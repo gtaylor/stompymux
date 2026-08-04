@@ -3,7 +3,6 @@
 #include "mux/server/platform.h"
 
 #include <errno.h>
-#include <signal.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -11,11 +10,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "mux/commands/command.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
+#include "mux/server/log.h"
 #include "mux/server/log_cache.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"

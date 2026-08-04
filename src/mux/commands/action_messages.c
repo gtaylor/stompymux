@@ -7,7 +7,9 @@
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_context.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/objects/flags.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"

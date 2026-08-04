@@ -13,8 +13,6 @@
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
 #include "mux/help/help_index.h"
-#include "mux/network/connect_flow.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"

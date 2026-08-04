@@ -17,6 +17,7 @@
 #include "mech.partnames.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/world_context.h"
 #include "p.template.h"
 
@@ -136,7 +137,7 @@ void initialize_partname_tables(BtechContext *context) {
 #define DASH(fromval, tohash)                                                  \
   for (tmpc1 = registry->short_sorted[i]->fromval, tmpc2 = tmpbuf; *tmpc1;     \
        tmpc1++, tmpc2++)                                                       \
-    *tmpc2 = ToLower(*tmpc1);                                                  \
+    *tmpc2 = ascii_to_lower(*tmpc1);                                           \
   *tmpc2 = 0;                                                                  \
   hash_table_add(tmpbuf, (int *)(i + 1), &registry->tohash);
 
@@ -182,7 +183,7 @@ int find_matching_vlong_part(BtechContext *context, const char *wc, int *ind,
   if (ind && *ind >= 0)
     return 0;
   for (tmpc1 = wc, tmpc2 = tmpbuf; *tmpc1; tmpc1++, tmpc2++) {
-    *tmpc2 = ToLower(*tmpc1);
+    *tmpc2 = ascii_to_lower(*tmpc1);
   }
   *tmpc2 = 0;
   if ((i = hash_table_find(tmpbuf, &registry->vlong_hash))) {
@@ -221,7 +222,7 @@ int find_matching_short_part(BtechContext *context, const char *wc, int *ind,
   if (*ind >= 0)
     return 0;
   for (tmpc1 = wc, tmpc2 = tmpbuf; *tmpc1; tmpc1++, tmpc2++) {
-    *tmpc2 = ToLower(*tmpc1);
+    *tmpc2 = ascii_to_lower(*tmpc1);
   }
   *tmpc2 = 0;
   if ((i = hash_table_find(tmpbuf, &registry->short_hash))) {

@@ -5,35 +5,17 @@
 #pragma once
 
 #include "mux/commands/action_messages.h"
-#include "mux/commands/command_parser.h"
-#include "mux/commands/command_queue.h"
 #include "mux/commands/look.h"
-#include "mux/network/connection_commands.h"
-#include "mux/network/connection_events.h"
 #include "mux/network/network_output.h"
-#include "mux/network/network_time.h"
 #include "mux/network/site_access.h"
-#include "mux/network/telnet_socket.h"
 #include "mux/objects/db.h"
 #include "mux/server/configuration.h"
 #include "mux/server/game.h"
-#include "mux/server/log.h"
 #include "mux/server/log_cache.h"
-#include "mux/server/server_config.h"
-#include "mux/server/signals.h"
-#include "mux/support/formatting.h"
-#include "mux/support/stringutil.h"
-#include "mux/support/validation.h"
-#include "mux/support/wild.h"
 #include "mux/world/access.h"
-#include "mux/world/match.h"
 #include "mux/world/move.h"
-#include "mux/world/object.h"
-#include "mux/world/object_list.h"
-#include "mux/world/object_set.h"
 #include "mux/world/object_spatial.h"
 #include "mux/world/player.h"
-#include "mux/world/walkdb.h"
 
 #ifndef _DB_C
 #define INLINE
@@ -44,16 +26,6 @@
 #define INLINE
 #endif /* __GNUC__ */
 #endif /* _DB_C */
-
-static inline char ToUpper(char C) {
-  return (C >= 'a' && C <= 'z') ? C - 'a' + 'A' : C;
-}
-static inline char ToLower(char C) {
-  return (C >= 'A' && C <= 'Z') ? C - 'A' + 'a' : C;
-}
-static inline int safe_atoi(const char *s) {
-  return s == nullptr ? 0 : atoi(s);
-}
 
 /* Message forwarding directives */
 

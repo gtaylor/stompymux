@@ -10,14 +10,19 @@
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
+#include "mux/network/connection_events.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
+#include "mux/server/log.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "mux/support/styled_text/markup.h"
+#include "mux/support/validation.h"
+#include "mux/world/object_list.h"
 #include "mux/world/world_context.h"
 
 #define IS_CLEAN(database, i)                                                  \

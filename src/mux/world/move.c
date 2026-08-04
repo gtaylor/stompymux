@@ -13,9 +13,12 @@
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
+#include "mux/support/formatting.h"
 #include "mux/world/match.h"
 #include "mux/world/move.h"
 #include "mux/world/move_internal.h"
+#include "mux/world/object_list.h"
 #include "mux/world/world_context.h"
 
 /*

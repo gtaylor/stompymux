@@ -7,6 +7,7 @@
 #include "libtelnet.h"
 #include "mux/commands/command_runtime.h"
 #include "mux/network/connect_flow.h"
+#include "mux/network/connection_events.h"
 #include "mux/network/connection_runtime.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"

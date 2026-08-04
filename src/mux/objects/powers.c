@@ -10,6 +10,7 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/world_context.h"
 
 POWERENT gen_powers[] = {{"idle", POWER_IDLE, 0}, {nullptr, POWER_NONE, 0}};
@@ -26,7 +27,7 @@ void init_powertab(WorldIndexes *indexes) {
   hash_table_initialize(&indexes->powers, 15 * HASH_FACTOR);
   for (fp = gen_powers; fp->powername; fp++) {
     for (np = nbuf, bp = fp->powername; *bp; np++, bp++)
-      *np = ToLower(*bp);
+      *np = ascii_to_lower(*bp);
     *np = '\0';
     hash_table_add(nbuf, (int *)fp, &indexes->powers);
   }
@@ -65,7 +66,7 @@ POWERENT *find_power(WorldIndexes *indexes, DbRef thing, char *powername) {
    */
 
   for (cp = powername; *cp; cp++)
-    *cp = ToLower(*cp);
+    *cp = ascii_to_lower(*cp);
   return (POWERENT *)hash_table_find(powername, &indexes->powers);
 }
 

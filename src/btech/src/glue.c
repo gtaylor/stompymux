@@ -40,6 +40,7 @@
 #include "mechrep.h"
 #include "mux/objects/powers.h"
 #include "mux/support/red_black_tree.h"
+#include "mux/support/stringutil.h"
 #include "mycool.h"
 #include "p.bsuit.h"
 #include "p.ds.turret.h"
@@ -176,7 +177,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
     *tmpc = 0;
   ishelp = !strcmp(command, "HELP");
   for (tmpchar = command; *tmpchar; tmpchar++)
-    *tmpchar = ToLower(*tmpchar);
+    *tmpchar = ascii_to_lower(*tmpchar);
   cmd = (CommandsStruct *)hash_table_find(command,
                                           &context->special_commands[type]);
   if (tmpc)
@@ -986,7 +987,7 @@ void InitSpecialHash(BtechContext *context, int which) {
       continue;
     tmpc = buf;
     for (; *tmp && *tmp != ' '; tmp++)
-      *(tmpc++) = ToLower(*tmp);
+      *(tmpc++) = ascii_to_lower(*tmp);
     *tmpc = 0;
     if ((tmpc = strstr(buf, " ")))
       *tmpc = 0;

@@ -28,6 +28,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/stringutil.h"
 #include "p.bsuit.h"
 #include "p.map.obj.h"
 #include "p.mech.combat.h"
@@ -183,7 +184,7 @@ int char_getvaluecode(BtechContext *context, char *name) {
   tmpbuf = alloc_sbuf("getvaluecodefind");
   for (tmpc1 = name, tmpc2 = tmpbuf;
        *tmpc1 && ((tmpbuf - tmpc2) < (SBUF_SIZE - 1)); tmpc1++, tmpc2++)
-    *tmpc2 = ToLower(*tmpc1);
+    *tmpc2 = ascii_to_lower(*tmpc1);
   *tmpc2 = 0;
   if ((ip = hash_table_find(tmpbuf, &context->player_value_hashes[0])) == NULL)
     ip = hash_table_find(tmpbuf, &context->player_value_hashes[1]);
@@ -509,7 +510,7 @@ void init_btechstats(BtechContext *context) {
   tmpbuf = alloc_sbuf("getvaluecode");
   for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     for (tmpc1 = char_values[i].name, tmpc2 = tmpbuf; *tmpc1; tmpc1++, tmpc2++)
-      *tmpc2 = ToLower(*tmpc1);
+      *tmpc2 = ascii_to_lower(*tmpc1);
     *tmpc2 = '\0';
     hash_table_add(tmpbuf, (int *)(i + 1), &context->player_value_hashes[0]);
     tmpbuf[0] = '\0';
@@ -527,7 +528,7 @@ void init_btechstats(BtechContext *context) {
     }
     context->char_value_short_names[i] = strdup(tmpbuf);
     for (tmpc1 = tmpbuf; *tmpc1; tmpc1++)
-      *tmpc1 = ToLower(*tmpc1);
+      *tmpc1 = ascii_to_lower(*tmpc1);
     hash_table_add(tmpbuf, (int *)(i + 1), &context->player_value_hashes[1]);
   }
   free_sbuf(tmpbuf);

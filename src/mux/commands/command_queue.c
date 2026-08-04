@@ -10,6 +10,7 @@
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_helpers.h"
+#include "mux/commands/command_parser.h"
 #include "mux/commands/command_queue.h"
 #include "mux/commands/command_runtime.h"
 #include "mux/objects/attrs.h"
@@ -24,7 +25,9 @@
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/validation.h"
 #include "mux/world/match.h"
+#include "mux/world/object_set.h"
 #include "mux/world/player_cache.h"
 #include "mux/world/world_context.h"
 

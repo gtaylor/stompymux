@@ -6,7 +6,9 @@
 
 #include "mux/server/platform.h"
 
+#include "mux/commands/command_parser.h"
 #include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 

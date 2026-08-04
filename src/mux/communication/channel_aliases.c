@@ -21,6 +21,7 @@
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/comsys.h"
 #include "mux/communication/comsys_internal.h"
+#include "mux/network/connection_commands.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"

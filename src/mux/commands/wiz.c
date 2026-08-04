@@ -8,17 +8,25 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
+#include "mux/commands/command_parser.h"
+#include "mux/network/connection_commands.h"
+#include "mux/network/connection_events.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/file_cache.h"
+#include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/password.h"
+#include "mux/support/validation.h"
 #include "mux/world/match.h"
+#include "mux/world/object_list.h"
+#include "mux/world/object_set.h"
 
 void do_teleport(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;

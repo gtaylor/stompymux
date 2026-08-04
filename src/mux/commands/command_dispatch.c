@@ -10,6 +10,7 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_internal.h"
+#include "mux/commands/command_parser.h"
 #include "mux/commands/macro.h"
 #include "mux/communication/access_policy.h"
 #include "mux/communication/comsys.h"
@@ -21,10 +22,13 @@
 #include "mux/objects/powers.h"
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h"
+#include "mux/server/log.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 #include "mux/world/movement_commands.h"
 
@@ -502,12 +506,12 @@ void process_command(CommandContext *context, char *command, char *args[],
 
   lcbuf = alloc_lbuf("process_commands.LCbuf");
   for (p = command, q = lcbuf; *p && !isspace((unsigned char)*p); p++, q++)
-    *q = ToLower(*p); /*
-                       * Make lowercase command
-                       */
-  *q++ = '\0';        /*
-                       * Terminate command
-                       */
+    *q = ascii_to_lower(*p); /*
+                              * Make lowercase command
+                              */
+  *q++ = '\0';               /*
+                              * Terminate command
+                              */
   while (*p && isspace((unsigned char)*p))
     p++;   /*
             * Skip spaces before arg

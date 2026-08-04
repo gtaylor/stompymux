@@ -3,6 +3,7 @@
 #include "mux/communication/commac.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 

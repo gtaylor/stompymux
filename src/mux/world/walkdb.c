@@ -10,6 +10,7 @@
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/commands/command_invocation.h"
+#include "mux/commands/command_parser.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"

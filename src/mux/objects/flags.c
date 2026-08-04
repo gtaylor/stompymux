@@ -3,11 +3,14 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_context.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/world_context.h"
 
 bool game_object_has_flag(GameDatabase *database, DbRef object,
@@ -318,7 +321,7 @@ void init_flagtab(WorldIndexes *indexes) {
   for (FlagEntry *flag = gen_flags; flag->flagname; flag++) {
     char *out = buffer;
     for (const char *in = flag->flagname; *in; in++, out++)
-      *out = ToLower(*in);
+      *out = ascii_to_lower(*in);
     *out = '\0';
     hash_table_add(buffer, (int *)flag, &indexes->flags);
   }
@@ -341,7 +344,7 @@ void display_flagtab(EvaluationContext *evaluation, DbRef player) {
 FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing, char *flagname) {
   (void)thing;
   for (char *character = flagname; *character; character++)
-    *character = ToLower(*character);
+    *character = ascii_to_lower(*character);
   return (FlagEntry *)hash_table_find(flagname, &indexes->flags);
 }
 void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,

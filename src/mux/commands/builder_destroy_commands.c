@@ -20,6 +20,7 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/match.h"
 #include "mux/world/object.h"

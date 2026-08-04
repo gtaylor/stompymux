@@ -14,6 +14,7 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 
 static void help_command_send_article(EvaluationContext *evaluation,
                                       HelpIndex *help, DbRef player,
@@ -83,7 +84,7 @@ void do_help(CommandInvocation *invocation) {
   }
 
   for (p = message; *p; p++)
-    *p = ToLower(*p);
+    *p = ascii_to_lower(*p);
 
   article = help_index_find_exact(help, message, viewer_is_wizard);
   if (article) {

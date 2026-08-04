@@ -26,6 +26,7 @@
 #include "macros.h"
 #include "mech.h"
 #include "mux/network/mux_event.h"
+#include "mux/server/server_config.h"
 #include <math.h>
 
 static inline BtechContext *xcode_context(const void *object) {

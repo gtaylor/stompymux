@@ -4,6 +4,8 @@
 
 typedef struct ServerConfiguration ServerConfiguration;
 
+char ascii_to_upper(char character);
+char ascii_to_lower(char character);
 char *munge_space(char *string);
 char *trim_spaces(char *string);
 char *grabto(char **str, char targ);

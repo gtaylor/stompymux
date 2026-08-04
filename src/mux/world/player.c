@@ -14,9 +14,15 @@
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
+#include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "mux/support/password.h"
 #include "mux/support/stringutil.h"
+#include "mux/support/validation.h"
+#include "mux/support/wild.h"
+#include "mux/world/object.h"
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
@@ -351,7 +357,7 @@ int add_player_name(WorldContext *world, DbRef player, char *name) {
   safe_str(name, temp, &tp);
   *tp = '\0';
   for (tp = temp; *tp; tp++)
-    *tp = ToLower(*tp);
+    *tp = ascii_to_lower(*tp);
 
   p = (long *)hash_table_find(temp, &world->indexes->players);
   if (p) {
@@ -404,7 +410,7 @@ int delete_player_name(WorldContext *world, DbRef player, char *name) {
   safe_str(name, temp, &tp);
   *tp = '\0';
   for (tp = temp; *tp; tp++)
-    *tp = ToLower(*tp);
+    *tp = ascii_to_lower(*tp);
 
   p = (long *)hash_table_find(temp, &world->indexes->players);
   if (!p || (*p == NOTHING) || ((player != NOTHING) && (*p != player))) {
@@ -441,7 +447,7 @@ DbRef lookup_player(WorldContext *world, DbRef doer, char *name,
   safe_str(name, temp, &tp);
   *tp = '\0';
   for (tp = temp; *tp; tp++)
-    *tp = ToLower(*tp);
+    *tp = ascii_to_lower(*tp);
   p = (long *)hash_table_find(temp, &world->indexes->players);
   free_lbuf(temp);
   if (!p) {

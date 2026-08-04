@@ -15,6 +15,7 @@
 #pragma once
 
 #include "mux/server/server_api.h"
+#include "mux/support/formatting.h"
 #include "mux/world/world_context.h"
 
 #ifdef notify

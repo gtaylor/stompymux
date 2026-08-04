@@ -9,6 +9,7 @@
 
 #include "mux/commands/command.h"
 #include "mux/server/file_cache.h"
+#include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"

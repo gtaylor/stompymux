@@ -16,6 +16,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/utf8.h"
+#include "mux/support/validation.h"
 #include "mux/world/world_context.h"
 
 void macro_registry_initialize(MacroRegistry *registry,

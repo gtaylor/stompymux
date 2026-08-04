@@ -20,9 +20,10 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/wild.h"
 
-static inline char fixcase(char a) { return ToLower(a); }
+static inline char fixcase(char a) { return ascii_to_lower(a); }
 
 static inline bool is_equal(char a, char b) {
   return (a == b) || (fixcase(a) == fixcase(b));

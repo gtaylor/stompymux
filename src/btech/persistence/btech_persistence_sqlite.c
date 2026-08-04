@@ -20,6 +20,7 @@
 #include "mech.tech.h"
 #include "mechrep.h"
 #include "mux/persistence/gamedb.h"
+#include "mux/server/log.h"
 #include "mux/server/server_api.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/utf8.h"

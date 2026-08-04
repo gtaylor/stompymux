@@ -7,7 +7,6 @@
 #include <limits.h>
 
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
@@ -17,6 +16,16 @@ char *___strtok;
 
 #endif
 
+char ascii_to_upper(char character) {
+  return (character >= 'a' && character <= 'z') ? character - 'a' + 'A'
+                                                : character;
+}
+
+char ascii_to_lower(char character) {
+  return (character >= 'A' && character <= 'Z') ? character - 'A' + 'a'
+                                                : character;
+}
+
 /**
  * Parses str as a base-10 long, clamping out-of-range values to
  * LONG_MIN/LONG_MAX and treating non-numeric input as 0.
@@ -24,6 +33,9 @@ char *___strtok;
 long clamped_atol(const char *str) {
   char *end;
   long value;
+
+  if (str == nullptr)
+    return 0;
 
   errno = 0;
   value = strtol(str, &end, 10);
@@ -54,7 +66,7 @@ char *upcasestr(char *s) {
   char *p;
 
   for (p = s; p && *p; p++)
-    *p = ToUpper(*p);
+    *p = ascii_to_upper(*p);
   return s;
 }
 
@@ -143,17 +155,17 @@ char *grabto(char **str, char targ) {
 int string_compare(const ServerConfiguration *configuration, const char *s1,
                    const char *s2) {
   if (!configuration->space_compress) {
-    while (*s1 && *s2 && ToLower(*s1) == ToLower(*s2))
+    while (*s1 && *s2 && ascii_to_lower(*s1) == ascii_to_lower(*s2))
       s1++, s2++;
 
-    return (ToLower(*s1) - ToLower(*s2));
+    return (ascii_to_lower(*s1) - ascii_to_lower(*s2));
   } else {
     while (isspace((unsigned char)*s1))
       s1++;
     while (isspace((unsigned char)*s2))
       s2++;
     while (*s1 && *s2 &&
-           ((ToLower(*s1) == ToLower(*s2)) ||
+           ((ascii_to_lower(*s1) == ascii_to_lower(*s2)) ||
             (isspace((unsigned char)*s1) && isspace((unsigned char)*s2)))) {
       if (isspace((unsigned char)*s1) &&
           isspace((unsigned char)*s2)) { /*
@@ -191,7 +203,8 @@ int string_compare(const ServerConfiguration *configuration, const char *s1,
 int string_prefix(const char *string, const char *prefix) {
   int count = 0;
 
-  while (*string && *prefix && ToLower(*string) == ToLower(*prefix))
+  while (*string && *prefix &&
+         ascii_to_lower(*string) == ascii_to_lower(*prefix))
     string++, prefix++, count++;
   if (*prefix == '\0') /*
                         * Matched all of prefix
@@ -268,7 +281,7 @@ char *replace_string(const char *old, const char *new, const char *string) {
 }
 
 int minmatch(const char *str, const char *target, int min) {
-  while (*str && *target && (ToLower(*str) == ToLower(*target))) {
+  while (*str && *target && (ascii_to_lower(*str) == ascii_to_lower(*target))) {
     str++;
     target++;
     min--;
@@ -329,7 +342,7 @@ int matches_exit_from_list(char *str, char *pattern) {
     for (s = str; /*
                    * check out this one
                    */
-         (*s && (ToLower(*s) == ToLower(*pattern)) && *pattern &&
+         (*s && (ascii_to_lower(*s) == ascii_to_lower(*pattern)) && *pattern &&
           (*pattern != EXIT_DELIMITER));
          s++, pattern++)
       ;

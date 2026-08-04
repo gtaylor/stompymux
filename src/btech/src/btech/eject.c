@@ -10,6 +10,7 @@
  */
 
 #include "mux/server/platform.h"
+#include "mux/world/object.h"
 
 /* Ejection code */
 #include "autopilot.h"

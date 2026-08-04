@@ -20,6 +20,7 @@
 #include "mux/server/log.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/server_control.h"
+#include "mux/server/server_registries.h"
 #include "mux/world/world_context.h"
 
 typedef struct CommandQueue CommandQueue;
