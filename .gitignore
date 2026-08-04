@@ -8,6 +8,7 @@
 /CTestTestfile.cmake
 /Testing
 /.build
+/.iwyu-build
 /build
 /build-*
 *.in

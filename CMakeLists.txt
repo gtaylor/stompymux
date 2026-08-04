@@ -45,11 +45,17 @@ option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
 option(BTECH_ENABLE_UBSAN "Build with UndefinedBehaviorSanitizer instrumentation" ON)
 option(BTECH_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
+option(BTECH_ENABLE_IWYU "Run Include What You Use during project compilation" OFF)
 
 if(BTECH_ENABLE_CLANG_TIDY)
   # Needs to understand C23 `constexpr`, which landed in Clang 19.
   find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy-20 clang-tidy-19 clang-tidy REQUIRED)
   set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
+endif()
+
+if(BTECH_ENABLE_IWYU)
+  find_program(IWYU_EXECUTABLE NAMES include-what-you-use-20 include-what-you-use REQUIRED)
+  set(BTECH_IWYU_COMMAND "${IWYU_EXECUTABLE};-Xiwyu;--no_comments")
 endif()
 
 find_package(SQLite3 REQUIRED)
@@ -281,6 +287,9 @@ target_include_directories(btech PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/src")
+if(BTECH_ENABLE_IWYU)
+  set_property(TARGET btech PROPERTY C_INCLUDE_WHAT_YOU_USE "${BTECH_IWYU_COMMAND}")
+endif()
 
 add_executable(stompymux)
 include(src/mux/sources.cmake)
@@ -305,6 +314,9 @@ target_include_directories(stompymux PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}")
+if(BTECH_ENABLE_IWYU)
+  set_property(TARGET stompymux PROPERTY C_INCLUDE_WHAT_YOU_USE "${BTECH_IWYU_COMMAND}")
+endif()
 
 if(BUILD_TESTING)
   add_executable(event_timer_test tests/event_timer.c

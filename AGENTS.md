@@ -23,6 +23,7 @@
 * Use enums instead of multiple #define or constexpr statements.
 * Obey the C code naming conventions below.
 * Avoid source files longer than 800 lines long.
+* Avoid transitive includes and clean them up where possible.
 
 ## C code naming conventions
 
