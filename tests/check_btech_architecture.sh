@@ -41,6 +41,18 @@ while IFS= read -r match; do
 done < <(rg -n '^#include "mech_internal\.h"' src/btech \
   -g '*.[ch]' -g '!src/btech/unit/**' || true)
 
+while IFS= read -r match; do
+  echo "$match: non-unit source accesses a private Mech state component"
+  status=1
+done < <(rg -n -g '*.[ch]' -g '!src/btech/unit/**' \
+  -- '->(ud|pd|rd|sd)\b' src/btech || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy stagger API name"
+  status=1
+done < <(rg -n '\b(MarkStaggerDamage|RemoveStaggerDamage|ClearAllStaggerDamage|ClearStaggerDamage|CurrentStaggerDamage|CurrentCountedStaggerDamage)\b' \
+  src/btech -g '*.[ch]' || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1
