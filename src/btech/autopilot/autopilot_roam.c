@@ -30,12 +30,6 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-void speed_up_if_neccessary(Autopilot *autopilot, Mech *mech, int target_x,
-                            int target_y, int bearing);
-int slow_down_if_neccessary(Autopilot *autopilot, Mech *mech, float range,
-                            int bearing, int target_x, int target_y);
-void update_wanted_heading(Autopilot *autopilot, Mech *mech, int bearing);
-
 void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
   char *argument;

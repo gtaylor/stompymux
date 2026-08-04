@@ -456,6 +456,11 @@ void auto_leave_event(MuxEvent *muxevent);
 void auto_enter_event(MuxEvent *muxevent);
 void auto_command_roam(Autopilot *autopilot, Mech *mech);
 void auto_astar_roam_event(MuxEvent *muxevent);
+void speed_up_if_neccessary(Autopilot *autopilot, Mech *mech, int target_x,
+                            int target_y, int bearing);
+int slow_down_if_neccessary(Autopilot *autopilot, Mech *mech, float range,
+                            int bearing, int target_x, int target_y);
+void update_wanted_heading(Autopilot *autopilot, Mech *mech, int bearing);
 
 /* From autopilot_ai.c */
 int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,

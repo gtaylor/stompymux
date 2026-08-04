@@ -1,4 +1,30 @@
-#include "autopilot_commands_internal.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "ai_api.h"
+#include "autopilot.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "legacy_macros.h"
+#include "map_obj_api.h"
+#include "mech_classification_api.h"
+#include "mech_events.h"
+#include "mech_identity_api.h"
+#include "mech_lifecycle.h"
+#include "mech_maps_api.h"
+#include "mech_move_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_startup_api.h"
+#include "mech_utils_api.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/db.h"
+#include "registry_api.h"
+#include "section_types.h"
 
 void auto_leave_event(MuxEvent *muxevent) {
 
@@ -11,17 +37,17 @@ void auto_leave_event(MuxEvent *muxevent) {
   char *argument;
   char error_buf[MBUF_SIZE];
 
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
-      autopilot->mymechnum)
+  if (game_object_location(btech_context_database(mech_context(mech)),
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
-  if (Destroyed(mech))
+  if (mech_is_destroyed(mech))
     return;
 
   /* Check to make sure the first command in the queue is this one */
@@ -46,7 +72,7 @@ void auto_leave_event(MuxEvent *muxevent) {
   }
 
   /* Make sure mech is started */
-  if (!Started(mech)) {
+  if (!mech_is_started(mech)) {
 
     /* Startup */
     if (!mech_event_count(mech, EVENT_STARTUP))
@@ -59,7 +85,7 @@ void auto_leave_event(MuxEvent *muxevent) {
   }
 
   /* Ok not standing so lets do that first */
-  if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
+  if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
@@ -75,7 +101,7 @@ void auto_leave_event(MuxEvent *muxevent) {
 
   /* Do we need to reset the mapindex value ? */
   if (reset_mapindex) {
-    autopilot->mapindex = mech->mapindex;
+    autopilot->mapindex = mech_map_dbref(mech);
   }
 
   /* Get the argument - direction */
@@ -107,10 +133,10 @@ void auto_leave_event(MuxEvent *muxevent) {
   }
   free(argument);
 
-  if (mech->mapindex != autopilot->mapindex) {
+  if (mech_map_dbref(mech) != autopilot->mapindex) {
 
     /* We're elsewhere, pal! */
-    autopilot->mapindex = mech->mapindex;
+    autopilot->mapindex = mech_map_dbref(mech);
     ai_set_speed(mech, autopilot, 0);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -139,17 +165,17 @@ void auto_enter_event(MuxEvent *muxevent) {
   char dir[2];
   char error_buf[MBUF_SIZE];
 
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
-      autopilot->mymechnum)
+  if (game_object_location(btech_context_database(mech_context(mech)),
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
-  if (Destroyed(mech))
+  if (mech_is_destroyed(mech))
     return;
 
   /* Check to make sure the first command in the queue is this one */
@@ -174,21 +200,22 @@ void auto_enter_event(MuxEvent *muxevent) {
   }
 
   /* New map so we're done */
-  if (mech->mapindex != autopilot->mapindex) {
-    autopilot->mapindex = mech->mapindex;
+  if (mech_map_dbref(mech) != autopilot->mapindex) {
+    autopilot->mapindex = mech_map_dbref(mech);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
 
   /* Is there anything even to enter here */
-  if (!(map_object = find_entrance_by_xy(map, MechX(mech), MechY(mech)))) {
+  if (!(map_object = find_entrance_by_xy(map, mech_position_x(mech),
+                                         mech_position_y(mech)))) {
 
     /* Nothing in this hex */
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
              " enterbase with AI #%ld but there is nothing at %d, %d"
              " to enter",
-             autopilot->mynum, MechX(mech), MechY(mech));
+             autopilot->mynum, mech_position_x(mech), mech_position_y(mech));
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -197,11 +224,11 @@ void auto_enter_event(MuxEvent *muxevent) {
 
   /* Reset the mapindex if this is the first run of the event */
   if (reset_mapindex) {
-    autopilot->mapindex = mech->mapindex;
+    autopilot->mapindex = mech_map_dbref(mech);
   }
 
   /* Make sure mech is started */
-  if (!Started(mech)) {
+  if (!mech_is_started(mech)) {
 
     /* Startup */
     if (!mech_event_count(mech, EVENT_STARTUP))
@@ -214,7 +241,7 @@ void auto_enter_event(MuxEvent *muxevent) {
   }
 
   /* Ok not standing so lets do that first */
-  if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
+  if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
@@ -267,10 +294,11 @@ void auto_enter_event(MuxEvent *muxevent) {
   }
   free(argument);
 
-  if (MechDesiredSpeed(mech) != 0.0)
+  if (mech_desired_speed(mech) != 0.0)
     ai_set_speed(mech, autopilot, 0);
 
-  if ((MechSpeed(mech) == 0.0) && !mech_event_count(mech, EVENT_ENTER_HANGAR)) {
+  if ((mech_current_speed(mech) == 0.0) &&
+      !mech_event_count(mech, EVENT_ENTER_HANGAR)) {
     mech_enterbase(GOD, mech, dir);
   }
 
