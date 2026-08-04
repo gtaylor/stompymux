@@ -92,10 +92,7 @@ void AccumulatePilXP(DbRef pilot, Mech *mech, int reason, int addanyway) {
     return;
 
   if (!addanyway) {
-    if (MechLX(mech) != MechX(mech) || MechLY(mech) != MechY(mech)) {
-      MechLX(mech) = MechX(mech);
-      MechLY(mech) = MechY(mech);
-    } else
+    if (!mech_piloting_position_mark_changed(mech))
       return;
   }
   xp = MAX(1, reason);
@@ -125,13 +122,13 @@ void AccumulateSpotXP(DbRef pilot, Mech *attacker, Mech *wounded) {
     return;
   if (!mech_has_active_pilot(attacker))
     return;
-  if (MechPilot(attacker) != pilot)
+  if (mech_pilot_dbref(attacker) != pilot)
     return;
   if (attacker == wounded)
     return;
-  if (Destroyed(wounded))
+  if (mech_is_destroyed(wounded))
     return;
-  if (MechTeam(wounded) == MechTeam(attacker))
+  if (mech_team(wounded) == mech_team(attacker))
     return;
   if (!is_in_character(mech_context(attacker)->database, mech_dbref(wounded)))
     return;
@@ -150,12 +147,14 @@ int MadePerceptionRoll(Mech *mech, int modifier) {
     return 0;
   if (!mech_has_active_gunner(mech))
     return 0;
-  pilot = MechPilot(mech);
+  pilot = mech_pilot_dbref(mech);
   if (pilot <= 0)
     return 0;
-  if (!MechPer(mech))
-    MechPer(mech) = char_getskilltarget(context, pilot, "Perception", 2);
-  if (btech_random_roll(mech_context(mech)) < (MechPer(mech) + modifier))
+  if (!mech_perception_target(mech))
+    mech_perception_target_set(
+        mech, char_getskilltarget(context, pilot, "Perception", 2));
+  if (btech_random_roll(mech_context(mech)) <
+      (mech_perception_target(mech) + modifier))
     return 0;
   if (char_gainxp(context, pilot, "Perception", 1))
     btech_channel_send(
@@ -176,7 +175,7 @@ void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded) {
   if (!mech_has_active_gunner(attacker))
     return;
 
-  if (GunPilot(attacker) != pilot)
+  if (mech_gunner_dbref(attacker) != pilot)
     return;
 
   /* No xp for shooting yourself */
@@ -184,11 +183,11 @@ void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded) {
     return;
 
   /* No xp for shooting destroyed units */
-  if (Destroyed(wounded))
+  if (mech_is_destroyed(wounded))
     return;
 
   /* No xp if both on same team */
-  if (MechTeam(wounded) == MechTeam(attacker))
+  if (mech_team(wounded) == mech_team(attacker))
     return;
 
   /* If target not in character ie: in simulator - no xp */

@@ -5,6 +5,12 @@
 
 bool mech_is_started(const Mech *mech) { return mech->rd.status & STARTED; }
 
+bool mech_is_destroyed(const Mech *mech) { return mech->rd.status & DESTROYED; }
+
+bool mech_suppresses_gunnery_experience(const Mech *mech) {
+  return mech->rd.status2 & NO_GUN_XP;
+}
+
 DbRef mech_autopilot_dbref(const Mech *mech) { return mech->rd.autopilot_num; }
 
 void mech_autopilot_dbref_set(Mech *mech, DbRef autopilot) {

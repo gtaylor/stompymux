@@ -11,6 +11,7 @@
 
 #include "command_handlers_api.h"
 #include "mech.h"
+#include "mech_classification_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_macros.h"
@@ -46,7 +47,7 @@ static struct {
 int pc_to_dam_conversion(Mech *target, int weapindx, int dam) {
   int i = 0;
 
-  if (MechType(target) == CLASS_MW)
+  if (mech_class(target) == CLASS_MW)
     return dam;
   if (weapindx < 0 || !(MechWeapons[weapindx].special & PCOMBAT))
     return dam;
@@ -62,7 +63,7 @@ int dam_to_pc_conversion(Mech *target, int weapindx, int dam) {
 
   if (weapindx >= 0 && MechWeapons[weapindx].special & PCOMBAT)
     return dam;
-  if (MechType(target) != CLASS_MW)
+  if (mech_class(target) != CLASS_MW)
     return dam;
   /* Target is MW _and_ we have yet to convert damage */
   for (j = 0; j < dam; j++)
@@ -91,7 +92,7 @@ int armor_effect(Mech *wounded, int cause, int hitloc, int intDamage, int id) {
   if (id != -2)
     intDamage =
         (intDamage * btech_random_range(mech_context(wounded), 75, 125)) / 100;
-  if (MechType(wounded) != CLASS_MW)
+  if (mech_class(wounded) != CLASS_MW)
     return intDamage;
   hitloc = pcombat_hitloc(hitloc);
   if (!GetSectArmor(wounded, hitloc))

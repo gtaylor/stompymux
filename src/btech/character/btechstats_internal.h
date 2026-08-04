@@ -50,13 +50,18 @@
 #define BTECHSTATS
 #include "coolmenu.h"
 #include "mech.h"
+#include "mech_crew_api.h"
 #include "mech_identity_api.h"
+#include "mech_progress_api.h"
 #include "mycool.h"
 
 #include "btechstats.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_macros.h"
 #include "mech_partnames_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
 #include "mech_utils_api.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/network/mux_event_alloc.h"

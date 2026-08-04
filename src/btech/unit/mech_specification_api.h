@@ -12,6 +12,7 @@ int mech_heat_sink_count(const Mech *mech);
 int mech_technology_flags(const Mech *mech);
 int mech_technology_flags_secondary(const Mech *mech);
 float mech_current_speed(const Mech *mech);
+float mech_maximum_speed(const Mech *mech);
 bool mech_is_flying_type(const Mech *mech);
 bool mech_is_omni(const Mech *mech);
 int mech_fuel(const Mech *mech);

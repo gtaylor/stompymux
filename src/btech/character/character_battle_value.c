@@ -1,4 +1,5 @@
 #include "btechstats_internal.h"
+#include "mech_move_api.h"
 
 int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
   PSTATS stats, *s = &stats;
@@ -19,9 +20,11 @@ const int bth_modifier[] = /* Starts from '3' , in 1/36's */
         1, 3, 6, 10, 15, 21, 26, 30, 33, 35, 0, 0, 0, 0 /* pad, just in case */
 };
 
-#define TonValue(mech)                                                         \
-  MAX(1, (MechTons(mech) / ((MechType(mech) != CLASS_MECH) ? 2 : 1) /          \
-          ((MechMove(mech) == MOVE_NONE) ? 2 : 1)))
+static int ton_value(const Mech *mech) {
+  return MAX(1, mech_tonnage(mech) /
+                    ((mech_class(mech) != CLASS_MECH) ? 2 : 1) /
+                    ((mech_movement_type(mech) == MOVE_NONE) ? 2 : 1));
+}
 
 static int t_mod(float sp) {
   if (sp <= MP2)
@@ -35,8 +38,13 @@ static int t_mod(float sp) {
   return 4; /* No extra mods */
 }
 
-#define MoveValue(mech) (t_mod(MMaxSpeed(mech)) + 2)
-#define NewMoveValue(mech) ((int)(MechMaxSpeed(mech) / MP1))
+static int move_value(Mech *mech) {
+  return t_mod(MechCargoMaxSpeed(mech, mech_maximum_speed(mech))) + 2;
+}
+
+static int new_move_value(const Mech *mech) {
+  return (int)(mech_maximum_speed(mech) / MP1);
+}
 
 float getPilotBVMod(Mech *mech, int weapindx) {
   /*
@@ -106,13 +114,14 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   if (!is_in_character(mech_context(attacker)->database, mech_dbref(attacker)))
     return;
 
-  if (NoGunXP(wounded)) /* No Gun XP for shooting this (Boxes, etc) */
+  if (mech_suppresses_gunnery_experience(
+          wounded)) /* No Gun XP for shooting this (Boxes, etc) */
     return;
 
   if (!mech_has_active_gunner(attacker))
     return;
 
-  if (GunPilot(attacker) != pilot)
+  if (mech_gunner_dbref(attacker) != pilot)
     return;
 
   /* No xp for shooting yourself */
@@ -120,11 +129,11 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
     return;
 
   /* No xp for shooting destroyed mechs */
-  if (Destroyed(wounded))
+  if (mech_is_destroyed(wounded))
     return;
 
   /* No xp for shooting a teammate */
-  if (MechTeam(wounded) == MechTeam(attacker))
+  if (mech_team(wounded) == mech_team(attacker))
     return;
 
   /* Is the target in character ie: in simulators */
@@ -136,7 +145,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
     return;
 
   /* No xp for shooting mechwarriors if you not a mechwarrior */
-  if (MechType(wounded) == CLASS_MW && MechType(attacker) != CLASS_MW)
+  if (mech_class(wounded) == CLASS_MW && mech_class(attacker) != CLASS_MW)
     return;
 
   /* bth to high so no way to hit */
@@ -158,8 +167,8 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   }
 
   /* Need to do a BV mod between the mechs */
-  my_BV = MechBV(attacker);
-  th_BV = MechBV(wounded);
+  my_BV = mech_battle_value(attacker);
+  th_BV = mech_battle_value(wounded);
 
   if (mech_context(attacker)->configuration->btech_xp_usePilotBVMod) {
     myPilotBVMod = getPilotBVMod(attacker, weapindx);
@@ -178,8 +187,8 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
 #endif
   }
 
-  my_speed = NewMoveValue(attacker) + 1;
-  th_speed = NewMoveValue(wounded) + 1;
+  my_speed = new_move_value(attacker) + 1;
+  th_speed = new_move_value(wounded) + 1;
 
   if (MechWeapons[weapindx].type == TMISSILE)
     weapTypeMod = mech_context(attacker)->configuration->btech_xp_missilemod;
@@ -209,8 +218,8 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
 
   if (mech_context(attacker)->configuration->btech_perunit_xpmod)
     multiplier =
-        multiplier *
-        MechXPMod(attacker); /* Per unit XP Mod. Defaults to 1 anyways */
+        multiplier * mech_experience_modifier(
+                         attacker); /* Per unit XP Mod. Defaults to 1 anyways */
 
   /* Change the Cap to be variable depending on what a mux wants */
 
@@ -252,7 +261,7 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
   if (!mech_has_active_gunner(attacker))
     return;
 
-  if (GunPilot(attacker) != pilot)
+  if (mech_gunner_dbref(attacker) != pilot)
     return;
 
   /* No xp for shooting yourself */
@@ -260,11 +269,11 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
     return;
 
   /* No xp for shooting destroyed units */
-  if (Destroyed(wounded))
+  if (mech_is_destroyed(wounded))
     return;
 
   /* No xp for shooting teammate */
-  if (MechTeam(wounded) == MechTeam(attacker))
+  if (mech_team(wounded) == mech_team(attacker))
     return;
 
   /* if target is in character ie: in simulators or something */
@@ -275,15 +284,16 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
     return;
 
   /* No xp for shooting a mechwarrior unless you a mechwarrior */
-  if (MechType(wounded) == CLASS_MW && MechType(attacker) != CLASS_MW)
+  if (mech_class(wounded) == CLASS_MW && mech_class(attacker) != CLASS_MW)
     return;
 
   if (!(bth >= 3 && bth <= 12))
     return; /* sure hits aren't interesting */
 
-  if (MechTons(attacker) > 0)
-    multiplier = multiplier *
-                 BOUNDED(50, 100 * TonValue(wounded) / TonValue(attacker), 150);
+  if (mech_tonnage(attacker) > 0)
+    multiplier =
+        multiplier *
+        BOUNDED(50, 100 * ton_value(wounded) / ton_value(attacker), 150);
   else {
     /* Bring this to the attention of the admins */
     btech_channel_send(
@@ -292,14 +302,14 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
                 mech_dbref(attacker),
                 game_object_name(mech_context(attacker)->database,
                                  mech_dbref(attacker)),
-                (short)MechTons(attacker)));
+                (short)mech_tonnage(attacker)));
     return;
   }
 
   /* Hmm.. we have to figure the speed differences as well */
   {
-    int my_speed = MoveValue(attacker);
-    int th_speed = MoveValue(wounded);
+    int my_speed = move_value(attacker);
+    int th_speed = move_value(wounded);
 
     multiplier = multiplier * th_speed * th_speed / my_speed / my_speed;
   }
@@ -307,8 +317,9 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
   multiplier = multiplier * bth_modifier[bth - 3] / 36;
   multiplier = multiplier * 2; /* For average shot */
   if (mech_context(attacker)->configuration->btech_perunit_xpmod)
-    multiplier = multiplier *
-                 MechXPMod(attacker); /* Per unit XP Modifier. Defaults to 1 */
+    multiplier =
+        multiplier * mech_experience_modifier(
+                         attacker); /* Per unit XP Modifier. Defaults to 1 */
 
   if (btech_random_range(mech_context(attacker), 1, 50) >
       (multiplier * numOccurences))

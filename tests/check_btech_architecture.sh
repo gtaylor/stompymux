@@ -133,6 +133,15 @@ done < <(rg -n -g '*.[ch]' \
   -- '\b[A-Za-z_][A-Za-z0-9_]*->(xcode|mynum|mapindex|mapnumber)\b' \
   src/btech/character || true)
 
+while IFS= read -r match; do
+  echo "$match: converted character module uses a legacy Mech state macro"
+  status=1
+done < <(rg -n \
+  '\b(MechPilot|GunPilot|MechPer|MechLX|MechLY|MechX|MechY|MechTeam|MechType|MechMove|MechTons|MechXPMod|MechBV|Destroyed|NoGunXP|MechMaxSpeed)\s*\(' \
+  src/btech/character/character_experience.c \
+  src/btech/character/character_battle_value.c \
+  src/btech/character/pcombat.c || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1
