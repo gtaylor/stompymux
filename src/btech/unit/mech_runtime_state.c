@@ -9,6 +9,10 @@ bool mech_is_destroyed(const Mech *mech) { return mech->rd.status & DESTROYED; }
 
 bool mech_is_landed(const Mech *mech) { return mech->rd.status & LANDED; }
 
+bool mech_is_jumping(const Mech *mech) { return mech->rd.status & JUMPING; }
+
+bool mech_is_out_of_control(const Mech *mech) { return mech->rd.cocoon; }
+
 bool mech_suppresses_gunnery_experience(const Mech *mech) {
   return mech->rd.status2 & NO_GUN_XP;
 }
