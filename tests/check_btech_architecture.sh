@@ -74,6 +74,20 @@ done < <(rg -n \
   src/btech/ui/mech_maps.c src/btech/ui/mech_base_entry.c \
   src/btech/ui/mech_lrs_map.c src/btech/ui/mech_tactical_command.c || true)
 
+while IFS= read -r match; do
+  echo "$match: converted scripting boundary accesses Mech layout directly"
+  status=1
+done < <(rg -n -g '*.[ch]' \
+  -- '\b(mech|mechA|mechB|target)->(xcode|mynum|mapindex|mapnumber|freq|freqmodes|chantitle)\b' \
+  src/btech/scripting || true)
+
+while IFS= read -r match; do
+  echo "$match: converted special-object boundary accesses Mech layout directly"
+  status=1
+done < <(rg -n \
+  -- '\bmech->(xcode|mynum|mapindex|mapnumber|brief|ID)\b' \
+  src/btech/special/registry_loading.c || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

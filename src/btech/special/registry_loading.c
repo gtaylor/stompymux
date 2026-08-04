@@ -67,6 +67,7 @@
 #include "coolmenu.h"
 #include "mech.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_partnames_api.h"
 #include "mech_stat_api.h"
 #include "mechrep.h"
@@ -86,17 +87,17 @@ static int remove_from_all_maps_func(void *key, void *data, int depth,
     BattleMap *map;
     int i;
 
-    if (!(map = btech_context_get_map(mech->xcode.context, (DbRef)key)))
+    if (!(map = btech_context_get_map(mech_context(mech), (DbRef)key)))
       return 1;
     for (i = 0; i < map->first_free; i++)
-      if (map->mechsOnMap[i] == mech->mynum)
+      if (map->mechsOnMap[i] == mech_dbref(mech))
         map->mechsOnMap[i] = -1;
   }
   return 1;
 }
 
 void mech_remove_from_all_maps(Mech *mech) {
-  red_black_tree_walk(mech->xcode.context->special_objects, WALK_INORDER,
+  red_black_tree_walk(mech_context(mech)->special_objects, WALK_INORDER,
                       remove_from_all_maps_func, mech);
 }
 
@@ -118,10 +119,10 @@ static int remove_from_all_maps_except_func(void *key, void *data, int depth,
 
     if (key_val == context->except_map)
       return 1;
-    if (!(map = btech_context_get_map(mech->xcode.context, key_val)))
+    if (!(map = btech_context_get_map(mech_context(mech), key_val)))
       return 1;
     for (i = 0; i < map->first_free; i++)
-      if (map->mechsOnMap[i] == mech->mynum)
+      if (map->mechsOnMap[i] == mech_dbref(mech))
         map->mechsOnMap[i] = -1;
   }
   return 1;
@@ -133,7 +134,7 @@ void mech_remove_from_all_maps_except(Mech *mech, int num) {
       .except_map = num,
   };
 
-  red_black_tree_walk(mech->xcode.context->special_objects, WALK_INORDER,
+  red_black_tree_walk(mech_context(mech)->special_objects, WALK_INORDER,
                       remove_from_all_maps_except_func, &context);
 }
 
@@ -153,14 +154,16 @@ static int load_update4(void *key, void *data, int depth, void *arg) {
     Mech *const mech = (Mech *)xcode_obj;
     BattleMap *map;
 
-    if (!(map = btech_context_get_map(context, mech->mapindex))) {
+    if (!(map = btech_context_get_map(context, mech_map_dbref(mech)))) {
       /* Ugly kludge */
       if ((map = btech_context_get_map(
-               context, game_object_location(context->database, mech->mynum))))
-        mech_Rsetmapindex(GOD, mech,
-                          tprintf("%ld", game_object_location(context->database,
-                                                              mech->mynum)));
-      if (!(map = btech_context_get_map(context, mech->mapindex)))
+               context,
+               game_object_location(context->database, mech_dbref(mech)))))
+        mech_Rsetmapindex(
+            GOD, mech,
+            tprintf("%ld",
+                    game_object_location(context->database, mech_dbref(mech))));
+      if (!(map = btech_context_get_map(context, mech_map_dbref(mech))))
         return 1;
     }
 

@@ -90,12 +90,12 @@ void fun_btmechfreqs(char *buff, char **bufc, DbRef player, DbRef cause,
   for (i = 0; i < MFreqs(mech); i++) {
     if (i)
       safe_str(",", buff, bufc);
-    safe_tprintf_str(
-        buff, bufc, "%d|%d|%s", i + 1, mech->freq[i],
-        bv2text(mech->freqmodes[i] % FREQ_REST, (char[SBUF_SIZE]){0}));
-    if (mech->freqmodes[i] / FREQ_REST) {
-      safe_tprintf_str(buff, bufc, "|%c",
-                       radio_colorstr[mech->freqmodes[i] / FREQ_REST - 1]);
+    int const mode = mech_radio_mode(mech, i);
+    safe_tprintf_str(buff, bufc, "%d|%d|%s", i + 1,
+                     mech_radio_frequency(mech, i),
+                     bv2text(mode % FREQ_REST, (char[SBUF_SIZE]){0}));
+    if (mode / FREQ_REST) {
+      safe_tprintf_str(buff, bufc, "|%c", radio_colorstr[mode / FREQ_REST - 1]);
     } else {
       safe_str("|-", buff, bufc);
     }
@@ -275,7 +275,7 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
     FUNCHECK(!(mechA = btech_context_get_mech(context->btech, mechAdb)) ||
                  !(mechB = btech_context_get_mech(context->btech, mechBdb)),
              "#-1 INVALID MECH");
-    FUNCHECK(mechA->mapindex != mapdb || mechB->mapindex != mapdb,
+    FUNCHECK(mech_map_dbref(mechA) != mapdb || mech_map_dbref(mechB) != mapdb,
              "#-1 MECH NOT ON MAP");
     safe_tprintf_str(buff, bufc, "%f", FaMechRange(mechA, mechB));
     return;
@@ -300,7 +300,7 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
              "#-1 INVALID MECH");
     FUNCHECK(!(mechA = btech_context_get_mech(context->btech, mechAdb)),
              "#-1 INVALID MECH");
-    FUNCHECK(mechA->mapindex != mapdb, "#-1 MECH NOT ON MAP");
+    FUNCHECK(mech_map_dbref(mechA) != mapdb, "#-1 MECH NOT ON MAP");
     FUNCHECK(xA < 0 || yA < 0 || xA >= map->map_width || yA >= map->map_height,
              "#-1 INVALID COORDS");
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
@@ -336,7 +336,7 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
                "#-1 INVALID MECH");
       FUNCHECK(!(mechA = btech_context_get_mech(context->btech, mechAdb)),
                "#-1 INVALID MECH");
-      FUNCHECK(mechA->mapindex != mapdb, "#-1 MECH NOT ON MAP");
+      FUNCHECK(mech_map_dbref(mechA) != mapdb, "#-1 MECH NOT ON MAP");
       FUNCHECK(xA < 0 || yA < 0 || xA >= map->map_width ||
                    yA >= map->map_height,
                "#-1 INVALID COORDS");

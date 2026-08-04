@@ -123,11 +123,12 @@ void fun_btid2db(char *buff, char **bufc, DbRef player, DbRef cause,
   if (mech) {
     FUNCHECK(!(target = btech_context_get_mech(context->btech, mechnum)),
              "#-1 INVALID TARGETID");
-    FUNCHECK(!InLineOfSight_NB(mech, target, MechX(target), MechY(target),
-                               FlMechRange(btech_context_get_map(
-                                               context->btech, mech->mapindex),
-                                           mech, target)),
-             "#-1 INVALID TARGETID");
+    FUNCHECK(
+        !InLineOfSight_NB(mech, target, MechX(target), MechY(target),
+                          FlMechRange(btech_context_get_map(
+                                          context->btech, mech_map_dbref(mech)),
+                                      mech, target)),
+        "#-1 INVALID TARGETID");
   }
   safe_tprintf_str(buff, bufc, "#%d", (int)mechnum);
 }
@@ -154,7 +155,7 @@ void fun_bthexlos(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!btech_context_is_mech(context->btech, mechnum), "#-1 INVALID MECH");
   FUNCHECK(!(mech = btech_context_get_mech(context->btech, mechnum)),
            "#-1 INVALID MECH");
-  FUNCHECK(!(map = btech_context_get_map(context->btech, mech->mapindex)),
+  FUNCHECK(!(map = btech_context_get_map(context->btech, mech_map_dbref(mech))),
            "#-1 INTERNAL ERROR");
 
   x = atoi(fargs[1]);
@@ -198,9 +199,10 @@ void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
            "#-1 INVALID MECH");
 
   if (InLineOfSight(mech, target, MechX(mech), MechY(mech),
-                    FlMechRange(getmap(mech->mapindex), mech, target)))
-    if (InLineOfSight_NB(mech, target, MechX(mech), MechY(mech),
-                         FlMechRange(getmap(mech->mapindex), mech, target)))
+                    FlMechRange(getmap(mech_map_dbref(mech)), mech, target)))
+    if (InLineOfSight_NB(
+            mech, target, MechX(mech), MechY(mech),
+            FlMechRange(getmap(mech_map_dbref(mech)), mech, target)))
       safe_tprintf_str(buff, bufc, "1");
     else
       safe_tprintf_str(buff, bufc, "2");

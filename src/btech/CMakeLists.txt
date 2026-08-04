@@ -120,6 +120,7 @@ set(BTECH_SOURCES
   movement/mech_update_heartbeat.c
   movement/mech_boosters.c
   unit/mech_persistence.c
+  unit/mech_radio_state.c
   unit/mech_stagger.c
   persistence/economy_sqlite.c
   persistence/map_restore.c
