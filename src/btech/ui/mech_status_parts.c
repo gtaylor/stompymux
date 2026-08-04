@@ -1,19 +1,51 @@
-#include "mech_status_internal.h"
+#include "mech_status_api.h"
+#include "mech_status_render_internal.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "command_handlers_api.h"
+#include "coolmenu.h"
+#include "equipment_types.h"
+#include "failures.h"
+#include "legacy_macros.h"
+#include "mech_build_api.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_partnames_api.h"
+#include "mech_parts.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_tech_do_api.h"
+#include "mech_utils_api.h"
+#include "mux/network/mux_event_alloc.h"
+#include "mux/server/server_config.h"
+#include "mux/support/formatting.h"
+#include "section_types.h"
+#include "weapon_settings.h"
 
 void mech_critstatus(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  BtechContext *context = mech_context(mech);
+  EvaluationContext *evaluation = btech_context_evaluation(context);
   char *args[1];
   int index;
 
   cch(MECH_USUALSM);
-  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW, "Huh?");
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  mech_parseattributes(buffer, args, 1) != 1,
+  DOCHECK_CONTEXT(context, mech_class(mech) == CLASS_MW, "Huh?");
+  DOCHECK_CONTEXT(context, mech_parseattributes(buffer, args, 1) != 1,
                   "You must specify a section to list the criticals for!");
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
-  DOCHECK_CONTEXT(mech->xcode.context, index == -1, "Invalid section!");
-  DOCHECK_CONTEXT(mech->xcode.context, !GetSectOInt(mech, index),
+  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                 args[0]);
+  DOCHECK_CONTEXT(context, index == -1, "Invalid section!");
+  DOCHECK_CONTEXT(context, !mech_section_original_internal(mech, index),
                   "Invalid section!");
   CriticalStatus(evaluation, player, mech, index);
 }
@@ -68,60 +100,64 @@ PartDisplayName pos_part_name(Mech *mech, int index, int loop) {
   PartDisplayName name;
 
   if (index < 0 || index >= NUM_SECTIONS || loop < 0 || loop >= NUM_CRITICALS) {
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
                        tprintf("INVALID: For mech #%ld, %d/%d was requested.",
-                               mech->mynum, index, loop));
+                               mech_dbref(mech), index, loop));
     return part_display_name("--?LocationBug?--");
   }
-  t = GetPartType(mech, index, loop);
-  b = GetPartBrand(mech, index, loop);
+  t = mech_critical_part_type(mech, index, loop);
+  b = mech_critical_brand(mech, index, loop);
   if (t == Special(HAND_OR_FOOT_ACTUATOR)) {
-    if (index == LLEG || index == RLEG || MechIsQuad(mech))
+    if (index == LLEG || index == RLEG || mech_movement_type(mech) == MOVE_QUAD)
       return part_display_name("Foot Actuator");
     return part_display_name("Hand Actuator");
   }
   if (t == Special(SHOULDER_OR_HIP)) {
-    if (index == LLEG || index == RLEG || MechIsQuad(mech))
+    if (index == LLEG || index == RLEG || mech_movement_type(mech) == MOVE_QUAD)
       return part_display_name("Hip");
     return part_display_name("Shoulder");
   }
 
   if (t == Special(HEAT_SINK)) {
-    return part_display_name((MechSpecials(mech) & DOUBLE_HEAT_TECH ||
-                              MechSpecials(mech) & CLAN_TECH)
+    return part_display_name((mech_technology_flags(mech) & DOUBLE_HEAT_TECH ||
+                              mech_technology_flags(mech) & CLAN_TECH)
                                  ? "Double Heatsink"
                                  : "Heatsink");
   }
 
   if (t == Special(SPLIT_CRIT_RIGHT) || t == Special(SPLIT_CRIT_LEFT)) {
     newindex = ReverseSplitCritLoc(mech, index, loop);
-    newloop = GetPartData(mech, index, loop);
+    newloop = mech_critical_data(mech, index, loop);
     if (newindex >= 0) {
-      t = GetPartType(mech, newindex, newloop);
-      b = GetPartBrand(mech, newindex, newloop);
+      t = mech_critical_part_type(mech, newindex, newloop);
+      b = mech_critical_brand(mech, newindex, newloop);
     }
   }
 
   if (t == Special(ENGINE)) {
-    return part_display_name(MechSpecials(mech) & LE_TECH   ? "Engine (Light)"
-                             : MechSpecials(mech) & CE_TECH ? "Engine (Compact)"
-                             : MechSpecials(mech) & XXL_TECH ? "Engine (XXL)"
-                             : MechSpecials(mech) & XL_TECH  ? "Engine (XL)"
-                                                             : "Engine");
+    int technology = mech_technology_flags(mech);
+    return part_display_name(technology & LE_TECH    ? "Engine (Light)"
+                             : technology & CE_TECH  ? "Engine (Compact)"
+                             : technology & XXL_TECH ? "Engine (XXL)"
+                             : technology & XL_TECH  ? "Engine (XL)"
+                                                     : "Engine");
   }
 
   if (t == Special(JUMP_JET)) {
-    return part_display_name(MechSpecials2(mech) & IMPROVED_JJ_TECH
+    return part_display_name(mech_technology_flags_secondary(mech) &
+                                     IMPROVED_JJ_TECH
                                  ? "JumpJet (Improved)"
                                  : "Jumpjet");
   }
 
   if (t == Special(COCKPIT)) {
-    return part_display_name(
-        MechSpecials2(mech) & SMALLCOCKPIT_TECH ? "Small Cockpit" : "Cockpit");
+    return part_display_name(mech_technology_flags_secondary(mech) &
+                                     SMALLCOCKPIT_TECH
+                                 ? "Small Cockpit"
+                                 : "Cockpit");
   }
 
-  name = part_name(mech->xcode.context, t, b);
+  name = part_name(mech_context(mech), t, b);
   if (!name.valid)
     return part_display_name("--?ErrorInTemplate?--");
   return name;
@@ -157,7 +193,8 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
 
 void mech_weaponspecs(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  BtechContext *context = mech_context(mech);
+  EvaluationContext *evaluation = btech_context_evaluation(context);
   int loop;
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
@@ -169,12 +206,13 @@ void mech_weaponspecs(DbRef player, void *data, char *buffer) {
   int duplicate, ii;
   CoolMenu *c;
   WeaponSpecsMenuContext menu = {
-      .configuration = mech->xcode.context->configuration,
-      .weapon_settings = &mech->xcode.context->weapon_settings,
+      .configuration = context->configuration,
+      .weapon_settings = &context->weapon_settings,
   };
 
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    num_weaps = FindWeapons(mech, loop, weaparray, weapdata, critical);
+    num_weaps =
+        FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 0);
     for (index = 0; index < num_weaps; index++) {
       duplicate = 0;
       for (ii = 0; ii < menu.weapon_count; ii++)
@@ -184,18 +222,17 @@ void mech_weaponspecs(DbRef player, void *data, char *buffer) {
         menu.weapons[menu.weapon_count++] = weaparray[index];
     }
   }
-  DOCHECK_CONTEXT(mech->xcode.context, !menu.weapon_count,
-                  "You have no weapons!");
-  if (strcmp(MechType_Name(mech), MechType_Ref(mech)))
+  DOCHECK_CONTEXT(context, !menu.weapon_count, "You have no weapons!");
+  if (strcmp(mech_model_name(mech), mech_model_reference(mech)))
     c = SelCol_FunStringMenuContextK(1,
                                      tprintf("Weapons statistics for %s: %s",
-                                             MechType_Name(mech),
-                                             MechType_Ref(mech)),
+                                             mech_model_name(mech),
+                                             mech_model_reference(mech)),
                                      wspec_fun, &menu, menu.weapon_count + 1);
   else
     c = SelCol_FunStringMenuContextK(
-        1, tprintf("Weapons statistics for %s", MechType_Ref(mech)), wspec_fun,
-        &menu, menu.weapon_count + 1);
+        1, tprintf("Weapons statistics for %s", mech_model_reference(mech)),
+        wspec_fun, &menu, menu.weapon_count + 1);
   ShowCoolMenu(evaluation, player, c);
   KillCoolMenu(c);
 }
@@ -216,12 +253,15 @@ char *sectstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
   if (!arg || !*arg)
     return status_text(buffer, "#-1 INVALID SECTION");
 
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), arg);
+  index =
+      ArmorSectionFromString(mech_class(mech), mech_movement_type(mech), arg);
   if (index == -1)
     return status_text(buffer, "#-1 INVALID SECTION");
 
   snprintf(buffer, MBUF_SIZE, "%d",
-           SectIsFlooded(mech, index) ? -1 : !(SectIsDestroyed(mech, index)));
+           mech_section_is_flooded(mech, index)
+               ? -1
+               : !mech_section_is_destroyed(mech, index));
 
   return buffer;
 }
@@ -234,8 +274,9 @@ char *critstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
   if (!arg || !*arg)
     return status_text(buffer, "#-1 INVALID SECTION");
 
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), arg);
-  if (index == -1 || !GetSectOInt(mech, index))
+  index =
+      ArmorSectionFromString(mech_class(mech), mech_movement_type(mech), arg);
+  if (index == -1 || !mech_section_original_internal(mech, index))
     return status_text(buffer, "#-1 INVALID SECTION");
 
   buffer[0] = '\0';
@@ -244,24 +285,27 @@ char *critstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
     if (buffer[0])
       append_status(buffer, MBUF_SIZE, ",");
     append_status(buffer, MBUF_SIZE, "%d|", i + 1);
-    type = GetPartType(mech, index, i);
+    type = mech_critical_part_type(mech, index, i);
     if (IsAmmo(type))
       type = FindAmmoType(mech, index, i);
-    tmp = get_parts_long_name(mech->xcode.context, type,
-                              GetPartBrand(mech, index, i));
+    tmp = get_parts_long_name(mech_context(mech), type,
+                              mech_critical_brand(mech, index, i));
     append_status(buffer, MBUF_SIZE, "|%s", tmp ? tmp : "Empty");
     append_status(buffer, MBUF_SIZE, "|%d",
-                  (PartIsNonfunctional(mech, index, i) && type != EMPTY &&
-                   (!IsCrap(type) || SectIsDestroyed(mech, index)))
+                  (mech_critical_is_nonfunctional(mech, index, i) &&
+                   type != EMPTY &&
+                   (!mech_part_is_structural_placeholder(type) ||
+                    mech_section_is_destroyed(mech, index)))
                       ? -1
-                      : PartTempNuke(mech, index, i));
+                      : mech_critical_temporary_failure(mech, index, i));
     append_status(buffer, MBUF_SIZE, "|%d",
-                  IsWeapon(type)                    ? 1
-                  : IsAmmo(type)                    ? 2
-                  : IsActuator(type)                ? 3
-                  : IsCargo(type)                   ? 4
-                  : (IsCrap(type) || type == EMPTY) ? 5
-                                                    : 0);
+                  IsWeapon(type)     ? 1
+                  : IsAmmo(type)     ? 2
+                  : IsActuator(type) ? 3
+                  : IsCargo(type)    ? 4
+                  : (mech_part_is_structural_placeholder(type) || type == EMPTY)
+                      ? 5
+                      : 0);
   }
   return buffer;
 }
@@ -275,28 +319,35 @@ char *armorstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
     return status_text(buffer, "#-1 INVALID SECTION");
 
   if (strcmp(arg, "all") == 0) {
-    locs = ProperSectionStringFromType(MechType(mech), MechMove(mech));
+    locs =
+        ProperSectionStringFromType(mech_class(mech), mech_movement_type(mech));
     curarm = totarm = curint = totint = 0;
     for (iter = 0; locs[iter]; iter++) {
-      curarm += GetSectArmor(mech, iter) + GetSectRArmor(mech, iter);
-      totarm += GetSectOArmor(mech, iter) + GetSectORArmor(mech, iter);
-      curint += GetSectInt(mech, iter);
-      totint += GetSectOInt(mech, iter);
+      curarm +=
+          mech_section_armor(mech, iter) + mech_section_rear_armor(mech, iter);
+      totarm += mech_section_original_armor(mech, iter) +
+                mech_section_original_rear_armor(mech, iter);
+      curint += mech_section_internal(mech, iter);
+      totint += mech_section_original_internal(mech, iter);
     }
     buffer[0] = '\0';
     snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d", curarm, totarm, curint, totint);
     return buffer;
   }
 
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), arg);
-  if (index == -1 || !GetSectOInt(mech, index))
+  index =
+      ArmorSectionFromString(mech_class(mech), mech_movement_type(mech), arg);
+  if (index == -1 || !mech_section_original_internal(mech, index))
     return status_text(buffer, "#-1 INVALID SECTION");
 
   buffer[0] = '\0';
-  snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d|%d/%d", GetSectArmor(mech, index),
-           GetSectOArmor(mech, index), GetSectInt(mech, index),
-           GetSectOInt(mech, index), GetSectRArmor(mech, index),
-           GetSectORArmor(mech, index));
+  snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d|%d/%d",
+           mech_section_armor(mech, index),
+           mech_section_original_armor(mech, index),
+           mech_section_internal(mech, index),
+           mech_section_original_internal(mech, index),
+           mech_section_rear_armor(mech, index),
+           mech_section_original_rear_armor(mech, index));
   return buffer;
 }
 
@@ -331,32 +382,34 @@ char *weaponstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
     sect = -1;
   else if (!*arg)
     return status_text(buffer, "#-1 INVALID SECTION");
-  else if ((sect = ArmorSectionFromString(MechType(mech), MechMove(mech),
-                                          arg)) == -1 ||
-           !GetSectOInt(mech, sect))
+  else if ((sect = ArmorSectionFromString(
+                mech_class(mech), mech_movement_type(mech), arg)) == -1 ||
+           !mech_section_original_internal(mech, sect))
     return status_text(buffer, "#-1 INVALID SECTION");
 
   buffer[0] = '\0';
   for ((sect == -1) ? (loopsect = 0) : (loopsect = sect);
        (sect == -1) ? (loopsect < NUM_SECTIONS) : (loopsect < sect + 1);
        loopsect++) {
-    count = FindWeapons(mech, loopsect, weaparray, weapdata, criticals);
+    count =
+        FindWeapons_Advanced(mech, loopsect, weaparray, weapdata, criticals, 0);
     for (i = 0; i < count; i++, totalcount++) {
       if (buffer[0])
         append_status(buffer, MBUF_SIZE, ",");
-      type = Weapon2I(GetPartType(mech, loopsect, criticals[i]));
+      type = Weapon2I(mech_critical_part_type(mech, loopsect, criticals[i]));
       append_status(
           buffer, MBUF_SIZE, "%d|%s|%d|%d|%d|%d|%d|%d", totalcount,
-          get_parts_long_name(mech->xcode.context, I2Weapon(type),
-                              GetPartBrand(mech, loopsect, criticals[i])),
+          get_parts_long_name(
+              mech_context(mech), I2Weapon(type),
+              mech_critical_brand(mech, loopsect, criticals[i])),
           GetWeaponCrits(mech, type),
-          GetPartBrand(mech, loopsect, criticals[i]),
+          mech_critical_brand(mech, loopsect, criticals[i]),
           btech_weapon_settings_recycle_time(
-              &mech->xcode.context->weapon_settings, type),
+              &mech_context(mech)->weapon_settings, type),
           weapdata[i], MechWeapons[type].type,
-          PartIsNonfunctional(mech, loopsect, criticals[i]) ? 2
-          : PartTempNuke(mech, loopsect, criticals[i])      ? 1
-                                                            : 0);
+          mech_critical_is_nonfunctional(mech, loopsect, criticals[i])    ? 2
+          : mech_critical_temporary_failure(mech, loopsect, criticals[i]) ? 1
+                                                                          : 0);
     }
   }
   return buffer;
@@ -366,10 +419,11 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
                     char *buf_flag, char buffer[static MBUF_SIZE]) {
   int index, crit, flag, type;
 
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), buf_section);
+  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                 buf_section);
   if (index == -1)
     return status_text(buffer, "#-1 INVALID SECTION");
-  if (!GetSectOInt(mech, index))
+  if (!mech_section_original_internal(mech, index))
     return status_text(buffer, "#-1 INVALID SECTION");
   crit = atoi(buf_critnum);
   if (crit < 1 || crit > CritsInLoc(mech, index))
@@ -394,16 +448,16 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
   else
     flag = 0;
 
-  type = GetPartType(mech, index, crit);
+  type = mech_critical_part_type(mech, index, crit);
 
   if (flag == 1) {
-    if (PartIsDisabled(mech, index, crit))
+    if (mech_critical_is_disabled(mech, index, crit))
       return status_text(buffer, "Disabled");
-    if (PartIsDestroyed(mech, index, crit))
+    if (mech_critical_is_destroyed(mech, index, crit))
       return status_text(buffer, "Destroyed");
     return status_text(buffer, "Operational");
   } else if (flag == 2) {
-    snprintf(buffer, MBUF_SIZE, "%d", GetPartData(mech, index, crit));
+    snprintf(buffer, MBUF_SIZE, "%d", mech_critical_data(mech, index, crit));
     return buffer;
   } else if (flag == 3) {
     if (!IsAmmo(type))
@@ -422,27 +476,27 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
       weapindex = Weapon2I(type);
       snprintf(buffer, MBUF_SIZE, "%c%c",
                GetWeaponFireModeLetter_Model_Mode(
-                   weapindex, GetPartFireMode(mech, index, crit)),
+                   weapindex, mech_critical_fire_mode(mech, index, crit)),
                GetWeaponAmmoModeLetter_Model_Mode(
-                   weapindex, GetPartAmmoMode(mech, index, crit)));
+                   weapindex, mech_critical_ammo_mode(mech, index, crit)));
       return buffer;
     }
   } else if (flag == 6) {
     if (!IsAmmo(type))
       return status_text(buffer, "#-1 NOT AMMO");
     snprintf(buffer, MBUF_SIZE, "%d",
-             GetPartFireMode(mech, index, crit) & HALFTON_MODE ? 1 : 0);
+             mech_critical_fire_mode(mech, index, crit) & HALFTON_MODE ? 1 : 0);
     return buffer;
   }
 
-  if (type == EMPTY || IsCrap(type))
+  if (type == EMPTY || mech_part_is_structural_placeholder(type))
     return status_text(buffer, "Empty");
   if (flag == 0) {
     type = mech_parts_alias(mech, index, type);
   }
   snprintf(buffer, MBUF_SIZE, "%s",
-           get_parts_vlong_name(mech->xcode.context, type,
-                                GetPartBrand(mech, index, crit)));
+           get_parts_vlong_name(mech_context(mech), type,
+                                mech_critical_brand(mech, index, crit)));
   return buffer;
 }
 
@@ -461,18 +515,18 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   for (i = 0; i < max_crits; i++) {
     loop = ((i % 2) ? (max_crits / 2) : 0) + i / 2;
     snprintf(buffer, sizeof(buffer), "%2d ", loop + 1);
-    type = GetPartType(mech, index, loop);
-    data = GetPartData(mech, index, loop);
-    wFireMode = GetPartFireMode(mech, index, loop);
+    type = mech_critical_part_type(mech, index, loop);
+    data = mech_critical_data(mech, index, loop);
+    wFireMode = mech_critical_fire_mode(mech, index, loop);
     if (IsAmmo(type)) {
       char trash[50];
 
       strcat(buffer, &MechWeapons[Ammo2WeaponI(type)].name[3]);
-      strcat(buffer,
-             GetAmmoDesc_Model_Mode(Ammo2WeaponI(type),
-                                    GetPartAmmoMode(mech, index, loop)));
+      strcat(buffer, GetAmmoDesc_Model_Mode(
+                         Ammo2WeaponI(type),
+                         mech_critical_ammo_mode(mech, index, loop)));
       strcat(buffer, " Ammo");
-      if (!PartIsNonfunctional(mech, index, loop)) {
+      if (!mech_critical_is_nonfunctional(mech, index, loop)) {
         snprintf(trash, sizeof(trash), " [%3.3d/%3.3d]", data,
                  FullAmmo(mech, index, loop));
         strcat(buffer, trash);
@@ -490,7 +544,7 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
       if (IsWeapon(type) && (wFireMode & REAR_MOUNT))
         strcat(buffer, " (R)");
-      if (!PartIsNonfunctional(mech, index, loop)) {
+      if (!mech_critical_is_nonfunctional(mech, index, loop)) {
         if (Special2I(type) == ARTEMIS_IV) {
           char trash[50];
           if (data) {
@@ -501,19 +555,22 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       }
     }
 
-    if (PartIsBroken(mech, index, loop) && type != EMPTY &&
-        (!IsCrap(type) || SectIsDestroyed(mech, index)))
-      strcat(buffer,
-             PartIsDestroyed(mech, index, loop) ? " (Destroyed)" : " (Broken)");
-    else if (PartIsDisabled(mech, index, loop) && type != EMPTY)
+    if (mech_critical_is_broken(mech, index, loop) && type != EMPTY &&
+        (!mech_part_is_structural_placeholder(type) ||
+         mech_section_is_destroyed(mech, index)))
+      strcat(buffer, mech_critical_is_destroyed(mech, index, loop)
+                         ? " (Destroyed)"
+                         : " (Broken)");
+    else if (mech_critical_is_disabled(mech, index, loop) && type != EMPTY)
       strcat(buffer, " (Disabled)");
-    else if (PartIsDamaged(mech, index, loop) && type != EMPTY)
+    else if (mech_critical_is_damaged(mech, index, loop) && type != EMPTY)
       strcat(buffer, " (Damaged)");
 
     foo[count++] = strdup(buffer);
   }
 
-  ArmorStringFromIndex(index, buffer, MechType(mech), MechMove(mech));
+  ArmorStringFromIndex(index, buffer, mech_class(mech),
+                       mech_movement_type(mech));
   strcat(buffer, " Criticals");
   cm = SelCol_StringMenu(2, buffer, foo);
   ShowCoolMenu(evaluation, player, cm);

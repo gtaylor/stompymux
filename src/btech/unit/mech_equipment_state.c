@@ -22,6 +22,34 @@ int mech_critical_ammo_mode(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].ammomode;
 }
 
+int mech_critical_temporary_failure(const Mech *mech, int section,
+                                    int critical) {
+  return mech->ud.sections[section].criticals[critical].brand >> 4;
+}
+
+bool mech_critical_is_disabled(const Mech *mech, int section, int critical) {
+  return mech_critical_fire_mode(mech, section, critical) & DISABLED_MODE;
+}
+
+bool mech_critical_is_destroyed(const Mech *mech, int section, int critical) {
+  return mech_critical_fire_mode(mech, section, critical) & DESTROYED_MODE;
+}
+
+bool mech_critical_is_broken(const Mech *mech, int section, int critical) {
+  return mech_critical_fire_mode(mech, section, critical) &
+         (DESTROYED_MODE | BROKEN_MODE);
+}
+
+bool mech_critical_is_damaged(const Mech *mech, int section, int critical) {
+  return mech_critical_fire_mode(mech, section, critical) & DAMAGED_MODE;
+}
+
+bool mech_critical_is_nonfunctional(const Mech *mech, int section,
+                                    int critical) {
+  return mech_critical_is_disabled(mech, section, critical) ||
+         mech_critical_is_broken(mech, section, critical);
+}
+
 void mech_critical_temporary_failure_set(Mech *mech, int section, int critical,
                                          int failure) {
   struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
@@ -61,6 +89,10 @@ bool mech_section_is_destroyed(const Mech *mech, int section) {
          !is_dropship;
 }
 
+bool mech_section_is_flooded(const Mech *mech, int section) {
+  return mech->ud.sections[section].config & SECTION_FLOODED;
+}
+
 bool mech_critical_is_operational_special(const Mech *mech, int section,
                                           int critical, int special) {
   const struct CriticalSlot *slot =
@@ -71,6 +103,15 @@ bool mech_critical_is_operational_special(const Mech *mech, int section,
 
 bool mech_section_carries_club(const Mech *mech, int section) {
   return mech->ud.sections[section].specials & CARRYING_CLUB;
+}
+
+bool mech_part_is_structural_placeholder(int part_type) {
+  return part_type == I2Special(ENDO_STEEL) ||
+         part_type == I2Special(FERRO_FIBROUS) ||
+         part_type == I2Special(TRIPLE_STRENGTH_MYOMER) ||
+         part_type == I2Special(STEALTH_ARMOR) ||
+         part_type == I2Special(HVY_FERRO_FIBROUS) ||
+         part_type == I2Special(LT_FERRO_FIBROUS);
 }
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {

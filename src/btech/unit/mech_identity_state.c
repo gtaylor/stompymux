@@ -20,6 +20,12 @@ MechUnitId mech_unit_id(const Mech *mech) {
   return (MechUnitId){.first = mech->ID[0], .second = mech->ID[1]};
 }
 
+const char *mech_model_name(const Mech *mech) { return mech->ud.mech_name; }
+
+const char *mech_model_reference(const Mech *mech) {
+  return mech->ud.mech_type;
+}
+
 void mech_map_dbref_set(Mech *mech, DbRef map_dbref) {
   mech->mapindex = map_dbref;
 }
