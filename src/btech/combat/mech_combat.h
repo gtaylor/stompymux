@@ -15,6 +15,9 @@
 
 #include "mech.h"
 
+void mech_c3_track_emit(Mech *mech, DbRef network_reference,
+                        Mech *network_mech);
+
 #define Clustersize(weapindx)                                                  \
   (((MechWeapons[weapindx].special & (IDF | MRM | ROCKET)) &&                  \
     (MechWeapons[weapindx].damage == 1))                                       \

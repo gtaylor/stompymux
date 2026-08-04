@@ -32,6 +32,10 @@ set(BTECH_SOURCES
   combat/mech_bth.c
   combat/mech_bth_movement.c
   combat/mech_combat.c
+  combat/mech_fire_command.c
+  combat/mech_fire_resolution.c
+  combat/mech_hit_resolution.c
+  combat/mech_terrain_effects.c
   combat/mech_combat_misc.c
   combat/mech_combat_missile.c
   combat/mech_armor_damage.c
