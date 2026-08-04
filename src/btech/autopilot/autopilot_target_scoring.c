@@ -13,7 +13,19 @@
  *
  */
 
-#include "autopilot_autogun_internal.h"
+#include <math.h>
+
+#include "autopilot.h"
+#include "equipment_types.h"
+#include "map_los_api.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
+#include "mech_position_api.h"
+#include "mech_progress_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_utils_api.h"
 
 int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
                            BattleMap *map) {
@@ -57,15 +69,15 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
    * give us a good starting point */
 
   /* Is the target dead? */
-  if (Destroyed(target))
+  if (mech_is_destroyed(target))
     return target_score;
 
   /* If target is combat safe don't even try to shoot it */
-  if (MechStatus(target) & COMBAT_SAFE)
+  if (mech_condition_summary(target).combat_safe)
     return target_score;
 
   /* Compare Teams - for now we won't try to shoot a guy on our team */
-  if (MechTeam(target) == MechTeam(mech))
+  if (mech_team(target) == mech_team(mech))
     return target_score;
 
   /* Are we in los of the target - not sure really what to do about this
@@ -74,7 +86,8 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
 
   /* Range to target */
   range =
-      FindHexRange(MechFX(mech), MechFY(mech), MechFX(target), MechFY(target));
+      FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
+                   mech_position_real_x(target), mech_position_real_y(target));
 
   /* Our we outside the range of the AI's System */
   if ((range >= (float)AUTO_GUN_MAX_RANGE)) {
@@ -86,7 +99,7 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
   range_score = -10.0 * range + 300.0;
 
   /* Get the Speed of the target */
-  target_speed = MechSpeed(target);
+  target_speed = mech_current_speed(target);
 
   /* Speed score calc */
   /* Min speed is 0, max is 150 (can go higher tho), and score goes from
@@ -95,7 +108,7 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
   speed_score = -2.0 * target_speed + 300.0;
 
   /* Get the BV of the target */
-  target_bv = MechBV(target);
+  target_bv = mech_battle_value(target);
 
   /* BV score calc */
   /* Min bv is 0, max is around 2000 (can go higher), and score goes from
@@ -107,14 +120,14 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
   for (section = 0; section < NUM_SECTIONS; section++) {
 
     /* Total the current armor and original armor */
-    total_armor_current +=
-        GetSectArmor(target, section) + GetSectRArmor(target, section);
-    total_armor_original +=
-        GetSectOArmor(target, section) + GetSectORArmor(target, section);
+    total_armor_current += mech_section_armor(target, section) +
+                           mech_section_rear_armor(target, section);
+    total_armor_original += mech_section_original_armor(target, section) +
+                            mech_section_original_rear_armor(target, section);
 
     /* Total the current internal and original internal */
-    total_internal_current += GetSectInt(target, section);
-    total_internal_original += GetSectOInt(target, section);
+    total_internal_current += mech_section_internal(target, section);
+    total_internal_original += mech_section_original_internal(target, section);
   }
 
   /* Ok like above, we set a min and max, for armor was 100% to 0%
@@ -153,15 +166,15 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
   }
 
   /* Get the 'state' ie: shutdown, prone whatever */
-  if (!Started(target))
+  if (!mech_is_started(target))
     status_score += 100.0;
 
-  if (Uncon(target))
+  if (mech_pilot_is_unconscious(target))
     status_score += 100.0;
 
   /* Since the max bv is somewhat around 2000, lets put mechs in LOS on an even
    * scale */
-  if (MechToMech_LOSFlag(map, mech, target) & MECHLOSFLAG_SEEN)
+  if (battle_map_unit_is_seen(map, mech, target))
     status_score += 2000.0;
 
   /* Add the individual scores and return the value */

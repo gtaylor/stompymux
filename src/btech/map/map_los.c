@@ -10,6 +10,7 @@
  */
 
 #include "map_los.h"
+#include "map_los_api.h"
 
 #include <string.h>
 
@@ -33,6 +34,12 @@
 
 #define INDEX2X(los_map, i) (((i) % (los_map)->xsize) + (los_map)->startx)
 #define INDEX2Y(los_map, i) (((i) / (los_map)->xsize) + (los_map)->starty)
+
+bool battle_map_unit_is_seen(const BattleMap *map, const Mech *observer,
+                             const Mech *target) {
+  return map->LOSinfo[mech_map_slot(observer)][mech_map_slot(target)] &
+         MECHLOSFLAG_SEEN;
+}
 
 int los_map_hex_index(HexLosMap *map_info, int x, int y) {
   if (x < map_info->startx || x > map_info->startx + map_info->xsize ||
