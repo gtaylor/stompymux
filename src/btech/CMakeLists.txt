@@ -50,6 +50,9 @@ set(BTECH_SOURCES
   map/map_dynamic.c
   map/map_los.c
   map/map_obj.c
+  map/map_obj_commands.c
+  map/map_links.c
+  map/map_buildings.c
   map/map_terrain.c
   movement/aero_bomb.c
   movement/aero_move.c
