@@ -1,4 +1,6 @@
-#include "mech_status_internal.h"
+#include "mech_status_templates_internal.h"
+
+#include "btconfig.h"
 
 /* Don't indent the entire next section -- it contains ASCII graphics */
 /* *INDENT-OFF* */

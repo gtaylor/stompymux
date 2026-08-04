@@ -195,6 +195,8 @@ done < <(rg -n '#include "mech(_maps_internal|_macros)?\.h"' \
   src/btech/ui/mech_notify_radio_config.c \
   src/btech/ui/mech_radio_render_internal.h \
   src/btech/ui/mech_status_render_internal.h \
+  src/btech/ui/mech_status_templates_internal.h \
+  src/btech/ui/mech_status_armor_templates.c \
   src/btech/ui/mech_status_weapons.c \
   src/btech/ui/mech_tactical_command.c \
   src/btech/ui/mech_tactical_layout.c \

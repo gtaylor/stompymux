@@ -1,4 +1,5 @@
 #include "mech_status_internal.h"
+#include "mech_status_templates_internal.h"
 
 int ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *ret_armor_value) {
   int armor_value;
