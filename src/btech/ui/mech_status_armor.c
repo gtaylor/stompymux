@@ -1,5 +1,23 @@
-#include "mech_status_internal.h"
+#include "mech_status_api.h"
 #include "mech_status_templates_internal.h"
+
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "btconfig.h"
+#include "equipment_types.h"
+#include "legacy_macros.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
+#include "mech_parts.h"
+#include "mech_specification_api.h"
+#include "mech_utils_api.h"
+#include "mux/commands/command_context.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/support/formatting.h"
+#include "section_types.h"
 
 int ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *ret_armor_value) {
   int armor_value;
@@ -13,23 +31,23 @@ int ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *ret_armor_value) {
   switch (flag & ARMOR_TYPE_MASK) {
   case ARMOR_FRONT:
     /* Front armor.  */
-    armor_value = GetSectArmor(mech, loc);
-    armor_denom = GetSectOArmor(mech, loc);
+    armor_value = mech_section_armor(mech, loc);
+    armor_denom = mech_section_original_armor(mech, loc);
 
     if (mech_section_armor_repairing(mech, loc))
       repair_flag = 1;
     break;
 
   case ARMOR_INTERNAL:
-    if (MechType(mech) == CLASS_AERO && loc == 0) {
+    if (mech_class(mech) == CLASS_AERO && loc == 0) {
       /* Aero SI.  loc doesn't actually matter, but we check
        * it in case we want to use other locs later. */
-      armor_value = AeroSI(mech);
-      armor_denom = AeroSIOrig(mech);
+      armor_value = mech_structural_integrity(mech);
+      armor_denom = mech_original_structural_integrity(mech);
     } else {
       /* Internal armor.  */
-      armor_value = GetSectInt(mech, loc);
-      armor_denom = GetSectOInt(mech, loc);
+      armor_value = mech_section_internal(mech, loc);
+      armor_denom = mech_section_original_internal(mech, loc);
 
       if (mech_section_internals_repairing(mech, loc))
         repair_flag = 1;
@@ -38,8 +56,8 @@ int ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *ret_armor_value) {
 
   case ARMOR_REAR:
     /* Rear armor.  */
-    armor_value = GetSectRArmor(mech, loc);
-    armor_denom = GetSectORArmor(mech, loc);
+    armor_value = mech_section_rear_armor(mech, loc);
+    armor_denom = mech_section_original_rear_armor(mech, loc);
 
     if (mech_section_rear_armor_repairing(mech, loc))
       repair_flag = 1;
@@ -198,7 +216,7 @@ static ArmorFieldText armor_field_text(Mech *mech, const int loc,
   armor_level = ArmorEvaluateSerious(mech, loc, flag, &armor_value);
 
   /* Get strings.  */
-  if (!(flag & ARMOR_FLAG_SHOW_DEST) && !GetSectInt(mech, loc)) {
+  if (!(flag & ARMOR_FLAG_SHOW_DEST) && !mech_section_internal(mech, loc)) {
     /* Blank field. (Destroyed section.) */
     memset(result.text, ' ', width);
     result.text[width] = '\0';
@@ -221,9 +239,9 @@ static bool get_lua_status_template(EvaluationContext *evaluation, DbRef player,
       &(LuaMechStatusInvocation){
           .descriptor =
               evaluation->command ? evaluation->command->descriptor : nullptr,
-          .object = mech->mynum,
+          .object = mech_dbref(mech),
           .enactor = player,
-          .cause = mech->mynum,
+          .cause = mech_dbref(mech),
       },
       &status);
   if (!status.defined)
@@ -256,7 +274,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   char tmpbuf[8192];
 
   /* Select status template.  */
-  switch (MechType(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_MW:
     /* TODO: Should probably make this user-selectable by adding
      * some more formatting flags.  */
@@ -278,21 +296,21 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     srcbuf = tmpbuf;
   } else {
     /* Use standard template.  */
-    switch (MechType(mech)) {
+    switch (mech_class(mech)) {
     case CLASS_MW:
       srcbuf = mwdesc;
       break;
 
     case CLASS_MECH:
-      if (MechIsQuad(mech)) {
+      if (mech_movement_type(mech) == MOVE_QUAD) {
         srcbuf = quaddesc;
       } else {
 #ifdef WEIGHTVARIABLE_STATUS
-        if (MechTons(mech) <= 35)
+        if (mech_tonnage(mech) <= 35)
           srcbuf = lightmechdesc;
-        else if (MechTons(mech) <= 55)
+        else if (mech_tonnage(mech) <= 55)
           srcbuf = mediummechdesc;
-        else if (MechTons(mech) <= 75)
+        else if (mech_tonnage(mech) <= 75)
           srcbuf = heavymechdesc;
         else
           srcbuf = assaultmechdesc;
@@ -323,16 +341,16 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       break;
 
     case CLASS_VEH_GROUND:
-      if (GetSectOInt(mech, TURRET))
+      if (mech_section_original_internal(mech, TURRET))
         srcbuf = vehdesc;
       else
         srcbuf = veh_not_desc;
       break;
 
     case CLASS_VEH_NAVAL:
-      if (MechMove(mech) == MOVE_FOIL)
+      if (mech_movement_type(mech) == MOVE_FOIL)
         srcbuf = foildesc;
-      else if (MechMove(mech) == MOVE_HULL)
+      else if (mech_movement_type(mech) == MOVE_HULL)
         srcbuf = shipdesc;
       else
         srcbuf = subdesc;
@@ -520,7 +538,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         saved_sbp = sbp + 1;
         next_state = BTS_NORMAL;
 
-        if (GetSectInt(mech, tmp_value1)) {
+        if (mech_section_internal(mech, tmp_value1)) {
           SAFE_CHR_DBP(*sbp);
         } else {
           SAFE_CHR_DBP(' ');
@@ -554,7 +572,8 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         saved_sbp = sbp + 1;
         next_state = BTS_NORMAL;
 
-        if (GetSectInt(mech, tmp_value1) || GetSectInt(mech, tmp_value2)) {
+        if (mech_section_internal(mech, tmp_value1) ||
+            mech_section_internal(mech, tmp_value2)) {
           SAFE_CHR_DBP(*sbp);
         } else {
           SAFE_CHR_DBP(' ');
@@ -614,22 +633,22 @@ int hasPhysical(Mech *objMech, int wLoc, int wPhysType) {
   switch (wPhysType) {
   case PHY_AXE:
     wType = AXE;
-    wSize = MechTons(objMech) / 15;
+    wSize = mech_tonnage(objMech) / 15;
     break;
 
   case PHY_CLAW:
     wType = CLAW;
-    wSize = MechTons(objMech) / 15;
+    wSize = mech_tonnage(objMech) / 15;
     break;
 
   case PHY_SWORD:
     wType = SWORD;
-    wSize = MechTons(objMech) / 15;
+    wSize = mech_tonnage(objMech) / 15;
     break;
 
   case PHY_MACE:
     wType = MACE;
-    wSize = MechTons(objMech) / 15;
+    wSize = mech_tonnage(objMech) / 15;
     break;
 
   case PHY_SAW:
@@ -650,32 +669,37 @@ int canUsePhysical(Mech *objMech, int wLoc, int wPhysType) {
   switch (wPhysType) {
   case PHY_AXE:
   case PHY_SWORD:
-    if (SectIsDestroyed(objMech, wLoc))
+    if (mech_section_is_destroyed(objMech, wLoc))
       tRet = 0;
-    else if (!OkayCritSectS2(objMech, wLoc, 0, SHOULDER_OR_HIP))
+    else if (!mech_critical_is_operational_special(objMech, wLoc, 0,
+                                                   SHOULDER_OR_HIP))
       tRet = 0;
-    else if (!OkayCritSectS2(objMech, wLoc, 3, HAND_OR_FOOT_ACTUATOR))
+    else if (!mech_critical_is_operational_special(objMech, wLoc, 3,
+                                                   HAND_OR_FOOT_ACTUATOR))
       tRet = 0;
     break;
 
   case PHY_CLAW:
-    if (SectIsDestroyed(objMech, wLoc))
+    if (mech_section_is_destroyed(objMech, wLoc))
       tRet = 0;
     break;
 
   case PHY_MACE:
-    if (SectIsDestroyed(objMech, wLoc))
+    if (mech_section_is_destroyed(objMech, wLoc))
       tRet = 0;
-    else if (!OkayCritSectS2(objMech, wLoc, 0, SHOULDER_OR_HIP))
+    else if (!mech_critical_is_operational_special(objMech, wLoc, 0,
+                                                   SHOULDER_OR_HIP))
       tRet = 0;
-    else if (!OkayCritSectS2(objMech, wLoc, 3, HAND_OR_FOOT_ACTUATOR))
+    else if (!mech_critical_is_operational_special(objMech, wLoc, 3,
+                                                   HAND_OR_FOOT_ACTUATOR))
       tRet = 0;
     break;
 
   case PHY_SAW:
-    if (SectIsDestroyed(objMech, wLoc))
+    if (mech_section_is_destroyed(objMech, wLoc))
       tRet = 0;
-    else if (!OkayCritSectS2(objMech, wLoc, 0, SHOULDER_OR_HIP))
+    else if (!mech_critical_is_operational_special(objMech, wLoc, 0,
+                                                   SHOULDER_OR_HIP))
       tRet = 0;
     break;
 

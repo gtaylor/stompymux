@@ -46,6 +46,12 @@ int mech_fuel(const Mech *mech) { return mech->ud.fuel; }
 
 int mech_original_fuel(const Mech *mech) { return mech->ud.fuel_orig; }
 
+int mech_structural_integrity(const Mech *mech) { return mech->ud.si; }
+
+int mech_original_structural_integrity(const Mech *mech) {
+  return mech->ud.si_orig;
+}
+
 void mech_maximum_fuel_set(Mech *mech, int fuel) { mech->rd.maxfuel = fuel; }
 
 void mech_cargo_weight_set(Mech *mech, int weight) {

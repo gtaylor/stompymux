@@ -22,6 +22,14 @@ typedef struct PartDisplayName {
   bool valid;
 } PartDisplayName;
 
+typedef enum MechPhysicalWeaponType {
+  PHY_AXE = 1,
+  PHY_SWORD,
+  PHY_MACE,
+  PHY_SAW,
+  PHY_CLAW,
+} MechPhysicalWeaponType;
+
 /*
  * Armor status flags for ArmorEvaluateSerious().
  *

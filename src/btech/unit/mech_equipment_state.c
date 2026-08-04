@@ -28,6 +28,18 @@ int mech_section_armor(const Mech *mech, int section) {
   return mech->ud.sections[section].armor;
 }
 
+int mech_section_rear_armor(const Mech *mech, int section) {
+  return mech->ud.sections[section].rear;
+}
+
+int mech_section_internal(const Mech *mech, int section) {
+  return mech->ud.sections[section].internal;
+}
+
+int mech_section_original_internal(const Mech *mech, int section) {
+  return mech->ud.sections[section].internal_orig;
+}
+
 bool mech_section_is_destroyed(const Mech *mech, int section) {
   int unit_class = mech->ud.type;
   bool is_dropship = unit_class == CLASS_DS || unit_class == CLASS_SPHEROID_DS;
@@ -35,6 +47,14 @@ bool mech_section_is_destroyed(const Mech *mech, int section) {
   return mech->ud.sections[section].armor == 0 &&
          (is_aerospace || mech->ud.sections[section].internal == 0) &&
          !is_dropship;
+}
+
+bool mech_critical_is_operational_special(const Mech *mech, int section,
+                                          int critical, int special) {
+  const struct CriticalSlot *slot =
+      &mech->ud.sections[section].criticals[critical];
+  return slot->type == I2Special(special) &&
+         !(slot->firemode & (DISABLED_MODE | DESTROYED_MODE | BROKEN_MODE));
 }
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {

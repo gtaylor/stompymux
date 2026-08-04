@@ -56,11 +56,3 @@
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "weapon_settings.h"
-
-enum {
-  PHY_AXE = 1,
-  PHY_SWORD,
-  PHY_MACE,
-  PHY_SAW,
-  PHY_CLAW,
-};
