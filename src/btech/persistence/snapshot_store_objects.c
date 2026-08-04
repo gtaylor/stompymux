@@ -34,6 +34,7 @@ int btech_store_simple_object(void *key, void *data, int depth,
   Turret *turret;
   Autopilot *autopilot;
   Mech *mech;
+  MechPersistenceSnapshot snapshot;
   int index;
   int slot;
   int argument_index;
@@ -47,50 +48,73 @@ int btech_store_simple_object(void *key, void *data, int depth,
     return 0;
   if (xcode->type == GTYPE_MECH) {
     mech = (Mech *)xcode;
+    mech_persistence_snapshot_export(mech, &snapshot);
     if (btech_special_bind_int(context->mech, 1, (DbRef)key) < 0 ||
-        btech_special_bind_int(context->mech, 2, mech->ID[0]) < 0 ||
-        btech_special_bind_int(context->mech, 3, mech->ID[1]) < 0 ||
-        btech_special_bind_int(context->mech, 4, mech->brief) < 0 ||
-        btech_special_bind_int(context->mech, 5, mech->mapnumber) < 0 ||
-        btech_special_bind_int(context->mech, 6, mech->mapindex) < 0 ||
-        sqlite3_bind_text(context->mech, 7, mech->ud.mech_name, -1,
+        btech_special_bind_int(context->mech, 2, snapshot.id[0]) < 0 ||
+        btech_special_bind_int(context->mech, 3, snapshot.id[1]) < 0 ||
+        btech_special_bind_int(context->mech, 4, snapshot.brief) < 0 ||
+        btech_special_bind_int(context->mech, 5, snapshot.map_number) < 0 ||
+        btech_special_bind_int(context->mech, 6, snapshot.map_dbref) < 0 ||
+        sqlite3_bind_text(context->mech, 7, snapshot.definition.mech_name, -1,
                           SQLITE_TRANSIENT) != SQLITE_OK ||
-        sqlite3_bind_text(context->mech, 8, mech->ud.mech_type, -1,
+        sqlite3_bind_text(context->mech, 8, snapshot.definition.mech_type, -1,
                           SQLITE_TRANSIENT) != SQLITE_OK ||
-        sqlite3_bind_text(context->mech, 9, mech->ud.unit_era, -1,
+        sqlite3_bind_text(context->mech, 9, snapshot.definition.unit_era, -1,
                           SQLITE_TRANSIENT) != SQLITE_OK ||
-        sqlite3_bind_text(context->mech, 10, mech->ud.unit_tro, -1,
+        sqlite3_bind_text(context->mech, 10, snapshot.definition.unit_tro, -1,
                           SQLITE_TRANSIENT) != SQLITE_OK ||
-        btech_special_bind_int(context->mech, 11, mech->ud.type) < 0 ||
-        btech_special_bind_int(context->mech, 12, mech->ud.move) < 0 ||
-        btech_special_bind_int(context->mech, 13, mech->ud.tac_range) < 0 ||
-        btech_special_bind_int(context->mech, 14, mech->ud.lrs_range) < 0 ||
-        btech_special_bind_int(context->mech, 15, mech->ud.scan_range) < 0 ||
-        btech_special_bind_int(context->mech, 16, mech->ud.numsinks) < 0 ||
-        btech_special_bind_int(context->mech, 17, mech->ud.hsengoverride) < 0 ||
-        btech_special_bind_int(context->mech, 18, mech->ud.computer) < 0 ||
-        btech_special_bind_int(context->mech, 19, mech->ud.radio) < 0 ||
-        btech_special_bind_int(context->mech, 20, mech->ud.radioinfo) < 0 ||
-        btech_special_bind_int(context->mech, 21, mech->ud.si) < 0 ||
-        btech_special_bind_int(context->mech, 22, mech->ud.si_orig) < 0 ||
-        btech_special_bind_int(context->mech, 23, mech->ud.radio_range) < 0 ||
-        btech_special_bind_int(context->mech, 24, mech->ud.fuel) < 0 ||
-        btech_special_bind_int(context->mech, 25, mech->ud.fuel_orig) < 0 ||
-        btech_special_bind_int(context->mech, 26, mech->ud.tons) < 0 ||
-        btech_special_bind_int(context->mech, 27, mech->ud.walkspeed) < 0 ||
-        btech_special_bind_int(context->mech, 28, mech->ud.runspeed) < 0 ||
-        sqlite3_bind_double(context->mech, 29, mech->ud.maxspeed) !=
+        btech_special_bind_int(context->mech, 11, snapshot.definition.type) <
+            0 ||
+        btech_special_bind_int(context->mech, 12, snapshot.definition.move) <
+            0 ||
+        btech_special_bind_int(context->mech, 13,
+                               snapshot.definition.tac_range) < 0 ||
+        btech_special_bind_int(context->mech, 14,
+                               snapshot.definition.lrs_range) < 0 ||
+        btech_special_bind_int(context->mech, 15,
+                               snapshot.definition.scan_range) < 0 ||
+        btech_special_bind_int(context->mech, 16,
+                               snapshot.definition.numsinks) < 0 ||
+        btech_special_bind_int(context->mech, 17,
+                               snapshot.definition.hsengoverride) < 0 ||
+        btech_special_bind_int(context->mech, 18,
+                               snapshot.definition.computer) < 0 ||
+        btech_special_bind_int(context->mech, 19, snapshot.definition.radio) <
+            0 ||
+        btech_special_bind_int(context->mech, 20,
+                               snapshot.definition.radioinfo) < 0 ||
+        btech_special_bind_int(context->mech, 21, snapshot.definition.si) < 0 ||
+        btech_special_bind_int(context->mech, 22, snapshot.definition.si_orig) <
+            0 ||
+        btech_special_bind_int(context->mech, 23,
+                               snapshot.definition.radio_range) < 0 ||
+        btech_special_bind_int(context->mech, 24, snapshot.definition.fuel) <
+            0 ||
+        btech_special_bind_int(context->mech, 25,
+                               snapshot.definition.fuel_orig) < 0 ||
+        btech_special_bind_int(context->mech, 26, snapshot.definition.tons) <
+            0 ||
+        btech_special_bind_int(context->mech, 27,
+                               snapshot.definition.walkspeed) < 0 ||
+        btech_special_bind_int(context->mech, 28,
+                               snapshot.definition.runspeed) < 0 ||
+        sqlite3_bind_double(context->mech, 29, snapshot.definition.maxspeed) !=
             SQLITE_OK ||
-        sqlite3_bind_double(context->mech, 30, mech->ud.template_maxspeed) !=
+        sqlite3_bind_double(context->mech, 30,
+                            snapshot.definition.template_maxspeed) !=
             SQLITE_OK ||
-        btech_special_bind_int(context->mech, 31, mech->ud.mechbv) < 0 ||
-        btech_special_bind_int(context->mech, 32, mech->ud.cargospace) < 0 ||
-        btech_special_bind_int(context->mech, 33, mech->ud.targcomp) < 0 ||
-        btech_special_bind_int(context->mech, 34, mech->ud.carmaxton) < 0 ||
+        btech_special_bind_int(context->mech, 31, snapshot.definition.mechbv) <
+            0 ||
+        btech_special_bind_int(context->mech, 32,
+                               snapshot.definition.cargospace) < 0 ||
+        btech_special_bind_int(context->mech, 33,
+                               snapshot.definition.targcomp) < 0 ||
+        btech_special_bind_int(context->mech, 34,
+                               snapshot.definition.carmaxton) < 0 ||
         btech_special_step(context->mech) < 0)
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_SECTIONS; index++) {
-      struct MechSection *section = &mech->ud.sections[index];
+      struct MechSection *section = &snapshot.definition.sections[index];
       if (btech_special_bind_int(context->section, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->section, 2, index) < 0 ||
           btech_special_bind_int(context->section, 3, section->armor) < 0 ||
@@ -131,32 +155,47 @@ int btech_store_simple_object(void *key, void *data, int depth,
     }
     if (context->result == 0 &&
         (btech_special_bind_int(context->position, 1, (DbRef)key) < 0 ||
-         btech_special_bind_int(context->position, 2, mech->pd.pilotstatus) <
+         btech_special_bind_int(context->position, 2,
+                                snapshot.position.pilotstatus) < 0 ||
+         btech_special_bind_int(context->position, 3,
+                                snapshot.position.terrain) < 0 ||
+         btech_special_bind_int(context->position, 4, snapshot.position.elev) <
              0 ||
-         btech_special_bind_int(context->position, 3, mech->pd.terrain) < 0 ||
-         btech_special_bind_int(context->position, 4, mech->pd.elev) < 0 ||
-         sqlite3_bind_double(context->position, 5, mech->pd.hexes_walked) !=
+         sqlite3_bind_double(context->position, 5,
+                             snapshot.position.hexes_walked) != SQLITE_OK ||
+         btech_special_bind_int(context->position, 6,
+                                snapshot.position.facing) < 0 ||
+         btech_special_bind_int(context->position, 7, snapshot.position.x) <
+             0 ||
+         btech_special_bind_int(context->position, 8, snapshot.position.y) <
+             0 ||
+         btech_special_bind_int(context->position, 9, snapshot.position.z) <
+             0 ||
+         btech_special_bind_int(context->position, 10,
+                                snapshot.position.last_x) < 0 ||
+         btech_special_bind_int(context->position, 11,
+                                snapshot.position.last_y) < 0 ||
+         sqlite3_bind_double(context->position, 12, snapshot.position.fx) !=
              SQLITE_OK ||
-         btech_special_bind_int(context->position, 6, mech->pd.facing) < 0 ||
-         btech_special_bind_int(context->position, 7, mech->pd.x) < 0 ||
-         btech_special_bind_int(context->position, 8, mech->pd.y) < 0 ||
-         btech_special_bind_int(context->position, 9, mech->pd.z) < 0 ||
-         btech_special_bind_int(context->position, 10, mech->pd.last_x) < 0 ||
-         btech_special_bind_int(context->position, 11, mech->pd.last_y) < 0 ||
-         sqlite3_bind_double(context->position, 12, mech->pd.fx) != SQLITE_OK ||
-         sqlite3_bind_double(context->position, 13, mech->pd.fy) != SQLITE_OK ||
-         sqlite3_bind_double(context->position, 14, mech->pd.fz) != SQLITE_OK ||
-         btech_special_bind_int(context->position, 15, mech->pd.team) < 0 ||
-         btech_special_bind_int(context->position, 16, mech->pd.unusable_arcs) <
+         sqlite3_bind_double(context->position, 13, snapshot.position.fy) !=
+             SQLITE_OK ||
+         sqlite3_bind_double(context->position, 14, snapshot.position.fz) !=
+             SQLITE_OK ||
+         btech_special_bind_int(context->position, 15, snapshot.position.team) <
              0 ||
-         btech_special_bind_int(context->position, 17, mech->pd.stall) < 0 ||
-         btech_special_bind_int(context->position, 18, mech->pd.pilot) < 0 ||
+         btech_special_bind_int(context->position, 16,
+                                snapshot.position.unusable_arcs) < 0 ||
+         btech_special_bind_int(context->position, 17,
+                                snapshot.position.stall) < 0 ||
+         btech_special_bind_int(context->position, 18,
+                                snapshot.position.pilot) < 0 ||
          btech_special_step(context->position) < 0))
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_BAYS; index++) {
       if (btech_special_bind_int(context->bay, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->bay, 2, index) < 0 ||
-          btech_special_bind_int(context->bay, 3, mech->pd.bay[index]) < 0 ||
+          btech_special_bind_int(context->bay, 3,
+                                 snapshot.position.bay[index]) < 0 ||
           btech_special_step(context->bay) < 0)
         context->result = -1;
     }
@@ -164,30 +203,36 @@ int btech_store_simple_object(void *key, void *data, int depth,
       if (btech_special_bind_int(context->mech_turret, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->mech_turret, 2, index) < 0 ||
           btech_special_bind_int(context->mech_turret, 3,
-                                 mech->pd.turret[index]) < 0 ||
+                                 snapshot.position.turret[index]) < 0 ||
           btech_special_step(context->mech_turret) < 0)
         context->result = -1;
     }
     if (context->result == 0 &&
         (btech_special_bind_int(context->c3, 1, (DbRef)key) < 0 ||
-         sqlite3_bind_text(context->c3, 2, mech->sd.C3ChanTitle, -1,
+         sqlite3_bind_text(context->c3, 2, snapshot.network.C3ChanTitle, -1,
                            SQLITE_TRANSIENT) != SQLITE_OK ||
-         btech_special_bind_int(context->c3, 3, mech->sd.wC3iNetworkSize) < 0 ||
-         btech_special_bind_int(context->c3, 4, mech->sd.wC3NetworkSize) < 0 ||
-         btech_special_bind_int(context->c3, 5, mech->sd.wTotalC3Masters) < 0 ||
-         btech_special_bind_int(context->c3, 6, mech->sd.wWorkingC3Masters) <
+         btech_special_bind_int(context->c3, 3,
+                                snapshot.network.wC3iNetworkSize) < 0 ||
+         btech_special_bind_int(context->c3, 4,
+                                snapshot.network.wC3NetworkSize) < 0 ||
+         btech_special_bind_int(context->c3, 5,
+                                snapshot.network.wTotalC3Masters) < 0 ||
+         btech_special_bind_int(context->c3, 6,
+                                snapshot.network.wWorkingC3Masters) < 0 ||
+         btech_special_bind_int(context->c3, 7, snapshot.network.C3FreqMode) <
              0 ||
-         btech_special_bind_int(context->c3, 7, mech->sd.C3FreqMode) < 0 ||
-         btech_special_bind_int(context->c3, 8, mech->sd.tagTarget) < 0 ||
-         btech_special_bind_int(context->c3, 9, mech->sd.taggedBy) < 0 ||
+         btech_special_bind_int(context->c3, 8, snapshot.network.tagTarget) <
+             0 ||
+         btech_special_bind_int(context->c3, 9, snapshot.network.taggedBy) <
+             0 ||
          btech_special_step(context->c3) < 0))
       context->result = -1;
     for (index = 0;
          context->result == 0 && index < C3I_NETWORK_SIZE + C3_NETWORK_SIZE;
          index++) {
       DbRef node = index < C3I_NETWORK_SIZE
-                       ? mech->sd.C3iNetwork[index]
-                       : mech->sd.C3Network[index - C3I_NETWORK_SIZE];
+                       ? snapshot.network.C3iNetwork[index]
+                       : snapshot.network.C3Network[index - C3I_NETWORK_SIZE];
       int network = index < C3I_NETWORK_SIZE ? 0 : 1;
       int node_index =
           index < C3I_NETWORK_SIZE ? index : index - C3I_NETWORK_SIZE;
@@ -203,8 +248,8 @@ int btech_store_simple_object(void *key, void *data, int depth,
         if (btech_special_bind_int(context->tic, 1, (DbRef)key) < 0 ||
             btech_special_bind_int(context->tic, 2, index) < 0 ||
             btech_special_bind_int(context->tic, 3, slot) < 0 ||
-            btech_special_bind_int(context->tic, 4, mech->tic[index][slot]) <
-                0 ||
+            btech_special_bind_int(context->tic, 4,
+                                   snapshot.tics[index][slot]) < 0 ||
             btech_special_step(context->tic) < 0)
           context->result = -1;
       }
@@ -212,11 +257,12 @@ int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < FREQS; index++) {
       if (btech_special_bind_int(context->frequency, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->frequency, 2, index) < 0 ||
-          btech_special_bind_int(context->frequency, 3, mech->freq[index]) <
-              0 ||
+          btech_special_bind_int(context->frequency, 3,
+                                 snapshot.frequencies[index]) < 0 ||
           btech_special_bind_int(context->frequency, 4,
-                                 mech->freqmodes[index]) < 0 ||
-          sqlite3_bind_text(context->frequency, 5, mech->chantitle[index], -1,
+                                 snapshot.frequency_modes[index]) < 0 ||
+          sqlite3_bind_text(context->frequency, 5,
+                            snapshot.channel_titles[index], -1,
                             SQLITE_TRANSIENT) != SQLITE_OK ||
           btech_special_step(context->frequency) < 0)
         context->result = -1;
@@ -229,100 +275,100 @@ int btech_store_simple_object(void *key, void *data, int depth,
 #define BTECH_RUNTIME_REAL(value)                                              \
   btech_special_bind_real(context->runtime, runtime_index++, (double)(value))
       if (BTECH_RUNTIME_INT((DbRef)key) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.jumptop) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.aim) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.basetohit) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.pilotskillbase) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.engineheat) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.masc_value) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.aim_type) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.sensor[0]) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.sensor[1]) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.fire_adjustment) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.vis_mod) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.chargetimer) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.chargedist) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.staggerstamp) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.mech_prefs) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.jumplength) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.goingx) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.goingy) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.desiredfacing) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.angle) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.jumpheading) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.targx) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.targy) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.targz) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.turretfacing) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.turndamage) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.lateral) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.num_seen) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.lx) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.ly) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.chgtarget) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.dfatarget) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.target) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.swarming) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.swarmedby) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.carrying) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.spotter) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.heat) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.weapheat) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.plus_heat) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.minus_heat) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.startfx) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.startfy) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.startfz) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.endfz) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.verticalspeed) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.speed) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.desired_speed) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.jumpspeed) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.critstatus) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.status) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.status2) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.specials) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.specials2) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.specialsstatus) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.tankcritstatus) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.last_weapon_recycle) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.cargo_weight) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.lastrndu) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.rnd) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.last_ds_msg) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.boom_start) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.maxfuel) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.lastused) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.cocoon) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.commconv) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.commconv_last) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.onumsinks) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.disabled_hs) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.autopilot_num) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.heatboom_last) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.sspin) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.can_see) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.row) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.rcw) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.rspd) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.erat) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.per) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.wxf) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.last_startup) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.maxsuits) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.infantry_specials) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.scharge_value) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.staggerDamage) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.lastStaggerNotify) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.critstatus2) < 0 ||
-          BTECH_RUNTIME_REAL(mech->rd.xpmod) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.shots_fired) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.shots_hit) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.shots_missed) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.damage_taken) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.damage_inflicted) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.units_killed) < 0 ||
-          BTECH_RUNTIME_INT(mech->rd.lastStaggerCheck) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.jumptop) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.aim) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.basetohit) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.pilotskillbase) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.engineheat) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.masc_value) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.aim_type) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.sensor[0]) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.sensor[1]) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.fire_adjustment) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.vis_mod) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.chargetimer) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.chargedist) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.staggerstamp) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.mech_prefs) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.jumplength) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.goingx) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.goingy) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.desiredfacing) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.angle) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.jumpheading) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.targx) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.targy) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.targz) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.turretfacing) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.turndamage) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.lateral) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.num_seen) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.lx) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.ly) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.chgtarget) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.dfatarget) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.target) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.swarming) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.swarmedby) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.carrying) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.spotter) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.heat) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.weapheat) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.plus_heat) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.minus_heat) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.startfx) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.startfy) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.startfz) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.endfz) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.verticalspeed) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.speed) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.desired_speed) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.jumpspeed) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.critstatus) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.status) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.status2) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.specials) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.specials2) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.specialsstatus) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.tankcritstatus) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.last_weapon_recycle) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.cargo_weight) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.lastrndu) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.rnd) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.last_ds_msg) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.boom_start) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.maxfuel) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.lastused) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.cocoon) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.commconv) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.commconv_last) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.onumsinks) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.disabled_hs) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.autopilot_num) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.heatboom_last) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.sspin) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.can_see) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.row) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.rcw) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.rspd) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.erat) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.per) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.wxf) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.last_startup) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.maxsuits) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.infantry_specials) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.scharge_value) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.staggerDamage) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.lastStaggerNotify) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.critstatus2) < 0 ||
+          BTECH_RUNTIME_REAL(snapshot.runtime.xpmod) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.shots_fired) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.shots_hit) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.shots_missed) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.damage_taken) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.damage_inflicted) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.units_killed) < 0 ||
+          BTECH_RUNTIME_INT(snapshot.runtime.lastStaggerCheck) < 0 ||
           btech_special_step(context->runtime) < 0)
         context->result = -1;
 #undef BTECH_RUNTIME_INT
@@ -332,7 +378,7 @@ int btech_store_simple_object(void *key, void *data, int depth,
       if (btech_special_bind_int(context->runtime_unused, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->runtime_unused, 2, index) < 0 ||
           btech_special_bind_int(context->runtime_unused, 3,
-                                 mech->rd.unused[index]) < 0 ||
+                                 snapshot.runtime.unused[index]) < 0 ||
           btech_special_step(context->runtime_unused) < 0)
         context->result = -1;
     }
@@ -340,8 +386,8 @@ int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < 8; index++) {
       if (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->unit_aux, 2, index) < 0 ||
-          btech_special_bind_int(context->unit_aux, 3, mech->ud.unused[index]) <
-              0 ||
+          btech_special_bind_int(context->unit_aux, 3,
+                                 snapshot.definition.unused[index]) < 0 ||
           btech_special_step(context->unit_aux) < 0)
         context->result = -1;
     }
@@ -349,8 +395,8 @@ int btech_store_simple_object(void *key, void *data, int depth,
     if (context->result == 0 &&
         (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
          btech_special_bind_int(context->unit_aux, 2, 0) < 0 ||
-         btech_special_bind_int(context->unit_aux, 3, mech->ud.mechbv_last) <
-             0 ||
+         btech_special_bind_int(context->unit_aux, 3,
+                                snapshot.definition.mechbv_last) < 0 ||
          btech_special_step(context->unit_aux) < 0))
       context->result = -1;
 #endif
@@ -358,11 +404,11 @@ int btech_store_simple_object(void *key, void *data, int depth,
       if (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->unit_aux, 2, 8 + index) < 0 ||
           btech_special_bind_int(context->unit_aux, 3,
-                                 mech->ud.unused_char[index]) < 0 ||
+                                 snapshot.definition.unused_char[index]) < 0 ||
           btech_special_step(context->unit_aux) < 0)
         context->result = -1;
     }
-    for (damage = mech->rd.staggerDamageList, index = 0;
+    for (damage = snapshot.runtime.staggerDamageList, index = 0;
          context->result == 0 && damage; damage = damage->next, index++) {
       if (btech_special_bind_int(context->stagger_damage, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->stagger_damage, 2, index) < 0 ||

@@ -119,6 +119,7 @@ set(BTECH_SOURCES
   movement/mech_update_piloting.c
   movement/mech_update_heartbeat.c
   movement/mech_boosters.c
+  unit/mech_persistence.c
   persistence/economy_sqlite.c
   persistence/map_restore.c
   persistence/mech_restore_identity.c

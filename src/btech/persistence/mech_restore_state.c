@@ -3,6 +3,7 @@
 int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   Mech *mech;
+  MechPersistenceSnapshot snapshot;
   DbRef mech_dbref;
   long pilot;
   float fx;
@@ -64,23 +65,25 @@ int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    mech->pd.pilotstatus = (char)pilot_status;
-    mech->pd.terrain = (char)terrain;
-    mech->pd.elev = (char)elevation;
-    mech->pd.hexes_walked = hexes_walked;
-    mech->pd.facing = (short)facing;
-    mech->pd.x = (short)x;
-    mech->pd.y = (short)y;
-    mech->pd.z = (short)z;
-    mech->pd.last_x = (short)last_x;
-    mech->pd.last_y = (short)last_y;
-    mech->pd.fx = fx;
-    mech->pd.fy = fy;
-    mech->pd.fz = fz;
-    mech->pd.team = team;
-    mech->pd.unusable_arcs = unusable_arcs;
-    mech->pd.stall = stall;
-    mech->pd.pilot = pilot;
+    mech_persistence_snapshot_export(mech, &snapshot);
+    snapshot.position.pilotstatus = (char)pilot_status;
+    snapshot.position.terrain = (char)terrain;
+    snapshot.position.elev = (char)elevation;
+    snapshot.position.hexes_walked = hexes_walked;
+    snapshot.position.facing = (short)facing;
+    snapshot.position.x = (short)x;
+    snapshot.position.y = (short)y;
+    snapshot.position.z = (short)z;
+    snapshot.position.last_x = (short)last_x;
+    snapshot.position.last_y = (short)last_y;
+    snapshot.position.fx = fx;
+    snapshot.position.fy = fy;
+    snapshot.position.fz = fz;
+    snapshot.position.team = team;
+    snapshot.position.unusable_arcs = unusable_arcs;
+    snapshot.position.stall = stall;
+    snapshot.position.pilot = pilot;
+    mech_persistence_position_restore(mech, &snapshot);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -137,7 +140,7 @@ int btech_special_load_mech_bays(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    mech->pd.bay[bay_index] = bay_dbref;
+    mech_persistence_bay_restore(mech, bay_index, bay_dbref);
     expected_bay++;
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -199,7 +202,7 @@ int btech_special_load_mech_turrets(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    mech->pd.turret[turret_index] = turret_dbref;
+    mech_persistence_turret_restore(mech, turret_index, turret_dbref);
     expected_turret++;
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -214,7 +217,8 @@ int btech_special_load_mech_turrets(sqlite3 *sqlite, BtechContext *context) {
 int btech_special_load_mech_c3(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   Mech *mech;
-  char channel_title[sizeof(mech->sd.C3ChanTitle)];
+  MechPersistenceSnapshot snapshot;
+  char channel_title[CHTITLELEN + 1];
   DbRef mech_dbref;
   long tag_target;
   long tagged_by;
@@ -258,14 +262,16 @@ int btech_special_load_mech_c3(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    memcpy(mech->sd.C3ChanTitle, channel_title, sizeof(channel_title));
-    mech->sd.wC3iNetworkSize = c3i_size;
-    mech->sd.wC3NetworkSize = c3_size;
-    mech->sd.wTotalC3Masters = total_masters;
-    mech->sd.wWorkingC3Masters = working_masters;
-    mech->sd.C3FreqMode = frequency_mode;
-    mech->sd.tagTarget = tag_target;
-    mech->sd.taggedBy = tagged_by;
+    mech_persistence_snapshot_export(mech, &snapshot);
+    memcpy(snapshot.network.C3ChanTitle, channel_title, sizeof(channel_title));
+    snapshot.network.wC3iNetworkSize = c3i_size;
+    snapshot.network.wC3NetworkSize = c3_size;
+    snapshot.network.wTotalC3Masters = total_masters;
+    snapshot.network.wWorkingC3Masters = working_masters;
+    snapshot.network.C3FreqMode = frequency_mode;
+    snapshot.network.tagTarget = tag_target;
+    snapshot.network.taggedBy = tagged_by;
+    mech_persistence_network_restore(mech, &snapshot);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -331,10 +337,8 @@ int btech_special_load_mech_c3_nodes(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    if (network_type == 0)
-      mech->sd.C3iNetwork[node_index] = node_dbref;
-    else
-      mech->sd.C3Network[node_index] = node_dbref;
+    mech_persistence_network_node_restore(mech, network_type, node_index,
+                                          node_dbref);
     expected_node++;
     if ((expected_network == 0 && expected_node == C3I_NETWORK_SIZE) ||
         (expected_network == 1 && expected_node == C3_NETWORK_SIZE)) {
@@ -404,7 +408,7 @@ int btech_special_load_mech_tics(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    mech->tic[tic_index][word_index] = value;
+    mech_persistence_tic_restore(mech, tic_index, word_index, value);
     if (++expected_word == TICLONGS) {
       expected_word = 0;
       expected_tic++;
@@ -472,9 +476,8 @@ int btech_special_load_mech_frequencies(sqlite3 *sqlite,
       result = -1;
       break;
     }
-    mech->freq[frequency_index] = frequency;
-    mech->freqmodes[frequency_index] = mode;
-    memcpy(mech->chantitle[frequency_index], title, sizeof(title));
+    mech_persistence_frequency_restore(mech, frequency_index, frequency, mode,
+                                       title);
     expected_frequency++;
   }
   if (result == 0 && step != SQLITE_DONE)

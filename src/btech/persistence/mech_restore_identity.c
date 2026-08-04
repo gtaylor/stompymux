@@ -3,10 +3,11 @@
 int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   Mech *mech;
-  char mech_name[sizeof(mech->ud.mech_name)];
-  char mech_type[sizeof(mech->ud.mech_type)];
-  char unit_era[sizeof(mech->ud.unit_era)];
-  char unit_tro[sizeof(mech->ud.unit_tro)];
+  MechPersistenceSnapshot snapshot;
+  char mech_name[sizeof(snapshot.definition.mech_name)];
+  char mech_type[sizeof(snapshot.definition.mech_type)];
+  char unit_era[sizeof(snapshot.definition.unit_era)];
+  char unit_tro[sizeof(snapshot.definition.unit_tro)];
   DbRef mech_dbref;
   long map_dbref;
   float max_speed;
@@ -116,39 +117,41 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    mech->ID[0] = (char)id_0;
-    mech->ID[1] = (char)id_1;
-    mech->brief = (char)brief;
-    mech->mapnumber = map_number;
-    mech->mapindex = map_dbref;
-    memcpy(mech->ud.mech_name, mech_name, sizeof(mech_name));
-    memcpy(mech->ud.mech_type, mech_type, sizeof(mech_type));
-    memcpy(mech->ud.unit_era, unit_era, sizeof(unit_era));
-    memcpy(mech->ud.unit_tro, unit_tro, sizeof(unit_tro));
-    mech->ud.type = (char)unit_class;
-    mech->ud.move = (char)movement_type;
-    mech->ud.tac_range = (char)tactical_range;
-    mech->ud.lrs_range = (char)lrs_range;
-    mech->ud.scan_range = (char)scan_range;
-    mech->ud.numsinks = (char)heat_sinks;
-    mech->ud.hsengoverride = heat_sink_override;
-    mech->ud.computer = (char)computer;
-    mech->ud.radio = (char)radio;
-    mech->ud.radioinfo = (unsigned char)radio_info;
-    mech->ud.si = (char)structural_integrity;
-    mech->ud.si_orig = (char)structural_integrity_original;
-    mech->ud.radio_range = (short)radio_range;
-    mech->ud.fuel = fuel;
-    mech->ud.fuel_orig = fuel_original;
-    mech->ud.tons = tons;
-    mech->ud.walkspeed = walk_speed;
-    mech->ud.runspeed = run_speed;
-    mech->ud.maxspeed = max_speed;
-    mech->ud.template_maxspeed = template_max_speed;
-    mech->ud.mechbv = battle_value;
-    mech->ud.cargospace = cargo_space;
-    mech->ud.targcomp = (char)targeting_computer;
-    mech->ud.carmaxton = (char)carrier_max_tons;
+    mech_persistence_snapshot_export(mech, &snapshot);
+    snapshot.id[0] = (char)id_0;
+    snapshot.id[1] = (char)id_1;
+    snapshot.brief = (char)brief;
+    snapshot.map_number = map_number;
+    snapshot.map_dbref = map_dbref;
+    memcpy(snapshot.definition.mech_name, mech_name, sizeof(mech_name));
+    memcpy(snapshot.definition.mech_type, mech_type, sizeof(mech_type));
+    memcpy(snapshot.definition.unit_era, unit_era, sizeof(unit_era));
+    memcpy(snapshot.definition.unit_tro, unit_tro, sizeof(unit_tro));
+    snapshot.definition.type = (char)unit_class;
+    snapshot.definition.move = (char)movement_type;
+    snapshot.definition.tac_range = (char)tactical_range;
+    snapshot.definition.lrs_range = (char)lrs_range;
+    snapshot.definition.scan_range = (char)scan_range;
+    snapshot.definition.numsinks = (char)heat_sinks;
+    snapshot.definition.hsengoverride = heat_sink_override;
+    snapshot.definition.computer = (char)computer;
+    snapshot.definition.radio = (char)radio;
+    snapshot.definition.radioinfo = (unsigned char)radio_info;
+    snapshot.definition.si = (char)structural_integrity;
+    snapshot.definition.si_orig = (char)structural_integrity_original;
+    snapshot.definition.radio_range = (short)radio_range;
+    snapshot.definition.fuel = fuel;
+    snapshot.definition.fuel_orig = fuel_original;
+    snapshot.definition.tons = tons;
+    snapshot.definition.walkspeed = walk_speed;
+    snapshot.definition.runspeed = run_speed;
+    snapshot.definition.maxspeed = max_speed;
+    snapshot.definition.template_maxspeed = template_max_speed;
+    snapshot.definition.mechbv = battle_value;
+    snapshot.definition.cargospace = cargo_space;
+    snapshot.definition.targcomp = (char)targeting_computer;
+    snapshot.definition.carmaxton = (char)carrier_max_tons;
+    mech_persistence_identity_restore(mech, &snapshot);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -160,6 +163,7 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
 int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   Mech *mech;
+  MechPersistenceSnapshot snapshot;
   DbRef current_mech;
   DbRef mech_dbref;
   struct MechSection *section;
@@ -228,12 +232,13 @@ int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
       }
       current_mech = mech_dbref;
       expected_section = 0;
+      mech_persistence_snapshot_export(mech, &snapshot);
     }
     if (section_index != expected_section || section_index >= NUM_SECTIONS) {
       result = -1;
       break;
     }
-    section = &mech->ud.sections[section_index];
+    section = &snapshot.definition.sections[section_index];
     section->armor = (unsigned char)armor;
     section->internal = (unsigned char)internal;
     section->rear = (unsigned char)rear;
@@ -244,6 +249,7 @@ int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
     section->config = (char)config;
     section->recycle = (char)recycle;
     section->specials = (unsigned short)specials;
+    mech_persistence_section_restore(mech, section_index, section);
     expected_section++;
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -258,6 +264,7 @@ int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
 int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   Mech *mech;
+  MechPersistenceSnapshot snapshot;
   DbRef current_mech;
   DbRef mech_dbref;
   struct CriticalSlot *critical;
@@ -321,6 +328,7 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
       current_mech = mech_dbref;
       current_section = 0;
       expected_slot = 0;
+      mech_persistence_snapshot_export(mech, &snapshot);
     }
     if (section_index != current_section) {
       if (expected_slot != NUM_CRITICALS ||
@@ -336,7 +344,7 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    critical = &mech->ud.sections[section_index].criticals[slot];
+    critical = &snapshot.definition.sections[section_index].criticals[slot];
     critical->brand = (unsigned char)brand;
     critical->data = (unsigned char)data;
     critical->type = (unsigned short)item_type;
@@ -344,6 +352,7 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
     critical->ammomode = ammo_mode;
     critical->weapDamageFlags = damage_flags;
     critical->desiredAmmoLoc = (short)desired_ammo_location;
+    mech_persistence_critical_restore(mech, section_index, slot, critical);
     expected_slot++;
   }
   if (result == 0 && step != SQLITE_DONE)

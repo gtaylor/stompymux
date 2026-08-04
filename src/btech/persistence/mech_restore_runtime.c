@@ -3,6 +3,7 @@
 int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   Mech *mech;
+  MechPersistenceSnapshot snapshot;
   DbRef mech_dbref;
   int result;
   int step;
@@ -19,25 +20,28 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
+    mech_persistence_snapshot_export(mech, &snapshot);
 #define RUNTIME_CHAR(column, field)                                            \
-  btech_special_column_char(statement, column, &mech->rd.field)
+  btech_special_column_char(statement, column, &snapshot.runtime.field)
 #define RUNTIME_SHORT(column, field)                                           \
-  btech_special_column_short(statement, column, &mech->rd.field)
+  btech_special_column_short(statement, column, &snapshot.runtime.field)
 #define RUNTIME_INT(column, field)                                             \
-  btech_special_column_int(statement, column, &mech->rd.field)
+  btech_special_column_int(statement, column, &snapshot.runtime.field)
 #define RUNTIME_REAL(column, field)                                            \
-  btech_special_column_real(statement, column, &mech->rd.field)
+  btech_special_column_real(statement, column, &snapshot.runtime.field)
 #define RUNTIME_DBREF(column, field)                                           \
   btech_special_column_dbref(context->database, statement, column,             \
-                             &mech->rd.field)
+                             &snapshot.runtime.field)
     if (RUNTIME_CHAR(1, jumptop) < 0 || RUNTIME_CHAR(2, aim) < 0 ||
         RUNTIME_CHAR(3, basetohit) < 0 || RUNTIME_CHAR(4, pilotskillbase) < 0 ||
         RUNTIME_CHAR(5, engineheat) < 0 || RUNTIME_CHAR(6, masc_value) < 0 ||
         RUNTIME_CHAR(7, aim_type) < 0 ||
-        btech_special_column_char(statement, 8, &mech->rd.sensor[0]) < 0 ||
-        btech_special_column_char(statement, 9, &mech->rd.sensor[1]) < 0 ||
-        btech_special_column_uchar(statement, 10, &mech->rd.fire_adjustment) <
+        btech_special_column_char(statement, 8, &snapshot.runtime.sensor[0]) <
             0 ||
+        btech_special_column_char(statement, 9, &snapshot.runtime.sensor[1]) <
+            0 ||
+        btech_special_column_uchar(statement, 10,
+                                   &snapshot.runtime.fire_adjustment) < 0 ||
         RUNTIME_CHAR(11, vis_mod) < 0 || RUNTIME_CHAR(12, chargetimer) < 0 ||
         RUNTIME_REAL(13, chargedist) < 0 ||
         RUNTIME_CHAR(14, staggerstamp) < 0 || RUNTIME_INT(15, mech_prefs) < 0 ||
@@ -64,7 +68,7 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
         RUNTIME_INT(55, specialsstatus) < 0 ||
         RUNTIME_INT(56, tankcritstatus) < 0 ||
         btech_special_column_time(statement, 57,
-                                  &mech->rd.last_weapon_recycle) < 0 ||
+                                  &snapshot.runtime.last_weapon_recycle) < 0 ||
         RUNTIME_INT(58, cargo_weight) < 0 || RUNTIME_INT(59, lastrndu) < 0 ||
         RUNTIME_INT(60, rnd) < 0 || RUNTIME_INT(61, last_ds_msg) < 0 ||
         RUNTIME_INT(62, boom_start) < 0 || RUNTIME_INT(63, maxfuel) < 0 ||
@@ -88,9 +92,11 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
         RUNTIME_INT(91, damage_taken) < 0 ||
         RUNTIME_INT(92, damage_inflicted) < 0 ||
         RUNTIME_INT(93, units_killed) < 0 ||
-        btech_special_column_time(statement, 94, &mech->rd.lastStaggerCheck) <
-            0)
+        btech_special_column_time(statement, 94,
+                                  &snapshot.runtime.lastStaggerCheck) < 0)
       result = -1;
+    else
+      mech_persistence_runtime_restore(mech, &snapshot);
 #undef RUNTIME_CHAR
 #undef RUNTIME_SHORT
 #undef RUNTIME_INT
@@ -107,6 +113,7 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
 int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   Mech *mech;
+  MechPersistenceSnapshot snapshot;
   DbRef current_mech;
   DbRef mech_dbref;
   int seen[11];
@@ -158,6 +165,7 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
       }
       current_mech = mech_dbref;
       memset(seen, 0, sizeof(seen));
+      mech_persistence_snapshot_export(mech, &snapshot);
     }
 #ifdef BT_CALCULATE_BV
     if ((slot > 0 && slot < 8) || seen[slot]) {
@@ -170,19 +178,21 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
     seen[slot] = 1;
 #ifndef BT_CALCULATE_BV
     if (slot < 8)
-      mech->ud.unused[slot] = value;
+      snapshot.definition.unused[slot] = value;
     else if (value < CHAR_MIN || value > CHAR_MAX)
       result = -1;
     else
-      mech->ud.unused_char[slot - 8] = (char)value;
+      snapshot.definition.unused_char[slot - 8] = (char)value;
 #else
     if (slot == 0)
-      mech->ud.mechbv_last = value;
+      snapshot.definition.mechbv_last = value;
     else if (value < CHAR_MIN || value > CHAR_MAX)
       result = -1;
     else
-      mech->ud.unused_char[slot - 8] = (char)value;
+      snapshot.definition.unused_char[slot - 8] = (char)value;
 #endif
+    if (result == 0)
+      mech_persistence_identity_restore(mech, &snapshot);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -205,6 +215,7 @@ int btech_special_load_mech_runtime_unused(sqlite3 *sqlite,
                                            BtechContext *context) {
   sqlite3_stmt *statement;
   Mech *mech;
+  MechPersistenceSnapshot snapshot;
   DbRef current_mech;
   DbRef mech_dbref;
   int expected_slot;
@@ -244,12 +255,14 @@ int btech_special_load_mech_runtime_unused(sqlite3 *sqlite,
       }
       current_mech = mech_dbref;
       expected_slot = 0;
+      mech_persistence_snapshot_export(mech, &snapshot);
     }
     if (slot != expected_slot || slot >= 5) {
       result = -1;
       break;
     }
-    mech->rd.unused[slot] = value;
+    snapshot.runtime.unused[slot] = value;
+    mech_persistence_runtime_restore(mech, &snapshot);
     expected_slot++;
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -265,8 +278,6 @@ int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
                                            BtechContext *context) {
   sqlite3_stmt *statement;
   Mech *mech;
-  MechDamageRecord *node;
-  MechDamageRecord *tail;
   DbRef current_mech;
   DbRef mech_dbref;
   DbRef attacker;
@@ -282,7 +293,6 @@ int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
   current_mech = NOTHING;
   expected_position = 0;
   mech = NULL;
-  tail = NULL;
   result = sqlite3_prepare_v2(
                sqlite,
                "SELECT mech_dbref, position, amount, occurred_at, "
@@ -306,32 +316,22 @@ int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
     }
     if (mech_dbref != current_mech) {
       mech = btech_context_get_mech(context, mech_dbref);
-      if (!mech || mech->rd.staggerDamageList) {
+      if (!mech || !mech_persistence_damage_history_is_empty(mech)) {
         result = -1;
         break;
       }
       current_mech = mech_dbref;
       expected_position = 0;
-      tail = NULL;
     }
     if (position != expected_position) {
       result = -1;
       break;
     }
-    node = calloc(1, sizeof(*node));
-    if (!node) {
+    if (!mech_persistence_damage_append(mech, amount, occurred_at, attacker,
+                                        counted != 0)) {
       result = -1;
       break;
     }
-    node->amount = amount;
-    node->occuredAt = occurred_at;
-    node->attackerNum = attacker;
-    node->counted = counted;
-    if (tail)
-      tail->next = node;
-    else
-      mech->rd.staggerDamageList = node;
-    tail = node;
     expected_position++;
   }
   if (result == 0 && step != SQLITE_DONE)
