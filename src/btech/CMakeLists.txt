@@ -11,6 +11,9 @@ set(BTECH_SOURCES
   autopilot/autopilot_roam.c
   autopilot/autopilot_core.c
   autopilot/autopilot_radio.c
+  autopilot/autopilot_radio_catalog.c
+  autopilot/autopilot_radio_handlers.c
+  autopilot/autopilot_radio_parser.c
   autopilot/path_helpers.c
   character/btechstats.c
   character/character_health.c
