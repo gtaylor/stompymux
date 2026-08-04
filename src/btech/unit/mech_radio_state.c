@@ -17,6 +17,14 @@ int mech_radio_mode(const Mech *mech, int channel) {
   return mech_radio_channel_valid(channel) ? mech->freqmodes[channel] : 0;
 }
 
+int mech_radio_channel_count(const Mech *mech) {
+  return mech->ud.radioinfo % FREQS;
+}
+
+int mech_radio_capabilities(const Mech *mech) {
+  return mech->ud.radioinfo / FREQS;
+}
+
 const char *mech_radio_title(const Mech *mech, int channel) {
   return mech_radio_channel_valid(channel) ? mech->chantitle[channel] : "";
 }
