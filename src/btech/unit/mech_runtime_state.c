@@ -38,6 +38,12 @@ bool mech_is_under_gravity(const Mech *mech) {
   return mech->rd.status & UNDERGRAVITY;
 }
 
+bool mech_has_destroyed_gyro(const Mech *mech) {
+  return mech->rd.critstatus & GYRO_DESTROYED;
+}
+
+int mech_seen_count(const Mech *mech) { return mech->rd.num_seen; }
+
 void mech_movement_stop(Mech *mech) {
   mech->rd.speed = 0.0F;
   mech->rd.desired_speed = 0.0F;

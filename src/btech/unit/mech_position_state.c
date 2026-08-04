@@ -1,5 +1,7 @@
 #include "mech_position_api.h"
 
+#include <stdlib.h>
+
 #include "floatsim.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
@@ -17,6 +19,10 @@ int mech_position_x(const Mech *mech) { return mech->pd.x; }
 int mech_position_y(const Mech *mech) { return mech->pd.y; }
 
 int mech_position_z(const Mech *mech) { return mech->pd.z; }
+
+int mech_position_elevation_magnitude(const Mech *mech) {
+  return abs(mech->pd.elev);
+}
 
 float mech_position_real_x(const Mech *mech) { return mech->pd.fx; }
 

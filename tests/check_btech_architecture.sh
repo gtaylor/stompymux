@@ -214,6 +214,7 @@ while IFS= read -r match; do
   status=1
 done < <(rg -n \
   '#include "mech(_macros)?\.h"|\bmech->|\b(Mech[A-Z][A-Za-z0-9_]*|GetSect[A-Za-z0-9_]*|GetPart[A-Za-z0-9_]*|SetSect[A-Za-z0-9_]*|SetPart[A-Za-z0-9_]*|Destroyed|Started|Fallen|Jumping|Landed|FlyingT|HasCamo)\(' \
+  src/btech/autopilot/autopilot_ai.c \
   src/btech/autopilot/autopilot_autogun.c \
   src/btech/autopilot/autopilot_bases.c \
   src/btech/autopilot/autopilot_chase_target.c \
@@ -241,6 +242,11 @@ fi
 
 if [[ -e src/btech/autopilot/autopilot_commands_internal.h ]]; then
   echo "src/btech/autopilot/autopilot_commands_internal.h: aggregate command header is not allowed"
+  status=1
+fi
+
+if [[ -e src/btech/autopilot/autopilot_ai_internal.h ]]; then
+  echo "src/btech/autopilot/autopilot_ai_internal.h: aggregate AI header is not allowed"
   status=1
 fi
 

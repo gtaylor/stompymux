@@ -54,7 +54,9 @@ CommandContext *btech_context_command(BtechContext *context);
 EvaluationContext *btech_context_evaluation(BtechContext *context);
 GameDatabase *btech_context_database(BtechContext *context);
 bool btech_context_combat_arcs_enabled(const BtechContext *context);
+int btech_context_movement_slowdown_mode(const BtechContext *context);
 int btech_context_event_tick(const BtechContext *context);
+time_t btech_context_now(const BtechContext *context);
 void btech_command_scope_enter(BtechCommandScope *scope, BtechContext *context,
                                CommandContext *command);
 void btech_command_scope_leave(BtechCommandScope *scope);

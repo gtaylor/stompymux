@@ -7,6 +7,8 @@
 
 #include "mux/commands/command_context.h"
 #include "mux/network/mux_event.h"
+#include "mux/server/runtime_clock.h"
+#include "mux/server/server_config.h"
 
 BtechContext *btech_context_create(const BtechDependencies *dependencies) {
   if (dependencies == nullptr)
@@ -74,9 +76,19 @@ bool btech_context_combat_arcs_enabled(const BtechContext *context) {
   return context->combat_overrides.arcs;
 }
 
+int btech_context_movement_slowdown_mode(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_slowdown;
+}
+
 int btech_context_event_tick(const BtechContext *context) {
   assert(context != nullptr);
   return context->events->tick;
+}
+
+time_t btech_context_now(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->clock->now;
 }
 
 void btech_command_scope_enter(BtechCommandScope *scope, BtechContext *context,
