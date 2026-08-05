@@ -71,6 +71,7 @@ while IFS= read -r match; do
   status=1
 done < <(rg -n \
   '#include "mech(_macros)?\.h"|\b(Mech[A-Z][A-Za-z0-9_]*|GetSect[A-Za-z0-9_]*|GetPart[A-Za-z0-9_]*|SetSect[A-Za-z0-9_]*|SetPart[A-Za-z0-9_]*|Destroyed|Started|Fallen|Jumping|Landed|HasWorkingECMSuite|ECMProtected|ECMCountered|AnyECMDisturbed)\(' \
+  src/btech/sensors/los_trace.c \
   src/btech/sensors/mech_ecm.c \
   src/btech/sensors/mech_lite.c \
   src/btech/sensors/mech_scan_navigation.c \
@@ -82,6 +83,11 @@ while IFS= read -r match; do
   status=1
 done < <(rg -n '#include "mech(_macros)?\.h"' \
   src/btech/sensors/mech_sensor.h || true)
+
+while IFS= read -r match; do
+  echo "$match: converted LOS tracer accesses BattleMap layout"
+  status=1
+done < <(rg -n -- '\bmap->' src/btech/sensors/los_trace.c || true)
 
 while IFS= read -r match; do
   echo "$match: legacy sensor export is not allowed"
