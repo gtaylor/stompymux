@@ -5,8 +5,11 @@
 #include <stddef.h>
 
 typedef struct Mech Mech;
+typedef struct BtechContext BtechContext;
 
 size_t mech_storage_size(void);
+Mech *mech_temporary_create(BtechContext *context);
+void mech_temporary_destroy(Mech *mech);
 void mech_power_up(Mech *mech);
 void mech_power_down(Mech *mech);
 void mech_mark_destroyed(Mech *mech);

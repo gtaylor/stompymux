@@ -2,6 +2,7 @@
 
 #include "mech_lifecycle.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "bsuit_api.h"
@@ -252,3 +253,17 @@ bool mech_aero_has_free_fuel(const Mech *mech) {
 }
 
 size_t mech_storage_size(void) { return sizeof(Mech); }
+
+Mech *mech_temporary_create(BtechContext *context) {
+  Mech *mech = calloc(1, sizeof(*mech));
+  if (mech == nullptr)
+    return nullptr;
+  mech->xcode = (BtechSpecialObject){
+      .type = GTYPE_MECH,
+      .size = sizeof(*mech),
+      .context = context,
+  };
+  return mech;
+}
+
+void mech_temporary_destroy(Mech *mech) { free(mech); }

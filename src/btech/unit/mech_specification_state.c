@@ -63,8 +63,24 @@ int mech_heat_sink_critical_size(const Mech *mech) {
 
 int mech_technology_flags(const Mech *mech) { return mech->rd.specials; }
 
+void mech_technology_flags_set(Mech *mech, int flags) {
+  mech->rd.specials = flags;
+}
+
+void mech_technology_flags_add(Mech *mech, int flags) {
+  mech->rd.specials |= flags;
+}
+
 int mech_technology_flags_secondary(const Mech *mech) {
   return mech->rd.specials2;
+}
+
+void mech_technology_flags_secondary_set(Mech *mech, int flags) {
+  mech->rd.specials2 = flags;
+}
+
+void mech_technology_flags_secondary_add(Mech *mech, int flags) {
+  mech->rd.specials2 |= flags;
 }
 
 void mech_technology_flags_remove(Mech *mech, int flags) {
@@ -87,7 +103,19 @@ int mech_infantry_technology_flags(const Mech *mech) {
   return mech->rd.infantry_specials;
 }
 
+void mech_infantry_technology_flags_set(Mech *mech, int flags) {
+  mech->rd.infantry_specials = flags;
+}
+
+void mech_infantry_technology_flags_add(Mech *mech, int flags) {
+  mech->rd.infantry_specials |= flags;
+}
+
 int mech_cargo_space(const Mech *mech) { return mech->ud.cargospace; }
+
+void mech_cargo_space_set(Mech *mech, int space) {
+  mech->ud.cargospace = space;
+}
 
 void mech_cargo_space_remove(Mech *mech, int amount) {
   mech->ud.cargospace -= amount;
@@ -99,6 +127,10 @@ void mech_cargo_space_add(Mech *mech, int amount) {
 
 int mech_carrier_maximum_tonnage(const Mech *mech) {
   return mech->ud.carmaxton;
+}
+
+void mech_carrier_maximum_tonnage_set(Mech *mech, int tonnage) {
+  mech->ud.carmaxton = tonnage;
 }
 
 int mech_maximum_battle_suits(const Mech *mech) { return mech->rd.maxsuits; }
