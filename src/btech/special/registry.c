@@ -286,11 +286,6 @@ bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
     if (okay_hcode(context, curr))
       if (HandledCommand_sub(context, player, curr, command))
         return 1;
-#if 0 /* Recursion is evil ; let's not do that, this time */
-		if(has_contents(context->database, curr))
-			if(HandledCommand_contents(player, curr, command))
-				return 1;
-#endif
   }
   return 0;
 }

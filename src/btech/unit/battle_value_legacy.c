@@ -34,15 +34,6 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
     if (type == CLASS_MECH && (i == CTORSO || i == LTORSO || i == RTORSO)) {
       armor += (debug2 = GetSectRArmor(mech, i) *
                          (mechspec & HARDA_TECH ? 200 : 100));
-#if 0
-/* NULLTODO : Port any of these techs ASAP */
-					if(mechspec2 & TORSOCOCKPIT_TECH && i == CTORSO)
-						armor += (debug4 =
-								  (((GetSectArmor(mech, i) +
-									 GetSectRArmor(mech,
-												   i)) * 2) *
-								   (mechspec & HARDA_TECH ? 200 : 100)));
-#endif
     }
     if (!is_aero(mech))
       intern +=
@@ -131,24 +122,10 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
       } else if (IsAmmo(temp)) {
         if (PartIsNonfunctional(mech, i, ii) || !GetPartData(mech, i, ii))
           continue;
-#if 0
-/* NULLTODO : Port any of these techs ASAP */
-						mul =
-							((temp2 =
-							  GetPartAmmoMode(mech, i,
-											  ii)) & AC_AP_MODE ? 4 : temp2 &
-							 AC_PRECISION_MODE ? 6 : temp2 & (TRACER_MODE |
-															  STINGER_MODE |
-															  SWARM_MODE |
-															  SWARM1_MODE |
-															  SGUIDED_MODE) ?
-							 1.5 : 1);
-#else
         mul = ((temp2 = GetPartAmmoMode(mech, i, ii)) & AC_AP_MODE ? 4
                : temp2 & AC_PRECISION_MODE                         ? 6
                : temp2 & (SWARM_MODE | SWARM1_MODE | STINGER_MODE) ? 1.5
                                                                    : 1);
-#endif
         mul = (mul * ((float)((float)GetPartData(mech, i, ii) /
                               (float)MechWeapons[weapindx = Ammo2WeaponI(temp)]
                                   .ammoperton)));
@@ -280,12 +257,6 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
     else
       offweapbv += 1000;
   }
-#if 0
-/* NULLTODO : Port any of these techs ASAP */
-			if(mechspec2 & HDGYRO_TECH)
-				defweapbv += 3000;
-#endif
-
   if (mechspec & (XL_TECH | XXL_TECH | LE_TECH)) {
     if (mechspec & (CLAN_TECH | LE_TECH))
       mul = 1.125;

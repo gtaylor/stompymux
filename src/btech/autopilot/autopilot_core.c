@@ -95,14 +95,7 @@ void auto_destroy_command_node(AutopilotCommand *node) {
  */
 
 /*! \todo {See if we need this function and remove it if not} */
-int auto_valid_progline(Autopilot *a, int p) {
-#if 0
-	for(i = 0; i < a->first_free; i += (acom[a->commands[i]].argcount + 1))
-		if(i == p)
-			return 1;
-#endif
-  return 0;
-}
+int auto_valid_progline(Autopilot *a, int p) { return 0; }
 
 /*
  * Internal function to return a string that
@@ -246,16 +239,6 @@ void auto_jump(DbRef player, void *data, char *buffer) {
   notify(btech_context_evaluation(autopilot->xcode.context), player,
          "jump has been temporarly disabled till I can figure out"
          " how I want to change it - Dany");
-#if 0
-	skipws(buffer);
-	DOCHECK_CONTEXT(autopilot->xcode.context, !*buffer, "Argument expected!");
-	DOCHECK_CONTEXT(autopilot->xcode.context, Readnum(p, buffer), "Invalid argument - single number expected.");
-	/* Find out if it's valid position */
-	DOCHECK_CONTEXT(autopilot->xcode.context, !auto_valid_progline(a, p),
-			"Invalid : Argument out of range, or argument, not command.");
-	PG(a) = p;
-	notify_printf(btech_context_evaluation(autopilot->xcode.context), player, "Program Counter set to #%d.", p);
-#endif
 }
 
 /*

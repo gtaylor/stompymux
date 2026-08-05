@@ -386,10 +386,6 @@ void dump_locations(FILE *fp, Mech *mech, const char *locdesc[]) {
       fprintf(fp, "  Internals        { %d }\n", GetSectOInt(mech, x));
     if (GetSectORArmor(mech, x))
       fprintf(fp, "  Rear             { %d }\n", GetSectORArmor(mech, x));
-#if 0 /* Shouldn't be neccessary to save at all */
-		fprintf(fp, "  Recycle          { %d }\n",
-				MechSections(mech)[x].recycle);
-#endif
     y = MechSections(mech)[x].config;
     y &= ~CASE_TECH;
     if (y)

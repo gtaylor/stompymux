@@ -216,19 +216,9 @@ unsigned long long mech_fasa_cost(Mech *mech) {
       mech_cost_add(mech, &total, "RE Internals", (tons * 6400));
     else
       mech_cost_add(mech, &total, "Std Internals", (tons * 400));
-/* End MECH Internal Structure Skeleton */
+    /* End MECH Internal Structure Skeleton */
 
-/* Cockpit */
-#if 0
-/* NULLTODO : Port any of these techs ASAP */
-		if(technology_secondary & SMALLCOCKPIT_TECH)
-			ADDPRICE("SmallCockpit", 175000)
-				else
-		if(technology_secondary & TORSOCOCKPIT_TECH)
-			ADDPRICE("TorsoCockpit", 750000)
-				else
-				EI is 400000 (Clan Tech)
-#endif
+    /* Cockpit */
     if (technology_secondary & SMALLCOCKPIT_TECH)
       mech_cost_add(mech, &total, "Small Cockpit", 175000);
     else
@@ -586,11 +576,6 @@ unsigned long long mech_fasa_cost(Mech *mech) {
           mech_cost_add(mech, &total, "TargComp", 10000);
           continue;
 
-#if 0
-/* NULLTODO : Port any of these techs ASAP */
-						case HARDPOINT:
-							continue;
-#endif
         default:
           break;
         }

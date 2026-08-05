@@ -579,9 +579,6 @@ char *FindTechSkillName(Mech *mech) {
   case CLASS_SPHEROID_DS:
   case CLASS_DS:
     return "Technician-Aerospace";
-#if 0 /* Used to be DS tech */
-		return (char_getskilltarget(mech->xcode.context, player, "Technician-Spacecraft", 0));
-#endif
   }
   return NULL;
 }

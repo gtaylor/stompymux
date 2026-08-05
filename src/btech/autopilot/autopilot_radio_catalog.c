@@ -54,66 +54,28 @@ void sendchannelstuff(Mech *mech, int freq, char *msg);
 AutopilotRadioCommand const autopilot_radio_commands[] = {
     {"auto", "autogun", 1, 0, auto_radio_command_autogun},
     {"auto", "autogun", 2, 0, auto_radio_command_autogun},
-    {
-#if 0
-	"att", "attackleg", 1, 0, auto_attackleg}, {
-	"chanf", "chanfreq", 2, 0, auto_setchanfreq}, {
-	"chanm", "chanmode", 2, 0, auto_setchanmode}, {
-#endif
-        "chase", "chasetarg", 1, 0, auto_radio_command_chasetarg},
-    {
-#if 0
-	"cm", "cmode", 2, 0, auto_cmode}, {
-#endif
-        "dfo", "dfollow", 1, 0, auto_radio_command_dfollow},
+    {"chase", "chasetarg", 1, 0, auto_radio_command_chasetarg},
+    {"dfo", "dfollow", 1, 0, auto_radio_command_dfollow},
     {"dgo", "dgoto", 2, 0, auto_radio_command_dgoto},
-    {
-#if 0
-	"dr", "drally", 2, 0, auto_drally}, {
-	"dr", "drally", 3, 0, auto_drally}, {
-#endif
-        "drop", "dropoff", 0, 0, auto_radio_command_dropoff},
+    {"drop", "dropoff", 0, 0, auto_radio_command_dropoff},
     {"emb", "embark", 1, 0, auto_radio_command_embark},
     {"en", "enterbase", 0, 0, auto_radio_command_enterbase},
     {"en", "enterbase", 1, 0, auto_radio_command_enterbase},
-    {
-#if 0
-	"en", "enterbay", 0, 0, auto_enterbay}, {
-	"en", "enterbay", 1, 0, auto_enterbay}, {
-#endif
-        "fo", "follow", 1, 0, auto_radio_command_follow},
-    {
-#if 0
-	"fr", "freq", 1, 0, auto_freq}, {
-#endif
-        "go", "goto", 2, 0, auto_radio_command_goto},
+    {"fo", "follow", 1, 0, auto_radio_command_follow},
+    {"go", "goto", 2, 0, auto_radio_command_goto},
     {"he", "heading", 1, 0, auto_radio_command_heading},
     {"he", "help", 0, 1, auto_radio_command_help},
     {"hi", "hide", 0, 0, auto_radio_command_hide},
     {"jump", "jumpjet", 1, 0, auto_radio_command_jumpjet},
     {"jump", "jumpjet", 2, 0, auto_radio_command_jumpjet},
     {"le", "leavebase", 1, 0, auto_radio_command_leavebase},
-    {
-#if 0
-	"nog", "nogun", 0, 0, auto_nogun}, {
-	"not", "notarget", 0, 0, auto_notarget}, {
-#endif
-        "ogo", "ogoto", 2, 0, auto_radio_command_ogoto},
+    {"ogo", "ogoto", 2, 0, auto_radio_command_ogoto},
     {"pick", "pickup", 1, 0, auto_radio_command_pickup},
     {"pos", "position", 2, 0, auto_radio_command_position},
     {"pr", "prone", 0, 0, auto_radio_command_prone},
-    {
-#if 0
-	"ra", "rally", 2, 0, auto_rally}, {
-	"ra", "rally", 3, 0, auto_rally}, {
-#endif
-        "re", "report", 0, 1, auto_radio_command_report},
+    {"re", "report", 0, 1, auto_radio_command_report},
     {"reset", "reset", 0, 0, auto_radio_command_reset},
-    {
-#if 0
-	"roam", "roammode", 1, 0, auto_roammode}, {
-#endif
-        "se", "sensor", 2, 0, auto_radio_command_sensor},
+    {"se", "sensor", 2, 0, auto_radio_command_sensor},
     {"se", "sensor", 0, 0, auto_radio_command_sensor},
     {"sh", "shutdown", 0, 0, auto_radio_command_shutdown},
     {"sp", "speed", 1, 0, auto_radio_command_speed},
@@ -122,15 +84,5 @@ AutopilotRadioCommand const autopilot_radio_commands[] = {
     {"st", "startup", 1, 0, auto_radio_command_startup},
     {"st", "stop", 0, 0, auto_radio_command_stop},
     {"sw", "sweight", 2, 1, auto_radio_command_sweight},
-    {
-#if 0
-	"swa", "swarm", 1, 0, auto_swarm}, {
-	"swarmc", "swarmcharge", 1, 0, auto_swarmcharge}, {
-	"swarmm", "swarmmode", 1, 0, auto_swarmmode}, {
-#endif
-        "ta", "target", 1, 0, auto_radio_command_target},
-    {
-#if 0
-	"ta", "target", 2, 0, auto_target}, {
-#endif
-        NULL, NULL, 0, 0, NULL}};
+    {"ta", "target", 1, 0, auto_radio_command_target},
+    {NULL, NULL, 0, 0, NULL}};

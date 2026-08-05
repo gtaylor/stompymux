@@ -52,14 +52,6 @@ void fun_btweapstat(char *buff, char **bufc, DbRef player, DbRef cause,
   else if (strcasecmp("BV", fargs[1]) == 0)
     val = btech_weapon_settings_battle_value(&context->btech->weapon_settings,
                                              weapindx);
-#if 0
-	else if(strcasecmp("ABV", fargs[1]) == 0)
-		val = MechWeapons[weapindx].abattlevalue;
-	else if(strcasecmp("REP", fargs[1]) == 0)
-		val = MechWeapons[weapindx].reptime;
-	else if(strcasecmp("WCLASS", fargs[1]) == 0)
-		val = MechWeapons[weapindx].class;
-#endif
   if (val == -1)
     safe_tprintf_str(buff, bufc, "#-1");
   safe_tprintf_str(buff, bufc, "%d", val);

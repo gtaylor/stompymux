@@ -240,9 +240,6 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       if ((tt == BATTLE_TERRAIN_HEAVY_FOREST) &&
           fabs(mech_current_speed(mech)) > MP1) {
 
-#if 0
-				mech_notify(mech, MECHALL, "You cruise at a bunch of trees!");
-#endif
         mech_notify(mech, MECHALL, "You try to dodge the larger trees..");
 
         if (mech_pilot_dbref(mech) == -1 ||
@@ -408,9 +405,6 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
            tt == BATTLE_TERRAIN_LIGHT_FOREST) &&
           fabs(mech_current_speed(mech)) > MP1) {
 
-#if 0
-				mech_notify(mech, MECHALL, "You cruise at a bunch of trees!");
-#endif
         mech_notify(mech, MECHALL, "You try to dodge the larger trees..");
         if (mech_pilot_dbref(mech) == -1 ||
             MadePilotSkillRoll(
@@ -430,10 +424,6 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
 
       } else if ((tt == BATTLE_TERRAIN_ROUGH) &&
                  fabs(mech_current_speed(mech)) > MP1) {
-#if 0
-				mech_notify(mech, MECHALL,
-							"You cruise at some rough terrain!");
-#endif
         mech_notify(mech, MECHALL, "You try to avoid the rocks..");
         if (mech_pilot_dbref(mech) == -1 ||
             MadePilotSkillRoll(
@@ -626,9 +616,6 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
     if ((tt == BATTLE_TERRAIN_HEAVY_FOREST ||
          tt == BATTLE_TERRAIN_LIGHT_FOREST) &&
         fabs(mech_current_speed(mech)) > MP1) {
-#if 0
-			mech_notify(mech, MECHALL, "You cruise at a bunch of trees!");
-#endif
       mech_notify(mech, MECHALL, "You try to dodge the larger trees..");
 
       if (mech_pilot_dbref(mech) == -1 ||
