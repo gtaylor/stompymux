@@ -17,10 +17,16 @@
 #include "btech/context.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map_obj_api.h"
 #include "mech_build_api.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_partnames_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_tech.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
@@ -29,6 +35,31 @@
 #include "mux/server/game.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
+
+#ifndef BT_COMPLEXREPAIRS
+int tech_proper_armor_part(const Mech *mech) {
+  int technology = mech_technology_flags(mech);
+  int secondary = mech_technology_flags_secondary(mech);
+  int infantry = mech_infantry_technology_flags(mech);
+  int armor = technology & FF_TECH                  ? FF_ARMOR
+              : technology & HARDA_TECH             ? HD_ARMOR
+              : secondary & STEALTH_ARMOR_TECH      ? STH_ARMOR
+              : secondary & HVY_FF_ARMOR_TECH       ? HVY_FF_ARMOR
+              : secondary & LT_FF_ARMOR_TECH        ? LT_FF_ARMOR
+              : infantry & CS_PURIFIER_STEALTH_TECH ? PURIFIER_ARMOR
+                                                    : S_ARMOR;
+  return Cargo(armor);
+}
+
+int tech_proper_internal_part(const Mech *mech) {
+  int technology = mech_technology_flags(mech);
+  int internal = technology & ES_TECH       ? ES_INTERNAL
+                 : technology & REINFI_TECH ? RE_INTERNAL
+                 : technology & COMPI_TECH  ? CO_INTERNAL
+                                            : S_INTERNAL;
+  return Cargo(internal);
+}
+#endif
 
 int game_lag(BtechContext *context) {
   if (!context->events->tick)
@@ -66,50 +97,52 @@ int player_techtime(BtechContext *context, DbRef player) {
 }
 
 int tech_roll(DbRef player, Mech *mech, int diff) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   int s;
   int succ;
   int r = (HasBoolAdvantage(context, player, "tech_aptitude")
-               ? char_rollsaving(mech->xcode.context)
-               : btech_random_roll(mech->xcode.context));
+               ? char_rollsaving(context)
+               : btech_random_roll(context));
 
   s = FindTechSkill(player, mech);
   s += diff;
   succ = r >= s;
-  if (is_wizard(context->database, player)) {
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  if (is_wizard(btech_context_database(context), player)) {
+    notify_printf(btech_context_evaluation(context), player,
                   "Tech - BTH: %d(Base:%d, Mod:%d) Roll: %d", s, s - diff, diff,
                   r);
   } else {
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                  "BTH: %d Roll: %d", s, r);
+    notify_printf(btech_context_evaluation(context), player, "BTH: %d Roll: %d",
+                  s, r);
   }
-  if (succ && is_in_character(context->database, mech->mynum))
+  if (succ &&
+      is_in_character(btech_context_database(context), mech_dbref(mech)))
     AccumulateTechXP(context, player, mech,
                      BOUNDED(1, s - 7, MAX(2, 1 + diff)));
   return (r - s);
 }
 
 int tech_weapon_roll(DbRef player, Mech *mech, int diff) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   int s;
   int succ;
   int r = (HasBoolAdvantage(context, player, "tech_aptitude")
-               ? char_rollsaving(mech->xcode.context)
-               : btech_random_roll(mech->xcode.context));
+               ? char_rollsaving(context)
+               : btech_random_roll(context));
 
   s = char_getskilltarget(context, player, "technician-weapons", 0);
   s += diff;
   succ = r >= s;
-  if (is_wizard(context->database, player)) {
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  if (is_wizard(btech_context_database(context), player)) {
+    notify_printf(btech_context_evaluation(context), player,
                   "Tech-W - BTH: %d(Base:%d, Mod:%d) Roll: %d", s, s - diff,
                   diff, r);
   } else {
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                  "BTH: %d Roll: %d", s, r);
+    notify_printf(btech_context_evaluation(context), player, "BTH: %d Roll: %d",
+                  s, r);
   }
-  if (succ && is_in_character(context->database, mech->mynum))
+  if (succ &&
+      is_in_character(btech_context_database(context), mech_dbref(mech)))
     AccumulateTechWeaponsXP(context, player, mech,
                             BOUNDED(1, s - 7, MAX(2, 1 + diff)));
   return (r - s);
@@ -190,14 +223,14 @@ int tech_parsepart_advanced(Mech *mech, char *buffer, int *loc, int *pos,
       isrear = 8;
     }
   }
-  if ((*loc = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0])) <
-      0)
+  if ((*loc = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                     args[0])) < 0)
     return -1;
   if (allowrear)
     *loc += isrear;
   if (pos) {
     l = atoi(args[1]) - 1;
-    if (l < 0 || l >= CritsInLoc(mech, *loc))
+    if (l < 0 || l >= mech_section_critical_count(mech, *loc))
       return -2;
     *pos = l;
   }
@@ -222,11 +255,11 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
   if (argc < 1 || argc > (2 + (brand != NULL)))
     return -1;
   if (argc == (2 + (brand != NULL)) || (brand && argc == 2 && atoi(args[1]))) {
-    if ((*loc = ArmorSectionFromString(MechType(mech), MechMove(mech),
-                                       args[0])) < 0)
+    if ((*loc = ArmorSectionFromString(mech_class(mech),
+                                       mech_movement_type(mech), args[0])) < 0)
       return -1;
     l = atoi(args[1]);
-    if (l <= 0 || l > CritsInLoc(mech, *loc))
+    if (l <= 0 || l > mech_section_critical_count(mech, *loc))
       return -4;
     *pos = l - 1;
   } else {
@@ -239,16 +272,16 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
     if ((t = FindWeaponNumberOnMech(mech, l, loc, pos)) == -1)
       return -1;
   }
-  t = GetPartType(mech, *loc, *pos);
+  t = mech_critical_part_type(mech, *loc, *pos);
   if (brand != NULL && argc > 1 && !atoi(args[argc - 1])) {
-    if (!find_matching_long_part(mech->xcode.context, args[argc - 1], &c, &pi,
+    if (!find_matching_long_part(mech_context(mech), args[argc - 1], &c, &pi,
                                  &pb))
       return -2;
     if (pi != t)
       return -3;
     *brand = pb;
   } else if (brand != NULL)
-    *brand = GetPartBrand(mech, *loc, *pos);
+    *brand = mech_critical_brand(mech, *loc, *pos);
   return 0;
 }
 
@@ -276,10 +309,7 @@ static void find_latest_tech_event(MuxEvent *event, void *data) {
 
 int figure_latest_tech_event(Mech *mech) {
   LatestTechEventContext latest = {0};
-  MuxEventScheduler *events = mech->xcode.context->events;
-
   for (int type = FIRST_TECH_EVENT; type <= LAST_TECH_EVENT; type++)
-    mux_event_visit_type_data(events, type, mech, find_latest_tech_event,
-                              &latest);
+    mech_event_visit(mech, type, find_latest_tech_event, &latest);
   return latest.latest;
 }

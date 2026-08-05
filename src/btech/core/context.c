@@ -238,6 +238,20 @@ bool btech_context_limits_repairs_to_stalls(const BtechContext *context) {
   return context->configuration->btech_limitedrepairs;
 }
 
+bool btech_context_uses_free_technology_time(const BtechContext *context) {
+  assert(context != nullptr);
+#ifdef BT_FREETECHTIME
+  return context->configuration->btech_freetechtime;
+#else
+  return false;
+#endif
+}
+
+int btech_context_maximum_technology_time(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_maxtechtime;
+}
+
 int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_sprint_bth;

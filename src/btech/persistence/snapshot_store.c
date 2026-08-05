@@ -1,5 +1,7 @@
 #include "sqlite_internal.h"
 
+#include "mech_identity_api.h"
+
 int btech_store_map(void *key, void *data, int depth, void *argument) {
   BTECH_MAP_STORE_CONTEXT *context = argument;
   BtechSpecialObject *xcode = data;
@@ -139,7 +141,7 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
     remaining = 1;
   if (event->function == very_fake_func)
     remaining = -remaining;
-  if (btech_special_bind_int(context->statement, 1, mech->mynum) < 0 ||
+  if (btech_special_bind_int(context->statement, 1, mech_dbref(mech)) < 0 ||
       btech_special_bind_int(context->statement, 2, context->type) < 0 ||
       btech_special_bind_int(context->statement, 3,
                              remaining < 0 ? -remaining : remaining) < 0 ||
