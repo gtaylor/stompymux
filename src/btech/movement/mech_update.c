@@ -10,6 +10,8 @@
 
 #include "mech_update_internal.h"
 
+#include "mech_movement_validation_api.h"
+
 void move_mech(Mech *mech) {
   float newx = 0.0, newy = 0.0, dax, day;
   float xy_charge_dist, xscale;
@@ -30,56 +32,9 @@ void move_mech(Mech *mech) {
   char message_buffer[MBUF_SIZE];
 
   oz = MechZ(mech);
-  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
-
-  if (!mech_map && MechPilot(mech) >= 0)
-    mech_map = ValidMap(mech->xcode.context, MechPilot(mech), mech->mapindex);
-
-  /* Unit is not on a map so don't need to move it - instead
-   * reset its values and shut it down */
-  if (!mech_map) {
-
-    mech_notify(mech, MECHALL, "You are on an invalid map! Map index reset!");
-    MechCocoon(mech) = 0;
-
-    if (Jumping(mech))
-      mech_land(MechPilot(mech), (void *)mech, "");
-
-    mech_shutdown(MechPilot(mech), (void *)mech, "");
-
-    snprintf(message_buffer, MBUF_SIZE,
-             "move_mech:invalid map:Mech: %ld Index: %ld", mech->mynum,
-             mech->mapindex);
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       message_buffer);
-    mech->mapindex = -1;
+  mech_map = mech_movement_map_validate(mech);
+  if (!mech_map)
     return;
-  }
-
-  /* Is the unit on a valid spot on the map */
-  if (MechX(mech) < 0 || MechX(mech) >= mech_map->map_width ||
-      MechLastX(mech) < 0 || MechLastX(mech) >= mech_map->map_width ||
-      MechY(mech) < 0 || MechY(mech) >= mech_map->map_height ||
-      MechLastY(mech) < 0 || MechLastY(mech) >= mech_map->map_height) {
-
-    mech_notify(mech, MECHALL,
-                "You are at an invalid map location! Map index reset!");
-    MechCocoon(mech) = 0;
-
-    if (Jumping(mech))
-      mech_land(MechPilot(mech), (void *)mech, "");
-
-    mech_shutdown(MechPilot(mech), (void *)mech, "");
-
-    snprintf(message_buffer, MBUF_SIZE,
-             "move_mech:invalid map:Mech: %ld Index: %ld", mech->mynum,
-             mech->mapindex);
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       message_buffer);
-
-    mech->mapindex = -1;
-    return;
-  }
 
   /* Is the unit charging - and if so have they been charging to long */
   if (mech->xcode.context->configuration->btech_newcharge &&

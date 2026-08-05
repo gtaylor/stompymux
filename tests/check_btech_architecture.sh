@@ -583,6 +583,13 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Jumping)\s*\(' \
+  src/btech/movement/mech_movement_validation.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: movement validation must use opaque unit APIs"
+  status=1
+fi
+
 match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Destroyed|is_aero)\s*\(' \
   src/btech/movement/mech_fire_hazard.c || true)
 if [[ -n "$match" ]]; then

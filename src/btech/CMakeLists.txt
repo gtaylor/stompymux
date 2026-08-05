@@ -120,6 +120,7 @@ set(BTECH_SOURCES
   movement/mech_update.c
   movement/mech_fire_hazard.c
   movement/mech_collision.c
+  movement/mech_movement_validation.c
   movement/mech_update_altitude.c
   movement/mech_update_motion.c
   movement/mech_update_speed.c
