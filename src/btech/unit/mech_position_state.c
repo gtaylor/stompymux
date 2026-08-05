@@ -61,6 +61,10 @@ int mech_heading_fixed_difference(const Mech *mech) {
   return mech->pd.facing - SHO2FSIM(mech->rd.desiredfacing);
 }
 
+bool mech_heading_changed(const Mech *mech) {
+  return mech->rd.critstatus & CHEAD;
+}
+
 int mech_desired_heading_degrees(const Mech *mech) {
   return mech->rd.desiredfacing;
 }
@@ -156,6 +160,8 @@ void mech_heading_rotate_toward_desired(Mech *mech, int fixed_offset) {
   mech->rd.critstatus |= CHEAD;
   MarkForLOSUpdate(mech);
 }
+
+void mech_heading_change_clear(Mech *mech) { mech->rd.critstatus &= ~CHEAD; }
 
 void mech_turret_heading_absolute_set(Mech *mech, int heading) {
   mech->rd.turretfacing =

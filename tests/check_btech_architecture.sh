@@ -531,6 +531,13 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "mech_update_internal\.h"|#include "(mech|mech_macros)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Fallen|Jumping|Landed|Sprinting|Evading|GetTurnMode|MMaxSpeed)\s*\(' \
+  src/btech/movement/mech_update_speed.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: speed integration must use opaque unit APIs"
+  status=1
+fi
+
 match=$(rg -n '\b(UpdateHeading|UpdateSpeed|terrain_speed)\s*\(' src/btech || true)
 if [[ -n "$match" ]]; then
   echo "$match: legacy heading or speed exports are not allowed"
