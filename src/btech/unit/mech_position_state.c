@@ -95,6 +95,8 @@ void mech_position_real_xy_set(Mech *mech, float x, float y) {
   mech->pd.fy = y;
 }
 
+void mech_position_real_z_set(Mech *mech, float z) { mech->pd.fz = z; }
+
 void mech_position_terrain_set(Mech *mech, char terrain) {
   mech->pd.terrain = terrain;
 }
@@ -120,6 +122,10 @@ void mech_desired_speed_set(Mech *mech, float speed) {
 
 void mech_desired_heading_set(Mech *mech, int heading) {
   mech->rd.desiredfacing = AcceptableDegree(heading);
+}
+
+void mech_heading_set(Mech *mech, int heading) {
+  mech->pd.facing = SHO2FSIM(AcceptableDegree(heading));
 }
 
 void mech_turret_heading_absolute_set(Mech *mech, int heading) {

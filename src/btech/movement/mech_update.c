@@ -115,8 +115,6 @@ int collision_check(Mech *mech, int mode, int le, int lt) {
   return 0;
 }
 
-void CheckNavalHeight(Mech *mech, int oz);
-
 void move_mech(Mech *mech) {
   float newx = 0.0, newy = 0.0, dax, day;
   float xy_charge_dist, xscale;
@@ -642,11 +640,11 @@ void move_mech(Mech *mech) {
 
   /* If aero/vtol make sure we're not rubbing against the ground or trees */
   if ((MechMove(mech) == MOVE_VTOL || is_aero(mech)) && !Landed(mech))
-    CheckVTOLHeight(mech);
+    mech_vtol_altitude_check(mech);
 
   /* If we're a boat make sure we've not run a ground */
   if (MechType(mech) == CLASS_VEH_NAVAL)
-    CheckNavalHeight(mech, oz);
+    mech_naval_altitude_check(mech, oz);
 
   /* We're charging lets do some damage */
   if (MechChargeTarget(mech) != -1) {

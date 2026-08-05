@@ -485,6 +485,19 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "mech_update_internal\.h"|#include "(mech|mech_macros)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|InWater|Landed|is_aero)\s*\(' \
+  src/btech/movement/mech_update_altitude.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: altitude handling must use opaque unit APIs"
+  status=1
+fi
+
+match=$(rg -n '\b(CheckNavalHeight|CheckVTOLHeight)\b' src/btech || true)
+if [[ -n "$match" ]]; then
+  echo "$match: legacy altitude exports are not allowed"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1

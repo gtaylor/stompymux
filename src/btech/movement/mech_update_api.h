@@ -20,8 +20,8 @@ void bridge_set_elevation(Mech *mech);
 int DSOkToNotify(Mech *mech);
 int collision_check(Mech *mech, int mode, int le, int lt);
 void move_mech(Mech *mech);
-void CheckNavalHeight(Mech *mech, int oz);
-void CheckVTOLHeight(Mech *mech);
+void mech_naval_altitude_check(Mech *mech, int previous_z);
+void mech_vtol_altitude_check(Mech *mech);
 void UpdateHeading(Mech *mech);
 float terrain_speed(Mech *mech, float tempspeed, float maxspeed, int terrain,
                     int elev);
