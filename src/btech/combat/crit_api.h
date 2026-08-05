@@ -16,21 +16,25 @@
 /* crit.c */
 void mech_speed_correct(Mech *mech);
 void mech_explosion_apply(Mech *wounded, Mech *attacker);
-int handleWeaponCrit(Mech *attacker, Mech *wounded, int hitloc, int critHit,
-                     int critType, int LOS);
+int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
+                                int critHit, int critType, int LOS);
 void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                     int num);
 void mech_main_weapon_destroy(Mech *mech);
-void JamMainWeapon(Mech *mech);
-void pickRandomWeapon(Mech *objMech, int wLoc, int *critNum, int wIgnoreJams);
-void limitSpeedToCruise(Mech *objMech);
-void DoVehicleStablizerCrit(Mech *objMech, int wLoc);
-void DoTurretJamCrit(Mech *objMech);
-void DoWeaponJamCrit(Mech *objMech, int wLoc);
-void DoTurretLockCrit(Mech *objMech);
-void DoWeaponDestroyedCrit(Mech *objAttacker, Mech *objMech, int wLoc, int LOS);
-void DoTurretBlownOffCrit(Mech *objMech, Mech *objAttacker, int LOS);
-void DoAmmunitionCrit(Mech *objMech, Mech *objAttacker, int wLoc, int LOS);
+void mech_main_weapon_jam(Mech *mech);
+void mech_random_weapon_select(Mech *objMech, int wLoc, int *critNum,
+                               int wIgnoreJams);
+void mech_speed_limit_to_cruise(Mech *objMech);
+void mech_vehicle_stabilizer_critical_apply(Mech *objMech, int wLoc);
+void mech_turret_jam_critical_apply(Mech *objMech);
+void mech_weapon_jam_critical_apply(Mech *objMech, int wLoc);
+void mech_turret_lock_critical_apply(Mech *objMech);
+void mech_weapon_destroyed_critical_apply(Mech *objAttacker, Mech *objMech,
+                                          int wLoc, int LOS);
+void mech_turret_blown_off_critical_apply(Mech *objMech, Mech *objAttacker,
+                                          int LOS);
+void mech_ammunition_critical_apply(Mech *objMech, Mech *objAttacker, int wLoc,
+                                    int LOS);
 void DoCargoInfantryCrit(Mech *objMech, int wLoc);
 void DoVehicleEngineHit(Mech *objMech, Mech *objAttacker);
 void DoVehicleFuelTankCrit(Mech *objMech, Mech *objAttacker);

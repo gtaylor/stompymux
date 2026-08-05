@@ -47,6 +47,9 @@ bool mech_critical_is_operational_special(const Mech *mech, int section,
                                           int critical, int special);
 bool mech_section_carries_club(const Mech *mech, int section);
 bool mech_section_has_special(const Mech *mech, int section, int special);
+bool mech_section_configuration_has(const Mech *mech, int section,
+                                    int configuration);
+void mech_section_configuration_add(Mech *mech, int section, int configuration);
 bool mech_has_section_special(const Mech *mech, int special);
 void mech_section_special_remove(Mech *mech, int section, int special);
 bool mech_has_attached_inarc_ecm(const Mech *mech);

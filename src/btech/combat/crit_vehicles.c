@@ -150,7 +150,7 @@ void DoVehicleCrewStunnedCrit(Mech *objMech) {
       "temporarily stunning you![reset]");
 
   mech_stun_crew(objMech);
-  limitSpeedToCruise(objMech);
+  mech_speed_limit_to_cruise(objMech);
 }
 
 void DoVehicleDriverCrit(Mech *objMech) {
@@ -294,7 +294,7 @@ void DoVTOLTailRotorDamagedCrit(Mech *objMech) {
         objMech, MECHALL,
         "[fg=red bold]Your tail rotor is damaged, slowing you down![reset]");
 
-    limitSpeedToCruise(objMech);
+    mech_speed_limit_to_cruise(objMech);
   }
 }
 
@@ -345,11 +345,11 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 7:
-        DoWeaponJamCrit(wounded, hitloc);
+        mech_weapon_jam_critical_apply(wounded, hitloc);
         break;
 
       case 8:
-        DoVehicleStablizerCrit(wounded, hitloc);
+        mech_vehicle_stabilizer_critical_apply(wounded, hitloc);
         break;
 
       case 9:
@@ -361,7 +361,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 11:
-        DoWeaponDestroyedCrit(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
         break;
 
       case 12:
@@ -378,7 +378,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 7:
-        DoWeaponJamCrit(wounded, hitloc);
+        mech_weapon_jam_critical_apply(wounded, hitloc);
         break;
 
       case 8:
@@ -386,11 +386,11 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 9:
-        DoVehicleStablizerCrit(wounded, hitloc);
+        mech_vehicle_stabilizer_critical_apply(wounded, hitloc);
         break;
 
       case 10:
-        DoWeaponDestroyedCrit(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
         break;
 
       case 11:
@@ -406,7 +406,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
     case BSIDE:
       switch (wRoll) {
       case 6:
-        DoWeaponJamCrit(wounded, hitloc);
+        mech_weapon_jam_critical_apply(wounded, hitloc);
         break;
 
       case 7:
@@ -414,11 +414,11 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 8:
-        DoVehicleStablizerCrit(wounded, hitloc);
+        mech_vehicle_stabilizer_critical_apply(wounded, hitloc);
         break;
 
       case 9:
-        DoWeaponDestroyedCrit(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
         break;
 
       case 10:
@@ -426,7 +426,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 11:
-        DoAmmunitionCrit(wounded, attacker, hitloc, LOS);
+        mech_ammunition_critical_apply(wounded, attacker, hitloc, LOS);
         break;
 
       case 12:
@@ -438,31 +438,31 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
     case TURRET:
       switch (wRoll) {
       case 6:
-        DoVehicleStablizerCrit(wounded, hitloc);
+        mech_vehicle_stabilizer_critical_apply(wounded, hitloc);
         break;
 
       case 7:
-        DoTurretJamCrit(wounded);
+        mech_turret_jam_critical_apply(wounded);
         break;
 
       case 8:
-        DoWeaponJamCrit(wounded, hitloc);
+        mech_weapon_jam_critical_apply(wounded, hitloc);
         break;
 
       case 9:
-        DoTurretLockCrit(wounded);
+        mech_turret_lock_critical_apply(wounded);
         break;
 
       case 10:
-        DoWeaponDestroyedCrit(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
         break;
 
       case 11:
-        DoTurretBlownOffCrit(wounded, attacker, LOS);
+        mech_turret_blown_off_critical_apply(wounded, attacker, LOS);
         break;
 
       case 12:
-        DoAmmunitionCrit(wounded, attacker, hitloc, LOS);
+        mech_ammunition_critical_apply(wounded, attacker, hitloc, LOS);
         break;
       }
       break;
@@ -478,11 +478,11 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 7:
-        DoWeaponJamCrit(wounded, hitloc);
+        mech_weapon_jam_critical_apply(wounded, hitloc);
         break;
 
       case 8:
-        DoVehicleStablizerCrit(wounded, hitloc);
+        mech_vehicle_stabilizer_critical_apply(wounded, hitloc);
         break;
 
       case 9:
@@ -494,7 +494,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 11:
-        DoWeaponDestroyedCrit(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
         break;
 
       case 12:
@@ -507,7 +507,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
     case RSIDE:
       switch (wRoll) {
       case 6:
-        DoWeaponJamCrit(wounded, hitloc);
+        mech_weapon_jam_critical_apply(wounded, hitloc);
         break;
 
       case 7:
@@ -515,11 +515,11 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 8:
-        DoVehicleStablizerCrit(wounded, hitloc);
+        mech_vehicle_stabilizer_critical_apply(wounded, hitloc);
         break;
 
       case 9:
-        DoWeaponDestroyedCrit(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
         break;
 
       case 10:
@@ -527,7 +527,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 11:
-        DoAmmunitionCrit(wounded, attacker, hitloc, LOS);
+        mech_ammunition_critical_apply(wounded, attacker, hitloc, LOS);
         break;
 
       case 12:
@@ -543,15 +543,15 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 7:
-        DoWeaponJamCrit(wounded, hitloc);
+        mech_weapon_jam_critical_apply(wounded, hitloc);
         break;
 
       case 8:
-        DoVehicleStablizerCrit(wounded, hitloc);
+        mech_vehicle_stabilizer_critical_apply(wounded, hitloc);
         break;
 
       case 9:
-        DoWeaponDestroyedCrit(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
         break;
 
       case 10:
@@ -609,7 +609,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
   case 1:
     /* Weapon jams, set them recylcling maybe */
     /* hmm. nothing for now, tanks are so weak */
-    JamMainWeapon(wounded);
+    mech_main_weapon_jam(wounded);
     break;
   case 2:
     /* Engine Hit */

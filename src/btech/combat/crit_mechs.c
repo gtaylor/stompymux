@@ -222,7 +222,8 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
   }
 
   if (IsWeapon(critType)) {
-    if (handleWeaponCrit(attacker, wounded, hitloc, critHit, critType, LOS)) {
+    if (mech_weapon_critical_handle(attacker, wounded, hitloc, critHit,
+                                    critType, LOS)) {
       return 1;
     }
 
@@ -288,8 +289,8 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
         break; // sanity check
       }
       destroycrit = 0;
-      if (handleWeaponCrit(attacker, wounded, temp, fCrit,
-                           GetPartType(wounded, temp, fCrit), LOS))
+      if (mech_weapon_critical_handle(attacker, wounded, temp, fCrit,
+                                      GetPartType(wounded, temp, fCrit), LOS))
         break;
       scoreEnhancedWeaponCriticalHit(wounded, attacker, LOS, temp, fCrit);
       break;

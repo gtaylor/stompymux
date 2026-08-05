@@ -33,6 +33,10 @@ int mech_technology_flags_secondary(const Mech *mech) {
   return mech->rd.specials2;
 }
 
+void mech_technology_flags_remove(Mech *mech, int flags) {
+  mech->rd.specials &= ~flags;
+}
+
 void mech_masc_technology_destroy(Mech *mech) {
   mech->rd.specials &= ~MASC_TECH;
 }

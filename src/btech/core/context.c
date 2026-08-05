@@ -273,6 +273,14 @@ long btech_context_random_i31(BtechContext *context) {
   return btech_random_i31(&context->random);
 }
 
+int btech_context_missile_hit_count(const BtechContext *context,
+                                    int weapon_index, int roll_index) {
+  assert(context != nullptr);
+  const MissileHitEntry *entry =
+      missile_hit_registry_find_weapon(&context->missile_hits, weapon_index);
+  return entry ? entry->num_missiles[roll_index] : 0;
+}
+
 int btech_context_event_data_count(const BtechContext *context, int event_type,
                                    intptr_t event_data) {
   assert(context != nullptr);

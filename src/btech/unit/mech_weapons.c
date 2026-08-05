@@ -24,6 +24,15 @@ bool weapon_catalogue_supports_indirect_fire(int weapon_index) {
   return MechWeapons[weapon_index].special & IDF;
 }
 
+bool weapon_catalogue_is_anti_missile(int weapon_index) {
+  return MechWeapons[weapon_index].special & AMS;
+}
+
+bool weapon_catalogue_is_hot_loaded(int weapon_index, int fire_mode) {
+  return (fire_mode & HOTLOAD_MODE) &&
+         (MechWeapons[weapon_index].special & IDF);
+}
+
 const char *weapon_catalogue_name(int weapon_index) {
   return MechWeapons[weapon_index].name;
 }

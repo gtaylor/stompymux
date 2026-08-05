@@ -113,7 +113,7 @@ void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
   case 1:
     /* Weapon jams, set them recylcling maybe */
     /* hmm. nothing for now, tanks are so weak */
-    JamMainWeapon(wounded);
+    mech_main_weapon_jam(wounded);
     break;
   case 2:
     /* Engine Hit */
@@ -142,7 +142,7 @@ void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s power plant suddenly explodes!");
     DestroyMech(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
-    if (!mech_section_has_special(wounded, BSIDE, CASE_TECH))
+    if (!mech_section_configuration_has(wounded, BSIDE, CASE_TECH))
       mech_explosion_apply(wounded, attacker);
     else
       DestroySection(wounded, attacker, LOS, BSIDE);
@@ -235,7 +235,7 @@ void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
   case 1:
     /* Weapon jams, set them recylcling maybe */
     /* hmm. nothing for now, tanks are so weak */
-    JamMainWeapon(wounded);
+    mech_main_weapon_jam(wounded);
     break;
   case 2:
     /* Engine Hit */
