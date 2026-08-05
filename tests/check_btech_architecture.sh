@@ -557,6 +557,13 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(MechType|MechPilot|MechWeapHeat|GetPartAmmoMode|DestroyPart)\s*\(' \
+  src/btech/combat/mech_ammunition_explosion.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: ammunition explosions must use opaque unit APIs"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1

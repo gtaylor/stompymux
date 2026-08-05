@@ -41,6 +41,7 @@ set(BTECH_SOURCES
   combat/eject_embark.c
   combat/environment_damage.c
   combat/mech_ammodump.c
+  combat/mech_ammunition_explosion.c
   combat/mech_bth.c
   combat/mech_bth_movement.c
   combat/mech_combat.c

@@ -25,6 +25,7 @@ void mech_critical_part_type_set(Mech *mech, int section, int critical,
                                  int part_type);
 void mech_critical_destroyed_set(Mech *mech, int section, int critical,
                                  bool destroyed);
+void mech_critical_destroy(Mech *mech, int section, int critical);
 int mech_section_original_armor(const Mech *mech, int section);
 int mech_section_original_rear_armor(const Mech *mech, int section);
 int mech_section_armor(const Mech *mech, int section);

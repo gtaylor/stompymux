@@ -8,54 +8,8 @@
  *       All rights reserved
  */
 
+#include "mech_ammunition_explosion_api.h"
 #include "mech_update_internal.h"
-
-void mech_ammunition_explode(Mech *attacker, Mech *mech, int ammoloc,
-                             int ammocritnum, int damage) {
-  if (MechType(mech) == CLASS_MW) {
-    mech_notify(mech, MECHALL, "Your weapon's ammo explodes!");
-    mech_los_broadcast(mech, "'s weapon's ammo explodes!");
-  } else {
-    mech_notify(mech, MECHALL, "Ammunition explosion!");
-    if (GetPartAmmoMode(mech, ammoloc, ammocritnum) & INFERNO_MODE)
-      mech_los_broadcast(mech,
-                         "is suddenly enveloped by a brilliant fireball!");
-    else
-      mech_los_broadcast(mech, "has an internal ammo explosion!");
-  }
-  DestroyPart(mech, ammoloc, ammocritnum);
-  if (!attacker)
-    return;
-  if (GetPartAmmoMode(mech, ammoloc, ammocritnum) & INFERNO_MODE) {
-    Inferno_Hit(mech, mech, damage / 4, 0);
-    if (mech->xcode.context->configuration->btech_inferno_penalty)
-      MechWeapHeat(mech) += 30.0;
-    damage = damage / 2;
-  }
-  if (MechType(mech) == CLASS_BSUIT)
-    DamageMech(mech, attacker, 0, -1, ammoloc, 0, 0, damage, 0, -1, 0, -1, 0,
-               0);
-  else
-    DamageMech(mech, attacker, 0, -1, ammoloc, 0, 0, -1, damage, -1, 0, -1, 0,
-               0);
-
-  /* Rule Reference: BMR Revised, Page 16-17 (Ammo Explosion=2 Bruise) */
-  /* Rule Reference: Total Warfare, Page 41 (Ammo Explosion=2 Bruise) */
-
-  if (MechType(mech) != CLASS_BSUIT) {
-    mech_notify(mech, MECHPILOT,
-                "You take personal injury from the ammunition explosion!");
-
-    /* Rule Reference: MaxTech Revised, Page 46 (Reduce by 1 because of pain
-     * resistance) */
-
-    if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
-                         "pain_resistance"))
-      headhitmwdamage(mech, mech, 1);
-    else
-      headhitmwdamage(mech, mech, 2);
-  }
-}
 
 void mech_overheat_handle(Mech *mech) {
   int avoided = 0, hasinferno = 0;

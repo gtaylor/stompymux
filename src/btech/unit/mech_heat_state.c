@@ -21,3 +21,5 @@ bool mech_uses_heat(const Mech *mech) {
 }
 
 float mech_added_heat(const Mech *mech) { return mech->rd.plus_heat; }
+
+void mech_weapon_heat_add(Mech *mech, float heat) { mech->rd.weapheat += heat; }

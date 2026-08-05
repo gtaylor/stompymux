@@ -59,6 +59,7 @@ void btech_context_combat_arcs_override_set(BtechContext *context, int arcs);
 void btech_context_combat_pilot_override_set(BtechContext *context,
                                              BtechObjectId pilot);
 bool btech_context_seismic_detects_stopped_units(const BtechContext *context);
+bool btech_context_inferno_penalty_enabled(const BtechContext *context);
 bool btech_context_uses_fasa_turning(const BtechContext *context);
 int btech_context_movement_slowdown_mode(const BtechContext *context);
 int btech_context_stacking_mode(const BtechContext *context);

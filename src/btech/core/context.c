@@ -92,6 +92,11 @@ bool btech_context_seismic_detects_stopped_units(const BtechContext *context) {
   return context->configuration->btech_seismic_see_stopped;
 }
 
+bool btech_context_inferno_penalty_enabled(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_inferno_penalty;
+}
+
 bool btech_context_uses_fasa_turning(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_fasaturn;

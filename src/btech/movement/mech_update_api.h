@@ -27,8 +27,6 @@ float mech_terrain_speed(Mech *mech, float current_speed, float maximum_speed,
                          int terrain, int elevation);
 void mech_speed_update(Mech *mech);
 int mech_overheat_to_hit_modifier(const Mech *mech);
-void mech_ammunition_explode(Mech *attacker, Mech *mech, int ammunition_section,
-                             int ammunition_critical, int damage);
 void mech_overheat_handle(Mech *mech);
 void mech_heat_update(Mech *mech);
 int mech_weapon_recycle_update(Mech *mech);

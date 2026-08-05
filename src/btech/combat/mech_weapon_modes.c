@@ -1,4 +1,5 @@
 #include "mech_advanced_internal.h"
+#include "mech_ammunition_explosion_api.h"
 
 static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,

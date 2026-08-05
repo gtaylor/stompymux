@@ -80,6 +80,14 @@ void mech_critical_destroyed_set(Mech *mech, int section, int critical,
     slot->firemode &= ~DESTROYED_MODE;
 }
 
+void mech_critical_destroy(Mech *mech, int section, int critical) {
+  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  slot->firemode |= DESTROYED_MODE;
+  slot->firemode &= ~(BROKEN_MODE | DISABLED_MODE | DAMAGED_MODE);
+  slot->weapDamageFlags = 0;
+  slot->brand %= 16;
+}
+
 int mech_section_original_armor(const Mech *mech, int section) {
   return mech->ud.sections[section].armor_orig;
 }

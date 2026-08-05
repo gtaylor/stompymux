@@ -24,6 +24,7 @@
 #include "map_terrain.h"
 #include "mech.h"
 #include "mech_ammodump_api.h"
+#include "mech_ammunition_explosion_api.h"
 #include "mech_c3_api.h"
 #include "mech_c3i_api.h"
 #include "mech_combat_misc_api.h"
