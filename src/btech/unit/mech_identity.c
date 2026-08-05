@@ -598,7 +598,7 @@ int MadePilotSkillRoll(Mech *mech, int mods) {
   return MadePilotSkillRoll_Advanced(mech, mods, 1);
 }
 
-int MechPilotSkillRoll_BTH(Mech *mech, int mods) {
+int mech_pilot_skill_roll_target(Mech *mech, int mods) {
   mods += FindSPilotPiloting(mech) + MechPilotSkillBase(mech);
   if (MechSpecials2(mech) & SMALLCOCKPIT_TECH)
     mods++;
@@ -618,7 +618,7 @@ int MadePilotSkillRoll_NoXP(Mech *mech, int mods, int succeedWhenFallen) {
   if (Uncon(mech) || !Started(mech) || Blinded(mech))
     return 0;
   roll = btech_random_roll(mech->xcode.context);
-  roll_needed = MechPilotSkillRoll_BTH(mech, mods);
+  roll_needed = mech_pilot_skill_roll_target(mech, mods);
 
   btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                      tprintf("Attempting to make pilot skill roll. "
@@ -643,7 +643,7 @@ int MadePilotSkillRoll_Advanced(Mech *mech, int mods, int succeedWhenFallen) {
   if (Uncon(mech) || !Started(mech) || Blinded(mech))
     return 0;
   roll = btech_random_roll(mech->xcode.context);
-  roll_needed = MechPilotSkillRoll_BTH(mech, mods);
+  roll_needed = mech_pilot_skill_roll_target(mech, mods);
 
   btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                      tprintf("Attempting to make pilot (noxp) skill roll. "

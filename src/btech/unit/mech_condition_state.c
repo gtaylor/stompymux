@@ -16,6 +16,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
 
   return (MechConditionSummary){
       .combat_safe = status & COMBAT_SAFE,
+      .fallen = status & FALLEN,
       .fortified = status2 & FORTIFIED,
       .weapons_hold = status2 & WEAPONS_HOLD,
       .hull_down = status & HULLDOWN,

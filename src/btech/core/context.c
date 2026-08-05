@@ -122,6 +122,22 @@ bool btech_context_uses_advanced_vehicle_fire(const BtechContext *context) {
          context->configuration->btech_fasaadvvhlfire;
 }
 
+bool btech_context_uses_tsm_sprint_bonus(const BtechContext *context) {
+  return context && context->configuration &&
+         context->configuration->btech_tsm_sprint_bonus;
+}
+
+bool btech_context_uses_tsm_tow_bonus(const BtechContext *context) {
+  return context && context->configuration &&
+         context->configuration->btech_tsm_tow_bonus;
+}
+
+int btech_context_stand_careful_modifier(const BtechContext *context) {
+  return context && context->configuration
+             ? context->configuration->btech_standcareful
+             : 0;
+}
+
 bool btech_context_requires_backwalk_rolls(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_roll_on_backwalk;

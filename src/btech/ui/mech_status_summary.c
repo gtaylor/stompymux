@@ -528,7 +528,7 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
     if (mech_lateral_movement(mech))
       notify_printf(evaluation, player, "You are moving laterally %s",
-                    LateralDesc(mech));
+                    mech_lateral_description(mech));
     break;
   case CLASS_VEH_GROUND:
   case CLASS_VEH_NAVAL:

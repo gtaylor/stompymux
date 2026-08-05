@@ -431,7 +431,7 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   notify(evaluation, player, buff);
   if (mech_lateral_movement(tempMech))
     notify_printf(evaluation, player, "      Mech is moving laterally %s",
-                  LateralDesc(tempMech));
+                  mech_lateral_description(tempMech));
   mech_scan_show_turret_facing(evaluation, player, 6, tempMech);
 
   switch (mech_movement_type(tempMech)) {

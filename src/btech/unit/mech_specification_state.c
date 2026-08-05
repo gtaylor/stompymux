@@ -109,3 +109,42 @@ void mech_sixth_sense_set(Mech *mech, bool enabled) {
 void mech_bay_dbref_set(Mech *mech, int bay, DbRef bay_dbref) {
   mech->pd.bay[bay] = bay_dbref;
 }
+
+int mech_carried_cargo_weight(const Mech *mech) {
+  return mech->rd.cargo_weight;
+}
+
+bool mech_load_cache_is_valid(const Mech *mech) {
+  return mech->rd.critstatus & LOAD_OK;
+}
+
+bool mech_weight_cache_is_valid(const Mech *mech) {
+  return mech->rd.critstatus & OWEIGHT_OK;
+}
+
+bool mech_speed_cache_is_valid(const Mech *mech) {
+  return mech->rd.critstatus & SPEED_OK;
+}
+
+void mech_load_cache_invalidate(Mech *mech) { mech->rd.critstatus &= ~LOAD_OK; }
+
+int mech_cached_calculated_weight(const Mech *mech) { return mech->rd.row; }
+
+void mech_cached_calculated_weight_set(Mech *mech, int weight) {
+  mech->rd.row = weight;
+}
+
+int mech_cached_lugged_weight(const Mech *mech) { return mech->rd.rcw; }
+
+void mech_load_cache_record(Mech *mech, int lugged_weight) {
+  mech->rd.rcw = lugged_weight;
+  mech->rd.critstatus |= LOAD_OK;
+}
+
+float mech_cached_maximum_speed(const Mech *mech) { return mech->rd.rspd; }
+
+void mech_speed_cache_record(Mech *mech, float speed, int walk_xp_factor) {
+  mech->rd.rspd = speed;
+  mech->rd.wxf = walk_xp_factor;
+  mech->rd.critstatus |= SPEED_OK;
+}

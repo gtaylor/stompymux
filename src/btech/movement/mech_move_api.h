@@ -14,7 +14,7 @@
 #include "mux/server/platform.h"
 
 /* mech.move.c */
-const char *LateralDesc(Mech *mech);
+const char *mech_lateral_description(Mech *mech);
 void mech_lateral(DbRef player, void *data, char *buffer);
 void mech_turnmode(DbRef player, void *data, char *buffer);
 void mech_bootlegger(DbRef player, void *data, char *buffer);

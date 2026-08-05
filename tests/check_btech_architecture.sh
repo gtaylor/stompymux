@@ -628,6 +628,13 @@ if [[ -e src/btech/movement/mech_update_internal.h ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "(mech|mech_macros)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|InSpecial|InGravity|InWater|Fallen|Jumping|Destroyed|OODing|MMaxSpeed|WalkingSpeed|MapGravity)\s*\(' \
+  src/btech/movement/mech_move.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: ground movement must use opaque unit and map APIs"
+  status=1
+fi
+
 match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Jumping)\s*\(' \
   src/btech/movement/mech_movement_validation.c || true)
 if [[ -n "$match" ]]; then

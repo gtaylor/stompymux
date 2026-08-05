@@ -96,7 +96,7 @@ int FindTechSkill(DbRef player, Mech *mech);
 /* Skill rolls */
 long btech_random_range(BtechContext *context, long low, long high);
 int MadePilotSkillRoll(Mech *mech, int mods);
-int MechPilotSkillRoll_BTH(Mech *mech, int mods);
+int mech_pilot_skill_roll_target(Mech *mech, int mods);
 int MadePilotSkillRoll_Advanced(Mech *mech, int mods, int succeedWhenFallen);
 int MadePilotSkillRoll_NoXP(Mech *mech, int mods, int succeedWhenFallen);
 int btech_random_roll(BtechContext *context);

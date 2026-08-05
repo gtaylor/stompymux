@@ -7,6 +7,7 @@
 typedef struct MechConditionSummary {
   bool combat_safe;
   bool fortified;
+  bool fallen;
   bool weapons_hold;
   bool hull_down;
   bool dug_in;
