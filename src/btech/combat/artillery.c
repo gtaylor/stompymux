@@ -50,6 +50,7 @@
 #include "mux/support/formatting.h"
 #include "mymath.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 static void artillery_hit(artillery_shot *s);
 
@@ -164,9 +165,9 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
   if (!tomsg || !otmsg)
     return;
   if (isunderwater)
-    ground_zero = Elevation(map, tx, ty);
+    ground_zero = battle_map_hex_elevation(map, tx, ty);
   else
-    ground_zero = MAX(0, Elevation(map, tx, ty));
+    ground_zero = MAX(0, battle_map_hex_elevation(map, tx, ty));
 
   for (loop = 0; loop < map->first_free; loop++)
     if (map->mechsOnMap[loop] >= 0) {
@@ -323,7 +324,7 @@ static void artillery_hit_hex(BattleMap *map, artillery_shot *s, int type,
     return;
   }
   if (mode & MINE_MODE) {
-    add_mine(map, tx, ty, dam);
+    mine_field_add(map, tx, ty, dam);
     return;
   }
   if (!(mode & CLUSTER_MODE)) {

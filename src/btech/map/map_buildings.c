@@ -1,6 +1,7 @@
 #include "map_building_query_api.h"
 #include "map_obj_internal.h"
 
+#include "mech_condition_api.h"
 #include "mech_identity_api.h"
 #include "mech_position_api.h"
 
@@ -139,17 +140,17 @@ void hit_building(Mech *mech, int x, int y, int weapindx, int damage) {
     if (!IsMissile(weapindx))
       damage = MechWeapons[weapindx].damage;
     else {
-      const MissileHitEntry *entry = missile_hit_registry_find_weapon(
-          &mech_context(mech)->missile_hits, weapindx);
-
       /* Missile weapon.  Multiple Hit locations... */
-      if (entry == nullptr)
+      if (!btech_context_has_missile_hit_table(mech_context(mech), weapindx))
         return;
-      if ((MechWeapons[weapindx].type == STREAK) && (!AngelECMDisturbed(mech)))
-        num_missiles_hit = entry->num_missiles[10];
+      if ((MechWeapons[weapindx].type == STREAK) &&
+          !mech_condition_summary(mech).angel_ecm_disturbed)
+        num_missiles_hit =
+            btech_context_missile_hit_count(mech_context(mech), weapindx, 10);
       else {
         hit_roll = btech_random_roll(map->xcode.context) - 2;
-        num_missiles_hit = entry->num_missiles[hit_roll];
+        num_missiles_hit = btech_context_missile_hit_count(mech_context(mech),
+                                                           weapindx, hit_roll);
       }
       damage = num_missiles_hit * MechWeapons[weapindx].damage;
     }

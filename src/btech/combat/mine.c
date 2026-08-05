@@ -37,11 +37,12 @@
 #include "map_bits_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_specification_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "mux/commands/action_messages.h"
@@ -57,12 +58,12 @@
  * know if a unit has moved to a certain spot
  *
  * The others are the explosive do damage kind */
-char *mine_type_names[] = {"Standard", "Inferno", "Command",
-                           "Vibra",    "Trigger", NULL};
+static char *mine_type_names[] = {"Standard", "Inferno", "Command",
+                                  "Vibra",    "Trigger", nullptr};
 
 extern int compare_array(char *[], char *);
 
-void add_mine(BattleMap *map, int x, int y, int dam) {
+void mine_field_add(BattleMap *map, int x, int y, int damage) {
   MapObject *o, foo;
 
   if (is_mine_hex(map, x, y)) {
@@ -75,7 +76,7 @@ void add_mine(BattleMap *map, int x, int y, int dam) {
   bzero(&foo, sizeof(foo));
   foo.x = x;
   foo.y = y;
-  foo.datas = dam;
+  foo.datas = damage;
   foo.datac = MINE_STANDARD;
   add_mapobj(map, &map->MapObject[TYPE_MINE], &foo, 1);
 }
@@ -96,8 +97,8 @@ static void update_mine(BattleMap *map, MapObject *mine) {
     mine->datas = i;
 }
 
-void make_mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
-                       int reason) {
+static void mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
+                         int reason) {
   int cool = (o->datas >= MINE_MIN);
 
   if ((o->datac == MINE_TRIGGER) && reason != MINE_STEP && reason != MINE_LAND)
@@ -150,16 +151,16 @@ void make_mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
     mapobj_del(map, o->x, o->y, TYPE_MINE);
     break;
   case MINE_TRIGGER:
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MINE_TRIGGERS, "%s",
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MINE_TRIGGERS, "%s",
                        tprintf("#%ld %s activated trigger at %d,%d.",
-                               mech->mynum, mech_display_id(mech).text, o->x,
-                               o->y));
+                               mech_dbref(mech), mech_display_id(mech).text,
+                               o->x, o->y));
 
     // Trigger the unit's AMECHDEST attribute.
-    if (mech->mynum > 0)
-      notify_event(btech_context_evaluation(mech->xcode.context), NULL,
-                   mech->mynum, mech->mynum, mech->mynum,
-                   LUA_EVENT_MECH_MINE_TRIGGER, (char **)NULL, 0);
+    if (mech_dbref(mech) > 0)
+      notify_event(btech_context_evaluation(mech_context(mech)), nullptr,
+                   mech_dbref(mech), mech_dbref(mech), mech_dbref(mech),
+                   LUA_EVENT_MECH_MINE_TRIGGER, nullptr, 0);
 
     return;
   case MINE_VIBRA:
@@ -173,7 +174,7 @@ void make_mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
     mapobj_del(map, o->x, o->y, TYPE_MINE);
     break;
   }
-  recalculate_minefields(map);
+  mine_fields_recalculate(map);
 }
 
 /* we find the mine(s) that cause this (vibras can do it long-distance),
@@ -182,7 +183,7 @@ void make_mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
 static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
                                     int reason) {
   MapObject *o, *o2;
-  int mdis = (MechRealTons(mech) - 20) / 10;
+  int mdis = (mech_real_tonnage(mech) - 20) / 10;
   float x1, y1, x2, y2, range;
 
   MapCoordToRealCoord(x, y, &x1, &y1);
@@ -196,11 +197,11 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
       switch (o->datac) {
 
       case MINE_TRIGGER:
-        if (o->datas > MechRealTons(mech))
+        if (o->datas > mech_real_tonnage(mech))
           continue;
         break;
       case MINE_VIBRA:
-        if (o->datai > MechRealTons(mech))
+        if (o->datai > mech_real_tonnage(mech))
           continue; /* No message, just boom */
         break;
       case MINE_COMMAND:
@@ -213,14 +214,14 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
       if (!real)
         return;
 
-      make_mine_explode(mech, map, o, x, y, reason);
+      mine_explode(mech, map, o, x, y, reason);
 
-    } else if (VIBRO(o->datac)) {
+    } else if (mine_type_is_vibrating(o->datac)) {
 
       if (o->datac == MINE_TRIGGER) {
 
         /* To small let it go */
-        if (o->datas > (MechRealTons(mech)))
+        if (o->datas > mech_real_tonnage(mech))
           continue;
 
         MapCoordToRealCoord(o->x, o->y, &x2, &y2);
@@ -231,60 +232,53 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
         if (nearbyintf(FindHexRange(x1, y1, x2, y2)) > ((float)o->datai))
           continue;
 
-        make_mine_explode(mech, map, o, x, y, reason);
+        mine_explode(mech, map, o, x, y, reason);
 
-      } else if (o->datai < MechRealTons(mech)) {
+      } else if (o->datai < mech_real_tonnage(mech)) {
 
         if (abs(o->x - x) <= mdis && abs(o->y - y) <= mdis) {
 
           /* Possible remote explosion */
           MapCoordToRealCoord(o->x, o->y, &x2, &y2);
           if ((range = FindHexRange(x1, y1, x2, y2)) >
-              (MechRealTons(mech) - o->datai) / 10)
+              (mech_real_tonnage(mech) - o->datai) / 10)
             continue;
 
-          make_mine_explode(mech, map, o, x, y, reason);
+          mine_explode(mech, map, o, x, y, reason);
         }
       }
     }
   }
 }
 
-void possible_mine_poof(Mech *mech, int reason) {
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
-  int x = MechX(mech);
-  int y = MechY(mech);
+void mine_field_trigger(Mech *mech, int reason) {
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
+  int x = mech_position_x(mech);
+  int y = mech_position_y(mech);
 
   if (!is_mine_hex(map, x, y))
     return;
 
-  if (MechZ(mech) >
-      (mech_real_terrain_get(mech) == ICE ? 0 : Elevation(map, x, y)))
+  if (mech_position_z(mech) > (mech_real_terrain_get(mech) == ICE
+                                   ? 0
+                                   : battle_map_hex_elevation(map, x, y)))
     return;
 
   possible_mine_explosion(mech, map, x, y, reason);
 }
 
-void possibly_remove_mines(Mech *mech, int x, int y) {
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+void mine_field_possibly_remove(Mech *mech, int x, int y) {
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   if (!map)
     return;
   if (!is_mine_hex(map, x, y))
     return;
 
-  /* Do the cleaning stuff here */
-
-  /* Ok, we're lazy and just decide that roll of <= 4 removes
-     all traces of mines in the hex */
-  /* For now, we are commenting this out. We need a better way to handle mines
-   * Well, just trigger mines really. Frontiers uses them for Map triggers */
-  /*	if(btech_random_roll(mech->xcode.context) <= 4) {
-                  if(mapobj_del(map, x, y, TYPE_MINE)) {
-                          recalculate_minefields(map);
-                  }
-          }
-  */
+  /* Mine removal is intentionally disabled until trigger mines can be
+     distinguished from ordinary minefields. */
 }
 
 /* for now, just put the hexes themselves ; vibras should have larger radius */
@@ -318,7 +312,7 @@ static void add_mine_on_map(BattleMap *map, int x, int y, char type, int data) {
 
   } else if (type >= MINE_LOW && type <= MINE_HIGH) {
 
-    if (VIBRO(type) && mdis) {
+    if (mine_type_is_vibrating(type) && mdis) {
       for (x1 = x - mdis; x1 <= (x + mdis); x1++)
         for (y1 = y - mdis; y1 <= (y + mdis); y1++)
           if ((abs(x1 - x) + abs(y1 - y)) <= t)
@@ -332,7 +326,7 @@ static void add_mine_on_map(BattleMap *map, int x, int y, char type, int data) {
 }
 
 /* Re-set all the minefield bits on a map */
-void recalculate_minefields(BattleMap *map) {
+void mine_fields_recalculate(BattleMap *map) {
   MapObject *o;
 
   clear_hex_bits(map, 1);
@@ -341,7 +335,7 @@ void recalculate_minefields(BattleMap *map) {
 }
 
 /* x y type strength <optvalue> */
-void map_add_mine(DbRef player, void *data, char *buffer) {
+void mine_command_add(DbRef player, void *data, char *buffer) {
 
   char *args[6];
   int argc;
@@ -385,11 +379,12 @@ void map_add_mine(DbRef player, void *data, char *buffer) {
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "%s mine added to (%d,%d) (strength: %d / extra: %d)",
                 mine_type_names[type], x, y, str, extra);
-  recalculate_minefields(map);
+  mine_fields_recalculate(map);
 }
 
-void explode_mines(Mech *mech, int chn) {
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+void mine_command_detonate(Mech *mech, int channel) {
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   MapObject *o, *o2;
   int count = 0;
 
@@ -398,32 +393,33 @@ void explode_mines(Mech *mech, int chn) {
   for (o = map->MapObject[TYPE_MINE]; o; o = o2) {
     o2 = o->next;
     if (o->datac == MINE_COMMAND)
-      if (o->datai == chn) {
-        make_mine_explode(mech, map, o, 0, 0, 0);
+      if (o->datai == channel) {
+        mine_explode(mech, map, o, 0, 0, 0);
         count++;
       }
   }
   if (count)
-    recalculate_minefields(map);
+    mine_fields_recalculate(map);
 }
 
-void show_mines_in_hex(DbRef player, Mech *mech, float range, int x, int y) {
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+void mine_field_scan(DbRef player, Mech *mech, float range, int x, int y) {
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   MapObject *o;
 
-  DOCHECK_CONTEXT(mech->xcode.context, !is_mine_hex(map, x, y),
+  DOCHECK_CONTEXT(mech_context(mech), !is_mine_hex(map, x, y),
                   "You see nothing else of interest in the hex, either.");
 
   for (o = map->MapObject[TYPE_MINE]; o; o = o->next)
     if (o->x == x && o->y == y)
       break;
 
-  DOCHECK_CONTEXT(mech->xcode.context, !o,
+  DOCHECK_CONTEXT(mech_context(mech), !o,
                   "You see nothing else of interest in the hex, either.");
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  btech_random_range(mech->xcode.context, 2, 9) < ((int)range),
+  DOCHECK_CONTEXT(mech_context(mech),
+                  btech_random_range(mech_context(mech), 2, 9) < ((int)range),
                   "You see nothing else of interest in the hex, either.");
-  DOCHECK_CONTEXT(mech->xcode.context, !MadePerceptionRoll(mech, 0),
+  DOCHECK_CONTEXT(mech_context(mech), !MadePerceptionRoll(mech, 0),
                   "You see nothing else of interest in the hex, either.");
   mech_notify(mech, MECHALL,
               "Small bomblets litter the hex, interesting... You vaguely "

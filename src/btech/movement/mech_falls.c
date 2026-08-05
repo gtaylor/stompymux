@@ -199,6 +199,6 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
       mech_inferno_extinguish_in_water(mech);
     }
   }
-  possible_mine_poof(mech, MINE_FALL);
+  mine_field_trigger(mech, MINE_FALL);
   MarkForLOSUpdate(mech);
 }

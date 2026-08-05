@@ -2,8 +2,11 @@
 
 #pragma once
 
+#include <stddef.h>
+
 typedef struct Mech Mech;
 
+size_t mech_storage_size(void);
 void mech_power_up(Mech *mech);
 void mech_power_down(Mech *mech);
 void mech_mark_destroyed(Mech *mech);

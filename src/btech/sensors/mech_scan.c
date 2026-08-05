@@ -270,7 +270,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   if (dob)
     show_building_in_hex(mech, mapx, mapy);
   if (doh)
-    show_mines_in_hex(player, mech, range, mapx, mapy);
+    mine_field_scan(player, mech, range, mapx, mapy);
 }
 
 void mech_report(DbRef player, void *data, char *buffer) {

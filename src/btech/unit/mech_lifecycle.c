@@ -250,3 +250,5 @@ bool mech_aero_has_free_fuel(const Mech *mech) {
          mech->xcode.context->configuration->btech_nofusionvtolfuel &&
          !(MechSpecials(mech) & ICE_TECH);
 }
+
+size_t mech_storage_size(void) { return sizeof(Mech); }

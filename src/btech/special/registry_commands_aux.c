@@ -146,7 +146,7 @@ BtechCommandDefinition mapcommands[] = {
     {0, "ADDBLOCK <X> <Y> <DIST> [TEAM#_TO_ALLOW]",
      "@Adds no-landings zone of DIST hexes to X Y", map_add_block},
     {0, "ADDMINE <X> <Y> <TYPE> <STRENGTH> [OPT]", "@Adds mine to X,Y",
-     map_add_mine},
+     mine_command_add},
     {0, "ADDHEX <X> <Y> <TERRAIN> <ELEV>",
      "@Changes the terrain and elevation of the given hex", map_addhex},
     {0, "SETLINKED", "@Sets the map linked", map_setlinked},

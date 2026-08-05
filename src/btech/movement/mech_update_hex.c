@@ -26,12 +26,14 @@
 #include "mech_fire_api.h"
 #include "mech_hex_transition_api.h"
 #include "mech_identity_api.h"
+#include "mech_lifecycle.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "mux/support/formatting.h"
@@ -750,7 +752,7 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
   }
 
   if (!done) {
-    possible_mine_poof(mech, MINE_STEP);
+    mine_field_trigger(mech, MINE_STEP);
     if (advanced_vehicle_fire && (mech_class(mech) == CLASS_VEH_GROUND) &&
         (mech_position_terrain(mech) == BATTLE_TERRAIN_FIRE))
       vehicle_fire_check(mech, 1);

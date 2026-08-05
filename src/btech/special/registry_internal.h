@@ -18,6 +18,8 @@
   Based on the original by MUSE folks
 */
 
+#include <stddef.h>
+
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 
@@ -71,16 +73,24 @@ btech_command_definition_has_handler(const BtechCommandDefinition *command) {
 typedef void (*BtechSpecialLifecycleHandler)(DbRef object, void **data,
                                              int operation);
 typedef void (*BtechSpecialUpdateHandler)(DbRef object, void *data);
+typedef size_t (*BtechSpecialStorageSize)(void);
 
 typedef struct BtechSpecialObjectDefinition {
   char *type;                       // Type of the object
   BtechCommandDefinition *commands; // Commands array
   long datasize;                    // Size of private buffer
+  BtechSpecialStorageSize storage_size;
   BtechSpecialLifecycleHandler lifecycle;
   int updateTime;                   // Amount of time between updates (secs)
   BtechSpecialUpdateHandler update; // called for every object at every update
   PowerId power_needed; // What power is needed to restricted commands
 } BtechSpecialObjectDefinition;
+
+static inline size_t
+btech_special_object_data_size(const BtechSpecialObjectDefinition *definition) {
+  return definition->storage_size ? definition->storage_size()
+                                  : (size_t)definition->datasize;
+}
 
 enum { BTECH_SPECIAL_OBJECT_COUNT = 6 };
 

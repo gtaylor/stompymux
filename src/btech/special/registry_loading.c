@@ -183,7 +183,7 @@ static int load_update3(void *key, void *data, int depth, void *arg) {
 
   if (xcode_obj->type == GTYPE_MAP) {
     eliminate_empties((BattleMap *)xcode_obj);
-    recalculate_minefields((BattleMap *)xcode_obj);
+    mine_fields_recalculate((BattleMap *)xcode_obj);
   }
   return 1;
 }
@@ -262,7 +262,7 @@ void btech_special_objects_load(BtechContext *context) {
       !is_halted(context->database, i)) {
     type = btech_context_which_special_attribute(context, i);
     if (type >= 0) {
-      if (SpecialObjects[type].datasize > 0)
+      if (btech_special_object_data_size(&SpecialObjects[type]) > 0)
         NewSpecialObject(context, i, type);
     } else
       c_xcode(context->database, i); /* Reset the flag */

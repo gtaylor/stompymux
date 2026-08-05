@@ -84,7 +84,7 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   int size;
   BattleMap *map;
 
-  size = SpecialObjects[xcode_obj->type].datasize;
+  size = (int)btech_special_object_data_size(&SpecialObjects[xcode_obj->type]);
 
   switch (xcode_obj->type) {
   case GTYPE_MAP:

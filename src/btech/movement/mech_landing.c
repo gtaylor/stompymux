@@ -292,7 +292,7 @@ void mech_jump_land(Mech *mech) {
   mech_maybe_move(mech);               /* Possibly start movin' on da ground */
 
   if (!done)
-    possible_mine_poof(mech, MINE_LAND);
+    mine_field_trigger(mech, MINE_LAND);
 
   mech_flood(mech);
   mech_inferno_extinguish_in_water(mech);

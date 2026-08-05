@@ -77,22 +77,23 @@
 #include "mux/support/stringutil.h"
 #include "mycool.h"
 #include "registry_internal.h"
+#include "section_types.h"
 #include "turret.h"
 
 /* Special object parameters.  */
 const BtechSpecialObjectDefinition SpecialObjects[BTECH_SPECIAL_OBJECT_COUNT] =
-    {{"MECH", mechcommands, sizeof(Mech), newfreemech, HEAT_TICK, mech_update,
-      POWER_NONE},
-     {"DEBUG", debugcommands, sizeof(BtechSpecialObject), NULL, 0, NULL,
-      POWER_NONE},
-     {"MECHREP", mechrepcommands, sizeof(RepairFacility), newfreemechrep, 0,
-      NULL, POWER_NONE},
-     {"MAP", mapcommands, sizeof(BattleMap), newfreemap, LOS_TICK, map_update,
-      POWER_NONE},
-     {"AUTOPILOT", autopilotcommands, sizeof(Autopilot), auto_newautopilot, 0,
-      NULL, POWER_NONE},
-     {"TURRET", turretcommands, sizeof(Turret), turret_lifecycle_update, 0,
-      NULL, POWER_NONE}};
+    {{"MECH", mechcommands, 0, mech_storage_size, newfreemech, HEAT_TICK,
+      mech_update, POWER_NONE},
+     {"DEBUG", debugcommands, sizeof(BtechSpecialObject), nullptr, nullptr, 0,
+      nullptr, POWER_NONE},
+     {"MECHREP", mechrepcommands, sizeof(RepairFacility), nullptr,
+      newfreemechrep, 0, nullptr, POWER_NONE},
+     {"MAP", mapcommands, sizeof(BattleMap), nullptr, newfreemap, LOS_TICK,
+      map_update, POWER_NONE},
+     {"AUTOPILOT", autopilotcommands, sizeof(Autopilot), nullptr,
+      auto_newautopilot, 0, nullptr, POWER_NONE},
+     {"TURRET", turretcommands, sizeof(Turret), nullptr,
+      turret_lifecycle_update, 0, nullptr, POWER_NONE}};
 
 #define NUM_SPECIAL_OBJECTS BTECH_SPECIAL_OBJECT_COUNT
 
@@ -134,22 +135,36 @@ void btech_registry_tree_initialize(BtechContext *context) {
 
 /*********************************************/
 
+static int mech_class_command_flag(int unit_class) {
+  switch (unit_class) {
+  case CLASS_MECH:
+    return GFLAG_MECH;
+  case CLASS_VEH_GROUND:
+    return GFLAG_GROUNDVEH;
+  case CLASS_AERO:
+    return GFLAG_AERO;
+  case CLASS_DS:
+  case CLASS_SPHEROID_DS:
+    return GFLAG_DS;
+  case CLASS_VTOL:
+    return GFLAG_VTOL;
+  case CLASS_VEH_NAVAL:
+    return GFLAG_NAVAL;
+  case CLASS_BSUIT:
+    return GFLAG_BSUIT;
+  case CLASS_MW:
+    return GFLAG_MW;
+  default:
+    return 0;
+  }
+}
+
 int btech_command_allowed_for_mech(Mech *mech, int cmdflag) {
-#define TYPE2FLAG(a)                                                           \
-  ((a) == CLASS_MECH         ? GFLAG_MECH                                      \
-   : (a) == CLASS_VEH_GROUND ? GFLAG_GROUNDVEH                                 \
-   : (a) == CLASS_AERO       ? GFLAG_AERO                                      \
-   : DropShip(a)             ? GFLAG_DS                                        \
-   : (a) == CLASS_VTOL       ? GFLAG_VTOL                                      \
-   : (a) == CLASS_VEH_NAVAL  ? GFLAG_NAVAL                                     \
-   : (a) == CLASS_BSUIT      ? GFLAG_BSUIT                                     \
-   : (a) == CLASS_MW         ? GFLAG_MW                                        \
-                             : 0)
   int i;
 
   if (!cmdflag)
     return 1;
-  if (!mech || !(i = TYPE2FLAG(mech_class(mech))))
+  if (!mech || !(i = mech_class_command_flag(mech_class(mech))))
     return 0;
   if (cmdflag > 0) {
     if (cmdflag & i)
@@ -178,7 +193,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   int ishelp;
 
   type = btech_context_which_special(context, location);
-  if (type < 0 || (SpecialObjects[type].datasize > 0 &&
+  if (type < 0 || (btech_special_object_data_size(&SpecialObjects[type]) > 0 &&
                    !(xcode_obj = red_black_tree_find(context->special_objects,
                                                      (void *)location)))) {
     if (type >= 0 || !is_xcode(context->database, location) ||
@@ -186,7 +201,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
       return 0;
     if ((type = btech_context_which_special_attribute(context, location)) >=
         0) {
-      if (SpecialObjects[type].datasize > 0)
+      if (btech_special_object_data_size(&SpecialObjects[type]) > 0)
         return 0;
     } else
       return 0;
@@ -270,15 +285,16 @@ const int global_specials = NUM_SPECIAL_OBJECTS;
 
 void *NewSpecialObject(BtechContext *context, long id, int type) {
   BtechSpecialObject *xcode_obj = NULL;
+  size_t data_size = btech_special_object_data_size(&SpecialObjects[type]);
 
-  if (SpecialObjects[type].datasize) {
-    xcode_obj = (BtechSpecialObject *)calloc(1, SpecialObjects[type].datasize);
+  if (data_size) {
+    xcode_obj = (BtechSpecialObject *)calloc(1, data_size);
     if (!xcode_obj) {
       printf("Unable to calloc\n");
       exit(1);
     }
     xcode_obj->type = type;
-    xcode_obj->size = SpecialObjects[type].datasize;
+    xcode_obj->size = data_size;
     xcode_obj->context = context;
 
     if (SpecialObjects[type].lifecycle)
@@ -314,7 +330,7 @@ void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
   if (type > -1) {
     /* We found the proper special object */
     typeOfObject = &SpecialObjects[type];
-    if (typeOfObject->datasize) {
+    if (btech_special_object_data_size(typeOfObject)) {
       new = NewSpecialObject(context, key, type);
       if (!new)
         notify(btech_context_evaluation(context), player,
@@ -350,7 +366,7 @@ void btech_special_object_dispose(BtechContext *context, DbRef player,
   }
   typeOfObject = &SpecialObjects[i];
 
-  if (typeOfObject->datasize > 0 &&
+  if (btech_special_object_data_size(typeOfObject) > 0 &&
       btech_context_which_special(context, key) != i) {
     notify(btech_context_evaluation(context), player,
            "Semi-critical error has occured. For some reason the "
@@ -364,7 +380,7 @@ void btech_special_object_dispose(BtechContext *context, DbRef player,
     red_black_tree_delete(context->special_objects, (void *)key);
     mux_event_remove_data(context->events, xcode_obj);
     free(xcode_obj);
-  } else if (typeOfObject->datasize > 0) {
+  } else if (btech_special_object_data_size(typeOfObject) > 0) {
     notify(btech_context_evaluation(context), player,
            "This object is not in the special object DBASE.");
     notify(btech_context_evaluation(context), player,

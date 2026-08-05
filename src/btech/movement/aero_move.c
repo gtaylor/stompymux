@@ -48,6 +48,7 @@
 #include "mech_sensor_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_tag_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
@@ -115,13 +116,16 @@ static void aero_takeoff_event(MuxEvent *e) {
       mech_printf(mech, MECHALL, "Launch countdown: %ld.", count);
     if (i >= 0) {
       if (count == (land_data[i].launchtime / 4))
-        DSSpam_O(mech, "'s engines start to glow with unbearable intensity..");
+        dropship_notification_broadcast(
+            mech, "'s engines start to glow with unbearable intensity..");
       switch (count) {
       case 10:
-        DSSpam_O(mech, "'s engines are almost ready to lift off!");
+        dropship_notification_broadcast(
+            mech, "'s engines are almost ready to lift off!");
         break;
       case 6:
-        DSSpam_O(mech, "'s engines generate a tremendous heat wave!");
+        dropship_notification_broadcast(
+            mech, "'s engines generate a tremendous heat wave!");
         mech_sensors_scramble_infrared_and_liteamp(
             mech, 2, 0, "The blinding flash of light momentarily blinds you!",
             "The blinding flash of light momentarily blinds you!");
@@ -129,7 +133,7 @@ static void aero_takeoff_event(MuxEvent *e) {
       case 2:
         mech_notify(mech, MECHALL,
                     "The engines pulse out a stream of superheated plasma!");
-        DSSpam_O(
+        dropship_notification_broadcast(
             mech,
             "'s engines send forth a tremendous stream of superheated plasma!");
         mech_sensors_scramble_infrared_and_liteamp(
@@ -241,7 +245,8 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
   if (land_data[i].launchtime > 0)
     mech_notify(mech, MECHALL,
                 "Launch sequence initiated.. type 'land' to abort it.");
-  DSSpam(mech, "starts warming engines for liftoff!");
+  dropship_notification_broadcast_if_due(mech,
+                                         "starts warming engines for liftoff!");
   if (mech_is_dropship(mech))
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
@@ -319,7 +324,7 @@ struct LandingZoneCheck {
 static void improper_lz_callback(BattleMap *map, int x, int y, void *context) {
   LandingZoneCheck *check = context;
 
-  if (Elevation(map, x, y) != check->height)
+  if (battle_map_hex_elevation(map, x, y) != check->height)
     check->matching_neighbors = 0;
   else
     check->matching_neighbors++;
@@ -334,7 +339,7 @@ int aero_landing_zone_check(Mech *mech, int x, int y) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   LandingZoneCheck check = {
-      .height = Elevation(map, x, y),
+      .height = battle_map_hex_elevation(map, x, y),
   };
 
   if (map_real_terrain_get(map, x, y) != BATTLE_TERRAIN_GRASSLAND &&
@@ -454,7 +459,7 @@ void aero_land(DbRef player, void *data, char *buffer) {
   notify_event(btech_context_evaluation(mech_context(mech)), NULL,
                mech_dbref(mech), mech_dbref(mech), mech_dbref(mech),
                LUA_EVENT_AERO_LAND, (char **)NULL, 0);
-  possible_mine_poof(mech, MINE_LAND);
+  mine_field_trigger(mech, MINE_LAND);
 }
 
 void aero_control_effect(Mech *mech) {

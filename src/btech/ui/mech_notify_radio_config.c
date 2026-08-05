@@ -10,10 +10,12 @@
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_notify.h"
+#include "mech_notify_api.h"
 #include "mech_radio_api.h"
 #include "mech_radio_render_internal.h"
 #include "mech_restrict_api.h"
 #include "mech_runtime_api.h"
+#include "mech_status_types.h"
 #include "mine_api.h"
 #include "mux/communication/comsys.h"
 #include "mux/objects/flags.h"
@@ -342,5 +344,5 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
     if (args[i])
       free(args[i]);
   }
-  explode_mines(mech, mech_radio_frequency(mech, chn));
+  mine_command_detonate(mech, mech_radio_frequency(mech, chn));
 }

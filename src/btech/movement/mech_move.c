@@ -558,7 +558,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
   if (btech_context_stagger_mode(mech_context(mech)))
     mech_stagger_damage_clear(mech);
 
-  possible_mine_poof(mech, MINE_STEP);
+  mine_field_trigger(mech, MINE_STEP);
 }
 
 void mech_stand(DbRef player, void *data, char *buffer) {

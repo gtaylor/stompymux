@@ -1,16 +1,15 @@
 
 #pragma once
 
-#include "map.h"
-#include "mech.h"
 #include "mux/server/platform.h"
 
-void add_mine(BattleMap *map, int x, int y, int dam);
-void make_mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
-                       int reason);
-void possible_mine_poof(Mech *mech, int reason);
-void possibly_remove_mines(Mech *mech, int x, int y);
-void recalculate_minefields(BattleMap *map);
-void map_add_mine(DbRef player, void *data, char *buffer);
-void explode_mines(Mech *mech, int chn);
-void show_mines_in_hex(DbRef player, Mech *mech, float range, int x, int y);
+typedef struct BattleMap BattleMap;
+typedef struct Mech Mech;
+
+void mine_field_add(BattleMap *map, int x, int y, int damage);
+void mine_field_trigger(Mech *mech, int reason);
+void mine_field_possibly_remove(Mech *mech, int x, int y);
+void mine_fields_recalculate(BattleMap *map);
+void mine_command_add(DbRef player, void *data, char *buffer);
+void mine_command_detonate(Mech *mech, int channel);
+void mine_field_scan(DbRef player, Mech *mech, float range, int x, int y);

@@ -208,5 +208,5 @@ void map_delobj(DbRef player, void *data, char *buffer) {
     return;
   }
   if (mdel)
-    recalculate_minefields(map);
+    mine_fields_recalculate(map);
 }

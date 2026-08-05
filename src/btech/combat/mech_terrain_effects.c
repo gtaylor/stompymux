@@ -209,7 +209,7 @@ void mech_terrain_possibly_clear(Mech *mech, BattleMap *map, int weapindx,
     return;
 
   clear_hex(mech, x, y, intentional);
-  possibly_remove_mines(mech, x, y);
+  mine_field_possibly_remove(mech, x, y);
 }
 
 void mech_terrain_possibly_ignite_or_clear(Mech *mech, int weapindx,
