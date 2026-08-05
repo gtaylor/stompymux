@@ -2,6 +2,15 @@
 
 #include "mech_api_types.h"
 
+typedef struct MechJumpLaunch {
+  int heading;
+  int destination_x;
+  int destination_y;
+  int destination_elevation;
+  int apex_elevation;
+  float distance;
+} MechJumpLaunch;
+
 void mech_position_reset_origin(Mech *mech);
 int mech_position_x(const Mech *mech);
 int mech_position_y(const Mech *mech);
@@ -37,5 +46,7 @@ void mech_desired_speed_set(Mech *mech, float speed);
 void mech_desired_angle_set(Mech *mech, int angle);
 void mech_vertical_speed_set(Mech *mech, float speed);
 void mech_motion_vector_reset(Mech *mech);
+void mech_jump_apex_elevation_set(Mech *mech, int elevation);
 void mech_position_mirror(Mech *target, const Mech *source, int height_offset);
 void mech_position_land_if_flying(Mech *mech);
+void mech_jump_launch(Mech *mech, const MechJumpLaunch *launch);

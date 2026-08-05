@@ -56,8 +56,8 @@ static void mech_enter_event(MuxEvent *e) {
        (mech_is_fallen(mech) || mech_event_count(mech, EVENT_STAND))) ||
       mech_is_out_of_control(mech) ||
       (fabs(mech_current_speed(mech)) * 5 >=
-           MechCargoMaxSpeed(mech, mech_maximum_speed(mech)) &&
-       fabs(MechCargoMaxSpeed(mech, mech_maximum_speed(mech))) >= MP1) ||
+           mech_cargo_maximum_speed(mech, mech_maximum_speed(mech)) &&
+       fabs(mech_cargo_maximum_speed(mech, mech_maximum_speed(mech))) >= MP1) ||
       (mech_class(mech) == CLASS_VTOL && mech_fuel(mech) <= 0))
     return;
   if (!(newmap = btech_context_get_map(mech_context(mech), mapo->obj)))
@@ -159,12 +159,12 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(
       mech_context(mech), mech_is_dropship(mech),
       "Heh, you're trying to be funny, right, a DropShip entering hangar?");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  fabs(mech_current_speed(mech)) * 5 >=
-                          MechCargoMaxSpeed(mech, mech_maximum_speed(mech)) &&
-                      fabs(MechCargoMaxSpeed(mech, mech_maximum_speed(mech))) >=
-                          MP1,
-                  "You are moving too fast to enter the hangar!");
+  DOCHECK_CONTEXT(
+      mech_context(mech),
+      fabs(mech_current_speed(mech)) * 5 >=
+              mech_cargo_maximum_speed(mech, mech_maximum_speed(mech)) &&
+          fabs(mech_cargo_maximum_speed(mech, mech_maximum_speed(mech))) >= MP1,
+      "You are moving too fast to enter the hangar!");
   DOCHECK_CONTEXT(mech_context(mech),
                   !(mapo = find_entrance_by_xy(map, mech_position_x(mech),
                                                mech_position_y(mech))),

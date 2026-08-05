@@ -116,6 +116,26 @@ void mech_motion_vector_reset(Mech *mech) {
   mech->rd.startfz = 0.0F;
 }
 
+void mech_jump_apex_elevation_set(Mech *mech, int elevation) {
+  mech->rd.jumptop = elevation;
+}
+
+void mech_jump_launch(Mech *mech, const MechJumpLaunch *launch) {
+  mech->rd.cocoon = 0;
+  mech->rd.jumpheading = launch->heading;
+  mech->rd.status |= JUMPING;
+  mech->rd.startfx = mech->pd.fx;
+  mech->rd.startfy = mech->pd.fy;
+  mech->rd.startfz = mech->pd.fz;
+  mech->rd.jumplength = launch->distance;
+  mech->rd.goingx = launch->destination_x;
+  mech->rd.goingy = launch->destination_y;
+  mech->rd.endfz = ZSCALE * launch->destination_elevation;
+  mech->rd.jumptop = launch->apex_elevation;
+  mech->rd.speed = 0.0F;
+  mech->rd.swarming = -1;
+}
+
 void mech_position_mirror(Mech *target, const Mech *source, int height_offset) {
   target->pd.fx = source->pd.fx;
   target->pd.fy = source->pd.fy;

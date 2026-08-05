@@ -175,6 +175,18 @@ done < <(rg -n \
   src/btech/movement/mech_stance.c || true)
 
 while IFS= read -r match; do
+  echo "$match: converted jump module uses an aggregate Mech or map layout"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\b(mech|tempMech|mech_map)->|\b(Mech(Type|Carrying|MaxSpeed|JumpSpeed|Status|Target|DFATarget|SwarmTarget|JumpTop|Cocoon|JumpHeading|StartF[XYZ]|JumpLength|Going[XY]|EndFZ|Speed|F[XYZ]|[XYZ])|Fortified|OODing|Fallen|Jumping|IsHulldown|Staggering)\(' \
+  src/btech/movement/mech_jump.c || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy cargo-speed export is not allowed"
+  status=1
+done < <(rg -n '\bMechCargoMaxSpeed\b' src/btech -g '*.[ch]' || true)
+
+while IFS= read -r match; do
   echo "$match: legacy out-of-door drop export is not allowed"
   status=1
 done < <(rg -n '\binitiate_ood\b' src/btech -g '*.[ch]' || true)

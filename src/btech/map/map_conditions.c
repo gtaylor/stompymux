@@ -57,6 +57,10 @@ bool battle_map_is_dark(const BattleMap *map) {
   return map->flags & MAPFLAG_DARK;
 }
 
+bool battle_map_is_underground(const BattleMap *map) {
+  return map->flags & MAPFLAG_UNDERGROUND;
+}
+
 void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
   char *args[5];
   int vacuum = -1, underground = -1, grav, temp, argc;

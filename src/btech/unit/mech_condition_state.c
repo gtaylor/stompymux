@@ -98,6 +98,13 @@ void mech_sprinting_set(Mech *mech, bool sprinting) {
     mech->rd.status2 &= ~SPRINTING;
 }
 
+void mech_dfa_attacking_set(Mech *mech, bool attacking) {
+  if (attacking)
+    mech->rd.status |= DFA_ATTACK;
+  else
+    mech->rd.status &= ~DFA_ATTACK;
+}
+
 void mech_player_killer_set(Mech *mech, bool enabled) {
   if (enabled)
     mech->rd.mech_prefs |= MECHPREF_PKILL;

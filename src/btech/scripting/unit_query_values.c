@@ -441,7 +441,7 @@ void fun_btgetrealmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!is_wizard(context->world->database, player),
            "#-1 PERMISSION DENIED");
 
-  speed = MechCargoMaxSpeed(mech, mech_maximum_speed(mech));
+  speed = mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 
   safe_tprintf_str(buff, bufc, "%s", tprintf("%f", speed));
 }

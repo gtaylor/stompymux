@@ -315,7 +315,7 @@ void mech_eta(DbRef player, void *data, char *buffer) {
   }
 }
 
-float MechCargoMaxSpeed(Mech *mech, float mspeed) {
+float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
   int lugged = 0, mod = 2;
   Mech *c;
   BattleMap *map;
@@ -445,7 +445,7 @@ float MechCargoMaxSpeed(Mech *mech, float mspeed) {
 }
 
 float mech_effective_maximum_speed(Mech *mech) {
-  return MechCargoMaxSpeed(mech, mech_maximum_speed(mech));
+  return mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 }
 
 void mech_drop(DbRef player, void *data, char *buffer) {

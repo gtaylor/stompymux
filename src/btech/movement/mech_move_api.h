@@ -19,7 +19,7 @@ void mech_lateral(DbRef player, void *data, char *buffer);
 void mech_turnmode(DbRef player, void *data, char *buffer);
 void mech_bootlegger(DbRef player, void *data, char *buffer);
 void mech_eta(DbRef player, void *data, char *buffer);
-float MechCargoMaxSpeed(Mech *mech, float mspeed);
+float mech_cargo_maximum_speed(Mech *mech, float maximum_speed);
 float mech_effective_maximum_speed(Mech *mech);
 void mech_drop(DbRef player, void *data, char *buffer);
 void mech_stand(DbRef player, void *data, char *buffer);

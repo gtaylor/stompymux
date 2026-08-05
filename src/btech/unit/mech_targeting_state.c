@@ -35,6 +35,10 @@ DbRef mech_charge_target_dbref(const Mech *mech) { return mech->rd.chgtarget; }
 
 DbRef mech_dfa_target_dbref(const Mech *mech) { return mech->rd.dfatarget; }
 
+void mech_dfa_target_dbref_set(Mech *mech, DbRef target) {
+  mech->rd.dfatarget = target;
+}
+
 int mech_charge_timer(const Mech *mech) { return mech->rd.chargetimer; }
 
 int mech_target_hex_x(const Mech *mech) { return mech->rd.targx; }

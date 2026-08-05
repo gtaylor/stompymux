@@ -175,7 +175,8 @@ static inline BtechContext *xcode_context(const void *object) {
 #define MechMaxSpeed(a) (a)->ud.maxspeed
 #define TemplateMaxSpeed(a) (a)->ud.template_maxspeed
 #define MechRMaxSpeed(a) (a)->rd.rspd
-#define MMaxSpeed(a) ((float)MechCargoMaxSpeed((a), (float)MechMaxSpeed((a))))
+#define MMaxSpeed(a)                                                           \
+  ((float)mech_cargo_maximum_speed((a), (float)MechMaxSpeed((a))))
 #define MechMaxSuits(a) (a)->rd.maxsuits
 #define MechMinusHeat(a) (a)->rd.minus_heat
 #define MechHSEngOverRide(a) (a)->ud.hsengoverride

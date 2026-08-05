@@ -39,7 +39,7 @@ static int t_mod(float sp) {
 }
 
 static int move_value(Mech *mech) {
-  return t_mod(MechCargoMaxSpeed(mech, mech_maximum_speed(mech))) + 2;
+  return t_mod(mech_cargo_maximum_speed(mech, mech_maximum_speed(mech))) + 2;
 }
 
 static int new_move_value(const Mech *mech) {

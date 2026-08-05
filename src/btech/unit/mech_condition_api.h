@@ -70,6 +70,7 @@ void mech_arms_center(Mech *mech);
 void mech_arms_flip(Mech *mech);
 void mech_evading_set(Mech *mech, bool evading);
 void mech_sprinting_set(Mech *mech, bool sprinting);
+void mech_dfa_attacking_set(Mech *mech, bool attacking);
 void mech_player_killer_set(Mech *mech, bool enabled);
 void mech_partial_cover_set(Mech *mech, bool covered);
 void mech_swarm_target_set(Mech *mech, DbRef target);
