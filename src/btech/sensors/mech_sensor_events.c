@@ -57,9 +57,9 @@ void mech_sensor_visibility_refresh(Mech *mech) {
 
     /* Then update the SEES flags. */
 #ifdef ADVANCED_LOS
-    Sensor_DoWeSeeNow(seer, &los_flags, range, -1, -1, mech,
-                      battle_map_visibility(map), battle_map_light(map),
-                      battle_map_cloud_base(map), 2, 0);
+    mech_sensor_visibility_update(
+        seer, &los_flags, range, -1, -1, mech, battle_map_visibility(map),
+        battle_map_light(map), battle_map_cloud_base(map), 2, 0);
     battle_map_los_flags_set(map, i, num, los_flags);
 #endif
   }

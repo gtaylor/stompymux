@@ -41,6 +41,8 @@ int battle_map_light(const BattleMap *map) { return map->maplight; }
 
 int battle_map_visibility(const BattleMap *map) { return map->mapvis; }
 
+int battle_map_maximum_visibility(const BattleMap *map) { return map->maxvis; }
+
 int battle_map_cloud_base(const BattleMap *map) { return map->cloudbase; }
 
 bool battle_map_sensor_is_disabled(const BattleMap *map, int sensor) {

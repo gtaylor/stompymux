@@ -394,8 +394,9 @@ void mech_plos_event(MuxEvent *e) {
           continue;
         range = FlMechRange(map, mech, target);
         MechPNumSeen(mech)++;
-        Sensor_DoWeSeeNow(mech, &map->LOSinfo[mech->mapnumber][i], range, -1,
-                          -1, target, mapvis, maplight, map->cloudbase, 1, 0);
+        mech_sensor_visibility_update(mech, &map->LOSinfo[mech->mapnumber][i],
+                                      range, -1, -1, target, mapvis, maplight,
+                                      map->cloudbase, 1, 0);
       }
 }
 

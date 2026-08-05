@@ -18,22 +18,24 @@ typedef struct SensorFlagText {
 } SensorFlagText;
 
 /* mech.sensor.c */
-int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
-                      float range, int wAmmoMode);
-int Sensor_CanSee(Mech *mech, Mech *target, int *flag, int arc, float range,
-                  int mapvis, int maplight, int cloudbase);
-int Sensor_ArcBaseChance(int type, int arc);
-int Sensor_DriverBaseChance(Mech *mech);
-int Sensor_Sees(Mech *mech, Mech *target, int f, int arc, float range, int snum,
-                int chance_divisor, int mapvis, int maplight);
-int Sensor_SeesNow(Mech *mech, Mech *target, int f, int arc, float range,
-                   int mapvis, int maplight);
+int mech_sensor_to_hit_bonus(Mech *mech, Mech *target, int flag, int maplight,
+                             float range, int ammunition_mode);
+int mech_sensor_can_see(Mech *mech, Mech *target, int *flag, int arc,
+                        float range, int mapvis, int maplight, int cloudbase);
+int mech_sensor_arc_base_chance(int type, int arc);
+int mech_sensor_driver_base_chance(Mech *mech);
+int mech_sensor_detects(Mech *mech, Mech *target, int f, int arc, float range,
+                        int snum, int chance_divisor, int mapvis, int maplight);
+int mech_sensor_detects_now(Mech *mech, Mech *target, int f, int arc,
+                            float range, int mapvis, int maplight);
 SensorFlagText sensor_flag_text(int flags);
-void Sensor_DoWeSeeNow(Mech *mech, unsigned short *fl, float range, int x,
-                       int y, Mech *target, int mapvis, int maplight,
-                       int cloudbase, int seeanew, int wlf);
-void update_LOSinfo(DbRef obj, BattleMap *map);
-void add_sensor_info(char *buf, int size, Mech *mech, int sn, int verbose);
+void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
+                                   int x, int y, Mech *target, int mapvis,
+                                   int maplight, int cloudbase, int seeanew,
+                                   int wlf);
+void mech_sensor_map_los_update(DbRef obj, BattleMap *map);
+void mech_sensor_description_append(char *buf, int size, Mech *mech, int sn,
+                                    int verbose);
 char *mech_sensor_info(Mech *mech, char buffer[static LBUF_SIZE]);
 int mech_sensor_can_change_to(Mech *mech, int sensor);
 void sensor_light_availability_check(Mech *mech);

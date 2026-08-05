@@ -19,6 +19,18 @@ bool mech_has_fired_recently(const Mech *mech) {
   return mech->rd.status & FIRED;
 }
 
+bool mech_is_invisible(const Mech *mech) {
+  return mech->rd.critstatus & INVISIBLE;
+}
+
+bool mech_autocon_when_shutdown(const Mech *mech) {
+  return mech->rd.status & AUTOCON_WHEN_SHUTDOWN;
+}
+
+bool mech_autocon_include_shutdown_targets(const Mech *mech) {
+  return mech->rd.mech_prefs & MECHPREF_AUTOCON_SD;
+}
+
 void mech_blinded_set(Mech *mech, bool blinded) {
   if (blinded)
     mech->rd.status |= BLINDED;
@@ -73,7 +85,11 @@ void mech_seen_count_decrement(Mech *mech) {
     mech->rd.num_seen--;
 }
 
+void mech_seen_count_increment(Mech *mech) { mech->rd.num_seen++; }
+
 void mech_seen_count_reset(Mech *mech) { mech->rd.num_seen = 0; }
+
+void mech_possible_contact_count_increment(Mech *mech) { mech->rd.can_see++; }
 
 DbRef mech_carried_dbref(const Mech *mech) { return mech->rd.carrying; }
 

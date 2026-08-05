@@ -46,7 +46,7 @@ static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
 
   if (sensors[sn].full_vision) {
     snprintf(buf, sizeof(mode.text), "%s ", sensors[sn].sensor_name);
-    add_sensor_info(buf, sizeof(mode.text), mech, sn, verbose);
+    mech_sensor_description_append(buf, sizeof(mode.text), mech, sn, verbose);
   } else {
     if (full || mech_movement_type(mech) == MOVE_NONE ||
         mech_class(mech) == CLASS_BSUIT)
@@ -56,7 +56,7 @@ static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
       snprintf(buf, sizeof(mode.text),
                "%s in 120 degree scanning mode (Forward arc) ",
                sensors[sn].sensor_name);
-    add_sensor_info(buf, sizeof(mode.text), mech, sn, verbose);
+    mech_sensor_description_append(buf, sizeof(mode.text), mech, sn, verbose);
   }
   return mode;
 }

@@ -298,9 +298,9 @@ int AddTerrainMod(Mech *mech, Mech *target, BattleMap *map, float hexRange,
     else
       MechStatus(target) &= ~PARTIAL_COVER;
 
-    return Sensor_ToHitBonus(mech, target,
-                             MechToMech_LOSFlag(map, mech, target),
-                             map->maplight, hexRange, wAmmoMode);
+    return mech_sensor_to_hit_bonus(mech, target,
+                                    MechToMech_LOSFlag(map, mech, target),
+                                    map->maplight, hexRange, wAmmoMode);
   }
   return 0;
 }
@@ -352,8 +352,8 @@ int InLineOfSight(Mech *mech, Mech *target, int x, int y, float hexRange) {
   if (mech && target) {
 #ifndef ADVANCED_LOS
     losflag = MechToMech_LOSFlag(map, mech, target);
-    if (Sensor_CanSee(mech, target, &losflag, arc, hexRange, map->mapvis,
-                      map->maplight, map->cloudbase)) {
+    if (mech_sensor_can_see(mech, target, &losflag, arc, hexRange, map->mapvis,
+                            map->maplight, map->cloudbase)) {
       map->LOSinfo[mech_map_slot(mech)][mech_map_slot(target)] |=
           (MECHLOSFLAG_SEEN | MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS);
       return 1;
@@ -371,8 +371,8 @@ int InLineOfSight(Mech *mech, Mech *target, int x, int y, float hexRange) {
     return 0;
   }
   losflag = CalculateLOSFlag(mech, NULL, map, x, y, 0, hexRange);
-  return Sensor_CanSee(mech, NULL, &losflag, arc, hexRange, map->mapvis,
-                       map->maplight, map->cloudbase);
+  return mech_sensor_can_see(mech, NULL, &losflag, arc, hexRange, map->mapvis,
+                             map->maplight, map->cloudbase);
 }
 
 void mech_losemit(DbRef player, Mech *mech, char *buffer) {

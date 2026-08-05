@@ -48,6 +48,23 @@ bool mech_is_any_ecm_disturbed(const Mech *mech) {
   return mech->rd.status2 & (ECM_DISTURBANCE | ANGEL_ECM_DISTURBED);
 }
 
+bool mech_electronic_warfare_is_enabled(const Mech *mech) {
+  return mech->rd.status2 &
+         (ECM_ENABLED | ECCM_ENABLED | ANGEL_ECM_ENABLED | ANGEL_ECCM_ENABLED);
+}
+
+bool mech_is_stealth_infantry(const Mech *mech) {
+  return mech->rd.infantry_specials & STEALTH_TECH;
+}
+
+bool mech_is_purifier_infantry(const Mech *mech) {
+  return mech->rd.infantry_specials & CS_PURIFIER_STEALTH_TECH;
+}
+
+int mech_sensor_visibility_modifier(const Mech *mech) {
+  return mech->rd.vis_mod;
+}
+
 bool mech_has_tag_system(const Mech *mech) {
   return (mech->rd.specials2 & TAG_TECH) ||
          (mech->rd.specials & C3_MASTER_TECH);

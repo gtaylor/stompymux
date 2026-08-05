@@ -18,12 +18,23 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "legacy_macros.h"
-#include "map.h"
-#include "mech.h"
+#include "map_conditions_api.h"
+#include "map_los_api.h"
+#include "map_los_types.h"
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_crew_api.h"
 #include "mech_identity_api.h"
-#include "mech_macros.h"
+#include "mech_network_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_targeting_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -47,10 +58,26 @@
 #define SEE_SENSOR_PRIMARY 1
 #define SEE_SENSOR_SECONDARY 2
 
-int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
-                      float range, int wAmmoMode) {
+static int mech_sensor_maximum_range(const Mech *mech, int sensor) {
+  int stationary_bonus =
+      sensor >= 2 && mech_movement_type(mech) == MOVE_NONE ? 140 : 100;
+  return sensors[sensor].maximum_visibility * stationary_bonus / 100;
+}
+
+static int mech_sensor_minimum_variable_range(const Mech *mech, int sensor) {
+  return mech_sensor_maximum_range(mech, sensor) -
+         sensors[sensor].maximum_variation;
+}
+
+static bool mech_sensor_sees_in_all_directions(const Mech *mech) {
+  return mech_movement_type(mech) == MOVE_NONE ||
+         mech_class(mech) == CLASS_BSUIT;
+}
+
+int mech_sensor_to_hit_bonus(Mech *mech, Mech *target, int flag, int maplight,
+                             float range, int ammunition_mode) {
   int bth1, bth2;
-  int wLightMod = (wAmmoMode & AC_INCENDIARY_MODE) ? 1 : 0;
+  int wLightMod = (ammunition_mode & AC_INCENDIARY_MODE) ? 1 : 0;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
@@ -62,31 +89,31 @@ int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
   if (maplight > 2)
     maplight = 2;
 
-  if (!(flag & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)))
+  if (!(flag & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY)))
     return 10000;
-  if (!(flag & MECHLOSFLAG_SEESP)) {
-    bth2 = 1 + sensors[(int)MechSensor(mech)[1]].to_hit_bonus(mech, target, map,
-                                                              flag, maplight);
+  if (!(flag & BATTLE_MAP_LOS_SEEN_PRIMARY)) {
+    bth2 = 1 + sensors[mech_sensor_index(mech, 1)].to_hit_bonus(
+                   mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("%d: BTH S+%d", mech_dbref(mech), bth2));
 #endif
     return bth2;
   }
-  if (!(flag & MECHLOSFLAG_SEESS) ||
-      (MechSensor(mech)[0] == MechSensor(mech)[1])) {
-    bth1 = sensors[(int)MechSensor(mech)[0]].to_hit_bonus(mech, target, map,
-                                                          flag, maplight);
+  if (!(flag & BATTLE_MAP_LOS_SEEN_SECONDARY) ||
+      (mech_sensor_index(mech, 0) == mech_sensor_index(mech, 1))) {
+    bth1 = sensors[mech_sensor_index(mech, 0)].to_hit_bonus(mech, target, map,
+                                                            flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("%d: BTH P+%d", mech_dbref(mech), bth1));
 #endif
     return bth1;
   }
-  bth1 = sensors[(int)MechSensor(mech)[0]].to_hit_bonus(mech, target, map, flag,
-                                                        maplight);
-  bth2 = 1 + sensors[(int)MechSensor(mech)[1]].to_hit_bonus(mech, target, map,
-                                                            flag, maplight);
+  bth1 = sensors[mech_sensor_index(mech, 0)].to_hit_bonus(mech, target, map,
+                                                          flag, maplight);
+  bth2 = 1 + sensors[mech_sensor_index(mech, 1)].to_hit_bonus(mech, target, map,
+                                                              flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                      tprintf("%d: BTH +%d/+%d", mech_dbref(mech), bth1, bth2));
@@ -94,8 +121,8 @@ int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
   return MIN(bth1, bth2);
 }
 
-int Sensor_CanSee(Mech *mech, Mech *target, int *flag, int arc, float range,
-                  int mapvis, int maplight, int cloudbase) {
+int mech_sensor_can_see(Mech *mech, Mech *target, int *flag, int arc,
+                        float range, int mapvis, int maplight, int cloudbase) {
   int i, j = 0, sn;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -104,27 +131,21 @@ int Sensor_CanSee(Mech *mech, Mech *target, int *flag, int arc, float range,
   if (!map || !mech)
     return 0;
 
-  if (!(*flag & MECHLOSFLAG_SEEC2))
+  if (!(*flag & BATTLE_MAP_LOS_TERRAIN_CALCULATED))
     return 0;
-  if (target && (MechCritStatus(target) & INVISIBLE))
+  if (target && mech_is_invisible(target))
     return 0;
   /* Ok.. s'pose we can, at that. */
-  if (MechSensor(mech)[0] != MechSensor(mech)[1]) {
-#define MaxVis(mech, sensor)                                                   \
-  ((sensors[sensor].maximum_visibility *                                       \
-    (((sensor) >= 2 && MechMove(mech) == MOVE_NONE) ? 140 : 100)) /            \
-   100)
-#define MaxVar(mech, sensor) sensors[sensor].maximum_variation
-#define MAXVR(mech, sensor) MaxVis(mech, sensor) - MaxVar(mech, sensor)
+  if (mech_sensor_index(mech, 0) != mech_sensor_index(mech, 1)) {
     /* Check both seperately */
     for (i = 0; i < 2; i++) {
-      sn = MechSensor(mech)[i];
+      sn = mech_sensor_index(mech, i);
       /* No chance */
 
       if (!sensors[sn].full_vision && !(arc & (FORWARDARC | TURRETARC)) &&
-          !Sees360(mech))
+          !mech_sensor_sees_in_all_directions(mech))
         continue;
-      if (MaxVis(mech, sn) < range)
+      if (mech_sensor_maximum_range(mech, sn) < range)
         continue;
 
       /* Okay, so this is a horrible, horrible hack that'll break when new
@@ -133,11 +154,12 @@ int Sensor_CanSee(Mech *mech, Mech *target, int *flag, int arc, float range,
 
       if (target) {
         if (cloudbase && sn < 3 &&
-            ((MechZ(mech) < cloudbase) ? (MechZ(target) >= cloudbase)
-                                       : (MechZ(target) < cloudbase)))
+            ((mech_position_z(mech) < cloudbase)
+                 ? (mech_position_z(target) >= cloudbase)
+                 : (mech_position_z(target) < cloudbase)))
           continue;
       } else {
-        if (cloudbase && MechZ(mech) > cloudbase)
+        if (cloudbase && mech_position_z(mech) > cloudbase)
           continue;
       }
 
@@ -147,33 +169,39 @@ int Sensor_CanSee(Mech *mech, Mech *target, int *flag, int arc, float range,
       if (!sensors[sn].see_chance(target, map, sn, range, mapvis, maplight))
         continue;
 
-      if (MaxVar(mech, sn) && (MAXVR(mech, sn)) < range)
-        if (((MAXVR(mech, sn)) +
-             (MechVisMod(mech) * (MaxVar(mech, sn) + 1)) / 100) < range)
+      if (sensors[sn].maximum_variation &&
+          mech_sensor_minimum_variable_range(mech, sn) < range)
+        if ((mech_sensor_minimum_variable_range(mech, sn) +
+             (mech_sensor_visibility_modifier(mech) *
+              (sensors[sn].maximum_variation + 1)) /
+                 100) < range)
           continue;
       j += (i + 1);
     }
     return j;
   }
-  sn = MechSensor(mech)[0];
-  if (MaxVis(mech, sn) < range)
+  sn = mech_sensor_index(mech, 0);
+  if (mech_sensor_maximum_range(mech, sn) < range)
     return 0;
   if (cloudbase && target && sn < 3 &&
-      ((MechZ(mech) < cloudbase) ? (MechZ(target) >= cloudbase)
-                                 : (MechZ(target) < cloudbase)))
+      ((mech_position_z(mech) < cloudbase)
+           ? (mech_position_z(target) >= cloudbase)
+           : (mech_position_z(target) < cloudbase)))
     return 0;
   if (!sensors[sn].can_see(mech, target, map, range, *flag))
     return 0;
   if (!sensors[sn].see_chance(target, map, sn, range, mapvis, maplight))
     return 0;
-  if (MaxVar(mech, sn) && (MAXVR(mech, sn)) < range)
-    if (((MAXVR(mech, sn)) + MechVisMod(mech) * (MaxVar(mech, sn) + 1) / 100) <
-        range)
+  if (sensors[sn].maximum_variation &&
+      mech_sensor_minimum_variable_range(mech, sn) < range)
+    if ((mech_sensor_minimum_variable_range(mech, sn) +
+         mech_sensor_visibility_modifier(mech) *
+             (sensors[sn].maximum_variation + 1) / 100) < range)
       return 0;
   return 3;
 }
 
-int Sensor_ArcBaseChance(int type, int arc) {
+int mech_sensor_arc_base_chance(int type, int arc) {
   int base = 100;
 
   switch (type) {
@@ -203,25 +231,26 @@ int Sensor_ArcBaseChance(int type, int arc) {
 extern const int bth_modifier[];
 
 /* Slow, but sacrifices we make for sake of playability.. :-) */
-int Sensor_DriverBaseChance(Mech *mech) {
+int mech_sensor_driver_base_chance(Mech *mech) {
   int i = 1;
 
-  if (MechPer(mech) <= 2)
+  if (mech_perception_target(mech) <= 2)
     i = 36;
-  else if (MechPer(mech) >= 12)
+  else if (mech_perception_target(mech) >= 12)
     i = 1;
   else
-    i = (36 - bth_modifier[MechPer(mech) - 2]);
+    i = (36 - bth_modifier[mech_perception_target(mech) - 2]);
   return 64 + i; /* Padded a bit */
 }
 
-int Sensor_Sees(Mech *mech, Mech *target, int f, int arc, float range, int snum,
-                int chance_divisor, int mapvis, int maplight) {
+int mech_sensor_detects(Mech *mech, Mech *target, int f, int arc, float range,
+                        int snum, int chance_divisor, int mapvis,
+                        int maplight) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int chance = (Sensor_ArcBaseChance(MechType(mech), arc) *
-                ((target && MechTeam(mech) != MechTeam(target))
-                     ? Sensor_DriverBaseChance(mech)
+  int chance = (mech_sensor_arc_base_chance(mech_class(mech), arc) *
+                ((target && mech_team(mech) != mech_team(target))
+                     ? mech_sensor_driver_base_chance(mech)
                      : 100)) /
                100;
   int ch2 =
@@ -229,14 +258,13 @@ int Sensor_Sees(Mech *mech, Mech *target, int f, int arc, float range, int snum,
 
   if (!ch2 || !sensors[snum].can_see(mech, target, map, range, f))
     return 0;
-  if (target && IsDS(target))
+  if (target && mech_is_dropship(target))
     chance = chance * 4;
-  if (target && MechCritStatus(target) & HIDDEN &&
-      MechTeam(mech) != MechTeam(target)) {
+  if (target && mech_condition_summary(target).hidden &&
+      mech_team(mech) != mech_team(target)) {
 
     if (sensors[snum].match_letter[0] == 'B' &&
-        (MechInfantrySpecials(target) & STEALTH_TECH) &&
-        (!(MechInfantrySpecials(target) & CS_PURIFIER_STEALTH_TECH)))
+        mech_is_stealth_infantry(target) && !mech_is_purifier_infantry(target))
       return 0;
 
     if (ch2 <= 100) {
@@ -248,9 +276,11 @@ int Sensor_Sees(Mech *mech, Mech *target, int f, int arc, float range, int snum,
   if (range < 3 || btech_random_range(mech_context(mech), 1, 10000) <
                        ((chance * ch2) / chance_divisor)) {
     if (target &&
-        is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
-        is_in_character(mech_context(mech)->database, mech_dbref(target)) &&
-        MechTeam(mech) != MechTeam(target))
+        is_in_character(btech_context_database(mech_context(mech)),
+                        mech_dbref(mech)) &&
+        is_in_character(btech_context_database(mech_context(mech)),
+                        mech_dbref(target)) &&
+        mech_team(mech) != mech_team(target))
       if (!btech_random_range(mech_context(mech), 0, 5))
         MadePerceptionRoll(mech, -2);
     return 1;
@@ -265,30 +295,31 @@ int Sensor_Sees(Mech *mech, Mech *target, int f, int arc, float range, int snum,
 
    If both same, multiply chance by 1.1
  */
-int Sensor_SeesNow(Mech *mech, Mech *target, int f, int arc, float range,
-                   int mapvis, int maplight) {
+int mech_sensor_detects_now(Mech *mech, Mech *target, int f, int arc,
+                            float range, int mapvis, int maplight) {
   int i, sn;
 
-  if (MechSensor(mech)[0] != MechSensor(mech)[1]) {
+  if (mech_sensor_index(mech, 0) != mech_sensor_index(mech, 1)) {
     /* Check both seperately */
     for (i = 0; i < 2; i++) {
-      sn = MechSensor(mech)[i];
+      sn = mech_sensor_index(mech, i);
       /* No chance */
       if (!sensors[sn].full_vision && !(arc & (FORWARDARC | TURRETARC)) &&
-          !Sees360(mech))
+          !mech_sensor_sees_in_all_directions(mech))
         continue;
-      if (MaxVis(mech, sn) < range)
+      if (mech_sensor_maximum_range(mech, sn) < range)
         continue;
-      if (Sensor_Sees(mech, target, f, arc, range, sn, i + 1, mapvis, maplight))
+      if (mech_sensor_detects(mech, target, f, arc, range, sn, i + 1, mapvis,
+                              maplight))
         return (i + 1);
     }
     return 0;
   }
-  sn = MechSensor(mech)[0];
-  if (MaxVis(mech, sn) < range)
+  sn = mech_sensor_index(mech, 0);
+  if (mech_sensor_maximum_range(mech, sn) < range)
     return 0;
-  return (Sensor_Sees(mech, target, f, arc, range, sn, 1, mapvis, maplight));
-  return 3;
+  return mech_sensor_detects(mech, target, f, arc, range, sn, 1, mapvis,
+                             maplight);
 }
 
 SensorFlagText sensor_flag_text(int flags) {
@@ -315,8 +346,9 @@ static int valid_to_notice(Mech *mech, Mech *targ, int los) {
   int bf = (mech_brief_mode(mech) / 4);
   int foe;
 
-  if ((los < 0 && MechSeemsFriend(mech, targ)) ||
-      (los > 0 && MechTeam(mech) == MechTeam(targ)))
+  if ((los < 0 && mech_team(mech) == mech_team(targ) &&
+       InLineOfSight_NB(mech, targ, 0, 0, 0)) ||
+      (los > 0 && mech_team(mech) == mech_team(targ)))
     foe = 0;
   else
     foe = AUTOCON_WARN;
@@ -340,39 +372,41 @@ static int valid_to_notice(Mech *mech, Mech *targ, int los) {
   }
 }
 
-void Sensor_DoWeSeeNow(Mech *mech, unsigned short *fl, float range, int x,
-                       int y, Mech *target, int mapvis, int maplight,
-                       int cloudbase, int seeanew, int wlf) {
+void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
+                                   int x, int y, Mech *target, int mapvis,
+                                   int maplight, int cloudbase, int seeanew,
+                                   int wlf) {
   int arc;
   float x1, y1;
   int sc, sl, st;
   int f = *fl;
   char buf[MBUF_SIZE] = {0};
 
-  if (!Started(mech))
+  if (!mech_is_started(mech))
     return;
   if (target) {
-    x1 = MechFX(target);
-    y1 = MechFY(target);
-    if (MechZ(mech) >= ATMO_Z && MechZ(target) >= ATMO_Z)
+    x1 = mech_position_real_x(target);
+    y1 = mech_position_real_y(target);
+    if (mech_position_z(mech) >= ATMO_Z && mech_position_z(target) >= ATMO_Z)
       range = range / 3;
   } else
     MapCoordToRealCoord(x, y, &x1, &y1);
   arc = InWeaponArc(mech, x1, y1);
-  if (f & MECHLOSFLAG_SEEN) {
-    if ((sl = Sensor_CanSee(mech, target, &f, arc, range, mapvis, maplight,
-                            cloudbase))) {
+  if (f & BATTLE_MAP_LOS_SEEN) {
+    if ((sl = mech_sensor_can_see(mech, target, &f, arc, range, mapvis,
+                                  maplight, cloudbase))) {
       if (sl & 1)
-        f |= MECHLOSFLAG_SEESP;
+        f |= BATTLE_MAP_LOS_SEEN_PRIMARY;
       if (sl & 2)
-        f |= MECHLOSFLAG_SEESS;
+        f |= BATTLE_MAP_LOS_SEEN_SECONDARY;
     }
-    if (!(f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS))) {
-      if (MechTeam(mech) != MechTeam(target))
-        MechNumSeen(mech) = MAX(0, MechNumSeen(mech) - 1);
-      f &= ~MECHLOSFLAG_SEEN;
-      if (!MechIsObservator(mech) &&
-          (Started(target) || SeeWhenShutdown(target) || MechAutoconSD(mech)) &&
+    if (!(f & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY))) {
+      if (mech_team(mech) != mech_team(target))
+        mech_seen_count_decrement(mech);
+      f &= ~BATTLE_MAP_LOS_SEEN;
+      if (!mech_is_observer(mech) &&
+          (mech_is_started(target) || mech_autocon_when_shutdown(mech) ||
+           mech_autocon_include_shutdown_targets(mech)) &&
           (st = valid_to_notice(mech, target, wlf)) && seeanew < 3) {
         if (st & AUTOCON_WARN)
           strcpy(buf, "[fg=yellow]");
@@ -393,47 +427,49 @@ void Sensor_DoWeSeeNow(Mech *mech, unsigned short *fl, float range, int x,
           strcat(buf, "[reset]");
         mech_notify(mech, MECHALL, buf);
       }
-      if ((MechStatus(mech) & LOCK_TARGET) &&
-          mech_dbref(target) == MechTarget(mech)) {
+      if (mech_targeting_has_lock_on(mech, mech_dbref(target))) {
         mech_notify(mech, MECHALL,
                     "Weapon system reports the lock has been lost.");
         mech_lose_lock(mech);
       }
 #ifdef SENSOR_DEBUG
-      snprintf(buf, strlen(buf), "Notice: #%d lost #%d (Sensor: %d, Flag: %s)",
-               mech_dbref(mech), mech_dbref(target),
-               (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)),
-               sensor_flag_text(f).text);
+      snprintf(
+          buf, strlen(buf), "Notice: #%d lost #%d (Sensor: %d, Flag: %s)",
+          mech_dbref(mech), mech_dbref(target),
+          (f & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY)),
+          sensor_flag_text(f).text);
       btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
                          buf);
 #endif
-      MechPNumSeen(mech)++;
+      mech_possible_contact_count_increment(mech);
     }
     *fl = f;
     return;
   }
-  if ((sc = Sensor_CanSee(mech, target, &f, arc, range, mapvis, maplight,
-                          cloudbase))) {
+  if ((sc = mech_sensor_can_see(mech, target, &f, arc, range, mapvis, maplight,
+                                cloudbase))) {
     if (!seeanew) {
-      MechPNumSeen(mech)++; /* Whee, something we _could_ see */
+      mech_possible_contact_count_increment(mech);
       *fl = f;
       return;
     }
-    if ((sl = Sensor_SeesNow(mech, target, f, arc, range, mapvis, maplight))) {
+    if ((sl = mech_sensor_detects_now(mech, target, f, arc, range, mapvis,
+                                      maplight))) {
       if (sc & 1)
-        f |= MECHLOSFLAG_SEESP;
+        f |= BATTLE_MAP_LOS_SEEN_PRIMARY;
       if (sc & 2)
-        f |= MECHLOSFLAG_SEESS;
+        f |= BATTLE_MAP_LOS_SEEN_SECONDARY;
     }
-    if ((f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS))) {
-      if (MechTeam(mech) != MechTeam(target)) {
-        MechNumSeen(mech)++;
+    if ((f & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY))) {
+      if (mech_team(mech) != mech_team(target)) {
+        mech_seen_count_increment(mech);
         autopilot_resume_for_mech(mech);
       }
-      f |= MECHLOSFLAG_SEEN;
+      f |= BATTLE_MAP_LOS_SEEN;
       *fl = f;
-      if (!MechIsObservator(mech) &&
-          (Started(target) || SeeWhenShutdown(target) || MechAutoconSD(mech)) &&
+      if (!mech_is_observer(mech) &&
+          (mech_is_started(target) || mech_autocon_when_shutdown(mech) ||
+           mech_autocon_include_shutdown_targets(mech)) &&
           (st = valid_to_notice(mech, target, -1)) && seeanew < 2) {
         if (st & AUTOCON_WARN)
           strcpy(buf, "[fg=red]");
@@ -452,132 +488,100 @@ void Sensor_DoWeSeeNow(Mech *mech, unsigned short *fl, float range, int x,
           strcat(buf, "[reset]");
         mech_notify(mech, MECHALL, buf);
       }
-      if (MechTeam(mech) != MechTeam(target))
+      if (mech_team(mech) != mech_team(target))
         mech_event_cancel(target, EVENT_HIDE);
 #ifdef SENSOR_DEBUG
-      snprintf(buf, sizeof(buf),
-               "Notice: #%d saw #%d (Sensor: %d, Flag: %s C:%d)",
-               mech_dbref(mech), mech_dbref(target),
-               (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)),
-               sensor_flag_text(f).text, seeanew);
+      snprintf(
+          buf, sizeof(buf), "Notice: #%d saw #%d (Sensor: %d, Flag: %s C:%d)",
+          mech_dbref(mech), mech_dbref(target),
+          (f & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY)),
+          sensor_flag_text(f).text, seeanew);
       btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
                          buf);
 #endif
     } else
-      MechPNumSeen(mech)++;
+      mech_possible_contact_count_increment(mech);
   }
   *fl = f;
 }
 
-void update_LOSinfo(DbRef obj, BattleMap *map) {
-  int i, j, fl;
-  int mapvis = map->mapvis;
-  int maplight = map->maplight;
-  Mech *mech, *target;
-  float range;
-  int wlf;
+static void sensor_update_los_pair(BattleMap *map, int observer_index,
+                                   int target_index, Mech *observer,
+                                   Mech *target, bool always_update_sensors) {
+  float range = mech_range_to(observer, target);
 
-  /* First, for all moved mechs, calculate new LOS flags */
-  for (i = 0; i < map->first_free; i++) {
-    mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
-    if (!mech)
-      continue;
-    if (!Started(mech))
-      continue;
-    for (j = i + 1; j < map->first_free; j++)
-      if (1) {
-        target = btech_context_get_mech(mech_context(mech), map->mechsOnMap[j]);
-        if (!target)
-          continue;
-        range = FaMechRange(mech, target);
-        if (ECMEnabled(mech) || ECCMEnabled(mech) || AngelECMEnabled(mech) ||
-            AngelECCMEnabled(mech))
-          if (range < ECM_RANGE)
-            mech_ecm_check(target);
-        if (TAGTarget(mech) > 0)
-          mech_tag_check(mech);
-        if (MechStatus2(mech) & SLITE_ON)
-          if (range < LITE_RANGE)
-            cause_lite(mech, target);
-        if (range > map->maxvis && MechZ(target) < 11 && MechZ(mech) < 11) {
-          map->LOSinfo[i][j] = MECHLOSFLAG_BLOCK;
-          continue;
-        }
-        wlf = !(map->LOSinfo[i][j] & MECHLOSFLAG_BLOCK) &&
-              ((map->LOSinfo[i][j] & MECHLOSFLAG_SEESP) ||
-               (map->LOSinfo[i][j] & MECHLOSFLAG_SEESS));
-        map->LOSinfo[i][j] = fl =
-            CalculateLOSFlag(mech, target, map, MechX(target), MechY(target),
-                             map->LOSinfo[i][j], (float)range);
-      /* Then, we update the SEES* */
+  if (mech_electronic_warfare_is_enabled(observer) && range < ECM_RANGE)
+    mech_ecm_check(target);
+  if (mech_tag_target_dbref(observer) > 0)
+    mech_tag_check(observer);
+  if (mech_searchlight_active(observer) && range < LITE_RANGE)
+    cause_lite(observer, target);
+  if (range > battle_map_maximum_visibility(map) &&
+      mech_position_z(target) < 11 && mech_position_z(observer) < 11) {
+    battle_map_los_flags_set(map, observer_index, target_index,
+                             BATTLE_MAP_LOS_BLOCKED);
+    return;
+  }
+
+  unsigned short flags =
+      battle_map_los_flags(map, observer_index, target_index);
+  int was_visible =
+      !(flags & BATTLE_MAP_LOS_BLOCKED) &&
+      (flags & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY));
+  flags = CalculateLOSFlag(observer, target, map, mech_position_x(target),
+                           mech_position_y(target), flags, range);
+  battle_map_los_flags_set(map, observer_index, target_index, flags);
+
 #ifdef ADVANCED_LOS
-        Sensor_DoWeSeeNow(mech, &map->LOSinfo[i][j], range, -1, -1, target,
-                          mapvis, maplight, map->cloudbase, 0, wlf);
+  (void)always_update_sensors;
+  mech_sensor_visibility_update(
+      observer, &flags, range, -1, -1, target, battle_map_visibility(map),
+      battle_map_light(map), battle_map_cloud_base(map), 0, was_visible);
+  battle_map_los_flags_set(map, observer_index, target_index, flags);
+#else
+  if (always_update_sensors) {
+    mech_sensor_visibility_update(
+        observer, &flags, range, -1, -1, target, battle_map_visibility(map),
+        battle_map_light(map), battle_map_cloud_base(map), 0, was_visible);
+    battle_map_los_flags_set(map, observer_index, target_index, flags);
+  }
 #endif
-      }
-  }
-  for (i = 1; i < map->first_free; i++) {
-    mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
-    if (!mech)
-      continue;
-    if (!Started(mech))
-      continue;
-    for (j = 0; j < i; j++)
-      if (1) {
-        target = btech_context_get_mech(mech_context(mech), map->mechsOnMap[j]);
-        if (!target)
-          continue;
-        range = FaMechRange(mech, target);
-        if (ECMEnabled(mech) || ECCMEnabled(mech) || AngelECMEnabled(mech) ||
-            AngelECCMEnabled(mech))
-          if (range < ECM_RANGE)
-            mech_ecm_check(target);
-        if (TAGTarget(mech) > 0)
-          mech_tag_check(mech);
-        if (MechStatus2(mech) & SLITE_ON)
-          if (range < LITE_RANGE)
-            cause_lite(mech, target);
-        /* for now, commenting out this if(Started... section
-         * it was causing problems with bap. so we update los a bit more often
-         * now
-         */
-        /*				if(Started(target))
-                                                if(map->LOSinfo[j][i] &
-        MECHLOSFLAG_BLOCK) { wlf = !(map->LOSinfo[i][j] & MECHLOSFLAG_BLOCK) &&
-                                                                ((map->LOSinfo[i][j]
-        & MECHLOSFLAG_SEESP) || (map->LOSinfo[i][j] & MECHLOSFLAG_SEESS));
-                                                        map->LOSinfo[i][j] =
-                                                                MECHLOSFLAG_BLOCK
-        | (map->LOSinfo[i][j] & (MECHLOSFLAG_SEEN | MECHLOSFLAG_SEEC2));
-
-        #ifdef ADVANCED_LOS
-                                                        Sensor_DoWeSeeNow(mech,
-        &map->LOSinfo[i][j], range, -1, -1, target, mapvis, maplight,
-                                                                                          map->cloudbase, 0, wlf);
-        #endif
-                                                        continue;
-                                                }
-        */
-        if (range > map->maxvis && MechZ(target) < 11 && MechZ(mech) < 11) {
-          map->LOSinfo[i][j] = MECHLOSFLAG_BLOCK;
-          continue;
-        }
-        /* Then, we update the SEES* */
-        wlf = !(map->LOSinfo[i][j] & MECHLOSFLAG_BLOCK) &&
-              ((map->LOSinfo[i][j] & MECHLOSFLAG_SEESP) ||
-               (map->LOSinfo[i][j] & MECHLOSFLAG_SEESS));
-        map->LOSinfo[i][j] = fl =
-            CalculateLOSFlag(mech, target, map, MechX(target), MechY(target),
-                             map->LOSinfo[i][j], (float)range);
-        Sensor_DoWeSeeNow(mech, &map->LOSinfo[i][j], range, -1, -1, target,
-                          mapvis, maplight, map->cloudbase, 0, wlf);
-      }
-  }
-  for (i = 0; i < map->first_free; i++)
-    map->mechflags[i] = 0;
 }
 
-void add_sensor_info(char *buf, int size, Mech *mech, int sn, int verbose) {
+void mech_sensor_map_los_update(DbRef obj, BattleMap *map) {
+  (void)obj;
+  int unit_count = battle_map_unit_count(map);
+
+  for (int i = 0; i < unit_count; i++) {
+    Mech *observer = btech_context_get_mech(battle_map_context(map),
+                                            battle_map_unit_dbref(map, i));
+    if (!observer || !mech_is_started(observer))
+      continue;
+    for (int j = i + 1; j < unit_count; j++) {
+      Mech *target = btech_context_get_mech(mech_context(observer),
+                                            battle_map_unit_dbref(map, j));
+      if (target)
+        sensor_update_los_pair(map, i, j, observer, target, false);
+    }
+  }
+
+  for (int i = 1; i < unit_count; i++) {
+    Mech *observer = btech_context_get_mech(battle_map_context(map),
+                                            battle_map_unit_dbref(map, i));
+    if (!observer || !mech_is_started(observer))
+      continue;
+    for (int j = 0; j < i; j++) {
+      Mech *target = btech_context_get_mech(mech_context(observer),
+                                            battle_map_unit_dbref(map, j));
+      if (target)
+        sensor_update_los_pair(map, i, j, observer, target, true);
+    }
+  }
+  battle_map_unit_moved_flags_clear(map);
+}
+
+void mech_sensor_description_append(char *buf, int size, Mech *mech, int sn,
+                                    int verbose) {
   if (!verbose)
     snprintf(buf + strlen(buf), size - strlen(buf), "(R:%s)",
              sensors[sn].range_description);

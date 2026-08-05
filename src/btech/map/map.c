@@ -585,8 +585,6 @@ void map_clearmechs(DbRef player, void *data, char *buffer) {
     ShutDownMap(map->xcode.context, player, map->mynum);
 }
 
-extern void update_LOSinfo(DbRef, BattleMap *);
-
 void map_update(DbRef obj, void *data) {
   BattleMap *map = ((BattleMap *)data);
   Mech *mech;
@@ -628,7 +626,7 @@ void map_update(DbRef obj, void *data) {
           mech_notify(mech, MECHALL, changemsg);
       }
   }
-  update_LOSinfo(obj, map);
+  mech_sensor_map_los_update(obj, map);
   /* Fire/Smoke are event-driven -> nothing related to them done here */
 }
 
