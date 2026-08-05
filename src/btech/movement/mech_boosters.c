@@ -41,7 +41,7 @@ static void mech_masc_event(MuxEvent *e) {
     mech_notify(mech, MECHALL,
                 "Your leg actuators freeze suddenly, and you fall!");
     mech_los_broadcast(mech, "stops and falls in mid-step!");
-    MechFalls(mech, 1, 0);
+    mech_fall(mech, 1, 0);
   } else {
     mech_notify(mech, MECHALL, "Your leg actuators freeze suddenly!");
     if (MechSpeed(mech) > 0.0)

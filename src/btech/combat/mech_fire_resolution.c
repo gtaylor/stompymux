@@ -687,7 +687,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                     "The weapon's recoil knocks you to the ground!");
         mech_los_broadcast(mech, tprintf("topples over from the %s's recoil!",
                                          &MechWeapons[weapindx].name[3]));
-        MechFalls(mech, 1, 0);
+        mech_fall(mech, 1, 0);
       }
     }
   }

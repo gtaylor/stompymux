@@ -269,7 +269,7 @@ void move_mech(Mech *mech) {
 
         mech_notify(mech, MECHALL, "CRASH! You crash into the bridge!");
         mech_los_broadcast(mech, "crashes into the bridge!");
-        MechFalls(mech, 1, 0);
+        mech_fall(mech, 1, 0);
         return;
       }
 

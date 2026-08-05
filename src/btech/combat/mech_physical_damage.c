@@ -11,7 +11,7 @@ void PhysicalTrip(Mech *mech, Mech *target) {
     mech_notify(target, MECHSTARTED, "You are tripped and fall to the ground!");
     mech_los_broadcast(target, "trips up and falls down!");
 
-    MechFalls(target, 1, 0);
+    mech_fall(target, 1, 0);
   } else {
     mech_los_broadcast(target, "manages to stay upright!");
   }
@@ -187,7 +187,7 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
     if (!MadePilotSkillRoll(target, 0) && !Fallen(target)) {
       mech_notify(target, MECHSTARTED, "The kick knocks you to the ground!");
       mech_los_broadcast(target, "stumbles and falls down!");
-      MechFalls(target, 1, 0);
+      mech_fall(target, 1, 0);
     }
   }
 
@@ -338,13 +338,13 @@ int DeathFromAbove(Mech *mech, Mech *target) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
         mech_los_broadcast(mech, "stumbles and falls down!");
-        MechFalls(mech, 1, 0);
+        mech_fall(mech, 1, 0);
       }
       if (MechType(target) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
         mech_notify(target, MECHSTARTED,
                     "Your piloting skill fails and you fall over!!");
         mech_los_broadcast(target, "stumbles and falls down!");
-        MechFalls(target, 1, 0);
+        mech_fall(target, 1, 0);
       }
     }
 

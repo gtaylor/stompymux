@@ -415,13 +415,13 @@ void ChargeMech(Mech *mech, Mech *target) {
       if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
-        MechFalls(mech, 1, 1);
+        mech_fall(mech, 1, 1);
       }
       /* Make the second unit roll for receiving the charge if it is a mech */
       if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
         mech_notify(target, MECHALL,
                     "Your piloting skill fails and you fall over!!");
-        MechFalls(target, 1, 1);
+        mech_fall(target, 1, 1);
       }
     }
 
@@ -497,12 +497,12 @@ void ChargeMech(Mech *mech, Mech *target) {
       if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
-        MechFalls(mech, 1, 1);
+        mech_fall(mech, 1, 1);
       }
       if (MechType(target) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
         mech_notify(target, MECHALL,
                     "Your piloting skill fails and you fall over!!");
-        MechFalls(target, 1, 1);
+        mech_fall(target, 1, 1);
       }
     }
 
@@ -700,14 +700,14 @@ void ChargeMech(Mech *mech, Mech *target) {
     if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
       mech_notify(mech, MECHALL,
                   "Your piloting skill fails and you fall over!!");
-      MechFalls(mech, 1, 1);
+      mech_fall(mech, 1, 1);
     }
 
     /* Force piloting roll for target if they are in a mech */
     if (MechType(target) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
       mech_notify(target, MECHSTARTED,
                   "Your piloting skill fails and you fall over!!");
-      MechFalls(target, 1, 1);
+      mech_fall(target, 1, 1);
     }
 
     /* Stop him */

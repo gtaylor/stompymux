@@ -269,7 +269,7 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     if (wFallLevels > 2)
       mech_los_broadcast(mech, "tumbles over and over and over!");
 
-    MechFalls(mech, wFallLevels, 1);
+    mech_fall(mech, wFallLevels, 1);
   }
 }
 
@@ -516,7 +516,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
             btech_context_find_object(mech->xcode.context, mech->mapindex),
             mech, 0);
 
-      MechFalls(mech, wDropLevels, 1);
+      mech_fall(mech, wDropLevels, 1);
     }
   } else {
     mech_notify(mech, MECHALL, "You drop to the ground prone!");
@@ -630,7 +630,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
     if (!MadePilotSkillRoll_NoXP(mech, standcarefulmod, 0)) {
       mech_notify(mech, MECHALL,
                   "You fail your attempt to stand and fall back on the ground");
-      MechFalls(mech, 1, 1);
+      mech_fall(mech, 1, 1);
       mechstandtime = ((MechType(mech) == CLASS_MW) ? DROP_TO_STAND_RECYCLE / 3
                                                     : StandMechTime(mech));
       /* Not strictly FASA, but allows legged mechs to stand careful */

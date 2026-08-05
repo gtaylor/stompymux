@@ -189,7 +189,7 @@ void mech_ood_event(MuxEvent *e) {
 
                          "touches down on the ground, twists, and falls down!");
 
-      MechFalls(mech, (abs(mof) * (para ? 1 : 2)), 1);
+      mech_fall(mech, (abs(mof) * (para ? 1 : 2)), 1);
 
     } else if (unit_class == CLASS_BSUIT) {
 
@@ -217,7 +217,7 @@ void mech_ood_event(MuxEvent *e) {
         }
       }
 
-      MechFalls(mech, 0, 1);
+      mech_fall(mech, 0, 1);
 
     } else {
 
@@ -227,7 +227,7 @@ void mech_ood_event(MuxEvent *e) {
 
       mech_los_broadcast(mech, "crashes at the ground!");
 
-      MechFalls(mech, (abs(mof) * (para ? 1 : 3)), 1);
+      mech_fall(mech, (abs(mof) * (para ? 1 : 3)), 1);
     }
 
   } else if (!para) {

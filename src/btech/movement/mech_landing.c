@@ -138,7 +138,7 @@ void mech_jump_land(Mech *mech) {
     mech_notify(mech, MECHALL,
                 "Your lack of conciousness makes you fall to the ground. Not "
                 "like you can read this anyway.");
-    MechFalls(mech, 1, 0);
+    mech_fall(mech, 1, 0);
     dfa = 1;
     done = 1;
   } else {
@@ -174,7 +174,7 @@ void mech_jump_land(Mech *mech) {
         mech_notify(mech, MECHALL,
                     "... something you apparently can't handle!");
         mech_los_broadcast(mech, "lands, staggers, and falls down!");
-        MechFalls(mech, 1, 0);
+        mech_fall(mech, 1, 0);
         return;
       }
     }
@@ -189,7 +189,7 @@ void mech_jump_land(Mech *mech) {
                       "Your missing leg has caused you to fall upon landing!");
           mech_los_broadcast(mech, "lands, unbalanced, and falls down!");
           dfa = 1;
-          MechFalls(mech, 1, 0);
+          mech_fall(mech, 1, 0);
           done = 1;
         }
       } else if (mech_section_base_to_hit(mech, RLEG) ||
@@ -203,7 +203,7 @@ void mech_jump_land(Mech *mech) {
           mech_los_broadcast(mech, "lands, stumbles, and falls down!");
           dfa = 1;
           done = 1;
-          MechFalls(mech, 1, 0);
+          mech_fall(mech, 1, 0);
         }
       } else if (mech_has_damaged_gyro(mech)) {
         mech_notify(mech, MECHPILOT,
@@ -214,7 +214,7 @@ void mech_jump_land(Mech *mech) {
           mech_los_broadcast(mech, "lands, twists awkwardly, and falls down!");
           dfa = 1;
           done = 1;
-          MechFalls(mech, 1, 0);
+          mech_fall(mech, 1, 0);
         }
       }
     }
@@ -233,7 +233,7 @@ void mech_jump_land(Mech *mech) {
       mech_los_broadcast(mech,
                          "lands and crashes to the ground from the weight "
                          "of the battlesuits!");
-      MechFalls(mech, 1, 0);
+      mech_fall(mech, 1, 0);
     }
   }
 
@@ -246,7 +246,7 @@ void mech_jump_land(Mech *mech) {
   }
 
   /* If we aren't jumping anymore, we already took care of the event.
-     (e.g. in MechFalls()) */
+     (e.g. in mech_fall()) */
   if (mech_is_jumping(mech))
     mech_event_schedule(mech, EVENT_JUMPSTABIL, mech_stabilizing_event,
                         JUMP_TO_HIT_RECYCLE, 0);

@@ -91,7 +91,7 @@ void CheckVTOLHeight(Mech *mech) {
     return;
   mech_notify(mech, MECHALL, "CRASH! You smash your toy into the ground!");
   mech_los_broadcast(mech, "crashes into the ground!");
-  MechFalls(mech, 1 + fabs(MechVerticalSpeed(mech) / MP1), 0);
+  mech_fall(mech, 1 + fabs(MechVerticalSpeed(mech) / MP1), 0);
 
   /*   mech_notify (mech, MECHALL, "Your vehicle is inoperable."); */
   MechZ(mech) = MechElevation(mech);

@@ -201,13 +201,13 @@ void HandleOverheat(Mech *mech) {
       mech_notify(mech, MECHALL, "[bold]You fall from the sky![reset]");
       mech_los_broadcast(mech, "falls from the sky!");
       mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
-      MechFalls(mech, JumpSpeedMP(mech, mech_map), 0);
+      mech_fall(mech, JumpSpeedMP(mech, mech_map), 0);
       mech_domino_resolve(mech, MECH_DOMINO_FALL);
     } else {
       mech_los_broadcast(mech, "stops in mid-motion!");
       if ((fabs(MechSpeed(mech)) > MP1) && !Fallen(mech) &&
           (!MadePilotSkillRoll(mech, 3)))
-        MechFalls(mech, 0, 1);
+        mech_fall(mech, 0, 1);
     }
     mech_power_down(mech);
     mech_event_cancel(mech, EVENT_MOVE);

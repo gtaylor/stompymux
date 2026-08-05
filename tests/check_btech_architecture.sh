@@ -451,6 +451,19 @@ if [[ -e src/btech/movement/mech_landing_falls.c ]]; then
   status=1
 fi
 
+match=$(rg -n '\b(MechFalls|MechCocoon|MechStatus|MechStatus2|MechType|MechMove|MechSpeed|MechDesiredSpeed|MechVerticalSpeed|MechGoingY|MechStartFX|MechStartFY|MechStartFZ|MechFZ|MechZ|MechTons|MechRealTons|MechFacing|MechDesiredFacing|InWater|InSpecial|MapUnderSpecialRules|MapGravity)\b' \
+  src/btech/movement/mech_falls.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: fall resolution must use opaque unit and map APIs"
+  status=1
+fi
+
+match=$(rg -n '\bMechFalls\b' src/btech || true)
+if [[ -n "$match" ]]; then
+  echo "$match: legacy fall export is not allowed"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1

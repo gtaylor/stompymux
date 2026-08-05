@@ -330,7 +330,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
         mech_notify(wounded, MECHALL,
                     "Losing your last jump jet, you fall from the sky!");
         mech_los_broadcast(wounded, "falls from the sky!");
-        MechFalls(wounded, 1, 0);
+        mech_fall(wounded, 1, 0);
         mech_domino_resolve(wounded, MECH_DOMINO_FALL);
       }
       break;
@@ -391,11 +391,11 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
               mech_notify(wounded, MECHALL,
                           "You lose your balance and fall down!");
               mech_los_broadcast(wounded, "stumbles and falls down.");
-              MechFalls(wounded, 1, 0);
+              mech_fall(wounded, 1, 0);
             } else {
               mech_notify(wounded, MECHALL, "You fall from the sky!");
               mech_los_broadcast(wounded, "falls from the sky!");
-              MechFalls(wounded, JumpSpeedMP(wounded, map), 0);
+              mech_fall(wounded, JumpSpeedMP(wounded, map), 0);
               mech_domino_resolve(wounded, MECH_DOMINO_FALL);
             }
           }
@@ -407,12 +407,12 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
           if (!Fallen(wounded) && !Jumping(wounded) && !OODing(wounded)) {
             mech_notify(wounded, MECHALL, "You fall and you can't get up!");
             mech_los_broadcast(wounded, "is knocked over!");
-            MechFalls(wounded, 1, 0);
+            mech_fall(wounded, 1, 0);
           } else if (!Fallen(wounded) &&
                      (Jumping(wounded) || OODing(wounded))) {
             mech_notify(wounded, MECHALL, "You fall from the sky!");
             mech_los_broadcast(wounded, "falls from the sky!");
-            MechFalls(wounded, JumpSpeedMP(wounded, map), 0);
+            mech_fall(wounded, JumpSpeedMP(wounded, map), 0);
             mech_domino_resolve(wounded, MECH_DOMINO_FALL);
           }
         }
@@ -450,7 +450,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
             !MadePilotSkillRoll(wounded, 0)) {
           mech_notify(wounded, MECHALL, "You lose your balance and fall down!");
           mech_los_broadcast(wounded, "stumbles and falls down!");
-          MechFalls(wounded, 1, 0);
+          mech_fall(wounded, 1, 0);
         }
       }
       break;
@@ -500,7 +500,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
             mech_notify(wounded, MECHALL,
                         "You lose your balance and fall down!");
             mech_los_broadcast(wounded, "stumbles and falls down!");
-            MechFalls(wounded, 1, 0);
+            mech_fall(wounded, 1, 0);
           }
         }
       }

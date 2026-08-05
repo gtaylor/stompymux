@@ -136,7 +136,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
             mech_notify(wounded, MECHALL,
                         "Losing your last Jump Jet you fall from the sky!!!!!");
             mech_los_broadcast(wounded, "falls from the sky!");
-            MechFalls(wounded, (int)(oldjs * MP_PER_KPH), 0);
+            mech_fall(wounded, (int)(oldjs * MP_PER_KPH), 0);
             mech_domino_resolve(wounded, MECH_DOMINO_FALL);
           }
           break;
@@ -232,11 +232,11 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
                     "You realize remaining standing is no longer an option and "
                     "crash to the ground!");
         mech_los_broadcast(wounded, "crashes to the ground!");
-        MechFalls(wounded, 1, 0);
+        mech_fall(wounded, 1, 0);
       } else if (!MadePilotSkillRoll(wounded, 0)) {
         mech_notify(wounded, MECHALL, "You lose your balance and fall down!");
         mech_los_broadcast(wounded, "loses balance and falls down!");
-        MechFalls(wounded, 1, 0);
+        mech_fall(wounded, 1, 0);
       }
     }
   }

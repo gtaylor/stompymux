@@ -110,6 +110,10 @@ void mech_position_z_set(Mech *mech, int z) {
 
 void mech_position_hex_z_set(Mech *mech, int z) { mech->pd.z = z; }
 
+void mech_position_real_z_sync(Mech *mech) {
+  mech->pd.fz = ZSCALE * mech->pd.z;
+}
+
 void mech_desired_speed_set(Mech *mech, float speed) {
   mech->rd.desired_speed = speed;
 }
@@ -124,6 +128,16 @@ void mech_motion_vector_reset(Mech *mech) {
   mech->rd.startfx = 0.0F;
   mech->rd.startfy = 0.0F;
   mech->rd.startfz = 0.0F;
+}
+
+void mech_jump_destination_y_set(Mech *mech, int destination_y) {
+  mech->rd.goingy = destination_y;
+}
+
+void mech_fall_heading_apply(Mech *mech, int offset) {
+  mech->pd.facing += SHO2FSIM(offset);
+  mech->pd.facing = SHO2FSIM(AcceptableDegree(FSIM2SHO(mech->pd.facing)));
+  mech->rd.desiredfacing = FSIM2SHO(mech->pd.facing);
 }
 
 void mech_jump_apex_elevation_set(Mech *mech, int elevation) {

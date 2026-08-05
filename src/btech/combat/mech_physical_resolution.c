@@ -464,7 +464,7 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
       // We fail the piloting skill roll and flop on our face.
       if (!MadePilotSkillRoll(mech, failRoll)) {
         mech_notify(mech, MECHALL, "You lose your balance and fall down!");
-        MechFalls(mech, 1, 1);
+        mech_fall(mech, 1, 1);
       } // end if() - Miss/fall.
     } // end if() - Miss kick/club and risk falling.
   } // end if() - Physical failure handling.

@@ -524,7 +524,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
             mech, tprintf("smashes open the ramp door and emerges from %s!",
                           mech_display_id(target).text));
         notify(evaluation, player, "You smash open the door and break out.");
-        MechFalls(mech, 4, 0);
+        mech_fall(mech, 4, 0);
       } else {
         /* All is well. */
         mech_los_broadcast(mech, tprintf("emerges from the ramp out of %s!",

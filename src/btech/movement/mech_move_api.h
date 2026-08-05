@@ -44,7 +44,7 @@ int mech_upper_surface_elevation(Mech *mech);
 void mech_jump_land(Mech *mech);
 void mech_flood_section(Mech *mech, int section, int elevation);
 void mech_flood(Mech *mech);
-void MechFalls(Mech *mech, int levels, int seemsg);
+void mech_fall(Mech *mech, int levels, int seemsg);
 typedef enum MechDominoMode {
   MECH_DOMINO_GROUND,
   MECH_DOMINO_JUMP,

@@ -58,7 +58,7 @@ static void swim_except(BattleMap *map, Mech *mech, int x, int y, char *msg,
         (isbridge &&
          mech_position_z(t) == mech_position_elevation_magnitude(t))) {
       mech_los_broadcast(t, msg);
-      MechFalls(t, mech_position_elevation_magnitude(t) + isbridge, 0);
+      mech_fall(t, mech_position_elevation_magnitude(t) + isbridge, 0);
       if (mech_class(t) == CLASS_VEH_GROUND && !mech_is_destroyed(t)) {
         mech_notify(t, MECHALL, "Water renders your vehicle inoperable.");
         mech_los_broadcast(t,
@@ -94,7 +94,7 @@ void drop_thru_ice(Mech *mech) {
   mech_position_terrain_set(mech, BATTLE_TERRAIN_WATER);
   if (mech_movement_type(mech) != MOVE_FOIL) {
     if (mech_position_elevation_magnitude(mech) > 0)
-      MechFalls(mech, mech_position_elevation_magnitude(mech), 0);
+      mech_fall(mech, mech_position_elevation_magnitude(mech), 0);
   }
   if (mech_position_elevation_magnitude(mech) > 0 &&
       mech_class(mech) == CLASS_VEH_GROUND && !mech_is_destroyed(mech) &&

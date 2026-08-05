@@ -123,3 +123,7 @@ void map_conditions_apply(Mech *mech, BattleMap *map) {
                                       MapTemperature(map) > 50,
                                   MapGravity(map) != 100, MapIsVacuum(map));
 }
+
+bool battle_map_uses_special_rules(const BattleMap *map) {
+  return MapUnderSpecialRules(map);
+}

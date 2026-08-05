@@ -56,7 +56,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                       "sky![reset]");
           mech_los_broadcast(
               mech, "crashes into an obstacle and falls from the sky!");
-          MechFalls(mech, ed, 0);
+          mech_fall(mech, ed, 0);
           mech_domino_resolve(mech, MECH_DOMINO_FALL);
         }
       }
@@ -87,9 +87,9 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                     "You run headlong into the cliff and fall down!");
         mech_los_broadcast(mech, "runs headlong into a cliff and falls down!");
         if (!mech->xcode.context->configuration->btech_skidcliff)
-          MechFalls(mech, (int)(1 + (MechSpeed(mech)) * MP_PER_KPH) / 4, 0);
+          mech_fall(mech, (int)(1 + (MechSpeed(mech)) * MP_PER_KPH) / 4, 0);
         else
-          MechFalls(mech, 1, 0);
+          mech_fall(mech, 1, 0);
       }
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
@@ -118,7 +118,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                     "You run off the cliff and fall to the ground below.");
         mech_los_broadcast(mech,
                            "runs off a cliff and falls to the ground below!");
-        MechFalls(mech, lastelevation - elevation, 0);
+        mech_fall(mech, lastelevation - elevation, 0);
         MechDesiredSpeed(mech) = 0;
         MechSpeed(mech) = 0;
       }
@@ -153,7 +153,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
             tprintf("%s", (elevation > lastelevation
                                ? "falls on its back walking up an incline."
                                : "falls off the back of a small incline.")));
-        MechFalls(mech, abs(lastelevation - elevation), 1);
+        mech_fall(mech, abs(lastelevation - elevation), 1);
         MechDesiredSpeed(mech) = 0;
         MechSpeed(mech) = 0;
         if (elevation > lastelevation) {
@@ -256,7 +256,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       if (!MadePilotSkillRoll_NoXP(mech, skillmod, 0)) {
         mech_notify(mech, MECHALL, "You slip in the water and fall down");
         mech_los_broadcast(mech, "slips in the water and falls down!");
-        MechFalls(mech, 1, dammod);
+        mech_fall(mech, 1, dammod);
         done = 1;
       }
     }

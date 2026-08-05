@@ -103,7 +103,7 @@ void DoVehicleEngineHit(Mech *objMech, Mech *objAttacker) {
         mech_notify(objMech, MECHALL, "The ground rushes up to meet you!");
         mech_notify(objAttacker, MECHALL, "You knock the VTOL out of the sky!");
         mech_los_broadcast(objMech, "falls from the sky!");
-        MechFalls(objMech, MechsElevation(objMech), 0);
+        mech_fall(objMech, MechsElevation(objMech), 0);
       }
     }
   } else {
@@ -317,7 +317,7 @@ void StartVTOLCrash(Mech *objMech) {
          MechVerticalSpeed(objMech) = 0;
          mech_notify(objMech, MECHALL, "You fall rapidly from the sky!");
          mech_los_broadcast(objMech, "plummets from the sky!");
-         MechFalls(objMech, MechsElevation(objMech), 0);
+         mech_fall(objMech, MechsElevation(objMech), 0);
        */
     }
   }
@@ -631,7 +631,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
         mech_notify(wounded, MECHALL, "The ground rushes up to meet you!");
         mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
         mech_los_broadcast(wounded, "falls from the sky!");
-        MechFalls(wounded, MechsElevation(wounded), 0);
+        mech_fall(wounded, MechsElevation(wounded), 0);
       }
     }
     mech_max_speed_set(wounded, 0.0);

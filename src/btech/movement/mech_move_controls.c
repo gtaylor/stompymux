@@ -73,7 +73,7 @@ void mech_land(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL, "You don't quite make it.");
       mech_los_broadcast(mech,
                          "attempts a landing, but crashes to the ground!");
-      MechFalls(mech, 1, 0);
+      mech_fall(mech, 1, 0);
       MechDFATarget(mech) = -1;
       MechGoingX(mech) = MechGoingY(mech) = 0;
       MechSpeed(mech) = 0;
@@ -546,7 +546,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
    * yourself */
 
   if (!MadePilotSkillRoll_Advanced(mech, 0, 0)) {
-    MechFalls(mech, 1, 1);
+    mech_fall(mech, 1, 1);
   }
 
   for (i = 0; i < 4; i++) {

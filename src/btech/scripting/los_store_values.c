@@ -90,7 +90,7 @@ void fun_btmakepilotroll(char *buff, char **bufc, DbRef player, DbRef cause,
   if (MadePilotSkillRoll(mech, rollmod)) {
     safe_tprintf_str(buff, bufc, "1");
   } else {
-    MechFalls(mech, dammod, 1);
+    mech_fall(mech, dammod, 1);
     safe_tprintf_str(buff, bufc, "0");
   }
 }

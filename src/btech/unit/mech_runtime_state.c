@@ -61,6 +61,10 @@ bool mech_is_under_gravity(const Mech *mech) {
   return mech->rd.status & UNDERGRAVITY;
 }
 
+bool mech_is_under_special_conditions(const Mech *mech) {
+  return mech->rd.status & UNDERSPECIAL;
+}
+
 bool mech_has_destroyed_gyro(const Mech *mech) {
   return mech->rd.critstatus & GYRO_DESTROYED;
 }
@@ -153,3 +157,5 @@ void mech_jump_complete(Mech *mech) {
   mech->rd.goingy = 0;
   mech->rd.speed = 0.0F;
 }
+
+void mech_jump_abort(Mech *mech) { mech->rd.status &= ~(JUMPING | DFA_ATTACK); }

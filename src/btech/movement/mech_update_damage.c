@@ -13,7 +13,7 @@ void CheckDamage(Mech *wounded) {
         if (!MadePilotSkillRoll(wounded, 1)) {
           mech_notify(wounded, MECHALL, "You fall over from all the damage!");
           mech_los_broadcast(wounded, "falls down, staggered by the damage!");
-          MechFalls(wounded, 1, 0);
+          mech_fall(wounded, 1, 0);
         }
       }
       MechTurnDamage(wounded) = 0;

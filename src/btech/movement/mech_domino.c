@@ -239,7 +239,7 @@ static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
       mech_los_broadcast_unit(me, mech, "nearly lands on %s!");
       if (!MadePilotSkillRoll(me,
                               cnt + mech_adjusted_jump_speed_mp(me, map) / 2))
-        MechFalls(me, 1, mech_adjusted_jump_speed_mp(me, map) / 2);
+        mech_fall(me, 1, mech_adjusted_jump_speed_mp(me, map) / 2);
     }
     return 1;
   case MECH_DOMINO_GROUND:
@@ -271,7 +271,7 @@ static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
                 mech_to_mech_display_id(mech, me).text);
     mech_los_broadcast_unit(me, mech, "nearly bumps into %s!");
     if (!MadePilotSkillRoll(me, cnt))
-      MechFalls(me, 1, 0);
+      mech_fall(me, 1, 0);
     mech_movement_stop(me);
   }
   mech_charge_reset(me);

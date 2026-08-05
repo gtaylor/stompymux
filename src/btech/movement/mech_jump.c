@@ -144,7 +144,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
       mech_los_broadcast(
           mech,
           "engages jumpjets, rolls to the side and slams into the ground!");
-      MechFalls(mech, 1, 0);
+      mech_fall(mech, 1, 0);
       return;
     }
   }

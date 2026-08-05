@@ -27,5 +27,6 @@ int battle_map_maximum_visibility(const BattleMap *map);
 int battle_map_cloud_base(const BattleMap *map);
 bool battle_map_is_dark(const BattleMap *map);
 bool battle_map_is_underground(const BattleMap *map);
+bool battle_map_uses_special_rules(const BattleMap *map);
 bool battle_map_sensor_is_disabled(const BattleMap *map, int sensor);
 bool battle_map_bridges_have_capacity(const BattleMap *map);
