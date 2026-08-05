@@ -37,6 +37,7 @@
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_hitloc_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_macros.h"
 #include "mech_move_api.h"
@@ -314,7 +315,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
               notificationBuff, was_transfer ? "(transfer)" : "");
   /* Always a good policy :-> */
   if (damage > 0 && intDamage <= 0 && !was_transfer && !Fallen(wounded)) {
-    if (wounded->xcode.context->configuration->btech_newstagger &&
+    if (btech_context_stagger_mode(mech_context(wounded)) &&
         MechType(wounded) == CLASS_MECH) {
 
       mech_stagger_damage_append(wounded, damage,

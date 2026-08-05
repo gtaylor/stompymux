@@ -62,6 +62,9 @@ bool btech_context_seismic_detects_stopped_units(const BtechContext *context);
 int btech_context_movement_slowdown_mode(const BtechContext *context);
 int btech_context_stacking_mode(const BtechContext *context);
 int btech_context_stacking_damage(const BtechContext *context);
+int btech_context_stagger_mode(const BtechContext *context);
+int btech_context_stagger_interval(const BtechContext *context);
+bool btech_context_stagger_uses_tonnage(const BtechContext *context);
 int btech_context_event_tick(const BtechContext *context);
 int btech_context_event_data_count(const BtechContext *context, int event_type,
                                    intptr_t event_data);

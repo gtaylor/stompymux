@@ -107,6 +107,21 @@ int btech_context_stacking_damage(const BtechContext *context) {
   return context->configuration->btech_stackdamage;
 }
 
+int btech_context_stagger_mode(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_newstagger;
+}
+
+int btech_context_stagger_interval(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_newstaggertime;
+}
+
+bool btech_context_stagger_uses_tonnage(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_newstaggertons;
+}
+
 int btech_context_event_tick(const BtechContext *context) {
   assert(context != nullptr);
   return context->events->tick;

@@ -36,6 +36,7 @@
 #include "mech_fire_api.h"
 #include "mech_hitloc_api.h"
 #include "mech_ice_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_macros.h"
@@ -231,7 +232,7 @@ void LandMech(Mech *mech) {
   MechFloods(mech);
   water_extinguish_inferno(mech);
   // this is only for non-new-stagger
-  if (!mech->xcode.context->configuration->btech_newstagger)
+  if (!btech_context_stagger_mode(mech_context(mech)))
     mech_stop_stagger_check(mech);
 }
 
@@ -332,7 +333,7 @@ void MechFalls(Mech *mech, int levels, int seemsg) {
         0);
 
   /* Clear stagger damage if we use new stagger*/
-  if (mech->xcode.context->configuration->btech_newstagger)
+  if (btech_context_stagger_mode(mech_context(mech)))
     mech_stagger_damage_clear(mech);
 
   /* damage pilot */

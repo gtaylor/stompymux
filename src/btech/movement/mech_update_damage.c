@@ -1,9 +1,11 @@
 #include "mech_update_internal.h"
 
+#include "mech_identity_api.h"
+
 void CheckDamage(Mech *wounded) {
   int now = wounded->xcode.context->events->tick % TURN;
 
-  if (!wounded->xcode.context->configuration->btech_newstagger) {
+  if (!btech_context_stagger_mode(mech_context(wounded))) {
     if (!IsDS(wounded) && MechTurnDamage(wounded) >= 20 &&
         (!MechStaggeredLastTurn(wounded) || MechStaggerStamp(wounded) == now)) {
       if (!Jumping(wounded) && !Fallen(wounded) && !OODing(wounded)) {

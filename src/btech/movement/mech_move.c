@@ -36,6 +36,7 @@
 #include "mech_fire_api.h"
 #include "mech_hitloc_api.h"
 #include "mech_ice_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_macros.h"
@@ -529,7 +530,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
   water_extinguish_inferno(mech);
 
   // as per ps, prone clears stagger
-  if (mech->xcode.context->configuration->btech_newstagger)
+  if (btech_context_stagger_mode(mech_context(mech)))
     mech_stagger_damage_clear(mech);
 
   possible_mine_poof(mech, MINE_STEP);

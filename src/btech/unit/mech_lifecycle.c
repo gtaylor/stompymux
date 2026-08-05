@@ -14,6 +14,7 @@
 #include "mech.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
+#include "mech_identity_api.h"
 #include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
@@ -194,7 +195,7 @@ void mech_make_fall(Mech *mech) {
   mech_event_cancel(mech, EVENT_STAND);
   mech_event_cancel(mech, EVENT_CHANGING_HULLDOWN);
   MechStatus(mech) &= ~HULLDOWN;
-  if (mech->xcode.context->configuration->btech_newstagger) {
+  if (btech_context_stagger_mode(mech_context(mech))) {
     mech_stagger_damage_clear(mech);
   }
 }

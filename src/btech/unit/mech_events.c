@@ -25,6 +25,7 @@
 #include "mech_combat_misc_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_macros.h"
@@ -44,7 +45,7 @@
 
 void mech_heartbeat(Mech *mech) {
   mech_update_recycling(mech);
-  if (mech->xcode.context->configuration->btech_newstagger >= 1 &&
+  if (btech_context_stagger_mode(mech_context(mech)) >= 1 &&
       MechType(mech) == CLASS_MECH) {
     // no sense checking if a fallen mech will fall down again, and let's not
     // let jumping mechs stagger.
@@ -71,7 +72,7 @@ void mech_staggercheck_heartbeat(Mech *mech) {
 
   // if we've not checked stagger since last time... ruhroh!
   if (now - (mech)->rd.lastStaggerCheck >=
-      mech->xcode.context->configuration->btech_newstaggertime) {
+      btech_context_stagger_interval(mech_context(mech))) {
     (mech)->rd.lastStaggerCheck = now;
 
     // curStagger is stuff we haven't rolled against
@@ -86,8 +87,8 @@ void mech_staggercheck_heartbeat(Mech *mech) {
 
       // Dont need to remove stagger anymore, it clears on fall,
       // unless we're using
-      // mech->xcode.context->configuration->btech_newstagger = 2
-      if (mech->xcode.context->configuration->btech_newstagger == 2)
+      // Stagger mode 2 removes damage after it is checked.
+      if (btech_context_stagger_mode(mech_context(mech)) == 2)
         mech_stagger_damage_remove(mech, staggerLevel);
       else {
         mech_stagger_damage_mark(mech, staggerLevel);
@@ -150,7 +151,7 @@ int calcNewStaggerBTHMod(Mech *mech, int staggerLevel) {
       tonnageMod = -2;
 
     // disable tonnage mods if so configured
-    if (mech->xcode.context->configuration->btech_newstaggertons)
+    if (btech_context_stagger_uses_tonnage(mech_context(mech)))
       bthMod += tonnageMod;
   }
 

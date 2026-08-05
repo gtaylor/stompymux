@@ -272,6 +272,12 @@ done < <(rg -n -g '*.[ch]' '#include "mech\.h"|#include "mech_macros\.h"' \
   src/btech/core || true)
 
 while IFS= read -r match; do
+  echo "$match: BTech domain reaches into stagger configuration directly"
+  status=1
+done < <(rg -n 'configuration->btech_newstagger(time|tons)?' \
+  src/btech -g '*.[ch]' -g '!**/core/context.c' || true)
+
+while IFS= read -r match; do
   echo "$match: commands depend on the legacy Mech aggregate"
   status=1
 done < <(rg -n -g '*.[ch]' '#include "mech\.h"|#include "mech_macros\.h"' \
