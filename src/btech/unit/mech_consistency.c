@@ -14,7 +14,7 @@
 #include "command_handlers_api.h"
 #include "coolmenu.h"
 #include "legacy_macros.h"
-#include "mech.h"
+#include "mech_internal.h"
 #include "mech_lifecycle.h"
 #include "mech_macros.h"
 #include "mech_notify_api.h"

@@ -2,7 +2,7 @@
 
 #include "btech/context.h"
 #include "map.h"
-#include "mech.h"
+#include "mech_internal.h"
 #include "mech_macros.h"
 
 static char encoded_terrain[256];

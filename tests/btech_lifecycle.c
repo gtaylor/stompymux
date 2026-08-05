@@ -1,6 +1,6 @@
 #include "mech_lifecycle.h"
 
-#include "mech.h"
+#include "mech_internal.h"
 #include "mech_macros.h"
 
 static int speed_corrections;

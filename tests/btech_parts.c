@@ -1,9 +1,9 @@
 #include "mech_parts.h"
 
 #include "btech/context.h"
-#include "mech_macros.h"
 #include "btmux_build_config.h"
-#include "mech.h"
+#include "mech_internal.h"
+#include "mech_macros.h"
 #include "mux/objects/db.h"
 
 static int inventory_count = 6;

@@ -17,11 +17,12 @@
 #include "legacy_macros.h"
 #include "map.h" // IWYU pragma: keep
 #include "map_terrain.h"
-#include "mech.h"
 #include "mech_build_api.h"
 #include "mech_combat_api.h"
 #include "mech_events.h"
+#include "mech_internal.h"
 #include "mech_lifecycle.h"
+#include "mech_macros.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_tic_api.h"

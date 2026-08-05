@@ -15,7 +15,7 @@
 
 #include "btech/context.h"
 #include "legacy_macros.h"
-#include "mech.h"
+#include "mech_internal.h"
 #include "mech_partnames.h"
 #include "mech_partnames_api.h"
 #include "mux/network/mux_event_alloc.h"

@@ -17,8 +17,8 @@
 #include <string.h>
 #include <strings.h>
 
-#include "mech.h"
 #include "mech_build_api.h"
+#include "mech_internal.h"
 #include "mech_lifecycle.h"
 #include "mech_macros.h"
 #include "mech_partnames_api.h"

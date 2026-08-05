@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "mech.h"
+#include "mech_internal.h"
 
 /* mech.tic.c */
 void cleartic_sub(DbRef player, Mech *mech, char *buffer);

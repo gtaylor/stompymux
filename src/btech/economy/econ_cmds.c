@@ -36,11 +36,14 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify.h"
+#include "mech_notify_api.h"
 #include "mech_partnames.h"
 #include "mech_partnames_api.h"
 #include "mech_position_api.h"
+#include "mech_restrict_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
@@ -135,7 +138,7 @@ void econ_fix_stuff(BtechContext *context, DbRef player, DbRef loc) {
   while (*t) {
     if (*t == '[')
       if ((sscanf(t, "[%d,%d,%d]", &i1, &i2, &i3)) == 3)
-        if (!IsCrap(i1))
+        if (!mech_part_is_structural_placeholder(i1))
           pile[i2][i1] += i3;
     t++;
   }
