@@ -65,6 +65,8 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .turret_jammed = tank_critical_status & TURRET_JAMMED,
       .turret_locked = tank_critical_status & TURRET_LOCKED,
       .tail_rotor_destroyed = tank_critical_status & TAIL_ROTOR_DESTROYED,
+      .hip_damaged = critical_status & HIP_DAMAGED,
+      .gyro_damaged = critical_status & GYRO_DAMAGED,
       .torso_right = status & TORSO_RIGHT,
       .torso_left = status & TORSO_LEFT,
       .spinning = critical_status & SPINNING,

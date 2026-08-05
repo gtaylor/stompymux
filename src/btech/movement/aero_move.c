@@ -621,7 +621,7 @@ void aero_update(Mech *mech) {
   if (Destroyed(mech))
     return;
   if (Started(mech) || Uncon(mech)) {
-    UpdatePilotSkillRolls(mech);
+    mech_piloting_update(mech);
   }
   if (Started(mech) || MechPlusHeat(mech) > 0.)
     UpdateHeat(mech);

@@ -498,6 +498,19 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "mech_update_internal\.h"|#include "(mech|mech_macros)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Started|Uncon|Blinded|Jumping|Fallen|OODing|InSpecial|InGravity|IsRunning|SectIsDestroyed)\s*\(' \
+  src/btech/movement/mech_update_piloting.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: piloting updates must use opaque unit APIs"
+  status=1
+fi
+
+match=$(rg -n '\b(UpdatePilotSkillRolls|updateAutoturnTurret)\b' src/btech || true)
+if [[ -n "$match" ]]; then
+  echo "$match: legacy piloting update exports are not allowed"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1

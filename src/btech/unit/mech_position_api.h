@@ -49,6 +49,7 @@ void mech_desired_speed_set(Mech *mech, float speed);
 void mech_desired_heading_set(Mech *mech, int heading);
 void mech_heading_set(Mech *mech, int heading);
 void mech_turret_heading_absolute_set(Mech *mech, int heading);
+void mech_turret_heading_relative_set(Mech *mech, int heading);
 int mech_turret_heading_absolute(const Mech *mech);
 void mech_desired_angle_set(Mech *mech, int angle);
 void mech_vertical_speed_set(Mech *mech, float speed);

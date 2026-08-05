@@ -133,6 +133,10 @@ void mech_turret_heading_absolute_set(Mech *mech, int heading) {
       AcceptableDegree(heading - mech_heading_degrees(mech));
 }
 
+void mech_turret_heading_relative_set(Mech *mech, int heading) {
+  mech->rd.turretfacing = AcceptableDegree(heading);
+}
+
 int mech_turret_heading_absolute(const Mech *mech) {
   return AcceptableDegree(mech->rd.turretfacing + mech_heading_degrees(mech));
 }

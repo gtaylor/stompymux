@@ -42,7 +42,7 @@ void mech_update(DbRef key, void *data) {
     return;
   }
   if (mech_is_started(mech) || mech_pilot_is_unconscious(mech))
-    UpdatePilotSkillRolls(mech);
+    mech_piloting_update(mech);
   if (mech_is_started(mech) || mech_added_heat(mech) > 0.1F)
     UpdateHeat(mech);
   if (mech_is_started(mech)) {
@@ -56,5 +56,5 @@ void mech_update(DbRef key, void *data) {
   end_lite_check(mech);
 
   if (mech_condition_summary(mech).turret_auto_turn)
-    updateAutoturnTurret(mech);
+    mech_turret_autoturn_update(mech);
 }

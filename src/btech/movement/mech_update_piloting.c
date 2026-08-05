@@ -8,113 +8,149 @@
  *       All rights reserved
  */
 
-#include "mech_update_internal.h"
+#include "mech_update_api.h"
 
-void UpdatePilotSkillRolls(Mech *mech) {
+#include <math.h>
+
+#include "btconfig.h"
+#include "btech/context.h"
+#include "btech_event.h"
+#include "btechstats_api.h"
+#include "failures_api.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
+#include "mech_combat_misc_api.h"
+#include "mech_condition_api.h"
+#include "mech_damage_api.h"
+#include "mech_damage_history_api.h"
+#include "mech_equipment_api.h"
+#include "mech_events.h"
+#include "mech_heat_api.h"
+#include "mech_identity_api.h"
+#include "mech_los_api.h"
+#include "mech_move_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_targeting_api.h"
+#include "mech_utils_api.h"
+#include "registry_api.h"
+#include "section_types.h"
+
+static bool mech_piloting_is_running(const Mech *mech, float maximum_speed) {
+  return mech_current_speed(mech) > 2.0F * maximum_speed / 3.0F + 0.1F;
+}
+
+void mech_piloting_update(Mech *mech) {
+  BtechContext *context = mech_context(mech);
   int makeroll = 0, grav = 0;
   float maxspeed;
+  int temp_tick = btech_context_event_tick(context);
 
-  int temp_tick = mech->xcode.context->events->tick;
-
-  /* If for some reason, we get here and
-   * mech->xcode.context->events->tick is odd all the time....
-   */
+  /* Preserve the legacy even-tick alignment before the per-turn checks. */
   if ((temp_tick & 1) != 0)
     temp_tick++;
 
-  if (((temp_tick % TURN) == 0) && !Fallen(mech) && !Jumping(mech) &&
-      !OODing(mech))
-  /* do this once a turn (30 secs), only if mech is standing */
-  {
-    maxspeed = MMaxSpeed(mech);
+  if (temp_tick % TURN == 0 && !mech_is_fallen(mech) &&
+      !mech_is_jumping(mech) && !mech_is_out_of_control(mech)) {
+    maxspeed = mech_effective_maximum_speed(mech);
 
-    if (!Started(mech))
+    if (!mech_is_started(mech))
       makeroll = 4;
 
-    if ((MechHeat(mech) >= 9.) && (MechSpecials(mech) & TRIPLE_MYOMER_TECH))
-      maxspeed = ceil((rint((MMaxSpeed(mech) / 1.5) / MP1) + 1) * 1.5) * MP1;
-    /* maxspeed += 1.5 * MP1; */
+    if (mech_excess_heat(mech) >= 9.0F &&
+        (mech_technology_flags(mech) & TRIPLE_MYOMER_TECH))
+      maxspeed =
+          ceil((rint((mech_effective_maximum_speed(mech) / 1.5) / MP1) + 1) *
+               1.5) *
+          MP1;
 #ifndef BT_MOVEMENT_MODES
-    if (InSpecial(mech) && InGravity(mech))
+    if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech))
 #else
-    if (InSpecial(mech) && InGravity(mech) &&
+    if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech) &&
         !mech_event_count(mech, EVENT_MOVEMODE))
 #endif
-      if (MechSpeed(mech) > MechMaxSpeed(mech) &&
-          MechType(mech) == CLASS_MECH) {
+      if (mech_current_speed(mech) > mech_maximum_speed(mech) &&
+          mech_class(mech) == CLASS_MECH) {
         grav = 1;
         makeroll = 1;
       }
 
-    if (IsRunning(MechSpeed(mech), maxspeed) &&
-        ((MechCritStatus(mech) & GYRO_DAMAGED) ||
-         (MechCritStatus(mech) & HIP_DAMAGED)))
+    MechConditionSummary condition = mech_condition_summary(mech);
+    if (mech_piloting_is_running(mech, maxspeed) &&
+        (condition.gyro_damaged || condition.hip_damaged))
       makeroll = 1;
 
-    if (makeroll) {
-      if (!MadePilotSkillRoll(mech, (makeroll - 1))) {
-        if (grav) {
-          int dam = (MechSpeed(mech) - MechMaxSpeed(mech)) / MP1 + 1;
-          mech_notify(mech, MECHALL, "Your legs take some damage!");
-          if (MechIsQuad(mech)) {
-            if (!SectIsDestroyed(mech, LARM))
-              DamageMech(mech, mech, 0, -1, LARM, 0, 0, 0, dam, 0, 0, -1, 0, 1);
-            if (!SectIsDestroyed(mech, RARM))
-              DamageMech(mech, mech, 0, -1, RARM, 0, 0, 0, dam, 0, 0, -1, 0, 1);
-          }
-          if (!SectIsDestroyed(mech, LLEG))
-            DamageMech(mech, mech, 0, -1, LLEG, 0, 0, 0, dam, 0, 0, -1, 0, 1);
-          if (!SectIsDestroyed(mech, RLEG))
-            DamageMech(mech, mech, 0, -1, RLEG, 0, 0, 0, dam, 0, 0, -1, 0, 1);
-        } else {
-          mech_notify(mech, MECHALL,
-                      "Your damaged mech falls as you try to run!");
-          mech_los_broadcast(mech, "falls down.");
-          mech_fall(mech, 1, 0);
+    if (makeroll && !MadePilotSkillRoll(mech, makeroll - 1)) {
+      if (grav) {
+        int dam =
+            (mech_current_speed(mech) - mech_maximum_speed(mech)) / MP1 + 1;
+        mech_notify(mech, MECHALL, "Your legs take some damage!");
+        if (mech_movement_type(mech) == MOVE_QUAD) {
+          if (!mech_section_is_destroyed(mech, LARM))
+            DamageMech(mech, mech, 0, -1, LARM, 0, 0, 0, dam, 0, 0, -1, 0, 1);
+          if (!mech_section_is_destroyed(mech, RARM))
+            DamageMech(mech, mech, 0, -1, RARM, 0, 0, 0, dam, 0, 0, -1, 0, 1);
         }
+        if (!mech_section_is_destroyed(mech, LLEG))
+          DamageMech(mech, mech, 0, -1, LLEG, 0, 0, 0, dam, 0, 0, -1, 0, 1);
+        if (!mech_section_is_destroyed(mech, RLEG))
+          DamageMech(mech, mech, 0, -1, RLEG, 0, 0, 0, dam, 0, 0, -1, 0, 1);
+      } else {
+        mech_notify(mech, MECHALL,
+                    "Your damaged mech falls as you try to run!");
+        mech_los_broadcast(mech, "falls down.");
+        mech_fall(mech, 1, 0);
       }
     }
   }
-  if (MechType(mech) == CLASS_MECH)
+  if (mech_class(mech) == CLASS_MECH)
     mech_damage_stagger_check(mech);
   else
-    MechTurnDamage(mech) = 0;
-  if ((temp_tick % TURN) == 0) {
-    if (Started(mech) && MechMove(mech) != MOVE_NONE)
-      mech_generic_failure_check(mech, -1, nullptr, nullptr);
-  }
+    mech_turn_damage_clear(mech);
+  if (temp_tick % TURN == 0 && mech_is_started(mech) &&
+      mech_movement_type(mech) != MOVE_NONE)
+    mech_generic_failure_check(mech, -1, nullptr, nullptr);
 }
 
-void updateAutoturnTurret(Mech *mech) {
+void mech_turret_autoturn_update(Mech *mech) {
+  BtechContext *context = mech_context(mech);
+  MechConditionSummary condition = mech_condition_summary(mech);
   Mech *target;
   int bearing;
   float fx, fy;
 
-  if (!Started(mech) || Uncon(mech) || Blinded(mech))
+  if (!mech_is_started(mech) || mech_pilot_is_unconscious(mech) ||
+      mech_is_blinded(mech))
     return;
 
-  if ((MechTankCritStatus(mech) & TURRET_JAMMED) ||
-      (MechTankCritStatus(mech) & TURRET_LOCKED))
+  if (condition.turret_jammed || condition.turret_locked)
     return;
 
-  if (!GetSectInt(mech, TURRET))
+  if (!mech_section_internal(mech, TURRET))
     return;
 
-  if (MechTarget(mech) == -1 &&
-      (MechTargY(mech) == -1 || MechTargX(mech) == -1))
+  if (mech_target_dbref(mech) == -1 &&
+      (mech_target_hex_y(mech) == -1 || mech_target_hex_x(mech) == -1))
     return;
 
-  if (MechTarget(mech) != -1) {
-    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
-    fx = MechFX(target);
-    fy = MechFY(target);
+  if (mech_target_dbref(mech) != -1) {
+    target = btech_context_get_mech(context, mech_target_dbref(mech));
+    fx = mech_position_real_x(target);
+    fy = mech_position_real_y(target);
   } else {
-    MapCoordToRealCoord(MechTargX(mech), MechTargY(mech), &fx, &fy);
+    MapCoordToRealCoord(mech_target_hex_x(mech), mech_target_hex_y(mech), &fx,
+                        &fy);
   }
 
-  bearing = AcceptableDegree(FindBearing(MechFX(mech), MechFY(mech), fx, fy) -
-                             MechFacing(mech));
-  MechTurretFacing(mech) = bearing;
+  bearing = AcceptableDegree(FindBearing(mech_position_real_x(mech),
+                                         mech_position_real_y(mech), fx, fy) -
+                             mech_heading_degrees(mech));
+  mech_turret_heading_relative_set(mech, bearing);
   MarkForLOSUpdate(mech);
 }
 

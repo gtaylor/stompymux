@@ -36,6 +36,6 @@ int SkidMod(float Speed);
 void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                    int last_z);
 void mech_damage_stagger_check(Mech *wounded);
-void UpdatePilotSkillRolls(Mech *mech);
-void updateAutoturnTurret(Mech *mech);
+void mech_piloting_update(Mech *mech);
+void mech_turret_autoturn_update(Mech *mech);
 void mech_update(DbRef key, void *data);
