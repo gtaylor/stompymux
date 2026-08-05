@@ -65,6 +65,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .turret_locked = tank_critical_status & TURRET_LOCKED,
       .torso_right = status & TORSO_RIGHT,
       .torso_left = status & TORSO_LEFT,
+      .spinning = critical_status & SPINNING,
       .swarm_target = mech->rd.swarming,
       .supercharger_counter = mech->rd.scharge_value,
       .masc_counter = mech->rd.masc_value,

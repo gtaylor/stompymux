@@ -1,10 +1,25 @@
 #include "map_obj_internal.h"
+#include "map_object_query_api.h"
 
 MapObject *next_mapobj(MapObject *object) { return object->next; }
 
 MapObject *first_mapobj(BattleMap *map, int type) {
   return map->MapObject[type];
 }
+
+MapObject *battle_map_object_first(BattleMap *map, int type) {
+  return first_mapobj(map, type);
+}
+
+MapObject *battle_map_object_next(MapObject *object) {
+  return next_mapobj(object);
+}
+
+int battle_map_object_x(const MapObject *object) { return object->x; }
+
+int battle_map_object_y(const MapObject *object) { return object->y; }
+
+DbRef battle_map_object_dbref(const MapObject *object) { return object->obj; }
 
 int find_entrance(BattleMap *map, char dir, int *x, int *y) {
   MapObject *tmp;

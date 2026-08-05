@@ -114,6 +114,14 @@ bool mech_has_attached_inarc_ecm(const Mech *mech) {
   return false;
 }
 
+bool mech_has_attached_homing_beacon(const Mech *mech) {
+  for (int section = 0; section < NUM_SECTIONS; section++)
+    if (mech->ud.sections[section].specials &
+        (NARC_ATTACHED | INARC_HOMING_ATTACHED))
+      return true;
+  return false;
+}
+
 bool mech_limbs_are_recycling(const Mech *mech) {
   return mech->ud.sections[RARM].recycle || mech->ud.sections[LARM].recycle ||
          mech->ud.sections[RLEG].recycle || mech->ud.sections[LLEG].recycle;

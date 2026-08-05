@@ -52,6 +52,7 @@ typedef struct MechConditionSummary {
   bool turret_locked;
   bool torso_right;
   bool torso_left;
+  bool spinning;
   DbRef swarm_target;
   int supercharger_counter;
   int masc_counter;

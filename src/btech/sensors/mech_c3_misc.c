@@ -314,7 +314,7 @@ void showNetworkTargets(DbRef player, Mech *mech, int tIsC3) {
 
     /* Get our weapon arc */
     arc = InWeaponArc(mech, MechFX(otherMech), MechFY(otherMech));
-    weaponarc = getWeaponArc(mech, arc);
+    weaponarc = mech_contact_weapon_arc(arc);
 
     /* Now get our status chars */
     if (!tShowStatusInfo) {
@@ -324,11 +324,11 @@ void showNetworkTargets(DbRef player, Mech *mech, int tIsC3) {
       cStatus4 = ' ';
       cStatus5 = ' ';
     } else {
-      cStatus1 = getStatusChar(mech, otherMech, 1);
-      cStatus2 = getStatusChar(mech, otherMech, 2);
-      cStatus3 = getStatusChar(mech, otherMech, 3);
-      cStatus4 = getStatusChar(mech, otherMech, 4);
-      cStatus5 = getStatusChar(mech, otherMech, 5);
+      cStatus1 = mech_contact_status_character(mech, otherMech, 1);
+      cStatus2 = mech_contact_status_character(mech, otherMech, 2);
+      cStatus3 = mech_contact_status_character(mech, otherMech, 3);
+      cStatus4 = mech_contact_status_character(mech, otherMech, 4);
+      cStatus5 = mech_contact_status_character(mech, otherMech, 5);
     }
 
     /* Now, build the string */

@@ -1,7 +1,30 @@
+#include "map_building_query_api.h"
 #include "map_obj_internal.h"
 
 #include "mech_identity_api.h"
 #include "mech_position_api.h"
+
+bool battle_map_building_is_invisible(const BattleMap *map) {
+  return BuildIsInvis(map);
+}
+
+bool battle_map_building_is_hidden(const BattleMap *map) {
+  return BuildIsHidden(map);
+}
+
+bool battle_map_building_is_safe(const BattleMap *map) {
+  return BuildIsSafe(map);
+}
+
+bool battle_map_building_is_command_center(const BattleMap *map) {
+  return BuildIsCS(map);
+}
+
+int battle_map_building_integrity(const BattleMap *map) { return map->cf; }
+
+int battle_map_building_maximum_integrity(const BattleMap *map) {
+  return map->cfmax;
+}
 
 static int get_building_cf(BattleMap *map, int *i1, int *i2) {
   *i1 = map->cf;

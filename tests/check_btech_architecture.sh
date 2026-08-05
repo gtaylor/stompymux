@@ -83,6 +83,7 @@ done < <(rg -n \
   src/btech/sensors/mech_scan_view.c \
   src/btech/sensors/mech_los.c \
   src/btech/sensors/mech_spot.c \
+  src/btech/sensors/mech_contacts.c \
   src/btech/sensors/mech_tag.c || true)
 
 while IFS= read -r match; do
@@ -108,7 +109,7 @@ while IFS= read -r match; do
   echo "$match: legacy sensor export is not allowed"
   status=1
 done < <(rg -n \
-  '\b(sendECMNotification|checkECM|isTAGDestroyed|stopTAG|checkTAG|mechSensorInfo|CanChangeTo|possibly_see_mech|ScrambleInfraAndLiteAmp|Sensor_ToHitBonus|Sensor_CanSee|Sensor_ArcBaseChance|Sensor_DriverBaseChance|Sensor_Sees|Sensor_SeesNow|Sensor_DoWeSeeNow|update_LOSinfo|add_sensor_info|ShowTurretFacing|PrintReport|PrintEnemyStatus|ActualElevation|CalculateLOSFlag|AddTerrainMod|InLineOfSight_NB|InLineOfSight|IsArtyMech|ClearFireAdjustments|FireSpot)\s*\(' \
+  '\b(sendECMNotification|checkECM|isTAGDestroyed|stopTAG|checkTAG|mechSensorInfo|CanChangeTo|possibly_see_mech|ScrambleInfraAndLiteAmp|Sensor_ToHitBonus|Sensor_CanSee|Sensor_ArcBaseChance|Sensor_DriverBaseChance|Sensor_Sees|Sensor_SeesNow|Sensor_DoWeSeeNow|update_LOSinfo|add_sensor_info|ShowTurretFacing|PrintReport|PrintEnemyStatus|ActualElevation|CalculateLOSFlag|AddTerrainMod|InLineOfSight_NB|InLineOfSight|IsArtyMech|ClearFireAdjustments|FireSpot|getWeaponArc|getStatusChar)\s*\(' \
   src/btech || true)
 
 while IFS= read -r match; do
