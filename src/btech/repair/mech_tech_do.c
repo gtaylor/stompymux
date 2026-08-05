@@ -17,12 +17,16 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "legacy_macros.h"
-#include "mech.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
+#include "mech_specification_api.h"
 #include "mech_tech.h"
 #include "mech_tech_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
+#include "section_types.h"
 
 static bool parts_consume_one(DbRef player, Mech *mech, int location, int part,
                               int brand, int count) {
@@ -104,10 +108,10 @@ static struct {
 int valid_ammo_mode(Mech *mech, int loc, int part, int let) {
   int w, i;
 
-  if (!IsAmmo(GetPartType(mech, loc, part)) || !let)
+  if (!IsAmmo(mech_critical_part_type(mech, loc, part)) || !let)
     return -1;
   let = toupper(let);
-  w = Ammo2I(GetPartType(mech, loc, part));
+  w = Ammo2I(mech_critical_part_type(mech, loc, part));
 
   if (MechWeapons[w].special & NOSPA)
     return -1;
@@ -129,8 +133,8 @@ int valid_ammo_mode(Mech *mech, int loc, int part, int let) {
 }
 
 int FindAmmoType(Mech *mech, int loc, int part) {
-  int t = GetPartType(mech, loc, part);
-  int m = GetPartAmmoMode(mech, loc, part);
+  int t = mech_critical_part_type(mech, loc, part);
+  int m = mech_critical_ammo_mode(mech, loc, part);
   int base = -1;
 
   if (!IsAmmo(t))
@@ -284,10 +288,11 @@ int FindAmmoType(Mech *mech, int loc, int part) {
 }
 
 TFUNC_LOCPOS(replace_econ) {
-  if (IsAmmo(GetPartType(mech, loc, part)))
+  if (IsAmmo(mech_critical_part_type(mech, loc, part)))
     return 0;
-  if (!parts_consume_one(player, mech, loc, GetPartType(mech, loc, part),
-                         GetPartBrand(mech, loc, part), 1))
+  if (!parts_consume_one(player, mech, loc,
+                         mech_critical_part_type(mech, loc, part),
+                         mech_critical_brand(mech, loc, part), 1))
     return -1;
   return 0;
 }
@@ -296,7 +301,7 @@ TFUNC_LOCPOS_VAL(reload_econ) {
   int ammotype = FindAmmoType(mech, loc, part);
 
   if (!parts_consume_one(player, mech, loc, ammotype,
-                         GetPartBrand(mech, loc, part), 1))
+                         mech_critical_brand(mech, loc, part), 1))
     return -1;
   return 0;
 }
@@ -314,9 +319,9 @@ TFUNC_LOC_VAL(fixinternal_econ) {
 }
 
 TFUNC_LOCPOS(repair_econ) {
-  if (IsAmmo(GetPartType(mech, loc, part)))
+  if (IsAmmo(mech_critical_part_type(mech, loc, part)))
     return 0;
-  int destroyed = PartIsDestroyed(mech, loc, part) ? 3 : 1;
+  int destroyed = mech_critical_is_destroyed(mech, loc, part) ? 3 : 1;
   if (!parts_consume_two(player, mech, Cargo(S_ELECTRONIC), 0, destroyed,
                          ProperInternal(mech), 0, destroyed))
     return -1;
@@ -332,24 +337,27 @@ TFUNC_LOCPOS(repairenhcrit_econ) {
 TFUNC_LOC(reattach_econ) {
 #ifndef BT_COMPLEXREPAIRS
   if (!parts_consume_two(player, mech, ProperInternal(mech), 0,
-                         GetSectOInt(mech, loc), Cargo(S_ELECTRONIC), 0,
-                         GetSectOInt(mech, loc)))
+                         mech_section_original_internal(mech, loc),
+                         Cargo(S_ELECTRONIC), 0,
+                         mech_section_original_internal(mech, loc)))
     return -1;
 #else
-  if (mech->xcode.context->configuration->btech_complexrepair) {
-    if (MechType(mech) == CLASS_MECH) {
+  if (btech_context_uses_complex_repairs(mech_context(mech))) {
+    if (mech_class(mech) == CLASS_MECH) {
       if (!parts_consume_two(player, mech, ProperInternal(mech), 0,
-                             GetSectOInt(mech, loc), ProperMyomer(mech), 0, 1))
+                             mech_section_original_internal(mech, loc),
+                             ProperMyomer(mech), 0, 1))
         return -1;
     } else {
       if (!parts_consume_one(player, mech, loc, ProperInternal(mech), 0,
-                             GetSectOInt(mech, loc)))
+                             mech_section_original_internal(mech, loc)))
         return -1;
     }
   } else {
     if (!parts_consume_two(player, mech, ProperInternal(mech), 0,
-                           GetSectOInt(mech, loc), Cargo(S_ELECTRONIC), 0,
-                           GetSectOInt(mech, loc)))
+                           mech_section_original_internal(mech, loc),
+                           Cargo(S_ELECTRONIC), 0,
+                           mech_section_original_internal(mech, loc)))
       return -1;
   }
 #endif
@@ -378,8 +386,9 @@ TFUNC_LOC(replacesuit_econ) {
 
 TFUNC_LOC(reseal_econ) {
   if (!parts_consume_two(player, mech, ProperInternal(mech), 0,
-                         GetSectOInt(mech, loc), Cargo(S_ELECTRONIC), 0,
-                         GetSectOInt(mech, loc)))
+                         mech_section_original_internal(mech, loc),
+                         Cargo(S_ELECTRONIC), 0,
+                         mech_section_original_internal(mech, loc)))
     return -1;
   return 0;
 }
@@ -407,51 +416,52 @@ NFUNC(TFUNC_LOCPOS(repairp_succ));
 /* Replace failures give you one chance to roll for object recovery,
    otherwise it's irretrieavbly lost */
 TFUNC_LOCPOS(replaceg_fail) {
-  int w = (IsWeapon(GetPartType(mech, loc, part)));
+  int w = IsWeapon(mech_critical_part_type(mech, loc, part));
 
   if (tech_roll(player, mech, REPLACE_DIFFICULTY) < 0) {
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+    notify_printf(btech_context_evaluation(mech_context(mech)), player,
                   "You muck around, wasting the %s in the progress.",
                   w ? "weapon" : "part");
     return -1;
   }
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Despite messing the repair, you manage not to waste the %s.",
                 w ? "weapon" : "part");
 #ifndef BT_COMPLEXREPAIRS
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, FindAmmoType(mech, loc, part),
-                 GetPartBrand(mech, loc, part), 1);
+                 mech_critical_brand(mech, loc, part), 1);
 #else
   mech_parts_add(mech, loc, FindAmmoType(mech, loc, part),
-                 GetPartBrand(mech, loc, part), 1);
+                 mech_critical_brand(mech, loc, part), 1);
 #endif
   return -1;
 }
 
 TFUNC_LOCPOS(repairg_fail) {
-  if (PartIsDestroyed(mech, loc, part))
+  if (mech_critical_is_destroyed(mech, loc, part))
     /* If we are calling repairgun on a thing that is actually destroyed
      * the following check *should not* be necessary. Nevertheless... */
-    if (GetWeaponCrits(mech, Weapon2I(GetPartType(mech, loc, part))) > 4) {
-      DestroyPart(mech, loc, part + 1);
-      notify(btech_context_evaluation(mech->xcode.context), player,
+    if (GetWeaponCrits(
+            mech, Weapon2I(mech_critical_part_type(mech, loc, part))) > 4) {
+      mech_critical_destroy(mech, loc, part + 1);
+      notify(btech_context_evaluation(mech_context(mech)), player,
              "You muck around, trashing the gun in the process.");
       return -1;
     }
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "Your repair fails.. all the parts are wasted for good.");
   return -1;
 }
 
 TFUNC_LOCPOS(repairenhcrit_fail) {
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "You don't manage to repair the damage.");
   return -1;
 }
 
 /* Replacepart = Replacegun, for now */
 TFUNC_LOCPOS(replacep_fail) {
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "Your repair fails.. all the parts are wasted for good.");
   return -1;
 }
@@ -461,7 +471,7 @@ TFUNC_LOCPOS(repairp_fail) { return repairg_fail(player, mech, loc, part); }
 
 /* Reload fail = ammo is wasted and some time, but no averse effects (yet) */
 TFUNC_LOCPOS_VAL(reload_fail) {
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "You fumble around, wasting the ammo in the progress.");
   return -1;
 }
@@ -474,13 +484,13 @@ TFUNC_LOC_VAL(fixarmor_fail) {
 
   if (tech_roll(player, mech, FIXARMOR_DIFFICULTY) >= 0)
     tot += 50;
-  tot += btech_random_range(mech->xcode.context, 5, 44);
+  tot += btech_random_range(mech_context(mech), 5, 44);
   tot = (tot * should) / 100;
   if (tot == 0)
     tot = 1;
   if (tot == should)
     tot = should - 1;
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Your armor patching isn't exactly perfect.. "
                 "You managed to fix %d out of %d.",
                 tot, should);
@@ -494,13 +504,13 @@ TFUNC_LOC_VAL(fixinternal_fail) {
 
   if (tech_roll(player, mech, FIXARMOR_DIFFICULTY) >= 0)
     tot += 50;
-  tot += btech_random_range(mech->xcode.context, 5, 44);
+  tot += btech_random_range(mech_context(mech), 5, 44);
   tot = (tot * should) / 100;
   if (tot == 0)
     tot = 1;
   if (tot == should)
     tot = should - 1;
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Your internal patching isn't exactly perfect.. You managed to "
                 "fix %d out of %d.",
                 tot, should);
@@ -517,24 +527,24 @@ TFUNC_LOC(reattach_fail) {
 
   if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
     return 0;
-  tot = btech_random_range(mech->xcode.context, 5, 94);
+  tot = btech_random_range(mech_context(mech), 5, 94);
   notify_printf(
-      btech_context_evaluation(mech->xcode.context), player,
+      btech_context_evaluation(mech_context(mech)), player,
       "Despite your disastrous failure, you recover %d%% of the materials.",
       tot);
-  tot = (tot * GetSectOInt(mech, loc)) / 100;
+  tot = (tot * mech_section_original_internal(mech, loc)) / 100;
   if (tot == 0)
     tot = 1;
-  if (tot == GetSectOInt(mech, loc))
-    tot = GetSectOInt(mech, loc) - 1;
+  if (tot == mech_section_original_internal(mech, loc))
+    tot = mech_section_original_internal(mech, loc) - 1;
 #ifndef BT_COMPLEXREPAIRS
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, Cargo(S_ELECTRONIC), 0, tot);
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, ProperInternal(mech), 0, tot);
 #else
   mech_parts_add(mech, loc, Cargo(S_ELECTRONIC), 0, tot);
   mech_parts_add(mech, loc, ProperInternal(mech), 0, tot);
-  if (mech->xcode.context->configuration->btech_complexrepair &&
-      MechType(mech) == CLASS_MECH)
+  if (btech_context_uses_complex_repairs(mech_context(mech)) &&
+      mech_class(mech) == CLASS_MECH)
     mech_parts_add(mech, loc, ProperMyomer(mech), 0, 1);
 #endif
   return -1;
@@ -546,9 +556,9 @@ TFUNC_LOC(replacesuit_fail) {
   if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
     return 0;
 
-  wRand = btech_random_range(mech->xcode.context, 5, 94);
+  wRand = btech_random_range(mech_context(mech), 5, 94);
   notify_printf(
-      btech_context_evaluation(mech->xcode.context), player,
+      btech_context_evaluation(mech_context(mech)), player,
       "Despite your disastrous failure, you recover %d%% of the materials.",
       wRand);
 #ifndef BT_COMPLEXREPAIRS
@@ -583,16 +593,16 @@ TFUNC_LOC_RESEAL(reseal_fail) {
 
   if (tech_roll(player, mech, RESEAL_DIFFICULTY) >= 0)
     return 0;
-  tot = btech_random_range(mech->xcode.context, 5, 94);
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  tot = btech_random_range(mech_context(mech), 5, 94);
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "You don't manage to get all the water out and seal the "
                 "section, though you recover %d%% of the materials.",
                 tot);
-  tot = (tot * GetSectOInt(mech, loc)) / 100;
+  tot = (tot * mech_section_original_internal(mech, loc)) / 100;
   if (tot == 0)
     tot = 1;
-  if (tot == GetSectOInt(mech, loc))
-    tot = GetSectOInt(mech, loc) - 1;
+  if (tot == mech_section_original_internal(mech, loc))
+    tot = mech_section_original_internal(mech, loc) - 1;
 #ifndef BT_COMPLEXREPAIRS
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, Cargo(S_ELECTRONIC), 0, tot);
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, ProperInternal(mech), 0, tot);

@@ -238,6 +238,15 @@ bool btech_context_limits_repairs_to_stalls(const BtechContext *context) {
   return context->configuration->btech_limitedrepairs;
 }
 
+bool btech_context_uses_complex_repairs(const BtechContext *context) {
+  assert(context != nullptr);
+#ifdef BT_COMPLEXREPAIRS
+  return context->configuration->btech_complexrepair;
+#else
+  return false;
+#endif
+}
+
 bool btech_context_uses_free_technology_time(const BtechContext *context) {
   assert(context != nullptr);
 #ifdef BT_FREETECHTIME
