@@ -37,6 +37,10 @@ void mech_heat_sink_count_remove(Mech *mech, int count) {
   mech->ud.numsinks -= count;
 }
 
+void mech_heat_sink_count_add(Mech *mech, int count) {
+  mech->ud.numsinks += count;
+}
+
 bool mech_has_double_heat_sinks(const Mech *mech) {
   return mech->rd.specials & (CLAN_TECH | DOUBLE_HEAT_TECH);
 }

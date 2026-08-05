@@ -93,6 +93,8 @@ bool btech_context_self_destruct_can_stop(const BtechContext *context);
 bool btech_context_self_destruct_ammunition_enabled(
     const BtechContext *context);
 bool btech_context_self_destruct_reactor_enabled(const BtechContext *context);
+int btech_context_reactor_explosion_mode(const BtechContext *context);
+bool btech_context_stackpole_enabled(const BtechContext *context);
 bool btech_context_requires_backwalk_rolls(const BtechContext *context);
 bool btech_context_uses_new_charge_rules(const BtechContext *context);
 int btech_context_movement_slowdown_mode(const BtechContext *context);

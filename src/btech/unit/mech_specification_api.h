@@ -14,6 +14,7 @@ float mech_jump_speed(const Mech *mech);
 void mech_jump_speed_lower(Mech *mech, float amount);
 int mech_heat_sink_count(const Mech *mech);
 void mech_heat_sink_count_remove(Mech *mech, int count);
+void mech_heat_sink_count_add(Mech *mech, int count);
 bool mech_has_double_heat_sinks(const Mech *mech);
 int mech_heat_sink_critical_size(const Mech *mech);
 int mech_technology_flags(const Mech *mech);

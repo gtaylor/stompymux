@@ -86,7 +86,7 @@ static void mech_self_destruct_event(MuxEvent *event) {
     mech_notify(mech, MECHALL,
                 "Suddenly you feel great heat overcoming your senses.. you "
                 "faint.. (and die)");
-    reactor_explosion(mech, mech);
+    mech_reactor_explode(mech, mech);
   }
 }
 

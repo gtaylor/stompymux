@@ -20,6 +20,7 @@ bool mech_pilot_is_unconscious(const Mech *mech);
 bool mech_is_observer(const Mech *mech);
 bool mech_is_under_gravity(const Mech *mech);
 bool mech_is_under_special_conditions(const Mech *mech);
+bool mech_is_under_vacuum(const Mech *mech);
 bool mech_is_immobile(const Mech *mech);
 bool mech_has_destroyed_gyro(const Mech *mech);
 bool mech_has_damaged_gyro(const Mech *mech);
@@ -51,4 +52,5 @@ void mech_environment_conditions_set(Mech *mech, bool special, bool temperature,
 void mech_jump_complete(Mech *mech);
 void mech_jump_abort(Mech *mech);
 int mech_spin_start_tick(const Mech *mech);
+int mech_reactor_instability_start_tick(const Mech *mech);
 void mech_spin_start_tick_set(Mech *mech, int tick);

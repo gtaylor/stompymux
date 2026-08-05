@@ -257,6 +257,16 @@ bool btech_context_self_destruct_reactor_enabled(const BtechContext *context) {
   return context->configuration->btech_explode_reactor;
 }
 
+int btech_context_reactor_explosion_mode(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_explode_reactor;
+}
+
+bool btech_context_stackpole_enabled(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_stackpole;
+}
+
 bool btech_context_requires_backwalk_rolls(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_roll_on_backwalk;

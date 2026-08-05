@@ -72,6 +72,10 @@ bool mech_is_under_special_conditions(const Mech *mech) {
   return mech->rd.status & UNDERSPECIAL;
 }
 
+bool mech_is_under_vacuum(const Mech *mech) {
+  return mech->rd.status & UNDERVACUUM;
+}
+
 bool mech_is_immobile(const Mech *mech) {
   return !(mech->rd.status & STARTED) || (mech->rd.status & UNCONSCIOUS) ||
          (mech->rd.status2 & FORTIFIED) || (mech->rd.status & BLINDED) ||
@@ -184,5 +188,9 @@ void mech_jump_complete(Mech *mech) {
 void mech_jump_abort(Mech *mech) { mech->rd.status &= ~(JUMPING | DFA_ATTACK); }
 
 int mech_spin_start_tick(const Mech *mech) { return mech->rd.sspin; }
+
+int mech_reactor_instability_start_tick(const Mech *mech) {
+  return mech->rd.boom_start;
+}
 
 void mech_spin_start_tick_set(Mech *mech, int tick) { mech->rd.sspin = tick; }

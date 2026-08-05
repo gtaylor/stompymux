@@ -145,11 +145,22 @@ bool mech_section_is_flooded(const Mech *mech, int section) {
   return mech->ud.sections[section].config & SECTION_FLOODED;
 }
 
+bool mech_section_is_breached(const Mech *mech, int section) {
+  return mech->ud.sections[section].config & SECTION_BREACHED;
+}
+
 void mech_section_flooded_set(Mech *mech, int section, bool flooded) {
   if (flooded)
     mech->ud.sections[section].config |= SECTION_FLOODED;
   else
     mech->ud.sections[section].config &= ~SECTION_FLOODED;
+}
+
+void mech_section_breached_set(Mech *mech, int section, bool breached) {
+  if (breached)
+    mech->ud.sections[section].config |= SECTION_BREACHED;
+  else
+    mech->ud.sections[section].config &= ~SECTION_BREACHED;
 }
 
 bool mech_critical_is_operational_special(const Mech *mech, int section,

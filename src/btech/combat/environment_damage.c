@@ -13,28 +13,38 @@
 #include "legacy_macros.h"
 #include "map.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
+#include "mech_condition_api.h"
+#include "mech_crew_api.h"
 #include "mech_damage_api.h"
 #include "mech_ecm_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
+#include "mech_heat_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
 #include "mech_sensor_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
-void reactor_explosion(Mech *wounded, Mech *attacker) {
-  int z = MechZ(wounded);
-  BattleMap *map =
-      btech_context_get_map(wounded->xcode.context, wounded->mapindex);
-  DbRef wounded_pilot = MechPilot(wounded);
+#include "section_types.h"
+void mech_reactor_explode(Mech *wounded, Mech *attacker) {
+  BtechContext *context = mech_context(wounded);
+  int z = mech_position_z(wounded);
+  BattleMap *map = btech_context_get_map(context, mech_map_dbref(wounded));
+  DbRef wounded_pilot = mech_pilot_dbref(wounded);
   int dam;
 
   DestroySection(wounded, attacker, 0, CTORSO);
@@ -48,23 +58,24 @@ void reactor_explosion(Mech *wounded, Mech *attacker) {
     autoeject(wounded_pilot, wounded, 0);
 
   DestroySection(wounded, attacker, 0, HEAD);
-  MechZ(wounded) += 6;
-  dam = MAX(MechTons(wounded) / 5, MechEngineSize(wounded) / 10);
+  mech_position_z_set(wounded, z + 6);
+  dam = MAX(mech_tonnage(wounded) / 5, mech_engine_rating(wounded) / 10);
 
   mech_sensors_scramble_infrared_and_liteamp(
       wounded, 4, 0, "The searing blast of heat burns out your sensors!",
       "The blinding flash of light overloads your sensors!");
 
   blast_hit_hexesf(
-      map, dam, 3, MAX(MechTons(wounded) / 10, MechEngineSize(wounded) / 25),
-      MechFX(wounded), MechFY(wounded), MechFX(wounded), MechFY(wounded),
+      map, dam, 3,
+      MAX(mech_tonnage(wounded) / 10, mech_engine_rating(wounded) / 25),
+      mech_position_real_x(wounded), mech_position_real_y(wounded),
+      mech_position_real_x(wounded), mech_position_real_y(wounded),
       "[fg=red bold]You bear full brunt of the blast![reset]",
       "is hit badly by the blast!",
       "[fg=yellow bold]You receive some damage from the blast![reset]",
-      "is hit by the blast!",
-      wounded->xcode.context->configuration->btech_explode_reactor > 1, 3, 5, 1,
-      2);
-  MechZ(wounded) = z;
+      "is hit by the blast!", btech_context_reactor_explosion_mode(context) > 1,
+      3, 5, 1, 2);
+  mech_position_z_set(wounded, z);
   headhitmwdamage(wounded, attacker, 4);
 }
 
@@ -76,34 +87,34 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
   int nhs = 0;
   int tDoAutoFall = 0;
   int tIsLeg = ((hitloc == RLEG || hitloc == LLEG) ||
-                ((hitloc == RARM || hitloc == LARM) && (MechIsQuad(wounded))));
+                ((hitloc == RARM || hitloc == LARM) && mech_is_quad(wounded)));
 
-  if (!(MechType(wounded) == CLASS_MECH || MechType(wounded) == CLASS_MW ||
-        MechType(wounded) == CLASS_BSUIT)) {
-    for (i = 0; i < CritsInLoc(wounded, hitloc); i++)
-      if (GetPartType(wounded, hitloc, i) &&
-          !PartIsDestroyed(wounded, hitloc, i)) {
+  if (!(mech_class(wounded) == CLASS_MECH || mech_class(wounded) == CLASS_MW ||
+        mech_class(wounded) == CLASS_BSUIT)) {
+    for (i = 0; i < mech_section_critical_count(wounded, hitloc); i++)
+      if (mech_critical_part_type(wounded, hitloc, i) &&
+          !mech_critical_is_destroyed(wounded, hitloc, i)) {
         if (is_disable == 1)
-          DisablePart(wounded, hitloc, i);
+          mech_critical_fire_mode_add(wounded, hitloc, i, DISABLED_MODE);
         else
-          DestroyPart(wounded, hitloc, i);
+          mech_critical_destroy(wounded, hitloc, i);
       }
     return;
   }
-  oldjs = MechJumpSpeed(wounded);
-  for (i = 0; i < CritsInLoc(wounded, hitloc); i++)
-    if (!PartIsDestroyed(wounded, hitloc, i)) {
+  oldjs = mech_jump_speed(wounded);
+  for (i = 0; i < mech_section_critical_count(wounded, hitloc); i++)
+    if (!mech_critical_is_destroyed(wounded, hitloc, i)) {
       if (is_disable == 1)
-        DisablePart(wounded, hitloc, i);
-      else if (PartIsDisabled(wounded, hitloc, i)) {
-        DestroyPart(wounded, hitloc, i);
+        mech_critical_fire_mode_add(wounded, hitloc, i, DISABLED_MODE);
+      else if (mech_critical_is_disabled(wounded, hitloc, i)) {
+        mech_critical_destroy(wounded, hitloc, i);
         continue;
       } else
-        DestroyPart(wounded, hitloc, i);
+        mech_critical_destroy(wounded, hitloc, i);
 
-      critType = GetPartType(wounded, hitloc, i);
+      critType = mech_critical_part_type(wounded, hitloc, i);
       if (IsAmmo(critType)) {
-        GetPartData(wounded, hitloc, i) = 0;
+        mech_critical_data_set(wounded, hitloc, i, 0);
       }
       if ((IsSpecial(critType))) {
         switch (Special2I(critType)) {
@@ -113,26 +124,26 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
           break;
         case SHOULDER_OR_HIP:
           if (tIsLeg) {
-            if (!(MechCritStatus(wounded) & HIP_DAMAGED)) {
-              MechCritStatus(wounded) |= HIP_DAMAGED;
+            MechConditionSummary condition = mech_condition_summary(wounded);
+            if (!condition.hip_damaged) {
+              mech_hip_damage_set(wounded, true, false);
             } else {
-              if (!MechIsQuad(wounded))
-                MechCritStatus(wounded) |= HIP_DESTROYED;
+              if (!mech_is_quad(wounded))
+                mech_hip_damage_set(wounded, true, true);
             }
           }
           break;
         case HEAT_SINK:
-          if (MechSpecials(wounded) & DOUBLE_HEAT_TECH) {
+          if (mech_technology_flags(wounded) & DOUBLE_HEAT_TECH) {
             if ((nhs++) % 3 == 2)
-              MechRealNumsinks(wounded)++;
+              mech_heat_sink_count_add(wounded, 1);
           }
-          MechRealNumsinks(wounded)--;
+          mech_heat_sink_count_remove(wounded, 1);
           break;
         case JUMP_JET:
-          MechJumpSpeed(wounded) -= MP1;
-          if (MechJumpSpeed(wounded) < 0)
-            MechJumpSpeed(wounded) = 0;
-          if (attacker && MechJumpSpeed(wounded) == 0 && Jumping(wounded)) {
+          mech_jump_speed_lower(wounded, MP1);
+          if (attacker && mech_jump_speed(wounded) == 0 &&
+              mech_is_jumping(wounded)) {
             mech_notify(wounded, MECHALL,
                         "Losing your last Jump Jet you fall from the sky!!!!!");
             mech_los_broadcast(wounded, "falls from the sky!");
@@ -141,10 +152,10 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
           }
           break;
         case ENGINE:
-          if (MechEngineHeat(wounded) < 10)
-            MechEngineHeat(wounded) += 5;
-          else if (MechEngineHeat(wounded) < 15) {
-            MechEngineHeat(wounded) = 15;
+          if (mech_engine_heat(wounded) < 10)
+            mech_engine_heat_add(wounded, 5);
+          else if (mech_engine_heat(wounded) < 15) {
+            mech_engine_heat_set(wounded, 15);
             if (attacker) {
               mech_notify(wounded, MECHALL, "Your engine is destroyed!!");
               if (wounded != attacker)
@@ -152,26 +163,26 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
             }
             // check_stackpole(wounded, attacker);
 
-            if (wounded->xcode.context->configuration->btech_stackpole &&
-                (MechBoomStart(wounded) + MAX_BOOM_TIME) >=
-                    wounded->xcode.context->events->tick &&
-                btech_random_roll(wounded->xcode.context) >= BOOM_BTH &&
-                (Started(wounded) ||
+            BtechContext *context = mech_context(wounded);
+            if (btech_context_stackpole_enabled(context) &&
+                (mech_reactor_instability_start_tick(wounded) +
+                 MAX_BOOM_TIME) >= btech_context_event_tick(context) &&
+                btech_random_roll(context) >= BOOM_BTH &&
+                (mech_is_started(wounded) ||
                  mech_event_count(wounded, EVENT_STARTUP))) {
 
               HexLOSBroadcast(
-                  btech_context_get_map(wounded->xcode.context,
-                                        wounded->mapindex),
-                  MechX(wounded), MechY(wounded),
+                  btech_context_get_map(context, mech_map_dbref(wounded)),
+                  mech_position_x(wounded), mech_position_y(wounded),
                   "[fg=red bold]The hit destroys the last safety systems, "
                   "releasing the fusion reaction![reset]");
 
-              reactor_explosion(wounded, attacker);
+              mech_reactor_explode(wounded, attacker);
             }
 
-            if ((MechType(wounded) == CLASS_MECH) &&
+            if (mech_class(wounded) == CLASS_MECH &&
                 (hitloc == LTORSO || hitloc == RTORSO) &&
-                (MechSpecials(wounded) & XL_TECH))
+                (mech_technology_flags(wounded) & XL_TECH))
               DestroyMech(wounded, attacker, 1,
                           (wounded == attacker) ? KILL_TYPE_SELF_DESTRUCT
                                                 : KILL_TYPE_XLENGINE);
@@ -182,33 +193,32 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
           }
           break;
         case ECM:
-          if (!(MechCritStatus(wounded) & ECM_DESTROYED)) {
-            MechCritStatus(wounded) |= ECM_DESTROYED;
+          if (!mech_condition_summary(wounded).ecm_destroyed) {
+            mech_ecm_destroyed_set(wounded, true);
             mech_notify(wounded, MECHALL,
                         "Your ECM system has been destroyed!");
-            DisableECM(wounded);
-            DisableECCM(wounded);
+            mech_ecm_modes_disable(wounded);
             mech_ecm_check(wounded);
           }
           break;
         case TARGETING_COMPUTER:
-          if (!(MechCritStatus(wounded) & TC_DESTROYED)) {
+          if (!mech_condition_summary(wounded).targeting_computer_destroyed) {
             if (attacker)
               mech_notify(wounded, MECHALL,
                           "Your Targeting Computer is Destroyed");
-            MechCritStatus(wounded) |= TC_DESTROYED;
+            mech_targeting_computer_destroyed_set(wounded, true);
           }
           break;
         }
       }
     }
   if (breach)
-    if (MechType(wounded) == CLASS_VEH_GROUND ||
-        MechType(wounded) == CLASS_VEH_NAVAL)
+    if (mech_class(wounded) == CLASS_VEH_GROUND ||
+        mech_class(wounded) == CLASS_VEH_NAVAL)
       DestroyMech(wounded, attacker, 0, KILL_TYPE_NORMAL);
-  if (MechType(wounded) == CLASS_MECH || MechType(wounded) == CLASS_MW) {
+  if (mech_class(wounded) == CLASS_MECH || mech_class(wounded) == CLASS_MW) {
     if (breach && hitloc == HEAD) {
-      if (InVacuum(wounded))
+      if (mech_is_under_vacuum(wounded))
         mech_notify(wounded, MECHALL, "You are exposed to vacuum!");
       else
         mech_notify(wounded, MECHALL, "Water floods into your cockpit!");
@@ -217,7 +227,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
       DestroyMech(wounded, attacker, 0, KILL_TYPE_FLOOD);
       return;
     }
-    if (!MechIsQuad(wounded))
+    if (!mech_is_quad(wounded))
       if (hitloc == LARM || hitloc == RARM)
         return;
     if (hitloc == RLEG || hitloc == LLEG || hitloc == LARM || hitloc == RARM) {
@@ -225,8 +235,8 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
       mech_event_cancel(wounded, EVENT_STAND);
     }
     mech_actuator_criticals_normalize(wounded);
-    if (tIsLeg && !Fallen(wounded) && !Jumping(wounded) && !OODing(wounded) &&
-        attacker) {
+    if (tIsLeg && !mech_is_fallen(wounded) && !mech_is_jumping(wounded) &&
+        !mech_is_out_of_control(wounded) && attacker) {
       if (tDoAutoFall) {
         mech_notify(wounded, MECHALL,
                     "You realize remaining standing is no longer an option and "
@@ -245,23 +255,24 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
 int mech_location_breach(Mech *attacker, Mech *mech, int hitloc) {
   char buf[SBUF_SIZE];
 
-  if (!InSpecial(mech))
+  if (!mech_is_under_special_conditions(mech))
     return 0;
-  if (!InVacuum(mech))
+  if (!mech_is_under_vacuum(mech))
     return 0;
-  if (SectIsDestroyed(mech, hitloc) || SectIsBreached(mech, hitloc))
+  if (mech_section_is_destroyed(mech, hitloc) ||
+      mech_section_is_breached(mech, hitloc))
     return 0;
-  ArmorStringFromIndex(hitloc, buf, MechType(mech), MechMove(mech));
+  ArmorStringFromIndex(hitloc, buf, mech_class(mech), mech_movement_type(mech));
   mech_notify(mech, MECHALL, tprintf("Your %s has been breached!", buf));
-  SetSectBreached(mech, hitloc);
+  mech_section_breached_set(mech, hitloc, true);
   mech_parts_destroy(attacker, mech, hitloc, 1, 1);
   return 1;
 }
 
 int mech_location_maybe_breach(Mech *attacker, Mech *mech, int hitloc) {
-  if (!InSpecial(mech))
+  if (!mech_is_under_special_conditions(mech))
     return 0;
-  if (btech_random_roll(mech->xcode.context) < 10)
+  if (btech_random_roll(mech_context(mech)) < 10)
     return 0;
   return mech_location_breach(attacker, mech, hitloc);
 }
