@@ -58,6 +58,7 @@ typedef struct MechConditionSummary {
   bool masc_enabled;
   bool player_killer;
   bool friendly_fire_safety;
+  bool attack_emissions;
   bool unit_target_lock;
   bool tight_turn_mode;
   bool dfa_attacking;

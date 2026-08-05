@@ -189,6 +189,11 @@ bool btech_context_glancing_blows_enabled(const BtechContext *context) {
   return context->configuration->btech_glancing_blows;
 }
 
+int btech_context_glancing_blow_mode(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_glancing_blows;
+}
+
 int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_sprint_bth;

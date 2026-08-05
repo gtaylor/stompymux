@@ -29,26 +29,35 @@
 #include "map_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "map_units_api.h"
 #include "mech_bth_api.h"
 #include "mech_build_api.h"
+#include "mech_classification_api.h"
 #include "mech_combat.h"
 #include "mech_combat_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_combat_missile_api.h"
+#include "mech_condition_api.h"
 #include "mech_damage_api.h"
 #include "mech_enhanced_criticals_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
+#include "mech_heat_api.h"
 #include "mech_hitloc_api.h"
 #include "mech_ice_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_progress_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
 #include "mech_spot_api.h"
+#include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "missile_hit_registry.h"
@@ -59,8 +68,8 @@
 #include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
-#include "weapon_settings.h"
 
 static void swap_ints(int *left, int *right) {
   int temporary = *left;
@@ -93,16 +102,16 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   int wHGRPSkillMod = 0;
   int tIsSwarmAttack = 0;
   DbRef c3Ref = -1;
-  Mech *c3Mech = NULL;
+  Mech *c3Mech = nullptr;
   int firstCrit = 0;
-  int mode = GetPartFireMode(mech, section, critical);
-  int wAmmoMode = GetPartAmmoMode(mech, section, critical);
+  int mode = mech_critical_fire_mode(mech, section, critical);
+  int wAmmoMode = mech_critical_ammo_mode(mech, section, critical);
 
   DOCHECKMA((wAmmoMode & STINGER_MODE) && ishex,
             "Stinger missiles cannot shoot hexes!");
   DOCHECKMA((wAmmoMode & STINGER_MODE) && target &&
-                !(Jumping(target) || OODing(target) ||
-                  (FlyingT(target) && !Landed(target))),
+                !(mech_is_jumping(target) || mech_cocoon_integrity(target) ||
+                  (mech_is_flying_type(target) && !mech_is_landed(target))),
             "Stinger missiles can only engage airborne targets!");
 
   /* If its a coolant gun set to heat, set the target
@@ -110,7 +119,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   if (IsCoolant(weapindx) && mode & HEAT_MODE)
     target = mech;
 
-  DOCHECKMA((SectionUnderwater(mech, section) &&
+  DOCHECKMA((mech_section_is_underwater(mech, section) &&
              (MechWeapons[weapindx].shortrange_water <= 0)),
             "This weapon may not be fired underwater.");
   DOCHECKMA(mech_event_count(mech, EVENT_UNSTUN_CREW),
@@ -122,12 +131,12 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   DOCHECKMA(mech_event_count(mech, EVENT_REMOVE_PODS),
             "You are too busy removing iNARC pods!");
 
-  DOCHECKMA((MechSwarmTarget(mech) > 0) &&
-                ((!target) || (MechSwarmTarget(mech) != target->mynum)),
+  DOCHECKMA((mech_swarm_target(mech) > 0) &&
+                ((!target) || (mech_swarm_target(mech) != mech_dbref(target))),
             "You're too busy holding on for dear life!");
 
-  if (MechSwarmTarget(mech) > 0) {
-    if (target && (MechSwarmTarget(mech) == target->mynum))
+  if (mech_swarm_target(mech) > 0) {
+    if (target && (mech_swarm_target(mech) == mech_dbref(target)))
       tIsSwarmAttack = 1;
   }
 
@@ -135,8 +144,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
    * Gattling MGs do d6 damage (all as one hit), causing the same in heat
    * and using 3 * damage in ammo.
    */
-  if (GetPartFireMode(mech, section, critical) & GATTLING_MODE)
-    wGattlingShots = btech_random_range(mech->xcode.context, 1, 6);
+  if (mech_critical_fire_mode(mech, section, critical) & GATTLING_MODE)
+    wGattlingShots = btech_random_range(mech_context(mech), 1, 6);
 
   /* Find and check Ammunition */
   if (!sight)
@@ -153,11 +162,11 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                                              indirectFire, &c3Ref);
 
     if (c3Ref) {
-      c3Mech = btech_context_get_mech(mech->xcode.context, c3Ref);
+      c3Mech = btech_context_get_mech(mech_context(mech), c3Ref);
 
-      if (c3Mech &&
-          ((MechTeam(c3Mech) != MechTeam(mech)) || (c3Ref == mech->mynum))) {
-        c3Mech = NULL;
+      if (c3Mech && ((mech_team(c3Mech) != mech_team(mech)) ||
+                     (c3Ref == mech_dbref(mech)))) {
+        c3Mech = nullptr;
       }
     }
 
@@ -173,9 +182,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   if ((MechWeapons[weapindx].special & DFM) ||
       ((MechWeapons[weapindx].special & ELRM) &&
        range < MechWeapons[weapindx].min)) {
-    r1 = btech_random_range(mech->xcode.context, 1, 6);
-    r2 = btech_random_range(mech->xcode.context, 1, 6);
-    r3 = btech_random_range(mech->xcode.context, 1, 6);
+    r1 = btech_random_range(mech_context(mech), 1, 6);
+    r2 = btech_random_range(mech_context(mech), 1, 6);
+    r3 = btech_random_range(mech_context(mech), 1, 6);
     /* Sort 'em to ascending order */
     if (r1 > r2)
       swap_ints(&r1, &r2);
@@ -184,9 +193,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     roll = r1 + r2;
   } else {
     if (target)
-      roll = btech_random_roll(mech->xcode.context);
+      roll = btech_random_roll(mech_context(mech));
     else
-      roll = btech_random_roll(mech->xcode.context);
+      roll = btech_random_roll(mech_context(mech));
   }
   if (LOS)
     snprintf(buf, sizeof(buf), "Roll: %d ", roll);
@@ -199,12 +208,13 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
    * START: Do all the necessary emits for sighting and firing
    ****************************************/
   if (target && !ishex) {
-    range = FaMechRange(mech, target);
+    range = mech_range_to(mech, target);
     strcpy(buf2, "");
-    if (MechAim(mech) != NUM_SECTIONS &&
-        MechAimType(mech) == MechType(target) && !IsMissile(weapindx)) {
-      ArmorStringFromIndex(MechAim(mech), buf3, MechType(target),
-                           MechMove(target));
+    if (mech_aim_section(mech) != NUM_SECTIONS &&
+        mech_aim_unit_class(mech) == mech_class(target) &&
+        !IsMissile(weapindx)) {
+      ArmorStringFromIndex(mech_aim_section(mech), buf3, mech_class(target),
+                           mech_movement_type(target));
       snprintf(buf2, sizeof(buf2), "'s %s", buf3);
     }
 
@@ -219,7 +229,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
       mech_printf(mech, MECHALL, "You aim %s at %s%s - BTH: %d %s",
                   &MechWeapons[weapindx].name[3],
                   mech_to_mech_display_id(mech, target).text, buf2, baseToHit,
-                  MechStatus(target) & PARTIAL_COVER ? "(Partial cover)" : "");
+                  mech_condition_summary(target).partial_cover
+                      ? "(Partial cover)"
+                      : "");
       return;
     }
     if (baseToHit > 12) {
@@ -227,11 +239,12 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                 tprintf("Fire %s at %s%s - Out of range.",
                         &MechWeapons[weapindx].name[3],
                         mech_to_mech_display_id(mech, target).text, buf2));
-      mech_printf(mech, MECHALL,
-                  "Fire %s at %s%s - BTH: %d  Roll: Impossible! %s",
-                  &MechWeapons[weapindx].name[3],
-                  mech_to_mech_display_id(mech, target).text, buf2, baseToHit,
-                  MechStatus(target) & PARTIAL_COVER ? "(Partial cover)" : "");
+      mech_printf(
+          mech, MECHALL, "Fire %s at %s%s - BTH: %d  Roll: Impossible! %s",
+          &MechWeapons[weapindx].name[3],
+          mech_to_mech_display_id(mech, target).text, buf2, baseToHit,
+          mech_condition_summary(target).partial_cover ? "(Partial cover)"
+                                                       : "");
       return;
     }
   } else {
@@ -261,19 +274,20 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   if (target && !ishex) {
     mech_c3_track_emit(mech, c3Ref, c3Mech);
 
-    mech_printf(mech, MECHALL, "You fire %s at %s%s - BTH: %d  %s%s",
-                &MechWeapons[weapindx].name[3],
-                mech_to_mech_display_id(mech, target).text, buf2, baseToHit,
-                buf,
-                MechStatus(target) & PARTIAL_COVER ? "(Partial cover)" : "");
+    mech_printf(
+        mech, MECHALL, "You fire %s at %s%s - BTH: %d  %s%s",
+        &MechWeapons[weapindx].name[3],
+        mech_to_mech_display_id(mech, target).text, buf2, baseToHit, buf,
+        mech_condition_summary(target).partial_cover ? "(Partial cover)" : "");
 
     /* Switching to Exile method of tracking xp, where we split
      * Attacking and Piloting xp into two different channels
      * And since this is neither it goes to its own channel
      */
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ATTACKS, "%s",
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ATTACKS, "%s",
                        tprintf("#%li attacks #%li (weapon) (%i/%i)",
-                               mech->mynum, target->mynum, baseToHit, roll));
+                               mech_dbref(mech), mech_dbref(target), baseToHit,
+                               roll));
     /*
             btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_XP,
        tprintf("#%i attacks #%i (weapon)
@@ -282,11 +296,11 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     /* If the target has the ATTACKEMIT_MECH flag on have it
      * output this info as well
      */
-    if (MechStatus2(target) & ATTACKEMIT_MECH)
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ATTACK_EMITS,
-                         "%s",
-                         tprintf("#%li attacks #%li (weapon) (%i/%i)",
-                                 mech->mynum, target->mynum, baseToHit, roll));
+    if (mech_condition_summary(target).attack_emissions)
+      btech_channel_send(
+          mech_context(mech), BTECH_CHANNEL_MECH_ATTACK_EMITS, "%s",
+          tprintf("#%li attacks #%li (weapon) (%i/%i)", mech_dbref(mech),
+                  mech_dbref(target), baseToHit, roll));
 
   } else {
     mech_c3_track_emit(mech, c3Ref, c3Mech);
@@ -300,9 +314,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
      * And since this is neither it goes to its own channel
      */
     btech_channel_send(
-        mech->xcode.context, BTECH_CHANNEL_MECH_ATTACKS, "%s",
-        tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)", mech->mynum, mapx,
-                mapy, mech_hex_target_short_name(mech), baseToHit, roll));
+        mech_context(mech), BTECH_CHANNEL_MECH_ATTACKS, "%s",
+        tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)", mech_dbref(mech),
+                mapx, mapy, mech_hex_target_short_name(mech), baseToHit, roll));
     /*
             btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_XP,
        tprintf("#%i attacks %d,%d (%s) (weapon)
@@ -318,23 +332,25 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
       Mech *tmpmech;
       int foo;
 
-      for (foo = 0; foo < mech_map->first_free; foo++) {
+      for (foo = 0; foo < battle_map_unit_count(mech_map); foo++) {
+        DbRef unit_dbref = battle_map_unit_dbref(mech_map, foo);
 
-        if (mech_map->mechsOnMap[foo] >= 0) {
+        if (unit_dbref >= 0) {
 
-          if (!(tmpmech = btech_context_get_mech(mech->xcode.context,
-                                                 mech_map->mechsOnMap[foo])))
+          if (!(tmpmech =
+                    btech_context_get_mech(mech_context(mech), unit_dbref)))
             continue;
-          if (mech->mynum == tmpmech->mynum)
+          if (mech_dbref(mech) == mech_dbref(tmpmech))
             continue;
-          if (MechX(tmpmech) != mapx && MechY(tmpmech) != mapy)
+          if (mech_position_x(tmpmech) != mapx &&
+              mech_position_y(tmpmech) != mapy)
             continue;
-          if (MechStatus2(tmpmech) & ATTACKEMIT_MECH)
+          if (mech_condition_summary(tmpmech).attack_emissions)
             btech_channel_send(
-                mech->xcode.context, BTECH_CHANNEL_MECH_ATTACK_EMITS, "%s",
+                mech_context(mech), BTECH_CHANNEL_MECH_ATTACK_EMITS, "%s",
                 tprintf("#%li attacks %d,%d (%s) (weapon)"
                         " (%i/%i)",
-                        mech->mynum, mapx, mapy,
+                        mech_dbref(mech), mapx, mapy,
                         mech_hex_target_short_name(mech), baseToHit, roll));
         }
       }
@@ -353,41 +369,43 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
 
   /* See if our streaks work */
   if (MechWeapons[weapindx].special & STREAK) {
-    if (target && (AngelECMDisturbed(mech) || AngelECMProtected(target)))
+    if (target && (mech_condition_summary(mech).angel_ecm_disturbed ||
+                   mech_condition_summary(target).angel_ecm_protected))
       mech_notify(mech, MECHALL, "The ECM confuses your streak homing system!");
     else if (roll < baseToHit) {
-      mech_set_recycle_part(
-          mech, section, critical,
-          WEAPON_TICK * btech_weapon_settings_recycle_time(
-                            &mech->xcode.context->weapon_settings, weapindx));
+      mech_set_recycle_part(mech, section, critical,
+                            WEAPON_TICK * btech_context_weapon_recycle_time(
+                                              mech_context(mech), weapindx));
       mech_notify(mech, MECHALL, "Your streak fails to lock on.");
       return;
     }
   }
 
   /* Hotload LRM jams on 2 or 3 */
-  if (GetPartFireMode(mech, section, critical) & HOTLOAD_MODE) {
+  if (mech_critical_fire_mode(mech, section, critical) & HOTLOAD_MODE) {
     if (roll == 2 || roll == 3) {
       mech_printf(
           mech, MECHALL,
           "[fg=red bold]The ammo loading mechanism jams on your %s![reset]",
           &(MechWeapons[weapindx].name[3]));
-      SetPartTempNuke(mech, section, critical, FAIL_AMMOJAMMED);
+      mech_critical_temporary_failure_set(mech, section, critical,
+                                          FAIL_AMMOJAMMED);
       return;
     }
   }
 
   /* Caseless jams on a 2. Next internal roll of 8+ explodes */
-  if (GetPartAmmoMode(mech, section, critical) & AC_CASELESS_MODE) {
+  if (mech_critical_ammo_mode(mech, section, critical) & AC_CASELESS_MODE) {
     if (roll == 2 || roll == 3) {
       mech_printf(
           mech, MECHALL,
           "[fg=red bold]The ammo loading mechanism jams on your %s![reset]",
           &(MechWeapons[weapindx].name[3]));
-      SetPartTempNuke(mech, section, critical, FAIL_AMMOJAMMED);
+      mech_critical_temporary_failure_set(mech, section, critical,
+                                          FAIL_AMMOJAMMED);
       /* do 8+ explosion check. Per tac handbook, the launcher explodes on
        * failure*/
-      if (btech_random_roll(mech->xcode.context) > 7) {
+      if (btech_random_roll(mech_context(mech)) > 7) {
         /* Rut roh shaggy. Time to cause some damage! */
         mech_printf(mech, MECHALL,
                     "[fg=red bold]Propellant from your %s ignites and "
@@ -414,7 +432,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   }
 
   /* Check for RFAC explosion/jams */
-  if (GetPartFireMode(mech, section, critical) & RFAC_MODE) {
+  if (mech_critical_fire_mode(mech, section, critical) & RFAC_MODE) {
     if (roll == 2) {
       mech_printf(
           mech, MECHALL,
@@ -437,30 +455,35 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
           mech, MECHALL,
           "[fg=red bold]The ammo loader mechanism jams on your %s![reset]",
           &(MechWeapons[weapindx].name[3]));
-      SetPartTempNuke(mech, section, critical, FAIL_AMMOJAMMED);
+      mech_critical_temporary_failure_set(mech, section, critical,
+                                          FAIL_AMMOJAMMED);
       return;
     }
   }
 
   /* Check for RAC explosion/jams */
   if (MechWeapons[weapindx].special & RAC) {
-    if (((GetPartFireMode(mech, section, critical) & RAC_TWOSHOT_MODE) &&
+    if (((mech_critical_fire_mode(mech, section, critical) &
+          RAC_TWOSHOT_MODE) &&
          (roll == 2)) ||
-        ((GetPartFireMode(mech, section, critical) & RAC_FOURSHOT_MODE) &&
+        ((mech_critical_fire_mode(mech, section, critical) &
+          RAC_FOURSHOT_MODE) &&
          (roll <= 3)) ||
-        ((GetPartFireMode(mech, section, critical) & RAC_SIXSHOT_MODE) &&
+        ((mech_critical_fire_mode(mech, section, critical) &
+          RAC_SIXSHOT_MODE) &&
          (roll <= 4))) {
       mech_printf(
           mech, MECHALL,
           "[fg=red bold]The ammo loader mechanism jams on your %s![reset]",
           &(MechWeapons[weapindx].name[3]));
-      SetPartTempNuke(mech, section, critical, FAIL_AMMOJAMMED);
+      mech_critical_temporary_failure_set(mech, section, critical,
+                                          FAIL_AMMOJAMMED);
       return;
     }
   }
 
   /* Check for Ultra explosion/jams */
-  if (GetPartFireMode(mech, section, critical) & ULTRA_MODE) {
+  if (mech_critical_fire_mode(mech, section, critical) & ULTRA_MODE) {
     if (roll == 2) {
       mech_printf(mech, MECHALL, "The loader jams on your %s, destroying it!",
                   &(MechWeapons[weapindx].name[3]));
@@ -507,25 +530,26 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
         mech, MECHALL,
         "[fg=red bold]The ammo loader mechanism jams on your %s![reset]",
         &(MechWeapons[weapindx].name[3]));
-    SetPartTempNuke(mech, section, critical, FAIL_AMMOCRITJAMMED);
+    mech_critical_temporary_failure_set(mech, section, critical,
+                                        FAIL_AMMOCRITJAMMED);
 
     return;
   }
 
   /* Trash our cocoon if we're OODing */
-  if (OODing(mech)) {
-    if (MechZ(mech) > MechElevation(mech)) {
-      if (MechJumpSpeed(mech) >= MP1) {
+  if (mech_cocoon_integrity(mech)) {
+    if (mech_position_z(mech) > mech_position_surface_elevation(mech)) {
+      if (mech_jump_speed(mech) >= MP1) {
         mech_notify(
             mech, MECHALL,
             "You initiate your jumpjets to compensate for the opened cocoon!");
-        MechCocoon(mech) = -1;
+        mech_cocoon_integrity_set(mech, -1);
       } else {
         mech_notify(mech, MECHALL,
                     "Your action splits open the cocoon - have a nice fall!");
         mech_los_broadcast(mech,
                            "starts plummeting down, as the cocoon opens!.");
-        MechCocoon(mech) = 0;
+        mech_cocoon_integrity_set(mech, 0);
         mech_event_cancel(mech, EVENT_OOD);
         mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
       }
@@ -540,37 +564,39 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
    * mech_hit_resolve
    */
   RbaseToHit = baseToHit;
-  if (mech->xcode.context->configuration->btech_glancing_blows == 2)
+  if (btech_context_glancing_blow_mode(mech_context(mech)) == 2)
     RbaseToHit = baseToHit - 1; /* only time we modify it */
 
   if (!isarty) {
-    MechFireBroadcast(mech, ishex ? NULL : target, mapx, mapy, mech_map,
+    MechFireBroadcast(mech, ishex ? nullptr : target, mapx, mapy, mech_map,
                       &MechWeapons[weapindx].name[3],
                       (roll >= RbaseToHit) && range_ok);
   }
   /* Tell our target they were just shot at... */
   if (target) {
-    if (mech_los_check(target, mech, MechX(mech), MechY(mech), range))
+    if (mech_los_check(target, mech, mech_position_x(mech),
+                       mech_position_y(mech), range))
       mech_printf(target, MECHALL, "%s has fired a %s at you!",
                   mech_to_mech_display_id(target, mech).text,
                   &MechWeapons[weapindx].name[3]);
     else
-      mech_printf(target, MECHALL,
-                  "Something has fired a %s at you from bearing %d!",
-                  &MechWeapons[weapindx].name[3],
-                  FindBearing(MechFX(target), MechFY(target), MechFX(mech),
-                              MechFY(mech)));
+      mech_printf(
+          target, MECHALL, "Something has fired a %s at you from bearing %d!",
+          &MechWeapons[weapindx].name[3],
+          FindBearing(mech_position_real_x(target),
+                      mech_position_real_y(target), mech_position_real_x(mech),
+                      mech_position_real_y(mech)));
   }
 
   /* Time to decide if we've really hit them and wot to do */
-  MechStatus(mech) |= FIRED;
+  mech_fired_recently_set(mech, true);
 
   if (!ishex) /* only record against actual targets */
-    MechShotsFired(mech)++;
+    mech_shots_fired_increment(mech);
 
   if (isarty) {
     artillery_shoot(mech, mapx, mapy, weapindx,
-                    GetPartAmmoMode(mech, section, critical),
+                    mech_critical_ammo_mode(mech, section, critical),
                     baseToHit <= roll);
   } else if (range_ok) {
     if (IsMissile(weapindx)) {
@@ -586,10 +612,10 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
         int tTryClear = 1;
 
         if (target) {
-          if ((MechType(target) == CLASS_BSUIT) &&
-              (MechSwarmTarget(target) > -1) &&
-              (altTarget = btech_context_get_mech(mech->xcode.context,
-                                                  MechSwarmTarget(target)))) {
+          if ((mech_class(target) == CLASS_BSUIT) &&
+              (mech_swarm_target(target) > -1) &&
+              (altTarget = btech_context_get_mech(mech_context(mech),
+                                                  mech_swarm_target(target)))) {
 
             baseToHit = mech_normal_to_hit_calculate(
                 mech, mech_map, section, critical, weapindx, range, altTarget,
@@ -605,8 +631,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
 
               tTryClear = 0;
             } else {
-              if (Elevation(mech_map, MechX(target), MechY(target)) <
-                  (MechZ(target) - 2))
+              if (battle_map_hex_elevation(mech_map, mech_position_x(target),
+                                           mech_position_y(target)) <
+                  (mech_position_z(target) - 2))
                 tTryClear = 0;
             }
           }
@@ -616,10 +643,11 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
           int tempDamage = mech_hit_damage_determine(
               mech, section, critical, target, mapx, mapy, weapindx,
               wGattlingShots, MechWeapons[weapindx].damage,
-              GetPartAmmoMode(mech, section, critical), type, modifier, 1);
+              mech_critical_ammo_mode(mech, section, critical), type, modifier,
+              1);
 
           mech_terrain_possibly_ignite_or_clear(
-              mech, weapindx, GetPartAmmoMode(mech, section, critical),
+              mech, weapindx, mech_critical_ammo_mode(mech, section, critical),
               tempDamage, mapx, mapy, 0);
         }
       }
@@ -627,47 +655,48 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   }
 
   /* Recycle the weapon */
-  mech_set_recycle_part(
-      mech, section, critical,
-      WEAPON_TICK * btech_weapon_settings_recycle_time(
-                        &mech->xcode.context->weapon_settings, weapindx));
+  mech_set_recycle_part(mech, section, critical,
+                        WEAPON_TICK * btech_context_weapon_recycle_time(
+                                          mech_context(mech), weapindx));
 
   /****************************************
    * START: Set the heat after firing
    ****************************************/
   if (type == HEAT)
-    MechWeapHeat(mech) += (float)modifier;
+    mech_weapon_heat_add(mech, (float)modifier);
 
-  if (GetPartFireMode(mech, section, critical) & GATTLING_MODE) {
-    MechWeapHeat(mech) += wGattlingShots;
+  if (mech_critical_fire_mode(mech, section, critical) & GATTLING_MODE) {
+    mech_weapon_heat_add(mech, (float)wGattlingShots);
   } else if (MechWeapons[weapindx].special & RAC) {
-    if (GetPartFireMode(mech, section, critical) & RAC_TWOSHOT_MODE)
+    if (mech_critical_fire_mode(mech, section, critical) & RAC_TWOSHOT_MODE)
       wRACHeat = 2;
-    else if (GetPartFireMode(mech, section, critical) & RAC_FOURSHOT_MODE)
+    else if (mech_critical_fire_mode(mech, section, critical) &
+             RAC_FOURSHOT_MODE)
       wRACHeat = 4;
-    else if (GetPartFireMode(mech, section, critical) & RAC_SIXSHOT_MODE)
+    else if (mech_critical_fire_mode(mech, section, critical) &
+             RAC_SIXSHOT_MODE)
       wRACHeat = 6;
     else
       wRACHeat = 1;
 
-    MechWeapHeat(mech) += (float)(MechWeapons[weapindx].heat * wRACHeat);
+    mech_weapon_heat_add(mech, (float)(MechWeapons[weapindx].heat * wRACHeat));
 
     if (type == HEAT)
-      MechWeapHeat(mech) += (float)(modifier * wRACHeat);
+      mech_weapon_heat_add(mech, (float)(modifier * wRACHeat));
   } else {
-    MechWeapHeat(mech) += (float)MechWeapons[weapindx].heat;
+    mech_weapon_heat_add(mech, (float)MechWeapons[weapindx].heat);
 
     if (IsEnergy(weapindx))
-      MechWeapHeat(mech) +=
-          (float)mech_weapon_critical_heat_modifier(mech, section, critical);
+      mech_weapon_heat_add(mech, (float)mech_weapon_critical_heat_modifier(
+                                     mech, section, critical));
 
-    if ((GetPartFireMode(mech, section, critical) & ULTRA_MODE) ||
-        (GetPartFireMode(mech, section, critical) & RFAC_MODE)) {
+    if ((mech_critical_fire_mode(mech, section, critical) & ULTRA_MODE) ||
+        (mech_critical_fire_mode(mech, section, critical) & RFAC_MODE)) {
 
       if (type == HEAT)
-        MechWeapHeat(mech) += (float)modifier;
+        mech_weapon_heat_add(mech, (float)modifier);
 
-      MechWeapHeat(mech) += (float)MechWeapons[weapindx].heat;
+      mech_weapon_heat_add(mech, (float)MechWeapons[weapindx].heat);
     }
   }
 
@@ -681,16 +710,16 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
 
   /* Special for Heavy Gauss Rifles */
   if ((MechWeapons[weapindx].special & HVYGAUSS) &&
-      (MechType(mech) == CLASS_MECH)) {
-    if (fabs(MechSpeed(mech)) > 0.0) {
+      (mech_class(mech) == CLASS_MECH)) {
+    if (fabs(mech_current_speed(mech)) > 0.0) {
       mech_notify(mech, MECHALL,
                   "You realize that moving while firing this weapon may not be "
                   "a good idea after all.");
-      if (MechTons(mech) <= 35)
+      if (mech_tonnage(mech) <= 35)
         wHGRPSkillMod = 2;
-      else if (MechTons(mech) <= 55)
+      else if (mech_tonnage(mech) <= 55)
         wHGRPSkillMod = 1;
-      else if (MechTons(mech) <= 75)
+      else if (mech_tonnage(mech) <= 75)
         wHGRPSkillMod = 0;
       else
         wHGRPSkillMod = -1;

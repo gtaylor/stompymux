@@ -80,6 +80,7 @@ int btech_context_dig_bonus(const BtechContext *context);
 bool btech_context_range_modifies_damage(const BtechContext *context);
 bool btech_context_woods_modify_damage(const BtechContext *context);
 bool btech_context_glancing_blows_enabled(const BtechContext *context);
+int btech_context_glancing_blow_mode(const BtechContext *context);
 int btech_context_sprint_to_hit_modifier(const BtechContext *context);
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context);
 bool btech_context_uses_roll_on_backwalk(const BtechContext *context);

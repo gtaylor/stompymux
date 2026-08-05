@@ -9,4 +9,5 @@ int mech_battle_value(const Mech *mech);
 void mech_battle_value_set(Mech *mech, int battle_value);
 float mech_experience_modifier(const Mech *mech);
 void mech_shot_result_record(Mech *mech, bool hit);
+void mech_shots_fired_increment(Mech *mech);
 int mech_hexes_walked_advance(Mech *mech);
