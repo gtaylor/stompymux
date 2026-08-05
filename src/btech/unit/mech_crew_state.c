@@ -26,6 +26,16 @@ void mech_pilot_skill_modifier_add(Mech *mech, int modifier) {
   mech->rd.pilotskillbase += modifier;
 }
 
+int mech_base_to_hit_modifier(const Mech *mech) { return mech->rd.basetohit; }
+
+void mech_base_to_hit_modifier_set(Mech *mech, int modifier) {
+  mech->rd.basetohit = modifier;
+}
+
+void mech_base_to_hit_modifier_add(Mech *mech, int modifier) {
+  mech->rd.basetohit += modifier;
+}
+
 void mech_pilot_status_set(Mech *mech, int status) {
   mech->pd.pilotstatus = status;
 }

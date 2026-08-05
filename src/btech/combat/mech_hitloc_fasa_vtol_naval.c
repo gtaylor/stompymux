@@ -24,7 +24,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 2:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDestroyedCrit(mech, NULL, 1);
+        mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
         *iscritical = 1;
@@ -32,7 +32,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 4:
       case 5:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 6:
       case 7:
@@ -47,12 +47,12 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 10:
       case 11:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 12:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
       break;
@@ -62,7 +62,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 2:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDestroyedCrit(mech, NULL, 1);
+        mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
         *iscritical = 1;
@@ -70,7 +70,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 4:
       case 5:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 6:
       case 7:
@@ -84,12 +84,12 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 10:
       case 11:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 12:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
       break;
@@ -102,16 +102,16 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 2:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDestroyedCrit(mech, NULL, 1);
+        mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
         hitloc = ROTOR;
-        DoVTOLRotorDestroyedCrit(mech, NULL, 1);
+        mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 4:
       case 5:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 6:
       case 7:
@@ -122,12 +122,12 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 10:
       case 11:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 12:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
       break;

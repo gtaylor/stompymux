@@ -427,12 +427,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 2:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDestroyedCrit(mech, NULL, 1);
+        mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
       case 4:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 5:
       case 6:
@@ -444,12 +444,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 10:
       case 11:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 12:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
       break;
@@ -459,12 +459,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 2:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDestroyedCrit(mech, NULL, 1);
+        mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
       case 4:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 5:
       case 6:
@@ -476,12 +476,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 10:
       case 11:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 12:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
       break;
@@ -493,12 +493,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 2:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDestroyedCrit(mech, NULL, 1);
+        mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
       case 4:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 5:
       case 6:
@@ -510,12 +510,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 10:
       case 11:
         hitloc = ROTOR;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       case 12:
         hitloc = ROTOR;
         *iscritical = 1;
-        DoVTOLRotorDamagedCrit(mech);
+        mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
       break;

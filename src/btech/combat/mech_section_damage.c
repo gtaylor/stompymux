@@ -346,7 +346,7 @@ skip_nuke:
   case CLASS_VTOL:
     if (hitloc == ROTOR) {
       tKillMech = 0;
-      StartVTOLCrash(wounded);
+      mech_vtol_crash_start(wounded);
     } else
       tKillMech = 1;
     break;

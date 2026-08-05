@@ -22,22 +22,29 @@
 #include "failures.h"
 #include "map.h"
 #include "map_terrain.h"
-#include "mech.h"
 #include "mech_ammodump_api.h"
 #include "mech_c3_api.h"
 #include "mech_c3i_api.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
+#include "mech_condition_api.h"
+#include "mech_crew_api.h"
 #include "mech_damage_api.h"
 #include "mech_enhanced_criticals_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
 #include "mech_sensor.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_tag_api.h"
 #include "mech_tech_commands_api.h"
 #include "mech_update_api.h"
@@ -51,7 +58,7 @@
 #include "random.h"
 #include "registry_api.h"
 
-void DoCargoInfantryCrit(Mech *objMech, int wLoc) {
+void mech_cargo_infantry_critical_apply(Mech *objMech, int wLoc) {
   /*
    * If there's infantry in the unit, the infantry takes
    * damage as if the weapon that caused the crit hit them.
@@ -64,7 +71,7 @@ void DoCargoInfantryCrit(Mech *objMech, int wLoc) {
       "The shot pierces your armor yet fails to hit a critical system!");
 }
 
-void DoVehicleEngineHit(Mech *objMech, Mech *objAttacker) {
+void mech_vehicle_engine_critical_apply(Mech *objMech, Mech *objAttacker) {
   /*
    * Vehicle engine is severly damaged.
    * The vehicle may not move or change facing.
@@ -75,7 +82,7 @@ void DoVehicleEngineHit(Mech *objMech, Mech *objAttacker) {
    * above any other terrain, the VTOL crashes.
    */
 
-  if (Fallen(objMech)) {
+  if (mech_condition_summary(objMech).fallen) {
     mech_notify(objMech, MECHALL,
                 "Your destroyed engine takes another direct hit!");
     return;
@@ -84,26 +91,26 @@ void DoVehicleEngineHit(Mech *objMech, Mech *objAttacker) {
   mech_notify(objMech, MECHALL,
               "[fg=red bold]Your engine takes a direct hit![reset]");
 
-  if (MechType(objMech) == CLASS_VTOL) {
-    if (!Landed(objMech)) {
+  if (mech_class(objMech) == CLASS_VTOL) {
+    if (!mech_is_landed(objMech)) {
       if (mech_real_terrain_get(objMech) == GRASSLAND ||
           mech_real_terrain_get(objMech) == ROAD ||
           mech_real_terrain_get(objMech) == BUILDING) {
 
-        if (MadePilotSkillRoll(objMech,
-                               MechZ(objMech) - MechElevation(objMech))) {
+        if (MadePilotSkillRoll(objMech, mech_position_z(objMech) -
+                                            mech_position_elevation(objMech))) {
           mech_notify(objMech, MECHALL, "You land safely!");
-          MechStatus(objMech) |= LANDED;
-          MechZ(objMech) = MechElevation(objMech);
-          MechFZ(objMech) = ZSCALE * MechZ(objMech);
+          mech_landed_set(objMech, true);
+          mech_position_z_set(objMech, mech_position_elevation(objMech));
+          mech_position_real_z_sync(objMech);
           mech_max_speed_set(objMech, 0.0);
-          MechVerticalSpeed(objMech) = 0.0;
+          mech_vertical_speed_set(objMech, 0.0);
         }
       } else {
         mech_notify(objMech, MECHALL, "The ground rushes up to meet you!");
         mech_notify(objAttacker, MECHALL, "You knock the VTOL out of the sky!");
         mech_los_broadcast(objMech, "falls from the sky!");
-        mech_fall(objMech, MechsElevation(objMech), 0);
+        mech_fall(objMech, mech_position_elevation_magnitude(objMech), 0);
       }
     }
   } else {
@@ -112,15 +119,15 @@ void DoVehicleEngineHit(Mech *objMech, Mech *objAttacker) {
   }
 }
 
-void DoVehicleFuelTankCrit(Mech *objMech, Mech *objAttacker) {
+void mech_vehicle_fuel_tank_critical_apply(Mech *objMech, Mech *objAttacker) {
   /*
    * The fuel tank is breached causing the
    * the vehicle to explode. If the unit does not
    * have an ICE engine, treat this as an engine crit.
    */
 
-  if (!(MechSpecials(objMech) & ICE_TECH)) {
-    DoVehicleEngineHit(objMech, objAttacker);
+  if (!(mech_technology_flags(objMech) & ICE_TECH)) {
+    mech_vehicle_engine_critical_apply(objMech, objAttacker);
     return;
   }
 
@@ -130,20 +137,20 @@ void DoVehicleFuelTankCrit(Mech *objMech, Mech *objAttacker) {
   if (objMech != objAttacker)
     mech_los_broadcast(objMech, "explodes in a ball of fire!");
 
-  MechZ(objMech) = MechElevation(objMech);
-  MechFZ(objMech) = ZSCALE * MechZ(objMech);
-  MechSpeed(objMech) = 0.0;
-  MechVerticalSpeed(objMech) = 0.0;
+  mech_position_z_set(objMech, mech_position_elevation(objMech));
+  mech_position_real_z_sync(objMech);
+  mech_current_speed_set(objMech, 0.0);
+  mech_vertical_speed_set(objMech, 0.0);
   DestroyMech(objMech, objAttacker, 1, KILL_TYPE_FUELTANK);
   mech_explosion_apply(objMech, objAttacker);
 }
 
-void DoVehicleCrewStunnedCrit(Mech *objMech) {
+void mech_vehicle_crew_stun_critical_apply(Mech *objMech) {
   /*
    * For one turn the crew can not move over cruising
    * speed and not fire weapons/ram/use radio/etc, just turn.
    */
-  MechTankCritStatus(objMech) |= CREW_STUNNED;
+  mech_crew_stunned_set(objMech, true);
   mech_notify(
       objMech, MECHALL,
       "[fg=red bold]The shot resonates throughout the crew compartment, "
@@ -153,7 +160,7 @@ void DoVehicleCrewStunnedCrit(Mech *objMech) {
   mech_speed_limit_to_cruise(objMech);
 }
 
-void DoVehicleDriverCrit(Mech *objMech) {
+void mech_vehicle_driver_critical_apply(Mech *objMech) {
   /*
    * Driver is hit, apply a +2 to all driving skills
    */
@@ -162,20 +169,20 @@ void DoVehicleDriverCrit(Mech *objMech) {
       objMech, MECHALL,
       "[fg=red bold]Your vehicle's driver takes a piece of shrapnel, making "
       "it harder to control the vehicle![reset]");
-  MechPilotSkillBase(objMech) += 2;
+  mech_pilot_skill_modifier_add(objMech, 2);
 }
 
-void DoVehicleSensorCrit(Mech *objMech) {
+void mech_vehicle_sensor_critical_apply(Mech *objMech) {
   /*
    * Add +1 to BTH for each sensor crit.
    */
 
   mech_notify(objMech, MECHALL,
               "[fg=red bold]Your sensor suite takes a hit![reset]");
-  MechBTH(objMech) += 1;
+  mech_base_to_hit_modifier_add(objMech, 1);
 }
 
-void DoVehicleCommanderHit(Mech *objMech) {
+void mech_vehicle_commander_critical_apply(Mech *objMech) {
   /*
    * Commander is hit. Vehicle suffers a +1 to BTH and driving
    * skills. Also does result of crew stunned.
@@ -184,13 +191,13 @@ void DoVehicleCommanderHit(Mech *objMech) {
   mech_notify(objMech, MECHALL,
               "[fg=red bold]Your vehicle's commander takes a piece of "
               "shrapnel![reset]");
-  MechPilotSkillBase(objMech) += 1;
-  MechBTH(objMech) += 1;
+  mech_pilot_skill_modifier_add(objMech, 1);
+  mech_base_to_hit_modifier_add(objMech, 1);
 
-  DoVehicleCrewStunnedCrit(objMech);
+  mech_vehicle_crew_stun_critical_apply(objMech);
 }
 
-void DoVehicleCrewKilledCrit(Mech *objMech, Mech *objAttacker) {
+void mech_vehicle_crew_killed_critical_apply(Mech *objMech, Mech *objAttacker) {
   /*
    * The whole crew is instantly killed
    * leaving the tank 'destroyed' but fixable.
@@ -203,13 +210,13 @@ void DoVehicleCrewKilledCrit(Mech *objMech, Mech *objAttacker) {
   DestroyMech(objMech, objAttacker, 0, KILL_TYPE_PILOT);
   KillMechContentsIfIC(objMech);
 
-  if (MechSpeed(objMech) != 0.0)
+  if (mech_current_speed(objMech) != 0.0)
     mech_los_broadcast(objMech, "careens out of control and starts to slow!");
 
   mech_make_fall(objMech);
 }
 
-void DoVTOLCoPilotCrit(Mech *objMech) {
+void mech_vtol_copilot_critical_apply(Mech *objMech) {
   /*
    * +1 BTH for weapons fire
    */
@@ -218,10 +225,10 @@ void DoVTOLCoPilotCrit(Mech *objMech) {
       objMech, MECHALL,
       "[fg=red bold]Your VTOL's pilot takes a piece of shrapnel, making it "
       "harder to aim your weapons![reset]");
-  MechBTH(objMech) += 1;
+  mech_base_to_hit_modifier_add(objMech, 1);
 }
 
-void DoVTOLPilotHit(Mech *objMech) {
+void mech_vtol_pilot_critical_apply(Mech *objMech) {
   /*
    * +2 pskill rolls
    * Must make sucessful pskill roll
@@ -232,18 +239,19 @@ void DoVTOLPilotHit(Mech *objMech) {
       objMech, MECHALL,
       "[fg=red bold]Your VTOL's copilot takes a piece of shrapnel, making it "
       "harder to control the VTOL![reset]");
-  MechPilotSkillBase(objMech) += 2;
+  mech_pilot_skill_modifier_add(objMech, 2);
 
   /* TODO: make vtol drop a level if it fails a pskill roll */
 }
 
-void DoVTOLRotorDestroyedCrit(Mech *objMech, Mech *objAttacker, int LOS) {
+void mech_vtol_rotor_destroyed_critical_apply(Mech *objMech, Mech *objAttacker,
+                                              int LOS) {
   /*
    * Rotors are destroyed sending the vehicle crashing to the ground,
    * if it's not already there.
    */
 
-  if (SectIsDestroyed(objMech, ROTOR))
+  if (mech_section_is_destroyed(objMech, ROTOR))
     return;
 
   mech_notify(
@@ -258,7 +266,7 @@ void DoVTOLRotorDestroyedCrit(Mech *objMech, Mech *objAttacker, int LOS) {
   }
 }
 
-void DoVTOLRotorDamagedCrit(Mech *objMech) {
+void mech_vtol_rotor_damaged_critical_apply(Mech *objMech) {
   /*
    * -1MP
    */
@@ -268,28 +276,28 @@ void DoVTOLRotorDamagedCrit(Mech *objMech) {
    * enough rotor speed to keep us aloft, logically... so let's blow the sucker
    * off and crash the VTOL.
    */
-  if (MMaxSpeed(objMech) <= MP1) {
-    DoVTOLRotorDestroyedCrit(objMech, NULL, 1);
+  if (mech_maximum_speed(objMech) <= MP1) {
+    mech_vtol_rotor_destroyed_critical_apply(objMech, nullptr, 1);
     return;
   }
 
   mech_notify(objMech, MECHALL, "Your rotor is damaged!");
 
-  if (!Fallen(objMech))
+  if (!mech_condition_summary(objMech).fallen)
     mech_max_speed_lower(objMech, MP1);
 }
 
-void DoVTOLTailRotorDamagedCrit(Mech *objMech) {
+void mech_vtol_tail_rotor_critical_apply(Mech *objMech) {
   /*
    * May not move faster than cruising speed.
    * Turns slower.
    */
 
-  if (MechTankCritStatus(objMech) & TAIL_ROTOR_DESTROYED)
+  if (mech_condition_summary(objMech).tail_rotor_destroyed)
     mech_notify(objMech, MECHALL,
                 "Your damaged tail rotor suffers more damage!");
   else {
-    MechTankCritStatus(objMech) |= TAIL_ROTOR_DESTROYED;
+    mech_tail_rotor_destroyed_set(objMech, true);
     mech_notify(
         objMech, MECHALL,
         "[fg=red bold]Your tail rotor is damaged, slowing you down![reset]");
@@ -298,17 +306,17 @@ void DoVTOLTailRotorDamagedCrit(Mech *objMech) {
   }
 }
 
-void StartVTOLCrash(Mech *objMech) {
-  if (!Fallen(objMech)) {
-    MechSpeed(objMech) = 0.0;
-    MechDesiredSpeed(objMech) = 0.0;
+void mech_vtol_crash_start(Mech *objMech) {
+  if (!mech_condition_summary(objMech).fallen) {
+    mech_current_speed_set(objMech, 0.0);
+    mech_desired_speed_set(objMech, 0.0);
     mech_max_speed_set(objMech, 0.0);
 
-    if (!Landed(objMech)) {
+    if (!mech_is_landed(objMech)) {
       mech_notify(objMech, MECHALL,
                   "You ponder F = ma, S = F/m, S = at^2 => S=agt^2 in relation "
                   "to the ground.");
-      MechVerticalSpeed(objMech) = 0;
+      mech_vertical_speed_set(objMech, 0.0);
       mech_notify(objMech, MECHALL, "You start free-fall.. Enjoy the ride!");
       mech_los_broadcast(objMech, "starts to fall to the ground!");
       mech_event_schedule(objMech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
@@ -323,11 +331,11 @@ void StartVTOLCrash(Mech *objMech) {
   }
 }
 
-void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
-                              int hitloc, int num) {
-  int wRoll = btech_random_roll(wounded->xcode.context);
+void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
+                                           int LOS, int hitloc, int num) {
+  int wRoll = btech_random_roll(mech_context(wounded));
 
-  if (MechMove(wounded) == MOVE_NONE)
+  if (mech_movement_type(wounded) == MOVE_NONE)
     return;
 
   if (wRoll < 6)
@@ -335,13 +343,13 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
 
   mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
 
-  switch (MechType(wounded)) {
+  switch (mech_class(wounded)) {
   case CLASS_VEH_GROUND:
     switch (hitloc) {
     case FSIDE:
       switch (wRoll) {
       case 6:
-        DoVehicleDriverCrit(wounded);
+        mech_vehicle_driver_critical_apply(wounded);
         break;
 
       case 7:
@@ -353,11 +361,11 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 9:
-        DoVehicleSensorCrit(wounded);
+        mech_vehicle_sensor_critical_apply(wounded);
         break;
 
       case 10:
-        DoVehicleCommanderHit(wounded);
+        mech_vehicle_commander_critical_apply(wounded);
         break;
 
       case 11:
@@ -365,7 +373,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 12:
-        DoVehicleCrewKilledCrit(wounded, attacker);
+        mech_vehicle_crew_killed_critical_apply(wounded, attacker);
         break;
       }
       break;
@@ -374,7 +382,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
     case RSIDE:
       switch (wRoll) {
       case 6:
-        DoCargoInfantryCrit(wounded, hitloc);
+        mech_cargo_infantry_critical_apply(wounded, hitloc);
         break;
 
       case 7:
@@ -382,7 +390,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 8:
-        DoVehicleCrewStunnedCrit(wounded);
+        mech_vehicle_crew_stun_critical_apply(wounded);
         break;
 
       case 9:
@@ -394,11 +402,11 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 11:
-        DoVehicleEngineHit(wounded, attacker);
+        mech_vehicle_engine_critical_apply(wounded, attacker);
         break;
 
       case 12:
-        DoVehicleFuelTankCrit(wounded, attacker);
+        mech_vehicle_fuel_tank_critical_apply(wounded, attacker);
         break;
       }
       break;
@@ -410,7 +418,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 7:
-        DoCargoInfantryCrit(wounded, hitloc);
+        mech_cargo_infantry_critical_apply(wounded, hitloc);
         break;
 
       case 8:
@@ -422,7 +430,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 10:
-        DoVehicleEngineHit(wounded, attacker);
+        mech_vehicle_engine_critical_apply(wounded, attacker);
         break;
 
       case 11:
@@ -430,7 +438,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 12:
-        DoVehicleFuelTankCrit(wounded, attacker);
+        mech_vehicle_fuel_tank_critical_apply(wounded, attacker);
         break;
       }
       break;
@@ -474,7 +482,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
     case FSIDE:
       switch (wRoll) {
       case 6:
-        DoVTOLCoPilotCrit(wounded);
+        mech_vtol_copilot_critical_apply(wounded);
         break;
 
       case 7:
@@ -486,11 +494,11 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 9:
-        DoVehicleSensorCrit(wounded);
+        mech_vehicle_sensor_critical_apply(wounded);
         break;
 
       case 10:
-        DoVTOLPilotHit(wounded);
+        mech_vtol_pilot_critical_apply(wounded);
         break;
 
       case 11:
@@ -498,7 +506,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 12:
-        DoVehicleCrewKilledCrit(wounded, attacker);
+        mech_vehicle_crew_killed_critical_apply(wounded, attacker);
         break;
       }
       break;
@@ -511,7 +519,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 7:
-        DoCargoInfantryCrit(wounded, hitloc);
+        mech_cargo_infantry_critical_apply(wounded, hitloc);
         break;
 
       case 8:
@@ -523,7 +531,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 10:
-        DoVehicleEngineHit(wounded, attacker);
+        mech_vehicle_engine_critical_apply(wounded, attacker);
         break;
 
       case 11:
@@ -531,7 +539,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 12:
-        DoVehicleFuelTankCrit(wounded, attacker);
+        mech_vehicle_fuel_tank_critical_apply(wounded, attacker);
         break;
       }
       break;
@@ -539,7 +547,7 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
     case BSIDE:
       switch (wRoll) {
       case 6:
-        DoCargoInfantryCrit(wounded, hitloc);
+        mech_cargo_infantry_critical_apply(wounded, hitloc);
         break;
 
       case 7:
@@ -555,15 +563,15 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
         break;
 
       case 10:
-        DoVehicleSensorCrit(wounded);
+        mech_vehicle_sensor_critical_apply(wounded);
         break;
 
       case 11:
-        DoVehicleEngineHit(wounded, attacker);
+        mech_vehicle_engine_critical_apply(wounded, attacker);
         break;
 
       case 12:
-        DoVehicleFuelTankCrit(wounded, attacker);
+        mech_vehicle_fuel_tank_critical_apply(wounded, attacker);
         break;
       }
       break;
@@ -573,17 +581,17 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
       case 6:
       case 7:
       case 8:
-        DoVTOLRotorDamagedCrit(wounded);
+        mech_vtol_rotor_damaged_critical_apply(wounded);
         break;
 
       case 9:
       case 10:
-        DoVTOLTailRotorDamagedCrit(wounded);
+        mech_vtol_tail_rotor_critical_apply(wounded);
         break;
 
       case 11:
       case 12:
-        DoVTOLRotorDestroyedCrit(wounded, attacker, LOS);
+        mech_vtol_rotor_destroyed_critical_apply(wounded, attacker, LOS);
         break;
       }
       break;
@@ -592,14 +600,14 @@ void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
   }
 }
 
-void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
-                    int num) {
+void mech_vtol_critical_handle(Mech *wounded, Mech *attacker, int LOS,
+                               int hitloc, int num) {
   mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-  switch (btech_random_range(wounded->xcode.context, 0, 5)) {
+  switch (btech_random_range(mech_context(wounded), 0, 5)) {
   case 0:
     /* Crew killed */
     mech_notify(wounded, MECHALL, "Your cockpit is destroyed!");
-    if (!Landed(wounded)) {
+    if (!mech_is_landed(wounded)) {
       mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
       mech_los_broadcast(wounded, "falls down from the sky!");
     }
@@ -614,24 +622,24 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
   case 2:
     /* Engine Hit */
     mech_notify(wounded, MECHALL, "Your engine takes a direct hit!");
-    if (!Landed(wounded)) {
+    if (!mech_is_landed(wounded)) {
       if (mech_real_terrain_get(wounded) == GRASSLAND ||
           mech_real_terrain_get(wounded) == ROAD ||
           mech_real_terrain_get(wounded) == BUILDING) {
-        if (MadePilotSkillRoll(wounded,
-                               MechZ(wounded) - MechElevation(wounded))) {
+        if (MadePilotSkillRoll(wounded, mech_position_z(wounded) -
+                                            mech_position_elevation(wounded))) {
           mech_notify(wounded, MECHALL, "You land safely!");
-          MechStatus(wounded) |= LANDED;
-          MechZ(wounded) = MechElevation(wounded);
-          MechFZ(wounded) = ZSCALE * MechZ(wounded);
+          mech_landed_set(wounded, true);
+          mech_position_z_set(wounded, mech_position_elevation(wounded));
+          mech_position_real_z_sync(wounded);
           mech_max_speed_set(wounded, 0.0);
-          MechVerticalSpeed(wounded) = 0.0;
+          mech_vertical_speed_set(wounded, 0.0);
         }
       } else {
         mech_notify(wounded, MECHALL, "The ground rushes up to meet you!");
         mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
         mech_los_broadcast(wounded, "falls from the sky!");
-        mech_fall(wounded, MechsElevation(wounded), 0);
+        mech_fall(wounded, mech_position_elevation_magnitude(wounded), 0);
       }
     }
     mech_max_speed_set(wounded, 0.0);
@@ -639,7 +647,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
   case 3:
     /* Crew Killed */
     mech_notify(wounded, MECHALL, "Your cockpit is destroyed!");
-    if (!(MechStatus(wounded) & LANDED)) {
+    if (!mech_is_landed(wounded)) {
       mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
       mech_los_broadcast(wounded, "falls from the sky!");
     }
@@ -653,10 +661,10 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     mech_notify(wounded, MECHALL, "Your fuel tank explodes in a ball of fire!");
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s fuel tank explodes in a ball of fire!");
-    MechZ(wounded) = MechElevation(wounded);
-    MechFZ(wounded) = ZSCALE * MechZ(wounded);
-    MechSpeed(wounded) = 0.0;
-    MechVerticalSpeed(wounded) = 0.0;
+    mech_position_z_set(wounded, mech_position_elevation(wounded));
+    mech_position_real_z_sync(wounded);
+    mech_current_speed_set(wounded, 0.0);
+    mech_vertical_speed_set(wounded, 0.0);
     DestroyMech(wounded, attacker, 1, KILL_TYPE_FUELTANK);
     mech_explosion_apply(wounded, attacker);
     break;
@@ -664,12 +672,12 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     /* Ammo/Power Plant Explodes */
     mech_notify(wounded, MECHALL, "Your power plant explodes!");
     mech_los_broadcast(wounded, "'s power plant suddenly explodes!");
-    MechZ(wounded) = MechElevation(wounded);
-    MechFZ(wounded) = ZSCALE * MechZ(wounded);
-    MechSpeed(wounded) = 0.0;
-    MechVerticalSpeed(wounded) = 0.0;
+    mech_position_z_set(wounded, mech_position_elevation(wounded));
+    mech_position_real_z_sync(wounded);
+    mech_current_speed_set(wounded, 0.0);
+    mech_vertical_speed_set(wounded, 0.0);
     DestroyMech(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
-    if (!(MechSections(wounded)[BSIDE].config & CASE_TECH))
+    if (!mech_section_configuration_has(wounded, BSIDE, CASE_TECH))
       mech_explosion_apply(wounded, attacker);
     else
       DestroySection(wounded, attacker, LOS, BSIDE);

@@ -105,6 +105,8 @@ bool mech_supercharger_counter_regenerate(Mech *mech);
 void mech_hip_damage_set(Mech *mech, bool damaged, bool destroyed);
 void mech_turret_jammed_set(Mech *mech, bool jammed);
 void mech_turret_locked_set(Mech *mech, bool locked);
+void mech_crew_stunned_set(Mech *mech, bool stunned);
+void mech_tail_rotor_destroyed_set(Mech *mech, bool destroyed);
 void mech_stunned_set(Mech *mech, bool stunned);
 void mech_searchlight_set(Mech *mech, bool enabled);
 void mech_stealth_armor_active_set(Mech *mech, bool active);

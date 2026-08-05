@@ -274,6 +274,20 @@ void mech_turret_locked_set(Mech *mech, bool locked) {
     mech->rd.tankcritstatus &= ~TURRET_LOCKED;
 }
 
+void mech_crew_stunned_set(Mech *mech, bool stunned) {
+  if (stunned)
+    mech->rd.tankcritstatus |= CREW_STUNNED;
+  else
+    mech->rd.tankcritstatus &= ~CREW_STUNNED;
+}
+
+void mech_tail_rotor_destroyed_set(Mech *mech, bool destroyed) {
+  if (destroyed)
+    mech->rd.tankcritstatus |= TAIL_ROTOR_DESTROYED;
+  else
+    mech->rd.tankcritstatus &= ~TAIL_ROTOR_DESTROYED;
+}
+
 void mech_stunned_set(Mech *mech, bool stunned) {
   if (stunned)
     mech->rd.critstatus |= MECH_STUNNED;

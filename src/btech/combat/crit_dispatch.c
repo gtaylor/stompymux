@@ -79,7 +79,8 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       mech_class(wounded) == CLASS_VEH_NAVAL) {
     if (btech_context_uses_advanced_vehicle_criticals(context)) {
       for (i = 0; i < num; i++)
-        HandleAdvFasaVehicleCrit(wounded, attacker, LOS, hitloc, num);
+        mech_advanced_vehicle_critical_handle(wounded, attacker, LOS, hitloc,
+                                              num);
 
       return;
     } else if (!btech_context_uses_fasa_criticals(context)) {
@@ -97,12 +98,13 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
   if (mech_class(wounded) == CLASS_VTOL) {
     if (btech_context_uses_advanced_vtol_criticals(context)) {
       for (i = 0; i < num; i++)
-        HandleAdvFasaVehicleCrit(wounded, attacker, LOS, hitloc, num);
+        mech_advanced_vehicle_critical_handle(wounded, attacker, LOS, hitloc,
+                                              num);
 
       return;
     } else {
       for (i = 0; i < num; i++)
-        HandleVTOLCrit(wounded, attacker, LOS, hitloc, num);
+        mech_vtol_critical_handle(wounded, attacker, LOS, hitloc, num);
 
       return;
     }
