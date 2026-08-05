@@ -487,7 +487,7 @@ float findC3Range(Mech *mech, Mech *mechTarget, float realRange, DbRef *c3Ref,
     }
   } else {
     if (C3iDestroyed(mech)) {
-      validateC3iNetwork(mech);
+      mech_c3i_network_validate(mech);
 
       return realRange;
     }

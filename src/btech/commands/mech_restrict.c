@@ -155,7 +155,7 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     if (!(oldmap = ValidMap(mech_context(mech), player, mech_map_dbref(mech))))
       return;
     mech_targeting_tag_clear(mech);
-    clearC3iNetwork(mech, 1);
+    mech_c3i_network_clear(mech, 1);
     clearC3Network(mech, 1);
     remove_mech_from_map(oldmap, mech);
   }

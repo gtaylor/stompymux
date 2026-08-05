@@ -535,7 +535,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       MechCritStatus(wounded) |= C3I_DESTROYED;
       mech_notify(wounded, MECHALL, "Your C3i system has been destroyed!");
 
-      clearC3iNetwork(mech, 1);
+      mech_c3i_network_clear(mech, 1);
       break;
     case TAG:
       MechCritStatus(wounded) |= TAG_DESTROYED;
