@@ -41,7 +41,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
         break;
       case 9:
         /*  Destroy Main Weapon but do not destroy armor */
-        DestroyMainWeapon(mech);
+        mech_main_weapon_destroy(mech);
         hitloc = 0;
         break;
       case 10:
@@ -79,7 +79,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
         break;
       case 9:
         /* Destroy Main Weapon but do not destroy armor */
-        DestroyMainWeapon(mech);
+        mech_main_weapon_destroy(mech);
         break;
       case 10:
       case 11:

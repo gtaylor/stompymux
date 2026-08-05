@@ -22,22 +22,24 @@
 #include "failures.h"
 #include "map.h"
 #include "map_terrain.h"
-#include "mech.h"
 #include "mech_ammodump_api.h"
 #include "mech_c3_api.h"
 #include "mech_c3i_api.h"
 #include "mech_combat_misc_api.h"
+#include "mech_condition_api.h"
 #include "mech_damage_api.h"
 #include "mech_enhanced_criticals_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
 #include "mech_sensor.h"
+#include "mech_specification_api.h"
 #include "mech_tag_api.h"
 #include "mech_tech_commands_api.h"
 #include "mech_update_api.h"
@@ -50,8 +52,9 @@
 #include "mux/support/formatting.h"
 #include "random.h"
 #include "registry_api.h"
+#include "section_types.h"
 
-void DestroyMainWeapon(Mech *mech) {
+void mech_main_weapon_destroy(Mech *mech) {
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
   int critical[MAX_WEAPS_SECTION];
@@ -64,16 +67,17 @@ void DestroyMainWeapon(Mech *mech) {
   int critfound = 0;
   unsigned char maxtype = 0;
   int firstCrit = 0;
+  BtechContext *context = mech_context(mech);
 
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    if (SectIsDestroyed(mech, loop))
+    if (mech_section_is_destroyed(mech, loop))
       continue;
-    count = FindWeapons(mech, loop, weaparray, weapdata, critical);
+    count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
       for (ii = 0; ii < count; ii++) {
-        if (!PartIsBroken(mech, loop, critical[ii])) {
+        if (!mech_critical_is_broken(mech, loop, critical[ii])) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
-          tempcrit = (int)btech_random_i31(&mech->xcode.context->random);
+          tempcrit = (int)btech_context_random_i31(context);
           if (tempcrit > maxcrit) {
             critfound = 1;
             maxcrit = tempcrit;
@@ -93,13 +97,15 @@ void DestroyMainWeapon(Mech *mech) {
   }
 }
 
-void HandleFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
-                           int num) {
-  if (MechMove(wounded) == MOVE_NONE)
+void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
+                                       int hitloc, int num) {
+  BtechContext *context = mech_context(wounded);
+
+  if (mech_movement_type(wounded) == MOVE_NONE)
     return;
 
   mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-  switch (btech_random_range(wounded->xcode.context, 0, 5)) {
+  switch (btech_random_range(context, 0, 5)) {
   case 0:
     /* Crew stunned for one turn...treat like a head hit */
     headhitmwdamage(wounded, attacker, 1);
@@ -136,7 +142,7 @@ void HandleFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s power plant suddenly explodes!");
     DestroyMech(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
-    if (!(MechSections(wounded)[BSIDE].config & CASE_TECH))
+    if (!mech_section_has_special(wounded, BSIDE, CASE_TECH))
       explode_unit(wounded, attacker);
     else
       DestroySection(wounded, attacker, LOS, BSIDE);
@@ -144,29 +150,32 @@ void HandleFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
   }
 }
 
-void HandleVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
-                       int num) {
-  if (MechMove(wounded) == MOVE_NONE)
+void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
+                                  int hitloc, int num) {
+  BtechContext *context = mech_context(wounded);
+  MechConditionSummary condition = mech_condition_summary(wounded);
+
+  if (mech_movement_type(wounded) == MOVE_NONE)
     return;
   if (hitloc == TURRET) {
-    if (btech_random_range(wounded->xcode.context, 1, 3) == 2) {
-      if (!(MechTankCritStatus(wounded) & TURRET_LOCKED)) {
+    if (btech_random_range(context, 1, 3) == 2) {
+      if (!condition.turret_locked) {
         mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-        MechTankCritStatus(wounded) |= TURRET_LOCKED;
+        mech_turret_locked_set(wounded, true);
         mech_notify(wounded, MECHALL,
                     "Your turret takes a direct hit and locks up!");
       }
       return;
     }
   } else
-    switch (btech_random_range(wounded->xcode.context, 1, 10)) {
+    switch (btech_random_range(context, 1, 10)) {
     case 1:
     case 2:
     case 3:
     case 4:
-      if (!Fallen(wounded)) {
+      if (!condition.fallen) {
         mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-        switch (MechMove(wounded)) {
+        switch (mech_movement_type(wounded)) {
         case MOVE_TRACK:
           mech_notify(wounded, MECHALL, "One of your tracks is damaged!");
           break;
@@ -187,9 +196,9 @@ void HandleVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       return;
       break;
     case 5:
-      if (!Fallen(wounded)) {
+      if (!condition.fallen) {
         mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-        switch (MechMove(wounded)) {
+        switch (mech_movement_type(wounded)) {
         case MOVE_TRACK:
           mech_notify(
               wounded, MECHALL,
@@ -218,7 +227,7 @@ void HandleVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       break;
     }
   mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-  switch (btech_random_range(wounded->xcode.context, 0, 5)) {
+  switch (btech_random_range(context, 0, 5)) {
   case 0:
     /* Crew stunned for one turn...treat like a head hit */
     headhitmwdamage(wounded, attacker, 1);

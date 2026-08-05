@@ -20,7 +20,7 @@ int handleWeaponCrit(Mech *attacker, Mech *wounded, int hitloc, int critHit,
                      int critType, int LOS);
 void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                     int num);
-void DestroyMainWeapon(Mech *mech);
+void mech_main_weapon_destroy(Mech *mech);
 void JamMainWeapon(Mech *mech);
 void pickRandomWeapon(Mech *objMech, int wLoc, int *critNum, int wIgnoreJams);
 void limitSpeedToCruise(Mech *objMech);
@@ -47,10 +47,10 @@ void DoVTOLRotorDestroyedCrit(Mech *objMech, Mech *objAttacker, int LOS);
 void StartVTOLCrash(Mech *objMech);
 void HandleAdvFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS,
                               int hitloc, int num);
-void HandleFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
-                           int num);
-void HandleVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
-                       int num);
+void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
+                                       int hitloc, int num);
+void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
+                                  int hitloc, int num);
 int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                    int critHit, int critType, int critData);
 void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,

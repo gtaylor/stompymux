@@ -84,11 +84,11 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       return;
     } else if (!btech_context_uses_fasa_criticals(context)) {
       for (i = 0; i < num; i++)
-        HandleVehicleCrit(wounded, attacker, LOS, hitloc, num);
+        mech_vehicle_critical_handle(wounded, attacker, LOS, hitloc, num);
       return;
     } else if (btech_context_uses_fasa_criticals(context)) {
       for (i = 0; i < num; i++)
-        HandleFasaVehicleCrit(wounded, attacker, LOS, hitloc, num);
+        mech_fasa_vehicle_critical_handle(wounded, attacker, LOS, hitloc, num);
       return;
     }
   }

@@ -268,6 +268,11 @@ void btech_context_hit_roll_record(BtechContext *context, int roll) {
   context->random.statistics.total_hit_rolls++;
 }
 
+long btech_context_random_i31(BtechContext *context) {
+  assert(context != nullptr);
+  return btech_random_i31(&context->random);
+}
+
 int btech_context_event_data_count(const BtechContext *context, int event_type,
                                    intptr_t event_data) {
   assert(context != nullptr);
