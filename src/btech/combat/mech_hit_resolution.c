@@ -166,8 +166,9 @@ int determineDamageFromHit(Mech *mech, int wSection, int wCritSlot,
       mech_notify(mech, MECHALL, "The woods absorb some of your shot!");
       mech_notify(hitMech, MECHALL, "The woods absorb some of the damage!");
 
-      possibly_ignite_or_clear(mech, weapindx, wAmmoMode, wClearDamage,
-                               MechX(hitMech), MechY(hitMech), 1);
+      mech_terrain_possibly_ignite_or_clear(mech, weapindx, wAmmoMode,
+                                            wClearDamage, MechX(hitMech),
+                                            MechY(hitMech), 1);
     }
   }
 
@@ -298,7 +299,8 @@ void HitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
                  0, weapindx, bth, weapindx, wAmmoMode, tIsSwarmAttack);
 
     } else {
-      hex_hit(mech, hitX, hitY, weapindx, wAmmoMode, wWeapDamage, 1);
+      mech_terrain_hex_hit(mech, hitX, hitY, weapindx, wAmmoMode, wWeapDamage,
+                           1);
     }
 
     return;
@@ -404,7 +406,8 @@ void HitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
             personal_combat_damage_to_unit(hitMech, weapindx, wWeapDamage), 0,
             weapindx, bth, weapindx, wAmmoMode, tIsSwarmAttack);
       } else
-        hex_hit(mech, hitX, hitY, weapindx, wAmmoMode, wWeapDamage, 1);
+        mech_terrain_hex_hit(mech, hitX, hitY, weapindx, wAmmoMode, wWeapDamage,
+                             1);
 
       num_missiles_hit--;
     }

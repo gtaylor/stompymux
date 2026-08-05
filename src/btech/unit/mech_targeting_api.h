@@ -32,6 +32,8 @@ int mech_aim_section(const Mech *mech);
 int mech_aim_unit_class(const Mech *mech);
 bool mech_targets_building(const Mech *mech);
 bool mech_targets_hex(const Mech *mech);
+bool mech_targets_hex_for_ignition(const Mech *mech);
+bool mech_targets_hex_for_clearing(const Mech *mech);
 bool mech_targets_hex_or_building(const Mech *mech);
 void mech_targeting_tag_clear(Mech *mech);
 bool mech_targeting_has_lock_on(const Mech *mech, DbRef target);

@@ -292,8 +292,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     mech_c3_track_emit(mech, c3Ref, c3Mech);
 
     mech_printf(mech, MECHALL, "You fire %s %s (%d,%d) - BTH: %d  %s",
-                &MechWeapons[weapindx].name[3], hex_target_id(mech), mapx, mapy,
-                baseToHit, buf);
+                &MechWeapons[weapindx].name[3],
+                mech_hex_target_description(mech), mapx, mapy, baseToHit, buf);
 
     /* Switching to Exile method of tracking xp, where we split
      * Attacking and Piloting xp into two different channels
@@ -616,9 +616,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
               wGattlingShots, MechWeapons[weapindx].damage,
               GetPartAmmoMode(mech, section, critical), type, modifier, 1);
 
-          possibly_ignite_or_clear(mech, weapindx,
-                                   GetPartAmmoMode(mech, section, critical),
-                                   tempDamage, mapx, mapy, 0);
+          mech_terrain_possibly_ignite_or_clear(
+              mech, weapindx, GetPartAmmoMode(mech, section, critical),
+              tempDamage, mapx, mapy, 0);
         }
       }
     }

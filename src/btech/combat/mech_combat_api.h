@@ -20,16 +20,19 @@ void mech_settarget(DbRef player, void *data, char *buffer);
 void mech_fireweapon(DbRef player, void *data, char *buffer);
 int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
                      int argc, char **args, int sight);
-char *hex_target_id(Mech *mech);
+const char *mech_hex_target_description(const Mech *mech);
 int canClearOrIgnite(int weapindx);
-void possibly_ignite(Mech *mech, BattleMap *map, int weapindx, int ammoMode,
-                     int x, int y, int intentional);
-void possibly_clear(Mech *mech, BattleMap *map, int weapindx, int ammoMode,
-                    int damage, int x, int y, int intentional);
-void possibly_ignite_or_clear(Mech *mech, int weapindx, int ammoMode,
-                              int damage, int x, int y, int intentional);
-void hex_hit(Mech *mech, int x, int y, int weapindx, int ammoMode, int damage,
-             int ishit);
+void mech_terrain_possibly_ignite(Mech *mech, BattleMap *map, int weapon_index,
+                                  int ammunition_mode, int x, int y,
+                                  int intentional);
+void mech_terrain_possibly_clear(Mech *mech, BattleMap *map, int weapon_index,
+                                 int ammunition_mode, int damage, int x, int y,
+                                 int intentional);
+void mech_terrain_possibly_ignite_or_clear(Mech *mech, int weapon_index,
+                                           int ammunition_mode, int damage,
+                                           int x, int y, int intentional);
+void mech_terrain_hex_hit(Mech *mech, int x, int y, int weapon_index,
+                          int ammunition_mode, int damage, int hit);
 int weapon_failure_stuff(Mech *mech, int *weapnum, int *weapindx, int *section,
                          int *critical, int *ammoLoc, int *ammoCrit,
                          int *ammoLoc1, int *ammoCrit1, int *modifier,

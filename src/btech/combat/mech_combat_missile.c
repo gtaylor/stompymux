@@ -76,8 +76,9 @@ void Missile_Hit(Mech *mech, Mech *target, int hitX, int hitY, int isrear,
     else
       num_missiles_hit = total_damage / damage;
 
-    possibly_ignite_or_clear(mech, weapindx, ammoMode, clear_damage,
-                             MechX(target), MechY(target), 1);
+    mech_terrain_possibly_ignite_or_clear(mech, weapindx, ammoMode,
+                                          clear_damage, MechX(target),
+                                          MechY(target), 1);
 
     strcpy(buf, "");
 
@@ -117,7 +118,8 @@ void Missile_Hit(Mech *mech, Mech *target, int hitX, int hitY, int isrear,
                  personal_combat_damage_to_unit(target, weapindx, this_damage),
                  0, weapindx, bth, weapindx, ammoMode, tIsSwarmAttack);
     } else {
-      hex_hit(mech, hitX, hitY, weapindx, ammoMode, this_damage, 1);
+      mech_terrain_hex_hit(mech, hitX, hitY, weapindx, ammoMode, this_damage,
+                           1);
     }
 
     num_missiles_hit -= this_time;
@@ -349,8 +351,8 @@ int MissileHitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
     if (hitMech)
       Inferno_Hit(mech, hitMech, hit, LOS);
     else
-      hex_hit(mech, hitX, hitY, weapindx,
-              GetPartAmmoMode(mech, wSection, wCritSlot), 0, 0);
+      mech_terrain_hex_hit(mech, hitX, hitY, weapindx,
+                           GetPartAmmoMode(mech, wSection, wCritSlot), 0, 0);
   } else {
     if (mech->xcode.context->configuration->btech_glancing_blows &&
         (player_roll == baseToHit) && hitMech) {

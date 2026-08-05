@@ -29,7 +29,6 @@
 #include "map_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
 #include "mech_bth_api.h"
 #include "mech_build_api.h"
 #include "mech_combat.h"
@@ -42,13 +41,14 @@
 #include "mech_events_api.h"
 #include "mech_hitloc_api.h"
 #include "mech_ice_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_spot_api.h"
+#include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "missile_hit_registry.h"
@@ -61,14 +61,14 @@
 #include "registry_api.h"
 #include "weapon_settings.h"
 
-char *hex_target_id(Mech *mech) {
-  if (MechStatus(mech) & LOCK_HEX_IGN)
+const char *mech_hex_target_description(const Mech *mech) {
+  if (mech_targets_hex_for_ignition(mech))
     return "at the hex, trying to ignite it";
-  if (MechStatus(mech) & LOCK_HEX_CLR)
+  if (mech_targets_hex_for_clearing(mech))
     return "at the hex, trying to clear it";
-  if (MechStatus(mech) & LOCK_HEX)
+  if (mech_targets_hex(mech))
     return "at the hex";
-  if (MechStatus(mech) & LOCK_BUILDING)
+  if (mech_targets_building(mech))
     return "at the building at";
   return "at";
 }
@@ -99,7 +99,7 @@ Buildings can't accidently be set on fire.
 
 */
 
-int canWeaponIgnite(int weapindx) {
+static bool weapon_can_ignite(int weapindx) {
   if (strcmp(&MechWeapons[weapindx].name[3], "ERSmallLaser") &&
       strcmp(&MechWeapons[weapindx].name[3], "SmallLaser") &&
       strcmp(&MechWeapons[weapindx].name[3], "SmallPulseLaser") &&
@@ -122,7 +122,7 @@ int canWeaponIgnite(int weapindx) {
   return 0;
 }
 
-int canWeaponClear(int weapindx) {
+static bool weapon_can_clear(int weapindx) {
   if (strcmp(&MechWeapons[weapindx].name[3], "ERSmallLaser") &&
       strcmp(&MechWeapons[weapindx].name[3], "SmallLaser") &&
       strcmp(&MechWeapons[weapindx].name[3], "SmallPulseLaser") &&
@@ -153,10 +153,10 @@ int canWeaponClear(int weapindx) {
   return 0;
 }
 
-void possibly_ignite(Mech *mech, BattleMap *map, int weapindx, int ammoMode,
-                     int x, int y, int intentional) {
+void mech_terrain_possibly_ignite(Mech *mech, BattleMap *map, int weapindx,
+                                  int ammoMode, int x, int y, int intentional) {
   char terrain = map_terrain_get(map, x, y);
-  int roll = btech_random_roll(mech->xcode.context);
+  int roll = btech_random_roll(mech_context(mech));
   int bth = 13;
 
   if (MechWeapons[weapindx].special & PCOMBAT)
@@ -172,21 +172,22 @@ void possibly_ignite(Mech *mech, BattleMap *map, int weapindx, int ammoMode,
     bth = 5;
   else if (IsBallistic(weapindx) && (ammoMode & AC_FLECHETTE_MODE))
     bth = 5;
-  else if (IsEnergy(weapindx) && canWeaponIgnite(weapindx))
+  else if (IsEnergy(weapindx) && weapon_can_ignite(weapindx))
     bth = 5;
   else if ((IsMissile(weapindx) || IsBallistic(weapindx)) &&
-           canWeaponIgnite(weapindx))
+           weapon_can_ignite(weapindx))
     bth = 9;
 
   if (roll >= bth)
     fire_hex(mech, x, y, intentional);
 }
 
-void possibly_clear(Mech *mech, BattleMap *map, int weapindx, int ammoMode,
-                    int damage, int x, int y, int intentional) {
+void mech_terrain_possibly_clear(Mech *mech, BattleMap *map, int weapindx,
+                                 int ammoMode, int damage, int x, int y,
+                                 int intentional) {
   int igniteBTH = 5; /* This is for intentional clearing */
-  int igniteRoll = btech_random_roll(mech->xcode.context);
-  int clearRoll = btech_random_roll(mech->xcode.context);
+  int igniteRoll = btech_random_roll(mech_context(mech));
+  int clearRoll = btech_random_roll(mech_context(mech));
 
   if (MechWeapons[weapindx].special & PCOMBAT)
     return;
@@ -195,11 +196,12 @@ void possibly_clear(Mech *mech, BattleMap *map, int weapindx, int ammoMode,
     igniteBTH = 3;
 
   if (igniteRoll <= igniteBTH) {
-    possibly_ignite(mech, map, weapindx, ammoMode, x, y, intentional);
+    mech_terrain_possibly_ignite(mech, map, weapindx, ammoMode, x, y,
+                                 intentional);
     return;
   }
 
-  if (!canWeaponClear(weapindx))
+  if (!weapon_can_clear(weapindx))
     return;
 
   if (clearRoll > damage)
@@ -209,43 +211,45 @@ void possibly_clear(Mech *mech, BattleMap *map, int weapindx, int ammoMode,
   possibly_remove_mines(mech, x, y);
 }
 
-void possibly_ignite_or_clear(Mech *mech, int weapindx, int ammoMode,
-                              int damage, int x, int y, int intentional) {
+void mech_terrain_possibly_ignite_or_clear(Mech *mech, int weapindx,
+                                           int ammoMode, int damage, int x,
+                                           int y, int intentional) {
   BattleMap *map;
 
-  map = btech_context_find_object(mech->xcode.context, mech->mapindex);
+  map = btech_context_find_object(mech_context(mech), mech_map_dbref(mech));
 
   if (!map)
     return;
 
-  if (MechStatus(mech) & LOCK_HEX_IGN) {
-    possibly_ignite(mech, map, weapindx, ammoMode, x, y, 1);
+  if (mech_targets_hex_for_ignition(mech)) {
+    mech_terrain_possibly_ignite(mech, map, weapindx, ammoMode, x, y, 1);
     return;
   }
 
-  if (MechStatus(mech) & LOCK_HEX_CLR) {
-    possibly_clear(mech, map, weapindx, ammoMode, damage, x, y, 1);
+  if (mech_targets_hex_for_clearing(mech)) {
+    mech_terrain_possibly_clear(mech, map, weapindx, ammoMode, damage, x, y, 1);
     return;
   }
 
-  possibly_clear(mech, map, weapindx, ammoMode, damage, x, y, intentional);
+  mech_terrain_possibly_clear(mech, map, weapindx, ammoMode, damage, x, y,
+                              intentional);
 }
 
-void hex_hit(Mech *mech, int x, int y, int weapindx, int ammoMode, int damage,
-             int ishit) {
-  if (!(MechStatus(mech) &
-        (LOCK_BUILDING | LOCK_HEX | LOCK_HEX_IGN | LOCK_HEX_CLR)))
+void mech_terrain_hex_hit(Mech *mech, int x, int y, int weapindx, int ammoMode,
+                          int damage, int ishit) {
+  if (!mech_targets_hex_or_building(mech))
     return;
 
   /* Ok.. we either try to clear/ignite the hex, or alternatively we try to hit
    * building in it */
-  if (MechStatus(mech) & LOCK_BUILDING) {
+  if (mech_targets_building(mech)) {
     if (ishit > 0)
       hit_building(mech, x, y, weapindx, damage);
   } else {
-    possibly_ignite_or_clear(mech, weapindx, ammoMode, damage, x, y, 1);
+    mech_terrain_possibly_ignite_or_clear(mech, weapindx, ammoMode, damage, x,
+                                          y, 1);
 
-    if (MechStatus(mech) & LOCK_HEX) {
+    if (mech_targets_hex(mech)) {
       possibly_blow_ice(mech, weapindx, x, y);
       possibly_blow_bridge(mech, weapindx, x, y);
     }

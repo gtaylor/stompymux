@@ -79,6 +79,14 @@ bool mech_targets_building(const Mech *mech) {
 
 bool mech_targets_hex(const Mech *mech) { return mech->rd.status & LOCK_HEX; }
 
+bool mech_targets_hex_for_ignition(const Mech *mech) {
+  return mech->rd.status & LOCK_HEX_IGN;
+}
+
+bool mech_targets_hex_for_clearing(const Mech *mech) {
+  return mech->rd.status & LOCK_HEX_CLR;
+}
+
 bool mech_targets_hex_or_building(const Mech *mech) {
   return mech->rd.status &
          (LOCK_HEX | LOCK_BUILDING | LOCK_HEX_IGN | LOCK_HEX_CLR);
