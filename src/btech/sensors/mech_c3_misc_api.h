@@ -5,23 +5,28 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 typedef struct BtechContext BtechContext;
+typedef struct Mech Mech;
 
 #include "mux/server/platform.h"
 
-Mech *getMechInTempNetwork(BtechContext *context, int wIdx, DbRef *myNetwork,
-                           int networkSize);
-Mech *getOtherMechInNetwork(Mech *mech, int wIdx, int tCheckECM,
-                            int tCheckStarted, int tCheckUncon, int tIsC3);
-void buildTempNetwork(Mech *mech, DbRef *myNetwork, int *networkSize,
-                      int tCheckECM, int tCheckStarted, int tCheckUncon,
-                      int tIsC3);
-void sendNetworkMessage(DbRef player, Mech *mech, char *msg, int tIsC3);
-void showNetworkTargets(DbRef player, Mech *mech, int tIsC3);
-void showNetworkData(DbRef player, Mech *mech, int tIsC3);
-int mechSeenByNetwork(Mech *mech, Mech *mechTarget, int isC3);
-float findC3Range(Mech *mech, Mech *mechTarget, float realRange, DbRef *c3Ref,
-                  int tIsC3);
-float findC3RangeWithNetwork(Mech *mech, Mech *mechTarget, float realRange,
-                             DbRef *myNetwork, int networkSize, DbRef *c3Ref);
-void debugC3(BtechContext *context, char *msg);
+Mech *mech_network_temporary_unit(BtechContext *context, int index,
+                                  const DbRef *network, int network_size);
+Mech *mech_network_unit(Mech *mech, int index, bool check_ecm,
+                        bool check_started, bool check_unconscious, bool is_c3);
+void mech_network_build_temporary(Mech *mech, DbRef *network, int *network_size,
+                                  bool check_ecm, bool check_started,
+                                  bool check_unconscious, bool is_c3);
+void mech_network_send_message(DbRef player, Mech *mech, const char *message,
+                               bool is_c3);
+void mech_network_show_targets(DbRef player, Mech *mech, bool is_c3);
+void mech_network_show_status(DbRef player, Mech *mech, bool is_c3);
+int mech_network_visibility(Mech *mech, Mech *target, bool is_c3);
+float mech_network_range(Mech *mech, Mech *target, float real_range,
+                         DbRef *c3_reference, bool is_c3);
+float mech_network_range_with_members(Mech *mech, Mech *target,
+                                      float real_range, const DbRef *network,
+                                      int network_size, DbRef *c3_reference);
+void mech_network_debug(BtechContext *context, const char *message);

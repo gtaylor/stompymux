@@ -30,6 +30,8 @@ int mech_target_hex_y(const Mech *mech) { return mech->rd.targy; }
 
 int mech_target_hex_z(const Mech *mech) { return mech->rd.targz; }
 
+void mech_target_hex_z_set(Mech *mech, int z) { mech->rd.targz = z; }
+
 DbRef mech_spotter_dbref(const Mech *mech) { return mech->rd.spotter; }
 
 void mech_spotter_dbref_set(Mech *mech, DbRef spotter) {

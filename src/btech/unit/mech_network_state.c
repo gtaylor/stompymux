@@ -4,6 +4,10 @@
 
 int mech_c3_network_size(const Mech *mech) { return mech->sd.wC3NetworkSize; }
 
+DbRef mech_c3_network_node(const Mech *mech, int index) {
+  return mech->sd.C3Network[index];
+}
+
 int mech_c3i_network_size(const Mech *mech) { return mech->sd.wC3iNetworkSize; }
 
 void mech_c3i_network_size_set(Mech *mech, int size) {

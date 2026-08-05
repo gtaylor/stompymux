@@ -157,14 +157,14 @@ int FindNormalBTH(Mech *mech, BattleMap *mech_map, int section, int critical,
                (MechC3NetworkSize(mech) > 0)) {
       wRangeBracket = FindBTHByC3Range(
           mech, target, section, weapindx, range,
-          findC3Range(mech, target, range, c3Ref, 1), wAmmoMode, &rbth);
+          mech_network_range(mech, target, range, c3Ref, 1), wAmmoMode, &rbth);
 
       BTHADD("C3Range", rbth);
     } else if (HasC3i(mech) && !C3iDestroyed(mech) && !AnyECMDisturbed(mech) &&
                (MechC3iNetworkSize(mech) > 0)) {
       wRangeBracket = FindBTHByC3Range(
           mech, target, section, weapindx, range,
-          findC3Range(mech, target, range, c3Ref, 0), wAmmoMode, &rbth);
+          mech_network_range(mech, target, range, c3Ref, 0), wAmmoMode, &rbth);
 
       BTHADD("C3iRange", rbth);
     } else {

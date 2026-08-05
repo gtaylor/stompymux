@@ -14,6 +14,7 @@ int mech_charge_timer(const Mech *mech);
 int mech_target_hex_x(const Mech *mech);
 int mech_target_hex_y(const Mech *mech);
 int mech_target_hex_z(const Mech *mech);
+void mech_target_hex_z_set(Mech *mech, int z);
 DbRef mech_spotter_dbref(const Mech *mech);
 void mech_spotter_dbref_set(Mech *mech, DbRef spotter);
 void mech_fire_adjustment_set(Mech *mech, int adjustment);
