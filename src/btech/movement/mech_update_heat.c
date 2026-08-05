@@ -10,7 +10,7 @@
 
 #include "mech_update_internal.h"
 
-static int EnableSomeHS(Mech *mech, int numsinks) {
+static int mech_heat_sinks_enable(Mech *mech, int numsinks) {
 
   numsinks = MIN(numsinks,
                  (MechSpecials(mech) & (DOUBLE_HEAT_TECH | CLAN_TECH)) ? 4 : 2);
@@ -32,7 +32,7 @@ static int EnableSomeHS(Mech *mech, int numsinks) {
   return numsinks;
 }
 
-static int DisableSomeHS(Mech *mech, int numsinks) {
+static int mech_heat_sinks_disable(Mech *mech, int numsinks) {
 
   numsinks = MIN(numsinks,
                  (MechSpecials(mech) & (DOUBLE_HEAT_TECH | CLAN_TECH)) ? 4 : 2);
@@ -148,18 +148,18 @@ void mech_heat_update(Mech *mech) {
         }
 
   /* Handle heat cutoff now */
-  /* En/DisableSomeHS() take care of MechMinusHeat also. */
+  /* Sink enable/disable helpers also adjust heat dissipation. */
   /* Re-Written to use Exile's code - Dany 12/05 */
   if (Heatcutoff(mech)) {
     float overheat = MechPlusHeat(mech) - MechMinusHeat(mech);
 
     if (overheat >= 10.)
-      EnableSomeHS(mech, floor(overheat - 10.) + 1);
+      mech_heat_sinks_enable(mech, floor(overheat - 10.) + 1);
     else if (overheat < 9.)
-      DisableSomeHS(mech, floor(9. - overheat) + 1);
+      mech_heat_sinks_disable(mech, floor(9. - overheat) + 1);
 
   } else if (MechDisabledHS(mech)) {
-    EnableSomeHS(mech, 100);
+    mech_heat_sinks_enable(mech, 100);
   }
 
   MechHeat(mech) = MechPlusHeat(mech) - MechMinusHeat(mech);
