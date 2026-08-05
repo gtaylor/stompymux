@@ -150,6 +150,13 @@ int mech_upper_surface_elevation(Mech *mech) {
              : mech_position_surface_elevation(mech);
 }
 
+int mech_height_above_surface(Mech *mech) {
+  int upper = mech_upper_surface_elevation(mech);
+  return mech_position_z(mech) - (upper <= mech_position_z(mech)
+                                      ? upper
+                                      : mech_lower_surface_elevation(mech));
+}
+
 void mech_jump_land(Mech *mech) {
   Mech *target;
   BtechContext *context = mech_context(mech);

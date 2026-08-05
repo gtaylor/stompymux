@@ -28,21 +28,28 @@
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
+#include "mech_condition_api.h"
+#include "mech_crew_api.h"
 #include "mech_damage_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_fire_api.h"
 #include "mech_hitloc_api.h"
 #include "mech_ice_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
@@ -67,7 +74,8 @@
 void mech_thrash(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   Mech *target;
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  BtechContext *context = mech_context(mech);
+  BattleMap *map = btech_context_get_map(context, mech_map_dbref(mech));
   int terrain;
   int limbs = 4;
   int aLimbs[] = {RARM, LARM, LLEG, RLEG};
@@ -77,14 +85,15 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   int damage, tempDamage;
 
   cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech->xcode.context, !Fallen(mech),
+  DOCHECK_CONTEXT(context, !mech_is_fallen(mech),
                   "You need to be prone to thrash!");
-  DOCHECK_CONTEXT(mech->xcode.context, !map, "Invalid map! Contact a wizard!");
+  DOCHECK_CONTEXT(context, !map, "Invalid map! Contact a wizard!");
 
-  terrain = map_real_terrain_get(map, MechX(mech), MechY(mech));
+  terrain =
+      map_real_terrain_get(map, mech_position_x(mech), mech_position_y(mech));
 
   DOCHECK_CONTEXT(
-      mech->xcode.context,
+      context,
       !((terrain == GRASSLAND) || (terrain == ROAD) || (terrain == BRIDGE)),
       "Thrashing only works in clear terrain or on roads or bridges.");
 
@@ -92,17 +101,18 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   for (i = 0; i < 4; i++) {
     tempLoc = aLimbs[i];
 
-    if (SectIsDestroyed(mech, tempLoc)) {
+    if (mech_section_is_destroyed(mech, tempLoc)) {
       limbs--;
       continue;
     }
 
-    ArmorStringFromIndex(tempLoc, locName, MechType(mech), MechMove(mech));
+    ArmorStringFromIndex(tempLoc, locName, mech_class(mech),
+                         mech_movement_type(mech));
 
-    DOCHECK_CONTEXT(mech->xcode.context, SectHasBusyWeap(mech, tempLoc),
+    DOCHECK_CONTEXT(context, mech_section_has_recycling_weapon(mech, tempLoc),
                     tprintf("You have weapons recycling on your %s.", locName));
     DOCHECK_CONTEXT(
-        mech->xcode.context, MechSections(mech)[tempLoc].recycle,
+        context, mech_section_recycle_ticks(mech, tempLoc),
         tprintf("Your %s is still recovering from your last attack.", locName));
   }
 
@@ -112,9 +122,9 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
     return;
   }
 #ifndef REALWEIGHT_DAMAGE
-  damage = MechTons(mech) / 3;
+  damage = mech_tonnage(mech) / 3;
 #else
-  damage = MechRealTons(mech) / 3;
+  damage = mech_real_tonnage(mech) / 3;
 #endif /* REALWEIGHT_DAMAGE */
 
   /* Rules say tonnage/3, not tonnage/3 * limbs  Page 151, Total Warfare*/
@@ -127,19 +137,18 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   /* Let's see who we can smack around */
   for (i = 0; i < map->first_free; i++) {
     if (map->mechsOnMap[i] >= 0) {
-      target = (Mech *)btech_context_find_object(mech->xcode.context,
-                                                 map->mechsOnMap[i]);
+      target = (Mech *)btech_context_find_object(context, map->mechsOnMap[i]);
 
       if (!target)
         continue;
 
-      if (MechType(target) != CLASS_BSUIT)
+      if (mech_class(target) != CLASS_BSUIT)
         continue;
 
-      if (MechTeam(target) == MechTeam(mech))
+      if (mech_team(target) == mech_team(mech))
         continue;
 
-      if (Jumping(target) || OODing(target))
+      if (mech_is_jumping(target) || mech_is_out_of_control(target))
         continue;
 
       if (FaMechRange(mech, target) > 1.0)
@@ -154,16 +163,14 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
 
       while (tempDamage > 0) {
         if (tempDamage > 5) {
-          DamageMech(
-              target, mech, 1, MechPilot(mech),
-              btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1),
-              0, 0, 5, 0, -1, 0, -1, 0, 1);
+          DamageMech(target, mech, 1, mech_pilot_dbref(mech),
+                     btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1), 0,
+                     0, 5, 0, -1, 0, -1, 0, 1);
           tempDamage -= 5;
         } else {
-          DamageMech(
-              target, mech, 1, MechPilot(mech),
-              btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1),
-              0, 0, tempDamage, 0, -1, 0, -1, 0, 1);
+          DamageMech(target, mech, 1, mech_pilot_dbref(mech),
+                     btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1), 0,
+                     0, tempDamage, 0, -1, 0, -1, 0, 1);
           tempDamage = 0;
         }
       }
@@ -183,7 +190,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   for (i = 0; i < 4; i++) {
     tempLoc = aLimbs[i];
 
-    if (SectIsDestroyed(mech, tempLoc))
+    if (mech_section_is_destroyed(mech, tempLoc))
       continue;
 
     mech_set_recycle_limb(mech, tempLoc, PHYSICAL_RECYCLE_TIME);

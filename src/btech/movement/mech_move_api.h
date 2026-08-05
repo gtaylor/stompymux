@@ -43,6 +43,7 @@ int mech_drop_surface_elevation(Mech *mech);
 void mech_drop_surface_set(Mech *mech, bool check_ice);
 int mech_drop_height_above_surface(Mech *mech);
 int mech_upper_surface_elevation(Mech *mech);
+int mech_height_above_surface(Mech *mech);
 void mech_jump_land(Mech *mech);
 void mech_flood_section(Mech *mech, int section, int elevation);
 void mech_flood(Mech *mech);
