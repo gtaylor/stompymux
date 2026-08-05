@@ -37,6 +37,7 @@
 #include "map_bits_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify.h"
@@ -347,10 +348,10 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
     return;
 
 #define READINT(from, to)                                                      \
-  DOCHECK_CONTEXT(map->xcode.context, Readnum(to, from), "Invalid number!")
+  DOCHECK_CONTEXT(battle_map_context(map), Readnum(to, from), "Invalid number!")
 
   argc = mech_parseattributes(buffer, args, 6);
-  DOCHECK_CONTEXT(map->xcode.context, argc < 4 || argc > 5,
+  DOCHECK_CONTEXT(battle_map_context(map), argc < 4 || argc > 5,
                   "Invalid arguments!");
   READINT(args[0], x);
   READINT(args[1], y);
@@ -359,11 +360,11 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
   if (argc == 5)
     READINT(args[4], extra);
 
-  DOCHECK_CONTEXT(map->xcode.context,
+  DOCHECK_CONTEXT(battle_map_context(map),
                   (type = compare_array(mine_type_names, args[2])) < 0,
                   "Invalid mine type!");
   DOCHECK_CONTEXT(
-      map->xcode.context,
+      battle_map_context(map),
       !((x >= 0) && (x < map->map_width) && (y >= 0) && (y < map->map_height)),
       "X,Y out of range!");
 
@@ -376,7 +377,7 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
   foo.obj = player;
   add_mapobj(map, &map->MapObject[TYPE_MINE], &foo, 1);
 
-  notify_printf(btech_context_evaluation(map->xcode.context), player,
+  notify_printf(btech_context_evaluation(battle_map_context(map)), player,
                 "%s mine added to (%d,%d) (strength: %d / extra: %d)",
                 mine_type_names[type], x, y, str, extra);
   mine_fields_recalculate(map);
