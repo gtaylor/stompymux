@@ -54,6 +54,13 @@ void btech_context_set_process_start_time(BtechContext *context,
 CommandContext *btech_context_command(BtechContext *context);
 EvaluationContext *btech_context_evaluation(BtechContext *context);
 GameDatabase *btech_context_database(BtechContext *context);
+BtechObjectId btech_context_afterlife_dbref(const BtechContext *context);
+bool btech_context_in_character_enabled(const BtechContext *context);
+int btech_context_experience_loss(const BtechContext *context);
+bool btech_context_mechwarrior_experience_loss_enabled(
+    const BtechContext *context);
+bool btech_context_transported_unit_death_enabled(const BtechContext *context);
+bool btech_context_vtol_ice_fire_enabled(const BtechContext *context);
 bool btech_context_combat_arcs_enabled(const BtechContext *context);
 void btech_context_combat_arcs_override_set(BtechContext *context, int arcs);
 void btech_context_combat_pilot_override_set(BtechContext *context,

@@ -265,7 +265,7 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
                   "Your cockpit is destroyed, your blood boils, and your body "
                   "is fried! [fg=yellow]You're dead![reset]");
       if (!mech_is_destroyed(wounded)) {
-        DestroyMech(wounded, attacker, 0, KILL_TYPE_COCKPIT);
+        mech_destroy(wounded, attacker, 0, KILL_TYPE_COCKPIT);
       }
 
       if (LOS && attacker)
@@ -275,7 +275,7 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       mech_los_broadcast(wounded,
                          "spasms for a second then remains oddly still.");
       mech_pilot_dbref_set(wounded, NOTHING);
-      KillMechContentsIfIC(wounded);
+      mech_contents_kill_if_in_character(wounded);
       break;
     case SENSORS:
       if (!mech_condition_summary(wounded).sensors_damaged) {
@@ -366,9 +366,9 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
         if (wounded != attacker && !mech_is_destroyed(wounded) && attacker)
           mech_notify(attacker, MECHALL, "You destroy the engine!");
         if (unit_is_fixable(mech))
-          DestroyMech(wounded, attacker, 1, KILL_TYPE_ENGINE);
+          mech_destroy(wounded, attacker, 1, KILL_TYPE_ENGINE);
         else
-          DestroyMech(wounded, attacker, 1, KILL_TYPE_NORMAL);
+          mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
       }
       break;
     case TARGETING_COMPUTER:

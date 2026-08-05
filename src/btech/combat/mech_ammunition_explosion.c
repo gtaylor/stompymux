@@ -34,7 +34,7 @@ void mech_ammunition_explode(Mech *attacker, Mech *mech, int ammunition_section,
   if (!attacker)
     return;
   if (ammunition_mode & INFERNO_MODE) {
-    Inferno_Hit(mech, mech, damage / 4, 0);
+    mech_inferno_hit(mech, mech, damage / 4, 0);
     if (btech_context_inferno_penalty_enabled(context))
       mech_weapon_heat_add(mech, 30.0);
     damage = damage / 2;

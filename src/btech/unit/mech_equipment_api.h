@@ -12,6 +12,8 @@ int mech_critical_ammo_mode(const Mech *mech, int section, int critical);
 int mech_critical_temporary_failure(const Mech *mech, int section,
                                     int critical);
 int mech_critical_full_ammunition(const Mech *mech, int section, int critical);
+float mech_ammunition_slot_multiplier(const Mech *mech, int section,
+                                      int critical);
 bool mech_critical_is_nonfunctional(const Mech *mech, int section,
                                     int critical);
 bool mech_critical_is_disabled(const Mech *mech, int section, int critical);

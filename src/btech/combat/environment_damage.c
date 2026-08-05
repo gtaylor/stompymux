@@ -183,13 +183,13 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
             if (mech_class(wounded) == CLASS_MECH &&
                 (hitloc == LTORSO || hitloc == RTORSO) &&
                 (mech_technology_flags(wounded) & XL_TECH))
-              DestroyMech(wounded, attacker, 1,
-                          (wounded == attacker) ? KILL_TYPE_SELF_DESTRUCT
-                                                : KILL_TYPE_XLENGINE);
+              mech_destroy(wounded, attacker, 1,
+                           (wounded == attacker) ? KILL_TYPE_SELF_DESTRUCT
+                                                 : KILL_TYPE_XLENGINE);
             else
-              DestroyMech(wounded, attacker, 1,
-                          (wounded == attacker) ? KILL_TYPE_SELF_DESTRUCT
-                                                : KILL_TYPE_NORMAL);
+              mech_destroy(wounded, attacker, 1,
+                           (wounded == attacker) ? KILL_TYPE_SELF_DESTRUCT
+                                                 : KILL_TYPE_NORMAL);
           }
           break;
         case ECM:
@@ -215,7 +215,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
   if (breach)
     if (mech_class(wounded) == CLASS_VEH_GROUND ||
         mech_class(wounded) == CLASS_VEH_NAVAL)
-      DestroyMech(wounded, attacker, 0, KILL_TYPE_NORMAL);
+      mech_destroy(wounded, attacker, 0, KILL_TYPE_NORMAL);
   if (mech_class(wounded) == CLASS_MECH || mech_class(wounded) == CLASS_MW) {
     if (breach && hitloc == HEAD) {
       if (mech_is_under_vacuum(wounded))
@@ -223,8 +223,8 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
       else
         mech_notify(wounded, MECHALL, "Water floods into your cockpit!");
 
-      KillMechContentsIfIC(wounded);
-      DestroyMech(wounded, attacker, 0, KILL_TYPE_FLOOD);
+      mech_contents_kill_if_in_character(wounded);
+      mech_destroy(wounded, attacker, 0, KILL_TYPE_FLOOD);
       return;
     }
     if (!mech_is_quad(wounded))

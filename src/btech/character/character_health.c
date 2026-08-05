@@ -249,7 +249,7 @@ int handlemwconc(Mech *mech, int initial) {
 
         // This is here to avoid multi-triggers of AMECHDEST.
         if (!mech_is_destroyed(mech))
-          DestroyMech(mech, mech, 0, KILL_TYPE_MWDAMAGE);
+          mech_destroy(mech, mech, 0, KILL_TYPE_MWDAMAGE);
 
         mech_pilot_dbref_set(mech, -1);
         mech_movement_stop(mech);
@@ -330,9 +330,9 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
       char_sbruise(s, playerBLD * 10);
       character_stats_store(context, player, s, VALUES_HEALTH);
       if (!mech_is_destroyed(mech)) {
-        DestroyMech(mech, attacker, 0, KILL_TYPE_MWDAMAGE);
+        mech_destroy(mech, attacker, 0, KILL_TYPE_MWDAMAGE);
       }
-      KillMechContentsIfIC(mech);
+      mech_contents_kill_if_in_character(mech);
       return;
     }
     char_slethal(s, lethaldam);
@@ -374,9 +374,9 @@ void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
     char_sbruise(s, lethaldam);
     character_stats_store(context, player, s, VALUES_HEALTH);
     if (!mech_is_destroyed(mech)) {
-      DestroyMech(mech, attacker, 0, KILL_TYPE_MWDAMAGE);
+      mech_destroy(mech, attacker, 0, KILL_TYPE_MWDAMAGE);
     }
-    KillMechContentsIfIC(mech);
+    mech_contents_kill_if_in_character(mech);
     return;
   }
   char_sbruise(s, playerBLD * 10 - 5);

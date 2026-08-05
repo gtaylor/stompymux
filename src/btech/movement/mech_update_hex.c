@@ -167,7 +167,7 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
           mech_notify(
               mech, MECHALL,
               "You drive into the water and your vehicle becomes inoperable.");
-          DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
+          mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
         }
 
         return;
@@ -224,7 +224,7 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
         mech_notify(
             mech, MECHALL,
             "You drive into the water and your vehicle becomes inoperable.");
-        DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
+        mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
         return;
       }
       mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
@@ -334,7 +334,7 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
           mech_notify(
               mech, MECHALL,
               "You drive into the water and your vehicle becomes inoperable.");
-          DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
+          mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
         }
 
         return;
@@ -391,7 +391,7 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
         mech_notify(
             mech, MECHALL,
             "You drive into the water and your vehicle becomes inoperable.");
-        DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
+        mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
         return;
       }
       mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);

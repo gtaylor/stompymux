@@ -349,7 +349,7 @@ int MissileHitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
 
   if (tIsInferno) {
     if (hitMech)
-      Inferno_Hit(mech, hitMech, hit, LOS);
+      mech_inferno_hit(mech, hitMech, hit, LOS);
     else
       mech_terrain_hex_hit(mech, hitX, hitY, weapindx,
                            GetPartAmmoMode(mech, wSection, wCritSlot), 0, 0);

@@ -215,7 +215,7 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
         DamageMech(tempMech, tempMech, 0, -1, hitloc, isrear, iscritical, ndam,
                    0, -1, 0, -1, 0, 0);
       }
-      heat_effect(NULL, tempMech, heatdam, 0);
+      mech_heat_effect_apply(NULL, tempMech, heatdam, 0);
     }
 }
 

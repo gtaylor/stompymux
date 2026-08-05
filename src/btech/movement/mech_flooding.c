@@ -139,8 +139,8 @@ void mech_flood(Mech *mech) {
         mech, "shudders, splashes in the water for a second, then goes limp "
               "and sinks to the bottom.");
 
-    KillMechContentsIfIC(mech);
-    DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
+    mech_contents_kill_if_in_character(mech);
+    mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
     return;
   }
 

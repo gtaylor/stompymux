@@ -25,6 +25,6 @@ bool mech_fire_hazard_resolve(Mech *mech) {
 
   mech_notify(mech, MECHALL, "You feel a tad bit too warm..");
   mech_notify(mech, MECHALL, "You faint.");
-  DestroyMech(mech, mech, 0, KILL_TYPE_HEAT);
+  mech_destroy(mech, mech, 0, KILL_TYPE_HEAT);
   return true;
 }

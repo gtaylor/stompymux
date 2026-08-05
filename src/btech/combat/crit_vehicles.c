@@ -141,7 +141,7 @@ void mech_vehicle_fuel_tank_critical_apply(Mech *objMech, Mech *objAttacker) {
   mech_position_real_z_sync(objMech);
   mech_current_speed_set(objMech, 0.0);
   mech_vertical_speed_set(objMech, 0.0);
-  DestroyMech(objMech, objAttacker, 1, KILL_TYPE_FUELTANK);
+  mech_destroy(objMech, objAttacker, 1, KILL_TYPE_FUELTANK);
   mech_explosion_apply(objMech, objAttacker);
 }
 
@@ -207,8 +207,8 @@ void mech_vehicle_crew_killed_critical_apply(Mech *objMech, Mech *objAttacker) {
       objMech, MECHALL,
       "[fg=red bold]The shot ricochets around the crew compartment, instantly "
       "killing everyone![reset]");
-  DestroyMech(objMech, objAttacker, 0, KILL_TYPE_PILOT);
-  KillMechContentsIfIC(objMech);
+  mech_destroy(objMech, objAttacker, 0, KILL_TYPE_PILOT);
+  mech_contents_kill_if_in_character(objMech);
 
   if (mech_current_speed(objMech) != 0.0)
     mech_los_broadcast(objMech, "careens out of control and starts to slow!");
@@ -611,8 +611,8 @@ void mech_vtol_critical_handle(Mech *wounded, Mech *attacker, int LOS,
       mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
       mech_los_broadcast(wounded, "falls down from the sky!");
     }
-    DestroyMech(wounded, attacker, 0, KILL_TYPE_COCKPIT);
-    KillMechContentsIfIC(wounded);
+    mech_destroy(wounded, attacker, 0, KILL_TYPE_COCKPIT);
+    mech_contents_kill_if_in_character(wounded);
     break;
   case 1:
     /* Weapon jams, set them recylcling maybe */
@@ -652,9 +652,9 @@ void mech_vtol_critical_handle(Mech *wounded, Mech *attacker, int LOS,
       mech_los_broadcast(wounded, "falls from the sky!");
     }
 
-    DestroyMech(wounded, attacker, 0, KILL_TYPE_COCKPIT);
+    mech_destroy(wounded, attacker, 0, KILL_TYPE_COCKPIT);
 
-    KillMechContentsIfIC(wounded);
+    mech_contents_kill_if_in_character(wounded);
     break;
   case 4:
     /* Fuel Tank Explodes */
@@ -665,7 +665,7 @@ void mech_vtol_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     mech_position_real_z_sync(wounded);
     mech_current_speed_set(wounded, 0.0);
     mech_vertical_speed_set(wounded, 0.0);
-    DestroyMech(wounded, attacker, 1, KILL_TYPE_FUELTANK);
+    mech_destroy(wounded, attacker, 1, KILL_TYPE_FUELTANK);
     mech_explosion_apply(wounded, attacker);
     break;
   case 5:
@@ -676,7 +676,7 @@ void mech_vtol_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     mech_position_real_z_sync(wounded);
     mech_current_speed_set(wounded, 0.0);
     mech_vertical_speed_set(wounded, 0.0);
-    DestroyMech(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
+    mech_destroy(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
     if (!mech_section_configuration_has(wounded, BSIDE, CASE_TECH))
       mech_explosion_apply(wounded, attacker);
     else

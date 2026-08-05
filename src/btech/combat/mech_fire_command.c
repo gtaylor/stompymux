@@ -494,8 +494,8 @@ int weapon_failure_stuff(Mech *mech, int *weapnum, int *weapindx, int *section,
     return 1;
   if (*type == WEAPON_JAMMED || *type == WEAPON_DUD) {
     /* Just decrement ammunition */
-    decrement_ammunition(mech, *weapindx, *section, *critical, *ammoLoc,
-                         *ammoCrit, *ammoLoc1, *ammoCrit1, wGattlingShots);
+    mech_ammunition_decrement(mech, *weapindx, *section, *critical, *ammoLoc,
+                              *ammoCrit, *ammoLoc1, *ammoCrit1, wGattlingShots);
     return 1;
   }
   if (*type == RANGE)

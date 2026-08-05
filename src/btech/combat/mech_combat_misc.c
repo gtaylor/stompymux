@@ -17,25 +17,35 @@
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_fire_api.h"
+#include "mech_heat_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_partnames_api.h"
 #include "mech_pickup_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "registry_api.h"
+#include "section_types.h"
 
-void decrement_ammunition(Mech *mech, int weapindx, int section, int critical,
-                          int ammoLoc, int ammoCrit, int ammoLoc1,
-                          int ammoCrit1, int wGattlingShots) {
+void mech_ammunition_decrement(Mech *mech, int weapindx, int section,
+                               int critical, int ammoLoc, int ammoCrit,
+                               int ammoLoc1, int ammoCrit1,
+                               int wGattlingShots) {
   int wGatSec = 0, wGatCrit = 0;
   int wShotsLeft = 0;
   int wCurShots = 0;
@@ -51,39 +61,41 @@ void decrement_ammunition(Mech *mech, int weapindx, int section, int critical,
   /* If we're a rocket launcher, fire our load and return */
   if (MechWeapons[weapindx].special == ROCKET) {
     weapSize = GetWeaponCrits(mech, weapindx);
-    firstCrit =
-        FindFirstWeaponCrit(mech, section, critical, 0,
-                            GetPartType(mech, section, critical), weapSize);
+    firstCrit = FindFirstWeaponCrit(
+        mech, section, critical, 0,
+        mech_critical_part_type(mech, section, critical), weapSize);
 
     for (i = firstCrit; i < (firstCrit + weapSize); i++) {
-      GetPartFireMode(mech, section, i) |= ROCKET_FIRED;
+      mech_critical_fire_mode_add(mech, section, i, ROCKET_FIRED);
     }
 
     return;
   }
 
   /* If we're a one-shot, set us used and return */
-  if (GetPartFireMode(mech, section, critical) & OS_MODE) {
-    GetPartFireMode(mech, section, critical) |= OS_USED;
+  if (mech_critical_fire_mode(mech, section, critical) & OS_MODE) {
+    mech_critical_fire_mode_add(mech, section, critical, OS_USED);
     return;
   }
   /* Check the state of our weapon bins */
-  ammo_expedinture_check(
+  mech_ammunition_expenditure_check(
       mech, weapindx,
       MAX(wGattlingShots,
-          ((GetPartFireMode(mech, section, critical) & ULTRA_MODE) ||
-           (GetPartFireMode(mech, section, critical) & RFAC_MODE))));
+          ((mech_critical_fire_mode(mech, section, critical) & ULTRA_MODE) ||
+           (mech_critical_fire_mode(mech, section, critical) & RFAC_MODE))));
 
-  if ((GetPartFireMode(mech, section, critical) & GATTLING_MODE) ||
+  if ((mech_critical_fire_mode(mech, section, critical) & GATTLING_MODE) ||
       (MechWeapons[weapindx].special & RAC)) {
-    if (GetPartFireMode(mech, section, critical) & GATTLING_MODE)
+    if (mech_critical_fire_mode(mech, section, critical) & GATTLING_MODE)
       wShotsLeft = wGattlingShots * 3;
     else {
-      if (GetPartFireMode(mech, section, critical) & RAC_TWOSHOT_MODE)
+      if (mech_critical_fire_mode(mech, section, critical) & RAC_TWOSHOT_MODE)
         wShotsLeft = 2;
-      else if (GetPartFireMode(mech, section, critical) & RAC_FOURSHOT_MODE)
+      else if (mech_critical_fire_mode(mech, section, critical) &
+               RAC_FOURSHOT_MODE)
         wShotsLeft = 4;
-      else if (GetPartFireMode(mech, section, critical) & RAC_SIXSHOT_MODE)
+      else if (mech_critical_fire_mode(mech, section, critical) &
+               RAC_SIXSHOT_MODE)
         wShotsLeft = 6;
       else
         wShotsLeft = 1;
@@ -92,14 +104,15 @@ void decrement_ammunition(Mech *mech, int weapindx, int section, int critical,
     while (wShotsLeft > 0) {
       FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
                             &wGatSec, &wGatCrit, AMMO_MODES, 0);
-      wCurShots = GetPartData(mech, wGatSec, wGatCrit);
+      wCurShots = mech_critical_data(mech, wGatSec, wGatCrit);
 
       if (wCurShots) {
         if (wCurShots >= wShotsLeft) {
-          SetPartData(mech, wGatSec, wGatCrit, wCurShots - wShotsLeft);
+          mech_critical_data_set(mech, wGatSec, wGatCrit,
+                                 wCurShots - wShotsLeft);
           wShotsLeft = 0;
         } else {
-          SetPartData(mech, wGatSec, wGatCrit, 0);
+          mech_critical_data_set(mech, wGatSec, wGatCrit, 0);
           wShotsLeft -= wCurShots;
         }
       }
@@ -109,35 +122,38 @@ void decrement_ammunition(Mech *mech, int weapindx, int section, int critical,
     }
   } else { /* Non-RAC/Gattling */
     /* Decrement our ammo one shot */
-    if (GetPartData(mech, ammoLoc, ammoCrit))
-      GetPartData(mech, ammoLoc, ammoCrit)--;
+    if (mech_critical_data(mech, ammoLoc, ammoCrit))
+      mech_critical_data_set(mech, ammoLoc, ammoCrit,
+                             mech_critical_data(mech, ammoLoc, ammoCrit) - 1);
 
     /* If we're ultra or rfac, decrement it again */
-    if ((GetPartFireMode(mech, section, critical) & ULTRA_MODE) ||
-        (GetPartFireMode(mech, section, critical) & RFAC_MODE))
-      if (GetPartData(mech, ammoLoc1, ammoCrit1))
-        GetPartData(mech, ammoLoc1, ammoCrit1)--;
+    if ((mech_critical_fire_mode(mech, section, critical) & ULTRA_MODE) ||
+        (mech_critical_fire_mode(mech, section, critical) & RFAC_MODE))
+      if (mech_critical_data(mech, ammoLoc1, ammoCrit1))
+        mech_critical_data_set(mech, ammoLoc1, ammoCrit1,
+                               mech_critical_data(mech, ammoLoc1, ammoCrit1) -
+                                   1);
   }
 }
 
-void ammo_expedinture_check(Mech *mech, int weapindx, int ns) {
+void mech_ammunition_expenditure_check(Mech *mech, int weapindx, int ns) {
   int targ = I2Ammo(weapindx);
   int cnt = 0, slots = 0;
   int t, t2;
   int i, j, cl;
   int sev = 0;
 
-  SetWCheck(mech);
+  mech_weight_cache_invalidate(mech);
 
-  if (!MechAmmoWarn(mech))
+  if (!mech_ammunition_warning_enabled(mech))
     return;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    cl = CritsInLoc(mech, i);
+    cl = mech_section_critical_count(mech, i);
     for (j = 0; j < cl; j++)
-      if (GetPartType(mech, i, j) == targ) {
-        cnt += GetPartData(mech, i, j);
-        slots += AmmoMod(mech, i, j);
+      if (mech_critical_part_type(mech, i, j) == targ) {
+        cnt += mech_critical_data(mech, i, j);
+        slots += mech_ammunition_slot_multiplier(mech, i, j);
       }
   }
   t = BOUNDED(3, (slots * MechWeapons[weapindx].ammoperton) / 8, 30);
@@ -149,28 +165,29 @@ void ammo_expedinture_check(Mech *mech, int weapindx, int ns) {
   else
     return;
   /* Okay, we have case of warning here */
-  if (Started(mech))
+  if (mech_is_started(mech))
     if ((sev * 65536 + weapindx) % 65536)
       mech_printf(
           mech, MECHALL, "%sWARNING: Ammo for %s is running low.[reset]",
           sev ? "[fg=red bold]" : "[fg=yellow bold]",
-          get_parts_long_name(mech->xcode.context, I2Weapon(weapindx), 0));
+          get_parts_long_name(mech_context(mech), I2Weapon(weapindx), 0));
 }
 
-void heat_effect(Mech *mech, Mech *tempMech, int heatdam, int fromInferno) {
-  if (MechType(tempMech) != CLASS_MECH && MechType(tempMech) != CLASS_MW &&
-      MechType(tempMech) != CLASS_BSUIT && !IsDS(tempMech) &&
-      MechMove(tempMech) != MOVE_NONE) {
+void mech_heat_effect_apply(Mech *mech, Mech *tempMech, int heatdam,
+                            bool fromInferno) {
+  if (mech_class(tempMech) != CLASS_MECH && mech_class(tempMech) != CLASS_MW &&
+      mech_class(tempMech) != CLASS_BSUIT && !mech_is_dropship(tempMech) &&
+      mech_movement_type(tempMech) != MOVE_NONE) {
 
-    if (((MechType(tempMech) == CLASS_VEH_GROUND) ||
-         (MechType(tempMech) == CLASS_VTOL)) &&
-        tempMech->xcode.context->configuration->btech_fasaadvvhlfire) {
+    if ((mech_class(tempMech) == CLASS_VEH_GROUND ||
+         mech_class(tempMech) == CLASS_VTOL) &&
+        btech_context_uses_advanced_vehicle_fire(mech_context(tempMech))) {
       if (fromInferno)
         vehicle_fire_start(tempMech, mech);
       else
         vehicle_fire_check(tempMech, 0);
     } else {
-      if (btech_random_roll(tempMech->xcode.context) > 8) {
+      if (btech_random_roll(mech_context(tempMech)) > 8) {
         mech_los_broadcast(tempMech, "explodes!");
         mech_notify(tempMech, MECHALL,
                     "The heat's too much for your vehicle! It blows up!");
@@ -187,10 +204,11 @@ void heat_effect(Mech *mech, Mech *tempMech, int heatdam, int fromInferno) {
 }
 
 /* Burn.. burn in hell! ;> */
-void Inferno_Hit(Mech *mech, Mech *hitMech, int missiles, int LOS) {
+void mech_inferno_hit(Mech *mech, Mech *hitMech, int missiles, bool LOS) {
   int hmod = (missiles + 1) / 2;
 
-  if (Jellied(hitMech) || mech_event_count(hitMech, EVENT_VEHICLEBURN)) {
+  if (mech_is_jellied(hitMech) ||
+      mech_event_count(hitMech, EVENT_VEHICLEBURN)) {
     mech_los_broadcast(hitMech, "burns a bit more brightly.");
     mech_notify(hitMech, MECHALL,
                 "[fg=red bold]More burning jelly joins the flames![reset]");
@@ -199,13 +217,14 @@ void Inferno_Hit(Mech *mech, Mech *hitMech, int missiles, int LOS) {
     mech_notify(hitMech, MECHALL,
                 "[fg=red bold]You are sprayed with burning jelly![reset]");
   }
-  heat_effect(mech, hitMech, hmod * 30, 1); /* 3min for _each_ missile */
+  mech_heat_effect_apply(mech, hitMech, hmod * 30,
+                         1); /* 3min for _each_ missile */
   mech_inferno_extinguish_in_water(
       hitMech); /* They could be in -2 standing or -1 prone.. Shooter just
                    wastes his missiles! */
 }
 
-void Plasma_Hit(Mech *mech, Mech *hitMech, int LOS) {
+void mech_plasma_hit(Mech *mech, Mech *hitMech, bool LOS) {
   /* For now, lets just worry about IS.PlasmaRifles
    * They are 1D6 Heat to mechs and 2D6 damage to anything else (clustered into
    * 5) We'll handle the cluster damage in HitMech
@@ -213,30 +232,32 @@ void Plasma_Hit(Mech *mech, Mech *hitMech, int LOS) {
 
   float heatadd = 0;
 
-  if (MechType(hitMech) == CLASS_MECH) {
-    heatadd = (float)btech_random_range(hitMech->xcode.context, 1, 6);
-    MechWeapHeat(hitMech) += heatadd;
+  if (mech_class(hitMech) == CLASS_MECH) {
+    heatadd = (float)btech_random_range(mech_context(hitMech), 1, 6);
+    mech_weapon_heat_add(hitMech, heatadd);
   }
 }
 
 // extern int global_kill_cheat;
-void KillMechContentsIfIC(Mech *mech) {
-  BtechContext *context = mech->xcode.context;
+void mech_contents_kill_if_in_character(Mech *mech) {
+  BtechContext *context = mech_context(mech);
+  GameDatabase *database = btech_context_database(context);
+  DbRef mech_ref = mech_dbref(mech);
 
   // global_kill_cheat = 1;
-  if (!is_in_character(context->database, mech->mynum))
+  if (!is_in_character(database, mech_ref))
     return;
-  if (!context->configuration->btech_ic ||
-      context->configuration->btech_xploss >= 1000)
-    tele_contents(context, mech->mynum, context->configuration->afterlife_dbref,
+  if (!btech_context_in_character_enabled(context) ||
+      btech_context_experience_loss(context) >= 1000)
+    tele_contents(context, mech_ref, btech_context_afterlife_dbref(context),
                   TELE_LOUD);
   else
-    tele_contents(context, mech->mynum, context->configuration->afterlife_dbref,
+    tele_contents(context, mech_ref, btech_context_afterlife_dbref(context),
                   TELE_XP | TELE_LOUD);
 }
 
-#define BOOMLENGTH 24
-static char BOOM[BOOMLENGTH][80] = {
+enum { BOOM_LENGTH = 24 };
+static const char BOOM[BOOM_LENGTH][80] = {
     "                              ________________",
     "                         ____/ (  (    )   )  \\___",
     "                        /( (  (  )   _    ))  )   )\\",
@@ -264,8 +285,9 @@ static char BOOM[BOOMLENGTH][80] = {
     "----------------------------------------------------------------------------"};
 // clang-format on
 
-void DestroyMech(Mech *target, Mech *mech, int showboom, const char *reason) {
-  BtechContext *context = target->xcode.context;
+void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason) {
+  BtechContext *context = mech_context(target);
+  GameDatabase *database = btech_context_database(context);
   int loop;
   BattleMap *mech_map;
   Mech *ttarget;
@@ -273,7 +295,7 @@ void DestroyMech(Mech *target, Mech *mech, int showboom, const char *reason) {
 
   DbRef a, b;
 
-  if (Destroyed(target)) {
+  if (mech_is_destroyed(target)) {
     if (strncmp(reason, KILL_TYPE_HEAD_TARGET, strlen(KILL_TYPE_HEAD_TARGET)) ==
         0)
       /* Need some logic in here to detect for beheadings 'after the fact' */
@@ -285,17 +307,16 @@ void DestroyMech(Mech *target, Mech *mech, int showboom, const char *reason) {
   // global_kill_cheat = 1;
 
   // Destroy Contents Right Away
-  if (context->configuration->btech_transported_unit_death) {
-    SAFE_DOLIST(context->database, a, b,
-                game_object_contents(context->database, target->mynum))
-    if (btech_context_is_mech(context, a) &&
-        is_in_character(context->database, a)) {
-      ctarget = btech_context_get_mech(mech->xcode.context, a);
+  if (btech_context_transported_unit_death_enabled(context)) {
+    SAFE_DOLIST(database, a, b,
+                game_object_contents(database, mech_dbref(target)))
+    if (btech_context_is_mech(context, a) && is_in_character(database, a)) {
+      ctarget = btech_context_get_mech(context, a);
       mech_notify(
           ctarget, MECHALL,
           "Due to your transport's destruction, your unit has been destroyed!");
       mech_udisembark(a, ctarget, "");
-      DestroyMech(ctarget, mech, 1, KILL_TYPE_TRANSPORT);
+      mech_destroy(ctarget, mech, 1, KILL_TYPE_TRANSPORT);
     }
   }
 
@@ -311,10 +332,10 @@ void DestroyMech(Mech *target, Mech *mech, int showboom, const char *reason) {
     } else
       mech_los_broadcast(target, "has been destroyed!");
     if (showboom) {
-      for (loop = 0; loop < BOOMLENGTH; loop++)
+      for (loop = 0; loop < BOOM_LENGTH; loop++)
         mech_notify(target, MECHALL, BOOM[loop]);
     }
-    switch (MechType(target)) {
+    switch (mech_class(target)) {
     case CLASS_MW:
     case CLASS_BSUIT:
       mech_notify(target, MECHALL, "You have been killed!");
@@ -323,19 +344,20 @@ void DestroyMech(Mech *target, Mech *mech, int showboom, const char *reason) {
       mech_notify(target, MECHALL, "You have been destroyed!");
       break;
     }
-    if (target->mapindex != -1) {
-      mech_map = btech_context_get_map(mech->xcode.context, target->mapindex);
-      if ((context->configuration->btech_vtol_ice_causes_fire) &&
-          (MechSpecials(target) & ICE_TECH) &&
-          (MechType(target) == CLASS_VTOL)) {
+    if (mech_map_dbref(target) != -1) {
+      mech_map = btech_context_get_map(context, mech_map_dbref(target));
+      if (btech_context_vtol_ice_fire_enabled(context) &&
+          (mech_technology_flags(target) & ICE_TECH) &&
+          mech_class(target) == CLASS_VTOL) {
         mech_los_broadcast(target, "explodes in a ball of flames!");
-        add_decoration(mech_map, MechX(target), MechY(target), TYPE_FIRE, FIRE,
+        add_decoration(mech_map, mech_position_x(target),
+                       mech_position_y(target), TYPE_FIRE, FIRE,
                        btech_random_range(context, 60, 180));
       }
     }
-    if (MechCarrying(target) > 0) {
-      if ((ttarget = btech_context_get_mech(mech->xcode.context,
-                                            MechCarrying(target)))) {
+    if (mech_carried_dbref(target) > 0) {
+      if ((ttarget =
+               btech_context_get_mech(context, mech_carried_dbref(target)))) {
         mech_notify(ttarget, MECHALL, "Your tow lines go suddenly slack!");
         mech_dropoff(GOD, target, "");
       }
@@ -348,28 +370,28 @@ void DestroyMech(Mech *target, Mech *mech, int showboom, const char *reason) {
   } else {
     mech_mark_destroyed(target);
   }
-  if (MechType(target) == CLASS_MW) {
-    if (is_in_character(context->database, target->mynum)) {
-      if (context->configuration->btech_xploss_for_mw) {
-        KillMechContentsIfIC(target);
+  if (mech_class(target) == CLASS_MW) {
+    if (is_in_character(database, mech_dbref(target))) {
+      if (btech_context_mechwarrior_experience_loss_enabled(context)) {
+        mech_contents_kill_if_in_character(target);
       } else {
-        tele_contents(context, target->mynum,
-                      context->configuration->afterlife_dbref, TELE_LOUD);
+        tele_contents(context, mech_dbref(target),
+                      btech_context_afterlife_dbref(context), TELE_LOUD);
       }
       discard_mw(target);
     }
   }
 }
 
-char *short_hextarget(Mech *mech) {
+const char *mech_hex_target_short_name(const Mech *mech) {
 
-  if (MechStatus(mech) & LOCK_HEX_IGN)
+  if (mech_targets_hex_for_ignition(mech))
     return "ign";
-  if (MechStatus(mech) & LOCK_HEX_CLR)
+  if (mech_targets_hex_for_clearing(mech))
     return "clr";
-  if (MechStatus(mech) & LOCK_HEX)
+  if (mech_targets_hex(mech))
     return "hex";
-  if (MechStatus(mech) & LOCK_BUILDING)
+  if (mech_targets_building(mech))
     return "bld";
   return "reg";
 }

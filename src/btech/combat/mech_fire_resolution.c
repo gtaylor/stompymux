@@ -299,15 +299,15 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
      * Attacking and Piloting xp into two different channels
      * And since this is neither it goes to its own channel
      */
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ATTACKS, "%s",
-                       tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)",
-                               mech->mynum, mapx, mapy, short_hextarget(mech),
-                               baseToHit, roll));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ATTACKS, "%s",
+        tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)", mech->mynum, mapx,
+                mapy, mech_hex_target_short_name(mech), baseToHit, roll));
     /*
             btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_XP,
        tprintf("#%i attacks %d,%d (%s) (weapon)
-       (%i/%i)", mech->mynum, mapx, mapy, short_hextarget(mech), baseToHit,
-       roll));
+       (%i/%i)", mech->mynum, mapx, mapy, mech_hex_target_short_name(mech),
+       baseToHit, roll));
     */
 
     /* Big Block of code here. Basicly it checks all the targets
@@ -330,12 +330,12 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
           if (MechX(tmpmech) != mapx && MechY(tmpmech) != mapy)
             continue;
           if (MechStatus2(tmpmech) & ATTACKEMIT_MECH)
-            btech_channel_send(mech->xcode.context,
-                               BTECH_CHANNEL_MECH_ATTACK_EMITS, "%s",
-                               tprintf("#%li attacks %d,%d (%s) (weapon)"
-                                       " (%i/%i)",
-                                       mech->mynum, mapx, mapy,
-                                       short_hextarget(mech), baseToHit, roll));
+            btech_channel_send(
+                mech->xcode.context, BTECH_CHANNEL_MECH_ATTACK_EMITS, "%s",
+                tprintf("#%li attacks %d,%d (%s) (weapon)"
+                        " (%i/%i)",
+                        mech->mynum, mapx, mapy,
+                        mech_hex_target_short_name(mech), baseToHit, roll));
         }
       }
     }
@@ -404,8 +404,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
 
         DamageMech(mech, mech, 0, -1, section, 0, 1, 0,
                    MechWeapons[weapindx].damage, -1, 0, -1, 0, 1);
-        decrement_ammunition(mech, weapindx, section, critical, ammoLoc,
-                             ammoCrit, ammoLoc1, ammoCrit1, wGattlingShots);
+        mech_ammunition_decrement(mech, weapindx, section, critical, ammoLoc,
+                                  ammoCrit, ammoLoc1, ammoCrit1,
+                                  wGattlingShots);
       }
 
       return;
@@ -428,8 +429,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
       mech_los_broadcast(mech, "shudders from an internal explosion!");
       DamageMech(mech, mech, 0, -1, section, 0, 0, 0,
                  MechWeapons[weapindx].damage, -1, 0, -1, 0, 1);
-      decrement_ammunition(mech, weapindx, section, critical, ammoLoc, ammoCrit,
-                           ammoLoc1, ammoCrit1, wGattlingShots);
+      mech_ammunition_decrement(mech, weapindx, section, critical, ammoLoc,
+                                ammoCrit, ammoLoc1, ammoCrit1, wGattlingShots);
       return;
     } else if (roll < 5) {
       mech_printf(
@@ -484,8 +485,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                   "[fg=red bold]The damaged ammo feed on your %s triggers an "
                   "internal explosion![reset]",
                   &(MechWeapons[weapindx].name[3]));
-      decrement_ammunition(mech, weapindx, section, critical, ammoLoc, ammoCrit,
-                           ammoLoc1, ammoCrit1, wGattlingShots);
+      mech_ammunition_decrement(mech, weapindx, section, critical, ammoLoc,
+                                ammoCrit, ammoLoc1, ammoCrit1, wGattlingShots);
     }
 
     mech_los_broadcast(mech, "shudders from an internal explosion!");
@@ -673,8 +674,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
    ****************************************/
 
   /* Decrement Ammunition */
-  decrement_ammunition(mech, weapindx, section, critical, ammoLoc, ammoCrit,
-                       ammoLoc1, ammoCrit1, wGattlingShots);
+  mech_ammunition_decrement(mech, weapindx, section, critical, ammoLoc,
+                            ammoCrit, ammoLoc1, ammoCrit1, wGattlingShots);
 
   /* Special for Heavy Gauss Rifles */
   if ((MechWeapons[weapindx].special & HVYGAUSS) &&

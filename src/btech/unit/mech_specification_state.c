@@ -172,6 +172,10 @@ bool mech_weight_cache_is_valid(const Mech *mech) {
   return mech->rd.critstatus & OWEIGHT_OK;
 }
 
+void mech_weight_cache_invalidate(Mech *mech) {
+  mech->rd.critstatus &= ~OWEIGHT_OK;
+}
+
 bool mech_speed_cache_is_valid(const Mech *mech) {
   return mech->rd.critstatus & SPEED_OK;
 }

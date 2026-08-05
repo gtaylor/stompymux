@@ -540,8 +540,8 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
       get_parts_long_name(objMech->xcode.context, I2Weapon(wWeapIdx), 0));
   mech_los_broadcast(objMech, "ejects a mangled shell!");
 
-  decrement_ammunition(objMech, wWeapNum, wSect, wSlot, ammoLoc, ammoCrit,
-                       ammoLoc1, ammoCrit1, 0);
+  mech_ammunition_decrement(objMech, wWeapNum, wSect, wSlot, ammoLoc, ammoCrit,
+                            ammoLoc1, ammoCrit1, 0);
 }
 
 void check_stagger_event(MuxEvent *event) {

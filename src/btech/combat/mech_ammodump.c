@@ -269,7 +269,7 @@ int Dump_Decrease(Mech *mech, int loc, int pos, int *hm) {
           rem = 1;
         } else
           rem = MIN(c, MechWeapons[weapindx].ammoperton / DUMP_SPEED);
-        ammo_expedinture_check(mech, weapindx, rem - 1);
+        mech_ammunition_expenditure_check(mech, weapindx, rem - 1);
         SetPartData(mech, loc, pos, c - rem);
         if (c <= rem)
           RUP(1);

@@ -233,7 +233,7 @@ void DestroySection(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
     if (CountBSuitMembers(wounded) > 0)
       goto skip_nuke;
     else if (!Destroyed(wounded))
-      DestroyMech(wounded, attacker, 1, KILL_TYPE_NORMAL);
+      mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
   } else {
     for (i = 0; i < NUM_SECTIONS; i++)
       if (GetSectOInt(wounded, i) && GetSectInt(wounded, i))
@@ -255,7 +255,7 @@ void DestroySection(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
         wounded_pilot)
       autoeject(wounded_pilot, wounded, 1);
     else
-      KillMechContentsIfIC(wounded);
+      mech_contents_kill_if_in_character(wounded);
     /* Schedule removal of the template */
     if (!IsDS(wounded))
       discard_mw(wounded);
@@ -281,12 +281,12 @@ skip_nuke:
       if (!Destroyed(wounded)) {
         if (hitloc == HEAD) {
           if (attacker && MechAim(attacker) == HEAD) {
-            DestroyMech(wounded, attacker, 1, KILL_TYPE_HEAD_TARGET);
+            mech_destroy(wounded, attacker, 1, KILL_TYPE_HEAD_TARGET);
           } else {
-            DestroyMech(wounded, attacker, 1, KILL_TYPE_BEHEADED);
+            mech_destroy(wounded, attacker, 1, KILL_TYPE_BEHEADED);
           }
         } else {
-          DestroyMech(wounded, attacker, 1, KILL_TYPE_NORMAL);
+          mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
         }
       }
       /* If it's the head or a MW's CT, kill the contents if IC */
@@ -298,7 +298,7 @@ skip_nuke:
             wounded->freqmodes[j] = 0;
             wounded->chantitle[j][0] = 0;
           }
-          KillMechContentsIfIC(wounded);
+          mech_contents_kill_if_in_character(wounded);
         }
       }
 
@@ -316,13 +316,13 @@ skip_nuke:
     /* With one exception.. */
     if (hitloc == COCKPIT && MechType(wounded) == CLASS_AERO) {
       if (!Destroyed(wounded))
-        DestroyMech(wounded, attacker, 0, KILL_TYPE_COCKPIT);
+        mech_destroy(wounded, attacker, 0, KILL_TYPE_COCKPIT);
       for (j = 0; j < FREQS; j++) {
         wounded->freq[j] = 0;
         wounded->freqmodes[j] = 0;
         wounded->chantitle[j][0] = 0;
       }
-      KillMechContentsIfIC(wounded);
+      mech_contents_kill_if_in_character(wounded);
     }
     return;
   }
@@ -354,7 +354,7 @@ skip_nuke:
 
   if (tKillMech) {
     if (!Destroyed(wounded))
-      DestroyMech(wounded, attacker, 1, KILL_TYPE_NORMAL);
+      mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
   }
 }
 

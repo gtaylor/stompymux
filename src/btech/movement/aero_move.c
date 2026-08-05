@@ -478,7 +478,7 @@ void dropship_bridge_hit(Mech *mech) {
                       mech_dbref(mech)))
     mech_notify(mech, MECHALL,
                 "DUCK! The shot seems to be coming straight for the bridge!");
-  KillMechContentsIfIC(mech);
+  mech_contents_kill_if_in_character(mech);
 }
 
 #define degsin(a) ((double)sin((double)(a) * M_PI / 180.0))

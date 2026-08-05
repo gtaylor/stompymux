@@ -33,6 +33,17 @@ int mech_critical_full_ammunition(const Mech *mech, int section, int critical) {
   return FullAmmo((Mech *)mech, section, critical);
 }
 
+float mech_ammunition_slot_multiplier(const Mech *mech, int section,
+                                      int critical) {
+  int part = mech_critical_part_type(mech, section, critical);
+  int fire_mode = mech_critical_fire_mode(mech, section, critical);
+  int ammo_mode = mech_critical_ammo_mode(mech, section, critical);
+  if (!IsAmmo(part) || (fire_mode & HALFTON_MODE) ||
+      (ammo_mode & (AC_AP_MODE | AC_PRECISION_MODE)))
+    return 1.0F;
+  return ammo_mode & AC_CASELESS_MODE ? 0.5F : 2.0F;
+}
+
 bool mech_critical_is_disabled(const Mech *mech, int section, int critical) {
   return mech_critical_fire_mode(mech, section, critical) & DISABLED_MODE;
 }

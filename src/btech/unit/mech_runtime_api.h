@@ -15,6 +15,7 @@ bool mech_is_invisible(const Mech *mech);
 bool mech_autocon_when_shutdown(const Mech *mech);
 bool mech_autocon_include_shutdown_targets(const Mech *mech);
 bool mech_armor_warning_enabled(const Mech *mech);
+bool mech_ammunition_warning_enabled(const Mech *mech);
 bool mech_suppresses_gunnery_experience(const Mech *mech);
 bool mech_player_character_initialization_begin(Mech *mech);
 bool mech_pilot_is_unconscious(const Mech *mech);

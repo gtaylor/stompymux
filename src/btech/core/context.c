@@ -71,6 +71,37 @@ GameDatabase *btech_context_database(BtechContext *context) {
   return context->database;
 }
 
+BtechObjectId btech_context_afterlife_dbref(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->afterlife_dbref;
+}
+
+bool btech_context_in_character_enabled(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_ic;
+}
+
+int btech_context_experience_loss(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_xploss;
+}
+
+bool btech_context_mechwarrior_experience_loss_enabled(
+    const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_xploss_for_mw;
+}
+
+bool btech_context_transported_unit_death_enabled(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_transported_unit_death;
+}
+
+bool btech_context_vtol_ice_fire_enabled(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_vtol_ice_causes_fire;
+}
+
 bool btech_context_combat_arcs_enabled(const BtechContext *context) {
   assert(context != nullptr);
   return context->combat_overrides.arcs;

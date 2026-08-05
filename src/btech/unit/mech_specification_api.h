@@ -50,6 +50,7 @@ void mech_bay_dbref_set(Mech *mech, int bay, DbRef bay_dbref);
 int mech_carried_cargo_weight(const Mech *mech);
 bool mech_load_cache_is_valid(const Mech *mech);
 bool mech_weight_cache_is_valid(const Mech *mech);
+void mech_weight_cache_invalidate(Mech *mech);
 bool mech_speed_cache_is_valid(const Mech *mech);
 void mech_load_cache_invalidate(Mech *mech);
 int mech_cached_calculated_weight(const Mech *mech);

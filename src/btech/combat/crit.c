@@ -90,14 +90,14 @@ void mech_explosion_apply(Mech *wounded, Mech *attacker) {
     if (is_good_obj(database, i) && is_xcode(database, i)) {
       if ((target = btech_context_get_mech(context, i))) {
         if (mech_class(target) == CLASS_BSUIT) {
-          KillMechContentsIfIC(target);
+          mech_contents_kill_if_in_character(target);
           discard_mw(target);
         }
       }
     }
   }
 
-  KillMechContentsIfIC(wounded);
+  mech_contents_kill_if_in_character(wounded);
   for (j = 0; j < NUM_SECTIONS; j++) {
     if (mech_section_original_internal(wounded, j) &&
         !mech_section_is_destroyed(wounded, j))

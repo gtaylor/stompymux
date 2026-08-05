@@ -63,7 +63,7 @@ static void swim_except(BattleMap *map, Mech *mech, int x, int y, char *msg,
         mech_notify(t, MECHALL, "Water renders your vehicle inoperable.");
         mech_los_broadcast(t,
                            "fizzles and pops as water renders it inoperable.");
-        DestroyMech(t, t, 0, KILL_TYPE_FLOOD);
+        mech_destroy(t, t, 0, KILL_TYPE_FLOOD);
       }
     }
   }
@@ -102,7 +102,7 @@ void drop_thru_ice(Mech *mech) {
     mech_notify(mech, MECHALL, "Water renders your vehicle inoperable.");
     mech_los_broadcast(mech,
                        "fizzles and pops as water renders it inoperable.");
-    DestroyMech(mech, mech, 0, KILL_TYPE_ICE);
+    mech_destroy(mech, mech, 0, KILL_TYPE_ICE);
   }
 }
 

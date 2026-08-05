@@ -35,6 +35,10 @@ bool mech_armor_warning_enabled(const Mech *mech) {
   return !(mech->rd.mech_prefs & MECHPREF_NOARMORWARN);
 }
 
+bool mech_ammunition_warning_enabled(const Mech *mech) {
+  return !(mech->rd.mech_prefs & MECHPREF_NOAMMOWARN);
+}
+
 void mech_blinded_set(Mech *mech, bool blinded) {
   if (blinded)
     mech->rd.status |= BLINDED;

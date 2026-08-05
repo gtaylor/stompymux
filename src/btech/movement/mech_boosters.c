@@ -199,7 +199,7 @@ static void mech_scharge_event(MuxEvent *e) {
         } else if (mech_engine_heat(mech) < 15) {
           mech_engine_heat_set(mech, 15);
           mech_notify(mech, MECHALL, "Your engine is destroyed!!");
-          DestroyMech(mech, mech, 1, KILL_TYPE_SCHARGE);
+          mech_destroy(mech, mech, 1, KILL_TYPE_SCHARGE);
         }
         count--;
       }

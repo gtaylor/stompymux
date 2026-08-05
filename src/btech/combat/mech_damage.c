@@ -347,8 +347,8 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
         mech_notify(attacker, MECHALL, "You shoot the craft from the sky!");
         mech_los_broadcast_unit(attacker, wounded, "shoots %s from the sky!");
       }
-      DestroyMech(wounded, attacker, !(!Landed(wounded) && Started(wounded)),
-                  KILL_TYPE_NORMAL);
+      mech_destroy(wounded, attacker, !(!Landed(wounded) && Started(wounded)),
+                   KILL_TYPE_NORMAL);
     }
     return;
   }
@@ -442,7 +442,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
                    iscritical, intDamage, -2, cause, bth, wWeapIndx, wAmmoMode,
                    tIgnoreSwarmers);
       else {
-        DestroyMech(wounded, attacker, 1, KILL_TYPE_NORMAL);
+        mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
         return;
       }
     }
@@ -474,7 +474,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
                        iscritical, intDamage, -2, cause, bth, wWeapIndx,
                        wAmmoMode, tIgnoreSwarmers);
         } else {
-          DestroyMech(wounded, attacker, 1, KILL_TYPE_NORMAL);
+          mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
           return;
         }
       }
@@ -499,7 +499,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   if (wWeapIndx > 0) {
     if (strstr(MechWeapons[wWeapIndx].name, "IS.PlasmaRifle")) {
       if (MechType(wounded) == CLASS_MECH)
-        Plasma_Hit(attacker, wounded, LOS);
+        mech_plasma_hit(attacker, wounded, LOS);
     }
   }
   /* Check to see if we blow up ammo that's dumping. */

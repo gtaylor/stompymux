@@ -208,7 +208,7 @@ static void mech_startup_event(MuxEvent *e) {
       else
         mech_los_broadcast(mech,
                            "emits some bubbles as its engines are flooded.");
-      DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
+      mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
       return;
     }
   }

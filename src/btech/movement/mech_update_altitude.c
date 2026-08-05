@@ -98,7 +98,7 @@ void mech_vtol_altitude_check(Mech *mech) {
     mech_notify(mech, MECHALL, "You crash your vehicle into the water!");
     mech_notify(mech, MECHALL, "Water pours into the cockpit....glub glub!");
     mech_los_broadcast(mech, "splashes into the water!");
-    DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
+    mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
     return;
   }
 
