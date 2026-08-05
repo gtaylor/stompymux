@@ -292,6 +292,11 @@ if [[ -e src/btech/autopilot/autopilot_ai_internal.h ]]; then
   status=1
 fi
 
+if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
+  echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
+  status=1
+fi
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1
