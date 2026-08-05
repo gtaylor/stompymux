@@ -198,7 +198,8 @@ void mech_network_build_temporary(Mech *mech, DbRef *myNetwork,
    */
   if (tIsC3) {
     if (tempNetworkSize > 0)
-      tempNetworkSize = trimC3Network(mech, myTempNetwork, tempNetworkSize);
+      tempNetworkSize =
+          mech_c3_network_trim(mech, myTempNetwork, tempNetworkSize);
   }
 
   for (i = 0; i < tempNetworkSize; i++)

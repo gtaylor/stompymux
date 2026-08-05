@@ -507,7 +507,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       break;
     case C3_MASTER:
       temp = MechWorkingC3Masters(mech);
-      MechWorkingC3Masters(mech) = countWorkingC3MastersOnMech(mech);
+      MechWorkingC3Masters(mech) = mech_c3_working_master_count(mech);
 
       if (temp == MechWorkingC3Masters(mech))
         mech_notify(wounded, MECHALL,

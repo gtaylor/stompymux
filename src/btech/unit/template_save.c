@@ -570,8 +570,8 @@ void update_specials(Mech *mech) {
 
   /* New C3 Master code */
   if (c3_master_count > 0) {
-    MechTotalC3Masters(mech) = countTotalC3MastersOnMech(mech);
-    MechWorkingC3Masters(mech) = countWorkingC3MastersOnMech(mech);
+    MechTotalC3Masters(mech) = mech_c3_total_master_count(mech);
+    MechWorkingC3Masters(mech) = mech_c3_working_master_count(mech);
 
     if (MechTotalC3Masters(mech) > 0)
       MechSpecials(mech) |= C3_MASTER_TECH;

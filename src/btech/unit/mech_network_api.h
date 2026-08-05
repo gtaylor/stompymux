@@ -3,7 +3,11 @@
 #include "mech_api_types.h"
 
 int mech_c3_network_size(const Mech *mech);
+void mech_c3_network_size_set(Mech *mech, int size);
 DbRef mech_c3_network_node(const Mech *mech, int index);
+void mech_c3_network_node_set(Mech *mech, int index, DbRef node);
+int mech_c3_working_masters(const Mech *mech);
+void mech_c3_working_masters_set(Mech *mech, int count);
 int mech_c3i_network_size(const Mech *mech);
 void mech_c3i_network_size_set(Mech *mech, int size);
 DbRef mech_c3i_network_node(const Mech *mech, int index);

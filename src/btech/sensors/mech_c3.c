@@ -11,15 +11,24 @@
 #include <string.h>
 
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "legacy_macros.h"
-#include "mech.h"
 #include "mech_c3_api.h"
 #include "mech_c3_misc_api.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
+#include "mech_network_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
@@ -32,34 +41,38 @@
 #define C3_MASTER_MECH_SIZE 5
 #define C3_MASTER_OTHER_SIZE 1
 
-int getC3MasterSize(Mech *mech) {
-  if (MechType(mech) == CLASS_MECH)
+static bool mech_has_c3(const Mech *mech) {
+  return mech_technology_flags(mech) & (C3_MASTER_TECH | C3_SLAVE_TECH);
+}
+
+int mech_c3_master_slot_count(const Mech *mech) {
+  if (mech_class(mech) == CLASS_MECH)
     return C3_MASTER_MECH_SIZE;
   else
     return C3_MASTER_OTHER_SIZE;
 }
 
-int isPartOfWorkingC3Master(Mech *mech, int section, int slot) {
+bool mech_c3_master_slot_is_working(Mech *mech, int section, int slot) {
   int x = 0;
   int y, t;
   int wcWorkingSlots = 0;
   int wStartCheck = 0;
   int tDoBump;
 
-  wStartCheck = MAX(0, slot - (getC3MasterSize(mech) - 1));
+  wStartCheck = MAX(0, slot - (mech_c3_master_slot_count(mech) - 1));
 
   while (x < CritsInLoc(mech, section)) {
     tDoBump = 0;
 
-    if ((t = GetPartType(mech, section, x))) {
+    if ((t = mech_critical_part_type(mech, section, x))) {
       if (Special2I(t) == C3_MASTER) {
         if (x < wStartCheck) {
           tDoBump = 1;
         } else {
           /* We're within range of our slot, if not already on it */
-          for (y = x; y < (x + getC3MasterSize(mech)); y++) {
+          for (y = x; y < (x + mech_c3_master_slot_count(mech)); y++) {
             if (y != slot) {
-              if (!PartIsNonfunctional(mech, section, y))
+              if (!mech_critical_is_nonfunctional(mech, section, y))
                 wcWorkingSlots++;
             }
           }
@@ -68,15 +81,15 @@ int isPartOfWorkingC3Master(Mech *mech, int section, int slot) {
     }
 
     if (tDoBump)
-      x += getC3MasterSize(mech);
+      x += mech_c3_master_slot_count(mech);
     else
       x++;
   }
 
-  return (wcWorkingSlots == (getC3MasterSize(mech) - 1));
+  return (wcWorkingSlots == (mech_c3_master_slot_count(mech) - 1));
 }
 
-int countWorkingC3MastersOnMech(Mech *mech) {
+int mech_c3_working_master_count(Mech *mech) {
   int x, y, t;
   int wcSlots;
   int wcWorkingSlots;
@@ -91,7 +104,7 @@ int countWorkingC3MastersOnMech(Mech *mech) {
     wcWorkingSlots = 0;
 
     for (y = 0; y < CritsInLoc(mech, x); y++) {
-      if ((t = GetPartType(mech, x, y))) {
+      if ((t = mech_critical_part_type(mech, x, y))) {
         if (Special2I(t) == C3_MASTER) {
           mech_network_debug(
               mech_context(mech),
@@ -100,7 +113,7 @@ int countWorkingC3MastersOnMech(Mech *mech) {
 
           wcSlots++;
 
-          if (!PartIsNonfunctional(mech, x, y)) {
+          if (!mech_critical_is_nonfunctional(mech, x, y)) {
             mech_network_debug(mech_context(mech),
                                "......and the slot is functional.");
             wcWorkingSlots++;
@@ -108,14 +121,14 @@ int countWorkingC3MastersOnMech(Mech *mech) {
         }
       }
 
-      if (wcSlots == getC3MasterSize(mech)) {
+      if (wcSlots == mech_c3_master_slot_count(mech)) {
         mech_network_debug(
             mech_context(mech),
             tprintf("...found enough slots for a C3Master for %ld.",
                     mech_dbref(mech)));
         wcSlots = 0;
 
-        if (wcWorkingSlots == getC3MasterSize(mech)) {
+        if (wcWorkingSlots == mech_c3_master_slot_count(mech)) {
           mech_network_debug(
               mech_context(mech),
               tprintf("...there is even enough working slots to make the "
@@ -134,7 +147,7 @@ int countWorkingC3MastersOnMech(Mech *mech) {
   return wcMasters;
 }
 
-int countTotalC3MastersOnMech(Mech *mech) {
+int mech_c3_total_master_count(Mech *mech) {
   int x, y, t;
   int wcSlots;
   int wcMasters = 0;
@@ -147,7 +160,7 @@ int countTotalC3MastersOnMech(Mech *mech) {
     wcSlots = 0;
 
     for (y = 0; y < CritsInLoc(mech, x); y++) {
-      if ((t = GetPartType(mech, x, y))) {
+      if ((t = mech_critical_part_type(mech, x, y))) {
         if (Special2I(t) == C3_MASTER) {
           mech_network_debug(
               mech_context(mech),
@@ -158,7 +171,7 @@ int countTotalC3MastersOnMech(Mech *mech) {
         }
       }
 
-      if (wcSlots == getC3MasterSize(mech)) {
+      if (wcSlots == mech_c3_master_slot_count(mech)) {
         mech_network_debug(
             mech_context(mech),
             tprintf("...found enough slots for a C3Master for %ld.",
@@ -177,8 +190,8 @@ int countTotalC3MastersOnMech(Mech *mech) {
   return wcMasters;
 }
 
-int countMaxC3Units(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize,
-                    Mech *targMech) {
+int mech_c3_maximum_network_size(Mech *mech, const DbRef *myTempNetwork,
+                                 int tempNetworkSize, Mech *targMech) {
   DbRef otherRef;
   Mech *otherMech;
   int i;
@@ -203,12 +216,12 @@ int countMaxC3Units(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize,
     if (!otherMech)
       continue;
 
-    wcC3Masters += MechWorkingC3Masters(otherMech);
+    wcC3Masters += mech_c3_working_masters(otherMech);
 
     mech_network_debug(mech_context(mech),
                        tprintf("...for %ld, we add %d masters",
                                mech_dbref(otherMech),
-                               MechWorkingC3Masters(otherMech)));
+                               mech_c3_working_masters(otherMech)));
   }
 
   /* Let's find out the max number of mechs in this network. Make sure we add in
@@ -218,7 +231,7 @@ int countMaxC3Units(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize,
   mech_network_debug(mech_context(mech),
                      tprintf("...we now have a max size of %d", maxC3Size));
 
-  myMasters = MechWorkingC3Masters(mech);
+  myMasters = mech_c3_working_masters(mech);
 
   if (myMasters > 0)
     maxC3Size += (myMasters * 4) - myMasters;
@@ -230,7 +243,7 @@ int countMaxC3Units(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize,
 
   /* Let's see if a 2nd mech has been supplied to us */
   if (targMech) {
-    myMasters = MechWorkingC3Masters(targMech);
+    myMasters = mech_c3_working_masters(targMech);
 
     if (myMasters > 0)
       maxC3Size += (myMasters * 4) - myMasters;
@@ -244,7 +257,8 @@ int countMaxC3Units(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize,
   return maxC3Size;
 }
 
-int trimC3Network(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize) {
+int mech_c3_network_trim(Mech *mech, DbRef *myTempNetwork,
+                         int tempNetworkSize) {
   DbRef otherRef;
   Mech *otherMech;
   int i;
@@ -263,7 +277,8 @@ int trimC3Network(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize) {
     newNetwork[i] = -1;
 
   /* Get our count of max units */
-  maxC3Size = countMaxC3Units(mech, myTempNetwork, tempNetworkSize, NULL);
+  maxC3Size = mech_c3_maximum_network_size(mech, myTempNetwork, tempNetworkSize,
+                                           nullptr);
 
   mech_network_debug(mech_context(mech),
                      tprintf("C3 TRIM: Max C3 size: %d", maxC3Size));
@@ -282,7 +297,7 @@ int trimC3Network(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize) {
       if (!otherMech)
         continue;
 
-      if (MechWorkingC3Masters(otherMech) > 0)
+      if (mech_c3_working_masters(otherMech) > 0)
         newNetwork[newNetworkSize++] = otherRef;
     }
 
@@ -295,7 +310,7 @@ int trimC3Network(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize) {
         if (!otherMech)
           continue;
 
-        if (MechWorkingC3Masters(otherMech) == 0)
+        if (mech_c3_working_masters(otherMech) == 0)
           newNetwork[newNetworkSize++] = otherRef;
 
         if (newNetworkSize >= maxC3Size)
@@ -311,14 +326,14 @@ int trimC3Network(Mech *mech, DbRef *myTempNetwork, int tempNetworkSize) {
   return newNetworkSize;
 }
 
-int getFreeC3NetworkPos(Mech *mech, Mech *mechToAdd) {
+int mech_c3_free_network_position(Mech *mech, Mech *mechToAdd) {
   int i;
   DbRef otherRef;
 
-  validateC3Network(mech);
+  mech_c3_network_validate(mech);
 
   for (i = 0; i < C3_NETWORK_SIZE; i++) {
-    otherRef = MechC3NetworkElem(mech, i);
+    otherRef = mech_c3_network_node(mech, i);
 
     if (otherRef > 0) {
       if (otherRef == mech_dbref(mechToAdd))
@@ -330,7 +345,7 @@ int getFreeC3NetworkPos(Mech *mech, Mech *mechToAdd) {
   return C3_POS_NO_ROOM;
 }
 
-void replicateC3Network(Mech *mechSrc, Mech *mechDest) {
+void mech_c3_network_replicate(Mech *mechSrc, Mech *mechDest) {
   int i;
   DbRef otherRef;
 
@@ -338,24 +353,25 @@ void replicateC3Network(Mech *mechSrc, Mech *mechDest) {
                      tprintf("C3 REPLICATE: %ld's C3 network to %ld",
                              mech_dbref(mechSrc), mech_dbref(mechDest)));
 
-  clearC3Network(mechDest, 0);
+  mech_c3_network_clear(mechDest, 0);
 
-  MechC3NetworkElem(mechDest, 0) = mech_dbref(mechSrc);
-  MechC3NetworkSize(mechDest) = 1;
+  mech_c3_network_node_set(mechDest, 0, mech_dbref(mechSrc));
+  mech_c3_network_size_set(mechDest, 1);
 
   for (i = 0; i < C3_NETWORK_SIZE; i++) {
-    otherRef = MechC3NetworkElem(mechSrc, i);
+    otherRef = mech_c3_network_node(mechSrc, i);
 
     if (otherRef != mech_dbref(mechDest)) {
-      MechC3NetworkElem(mechDest, MechC3NetworkSize(mechDest)) = otherRef;
-      MechC3NetworkSize(mechDest) += 1;
+      const int destination_size = mech_c3_network_size(mechDest);
+      mech_c3_network_node_set(mechDest, destination_size, otherRef);
+      mech_c3_network_size_set(mechDest, destination_size + 1);
     }
   }
 
-  validateC3Network(mechDest);
+  mech_c3_network_validate(mechDest);
 }
 
-void addMechToC3Network(Mech *mech, Mech *mechToAdd) {
+void mech_c3_network_add(Mech *mech, Mech *mechToAdd) {
   Mech *otherMech;
   Mech *otherNotifyMech;
   DbRef otherRef;
@@ -367,7 +383,7 @@ void addMechToC3Network(Mech *mech, Mech *mechToAdd) {
                              mech_dbref(mechToAdd), mech_dbref(mech)));
 
   /* Find a position to add the new mech into my network */
-  wPos = getFreeC3NetworkPos(mech, mechToAdd);
+  wPos = mech_c3_free_network_position(mech, mechToAdd);
 
   /* If we have a number that's less than 0, then we have an invalid position.
    * Either we're already in the network or there's not enough room */
@@ -379,8 +395,8 @@ void addMechToC3Network(Mech *mech, Mech *mechToAdd) {
                      tprintf("C3 ADD: Position to add to %ld's network is %d",
                              mech_dbref(mech), wPos));
 
-  MechC3NetworkElem(mech, wPos) = mech_dbref(mechToAdd);
-  MechC3NetworkSize(mech) += 1;
+  mech_c3_network_node_set(mech, wPos, mech_dbref(mechToAdd));
+  mech_c3_network_size_set(mech, mech_c3_network_size(mech) + 1);
 
   mech_notify(mech, MECHALL,
               tprintf("%s connects to your C3 network.",
@@ -389,7 +405,7 @@ void addMechToC3Network(Mech *mech, Mech *mechToAdd) {
   /* Now let's replicate the new network across the system so that everyone has
    * the same network settings */
   for (i = 0; i < C3_NETWORK_SIZE; i++) {
-    otherRef = MechC3NetworkElem(mech, i);
+    otherRef = mech_c3_network_node(mech, i);
 
     otherMech = mech_network_unit(mech, i, 0, 0, 0, 1);
 
@@ -409,32 +425,32 @@ void addMechToC3Network(Mech *mech, Mech *mechToAdd) {
                     mech_to_mech_display_id(otherNotifyMech, mechToAdd).text));
     }
 
-    replicateC3Network(mech, otherMech);
+    mech_c3_network_replicate(mech, otherMech);
   }
 
   /* Last, but not least, one final validation of the network */
-  validateC3Network(mech);
+  mech_c3_network_validate(mech);
 }
 
-void clearMechFromC3Network(DbRef refToClear, Mech *mech) {
+void mech_c3_network_remove_reference(DbRef refToClear, Mech *mech) {
   int i;
 
   mech_network_debug(mech_context(mech),
                      tprintf("C3 CLEAR: %ld from the C3 network of %ld",
                              refToClear, mech_dbref(mech)));
 
-  if (!MechC3NetworkSize(mech))
+  if (!mech_c3_network_size(mech))
     return;
 
   for (i = 0; i < C3_NETWORK_SIZE; i++) {
-    if (MechC3NetworkElem(mech, i) == refToClear)
-      MechC3NetworkElem(mech, i) = -1;
+    if (mech_c3_network_node(mech, i) == refToClear)
+      mech_c3_network_node_set(mech, i, -1);
   }
 
-  validateC3Network(mech);
+  mech_c3_network_validate(mech);
 }
 
-void clearC3Network(Mech *mech, int tClearFromOthers) {
+void mech_c3_network_clear(Mech *mech, bool tClearFromOthers) {
   Mech *otherMech;
   int i;
 
@@ -444,7 +460,7 @@ void clearC3Network(Mech *mech, int tClearFromOthers) {
   for (i = 0; i < C3_NETWORK_SIZE; i++) {
     otherMech = mech_network_unit(mech, i, 0, 0, 0, 1);
 
-    MechC3NetworkElem(mech, i) = -1;
+    mech_c3_network_node_set(mech, i, -1);
 
     if (tClearFromOthers) {
       if (!otherMech)
@@ -453,14 +469,14 @@ void clearC3Network(Mech *mech, int tClearFromOthers) {
       if (!is_good_obj(mech_context(mech)->database, mech_dbref(otherMech)))
         continue;
 
-      clearMechFromC3Network(mech_dbref(mech), otherMech);
+      mech_c3_network_remove_reference(mech_dbref(mech), otherMech);
     }
   }
 
-  MechC3NetworkSize(mech) = 0;
+  mech_c3_network_size_set(mech, 0);
 }
 
-void validateC3Network(Mech *mech) {
+void mech_c3_network_validate(Mech *mech) {
   Mech *otherMech;
   DbRef myTempNetwork[C3_NETWORK_SIZE];
   int i;
@@ -470,14 +486,15 @@ void validateC3Network(Mech *mech) {
       mech_context(mech),
       tprintf("C3 VALIDATE: %ld's C3 network", mech_dbref(mech)));
 
-  if (!HasC3(mech) || Destroyed(mech) || C3Destroyed(mech)) {
-    clearC3Network(mech, 1);
+  if (!mech_has_c3(mech) || mech_is_destroyed(mech) ||
+      mech_condition_summary(mech).c3_destroyed) {
+    mech_c3_network_clear(mech, 1);
 
     return;
   }
 
-  if (MechC3NetworkSize(mech) < 0) {
-    clearC3Network(mech, 1);
+  if (mech_c3_network_size(mech) < 0) {
+    mech_c3_network_clear(mech, 1);
 
     return;
   }
@@ -500,19 +517,19 @@ void validateC3Network(Mech *mech) {
     networkSize++;
   }
 
-  clearC3Network(mech, 0);
+  mech_c3_network_clear(mech, 0);
 
   for (i = 0; i < networkSize; i++)
-    MechC3NetworkElem(mech, i) = myTempNetwork[i];
+    mech_c3_network_node_set(mech, i, myTempNetwork[i]);
 
-  MechC3NetworkSize(mech) = networkSize;
+  mech_c3_network_size_set(mech, networkSize);
 
   mech_network_debug(
       mech_context(mech),
       tprintf("C3 VALIDATE INFO: (PreTrim) %ld's C3 network is %d elements",
-              mech_dbref(mech), MechC3NetworkSize(mech)));
+              mech_dbref(mech), mech_c3_network_size(mech)));
 
-  networkSize = trimC3Network(mech, myTempNetwork, networkSize);
+  networkSize = mech_c3_network_trim(mech, myTempNetwork, networkSize);
 
   mech_network_debug(
       mech_context(mech),
@@ -520,13 +537,13 @@ void validateC3Network(Mech *mech) {
               "trimmed to %d elements",
               mech_dbref(mech), networkSize));
 
-  if (networkSize != MechC3NetworkSize(mech)) {
-    clearC3Network(mech, 0);
+  if (networkSize != mech_c3_network_size(mech)) {
+    mech_c3_network_clear(mech, 0);
 
     for (i = 0; i < networkSize; i++)
-      MechC3NetworkElem(mech, i) = myTempNetwork[i];
+      mech_c3_network_node_set(mech, i, myTempNetwork[i]);
 
-    MechC3NetworkSize(mech) = networkSize;
+    mech_c3_network_size_set(mech, networkSize);
   }
 }
 
@@ -544,24 +561,24 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
                   mech_parseattributes(buffer, args, 2) != 1,
                   "Invalid number of arguments to function!");
 
-  DOCHECK_CONTEXT(mech_context(mech), !HasC3(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(mech),
                   "This unit is not equipped with C3!");
-  DOCHECK_CONTEXT(mech_context(mech), C3Destroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).c3_destroyed,
                   "Your C3 system is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), AnyECMDisturbed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_is_any_ecm_disturbed(mech),
                   "Your C3 system is not currently operational!");
 
-  validateC3Network(mech);
+  mech_c3_network_validate(mech);
 
   /* Clear our C3 Network */
   if (!strcmp(args[0], "-")) {
-    if (MechC3NetworkSize(mech) <= 0) {
+    if (mech_c3_network_size(mech) <= 0) {
       mech_notify(mech, MECHALL, "You are not connected to a C3 network!");
 
       return;
     }
 
-    clearC3Network(mech, 1);
+    mech_c3_network_clear(mech, 1);
 
     mech_notify(mech, MECHALL, "You disconnect from the C3 network.");
 
@@ -571,7 +588,7 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
   /* Well, if we're here then we wanna connect to a network */
   /* Let's check to see if we're already in one... can't be in two at the same
    * time */
-  DOCHECK_CONTEXT(mech_context(mech), MechC3NetworkSize(mech) > 0,
+  DOCHECK_CONTEXT(mech_context(mech), mech_c3_network_size(mech) > 0,
                   "You are already in a C3 network!");
 
   /* Find who we're trying to connect to */
@@ -579,33 +596,38 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
   target = btech_context_get_mech(mech_context(mech), refTarget);
 
   if (target)
-    LOS = mech_los_check(mech, target, MechX(target), MechY(target), range);
+    LOS = mech_los_check(mech, target, mech_position_x(target),
+                         mech_position_y(target), range);
   else
     refTarget = 0;
 
   DOCHECK_CONTEXT(mech_context(mech), (refTarget < 1) || !LOS,
                   "That is not a valid targetID. Try again.");
-  DOCHECK_CONTEXT(mech_context(mech), MechTeam(mech) != MechTeam(target),
+  DOCHECK_CONTEXT(mech_context(mech), mech_team(mech) != mech_team(target),
                   "You can't use the C3 network of unfriendly units!");
   DOCHECK_CONTEXT(mech_context(mech), mech_dbref(mech) == mech_dbref(target),
                   "You can't connect to yourself!");
-  DOCHECK_CONTEXT(mech_context(mech), Destroyed(target),
+  DOCHECK_CONTEXT(mech_context(mech), mech_is_destroyed(target),
                   "That unit is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), !Started(target),
+  DOCHECK_CONTEXT(mech_context(mech), !mech_is_started(target),
                   "That unit is not started!");
-  DOCHECK_CONTEXT(mech_context(mech), !HasC3(target),
+  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(target),
                   "That unit does not appear to be equipped with C3!");
 
   /* validate the network of our target */
-  validateC3Network(target);
+  mech_c3_network_validate(target);
 
   /* Let's see how much can actually fit in this network, based on the number of
    * masters and slaves */
-  maxC3Size = countMaxC3Units(mech, MechC3Network(target),
-                              MechC3NetworkSize(target), target);
+  DbRef target_network[C3_NETWORK_SIZE];
+  const int target_network_size = mech_c3_network_size(target);
+  for (int i = 0; i < target_network_size; ++i)
+    target_network[i] = mech_c3_network_node(target, i);
+  maxC3Size = mech_c3_maximum_network_size(mech, target_network,
+                                           target_network_size, target);
 
   DOCHECK_CONTEXT(mech_context(mech),
-                  maxC3Size < (MechC3NetworkSize(target) + 1),
+                  maxC3Size < (mech_c3_network_size(target) + 1),
                   "That unit's C3 network is operating at maximum capacity!");
 
   /* Connect us up */
@@ -613,22 +635,22 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
               tprintf("You connect to %s's C3 network.",
                       mech_to_mech_display_id(mech, target).text));
 
-  addMechToC3Network(target, mech);
+  mech_c3_network_add(target, mech);
 }
 
 void mech_c3_message(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech_context(mech), !HasC3(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(mech),
                   "This unit is not equipped with C3!");
-  DOCHECK_CONTEXT(mech_context(mech), C3Destroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).c3_destroyed,
                   "Your C3 system is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), AnyECMDisturbed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_is_any_ecm_disturbed(mech),
                   "Your C3 system is not currently operational!");
 
-  validateC3Network(mech);
+  mech_c3_network_validate(mech);
 
-  DOCHECK_CONTEXT(mech_context(mech), MechC3NetworkSize(mech) <= 0,
+  DOCHECK_CONTEXT(mech_context(mech), mech_c3_network_size(mech) <= 0,
                   "There are no other units in your C3 network!");
 
   skipws(buffer);
@@ -641,16 +663,16 @@ void mech_c3_message(DbRef player, Mech *mech, char *buffer) {
 void mech_c3_targets(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech_context(mech), !HasC3(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(mech),
                   "This unit is not equipped with C3!");
-  DOCHECK_CONTEXT(mech_context(mech), C3Destroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).c3_destroyed,
                   "Your C3 system is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), AnyECMDisturbed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_is_any_ecm_disturbed(mech),
                   "Your C3 system is not currently operational!");
 
-  validateC3Network(mech);
+  mech_c3_network_validate(mech);
 
-  DOCHECK_CONTEXT(mech_context(mech), MechC3NetworkSize(mech) <= 0,
+  DOCHECK_CONTEXT(mech_context(mech), mech_c3_network_size(mech) <= 0,
                   "There are no other units in your C3 network!");
 
   mech_network_show_targets(player, mech, 1);
@@ -659,16 +681,16 @@ void mech_c3_targets(DbRef player, Mech *mech, char *buffer) {
 void mech_c3_network(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech_context(mech), !HasC3(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(mech),
                   "This unit is not equipped with C3!");
-  DOCHECK_CONTEXT(mech_context(mech), C3Destroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).c3_destroyed,
                   "Your C3 system is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), AnyECMDisturbed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_is_any_ecm_disturbed(mech),
                   "Your C3 system is not currently operational!");
 
-  validateC3Network(mech);
+  mech_c3_network_validate(mech);
 
-  DOCHECK_CONTEXT(mech_context(mech), MechC3NetworkSize(mech) <= 0,
+  DOCHECK_CONTEXT(mech_context(mech), mech_c3_network_size(mech) <= 0,
                   "There are no other units in your C3 network!");
 
   mech_network_show_status(player, mech, 1);

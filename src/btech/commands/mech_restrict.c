@@ -156,7 +156,7 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
       return;
     mech_targeting_tag_clear(mech);
     mech_c3i_network_clear(mech, 1);
-    clearC3Network(mech, 1);
+    mech_c3_network_clear(mech, 1);
     remove_mech_from_map(oldmap, mech);
   }
 
