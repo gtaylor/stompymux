@@ -27,23 +27,28 @@
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
-#include "mech.h"
 #include "mech_ammodump_api.h"
 #include "mech_build_api.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_combat_missile_api.h"
 #include "mech_damage_api.h"
 #include "mech_ecm_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_hitloc_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_ood_api.h"
 #include "mech_pickup_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mechrep_api.h"
 #include "mux/network/mux_event.h"
@@ -70,9 +75,9 @@ static inline char *MySeriousStr(Mech *mech, int index) {
 static inline int MySeriousnessCheck(Mech *mech, int hitloc) {
   int orig, new;
 
-  if (!(orig = GetSectOArmor(mech, hitloc)))
+  if (!(orig = mech_section_original_armor(mech, hitloc)))
     return 0;
-  if (!(new = GetSectArmor(mech, hitloc)))
+  if (!(new = mech_section_armor(mech, hitloc)))
     return 3;
   if (new < orig / 4)
     return 2;
@@ -84,9 +89,9 @@ static inline int MySeriousnessCheck(Mech *mech, int hitloc) {
 static inline int MySeriousnessCheckR(Mech *mech, int hitloc) {
   int orig, new;
 
-  if (!(orig = GetSectORArmor(mech, hitloc)))
+  if (!(orig = mech_section_original_rear_armor(mech, hitloc)))
     return 0;
-  if (!(new = GetSectRArmor(mech, hitloc)))
+  if (!(new = mech_section_rear_armor(mech, hitloc)))
     return 3;
   if (new < orig / 4)
     return 2;
@@ -103,31 +108,33 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   int tAPCritical = 0;
   int wPercentLeft = 0;
 
-  if (MechType(wounded) == CLASS_MW)
+  if (mech_class(wounded) == CLASS_MW)
     return (damage > 0) ? damage : 0;
 
-  if ((MechSpecials(wounded) & HARDA_TECH) && damage > 0)
+  if ((mech_technology_flags(wounded) & HARDA_TECH) && damage > 0)
     damage = (damage + 1) / 2;
 
   /* Now decrement armor, and if neccessary, handle criticals... */
-  if (MechType(wounded) == CLASS_MECH && isrear &&
+  if (mech_class(wounded) == CLASS_MECH && isrear &&
       (hitloc == CTORSO || hitloc == RTORSO || hitloc == LTORSO)) {
 
-    if ((GetSectRArmor(wounded, hitloc) - damage) >= 0) {
+    if ((mech_section_rear_armor(wounded, hitloc) - damage) >= 0) {
 
-      wPercentLeft = (((GetSectRArmor(wounded, hitloc) - damage) * 100) /
-                      GetSectORArmor(wounded, hitloc));
+      wPercentLeft =
+          (((mech_section_rear_armor(wounded, hitloc) - damage) * 100) /
+           mech_section_original_rear_armor(wounded, hitloc));
     }
 
-    intDamage = damage - GetSectRArmor(wounded, hitloc);
+    intDamage = damage - mech_section_rear_armor(wounded, hitloc);
 
     if (intDamage > 0) {
-      SetSectRArmor(wounded, hitloc, 0);
+      mech_section_rear_armor_set(wounded, hitloc, 0);
       if (intDamage != damage)
         seriousness = 3;
     } else {
       seriousness = MySeriousnessCheckR(wounded, hitloc);
-      SetSectRArmor(wounded, hitloc, GetSectRArmor(wounded, hitloc) - damage);
+      mech_section_rear_armor_set(
+          wounded, hitloc, mech_section_rear_armor(wounded, hitloc) - damage);
       seriousness = (seriousness == MySeriousnessCheckR(wounded, hitloc))
                         ? 0
                         : MySeriousnessCheckR(wounded, hitloc);
@@ -142,29 +149,30 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
        intDamage = abs(intDamage);
      */
 
-    if (GetSectOArmor(wounded, hitloc) &&
-        ((GetSectArmor(wounded, hitloc) - damage) >= 0)) {
+    if (mech_section_original_armor(wounded, hitloc) &&
+        ((mech_section_armor(wounded, hitloc) - damage) >= 0)) {
 
-      wPercentLeft = (((GetSectArmor(wounded, hitloc) - damage) * 100) /
-                      GetSectOArmor(wounded, hitloc));
+      wPercentLeft = (((mech_section_armor(wounded, hitloc) - damage) * 100) /
+                      mech_section_original_armor(wounded, hitloc));
     }
 
-    intDamage = damage - GetSectArmor(wounded, hitloc);
+    intDamage = damage - mech_section_armor(wounded, hitloc);
 
     if (intDamage > 0) {
-      SetSectArmor(wounded, hitloc, 0);
+      mech_section_armor_set(wounded, hitloc, 0);
       if (intDamage != damage)
         seriousness = 3;
     } else {
       seriousness = MySeriousnessCheck(wounded, hitloc);
-      SetSectArmor(wounded, hitloc, GetSectArmor(wounded, hitloc) - damage);
+      mech_section_armor_set(wounded, hitloc,
+                             mech_section_armor(wounded, hitloc) - damage);
       seriousness = (seriousness == MySeriousnessCheck(wounded, hitloc))
                         ? 0
                         : MySeriousnessCheck(wounded, hitloc);
     }
 
-    if (!GetSectArmor(wounded, hitloc))
-      mech_flood_section(wounded, hitloc, MechZ(wounded));
+    if (!mech_section_armor(wounded, hitloc))
+      mech_flood_section(wounded, hitloc, mech_position_z(wounded));
   }
 
   if (!iscritical && (wAmmoMode & AC_AP_MODE) && (intDamage <= 0) &&
@@ -172,9 +180,9 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
     tAPCritical = 1;
 
   if (iscritical || tAPCritical) {
-    r = btech_random_roll(wounded->xcode.context);
-    wounded->xcode.context->random.statistics.critical_rolls[r - 2]++;
-    wounded->xcode.context->random.statistics.total_critical_rolls++;
+    BtechContext *context = mech_context(wounded);
+    r = btech_random_roll(context);
+    btech_context_critical_roll_record(context, r);
     /* Do the AP ammo thang */
     if (tAPCritical) {
       if (!strcmp(&MechWeapons[wWeapIndx].name[3], "AC/2"))
@@ -214,36 +222,36 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
     iscritical = 0;
   }
 
-  if (MechType(wounded) == CLASS_AERO && intDamage >= 0) {
+  if (mech_class(wounded) == CLASS_AERO && intDamage >= 0) {
     DestroySection(wounded, attacker, LOS, hitloc);
-    if (Destroyed(wounded)) {
+    if (mech_is_destroyed(wounded)) {
       intDamage = 0;
       return 0;
     }
     switch (hitloc) {
     case AERO_AFT:
       mech_make_fall(wounded);
-      MechSpeed(wounded) = 0;
+      mech_current_speed_set(wounded, 0);
       mech_max_speed_set(wounded, 0);
-      MechVerticalSpeed(wounded) = 0;
-      if (!(MechStatus(wounded) & LANDED))
+      mech_vertical_speed_set(wounded, 0);
+      if (!mech_is_landed(wounded))
         mech_notify(wounded, MECHALL, "You feel the thrust die..");
       else
         mech_notify(wounded, MECHALL, "The computer reports engine destroyed!");
-      if (!Landed(wounded))
+      if (!mech_is_landed(wounded))
         mech_event_schedule(wounded, EVENT_FALL, mech_fall_event, FALL_TICK,
                             -1);
       break;
     }
   }
 
-  if (seriousness > 0 && MechArmorWarn(wounded))
-    mech_printf(
-        wounded, MECHALL, "%sWARNING: %s%s Armor %s",
-        MySeriousColorStr(wounded, seriousness),
-        armor_section_abbreviation(MechType(wounded), MechMove(wounded), hitloc)
-            .text,
-        isrear ? " (Rear)" : "", MySeriousStr(wounded, seriousness));
+  if (seriousness > 0 && mech_armor_warning_enabled(wounded))
+    mech_printf(wounded, MECHALL, "%sWARNING: %s%s Armor %s",
+                MySeriousColorStr(wounded, seriousness),
+                armor_section_abbreviation(mech_class(wounded),
+                                           mech_movement_type(wounded), hitloc)
+                    .text,
+                isrear ? " (Rear)" : "", MySeriousStr(wounded, seriousness));
 
   return intDamage > 0 ? intDamage : 0;
 }
@@ -251,18 +259,19 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
 int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
                          int attackPilot, int isrear, int hitloc, int intDamage,
                          int weapindx, int *crits) {
-  int r = btech_random_roll(wounded->xcode.context);
+  BtechContext *context = mech_context(wounded);
+  int r = btech_random_roll(context);
   char locname[30];
   char msgbuf[MBUF_SIZE];
 
-  ArmorStringFromIndex(hitloc, locname, MechType(wounded), MechMove(wounded));
-  if ((MechSpecials(wounded) & REINFI_TECH) && intDamage > 0)
+  ArmorStringFromIndex(hitloc, locname, mech_class(wounded),
+                       mech_movement_type(wounded));
+  if ((mech_technology_flags(wounded) & REINFI_TECH) && intDamage > 0)
     intDamage = (intDamage + 1) / 2;
-  else if (MechSpecials(wounded) & COMPI_TECH)
+  else if (mech_technology_flags(wounded) & COMPI_TECH)
     intDamage = intDamage * 2;
   /* Critical hits? */
-  wounded->xcode.context->random.statistics.critical_rolls[r - 2]++;
-  wounded->xcode.context->random.statistics.total_critical_rolls++;
+  btech_context_critical_roll_record(context, r);
   if (!(*crits))
     switch (r) {
     case 8:
@@ -274,8 +283,8 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
       mech_critical_handle(wounded, attacker, LOS, hitloc, 2);
       break;
     case 12:
-      if ((MechType(wounded) == CLASS_MECH) ||
-          (MechType(wounded) == CLASS_MW)) {
+      if (mech_class(wounded) == CLASS_MECH ||
+          mech_class(wounded) == CLASS_MW) {
         switch (hitloc) {
         case RARM:
         case LARM:
@@ -285,14 +294,14 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
           /* Limb blown off */
           mech_notify(wounded, MECHALL,
                       "[fg=yellow bold]CRITICAL HIT!![reset]");
-          if (!Destroyed(wounded)) {
+          if (!mech_is_destroyed(wounded)) {
             snprintf(msgbuf, sizeof(msgbuf),
                      "'s %s is blown off in a shower of sparks and smoke!",
                      locname);
             mech_los_broadcast(wounded, msgbuf);
           }
           DestroySection(wounded, attacker, LOS, hitloc);
-          if (MechType(wounded) != CLASS_MW)
+          if (mech_class(wounded) != CLASS_MW)
             intDamage = 0;
           break;
         default:
@@ -310,19 +319,19 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
       /* No critical hit */
     }
   /* Hmm.. This should be interesting */
-  if (MechType(wounded) == CLASS_MECH && intDamage && (hitloc == CTORSO) &&
-      GetSectInt(wounded, hitloc) == GetSectOInt(wounded, hitloc))
-    MechBoomStart(wounded) = wounded->xcode.context->events->tick;
+  if (mech_class(wounded) == CLASS_MECH && intDamage && hitloc == CTORSO &&
+      mech_section_internal(wounded, hitloc) ==
+          mech_section_original_internal(wounded, hitloc))
+    mech_reactor_instability_start_tick_set(wounded,
+                                            btech_context_event_tick(context));
 
-  if (GetSectInt(wounded, hitloc) <= intDamage) {
-    intDamage -= GetSectInt(wounded, hitloc);
+  if (mech_section_internal(wounded, hitloc) <= intDamage) {
+    intDamage -= mech_section_internal(wounded, hitloc);
     DestroySection(wounded, attacker, LOS, hitloc);
 
-    /*    if (Destroyed(wounded)) */
-
-    /*      intDamage = 0;        */
   } else {
-    SetSectInt(wounded, hitloc, GetSectInt(wounded, hitloc) - intDamage);
+    mech_section_internal_set(
+        wounded, hitloc, mech_section_internal(wounded, hitloc) - intDamage);
     intDamage = 0;
   }
   return intDamage;

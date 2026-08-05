@@ -319,6 +319,12 @@ void btech_context_hit_roll_record(BtechContext *context, int roll) {
   context->random.statistics.total_hit_rolls++;
 }
 
+void btech_context_critical_roll_record(BtechContext *context, int roll) {
+  assert(context != nullptr);
+  context->random.statistics.critical_rolls[roll - 2]++;
+  context->random.statistics.total_critical_rolls++;
+}
+
 long btech_context_random_i31(BtechContext *context) {
   assert(context != nullptr);
   return btech_random_i31(&context->random);

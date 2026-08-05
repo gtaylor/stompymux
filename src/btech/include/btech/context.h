@@ -105,6 +105,7 @@ int btech_context_stagger_interval(const BtechContext *context);
 bool btech_context_stagger_uses_tonnage(const BtechContext *context);
 int btech_context_event_tick(const BtechContext *context);
 void btech_context_hit_roll_record(BtechContext *context, int roll);
+void btech_context_critical_roll_record(BtechContext *context, int roll);
 long btech_context_random_i31(BtechContext *context);
 int btech_context_missile_hit_count(const BtechContext *context,
                                     int weapon_index, int roll_index);

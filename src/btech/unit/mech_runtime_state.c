@@ -31,6 +31,10 @@ bool mech_autocon_include_shutdown_targets(const Mech *mech) {
   return mech->rd.mech_prefs & MECHPREF_AUTOCON_SD;
 }
 
+bool mech_armor_warning_enabled(const Mech *mech) {
+  return !(mech->rd.mech_prefs & MECHPREF_NOARMORWARN);
+}
+
 void mech_blinded_set(Mech *mech, bool blinded) {
   if (blinded)
     mech->rd.status |= BLINDED;
@@ -191,6 +195,10 @@ int mech_spin_start_tick(const Mech *mech) { return mech->rd.sspin; }
 
 int mech_reactor_instability_start_tick(const Mech *mech) {
   return mech->rd.boom_start;
+}
+
+void mech_reactor_instability_start_tick_set(Mech *mech, int tick) {
+  mech->rd.boom_start = tick;
 }
 
 void mech_spin_start_tick_set(Mech *mech, int tick) { mech->rd.sspin = tick; }
