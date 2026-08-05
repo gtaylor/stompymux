@@ -453,7 +453,7 @@ void aero_UpdateHeading(Mech *mech) {
   /* Heading things are done in speed now, odd as though it might
      seem */
   if (SpheroidDS(mech))
-    UpdateHeading(mech);
+    mech_heading_update(mech);
 }
 
 double length_hypotenuse(double x, double y) {

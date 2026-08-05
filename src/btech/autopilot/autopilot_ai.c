@@ -135,7 +135,7 @@ int ai_crash(BattleMap *map, Mech *m, LocationSimulation *l) {
 
   maxspeed = mech_effective_maximum_speed(m);
 
-  /* UpdateHeading */
+  /* Heading update */
   if (l->h != l->dh && !mech_has_destroyed_gyro(m)) {
     ch = 1;
     if (mech_is_aerospace_unit(m))
@@ -172,13 +172,13 @@ int ai_crash(BattleMap *map, Mech *m, LocationSimulation *l) {
         l->h = l->dh;
     }
   }
-  /* UpdateSpeed */
+  /* Speed update */
   /* XXX MASC */
   /* XXX heat (_hard_ to track) */
   tempspeed = l->ds;
   if (mech_class(m) != CLASS_MW && mech_movement_type(m) != MOVE_VTOL &&
       (mech_movement_type(m) != MOVE_FLY || mech_is_landed(m)))
-    tempspeed = terrain_speed(m, tempspeed, maxspeed, l->t, l->e);
+    tempspeed = mech_terrain_speed(m, tempspeed, maxspeed, l->t, l->e);
   if (ch) {
     if (btech_context_movement_slowdown_mode(mech_context(m)) == 2) {
       int dif = mech_heading_degrees(m) - mech_desired_heading_degrees(m);

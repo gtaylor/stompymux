@@ -57,6 +57,10 @@ float mech_vertical_speed(const Mech *mech) { return mech->rd.verticalspeed; }
 
 int mech_heading_degrees(const Mech *mech) { return FSIM2SHO(mech->pd.facing); }
 
+int mech_heading_fixed_difference(const Mech *mech) {
+  return mech->pd.facing - SHO2FSIM(mech->rd.desiredfacing);
+}
+
 int mech_desired_heading_degrees(const Mech *mech) {
   return mech->rd.desiredfacing;
 }
@@ -126,6 +130,31 @@ void mech_desired_heading_set(Mech *mech, int heading) {
 
 void mech_heading_set(Mech *mech, int heading) {
   mech->pd.facing = SHO2FSIM(AcceptableDegree(heading));
+}
+
+void mech_heading_rotate_toward_desired(Mech *mech, int fixed_offset) {
+  int difference = mech_heading_fixed_difference(mech);
+  if (difference < 0)
+    difference += SHO2FSIM(360);
+
+  if (difference > SHO2FSIM(180)) {
+    mech->pd.facing += fixed_offset;
+    if (mech_heading_degrees(mech) >= 360)
+      mech->pd.facing = mech_heading_degrees(mech) % 360;
+    difference += fixed_offset;
+    if (difference >= SHO2FSIM(360))
+      mech->pd.facing = SHO2FSIM(mech->rd.desiredfacing);
+  } else {
+    mech->pd.facing -= fixed_offset;
+    if (mech->pd.facing < 0)
+      mech->pd.facing += SHO2FSIM(360);
+    difference -= fixed_offset;
+    if (difference < 0)
+      mech->pd.facing = SHO2FSIM(mech->rd.desiredfacing);
+  }
+
+  mech->rd.critstatus |= CHEAD;
+  MarkForLOSUpdate(mech);
 }
 
 void mech_turret_heading_absolute_set(Mech *mech, int heading) {

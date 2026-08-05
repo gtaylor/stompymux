@@ -335,13 +335,13 @@ void mech_move_event(MuxEvent *e) {
   if (MechType(mech) == CLASS_VTOL)
     if (Landed(mech) || FuelCheck(mech))
       return;
-  UpdateHeading(mech);
+  mech_heading_update(mech);
   if ((IsMechLegLess(mech)) || Jumping(mech) || OODing(mech)) {
     if (MechDesiredFacing(mech) != MechFacing(mech))
       mech_event_schedule(mech, EVENT_MOVE, mech_move_event, MOVE_TICK, 0);
     return;
   }
-  UpdateSpeed(mech);
+  mech_speed_update(mech);
   move_mech(mech);
 
   if (mech->mapindex < 0)
@@ -429,8 +429,8 @@ void aero_move_event(MuxEvent *e) {
           "is hit by DropShip's exhaust!", "light up and burn.", 8);
     mech_event_schedule(mech, EVENT_MOVE, aero_move_event, MOVE_TICK, 0);
   } else if (Landed(mech) && !Fallen(mech) && RollingT(mech)) {
-    UpdateHeading(mech);
-    UpdateSpeed(mech);
+    mech_heading_update(mech);
+    mech_speed_update(mech);
     move_mech(mech);
     if (fabs(MechSpeed(mech)) > 0.0 || fabs(MechDesiredSpeed(mech)) > 0.0 ||
         MechDesiredFacing(mech) != MechFacing(mech))

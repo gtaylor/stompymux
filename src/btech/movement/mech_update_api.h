@@ -22,10 +22,10 @@ int collision_check(Mech *mech, int mode, int le, int lt);
 void move_mech(Mech *mech);
 void mech_naval_altitude_check(Mech *mech, int previous_z);
 void mech_vtol_altitude_check(Mech *mech);
-void UpdateHeading(Mech *mech);
-float terrain_speed(Mech *mech, float tempspeed, float maxspeed, int terrain,
-                    int elev);
-void UpdateSpeed(Mech *mech);
+void mech_heading_update(Mech *mech);
+float mech_terrain_speed(Mech *mech, float current_speed, float maximum_speed,
+                         int terrain, int elevation);
+void mech_speed_update(Mech *mech);
 int OverheatMods(Mech *mech);
 void ammo_explosion(Mech *attacker, Mech *mech, int ammoloc, int ammocritnum,
                     int damage);
