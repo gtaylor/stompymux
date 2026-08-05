@@ -68,6 +68,8 @@ int mech_charge_timer(const Mech *mech) { return mech->rd.chargetimer; }
 
 int mech_charge_timer_advance(Mech *mech) { return mech->rd.chargetimer++; }
 
+float mech_charge_distance(const Mech *mech) { return mech->rd.chargedist; }
+
 void mech_charge_distance_add(Mech *mech, float distance) {
   mech->rd.chargedist += distance;
 }

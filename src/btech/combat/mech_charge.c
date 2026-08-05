@@ -1,4 +1,26 @@
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_crew_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
 #include "mech_physical_internal.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_targeting_api.h"
+
+static int charge_forward_arc(Mech *mech, const Mech *target) {
+  MechConditionSummary condition = mech_condition_summary(mech);
+  mech_torso_twist_set(mech, MECH_TORSO_CENTER);
+  int arc = InWeaponArc(mech, mech_position_real_x(target),
+                        mech_position_real_y(target));
+  if (condition.torso_left)
+    mech_torso_twist_set(mech, MECH_TORSO_LEFT);
+  else if (condition.torso_right)
+    mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
+  return arc;
+}
+
 void ChargeMech(Mech *mech, Mech *target) {
   int baseToHit = 5;
   int roll;
@@ -20,11 +42,12 @@ void ChargeMech(Mech *mech, Mech *target) {
   int targ_roll;
   int done = 0;
   char location[50];
-  int ts, iwa;
+  int iwa;
+  BtechContext *context = mech_context(mech);
   char emit_buff[LBUF_SIZE];
 
   /* Are they both charging ? */
-  if (MechChargeTarget(target) == mech->mynum) {
+  if (mech_charge_target_dbref(target) == mech_dbref(mech)) {
     /* They are both charging each other */
     mech_charge = 1;
     target_charge = 1;
@@ -32,9 +55,9 @@ void ChargeMech(Mech *mech, Mech *target) {
     /* Check the sections of the first unit for weapons that are cycling */
     done = 0;
     for (i = 0; i < CHARGE_SECTIONS && !done; i++) {
-      if (SectHasBusyWeap(mech, resect[i])) {
-        ArmorStringFromIndex(resect[i], location, MechType(mech),
-                             MechMove(mech));
+      if (mech_section_has_recycling_weapon(mech, resect[i])) {
+        ArmorStringFromIndex(resect[i], location, mech_class(mech),
+                             mech_movement_type(mech));
         mech_printf(mech, MECHALL, "You have weapons recycling on your %s.",
                     location);
         mech_charge = 0;
@@ -45,9 +68,9 @@ void ChargeMech(Mech *mech, Mech *target) {
     /* Check the sections of the second unit for weapons that are cycling */
     done = 0;
     for (i = 0; i < CHARGE_SECTIONS && !done; i++) {
-      if (SectHasBusyWeap(target, resect[i])) {
-        ArmorStringFromIndex(resect[i], location, MechType(target),
-                             MechMove(target));
+      if (mech_section_has_recycling_weapon(target, resect[i])) {
+        ArmorStringFromIndex(resect[i], location, mech_class(target),
+                             mech_movement_type(target));
         mech_printf(target, MECHALL, "You have weapons recycling on your %s.",
                     location);
         target_charge = 0;
@@ -56,43 +79,45 @@ void ChargeMech(Mech *mech, Mech *target) {
     }
 
     /* Is the second unit capable of charging */
-    if (!Started(target) || Uncon(target) || Blinded(target))
+    if (!mech_is_started(target) || mech_pilot_is_unconscious(target) ||
+        mech_is_blinded(target))
       target_charge = 0;
     /* Is the first unit capable of charging */
-    if (!Started(mech) || Uncon(mech) || Blinded(mech))
+    if (!mech_is_started(mech) || mech_pilot_is_unconscious(mech) ||
+        mech_is_blinded(mech))
       mech_charge = 0;
 
     /* Is the first unit moving fast enough to charge */
-    if (MechSpeed(mech) < MP1) {
+    if (mech_current_speed(mech) < MP1) {
       mech_notify(mech, MECHALL, "You aren't moving fast enough to charge.");
       mech_charge = 0;
     }
 
     /* Is the second unit moving fast enough to charge */
-    if (MechSpeed(target) < MP1) {
+    if (mech_current_speed(target) < MP1) {
       mech_notify(target, MECHALL, "You aren't moving fast enough to charge.");
       target_charge = 0;
     }
 
     /* Check to see if any sections cycling from a previous attack */
-    if (MechType(mech) == CLASS_MECH) {
+    if (mech_class(mech) == CLASS_MECH) {
       /* Is the first unit's legs cycling */
-      if (MechSections(mech)[LLEG].recycle ||
-          MechSections(mech)[RLEG].recycle) {
+      if (mech_section_recycle_ticks(mech, LLEG) ||
+          mech_section_recycle_ticks(mech, RLEG)) {
         mech_notify(mech, MECHALL,
                     "Your legs are still recovering from your last attack.");
         mech_charge = 0;
       }
       /* Is the first unit's arms cycling */
-      if (MechSections(mech)[RARM].recycle ||
-          MechSections(mech)[LARM].recycle) {
+      if (mech_section_recycle_ticks(mech, RARM) ||
+          mech_section_recycle_ticks(mech, LARM)) {
         mech_notify(mech, MECHALL,
                     "Your arms are still recovering from your last attack.");
         mech_charge = 0;
       }
     } else {
       /* Is the first unit's front side cycling */
-      if (MechSections(mech)[FSIDE].recycle) {
+      if (mech_section_recycle_ticks(mech, FSIDE)) {
         mech_notify(mech, MECHALL,
                     "You are still recovering from your last attack!");
         mech_charge = 0;
@@ -100,24 +125,24 @@ void ChargeMech(Mech *mech, Mech *target) {
     }
 
     /* Check to see if any sections cycling from a previous attack */
-    if (MechType(target) == CLASS_MECH) {
+    if (mech_class(target) == CLASS_MECH) {
       /* Is the second unit's legs cycling */
-      if (MechSections(target)[LLEG].recycle ||
-          MechSections(target)[RLEG].recycle) {
+      if (mech_section_recycle_ticks(target, LLEG) ||
+          mech_section_recycle_ticks(target, RLEG)) {
         mech_notify(target, MECHALL,
                     "Your legs are still recovering from your last attack.");
         target_charge = 0;
       }
       /* Is the second unit's arms cycling */
-      if (MechSections(target)[RARM].recycle ||
-          MechSections(target)[LARM].recycle) {
+      if (mech_section_recycle_ticks(target, RARM) ||
+          mech_section_recycle_ticks(target, LARM)) {
         mech_notify(target, MECHALL,
                     "Your arms are still recovering from your last attack.");
         target_charge = 0;
       }
     } else {
       /* Is the second unit's front side cycling */
-      if (MechSections(target)[FSIDE].recycle) {
+      if (mech_section_recycle_ticks(target, FSIDE)) {
         mech_notify(target, MECHALL,
                     "You are still recovering from your last attack!");
         target_charge = 0;
@@ -125,7 +150,7 @@ void ChargeMech(Mech *mech, Mech *target) {
     }
 
     /* Is the second unit jumping */
-    if (Jumping(target)) {
+    if (mech_is_jumping(target)) {
       mech_notify(mech, MECHALL,
                   "Your target is jumping, you charge underneath it.");
       mech_notify(target, MECHALL,
@@ -135,7 +160,7 @@ void ChargeMech(Mech *mech, Mech *target) {
     }
 
     /* Is the first unit jumping */
-    if (Jumping(mech)) {
+    if (mech_is_jumping(mech)) {
       mech_notify(target, MECHALL,
                   "Your target is jumping, you charge underneath it.");
       mech_notify(mech, MECHALL,
@@ -145,7 +170,8 @@ void ChargeMech(Mech *mech, Mech *target) {
     }
 
     /* Is the second unit fallen and the first unit not a tank */
-    if (Fallen(target) && (MechType(mech) != CLASS_VEH_GROUND)) {
+    if (mech_condition_summary(target).fallen &&
+        (mech_class(mech) != CLASS_VEH_GROUND)) {
       mech_notify(mech, MECHALL, "Your target's too low for you to charge it!");
       mech_charge = 0;
     }
@@ -153,36 +179,39 @@ void ChargeMech(Mech *mech, Mech *target) {
     /* Not sure at the moment if I need this here, but I figured
      * couldn't hurt for now */
     /* Is the first unit fallen and the second unit not a tank */
-    if (Fallen(mech) && (MechType(target) != CLASS_VEH_GROUND)) {
+    if (mech_condition_summary(mech).fallen &&
+        (mech_class(target) != CLASS_VEH_GROUND)) {
       mech_notify(target, MECHALL,
                   "Your target's too low for you to charge it!");
       target_charge = 0;
     }
 
     /* If the second unit is a mech it can only charge mechs */
-    if ((MechType(target) == CLASS_MECH) && (MechType(mech) != CLASS_MECH)) {
+    if ((mech_class(target) == CLASS_MECH) &&
+        (mech_class(mech) != CLASS_MECH)) {
       mech_notify(target, MECHALL, "You can only charge mechs!");
       target_charge = 0;
     }
 
     /* If the first unit is a mech it can only charge mechs */
-    if ((MechType(mech) == CLASS_MECH) && (MechType(target) != CLASS_MECH)) {
+    if ((mech_class(mech) == CLASS_MECH) &&
+        (mech_class(target) != CLASS_MECH)) {
       mech_notify(mech, MECHALL, "You can only charge mechs!");
       mech_charge = 0;
     }
 
     /* If the second unit is a tank, it can only charge tanks and mechs */
-    if ((MechType(target) == CLASS_VEH_GROUND) &&
-        ((MechType(mech) != CLASS_MECH) &&
-         (MechType(mech) != CLASS_VEH_GROUND))) {
+    if ((mech_class(target) == CLASS_VEH_GROUND) &&
+        ((mech_class(mech) != CLASS_MECH) &&
+         (mech_class(mech) != CLASS_VEH_GROUND))) {
       mech_notify(target, MECHALL, "You can only charge mechs and tanks!");
       target_charge = 0;
     }
 
     /* If the first unit is a tank, it can only charge tanks and mechs */
-    if ((MechType(mech) == CLASS_VEH_GROUND) &&
-        ((MechType(target) != CLASS_MECH) &&
-         (MechType(target) != CLASS_VEH_GROUND))) {
+    if ((mech_class(mech) == CLASS_VEH_GROUND) &&
+        ((mech_class(target) != CLASS_MECH) &&
+         (mech_class(target) != CLASS_VEH_GROUND))) {
       mech_notify(mech, MECHALL, "You can only charge mechs and tanks!");
       mech_charge = 0;
     }
@@ -210,44 +239,40 @@ void ChargeMech(Mech *mech, Mech *target) {
     }
 
     /* Check the arcs to make sure the target is in the front arc */
-    ts = MechStatus(mech) & (TORSO_LEFT | TORSO_RIGHT);
-    MechStatus(mech) &= ~ts;
-    if (!(InWeaponArc(mech, MechFX(target), MechFY(target)) & FORWARDARC)) {
+    if (!(charge_forward_arc(mech, target) & FORWARDARC)) {
       mech_notify(mech, MECHALL,
                   "Your charge target is not in your forward arc and you are "
                   "unable to charge it.");
       mech_charge = 0;
     }
-    MechStatus(mech) |= ts;
-
-    ts = MechStatus(target) & (TORSO_LEFT | TORSO_RIGHT);
-    MechStatus(mech) &= ~ts;
-    if (!(InWeaponArc(target, MechFX(mech), MechFY(mech)) & FORWARDARC)) {
+    if (!(InWeaponArc(target, mech_position_real_x(mech),
+                      mech_position_real_y(mech)) &
+          FORWARDARC)) {
       mech_notify(target, MECHALL,
                   "Your charge target is not in your forward arc and you are "
                   "unable to charge it.");
       target_charge = 0;
     }
-    MechStatus(mech) |= ts;
-
+    mech_torso_twist_merge(mech, target);
     /* Now to calculate how much damage the first unit will do */
-    if (mech->xcode.context->configuration->btech_newcharge)
+    if (btech_context_uses_new_charge_rules(context))
       target_damage =
-          (((((float)MechChargeDistance(mech)) * MP1) -
-            MechSpeed(target) *
-                cos((MechFacing(mech) - MechFacing(target)) * (M_PI / 180.))) *
+          (((((float)mech_charge_distance(mech)) * MP1) -
+            mech_current_speed(target) * cos((mech_heading_degrees(mech) -
+                                              mech_heading_degrees(target)) *
+                                             (M_PI / 180.))) *
            MP_PER_KPH) *
-          (MechRealTons(mech) + 5) / 10;
+          (mech_real_tonnage(mech) + 5) / 10;
     else
       target_damage =
-          ((MechSpeed(mech) -
-            MechSpeed(target) *
-                cos((MechFacing(mech) - MechFacing(target)) * (M_PI / 180.))) *
+          ((mech_current_speed(mech) -
+            mech_current_speed(target) * cos((mech_heading_degrees(mech) -
+                                              mech_heading_degrees(target)) *
+                                             (M_PI / 180.))) *
            MP_PER_KPH) *
-          (MechRealTons(mech) + 5) / 10;
+          (mech_real_tonnage(mech) + 5) / 10;
 
-    if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
-                         "melee_specialist"))
+    if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "melee_specialist"))
       target_damage++;
 
     /* Not able to do any damage */
@@ -259,10 +284,9 @@ void ChargeMech(Mech *mech, Mech *target) {
     }
 
     /* Now see how much damage the second unit will do */
-    mech_damage = (MechRealTons(target) + 5) / 10;
+    mech_damage = (mech_real_tonnage(target) + 5) / 10;
 
-    if (HasBoolAdvantage(mech->xcode.context, MechPilot(target),
-                         "melee_specialist"))
+    if (HasBoolAdvantage(context, mech_pilot_dbref(target), "melee_specialist"))
       mech_damage++;
 
     /* Not able to do any damage */
@@ -276,15 +300,15 @@ void ChargeMech(Mech *mech, Mech *target) {
     mech_baseToHit = 5;
     mech_baseToHit += FindPilotPiloting(mech) - FindPilotPiloting(target);
 
-    mech_baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
-                                        "melee_specialist")
-                           ? MIN(0, mech_attacker_movement_modifier(mech) - 1)
-                           : mech_attacker_movement_modifier(mech));
+    mech_baseToHit +=
+        (HasBoolAdvantage(context, mech_pilot_dbref(mech), "melee_specialist")
+             ? MIN(0, mech_attacker_movement_modifier(mech) - 1)
+             : mech_attacker_movement_modifier(mech));
 
     mech_baseToHit += mech_target_movement_modifier(mech, target, 0.0);
 
 #ifdef BT_MOVEMENT_MODES
-    if (Dodging(target))
+    if (mech_condition_summary(target).dodging)
       mech_baseToHit += 2;
 #endif
 
@@ -292,15 +316,15 @@ void ChargeMech(Mech *mech, Mech *target) {
     targ_baseToHit = 5;
     targ_baseToHit += FindPilotPiloting(target) - FindPilotPiloting(mech);
 
-    targ_baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(target),
-                                        "melee_specialist")
-                           ? MIN(0, mech_attacker_movement_modifier(target) - 1)
-                           : mech_attacker_movement_modifier(target));
+    targ_baseToHit +=
+        (HasBoolAdvantage(context, mech_pilot_dbref(target), "melee_specialist")
+             ? MIN(0, mech_attacker_movement_modifier(target) - 1)
+             : mech_attacker_movement_modifier(target));
 
     targ_baseToHit += mech_target_movement_modifier(target, mech, 0.0);
 
 #ifdef BT_MOVEMENT_MODES
-    if (Dodging(mech))
+    if (mech_condition_summary(mech).dodging)
       targ_baseToHit += 2;
 #endif
 
@@ -324,15 +348,13 @@ void ChargeMech(Mech *mech, Mech *target) {
     if (!mech_charge && !target_charge) {
       /* MechChargeTarget(mech) and the others are set
          after the return */
-      MechChargeTarget(target) = -1;
-      MechChargeTimer(target) = 0;
-      MechChargeDistance(target) = 0;
+      mech_charge_reset(target);
       return;
     }
 
     /* Roll */
-    mech_roll = btech_random_roll(mech->xcode.context);
-    targ_roll = btech_random_roll(mech->xcode.context);
+    mech_roll = btech_random_roll(context);
+    targ_roll = btech_random_roll(context);
 
     if (mech_charge)
       mech_printf(mech, MECHALL, "Charge: BTH %d\tRoll: %d", mech_baseToHit,
@@ -357,14 +379,14 @@ void ChargeMech(Mech *mech, Mech *target) {
 
       for (i = 0; i < spread; i++) {
         hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
-        MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear,
-                     iscritical, 5, 0);
+        physical_damage_apply(target, mech, 1, mech_pilot_dbref(mech), hitloc,
+                              isrear, iscritical, 5, 0);
       }
 
       if (target_damage % 5) {
         hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
-        MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear,
-                     iscritical, (target_damage % 5), 0);
+        physical_damage_apply(target, mech, 1, mech_pilot_dbref(mech), hitloc,
+                              isrear, iscritical, (target_damage % 5), 0);
       }
 
       hitGroup = mech_hit_group(target, mech);
@@ -372,16 +394,17 @@ void ChargeMech(Mech *mech, Mech *target) {
 
       /* Ok now how much damage will the first unit take from
        * charging */
-      if (mech->xcode.context->configuration->btech_newcharge &&
-          mech->xcode.context->configuration->btech_tl3_charge)
+      if (btech_context_uses_new_charge_rules(context) &&
+          btech_context_uses_technology_level_three_charge_rules(context))
         target_damage =
-            (((((float)MechChargeDistance(mech)) * MP1) -
-              MechSpeed(target) * cos((MechFacing(mech) - MechFacing(target)) *
-                                      (M_PI / 180.))) *
+            (((((float)mech_charge_distance(mech)) * MP1) -
+              mech_current_speed(target) * cos((mech_heading_degrees(mech) -
+                                                mech_heading_degrees(target)) *
+                                               (M_PI / 180.))) *
              MP_PER_KPH) *
-            (MechRealTons(mech) + 5) / 20;
+            (mech_real_tonnage(mech) + 5) / 20;
       else
-        target_damage = (MechRealTons(target) + 5) / 10; /* REUSED! */
+        target_damage = (mech_real_tonnage(target) + 5) / 10; /* REUSED! */
 
       /* Record the damage for debugging then dish it out */
       received_damage = target_damage;
@@ -389,36 +412,37 @@ void ChargeMech(Mech *mech, Mech *target) {
 
       for (i = 0; i < spread; i++) {
         hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
-        MyDamageMech2(mech, mech, 0, -1, hitloc, isrear, iscritical, 5, 0);
+        physical_damage_apply_without_experience(mech, mech, 0, -1, hitloc,
+                                                 isrear, iscritical, 5, 0);
       }
 
       if (target_damage % 5) {
         hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
-        MyDamageMech2(mech, mech, 0, -1, hitloc, isrear, iscritical,
-                      (target_damage % 5), 0);
+        physical_damage_apply_without_experience(mech, mech, 0, -1, hitloc,
+                                                 isrear, iscritical,
+                                                 (target_damage % 5), 0);
       }
 
       /* Stop him */
-      MechSpeed(mech) = 0;
-      MechDesiredSpeed(mech) = 0;
+      mech_current_speed_set(mech, 0);
+      mech_desired_speed_set(mech, 0);
 
       /* Emit the damage for debugging purposes */
       snprintf(emit_buff, LBUF_SIZE,
                "#%li charges #%li (%i/%i) Distance:"
                " %.2f DI: %i DR: %i",
-               mech->mynum, target->mynum, mech_baseToHit, mech_roll,
-               MechChargeDistance(mech), inflicted_damage, received_damage);
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                         emit_buff);
+               mech_dbref(mech), mech_dbref(target), mech_baseToHit, mech_roll,
+               mech_charge_distance(mech), inflicted_damage, received_damage);
+      btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
 
       /* Make the first unit roll for doing the charge if it is a mech */
-      if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
+      if (mech_class(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
         mech_fall(mech, 1, 1);
       }
       /* Make the second unit roll for receiving the charge if it is a mech */
-      if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
+      if (mech_class(mech) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
         mech_notify(target, MECHALL,
                     "Your piloting skill fails and you fall over!!");
         mech_fall(target, 1, 1);
@@ -440,14 +464,14 @@ void ChargeMech(Mech *mech, Mech *target) {
 
       for (i = 0; i < spread; i++) {
         hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
-        MyDamageMech(mech, target, 1, MechPilot(target), hitloc, isrear,
-                     iscritical, 5, 0);
+        physical_damage_apply(mech, target, 1, mech_pilot_dbref(target), hitloc,
+                              isrear, iscritical, 5, 0);
       }
 
       if (mech_damage % 5) {
         hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
-        MyDamageMech(mech, target, 1, MechPilot(target), hitloc, isrear,
-                     iscritical, (mech_damage % 5), 0);
+        physical_damage_apply(mech, target, 1, mech_pilot_dbref(target), hitloc,
+                              isrear, iscritical, (mech_damage % 5), 0);
       }
 
       hitGroup = mech_hit_group(mech, target);
@@ -455,16 +479,17 @@ void ChargeMech(Mech *mech, Mech *target) {
 
       /* Ok now how much damage will the second unit take from
        * charging */
-      if (mech->xcode.context->configuration->btech_newcharge &&
-          mech->xcode.context->configuration->btech_tl3_charge)
+      if (btech_context_uses_new_charge_rules(context) &&
+          btech_context_uses_technology_level_three_charge_rules(context))
         target_damage =
-            (((((float)MechChargeDistance(target)) * MP1) -
-              MechSpeed(mech) * cos((MechFacing(target) - MechFacing(mech)) *
-                                    (M_PI / 180.))) *
+            (((((float)mech_charge_distance(target)) * MP1) -
+              mech_current_speed(mech) * cos((mech_heading_degrees(target) -
+                                              mech_heading_degrees(mech)) *
+                                             (M_PI / 180.))) *
              MP_PER_KPH) *
-            (MechRealTons(mech) + 5) / 20;
+            (mech_real_tonnage(mech) + 5) / 20;
       else
-        target_damage = (MechRealTons(mech) + 5) / 10; /* REUSED! */
+        target_damage = (mech_real_tonnage(mech) + 5) / 10; /* REUSED! */
 
       /* Record the damage for debugging then dish it out */
       received_damage = target_damage;
@@ -472,34 +497,35 @@ void ChargeMech(Mech *mech, Mech *target) {
 
       for (i = 0; i < spread; i++) {
         hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
-        MyDamageMech2(target, target, 0, -1, hitloc, isrear, iscritical, 5, 0);
+        physical_damage_apply_without_experience(target, target, 0, -1, hitloc,
+                                                 isrear, iscritical, 5, 0);
       }
 
       if (mech_damage % 5) {
         hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
-        MyDamageMech2(target, target, 0, -1, hitloc, isrear, iscritical,
-                      (mech_damage % 5), 0);
+        physical_damage_apply_without_experience(target, target, 0, -1, hitloc,
+                                                 isrear, iscritical,
+                                                 (mech_damage % 5), 0);
       }
 
       /* Stop him */
-      MechSpeed(target) = 0;
-      MechDesiredSpeed(target) = 0;
+      mech_current_speed_set(target, 0);
+      mech_desired_speed_set(target, 0);
 
       /* Emit the damage for debugging purposes */
       snprintf(emit_buff, LBUF_SIZE,
                "#%li charges #%li (%i/%i) Distance:"
                " %.2f DI: %i DR: %i",
-               target->mynum, mech->mynum, targ_baseToHit, targ_roll,
-               MechChargeDistance(target), inflicted_damage, received_damage);
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                         emit_buff);
+               mech_dbref(target), mech_dbref(mech), targ_baseToHit, targ_roll,
+               mech_charge_distance(target), inflicted_damage, received_damage);
+      btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
 
-      if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
+      if (mech_class(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
         mech_fall(mech, 1, 1);
       }
-      if (MechType(target) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
+      if (mech_class(target) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
         mech_notify(target, MECHALL,
                     "Your piloting skill fails and you fall over!!");
         mech_fall(target, 1, 1);
@@ -507,7 +533,7 @@ void ChargeMech(Mech *mech, Mech *target) {
     }
 
     /* Cycle the sections so they can't make another attack for a while */
-    if (MechType(mech) == CLASS_MECH) {
+    if (mech_class(mech) == CLASS_MECH) {
       for (i = 0; i < CHARGE_SECTIONS; i++)
         mech_set_recycle_limb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
     } else {
@@ -515,7 +541,7 @@ void ChargeMech(Mech *mech, Mech *target) {
       mech_set_recycle_limb(mech, TURRET, PHYSICAL_RECYCLE_TIME);
     }
 
-    if (MechType(target) == CLASS_MECH) {
+    if (mech_class(target) == CLASS_MECH) {
       for (i = 0; i < CHARGE_SECTIONS; i++)
         mech_set_recycle_limb(target, resect[i], PHYSICAL_RECYCLE_TIME);
     } else {
@@ -525,16 +551,15 @@ void ChargeMech(Mech *mech, Mech *target) {
 
     /* MechChargeTarget(mech) and the others are set
        after the return */
-    MechChargeTarget(target) = -1;
-    MechChargeTimer(target) = 0;
-    MechChargeDistance(target) = 0;
+    mech_charge_reset(target);
     return;
   }
 
   /* Check to see if any weapons cycling in any of the sections */
   for (i = 0; i < CHARGE_SECTIONS; i++) {
-    if (SectHasBusyWeap(mech, i)) {
-      ArmorStringFromIndex(i, location, MechType(mech), MechMove(mech));
+    if (mech_section_has_recycling_weapon(mech, i)) {
+      ArmorStringFromIndex(i, location, mech_class(mech),
+                           mech_movement_type(mech));
       mech_printf(mech, MECHALL, "You have weapons recycling on your %s.",
                   location);
       return;
@@ -542,69 +567,70 @@ void ChargeMech(Mech *mech, Mech *target) {
   }
 
   /* Check if they going fast enough to charge */
-  DOCHECKMA(MechSpeed(mech) < MP1, "You aren't moving fast enough to charge.");
+  DOCHECKMA(mech_current_speed(mech) < MP1,
+            "You aren't moving fast enough to charge.");
 
   /* Check to see if their sections cycling */
-  if (MechType(mech) == CLASS_MECH) {
-    DOCHECKMA(MechSections(mech)[LLEG].recycle ||
-                  MechSections(mech)[RLEG].recycle,
+  if (mech_class(mech) == CLASS_MECH) {
+    DOCHECKMA(mech_section_recycle_ticks(mech, LLEG) ||
+                  mech_section_recycle_ticks(mech, RLEG),
               "Your legs are still recovering from your last attack.");
-    DOCHECKMA(MechSections(mech)[RARM].recycle ||
-                  MechSections(mech)[LARM].recycle,
+    DOCHECKMA(mech_section_recycle_ticks(mech, RARM) ||
+                  mech_section_recycle_ticks(mech, LARM),
               "Your arms are still recovering from your last attack.");
   } else {
-    DOCHECKMA(MechSections(mech)[FSIDE].recycle,
+    DOCHECKMA(mech_section_recycle_ticks(mech, FSIDE),
               "You are still recovering from your last attack!");
   }
 
   /* See if either the target or the attacker are jumping */
-  DOCHECKMA(Jumping(target),
+  DOCHECKMA(mech_is_jumping(target),
             "Your target is jumping, you charge underneath it.");
-  DOCHECKMA(Jumping(mech),
+  DOCHECKMA(mech_is_jumping(mech),
             "You can't charge while jumping, try death from above.");
 
   /* If target is fallen make sure you in a tank */
-  DOCHECKMA(Fallen(target) && (MechType(mech) != CLASS_VEH_GROUND),
+  DOCHECKMA(mech_condition_summary(target).fallen &&
+                (mech_class(mech) != CLASS_VEH_GROUND),
             "Your target's too low for you to charge it!");
 
   /* Only mechs can charge mechs */
-  DOCHECKMA((MechType(mech) == CLASS_MECH) && (MechType(target) != CLASS_MECH),
+  DOCHECKMA((mech_class(mech) == CLASS_MECH) &&
+                (mech_class(target) != CLASS_MECH),
             "You can only charge mechs!");
 
   /* Only tanks can charge tanks and mechs */
-  DOCHECKMA((MechType(mech) == CLASS_VEH_GROUND) &&
-                ((MechType(target) != CLASS_MECH) &&
-                 (MechType(target) != CLASS_VEH_GROUND)),
+  DOCHECKMA((mech_class(mech) == CLASS_VEH_GROUND) &&
+                ((mech_class(target) != CLASS_MECH) &&
+                 (mech_class(target) != CLASS_VEH_GROUND)),
             "You can only charge mechs and tanks!");
 
   /* Check the arc make sure target is in front arc */
-  ts = MechStatus(mech) & (TORSO_LEFT | TORSO_RIGHT);
-  MechStatus(mech) &= ~ts;
-  iwa = InWeaponArc(mech, MechFX(target), MechFY(target));
-  MechStatus(mech) |= ts;
+  iwa = charge_forward_arc(mech, target);
   DOCHECKMA(!(iwa & FORWARDARC), "Your charge target is not in your forward "
                                  "arc and you are unable to charge it.");
 
   /* Damage inflicted by the charge */
-  if (mech->xcode.context->configuration->btech_newcharge)
+  if (btech_context_uses_new_charge_rules(context))
     target_damage =
-        (((((float)MechChargeDistance(mech)) * MP1) -
-          MechSpeed(target) *
-              cos((MechFacing(mech) - MechFacing(target)) * (M_PI / 180.))) *
+        (((((float)mech_charge_distance(mech)) * MP1) -
+          mech_current_speed(target) *
+              cos((mech_heading_degrees(mech) - mech_heading_degrees(target)) *
+                  (M_PI / 180.))) *
          MP_PER_KPH) *
-            (MechRealTons(mech) + 5) / 10 +
+            (mech_real_tonnage(mech) + 5) / 10 +
         1;
   else
     target_damage =
-        ((MechSpeed(mech) -
-          MechSpeed(target) *
-              cos((MechFacing(mech) - MechFacing(target)) * (M_PI / 180.))) *
+        ((mech_current_speed(mech) -
+          mech_current_speed(target) *
+              cos((mech_heading_degrees(mech) - mech_heading_degrees(target)) *
+                  (M_PI / 180.))) *
          MP_PER_KPH) *
-            (MechRealTons(mech) + 5) / 10 +
+            (mech_real_tonnage(mech) + 5) / 10 +
         1;
 
-  if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
-                       "melee_specialist"))
+  if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "melee_specialist"))
     target_damage++;
 
   /* Not enough damage done so no charge */
@@ -614,15 +640,15 @@ void ChargeMech(Mech *mech, Mech *target) {
   /* BTH */
   baseToHit += FindPilotPiloting(mech) - FindSPilotPiloting(target);
 
-  baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
-                                 "melee_specialist")
-                    ? MIN(0, mech_attacker_movement_modifier(mech) - 1)
-                    : mech_attacker_movement_modifier(mech));
+  baseToHit +=
+      (HasBoolAdvantage(context, mech_pilot_dbref(mech), "melee_specialist")
+           ? MIN(0, mech_attacker_movement_modifier(mech) - 1)
+           : mech_attacker_movement_modifier(mech));
 
   baseToHit += mech_target_movement_modifier(mech, target, 0.0);
 
 #ifdef BT_MOVEMENT_MODES
-  if (Dodging(target))
+  if (mech_condition_summary(target).dodging)
     baseToHit += 2;
 #endif
 
@@ -630,7 +656,7 @@ void ChargeMech(Mech *mech, Mech *target) {
             tprintf("Charge: BTH %d\tYou choose not to charge.", baseToHit));
 
   /* Roll */
-  roll = btech_random_roll(mech->xcode.context);
+  roll = btech_random_roll(context);
   mech_printf(mech, MECHALL, "Charge: BTH %d\tRoll: %d", baseToHit, roll);
 
   /* Did the charge work ? */
@@ -638,10 +664,10 @@ void ChargeMech(Mech *mech, Mech *target) {
     /* OUCH */
     mech_los_broadcast_unit(
         mech, target,
-        tprintf("%ss %%s!", MechType(mech) == CLASS_MECH ? "charge" : "ram"));
+        tprintf("%ss %%s!", mech_class(mech) == CLASS_MECH ? "charge" : "ram"));
     mech_printf(target, MECHSTARTED, "CRASH!!!\n%s %ss into you!",
                 mech_to_mech_display_id(target, mech).text,
-                MechType(mech) == CLASS_MECH ? "charge" : "ram");
+                mech_class(mech) == CLASS_MECH ? "charge" : "ram");
     mech_notify(mech, MECHALL, "SMASH!!! You crash into your target!");
     hitGroup = mech_hit_group(mech, target);
 
@@ -656,30 +682,31 @@ void ChargeMech(Mech *mech, Mech *target) {
 
     for (i = 0; i < spread; i++) {
       hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
-      MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear, iscritical,
-                   5, 0);
+      physical_damage_apply(target, mech, 1, mech_pilot_dbref(mech), hitloc,
+                            isrear, iscritical, 5, 0);
     }
 
     if (target_damage % 5) {
       hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
-      MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear, iscritical,
-                   (target_damage % 5), 0);
+      physical_damage_apply(target, mech, 1, mech_pilot_dbref(mech), hitloc,
+                            isrear, iscritical, (target_damage % 5), 0);
     }
 
     hitGroup = mech_hit_group(target, mech);
     isrear = (hitGroup == BACK);
 
     /* Damage done to the attacker for the charge */
-    if (mech->xcode.context->configuration->btech_newcharge &&
-        mech->xcode.context->configuration->btech_tl3_charge)
+    if (btech_context_uses_new_charge_rules(context) &&
+        btech_context_uses_technology_level_three_charge_rules(context))
       mech_damage =
-          (((((float)MechChargeDistance(mech)) * MP1) -
-            MechSpeed(target) *
-                cos((MechFacing(mech) - MechFacing(target)) * (M_PI / 180.))) *
+          (((((float)mech_charge_distance(mech)) * MP1) -
+            mech_current_speed(target) * cos((mech_heading_degrees(mech) -
+                                              mech_heading_degrees(target)) *
+                                             (M_PI / 180.))) *
            MP_PER_KPH) *
-          (MechRealTons(target) + 5) / 20;
+          (mech_real_tonnage(target) + 5) / 20;
     else
-      mech_damage = (MechRealTons(target) + 5) / 10;
+      mech_damage = (mech_real_tonnage(target) + 5) / 10;
 
     /* Record the damage then dish it out */
     received_damage = mech_damage;
@@ -687,45 +714,45 @@ void ChargeMech(Mech *mech, Mech *target) {
 
     for (i = 0; i < spread; i++) {
       hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
-      MyDamageMech2(mech, mech, 0, -1, hitloc, isrear, iscritical, 5, 0);
+      physical_damage_apply_without_experience(mech, mech, 0, -1, hitloc,
+                                               isrear, iscritical, 5, 0);
     }
 
     if (mech_damage % 5) {
       hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
-      MyDamageMech2(mech, mech, 0, -1, hitloc, isrear, iscritical,
-                    (mech_damage % 5), 0);
+      physical_damage_apply_without_experience(
+          mech, mech, 0, -1, hitloc, isrear, iscritical, (mech_damage % 5), 0);
     }
 
     /* Force piloting roll for attacker if they are in a mech */
-    if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
+    if (mech_class(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
       mech_notify(mech, MECHALL,
                   "Your piloting skill fails and you fall over!!");
       mech_fall(mech, 1, 1);
     }
 
     /* Force piloting roll for target if they are in a mech */
-    if (MechType(target) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
+    if (mech_class(target) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
       mech_notify(target, MECHSTARTED,
                   "Your piloting skill fails and you fall over!!");
       mech_fall(target, 1, 1);
     }
 
     /* Stop him */
-    MechSpeed(mech) = 0;
-    MechDesiredSpeed(mech) = 0;
+    mech_current_speed_set(mech, 0);
+    mech_desired_speed_set(mech, 0);
 
     /* Emit the damage for debugging purposes */
     snprintf(emit_buff, LBUF_SIZE,
              "#%li charges #%li (%i/%i) Distance:"
              " %.2f DI: %i DR: %i",
-             mech->mynum, target->mynum, baseToHit, roll,
-             MechChargeDistance(mech), inflicted_damage, received_damage);
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       emit_buff);
+             mech_dbref(mech), mech_dbref(target), baseToHit, roll,
+             mech_charge_distance(mech), inflicted_damage, received_damage);
+    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
   }
 
   /* Cycle the sections so they can't make another attack for a while */
-  if (MechType(mech) == CLASS_MECH) {
+  if (mech_class(mech) == CLASS_MECH) {
     for (i = 0; i < CHARGE_SECTIONS; i++)
       mech_set_recycle_limb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
   } else {

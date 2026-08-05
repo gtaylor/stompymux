@@ -23,6 +23,7 @@ DbRef mech_dfa_target_dbref(const Mech *mech);
 void mech_dfa_target_dbref_set(Mech *mech, DbRef target);
 int mech_charge_timer(const Mech *mech);
 int mech_charge_timer_advance(Mech *mech);
+float mech_charge_distance(const Mech *mech);
 void mech_charge_distance_add(Mech *mech, float distance);
 int mech_target_hex_x(const Mech *mech);
 int mech_target_hex_y(const Mech *mech);

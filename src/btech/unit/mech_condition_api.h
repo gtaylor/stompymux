@@ -90,6 +90,7 @@ bool mech_ecm_mode_toggle(Mech *mech, bool eccm);
 bool mech_personal_ecm_mode_toggle(Mech *mech, bool eccm);
 bool mech_angel_ecm_mode_toggle(Mech *mech, bool eccm);
 void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist);
+void mech_torso_twist_merge(Mech *mech, const Mech *source);
 void mech_arms_center(Mech *mech);
 void mech_arms_flip(Mech *mech);
 void mech_ams_enabled_set(Mech *mech, bool enabled);

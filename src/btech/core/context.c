@@ -372,6 +372,12 @@ bool btech_context_uses_new_charge_rules(const BtechContext *context) {
   return context->configuration->btech_newcharge;
 }
 
+bool btech_context_uses_technology_level_three_charge_rules(
+    const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_tl3_charge;
+}
+
 int btech_context_movement_slowdown_mode(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_slowdown;

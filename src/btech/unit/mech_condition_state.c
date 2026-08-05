@@ -135,6 +135,10 @@ void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist) {
     mech->rd.status |= TORSO_RIGHT;
 }
 
+void mech_torso_twist_merge(Mech *mech, const Mech *source) {
+  mech->rd.status |= source->rd.status & (TORSO_LEFT | TORSO_RIGHT);
+}
+
 void mech_arms_center(Mech *mech) { mech->rd.status &= ~FLIPPED_ARMS; }
 
 void mech_arms_flip(Mech *mech) { mech->rd.status |= FLIPPED_ARMS; }
