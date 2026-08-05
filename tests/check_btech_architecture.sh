@@ -635,6 +635,20 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "(mech|mech_macros|map)\.h"|(mech|map)->|\b(Mech[A-Z][A-Za-z0-9_]*|IsDS|Landed|Started|Destroyed|Fallen|FlyingT|RollingT|SpheroidDS|Spinning|StopSpinning|StartSpinning|SetFacing|AeroFuel|MMaxSpeed|is_aero)\s*\(' \
+  src/btech/movement/aero_move.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: aerospace movement must use opaque unit and map APIs"
+  status=1
+fi
+
+match=$(rg -n '\b(aero_ControlEffect|ds_BridgeHit|aero_UpdateHeading|aero_UpdateSpeed|FuelCheck|ImproperLZ|DS_LandWarning)\b' \
+  src/btech || true)
+if [[ -n "$match" ]]; then
+  echo "$match: legacy aerospace exports are not allowed"
+  status=1
+fi
+
 match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Jumping)\s*\(' \
   src/btech/movement/mech_movement_validation.c || true)
 if [[ -n "$match" ]]; then

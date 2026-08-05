@@ -176,7 +176,7 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 2:
       case 12:
         if (crittable(mech, DS_NOSE, 30))
-          ds_BridgeHit(mech);
+          dropship_bridge_hit(mech);
         return DS_NOSE;
       case 3:
       case 11:
@@ -205,7 +205,7 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
       switch (roll) {
       case 2:
         if (crittable(mech, DS_NOSE, 30))
-          ds_BridgeHit(mech);
+          dropship_bridge_hit(mech);
         return DS_NOSE;
       case 3:
       case 11:

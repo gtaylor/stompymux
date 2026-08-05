@@ -228,6 +228,12 @@ void mech_motion_vector_xy_set(Mech *mech, float x, float y) {
   mech->rd.startfy = y;
 }
 
+void mech_motion_vector_set(Mech *mech, float x, float y, float z) {
+  mech->rd.startfx = x;
+  mech->rd.startfy = y;
+  mech->rd.startfz = z;
+}
+
 void mech_jump_destination_y_set(Mech *mech, int destination_y) {
   mech->rd.goingy = destination_y;
 }

@@ -70,6 +70,7 @@ void mech_desired_angle_set(Mech *mech, int angle);
 void mech_vertical_speed_set(Mech *mech, float speed);
 void mech_motion_vector_reset(Mech *mech);
 void mech_motion_vector_xy_set(Mech *mech, float x, float y);
+void mech_motion_vector_set(Mech *mech, float x, float y, float z);
 void mech_jump_destination_y_set(Mech *mech, int destination_y);
 void mech_fall_heading_apply(Mech *mech, int offset);
 void mech_jump_apex_elevation_set(Mech *mech, int elevation);

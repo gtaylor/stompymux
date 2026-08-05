@@ -102,6 +102,7 @@ set(BTECH_SOURCES
   map/map_terrain.c
   movement/aero_bomb.c
   movement/aero_move.c
+  movement/aero_flight_math.c
   movement/ds_bay.c
   movement/ds_turret.c
   movement/dropship_notification.c

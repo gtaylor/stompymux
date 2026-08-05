@@ -49,3 +49,5 @@ void mech_environment_conditions_set(Mech *mech, bool special, bool temperature,
                                      bool gravity, bool vacuum);
 void mech_jump_complete(Mech *mech);
 void mech_jump_abort(Mech *mech);
+int mech_spin_start_tick(const Mech *mech);
+void mech_spin_start_tick_set(Mech *mech, int tick);

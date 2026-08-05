@@ -156,3 +156,10 @@ void mech_hidden_set(Mech *mech, bool hidden) {
   else
     mech->rd.critstatus &= ~HIDDEN;
 }
+
+void mech_spinning_set(Mech *mech, bool spinning) {
+  if (spinning)
+    mech->rd.critstatus |= SPINNING;
+  else
+    mech->rd.critstatus &= ~SPINNING;
+}

@@ -216,9 +216,9 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
 
       if (mech_is_dropship(mech)) {
         if (mech_position_z(mech) < 10 && step->previous_z >= 10)
-          DS_LandWarning(mech, 1);
+          dropship_land_warning(mech, 1);
         else if (mech_position_z(mech) < 50 && step->previous_z >= 50)
-          DS_LandWarning(mech, 0);
+          dropship_land_warning(mech, 0);
         else if (mech_position_z(mech) < 100 && step->previous_z >= 100) {
           if (abs(mech_desired_angle(mech)) != 90) {
             if (dropship_notification_is_due(mech)) {
@@ -237,7 +237,7 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
             mech_desired_angle_set(mech, 90);
           }
           mech_motion_vector_xy_set(mech, 0.0F, 0.0F);
-          DS_LandWarning(mech, -1);
+          dropship_land_warning(mech, -1);
         }
       }
     } else {

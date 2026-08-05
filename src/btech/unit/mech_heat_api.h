@@ -22,6 +22,7 @@ void mech_heat_dissipation_add(Mech *mech, float heat);
 void mech_excess_heat_set(Mech *mech, float heat);
 void mech_weapon_heat_set(Mech *mech, float heat);
 void mech_weapon_heat_add(Mech *mech, float heat);
+void mech_added_heat_add(Mech *mech, float heat);
 void mech_disabled_heat_sinks_set(Mech *mech, int count);
 int mech_last_overheat_check_tick(const Mech *mech);
 void mech_last_overheat_check_tick_set(Mech *mech, int tick);

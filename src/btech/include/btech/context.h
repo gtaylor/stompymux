@@ -68,6 +68,7 @@ bool btech_context_uses_advanced_vehicle_fire(const BtechContext *context);
 bool btech_context_uses_tsm_sprint_bonus(const BtechContext *context);
 bool btech_context_uses_tsm_tow_bonus(const BtechContext *context);
 int btech_context_stand_careful_modifier(const BtechContext *context);
+int btech_context_landing_zone_mode(const BtechContext *context);
 bool btech_context_requires_backwalk_rolls(const BtechContext *context);
 bool btech_context_uses_new_charge_rules(const BtechContext *context);
 int btech_context_movement_slowdown_mode(const BtechContext *context);

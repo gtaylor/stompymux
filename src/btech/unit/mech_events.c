@@ -58,7 +58,7 @@ void mech_heartbeat(Mech *mech) {
   if (MechType(mech) == CLASS_AERO || MechType(mech) == CLASS_VTOL) {
     if (!Landed(mech) && (fabs(MechSpeed(mech)) == 0) &&
         (fabs(MechVerticalSpeed(mech)) == 0))
-      FuelCheck(mech);
+      aero_fuel_check(mech);
   }
 
   return;
@@ -333,7 +333,7 @@ void mech_move_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
 
   if (MechType(mech) == CLASS_VTOL)
-    if (Landed(mech) || FuelCheck(mech))
+    if (Landed(mech) || aero_fuel_check(mech))
       return;
   mech_heading_update(mech);
   if ((IsMechLegLess(mech)) || Jumping(mech) || OODing(mech)) {
@@ -410,12 +410,12 @@ void aero_move_event(MuxEvent *e) {
        2) Were VTOL, and
        3) Crashed
      */
-    if (FuelCheck(mech))
+    if (aero_fuel_check(mech))
       return;
     /* Genuine CHEAT :-) */
     if (Started(mech)) {
-      aero_UpdateHeading(mech);
-      aero_UpdateSpeed(mech);
+      aero_heading_update(mech);
+      aero_speed_update(mech);
     }
     if (Fallen(mech))
       MechStartFZ(mech) = MechStartFZ(mech) - 1;
@@ -434,7 +434,7 @@ void aero_move_event(MuxEvent *e) {
     mech_movement_update(mech);
     if (fabs(MechSpeed(mech)) > 0.0 || fabs(MechDesiredSpeed(mech)) > 0.0 ||
         MechDesiredFacing(mech) != MechFacing(mech))
-      if (!FuelCheck(mech))
+      if (!aero_fuel_check(mech))
         mech_event_schedule(mech, EVENT_MOVE, aero_move_event, MOVE_TICK, 0);
   }
 }

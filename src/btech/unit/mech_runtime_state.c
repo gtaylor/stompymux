@@ -174,3 +174,7 @@ void mech_jump_complete(Mech *mech) {
 }
 
 void mech_jump_abort(Mech *mech) { mech->rd.status &= ~(JUMPING | DFA_ATTACK); }
+
+int mech_spin_start_tick(const Mech *mech) { return mech->rd.sspin; }
+
+void mech_spin_start_tick_set(Mech *mech, int tick) { mech->rd.sspin = tick; }

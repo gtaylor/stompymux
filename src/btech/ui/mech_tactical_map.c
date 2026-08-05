@@ -276,7 +276,7 @@ static void sketch_tac_dslz(char *buf, BattleMap *map, Mech *mech, int sx,
       int tx = sx + x;
       char *base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
 
-      if (ImproperLZ(mech, tx, ty))
+      if (aero_landing_zone_check(mech, tx, ty))
         base[dispcols] = docolour ? '\241' : 'X';
       else
         base[dispcols] = docolour ? '\240' : 'O';

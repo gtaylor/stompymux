@@ -138,6 +138,12 @@ int btech_context_stand_careful_modifier(const BtechContext *context) {
              : 0;
 }
 
+int btech_context_landing_zone_mode(const BtechContext *context) {
+  return context && context->configuration
+             ? context->configuration->btech_blzmapmode
+             : 0;
+}
+
 bool btech_context_requires_backwalk_rolls(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_roll_on_backwalk;

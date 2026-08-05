@@ -58,6 +58,8 @@ void mech_weapon_heat_set(Mech *mech, float heat) { mech->rd.weapheat = heat; }
 
 void mech_weapon_heat_add(Mech *mech, float heat) { mech->rd.weapheat += heat; }
 
+void mech_added_heat_add(Mech *mech, float heat) { mech->rd.plus_heat += heat; }
+
 void mech_disabled_heat_sinks_set(Mech *mech, int count) {
   mech->rd.disabled_hs = count;
 }

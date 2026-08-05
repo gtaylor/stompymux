@@ -27,6 +27,8 @@ void mech_maximum_speed_set(Mech *mech, float speed);
 bool mech_is_flying_type(const Mech *mech);
 bool mech_is_omni(const Mech *mech);
 int mech_fuel(const Mech *mech);
+void mech_fuel_set(Mech *mech, int fuel);
+void mech_fuel_decrement(Mech *mech, int amount);
 int mech_original_fuel(const Mech *mech);
 int mech_structural_integrity(const Mech *mech);
 int mech_original_structural_integrity(const Mech *mech);

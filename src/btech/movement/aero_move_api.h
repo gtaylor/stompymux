@@ -19,18 +19,18 @@ void DS_BlastNearbyMechsAndTrees(Mech *mech, char *hitmsg, char *hitmsg1,
                                  char *nearhitmsg, char *nearhitmsg1,
                                  char *treehitmsg, int damage);
 void aero_land(DbRef player, void *data, char *buffer);
-void aero_ControlEffect(Mech *mech);
-void ds_BridgeHit(Mech *mech);
-void aero_UpdateHeading(Mech *mech);
+void aero_control_effect(Mech *mech);
+void dropship_bridge_hit(Mech *mech);
+void aero_heading_update(Mech *mech);
 double length_hypotenuse(double x, double y);
 double my_sqrtm(double x, double y);
-void aero_UpdateSpeed(Mech *mech);
-int FuelCheck(Mech *mech);
+void aero_speed_update(Mech *mech);
+int aero_fuel_check(Mech *mech);
 void aero_update(Mech *mech);
 void aero_thrust(DbRef player, void *data, char *arg);
 void aero_vheading(DbRef player, void *data, char *arg, int flag);
 void aero_climb(DbRef player, Mech *mech, char *arg);
 void aero_dive(DbRef player, Mech *mech, char *arg);
-int ImproperLZ(Mech *mech, int x, int y);
-void DS_LandWarning(Mech *mech, int serious);
+int aero_landing_zone_check(Mech *mech, int x, int y);
+void dropship_land_warning(Mech *mech, int serious);
 void aero_checklz(DbRef player, Mech *mech, char *buffer);

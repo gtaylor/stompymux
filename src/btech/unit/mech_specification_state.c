@@ -82,6 +82,10 @@ bool mech_is_omni(const Mech *mech) {
 
 int mech_fuel(const Mech *mech) { return mech->ud.fuel; }
 
+void mech_fuel_set(Mech *mech, int fuel) { mech->ud.fuel = fuel; }
+
+void mech_fuel_decrement(Mech *mech, int amount) { mech->ud.fuel -= amount; }
+
 int mech_original_fuel(const Mech *mech) { return mech->ud.fuel_orig; }
 
 int mech_structural_integrity(const Mech *mech) { return mech->ud.si; }

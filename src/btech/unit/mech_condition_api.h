@@ -84,3 +84,4 @@ void mech_fallen_set(Mech *mech, bool fallen);
 void mech_hull_down_set(Mech *mech, bool hull_down);
 void mech_dug_in_set(Mech *mech, bool dug_in);
 void mech_hidden_set(Mech *mech, bool hidden);
+void mech_spinning_set(Mech *mech, bool spinning);
