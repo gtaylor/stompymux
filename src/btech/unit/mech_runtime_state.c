@@ -84,6 +84,10 @@ int mech_cocoon_integrity(const Mech *mech) { return mech->rd.cocoon; }
 
 int mech_seen_count(const Mech *mech) { return mech->rd.num_seen; }
 
+int mech_last_dropship_message_tick(const Mech *mech) {
+  return mech->rd.last_ds_msg;
+}
+
 void mech_cocoon_integrity_set(Mech *mech, int integrity) {
   mech->rd.cocoon = integrity;
 }
@@ -120,6 +124,10 @@ void mech_seen_count_decrement(Mech *mech) {
 void mech_seen_count_increment(Mech *mech) { mech->rd.num_seen++; }
 
 void mech_seen_count_reset(Mech *mech) { mech->rd.num_seen = 0; }
+
+void mech_last_dropship_message_tick_set(Mech *mech, int tick) {
+  mech->rd.last_ds_msg = tick;
+}
 
 void mech_possible_contact_count_increment(Mech *mech) { mech->rd.can_see++; }
 

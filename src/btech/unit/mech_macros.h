@@ -290,7 +290,7 @@ static inline BtechContext *xcode_context(const void *object) {
 
 #define DSSpam(mek, msg)                                                       \
   do {                                                                         \
-    if (DropShip(MechType(mek)) && DSOkToNotify(mek))                          \
+    if (DropShip(MechType(mek)) && dropship_notification_is_due(mek))          \
       mech_los_broadcast(mek, msg);                                            \
   } while (0)
 #define DSSpam_O(mek, msg)                                                     \

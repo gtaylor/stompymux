@@ -563,6 +563,19 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '\bDSOkToNotify\b' src/btech || true)
+if [[ -n "$match" ]]; then
+  echo "$match: legacy DropShip notification export is not allowed"
+  status=1
+fi
+
+match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\bMech[A-Z][A-Za-z0-9_]*\s*\(' \
+  src/btech/movement/dropship_notification.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: DropShip notification throttling must use opaque unit APIs"
+  status=1
+fi
+
 match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Destroyed|is_aero)\s*\(' \
   src/btech/movement/mech_fire_hazard.c || true)
 if [[ -n "$match" ]]; then

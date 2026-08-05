@@ -23,15 +23,6 @@ void bridge_set_elevation(Mech *mech) {
   MechZ(mech) = MechUpperElevation(mech);
 }
 
-int DSOkToNotify(Mech *mech) {
-  if (DSLastMsg(mech) > mech->xcode.context->events->tick ||
-      (mech->xcode.context->events->tick - DSLastMsg(mech)) >= DS_SPAM_TIME) {
-    DSLastMsg(mech) = mech->xcode.context->events->tick;
-    return 1;
-  }
-  return 0;
-}
-
 int collision_check(Mech *mech, MovementCollisionMode mode, int le, int lt) {
   int e;
   BattleMap *mech_map =
@@ -421,7 +412,7 @@ void move_mech(Mech *mech) {
         else if (MechZ(mech) < 100 && oz >= 100) {
 
           if (abs(MechDesiredAngle(mech)) != 90) {
-            if (DSOkToNotify(mech)) {
+            if (dropship_notification_is_due(mech)) {
               mech_notify(mech, MECHALL,
                           "As the craft enters "
                           "the lower atmosphere, its nose rises up "

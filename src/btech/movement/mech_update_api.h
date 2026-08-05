@@ -17,7 +17,7 @@
 bool mech_fire_hazard_resolve(Mech *mech);
 int bridge_w_elevation(Mech *mech);
 void bridge_set_elevation(Mech *mech);
-int DSOkToNotify(Mech *mech);
+bool dropship_notification_is_due(Mech *mech);
 void move_mech(Mech *mech);
 void mech_naval_altitude_check(Mech *mech, int previous_z);
 void mech_vtol_altitude_check(Mech *mech);
