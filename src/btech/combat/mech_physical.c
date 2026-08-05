@@ -1,12 +1,46 @@
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
 #include "mech_physical_internal.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+
+static bool physical_arm_check(DbRef player, Mech *mech, const char *verb) {
+  BtechContext *context = mech_context(mech);
+
+  if (mech_class(mech) == CLASS_MW || mech_class(mech) == CLASS_BSUIT) {
+    notify(btech_context_evaluation(context), player,
+           tprintf("You cannot %s without a 'mech!", verb));
+    return false;
+  }
+  if (mech_class(mech) != CLASS_MECH) {
+    notify(btech_context_evaluation(context), player,
+           tprintf("You cannot %s with this vehicle!", verb));
+    return false;
+  }
+  return true;
+}
+
+static bool physical_quad_check(DbRef player, Mech *mech, const char *verb) {
+  if (mech_class(mech) != CLASS_MECH || !mech_is_quad(mech))
+    return true;
+
+  notify(btech_context_evaluation(mech_context(mech)), player,
+         tprintf("What are you going to %s with, your front right leg?", verb));
+  return false;
+}
+
 int all_limbs_recycled(Mech *mech) {
-  if (MechSections(mech)[LARM].recycle || MechSections(mech)[RARM].recycle) {
+  if (mech_section_recycle_ticks(mech, LARM) ||
+      mech_section_recycle_ticks(mech, RARM)) {
     mech_notify(mech, MECHALL,
                 "You still have arms recovering from another attack.");
     return 0;
   }
 
-  if (MechSections(mech)[RLEG].recycle || MechSections(mech)[LLEG].recycle) {
+  if (mech_section_recycle_ticks(mech, RLEG) ||
+      mech_section_recycle_ticks(mech, LLEG)) {
     mech_notify(mech, MECHALL,
                 "Your legs are still recovering from your last attack.");
     return 0;
@@ -115,11 +149,11 @@ int have_punch(Mech *mech, int loc) { return 1; }
  * Does our unit have an axe?
  */
 int have_axe(Mech *mech, int loc) {
-  return FindObj(mech, loc, I2Special(AXE)) >= (MechTons(mech) / 15);
+  return FindObj(mech, loc, I2Special(AXE)) >= (mech_tonnage(mech) / 15);
 }
 
 int have_claw(Mech *mech, int loc) {
-  return FindObj(mech, loc, I2Special(CLAW)) >= (MechTons(mech) / 15);
+  return FindObj(mech, loc, I2Special(CLAW)) >= (mech_tonnage(mech) / 15);
 }
 
 /**
@@ -133,21 +167,22 @@ int have_saw(Mech *mech, int loc) {
  * Does our unit have a sword?
  */
 int have_sword(Mech *mech, int loc) {
-  return FindObj(mech, loc, I2Special(SWORD)) >= ((MechTons(mech) + 15) / 20);
+  return FindObj(mech, loc, I2Special(SWORD)) >=
+         ((mech_tonnage(mech) + 15) / 20);
 }
 
 /**
  * Does our unit have a mace?
  */
 int have_mace(Mech *mech, int loc) {
-  return FindObj(mech, loc, I2Special(MACE)) >= (MechTons(mech) / 10);
+  return FindObj(mech, loc, I2Special(MACE)) >= (mech_tonnage(mech) / 10);
 }
 
 /*
  * Carry out some checks common to all types of physical attacks.
  */
 int phys_common_checks(Mech *mech) {
-  if (Jumping(mech)) {
+  if (mech_is_jumping(mech)) {
     mech_notify(mech, MECHALL,
                 "You can't perform physical attacks while in the air!");
     return 0;
@@ -158,7 +193,7 @@ int phys_common_checks(Mech *mech) {
     return 0;
   }
 #ifdef BT_MOVEMENT_MODES
-  if (Dodging(mech) || mech_move_mode_locked(mech)) {
+  if (mech_condition_summary(mech).dodging || mech_move_mode_locked(mech)) {
     mech_notify(
         mech, MECHALL,
         "You cannot use physicals while using a special movement mode.");
@@ -240,16 +275,17 @@ int get_arm_args(int *using, int *argc, char ***args, Mech *mech,
 int punch_checkArm(Mech *mech, int arm) {
   char *arm_used = (arm == LARM ? "left" : "right");
 
-  if (SectIsDestroyed(mech, arm)) {
+  if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't punch with it.", arm_used);
     return 0;
-  } else if (!OkayCritSectS(arm, 0, SHOULDER_OR_HIP)) {
+  } else if (!mech_critical_is_operational_special(mech, arm, 0,
+                                                   SHOULDER_OR_HIP)) {
     mech_printf(mech, MECHALL,
                 "Your %s shoulder is destroyed, you can't punch with that arm.",
                 arm_used);
     return 0;
-  } else if (MechSections(mech)[arm].specials & CARRYING_CLUB) {
+  } else if (mech_section_carries_club(mech, arm)) {
     mech_printf(
         mech, MECHALL,
         "You're carrying a club in your %s arm and can't punch with it.",
@@ -266,7 +302,7 @@ int punch_checkArm(Mech *mech, int arm) {
 void mech_punch(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -275,15 +311,17 @@ void mech_punch(DbRef player, void *data, char *buffer) {
   // Carry out the common checks (started, on map, etc.)
   cch(MECH_USUALO);
   // Make sure we have arms to punch with.
-  ARM_PHYS_CHECK("punch");
+  if (!physical_arm_check(player, mech, "punch"))
+    return;
   // Disallow quads from punching.
-  QUAD_CHECK("punch");
+  if (!physical_quad_check(player, mech, "punch"))
+    return;
 
   argc = mech_parseattributes(buffer, args, 5);
 
   // If the directive is true, use the pilot's piloting skill. If not, we
   // use a constant BTH of 4.
-  if (mech->xcode.context->configuration->btech_phys_use_pskill)
+  if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
     rtohit = ltohit = FindPilotPiloting(mech);
 
   // Manipulate punching var to contain only the arms we're punching with.
@@ -315,7 +353,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
 void mech_club(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *args[5];
   int argc;
   int clubLoc = -1;
@@ -323,13 +361,15 @@ void mech_club(DbRef player, void *data, char *buffer) {
   // Make sure unit is started, on map, etc.
   cch(MECH_USUALO);
   // Make sure we're in a biped.
-  ARM_PHYS_CHECK("club");
+  if (!physical_arm_check(player, mech, "club"))
+    return;
   // Don't let quads club.
-  QUAD_CHECK("club");
+  if (!physical_quad_check(player, mech, "club"))
+    return;
 
-  if (MechSections(mech)[RARM].specials & CARRYING_CLUB)
+  if (mech_section_carries_club(mech, RARM))
     clubLoc = RARM;
-  else if (MechSections(mech)[LARM].specials & CARRYING_CLUB)
+  else if (mech_section_carries_club(mech, LARM))
     clubLoc = LARM;
 
   if (clubLoc == -1) {
@@ -342,32 +382,37 @@ void mech_club(DbRef player, void *data, char *buffer) {
 
   argc = mech_parseattributes(buffer, args, 5);
 
-  DOCHECKMA(SectIsDestroyed(mech, LARM),
+  DOCHECKMA(mech_section_is_destroyed(mech, LARM),
             "Your left arm is destroyed, you can't club.");
-  DOCHECKMA(SectIsDestroyed(mech, RARM),
+  DOCHECKMA(mech_section_is_destroyed(mech, RARM),
             "Your right arm is destroyed, you can't club.");
   DOCHECKMA(
-      !OkayCritSectS(RARM, 0, SHOULDER_OR_HIP),
+      !mech_critical_is_operational_special(mech, RARM, 0, SHOULDER_OR_HIP),
       "You can't club anyone with a destroyed or missing right shoulder.");
-  DOCHECKMA(!OkayCritSectS(LARM, 0, SHOULDER_OR_HIP),
-            "You can't club anyone with a destroyed or missing left shoulder.");
-  DOCHECKMA(!OkayCritSectS(RARM, 3, HAND_OR_FOOT_ACTUATOR),
+  DOCHECKMA(
+      !mech_critical_is_operational_special(mech, LARM, 0, SHOULDER_OR_HIP),
+      "You can't club anyone with a destroyed or missing left shoulder.");
+  DOCHECKMA(!mech_critical_is_operational_special(mech, RARM, 3,
+                                                  HAND_OR_FOOT_ACTUATOR),
             "You can't club anyone with a destroyed or missing right hand.");
-  DOCHECKMA(!OkayCritSectS(LARM, 3, HAND_OR_FOOT_ACTUATOR),
+  DOCHECKMA(!mech_critical_is_operational_special(mech, LARM, 3,
+                                                  HAND_OR_FOOT_ACTUATOR),
             "You can't club anyone with a destroyed or missing left hand.");
 
   // Clubbing is usually done with the right arm but a club may be
   // grabbed by the left hand. Clubbing requires both arms to be cycled,
   // but only one is checked by PhysicalAttack(). So, we check both
   // here just in case.
-  DOCHECKMA(SectHasBusyWeap(mech, LARM) || SectHasBusyWeap(mech, RARM),
+  DOCHECKMA(mech_section_has_recycling_weapon(mech, LARM) ||
+                mech_section_has_recycling_weapon(mech, RARM),
             "You have weapons recycling on your arms.");
 
-  PhysicalAttack(mech, 5,
-                 (mech->xcode.context->configuration->btech_phys_use_pskill
-                      ? FindPilotPiloting(mech) - 1
-                      : 4),
-                 PA_CLUB, argc, args, mech_map, RARM);
+  PhysicalAttack(
+      mech, 5,
+      (btech_context_physical_attacks_use_pilot_skill(mech_context(mech))
+           ? FindPilotPiloting(mech) - 1
+           : 4),
+      PA_CLUB, argc, args, mech_map, RARM);
 } // end mech_club()
 
 /**
@@ -376,16 +421,18 @@ void mech_club(DbRef player, void *data, char *buffer) {
 int axe_checkArm(Mech *mech, int arm) {
   char *arm_used = (arm == RARM ? "right" : "left");
 
-  if (SectIsDestroyed(mech, arm)) {
+  if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't axe with it", arm_used);
     return 0;
-  } else if (!OkayCritSectS(arm, 0, SHOULDER_OR_HIP)) {
+  } else if (!mech_critical_is_operational_special(mech, arm, 0,
+                                                   SHOULDER_OR_HIP)) {
     mech_printf(mech, MECHALL,
                 "Your %s shoulder is destroyed, you can't axe with that arm.",
                 arm_used);
     return 0;
-  } else if (!OkayCritSectS(arm, 3, HAND_OR_FOOT_ACTUATOR)) {
+  } else if (!mech_critical_is_operational_special(mech, arm, 3,
+                                                   HAND_OR_FOOT_ACTUATOR)) {
     mech_printf(mech, MECHALL,
                 "Your %s hand is destroyed, you can't axe with that arm.",
                 arm_used);
@@ -401,7 +448,7 @@ int axe_checkArm(Mech *mech, int arm) {
 void mech_axe(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -410,15 +457,17 @@ void mech_axe(DbRef player, void *data, char *buffer) {
   // Make sure we're started, on a map, etc.
   cch(MECH_USUALO);
   // Do we have arms?
-  ARM_PHYS_CHECK("axe");
+  if (!physical_arm_check(player, mech, "axe"))
+    return;
   // Make sure we're not a quad.
-  QUAD_CHECK("axe");
+  if (!physical_quad_check(player, mech, "axe"))
+    return;
 
   argc = mech_parseattributes(buffer, args, 5);
 
   // If btech_phys_use_pskill is on, use the player's piloting skill.
   // If not, assume a skill level of 4.
-  if (mech->xcode.context->configuration->btech_phys_use_pskill)
+  if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
     ltohit = rtohit = FindPilotPiloting(mech) - 1;
 
   // Figure out which arm to use.
@@ -445,11 +494,12 @@ void mech_axe(DbRef player, void *data, char *buffer) {
 int saw_checkArm(Mech *mech, int arm) {
   char *arm_used = (arm == RARM ? "right" : "left");
 
-  if (SectIsDestroyed(mech, arm)) {
+  if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't saw with it", arm_used);
     return 0;
-  } else if (!OkayCritSectS(arm, 0, SHOULDER_OR_HIP)) {
+  } else if (!mech_critical_is_operational_special(mech, arm, 0,
+                                                   SHOULDER_OR_HIP)) {
     mech_printf(mech, MECHALL,
                 "Your %s shoulder is destroyed, you can't saw with that arm.",
                 arm_used);
@@ -465,7 +515,7 @@ int saw_checkArm(Mech *mech, int arm) {
 void mech_saw(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -474,15 +524,17 @@ void mech_saw(DbRef player, void *data, char *buffer) {
   // Make sure we're started, on a map, etc.
   cch(MECH_USUALO);
   // Do we have arms?
-  ARM_PHYS_CHECK("saw");
+  if (!physical_arm_check(player, mech, "saw"))
+    return;
   // Make sure we're not a quad.
-  QUAD_CHECK("saw");
+  if (!physical_quad_check(player, mech, "saw"))
+    return;
 
   argc = mech_parseattributes(buffer, args, 5);
 
   // If btech_phys_use_pskill is on, use the player's piloting skill.
   // If not, assume a skill level of 4.
-  if (mech->xcode.context->configuration->btech_phys_use_pskill)
+  if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
     ltohit = rtohit = FindPilotPiloting(mech) - 1;
 
   // Figure out which arm to use.
@@ -508,7 +560,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
 void mech_claw(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -517,15 +569,17 @@ void mech_claw(DbRef player, void *data, char *buffer) {
   // Carry out the common checks (started, on map, etc.)
   cch(MECH_USUALO);
   // Make sure we have arms to claw with.
-  ARM_PHYS_CHECK("claw");
+  if (!physical_arm_check(player, mech, "claw"))
+    return;
   // Disallow quads from clawing.
-  QUAD_CHECK("claw");
+  if (!physical_quad_check(player, mech, "claw"))
+    return;
 
   argc = mech_parseattributes(buffer, args, 5);
 
   // If the directive is true, use the pilot's piloting skill. If not, we
   // use a constant BTH of 4.
-  if (mech->xcode.context->configuration->btech_phys_use_pskill)
+  if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
     rtohit = ltohit = FindPilotPiloting(mech);
 
   // Manipulate punching var to contain only the arms we're punching with.
@@ -560,18 +614,20 @@ void mech_claw(DbRef player, void *data, char *buffer) {
 int mace_checkArm(Mech *mech, int arm) {
   char *arm_used = (arm == RARM ? "right" : "left");
 
-  if (SectIsDestroyed(mech, arm)) {
+  if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't use a mace with it.",
                 arm_used);
     return 0;
-  } else if (!OkayCritSectS(arm, 0, SHOULDER_OR_HIP)) {
+  } else if (!mech_critical_is_operational_special(mech, arm, 0,
+                                                   SHOULDER_OR_HIP)) {
     mech_printf(
         mech, MECHALL,
         "Your %s shoulder is destroyed, you can't use a mace with that arm.",
         arm_used);
     return 0;
-  } else if (!OkayCritSectS(arm, 3, HAND_OR_FOOT_ACTUATOR)) {
+  } else if (!mech_critical_is_operational_special(mech, arm, 3,
+                                                   HAND_OR_FOOT_ACTUATOR)) {
     mech_printf(
         mech, MECHALL,
         "Your %s hand is destroyed, you can't use a mace with that arm.",
@@ -588,7 +644,7 @@ int mace_checkArm(Mech *mech, int arm) {
 void mech_mace(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -597,15 +653,17 @@ void mech_mace(DbRef player, void *data, char *buffer) {
   // Make sure we're started, on a map, etc.
   cch(MECH_USUALO);
   // Do we have arms?
-  ARM_PHYS_CHECK("mace");
+  if (!physical_arm_check(player, mech, "mace"))
+    return;
   // Make sure we're not a quad.
-  QUAD_CHECK("mace");
+  if (!physical_quad_check(player, mech, "mace"))
+    return;
 
   argc = mech_parseattributes(buffer, args, 5);
 
   // If btech_phys_use_pskill is on, use the player's piloting skill.
   // If not, assume a skill level of 4.
-  if (mech->xcode.context->configuration->btech_phys_use_pskill)
+  if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
     ltohit = rtohit = FindPilotPiloting(mech) - 1;
 
   // Figure out which arm to use.
@@ -631,18 +689,20 @@ void mech_mace(DbRef player, void *data, char *buffer) {
 int sword_checkArm(Mech *mech, int arm) {
   char *arm_used = (arm == RARM ? "right" : "left");
 
-  if (SectIsDestroyed(mech, arm)) {
+  if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't use a sword with it.",
                 arm_used);
     return 0;
-  } else if (!OkayCritSectS(arm, 0, SHOULDER_OR_HIP)) {
+  } else if (!mech_critical_is_operational_special(mech, arm, 0,
+                                                   SHOULDER_OR_HIP)) {
     mech_printf(
         mech, MECHALL,
         "Your %s shoulder is destroyed, you can't use a sword with that arm.",
         arm_used);
     return 0;
-  } else if (!OkayCritSectS(arm, 3, HAND_OR_FOOT_ACTUATOR)) {
+  } else if (!mech_critical_is_operational_special(mech, arm, 3,
+                                                   HAND_OR_FOOT_ACTUATOR)) {
     mech_printf(
         mech, MECHALL,
         "Your %s hand is destroyed, you can't use a sword with that arm.",
@@ -659,7 +719,7 @@ int sword_checkArm(Mech *mech, int arm) {
 void mech_sword(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 3, rtohit = 3;
@@ -668,15 +728,17 @@ void mech_sword(DbRef player, void *data, char *buffer) {
   // Make sure we're started, on a map, etc.
   cch(MECH_USUALO);
   // Do we have arms to chop with?
-  ARM_PHYS_CHECK("chop");
+  if (!physical_arm_check(player, mech, "chop"))
+    return;
   // Quads can't do it.
-  QUAD_CHECK("chop");
+  if (!physical_quad_check(player, mech, "chop"))
+    return;
 
   argc = mech_parseattributes(buffer, args, 5);
 
   // If btech_phys_use_pskill is defined, use the pilot's piloting skill,
   // otherwise use a constant skill 3.
-  if (mech->xcode.context->configuration->btech_phys_use_pskill)
+  if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
     ltohit = rtohit = FindPilotPiloting(mech) - 2;
 
   // Which arm(s) have sword crits?
