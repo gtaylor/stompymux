@@ -13,6 +13,9 @@
 
 #include "mux/server/platform.h"
 
+typedef struct Mech Mech;
+typedef struct MuxEvent MuxEvent;
+
 /* mech.legacy_events.c */
 void mech_standfail_event(MuxEvent *e);
 void mech_fall_event(MuxEvent *e);

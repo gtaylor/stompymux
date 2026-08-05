@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <stdio.h>
+
 /* template_file.c */
 FILE *my_open_file(char *name, char *mode, int *openway);
 void my_close_file(FILE *f, int *openway);

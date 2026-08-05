@@ -7,6 +7,8 @@
  */
 
 #pragma once
+
+#include "equipment_types.h"
 #ifdef BT_USE_VRT
 #include "weapons_vrt.h"
 #else

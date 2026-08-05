@@ -316,7 +316,7 @@ if(BUILD_TESTING)
   add_test(NAME btech_header_interfaces COMMAND btech_header_interfaces_test)
   add_test(NAME btech_architecture
     COMMAND bash "${CMAKE_SOURCE_DIR}/tests/check_btech_architecture.sh"
-                 "${CMAKE_SOURCE_DIR}")
+                 "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}")
 
   add_executable(event_timer_test tests/event_timer.c
     ${MUX_SOURCE_DIR}/server/event_timer.c)

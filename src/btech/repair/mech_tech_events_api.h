@@ -11,6 +11,8 @@
 
 #pragma once
 
+typedef struct MuxEvent MuxEvent;
+
 /* mech.tech.legacy_events.c */
 void mux_event_tickmech_removesection(MuxEvent *e);
 void mux_event_tickmech_removegun(MuxEvent *e);

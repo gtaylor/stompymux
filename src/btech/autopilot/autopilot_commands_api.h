@@ -13,6 +13,8 @@
 
 #include "mux/server/platform.h"
 
+typedef struct Autopilot Autopilot;
+
 /* autopilot_commands.c */
 int auto_valid_progline(Autopilot *a, int p);
 void auto_jump(DbRef player, void *data, char *buffer);

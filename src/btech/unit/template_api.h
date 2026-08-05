@@ -11,9 +11,13 @@
 
 #include "mux/server/platform.h"
 
+#include <stdio.h>
+
 #pragma once
 
 typedef struct BtechContext BtechContext;
+typedef struct Mech Mech;
+typedef struct ServerConfiguration ServerConfiguration;
 
 enum { BTECH_TEXT_CAPACITY = 8192 };
 

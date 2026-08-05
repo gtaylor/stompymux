@@ -13,6 +13,9 @@
 
 #include "mux/server/platform.h"
 
+typedef struct Mech Mech;
+typedef struct MuxEvent MuxEvent;
+
 /* autopilot.c */
 void gradually_load(Mech *mech, int loc, int percent);
 void autopilot_load_cargo(DbRef player, Mech *mech, int percent);

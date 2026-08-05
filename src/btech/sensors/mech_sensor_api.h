@@ -12,6 +12,10 @@
 #pragma once
 
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+
+typedef struct BattleMap BattleMap;
+typedef struct Mech Mech;
 
 typedef struct SensorFlagText {
   char text[MBUF_SIZE];

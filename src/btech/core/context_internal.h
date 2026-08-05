@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "btech/context.h"
+#include "btech/ids.h"
 #include "coding_registry.h"
 #include "missile_hit_registry.h"
 #include "mux/support/red_black_tree.h"

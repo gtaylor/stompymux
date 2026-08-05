@@ -3,6 +3,7 @@
 set -euo pipefail
 
 root=${1:?repository root is required}
+build_root=${2:-$root/.build}
 cd "$root"
 
 status=0
@@ -758,5 +759,35 @@ if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1
 fi
+
+header_compiler=${BTECH_HEADER_COMPILER:-clang-20}
+header_flags=(
+  -DBTECH_INTERNAL=1
+  -DBTMUX_PERSISTENCE_TESTING=1
+  -std=gnu23
+  -Wall
+  -Wextra
+  -Wno-unused-parameter
+  -Werror
+  -Wformat=2
+  -Wshadow
+  "-I$root/src/btech/include"
+  "-I$build_root/src/btech"
+  "-I$build_root"
+  "-I$root/src"
+)
+
+for domain in autopilot character combat commands core economy integration map \
+              movement persistence repair scripting sensors special ui unit; do
+  header_flags+=("-I$root/src/btech/$domain")
+done
+
+while IFS= read -r -d '' header; do
+  if ! "$header_compiler" "${header_flags[@]}" -fsyntax-only -x c-header \
+       "$header"; then
+    echo "$header: header does not compile independently"
+    status=1
+  fi
+done < <(find src/btech -type f -name '*.h' -print0 | sort -z)
 
 exit "$status"

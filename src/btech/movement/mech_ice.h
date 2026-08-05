@@ -16,6 +16,8 @@
 
 #pragma once
 
+typedef struct Mech Mech;
+
 /* mech.ice.c */
 void drop_thru_ice(Mech *mech);
 void break_thru_ice(Mech *mech);

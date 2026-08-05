@@ -7,6 +7,9 @@ typedef struct BtechContext BtechContext;
 #include <stdbool.h>
 
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+
+typedef struct Mech Mech;
 
 typedef struct MechId {
   char text[3];
