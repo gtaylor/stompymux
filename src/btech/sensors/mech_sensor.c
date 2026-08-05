@@ -65,8 +65,8 @@ int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
   if (!(flag & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)))
     return 10000;
   if (!(flag & MECHLOSFLAG_SEESP)) {
-    bth2 = 1 + sensors[(int)MechSensor(mech)[1]].tohitbonus_func(
-                   mech, target, map, flag, maplight);
+    bth2 = 1 + sensors[(int)MechSensor(mech)[1]].to_hit_bonus(mech, target, map,
+                                                              flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("%d: BTH S+%d", mech_dbref(mech), bth2));
@@ -75,18 +75,18 @@ int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
   }
   if (!(flag & MECHLOSFLAG_SEESS) ||
       (MechSensor(mech)[0] == MechSensor(mech)[1])) {
-    bth1 = sensors[(int)MechSensor(mech)[0]].tohitbonus_func(mech, target, map,
-                                                             flag, maplight);
+    bth1 = sensors[(int)MechSensor(mech)[0]].to_hit_bonus(mech, target, map,
+                                                          flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("%d: BTH P+%d", mech_dbref(mech), bth1));
 #endif
     return bth1;
   }
-  bth1 = sensors[(int)MechSensor(mech)[0]].tohitbonus_func(mech, target, map,
-                                                           flag, maplight);
-  bth2 = 1 + sensors[(int)MechSensor(mech)[1]].tohitbonus_func(
-                 mech, target, map, flag, maplight);
+  bth1 = sensors[(int)MechSensor(mech)[0]].to_hit_bonus(mech, target, map, flag,
+                                                        maplight);
+  bth2 = 1 + sensors[(int)MechSensor(mech)[1]].to_hit_bonus(mech, target, map,
+                                                            flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                      tprintf("%d: BTH +%d/+%d", mech_dbref(mech), bth1, bth2));
@@ -111,17 +111,17 @@ int Sensor_CanSee(Mech *mech, Mech *target, int *flag, int arc, float range,
   /* Ok.. s'pose we can, at that. */
   if (MechSensor(mech)[0] != MechSensor(mech)[1]) {
 #define MaxVis(mech, sensor)                                                   \
-  ((sensors[sensor].maxvis *                                                   \
+  ((sensors[sensor].maximum_visibility *                                       \
     (((sensor) >= 2 && MechMove(mech) == MOVE_NONE) ? 140 : 100)) /            \
    100)
-#define MaxVar(mech, sensor) sensors[sensor].maxvvar
+#define MaxVar(mech, sensor) sensors[sensor].maximum_variation
 #define MAXVR(mech, sensor) MaxVis(mech, sensor) - MaxVar(mech, sensor)
     /* Check both seperately */
     for (i = 0; i < 2; i++) {
       sn = MechSensor(mech)[i];
       /* No chance */
 
-      if (!sensors[sn].fullvision && !(arc & (FORWARDARC | TURRETARC)) &&
+      if (!sensors[sn].full_vision && !(arc & (FORWARDARC | TURRETARC)) &&
           !Sees360(mech))
         continue;
       if (MaxVis(mech, sn) < range)
@@ -141,10 +141,10 @@ int Sensor_CanSee(Mech *mech, Mech *target, int *flag, int arc, float range,
           continue;
       }
 
-      if (!sensors[sn].cansee_func(mech, target, map, range, *flag))
+      if (!sensors[sn].can_see(mech, target, map, range, *flag))
         continue;
 
-      if (!sensors[sn].seechance_func(target, map, sn, range, mapvis, maplight))
+      if (!sensors[sn].see_chance(target, map, sn, range, mapvis, maplight))
         continue;
 
       if (MaxVar(mech, sn) && (MAXVR(mech, sn)) < range)
@@ -162,9 +162,9 @@ int Sensor_CanSee(Mech *mech, Mech *target, int *flag, int arc, float range,
       ((MechZ(mech) < cloudbase) ? (MechZ(target) >= cloudbase)
                                  : (MechZ(target) < cloudbase)))
     return 0;
-  if (!sensors[sn].cansee_func(mech, target, map, range, *flag))
+  if (!sensors[sn].can_see(mech, target, map, range, *flag))
     return 0;
-  if (!sensors[sn].seechance_func(target, map, sn, range, mapvis, maplight))
+  if (!sensors[sn].see_chance(target, map, sn, range, mapvis, maplight))
     return 0;
   if (MaxVar(mech, sn) && (MAXVR(mech, sn)) < range)
     if (((MAXVR(mech, sn)) + MechVisMod(mech) * (MaxVar(mech, sn) + 1) / 100) <
@@ -225,16 +225,16 @@ int Sensor_Sees(Mech *mech, Mech *target, int f, int arc, float range, int snum,
                      : 100)) /
                100;
   int ch2 =
-      sensors[snum].seechance_func(target, map, snum, range, mapvis, maplight);
+      sensors[snum].see_chance(target, map, snum, range, mapvis, maplight);
 
-  if (!ch2 || !sensors[snum].cansee_func(mech, target, map, range, f))
+  if (!ch2 || !sensors[snum].can_see(mech, target, map, range, f))
     return 0;
   if (target && IsDS(target))
     chance = chance * 4;
   if (target && MechCritStatus(target) & HIDDEN &&
       MechTeam(mech) != MechTeam(target)) {
 
-    if (sensors[snum].matchletter[0] == 'B' &&
+    if (sensors[snum].match_letter[0] == 'B' &&
         (MechInfantrySpecials(target) & STEALTH_TECH) &&
         (!(MechInfantrySpecials(target) & CS_PURIFIER_STEALTH_TECH)))
       return 0;
@@ -274,7 +274,7 @@ int Sensor_SeesNow(Mech *mech, Mech *target, int f, int arc, float range,
     for (i = 0; i < 2; i++) {
       sn = MechSensor(mech)[i];
       /* No chance */
-      if (!sensors[sn].fullvision && !(arc & (FORWARDARC | TURRETARC)) &&
+      if (!sensors[sn].full_vision && !(arc & (FORWARDARC | TURRETARC)) &&
           !Sees360(mech))
         continue;
       if (MaxVis(mech, sn) < range)
@@ -580,13 +580,13 @@ void update_LOSinfo(DbRef obj, BattleMap *map) {
 void add_sensor_info(char *buf, int size, Mech *mech, int sn, int verbose) {
   if (!verbose)
     snprintf(buf + strlen(buf), size - strlen(buf), "(R:%s)",
-             sensors[sn].range_desc);
+             sensors[sn].range_description);
   else {
     snprintf(buf + strlen(buf), size - strlen(buf),
-             "\n\tRange:      %s\n\tBlocked by: %s", sensors[sn].range_desc,
-             sensors[sn].block_desc);
-    if (sensors[sn].special_desc)
+             "\n\tRange:      %s\n\tBlocked by: %s",
+             sensors[sn].range_description, sensors[sn].block_description);
+    if (sensors[sn].special_description)
       snprintf(buf + strlen(buf), size - strlen(buf), "\n\tNotes:      %s",
-               sensors[sn].special_desc);
+               sensors[sn].special_description);
   }
 }

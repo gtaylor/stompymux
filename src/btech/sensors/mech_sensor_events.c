@@ -94,13 +94,13 @@ void mech_sensors_scramble_infrared_and_liteamp(Mech *mech, int time,
       continue;
 
     int sensor = mech_sensor_index(observer, 0);
-    if (sensors[sensor].matchletter[0] == 'I' ||
-        sensors[sensor].matchletter[1] == 'I') {
+    if (sensors[sensor].match_letter[0] == 'I' ||
+        sensors[sensor].match_letter[1] == 'I') {
       if (chance && btech_random_range(mech_context(mech), 1, 100) > chance)
         continue;
       mech_notify(observer, MECHALL, inframsg);
-    } else if (sensors[sensor].matchletter[0] == 'L' ||
-               sensors[sensor].matchletter[1] == 'L') {
+    } else if (sensors[sensor].match_letter[0] == 'L' ||
+               sensors[sensor].match_letter[1] == 'L') {
       if (chance && btech_random_range(mech_context(mech), 1, 100) > chance)
         continue;
       mech_notify(observer, MECHALL, liteampmsg);

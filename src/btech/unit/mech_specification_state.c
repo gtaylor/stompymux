@@ -9,6 +9,8 @@ int mech_movement_type(const Mech *mech) { return mech->ud.move; }
 
 int mech_tonnage(const Mech *mech) { return mech->ud.tons; }
 
+int mech_real_tonnage(const Mech *mech) { return mech->rd.row / 1024; }
+
 int mech_engine_rating(const Mech *mech) {
   if (mech->rd.erat > 0)
     return mech->rd.erat;

@@ -43,6 +43,10 @@ int battle_map_visibility(const BattleMap *map) { return map->mapvis; }
 
 int battle_map_cloud_base(const BattleMap *map) { return map->cloudbase; }
 
+bool battle_map_sensor_is_disabled(const BattleMap *map, int sensor) {
+  return map->sensorflags & (1 << sensor);
+}
+
 bool battle_map_is_dark(const BattleMap *map) {
   return map->flags & MAPFLAG_DARK;
 }

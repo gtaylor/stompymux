@@ -140,7 +140,7 @@ static int mech_los_sees_through_woods(Mech *mech, BattleMap *map, int nwoods,
                                        int sensor) {
   int sn = mech_sensor_index(mech, sensor);
   int fake_losflag = nwoods * MECHLOSFLAG_WOOD;
-  int res = sensors[sn].cansee_func(mech, nullptr, map, 1, fake_losflag);
+  int res = sensors[sn].can_see(mech, nullptr, map, 1, fake_losflag);
 
   return res;
 }
@@ -149,7 +149,7 @@ static int mech_los_sees_over_mountain(Mech *mech, BattleMap *map, int sensor) {
   int sn = mech_sensor_index(mech, sensor);
   int fake_losflag = MECHLOSFLAG_MNTN;
 
-  return sensors[sn].cansee_func(mech, nullptr, map, 1, fake_losflag);
+  return sensors[sn].can_see(mech, nullptr, map, 1, fake_losflag);
 }
 
 static int mech_los_sees_through_water(Mech *mech, BattleMap *map, int nwater,
@@ -157,13 +157,13 @@ static int mech_los_sees_through_water(Mech *mech, BattleMap *map, int nwater,
   int sn = mech_sensor_index(mech, sensor);
   int fake_losflag = nwater * MECHLOSFLAG_WATER;
 
-  return sensors[sn].cansee_func(mech, nullptr, map, 1, fake_losflag);
+  return sensors[sn].can_see(mech, nullptr, map, 1, fake_losflag);
 }
 
 static int mech_los_sees_range(HexLosMap *los_map, Mech *mech, BattleMap *map,
                                int x, int y, int z, int sensor) {
   int sn = mech_sensor_index(mech, sensor);
-  float fx, fy, range, maxvis = sensors[sn].maxvis;
+  float fx, fy, range, maxvis = sensors[sn].maximum_visibility;
 
   MapCoordToRealCoord(x, y, &fx, &fy);
   range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
@@ -178,7 +178,7 @@ static int mech_los_sees_range(HexLosMap *los_map, Mech *mech, BattleMap *map,
   if (sn == 1 && map->maplight == 0) /* L sensors in darkness */
     maxvis *= 2;
 
-  if (!sensors[sn].fullvision) {
+  if (!sensors[sn].full_vision) {
     int arc = InWeaponArc(mech, fx, fy);
 
     if (!(arc & (FORWARDARC | TURRETARC))) {

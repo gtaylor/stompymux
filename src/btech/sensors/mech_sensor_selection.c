@@ -44,18 +44,18 @@ static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
     return mode;
   }
 
-  if (sensors[sn].fullvision) {
-    snprintf(buf, sizeof(mode.text), "%s ", sensors[sn].sensorname);
+  if (sensors[sn].full_vision) {
+    snprintf(buf, sizeof(mode.text), "%s ", sensors[sn].sensor_name);
     add_sensor_info(buf, sizeof(mode.text), mech, sn, verbose);
   } else {
     if (full || mech_movement_type(mech) == MOVE_NONE ||
         mech_class(mech) == CLASS_BSUIT)
       snprintf(buf, sizeof(mode.text), "%s in 360 degree scanning mode ",
-               sensors[sn].sensorname);
+               sensors[sn].sensor_name);
     else
       snprintf(buf, sizeof(mode.text),
                "%s in 120 degree scanning mode (Forward arc) ",
-               sensors[sn].sensorname);
+               sensors[sn].sensor_name);
     add_sensor_info(buf, sizeof(mode.text), mech, sn, verbose);
   }
   return mode;
@@ -157,7 +157,7 @@ int mech_sensor_can_change_to(Mech *mech, int s) {
   if ((i = sensors[s].required_special)) {
     if (!mech_supports_sensor_requirement(mech, sensors[s].specials_set, i)) {
       mech_printf(mech, MECHALL, "You lack the %s sensors!",
-                  sensors[s].sensorname);
+                  sensors[s].sensor_name);
       return 0;
     }
   }
@@ -166,24 +166,24 @@ int mech_sensor_can_change_to(Mech *mech, int s) {
       sensors[s].min_light > battle_map_light(map)) {
     if (!mech_is_destroyed(mech) && mech_is_started(mech))
       mech_printf(mech, MECHALL, "It's now too dark to use %s!",
-                  sensors[s].sensorname);
+                  sensors[s].sensor_name);
     return 0;
   }
   if (sensors[s].max_light >= 0 &&
       sensors[s].max_light < battle_map_light(map)) {
     if (!mech_is_destroyed(mech) && mech_is_started(mech))
       mech_printf(mech, MECHALL, "The light's kinda too bright now to use %s!",
-                  sensors[s].sensorname);
+                  sensors[s].sensor_name);
     return 0;
   }
 
-  switch (sensors[s].attributeCheck) {
+  switch (sensors[s].attribute_check) {
   case SENSOR_ATTR_SEISMIC:
     if (mech_class(mech) == CLASS_MW || mech_class(mech) == CLASS_BSUIT ||
         mech_class(mech) == CLASS_VEH_NAVAL ||
         mech_movement_type(mech) == MOVE_HOVER) {
       mech_printf(mech, MECHALL, "You lack the %s sensors!",
-                  sensors[s].sensorname);
+                  sensors[s].sensor_name);
       return 0;
     }
 
@@ -214,9 +214,9 @@ static int set_sensor(Mech *mech, char ps, char ss) {
   if (!mech_is_started(mech))
     return 0;
   for (i = 0; i < (int)NUM_SENSORS; i++) {
-    if (sensors[i].matchletter[0] == ps)
+    if (sensors[i].match_letter[0] == ps)
       prim = i;
-    if (sensors[i].matchletter[0] == ss)
+    if (sensors[i].match_letter[0] == ss)
       sec = i;
   }
   if (prim < 0 || sec < 0)

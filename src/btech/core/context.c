@@ -76,6 +76,11 @@ bool btech_context_combat_arcs_enabled(const BtechContext *context) {
   return context->combat_overrides.arcs;
 }
 
+bool btech_context_seismic_detects_stopped_units(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_seismic_see_stopped;
+}
+
 int btech_context_movement_slowdown_mode(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_slowdown;

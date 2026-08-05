@@ -25,31 +25,31 @@ typedef struct BattleMap BattleMap;
    - Rear arc is 40% chance
  */
 
-typedef struct {
-  char *sensorname;
-  char *matchletter;
+typedef struct SensorDefinition {
+  const char *sensor_name;
+  const char *match_letter;
 
   /* Is the sensor 360 degree with just one of them? */
-  int fullvision;
+  int full_vision;
 
   /* Longest vis this sensor brand sees */
-  int maxvis;
+  int maximum_visibility;
 
   /* Variable factor in maxvis ; it changes by +- 1 every 30 seconds */
-  int maxvvar;
+  int maximum_variation;
 
   /* Function for retrieving generic chance of spotting foe with
      this scanner at the range */
   /* first int = sensor type #, second = maxrange by conditions,
      third = lightning level */
-  int (*seechance_func)(Mech *, BattleMap *, int, float, int, int);
+  int (*see_chance)(Mech *, BattleMap *, int, float, int, int);
 
   /* Do we really see 'em? Mainly checks for various things that
      vary between diff. sensors (and also seechancefunc > 0) */
-  int (*cansee_func)(Mech *, Mech *, BattleMap *, float, int);
+  int (*can_see)(Mech *, Mech *, BattleMap *, float, int);
 
   /* Chance of actually hitting someone */
-  int (*tohitbonus_func)(Mech *mech, Mech *target, BattleMap *, int, int);
+  int (*to_hit_bonus)(Mech *mech, Mech *target, BattleMap *, int, int);
 
   /* If <0, not used */
   int min_light;
@@ -58,69 +58,59 @@ typedef struct {
   int required_special;
   int specials_set; /* 1 if the original specials struct, 2 if the extended */
 
-  int attributeCheck; /* Some special checks here that are done in mech.sensor.c
-                       */
+  int attribute_check;
 
-  char *range_desc;
-  char *block_desc;
-  char *special_desc;
-} SensorStruct;
+  const char *range_description;
+  const char *block_description;
+  const char *special_description;
+} SensorDefinition;
 
-#define ESEEFUNC(a) extern int a(Mech *, BattleMap *, int, float, int, int);
-#define SEEFUNC(a, b)                                                          \
-  int a(Mech *t, BattleMap *map, int num, float r, int c, int l) {             \
-    return (int)(b);                                                           \
-  }
-ESEEFUNC(vislight_see);
-ESEEFUNC(liteamp_see);
-ESEEFUNC(infrared_see);
-ESEEFUNC(electrom_see);
-ESEEFUNC(seismic_see);
-ESEEFUNC(radar_see);
-ESEEFUNC(bap_see);
-ESEEFUNC(blood_see);
+int vislight_see(Mech *, BattleMap *, int, float, int, int);
+int liteamp_see(Mech *, BattleMap *, int, float, int, int);
+int infrared_see(Mech *, BattleMap *, int, float, int, int);
+int electrom_see(Mech *, BattleMap *, int, float, int, int);
+int seismic_see(Mech *, BattleMap *, int, float, int, int);
+int radar_see(Mech *, BattleMap *, int, float, int, int);
+int bap_see(Mech *, BattleMap *, int, float, int, int);
+int blood_see(Mech *, BattleMap *, int, float, int, int);
 
-#define ECSEEFUNC(a) extern int a(Mech *, Mech *, BattleMap *, float, int);
-#define CSEEFUNC(a, b)                                                         \
-  int a(Mech *m, Mech *t, BattleMap *map, float r, int f) { return (int)(b); }
-ECSEEFUNC(vislight_csee);
-ECSEEFUNC(liteamp_csee);
-ECSEEFUNC(infrared_csee);
-ECSEEFUNC(electrom_csee);
-ECSEEFUNC(seismic_csee);
-ECSEEFUNC(radar_csee);
-ECSEEFUNC(bap_csee);
-ECSEEFUNC(blood_csee);
+int vislight_csee(Mech *, Mech *, BattleMap *, float, int);
+int liteamp_csee(Mech *, Mech *, BattleMap *, float, int);
+int infrared_csee(Mech *, Mech *, BattleMap *, float, int);
+int electrom_csee(Mech *, Mech *, BattleMap *, float, int);
+int seismic_csee(Mech *, Mech *, BattleMap *, float, int);
+int radar_csee(Mech *, Mech *, BattleMap *, float, int);
+int bap_csee(Mech *, Mech *, BattleMap *, float, int);
+int blood_csee(Mech *, Mech *, BattleMap *, float, int);
 
-#define ETOHITFUNC(a) extern int a(Mech *, Mech *, BattleMap *, int, int);
-#define TOHITFUNC(a, b)                                                        \
-  int a(Mech *m, Mech *t, BattleMap *map, int f, int l) { return (int)(b); }
+int vislight_tohit(Mech *, Mech *, BattleMap *, int, int);
+int liteamp_tohit(Mech *, Mech *, BattleMap *, int, int);
+int infrared_tohit(Mech *, Mech *, BattleMap *, int, int);
+int electrom_tohit(Mech *, Mech *, BattleMap *, int, int);
+int seismic_tohit(Mech *, Mech *, BattleMap *, int, int);
+int radar_tohit(Mech *, Mech *, BattleMap *, int, int);
+int bap_tohit(Mech *, Mech *, BattleMap *, int, int);
+int blood_tohit(Mech *, Mech *, BattleMap *, int, int);
 
-ETOHITFUNC(vislight_tohit);
-ETOHITFUNC(liteamp_tohit);
-ETOHITFUNC(infrared_tohit);
-ETOHITFUNC(electrom_tohit);
-ETOHITFUNC(seismic_tohit);
-ETOHITFUNC(radar_tohit);
-ETOHITFUNC(bap_tohit);
-ETOHITFUNC(blood_tohit);
+typedef enum SensorType {
+  SENSOR_VIS,
+  SENSOR_LA,
+  SENSOR_IR,
+  SENSOR_EM,
+  SENSOR_SE,
+  SENSOR_RA,
+  SENSOR_BAP,
+  SENSOR_BHAP,
+  NUM_SENSORS = 9,
+} SensorType;
 
-#define SENSOR_VIS 0
-#define SENSOR_LA 1
-#define SENSOR_IR 2
-#define SENSOR_EM 3
-#define SENSOR_SE 4
-#define SENSOR_RA 5
-#define SENSOR_BAP 6
-#define SENSOR_BHAP 7
-
-enum { NUM_SENSORS = 9 };
-
-#define SENSOR_ATTR_NONE 0
-#define SENSOR_ATTR_SEISMIC 1
+typedef enum SensorAttribute {
+  SENSOR_ATTR_NONE,
+  SENSOR_ATTR_SEISMIC,
+} SensorAttribute;
 
 #ifdef _MECH_SENSOR_C
-SensorStruct sensors[] = {
+const SensorDefinition sensors[] = {
     {"Vislight", "V", 0, 60, 0, vislight_see, vislight_csee, vislight_tohit, -1,
      -1, 0, 1, SENSOR_ATTR_NONE, "Visual",
      "Fire/Smoke/Obstacles, 3 pt woods, 5 underwater hexes",
@@ -168,5 +158,5 @@ SensorStruct sensors[] = {
      "ignores partial/woods/water)"}};
 
 #else
-extern SensorStruct sensors[];
+extern const SensorDefinition sensors[];
 #endif

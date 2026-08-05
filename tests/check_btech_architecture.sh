@@ -75,6 +75,7 @@ done < <(rg -n \
   src/btech/sensors/mech_ecm.c \
   src/btech/sensors/mech_lite.c \
   src/btech/sensors/mech_sensor_events.c \
+  src/btech/sensors/mech_sensor_functions.c \
   src/btech/sensors/mech_sensor_selection.c \
   src/btech/sensors/mech_scan_navigation.c \
   src/btech/sensors/mech_scan_view.c \
@@ -95,6 +96,7 @@ while IFS= read -r match; do
   echo "$match: converted sensor module accesses BattleMap layout"
   status=1
 done < <(rg -n -- '\bmap->' src/btech/sensors/mech_sensor_events.c \
+  src/btech/sensors/mech_sensor_functions.c \
   src/btech/sensors/mech_sensor_selection.c || true)
 
 while IFS= read -r match; do

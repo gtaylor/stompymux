@@ -6,6 +6,7 @@
 
 int mech_movement_type(const Mech *mech);
 int mech_tonnage(const Mech *mech);
+int mech_real_tonnage(const Mech *mech);
 int mech_engine_rating(const Mech *mech);
 float mech_jump_speed(const Mech *mech);
 int mech_heat_sink_count(const Mech *mech);

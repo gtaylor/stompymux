@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include "map_los_types.h"
+
 #include "mux/server/platform.h"
 #include "special_object.h"
 
@@ -140,33 +142,29 @@ typedef struct MapObject {
 
 #define MECHMAPFLAG_MOVED 1 /* mech has moved since last LOS update */
 
-#define MECHLOSFLAG_SEEN 0x0001  /* x <mech> has seen <target> (before) */
-#define MECHLOSFLAG_SEESP 0x0002 /* x <mech> sees <target> now w/ primary */
-#define MECHLOSFLAG_SEESS 0x0004 /* x <mech> sees <target> now w/ secondary */
-#define MECHLOSFLAG_SEEC2 0x0008 /* The terrain flag has been calculated */
-#define MECHLOSFLAG_MNTN 0x0010  /* Intervening mountain hexes? */
+#define MECHLOSFLAG_SEEN BATTLE_MAP_LOS_SEEN
+#define MECHLOSFLAG_SEESP BATTLE_MAP_LOS_SEEN_PRIMARY
+#define MECHLOSFLAG_SEESS BATTLE_MAP_LOS_SEEN_SECONDARY
+#define MECHLOSFLAG_SEEC2 BATTLE_MAP_LOS_TERRAIN_CALCULATED
+#define MECHLOSFLAG_MNTN BATTLE_MAP_LOS_MOUNTAIN
 
-#define MECHLOSFLAG_WOOD 0x0020  /* The number of intervening woods hexes */
+#define MECHLOSFLAG_WOOD BATTLE_MAP_LOS_WOOD
 #define MECHLOSFLAG_WOOD2 0x0040 /* Heavywood = 2, Light = 1 */
 #define MECHLOSFLAG_WOOD3 0x0080
 #define MECHLOSFLAG_WOOD4 0x0100
 #define MECHLOSBYTES_WOOD 4
-#define MECHLOSMAX_WOOD 16 /* No sensors penetrate this far */
+#define MECHLOSMAX_WOOD BATTLE_MAP_LOS_MAX_WOOD
 
-#define MECHLOSFLAG_WATER 0x0200 /* The number of intervening water hexes */
+#define MECHLOSFLAG_WATER BATTLE_MAP_LOS_WATER
 #define MECHLOSFLAG_WATER2 0x0400
 #define MECHLOSFLAG_WATER3 0x0800
 #define MECHLOSBYTES_WATER 3
-#define MECHLOSMAX_WATER 8 /* No sensors penetrate this far */
+#define MECHLOSMAX_WATER BATTLE_MAP_LOS_MAX_WATER
 
-#define MECHLOSFLAG_PARTIAL                                                    \
-  0x1000                         /* The target's in partial cover for          \
-                                    da shooter */
-#define MECHLOSFLAG_FIRE 0x2000  /* Fire between mech and target */
-#define MECHLOSFLAG_SMOKE 0x4000 /* Smoke between mech and target */
-#define MECHLOSFLAG_BLOCK                                                      \
-  0x8000 /* Something blocks vision                                            \
-            (elevation propably) */
+#define MECHLOSFLAG_PARTIAL BATTLE_MAP_LOS_PARTIAL_COVER
+#define MECHLOSFLAG_FIRE BATTLE_MAP_LOS_FIRE
+#define MECHLOSFLAG_SMOKE BATTLE_MAP_LOS_SMOKE
+#define MECHLOSFLAG_BLOCK BATTLE_MAP_LOS_BLOCKED
 
 typedef struct BattleMap {
   BtechSpecialObject xcode; /* XCODE base class field */

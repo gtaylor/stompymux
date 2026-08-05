@@ -15,6 +15,10 @@ bool mech_is_out_of_control(const Mech *mech) { return mech->rd.cocoon; }
 
 bool mech_is_blinded(const Mech *mech) { return mech->rd.status & BLINDED; }
 
+bool mech_has_fired_recently(const Mech *mech) {
+  return mech->rd.status & FIRED;
+}
+
 void mech_blinded_set(Mech *mech, bool blinded) {
   if (blinded)
     mech->rd.status |= BLINDED;
