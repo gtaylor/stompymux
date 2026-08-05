@@ -49,6 +49,22 @@ float mech_current_speed(const Mech *mech) { return mech->rd.speed; }
 
 void mech_current_speed_set(Mech *mech, float speed) { mech->rd.speed = speed; }
 
+void mech_current_speed_scale(Mech *mech, float factor) {
+  mech->rd.speed *= factor;
+}
+
+void mech_current_speed_reduce_toward_zero(Mech *mech, float amount) {
+  if (mech->rd.speed > 0.0F) {
+    mech->rd.speed -= amount;
+    if (mech->rd.speed < 0.0F)
+      mech->rd.speed = 0.0F;
+  } else if (mech->rd.speed < 0.0F) {
+    mech->rd.speed += amount;
+    if (mech->rd.speed > 0.0F)
+      mech->rd.speed = 0.0F;
+  }
+}
+
 float mech_maximum_speed(const Mech *mech) { return mech->ud.maxspeed; }
 
 void mech_maximum_speed_set(Mech *mech, float speed) {

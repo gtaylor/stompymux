@@ -55,6 +55,11 @@ bool battle_terrain_is_water(char terrain) {
          terrain == BATTLE_TERRAIN_BRIDGE;
 }
 
+bool battle_terrain_is_forest(char terrain) {
+  return terrain == BATTLE_TERRAIN_LIGHT_FOREST ||
+         terrain == BATTLE_TERRAIN_HEAVY_FOREST;
+}
+
 void map_hex_set(BattleMap *map, int x, int y, char terrain, char elevation) {
   map->map[y][x] = (unsigned char)map_coding_get_index(
       &map->xcode.context->map_coding, terrain, elevation);

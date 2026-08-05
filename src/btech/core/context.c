@@ -107,6 +107,21 @@ bool btech_context_uses_skid_cliff_rules(const BtechContext *context) {
   return context->configuration->btech_skidcliff;
 }
 
+bool btech_context_uses_roll_on_backwalk(const BtechContext *context) {
+  return context && context->configuration &&
+         context->configuration->btech_roll_on_backwalk;
+}
+
+bool btech_context_uses_new_terrain_rules(const BtechContext *context) {
+  return context && context->configuration &&
+         context->configuration->btech_newterrain;
+}
+
+bool btech_context_uses_advanced_vehicle_fire(const BtechContext *context) {
+  return context && context->configuration &&
+         context->configuration->btech_fasaadvvhlfire;
+}
+
 bool btech_context_requires_backwalk_rolls(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_roll_on_backwalk;

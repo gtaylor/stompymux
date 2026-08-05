@@ -616,6 +616,18 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Landed|IsForest|Elevation)\s*\(' \
+  src/btech/movement/mech_update_hex.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: hex transition dispatch must use opaque unit and map APIs"
+  status=1
+fi
+
+if [[ -e src/btech/movement/mech_update_internal.h ]]; then
+  echo "legacy movement update aggregate header is not allowed"
+  status=1
+fi
+
 match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Jumping)\s*\(' \
   src/btech/movement/mech_movement_validation.c || true)
 if [[ -n "$match" ]]; then
