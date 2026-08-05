@@ -164,9 +164,19 @@ int btech_context_dig_bonus(const BtechContext *context) {
   return context->configuration->btech_digbonus;
 }
 
+bool btech_context_range_modifies_damage(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_moddamagewithrange;
+}
+
 bool btech_context_woods_modify_damage(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_moddamagewithwoods;
+}
+
+bool btech_context_glancing_blows_enabled(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_glancing_blows;
 }
 
 int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
@@ -366,6 +376,14 @@ int btech_context_missile_hit_count(const BtechContext *context,
   assert(context != nullptr);
   const MissileHitEntry *entry =
       missile_hit_registry_find_weapon(&context->missile_hits, weapon_index);
+  return entry ? entry->num_missiles[roll_index] : 0;
+}
+
+int btech_context_missile_hit_count_by_name(const BtechContext *context,
+                                            const char *name, int roll_index) {
+  assert(context != nullptr);
+  const MissileHitEntry *entry =
+      missile_hit_registry_find_name(&context->missile_hits, name);
   return entry ? entry->num_missiles[roll_index] : 0;
 }
 

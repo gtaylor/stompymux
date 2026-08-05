@@ -75,7 +75,9 @@ bool btech_context_hotload_uses_half_modifier(const BtechContext *context);
 bool btech_context_overrides_weapon_arcs(const BtechContext *context);
 bool btech_context_dig_bonus_requires_front(const BtechContext *context);
 int btech_context_dig_bonus(const BtechContext *context);
+bool btech_context_range_modifies_damage(const BtechContext *context);
 bool btech_context_woods_modify_damage(const BtechContext *context);
+bool btech_context_glancing_blows_enabled(const BtechContext *context);
 int btech_context_sprint_to_hit_modifier(const BtechContext *context);
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context);
 bool btech_context_uses_roll_on_backwalk(const BtechContext *context);
@@ -116,6 +118,8 @@ void btech_context_critical_roll_record(BtechContext *context, int roll);
 long btech_context_random_i31(BtechContext *context);
 int btech_context_missile_hit_count(const BtechContext *context,
                                     int weapon_index, int roll_index);
+int btech_context_missile_hit_count_by_name(const BtechContext *context,
+                                            const char *name, int roll_index);
 int btech_context_event_data_count(const BtechContext *context, int event_type,
                                    intptr_t event_data);
 time_t btech_context_now(const BtechContext *context);

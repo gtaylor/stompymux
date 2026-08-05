@@ -536,7 +536,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
    * Glancing_Blows = 0: NO Glancing. ROLL>=BTH=Normal
    * Glancing_Blows = 1: MaxTech Glancing. ROLL=BTH=Glance, ROLL>BTH=Normal
    * Glancing_Blows = 2: Exile Glancing. ROLL=BTH-1=Glance, ROLL>=BTH=Normal
-   * We need to do a little handling here. The rest happens over it HitTarget
+   * We need to do a little handling here. The rest happens over it
+   * mech_hit_resolve
    */
   RbaseToHit = baseToHit;
   if (mech->xcode.context->configuration->btech_glancing_blows == 2)
@@ -573,14 +574,14 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                     baseToHit <= roll);
   } else if (range_ok) {
     if (IsMissile(weapindx)) {
-      HitTarget(mech, weapindx, section, critical, target, mapx, mapy, LOS,
-                type, modifier, (roll >= RbaseToHit) && range_ok, baseToHit,
-                wGattlingShots, tIsSwarmAttack, roll);
+      mech_hit_resolve(mech, weapindx, section, critical, target, mapx, mapy,
+                       LOS, type, modifier, (roll >= RbaseToHit) && range_ok,
+                       baseToHit, wGattlingShots, tIsSwarmAttack, roll);
     } else {
       if (roll >= RbaseToHit) {
-        HitTarget(mech, weapindx, section, critical, target, mapx, mapy, LOS,
-                  type, modifier, 1, RbaseToHit, wGattlingShots, tIsSwarmAttack,
-                  roll);
+        mech_hit_resolve(mech, weapindx, section, critical, target, mapx, mapy,
+                         LOS, type, modifier, 1, RbaseToHit, wGattlingShots,
+                         tIsSwarmAttack, roll);
       } else {
         int tTryClear = 1;
 
@@ -598,9 +599,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
               mech_notify(altTarget, MECHALL, "The shot hits you instead!");
               mech_los_broadcast(
                   altTarget, "manages to get in the way of the shot instead!");
-              HitTarget(mech, weapindx, section, critical, altTarget, mapx,
-                        mapy, LOS, type, modifier, 1, baseToHit, wGattlingShots,
-                        tIsSwarmAttack, roll);
+              mech_hit_resolve(mech, weapindx, section, critical, altTarget,
+                               mapx, mapy, LOS, type, modifier, 1, baseToHit,
+                               wGattlingShots, tIsSwarmAttack, roll);
 
               tTryClear = 0;
             } else {
@@ -612,7 +613,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
         }
 
         if (tTryClear) {
-          int tempDamage = determineDamageFromHit(
+          int tempDamage = mech_hit_damage_determine(
               mech, section, critical, target, mapx, mapy, weapindx,
               wGattlingShots, MechWeapons[weapindx].damage,
               GetPartAmmoMode(mech, section, critical), type, modifier, 1);

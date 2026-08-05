@@ -42,12 +42,12 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                 int weapindx, int weapnum, int section, int critical,
                 float enemyX, float enemyY, int mapx, int mapy, float range,
                 int indirectFire, int sight, int ishex);
-int determineDamageFromHit(Mech *mech, int wSection, int wCritSlot,
-                           Mech *hitMech, int hitX, int hitY, int weapindx,
-                           int wGattlingShots, int wBaseWeapDamage,
-                           int wAmmoMode, int type, int modifier,
-                           int isTempCalc);
-void HitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
-               Mech *hitMech, int hitX, int hitY, int LOS, int type,
-               int modifier, int reallyhit, int bth, int wGattlingShots,
-               int tIsSwarmAttack, int player_roll);
+int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
+                              Mech *hitMech, int hitX, int hitY, int weapindx,
+                              int wGattlingShots, int wBaseWeapDamage,
+                              int wAmmoMode, int type, int modifier,
+                              int isTempCalc);
+void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
+                      Mech *hitMech, int hitX, int hitY, int LOS, int type,
+                      int modifier, int reallyhit, int bth, int wGattlingShots,
+                      int tIsSwarmAttack, int player_roll);
