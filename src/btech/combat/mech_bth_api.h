@@ -14,8 +14,8 @@ int FindBTHByRange(Mech *mech, Mech *target, int section, int weapindx,
                    float frange, int firemode, int ammomode, int *wBTH);
 int FindBTHByC3Range(Mech *mech, Mech *target, int section, int weapindx,
                      float realRange, float c3Range, int mode, int *wBTH);
-int AttackMovementMods(Mech *mech);
-int TargetMovementMods(Mech *mech, Mech *target, float range);
+int mech_attacker_movement_modifier(Mech *mech);
+int mech_target_movement_modifier(Mech *mech, Mech *target, float range);
 
 #define RANGE_SHORT 0
 #define RANGE_MED 1

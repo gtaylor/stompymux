@@ -61,6 +61,8 @@ void btech_context_combat_pilot_override_set(BtechContext *context,
 bool btech_context_seismic_detects_stopped_units(const BtechContext *context);
 bool btech_context_inferno_penalty_enabled(const BtechContext *context);
 bool btech_context_uses_fasa_turning(const BtechContext *context);
+bool btech_context_uses_extended_movement_modifiers(
+    const BtechContext *context);
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context);
 bool btech_context_uses_roll_on_backwalk(const BtechContext *context);
 bool btech_context_uses_new_terrain_rules(const BtechContext *context);

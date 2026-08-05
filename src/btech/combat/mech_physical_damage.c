@@ -255,9 +255,9 @@ int DeathFromAbove(Mech *mech, Mech *target) {
 
   baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
                                  "melee_specialist")
-                    ? MIN(0, AttackMovementMods(mech)) - 1
-                    : AttackMovementMods(mech));
-  baseToHit += TargetMovementMods(mech, target, 0.0);
+                    ? MIN(0, mech_attacker_movement_modifier(mech)) - 1
+                    : mech_attacker_movement_modifier(mech));
+  baseToHit += mech_target_movement_modifier(mech, target, 0.0);
   baseToHit += MechType(target) == CLASS_BSUIT ? 1 : 0;
 
 #ifdef BT_MOVEMENT_MODES

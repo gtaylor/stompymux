@@ -22,6 +22,7 @@ void mech_eta(DbRef player, void *data, char *buffer);
 float mech_cargo_maximum_speed(Mech *mech, float maximum_speed);
 float mech_effective_maximum_speed(Mech *mech);
 int mech_jump_speed_mp_for_map(const Mech *mech, const BattleMap *map);
+float mech_jump_speed_for_map(const Mech *mech, const BattleMap *map);
 void mech_drop(DbRef player, void *data, char *buffer);
 void mech_stand(DbRef player, void *data, char *buffer);
 void mech_land(DbRef player, void *data, char *buffer);

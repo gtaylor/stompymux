@@ -232,9 +232,9 @@ int FindNormalBTH(Mech *mech, BattleMap *mech_map, int section, int critical,
 
   /* Add in the movement modifiers */
   if (MechSections(mech)[section].config & STABILIZERS_DESTROYED)
-    BTHADD("AttackMoveX2", AttackMovementMods(mech) * 2);
+    BTHADD("AttackMoveX2", mech_attacker_movement_modifier(mech) * 2);
   else
-    BTHADD("AttackMove", AttackMovementMods(mech));
+    BTHADD("AttackMove", mech_attacker_movement_modifier(mech));
 
   /* Add mods for overheating */
   BTHADD("Overheat", mech_overheat_to_hit_modifier(mech));
@@ -363,9 +363,9 @@ int FindNormalBTH(Mech *mech, BattleMap *mech_map, int section, int critical,
 
     /* Add aero targetting mods. TODO: Rewrite aero code :) */
     if (MechType(mech) == CLASS_AERO) {
-      wTargMoveMod = TargetMovementMods(mech, target, range) * 3 / 4;
+      wTargMoveMod = mech_target_movement_modifier(mech, target, range) * 3 / 4;
     } else {
-      wTargMoveMod = TargetMovementMods(mech, target, range);
+      wTargMoveMod = mech_target_movement_modifier(mech, target, range);
     }
 
     if (wAmmoMode & AC_PRECISION_MODE)

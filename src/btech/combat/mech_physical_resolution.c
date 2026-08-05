@@ -316,10 +316,10 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
   // If we have melee_specialist advantage, knock -1 off the BTH.
   baseToHit +=
       HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "melee_specialist")
-          ? MIN(0, AttackMovementMods(mech) - 1)
-          : AttackMovementMods(mech);
+          ? MIN(0, mech_attacker_movement_modifier(mech) - 1)
+          : mech_attacker_movement_modifier(mech);
 
-  baseToHit += TargetMovementMods(mech, target, 0.0);
+  baseToHit += mech_target_movement_modifier(mech, target, 0.0);
 
   // BSuits get +1 BTH
   baseToHit += MechType(target) == CLASS_BSUIT ? 1 : 0;

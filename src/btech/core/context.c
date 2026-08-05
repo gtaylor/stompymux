@@ -102,6 +102,12 @@ bool btech_context_uses_fasa_turning(const BtechContext *context) {
   return context->configuration->btech_fasaturn;
 }
 
+bool btech_context_uses_extended_movement_modifiers(
+    const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_extendedmovemod;
+}
+
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_skidcliff;

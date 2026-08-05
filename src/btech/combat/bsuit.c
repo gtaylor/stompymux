@@ -436,7 +436,7 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
     if (Fallen(target))
       baseToHit -= 4;
   } else {
-    baseToHit += TargetMovementMods(mech, target, 0.0);
+    baseToHit += mech_target_movement_modifier(mech, target, 0.0);
 
     if (Fallen(target))
       baseToHit -= 2;
@@ -543,7 +543,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
     if (Fallen(target))
       baseToHit -= 2;
   } else {
-    baseToHit += TargetMovementMods(mech, target, 0.0);
+    baseToHit += mech_target_movement_modifier(mech, target, 0.0);
   }
 
   if (MechIsQuad(target)) {

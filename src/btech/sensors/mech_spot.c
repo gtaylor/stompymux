@@ -280,7 +280,7 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
             : (1 +
                mech_los_terrain_modifier(spotter, target, mech_map, spot_range,
                                          0) +
-               AttackMovementMods(spotter) +
+               mech_attacker_movement_modifier(spotter) +
                ((mech_event_count(spotter, EVENT_LOCK) &&
                  mech_targeting_computer_type(spotter) != TARGCOMP_MULTI)
                     ? 2
@@ -331,7 +331,7 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
   spotTerrain =
       weapon_catalogue_is_artillery(weapontype)
           ? 2
-          : (1 + AttackMovementMods(spotter) +
+          : (1 + mech_attacker_movement_modifier(spotter) +
              ((mech_event_count(spotter, EVENT_LOCK) &&
                mech_targeting_computer_type(spotter) != TARGCOMP_MULTI)
                   ? 2

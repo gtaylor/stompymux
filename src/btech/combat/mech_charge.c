@@ -278,10 +278,10 @@ void ChargeMech(Mech *mech, Mech *target) {
 
     mech_baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
                                         "melee_specialist")
-                           ? MIN(0, AttackMovementMods(mech) - 1)
-                           : AttackMovementMods(mech));
+                           ? MIN(0, mech_attacker_movement_modifier(mech) - 1)
+                           : mech_attacker_movement_modifier(mech));
 
-    mech_baseToHit += TargetMovementMods(mech, target, 0.0);
+    mech_baseToHit += mech_target_movement_modifier(mech, target, 0.0);
 
 #ifdef BT_MOVEMENT_MODES
     if (Dodging(target))
@@ -294,10 +294,10 @@ void ChargeMech(Mech *mech, Mech *target) {
 
     targ_baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(target),
                                         "melee_specialist")
-                           ? MIN(0, AttackMovementMods(target) - 1)
-                           : AttackMovementMods(target));
+                           ? MIN(0, mech_attacker_movement_modifier(target) - 1)
+                           : mech_attacker_movement_modifier(target));
 
-    targ_baseToHit += TargetMovementMods(target, mech, 0.0);
+    targ_baseToHit += mech_target_movement_modifier(target, mech, 0.0);
 
 #ifdef BT_MOVEMENT_MODES
     if (Dodging(mech))
@@ -616,10 +616,10 @@ void ChargeMech(Mech *mech, Mech *target) {
 
   baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
                                  "melee_specialist")
-                    ? MIN(0, AttackMovementMods(mech) - 1)
-                    : AttackMovementMods(mech));
+                    ? MIN(0, mech_attacker_movement_modifier(mech) - 1)
+                    : mech_attacker_movement_modifier(mech));
 
-  baseToHit += TargetMovementMods(mech, target, 0.0);
+  baseToHit += mech_target_movement_modifier(mech, target, 0.0);
 
 #ifdef BT_MOVEMENT_MODES
   if (Dodging(target))
