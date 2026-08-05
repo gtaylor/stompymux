@@ -164,6 +164,21 @@ bool mech_section_carries_club(const Mech *mech, int section) {
   return mech->ud.sections[section].specials & CARRYING_CLUB;
 }
 
+bool mech_section_has_special(const Mech *mech, int section, int special) {
+  return mech->ud.sections[section].specials & special;
+}
+
+bool mech_has_section_special(const Mech *mech, int special) {
+  for (int section = 0; section < NUM_SECTIONS; section++)
+    if (mech_section_has_special(mech, section, special))
+      return true;
+  return false;
+}
+
+void mech_section_special_remove(Mech *mech, int section, int special) {
+  mech->ud.sections[section].specials &= ~special;
+}
+
 bool mech_has_attached_inarc_ecm(const Mech *mech) {
   for (int section = 0; section < NUM_SECTIONS; section++)
     if (mech->ud.sections[section].internal &&

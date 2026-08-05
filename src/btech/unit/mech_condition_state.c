@@ -24,6 +24,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .digging = tank_critical_status & DIGGING_IN,
       .staggering = mech->rd.staggerDamage / 20 > 0,
       .searchlight_destroyed = critical_status & SLITE_DEST,
+      .searchlight_on = status2 & SLITE_ON,
       .illuminated = critical_status & SLITE_LIT,
       .hidden = critical_status & HIDDEN,
       .dodging = status2 & DODGING,
@@ -81,6 +82,34 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
 
 bool mech_supercharger_movement_mode_is_enabled(const Mech *mech) {
   return mech->rd.status2 & SCHARGE_ENABLED;
+}
+
+static bool mech_condition_mode_toggle(int *status, int mode, int opposite) {
+  if (*status & mode) {
+    *status &= ~mode;
+    return false;
+  }
+  *status |= mode;
+  *status &= ~opposite;
+  return true;
+}
+
+bool mech_ecm_mode_toggle(Mech *mech, bool eccm) {
+  return mech_condition_mode_toggle(&mech->rd.status2,
+                                    eccm ? ECCM_ENABLED : ECM_ENABLED,
+                                    eccm ? ECM_ENABLED : ECCM_ENABLED);
+}
+
+bool mech_personal_ecm_mode_toggle(Mech *mech, bool eccm) {
+  return mech_condition_mode_toggle(&mech->rd.status2,
+                                    eccm ? PER_ECCM_ENABLED : PER_ECM_ENABLED,
+                                    eccm ? PER_ECM_ENABLED : PER_ECCM_ENABLED);
+}
+
+bool mech_angel_ecm_mode_toggle(Mech *mech, bool eccm) {
+  return mech_condition_mode_toggle(
+      &mech->rd.status2, eccm ? ANGEL_ECCM_ENABLED : ANGEL_ECM_ENABLED,
+      eccm ? ANGEL_ECM_ENABLED : ANGEL_ECCM_ENABLED);
 }
 
 void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist) {
@@ -233,4 +262,28 @@ void mech_turret_jammed_set(Mech *mech, bool jammed) {
     mech->rd.tankcritstatus |= TURRET_JAMMED;
   else
     mech->rd.tankcritstatus &= ~TURRET_JAMMED;
+}
+
+void mech_searchlight_set(Mech *mech, bool enabled) {
+  if (enabled) {
+    mech->rd.status2 |= SLITE_ON;
+    mech->rd.critstatus |= SLITE_LIT;
+  } else {
+    mech->rd.status2 &= ~SLITE_ON;
+    mech->rd.critstatus &= ~SLITE_LIT;
+  }
+}
+
+void mech_stealth_armor_active_set(Mech *mech, bool active) {
+  if (active)
+    mech->rd.status2 |= STH_ARMOR_ON;
+  else
+    mech->rd.status2 &= ~STH_ARMOR_ON;
+}
+
+void mech_null_signature_active_set(Mech *mech, bool active) {
+  if (active)
+    mech->rd.status2 |= NULLSIGSYS_ON;
+  else
+    mech->rd.status2 &= ~NULLSIGSYS_ON;
 }

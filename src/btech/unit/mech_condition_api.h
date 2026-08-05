@@ -14,6 +14,7 @@ typedef struct MechConditionSummary {
   bool digging;
   bool staggering;
   bool searchlight_destroyed;
+  bool searchlight_on;
   bool illuminated;
   bool hidden;
   bool dodging;
@@ -73,6 +74,9 @@ typedef enum MechTorsoTwist {
 
 MechConditionSummary mech_condition_summary(const Mech *mech);
 bool mech_supercharger_movement_mode_is_enabled(const Mech *mech);
+bool mech_ecm_mode_toggle(Mech *mech, bool eccm);
+bool mech_personal_ecm_mode_toggle(Mech *mech, bool eccm);
+bool mech_angel_ecm_mode_toggle(Mech *mech, bool eccm);
 void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist);
 void mech_arms_center(Mech *mech);
 void mech_arms_flip(Mech *mech);
@@ -97,3 +101,6 @@ int mech_supercharger_counter_advance(Mech *mech);
 bool mech_supercharger_counter_regenerate(Mech *mech);
 void mech_hip_damage_set(Mech *mech, bool damaged, bool destroyed);
 void mech_turret_jammed_set(Mech *mech, bool jammed);
+void mech_searchlight_set(Mech *mech, bool enabled);
+void mech_stealth_armor_active_set(Mech *mech, bool active);
+void mech_null_signature_active_set(Mech *mech, bool active);
