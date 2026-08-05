@@ -51,7 +51,7 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return AERO_LWING;
       case 11:
         // Nose/Gear
-        if (crittable(mech, AERO_NOSE, 90))
+        if (mech_section_is_crittable(mech, AERO_NOSE, 90))
           LoseWeapon(mech, AERO_NOSE);
         return AERO_NOSE;
       case 12:
@@ -178,12 +178,12 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
       switch (roll) {
       case 2:
       case 12:
-        if (crittable(mech, DS_NOSE, 30))
+        if (mech_section_is_crittable(mech, DS_NOSE, 30))
           dropship_bridge_hit(mech);
         return DS_NOSE;
       case 3:
       case 11:
-        if (crittable(mech, DS_NOSE, 50))
+        if (mech_section_is_crittable(mech, DS_NOSE, 50))
           LoseWeapon(mech, DS_NOSE);
         return DS_NOSE;
       case 5:
@@ -203,15 +203,15 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
       if (btech_random_range(context, 1, 2) == 2)
-        SpheroidToRear(mech, side);
+        side = mech_spheroid_rear_section(mech, side);
       switch (roll) {
       case 2:
-        if (crittable(mech, DS_NOSE, 30))
+        if (mech_section_is_crittable(mech, DS_NOSE, 30))
           dropship_bridge_hit(mech);
         return DS_NOSE;
       case 3:
       case 11:
-        if (crittable(mech, side, 60))
+        if (mech_section_is_crittable(mech, side, 60))
           LoseWeapon(mech, side);
         return side;
       case 4:
@@ -224,7 +224,7 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 9:
         return DS_NOSE;
       case 12:
-        if (crittable(mech, side, 60))
+        if (mech_section_is_crittable(mech, side, 60))
           *iscritical = 1;
         return side;
       }
@@ -233,7 +233,7 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
       switch (roll) {
       case 2:
       case 12:
-        if (crittable(mech, DS_AFT, 60))
+        if (mech_section_is_crittable(mech, DS_AFT, 60))
           *iscritical = 1;
         return DS_AFT;
       case 3:
@@ -242,19 +242,19 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 4:
       case 7:
       case 10:
-        if (crittable(mech, DS_AFT, 60))
+        if (mech_section_is_crittable(mech, DS_AFT, 60))
           DestroyHeatSink(mech, DS_AFT);
         return DS_AFT;
       case 5:
         hitloc = DS_RWING;
-        SpheroidToRear(mech, hitloc);
+        hitloc = mech_spheroid_rear_section(mech, hitloc);
         return hitloc;
       case 6:
       case 8:
         return DS_AFT;
       case 9:
         hitloc = DS_LWING;
-        SpheroidToRear(mech, hitloc);
+        hitloc = mech_spheroid_rear_section(mech, hitloc);
         return hitloc;
       }
     }

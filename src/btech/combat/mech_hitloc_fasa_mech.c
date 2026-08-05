@@ -18,7 +18,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
 
   switch (mech_class(mech)) {
   case CLASS_BSUIT:
-    if ((hitloc = get_bsuit_hitloc(mech)) < 0)
+    if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
       return btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
@@ -52,7 +52,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return RLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return ModifyHeadHit(hitGroup, mech);
+          return mech_head_hit_modify(hitGroup, mech);
         return HEAD;
       }
       break;
@@ -84,7 +84,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return LLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return ModifyHeadHit(hitGroup, mech);
+          return mech_head_hit_modify(hitGroup, mech);
         return HEAD;
       }
       break;
@@ -116,7 +116,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return LARM;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return ModifyHeadHit(hitGroup, mech);
+          return mech_head_hit_modify(hitGroup, mech);
         return HEAD;
       }
     }

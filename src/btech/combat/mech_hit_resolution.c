@@ -285,11 +285,12 @@ void HitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
       }
 
       if (aim_hit)
-        hitloc = FindAimHitLoc(mech, hitMech, &isrear, &iscritical);
+        hitloc = mech_aimed_hit_location(mech, hitMech, &isrear, &iscritical);
       else if (tUsingTC)
-        hitloc = FindTCHitLoc(mech, hitMech, &isrear, &iscritical);
+        hitloc = mech_targeting_computer_hit_location(mech, hitMech, &isrear,
+                                                      &iscritical);
       else
-        hitloc = FindTargetHitLoc(mech, hitMech, &isrear, &iscritical);
+        hitloc = mech_target_hit_location(mech, hitMech, &isrear, &iscritical);
 
       DamageMech(hitMech, mech, LOS, GunPilot(mech), hitloc, isrear, iscritical,
                  personal_combat_damage_to_unit(hitMech, weapindx, wWeapDamage),
@@ -390,11 +391,13 @@ void HitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
     while (num_missiles_hit) {
       if (hitMech) {
         if (aim_hit)
-          hitloc = FindAimHitLoc(mech, hitMech, &isrear, &iscritical);
+          hitloc = mech_aimed_hit_location(mech, hitMech, &isrear, &iscritical);
         if (tUsingTC)
-          hitloc = FindTCHitLoc(mech, hitMech, &isrear, &iscritical);
+          hitloc = mech_targeting_computer_hit_location(mech, hitMech, &isrear,
+                                                        &iscritical);
         else
-          hitloc = FindTargetHitLoc(mech, hitMech, &isrear, &iscritical);
+          hitloc =
+              mech_target_hit_location(mech, hitMech, &isrear, &iscritical);
         DamageMech(
             hitMech, mech, LOS, GunPilot(mech), hitloc, isrear, iscritical,
             personal_combat_damage_to_unit(hitMech, weapindx, wWeapDamage), 0,

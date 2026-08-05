@@ -328,7 +328,7 @@ skip_nuke:
   }
 
   /* Last check to see if we destroy the unit... vehicle stuff */
-  if (TransferTarget(wounded, 0) < 0)
+  if (mech_hit_location_transfer(wounded, 0) < 0)
     tKillMech = 1;
   else
     tKillMech = 0;

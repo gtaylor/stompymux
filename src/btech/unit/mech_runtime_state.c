@@ -72,6 +72,14 @@ bool mech_is_under_special_conditions(const Mech *mech) {
   return mech->rd.status & UNDERSPECIAL;
 }
 
+bool mech_is_immobile(const Mech *mech) {
+  return !(mech->rd.status & STARTED) || (mech->rd.status & UNCONSCIOUS) ||
+         (mech->rd.status2 & FORTIFIED) || (mech->rd.status & BLINDED) ||
+         mech->ud.move == MOVE_NONE ||
+         ((mech->rd.status & FALLEN) && mech->ud.type != CLASS_MECH &&
+          mech->ud.type != CLASS_MW);
+}
+
 bool mech_has_destroyed_gyro(const Mech *mech) {
   return mech->rd.critstatus & GYRO_DESTROYED;
 }

@@ -104,7 +104,7 @@ void Missile_Hit(Mech *mech, Mech *target, int hitX, int hitY, int isrear,
     this_damage = this_time * damage;
 
     if (target) {
-      hitloc = FindTargetHitLoc(mech, target, &isrear, &iscritical);
+      hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
 
       DamageMech(target, mech, LOS, GunPilot(mech), hitloc, isrear, iscritical,
                  personal_combat_damage_to_unit(target, weapindx, this_damage),
@@ -244,7 +244,7 @@ int MissileHitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
             return 0;
           }
 
-          wNARCHitLoc = findNARCHitLoc(mech, hitMech, &tIsRear);
+          wNARCHitLoc = mech_narc_hit_location(mech, hitMech, &tIsRear);
 
           /* sanity check */
           if (wNARCHitLoc < 0) {

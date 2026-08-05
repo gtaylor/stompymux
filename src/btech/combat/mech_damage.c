@@ -243,7 +243,8 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   while (((!is_aero(wounded) && !GetSectInt(wounded, hitloc)) ||
           (is_aero(wounded) && !GetSectArmor(wounded, hitloc))) &&
          !kill) {
-    if (transfer && (hitloc = TransferTarget(wounded, hitloc)) >= 0 &&
+    if (transfer &&
+        (hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0 &&
         (MechType(wounded) == CLASS_MECH || MechType(wounded) == CLASS_MW ||
          MechType(wounded) == CLASS_BSUIT || is_aero(wounded))) {
       DamageMech(wounded, attacker, LOS, attackPilot, hitloc, isrear,
@@ -254,7 +255,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
     } else {
       if (!((MechType(wounded) == CLASS_MECH || MechType(wounded) == CLASS_MW ||
              MechType(wounded) == CLASS_BSUIT || is_aero(wounded)) &&
-            (hitloc = TransferTarget(wounded, hitloc)) >= 0)) {
+            (hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0)) {
         if (is_aero(wounded) && !Destroyed(wounded)) {
           /* Hurt SI instead. */
           if (AeroSI(wounded) <= damage)
@@ -436,7 +437,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
     } else
       mech_location_maybe_breach(attacker, wounded, hitloc);
     if (intDamage > 0 && transfer && (MechType(wounded) != CLASS_BSUIT)) {
-      if ((hitloc = TransferTarget(wounded, hitloc)) >= 0)
+      if ((hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0)
         DamageMech(wounded, attacker, LOS, attackPilot, hitloc, isrear,
                    iscritical, intDamage, -2, cause, bth, wWeapIndx, wAmmoMode,
                    tIgnoreSwarmers);
@@ -463,7 +464,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
       if (intDamage > 0 && transfer &&
           !((MechSections(wounded)[hitloc].config & CASE_TECH) ||
             (MechSpecials(wounded) & CLAN_TECH))) {
-        if ((hitloc = TransferTarget(wounded, hitloc)) >= 0) {
+        if ((hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0) {
           if (!is_aero(wounded))
             DamageMech(wounded, attacker, LOS, attackPilot, hitloc, isrear,
                        iscritical, -2, intDamage, cause, bth, wWeapIndx,

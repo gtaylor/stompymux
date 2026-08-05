@@ -24,9 +24,8 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
 
   /* We have a varying set of crit charts we can use, so let's see what's been
    * config'd */
-  /* We call the mech_critproof_hit_location after the adv fasa hit loc function
-   * because it already has a check built in for critproof (lookup crittable),
-   * the others don't */
+  /* The advanced FASA table already checks critical immunity; the others do
+   * not, so dispatch to the crit-proof table after that check. */
   switch (mech_class(mech)) {
   case CLASS_VTOL:
     if (btech_context_uses_advanced_vtol_criticals(context))
@@ -62,7 +61,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
   btech_context_hit_roll_record(context, roll);
   switch (mech_class(mech)) {
   case CLASS_BSUIT:
-    if ((hitloc = get_bsuit_hitloc(mech)) < 0)
+    if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
       return btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
@@ -71,7 +70,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
-        if (crittable(mech, LTORSO, 60)) {
+        if (mech_section_is_crittable(mech, LTORSO, 60)) {
           btech_channel_send(
               context, BTECH_CHANNEL_TAC_INFO, "%s",
               tprintf(
@@ -99,14 +98,14 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return RLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return ModifyHeadHit(hitGroup, mech);
+          return mech_head_hit_modify(hitGroup, mech);
         return HEAD;
       }
       break;
     case RIGHTSIDE:
       switch (roll) {
       case 2:
-        if (crittable(mech, RTORSO, 60)) {
+        if (mech_section_is_crittable(mech, RTORSO, 60)) {
           btech_channel_send(
               context, BTECH_CHANNEL_TAC_INFO, "%s",
               tprintf(
@@ -134,7 +133,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return LLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return ModifyHeadHit(hitGroup, mech);
+          return mech_head_hit_modify(hitGroup, mech);
         return HEAD;
       }
       break;
@@ -142,7 +141,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     case BACK:
       switch (roll) {
       case 2:
-        if (crittable(mech, CTORSO, 60)) {
+        if (mech_section_is_crittable(mech, CTORSO, 60)) {
           btech_channel_send(
               context, BTECH_CHANNEL_TAC_INFO, "%s",
               tprintf(
@@ -169,7 +168,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return LARM;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return ModifyHeadHit(hitGroup, mech);
+          return mech_head_hit_modify(hitGroup, mech);
         return HEAD;
       }
     }
@@ -180,7 +179,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (crittable(mech, LSIDE, 40))
+        if (mech_section_is_crittable(mech, LSIDE, 40))
           *iscritical = 1;
         return LSIDE;
       case 3:
@@ -195,7 +194,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return (mech_section_internal(mech, TURRET)) ? TURRET : LSIDE;
       case 11:
         if (mech_section_internal(mech, TURRET)) {
-          if (crittable(mech, TURRET, 50))
+          if (mech_section_is_crittable(mech, TURRET, 50))
             *iscritical = 1;
           return TURRET;
         } else
@@ -206,7 +205,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (crittable(mech, RSIDE, 40))
+        if (mech_section_is_crittable(mech, RSIDE, 40))
           *iscritical = 1;
         return RSIDE;
       case 3:
@@ -221,7 +220,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return (mech_section_internal(mech, TURRET)) ? TURRET : RSIDE;
       case 11:
         if (mech_section_internal(mech, TURRET)) {
-          if (crittable(mech, TURRET, 50))
+          if (mech_section_is_crittable(mech, TURRET, 50))
             *iscritical = 1;
           return TURRET;
         } else
@@ -236,7 +235,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (crittable(mech, FSIDE, 40))
+        if (mech_section_is_crittable(mech, FSIDE, 40))
           *iscritical = 1;
         return side;
       case 3:
@@ -251,7 +250,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return (mech_section_internal(mech, TURRET)) ? TURRET : side;
       case 11:
         if (mech_section_internal(mech, TURRET)) {
-          if (crittable(mech, TURRET, 50))
+          if (mech_section_is_crittable(mech, TURRET, 50))
             *iscritical = 1;
           return TURRET;
         } else
@@ -267,7 +266,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 12:
       case 3:
       case 11:
-        if (crittable(mech, AERO_NOSE, 90))
+        if (mech_section_is_crittable(mech, AERO_NOSE, 90))
           LoseWeapon(mech, AERO_NOSE);
         return AERO_NOSE;
       case 4:
@@ -288,17 +287,17 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (crittable(mech, AERO_AFT, 99))
+        if (mech_section_is_crittable(mech, AERO_AFT, 99))
           *iscritical = 1;
         return AERO_AFT;
       case 3:
       case 11:
-        if (crittable(mech, side, 99))
+        if (mech_section_is_crittable(mech, side, 99))
           LoseWeapon(mech, side);
         return side;
       case 4:
       case 10:
-        if (crittable(mech, AERO_AFT, 90))
+        if (mech_section_is_crittable(mech, AERO_AFT, 90))
           DestroyHeatSink(mech, AERO_AFT);
         return AERO_AFT;
       case 5:
@@ -315,7 +314,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (crittable(mech, AERO_AFT, 90))
+        if (mech_section_is_crittable(mech, AERO_AFT, 90))
           *iscritical = 1;
         return AERO_AFT;
       case 3:
@@ -340,12 +339,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (crittable(mech, DS_NOSE, 30))
+        if (mech_section_is_crittable(mech, DS_NOSE, 30))
           dropship_bridge_hit(mech);
         return DS_NOSE;
       case 3:
       case 11:
-        if (crittable(mech, DS_NOSE, 50))
+        if (mech_section_is_crittable(mech, DS_NOSE, 50))
           LoseWeapon(mech, DS_NOSE);
         return DS_NOSE;
       case 5:
@@ -365,15 +364,15 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
       if (btech_random_range(context, 1, 2) == 2)
-        SpheroidToRear(mech, side);
+        side = mech_spheroid_rear_section(mech, side);
       switch (roll) {
       case 2:
-        if (crittable(mech, DS_NOSE, 30))
+        if (mech_section_is_crittable(mech, DS_NOSE, 30))
           dropship_bridge_hit(mech);
         return DS_NOSE;
       case 3:
       case 11:
-        if (crittable(mech, side, 60))
+        if (mech_section_is_crittable(mech, side, 60))
           LoseWeapon(mech, side);
         return side;
       case 4:
@@ -386,7 +385,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 9:
         return DS_NOSE;
       case 12:
-        if (crittable(mech, side, 60))
+        if (mech_section_is_crittable(mech, side, 60))
           *iscritical = 1;
         return side;
       }
@@ -395,7 +394,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (crittable(mech, DS_AFT, 60))
+        if (mech_section_is_crittable(mech, DS_AFT, 60))
           *iscritical = 1;
         return DS_AFT;
       case 3:
@@ -404,19 +403,19 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 4:
       case 7:
       case 10:
-        if (crittable(mech, DS_AFT, 60))
+        if (mech_section_is_crittable(mech, DS_AFT, 60))
           DestroyHeatSink(mech, DS_AFT);
         return DS_AFT;
       case 5:
         hitloc = DS_RWING;
-        SpheroidToRear(mech, hitloc);
+        hitloc = mech_spheroid_rear_section(mech, hitloc);
         return hitloc;
       case 6:
       case 8:
         return DS_AFT;
       case 9:
         hitloc = DS_LWING;
-        SpheroidToRear(mech, hitloc);
+        hitloc = mech_spheroid_rear_section(mech, hitloc);
         return hitloc;
       }
     }
@@ -528,7 +527,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         hitloc = LSIDE;
-        if (crittable(mech, hitloc, 40))
+        if (mech_section_is_crittable(mech, hitloc, 40))
           *iscritical = 1;
         break;
       case 3:
@@ -548,7 +547,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-          if (crittable(mech, hitloc, 40))
+          if (mech_section_is_crittable(mech, hitloc, 40))
             *iscritical = 1;
         } else
           hitloc = LSIDE;
@@ -565,7 +564,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 2:
       case 12:
         hitloc = RSIDE;
-        if (crittable(mech, hitloc, 40))
+        if (mech_section_is_crittable(mech, hitloc, 40))
           *iscritical = 1;
         break;
       case 3:
@@ -585,7 +584,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-          if (crittable(mech, hitloc, 40))
+          if (mech_section_is_crittable(mech, hitloc, 40))
             *iscritical = 1;
         } else
           hitloc = RSIDE;
@@ -599,7 +598,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 2:
       case 12:
         hitloc = FSIDE;
-        if (crittable(mech, hitloc, 40))
+        if (mech_section_is_crittable(mech, hitloc, 40))
           *iscritical = 1;
         break;
       case 3:

@@ -7,15 +7,22 @@
  *       All rights reserved
  */
 
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
+#include "mech_identity_api.h"
+#include "mech_position_api.h"
+#include "mech_specification_api.h"
 
-int FindPunchLocation(Mech *target, int hitGroup) {
+int mech_punch_hit_location(Mech *target, int hitGroup) {
+  BtechContext *context = mech_context(target);
 
-  int roll = btech_random_range(target->xcode.context, 1, 6);
+  int roll = btech_random_range(context, 1, 6);
 
   /* New tables from Total Warfare - pg 147 (and back of book)
    * - Dany 01/2007 */
-  if (MechIsQuad(target)) {
+  if (mech_is_quad(target)) {
 
     switch (hitGroup) {
     case LEFTSIDE:
@@ -144,12 +151,13 @@ int FindPunchLocation(Mech *target, int hitGroup) {
   return -1;
 }
 
-int FindKickLocation(Mech *target, int hitGroup) {
+int mech_kick_hit_location(Mech *target, int hitGroup) {
+  BtechContext *context = mech_context(target);
 
-  int roll = btech_random_range(target->xcode.context, 1, 6);
+  int roll = btech_random_range(context, 1, 6);
 
   /* New tables from Total Warfare for quads */
-  if (MechIsQuad(target)) {
+  if (mech_is_quad(target)) {
 
     switch (hitGroup) {
     case LEFTSIDE:
@@ -242,17 +250,18 @@ int FindKickLocation(Mech *target, int hitGroup) {
  * instead of doing damage to the head it stuns the pilot
  * and re-rolls the location
  */
-int ModifyHeadHit(int hitGroup, Mech *mech) {
+int mech_head_hit_modify(int hitGroup, Mech *mech) {
+  BtechContext *context = mech_context(mech);
 
-  int newloc = FindPunchLocation(mech, hitGroup);
+  int newloc = mech_punch_hit_location(mech, hitGroup);
 
-  if (MechType(mech) != CLASS_MECH) {
+  if (mech_class(mech) != CLASS_MECH) {
     return newloc;
   }
 
   if (newloc != HEAD &&
-      (mech->xcode.context->configuration->btech_exile_stun_code ==
-       1)) { // set exile_stun_code >1 to disable 'stun' part
+      btech_context_exile_stun_mode(context) ==
+          1) { // set exile_stun_code >1 to disable 'stun' part
 
     mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
     mech_notify(mech, MECHALL,
@@ -265,10 +274,11 @@ int ModifyHeadHit(int hitGroup, Mech *mech) {
 
     mech_los_broadcast(mech, "significantly slows down and starts wobbling!");
 
-    MechCritStatus(mech) |= MECH_STUNNED;
+    mech_stunned_set(mech, true);
 
-    if (MechSpeed(mech) > WalkingSpeed(MechMaxSpeed(mech))) {
-      MechDesiredSpeed(mech) = WalkingSpeed(MechMaxSpeed(mech));
+    float walking_speed = 2.0F * mech_maximum_speed(mech) / 3.0F;
+    if (mech_current_speed(mech) > walking_speed) {
+      mech_desired_speed_set(mech, walking_speed);
     }
 
     mech_event_schedule(mech, EVENT_CREWSTUN, mech_crewstun_event,
@@ -278,23 +288,24 @@ int ModifyHeadHit(int hitGroup, Mech *mech) {
   return newloc;
 }
 
-int get_bsuit_hitloc(Mech *mech) {
+int mech_battle_suit_hit_location(Mech *mech) {
   int i;
   int table[NUM_BSUIT_MEMBERS];
   int last = 0;
+  BtechContext *context = mech_context(mech);
 
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++)
-    if (GetSectInt(mech, i))
+    if (mech_section_internal(mech, i))
       table[last++] = i;
   if (!last)
     return -1;
-  return table[btech_random_range(mech->xcode.context, 0, last - 1)];
+  return table[btech_random_range(context, 0, last - 1)];
 }
 
-int TransferTarget(Mech *mech, int hitloc) {
-  switch (MechType(mech)) {
+int mech_hit_location_transfer(Mech *mech, int hitloc) {
+  switch (mech_class(mech)) {
   case CLASS_BSUIT:
-    return get_bsuit_hitloc(mech);
+    return mech_battle_suit_hit_location(mech);
   case CLASS_AERO:
   case CLASS_MECH:
   case CLASS_MW:
@@ -315,6 +326,12 @@ int TransferTarget(Mech *mech, int hitloc) {
     break;
   }
   return -1;
+}
+
+int mech_spheroid_rear_section(const Mech *mech, int section) {
+  if (mech_class(mech) != CLASS_SPHEROID_DS)
+    return section;
+  return section == DS_LWING ? DS_LRWING : DS_RRWING;
 }
 
 int find_swarm_hit_location(BtechContext *context, int *iscritical,
@@ -355,48 +372,50 @@ int find_swarm_hit_location(BtechContext *context, int *iscritical,
 }
 
 /*
- * Determines whether a section is crittable.
+ * Determines whether a section can receive a critical hit.
  * tres = armor percentage threshhold
  */
-int crittable(Mech *mech, int loc, int tres) {
+int mech_section_is_crittable(Mech *mech, int loc, int tres) {
   int d;
+  BtechContext *context = mech_context(mech);
 
-  if (MechSpecials(mech) & CRITPROOF_TECH)
+  if (mech_technology_flags(mech) & CRITPROOF_TECH)
     return 0;
   /* Towers and Stationary Objectives should not crit */
-  if (MechMove(mech) == MOVE_NONE)
+  if (mech_movement_type(mech) == MOVE_NONE)
     return 0;
-  if (!GetSectOArmor(mech, loc))
+  if (!mech_section_original_armor(mech, loc))
     return 1;
-  if (MechType(mech) != CLASS_MECH &&
-      mech->xcode.context->configuration->btech_vcrit <= 1)
+  if (mech_class(mech) != CLASS_MECH &&
+      btech_context_vehicle_critical_mode(context) <= 1)
     return 0;
 
   /* Calculate percentage of armor remaining */
-  d = (100 * GetSectArmor(mech, loc)) / GetSectOArmor(mech, loc);
+  d = (100 * mech_section_armor(mech, loc)) /
+      mech_section_original_armor(mech, loc);
 
   /* Are we below the threshold? Okay, then lets give it a 1 in 12 chance to TAC
    */
   if (d < tres) {
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+    btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
                        tprintf("%ld was below thresh (d: %d, tres: %d)",
-                               mech->mynum, d, tres));
-    if (btech_random_range(mech->xcode.context, 1, 12) == 6) {
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+                               mech_dbref(mech), d, tres));
+    if (btech_random_range(context, 1, 12) == 6) {
+      btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
                          tprintf("%ld is pretty unlucky. Needed 6. "
                                  "Rolled: 6. You're getting tac'd!",
-                                 mech->mynum));
+                                 mech_dbref(mech)));
       return 1;
     }
   }
   /* Full Up Armor? Okay, 1 in 71 chance for that 'lucky' TAC */
   if (d == 100) {
-    if (btech_random_range(mech->xcode.context, 1, 71) == 23) {
+    if (btech_random_range(context, 1, 71) == 23) {
       btech_channel_send(
-          mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+          context, BTECH_CHANNEL_TAC_INFO, "%s",
           tprintf("%ld has full armor, but you suck. 1-71 and you got a 23? "
                   "Who the eff are you, MJ?",
-                  mech->mynum));
+                  mech_dbref(mech)));
       return 1;
     }
     return 0;
@@ -405,7 +424,7 @@ int crittable(Mech *mech, int loc, int tres) {
    * Anything below 70% is a 1 in 11 chance? That's stupid. Lets just make the
    * TAC threshold, the TAC threshold and leave it at that */
   //	if(d < (100 - ((100 - tres) / 2)))
-  //		if(btech_random_range(mech->xcode.context, 1, 11) == 6)
+  //		if(btech_random_range(context, 1, 11) == 6)
   //			return 1;
   return 0;
-} /* end crittable() */
+}

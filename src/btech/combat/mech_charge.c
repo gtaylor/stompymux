@@ -348,7 +348,7 @@ void ChargeMech(Mech *mech, Mech *target) {
       mech_printf(target, MECHALL, "CRASH!!!\n%s charges into you!",
                   mech_to_mech_display_id(target, mech).text);
       mech_notify(mech, MECHALL, "SMASH!!! You crash into your target!");
-      hitGroup = FindAreaHitGroup(mech, target);
+      hitGroup = mech_hit_group(mech, target);
       isrear = (hitGroup == BACK);
 
       /* Record the damage for debugging then dish it out */
@@ -367,7 +367,7 @@ void ChargeMech(Mech *mech, Mech *target) {
                      iscritical, (target_damage % 5), 0);
       }
 
-      hitGroup = FindAreaHitGroup(target, mech);
+      hitGroup = mech_hit_group(target, mech);
       isrear = (hitGroup == BACK);
 
       /* Ok now how much damage will the first unit take from
@@ -431,7 +431,7 @@ void ChargeMech(Mech *mech, Mech *target) {
       mech_printf(mech, MECHALL, "CRASH!!!\n%s charges into you!",
                   mech_to_mech_display_id(mech, target).text);
       mech_notify(target, MECHALL, "SMASH!!! You crash into your target!");
-      hitGroup = FindAreaHitGroup(target, mech);
+      hitGroup = mech_hit_group(target, mech);
       isrear = (hitGroup == BACK);
 
       /* Record the damage for debugging then dish it out */
@@ -450,7 +450,7 @@ void ChargeMech(Mech *mech, Mech *target) {
                      iscritical, (mech_damage % 5), 0);
       }
 
-      hitGroup = FindAreaHitGroup(mech, target);
+      hitGroup = mech_hit_group(mech, target);
       isrear = (hitGroup == BACK);
 
       /* Ok now how much damage will the second unit take from
@@ -643,7 +643,7 @@ void ChargeMech(Mech *mech, Mech *target) {
                 mech_to_mech_display_id(target, mech).text,
                 MechType(mech) == CLASS_MECH ? "charge" : "ram");
     mech_notify(mech, MECHALL, "SMASH!!! You crash into your target!");
-    hitGroup = FindAreaHitGroup(mech, target);
+    hitGroup = mech_hit_group(mech, target);
 
     if (hitGroup == BACK)
       isrear = 1;
@@ -666,7 +666,7 @@ void ChargeMech(Mech *mech, Mech *target) {
                    (target_damage % 5), 0);
     }
 
-    hitGroup = FindAreaHitGroup(target, mech);
+    hitGroup = mech_hit_group(target, mech);
     isrear = (hitGroup == BACK);
 
     /* Damage done to the attacker for the charge */

@@ -104,7 +104,7 @@ static void collision_apply_damage(Mech *att, Mech *mech, int dam,
   if (att == mech)
     hitGroup = FRONT;
   else
-    hitGroup = FindAreaHitGroup(att, mech);
+    hitGroup = mech_hit_group(att, mech);
   isrear = (hitGroup == BACK);
   if (mech_is_fallen(mech))
     table = COLLISION_DAMAGE_NORMAL;
@@ -117,14 +117,14 @@ static void collision_apply_damage(Mech *att, Mech *mech, int dam,
       if (mech_class(mech) != CLASS_MECH) {
         hitloc = mech_hit_location(mech, hitGroup, &iscrit, &isrear);
       } else {
-        hitloc = FindPunchLocation(mech, hitGroup);
+        hitloc = mech_punch_hit_location(mech, hitGroup);
       }
       break;
     case COLLISION_DAMAGE_KICK:
       if (mech_class(mech) != CLASS_MECH) {
         hitloc = mech_hit_location(mech, hitGroup, &iscrit, &isrear);
       } else {
-        hitloc = FindKickLocation(mech, hitGroup);
+        hitloc = mech_kick_hit_location(mech, hitGroup);
       }
       break;
     }

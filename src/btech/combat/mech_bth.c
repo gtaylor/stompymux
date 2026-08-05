@@ -332,7 +332,7 @@ int FindNormalBTH(Mech *mech, BattleMap *mech_map, int section, int critical,
     /* Add the dig-in bonus */
     if (MechDugIn(target) &&
         (!mech->xcode.context->configuration->btech_dig_only_fs ||
-         (FindAreaHitGroup(mech, target) == FRONT)) &&
+         (mech_hit_group(mech, target) == FRONT)) &&
         (MechZ(target) >= MechZ(mech)))
       BTHADD("DugIn", mech->xcode.context->configuration->btech_digbonus);
 

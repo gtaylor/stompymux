@@ -20,6 +20,7 @@ bool mech_pilot_is_unconscious(const Mech *mech);
 bool mech_is_observer(const Mech *mech);
 bool mech_is_under_gravity(const Mech *mech);
 bool mech_is_under_special_conditions(const Mech *mech);
+bool mech_is_immobile(const Mech *mech);
 bool mech_has_destroyed_gyro(const Mech *mech);
 bool mech_has_damaged_gyro(const Mech *mech);
 int mech_cocoon_integrity(const Mech *mech);

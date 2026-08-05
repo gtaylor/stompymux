@@ -69,7 +69,7 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
       damage = damage / 2;
     }
 
-    hitgroup = FindAreaHitGroup(mech, target);
+    hitgroup = mech_hit_group(mech, target);
     if (hitgroup == BACK) {
       isrear = 1;
     }
@@ -85,28 +85,28 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
         if ((MechType(target) != CLASS_MECH) ||
             (Fallen(target) &&
              (MechElevation(mech) == MechElevation(target)))) {
-          hitloc = FindTargetHitLoc(mech, target, &isrear, &iscritical);
+          hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
         } else if (!Fallen(target) &&
                    (MechElevation(mech) > MechElevation(target))) {
-          hitloc = FindPunchLocation(target, hitgroup);
+          hitloc = mech_punch_hit_location(target, hitgroup);
         } else if (MechElevation(mech) == MechElevation(target)) {
-          hitloc = FindKickLocation(target, hitgroup);
+          hitloc = mech_kick_hit_location(target, hitgroup);
         }
 
       } else if (MechElevation(mech) < MechElevation(target)) {
 
         if (Fallen(target) || MechType(target) != CLASS_MECH) {
-          hitloc = FindTargetHitLoc(mech, target, &isrear, &iscritical);
+          hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
         } else {
-          hitloc = FindKickLocation(target, hitgroup);
+          hitloc = mech_kick_hit_location(target, hitgroup);
         }
 
       } else {
-        hitloc = FindPunchLocation(target, hitgroup);
+        hitloc = mech_punch_hit_location(target, hitgroup);
       }
 
     } else {
-      hitloc = FindTargetHitLoc(mech, target, &isrear, &iscritical);
+      hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
     }
 
     break;
@@ -116,7 +116,7 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
   case PA_MACE:
   case PA_CLUB:
 
-    hitgroup = FindAreaHitGroup(mech, target);
+    hitgroup = mech_hit_group(mech, target);
     if (hitgroup == BACK) {
       isrear = 1;
     }
@@ -126,19 +126,19 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
       if (MechElevation(mech) < MechElevation(target)) {
 
         if (Fallen(target) || MechType(target) != CLASS_MECH) {
-          hitloc = FindTargetHitLoc(mech, target, &isrear, &iscritical);
+          hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
         } else {
-          hitloc = FindKickLocation(target, hitgroup);
+          hitloc = mech_kick_hit_location(target, hitgroup);
         }
 
       } else if (MechElevation(mech) > MechElevation(target)) {
-        hitloc = FindPunchLocation(target, hitgroup);
+        hitloc = mech_punch_hit_location(target, hitgroup);
       } else {
-        hitloc = FindTargetHitLoc(mech, target, &isrear, &iscritical);
+        hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
       }
 
     } else {
-      hitloc = FindTargetHitLoc(mech, target, &isrear, &iscritical);
+      hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
     }
     break;
 
@@ -151,18 +151,18 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
       damage = damage / 2;
 
     if (Fallen(target) || MechType(target) != CLASS_MECH) {
-      hitloc = FindTargetHitLoc(mech, target, &isrear, &iscritical);
+      hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
     } else {
 
-      hitgroup = FindAreaHitGroup(mech, target);
+      hitgroup = mech_hit_group(mech, target);
       if (hitgroup == BACK) {
         isrear = 1;
       }
 
       if (MechElevation(mech) > MechElevation(target)) {
-        hitloc = FindPunchLocation(target, hitgroup);
+        hitloc = mech_punch_hit_location(target, hitgroup);
       } else {
-        hitloc = FindKickLocation(target, hitgroup);
+        hitloc = mech_kick_hit_location(target, hitgroup);
       }
     }
     break;
@@ -284,7 +284,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     mech_notify(mech, MECHALL, "You land on your target legs first!");
     mech_los_broadcast_unit(mech, target, "lands on %s!");
 
-    hitGroup = FindAreaHitGroup(mech, target);
+    hitGroup = mech_hit_group(mech, target);
     if (hitGroup == BACK)
       isrear = 1;
 
@@ -303,7 +303,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
       if (Fallen(target) || MechType(target) != CLASS_MECH)
         hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
       else
-        hitloc = FindPunchLocation(target, hitGroup);
+        hitloc = mech_punch_hit_location(target, hitGroup);
 
       MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear, iscritical,
                    5, 0);
@@ -313,7 +313,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
       if (Fallen(target) || (MechType(target) != CLASS_MECH))
         hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
       else
-        hitloc = FindPunchLocation(target, hitGroup);
+        hitloc = mech_punch_hit_location(target, hitGroup);
 
       MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear, iscritical,
                    (target_damage % 5), 0);
@@ -324,12 +324,12 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     spread = mech_damage / 5;
 
     for (i = 0; i < spread; i++) {
-      hitloc = FindKickLocation(mech, FRONT);
+      hitloc = mech_kick_hit_location(mech, FRONT);
       MyDamageMech2(mech, mech, 0, -1, hitloc, 0, 0, 5, 0);
     }
 
     if (mech_damage % 5) {
-      hitloc = FindKickLocation(mech, FRONT);
+      hitloc = mech_kick_hit_location(mech, FRONT);
       MyDamageMech2(mech, mech, 0, -1, hitloc, 0, 0, (mech_damage % 5), 0);
     }
 

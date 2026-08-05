@@ -51,7 +51,8 @@ int mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
         break;
       case 3:
         hitloc = side;
-        if (crittable(mech, hitloc, btech_context_critical_level(context)))
+        if (mech_section_is_crittable(mech, hitloc,
+                                      btech_context_critical_level(context)))
           mech_motive_system_hit(mech, 0);
         break;
       case 4:
@@ -91,7 +92,8 @@ int mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
       case 3:
         hitloc = side;
 
-        if (crittable(mech, hitloc, btech_context_critical_level(context)))
+        if (mech_section_is_crittable(mech, hitloc,
+                                      btech_context_critical_level(context)))
           mech_motive_system_hit(mech, 0);
         break;
       case 4:
@@ -200,7 +202,8 @@ int mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
     break;
   }
 
-  if (!crittable(mech, hitloc, btech_context_critical_level(context)))
+  if (!mech_section_is_crittable(mech, hitloc,
+                                 btech_context_critical_level(context)))
     *iscritical = 0;
 
   return hitloc;

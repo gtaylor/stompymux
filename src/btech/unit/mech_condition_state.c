@@ -16,6 +16,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
 
   return (MechConditionSummary){
       .combat_safe = status & COMBAT_SAFE,
+      .partial_cover = status & PARTIAL_COVER,
       .fallen = status & FALLEN,
       .fortified = status2 & FORTIFIED,
       .weapons_hold = status2 & WEAPONS_HOLD,
@@ -269,6 +270,13 @@ void mech_turret_locked_set(Mech *mech, bool locked) {
     mech->rd.tankcritstatus |= TURRET_LOCKED;
   else
     mech->rd.tankcritstatus &= ~TURRET_LOCKED;
+}
+
+void mech_stunned_set(Mech *mech, bool stunned) {
+  if (stunned)
+    mech->rd.critstatus |= MECH_STUNNED;
+  else
+    mech->rd.critstatus &= ~MECH_STUNNED;
 }
 
 void mech_searchlight_set(Mech *mech, bool enabled) {

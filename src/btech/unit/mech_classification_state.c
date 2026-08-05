@@ -14,6 +14,8 @@ bool mech_is_aerospace_unit(const Mech *mech) {
   return mech->ud.type == CLASS_AERO || mech_is_dropship(mech);
 }
 
+bool mech_is_quad(const Mech *mech) { return mech->ud.move == MOVE_QUAD; }
+
 int mech_team(const Mech *mech) { return mech->pd.team; }
 
 void mech_team_set(Mech *mech, int team) { mech->pd.team = team; }

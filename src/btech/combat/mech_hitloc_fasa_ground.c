@@ -33,7 +33,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return LSIDE;
       case 3:
         if (btech_context_uses_tank_friendly_criticals(context)) {
-          if (!Fallen(mech)) {
+          if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
@@ -61,7 +61,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           return LSIDE;
         }
         /* Cripple tank */
-        if (!Fallen(mech)) {
+        if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
           switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
@@ -93,7 +93,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 4:
       case 5:
         /* MP -1 */
-        if (!Fallen(mech)) {
+        if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
           switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
@@ -147,7 +147,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return RSIDE;
       case 3:
         if (btech_context_uses_tank_friendly_criticals(context)) {
-          if (!Fallen(mech)) {
+          if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
@@ -175,7 +175,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           return RSIDE;
         }
         /* Cripple Tank */
-        if (!Fallen(mech)) {
+        if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
           switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
@@ -207,7 +207,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 4:
       case 5:
         /* MP -1 */
-        if (!Fallen(mech)) {
+        if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
           switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
@@ -234,7 +234,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return RSIDE;
       case 9:
         /* MP -1 if hover */
-        if (!Fallen(mech)) {
+        if (!condition.fallen) {
           if (mech_movement_type(mech) == MOVE_HOVER) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             mech_notify(mech, MECHALL, "Your air skirt is damaged!");
@@ -273,7 +273,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 3:
         if (btech_context_uses_tank_critical_shielding(context)) {
           if (btech_context_uses_tank_friendly_criticals(context)) {
-            if (!Fallen(mech)) {
+            if (!condition.fallen) {
               mech_notify(mech, MECHALL,
                           "[fg=yellow bold]CRITICAL HIT![reset]");
               switch (mech_movement_type(mech)) {
@@ -302,7 +302,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             return side;
           }
           /* Cripple tank */
-          if (!Fallen(mech)) {
+          if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
@@ -335,7 +335,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 4:
         /* MP -1 */
         if (btech_context_uses_tank_critical_shielding(context)) {
-          if (!Fallen(mech)) {
+          if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
@@ -359,7 +359,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return side;
       case 5:
         /* MP -1 if Hovercraft */
-        if (!Fallen(mech)) {
+        if (!condition.fallen) {
           if (mech_movement_type(mech) == MOVE_HOVER) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             mech_notify(mech, MECHALL, "Your air skirt is damaged!");
@@ -389,9 +389,9 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           return side;
       case 12:
         /* A Roll on Determining Critical Hits Table */
-        if (crittable(mech,
-                      (mech_section_internal(mech, TURRET)) ? TURRET : side,
-                      btech_context_critical_level(context)))
+        if (mech_section_is_crittable(
+                mech, (mech_section_internal(mech, TURRET)) ? TURRET : side,
+                btech_context_critical_level(context)))
           *iscritical = 1;
         return (mech_section_internal(mech, TURRET)) ? TURRET : side;
       }

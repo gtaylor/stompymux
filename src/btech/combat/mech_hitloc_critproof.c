@@ -37,7 +37,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
   btech_context_hit_roll_record(context, roll);
   switch (mech_class(mech)) {
   case CLASS_BSUIT:
-    if ((hitloc = get_bsuit_hitloc(mech)) < 0)
+    if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
       return btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
@@ -66,7 +66,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return RLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return ModifyHeadHit(hitGroup, mech);
+          return mech_head_hit_modify(hitGroup, mech);
         return HEAD;
       }
       break;
@@ -93,7 +93,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return LLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return ModifyHeadHit(hitGroup, mech);
+          return mech_head_hit_modify(hitGroup, mech);
         return HEAD;
       }
       break;
@@ -120,7 +120,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return LARM;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return ModifyHeadHit(hitGroup, mech);
+          return mech_head_hit_modify(hitGroup, mech);
         return HEAD;
       }
     }
@@ -290,7 +290,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
       if (btech_random_range(context, 1, 2) == 2)
-        SpheroidToRear(mech, side);
+        side = mech_spheroid_rear_section(mech, side);
       switch (roll) {
       case 2:
         return DS_NOSE;
@@ -324,14 +324,14 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return DS_AFT;
       case 5:
         hitloc = DS_RWING;
-        SpheroidToRear(mech, hitloc);
+        hitloc = mech_spheroid_rear_section(mech, hitloc);
         return hitloc;
       case 6:
       case 8:
         return DS_AFT;
       case 9:
         hitloc = DS_LWING;
-        SpheroidToRear(mech, hitloc);
+        hitloc = mech_spheroid_rear_section(mech, hitloc);
         return hitloc;
       }
     }

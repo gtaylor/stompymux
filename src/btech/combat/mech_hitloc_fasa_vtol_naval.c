@@ -140,7 +140,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       switch (roll) {
       case 2:
         hitloc = LSIDE;
-        if (crittable(mech, hitloc, 40))
+        if (mech_section_is_crittable(mech, hitloc, 40))
           *iscritical = 1;
         break;
       case 3:
@@ -160,7 +160,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-          if (crittable(mech, hitloc, 40))
+          if (mech_section_is_crittable(mech, hitloc, 40))
             *iscritical = 1;
         } else
           hitloc = LSIDE;
@@ -177,7 +177,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 2:
       case 12:
         hitloc = RSIDE;
-        if (crittable(mech, hitloc, 40))
+        if (mech_section_is_crittable(mech, hitloc, 40))
           *iscritical = 1;
         break;
       case 3:
@@ -197,7 +197,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-          if (crittable(mech, hitloc, 40))
+          if (mech_section_is_crittable(mech, hitloc, 40))
             *iscritical = 1;
         } else
           hitloc = RSIDE;
@@ -212,7 +212,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 2:
       case 12:
         hitloc = side;
-        if (crittable(mech, hitloc, 40))
+        if (mech_section_is_crittable(mech, hitloc, 40))
           *iscritical = 1;
         break;
       case 3:

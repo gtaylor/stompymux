@@ -9,23 +9,25 @@
 #include "btech_event.h"
 #include "crit_api.h"
 #include "map_obj_api.h"
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_damage_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/support/formatting.h"
+#include "section_types.h"
 
-int ModifyHeadHit(int hitGroup, Mech *mech);
-int FindPunchLocation(Mech *target, int hitGroup);
-int FindKickLocation(Mech *target, int hitGroup);
-int get_bsuit_hitloc(Mech *mech);
-int TransferTarget(Mech *mech, int hitloc);
-int crittable(Mech *mech, int loc, int tres);
+int mech_head_hit_modify(int hitGroup, Mech *mech);
+int mech_punch_hit_location(Mech *target, int hitGroup);
+int mech_kick_hit_location(Mech *target, int hitGroup);
+int mech_battle_suit_hit_location(Mech *mech);
+int mech_hit_location_transfer(Mech *mech, int hitloc);
+int mech_section_is_crittable(Mech *mech, int loc, int tres);
+int mech_spheroid_rear_section(const Mech *mech, int section);
 void mech_motive_system_hit(Mech *mech, int wRollMod);
 int mech_fasa_hit_location(Mech *mech, int hitGroup, int *iscritical,
                            int *isrear);

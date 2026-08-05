@@ -7,7 +7,18 @@
  *       All rights reserved
  */
 
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
+#include "mech_identity_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_targeting_api.h"
+
+static bool mech_has_partial_cover(const Mech *mech) {
+  return mech_condition_summary(mech).partial_cover;
+}
 
 /*
  * Total Warfare, p. 119:
@@ -81,7 +92,7 @@
  *
  * --Codicus Unitus (cu5)
  */
-int FindAreaHitGroup(Mech *mech, Mech *target) {
+int mech_hit_group(Mech *mech, Mech *target) {
   int m_fs_hw, fs_hw;
   int m_as_hw, as_hw;
 
@@ -100,7 +111,7 @@ int FindAreaHitGroup(Mech *mech, Mech *target) {
    * The left side and right side are simply the leftovers, and are
    * determined by whether an arc is less than or greater than 180.
    */
-  switch (mech->xcode.context->configuration->btech_hit_arcs) {
+  switch (btech_context_hit_arc_mode(mech_context(mech))) {
   case 0: /* TW rules */
   default:
     m_fs_hw = 90;
@@ -129,11 +140,12 @@ int FindAreaHitGroup(Mech *mech, Mech *target) {
 
   /* Compute attack direction.  */
   ad = AcceptableDegree(
-      FindBearing(MechFX(target), MechFY(target), MechFX(mech), MechFY(mech)) -
-      MechFacing(target));
+      FindBearing(mech_position_real_x(target), mech_position_real_y(target),
+                  mech_position_real_x(mech), mech_position_real_y(mech)) -
+      mech_heading_degrees(target));
 
   /* Determine hit group.  */
-  switch (MechType(target)) {
+  switch (mech_class(target)) {
   case CLASS_MECH:
     /* Mech rules.  */
     if (ad >= (360 - m_fs_hw) || ad <= (0 + m_fs_hw)) {
@@ -172,49 +184,50 @@ int FindAreaHitGroup(Mech *mech, Mech *target) {
   }
 }
 
-int FindTargetHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
+int mech_target_hit_location(Mech *mech, Mech *target, int *isrear,
+                             int *iscritical) {
 
   int hitGroup;
 
   *iscritical = 0;
-  hitGroup = FindAreaHitGroup(mech, target);
+  hitGroup = mech_hit_group(mech, target);
 
   if (hitGroup == BACK) {
     *isrear = 1;
   }
 
-  if (MechType(target) == CLASS_MECH && (MechStatus(target) & PARTIAL_COVER)) {
-    return FindPunchLocation(target, hitGroup);
+  if (mech_class(target) == CLASS_MECH && mech_has_partial_cover(target)) {
+    return mech_punch_hit_location(target, hitGroup);
   }
 
-  if (MechType(mech) == CLASS_MW && MechType(target) == CLASS_MECH &&
-      MechZ(mech) <= MechZ(target)) {
-    return FindKickLocation(target, hitGroup);
+  if (mech_class(mech) == CLASS_MW && mech_class(target) == CLASS_MECH &&
+      mech_position_z(mech) <= mech_position_z(target)) {
+    return mech_kick_hit_location(target, hitGroup);
   }
 
-  if (MechType(target) == CLASS_MECH &&
-      ((MechType(mech) == CLASS_BSUIT &&
-        MechSwarmTarget(mech) == target->mynum))) {
-    return find_swarm_hit_location(mech->xcode.context, iscritical, isrear);
+  if (mech_class(target) == CLASS_MECH &&
+      ((mech_class(mech) == CLASS_BSUIT &&
+        mech_condition_summary(mech).swarm_target == mech_dbref(target)))) {
+    return find_swarm_hit_location(mech_context(mech), iscritical, isrear);
   }
 
   return mech_hit_location(target, hitGroup, iscritical, isrear);
 }
 
-int findNARCHitLoc(Mech *mech, Mech *hitMech, int *tIsRearHit) {
+int mech_narc_hit_location(Mech *mech, Mech *hitMech, int *tIsRearHit) {
   int tIsRear = 0;
   int tIsCritical = 0;
-  int wHitLoc = FindTargetHitLoc(mech, hitMech, &tIsRear, &tIsCritical);
+  int wHitLoc = mech_target_hit_location(mech, hitMech, &tIsRear, &tIsCritical);
 
-  while (GetSectInt(hitMech, wHitLoc) <= 0) {
-    wHitLoc = TransferTarget(hitMech, wHitLoc);
+  while (mech_section_internal(hitMech, wHitLoc) <= 0) {
+    wHitLoc = mech_hit_location_transfer(hitMech, wHitLoc);
     if (wHitLoc < 0)
       return -1;
   }
 
   *tIsRearHit = 0;
   if (tIsRear) {
-    if (MechType(hitMech) == CLASS_MECH)
+    if (mech_class(hitMech) == CLASS_MECH)
       *tIsRearHit = 1;
     else if (wHitLoc == FSIDE)
       wHitLoc = BSIDE;
@@ -223,20 +236,21 @@ int findNARCHitLoc(Mech *mech, Mech *hitMech, int *tIsRearHit) {
   return wHitLoc;
 }
 
-int FindTCHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
+int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
+                                         int *iscritical) {
   int hitGroup;
 
   *isrear = 0;
   *iscritical = 0;
-  hitGroup = FindAreaHitGroup(mech, target);
+  hitGroup = mech_hit_group(mech, target);
   if (hitGroup == BACK)
     *isrear = 1;
-  if (MechAimType(mech) == MechType(target) &&
-      btech_random_range(mech->xcode.context, 1, 6) >= 3)
-    switch (MechType(target)) {
+  if (mech_aim_unit_class(mech) == mech_class(target) &&
+      btech_random_range(mech_context(mech), 1, 6) >= 3)
+    switch (mech_class(target)) {
     case CLASS_MECH:
     case CLASS_MW:
-      switch (MechAim(mech)) {
+      switch (mech_aim_section(mech)) {
       case RARM:
         if (hitGroup != LEFTSIDE)
           return RARM;
@@ -246,11 +260,11 @@ int FindTCHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
           return LARM;
         break;
       case RLEG:
-        if (hitGroup != LEFTSIDE && !(MechStatus(target) & PARTIAL_COVER))
+        if (hitGroup != LEFTSIDE && !mech_has_partial_cover(target))
           return RLEG;
         break;
       case LLEG:
-        if (hitGroup != RIGHTSIDE && !(MechStatus(target) & PARTIAL_COVER))
+        if (hitGroup != RIGHTSIDE && !mech_has_partial_cover(target))
           return LLEG;
         break;
       case RTORSO:
@@ -266,13 +280,13 @@ int FindTCHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
         /*        if (hitGroup != LEFTSIDE && hitGroup != RIGHTSIDE) */
         return CTORSO;
       case HEAD:
-        if (Immobile(target))
+        if (mech_is_immobile(target))
           return HEAD;
       }
       break;
     case CLASS_AERO:
     case CLASS_DS:
-      switch (MechAim(mech)) {
+      switch (mech_aim_section(mech)) {
       case AERO_NOSE:
         if (hitGroup != BACK)
           return AERO_NOSE;
@@ -294,7 +308,7 @@ int FindTCHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
     case CLASS_VEH_GROUND:
     case CLASS_VEH_NAVAL:
     case CLASS_VTOL:
-      switch (MechAim(mech)) {
+      switch (mech_aim_section(mech)) {
       case RSIDE:
         if (hitGroup != LEFTSIDE)
           return (RSIDE);
@@ -317,21 +331,22 @@ int FindTCHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
       }
       break;
     }
-  if (MechType(target) == CLASS_MECH && (MechStatus(target) & PARTIAL_COVER))
-    return FindPunchLocation(target, hitGroup);
+  if (mech_class(target) == CLASS_MECH && mech_has_partial_cover(target))
+    return mech_punch_hit_location(target, hitGroup);
   return mech_hit_location(target, hitGroup, iscritical, isrear);
 }
 
-int FindAimHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
+int mech_aimed_hit_location(Mech *mech, Mech *target, int *isrear,
+                            int *iscritical) {
   int hitGroup;
 
   *isrear = 0;
   *iscritical = 0;
-  hitGroup = FindAreaHitGroup(mech, target);
+  hitGroup = mech_hit_group(mech, target);
   if (hitGroup == BACK)
     *isrear = 1;
-  if (MechType(target) == CLASS_MECH || MechType(target) == CLASS_MW)
-    switch (MechAim(mech)) {
+  if (mech_class(target) == CLASS_MECH || mech_class(target) == CLASS_MW)
+    switch (mech_aim_section(mech)) {
     case RARM:
       if (hitGroup != LEFTSIDE)
         return (RARM);
@@ -341,11 +356,11 @@ int FindAimHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
         return (LARM);
       break;
     case RLEG:
-      if (hitGroup != LEFTSIDE && !(MechStatus(target) & PARTIAL_COVER))
+      if (hitGroup != LEFTSIDE && !mech_has_partial_cover(target))
         return (RLEG);
       break;
     case LLEG:
-      if (hitGroup != RIGHTSIDE && !(MechStatus(target) & PARTIAL_COVER))
+      if (hitGroup != RIGHTSIDE && !mech_has_partial_cover(target))
         return (LLEG);
       break;
     case RTORSO:
@@ -361,10 +376,10 @@ int FindAimHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
     case HEAD:
       return (HEAD);
     }
-  else if (is_aero(target))
-    return MechAim(mech);
+  else if (mech_is_aerospace_unit(target))
+    return mech_aim_section(mech);
   else
-    switch (MechAim(mech)) {
+    switch (mech_aim_section(mech)) {
     case RSIDE:
       if (hitGroup != LEFTSIDE)
         return (RSIDE);
@@ -386,7 +401,7 @@ int FindAimHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
       break;
     }
 
-  if (MechType(target) == CLASS_MECH && (MechStatus(target) & PARTIAL_COVER))
-    return FindPunchLocation(target, hitGroup);
+  if (mech_class(target) == CLASS_MECH && mech_has_partial_cover(target))
+    return mech_punch_hit_location(target, hitGroup);
   return mech_hit_location(target, hitGroup, iscritical, isrear);
 }

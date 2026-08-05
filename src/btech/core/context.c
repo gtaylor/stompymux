@@ -143,9 +143,24 @@ bool btech_context_uses_exile_stun_code(const BtechContext *context) {
   return context->configuration->btech_exile_stun_code;
 }
 
+int btech_context_exile_stun_mode(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_exile_stun_code;
+}
+
 int btech_context_critical_level(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_critlevel;
+}
+
+int btech_context_hit_arc_mode(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_hit_arcs;
+}
+
+int btech_context_vehicle_critical_mode(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_vcrit;
 }
 
 bool btech_context_uses_tank_friendly_criticals(const BtechContext *context) {
