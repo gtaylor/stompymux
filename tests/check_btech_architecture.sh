@@ -194,6 +194,19 @@ while IFS= read -r match; do
 done < <(rg -n '\bMechFloods(Loc)?\b' src/btech -g '*.[ch]' || true)
 
 while IFS= read -r match; do
+  echo "$match: converted landing module uses the aggregate Mech or map layout"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\b(mech|target|mech_map)->|\b(Mech(Type|Status|DFATarget|[FXYZ]|Elev|Elevation|Sections|CritStatus|Going[XY]|Speed)|Uncon|Staggering|Fallen|Jumping)\(' \
+  src/btech/movement/mech_landing.c || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy landing export is not allowed"
+  status=1
+done < <(rg -n '\b(LandMech|DropGetElevation|DropSetElevation)\b' \
+  src/btech -g '*.[ch]' || true)
+
+while IFS= read -r match; do
   echo "$match: legacy cargo-speed export is not allowed"
   status=1
 done < <(rg -n '\bMechCargoMaxSpeed\b' src/btech -g '*.[ch]' || true)

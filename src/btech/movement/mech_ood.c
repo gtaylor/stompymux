@@ -115,7 +115,7 @@ void mech_ood_event(MuxEvent *e) {
      * damage */
     mech_cocoon_integrity_set(mech, 0);
     mech_los_broadcast(mech, "touches down safely!");
-    DropSetElevation(mech, 1);
+    mech_drop_surface_set(mech, true);
     mech_maybe_move(mech);
     return;
   }
@@ -241,7 +241,7 @@ void mech_ood_event(MuxEvent *e) {
     /* Legacy parachute landing intentionally applies no fall damage. */
   }
 
-  DropSetElevation(mech, 1);
+  mech_drop_surface_set(mech, true);
 
   if (!mech_is_fallen(mech))
 

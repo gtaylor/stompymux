@@ -125,7 +125,7 @@ void StopSwarming(Mech *mech, int intentional) {
 
   MechSpeed(mech) = 0;
   mech_maybe_move(mech);
-  DropSetElevation(mech, 0);
+  mech_drop_surface_set(mech, false);
   mech_flood(mech);
 }
 

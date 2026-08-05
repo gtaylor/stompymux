@@ -174,6 +174,10 @@ int mech_section_recycle_ticks(const Mech *mech, int section) {
   return mech->ud.sections[section].recycle;
 }
 
+int mech_section_base_to_hit(const Mech *mech, int section) {
+  return mech->ud.sections[section].basetohit;
+}
+
 bool mech_part_is_structural_placeholder(int part_type) {
   return part_type == I2Special(ENDO_STEEL) ||
          part_type == I2Special(FERRO_FIBROUS) ||

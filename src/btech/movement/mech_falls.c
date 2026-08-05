@@ -137,7 +137,7 @@ void MechFalls(Mech *mech, int levels, int seemsg) {
 
   if (seemsg)
     mech_los_broadcast(mech, "falls down!");
-  DropSetElevation(mech, 1);
+  mech_drop_surface_set(mech, true);
   MechFZ(mech) = MechZ(mech) * ZSCALE;
 
   roll = btech_random_range(mech->xcode.context, 1, 6);

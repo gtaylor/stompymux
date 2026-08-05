@@ -47,7 +47,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
             MadePilotSkillRoll(mech, (int)(MechFZ(mech)) / ZSCALE / 3)) {
 
           mech_notify(mech, MECHALL, "[bold]You land safely.[reset]");
-          LandMech(mech);
+          mech_jump_land(mech);
 
         } else {
 

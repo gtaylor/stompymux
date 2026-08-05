@@ -68,7 +68,7 @@ void mech_land(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL, "You are able to abort the jump.");
 
       /*        mech_los_broadcast (mech, "lands abruptly!"); */
-      LandMech(mech);
+      mech_jump_land(mech);
     } else {
       mech_notify(mech, MECHALL, "You don't quite make it.");
       mech_los_broadcast(mech,

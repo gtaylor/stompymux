@@ -117,7 +117,7 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
     elevation = map_elevation_get(mech_map, x, y);
     mech_position_elevation_set(mech, elevation);
     mech_position_z_set(mech, elevation - 1);
-    DropSetElevation(mech, 0);
+    mech_drop_surface_set(mech, false);
     z = mech_position_z(mech);
     mech_position_land_if_flying(mech);
   } else {

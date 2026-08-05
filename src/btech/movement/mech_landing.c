@@ -26,11 +26,13 @@
 #include "command_handlers_api.h"
 #include "environment_damage_api.h"
 #include "legacy_macros.h"
-#include "map.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
+#include "mech_condition_api.h"
 #include "mech_damage_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_fire_api.h"
@@ -39,12 +41,16 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
 #include "mech_stagger.h"
+#include "mech_targeting_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
@@ -53,47 +59,72 @@
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "template_api.h"
-int DropGetElevation(Mech *mech) {
-  if (mech_real_terrain_get(mech) == BRIDGE) {
-    if (MechZ(mech) < (MechElev(mech))) {
-      if (Overwater(mech))
+
+static bool mech_is_over_water(const Mech *mech) {
+  return mech_movement_type(mech) == MOVE_HOVER ||
+         mech_class(mech) == CLASS_MW ||
+         mech_movement_type(mech) == MOVE_FOIL ||
+         mech_movement_type(mech) == MOVE_HULL;
+}
+
+static int mech_lower_surface_elevation(Mech *mech) {
+  return mech_real_terrain_get(mech) != BATTLE_TERRAIN_BRIDGE
+             ? mech_position_surface_elevation(mech)
+             : bridge_w_elevation(mech);
+}
+
+int mech_drop_surface_elevation(Mech *mech) {
+  if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_BRIDGE) {
+    if (mech_position_z(mech) < mech_position_elevation(mech)) {
+      if (mech_is_over_water(mech))
         return 0;
       return bridge_w_elevation(mech);
     }
-    return MechElevation(mech);
+    return mech_position_surface_elevation(mech);
   }
-  if (Overwater(mech) ||
-      (mech_real_terrain_get(mech) == ICE && MechZ(mech) >= 0))
-    return MAX(0, MechElevation(mech));
+  if (mech_is_over_water(mech) ||
+      (mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE &&
+       mech_position_z(mech) >= 0))
+    return MAX(0, mech_position_surface_elevation(mech));
   else
-    return MechElevation(mech);
+    return mech_position_surface_elevation(mech);
 }
 
-void DropSetElevation(Mech *mech, int wantdrop) {
-  if (mech_real_terrain_get(mech) == BRIDGE) {
+void mech_drop_surface_set(Mech *mech, bool check_ice) {
+  if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_BRIDGE) {
     bridge_set_elevation(mech);
     return;
   }
-  MechZ(mech) = DropGetElevation(mech);
-  MechFZ(mech) = MechZ(mech) * ZSCALE;
-  if (wantdrop)
-    if (mech_real_terrain_get(mech) == ICE && MechZ(mech) >= 0)
+  mech_position_z_set(mech, mech_drop_surface_elevation(mech));
+  if (check_ice)
+    if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE &&
+        mech_position_z(mech) >= 0)
       possibly_drop_thru_ice(mech);
 }
 
 int mech_drop_height_above_surface(Mech *mech) {
-  return MechsElevation(mech) - DropGetElevation(mech);
+  int upper = mech_upper_surface_elevation(mech);
+  int elevation =
+      mech_position_z(mech) - (upper <= mech_position_z(mech)
+                                   ? upper
+                                   : mech_lower_surface_elevation(mech));
+
+  return elevation - mech_drop_surface_elevation(mech);
 }
 
 int mech_upper_surface_elevation(Mech *mech) {
-  return MechUpperElevation(mech);
+  return mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE
+             ? 0
+             : mech_position_surface_elevation(mech);
 }
 
-void LandMech(Mech *mech) {
+void mech_jump_land(Mech *mech) {
   Mech *target;
-  BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+  BtechContext *context = mech_context(mech);
+  BattleMap *mech_map = btech_context_get_map(context, mech_map_dbref(mech));
+  MechConditionSummary condition = mech_condition_summary(mech);
   int dfa = 0;
   int done = 0;
 
@@ -103,7 +134,7 @@ void LandMech(Mech *mech) {
    * - 8/3/99
    */
 
-  if (Uncon(mech)) {
+  if (mech_pilot_is_unconscious(mech)) {
     mech_notify(mech, MECHALL,
                 "Your lack of conciousness makes you fall to the ground. Not "
                 "like you can read this anyway.");
@@ -112,11 +143,12 @@ void LandMech(Mech *mech) {
     done = 1;
   } else {
     /* Handle DFA attack */
-    if (MechStatus(mech) & DFA_ATTACK) {
+    if (condition.dfa_attacking) {
       /* is the target here? */
-      target = btech_context_get_mech(mech->xcode.context, MechDFATarget(mech));
+      target = btech_context_get_mech(context, mech_dfa_target_dbref(mech));
       if (target) {
-        if (MechX(target) == MechX(mech) && MechY(target) == MechY(mech))
+        if (mech_position_x(target) == mech_position_x(mech) &&
+            mech_position_y(target) == mech_position_y(mech))
           dfa = DeathFromAbove(mech, target);
         else
           mech_notify(mech, MECHPILOT, "Your DFA target has moved!");
@@ -128,12 +160,13 @@ void LandMech(Mech *mech) {
       mech_notify(mech, MECHALL, "You finish your jump.");
 
     /* Better reset the FZ */
-    MechElev(mech) = map_elevation_get(mech_map, MechX(mech), MechY(mech));
-    MechZ(mech) = MechElev(mech) - 1;
-    MechFZ(mech) = ZSCALE * MechZ(mech);
-    DropSetElevation(mech, 1);
+    mech_position_elevation_set(mech, map_elevation_get(mech_map,
+                                                        mech_position_x(mech),
+                                                        mech_position_y(mech)));
+    mech_position_z_set(mech, mech_position_elevation(mech) - 1);
+    mech_drop_surface_set(mech, true);
 
-    if (Staggering(mech)) {
+    if (condition.staggering) {
       mech_notify(mech, MECHALL,
                   "The damage you've taken makes the landing a bit harder...");
 
@@ -147,7 +180,7 @@ void LandMech(Mech *mech) {
     }
 
     /* Check piloting rolls, etc. */
-    if (MechType(mech) == CLASS_MECH) {
+    if (mech_class(mech) == CLASS_MECH) {
       if (CountDestroyedLegs(mech) > 0) {
         mech_notify(mech, MECHPILOT,
                     "Your missing leg makes it harder to land");
@@ -159,8 +192,8 @@ void LandMech(Mech *mech) {
           MechFalls(mech, 1, 0);
           done = 1;
         }
-      } else if (MechSections(mech)[RLEG].basetohit ||
-                 MechSections(mech)[LLEG].basetohit) {
+      } else if (mech_section_base_to_hit(mech, RLEG) ||
+                 mech_section_base_to_hit(mech, LLEG)) {
         mech_notify(mech, MECHPILOT,
                     "Your damaged leg actuators make it harder to land");
         if (!MadePilotSkillRoll(mech, 0)) {
@@ -172,8 +205,7 @@ void LandMech(Mech *mech) {
           done = 1;
           MechFalls(mech, 1, 0);
         }
-      } else if ((MechCritStatus(mech) & GYRO_DAMAGED) ||
-                 (MechCritStatus(mech) & GYRO_DESTROYED)) {
+      } else if (mech_has_damaged_gyro(mech)) {
         mech_notify(mech, MECHPILOT,
                     "Your damaged gyro makes it harder to land");
         if (!MadePilotSkillRoll(mech, 0)) {
@@ -188,14 +220,13 @@ void LandMech(Mech *mech) {
     }
   }
 
-  if ((MechType(mech) == CLASS_MECH) && CountSwarmers(mech)) {
+  if (mech_class(mech) == CLASS_MECH && CountSwarmers(mech)) {
     mech_notify(mech, MECHALL,
                 "The suits hanging off you make landing harder!");
 
     if (MadePilotSkillRoll(mech, 4)) {
       StopBSuitSwarmers(
-          btech_context_find_object(mech->xcode.context, mech->mapindex), mech,
-          0);
+          btech_context_find_object(context, mech_map_dbref(mech)), mech, 0);
     } else {
       mech_notify(mech, MECHALL,
                   "You fail to properly control your unbalanced landing!");
@@ -206,8 +237,9 @@ void LandMech(Mech *mech) {
     }
   }
 
-  if (!dfa && !Fallen(mech) && !mech_domino_resolve(mech, MECH_DOMINO_JUMP)) {
-    if (MechType(mech) != CLASS_VEH_GROUND)
+  if (!dfa && !mech_is_fallen(mech) &&
+      !mech_domino_resolve(mech, MECH_DOMINO_JUMP)) {
+    if (mech_class(mech) != CLASS_VEH_GROUND)
       mech_los_broadcast(mech, "lands gracefully.");
     else
       mech_los_broadcast(mech, "returns to the ground where it belongs.");
@@ -215,14 +247,10 @@ void LandMech(Mech *mech) {
 
   /* If we aren't jumping anymore, we already took care of the event.
      (e.g. in MechFalls()) */
-  if (Jumping(mech))
+  if (mech_is_jumping(mech))
     mech_event_schedule(mech, EVENT_JUMPSTABIL, mech_stabilizing_event,
                         JUMP_TO_HIT_RECYCLE, 0);
-  MechStatus(mech) &= ~JUMPING;
-  MechStatus(mech) &= ~DFA_ATTACK;
-  MechDFATarget(mech) = -1;
-  MechGoingX(mech) = MechGoingY(mech) = 0;
-  MechSpeed(mech) = 0;
+  mech_jump_complete(mech);
   mech_event_cancel(mech, EVENT_JUMP); /* Kill the event for moving 'round */
   mech_maybe_move(mech);               /* Possibly start movin' on da ground */
 

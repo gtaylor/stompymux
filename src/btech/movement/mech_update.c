@@ -290,12 +290,12 @@ void move_mech(Mech *mech) {
             length_hypotenuse(MechFX(mech) - MechStartFX(mech),
                               MechFY(mech) - MechStartFY(mech))) {
 
-          LandMech(mech);
+          mech_jump_land(mech);
           MechFX(mech) = (float)dax;
           MechFY(mech) = (float)day;
         }
 #else
-        LandMech(mech);
+        mech_jump_land(mech);
         MechFX(mech) = (float)dax;
         MechFY(mech) = (float)day;
 #endif
@@ -521,7 +521,7 @@ void move_mech(Mech *mech) {
       MechLastY(mech) == MechGoingY(mech) &&
       (MechX(mech) != MechLastX(mech) || MechY(mech) != MechLastY(mech))) {
 
-    LandMech(mech);
+    mech_jump_land(mech);
     MechFX(mech) -= newx;
     MechFY(mech) -= newy;
     MechFZ(mech) = MechEndFZ(mech);
@@ -605,7 +605,7 @@ void move_mech(Mech *mech) {
       }
 
       /* Check for bridges and basic elevation changes */
-      DropSetElevation(mech, 0);
+      mech_drop_surface_set(mech, false);
 
       /* To fix certain slide-under-ice-effect for _mechs_ */
       if (MechType(mech) == CLASS_MECH && mech_real_terrain_get(mech) == ICE &&

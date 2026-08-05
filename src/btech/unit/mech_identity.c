@@ -305,7 +305,7 @@ void CheckEdgeOfMap(Mech *mech) {
     if (pinned > 0) {
       mech_notify(mech, MECHALL, "You cannot move off this map!");
       if (Jumping(mech) && !is_aero(mech))
-        LandMech(mech);
+        mech_jump_land(mech);
       MechCocoon(mech) = 0;
       MechSpeed(mech) = 0.0;
       MechDesiredSpeed(mech) = 0.0;

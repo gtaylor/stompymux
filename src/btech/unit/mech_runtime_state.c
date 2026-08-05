@@ -65,6 +65,10 @@ bool mech_has_destroyed_gyro(const Mech *mech) {
   return mech->rd.critstatus & GYRO_DESTROYED;
 }
 
+bool mech_has_damaged_gyro(const Mech *mech) {
+  return mech->rd.critstatus & (GYRO_DAMAGED | GYRO_DESTROYED);
+}
+
 int mech_cocoon_integrity(const Mech *mech) { return mech->rd.cocoon; }
 
 int mech_seen_count(const Mech *mech) { return mech->rd.num_seen; }
@@ -140,4 +144,12 @@ void mech_environment_conditions_set(Mech *mech, bool special, bool temperature,
     mech->rd.status |= UNDERGRAVITY;
   if (vacuum)
     mech->rd.status |= UNDERVACUUM;
+}
+
+void mech_jump_complete(Mech *mech) {
+  mech->rd.status &= ~(JUMPING | DFA_ATTACK);
+  mech->rd.dfatarget = -1;
+  mech->rd.goingx = 0;
+  mech->rd.goingy = 0;
+  mech->rd.speed = 0.0F;
 }

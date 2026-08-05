@@ -37,11 +37,11 @@ void mech_sprint(DbRef player, void *data, char *buffer);
 void mech_evade(DbRef player, void *data, char *buffer);
 void mech_dodge(DbRef player, void *date, char *buffer);
 #endif
-int DropGetElevation(Mech *mech);
-void DropSetElevation(Mech *mech, int wantdrop);
+int mech_drop_surface_elevation(Mech *mech);
+void mech_drop_surface_set(Mech *mech, bool check_ice);
 int mech_drop_height_above_surface(Mech *mech);
 int mech_upper_surface_elevation(Mech *mech);
-void LandMech(Mech *mech);
+void mech_jump_land(Mech *mech);
 void mech_flood_section(Mech *mech, int section, int elevation);
 void mech_flood(Mech *mech);
 void MechFalls(Mech *mech, int levels, int seemsg);
