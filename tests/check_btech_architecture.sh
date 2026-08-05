@@ -131,6 +131,13 @@ done < <(rg -n -g '*.[ch]' \
   src/btech/scripting || true)
 
 while IFS= read -r match; do
+  echo "$match: scripting registry fabricates a Mech field address"
+  status=1
+done < <(rg -n \
+  'offsetof\(Mech|\b(MeEntry|MeVEntry|UglieV?)\b' \
+  src/btech/scripting/registry_values.c || true)
+
+while IFS= read -r match; do
   echo "$match: converted special-object boundary accesses Mech layout directly"
   status=1
 done < <(rg -n \

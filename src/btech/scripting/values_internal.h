@@ -19,6 +19,7 @@
  */
 
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,6 +51,7 @@
 #include "mech_partnames_api.h"
 #include "mech_radio_api.h"
 #include "mech_restrict_api.h"
+#include "mech_script_value_api.h"
 #include "mech_sensor_api.h"
 #include "mech_status_api.h"
 #include "mech_tech_api.h"
@@ -88,6 +90,8 @@ typedef struct {
   void *rel_addr;
   int type;
   int size;
+  bool mech_value;
+  MechScriptValueKey mech_key;
 } GMV;
 enum {
   TYPE_STRING,
@@ -110,27 +114,26 @@ enum {
   TYPE_DBREF_RO,
   TYPE_LAST_TYPE
 };
-#define Uglie(dat) ((void *)&dat((Mech *)0))
-#define UglieV(dat, val) ((void *)&dat((Mech *)0, val))
+#define MeField(Name, Key, Type) {GTYPE_MECH, Name, nullptr, Type, 0, true, Key}
 
-#define MeEntry(Name, Func, Type) {GTYPE_MECH, Name, Uglie(Func), Type, 0}
+#define MeFieldS(Name, Key, Type, Size)                                        \
+  {GTYPE_MECH, Name, nullptr, Type, Size, true, Key}
 
-#define MeEntryS(Name, Func, Type, Size)                                       \
-  {GTYPE_MECH, Name, Uglie(Func), Type, Size}
-
-#define MeVEntry(Name, Func, Val, Type)                                        \
-  {GTYPE_MECH, Name, UglieV(Func, Val), Type, 0}
+#define MeFunction(Name, Function, Type)                                       \
+  {GTYPE_MECH, Name, Function, Type, 0, false, 0}
 
 #define UglieM(dat) ((void *)&((BattleMap *)0)->dat)
-#define MaEntry(Name, Func, Type) {GTYPE_MAP, Name, UglieM(Func), Type, 0}
+#define MaEntry(Name, Func, Type)                                              \
+  {GTYPE_MAP, Name, UglieM(Func), Type, 0, false, 0}
 #define MaEntryS(Name, Func, Type, Size)                                       \
-  {GTYPE_MAP, Name, UglieM(Func), Type, Size}
+  {GTYPE_MAP, Name, UglieM(Func), Type, Size, false, 0}
 
 #define UglieT(dat) (void *)&((Turret *)0)->dat
 
-#define TuEntry(Name, Func, Type) {GTYPE_TURRET, Name, UglieT(Func), Type, 0}
+#define TuEntry(Name, Func, Type)                                              \
+  {GTYPE_TURRET, Name, UglieT(Func), Type, 0, false, 0}
 #define TuEntryS(Name, Func, Type, Size)                                       \
-  {GTYPE_TURRET, Name, UglieT(Func), Type, Size}
+  {GTYPE_TURRET, Name, UglieT(Func), Type, Size, false, 0}
 
 extern const int scode_in_out[TYPE_LAST_TYPE];
 extern GMV xcode_data[];

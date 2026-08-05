@@ -1,6 +1,5 @@
 #include "values_internal.h"
 
-[[maybe_unused]] static Mech tmpm;
 [[maybe_unused]] static BattleMap tmpmap;
 /* INDENT OFF */
 const int scode_in_out[TYPE_LAST_TYPE] =
@@ -8,100 +7,93 @@ const int scode_in_out[TYPE_LAST_TYPE] =
     {3, 3, 3, 3, 3, 3, 1, 1, 2, 3, 3, 3, 3, 1, 1, 1, 1, 1};
 /* INDENT ON */
 
-#undef offsetof
-#ifdef __compiler_offsetof
-#define offsetof(TYPE, MEMBER) (void *)__compiler_offsetof(TYPE, MEMBER)
-#else
-#define offsetof(TYPE, MEMBER) (void *)((size_t)&((TYPE *)0)->MEMBER)
-#endif
-
 GMV xcode_data[] = {
-    {GTYPE_MECH, "mapindex", offsetof(Mech, mapindex), TYPE_DBREF_RO, 0},
-    {GTYPE_MECH, "id", mechIDfunc, TYPE_STRFUNC_BUF, 0},
-    MeEntryS("mechname", MechType_Name, TYPE_STRING, 31),
-    MeEntry("maxspeed", MechMaxSpeed, TYPE_FLOAT),
-    MeEntryS("unit_era", MechUnitEra, TYPE_STRING, 25),
-    MeEntryS("unit_tro", MechUnitTRO, TYPE_STRING, 25),
-    MeEntry("templatesp", TemplateMaxSpeed, TYPE_FLOAT),
-    MeEntry("pilotnum", MechPilot, TYPE_DBREF),
-    MeEntry("xpmod", MechXPMod, TYPE_FLOAT),
-    MeEntry("pilotdam", MechPilotStatus, TYPE_CHAR),
-    MeEntry("si", AeroSI, TYPE_CHAR),
-    MeEntry("si_orig", AeroSIOrig, TYPE_CHAR),
-    MeEntry("speed", MechSpeed, TYPE_FLOAT),
-    MeEntry("basewalkspeed", MechBaseWalk, TYPE_INT),
-    MeEntry("baserunspeed", MechBaseRun, TYPE_INT),
-    MeEntry("heading", MechRFacing, TYPE_SHORT),
-    MeEntry("stall", MechStall, TYPE_INT),
-    MeEntry("status", MechStatus, TYPE_BV),
-    MeEntry("status2", MechStatus2, TYPE_BV),
-    MeEntry("critstatus", MechCritStatus, TYPE_BV),
-    MeEntry("critstatus2", MechCritStatus2, TYPE_BV),
-    MeEntry("tankcritstatus", MechTankCritStatus, TYPE_BV),
-    MeEntry("target", MechTarget, TYPE_DBREF),
-    MeEntry("team", MechTeam, TYPE_INT),
-    MeEntry("tons", MechTons, TYPE_INT),
-    MeEntry("towing", MechCarrying, TYPE_INT_RO),
-    MeEntry("heat", MechPlusHeat, TYPE_FLOAT),
-    MeEntry("disabled_hs", MechDisabledHS, TYPE_INT_RO),
-    MeEntry("overheat", MechHeat, TYPE_FLOAT),
-    MeEntry("dissheat", MechMinusHeat, TYPE_FLOAT),
-    MeEntry("hsengoverride", MechHSEngOverRide, TYPE_INT),
-    MeEntry("heatsinks", MechRealNumsinks, TYPE_CHAR_RO),
-    MeEntry("last_startup", MechLastStartup, TYPE_INT),
-    MeEntry("C3iNetworkSize", MechC3iNetworkSize, TYPE_INT_RO),
-    MeEntry("MaxSuits", MechMaxSuits, TYPE_INT),
-    MeEntry("realweight", MechRTonsV, TYPE_INT),
-    MeEntry("StaggerDamage", StaggerDamage, TYPE_INT_RO),
-    MeEntry("MechPrefs", MechPrefs, TYPE_BV),
-    MeEntry("SwarmTarget", MechSwarmTarget, TYPE_DBREF),
-    MeEntry("SwarmedBy", MechSwarmer, TYPE_DBREF),
+    MeField("mapindex", MECH_SCRIPT_MAP_DBREF, TYPE_DBREF_RO),
+    MeFunction("id", mechIDfunc, TYPE_STRFUNC_BUF),
+    MeFieldS("mechname", MECH_SCRIPT_NAME, TYPE_STRING, 31),
+    MeField("maxspeed", MECH_SCRIPT_MAXIMUM_SPEED, TYPE_FLOAT),
+    MeFieldS("unit_era", MECH_SCRIPT_ERA, TYPE_STRING, 25),
+    MeFieldS("unit_tro", MECH_SCRIPT_TRO, TYPE_STRING, 25),
+    MeField("templatesp", MECH_SCRIPT_TEMPLATE_SPEED, TYPE_FLOAT),
+    MeField("pilotnum", MECH_SCRIPT_PILOT_DBREF, TYPE_DBREF),
+    MeField("xpmod", MECH_SCRIPT_EXPERIENCE_MODIFIER, TYPE_FLOAT),
+    MeField("pilotdam", MECH_SCRIPT_PILOT_DAMAGE, TYPE_CHAR),
+    MeField("si", MECH_SCRIPT_STRUCTURAL_INTEGRITY, TYPE_CHAR),
+    MeField("si_orig", MECH_SCRIPT_ORIGINAL_STRUCTURAL_INTEGRITY, TYPE_CHAR),
+    MeField("speed", MECH_SCRIPT_SPEED, TYPE_FLOAT),
+    MeField("basewalkspeed", MECH_SCRIPT_BASE_WALK_SPEED, TYPE_INT),
+    MeField("baserunspeed", MECH_SCRIPT_BASE_RUN_SPEED, TYPE_INT),
+    MeField("heading", MECH_SCRIPT_HEADING, TYPE_SHORT),
+    MeField("stall", MECH_SCRIPT_STALL, TYPE_INT),
+    MeField("status", MECH_SCRIPT_STATUS, TYPE_BV),
+    MeField("status2", MECH_SCRIPT_STATUS_SECONDARY, TYPE_BV),
+    MeField("critstatus", MECH_SCRIPT_CRITICAL_STATUS, TYPE_BV),
+    MeField("critstatus2", MECH_SCRIPT_CRITICAL_STATUS_SECONDARY, TYPE_BV),
+    MeField("tankcritstatus", MECH_SCRIPT_VEHICLE_CRITICAL_STATUS, TYPE_BV),
+    MeField("target", MECH_SCRIPT_TARGET_DBREF, TYPE_DBREF),
+    MeField("team", MECH_SCRIPT_TEAM, TYPE_INT),
+    MeField("tons", MECH_SCRIPT_TONNAGE, TYPE_INT),
+    MeField("towing", MECH_SCRIPT_TOWING_DBREF, TYPE_INT_RO),
+    MeField("heat", MECH_SCRIPT_HEAT_PRODUCTION, TYPE_FLOAT),
+    MeField("disabled_hs", MECH_SCRIPT_DISABLED_HEAT_SINKS, TYPE_INT_RO),
+    MeField("overheat", MECH_SCRIPT_HEAT, TYPE_FLOAT),
+    MeField("dissheat", MECH_SCRIPT_HEAT_DISSIPATION, TYPE_FLOAT),
+    MeField("hsengoverride", MECH_SCRIPT_ENGINE_HEAT_SINK_OVERRIDE, TYPE_INT),
+    MeField("heatsinks", MECH_SCRIPT_HEAT_SINKS, TYPE_CHAR_RO),
+    MeField("last_startup", MECH_SCRIPT_LAST_STARTUP, TYPE_INT),
+    MeField("C3iNetworkSize", MECH_SCRIPT_C3I_NETWORK_SIZE, TYPE_INT_RO),
+    MeField("MaxSuits", MECH_SCRIPT_MAXIMUM_BATTLE_SUITS, TYPE_INT),
+    MeField("realweight", MECH_SCRIPT_REAL_WEIGHT, TYPE_INT),
+    MeField("StaggerDamage", MECH_SCRIPT_STAGGER_DAMAGE, TYPE_INT_RO),
+    MeField("MechPrefs", MECH_SCRIPT_PREFERENCES, TYPE_BV),
+    MeField("SwarmTarget", MECH_SCRIPT_SWARM_TARGET, TYPE_DBREF),
+    MeField("SwarmedBy", MECH_SCRIPT_SWARMER, TYPE_DBREF),
 
-    {GTYPE_MECH, "mechtype", mechTypefunc, TYPE_STRFUNC_BD, 0},
-    {GTYPE_MECH, "mechmovetype", mechMovefunc, TYPE_STRFUNC_BD, 0},
-    {GTYPE_MECH, "mechdamage", mechDamagefunc, TYPE_STRFUNC_BD_BUF, 0},
-    {GTYPE_MECH, "techtime", mechTechTimefunc, TYPE_STRFUNC_BUF, 0},
-    {GTYPE_MECH, "centdist", mechCentDistfunc, TYPE_STRFUNC_BUF, 0},
-    {GTYPE_MECH, "centbearing", mechCentBearingfunc, TYPE_STRFUNC_BUF, 0},
-    {GTYPE_MECH, "sensors", mech_sensor_info, TYPE_STRFUNC_BUF, 0},
-    {GTYPE_MECH, "mechref", mech_getset_ref, TYPE_STRFUNC_BD, 0},
+    MeFunction("mechtype", mechTypefunc, TYPE_STRFUNC_BD),
+    MeFunction("mechmovetype", mechMovefunc, TYPE_STRFUNC_BD),
+    MeFunction("mechdamage", mechDamagefunc, TYPE_STRFUNC_BD_BUF),
+    MeFunction("techtime", mechTechTimefunc, TYPE_STRFUNC_BUF),
+    MeFunction("centdist", mechCentDistfunc, TYPE_STRFUNC_BUF),
+    MeFunction("centbearing", mechCentBearingfunc, TYPE_STRFUNC_BUF),
+    MeFunction("sensors", mech_sensor_info, TYPE_STRFUNC_BUF),
+    MeFunction("mechref", mech_getset_ref, TYPE_STRFUNC_BD),
 
-    MeEntry("fuel", AeroFuel, TYPE_INT),
-    MeEntry("fuel_orig", AeroFuelOrig, TYPE_INT),
-    MeEntry("cocoon", MechCocoon, TYPE_INT_RO),
-    MeEntry("numseen", MechNumSeen, TYPE_SHORT),
+    MeField("fuel", MECH_SCRIPT_FUEL, TYPE_INT),
+    MeField("fuel_orig", MECH_SCRIPT_ORIGINAL_FUEL, TYPE_INT),
+    MeField("cocoon", MECH_SCRIPT_COCOON, TYPE_INT_RO),
+    MeField("numseen", MECH_SCRIPT_SEEN_COUNT, TYPE_SHORT),
 
-    MeEntry("fx", MechFX, TYPE_FLOAT),
-    MeEntry("fy", MechFY, TYPE_FLOAT),
-    MeEntry("fz", MechFZ, TYPE_FLOAT),
-    MeEntry("x", MechX, TYPE_SHORT),
-    MeEntry("y", MechY, TYPE_SHORT),
-    MeEntry("z", MechZ, TYPE_SHORT),
-    MeEntry("elevation", MechElev, TYPE_CHAR),
+    MeField("fx", MECH_SCRIPT_REAL_X, TYPE_FLOAT),
+    MeField("fy", MECH_SCRIPT_REAL_Y, TYPE_FLOAT),
+    MeField("fz", MECH_SCRIPT_REAL_Z, TYPE_FLOAT),
+    MeField("x", MECH_SCRIPT_X, TYPE_SHORT),
+    MeField("y", MECH_SCRIPT_Y, TYPE_SHORT),
+    MeField("z", MECH_SCRIPT_Z, TYPE_SHORT),
+    MeField("elevation", MECH_SCRIPT_ELEVATION, TYPE_CHAR),
 
-    MeEntry("targcomp", MechTargComp, TYPE_CHAR),
-    MeEntry("lrsrange", MechLRSRange, TYPE_CHAR),
-    MeEntry("radiorange", MechRadioRange, TYPE_SHORT),
-    MeEntry("scanrange", MechScanRange, TYPE_CHAR),
-    MeEntry("tacrange", MechTacRange, TYPE_CHAR),
-    MeEntry("radiotype", MechRadioType, TYPE_CHAR),
-    MeEntry("bv", MechBV, TYPE_INT),
-    MeEntry("cargospace", CargoSpace, TYPE_INT),
-    MeEntry("carmaxton", CarMaxTon, TYPE_CHAR_RO),
+    MeField("targcomp", MECH_SCRIPT_TARGETING_COMPUTER, TYPE_CHAR),
+    MeField("lrsrange", MECH_SCRIPT_LONG_RANGE_SENSOR_RANGE, TYPE_CHAR),
+    MeField("radiorange", MECH_SCRIPT_RADIO_RANGE, TYPE_SHORT),
+    MeField("scanrange", MECH_SCRIPT_SCAN_RANGE, TYPE_CHAR),
+    MeField("tacrange", MECH_SCRIPT_TACTICAL_SENSOR_RANGE, TYPE_CHAR),
+    MeField("radiotype", MECH_SCRIPT_RADIO_TYPE, TYPE_CHAR),
+    MeField("bv", MECH_SCRIPT_BATTLE_VALUE, TYPE_INT),
+    MeField("cargospace", MECH_SCRIPT_CARGO_SPACE, TYPE_INT),
+    MeField("carmaxton", MECH_SCRIPT_CARRIER_MAXIMUM_TONNAGE, TYPE_CHAR_RO),
 
-    MeVEntry("bay0", AeroBay, 0, TYPE_DBREF),
-    MeVEntry("bay1", AeroBay, 1, TYPE_DBREF),
-    MeVEntry("bay2", AeroBay, 2, TYPE_DBREF),
-    MeVEntry("bay3", AeroBay, 3, TYPE_DBREF),
+    MeField("bay0", MECH_SCRIPT_BAY_0, TYPE_DBREF),
+    MeField("bay1", MECH_SCRIPT_BAY_1, TYPE_DBREF),
+    MeField("bay2", MECH_SCRIPT_BAY_2, TYPE_DBREF),
+    MeField("bay3", MECH_SCRIPT_BAY_3, TYPE_DBREF),
 
-    MeVEntry("turret0", AeroTurret, 0, TYPE_DBREF),
-    MeVEntry("turret1", AeroTurret, 1, TYPE_DBREF),
-    MeVEntry("turret2", AeroTurret, 2, TYPE_DBREF),
+    MeField("turret0", MECH_SCRIPT_TURRET_0, TYPE_DBREF),
+    MeField("turret1", MECH_SCRIPT_TURRET_1, TYPE_DBREF),
+    MeField("turret2", MECH_SCRIPT_TURRET_2, TYPE_DBREF),
 
-    MeEntry("unusablearcs", AeroUnusableArcs, TYPE_INT_RO),
-    MeEntry("maxjumpspeed", MechJumpSpeed, TYPE_FLOAT),
-    MeEntry("jumpheading", MechJumpHeading, TYPE_SHORT),
-    MeEntry("jumplength", MechJumpLength, TYPE_SHORT),
+    MeField("unusablearcs", MECH_SCRIPT_UNUSABLE_ARCS, TYPE_INT_RO),
+    MeField("maxjumpspeed", MECH_SCRIPT_MAXIMUM_JUMP_SPEED, TYPE_FLOAT),
+    MeField("jumpheading", MECH_SCRIPT_JUMP_HEADING, TYPE_SHORT),
+    MeField("jumplength", MECH_SCRIPT_JUMP_LENGTH, TYPE_SHORT),
 
     MaEntry("buildflag", buildflag, TYPE_CHAR),
     MaEntry("buildonmap", onmap, TYPE_DBREF_RO),
@@ -132,19 +124,75 @@ GMV xcode_data[] = {
     TuEntry("targz", target, TYPE_SHORT),
     TuEntry("lockmode", lockmode, TYPE_INT),
 
-    MeEntry("radio", MechRadio, TYPE_CHAR),
-    MeEntry("computer", MechComputer, TYPE_CHAR),
-    MeEntry("perception", MechPer, TYPE_INT),
+    MeField("radio", MECH_SCRIPT_RADIO, TYPE_CHAR),
+    MeField("computer", MECH_SCRIPT_COMPUTER, TYPE_CHAR),
+    MeField("perception", MECH_SCRIPT_PERCEPTION, TYPE_INT),
 
-    MeEntry("shots_fired", MechShotsFired, TYPE_INT),
-    MeEntry("shots_missed", MechShotsMissed, TYPE_INT),
-    MeEntry("shots_hit", MechShotsHit, TYPE_INT),
-    MeEntry("damage_taken", MechDamageTaken, TYPE_INT),
-    MeEntry("damage_inflicted", MechDamageInflicted, TYPE_INT),
-    MeEntry("units_killed", MechUnitsKilled, TYPE_INT),
-    MeEntry("hexes_walked", MechHexes, TYPE_FLOAT),
+    MeField("shots_fired", MECH_SCRIPT_SHOTS_FIRED, TYPE_INT),
+    MeField("shots_missed", MECH_SCRIPT_SHOTS_MISSED, TYPE_INT),
+    MeField("shots_hit", MECH_SCRIPT_SHOTS_HIT, TYPE_INT),
+    MeField("damage_taken", MECH_SCRIPT_DAMAGE_TAKEN, TYPE_INT),
+    MeField("damage_inflicted", MECH_SCRIPT_DAMAGE_INFLICTED, TYPE_INT),
+    MeField("units_killed", MECH_SCRIPT_UNITS_KILLED, TYPE_INT),
+    MeField("hexes_walked", MECH_SCRIPT_HEXES_WALKED, TYPE_FLOAT),
 
-    {-1, NULL, 0, TYPE_STRING, 0}};
+    {-1, nullptr, nullptr, TYPE_STRING, 0, false, 0}};
+
+static bool mech_value_write_text(Mech *mech, const GMV *descriptor,
+                                  const char *text) {
+  MechScriptValue value = {0};
+
+  switch (descriptor->type) {
+  case TYPE_STRING:
+    value.string = text;
+    break;
+  case TYPE_DBREF:
+    value.dbref = atoi(text);
+    break;
+  case TYPE_FLOAT:
+    value.floating = atof(text);
+    break;
+  case TYPE_BV:
+  case TYPE_CBV:
+    value.integer = text2bv((char *)text);
+    break;
+  default:
+    value.integer = atoi(text);
+    break;
+  }
+
+  return mech_script_value_write(mech, descriptor->mech_key, value);
+}
+
+static char *mech_value_read_text(const Mech *mech, const GMV *descriptor,
+                                  char *buffer) {
+  MechScriptValue value = {0};
+  if (!mech_script_value_read(mech, descriptor->mech_key, &value))
+    return nullptr;
+
+  switch (descriptor->type) {
+  case TYPE_STRING:
+    snprintf(buffer, LBUF_SIZE, "%s", value.string);
+    break;
+  case TYPE_DBREF:
+  case TYPE_DBREF_RO:
+    snprintf(buffer, LBUF_SIZE, "%ld", value.dbref);
+    break;
+  case TYPE_FLOAT:
+  case TYPE_FLOAT_RO:
+    snprintf(buffer, LBUF_SIZE, "%.2f", value.floating);
+    break;
+  case TYPE_BV:
+  case TYPE_CBV:
+    snprintf(buffer, LBUF_SIZE, "%s",
+             bv2text(value.integer, (char[SBUF_SIZE]){0}));
+    break;
+  default:
+    snprintf(buffer, LBUF_SIZE, "%d", value.integer);
+    break;
+  }
+  return buffer;
+}
 
 void fun_zmechs(char *buff, char **bufc, DbRef player, DbRef cause,
                 char *fargs[], int nfargs, char *cargs[], int ncargs,
@@ -206,6 +254,13 @@ void fun_btsetxcodevalue(char *buff, char **bufc, DbRef player, DbRef cause,
   for (i = 0; xcode_data[i].name; i++)
     if (!strcasecmp(fargs[1], xcode_data[i].name) &&
         xcode_data[i].gtype == spec && (scode_in_out[xcode_data[i].type] & 2)) {
+      if (xcode_data[i].mech_value) {
+        if (mech_value_write_text(foo, &xcode_data[i], fargs[2])) {
+          safe_tprintf_str(buff, bufc, "1");
+          return;
+        }
+        break;
+      }
       bar = (void *)((long)foo + xcode_data[i].rel_addr);
       switch (xcode_data[i].type) {
       case TYPE_STRFUNC_BD:
@@ -252,6 +307,9 @@ void fun_btsetxcodevalue(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 static char *retrieve_value(void *data, int i, char *buffer) {
+  if (xcode_data[i].mech_value)
+    return mech_value_read_text(data, &xcode_data[i], buffer);
+
   void *bar = (void *)((long)data + xcode_data[i].rel_addr);
   char *(*tempfun)(int, Mech *);
   char *(*buffered_tempfun)(Mech *, char *);
@@ -388,6 +446,16 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(
       context, !xcode_data[i].name,
       "Error: No matching xcode value for this type of object found.");
+  if (xcode_data[i].mech_value) {
+    DOCHECK_CONTEXT(
+        context,
+        !mech_value_write_text(
+            btech_context_get_mech(
+                context, game_object_location(context->database, player)),
+            &xcode_data[i], args[1]),
+        "Error: Unable to set that xcode value.");
+    return;
+  }
   bar = (void *)((long)btech_context_find_object(
                      context, game_object_location(context->database, player)) +
                  xcode_data[i].rel_addr);
