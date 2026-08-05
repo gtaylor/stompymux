@@ -5,7 +5,9 @@
 #include <stdbool.h>
 
 int mech_movement_type(const Mech *mech);
+void mech_movement_type_set(Mech *mech, int movement_type);
 int mech_tonnage(const Mech *mech);
+void mech_tonnage_set(Mech *mech, int tonnage);
 int mech_real_tonnage(const Mech *mech);
 int mech_engine_rating(const Mech *mech);
 float mech_jump_speed(const Mech *mech);

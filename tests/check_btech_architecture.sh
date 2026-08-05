@@ -124,10 +124,10 @@ done < <(rg -n \
   src/btech/ui/mech_lrs_map.c src/btech/ui/mech_tactical_command.c || true)
 
 while IFS= read -r match; do
-  echo "$match: converted scripting boundary accesses Mech layout directly"
+  echo "$match: converted scripting boundary accesses the Mech layout"
   status=1
 done < <(rg -n -g '*.[ch]' \
-  -- '\b(mech|mechA|mechB|target)->(xcode|mynum|mapindex|mapnumber|freq|freqmodes|chantitle)\b' \
+  -- '#include "mech(_macros)?\.h"|\b(mech|mechA|mechB|omech|target)->' \
   src/btech/scripting || true)
 
 while IFS= read -r match; do

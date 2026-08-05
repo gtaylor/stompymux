@@ -1,5 +1,10 @@
 #include "values_internal.h"
 
+#include "mech_position_api.h"
+#include "mech_progress_api.h"
+#include "mech_radio_api.h"
+#include "mech_specification_api.h"
+
 void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs,
                    EvaluationContext *context) {
@@ -87,7 +92,7 @@ void fun_btmechfreqs(char *buff, char **bufc, DbRef player, DbRef cause,
   mech = btech_context_get_mech(context->btech, mechdbref);
   FUNCHECK(!mech, "#-1 INVALID TARGET");
 
-  for (i = 0; i < MFreqs(mech); i++) {
+  for (i = 0; i < mech_radio_channel_count(mech); i++) {
     if (i)
       safe_str(",", buff, bufc);
     int const mode = mech_radio_mode(mech, i);
@@ -277,7 +282,7 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
              "#-1 INVALID MECH");
     FUNCHECK(mech_map_dbref(mechA) != mapdb || mech_map_dbref(mechB) != mapdb,
              "#-1 MECH NOT ON MAP");
-    safe_tprintf_str(buff, bufc, "%f", FaMechRange(mechA, mechB));
+    safe_tprintf_str(buff, bufc, "%f", mech_range_to(mechA, mechB));
     return;
   case 4:
     if (strspn(fargs[1], NUMBERS) < 1) {
@@ -305,8 +310,10 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
              "#-1 INVALID COORDS");
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
     safe_tprintf_str(buff, bufc, "%f",
-                     FindRange(MechFX(mechA), MechFY(mechA), MechFZ(mechA), fxA,
-                               fyA, Elevation(map, xA, yA) * ZSCALE));
+                     FindRange(mech_position_real_x(mechA),
+                               mech_position_real_y(mechA),
+                               mech_position_real_z(mechA), fxA, fyA,
+                               battle_map_hex_elevation(map, xA, yA) * ZSCALE));
     return;
   case 5:
     if (strspn(fargs[1], NUMBERS) < 1 || strspn(fargs[4], NUMBERS) < 1) {
@@ -341,9 +348,10 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
                    yA >= map->map_height,
                "#-1 INVALID COORDS");
       MapCoordToRealCoord(xA, yA, &fxA, &fyA);
-      safe_tprintf_str(buff, bufc, "%f",
-                       FindRange(MechFX(mechA), MechFY(mechA), MechFZ(mechA),
-                                 fxA, fyA, zA * ZSCALE));
+      safe_tprintf_str(
+          buff, bufc, "%f",
+          FindRange(mech_position_real_x(mechA), mech_position_real_y(mechA),
+                    mech_position_real_z(mechA), fxA, fyA, zA * ZSCALE));
       return;
     }
     // tihs is the (map, x1, y1, x2, y2) condition
@@ -361,9 +369,10 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
              "#-1 INVALID COORDS");
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
     MapCoordToRealCoord(xB, yB, &fxB, &fyB);
-    safe_tprintf_str(buff, bufc, "%f",
-                     FindRange(fxA, fyA, Elevation(map, xA, yA) * ZSCALE, fxB,
-                               fyB, Elevation(map, xB, yB) * ZSCALE));
+    safe_tprintf_str(
+        buff, bufc, "%f",
+        FindRange(fxA, fyA, battle_map_hex_elevation(map, xA, yA) * ZSCALE, fxB,
+                  fyB, battle_map_hex_elevation(map, xB, yB) * ZSCALE));
     return;
   case 7:
     FUNCHECK(strspn(fargs[1], NUMBERS) < 1, "#-1 INVALID COORDS");
@@ -410,7 +419,7 @@ void fun_btsetmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!is_wizard(context->world->database, player),
            "#-1 PERMISSION DENIED");
 
-  MechMaxSpeed(mech) = newmaxspeed;
+  mech_maximum_speed_set(mech, newmaxspeed);
   correct_speed(mech);
 
   safe_tprintf_str(buff, bufc, "1");
@@ -432,7 +441,7 @@ void fun_btgetrealmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!is_wizard(context->world->database, player),
            "#-1 PERMISSION DENIED");
 
-  speed = MechCargoMaxSpeed(mech, MechMaxSpeed(mech));
+  speed = MechCargoMaxSpeed(mech, mech_maximum_speed(mech));
 
   safe_tprintf_str(buff, bufc, "%s", tprintf("%f", speed));
 }
@@ -455,7 +464,7 @@ void fun_btgetbv(char *buff, char **bufc, DbRef player, DbRef cause,
            "#-1 PERMISSION DENIED");
 
   bv = CalculateBV(mech, 100, 100);
-  MechBV(mech) = bv;
+  mech_battle_value_set(mech, bv);
   safe_tprintf_str(buff, bufc, "%s", tprintf("%d", bv));
 #else
   safe_tprintf_str(buff, bufc, "#-1 BATTLE VALUE SUPPORT DISABLED");
@@ -472,8 +481,8 @@ void fun_btgetbv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
            "#-1 NO SUCH MECH");
 
-  MechBV(mech) = CalculateBV(mech, 4, 5);
-  safe_tprintf_str(buff, bufc, "%d", MechBV(mech));
+  mech_battle_value_set(mech, CalculateBV(mech, 4, 5));
+  safe_tprintf_str(buff, bufc, "%d", mech_battle_value(mech));
 #else
   safe_tprintf_str(buff, bufc, "#-1 BATTLE VALUE SUPPORT DISABLED");
 #endif
@@ -662,7 +671,7 @@ void fun_btengrate(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!btech_context_is_mech(context->btech, mechdb), "#-1 NOT A MECH");
   FUNCHECK(!(mech = btech_context_get_mech(context->btech, mechdb)), "#-1");
 
-  safe_tprintf_str(buff, bufc, "%d %d", MechEngineSize(mech),
+  safe_tprintf_str(buff, bufc, "%d %d", mech_engine_rating(mech),
                    susp_factor(mech));
 }
 
@@ -675,7 +684,7 @@ void fun_btengrate_ref(char *buff, char **bufc, DbRef player, DbRef cause,
            "#-1 PERMISSION DENIED");
   FUNCHECK(!(mech = load_refmech(context->btech, fargs[0])), "#-1 INVALID REF");
 
-  safe_tprintf_str(buff, bufc, "%d %d", MechEngineSize(mech),
+  safe_tprintf_str(buff, bufc, "%d %d", mech_engine_rating(mech),
                    susp_factor(mech));
 }
 

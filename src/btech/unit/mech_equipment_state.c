@@ -1,6 +1,7 @@
 #include "mech_equipment_api.h"
 
 #include "mech_internal.h"
+#include "mech_macros.h"
 #include "mech_utils_api.h"
 
 int mech_critical_part_type(const Mech *mech, int section, int critical) {
@@ -26,6 +27,10 @@ int mech_critical_ammo_mode(const Mech *mech, int section, int critical) {
 int mech_critical_temporary_failure(const Mech *mech, int section,
                                     int critical) {
   return mech->ud.sections[section].criticals[critical].brand >> 4;
+}
+
+int mech_critical_full_ammunition(const Mech *mech, int section, int critical) {
+  return FullAmmo((Mech *)mech, section, critical);
 }
 
 bool mech_critical_is_disabled(const Mech *mech, int section, int critical) {
@@ -55,6 +60,19 @@ void mech_critical_temporary_failure_set(Mech *mech, int section, int critical,
                                          int failure) {
   struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
   slot->brand = (slot->brand % 16) + (failure << 4);
+}
+
+void mech_critical_data_set(Mech *mech, int section, int critical, int data) {
+  mech->ud.sections[section].criticals[critical].data = data;
+}
+
+void mech_critical_destroyed_set(Mech *mech, int section, int critical,
+                                 bool destroyed) {
+  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  if (destroyed)
+    slot->firemode |= DESTROYED_MODE;
+  else
+    slot->firemode &= ~DESTROYED_MODE;
 }
 
 int mech_section_original_armor(const Mech *mech, int section) {
@@ -155,6 +173,10 @@ bool mech_part_is_structural_placeholder(int part_type) {
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {
   mech->ud.sections[section].armor = armor;
+}
+
+void mech_section_rear_armor_set(Mech *mech, int section, int armor) {
+  mech->ud.sections[section].rear = armor;
 }
 
 void mech_section_original_armor_set(Mech *mech, int section, int armor) {

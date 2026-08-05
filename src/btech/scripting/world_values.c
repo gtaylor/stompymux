@@ -1,5 +1,9 @@
 #include "values_internal.h"
 
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+
 void fun_btweapstat(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs,
                     EvaluationContext *context) {
@@ -92,7 +96,7 @@ void fun_btsettons(char *buff, char **bufc, DbRef player, DbRef cause,
   mech = btech_context_get_mech(context->btech, it);
   FUNCHECK(!mech, "#-1 NOT A MECH");
   x = atoi(fargs[1]);
-  MechTons(mech) = x;
+  mech_tonnage_set(mech, x);
 
   update_oweight(mech, x * 1024);
   safe_tprintf_str(buff, bufc, "%d", x);
@@ -143,8 +147,8 @@ void fun_btsetxy(char *buff, char **bufc, DbRef player, DbRef cause,
     FUNCHECK(z < 0 || z > 10000, "#-1 Z COORD");
   }
 
-  if (MechCarrying(mech) > 0)
-    towee = btech_context_get_mech(context->btech, MechCarrying(mech));
+  if (mech_carried_dbref(mech) > 0)
+    towee = btech_context_get_mech(context->btech, mech_carried_dbref(mech));
 
   snprintf(buffer, MBUF_SIZE, "%ld", mapdb);
   mech_Rsetmapindex(GOD, (void *)mech, buffer);
@@ -227,8 +231,8 @@ void fun_btmapunits(char *buff, char **bufc, DbRef player, DbRef cause,
       if (map->mechsOnMap[loop] < 0)
         continue;
       mech = btech_context_get_mech(context->btech, map->mechsOnMap[loop]);
-      if (mech &&
-          FindXYRange(realX, realY, MechFX(mech), MechFY(mech)) <= range)
+      if (mech && FindXYRange(realX, realY, mech_position_real_x(mech),
+                              mech_position_real_y(mech)) <= range)
         safe_tprintf_str(buff, bufc, "#%ld ", map->mechsOnMap[loop]);
     }
     break;
@@ -250,8 +254,10 @@ void fun_btmapunits(char *buff, char **bufc, DbRef player, DbRef cause,
         continue;
       mech = btech_context_get_mech(context->btech, map->mechsOnMap[loop]);
 
-      if (mech && FindRange(realX, realY, z * ZSCALE, MechFX(mech),
-                            MechFY(mech), MechFZ(mech)) <= range)
+      if (mech &&
+          FindRange(realX, realY, z * ZSCALE, mech_position_real_x(mech),
+                    mech_position_real_y(mech),
+                    mech_position_real_z(mech)) <= range)
         safe_tprintf_str(buff, bufc, "#%ld ", map->mechsOnMap[loop]);
     }
     break;

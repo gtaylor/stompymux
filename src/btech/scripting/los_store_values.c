@@ -1,5 +1,10 @@
 #include "values_internal.h"
 
+#include "mech_equipment_api.h"
+#include "mech_position_api.h"
+#include "mech_tic_api.h"
+#include "weapon_catalogue_api.h"
+
 void fun_btupdatelinks(char *buff, char **bufc, DbRef player, DbRef cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs,
                        EvaluationContext *context) {
@@ -123,11 +128,9 @@ void fun_btid2db(char *buff, char **bufc, DbRef player, DbRef cause,
   if (mech) {
     FUNCHECK(!(target = btech_context_get_mech(context->btech, mechnum)),
              "#-1 INVALID TARGETID");
-    FUNCHECK(!mech_los_check_unblocked(
-                 mech, target, MechX(target), MechY(target),
-                 FlMechRange(btech_context_get_map(context->btech,
-                                                   mech_map_dbref(mech)),
-                             mech, target)),
+    FUNCHECK(!mech_los_check_unblocked(mech, target, mech_position_x(target),
+                                       mech_position_y(target),
+                                       mech_range_to(mech, target)),
              "#-1 INVALID TARGETID");
   }
   safe_tprintf_str(buff, bufc, "#%d", (int)mechnum);
@@ -163,8 +166,10 @@ void fun_bthexlos(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(x < 0 || x > map->map_width || y < 0 || y > map->map_height,
            "#-1 INVALID COORDINATES");
   MapCoordToRealCoord(x, y, &fx, &fy);
-  if (mech_los_check_unblocked(
-          mech, NULL, x, y, FindHexRange(MechFX(mech), MechFY(mech), fx, fy)))
+  if (mech_los_check_unblocked(mech, nullptr, x, y,
+                               FindHexRange(mech_position_real_x(mech),
+                                            mech_position_real_y(mech), fx,
+                                            fy)))
     safe_tprintf_str(buff, bufc, "1");
   else
     safe_tprintf_str(buff, bufc, "0");
@@ -198,11 +203,11 @@ void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!(target = btech_context_get_mech(context->btech, mechnum)),
            "#-1 INVALID MECH");
 
-  if (mech_los_check(mech, target, MechX(mech), MechY(mech),
-                     FlMechRange(getmap(mech_map_dbref(mech)), mech, target)))
-    if (mech_los_check_unblocked(
-            mech, target, MechX(mech), MechY(mech),
-            FlMechRange(getmap(mech_map_dbref(mech)), mech, target)))
+  if (mech_los_check(mech, target, mech_position_x(mech), mech_position_y(mech),
+                     mech_range_to(mech, target)))
+    if (mech_los_check_unblocked(mech, target, mech_position_x(mech),
+                                 mech_position_y(mech),
+                                 mech_range_to(mech, target)))
       safe_tprintf_str(buff, bufc, "1");
     else
       safe_tprintf_str(buff, bufc, "2");
@@ -268,7 +273,7 @@ void fun_btticweaps(char *buff, char **bufc, DbRef player, DbRef cause,
 
   Mech *mech;
   DbRef it;
-  int j, k, l, section, critical;
+  int j, section, critical;
   int ticnum;
 
   it = match_thing(&context->command->match, player, fargs[0]);
@@ -283,10 +288,7 @@ void fun_btticweaps(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!(ticnum >= 0 && ticnum < NUM_TICS), "#-1 INVALID TIC NUMBER");
 
   for (j = 0; j < MAX_WEAPONS_PER_MECH; j++) {
-    k = j / SINGLE_TICLONG_SIZE;
-    l = j % SINGLE_TICLONG_SIZE;
-
-    if (mech->tic[ticnum][k] & (1 << l)) {
+    if (mech_tic_contains_weapon(mech, ticnum, j)) {
       if (FindWeaponNumberOnMech(mech, j, &section, &critical) == -1) {
         j = MAX_WEAPONS_PER_MECH;
         continue;
@@ -294,8 +296,8 @@ void fun_btticweaps(char *buff, char **bufc, DbRef player, DbRef cause,
       safe_tprintf_str(
           buff, bufc, "%s",
           tprintf("%d:%s ", j,
-                  &MechWeapons[Weapon2I(GetPartType(mech, section, critical))]
-                       .name[3]));
+                  &weapon_catalogue_name(Weapon2I(
+                      mech_critical_part_type(mech, section, critical)))[3]));
     }
   }
 }

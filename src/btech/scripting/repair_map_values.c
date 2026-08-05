@@ -173,7 +173,7 @@ void fun_btmapelev(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(Readnum(x, fargs[1]), "#-2");
   FUNCHECK(Readnum(y, fargs[2]), "#-2");
   FUNCHECK(x < 0 || y < 0 || x >= map->map_width || y >= map->map_height, "?");
-  i = Elevation(map, x, y);
+  i = battle_map_hex_elevation(map, x, y);
   if (i < 0)
     safe_tprintf_str(buff, bufc, "-%c", '0' + -i);
   else

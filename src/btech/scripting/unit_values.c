@@ -1,19 +1,25 @@
 #include "values_internal.h"
 
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
+#include "mech_position_api.h"
+#include "mech_specification_api.h"
+
 char *mechIDfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
-  buffer[0] = MechID(mech)[0];
-  buffer[1] = MechID(mech)[1];
+  const MechUnitId id = mech_unit_id(mech);
+  buffer[0] = id.first;
+  buffer[1] = id.second;
   buffer[2] = '\0';
   return buffer;
 }
 
 char *mech_getset_ref(int mode, Mech *mech, char *data) {
   if (mode) {
-    strncpy(MechType_Ref(mech), data, 24);
-    MechType_Ref(mech)[24] = '\0';
+    mech_model_reference_set(mech, data);
     return NULL;
   } else
-    return MechType_Ref(mech);
+    return (char *)mech_model_reference(mech);
 }
 
 extern char *mech_types[];
@@ -23,10 +29,10 @@ char *mechTypefunc(int mode, Mech *mech, char *arg) {
   int i;
 
   if (!mode)
-    return mech_types[(short)MechType(mech)];
+    return mech_types[(short)mech_class(mech)];
   /* Should _alter_ mechtype.. weeeel. */
   if ((i = compare_array(mech_types, arg)) >= 0)
-    MechType(mech) = i;
+    mech_class_set(mech, i);
   return NULL;
 }
 
@@ -34,9 +40,9 @@ char *mechMovefunc(int mode, Mech *mech, char *arg) {
   int i;
 
   if (!mode)
-    return move_types[(short)MechMove(mech)];
+    return move_types[(short)mech_movement_type(mech)];
   if ((i = compare_array(move_types, arg)) >= 0)
-    MechMove(mech) = i;
+    mech_movement_type_set(mech, i);
   return NULL;
 }
 
@@ -56,17 +62,21 @@ void apply_mechDamage(Mech *omech, char *buf) {
 
   memcpy(mech, omech, sizeof(Mech));
   for (i = 0; i < NUM_SECTIONS; i++) {
-    SetSectInt(mech, i, GetSectOInt(mech, i));
-    SetSectArmor(mech, i, GetSectOArmor(mech, i));
-    SetSectRArmor(mech, i, GetSectORArmor(mech, i));
+    mech_section_internal_set(mech, i, mech_section_original_internal(mech, i));
+    mech_section_armor_set(mech, i, mech_section_original_armor(mech, i));
+    mech_section_rear_armor_set(mech, i,
+                                mech_section_original_rear_armor(mech, i));
     for (j = 0; j < NUM_CRITICALS; j++)
-      if (GetPartType(mech, i, j) && !IsCrap(GetPartType(mech, i, j))) {
-        if (PartIsDestroyed(mech, i, j))
-          UnDestroyPart(mech, i, j);
-        if (IsAmmo(GetPartType(mech, i, j)))
-          SetPartData(mech, i, j, FullAmmo(mech, i, j));
+      if (mech_critical_part_type(mech, i, j) &&
+          !mech_part_is_structural_placeholder(
+              mech_critical_part_type(mech, i, j))) {
+        if (mech_critical_is_destroyed(mech, i, j))
+          mech_critical_destroyed_set(mech, i, j, false);
+        if (IsAmmo(mech_critical_part_type(mech, i, j)))
+          mech_critical_data_set(mech, i, j,
+                                 mech_critical_full_ammunition(mech, i, j));
         else
-          SetPartTempNuke(mech, i, j, 0);
+          mech_critical_temporary_failure_set(mech, i, j, 0);
       }
   }
   s = buf;
@@ -79,62 +89,71 @@ void apply_mechDamage(Mech *omech, char *buf) {
     if (sscanf(s, "A:%d/%d", &i1, &i2) == 2) {
       /* Ordinary armor damage */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
-        SetSectArmor(mech, i1, GetSectOArmor(mech, i1) - i2);
+        mech_section_armor_set(mech, i1,
+                               mech_section_original_armor(mech, i1) - i2);
     } else if (sscanf(s, "A(R):%d/%d", &i1, &i2) == 2) {
       /* Ordinary rear armor damage */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
-        SetSectRArmor(mech, i1, GetSectORArmor(mech, i1) - i2);
+        mech_section_rear_armor_set(
+            mech, i1, mech_section_original_rear_armor(mech, i1) - i2);
     } else if (sscanf(s, "I:%d/%d", &i1, &i2) == 2) {
       /* Ordinary int damage */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
-        SetSectInt(mech, i1, GetSectOInt(mech, i1) - i2);
+        mech_section_internal_set(
+            mech, i1, mech_section_original_internal(mech, i1) - i2);
     } else if (sscanf(s, "C:%d/%d", &i1, &i2) == 2) {
       /* Dest'ed crit */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
-        DestroyPart(mech, i1, i2);
+        mech_critical_destroyed_set(mech, i1, i2, true);
     } else if (sscanf(s, "G:%d/%d(%d)", &i1, &i2, &i3) == 3) {
       /* Glitch */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         if (i2 >= 0 && i2 < NUM_CRITICALS)
-          SetPartTempNuke(mech, i1, i2, i3);
+          mech_critical_temporary_failure_set(mech, i1, i2, i3);
     } else if (sscanf(s, "R:%d/%d(%d)", &i1, &i2, &i3) == 3) {
       /* Reload */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         if (i2 >= 0 && i2 < NUM_CRITICALS)
-          SetPartData(mech, i1, i2, FullAmmo(mech, i1, i2) - i3);
+          mech_critical_data_set(
+              mech, i1, i2, mech_critical_full_ammunition(mech, i1, i2) - i3);
     }
     while (*s && (*s != ' ' && *s != ','))
       s++;
   }
   for (i = 0; i < NUM_SECTIONS; i++) {
-    if (GetSectInt(mech, i) != GetSectInt(omech, i))
-      SetSectInt(omech, i, GetSectInt(mech, i));
-    if (GetSectArmor(mech, i) != GetSectArmor(omech, i))
-      SetSectArmor(omech, i, GetSectArmor(mech, i));
-    if (GetSectRArmor(mech, i) != GetSectRArmor(omech, i))
-      SetSectRArmor(omech, i, GetSectRArmor(mech, i));
+    if (mech_section_internal(mech, i) != mech_section_internal(omech, i))
+      mech_section_internal_set(omech, i, mech_section_internal(mech, i));
+    if (mech_section_armor(mech, i) != mech_section_armor(omech, i))
+      mech_section_armor_set(omech, i, mech_section_armor(mech, i));
+    if (mech_section_rear_armor(mech, i) != mech_section_rear_armor(omech, i))
+      mech_section_rear_armor_set(omech, i, mech_section_rear_armor(mech, i));
     for (j = 0; j < NUM_CRITICALS; j++)
-      if (GetPartType(mech, i, j) && !IsCrap(GetPartType(mech, i, j))) {
-        if (PartIsDestroyed(mech, i, j) && !PartIsDestroyed(omech, i, j)) {
+      if (mech_critical_part_type(mech, i, j) &&
+          !mech_part_is_structural_placeholder(
+              mech_critical_part_type(mech, i, j))) {
+        if (mech_critical_is_destroyed(mech, i, j) &&
+            !mech_critical_is_destroyed(omech, i, j)) {
           /* Blast a part */
-          DestroyPart(omech, i, j);
+          mech_critical_destroyed_set(omech, i, j, true);
           do_mag = 1;
-        } else if (!PartIsDestroyed(mech, i, j) &&
-                   PartIsDestroyed(omech, i, j)) {
+        } else if (!mech_critical_is_destroyed(mech, i, j) &&
+                   mech_critical_is_destroyed(omech, i, j)) {
           mech_RepairPart(omech, i, j);
-          SetPartTempNuke(omech, i, j, 0);
+          mech_critical_temporary_failure_set(omech, i, j, 0);
           do_mag = 1;
         }
-        if (IsAmmo(GetPartType(mech, i, j))) {
-          if (GetPartData(mech, i, j) != GetPartData(omech, i, j))
-            SetPartData(omech, i, j, GetPartData(mech, i, j));
+        if (IsAmmo(mech_critical_part_type(mech, i, j))) {
+          if (mech_critical_data(mech, i, j) != mech_critical_data(omech, i, j))
+            mech_critical_data_set(omech, i, j, mech_critical_data(mech, i, j));
         } else {
-          if (PartTempNuke(mech, i, j) != PartTempNuke(omech, i, j))
-            SetPartTempNuke(omech, i, j, PartTempNuke(mech, i, j));
+          if (mech_critical_temporary_failure(mech, i, j) !=
+              mech_critical_temporary_failure(omech, i, j))
+            mech_critical_temporary_failure_set(
+                omech, i, j, mech_critical_temporary_failure(mech, i, j));
         }
       }
   }
-  if (do_mag && MechType(omech) == CLASS_MECH)
+  if (do_mag && mech_class(omech) == CLASS_MECH)
     do_magic(omech);
 }
 
@@ -166,28 +185,40 @@ char *mechDamagefunc(int mode, Mech *mech, char *arg,
   };
   buffer[0] = '\0';
   for (i = 0; i < NUM_SECTIONS; i++)
-    if (GetSectOInt(mech, i)) {
-      if (GetSectArmor(mech, i) != GetSectOArmor(mech, i))
-        ADD("A:%d/%d", i, GetSectOArmor(mech, i) - GetSectArmor(mech, i));
-      if (GetSectRArmor(mech, i) != GetSectORArmor(mech, i))
-        ADD("A(R):%d/%d", i, GetSectORArmor(mech, i) - GetSectRArmor(mech, i));
+    if (mech_section_original_internal(mech, i)) {
+      if (mech_section_armor(mech, i) != mech_section_original_armor(mech, i))
+        ADD("A:%d/%d", i,
+            mech_section_original_armor(mech, i) - mech_section_armor(mech, i));
+      if (mech_section_rear_armor(mech, i) !=
+          mech_section_original_rear_armor(mech, i))
+        ADD("A(R):%d/%d", i,
+            mech_section_original_rear_armor(mech, i) -
+                mech_section_rear_armor(mech, i));
     }
   for (i = 0; i < NUM_SECTIONS; i++)
-    if (GetSectOInt(mech, i))
-      if (GetSectInt(mech, i) != GetSectOInt(mech, i))
-        ADD("I:%d/%d", i, GetSectOInt(mech, i) - GetSectInt(mech, i));
+    if (mech_section_original_internal(mech, i))
+      if (mech_section_internal(mech, i) !=
+          mech_section_original_internal(mech, i))
+        ADD("I:%d/%d", i,
+            mech_section_original_internal(mech, i) -
+                mech_section_internal(mech, i));
   for (i = 0; i < NUM_SECTIONS; i++)
     for (j = 0; j < CritsInLoc(mech, i); j++) {
-      if (GetPartType(mech, i, j) && !IsCrap(GetPartType(mech, i, j))) {
-        if (PartIsDestroyed(mech, i, j)) {
+      if (mech_critical_part_type(mech, i, j) &&
+          !mech_part_is_structural_placeholder(
+              mech_critical_part_type(mech, i, j))) {
+        if (mech_critical_is_destroyed(mech, i, j)) {
           ADD("C:%d/%d", i, j);
         } else {
-          if (IsAmmo(GetPartType(mech, i, j))) {
-            if (GetPartData(mech, i, j) != FullAmmo(mech, i, j))
+          if (IsAmmo(mech_critical_part_type(mech, i, j))) {
+            if (mech_critical_data(mech, i, j) !=
+                mech_critical_full_ammunition(mech, i, j))
               ADD("R:%d/%d(%d)", i, j,
-                  FullAmmo(mech, i, j) - GetPartData(mech, i, j));
-          } else if (PartTempNuke(mech, i, j))
-            ADD("G:%d/%d(%d)", i, j, PartTempNuke(mech, i, j));
+                  mech_critical_full_ammunition(mech, i, j) -
+                      mech_critical_data(mech, i, j));
+          } else if (mech_critical_temporary_failure(mech, i, j))
+            ADD("G:%d/%d(%d)", i, j,
+                mech_critical_temporary_failure(mech, i, j));
         }
       }
     }
@@ -195,24 +226,26 @@ char *mechDamagefunc(int mode, Mech *mech, char *arg,
 }
 
 char *mechCentBearingfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
-  int x = MechX(mech);
-  int y = MechY(mech);
+  int x = mech_position_x(mech);
+  int y = mech_position_y(mech);
   float fx, fy;
 
   MapCoordToRealCoord(x, y, &fx, &fy);
   snprintf(buffer, LBUF_SIZE, "%d",
-           FindBearing(MechFX(mech), MechFY(mech), fx, fy));
+           FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
+                       fx, fy));
   return buffer;
 }
 
 char *mechCentDistfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
-  int x = MechX(mech);
-  int y = MechY(mech);
+  int x = mech_position_x(mech);
+  int y = mech_position_y(mech);
   float fx, fy;
 
   MapCoordToRealCoord(x, y, &fx, &fy);
   snprintf(buffer, LBUF_SIZE, "%.2f",
-           FindHexRange(fx, fy, MechFX(mech), MechFY(mech)));
+           FindHexRange(fx, fy, mech_position_real_x(mech),
+                        mech_position_real_y(mech)));
   return buffer;
 }
 

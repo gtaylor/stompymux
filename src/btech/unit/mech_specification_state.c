@@ -7,7 +7,13 @@
 
 int mech_movement_type(const Mech *mech) { return mech->ud.move; }
 
+void mech_movement_type_set(Mech *mech, int movement_type) {
+  mech->ud.move = movement_type;
+}
+
 int mech_tonnage(const Mech *mech) { return mech->ud.tons; }
+
+void mech_tonnage_set(Mech *mech, int tonnage) { mech->ud.tons = tonnage; }
 
 int mech_real_tonnage(const Mech *mech) { return mech->rd.row / 1024; }
 

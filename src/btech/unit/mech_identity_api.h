@@ -13,6 +13,7 @@ int mech_brief_mode(const Mech *mech);
 MechUnitId mech_unit_id(const Mech *mech);
 const char *mech_model_name(const Mech *mech);
 const char *mech_model_reference(const Mech *mech);
+void mech_model_reference_set(Mech *mech, const char *reference);
 void mech_map_dbref_set(Mech *mech, DbRef map_dbref);
 void mech_map_slot_set(Mech *mech, int map_slot);
 void mech_brief_mode_set(Mech *mech, int mode);

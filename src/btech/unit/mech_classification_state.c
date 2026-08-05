@@ -4,6 +4,8 @@
 
 int mech_class(const Mech *mech) { return mech->ud.type; }
 
+void mech_class_set(Mech *mech, int unit_class) { mech->ud.type = unit_class; }
+
 bool mech_is_dropship(const Mech *mech) {
   return mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS;
 }

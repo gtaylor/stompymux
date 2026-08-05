@@ -11,7 +11,11 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 #include "mux/server/platform.h"
+
+typedef struct Mech Mech;
 
 /* mech.tic.c */
 int cleartic_sub_func(Mech *mech, DbRef player, int low, int high,
@@ -31,3 +35,4 @@ void mech_deltic(DbRef player, void *data, char *buffer);
 void mech_firetic(DbRef player, void *data, char *buffer);
 void mech_listtic(DbRef player, void *data, char *buffer);
 void heat_cutoff(DbRef player, void *data, char *buffer);
+bool mech_tic_contains_weapon(const Mech *mech, int tic, int weapon_number);

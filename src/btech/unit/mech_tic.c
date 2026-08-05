@@ -24,10 +24,17 @@
 #include "mech_lifecycle.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_tic_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+
+bool mech_tic_contains_weapon(const Mech *mech, int tic, int weapon_number) {
+  const int word = weapon_number / SINGLE_TICLONG_SIZE;
+  const int bit = weapon_number % SINGLE_TICLONG_SIZE;
+  return mech->tic[tic][word] & (1 << bit);
+}
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
