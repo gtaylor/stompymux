@@ -28,6 +28,10 @@ const char *weapon_catalogue_name(int weapon_index) {
   return MechWeapons[weapon_index].name;
 }
 
+int weapon_catalogue_damage(int weapon_index) {
+  return MechWeapons[weapon_index].damage;
+}
+
 /* ASSERTION: Weapons must be located next to each other in criticals. */
 int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
                          unsigned char *weapdataarray, int *critical,

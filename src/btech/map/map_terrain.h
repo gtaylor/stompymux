@@ -30,6 +30,7 @@ char mech_real_terrain_get(Mech *mech);
 char map_elevation_get(const BattleMap *map, int x, int y);
 int battle_map_hex_elevation(BattleMap *map, int x, int y);
 bool battle_map_coordinate_is_valid(const BattleMap *map, int x, int y);
+bool battle_terrain_is_water(char terrain);
 void map_hex_set(BattleMap *map, int x, int y, char terrain, char elevation);
 void map_hex_buffer_set(MapCodingRegistry *registry, unsigned char **BattleMap,
                         int x, int y, char terrain, char elevation);

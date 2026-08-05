@@ -96,6 +96,13 @@ done < <(rg -n '#include "mech(_macros)?\.h"' \
   src/btech/sensors/mech_sensor.h || true)
 
 while IFS= read -r match; do
+  echo "$match: converted ice hazard module uses an aggregate domain layout"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\b(mech|map|t)->|\b(MechWeapons|MapBridgesCS)\b' \
+  src/btech/movement/mech_ice.c || true)
+
+while IFS= read -r match; do
   echo "$match: converted LOS tracer accesses BattleMap layout"
   status=1
 done < <(rg -n -- '\bmap->' src/btech/sensors/los_trace.c || true)

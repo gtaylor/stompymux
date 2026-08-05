@@ -49,6 +49,10 @@ bool battle_map_sensor_is_disabled(const BattleMap *map, int sensor) {
   return map->sensorflags & (1 << sensor);
 }
 
+bool battle_map_bridges_have_capacity(const BattleMap *map) {
+  return map->flags & MAPFLAG_BRIDGESCS;
+}
+
 bool battle_map_is_dark(const BattleMap *map) {
   return map->flags & MAPFLAG_DARK;
 }
