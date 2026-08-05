@@ -444,8 +444,8 @@ void mech_damage(DbRef player, Mech *mech, char *buffer) {
       "Invalid cluster size! (must be smaller than damage amount, but > 0)");
   DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW,
                   "No MW killings!");
-  Missile_Hit(mech, mech, -1, -1, isrear, iscritical, 0, -1, -1, clustersize,
-              damage / clustersize, 1, 0, 0, 0);
+  mech_missile_apply_hits(mech, mech, -1, -1, isrear, iscritical, 0, -1, -1,
+                          clustersize, damage / clustersize, 1, 0, 0, 0);
 }
 
 void mech_damage_section(DbRef player, Mech *mech, char *buffer) {

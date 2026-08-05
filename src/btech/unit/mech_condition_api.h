@@ -25,6 +25,7 @@ typedef struct MechConditionSummary {
   bool performing_action;
   bool auto_fall;
   bool to_hit_debug;
+  bool ecm_disturbed;
   bool ecm_protected;
   bool angel_ecm_protected;
   bool angel_ecm_disturbed;

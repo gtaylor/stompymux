@@ -55,6 +55,7 @@ bool mech_section_configuration_has(const Mech *mech, int section,
                                     int configuration);
 void mech_section_configuration_add(Mech *mech, int section, int configuration);
 bool mech_has_section_special(const Mech *mech, int special);
+void mech_section_special_add(Mech *mech, int section, int special);
 void mech_section_special_remove(Mech *mech, int section, int special);
 bool mech_has_attached_inarc_ecm(const Mech *mech);
 bool mech_has_attached_homing_beacon(const Mech *mech);

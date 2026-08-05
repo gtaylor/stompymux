@@ -36,6 +36,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .performing_action = status & PERFORMING_ACTION,
       .auto_fall = mech->rd.mech_prefs & MECHPREF_AUTOFALL,
       .to_hit_debug = mech->rd.mech_prefs & MECHPREF_BTHDEBUG,
+      .ecm_disturbed = status2 & ECM_DISTURBANCE,
       .ecm_protected =
           (status2 & ECM_PROTECTED) || ecm_active || personal_ecm_active,
       .angel_ecm_protected =

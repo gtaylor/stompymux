@@ -363,7 +363,7 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
     } else
 
         if (tIsSwarm && hitMech) /* No swarms on hex hits */
-      SwarmHitTarget(
+      mech_swarm_missile_hit_target(
           mech, weapindx, wSection, wCritSlot, hitMech, LOS, bth,
           reallyhit ? bth + 1 : bth - 1,
           (type == CRAZY_MISSILES) ? maximum_missile_hits * modifier / 100
@@ -371,17 +371,17 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
           (mech_critical_ammo_mode(mech, wSection, wCritSlot) & SWARM1_MODE),
           tIsSwarmAttack, player_roll);
     else
-      MissileHitTarget(mech, weapindx, wSection, wCritSlot, hitMech, hitX, hitY,
-                       LOS ? 1 : 0, bth, reallyhit ? bth + 1 : bth - 1,
-                       (type == CRAZY_MISSILES)
-                           ? maximum_missile_hits * modifier / 100
-                           : maximum_missile_hits,
-                       tIsSwarmAttack, player_roll);
+      mech_missile_hit_target(
+          mech, weapindx, wSection, wCritSlot, hitMech, hitX, hitY, LOS ? 1 : 0,
+          bth, reallyhit ? bth + 1 : bth - 1,
+          (type == CRAZY_MISSILES) ? maximum_missile_hits * modifier / 100
+                                   : maximum_missile_hits,
+          tIsSwarmAttack, player_roll);
 
     return;
   }
 
-  missileindex = MissileHitIndex(
+  missileindex = mech_missile_hit_index(
       mech, hitMech, weapindx, wSection, wCritSlot,
       btech_context_glancing_blows_enabled(mech_context(mech)) &&
               (player_roll == bth)
@@ -408,7 +408,7 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
                 (num_missiles_hit > 1 ? "s" : ""));
 
   if (tIsLBX)
-    Missile_Hit(
+    mech_missile_apply_hits(
         mech, hitMech, hitX, hitY, isrear, iscritical, weapindx, wFireMode,
         wAmmoMode, num_missiles_hit, tIsLBX ? 1 : wWeapDamage,
         weapon_catalogue_cluster_size(weapindx), LOS, bth, tIsSwarmAttack);

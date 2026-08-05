@@ -118,8 +118,12 @@ void btech_context_critical_roll_record(BtechContext *context, int roll);
 long btech_context_random_i31(BtechContext *context);
 int btech_context_missile_hit_count(const BtechContext *context,
                                     int weapon_index, int roll_index);
+bool btech_context_has_missile_hit_table(const BtechContext *context,
+                                         int weapon_index);
 int btech_context_missile_hit_count_by_name(const BtechContext *context,
                                             const char *name, int roll_index);
+int btech_context_weapon_recycle_time(const BtechContext *context,
+                                      int weapon_index);
 int btech_context_event_data_count(const BtechContext *context, int event_type,
                                    intptr_t event_data);
 time_t btech_context_now(const BtechContext *context);

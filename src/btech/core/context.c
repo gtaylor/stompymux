@@ -379,12 +379,26 @@ int btech_context_missile_hit_count(const BtechContext *context,
   return entry ? entry->num_missiles[roll_index] : 0;
 }
 
+bool btech_context_has_missile_hit_table(const BtechContext *context,
+                                         int weapon_index) {
+  assert(context != nullptr);
+  return missile_hit_registry_find_weapon(&context->missile_hits,
+                                          weapon_index) != nullptr;
+}
+
 int btech_context_missile_hit_count_by_name(const BtechContext *context,
                                             const char *name, int roll_index) {
   assert(context != nullptr);
   const MissileHitEntry *entry =
       missile_hit_registry_find_name(&context->missile_hits, name);
   return entry ? entry->num_missiles[roll_index] : 0;
+}
+
+int btech_context_weapon_recycle_time(const BtechContext *context,
+                                      int weapon_index) {
+  assert(context != nullptr);
+  return btech_weapon_settings_recycle_time(&context->weapon_settings,
+                                            weapon_index);
 }
 
 int btech_context_event_data_count(const BtechContext *context, int event_type,

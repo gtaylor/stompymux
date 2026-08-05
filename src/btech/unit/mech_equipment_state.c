@@ -207,6 +207,10 @@ bool mech_has_section_special(const Mech *mech, int special) {
   return false;
 }
 
+void mech_section_special_add(Mech *mech, int section, int special) {
+  mech->ud.sections[section].specials |= special;
+}
+
 void mech_section_special_remove(Mech *mech, int section, int special) {
   mech->ud.sections[section].specials &= ~special;
 }
