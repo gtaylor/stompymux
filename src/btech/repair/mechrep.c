@@ -34,16 +34,19 @@
 
 #define MECH_STAT_C /* want to use the POSIX stat() call. */
 
-#include "mech.h"
 #include "mech_build_api.h"
+#include "mech_classification_api.h"
 #include "mech_consistency_api.h"
+#include "mech_electronics_api.h"
 #include "mech_restrict_api.h"
+#include "mech_specification_api.h"
 #include "mech_status_api.h"
 #include "mech_utils_api.h"
 #include "mechrep.h"
 #include "mechrep_api.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/network/mux_event_alloc.h"
+#include "section_types.h"
 #include "template_api.h"
 
 /* Selectors */
@@ -108,14 +111,12 @@ void mechrep_Rdisplaysection(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(rep->xcode.context,
                   mech_parseattributes(buffer, args, 1) != 1,
                   "You must specify a section to list the criticals for!");
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
+  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                 args[0]);
   DOCHECK_CONTEXT(rep->xcode.context, index == -1, "Invalid section!");
   CriticalStatus(btech_context_evaluation(rep->xcode.context), player, mech,
                  index);
 }
-
-#define MechComputersRadioRange(mech)                                          \
-  (DEFAULT_RADIORANGE * generic_radio_multiplier(mech))
 
 void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
   char *args[2];
@@ -135,14 +136,16 @@ void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
   i = BOUNDED(1, atoi(args[0]), 5);
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "Radio level set to %d.", i);
-  MechRadio(mech) = i;
-  MechRadioType(mech) = generic_radio_type(MechRadio(mech), 0);
+  mech_radio_quality_set(mech, i);
+  mech_radio_configuration_set(mech, generic_radio_type(i, 0));
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "Number of freqs: %d  Extra stuff: %d",
-                MechRadioType(mech) % 16, (MechRadioType(mech) / 16) * 16);
-  MechRadioRange(mech) = MechComputersRadioRange(mech);
+                mech_radio_configuration(mech) % 16,
+                (mech_radio_configuration(mech) / 16) * 16);
+  mech_radio_range_set(mech,
+                       DEFAULT_RADIORANGE * generic_radio_multiplier(mech));
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                "Radio range set to %d.", (int)MechRadioRange(mech));
+                "Radio range set to %d.", mech_radio_range(mech));
 }
 
 void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
@@ -177,54 +180,54 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
                   "Invalid number of arguments!");
   switch (toupper(args[0][0])) {
   case 'M':
-    MechType(mech) = CLASS_MECH;
-    MechMove(mech) = MOVE_BIPED;
+    mech_class_set(mech, CLASS_MECH);
+    mech_movement_type_set(mech, MOVE_BIPED);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Type set to MECH");
     break;
   case 'Q':
-    MechType(mech) = CLASS_MECH;
-    MechMove(mech) = MOVE_QUAD;
+    mech_class_set(mech, CLASS_MECH);
+    mech_movement_type_set(mech, MOVE_QUAD);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Type set to QUAD");
     break;
   case 'G':
-    MechType(mech) = CLASS_VEH_GROUND;
+    mech_class_set(mech, CLASS_VEH_GROUND);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Type set to VEHICLE");
     break;
   case 'V':
-    MechType(mech) = CLASS_VTOL;
-    MechMove(mech) = MOVE_VTOL;
+    mech_class_set(mech, CLASS_VTOL);
+    mech_movement_type_set(mech, MOVE_VTOL);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Type set to VTOL");
     break;
   case 'N':
-    MechType(mech) = CLASS_VEH_NAVAL;
+    mech_class_set(mech, CLASS_VEH_NAVAL);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Type set to NAVAL");
     break;
   case 'A':
-    MechType(mech) = CLASS_AERO;
-    MechMove(mech) = MOVE_FLY;
+    mech_class_set(mech, CLASS_AERO);
+    mech_movement_type_set(mech, MOVE_FLY);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Type set to AeroSpace");
     break;
   case 'D':
-    MechType(mech) = CLASS_DS;
-    MechMove(mech) = MOVE_FLY;
+    mech_class_set(mech, CLASS_DS);
+    mech_movement_type_set(mech, MOVE_FLY);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Type set to DropShip");
     break;
   case 'S':
-    MechType(mech) = CLASS_SPHEROID_DS;
-    MechMove(mech) = MOVE_FLY;
+    mech_class_set(mech, CLASS_SPHEROID_DS);
+    mech_movement_type_set(mech, MOVE_FLY);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Type set to SpheroidDropship");
     break;
   case 'B':
-    MechType(mech) = CLASS_BSUIT;
-    MechMove(mech) = MOVE_BIPED;
+    mech_class_set(mech, CLASS_BSUIT);
+    mech_movement_type_set(mech, MOVE_BIPED);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Type set to BattleSuit");
     break;
@@ -236,47 +239,116 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
   }
 }
 
-#define SETVALUE_FUNCTION_FLOAT(funcname, valname, valstring, modifier)        \
-  void funcname(DbRef player, void *data, char *buffer) {                      \
-    char *args[1];                                                             \
-    float f;                                                                   \
-    MECHREP_COMMON(1);                                                         \
-    DOCHECK_CONTEXT(                                                           \
-        rep->xcode.context, mech_parseattributes(buffer, args, 1) != 1,        \
-        tprintf("Invalid number of arguments to Set%s!", valstring));          \
-    f = atof(args[0]);                                                         \
-    valname = f * modifier;                                                    \
-    notify(btech_context_evaluation(rep->xcode.context), player,               \
-           tprintf("%s changed to %.2f.", valstring, valname));                \
+static bool parse_repair_float(RepairFacility *rep, DbRef player, char *buffer,
+                               const char *name, float *value) {
+  char *args[1];
+  if (mech_parseattributes(buffer, args, 1) != 1) {
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "Invalid number of arguments to Set%s!", name);
+    return false;
   }
+  *value = atof(args[0]);
+  return true;
+}
 
-#define SETVALUE_FUNCTION_INT(funcname, valname, valstring, modifier)          \
-  void funcname(DbRef player, void *data, char *buffer) {                      \
-    char *args[1];                                                             \
-    int f;                                                                     \
-    MECHREP_COMMON(1);                                                         \
-    DOCHECK_CONTEXT(                                                           \
-        rep->xcode.context, mech_parseattributes(buffer, args, 1) != 1,        \
-        tprintf("Invalid number of arguments to Set%s!", valstring));          \
-    f = atoi(args[0]);                                                         \
-    valname = f * modifier;                                                    \
-    notify(btech_context_evaluation(rep->xcode.context), player,               \
-           tprintf("%s changed to %d.", valstring, valname));                  \
+static bool parse_repair_int(RepairFacility *rep, DbRef player, char *buffer,
+                             const char *name, int *value) {
+  char *args[1];
+  if (mech_parseattributes(buffer, args, 1) != 1) {
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "Invalid number of arguments to Set%s!", name);
+    return false;
   }
+  *value = atoi(args[0]);
+  return true;
+}
 
-SETVALUE_FUNCTION_FLOAT(mechrep_Rsetspeed, MechMaxSpeed(mech), "Maxspeed",
-                        KPH_PER_MP);
-SETVALUE_FUNCTION_FLOAT(mechrep_Rsetjumpspeed, MechJumpSpeed(mech), "Jumpspeed",
-                        KPH_PER_MP);
-SETVALUE_FUNCTION_INT(mechrep_Rsetheatsinks, MechRealNumsinks(mech),
-                      "Heatsinks", 1);
-SETVALUE_FUNCTION_INT(mechrep_Rsetlrsrange, MechLRSRange(mech), "LRSrange", 1);
-SETVALUE_FUNCTION_INT(mechrep_Rsettacrange, MechTacRange(mech), "TACrange", 1);
-SETVALUE_FUNCTION_INT(mechrep_Rsetscanrange, MechScanRange(mech), "SCANrange",
-                      1);
-SETVALUE_FUNCTION_INT(mechrep_Rsetradiorange, MechRadioRange(mech),
-                      "RADIOrange", 1);
-SETVALUE_FUNCTION_INT(mechrep_Rsettons, MechTons(mech), "Tons", 1);
+static void notify_repair_float(RepairFacility *rep, DbRef player,
+                                const char *name, float value) {
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                "%s changed to %.2f.", name, value);
+}
+
+static void notify_repair_int(RepairFacility *rep, DbRef player,
+                              const char *name, int value) {
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                "%s changed to %d.", name, value);
+}
+
+void mechrep_Rsetspeed(DbRef player, void *data, char *buffer) {
+  float value;
+  MECHREP_COMMON(1);
+  if (!parse_repair_float(rep, player, buffer, "Maxspeed", &value))
+    return;
+  value *= KPH_PER_MP;
+  mech_maximum_speed_set(mech, value);
+  notify_repair_float(rep, player, "Maxspeed", mech_maximum_speed(mech));
+}
+
+void mechrep_Rsetjumpspeed(DbRef player, void *data, char *buffer) {
+  float value;
+  MECHREP_COMMON(1);
+  if (!parse_repair_float(rep, player, buffer, "Jumpspeed", &value))
+    return;
+  value *= KPH_PER_MP;
+  mech_jump_speed_set(mech, value);
+  notify_repair_float(rep, player, "Jumpspeed", mech_jump_speed(mech));
+}
+
+void mechrep_Rsetheatsinks(DbRef player, void *data, char *buffer) {
+  int value;
+  MECHREP_COMMON(1);
+  if (!parse_repair_int(rep, player, buffer, "Heatsinks", &value))
+    return;
+  mech_heat_sink_count_set(mech, value);
+  notify_repair_int(rep, player, "Heatsinks", mech_heat_sink_count(mech));
+}
+
+void mechrep_Rsetlrsrange(DbRef player, void *data, char *buffer) {
+  int value;
+  MECHREP_COMMON(1);
+  if (!parse_repair_int(rep, player, buffer, "LRSrange", &value))
+    return;
+  mech_long_range_sensor_range_set(mech, value);
+  notify_repair_int(rep, player, "LRSrange",
+                    mech_long_range_sensor_range(mech));
+}
+
+void mechrep_Rsettacrange(DbRef player, void *data, char *buffer) {
+  int value;
+  MECHREP_COMMON(1);
+  if (!parse_repair_int(rep, player, buffer, "TACrange", &value))
+    return;
+  mech_tactical_range_set(mech, value);
+  notify_repair_int(rep, player, "TACrange", mech_tactical_range(mech));
+}
+
+void mechrep_Rsetscanrange(DbRef player, void *data, char *buffer) {
+  int value;
+  MECHREP_COMMON(1);
+  if (!parse_repair_int(rep, player, buffer, "SCANrange", &value))
+    return;
+  mech_scanner_range_set(mech, value);
+  notify_repair_int(rep, player, "SCANrange", mech_scanner_range(mech));
+}
+
+void mechrep_Rsetradiorange(DbRef player, void *data, char *buffer) {
+  int value;
+  MECHREP_COMMON(1);
+  if (!parse_repair_int(rep, player, buffer, "RADIOrange", &value))
+    return;
+  mech_radio_range_set(mech, value);
+  notify_repair_int(rep, player, "RADIOrange", mech_radio_range(mech));
+}
+
+void mechrep_Rsettons(DbRef player, void *data, char *buffer) {
+  int value;
+  MECHREP_COMMON(1);
+  if (!parse_repair_int(rep, player, buffer, "Tons", &value))
+    return;
+  mech_tonnage_set(mech, value);
+  notify_repair_int(rep, player, "Tons", mech_tonnage(mech));
+}
 
 void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
   char *args[1];
@@ -287,65 +359,65 @@ void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
                   "Invalid number of arguments!");
   switch (toupper(args[0][0])) {
   case 'T':
-    MechMove(mech) = MOVE_TRACK;
+    mech_movement_type_set(mech, MOVE_TRACK);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Movement set to TRACKED");
     break;
   case 'W':
-    MechMove(mech) = MOVE_WHEEL;
+    mech_movement_type_set(mech, MOVE_WHEEL);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Movement set to WHEELED");
     break;
   case 'H':
     switch (toupper(args[0][1])) {
     case 'O':
-      MechMove(mech) = MOVE_HOVER;
+      mech_movement_type_set(mech, MOVE_HOVER);
       notify(btech_context_evaluation(rep->xcode.context), player,
              "Movement set to HOVER");
       break;
     case 'U':
-      MechMove(mech) = MOVE_HULL;
+      mech_movement_type_set(mech, MOVE_HULL);
       notify(btech_context_evaluation(rep->xcode.context), player,
              "Movement set to HULL");
       break;
     }
     break;
   case 'V':
-    MechMove(mech) = MOVE_VTOL;
+    mech_movement_type_set(mech, MOVE_VTOL);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Movement set to VTOL");
     break;
   case 'Q':
-    MechMove(mech) = MOVE_QUAD;
+    mech_movement_type_set(mech, MOVE_QUAD);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Movement set to QUAD");
     break;
   case 'B':
-    MechMove(mech) = MOVE_BIPED;
+    mech_movement_type_set(mech, MOVE_BIPED);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Movement set to BIPED");
     break;
   case 'S':
-    MechMove(mech) = MOVE_SUB;
+    mech_movement_type_set(mech, MOVE_SUB);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Movement set to SUB");
     break;
   case 'F':
     switch (toupper(args[0][1])) {
     case 'O':
-      MechMove(mech) = MOVE_FOIL;
+      mech_movement_type_set(mech, MOVE_FOIL);
       notify(btech_context_evaluation(rep->xcode.context), player,
              "Movement set to FOIL");
       break;
     case 'L':
-      MechMove(mech) = MOVE_FLY;
+      mech_movement_type_set(mech, MOVE_FLY);
       notify(btech_context_evaluation(rep->xcode.context), player,
              "Movement set to FLY");
       break;
     }
     break;
   case 'N':
-    MechMove(mech) = MOVE_NONE;
+    mech_movement_type_set(mech, MOVE_NONE);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Movement set to NONE");
     break;

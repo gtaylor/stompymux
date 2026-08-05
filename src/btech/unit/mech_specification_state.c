@@ -25,6 +25,10 @@ int mech_engine_rating(const Mech *mech) {
 
 float mech_jump_speed(const Mech *mech) { return mech->rd.jumpspeed; }
 
+void mech_jump_speed_set(Mech *mech, float speed) {
+  mech->rd.jumpspeed = speed;
+}
+
 void mech_jump_speed_lower(Mech *mech, float amount) {
   mech->rd.jumpspeed -= amount;
   if (mech->rd.jumpspeed < 0.0F)
@@ -32,6 +36,10 @@ void mech_jump_speed_lower(Mech *mech, float amount) {
 }
 
 int mech_heat_sink_count(const Mech *mech) { return mech->ud.numsinks; }
+
+void mech_heat_sink_count_set(Mech *mech, int count) {
+  mech->ud.numsinks = count;
+}
 
 void mech_heat_sink_count_remove(Mech *mech, int count) {
   mech->ud.numsinks -= count;

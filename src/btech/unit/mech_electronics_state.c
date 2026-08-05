@@ -6,6 +6,16 @@ int mech_computer_quality(const Mech *mech) { return mech->ud.computer; }
 
 int mech_radio_quality(const Mech *mech) { return mech->ud.radio; }
 
+void mech_radio_quality_set(Mech *mech, int quality) {
+  mech->ud.radio = quality;
+}
+
+int mech_radio_configuration(const Mech *mech) { return mech->ud.radioinfo; }
+
+void mech_radio_configuration_set(Mech *mech, int configuration) {
+  mech->ud.radioinfo = configuration;
+}
+
 int mech_radio_range(const Mech *mech) { return mech->ud.radio_range; }
 
 void mech_radio_range_set(Mech *mech, int range) {

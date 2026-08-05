@@ -4,6 +4,9 @@
 
 int mech_computer_quality(const Mech *mech);
 int mech_radio_quality(const Mech *mech);
+void mech_radio_quality_set(Mech *mech, int quality);
+int mech_radio_configuration(const Mech *mech);
+void mech_radio_configuration_set(Mech *mech, int configuration);
 int mech_radio_range(const Mech *mech);
 void mech_radio_range_set(Mech *mech, int range);
 void mech_radio_range_add(Mech *mech, int amount);
