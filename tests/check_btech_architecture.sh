@@ -103,6 +103,13 @@ done < <(rg -n \
   src/btech/movement/mech_ice.c || true)
 
 while IFS= read -r match; do
+  echo "$match: converted turret module uses the aggregate Mech layout"
+  status=1
+done < <(rg -n \
+  '#include "mech(_macros)?\.h"|\bmech->|\bMech[A-Z][A-Za-z0-9_]*\(|#if 0|\bnewturret\b' \
+  src/btech/movement/ds_turret.c src/btech/unit/turret.h || true)
+
+while IFS= read -r match; do
   echo "$match: converted LOS tracer accesses BattleMap layout"
   status=1
 done < <(rg -n -- '\bmap->' src/btech/sensors/los_trace.c || true)

@@ -18,9 +18,9 @@
 
 #include "special_object.h"
 
-#include "mech.h"
+#include "equipment_types.h"
 
-typedef struct {
+typedef struct Turret {
   BtechSpecialObject xcode; /* XCODE base class field */
   DbRef mynum;
 

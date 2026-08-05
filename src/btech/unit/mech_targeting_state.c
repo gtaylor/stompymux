@@ -4,6 +4,19 @@
 #include "mech_status_types.h"
 #include "section_types.h"
 
+#include <string.h>
+
+typedef struct MechTargetingOverrideStorage {
+  DbRef target;
+  int target_x;
+  int target_y;
+  int target_z;
+  int status;
+} MechTargetingOverrideStorage;
+
+static_assert(sizeof(MechTargetingOverrideStorage) <=
+              sizeof(MechTargetingOverride));
+
 void mech_targeting_lock_modes_clear(Mech *mech) {
   mech->rd.status &= ~LOCK_MODES;
 }
@@ -75,3 +88,41 @@ bool mech_movement_modes_locked(const Mech *mech) {
 bool mech_is_dodging(const Mech *mech) { return mech->rd.status2 & DODGING; }
 
 void mech_digging_clear(Mech *mech) { mech->rd.tankcritstatus &= ~DIGGING_IN; }
+
+void mech_targeting_override_begin(Mech *mech, MechTargetingOverride *override,
+                                   DbRef target, int target_x, int target_y,
+                                   int target_z, int lock_modes) {
+  const MechTargetingOverrideStorage storage = {
+      .target = mech->rd.target,
+      .target_x = mech->rd.targx,
+      .target_y = mech->rd.targy,
+      .target_z = mech->rd.targz,
+      .status = mech->rd.status,
+  };
+  *override = (MechTargetingOverride){0};
+  memcpy(override, &storage, sizeof(storage));
+  mech->rd.status = (mech->rd.status & ~LOCK_MODES) | lock_modes;
+  mech->rd.target = target;
+  mech->rd.targx = target_x;
+  mech->rd.targy = target_y;
+  mech->rd.targz = target_z;
+}
+
+void mech_targeting_override_end(Mech *mech,
+                                 const MechTargetingOverride *override,
+                                 DbRef *target, int *target_x, int *target_y,
+                                 int *target_z, int *lock_modes) {
+  MechTargetingOverrideStorage storage;
+
+  memcpy(&storage, override, sizeof(storage));
+  *target = mech->rd.target;
+  *target_x = mech->rd.targx;
+  *target_y = mech->rd.targy;
+  *target_z = mech->rd.targz;
+  *lock_modes = mech->rd.status & LOCK_MODES;
+  mech->rd.status = storage.status;
+  mech->rd.target = storage.target;
+  mech->rd.targx = storage.target_x;
+  mech->rd.targy = storage.target_y;
+  mech->rd.targz = storage.target_z;
+}

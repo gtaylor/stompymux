@@ -176,7 +176,6 @@ static void command_mech_snipe(DbRef actor, void *object, char *arguments) {
   mech_snipe(actor, object, arguments);
 }
 
-void newturret(DbRef, void **, int);
 void newfreemech(DbRef, void **, int);
 
 ECMD(f_mapblock_set);

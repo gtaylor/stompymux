@@ -3,6 +3,11 @@
 #include "mech_api_types.h"
 
 #include <stdbool.h>
+#include <stdint.h>
+
+typedef struct MechTargetingOverride {
+  uint64_t private_storage[3];
+} MechTargetingOverride;
 
 void mech_targeting_lock_modes_clear(Mech *mech);
 void mech_targeting_aim_reset(Mech *mech);
@@ -30,3 +35,10 @@ bool mech_targeting_has_specific_aim(const Mech *mech);
 bool mech_movement_modes_locked(const Mech *mech);
 bool mech_is_dodging(const Mech *mech);
 void mech_digging_clear(Mech *mech);
+void mech_targeting_override_begin(Mech *mech, MechTargetingOverride *override,
+                                   DbRef target, int target_x, int target_y,
+                                   int target_z, int lock_modes);
+void mech_targeting_override_end(Mech *mech,
+                                 const MechTargetingOverride *override,
+                                 DbRef *target, int *target_x, int *target_y,
+                                 int *target_z, int *lock_modes);

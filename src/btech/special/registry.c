@@ -91,8 +91,8 @@ const BtechSpecialObjectDefinition SpecialObjects[BTECH_SPECIAL_OBJECT_COUNT] =
       POWER_NONE},
      {"AUTOPILOT", autopilotcommands, sizeof(Autopilot), auto_newautopilot, 0,
       NULL, POWER_NONE},
-     {"TURRET", turretcommands, sizeof(Turret), newturret, 0, NULL,
-      POWER_NONE}};
+     {"TURRET", turretcommands, sizeof(Turret), turret_lifecycle_update, 0,
+      NULL, POWER_NONE}};
 
 #define NUM_SPECIAL_OBJECTS BTECH_SPECIAL_OBJECT_COUNT
 

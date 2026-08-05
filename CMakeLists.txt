@@ -274,6 +274,17 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_lifecycle COMMAND btech_lifecycle_test)
 
+  add_executable(btech_targeting_test tests/btech_targeting.c
+    ${BTECH_SOURCE_DIR}/unit/mech_targeting_state.c)
+  target_compile_definitions(btech_targeting_test PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(btech_targeting_test PRIVATE btmux_options)
+  target_include_directories(btech_targeting_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_targeting COMMAND btech_targeting_test)
+
   add_executable(btech_parts_test tests/btech_parts.c
     ${BTECH_SOURCE_DIR}/unit/mech_parts.c)
   target_compile_definitions(btech_parts_test PRIVATE BTECH_INTERNAL=1)

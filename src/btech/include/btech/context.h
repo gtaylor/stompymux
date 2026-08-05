@@ -54,6 +54,9 @@ CommandContext *btech_context_command(BtechContext *context);
 EvaluationContext *btech_context_evaluation(BtechContext *context);
 GameDatabase *btech_context_database(BtechContext *context);
 bool btech_context_combat_arcs_enabled(const BtechContext *context);
+void btech_context_combat_arcs_override_set(BtechContext *context, int arcs);
+void btech_context_combat_pilot_override_set(BtechContext *context,
+                                             BtechObjectId pilot);
 bool btech_context_seismic_detects_stopped_units(const BtechContext *context);
 int btech_context_movement_slowdown_mode(const BtechContext *context);
 int btech_context_event_tick(const BtechContext *context);

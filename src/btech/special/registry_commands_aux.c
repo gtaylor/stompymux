@@ -58,7 +58,6 @@ static void command_map_setconditions(DbRef actor, void *object,
   map_setconditions(actor, object, arguments);
 }
 
-void newturret(DbRef, void **, int);
 void newfreemech(DbRef, void **, int);
 
 ECMD(f_mapblock_set);

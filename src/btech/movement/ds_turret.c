@@ -10,15 +10,17 @@
 
 #include "btech/context.h"
 #include "legacy_macros.h"
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_combat_api.h"
 #include "mech_contacts_api.h"
+#include "mech_crew_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_maps_api.h"
 #include "mech_move_api.h"
 #include "mech_scan_api.h"
 #include "mech_status_api.h"
+#include "mech_targeting_api.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
@@ -26,203 +28,275 @@
 #include "registry_api.h"
 #include "turret.h"
 
-#define LOCK_FUDGE(mech, tur)                                                  \
-  if (tur->gunner > 0)                                                         \
-    mech->xcode.context->combat_overrides.pilot = tur->gunner;                 \
-  stored_status = MechStatus(mech);                                            \
-  stored_target = MechTarget(mech);                                            \
-  stored_targx = MechTargX(mech);                                              \
-  stored_targy = MechTargY(mech);                                              \
-  stored_targz = MechTargZ(mech);                                              \
-  MechStatus(mech) &= ~LOCK_MODES;                                             \
-  MechStatus(mech) |= tur->lockmode;                                           \
-  mech->xcode.context->combat_overrides.arcs = tur->arcs;                      \
-  MechTarget(mech) = tur->target;                                              \
-  MechTargX(mech) = tur->targx;                                                \
-  MechTargY(mech) = tur->targy;                                                \
-  MechTargZ(mech) = tur->targz
+typedef struct TurretTargetingScope {
+  MechTargetingOverride targeting;
+} TurretTargetingScope;
 
-#define LOCK_FUDGE_R(mech, tur)                                                \
-  mech->xcode.context->combat_overrides.pilot = 0;                             \
-  tur->target = MechTarget(mech);                                              \
-  tur->targx = MechTargX(mech);                                                \
-  tur->targy = MechTargY(mech);                                                \
-  tur->targz = MechTargZ(mech);                                                \
-  tur->lockmode = (MechStatus(mech) & LOCK_MODES);                             \
-  MechStatus(mech) = stored_status;                                            \
-  MechTarget(mech) = stored_target;                                            \
-  MechTargX(mech) = stored_targx;                                              \
-  MechTargY(mech) = stored_targy;                                              \
-  MechTargZ(mech) = stored_targz;                                              \
-  mech->xcode.context->combat_overrides.arcs = 0;
+static Mech *turret_parent_mech(DbRef player, Turret *tur,
+                                bool require_gunner) {
+  Mech *mech = btech_context_find_object(tur->xcode.context, tur->parent);
 
-#define LOCK_FUDGE_VARS                                                        \
-  short stored_targx, stored_targy, stored_targz;                              \
-  DbRef stored_target;                                                         \
-  int stored_status;
+  if (!btech_context_is_mech(tur->xcode.context, tur->parent)) {
+    notify(btech_context_evaluation(tur->xcode.context), player,
+           "Error: Turret's parentage is unknown.");
+    return nullptr;
+  }
+  if (!require_gunner)
+    return mech;
+  if (tur->gunner < 0) {
+    notify(btech_context_evaluation(tur->xcode.context), player,
+           "The turret hasn't been initialized yet!");
+    return nullptr;
+  }
+  if (player != tur->gunner) {
+    notify(btech_context_evaluation(tur->xcode.context), player,
+           "You aren't the registered gunner! Go 'way!");
+    return nullptr;
+  }
+  if (player == mech_pilot_dbref(mech)) {
+    notify(btech_context_evaluation(tur->xcode.context), player,
+           "You'll pilot and gun at once? Yah right :P");
+    return nullptr;
+  }
+  return mech;
+}
 
-#define TUR_BASE                                                               \
-  Turret *tur = (Turret *)data;                                                \
-  [[maybe_unused]] Mech *mech =                                                \
-      btech_context_find_object(tur->xcode.context, tur->parent);              \
-  DOCHECK_CONTEXT(tur->xcode.context,                                          \
-                  !btech_context_is_mech(tur->xcode.context, tur->parent),     \
-                  "Error: Turret's parentage is unknown.");
+static void turret_targeting_scope_enter(TurretTargetingScope *scope,
+                                         Turret *tur, Mech *mech) {
+  if (tur->gunner > 0)
+    btech_context_combat_pilot_override_set(tur->xcode.context, tur->gunner);
+  mech_targeting_override_begin(mech, &scope->targeting, tur->target,
+                                tur->targx, tur->targy, tur->targz,
+                                tur->lockmode);
+  btech_context_combat_arcs_override_set(tur->xcode.context, tur->arcs);
+}
 
-#define TUR_COMMON                                                             \
-  TUR_BASE                                                                     \
-  DOCHECK_CONTEXT(tur->xcode.context, tur->gunner < 0,                         \
-                  "The turret hasn't been initialized yet!");                  \
-  DOCHECK_CONTEXT(tur->xcode.context, player != tur->gunner,                   \
-                  "You aren't the registered gunner! Go 'way!");               \
-  DOCHECK_CONTEXT(tur->xcode.context, player == MechPilot(mech),               \
-                  "You'll pilot and gun at once? Yah right :P");
+static void turret_targeting_scope_leave(TurretTargetingScope *scope,
+                                         Turret *tur, Mech *mech) {
+  int target_x;
+  int target_y;
+  int target_z;
 
-#define TUR_GCOMMON                                                            \
-  LOCK_FUDGE_VARS                                                              \
-  TUR_COMMON                                                                   \
-  LOCK_FUDGE(mech, tur)
+  btech_context_combat_pilot_override_set(tur->xcode.context, 0);
+  mech_targeting_override_end(mech, &scope->targeting, &tur->target, &target_x,
+                              &target_y, &target_z, &tur->lockmode);
+  tur->targx = target_x;
+  tur->targy = target_y;
+  tur->targz = target_z;
+  btech_context_combat_arcs_override_set(tur->xcode.context, 0);
+}
 
 void turret_addtic(DbRef player, void *data, char *buffer) {
-#if 0
-	TUR_COMMON;
-	addtic_sub(player, tur->tic, mech, buffer);
-#endif
+  (void)player;
+  (void)data;
+  (void)buffer;
 }
 
 void turret_deltic(DbRef player, void *data, char *buffer) {
-#if 0
-	TUR_COMMON;
-	deltic_sub(player, tur->tic, mech, buffer);
-#endif
+  (void)player;
+  (void)data;
+  (void)buffer;
 }
 
 void turret_listtic(DbRef player, void *data, char *buffer) {
-#if 0
-	TUR_COMMON;
-	listtic_sub(player, tur->tic, mech, buffer);
-#endif
+  (void)player;
+  (void)data;
+  (void)buffer;
 }
 
 void turret_cleartic(DbRef player, void *data, char *buffer) {
-#if 0
-	TUR_COMMON;
-	cleartic_sub(player, tur->tic, buffer);
-#endif
+  (void)player;
+  (void)data;
+  (void)buffer;
 }
 
 void turret_firetic(DbRef player, void *data, char *buffer) {
-#if 0
-	TUR_GCOMMON;
-	firetic_sub(player, tur->tic, mech, buffer);
-	LOCK_FUDGE_R(mech, tur);
-#endif
+  (void)player;
+  (void)data;
+  (void)buffer;
 }
 
 void turret_bearing(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_bearing(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_eta(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_eta(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_findcenter(DbRef player, void *data, char *buffer) {
-  TUR_COMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
   mech_findcenter(player, mech, buffer);
 }
 
 void turret_fireweapon(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_fireweapon(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_settarget(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_settarget(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_lrsmap(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_lrsmap(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_navigate(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_navigate(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_range(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_range(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_sight(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_sight(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_tacmap(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_tacmap(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_contacts(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_contacts(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_critstatus(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_critstatus(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_report(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_report(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_scan(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_scan(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_status(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_status(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
 void turret_weaponspecs(DbRef player, void *data, char *buffer) {
-  TUR_GCOMMON;
+  Turret *tur = data;
+  Mech *mech = turret_parent_mech(player, tur, true);
+  if (mech == nullptr)
+    return;
+  TurretTargetingScope scope;
+  turret_targeting_scope_enter(&scope, tur, mech);
   mech_weaponspecs(player, mech, buffer);
-  LOCK_FUDGE_R(mech, tur);
+  turret_targeting_scope_leave(&scope, tur, mech);
 }
 
-#define SPECIAL_FREE 0
-#define SPECIAL_ALLOC 1
+enum { TURRET_LIFECYCLE_ALLOC = 1 };
 
 /* Alloc/free routine */
-void newturret(DbRef key, void **data, int selector) {
+void turret_lifecycle_update(DbRef key, void **data, int selector) {
   Turret *new = *data;
 
   switch (selector) {
-  case SPECIAL_ALLOC:
+  case TURRET_LIFECYCLE_ALLOC:
     new->mynum = key;
     new->target = -1;
     new->targx = -1;
@@ -232,7 +306,9 @@ void newturret(DbRef key, void **data, int selector) {
 }
 
 void turret_initialize(DbRef player, void *data, char *buffer) {
-  TUR_BASE;
+  Turret *tur = data;
+  if (turret_parent_mech(player, tur, false) == nullptr)
+    return;
   DOCHECK_CONTEXT(
       tur->xcode.context,
       player != tur->gunner &&
@@ -252,7 +328,9 @@ void turret_initialize(DbRef player, void *data, char *buffer) {
 }
 
 void turret_deinitialize(DbRef player, void *data, char *buffer) {
-  TUR_BASE;
+  Turret *tur = data;
+  if (turret_parent_mech(player, tur, false) == nullptr)
+    return;
   DOCHECK_CONTEXT(tur->xcode.context, player != tur->gunner,
                   "You aren't gunner!");
   notify_except(
