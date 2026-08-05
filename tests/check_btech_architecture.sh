@@ -464,6 +464,13 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "(mech|mech_macros)\.h"|mech->|\b(MechStatus|MechStatus2|MechCritStatus|MechTankCritStatus|MechType|MechMove|MechSpeed|MechDesiredSpeed|MechVerticalSpeed|MechFacing|MechDesiredFacing|MechTurretFacing|MechPilot|MechCarrying|MechSpecials|MechSwarmTarget|Fortified|Fallen|Landed|Jumping|WaterBeast|NotInWater|PerformingAction|MechDugIn|IsHulldown|Digging|Spinning|RollingT|FlyingT|AeroFuel|MMaxSpeed|WalkingSpeed|IsRunning)\s*\(' \
+  src/btech/movement/mech_move_controls.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: movement controls must use opaque unit APIs"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1

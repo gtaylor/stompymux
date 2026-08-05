@@ -30,6 +30,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .sprinting = status2 & SPRINTING,
       .stunned = (tank_critical_status & CREW_STUNNED) ||
                  (critical_status & MECH_STUNNED),
+      .performing_action = status & PERFORMING_ACTION,
       .ecm_protected =
           (status2 & ECM_PROTECTED) || ecm_active || personal_ecm_active,
       .angel_ecm_protected =
@@ -63,6 +64,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .dfa_attacking = status & DFA_ATTACK,
       .turret_jammed = tank_critical_status & TURRET_JAMMED,
       .turret_locked = tank_critical_status & TURRET_LOCKED,
+      .tail_rotor_destroyed = tank_critical_status & TAIL_ROTOR_DESTROYED,
       .torso_right = status & TORSO_RIGHT,
       .torso_left = status & TORSO_LEFT,
       .spinning = critical_status & SPINNING,
@@ -142,4 +144,11 @@ void mech_dug_in_set(Mech *mech, bool dug_in) {
     mech->rd.tankcritstatus |= DUG_IN;
   else
     mech->rd.tankcritstatus &= ~DUG_IN;
+}
+
+void mech_hidden_set(Mech *mech, bool hidden) {
+  if (hidden)
+    mech->rd.critstatus |= HIDDEN;
+  else
+    mech->rd.critstatus &= ~HIDDEN;
 }

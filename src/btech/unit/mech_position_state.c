@@ -118,6 +118,19 @@ void mech_desired_speed_set(Mech *mech, float speed) {
   mech->rd.desired_speed = speed;
 }
 
+void mech_desired_heading_set(Mech *mech, int heading) {
+  mech->rd.desiredfacing = AcceptableDegree(heading);
+}
+
+void mech_turret_heading_absolute_set(Mech *mech, int heading) {
+  mech->rd.turretfacing =
+      AcceptableDegree(heading - mech_heading_degrees(mech));
+}
+
+int mech_turret_heading_absolute(const Mech *mech) {
+  return AcceptableDegree(mech->rd.turretfacing + mech_heading_degrees(mech));
+}
+
 void mech_desired_angle_set(Mech *mech, int angle) { mech->rd.angle = angle; }
 
 void mech_vertical_speed_set(Mech *mech, float speed) {

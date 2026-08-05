@@ -19,6 +19,7 @@ typedef struct MechConditionSummary {
   bool evading;
   bool sprinting;
   bool stunned;
+  bool performing_action;
   bool ecm_protected;
   bool angel_ecm_protected;
   bool angel_ecm_disturbed;
@@ -50,6 +51,7 @@ typedef struct MechConditionSummary {
   bool dfa_attacking;
   bool turret_jammed;
   bool turret_locked;
+  bool tail_rotor_destroyed;
   bool torso_right;
   bool torso_left;
   bool spinning;
@@ -77,3 +79,4 @@ void mech_swarm_target_set(Mech *mech, DbRef target);
 void mech_fallen_set(Mech *mech, bool fallen);
 void mech_hull_down_set(Mech *mech, bool hull_down);
 void mech_dug_in_set(Mech *mech, bool dug_in);
+void mech_hidden_set(Mech *mech, bool hidden);
