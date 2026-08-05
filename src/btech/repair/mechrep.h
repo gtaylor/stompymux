@@ -13,11 +13,11 @@
  *
  */
 
-#include "mech.h"
+#pragma once
+
+#include "mech_api_types.h"
 #include "mux/server/platform.h"
 #include "special_object.h"
-
-#pragma once
 
 /* This is the silly structure that I use for the repair stuff */
 typedef struct RepairFacility {

@@ -41,7 +41,7 @@
 
 typedef struct RepairDamageTable {
   /* Each entry stores type, location, and position or amount. */
-  short entries[MAX_DAMAGES][3];
+  short entries[REPAIR_DAMAGE_CAPACITY][3];
   int count;
 } RepairDamageTable;
 

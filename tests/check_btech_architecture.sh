@@ -140,6 +140,12 @@ done < <(rg -n '\b(domino_space|mechs_in_hex|cause_damage|get_weight)\b' \
   src/btech -g '*.[ch]' || true)
 
 while IFS= read -r match; do
+  echo "$match: converted repair interface exposes the aggregate Mech layout"
+  status=1
+done < <(rg -n '#include "mech(_macros)?\.h"|\benum damage_type\b|\bMAX_DAMAGES\b' \
+  src/btech/repair/mech_tech_damages.h src/btech/repair/mechrep.h || true)
+
+while IFS= read -r match; do
   echo "$match: converted LOS tracer accesses BattleMap layout"
   status=1
 done < <(rg -n -- '\bmap->' src/btech/sensors/los_trace.c || true)

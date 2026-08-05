@@ -16,13 +16,14 @@
 
 #pragma once
 
-#include "mech.h"
+#include "equipment_types.h"
+#include "section_types.h"
 /* Added RESEAL to repair flooded sections
  * -Kipsta
  * 8/4/99
  */
 
-enum damage_type {
+typedef enum RepairDamageType {
   REATTACH,
   REPAIRP,
   REPAIRP_T,
@@ -45,7 +46,9 @@ enum damage_type {
   RESEAL,
   REPLACESUIT,
   NUM_DAMAGE_TYPES
-};
+} RepairDamageType;
 
 /* Reattachs / fixints / fixarmors, repair / reload */
-#define MAX_DAMAGES (3 * NUM_SECTIONS + 2 * NUM_SECTIONS * NUM_CRITICALS)
+enum {
+  REPAIR_DAMAGE_CAPACITY = 3 * NUM_SECTIONS + 2 * NUM_SECTIONS * NUM_CRITICALS,
+};
