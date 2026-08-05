@@ -59,6 +59,7 @@
 #include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 
 int determineDamageFromHit(Mech *mech, int wSection, int wCritSlot,
@@ -383,10 +384,10 @@ void HitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
                 (num_missiles_hit > 1 ? "s" : ""));
 
   if (tIsLBX)
-    Missile_Hit(mech, hitMech, hitX, hitY, isrear, iscritical, weapindx,
-                wFireMode, wAmmoMode, num_missiles_hit,
-                tIsLBX ? 1 : wWeapDamage, Clustersize(weapindx), LOS, bth,
-                tIsSwarmAttack);
+    Missile_Hit(
+        mech, hitMech, hitX, hitY, isrear, iscritical, weapindx, wFireMode,
+        wAmmoMode, num_missiles_hit, tIsLBX ? 1 : wWeapDamage,
+        weapon_catalogue_cluster_size(weapindx), LOS, bth, tIsSwarmAttack);
   else {
     while (num_missiles_hit) {
       if (hitMech) {

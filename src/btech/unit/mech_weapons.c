@@ -32,6 +32,12 @@ int weapon_catalogue_damage(int weapon_index) {
   return MechWeapons[weapon_index].damage;
 }
 
+int weapon_catalogue_cluster_size(int weapon_index) {
+  const struct WeaponDefinition *weapon = &MechWeapons[weapon_index];
+  return (weapon->special & (IDF | MRM | ROCKET)) && weapon->damage == 1 ? 5
+                                                                         : 1;
+}
+
 /* ASSERTION: Weapons must be located next to each other in criticals. */
 int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
                          unsigned char *weapdataarray, int *critical,

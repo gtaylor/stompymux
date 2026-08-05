@@ -13,20 +13,7 @@
 
 #pragma once
 
-#include "mech.h"
+#include "mech_api_types.h"
 
 void mech_c3_track_emit(Mech *mech, DbRef network_reference,
                         Mech *network_mech);
-
-#define Clustersize(weapindx)                                                  \
-  (((MechWeapons[weapindx].special & (IDF | MRM | ROCKET)) &&                  \
-    (MechWeapons[weapindx].damage == 1))                                       \
-       ? 5                                                                     \
-       : 1)
-
-#define Swap(val1, val2)                                                       \
-  {                                                                            \
-    rtmp = val1;                                                               \
-    val1 = val2;                                                               \
-    val2 = rtmp;                                                               \
-  }

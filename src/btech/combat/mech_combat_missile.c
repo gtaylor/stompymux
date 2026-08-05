@@ -32,7 +32,14 @@
 #include "mux/support/alloc.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
+
+static void swap_ints(int *left, int *right) {
+  int temporary = *left;
+  *left = *right;
+  *right = temporary;
+}
 
 void Missile_Hit(Mech *mech, Mech *target, int hitX, int hitY, int isrear,
                  int iscritical, int weapindx, int fireMode, int ammoMode,
@@ -120,7 +127,7 @@ void Missile_Hit(Mech *mech, Mech *target, int hitX, int hitY, int isrear,
 int MissileHitIndex(Mech *mech, Mech *hitMech, int weapindx, int wSection,
                     int wCritSlot, int glance) {
   int hit_roll;
-  int r1, r2, r3, rtmp;
+  int r1, r2, r3;
   int tHotloading =
       HotLoading(weapindx, GetPartFireMode(mech, wSection, wCritSlot));
   int wRollInc = 0;
@@ -158,9 +165,9 @@ int MissileHitIndex(Mech *mech, Mech *hitMech, int weapindx, int wSection,
   r3 = btech_random_range(mech->xcode.context, 1, 6);
 
   if (r1 > r2)
-    Swap(r1, r2);
+    swap_ints(&r1, &r2);
   if (r2 > r3)
-    Swap(r2, r3);
+    swap_ints(&r2, &r3);
 
   if (tHotloading)
     hit_roll = r1 + r2 - 2;
@@ -355,8 +362,9 @@ int MissileHitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
     Missile_Hit(mech, hitMech, hitX, hitY, isrear, iscritical, weapindx,
                 GetPartFireMode(mech, wSection, wCritSlot),
                 GetPartAmmoMode(mech, wSection, wCritSlot), hit,
-                MechWeapons[weapindx].damage, Clustersize(weapindx), LOS,
-                baseToHit, tIsSwarmAttack);
+                MechWeapons[weapindx].damage,
+                weapon_catalogue_cluster_size(weapindx), LOS, baseToHit,
+                tIsSwarmAttack);
   }
 
   return incoming - hit;

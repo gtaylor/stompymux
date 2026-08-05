@@ -59,7 +59,14 @@
 #include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
+
+static void swap_ints(int *left, int *right) {
+  int temporary = *left;
+  *left = *right;
+  *right = temporary;
+}
 
 void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                 int weapindx, int weapnum, int section, int critical,
@@ -72,7 +79,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   int ammoLoc1;
   int ammoCrit1;
   int roll;
-  int r1, r2, r3, rtmp;
+  int r1, r2, r3;
   int type = -1, modifier;
   int isarty = (IsArtillery(weapindx));
   int range_ok = 1;
@@ -169,9 +176,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     r3 = btech_random_range(mech->xcode.context, 1, 6);
     /* Sort 'em to ascending order */
     if (r1 > r2)
-      Swap(r1, r2);
+      swap_ints(&r1, &r2);
     if (r2 > r3)
-      Swap(r2, r3);
+      swap_ints(&r2, &r3);
     roll = r1 + r2;
   } else {
     if (target)
