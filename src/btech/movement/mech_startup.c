@@ -17,7 +17,7 @@
 #include <string.h>
 #include <strings.h>
 
-#include "autopilot.h"
+#include "autopilot_resume_api.h"
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btech_event.h"
@@ -25,16 +25,26 @@
 #include "command_handlers_api.h"
 #include "econ_cmds_api.h"
 #include "legacy_macros.h"
+#include "map_los_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
+#include "mech_condition_api.h"
+#include "mech_crew_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
+#include "mech_heat_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_tech_api.h"
 #include "mech_utils_api.h"
 #include "mux/objects/attrs.h"
@@ -42,12 +52,13 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 /* NOTE: Number of boot messages for both types _MUST_ match */
 
-#define BOOTCOUNT 6
+enum { BOOT_MESSAGE_COUNT = 6 };
 
-static char *const bsuit_bootmsgs[BOOTCOUNT] = {
+static const char *const bsuit_bootmsgs[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->         Initializing powerpack       <-[reset]",
     "[fg=green]->          Powerpack operational       <-[reset]",
     "[fg=green]->             Suit sealed              <-[reset]",
@@ -56,7 +67,7 @@ static char *const bsuit_bootmsgs[BOOTCOUNT] = {
     ("       [fg=green]- [fg=red]-=>[fg=white bold] All systems go![reset] "
      "[fg=red]<= [fg=green]-[reset]")};
 
-static char *const aero_bootmsgs[BOOTCOUNT] = {
+static const char *const aero_bootmsgs[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->       Main reactor is now online    <-[reset]",
     "[fg=green]->            Thrusters online         <-[reset]",
     "[fg=green]->  Main computer system is now online <-[reset]",
@@ -65,7 +76,7 @@ static char *const aero_bootmsgs[BOOTCOUNT] = {
     ("       [fg=green]- [fg=red]-=>[fg=white bold] All systems go![reset] "
      "[fg=red]<= [fg=green]-[reset]")};
 
-static char *const bootmsgs[BOOTCOUNT] = {
+static const char *const bootmsgs[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->       Main reactor is now online    <-[reset]",
     "[fg=green]->         Gyros are now stable        <-[reset]",
     "[fg=green]->  Main computer system is now online <-[reset]",
@@ -74,7 +85,7 @@ static char *const bootmsgs[BOOTCOUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static char *const hover_bootmsgs[BOOTCOUNT] = {
+static const char *const hover_bootmsgs[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->  Powerplant initialized and online  <-[reset]",
     "[fg=green]->   Checking plenum chamber status    <-[reset]",
     "[fg=green]->         Verifying fan status        <-[reset]",
@@ -83,7 +94,7 @@ static char *const hover_bootmsgs[BOOTCOUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static char *const track_bootmsgs[BOOTCOUNT] = {
+static const char *const track_bootmsgs[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->  Powerplant initialized and online  <-[reset]",
     "[fg=green]->      Auto-aligning drive wheels     <-[reset]",
     "[fg=green]->       Adjusting track tension       <-[reset]",
@@ -92,7 +103,7 @@ static char *const track_bootmsgs[BOOTCOUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static char *const wheel_bootmsgs[BOOTCOUNT] = {
+static const char *const wheel_bootmsgs[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->  Powerplant initialized and online  <-[reset]",
     "[fg=green]->  Performing steering system checks  <-[reset]",
     "[fg=green]->        Checking wheel status        <-[reset]",
@@ -101,7 +112,7 @@ static char *const wheel_bootmsgs[BOOTCOUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static char *const vtol_bootmsgs[BOOTCOUNT] = {
+static const char *const vtol_bootmsgs[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->     Initializing main powerplant    <-[reset]",
     "[fg=green]-> Main turbine online and operational <-[reset]",
     "[fg=green]->      Rotor transmission engaged     <-[reset]",
@@ -110,7 +121,7 @@ static char *const vtol_bootmsgs[BOOTCOUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static char *const naval_bootmsgs[BOOTCOUNT] = {
+static const char *const naval_bootmsgs[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->       Main reactor is now online    <-[reset]",
     "[fg=green]->  Main computer system is now online <-[reset]",
     "[fg=green]->   Hull integrity monitoring online  <-[reset]",
@@ -119,13 +130,18 @@ static char *const naval_bootmsgs[BOOTCOUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-#define SSLEN MechType(mech) == CLASS_BSUIT ? 1 : (STARTUP_TIME / BOOTCOUNT)
+static int mech_startup_step_delay(const Mech *mech) {
+  return mech_class(mech) == CLASS_BSUIT ? 1
+                                         : STARTUP_TIME / BOOT_MESSAGE_COUNT;
+}
 
 static void mech_startup_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long timer = (long)e->data2;
   BattleMap *mech_map;
-  int i;
+  int unit_class = mech_class(mech);
+  int movement_type = mech_movement_type(mech);
+  BtechContext *context = mech_context(mech);
 
   /*
    * Each *_bootmsgs[] array is a fixed set of string-literal boot messages
@@ -137,12 +153,12 @@ static void mech_startup_event(MuxEvent *e) {
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
 #pragma clang diagnostic ignored "-Wformat-security"
 #endif
-  if (is_aero(mech)) {
+  if (mech_is_aerospace_unit(mech)) {
     mech_printf(mech, MECHALL, aero_bootmsgs[timer]);
-  } else if (MechType(mech) == CLASS_BSUIT) {
+  } else if (unit_class == CLASS_BSUIT) {
     mech_printf(mech, MECHALL, bsuit_bootmsgs[timer]);
   } else
-    switch (MechMove(mech)) {
+    switch (movement_type) {
     case MOVE_HOVER:
       mech_printf(mech, MECHALL, hover_bootmsgs[timer]);
       break;
@@ -176,16 +192,17 @@ static void mech_startup_event(MuxEvent *e) {
   /* Make sure it checks pretty early in the startup */
   if (timer >= 2) {
 
-    if (InWater(mech) &&
-        (MechType(mech) == CLASS_VEH_GROUND || MechType(mech) == CLASS_VTOL ||
-         MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_AERO ||
-         MechType(mech) == CLASS_DS) &&
-        !(MechSpecials2(mech) & WATERPROOF_TECH)) {
+    if (battle_terrain_is_water(mech_real_terrain_get(mech)) &&
+        mech_position_z(mech) < 0 &&
+        (unit_class == CLASS_VEH_GROUND || unit_class == CLASS_VTOL ||
+         unit_class == CLASS_BSUIT || unit_class == CLASS_AERO ||
+         unit_class == CLASS_DS) &&
+        !(mech_technology_flags_secondary(mech) & WATERPROOF_TECH)) {
 
       mech_notify(mech, MECHALL,
                   "Water floods your engine and your unit "
                   "becomes inoperable.");
-      if (MechType(mech) == CLASS_BSUIT)
+      if (unit_class == CLASS_BSUIT)
         mech_los_broadcast(mech, "emits some bubbles and flails their arms "
                                  "around as they sink to the bottom.");
       else
@@ -196,49 +213,55 @@ static void mech_startup_event(MuxEvent *e) {
     }
   }
 
-  if (timer < BOOTCOUNT) {
-    mech_event_schedule(mech, EVENT_STARTUP, mech_startup_event, SSLEN, timer);
+  if (timer < BOOT_MESSAGE_COUNT) {
+    mech_event_schedule(mech, EVENT_STARTUP, mech_startup_event,
+                        mech_startup_step_delay(mech), timer);
     return;
   }
-  if ((mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
-    for (i = 0; i < mech_map->first_free; i++)
-      mech_map->LOSinfo[mech->mapnumber][i] = 0;
-  initialize_pc(MechPilot(mech), mech);
+  if ((mech_map = btech_context_get_map(context, mech_map_dbref(mech))))
+    battle_map_los_observer_clear(mech_map, mech_map_slot(mech));
+  initialize_pc(mech_pilot_dbref(mech), mech);
   mech_power_up(mech);
   MarkForLOSUpdate(mech);
   mech_cargo_weight_recalculate(mech);
-  UnSetMechPKiller(mech);
+  mech_player_killer_set(mech, false);
   mech_los_broadcast(mech, "powers up!");
-  MechVerticalSpeed(mech) = 0;
-  EvalBit(
-      MechSpecials(mech), SS_ABILITY,
-      ((MechPilot(mech) > 0 &&
-        is_player(mech->xcode.context->database, MechPilot(mech)))
-           ? char_getvalue(mech->xcode.context, MechPilot(mech), "Sixth_Sense")
-           : 0));
-  if (FlyingT(mech)) {
-    if (MechZ(mech) <= MechElevation(mech))
-      MechStatus(mech) |= LANDED;
+  mech_vertical_speed_set(mech, 0.0F);
+  mech_sixth_sense_set(
+      mech,
+      mech_pilot_dbref(mech) > 0 &&
+              is_player(btech_context_database(context), mech_pilot_dbref(mech))
+          ? char_getvalue(context, mech_pilot_dbref(mech), "Sixth_Sense")
+          : 0);
+  if (mech_is_flying_type(mech)) {
+    char terrain = mech_real_terrain_get(mech);
+    int elevation = mech_position_elevation_magnitude(mech);
+    int surface_elevation =
+        terrain == BATTLE_TERRAIN_WATER || terrain == BATTLE_TERRAIN_ICE
+            ? -elevation
+            : elevation;
+    if (mech_position_z(mech) <= surface_elevation)
+      mech_landed_set(mech, true);
   }
-  MechComm(mech) = DEFAULT_COMM;
-  if (is_player(mech->xcode.context->database, MechPilot(mech)) &&
-      !is_quiet(mech->xcode.context->database, mech->mynum)) {
-    MechComm(mech) = char_getskilltarget(mech->xcode.context, MechPilot(mech),
-                                         "Comm-Conventional", 0);
-    MechPer(mech) = char_getskilltarget(mech->xcode.context, MechPilot(mech),
-                                        "Perception", 0);
+  mech_communication_skill_set(mech, DEFAULT_COMM);
+  if (is_player(btech_context_database(context), mech_pilot_dbref(mech)) &&
+      !is_quiet(btech_context_database(context), mech_dbref(mech))) {
+    mech_communication_skill_set(
+        mech, char_getskilltarget(context, mech_pilot_dbref(mech),
+                                  "Comm-Conventional", 0));
+    mech_perception_target_set(
+        mech,
+        char_getskilltarget(context, mech_pilot_dbref(mech), "Perception", 0));
   } else {
-    MechComm(mech) = 6;
-    MechPer(mech) = 6;
+    mech_communication_skill_set(mech, 6);
+    mech_perception_target_set(mech, 6);
   }
-  MechCommLast(mech) = 0;
-  MechLastStartup(mech) = mech->xcode.context->clock->now;
-  if (is_aero(mech) && !Landed(mech)) {
-    MechDesiredAngle(mech) = -90;
-    MechStartFX(mech) = 0.0;
-    MechStartFY(mech) = 0.0;
-    MechStartFZ(mech) = 0.0;
-    MechDesiredSpeed(mech) = MechMaxSpeed(mech);
+  mech_communication_last_tick_set(mech, 0);
+  mech_last_startup_set(mech, (int)btech_context_now(context));
+  if (mech_is_aerospace_unit(mech) && !mech_is_landed(mech)) {
+    mech_desired_angle_set(mech, -90);
+    mech_motion_vector_reset(mech);
+    mech_desired_speed_set(mech, mech_maximum_speed(mech));
     mech_maybe_move(mech);
   }
   autopilot_resume_for_mech(mech);
@@ -247,129 +270,130 @@ static void mech_startup_event(MuxEvent *e) {
 void mech_startup(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   int n;
+  int unit_class = mech_class(mech);
+  BtechContext *context = mech_context(mech);
+  GameDatabase *database = btech_context_database(context);
 
   cch(MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON);
   skipws(buffer);
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  !(is_good_obj(mech->xcode.context->database, player) &&
-                    (is_alive(mech->xcode.context->database, player) ||
-                     is_xcode(mech->xcode.context->database, player))),
+  DOCHECK_CONTEXT(context,
+                  !(is_good_obj(database, player) &&
+                    (is_alive(database, player) || is_xcode(database, player))),
                   "That is not a valid player!");
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  MechType(mech) == CLASS_MW && Started(mech),
+  DOCHECK_CONTEXT(context, unit_class == CLASS_MW && mech_is_started(mech),
                   "You're up and about already!");
   DOCHECK_CONTEXT(
-      mech->xcode.context, Towed(mech),
+      context, mech_is_towed(mech),
       "You're being towed! Wait for drop-off before starting again!");
-  DOCHECK_CONTEXT(mech->xcode.context, mech->mapindex < 0,
-                  "You are not on any map!");
-  DOCHECK_CONTEXT(mech->xcode.context, Destroyed(mech),
-                  "This 'Mech is destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context, Started(mech),
+  DOCHECK_CONTEXT(context, mech_map_dbref(mech) < 0, "You are not on any map!");
+  DOCHECK_CONTEXT(context, mech_is_destroyed(mech), "This 'Mech is destroyed!");
+  DOCHECK_CONTEXT(context, mech_is_started(mech),
                   "This 'Mech is already started!");
-  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STARTUP),
+  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_STARTUP),
                   "This 'Mech is already starting!");
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH),
+  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH),
                   "You're way too busy putting out fires!");
   n = figure_latest_tech_event(mech);
   DOCHECK_CONTEXT(
-      mech->xcode.context, n,
+      context, n,
       "This 'Mech is still under repairs (see checkstatus for more info)");
-  DOCHECK_CONTEXT(mech->xcode.context, MechHeat(mech) > 30.,
+  DOCHECK_CONTEXT(context, mech_excess_heat(mech) > 30.0F,
                   "This 'Mech is too hot to start back up!");
   DOCHECK_CONTEXT(
-      mech->xcode.context,
-      is_in_character(mech->xcode.context->database, mech->mynum) &&
-          !is_wizard(mech->xcode.context->database, player) &&
-          (char_lookupplayer(mech->xcode.context, GOD, GOD, 0,
-                             btech_attribute_read(
-                                 mech->xcode.context->database, mech->mynum,
-                                 A_PILOTNUM, (char[LBUF_SIZE]){0})) != player),
+      context,
+      is_in_character(database, mech_dbref(mech)) &&
+          !is_wizard(database, player) &&
+          (char_lookupplayer(
+               context, GOD, GOD, 0,
+               btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
+                                    (char[LBUF_SIZE]){0})) != player),
       "This isn't your mech!");
   n = 0;
   if (*buffer && !strncasecmp(buffer, "override", strlen(buffer))) {
-    DOCHECK_CONTEXT(mech->xcode.context,
-                    !is_wizard(mech->xcode.context->database, player),
+    DOCHECK_CONTEXT(context, !is_wizard(database, player),
                     "Insufficient access!");
-    n = BOOTCOUNT - 1;
+    n = BOOT_MESSAGE_COUNT - 1;
   }
-  MechPilot(mech) = player;
+  mech_pilot_dbref_set(mech, player);
 
-  /*   if (is_in_character(mech->xcode.context->database,
-   * mech->mynum)) */
   /* Initialize the PilotDamage from the new pilot */
   fix_pilotdamage(mech, player);
   mech_notify(mech, MECHALL, "Startup Cycle commencing...");
-  MechSections(mech)[RLEG].recycle = 0;
-  MechSections(mech)[LLEG].recycle = 0;
-  MechSections(mech)[RARM].recycle = 0;
-  MechSections(mech)[LARM].recycle = 0;
-  MechSections(mech)[RTORSO].recycle = 0;
-  MechSections(mech)[LTORSO].recycle = 0;
-  mech_event_schedule(mech, EVENT_STARTUP, mech_startup_event,
-                      (n || MechType(mech) == CLASS_MW) ? 1 : SSLEN,
-                      (long)(MechType(mech) == CLASS_MW ? BOOTCOUNT - 1 : n));
+  mech_set_recycle_limb(mech, RLEG, 0);
+  mech_set_recycle_limb(mech, LLEG, 0);
+  mech_set_recycle_limb(mech, RARM, 0);
+  mech_set_recycle_limb(mech, LARM, 0);
+  mech_set_recycle_limb(mech, RTORSO, 0);
+  mech_set_recycle_limb(mech, LTORSO, 0);
+  mech_event_schedule(
+      mech, EVENT_STARTUP, mech_startup_event,
+      (n || unit_class == CLASS_MW) ? 1 : mech_startup_step_delay(mech),
+      (long)(unit_class == CLASS_MW ? BOOT_MESSAGE_COUNT - 1 : n));
 }
 
 void mech_shutdown(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
+  int unit_class = mech_class(mech);
+  int movement_type = mech_movement_type(mech);
+  BtechContext *context = mech_context(mech);
+  MechConditionSummary condition;
 
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  (!Started(mech) && !mech_event_count(mech, EVENT_STARTUP)),
-                  "The 'mech hasn't been started yet!");
-  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW,
+  DOCHECK_CONTEXT(
+      context,
+      (!mech_is_started(mech) && !mech_event_count(mech, EVENT_STARTUP)),
+      "The 'mech hasn't been started yet!");
+  DOCHECK_CONTEXT(context, unit_class == CLASS_MW,
                   "You snore for a while.. and then _start_ yourself back up.");
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  IsDS(mech) && !Landed(mech) &&
-                      !is_wizard(mech->xcode.context->database, player),
+  DOCHECK_CONTEXT(context,
+                  mech_is_dropship(mech) && !mech_is_landed(mech) &&
+                      !is_wizard(btech_context_database(context), player),
                   "No shutdowns in mid-air! Are you suicidal?");
-  if (MechPilot(mech) == -1)
+  if (mech_pilot_dbref(mech) == -1)
     return;
   if (mech_event_count(mech, EVENT_STARTUP)) {
     mech_notify(mech, MECHALL, "The startup sequence has been aborted.");
     mech_event_cancel(mech, EVENT_STARTUP);
-    MechPilot(mech) = -1;
+    mech_pilot_dbref_set(mech, -1);
     return;
   }
   mech_printf(mech, MECHALL, "%s has been shutdown!",
-              IsDS(mech)                      ? "Dropship"
-              : is_aero(mech)                 ? "Fighter"
-              : MechType(mech) == CLASS_BSUIT ? "Suit"
-              : ((MechMove(mech) == MOVE_HOVER) ||
-                 (MechMove(mech) == MOVE_TRACK) ||
-                 (MechMove(mech) == MOVE_WHEEL))
+              mech_is_dropship(mech)         ? "Dropship"
+              : mech_is_aerospace_unit(mech) ? "Fighter"
+              : unit_class == CLASS_BSUIT    ? "Suit"
+              : ((movement_type == MOVE_HOVER) ||
+                 (movement_type == MOVE_TRACK) || (movement_type == MOVE_WHEEL))
                   ? "Vehicle"
-              : MechMove(mech) == MOVE_VTOL ? "VTOL"
-                                            : "Mech");
+              : movement_type == MOVE_VTOL ? "VTOL"
+                                           : "Mech");
 
   /*
    * Fixed by Kipsta so searchlights shutoff when the mech shuts down
    */
 
-  if (MechStatus2(mech) & SLITE_ON) {
+  if (mech_searchlight_active(mech)) {
     mech_notify(mech, MECHALL, "Your searchlight shuts off.");
-    MechStatus2(mech) &= ~SLITE_ON;
-    MechCritStatus(mech) &= ~SLITE_LIT;
+    mech_searchlight_active_set(mech, false);
+    mech_illumination_set(mech, false);
   }
 
-  if (MechStatus(mech) & TORSO_RIGHT) {
+  condition = mech_condition_summary(mech);
+  if (condition.torso_right) {
     mech_notify(mech, MECHSTARTED, "Torso rotated back to center for shutdown");
-    MechStatus(mech) &= ~TORSO_RIGHT;
   }
-  if (MechStatus(mech) & TORSO_LEFT) {
+  if (condition.torso_left) {
     mech_notify(mech, MECHSTARTED, "Torso rotated back to center for shutdown");
-    MechStatus(mech) &= ~TORSO_LEFT;
   }
-  if (MechMove(mech) != MOVE_NONE && MechType(mech) != CLASS_VEH_NAVAL &&
-      ((MechType(mech) == CLASS_MECH && Jumping(mech)) ||
-       (MechType(mech) != CLASS_MECH &&
-        MechZ(mech) > MechUpperElevation(mech) && MechZ(mech) < ORBIT_Z))) {
+  mech_torso_twist_set(mech, MECH_TORSO_CENTER);
+  if (movement_type != MOVE_NONE && unit_class != CLASS_VEH_NAVAL &&
+      ((unit_class == CLASS_MECH && mech_is_jumping(mech)) ||
+       (unit_class != CLASS_MECH &&
+        mech_position_z(mech) > mech_upper_surface_elevation(mech) &&
+        mech_position_z(mech) < ORBIT_Z))) {
     mech_notify(mech, MECHALL, "You start free-fall.. Enjoy the ride!");
     mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
-  } else if (MechSpeed(mech) > MP1) {
+  } else if (mech_current_speed(mech) > MP1) {
     mech_notify(mech, MECHALL, "Your systems stop in mid-motion!");
-    if (MechType(mech) == CLASS_MECH)
+    if (unit_class == CLASS_MECH)
       mech_los_broadcast(mech, "stops in mid-motion, and falls!");
     else {
       mech_notify(mech, MECHALL,

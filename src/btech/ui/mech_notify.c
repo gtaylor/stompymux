@@ -335,7 +335,7 @@ void mech_notify(Mech *mech, int type, const char *buffer) {
   }
 }
 
-void mech_printf(Mech *mech, int type, char *format, ...) {
+void mech_printf(Mech *mech, int type, const char *format, ...) {
   char buffer[LBUF_SIZE];
   int i;
   va_list ap;

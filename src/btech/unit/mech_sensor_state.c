@@ -112,6 +112,10 @@ static void mech_status2_flag_set(Mech *mech, int flag, bool enabled) {
     mech->rd.status2 &= ~flag;
 }
 
+void mech_searchlight_active_set(Mech *mech, bool active) {
+  mech_status2_flag_set(mech, SLITE_ON, active);
+}
+
 void mech_ecm_countered_set(Mech *mech, bool countered) {
   mech_status2_flag_set(mech, ECM_COUNTERED, countered);
 }

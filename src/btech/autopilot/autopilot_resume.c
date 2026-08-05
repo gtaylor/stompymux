@@ -1,4 +1,5 @@
 #include "autopilot.h"
+#include "autopilot_resume_api.h"
 
 #include "btech/context.h"
 #include "mech_identity_api.h"

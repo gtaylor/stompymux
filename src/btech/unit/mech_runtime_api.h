@@ -24,6 +24,7 @@ int mech_cocoon_integrity(const Mech *mech);
 int mech_seen_count(const Mech *mech);
 void mech_cocoon_integrity_set(Mech *mech, int integrity);
 void mech_landed_set(Mech *mech, bool landed);
+void mech_last_startup_set(Mech *mech, int timestamp);
 void mech_movement_stop(Mech *mech);
 void mech_last_use_reset(Mech *mech);
 DbRef mech_autopilot_dbref(const Mech *mech);

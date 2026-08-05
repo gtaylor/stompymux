@@ -98,6 +98,13 @@ void mech_sprinting_set(Mech *mech, bool sprinting) {
     mech->rd.status2 &= ~SPRINTING;
 }
 
+void mech_player_killer_set(Mech *mech, bool enabled) {
+  if (enabled)
+    mech->rd.mech_prefs |= MECHPREF_PKILL;
+  else
+    mech->rd.mech_prefs &= ~MECHPREF_PKILL;
+}
+
 void mech_partial_cover_set(Mech *mech, bool covered) {
   if (covered)
     mech->rd.status |= PARTIAL_COVER;

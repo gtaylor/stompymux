@@ -32,4 +32,6 @@ void mech_position_elevation_set(Mech *mech, int elevation);
 void mech_position_z_set(Mech *mech, int z);
 void mech_desired_speed_set(Mech *mech, float speed);
 void mech_desired_angle_set(Mech *mech, int angle);
+void mech_vertical_speed_set(Mech *mech, float speed);
+void mech_motion_vector_reset(Mech *mech);
 void mech_position_land_if_flying(Mech *mech);

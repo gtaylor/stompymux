@@ -78,3 +78,10 @@ void mech_cargo_weight_set(Mech *mech, int weight) {
   mech->rd.cargo_weight = weight;
   mech->rd.critstatus &= ~LOAD_OK;
 }
+
+void mech_sixth_sense_set(Mech *mech, bool enabled) {
+  if (enabled)
+    mech->rd.specials |= SS_ABILITY;
+  else
+    mech->rd.specials &= ~SS_ABILITY;
+}

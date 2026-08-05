@@ -80,6 +80,10 @@ void mech_landed_set(Mech *mech, bool landed) {
     mech->rd.status &= ~LANDED;
 }
 
+void mech_last_startup_set(Mech *mech, int timestamp) {
+  mech->rd.last_startup = timestamp;
+}
+
 void mech_movement_stop(Mech *mech) {
   mech->rd.speed = 0.0F;
   mech->rd.desired_speed = 0.0F;

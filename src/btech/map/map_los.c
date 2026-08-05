@@ -71,6 +71,11 @@ void battle_map_los_flags_set(BattleMap *map, int observer_index,
   map->LOSinfo[observer_index][target_index] = flags;
 }
 
+void battle_map_los_observer_clear(BattleMap *map, int observer_index) {
+  for (int target_index = 0; target_index < map->first_free; target_index++)
+    map->LOSinfo[observer_index][target_index] = 0;
+}
+
 int los_map_hex_index(HexLosMap *map_info, int x, int y) {
   if (x < map_info->startx || x > map_info->startx + map_info->xsize ||
       y < map_info->starty || y > map_info->starty + map_info->ysize) {

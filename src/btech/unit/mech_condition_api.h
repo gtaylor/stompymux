@@ -70,4 +70,5 @@ void mech_arms_center(Mech *mech);
 void mech_arms_flip(Mech *mech);
 void mech_evading_set(Mech *mech, bool evading);
 void mech_sprinting_set(Mech *mech, bool sprinting);
+void mech_player_killer_set(Mech *mech, bool enabled);
 void mech_partial_cover_set(Mech *mech, bool covered);

@@ -17,3 +17,4 @@ unsigned short battle_map_los_flags(const BattleMap *map, int observer_index,
                                     int target_index);
 void battle_map_los_flags_set(BattleMap *map, int observer_index,
                               int target_index, unsigned short flags);
+void battle_map_los_observer_clear(BattleMap *map, int observer_index);

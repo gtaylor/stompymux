@@ -26,6 +26,7 @@ bool mech_supports_sensor_requirement(const Mech *mech, int capability_set,
                                       int signed_capability);
 bool mech_searchlight_warning_enabled(const Mech *mech);
 void mech_illumination_set(Mech *mech, bool illuminated);
+void mech_searchlight_active_set(Mech *mech, bool active);
 void mech_ecm_countered_set(Mech *mech, bool countered);
 void mech_ecm_protected_set(Mech *mech, bool protected);
 void mech_angel_ecm_protected_set(Mech *mech, bool protected);

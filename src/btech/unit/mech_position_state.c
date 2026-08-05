@@ -98,6 +98,16 @@ void mech_desired_speed_set(Mech *mech, float speed) {
 
 void mech_desired_angle_set(Mech *mech, int angle) { mech->rd.angle = angle; }
 
+void mech_vertical_speed_set(Mech *mech, float speed) {
+  mech->rd.verticalspeed = speed;
+}
+
+void mech_motion_vector_reset(Mech *mech) {
+  mech->rd.startfx = 0.0F;
+  mech->rd.startfy = 0.0F;
+  mech->rd.startfz = 0.0F;
+}
+
 void mech_position_land_if_flying(Mech *mech) {
   bool const is_dropship =
       mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS;

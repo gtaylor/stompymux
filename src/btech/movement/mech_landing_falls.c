@@ -85,6 +85,10 @@ int mech_drop_height_above_surface(Mech *mech) {
   return MechsElevation(mech) - DropGetElevation(mech);
 }
 
+int mech_upper_surface_elevation(Mech *mech) {
+  return MechUpperElevation(mech);
+}
+
 void LandMech(Mech *mech) {
   Mech *target;
   BattleMap *mech_map =

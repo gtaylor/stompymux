@@ -29,3 +29,4 @@ int mech_structural_integrity(const Mech *mech);
 int mech_original_structural_integrity(const Mech *mech);
 void mech_maximum_fuel_set(Mech *mech, int fuel);
 void mech_cargo_weight_set(Mech *mech, int weight);
+void mech_sixth_sense_set(Mech *mech, bool enabled);

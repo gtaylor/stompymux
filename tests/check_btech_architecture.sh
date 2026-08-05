@@ -152,6 +152,13 @@ while IFS= read -r match; do
 done < <(rg -n '\binitiate_ood\b' src/btech -g '*.[ch]' || true)
 
 while IFS= read -r match; do
+  echo "$match: converted startup module uses an aggregate Mech or map layout"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\b(mech|mech_map)->|\b(Mech(Type|Move|Specials2?|Z|Elevation|Pilot|VerticalSpeed|Status2?|CritStatus|Comm|Per|CommLast|LastStartup|DesiredAngle|DesiredSpeed|MaxSpeed|StartF[XYZ]|Heat|Sections|Speed)|InWater|FlyingT|Landed|Jumping|Started|Destroyed|Towed|IsDS|is_aero|UnSetMechPKiller)\(' \
+  src/btech/movement/mech_startup.c || true)
+
+while IFS= read -r match; do
   echo "$match: converted repair interface exposes the aggregate Mech layout"
   status=1
 done < <(rg -n '#include "mech(_macros)?\.h"|\benum damage_type\b|\bMAX_DAMAGES\b' \
