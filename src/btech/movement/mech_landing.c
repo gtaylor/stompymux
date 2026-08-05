@@ -50,6 +50,7 @@
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
 #include "mech_stagger.h"
+#include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
@@ -61,6 +62,10 @@
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
+
+static int mech_jump_to_hit_recycle(const Mech *mech) {
+  return JUMP_TICK * 12 / (mech_class(mech) == CLASS_BSUIT ? 4 : 1);
+}
 
 void mech_land(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
@@ -286,7 +291,7 @@ void mech_jump_land(Mech *mech) {
      (e.g. in mech_fall()) */
   if (mech_is_jumping(mech))
     mech_event_schedule(mech, EVENT_JUMPSTABIL, mech_stabilizing_event,
-                        JUMP_TO_HIT_RECYCLE, 0);
+                        mech_jump_to_hit_recycle(mech), 0);
   mech_jump_complete(mech);
   mech_event_cancel(mech, EVENT_JUMP); /* Kill the event for moving 'round */
   mech_maybe_move(mech);               /* Possibly start movin' on da ground */

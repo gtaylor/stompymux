@@ -1,6 +1,5 @@
 #pragma once
 
-#include "mech.h" /* Temporary transitive compatibility for legacy callers. */
 #include "mech_api_types.h"
 #include "mux/server/platform.h"
 

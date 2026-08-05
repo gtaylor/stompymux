@@ -18,6 +18,7 @@
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
+#include "map_obj_api.h"
 #include "map_terrain.h"
 #include "mech_charge_tracking_api.h"
 #include "mech_classification_api.h"
@@ -27,6 +28,7 @@
 #include "mech_fire_api.h"
 #include "mech_ice.h"
 #include "mech_identity_api.h"
+#include "mech_lifecycle.h"
 #include "mech_motion_integration_api.h"
 #include "mech_move_api.h"
 #include "mech_movement_validation_api.h"
@@ -114,7 +116,7 @@ void mech_movement_update(Mech *mech) {
 
     int iced = 0;
     if (step.update_surface) {
-      if (mech_real_terrain_get(mech) == ICE) {
+      if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE) {
         if (step.previous_z < -1 && mech_position_z(mech) >= -1)
           break_thru_ice(mech);
         else if (mech_position_z(mech) == 0 && possibly_drop_thru_ice(mech))
@@ -123,8 +125,8 @@ void mech_movement_update(Mech *mech) {
 
       mech_drop_surface_set(mech, false);
       if (mech_class(mech) == CLASS_MECH &&
-          mech_real_terrain_get(mech) == ICE && step.previous_z == -1 &&
-          mech_position_z(mech) == -1) {
+          mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE &&
+          step.previous_z == -1 && mech_position_z(mech) == -1) {
         mech_position_z_set(mech, 0);
       }
     }

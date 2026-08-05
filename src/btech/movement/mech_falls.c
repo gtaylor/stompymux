@@ -21,10 +21,12 @@
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_damage_api.h"
+#include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_fire_api.h"
 #include "mech_hitloc_api.h"
 #include "mech_identity_api.h"
+#include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
@@ -34,9 +36,15 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_stagger.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
+#include "registry_api.h"
 #include "section_types.h"
+
+static int mech_jump_to_hit_recycle(const Mech *mech) {
+  return JUMP_TICK * 12 / (mech_class(mech) == CLASS_BSUIT ? 4 : 1);
+}
 
 static bool mech_fall_is_in_water(Mech *mech) {
   return battle_terrain_is_water(mech_real_terrain_get(mech)) &&
@@ -95,7 +103,7 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
     mech_jump_abort(mech);
     mech_event_cancel(mech, EVENT_JUMP);
     mech_event_schedule(mech, EVENT_JUMPSTABIL, mech_stabilizing_event,
-                        JUMP_TO_HIT_RECYCLE, 0);
+                        mech_jump_to_hit_recycle(mech), 0);
   }
 #ifdef BT_MOVEMENT_MODES
   if (mech_event_count(mech, EVENT_MOVEMODE))
@@ -176,7 +184,10 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
   if (mech_is_under_special_conditions(mech))
     if ((map = btech_context_find_object(context, mech_map_dbref(mech))))
       if (battle_map_uses_special_rules(map))
-        damage = damage * MIN(100, battle_map_gravity(map)) / 100;
+        damage =
+            damage *
+            (battle_map_gravity(map) < 100 ? battle_map_gravity(map) : 100) /
+            100;
 
   if (mech_class(mech) == CLASS_MW)
     damage *= 40;

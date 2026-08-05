@@ -6,6 +6,7 @@
 #include "bsuit_api.h"
 #include "btech/context.h"
 #include "btech_event.h"
+#include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "legacy_macros.h"
 #include "mech_classification_api.h"
@@ -22,6 +23,7 @@
 #include "mux/objects/db.h"
 #include "mux/server/diagnostics.h"
 #include "mux/support/alloc.h"
+#include "registry_api.h"
 #include "section_types.h"
 #include "weapon_settings.h"
 
