@@ -105,22 +105,20 @@ static int scan_template_dir(MechTemplateRegistry *registry,
       continue;
     }
 
-    if (registry->template_count == registry->template_capacity) {
-      if (registry->template_capacity == 0) {
-        registry->template_capacity = 4;
-        registry->templates =
-            calloc(registry->template_capacity, sizeof(*registry->templates));
-      } else {
-        size_t capacity = registry->template_capacity * 2;
-        TemplateDirectoryEntry *templates = realloc(
-            registry->templates, capacity * sizeof(*registry->templates));
-        if (templates == nullptr)
-          return -1;
-        registry->templates = templates;
-        registry->template_capacity = capacity;
-      }
-      if (registry->templates == nullptr)
+    if (registry->templates == nullptr ||
+        registry->template_count >= registry->template_capacity) {
+      size_t capacity = registry->template_capacity == 0
+                            ? 4
+                            : registry->template_capacity * 2;
+      TemplateDirectoryEntry *templates =
+          realloc(registry->templates, capacity * sizeof(*templates));
+
+      if (templates == nullptr) {
+        closedir(dir);
         return -1;
+      }
+      registry->templates = templates;
+      registry->template_capacity = capacity;
     }
 
     snprintf(registry->templates[registry->template_count].name,
@@ -155,8 +153,10 @@ static int scan_templates(MechTemplateRegistry *registry, char const *dir) {
     p = p->next;
   }
 
-  qsort(registry->templates, registry->template_count,
-        sizeof(registry->templates[0]), tmplcmp);
+  if (registry->templates != nullptr && registry->template_count > 1) {
+    qsort(registry->templates, registry->template_count,
+          sizeof(registry->templates[0]), tmplcmp);
+  }
 
   return 0;
 }
@@ -213,6 +213,9 @@ redo:
     TemplateDirectoryEntry *ent;
     TemplateDirectoryEntry key;
 
+    if (registry->templates == nullptr || registry->template_count == 0) {
+      return nullptr;
+    }
     strncpy(key.name, id, CACHE_MAXNAME);
     key.name[CACHE_MAXNAME] = '\0';
 

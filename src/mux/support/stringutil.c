@@ -19,13 +19,15 @@ char *___strtok;
 #endif
 
 char ascii_to_upper(char character) {
-  return (character >= 'a' && character <= 'z') ? character - 'a' + 'A'
-                                                : character;
+  if (character >= 'a' && character <= 'z')
+    return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[character - 'a'];
+  return character;
 }
 
 char ascii_to_lower(char character) {
-  return (character >= 'A' && character <= 'Z') ? character - 'A' + 'a'
-                                                : character;
+  if (character >= 'A' && character <= 'Z')
+    return "abcdefghijklmnopqrstuvwxyz"[character - 'A'];
+  return character;
 }
 
 /**

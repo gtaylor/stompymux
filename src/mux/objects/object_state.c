@@ -235,6 +235,10 @@ static bool object_state_collection_set(GameDatabase *database,
   size_t new_bytes;
   ObjectStateValue value_copy;
 
+  if (!collection || (collection->count > 0 && !collection->entries)) {
+    object_state_error(error, error_size, "invalid object state collection");
+    return false;
+  }
   if (!name_space || strlen(name_space) > OBJECT_STATE_NAMESPACE_LIMIT ||
       !object_state_name_is_valid(name_space)) {
     object_state_error(error, error_size, "invalid state namespace");
@@ -256,10 +260,15 @@ static bool object_state_collection_set(GameDatabase *database,
   }
 
   index = object_state_find(collection, name_space, key, &found);
-  if (found)
+  if (found && (collection->entries == nullptr || index >= collection->count)) {
+    object_state_error(error, error_size, "invalid object state collection");
+    return false;
+  }
+  if (found) {
     old_bytes = object_state_entry_bytes(collection->entries[index].name_space,
                                          collection->entries[index].key,
                                          &collection->entries[index].value);
+  }
   if (!found && collection->count >= object_state_entry_limit(database)) {
     object_state_error(error, error_size, "object state exceeds %zu entries",
                        object_state_entry_limit(database));

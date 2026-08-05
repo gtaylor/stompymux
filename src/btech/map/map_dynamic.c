@@ -147,7 +147,8 @@ void remove_mech_from_map(BattleMap *map, Mech *mech) {
 
   clear_mech_from_LOS(mech);
   mech_map_dbref_set(mech, -1);
-  if (map->first_free <= mech_map_slot(mech) ||
+  if (map->mechsOnMap == nullptr || map->mechflags == nullptr ||
+      map->first_free <= mech_map_slot(mech) ||
       map->mechsOnMap[mech_map_slot(mech)] != mech_dbref(mech)) {
     btech_channel_send(
         map->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
@@ -163,7 +164,8 @@ void remove_mech_from_map(BattleMap *map, Mech *mech) {
   } else
     loop = mech_map_slot(mech);
   mech_map_slot_set(mech, 0);
-  if (loop != (map->first_free)) {
+  if (map->mechsOnMap != nullptr && map->mechflags != nullptr &&
+      loop != map->first_free) {
     map->mechsOnMap[loop] = -1; /* clear it */
     map->mechflags[loop] = 0;
     if (loop == (map->first_free - 1))
@@ -175,7 +177,7 @@ void remove_mech_from_map(BattleMap *map, Mech *mech) {
     int i;
     Mech *t;
 
-    for (i = 0; i < map->first_free; i++)
+    for (i = 0; map->mechsOnMap != nullptr && i < map->first_free; i++)
       /* Release from towing if tow-guy ain't on same map already */
       if ((t = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i])))
         if (mech_carried_dbref(t) == mech_dbref(mech)) {

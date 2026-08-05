@@ -16,12 +16,20 @@ static rbtree_node *red_black_tree_allocate(rbtree_node *parent, void *key,
                                             void *data) {
   rbtree_node *temp;
   temp = malloc(sizeof(struct RedBlackTreeNode));
+  if (temp == nullptr)
+    red_black_tree_fail("unable to allocate a node");
   memset(temp, 0, sizeof(struct RedBlackTreeNode));
   temp->parent = parent;
   temp->key = key;
   temp->data = data;
   temp->count = 1;
   return temp;
+}
+
+static rbtree_node *red_black_tree_require_parent(rbtree_node *node) {
+  if (node == nullptr || node->parent == nullptr)
+    red_black_tree_fail("non-root node has no parent");
+  return node->parent;
 }
 
 static void red_black_tree_rotate_right(RedBlackTree bt, rbtree_node *pivot) {
@@ -208,11 +216,13 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
   node = leaf;
 
   if (node->color == RED_BLACK_TREE_RED) {
+    rbtree_node *parent = red_black_tree_require_parent(node);
+
     // if node is red and has at most one child, then it has no child.
-    if (node->parent->left == node) {
-      node->parent->left = nullptr;
+    if (parent->left == node) {
+      parent->left = nullptr;
     } else {
-      node->parent->right = nullptr;
+      parent->right = nullptr;
     }
     node->parent = nullptr;
     return;
@@ -224,12 +234,15 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
     if (node == bt->head) {
       bt->head = node->left;
       node->left->parent = nullptr;
-    } else if (node->parent->left == node) {
-      node->parent->left = node->left;
-      node->left->parent = node->parent;
     } else {
-      node->parent->right = node->left;
-      node->left->parent = node->parent;
+      rbtree_node *parent = red_black_tree_require_parent(node);
+
+      if (parent->left == node) {
+        parent->left = node->left;
+      } else {
+        parent->right = node->left;
+      }
+      node->left->parent = parent;
     }
     if (node->color == RED_BLACK_TREE_BLACK) {
       if (node->left->color == RED_BLACK_TREE_RED) {
@@ -247,12 +260,15 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
     if (node == bt->head) {
       bt->head = node->right;
       node->right->parent = nullptr;
-    } else if (node->parent->right == node) {
-      node->parent->right = node->right;
-      node->right->parent = node->parent;
     } else {
-      node->parent->left = node->right;
-      node->right->parent = node->parent;
+      rbtree_node *parent = red_black_tree_require_parent(node);
+
+      if (parent->right == node) {
+        parent->right = node->right;
+      } else {
+        parent->left = node->right;
+      }
+      node->right->parent = parent;
     }
     if (node->color == RED_BLACK_TREE_BLACK) {
       if (node->right->color == RED_BLACK_TREE_RED) {
@@ -270,24 +286,26 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
   // black and has no children, things get complicated.
 
   while (node != bt->head) {
+    rbtree_node *parent = red_black_tree_require_parent(node);
+
     // First we loop through the Case 2a situations.
     //
-    if (node->parent->left == node) {
-      sibling = node->parent->right;
+    if (parent->left == node) {
+      sibling = parent->right;
     } else {
-      sibling = node->parent->left;
+      sibling = parent->left;
     }
     // if the parent is black, it has two black children, or no children.
     // since we are a child, we're guaranteed a sibling.
     if (!sibling) // Sanity Check
       red_black_tree_fail(
           "serious braindamage: black child of black parent has no sibling.");
-    if (node->parent->color == RED_BLACK_TREE_BLACK &&
+    if (parent->color == RED_BLACK_TREE_BLACK &&
         sibling->color == RED_BLACK_TREE_BLACK &&
         (!sibling->right || sibling->right->color == RED_BLACK_TREE_BLACK) &&
         (!sibling->left || sibling->left->color == RED_BLACK_TREE_BLACK)) {
       sibling->color = RED_BLACK_TREE_RED;
-      node = node->parent;
+      node = parent;
       continue;
     }
     break;
@@ -298,44 +316,47 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
     goto done;
   }
 
-  if (node->parent->left == node) {
-    sibling = node->parent->right;
+  rbtree_node *parent = red_black_tree_require_parent(node);
+  if (parent->left == node) {
+    sibling = parent->right;
   } else {
-    sibling = node->parent->left;
+    sibling = parent->left;
   }
 
-  if (node->parent->color == RED_BLACK_TREE_BLACK && sibling &&
+  if (parent->color == RED_BLACK_TREE_BLACK && sibling &&
       sibling->color == RED_BLACK_TREE_RED &&
       (!sibling->right || sibling->right->color == RED_BLACK_TREE_BLACK) &&
       (!sibling->left || sibling->left->color == RED_BLACK_TREE_BLACK)) {
-    node->parent->color = RED_BLACK_TREE_RED;
+    parent->color = RED_BLACK_TREE_RED;
     sibling->color = RED_BLACK_TREE_BLACK;
-    if (node->parent->left == node) {
-      red_black_tree_rotate_left(bt, node->parent);
-      sibling = node->parent->right;
+    if (parent->left == node) {
+      red_black_tree_rotate_left(bt, parent);
+      parent = red_black_tree_require_parent(node);
+      sibling = parent->right;
     } else {
-      red_black_tree_rotate_right(bt, node->parent);
-      sibling = node->parent->left;
+      red_black_tree_rotate_right(bt, parent);
+      parent = red_black_tree_require_parent(node);
+      sibling = parent->left;
     }
   }
 
   if (!sibling) {
-    if (node->parent->color == RED_BLACK_TREE_RED)
-      node->parent->color = RED_BLACK_TREE_BLACK;
+    if (parent->color == RED_BLACK_TREE_RED)
+      parent->color = RED_BLACK_TREE_BLACK;
     goto done;
   }
 
-  if (node->parent->color == RED_BLACK_TREE_RED &&
+  if (parent->color == RED_BLACK_TREE_RED &&
       sibling->color == RED_BLACK_TREE_BLACK &&
       (!sibling->right || sibling->right->color == RED_BLACK_TREE_BLACK) &&
       (!sibling->left || sibling->left->color == RED_BLACK_TREE_BLACK)) {
 
     sibling->color = RED_BLACK_TREE_RED;
-    node->parent->color = RED_BLACK_TREE_BLACK;
+    parent->color = RED_BLACK_TREE_BLACK;
     goto done;
   }
 
-  if (node->parent->left == node) {
+  if (parent->left == node) {
 
     if (sibling->color == RED_BLACK_TREE_BLACK &&
         (sibling->left && sibling->left->color == RED_BLACK_TREE_RED) &&
@@ -374,10 +395,11 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
   }
 
 done:
-  if (leaf->parent->left == leaf) {
-    leaf->parent->left = nullptr;
-  } else if (leaf->parent->right == leaf) {
-    leaf->parent->right = nullptr;
+  rbtree_node *leaf_parent = red_black_tree_require_parent(leaf);
+  if (leaf_parent->left == leaf) {
+    leaf_parent->left = nullptr;
+  } else if (leaf_parent->right == leaf) {
+    leaf_parent->right = nullptr;
   } else {
     red_black_tree_fail("leaf is detached from its parent");
   }

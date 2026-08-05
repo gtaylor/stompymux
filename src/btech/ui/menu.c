@@ -361,6 +361,7 @@ CoolMenu *SelCol_FunStringMenuContextK(int columns, char *heading,
   buf[0] = toupper(buf[0]);
   CreateMenuEntry_Simple(&c, nullptr, CM_ONE | CM_LINE);
   CreateMenuEntry_Simple(&c, buf, CM_ONE | CM_CENTER);
+  fun(context, 0, entry);
   if (entry[0] == '[') {
     CreateMenuEntry_Normal(&c, entry, columns, 1, 0);
     sick = 1;

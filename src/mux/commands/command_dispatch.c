@@ -631,6 +631,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     match_zone_exit(&context->match);
     exit = last_match_result(&context->match);
     if (exit != NOTHING) {
+      free_lbuf(lcbuf);
       move_exit(&context->evaluation, player, exit, nullptr, 0);
       context->debug_command = cmdsave;
       goto exit;

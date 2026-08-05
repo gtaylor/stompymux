@@ -110,10 +110,15 @@ static int template_load_legacy(Mech *mech, const char *id) {
                           "No matching file for '%s'.", id)) {
     return -1;
   }
-  if (filename)
-    fp = fopen(filename, "r");
-  if (template_load_error(fp, mech, !fp, "Unable to open file %s (%s)!",
-                          filename, id)) {
+  if (filename == nullptr) {
+    return -1;
+  }
+  fp = fopen(filename, "r");
+  if (template_load_error(fp, mech, fp == nullptr,
+                          "Unable to open file %s (%s)!", filename, id)) {
+    return -1;
+  }
+  if (fp == nullptr) {
     return -1;
   }
   strncpy(MechType_Ref(mech), id, 25);
