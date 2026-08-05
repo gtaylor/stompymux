@@ -12,3 +12,5 @@ float mech_active_heat_sinks(const Mech *mech);
 bool mech_uses_heat(const Mech *mech);
 float mech_added_heat(const Mech *mech);
 void mech_weapon_heat_add(Mech *mech, float heat);
+int mech_last_overheat_check_tick(const Mech *mech);
+void mech_last_overheat_check_tick_set(Mech *mech, int tick);
