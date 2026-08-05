@@ -14,7 +14,7 @@
 #include "mux/objects/db.h"
 #include "mux/support/formatting.h"
 
-static DbRef mech_parts_store(const Mech *mech) {
+DbRef mech_parts_store_dbref(const Mech *mech) {
   if (IsDS(mech)) {
     return AeroBay(mech, 0);
   }
@@ -54,17 +54,17 @@ int mech_parts_alias(Mech *mech, int location, int part) {
 }
 
 bool mech_parts_available(Mech *mech, int part, int brand, int count) {
-  return econ_find_items(mech->xcode.context, mech_parts_store(mech), part,
-                         brand) >= count;
+  return econ_find_items(mech->xcode.context, mech_parts_store_dbref(mech),
+                         part, brand) >= count;
 }
 
 void mech_parts_take(Mech *mech, int part, int brand, int count) {
-  econ_change_items(mech->xcode.context, mech_parts_store(mech), part, brand,
-                    -count);
+  econ_change_items(mech->xcode.context, mech_parts_store_dbref(mech), part,
+                    brand, -count);
 }
 
 void mech_parts_add(Mech *mech, int location, int part, int brand, int count) {
-  econ_change_items(mech->xcode.context, mech_parts_store(mech),
+  econ_change_items(mech->xcode.context, mech_parts_store_dbref(mech),
                     mech_parts_alias(mech, location, part), brand, count);
 }
 

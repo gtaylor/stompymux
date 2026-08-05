@@ -261,6 +261,16 @@ int btech_context_maximum_technology_time(const BtechContext *context) {
   return context->configuration->btech_maxtechtime;
 }
 
+bool btech_context_uses_variable_technology_time(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_variable_techtime;
+}
+
+int btech_context_technology_time_modifier(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_techtime_mod;
+}
+
 int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_sprint_bth;

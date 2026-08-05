@@ -16,13 +16,15 @@
 #include "command_handlers_api.h"
 #include "econ_api.h"
 #include "legacy_macros.h"
-#include "mech.h"
+#include "mech_classification_api.h"
 #include "mech_consistency_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
-#include "mech_macros.h"
+#include "mech_identity_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_parts.h"
+#include "mech_specification_api.h"
 #include "mech_status_api.h"
 #include "mech_tech.h"
 #include "mech_tech_api.h"
@@ -35,6 +37,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "section_types.h"
 
 #define my_parsepart(loc, part)                                                \
   switch (tech_parsepart(mech, buffer, loc, part, NULL)) {                     \
@@ -74,9 +77,6 @@
     return;                                                                    \
   }
 
-#define ClanMod(num)                                                           \
-  MAX(1, (((num) / ((MechSpecials(mech) & CLAN_TECH) ? 2 : 1))))
-
 typedef struct TechCheckContext {
   int matches;
   int location;
@@ -85,12 +85,12 @@ typedef struct TechCheckContext {
 
 #define CHECK(tloc, nloc)                                                      \
   case tloc:                                                                   \
-    if (SectIsDestroyed(mech, nloc))                                           \
+    if (mech_section_is_destroyed(mech, nloc))                                 \
       return 1;                                                                \
     break;
 
 int Invalid_Repair_Path(Mech *mech, int loc) {
-  if (MechType(mech) != CLASS_MECH)
+  if (mech_class(mech) != CLASS_MECH)
     return 0;
   switch (loc) {
     CHECK(HEAD, CTORSO);
@@ -108,22 +108,48 @@ int unit_is_fixable(Mech *mech) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    if (!GetSectOInt(mech, i))
+    if (!mech_section_original_internal(mech, i))
       continue;
-    if (!SectIsDestroyed(mech, i))
+    if (!mech_section_is_destroyed(mech, i))
       continue;
-    if (MechType(mech) == CLASS_MECH)
+    if (mech_class(mech) == CLASS_MECH)
       if (i == CTORSO)
         return 0;
-    if (MechType(mech) == CLASS_VTOL)
+    if (mech_class(mech) == CLASS_VTOL)
       if (i != ROTOR)
         return 0;
-    if (MechType(mech) == CLASS_VEH_GROUND)
+    if (mech_class(mech) == CLASS_VEH_GROUND)
       if (i != TURRET)
         return 0;
   }
   return 1;
 };
+
+static int adjusted_technology_time(BtechContext *context, int base_time,
+                                    int roll) {
+  if (!roll || !btech_context_uses_variable_technology_time(context))
+    return base_time;
+  return (base_time * 10) /
+         (1000 /
+          (100 - btech_context_technology_time_modifier(context) * roll));
+}
+
+static void schedule_section_repair(BtechContext *context, Mech *mech,
+                                    DbRef player, int location, int event_type,
+                                    MuxEventCallback callback) {
+  btech_context_event_schedule(
+      context, mech, event_type, callback,
+      MAX(1, player_techtime(context, player) * TECH_TICK),
+      (intptr_t)(location + player * PLAYERPOS));
+}
+
+static void take_section_materials(BtechContext *context, Mech *mech,
+                                   int location) {
+  int amount = mech_section_original_internal(mech, location);
+  DbRef store = mech_parts_store_dbref(mech);
+  econ_change_items(context, store, ProperInternal(mech), 0, -amount);
+  econ_change_items(context, store, Cargo(S_ELECTRONIC), 0, -amount);
+}
 
 TECHCOMMANDH(tech_reattach) {
   TECHCOMMANDB;
@@ -135,42 +161,35 @@ TECHCOMMANDH(tech_reattach) {
   int roll, rollmod, fixtime, base_fixtime, fail_fixtime;
 
   my_parsepart(&loc, NULL);
-  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_BSUIT,
+  DOCHECK_CONTEXT(context, mech_class(mech) == CLASS_BSUIT,
                   "You can't reattach a Battlesuit! Use 'replacesuit'!");
-  DOCHECK_CONTEXT(mech->xcode.context, !SectIsDestroyed(mech, loc),
+  DOCHECK_CONTEXT(context, !mech_section_is_destroyed(mech, loc),
                   "That section isn't destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context, Invalid_Repair_Path(mech, loc),
+  DOCHECK_CONTEXT(context, Invalid_Repair_Path(mech, loc),
                   "You need to reattach adjacent locations first!");
-  DOCHECK_CONTEXT(mech->xcode.context, SomeoneAttaching(mech, loc),
+  DOCHECK_CONTEXT(context, SomeoneAttaching(mech, loc),
                   "Someone's attaching that section already!");
-  DOCHECK_CONTEXT(mech->xcode.context, !unit_is_fixable(mech),
+  DOCHECK_CONTEXT(context, !unit_is_fixable(mech),
                   "You see nothing to reattach it to (read:unit is cored).");
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  player_techtime(mech->xcode.context, player) >=
-                      mech->xcode.context->configuration->btech_maxtechtime,
+  DOCHECK_CONTEXT(context,
+                  player_techtime(context, player) >=
+                      btech_context_maximum_technology_time(context),
                   "You're too tired to do that!");
 
-  internal_stock = econ_find_items(
-      mech->xcode.context,
-      IsDS(mech)
-          ? AeroBay(mech, 0)
-          : game_object_location(mech->xcode.context->database, mech->mynum),
-      ProperInternal(mech), 0);
-  electric_stock = econ_find_items(
-      mech->xcode.context,
-      IsDS(mech)
-          ? AeroBay(mech, 0)
-          : game_object_location(mech->xcode.context->database, mech->mynum),
-      Cargo(S_ELECTRONIC), 0);
+  internal_stock = econ_find_items(context, mech_parts_store_dbref(mech),
+                                   ProperInternal(mech), 0);
+  electric_stock = econ_find_items(context, mech_parts_store_dbref(mech),
+                                   Cargo(S_ELECTRONIC), 0);
 
   DOCHECK_CONTEXT(
-      mech->xcode.context, internal_stock < GetSectOInt(mech, loc),
+      context, internal_stock < mech_section_original_internal(mech, loc),
       tprintf("Not enough %ss in stock. You need %d more.",
-              part_name(mech->xcode.context, ProperInternal(mech), 0).text,
-              GetSectOInt(mech, loc) - internal_stock));
-  DOCHECK_CONTEXT(mech->xcode.context, electric_stock < GetSectOInt(mech, loc),
-                  tprintf("Not enough Electrics in stock. You need %d more.",
-                          GetSectOInt(mech, loc) - electric_stock));
+              part_name(context, ProperInternal(mech), 0).text,
+              mech_section_original_internal(mech, loc) - internal_stock));
+  DOCHECK_CONTEXT(
+      context, electric_stock < mech_section_original_internal(mech, loc),
+      tprintf("Not enough Electrics in stock. You need %d more.",
+              mech_section_original_internal(mech, loc) - electric_stock));
 
   notify_printf(evaluation, player, "You start replacing the section...");
   rollmod = REATTACH_DIFFICULTY;
@@ -189,24 +208,10 @@ TECHCOMMANDH(tech_reattach) {
       notify_printf(evaluation, player,
                     "You muck around, wasting the section for good...");
       /* TODO: maybe save X% of materials like before? */
-      econ_change_items(mech->xcode.context,
-                        IsDS(mech)
-                            ? AeroBay(mech, 0)
-                            : game_object_location(
-                                  mech->xcode.context->database, mech->mynum),
-                        ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-      econ_change_items(mech->xcode.context,
-                        IsDS(mech)
-                            ? AeroBay(mech, 0)
-                            : game_object_location(
-                                  mech->xcode.context->database, mech->mynum),
-                        Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
-      tech_addtechtime(mech->xcode.context, player, fixtime);
-      mux_event_add(
-          mech->xcode.context->events,
-          MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
-          EVENT_REPAIR_REAT, very_fake_func, (void *)mech,
-          (void *)(loc + player * PLAYERPOS));
+      take_section_materials(context, mech, loc);
+      tech_addtechtime(context, player, fixtime);
+      schedule_section_repair(context, mech, player, loc, EVENT_REPAIR_REAT,
+                              very_fake_func);
 
     } else {
       notify_printf(evaluation, player, "You manage to replace the section...");
@@ -214,71 +219,29 @@ TECHCOMMANDH(tech_reattach) {
       if (roll == 0)
         fixtime = fail_fixtime;
       else
-        fixtime =
-            mech->xcode.context->configuration->btech_variable_techtime
-                ? (fail_fixtime * 10) /
-                      (1000 / (100 - (roll ? mech->xcode.context->configuration
-                                                     ->btech_techtime_mod *
-                                                 roll
-                                           : 0)))
-                : fail_fixtime;
+        fixtime = adjusted_technology_time(context, fail_fixtime, roll);
       if (fail_fixtime - fixtime)
         notify_printf(
             evaluation, player, "Your skill manages to save %d minute%s",
             fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
-      econ_change_items(mech->xcode.context,
-                        IsDS(mech)
-                            ? AeroBay(mech, 0)
-                            : game_object_location(
-                                  mech->xcode.context->database, mech->mynum),
-                        ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-      econ_change_items(mech->xcode.context,
-                        IsDS(mech)
-                            ? AeroBay(mech, 0)
-                            : game_object_location(
-                                  mech->xcode.context->database, mech->mynum),
-                        Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
-      tech_addtechtime(mech->xcode.context, player, fixtime);
-      mux_event_add(
-          mech->xcode.context->events,
-          MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
-          EVENT_REPAIR_REAT, mux_event_tickmech_reattach, (void *)mech,
-          (void *)(loc + player * PLAYERPOS));
+      take_section_materials(context, mech, loc);
+      tech_addtechtime(context, player, fixtime);
+      schedule_section_repair(context, mech, player, loc, EVENT_REPAIR_REAT,
+                              mux_event_tickmech_reattach);
     }
   } else {
     if (roll == 0)
       fixtime = base_fixtime;
     else
-      fixtime =
-          mech->xcode.context->configuration->btech_variable_techtime
-              ? (base_fixtime * 10) /
-                    (1000 / (100 - (roll ? mech->xcode.context->configuration
-                                                   ->btech_techtime_mod *
-                                               roll
-                                         : 0)))
-              : base_fixtime;
+      fixtime = adjusted_technology_time(context, base_fixtime, roll);
     if (base_fixtime - fixtime)
       notify_printf(
           evaluation, player, "Your skill manages to save %d minute%s",
           base_fixtime - fixtime, base_fixtime - fixtime == 1 ? "!" : "s!");
-    econ_change_items(
-        mech->xcode.context,
-        IsDS(mech)
-            ? AeroBay(mech, 0)
-            : game_object_location(mech->xcode.context->database, mech->mynum),
-        ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-    econ_change_items(
-        mech->xcode.context,
-        IsDS(mech)
-            ? AeroBay(mech, 0)
-            : game_object_location(mech->xcode.context->database, mech->mynum),
-        Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
-    tech_addtechtime(mech->xcode.context, player, fixtime);
-    mux_event_add(
-        mech->xcode.context->events,
-        MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
-        EVENT_REPAIR_REAT, mux_event_tickmech_reattach, (void *)mech,
-        (void *)(loc + player * PLAYERPOS));
+    take_section_materials(context, mech, loc);
+    tech_addtechtime(context, player, fixtime);
+    schedule_section_repair(context, mech, player, loc, EVENT_REPAIR_REAT,
+                            mux_event_tickmech_reattach);
   }
 
   //	DOTECH_LOC(REATTACH_DIFFICULTY, reattach_fail, reattach_succ,
@@ -294,32 +257,34 @@ TECHCOMMANDH(tech_replacesuit) {
 
   TECHCOMMANDC;
   my_parsepart(&loc, NULL);
-  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) != CLASS_BSUIT,
+  DOCHECK_CONTEXT(context, mech_class(mech) != CLASS_BSUIT,
                   "You can only use 'replacesuit' on a battlesuit unit!");
 
   wSuits = bsuit_member_count(mech);
 
   DOCHECK_CONTEXT(
-      mech->xcode.context, MechMaxSuits(mech) <= wSuits,
+      context, mech_maximum_battle_suits(mech) <= wSuits,
       tprintf("This %s is already full! This %s only consists of %d suits!",
               bsuit_formation_name_lowercase(mech),
-              bsuit_formation_name_lowercase(mech), MechMaxSuits(mech)));
-  DOCHECK_CONTEXT(mech->xcode.context, (loc >= MechMaxSuits(mech)) || (loc < 0),
+              bsuit_formation_name_lowercase(mech),
+              mech_maximum_battle_suits(mech)));
+  DOCHECK_CONTEXT(context,
+                  (loc >= mech_maximum_battle_suits(mech)) || (loc < 0),
                   tprintf("Invalid suit! This %s only consists of %d suits!",
                           bsuit_formation_name_lowercase(mech),
-                          MechMaxSuits(mech)));
+                          mech_maximum_battle_suits(mech)));
 
-  DOCHECK_CONTEXT(mech->xcode.context, !SectIsDestroyed(mech, loc),
+  DOCHECK_CONTEXT(context, !mech_section_is_destroyed(mech, loc),
                   "That suit isn't destroyed!");
 
-  DOCHECK_CONTEXT(mech->xcode.context, SomeoneReplacingSuit(mech, loc),
+  DOCHECK_CONTEXT(context, SomeoneReplacingSuit(mech, loc),
                   "Someone's already rebuilding that suit!");
-  DOCHECK_CONTEXT(mech->xcode.context, wSuits <= 0,
+  DOCHECK_CONTEXT(context, wSuits <= 0,
                   "You are unable to replace the suits here! None of the "
                   "buggers are still alive!");
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  player_techtime(mech->xcode.context, player) >=
-                      mech->xcode.context->configuration->btech_maxtechtime,
+  DOCHECK_CONTEXT(context,
+                  player_techtime(context, player) >=
+                      btech_context_maximum_technology_time(context),
                   "You're too tired to do that!");
 
   DOTECH_LOC(REPLACESUIT_DIFFICULTY, replacesuit_fail, replacesuit_succ,
@@ -339,17 +304,17 @@ TECHCOMMANDH(tech_reseal) {
 
   TECHCOMMANDC;
   my_parsepart(&loc, NULL);
-  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+  DOCHECK_CONTEXT(context, mech_section_is_destroyed(mech, loc),
                   "That section is destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context, !SectIsFlooded(mech, loc),
+  DOCHECK_CONTEXT(context, !mech_section_is_flooded(mech, loc),
                   "That has not been flooded!");
-  DOCHECK_CONTEXT(mech->xcode.context, Invalid_Repair_Path(mech, loc),
+  DOCHECK_CONTEXT(context, Invalid_Repair_Path(mech, loc),
                   "You need to reattach adjacent locations first!");
-  DOCHECK_CONTEXT(mech->xcode.context, SomeoneResealing(mech, loc),
+  DOCHECK_CONTEXT(context, SomeoneResealing(mech, loc),
                   "Someone's sealing that section already!");
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  player_techtime(mech->xcode.context, player) >=
-                      mech->xcode.context->configuration->btech_maxtechtime,
+  DOCHECK_CONTEXT(context,
+                  player_techtime(context, player) >=
+                      btech_context_maximum_technology_time(context),
                   "You're too tired to do that!");
 
   DOTECH_LOC(RESEAL_DIFFICULTY, reseal_fail, reseal_succ, reseal_econ,
