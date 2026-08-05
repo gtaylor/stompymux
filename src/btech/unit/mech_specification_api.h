@@ -45,6 +45,7 @@ int mech_original_structural_integrity(const Mech *mech);
 DbRef mech_bay_dbref(const Mech *mech, int bay);
 void mech_maximum_fuel_set(Mech *mech, int fuel);
 void mech_cargo_weight_set(Mech *mech, int weight);
+bool mech_has_sixth_sense(const Mech *mech);
 void mech_sixth_sense_set(Mech *mech, bool enabled);
 void mech_bay_dbref_set(Mech *mech, int bay, DbRef bay_dbref);
 int mech_carried_cargo_weight(const Mech *mech);

@@ -11,7 +11,11 @@ typedef struct MechTargetingOverride {
 
 void mech_targeting_lock_modes_clear(Mech *mech);
 void mech_targeting_aim_reset(Mech *mech);
+void mech_targeting_aim_set(Mech *mech, int section, int unit_class);
 void mech_targeting_target_clear(Mech *mech);
+void mech_targeting_unit_set(Mech *mech, DbRef target);
+void mech_targeting_hex_xy_set(Mech *mech, int x, int y);
+void mech_targeting_lock_mode_add(Mech *mech, int lock_mode);
 DbRef mech_target_dbref(const Mech *mech);
 DbRef mech_charge_target_dbref(const Mech *mech);
 DbRef mech_dfa_target_dbref(const Mech *mech);

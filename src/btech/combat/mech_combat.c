@@ -29,13 +29,14 @@
 #include "map_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
 #include "mech_bth_api.h"
 #include "mech_build_api.h"
+#include "mech_classification_api.h"
 #include "mech_combat.h"
 #include "mech_combat_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_combat_missile_api.h"
+#include "mech_condition_api.h"
 #include "mech_damage_api.h"
 #include "mech_enhanced_criticals_api.h"
 #include "mech_events.h"
@@ -45,14 +46,16 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
 #include "mech_spot_api.h"
+#include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
-#include "missile_hit_registry.h"
 #include "mux/objects/attrs.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
@@ -92,6 +95,7 @@ distance Avoid feedback on: 1 10+ 2 6+ 3 3+
 */
 void mech_target(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
+  BtechContext *context = mech_context(mech);
   Mech *target;
   char *args[5];
   int argc;
@@ -100,29 +104,27 @@ void mech_target(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUALO);
   argc = mech_parseattributes(buffer, args, 5);
-  DOCHECK_CONTEXT(mech->xcode.context, argc != 1,
+  DOCHECK_CONTEXT(context, argc != 1,
                   "Invalid number of arguments to function!");
   if (!strcmp(args[0], "-")) {
-    MechAim(mech) = NUM_SECTIONS;
-    notify(btech_context_evaluation(mech->xcode.context), player,
-           "Targetting disabled.");
+    mech_targeting_aim_reset(mech);
+    notify(btech_context_evaluation(context), player, "Targetting disabled.");
     return;
   }
   DOCHECK_CONTEXT(
-      mech->xcode.context,
-      MechTarget(mech) < 0 || !(target = btech_context_find_object(
-                                    mech->xcode.context, MechTarget(mech))),
+      context,
+      mech_target_dbref(mech) < 0 || !(target = btech_context_find_object(
+                                           context, mech_target_dbref(mech))),
       "Error: You need to be locked onto something to target its part!");
-  type = MechType(target);
-  move = MechMove(target);
-  DOCHECK_CONTEXT(mech->xcode.context,
+  type = mech_class(target);
+  move = mech_movement_type(target);
+  DOCHECK_CONTEXT(context,
                   (index = ArmorSectionFromString(type, move, args[0])) < 0,
                   "Invalid location!");
-  MechAim(mech) = index;
-  MechAimType(mech) = type;
+  mech_targeting_aim_set(mech, index, type);
   ArmorStringFromIndex(index, section, type, move);
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                "%s targetted.", section);
+  notify_printf(btech_context_evaluation(context), player, "%s targetted.",
+                section);
 }
 
 /* Varying messages based on the distance to foe, and size of your vehicle
@@ -146,39 +148,46 @@ static char *const ss_messages[] = {
     "Something makes you definitely feel uneasy..",
     "Something makes you feel out of your element.."};
 
-#define SSDistMod(r) ((r < 9) ? 0 : ((r < 20) ? 1 : 2))
-#define SSTonMod(d) ((d <= -20) ? 0 : (d >= 20) ? 2 : 1)
+static int sixth_sense_distance_severity(float range) {
+  return range < 9 ? 0 : range < 20 ? 1 : 2;
+}
+
+static int sixth_sense_tonnage_severity(int difference) {
+  return difference <= -20 ? 0 : difference >= 20 ? 2 : 1;
+}
 
 static void mech_ss_event(MuxEvent *ev) {
   Mech *mech = (Mech *)ev->data;
   long i = (long)ev->data2;
 
-  if (Uncon(mech))
+  if (mech_pilot_is_unconscious(mech))
     return;
   if (!mech_has_active_pilot(mech))
     return;
   mech_notify(mech, MECHPILOT, ss_messages[BOUNDED(0, i, 8)]);
 }
 
-void sixth_sense_check(Mech *mech, Mech *target) {
+void mech_sixth_sense_check(Mech *mech, Mech *target) {
   float r;
   int d;
 
-  if (!(MechSpecials(target) & SS_ABILITY) || MechIsObservator(mech))
+  if (!mech_has_sixth_sense(target) || mech_is_observer(mech))
     return;
-  if (Destroyed(target))
+  if (mech_is_destroyed(target))
     return;
-  if (btech_random_roll(mech->xcode.context) > 8)
+  if (btech_random_roll(mech_context(mech)) > 8)
     return;
-  r = FaMechRange(mech, target);
-  d = (MechRTonsV(mech) - MechRTonsV(target)) / 1024;
+  r = mech_range_to(mech, target);
+  d = (mech_real_tonnage(mech) - mech_real_tonnage(target)) / 1024;
   mech_event_schedule(target, EVENT_SS, mech_ss_event,
-                      btech_random_range(mech->xcode.context, 1, 3),
-                      (long)((3 * (SSDistMod(r))) + (SSTonMod(d))));
+                      btech_random_range(mech_context(mech), 1, 3),
+                      (long)((3 * sixth_sense_distance_severity(r)) +
+                             sixth_sense_tonnage_severity(d)));
 }
 
-void mech_settarget(DbRef player, void *data, char *buffer) {
+void mech_set_target(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *target;
+  BtechContext *context = mech_context(mech);
   BattleMap *mech_map;
   char *args[5];
   char targetID[2];
@@ -193,31 +202,30 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
   argc = mech_parseattributes(buffer, args, 5);
   switch (argc) {
   case 1:
-    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+    mech_map = btech_context_get_map(context, mech_map_dbref(mech));
     if (args[0][0] == '-') {
-      MechTarget(mech) = -1;
-      MechTargX(mech) = -1;
-      MechTargY(mech) = -1;
+      mech_targeting_target_clear(mech);
       mech_notify(mech, MECHALL, "All locks cleared.");
       mech_stop_lock(mech);
-      if (MechSpotter(mech) == mech->mynum)
+      if (mech_spotter_dbref(mech) == mech_dbref(mech))
         mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
       return;
     }
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
     targetref = FindTargetDBREFFromMapNumber(mech, targetID);
-    target = btech_context_get_mech(mech->xcode.context, targetref);
+    target = btech_context_get_mech(context, targetref);
     if (target)
-      LOS = mech_los_check(mech, target, MechX(target), MechY(target),
-                           FlMechRange(mech_map, mech, target));
+      LOS =
+          mech_los_check(mech, target, mech_position_x(target),
+                         mech_position_y(target), mech_range_to(mech, target));
     else
       targetref = -1;
-    DOCHECK_CONTEXT(mech->xcode.context, targetref == -1 || !LOS,
+    DOCHECK_CONTEXT(context, targetref == -1 || !LOS,
                     "That is not a valid targetID. Try again.");
 
-    if (MechSwarmTarget(mech) > 0) {
-      if (MechSwarmTarget(mech) != target->mynum) {
+    if (mech_condition_summary(mech).swarm_target > 0) {
+      if (mech_condition_summary(mech).swarm_target != mech_dbref(target)) {
         mech_notify(
             mech, MECHALL,
             "You're a bit too busy holding on for dear life to lock a target!");
@@ -228,54 +236,49 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     mech_printf(mech, MECHALL, "Target set to %s.",
                 mech_to_mech_display_id(mech, target).text);
     mech_stop_lock(mech);
-    MechTarget(mech) = targetref;
-    MechStatus(mech) |= LOCK_TARGET;
-    sixth_sense_check(mech, target);
+    mech_targeting_unit_set(mech, targetref);
+    mech_sixth_sense_check(mech, target);
 #if LOCK_TICK > 0
-    if (!mech->xcode.context->combat_overrides.arcs)
+    if (!btech_context_overrides_weapon_arcs(context))
       mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
 #endif
     break;
   case 2:
     /* Targetted a square */
-    if (MechSwarmTarget(mech) > 0) {
+    if (mech_condition_summary(mech).swarm_target > 0) {
       mech_notify(
           mech, MECHALL,
           "You're a bit too busy holding on for dear life to lock a target!");
       return;
     }
 
-    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+    mech_map = btech_context_get_map(context, mech_map_dbref(mech));
     newx = atoi(args[0]);
     newy = atoi(args[1]);
     ValidCoord(mech_map, newx, newy);
-    MechTarget(mech) = -1;
-    MechTargX(mech) = newx;
-    MechTargY(mech) = newy;
-    MechFireAdjustment(mech) = 0;
-    if (MechSpotter(mech) == mech->mynum)
+    mech_targeting_hex_xy_set(mech, newx, newy);
+    if (mech_spotter_dbref(mech) == mech_dbref(mech))
       mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
-    MechTargZ(mech) = Elevation(mech_map, newx, newy);
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+    mech_target_hex_z_set(mech, Elevation(mech_map, newx, newy));
+    notify_printf(btech_context_evaluation(context), player,
                   "Target coordinates set at (X,Y) %d, %d", newx, newy);
     mech_stop_lock(mech);
-    MechStatus(mech) |= LOCK_TARGET;
+    mech_targeting_lock_mode_add(mech, LOCK_TARGET);
 #if LOCK_TICK > 0
-    if (!mech->xcode.context->combat_overrides.arcs)
+    if (!btech_context_overrides_weapon_arcs(context))
       mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
 #endif
     break;
   case 3:
     /* Targetted a square w/ special mode (hex / building) */
-    if (MechSwarmTarget(mech) > 0) {
+    if (mech_condition_summary(mech).swarm_target > 0) {
       mech_notify(
           mech, MECHALL,
           "You're a bit too busy holding on for dear life to lock a target!");
       return;
     }
 
-    DOCHECK_CONTEXT(mech->xcode.context, strlen(args[2]) > 1,
-                    "Invalid lock mode!");
+    DOCHECK_CONTEXT(context, strlen(args[2]) > 1, "Invalid lock mode!");
     switch (toupper(args[2][0])) {
     case 'B':
       mode = LOCK_BUILDING;
@@ -290,48 +293,45 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
       mode = LOCK_HEX;
       break;
     default:
-      notify(btech_context_evaluation(mech->xcode.context), player,
+      notify(btech_context_evaluation(context), player,
              "Invalid mode selected!");
       return;
     }
-    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+    mech_map = btech_context_get_map(context, mech_map_dbref(mech));
     newx = atoi(args[0]);
     newy = atoi(args[1]);
     ValidCoord(mech_map, newx, newy);
-    MechTarget(mech) = -1;
-    MechTargX(mech) = newx;
-    MechTargY(mech) = newy;
-    MechFireAdjustment(mech) = 0;
-    if (MechSpotter(mech) == mech->mynum)
+    mech_targeting_hex_xy_set(mech, newx, newy);
+    if (mech_spotter_dbref(mech) == mech_dbref(mech))
       mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
-    MechTargZ(mech) = Elevation(mech_map, newx, newy);
+    mech_target_hex_z_set(mech, Elevation(mech_map, newx, newy));
     switch (mode) {
     case LOCK_HEX:
-      notify_printf(btech_context_evaluation(mech->xcode.context), player,
+      notify_printf(btech_context_evaluation(context), player,
                     "Target coordinates set to hex at (X,Y) %d, %d", newx,
                     newy);
       break;
     case LOCK_HEX_CLR:
-      notify_printf(btech_context_evaluation(mech->xcode.context), player,
+      notify_printf(btech_context_evaluation(context), player,
                     "Target coordinates set to clearing hex at (X,Y) %d, %d",
                     newx, newy);
       break;
     case LOCK_HEX_IGN:
-      notify_printf(btech_context_evaluation(mech->xcode.context), player,
+      notify_printf(btech_context_evaluation(context), player,
                     "Target coordinates set to igniting hex at (X,Y) %d, %d",
                     newx, newy);
       break;
     default:
-      notify_printf(btech_context_evaluation(mech->xcode.context), player,
+      notify_printf(btech_context_evaluation(context), player,
                     "Target coordinates set to building at (X,Y) %d, %d", newx,
                     newy);
       break;
     }
 
     mech_stop_lock(mech);
-    MechStatus(mech) |= mode;
+    mech_targeting_lock_mode_add(mech, mode);
 #if LOCK_TICK > 0
-    if (!mech->xcode.context->combat_overrides.arcs)
+    if (!btech_context_overrides_weapon_arcs(context))
       mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
 #endif
   }

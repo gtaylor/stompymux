@@ -49,7 +49,7 @@ static int mech_snipe_func(Mech *mech, DbRef player, int index, int high,
   }
   /* Fire at t.x, t.y */
   if (mech_target_hex_x(mech) != t.x || mech_target_hex_y(mech) != t.y)
-    mech_settarget(player, mech, tprintf("%d %d", t.x, t.y));
+    mech_set_target(player, mech, tprintf("%d %d", t.x, t.y));
   mech_fireweapon(player, mech, tprintf("%d", index));
   return 0;
 }

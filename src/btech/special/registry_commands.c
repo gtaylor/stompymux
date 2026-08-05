@@ -324,7 +324,7 @@ BtechCommandDefinition mechcommands[] = {
      "Sets the target to the (3rd argument :  B = building, C = clear, I = "
      "ignite, H = hex (clear/ignite/break ice/destroy bridge)) /, - = Clears "
      "present lock.",
-     mech_settarget},
+     mech_set_target},
     {0, "SIGHT <WEAPNUM> [<TARGET-ID> | <X> <Y>]",
      "Computes base-to-hit for given weapon and target.", mech_sight},
     {0, "FIRE <WEAPNUM> [<TARGET-ID> | <X> <Y>]",

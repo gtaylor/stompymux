@@ -23,10 +23,31 @@ void mech_targeting_lock_modes_clear(Mech *mech) {
 
 void mech_targeting_aim_reset(Mech *mech) { mech->rd.aim = NUM_SECTIONS; }
 
+void mech_targeting_aim_set(Mech *mech, int section, int unit_class) {
+  mech->rd.aim = section;
+  mech->rd.aim_type = unit_class;
+}
+
 void mech_targeting_target_clear(Mech *mech) {
   mech->rd.target = -1;
   mech->rd.targx = -1;
   mech->rd.targy = -1;
+}
+
+void mech_targeting_unit_set(Mech *mech, DbRef target) {
+  mech->rd.target = target;
+  mech->rd.status |= LOCK_TARGET;
+}
+
+void mech_targeting_hex_xy_set(Mech *mech, int x, int y) {
+  mech->rd.target = -1;
+  mech->rd.targx = x;
+  mech->rd.targy = y;
+  mech->rd.fire_adjustment = 0;
+}
+
+void mech_targeting_lock_mode_add(Mech *mech, int lock_mode) {
+  mech->rd.status |= lock_mode;
 }
 
 DbRef mech_target_dbref(const Mech *mech) { return mech->rd.target; }

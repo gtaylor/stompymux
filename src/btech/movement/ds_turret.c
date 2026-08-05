@@ -164,7 +164,7 @@ void turret_settarget(DbRef player, void *data, char *buffer) {
     return;
   TurretTargetingScope scope;
   turret_targeting_scope_enter(&scope, tur, mech);
-  mech_settarget(player, mech, buffer);
+  mech_set_target(player, mech, buffer);
   turret_targeting_scope_leave(&scope, tur, mech);
 }
 

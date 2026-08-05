@@ -335,7 +335,7 @@ void auto_gun_event(Autopilot *autopilot) {
 
     /* Lock Him */
     format_target_id(buffer, target);
-    mech_settarget(autopilot->mynum, mech, buffer);
+    mech_set_target(autopilot->mynum, mech, buffer);
 
     /* Log It */
     print_autogun_log(autopilot, "Autogun - Locking target #%d",
