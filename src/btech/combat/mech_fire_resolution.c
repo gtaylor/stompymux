@@ -396,9 +396,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
         firstCrit =
             FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
                                 GetWeaponCrits(mech, weapindx));
-        DestroyWeapon(mech, section, I2Weapon(weapindx), firstCrit,
-                      GetWeaponCrits(mech, weapindx),
-                      GetWeaponCrits(mech, weapindx));
+        mech_weapon_destroy(mech, section, I2Weapon(weapindx), firstCrit,
+                            GetWeaponCrits(mech, weapindx),
+                            GetWeaponCrits(mech, weapindx));
         mech_los_broadcast(mech, "shudders from an internal explosion!");
         /* Apply damage equal to one shot, follow crits as well */
 
@@ -423,9 +423,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
           &(MechWeapons[weapindx].name[3]));
       firstCrit = FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
                                       GetWeaponCrits(mech, weapindx));
-      DestroyWeapon(mech, section, I2Weapon(weapindx), firstCrit,
-                    GetWeaponCrits(mech, weapindx),
-                    GetWeaponCrits(mech, weapindx));
+      mech_weapon_destroy(mech, section, I2Weapon(weapindx), firstCrit,
+                          GetWeaponCrits(mech, weapindx),
+                          GetWeaponCrits(mech, weapindx));
       mech_los_broadcast(mech, "shudders from an internal explosion!");
       DamageMech(mech, mech, 0, -1, section, 0, 0, 0,
                  MechWeapons[weapindx].damage, -1, 0, -1, 0, 1);
@@ -466,9 +466,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                   &(MechWeapons[weapindx].name[3]));
       firstCrit = FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
                                       GetWeaponCrits(mech, weapindx));
-      DestroyWeapon(mech, section, I2Weapon(weapindx), firstCrit,
-                    GetWeaponCrits(mech, weapindx),
-                    GetWeaponCrits(mech, weapindx));
+      mech_weapon_destroy(mech, section, I2Weapon(weapindx), firstCrit,
+                          GetWeaponCrits(mech, weapindx),
+                          GetWeaponCrits(mech, weapindx));
       return;
     }
   }
@@ -492,9 +492,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     mech_los_broadcast(mech, "shudders from an internal explosion!");
     firstCrit = FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
                                     GetWeaponCrits(mech, weapindx));
-    DestroyWeapon(mech, section, I2Weapon(weapindx), firstCrit,
-                  GetWeaponCrits(mech, weapindx),
-                  GetWeaponCrits(mech, weapindx));
+    mech_weapon_destroy(mech, section, I2Weapon(weapindx), firstCrit,
+                        GetWeaponCrits(mech, weapindx),
+                        GetWeaponCrits(mech, weapindx));
     DamageMech(mech, mech, 0, -1, section, 0, 0, 0,
                MechWeapons[weapindx].damage, -1, 0, -1, 0, 1);
 

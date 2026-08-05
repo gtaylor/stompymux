@@ -258,7 +258,7 @@ void mech_vtol_rotor_destroyed_critical_apply(Mech *objMech, Mech *objAttacker,
       objMech, MECHALL,
       "[fg=red bold]The shot hits your fragile rotor mechanism![reset]");
   mech_los_broadcast(objMech, "'s rotor snaps into several parts!");
-  DestroySection(objMech, objAttacker, LOS, ROTOR);
+  mech_section_destroy(objMech, objAttacker, LOS, ROTOR);
 
   if (!objAttacker) {
     mech_notify(objMech, MECHALL, "Your rotor has been destroyed!");
@@ -680,6 +680,6 @@ void mech_vtol_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     if (!mech_section_configuration_has(wounded, BSIDE, CASE_TECH))
       mech_explosion_apply(wounded, attacker);
     else
-      DestroySection(wounded, attacker, LOS, BSIDE);
+      mech_section_destroy(wounded, attacker, LOS, BSIDE);
   }
 }

@@ -625,7 +625,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
               target,
               tprintf("'s %s is blown off in a shower of sparks and smoke!",
                       strAttackLoc));
-          DestroySection(target, mech, 1, wLegID);
+          mech_section_destroy(target, mech, 1, wLegID);
           [[fallthrough]];
         default:
           mech_critical_handle(target, mech, 1, wLegID, 3);

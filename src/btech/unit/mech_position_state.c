@@ -105,6 +105,10 @@ int mech_desired_angle(const Mech *mech) { return mech->rd.angle; }
 
 int mech_lateral_movement(const Mech *mech) { return mech->rd.lateral; }
 
+void mech_lateral_movement_set(Mech *mech, int lateral_movement) {
+  mech->rd.lateral = lateral_movement;
+}
+
 int mech_dropship_bearing_sector(const Mech *mech) {
   return ((mech_heading_degrees(mech) + 30) / 60) % 6;
 }

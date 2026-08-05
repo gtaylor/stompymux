@@ -101,7 +101,7 @@ void mech_explosion_apply(Mech *wounded, Mech *attacker) {
   for (j = 0; j < NUM_SECTIONS; j++) {
     if (mech_section_original_internal(wounded, j) &&
         !mech_section_is_destroyed(wounded, j))
-      DestroySection(wounded, attacker, wounded == attacker ? 0 : 1, j);
+      mech_section_destroy(wounded, attacker, wounded == attacker ? 0 : 1, j);
   }
 }
 

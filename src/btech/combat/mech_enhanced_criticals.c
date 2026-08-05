@@ -427,9 +427,9 @@ void mech_weapon_critical_apply(Mech *mech, Mech *attacker, int LOS,
   if (tDestroyWeapon) {
     mech_printf(mech, MECHALL, "Your %s has been destroyed!!",
                 &MechWeapons[wWeapIndex].name[3]);
-    DestroyWeapon(mech, section,
-                  mech_critical_part_type(mech, section, critical), wFirstCrit,
-                  1, wWeapSize);
+    mech_weapon_destroy(mech, section,
+                        mech_critical_part_type(mech, section, critical),
+                        wFirstCrit, 1, wWeapSize);
   } else {
     mech_critical_fire_mode_add(mech, section, critical, DAMAGED_MODE);
 

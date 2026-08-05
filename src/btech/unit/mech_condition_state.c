@@ -162,6 +162,13 @@ void mech_dfa_attacking_set(Mech *mech, bool attacking) {
     mech->rd.status &= ~DFA_ATTACK;
 }
 
+void mech_turret_auto_turn_set(Mech *mech, bool enabled) {
+  if (enabled)
+    mech->rd.status2 |= AUTOTURN_TURRET;
+  else
+    mech->rd.status2 &= ~AUTOTURN_TURRET;
+}
+
 void mech_player_killer_set(Mech *mech, bool enabled) {
   if (enabled)
     mech->rd.mech_prefs |= MECHPREF_PKILL;

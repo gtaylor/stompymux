@@ -344,7 +344,7 @@ void do_magic(Mech *mech) {
     MechSections(mech)[i].config &= ~STABILIZERS_DESTROYED;
 
     if (SectIsDestroyed(mech, i))
-      DestroySection(&opp, NULL, 0, i);
+      mech_section_destroy(&opp, nullptr, 0, i);
     if (MechStall(mech) > 0)
       UnSetSectBreached(mech, i); /* Just in case ; this leads to 'unbreachable'
                                      legs once you've 'done your time' once */
@@ -483,7 +483,7 @@ void mech_ReSeal(Mech *mech, int loc) {
 void mech_Detach(Mech *mech, int loc) {
   if (SectIsDestroyed(mech, loc))
     return;
-  DestroySection(mech, NULL, 0, loc);
+  mech_section_destroy(mech, nullptr, 0, loc);
 }
 
 /* Figures out how much ammo there is when we're 'fully loaded', and

@@ -15,17 +15,19 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
                 int hitloc, int isrear, int iscritical, int damage,
                 int intDamage, int cause, int bth, int wWeapIndx, int wAmmoMode,
                 int tIgnoreSwarmers);
-void DestroyWeapon(Mech *wounded, int hitloc, int type, int startCrit,
-                   int numcrits, int totalcrits);
-int CountWeaponsInLoc(Mech *mech, int loc);
-int FindWeaponTypeNumInLoc(Mech *mech, int loc, int num);
-void LoseWeapon(Mech *mech, int hitloc);
-void DestroyHeatSink(Mech *mech, int hitloc);
-void DestroySection(Mech *wounded, Mech *attacker, int LOS, int hitloc);
-char *setarmorstatus_func(Mech *mech, char *sectstr, char *typestr,
-                          char *valuestr);
-int dodamage_func(DbRef player, Mech *mech, int totaldam, int clustersize,
-                  int direction, int critical, char *mechmsg,
-                  char *mechbroadcast);
+void mech_weapon_destroy(Mech *wounded, int hitloc, int type,
+                         int start_critical, int critical_count,
+                         int total_criticals);
+int mech_weapon_count_in_section(Mech *mech, int section);
+int mech_weapon_index_in_section(Mech *mech, int section, int ordinal);
+void mech_weapon_destroy_random(Mech *mech, int section);
+void mech_heat_sink_destroy(Mech *mech, int section);
+void mech_section_destroy(Mech *wounded, Mech *attacker, int line_of_sight,
+                          int section);
+char *mech_armor_status_set_value(Mech *mech, char *section, char *armor_type,
+                                  char *value);
+int mech_damage_apply_clusters(DbRef player, Mech *mech, int total_damage,
+                               int cluster_size, int direction, int critical,
+                               char *mech_message, char *broadcast_message);
 void mech_damage(DbRef player, Mech *mech, char *buffer);
 void mech_damage_section(DbRef player, Mech *mech, char *buffer);

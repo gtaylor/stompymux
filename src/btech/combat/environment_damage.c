@@ -47,17 +47,17 @@ void mech_reactor_explode(Mech *wounded, Mech *attacker) {
   DbRef wounded_pilot = mech_pilot_dbref(wounded);
   int dam;
 
-  DestroySection(wounded, attacker, 0, CTORSO);
-  DestroySection(wounded, attacker, 0, LTORSO);
-  DestroySection(wounded, attacker, 0, RTORSO);
-  DestroySection(wounded, attacker, 0, LLEG);
-  DestroySection(wounded, attacker, 0, RLEG);
+  mech_section_destroy(wounded, attacker, 0, CTORSO);
+  mech_section_destroy(wounded, attacker, 0, LTORSO);
+  mech_section_destroy(wounded, attacker, 0, RTORSO);
+  mech_section_destroy(wounded, attacker, 0, LLEG);
+  mech_section_destroy(wounded, attacker, 0, RLEG);
 
   /* Need to autoeject before the explosion reaches the head */
   if (!MapIsUnderground(map))
     autoeject(wounded_pilot, wounded, 0);
 
-  DestroySection(wounded, attacker, 0, HEAD);
+  mech_section_destroy(wounded, attacker, 0, HEAD);
   mech_position_z_set(wounded, z + 6);
   dam = MAX(mech_tonnage(wounded) / 5, mech_engine_rating(wounded) / 10);
 

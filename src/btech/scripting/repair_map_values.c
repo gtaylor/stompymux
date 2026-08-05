@@ -420,8 +420,8 @@ void fun_btsetarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
            "#-1 NOT A MECH");
   FUNCHECK(!btech_context_is_mech(context->btech, it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = btech_context_find_object(context->btech, it)), "#-1");
-  infostr = setarmorstatus_func(mech, fargs[1], fargs[2],
-                                fargs[3]); /* fargs[1] unguaranteed ! */
+  infostr = mech_armor_status_set_value(mech, fargs[1], fargs[2],
+                                        fargs[3]); /* fargs[1] unguaranteed ! */
   safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
@@ -472,8 +472,9 @@ void fun_btdamagemech(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(Readnum(direction, fargs[3]), "#-1 INVALID 4TH ARG");
   FUNCHECK(Readnum(iscrit, fargs[4]), "#-1 INVALID 5TH ARG");
   safe_tprintf_str(buff, bufc, "%d",
-                   dodamage_func(player, mech, totaldam, clustersize, direction,
-                                 iscrit, fargs[5], fargs[6]));
+                   mech_damage_apply_clusters(player, mech, totaldam,
+                                              clustersize, direction, iscrit,
+                                              fargs[5], fargs[6]));
 }
 
 void fun_bttechstatus(char *buff, char **bufc, DbRef player, DbRef cause,

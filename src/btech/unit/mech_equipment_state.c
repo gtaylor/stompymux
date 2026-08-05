@@ -229,6 +229,10 @@ void mech_section_special_remove(Mech *mech, int section, int special) {
   mech->ud.sections[section].specials &= ~special;
 }
 
+void mech_section_specials_clear(Mech *mech, int section) {
+  mech->ud.sections[section].specials = 0;
+}
+
 bool mech_has_attached_inarc_ecm(const Mech *mech) {
   for (int section = 0; section < NUM_SECTIONS; section++)
     if (mech->ud.sections[section].internal &&
@@ -310,10 +314,12 @@ bool mech_part_is_structural_placeholder(int part_type) {
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {
   mech->ud.sections[section].armor = armor;
+  mech->rd.critstatus &= ~OWEIGHT_OK;
 }
 
 void mech_section_rear_armor_set(Mech *mech, int section, int armor) {
   mech->ud.sections[section].rear = armor;
+  mech->rd.critstatus &= ~OWEIGHT_OK;
 }
 
 void mech_section_original_armor_set(Mech *mech, int section, int armor) {
@@ -322,6 +328,7 @@ void mech_section_original_armor_set(Mech *mech, int section, int armor) {
 
 void mech_section_internal_set(Mech *mech, int section, int internal) {
   mech->ud.sections[section].internal = internal;
+  mech->rd.critstatus &= ~OWEIGHT_OK;
 }
 
 void mech_section_original_internal_set(Mech *mech, int section, int internal) {

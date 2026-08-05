@@ -245,10 +245,6 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
 
     mech_weapon_critical_apply(mech, attacker, LOS, hitloc, critHit);
 
-    /* Have to destroy all the weapons of this type in this section */
-    /* DestroyWeapon(wounded, hitloc, critType, 1, GetWeaponCrits(wounded,
-     * Weapon2I(critType))); */
-
     return 1;
   }
 
@@ -313,8 +309,8 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
         wFirstCrit = FindFirstWeaponCrit(wounded, hitloc, critHit, 0, critType,
                                          heat_sink_critical_size);
         mech_heat_sink_count_remove(wounded, 2);
-        DestroyWeapon(wounded, hitloc, critType, wFirstCrit, 1,
-                      heat_sink_critical_size);
+        mech_weapon_destroy(wounded, hitloc, critType, wFirstCrit, 1,
+                            heat_sink_critical_size);
         destroycrit = 0;
       } else
         mech_heat_sink_count_remove(wounded, 1);
@@ -335,7 +331,7 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       if (mech_technology_flags_secondary(mech) & IMPROVED_JJ_TECH) {
         wFirstCrit =
             FindFirstWeaponCrit(wounded, hitloc, critHit, 0, critType, 2);
-        DestroyWeapon(wounded, hitloc, critType, wFirstCrit, 1, 2);
+        mech_weapon_destroy(wounded, hitloc, critType, wFirstCrit, 1, 2);
         destroycrit = 0;
       }
       mech_jump_speed_lower(wounded, MP1);

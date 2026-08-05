@@ -101,7 +101,8 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
       mech_los_broadcast(wounded, msgbuf);
     }
 
-    DestroyWeapon(wounded, hitloc, critType, wFirstCrit, wMaxCrits, wMaxCrits);
+    mech_weapon_destroy(wounded, hitloc, critType, wFirstCrit, wMaxCrits,
+                        wMaxCrits);
 
     if (attacker) {
       DamageMech(wounded, attacker, 0, -1, hitloc, 0, 0, 0,
@@ -165,8 +166,8 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
         mech_los_broadcast(wounded, msgbuf);
       }
 
-      DestroyWeapon(wounded, hitloc, critType, wFirstCrit, wMaxCrits,
-                    wMaxCrits);
+      mech_weapon_destroy(wounded, hitloc, critType, wFirstCrit, wMaxCrits,
+                          wMaxCrits);
 
       if (attacker) {
         DamageMech(wounded, attacker, 0, -1, hitloc, 0, 0, 0, damage, -1, 7, -1,
@@ -201,8 +202,8 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
         mech_los_broadcast(wounded, msgbuf);
       }
 
-      DestroyWeapon(wounded, hitloc, critType, wFirstCrit, wMaxCrits,
-                    wMaxCrits);
+      mech_weapon_destroy(wounded, hitloc, critType, wFirstCrit, wMaxCrits,
+                          wMaxCrits);
 
       if (attacker) {
         DamageMech(wounded, attacker, 0, -1, hitloc, 0, 0, 0,
@@ -480,7 +481,7 @@ void mech_weapon_destroyed_critical_apply(Mech *objAttacker, Mech *objMech,
   if (wWeapIdx >= 0) {
     firstCrit = FindFirstWeaponCrit(objMech, wLoc, -1, 0, wCritType, 1);
 
-    DestroyWeapon(objMech, wLoc, wCritType, firstCrit, 1, 1);
+    mech_weapon_destroy(objMech, wLoc, wCritType, firstCrit, 1, 1);
     mech_printf(objMech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
                 &MechWeapons[wWeapIdx].name[3]);
   }
@@ -499,7 +500,7 @@ void mech_turret_blown_off_critical_apply(Mech *objMech, Mech *objAttacker,
       objMech, MECHALL,
       "[fg=red bold]The shot pops your turret clear off its housing![reset]");
   mech_los_broadcast(objMech, "'s turret flies off!");
-  DestroySection(objMech, objAttacker, LOS, TURRET);
+  mech_section_destroy(objMech, objAttacker, LOS, TURRET);
 }
 
 void mech_ammunition_critical_apply(Mech *objMech, Mech *objAttacker, int wLoc,

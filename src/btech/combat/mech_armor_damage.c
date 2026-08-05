@@ -223,7 +223,7 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   }
 
   if (mech_class(wounded) == CLASS_AERO && intDamage >= 0) {
-    DestroySection(wounded, attacker, LOS, hitloc);
+    mech_section_destroy(wounded, attacker, LOS, hitloc);
     if (mech_is_destroyed(wounded)) {
       intDamage = 0;
       return 0;
@@ -300,7 +300,7 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
                      locname);
             mech_los_broadcast(wounded, msgbuf);
           }
-          DestroySection(wounded, attacker, LOS, hitloc);
+          mech_section_destroy(wounded, attacker, LOS, hitloc);
           if (mech_class(wounded) != CLASS_MW)
             intDamage = 0;
           break;
@@ -327,7 +327,7 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
 
   if (mech_section_internal(wounded, hitloc) <= intDamage) {
     intDamage -= mech_section_internal(wounded, hitloc);
-    DestroySection(wounded, attacker, LOS, hitloc);
+    mech_section_destroy(wounded, attacker, LOS, hitloc);
 
   } else {
     mech_section_internal_set(

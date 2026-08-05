@@ -93,6 +93,7 @@ void mech_ams_enabled_set(Mech *mech, bool enabled);
 void mech_evading_set(Mech *mech, bool evading);
 void mech_sprinting_set(Mech *mech, bool sprinting);
 void mech_dfa_attacking_set(Mech *mech, bool attacking);
+void mech_turret_auto_turn_set(Mech *mech, bool enabled);
 void mech_player_killer_set(Mech *mech, bool enabled);
 void mech_partial_cover_set(Mech *mech, bool covered);
 void mech_swarm_target_set(Mech *mech, DbRef target);

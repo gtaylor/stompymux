@@ -90,8 +90,8 @@ void mech_main_weapon_destroy(Mech *mech) {
   }
   if (critfound) {
     firstCrit = FindFirstWeaponCrit(mech, maxloc, -1, 0, I2Weapon(maxtype), 1);
-    DestroyWeapon(mech, maxloc, I2Weapon(maxtype), 1, firstCrit,
-                  GetWeaponCrits(mech, maxtype));
+    mech_weapon_destroy(mech, maxloc, I2Weapon(maxtype), 1, firstCrit,
+                        GetWeaponCrits(mech, maxtype));
     mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
                 &MechWeapons[maxtype].name[3]);
   }
@@ -145,7 +145,7 @@ void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     if (!mech_section_configuration_has(wounded, BSIDE, CASE_TECH))
       mech_explosion_apply(wounded, attacker);
     else
-      DestroySection(wounded, attacker, LOS, BSIDE);
+      mech_section_destroy(wounded, attacker, LOS, BSIDE);
     break;
   }
 }

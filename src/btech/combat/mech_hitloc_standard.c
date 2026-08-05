@@ -267,7 +267,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 3:
       case 11:
         if (mech_section_is_crittable(mech, AERO_NOSE, 90))
-          LoseWeapon(mech, AERO_NOSE);
+          mech_weapon_destroy_random(mech, AERO_NOSE);
         return AERO_NOSE;
       case 4:
       case 10:
@@ -293,12 +293,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 3:
       case 11:
         if (mech_section_is_crittable(mech, side, 99))
-          LoseWeapon(mech, side);
+          mech_weapon_destroy_random(mech, side);
         return side;
       case 4:
       case 10:
         if (mech_section_is_crittable(mech, AERO_AFT, 90))
-          DestroyHeatSink(mech, AERO_AFT);
+          mech_heat_sink_destroy(mech, AERO_AFT);
         return AERO_AFT;
       case 5:
       case 9:
@@ -345,7 +345,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 3:
       case 11:
         if (mech_section_is_crittable(mech, DS_NOSE, 50))
-          LoseWeapon(mech, DS_NOSE);
+          mech_weapon_destroy_random(mech, DS_NOSE);
         return DS_NOSE;
       case 5:
         return DS_RWING;
@@ -373,7 +373,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 3:
       case 11:
         if (mech_section_is_crittable(mech, side, 60))
-          LoseWeapon(mech, side);
+          mech_weapon_destroy_random(mech, side);
         return side;
       case 4:
       case 5:
@@ -404,7 +404,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 7:
       case 10:
         if (mech_section_is_crittable(mech, DS_AFT, 60))
-          DestroyHeatSink(mech, DS_AFT);
+          mech_heat_sink_destroy(mech, DS_AFT);
         return DS_AFT;
       case 5:
         hitloc = DS_RWING;

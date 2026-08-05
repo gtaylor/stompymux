@@ -61,14 +61,14 @@ static void mech_self_destruct_event(MuxEvent *event) {
     mech_los_broadcast(mech, "suddenly explodes!");
     headhitmwdamage(mech, mech, 4);
     for (int section = 0; section < NUM_BSUIT_MEMBERS; section++)
-      DestroySection(mech, mech, -1, section);
+      mech_section_destroy(mech, mech, -1, section);
     mech_position_z_set(mech, mech_position_z(mech) + 6);
   } else if (mech_class(mech) != CLASS_MECH) {
     mech_notify(mech, MECHALL,
                 "Your life flashes before your eyes as your vehicle "
                 "immolates itself... you faint.. (and die)");
     mech_los_broadcast(mech, "suddenly explodes!");
-    DestroySection(mech, mech, -1, 3);
+    mech_section_destroy(mech, mech, -1, 3);
     headhitmwdamage(mech, mech, 4);
     mech_position_z_set(mech, mech_position_z(mech) + 6);
   } else if (extra >= 256) {
