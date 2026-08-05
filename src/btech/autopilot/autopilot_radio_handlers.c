@@ -30,6 +30,7 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
+#include "legacy_macros.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_events.h"

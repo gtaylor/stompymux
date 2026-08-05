@@ -53,8 +53,8 @@ void HandleVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                        int num);
 int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                    int critHit, int critType, int critData);
-void HandleCritical(Mech *wounded, Mech *attacker, int LOS, int hitloc,
-                    int num);
+void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
+                          int num);
 void NormalizeArmActuatorCrits(Mech *objMech, int wLoc, int wCritType);
 void NormalizeLegActuatorCrits(Mech *objMech, int wLoc, int wCritType);
 void NormalizeLocActuatorCrits(Mech *objMech, int wLoc);

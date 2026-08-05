@@ -606,11 +606,11 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
       switch (wCritRoll) {
       case 8:
       case 9:
-        HandleCritical(target, mech, 1, wLegID, 1);
+        mech_critical_handle(target, mech, 1, wLegID, 1);
         break;
       case 10:
       case 11:
-        HandleCritical(target, mech, 1, wLegID, 2);
+        mech_critical_handle(target, mech, 1, wLegID, 2);
         break;
       case 12:
         switch (wLegID) {
@@ -628,7 +628,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
           DestroySection(target, mech, 1, wLegID);
           [[fallthrough]];
         default:
-          HandleCritical(target, mech, 1, wLegID, 3);
+          mech_critical_handle(target, mech, 1, wLegID, 3);
         }
         break;
       default:

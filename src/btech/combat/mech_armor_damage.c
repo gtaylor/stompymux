@@ -196,16 +196,16 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
     switch (r) {
     case 8:
     case 9:
-      HandleCritical(wounded, attacker, LOS, hitloc, 1);
+      mech_critical_handle(wounded, attacker, LOS, hitloc, 1);
       (*crits) += 1;
       break;
     case 10:
     case 11:
-      HandleCritical(wounded, attacker, LOS, hitloc, 2);
+      mech_critical_handle(wounded, attacker, LOS, hitloc, 2);
       (*crits) += 2;
       break;
     case 12:
-      HandleCritical(wounded, attacker, LOS, hitloc, 3);
+      mech_critical_handle(wounded, attacker, LOS, hitloc, 3);
       (*crits) += 3;
       break;
     default:
@@ -267,11 +267,11 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
     switch (r) {
     case 8:
     case 9:
-      HandleCritical(wounded, attacker, LOS, hitloc, 1);
+      mech_critical_handle(wounded, attacker, LOS, hitloc, 1);
       break;
     case 10:
     case 11:
-      HandleCritical(wounded, attacker, LOS, hitloc, 2);
+      mech_critical_handle(wounded, attacker, LOS, hitloc, 2);
       break;
     case 12:
       if ((MechType(wounded) == CLASS_MECH) ||
@@ -297,11 +297,11 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
           break;
         default:
           /* Ouch */
-          HandleCritical(wounded, attacker, LOS, hitloc, 3);
+          mech_critical_handle(wounded, attacker, LOS, hitloc, 3);
           break;
         }
       } else {
-        HandleCritical(wounded, attacker, LOS, hitloc, 3);
+        mech_critical_handle(wounded, attacker, LOS, hitloc, 3);
       }
 
       break;
