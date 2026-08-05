@@ -7,6 +7,13 @@ bool mech_is_started(const Mech *mech) { return mech->rd.status & STARTED; }
 
 bool mech_is_destroyed(const Mech *mech) { return mech->rd.status & DESTROYED; }
 
+void mech_destroyed_set(Mech *mech, bool destroyed) {
+  if (destroyed)
+    mech->rd.status |= DESTROYED;
+  else
+    mech->rd.status &= ~DESTROYED;
+}
+
 bool mech_is_landed(const Mech *mech) { return mech->rd.status & LANDED; }
 
 bool mech_is_jumping(const Mech *mech) { return mech->rd.status & JUMPING; }

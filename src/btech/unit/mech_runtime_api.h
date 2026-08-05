@@ -6,6 +6,7 @@
 
 bool mech_is_started(const Mech *mech);
 bool mech_is_destroyed(const Mech *mech);
+void mech_destroyed_set(Mech *mech, bool destroyed);
 bool mech_is_landed(const Mech *mech);
 bool mech_is_jumping(const Mech *mech);
 bool mech_is_out_of_control(const Mech *mech);

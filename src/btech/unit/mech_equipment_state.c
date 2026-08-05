@@ -12,6 +12,11 @@ int mech_critical_brand(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].brand % 16;
 }
 
+void mech_critical_brand_set(Mech *mech, int section, int critical, int brand) {
+  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  slot->brand = brand + ((slot->brand >> 4) << 4);
+}
+
 int mech_critical_data(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].data;
 }
@@ -109,6 +114,13 @@ void mech_critical_ammo_mode_add(Mech *mech, int section, int critical,
 void mech_critical_damage_flags_add(Mech *mech, int section, int critical,
                                     int flags) {
   mech->ud.sections[section].criticals[critical].weapDamageFlags |= flags;
+}
+
+void mech_critical_damage_repair(Mech *mech, int section, int critical) {
+  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  slot->firemode &= ~DAMAGED_MODE;
+  slot->weapDamageFlags = 0;
+  slot->brand %= 16;
 }
 
 void mech_critical_part_type_set(Mech *mech, int section, int critical,
