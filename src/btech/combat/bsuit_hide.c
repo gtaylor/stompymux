@@ -21,6 +21,7 @@
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "legacy_macros.h"
+#include "map.h"
 #include "map_terrain.h"
 #include "mech_bth_api.h"
 #include "mech_classification_api.h"
@@ -92,7 +93,7 @@ static void mech_hide_event(MuxEvent *e) {
     if (mech_is_destroyed(t))
       continue;
     if (mech_los_check(t, mech, mech_position_x(mech), mech_position_y(mech),
-                       FaMechRange(t, mech)))
+                       mech_range_to(t, mech)))
       fail = 1;
   }
 
@@ -151,15 +152,17 @@ void bsuit_hide(DbRef player, void *data, char *buffer) {
   terrain =
       map_real_terrain_get(map, mech_position_x(mech), mech_position_y(mech));
 
-  if (IsForest(terrain)) {
+  if (terrain == BATTLE_TERRAIN_LIGHT_FOREST ||
+      terrain == BATTLE_TERRAIN_HEAVY_FOREST) {
     mech_notify(mech, MECHALL, "You start to hide amongst the trees...");
-  } else if (IsMountains(terrain)) {
+  } else if (terrain == BATTLE_TERRAIN_MOUNTAINS) {
     mech_notify(mech, MECHALL,
                 "You start to hide behind some rocky outcroppings...");
-  } else if (IsRough(terrain)) {
+  } else if (terrain == BATTLE_TERRAIN_ROUGH) {
     mech_notify(mech, MECHALL,
                 "You find some boulders to try to hide behind...");
-  } else if (IsBuilding(terrain) && mech_class(mech) == CLASS_BSUIT) {
+  } else if (terrain == BATTLE_TERRAIN_BUILDING &&
+             mech_class(mech) == CLASS_BSUIT) {
     mech_notify(mech, MECHALL,
                 "You break into a building and look for a spot to hide...");
   } else {

@@ -50,6 +50,7 @@
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
@@ -58,6 +59,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "template_api.h"
 /*
  * - Only when fallen
@@ -151,7 +153,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
       if (mech_is_jumping(target) || mech_is_out_of_control(target))
         continue;
 
-      if (FaMechRange(mech, target) > 1.0)
+      if (mech_range_to(mech, target) > 1.0)
         continue;
 
       mech_printf(mech, MECHALL, "You manage to hit %s!",

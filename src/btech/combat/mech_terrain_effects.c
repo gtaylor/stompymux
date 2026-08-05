@@ -59,6 +59,7 @@
 #include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_settings.h"
 
 const char *mech_hex_target_description(const Mech *mech) {
