@@ -8,9 +8,33 @@
  *       All rights reserved
  */
 
-#include "mech_update_internal.h"
+#include "mech_hex_transition_api.h"
 
+#include <math.h>
+#include <stdlib.h>
+
+#include "btech/context.h"
+#include "btech_event.h"
+#include "btechstats_api.h"
+#include "equipment_types.h"
+#include "map_terrain.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_crew_api.h"
+#include "mech_events.h"
+#include "mech_events_api.h"
+#include "mech_identity_api.h"
+#include "mech_lifecycle.h"
+#include "mech_move_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
 #include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_update_api.h"
+#include "mech_utils_api.h"
+#include "mux/support/formatting.h"
 
 HexTransitionResult
 mech_hex_transition_resolve(const HexMechTransitionInput *input) {
@@ -26,27 +50,33 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
   int ed;
   int avoidbth;
   int done = 0;
+  BtechContext *context = mech_context(mech);
+  bool skid_cliff = btech_context_uses_skid_cliff_rules(context);
+  MechConditionSummary condition = mech_condition_summary(mech);
 
-  switch (MechMove(mech)) {
+  switch (mech_movement_type(mech)) {
   case MOVE_BIPED:
   case MOVE_QUAD:
 
-    if (Jumping(mech)) {
+    if (mech_is_jumping(mech)) {
 
-      if (mech_real_terrain_get(mech) == WATER)
+      if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_WATER)
         return (HexTransitionResult){.stop = true, .done = done};
 
       /* Did we hit something while jumping */
       if (collision_check(mech, JUMP, 0, 0)) {
 
-        ed = MAX(1, 1 + MechZ(mech) -
-                        Elevation(mech_map, MechX(mech), MechY(mech)));
+        ed = 1 + mech_position_z(mech) -
+             battle_map_hex_elevation(mech_map, mech_position_x(mech),
+                                      mech_position_y(mech));
+        ed = ed > 1 ? ed : 1;
         mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
         mech_notify(mech, MECHALL,
                     "[bold]You attempt to jump over elevation that is too "
                     "high![reset]");
         if (mech_has_active_pilot(mech) &&
-            MadePilotSkillRoll(mech, (int)(MechFZ(mech)) / ZSCALE / 3)) {
+            MadePilotSkillRoll(mech,
+                               (int)mech_position_real_z(mech) / ZSCALE / 3)) {
 
           mech_notify(mech, MECHALL, "[bold]You land safely.[reset]");
           mech_jump_land(mech);
@@ -72,13 +102,15 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       mech_notify(mech, MECHALL,
                   "You attempt to climb a hill too steep for you.");
 
-      if (MechPilot(mech) == -1 ||
-          (!mech->xcode.context->configuration->btech_skidcliff &&
+      if (mech_pilot_dbref(mech) == -1 ||
+          (!skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
-          (mech->xcode.context->configuration->btech_skidcliff &&
+               mech, (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3,
+               1)) ||
+          (skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, mech_skid_modifier(fabs(MechSpeed(mech)) / MP1), 1))) {
+               mech, mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1),
+               1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
         mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
@@ -88,26 +120,27 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         mech_notify(mech, MECHALL,
                     "You run headlong into the cliff and fall down!");
         mech_los_broadcast(mech, "runs headlong into a cliff and falls down!");
-        if (!mech->xcode.context->configuration->btech_skidcliff)
-          mech_fall(mech, (int)(1 + (MechSpeed(mech)) * MP_PER_KPH) / 4, 0);
+        if (!skid_cliff)
+          mech_fall(mech, (int)(1 + mech_current_speed(mech) * MP_PER_KPH) / 4,
+                    0);
         else
           mech_fall(mech, 1, 0);
       }
-      MechDesiredSpeed(mech) = 0;
-      MechSpeed(mech) = 0;
-      MechZ(mech) = lastelevation;
+      mech_movement_stop(mech);
+      mech_position_z_set(mech, lastelevation);
       return (HexTransitionResult){.stop = true, .done = done};
 
     } else if (collision_check(mech, WALK_DROP, lastelevation, oldterrain)) {
 
       /* Walked off a cliff ... */
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
-      avoidbth = mech->xcode.context->configuration->btech_skidcliff
-                     ? mech_skid_modifier(fabs(MechSpeed(mech)) / MP1)
-                     : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
+      avoidbth = skid_cliff
+                     ? mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1)
+                     : ((fabs((mech_current_speed(mech)) + MP1) / MP1) / 3);
 
-      if (MechPilot(mech) == -1 ||
-          (!MechAutoFall(mech) && MadePilotSkillRoll_NoXP(mech, avoidbth, 1))) {
+      if (mech_pilot_dbref(mech) == -1 ||
+          (!condition.auto_fall &&
+           MadePilotSkillRoll_NoXP(mech, avoidbth, 1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before falling off.");
         mech_los_broadcast(mech,
@@ -121,21 +154,19 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         mech_los_broadcast(mech,
                            "runs off a cliff and falls to the ground below!");
         mech_fall(mech, lastelevation - elevation, 0);
-        MechDesiredSpeed(mech) = 0;
-        MechSpeed(mech) = 0;
+        mech_movement_stop(mech);
       }
-      MechDesiredSpeed(mech) = 0;
-      MechSpeed(mech) = 0;
+      mech_movement_stop(mech);
       return (HexTransitionResult){.stop = true, .done = done};
 
-    } else if (mech->xcode.context->configuration->btech_roll_on_backwalk &&
-               (MechSpeed(mech) < 0) &&
+    } else if (btech_context_requires_backwalk_rolls(context) &&
+               (mech_current_speed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
 
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
                   (elevation > lastelevation ? "small incline" : "small drop"));
 
-      if (MechPilot(mech) == -1 ||
+      if (mech_pilot_dbref(mech) == -1 ||
           (MadePilotSkillRoll(mech, collision_check(mech, WALK_BACK,
                                                     lastelevation, oldterrain) -
                                         1))) {
@@ -156,8 +187,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                                ? "falls on its back walking up an incline."
                                : "falls off the back of a small incline.")));
         mech_fall(mech, abs(lastelevation - elevation), 1);
-        MechDesiredSpeed(mech) = 0;
-        MechSpeed(mech) = 0;
+        mech_movement_stop(mech);
         if (elevation > lastelevation) {
           mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
         }
@@ -168,36 +198,36 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
     /* Slow the unit if its made an elevation change */
     le = elevation - lastelevation;
     le = (le < 0) ? -le : le;
-    if (MechZ(mech) != elevation)
+    if (mech_position_z(mech) != elevation)
       le = 0;
     if (le > 0) {
       deltax = (le == 1) ? MP1 : MP2;
-      if (MechSpeed(mech) > 0) {
-        MechSpeed(mech) -= deltax;
-        if (MechSpeed(mech) < 0)
-          MechSpeed(mech) = 0;
-      } else if (MechSpeed(mech) < 0) {
-        MechSpeed(mech) += deltax;
-        if (MechSpeed(mech) > 0)
-          MechSpeed(mech) = 0;
+      float speed = mech_current_speed(mech);
+      if (speed > 0) {
+        speed -= deltax;
+        mech_current_speed_set(mech, speed < 0 ? 0 : speed);
+      } else if (speed < 0) {
+        speed += deltax;
+        mech_current_speed_set(mech, speed > 0 ? 0 : speed);
       }
     }
 
-    if (MechType(mech) == CLASS_BSUIT) {
+    if (mech_class(mech) == CLASS_BSUIT) {
 
       /* Are they in water, also make sure it affects them */
-      if (!(MechSpecials2(mech) & WATERPROOF_TECH) &&
-          (mech_real_terrain_get(mech) == WATER ||
-           (mech_real_terrain_get(mech) == BRIDGE &&
+      if (!(mech_technology_flags_secondary(mech) & WATERPROOF_TECH) &&
+          (mech_real_terrain_get(mech) == BATTLE_TERRAIN_WATER ||
+           (mech_real_terrain_get(mech) == BATTLE_TERRAIN_BRIDGE &&
             (lastelevation < (elevation - 1)))) &&
           elevation < 0) {
 
         mech_notify(mech, MECHALL,
                     "You notice a body of water in front of you");
 
-        if (MechPilot(mech) == -1 ||
+        if (mech_pilot_dbref(mech) == -1 ||
             MadePilotSkillRoll(
-                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3)) {
+                mech,
+                (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3)) {
 
           mech_notify(mech, MECHALL, "You manage to stop before falling in.");
           mech_los_broadcast(mech, "stops suddenly to avoid going for a swim!");
@@ -209,23 +239,26 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
           return (HexTransitionResult){.stop = true, .done = done};
         }
         mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
-        MechDesiredSpeed(mech) = 0;
-        MechSpeed(mech) = 0;
+        mech_movement_stop(mech);
         return (HexTransitionResult){.stop = true, .done = done};
       }
 
-    } else if (!(MechSpecials2(mech) & WATERPROOF_TECH) &&
-               ((mech_real_terrain_get(mech) == WATER && MechZ(mech) < 0) ||
-                (mech_real_terrain_get(mech) == BRIDGE && MechZ(mech) < 0) ||
-                (mech_real_terrain_get(mech) == ICE && MechZ(mech) < 0) ||
-                mech_real_terrain_get(mech) == HIGHWATER) &&
-               MechType(mech) != CLASS_MW) {
+    } else if (!(mech_technology_flags_secondary(mech) & WATERPROOF_TECH) &&
+               ((mech_real_terrain_get(mech) == BATTLE_TERRAIN_WATER &&
+                 mech_position_z(mech) < 0) ||
+                (mech_real_terrain_get(mech) == BATTLE_TERRAIN_BRIDGE &&
+                 mech_position_z(mech) < 0) ||
+                (mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE &&
+                 mech_position_z(mech) < 0) ||
+                mech_real_terrain_get(mech) == BATTLE_TERRAIN_HIGH_WATER) &&
+               mech_class(mech) != CLASS_MW) {
 
       int skillmod, dammod;
-      MechDesiredSpeed(mech) =
-          MIN(MechDesiredSpeed(mech), WalkingSpeed(MMaxSpeed(mech)));
+      float walking_speed = 2.0F * mech_effective_maximum_speed(mech) / 3.0F;
+      if (mech_desired_speed(mech) > walking_speed)
+        mech_desired_speed_set(mech, walking_speed);
 #ifdef BT_MOVEMENT_MODES
-      if (MechStatus2(mech) & SPRINTING) {
+      if (condition.sprinting) {
         mech_los_broadcast(mech,
                            "breaks out of its sprint as it enters water!");
         mech_notify(mech, MECHALL,
@@ -236,7 +269,8 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                               MODE_OFF | MODE_SPRINT);
       }
 #endif
-      if (IsRunning(MechSpeed(mech), MMaxSpeed(mech))) {
+      if (mech_current_speed(mech) >
+          2.0F * mech_effective_maximum_speed(mech) / 3.0F + 0.1F) {
         mech_notify(mech, MECHPILOT,
                     "You struggle to keep control as you run into the water!");
         skillmod = 2;
@@ -248,11 +282,12 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         skillmod = 0;
         dammod = 0;
       }
-      skillmod +=
-          (mech_real_terrain_get(mech) == HIGHWATER ? -2
-           : mech_real_terrain_get(mech) == BRIDGE  ? bridge_w_elevation(mech)
-           : MechElev(mech) > 3                     ? 1
-                                                    : (MechElev(mech) - 2));
+      skillmod += (mech_real_terrain_get(mech) == BATTLE_TERRAIN_HIGH_WATER ? -2
+                   : mech_real_terrain_get(mech) == BATTLE_TERRAIN_BRIDGE
+                       ? bridge_w_elevation(mech)
+                   : mech_position_elevation(mech) > 3
+                       ? 1
+                       : (mech_position_elevation(mech) - 2));
       //
       // Stupid Frontiers cheaters. No XP gains here.
       if (!MadePilotSkillRoll_NoXP(mech, skillmod, 0)) {

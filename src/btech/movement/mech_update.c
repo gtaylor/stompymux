@@ -59,7 +59,7 @@ int DSOkToNotify(Mech *mech) {
   return 0;
 }
 
-int collision_check(Mech *mech, int mode, int le, int lt) {
+int collision_check(Mech *mech, MovementCollisionMode mode, int le, int lt) {
   int e;
   BattleMap *mech_map =
       btech_context_get_map(mech->xcode.context, mech->mapindex);

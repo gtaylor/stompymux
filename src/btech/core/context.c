@@ -102,6 +102,16 @@ bool btech_context_uses_fasa_turning(const BtechContext *context) {
   return context->configuration->btech_fasaturn;
 }
 
+bool btech_context_uses_skid_cliff_rules(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_skidcliff;
+}
+
+bool btech_context_requires_backwalk_rolls(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_roll_on_backwalk;
+}
+
 int btech_context_movement_slowdown_mode(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_slowdown;

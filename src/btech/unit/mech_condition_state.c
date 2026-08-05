@@ -31,6 +31,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .stunned = (tank_critical_status & CREW_STUNNED) ||
                  (critical_status & MECH_STUNNED),
       .performing_action = status & PERFORMING_ACTION,
+      .auto_fall = mech->rd.mech_prefs & MECHPREF_AUTOFALL,
       .ecm_protected =
           (status2 & ECM_PROTECTED) || ecm_active || personal_ecm_active,
       .angel_ecm_protected =

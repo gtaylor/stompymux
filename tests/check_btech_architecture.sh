@@ -578,6 +578,13 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Jumping|MMaxSpeed|IsRunning|WalkingSpeed)\s*\(' \
+  src/btech/movement/mech_update_hex_mech.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: mech hex transitions must use opaque unit APIs"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1
