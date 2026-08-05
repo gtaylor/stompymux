@@ -209,7 +209,7 @@ void checkVehicleInFire(Mech *objMech, int fromHexFire) {
     } else {
       mech_notify(objMech, MECHALL,
                   "[fg=red bold]The fire damages your motive system![reset]");
-      DoMotiveSystemHit(objMech, 0);
+      mech_motive_system_hit(objMech, 0);
     }
     break;
 

@@ -21,7 +21,7 @@ int TransferTarget(Mech *mech, int hitloc);
 int crittable(Mech *m, int loc, int tres);
 int FindHitLocation(Mech *mech, int hitGroup, int *iscritical, int *isrear);
 int FindFasaHitLocation(Mech *mech, int hitGroup, int *iscritical, int *isrear);
-void DoMotiveSystemHit(Mech *mech, int wRollMod);
+void mech_motive_system_hit(Mech *mech, int wRollMod);
 int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
                                   int *isrear);
 int findNARCHitLoc(Mech *mech, Mech *hitMech, int *tIsRearHit);

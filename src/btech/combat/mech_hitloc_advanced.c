@@ -43,7 +43,7 @@ int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
         hitloc = side;
         if (crittable(mech, hitloc,
                       mech->xcode.context->configuration->btech_critlevel))
-          DoMotiveSystemHit(mech, 0);
+          mech_motive_system_hit(mech, 0);
         break;
       case 4:
         hitloc = side;
@@ -84,7 +84,7 @@ int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
 
         if (crittable(mech, hitloc,
                       mech->xcode.context->configuration->btech_critlevel))
-          DoMotiveSystemHit(mech, 0);
+          mech_motive_system_hit(mech, 0);
         break;
       case 4:
         hitloc = side;
