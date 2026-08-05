@@ -521,7 +521,7 @@ static inline BtechContext *xcode_context(const void *object) {
     MechTerrain(to) = MechTerrain(from);                                       \
     MechElev(to) = MechElev(from) + heightMod;                                 \
     MarkForLOSUpdate(to);                                                      \
-    MechFloods(to);                                                            \
+    mech_flood(to);                                                            \
   } while (0)
 
 #define ValidCoordA(mech_map, newx, newy, msg)                                 \

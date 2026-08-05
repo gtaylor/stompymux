@@ -623,7 +623,7 @@ void move_mech(Mech *mech) {
       // Removed MarkForLOSUpdate.. Moved to NewHexEntered to clear potential
       // false positives.
       //			MarkForLOSUpdate(mech);
-      MechFloods(mech);
+      mech_flood(mech);
       water_extinguish_inferno(mech);
       steppable_base_check(mech, x, y);
 

@@ -203,7 +203,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
 
           mech_notify(mech, MECHALL,
                       "You trip at the edge of the water and plunge in...");
-          MechFloods(mech);
+          mech_flood(mech);
           return (HexTransitionResult){.stop = true, .done = done};
         }
         move_unit_back(mech, deltax, deltay, lastelevation, ot, le);

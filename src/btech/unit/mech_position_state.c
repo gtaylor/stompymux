@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "floatsim.h"
+#include "map_terrain.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
@@ -24,6 +25,15 @@ int mech_position_elevation(const Mech *mech) { return mech->pd.elev; }
 
 int mech_position_elevation_magnitude(const Mech *mech) {
   return abs(mech->pd.elev);
+}
+
+int mech_position_surface_elevation(Mech *mech) {
+  int elevation = abs(mech->pd.elev);
+  char terrain = mech_real_terrain_get(mech);
+
+  return terrain == BATTLE_TERRAIN_WATER || terrain == BATTLE_TERRAIN_ICE
+             ? -elevation
+             : elevation;
 }
 
 float mech_position_real_x(const Mech *mech) { return mech->pd.fx; }

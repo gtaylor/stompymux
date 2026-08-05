@@ -213,7 +213,7 @@ void mech_ood_event(MuxEvent *e) {
 
           DamageMech(mech, mech, 0, -1, i, 0, 0, dam, -1, -1, 0, 0, 0, 0);
 
-          MechFloods(mech);
+          mech_flood(mech);
         }
       }
 

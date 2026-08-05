@@ -182,6 +182,18 @@ done < <(rg -n \
   src/btech/movement/mech_jump.c || true)
 
 while IFS= read -r match; do
+  echo "$match: converted flooding module uses the aggregate Mech layout"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\bmech->|\b(Mech[A-Z][A-Za-z0-9_]*|GetSect[A-Za-z0-9_]*|SetSect[A-Za-z0-9_]*|SectIsFlooded|Fallen|InWater)\(' \
+  src/btech/movement/mech_flooding.c || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy flooding export is not allowed"
+  status=1
+done < <(rg -n '\bMechFloods(Loc)?\b' src/btech -g '*.[ch]' || true)
+
+while IFS= read -r match; do
   echo "$match: legacy cargo-speed export is not allowed"
   status=1
 done < <(rg -n '\bMechCargoMaxSpeed\b' src/btech -g '*.[ch]' || true)

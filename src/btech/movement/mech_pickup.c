@@ -209,7 +209,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
                 mech_position_z(mech) >= 0 && mech_position_z(target) < 0;
   mech_position_mirror(target, mech, 0);
   MarkForLOSUpdate(target);
-  MechFloods(target);
+  mech_flood(target);
   if (through_ice) {
     if (mech_position_z(mech) == 0 && mech_movement_type(mech) != MOVE_HOVER)
       drop_thru_ice(mech);

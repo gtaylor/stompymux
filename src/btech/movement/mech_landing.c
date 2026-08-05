@@ -229,7 +229,7 @@ void LandMech(Mech *mech) {
   if (!done)
     possible_mine_poof(mech, MINE_LAND);
 
-  MechFloods(mech);
+  mech_flood(mech);
   water_extinguish_inferno(mech);
   // this is only for non-new-stagger
   if (!btech_context_stagger_mode(mech_context(mech)))

@@ -33,6 +33,7 @@ int mech_section_internal(const Mech *mech, int section);
 int mech_section_original_internal(const Mech *mech, int section);
 bool mech_section_is_destroyed(const Mech *mech, int section);
 bool mech_section_is_flooded(const Mech *mech, int section);
+void mech_section_flooded_set(Mech *mech, int section, bool flooded);
 bool mech_critical_is_operational_special(const Mech *mech, int section,
                                           int critical, int special);
 bool mech_section_carries_club(const Mech *mech, int section);

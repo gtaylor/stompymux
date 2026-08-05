@@ -407,7 +407,7 @@ static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
   if (car) {
     mech_position_mirror(car, mech, 0);
     MarkForLOSUpdate(car);
-    MechFloods(car);
+    mech_flood(car);
   }
   mech_los_broadcast_unit(mech, ds, "has left %s's bay.");
   mech_notify(ds, MECHALL,

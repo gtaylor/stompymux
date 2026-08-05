@@ -164,7 +164,7 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
     }
 
     if (!GetSectArmor(wounded, hitloc))
-      MechFloodsLoc(wounded, hitloc, MechZ(wounded));
+      mech_flood_section(wounded, hitloc, MechZ(wounded));
   }
 
   if (!iscritical && (wAmmoMode & AC_AP_MODE) && (intDamage <= 0) &&

@@ -191,7 +191,7 @@ void mech_make_fall(Mech *mech) {
   MechStatus(mech) |= FALLEN;
   MechStatus(mech) &= ~(TORSO_RIGHT | TORSO_LEFT | FLIPPED_ARMS);
   MarkForLOSUpdate(mech);
-  MechFloods(mech);
+  mech_flood(mech);
   mech_event_cancel(mech, EVENT_STAND);
   mech_event_cancel(mech, EVENT_CHANGING_HULLDOWN);
   MechStatus(mech) &= ~HULLDOWN;

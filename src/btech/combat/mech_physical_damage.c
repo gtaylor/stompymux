@@ -384,7 +384,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     MechFZ(mech) = MechZ(mech) * ZSCALE;
 
     if (MechZ(mech) < 0)
-      MechFloods(mech);
+      mech_flood(mech);
   }
 
   for (i = 0; i < DFA_SECTIONS; i++)

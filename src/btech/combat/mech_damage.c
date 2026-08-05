@@ -426,7 +426,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
           MSG_ME_ALL | MSG_F_DOWN);
 
     if (intDamage >= 0)
-      MechFloodsLoc(wounded, hitloc, MechZ(wounded));
+      mech_flood_section(wounded, hitloc, MechZ(wounded));
     if (intDamage > 0 && !is_aero(wounded)) {
       intDamage =
           cause_internaldamage(wounded, attacker, LOS, attackPilot, isrear,
