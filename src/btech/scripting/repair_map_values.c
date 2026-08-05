@@ -1,3 +1,4 @@
+#include "mech_template_api.h"
 #include "values_internal.h"
 
 void fun_btunderrepair(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -197,8 +198,9 @@ void fun_btdesignex(char *buff, char **bufc, DbRef player, DbRef cause,
                     EvaluationContext *context) {
   char *id = fargs[0];
 
-  if (mechref_path(context->btech,
-                   context->btech->configuration->database.mech_db, id)) {
+  if (mech_template_resolve_path(
+          context->btech, context->btech->configuration->database.mech_db,
+          id)) {
     safe_tprintf_str(buff, bufc, "1");
   } else
     safe_tprintf_str(buff, bufc, "0");

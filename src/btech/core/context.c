@@ -71,6 +71,23 @@ GameDatabase *btech_context_database(BtechContext *context) {
   return context->database;
 }
 
+const char *btech_context_mech_template_path(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->database.mech_db;
+}
+
+MechTemplateRegistry *
+btech_context_mech_template_registry(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->templates;
+}
+
+void btech_context_mech_template_registry_set(BtechContext *context,
+                                              MechTemplateRegistry *registry) {
+  assert(context != nullptr);
+  context->templates = registry;
+}
+
 BtechObjectId btech_context_afterlife_dbref(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->afterlife_dbref;

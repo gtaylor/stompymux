@@ -1,3 +1,4 @@
+#include "mech_template_api.h"
 #include "mech_utils_internal.h"
 
 void ArmorStringFromIndex(int index, char *buffer, char type, char mtype) {
@@ -301,7 +302,7 @@ void do_magic(Mech *mech) {
   StopPerformingAction(mech);
 
   memcpy(&opp, mech, sizeof(Mech));
-  mech_loadnew(GOD, &opp, MechType_Ref(mech));
+  mech_template_load(GOD, &opp, MechType_Ref(mech));
   MechEngineSizeV(mech) = MechEngineSizeC(&opp); /* From intact template */
   opp.mynum = -1;
   /* Ok.. It's at perfect condition. Start inflicting some serious crits.. */

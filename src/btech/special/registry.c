@@ -38,6 +38,7 @@
 #include "map_dynamic_api.h"
 #include "mech_lifecycle.h"
 #include "mech_restrict_api.h"
+#include "mech_template_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"

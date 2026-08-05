@@ -237,6 +237,10 @@ bool mech_section_configuration_has(const Mech *mech, int section,
   return mech->ud.sections[section].config & configuration;
 }
 
+int mech_section_configuration(const Mech *mech, int section) {
+  return mech->ud.sections[section].config;
+}
+
 void mech_section_configuration_add(Mech *mech, int section,
                                     int configuration) {
   mech->ud.sections[section].config |= configuration;

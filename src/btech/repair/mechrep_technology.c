@@ -22,7 +22,8 @@
 #include "legacy_macros.h"
 #include "map_terrain.h" // IWYU pragma: keep
 #include "mech_events.h"
-#include "mech_lifecycle.h" // IWYU pragma: keep
+#include "mech_lifecycle.h"
+#include "mech_template_api.h" // IWYU pragma: keep
 #include "mux/network/mux_event.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -581,7 +582,7 @@ Mech *load_refmech(BtechContext *context, const char *reference) {
 
   if (!strcmp(cache->reference, reference))
     return cache->mech;
-  if (mech_loadnew(GOD, cache->mech, (char *)reference) < 1) {
+  if (mech_template_load(GOD, cache->mech, (char *)reference) < 1) {
     cache->reference[0] = '\0';
     return nullptr;
   }

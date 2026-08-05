@@ -17,6 +17,7 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "mech_lifecycle.h"
+#include "mech_template_api.h"
 #include "mux/commands/action_messages.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
@@ -369,8 +370,8 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
            "(can't create RS object)");
     return;
   }
-  if (!mech_loadnew(GOD, m,
-                    (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
+  if (!mech_template_load(
+          GOD, m, (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to load mechwarrior template for #%ld's ejection. (%s)",

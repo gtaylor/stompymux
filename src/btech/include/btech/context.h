@@ -10,6 +10,7 @@
 
 typedef struct AccessControlStore AccessControlStore;
 typedef struct BtechContext BtechContext;
+typedef struct MechTemplateRegistry MechTemplateRegistry;
 typedef struct BtechCommandScope BtechCommandScope;
 typedef struct CommandContext CommandContext;
 typedef struct EvaluationContext EvaluationContext;
@@ -60,6 +61,11 @@ void btech_context_set_process_start_time(BtechContext *context,
 CommandContext *btech_context_command(BtechContext *context);
 EvaluationContext *btech_context_evaluation(BtechContext *context);
 GameDatabase *btech_context_database(BtechContext *context);
+const char *btech_context_mech_template_path(const BtechContext *context);
+MechTemplateRegistry *
+btech_context_mech_template_registry(const BtechContext *context);
+void btech_context_mech_template_registry_set(BtechContext *context,
+                                              MechTemplateRegistry *registry);
 BtechObjectId btech_context_afterlife_dbref(const BtechContext *context);
 bool btech_context_in_character_enabled(const BtechContext *context);
 int btech_context_experience_loss(const BtechContext *context);

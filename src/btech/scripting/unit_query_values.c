@@ -1,3 +1,4 @@
+#include "mech_template_api.h"
 #include "values_internal.h"
 
 #include "crit_api.h"
@@ -65,7 +66,7 @@ void fun_btloadmech(char *buff, char **bufc, DbRef player, DbRef cause,
            "#-1 INVALID TARGET");
   mech = btech_context_get_mech(context->btech, mechdbref);
   FUNCHECK(!mech, "#-1 INVALID TARGET");
-  if (mech_loadnew(player, mech, fargs[1]) == 1) {
+  if (mech_template_load(player, mech, fargs[1]) == 1) {
     mux_event_remove_data(context->btech->events, (void *)mech);
     clear_mech_from_LOS(mech);
     safe_str("1", buff, bufc);

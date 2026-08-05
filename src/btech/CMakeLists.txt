@@ -261,6 +261,8 @@ set(BTECH_SOURCES
   unit/template_internals.c
   unit/template_inventory.c
   unit/template_load.c
+  unit/template_legacy_load.c
+  unit/template_registry.c
   unit/template_save.c)
 
 add_library(btech STATIC ${BTECH_SOURCES})

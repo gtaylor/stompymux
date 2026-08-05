@@ -65,6 +65,7 @@ bool mech_section_carries_club(const Mech *mech, int section);
 bool mech_section_has_special(const Mech *mech, int section, int special);
 bool mech_section_configuration_has(const Mech *mech, int section,
                                     int configuration);
+int mech_section_configuration(const Mech *mech, int section);
 void mech_section_configuration_add(Mech *mech, int section, int configuration);
 void mech_section_configuration_remove(Mech *mech, int section,
                                        int configuration);

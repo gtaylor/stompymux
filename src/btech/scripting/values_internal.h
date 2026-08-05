@@ -84,7 +84,6 @@
 #include "weapon_settings.h"
 
 extern const BtechSpecialObjectDefinition SpecialObjects[];
-char *mechref_path(BtechContext *context, const char *mech_path, char *id);
 char *mech_armor_status_set_value(Mech *mech, char *section, char *armor_type,
                                   char *value);
 typedef struct {

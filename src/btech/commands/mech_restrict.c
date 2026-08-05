@@ -35,6 +35,7 @@
 #include "mech_stagger.h"
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
+#include "mech_template_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mechrep_api.h"
@@ -267,7 +268,7 @@ void newfreemech(DbRef key, void **data, int selector) {
   switch (selector) {
   case SPECIAL_ALLOC:
     mech_identity_initialize(new, key);
-    clear_mech(new, 1);
+    mech_template_clear(new, 1);
     for (i = 0; i < NUM_SECTIONS; i++)
       FillDefaultCriticals(new, i);
     break;
