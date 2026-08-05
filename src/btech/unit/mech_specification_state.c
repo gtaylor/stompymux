@@ -85,6 +85,10 @@ void mech_cargo_space_remove(Mech *mech, int amount) {
   mech->ud.cargospace -= amount;
 }
 
+void mech_cargo_space_add(Mech *mech, int amount) {
+  mech->ud.cargospace += amount;
+}
+
 int mech_carrier_maximum_tonnage(const Mech *mech) {
   return mech->ud.carmaxton;
 }
@@ -112,6 +116,10 @@ void mech_current_speed_reduce_toward_zero(Mech *mech, float amount) {
 }
 
 float mech_maximum_speed(const Mech *mech) { return mech->ud.maxspeed; }
+
+float mech_walking_speed(const Mech *mech) {
+  return (float)2.0 * mech->ud.maxspeed / 3.0;
+}
 
 float mech_template_maximum_speed(const Mech *mech) {
   return mech->ud.template_maxspeed;

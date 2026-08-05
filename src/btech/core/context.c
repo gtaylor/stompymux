@@ -216,6 +216,17 @@ BtechObjectId btech_context_stat_engine_dbref(const BtechContext *context) {
   return context->configuration->btech_statengine_obj;
 }
 
+BtechObjectId btech_context_used_mech_store_dbref(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_usedmechstore;
+}
+
+bool btech_context_mechwarrior_pickup_triggers_actions(
+    const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_mwpickup_action;
+}
+
 int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_sprint_bth;
