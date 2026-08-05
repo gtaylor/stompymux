@@ -16,10 +16,9 @@
 #include "command_handlers_api.h"
 #include "econ_api.h"
 #include "legacy_macros.h"
-#include "mech.h"
 #include "mech_consistency_api.h"
 #include "mech_events.h"
-#include "mech_macros.h"
+#include "mech_identity_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_parts.h"
@@ -35,47 +34,6 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
-
-#define my_parsepart(loc, part)                                                \
-  switch (tech_parsepart(mech, buffer, loc, part, NULL)) {                     \
-  case -1:                                                                     \
-    notify(evaluation, player, "Invalid section!");                            \
-    return;                                                                    \
-  case -2:                                                                     \
-    notify(evaluation, player, "Invalid part!");                               \
-    return;                                                                    \
-  }
-
-#define my_parsepart2(loc, part, brand)                                        \
-  switch (tech_parsepart(mech, buffer, loc, part, brand)) {                    \
-  case -1:                                                                     \
-    notify(evaluation, player, "Invalid section!");                            \
-    return;                                                                    \
-  case -2:                                                                     \
-    notify(evaluation, player, "Invalid part!");                               \
-    return;                                                                    \
-  }
-
-#define my_parsegun(loc, part, brand)                                          \
-  switch (tech_parsegun(mech, buffer, loc, part, brand)) {                     \
-  case -1:                                                                     \
-    notify(evaluation, player, "Invalid gun #!");                              \
-    return;                                                                    \
-  case -2:                                                                     \
-    notify(evaluation, player, "Invalid object to replace with!");             \
-    return;                                                                    \
-  case -3:                                                                     \
-    notify(evaluation, player,                                                 \
-           "Invalid object type - not matching with original.");               \
-    return;                                                                    \
-  case -4:                                                                     \
-    notify(evaluation, player,                                                 \
-           "Invalid gun location - subscript out of range.");                  \
-    return;                                                                    \
-  }
-
-#define ClanMod(num)                                                           \
-  MAX(1, (((num) / ((MechSpecials(mech) & CLAN_TECH) ? 2 : 1))))
 
 typedef struct TechCheckContext {
   int matches;
@@ -104,22 +62,18 @@ static void tech_check_loc(MuxEvent *e, void *data) {
 
 #define CHECK(t, fun)                                                          \
   TechCheckContext check = {.location = loc, .part = part};                    \
-  mux_event_visit_type_data(mech->xcode.context->events, t, (void *)mech, fun, \
-                            &check);                                           \
+  mech_event_visit(mech, t, fun, &check);                                      \
   return check.matches
 
 #define CHECKL(t, fun)                                                         \
   TechCheckContext check = {.location = loc};                                  \
-  mux_event_visit_type_data(mech->xcode.context->events, t, (void *)mech, fun, \
-                            &check);                                           \
+  mech_event_visit(mech, t, fun, &check);                                      \
   return check.matches
 
 #define CHECK2(t, t2, fun)                                                     \
   TechCheckContext check = {.location = loc, .part = part};                    \
-  mux_event_visit_type_data(mech->xcode.context->events, t, (void *)mech, fun, \
-                            &check);                                           \
-  mux_event_visit_type_data(mech->xcode.context->events, t2, (void *)mech,     \
-                            fun, &check);                                      \
+  mech_event_visit(mech, t, fun, &check);                                      \
+  mech_event_visit(mech, t2, fun, &check);                                     \
   return check.matches
 
 /* Replace/reload */
@@ -192,18 +146,14 @@ int SomeoneScrappingPart(Mech *mech, int loc, int part) {
 int CanScrapLoc(Mech *mech, int loc) {
   TechCheckContext check = {.location = loc % 8};
 
-  mux_event_visit_type_data(mech->xcode.context->events, EVENT_REPAIR_REPL,
-                            (void *)mech, tech_check_loc, &check);
-  mux_event_visit_type_data(mech->xcode.context->events, EVENT_REPAIR_RELO,
-                            (void *)mech, tech_check_loc, &check);
+  mech_event_visit(mech, EVENT_REPAIR_REPL, tech_check_loc, &check);
+  mech_event_visit(mech, EVENT_REPAIR_RELO, tech_check_loc, &check);
   return !check.matches && !SomeoneFixing(mech, loc);
 }
 
 int CanScrapPart(Mech *mech, int loc, int part) {
   return !(SomeoneRepairing(mech, loc, part));
 }
-
-#define tech_gun_is_ok(a, b, c) !PartIsNonfunctional(a, b, c)
 
 int ValidGunPos(Mech *mech, int loc, int pos) {
   unsigned char weaparray_f[MAX_WEAPS_SECTION];
@@ -222,12 +172,13 @@ int ValidGunPos(Mech *mech, int loc, int pos) {
 
 void tech_checkstatus(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  BtechContext *context = mech_context(mech);
+  EvaluationContext *evaluation = btech_context_evaluation(context);
   int i = figure_latest_tech_event(mech);
   UptimeText uptime;
 
-  DOCHECK_CONTEXT(mech->xcode.context, !i, "The mech's ready to rock!");
-  uptime = uptime_text(game_lag_time(mech->xcode.context, i));
+  DOCHECK_CONTEXT(context, !i, "The mech's ready to rock!");
+  uptime = uptime_text(game_lag_time(context, i));
   notify_printf(evaluation, player,
                 "The 'mech has approximately %s until done.", uptime.text);
 }
