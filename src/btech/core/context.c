@@ -154,6 +154,16 @@ bool btech_context_overrides_weapon_arcs(const BtechContext *context) {
   return context->combat_overrides.arcs;
 }
 
+int btech_context_weapon_arc_override(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->combat_overrides.arcs;
+}
+
+bool btech_context_idf_requires_spotter(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_idf_requires_spotter;
+}
+
 bool btech_context_dig_bonus_requires_front(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_dig_only_fs;

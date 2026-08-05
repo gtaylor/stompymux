@@ -65,6 +65,10 @@ int battle_map_height(const BattleMap *map) { return map->map_height; }
 
 DbRef battle_map_parent_dbref(const BattleMap *map) { return map->onmap; }
 
+bool battle_map_blocks_friendly_fire(const BattleMap *map) {
+  return map->flags & MAPFLAG_NOFRIENDLYFIRE;
+}
+
 void battle_map_parent_dbref_set(BattleMap *map, DbRef parent) {
   map->onmap = parent;
 }

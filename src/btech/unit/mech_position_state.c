@@ -113,6 +113,10 @@ int mech_dropship_bearing_sector(const Mech *mech) {
   return ((mech_heading_degrees(mech) + 30) / 60) % 6;
 }
 
+int mech_unusable_weapon_arcs(const Mech *mech) {
+  return mech->pd.unusable_arcs;
+}
+
 float mech_desired_speed(const Mech *mech) { return mech->rd.desired_speed; }
 
 char mech_position_terrain(const Mech *mech) { return mech->pd.terrain; }

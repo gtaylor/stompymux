@@ -46,6 +46,7 @@ int mech_desired_angle(const Mech *mech);
 int mech_lateral_movement(const Mech *mech);
 void mech_lateral_movement_set(Mech *mech, int lateral_movement);
 int mech_dropship_bearing_sector(const Mech *mech);
+int mech_unusable_weapon_arcs(const Mech *mech);
 float mech_desired_speed(const Mech *mech);
 char mech_position_terrain(const Mech *mech);
 void mech_position_xy_set(Mech *mech, int x, int y);

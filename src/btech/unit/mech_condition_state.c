@@ -71,6 +71,10 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .supercharger_enabled = status & SCHARGE_ENABLED,
       .masc_enabled = status & MASC_ENABLED,
       .player_killer = mech->rd.mech_prefs & MECHPREF_PKILL,
+      .friendly_fire_safety = mech->rd.mech_prefs & MECHPREF_NOFRIENDLYFIRE,
+      .unit_target_lock = (mech->rd.status & LOCK_TARGET) &&
+                          !(mech->rd.status & (LOCK_BUILDING | LOCK_HEX |
+                                               LOCK_HEX_IGN | LOCK_HEX_CLR)),
       .tight_turn_mode = mech->rd.mech_prefs & MECHPREF_TURNMODE,
       .dfa_attacking = status & DFA_ATTACK,
       .turret_jammed = tank_critical_status & TURRET_JAMMED,

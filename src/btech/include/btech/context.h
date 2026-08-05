@@ -73,6 +73,8 @@ bool btech_context_uses_extended_movement_modifiers(
 bool btech_context_uses_extended_weapon_ranges(const BtechContext *context);
 bool btech_context_hotload_uses_half_modifier(const BtechContext *context);
 bool btech_context_overrides_weapon_arcs(const BtechContext *context);
+int btech_context_weapon_arc_override(const BtechContext *context);
+bool btech_context_idf_requires_spotter(const BtechContext *context);
 bool btech_context_dig_bonus_requires_front(const BtechContext *context);
 int btech_context_dig_bonus(const BtechContext *context);
 bool btech_context_range_modifies_damage(const BtechContext *context);
