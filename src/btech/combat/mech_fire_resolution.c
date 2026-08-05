@@ -148,8 +148,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
    * START: Calc BTH and Roll
    ****************************************/
   if (!isarty) {
-    baseToHit = FindNormalBTH(mech, mech_map, section, critical, weapindx,
-                              range, target, indirectFire, &c3Ref);
+    baseToHit = mech_normal_to_hit_calculate(mech, mech_map, section, critical,
+                                             weapindx, range, target,
+                                             indirectFire, &c3Ref);
 
     if (c3Ref) {
       c3Mech = btech_context_get_mech(mech->xcode.context, c3Ref);
@@ -161,7 +162,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     }
 
   } else
-    baseToHit = FindArtilleryBTH(mech, section, weapindx, !LOS, range);
+    baseToHit =
+        mech_artillery_to_hit_calculate(mech, section, weapindx, !LOS, range);
 
   /* If it's a swarm attack, make the BTH 0 'cause they always hit */
   if (tIsSwarmAttack)
@@ -587,9 +589,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
               (altTarget = btech_context_get_mech(mech->xcode.context,
                                                   MechSwarmTarget(target)))) {
 
-            baseToHit =
-                FindNormalBTH(mech, mech_map, section, critical, weapindx,
-                              range, altTarget, indirectFire, &c3Ref);
+            baseToHit = mech_normal_to_hit_calculate(
+                mech, mech_map, section, critical, weapindx, range, altTarget,
+                indirectFire, &c3Ref);
 
             if (roll >= baseToHit) {
               mech_notify(altTarget, MECHALL, "The shot hits you instead!");

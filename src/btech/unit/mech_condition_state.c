@@ -35,6 +35,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
                  (critical_status & MECH_STUNNED),
       .performing_action = status & PERFORMING_ACTION,
       .auto_fall = mech->rd.mech_prefs & MECHPREF_AUTOFALL,
+      .to_hit_debug = mech->rd.mech_prefs & MECHPREF_BTHDEBUG,
       .ecm_protected =
           (status2 & ECM_PROTECTED) || ecm_active || personal_ecm_active,
       .angel_ecm_protected =
@@ -369,6 +370,16 @@ void mech_light_beagle_probe_destroyed_set(Mech *mech, bool destroyed) {
 
 void mech_null_signature_destroyed_set(Mech *mech, bool destroyed) {
   mech_critical_status_set(mech, NSS_DESTROYED, destroyed);
+}
+
+bool mech_section_is_underwater(const Mech *mech, int section) {
+  if (mech->pd.z >= 0)
+    return false;
+  if (mech->pd.z < -1 || (mech->rd.status & FALLEN))
+    return true;
+  return section == LLEG || section == RLEG ||
+         (mech->ud.type == CLASS_MECH && mech->ud.move == MOVE_QUAD &&
+          (section == LARM || section == RARM));
 }
 
 void mech_stunned_set(Mech *mech, bool stunned) {

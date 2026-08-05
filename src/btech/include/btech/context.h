@@ -63,6 +63,13 @@ bool btech_context_inferno_penalty_enabled(const BtechContext *context);
 bool btech_context_uses_fasa_turning(const BtechContext *context);
 bool btech_context_uses_extended_movement_modifiers(
     const BtechContext *context);
+bool btech_context_uses_extended_weapon_ranges(const BtechContext *context);
+bool btech_context_hotload_uses_half_modifier(const BtechContext *context);
+bool btech_context_overrides_weapon_arcs(const BtechContext *context);
+bool btech_context_dig_bonus_requires_front(const BtechContext *context);
+int btech_context_dig_bonus(const BtechContext *context);
+bool btech_context_woods_modify_damage(const BtechContext *context);
+int btech_context_sprint_to_hit_modifier(const BtechContext *context);
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context);
 bool btech_context_uses_roll_on_backwalk(const BtechContext *context);
 bool btech_context_uses_new_terrain_rules(const BtechContext *context);

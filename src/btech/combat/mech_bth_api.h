@@ -5,15 +5,17 @@
 
 #include "mux/server/platform.h"
 
-int FindNormalBTH(Mech *mech, BattleMap *mech_map, int section, int critical,
-                  int weapindx, float range, Mech *target, int indirectFire,
-                  DbRef *c3Ref);
-int FindArtilleryBTH(Mech *mech, int section, int weapindx, int indirect,
-                     float range);
-int FindBTHByRange(Mech *mech, Mech *target, int section, int weapindx,
-                   float frange, int firemode, int ammomode, int *wBTH);
-int FindBTHByC3Range(Mech *mech, Mech *target, int section, int weapindx,
-                     float realRange, float c3Range, int mode, int *wBTH);
+int mech_normal_to_hit_calculate(Mech *mech, BattleMap *mech_map, int section,
+                                 int critical, int weapindx, float range,
+                                 Mech *target, int indirectFire, DbRef *c3Ref);
+int mech_artillery_to_hit_calculate(Mech *mech, int section, int weapindx,
+                                    int indirect, float range);
+int mech_range_to_hit_calculate(Mech *mech, Mech *target, int section,
+                                int weapindx, float frange, int firemode,
+                                int ammomode, int *wBTH);
+int mech_c3_range_to_hit_calculate(Mech *mech, Mech *target, int section,
+                                   int weapindx, float realRange, float c3Range,
+                                   int mode, int *wBTH);
 int mech_attacker_movement_modifier(Mech *mech);
 int mech_target_movement_modifier(Mech *mech, Mech *target, float range);
 

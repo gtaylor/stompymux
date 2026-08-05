@@ -47,6 +47,21 @@ int weapon_catalogue_cluster_size(int weapon_index) {
                                                                          : 1;
 }
 
+int weapon_catalogue_effective_range(int weapon_index, bool extended) {
+  int normal = GunRange(weapon_index);
+  int extended_range = MechWeapons[weapon_index].medrange * 2;
+  return extended && extended_range > normal ? extended_range : normal;
+}
+
+int weapon_catalogue_effective_water_range(int weapon_index, bool extended) {
+  int normal = GunWaterRange(weapon_index);
+  int extended_range = MechWeapons[weapon_index].medrange_water * 2;
+  return extended && extended_range > normal &&
+                 MechWeapons[weapon_index].longrange_water > 0
+             ? extended_range
+             : normal;
+}
+
 /* ASSERTION: Weapons must be located next to each other in criticals. */
 int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
                          unsigned char *weapdataarray, int *critical,

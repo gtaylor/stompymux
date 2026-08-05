@@ -108,6 +108,41 @@ bool btech_context_uses_extended_movement_modifiers(
   return context->configuration->btech_extendedmovemod;
 }
 
+bool btech_context_uses_extended_weapon_ranges(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_erange;
+}
+
+bool btech_context_hotload_uses_half_modifier(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_hotloadaddshalfbthmod;
+}
+
+bool btech_context_overrides_weapon_arcs(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->combat_overrides.arcs;
+}
+
+bool btech_context_dig_bonus_requires_front(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_dig_only_fs;
+}
+
+int btech_context_dig_bonus(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_digbonus;
+}
+
+bool btech_context_woods_modify_damage(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_moddamagewithwoods;
+}
+
+int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_sprint_bth;
+}
+
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_skidcliff;

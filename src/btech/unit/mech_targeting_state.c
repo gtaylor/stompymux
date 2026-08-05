@@ -65,6 +65,8 @@ void mech_fire_adjustment_set(Mech *mech, int adjustment) {
   mech->rd.fire_adjustment = adjustment;
 }
 
+int mech_fire_adjustment(const Mech *mech) { return mech->rd.fire_adjustment; }
+
 int mech_targeting_computer_type(const Mech *mech) { return mech->ud.targcomp; }
 
 int mech_aim_section(const Mech *mech) { return mech->rd.aim; }
@@ -76,6 +78,11 @@ bool mech_targets_building(const Mech *mech) {
 }
 
 bool mech_targets_hex(const Mech *mech) { return mech->rd.status & LOCK_HEX; }
+
+bool mech_targets_hex_or_building(const Mech *mech) {
+  return mech->rd.status &
+         (LOCK_HEX | LOCK_BUILDING | LOCK_HEX_IGN | LOCK_HEX_CLR);
+}
 
 void mech_targeting_tag_clear(Mech *mech) { mech->sd.tagTarget = -1; }
 

@@ -24,6 +24,7 @@ typedef struct MechConditionSummary {
   bool stunned;
   bool performing_action;
   bool auto_fall;
+  bool to_hit_debug;
   bool ecm_protected;
   bool angel_ecm_protected;
   bool angel_ecm_disturbed;
@@ -127,6 +128,7 @@ void mech_beagle_probe_destroyed_set(Mech *mech, bool destroyed);
 void mech_bloodhound_probe_destroyed_set(Mech *mech, bool destroyed);
 void mech_light_beagle_probe_destroyed_set(Mech *mech, bool destroyed);
 void mech_null_signature_destroyed_set(Mech *mech, bool destroyed);
+bool mech_section_is_underwater(const Mech *mech, int section);
 void mech_stunned_set(Mech *mech, bool stunned);
 void mech_searchlight_set(Mech *mech, bool enabled);
 void mech_stealth_armor_active_set(Mech *mech, bool active);
