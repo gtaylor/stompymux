@@ -24,12 +24,15 @@
 #include "command_handlers_api.h"
 #include "coolmenu.h"
 #include "legacy_macros.h"
-#include "mech.h"
 #include "mech_build_api.h"
-#include "mech_macros.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
 #include "mech_notify_api.h"
 #include "mech_parts.h"
+#include "mech_specification_api.h"
 #include "mech_status_api.h"
+#include "mech_status_types.h"
 #include "mech_tech.h"
 #include "mech_tech_commands_api.h"
 #include "mech_tech_damages.h"
@@ -38,6 +41,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mycool.h"
+#include "section_types.h"
 
 typedef struct RepairDamageTable {
   /* Each entry stores type, location, and position or amount. */
@@ -97,14 +101,15 @@ static const char *const repair_need_msgs[] = {
     damages->entries[damages->count++][2] = c;                                 \
   } while (0)
 
-#define ClanMod(num)                                                           \
-  MAX(1, (((num) / ((MechSpecials(mech) & CLAN_TECH) ? 2 : 1))))
+static int clan_modified_time(const Mech *mech, int time) {
+  return MAX(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
+}
 
 static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
   int a, b, c, d;
 
-  if (SectIsDestroyed(mech, loc)) {
-    if (MechType(mech) != CLASS_BSUIT)
+  if (mech_section_is_destroyed(mech, loc)) {
+    if (mech_class(mech) != CLASS_BSUIT)
       DAMAGE2(REATTACH, loc);
     else
       DAMAGE2(REPLACESUIT, loc);
@@ -116,48 +121,53 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
    * 8/4/99
    */
 
-  if (SectIsFlooded(mech, loc)) {
+  if (mech_section_is_flooded(mech, loc)) {
     DAMAGE2(RESEAL, loc);
     return 0;
   }
-  if ((a = GetSectInt(mech, loc)) != (b = GetSectOInt(mech, loc)))
+  if ((a = mech_section_internal(mech, loc)) !=
+      (b = mech_section_original_internal(mech, loc)))
     DAMAGE3(FIXINTERNAL, loc, (b - a));
   else {
-    if ((a = GetSectArmor(mech, loc)) != (b = GetSectOArmor(mech, loc)))
+    if ((a = mech_section_armor(mech, loc)) !=
+        (b = mech_section_original_armor(mech, loc)))
       DAMAGE3(FIXARMOR, loc, (b - a));
-    if ((a = GetSectRArmor(mech, loc)) != (b = GetSectORArmor(mech, loc)))
+    if ((a = mech_section_rear_armor(mech, loc)) !=
+        (b = mech_section_original_rear_armor(mech, loc)))
       DAMAGE3(FIXARMOR_R, loc, (b - a));
   }
   for (a = 0; a < NUM_CRITICALS; a++) {
-    if (!(b = GetPartType(mech, loc, a)))
+    if (!(b = mech_critical_part_type(mech, loc, a)))
       continue;
-    if (IsAmmo(b) && !PartIsDestroyed(mech, loc, a) &&
-        (c = GetPartData(mech, loc, a)) != (d = FullAmmo(mech, loc, a)))
+    if (IsAmmo(b) && !mech_critical_is_destroyed(mech, loc, a) &&
+        (c = mech_critical_data(mech, loc, a)) !=
+            (d = mech_critical_full_ammunition(mech, loc, a)))
       DAMAGE3(RELOAD, loc, a);
-    if (!PartIsNonfunctional(mech, loc, a) && !PartTempNuke(mech, loc, a) &&
-        !PartIsDamaged(mech, loc, a))
+    if (!mech_critical_is_nonfunctional(mech, loc, a) &&
+        !mech_critical_temporary_failure(mech, loc, a) &&
+        !mech_critical_is_damaged(mech, loc, a))
       continue;
-    if (IsCrap(b))
+    if (mech_part_is_structural_placeholder(b))
       continue;
     /* Destroyed / tempnuke'd part. Either case, it works for us :) */
 
-    if (PartIsDamaged(mech, loc, a)) {
-      if (GetPartDamageFlags(mech, loc, a) & WEAP_DAM_EN_FOCUS)
+    if (mech_critical_is_damaged(mech, loc, a)) {
+      if (mech_critical_damage_flags(mech, loc, a) & WEAP_DAM_EN_FOCUS)
         DAMAGE3(ENHCRIT_FOCUS, loc, a);
-      else if (GetPartDamageFlags(mech, loc, a) & WEAP_DAM_EN_CRYSTAL)
+      else if (mech_critical_damage_flags(mech, loc, a) & WEAP_DAM_EN_CRYSTAL)
         DAMAGE3(ENHCRIT_CRYSTAL, loc, a);
-      else if (GetPartDamageFlags(mech, loc, a) & WEAP_DAM_BALL_BARREL)
+      else if (mech_critical_damage_flags(mech, loc, a) & WEAP_DAM_BALL_BARREL)
         DAMAGE3(ENHCRIT_BARREL, loc, a);
-      else if (GetPartDamageFlags(mech, loc, a) & WEAP_DAM_BALL_AMMO)
+      else if (mech_critical_damage_flags(mech, loc, a) & WEAP_DAM_BALL_AMMO)
         DAMAGE3(ENHCRIT_AMMOB, loc, a);
-      else if (GetPartDamageFlags(mech, loc, a) & WEAP_DAM_MSL_RANGING)
+      else if (mech_critical_damage_flags(mech, loc, a) & WEAP_DAM_MSL_RANGING)
         DAMAGE3(ENHCRIT_RANGING, loc, a);
-      else if (GetPartDamageFlags(mech, loc, a) & WEAP_DAM_MSL_AMMO)
+      else if (mech_critical_damage_flags(mech, loc, a) & WEAP_DAM_MSL_AMMO)
         DAMAGE3(ENHCRIT_AMMOM, loc, a);
       else
         DAMAGE3(ENHCRIT_MISC, loc, a);
 
-    } else if (IsWeapon(b) && !PartIsDestroyed(mech, loc, a))
+    } else if (IsWeapon(b) && !mech_critical_is_destroyed(mech, loc, a))
       DAMAGE3(REPAIRP_T, loc, a);
     else
       DAMAGE3(IsWeapon(b) ? REPAIRG : REPAIRP, loc, a);
@@ -173,7 +183,7 @@ static int check_for_scrappage(RepairDamageTable *damages, Mech *mech,
   int a, b;
   int ret = 1;
 
-  if (SectIsDestroyed(mech, loc))
+  if (mech_section_is_destroyed(mech, loc))
     return 1;
 
   if (SomeoneScrappingLoc(mech, loc)) {
@@ -181,13 +191,13 @@ static int check_for_scrappage(RepairDamageTable *damages, Mech *mech,
     return 1;
   }
   for (a = 0; a < NUM_CRITICALS; a++) {
-    if (!(b = GetPartType(mech, loc, a)))
+    if (!(b = mech_critical_part_type(mech, loc, a)))
       continue;
-    if (PartIsBroken(mech, loc, a))
+    if (mech_critical_is_broken(mech, loc, a))
       continue;
-    if (IsCrap(b))
+    if (mech_part_is_structural_placeholder(b))
       continue;
-    if (IsAmmo(b) && GetPartData(mech, loc, a)) {
+    if (IsAmmo(b) && mech_critical_data(mech, loc, a)) {
       DAMAGE3(UNLOAD, loc, a);
       if (ret && !SomeoneRepairing(mech, loc, a))
         ret = 0;
@@ -210,7 +220,7 @@ static void make_scrap_table(RepairDamageTable *damages, Mech *mech) {
   int i = 4;
 
   damages->count = 0;
-  if (MechType(mech) == CLASS_MECH) {
+  if (mech_class(mech) == CLASS_MECH) {
     if (check_for_scrappage(damages, mech, RARM))
       i -= check_for_scrappage(damages, mech, RTORSO);
     if (check_for_scrappage(damages, mech, LARM))
@@ -224,7 +234,7 @@ static void make_scrap_table(RepairDamageTable *damages, Mech *mech) {
     check_for_scrappage(damages, mech, HEAD);
   } else
     for (i = 0; i < NUM_SECTIONS; i++)
-      if (GetSectOInt(mech, i))
+      if (mech_section_original_internal(mech, i))
         check_for_scrappage(damages, mech, i);
 }
 
@@ -232,7 +242,7 @@ static void make_damage_table(RepairDamageTable *damages, Mech *mech) {
   int i;
 
   damages->count = 0;
-  if (MechType(mech) == CLASS_MECH) {
+  if (mech_class(mech) == CLASS_MECH) {
     if (check_for_damage(damages, mech, CTORSO)) {
       if (check_for_damage(damages, mech, LTORSO)) {
         CHECK(LARM);
@@ -246,7 +256,7 @@ static void make_damage_table(RepairDamageTable *damages, Mech *mech) {
     }
   } else
     for (i = 0; i < NUM_SECTIONS; i++)
-      if (GetSectOInt(mech, i))
+      if (mech_section_original_internal(mech, i))
         check_for_damage(damages, mech, i);
 }
 
@@ -310,7 +320,8 @@ void mech_repair_jobs_format(Mech *mech, char *buffer, size_t buffer_size) {
     if (i)
       append_damage(buffer, buffer_size, ",");
     append_damage(buffer, buffer_size, "%d|%s|%d|", i + 1,
-                  armor_section_abbreviation(MechType(mech), MechMove(mech),
+                  armor_section_abbreviation(mech_class(mech),
+                                             mech_movement_type(mech),
                                              damages->entries[i][1])
                       .text,
                   (int)damages->entries[i][0]);
@@ -338,15 +349,16 @@ void mech_repair_jobs_format(Mech *mech, char *buffer, size_t buffer_size) {
           pos_part_name(mech, damages->entries[i][1], damages->entries[i][2])
               .text,
           FullAmmo(mech, damages->entries[i][1], damages->entries[i][2]) -
-              GetPartData(mech, damages->entries[i][1],
-                          damages->entries[i][2]));
+              mech_critical_data(mech, damages->entries[i][1],
+                                 damages->entries[i][2]));
       break;
     case UNLOAD:
       append_damage(
           buffer, buffer_size, "%s:%d",
           pos_part_name(mech, damages->entries[i][1], damages->entries[i][2])
               .text,
-          GetPartData(mech, damages->entries[i][1], damages->entries[i][2]));
+          mech_critical_data(mech, damages->entries[i][1],
+                             damages->entries[i][2]));
       break;
     case FIXARMOR:
     case FIXARMOR_R:
@@ -390,10 +402,10 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     make_damage_table(damages, mech);
   else
     make_scrap_table(damages, mech);
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  !damages->count && MechType(mech) == CLASS_MECH,
+  DOCHECK_CONTEXT(mech_context(mech),
+                  !damages->count && mech_class(mech) == CLASS_MECH,
                   "The 'mech is in pristine condition!");
-  DOCHECK_CONTEXT(mech->xcode.context, !damages->count,
+  DOCHECK_CONTEXT(mech_context(mech), !damages->count,
                   "It's in pristine condition!");
   addline();
   cent(tprintf("Damage for %s", mech_display_id(mech).text));
@@ -425,30 +437,34 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
       break;
     case REPAIRP:
       fix_bth = FindTechSkill(player, mech) + REPLACE_DIFFICULTY +
-                PARTTYPE_DIFFICULTY(GetPartType(mech, v1, v2));
+                PARTTYPE_DIFFICULTY(mech_critical_part_type(mech, v1, v2));
       fix_time = REPLACEPART_TIME;
       snprintf(buf, sizeof(buf), "Repairs on %s",
                pos_part_name(mech, v1, v2).text);
       break;
     case REPAIRP_T:
-      if (GetWeaponCrits(mech, Weapon2I(GetPartType(mech, v1, v2))) < 5)
+      if (GetWeaponCrits(mech,
+                         Weapon2I(mech_critical_part_type(mech, v1, v2))) < 5)
         extra_hard = 0;
-      fix_bth = char_getskilltarget(mech->xcode.context, player,
+      fix_bth = char_getskilltarget(mech_context(mech), player,
                                     "technician-weapons", 0) +
                 REPLACE_DIFFICULTY +
-                WEAPTYPE_DIFFICULTY(GetPartType(mech, v1, v2)) + extra_hard;
+                WEAPTYPE_DIFFICULTY(mech_critical_part_type(mech, v1, v2)) +
+                extra_hard;
       fix_time = REPAIRGUN_TIME;
       snprintf(buf, sizeof(buf), "Repairs on %s",
                pos_part_name(mech, v1, v2).text);
       break;
     case REPAIRG:
-      fix_bth = char_getskilltarget(mech->xcode.context, player,
+      fix_bth = char_getskilltarget(mech_context(mech), player,
                                     "technician-weapons", 0) +
                 REPLACE_DIFFICULTY +
-                WEAPTYPE_DIFFICULTY(GetPartType(mech, v1, v2));
+                WEAPTYPE_DIFFICULTY(mech_critical_part_type(mech, v1, v2));
       fix_time =
           REPLACEGUN_TIME *
-          ClanMod(GetWeaponCrits(mech, Weapon2I(GetPartType(mech, v1, v2))));
+          clan_modified_time(
+              mech, GetWeaponCrits(
+                        mech, Weapon2I(mech_critical_part_type(mech, v1, v2))));
       snprintf(buf, sizeof(buf), "Repairs on %s",
                pos_part_name(mech, v1, v2).text);
       break;
@@ -459,7 +475,7 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     case ENHCRIT_AMMOB:
     case ENHCRIT_RANGING:
     case ENHCRIT_AMMOM:
-      fix_bth = char_getskilltarget(mech->xcode.context, player,
+      fix_bth = char_getskilltarget(mech_context(mech), player,
                                     "technician-weapons", 0) +
                 ENHCRIT_DIFFICULTY;
       fix_time = REPAIRENHCRIT_TIME;
@@ -500,36 +516,39 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
                pos_part_name(mech, v1, v2).text);
       break;
     case SCRAPG:
-      fix_bth = char_getskilltarget(mech->xcode.context, player,
+      fix_bth = char_getskilltarget(mech_context(mech), player,
                                     "technician-weapons", 0) +
                 REMOVEG_DIFFICULTY;
       fix_time =
           REMOVEG_TIME *
-          ClanMod(GetWeaponCrits(mech, Weapon2I(GetPartType(mech, v1, v2))));
+          clan_modified_time(
+              mech, GetWeaponCrits(
+                        mech, Weapon2I(mech_critical_part_type(mech, v1, v2))));
       snprintf(buf, sizeof(buf), "Removal of %s",
                pos_part_name(mech, v1, v2).text);
       break;
     case RELOAD:
-      snprintf(
-          buf, sizeof(buf), "Reload of %s%s (%d rounds)",
-          pos_part_name(mech, v1, v2).text,
-          GetPartAmmoMode(mech, v1, v2)
-              ? GetAmmoDesc_Model_Mode(Ammo2WeaponI(GetPartType(mech, v1, v2)),
-                                       GetPartAmmoMode(mech, v1, v2))
-              : "",
-          FullAmmo(mech, v1, v2) - GetPartData(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Reload of %s%s (%d rounds)",
+               pos_part_name(mech, v1, v2).text,
+               mech_critical_ammo_mode(mech, v1, v2)
+                   ? GetAmmoDesc_Model_Mode(
+                         Ammo2WeaponI(mech_critical_part_type(mech, v1, v2)),
+                         mech_critical_ammo_mode(mech, v1, v2))
+                   : "",
+               mech_critical_full_ammunition(mech, v1, v2) -
+                   mech_critical_data(mech, v1, v2));
       fix_time = RELOAD_TIME;
       fix_bth = FindTechSkill(player, mech) + RELOAD_DIFFICULTY;
       break;
     case UNLOAD:
-      snprintf(
-          buf, sizeof(buf), "Unload of %s%s(%d rounds)",
-          pos_part_name(mech, v1, v2).text,
-          GetPartAmmoMode(mech, v1, v2)
-              ? GetAmmoDesc_Model_Mode(Ammo2WeaponI(GetPartType(mech, v1, v2)),
-                                       GetPartAmmoMode(mech, v1, v2))
-              : "",
-          GetPartData(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Unload of %s%s(%d rounds)",
+               pos_part_name(mech, v1, v2).text,
+               mech_critical_ammo_mode(mech, v1, v2)
+                   ? GetAmmoDesc_Model_Mode(
+                         Ammo2WeaponI(mech_critical_part_type(mech, v1, v2)),
+                         mech_critical_ammo_mode(mech, v1, v2))
+                   : "",
+               mech_critical_data(mech, v1, v2));
       fix_time = RELOAD_TIME;
       fix_bth = FindTechSkill(player, mech) + REMOVES_DIFFICULTY;
       break;
@@ -538,18 +557,20 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     case FIXINTERNAL:
       const char *armor_material =
           damages->entries[i][0] == FIXINTERNAL
-              ? ((MechSpecials(mech) & ES_TECH)       ? " Endosteel"
-                 : (MechSpecials(mech) & REINFI_TECH) ? " Reinforced"
-                 : (MechSpecials(mech) & COMPI_TECH)  ? " Composite"
-                                                      : "")
-              : ((MechSpecials(mech) & FF_TECH)               ? " Ferrofibrous"
-                 : (MechSpecials(mech) & HARDA_TECH)          ? " Hardened"
-                 : (MechSpecials2(mech) & STEALTH_ARMOR_TECH) ? " Stealth"
-                 : (MechSpecials2(mech) & HVY_FF_ARMOR_TECH)
+              ? ((mech_technology_flags(mech) & ES_TECH)       ? " Endosteel"
+                 : (mech_technology_flags(mech) & REINFI_TECH) ? " Reinforced"
+                 : (mech_technology_flags(mech) & COMPI_TECH)  ? " Composite"
+                                                               : "")
+              : ((mech_technology_flags(mech) & FF_TECH)      ? " Ferrofibrous"
+                 : (mech_technology_flags(mech) & HARDA_TECH) ? " Hardened"
+                 : (mech_technology_flags_secondary(mech) & STEALTH_ARMOR_TECH)
+                     ? " Stealth"
+                 : (mech_technology_flags_secondary(mech) & HVY_FF_ARMOR_TECH)
                      ? " Heavy Ferrofibrous"
-                 : (MechSpecials2(mech) & LT_FF_ARMOR_TECH)
+                 : (mech_technology_flags_secondary(mech) & LT_FF_ARMOR_TECH)
                      ? " Light Ferrofibrous"
-                 : (MechInfantrySpecials(mech) & CS_PURIFIER_STEALTH_TECH)
+                 : (mech_infantry_technology_flags(mech) &
+                    CS_PURIFIER_STEALTH_TECH)
                      ? " Purifier Stealth"
                      : "");
       if (damages->entries[i][0] == FIXINTERNAL) {
@@ -576,11 +597,12 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     } else {
       snprintf(buf3, sizeof(buf3), "%4d %4d", fix_time, fix_bth);
     }
-    snprintf(
-        buf2, sizeof(buf2), "[bold]%s%3s %3d %9s %3s %s[reset]%s",
-        j ? "[fg=green]" : "[fg=yellow]", j ? "(*)" : "", i + 1, buf3,
-        armor_section_abbreviation(MechType(mech), MechMove(mech), v1).text,
-        buf, j ? " (*)" : "");
+    snprintf(buf2, sizeof(buf2), "[bold]%s%3s %3d %9s %3s %s[reset]%s",
+             j ? "[fg=green]" : "[fg=yellow]", j ? "(*)" : "", i + 1, buf3,
+             armor_section_abbreviation(mech_class(mech),
+                                        mech_movement_type(mech), v1)
+                 .text,
+             buf, j ? " (*)" : "");
     vsi(buf2);
   }
   addline();
@@ -589,7 +611,7 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
   vsi("Time = Normal Time (in minutes) to complete fix. BTH = Your BTH to "
       "fix.");
   addline();
-  ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
+  ShowCoolMenu(btech_context_evaluation(mech_context(mech)), player, c);
   KillCoolMenu(c);
 }
 
@@ -601,7 +623,7 @@ static void fix_entry(const RepairDamageTable *damages, DbRef player,
   /* whee */
   n--;
   ArmorSectionAbbreviation abbreviation = armor_section_abbreviation(
-      MechType(mech), MechMove(mech), damages->entries[n][1]);
+      mech_class(mech), mech_movement_type(mech), damages->entries[n][1]);
   c = abbreviation.text;
   switch (damages->entries[n][0]) {
   case REPAIRP_T:
@@ -687,21 +709,21 @@ void tech_fix(DbRef player, void *data, char *buffer) {
     make_damage_table(damages, mech);
   else
     make_scrap_table(damages, mech);
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  !damages->count && MechType(mech) == CLASS_MECH,
+  DOCHECK_CONTEXT(mech_context(mech),
+                  !damages->count && mech_class(mech) == CLASS_MECH,
                   "The 'mech is in pristine condition!");
-  DOCHECK_CONTEXT(mech->xcode.context, !damages->count,
+  DOCHECK_CONTEXT(mech_context(mech), !damages->count,
                   "It's in pristine condition!");
   if (sscanf(buffer, "%d-%d", &low, &high) == 2) {
-    DOCHECK_CONTEXT(mech->xcode.context, low < 1 || low > damages->count,
+    DOCHECK_CONTEXT(mech_context(mech), low < 1 || low > damages->count,
                     "Invalid low #!");
-    DOCHECK_CONTEXT(mech->xcode.context, high < 1 || high > damages->count,
+    DOCHECK_CONTEXT(mech_context(mech), high < 1 || high > damages->count,
                     "Invalid high #!");
     for (n = low; n <= high; n++)
       fix_entry(damages, player, mech, n);
     return;
   }
-  DOCHECK_CONTEXT(mech->xcode.context, n < 1 || n > damages->count,
+  DOCHECK_CONTEXT(mech_context(mech), n < 1 || n > damages->count,
                   "Invalid #!");
   fix_entry(damages, player, mech, n);
 }
