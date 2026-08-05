@@ -51,6 +51,8 @@ int mech_jump_destination_x(const Mech *mech) { return mech->rd.goingx; }
 
 int mech_jump_destination_y(const Mech *mech) { return mech->rd.goingy; }
 
+int mech_jump_heading_degrees(const Mech *mech) { return mech->rd.jumpheading; }
+
 int mech_desired_angle(const Mech *mech) { return mech->rd.angle; }
 
 int mech_lateral_movement(const Mech *mech) { return mech->rd.lateral; }

@@ -38,6 +38,18 @@ char map_elevation_get(const BattleMap *map, int x, int y) {
                                   map->map[y][x]);
 }
 
+int battle_map_hex_elevation(BattleMap *map, int x, int y) {
+  int elevation = map_elevation_get(map, x, y);
+  char terrain = map_real_terrain_get(map, x, y);
+  return terrain == BATTLE_TERRAIN_WATER || terrain == BATTLE_TERRAIN_ICE
+             ? -elevation
+             : elevation;
+}
+
+bool battle_map_coordinate_is_valid(const BattleMap *map, int x, int y) {
+  return x >= 0 && x < map->map_width && y >= 0 && y < map->map_height;
+}
+
 void map_hex_set(BattleMap *map, int x, int y, char terrain, char elevation) {
   map->map[y][x] = (unsigned char)map_coding_get_index(
       &map->xcode.context->map_coding, terrain, elevation);

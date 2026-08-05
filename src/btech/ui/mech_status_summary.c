@@ -587,7 +587,7 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                mech_desired_heading_degrees(mech));
       notify(evaluation, player, buff);
     }
-    ShowTurretFacing(evaluation, player, 0, mech);
+    mech_scan_show_turret_facing(evaluation, player, 0, mech);
     if (mech_uses_heat(mech)) {
       notify_printf(evaluation, player,
                     "Excess Heat:%3d deg  Heat Production:     %3d deg   Heat "

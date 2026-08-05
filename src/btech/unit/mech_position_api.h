@@ -17,6 +17,7 @@ int mech_desired_heading_degrees(const Mech *mech);
 int mech_turret_heading_degrees(const Mech *mech);
 int mech_jump_destination_x(const Mech *mech);
 int mech_jump_destination_y(const Mech *mech);
+int mech_jump_heading_degrees(const Mech *mech);
 int mech_desired_angle(const Mech *mech);
 int mech_lateral_movement(const Mech *mech);
 float mech_desired_speed(const Mech *mech);
