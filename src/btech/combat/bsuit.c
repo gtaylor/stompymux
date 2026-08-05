@@ -94,14 +94,14 @@ void StopSwarming(Mech *mech, int intentional) {
                 "You let your hold loosen and you drop from the 'mech!");
     mech_printf(target, MECHALL, "%s lets go of you!",
                 mech_to_mech_display_id(target, mech).text);
-    MechLOSBroadcasti(mech, target, "lets go of %s!");
+    mech_los_broadcast_unit(mech, target, "lets go of %s!");
 
     StartBSuitRecycle(mech, RECYCLE_INT_STOPSWARM);
   } else {
     if (MadePilotSkillRoll(mech, 4)) {
       mech_notify(mech, MECHALL,
                   "The hold loosens and you drop from the 'mech!");
-      MechLOSBroadcasti(mech, target, "jumps off of %s!");
+      mech_los_broadcast_unit(mech, target, "jumps off of %s!");
       mech_printf(target, MECHALL, "%s jumps off!",
                   mech_to_mech_display_id(target, mech).text);
 
@@ -110,7 +110,7 @@ void StopSwarming(Mech *mech, int intentional) {
       mech_notify(mech, MECHALL,
                   "You're suprised by the sudden action and find yourself "
                   "rapidly approaching the ground!");
-      MechLOSBroadcasti(mech, target, "falls off %s!");
+      mech_los_broadcast_unit(mech, target, "falls off %s!");
       mech_printf(target, MECHALL, "%s falls off!",
                   mech_to_mech_display_id(target, mech).text);
 
@@ -321,9 +321,10 @@ int FindBSuitTarget(DbRef player, Mech *mech, Mech **target, char *buffer) {
     return 1;
   }
   range = FaMechRange(mech, t);
-  DOCHECK1_CONTEXT(mech->xcode.context,
-                   !InLineOfSight_NB(mech, t, MechX(t), MechY(t), range),
-                   "Target is not in line of sight!");
+  DOCHECK1_CONTEXT(
+      mech->xcode.context,
+      !mech_los_check_unblocked(mech, t, MechX(t), MechY(t), range),
+      "Target is not in line of sight!");
   DOCHECK1_CONTEXT(mech->xcode.context, range >= 1.0, "Target out of range!");
   DOCHECK1_CONTEXT(mech->xcode.context, Jumping(t),
                    "That target's unreachable right now!");
@@ -455,9 +456,9 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
     MechStatus2(target) |= UNIT_MOUNTED;
 
     if (tIsMount) {
-      MechLOSBroadcasti(mech, target, "mounts %s!");
+      mech_los_broadcast_unit(mech, target, "mounts %s!");
     } else {
-      MechLOSBroadcasti(mech, target, "swarms %s!");
+      mech_los_broadcast_unit(mech, target, "swarms %s!");
     }
 
     MechSpeed(mech) = 0.0;
@@ -478,7 +479,7 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
 
   if (MechCritStatus(mech) & HIDDEN) {
     mech_notify(mech, MECHALL, "You move too much and break your cover!");
-    MechLOSBroadcast(mech, "breaks from its cover.");
+    mech_los_broadcast(mech, "breaks from its cover.");
     MechCritStatus(mech) &= ~(HIDDEN);
     mech_event_cancel(mech, EVENT_HIDE);
   }
@@ -592,7 +593,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
         "%s swarms your %s putting small packets of explosives all over it!",
         mech_to_mech_display_id(target, mech).text, strAttackLoc);
 
-    MechLOSBroadcasti(mech, target, "attacks %s's legs!");
+    mech_los_broadcast_unit(mech, target, "attacks %s's legs!");
 
     /* find out if we do a crit or damage */
     wCritRoll = btech_random_roll(mech->xcode.context);
@@ -620,7 +621,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
           /* Limb blown off */
           mech_notify(target, MECHALL, "[fg=yellow bold]CRITICAL HIT!![reset]");
 
-          MechLOSBroadcast(
+          mech_los_broadcast(
               target,
               tprintf("'s %s is blown off in a shower of sparks and smoke!",
                       strAttackLoc));
@@ -650,8 +651,8 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
                 "your attempt at hitting %s's legs!",
                 mech_to_mech_display_id(mech, target).text);
 
-    MechLOSBroadcasti(mech, target,
-                      "attempts to climb %s's legs, but fails miserably!");
+    mech_los_broadcast_unit(
+        mech, target, "attempts to climb %s's legs, but fails miserably!");
   }
 
   StartBSuitRecycle(mech, RECYCLE_ATTACKLEG);
@@ -689,13 +690,14 @@ void JettisonPacks(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL,
                   "The explosive bolts that hold the backpacks on blow, "
                   "allowing them to drop to the ground.");
-      MechLOSBroadcast(
+      mech_los_broadcast(
           mech, "'s backpacks blow off in a shower of small explosions!");
     } else {
       mech_notify(mech, MECHALL,
                   "The explosive bolts that hold your backpack on blows, "
                   "allowing it to drop to the ground.");
-      MechLOSBroadcast(mech, "'s backpack blows off in a puff of grey smoke!");
+      mech_los_broadcast(mech,
+                         "'s backpack blows off in a puff of grey smoke!");
     }
   } else {
     mech_notify(

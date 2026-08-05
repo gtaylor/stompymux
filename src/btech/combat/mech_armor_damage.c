@@ -289,7 +289,7 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
             snprintf(msgbuf, sizeof(msgbuf),
                      "'s %s is blown off in a shower of sparks and smoke!",
                      locname);
-            MechLOSBroadcast(wounded, msgbuf);
+            mech_los_broadcast(wounded, msgbuf);
           }
           DestroySection(wounded, attacker, LOS, hitloc);
           if (MechType(wounded) != CLASS_MW)

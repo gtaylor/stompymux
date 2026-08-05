@@ -208,8 +208,8 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     targetref = FindTargetDBREFFromMapNumber(mech, targetID);
     target = btech_context_get_mech(mech->xcode.context, targetref);
     if (target)
-      LOS = InLineOfSight(mech, target, MechX(target), MechY(target),
-                          FlMechRange(mech_map, mech, target));
+      LOS = mech_los_check(mech, target, MechX(target), MechY(target),
+                           FlMechRange(mech_map, mech, target));
     else
       targetref = -1;
     DOCHECK_CONTEXT(mech->xcode.context, targetref == -1 || !LOS,

@@ -10,7 +10,7 @@ void CheckDamage(Mech *wounded) {
         mech_notify(wounded, MECHALL, "You stagger from the damage!");
         if (!MadePilotSkillRoll(wounded, 1)) {
           mech_notify(wounded, MECHALL, "You fall over from all the damage!");
-          MechLOSBroadcast(wounded, "falls down, staggered by the damage!");
+          mech_los_broadcast(wounded, "falls down, staggered by the damage!");
           MechFalls(wounded, 1, 0);
         }
       }

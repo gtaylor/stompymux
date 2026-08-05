@@ -205,7 +205,7 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
       continue;
     if (MechX(other) != x || MechY(other) != y)
       continue;
-    if (!InLineOfSight(mech, other, x, y, 0.5))
+    if (!mech_los_check(mech, other, x, y, 0.5))
       continue;
 
     fx = MechFX(other) - corner_fx;

@@ -133,9 +133,9 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech, char **args,
     if (target) {
       snprintf(buffer, MBUF_SIZE, ", targeting %s %s",
                mech_to_mech_display_id(mech, target).text,
-               InLineOfSight(mech, target, mech_position_x(target),
-                             mech_position_y(target),
-                             mech_range_to(mech, target))
+               mech_los_check(mech, target, mech_position_x(target),
+                              mech_position_y(target),
+                              mech_range_to(mech, target))
                    ? ""
                    : "(not in LOS)");
       strncat(mesg, buffer, LBUF_SIZE);

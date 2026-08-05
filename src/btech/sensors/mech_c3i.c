@@ -273,7 +273,7 @@ void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
   target = btech_context_get_mech(mech_context(mech), refTarget);
 
   if (target) {
-    LOS = InLineOfSight(mech, target, MechX(target), MechY(target), range);
+    LOS = mech_los_check(mech, target, MechX(target), MechY(target), range);
   } else
     refTarget = 0;
 

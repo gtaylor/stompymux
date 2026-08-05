@@ -80,8 +80,8 @@ void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech) {
     tempMech = btech_context_get_mech(mech_context(mech), target_dbref);
     if (tempMech) {
       float range = mech_range_to(mech, tempMech);
-      if (InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                        mech_position_y(tempMech), range)) {
+      if (mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                         mech_position_y(tempMech), range)) {
         snprintf(buff, sizeof(buff),
                  "Target: %s\t   Range: %.1f hexes   Bearing: %d deg\n",
                  mech_to_mech_display_id(mech, tempMech).text, range,
@@ -135,9 +135,9 @@ void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech) {
                                       mech_charge_target_dbref(mech));
     if (!tempMech)
       return;
-    if (InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                      mech_position_y(tempMech),
-                      mech_range_to(mech, tempMech))) {
+    if (mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                       mech_position_y(tempMech),
+                       mech_range_to(mech, tempMech))) {
       notify_printf(evaluation, player, "ChargeTarget: %s\t  ChargeTimer: %d\n",
                     mech_to_mech_display_id(mech, tempMech).text,
                     mech_charge_timer(mech) / 2);

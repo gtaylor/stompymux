@@ -347,7 +347,7 @@ static int valid_to_notice(Mech *mech, Mech *targ, int los) {
   int foe;
 
   if ((los < 0 && mech_team(mech) == mech_team(targ) &&
-       InLineOfSight_NB(mech, targ, 0, 0, 0)) ||
+       mech_los_check_unblocked(mech, targ, 0, 0, 0)) ||
       (los > 0 && mech_team(mech) == mech_team(targ)))
     foe = 0;
   else
@@ -528,8 +528,9 @@ static void sensor_update_los_pair(BattleMap *map, int observer_index,
   int was_visible =
       !(flags & BATTLE_MAP_LOS_BLOCKED) &&
       (flags & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY));
-  flags = CalculateLOSFlag(observer, target, map, mech_position_x(target),
-                           mech_position_y(target), flags, range);
+  flags =
+      mech_los_calculate_flags(observer, target, map, mech_position_x(target),
+                               mech_position_y(target), flags, range);
   battle_map_los_flags_set(map, observer_index, target_index, flags);
 
 #ifdef ADVANCED_LOS

@@ -83,9 +83,9 @@ void mech_embark(DbRef player, void *data, char *buffer) {
                     "That target is not in your line of sight.");
     target = btech_context_get_mech(mech->xcode.context, target_num);
     DOCHECK_CONTEXT(mech->xcode.context,
-                    !target || !InLineOfSight(mech, target, MechX(target),
-                                              MechY(target),
-                                              FaMechRange(mech, target)),
+                    !target || !mech_los_check(mech, target, MechX(target),
+                                               MechY(target),
+                                               FaMechRange(mech, target)),
                     "That target is not in your line of sight.");
     DOCHECK_CONTEXT(mech->xcode.context, OODing(target),
                     "You should wait for your target to land first");
@@ -146,8 +146,8 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     }
     mech_notify(mech, MECHALL,
                 tprintf("You climb into %s.", mech_display_id(target).text));
-    MechLOSBroadcast(mech,
-                     tprintf("climbs into %s.", mech_display_id(target).text));
+    mech_los_broadcast(
+        mech, tprintf("climbs into %s.", mech_display_id(target).text));
     tele_contents(mech->xcode.context, mech->mynum, target->mynum, TELE_ALL);
     discard_mw(mech);
     return;
@@ -163,8 +163,8 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   target = btech_context_get_mech(mech->xcode.context, target_num);
   DOCHECK_CONTEXT(mech->xcode.context,
                   !target ||
-                      !InLineOfSight(mech, target, MechX(target), MechY(target),
-                                     FaMechRange(mech, target)),
+                      !mech_los_check(mech, target, MechX(target),
+                                      MechY(target), FaMechRange(mech, target)),
                   "That target is not in your line of sight.");
   DOCHECK_CONTEXT(mech->xcode.context, MechCarrying(mech) == target_num,
                   "You cannot embark what your towing!");
@@ -261,20 +261,20 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   if (MechType(mech) == CLASS_BSUIT) {
     mech_notify(mech, MECHALL,
                 tprintf("You climb into %s.", mech_display_id(target).text));
-    MechLOSBroadcast(mech,
-                     tprintf("climbs into %s.", mech_display_id(target).text));
+    mech_los_broadcast(
+        mech, tprintf("climbs into %s.", mech_display_id(target).text));
   } else {
     mech_notify(mech, MECHALL,
                 tprintf("You climb up the entry ramp into %s.",
                         mech_display_id(target).text));
-    MechLOSBroadcast(mech, tprintf("climbs up the entry ramp into %s.",
-                                   mech_display_id(target).text));
+    mech_los_broadcast(mech, tprintf("climbs up the entry ramp into %s.",
+                                     mech_display_id(target).text));
     if (towee && MechCarrying(mech) > 0) {
       mech_notify(towee, MECHALL,
                   tprintf("You are drug up the entry ramp into %s.",
                           mech_display_id(target).text));
-      MechLOSBroadcast(towee, tprintf("is drug up the entry ramp into %s.",
-                                      mech_display_id(target).text));
+      mech_los_broadcast(towee, tprintf("is drug up the entry ramp into %s.",
+                                        mech_display_id(target).text));
     }
   }
   MarkForLOSUpdate(mech);
@@ -282,7 +282,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
 
   if (MechCritStatus(target) & HIDDEN) {
     MechCritStatus(target) &= ~HIDDEN;
-    MechLOSBroadcast(target, "becomes visible as it is embarked into.");
+    mech_los_broadcast(target, "becomes visible as it is embarked into.");
   }
 
   /* Check if the unit is towing something so the towed unit
@@ -385,11 +385,11 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
   */
 
   if (tIsBSuit) {
-    MechLOSBroadcast(m, "climbs out of one of the destroyed suits!");
+    mech_los_broadcast(m, "climbs out of one of the destroyed suits!");
     notify(evaluation, player, "You climb out of the unit!");
   } else {
-    MechLOSBroadcast(m,
-                     tprintf("ejected from %s!", mech_display_id(mech).text));
+    mech_los_broadcast(m,
+                       tprintf("ejected from %s!", mech_display_id(mech).text));
     initiate_ood(player, m, tprintf("%d %d %d", MechX(m), MechY(m), 150));
     notify(evaluation, player, "You eject from the unit!");
   }

@@ -236,7 +236,8 @@ void bomb_drop(Mech *mech, int player, int bn) {
       "You're on invalid map!");
   DOCHECK_CONTEXT(mech->xcode.context, bn < 0 || bn >= bc,
                   "No bomb with such number installed! (See BOMB LIST)");
-  MechLOSBroadcast(mech, "detaches a small object that starts falling down..");
+  mech_los_broadcast(mech,
+                     "detaches a small object that starts falling down..");
   k = Bomb2I(GetPartType(mech, lloc, lpos));
   mech_notify(mech, MECHALL, "The ship trembles as you detach a bomb..");
   t = calc_dest(mech, &x, &y);

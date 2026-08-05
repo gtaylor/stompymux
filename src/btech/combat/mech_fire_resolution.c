@@ -390,7 +390,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
         DestroyWeapon(mech, section, I2Weapon(weapindx), firstCrit,
                       GetWeaponCrits(mech, weapindx),
                       GetWeaponCrits(mech, weapindx));
-        MechLOSBroadcast(mech, "shudders from an internal explosion!");
+        mech_los_broadcast(mech, "shudders from an internal explosion!");
         /* Apply damage equal to one shot, follow crits as well */
 
         DamageMech(mech, mech, 0, -1, section, 0, 1, 0,
@@ -416,7 +416,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
       DestroyWeapon(mech, section, I2Weapon(weapindx), firstCrit,
                     GetWeaponCrits(mech, weapindx),
                     GetWeaponCrits(mech, weapindx));
-      MechLOSBroadcast(mech, "shudders from an internal explosion!");
+      mech_los_broadcast(mech, "shudders from an internal explosion!");
       DamageMech(mech, mech, 0, -1, section, 0, 0, 0,
                  MechWeapons[weapindx].damage, -1, 0, -1, 0, 1);
       decrement_ammunition(mech, weapindx, section, critical, ammoLoc, ammoCrit,
@@ -479,7 +479,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                            ammoLoc1, ammoCrit1, wGattlingShots);
     }
 
-    MechLOSBroadcast(mech, "shudders from an internal explosion!");
+    mech_los_broadcast(mech, "shudders from an internal explosion!");
     firstCrit = FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
                                     GetWeaponCrits(mech, weapindx));
     DestroyWeapon(mech, section, I2Weapon(weapindx), firstCrit,
@@ -513,7 +513,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
       } else {
         mech_notify(mech, MECHALL,
                     "Your action splits open the cocoon - have a nice fall!");
-        MechLOSBroadcast(mech, "starts plummeting down, as the cocoon opens!.");
+        mech_los_broadcast(mech,
+                           "starts plummeting down, as the cocoon opens!.");
         MechCocoon(mech) = 0;
         mech_event_cancel(mech, EVENT_OOD);
         mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
@@ -538,7 +539,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   }
   /* Tell our target they were just shot at... */
   if (target) {
-    if (InLineOfSight(target, mech, MechX(mech), MechY(mech), range))
+    if (mech_los_check(target, mech, MechX(mech), MechY(mech), range))
       mech_printf(target, MECHALL, "%s has fired a %s at you!",
                   mech_to_mech_display_id(target, mech).text,
                   &MechWeapons[weapindx].name[3]);
@@ -585,7 +586,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
 
             if (roll >= baseToHit) {
               mech_notify(altTarget, MECHALL, "The shot hits you instead!");
-              MechLOSBroadcast(
+              mech_los_broadcast(
                   altTarget, "manages to get in the way of the shot instead!");
               HitTarget(mech, weapindx, section, critical, altTarget, mapx,
                         mapy, LOS, type, modifier, 1, baseToHit, wGattlingShots,
@@ -684,8 +685,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
       if (!MadePilotSkillRoll(mech, wHGRPSkillMod)) {
         mech_notify(mech, MECHALL,
                     "The weapon's recoil knocks you to the ground!");
-        MechLOSBroadcast(mech, tprintf("topples over from the %s's recoil!",
-                                       &MechWeapons[weapindx].name[3]));
+        mech_los_broadcast(mech, tprintf("topples over from the %s's recoil!",
+                                         &MechWeapons[weapindx].name[3]));
         MechFalls(mech, 1, 0);
       }
     }

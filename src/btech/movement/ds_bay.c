@@ -175,9 +175,9 @@ static void mech_enterbay_event(MuxEvent *e) {
   StopBSuitSwarmers(
       btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
   mech_notify(mech, MECHALL, "You enter the bay.");
-  MechLOSBroadcast(mech,
-                   tprintf("has entered %s at %d,%d.", mech_display_id(ds).text,
-                           MechX(mech), MechY(mech)));
+  mech_los_broadcast(mech, tprintf("has entered %s at %d,%d.",
+                                   mech_display_id(ds).text, MechX(mech),
+                                   MechY(mech)));
   MarkForLOSUpdate(mech);
   if (MechType(mech) == CLASS_MW &&
       !is_in_character(mech->xcode.context->database, ref)) {
@@ -188,7 +188,7 @@ static void mech_enterbay_event(MuxEvent *e) {
     tmpm = btech_context_get_mech(mech->xcode.context, MechCarrying(mech));
   mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", ref));
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
-  MechLOSBroadcast(mech, "has entered the bay.");
+  mech_los_broadcast(mech, "has entered the bay.");
   move_via_teleport(btech_context_evaluation(mech->xcode.context), mech->mynum,
                     ref, 1, 0);
   if (tmpm) {
@@ -367,7 +367,7 @@ static int Leave_DS_Bay(BattleMap *map, Mech *ds, Mech *mech, DbRef frombay) {
 
   StopBSuitSwarmers(
       btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
-  MechLOSBroadcast(mech, "has left the bay.");
+  mech_los_broadcast(mech, "has left the bay.");
   /* We escape confines of the bay to open air/land! */
   mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", ds->mapindex));
   if (MechCarrying(mech) > 0)
@@ -385,7 +385,7 @@ static int Leave_DS_Bay(BattleMap *map, Mech *ds, Mech *mech, DbRef frombay) {
   DS_Place(ds, mech, frombay);
   if (car)
     MirrorPosition(mech, car, 0);
-  MechLOSBroadcasti(mech, ds, "has left %s's bay.");
+  mech_los_broadcast_unit(mech, ds, "has left %s's bay.");
   mech_notify(ds, MECHALL,
               tprintf("%s has left the bay.", mech_display_id(mech).text));
   mech_continue_flying(mech);

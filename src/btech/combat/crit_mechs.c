@@ -254,8 +254,8 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
         mech_notify(attacker, MECHALL,
                     "You destroy the cockpit! The pilot's blood splatters down "
                     "the sides!");
-      MechLOSBroadcast(wounded,
-                       "spasms for a second then remains oddly still.");
+      mech_los_broadcast(wounded,
+                         "spasms for a second then remains oddly still.");
       MechPilot(wounded) = -1;
       KillMechContentsIfIC(wounded);
       break;
@@ -305,14 +305,14 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       if (!Destroyed(wounded)) {
         snprintf(msgbuf, MBUF_SIZE, "'s %s is covered in a green mist!",
                  locname);
-        MechLOSBroadcast(wounded, msgbuf);
+        mech_los_broadcast(wounded, msgbuf);
       }
       break;
     case JUMP_JET:
       if (!Destroyed(wounded) && Started(wounded)) {
         snprintf(msgbuf, MBUF_SIZE,
                  "'s %s flares as superheated plasma spews out!", locname);
-        MechLOSBroadcast(wounded, msgbuf);
+        mech_los_broadcast(wounded, msgbuf);
       }
       /* IMPROVED JJ CHECK HERE. SIMILIAR TO DHS */
       if ((MechSpecials2(mech) & IMPROVED_JJ_TECH)) {
@@ -329,7 +329,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       if (attacker && MechJumpSpeed(wounded) < MP1 && Jumping(wounded)) {
         mech_notify(wounded, MECHALL,
                     "Losing your last jump jet, you fall from the sky!");
-        MechLOSBroadcast(wounded, "falls from the sky!");
+        mech_los_broadcast(wounded, "falls from the sky!");
         MechFalls(wounded, 1, 0);
         domino_space(wounded, 2);
       }
@@ -337,7 +337,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     case ENGINE:
       if (!Destroyed(wounded) && Started(wounded)) {
         snprintf(msgbuf, MBUF_SIZE, "'s %s spews black smoke!", locname);
-        MechLOSBroadcast(wounded, msgbuf);
+        mech_los_broadcast(wounded, msgbuf);
       }
       if (MechEngineHeat(wounded) < 10) {
         MechEngineHeat(wounded) += 5;
@@ -369,7 +369,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
           snprintf(msgbuf, MBUF_SIZE,
                    "emits a screech as its "
                    "hardened gyro buckles slightly!");
-          MechLOSBroadcast(wounded, msgbuf);
+          mech_los_broadcast(wounded, msgbuf);
           MechCritStatus2(wounded) |= HDGYRO_DAMAGED;
           mech_notify(wounded, MECHALL, "Your hardened gyro takes a hit!");
           break;
@@ -380,7 +380,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
           snprintf(msgbuf, MBUF_SIZE,
                    "emits a loud screech as "
                    "its gyro buckles under the impact!");
-          MechLOSBroadcast(wounded, msgbuf);
+          mech_los_broadcast(wounded, msgbuf);
         }
         MechCritStatus(wounded) |= GYRO_DAMAGED;
         MechPilotSkillBase(wounded) += 3;
@@ -390,11 +390,11 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
             if (!Jumping(wounded) && !OODing(wounded)) {
               mech_notify(wounded, MECHALL,
                           "You lose your balance and fall down!");
-              MechLOSBroadcast(wounded, "stumbles and falls down.");
+              mech_los_broadcast(wounded, "stumbles and falls down.");
               MechFalls(wounded, 1, 0);
             } else {
               mech_notify(wounded, MECHALL, "You fall from the sky!");
-              MechLOSBroadcast(wounded, "falls from the sky!");
+              mech_los_broadcast(wounded, "falls from the sky!");
               MechFalls(wounded, JumpSpeedMP(wounded, map), 0);
               domino_space(wounded, 2);
             }
@@ -406,12 +406,12 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
         if (attacker) {
           if (!Fallen(wounded) && !Jumping(wounded) && !OODing(wounded)) {
             mech_notify(wounded, MECHALL, "You fall and you can't get up!");
-            MechLOSBroadcast(wounded, "is knocked over!");
+            mech_los_broadcast(wounded, "is knocked over!");
             MechFalls(wounded, 1, 0);
           } else if (!Fallen(wounded) &&
                      (Jumping(wounded) || OODing(wounded))) {
             mech_notify(wounded, MECHALL, "You fall from the sky!");
-            MechLOSBroadcast(wounded, "falls from the sky!");
+            mech_los_broadcast(wounded, "falls from the sky!");
             MechFalls(wounded, JumpSpeedMP(wounded, map), 0);
             domino_space(wounded, 2);
           }
@@ -431,7 +431,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       } else if (tLocIsLeg) {
         if (!Destroyed(wounded) && Started(wounded)) {
           snprintf(msgbuf, MBUF_SIZE, "'s hip locks into place!");
-          MechLOSBroadcast(wounded, msgbuf);
+          mech_los_broadcast(wounded, msgbuf);
         }
 
         mech_notify(wounded, MECHALL,
@@ -449,7 +449,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
         if (attacker && !Jumping(wounded) && !OODing(wounded) &&
             !MadePilotSkillRoll(wounded, 0)) {
           mech_notify(wounded, MECHALL, "You lose your balance and fall down!");
-          MechLOSBroadcast(wounded, "stumbles and falls down!");
+          mech_los_broadcast(wounded, "stumbles and falls down!");
           MechFalls(wounded, 1, 0);
         }
       }
@@ -475,8 +475,8 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
           mech_drop_club(mech);
         if (MechCarrying(mech) > 0) {
           mech_notify(mech, MECHALL, "The hit causes your tow line to let go!");
-          MechLOSBroadcast(mech,
-                           "'s tow lines release and flap freely behind it!");
+          mech_los_broadcast(mech,
+                             "'s tow lines release and flap freely behind it!");
           mech_dropoff(GOD, mech, "");
         }
         NormalizeLocActuatorCrits(wounded, hitloc);
@@ -490,7 +490,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                                        already have a hip crit here */
           if (!Destroyed(wounded) && Started(wounded)) {
             snprintf(msgbuf, MBUF_SIZE, "'s %s twists in an odd way!", locname);
-            MechLOSBroadcast(wounded, msgbuf);
+            mech_los_broadcast(wounded, msgbuf);
           }
 
           NormalizeAllActuatorCrits(wounded);
@@ -499,7 +499,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
               !MadePilotSkillRoll(wounded, 0)) {
             mech_notify(wounded, MECHALL,
                         "You lose your balance and fall down!");
-            MechLOSBroadcast(wounded, "stumbles and falls down!");
+            mech_los_broadcast(wounded, "stumbles and falls down!");
             MechFalls(wounded, 1, 0);
           }
         }

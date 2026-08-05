@@ -123,12 +123,12 @@ void fun_btid2db(char *buff, char **bufc, DbRef player, DbRef cause,
   if (mech) {
     FUNCHECK(!(target = btech_context_get_mech(context->btech, mechnum)),
              "#-1 INVALID TARGETID");
-    FUNCHECK(
-        !InLineOfSight_NB(mech, target, MechX(target), MechY(target),
-                          FlMechRange(btech_context_get_map(
-                                          context->btech, mech_map_dbref(mech)),
-                                      mech, target)),
-        "#-1 INVALID TARGETID");
+    FUNCHECK(!mech_los_check_unblocked(
+                 mech, target, MechX(target), MechY(target),
+                 FlMechRange(btech_context_get_map(context->btech,
+                                                   mech_map_dbref(mech)),
+                             mech, target)),
+             "#-1 INVALID TARGETID");
   }
   safe_tprintf_str(buff, bufc, "#%d", (int)mechnum);
 }
@@ -163,8 +163,8 @@ void fun_bthexlos(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(x < 0 || x > map->map_width || y < 0 || y > map->map_height,
            "#-1 INVALID COORDINATES");
   MapCoordToRealCoord(x, y, &fx, &fy);
-  if (InLineOfSight_NB(mech, NULL, x, y,
-                       FindHexRange(MechFX(mech), MechFY(mech), fx, fy)))
+  if (mech_los_check_unblocked(
+          mech, NULL, x, y, FindHexRange(MechFX(mech), MechFY(mech), fx, fy)))
     safe_tprintf_str(buff, bufc, "1");
   else
     safe_tprintf_str(buff, bufc, "0");
@@ -198,9 +198,9 @@ void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!(target = btech_context_get_mech(context->btech, mechnum)),
            "#-1 INVALID MECH");
 
-  if (InLineOfSight(mech, target, MechX(mech), MechY(mech),
-                    FlMechRange(getmap(mech_map_dbref(mech)), mech, target)))
-    if (InLineOfSight_NB(
+  if (mech_los_check(mech, target, MechX(mech), MechY(mech),
+                     FlMechRange(getmap(mech_map_dbref(mech)), mech, target)))
+    if (mech_los_check_unblocked(
             mech, target, MechX(mech), MechY(mech),
             FlMechRange(getmap(mech_map_dbref(mech)), mech, target)))
       safe_tprintf_str(buff, bufc, "1");

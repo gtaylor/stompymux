@@ -40,12 +40,12 @@ static void mech_masc_event(MuxEvent *e) {
   if (fabs(MechSpeed(mech)) > MP1) {
     mech_notify(mech, MECHALL,
                 "Your leg actuators freeze suddenly, and you fall!");
-    MechLOSBroadcast(mech, "stops and falls in mid-step!");
+    mech_los_broadcast(mech, "stops and falls in mid-step!");
     MechFalls(mech, 1, 0);
   } else {
     mech_notify(mech, MECHALL, "Your leg actuators freeze suddenly!");
     if (MechSpeed(mech) > 0.0)
-      MechLOSBroadcast(mech, "stops suddenly!");
+      mech_los_broadcast(mech, "stops suddenly!");
   }
 
   /* Break the Hips - FASA canon rule about MASC */
@@ -155,7 +155,7 @@ static void mech_scharge_event(MuxEvent *e) {
         DestroyPart(mech, CTORSO, j);
         if (!Destroyed(mech) && Started(mech)) {
           snprintf(msgbuf, MBUF_SIZE, "'s center torso spews black smoke!");
-          MechLOSBroadcast(mech, msgbuf);
+          mech_los_broadcast(mech, msgbuf);
         }
         if (MechEngineHeat(mech) < 10) {
           MechEngineHeat(mech) += 5;
@@ -174,7 +174,7 @@ static void mech_scharge_event(MuxEvent *e) {
 
   if ((MechType(mech) == CLASS_VTOL) || (MechType(mech) == CLASS_VEH_GROUND)) {
     snprintf(msgbuf, MBUF_SIZE, " coughs thick black smoke from its exhaust.");
-    MechLOSBroadcast(mech, msgbuf);
+    mech_los_broadcast(mech, msgbuf);
     maxspeed = MechMaxSpeed(mech);
     newmaxspeed = (maxspeed * .5);
     mech_max_speed_set(mech, newmaxspeed);

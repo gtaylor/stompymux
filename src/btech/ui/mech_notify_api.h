@@ -44,11 +44,11 @@ int common_checks(DbRef player, Mech *mech, int flag);
 void sendchannelstuff(Mech *mech, int freq, char *msg);
 void mech_radio(DbRef player, void *data, char *buffer);
 void MechBroadcast(Mech *mech, Mech *target, BattleMap *mech_map, char *buffer);
-void MechLOSBroadcast(Mech *mech, char *message);
+void mech_los_broadcast(Mech *mech, char *message);
 int MechSeesHexF(Mech *mech, BattleMap *map, float x, float y, int ix, int iy);
 int MechSeesHex(Mech *mech, BattleMap *map, int x, int y);
 void HexLOSBroadcast(BattleMap *mech_map, int x, int y, char *message);
-void MechLOSBroadcasti(Mech *mech, Mech *target, const char *message);
+void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message);
 void MapBroadcast(BattleMap *map, char *message);
 void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
                        BattleMap *mech_map, char *weapname, int IsHit);

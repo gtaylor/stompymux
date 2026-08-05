@@ -268,7 +268,7 @@ void move_mech(Mech *mech) {
           collision_check(mech, JUMP, 0, 0) && MechZ(mech) > 0) {
 
         mech_notify(mech, MECHALL, "CRASH! You crash into the bridge!");
-        MechLOSBroadcast(mech, "crashes into the bridge!");
+        mech_los_broadcast(mech, "crashes into the bridge!");
         MechFalls(mech, 1, 0);
         return;
       }
@@ -458,7 +458,7 @@ void move_mech(Mech *mech) {
               snprintf(message_buffer, MBUF_SIZE,
                        "starts descending towards %d, %d..", MechX(mech),
                        MechY(mech));
-              MechLOSBroadcast(mech, message_buffer);
+              mech_los_broadcast(mech, message_buffer);
             } else {
               mech_notify(mech, MECHALL,
                           "Due to low altitude, "
@@ -581,7 +581,7 @@ void move_mech(Mech *mech) {
     /* We've moved from our hex so break our cover */
     if (MechCritStatus(mech) & HIDDEN) {
       mech_notify(mech, MECHALL, "You move too much and break your cover!");
-      MechLOSBroadcast(mech, "breaks from its cover.");
+      mech_los_broadcast(mech, "breaks from its cover.");
       MechCritStatus(mech) &= ~(HIDDEN);
     }
 

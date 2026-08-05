@@ -64,8 +64,8 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   target = btech_context_get_mech(mech->xcode.context, target_num);
   DOCHECK_CONTEXT(mech->xcode.context,
                   !target ||
-                      !InLineOfSight(mech, target, MechX(target), MechY(target),
-                                     FaMechRange(mech, target)),
+                      !mech_los_check(mech, target, MechX(target),
+                                      MechY(target), FaMechRange(mech, target)),
                   "That target is not in your line of sight.");
   DOCHECK_CONTEXT(mech->xcode.context, Fortified(target),
                   "Your target is fortified and cannot be towed.");
@@ -166,7 +166,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   if (MechCarrying(target) > 0)
     mech_dropoff(GOD, target, "");
   if ((newmap = btech_context_get_map(mech->xcode.context, target->mapindex)))
-    MechLOSBroadcasti(mech, target, "picks up %s!");
+    mech_los_broadcast_unit(mech, target, "picks up %s!");
   SetCarrying(mech, target->mynum);
   MechSwarmTarget(target) = -1;
   if (MechType(target) == CLASS_MECH) {
@@ -227,9 +227,9 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
                   "That towing unit is not in your line of sight.");
   towMech = btech_context_get_mech(mech->xcode.context, towMech_num);
   DOCHECK_CONTEXT(mech->xcode.context,
-                  !towMech || !InLineOfSight(mech, towMech, MechX(towMech),
-                                             MechY(towMech),
-                                             FaMechRange(mech, towMech)),
+                  !towMech || !mech_los_check(mech, towMech, MechX(towMech),
+                                              MechY(towMech),
+                                              FaMechRange(mech, towMech)),
                   "That towing unit is not in your line of sight.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechX(mech) != MechX(towMech) ||
@@ -281,8 +281,8 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   target = btech_context_get_mech(mech->xcode.context, target_num);
   DOCHECK_CONTEXT(mech->xcode.context,
                   !target ||
-                      !InLineOfSight(mech, target, MechX(target), MechY(target),
-                                     FaMechRange(mech, target)),
+                      !mech_los_check(mech, target, MechX(target),
+                                      MechY(target), FaMechRange(mech, target)),
                   "That target is not in your line of sight.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechX(mech) != MechX(target) || MechY(mech) != MechY(target),
@@ -337,8 +337,8 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   mech_printf(mech, MECHALL, "You attach %s's tow lines to %s.", towMechName,
               targetName);
 
-  MechLOSBroadcast(mech, tprintf("attaches tow cables from %s to %s!",
-                                 towMechName, targetName));
+  mech_los_broadcast(mech, tprintf("attaches tow cables from %s to %s!",
+                                   towMechName, targetName));
 
   SetCarrying(towMech, target->mynum);
   MechSwarmTarget(target) = -1;
@@ -384,9 +384,9 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
                   "That towing unit is not in your line of sight.");
   towMech = btech_context_get_mech(mech->xcode.context, towMech_num);
   DOCHECK_CONTEXT(mech->xcode.context,
-                  !towMech || !InLineOfSight(mech, towMech, MechX(towMech),
-                                             MechY(towMech),
-                                             FaMechRange(mech, towMech)),
+                  !towMech || !mech_los_check(mech, towMech, MechX(towMech),
+                                              MechY(towMech),
+                                              FaMechRange(mech, towMech)),
                   "That towing unit is not in your line of sight.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechX(mech) != MechX(towMech) ||
@@ -417,8 +417,8 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
   MechSpeed(target) = 0;
   MechDesiredSpeed(target) = 0;
 
-  MechLOSBroadcast(mech, tprintf("detaches %s's tow cables from %s!",
-                                 towMechName, targetName));
+  mech_los_broadcast(mech, tprintf("detaches %s's tow cables from %s!",
+                                   towMechName, targetName));
 
   if ((newmap = btech_context_get_map(mech->xcode.context, target->mapindex))) {
     MechZ(target) = Elevation(newmap, MechX(towMech), MechY(towMech));
@@ -453,7 +453,7 @@ void mech_dropoff(DbRef player, void *data, char *buffer) {
   MechDesiredSpeed(target) = 0;
 
   if ((newmap = btech_context_get_map(mech->xcode.context, target->mapindex))) {
-    MechLOSBroadcasti(mech, target, "drops %s!");
+    mech_los_broadcast_unit(mech, target, "drops %s!");
     if ((x = MechZ(target)) >
         ((y = Elevation(newmap, MechX(target), MechY(target))) + 2)) {
       mech_notify(mech, MECHALL,
@@ -461,7 +461,7 @@ void mech_dropoff(DbRef player, void *data, char *buffer) {
       mech_notify(
           target, MECHALL,
           "You wish he had done that a might bit closer to the ground.");
-      MechLOSBroadcast(target, "falls through the sky.");
+      mech_los_broadcast(target, "falls through the sky.");
       mech_event_schedule(target, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
     } else {
       if (map_terrain_get(newmap, MechX(mech), MechY(mech)) == ICE)

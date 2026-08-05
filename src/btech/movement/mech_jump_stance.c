@@ -121,7 +121,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
 
     if (!MadePilotSkillRoll(mech, calcStaggerBTHMod(mech))) {
       mech_notify(mech, MECHALL, "... something you apparently can't handle!");
-      MechLOSBroadcast(
+      mech_los_broadcast(
           mech,
           "engages jumpjets, rolls to the side and slams into the ground!");
       MechFalls(mech, 1, 0);
@@ -148,10 +148,10 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     tempMech = btech_context_get_mech(mech->xcode.context, target);
     DOCHECK_CONTEXT(mech->xcode.context, !tempMech, "Invalid Target!");
     range = FaMechRange(mech, tempMech);
-    DOCHECK_CONTEXT(
-        mech->xcode.context,
-        !InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech), range),
-        "Target is not in line of sight!");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    !mech_los_check(mech, tempMech, MechX(tempMech),
+                                    MechY(tempMech), range),
+                    "Target is not in line of sight!");
     DOCHECK_CONTEXT(mech->xcode.context, MechType(tempMech) == CLASS_MW,
                     "Even you can't aim your jump well enough to squish that!");
     mapx = MechX(tempMech);
@@ -170,10 +170,10 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     DOCHECK_CONTEXT(mech->xcode.context, !tempMech,
                     "Target is not in line of sight!");
     range = FaMechRange(mech, tempMech);
-    DOCHECK_CONTEXT(
-        mech->xcode.context,
-        !InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech), range),
-        "Target is not in line of sight!");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    !mech_los_check(mech, tempMech, MechX(tempMech),
+                                    MechY(tempMech), range),
+                    "Target is not in line of sight!");
     DOCHECK_CONTEXT(mech->xcode.context, MechType(tempMech) == CLASS_MW,
                     "Even you can't aim your jump well enough to squish that!");
     mapx = MechX(tempMech);
@@ -244,7 +244,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   else
     mech_notify(mech, MECHALL, "You engage your jump jets.");
   MechSwarmTarget(mech) = -1;
-  MechLOSBroadcast(mech, "engages jumpjets!");
+  mech_los_broadcast(mech, "engages jumpjets!");
   mech_event_schedule(mech, EVENT_JUMP, mech_jump_event, JUMP_TICK, 0);
 }
 
@@ -261,11 +261,11 @@ static void mech_hulldown_event(MuxEvent *e) {
   if (type == 0) {
     MechStatus(mech) &= ~HULLDOWN;
     mech_notify(mech, MECHALL, "You finish lifting yourself up.");
-    MechLOSBroadcast(mech, "finishes lifting itself up");
+    mech_los_broadcast(mech, "finishes lifting itself up");
   } else {
     MechStatus(mech) |= HULLDOWN;
     mech_notify(mech, MECHALL, "You finish lowering yourself to the ground.");
-    MechLOSBroadcast(mech, "finishes lowering itself to the ground.");
+    mech_los_broadcast(mech, "finishes lowering itself to the ground.");
   }
 }
 
@@ -516,7 +516,7 @@ void mech_hulldown(DbRef player, void *data, char *buffer) {
         mech_notify(mech, MECHALL, "You are busy changing your hulldown mode.");
       else {
         mech_notify(mech, MECHALL, "You start to lift yourself up.");
-        MechLOSBroadcast(mech, "begins to raise up on its legs.");
+        mech_los_broadcast(mech, "begins to raise up on its legs.");
 
         mech_event_schedule(mech, EVENT_CHANGING_HULLDOWN, mech_hulldown_event,
                             StandMechTime(mech), 0);
@@ -542,7 +542,7 @@ void mech_hulldown(DbRef player, void *data, char *buffer) {
                   "You are busy changing your hulldown mode.");
 
   mech_notify(mech, MECHALL, "You start to lower yourself to the ground.");
-  MechLOSBroadcast(mech, "begins to lower itself to the ground.");
+  mech_los_broadcast(mech, "begins to lower itself to the ground.");
   MechDesiredSpeed(mech) = 0;
 
   mech_event_schedule(mech, EVENT_CHANGING_HULLDOWN, mech_hulldown_event,

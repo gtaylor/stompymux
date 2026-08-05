@@ -191,7 +191,7 @@ int domino_space_in_hex(BattleMap *map, Mech *me, int x, int y, int friendly,
                   mech_to_mech_display_id(me, mech).text);
       mech_printf(mech, MECHALL, "%s lands on you!",
                   mech_to_mech_display_id(mech, me).text);
-      MechLOSBroadcasti(me, mech, "lands on %s!");
+      mech_los_broadcast_unit(me, mech, "lands on %s!");
       if (IsDS(mech)) {
         cause_damage(me, mech, MAX(1, td * factor / 500), PUNCH);
         cause_damage(me, me, MAX(1, td * factor / 100), KICK);
@@ -204,7 +204,7 @@ int domino_space_in_hex(BattleMap *map, Mech *me, int x, int y, int friendly,
                   mech_to_mech_display_id(me, mech).text);
       mech_printf(mech, MECHALL, "%s nearly lands on you!",
                   mech_to_mech_display_id(mech, me).text);
-      MechLOSBroadcasti(me, mech, "nearly lands on %s!");
+      mech_los_broadcast_unit(me, mech, "nearly lands on %s!");
       if (!MadePilotSkillRoll(me, cnt + JumpSpeedMP(me, map) / 2))
         MechFalls(me, 1, JumpSpeedMP(me, map) / 2);
     }
@@ -216,7 +216,7 @@ int domino_space_in_hex(BattleMap *map, Mech *me, int x, int y, int friendly,
                 mech_to_mech_display_id(me, mech).text);
     mech_printf(mech, MECHALL, "%s bumps into you!",
                 mech_to_mech_display_id(mech, me).text);
-    MechLOSBroadcasti(me, mech, "bumps into %s!");
+    mech_los_broadcast_unit(me, mech, "bumps into %s!");
     if (IsDS(mech)) {
       cause_damage(me, mech, MAX(1, td * factor / 500), NORMAL);
       cause_damage(me, me, MAX(1, td * factor / 100), NORMAL);
@@ -229,7 +229,7 @@ int domino_space_in_hex(BattleMap *map, Mech *me, int x, int y, int friendly,
                 mech_to_mech_display_id(me, mech).text);
     mech_printf(mech, MECHALL, "%s nearly bumps into you!",
                 mech_to_mech_display_id(mech, me).text);
-    MechLOSBroadcasti(me, mech, "nearly bumps into %s!");
+    mech_los_broadcast_unit(me, mech, "nearly bumps into %s!");
     if (!MadePilotSkillRoll(me, cnt))
       MechFalls(me, 1, 0);
     MechDesiredSpeed(me) = 0;

@@ -58,7 +58,7 @@ void mech_ood_damage(Mech *wounded, Mech *attacker, int damage) {
     }
     mech_notify(wounded, MECHALL,
                 "Your cocoon has been destroyed - have a nice fall!");
-    MechLOSBroadcast(
+    mech_los_broadcast(
         wounded,
         "starts plummeting down, as the final blast blows the cocoon apart!");
     mech_event_cancel(wounded, EVENT_OOD);
@@ -89,7 +89,7 @@ void mech_ood_event(MuxEvent *e) {
     /* If we're combat safe, we land regardless, since we're not gonna take any
      * damage */
     MechCocoon(mech) = 0;
-    MechLOSBroadcast(mech, "touches down safely!");
+    mech_los_broadcast(mech, "touches down safely!");
     DropSetElevation(mech, 1);
     mech_maybe_move(mech);
     return;
@@ -158,9 +158,9 @@ void mech_ood_event(MuxEvent *e) {
 
           "You are unable to control your momentum and fall on your face!");
 
-      MechLOSBroadcast(mech,
+      mech_los_broadcast(mech,
 
-                       "touches down on the ground, twists, and falls down!");
+                         "touches down on the ground, twists, and falls down!");
 
       MechFalls(mech, (abs(mof) * (para ? 1 : 2)), 1);
 
@@ -172,7 +172,7 @@ void mech_ood_event(MuxEvent *e) {
 
                   "You are unable to control your momentum and crash!");
 
-      MechLOSBroadcast(mech, "crashes to the ground!");
+      mech_los_broadcast(mech, "crashes to the ground!");
 
       for (i = 0; i < NUM_SECTIONS; i++) {
 
@@ -198,18 +198,18 @@ void mech_ood_event(MuxEvent *e) {
 
                   "You are unable to control your momentum and crash!");
 
-      MechLOSBroadcast(mech, "crashes at the ground!");
+      mech_los_broadcast(mech, "crashes at the ground!");
 
       MechFalls(mech, (abs(mof) * (para ? 1 : 3)), 1);
     }
 
   } else if (!para) {
 
-    MechLOSBroadcast(mech, "touches down!");
+    mech_los_broadcast(mech, "touches down!");
 
   } else if (para) {
 
-    MechLOSBroadcast(mech, "touches down and rolls on the ground!");
+    mech_los_broadcast(mech, "touches down and rolls on the ground!");
 
     /*	mech_notify(mech, MECHALL,
                 "As you hit the ground you roll and sponge some damage!");
@@ -240,10 +240,12 @@ void mech_ood_event(MuxEvent *e) {
                 "Water floods your engine and your unit "
                 "becomes unoperable.");
     if (MechType(mech) == CLASS_BSUIT)
-      MechLOSBroadcast(mech, "emits some bubbles and flails their arms around "
-                             "as they sink to the bottom!");
+      mech_los_broadcast(mech,
+                         "emits some bubbles and flails their arms around "
+                         "as they sink to the bottom!");
     else
-      MechLOSBroadcast(mech, "emits some bubbles as its engines are flooded.");
+      mech_los_broadcast(mech,
+                         "emits some bubbles as its engines are flooded.");
     DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
   }
 }

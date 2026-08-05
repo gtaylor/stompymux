@@ -769,10 +769,10 @@ void clear_hex(Mech *mech, int x, int y, int meant) {
     return;
   }
   if (meant) {
-    MechLOSBroadcast(mech, tprintf("'s shot clears %d,%d!", x, y));
+    mech_los_broadcast(mech, tprintf("'s shot clears %d,%d!", x, y));
     mech_printf(mech, MECHALL, "You clear %d,%d.", x, y);
   } else {
-    MechLOSBroadcast(mech, tprintf("'s stray shot clears %d,%d!", x, y));
+    mech_los_broadcast(mech, tprintf("'s stray shot clears %d,%d!", x, y));
     mech_printf(mech, MECHALL, "You accidentally clear %d,%d!", x, y);
   }
 }

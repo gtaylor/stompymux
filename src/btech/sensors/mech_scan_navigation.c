@@ -59,9 +59,9 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
         tempMech =
             btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
         if (tempMech) {
-          if (!InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                             mech_position_y(tempMech),
-                             mech_range_to(mech, tempMech))) {
+          if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                              mech_position_y(tempMech),
+                              mech_range_to(mech, tempMech))) {
             notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
@@ -148,9 +148,9 @@ void mech_range(DbRef player, void *data, char *buffer) {
         tempMech =
             btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
         if (tempMech) {
-          if (!InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                             mech_position_y(tempMech),
-                             mech_range_to(mech, tempMech))) {
+          if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                              mech_position_y(tempMech),
+                              mech_range_to(mech, tempMech))) {
             notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
@@ -256,9 +256,9 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         tempMech =
             btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
         if (tempMech) {
-          if (!InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                             mech_position_y(tempMech),
-                             mech_range_to(mech, tempMech))) {
+          if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                              mech_position_y(tempMech),
+                              mech_range_to(mech, tempMech))) {
             notify(evaluation, player, "Target is not in line of sight!");
             return;
           }

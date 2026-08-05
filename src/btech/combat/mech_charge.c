@@ -636,7 +636,7 @@ void ChargeMech(Mech *mech, Mech *target) {
   /* Did the charge work ? */
   if (roll >= baseToHit) {
     /* OUCH */
-    MechLOSBroadcasti(
+    mech_los_broadcast_unit(
         mech, target,
         tprintf("%ss %%s!", MechType(mech) == CLASS_MECH ? "charge" : "ram"));
     mech_printf(target, MECHSTARTED, "CRASH!!!\n%s %ss into you!",

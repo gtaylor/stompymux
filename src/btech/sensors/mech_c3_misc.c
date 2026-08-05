@@ -268,15 +268,15 @@ void showNetworkTargets(DbRef player, Mech *mech, int tIsC3) {
 
     tShowStatusInfo = 0;
     realRange = FlMechRange(objMap, mech, otherMech);
-    losFlag = InLineOfSight(mech, otherMech, MechX(otherMech), MechY(otherMech),
-                            realRange);
+    losFlag = mech_los_check(mech, otherMech, MechX(otherMech),
+                             MechY(otherMech), realRange);
 
     /*
      * If we do see them, let's make sure it's not just a 'something'
      */
     if (losFlag) {
-      if (InLineOfSight_NB(mech, otherMech, MechX(otherMech), MechY(otherMech),
-                           0.0))
+      if (mech_los_check_unblocked(mech, otherMech, MechX(otherMech),
+                                   MechY(otherMech), 0.0))
         wSeeTarget = TARG_LOS_CLEAR;
       else
         wSeeTarget = TARG_LOS_SOMETHING;
@@ -459,12 +459,12 @@ int mechSeenByNetwork(Mech *mech, Mech *mechTarget, int tIsC3) {
       continue;
 
     range = FaMechRange(otherMech, mechTarget);
-    los = InLineOfSight(otherMech, mechTarget, MechX(mechTarget),
-                        MechY(mechTarget), range);
+    los = mech_los_check(otherMech, mechTarget, MechX(mechTarget),
+                         MechY(mechTarget), range);
 
     if (los) {
-      if (!InLineOfSight_NB(otherMech, mechTarget, MechX(mechTarget),
-                            MechY(mechTarget), range))
+      if (!mech_los_check_unblocked(otherMech, mechTarget, MechX(mechTarget),
+                                    MechY(mechTarget), range))
         los = TARG_LOS_SOMETHING;
       else {
         los = TARG_LOS_CLEAR;
@@ -538,8 +538,8 @@ float findC3RangeWithNetwork(Mech *mech, Mech *mechTarget, float realRange,
                       mech_dbref(mech), mech_dbref(mechTarget)));
 
       c3Range = FaMechRange(otherMech, mechTarget);
-      inLOS = InLineOfSight(otherMech, mechTarget, MechX(mechTarget),
-                            MechY(mechTarget), c3Range);
+      inLOS = mech_los_check(otherMech, mechTarget, MechX(mechTarget),
+                             MechY(mechTarget), c3Range);
     } else if ((MechTargX(mech) > 0) && (MechTargY(mech) > 0)) {
       mapX = MechTargX(mech);
       mapY = MechTargY(mech);

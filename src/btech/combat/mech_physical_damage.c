@@ -9,11 +9,11 @@ void PhysicalTrip(Mech *mech, Mech *target) {
 
     // Emit to victim and LOS.
     mech_notify(target, MECHSTARTED, "You are tripped and fall to the ground!");
-    MechLOSBroadcast(target, "trips up and falls down!");
+    mech_los_broadcast(target, "trips up and falls down!");
 
     MechFalls(target, 1, 0);
   } else {
-    MechLOSBroadcast(target, "manages to stay upright!");
+    mech_los_broadcast(target, "manages to stay upright!");
   }
 } // end PhysicalTrip()
 
@@ -186,7 +186,7 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
   if (MechType(target) == CLASS_MECH && AttackType == PA_KICK) {
     if (!MadePilotSkillRoll(target, 0) && !Fallen(target)) {
       mech_notify(target, MECHSTARTED, "The kick knocks you to the ground!");
-      MechLOSBroadcast(target, "stumbles and falls down!");
+      mech_los_broadcast(target, "stumbles and falls down!");
       MechFalls(target, 1, 0);
     }
   }
@@ -282,7 +282,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
                 "DEATH FROM ABOVE!!!\n%s lands on you from above!",
                 mech_to_mech_display_id(target, mech).text);
     mech_notify(mech, MECHALL, "You land on your target legs first!");
-    MechLOSBroadcasti(mech, target, "lands on %s!");
+    mech_los_broadcast_unit(mech, target, "lands on %s!");
 
     hitGroup = FindAreaHitGroup(mech, target);
     if (hitGroup == BACK)
@@ -337,13 +337,13 @@ int DeathFromAbove(Mech *mech, Mech *target) {
       if (!MadePilotSkillRoll(mech, 4)) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
-        MechLOSBroadcast(mech, "stumbles and falls down!");
+        mech_los_broadcast(mech, "stumbles and falls down!");
         MechFalls(mech, 1, 0);
       }
       if (MechType(target) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
         mech_notify(target, MECHSTARTED,
                     "Your piloting skill fails and you fall over!!");
-        MechLOSBroadcast(target, "stumbles and falls down!");
+        mech_los_broadcast(target, "stumbles and falls down!");
         MechFalls(target, 1, 0);
       }
     }
@@ -353,7 +353,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     if (!Fallen(mech)) {
       mech_notify(mech, MECHALL,
                   "You miss your DFA attack and fall on your back!!");
-      MechLOSBroadcast(mech, "misses DFA and falls down!");
+      mech_los_broadcast(mech, "misses DFA and falls down!");
     }
 
     mech_damage = MechTons(mech) / 5;

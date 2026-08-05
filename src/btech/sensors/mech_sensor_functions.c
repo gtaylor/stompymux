@@ -175,10 +175,11 @@ int vislight_csee(Mech *observer, Mech *target, BattleMap *map, float range,
                     BATTLE_MAP_LOS_SMOKE)) &&
          battle_map_los_wood_count(flags) < 3 &&
          (!target || mech_position_z(target) >= 0 ||
-          ActualElevation(btech_context_get_map(mech_context(target),
-                                                mech_map_dbref(target)),
-                          mech_position_x(target), mech_position_y(target),
-                          target) >= 0.0 ||
+          mech_los_actual_elevation(
+              btech_context_get_map(mech_context(target),
+                                    mech_map_dbref(target)),
+              mech_position_x(target), mech_position_y(target),
+              target) >= 0.0 ||
           battle_map_los_water_count(flags) < 6);
 }
 

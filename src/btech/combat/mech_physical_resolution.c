@@ -141,9 +141,9 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
 
   range = FaMechRange(mech, target);
 
-  DOCHECKMA(
-      !InLineOfSight_NB(mech, target, MechX(target), MechY(target), range),
-      "Target is not in line of sight!");
+  DOCHECKMA(!mech_los_check_unblocked(mech, target, MechX(target),
+                                      MechY(target), range),
+            "Target is not in line of sight!");
 
   // BSuits have to be <= 0.5 hexes to attack units.
   if ((MechType(target) == CLASS_BSUIT) || (MechType(target) == CLASS_MW))
@@ -412,7 +412,7 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     phys_succeed(mech, target, AttackType);
     if (mech->xcode.context->configuration->btech_glancing_blows &&
         (roll == RbaseToHit)) {
-      MechLOSBroadcast(target, "is nicked by a glancing blow!");
+      mech_los_broadcast(target, "is nicked by a glancing blow!");
       mech_notify(target, MECHALL, "You are nicked by a glancing blow!");
       glance = 1;
     }
@@ -426,7 +426,7 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
 
       if (clubLoc > -1) {
         mech_notify(mech, MECHALL, "Your club shatters on contact.");
-        MechLOSBroadcast(mech, "'s club shatters with a loud *CRACK*!");
+        mech_los_broadcast(mech, "'s club shatters with a loud *CRACK*!");
 
         MechSections(mech)[clubLoc].specials &= ~CARRYING_CLUB;
       }
@@ -448,7 +448,7 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
       if (!MadePilotSkillRoll(mech, 4)) {
         mech_notify(mech, MECHALL,
                     "Uh oh. You miss the little buggers, but hit yourself!");
-        MechLOSBroadcast(mech, "misses, and hits itself!");
+        mech_los_broadcast(mech, "misses, and hits itself!");
 
         PhysicalDamage(mech, mech, damageweight, AttackType, sect, glance);
       } // If we really screw up against suits swarmed on ourselves,

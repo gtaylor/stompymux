@@ -392,7 +392,7 @@ int FindNormalBTH(Mech *mech, BattleMap *mech_map, int section, int critical,
 
     /* Add in the terrain modifier */
     if (indirectFire >= 1000) {
-      j = AddTerrainMod(mech, target, mech_map, range, wAmmoMode);
+      j = mech_los_terrain_modifier(mech, target, mech_map, range, wAmmoMode);
       if (j < 1000)
         BTHADD("Terrain/is_light(Sensor)", j);
     }

@@ -462,7 +462,7 @@ MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech) {
   if (!is_good_obj(context->database, object))
     return id;
 
-  if (!InLineOfSight_NB(see, mech, 0, 0, 0)) {
+  if (!mech_los_check_unblocked(see, mech, 0, 0, 0)) {
     mname = "something";
     team = 0;
   } else {

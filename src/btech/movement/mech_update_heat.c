@@ -35,13 +35,14 @@ void ammo_explosion(Mech *attacker, Mech *mech, int ammoloc, int ammocritnum,
                     int damage) {
   if (MechType(mech) == CLASS_MW) {
     mech_notify(mech, MECHALL, "Your weapon's ammo explodes!");
-    MechLOSBroadcast(mech, "'s weapon's ammo explodes!");
+    mech_los_broadcast(mech, "'s weapon's ammo explodes!");
   } else {
     mech_notify(mech, MECHALL, "Ammunition explosion!");
     if (GetPartAmmoMode(mech, ammoloc, ammocritnum) & INFERNO_MODE)
-      MechLOSBroadcast(mech, "is suddenly enveloped by a brilliant fireball!");
+      mech_los_broadcast(mech,
+                         "is suddenly enveloped by a brilliant fireball!");
     else
-      MechLOSBroadcast(mech, "has an internal ammo explosion!");
+      mech_los_broadcast(mech, "has an internal ammo explosion!");
   }
   DestroyPart(mech, ammoloc, ammocritnum);
   if (!attacker)
@@ -198,12 +199,12 @@ void HandleOverheat(Mech *mech) {
     }
     if (Jumping(mech) || OODing(mech) || (is_aero(mech) && !Landed(mech))) {
       mech_notify(mech, MECHALL, "[bold]You fall from the sky![reset]");
-      MechLOSBroadcast(mech, "falls from the sky!");
+      mech_los_broadcast(mech, "falls from the sky!");
       mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
       MechFalls(mech, JumpSpeedMP(mech, mech_map), 0);
       domino_space(mech, 2);
     } else {
-      MechLOSBroadcast(mech, "stops in mid-motion!");
+      mech_los_broadcast(mech, "stops in mid-motion!");
       if ((fabs(MechSpeed(mech)) > MP1) && !Fallen(mech) &&
           (!MadePilotSkillRoll(mech, 3)))
         MechFalls(mech, 0, 1);

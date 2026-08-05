@@ -65,7 +65,7 @@ void DoMotiveSystemHit(Mech *mech, int wRollMod) {
           strVhlTypeName);
 
     if (MechSpeed(mech) != 0.0)
-      MechLOSBroadcast(mech, "wobbles slightly.");
+      mech_los_broadcast(mech, "wobbles slightly.");
   } else if (wRoll < 12) { /* moderate effect */
     MechPilotSkillBase(mech) += 2;
 
@@ -81,7 +81,7 @@ void DoMotiveSystemHit(Mech *mech, int wRollMod) {
           strVhlTypeName);
 
     if (MechSpeed(mech) != 0.0)
-      MechLOSBroadcast(mech, "wobbles violently.");
+      mech_los_broadcast(mech, "wobbles violently.");
 
     mech_max_speed_lower(mech, MP1);
     correct_speed(mech);
@@ -98,7 +98,7 @@ void DoMotiveSystemHit(Mech *mech, int wRollMod) {
           strVhlTypeName);
 
     if (MechSpeed(mech) > 0)
-      MechLOSBroadcast(mech, "shakes violently then begins to slow down.");
+      mech_los_broadcast(mech, "shakes violently then begins to slow down.");
 
     mech_max_speed_set(mech, 0.0);
     mech_make_fall(mech);

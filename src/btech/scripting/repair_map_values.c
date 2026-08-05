@@ -449,7 +449,7 @@ void fun_btdamagemech(char *buff, char **bufc, DbRef player, DbRef cause,
    * fargs[3] = direction of 'attack'
    * fargs[4] = (try to) force crit
    * fargs[5] = message to send to damaged 'mech
-   * fargs[6] = message to MechLOSBroadcast, prepended by mech name
+   * fargs[6] = message to mech_los_broadcast, prepended by mech name
    */
 
   int totaldam, clustersize, direction, iscrit;

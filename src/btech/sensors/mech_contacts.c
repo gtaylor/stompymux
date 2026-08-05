@@ -401,12 +401,12 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         continue;
     }
     range = FlMechRange(mech_map, mech, tempMech);
-    if (!(losflag = InLineOfSight(mech, tempMech, MechX(tempMech),
-                                  MechY(tempMech), range)))
+    if (!(losflag = mech_los_check(mech, tempMech, MechX(tempMech),
+                                   MechY(tempMech), range)))
       continue;
     if (is_good_obj(mech_context(mech)->database, mech_dbref(tempMech))) {
-      if (!InLineOfSight_NB(mech, tempMech, MechX(tempMech), MechY(tempMech),
-                            0.0)) {
+      if (!mech_los_check_unblocked(mech, tempMech, MechX(tempMech),
+                                    MechY(tempMech), 0.0)) {
         mech_name = "something";
         inlos = 0;
       } else {
@@ -506,7 +506,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           MechFX(mech), MechFY(mech), MechFZ(mech), fx, fy,
           ZSCALE * ((i = Elevation(mech_map, building->x, building->y)) + 1));
 
-      losflag = InLineOfSight(mech, NULL, building->x, building->y, range);
+      losflag = mech_los_check(mech, NULL, building->x, building->y, range);
       if (!losflag || (losflag & MECHLOSFLAG_BLOCK))
         continue;
 

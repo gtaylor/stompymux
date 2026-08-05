@@ -141,7 +141,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
 #ifdef BT_MOVEMENT_MODES
   if ((damage > 0 || intDamage > 0) && MechStatus2(wounded) & SPRINTING) {
     MechStatus2(wounded) &= ~SPRINTING;
-    MechLOSBroadcast(wounded, "breaks out of its sprint as it takes damage!");
+    mech_los_broadcast(wounded, "breaks out of its sprint as it takes damage!");
     mech_notify(wounded, MECHALL,
                 "You lose your sprinting momentum as you take damage!");
     if (!mech_event_count(wounded, EVENT_MOVEMODE))
@@ -151,7 +151,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
 
   if ((damage > 0 || intDamage > 0) && MechCritStatus(wounded) & HIDDEN) {
     MechCritStatus(wounded) &= ~HIDDEN;
-    MechLOSBroadcast(wounded, "loses its cover as it takes damage!");
+    mech_los_broadcast(wounded, "loses its cover as it takes damage!");
     mech_notify(wounded, MECHALL, "Your cover is ruined as you take damage!");
     if (!mech_event_count(wounded, EVENT_MOVEMODE))
       MechCritStatus(wounded) &= ~HIDDEN;
@@ -179,7 +179,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
 
     if (MechCritStatus(wounded) & HIDDEN) {
       mech_notify(wounded, MECHALL, "Your cover is ruined as you take damage!");
-      MechLOSBroadcast(wounded, "loses its cover as it takes damage.");
+      mech_los_broadcast(wounded, "loses its cover as it takes damage.");
       MechCritStatus(wounded) &= ~HIDDEN;
     }
 
@@ -343,7 +343,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
       mech_notify(wounded, MECHALL, "its pieces all over the sky!");
       if (!Landed(wounded) && Started(wounded)) {
         mech_notify(attacker, MECHALL, "You shoot the craft from the sky!");
-        MechLOSBroadcasti(attacker, wounded, "shoots %s from the sky!");
+        mech_los_broadcast_unit(attacker, wounded, "shoots %s from the sky!");
       }
       DestroyMech(wounded, attacker, !(!Landed(wounded) && Started(wounded)),
                   KILL_TYPE_NORMAL);
@@ -361,7 +361,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
               (btech_random_roll(wounded->xcode.context) > 5)) {
             MechCritStatus(wounded) |= SLITE_DEST;
             MechStatus2(wounded) &= ~SLITE_ON;
-            MechLOSBroadcast(wounded, "'s searchlight is blown apart!");
+            mech_los_broadcast(wounded, "'s searchlight is blown apart!");
             mech_notify(
                 wounded, MECHALL,
                 "[fg=yellow bold]Your searchlight is destroyed![reset]");
@@ -378,7 +378,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
               (btech_random_roll(wounded->xcode.context) > 5)) {
             MechCritStatus(wounded) |= SLITE_DEST;
             MechStatus2(wounded) &= ~SLITE_ON;
-            MechLOSBroadcast(wounded, "'s searchlight is blown apart!");
+            mech_los_broadcast(wounded, "'s searchlight is blown apart!");
             mech_notify(
                 wounded, MECHALL,
                 "[fg=yellow bold]Your searchlight is destroyed![reset]");
@@ -485,8 +485,8 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
                                             MechCarrying(wounded)))) {
       mech_notify(wounded, MECHALL, "The hit causes your tow line to let go!");
       mech_notify(towTarget, MECHALL, "Your tow lines go suddenly slack!");
-      MechLOSBroadcast(wounded,
-                       "'s tow lines release and flap freely behind it!");
+      mech_los_broadcast(wounded,
+                         "'s tow lines release and flap freely behind it!");
 
       mech_dropoff(GOD, wounded, "");
     }

@@ -50,7 +50,7 @@ static inline BtechContext *xcode_context(const void *object) {
   return ((const BtechSpecialObject *)object)->context;
 }
 
-#define LOS_NB InLineOfSight_NB
+#define LOS_NB mech_los_check_unblocked
 #define MWalkingSpeed(maxspeed) ((float)2.0 * (maxspeed) / 3.0 + 0.1)
 #define WalkingSpeed(maxspeed) ((float)2.0 * (maxspeed) / 3.0)
 #define IsRunning(speed, maxspeed) (speed > MWalkingSpeed(maxspeed))
@@ -290,12 +290,12 @@ static inline BtechContext *xcode_context(const void *object) {
 #define DSSpam(mek, msg)                                                       \
   do {                                                                         \
     if (DropShip(MechType(mek)) && DSOkToNotify(mek))                          \
-      MechLOSBroadcast(mek, msg);                                              \
+      mech_los_broadcast(mek, msg);                                            \
   } while (0)
 #define DSSpam_O(mek, msg)                                                     \
   do {                                                                         \
     if (DropShip(MechType(mek)))                                               \
-      MechLOSBroadcast(mek, msg);                                              \
+      mech_los_broadcast(mek, msg);                                            \
   } while (0)
 
 #define MechHasTurret(a)                                                       \
@@ -304,7 +304,7 @@ static inline BtechContext *xcode_context(const void *object) {
    GetSectOInt(a, TURRET))
 
 #define MechSeemsFriend(a, b)                                                  \
-  (MechTeam(a) == MechTeam(b) && InLineOfSight_NB(a, b, 0, 0, 0))
+  (MechTeam(a) == MechTeam(b) && mech_los_check_unblocked(a, b, 0, 0, 0))
 
 #define SetTurnMode(a, b)                                                      \
   do {                                                                         \

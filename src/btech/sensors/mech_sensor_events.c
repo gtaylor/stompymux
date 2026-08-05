@@ -51,7 +51,8 @@ void mech_sensor_visibility_refresh(Mech *mech) {
 
     float range = mech_range_to(seer, mech);
     unsigned short los_flags = battle_map_los_flags(map, i, num);
-    los_flags = CalculateLOSFlag(seer, mech, map, mech_position_x(mech),
+    los_flags =
+        mech_los_calculate_flags(seer, mech, map, mech_position_x(mech),
                                  mech_position_y(mech), los_flags, range);
     battle_map_los_flags_set(map, i, num, los_flags);
 
@@ -87,8 +88,8 @@ void mech_sensors_scramble_infrared_and_liteamp(Mech *mech, int time,
 
     Mech *observer = btech_context_get_mech(mech_context(mech), observer_dbref);
     if (!observer ||
-        !InLineOfSight(observer, mech, mech_position_x(mech),
-                       mech_position_y(mech), mech_range_to(observer, mech)))
+        !mech_los_check(observer, mech, mech_position_x(mech),
+                        mech_position_y(mech), mech_range_to(observer, mech)))
       continue;
     if (mech_is_blinded(observer) || mech_pilot_is_unconscious(observer))
       continue;

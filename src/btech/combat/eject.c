@@ -131,7 +131,8 @@ void pickup_mw(Mech *mech, Mech *target) {
                   "%s scoops you up and brings you into the cockpit.",
                   mech_to_mech_display_id(target, mech).text);
   /* Put the player in the picker uppper and clear him from the map */
-  MechLOSBroadcast(mech, tprintf("picks up %s.", mech_display_id(target).text));
+  mech_los_broadcast(mech,
+                     tprintf("picks up %s.", mech_display_id(target).text));
   mech_printf(mech, MECHALL,
               "You pick up the stray mechwarrior from the field.");
   if (MechTeam(target) != MechTeam(mech))
@@ -193,7 +194,8 @@ static void char_eject(DbRef player, Mech *mech) {
   mech_Rsetteam(GOD, (void *)m, tprintf("%d", MechTeam(mech)));
   move_via_teleport(evaluation, suit, mech->mapindex, 1, 7);
   move_via_teleport(evaluation, player, suit, 1, 7);
-  MechLOSBroadcast(m, tprintf("ejected from %s!", mech_display_id(mech).text));
+  mech_los_broadcast(m,
+                     tprintf("ejected from %s!", mech_display_id(mech).text));
   s_in_character(mech->xcode.context->database, suit);
   initialize_pc(player, m);
   silly_atr_set_in(m->xcode.context->database, m->mynum, A_PILOTNUM,
@@ -343,14 +345,14 @@ static void char_disembark(DbRef player, Mech *mech) {
     notify(evaluation, player,
            "You open the hatch and climb out of the unit. Maybe you should "
            "have done this while the thing was closer to the ground...");
-    MechLOSBroadcast(m, tprintf("jumps out of %s... in mid air !",
-                                mech_display_id(mech).text));
+    mech_los_broadcast(m, tprintf("jumps out of %s... in mid air !",
+                                  mech_display_id(mech).text));
     initial_speed = ((MechSpeed(mech) + MechVerticalSpeed(mech)) / MP1) / 2 + 4;
     mech_event_schedule(m, EVENT_FALL, mech_fall_event, FALL_TICK,
                         -initial_speed);
   } else {
-    MechLOSBroadcast(m,
-                     tprintf("climbs out of %s!", mech_display_id(mech).text));
+    mech_los_broadcast(
+        m, tprintf("climbs out of %s!", mech_display_id(mech).text));
     notify(evaluation, player, "You climb out of the unit.");
   }
 }
@@ -467,7 +469,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   MarkForLOSUpdate(mech);
   SetCargoWeight(mech);
   UnSetMechPKiller(mech);
-  MechLOSBroadcast(mech, "powers up!");
+  mech_los_broadcast(mech, "powers up!");
   EvalBit(
       MechSpecials(mech), SS_ABILITY,
       ((MechPilot(mech) > 0 &&
@@ -494,7 +496,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   /* A hidden carrier that is disembarked from loses its HIDDEN status */
   if (MechCritStatus(target) & HIDDEN) {
     MechCritStatus(target) &= ~HIDDEN;
-    MechLOSBroadcast(target, "becomes visible as it is disembarked from.");
+    mech_los_broadcast(target, "becomes visible as it is disembarked from.");
   }
 
   /* Para-dropping out of units from elevations. */
@@ -504,28 +506,28 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
 
     notify(evaluation, player,
            "You open the hatch and drop out of the unit....");
-    MechLOSBroadcast(
+    mech_los_broadcast(
         mech, tprintf("drops out of %s and begins falling to the ground.",
                       mech_display_id(target).text));
     initiate_ood(player, mech,
                  tprintf("%d %d %d", MechX(mech), MechY(mech), MechZ(mech)));
   } else {
     if (MechType(mech) == CLASS_BSUIT) {
-      MechLOSBroadcast(
+      mech_los_broadcast(
           mech, tprintf("climbs out of %s!", mech_display_id(target).text));
       notify(evaluation, player, "You climb out of the unit.");
     } else {
       /* If the carrier is destroyed, do damage to the disembarking unit. */
       if (Destroyed(target) || !Started(target)) {
-        MechLOSBroadcast(
+        mech_los_broadcast(
             mech, tprintf("smashes open the ramp door and emerges from %s!",
                           mech_display_id(target).text));
         notify(evaluation, player, "You smash open the door and break out.");
         MechFalls(mech, 4, 0);
       } else {
         /* All is well. */
-        MechLOSBroadcast(mech, tprintf("emerges from the ramp out of %s!",
-                                       mech_display_id(target).text));
+        mech_los_broadcast(mech, tprintf("emerges from the ramp out of %s!",
+                                         mech_display_id(target).text));
         notify(evaluation, player, "You emerge from the unit loading ramp.");
         if (Landed(mech) &&
             MechZ(mech) > Elevation(mymap, MechX(mech), MechY(mech)) &&

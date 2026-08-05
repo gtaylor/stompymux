@@ -28,7 +28,7 @@
 
 static bool mech_seems_friendly(Mech *mech, Mech *other) {
   return mech_team(mech) == mech_team(other) &&
-         InLineOfSight_NB(mech, other, 0, 0, 0);
+         mech_los_check_unblocked(mech, other, 0, 0, 0);
 }
 
 char GetLRSMechChar(Mech *mech, Mech *other) {
@@ -326,8 +326,9 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
              mech_position_y(oMech) <= e_height &&
              mech_position_x(oMech) >= b_width &&
              mech_position_x(oMech) <= e_width &&
-             InLineOfSight(mech, oMech, mech_position_x(oMech),
-                           mech_position_y(oMech), mech_range_to(mech, oMech))))
+             mech_los_check(mech, oMech, mech_position_x(oMech),
+                            mech_position_y(oMech),
+                            mech_range_to(mech, oMech))))
           mechs[last_mech++] = oMech;
       }
     }

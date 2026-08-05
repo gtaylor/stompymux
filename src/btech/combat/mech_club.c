@@ -109,7 +109,7 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
 
   ArmorStringFromIndex(location, locname, MechType(mech), MechMove(mech));
 
-  MechLOSBroadcast(mech, "reaches down and yanks a tree out of the ground!");
+  mech_los_broadcast(mech, "reaches down and yanks a tree out of the ground!");
   mech_printf(mech, MECHALL,
               "You reach down and yank a tree out of the ground with your %s.",
               locname);

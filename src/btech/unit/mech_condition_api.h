@@ -67,3 +67,4 @@ MechConditionSummary mech_condition_summary(const Mech *mech);
 void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist);
 void mech_arms_center(Mech *mech);
 void mech_arms_flip(Mech *mech);
+void mech_partial_cover_set(Mech *mech, bool covered);

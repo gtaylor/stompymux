@@ -24,15 +24,15 @@ void CheckNavalHeight(Mech *mech, int oz) {
   if (!oz && MechZ(mech) && MechElev(mech) > 1) {
     MarkForLOSUpdate(mech);
     MechZ(mech) = 0;
-    MechLOSBroadcast(mech, "dives!");
+    mech_los_broadcast(mech, "dives!");
     MechZ(mech) = -1;
   }
   if (MechFZ(mech) > 0.0) {
     if (MechVerticalSpeed(mech) > 0 && !MechZ(mech) && oz < 0) {
       mech_notify(mech, MECHALL,
                   "Your sub has reached surface and stops rising.");
-      MechLOSBroadcast(mech,
-                       tprintf("surfaces at %d,%d!", MechX(mech), MechY(mech)));
+      mech_los_broadcast(
+          mech, tprintf("surfaces at %d,%d!", MechX(mech), MechY(mech)));
       /* Possible show-up message? */
     }
     MechZ(mech) = 0;
@@ -67,7 +67,7 @@ void CheckVTOLHeight(Mech *mech) {
   if (InWater(mech) && MechZ(mech) <= 0) {
     mech_notify(mech, MECHALL, "You crash your vehicle into the water!");
     mech_notify(mech, MECHALL, "Water pours into the cockpit....glub glub!");
-    MechLOSBroadcast(mech, "splashes into the water!");
+    mech_los_broadcast(mech, "splashes into the water!");
     DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
     return;
   }
@@ -90,7 +90,7 @@ void CheckVTOLHeight(Mech *mech) {
   if (Landed(mech))
     return;
   mech_notify(mech, MECHALL, "CRASH! You smash your toy into the ground!");
-  MechLOSBroadcast(mech, "crashes into the ground!");
+  mech_los_broadcast(mech, "crashes into the ground!");
   MechFalls(mech, 1 + fabs(MechVerticalSpeed(mech) / MP1), 0);
 
   /*   mech_notify (mech, MECHALL, "Your vehicle is inoperable."); */

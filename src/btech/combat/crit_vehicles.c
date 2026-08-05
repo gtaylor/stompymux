@@ -102,7 +102,7 @@ void DoVehicleEngineHit(Mech *objMech, Mech *objAttacker) {
       } else {
         mech_notify(objMech, MECHALL, "The ground rushes up to meet you!");
         mech_notify(objAttacker, MECHALL, "You knock the VTOL out of the sky!");
-        MechLOSBroadcast(objMech, "falls from the sky!");
+        mech_los_broadcast(objMech, "falls from the sky!");
         MechFalls(objMech, MechsElevation(objMech), 0);
       }
     }
@@ -128,7 +128,7 @@ void DoVehicleFuelTankCrit(Mech *objMech, Mech *objAttacker) {
               "[fg=red bold]Your fuel tank explodes in a ball of fire![reset]");
 
   if (objMech != objAttacker)
-    MechLOSBroadcast(objMech, "explodes in a ball of fire!");
+    mech_los_broadcast(objMech, "explodes in a ball of fire!");
 
   MechZ(objMech) = MechElevation(objMech);
   MechFZ(objMech) = ZSCALE * MechZ(objMech);
@@ -204,7 +204,7 @@ void DoVehicleCrewKilledCrit(Mech *objMech, Mech *objAttacker) {
   KillMechContentsIfIC(objMech);
 
   if (MechSpeed(objMech) != 0.0)
-    MechLOSBroadcast(objMech, "careens out of control and starts to slow!");
+    mech_los_broadcast(objMech, "careens out of control and starts to slow!");
 
   mech_make_fall(objMech);
 }
@@ -249,12 +249,12 @@ void DoVTOLRotorDestroyedCrit(Mech *objMech, Mech *objAttacker, int LOS) {
   mech_notify(
       objMech, MECHALL,
       "[fg=red bold]The shot hits your fragile rotor mechanism![reset]");
-  MechLOSBroadcast(objMech, "'s rotor snaps into several parts!");
+  mech_los_broadcast(objMech, "'s rotor snaps into several parts!");
   DestroySection(objMech, objAttacker, LOS, ROTOR);
 
   if (!objAttacker) {
     mech_notify(objMech, MECHALL, "Your rotor has been destroyed!");
-    MechLOSBroadcast(objMech, "'s rotor has been destroyed!");
+    mech_los_broadcast(objMech, "'s rotor has been destroyed!");
   }
 }
 
@@ -310,13 +310,13 @@ void StartVTOLCrash(Mech *objMech) {
                   "to the ground.");
       MechVerticalSpeed(objMech) = 0;
       mech_notify(objMech, MECHALL, "You start free-fall.. Enjoy the ride!");
-      MechLOSBroadcast(objMech, "starts to fall to the ground!");
+      mech_los_broadcast(objMech, "starts to fall to the ground!");
       mech_event_schedule(objMech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
 
       /*
          MechVerticalSpeed(objMech) = 0;
          mech_notify(objMech, MECHALL, "You fall rapidly from the sky!");
-         MechLOSBroadcast(objMech, "plummets from the sky!");
+         mech_los_broadcast(objMech, "plummets from the sky!");
          MechFalls(objMech, MechsElevation(objMech), 0);
        */
     }
@@ -601,7 +601,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     mech_notify(wounded, MECHALL, "Your cockpit is destroyed!");
     if (!Landed(wounded)) {
       mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
-      MechLOSBroadcast(wounded, "falls down from the sky!");
+      mech_los_broadcast(wounded, "falls down from the sky!");
     }
     DestroyMech(wounded, attacker, 0, KILL_TYPE_COCKPIT);
     KillMechContentsIfIC(wounded);
@@ -630,7 +630,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       } else {
         mech_notify(wounded, MECHALL, "The ground rushes up to meet you!");
         mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
-        MechLOSBroadcast(wounded, "falls from the sky!");
+        mech_los_broadcast(wounded, "falls from the sky!");
         MechFalls(wounded, MechsElevation(wounded), 0);
       }
     }
@@ -641,7 +641,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     mech_notify(wounded, MECHALL, "Your cockpit is destroyed!");
     if (!(MechStatus(wounded) & LANDED)) {
       mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
-      MechLOSBroadcast(wounded, "falls from the sky!");
+      mech_los_broadcast(wounded, "falls from the sky!");
     }
 
     DestroyMech(wounded, attacker, 0, KILL_TYPE_COCKPIT);
@@ -652,7 +652,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     /* Fuel Tank Explodes */
     mech_notify(wounded, MECHALL, "Your fuel tank explodes in a ball of fire!");
     if (wounded != attacker)
-      MechLOSBroadcast(wounded, "'s fuel tank explodes in a ball of fire!");
+      mech_los_broadcast(wounded, "'s fuel tank explodes in a ball of fire!");
     MechZ(wounded) = MechElevation(wounded);
     MechFZ(wounded) = ZSCALE * MechZ(wounded);
     MechSpeed(wounded) = 0.0;
@@ -663,7 +663,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
   case 5:
     /* Ammo/Power Plant Explodes */
     mech_notify(wounded, MECHALL, "Your power plant explodes!");
-    MechLOSBroadcast(wounded, "'s power plant suddenly explodes!");
+    mech_los_broadcast(wounded, "'s power plant suddenly explodes!");
     MechZ(wounded) = MechElevation(wounded);
     MechFZ(wounded) = ZSCALE * MechZ(wounded);
     MechSpeed(wounded) = 0.0;

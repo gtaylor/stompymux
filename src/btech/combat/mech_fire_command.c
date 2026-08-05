@@ -125,8 +125,8 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
   if (!sight && (MechCritStatus(mech) & HIDDEN)) {
     mech_notify(mech, MECHALL,
                 "You break out of your cover to initiate weapons fire!");
-    MechLOSBroadcast(mech,
-                     "breaks out of its cover and begins firing rabidly!");
+    mech_los_broadcast(mech,
+                       "breaks out of its cover and begins firing rabidly!");
     MechCritStatus(mech) &= ~HIDDEN;
   }
 

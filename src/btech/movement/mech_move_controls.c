@@ -67,11 +67,12 @@ void mech_land(DbRef player, void *data, char *buffer) {
     if (MadePilotSkillRoll(mech, 0)) {
       mech_notify(mech, MECHALL, "You are able to abort the jump.");
 
-      /*        MechLOSBroadcast (mech, "lands abruptly!"); */
+      /*        mech_los_broadcast (mech, "lands abruptly!"); */
       LandMech(mech);
     } else {
       mech_notify(mech, MECHALL, "You don't quite make it.");
-      MechLOSBroadcast(mech, "attempts a landing, but crashes to the ground!");
+      mech_los_broadcast(mech,
+                         "attempts a landing, but crashes to the ground!");
       MechFalls(mech, 1, 0);
       MechDFATarget(mech) = -1;
       MechGoingX(mech) = MechGoingY(mech) = 0;
@@ -489,8 +490,8 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
 
   mech_notify(mech, MECHALL,
               "You start to flail your arms and legs like a wild man!");
-  MechLOSBroadcast(mech,
-                   "starts to flail its arms and legs like a wild beast!");
+  mech_los_broadcast(mech,
+                     "starts to flail its arms and legs like a wild beast!");
 
   /* Let's see who we can smack around */
   for (i = 0; i < map->first_free; i++) {

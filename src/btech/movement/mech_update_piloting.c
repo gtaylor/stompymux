@@ -69,7 +69,7 @@ void UpdatePilotSkillRolls(Mech *mech) {
         } else {
           mech_notify(mech, MECHALL,
                       "Your damaged mech falls as you try to run!");
-          MechLOSBroadcast(mech, "falls down.");
+          mech_los_broadcast(mech, "falls down.");
           MechFalls(mech, 1, 0);
         }
       }

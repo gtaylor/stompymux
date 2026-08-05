@@ -98,14 +98,14 @@ void mech_staggercheck_heartbeat(Mech *mech) {
         mech_notify(mech, MECHALL,
                     "[fg=yellow bold]The damage causes you to stagger a "
                     "little.[reset]");
-        MechLOSBroadcast(mech, "stumbles slightly!");
+        mech_los_broadcast(mech, "stumbles slightly!");
         break;
 
       case 2:
         mech_notify(
             mech, MECHALL,
             "[fg=red]The damage causes you to stagger even more![reset]");
-        MechLOSBroadcast(mech, "starts to stagger from the damage!");
+        mech_los_broadcast(mech, "starts to stagger from the damage!");
         break;
 
       default:
@@ -113,7 +113,7 @@ void mech_staggercheck_heartbeat(Mech *mech) {
             mech, MECHALL,
             "[fg=red bold]The damage causes you to stagger violently while "
             "attempting to keep your footing![reset]");
-        MechLOSBroadcast(
+        mech_los_broadcast(
             mech, "staggers back and forth attempting to keep its footing!");
         break;
       }
@@ -124,7 +124,7 @@ void mech_staggercheck_heartbeat(Mech *mech) {
       if (!MadePilotSkillRoll(mech, calcNewStaggerBTHMod(mech, staggerLevel))) {
         mech_notify(mech, MECHALL,
                     "You loose the battle with gravity and tumble over!!");
-        MechLOSBroadcast(mech, "tumbles over, staggered by the damage!");
+        mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
         MechFalls(mech, 1, 0);
       }
     }
@@ -198,7 +198,7 @@ void mech_fall_event(MuxEvent *e) {
   /* Time to hit da ground */
   fallen_elev = factoral(labs(fallspeed));
   mech_notify(mech, MECHALL, "You hit the ground!");
-  MechLOSBroadcast(mech, "hits the ground!");
+  mech_los_broadcast(mech, "hits the ground!");
   MechFalls(mech, fallen_elev, 0);
   MechStatus(mech) &= ~JUMPING;
 }
@@ -212,8 +212,8 @@ void mech_lock_event(MuxEvent *e) {
     target = btech_context_find_object(mech->xcode.context, MechTarget(mech));
     if (!target)
       return;
-    if (!InLineOfSight(mech, target, MechX(target), MechY(target),
-                       FaMechRange(mech, target)))
+    if (!mech_los_check(mech, target, MechX(target), MechY(target),
+                        FaMechRange(mech, target)))
       return;
     mech_printf(mech, MECHALL, "The sensors acquire a stable lock on %s.",
                 mech_to_mech_display_id(mech, target).text);
@@ -294,7 +294,7 @@ void mech_sideslip_event(MuxEvent *e) {
                               ? -1
                               : 0)) {
     mech_notify(mech, MECHALL, "You fail and spin out!");
-    MechLOSBroadcast(mech, "spins out while sideslipping!");
+    mech_los_broadcast(mech, "spins out while sideslipping!");
     MechSpeed(mech) = 0.0;
     roll = btech_random_range(mech->xcode.context, 0, 5);
     AddFacing(mech, roll * 60);
@@ -362,7 +362,7 @@ void mech_move_event(MuxEvent *e) {
 void mech_stand_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
 
-  MechLOSBroadcast(mech, "stands up!");
+  mech_los_broadcast(mech, "stands up!");
   mech_notify(mech, MECHALL, "You have finally finished standing up.");
   mech_make_stand(mech);
 }
@@ -537,7 +537,7 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
   mech_printf(
       objMech, MECHALL, "You manage to clear the jam on your %s!",
       get_parts_long_name(objMech->xcode.context, I2Weapon(wWeapIdx), 0));
-  MechLOSBroadcast(objMech, "ejects a mangled shell!");
+  mech_los_broadcast(objMech, "ejects a mangled shell!");
 
   decrement_ammunition(objMech, wWeapNum, wSect, wSlot, ammoLoc, ammoCrit,
                        ammoLoc1, ammoCrit1, 0);
@@ -563,7 +563,7 @@ void check_stagger_event(MuxEvent *event) {
   if (!MadePilotSkillRoll(mech, calcStaggerBTHMod(mech))) {
     mech_notify(mech, MECHALL,
                 "You loose the battle with gravity and tumble over!!");
-    MechLOSBroadcast(mech, "tumbles over, staggered by the damage!");
+    mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
     MechFalls(mech, 1, 0);
   }
 
@@ -595,7 +595,7 @@ void mech_movemode_event(MuxEvent *e) {
       mech_notify(mech, MECHALL,
                   "You bounce chaotically as you maximize your movement mode "
                   "to evade!");
-      MechLOSBroadcast(
+      mech_los_broadcast(
           mech,
           "suddenly begins to move erratically performing evasive maneuvers!");
     } else if (i & MODE_SPRINT) {
@@ -604,10 +604,11 @@ void mech_movemode_event(MuxEvent *e) {
                   "You shimmy side to side as you get more speed from your "
                   "movement mode.");
       if ((MechType(mech) == CLASS_MECH) || (MechType(mech) == CLASS_BSUIT))
-        MechLOSBroadcast(mech, "breaks out into a full blown stride as it "
-                               "sprints over the terrain!");
+        mech_los_broadcast(mech, "breaks out into a full blown stride as it "
+                                 "sprints over the terrain!");
       else
-        MechLOSBroadcast(mech, "shifts into high gear as it gains more speed!");
+        mech_los_broadcast(mech,
+                           "shifts into high gear as it gains more speed!");
       if (MechSpeed(mech) < 0) {
         mech_notify(mech, MECHALL,
                     "You stop your backward momemtum while sprinting and come "
@@ -631,13 +632,13 @@ void mech_movemode_event(MuxEvent *e) {
       mech_notify(
           mech, MECHALL,
           "Cockpit movement normalizes as you cease your evasive maneuvers.");
-      MechLOSBroadcast(mech, "ceases its evasive behavior and calms down.");
+      mech_los_broadcast(mech, "ceases its evasive behavior and calms down.");
     } else if (i & MODE_SPRINT) {
       MechStatus2(mech) &= ~SPRINTING;
       mech_notify(mech, MECHALL,
                   "You feel less seasick as you leave your sprint mode and "
                   "resume normal movement.");
-      MechLOSBroadcast(mech, "slows down and enters a normal movement mode.");
+      mech_los_broadcast(mech, "slows down and enters a normal movement mode.");
     } else if (i & MODE_DODGE) {
       MechStatus2(mech) &= ~DODGING;
       if (i & MODE_DG_USED)

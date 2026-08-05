@@ -348,7 +348,7 @@ int MissileHitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
     if (mech->xcode.context->configuration->btech_glancing_blows &&
         (player_roll == baseToHit) && hitMech) {
       if (!(MechWeapons[weapindx].special & STREAK)) {
-        MechLOSBroadcast(hitMech, "is nicked by a glancing blow!");
+        mech_los_broadcast(hitMech, "is nicked by a glancing blow!");
         mech_notify(hitMech, MECHALL, "You are nicked by a glancing blow!");
       }
     }
@@ -392,7 +392,8 @@ void SwarmHitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
     }
     if (!(missiles = MissileHitTarget(
               mech, weapindx, wSection, wCritSlot, hitMech, -1, -1,
-              InLineOfSight_NB(mech, hitMech, MechX(mech), MechY(mech), ran)
+              mech_los_check_unblocked(mech, hitMech, MechX(mech), MechY(mech),
+                                       ran)
                   ? present_target == 0 ? 1 : 2
                   : 0,
               baseToHit,
@@ -418,8 +419,8 @@ void SwarmHitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
           if (j != present_target)
             continue;
           if (!hitMech && (r = FaMechRange(source, tempMech)) < 1.9)
-            if (InLineOfSight_NB(source, tempMech, MechX(source), MechY(source),
-                                 r)) {
+            if (mech_los_check_unblocked(source, tempMech, MechX(source),
+                                         MechY(source), r)) {
               hitMech = tempMech;
               ran = r;
             }
@@ -428,14 +429,14 @@ void SwarmHitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
       return;
     if (mech != hitMech)
       mech_notify(hitMech, MECHALL, "The missile-swarm turns towards you!");
-    if (InLineOfSight_NB(mech, source, MechX(mech), MechY(mech),
-                         FaMechRange(mech, source)))
+    if (mech_los_check_unblocked(mech, source, MechX(mech), MechY(mech),
+                                 FaMechRange(mech, source)))
       mech_printf(
           mech, MECHALL, "Your missile-swarm of %d missile%s targets %s!",
           missiles, missiles > 1 ? "s" : "",
           mech == hitMech ? "YOU!!"
                           : mech_to_mech_display_id(mech, hitMech).text);
-    MechLOSBroadcasti(mech, hitMech, "'s missile-swarm targets %s!");
+    mech_los_broadcast_unit(mech, hitMech, "'s missile-swarm targets %s!");
   }
 }
 

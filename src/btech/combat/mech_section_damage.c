@@ -218,7 +218,7 @@ void DestroySection(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
     if (LOS >= 0)
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!", locname);
     snprintf(msgbuf, sizeof(msgbuf), "'s %s has been destroyed!", locname);
-    MechLOSBroadcast(wounded, msgbuf);
+    mech_los_broadcast(wounded, msgbuf);
   }
 
   /* Destroy everything in the loc */
@@ -404,7 +404,7 @@ int dodamage_func(DbRef player, Mech *mech, int totaldam, int clustersize,
   if (mechmsg && *mechmsg)
     mech_notify(mech, MECHALL, mechmsg);
   if (mechbroadcast && *mechbroadcast)
-    MechLOSBroadcast(mech, mechbroadcast);
+    mech_los_broadcast(mech, mechbroadcast);
   while (totaldam) {
     if (direction > 18)
       isrear = 1;

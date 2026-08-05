@@ -171,7 +171,7 @@ void heat_effect(Mech *mech, Mech *tempMech, int heatdam, int fromInferno) {
         checkVehicleInFire(tempMech, 0);
     } else {
       if (btech_random_roll(tempMech->xcode.context) > 8) {
-        MechLOSBroadcast(tempMech, "explodes!");
+        mech_los_broadcast(tempMech, "explodes!");
         mech_notify(tempMech, MECHALL,
                     "The heat's too much for your vehicle! It blows up!");
         mech_mark_destroyed(tempMech);
@@ -191,11 +191,11 @@ void Inferno_Hit(Mech *mech, Mech *hitMech, int missiles, int LOS) {
   int hmod = (missiles + 1) / 2;
 
   if (Jellied(hitMech) || mech_event_count(hitMech, EVENT_VEHICLEBURN)) {
-    MechLOSBroadcast(hitMech, "burns a bit more brightly.");
+    mech_los_broadcast(hitMech, "burns a bit more brightly.");
     mech_notify(hitMech, MECHALL,
                 "[fg=red bold]More burning jelly joins the flames![reset]");
   } else {
-    MechLOSBroadcast(hitMech, "suddenly bursts into flames!");
+    mech_los_broadcast(hitMech, "suddenly bursts into flames!");
     mech_notify(hitMech, MECHALL,
                 "[fg=red bold]You are sprayed with burning jelly![reset]");
   }
@@ -307,9 +307,9 @@ void DestroyMech(Mech *target, Mech *mech, int showboom, const char *reason) {
 
     if (mech != target) {
       mech_notify(mech, MECHALL, "You destroyed the target!");
-      MechLOSBroadcasti(target, mech, "has been destroyed by %s!");
+      mech_los_broadcast_unit(target, mech, "has been destroyed by %s!");
     } else
-      MechLOSBroadcast(target, "has been destroyed!");
+      mech_los_broadcast(target, "has been destroyed!");
     if (showboom) {
       for (loop = 0; loop < BOOMLENGTH; loop++)
         mech_notify(target, MECHALL, BOOM[loop]);
@@ -328,7 +328,7 @@ void DestroyMech(Mech *target, Mech *mech, int showboom, const char *reason) {
       if ((context->configuration->btech_vtol_ice_causes_fire) &&
           (MechSpecials(target) & ICE_TECH) &&
           (MechType(target) == CLASS_VTOL)) {
-        MechLOSBroadcast(target, "explodes in a ball of flames!");
+        mech_los_broadcast(target, "explodes in a ball of flames!");
         add_decoration(mech_map, MechX(target), MechY(target), TYPE_FIRE, FIRE,
                        btech_random_range(context, 60, 180));
       }

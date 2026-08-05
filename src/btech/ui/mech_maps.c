@@ -68,8 +68,8 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
     DOCHECK0_CONTEXT(mech_context(mech), !tempMech, "No such target.");
     range = mech_range_to(mech, tempMech);
     DOCHECK0_CONTEXT(mech_context(mech),
-                     !InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                                    mech_position_y(tempMech), range),
+                     !mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                                     mech_position_y(tempMech), range),
                      "No such target.");
     DOCHECK0_CONTEXT(mech_context(mech), abs((int)range) > maxrange,
                      "Target is out of scanner range.");

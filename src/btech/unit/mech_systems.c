@@ -232,8 +232,8 @@ Mech *find_mech_in_hex(Mech *mech, BattleMap *mech_map, int x, int y,
         continue;
       if (needlos) {
         if (needlos & 1)
-          if (!InLineOfSight(mech, target, x, y,
-                             FlMechRange(mech_map, mech, target)))
+          if (!mech_los_check(mech, target, x, y,
+                              FlMechRange(mech_map, mech, target)))
             continue;
         if (needlos & 2) {
           if (MechTeam(mech) != MechTeam(target))

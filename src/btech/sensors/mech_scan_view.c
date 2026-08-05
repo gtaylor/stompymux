@@ -123,8 +123,9 @@ void mech_view(DbRef player, void *data, char *buffer) {
     }
     DOCHECK_CONTEXT(
         mech_context(mech),
-        !InLineOfSight_NB(mech, target, mech_position_x(target),
-                          mech_position_y(target), mech_range_to(mech, target)),
+        !mech_los_check_unblocked(mech, target, mech_position_x(target),
+                                  mech_position_y(target),
+                                  mech_range_to(mech, target)),
         "That target isn't seen well enough by the scannfers for viewing!");
     if (*(target_desc = btech_attribute_read(mech_context(target)->database,
                                              mech_dbref(target), A_MECHDESC,
@@ -143,16 +144,17 @@ void mech_view(DbRef player, void *data, char *buffer) {
     target = btech_context_get_mech(mech_context(mech), targetnum);
 
     if (!target ||
-        !InLineOfSight(mech, target, mech_position_x(target),
-                       mech_position_y(target), mech_range_to(mech, target))) {
+        !mech_los_check(mech, target, mech_position_x(target),
+                        mech_position_y(target), mech_range_to(mech, target))) {
       mech_notify(mech, MECHPILOT, "Target is not in line of sight!");
       return;
     }
 
     DOCHECK_CONTEXT(
         mech_context(mech),
-        !InLineOfSight_NB(mech, target, mech_position_x(target),
-                          mech_position_y(target), mech_range_to(mech, target)),
+        !mech_los_check_unblocked(mech, target, mech_position_x(target),
+                                  mech_position_y(target),
+                                  mech_range_to(mech, target)),
         "That target isn't seen well enough by the scanners for viewing!");
 
     if (*(target_desc = btech_attribute_read(mech_context(target)->database,

@@ -263,7 +263,7 @@ int ModifyHeadHit(int hitGroup, Mech *mech) {
       mech_event_cancel(mech, EVENT_CREWSTUN);
     }
 
-    MechLOSBroadcast(mech, "significantly slows down and starts wobbling!");
+    mech_los_broadcast(mech, "significantly slows down and starts wobbling!");
 
     MechCritStatus(mech) |= MECH_STUNNED;
 

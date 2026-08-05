@@ -131,7 +131,7 @@ void LandMech(Mech *mech) {
       if (!MadePilotSkillRoll(mech, calcStaggerBTHMod(mech))) {
         mech_notify(mech, MECHALL,
                     "... something you apparently can't handle!");
-        MechLOSBroadcast(mech, "lands, staggers, and falls down!");
+        mech_los_broadcast(mech, "lands, staggers, and falls down!");
         MechFalls(mech, 1, 0);
         return;
       }
@@ -145,7 +145,7 @@ void LandMech(Mech *mech) {
         if (!MadePilotSkillRoll(mech, 0)) {
           mech_notify(mech, MECHALL,
                       "Your missing leg has caused you to fall upon landing!");
-          MechLOSBroadcast(mech, "lands, unbalanced, and falls down!");
+          mech_los_broadcast(mech, "lands, unbalanced, and falls down!");
           dfa = 1;
           MechFalls(mech, 1, 0);
           done = 1;
@@ -158,7 +158,7 @@ void LandMech(Mech *mech) {
           mech_notify(mech, MECHALL,
                       "Your damaged leg actuators have caused you to fall upon "
                       "landing!");
-          MechLOSBroadcast(mech, "lands, stumbles, and falls down!");
+          mech_los_broadcast(mech, "lands, stumbles, and falls down!");
           dfa = 1;
           done = 1;
           MechFalls(mech, 1, 0);
@@ -170,7 +170,7 @@ void LandMech(Mech *mech) {
         if (!MadePilotSkillRoll(mech, 0)) {
           mech_notify(mech, MECHALL,
                       "Your damaged gyro has caused you to fall upon landing!");
-          MechLOSBroadcast(mech, "lands, twists awkwardly, and falls down!");
+          mech_los_broadcast(mech, "lands, twists awkwardly, and falls down!");
           dfa = 1;
           done = 1;
           MechFalls(mech, 1, 0);
@@ -190,17 +190,18 @@ void LandMech(Mech *mech) {
     } else {
       mech_notify(mech, MECHALL,
                   "You fail to properly control your unbalanced landing!");
-      MechLOSBroadcast(mech, "lands and crashes to the ground from the weight "
-                             "of the battlesuits!");
+      mech_los_broadcast(mech,
+                         "lands and crashes to the ground from the weight "
+                         "of the battlesuits!");
       MechFalls(mech, 1, 0);
     }
   }
 
   if (!dfa && !Fallen(mech) && !domino_space(mech, 1)) {
     if (MechType(mech) != CLASS_VEH_GROUND)
-      MechLOSBroadcast(mech, "lands gracefully.");
+      mech_los_broadcast(mech, "lands gracefully.");
     else
-      MechLOSBroadcast(mech, "returns to the ground where it belongs.");
+      mech_los_broadcast(mech, "returns to the ground where it belongs.");
   }
 
   /* If we aren't jumping anymore, we already took care of the event.
@@ -262,7 +263,7 @@ void MechFloodsLoc(Mech *mech, int loc, int lev) {
       "[fg=red bold]Water floods into your %s disabling everything that was "
       "there![reset]",
       locbuff);
-  MechLOSBroadcast(
+  mech_los_broadcast(
       mech, tprintf("has a gaping hole in %s, and water pours in!", locbuff));
 
   SetSectFlooded(mech, loc);
@@ -292,7 +293,7 @@ void MechFloods(Mech *mech) {
                 "Everything gets very dark as water starts to fill your suit "
                 "and you sink towards the bottom!");
 
-    MechLOSBroadcast(
+    mech_los_broadcast(
         mech, "shudders, splashes in the water for a second, then goes limp "
               "and sinks to the bottom.");
 
@@ -393,7 +394,7 @@ void MechFalls(Mech *mech, int levels, int seemsg) {
     mech_make_fall(mech);
 
   if (seemsg)
-    MechLOSBroadcast(mech, "falls down!");
+    mech_los_broadcast(mech, "falls down!");
   DropSetElevation(mech, 1);
   MechFZ(mech) = MechZ(mech) * ZSCALE;
 

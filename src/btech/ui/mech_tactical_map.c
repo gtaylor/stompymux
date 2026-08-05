@@ -29,7 +29,7 @@
 
 static bool mech_seems_friendly(Mech *mech, Mech *other) {
   return mech_team(mech) == mech_team(other) &&
-         InLineOfSight_NB(mech, other, 0, 0, 0);
+         mech_los_check_unblocked(mech, other, 0, 0, 0);
 }
 
 static int minimum_int(int left, int right) {
@@ -123,9 +123,9 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
     }
 
     if (mech != player_mech &&
-        !InLineOfSight(player_mech, mech, mech_position_x(mech),
-                       mech_position_y(mech),
-                       mech_range_to(player_mech, mech))) {
+        !mech_los_check(player_mech, mech, mech_position_x(mech),
+                        mech_position_y(mech),
+                        mech_range_to(player_mech, mech))) {
       continue;
     }
 
@@ -334,7 +334,7 @@ static void sketch_tac_mines(char *buf, BattleMap *map, Mech *mech, int sx,
             FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
                       mech_position_real_z(mech), fx, fy, fz);
         if ((o->datac != MINE_TRIGGER) &&
-            InLineOfSight_NB(mech, nullptr, tx, ty, hex_range)) {
+            mech_los_check_unblocked(mech, nullptr, tx, ty, hex_range)) {
           /*     base[dispcols]=(o->datas/10) + '0'; */
           /*     base[dispcols+1]=(o->datas%10) + '0'; */
           base[dispcols] = '<';

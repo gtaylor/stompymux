@@ -47,11 +47,12 @@ static void swim_except(BattleMap *map, Mech *mech, int x, int y, char *msg,
     MechTerrain(t) = WATER;
     if ((!isbridge && (MechZ(t) == 0) && (MechMove(t) != MOVE_HOVER)) ||
         (isbridge && MechZ(t) == MechElev(t))) {
-      MechLOSBroadcast(t, msg);
+      mech_los_broadcast(t, msg);
       MechFalls(t, MechElev(t) + isbridge, 0);
       if (MechType(t) == CLASS_VEH_GROUND && !Destroyed(t)) {
         mech_notify(t, MECHALL, "Water renders your vehicle inoperable.");
-        MechLOSBroadcast(t, "fizzles and pops as water renders it inoperable.");
+        mech_los_broadcast(t,
+                           "fizzles and pops as water renders it inoperable.");
         DestroyMech(t, t, 0, KILL_TYPE_FLOOD);
       }
     }
@@ -73,10 +74,10 @@ void drop_thru_ice(Mech *mech) {
       btech_context_find_object(mech->xcode.context, mech->mapindex);
 
   mech_notify(mech, MECHALL, "You break the ice!");
-  MechLOSBroadcast(mech, "breaks the ice!");
+  mech_los_broadcast(mech, "breaks the ice!");
   if (MechMove(mech) != MOVE_FOIL) {
     if (MechElev(mech) > 0)
-      MechLOSBroadcast(mech, "vanishes into the waters!");
+      mech_los_broadcast(mech, "vanishes into the waters!");
   }
   break_sub(map, mech, MechX(mech), MechY(mech), "goes swimming!");
   MechTerrain(mech) = WATER;
@@ -87,7 +88,8 @@ void drop_thru_ice(Mech *mech) {
   if (MechElev(mech) > 0 && MechType(mech) == CLASS_VEH_GROUND &&
       !Destroyed(mech) && !(MechSpecials2(mech) & WATERPROOF_TECH)) {
     mech_notify(mech, MECHALL, "Water renders your vehicle inoperable.");
-    MechLOSBroadcast(mech, "fizzles and pops as water renders it inoperable.");
+    mech_los_broadcast(mech,
+                       "fizzles and pops as water renders it inoperable.");
     DestroyMech(mech, mech, 0, KILL_TYPE_ICE);
   }
 }
@@ -99,7 +101,7 @@ void break_thru_ice(Mech *mech) {
 
   MarkForLOSUpdate(mech);
   mech_notify(mech, MECHALL, "You break through the ice!");
-  MechLOSBroadcast(mech, "breaks through the ice!");
+  mech_los_broadcast(mech, "breaks through the ice!");
   break_sub(map, mech, MechX(mech), MechY(mech), "goes swimming!");
   MechTerrain(mech) = WATER;
 }

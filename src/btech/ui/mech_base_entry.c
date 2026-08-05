@@ -81,7 +81,7 @@ static void mech_enter_event(MuxEvent *e) {
       1);
   mech_printf(mech, MECHALL, "You enter %s.",
               structure_name(mech_context(mech)->database, mapo).text);
-  MechLOSBroadcast(
+  mech_los_broadcast(
       mech, tprintf("has entered %s at %d,%d.",
                     structure_name(mech_context(mech)->database, mapo).text,
                     mech_position_x(mech), mech_position_y(mech)));
@@ -97,12 +97,12 @@ static void mech_enter_event(MuxEvent *e) {
   obj_y = mech_position_y(mech);
   mech_Rsetmapindex(GOD, (void *)mech, tprintf("%d", (int)mapo->obj));
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
-  MechLOSBroadcast(
+  mech_los_broadcast(
       mech, tprintf("has entered %s at %d,%d.",
                     structure_name(mech_context(mech)->database, mapo).text,
                     obj_x, obj_y));
   if (tmpm)
-    MechLOSBroadcast(
+    mech_los_broadcast(
         tmpm, tprintf("has entered %s at %d,%d.",
                       structure_name(mech_context(mech)->database, mapo).text,
                       obj_x, obj_y));

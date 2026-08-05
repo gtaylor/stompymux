@@ -625,7 +625,7 @@ static void mech_explode_event(MuxEvent *e) {
       mech_notify(mech, MECHALL,
                   "Your batttle suit triggers it's self-destruction sequence.. "
                   "you faint.. (and die)");
-      MechLOSBroadcast(mech, "suddenly explodes!");
+      mech_los_broadcast(mech, "suddenly explodes!");
       headhitmwdamage(mech, mech, 4);
       for (k = 0; k < NUM_BSUIT_MEMBERS; k++)
         DestroySection(mech, mech, -1, k);
@@ -634,7 +634,7 @@ static void mech_explode_event(MuxEvent *e) {
       mech_notify(mech, MECHALL,
                   "Your life flashes before your eyes as your vehicle "
                   "immolates itself... you faint.. (and die)");
-      MechLOSBroadcast(mech, "suddenly explodes!");
+      mech_los_broadcast(mech, "suddenly explodes!");
       DestroySection(mech, mech, -1, 3); // This is the back side for vehicles
       // and the aft for aero's.
       headhitmwdamage(mech, mech, 4);
@@ -649,7 +649,7 @@ static void mech_explode_event(MuxEvent *e) {
     } else {
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                          tprintf("#%ld explodes [reactor]", mech->mynum));
-      MechLOSBroadcast(mech, "suddenly explodes!");
+      mech_los_broadcast(mech, "suddenly explodes!");
       mech_notify(mech, MECHALL,
                   "Suddenly you feel great heat overcoming your senses.. you "
                   "faint.. (and die)");
@@ -701,7 +701,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
         mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
         tprintf("#%ld in #%ld stopped the self-destruction sequence.", player,
                 mech->mynum));
-    MechLOSBroadcast(mech, "regains control over itself.");
+    mech_los_broadcast(mech, "regains control over itself.");
     return;
   }
   DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_EXPLODE),
@@ -725,7 +725,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
         mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
         tprintf("#%ld in #%ld initiates the ammo explosion sequence.", player,
                 mech->mynum));
-    MechLOSBroadcast(mech, "starts billowing smoke!");
+    mech_los_broadcast(mech, "starts billowing smoke!");
     time = time / 2;
   } else {
     if (!override) {
@@ -742,7 +742,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
         mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
         tprintf("#%ld in #%ld initiates the reactor explosion sequence.",
                 player, mech->mynum));
-    MechLOSBroadcast(mech, "loses reactions containment!");
+    mech_los_broadcast(mech, "loses reactions containment!");
     ammo = 0;
   }
   if (override)

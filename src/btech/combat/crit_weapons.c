@@ -86,7 +86,7 @@ int handleWeaponCrit(Mech *attacker, Mech *wounded, int hitloc, int critHit,
     if (!Destroyed(wounded)) {
       snprintf(msgbuf, MBUF_SIZE,
                "'s %s is covered in a large electrical discharge!", locname);
-      MechLOSBroadcast(wounded, msgbuf);
+      mech_los_broadcast(wounded, msgbuf);
     }
 
     DestroyWeapon(wounded, hitloc, critType, wFirstCrit, wMaxCrits, wMaxCrits);
@@ -146,7 +146,7 @@ int handleWeaponCrit(Mech *attacker, Mech *wounded, int hitloc, int critHit,
       if (!Destroyed(wounded)) {
         snprintf(msgbuf, MBUF_SIZE,
                  " loses a launcher in a brilliant explosion!");
-        MechLOSBroadcast(wounded, msgbuf);
+        mech_los_broadcast(wounded, msgbuf);
       }
 
       DestroyWeapon(wounded, hitloc, critType, wFirstCrit, wMaxCrits,
@@ -181,7 +181,7 @@ int handleWeaponCrit(Mech *attacker, Mech *wounded, int hitloc, int critHit,
       if (!Destroyed(wounded)) {
         snprintf(msgbuf, MBUF_SIZE,
                  "'s %s is engulfed in a brilliant blue flame!", locname);
-        MechLOSBroadcast(wounded, msgbuf);
+        mech_los_broadcast(wounded, msgbuf);
       }
 
       DestroyWeapon(wounded, hitloc, critType, wFirstCrit, wMaxCrits,
@@ -473,7 +473,7 @@ void DoTurretBlownOffCrit(Mech *objMech, Mech *objAttacker, int LOS) {
   mech_notify(
       objMech, MECHALL,
       "[fg=red bold]The shot pops your turret clear off its housing![reset]");
-  MechLOSBroadcast(objMech, "'s turret flies off!");
+  mech_los_broadcast(objMech, "'s turret flies off!");
   DestroySection(objMech, objAttacker, LOS, TURRET);
 }
 
@@ -524,7 +524,7 @@ void DoAmmunitionCrit(Mech *objMech, Mech *objAttacker, int wLoc, int LOS) {
       objMech, MECHALL,
       "[fg=red bold]One of your ammo bins is struck causing a cascading "
       "explosion![reset]");
-  MechLOSBroadcast(objMech, "has an internal ammo explosion!");
+  mech_los_broadcast(objMech, "has an internal ammo explosion!");
 
   DamageMech(objMech, objAttacker, 0, -1, wLoc, 0, 0, 0, wTotalAmmoDamage, 0, 0,
              -1, 0, 1);

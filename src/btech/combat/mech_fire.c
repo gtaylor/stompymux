@@ -82,7 +82,7 @@ static void vehicle_burn_event(MuxEvent *objEvent) {
       mech_printf(objMech, MECHALL,
                   "The fire burning on your %s finally goes out.", strLocName);
     if (!mech_event_count(objMech, EVENT_VEHICLEBURN))
-      MechLOSBroadcast(objMech, "is no longer engulfed in flames.");
+      mech_los_broadcast(objMech, "is no longer engulfed in flames.");
   }
 }
 
@@ -95,7 +95,7 @@ void vehicle_start_burn(Mech *objMech, Mech *objAttacker) {
     objAttacker = objMech;
 
   mech_notify(objMech, MECHALL, "You catch on fire!");
-  MechLOSBroadcast(objMech, "catches on fire!");
+  mech_los_broadcast(objMech, "catches on fire!");
 
   for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
     if (GetSectInt(objMech, wIter) &&
@@ -125,7 +125,7 @@ void vehicle_extinquish_fire_event(MuxEvent *e) {
   mech_event_cancel(objMech, EVENT_VEHICLEBURN);
 
   mech_notify(objMech, MECHALL, "You manage to dowse the fire.");
-  MechLOSBroadcast(objMech, "is no longer engulfed in flames.");
+  mech_los_broadcast(objMech, "is no longer engulfed in flames.");
 }
 
 void vehicle_extinquish_fire(DbRef player, Mech *mech, char *buffer) {
@@ -165,7 +165,7 @@ void water_extinguish_inferno(Mech *mech) {
   MechCritStatus(mech) &= ~JELLIED;
 
   mech_notify(mech, MECHALL, "The flames extinguish in a roar of steam!");
-  MechLOSBroadcast(
+  mech_los_broadcast(
       mech, "is surrounded by a plume of steam as the flames extinguish.");
 
   /* According to FASA, the inferno jelly should keep on burning on the

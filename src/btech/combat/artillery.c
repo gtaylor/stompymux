@@ -110,8 +110,8 @@ void artillery_shoot(Mech *mech, int targx, int targy, int windex, int wmode,
   s->shooter = mech->mynum;
   s->map = mech->mapindex;
   s->context = mech->xcode.context;
-  MechLOSBroadcast(mech, tprintf("shoots %s towards the %s!", artillery_type(s),
-                                 artillery_direction(s)));
+  mech_los_broadcast(mech, tprintf("shoots %s towards the %s!",
+                                   artillery_type(s), artillery_direction(s)));
   MapCoordToRealCoord(s->from_x, s->from_y, &fx, &fy);
   MapCoordToRealCoord(s->to_x, s->to_y, &tx, &ty);
   mux_event_add(mech->xcode.context->events,
@@ -177,7 +177,7 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
       if (/* MechTerrain(tempMech) == WATER &&  */
           MechZ(tempMech) <= (ground_zero - safedown))
         continue;
-      MechLOSBroadcast(tempMech, otmsg);
+      mech_los_broadcast(tempMech, otmsg);
       mech_notify(tempMech, MECHALL, tomsg);
       arc = blast_arcf(tfx, tfy, tempMech);
 

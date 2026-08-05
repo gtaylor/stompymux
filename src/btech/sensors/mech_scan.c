@@ -78,13 +78,13 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                       "Target is not in line of sight!");
       range = mech_range_to(mech, tempMech);
       DOCHECK_CONTEXT(mech_context(mech),
-                      !InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                                     mech_position_y(tempMech), range),
+                      !mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                                      mech_position_y(tempMech), range),
                       "Target is not in line of sight!");
       DOCHECK_CONTEXT(
           mech_context(mech),
-          !InLineOfSight_NB(mech, tempMech, mech_position_x(tempMech),
-                            mech_position_y(tempMech), range),
+          !mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
+                                    mech_position_y(tempMech), range),
           "That target isn't seen well enough by the scanners for scanning!");
       DOCHECK_CONTEXT(mech_context(mech),
                       !mech_is_observer(mech) &&
@@ -119,13 +119,13 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                           (int)range > mech_scanner_range(mech),
                       "Target is out of scanner range.");
       DOCHECK_CONTEXT(mech_context(mech),
-                      !InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                                     mech_position_y(tempMech), range),
+                      !mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                                      mech_position_y(tempMech), range),
                       "Target is not in line of sight!");
       DOCHECK_CONTEXT(
           mech_context(mech),
-          !InLineOfSight_NB(mech, tempMech, mech_position_x(tempMech),
-                            mech_position_y(tempMech), range),
+          !mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
+                                    mech_position_y(tempMech), range),
           "That target isn't seen well enough by the scanners for scanning!");
     } else {
       if (!mech_targets_building(mech))
@@ -145,9 +145,10 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                       !mech_is_observer(mech) &&
                           (int)range > mech_scanner_range(mech),
                       "Those coordinates are out of scanner range.");
-      DOCHECK_CONTEXT(mech_context(mech),
-                      !InLineOfSight_NB(mech, tempMech, mapx, mapy, range),
-                      "Target hex is not in line of sight!");
+      DOCHECK_CONTEXT(
+          mech_context(mech),
+          !mech_los_check_unblocked(mech, tempMech, mapx, mapy, range),
+          "Target hex is not in line of sight!");
       /* look for enemies in that hex... */
       if (mech_targets_building(mech))
         dob = 1;
@@ -183,7 +184,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
     DOCHECK_CONTEXT(mech_context(mech), (int)range > mech_scanner_range(mech),
                     "Those coordinates are out of scanner range.");
     DOCHECK_CONTEXT(mech_context(mech),
-                    !InLineOfSight(mech, tempMech, mapx, mapy, range),
+                    !mech_los_check(mech, tempMech, mapx, mapy, range),
                     "Coordinates are not in line of sight!");
     break;
   case 2:
@@ -199,8 +200,8 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                       "Target is not in line of sight!");
       range = mech_range_to(mech, tempMech);
       DOCHECK_CONTEXT(mech_context(mech),
-                      !InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                                     mech_position_y(tempMech), range),
+                      !mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                                      mech_position_y(tempMech), range),
                       "Target is not in line of sight!");
       DOCHECK_CONTEXT(mech_context(mech),
                       !mech_is_observer(mech) &&
@@ -233,7 +234,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                         (int)range > mech_scanner_range(mech),
                     "Those coordinates are out of scanner range.");
     DOCHECK_CONTEXT(mech_context(mech),
-                    !InLineOfSight(mech, tempMech, mapx, mapy, range),
+                    !mech_los_check(mech, tempMech, mapx, mapy, range),
                     "Coordinates are not in line of sight!");
     fz = ZSCALE * battle_map_hex_elevation(mech_map, mapx, mapy);
     /* look for enemies in that hex... */
@@ -244,8 +245,8 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   if (tempMech) {
     DOCHECK_CONTEXT(
         mech_context(mech),
-        !InLineOfSight_NB(mech, tempMech, mech_position_x(tempMech),
-                          mech_position_y(tempMech), range),
+        !mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
+                                  mech_position_y(tempMech), range),
         "That target isn't seen well enough by the scanners for report!");
     DOCHECK_CONTEXT(
         mech_context(mech), mech_class(tempMech) == CLASS_MW,
@@ -303,13 +304,13 @@ void mech_report(DbRef player, void *data, char *buffer) {
                     "Target is not in line of sight!");
     range = mech_range_to(mech, tempMech);
     DOCHECK_CONTEXT(mech_context(mech),
-                    !InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                                   mech_position_y(tempMech), range),
+                    !mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                                    mech_position_y(tempMech), range),
                     "Target is not in line of sight!");
     DOCHECK_CONTEXT(
         mech_context(mech),
-        !InLineOfSight_NB(mech, tempMech, mech_position_x(tempMech),
-                          mech_position_y(tempMech), range),
+        !mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
+                                  mech_position_y(tempMech), range),
         "That target isn't seen well enough by the scanners for a report!");
     break;
   case 2:
@@ -325,11 +326,11 @@ void mech_report(DbRef player, void *data, char *buffer) {
     DOCHECK_CONTEXT(mech_context(mech), (int)range > mech_scanner_range(mech),
                     "Those coordinates are out of scanner range.");
     DOCHECK_CONTEXT(mech_context(mech),
-                    !InLineOfSight(mech, tempMech, mapx, mapy, range),
+                    !mech_los_check(mech, tempMech, mapx, mapy, range),
                     "Coordinates are not in line of sight!");
     DOCHECK_CONTEXT(
         mech_context(mech),
-        !InLineOfSight_NB(mech, tempMech, mapx, mapy, range),
+        !mech_los_check_unblocked(mech, tempMech, mapx, mapy, range),
         "That target isn't seen well enough by the scanners for a report!");
     fz = ZSCALE * battle_map_hex_elevation(mech_map, mapx, mapy);
     /* look for enemies in that hex... */
@@ -343,13 +344,13 @@ void mech_report(DbRef player, void *data, char *buffer) {
     if (tempMech) {
       range = mech_range_to(mech, tempMech);
       DOCHECK_CONTEXT(mech_context(mech),
-                      !InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                                     mech_position_y(tempMech), range),
+                      !mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                                      mech_position_y(tempMech), range),
                       "Target is not in line of sight!");
       DOCHECK_CONTEXT(
           mech_context(mech),
-          !InLineOfSight_NB(mech, tempMech, mech_position_x(tempMech),
-                            mech_position_y(tempMech), range),
+          !mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
+                                    mech_position_y(tempMech), range),
           "That target isn't seen well enough by the scanners for a report!");
     } else {
       DOCHECK_CONTEXT(mech_context(mech),
@@ -359,8 +360,8 @@ void mech_report(DbRef player, void *data, char *buffer) {
       tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
       DOCHECK_CONTEXT(mech_context(mech), !tempMech, "You don't see a thing.");
       DOCHECK_CONTEXT(mech_context(mech),
-                      !InLineOfSight(mech, tempMech, mech_position_x(tempMech),
-                                     mech_position_y(tempMech), range),
+                      !mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                                      mech_position_y(tempMech), range),
                       "You don't see a thing.");
     }
   }
@@ -402,11 +403,12 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   mech_name = btech_attribute_read(
       btech_context_database(mech_context(tempMech)), mech_dbref(tempMech),
       A_MECHNAME, (char[LBUF_SIZE]){0});
-  snprintf(buff, sizeof(buff), "[%s]  %-25.25s Tonnage: %d",
-           mech_id(tempMech, mech_team(mech) == mech_team(tempMech) &&
-                                 InLineOfSight_NB(mech, tempMech, 0, 0, 0))
-               .text,
-           mech_name, mech_tonnage(tempMech));
+  snprintf(
+      buff, sizeof(buff), "[%s]  %-25.25s Tonnage: %d",
+      mech_id(tempMech, mech_team(mech) == mech_team(tempMech) &&
+                            mech_los_check_unblocked(mech, tempMech, 0, 0, 0))
+          .text,
+      mech_name, mech_tonnage(tempMech));
   notify(evaluation, player, buff);
   bearing = FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
                         mech_position_real_x(tempMech),

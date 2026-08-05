@@ -106,18 +106,18 @@ void make_mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
     if (o->datac != MINE_COMMAND) {
       switch (reason) {
       case MINE_STEP:
-        MechLOSBroadcast(mech,
-                         tprintf("moves to %d,%d, and triggers a mine!", x, y));
+        mech_los_broadcast(
+            mech, tprintf("moves to %d,%d, and triggers a mine!", x, y));
         mech_printf(mech, MECHALL, "As you move to %d,%d, you trigger a mine!",
                     x, y);
         break;
       case MINE_LAND:
-        MechLOSBroadcast(mech, tprintf("triggers a mine!"));
+        mech_los_broadcast(mech, tprintf("triggers a mine!"));
         mech_notify(mech, MECHALL, "You trigger a mine!");
         break;
       case MINE_DROP:
       case MINE_FALL:
-        MechLOSBroadcast(mech, tprintf("triggers a mine!"));
+        mech_los_broadcast(mech, tprintf("triggers a mine!"));
         mech_notify(mech, MECHALL, "You trigger a mine!");
         break;
       }

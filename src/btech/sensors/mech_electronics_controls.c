@@ -90,13 +90,13 @@ void MechSliteChangeEvent(MuxEvent *e) {
     MechCritStatus(mech) |= SLITE_LIT;
 
     mech_notify(mech, MECHALL, "Your searchlight comes on to full power.");
-    MechLOSBroadcast(mech, "turns on a searchlight!");
+    mech_los_broadcast(mech, "turns on a searchlight!");
   } else {
     MechStatus2(mech) &= ~SLITE_ON;
     MechCritStatus(mech) &= ~SLITE_LIT;
 
     mech_notify(mech, MECHALL, "Your searchlight shuts off.");
-    MechLOSBroadcast(mech, "turns off a searchlight!");
+    mech_los_broadcast(mech, "turns off a searchlight!");
   }
 
   MarkForLOSUpdate(mech);
@@ -458,7 +458,7 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
   /* Oops, we failed! */
   if (wRoll < wBTH) {
     mech_notify(mech, MECHALL, "Uh oh. You miss the pod and hit yourself!");
-    MechLOSBroadcast(
+    mech_los_broadcast(
         mech, "tries to swat off an iNarc pod, but misses and hits itself!");
 
     wSelfDamage = (MechTons(mech) + 10 / 2) / 10;
@@ -476,7 +476,7 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
 
     mech_printf(mech, MECHALL, "You knock a %s pod off your %s!", strPodType,
                 strLocation);
-    MechLOSBroadcast(mech, "knocks an iNarc pod off itself.");
+    mech_los_broadcast(mech, "knocks an iNarc pod off itself.");
   }
 
   mech_set_recycle_limb(mech, wArmToUse, PHYSICAL_RECYCLE_TIME);
@@ -491,7 +491,7 @@ void removeiNarcPodsTank(MuxEvent *e) {
 
   mech_notify(mech, MECHALL, "You remove all the iNARC pods from your unit.");
 
-  MechLOSBroadcast(
+  mech_los_broadcast(
       mech, "'s crew climbs out and knocks off all the attached iNarc pods!");
 
   for (i = 0; i < NUM_SECTIONS; i++) {

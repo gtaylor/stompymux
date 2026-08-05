@@ -98,8 +98,8 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   if (target) {
     range = mech_range_to(mech, target);
 
-    LOS = InLineOfSight_NB(mech, target, mech_position_x(target),
-                           mech_position_y(target), range);
+    LOS = mech_los_check_unblocked(mech, target, mech_position_x(target),
+                                   mech_position_y(target), range);
   } else
     refTarget = 0;
 
@@ -180,8 +180,8 @@ void mech_tag_check(Mech *mech) {
   }
 
   range = mech_range_to(mech, target);
-  LOS = InLineOfSight_NB(mech, target, mech_position_x(target),
-                         mech_position_y(target), range);
+  LOS = mech_los_check_unblocked(mech, target, mech_position_x(target),
+                                 mech_position_y(target), range);
 
   if (!LOS || (range > TAG_LONG)) {
     mech_tag_stop(mech);

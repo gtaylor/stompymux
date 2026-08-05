@@ -81,17 +81,17 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                                    1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
-        MechLOSBroadcast(mech, "stops suddenly to avoid a cliff!");
+        mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
 
       } else {
 
         if (!mech->xcode.context->configuration->btech_skidcliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
-          MechLOSBroadcast(mech, "crashes to a cliff!");
+          mech_los_broadcast(mech, "crashes to a cliff!");
           MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
         } else {
           mech_notify(mech, MECHALL, "You skid to a violent halt!");
-          MechLOSBroadcast(mech, "goes into a skid!");
+          mech_los_broadcast(mech, "goes into a skid!");
           MechFalls(mech, 0, 0);
         }
       }
@@ -109,12 +109,13 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
       if (MechPilot(mech) == -1 ||
           (!MechAutoFall(mech) && MadePilotSkillRoll_NoXP(mech, avoidbth, 1))) {
         mech_notify(mech, MECHALL, "You manage to stop before falling off.");
-        MechLOSBroadcast(mech, "stops suddenly to avoid falling off a cliff!");
+        mech_los_broadcast(mech,
+                           "stops suddenly to avoid falling off a cliff!");
       } else {
         mech_notify(mech, MECHALL,
                     "You drive off the cliff and fall to the ground below.");
-        MechLOSBroadcast(mech,
-                         "drives off a cliff and falls to the ground below.");
+        mech_los_broadcast(mech,
+                           "drives off a cliff and falls to the ground below.");
         MechFalls(mech, lastelevation - elevation, 0);
         domino_space(mech, 2);
 
@@ -152,7 +153,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                     (elevation > lastelevation
                          ? "You stumble on your rear and fall down."
                          : "You fall on your rear off the small incline."));
-        MechLOSBroadcast(
+        mech_los_broadcast(
             mech,
             tprintf("%s", (elevation > lastelevation
                                ? "falls on its back walking up an incline."
@@ -178,8 +179,8 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
           MadePilotSkillRoll(mech,
                              (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3)) {
         mech_notify(mech, MECHALL, "You manage to stop before falling in.");
-        MechLOSBroadcast(mech,
-                         "stops suddenly to avoid driving into the water!");
+        mech_los_broadcast(mech,
+                           "stops suddenly to avoid driving into the water!");
       } else {
         mech_notify(
             mech, MECHALL,
@@ -210,7 +211,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         } else {
           mech_notify(mech, MECHALL,
                       "You swerve, but not enough! This'll hurt!");
-          MechLOSBroadcast(mech, "cruises headlong at a tree!");
+          mech_los_broadcast(mech, "cruises headlong at a tree!");
           f = fabs(MechSpeed(mech));
           MechSpeed(mech) = MechSpeed(mech) / 2.0;
           MechFalls(mech, MAX(1, (int)sqrt(f / MP1 / 2)), 0);
@@ -252,17 +253,17 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                                    1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
-        MechLOSBroadcast(mech, "stops suddenly to avoid a cliff!");
+        mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
 
       } else {
 
         if (!mech->xcode.context->configuration->btech_skidcliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
-          MechLOSBroadcast(mech, "crashes to a cliff!");
+          mech_los_broadcast(mech, "crashes to a cliff!");
           MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
         } else {
           mech_notify(mech, MECHALL, "You skid to a violent halt!");
-          MechLOSBroadcast(mech, "skids to a halt!");
+          mech_los_broadcast(mech, "skids to a halt!");
           MechFalls(mech, 0, 0);
         }
       }
@@ -283,12 +284,13 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
           (!MechAutoFall(mech) && MadePilotSkillRoll_NoXP(mech, avoidbth, 1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before falling off.");
-        MechLOSBroadcast(mech, "stops suddenly to avoid driving off a cliff!");
+        mech_los_broadcast(mech,
+                           "stops suddenly to avoid driving off a cliff!");
       } else {
         mech_notify(mech, MECHALL,
                     "You drive off the cliff and fall to the ground below.");
-        MechLOSBroadcast(mech,
-                         "drives off a cliff and falls to the ground below.");
+        mech_los_broadcast(mech,
+                           "drives off a cliff and falls to the ground below.");
         MechFalls(mech, lastelevation - elevation, 0);
         domino_space(mech, 2);
 
@@ -325,7 +327,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                     (elevation > lastelevation
                          ? "You stumble on your rear and fall down."
                          : "You fall on your rear off the small incline."));
-        MechLOSBroadcast(
+        mech_los_broadcast(
             mech,
             tprintf("%s", (elevation > lastelevation
                                ? "falls on its back walking up an incline."
@@ -353,7 +355,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                              (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3)) {
 
         mech_notify(mech, MECHALL, "You manage to stop before falling in.");
-        MechLOSBroadcast(mech, "stops suddenly to driving into the water!");
+        mech_los_broadcast(mech, "stops suddenly to driving into the water!");
       } else {
         mech_notify(
             mech, MECHALL,
@@ -386,7 +388,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         } else {
           mech_notify(mech, MECHALL,
                       "You swerve, but not enough! This'll hurt!");
-          MechLOSBroadcast(mech, "cruises headlong at a tree!");
+          mech_los_broadcast(mech, "cruises headlong at a tree!");
           f = fabs(MechSpeed(mech));
           MechSpeed(mech) = MechSpeed(mech) / 2.0;
           MechFalls(mech, MAX(1, (int)sqrt(f / MP1 / 2)), 0);
@@ -404,7 +406,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         } else {
           mech_notify(mech, MECHALL,
                       "You swerve, but not enough! This'll hurt!");
-          MechLOSBroadcast(mech, "cruises headlong at a rock!");
+          mech_los_broadcast(mech, "cruises headlong at a rock!");
           f = fabs(MechSpeed(mech));
           MechSpeed(mech) = MechSpeed(mech) / 2.0;
           MechFalls(mech, MAX(1, (int)sqrt(f / MP1 / 2)), 0);
@@ -445,11 +447,11 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
           MadePilotSkillRoll(mech,
                              (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3)) {
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
-        MechLOSBroadcast(mech, "stops suddenly to avoid running aground!");
+        mech_los_broadcast(mech, "stops suddenly to avoid running aground!");
         move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
       } else {
         mech_notify(mech, MECHALL, "You smash into the ground!");
-        MechLOSBroadcast(mech, "smashes aground!");
+        mech_los_broadcast(mech, "smashes aground!");
         MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
       }
       MechSpeed(mech) = 0;
@@ -477,17 +479,17 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                                    1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
-        MechLOSBroadcast(mech, "stops suddenly to avoid a cliff!");
+        mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
 
       } else {
 
         if (!mech->xcode.context->configuration->btech_skidcliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
-          MechLOSBroadcast(mech, "smashes into a cliff!");
+          mech_los_broadcast(mech, "smashes into a cliff!");
           MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
         } else {
           mech_notify(mech, MECHALL, "You skid to a violent halt!");
-          MechLOSBroadcast(mech, "skids to a halt!");
+          mech_los_broadcast(mech, "skids to a halt!");
           MechFalls(mech, 0, 0);
         }
       }
@@ -508,14 +510,15 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
           (!MechAutoFall(mech) && MadePilotSkillRoll_NoXP(mech, avoidbth, 1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before falling off.");
-        MechLOSBroadcast(mech, "stops suddenly to avoid falling off a cliff!");
+        mech_los_broadcast(mech,
+                           "stops suddenly to avoid falling off a cliff!");
 
       } else {
 
         mech_notify(mech, MECHALL,
                     "You drive off the cliff and fall to the ground below.");
-        MechLOSBroadcast(mech,
-                         "drives off a cliff and falls to the ground below.");
+        mech_los_broadcast(mech,
+                           "drives off a cliff and falls to the ground below.");
         MechFalls(mech, lastelevation - elevation, 0);
         return;
       }
@@ -540,13 +543,13 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
 
         mech_notify(mech, MECHALL,
                     "You manage to stop before slamming into the bridge.");
-        MechLOSBroadcast(mech,
-                         "stops suddenly to avoid slamming into the bridge!");
+        mech_los_broadcast(mech,
+                           "stops suddenly to avoid slamming into the bridge!");
       } else {
         mech_notify(mech, MECHALL,
                     "You drive right into the underside of the bridge.");
-        MechLOSBroadcast(mech,
-                         "drives right into the underside of the bridge.");
+        mech_los_broadcast(mech,
+                           "drives right into the underside of the bridge.");
         MechFalls(mech, 1, 0);
       }
       move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
@@ -575,7 +578,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                     (elevation > lastelevation
                          ? "You stumble on your rear and fall down."
                          : "You fall on your rear off the small incline."));
-        MechLOSBroadcast(
+        mech_los_broadcast(
             mech,
             tprintf("%s", (elevation > lastelevation
                                ? "falls on its back walking up an incline."
@@ -606,7 +609,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
 
       } else {
         mech_notify(mech, MECHALL, "You swerve, but not enough! This'll hurt!");
-        MechLOSBroadcast(mech, "cruises headlong at a tree!");
+        mech_los_broadcast(mech, "cruises headlong at a tree!");
         f = fabs(MechSpeed(mech));
         MechSpeed(mech) = MechSpeed(mech) / 2.0;
         MechFalls(mech, MAX(1, (int)sqrt(f / MP1 / 2)), 0);
@@ -647,7 +650,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
       } else {
         mech_notify(mech, MECHALL, "Eww.. You've a bad feeling about this.");
-        MechLOSBroadcast(mech, "crashes!");
+        mech_los_broadcast(mech, "crashes!");
         MechFalls(mech, 1, 0);
       }
       MechDesiredSpeed(mech) = 0;
@@ -675,7 +678,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                     (elevation > lastelevation
                          ? "You stumble on your rear and fall down."
                          : "You fall on your rear off the small incline."));
-        MechLOSBroadcast(
+        mech_los_broadcast(
             mech,
             tprintf("%s", (elevation > lastelevation
                                ? "falls on its back walking up an incline."
@@ -723,8 +726,8 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
       } else {
         mech_notify(mech, MECHALL,
                     "You crash into the obstacle and fall from the sky!");
-        MechLOSBroadcast(mech,
-                         "crashes into an obstacle and falls from the sky!");
+        mech_los_broadcast(mech,
+                           "crashes into an obstacle and falls from the sky!");
         MechFalls(mech, MechsElevation(mech) + 1, 0);
         domino_space(mech, 2);
       }

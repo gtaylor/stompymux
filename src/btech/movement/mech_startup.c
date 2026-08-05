@@ -186,11 +186,11 @@ static void mech_startup_event(MuxEvent *e) {
                   "Water floods your engine and your unit "
                   "becomes inoperable.");
       if (MechType(mech) == CLASS_BSUIT)
-        MechLOSBroadcast(mech, "emits some bubbles and flails their arms "
-                               "around as they sink to the bottom.");
+        mech_los_broadcast(mech, "emits some bubbles and flails their arms "
+                                 "around as they sink to the bottom.");
       else
-        MechLOSBroadcast(mech,
-                         "emits some bubbles as its engines are flooded.");
+        mech_los_broadcast(mech,
+                           "emits some bubbles as its engines are flooded.");
       DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
       return;
     }
@@ -208,7 +208,7 @@ static void mech_startup_event(MuxEvent *e) {
   MarkForLOSUpdate(mech);
   SetCargoWeight(mech);
   UnSetMechPKiller(mech);
-  MechLOSBroadcast(mech, "powers up!");
+  mech_los_broadcast(mech, "powers up!");
   MechVerticalSpeed(mech) = 0;
   EvalBit(
       MechSpecials(mech), SS_ABILITY,
@@ -370,12 +370,12 @@ void mech_shutdown(DbRef player, void *data, char *buffer) {
   } else if (MechSpeed(mech) > MP1) {
     mech_notify(mech, MECHALL, "Your systems stop in mid-motion!");
     if (MechType(mech) == CLASS_MECH)
-      MechLOSBroadcast(mech, "stops in mid-motion, and falls!");
+      mech_los_broadcast(mech, "stops in mid-motion, and falls!");
     else {
       mech_notify(mech, MECHALL,
                   "You tumble end over end and come to a crashing halt!");
-      MechLOSBroadcast(mech,
-                       "tumbles end over end and comes to a crashing halt!");
+      mech_los_broadcast(mech,
+                         "tumbles end over end and comes to a crashing halt!");
     }
     MechFalls(mech, 1, 0);
     domino_space(mech, 2);

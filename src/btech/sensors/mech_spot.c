@@ -159,8 +159,8 @@ void mech_spot(DbRef player, void *data, char *buffer) {
   }
   target = btech_context_get_mech(mech_context(mech), targetref);
   if (target)
-    LOS = InLineOfSight(mech, target, MechX(target), MechY(target),
-                        FlMechRange(mech_map, mech, target));
+    LOS = mech_los_check(mech, target, MechX(target), MechY(target),
+                         FlMechRange(mech_map, mech, target));
   DOCHECK_CONTEXT(mech_context(mech),
                   !target || (targetref == -1) ||
                       MechTeam(target) != MechTeam(mech),
@@ -234,21 +234,22 @@ int FireSpot(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
     mapx = MechX(target);
     mapy = MechY(target);
     spot_range = FaMechRange(spotter, target);
-    LOS = InLineOfSight(spotter, target, mapx, mapy, spot_range);
+    LOS = mech_los_check(spotter, target, mapx, mapy, spot_range);
     DOCHECKMP1(!LOS, "You spotter does not have a target in LOS!");
     range = FaMechRange(mech, target);
     DOCHECK0_CONTEXT(mech_context(mech), InWater(target) && !(InWater(mech)),
                      "You can't fire into water with that weapon from here.");
 
-    spotTerrain =
-        IsArtillery(weapontype)
-            ? 2
-            : (1 + AddTerrainMod(spotter, target, mech_map, spot_range, 0) +
-               AttackMovementMods(spotter) +
-               ((mech_event_count(spotter, EVENT_LOCK) &&
-                 MechTargComp(spotter) != TARGCOMP_MULTI)
-                    ? 2
-                    : 0));
+    spotTerrain = IsArtillery(weapontype)
+                      ? 2
+                      : (1 +
+                         mech_los_terrain_modifier(spotter, target, mech_map,
+                                                   spot_range, 0) +
+                         AttackMovementMods(spotter) +
+                         ((mech_event_count(spotter, EVENT_LOCK) &&
+                           MechTargComp(spotter) != TARGCOMP_MULTI)
+                              ? 2
+                              : 0));
     DOCHECK1_CONTEXT(mech_context(mech), IsArtillery(weapontype) && target,
                      "You can only target hexes with this kind of artillery.");
     if (!sight) {
@@ -284,7 +285,7 @@ int FireSpot(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
   }
   spot_range = FindRange(MechFX(spotter), MechFY(spotter), MechFZ(spotter),
                          enemyX, enemyY, enemyZ);
-  LOS = InLineOfSight(spotter, target, mapx, mapy, spot_range);
+  LOS = mech_los_check(spotter, target, mapx, mapy, spot_range);
   DOCHECK0_CONTEXT(mech_context(mech), !LOS,
                    "That target is not in your spotters line of sight!");
   range = FindRange(MechFX(mech), MechFY(mech), MechFZ(mech), enemyX, enemyY,

@@ -228,7 +228,7 @@ void HitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
        * correct because we modified the bth in FireWeapon. Nothing to see here.
        * move along
        */
-      MechLOSBroadcast(hitMech, "is nicked by a glancing blow!");
+      mech_los_broadcast(hitMech, "is nicked by a glancing blow!");
       mech_notify(hitMech, MECHALL, "You are nicked by a glancing blow!");
       wWeapDamage = (int)(wWeapDamage + 1) / 2;
       if (wWeapDamage < 1)

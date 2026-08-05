@@ -82,7 +82,7 @@ static void damage_cf(Mech *mech, MapObject *o, int from, int to, int damage) {
         tprintf("%s is hit for %d more points of damage, destroying it!",
                 MyToUpper(structure_name(mech_context(mech)->database, o).text),
                 damage));
-    MechLOSBroadcast(
+    mech_los_broadcast(
         mech, tprintf("hits %s, destroying it!",
                       structure_name(mech_context(mech)->database, o).text));
     start_regen = 2;
@@ -156,10 +156,10 @@ void fire_hex(Mech *mech, int x, int y, int meant) {
     return;
   }
   if (meant) {
-    MechLOSBroadcast(mech, tprintf("'s shot ignites %d,%d!", x, y));
+    mech_los_broadcast(mech, tprintf("'s shot ignites %d,%d!", x, y));
     mech_printf(mech, MECHALL, "You ignite %d,%d.", x, y);
   } else {
-    MechLOSBroadcast(mech, tprintf("'s stray shot ignites %d,%d!", x, y));
+    mech_los_broadcast(mech, tprintf("'s stray shot ignites %d,%d!", x, y));
     mech_printf(mech, MECHALL, "You accidentally ignite %d,%d!", x, y);
   }
   add_decoration(map, x, y, TYPE_FIRE, FIRE,

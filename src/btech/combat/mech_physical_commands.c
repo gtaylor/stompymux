@@ -168,8 +168,9 @@ void mech_charge(DbRef player, void *data, char *buffer) {
     DOCHECKMA(targetnum == -1, "Target is not in line of sight!");
 
     target = btech_context_get_mech(mech->xcode.context, targetnum);
-    DOCHECKMA(!InLineOfSight_NB(mech, target, MechX(target), MechY(target),
-                                FaMechRange(mech, target)),
+    DOCHECKMA(!mech_los_check_unblocked(mech, target, MechX(target),
+                                        MechY(target),
+                                        FaMechRange(mech, target)),
               "Target is not in line of sight!");
 
     if (!target) {

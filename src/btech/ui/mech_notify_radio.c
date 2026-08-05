@@ -581,10 +581,10 @@ void mech_radio(DbRef player, void *data, char *buffer) {
     target = FindTargetDBREFFromMapNumber(mech, args[0]);
     tempMech = btech_context_get_mech(mech_context(mech), target);
     DOCHECK_CONTEXT(mech_context(mech),
-                    !tempMech || !InLineOfSight(mech, tempMech,
-                                                mech_position_x(tempMech),
-                                                mech_position_y(tempMech),
-                                                mech_range_to(mech, tempMech)),
+                    !tempMech || !mech_los_check(mech, tempMech,
+                                                 mech_position_x(tempMech),
+                                                 mech_position_y(tempMech),
+                                                 mech_range_to(mech, tempMech)),
                     "Target is not in line of sight!");
     mech_printf(mech, MECHSTARTED, "You radio %s with, '%s'",
                 mech_to_mech_display_id(mech, tempMech).text, args[2]);

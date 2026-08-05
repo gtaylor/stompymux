@@ -54,8 +54,8 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
           mech_notify(mech, MECHALL,
                       "[bold]You crash into the obstacle and fall from the "
                       "sky![reset]");
-          MechLOSBroadcast(mech,
-                           "crashes into an obstacle and falls from the sky!");
+          mech_los_broadcast(
+              mech, "crashes into an obstacle and falls from the sky!");
           MechFalls(mech, ed, 0);
           domino_space(mech, 2);
         }
@@ -79,13 +79,13 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                                    1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
-        MechLOSBroadcast(mech, "stops suddenly to avoid a cliff!");
+        mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
 
       } else {
 
         mech_notify(mech, MECHALL,
                     "You run headlong into the cliff and fall down!");
-        MechLOSBroadcast(mech, "runs headlong into a cliff and falls down!");
+        mech_los_broadcast(mech, "runs headlong into a cliff and falls down!");
         if (!mech->xcode.context->configuration->btech_skidcliff)
           MechFalls(mech, (int)(1 + (MechSpeed(mech)) * MP_PER_KPH) / 4, 0);
         else
@@ -108,15 +108,16 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
           (!MechAutoFall(mech) && MadePilotSkillRoll_NoXP(mech, avoidbth, 1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before falling off.");
-        MechLOSBroadcast(mech, "stops suddenly to avoid falling off a cliff!");
+        mech_los_broadcast(mech,
+                           "stops suddenly to avoid falling off a cliff!");
         move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
 
       } else {
 
         mech_notify(mech, MECHALL,
                     "You run off the cliff and fall to the ground below.");
-        MechLOSBroadcast(mech,
-                         "runs off a cliff and falls to the ground below!");
+        mech_los_broadcast(mech,
+                           "runs off a cliff and falls to the ground below!");
         MechFalls(mech, lastelevation - elevation, 0);
         MechDesiredSpeed(mech) = 0;
         MechSpeed(mech) = 0;
@@ -147,7 +148,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                          : "You fall on your rear off the small incline."));
 
         /*! \todo {Get rid of this tprintf} */
-        MechLOSBroadcast(
+        mech_los_broadcast(
             mech,
             tprintf("%s", (elevation > lastelevation
                                ? "falls on its back walking up an incline."
@@ -197,7 +198,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                 mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3)) {
 
           mech_notify(mech, MECHALL, "You manage to stop before falling in.");
-          MechLOSBroadcast(mech, "stops suddenly to avoid going for a swim!");
+          mech_los_broadcast(mech, "stops suddenly to avoid going for a swim!");
         } else {
 
           mech_notify(mech, MECHALL,
@@ -223,7 +224,8 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
           MIN(MechDesiredSpeed(mech), WalkingSpeed(MMaxSpeed(mech)));
 #ifdef BT_MOVEMENT_MODES
       if (MechStatus2(mech) & SPRINTING) {
-        MechLOSBroadcast(mech, "breaks out of its sprint as it enters water!");
+        mech_los_broadcast(mech,
+                           "breaks out of its sprint as it enters water!");
         mech_notify(mech, MECHALL,
                     "You lose your sprinting momentum as you "
                     "enter water!");
@@ -253,7 +255,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       // Stupid Frontiers cheaters. No XP gains here.
       if (!MadePilotSkillRoll_NoXP(mech, skillmod, 0)) {
         mech_notify(mech, MECHALL, "You slip in the water and fall down");
-        MechLOSBroadcast(mech, "slips in the water and falls down!");
+        mech_los_broadcast(mech, "slips in the water and falls down!");
         MechFalls(mech, 1, dammod);
         done = 1;
       }

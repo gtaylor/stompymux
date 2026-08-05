@@ -96,7 +96,7 @@ char *phys_form(int AttackType, int add_s) {
   return verb;
 } // end phys_form
 
-#define phys_message(txt) MechLOSBroadcasti(mech, target, txt)
+#define phys_message(txt) mech_los_broadcast_unit(mech, target, txt)
 
 void phys_succeed(Mech *mech, Mech *target, int at) {
   phys_message(tprintf("%s %%s!", phys_form(at, 1)));

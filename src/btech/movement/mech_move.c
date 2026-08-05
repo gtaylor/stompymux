@@ -261,11 +261,12 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     mech_notify(
         mech, MECHALL,
         "... but realize a little late that this is harder than it looks!");
-    MechLOSBroadcast(mech, "attempts to fight the forces of inertia but looses "
-                           "the battle miserably!");
+    mech_los_broadcast(mech,
+                       "attempts to fight the forces of inertia but looses "
+                       "the battle miserably!");
 
     if (wFallLevels > 2)
-      MechLOSBroadcast(mech, "tumbles over and over and over!");
+      mech_los_broadcast(mech, "tumbles over and over and over!");
 
     MechFalls(mech, wFallLevels, 1);
   }
@@ -495,7 +496,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
   if ((wDropLevels > 0) || tHasSwarmers) {
     if (MadePilotSkillRoll(mech, wDropBTH)) {
       mech_notify(mech, MECHALL, "You hit the ground with minimal damage");
-      MechLOSBroadcast(mech, "drops to the ground!");
+      mech_los_broadcast(mech, "drops to the ground!");
 
       if (tHasSwarmers)
         StopBSuitSwarmers(
@@ -504,7 +505,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
 
     } else {
       mech_notify(mech, MECHALL, "You fall to the ground hard");
-      MechLOSBroadcast(mech, "falls hard to the ground!");
+      mech_los_broadcast(mech, "falls hard to the ground!");
 
       if (wDropLevels <= 0)
         wDropLevels = 1;
@@ -518,7 +519,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
     }
   } else {
     mech_notify(mech, MECHALL, "You drop to the ground prone!");
-    MechLOSBroadcast(mech, "drops to the ground!");
+    mech_los_broadcast(mech, "drops to the ground!");
   }
 
   mech_make_fall(mech);
@@ -618,7 +619,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
     tNeedsPSkill = 0;
   }
 
-  MechLOSBroadcast(mech, "attempts to stand up.");
+  mech_los_broadcast(mech, "attempts to stand up.");
 
   if (mech_real_terrain_get(mech) == ICE && MechZ(mech) == -1)
     break_thru_ice(mech);

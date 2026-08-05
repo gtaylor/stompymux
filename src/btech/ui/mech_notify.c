@@ -26,7 +26,7 @@ static int map_base_elevation(BattleMap *map, int x, int y) {
   return terrain == WATER || terrain == ICE ? -elevation : elevation;
 }
 
-void MechLOSBroadcast(Mech *mech, char *message) {
+void mech_los_broadcast(Mech *mech, char *message) {
   /* Sends msg to everyone except the mech */
   int i;
   Mech *tempMech;
@@ -42,9 +42,9 @@ void MechLOSBroadcast(Mech *mech, char *message) {
         mech_map->mechsOnMap[i] != mech_dbref(mech))
       if ((tempMech = btech_context_get_mech(mech_map->xcode.context,
                                              mech_map->mechsOnMap[i])))
-        if (InLineOfSight(tempMech, mech, mech_position_x(mech),
-                          mech_position_y(mech),
-                          mech_range_to(tempMech, mech))) {
+        if (mech_los_check(tempMech, mech, mech_position_x(mech),
+                           mech_position_y(mech),
+                           mech_range_to(tempMech, mech))) {
           snprintf(buf, sizeof(buf), "%s%s%s",
                    mech_to_mech_display_id(tempMech, mech).text,
                    *message != '\'' ? " " : "", message);
@@ -53,11 +53,11 @@ void MechLOSBroadcast(Mech *mech, char *message) {
 }
 
 int MechSeesHexF(Mech *mech, BattleMap *map, float x, float y, int ix, int iy) {
-  return InLineOfSight(mech, nullptr, ix, iy,
-                       FindRange(mech_position_real_x(mech),
-                                 mech_position_real_y(mech),
-                                 mech_position_real_z(mech), x, y,
-                                 ZSCALE * map_base_elevation(map, ix, iy)));
+  return mech_los_check(mech, nullptr, ix, iy,
+                        FindRange(mech_position_real_x(mech),
+                                  mech_position_real_y(mech),
+                                  mech_position_real_z(mech), x, y,
+                                  ZSCALE * map_base_elevation(map, ix, iy)));
 }
 
 int MechSeesHex(Mech *mech, BattleMap *map, int x, int y) {
@@ -139,7 +139,7 @@ static void format_mech_los_message(char *buffer, size_t buffer_size,
            message, target_name, placeholder + 2);
 }
 
-void MechLOSBroadcasti(Mech *mech, Mech *target, const char *message) {
+void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
   /* Sends msg to everyone except the mech */
   int i, a, b;
   char oddbuff[LBUF_SIZE];
@@ -158,11 +158,12 @@ void MechLOSBroadcasti(Mech *mech, Mech *target, const char *message) {
         mech_map->mechsOnMap[i] != mech_dbref(target))
       if ((tempMech = btech_context_get_mech(mech_context(mech),
                                              mech_map->mechsOnMap[i]))) {
-        a = InLineOfSight(tempMech, mech, mech_position_x(mech),
-                          mech_position_y(mech), mech_range_to(tempMech, mech));
-        b = InLineOfSight(tempMech, target, mech_position_x(target),
-                          mech_position_y(target),
-                          mech_range_to(tempMech, target));
+        a = mech_los_check(tempMech, mech, mech_position_x(mech),
+                           mech_position_y(mech),
+                           mech_range_to(tempMech, mech));
+        b = mech_los_check(tempMech, target, mech_position_x(target),
+                           mech_position_y(target),
+                           mech_range_to(tempMech, target));
         if (a || b) {
           char *obp = oddbuff2;
 
@@ -227,18 +228,19 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
             mech_context(mech), mech_map->mechsOnMap[loop]);
         if (!tempMech)
           continue;
-        if (InLineOfSight(tempMech, mech, mech_position_x(mech),
-                          mech_position_y(mech), mech_range_to(tempMech, mech)))
+        if (mech_los_check(tempMech, mech, mech_position_x(mech),
+                           mech_position_y(mech),
+                           mech_range_to(tempMech, mech)))
           attacker = 1;
         if (target) {
-          if (InLineOfSight(tempMech, target, mapx, mapy,
-                            mech_range_to(tempMech, target)))
+          if (mech_los_check(tempMech, target, mapx, mapy,
+                             mech_range_to(tempMech, target)))
             defender = 1;
-        } else if (InLineOfSight(tempMech, target, mapx, mapy,
-                                 FindRange(mech_position_real_x(tempMech),
-                                           mech_position_real_y(tempMech),
-                                           mech_position_real_z(tempMech), fx,
-                                           fy, fz)))
+        } else if (mech_los_check(tempMech, target, mapx, mapy,
+                                  FindRange(mech_position_real_x(tempMech),
+                                            mech_position_real_y(tempMech),
+                                            mech_position_real_z(tempMech), fx,
+                                            fy, fz)))
           defender = 1;
 
         if (!attacker && !defender)
@@ -273,18 +275,19 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
             mech_context(mech), mech_map->mechsOnMap[loop]);
         if (!tempMech)
           continue;
-        if (InLineOfSight(tempMech, mech, mech_position_x(mech),
-                          mech_position_y(mech), mech_range_to(tempMech, mech)))
+        if (mech_los_check(tempMech, mech, mech_position_x(mech),
+                           mech_position_y(mech),
+                           mech_range_to(tempMech, mech)))
           attacker = 1;
         if (target) {
-          if (InLineOfSight(tempMech, target, mapx, mapy,
-                            mech_range_to(tempMech, target)))
+          if (mech_los_check(tempMech, target, mapx, mapy,
+                             mech_range_to(tempMech, target)))
             defender = 1;
-        } else if (InLineOfSight(tempMech, target, mapx, mapy,
-                                 FindRange(mech_position_real_x(tempMech),
-                                           mech_position_real_y(tempMech),
-                                           mech_position_real_z(tempMech), fx,
-                                           fy, fz)))
+        } else if (mech_los_check(tempMech, target, mapx, mapy,
+                                  FindRange(mech_position_real_x(tempMech),
+                                            mech_position_real_y(tempMech),
+                                            mech_position_real_z(tempMech), fx,
+                                            fy, fz)))
           defender = 1;
         if (!attacker && !defender)
           continue;

@@ -146,7 +146,7 @@ static void aero_takeoff_event(MuxEvent *e) {
   }
   StopSpinning(mech);
   mech_notify(mech, MECHALL, land_data[i].takeoff);
-  MechLOSBroadcast(mech, land_data[i].takeoff_others);
+  mech_los_broadcast(mech, land_data[i].takeoff_others);
   MechStartFX(mech) = 0;
   MechStartFY(mech) = 0;
   MechStartFZ(mech) = 0;
@@ -158,7 +158,7 @@ static void aero_takeoff_event(MuxEvent *e) {
                                map->mynum));
   if (MechCritStatus(mech) & HIDDEN) {
     mech_notify(mech, MECHALL, "You move too much and break your cover!");
-    MechLOSBroadcast(mech, "breaks its cover in the brush.");
+    mech_los_broadcast(mech, "breaks its cover in the brush.");
     MechCritStatus(mech) &= ~(HIDDEN);
   }
   if (MechType(mech) != CLASS_VTOL) {
@@ -231,7 +231,7 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
                 MechX(mech), MechY(mech), map->mynum));
   if (MechCritStatus(mech) & HIDDEN) {
     mech_notify(mech, MECHALL, "You break your cover to takeoff!");
-    MechLOSBroadcast(mech, "breaks its cover as it begins takeoff.");
+    mech_los_broadcast(mech, "breaks its cover as it begins takeoff.");
     MechCritStatus(mech) &= ~(HIDDEN);
   }
   mech_event_cancel(mech, EVENT_HIDE);
@@ -409,7 +409,7 @@ void aero_land(DbRef player, void *data, char *buffer) {
                                map->mynum));
 
   mech_notify(mech, MECHALL, land_data[i].landmsg);
-  MechLOSBroadcast(mech, land_data[i].landmsg_others);
+  mech_los_broadcast(mech, land_data[i].landmsg_others);
   MechZ(mech) = MechElevation(mech);
   MechFZ(mech) = ZSCALE * MechZ(mech);
   MechStatus(mech) |= LANDED;
@@ -431,7 +431,7 @@ void aero_ControlEffect(Mech *mech) {
   if (Landed(mech))
     return;
   mech_notify(mech, MECHALL, "You lose control of your craft!");
-  MechLOSBroadcast(mech, "spins out of control!");
+  mech_los_broadcast(mech, "spins out of control!");
   StartSpinning(mech);
   MechStartSpin(mech) = mech->xcode.context->clock->now;
 }
@@ -596,10 +596,10 @@ int FuelCheck(Mech *mech) {
   if (!(AeroFuel(mech) % 100) && AeroFuel(mech) >= AeroFuelOrig(mech))
     SetCargoWeight(mech);
   if (MechType(mech) == CLASS_VTOL) {
-    MechLOSBroadcast(mech, "'s rotors suddenly stop!");
+    mech_los_broadcast(mech, "'s rotors suddenly stop!");
     mech_notify(mech, MECHALL, "The sound of rotors slowly stops..");
   } else {
-    MechLOSBroadcast(mech, "'s engines die suddenly..");
+    mech_los_broadcast(mech, "'s engines die suddenly..");
     mech_notify(mech, MECHALL, "Your engines die suddenly..");
   }
   MechSpeed(mech) = 0.0;

@@ -175,7 +175,7 @@ static int Leave_Hangar(BattleMap *map, Mech *mech) {
   if (MechCarrying(mech) > 0)
     car = btech_context_get_mech(mech->xcode.context, MechCarrying(mech));
   DOCHECKMA0(!map->cf, "The entrance is still filled with rubble!");
-  MechLOSBroadcast(mech, "has left the hangar.");
+  mech_los_broadcast(mech, "has left the hangar.");
   mech_Rsetmapindex(GOD, (void *)mech,
                     tprintf("%d", (int)map->MapObject[TYPE_LEAVE]->obj));
   if (car)
@@ -209,7 +209,7 @@ static int Leave_Hangar(BattleMap *map, Mech *mech) {
   mech_continue_flying(mech);
   if (car)
     MirrorPosition(mech, car, 0);
-  MechLOSBroadcast(
+  mech_los_broadcast(
       mech, tprintf("has left %s at %d,%d.",
                     structure_name(mech->xcode.context->database, mapo).text,
                     MechX(mech), MechY(mech)));

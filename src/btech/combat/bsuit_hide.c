@@ -83,7 +83,7 @@ static void mech_hide_event(MuxEvent *e) {
       continue;
     if (Destroyed(t))
       continue;
-    if (InLineOfSight(t, mech, MechX(mech), MechY(mech), FaMechRange(t, mech)))
+    if (mech_los_check(t, mech, MechX(mech), MechY(mech), FaMechRange(t, mech)))
       fail = 1;
   }
 

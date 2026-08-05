@@ -227,7 +227,7 @@ void mech_drop_club(Mech *mech) {
     MechSections(mech)[RARM].specials &= ~CARRYING_CLUB;
     MechSections(mech)[LARM].specials &= ~CARRYING_CLUB;
     mech_notify(mech, MECHALL, "Your club falls to the ground and shatters.");
-    MechLOSBroadcast(mech, "'s club falls to the ground and shatters.");
+    mech_los_broadcast(mech, "'s club falls to the ground and shatters.");
   }
 }
 
