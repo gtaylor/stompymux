@@ -11,9 +11,7 @@
  *
  */
 
-#define GMOD 1 /* Acceleration / second, in Z hexes */
-
-#include "aero_bomb.h"
+enum { BOMB_GRAVITY = 1 };
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,14 +25,21 @@
 #include "coolmenu.h"
 #include "econ_cmds_api.h"
 #include "legacy_macros.h"
-#include "map.h" // IWYU pragma: keep
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "math.h"
-#include "mech.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
@@ -44,26 +49,48 @@
 #include "mymath.h"
 #include "registry_api.h"
 
-static const BOMBINFO bombs[] = {
-    {"10_Inferno", 10, 1, 30},     {"10_Cluster", 10, 2, 30},
-    {"10_Standard", 10, 0, 130},   {"50_Inferno", 50, 1, 130},
-    {"50_Cluster", 50, 2, 130},    {"50_Standard", 50, 0, 130},
-    {"100_Inferno", 100, 1, 250},  {"100_Cluster", 100, 2, 250},
-    {"100_Standard", 100, 0, 250}, {NULL, 0, 0, 0}};
+typedef enum BombKind {
+  BOMB_KIND_STANDARD,
+  BOMB_KIND_INFERNO,
+  BOMB_KIND_CLUSTER,
+} BombKind;
 
-void DestroyBomb(Mech *mech, int loc) {}
+typedef struct BombInfo {
+  const char *name;
+  int aff;
+  BombKind type;
+  int weight;
+} BombInfo;
 
-int BombWeight(int i) { return bombs[i].weight; }
+typedef struct BombShot {
+  int x;
+  int y;
+  int type;
+  BattleMap *map;
+} BombShot;
+
+static const BombInfo bombs[] = {{"10_Inferno", 10, BOMB_KIND_INFERNO, 30},
+                                 {"10_Cluster", 10, BOMB_KIND_CLUSTER, 30},
+                                 {"10_Standard", 10, BOMB_KIND_STANDARD, 130},
+                                 {"50_Inferno", 50, BOMB_KIND_INFERNO, 130},
+                                 {"50_Cluster", 50, BOMB_KIND_CLUSTER, 130},
+                                 {"50_Standard", 50, BOMB_KIND_STANDARD, 130},
+                                 {"100_Inferno", 100, BOMB_KIND_INFERNO, 250},
+                                 {"100_Cluster", 100, BOMB_KIND_CLUSTER, 250},
+                                 {"100_Standard", 100, BOMB_KIND_STANDARD, 250},
+                                 {nullptr, 0, BOMB_KIND_STANDARD, 0}};
+
+int bomb_weight(int i) { return bombs[i].weight; }
 
 const char *bomb_name(int i) { return bombs[i].name; }
 
-void bomb_list(Mech *mech, int player) {
+static void bomb_list(Mech *mech, DbRef player) {
   int bc = 0, fb;
   int i, j, k;
   char location[20];
   static const char *const types[] = {"Standard", "Inferno", "Cluster",
                                       nullptr};
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
 
   addline();
   cent(tprintf("Bomb payload for %s:", mech_display_id(mech).text));
@@ -71,10 +98,11 @@ void bomb_list(Mech *mech, int player) {
   for (i = 0; i < NUM_SECTIONS; i++) {
     fb = 1;
     for (j = 0; j < NUM_CRITICALS; j++)
-      if (IsBomb((k = GetPartType(mech, i, j)))) {
+      if (IsBomb((k = mech_critical_part_type(mech, i, j)))) {
         k = Bomb2I(k);
         if (fb) {
-          ArmorStringFromIndex(i, location, MechType(mech), MechMove(mech));
+          ArmorStringFromIndex(i, location, mech_class(mech),
+                               mech_movement_type(mech));
           fb = 0;
         }
         if (!bc) {
@@ -89,32 +117,32 @@ void bomb_list(Mech *mech, int player) {
   if (!bc)
     cent("No bombs installed.");
   addline();
-  ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
+  ShowCoolMenu(btech_context_evaluation(mech_context(mech)), player, c);
   KillCoolMenu(c);
 }
 
-float calc_dest(Mech *mech, short *x, short *y) {
+static float bomb_calculate_destination(Mech *mech, short *x, short *y) {
   /* Present location */
-  float fx = MechFX(mech);
-  float fy = MechFY(mech);
-  float fz = MechFZ(mech) / ZSCALE;
-  float zspd = MechStartFZ(mech) / ZSCALE;
+  float fx = mech_position_real_x(mech);
+  float fy = mech_position_real_y(mech);
+  float fz = mech_position_real_z(mech) / ZSCALE;
+  float zspd = mech_motion_vector_z(mech) / ZSCALE;
   float t, ot;
 
-  ot = t = (zspd + sqrt(zspd * zspd + 2 * GMOD * fz)) / GMOD;
+  ot = t = (zspd + sqrt(zspd * zspd + 2 * BOMB_GRAVITY * fz)) / BOMB_GRAVITY;
   t = (float)t / MOVE_TICK;
-  fx = fx + MechStartFX(mech) * t;
-  fy = fy + MechStartFY(mech) * t;
+  fx = fx + mech_motion_vector_x(mech) * t;
+  fy = fy + mech_motion_vector_y(mech) * t;
   RealCoordToMapCoord(x, y, fx, fy);
   return ot;
 }
 
-void bomb_aim(Mech *mech, DbRef player) {
+static void bomb_aim(Mech *mech, DbRef player) {
   float t; /* The time of impact */
   char toi[LBUF_SIZE];
   short x, y;
 
-  t = calc_dest(mech, &x, &y);
+  t = bomb_calculate_destination(mech, &x, &y);
   snprintf(toi, LBUF_SIZE, "%.1f second%s", t,
            (t >= 2.0 || t < 1.0) ? "" : "s");
   mech_printf(mech, MECHALL,
@@ -122,64 +150,67 @@ void bomb_aim(Mech *mech, DbRef player) {
               toi, x, y);
 }
 
-void bomb_hit_hexes(BattleMap *map, int x, int y, int hitnb, int iscluster,
-                    int aff_d, int aff_h, char *tomsg, char *otmsg,
-                    char *tomsg1, char *otmsg1) {
+static void bomb_hit_hexes(BattleMap *map, int x, int y, int hitnb,
+                           bool iscluster, int aff_d, int aff_h, char *tomsg,
+                           char *otmsg, char *tomsg1, char *otmsg1) {
   blast_hit_hexes(map, aff_d, iscluster ? 2 : 10, aff_h, x, y, tomsg, otmsg,
                   tomsg1, otmsg1, 0, 4, 1, 1, hitnb);
 }
 
-static void bomb_hit(bomb_shot *s) {
+static void bomb_hit(BombShot *s) {
   switch (bombs[s->type].type) {
-  case 0:
+  case BOMB_KIND_STANDARD:
     HexLOSBroadcast(s->map, s->x, s->y, "A blast rocks the area around $H!");
-    bomb_hit_hexes(s->map, s->x, s->y, 1, 0,
-                   bombs[s->type].type == 1 ? bombs[s->type].aff / 2
-                                            : bombs[s->type].aff,
-                   bombs[s->type].type == 1 ? bombs[s->type].aff : 0,
-                   "You receive a direct hit!", "receives a direct hit!",
-                   "You are hit by shrapnel!", "is hit by shrapnel!");
+    bomb_hit_hexes(
+        s->map, s->x, s->y, 1, 0,
+        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff / 2
+                                                 : bombs[s->type].aff,
+        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff : 0,
+        "You receive a direct hit!", "receives a direct hit!",
+        "You are hit by shrapnel!", "is hit by shrapnel!");
     break;
-  case 1:
+  case BOMB_KIND_INFERNO:
     HexLOSBroadcast(
         s->map, s->x, s->y,
         "A fiery blast occurs in $H, spraying flaming gel everywhere!");
     bomb_hit_hexes(
         s->map, s->x, s->y, 1, 0,
-        bombs[s->type].type == 1 ? bombs[s->type].aff / 2 : bombs[s->type].aff,
-        bombs[s->type].type == 1 ? bombs[s->type].aff : 0,
+        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff / 2
+                                                 : bombs[s->type].aff,
+        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff : 0,
         "You receive a direct hit!", "receives a direct hit!",
         "You are hit by the globs of flaming gel!", "is hit by the globs!");
     break;
-  case 2:
+  case BOMB_KIND_CLUSTER:
     HexLOSBroadcast(
         s->map, s->x, s->y,
         "A bomb drops rain of small bomblets in $H's surroundings!");
-    bomb_hit_hexes(s->map, s->x, s->y, 1, 1,
-                   bombs[s->type].type == 1 ? bombs[s->type].aff / 2
-                                            : bombs[s->type].aff,
-                   bombs[s->type].type == 1 ? bombs[s->type].aff : 0,
-                   "You are hit by ton of small munitions!",
-                   "is hit by many small munitions!",
-                   "You are hit by some of the small munitions!",
-                   "is hit by some small munitions!");
+    bomb_hit_hexes(
+        s->map, s->x, s->y, 1, 1,
+        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff / 2
+                                                 : bombs[s->type].aff,
+        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff : 0,
+        "You are hit by ton of small munitions!",
+        "is hit by many small munitions!",
+        "You are hit by some of the small munitions!",
+        "is hit by some small munitions!");
     break;
   }
 }
 
 static void bomb_hit_event(MuxEvent *e) {
-  bomb_shot *s = (bomb_shot *)e->data;
+  BombShot *s = e->data;
 
   bomb_hit(s);
-  free((void *)s);
+  free(s);
 }
 
-void simulate_flight(Mech *mech, BattleMap *map, short *x, short *y, float t) {
-  float fx = MechFX(mech);
-  float fy = MechFY(mech);
-  float fz = MechFZ(mech);
+static void bomb_simulate_flight(Mech *mech, BattleMap *map, short *x, short *y,
+                                 float t) {
+  float fx = mech_position_real_x(mech);
+  float fy = mech_position_real_y(mech);
+  float fz = mech_position_real_z(mech);
 
-  /*   float fs = MechStartFZ(mech); */
   float delx, dely;
   float dx, dy;
   int i;
@@ -193,18 +224,18 @@ void simulate_flight(Mech *mech, BattleMap *map, short *x, short *y, float t) {
   for (i = 1; i < t; i++) {
     fx = fx + delx;
     fy = fx + dely;
-    fz = (float)fz - GMOD;
+    fz = (float)fz - BOMB_GRAVITY;
     RealCoordToMapCoord(&tx, &ty, fx, fy);
-    if (tx < 0 || ty < 0 || tx >= map->map_width || ty >= map->map_height)
+    if (!battle_map_coordinate_is_valid(map, tx, ty))
       continue;
-    if (Elevation(map, tx, ty) > (fz / ZSCALE)) {
+    if (battle_map_hex_elevation(map, tx, ty) > (fz / ZSCALE)) {
       *x = tx;
       *y = ty;
     }
   }
 }
 
-void bomb_drop(Mech *mech, int player, int bn) {
+static void bomb_drop(Mech *mech, DbRef player, int bn) {
   int bc = 0;
   int i, j, k;
   int lloc = 0, lpos = 0;
@@ -213,34 +244,34 @@ void bomb_drop(Mech *mech, int player, int bn) {
   int ob;
   int di;
   float dir;
-  bomb_shot *s;
+  BombShot *s;
   BattleMap *map;
 
-  DOCHECK_CONTEXT(mech->xcode.context, bn < 0,
+  DOCHECK_CONTEXT(mech_context(mech), bn < 0,
                   "Negative bomb number? Gimme a break.");
   bn--;
   for (i = 0; i < NUM_SECTIONS; i++)
     for (j = 0; j < NUM_CRITICALS; j++)
-      if (IsBomb((k = GetPartType(mech, i, j))) &&
-          !PartIsDestroyed(mech, i, j)) {
+      if (IsBomb((k = mech_critical_part_type(mech, i, j))) &&
+          !mech_critical_is_destroyed(mech, i, j)) {
         if (bc == bn) {
           lloc = i;
           lpos = j;
         }
         bc++;
       }
-  DOCHECK_CONTEXT(mech->xcode.context, !bc, "No bombs installed.");
+  DOCHECK_CONTEXT(mech_context(mech), !bc, "No bombs installed.");
   DOCHECK_CONTEXT(
-      mech->xcode.context,
-      !(map = btech_context_get_map(mech->xcode.context, mech->mapindex)),
+      mech_context(mech),
+      !(map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech))),
       "You're on invalid map!");
-  DOCHECK_CONTEXT(mech->xcode.context, bn < 0 || bn >= bc,
+  DOCHECK_CONTEXT(mech_context(mech), bn < 0 || bn >= bc,
                   "No bomb with such number installed! (See BOMB LIST)");
   mech_los_broadcast(mech,
                      "detaches a small object that starts falling down..");
-  k = Bomb2I(GetPartType(mech, lloc, lpos));
+  k = Bomb2I(mech_critical_part_type(mech, lloc, lpos));
   mech_notify(mech, MECHALL, "The ship trembles as you detach a bomb..");
-  t = calc_dest(mech, &x, &y);
+  t = bomb_calculate_destination(mech, &x, &y);
   ob = (int)t / 10;
   if (MadePilotSkillRoll(mech, 4 + ob) || t < 2.0)
     mech_notify(mech, MECHALL,
@@ -250,24 +281,24 @@ void bomb_drop(Mech *mech, int player, int bn) {
     mech_notify(mech, MECHALL,
                 "The ship's lurches slightly, dropping the bomb off target!");
     ob = 6 * (1 + ob); /* Max distance missed  */
-    ob = MAX(1, (btech_random_range(mech->xcode.context, 1, ob)) / 2);
-    di = btech_random_range(mech->xcode.context, 0, 359);
+    ob = MAX(1, (btech_random_range(mech_context(mech), 1, ob)) / 2);
+    di = btech_random_range(mech_context(mech), 0, 359);
     dir = di * TWOPIOVER360;
     x = x + ob * cos(dir);
     y = y + ob * sin(dir);
   }
-  simulate_flight(mech, map, &x, &y, t);
-  if (x < 0 || y < 0 || x >= map->map_width || y >= map->map_height)
+  bomb_simulate_flight(mech, map, &x, &y, t);
+  if (!battle_map_coordinate_is_valid(map, x, y))
     return;
-  SetPartType(mech, lloc, lpos, 0);
-  Create(s, bomb_shot, 1);
+  mech_critical_part_type_set(mech, lloc, lpos, 0);
+  Create(s, BombShot, 1);
   s->x = x;
   s->y = y;
   s->type = k;
   s->map = map;
-  SetCargoWeight(mech);
-  mux_event_add(mech->xcode.context->events, MAX(1, t), 0, EVENT_DHIT,
-                bomb_hit_event, (void *)s, NULL);
+  mech_cargo_weight_recalculate(mech);
+  btech_context_event_schedule(mech_context(mech), s, EVENT_DHIT,
+                               bomb_hit_event, MAX(1, t), 0);
 }
 
 void mech_bomb(DbRef player, void *data, char *buffer) {
@@ -277,24 +308,25 @@ void mech_bomb(DbRef player, void *data, char *buffer) {
   int bn;
 
   cch(MECH_USUALSO);
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   !(argc = mech_parseattributes(buffer, args, 3)),
                   "(At least) one option required.");
-  DOCHECK_CONTEXT(mech->xcode.context, argc > 2, "Too many arguments!");
+  DOCHECK_CONTEXT(mech_context(mech), argc > 2, "Too many arguments!");
   if (!strcasecmp(args[0], "list")) {
     bomb_list(mech, player);
     return;
   }
-  DOCHECK_CONTEXT(mech->xcode.context, Landed(mech), "The craft is landed!");
+  DOCHECK_CONTEXT(mech_context(mech), mech_is_landed(mech),
+                  "The craft is landed!");
   if (!strcasecmp(args[0], "aim")) {
     bomb_aim(mech, player);
     return;
   }
-  DOCHECK_CONTEXT(mech->xcode.context, strcasecmp(args[0], "drop"),
+  DOCHECK_CONTEXT(mech_context(mech), strcasecmp(args[0], "drop"),
                   "Invalid argument to BOMB!");
-  DOCHECK_CONTEXT(mech->xcode.context, argc < 2,
+  DOCHECK_CONTEXT(mech_context(mech), argc < 2,
                   "The BOMB commands needs to know WHICH bomb to drop!");
-  DOCHECK_CONTEXT(mech->xcode.context, Readnum(bn, args[1]),
+  DOCHECK_CONTEXT(mech_context(mech), Readnum(bn, args[1]),
                   "Invalid bomb number!");
   bomb_drop(mech, player, bn);
 }

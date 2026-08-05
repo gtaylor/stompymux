@@ -594,7 +594,7 @@ int FuelCheck(Mech *mech) {
   /* Now, the true nastiness begins ;) */
   AeroFuel(mech)--;
   if (!(AeroFuel(mech) % 100) && AeroFuel(mech) >= AeroFuelOrig(mech))
-    SetCargoWeight(mech);
+    mech_cargo_weight_recalculate(mech);
   if (MechType(mech) == CLASS_VTOL) {
     mech_los_broadcast(mech, "'s rotors suddenly stop!");
     mech_notify(mech, MECHALL, "The sound of rotors slowly stops..");

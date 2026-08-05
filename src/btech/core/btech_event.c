@@ -19,6 +19,12 @@
 #include "mech_targeting_api.h"
 #include "mux/network/mux_event.h" // IWYU pragma: keep
 
+void btech_context_event_schedule(BtechContext *context, void *object, int type,
+                                  MuxEventCallback callback, int delay,
+                                  intptr_t data) {
+  btech_event_schedule(context->events, object, type, callback, delay, data);
+}
+
 void mech_event_schedule(Mech *mech, int type, MuxEventCallback callback,
                          int delay, intptr_t data) {
   if (mech_dbref(mech) > 0) {

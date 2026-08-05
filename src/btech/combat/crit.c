@@ -57,7 +57,7 @@ void correct_speed(Mech *mech) {
 
   if (MechMaxSpeed(mech) < 0.0)
     MechMaxSpeed(mech) = 0.0;
-  SetCargoWeight(mech);
+  mech_cargo_weight_recalculate(mech);
   if (MechDesiredSpeed(mech) < -0.1) {
     maxspeed = maxspeed * 2.0 / 3.0;
     neg = -1;

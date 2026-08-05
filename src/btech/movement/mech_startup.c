@@ -206,7 +206,7 @@ static void mech_startup_event(MuxEvent *e) {
   initialize_pc(MechPilot(mech), mech);
   mech_power_up(mech);
   MarkForLOSUpdate(mech);
-  SetCargoWeight(mech);
+  mech_cargo_weight_recalculate(mech);
   UnSetMechPKiller(mech);
   mech_los_broadcast(mech, "powers up!");
   MechVerticalSpeed(mech) = 0;

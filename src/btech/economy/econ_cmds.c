@@ -61,7 +61,7 @@ extern const int cargoweight[];
 
 /* Also sets the fuel we have ; but I digress */
 
-void SetCargoWeight(Mech *mech) {
+void mech_cargo_weight_recalculate(Mech *mech) {
   int pile[NUM_ITEMS];
   int sw, weight = 0; /* in 1/10 tons */
   int i, j, k;

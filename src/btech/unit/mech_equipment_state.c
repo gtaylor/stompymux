@@ -66,6 +66,11 @@ void mech_critical_data_set(Mech *mech, int section, int critical, int data) {
   mech->ud.sections[section].criticals[critical].data = data;
 }
 
+void mech_critical_part_type_set(Mech *mech, int section, int critical,
+                                 int part_type) {
+  mech->ud.sections[section].criticals[critical].type = part_type;
+}
+
 void mech_critical_destroyed_set(Mech *mech, int section, int critical,
                                  bool destroyed) {
   struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];

@@ -110,6 +110,23 @@ done < <(rg -n \
   src/btech/movement/ds_turret.c src/btech/unit/turret.h || true)
 
 while IFS= read -r match; do
+  echo "$match: converted bomb module uses a legacy aggregate interface"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\b(mech|map)->|\b(Mech[A-Z][A-Za-z0-9_]*|GetPart[A-Za-z0-9_]*|SetPart[A-Za-z0-9_]*|Landed)\(|\b(BOMBINFO|bomb_shot|BombWeight|DestroyBomb|calc_dest|simulate_flight)\b' \
+  src/btech/movement/aero_bomb.c src/btech/movement/aero_bomb_api.h || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy cargo-weight export is not allowed"
+  status=1
+done < <(rg -n '\bSetCargoWeight\b' src/btech || true)
+
+if [[ -e src/btech/movement/aero_bomb.h ]]; then
+  echo "src/btech/movement/aero_bomb.h: unused bomb implementation header"
+  status=1
+fi
+
+while IFS= read -r match; do
   echo "$match: converted LOS tracer accesses BattleMap layout"
   status=1
 done < <(rg -n -- '\bmap->' src/btech/sensors/los_trace.c || true)

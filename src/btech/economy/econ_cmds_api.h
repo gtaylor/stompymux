@@ -16,7 +16,7 @@
 typedef struct BtechContext BtechContext;
 
 /* econ_cmds.c */
-void SetCargoWeight(Mech *mech);
+void mech_cargo_weight_recalculate(Mech *mech);
 int loading_bay_whine(DbRef player, DbRef cargobay, Mech *mech);
 void econ_fix_stuff(BtechContext *context, DbRef player, DbRef loc);
 void mech_Rfixstuff(DbRef player, void *data, char *buffer);

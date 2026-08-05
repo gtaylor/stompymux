@@ -30,6 +30,12 @@ float mech_position_real_y(const Mech *mech) { return mech->pd.fy; }
 
 float mech_position_real_z(const Mech *mech) { return mech->pd.fz; }
 
+float mech_motion_vector_x(const Mech *mech) { return mech->rd.startfx; }
+
+float mech_motion_vector_y(const Mech *mech) { return mech->rd.startfy; }
+
+float mech_motion_vector_z(const Mech *mech) { return mech->rd.startfz; }
+
 float mech_range_to(const Mech *mech, const Mech *target) {
   return FindRange(mech->pd.fx, mech->pd.fy, mech->pd.fz, target->pd.fx,
                    target->pd.fy, target->pd.fz);

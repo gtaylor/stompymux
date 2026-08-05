@@ -36,7 +36,7 @@ int btech_part_weight(int part) {
   else if (IsAmmo(part))
     return 1024;
   else if (IsBomb(part))
-    return 102 * BombWeight(Bomb2I(part));
+    return 102 * bomb_weight(Bomb2I(part));
 #ifndef BT_PART_WEIGHTS
   else if (IsSpecial(part) && part <= I2Special(CLAW))
     return 1024;

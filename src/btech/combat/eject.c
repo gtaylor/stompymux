@@ -467,7 +467,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   }
 
   MarkForLOSUpdate(mech);
-  SetCargoWeight(mech);
+  mech_cargo_weight_recalculate(mech);
   UnSetMechPKiller(mech);
   mech_los_broadcast(mech, "powers up!");
   EvalBit(
