@@ -1,5 +1,7 @@
 #include "mech_sensor_state_api.h"
 
+#include <stdlib.h>
+
 #include "mech_internal.h"
 #include "mech_status_types.h"
 
@@ -64,6 +66,15 @@ bool mech_has_working_ecm_suite(const Mech *mech) {
          ((mech->rd.specials2 & ANGEL_ECM_TECH) &&
           !(mech->rd.critstatus & ANGEL_ECM_DESTROYED)) ||
          (mech->rd.infantry_specials & FC_INFILTRATORII_STEALTH_TECH);
+}
+
+bool mech_supports_sensor_requirement(const Mech *mech, int capability_set,
+                                      int signed_capability) {
+  const int capability = abs(signed_capability);
+  const bool equipped = capability_set == 1
+                            ? (mech->rd.specials & capability) != 0
+                            : (mech->rd.specials2 & capability) != 0;
+  return signed_capability > 0 ? equipped : !equipped;
 }
 
 bool mech_searchlight_warning_enabled(const Mech *mech) {

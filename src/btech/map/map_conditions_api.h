@@ -23,4 +23,5 @@ void map_conditions_apply(Mech *mech, BattleMap *map);
 int battle_map_gravity(const BattleMap *map);
 int battle_map_light(const BattleMap *map);
 int battle_map_visibility(const BattleMap *map);
+int battle_map_cloud_base(const BattleMap *map);
 bool battle_map_is_dark(const BattleMap *map);

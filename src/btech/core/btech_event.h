@@ -14,6 +14,7 @@ typedef struct Mech Mech;
 typedef struct BattleMap BattleMap;
 typedef struct Autopilot Autopilot;
 typedef void (*MuxEventCallback)(MuxEvent *event);
+typedef void (*MuxEventVisitor)(MuxEvent *event, void *context);
 
 void mech_event_schedule(Mech *mech, int type, MuxEventCallback callback,
                          int delay, intptr_t data);
@@ -42,6 +43,8 @@ long mech_event_data(const Mech *mech, int type);
 void mech_event_cancel(Mech *mech, int type);
 void mech_event_cancel_data(Mech *mech, int type, intptr_t data);
 void mech_events_cancel_all(Mech *mech);
+void mech_event_visit(Mech *mech, int type, MuxEventVisitor visitor,
+                      void *context);
 const char *btech_event_name(int type);
 bool mech_dumping_type(const Mech *mech, intptr_t type);
 void mech_stun_crew(Mech *mech);

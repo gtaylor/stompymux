@@ -61,6 +61,16 @@ int battle_map_unit_los_water_count(const BattleMap *map, const Mech *observer,
   return (flags / MECHLOSFLAG_WATER) % MECHLOSMAX_WATER;
 }
 
+unsigned short battle_map_los_flags(const BattleMap *map, int observer_index,
+                                    int target_index) {
+  return map->LOSinfo[observer_index][target_index];
+}
+
+void battle_map_los_flags_set(BattleMap *map, int observer_index,
+                              int target_index, unsigned short flags) {
+  map->LOSinfo[observer_index][target_index] = flags;
+}
+
 int los_map_hex_index(HexLosMap *map_info, int x, int y) {
   if (x < map_info->startx || x > map_info->startx + map_info->xsize ||
       y < map_info->starty || y > map_info->starty + map_info->ysize) {

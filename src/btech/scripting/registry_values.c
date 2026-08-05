@@ -63,7 +63,7 @@ GMV xcode_data[] = {
     {GTYPE_MECH, "techtime", mechTechTimefunc, TYPE_STRFUNC_BUF, 0},
     {GTYPE_MECH, "centdist", mechCentDistfunc, TYPE_STRFUNC_BUF, 0},
     {GTYPE_MECH, "centbearing", mechCentBearingfunc, TYPE_STRFUNC_BUF, 0},
-    {GTYPE_MECH, "sensors", mechSensorInfo, TYPE_STRFUNC_BUF, 0},
+    {GTYPE_MECH, "sensors", mech_sensor_info, TYPE_STRFUNC_BUF, 0},
     {GTYPE_MECH, "mechref", mech_getset_ref, TYPE_STRFUNC_BD, 0},
 
     MeEntry("fuel", AeroFuel, TYPE_INT),

@@ -44,6 +44,12 @@ DbRef battle_map_unit_dbref(const BattleMap *map, int index) {
   return map->mechsOnMap[index];
 }
 
+DbRef battle_map_dbref(const BattleMap *map) { return map->mynum; }
+
+void battle_map_unit_slot_clear(BattleMap *map, int index) {
+  map->mechsOnMap[index] = -1;
+}
+
 int battle_map_width(const BattleMap *map) { return map->map_width; }
 
 int battle_map_height(const BattleMap *map) { return map->map_height; }

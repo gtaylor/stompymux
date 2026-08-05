@@ -109,7 +109,7 @@ static void aero_takeoff_event(MuxEvent *e) {
         break;
       case 6:
         DSSpam_O(mech, "'s engines generate a tremendous heat wave!");
-        ScrambleInfraAndLiteAmp(
+        mech_sensors_scramble_infrared_and_liteamp(
             mech, 2, 0, "The blinding flash of light momentarily blinds you!",
             "The blinding flash of light momentarily blinds you!");
         break;
@@ -119,9 +119,9 @@ static void aero_takeoff_event(MuxEvent *e) {
         DSSpam_O(
             mech,
             "'s engines send forth a tremendous stream of superheated plasma!");
-        ScrambleInfraAndLiteAmp(mech, 4, 0,
-                                "The blinding flash of light blinds you!",
-                                "The blinding flash of light blinds you!");
+        mech_sensors_scramble_infrared_and_liteamp(
+            mech, 4, 0, "The blinding flash of light blinds you!",
+            "The blinding flash of light blinds you!");
         break;
       case 1:
         DS_BlastNearbyMechsAndTrees(mech, "You receive a direct hit!",

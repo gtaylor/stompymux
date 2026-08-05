@@ -51,7 +51,7 @@ void reactor_explosion(Mech *wounded, Mech *attacker) {
   MechZ(wounded) += 6;
   dam = MAX(MechTons(wounded) / 5, MechEngineSize(wounded) / 10);
 
-  ScrambleInfraAndLiteAmp(
+  mech_sensors_scramble_infrared_and_liteamp(
       wounded, 4, 0, "The searing blast of heat burns out your sensors!",
       "The blinding flash of light overloads your sensors!");
 

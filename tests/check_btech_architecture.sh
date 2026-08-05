@@ -74,6 +74,8 @@ done < <(rg -n \
   src/btech/sensors/los_trace.c \
   src/btech/sensors/mech_ecm.c \
   src/btech/sensors/mech_lite.c \
+  src/btech/sensors/mech_sensor_events.c \
+  src/btech/sensors/mech_sensor_selection.c \
   src/btech/sensors/mech_scan_navigation.c \
   src/btech/sensors/mech_scan_view.c \
   src/btech/sensors/mech_tag.c || true)
@@ -90,10 +92,16 @@ while IFS= read -r match; do
 done < <(rg -n -- '\bmap->' src/btech/sensors/los_trace.c || true)
 
 while IFS= read -r match; do
+  echo "$match: converted sensor module accesses BattleMap layout"
+  status=1
+done < <(rg -n -- '\bmap->' src/btech/sensors/mech_sensor_events.c \
+  src/btech/sensors/mech_sensor_selection.c || true)
+
+while IFS= read -r match; do
   echo "$match: legacy sensor export is not allowed"
   status=1
 done < <(rg -n \
-  '\b(sendECMNotification|checkECM|isTAGDestroyed|stopTAG|checkTAG)\b' \
+  '\b(sendECMNotification|checkECM|isTAGDestroyed|stopTAG|checkTAG|mechSensorInfo|CanChangeTo|possibly_see_mech|ScrambleInfraAndLiteAmp)\b' \
   src/btech || true)
 
 while IFS= read -r match; do

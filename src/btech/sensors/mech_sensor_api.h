@@ -34,10 +34,11 @@ void Sensor_DoWeSeeNow(Mech *mech, unsigned short *fl, float range, int x,
                        int cloudbase, int seeanew, int wlf);
 void update_LOSinfo(DbRef obj, BattleMap *map);
 void add_sensor_info(char *buf, int size, Mech *mech, int sn, int verbose);
-char *mechSensorInfo(Mech *mech, char buffer[static LBUF_SIZE]);
-int CanChangeTo(Mech *mech, int s);
+char *mech_sensor_info(Mech *mech, char buffer[static LBUF_SIZE]);
+int mech_sensor_can_change_to(Mech *mech, int sensor);
 void sensor_light_availability_check(Mech *mech);
 void mech_sensor(DbRef player, void *data, char *buffer);
-void possibly_see_mech(Mech *mech);
-void ScrambleInfraAndLiteAmp(Mech *mech, int time, int chance, char *inframsg,
-                             char *liteampmsg);
+void mech_sensor_visibility_refresh(Mech *mech);
+void mech_sensors_scramble_infrared_and_liteamp(Mech *mech, int time,
+                                                int chance, char *inframsg,
+                                                char *liteampmsg);

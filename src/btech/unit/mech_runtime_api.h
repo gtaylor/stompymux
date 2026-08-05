@@ -23,6 +23,7 @@ DbRef mech_autopilot_dbref(const Mech *mech);
 void mech_autopilot_dbref_set(Mech *mech, DbRef autopilot);
 void mech_seen_count_decrement(Mech *mech);
 void mech_seen_count_reset(Mech *mech);
+void mech_blinded_set(Mech *mech, bool blinded);
 DbRef mech_carried_dbref(const Mech *mech);
 void mech_carried_dbref_set(Mech *mech, DbRef carried);
 bool mech_is_towed(const Mech *mech);

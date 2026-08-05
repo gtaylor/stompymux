@@ -13,3 +13,7 @@ int battle_map_unit_los_wood_count(const BattleMap *map, const Mech *observer,
                                    const Mech *target);
 int battle_map_unit_los_water_count(const BattleMap *map, const Mech *observer,
                                     const Mech *target);
+unsigned short battle_map_los_flags(const BattleMap *map, int observer_index,
+                                    int target_index);
+void battle_map_los_flags_set(BattleMap *map, int observer_index,
+                              int target_index, unsigned short flags);

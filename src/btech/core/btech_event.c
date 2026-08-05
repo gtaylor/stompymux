@@ -68,6 +68,12 @@ void mech_events_cancel_all(Mech *mech) {
   btech_events_cancel_all(mech_context(mech)->events, mech);
 }
 
+void mech_event_visit(Mech *mech, int type, MuxEventVisitor visitor,
+                      void *context) {
+  mux_event_visit_type_data(mech_context(mech)->events, type, mech, visitor,
+                            context);
+}
+
 bool mech_dumping_type(const Mech *mech, intptr_t type) {
   return mech_event_count_data(mech, EVENT_DUMP, type) ||
          mech_event_count_data(mech, EVENT_DUMP, 0);

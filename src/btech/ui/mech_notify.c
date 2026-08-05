@@ -34,7 +34,7 @@ void MechLOSBroadcast(Mech *mech, char *message) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char buf[LBUF_SIZE];
 
-  possibly_see_mech(mech);
+  mech_sensor_visibility_refresh(mech);
   if (!mech_map)
     return;
   for (i = 0; i < mech_map->first_free; i++)
@@ -150,8 +150,8 @@ void MechLOSBroadcasti(Mech *mech, Mech *target, const char *message) {
 
   if (!mech_map)
     return;
-  possibly_see_mech(mech);
-  possibly_see_mech(target);
+  mech_sensor_visibility_refresh(mech);
+  mech_sensor_visibility_refresh(target);
   for (i = 0; i < mech_map->first_free; i++)
     if (mech_map->mechsOnMap[i] != -1 &&
         mech_map->mechsOnMap[i] != mech_dbref(mech) &&
@@ -209,9 +209,9 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
       mech_shot_result_record(mech, false);
   }
 
-  possibly_see_mech(mech);
+  mech_sensor_visibility_refresh(mech);
   if (target) {
-    possibly_see_mech(target);
+    mech_sensor_visibility_refresh(target);
     mapx = mech_position_x(target);
     mapy = mech_position_y(target);
     fx = mech_position_real_x(target);

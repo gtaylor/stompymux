@@ -18,6 +18,8 @@ bool mech_is_any_ecm_disturbed(const Mech *mech);
 bool mech_has_tag_system(const Mech *mech);
 bool mech_tag_system_is_destroyed(const Mech *mech);
 bool mech_has_working_ecm_suite(const Mech *mech);
+bool mech_supports_sensor_requirement(const Mech *mech, int capability_set,
+                                      int signed_capability);
 bool mech_searchlight_warning_enabled(const Mech *mech);
 void mech_illumination_set(Mech *mech, bool illuminated);
 void mech_ecm_countered_set(Mech *mech, bool countered);

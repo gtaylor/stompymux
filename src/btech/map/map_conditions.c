@@ -41,6 +41,8 @@ int battle_map_light(const BattleMap *map) { return map->maplight; }
 
 int battle_map_visibility(const BattleMap *map) { return map->mapvis; }
 
+int battle_map_cloud_base(const BattleMap *map) { return map->cloudbase; }
+
 bool battle_map_is_dark(const BattleMap *map) {
   return map->flags & MAPFLAG_DARK;
 }

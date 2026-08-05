@@ -177,6 +177,7 @@ set(BTECH_SOURCES
   sensors/mech_scan_view.c
   sensors/mech_sensor.c
   sensors/mech_sensor_selection.c
+  sensors/mech_sensor_events.c
   sensors/mech_sensor_functions.c
   sensors/mech_spot.c
   sensors/mech_tag.c
