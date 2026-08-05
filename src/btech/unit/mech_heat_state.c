@@ -28,6 +28,10 @@ int mech_disabled_heat_sink_count(const Mech *mech) {
 
 int mech_engine_heat(const Mech *mech) { return mech->rd.engineheat; }
 
+void mech_engine_heat_set(Mech *mech, int heat) { mech->rd.engineheat = heat; }
+
+void mech_engine_heat_add(Mech *mech, int heat) { mech->rd.engineheat += heat; }
+
 bool mech_heat_cutoff_is_enabled(const Mech *mech) {
   return mech->rd.critstatus & HEATCUTOFF;
 }

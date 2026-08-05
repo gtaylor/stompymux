@@ -71,6 +71,7 @@ typedef enum MechTorsoTwist {
 } MechTorsoTwist;
 
 MechConditionSummary mech_condition_summary(const Mech *mech);
+bool mech_supercharger_movement_mode_is_enabled(const Mech *mech);
 void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist);
 void mech_arms_center(Mech *mech);
 void mech_arms_flip(Mech *mech);
@@ -83,5 +84,14 @@ void mech_swarm_target_set(Mech *mech, DbRef target);
 void mech_fallen_set(Mech *mech, bool fallen);
 void mech_hull_down_set(Mech *mech, bool hull_down);
 void mech_dug_in_set(Mech *mech, bool dug_in);
+void mech_digging_set(Mech *mech, bool digging);
 void mech_hidden_set(Mech *mech, bool hidden);
 void mech_spinning_set(Mech *mech, bool spinning);
+void mech_masc_enabled_set(Mech *mech, bool enabled);
+void mech_supercharger_enabled_set(Mech *mech, bool enabled);
+int mech_masc_counter_advance(Mech *mech);
+bool mech_masc_counter_regenerate(Mech *mech);
+int mech_supercharger_counter_advance(Mech *mech);
+bool mech_supercharger_counter_regenerate(Mech *mech);
+void mech_hip_damage_set(Mech *mech, bool damaged, bool destroyed);
+void mech_turret_jammed_set(Mech *mech, bool jammed);

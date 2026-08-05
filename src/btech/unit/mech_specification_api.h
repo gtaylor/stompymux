@@ -14,6 +14,8 @@ float mech_jump_speed(const Mech *mech);
 int mech_heat_sink_count(const Mech *mech);
 int mech_technology_flags(const Mech *mech);
 int mech_technology_flags_secondary(const Mech *mech);
+void mech_masc_technology_destroy(Mech *mech);
+void mech_supercharger_technology_destroy(Mech *mech);
 int mech_infantry_technology_flags(const Mech *mech);
 int mech_cargo_space(const Mech *mech);
 int mech_carrier_maximum_tonnage(const Mech *mech);

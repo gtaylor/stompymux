@@ -78,6 +78,10 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
   };
 }
 
+bool mech_supercharger_movement_mode_is_enabled(const Mech *mech) {
+  return mech->rd.status2 & SCHARGE_ENABLED;
+}
+
 void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist) {
   mech->rd.status &= ~(TORSO_RIGHT | TORSO_LEFT);
   if (twist == MECH_TORSO_LEFT)
@@ -150,6 +154,13 @@ void mech_dug_in_set(Mech *mech, bool dug_in) {
     mech->rd.tankcritstatus &= ~DUG_IN;
 }
 
+void mech_digging_set(Mech *mech, bool digging) {
+  if (digging)
+    mech->rd.tankcritstatus |= DIGGING_IN;
+  else
+    mech->rd.tankcritstatus &= ~DIGGING_IN;
+}
+
 void mech_hidden_set(Mech *mech, bool hidden) {
   if (hidden)
     mech->rd.critstatus |= HIDDEN;
@@ -162,4 +173,56 @@ void mech_spinning_set(Mech *mech, bool spinning) {
     mech->rd.critstatus |= SPINNING;
   else
     mech->rd.critstatus &= ~SPINNING;
+}
+
+void mech_masc_enabled_set(Mech *mech, bool enabled) {
+  if (enabled)
+    mech->rd.status |= MASC_ENABLED;
+  else
+    mech->rd.status &= ~MASC_ENABLED;
+}
+
+void mech_supercharger_enabled_set(Mech *mech, bool enabled) {
+  if (enabled)
+    mech->rd.status |= SCHARGE_ENABLED;
+  else
+    mech->rd.status &= ~SCHARGE_ENABLED;
+}
+
+int mech_masc_counter_advance(Mech *mech) { return mech->rd.masc_value++; }
+
+bool mech_masc_counter_regenerate(Mech *mech) {
+  if (mech->rd.masc_value <= 0)
+    return false;
+  mech->rd.masc_value--;
+  return true;
+}
+
+int mech_supercharger_counter_advance(Mech *mech) {
+  return mech->rd.scharge_value++;
+}
+
+bool mech_supercharger_counter_regenerate(Mech *mech) {
+  if (mech->rd.scharge_value <= 0)
+    return false;
+  mech->rd.scharge_value--;
+  return true;
+}
+
+void mech_hip_damage_set(Mech *mech, bool damaged, bool destroyed) {
+  if (damaged)
+    mech->rd.critstatus |= HIP_DAMAGED;
+  else
+    mech->rd.critstatus &= ~HIP_DAMAGED;
+  if (destroyed)
+    mech->rd.critstatus |= HIP_DESTROYED;
+  else
+    mech->rd.critstatus &= ~HIP_DESTROYED;
+}
+
+void mech_turret_jammed_set(Mech *mech, bool jammed) {
+  if (jammed)
+    mech->rd.tankcritstatus |= TURRET_JAMMED;
+  else
+    mech->rd.tankcritstatus &= ~TURRET_JAMMED;
 }

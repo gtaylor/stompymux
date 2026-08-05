@@ -33,6 +33,14 @@ int mech_technology_flags_secondary(const Mech *mech) {
   return mech->rd.specials2;
 }
 
+void mech_masc_technology_destroy(Mech *mech) {
+  mech->rd.specials &= ~MASC_TECH;
+}
+
+void mech_supercharger_technology_destroy(Mech *mech) {
+  mech->rd.specials2 &= ~SUPERCHARGER_TECH;
+}
+
 int mech_infantry_technology_flags(const Mech *mech) {
   return mech->rd.infantry_specials;
 }

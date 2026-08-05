@@ -24,6 +24,7 @@ typedef enum BattleTerrain {
   BATTLE_TERRAIN_SMOKE = ':',
   BATTLE_TERRAIN_SNOW = '+',
   BATTLE_TERRAIN_BUILDING = '@',
+  BATTLE_TERRAIN_WALL = '=',
 } BattleTerrain;
 typedef struct Mech Mech;
 typedef struct MapCodingRegistry MapCodingRegistry;

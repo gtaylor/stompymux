@@ -198,6 +198,14 @@ int mech_section_base_to_hit(const Mech *mech, int section) {
   return mech->ud.sections[section].basetohit;
 }
 
+void mech_section_base_to_hit_add(Mech *mech, int section, int modifier) {
+  mech->ud.sections[section].basetohit += modifier;
+}
+
+int mech_section_critical_count(const Mech *mech, int section) {
+  return CritsInLoc((Mech *)mech, section);
+}
+
 bool mech_part_is_structural_placeholder(int part_type) {
   return part_type == I2Special(ENDO_STEEL) ||
          part_type == I2Special(FERRO_FIBROUS) ||
