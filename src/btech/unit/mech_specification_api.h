@@ -25,6 +25,7 @@ void mech_masc_technology_destroy(Mech *mech);
 void mech_supercharger_technology_destroy(Mech *mech);
 int mech_infantry_technology_flags(const Mech *mech);
 int mech_cargo_space(const Mech *mech);
+void mech_cargo_space_remove(Mech *mech, int amount);
 int mech_carrier_maximum_tonnage(const Mech *mech);
 int mech_maximum_battle_suits(const Mech *mech);
 float mech_current_speed(const Mech *mech);

@@ -81,6 +81,10 @@ int mech_infantry_technology_flags(const Mech *mech) {
 
 int mech_cargo_space(const Mech *mech) { return mech->ud.cargospace; }
 
+void mech_cargo_space_remove(Mech *mech, int amount) {
+  mech->ud.cargospace -= amount;
+}
+
 int mech_carrier_maximum_tonnage(const Mech *mech) {
   return mech->ud.carmaxton;
 }
