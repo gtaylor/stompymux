@@ -65,7 +65,6 @@
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
-#include "registry_internal.h"
 #include "section_types.h"
 
 int tele_contents(BtechContext *context, DbRef from, DbRef to, int flag) {

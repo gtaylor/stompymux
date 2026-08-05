@@ -34,7 +34,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/red_black_tree.h"
 #include "registry_api.h"
-#include "registry_internal.h"
 #include "special_object.h"
 #include "weapon_settings.h"
 
@@ -73,9 +72,6 @@ struct DebugMemoryContext {
   int *total;
   DbRef detail_player;
 };
-extern const int global_specials;
-extern const BtechSpecialObjectDefinition SpecialObjects[];
-
 static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   const DbRef key_val = (DbRef)key;
   BtechSpecialObject *const xcode_obj = data;
@@ -84,7 +80,7 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   int size;
   BattleMap *map;
 
-  size = (int)btech_special_object_data_size(&SpecialObjects[xcode_obj->type]);
+  size = (int)btech_special_object_storage_size(xcode_obj->type);
 
   switch (xcode_obj->type) {
   case GTYPE_MAP:
@@ -111,11 +107,12 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   memory->number[xcode_obj->type]++;
 
   if (memory->detail_player > 0)
-    notify_printf(
-        btech_context_evaluation(xcode_obj->context), memory->detail_player,
-        "#%5ld: %10s %5ld", key_val, SpecialObjects[xcode_obj->type].type,
-        xcode_obj->type == GTYPE_AUTO ? ((Autopilot *)xcode_obj)->mymechnum
-                                      : 0);
+    notify_printf(btech_context_evaluation(xcode_obj->context),
+                  memory->detail_player, "#%5ld: %10s %5ld", key_val,
+                  btech_special_object_type_name(xcode_obj->type),
+                  xcode_obj->type == GTYPE_AUTO
+                      ? ((Autopilot *)xcode_obj)->mymechnum
+                      : 0);
 
   return 1;
 }
@@ -124,14 +121,15 @@ void debug_memory(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
   BtechContext *context = debug->context;
   int i, gtotal = 0;
+  int type_count = btech_special_object_type_count();
   DebugMemoryContext memory = {0};
 
-  Create(memory.number, int, global_specials);
-  Create(memory.smallest, int, global_specials);
-  Create(memory.largest, int, global_specials);
-  Create(memory.total, int, global_specials);
+  Create(memory.number, int, type_count);
+  Create(memory.smallest, int, type_count);
+  Create(memory.largest, int, type_count);
+  Create(memory.total, int, type_count);
 
-  for (i = 0; i < global_specials; i++) {
+  for (i = 0; i < type_count; i++) {
     memory.number[i] = 0;
     memory.smallest[i] = -1;
     memory.largest[i] = -1;
@@ -144,19 +142,19 @@ void debug_memory(DbRef player, void *data, char *buffer) {
     memory.detail_player = -1;
   red_black_tree_walk(context->special_objects, WALK_INORDER, debug_check_stuff,
                       &memory);
-  for (i = 0; i < global_specials; i++) {
+  for (i = 0; i < type_count; i++) {
     if (memory.number[i]) {
       if (memory.smallest[i] == memory.largest[i])
         notify_printf(btech_context_evaluation(debug->context), player,
                       "%4d %-20s: %d bytes total, %d each", memory.number[i],
-                      SpecialObjects[i].type, memory.total[i],
+                      btech_special_object_type_name(i), memory.total[i],
                       memory.total[i] / memory.number[i]);
       else
         notify_printf(btech_context_evaluation(debug->context), player,
                       "%4d %-20s: %d bytes total, %d avg, %d/%d small/large",
-                      memory.number[i], SpecialObjects[i].type, memory.total[i],
-                      memory.total[i] / memory.number[i], memory.smallest[i],
-                      memory.largest[i]);
+                      memory.number[i], btech_special_object_type_name(i),
+                      memory.total[i], memory.total[i] / memory.number[i],
+                      memory.smallest[i], memory.largest[i]);
     }
     gtotal += memory.total[i];
   }

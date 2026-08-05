@@ -96,6 +96,20 @@ const BtechSpecialObjectDefinition SpecialObjects[BTECH_SPECIAL_OBJECT_COUNT] =
      {"TURRET", turretcommands, sizeof(Turret), nullptr,
       turret_lifecycle_update, 0, nullptr, POWER_NONE}};
 
+int btech_special_object_type_count(void) { return BTECH_SPECIAL_OBJECT_COUNT; }
+
+const char *btech_special_object_type_name(int type) {
+  if (type < 0 || type >= BTECH_SPECIAL_OBJECT_COUNT)
+    return "Unknown";
+  return SpecialObjects[type].type;
+}
+
+size_t btech_special_object_storage_size(int type) {
+  if (type < 0 || type >= BTECH_SPECIAL_OBJECT_COUNT)
+    return 0;
+  return btech_special_object_data_size(&SpecialObjects[type]);
+}
+
 #define NUM_SPECIAL_OBJECTS BTECH_SPECIAL_OBJECT_COUNT
 
 /* Prototypes */

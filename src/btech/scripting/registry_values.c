@@ -520,7 +520,7 @@ void list_xcodestuff(DbRef player, void *data, char *buffer) {
       tprintf("Data for %s (%s)",
               game_object_name(context->database,
                                game_object_location(context->database, player)),
-              SpecialObjects[t].type));
+              btech_special_object_type_name(t)));
   addline();
   if (*buffer == '1') {
     flag = CM_ONE;

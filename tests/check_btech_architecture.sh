@@ -30,6 +30,30 @@ while IFS= read -r path; do
   fi
 done < <(find src/btech -type f -print | sort)
 
+if [[ -e src/btech/unit/mech.h ]]; then
+  echo "src/btech/unit/mech.h: aggregate Mech layout header is not allowed"
+  status=1
+fi
+
+while IFS= read -r match; do
+  echo "$match: non-unit source includes a private unit layout header"
+  status=1
+done < <(rg -n '^#include "(mech_internal|mech_macros)\.h"' src/btech \
+  -g '*.[ch]' -g '!src/btech/unit/**' || true)
+
+while IFS= read -r match; do
+  echo "$match: non-special source includes the private registry layout"
+  status=1
+done < <(rg -n '^#include "registry_internal\.h"' src/btech \
+  -g '*.[ch]' -g '!src/btech/special/**' || true)
+
+while IFS= read -r match; do
+  echo "$match: non-unit source requires a complete Mech value"
+  status=1
+done < <(rg -n 'sizeof\(Mech\)|\bMech[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[;=]' \
+  src/btech -g '*.[ch]' -g '!src/btech/unit/**' | \
+  rg -v 'typedef struct Mech' || true)
+
 while IFS= read -r match; do
   echo "$match: MUX includes a private BTech header"
   status=1

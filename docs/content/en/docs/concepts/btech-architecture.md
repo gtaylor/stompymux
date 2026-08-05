@@ -34,6 +34,24 @@ Each domain owns both its state and the operations that change that state:
 Concrete `Mech`, `BattleMap`, `Autopilot`, and runtime-context layouts are
 private. Cross-domain interfaces use forward declarations, database object
 references, or domain operations rather than copying another domain's state.
+`unit/mech_internal.h` and `unit/mech_macros.h` may only be included by unit
+sources. The special-object command and lifecycle definitions in
+`special/registry_internal.h` likewise remain inside `special`.
+
+The dependency direction is deliberately shallow:
+
+```text
+MUX -> include/btech -> integration/commands
+                         |
+            ui/scripting/persistence
+                         |
+ gameplay domains -> unit/map/special -> core
+```
+
+Presentation, persistence, and MUX adapters call domain operations. They do not
+receive mutable layout views. Template discovery, legacy template parsing, and
+template cache ownership are unit responsibilities; repair only supplies the
+player commands that invoke those operations.
 
 ## Public boundary
 
@@ -66,3 +84,21 @@ events, persistence records, and presentation adapters should call that domain
 through typed interfaces. Headers include their direct dependencies and must
 compile without relying on inclusion order. Constants use uppercase names,
 types use PascalCase, and functions use subject-prefixed snake_case.
+
+- Add a domain operation to the smallest focused API owned by that domain, then
+  call it from the command or adapter. Do not add a generic field accessor.
+- Add a command descriptor beside its owning domain behavior, preserving the
+  command spelling, authorization flags, help, and argument handling.
+- Add an event with a typed scheduling operation and keep cancellation in the
+  lifecycle of the object that owns the event.
+- Add a persisted field to the domain snapshot first, then teach the SQLite
+  adapter to store and restore that snapshot. Persistence never reads a private
+  layout.
+- Add weapons and immutable catalogue entries in `unit`; gameplay domains query
+  the catalogue through unit interfaces.
+- Add a special-object type with its lifecycle and command descriptors in
+  `special`, exposing only typed lookup and dispatch operations to callers.
+
+The architecture check rejects files over 800 lines, dotted or generated-style
+filenames, private unit or registry headers outside their owner, complete
+`Mech` values outside `unit`, and known legacy exported names.

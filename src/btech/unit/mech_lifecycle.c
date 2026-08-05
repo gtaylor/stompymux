@@ -266,4 +266,13 @@ Mech *mech_temporary_create(BtechContext *context) {
   return mech;
 }
 
+Mech *mech_temporary_clone(const Mech *source) {
+  if (source == nullptr)
+    return nullptr;
+  Mech *mech = malloc(sizeof(*mech));
+  if (mech != nullptr)
+    memcpy(mech, source, sizeof(*mech));
+  return mech;
+}
+
 void mech_temporary_destroy(Mech *mech) { free(mech); }

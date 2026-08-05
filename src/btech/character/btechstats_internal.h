@@ -68,7 +68,6 @@
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
-#include "registry_internal.h"
 #include "section_types.h"
 int character_value_by_code(BtechContext *context, DbRef player, int code);
 void character_stats_clear(PSTATS *stats);

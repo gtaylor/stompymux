@@ -3,6 +3,7 @@
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
+#include "mech_lifecycle.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
 
@@ -54,13 +55,13 @@ char *mechTechTimefunc(Mech *mech, char buffer[static LBUF_SIZE]) {
 }
 
 void apply_mechDamage(Mech *omech, char *buf) {
-  Mech mek;
-  Mech *mech = &mek;
+  Mech *mech = mech_temporary_clone(omech);
   int i, j, i1, i2, i3;
   char *s;
   int do_mag = 0;
 
-  memcpy(mech, omech, sizeof(Mech));
+  if (mech == nullptr)
+    return;
   for (i = 0; i < NUM_SECTIONS; i++) {
     mech_section_internal_set(mech, i, mech_section_original_internal(mech, i));
     mech_section_armor_set(mech, i, mech_section_original_armor(mech, i));
@@ -155,6 +156,7 @@ void apply_mechDamage(Mech *omech, char *buf) {
   }
   if (do_mag && mech_class(omech) == CLASS_MECH)
     do_magic(omech);
+  mech_temporary_destroy(mech);
 }
 
 #define ADD(...)                                                               \

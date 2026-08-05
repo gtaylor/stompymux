@@ -66,7 +66,6 @@
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
-#include "registry_internal.h"
 #include "section_types.h"
 
 void mech_embark(DbRef player, void *data, char *buffer) {

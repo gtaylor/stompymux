@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "mech_internal.h"
+#include "equipment_types.h"
 
 typedef struct PartNameEntry {
   char *shorty;
