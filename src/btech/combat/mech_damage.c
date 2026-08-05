@@ -504,7 +504,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   }
   /* Check to see if we blow up ammo that's dumping. */
   if (tBlowDumpingAmmo) {
-    BlowDumpingAmmo(wounded, attacker, hitloc);
+    mech_ammunition_dump_explode(wounded, attacker, hitloc);
   }
 }
 

@@ -5,17 +5,17 @@
 
 #include "mux/server/platform.h"
 
-int Dump_Decrease(Mech *mech, int loc, int pos, int *hm);
+int mech_ammunition_dump_decrease(Mech *mech, int loc, int pos, int *hm);
 void mech_dump(DbRef player, void *data, char *buffer);
-void BlowDumpingAmmo(Mech *mech, Mech *attacker, int wHitLoc);
+void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc);
 typedef struct BtechContext BtechContext;
 
-int FindMaxAmmoDamage(BtechContext *context, int wWeapIdx);
+int weapon_maximum_ammunition_damage(BtechContext *context, int weapon_index);
 
-struct objDumpingAmmo {
-  int wDamage;
-  int wLocation;
-  int wSlot;
-  int wWeapIdx;
-  int wPartType;
-};
+typedef struct DumpingAmmunitionItem {
+  int damage;
+  int location;
+  int slot;
+  int weapon_index;
+  int part_type;
+} DumpingAmmunitionItem;

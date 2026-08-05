@@ -533,8 +533,9 @@ void mech_ammunition_critical_apply(Mech *objMech, Mech *objAttacker, int wLoc,
       if (IsAmmo(wPartType) &&
           mech_critical_data(objMech, wSecIter, wSlotIter) &&
           (!(MechWeapons[wWeapIdx].special & GAUSS))) {
-        wTempDamage = FindMaxAmmoDamage(context, Ammo2WeaponI(wPartType)) *
-                      mech_critical_data(objMech, wSecIter, wSlotIter);
+        wTempDamage =
+            weapon_maximum_ammunition_damage(context, Ammo2WeaponI(wPartType)) *
+            mech_critical_data(objMech, wSecIter, wSlotIter);
         wTotalAmmoDamage += wTempDamage;
 
         mech_critical_data_set(objMech, wSecIter, wSlotIter, 0);
