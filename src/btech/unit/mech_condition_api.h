@@ -59,6 +59,7 @@ typedef struct MechConditionSummary {
   bool torso_right;
   bool torso_left;
   bool spinning;
+  bool self_destruct_safe;
   DbRef swarm_target;
   int supercharger_counter;
   int masc_counter;
@@ -75,6 +76,7 @@ bool mech_supercharger_movement_mode_is_enabled(const Mech *mech);
 void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist);
 void mech_arms_center(Mech *mech);
 void mech_arms_flip(Mech *mech);
+void mech_ams_enabled_set(Mech *mech, bool enabled);
 void mech_evading_set(Mech *mech, bool evading);
 void mech_sprinting_set(Mech *mech, bool sprinting);
 void mech_dfa_attacking_set(Mech *mech, bool attacking);

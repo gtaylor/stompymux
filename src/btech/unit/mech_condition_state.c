@@ -72,6 +72,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .torso_right = status & TORSO_RIGHT,
       .torso_left = status & TORSO_LEFT,
       .spinning = critical_status & SPINNING,
+      .self_destruct_safe = status & EXPLODE_SAFE,
       .swarm_target = mech->rd.swarming,
       .supercharger_counter = mech->rd.scharge_value,
       .masc_counter = mech->rd.masc_value,
@@ -93,6 +94,13 @@ void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist) {
 void mech_arms_center(Mech *mech) { mech->rd.status &= ~FLIPPED_ARMS; }
 
 void mech_arms_flip(Mech *mech) { mech->rd.status |= FLIPPED_ARMS; }
+
+void mech_ams_enabled_set(Mech *mech, bool enabled) {
+  if (enabled)
+    mech->rd.status |= AMS_ENABLED;
+  else
+    mech->rd.status &= ~AMS_ENABLED;
+}
 
 void mech_evading_set(Mech *mech, bool evading) {
   if (evading)

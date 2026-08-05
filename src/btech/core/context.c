@@ -144,6 +144,27 @@ int btech_context_landing_zone_mode(const BtechContext *context) {
              : 0;
 }
 
+int btech_context_self_destruct_time(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_explode_time;
+}
+
+bool btech_context_self_destruct_can_stop(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_explode_stop;
+}
+
+bool btech_context_self_destruct_ammunition_enabled(
+    const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_explode_ammo;
+}
+
+bool btech_context_self_destruct_reactor_enabled(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_explode_reactor;
+}
+
 bool btech_context_requires_backwalk_rolls(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_roll_on_backwalk;

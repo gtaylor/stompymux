@@ -21,6 +21,14 @@ bool mech_critical_is_damaged(const Mech *mech, int section, int critical);
 void mech_critical_temporary_failure_set(Mech *mech, int section, int critical,
                                          int failure);
 void mech_critical_data_set(Mech *mech, int section, int critical, int data);
+void mech_critical_fire_mode_clear(Mech *mech, int section, int critical,
+                                   int modes);
+void mech_critical_fire_mode_add(Mech *mech, int section, int critical,
+                                 int modes);
+void mech_critical_ammo_mode_clear(Mech *mech, int section, int critical,
+                                   int modes);
+void mech_critical_ammo_mode_add(Mech *mech, int section, int critical,
+                                 int modes);
 void mech_critical_part_type_set(Mech *mech, int section, int critical,
                                  int part_type);
 void mech_critical_destroyed_set(Mech *mech, int section, int critical,
@@ -42,6 +50,7 @@ bool mech_has_attached_inarc_ecm(const Mech *mech);
 bool mech_has_attached_homing_beacon(const Mech *mech);
 bool mech_limbs_are_recycling(const Mech *mech);
 bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical);
+bool mech_section_has_recycling_weapon(const Mech *mech, int section);
 bool mech_weapon_is_nonfunctional_at(Mech *mech, int section, int critical,
                                      int weapon_index);
 int mech_section_recycle_ticks(const Mech *mech, int section);

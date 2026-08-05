@@ -66,6 +66,26 @@ void mech_critical_data_set(Mech *mech, int section, int critical, int data) {
   mech->ud.sections[section].criticals[critical].data = data;
 }
 
+void mech_critical_fire_mode_clear(Mech *mech, int section, int critical,
+                                   int modes) {
+  mech->ud.sections[section].criticals[critical].firemode &= ~modes;
+}
+
+void mech_critical_fire_mode_add(Mech *mech, int section, int critical,
+                                 int modes) {
+  mech->ud.sections[section].criticals[critical].firemode |= modes;
+}
+
+void mech_critical_ammo_mode_clear(Mech *mech, int section, int critical,
+                                   int modes) {
+  mech->ud.sections[section].criticals[critical].ammomode &= ~modes;
+}
+
+void mech_critical_ammo_mode_add(Mech *mech, int section, int critical,
+                                 int modes) {
+  mech->ud.sections[section].criticals[critical].ammomode |= modes;
+}
+
 void mech_critical_part_type_set(Mech *mech, int section, int critical,
                                  int part_type) {
   mech->ud.sections[section].criticals[critical].type = part_type;
@@ -170,6 +190,10 @@ bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical) {
          IsWeapon(mech_critical_part_type(mech, section, critical)) &&
          !mech_critical_is_nonfunctional(mech, section, critical) &&
          !mech_section_is_destroyed(mech, section);
+}
+
+bool mech_section_has_recycling_weapon(const Mech *mech, int section) {
+  return SectHasBusyWeap((Mech *)mech, section);
 }
 
 bool mech_weapon_is_nonfunctional_at(Mech *mech, int section, int critical,
