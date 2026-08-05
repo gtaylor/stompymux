@@ -36,6 +36,7 @@ void mech_seen_count_increment(Mech *mech);
 void mech_seen_count_reset(Mech *mech);
 void mech_possible_contact_count_increment(Mech *mech);
 void mech_blinded_set(Mech *mech, bool blinded);
+void mech_fired_recently_set(Mech *mech, bool fired);
 DbRef mech_carried_dbref(const Mech *mech);
 void mech_carried_dbref_set(Mech *mech, DbRef carried);
 bool mech_is_towed(const Mech *mech);

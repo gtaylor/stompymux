@@ -76,7 +76,7 @@ void UpdatePilotSkillRolls(Mech *mech) {
     }
   }
   if (MechType(mech) == CLASS_MECH)
-    CheckDamage(mech);
+    mech_damage_stagger_check(mech);
   else
     MechTurnDamage(mech) = 0;
   if ((temp_tick % TURN) == 0) {

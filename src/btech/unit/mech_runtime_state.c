@@ -38,6 +38,13 @@ void mech_blinded_set(Mech *mech, bool blinded) {
     mech->rd.status &= ~BLINDED;
 }
 
+void mech_fired_recently_set(Mech *mech, bool fired) {
+  if (fired)
+    mech->rd.status |= FIRED;
+  else
+    mech->rd.status &= ~FIRED;
+}
+
 bool mech_suppresses_gunnery_experience(const Mech *mech) {
   return mech->rd.status2 & NO_GUN_XP;
 }

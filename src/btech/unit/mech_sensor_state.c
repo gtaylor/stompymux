@@ -18,6 +18,10 @@ bool mech_is_fallen(const Mech *mech) { return mech->rd.status & FALLEN; }
 
 bool mech_is_jellied(const Mech *mech) { return mech->rd.critstatus & JELLIED; }
 
+void mech_sensor_visibility_modifier_set(Mech *mech, int modifier) {
+  mech->rd.vis_mod = modifier;
+}
+
 bool mech_searchlight_active(const Mech *mech) {
   return mech->rd.status2 & SLITE_ON;
 }

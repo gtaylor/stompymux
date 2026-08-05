@@ -19,3 +19,5 @@ bool mech_uses_heat(const Mech *mech) {
   return mech->ud.type == CLASS_MECH || mech->ud.type == CLASS_AERO ||
          mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS;
 }
+
+float mech_added_heat(const Mech *mech) { return mech->rd.plus_heat; }

@@ -8,30 +8,53 @@
  *       All rights reserved
  */
 
-#include "mech_update_internal.h"
+#include "mech_update_api.h"
+
+#include "aero_move_api.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_ecm_api.h"
+#include "mech_heat_api.h"
+#include "mech_identity_api.h"
+#include "mech_lite_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_tag_api.h"
+#include "mech_utils_api.h"
+
+static int mech_visibility_clamp(int visibility) {
+  if (visibility < 0)
+    return 0;
+  if (visibility > 100)
+    return 100;
+  return visibility;
+}
 
 void mech_update(DbRef key, void *data) {
-  Mech *mech = (Mech *)data;
+  Mech *mech = data;
 
   if (!mech)
     return;
-  MechStatus(mech) &= ~FIRED;
-  if (is_aero(mech)) {
+  mech_fired_recently_set(mech, false);
+  if (mech_is_aerospace_unit(mech)) {
     aero_update(mech);
     return;
   }
-  if (Started(mech) || Uncon(mech))
+  if (mech_is_started(mech) || mech_pilot_is_unconscious(mech))
     UpdatePilotSkillRolls(mech);
-  if (Started(mech) || MechPlusHeat(mech) > 0.1)
+  if (mech_is_started(mech) || mech_added_heat(mech) > 0.1F)
     UpdateHeat(mech);
-  if (Started(mech))
-    MechVisMod(mech) = BOUNDED(
-        0, MechVisMod(mech) + btech_random_range(mech->xcode.context, -40, 40),
-        100);
+  if (mech_is_started(mech)) {
+    int visibility = mech_sensor_visibility_modifier(mech) +
+                     btech_random_range(mech_context(mech), -40, 40);
+    mech_sensor_visibility_modifier_set(mech,
+                                        mech_visibility_clamp(visibility));
+  }
   mech_ecm_check(mech);
   mech_tag_check(mech);
   end_lite_check(mech);
 
-  if (MechStatus2(mech) & AUTOTURN_TURRET)
+  if (mech_condition_summary(mech).turret_auto_turn)
     updateAutoturnTurret(mech);
 }

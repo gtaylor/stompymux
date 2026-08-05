@@ -573,7 +573,7 @@ void check_stagger_event(MuxEvent *event) {
    * points of 'buffer' to mech that was just forced to make a stager roll.
    * Mechs whose damage accumulation times out without making a roll (<20
    * damage) don't get this help. This 10 points of damage assistance slowly
-   * times out in CheckDamage, or can be erased by weapons fire */
+   * times out in mech_damage_stagger_check, or can be erased by weapons fire */
   mech->rd.staggerDamage = -10;
 }
 

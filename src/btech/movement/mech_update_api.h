@@ -35,7 +35,7 @@ int recycle_weaponry(Mech *mech);
 int SkidMod(float Speed);
 void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                    int last_z);
-void CheckDamage(Mech *wounded);
+void mech_damage_stagger_check(Mech *wounded);
 void UpdatePilotSkillRolls(Mech *mech);
 void updateAutoturnTurret(Mech *mech);
 void mech_update(DbRef key, void *data);

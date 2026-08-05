@@ -471,6 +471,20 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "mech_update_internal\.h"|#include "(mech|mech_macros)\.h"|mech->|wounded->|\b(Mech[A-Z][A-Za-z0-9_]*|Started|Uncon|Jumping|Fallen|OODing|IsDS|is_aero)\s*\(' \
+  src/btech/movement/mech_update_damage.c \
+  src/btech/movement/mech_update_heartbeat.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: update coordinators must use opaque unit APIs"
+  status=1
+fi
+
+match=$(rg -n '\bCheckDamage\b' src/btech || true)
+if [[ -n "$match" ]]; then
+  echo "$match: legacy damage-update export is not allowed"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1
