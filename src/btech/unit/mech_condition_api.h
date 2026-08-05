@@ -57,7 +57,9 @@ typedef struct MechConditionSummary {
   bool turret_locked;
   bool tail_rotor_destroyed;
   bool hip_damaged;
+  bool hip_destroyed;
   bool gyro_damaged;
+  bool hardened_gyro_damaged;
   bool torso_right;
   bool torso_left;
   bool spinning;

@@ -224,7 +224,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
       tDoAutoFall = 1;
       mech_event_cancel(wounded, EVENT_STAND);
     }
-    NormalizeAllActuatorCrits(wounded);
+    mech_actuator_criticals_normalize(wounded);
     if (tIsLeg && !Fallen(wounded) && !Jumping(wounded) && !OODing(wounded) &&
         attacker) {
       if (tDoAutoFall) {

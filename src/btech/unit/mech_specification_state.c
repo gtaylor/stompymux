@@ -75,6 +75,10 @@ void mech_current_speed_reduce_toward_zero(Mech *mech, float amount) {
 
 float mech_maximum_speed(const Mech *mech) { return mech->ud.maxspeed; }
 
+float mech_template_maximum_speed(const Mech *mech) {
+  return mech->ud.template_maxspeed;
+}
+
 void mech_maximum_speed_set(Mech *mech, float speed) {
   mech->ud.maxspeed = speed;
 }

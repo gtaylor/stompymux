@@ -61,6 +61,7 @@ void mech_section_recycle_ticks_set(Mech *mech, int section, int ticks);
 int mech_last_weapon_recycle_tick(const Mech *mech);
 void mech_last_weapon_recycle_tick_set(Mech *mech, int tick);
 int mech_section_base_to_hit(const Mech *mech, int section);
+void mech_section_base_to_hit_set(Mech *mech, int section, int modifier);
 void mech_section_base_to_hit_add(Mech *mech, int section, int modifier);
 int mech_section_critical_count(const Mech *mech, int section);
 bool mech_part_is_structural_placeholder(int part_type);

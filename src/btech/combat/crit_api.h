@@ -14,8 +14,8 @@
 #include "mux/server/platform.h"
 
 /* crit.c */
-void correct_speed(Mech *mech);
-void explode_unit(Mech *wounded, Mech *attacker);
+void mech_speed_correct(Mech *mech);
+void mech_explosion_apply(Mech *wounded, Mech *attacker);
 int handleWeaponCrit(Mech *attacker, Mech *wounded, int hitloc, int critHit,
                      int critType, int LOS);
 void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
@@ -55,7 +55,9 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                    int critHit, int critType, int critData);
 void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                           int num);
-void NormalizeArmActuatorCrits(Mech *objMech, int wLoc, int wCritType);
-void NormalizeLegActuatorCrits(Mech *objMech, int wLoc, int wCritType);
-void NormalizeLocActuatorCrits(Mech *objMech, int wLoc);
-void NormalizeAllActuatorCrits(Mech *objMech);
+void mech_arm_actuator_criticals_normalize(Mech *objMech, int wLoc,
+                                           int wCritType);
+void mech_leg_actuator_criticals_normalize(Mech *objMech, int wLoc,
+                                           int wCritType);
+void mech_section_actuator_criticals_normalize(Mech *objMech, int wLoc);
+void mech_actuator_criticals_normalize(Mech *objMech);

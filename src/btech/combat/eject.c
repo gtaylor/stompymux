@@ -554,5 +554,5 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   }
 
   fix_pilotdamage(mech, MechPilot(mech));
-  correct_speed(target);
+  mech_speed_correct(target);
 } /* end mech_udisembark */

@@ -134,7 +134,7 @@ void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s fule tank explodes in a ball of fire!");
     DestroyMech(wounded, attacker, 1, KILL_TYPE_FUELTANK);
-    explode_unit(wounded, attacker);
+    mech_explosion_apply(wounded, attacker);
     break;
   case 5:
     /* Ammo/Power Plant Explodes */
@@ -143,7 +143,7 @@ void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
       mech_los_broadcast(wounded, "'s power plant suddenly explodes!");
     DestroyMech(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
     if (!mech_section_has_special(wounded, BSIDE, CASE_TECH))
-      explode_unit(wounded, attacker);
+      mech_explosion_apply(wounded, attacker);
     else
       DestroySection(wounded, attacker, LOS, BSIDE);
     break;
@@ -256,7 +256,7 @@ void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s fuel tank explodes in a ball of fire!");
     DestroyMech(wounded, attacker, 1, KILL_TYPE_FUELTANK);
-    explode_unit(wounded, attacker);
+    mech_explosion_apply(wounded, attacker);
     break;
   case 5:
     /* Ammo/Power Plant Explodes */
@@ -264,7 +264,7 @@ void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s power plant suddenly explodes!");
     DestroyMech(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
-    explode_unit(wounded, attacker);
+    mech_explosion_apply(wounded, attacker);
     break;
   }
 }

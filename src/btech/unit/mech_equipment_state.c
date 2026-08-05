@@ -237,6 +237,10 @@ int mech_section_base_to_hit(const Mech *mech, int section) {
   return mech->ud.sections[section].basetohit;
 }
 
+void mech_section_base_to_hit_set(Mech *mech, int section, int modifier) {
+  mech->ud.sections[section].basetohit = modifier;
+}
+
 void mech_section_base_to_hit_add(Mech *mech, int section, int modifier) {
   mech->ud.sections[section].basetohit += modifier;
 }

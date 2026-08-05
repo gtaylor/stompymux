@@ -428,7 +428,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       if (tLocIsArm) {
         mech_notify(wounded, MECHALL,
                     "Your shoulder joint takes a hit and is frozen!");
-        NormalizeLocActuatorCrits(wounded, hitloc);
+        mech_section_actuator_criticals_normalize(wounded, hitloc);
       } else if (tLocIsLeg) {
         if (!Destroyed(wounded) && Started(wounded)) {
           snprintf(msgbuf, MBUF_SIZE, "'s hip locks into place!");
@@ -445,7 +445,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
             MechCritStatus(wounded) |= HIP_DESTROYED;
         }
 
-        NormalizeAllActuatorCrits(wounded);
+        mech_actuator_criticals_normalize(wounded);
 
         if (attacker && !Jumping(wounded) && !OODing(wounded) &&
             !MadePilotSkillRoll(wounded, 0)) {
@@ -480,7 +480,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                              "'s tow lines release and flap freely behind it!");
           mech_dropoff(GOD, mech, "");
         }
-        NormalizeLocActuatorCrits(wounded, hitloc);
+        mech_section_actuator_criticals_normalize(wounded, hitloc);
       } else if (tLocIsLeg) {
         mech_notify(wounded, MECHALL,
                     "One of your leg actuators is destroyed!");
@@ -494,7 +494,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
             mech_los_broadcast(wounded, msgbuf);
           }
 
-          NormalizeAllActuatorCrits(wounded);
+          mech_actuator_criticals_normalize(wounded);
 
           if (attacker && !Jumping(wounded) && !OODing(wounded) &&
               !MadePilotSkillRoll(wounded, 0)) {

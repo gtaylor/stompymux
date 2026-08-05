@@ -176,7 +176,7 @@ void heat_effect(Mech *mech, Mech *tempMech, int heatdam, int fromInferno) {
                     "The heat's too much for your vehicle! It blows up!");
         mech_mark_destroyed(tempMech);
         ChannelEmitKill(tempMech, mech, KILL_TYPE_HEAT);
-        explode_unit(tempMech, mech ? mech : tempMech);
+        mech_explosion_apply(tempMech, mech ? mech : tempMech);
       }
     }
   } else {

@@ -417,7 +417,7 @@ void mech_loadcargo(DbRef player, void *data, char *buffer) {
     return;
   stuff_change_sub(context, player, buffer, mech_dbref(mech),
                    mech_map_dbref(mech), 1, 1);
-  correct_speed(mech);
+  mech_speed_correct(mech);
 }
 
 void mech_unloadcargo(DbRef player, void *data, char *buffer) {
@@ -429,7 +429,7 @@ void mech_unloadcargo(DbRef player, void *data, char *buffer) {
                   "This unit cannot haul cargo!");
   stuff_change_sub(context, player, buffer, mech_dbref(mech),
                    mech_map_dbref(mech), -1, 1);
-  correct_speed(mech);
+  mech_speed_correct(mech);
 }
 
 void mech_Rresetstuff(DbRef player, void *data, char *buffer) {

@@ -25,6 +25,7 @@ void mech_current_speed_set(Mech *mech, float speed);
 void mech_current_speed_scale(Mech *mech, float factor);
 void mech_current_speed_reduce_toward_zero(Mech *mech, float amount);
 float mech_maximum_speed(const Mech *mech);
+float mech_template_maximum_speed(const Mech *mech);
 void mech_maximum_speed_set(Mech *mech, float speed);
 bool mech_is_flying_type(const Mech *mech);
 bool mech_is_omni(const Mech *mech);

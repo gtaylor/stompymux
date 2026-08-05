@@ -7,6 +7,7 @@ void mech_pilot_dbref_set(Mech *mech, DbRef pilot);
 DbRef mech_gunner_dbref(const Mech *mech);
 int mech_pilot_status(const Mech *mech);
 int mech_pilot_skill_modifier(const Mech *mech);
+void mech_pilot_skill_modifier_set(Mech *mech, int modifier);
 void mech_pilot_skill_modifier_add(Mech *mech, int modifier);
 void mech_pilot_status_set(Mech *mech, int status);
 void mech_pilot_status_add(Mech *mech, int damage);

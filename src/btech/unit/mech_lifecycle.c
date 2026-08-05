@@ -146,7 +146,7 @@ bool mech_has_active_gunner(const Mech *mech) {
 void mech_max_speed_set(Mech *mech, float speed) {
   MechMaxSpeed(mech) = speed;
   MechCritStatus(mech) &= ~SPEED_OK;
-  correct_speed(mech);
+  mech_speed_correct(mech);
 }
 
 void mech_max_speed_lower(Mech *mech, float amount) {

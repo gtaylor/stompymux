@@ -99,7 +99,7 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
       mech_los_broadcast(mech, "wobbles violently.");
 
     mech_max_speed_lower(mech, MP1);
-    correct_speed(mech);
+    mech_speed_correct(mech);
   } else {
     if (mech_condition_summary(mech).fallen)
       mech_notify(mech, MECHALL,
@@ -117,6 +117,6 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
 
     mech_max_speed_set(mech, 0.0);
     mech_make_fall(mech);
-    correct_speed(mech);
+    mech_speed_correct(mech);
   }
 }

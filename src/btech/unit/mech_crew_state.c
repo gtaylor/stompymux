@@ -18,6 +18,10 @@ int mech_pilot_skill_modifier(const Mech *mech) {
   return mech->rd.pilotskillbase;
 }
 
+void mech_pilot_skill_modifier_set(Mech *mech, int modifier) {
+  mech->rd.pilotskillbase = modifier;
+}
+
 void mech_pilot_skill_modifier_add(Mech *mech, int modifier) {
   mech->rd.pilotskillbase += modifier;
 }

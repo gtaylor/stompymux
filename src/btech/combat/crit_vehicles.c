@@ -135,7 +135,7 @@ void DoVehicleFuelTankCrit(Mech *objMech, Mech *objAttacker) {
   MechSpeed(objMech) = 0.0;
   MechVerticalSpeed(objMech) = 0.0;
   DestroyMech(objMech, objAttacker, 1, KILL_TYPE_FUELTANK);
-  explode_unit(objMech, objAttacker);
+  mech_explosion_apply(objMech, objAttacker);
 }
 
 void DoVehicleCrewStunnedCrit(Mech *objMech) {
@@ -658,7 +658,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     MechSpeed(wounded) = 0.0;
     MechVerticalSpeed(wounded) = 0.0;
     DestroyMech(wounded, attacker, 1, KILL_TYPE_FUELTANK);
-    explode_unit(wounded, attacker);
+    mech_explosion_apply(wounded, attacker);
     break;
   case 5:
     /* Ammo/Power Plant Explodes */
@@ -670,7 +670,7 @@ void HandleVTOLCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     MechVerticalSpeed(wounded) = 0.0;
     DestroyMech(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
     if (!(MechSections(wounded)[BSIDE].config & CASE_TECH))
-      explode_unit(wounded, attacker);
+      mech_explosion_apply(wounded, attacker);
     else
       DestroySection(wounded, attacker, LOS, BSIDE);
   }

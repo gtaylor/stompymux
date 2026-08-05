@@ -1,5 +1,6 @@
 #include "values_internal.h"
 
+#include "crit_api.h"
 #include "mech_position_api.h"
 #include "mech_progress_api.h"
 #include "mech_radio_api.h"
@@ -398,8 +399,6 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
   }
 }
 
-extern void correct_speed(Mech *);
-
 void fun_btsetmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs,
                        EvaluationContext *context) {
@@ -420,7 +419,7 @@ void fun_btsetmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
            "#-1 PERMISSION DENIED");
 
   mech_maximum_speed_set(mech, newmaxspeed);
-  correct_speed(mech);
+  mech_speed_correct(mech);
 
   safe_tprintf_str(buff, bufc, "1");
 }

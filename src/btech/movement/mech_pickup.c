@@ -220,7 +220,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
     mech_power_down(target);
 
   /* Adjust the speed involved */
-  correct_speed(mech);
+  mech_speed_correct(mech);
 
   /* Send emit for triggers/debugging */
   btech_channel_send(
@@ -376,7 +376,7 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
     mech_power_down(target);
 
   /* Adjust the speed involved */
-  correct_speed(towMech);
+  mech_speed_correct(towMech);
 }
 
 void mech_detachcables(DbRef player, void *data, char *buffer) {
@@ -445,7 +445,7 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
                                          mech_position_y(towMech)));
   }
 
-  correct_speed(towMech);
+  mech_speed_correct(towMech);
 }
 
 void mech_dropoff(DbRef player, void *data, char *buffer) {
@@ -495,7 +495,7 @@ void mech_dropoff(DbRef player, void *data, char *buffer) {
                                              mech_position_y(mech)));
     }
   }
-  correct_speed(mech);
+  mech_speed_correct(mech);
   btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                      tprintf("#%ld has dropped off #%ld", mech_dbref(mech),
                              mech_dbref(target)));

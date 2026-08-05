@@ -306,7 +306,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   CargoSpace(target) -= (MechTons(mech) * 100);
   mech_power_down(mech);
 
-  correct_speed(target);
+  mech_speed_correct(target);
 }
 
 void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
