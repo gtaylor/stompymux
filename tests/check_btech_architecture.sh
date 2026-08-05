@@ -603,6 +603,11 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+if (( $(wc -l < src/btech/movement/mech_motion_integration.c) > 300 )); then
+  echo "movement motion integration exceeds its 300-line responsibility limit"
+  status=1
+fi
+
 match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Jumping)\s*\(' \
   src/btech/movement/mech_movement_validation.c || true)
 if [[ -n "$match" ]]; then

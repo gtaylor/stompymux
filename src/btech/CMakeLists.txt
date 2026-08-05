@@ -118,6 +118,7 @@ set(BTECH_SOURCES
   movement/mech_pickup.c
   movement/mech_startup.c
   movement/mech_update.c
+  movement/mech_motion_integration.c
   movement/mech_fire_hazard.c
   movement/mech_collision.c
   movement/mech_charge_tracking.c
