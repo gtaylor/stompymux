@@ -10,6 +10,10 @@ void mech_critical_brand_set(Mech *mech, int section, int critical, int brand);
 int mech_critical_data(const Mech *mech, int section, int critical);
 int mech_critical_fire_mode(const Mech *mech, int section, int critical);
 int mech_critical_ammo_mode(const Mech *mech, int section, int critical);
+void mech_critical_fire_mode_set(Mech *mech, int section, int critical,
+                                 int modes);
+void mech_critical_ammo_mode_set(Mech *mech, int section, int critical,
+                                 int modes);
 int mech_critical_damage_flags(const Mech *mech, int section, int critical);
 int mech_critical_desired_ammo_section(const Mech *mech, int section,
                                        int critical);
@@ -87,6 +91,7 @@ bool mech_part_is_structural_placeholder(int part_type);
 void mech_section_armor_set(Mech *mech, int section, int armor);
 void mech_section_rear_armor_set(Mech *mech, int section, int armor);
 void mech_section_original_armor_set(Mech *mech, int section, int armor);
+void mech_section_original_rear_armor_set(Mech *mech, int section, int armor);
 void mech_section_internal_set(Mech *mech, int section, int internal);
 void mech_section_original_internal_set(Mech *mech, int section, int internal);
 void mech_critical_configure(Mech *mech, int section, int critical,

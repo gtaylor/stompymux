@@ -29,6 +29,16 @@ int mech_critical_ammo_mode(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].ammomode;
 }
 
+void mech_critical_fire_mode_set(Mech *mech, int section, int critical,
+                                 int modes) {
+  mech->ud.sections[section].criticals[critical].firemode = modes;
+}
+
+void mech_critical_ammo_mode_set(Mech *mech, int section, int critical,
+                                 int modes) {
+  mech->ud.sections[section].criticals[critical].ammomode = modes;
+}
+
 int mech_critical_damage_flags(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].weapDamageFlags;
 }
@@ -347,6 +357,10 @@ void mech_section_rear_armor_set(Mech *mech, int section, int armor) {
 
 void mech_section_original_armor_set(Mech *mech, int section, int armor) {
   mech->ud.sections[section].armor_orig = armor;
+}
+
+void mech_section_original_rear_armor_set(Mech *mech, int section, int armor) {
+  mech->ud.sections[section].rear_orig = armor;
 }
 
 void mech_section_internal_set(Mech *mech, int section, int internal) {

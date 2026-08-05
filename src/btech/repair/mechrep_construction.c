@@ -34,16 +34,22 @@
 
 #define MECH_STAT_C /* want to use the POSIX stat() call. */
 
-#include "mech.h"
+#include "equipment_types.h"
 #include "mech_build_api.h"
+#include "mech_classification_api.h"
 #include "mech_consistency_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
 #include "mech_restrict_api.h"
+#include "mech_specification_api.h"
 #include "mech_status_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mechrep.h"
 #include "mechrep_api.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/network/mux_event_alloc.h"
+#include "section_types.h"
 #include "template_api.h"
 
 /* Selectors */
@@ -78,55 +84,55 @@ extern char *strtok(char *s, const char *ct);
 /* Alloc/free routine */
 
 void invalid_section(DbRef player, Mech *mech) {
-  int mechtype = MechType(mech);
-  int movetype = MechMove(mech);
+  int mechtype = mech_class(mech);
+  int movetype = mech_movement_type(mech);
 
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "Not a legal armor location, must be one of:");
 
   switch (mechtype) {
   case CLASS_MW:
   case CLASS_MECH:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "HEAD (H), CTORSO (CT), LTORSO (LT), RTORSO (RT)");
 
     if (movetype == MOVE_QUAD)
-      notify(btech_context_evaluation(mech->xcode.context), player,
+      notify(btech_context_evaluation(mech_context(mech)), player,
              "LARM (LA), RARM (RA), LLEG (LL), RLEG (RL)");
     else
-      notify(btech_context_evaluation(mech->xcode.context), player,
+      notify(btech_context_evaluation(mech_context(mech)), player,
              "FLLEG (FLL), FRLEG (FRL), RLLEG (RLL), RRLEG (RRL)");
 
     break;
   case CLASS_VEH_NAVAL:
   case CLASS_VEH_GROUND:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), TURRET (TU)");
     break;
   case CLASS_VTOL:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), ROTOR (RO)");
     break;
   case CLASS_AERO:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "NOSE (N), LWING (LW), RWING (RW), ASIDE (AS)");
     break;
   case CLASS_DS:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "NOSE (N), LWING (LW), RWING (RW), LRWING (LR), RRWING "
            "(RR), ASIDE (AS)");
     break;
   case CLASS_SPHEROID_DS:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "NOSE (N), FRSIDE (FR), FLSIDE (FL), RLSIDE (RL), RRSIDE "
            "(RR), ASIDE (AS)");
     break;
   case CLASS_BSUIT:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "S1, S2, S3, S4, S5, S6, S7, S8");
     break;
   default:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "Invalid or unknown unit type!");
   }
 }
@@ -143,7 +149,8 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
   MECHREP_COMMON(1);
   argc = mech_parseattributes(buffer, args, 4);
   DOCHECK_CONTEXT(rep->xcode.context, !argc, "Invalid number of arguments!");
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
+  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                 args[0]);
 
   if (index == -1) {
     // Invalid section, emit error and valid choices for unit type.
@@ -162,8 +169,8 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     else {
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Front armor set to    : %d", temp);
-      SetSectArmor(mech, index, temp);
-      SetSectOArmor(mech, index, temp);
+      mech_section_armor_set(mech, index, temp);
+      mech_section_original_armor_set(mech, index, temp);
     }
     argc--;
   }
@@ -176,8 +183,8 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     else {
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Internal armor set to : %d", temp);
-      SetSectInt(mech, index, temp);
-      SetSectOInt(mech, index, temp);
+      mech_section_internal_set(mech, index, temp);
+      mech_section_original_internal_set(mech, index, temp);
     }
     argc--;
   }
@@ -191,8 +198,8 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
       else {
         notify_printf(btech_context_evaluation(rep->xcode.context), player,
                       "Rear armor set to     : %d", temp);
-        SetSectRArmor(mech, index, temp);
-        SetSectORArmor(mech, index, temp);
+        mech_section_rear_armor_set(mech, index, temp);
+        mech_section_original_rear_armor_set(mech, index, temp);
       }
     } else
       notify(btech_context_evaluation(rep->xcode.context), player,
@@ -223,7 +230,8 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   argc = mech_parseattributes(buffer, args, 20);
   DOCHECK_CONTEXT(rep->xcode.context, argc < 3, "Invalid number of arguments!")
 
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[1]);
+  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                 args[1]);
 
   if (index == -1) {
     // Invalid section entered. Emit error and valid sections.
@@ -236,7 +244,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   if (weapindex == -1) {
     notify_printf(btech_context_evaluation(rep->xcode.context), player,
                   "That is not a valid weapon!");
-    DumpWeapons(mech->xcode.context, player);
+    DumpWeapons(mech_context(mech), player);
     return;
   }
 
@@ -304,27 +312,27 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
       temp--; /* From 1 based to 0 based */
       DOCHECK_CONTEXT(rep->xcode.context, temp < 0 || temp > NUM_CRITICALS,
                       "Bad critical location!");
-      MechSections(mech)[index].criticals[temp].type = (I2Weapon(weapindex));
-      MechSections(mech)[index].criticals[temp].firemode = 0;
-      MechSections(mech)[index].criticals[temp].ammomode = 0;
+      int fire_mode = 0;
 
       /* If this is a Rocket Launcher, use isrocket to set the OS flag */
       //                      if(MechWeapons[weapindex].special & ROCKET)
       //                              isrocket = 1;
 
       if (isrear)
-        MechSections(mech)[index].criticals[temp].firemode |= REAR_MOUNT;
+        fire_mode |= REAR_MOUNT;
       if (istc)
-        MechSections(mech)[index].criticals[temp].firemode |= ON_TC;
+        fire_mode |= ON_TC;
       /* Rockets are OS too */ // NOT! -=RST
       if (isoneshot)
-        MechSections(mech)[index].criticals[temp].firemode |= OS_MODE;
+        fire_mode |= OS_MODE;
+      mech_critical_configure(mech, index, temp, I2Weapon(weapindex), 0,
+                              fire_mode, 0);
     }
-    if (IsAMS(weapindex)) {
+    if (MechWeapons[weapindex].special & AMS) {
       if (MechWeapons[weapindex].special & CLAT)
-        MechSpecials(mech) |= CL_ANTI_MISSILE_TECH;
+        mech_technology_flags_add(mech, CL_ANTI_MISSILE_TECH);
       else
-        MechSpecials(mech) |= IS_ANTI_MISSILE_TECH;
+        mech_technology_flags_add(mech, IS_ANTI_MISSILE_TECH);
     }
     notify_printf(btech_context_evaluation(rep->xcode.context), player,
                   "Weapon added.");
@@ -351,102 +359,95 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
   }
 
   if (MechWeapons[weaptype].ammoperton == 0) {
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "That weapon doesn't require ammo!");
     return;
   }
 
-  if (MechSections(mech)[section].criticals[critical].firemode & OS_MODE) {
+  if (mech_critical_fire_mode(mech, section, critical) & OS_MODE) {
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Keeping One Shot Mode!");
-    MechSections(mech)[section].criticals[critical].ammomode = 0;
-  } else if (!(MechSections(mech)[section].criticals[critical].firemode &
+    mech_critical_ammo_mode_set(mech, section, critical, 0);
+  } else if (!(mech_critical_fire_mode(mech, section, critical) &
                HALFTON_MODE)) {
 
-    MechSections(mech)[section].criticals[critical].firemode = 0;
-    MechSections(mech)[section].criticals[critical].ammomode = 0;
+    mech_critical_fire_mode_set(mech, section, critical, 0);
+    mech_critical_ammo_mode_set(mech, section, critical, 0);
   }
 
   switch (toupper(args[1][0])) {
   case 'W':
-    MechSections(mech)[section].criticals[critical].ammomode |= SWARM_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, SWARM_MODE);
     break;
   case '#':
-    MechSections(mech)[section].criticals[critical].ammomode |= MML_LRM_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, MML_LRM_MODE);
     break;
   case '1':
-    MechSections(mech)[section].criticals[critical].ammomode |= SWARM1_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, SWARM1_MODE);
     break;
   case 'I':
-    MechSections(mech)[section].criticals[critical].ammomode |= INFERNO_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, INFERNO_MODE);
     break;
   case 'L':
-    MechSections(mech)[section].criticals[critical].ammomode |= LBX_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, LBX_MODE);
     break;
   case 'A':
-    MechSections(mech)[section].criticals[critical].ammomode |= ARTEMIS_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, ARTEMIS_MODE);
     break;
   case 'N':
-    MechSections(mech)[section].criticals[critical].ammomode |= NARC_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, NARC_MODE);
     break;
   case 'C':
-    MechSections(mech)[section].criticals[critical].ammomode |= CLUSTER_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, CLUSTER_MODE);
     break;
   case 'M':
-    MechSections(mech)[section].criticals[critical].ammomode |= MINE_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, MINE_MODE);
     break;
   case 'S':
-    MechSections(mech)[section].criticals[critical].ammomode |= SMOKE_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, SMOKE_MODE);
     break;
   case 'X':
-    MechSections(mech)[section].criticals[critical].ammomode |=
-        INARC_EXPLO_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, INARC_EXPLO_MODE);
     break;
   case 'Y':
-    MechSections(mech)[section].criticals[critical].ammomode |=
-        INARC_HAYWIRE_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, INARC_HAYWIRE_MODE);
     break;
   case 'E':
-    MechSections(mech)[section].criticals[critical].ammomode |= INARC_ECM_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, INARC_ECM_MODE);
     break;
   case 'R':
-    MechSections(mech)[section].criticals[critical].ammomode |= AC_AP_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, AC_AP_MODE);
     break;
   case 'F':
-    MechSections(mech)[section].criticals[critical].ammomode |=
-        AC_FLECHETTE_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, AC_FLECHETTE_MODE);
     break;
   case 'D':
-    MechSections(mech)[section].criticals[critical].ammomode |=
-        AC_INCENDIARY_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, AC_INCENDIARY_MODE);
     break;
   case 'P':
-    MechSections(mech)[section].criticals[critical].ammomode |=
-        AC_PRECISION_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, AC_PRECISION_MODE);
     break;
   case 'T':
-    MechSections(mech)[section].criticals[critical].ammomode |= STINGER_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, STINGER_MODE);
     break;
   case 'U':
-    MechSections(mech)[section].criticals[critical].ammomode |=
-        AC_CASELESS_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, AC_CASELESS_MODE);
     break;
   case 'J':
-    MechSections(mech)[section].criticals[critical].firemode |=
-        WILL_JETTISON_MODE;
+    mech_critical_fire_mode_add(mech, section, critical, WILL_JETTISON_MODE);
     break;
   case 'G':
-    MechSections(mech)[section].criticals[critical].ammomode |= SGUIDED_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, SGUIDED_MODE);
     break;
   case 'H':
-    MechSections(mech)[section].criticals[critical].ammomode |= ATM_HE_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, ATM_HE_MODE);
     break;
   case 'V':
-    MechSections(mech)[section].criticals[critical].ammomode |= ATM_ER_MODE;
+    mech_critical_ammo_mode_add(mech, section, critical, ATM_ER_MODE);
     break;
   case '-':
-    MechSections(mech)[section].criticals[critical].ammomode = 0;
-    MechSections(mech)[section].criticals[critical].firemode = 0;
+    mech_critical_ammo_mode_set(mech, section, critical, 0);
+    mech_critical_fire_mode_set(mech, section, critical, 0);
   }
 
   notify(btech_context_evaluation(rep->xcode.context), player,
@@ -471,11 +472,12 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
   if (weapindex == -1) {
     notify(btech_context_evaluation(rep->xcode.context), player,
            "That is not a valid weapon!");
-    DumpWeapons(mech->xcode.context, player);
+    DumpWeapons(mech_context(mech), player);
     return;
   }
 
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[1]);
+  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                 args[1]);
 
   if (index == -1) {
     // Invalid section entered. Emit error and valid sections.
@@ -489,104 +491,96 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
                   subsect < 0 || subsect >= CritsInLoc(mech, index),
                   "Critslot out of range!");
   if (MechWeapons[weapindex].ammoperton == 0)
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "That weapon doesn't require ammo!");
   else {
-    MechSections(mech)[index].criticals[subsect].type = I2Ammo(weapindex);
-    if (!(MechSections(mech)[index].criticals[subsect].firemode &
-          HALFTON_MODE)) {
-      MechSections(mech)[index].criticals[subsect].firemode = 0;
-      MechSections(mech)[index].criticals[subsect].ammomode = 0;
+    mech_critical_part_type_set(mech, index, subsect, I2Ammo(weapindex));
+    if (!(mech_critical_fire_mode(mech, index, subsect) & HALFTON_MODE)) {
+      mech_critical_fire_mode_set(mech, index, subsect, 0);
+      mech_critical_ammo_mode_set(mech, index, subsect, 0);
     }
 
     if (argc > 3)
       switch (toupper(args[3][0])) {
       case '+':
-        MechSections(mech)[index].criticals[subsect].firemode |= HALFTON_MODE;
+        mech_critical_fire_mode_add(mech, index, subsect, HALFTON_MODE);
         break;
       case '#':
-        MechSections(mech)[index].criticals[subsect].ammomode |= MML_LRM_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, MML_LRM_MODE);
         break;
       case 'W':
-        MechSections(mech)[index].criticals[subsect].ammomode |= SWARM_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, SWARM_MODE);
         break;
       case '1':
-        MechSections(mech)[index].criticals[subsect].ammomode |= SWARM1_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, SWARM1_MODE);
         break;
       case 'I':
-        MechSections(mech)[index].criticals[subsect].ammomode |= INFERNO_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, INFERNO_MODE);
         break;
       case 'L':
-        MechSections(mech)[index].criticals[subsect].ammomode |= LBX_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, LBX_MODE);
         break;
       case 'A':
-        MechSections(mech)[index].criticals[subsect].ammomode |= ARTEMIS_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, ARTEMIS_MODE);
         break;
       case 'N':
-        MechSections(mech)[index].criticals[subsect].ammomode |= NARC_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, NARC_MODE);
         break;
       case 'C':
-        MechSections(mech)[index].criticals[subsect].ammomode |= CLUSTER_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, CLUSTER_MODE);
         break;
       case 'M':
-        MechSections(mech)[index].criticals[subsect].ammomode |= MINE_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, MINE_MODE);
         break;
       case 'S':
-        MechSections(mech)[index].criticals[subsect].ammomode |= SMOKE_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, SMOKE_MODE);
         break;
       case 'Z':
-        MechSections(mech)[index].criticals[subsect].ammomode |=
-            INARC_NEMESIS_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, INARC_NEMESIS_MODE);
         break;
       case 'X':
-        MechSections(mech)[index].criticals[subsect].ammomode |=
-            INARC_EXPLO_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, INARC_EXPLO_MODE);
         break;
       case 'Y':
-        MechSections(mech)[index].criticals[subsect].ammomode |=
-            INARC_HAYWIRE_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, INARC_HAYWIRE_MODE);
         break;
       case 'E':
-        MechSections(mech)[index].criticals[subsect].ammomode |= INARC_ECM_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, INARC_ECM_MODE);
         break;
       case 'R':
-        MechSections(mech)[index].criticals[subsect].ammomode |= AC_AP_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, AC_AP_MODE);
         break;
       case 'F':
-        MechSections(mech)[index].criticals[subsect].ammomode |=
-            AC_FLECHETTE_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, AC_FLECHETTE_MODE);
         break;
       case 'D':
-        MechSections(mech)[index].criticals[subsect].ammomode |=
-            AC_INCENDIARY_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, AC_INCENDIARY_MODE);
         break;
       case 'P':
-        MechSections(mech)[index].criticals[subsect].ammomode |=
-            AC_PRECISION_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, AC_PRECISION_MODE);
         break;
       case 'T':
-        MechSections(mech)[index].criticals[subsect].ammomode |= STINGER_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, STINGER_MODE);
         break;
       case 'U':
-        MechSections(mech)[index].criticals[subsect].ammomode |=
-            AC_CASELESS_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, AC_CASELESS_MODE);
         break;
       case 'G':
-        MechSections(mech)[index].criticals[subsect].ammomode |= SGUIDED_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, SGUIDED_MODE);
         break;
       case 'H':
-        MechSections(mech)[index].criticals[subsect].ammomode |= ATM_HE_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, ATM_HE_MODE);
         break;
       case 'V':
-        MechSections(mech)[index].criticals[subsect].ammomode |= ATM_ER_MODE;
+        mech_critical_ammo_mode_add(mech, index, subsect, ATM_ER_MODE);
         break;
       case '-':
-        MechSections(mech)[index].criticals[subsect].ammomode = 0;
-        MechSections(mech)[index].criticals[subsect].firemode = 0;
+        mech_critical_ammo_mode_set(mech, index, subsect, 0);
+        mech_critical_fire_mode_set(mech, index, subsect, 0);
       }
 
-    MechSections(mech)[index].criticals[subsect].data =
-        FullAmmo(mech, index, subsect);
+    mech_critical_data_set(mech, index, subsect,
+                           FullAmmo(mech, index, subsect));
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Weapon loaded!");
   }
@@ -605,7 +599,8 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
   argc = mech_parseattributes(buffer, args, 2);
   DOCHECK_CONTEXT(rep->xcode.context, argc < 2, "Invalid number of arguments!");
 
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
+  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                 args[0]);
 
   if (index == -1) {
     // Invalid section entered. Emit error and valid sections.
@@ -618,12 +613,13 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(rep->xcode.context,
                   subsect < 0 || subsect >= CritsInLoc(mech, index),
                   "Critslot out of range!");
-  if (MechWeapons[Ammo2I(GetPartType(mech, index, subsect))].ammoperton == 0)
+  if (MechWeapons[Ammo2I(mech_critical_part_type(mech, index, subsect))]
+          .ammoperton == 0)
     notify(btech_context_evaluation(rep->xcode.context), player,
            "That weapon doesn't require ammo!");
   else {
-    MechSections(mech)[index].criticals[subsect].data =
-        FullAmmo(mech, index, subsect);
+    mech_critical_data_set(mech, index, subsect,
+                           FullAmmo(mech, index, subsect));
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Weapon restocked!");
   }
@@ -641,7 +637,8 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   MECHREP_COMMON(1);
   argc = mech_parseattributes(buffer, args, 4);
   DOCHECK_CONTEXT(rep->xcode.context, argc < 2, "Invalid number of arguments!");
-  index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
+  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                 args[0]);
 
   if (index == -1) {
     // Invalid section entered. Emit error and valid sections.
@@ -657,14 +654,14 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   case 'A':
   case 'a':
     /* armor */
-    SetSectArmor(mech, index, temp);
+    mech_section_armor_set(mech, index, temp);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Armor repaired!");
     break;
   case 'I':
   case 'i':
     /* internal */
-    SetSectInt(mech, index, temp);
+    mech_section_internal_set(mech, index, temp);
     notify(btech_context_evaluation(rep->xcode.context), player,
            "Internal structure repaired!");
     break;
@@ -685,7 +682,7 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   case 'r':
     /* rear */
     if (index == CTORSO || index == LTORSO || index == RTORSO) {
-      SetSectRArmor(mech, index, temp);
+      mech_section_rear_armor_set(mech, index, temp);
       notify(btech_context_evaluation(rep->xcode.context), player,
              "Rear armor repaired!");
     } else {
