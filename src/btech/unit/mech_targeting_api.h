@@ -18,6 +18,7 @@ void mech_targeting_hex_xy_set(Mech *mech, int x, int y);
 void mech_targeting_lock_mode_add(Mech *mech, int lock_mode);
 DbRef mech_target_dbref(const Mech *mech);
 DbRef mech_charge_target_dbref(const Mech *mech);
+void mech_charge_target_dbref_set(Mech *mech, DbRef target);
 DbRef mech_dfa_target_dbref(const Mech *mech);
 void mech_dfa_target_dbref_set(Mech *mech, DbRef target);
 int mech_charge_timer(const Mech *mech);

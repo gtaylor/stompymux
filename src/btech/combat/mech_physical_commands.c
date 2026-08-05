@@ -1,4 +1,11 @@
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_identity_api.h"
 #include "mech_physical_internal.h"
+#include "mech_position_api.h"
+#include "mech_specification_api.h"
+#include "mech_targeting_api.h"
 void mech_trip(DbRef player, void *data, char *buffer) {
   mech_kickortrip(player, data, buffer, PA_TRIP);
 } // end mech_trip()
@@ -16,7 +23,7 @@ void mech_kick(DbRef player, void *data, char *buffer) {
 void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
   int argc;
@@ -27,12 +34,28 @@ void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
   // Make sure we're started, on a map, etc.
   cch(MECH_USUALO);
   // If we're a quad, re-map front legs.
-  if (MechIsQuad(mech)) {
+  if (mech_is_quad(mech)) {
     rl = RARM;
     ll = LARM;
   }
   // See if we have enough usable legs to kick/trip with.
-  GENERIC_CHECK("kick", CountDestroyedLegs(mech));
+  int destroyed_legs = CountDestroyedLegs(mech);
+  DOCHECK_CONTEXT(mech_context(mech),
+                  mech_class(mech) == CLASS_MW ||
+                      mech_class(mech) == CLASS_BSUIT,
+                  "You cannot kick without a 'mech!");
+  DOCHECK_CONTEXT(mech_context(mech), mech_class(mech) != CLASS_MECH,
+                  "You cannot kick with this vehicle!");
+  DOCHECK_CONTEXT(mech_context(mech),
+                  !mech_is_quad(mech) && (destroyed_legs > 1),
+                  "Without legs? Are you kidding?");
+  DOCHECK_CONTEXT(mech_context(mech),
+                  !mech_is_quad(mech) && (destroyed_legs > 0),
+                  "With one leg? Are you kidding?");
+  DOCHECK_CONTEXT(mech_context(mech), destroyed_legs > 1,
+                  "It'd unbalance you too much in your condition..");
+  DOCHECK_CONTEXT(mech_context(mech), destroyed_legs > 2,
+                  "Exactly _what_ are you going to kick with?");
 
   argc = mech_parseattributes(buffer, args, 5);
 
@@ -56,17 +79,18 @@ void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
     return;
   }
 
-  if ((MechCritStatus(mech) & HIP_DAMAGED)) {
+  if (mech_condition_summary(mech).hip_damaged) {
     mech_printf(mech, MECHALL, "You can't %s with a destroyed hip.",
                 phys_form(AttackType, 0));
     return;
   }
 
-  PhysicalAttack(mech, 5,
-                 (mech->xcode.context->configuration->btech_phys_use_pskill
-                      ? FindPilotPiloting(mech) - 2
-                      : 3),
-                 AttackType, argc, args, mech_map, leg);
+  PhysicalAttack(
+      mech, 5,
+      (btech_context_physical_attacks_use_pilot_skill(mech_context(mech))
+           ? FindPilotPiloting(mech) - 2
+           : 3),
+      AttackType, argc, args, mech_map, leg);
 } // end mech_kickortrip()
 
 /**
@@ -75,7 +99,7 @@ void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
 void mech_charge(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *target;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int targetnum;
   char targetID[5];
   char *args[5];
@@ -86,77 +110,81 @@ void mech_charge(DbRef player, void *data, char *buffer) {
   cch(MECH_USUALO);
 
   // Mechwarriors can't chage.
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  MechType(mech) == CLASS_MW || MechType(mech) == CLASS_BSUIT,
+  DOCHECK_CONTEXT(mech_context(mech),
+                  mech_class(mech) == CLASS_MW ||
+                      mech_class(mech) == CLASS_BSUIT,
                   "You cannot charge without a 'mech!");
 
   // Salvage vehicles can't charge.
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  MechType(mech) != CLASS_MECH &&
-                      (MechType(mech) != CLASS_VEH_GROUND ||
-                       MechSpecials(mech) & SALVAGE_TECH),
+  DOCHECK_CONTEXT(mech_context(mech),
+                  mech_class(mech) != CLASS_MECH &&
+                      (mech_class(mech) != CLASS_VEH_GROUND ||
+                       mech_technology_flags(mech) & SALVAGE_TECH),
                   "You cannot charge with this vehicle!");
 
   // Figure out if we have enough legs to kick with.
-  if (MechType(mech) == CLASS_MECH) {
+  if (mech_class(mech) == CLASS_MECH) {
     /* set the number of dead legs we have */
     wcDeadLegs = CountDestroyedLegs(mech);
 
-    DOCHECK_CONTEXT(mech->xcode.context, !MechIsQuad(mech) && (wcDeadLegs > 0),
+    DOCHECK_CONTEXT(mech_context(mech), !mech_is_quad(mech) && (wcDeadLegs > 0),
                     "With one leg? Are you kidding?");
-    DOCHECK_CONTEXT(mech->xcode.context, !MechIsQuad(mech) && (wcDeadLegs > 1),
+    DOCHECK_CONTEXT(mech_context(mech), !mech_is_quad(mech) && (wcDeadLegs > 1),
                     "Without legs? Are you kidding?");
-    DOCHECK_CONTEXT(mech->xcode.context, wcDeadLegs > 1,
+    DOCHECK_CONTEXT(mech_context(mech), wcDeadLegs > 1,
                     "It'd unbalance you too much in your condition..");
-    DOCHECK_CONTEXT(mech->xcode.context, wcDeadLegs > 2,
+    DOCHECK_CONTEXT(mech_context(mech), wcDeadLegs > 2,
                     "Exactly _what_ are you going to kick with?");
   } // end if() - Dead leg counting.
 
   argc = mech_parseattributes(buffer, args, 2);
 
-  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_MOVEMODE),
+  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_MOVEMODE),
                   "You cannot charge while changing movement modes!");
 
-  DOCHECK_CONTEXT(mech->xcode.context, Sprinting(mech) || Evading(mech),
+  DOCHECK_CONTEXT(mech_context(mech),
+                  mech_condition_summary(mech).sprinting ||
+                      mech_condition_summary(mech).evading,
                   "You cannot charge while in a special movement mode!");
-  DOCHECK_CONTEXT(mech->xcode.context, Dodging(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).dodging,
                   "You cannot charge while dodging!");
 
   switch (argc) {
     // No arguments given with charge. Assume default target.
   case 0:
-    DOCHECKMA(MechTarget(mech) == -1, "You do not have a default target set!");
+    DOCHECKMA(mech_target_dbref(mech) == -1,
+              "You do not have a default target set!");
 
-    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+    target =
+        btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
 
     if (!target) {
       mech_notify(mech, MECHALL, "Invalid default target!");
-      MechTarget(mech) = -1;
+      mech_targeting_target_clear(mech);
       return;
     }
     // Don't allow charging Mechwarriors.
-    if (MechType(target) == CLASS_MW) {
+    if (mech_class(target) == CLASS_MW) {
       mech_notify(mech, MECHALL,
                   "You can't charge THAT sack of bones and squishy bits!");
       return;
     }
 
-    if (MapNoFriendlyFire(mech_map) && (MechTeam(mech) == MechTeam(target))) {
+    if (battle_map_blocks_friendly_fire(mech_map) &&
+        (mech_team(mech) == mech_team(target))) {
       mech_notify(mech, MECHALL, "You can't charge your own team!");
-      MechChargeTarget(mech) = -1;
+      mech_charge_target_dbref_set(mech, -1);
       return;
     }
 
-    MechChargeTarget(mech) = MechTarget(mech);
+    mech_charge_target_dbref_set(mech, mech_target_dbref(mech));
     mech_notify(mech, MECHALL, "Charge target set to default target.");
     break;
 
     // We've supplied an argument, either a '-' or an ID.
   case 1:
     if (args[0][0] == '-') {
-      MechChargeTarget(mech) = -1;
-      MechChargeTimer(mech) = 0;
-      MechChargeDistance(mech) = 0;
+      mech_charge_reset(mech);
       mech_notify(mech, MECHPILOT, "You are no longer charging.");
       return;
     }
@@ -167,10 +195,10 @@ void mech_charge(DbRef player, void *data, char *buffer) {
 
     DOCHECKMA(targetnum == -1, "Target is not in line of sight!");
 
-    target = btech_context_get_mech(mech->xcode.context, targetnum);
-    DOCHECKMA(!mech_los_check_unblocked(mech, target, MechX(target),
-                                        MechY(target),
-                                        FaMechRange(mech, target)),
+    target = btech_context_get_mech(mech_context(mech), targetnum);
+    DOCHECKMA(!mech_los_check_unblocked(mech, target, mech_position_x(target),
+                                        mech_position_y(target),
+                                        mech_range_to(mech, target)),
               "Target is not in line of sight!");
 
     if (!target) {
@@ -178,29 +206,30 @@ void mech_charge(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    if (MapNoFriendlyFire(mech_map) && (MechTeam(mech) == MechTeam(target))) {
+    if (battle_map_blocks_friendly_fire(mech_map) &&
+        (mech_team(mech) == mech_team(target))) {
       mech_notify(mech, MECHALL, "You can't charge your own team!");
-      MechChargeTarget(mech) = -1;
+      mech_charge_target_dbref_set(mech, -1);
       return;
     }
 
     // Don't allow charging mechwarriors.
-    if (MechType(target) == CLASS_MW) {
+    if (mech_class(target) == CLASS_MW) {
       mech_notify(mech, MECHALL,
                   "You can't charge THAT sack of bones and squishy bits!");
       return;
     }
 
-    MechChargeTarget(mech) = targetnum;
+    mech_charge_target_dbref_set(mech, targetnum);
 
     mech_printf(mech, MECHALL, "%s target set to %s.",
-                MechType(mech) == CLASS_MECH ? "Charge" : "Ram",
+                mech_class(mech) == CLASS_MECH ? "Charge" : "Ram",
                 mech_to_mech_display_id(mech, target).text);
     break;
 
     // Something other than 0-1 arguments.
   default:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "Invalid number of arguments!");
   }
 } // end mech_charge()

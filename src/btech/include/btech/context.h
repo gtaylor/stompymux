@@ -96,6 +96,8 @@ BtechObjectId btech_context_stat_engine_dbref(const BtechContext *context);
 BtechObjectId btech_context_used_mech_store_dbref(const BtechContext *context);
 bool btech_context_mechwarrior_pickup_triggers_actions(
     const BtechContext *context);
+bool btech_context_physical_attacks_use_pilot_skill(
+    const BtechContext *context);
 int btech_context_sprint_to_hit_modifier(const BtechContext *context);
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context);
 bool btech_context_uses_roll_on_backwalk(const BtechContext *context);

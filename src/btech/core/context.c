@@ -227,6 +227,12 @@ bool btech_context_mechwarrior_pickup_triggers_actions(
   return context->configuration->btech_mwpickup_action;
 }
 
+bool btech_context_physical_attacks_use_pilot_skill(
+    const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_phys_use_pskill;
+}
+
 int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_sprint_bth;
