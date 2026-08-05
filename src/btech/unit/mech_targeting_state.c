@@ -86,6 +86,8 @@ void mech_fire_adjustment_set(Mech *mech, int adjustment) {
   mech->rd.fire_adjustment = adjustment;
 }
 
+void mech_fire_adjustment_increment(Mech *mech) { mech->rd.fire_adjustment++; }
+
 int mech_fire_adjustment(const Mech *mech) { return mech->rd.fire_adjustment; }
 
 int mech_targeting_computer_type(const Mech *mech) { return mech->ud.targcomp; }

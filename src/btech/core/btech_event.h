@@ -29,6 +29,9 @@ void btech_event_schedule(MuxEventScheduler *events, void *object, int type,
 void btech_context_event_schedule(BtechContext *context, void *object, int type,
                                   MuxEventCallback callback, int delay,
                                   intptr_t data);
+void btech_context_owned_event_schedule(BtechContext *context, void *object,
+                                        int type, MuxEventCallback callback,
+                                        int delay, intptr_t data);
 int btech_event_count(MuxEventScheduler *events, const void *object, int type);
 int btech_event_count_data(MuxEventScheduler *events, const void *object,
                            int type, intptr_t data);

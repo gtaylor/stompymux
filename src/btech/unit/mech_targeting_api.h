@@ -30,6 +30,7 @@ void mech_target_hex_z_set(Mech *mech, int z);
 DbRef mech_spotter_dbref(const Mech *mech);
 void mech_spotter_dbref_set(Mech *mech, DbRef spotter);
 void mech_fire_adjustment_set(Mech *mech, int adjustment);
+void mech_fire_adjustment_increment(Mech *mech);
 int mech_fire_adjustment(const Mech *mech);
 int mech_targeting_computer_type(const Mech *mech);
 int mech_aim_section(const Mech *mech);

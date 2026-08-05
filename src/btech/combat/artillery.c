@@ -29,14 +29,19 @@
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "map_units_api.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_damage_api.h"
 #include "mech_events.h"
 #include "mech_hitloc_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "mux/network/mux_event.h"
@@ -100,30 +105,31 @@ void artillery_shoot(Mech *mech, int targx, int targy, int windex, int wmode,
   float fx, fy, tx, ty;
 
   Create(s, artillery_shot, 1);
-  s->from_x = MechX(mech);
-  s->from_y = MechY(mech);
+  s->from_x = mech_position_x(mech);
+  s->from_y = mech_position_y(mech);
   s->to_x = targx;
   s->to_y = targy;
   s->type = windex;
   s->mode = wmode;
   s->ishit = ishit;
-  s->shooter = mech->mynum;
-  s->map = mech->mapindex;
-  s->context = mech->xcode.context;
+  s->shooter = mech_dbref(mech);
+  s->map = mech_map_dbref(mech);
+  s->context = mech_context(mech);
   mech_los_broadcast(mech, tprintf("shoots %s towards the %s!",
                                    artillery_type(s), artillery_direction(s)));
   MapCoordToRealCoord(s->from_x, s->from_y, &fx, &fy);
   MapCoordToRealCoord(s->to_x, s->to_y, &tx, &ty);
-  mux_event_add(mech->xcode.context->events,
-                artillery_round_flight_time(fx, fy, tx, ty), FLAG_FREE_DATA,
-                EVENT_DHIT, artillery_hit_event, s, nullptr);
+  btech_context_owned_event_schedule(
+      mech_context(mech), s, EVENT_DHIT, artillery_hit_event,
+      artillery_round_flight_time(fx, fy, tx, ty), 0);
 }
 
 static int blast_arcf(float fx, float fy, Mech *mech) {
   int b, dir;
 
-  b = FindBearing(MechFX(mech), MechFY(mech), fx, fy);
-  dir = AcceptableDegree(b - MechFacing(mech));
+  b = FindBearing(mech_position_real_x(mech), mech_position_real_y(mech), fx,
+                  fy);
+  dir = AcceptableDegree(b - mech_heading_degrees(mech));
   if (dir > 120 && dir < 240)
     return BACK;
   if (dir > 300 || dir < 60)
@@ -164,18 +170,18 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
 
   for (loop = 0; loop < map->first_free; loop++)
     if (map->mechsOnMap[loop] >= 0) {
-      tempMech =
-          btech_context_get_mech(map->xcode.context, map->mechsOnMap[loop]);
+      tempMech = btech_context_get_mech(battle_map_context(map),
+                                        map->mechsOnMap[loop]);
       if (!tempMech)
         continue;
-      if (MechX(tempMech) != tx || MechY(tempMech) != ty)
+      if (mech_position_x(tempMech) != tx || mech_position_y(tempMech) != ty)
         continue;
       /* Far too high.. */
-      if (MechZ(tempMech) >= (safeup + ground_zero))
+      if (mech_position_z(tempMech) >= (safeup + ground_zero))
         continue;
       /* Far too below (underwater, mostly) */
       if (/* MechTerrain(tempMech) == WATER &&  */
-          MechZ(tempMech) <= (ground_zero - safedown))
+          mech_position_z(tempMech) <= (ground_zero - safedown))
         continue;
       mech_los_broadcast(tempMech, otmsg);
       mech_notify(tempMech, MECHALL, tomsg);
@@ -195,14 +201,14 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
 
         switch (table) {
         case TABLE_PUNCH:
-          if (MechType(tempMech) != CLASS_MECH) {
+          if (mech_class(tempMech) != CLASS_MECH) {
             hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
           } else {
             hitloc = mech_punch_hit_location(tempMech, arc);
           }
           break;
         case TABLE_KICK:
-          if (MechType(tempMech) != CLASS_MECH) {
+          if (mech_class(tempMech) != CLASS_MECH) {
             hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
           } else {
             hitloc = mech_kick_hit_location(tempMech, arc);
@@ -215,7 +221,7 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
         DamageMech(tempMech, tempMech, 0, -1, hitloc, isrear, iscritical, ndam,
                    0, -1, 0, -1, 0, 0);
       }
-      mech_heat_effect_apply(NULL, tempMech, heatdam, 0);
+      mech_heat_effect_apply(nullptr, tempMech, heatdam, false);
     }
 }
 
@@ -281,7 +287,7 @@ void blast_hit_hexesf(BattleMap *map, int dam, int singlehitsize, int heatdam,
       case HEAVY_FOREST:
         if (!find_decorations(map, x1, y1)) {
           add_decoration(map, x1, y1, TYPE_FIRE, FIRE,
-                         btech_random_range(map->xcode.context, 60, 180));
+                         btech_random_range(battle_map_context(map), 60, 180));
         }
 
         break;
@@ -313,7 +319,7 @@ static void artillery_hit_hex(BattleMap *map, artillery_shot *s, int type,
   if ((mode & SMOKE_MODE)) {
     /* Add smoke */
     add_decoration(map, tx, ty, TYPE_SMOKE, SMOKE,
-                   btech_random_range(map->xcode.context, 90, 150));
+                   btech_random_range(battle_map_context(map), 90, 150));
     return;
   }
   if (mode & MINE_MODE) {
@@ -383,10 +389,10 @@ static void artillery_cluster_hit(BattleMap *map, artillery_shot *s, int type,
   bzero(targets, sizeof(targets));
   for (i = 0; i < dam; i++) {
     do {
-      xd = btech_random_range(map->xcode.context, -2, 0) +
-           btech_random_range(map->xcode.context, 0, 2);
-      yd = btech_random_range(map->xcode.context, -2, 0) +
-           btech_random_range(map->xcode.context, 0, 2);
+      xd = btech_random_range(battle_map_context(map), -2, 0) +
+           btech_random_range(battle_map_context(map), 0, 2);
+      yd = btech_random_range(battle_map_context(map), -2, 0) +
+           btech_random_range(battle_map_context(map), 0, 2);
       x = tx + xd;
       y = ty + yd;
     } while (x < 0 || x >= map->map_width || y < 0 || y >= map->map_height);
@@ -400,17 +406,20 @@ static void artillery_cluster_hit(BattleMap *map, artillery_shot *s, int type,
                           1);
 }
 
-void artillery_FriendlyAdjustment(DbRef mechnum, BattleMap *map, int x, int y) {
+void artillery_friendly_adjustment(DbRef mechnum, BattleMap *map, int x,
+                                   int y) {
   Mech *mech;
   Mech *spotter;
-  Mech *tempMech = NULL;
+  Mech *tempMech = nullptr;
 
-  if (!(mech = btech_context_get_mech(map->xcode.context, mechnum)))
+  if (!(mech = btech_context_get_mech(battle_map_context(map), mechnum)))
     return;
   /* Ok.. we've a valid guy */
-  spotter = btech_context_get_mech(map->xcode.context, MechSpotter(mech));
-  if (!((MechTargX(mech) == x && MechTargY(mech) == y) ||
-        (spotter && (MechTargX(spotter) == x && MechTargY(spotter) == y))))
+  spotter =
+      btech_context_get_mech(battle_map_context(map), mech_spotter_dbref(mech));
+  if (!((mech_target_hex_x(mech) == x && mech_target_hex_y(mech) == y) ||
+        (spotter &&
+         (mech_target_hex_x(spotter) == x && mech_target_hex_y(spotter) == y))))
     return;
   /* Ok.. we've a valid target to adjust fire on */
   /* Now, see if we've any friendlies in LOS.. NOTE: FRIENDLIES ;-) */
@@ -421,7 +430,7 @@ void artillery_FriendlyAdjustment(DbRef mechnum, BattleMap *map, int x, int y) {
     tempMech = find_mech_in_hex(mech, map, x, y, 2);
   if (!tempMech)
     return;
-  if (!Started(tempMech) || !Started(mech))
+  if (!mech_is_started(tempMech) || !mech_is_started(mech))
     return;
   if (spotter) {
     mech_printf(mech, MECHSTARTED,
@@ -431,7 +440,7 @@ void artillery_FriendlyAdjustment(DbRef mechnum, BattleMap *map, int x, int y) {
                 "You provide %s with information about the miss.",
                 mech_to_mech_display_id(tempMech, mech).text);
   }
-  MechFireAdjustment(mech)++;
+  mech_fire_adjustment_increment(mech);
 }
 
 static void artillery_hit(artillery_shot *s) {
@@ -450,9 +459,9 @@ static void artillery_hit(artillery_shot *s) {
   if (!s->ishit) {
     /* Shit! We missed target ;-) */
     /* Time to calculate a new target hex */
-    di = btech_random_range(map->xcode.context, 0, 359);
+    di = btech_random_range(battle_map_context(map), 0, 359);
     dir = di * TWOPIOVER360;
-    dist = btech_random_range(map->xcode.context, 2, 7);
+    dist = btech_random_range(battle_map_context(map), 2, 7);
     weight = 100 * (dist * 6) / ((dist * 6 + map->windspeed));
     di = (di * weight + map->winddir * (100 - weight)) / 100;
     dist = (dist * weight + (map->windspeed / 6) * (100 - weight)) / 100;
@@ -495,5 +504,5 @@ static void artillery_hit(artillery_shot *s) {
   } else
     artillery_cluster_hit(map, s, s->type, s->mode, dam, s->to_x, s->to_y);
   if (!s->ishit)
-    artillery_FriendlyAdjustment(s->shooter, map, original_x, original_y);
+    artillery_friendly_adjustment(s->shooter, map, original_x, original_y);
 }

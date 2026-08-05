@@ -25,6 +25,13 @@ void btech_context_event_schedule(BtechContext *context, void *object, int type,
   btech_event_schedule(context->events, object, type, callback, delay, data);
 }
 
+void btech_context_owned_event_schedule(BtechContext *context, void *object,
+                                        int type, MuxEventCallback callback,
+                                        int delay, intptr_t data) {
+  mux_event_add(context->events, delay, FLAG_FREE_DATA, type, callback, object,
+                (void *)data);
+}
+
 void mech_event_schedule(Mech *mech, int type, MuxEventCallback callback,
                          int delay, intptr_t data) {
   if (mech_dbref(mech) > 0) {

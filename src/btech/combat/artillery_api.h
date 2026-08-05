@@ -33,4 +33,4 @@ void blast_hit_hexes(BattleMap *map, int dam, int singlehitsize, int heatdam,
                      int tx, int ty, char *tomsg, char *otmsg, char *tomsg1,
                      char *otmsg1, int table, int safeup, int safedown,
                      int isunderwater, int doneighbors);
-void artillery_FriendlyAdjustment(DbRef mechnum, BattleMap *map, int x, int y);
+void artillery_friendly_adjustment(DbRef mechnum, BattleMap *map, int x, int y);
