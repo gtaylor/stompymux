@@ -107,7 +107,9 @@ set(BTECH_SOURCES
   movement/mech_move_controls.c
   movement/mech_jump.c
   movement/mech_stance.c
-  movement/mech_landing_falls.c
+  movement/mech_landing.c
+  movement/mech_flooding.c
+  movement/mech_falls.c
   movement/mech_domino.c
   movement/mech_ood.c
   movement/mech_pickup.c

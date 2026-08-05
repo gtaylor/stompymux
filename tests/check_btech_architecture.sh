@@ -421,6 +421,11 @@ if [[ -e src/btech/autopilot/autopilot_ai_internal.h ]]; then
   status=1
 fi
 
+if [[ -e src/btech/movement/mech_landing_falls.c ]]; then
+  echo "src/btech/movement/mech_landing_falls.c: mixed landing/flooding/fall module is not allowed"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1
