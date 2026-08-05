@@ -112,6 +112,11 @@ bool btech_context_requires_backwalk_rolls(const BtechContext *context) {
   return context->configuration->btech_roll_on_backwalk;
 }
 
+bool btech_context_uses_new_charge_rules(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_newcharge;
+}
+
 int btech_context_movement_slowdown_mode(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_slowdown;

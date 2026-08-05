@@ -63,6 +63,7 @@ bool btech_context_inferno_penalty_enabled(const BtechContext *context);
 bool btech_context_uses_fasa_turning(const BtechContext *context);
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context);
 bool btech_context_requires_backwalk_rolls(const BtechContext *context);
+bool btech_context_uses_new_charge_rules(const BtechContext *context);
 int btech_context_movement_slowdown_mode(const BtechContext *context);
 int btech_context_stacking_mode(const BtechContext *context);
 int btech_context_stacking_damage(const BtechContext *context);

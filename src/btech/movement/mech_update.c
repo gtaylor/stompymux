@@ -10,11 +10,11 @@
 
 #include "mech_update_internal.h"
 
+#include "mech_charge_tracking_api.h"
 #include "mech_movement_validation_api.h"
 
 void mech_movement_update(Mech *mech) {
   float newx = 0.0, newy = 0.0, dax, day;
-  float xy_charge_dist, xscale;
   float jump_pos;
 
 #ifdef ODDJUMP
@@ -36,16 +36,7 @@ void mech_movement_update(Mech *mech) {
   if (!mech_map)
     return;
 
-  /* Is the unit charging - and if so have they been charging to long */
-  if (mech->xcode.context->configuration->btech_newcharge &&
-      MechChargeTarget(mech) > 0) {
-    if (MechChargeTimer(mech)++ > CHARGE_TIMER_LIMIT) {
-      mech_notify(mech, MECHALL, "Charge timed out, charge reset.");
-      MechChargeTarget(mech) = -1;
-      MechChargeTimer(mech) = 0;
-      MechChargeDistance(mech) = 0;
-    }
-  }
+  mech_charge_timeout_update(mech);
 
   /*! \todo {now that I think about it maybe make a single block
    * of code to check for jumping BEFORE anything else.} */
@@ -167,14 +158,7 @@ void mech_movement_update(Mech *mech) {
 
       upd_z = 1;
 
-      /* If we're charging record distance traveled */
-      if (MechChargeTarget(mech) > 0 &&
-          mech->xcode.context->configuration->btech_newcharge) {
-        xscale = 1.0 / SCALEMAP;
-        xscale = xscale * xscale;
-        xy_charge_dist = sqrt(xscale * newx * newx + YSCALE2 * newy * newy);
-        MechChargeDistance(mech) += xy_charge_dist;
-      }
+      mech_charge_distance_record(mech, newx, newy);
 
     } else {
 
@@ -204,14 +188,7 @@ void mech_movement_update(Mech *mech) {
       MechFY(mech) += newy;
       upd_z = 1;
 
-      /* If we're charging record the distance traveled */
-      if (MechChargeTarget(mech) > 0 &&
-          mech->xcode.context->configuration->btech_newcharge) {
-        xscale = 1.0 / SCALEMAP;
-        xscale = xscale * xscale;
-        xy_charge_dist = sqrt(xscale * newx * newx + YSCALE2 * newy * newy);
-        MechChargeDistance(mech) += xy_charge_dist;
-      }
+      mech_charge_distance_record(mech, newx, newy);
 
     } else {
 
@@ -237,14 +214,7 @@ void mech_movement_update(Mech *mech) {
       MechFY(mech) += newy;
       upd_z = 1;
 
-      /* Record the charge distance */
-      if (MechChargeTarget(mech) > 0 &&
-          mech->xcode.context->configuration->btech_newcharge) {
-        xscale = 1.0 / SCALEMAP;
-        xscale = xscale * xscale;
-        xy_charge_dist = sqrt(xscale * newx * newx + YSCALE2 * newy * newy);
-        MechChargeDistance(mech) += xy_charge_dist;
-      }
+      mech_charge_distance_record(mech, newx, newy);
 
     } else {
 
@@ -496,28 +466,7 @@ void mech_movement_update(Mech *mech) {
   if (MechType(mech) == CLASS_VEH_NAVAL)
     mech_naval_altitude_check(mech, oz);
 
-  /* We're charging lets do some damage */
-  if (MechChargeTarget(mech) != -1) {
-
-    /* Valid target? */
-    target =
-        btech_context_get_mech(mech->xcode.context, MechChargeTarget(mech));
-    if (target) {
-
-      if (FaMechRange(mech, target) < CHARGE_DIST_TRIGGER) {
-        ChargeMech(mech, target);
-        MechChargeTarget(mech) = -1;
-        MechChargeTimer(mech) = 0;
-        MechChargeDistance(mech) = 0;
-      }
-
-    } else {
-      mech_notify(mech, MECHPILOT, "Invalid CHARGE target!");
-      MechChargeTarget(mech) = -1;
-      MechChargeDistance(mech) = 0;
-      MechChargeTimer(mech) = 0;
-    }
-  }
+  mech_charge_impact_resolve(mech);
 
   /* If we're towing something update its position with us */
   if (MechCarrying(mech) > 0) {

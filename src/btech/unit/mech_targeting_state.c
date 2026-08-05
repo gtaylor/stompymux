@@ -41,6 +41,12 @@ void mech_dfa_target_dbref_set(Mech *mech, DbRef target) {
 
 int mech_charge_timer(const Mech *mech) { return mech->rd.chargetimer; }
 
+int mech_charge_timer_advance(Mech *mech) { return mech->rd.chargetimer++; }
+
+void mech_charge_distance_add(Mech *mech, float distance) {
+  mech->rd.chargedist += distance;
+}
+
 int mech_target_hex_x(const Mech *mech) { return mech->rd.targx; }
 
 int mech_target_hex_y(const Mech *mech) { return mech->rd.targy; }
