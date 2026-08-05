@@ -148,6 +148,16 @@ int btech_context_critical_level(const BtechContext *context) {
   return context->configuration->btech_critlevel;
 }
 
+bool btech_context_uses_tank_friendly_criticals(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_tankfriendly;
+}
+
+bool btech_context_uses_tank_critical_shielding(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_tankshield;
+}
+
 bool btech_context_uses_tsm_sprint_bonus(const BtechContext *context) {
   return context && context->configuration &&
          context->configuration->btech_tsm_sprint_bonus;

@@ -264,6 +264,13 @@ void mech_turret_jammed_set(Mech *mech, bool jammed) {
     mech->rd.tankcritstatus &= ~TURRET_JAMMED;
 }
 
+void mech_turret_locked_set(Mech *mech, bool locked) {
+  if (locked)
+    mech->rd.tankcritstatus |= TURRET_LOCKED;
+  else
+    mech->rd.tankcritstatus &= ~TURRET_LOCKED;
+}
+
 void mech_searchlight_set(Mech *mech, bool enabled) {
   if (enabled) {
     mech->rd.status2 |= SLITE_ON;

@@ -7,14 +7,17 @@
  *       All rights reserved
  */
 
+#include "mech_classification_api.h"
 #include "mech_hitloc_internal.h"
+#include "mech_identity_api.h"
 
 int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
                                 int *isrear, int roll) {
   int hitloc = 0;
   int side;
+  BtechContext *context = mech_context(mech);
 
-  switch (MechType(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_AERO:
     switch (hitGroup) {
     case FRONT:
@@ -193,14 +196,13 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return DS_LWING;
       case 4:
       case 10:
-        return (btech_random_range(mech->xcode.context, 1, 2)) == 1 ? DS_LWING
-                                                                    : DS_RWING;
+        return (btech_random_range(context, 1, 2)) == 1 ? DS_LWING : DS_RWING;
       }
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
-      if (btech_random_range(mech->xcode.context, 1, 2) == 2)
+      if (btech_random_range(context, 1, 2) == 2)
         SpheroidToRear(mech, side);
       switch (roll) {
       case 2:

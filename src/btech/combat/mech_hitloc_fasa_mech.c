@@ -7,16 +7,19 @@
  *       All rights reserved
  */
 
+#include "mech_classification_api.h"
 #include "mech_hitloc_internal.h"
+#include "mech_identity_api.h"
 
 int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
                            int *isrear, int roll) {
   int hitloc = 0;
+  BtechContext *context = mech_context(mech);
 
-  switch (MechType(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_BSUIT:
     if ((hitloc = get_bsuit_hitloc(mech)) < 0)
-      return btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1);
+      return btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
@@ -24,10 +27,10 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
     case LEFTSIDE:
       switch (roll) {
       case 2:
-        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+        btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
                            tprintf("%ld's luck sucks. It got TACed. "
                                    "We're in mech_fasa_hit_location()",
-                                   mech->mynum));
+                                   mech_dbref(mech)));
         *iscritical = 1;
         return LTORSO;
       case 3:
@@ -48,7 +51,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 11:
         return RLEG;
       case 12:
-        if (mech->xcode.context->configuration->btech_exile_stun_code)
+        if (btech_context_uses_exile_stun_code(context))
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -56,10 +59,10 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
     case RIGHTSIDE:
       switch (roll) {
       case 2:
-        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+        btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
                            tprintf("%ld's luck sucks. It got TACed. "
                                    "We're in mech_fasa_hit_location()",
-                                   mech->mynum));
+                                   mech_dbref(mech)));
         *iscritical = 1;
         return RTORSO;
       case 3:
@@ -80,7 +83,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 11:
         return LLEG;
       case 12:
-        if (mech->xcode.context->configuration->btech_exile_stun_code)
+        if (btech_context_uses_exile_stun_code(context))
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -89,10 +92,10 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
     case BACK:
       switch (roll) {
       case 2:
-        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+        btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
                            tprintf("%ld's luck sucks. It got TACed. "
                                    "We're in mech_fasa_hit_location()",
-                                   mech->mynum));
+                                   mech_dbref(mech)));
         *iscritical = 1;
         return CTORSO;
       case 3:
@@ -112,7 +115,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 11:
         return LARM;
       case 12:
-        if (mech->xcode.context->configuration->btech_exile_stun_code)
+        if (btech_context_uses_exile_stun_code(context))
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }

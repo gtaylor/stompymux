@@ -7,6 +7,8 @@
  *       All rights reserved
  */
 
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
 
 int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
@@ -14,7 +16,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
   int hitloc = 0;
   int side;
 
-  switch (MechType(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_VTOL:
     switch (hitGroup) {
     case LEFTSIDE:
@@ -150,13 +152,13 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
         hitloc = LSIDE;
         break;
       case 10:
-        if (GetSectInt(mech, TURRET))
+        if (mech_section_internal(mech, TURRET))
           hitloc = TURRET;
         else
           hitloc = LSIDE;
         break;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
+        if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
           if (crittable(mech, hitloc, 40))
             *iscritical = 1;
@@ -187,13 +189,13 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
         hitloc = RSIDE;
         break;
       case 10:
-        if (GetSectInt(mech, TURRET))
+        if (mech_section_internal(mech, TURRET))
           hitloc = TURRET;
         else
           hitloc = RSIDE;
         break;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
+        if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
           if (crittable(mech, hitloc, 40))
             *iscritical = 1;
@@ -229,13 +231,13 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
         hitloc = side;
         break;
       case 10:
-        if (GetSectInt(mech, TURRET))
+        if (mech_section_internal(mech, TURRET))
           hitloc = TURRET;
         else
           hitloc = side;
         break;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
+        if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
           *iscritical = 1;
         } else

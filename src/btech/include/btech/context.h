@@ -70,6 +70,8 @@ bool btech_context_uses_advanced_vtol_criticals(const BtechContext *context);
 bool btech_context_uses_fasa_criticals(const BtechContext *context);
 bool btech_context_uses_exile_stun_code(const BtechContext *context);
 int btech_context_critical_level(const BtechContext *context);
+bool btech_context_uses_tank_friendly_criticals(const BtechContext *context);
+bool btech_context_uses_tank_critical_shielding(const BtechContext *context);
 bool btech_context_uses_tsm_sprint_bonus(const BtechContext *context);
 bool btech_context_uses_tsm_tow_bonus(const BtechContext *context);
 int btech_context_stand_careful_modifier(const BtechContext *context);

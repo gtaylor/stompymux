@@ -7,14 +7,21 @@
  *       All rights reserved
  */
 
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
+#include "mech_identity_api.h"
+#include "mech_specification_api.h"
 
 int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
                              int *isrear, int roll) {
   int hitloc = 0;
   int side;
+  BtechContext *context = mech_context(mech);
+  MechConditionSummary condition = mech_condition_summary(mech);
 
-  switch (MechType(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_VEH_GROUND:
     switch (hitGroup) {
 
@@ -25,10 +32,10 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         *iscritical = 1;
         return LSIDE;
       case 3:
-        if (mech->xcode.context->configuration->btech_tankfriendly) {
+        if (btech_context_uses_tank_friendly_criticals(context)) {
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch (MechMove(mech)) {
+            switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
                           "One of your tracks is seriously damaged!");
@@ -56,7 +63,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* Cripple tank */
         if (!Fallen(mech)) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch (MechMove(mech)) {
+          switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(
                 mech, MECHALL,
@@ -88,7 +95,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* MP -1 */
         if (!Fallen(mech)) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch (MechMove(mech)) {
+          switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(mech, MECHALL, "One of your tracks is damaged!");
             break;
@@ -115,12 +122,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* MP -1 if hover */
         return LSIDE;
       case 10:
-        return (GetSectInt(mech, TURRET)) ? TURRET : LSIDE;
+        return (mech_section_internal(mech, TURRET)) ? TURRET : LSIDE;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
-          if (!(MechTankCritStatus(mech) & TURRET_LOCKED)) {
+        if (mech_section_internal(mech, TURRET)) {
+          if (!condition.turret_locked) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            MechTankCritStatus(mech) |= TURRET_LOCKED;
+            mech_turret_locked_set(mech, true);
             mech_notify(mech, MECHALL,
                         "Your turret takes a direct hit and locks up!");
           }
@@ -139,10 +146,10 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         *iscritical = 1;
         return RSIDE;
       case 3:
-        if (mech->xcode.context->configuration->btech_tankfriendly) {
+        if (btech_context_uses_tank_friendly_criticals(context)) {
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch (MechMove(mech)) {
+            switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
                           "One of your tracks is seriously damaged!");
@@ -170,7 +177,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* Cripple Tank */
         if (!Fallen(mech)) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch (MechMove(mech)) {
+          switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(
                 mech, MECHALL,
@@ -202,7 +209,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* MP -1 */
         if (!Fallen(mech)) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch (MechMove(mech)) {
+          switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(mech, MECHALL, "One of your tracks is damaged!");
             break;
@@ -228,7 +235,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 9:
         /* MP -1 if hover */
         if (!Fallen(mech)) {
-          if (MechMove(mech) == MOVE_HOVER) {
+          if (mech_movement_type(mech) == MOVE_HOVER) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             mech_notify(mech, MECHALL, "Your air skirt is damaged!");
             mech_max_speed_lower(mech, MP1);
@@ -236,12 +243,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         }
         return RSIDE;
       case 10:
-        return (GetSectInt(mech, TURRET)) ? TURRET : RSIDE;
+        return (mech_section_internal(mech, TURRET)) ? TURRET : RSIDE;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
-          if (!(MechTankCritStatus(mech) & TURRET_LOCKED)) {
+        if (mech_section_internal(mech, TURRET)) {
+          if (!condition.turret_locked) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            MechTankCritStatus(mech) |= TURRET_LOCKED;
+            mech_turret_locked_set(mech, true);
             mech_notify(mech, MECHALL,
                         "Your turret takes a direct hit and locks up!");
           }
@@ -264,12 +271,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         *iscritical = 1;
         return side;
       case 3:
-        if (mech->xcode.context->configuration->btech_tankshield) {
-          if (mech->xcode.context->configuration->btech_tankfriendly) {
+        if (btech_context_uses_tank_critical_shielding(context)) {
+          if (btech_context_uses_tank_friendly_criticals(context)) {
             if (!Fallen(mech)) {
               mech_notify(mech, MECHALL,
                           "[fg=yellow bold]CRITICAL HIT![reset]");
-              switch (MechMove(mech)) {
+              switch (mech_movement_type(mech)) {
               case MOVE_TRACK:
                 mech_notify(mech, MECHALL,
                             "One of your tracks is seriously damaged!");
@@ -297,7 +304,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           /* Cripple tank */
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch (MechMove(mech)) {
+            switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
                           "One of your tracks is destroyed, immobilizing your "
@@ -327,10 +334,10 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return side;
       case 4:
         /* MP -1 */
-        if (mech->xcode.context->configuration->btech_tankshield) {
+        if (btech_context_uses_tank_critical_shielding(context)) {
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch (MechMove(mech)) {
+            switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL, "One of your tracks is damaged!");
               break;
@@ -353,7 +360,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 5:
         /* MP -1 if Hovercraft */
         if (!Fallen(mech)) {
-          if (MechMove(mech) == MOVE_HOVER) {
+          if (mech_movement_type(mech) == MOVE_HOVER) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             mech_notify(mech, MECHALL, "Your air skirt is damaged!");
             mech_max_speed_lower(mech, MP1);
@@ -366,14 +373,14 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 9:
         return side;
       case 10:
-        return (GetSectInt(mech, TURRET)) ? TURRET : side;
+        return (mech_section_internal(mech, TURRET)) ? TURRET : side;
       case 11:
         *iscritical = 1;
         /* Lock turret into place */
-        if (GetSectInt(mech, TURRET)) {
-          if (!(MechTankCritStatus(mech) & TURRET_LOCKED)) {
+        if (mech_section_internal(mech, TURRET)) {
+          if (!condition.turret_locked) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            MechTankCritStatus(mech) |= TURRET_LOCKED;
+            mech_turret_locked_set(mech, true);
             mech_notify(mech, MECHALL,
                         "Your turret takes a direct hit and locks up!");
           }
@@ -382,10 +389,11 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           return side;
       case 12:
         /* A Roll on Determining Critical Hits Table */
-        if (crittable(mech, (GetSectInt(mech, TURRET)) ? TURRET : side,
-                      mech->xcode.context->configuration->btech_critlevel))
+        if (crittable(mech,
+                      (mech_section_internal(mech, TURRET)) ? TURRET : side,
+                      btech_context_critical_level(context)))
           *iscritical = 1;
-        return (GetSectInt(mech, TURRET)) ? TURRET : side;
+        return (mech_section_internal(mech, TURRET)) ? TURRET : side;
       }
     }
     break;
