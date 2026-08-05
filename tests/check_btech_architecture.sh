@@ -30,10 +30,39 @@ while IFS= read -r path; do
   fi
 done < <(find src/btech -type f -print | sort)
 
+while IFS= read -r match; do
+  echo "$match: disabled legacy implementation is not allowed"
+  status=1
+done < <(rg -n '#if[[:space:]]+0|#if[[:space:]]+false' src/btech \
+  -g '*.[ch]' || true)
+
 if [[ -e src/btech/unit/mech.h ]]; then
   echo "src/btech/unit/mech.h: aggregate Mech layout header is not allowed"
   status=1
 fi
+
+if [[ -e src/btech/special/registry_commands.c ||
+      -e src/btech/special/registry_commands_aux.c ]]; then
+  echo "src/btech/special: central command catalog is not allowed"
+  status=1
+fi
+
+if [[ -e src/btech/commands/command_legacy_wrappers.c ]]; then
+  echo "src/btech/commands/command_legacy_wrappers.c: legacy command wrappers are not allowed"
+  status=1
+fi
+
+while IFS= read -r match; do
+  echo "$match: command registry callback exposes a void object"
+  status=1
+done < <(rg -n 'BtechCommandHandler.*void|\(DbRef actor, void \*object' \
+  src/btech/special/command_registry.h || true)
+
+while IFS= read -r match; do
+  echo "$match: command catalog must be immutable"
+  status=1
+done < <(rg -n '^BtechCommandDefinition [A-Za-z_]+commands\[' src/btech \
+  -g '*command_catalog.c' || true)
 
 while IFS= read -r match; do
   echo "$match: non-unit source includes a private unit layout header"

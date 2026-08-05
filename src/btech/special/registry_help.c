@@ -125,10 +125,11 @@ static void help_color_initialize(const char *from, char *to) {
 #define MLen CM_TWO
 #endif
 
-static char *do_ugly_things(CoolMenu **d, char *msg, int len, int initial) {
+static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
+                                  int initial) {
   CoolMenu *c = *d;
   size_t msg_len;
-  char *e;
+  const char *e;
   char buf[LBUF_SIZE];
 
   /* XXX: Not entirely sure what this is for.  */
@@ -189,8 +190,8 @@ static char *do_ugly_things(CoolMenu **d, char *msg, int len, int initial) {
 
 #define TAB 3
 
-static void cut_apart_helpmsgs(CoolMenu **d, char *msg1, char *msg2, int len,
-                               int initial) {
+static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
+                               int len, int initial) {
   int l1 = Len(msg1);
   int l2 = Len(msg2);
   int nl1, nl2;
@@ -228,9 +229,9 @@ static void cut_apart_helpmsgs(CoolMenu **d, char *msg1, char *msg2, int len,
 #endif
 }
 
-void btech_special_object_help(BtechContext *context, DbRef player, char *type,
-                               int id, int loc, PowerId powerneeded, int objid,
-                               char *arg) {
+void btech_special_object_help(BtechContext *context, DbRef player,
+                               const char *type, int id, int loc,
+                               PowerId powerneeded, int objid, char *arg) {
   int i, j;
   Mech *mech = NULL;
   int pos[100][2];

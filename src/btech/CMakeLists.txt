@@ -8,6 +8,7 @@ set(BTECH_SOURCES
   autopilot/autopilot_target_scoring.c
   autopilot/autopilot_physical_attack.c
   autopilot/autopilot_chase_target.c
+  autopilot/autopilot_command_catalog.c
   autopilot/autopilot_commands.c
   autopilot/autopilot_command_dispatch.c
   autopilot/autopilot_goto.c
@@ -78,8 +79,12 @@ set(BTECH_SOURCES
   combat/mech_club.c
   combat/mine.c
   commands/btech.c
+  commands/command_invokers_mech.c
+  commands/command_invokers_other.c
+  commands/mech_command_catalog.c
   commands/mech_command_checks.c
   commands/mech_restrict.c
+  commands/typed_command_invokers.c
   core/btech_channel.c
   core/btech_event.c
   core/context.c
@@ -90,7 +95,9 @@ set(BTECH_SOURCES
   economy/econ_cmds.c
   economy/unit_cost.c
   integration/debug.c
+  integration/debug_command_catalog.c
   map/map.c
+  map/map_command_catalog.c
   map/map_bits.c
   map/map_coding.c
   map/map_conditions.c
@@ -139,6 +146,7 @@ set(BTECH_SOURCES
   movement/mech_update_damage.c
   movement/mech_update_piloting.c
   movement/mech_update_heartbeat.c
+  movement/turret_command_catalog.c
   movement/mech_boosters.c
   unit/mech_persistence.c
   unit/mech_position_state.c
@@ -162,6 +170,7 @@ set(BTECH_SOURCES
   persistence/special_restore.c
   persistence/validation.c
   repair/mech_tech.c
+  repair/repair_command_catalog.c
   repair/mech_tech_commands.c
   repair/mech_tech_scrap_commands.c
   repair/mech_tech_part_commands.c
@@ -175,6 +184,7 @@ set(BTECH_SOURCES
   repair/mechrep_construction.c
   repair/mechrep_technology.c
   scripting/functions.c
+  scripting/special_command_catalog.c
   scripting/los_store_values.c
   scripting/registry_values.c
   scripting/repair_map_values.c
@@ -202,8 +212,6 @@ set(BTECH_SOURCES
   special/registry.c
   special/registry_loading.c
   special/registry_help.c
-  special/registry_commands.c
-  special/registry_commands_aux.c
   ui/mech_maps.c
   ui/mech_lrs_map.c
   ui/mech_tactical_map.c

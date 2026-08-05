@@ -7,6 +7,9 @@
 
 #include "mux/server/platform.h"
 
+typedef struct Mech Mech;
+typedef struct MuxEvent MuxEvent;
+
 void mech_inferno_burn(Mech *mech, int time);
 void vehicle_fire_start(Mech *mech, Mech *attacker);
 void vehicle_fire_check(Mech *mech, int from_hex_fire);

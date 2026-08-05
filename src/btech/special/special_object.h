@@ -33,7 +33,7 @@ typedef enum {
  * Base "class" for all XCODE objects.  Every XCODE object should start with a
  * field of this type, called 'xcode' by convention.
  */
-typedef struct {
+typedef struct BtechSpecialObject {
   BtechSpecialObjectType type; /* XCODE object type */
   size_t size;                 /* object size */
   BtechContext *context;       /* borrowed runtime owner */

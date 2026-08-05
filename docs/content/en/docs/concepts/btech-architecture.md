@@ -35,8 +35,10 @@ Concrete `Mech`, `BattleMap`, `Autopilot`, and runtime-context layouts are
 private. Cross-domain interfaces use forward declarations, database object
 references, or domain operations rather than copying another domain's state.
 `unit/mech_internal.h` and `unit/mech_macros.h` may only be included by unit
-sources. The special-object command and lifecycle definitions in
-`special/registry_internal.h` likewise remain inside `special`.
+sources. Special-object layouts and lifecycle definitions in
+`special/registry_internal.h` likewise remain inside `special`. Commands use
+the narrow `special/command_registry.h` invocation contract; immutable command
+catalogues live beside their owning domains.
 
 The dependency direction is deliberately shallow:
 
@@ -101,4 +103,6 @@ types use PascalCase, and functions use subject-prefixed snake_case.
 
 The architecture check rejects files over 800 lines, dotted or generated-style
 filenames, private unit or registry headers outside their owner, complete
-`Mech` values outside `unit`, and known legacy exported names.
+`Mech` values outside `unit`, mutable or centralized command catalogues,
+untyped command callbacks, disabled legacy code, and known legacy exported
+names.

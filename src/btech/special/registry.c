@@ -203,7 +203,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
 
   const BtechSpecialObjectDefinition *typeOfObject;
   int type;
-  BtechCommandDefinition *cmd;
+  const BtechCommandDefinition *cmd;
   char *tmpc, *tmpchar;
   int ishelp;
 
@@ -232,8 +232,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   ishelp = !strcmp(command, "HELP");
   for (tmpchar = command; *tmpchar; tmpchar++)
     *tmpchar = ascii_to_lower(*tmpchar);
-  cmd = (BtechCommandDefinition *)hash_table_find(
-      command, &context->special_commands[type]);
+  cmd = hash_table_find(command, &context->special_commands[type]);
   if (tmpc)
     *tmpc = ' ';
   if (cmd && (type != GTYPE_MECH ||
@@ -248,7 +247,15 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
         btech_special_command_access(context, player,
                                      typeOfObject->power_needed)) {
       SKIPSTUFF(command);
-      cmd->handler(player, xcode_obj, command);
+      const BtechCommandInvocation invocation = {
+          .context = context,
+          .evaluation = btech_context_evaluation(context),
+          .actor = player,
+          .object_id = location,
+          .object = xcode_obj,
+          .arguments = command,
+      };
+      cmd->handler(&invocation);
     } else
       notify(btech_context_evaluation(context), player,
              "Sorry, that command is restricted!");
@@ -505,7 +512,8 @@ void *btech_context_find_object(BtechContext *context, DbRef key) {
 }
 
 void InitSpecialHash(BtechContext *context, int which) {
-  char *tmp, *tmpc;
+  const char *tmp;
+  char *tmpc;
   int i;
   char buf[MBUF_SIZE];
 

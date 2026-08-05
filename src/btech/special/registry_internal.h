@@ -20,6 +20,8 @@
 
 #include <stddef.h>
 
+#include "command_catalogs.h"
+#include "command_registry.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 
@@ -29,8 +31,6 @@
 typedef struct EvaluationContext EvaluationContext;
 typedef struct Mech Mech;
 typedef struct BattleMap BattleMap;
-
-typedef void (*BtechCommandHandler)(DbRef actor, void *object, char *arguments);
 
 #define VERIFY 0
 #define SAVE 1
@@ -58,27 +58,15 @@ typedef void (*BtechCommandHandler)(DbRef actor, void *object, char *arguments);
 void btech_heartbeat_start(BtechContext *context);
 void btech_heartbeat_stop(BtechContext *context);
 
-typedef struct BtechCommandDefinition {
-  int flag;
-  char *name;
-  char *helpmsg;
-  BtechCommandHandler handler;
-} BtechCommandDefinition;
-
-static inline bool
-btech_command_definition_has_handler(const BtechCommandDefinition *command) {
-  return command->handler != nullptr;
-}
-
 typedef void (*BtechSpecialLifecycleHandler)(DbRef object, void **data,
                                              int operation);
 typedef void (*BtechSpecialUpdateHandler)(DbRef object, void *data);
 typedef size_t (*BtechSpecialStorageSize)(void);
 
 typedef struct BtechSpecialObjectDefinition {
-  char *type;                       // Type of the object
-  BtechCommandDefinition *commands; // Commands array
-  long datasize;                    // Size of private buffer
+  const char *type;                       // Type of the object
+  const BtechCommandDefinition *commands; // Commands array
+  long datasize;                          // Size of private buffer
   BtechSpecialStorageSize storage_size;
   BtechSpecialLifecycleHandler lifecycle;
   int updateTime;                   // Amount of time between updates (secs)
@@ -102,16 +90,9 @@ int btech_command_allowed_for_mech(Mech *mech, int command_flag);
 bool btech_special_command_access(BtechContext *context, DbRef object,
                                   PowerId power);
 int btech_context_which_special_attribute(BtechContext *context, DbRef key);
-void btech_special_object_help(BtechContext *context, DbRef player, char *type,
-                               int id, int location, PowerId power_needed,
-                               int object_id, char *argument);
-
-extern BtechCommandDefinition mechcommands[];
-extern BtechCommandDefinition mapcommands[];
-extern BtechCommandDefinition mechrepcommands[];
-extern BtechCommandDefinition autopilotcommands[];
-extern BtechCommandDefinition turretcommands[];
-extern BtechCommandDefinition debugcommands[];
-extern BtechCommandDefinition sscommands[];
+void btech_special_object_help(BtechContext *context, DbRef player,
+                               const char *type, int id, int location,
+                               PowerId power_needed, int object_id,
+                               char *argument);
 
 void send_channel(EvaluationContext *, const char *, const char *, ...);
