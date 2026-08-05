@@ -154,6 +154,13 @@ done < <(rg -n \
   src/btech -g '*.[ch]' || true)
 
 while IFS= read -r match; do
+  echo "$match: converted pickup module uses an aggregate Mech or map layout"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\b(mech|target|towMech|newmap)->|\b(Mech(X|Y|Z|F[XYZ]|Type|Move|Speed|VerticalSpeed|Specials2?|Carrying|SwarmTarget|Tons|Team|CritStatus|Status|TankCritStatus|DesiredSpeed)|Fortified|CarryingClub|Jumping|Fallen|Towed|Towable|Destroyed|Started|OODing|IsDS|SectIsDestroyed|OkayCritSectS|SetCarrying|MirrorPosition|FallCentersTorso)\(' \
+  src/btech/movement/mech_pickup.c || true)
+
+while IFS= read -r match; do
   echo "$match: converted out-of-door drop module uses an aggregate Mech layout"
   status=1
 done < <(rg -n \

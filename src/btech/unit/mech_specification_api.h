@@ -19,6 +19,7 @@ int mech_cargo_space(const Mech *mech);
 int mech_carrier_maximum_tonnage(const Mech *mech);
 int mech_maximum_battle_suits(const Mech *mech);
 float mech_current_speed(const Mech *mech);
+void mech_current_speed_set(Mech *mech, float speed);
 float mech_maximum_speed(const Mech *mech);
 void mech_maximum_speed_set(Mech *mech, float speed);
 bool mech_is_flying_type(const Mech *mech);

@@ -117,6 +117,15 @@ void mech_carried_dbref_set(Mech *mech, DbRef carried) {
 
 bool mech_is_towed(const Mech *mech) { return mech->rd.status & TOWED; }
 
+bool mech_is_towable(const Mech *mech) { return mech->rd.critstatus & TOWABLE; }
+
+void mech_towed_set(Mech *mech, bool towed) {
+  if (towed)
+    mech->rd.status |= TOWED;
+  else
+    mech->rd.status &= ~TOWED;
+}
+
 void mech_towed_clear(Mech *mech) { mech->rd.status &= ~TOWED; }
 
 void mech_environment_conditions_set(Mech *mech, bool special, bool temperature,

@@ -72,3 +72,7 @@ void mech_evading_set(Mech *mech, bool evading);
 void mech_sprinting_set(Mech *mech, bool sprinting);
 void mech_player_killer_set(Mech *mech, bool enabled);
 void mech_partial_cover_set(Mech *mech, bool covered);
+void mech_swarm_target_set(Mech *mech, DbRef target);
+void mech_fallen_set(Mech *mech, bool fallen);
+void mech_hull_down_set(Mech *mech, bool hull_down);
+void mech_dug_in_set(Mech *mech, bool dug_in);

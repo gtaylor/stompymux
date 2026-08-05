@@ -37,6 +37,8 @@ void mech_blinded_set(Mech *mech, bool blinded);
 DbRef mech_carried_dbref(const Mech *mech);
 void mech_carried_dbref_set(Mech *mech, DbRef carried);
 bool mech_is_towed(const Mech *mech);
+bool mech_is_towable(const Mech *mech);
+void mech_towed_set(Mech *mech, bool towed);
 void mech_towed_clear(Mech *mech);
 void mech_environment_conditions_set(Mech *mech, bool special, bool temperature,
                                      bool gravity, bool vacuum);

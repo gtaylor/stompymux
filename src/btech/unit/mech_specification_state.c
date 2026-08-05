@@ -47,6 +47,8 @@ int mech_maximum_battle_suits(const Mech *mech) { return mech->rd.maxsuits; }
 
 float mech_current_speed(const Mech *mech) { return mech->rd.speed; }
 
+void mech_current_speed_set(Mech *mech, float speed) { mech->rd.speed = speed; }
+
 float mech_maximum_speed(const Mech *mech) { return mech->ud.maxspeed; }
 
 void mech_maximum_speed_set(Mech *mech, float speed) {

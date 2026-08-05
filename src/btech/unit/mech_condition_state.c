@@ -111,3 +111,28 @@ void mech_partial_cover_set(Mech *mech, bool covered) {
   else
     mech->rd.status &= ~PARTIAL_COVER;
 }
+
+void mech_swarm_target_set(Mech *mech, DbRef target) {
+  mech->rd.swarming = target;
+}
+
+void mech_fallen_set(Mech *mech, bool fallen) {
+  if (fallen)
+    mech->rd.status |= FALLEN;
+  else
+    mech->rd.status &= ~FALLEN;
+}
+
+void mech_hull_down_set(Mech *mech, bool hull_down) {
+  if (hull_down)
+    mech->rd.status |= HULLDOWN;
+  else
+    mech->rd.status &= ~HULLDOWN;
+}
+
+void mech_dug_in_set(Mech *mech, bool dug_in) {
+  if (dug_in)
+    mech->rd.tankcritstatus |= DUG_IN;
+  else
+    mech->rd.tankcritstatus &= ~DUG_IN;
+}
