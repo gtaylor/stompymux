@@ -75,6 +75,15 @@ int phys_common_checks(Mech *mech);
 int get_arm_args(int *using, int *argument_count, char ***arguments, Mech *mech,
                  int (*has_weapon)(Mech *mech, int location), char *weapon);
 
+void physical_damage_apply(Mech *target, Mech *attacker, int cause_pilot,
+                           DbRef pilot, int hit_location, int rear,
+                           int critical, int damage, int glancing);
+void physical_damage_apply_without_experience(Mech *target, Mech *attacker,
+                                              int cause_pilot, DbRef pilot,
+                                              int hit_location, int rear,
+                                              int critical, int damage,
+                                              int glancing);
+
 #define MyDamageMech(a, b, c, d, e, f, g, h, i)                                \
   (a)->xcode.context->combat_overrides.damage_experience =                     \
       BTECH_DAMAGE_XP_PILOTING;                                                \
