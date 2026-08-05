@@ -66,6 +66,15 @@ static int mech_movement_maximum_int(int first, int second) {
   return first > second ? first : second;
 }
 
+int mech_jump_speed_mp_for_map(const Mech *mech, const BattleMap *map) {
+  float speed = mech_jump_speed(mech);
+  if (mech_is_under_gravity(mech) && map != nullptr) {
+    speed =
+        speed * 100 / mech_movement_maximum_int(50, battle_map_gravity(map));
+  }
+  return (int)(speed * MP_PER_KPH);
+}
+
 struct {
   char *name;
   char *full;

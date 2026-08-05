@@ -139,8 +139,8 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     critType = mech_critical_part_type(wounded, hitloc, critHit);
     critData = mech_critical_data(wounded, hitloc, critHit);
 
-    if (HandleMechCrit(wounded, attacker, LOS, hitloc, critHit, critType,
-                       critData))
+    if (mech_critical_effect_apply(wounded, attacker, LOS, hitloc, critHit,
+                                   critType, critData))
       num--;
   }
 }

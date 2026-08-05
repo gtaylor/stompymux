@@ -25,7 +25,29 @@ int mech_engine_rating(const Mech *mech) {
 
 float mech_jump_speed(const Mech *mech) { return mech->rd.jumpspeed; }
 
+void mech_jump_speed_lower(Mech *mech, float amount) {
+  mech->rd.jumpspeed -= amount;
+  if (mech->rd.jumpspeed < 0.0F)
+    mech->rd.jumpspeed = 0.0F;
+}
+
 int mech_heat_sink_count(const Mech *mech) { return mech->ud.numsinks; }
+
+void mech_heat_sink_count_remove(Mech *mech, int count) {
+  mech->ud.numsinks -= count;
+}
+
+bool mech_has_double_heat_sinks(const Mech *mech) {
+  return mech->rd.specials & (CLAN_TECH | DOUBLE_HEAT_TECH);
+}
+
+int mech_heat_sink_critical_size(const Mech *mech) {
+  if (mech->ud.type != CLASS_MECH)
+    return 1;
+  if (mech->rd.specials & CLAN_TECH)
+    return 2;
+  return mech->rd.specials & DOUBLE_HEAT_TECH ? 3 : 1;
+}
 
 int mech_technology_flags(const Mech *mech) { return mech->rd.specials; }
 
@@ -35,6 +57,10 @@ int mech_technology_flags_secondary(const Mech *mech) {
 
 void mech_technology_flags_remove(Mech *mech, int flags) {
   mech->rd.specials &= ~flags;
+}
+
+void mech_technology_flags_secondary_remove(Mech *mech, int flags) {
+  mech->rd.specials2 &= ~flags;
 }
 
 void mech_masc_technology_destroy(Mech *mech) {

@@ -35,3 +35,15 @@ int mech_scanner_range(const Mech *mech) { return mech->ud.scan_range; }
 void mech_scanner_range_set(Mech *mech, int range) {
   mech->ud.scan_range = range;
 }
+
+void mech_sensor_ranges_halve(Mech *mech) {
+  mech->ud.lrs_range /= 2;
+  mech->ud.tac_range /= 2;
+  mech->ud.scan_range /= 2;
+}
+
+void mech_sensor_ranges_disable(Mech *mech) {
+  mech->ud.lrs_range = 0;
+  mech->ud.tac_range = 0;
+  mech->ud.scan_range = 0;
+}

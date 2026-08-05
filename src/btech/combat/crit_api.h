@@ -56,8 +56,9 @@ void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
                                        int hitloc, int num);
 void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
                                   int hitloc, int num);
-int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
-                   int critHit, int critType, int critData);
+int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
+                               int hitloc, int critHit, int critType,
+                               int critData);
 void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                           int num);
 void mech_arm_actuator_criticals_normalize(Mech *objMech, int wLoc,

@@ -38,6 +38,7 @@ void mech_sensor_description_append(char *buf, int size, Mech *mech, int sn,
                                     int verbose);
 char *mech_sensor_info(Mech *mech, char buffer[static LBUF_SIZE]);
 int mech_sensor_can_change_to(Mech *mech, int sensor);
+void mech_sensors_disable_requiring(Mech *mech, int technology);
 void sensor_light_availability_check(Mech *mech);
 void mech_sensor(DbRef player, void *data, char *buffer);
 void mech_sensor_visibility_refresh(Mech *mech);

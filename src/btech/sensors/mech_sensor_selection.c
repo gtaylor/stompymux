@@ -34,6 +34,21 @@ typedef struct SensorModeText {
   char text[MBUF_SIZE];
 } SensorModeText;
 
+void mech_sensors_disable_requiring(Mech *mech, int technology) {
+  int primary = mech_sensor_index(mech, 0);
+  int secondary = mech_sensor_index(mech, 1);
+  bool primary_requires = sensors[primary].required_special == technology &&
+                          sensors[primary].specials_set == 1;
+  bool secondary_requires = sensors[secondary].required_special == technology &&
+                            sensors[secondary].specials_set == 1;
+
+  if (!primary_requires && !secondary_requires)
+    return;
+  mech_sensors_set(mech, primary_requires ? 0 : primary,
+                   secondary_requires ? 0 : secondary);
+  MarkForLOSUpdate(mech);
+}
+
 static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
                                        int verbose) {
   SensorModeText mode = {0};

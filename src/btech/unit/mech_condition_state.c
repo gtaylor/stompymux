@@ -57,6 +57,11 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .null_signature_destroyed = critical_status & NSS_DESTROYED,
       .c3_destroyed = critical_status & C3_DESTROYED,
       .c3i_destroyed = critical_status & C3I_DESTROYED,
+      .sensors_damaged = critical_status & SENSORS_DAMAGED,
+      .beagle_probe_destroyed = critical_status & BEAGLE_DESTROYED,
+      .bloodhound_probe_destroyed = critical_status & BLOODHOUND_DESTROYED,
+      .light_beagle_probe_destroyed =
+          mech->rd.critstatus2 & LIGHT_BAP_DESTROYED,
       .turret_auto_turn = status2 & AUTOTURN_TURRET,
       .arms_flipped = status & FLIPPED_ARMS,
       .targeting_computer_destroyed = critical_status & TC_DESTROYED,
@@ -286,6 +291,84 @@ void mech_tail_rotor_destroyed_set(Mech *mech, bool destroyed) {
     mech->rd.tankcritstatus |= TAIL_ROTOR_DESTROYED;
   else
     mech->rd.tankcritstatus &= ~TAIL_ROTOR_DESTROYED;
+}
+
+static void mech_critical_status_set(Mech *mech, int flag, bool enabled) {
+  if (enabled)
+    mech->rd.critstatus |= flag;
+  else
+    mech->rd.critstatus &= ~flag;
+}
+
+void mech_life_support_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, LIFE_SUPPORT_DESTROYED, destroyed);
+}
+
+void mech_sensors_damaged_set(Mech *mech, bool damaged) {
+  mech_critical_status_set(mech, SENSORS_DAMAGED, damaged);
+}
+
+void mech_targeting_computer_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, TC_DESTROYED, destroyed);
+}
+
+void mech_gyro_damage_set(Mech *mech, bool damaged, bool destroyed) {
+  mech_critical_status_set(mech, GYRO_DAMAGED, damaged);
+  mech_critical_status_set(mech, GYRO_DESTROYED, destroyed);
+}
+
+void mech_hardened_gyro_damaged_set(Mech *mech, bool damaged) {
+  if (damaged)
+    mech->rd.critstatus2 |= HDGYRO_DAMAGED;
+  else
+    mech->rd.critstatus2 &= ~HDGYRO_DAMAGED;
+}
+
+void mech_c3_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, C3_DESTROYED, destroyed);
+}
+
+void mech_c3i_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, C3I_DESTROYED, destroyed);
+}
+
+void mech_tag_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, TAG_DESTROYED, destroyed);
+}
+
+void mech_ecm_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, ECM_DESTROYED, destroyed);
+}
+
+void mech_angel_ecm_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, ANGEL_ECM_DESTROYED, destroyed);
+}
+
+void mech_ecm_modes_disable(Mech *mech) {
+  mech->rd.status2 &= ~(ECM_ENABLED | ECCM_ENABLED);
+}
+
+void mech_angel_ecm_modes_disable(Mech *mech) {
+  mech->rd.status2 &= ~(ANGEL_ECM_ENABLED | ANGEL_ECCM_ENABLED);
+}
+
+void mech_beagle_probe_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, BEAGLE_DESTROYED, destroyed);
+}
+
+void mech_bloodhound_probe_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, BLOODHOUND_DESTROYED, destroyed);
+}
+
+void mech_light_beagle_probe_destroyed_set(Mech *mech, bool destroyed) {
+  if (destroyed)
+    mech->rd.critstatus2 |= LIGHT_BAP_DESTROYED;
+  else
+    mech->rd.critstatus2 &= ~LIGHT_BAP_DESTROYED;
+}
+
+void mech_null_signature_destroyed_set(Mech *mech, bool destroyed) {
+  mech_critical_status_set(mech, NSS_DESTROYED, destroyed);
 }
 
 void mech_stunned_set(Mech *mech, bool stunned) {

@@ -324,7 +324,8 @@ void do_magic(Mech *mech) {
           if (!IsAmmo((t = GetPartType(mech, i, j)))) {
             if (!IsWeapon(t))
               if (MechType(mech) == CLASS_MECH)
-                HandleMechCrit(&opp, NULL, 0, i, j, t, GetPartData(mech, i, j));
+                mech_critical_effect_apply(&opp, nullptr, 0, i, j, t,
+                                           GetPartData(mech, i, j));
           }
         }
       } else {

@@ -13,3 +13,5 @@ int mech_long_range_sensor_range(const Mech *mech);
 void mech_long_range_sensor_range_set(Mech *mech, int range);
 int mech_scanner_range(const Mech *mech);
 void mech_scanner_range_set(Mech *mech, int range);
+void mech_sensor_ranges_halve(Mech *mech);
+void mech_sensor_ranges_disable(Mech *mech);
