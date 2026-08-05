@@ -47,6 +47,10 @@ int battle_map_cloud_base(const BattleMap *map) { return map->cloudbase; }
 
 int battle_map_temperature(const BattleMap *map) { return map->temp; }
 
+float battle_map_movement_modifier(const BattleMap *map) {
+  return map->movemod > 0 ? (float)map->movemod / 100.0F : 1.0F;
+}
+
 bool battle_map_sensor_is_disabled(const BattleMap *map, int sensor) {
   return map->sensorflags & (1 << sensor);
 }

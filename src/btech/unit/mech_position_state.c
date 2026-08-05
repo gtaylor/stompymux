@@ -62,6 +62,12 @@ float mech_motion_vector_y(const Mech *mech) { return mech->rd.startfy; }
 
 float mech_motion_vector_z(const Mech *mech) { return mech->rd.startfz; }
 
+float mech_jump_length(const Mech *mech) { return mech->rd.jumplength; }
+
+float mech_jump_end_real_z(const Mech *mech) { return mech->rd.endfz; }
+
+int mech_jump_apex_elevation(const Mech *mech) { return mech->rd.jumptop; }
+
 float mech_range_to(const Mech *mech, const Mech *target) {
   return FindRange(mech->pd.fx, mech->pd.fy, mech->pd.fz, target->pd.fx,
                    target->pd.fy, target->pd.fz);
@@ -119,7 +125,16 @@ void mech_position_real_xy_set(Mech *mech, float x, float y) {
   mech->pd.fy = y;
 }
 
+void mech_position_real_xy_translate(Mech *mech, float delta_x, float delta_y) {
+  mech->pd.fx += delta_x;
+  mech->pd.fy += delta_y;
+}
+
 void mech_position_real_z_set(Mech *mech, float z) { mech->pd.fz = z; }
+
+void mech_position_real_z_translate(Mech *mech, float delta_z) {
+  mech->pd.fz += delta_z;
+}
 
 void mech_position_terrain_set(Mech *mech, char terrain) {
   mech->pd.terrain = terrain;
@@ -206,6 +221,11 @@ void mech_motion_vector_reset(Mech *mech) {
   mech->rd.startfx = 0.0F;
   mech->rd.startfy = 0.0F;
   mech->rd.startfz = 0.0F;
+}
+
+void mech_motion_vector_xy_set(Mech *mech, float x, float y) {
+  mech->rd.startfx = x;
+  mech->rd.startfy = y;
 }
 
 void mech_jump_destination_y_set(Mech *mech, int destination_y) {

@@ -26,6 +26,7 @@ int battle_map_visibility(const BattleMap *map);
 int battle_map_maximum_visibility(const BattleMap *map);
 int battle_map_cloud_base(const BattleMap *map);
 int battle_map_temperature(const BattleMap *map);
+float battle_map_movement_modifier(const BattleMap *map);
 bool battle_map_is_dark(const BattleMap *map);
 bool battle_map_is_underground(const BattleMap *map);
 bool battle_map_uses_special_rules(const BattleMap *map);
