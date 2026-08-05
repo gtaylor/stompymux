@@ -14,6 +14,10 @@ DbRef mech_gunner_dbref(const Mech *mech) {
 
 int mech_pilot_status(const Mech *mech) { return mech->pd.pilotstatus; }
 
+int mech_pilot_skill_modifier(const Mech *mech) {
+  return mech->rd.pilotskillbase;
+}
+
 void mech_pilot_status_set(Mech *mech, int status) {
   mech->pd.pilotstatus = status;
 }

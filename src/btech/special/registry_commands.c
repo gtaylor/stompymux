@@ -181,7 +181,7 @@ void newfreemech(DbRef, void **, int);
 ECMD(f_mapblock_set);
 ECMD(f_mapblock_setxy);
 ECMD(ListForms);
-ECMD(initiate_ood);
+ECMD(mech_ood_initiate);
 ECMD(mech_Raddstuff);
 ECMD(mech_Rfixstuff);
 ECMD(mech_Rremovestuff);
@@ -473,7 +473,7 @@ BtechCommandDefinition mechcommands[] = {
     {0, "@OOD <X> <Y> [Z]",
      "@Initiates OOD drop at the orbit altitude to <X> <Y> (optional Z "
      "altitude to start from)",
-     initiate_ood},
+     mech_ood_initiate},
     {0, "@LOSEMIT <MESSAGE>",
      "@Sends message to everyone seeing the 'mech right now", mech_losemit},
     {0, "@DAMAGE <NUM> <CLUSTERSIZE> <ISREAR> <ISCRITICAL>",

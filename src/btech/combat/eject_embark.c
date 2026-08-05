@@ -390,7 +390,7 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
   } else {
     mech_los_broadcast(m,
                        tprintf("ejected from %s!", mech_display_id(mech).text));
-    initiate_ood(player, m, tprintf("%d %d %d", MechX(m), MechY(m), 150));
+    mech_ood_initiate(player, m, tprintf("%d %d %d", MechX(m), MechY(m), 150));
     notify(evaluation, player, "You eject from the unit!");
   }
 }

@@ -509,8 +509,9 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
     mech_los_broadcast(
         mech, tprintf("drops out of %s and begins falling to the ground.",
                       mech_display_id(target).text));
-    initiate_ood(player, mech,
-                 tprintf("%d %d %d", MechX(mech), MechY(mech), MechZ(mech)));
+    mech_ood_initiate(
+        player, mech,
+        tprintf("%d %d %d", MechX(mech), MechY(mech), MechZ(mech)));
   } else {
     if (MechType(mech) == CLASS_BSUIT) {
       mech_los_broadcast(

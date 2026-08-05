@@ -65,7 +65,20 @@ bool mech_has_destroyed_gyro(const Mech *mech) {
   return mech->rd.critstatus & GYRO_DESTROYED;
 }
 
+int mech_cocoon_integrity(const Mech *mech) { return mech->rd.cocoon; }
+
 int mech_seen_count(const Mech *mech) { return mech->rd.num_seen; }
+
+void mech_cocoon_integrity_set(Mech *mech, int integrity) {
+  mech->rd.cocoon = integrity;
+}
+
+void mech_landed_set(Mech *mech, bool landed) {
+  if (landed)
+    mech->rd.status |= LANDED;
+  else
+    mech->rd.status &= ~LANDED;
+}
 
 void mech_movement_stop(Mech *mech) {
   mech->rd.speed = 0.0F;

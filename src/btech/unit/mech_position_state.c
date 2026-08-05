@@ -92,6 +92,12 @@ void mech_position_z_set(Mech *mech, int z) {
   mech->pd.fz = ZSCALE * z;
 }
 
+void mech_desired_speed_set(Mech *mech, float speed) {
+  mech->rd.desired_speed = speed;
+}
+
+void mech_desired_angle_set(Mech *mech, int angle) { mech->rd.angle = angle; }
+
 void mech_position_land_if_flying(Mech *mech) {
   bool const is_dropship =
       mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS;

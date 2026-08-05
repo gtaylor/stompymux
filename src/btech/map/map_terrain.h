@@ -10,6 +10,8 @@
 typedef struct BattleMap BattleMap;
 
 typedef enum BattleTerrain {
+  BATTLE_TERRAIN_GRASSLAND = ' ',
+  BATTLE_TERRAIN_ROAD = '#',
   BATTLE_TERRAIN_LIGHT_FOREST = '`',
   BATTLE_TERRAIN_HEAVY_FOREST = '"',
   BATTLE_TERRAIN_WATER = '~',

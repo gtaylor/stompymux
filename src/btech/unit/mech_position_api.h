@@ -30,4 +30,6 @@ void mech_position_real_xy_set(Mech *mech, float x, float y);
 void mech_position_terrain_set(Mech *mech, char terrain);
 void mech_position_elevation_set(Mech *mech, int elevation);
 void mech_position_z_set(Mech *mech, int z);
+void mech_desired_speed_set(Mech *mech, float speed);
+void mech_desired_angle_set(Mech *mech, int angle);
 void mech_position_land_if_flying(Mech *mech);

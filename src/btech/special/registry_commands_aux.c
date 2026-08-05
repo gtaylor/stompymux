@@ -63,7 +63,7 @@ void newfreemech(DbRef, void **, int);
 ECMD(f_mapblock_set);
 ECMD(f_mapblock_setxy);
 ECMD(ListForms);
-ECMD(initiate_ood);
+ECMD(mech_ood_initiate);
 ECMD(mech_Raddstuff);
 ECMD(mech_Rfixstuff);
 ECMD(mech_Rremovestuff);

@@ -84,6 +84,20 @@ void mech_arms_center(Mech *mech) { mech->rd.status &= ~FLIPPED_ARMS; }
 
 void mech_arms_flip(Mech *mech) { mech->rd.status |= FLIPPED_ARMS; }
 
+void mech_evading_set(Mech *mech, bool evading) {
+  if (evading)
+    mech->rd.status2 |= EVADING;
+  else
+    mech->rd.status2 &= ~EVADING;
+}
+
+void mech_sprinting_set(Mech *mech, bool sprinting) {
+  if (sprinting)
+    mech->rd.status2 |= SPRINTING;
+  else
+    mech->rd.status2 &= ~SPRINTING;
+}
+
 void mech_partial_cover_set(Mech *mech, bool covered) {
   if (covered)
     mech->rd.status |= PARTIAL_COVER;

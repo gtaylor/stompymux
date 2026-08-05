@@ -81,6 +81,10 @@ void DropSetElevation(Mech *mech, int wantdrop) {
       possibly_drop_thru_ice(mech);
 }
 
+int mech_drop_height_above_surface(Mech *mech) {
+  return MechsElevation(mech) - DropGetElevation(mech);
+}
+
 void LandMech(Mech *mech) {
   Mech *target;
   BattleMap *mech_map =

@@ -140,6 +140,18 @@ done < <(rg -n '\b(domino_space|mechs_in_hex|cause_damage|get_weight)\b' \
   src/btech -g '*.[ch]' || true)
 
 while IFS= read -r match; do
+  echo "$match: converted out-of-door drop module uses an aggregate Mech layout"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\b(mech|wounded|attacker)->|\b(Mech(Cocoon|Z|FZ|Elevation|JumpSpeed|Status|Type|Pilot|PilotSkillBase|DesiredSpeed|DesiredAngle|MaxSpeed|RTons|Specials2|X|Y)|GetSectOInt|OODing|Fallen|Uncon|Started|Blinded|WaterBeast|NotInWater|InWater|FlyingT|Digging|Evading|Sprinting)\(' \
+  src/btech/movement/mech_ood.c || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy out-of-door drop export is not allowed"
+  status=1
+done < <(rg -n '\binitiate_ood\b' src/btech -g '*.[ch]' || true)
+
+while IFS= read -r match; do
   echo "$match: converted repair interface exposes the aggregate Mech layout"
   status=1
 done < <(rg -n '#include "mech(_macros)?\.h"|\benum damage_type\b|\bMAX_DAMAGES\b' \
