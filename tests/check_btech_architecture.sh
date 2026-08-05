@@ -544,6 +544,19 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "mech_update_internal\.h"|#include "(mech|mech_macros)\.h"|mech->|\bMechHeat\s*\(' \
+  src/btech/movement/mech_overheat_modifier.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: overheat modifiers must use opaque unit APIs"
+  status=1
+fi
+
+match=$(rg -n '\b(OverheatMods|HandleOverheat|UpdateHeat|ammo_explosion)\b' src/btech || true)
+if [[ -n "$match" ]]; then
+  echo "$match: legacy heat exports are not allowed"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1

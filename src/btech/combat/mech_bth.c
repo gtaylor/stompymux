@@ -237,7 +237,7 @@ int FindNormalBTH(Mech *mech, BattleMap *mech_map, int section, int critical,
     BTHADD("AttackMove", AttackMovementMods(mech));
 
   /* Add mods for overheating */
-  BTHADD("Overheat", OverheatMods(mech));
+  BTHADD("Overheat", mech_overheat_to_hit_modifier(mech));
 
   /* Add special weapon mods */
   if (wAmmoMode & AC_AP_MODE)

@@ -26,11 +26,11 @@ void mech_heading_update(Mech *mech);
 float mech_terrain_speed(Mech *mech, float current_speed, float maximum_speed,
                          int terrain, int elevation);
 void mech_speed_update(Mech *mech);
-int OverheatMods(Mech *mech);
-void ammo_explosion(Mech *attacker, Mech *mech, int ammoloc, int ammocritnum,
-                    int damage);
-void HandleOverheat(Mech *mech);
-void UpdateHeat(Mech *mech);
+int mech_overheat_to_hit_modifier(const Mech *mech);
+void mech_ammunition_explode(Mech *attacker, Mech *mech, int ammunition_section,
+                             int ammunition_critical, int damage);
+void mech_overheat_handle(Mech *mech);
+void mech_heat_update(Mech *mech);
 int mech_weapon_recycle_update(Mech *mech);
 int mech_skid_modifier(float speed);
 void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,

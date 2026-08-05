@@ -10,29 +10,8 @@
 
 #include "mech_update_internal.h"
 
-int OverheatMods(Mech *mech) {
-  int returnValue;
-
-  if (MechHeat(mech) >= 24.) {
-    /* +4 to fire... */
-    returnValue = 4;
-  } else if (MechHeat(mech) >= 17.) {
-    /* +3 to fire... */
-    returnValue = 3;
-  } else if (MechHeat(mech) >= 13.) {
-    /* +2 to fire... */
-    returnValue = 2;
-  } else if (MechHeat(mech) >= 8.) {
-    /* +1 to fire... */
-    returnValue = 1;
-  } else {
-    returnValue = 0;
-  }
-  return (returnValue);
-}
-
-void ammo_explosion(Mech *attacker, Mech *mech, int ammoloc, int ammocritnum,
-                    int damage) {
+void mech_ammunition_explode(Mech *attacker, Mech *mech, int ammoloc,
+                             int ammocritnum, int damage) {
   if (MechType(mech) == CLASS_MW) {
     mech_notify(mech, MECHALL, "Your weapon's ammo explodes!");
     mech_los_broadcast(mech, "'s weapon's ammo explodes!");
@@ -78,7 +57,7 @@ void ammo_explosion(Mech *attacker, Mech *mech, int ammoloc, int ammocritnum,
   }
 }
 
-void HandleOverheat(Mech *mech) {
+void mech_overheat_handle(Mech *mech) {
   int avoided = 0, hasinferno = 0;
   BattleMap *mech_map;
   int ammoloc, ammocritnum, damage = 0;
@@ -140,7 +119,7 @@ void HandleOverheat(Mech *mech) {
       if (damage) {
         /* BOOM! */
         /* That's going to hurt... */
-        ammo_explosion(mech, mech, ammoloc, ammocritnum, damage);
+        mech_ammunition_explode(mech, mech, ammoloc, ammocritnum, damage);
       } else
         mech_notify(mech, MECHALL, "You have no ammunition, lucky you!");
     }
@@ -261,7 +240,7 @@ static int DisableSomeHS(Mech *mech, int numsinks) {
 
 /* Update the Unit's current heat values as well as
  * send messages to the pilot based on heat level */
-void UpdateHeat(Mech *mech) {
+void mech_heat_update(Mech *mech) {
 
   int legsinks;
   float maxspeed;
@@ -420,5 +399,5 @@ void UpdateHeat(Mech *mech) {
                   "======================================[reset]");
     }
   }
-  HandleOverheat(mech);
+  mech_overheat_handle(mech);
 }

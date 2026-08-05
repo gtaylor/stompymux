@@ -119,6 +119,7 @@ set(BTECH_SOURCES
   movement/mech_update_altitude.c
   movement/mech_update_motion.c
   movement/mech_update_speed.c
+  movement/mech_overheat_modifier.c
   movement/mech_update_heat.c
   movement/mech_update_recycle.c
   movement/mech_skid.c

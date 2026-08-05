@@ -683,6 +683,6 @@ void move_mech(Mech *mech) {
   BSuitMirrorSwarmedTarget(mech_map, mech);
 
   /* This is really for killing MechWarriors
-   * actual heat code is checked with UpdateHeat */
+   * actual heat code is checked with mech_heat_update */
   fiery_death(mech);
 }

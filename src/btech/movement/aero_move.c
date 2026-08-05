@@ -624,7 +624,7 @@ void aero_update(Mech *mech) {
     mech_piloting_update(mech);
   }
   if (Started(mech) || MechPlusHeat(mech) > 0.)
-    UpdateHeat(mech);
+    mech_heat_update(mech);
   if (!(mech->xcode.context->clock->now / 3 % 5)) {
     if (!Spinning(mech))
       return;

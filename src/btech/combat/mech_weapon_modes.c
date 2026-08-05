@@ -645,7 +645,7 @@ static void mech_explode_event(MuxEvent *e) {
                          tprintf("#%ld explodes [ammo]", mech->mynum));
       mech_notify(mech, MECHALL, "All your ammo explodes!");
       while ((damage = FindDestructiveAmmo(mech, &i, &j)))
-        ammo_explosion(mech, mech, i, j, damage);
+        mech_ammunition_explode(mech, mech, i, j, damage);
     } else {
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                          tprintf("#%ld explodes [reactor]", mech->mynum));

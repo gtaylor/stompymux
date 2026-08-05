@@ -87,7 +87,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                     "One of your Gauss Rifle ammo feeds is destroyed");
       DestroyPart(wounded, hitloc, critHit);
     } else if (damage) {
-      ammo_explosion(attacker, wounded, hitloc, critHit, damage);
+      mech_ammunition_explode(attacker, wounded, hitloc, critHit, damage);
     } else {
       mech_notify(wounded, MECHALL,
                   "You have no ammunition left in that location, lucky you!");

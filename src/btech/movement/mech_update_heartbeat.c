@@ -44,7 +44,7 @@ void mech_update(DbRef key, void *data) {
   if (mech_is_started(mech) || mech_pilot_is_unconscious(mech))
     mech_piloting_update(mech);
   if (mech_is_started(mech) || mech_added_heat(mech) > 0.1F)
-    UpdateHeat(mech);
+    mech_heat_update(mech);
   if (mech_is_started(mech)) {
     int visibility = mech_sensor_visibility_modifier(mech) +
                      btech_random_range(mech_context(mech), -40, 40);
