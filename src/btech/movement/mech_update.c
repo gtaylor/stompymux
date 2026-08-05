@@ -10,33 +10,6 @@
 
 #include "mech_update_internal.h"
 
-int fiery_death(Mech *mech) {
-  if (MechTerrain(mech) == FIRE) {
-    if (is_aero(mech))
-      return 0;
-    if (MechMove(mech) == MOVE_VTOL)
-      return 0;
-    if (Destroyed(mech))
-      return 0;
-
-    /* Cause various things */
-    /* MWs _die_ */
-    if (MechType(mech) == CLASS_MW) {
-      mech_notify(mech, MECHALL, "You feel a tad bit too warm..");
-      mech_notify(mech, MECHALL, "You faint.");
-      DestroyMech(mech, mech, 0, KILL_TYPE_HEAT);
-      return 1;
-    }
-
-    /* Tanks may die */
-    return 0; /* Dumb idea */
-    heat_effect(NULL, mech, 0, 0);
-    if (Destroyed(mech))
-      return 1;
-  }
-  return 0;
-}
-
 int bridge_w_elevation(Mech *mech) { return -1; }
 
 void bridge_set_elevation(Mech *mech) {
@@ -684,5 +657,5 @@ void move_mech(Mech *mech) {
 
   /* This is really for killing MechWarriors
    * actual heat code is checked with mech_heat_update */
-  fiery_death(mech);
+  mech_fire_hazard_resolve(mech);
 }

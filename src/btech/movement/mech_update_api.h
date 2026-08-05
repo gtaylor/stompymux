@@ -14,7 +14,7 @@
 #include "mux/server/platform.h"
 
 /* mech.update.c */
-int fiery_death(Mech *mech);
+bool mech_fire_hazard_resolve(Mech *mech);
 int bridge_w_elevation(Mech *mech);
 void bridge_set_elevation(Mech *mech);
 int DSOkToNotify(Mech *mech);

@@ -557,6 +557,19 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '\bfiery_death\b' src/btech || true)
+if [[ -n "$match" ]]; then
+  echo "$match: legacy fire hazard export is not allowed"
+  status=1
+fi
+
+match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Destroyed|is_aero)\s*\(' \
+  src/btech/movement/mech_fire_hazard.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: movement fire hazards must use opaque unit APIs"
+  status=1
+fi
+
 match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(MechType|MechPilot|MechWeapHeat|GetPartAmmoMode|DestroyPart)\s*\(' \
   src/btech/combat/mech_ammunition_explosion.c || true)
 if [[ -n "$match" ]]; then
