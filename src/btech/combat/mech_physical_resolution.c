@@ -1,4 +1,27 @@
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_crew_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
 #include "mech_physical_internal.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_targeting_api.h"
+
+static int physical_forward_arc(Mech *mech, const Mech *target) {
+  MechConditionSummary condition = mech_condition_summary(mech);
+  mech_torso_twist_set(mech, MECH_TORSO_CENTER);
+  int arc = InWeaponArc(mech, mech_position_real_x(target),
+                        mech_position_real_y(target));
+  if (condition.torso_left)
+    mech_torso_twist_set(mech, MECH_TORSO_LEFT);
+  else if (condition.torso_right)
+    mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
+  return arc;
+}
+
 void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
                     int argc, char **args, BattleMap *mech_map, int sect) {
   Mech *target;
@@ -7,7 +30,7 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
   char targetID[2];
   int targetnum, roll, swarmingUs;
   char location[20];
-  int ts = 0, iwa;
+  int iwa;
   int RbaseToHit, glance = 0;
 
   /*
@@ -31,21 +54,22 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
       (AttackType == PA_CLAW) || (AttackType == PA_MACE) ||
       (AttackType == PA_SAW)) {
 
-    if (PartIsNonfunctional(mech, sect, 1) ||
-        GetPartType(mech, sect, 1) != I2Special(UPPER_ACTUATOR)) {
+    if (mech_critical_is_nonfunctional(mech, sect, 1) ||
+        mech_critical_part_type(mech, sect, 1) != I2Special(UPPER_ACTUATOR)) {
       baseToHit += 2;
     }
 
-    if (PartIsNonfunctional(mech, sect, 2) ||
-        GetPartType(mech, sect, 2) != I2Special(LOWER_ACTUATOR)) {
+    if (mech_critical_is_nonfunctional(mech, sect, 2) ||
+        mech_critical_part_type(mech, sect, 2) != I2Special(LOWER_ACTUATOR)) {
       baseToHit += 2;
     }
 
     /* Hand/Foot crits only affect punch/kick since with the other attacks
      * are not allowed if they're broken */
     if ((AttackType == PA_PUNCH) || (AttackType == PA_KICK)) {
-      if (PartIsNonfunctional(mech, sect, 3) ||
-          GetPartType(mech, sect, 3) != I2Special(HAND_OR_FOOT_ACTUATOR)) {
+      if (mech_critical_is_nonfunctional(mech, sect, 3) ||
+          mech_critical_part_type(mech, sect, 3) !=
+              I2Special(HAND_OR_FOOT_ACTUATOR)) {
         baseToHit += 1;
       }
     }
@@ -54,27 +78,28 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
 
     /* Only check lower/upper acts since without shoulder or hand you can't
      * club */
-    if (PartIsNonfunctional(mech, RARM, 1) ||
-        GetPartType(mech, sect, 1) != I2Special(UPPER_ACTUATOR)) {
+    if (mech_critical_is_nonfunctional(mech, RARM, 1) ||
+        mech_critical_part_type(mech, sect, 1) != I2Special(UPPER_ACTUATOR)) {
       baseToHit += 2;
     }
-    if (PartIsNonfunctional(mech, RARM, 2) ||
-        GetPartType(mech, sect, 2) != I2Special(LOWER_ACTUATOR)) {
+    if (mech_critical_is_nonfunctional(mech, RARM, 2) ||
+        mech_critical_part_type(mech, sect, 2) != I2Special(LOWER_ACTUATOR)) {
       baseToHit += 2;
     }
-    if (PartIsNonfunctional(mech, LARM, 1) ||
-        GetPartType(mech, sect, 1) != I2Special(UPPER_ACTUATOR)) {
+    if (mech_critical_is_nonfunctional(mech, LARM, 1) ||
+        mech_critical_part_type(mech, sect, 1) != I2Special(UPPER_ACTUATOR)) {
       baseToHit += 2;
     }
-    if (PartIsNonfunctional(mech, LARM, 2) ||
-        GetPartType(mech, sect, 2) != I2Special(LOWER_ACTUATOR)) {
+    if (mech_critical_is_nonfunctional(mech, LARM, 2) ||
+        mech_critical_part_type(mech, sect, 2) != I2Special(LOWER_ACTUATOR)) {
       baseToHit += 2;
     }
   }
 
   // All weapons must be cycled in the target limb.
-  if (SectHasBusyWeap(mech, sect)) {
-    ArmorStringFromIndex(sect, location, MechType(mech), MechMove(mech));
+  if (mech_section_has_recycling_weapon(mech, sect)) {
+    ArmorStringFromIndex(sect, location, mech_class(mech),
+                         mech_movement_type(mech));
     mech_printf(mech, MECHALL, "You have weapons recycling on your %s.",
                 location);
     return;
@@ -85,10 +110,11 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
   case -1:
   case 0:
     // No argument
-    DOCHECKMA(MechTarget(mech) == -1, "You do not have a target set!");
+    DOCHECKMA(mech_target_dbref(mech) == -1, "You do not have a target set!");
 
     // Populate target variable with current lock.
-    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+    target =
+        btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
     DOCHECKMA(!target, "Invalid default target!");
 
     break;
@@ -100,14 +126,14 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
-    target = btech_context_get_mech(mech->xcode.context, targetnum);
+    target = btech_context_get_mech(mech_context(mech), targetnum);
 
     DOCHECKMA(targetnum == -1, "Target is not in line of sight!");
     DOCHECKMA(!target, "Invalid default target!");
   } // end switch() - argc checking
 
   // Is the target swarming us?
-  swarmingUs = (MechSwarmTarget(target) == mech->mynum ? 1 : 0);
+  swarmingUs = (mech_swarm_target(target) == mech_dbref(mech) ? 1 : 0);
 
   /*
    * Common checks.
@@ -115,106 +141,116 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
 
   // If we're attacking something while fallen that isn't swarming us,
   // no-go it. Kicks/trips are automatically stopped.
-  if (Fallen(mech) && (AttackType == PA_KICK || AttackType == PA_TRIP)) {
+  if (mech_condition_summary(mech).fallen &&
+      (AttackType == PA_KICK || AttackType == PA_TRIP)) {
     mech_printf(mech, MECHALL, "You can't %s from a prone position.",
                 phys_form(AttackType, 0));
 
     return;
     // If we are fallen AND
     //   The target is not a BSuit AND We're not punching
-  } else if (Fallen(mech) && (MechType(target) != CLASS_VEH_GROUND &&
-                              MechType(target) != CLASS_BSUIT)) {
+  } else if (mech_condition_summary(mech).fallen &&
+             (mech_class(target) != CLASS_VEH_GROUND &&
+              mech_class(target) != CLASS_BSUIT)) {
     mech_printf(mech, MECHALL, "You can't %s from a prone position.",
                 phys_form(AttackType, 0));
 
     return;
-  } else if (Fallen(mech) && MechType(target) == CLASS_BSUIT && !swarmingUs) {
+  } else if (mech_condition_summary(mech).fallen &&
+             mech_class(target) == CLASS_BSUIT && !swarmingUs) {
     mech_notify(
         mech, MECHALL,
         "You may only physical suits that are swarming you while prone.");
     return;
-  } else if (Fallen(mech) && MechType(target) == CLASS_VEH_GROUND &&
-             AttackType != PA_PUNCH) {
+  } else if (mech_condition_summary(mech).fallen &&
+             mech_class(target) == CLASS_VEH_GROUND && AttackType != PA_PUNCH) {
     mech_notify(mech, MECHALL, "You may only punch vehicles while prone.");
     return;
   } // end if() - Physical while fallen.
 
-  range = FaMechRange(mech, target);
+  range = mech_range_to(mech, target);
 
-  DOCHECKMA(!mech_los_check_unblocked(mech, target, MechX(target),
-                                      MechY(target), range),
+  DOCHECKMA(!mech_los_check_unblocked(mech, target, mech_position_x(target),
+                                      mech_position_y(target), range),
             "Target is not in line of sight!");
 
   // BSuits have to be <= 0.5 hexes to attack units.
-  if ((MechType(target) == CLASS_BSUIT) || (MechType(target) == CLASS_MW))
+  if ((mech_class(target) == CLASS_BSUIT) || (mech_class(target) == CLASS_MW))
     maxRange = 0.5;
 
   DOCHECKMA(range >= maxRange, "Target out of range!");
 
-  DOCHECKMA(Jumping(target),
+  DOCHECKMA(mech_is_jumping(target),
             "You can't perform physical attacks on airborne mechs!");
 
-  DOCHECKMA(MapNoPhysicals(mech_map),
+  DOCHECKMA(battle_map_blocks_physical_attacks(mech_map),
             "You cannot perform physical attacks here!");
 
-  DOCHECKMA(MechTeam(target) == MechTeam(mech) && MechNoFriendlyFire(mech),
+  DOCHECKMA(mech_team(target) == mech_team(mech) &&
+                mech_condition_summary(mech).friendly_fire_safety,
             "You can't attack a teammate with FFSafeties on!");
 
-  DOCHECKMA(MechTeam(target) == MechTeam(mech) && MapNoFriendlyFire(mech_map),
+  DOCHECKMA(mech_team(target) == mech_team(mech) &&
+                battle_map_blocks_friendly_fire(mech_map),
             "Friendly Fire? I don't think so...");
 
-  DOCHECKMA(MechType(target) == CLASS_MW && !MechPKiller(mech),
+  DOCHECKMA(mech_class(target) == CLASS_MW &&
+                !mech_condition_summary(mech).player_killer,
             "That's a living, breathing person! Switch off the safety first, "
             "if you really want to assassinate the target.");
 
-  DOCHECKMA(MechCritStatus(mech) & MECH_STUNNED,
+  DOCHECKMA(mech_condition_summary(mech).stunned,
             "You are still recovering from your stunning experience!");
   /*
    * Attack-Specific checks.
    */
-  DOCHECKMA(AttackType == PA_PUNCH && (MechType(target) == CLASS_VEH_GROUND) &&
-                !Fallen(mech),
+  DOCHECKMA(AttackType == PA_PUNCH &&
+                (mech_class(target) == CLASS_VEH_GROUND) &&
+                !mech_condition_summary(mech).fallen,
             "You can't punch vehicles unless you are prone!");
 
   // As per BMR, can only trip mechs.
-  DOCHECKMA(AttackType == PA_TRIP && MechType(target) != CLASS_MECH,
+  DOCHECKMA(AttackType == PA_TRIP && mech_class(target) != CLASS_MECH,
             "You can only trip mechs!");
 
   // Can't trip mechs that are fallen or in the process of standing.
-  DOCHECKMA(AttackType == PA_TRIP &&
-                (Fallen(target) || mech_event_count(target, EVENT_STAND)),
+  DOCHECKMA(AttackType == PA_TRIP && (mech_condition_summary(target).fallen ||
+                                      mech_event_count(target, EVENT_STAND)),
             "Your target is already down!");
 
   // We're attacking a ground/naval unit.
-  if (MechMove(target) != MOVE_VTOL && MechMove(target) != MOVE_FLY) {
+  if (mech_movement_type(target) != MOVE_VTOL &&
+      mech_movement_type(target) != MOVE_FLY) {
 
     if ((AttackType != PA_KICK && AttackType != PA_TRIP) &&
-        (MechZ(mech) >= MechZ(target))) {
+        (mech_position_z(mech) >= mech_position_z(target))) {
       int isTooLow = 0; // Track whether we're too low or not.
 
       // If it's a fallen mech, too low.
-      if (MechType(target) == CLASS_MECH && Fallen(target))
+      if (mech_class(target) == CLASS_MECH &&
+          mech_condition_summary(target).fallen)
         isTooLow = 1;
 
       /* Target is to low to punch */
-      if ((MechType(target) == CLASS_MECH) && (MechZ(mech) > MechZ(target)) &&
+      if ((mech_class(target) == CLASS_MECH) &&
+          (mech_position_z(mech) > mech_position_z(target)) &&
           (AttackType == PA_PUNCH)) {
         isTooLow = 1;
       }
 
       // If it's not a mech, bsuit, or DS, too low.
-      if (MechType(target) != CLASS_MECH && MechType(target) != CLASS_BSUIT &&
-          !IsDS(target))
+      if (mech_class(target) != CLASS_MECH &&
+          mech_class(target) != CLASS_BSUIT && !mech_is_dropship(target))
         isTooLow = 1;
 
       // If it's a ground vehicle and we're fallen, then we can
       // punch as per BMR.
-      if (AttackType == PA_PUNCH && MechType(target) == CLASS_VEH_GROUND &&
-          Fallen(mech))
+      if (AttackType == PA_PUNCH && mech_class(target) == CLASS_VEH_GROUND &&
+          mech_condition_summary(mech).fallen)
         isTooLow = 0;
 
       // If it's a suit that's not on us, we can't physical it.
-      if (MechType(target) == CLASS_BSUIT && MechSwarmTarget(target) > 0) {
+      if (mech_class(target) == CLASS_BSUIT && mech_swarm_target(target) > 0) {
         mech_printf(mech, MECHALL,
                     "You can't directly physical suits that are swarmed or "
                     "mounted on another mech!");
@@ -230,38 +266,40 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     } // end if() - Target is too low checks.
 
     DOCHECKMA((AttackType == PA_KICK || AttackType == PA_TRIP) &&
-                  MechZ(mech) < MechZ(target),
+                  mech_position_z(mech) < mech_position_z(target),
               "The target is too high in elevation for you to kick at.");
 
-    DOCHECKMA(MechZ(mech) - MechZ(target) > 1 ||
-                  MechZ(target) - MechZ(mech) > 1,
+    DOCHECKMA(mech_position_z(mech) - mech_position_z(target) > 1 ||
+                  mech_position_z(target) - mech_position_z(mech) > 1,
               "You can't attack, the elevation difference is too large.");
 
     DOCHECKMA((AttackType == PA_KICK || AttackType == PA_TRIP) &&
-                  (MechZ(target) < MechZ(mech) &&
-                   (((MechType(target) == CLASS_MECH) && Fallen(target)) ||
-                    (MechType(target) == CLASS_VEH_GROUND) ||
-                    (MechType(target) == CLASS_BSUIT) ||
-                    (MechType(target) == CLASS_MW))),
+                  (mech_position_z(target) < mech_position_z(mech) &&
+                   (((mech_class(target) == CLASS_MECH) &&
+                     mech_condition_summary(target).fallen) ||
+                    (mech_class(target) == CLASS_VEH_GROUND) ||
+                    (mech_class(target) == CLASS_BSUIT) ||
+                    (mech_class(target) == CLASS_MW))),
               "The target is too low in elevation for you to kick.")
 
   } else { // We're attacking a VTOL/Aero.
 
-    if ((AttackType != PA_KICK) && MechZ(target) - MechZ(mech) > 3) {
+    if ((AttackType != PA_KICK) &&
+        mech_position_z(target) - mech_position_z(mech) > 3) {
       mech_printf(mech, MECHALL, "The target is too far away for you to %s.",
                   phys_form(AttackType, 0));
     }
 
     if ((AttackType == PA_KICK || AttackType == PA_TRIP) &&
-        MechZ(mech) != MechZ(target)) {
+        mech_position_z(mech) != mech_position_z(target)) {
       mech_printf(mech, MECHALL, "The target is too far away for you to %s.",
                   phys_form(AttackType, 0));
       return;
     }
 
-    DOCHECKMA(
-        !(MechZ(target) - MechZ(mech) > -1 && MechZ(target) - MechZ(mech) < 4),
-        "You can't attack, the elevation difference is too large.");
+    DOCHECKMA(!(mech_position_z(target) - mech_position_z(mech) > -1 &&
+                mech_position_z(target) - mech_position_z(mech) < 4),
+              "You can't attack, the elevation difference is too large.");
   } // end if/else() - Ground/VTOL + Physical Z comparisons
 
   /* Check weapon arc! */
@@ -276,16 +314,14 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
    * So I went and changed it according to FASA rules */
   if (AttackType == PA_KICK || AttackType == PA_TRIP) {
 
-    ts = MechStatus(mech) & (TORSO_LEFT | TORSO_RIGHT);
-    MechStatus(mech) &= ~ts;
-    iwa = InWeaponArc(mech, MechFX(target), MechFY(target));
-    MechStatus(mech) |= ts;
+    iwa = physical_forward_arc(mech, target);
 
     DOCHECKMA(!(iwa & FORWARDARC), "Target is not in your 'real' forward arc!");
 
   } else { // We're punching, clubbing, or other sharp things.
 
-    iwa = InWeaponArc(mech, MechFX(target), MechFY(target));
+    iwa = InWeaponArc(mech, mech_position_real_x(target),
+                      mech_position_real_y(target));
 
     if (AttackType == PA_CLUB) {
       // Clubs are a frontal attack. Go off of the forward arc, don't
@@ -314,23 +350,23 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
    */
 
   // If we have melee_specialist advantage, knock -1 off the BTH.
-  baseToHit +=
-      HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "melee_specialist")
-          ? MIN(0, mech_attacker_movement_modifier(mech) - 1)
-          : mech_attacker_movement_modifier(mech);
+  baseToHit += HasBoolAdvantage(mech_context(mech), mech_pilot_dbref(mech),
+                                "melee_specialist")
+                   ? MIN(0, mech_attacker_movement_modifier(mech) - 1)
+                   : mech_attacker_movement_modifier(mech);
 
   baseToHit += mech_target_movement_modifier(mech, target, 0.0);
 
   // BSuits get +1 BTH
-  baseToHit += MechType(target) == CLASS_BSUIT ? 1 : 0;
+  baseToHit += mech_class(target) == CLASS_BSUIT ? 1 : 0;
 
   // Kicking a BSuit is +3 BTH
   baseToHit +=
-      ((MechType(target) == CLASS_BSUIT) && (AttackType == PA_KICK)) ? 3 : 0;
+      ((mech_class(target) == CLASS_BSUIT) && (AttackType == PA_KICK)) ? 3 : 0;
 
 #ifdef BT_MOVEMENT_MODES
   // A dodging unit is +2, requires maneuvering_ace.
-  if (Dodging(target))
+  if (mech_condition_summary(target).dodging)
     baseToHit += 2;
 #endif
 
@@ -347,14 +383,14 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     baseToHit += 1;
 
   // If we're axing or chopping a bsuit, add +3 to BTH, else (punching) +5.
-  if (AttackType != PA_PUNCH && MechType(target) == CLASS_BSUIT &&
-      MechSwarmTarget(target) > 0)
+  if (AttackType != PA_PUNCH && mech_class(target) == CLASS_BSUIT &&
+      mech_swarm_target(target) > 0)
     baseToHit += (AttackType != PA_PUNCH) ? 3 : 5;
 
   // As per BMR, can only physical bsuits with punches, axes, or swords.
   // Added saw since it's the same idea.
-  DOCHECKMA(AttackType == PA_KICK && MechType(target) == CLASS_BSUIT &&
-                MechSwarmTarget(target) > 0,
+  DOCHECKMA(AttackType == PA_KICK && mech_class(target) == CLASS_BSUIT &&
+                mech_swarm_target(target) > 0,
             "You can't hit a swarmed suit with that, try a hand-held weapon!");
 
   // Terrain mods - Courtesy of RST
@@ -362,7 +398,7 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
   // Smoke from MaxTech old BMR
   // Check Smoke first since it can sit on top of other terrain
   // Might want to check for Fire also at some point?
-  if (MechTerrain(target) == SMOKE) {
+  if (mech_position_terrain(target) == SMOKE) {
     baseToHit += 2;
   } else if (mech_real_terrain_get(target) == HEAVY_FOREST) {
     baseToHit += 2;
@@ -370,7 +406,7 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     baseToHit += 1;
   }
 
-  roll = btech_random_roll(mech->xcode.context);
+  roll = btech_random_roll(mech_context(mech));
 
   // Carry out the attack.
   mech_printf(mech, MECHALL, "You try to %s %s.  BTH:  %d,\tRoll:  %d",
@@ -382,10 +418,10 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
               phys_form(AttackType, 0));
 
   // We send to MechAttacks channel
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ATTACKS, "%s",
-                     tprintf("#%li attacks #%li (%s) (%i/%i)", mech->mynum,
-                             target->mynum, phys_form(AttackType, 0), baseToHit,
-                             roll));
+  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ATTACKS, "%s",
+                     tprintf("#%li attacks #%li (%s) (%i/%i)", mech_dbref(mech),
+                             mech_dbref(target), phys_form(AttackType, 0),
+                             baseToHit, roll));
 
   // Set the appropriate section(s) to recycle.
   mech_set_recycle_limb(mech, sect, PHYSICAL_RECYCLE_TIME);
@@ -395,22 +431,22 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
    */
   if (AttackType == PA_AXE || AttackType == PA_SWORD || AttackType == PA_SAW ||
       AttackType == PA_MACE)
-    MechSections(mech)[sect].config |= AXED;
+    mech_section_configuration_add(mech, sect, AXED);
 
   if (AttackType == PA_PUNCH)
-    MechSections(mech)[sect].config &= ~AXED;
+    mech_section_configuration_remove(mech, sect, AXED);
 
   // Clubbing recycles both arms.
   if (AttackType == PA_CLUB)
     mech_set_recycle_limb(mech, LARM, PHYSICAL_RECYCLE_TIME);
 
   RbaseToHit = baseToHit;
-  if (mech->xcode.context->configuration->btech_glancing_blows == 2)
+  if (btech_context_glancing_blow_mode(mech_context(mech)) == 2)
     RbaseToHit = baseToHit - 1;
   // We've successfully hit the target.
   if (roll >= RbaseToHit) {
     phys_succeed(mech, target, AttackType);
-    if (mech->xcode.context->configuration->btech_glancing_blows &&
+    if (btech_context_glancing_blows_enabled(mech_context(mech)) &&
         (roll == RbaseToHit)) {
       mech_los_broadcast(target, "is nicked by a glancing blow!");
       mech_notify(target, MECHALL, "You are nicked by a glancing blow!");
@@ -419,16 +455,16 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     if (AttackType == PA_CLUB) {
       int clubLoc = -1;
 
-      if (MechSections(mech)[RARM].specials & CARRYING_CLUB)
+      if (mech_section_carries_club(mech, RARM))
         clubLoc = RARM;
-      else if (MechSections(mech)[LARM].specials & CARRYING_CLUB)
+      else if (mech_section_carries_club(mech, LARM))
         clubLoc = LARM;
 
       if (clubLoc > -1) {
         mech_notify(mech, MECHALL, "Your club shatters on contact.");
         mech_los_broadcast(mech, "'s club shatters with a loud *CRACK*!");
 
-        MechSections(mech)[clubLoc].specials &= ~CARRYING_CLUB;
+        mech_section_special_remove(mech, clubLoc, CARRYING_CLUB);
       }
     } // End if() - Club shattering
 
@@ -442,8 +478,8 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
   } else { // We have failed!
     phys_fail(mech, target, AttackType);
 
-    if (MechType(target) == CLASS_BSUIT &&
-        MechSwarmTarget(target) == mech->mynum) {
+    if (mech_class(target) == CLASS_BSUIT &&
+        mech_swarm_target(target) == mech_dbref(mech)) {
 
       if (!MadePilotSkillRoll(mech, 4)) {
         mech_notify(mech, MECHALL,
@@ -469,20 +505,3 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     } // end if() - Miss kick/club and risk falling.
   } // end if() - Physical failure handling.
 } // end PhysicalAttack()
-
-#define MyDamageMech(a, b, c, d, e, f, g, h, i)                                \
-  (a)->xcode.context->combat_overrides.damage_experience =                     \
-      BTECH_DAMAGE_XP_PILOTING;                                                \
-  DamageMech(a, b, c, d, e, f, g, h, i, -1, 0, -1, 0, 0);                      \
-  (a)->xcode.context->combat_overrides.damage_experience =                     \
-      BTECH_DAMAGE_XP_GUNNERY
-#define MyDamageMech2(a, b, c, d, e, f, g, h, i)                               \
-  (a)->xcode.context->combat_overrides.damage_experience =                     \
-      BTECH_DAMAGE_XP_NONE;                                                    \
-  DamageMech(a, b, c, d, e, f, g, h, i, -1, 0, -1, 0, 0);                      \
-  (a)->xcode.context->combat_overrides.damage_experience =                     \
-      BTECH_DAMAGE_XP_GUNNERY
-
-/*
- * Try to trip the victim.
- */

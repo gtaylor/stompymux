@@ -220,6 +220,11 @@ void mech_section_configuration_add(Mech *mech, int section,
   mech->ud.sections[section].config |= configuration;
 }
 
+void mech_section_configuration_remove(Mech *mech, int section,
+                                       int configuration) {
+  mech->ud.sections[section].config &= ~configuration;
+}
+
 bool mech_has_section_special(const Mech *mech, int special) {
   for (int section = 0; section < NUM_SECTIONS; section++)
     if (mech_section_has_special(mech, section, special))
