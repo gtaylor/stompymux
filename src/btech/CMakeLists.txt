@@ -121,6 +121,7 @@ set(BTECH_SOURCES
   movement/mech_fire_hazard.c
   movement/mech_collision.c
   movement/mech_charge_tracking.c
+  movement/mech_towing_sync.c
   movement/mech_movement_validation.c
   movement/mech_update_altitude.c
   movement/mech_update_motion.c

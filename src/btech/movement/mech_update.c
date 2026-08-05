@@ -12,6 +12,7 @@
 
 #include "mech_charge_tracking_api.h"
 #include "mech_movement_validation_api.h"
+#include "mech_towing_sync_api.h"
 
 void mech_movement_update(Mech *mech) {
   float newx = 0.0, newy = 0.0, dax, day;
@@ -22,7 +23,6 @@ void mech_movement_update(Mech *mech) {
 #endif
   int x, y, upd_z = 0;
   int last_z = 0;
-  Mech *target;
   BattleMap *mech_map;
   int oi, oz;
   int iced = 0;
@@ -469,13 +469,7 @@ void mech_movement_update(Mech *mech) {
   mech_charge_impact_resolve(mech);
 
   /* If we're towing something update its position with us */
-  if (MechCarrying(mech) > 0) {
-    target = btech_context_get_mech(mech->xcode.context, MechCarrying(mech));
-    if (target && target->mapindex == mech->mapindex) {
-      MirrorPosition(mech, target, 0);
-      SetRFacing(target, MechRFacing(mech));
-    }
-  }
+  mech_towing_position_update(mech);
 
   /* If a bsuit has swarmed a target update its
    * position in relation to its target */

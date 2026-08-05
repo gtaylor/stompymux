@@ -61,6 +61,8 @@ float mech_vertical_speed(const Mech *mech) { return mech->rd.verticalspeed; }
 
 int mech_heading_degrees(const Mech *mech) { return FSIM2SHO(mech->pd.facing); }
 
+int mech_heading_fixed(const Mech *mech) { return mech->pd.facing; }
+
 int mech_heading_fixed_difference(const Mech *mech) {
   return mech->pd.facing - SHO2FSIM(mech->rd.desiredfacing);
 }
@@ -138,6 +140,10 @@ void mech_desired_heading_set(Mech *mech, int heading) {
 
 void mech_heading_set(Mech *mech, int heading) {
   mech->pd.facing = SHO2FSIM(AcceptableDegree(heading));
+}
+
+void mech_heading_fixed_set(Mech *mech, int heading) {
+  mech->pd.facing = heading;
 }
 
 void mech_heading_rotate_toward_desired(Mech *mech, int fixed_offset) {
