@@ -58,6 +58,10 @@ long mech_event_first_delay(const Mech *mech, int type) {
   return btech_event_first_delay(mech_context(mech)->events, mech, type);
 }
 
+int mech_event_last_delay(const Mech *mech, int type) {
+  return btech_event_last_delay(mech_context(mech)->events, mech, type);
+}
+
 long mech_event_data(const Mech *mech, int type) {
   return btech_event_data(mech_context(mech)->events, mech, type);
 }

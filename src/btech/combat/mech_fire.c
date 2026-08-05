@@ -10,18 +10,25 @@
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_classification_api.h"
 #include "mech_damage_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_fire_api.h"
 #include "mech_hitloc_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
-#include "mux/network/mux_event.h"
 #include "mux/server/platform.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 #define VEHICLEBURN_TICK 60
 #define VEHICLE_EXTINGUISH_TICK 120
@@ -29,25 +36,22 @@
 static void inferno_end_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
 
-  MechCritStatus(mech) &= ~JELLIED;
+  mech_jellied_set(mech, false);
   mech_notify(mech, MECHALL,
               "You feel suddenly far cooler as the fires finally die.");
 }
 
-void inferno_burn(Mech *mech, int time) {
+void mech_inferno_burn(Mech *mech, int time) {
   int l;
 
-  if (!(MechCritStatus(mech) & JELLIED)) {
-    MechCritStatus(mech) |= JELLIED;
+  if (!mech_is_jellied(mech)) {
+    mech_jellied_set(mech, true);
     mech_event_schedule(mech, EVENT_BURN, inferno_end_event, time, 0);
     return;
   }
 
-  l = mux_event_last_type_data(mech->xcode.context->events, EVENT_BURN,
-                               (void *)mech) +
-      time;
-  mux_event_remove_type_data(mech->xcode.context->events, EVENT_BURN,
-                             (void *)mech);
+  l = mech_event_last_delay(mech, EVENT_BURN) + time;
+  mech_event_cancel(mech, EVENT_BURN);
   mech_event_schedule(mech, EVENT_BURN, inferno_end_event, l, 0);
 }
 
@@ -59,11 +63,12 @@ static void vehicle_burn_event(MuxEvent *objEvent) {
 
   if (!objMech)
     return;
-  wDamRoll = btech_random_range(objMech->xcode.context, 1, 6);
+  wDamRoll = btech_random_range(mech_context(objMech), 1, 6);
 
-  ArmorStringFromIndex(wLoc, strLocName, MechType(objMech), MechMove(objMech));
+  ArmorStringFromIndex(wLoc, strLocName, mech_class(objMech),
+                       mech_movement_type(objMech));
 
-  if (!GetSectInt(objMech, wLoc)) /* if our loc is gone, no damage to do */
+  if (!mech_section_internal(objMech, wLoc))
     return;
 
   mech_printf(objMech, MECHALL,
@@ -74,11 +79,11 @@ static void vehicle_burn_event(MuxEvent *objEvent) {
   /*
    * Only continue the event if the damage was greater than one
    */
-  if ((wDamRoll > 1) && (GetSectInt(objMech, wLoc)))
+  if ((wDamRoll > 1) && mech_section_internal(objMech, wLoc))
     mech_event_schedule(objMech, EVENT_VEHICLEBURN, vehicle_burn_event,
                         VEHICLEBURN_TICK, wLoc);
   else {
-    if (GetSectInt(objMech, wLoc))
+    if (mech_section_internal(objMech, wLoc))
       mech_printf(objMech, MECHALL,
                   "The fire burning on your %s finally goes out.", strLocName);
     if (!mech_event_count(objMech, EVENT_VEHICLEBURN))
@@ -86,7 +91,7 @@ static void vehicle_burn_event(MuxEvent *objEvent) {
   }
 }
 
-void vehicle_start_burn(Mech *objMech, Mech *objAttacker) {
+void vehicle_fire_start(Mech *objMech, Mech *objAttacker) {
   long wIter;
   long wDamage = 0;
   char strLocName[30];
@@ -98,11 +103,11 @@ void vehicle_start_burn(Mech *objMech, Mech *objAttacker) {
   mech_los_broadcast(objMech, "catches on fire!");
 
   for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
-    if (GetSectInt(objMech, wIter) &&
+    if (mech_section_internal(objMech, wIter) &&
         !mech_event_count_data(objMech, EVENT_VEHICLEBURN, wIter)) {
-      wDamage = btech_random_range(objMech->xcode.context, 1, 6);
-      ArmorStringFromIndex(wIter, strLocName, MechType(objMech),
-                           MechMove(objMech));
+      wDamage = btech_random_range(mech_context(objMech), 1, 6);
+      ArmorStringFromIndex(wIter, strLocName, mech_class(objMech),
+                           mech_movement_type(objMech));
       mech_printf(objMech, MECHALL, "Your %s catches on fire!", strLocName);
 
       DamageMech(objMech, objAttacker, 0, -1, wIter, 0, 0, wDamage, 0, 0, 0, -1,
@@ -113,7 +118,7 @@ void vehicle_start_burn(Mech *objMech, Mech *objAttacker) {
   }
 }
 
-void vehicle_extinquish_fire_event(MuxEvent *e) {
+void vehicle_fire_extinguish_event(MuxEvent *e) {
   Mech *objMech = (Mech *)e->data;
 
   if (!objMech)
@@ -128,23 +133,23 @@ void vehicle_extinquish_fire_event(MuxEvent *e) {
   mech_los_broadcast(objMech, "is no longer engulfed in flames.");
 }
 
-void vehicle_extinquish_fire(DbRef player, Mech *mech, char *buffer) {
+void vehicle_fire_extinguish(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALS);
 
-  DOCHECK_CONTEXT(mech->xcode.context, Started(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_is_started(mech),
                   "Your tank is started! You can not extinguish the "
                   "flames while your tank is started!");
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   !mech_event_count(mech, EVENT_VEHICLEBURN),
                   "This unit is not on fire!");
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH),
                   "You're already trying to put out the fire!");
 
   mech_notify(mech, MECHALL, "You begin to extinguish the fires!");
 
   mech_event_schedule(mech, EVENT_VEHICLE_EXTINGUISH,
-                      vehicle_extinquish_fire_event, VEHICLE_EXTINGUISH_TICK,
+                      vehicle_fire_extinguish_event, VEHICLE_EXTINGUISH_TICK,
                       0);
 }
 
@@ -152,17 +157,17 @@ void vehicle_extinquish_fire(DbRef player, Mech *mech, char *buffer) {
  *  Mechs entering level 2 water, or proning in level 1 water should
  *  extinguish any inferno currently burning.
  */
-void water_extinguish_inferno(Mech *mech) {
-  int elev = MechElevation(mech);
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+void mech_inferno_extinguish_in_water(Mech *mech) {
+  int elev = mech_position_elevation(mech);
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
-  if (!InWater(mech) || MechType(mech) != CLASS_MECH || !Jellied(mech) ||
-      (elev == -1 && !Fallen(mech)))
+  if (mech_position_terrain(mech) != WATER || mech_class(mech) != CLASS_MECH ||
+      !mech_is_jellied(mech) || (elev == -1 && !mech_is_fallen(mech)))
     return;
 
-  mux_event_remove_type_data(mech->xcode.context->events, EVENT_BURN,
-                             (void *)mech);
-  MechCritStatus(mech) &= ~JELLIED;
+  mech_event_cancel(mech, EVENT_BURN);
+  mech_jellied_set(mech, false);
 
   mech_notify(mech, MECHALL, "The flames extinguish in a roar of steam!");
   mech_los_broadcast(
@@ -170,15 +175,16 @@ void water_extinguish_inferno(Mech *mech) {
 
   /* According to FASA, the inferno jelly should keep on burning on the
    * water hex. We'll just add some steam (smoke) instead. */
-  add_decoration(map, MechX(mech), MechY(mech), TYPE_SMOKE, SMOKE, 120);
+  add_decoration(map, mech_position_x(mech), mech_position_y(mech), TYPE_SMOKE,
+                 SMOKE, 120);
 }
 
-void checkVehicleInFire(Mech *objMech, int fromHexFire) {
-  int wRoll = btech_random_roll(objMech->xcode.context);
+void vehicle_fire_check(Mech *objMech, int fromHexFire) {
+  int wRoll = btech_random_roll(mech_context(objMech));
   int wIter;
   int wDamage = 0;
 
-  switch (MechMove(objMech)) {
+  switch (mech_movement_type(objMech)) {
   case MOVE_WHEEL:
   case MOVE_VTOL:
     wRoll += 2;
@@ -202,7 +208,7 @@ void checkVehicleInFire(Mech *objMech, int fromHexFire) {
   switch (wRoll) {
   case 8: /* roll once on the motive system chart */
   case 9:
-    if (MechType(objMech) == CLASS_VTOL) {
+    if (mech_class(objMech) == CLASS_VTOL) {
       /*
        * VTOLs _should_ make a pskill or go up one level... not right now tho
        */
@@ -223,16 +229,16 @@ void checkVehicleInFire(Mech *objMech, int fromHexFire) {
         "[fg=red bold]The fire sweeps across your unit damaging it![reset]");
 
     for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
-      wDamage = btech_random_range(objMech->xcode.context, 1, 6);
+      wDamage = btech_random_range(mech_context(objMech), 1, 6);
 
-      if (GetSectInt(objMech, wIter))
+      if (mech_section_internal(objMech, wIter))
         DamageMech(objMech, objMech, 0, -1, wIter, 0, 0, wDamage, 0, 0, 0, -1,
                    0, 1);
     }
     break;
 
   default:
-    vehicle_start_burn(objMech, objMech);
+    vehicle_fire_start(objMech, objMech);
     break;
   }
 }

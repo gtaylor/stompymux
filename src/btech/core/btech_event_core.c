@@ -56,6 +56,11 @@ long btech_event_first_delay(MuxEventScheduler *events, const void *object,
   return mux_event_count_type_data_firstev(events, type, (void *)object);
 }
 
+int btech_event_last_delay(MuxEventScheduler *events, const void *object,
+                           int type) {
+  return mux_event_last_type_data(events, type, (void *)object);
+}
+
 long btech_event_data(MuxEventScheduler *events, const void *object, int type) {
   long data = 0;
   mux_event_get_type_data(events, type, (void *)object, &data);

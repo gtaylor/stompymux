@@ -166,9 +166,9 @@ void heat_effect(Mech *mech, Mech *tempMech, int heatdam, int fromInferno) {
          (MechType(tempMech) == CLASS_VTOL)) &&
         tempMech->xcode.context->configuration->btech_fasaadvvhlfire) {
       if (fromInferno)
-        vehicle_start_burn(tempMech, mech);
+        vehicle_fire_start(tempMech, mech);
       else
-        checkVehicleInFire(tempMech, 0);
+        vehicle_fire_check(tempMech, 0);
     } else {
       if (btech_random_roll(tempMech->xcode.context) > 8) {
         mech_los_broadcast(tempMech, "explodes!");
@@ -182,7 +182,7 @@ void heat_effect(Mech *mech, Mech *tempMech, int heatdam, int fromInferno) {
   } else {
 
     if (heatdam)
-      inferno_burn(tempMech, heatdam * 6);
+      mech_inferno_burn(tempMech, heatdam * 6);
   }
 }
 
@@ -200,7 +200,7 @@ void Inferno_Hit(Mech *mech, Mech *hitMech, int missiles, int LOS) {
                 "[fg=red bold]You are sprayed with burning jelly![reset]");
   }
   heat_effect(mech, hitMech, hmod * 30, 1); /* 3min for _each_ missile */
-  water_extinguish_inferno(
+  mech_inferno_extinguish_in_water(
       hitMech); /* They could be in -2 standing or -1 prone.. Shooter just
                    wastes his missiles! */
 }

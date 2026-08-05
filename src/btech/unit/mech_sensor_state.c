@@ -18,6 +18,13 @@ bool mech_is_fallen(const Mech *mech) { return mech->rd.status & FALLEN; }
 
 bool mech_is_jellied(const Mech *mech) { return mech->rd.critstatus & JELLIED; }
 
+void mech_jellied_set(Mech *mech, bool jellied) {
+  if (jellied)
+    mech->rd.critstatus |= JELLIED;
+  else
+    mech->rd.critstatus &= ~JELLIED;
+}
+
 void mech_sensor_visibility_modifier_set(Mech *mech, int modifier) {
   mech->rd.vis_mod = modifier;
 }

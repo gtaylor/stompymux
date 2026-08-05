@@ -288,7 +288,7 @@ void mech_jump_land(Mech *mech) {
     possible_mine_poof(mech, MINE_LAND);
 
   mech_flood(mech);
-  water_extinguish_inferno(mech);
+  mech_inferno_extinguish_in_water(mech);
   // this is only for non-new-stagger
   if (!btech_context_stagger_mode(mech_context(mech)))
     mech_stop_stagger_check(mech);

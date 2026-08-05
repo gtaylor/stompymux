@@ -34,6 +34,8 @@ int btech_event_count_data(MuxEventScheduler *events, const void *object,
                            int type, intptr_t data);
 long btech_event_first_delay(MuxEventScheduler *events, const void *object,
                              int type);
+int btech_event_last_delay(MuxEventScheduler *events, const void *object,
+                           int type);
 long btech_event_data(MuxEventScheduler *events, const void *object, int type);
 void btech_event_cancel(MuxEventScheduler *events, void *object, int type);
 void btech_event_cancel_data(MuxEventScheduler *events, void *object, int type,
@@ -43,6 +45,7 @@ void btech_events_cancel_all(MuxEventScheduler *events, void *object);
 int mech_event_count(const Mech *mech, int type);
 int mech_event_count_data(const Mech *mech, int type, intptr_t data);
 long mech_event_first_delay(const Mech *mech, int type);
+int mech_event_last_delay(const Mech *mech, int type);
 long mech_event_data(const Mech *mech, int type);
 void mech_event_cancel(Mech *mech, int type);
 void mech_event_cancel_data(Mech *mech, int type, intptr_t data);

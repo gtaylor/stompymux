@@ -121,7 +121,7 @@ static void command_mech_auto_turret(DbRef actor, void *object,
 
 static void command_vehicle_extinguish_fire(DbRef actor, void *object,
                                             char *arguments) {
-  vehicle_extinquish_fire(actor, object, arguments);
+  vehicle_fire_extinguish(actor, object, arguments);
 }
 
 static void command_mech_c3_message(DbRef actor, void *object,

@@ -753,7 +753,7 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
     possible_mine_poof(mech, MINE_STEP);
     if (advanced_vehicle_fire && (mech_class(mech) == CLASS_VEH_GROUND) &&
         (mech_position_terrain(mech) == BATTLE_TERRAIN_FIRE))
-      checkVehicleInFire(mech, 1);
+      vehicle_fire_check(mech, 1);
   }
   MarkForLOSUpdate(mech);
 }

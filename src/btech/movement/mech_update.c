@@ -135,7 +135,7 @@ void mech_movement_update(Mech *mech) {
 
     if (mech_position_x(mech) == x && mech_position_y(mech) == y) {
       mech_flood(mech);
-      water_extinguish_inferno(mech);
+      mech_inferno_extinguish_in_water(mech);
       steppable_base_check(mech, x, y);
 
       if (is_in_character(btech_context_database(mech_context(mech)),

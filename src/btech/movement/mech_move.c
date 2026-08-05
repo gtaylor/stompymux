@@ -552,7 +552,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
   mech_make_fall(mech);
   mech_movement_stop(mech);
   mech_flood(mech);
-  water_extinguish_inferno(mech);
+  mech_inferno_extinguish_in_water(mech);
 
   // as per ps, prone clears stagger
   if (btech_context_stagger_mode(mech_context(mech)))

@@ -7,9 +7,9 @@
 
 #include "mux/server/platform.h"
 
-void inferno_burn(Mech *mech, int time);
-void vehicle_start_burn(Mech *objMech, Mech *objAttacker);
-void checkVehicleInFire(Mech *objMech, int fromHexFire);
-void vehicle_extinquish_fire_event(MuxEvent *e);
-void vehicle_extinquish_fire(DbRef player, Mech *mech, char *buffer);
-void water_extinguish_inferno(Mech *mech);
+void mech_inferno_burn(Mech *mech, int time);
+void vehicle_fire_start(Mech *mech, Mech *attacker);
+void vehicle_fire_check(Mech *mech, int from_hex_fire);
+void vehicle_fire_extinguish_event(MuxEvent *event);
+void vehicle_fire_extinguish(DbRef player, Mech *mech, char *buffer);
+void mech_inferno_extinguish_in_water(Mech *mech);

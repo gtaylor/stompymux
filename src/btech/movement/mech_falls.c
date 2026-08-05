@@ -189,14 +189,14 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
       DamageMech(mech, mech, 0, -1, hitloc, isrear, iscritical, 5, -1, -1, 0,
                  -1, 0, 0);
       mech_flood(mech);
-      water_extinguish_inferno(mech);
+      mech_inferno_extinguish_in_water(mech);
     }
     if (damage % 5) {
       hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
       DamageMech(mech, mech, 0, -1, hitloc, isrear, iscritical, (damage % 5),
                  -1, -1, 0, -1, 0, 0);
       mech_flood(mech);
-      water_extinguish_inferno(mech);
+      mech_inferno_extinguish_in_water(mech);
     }
   }
   possible_mine_poof(mech, MINE_FALL);
