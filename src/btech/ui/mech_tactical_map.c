@@ -154,7 +154,7 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
           continue;
         }
         base = pos + tactical_hex_offset(tx, ty, dispcols, oddcol1);
-        if (Find_DS_Bay_Number(mech, (dir - ts + 6) % 6) >= 0) {
+        if (dropship_bay_number(mech, (dir - ts + 6) % 6) >= 0) {
           sketch_tac_ds(base, dispcols, '@');
         } else {
           sketch_tac_ds(base, dispcols, '=');

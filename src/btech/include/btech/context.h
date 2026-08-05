@@ -3,6 +3,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <time.h>
 
 #include "btech/ids.h"
@@ -62,6 +63,8 @@ int btech_context_movement_slowdown_mode(const BtechContext *context);
 int btech_context_stacking_mode(const BtechContext *context);
 int btech_context_stacking_damage(const BtechContext *context);
 int btech_context_event_tick(const BtechContext *context);
+int btech_context_event_data_count(const BtechContext *context, int event_type,
+                                   intptr_t event_data);
 time_t btech_context_now(const BtechContext *context);
 void btech_command_scope_enter(BtechCommandScope *scope, BtechContext *context,
                                CommandContext *command);

@@ -294,7 +294,7 @@ void CheckEdgeOfMap(Mech *mech) {
        blocked, one way or another.
      */
     if (map->onmap && btech_context_is_mech(map->xcode.context, map->onmap)) {
-      if (Leave_DS(map, mech))
+      if (dropship_leave(map, mech))
         return;
     } else if (map->flags & MAPFLAG_MAPO && map->MapObject[TYPE_LEAVE])
       if (Leave_Hangar(map, mech))

@@ -112,6 +112,13 @@ int btech_context_event_tick(const BtechContext *context) {
   return context->events->tick;
 }
 
+int btech_context_event_data_count(const BtechContext *context, int event_type,
+                                   intptr_t event_data) {
+  assert(context != nullptr);
+  return mux_event_count_type_data2(context->events, event_type,
+                                    (void *)event_data);
+}
+
 time_t btech_context_now(const BtechContext *context) {
   assert(context != nullptr);
   return context->clock->now;

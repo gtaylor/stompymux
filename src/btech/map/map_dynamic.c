@@ -63,6 +63,12 @@ int battle_map_width(const BattleMap *map) { return map->map_width; }
 
 int battle_map_height(const BattleMap *map) { return map->map_height; }
 
+DbRef battle_map_parent_dbref(const BattleMap *map) { return map->onmap; }
+
+void battle_map_parent_dbref_set(BattleMap *map, DbRef parent) {
+  map->onmap = parent;
+}
+
 void mech_map_consistency_check(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));

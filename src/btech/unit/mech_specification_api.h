@@ -27,6 +27,8 @@ int mech_fuel(const Mech *mech);
 int mech_original_fuel(const Mech *mech);
 int mech_structural_integrity(const Mech *mech);
 int mech_original_structural_integrity(const Mech *mech);
+DbRef mech_bay_dbref(const Mech *mech, int bay);
 void mech_maximum_fuel_set(Mech *mech, int fuel);
 void mech_cargo_weight_set(Mech *mech, int weight);
 void mech_sixth_sense_set(Mech *mech, bool enabled);
+void mech_bay_dbref_set(Mech *mech, int bay, DbRef bay_dbref);

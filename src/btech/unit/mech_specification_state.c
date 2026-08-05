@@ -72,6 +72,8 @@ int mech_original_structural_integrity(const Mech *mech) {
   return mech->ud.si_orig;
 }
 
+DbRef mech_bay_dbref(const Mech *mech, int bay) { return mech->pd.bay[bay]; }
+
 void mech_maximum_fuel_set(Mech *mech, int fuel) { mech->rd.maxfuel = fuel; }
 
 void mech_cargo_weight_set(Mech *mech, int weight) {
@@ -84,4 +86,8 @@ void mech_sixth_sense_set(Mech *mech, bool enabled) {
     mech->rd.specials |= SS_ABILITY;
   else
     mech->rd.specials &= ~SS_ABILITY;
+}
+
+void mech_bay_dbref_set(Mech *mech, int bay, DbRef bay_dbref) {
+  mech->pd.bay[bay] = bay_dbref;
 }

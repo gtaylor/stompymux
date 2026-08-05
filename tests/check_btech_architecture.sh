@@ -140,6 +140,20 @@ done < <(rg -n '\b(domino_space|mechs_in_hex|cause_damage|get_weight)\b' \
   src/btech -g '*.[ch]' || true)
 
 while IFS= read -r match; do
+  echo "$match: converted DropShip bay module uses an aggregate domain layout"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\b(mech|ds|tempMech|tmpm|car|map|mech_map|tmpmap)->|\b(AeroBay|Mech(X|Y|Z|F[XYZ]|Last[XY]|Elev|Terrain|Type|Move|Speed|VerticalSpeed|Specials2|Carrying|Pilot)|GetPartType|PartIsDestroyed|IsDS|Landed|Started|Uncon|Jumping|Fallen|OODing|is_aero|FlyingT|DSBearMod|MirrorPosition)\(' \
+  src/btech/movement/ds_bay.c || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy DropShip bay export is not allowed"
+  status=1
+done < <(rg -n \
+  '\b(Find_DS_Bay_Number|Find_DS_Bay_Dir|Find_DS_Bay_In_MechHex|Leave_DS|DS_Bay_Is_Open|DS_Bay_Is_EnterOK|DS_Place)\b' \
+  src/btech -g '*.[ch]' || true)
+
+while IFS= read -r match; do
   echo "$match: converted out-of-door drop module uses an aggregate Mech layout"
   status=1
 done < <(rg -n \

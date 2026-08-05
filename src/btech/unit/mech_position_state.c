@@ -20,6 +20,8 @@ int mech_position_y(const Mech *mech) { return mech->pd.y; }
 
 int mech_position_z(const Mech *mech) { return mech->pd.z; }
 
+int mech_position_elevation(const Mech *mech) { return mech->pd.elev; }
+
 int mech_position_elevation_magnitude(const Mech *mech) {
   return abs(mech->pd.elev);
 }
@@ -63,6 +65,10 @@ int mech_desired_angle(const Mech *mech) { return mech->rd.angle; }
 
 int mech_lateral_movement(const Mech *mech) { return mech->rd.lateral; }
 
+int mech_dropship_bearing_sector(const Mech *mech) {
+  return ((mech_heading_degrees(mech) + 30) / 60) % 6;
+}
+
 float mech_desired_speed(const Mech *mech) { return mech->rd.desired_speed; }
 
 char mech_position_terrain(const Mech *mech) { return mech->pd.terrain; }
@@ -92,6 +98,8 @@ void mech_position_z_set(Mech *mech, int z) {
   mech->pd.fz = ZSCALE * z;
 }
 
+void mech_position_hex_z_set(Mech *mech, int z) { mech->pd.z = z; }
+
 void mech_desired_speed_set(Mech *mech, float speed) {
   mech->rd.desired_speed = speed;
 }
@@ -106,6 +114,19 @@ void mech_motion_vector_reset(Mech *mech) {
   mech->rd.startfx = 0.0F;
   mech->rd.startfy = 0.0F;
   mech->rd.startfz = 0.0F;
+}
+
+void mech_position_mirror(Mech *target, const Mech *source, int height_offset) {
+  target->pd.fx = source->pd.fx;
+  target->pd.fy = source->pd.fy;
+  target->pd.fz = source->pd.fz + height_offset * ZSCALE;
+  target->pd.x = source->pd.x;
+  target->pd.y = source->pd.y;
+  target->pd.z = source->pd.z + height_offset;
+  target->pd.last_x = source->pd.last_x;
+  target->pd.last_y = source->pd.last_y;
+  target->pd.terrain = source->pd.terrain;
+  target->pd.elev = source->pd.elev + height_offset;
 }
 
 void mech_position_land_if_flying(Mech *mech) {

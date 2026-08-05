@@ -1,22 +1,13 @@
-
-/*
-   p.ds.bay.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Tue Feb  9 14:31:30 CET 1999 from ds.bay.c */
-
 #pragma once
 
+#include "mech_api_types.h"
 #include "mux/server/platform.h"
 
-/* ds.bay.c */
+typedef struct BattleMap BattleMap;
+
 void mech_createbays(DbRef player, void *data, char *buffer);
-int Find_DS_Bay_Number(Mech *ds, int dir);
-int Find_DS_Bay_Dir(Mech *ds, int num);
-int Find_DS_Bay_In_MechHex(Mech *seer, Mech *ds, int *bayn);
+int dropship_bay_number(Mech *ds, int direction);
+int dropship_bay_direction(Mech *ds, int bay);
+int dropship_bay_in_adjacent_hex(Mech *seer, Mech *dropship, long *bay);
 void mech_enterbay(DbRef player, void *data, char *buffer);
-int Leave_DS(BattleMap *map, Mech *mech);
+int dropship_leave(BattleMap *map, Mech *mech);
