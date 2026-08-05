@@ -19,6 +19,10 @@ int mech_position_x(const Mech *mech) { return mech->pd.x; }
 
 int mech_position_y(const Mech *mech) { return mech->pd.y; }
 
+int mech_position_previous_x(const Mech *mech) { return mech->pd.last_x; }
+
+int mech_position_previous_y(const Mech *mech) { return mech->pd.last_y; }
+
 int mech_position_z(const Mech *mech) { return mech->pd.z; }
 
 int mech_position_elevation(const Mech *mech) { return mech->pd.elev; }

@@ -14,6 +14,8 @@ typedef struct MechJumpLaunch {
 void mech_position_reset_origin(Mech *mech);
 int mech_position_x(const Mech *mech);
 int mech_position_y(const Mech *mech);
+int mech_position_previous_x(const Mech *mech);
+int mech_position_previous_y(const Mech *mech);
 int mech_position_z(const Mech *mech);
 int mech_position_elevation(const Mech *mech);
 int mech_position_elevation_magnitude(const Mech *mech);

@@ -576,6 +576,13 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Overwater|MoveMod|Elevation)\s*\(' \
+  src/btech/movement/mech_collision.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: collision evaluation must use opaque unit APIs"
+  status=1
+fi
+
 match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Destroyed|is_aero)\s*\(' \
   src/btech/movement/mech_fire_hazard.c || true)
 if [[ -n "$match" ]]; then
