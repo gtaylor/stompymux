@@ -22,7 +22,45 @@ bool mech_uses_heat(const Mech *mech) {
 
 float mech_added_heat(const Mech *mech) { return mech->rd.plus_heat; }
 
+int mech_disabled_heat_sink_count(const Mech *mech) {
+  return mech->rd.disabled_hs;
+}
+
+int mech_engine_heat(const Mech *mech) { return mech->rd.engineheat; }
+
+bool mech_heat_cutoff_is_enabled(const Mech *mech) {
+  return mech->rd.critstatus & HEATCUTOFF;
+}
+
+bool mech_life_support_is_destroyed(const Mech *mech) {
+  return mech->rd.critstatus & LIFE_SUPPORT_DESTROYED;
+}
+
+void mech_heat_production_set(Mech *mech, float heat) {
+  mech->rd.plus_heat = heat;
+}
+
+void mech_heat_production_add(Mech *mech, float heat) {
+  mech->rd.plus_heat += heat;
+}
+
+void mech_heat_dissipation_set(Mech *mech, float heat) {
+  mech->rd.minus_heat = heat;
+}
+
+void mech_heat_dissipation_add(Mech *mech, float heat) {
+  mech->rd.minus_heat += heat;
+}
+
+void mech_excess_heat_set(Mech *mech, float heat) { mech->rd.heat = heat; }
+
+void mech_weapon_heat_set(Mech *mech, float heat) { mech->rd.weapheat = heat; }
+
 void mech_weapon_heat_add(Mech *mech, float heat) { mech->rd.weapheat += heat; }
+
+void mech_disabled_heat_sinks_set(Mech *mech, int count) {
+  mech->rd.disabled_hs = count;
+}
 
 int mech_last_overheat_check_tick(const Mech *mech) {
   return mech->rd.heatboom_last;

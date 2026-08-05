@@ -571,6 +571,13 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '#include "(mech|mech_macros|mech_update_internal)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Started|Jumping|Fallen|Jellied|InWater|InSpecial|Heatcutoff|MMaxSpeed|IsRunning)\s*\(' \
+  src/btech/movement/mech_update_heat.c || true)
+if [[ -n "$match" ]]; then
+  echo "$match: heat accounting must use opaque unit APIs"
+  status=1
+fi
+
 if [[ -e src/btech/sensors/mech_sensor_internal.h ]]; then
   echo "src/btech/sensors/mech_sensor_internal.h: aggregate sensor header is not allowed"
   status=1
