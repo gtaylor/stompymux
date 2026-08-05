@@ -1,6 +1,6 @@
 #include "mech_utils_internal.h"
 
-int MechFullNoRecycle(Mech *mech, int num) {
+int mech_recycling_state(Mech *mech, int num) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++) {

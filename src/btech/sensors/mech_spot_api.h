@@ -3,10 +3,15 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 #include "mux/server/platform.h"
 
-int IsArtyMech(Mech *mech);
-void ClearFireAdjustments(BattleMap *map, DbRef mech);
+typedef struct BattleMap BattleMap;
+typedef struct Mech Mech;
+
+bool mech_spot_has_artillery(Mech *mech);
+void mech_spot_clear_fire_adjustments(BattleMap *map, DbRef mech);
 void mech_spot(DbRef player, void *data, char *buffer);
-int FireSpot(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
-             int weapontype, int sight, int section, int critical);
+int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
+                   int weapontype, int sight, int section, int critical);

@@ -230,7 +230,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
 
   /* New message system for when someone tries to embark
    * but their sections are still cycling (or weapons) */
-  if ((tmp = MechFullNoRecycle(mech, CHECK_BOTH))) {
+  if ((tmp = mech_recycling_state(mech, CHECK_BOTH))) {
 
     if (tmp == 1) {
       notify(evaluation, player, "You have weapons recycling!");

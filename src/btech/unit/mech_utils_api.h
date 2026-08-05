@@ -184,7 +184,7 @@ float Calculate_Defensive_BV(Mech *mech);
 float Calculate_Offensive_BV(Mech *mech);
 #endif
 void unit_parts_list(Mech *mech, char buffer[static LBUF_SIZE]);
-int MechFullNoRecycle(Mech *mech, int num);
+int mech_recycling_state(Mech *mech, int num);
 #ifdef BT_COMPLEXREPAIRS
 int GetPartMod(Mech *mech, int t);
 int ProperArmor(Mech *mech);

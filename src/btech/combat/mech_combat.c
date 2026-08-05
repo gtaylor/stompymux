@@ -42,6 +42,7 @@
 #include "mech_events_api.h"
 #include "mech_hitloc_api.h"
 #include "mech_ice_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_macros.h"
@@ -200,7 +201,7 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL, "All locks cleared.");
       mech_stop_lock(mech);
       if (MechSpotter(mech) == mech->mynum)
-        ClearFireAdjustments(mech_map, mech->mynum);
+        mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
       return;
     }
     targetID[0] = args[0][0];
@@ -253,7 +254,7 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     MechTargY(mech) = newy;
     MechFireAdjustment(mech) = 0;
     if (MechSpotter(mech) == mech->mynum)
-      ClearFireAdjustments(mech_map, mech->mynum);
+      mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
     MechTargZ(mech) = Elevation(mech_map, newx, newy);
     notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "Target coordinates set at (X,Y) %d, %d", newx, newy);
@@ -302,7 +303,7 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     MechTargY(mech) = newy;
     MechFireAdjustment(mech) = 0;
     if (MechSpotter(mech) == mech->mynum)
-      ClearFireAdjustments(mech_map, mech->mynum);
+      mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
     MechTargZ(mech) = Elevation(mech_map, newx, newy);
     switch (mode) {
     case LOCK_HEX:

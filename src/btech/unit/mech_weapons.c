@@ -1,4 +1,5 @@
 #include "mech_utils_internal.h"
+#include "weapon_catalogue_api.h"
 
 // Added i < 9 for Split crit tests
 #define UGLYTEST                                                               \
@@ -14,6 +15,14 @@
     }                                                                          \
     num_crits = 0;                                                             \
   }
+
+bool weapon_catalogue_is_artillery(int weapon_index) {
+  return IsArtillery(weapon_index);
+}
+
+bool weapon_catalogue_supports_indirect_fire(int weapon_index) {
+  return MechWeapons[weapon_index].special & IDF;
+}
 
 /* ASSERTION: Weapons must be located next to each other in criticals. */
 int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,

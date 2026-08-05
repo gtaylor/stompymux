@@ -254,8 +254,8 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
 
   if ((MechWeapons[weaptype].special & IDF) && MechSpotter(mech) != -1 &&
       MechTarget(mech) == -1) {
-    FireSpot(player, mech, mech_map, weapnum, weaptype, sight, section,
-             critical);
+    mech_spot_fire(player, mech, mech_map, weapnum, weaptype, sight, section,
+                   critical);
     return 1;
   }
 

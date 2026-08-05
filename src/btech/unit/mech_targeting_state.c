@@ -28,6 +28,20 @@ int mech_target_hex_x(const Mech *mech) { return mech->rd.targx; }
 
 int mech_target_hex_y(const Mech *mech) { return mech->rd.targy; }
 
+int mech_target_hex_z(const Mech *mech) { return mech->rd.targz; }
+
+DbRef mech_spotter_dbref(const Mech *mech) { return mech->rd.spotter; }
+
+void mech_spotter_dbref_set(Mech *mech, DbRef spotter) {
+  mech->rd.spotter = spotter;
+}
+
+void mech_fire_adjustment_set(Mech *mech, int adjustment) {
+  mech->rd.fire_adjustment = adjustment;
+}
+
+int mech_targeting_computer_type(const Mech *mech) { return mech->ud.targcomp; }
+
 int mech_aim_section(const Mech *mech) { return mech->rd.aim; }
 
 int mech_aim_unit_class(const Mech *mech) { return mech->rd.aim_type; }

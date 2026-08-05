@@ -616,7 +616,7 @@ void mech_movemode_event(MuxEvent *e) {
         MechDesiredSpeed(mech) = 0;
       }
     } else if (i & MODE_DODGE) {
-      if (MechFullNoRecycle(mech, CHECK_PHYS) > 0) {
+      if (mech_recycling_state(mech, CHECK_PHYS) > 0) {
         mech_notify(mech, MECHALL,
                     "You cannot enter DODGE mode due to physical useage.");
         return;
