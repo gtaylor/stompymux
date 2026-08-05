@@ -12,6 +12,8 @@ typedef struct MechJumpLaunch {
 } MechJumpLaunch;
 
 void mech_position_reset_origin(Mech *mech);
+void mech_position_previous_capture(Mech *mech);
+void mech_position_hex_sync_from_real(Mech *mech);
 int mech_position_x(const Mech *mech);
 int mech_position_y(const Mech *mech);
 int mech_position_previous_x(const Mech *mech);
@@ -71,3 +73,5 @@ void mech_position_rollback(Mech *mech, float delta_x, float delta_y,
                             int previous_z, char previous_terrain,
                             int previous_elevation);
 void mech_jump_launch(Mech *mech, const MechJumpLaunch *launch);
+bool mech_jump_destination_was_overshot(const Mech *mech);
+void mech_jump_overshoot_restore(Mech *mech, float delta_x, float delta_y);

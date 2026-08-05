@@ -5,6 +5,7 @@
 #include "floatsim.h"
 #include "map_terrain.h"
 #include "mech_internal.h"
+#include "mech_runtime_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 
@@ -13,6 +14,15 @@ void mech_position_reset_origin(Mech *mech) {
   mech->pd.last_y = 0;
   mech->pd.x = 0;
   mech->pd.y = 0;
+}
+
+void mech_position_previous_capture(Mech *mech) {
+  mech->pd.last_x = mech->pd.x;
+  mech->pd.last_y = mech->pd.y;
+}
+
+void mech_position_hex_sync_from_real(Mech *mech) {
+  RealCoordToMapCoord(&mech->pd.x, &mech->pd.y, mech->pd.fx, mech->pd.fy);
 }
 
 int mech_position_x(const Mech *mech) { return mech->pd.x; }
@@ -226,6 +236,22 @@ void mech_jump_launch(Mech *mech, const MechJumpLaunch *launch) {
   mech->rd.jumptop = launch->apex_elevation;
   mech->rd.speed = 0.0F;
   mech->rd.swarming = -1;
+}
+
+bool mech_jump_destination_was_overshot(const Mech *mech) {
+  return mech_is_jumping(mech) && mech->pd.last_x == mech->rd.goingx &&
+         mech->pd.last_y == mech->rd.goingy &&
+         (mech->pd.x != mech->pd.last_x || mech->pd.y != mech->pd.last_y);
+}
+
+void mech_jump_overshoot_restore(Mech *mech, float delta_x, float delta_y) {
+  mech->pd.fx -= delta_x;
+  mech->pd.fy -= delta_y;
+  mech->pd.fz = mech->rd.endfz;
+  mech->pd.x = mech->rd.goingx;
+  mech->pd.y = mech->rd.goingy;
+  MapCoordToRealCoord(mech->pd.x, mech->pd.y, &mech->pd.fx, &mech->pd.fy);
+  mech->pd.z = mech->pd.fz / ZSCALE;
 }
 
 void mech_position_mirror(Mech *target, const Mech *source, int height_offset) {

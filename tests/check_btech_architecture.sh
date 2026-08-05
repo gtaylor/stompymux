@@ -472,6 +472,7 @@ if [[ -n "$match" ]]; then
 fi
 
 match=$(rg -n '#include "mech_update_internal\.h"|#include "(mech|mech_macros)\.h"|mech->|wounded->|\b(Mech[A-Z][A-Za-z0-9_]*|Started|Uncon|Jumping|Fallen|OODing|IsDS|is_aero)\s*\(' \
+  src/btech/movement/mech_update.c \
   src/btech/movement/mech_update_damage.c \
   src/btech/movement/mech_update_heartbeat.c || true)
 if [[ -n "$match" ]]; then

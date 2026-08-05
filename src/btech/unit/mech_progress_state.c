@@ -24,3 +24,5 @@ void mech_shot_result_record(Mech *mech, bool hit) {
   else
     mech->rd.shots_missed++;
 }
+
+int mech_hexes_walked_advance(Mech *mech) { return ++mech->pd.hexes_walked; }
