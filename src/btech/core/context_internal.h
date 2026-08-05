@@ -15,12 +15,6 @@ typedef struct BtechPartCosts BtechPartCosts;
 typedef struct PartNameRegistry PartNameRegistry;
 typedef struct MuxTimer MuxTimer;
 
-typedef enum BtechDamageExperienceMode {
-  BTECH_DAMAGE_XP_GUNNERY,
-  BTECH_DAMAGE_XP_PILOTING,
-  BTECH_DAMAGE_XP_NONE,
-} BtechDamageExperienceMode;
-
 typedef struct BtechCombatOverrides {
   BtechObjectId pilot;
   int arcs;

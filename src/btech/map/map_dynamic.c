@@ -69,6 +69,10 @@ bool battle_map_blocks_friendly_fire(const BattleMap *map) {
   return map->flags & MAPFLAG_NOFRIENDLYFIRE;
 }
 
+bool battle_map_is_combat_safe(const BattleMap *map) {
+  return map->buildflag & BUILDFLAG_CSI;
+}
+
 void battle_map_parent_dbref_set(BattleMap *map, DbRef parent) {
   map->onmap = parent;
 }

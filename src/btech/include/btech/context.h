@@ -22,6 +22,12 @@ typedef struct ServerLifecycle ServerLifecycle;
 typedef struct ServerLog ServerLog;
 typedef struct WorldIndexes WorldIndexes;
 
+typedef enum BtechDamageExperienceMode {
+  BTECH_DAMAGE_XP_GUNNERY,
+  BTECH_DAMAGE_XP_PILOTING,
+  BTECH_DAMAGE_XP_NONE,
+} BtechDamageExperienceMode;
+
 typedef struct BtechDependencies {
   /* Every dependency is borrowed and must outlive the BTech context. */
   ServerConfiguration *configuration;
@@ -81,6 +87,12 @@ bool btech_context_range_modifies_damage(const BtechContext *context);
 bool btech_context_woods_modify_damage(const BtechContext *context);
 bool btech_context_glancing_blows_enabled(const BtechContext *context);
 int btech_context_glancing_blow_mode(const BtechContext *context);
+int btech_context_rotor_damage_divisor(const BtechContext *context);
+BtechDamageExperienceMode
+btech_context_damage_experience_mode(const BtechContext *context);
+void btech_context_damage_experience_mode_set(BtechContext *context,
+                                              BtechDamageExperienceMode mode);
+BtechObjectId btech_context_stat_engine_dbref(const BtechContext *context);
 int btech_context_sprint_to_hit_modifier(const BtechContext *context);
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context);
 bool btech_context_uses_roll_on_backwalk(const BtechContext *context);

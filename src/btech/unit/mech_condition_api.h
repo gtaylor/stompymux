@@ -144,5 +144,6 @@ void mech_null_signature_destroyed_set(Mech *mech, bool destroyed);
 bool mech_section_is_underwater(const Mech *mech, int section);
 void mech_stunned_set(Mech *mech, bool stunned);
 void mech_searchlight_set(Mech *mech, bool enabled);
+void mech_searchlight_destroy(Mech *mech);
 void mech_stealth_armor_active_set(Mech *mech, bool active);
 void mech_null_signature_active_set(Mech *mech, bool active);

@@ -41,6 +41,7 @@ void mech_fuel_set(Mech *mech, int fuel);
 void mech_fuel_decrement(Mech *mech, int amount);
 int mech_original_fuel(const Mech *mech);
 int mech_structural_integrity(const Mech *mech);
+void mech_structural_integrity_set(Mech *mech, int integrity);
 int mech_original_structural_integrity(const Mech *mech);
 DbRef mech_bay_dbref(const Mech *mech, int bay);
 void mech_maximum_fuel_set(Mech *mech, int fuel);

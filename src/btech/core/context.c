@@ -194,6 +194,28 @@ int btech_context_glancing_blow_mode(const BtechContext *context) {
   return context->configuration->btech_glancing_blows;
 }
 
+int btech_context_rotor_damage_divisor(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_divrotordamage;
+}
+
+BtechDamageExperienceMode
+btech_context_damage_experience_mode(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->combat_overrides.damage_experience;
+}
+
+void btech_context_damage_experience_mode_set(BtechContext *context,
+                                              BtechDamageExperienceMode mode) {
+  assert(context != nullptr);
+  context->combat_overrides.damage_experience = mode;
+}
+
+BtechObjectId btech_context_stat_engine_dbref(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_statengine_obj;
+}
+
 int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_sprint_bth;

@@ -27,25 +27,33 @@
 #include "legacy_macros.h"
 #include "map.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "map_units_api.h"
 #include "mech_ammodump_api.h"
 #include "mech_build_api.h"
+#include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_combat_missile_api.h"
+#include "mech_condition_api.h"
+#include "mech_crew_api.h"
 #include "mech_damage_api.h"
+#include "mech_damage_history_api.h"
 #include "mech_ecm_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_hitloc_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_ood_api.h"
 #include "mech_pickup_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
 #include "mech_stagger.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mechrep_api.h"
 #include "mux/network/mux_event.h"
@@ -56,6 +64,7 @@
 #include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
+#include "section_types.h"
 void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
                 int hitloc, int isrear, int iscritical, int damage,
                 int intDamage, int cause, int bth, int wWeapIndx, int wAmmoMode,
@@ -70,7 +79,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   int crits = 0;
   int tBlowDumpingAmmo = 0;
   int wSwarmerHitChance = 0;
-  int wRoll = btech_random_roll(wounded->xcode.context);
+  int wRoll = btech_random_roll(mech_context(wounded));
   Mech *mechSwarmer;
   int tSnapTowLines = 0;
   Mech *towTarget;
@@ -85,8 +94,9 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
      damage = n && intDamage = -1/-2
      - usual damage + transfer/+red enable */
   /* if damage>0 && !intDamage usual dam. */
-  map = btech_context_get_map(attacker->xcode.context, attacker->mapindex);
-  if ((map && MapIsCS(map)) || (MechStatus(wounded) & COMBAT_SAFE)) {
+  map = btech_context_get_map(mech_context(attacker), mech_map_dbref(attacker));
+  if ((map && battle_map_is_combat_safe(map)) ||
+      mech_condition_summary(wounded).combat_safe) {
     if (wounded != attacker)
       mech_notify(attacker, MECHALL, "Your efforts only scratch the paint!");
     return;
@@ -94,7 +104,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
 
   /* Rare case something passes through. We're in WEAPONS_HOLD. Don't even allow
    * it */
-  if (MechStatus2(attacker) & WEAPONS_HOLD) {
+  if (mech_condition_summary(attacker).weapons_hold) {
     if (wounded != attacker)
       mech_notify(attacker, MECHALL, "You are currently in weapons hold!");
   }
@@ -107,7 +117,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
    */
   if ((bsuit_swarmer_count(wounded) > 0) && (!tIgnoreSwarmers)) {
     if ((mechSwarmer = bsuit_swarmer_find(wounded))) {
-      if (!attacker || (attacker->mynum != mechSwarmer->mynum)) {
+      if (!attacker || (mech_dbref(attacker) != mech_dbref(mechSwarmer))) {
         wSwarmerHitChance = 20 * bsuit_member_count(mechSwarmer);
         if (isrear) {
           if ((hitloc != CTORSO) && (hitloc != RTORSO) && (hitloc != LTORSO))
@@ -117,8 +127,9 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
             wSwarmerHitChance = 0;
         }
 
-        if ((wSwarmerHitChance >= wRoll) && (GetSectArmor(wounded, hitloc))) {
-          if (attacker && (attacker->mynum != wounded->mynum)) {
+        if ((wSwarmerHitChance >= wRoll) &&
+            mech_section_armor(wounded, hitloc)) {
+          if (attacker && (mech_dbref(attacker) != mech_dbref(wounded))) {
             mech_notify(attacker, MECHALL,
                         "The battlesuits crawling all over your target absorb "
                         "the damage!");
@@ -137,11 +148,12 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
     }
   }
 
-  if (MechType(wounded) == CLASS_MW || MechType(wounded) == CLASS_MECH)
+  if (mech_class(wounded) == CLASS_MW || mech_class(wounded) == CLASS_MECH)
     transfer = 1;
 #ifdef BT_MOVEMENT_MODES
-  if ((damage > 0 || intDamage > 0) && MechStatus2(wounded) & SPRINTING) {
-    MechStatus2(wounded) &= ~SPRINTING;
+  if ((damage > 0 || intDamage > 0) &&
+      mech_condition_summary(wounded).sprinting) {
+    mech_sprinting_set(wounded, false);
     mech_los_broadcast(wounded, "breaks out of its sprint as it takes damage!");
     mech_notify(wounded, MECHALL,
                 "You lose your sprinting momentum as you take damage!");
@@ -150,12 +162,12 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
                           MODE_OFF | MODE_SPRINT);
   }
 
-  if ((damage > 0 || intDamage > 0) && MechCritStatus(wounded) & HIDDEN) {
-    MechCritStatus(wounded) &= ~HIDDEN;
+  if ((damage > 0 || intDamage > 0) && mech_condition_summary(wounded).hidden) {
+    mech_hidden_set(wounded, false);
     mech_los_broadcast(wounded, "loses its cover as it takes damage!");
     mech_notify(wounded, MECHALL, "Your cover is ruined as you take damage!");
     if (!mech_event_count(wounded, EVENT_MOVEMODE))
-      MechCritStatus(wounded) &= ~HIDDEN;
+      mech_hidden_set(wounded, false);
   }
 
   if ((damage > 0 || intDamage > 0) &&
@@ -170,39 +182,40 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   if (damage > 0 && intDamage == 0) {
     /* If we're a VTOL and the hitloc is the rotor,
        we'll cut the damage by some value */
-    if ((MechType(wounded) == CLASS_VTOL) && (hitloc == ROTOR)) {
-      if (wounded->xcode.context->configuration->btech_divrotordamage > 0)
-        damage = damage /
-                 wounded->xcode.context->configuration->btech_divrotordamage;
+    if ((mech_class(wounded) == CLASS_VTOL) && (hitloc == ROTOR)) {
+      if (btech_context_rotor_damage_divisor(mech_context(wounded)) > 0)
+        damage =
+            damage / btech_context_rotor_damage_divisor(mech_context(wounded));
       if (damage < 1)
         damage = 1;
     }
 
-    if (MechCritStatus(wounded) & HIDDEN) {
+    if (mech_condition_summary(wounded).hidden) {
       mech_notify(wounded, MECHALL, "Your cover is ruined as you take damage!");
       mech_los_broadcast(wounded, "loses its cover as it takes damage.");
-      MechCritStatus(wounded) &= ~HIDDEN;
+      mech_hidden_set(wounded, false);
     }
 
-    if (wounded->xcode.context->combat_overrides.damage_experience ==
+    if (btech_context_damage_experience_mode(mech_context(wounded)) ==
         BTECH_DAMAGE_XP_GUNNERY)
       AccumulateGunXP(attackPilot, attacker, wounded, damage, 1, cause, bth);
-    else if (wounded->xcode.context->combat_overrides.damage_experience ==
+    else if (btech_context_damage_experience_mode(mech_context(wounded)) ==
              BTECH_DAMAGE_XP_PILOTING)
-      if (!Destroyed(wounded) &&
-          is_in_character(wounded->xcode.context->database, wounded->mynum) &&
-          MechTeam(wounded) != MechTeam(attacker))
-        if (MechType(wounded) != CLASS_MW || MechType(attacker) == CLASS_MW)
+      if (!mech_is_destroyed(wounded) &&
+          is_in_character(btech_context_database(mech_context(wounded)),
+                          mech_dbref(wounded)) &&
+          mech_team(wounded) != mech_team(attacker))
+        if (mech_class(wounded) != CLASS_MW || mech_class(attacker) == CLASS_MW)
           AccumulatePilXP(attackPilot, attacker, damage / 3, 1);
     damage = unit_damage_to_personal_combat(wounded, cause, damage);
   }
   if (isrear) {
-    if (!(MechSpecials(wounded) & SALVAGE_TECH) &&
-        (btech_random_roll(wounded->xcode.context) <= 5) &&
+    if (!(mech_technology_flags(wounded) & SALVAGE_TECH) &&
+        (btech_random_roll(mech_context(wounded)) <= 5) &&
         (hitloc == CTORSO || hitloc == LTORSO || hitloc == RTORSO))
       tSnapTowLines = 1;
 
-    if (MechType(wounded) == CLASS_MECH) {
+    if (mech_class(wounded) == CLASS_MECH) {
       strcpy(rearMessage, "(Rear)");
       if (mech_event_count(wounded, EVENT_DUMP) &&
           ((hitloc == CTORSO) || (hitloc == LTORSO) || (hitloc == RTORSO)) &&
@@ -240,28 +253,34 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   }
 
   /*   while (SectIsDestroyed(wounded, hitloc) && !kill) */
-  while (((!is_aero(wounded) && !GetSectInt(wounded, hitloc)) ||
-          (is_aero(wounded) && !GetSectArmor(wounded, hitloc))) &&
+  while (((!mech_is_aerospace_unit(wounded) &&
+           !mech_section_internal(wounded, hitloc)) ||
+          (mech_is_aerospace_unit(wounded) &&
+           !mech_section_armor(wounded, hitloc))) &&
          !kill) {
     if (transfer &&
         (hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0 &&
-        (MechType(wounded) == CLASS_MECH || MechType(wounded) == CLASS_MW ||
-         MechType(wounded) == CLASS_BSUIT || is_aero(wounded))) {
+        (mech_class(wounded) == CLASS_MECH || mech_class(wounded) == CLASS_MW ||
+         mech_class(wounded) == CLASS_BSUIT ||
+         mech_is_aerospace_unit(wounded))) {
       DamageMech(wounded, attacker, LOS, attackPilot, hitloc, isrear,
                  iscritical, damage == -1 ? -2 : damage,
                  transfer == 1 ? -2 : damage, cause, bth, wWeapIndx, wAmmoMode,
                  tIgnoreSwarmers);
       return;
     } else {
-      if (!((MechType(wounded) == CLASS_MECH || MechType(wounded) == CLASS_MW ||
-             MechType(wounded) == CLASS_BSUIT || is_aero(wounded)) &&
+      if (!((mech_class(wounded) == CLASS_MECH ||
+             mech_class(wounded) == CLASS_MW ||
+             mech_class(wounded) == CLASS_BSUIT ||
+             mech_is_aerospace_unit(wounded)) &&
             (hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0)) {
-        if (is_aero(wounded) && !Destroyed(wounded)) {
+        if (mech_is_aerospace_unit(wounded) && !mech_is_destroyed(wounded)) {
           /* Hurt SI instead. */
-          if (AeroSI(wounded) <= damage)
+          if (mech_structural_integrity(wounded) <= damage)
             kill = 1;
           else {
-            AeroSI(wounded) -= damage;
+            mech_structural_integrity_set(
+                wounded, mech_structural_integrity(wounded) - damage);
             kill = -1;
           }
         } else
@@ -270,15 +289,16 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
       /* Nyah. Damage transferred to waste, shooting a dead mech? */
     }
   }
-  if (C_OODing(wounded) && btech_random_roll(wounded->xcode.context) > 8) {
+  if (mech_cocoon_integrity(wounded) > 0 &&
+      btech_random_roll(mech_context(wounded)) > 8) {
     mech_ood_damage(wounded, attacker,
                     damage + (intDamage < 0 ? 0 : intDamage));
     return;
   }
 
   if (hitloc != -1) {
-    ArmorStringFromIndex(hitloc, locationBuff, MechType(wounded),
-                         MechMove(wounded));
+    ArmorStringFromIndex(hitloc, locationBuff, mech_class(wounded),
+                         mech_movement_type(wounded));
     snprintf(notificationBuff, sizeof(notificationBuff),
              "for %d points of damage in the %s %s",
              damage + (intDamage < 0 ? 0 : intDamage), locationBuff,
@@ -292,10 +312,9 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
    * damage again */
   if (!was_transfer) {
     if (attacker != wounded)
-      MechDamageInflicted(attacker) = MechDamageInflicted(attacker) + damage +
-                                      (intDamage < 0 ? 0 : intDamage);
-    MechDamageTaken(wounded) =
-        MechDamageTaken(wounded) + damage + (intDamage < 0 ? 0 : intDamage);
+      mech_damage_inflicted_add(attacker,
+                                damage + (intDamage < 0 ? 0 : intDamage));
+    mech_damage_taken_add(wounded, damage + (intDamage < 0 ? 0 : intDamage));
   }
 
   /*  if (LOS && attackPilot != -1) */
@@ -307,7 +326,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
       mech_printf(attacker, MECHALL, "[fg=green]Damage transfer.. %s[reset]",
                   notificationBuff);
   }
-  if (MechType(wounded) == CLASS_MW && !was_transfer)
+  if (mech_class(wounded) == CLASS_MW && !was_transfer)
     if (damage > 0)
       if (!(damage = personal_armor_reduce_damage(wounded, cause, hitloc,
                                                   damage, intDamage)))
@@ -315,19 +334,20 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   mech_printf(wounded, MECHALL, "[fg=yellow bold]You have been hit %s%s[reset]",
               notificationBuff, was_transfer ? "(transfer)" : "");
   /* Always a good policy :-> */
-  if (damage > 0 && intDamage <= 0 && !was_transfer && !Fallen(wounded)) {
+  if (damage > 0 && intDamage <= 0 && !was_transfer &&
+      !mech_condition_summary(wounded).fallen) {
     if (btech_context_stagger_mode(mech_context(wounded)) &&
-        MechType(wounded) == CLASS_MECH) {
+        mech_class(wounded) == CLASS_MECH) {
 
       mech_stagger_damage_append(wounded, damage,
-                                 wounded->xcode.context->clock->now,
-                                 attacker->mynum, false);
+                                 btech_context_now(mech_context(wounded)),
+                                 mech_dbref(attacker), false);
     } else {
-      MechTurnDamage(wounded) += damage;
+      mech_turn_damage_add(wounded, damage);
     }
   }
 
-  if (hitloc == HEAD && MechType(wounded) == CLASS_MECH) {
+  if (hitloc == HEAD && mech_class(wounded) == CLASS_MECH) {
 
     /*      mech_notify (wounded, MECHALL,
        "You take 10 points of Lethal damage!!"); */
@@ -343,26 +363,26 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
                   "The blast causes the last of your craft's structure to "
                   "disintegrate, blowing");
       mech_notify(wounded, MECHALL, "its pieces all over the sky!");
-      if (!Landed(wounded) && Started(wounded)) {
+      if (!mech_is_landed(wounded) && mech_is_started(wounded)) {
         mech_notify(attacker, MECHALL, "You shoot the craft from the sky!");
         mech_los_broadcast_unit(attacker, wounded, "shoots %s from the sky!");
       }
-      mech_destroy(wounded, attacker, !(!Landed(wounded) && Started(wounded)),
+      mech_destroy(wounded, attacker,
+                   !(!mech_is_landed(wounded) && mech_is_started(wounded)),
                    KILL_TYPE_NORMAL);
     }
     return;
   }
   if (damage > 0) {
-    if (MechType(wounded) == CLASS_MECH) {
-      if (!isrear && (MechSpecials(wounded) & SLITE_TECH) &&
-          !(MechCritStatus(wounded) & SLITE_DEST) &&
+    if (mech_class(wounded) == CLASS_MECH) {
+      if (!isrear && (mech_technology_flags(wounded) & SLITE_TECH) &&
+          !mech_condition_summary(wounded).searchlight_destroyed &&
           (hitloc == LTORSO || hitloc == CTORSO || hitloc == RTORSO)) {
         /* Possibly destroy the light */
-        if (btech_random_roll(wounded->xcode.context) > 6) {
-          if ((MechStatus2(wounded) & SLITE_ON) ||
-              (btech_random_roll(wounded->xcode.context) > 5)) {
-            MechCritStatus(wounded) |= SLITE_DEST;
-            MechStatus2(wounded) &= ~SLITE_ON;
+        if (btech_random_roll(mech_context(wounded)) > 6) {
+          if (mech_condition_summary(wounded).searchlight_on ||
+              (btech_random_roll(mech_context(wounded)) > 5)) {
+            mech_searchlight_destroy(wounded);
             mech_los_broadcast(wounded, "'s searchlight is blown apart!");
             mech_notify(
                 wounded, MECHALL,
@@ -371,15 +391,15 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
         }
       }
     }
-    if (MechType(wounded) == CLASS_VEH_GROUND) {
-      if (!isrear && (MechSpecials(wounded) & SLITE_TECH) &&
-          !(MechCritStatus(wounded) & SLITE_DEST) && (hitloc == FSIDE)) {
+    if (mech_class(wounded) == CLASS_VEH_GROUND) {
+      if (!isrear && (mech_technology_flags(wounded) & SLITE_TECH) &&
+          !mech_condition_summary(wounded).searchlight_destroyed &&
+          (hitloc == FSIDE)) {
         /* Possibly destroy the light */
-        if (btech_random_roll(wounded->xcode.context) > 6) {
-          if ((MechStatus2(wounded) & SLITE_ON) ||
-              (btech_random_roll(wounded->xcode.context) > 5)) {
-            MechCritStatus(wounded) |= SLITE_DEST;
-            MechStatus2(wounded) &= ~SLITE_ON;
+        if (btech_random_roll(mech_context(wounded)) > 6) {
+          if (mech_condition_summary(wounded).searchlight_on ||
+              (btech_random_roll(mech_context(wounded)) > 5)) {
+            mech_searchlight_destroy(wounded);
             mech_los_broadcast(wounded, "'s searchlight is blown apart!");
             mech_notify(
                 wounded, MECHALL,
@@ -410,33 +430,35 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
      * negative num. If its negative, (lower then -1 which will stay as
      * selfdamage) we'll check a 'Physical Weapons Table' and abs() the value
      * and pick the name out from there */
-    if (wounded->xcode.context->configuration->btech_statengine_obj > 0 &&
+    if (btech_context_stat_engine_dbref(mech_context(wounded)) > 0 &&
         wWeapIndx != -1)
       notify_checked(
-          btech_context_evaluation(wounded->xcode.context),
-          wounded->xcode.context->configuration->btech_statengine_obj, GOD,
+          btech_context_evaluation(mech_context(wounded)),
+          btech_context_stat_engine_dbref(mech_context(wounded)), GOD,
           tprintf("STATHIT|#%ld|#%ld|#%ld|%s|%s|#%ld|#%ld|%d|%s%s|%s|%d|%d",
-                  attacker->mapindex, MechPilot(attacker), MechPilot(wounded),
-                  MechType_Ref(attacker), MechType_Ref(wounded),
-                  attacker->mynum, wounded->mynum, bth, isrear ? "Rear " : "",
+                  mech_map_dbref(attacker), mech_pilot_dbref(attacker),
+                  mech_pilot_dbref(wounded), mech_model_reference(attacker),
+                  mech_model_reference(wounded), mech_dbref(attacker),
+                  mech_dbref(wounded), bth, isrear ? "Rear " : "",
                   hitloc != -1 ? locationBuff : "NONE",
                   &MechWeapons[wWeapIndx].name[0], damage - intDamage,
-                  GetSectInt(wounded, hitloc) < intDamage
-                      ? intDamage - (intDamage - GetSectInt(wounded, hitloc))
+                  mech_section_internal(wounded, hitloc) < intDamage
+                      ? intDamage -
+                            (intDamage - mech_section_internal(wounded, hitloc))
                       : intDamage),
           MSG_ME_ALL | MSG_F_DOWN);
 
     if (intDamage >= 0)
-      mech_flood_section(wounded, hitloc, MechZ(wounded));
-    if (intDamage > 0 && !is_aero(wounded)) {
+      mech_flood_section(wounded, hitloc, mech_position_z(wounded));
+    if (intDamage > 0 && !mech_is_aerospace_unit(wounded)) {
       intDamage =
           cause_internaldamage(wounded, attacker, LOS, attackPilot, isrear,
                                hitloc, intDamage, cause, &crits);
-      if (!intDamage && !SectIsDestroyed(wounded, hitloc))
+      if (!intDamage && !mech_section_is_destroyed(wounded, hitloc))
         mech_location_breach(attacker, wounded, hitloc);
     } else
       mech_location_maybe_breach(attacker, wounded, hitloc);
-    if (intDamage > 0 && transfer && (MechType(wounded) != CLASS_BSUIT)) {
+    if (intDamage > 0 && transfer && (mech_class(wounded) != CLASS_BSUIT)) {
       if ((hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0)
         DamageMech(wounded, attacker, LOS, attackPilot, hitloc, isrear,
                    iscritical, intDamage, -2, cause, bth, wWeapIndx, wAmmoMode,
@@ -451,7 +473,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   /* Non-CASE things get _really_ hurt */
   {
     if (intDamage > 0) {
-      if (is_aero(wounded))
+      if (mech_is_aerospace_unit(wounded))
         intDamage = cause_armordamage(wounded, attacker, LOS, attackPilot,
                                       isrear, iscritical, hitloc, intDamage,
                                       &crits, wWeapIndx, wAmmoMode);
@@ -459,13 +481,13 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
         intDamage =
             cause_internaldamage(wounded, attacker, LOS, attackPilot, isrear,
                                  hitloc, intDamage, cause, &crits);
-      if (!SectIsDestroyed(wounded, hitloc))
+      if (!mech_section_is_destroyed(wounded, hitloc))
         mech_location_maybe_breach(attacker, wounded, hitloc);
       if (intDamage > 0 && transfer &&
-          !((MechSections(wounded)[hitloc].config & CASE_TECH) ||
-            (MechSpecials(wounded) & CLAN_TECH))) {
+          !(mech_section_configuration_has(wounded, hitloc, CASE_TECH) ||
+            (mech_technology_flags(wounded) & CLAN_TECH))) {
         if ((hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0) {
-          if (!is_aero(wounded))
+          if (!mech_is_aerospace_unit(wounded))
             DamageMech(wounded, attacker, LOS, attackPilot, hitloc, isrear,
                        iscritical, -2, intDamage, cause, bth, wWeapIndx,
                        wAmmoMode, tIgnoreSwarmers);
@@ -482,9 +504,9 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   }
 
   /* Check to see if the tow lines should snap */
-  if (tSnapTowLines && (MechCarrying(wounded) > 0)) {
-    if ((towTarget = btech_context_get_mech(wounded->xcode.context,
-                                            MechCarrying(wounded)))) {
+  if (tSnapTowLines && (mech_carried_dbref(wounded) > 0)) {
+    if ((towTarget = btech_context_get_mech(mech_context(wounded),
+                                            mech_carried_dbref(wounded)))) {
       mech_notify(wounded, MECHALL, "The hit causes your tow line to let go!");
       mech_notify(towTarget, MECHALL, "Your tow lines go suddenly slack!");
       mech_los_broadcast(wounded,
@@ -498,7 +520,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
    * later */
   if (wWeapIndx > 0) {
     if (strstr(MechWeapons[wWeapIndx].name, "IS.PlasmaRifle")) {
-      if (MechType(wounded) == CLASS_MECH)
+      if (mech_class(wounded) == CLASS_MECH)
         mech_plasma_hit(attacker, wounded, LOS);
     }
   }

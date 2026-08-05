@@ -19,4 +19,5 @@ int battle_map_width(const BattleMap *map);
 int battle_map_height(const BattleMap *map);
 DbRef battle_map_parent_dbref(const BattleMap *map);
 bool battle_map_blocks_friendly_fire(const BattleMap *map);
+bool battle_map_is_combat_safe(const BattleMap *map);
 void battle_map_parent_dbref_set(BattleMap *map, DbRef parent);

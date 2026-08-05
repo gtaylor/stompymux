@@ -449,6 +449,11 @@ void mech_searchlight_set(Mech *mech, bool enabled) {
   }
 }
 
+void mech_searchlight_destroy(Mech *mech) {
+  mech->rd.critstatus |= SLITE_DEST;
+  mech->rd.status2 &= ~SLITE_ON;
+}
+
 void mech_stealth_armor_active_set(Mech *mech, bool active) {
   if (active)
     mech->rd.status2 |= STH_ARMOR_ON;

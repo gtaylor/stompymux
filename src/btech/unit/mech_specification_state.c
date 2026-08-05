@@ -136,6 +136,10 @@ int mech_original_fuel(const Mech *mech) { return mech->ud.fuel_orig; }
 
 int mech_structural_integrity(const Mech *mech) { return mech->ud.si; }
 
+void mech_structural_integrity_set(Mech *mech, int integrity) {
+  mech->ud.si = integrity;
+}
+
 int mech_original_structural_integrity(const Mech *mech) {
   return mech->ud.si_orig;
 }
