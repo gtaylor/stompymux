@@ -356,13 +356,13 @@ void ChargeMech(Mech *mech, Mech *target) {
       spread = target_damage / 5;
 
       for (i = 0; i < spread; i++) {
-        hitloc = FindHitLocation(target, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
         MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear,
                      iscritical, 5, 0);
       }
 
       if (target_damage % 5) {
-        hitloc = FindHitLocation(target, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
         MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear,
                      iscritical, (target_damage % 5), 0);
       }
@@ -388,12 +388,12 @@ void ChargeMech(Mech *mech, Mech *target) {
       spread = target_damage / 5;
 
       for (i = 0; i < spread; i++) {
-        hitloc = FindHitLocation(mech, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
         MyDamageMech2(mech, mech, 0, -1, hitloc, isrear, iscritical, 5, 0);
       }
 
       if (target_damage % 5) {
-        hitloc = FindHitLocation(mech, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
         MyDamageMech2(mech, mech, 0, -1, hitloc, isrear, iscritical,
                       (target_damage % 5), 0);
       }
@@ -439,13 +439,13 @@ void ChargeMech(Mech *mech, Mech *target) {
       spread = mech_damage / 5;
 
       for (i = 0; i < spread; i++) {
-        hitloc = FindHitLocation(mech, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
         MyDamageMech(mech, target, 1, MechPilot(target), hitloc, isrear,
                      iscritical, 5, 0);
       }
 
       if (mech_damage % 5) {
-        hitloc = FindHitLocation(mech, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
         MyDamageMech(mech, target, 1, MechPilot(target), hitloc, isrear,
                      iscritical, (mech_damage % 5), 0);
       }
@@ -471,12 +471,12 @@ void ChargeMech(Mech *mech, Mech *target) {
       spread = target_damage / 5;
 
       for (i = 0; i < spread; i++) {
-        hitloc = FindHitLocation(target, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
         MyDamageMech2(target, target, 0, -1, hitloc, isrear, iscritical, 5, 0);
       }
 
       if (mech_damage % 5) {
-        hitloc = FindHitLocation(target, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
         MyDamageMech2(target, target, 0, -1, hitloc, isrear, iscritical,
                       (mech_damage % 5), 0);
       }
@@ -655,13 +655,13 @@ void ChargeMech(Mech *mech, Mech *target) {
     spread = target_damage / 5;
 
     for (i = 0; i < spread; i++) {
-      hitloc = FindHitLocation(target, hitGroup, &iscritical, &isrear);
+      hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
       MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear, iscritical,
                    5, 0);
     }
 
     if (target_damage % 5) {
-      hitloc = FindHitLocation(target, hitGroup, &iscritical, &isrear);
+      hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
       MyDamageMech(target, mech, 1, MechPilot(mech), hitloc, isrear, iscritical,
                    (target_damage % 5), 0);
     }
@@ -686,12 +686,12 @@ void ChargeMech(Mech *mech, Mech *target) {
     spread = mech_damage / 5;
 
     for (i = 0; i < spread; i++) {
-      hitloc = FindHitLocation(mech, hitGroup, &iscritical, &isrear);
+      hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
       MyDamageMech2(mech, mech, 0, -1, hitloc, isrear, iscritical, 5, 0);
     }
 
     if (mech_damage % 5) {
-      hitloc = FindHitLocation(mech, hitGroup, &iscritical, &isrear);
+      hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
       MyDamageMech2(mech, mech, 0, -1, hitloc, isrear, iscritical,
                     (mech_damage % 5), 0);
     }

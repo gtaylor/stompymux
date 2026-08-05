@@ -196,20 +196,20 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
         switch (table) {
         case TABLE_PUNCH:
           if (MechType(tempMech) != CLASS_MECH) {
-            hitloc = FindHitLocation(tempMech, arc, &iscritical, &isrear);
+            hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
           } else {
             hitloc = FindPunchLocation(tempMech, arc);
           }
           break;
         case TABLE_KICK:
           if (MechType(tempMech) != CLASS_MECH) {
-            hitloc = FindHitLocation(tempMech, arc, &iscritical, &isrear);
+            hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
           } else {
             hitloc = FindKickLocation(tempMech, arc);
           }
           break;
         default:
-          hitloc = FindHitLocation(tempMech, arc, &iscritical, &isrear);
+          hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
         }
 
         DamageMech(tempMech, tempMech, 0, -1, hitloc, isrear, iscritical, ndam,

@@ -185,14 +185,14 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
 
   if (!mech_condition_summary(mech).combat_safe) {
     for (i = 0; i < spread; i++) {
-      hitloc = FindHitLocation(mech, hitGroup, &iscritical, &isrear);
+      hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
       DamageMech(mech, mech, 0, -1, hitloc, isrear, iscritical, 5, -1, -1, 0,
                  -1, 0, 0);
       mech_flood(mech);
       water_extinguish_inferno(mech);
     }
     if (damage % 5) {
-      hitloc = FindHitLocation(mech, hitGroup, &iscritical, &isrear);
+      hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
       DamageMech(mech, mech, 0, -1, hitloc, isrear, iscritical, (damage % 5),
                  -1, -1, 0, -1, 0, 0);
       mech_flood(mech);

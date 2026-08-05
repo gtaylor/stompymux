@@ -409,7 +409,8 @@ int dodamage_func(DbRef player, Mech *mech, int totaldam, int clustersize,
     if (direction > 18)
       isrear = 1;
     if (direction > 15)
-      hitloc = FindHitLocation(mech, ((direction - 1) & 3) + 1, dummy1, dummy2);
+      hitloc =
+          mech_hit_location(mech, ((direction - 1) & 3) + 1, dummy1, dummy2);
     this_time = MIN(clustersize, totaldam);
     DamageMech(mech, mech, 0, -1, hitloc, isrear, iscritical, this_time, 0, 0,
                0, -1, 0, 1);

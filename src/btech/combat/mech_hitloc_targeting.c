@@ -198,7 +198,7 @@ int FindTargetHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
     return find_swarm_hit_location(mech->xcode.context, iscritical, isrear);
   }
 
-  return FindHitLocation(target, hitGroup, iscritical, isrear);
+  return mech_hit_location(target, hitGroup, iscritical, isrear);
 }
 
 int findNARCHitLoc(Mech *mech, Mech *hitMech, int *tIsRearHit) {
@@ -319,7 +319,7 @@ int FindTCHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
     }
   if (MechType(target) == CLASS_MECH && (MechStatus(target) & PARTIAL_COVER))
     return FindPunchLocation(target, hitGroup);
-  return FindHitLocation(target, hitGroup, iscritical, isrear);
+  return mech_hit_location(target, hitGroup, iscritical, isrear);
 }
 
 int FindAimHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
@@ -388,5 +388,5 @@ int FindAimHitLoc(Mech *mech, Mech *target, int *isrear, int *iscritical) {
 
   if (MechType(target) == CLASS_MECH && (MechStatus(target) & PARTIAL_COVER))
     return FindPunchLocation(target, hitGroup);
-  return FindHitLocation(target, hitGroup, iscritical, isrear);
+  return mech_hit_location(target, hitGroup, iscritical, isrear);
 }

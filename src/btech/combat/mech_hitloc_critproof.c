@@ -7,33 +7,38 @@
  *       All rights reserved
  */
 
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
+#include "mech_identity_api.h"
 
 /* Use this when the unit is CRITPROOF because the other
  * hitlocation functions are screwy */
-int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
-                              int *isrear) {
+int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
+                                int *isrear) {
   int roll, hitloc = 0;
   int side;
+  BtechContext *context = mech_context(mech);
+  MechConditionSummary condition = mech_condition_summary(mech);
 
-  roll = btech_random_roll(mech->xcode.context);
+  roll = btech_random_roll(context);
 
   /* Since we're crit proof set this to 0 */
   *iscritical = 0;
 
-  if (MechStatus(mech) & COMBAT_SAFE)
+  if (condition.combat_safe)
     return 0;
 
-  if (MechDugIn(mech) && GetSectOInt(mech, TURRET) &&
-      btech_random_range(mech->xcode.context, 1, 100) >= 42)
+  if (condition.dug_in && mech_section_original_internal(mech, TURRET) &&
+      btech_random_range(context, 1, 100) >= 42)
     return TURRET;
 
-  mech->xcode.context->random.statistics.hit_rolls[roll - 2]++;
-  mech->xcode.context->random.statistics.total_hit_rolls++;
-  switch (MechType(mech)) {
+  btech_context_hit_roll_record(context, roll);
+  switch (mech_class(mech)) {
   case CLASS_BSUIT:
     if ((hitloc = get_bsuit_hitloc(mech)) < 0)
-      return btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1);
+      return btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
@@ -60,7 +65,7 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
       case 11:
         return RLEG;
       case 12:
-        if (mech->xcode.context->configuration->btech_exile_stun_code)
+        if (btech_context_uses_exile_stun_code(context))
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -87,7 +92,7 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
       case 11:
         return LLEG;
       case 12:
-        if (mech->xcode.context->configuration->btech_exile_stun_code)
+        if (btech_context_uses_exile_stun_code(context))
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -114,7 +119,7 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
       case 11:
         return LARM;
       case 12:
-        if (mech->xcode.context->configuration->btech_exile_stun_code)
+        if (btech_context_uses_exile_stun_code(context))
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -136,9 +141,9 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
       case 9:
         return LSIDE;
       case 10:
-        return (GetSectInt(mech, TURRET)) ? TURRET : LSIDE;
+        return (mech_section_internal(mech, TURRET)) ? TURRET : LSIDE;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
+        if (mech_section_internal(mech, TURRET)) {
           return TURRET;
         } else
           return LSIDE;
@@ -158,9 +163,9 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
       case 9:
         return RSIDE;
       case 10:
-        return (GetSectInt(mech, TURRET)) ? TURRET : RSIDE;
+        return (mech_section_internal(mech, TURRET)) ? TURRET : RSIDE;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
+        if (mech_section_internal(mech, TURRET)) {
           return TURRET;
         } else
           return RSIDE;
@@ -184,9 +189,9 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
       case 9:
         return side;
       case 10:
-        return (GetSectInt(mech, TURRET)) ? TURRET : side;
+        return (mech_section_internal(mech, TURRET)) ? TURRET : side;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
+        if (mech_section_internal(mech, TURRET)) {
           return TURRET;
         } else
           return side;
@@ -278,14 +283,13 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
         return DS_LWING;
       case 4:
       case 10:
-        return (btech_random_range(mech->xcode.context, 1, 2)) == 1 ? DS_LWING
-                                                                    : DS_RWING;
+        return (btech_random_range(context, 1, 2)) == 1 ? DS_LWING : DS_RWING;
       }
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
-      if (btech_random_range(mech->xcode.context, 1, 2) == 2)
+      if (btech_random_range(context, 1, 2) == 2)
         SpheroidToRear(mech, side);
       switch (roll) {
       case 2:
@@ -431,13 +435,13 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
         hitloc = LSIDE;
         break;
       case 10:
-        if (GetSectInt(mech, TURRET))
+        if (mech_section_internal(mech, TURRET))
           hitloc = TURRET;
         else
           hitloc = LSIDE;
         break;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
+        if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
         } else
           hitloc = LSIDE;
@@ -463,13 +467,13 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
         hitloc = RSIDE;
         break;
       case 10:
-        if (GetSectInt(mech, TURRET))
+        if (mech_section_internal(mech, TURRET))
           hitloc = TURRET;
         else
           hitloc = RSIDE;
         break;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
+        if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
         } else
           hitloc = RSIDE;
@@ -500,13 +504,13 @@ int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
         hitloc = FSIDE;
         break;
       case 10:
-        if (GetSectInt(mech, TURRET))
+        if (mech_section_internal(mech, TURRET))
           hitloc = TURRET;
         else
           hitloc = FSIDE;
         break;
       case 11:
-        if (GetSectInt(mech, TURRET)) {
+        if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
         } else
           hitloc = FSIDE;

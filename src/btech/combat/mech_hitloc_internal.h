@@ -20,8 +20,6 @@
 #include "mech_utils_api.h"
 #include "mux/support/formatting.h"
 
-#define CHECK_ZERO_LOC(mech, a, b) (GetSectInt(mech, a) > 0 ? a : b)
-
 int ModifyHeadHit(int hitGroup, Mech *mech);
 int FindPunchLocation(Mech *target, int hitGroup);
 int FindKickLocation(Mech *target, int hitGroup);
@@ -39,10 +37,10 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
                                 int *isrear, int roll);
 int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
                                  int *isrear, int roll);
-int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
-                                  int *isrear);
-int FindHitLocation_CritProof(Mech *mech, int hitGroup, int *iscritical,
-                              int *isrear);
-int FindHitLocation(Mech *mech, int hitGroup, int *iscritical, int *isrear);
+int mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
+                                       int *iscritical, int *isrear);
+int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
+                                int *isrear);
+int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear);
 int find_swarm_hit_location(BtechContext *context, int *iscritical,
                             int *isrear);

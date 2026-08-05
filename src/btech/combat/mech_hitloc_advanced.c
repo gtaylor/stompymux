@@ -7,27 +7,37 @@
  *       All rights reserved
  */
 
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
+#include "mech_identity_api.h"
 
-int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
-                                  int *isrear) {
+static int hit_location_or_fallback(const Mech *mech, int preferred,
+                                    int fallback) {
+  return mech_section_internal(mech, preferred) > 0 ? preferred : fallback;
+}
+
+int mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
+                                       int *iscritical, int *isrear) {
   int roll, hitloc = 0;
   int side;
+  BtechContext *context = mech_context(mech);
+  MechConditionSummary condition = mech_condition_summary(mech);
 
   *iscritical = 0;
-  roll = btech_random_roll(mech->xcode.context);
+  roll = btech_random_roll(context);
 
-  if (MechStatus(mech) & COMBAT_SAFE)
+  if (condition.combat_safe)
     return 0;
 
-  if (MechDugIn(mech) && GetSectInt(mech, TURRET) &&
-      btech_random_range(mech->xcode.context, 1, 100) >= 42)
+  if (condition.dug_in && mech_section_internal(mech, TURRET) &&
+      btech_random_range(context, 1, 100) >= 42)
     return TURRET;
 
-  mech->xcode.context->random.statistics.hit_rolls[roll - 2]++;
-  mech->xcode.context->random.statistics.total_hit_rolls++;
+  btech_context_hit_roll_record(context, roll);
 
-  switch (MechType(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_VEH_GROUND:
     switch (hitGroup) {
     case LEFTSIDE:
@@ -41,8 +51,7 @@ int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
         break;
       case 3:
         hitloc = side;
-        if (crittable(mech, hitloc,
-                      mech->xcode.context->configuration->btech_critlevel))
+        if (crittable(mech, hitloc, btech_context_critical_level(context)))
           mech_motive_system_hit(mech, 0);
         break;
       case 4:
@@ -61,10 +70,10 @@ int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
         break;
       case 10:
       case 11:
-        hitloc = CHECK_ZERO_LOC(mech, TURRET, side);
+        hitloc = hit_location_or_fallback(mech, TURRET, side);
         break;
       case 12:
-        hitloc = CHECK_ZERO_LOC(mech, TURRET, side);
+        hitloc = hit_location_or_fallback(mech, TURRET, side);
         *iscritical = 1;
         break;
       }
@@ -82,8 +91,7 @@ int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
       case 3:
         hitloc = side;
 
-        if (crittable(mech, hitloc,
-                      mech->xcode.context->configuration->btech_critlevel))
+        if (crittable(mech, hitloc, btech_context_critical_level(context)))
           mech_motive_system_hit(mech, 0);
         break;
       case 4:
@@ -102,12 +110,12 @@ int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
         break;
       case 10:
       case 11:
-        hitloc =
-            CHECK_ZERO_LOC(mech, TURRET, (hitGroup == FRONT ? LSIDE : RSIDE));
+        hitloc = hit_location_or_fallback(mech, TURRET,
+                                          (hitGroup == FRONT ? LSIDE : RSIDE));
         break;
       case 12:
-        hitloc =
-            CHECK_ZERO_LOC(mech, TURRET, (hitGroup == FRONT ? LSIDE : RSIDE));
+        hitloc = hit_location_or_fallback(mech, TURRET,
+                                          (hitGroup == FRONT ? LSIDE : RSIDE));
         *iscritical = 1;
         break;
       }
@@ -192,8 +200,7 @@ int FindAdvFasaVehicleHitLocation(Mech *mech, int hitGroup, int *iscritical,
     break;
   }
 
-  if (!crittable(mech, hitloc,
-                 mech->xcode.context->configuration->btech_critlevel))
+  if (!crittable(mech, hitloc, btech_context_critical_level(context)))
     *iscritical = 0;
 
   return hitloc;

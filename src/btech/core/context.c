@@ -122,6 +122,32 @@ bool btech_context_uses_advanced_vehicle_fire(const BtechContext *context) {
          context->configuration->btech_fasaadvvhlfire;
 }
 
+bool btech_context_uses_advanced_vehicle_criticals(
+    const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_fasaadvvhlcrit;
+}
+
+bool btech_context_uses_advanced_vtol_criticals(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_fasaadvvtolcrit;
+}
+
+bool btech_context_uses_fasa_criticals(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_fasacrit;
+}
+
+bool btech_context_uses_exile_stun_code(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_exile_stun_code;
+}
+
+int btech_context_critical_level(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_critlevel;
+}
+
 bool btech_context_uses_tsm_sprint_bonus(const BtechContext *context) {
   return context && context->configuration &&
          context->configuration->btech_tsm_sprint_bonus;

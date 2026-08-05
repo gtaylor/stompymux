@@ -301,7 +301,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
 
     for (i = 0; i < spread; i++) {
       if (Fallen(target) || MechType(target) != CLASS_MECH)
-        hitloc = FindHitLocation(target, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
       else
         hitloc = FindPunchLocation(target, hitGroup);
 
@@ -311,7 +311,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
 
     if (target_damage % 5) {
       if (Fallen(target) || (MechType(target) != CLASS_MECH))
-        hitloc = FindHitLocation(target, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
       else
         hitloc = FindPunchLocation(target, hitGroup);
 
@@ -360,12 +360,12 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     spread = mech_damage / 5;
 
     for (i = 0; i < spread; i++) {
-      hitloc = FindHitLocation(mech, BACK, &iscritical, &tmpi);
+      hitloc = mech_hit_location(mech, BACK, &iscritical, &tmpi);
       MyDamageMech2(mech, mech, 0, -1, hitloc, 1, iscritical, 5, 0);
     }
 
     if (mech_damage % 5) {
-      hitloc = FindHitLocation(mech, BACK, &iscritical, &tmpi);
+      hitloc = mech_hit_location(mech, BACK, &iscritical, &tmpi);
       MyDamageMech2(mech, mech, 0, -1, hitloc, 1, iscritical, (mech_damage % 5),
                     0);
     }

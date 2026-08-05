@@ -111,18 +111,18 @@ static void collision_apply_damage(Mech *att, Mech *mech, int dam,
   for (i = 0; i <= sp; i++) {
     switch (table) {
     case COLLISION_DAMAGE_NORMAL:
-      hitloc = FindHitLocation(mech, hitGroup, &iscrit, &isrear);
+      hitloc = mech_hit_location(mech, hitGroup, &iscrit, &isrear);
       break;
     case COLLISION_DAMAGE_PUNCH:
       if (mech_class(mech) != CLASS_MECH) {
-        hitloc = FindHitLocation(mech, hitGroup, &iscrit, &isrear);
+        hitloc = mech_hit_location(mech, hitGroup, &iscrit, &isrear);
       } else {
         hitloc = FindPunchLocation(mech, hitGroup);
       }
       break;
     case COLLISION_DAMAGE_KICK:
       if (mech_class(mech) != CLASS_MECH) {
-        hitloc = FindHitLocation(mech, hitGroup, &iscrit, &isrear);
+        hitloc = mech_hit_location(mech, hitGroup, &iscrit, &isrear);
       } else {
         hitloc = FindKickLocation(mech, hitGroup);
       }

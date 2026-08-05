@@ -128,7 +128,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
               wounded, MECHALL,
               "The battlesuits crawling all over you absorb the damage!");
           mech_notify(mechSwarmer, MECHALL, "You absorb the damage!");
-          hitloc = FindHitLocation(mechSwarmer, 0, &iscritical, &isrear);
+          hitloc = mech_hit_location(mechSwarmer, 0, &iscritical, &isrear);
           DamageMech(mechSwarmer, attacker, LOS, attackPilot, hitloc, 0, 0,
                      damage, 0, cause, bth, wWeapIndx, wAmmoMode, 0);
           return;
