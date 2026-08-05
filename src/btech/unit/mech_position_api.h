@@ -59,4 +59,7 @@ void mech_fall_heading_apply(Mech *mech, int offset);
 void mech_jump_apex_elevation_set(Mech *mech, int elevation);
 void mech_position_mirror(Mech *target, const Mech *source, int height_offset);
 void mech_position_land_if_flying(Mech *mech);
+void mech_position_rollback(Mech *mech, float delta_x, float delta_y,
+                            int previous_z, char previous_terrain,
+                            int previous_elevation);
 void mech_jump_launch(Mech *mech, const MechJumpLaunch *launch);

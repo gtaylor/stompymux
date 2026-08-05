@@ -173,7 +173,7 @@ void mech_maybe_move(Mech *mech) {
 void mech_update_recycling(Mech *mech) {
   if (Started(mech) && !Destroyed(mech) &&
       mech->rd.last_weapon_recycle != mech->xcode.context->events->tick) {
-    recycle_weaponry(mech);
+    mech_weapon_recycle_update(mech);
   }
 }
 

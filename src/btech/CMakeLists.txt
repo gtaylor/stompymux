@@ -120,6 +120,7 @@ set(BTECH_SOURCES
   movement/mech_update_motion.c
   movement/mech_update_heat.c
   movement/mech_update_recycle.c
+  movement/mech_skid.c
   movement/mech_update_hex.c
   movement/mech_update_hex_mech.c
   movement/mech_update_damage.c

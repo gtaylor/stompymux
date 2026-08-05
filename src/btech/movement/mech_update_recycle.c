@@ -8,126 +8,109 @@
  *       All rights reserved
  */
 
-#include "mech_update_internal.h"
+#include "mech_update_api.h"
 
-int recycle_weaponry(Mech *mech) {
+#include "btech/context.h"
+#include "failures.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_utils_api.h"
+#include "section_types.h"
+#include "weapon_catalogue_api.h"
 
-  int loop;
-  int count, i;
-  int crit[MAX_WEAPS_SECTION];
-  unsigned char weaptype[MAX_WEAPS_SECTION];
-  unsigned char weapdata[MAX_WEAPS_SECTION];
+static bool mech_section_recycles(const Mech *mech) {
+  int unit_class = mech_class(mech);
+  return unit_class == CLASS_MECH || unit_class == CLASS_BSUIT ||
+         unit_class == CLASS_VEH_GROUND || unit_class == CLASS_VTOL;
+}
+
+int mech_weapon_recycle_update(Mech *mech) {
+  int criticals[MAX_WEAPS_SECTION];
+  unsigned char weapon_types[MAX_WEAPS_SECTION];
+  unsigned char weapon_data[MAX_WEAPS_SECTION];
   char location[20];
-
-  int diff = (mech->xcode.context->events->tick - MechLWRT(mech));
+  BtechContext *context = mech_context(mech);
+  int tick = btech_context_event_tick(context);
+  int diff = tick - mech_last_weapon_recycle_tick(mech);
   int lowest = 0;
 
   if (diff < 1) {
     if (diff < 0)
-      MechLWRT(mech) = mech->xcode.context->events->tick;
+      mech_last_weapon_recycle_tick_set(mech, tick);
     return 1;
   }
-  MechLWRT(mech) = mech->xcode.context->events->tick;
+  mech_last_weapon_recycle_tick_set(mech, tick);
 
-  if (!Started(mech) || Destroyed(mech))
+  if (!mech_is_started(mech) || mech_is_destroyed(mech))
     return 0;
 
-  mech->xcode.context->combat_overrides.arcs = 1;
-  for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    count = FindWeapons(mech, loop, weaptype, weapdata, crit);
-    for (i = 0; i < count; i++) {
-      if (WpnIsRecycling(mech, loop, crit[i])) {
-        /* Immediate recycle if its destroyed */
-        if (PartTempNuke(mech, loop, crit[i]) == FAIL_DESTROYED ||
-            SectIsDestroyed(mech, loop))
-          GetPartData(mech, loop, crit[i]) = 0;
-        if (diff >= GetPartData(mech, loop, crit[i])) {
-          GetPartData(mech, loop, crit[i]) = 0;
-          /*
-           * The ROCKET_FIRED branch intentionally selects an empty format
-           * to suppress any recycle notification for that case.
-           */
+  btech_context_combat_arcs_override_set(context, 1);
+  for (int section = 0; section < NUM_SECTIONS; section++) {
+    int count = FindWeapons_Advanced(mech, section, weapon_types, weapon_data,
+                                     criticals, 1);
+    for (int weapon = 0; weapon < count; weapon++) {
+      int critical = criticals[weapon];
+      if (!mech_weapon_is_recycling_at(mech, section, critical))
+        continue;
+
+      if (mech_critical_temporary_failure(mech, section, critical) ==
+              FAIL_DESTROYED ||
+          mech_section_is_destroyed(mech, section))
+        mech_critical_data_set(mech, section, critical, 0);
+      if (diff >= mech_critical_data(mech, section, critical)) {
+        mech_critical_data_set(mech, section, critical, 0);
+        /* ROCKET_FIRED intentionally selects an empty notification. */
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-zero-length"
 #endif
-          mech_printf(
-              mech, MECHSTARTED,
-              MechType(mech) == CLASS_MW
-                  ? "[fg=green]You are ready to attack again with %s.[reset]"
-              : PartTempNuke(mech, loop, crit[i]) != 0
-                  ? "[fg=green]%s is operational again.[reset]"
-              : (GetPartFireMode(mech, loop, crit[i]) & ROCKET_FIRED)
-                  ? ""
-                  : "[fg=green]%s finished recycling.[reset]",
-              &MechWeapons[weaptype[i]].name[3]);
+        mech_printf(
+            mech, MECHSTARTED,
+            mech_class(mech) == CLASS_MW
+                ? "[fg=green]You are ready to attack again with %s.[reset]"
+            : mech_critical_temporary_failure(mech, section, critical) != 0
+                ? "[fg=green]%s is operational again.[reset]"
+            : (mech_critical_fire_mode(mech, section, critical) & ROCKET_FIRED)
+                ? ""
+                : "[fg=green]%s finished recycling.[reset]",
+            &weapon_catalogue_name(weapon_types[weapon])[3]);
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
-          SetPartTempNuke(mech, loop, crit[i], 0);
-        } else {
-          if (PartTempNuke(mech, loop, crit[i]) != FAIL_DESTROYED) {
-            GetPartData(mech, loop, crit[i]) -= diff;
-            if (GetPartData(mech, loop, crit[i]) < lowest || !lowest)
-              lowest = GetPartData(mech, loop, crit[i]);
-          }
-        }
+        mech_critical_temporary_failure_set(mech, section, critical, 0);
+      } else if (mech_critical_temporary_failure(mech, section, critical) !=
+                 FAIL_DESTROYED) {
+        int remaining = mech_critical_data(mech, section, critical) - diff;
+        mech_critical_data_set(mech, section, critical, remaining);
+        if (remaining < lowest || !lowest)
+          lowest = remaining;
       }
     }
 
-    /* Cycle a section */
-    if (MechSections(mech)[loop].recycle &&
-        ((MechType(mech) == CLASS_MECH) || (MechType(mech) == CLASS_BSUIT) ||
-         (MechType(mech) == CLASS_VEH_GROUND) ||
-         (MechType(mech) == CLASS_VTOL))) {
+    int section_recycle = mech_section_recycle_ticks(mech, section);
+    if (!section_recycle || !mech_section_recycles(mech))
+      continue;
 
-      /* Is the section finished cycling or do we deincrement it */
-      if (diff >= MechSections(mech)[loop].recycle &&
-          !SectIsDestroyed(mech, loop)) {
-
-        MechSections(mech)[loop].recycle = 0;
-        ArmorStringFromIndex(loop, location, MechType(mech), MechMove(mech));
-
-        mech_printf(mech, MECHSTARTED,
-                    "[fg=green]%s%s has finished its previous action.[reset]",
-                    MechType(mech) == CLASS_BSUIT ? "" : "Your ", location);
-
-      } else {
-
-        MechSections(mech)[loop].recycle -= diff;
-        if (MechSections(mech)[loop].recycle < lowest || !lowest)
-          lowest = MechSections(mech)[loop].recycle;
-      }
+    if (diff >= section_recycle && !mech_section_is_destroyed(mech, section)) {
+      mech_section_recycle_ticks_set(mech, section, 0);
+      ArmorStringFromIndex(section, location, mech_class(mech),
+                           mech_movement_type(mech));
+      mech_printf(mech, MECHSTARTED,
+                  "[fg=green]%s%s has finished its previous action.[reset]",
+                  mech_class(mech) == CLASS_BSUIT ? "" : "Your ", location);
+    } else {
+      section_recycle -= diff;
+      mech_section_recycle_ticks_set(mech, section, section_recycle);
+      if (section_recycle < lowest || !lowest)
+        lowest = section_recycle;
     }
   }
-  mech->xcode.context->combat_overrides.arcs = 0;
+  btech_context_combat_arcs_override_set(context, 0);
   return lowest;
-}
-
-int SkidMod(float Speed) {
-  if (Speed < 2.1)
-    return -1;
-  if (Speed < 4.1)
-    return 0;
-  if (Speed < 7.1)
-    return 1;
-  if (Speed < 10.1)
-    return 2;
-  return 4;
-}
-
-/*
- * Move the unit back to its previous location because of cliff or something
- */
-void move_unit_back(Mech *mech, float deltax, float deltay, int lastelevation,
-                    int ot, int le) {
-
-  MechFX(mech) -= deltax;
-  MechFY(mech) -= deltay;
-  MechX(mech) = MechLastX(mech);
-  MechY(mech) = MechLastY(mech);
-  MechZ(mech) = lastelevation;
-  MechFZ(mech) = MechZ(mech) * ZSCALE;
-  MechTerrain(mech) = ot;
-  MechElev(mech) = le;
 }

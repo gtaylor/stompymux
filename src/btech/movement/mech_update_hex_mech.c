@@ -10,6 +10,8 @@
 
 #include "mech_update_internal.h"
 
+#include "mech_position_api.h"
+
 HexTransitionResult
 mech_hex_transition_resolve(const HexMechTransitionInput *input) {
   Mech *mech = input->mech;
@@ -39,7 +41,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
 
         ed = MAX(1, 1 + MechZ(mech) -
                         Elevation(mech_map, MechX(mech), MechY(mech)));
-        move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+        mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
         mech_notify(mech, MECHALL,
                     "[bold]You attempt to jump over elevation that is too "
                     "high![reset]");
@@ -66,7 +68,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
     /* Walked into a wall silly */
     if (collision_check(mech, WALK_WALL, lastelevation, oldterrain)) {
 
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       mech_notify(mech, MECHALL,
                   "You attempt to climb a hill too steep for you.");
 
@@ -75,8 +77,8 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
           (mech->xcode.context->configuration->btech_skidcliff &&
-           MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
-                                   1))) {
+           MadePilotSkillRoll_NoXP(
+               mech, mech_skid_modifier(fabs(MechSpeed(mech)) / MP1), 1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
         mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
@@ -101,7 +103,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       /* Walked off a cliff ... */
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
       avoidbth = mech->xcode.context->configuration->btech_skidcliff
-                     ? SkidMod(fabs(MechSpeed(mech)) / MP1)
+                     ? mech_skid_modifier(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
 
       if (MechPilot(mech) == -1 ||
@@ -110,7 +112,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         mech_notify(mech, MECHALL, "You manage to stop before falling off.");
         mech_los_broadcast(mech,
                            "stops suddenly to avoid falling off a cliff!");
-        move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+        mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
 
       } else {
 
@@ -157,7 +159,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         MechDesiredSpeed(mech) = 0;
         MechSpeed(mech) = 0;
         if (elevation > lastelevation) {
-          move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+          mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
         }
       }
       return (HexTransitionResult){.stop = true, .done = done};
@@ -206,7 +208,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
           mech_flood(mech);
           return (HexTransitionResult){.stop = true, .done = done};
         }
-        move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+        mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
         MechDesiredSpeed(mech) = 0;
         MechSpeed(mech) = 0;
         return (HexTransitionResult){.stop = true, .done = done};

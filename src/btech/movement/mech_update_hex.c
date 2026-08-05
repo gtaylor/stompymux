@@ -10,6 +10,8 @@
 
 #include "mech_update_internal.h"
 
+#include "mech_position_api.h"
+
 /*
  * Check to see what happens to the unit now that its entered a new hex
  */
@@ -77,8 +79,8 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
           (mech->xcode.context->configuration->btech_skidcliff &&
-           MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
-                                   1))) {
+           MadePilotSkillRoll_NoXP(
+               mech, mech_skid_modifier(fabs(MechSpeed(mech)) / MP1), 1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
         mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
@@ -95,7 +97,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
           mech_fall(mech, 0, 0);
         }
       }
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
       return;
@@ -104,7 +106,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
       avoidbth = mech->xcode.context->configuration->btech_skidcliff
-                     ? SkidMod(fabs(MechSpeed(mech)) / MP1)
+                     ? mech_skid_modifier(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
       if (MechPilot(mech) == -1 ||
           (!MechAutoFall(mech) && MadePilotSkillRoll_NoXP(mech, avoidbth, 1))) {
@@ -130,7 +132,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
 
         return;
       }
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
       return;
@@ -162,7 +164,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         MechDesiredSpeed(mech) = 0;
         MechSpeed(mech) = 0;
         if (elevation > lastelevation) {
-          move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+          mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
         }
       }
       return;
@@ -188,7 +190,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
         return;
       }
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
       return;
@@ -249,8 +251,8 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
           (mech->xcode.context->configuration->btech_skidcliff &&
-           MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
-                                   1))) {
+           MadePilotSkillRoll_NoXP(
+               mech, mech_skid_modifier(fabs(MechSpeed(mech)) / MP1), 1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
         mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
@@ -268,7 +270,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         }
       }
 
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
       return;
@@ -277,7 +279,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
       avoidbth = mech->xcode.context->configuration->btech_skidcliff
-                     ? SkidMod(fabs(MechSpeed(mech)) / MP1)
+                     ? mech_skid_modifier(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
 
       if (MechPilot(mech) == -1 ||
@@ -305,7 +307,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
 
         return;
       }
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
       return;
@@ -336,7 +338,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         MechDesiredSpeed(mech) = 0;
         MechSpeed(mech) = 0;
         if (elevation > lastelevation) {
-          move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+          mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
         }
       }
       return;
@@ -363,7 +365,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
         return;
       }
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
       return;
@@ -448,7 +450,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                              (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3)) {
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
         mech_los_broadcast(mech, "stops suddenly to avoid running aground!");
-        move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+        mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       } else {
         mech_notify(mech, MECHALL, "You smash into the ground!");
         mech_los_broadcast(mech, "smashes aground!");
@@ -475,8 +477,8 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
           (mech->xcode.context->configuration->btech_skidcliff &&
-           MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
-                                   1))) {
+           MadePilotSkillRoll_NoXP(
+               mech, mech_skid_modifier(fabs(MechSpeed(mech)) / MP1), 1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
         mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
@@ -493,7 +495,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
           mech_fall(mech, 0, 0);
         }
       }
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
       return;
@@ -503,7 +505,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
 
       avoidbth = mech->xcode.context->configuration->btech_skidcliff
-                     ? SkidMod(fabs(MechSpeed(mech)) / MP1)
+                     ? mech_skid_modifier(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
 
       if (MechPilot(mech) == -1 ||
@@ -523,7 +525,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         return;
       }
 
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
       return;
@@ -539,7 +541,8 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
            MadePilotSkillRoll(mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) /
                                         3)) ||
           (mech->xcode.context->configuration->btech_skidcliff &&
-           MadePilotSkillRoll(mech, SkidMod(fabs(MechSpeed(mech)) / MP1)))) {
+           MadePilotSkillRoll(
+               mech, mech_skid_modifier(fabs(MechSpeed(mech)) / MP1)))) {
 
         mech_notify(mech, MECHALL,
                     "You manage to stop before slamming into the bridge.");
@@ -552,7 +555,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                            "drives right into the underside of the bridge.");
         mech_fall(mech, 1, 0);
       }
-      move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       MechDesiredSpeed(mech) = 0;
       MechSpeed(mech) = 0;
       return;
@@ -587,7 +590,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         MechDesiredSpeed(mech) = 0;
         MechSpeed(mech) = 0;
         if (elevation > lastelevation) {
-          move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+          mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
         }
       }
       return;
@@ -647,7 +650,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                   "You go where no flying thing has ever gone before..");
       if (mech_has_active_pilot(mech) && MadePilotSkillRoll(mech, 5)) {
         mech_notify(mech, MECHALL, "You stop in time!");
-        move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+        mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
       } else {
         mech_notify(mech, MECHALL, "Eww.. You've a bad feeling about this.");
         mech_los_broadcast(mech, "crashes!");
@@ -687,7 +690,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         MechDesiredSpeed(mech) = 0;
         MechSpeed(mech) = 0;
         if (elevation > lastelevation) {
-          move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
+          mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
         }
       }
       return;

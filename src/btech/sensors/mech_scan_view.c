@@ -41,7 +41,7 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
   char location[20] = {0};
   int running_sum = 0;
 
-  recycle_weaponry(mech);
+  mech_weapon_recycle_update(mech);
   notify(evaluation, player, "================WEAPON SYSTEMS================");
   if (mech_class(mech) == CLASS_BSUIT)
     notify(evaluation, player,

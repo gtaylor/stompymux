@@ -44,6 +44,9 @@ bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical);
 bool mech_weapon_is_nonfunctional_at(Mech *mech, int section, int critical,
                                      int weapon_index);
 int mech_section_recycle_ticks(const Mech *mech, int section);
+void mech_section_recycle_ticks_set(Mech *mech, int section, int ticks);
+int mech_last_weapon_recycle_tick(const Mech *mech);
+void mech_last_weapon_recycle_tick_set(Mech *mech, int tick);
 int mech_section_base_to_hit(const Mech *mech, int section);
 bool mech_part_is_structural_placeholder(int part_type);
 void mech_section_armor_set(Mech *mech, int section, int armor);

@@ -77,5 +77,3 @@ typedef struct HexTransitionResult {
 int collision_check(Mech *mech, int mode, int last_elevation, int last_terrain);
 HexTransitionResult
 mech_hex_transition_resolve(const HexMechTransitionInput *input);
-void move_unit_back(Mech *mech, float deltax, float deltay, int lastelevation,
-                    int old_terrain, int last_elevation);

@@ -174,6 +174,18 @@ int mech_section_recycle_ticks(const Mech *mech, int section) {
   return mech->ud.sections[section].recycle;
 }
 
+void mech_section_recycle_ticks_set(Mech *mech, int section, int ticks) {
+  mech->ud.sections[section].recycle = ticks;
+}
+
+int mech_last_weapon_recycle_tick(const Mech *mech) {
+  return mech->rd.last_weapon_recycle;
+}
+
+void mech_last_weapon_recycle_tick_set(Mech *mech, int tick) {
+  mech->rd.last_weapon_recycle = tick;
+}
+
 int mech_section_base_to_hit(const Mech *mech, int section) {
   return mech->ud.sections[section].basetohit;
 }

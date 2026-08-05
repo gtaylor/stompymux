@@ -204,3 +204,16 @@ void mech_position_land_if_flying(Mech *mech) {
   if (!(mech->rd.status & LANDED) && is_flying)
     mech->rd.status |= LANDED;
 }
+
+void mech_position_rollback(Mech *mech, float delta_x, float delta_y,
+                            int previous_z, char previous_terrain,
+                            int previous_elevation) {
+  mech->pd.fx -= delta_x;
+  mech->pd.fy -= delta_y;
+  mech->pd.x = mech->pd.last_x;
+  mech->pd.y = mech->pd.last_y;
+  mech->pd.z = previous_z;
+  mech->pd.fz = previous_z * ZSCALE;
+  mech->pd.terrain = previous_terrain;
+  mech->pd.elev = previous_elevation;
+}

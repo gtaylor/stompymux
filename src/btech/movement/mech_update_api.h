@@ -31,8 +31,8 @@ void ammo_explosion(Mech *attacker, Mech *mech, int ammoloc, int ammocritnum,
                     int damage);
 void HandleOverheat(Mech *mech);
 void UpdateHeat(Mech *mech);
-int recycle_weaponry(Mech *mech);
-int SkidMod(float Speed);
+int mech_weapon_recycle_update(Mech *mech);
+int mech_skid_modifier(float speed);
 void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
                    int last_z);
 void mech_damage_stagger_check(Mech *wounded);
