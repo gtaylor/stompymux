@@ -378,7 +378,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   mech_maybe_move(mech);
   if (fabs(newspeed) > 0.1) {
     if (condition.swarm_target > 0) {
-      StopSwarming(mech, 1);
+      bsuit_swarm_stop(mech, 1);
       mech_hidden_set(mech, false);
     }
     if (condition.digging) {

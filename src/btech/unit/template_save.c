@@ -550,7 +550,7 @@ void update_specials(Mech *mech) {
 
   /* Let's do our suit checks */
   if (MechType(mech) == CLASS_BSUIT) {
-    wcSuits = CountBSuitMembers(mech);
+    wcSuits = bsuit_member_count(mech);
 
     if (awInfSpec[0] >= wcSuits)
       MechInfantrySpecials(mech) |= CS_PURIFIER_STEALTH_TECH;

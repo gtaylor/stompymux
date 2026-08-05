@@ -650,7 +650,7 @@ BtechCommandDefinition mechcommands[] = {
      bsuit_hide},
     {64, "SWARM [<TARGET-ID> | -]", "Swarms the target / drop off target (-)",
      bsuit_swarm},
-    {64, "JETTISON", "Jettison your backpack", JettisonPacks},
+    {64, "JETTISON", "Jettison your backpack", bsuit_pack_jettison},
 
     /* Repairing */
     HEADER("Repair"),

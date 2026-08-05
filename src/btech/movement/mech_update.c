@@ -158,6 +158,6 @@ void mech_movement_update(Mech *mech) {
 
   mech_charge_impact_resolve(mech);
   mech_towing_position_update(mech);
-  BSuitMirrorSwarmedTarget(mech_map, mech);
+  bsuit_swarmers_position_update(mech_map, mech);
   mech_fire_hazard_resolve(mech);
 }

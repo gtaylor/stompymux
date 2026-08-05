@@ -297,16 +297,17 @@ TECHCOMMANDH(tech_replacesuit) {
   DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) != CLASS_BSUIT,
                   "You can only use 'replacesuit' on a battlesuit unit!");
 
-  wSuits = CountBSuitMembers(mech);
+  wSuits = bsuit_member_count(mech);
 
   DOCHECK_CONTEXT(
       mech->xcode.context, MechMaxSuits(mech) <= wSuits,
       tprintf("This %s is already full! This %s only consists of %d suits!",
-              GetLCaseBSuitName(mech), GetLCaseBSuitName(mech),
-              MechMaxSuits(mech)));
+              bsuit_formation_name_lowercase(mech),
+              bsuit_formation_name_lowercase(mech), MechMaxSuits(mech)));
   DOCHECK_CONTEXT(mech->xcode.context, (loc >= MechMaxSuits(mech)) || (loc < 0),
                   tprintf("Invalid suit! This %s only consists of %d suits!",
-                          GetLCaseBSuitName(mech), MechMaxSuits(mech)));
+                          bsuit_formation_name_lowercase(mech),
+                          MechMaxSuits(mech)));
 
   DOCHECK_CONTEXT(mech->xcode.context, !SectIsDestroyed(mech, loc),
                   "That suit isn't destroyed!");

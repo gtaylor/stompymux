@@ -105,10 +105,10 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
    * one suits. 3030 rules are there's a 20 percent chance per suit on you that
    * the suits will eat up the damage.
    */
-  if ((CountSwarmers(wounded) > 0) && (!tIgnoreSwarmers)) {
-    if ((mechSwarmer = findSwarmers(wounded))) {
+  if ((bsuit_swarmer_count(wounded) > 0) && (!tIgnoreSwarmers)) {
+    if ((mechSwarmer = bsuit_swarmer_find(wounded))) {
       if (!attacker || (attacker->mynum != mechSwarmer->mynum)) {
-        wSwarmerHitChance = 20 * CountBSuitMembers(mechSwarmer);
+        wSwarmerHitChance = 20 * bsuit_member_count(mechSwarmer);
         if (isrear) {
           if ((hitloc != CTORSO) && (hitloc != RTORSO) && (hitloc != LTORSO))
             wSwarmerHitChance = 0;

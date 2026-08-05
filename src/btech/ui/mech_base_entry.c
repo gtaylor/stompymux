@@ -76,7 +76,7 @@ static void mech_enter_event(MuxEvent *e) {
     return;
   }
 
-  StopBSuitSwarmers(
+  bsuit_swarmers_stop(
       btech_context_find_object(mech_context(mech), mech_map_dbref(mech)), mech,
       1);
   mech_printf(mech, MECHALL, "You enter %s.",

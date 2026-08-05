@@ -179,7 +179,7 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
   // If we've successfully hit a suit, knock him off.
   if (MechType(target) == CLASS_BSUIT && MechSwarmTarget(target) > 0 &&
       AttackType != PA_KICK) {
-    StopSwarming(target, 0);
+    bsuit_swarm_stop(target, 0);
   }
 
   // If we kick our target (who is a mech), make a roll to see if he falls.

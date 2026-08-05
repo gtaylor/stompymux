@@ -133,6 +133,12 @@ void mech_critical_destroy(Mech *mech, int section, int critical) {
   slot->brand %= 16;
 }
 
+void mech_critical_jettison(Mech *mech, int section, int critical) {
+  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  slot->firemode |= DESTROYED_MODE | IS_JETTISONED_MODE;
+  slot->firemode &= ~(BROKEN_MODE | DISABLED_MODE);
+}
+
 int mech_section_original_armor(const Mech *mech, int section) {
   return mech->ud.sections[section].armor_orig;
 }

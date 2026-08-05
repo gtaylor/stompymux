@@ -169,6 +169,13 @@ void mech_turret_auto_turn_set(Mech *mech, bool enabled) {
     mech->rd.status2 &= ~AUTOTURN_TURRET;
 }
 
+void mech_tight_turn_mode_set(Mech *mech, bool enabled) {
+  if (enabled)
+    mech->rd.mech_prefs |= MECHPREF_TURNMODE;
+  else
+    mech->rd.mech_prefs &= ~MECHPREF_TURNMODE;
+}
+
 void mech_player_killer_set(Mech *mech, bool enabled) {
   if (enabled)
     mech->rd.mech_prefs |= MECHPREF_PKILL;
@@ -183,8 +190,38 @@ void mech_partial_cover_set(Mech *mech, bool covered) {
     mech->rd.status &= ~PARTIAL_COVER;
 }
 
+DbRef mech_swarm_target(const Mech *mech) { return mech->rd.swarming; }
+
 void mech_swarm_target_set(Mech *mech, DbRef target) {
   mech->rd.swarming = target;
+}
+
+DbRef mech_swarmed_by(const Mech *mech) { return mech->rd.swarmedby; }
+
+void mech_swarmed_by_set(Mech *mech, DbRef swarmer) {
+  mech->rd.swarmedby = swarmer;
+}
+
+bool mech_is_mounting(const Mech *mech) {
+  return mech->rd.status2 & UNIT_MOUNTING;
+}
+
+void mech_mounting_set(Mech *mech, bool mounting) {
+  if (mounting)
+    mech->rd.status2 |= UNIT_MOUNTING;
+  else
+    mech->rd.status2 &= ~UNIT_MOUNTING;
+}
+
+bool mech_is_mounted(const Mech *mech) {
+  return mech->rd.status2 & UNIT_MOUNTED;
+}
+
+void mech_mounted_set(Mech *mech, bool mounted) {
+  if (mounted)
+    mech->rd.status2 |= UNIT_MOUNTED;
+  else
+    mech->rd.status2 &= ~UNIT_MOUNTED;
 }
 
 void mech_fallen_set(Mech *mech, bool fallen) {

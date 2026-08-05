@@ -68,7 +68,7 @@ void mech_power_down(Mech *mech) {
   mech_drop_club(mech);
   mech_event_cancel(mech, EVENT_MASC_FAIL);
   MechChargeTarget(mech) = -1;
-  StopSwarming(mech, 0);
+  bsuit_swarm_stop(mech, 0);
   MechSChargeCounter(mech) = 0;
   if (MechCarrying(mech) > 0) {
     mech_dropoff(GOD, mech, "");
@@ -89,8 +89,8 @@ void mech_mark_destroyed(Mech *mech) {
   MechCritStatus(mech) &= ~JELLIED;
   MechStatus(mech) |= DESTROYED;
   MechCritStatus(mech) &= ~MECH_STUNNED;
-  StopBSuitSwarmers(btech_context_get_map(mech->xcode.context, mech->mapindex),
-                    mech, 1);
+  bsuit_swarmers_stop(
+      btech_context_get_map(mech->xcode.context, mech->mapindex), mech, 1);
   mech_events_cancel_all(mech);
   if ((MechType(mech) == CLASS_MECH && Jumping(mech)) ||
       (MechType(mech) != CLASS_MECH &&

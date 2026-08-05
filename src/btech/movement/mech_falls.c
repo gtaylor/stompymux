@@ -57,9 +57,9 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
   BtechContext *context = mech_context(mech);
 
   /* get rid of our swarmers */
-  if (CountSwarmers(mech))
-    StopBSuitSwarmers(btech_context_find_object(context, mech_map_dbref(mech)),
-                      mech, 0);
+  if (bsuit_swarmer_count(mech))
+    bsuit_swarmers_stop(
+        btech_context_find_object(context, mech_map_dbref(mech)), mech, 0);
 
   /* Clear stagger damage if we use new stagger*/
   if (btech_context_stagger_mode(mech_context(mech)))

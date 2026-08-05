@@ -49,6 +49,7 @@
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
@@ -58,6 +59,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "template_api.h"
 
 static int mech_adjusted_jump_speed_mp(const Mech *mech, const BattleMap *map) {
@@ -149,7 +151,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     }
   }
 
-  if (doJettisonChecks(mech))
+  if (bsuit_jettison_validate(mech))
     return;
 
   DOCHECK_CONTEXT(context, argc > 2, "Too many arguments to JUMP function!");

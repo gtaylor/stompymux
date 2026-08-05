@@ -257,12 +257,12 @@ void mech_jump_land(Mech *mech) {
     }
   }
 
-  if (mech_class(mech) == CLASS_MECH && CountSwarmers(mech)) {
+  if (mech_class(mech) == CLASS_MECH && bsuit_swarmer_count(mech)) {
     mech_notify(mech, MECHALL,
                 "The suits hanging off you make landing harder!");
 
     if (MadePilotSkillRoll(mech, 4)) {
-      StopBSuitSwarmers(
+      bsuit_swarmers_stop(
           btech_context_find_object(context, mech_map_dbref(mech)), mech, 0);
     } else {
       mech_notify(mech, MECHALL,

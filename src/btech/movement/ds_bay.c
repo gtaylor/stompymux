@@ -37,6 +37,7 @@
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
 #include "mech_startup_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/lua/lua_runtime.h"
@@ -192,8 +193,8 @@ static void mech_enterbay_event(MuxEvent *e) {
     return;
   /* whee */
   ref = mech_bay_dbref(ds, bayn);
-  StopBSuitSwarmers(btech_context_find_object(context, mech_map_dbref(mech)),
-                    mech, 1);
+  bsuit_swarmers_stop(btech_context_find_object(context, mech_map_dbref(mech)),
+                      mech, 1);
   mech_notify(mech, MECHALL, "You enter the bay.");
   mech_los_broadcast(
       mech, tprintf("has entered %s at %d,%d.", mech_display_id(ds).text,
@@ -386,8 +387,8 @@ static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
   Mech *car = nullptr;
   BtechContext *context = mech_context(mech);
 
-  StopBSuitSwarmers(btech_context_find_object(context, mech_map_dbref(mech)),
-                    mech, 1);
+  bsuit_swarmers_stop(btech_context_find_object(context, mech_map_dbref(mech)),
+                      mech, 1);
   mech_los_broadcast(mech, "has left the bay.");
   /* We escape confines of the bay to open air/land! */
   mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", mech_map_dbref(ds)));

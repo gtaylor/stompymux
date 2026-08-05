@@ -159,11 +159,11 @@ int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
 
   if (hitMech && !isTempCalc) {
     if (btech_context_woods_modify_damage(mech_context(mech)) &&
-        IsForestHex(mech_map, mech_position_x(hitMech),
-                    mech_position_y(hitMech)) &&
+        battle_terrain_is_forest(map_real_terrain_get(
+            mech_map, mech_position_x(hitMech), mech_position_y(hitMech))) &&
         ((mech_position_z(hitMech) - 2) <=
-         Elevation(mech_map, mech_position_x(hitMech),
-                   mech_position_y(hitMech)))) {
+         battle_map_hex_elevation(mech_map, mech_position_x(hitMech),
+                                  mech_position_y(hitMech)))) {
       wClearDamage = wWeapDamage;
 
       if (map_real_terrain_get(mech_map, mech_position_x(hitMech),

@@ -184,8 +184,8 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   case CLASS_BSUIT:
     snprintf(buff, sizeof(buff),
              "%s Name: %-18.18s  ID:[%s]   %s Reference: %s",
-             GetBSuitName(mech), mech_name, mech_id(mech, false).text,
-             GetBSuitName(mech), mech_ref);
+             bsuit_formation_name(mech), mech_name, mech_id(mech, false).text,
+             bsuit_formation_name(mech), mech_ref);
     notify(evaluation, player, buff);
     notify_printf(evaluation, player,
                   "MaxSpeed: %3d                  JumpRange: %d",
@@ -197,9 +197,9 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     else {
       snprintf(buff, sizeof(buff),
                "%s Leader Name: %-16.16s %s Leader injury: %d",
-               GetBSuitName(mech),
+               bsuit_formation_name(mech),
                game_object_name(context->database, mech_pilot_dbref(mech)),
-               GetBSuitName(mech), mech_pilot_status(mech));
+               bsuit_formation_name(mech), mech_pilot_status(mech));
       notify(evaluation, player, buff);
     }
 

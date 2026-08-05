@@ -232,7 +232,7 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     }
   }
 
-  if (IsMechMounted(mech)) {
+  if (bsuit_has_friendly_riders(mech)) {
     DOCHECK0_CONTEXT(
         mech->xcode.context,
         ((section == CTORSO) || (section == RTORSO) || (section == LTORSO)),

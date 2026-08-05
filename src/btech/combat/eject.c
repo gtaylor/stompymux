@@ -540,7 +540,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
 
   /* Recycle any weapons/sections they have to prevent munchkin behavior. */
   if (MechType(mech) == CLASS_BSUIT) {
-    StartBSuitRecycle(mech, 20);
+    bsuit_recycle_start(mech, 20);
   } else if (MechType(mech) == CLASS_MECH || MechType(mech) == CLASS_MW) {
     for (i = 0; i < NUM_SECTIONS; i++)
       mech_set_recycle_limb(mech, i, PHYSICAL_RECYCLE_TIME);

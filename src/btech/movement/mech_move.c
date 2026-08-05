@@ -50,6 +50,7 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_stagger.h"
+#include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
@@ -64,6 +65,10 @@
 
 static int mech_movement_maximum_int(int first, int second) {
   return first > second ? first : second;
+}
+
+static int mech_stand_time(const Mech *mech) {
+  return 30 / BOUNDED(1, mech_maximum_speed(mech) / MP2, 30);
 }
 
 float mech_jump_speed_for_map(const Mech *mech, const BattleMap *map) {
@@ -158,17 +163,18 @@ void mech_turnmode(DbRef player, void *data, char *buffer) {
   }
 
   if (buffer && !strcasecmp(buffer, "tight")) {
-    SetTurnMode(mech, 1);
+    mech_tight_turn_mode_set(mech, true);
     mech_notify(mech, MECHALL, "You brace for tighter turns.");
     return;
   }
   if (buffer && !strcasecmp(buffer, "normal")) {
-    SetTurnMode(mech, 0);
+    mech_tight_turn_mode_set(mech, false);
     mech_notify(mech, MECHALL, "You assume a normal turn mode.");
     return;
   }
   mech_printf(mech, MECHALL, "Your turning type is : %s",
-              GetTurnMode(mech) ? "TIGHT" : "NORMAL");
+              mech_condition_summary(mech).tight_turn_mode ? "TIGHT"
+                                                           : "NORMAL");
   return;
 }
 
@@ -271,7 +277,7 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
   if (MadePilotSkillRoll(mech, wBTHMod)) {
     wNewHeading = AcceptableDegree(mech_heading_degrees(mech) + wHeadingChange);
 
-    SetFacing(mech, wNewHeading);
+    mech_heading_set(mech, wNewHeading);
     mech_desired_heading_set(mech, wNewHeading);
     mech_current_speed_scale(mech, 0.5F);
 
@@ -496,7 +502,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
 
   s1 = mech_effective_maximum_speed(mech) / 3.0;
 
-  if ((mech_class(mech) == CLASS_MECH) && CountSwarmers(mech))
+  if ((mech_class(mech) == CLASS_MECH) && bsuit_swarmer_count(mech))
     tHasSwarmers = 1;
 
   if (mech_class(mech) != CLASS_MW && fabs(mech_current_speed(mech)) > s1 * 2) {
@@ -509,11 +515,11 @@ void mech_drop(DbRef player, void *data, char *buffer) {
     wDropLevels = 1;
   }
 
-  if (Staggering(mech)) {
+  if (mech_stagger_level(mech) > 0) {
     mech_notify(mech, MECHALL,
                 "Still staggering, you try not to fall on your face.");
     wDropLevels = (wDropLevels == 0 ? 1 : wDropLevels);
-    wDropBTH = wDropBTH + StaggerLevel(mech);
+    wDropBTH = wDropBTH + mech_stagger_level(mech);
   }
 
   if (tHasSwarmers)
@@ -526,7 +532,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
       mech_los_broadcast(mech, "drops to the ground!");
 
       if (tHasSwarmers)
-        StopBSuitSwarmers(
+        bsuit_swarmers_stop(
             btech_context_find_object(mech_context(mech), mech_map_dbref(mech)),
             mech, 0);
 
@@ -538,7 +544,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
         wDropLevels = 1;
 
       if (tHasSwarmers)
-        StopBSuitSwarmers(
+        bsuit_swarmers_stop(
             btech_context_find_object(mech_context(mech), mech_map_dbref(mech)),
             mech, 0);
 
@@ -662,7 +668,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
       mech_fall(mech, 1, 1);
       mechstandtime =
           ((mech_class(mech) == CLASS_MW) ? DROP_TO_STAND_RECYCLE / 3
-                                          : StandMechTime(mech));
+                                          : mech_stand_time(mech));
       /* Not strictly FASA, but allows legged mechs to stand careful */
       if (standcarefulmod) {
         mechstandtime = mech_movement_maximum_int(30, mechstandtime * 2);
@@ -678,7 +684,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
      * he is finished standing */
     mech_notify(mech, MECHALL, "You begin to stand up.");
     mechstandtime = ((mech_class(mech) == CLASS_MW) ? DROP_TO_STAND_RECYCLE / 3
-                                                    : StandMechTime(mech));
+                                                    : mech_stand_time(mech));
     /* Not strictly FASA, but allows legged mechs to stand careful */
     if (standcarefulmod) {
       mechstandtime = mechstandtime * 2;

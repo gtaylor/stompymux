@@ -201,7 +201,7 @@ static int Leave_Hangar(BattleMap *map, Mech *mech) {
     return 1;
   }
 
-  StopBSuitSwarmers(
+  bsuit_swarmers_stop(
       btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
   mech_printf(mech, MECHALL, "You have left %s.",
               structure_name(mech->xcode.context->database, mapo).text);

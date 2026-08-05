@@ -53,6 +53,7 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_spot_api.h"
+#include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
@@ -255,11 +256,13 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
     mech_map = btech_context_get_map(context, mech_map_dbref(mech));
     newx = atoi(args[0]);
     newy = atoi(args[1]);
-    ValidCoord(mech_map, newx, newy);
+    DOCHECK_CONTEXT(mech_context(mech),
+                    !battle_map_coordinate_is_valid(mech_map, newx, newy),
+                    "Illegal coordinates!");
     mech_targeting_hex_xy_set(mech, newx, newy);
     if (mech_spotter_dbref(mech) == mech_dbref(mech))
       mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
-    mech_target_hex_z_set(mech, Elevation(mech_map, newx, newy));
+    mech_target_hex_z_set(mech, battle_map_hex_elevation(mech_map, newx, newy));
     notify_printf(btech_context_evaluation(context), player,
                   "Target coordinates set at (X,Y) %d, %d", newx, newy);
     mech_stop_lock(mech);
@@ -300,11 +303,13 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
     mech_map = btech_context_get_map(context, mech_map_dbref(mech));
     newx = atoi(args[0]);
     newy = atoi(args[1]);
-    ValidCoord(mech_map, newx, newy);
+    DOCHECK_CONTEXT(mech_context(mech),
+                    !battle_map_coordinate_is_valid(mech_map, newx, newy),
+                    "Illegal coordinates!");
     mech_targeting_hex_xy_set(mech, newx, newy);
     if (mech_spotter_dbref(mech) == mech_dbref(mech))
       mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
-    mech_target_hex_z_set(mech, Elevation(mech_map, newx, newy));
+    mech_target_hex_z_set(mech, battle_map_hex_elevation(mech_map, newx, newy));
     switch (mode) {
     case LOCK_HEX:
       notify_printf(btech_context_evaluation(context), player,

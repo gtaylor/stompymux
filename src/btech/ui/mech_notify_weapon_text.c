@@ -280,11 +280,11 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
     strcpy(buf + spaces, tprintf("[fg=green bold]HIDDEN[reset]"));
     notify(evaluation, player, buf);
   }
-  if (IsMechSwarmed(mech)) {
+  if (bsuit_has_enemy_swarmers(mech)) {
     strcpy(buf + spaces, "[fg=red bold]SWARMED BY ENEMY SUITS[reset]");
     notify(evaluation, player, buf);
   }
-  if (IsMechMounted(mech)) {
+  if (bsuit_has_friendly_riders(mech)) {
     strcpy(buf + spaces, "[fg=red bold]MOUNTED BY FRIENDLY SUITS[reset]");
     notify(evaluation, player, buf);
   }

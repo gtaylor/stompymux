@@ -119,3 +119,5 @@ void mech_stagger_tracking_reset(Mech *mech) {
   mech->rd.staggerDamage = 0;
   mech->rd.lastStaggerNotify = 0;
 }
+
+int mech_stagger_level(const Mech *mech) { return mech->rd.staggerDamage / 20; }

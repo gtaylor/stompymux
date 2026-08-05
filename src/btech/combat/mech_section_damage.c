@@ -240,7 +240,7 @@ void mech_section_destroy(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
       mech_lateral_movement_set(wounded, 0);
   /* Check to see if we should destroy the unit */
   if (mech_class(wounded) == CLASS_BSUIT) {
-    if (CountBSuitMembers(wounded) > 0)
+    if (bsuit_member_count(wounded) > 0)
       goto skip_nuke;
     else if (!mech_is_destroyed(wounded))
       mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
