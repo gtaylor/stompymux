@@ -474,7 +474,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   }
 
   /* See if the sucker will explode from damage taken */
-  if (canWeapExplodeFromDamage(mech, section, critical, roll)) {
+  if (mech_weapon_critical_can_explode(mech, section, critical, roll)) {
     if (IsEnergy(weapindx)) {
       mech_printf(mech, MECHALL,
                   "[fg=red bold]The damaged charging crystal on your %s "
@@ -502,7 +502,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   }
 
   /* See if the sucker will jam from damage taken */
-  if (canWeapJamFromDamage(mech, section, critical, roll)) {
+  if (mech_weapon_critical_can_jam(mech, section, critical, roll)) {
     mech_printf(
         mech, MECHALL,
         "[fg=red bold]The ammo loader mechanism jams on your %s![reset]",
@@ -658,7 +658,8 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     MechWeapHeat(mech) += (float)MechWeapons[weapindx].heat;
 
     if (IsEnergy(weapindx))
-      MechWeapHeat(mech) += (float)getCritAddedHeat(mech, section, critical);
+      MechWeapHeat(mech) +=
+          (float)mech_weapon_critical_heat_modifier(mech, section, critical);
 
     if ((GetPartFireMode(mech, section, critical) & ULTRA_MODE) ||
         (GetPartFireMode(mech, section, critical) & RFAC_MODE)) {

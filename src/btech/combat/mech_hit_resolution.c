@@ -109,7 +109,7 @@ int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
       wWeapDamage = 8;
   }
 
-  wWeapDamage -= getCritSubDamage(mech, wSection, wCritSlot);
+  wWeapDamage -= mech_weapon_critical_damage_penalty(mech, wSection, wCritSlot);
 
   /* See if we're using flechette ammo */
   if (hitMech) {

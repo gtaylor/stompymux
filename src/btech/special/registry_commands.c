@@ -61,7 +61,7 @@ static void command_mech_usebin(DbRef actor, void *object, char *arguments) {
 
 static void command_mech_weaponstatus(DbRef actor, void *object,
                                       char *arguments) {
-  mech_weaponstatus(actor, object, arguments);
+  mech_weapon_status(actor, object, arguments);
 }
 
 static void command_aero_checklz(DbRef actor, void *object, char *arguments) {

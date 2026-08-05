@@ -24,6 +24,15 @@ int mech_critical_ammo_mode(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].ammomode;
 }
 
+int mech_critical_damage_flags(const Mech *mech, int section, int critical) {
+  return mech->ud.sections[section].criticals[critical].weapDamageFlags;
+}
+
+int mech_critical_desired_ammo_section(const Mech *mech, int section,
+                                       int critical) {
+  return mech->ud.sections[section].criticals[critical].desiredAmmoLoc;
+}
+
 int mech_critical_temporary_failure(const Mech *mech, int section,
                                     int critical) {
   return mech->ud.sections[section].criticals[critical].brand >> 4;
@@ -95,6 +104,11 @@ void mech_critical_ammo_mode_clear(Mech *mech, int section, int critical,
 void mech_critical_ammo_mode_add(Mech *mech, int section, int critical,
                                  int modes) {
   mech->ud.sections[section].criticals[critical].ammomode |= modes;
+}
+
+void mech_critical_damage_flags_add(Mech *mech, int section, int critical,
+                                    int flags) {
+  mech->ud.sections[section].criticals[critical].weapDamageFlags |= flags;
 }
 
 void mech_critical_part_type_set(Mech *mech, int section, int critical,

@@ -13,39 +13,49 @@
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "failures.h"
 #include "legacy_macros.h"
-#include "mech.h"
 #include "mech_bth_api.h"
+#include "mech_classification_api.h"
 #include "mech_damage_api.h"
 #include "mech_enhanced_criticals_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 
-void getWeapData(Mech *mech, int section, int critical, int *wWeapIndex,
-                 int *wWeapSize, int *wFirstCrit) {
+static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
+                                         int critical);
+
+static void mech_weapon_critical_data(Mech *mech, int section, int critical,
+                                      int *weapon_index, int *weapon_size,
+                                      int *first_critical) {
   int wCritType = 0;
 
   /* Get the crit type */
-  wCritType = GetPartType(mech, section, critical);
+  wCritType = mech_critical_part_type(mech, section, critical);
 
   /* Get the weapon index */
-  *wWeapIndex = Weapon2I(wCritType);
+  *weapon_index = Weapon2I(wCritType);
 
   /* Get the max number of crits for this weapon */
-  *wWeapSize = GetWeaponCrits(mech, *wWeapIndex);
+  *weapon_size = GetWeaponCrits(mech, *weapon_index);
 
   /* Find the first crit */
-  *wFirstCrit =
-      FindFirstWeaponCrit(mech, section, critical, 0, wCritType, *wWeapSize);
+  *first_critical =
+      FindFirstWeaponCrit(mech, section, critical, 0, wCritType, *weapon_size);
 }
 
-int getCritAddedBTH(Mech *mech, int section, int critical, int rangeBracket) {
+int mech_weapon_critical_to_hit_modifier(Mech *mech, int section, int critical,
+                                         int rangeBracket) {
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
@@ -54,17 +64,18 @@ int getCritAddedBTH(Mech *mech, int section, int critical, int rangeBracket) {
   int count = 0;
   int nloc, ncrit, stype;
 
-  if (MechType(mech) != CLASS_MECH)
+  if (mech_class(mech) != CLASS_MECH)
     return 0;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
   /* Iterate over the crits and see if we have any enhanced damage */
   for (i = wFirstCrit; i < MIN(NUM_CRITICALS, wFirstCrit + wWeapSize); i++) {
-    if (GetPartDamageFlags(mech, section, i) & WEAP_DAM_MODERATE)
+    if (mech_critical_damage_flags(mech, section, i) & WEAP_DAM_MODERATE)
       wRetMod++;
 
-    if ((GetPartDamageFlags(mech, section, i) &
+    if ((mech_critical_damage_flags(mech, section, i) &
          (WEAP_DAM_EN_FOCUS | WEAP_DAM_MSL_RANGING)) &&
         rangeBracket != RANGE_SHORT)
       wRetMod++;
@@ -74,9 +85,9 @@ int getCritAddedBTH(Mech *mech, int section, int critical, int rangeBracket) {
   if (count < wWeapSize) { // got split crits
     if (GetSplitData(mech, section, wFirstCrit, &nloc, &ncrit, &stype)) {
       for (i = ncrit; i < (wWeapSize - count); i++) {
-        if (GetPartDamageFlags(mech, nloc, i) & WEAP_DAM_MODERATE)
+        if (mech_critical_damage_flags(mech, nloc, i) & WEAP_DAM_MODERATE)
           wRetMod++;
-        if ((GetPartDamageFlags(mech, nloc, i) &
+        if ((mech_critical_damage_flags(mech, nloc, i) &
              (WEAP_DAM_EN_FOCUS | WEAP_DAM_MSL_RANGING)) &&
             rangeBracket != RANGE_SHORT)
           wRetMod++;
@@ -87,7 +98,7 @@ int getCritAddedBTH(Mech *mech, int section, int critical, int rangeBracket) {
   return wRetMod;
 }
 
-int getCritAddedHeat(Mech *mech, int section, int critical) {
+int mech_weapon_critical_heat_modifier(Mech *mech, int section, int critical) {
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
@@ -95,22 +106,23 @@ int getCritAddedHeat(Mech *mech, int section, int critical) {
   int wRetMod = 0;
   int count = 0, nloc, ncrit, stype;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
   if (!IsEnergy(wWeapIndex))
     return 0;
 
   /* Iterate over the crits and see if we have any enhanced damage */
   for (i = wFirstCrit; i < MIN(NUM_CRITICALS, wFirstCrit + wWeapSize); i++) {
-    if (GetPartDamageFlags(mech, section, i) & WEAP_DAM_EN_CRYSTAL)
+    if (mech_critical_damage_flags(mech, section, i) & WEAP_DAM_EN_CRYSTAL)
       wRetMod++;
     count++;
   }
 
-  if (count < wWeapSize && MechType(mech) == CLASS_MECH) { // got split crits
+  if (count < wWeapSize && mech_class(mech) == CLASS_MECH) { // split crits
     if (GetSplitData(mech, section, wFirstCrit, &nloc, &ncrit, &stype)) {
       for (i = ncrit; i < (wWeapSize - count); i++) {
-        if (GetPartDamageFlags(mech, nloc, i) & WEAP_DAM_EN_CRYSTAL)
+        if (mech_critical_damage_flags(mech, nloc, i) & WEAP_DAM_EN_CRYSTAL)
           wRetMod++;
       }
     }
@@ -119,7 +131,7 @@ int getCritAddedHeat(Mech *mech, int section, int critical) {
   return wRetMod;
 }
 
-int getCritSubDamage(Mech *mech, int section, int critical) {
+int mech_weapon_critical_damage_penalty(Mech *mech, int section, int critical) {
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
@@ -127,17 +139,18 @@ int getCritSubDamage(Mech *mech, int section, int critical) {
   int wRetMod = 0;
   int count = 0, nloc, ncrit, stype;
 
-  if (MechType(mech) != CLASS_MECH)
+  if (mech_class(mech) != CLASS_MECH)
     return 0;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
   if (!IsEnergy(wWeapIndex))
     return 0;
 
   /* Iterate over the crits and see if we have any enhanced damage */
   for (i = wFirstCrit; i < MIN(NUM_CRITICALS, wFirstCrit + wWeapSize); i++) {
-    if (GetPartDamageFlags(mech, section, i) & WEAP_DAM_EN_FOCUS)
+    if (mech_critical_damage_flags(mech, section, i) & WEAP_DAM_EN_FOCUS)
       wRetMod++;
     count++;
   }
@@ -145,7 +158,7 @@ int getCritSubDamage(Mech *mech, int section, int critical) {
   if (count < wWeapSize) { // got split crits
     if (GetSplitData(mech, section, wFirstCrit, &nloc, &ncrit, &stype)) {
       for (i = ncrit; i < (wWeapSize - count); i++) {
-        if (GetPartDamageFlags(mech, nloc, i) & WEAP_DAM_EN_FOCUS)
+        if (mech_critical_damage_flags(mech, nloc, i) & WEAP_DAM_EN_FOCUS)
           wRetMod++;
       }
     }
@@ -154,7 +167,8 @@ int getCritSubDamage(Mech *mech, int section, int critical) {
   return wRetMod;
 }
 
-int canWeapExplodeFromDamage(Mech *mech, int section, int critical, int roll) {
+bool mech_weapon_critical_can_explode(Mech *mech, int section, int critical,
+                                      int roll) {
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
@@ -162,14 +176,15 @@ int canWeapExplodeFromDamage(Mech *mech, int section, int critical, int roll) {
   int wExplosionCheck = 0;
   int count = 0, nloc, ncrit, stype;
 
-  if (MechType(mech) != CLASS_MECH)
-    return 0;
+  if (mech_class(mech) != CLASS_MECH)
+    return false;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
   /* Iterate over the crits and see if we have any enhanced damage */
   for (i = wFirstCrit; i < MIN(NUM_CRITICALS, wFirstCrit + wWeapSize); i++) {
-    if (GetPartDamageFlags(mech, section, i) &
+    if (mech_critical_damage_flags(mech, section, i) &
         (WEAP_DAM_EN_CRYSTAL | WEAP_DAM_BALL_AMMO | WEAP_DAM_MSL_AMMO))
       wExplosionCheck++;
     count++;
@@ -178,7 +193,7 @@ int canWeapExplodeFromDamage(Mech *mech, int section, int critical, int roll) {
   if (count < wWeapSize) { // got split crits
     if (GetSplitData(mech, section, wFirstCrit, &nloc, &ncrit, &stype)) {
       for (i = ncrit; i < (wWeapSize - count); i++) {
-        if (GetPartDamageFlags(mech, nloc, i) &
+        if (mech_critical_damage_flags(mech, nloc, i) &
             (WEAP_DAM_EN_CRYSTAL | WEAP_DAM_BALL_AMMO | WEAP_DAM_MSL_AMMO))
           wExplosionCheck++;
       }
@@ -191,7 +206,8 @@ int canWeapExplodeFromDamage(Mech *mech, int section, int critical, int roll) {
   return wExplosionCheck >= roll;
 }
 
-int canWeapJamFromDamage(Mech *mech, int section, int critical, int roll) {
+bool mech_weapon_critical_can_jam(Mech *mech, int section, int critical,
+                                  int roll) {
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
@@ -199,14 +215,15 @@ int canWeapJamFromDamage(Mech *mech, int section, int critical, int roll) {
   int wJamCheck = 0;
   int count = 0, nloc, ncrit, stype;
 
-  if (MechType(mech) != CLASS_MECH)
-    return 0;
+  if (mech_class(mech) != CLASS_MECH)
+    return false;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
   /* Iterate over the crits and see if we have any enhanced damage */
   for (i = wFirstCrit; i < MIN(NUM_CRITICALS, wFirstCrit + wWeapSize); i++) {
-    if (GetPartDamageFlags(mech, section, i) & WEAP_DAM_BALL_BARREL)
+    if (mech_critical_damage_flags(mech, section, i) & WEAP_DAM_BALL_BARREL)
       wJamCheck++;
     count++;
   }
@@ -214,7 +231,7 @@ int canWeapJamFromDamage(Mech *mech, int section, int critical, int roll) {
   if (count < wWeapSize) { // got split crits
     if (GetSplitData(mech, section, wFirstCrit, &nloc, &ncrit, &stype)) {
       for (i = ncrit; i < (wWeapSize - count); i++) {
-        if (GetPartDamageFlags(mech, nloc, i) & WEAP_DAM_BALL_BARREL)
+        if (mech_critical_damage_flags(mech, nloc, i) & WEAP_DAM_BALL_BARREL)
           wJamCheck++;
       }
     }
@@ -226,64 +243,67 @@ int canWeapJamFromDamage(Mech *mech, int section, int critical, int roll) {
   return wJamCheck >= roll;
 }
 
-int isWeapAmmoFeedLocked(Mech *mech, int section, int critical) {
+bool mech_weapon_ammo_feed_is_locked(Mech *mech, int section, int critical) {
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
   int i;
   int count = 0, nloc, ncrit, stype;
 
-  if (MechType(mech) != CLASS_MECH)
-    return 0;
+  if (mech_class(mech) != CLASS_MECH)
+    return false;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
   /* Iterate over the crits and see if we have any enhanced damage */
   for (i = wFirstCrit; i < MIN(NUM_CRITICALS, wFirstCrit + wWeapSize); i++) {
-    if (GetPartDamageFlags(mech, section, i) &
+    if (mech_critical_damage_flags(mech, section, i) &
         (WEAP_DAM_BALL_AMMO | WEAP_DAM_MSL_AMMO))
-      return 1;
+      return true;
     count++;
   }
 
   if (count < wWeapSize) { // got split crits
     if (GetSplitData(mech, section, wFirstCrit, &nloc, &ncrit, &stype)) {
       for (i = ncrit; i < (wWeapSize - count); i++) {
-        if (GetPartDamageFlags(mech, nloc, i) &
+        if (mech_critical_damage_flags(mech, nloc, i) &
             (WEAP_DAM_BALL_AMMO | WEAP_DAM_MSL_AMMO))
-          return 1;
+          return true;
       }
     }
   }
 
-  return 0;
+  return false;
 }
 
-int countDamagedSlotsFromCrit(Mech *mech, int section, int critical) {
+int mech_weapon_damaged_slot_count_at(Mech *mech, int section, int critical) {
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
-  return countDamagedSlots(mech, section, wFirstCrit, wWeapSize);
+  return mech_weapon_damaged_slot_count(mech, section, wFirstCrit, wWeapSize);
 }
 
-int countDamagedSlots(Mech *mech, int section, int wFirstCrit, int wWeapSize) {
+int mech_weapon_damaged_slot_count(Mech *mech, int section, int wFirstCrit,
+                                   int wWeapSize) {
   int wCritsDamaged = 0;
   int i;
   int count = 0, nloc, ncrit, stype;
 
   for (i = wFirstCrit; i < MIN(NUM_CRITICALS, wFirstCrit + wWeapSize); i++) {
-    if (PartIsDamaged(mech, section, i))
+    if (mech_critical_is_damaged(mech, section, i))
       wCritsDamaged++;
     count++;
   }
 
-  if (count < wWeapSize && MechType(mech) == CLASS_MECH) { // got split crits
+  if (count < wWeapSize && mech_class(mech) == CLASS_MECH) { // split crits
     if (GetSplitData(mech, section, wFirstCrit, &nloc, &ncrit, &stype)) {
       for (i = ncrit; i < (wWeapSize - count); i++) {
-        if (PartIsDamaged(mech, nloc, i))
+        if (mech_critical_is_damaged(mech, nloc, i))
           wCritsDamaged++;
       }
     }
@@ -292,47 +312,51 @@ int countDamagedSlots(Mech *mech, int section, int wFirstCrit, int wWeapSize) {
   return wCritsDamaged;
 }
 
-int shouldDestroyWeapon(Mech *mech, int section, int critical,
-                        int incrementCount) {
+bool mech_weapon_critical_should_destroy(Mech *mech, int section, int critical,
+                                         bool incrementCount) {
   int wCritsDamaged = 0;
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
 
-  if (MechType(mech) != CLASS_MECH)
-    return 1;
+  if (mech_class(mech) != CLASS_MECH)
+    return true;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
   if (incrementCount)
     wCritsDamaged++;
 
-  wCritsDamaged += countDamagedSlots(mech, section, wFirstCrit, wWeapSize);
+  wCritsDamaged +=
+      mech_weapon_damaged_slot_count(mech, section, wFirstCrit, wWeapSize);
 
   if ((wCritsDamaged * 2) > wWeapSize)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
-void scoreEnhancedWeaponCriticalHit(Mech *mech, Mech *attacker, int LOS,
-                                    int section, int critical) {
+void mech_weapon_critical_apply(Mech *mech, Mech *attacker, int LOS,
+                                int section, int critical) {
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
-  int wCritRoll = btech_random_roll(mech->xcode.context);
+  int wCritRoll = btech_random_roll(mech_context(mech));
   int tDestroyWeapon = 0;
   int tNoCrit = 0;
   int tModerateCrit = 0;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
   /* See if we should just destroy the sucker outright */
-  if (shouldDestroyWeapon(mech, section, critical, 1))
+  if (mech_weapon_critical_should_destroy(mech, section, critical, true))
     tDestroyWeapon = 1;
   else {
     /* Add the total number of damaged slots */
-    wCritRoll += countDamagedSlots(mech, section, wFirstCrit, wWeapSize);
+    wCritRoll +=
+        mech_weapon_damaged_slot_count(mech, section, wFirstCrit, wWeapSize);
     wCritRoll++;
   }
 
@@ -348,12 +372,14 @@ void scoreEnhancedWeaponCriticalHit(Mech *mech, Mech *attacker, int LOS,
             mech, MECHALL,
             "Your %s's focusing mechanism gets knocked out of alignment!!",
             &MechWeapons[wWeapIndex].name[3]);
-        GetPartDamageFlags(mech, section, critical) |= WEAP_DAM_EN_FOCUS;
+        mech_critical_damage_flags_add(mech, section, critical,
+                                       WEAP_DAM_EN_FOCUS);
       } else if (wCritRoll <= 9) {
         mech_printf(mech, MECHALL,
                     "Your %s's charging crystal takes a direct hit!!",
                     &MechWeapons[wWeapIndex].name[3]);
-        GetPartDamageFlags(mech, section, critical) |= WEAP_DAM_EN_CRYSTAL;
+        mech_critical_damage_flags_add(mech, section, critical,
+                                       WEAP_DAM_EN_CRYSTAL);
       } else {
         tDestroyWeapon = 1;
       }
@@ -365,11 +391,13 @@ void scoreEnhancedWeaponCriticalHit(Mech *mech, Mech *attacker, int LOS,
       } else if (wCritRoll <= 7) {
         mech_printf(mech, MECHALL, "Your %s's ranging system takes a hit!!",
                     &MechWeapons[wWeapIndex].name[3]);
-        GetPartDamageFlags(mech, section, critical) |= WEAP_DAM_MSL_RANGING;
+        mech_critical_damage_flags_add(mech, section, critical,
+                                       WEAP_DAM_MSL_RANGING);
       } else if (wCritRoll <= 9) {
         mech_printf(mech, MECHALL, "Your %s's ammo feed is damaged!!",
                     &MechWeapons[wWeapIndex].name[3]);
-        GetPartDamageFlags(mech, section, critical) |= WEAP_DAM_MSL_AMMO;
+        mech_critical_damage_flags_add(mech, section, critical,
+                                       WEAP_DAM_MSL_AMMO);
       } else {
         tDestroyWeapon = 1;
       }
@@ -381,11 +409,13 @@ void scoreEnhancedWeaponCriticalHit(Mech *mech, Mech *attacker, int LOS,
       } else if (wCritRoll <= 7) {
         mech_printf(mech, MECHALL, "Your %s's barrel warps from the damage!!",
                     &MechWeapons[wWeapIndex].name[3]);
-        GetPartDamageFlags(mech, section, critical) |= WEAP_DAM_BALL_BARREL;
+        mech_critical_damage_flags_add(mech, section, critical,
+                                       WEAP_DAM_BALL_BARREL);
       } else if (wCritRoll <= 9) {
         mech_printf(mech, MECHALL, "Your %s's ammo feed is damaged!!",
                     &MechWeapons[wWeapIndex].name[3]);
-        GetPartDamageFlags(mech, section, critical) |= WEAP_DAM_BALL_AMMO;
+        mech_critical_damage_flags_add(mech, section, critical,
+                                       WEAP_DAM_BALL_AMMO);
       } else {
         tDestroyWeapon = 1;
       }
@@ -397,10 +427,11 @@ void scoreEnhancedWeaponCriticalHit(Mech *mech, Mech *attacker, int LOS,
   if (tDestroyWeapon) {
     mech_printf(mech, MECHALL, "Your %s has been destroyed!!",
                 &MechWeapons[wWeapIndex].name[3]);
-    DestroyWeapon(mech, section, GetPartType(mech, section, critical),
-                  wFirstCrit, 1, wWeapSize);
+    DestroyWeapon(mech, section,
+                  mech_critical_part_type(mech, section, critical), wFirstCrit,
+                  1, wWeapSize);
   } else {
-    DamagePart(mech, section, critical);
+    mech_critical_fire_mode_add(mech, section, critical, DAMAGED_MODE);
 
     if (tNoCrit)
       mech_printf(mech, MECHALL,
@@ -409,12 +440,13 @@ void scoreEnhancedWeaponCriticalHit(Mech *mech, Mech *attacker, int LOS,
     else if (tModerateCrit) {
       mech_printf(mech, MECHALL, "Your %s takes a hit but continues working!!",
                   &MechWeapons[wWeapIndex].name[3]);
-      GetPartDamageFlags(mech, section, critical) |= WEAP_DAM_MODERATE;
+      mech_critical_damage_flags_add(mech, section, critical,
+                                     WEAP_DAM_MODERATE);
     }
   }
 }
 
-void mech_weaponstatus(DbRef player, Mech *mech, char *buffer) {
+void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
   int secIter = 0;
   int weapIter = 0;
   int wWeapsInSec = 0;
@@ -429,20 +461,22 @@ void mech_weaponstatus(DbRef player, Mech *mech, char *buffer) {
 
   cch(MECH_USUALSP);
 
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "=========================WEAPON SYSTEMS "
          "STATUS=========================");
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "[##] -------- Weapon Name -------- || Location -------- || "
          "Status -----");
 
   for (secIter = 0; secIter < NUM_SECTIONS; secIter++) {
-    wWeapsInSec = FindWeapons(mech, secIter, weaparray, weapdata, critical);
+    wWeapsInSec =
+        FindWeapons_Advanced(mech, secIter, weaparray, weapdata, critical, 1);
 
     if (wWeapsInSec <= 0)
       continue;
 
-    ArmorStringFromIndex(secIter, tempbuff, MechType(mech), MechMove(mech));
+    ArmorStringFromIndex(secIter, tempbuff, mech_class(mech),
+                         mech_movement_type(mech));
     snprintf(strLocation, sizeof(strLocation), "%-18.18s", tempbuff);
 
     for (weapIter = 0; weapIter < wWeapsInSec; weapIter++) {
@@ -452,19 +486,22 @@ void mech_weaponstatus(DbRef player, Mech *mech, char *buffer) {
       strcat(weapbuff, strLocation);
       wDamagedSlots = 0;
 
-      if (PartIsBroken(mech, secIter, critical[weapIter]) ||
-          PartTempNuke(mech, secIter, critical[weapIter]) == FAIL_DESTROYED)
+      if (mech_critical_is_broken(mech, secIter, critical[weapIter]) ||
+          mech_critical_temporary_failure(mech, secIter, critical[weapIter]) ==
+              FAIL_DESTROYED)
         strcat(weapbuff, "|| [fg=red bold]DESTROYED[reset]");
       else {
 
-        if (MechType(mech) == CLASS_MECH)
-          wDamagedSlots =
-              countDamagedSlotsFromCrit(mech, secIter, critical[weapIter]);
+        if (mech_class(mech) == CLASS_MECH)
+          wDamagedSlots = mech_weapon_damaged_slot_count_at(mech, secIter,
+                                                            critical[weapIter]);
 
-        if (PartIsDisabled(mech, secIter, critical[weapIter]))
+        if (mech_critical_is_disabled(mech, secIter, critical[weapIter]))
           strcat(weapbuff, "|| [fg=red bold]DISABLED[reset]");
-        else if (PartTempNuke(mech, secIter, critical[weapIter])) {
-          switch (PartTempNuke(mech, secIter, critical[weapIter])) {
+        else if (mech_critical_temporary_failure(mech, secIter,
+                                                 critical[weapIter])) {
+          switch (mech_critical_temporary_failure(mech, secIter,
+                                                  critical[weapIter])) {
           case FAIL_JAMMED:
             strcat(weapbuff, "|| [fg=yellow]JAMMED[reset]");
             break;
@@ -487,15 +524,16 @@ void mech_weaponstatus(DbRef player, Mech *mech, char *buffer) {
           strcat(weapbuff, "|| [fg=green bold]OPERATIONAL[reset]");
       }
 
-      notify(btech_context_evaluation(mech->xcode.context), player, weapbuff);
+      notify(btech_context_evaluation(mech_context(mech)), player, weapbuff);
 
-      showWeaponDamageAndInfo(player, mech, secIter, critical[weapIter]);
+      mech_weapon_damage_info_show(player, mech, secIter, critical[weapIter]);
     }
   }
 }
 
-void showWeaponDamageAndInfo(DbRef player, Mech *mech, int section,
-                             int critical) {
+static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
+                                         int critical) {
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;
@@ -503,13 +541,14 @@ void showWeaponDamageAndInfo(DbRef player, Mech *mech, int section,
   int i;
   int tHasDamagedPart = 0;
   int tPrintSpace = 0;
-  int wAmmoLoc = GetPartDesiredAmmoLoc(mech, section, critical);
+  int wAmmoLoc = mech_critical_desired_ammo_section(mech, section, critical);
   char strLocation[80];
   int awNonOpCrits[3];
   int damflag;
   int count = 0, nloc, ncrit, stype;
 
-  getWeapData(mech, section, critical, &wWeapIndex, &wWeapSize, &wFirstCrit);
+  mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
+                            &wFirstCrit);
 
   for (i = 0; i < 3; i++) {
     awDamage[i] = 0;
@@ -517,37 +556,37 @@ void showWeaponDamageAndInfo(DbRef player, Mech *mech, int section,
   }
 
   for (i = wFirstCrit; i < MIN(NUM_CRITICALS, wFirstCrit + wWeapSize); i++) {
-    if (PartIsDamaged(mech, section, i)) {
+    if (mech_critical_is_damaged(mech, section, i)) {
       tHasDamagedPart = 1;
-      damflag = GetPartDamageFlags(mech, section, i);
+      damflag = mech_critical_damage_flags(mech, section, i);
       awDamage[0] += damflag & WEAP_DAM_MODERATE;
       awDamage[1] += (damflag & (WEAP_DAM_EN_FOCUS | WEAP_DAM_BALL_BARREL |
                                  WEAP_DAM_MSL_RANGING));
       awDamage[2] += (damflag & (WEAP_DAM_EN_CRYSTAL | WEAP_DAM_BALL_AMMO |
                                  WEAP_DAM_MSL_AMMO));
       awNonOpCrits[0]++;
-    } else if (PartIsDestroyed(mech, section, i)) {
+    } else if (mech_critical_is_destroyed(mech, section, i)) {
       awNonOpCrits[1]++;
-    } else if (PartIsDisabled(mech, section, i)) {
+    } else if (mech_critical_is_disabled(mech, section, i)) {
       awNonOpCrits[2]++;
     }
   }
 
-  if (count < wWeapSize && MechType(mech) == CLASS_MECH) {
+  if (count < wWeapSize && mech_class(mech) == CLASS_MECH) {
     if (GetSplitData(mech, section, wFirstCrit, &nloc, &ncrit, &stype)) {
       for (i = ncrit; i < (wWeapSize - count); i++) {
-        if (PartIsDamaged(mech, nloc, i)) {
+        if (mech_critical_is_damaged(mech, nloc, i)) {
           tHasDamagedPart = 1;
-          damflag = GetPartDamageFlags(mech, nloc, i);
+          damflag = mech_critical_damage_flags(mech, nloc, i);
           awDamage[0] += damflag & WEAP_DAM_MODERATE;
           awDamage[1] += (damflag & (WEAP_DAM_EN_FOCUS | WEAP_DAM_BALL_BARREL |
                                      WEAP_DAM_MSL_RANGING));
           awDamage[2] += (damflag & (WEAP_DAM_EN_CRYSTAL | WEAP_DAM_BALL_AMMO |
                                      WEAP_DAM_MSL_AMMO));
           awNonOpCrits[0]++;
-        } else if (PartIsDestroyed(mech, nloc, i)) {
+        } else if (mech_critical_is_destroyed(mech, nloc, i)) {
           awNonOpCrits[1]++;
-        } else if (PartIsDisabled(mech, nloc, i)) {
+        } else if (mech_critical_is_disabled(mech, nloc, i)) {
           awNonOpCrits[2]++;
         }
       }
@@ -558,14 +597,14 @@ void showWeaponDamageAndInfo(DbRef player, Mech *mech, int section,
     tPrintSpace = 1;
 
     if (awDamage[0] > 0) {
-      notify_printf(btech_context_evaluation(mech->xcode.context), player,
+      notify_printf(evaluation, player,
                     "      General damage (%d hit%s): +%d to hit.", awDamage[0],
                     awDamage[0] > 1 ? "s" : "", awDamage[0]);
     }
 
     if (IsEnergy(wWeapIndex)) {
       if (awDamage[1] > 0) {
-        notify_printf(btech_context_evaluation(mech->xcode.context), player,
+        notify_printf(evaluation, player,
                       "      Focus misalignment (%d hit%s): -%d damage. +%d to "
                       "hit at >%d hexes.",
                       awDamage[1], awDamage[1] > 1 ? "s" : "", awDamage[1],
@@ -573,7 +612,7 @@ void showWeaponDamageAndInfo(DbRef player, Mech *mech, int section,
       }
 
       if (awDamage[2] > 0) {
-        notify_printf(btech_context_evaluation(mech->xcode.context), player,
+        notify_printf(evaluation, player,
                       "      Charging crystal damage (%d hit%s): +%d heat. "
                       "Explodes on %d or less.[reset]",
                       awDamage[2], awDamage[2] > 1 ? "s" : "", awDamage[2],
@@ -582,28 +621,28 @@ void showWeaponDamageAndInfo(DbRef player, Mech *mech, int section,
     } else if (IsMissile(wWeapIndex)) {
       if (awDamage[1] > 0) {
         notify_printf(
-            btech_context_evaluation(mech->xcode.context), player,
+            evaluation, player,
             "      Ranging system damage (%d hit%s): +%d to hit at >%d hexes.",
             awDamage[1], awDamage[1] > 1 ? "s" : "", awDamage[1],
             MechWeapons[wWeapIndex].shortrange);
       }
 
       if (awDamage[2] > 0) {
-        notify_printf(btech_context_evaluation(mech->xcode.context), player,
+        notify_printf(evaluation, player,
                       "      Ammo feed damage (%d hit%s): Can't switch ammo. "
                       "Explodes on %d or less.",
                       awDamage[2], awDamage[2] > 1 ? "s" : "", awDamage[2] + 1);
       }
     } else if (IsBallistic(wWeapIndex) || IsArtillery(wWeapIndex)) {
       if (awDamage[1] > 0) {
-        notify_printf(btech_context_evaluation(mech->xcode.context), player,
+        notify_printf(evaluation, player,
                       "      [fg=red bold]Barrel damage (%d hit%s): Jams on a "
                       "%d or less.[reset]",
                       awDamage[1], awDamage[1] > 1 ? "s" : "", awDamage[1] + 1);
       }
 
       if (awDamage[2] > 0) {
-        notify_printf(btech_context_evaluation(mech->xcode.context), player,
+        notify_printf(evaluation, player,
                       "      Ammo feed damage (%d hit%s): Can't switch ammo. "
                       "Explodes on %d or less.",
                       awDamage[2], awDamage[2] > 1 ? "s" : "", awDamage[2] + 1);
@@ -611,25 +650,26 @@ void showWeaponDamageAndInfo(DbRef player, Mech *mech, int section,
     }
 
     if ((awDamage[0] == 0) && (awDamage[1] == 0) && (awDamage[2] == 0))
-      notify_printf(btech_context_evaluation(mech->xcode.context), player,
+      notify_printf(evaluation, player,
                     "      Damaged, but fully operational.");
     tPrintSpace = 1;
   }
 
   if (wAmmoLoc >= 0) {
-    ArmorStringFromIndex(wAmmoLoc, strLocation, MechType(mech), MechMove(mech));
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                  "      Prefered ammo source: %s", strLocation);
+    ArmorStringFromIndex(wAmmoLoc, strLocation, mech_class(mech),
+                         mech_movement_type(mech));
+    notify_printf(evaluation, player, "      Prefered ammo source: %s",
+                  strLocation);
     tPrintSpace = 1;
   }
 
   if ((awNonOpCrits[0] > 0) || (awNonOpCrits[1] > 0) || (awNonOpCrits[2] > 0)) {
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+    notify_printf(evaluation, player,
                   "      Slot status: Damaged: %d. Destroyed: %d. Disabled: %d",
                   awNonOpCrits[0], awNonOpCrits[1], awNonOpCrits[2]);
     tPrintSpace = 1;
   }
 
   if (tPrintSpace)
-    notify(btech_context_evaluation(mech->xcode.context), player, " ");
+    notify(evaluation, player, " ");
 }

@@ -449,7 +449,8 @@ int mech_normal_to_hit_calculate(Mech *mech, BattleMap *mech_map, int section,
   }
 
   /* Check for damage */
-  BTHADD("CritDamage", getCritAddedBTH(mech, section, critical, wRangeBracket));
+  BTHADD("CritDamage", mech_weapon_critical_to_hit_modifier(
+                           mech, section, critical, wRangeBracket));
   if (condition.to_hit_debug)
     notify_printf(btech_context_evaluation(context), mech_pilot_dbref(mech),
                   "BTHDebug: %s", bthbuf);

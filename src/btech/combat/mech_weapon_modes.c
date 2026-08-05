@@ -138,7 +138,7 @@ static int mech_toggle_mode_sub_func(Mech *mech, DbRef player, int index,
                    mech_critical_fire_mode(mech, section, critical) & OS_MODE,
                    "One-shot weapons' mode cannot be altered!");
   DOCHECK0_CONTEXT(mech_context(mech),
-                   isWeapAmmoFeedLocked(mech, section, critical),
+                   mech_weapon_ammo_feed_is_locked(mech, section, critical),
                    "That weapon's ammo feed mechanism is damaged!");
 
   if (toggle->special_kind == 6) {

@@ -478,7 +478,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
         strcat(weapbuff, tprintf(" %2d    || ",
                                  weapdata[ii] / WEAPON_TICK +
                                      (weapdata[ii] % WEAPON_TICK ? 1 : 0)));
-      else if (countDamagedSlotsFromCrit(mech, loop, critical[ii]))
+      else if (mech_weapon_damaged_slot_count_at(mech, loop, critical[ii]))
         strcat(weapbuff, "[fg=red]DAMAGED[reset]|| ");
       else
         strcat(weapbuff, "[fg=green]Ready[reset]  || ");

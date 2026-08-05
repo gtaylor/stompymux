@@ -243,7 +243,7 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       return 1;
     }
 
-    scoreEnhancedWeaponCriticalHit(mech, attacker, LOS, hitloc, critHit);
+    mech_weapon_critical_apply(mech, attacker, LOS, hitloc, critHit);
 
     /* Have to destroy all the weapons of this type in this section */
     /* DestroyWeapon(wounded, hitloc, critType, 1, GetWeaponCrits(wounded,
@@ -305,7 +305,7 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
               attacker, wounded, temp, fCrit,
               mech_critical_part_type(wounded, temp, fCrit), LOS))
         break;
-      scoreEnhancedWeaponCriticalHit(wounded, attacker, LOS, temp, fCrit);
+      mech_weapon_critical_apply(wounded, attacker, LOS, temp, fCrit);
       break;
     case HEAT_SINK:
       if (mech_has_double_heat_sinks(mech)) {
