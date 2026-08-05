@@ -21,12 +21,15 @@
 #include "btech_event.h"
 #include "coolmenu.h"
 #include "legacy_macros.h"
-#include "mech.h"
 #include "mech_build_api.h"
+#include "mech_classification_api.h"
 #include "mech_events.h"
-#include "mech_macros.h"
+#include "mech_identity_api.h"
 #include "mech_notify_api.h"
 #include "mech_parts.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
 #include "mech_status_api.h"
 #include "mech_tech.h"
 #include "mech_tech_api.h"
@@ -46,13 +49,14 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
   char buf[MBUF_SIZE] = {0};
   char buf2[LBUF_SIZE] = {0};
   int fail = (e->function == very_fake_func);
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
 
   UNPACK_LOCPOS_E(earg, loc, pos, extra);
-  snprintf(
-      buf, sizeof(buf), "%s%s",
-      armor_section_abbreviation(MechType(mech), MechMove(mech), loc % 8).text,
-      loc >= 8 ? "(R)" : "");
+  snprintf(buf, sizeof(buf), "%s%s",
+           armor_section_abbreviation(mech_class(mech),
+                                      mech_movement_type(mech), loc % 8)
+               .text,
+           loc >= 8 ? "(R)" : "");
   snprintf(buf2, sizeof(buf2), "%-5ld ", player);
   snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%-4d ",
            game_lag_time(context, (e->tick - e->scheduler->tick) / 60));
@@ -168,12 +172,23 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
 }
 
 void tech_repairs(DbRef player, Mech *mech, char *buffer) {
-  int i, isds = IsDS(mech);
+  int i;
   CoolMenu *c = nullptr;
+  BtechContext *context = mech_context(mech);
+  bool is_wizard_player = is_wizard(btech_context_database(context), player);
 
-  TECHCOMMANDD;
+  DOCHECK_CONTEXT(context,
+                  mech_event_count(mech, EVENT_STARTUP) && !is_wizard_player,
+                  "The mech's starting up! Please stop the sequence first.");
+  DOCHECK_CONTEXT(context, mech_is_started(mech) && !is_wizard_player,
+                  "The mech's started up ; please shut it down first.");
+  DOCHECK_CONTEXT(context,
+                  btech_context_limits_repairs_to_stalls(context) &&
+                      !mech_is_dropship(mech) &&
+                      mech_repair_stall_dbref(mech) <= 0 && !is_wizard_player,
+                  "The 'mech isn't in a repair stall!");
 
-  DOCHECK_CONTEXT(mech->xcode.context, !figure_latest_tech_event(mech),
+  DOCHECK_CONTEXT(context, !figure_latest_tech_event(mech),
                   "This 'mech has no repairs pending!");
   addline();
   cent(tprintf("Repairs/Scrapping in progress (%s)",
@@ -181,11 +196,10 @@ void tech_repairs(DbRef player, Mech *mech, char *buffer) {
   vsi(tprintf("%-5s %-4s %s", "Plr", "Time", "Location + Description"));
   addline();
   for (i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
-    mux_event_visit_type_data(mech->xcode.context->events, i, mech,
-                              describe_repairs, &c);
+    mech_event_visit(mech, i, describe_repairs, &c);
   addline();
   vsi("Note: Time = Time remaining in minutes. Plr = Tech's dbref");
   addline();
-  ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
+  ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }

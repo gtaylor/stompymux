@@ -50,6 +50,8 @@ int mech_position_surface_elevation(Mech *mech) {
              : elevation;
 }
 
+DbRef mech_repair_stall_dbref(const Mech *mech) { return mech->pd.stall; }
+
 float mech_position_real_x(const Mech *mech) { return mech->pd.fx; }
 
 float mech_position_real_y(const Mech *mech) { return mech->pd.fy; }

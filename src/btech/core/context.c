@@ -233,6 +233,11 @@ bool btech_context_physical_attacks_use_pilot_skill(
   return context->configuration->btech_phys_use_pskill;
 }
 
+bool btech_context_limits_repairs_to_stalls(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_limitedrepairs;
+}
+
 int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
   assert(context != nullptr);
   return context->configuration->btech_sprint_bth;
