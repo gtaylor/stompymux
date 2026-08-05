@@ -26,7 +26,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 2:
         btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
                            tprintf("%ld's luck sucks. It got TACed. "
-                                   "We're in FindFasaHitLocation()",
+                                   "We're in mech_fasa_hit_location()",
                                    mech->mynum));
         *iscritical = 1;
         return LTORSO;
@@ -58,7 +58,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 2:
         btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
                            tprintf("%ld's luck sucks. It got TACed. "
-                                   "We're in FindFasaHitLocation()",
+                                   "We're in mech_fasa_hit_location()",
                                    mech->mynum));
         *iscritical = 1;
         return RTORSO;
@@ -91,7 +91,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
       case 2:
         btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
                            tprintf("%ld's luck sucks. It got TACed. "
-                                   "We're in FindFasaHitLocation()",
+                                   "We're in mech_fasa_hit_location()",
                                    mech->mynum));
         *iscritical = 1;
         return CTORSO;

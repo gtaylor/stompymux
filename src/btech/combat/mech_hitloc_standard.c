@@ -27,7 +27,7 @@ int FindHitLocation(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     else if (MechSpecials(mech) & CRITPROOF_TECH)
       return FindHitLocation_CritProof(mech, hitGroup, iscritical, isrear);
     else if (mech->xcode.context->configuration->btech_fasacrit)
-      return FindFasaHitLocation(mech, hitGroup, iscritical, isrear);
+      return mech_fasa_hit_location(mech, hitGroup, iscritical, isrear);
     break;
   case CLASS_VEH_GROUND:
     if (mech->xcode.context->configuration->btech_fasaadvvhlcrit)
@@ -35,13 +35,13 @@ int FindHitLocation(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     else if (MechSpecials(mech) & CRITPROOF_TECH)
       return FindHitLocation_CritProof(mech, hitGroup, iscritical, isrear);
     else if (mech->xcode.context->configuration->btech_fasacrit)
-      return FindFasaHitLocation(mech, hitGroup, iscritical, isrear);
+      return mech_fasa_hit_location(mech, hitGroup, iscritical, isrear);
     break;
   default:
     if (MechSpecials(mech) & CRITPROOF_TECH)
       return FindHitLocation_CritProof(mech, hitGroup, iscritical, isrear);
     else if (mech->xcode.context->configuration->btech_fasacrit)
-      return FindFasaHitLocation(mech, hitGroup, iscritical, isrear);
+      return mech_fasa_hit_location(mech, hitGroup, iscritical, isrear);
     break;
   }
 

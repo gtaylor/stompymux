@@ -29,7 +29,8 @@ int get_bsuit_hitloc(Mech *mech);
 int TransferTarget(Mech *mech, int hitloc);
 int crittable(Mech *mech, int loc, int tres);
 void mech_motive_system_hit(Mech *mech, int wRollMod);
-int FindFasaHitLocation(Mech *mech, int hitGroup, int *iscritical, int *isrear);
+int mech_fasa_hit_location(Mech *mech, int hitGroup, int *iscritical,
+                           int *isrear);
 int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
                            int *isrear, int roll);
 int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,

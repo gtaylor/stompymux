@@ -210,6 +210,13 @@ int btech_context_event_tick(const BtechContext *context) {
   return context->events->tick;
 }
 
+void btech_context_hit_roll_record(BtechContext *context, int roll) {
+  assert(context != nullptr);
+  assert(roll >= 2 && roll <= 12);
+  context->random.statistics.hit_rolls[roll - 2]++;
+  context->random.statistics.total_hit_rolls++;
+}
+
 int btech_context_event_data_count(const BtechContext *context, int event_type,
                                    intptr_t event_data) {
   assert(context != nullptr);

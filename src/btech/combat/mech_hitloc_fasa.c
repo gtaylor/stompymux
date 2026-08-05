@@ -7,26 +7,31 @@
  *       All rights reserved
  */
 
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
+#include "mech_identity_api.h"
 
-int FindFasaHitLocation(Mech *mech, int hitGroup, int *iscritical,
-                        int *isrear) {
+int mech_fasa_hit_location(Mech *mech, int hitGroup, int *iscritical,
+                           int *isrear) {
   int roll;
 
   *iscritical = 0;
-  roll = btech_random_roll(mech->xcode.context);
+  BtechContext *context = mech_context(mech);
+  roll = btech_random_roll(context);
 
-  if (MechStatus(mech) & COMBAT_SAFE)
+  MechConditionSummary condition = mech_condition_summary(mech);
+  if (condition.combat_safe)
     return 0;
 
-  if (MechDugIn(mech) && GetSectOInt(mech, TURRET) &&
-      btech_random_range(mech->xcode.context, 1, 100) >= 42)
+  if (condition.dug_in && mech_section_original_internal(mech, TURRET) &&
+      btech_random_range(context, 1, 100) >= 42)
     return TURRET;
 
-  mech->xcode.context->random.statistics.hit_rolls[roll - 2]++;
-  mech->xcode.context->random.statistics.total_hit_rolls++;
+  btech_context_hit_roll_record(context, roll);
 
-  switch (MechType(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_BSUIT:
   case CLASS_MW:
   case CLASS_MECH:
