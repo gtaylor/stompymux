@@ -42,3 +42,4 @@ void mech_targeting_override_end(Mech *mech,
                                  const MechTargetingOverride *override,
                                  DbRef *target, int *target_x, int *target_y,
                                  int *target_z, int *lock_modes);
+void mech_charge_reset(Mech *mech);

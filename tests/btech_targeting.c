@@ -37,5 +37,13 @@ int main(void) {
   if (mech.rd.status != (STARTED | LOCK_TARGET) || mech.rd.target != 11 ||
       mech.rd.targx != 12 || mech.rd.targy != 13 || mech.rd.targz != 14)
     return 3;
+
+  mech.rd.chgtarget = 41;
+  mech.rd.chargetimer = 42;
+  mech.rd.chargedist = 43.0F;
+  mech_charge_reset(&mech);
+  if (mech.rd.chgtarget != -1 || mech.rd.chargetimer != 0 ||
+      mech.rd.chargedist != 0.0F)
+    return 4;
   return 0;
 }

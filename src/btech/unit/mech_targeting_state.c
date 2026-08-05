@@ -126,3 +126,9 @@ void mech_targeting_override_end(Mech *mech,
   mech->rd.targy = storage.target_y;
   mech->rd.targz = storage.target_z;
 }
+
+void mech_charge_reset(Mech *mech) {
+  mech->rd.chgtarget = -1;
+  mech->rd.chargetimer = 0;
+  mech->rd.chargedist = 0.0F;
+}

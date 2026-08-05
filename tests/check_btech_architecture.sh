@@ -127,6 +127,19 @@ if [[ -e src/btech/movement/aero_bomb.h ]]; then
 fi
 
 while IFS= read -r match; do
+  echo "$match: converted collision module uses an aggregate Mech or map layout"
+  status=1
+done < <(rg -n \
+  '#include "(map|mech|mech_macros)\.h"|\b(me|mech|map)->|\b(Mech(X|Y|Type|Team|Speed|Facing|Lateral|JumpHeading|RTons|Charge)|Destroyed|Started|Landed|Jumping|OODing|IsDS|Fallen|JumpSpeedMP)\(' \
+  src/btech/movement/mech_domino.c || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy collision or weight export is not allowed"
+  status=1
+done < <(rg -n '\b(domino_space|mechs_in_hex|cause_damage|get_weight)\b' \
+  src/btech -g '*.[ch]' || true)
+
+while IFS= read -r match; do
   echo "$match: converted LOS tracer accesses BattleMap layout"
   status=1
 done < <(rg -n -- '\bmap->' src/btech/sensors/los_trace.c || true)

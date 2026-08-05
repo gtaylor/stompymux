@@ -56,7 +56,7 @@ int WeaponIFromString(char *data);
 int AmmoIFromString(char *data);
 void update_specials(Mech *mech);
 int update_oweight(Mech *mech, int value);
-int get_weight(Mech *mech);
+int mech_calculated_weight(Mech *mech);
 int load_template(DbRef player, Mech *mech, char *filename);
 void DumpMechSpecialObjects(BtechContext *context, DbRef player);
 void DumpWeapons(BtechContext *context, DbRef player);

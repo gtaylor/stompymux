@@ -382,14 +382,14 @@ float MechCargoMaxSpeed(Mech *mech, float mspeed) {
 #endif
     return mspeed;
   }
-  MechRTonsV(mech) = get_weight(mech);
+  MechRTonsV(mech) = mech_calculated_weight(mech);
 
   /*! \todo {Check some of this math better} */
   if (!(MechCritStatus(mech) & LOAD_OK)) {
     if (MechCarrying(mech) > 0)
       if ((c = btech_context_get_mech(mech->xcode.context,
                                       MechCarrying(mech)))) {
-        lugged = get_weight(c) * 2;
+        lugged = mech_calculated_weight(c) * 2;
         if (MechSpecials(mech) & SALVAGE_TECH)
           lugged = lugged / 2;
         if ((MechSpecials(mech) & TRIPLE_MYOMER_TECH) &&

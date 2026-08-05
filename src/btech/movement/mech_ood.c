@@ -220,7 +220,7 @@ void mech_ood_event(MuxEvent *e) {
 
   if (!Fallen(mech))
 
-    domino_space(mech, 2);
+    mech_domino_resolve(mech, MECH_DOMINO_FALL);
 
   if (WaterBeast(mech) && NotInWater(mech))
 

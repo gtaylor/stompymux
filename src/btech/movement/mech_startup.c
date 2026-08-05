@@ -378,7 +378,7 @@ void mech_shutdown(DbRef player, void *data, char *buffer) {
                          "tumbles end over end and comes to a crashing halt!");
     }
     MechFalls(mech, 1, 0);
-    domino_space(mech, 2);
+    mech_domino_resolve(mech, MECH_DOMINO_FALL);
   }
   mech_power_down(mech);
 }

@@ -594,7 +594,7 @@ int update_oweight(Mech *mech, int value) {
   return value;
 }
 
-int get_weight(Mech *mech) {
+int mech_calculated_weight(Mech *mech) {
   if (MechCritStatus(mech) & OWEIGHT_OK)
     return MechRTonsV(mech);
   return update_oweight(mech, mech_weight_sub(GOD, mech, -1));

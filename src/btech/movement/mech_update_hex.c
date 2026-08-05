@@ -117,7 +117,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         mech_los_broadcast(mech,
                            "drives off a cliff and falls to the ground below.");
         MechFalls(mech, lastelevation - elevation, 0);
-        domino_space(mech, 2);
+        mech_domino_resolve(mech, MECH_DOMINO_FALL);
 
         if (mech_real_terrain_get(mech) == WATER &&
             !(MechSpecials2(mech) & WATERPROOF_TECH)) {
@@ -292,7 +292,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         mech_los_broadcast(mech,
                            "drives off a cliff and falls to the ground below.");
         MechFalls(mech, lastelevation - elevation, 0);
-        domino_space(mech, 2);
+        mech_domino_resolve(mech, MECH_DOMINO_FALL);
 
         if (mech_real_terrain_get(mech) == WATER &&
             !(MechSpecials2(mech) & WATERPROOF_TECH)) {
@@ -729,7 +729,7 @@ void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
         mech_los_broadcast(mech,
                            "crashes into an obstacle and falls from the sky!");
         MechFalls(mech, MechsElevation(mech) + 1, 0);
-        domino_space(mech, 2);
+        mech_domino_resolve(mech, MECH_DOMINO_FALL);
       }
     }
     break;

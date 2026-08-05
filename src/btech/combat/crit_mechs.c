@@ -331,7 +331,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                     "Losing your last jump jet, you fall from the sky!");
         mech_los_broadcast(wounded, "falls from the sky!");
         MechFalls(wounded, 1, 0);
-        domino_space(wounded, 2);
+        mech_domino_resolve(wounded, MECH_DOMINO_FALL);
       }
       break;
     case ENGINE:
@@ -396,7 +396,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
               mech_notify(wounded, MECHALL, "You fall from the sky!");
               mech_los_broadcast(wounded, "falls from the sky!");
               MechFalls(wounded, JumpSpeedMP(wounded, map), 0);
-              domino_space(wounded, 2);
+              mech_domino_resolve(wounded, MECH_DOMINO_FALL);
             }
           }
       } else if (!(MechCritStatus(wounded) & GYRO_DESTROYED)) {
@@ -413,7 +413,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
             mech_notify(wounded, MECHALL, "You fall from the sky!");
             mech_los_broadcast(wounded, "falls from the sky!");
             MechFalls(wounded, JumpSpeedMP(wounded, map), 0);
-            domino_space(wounded, 2);
+            mech_domino_resolve(wounded, MECH_DOMINO_FALL);
           }
         }
       } else {

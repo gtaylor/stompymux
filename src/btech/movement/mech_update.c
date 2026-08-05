@@ -636,7 +636,7 @@ void move_mech(Mech *mech) {
       }
 
       /* Check for stacking */
-      domino_space(mech, 0);
+      mech_domino_resolve(mech, MECH_DOMINO_GROUND);
     }
   }
 

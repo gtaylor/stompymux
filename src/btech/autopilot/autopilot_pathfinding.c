@@ -284,7 +284,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
 
       /* Lets attempt to avoid hexes that already have our friendlies in it
        * (Stack Check) */
-      if (mechs_in_hex(map, map_x2, map_y2, 1, mech_team(mech)) > 2)
+      if (battle_map_mech_count_in_hex(map, map_x2, map_y2, 1,
+                                       mech_team(mech)) > 2)
         child_g_score += 150;
 
       /* Now add in some modifiers for terrain */

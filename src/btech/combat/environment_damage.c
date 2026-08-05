@@ -137,7 +137,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
                         "Losing your last Jump Jet you fall from the sky!!!!!");
             mech_los_broadcast(wounded, "falls from the sky!");
             MechFalls(wounded, (int)(oldjs * MP_PER_KPH), 0);
-            domino_space(wounded, 2);
+            mech_domino_resolve(wounded, MECH_DOMINO_FALL);
           }
           break;
         case ENGINE:

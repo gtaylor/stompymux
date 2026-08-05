@@ -57,7 +57,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
           mech_los_broadcast(
               mech, "crashes into an obstacle and falls from the sky!");
           MechFalls(mech, ed, 0);
-          domino_space(mech, 2);
+          mech_domino_resolve(mech, MECH_DOMINO_FALL);
         }
       }
       return (HexTransitionResult){.stop = true, .done = done};

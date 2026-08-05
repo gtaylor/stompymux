@@ -43,8 +43,12 @@ void LandMech(Mech *mech);
 void MechFloodsLoc(Mech *mech, int loc, int lev);
 void MechFloods(Mech *mech);
 void MechFalls(Mech *mech, int levels, int seemsg);
-int mechs_in_hex(BattleMap *map, int x, int y, int friendly, int team);
-void cause_damage(Mech *att, Mech *mech, int dam, int table);
-int domino_space_in_hex(BattleMap *map, Mech *me, int x, int y, int friendly,
-                        int mode, int cnt);
-int domino_space(Mech *mech, int mode);
+typedef enum MechDominoMode {
+  MECH_DOMINO_GROUND,
+  MECH_DOMINO_JUMP,
+  MECH_DOMINO_FALL,
+} MechDominoMode;
+
+int battle_map_mech_count_in_hex(BattleMap *map, int x, int y, int friendly,
+                                 int team);
+int mech_domino_resolve(Mech *mech, MechDominoMode mode);

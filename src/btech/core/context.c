@@ -97,6 +97,16 @@ int btech_context_movement_slowdown_mode(const BtechContext *context) {
   return context->configuration->btech_slowdown;
 }
 
+int btech_context_stacking_mode(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_stacking;
+}
+
+int btech_context_stacking_damage(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->configuration->btech_stackdamage;
+}
+
 int btech_context_event_tick(const BtechContext *context) {
   assert(context != nullptr);
   return context->events->tick;

@@ -242,7 +242,7 @@ static inline BtechContext *xcode_context(const void *object) {
 #define MechTeam(a) (a)->pd.team
 #define MechTerrain(a) (a)->pd.terrain
 #define MechTons(a) (a)->ud.tons
-#define MechRTons(a) get_weight(a)
+#define MechRTons(a) mech_calculated_weight(a)
 #define MechRTonsV(a) (a)->rd.row
 #define MechRealTons(a) ((a)->rd.row / 1024)
 #define MechRCTonsV(a) (a)->rd.rcw

@@ -197,7 +197,7 @@ void LandMech(Mech *mech) {
     }
   }
 
-  if (!dfa && !Fallen(mech) && !domino_space(mech, 1)) {
+  if (!dfa && !Fallen(mech) && !mech_domino_resolve(mech, MECH_DOMINO_JUMP)) {
     if (MechType(mech) != CLASS_VEH_GROUND)
       mech_los_broadcast(mech, "lands gracefully.");
     else

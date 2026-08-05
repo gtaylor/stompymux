@@ -202,7 +202,7 @@ void HandleOverheat(Mech *mech) {
       mech_los_broadcast(mech, "falls from the sky!");
       mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
       MechFalls(mech, JumpSpeedMP(mech, mech_map), 0);
-      domino_space(mech, 2);
+      mech_domino_resolve(mech, MECH_DOMINO_FALL);
     } else {
       mech_los_broadcast(mech, "stops in mid-motion!");
       if ((fabs(MechSpeed(mech)) > MP1) && !Fallen(mech) &&

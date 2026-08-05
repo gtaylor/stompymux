@@ -59,6 +59,8 @@ void btech_context_combat_pilot_override_set(BtechContext *context,
                                              BtechObjectId pilot);
 bool btech_context_seismic_detects_stopped_units(const BtechContext *context);
 int btech_context_movement_slowdown_mode(const BtechContext *context);
+int btech_context_stacking_mode(const BtechContext *context);
+int btech_context_stacking_damage(const BtechContext *context);
 int btech_context_event_tick(const BtechContext *context);
 time_t btech_context_now(const BtechContext *context);
 void btech_command_scope_enter(BtechCommandScope *scope, BtechContext *context,
