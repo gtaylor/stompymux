@@ -12,7 +12,7 @@
 
 #include "mech_movement_validation_api.h"
 
-void move_mech(Mech *mech) {
+void mech_movement_update(Mech *mech) {
   float newx = 0.0, newy = 0.0, dax, day;
   float xy_charge_dist, xscale;
   float jump_pos;
@@ -465,7 +465,7 @@ void move_mech(Mech *mech) {
     }
 
     if (!iced)
-      NewHexEntered(mech, mech_map, newx, newy, last_z);
+      mech_hex_entry_resolve(mech, mech_map, newx, newy, last_z);
 
     if (MechX(mech) == x && MechY(mech) == y) {
       // Removed MarkForLOSUpdate.. Moved to NewHexEntered to clear potential

@@ -15,8 +15,8 @@
 /*
  * Check to see what happens to the unit now that its entered a new hex
  */
-void NewHexEntered(Mech *mech, BattleMap *mech_map, float deltax, float deltay,
-                   int last_z) {
+void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
+                            float deltay, int last_z) {
   int elevation, lastelevation;
   int oldterrain;
   int ot, le, done = 0, tt, avoidbth;

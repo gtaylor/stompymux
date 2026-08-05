@@ -237,7 +237,7 @@ void mech_jump_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
 
   mech_event_schedule(mech, EVENT_JUMP, mech_jump_event, JUMP_TICK, 0);
-  move_mech(mech);
+  mech_movement_update(mech);
   if (!Jumping(mech))
     mech_event_cancel(mech, EVENT_JUMP);
 }
@@ -342,7 +342,7 @@ void mech_move_event(MuxEvent *e) {
     return;
   }
   mech_speed_update(mech);
-  move_mech(mech);
+  mech_movement_update(mech);
 
   if (mech->mapindex < 0)
     return;
@@ -419,7 +419,7 @@ void aero_move_event(MuxEvent *e) {
     }
     if (Fallen(mech))
       MechStartFZ(mech) = MechStartFZ(mech) - 1;
-    move_mech(mech);
+    mech_movement_update(mech);
     if (IsDS(mech) && MechZ(mech) <= (MechElevation(mech) + 5) &&
         ((mech->xcode.context->events->tick / WEAPON_TICK) % 10) == 0)
       DS_BlastNearbyMechsAndTrees(
@@ -431,7 +431,7 @@ void aero_move_event(MuxEvent *e) {
   } else if (Landed(mech) && !Fallen(mech) && RollingT(mech)) {
     mech_heading_update(mech);
     mech_speed_update(mech);
-    move_mech(mech);
+    mech_movement_update(mech);
     if (fabs(MechSpeed(mech)) > 0.0 || fabs(MechDesiredSpeed(mech)) > 0.0 ||
         MechDesiredFacing(mech) != MechFacing(mech))
       if (!FuelCheck(mech))

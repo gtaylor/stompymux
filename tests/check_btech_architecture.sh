@@ -524,6 +524,12 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '\b(move_mech|NewHexEntered)\s*\(' src/btech | rg -v '"' || true)
+if [[ -n "$match" ]]; then
+  echo "$match: legacy movement coordinator exports are not allowed"
+  status=1
+fi
+
 match=$(rg -n '#include "mech_update_internal\.h"|#include "(mech|mech_macros)\.h"|mech->|\b(Mech[A-Z][A-Za-z0-9_]*|Jumping|IsDS|is_aero|MarkForLOSUpdate|GetTurnMode)\s*\(' \
   src/btech/movement/mech_update_motion.c || true)
 if [[ -n "$match" ]]; then
