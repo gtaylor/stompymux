@@ -62,6 +62,36 @@
 #include "section_types.h"
 #include "template_api.h"
 
+void mech_land(DbRef player, void *data, char *buffer) {
+  Mech *mech = data;
+  BtechContext *context = mech_context(mech);
+
+  cch(MECH_USUAL);
+  if (mech_class(mech) != CLASS_MECH && mech_class(mech) != CLASS_MW &&
+      mech_class(mech) != CLASS_BSUIT && mech_class(mech) != CLASS_VEH_GROUND) {
+    aero_land(player, data, buffer);
+    return;
+  }
+  if (mech_is_jumping(mech)) {
+    mech_notify(mech, MECHALL,
+                "You abort your full jump and attempt to land early");
+    if (MadePilotSkillRoll(mech, 0)) {
+      mech_notify(mech, MECHALL, "You are able to abort the jump.");
+
+      /*        mech_los_broadcast (mech, "lands abruptly!"); */
+      mech_jump_land(mech);
+    } else {
+      mech_notify(mech, MECHALL, "You don't quite make it.");
+      mech_los_broadcast(mech,
+                         "attempts a landing, but crashes to the ground!");
+      mech_fall(mech, 1, 0);
+      mech_jump_complete(mech);
+      mech_maybe_move(mech);
+    }
+  } else
+    notify(btech_context_evaluation(context), player, "You're not jumping!");
+}
+
 static bool mech_is_over_water(const Mech *mech) {
   return mech_movement_type(mech) == MOVE_HOVER ||
          mech_class(mech) == CLASS_MW ||
