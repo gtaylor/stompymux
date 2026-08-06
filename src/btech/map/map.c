@@ -9,6 +9,7 @@
 #include "legacy_macros.h"
 #include "map.h"
 #include "map_api.h"
+#include "map_dynamic_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "mech_api_types.h"
@@ -660,9 +661,7 @@ void newfreemap(DbRef key, void **data, int selector) {
       new->MapObject[i] = NULL;
     snprintf(new->mapname, MAP_NAME_SIZE, "%s", "Default Map");
     break;
-  case SPECIAL_FREE: {
-    const int allocated_slots = new->dynamic_size;
-
+  case SPECIAL_FREE:
     /* Seriously. We weren't clearing the map of mechas. Bad bad accounting!!!
      */
     map_clearmechs(GOD, new, "");
@@ -673,14 +672,8 @@ void newfreemap(DbRef key, void **data, int selector) {
           free((char *)(new->map[i]));
       free((char *)(new->map));
     }
-    if (new->LOSinfo)
-      for (i = 0; i < allocated_slots; i++)
-        free(new->LOSinfo[i]);
-    free(new->LOSinfo);
-    free(new->mechflags);
-    free(new->mechsOnMap);
+    battle_map_dynamic_destroy(new);
     break;
-  }
   }
 }
 

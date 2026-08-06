@@ -202,11 +202,13 @@ static void lua_examine_array(LuaRuntime *runtime,
   int index;
   int count;
 
-  notify_printf(evaluation, player, "%s:", label);
   lua_getfield(state, module, table_name);
   count = lua_istable(state, -1) ? (int)lua_objlen(state, -1) : 0;
-  if (!count)
-    notify_checked(evaluation, player, player, "  (none)", MSG_ME);
+  if (!count) {
+    lua_pop(state, 1);
+    return;
+  }
+  notify_printf(evaluation, player, "%s:", label);
   for (index = 1; index <= count; index++) {
     const char *name;
 
@@ -233,20 +235,19 @@ lua_examine_named_functions(LuaRuntime *runtime, EvaluationContext *evaluation,
   bool found = false;
   int index;
 
-  notify_printf(evaluation, player, "%s:", label);
   lua_getfield(state, module, table_name);
   if (lua_istable(state, -1)) {
     for (index = first; index < count; index++) {
       lua_getfield(state, -1, names[index]);
       if (lua_isfunction(state, -1)) {
+        if (!found)
+          notify_printf(evaluation, player, "%s:", label);
         notify_printf(evaluation, player, "  %s", names[index]);
         found = true;
       }
       lua_pop(state, 1);
     }
   }
-  if (!found)
-    notify_checked(evaluation, player, player, "  (none)", MSG_ME);
   lua_pop(state, 1);
 }
 
@@ -271,7 +272,6 @@ void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
     return;
   }
   module = lua_gettop(state);
-  notify_checked(evaluation, player, player, "Lua appearances:", MSG_ME);
   {
     bool found = false;
     static const char *names[] = {"internal_appearance", "external_appearance",
@@ -280,13 +280,14 @@ void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
     for (size_t index = 0; index < sizeof(names) / sizeof(*names); index++) {
       lua_getfield(state, module, names[index]);
       if (lua_isfunction(state, -1)) {
+        if (!found)
+          notify_checked(evaluation, player, player,
+                         "Lua appearances:", MSG_ME);
         notify_printf(evaluation, player, "  %s", names[index]);
         found = true;
       }
       lua_pop(state, 1);
     }
-    if (!found)
-      notify_checked(evaluation, player, player, "  (none)", MSG_ME);
   }
   lua_examine_array(runtime, evaluation, player, module, "commands",
                     "Lua commands", "pattern");

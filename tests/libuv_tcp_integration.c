@@ -1022,8 +1022,10 @@ static int create_styled_object(int socket_fd) {
       send_command(socket_fd, "luafail\r\nluastate\r\n") < 0 ||
       expect_text(socket_fd, "LuaState 2") < 0 ||
       send_command(socket_fd, "@examine me\r\n") < 0 ||
-      expect_text(socket_fd, "State namespaces:\r\n  audit: 1 value\r\n"
-                             "  integration: 4 values") < 0 ||
+      expect_text_without(socket_fd,
+                          "State namespaces:\r\n  audit: 1 value\r\n"
+                          "  integration: 4 values",
+                          "  (none)") < 0 ||
       send_command(socket_fd, "@state\r\n") < 0 ||
       expect_text(socket_fd,
                   "@state command switches:\r\n"

@@ -40,6 +40,15 @@ static void examine_notify_markup(EvaluationContext *evaluation, DbRef player,
   free_lbuf(markup);
 }
 
+static void examine_notify_indented(EvaluationContext *evaluation, DbRef player,
+                                    const char *text) {
+  char *buffer = alloc_lbuf("examine_notify_indented");
+
+  snprintf(buffer, LBUF_SIZE, "  %s", text);
+  notify_checked(evaluation, player, player, buffer, MSG_ME_ALL | MSG_F_DOWN);
+  free_lbuf(buffer);
+}
+
 static void debug_examine(EvaluationContext *evaluation, DbRef player,
                           DbRef thing) {
   char *buf;
@@ -173,7 +182,7 @@ void do_examine(CommandInvocation *invocation) {
            game_object_contents(evaluation->world->database, thing)) {
       buf2 = unparse_object(evaluation->world->database, evaluation, player,
                             content);
-      notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
+      examine_notify_indented(evaluation, player, buf2);
       free_lbuf(buf2);
     }
   }
@@ -195,8 +204,7 @@ void do_examine(CommandInvocation *invocation) {
              game_object_exits(evaluation->world->database, thing)) {
         buf2 = unparse_object(evaluation->world->database, evaluation, player,
                               exit);
-        notify_checked(evaluation, player, player, buf2,
-                       MSG_ME_ALL | MSG_F_DOWN);
+        examine_notify_indented(evaluation, player, buf2);
         free_lbuf(buf2);
       }
     } else {
@@ -230,8 +238,7 @@ void do_examine(CommandInvocation *invocation) {
              game_object_exits(evaluation->world->database, thing)) {
         buf2 = unparse_object(evaluation->world->database, evaluation, player,
                               exit);
-        notify_checked(evaluation, player, player, buf2,
-                       MSG_ME_ALL | MSG_F_DOWN);
+        examine_notify_indented(evaluation, player, buf2);
         free_lbuf(buf2);
       }
     } else {

@@ -38,6 +38,28 @@
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
+void battle_map_dynamic_destroy(BattleMap *map) {
+  int allocated_slots;
+
+  if (!map)
+    return;
+  allocated_slots = map->dynamic_size;
+  /* Restored maps may have slot data before their allocation size is
+   * updated. */
+  if (allocated_slots < map->first_free)
+    allocated_slots = map->first_free;
+  if (map->LOSinfo)
+    for (int index = 0; index < allocated_slots; index++)
+      free(map->LOSinfo[index]);
+  free(map->LOSinfo);
+  free(map->mechflags);
+  free(map->mechsOnMap);
+  map->LOSinfo = nullptr;
+  map->mechflags = nullptr;
+  map->mechsOnMap = nullptr;
+  map->dynamic_size = 0;
+}
+
 int battle_map_unit_count(const BattleMap *map) { return map->first_free; }
 
 DbRef battle_map_unit_dbref(const BattleMap *map, int index) {
