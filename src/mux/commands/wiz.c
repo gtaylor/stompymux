@@ -184,11 +184,10 @@ void do_teleport(CommandInvocation *invocation) {
               victim));
       game_object_set_exits(evaluation->world->database, victim, destination);
 
-      if (!is_quiet(evaluation->world->database, player))
-        notify_checked(evaluation, player, player, "Exit teleported.", MSG_ME);
+      notify_checked(evaluation, player, player, "Exit teleported.", MSG_ME);
     } else if (move_via_teleport(evaluation, victim, destination, cause,
                                  hush)) {
-      if (player != victim && !is_quiet(evaluation->world->database, player))
+      if (player != victim)
         notify_checked(evaluation, player, player, "Teleported.", MSG_ME);
     }
   } else if (is_exit(evaluation->world->database, destination)) {
@@ -457,12 +456,10 @@ void do_global(CommandInvocation *invocation) {
       global_control_value(invocation->context->world->configuration, control);
   if (key == GLOB_ENABLE) {
     *is_enabled = true;
-    if (!is_quiet(evaluation->world->database, player))
-      notify_checked(evaluation, player, player, "Enabled.", MSG_ME);
+    notify_checked(evaluation, player, player, "Enabled.", MSG_ME);
   } else if (key == GLOB_DISABLE) {
     *is_enabled = false;
-    if (!is_quiet(evaluation->world->database, player))
-      notify_checked(evaluation, player, player, "Disabled.", MSG_ME);
+    notify_checked(evaluation, player, player, "Disabled.", MSG_ME);
   } else {
     notify_checked(evaluation, player, player,
                    "Illegal combination of switches.", MSG_ME);

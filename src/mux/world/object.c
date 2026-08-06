@@ -359,11 +359,9 @@ void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
   /* Halt any pending commands. */
   halt_que(evaluation->runtime->commands, NOTHING, obj);
 
-  if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
-    if (!is_quiet(evaluation->world->database, obj))
-      notify_checked(evaluation, player, player, "Destroyed.",
-                     MSG_ME_ALL | MSG_F_DOWN);
-  }
+  if (player != NOTHING)
+    notify_checked(evaluation, player, player, "Destroyed.",
+                   MSG_ME_ALL | MSG_F_DOWN);
 
   attribute_free(evaluation->world->database, obj);
   /* object_name_set()'s parameter isn't const-correct; "Garbage" is only

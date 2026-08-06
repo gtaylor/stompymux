@@ -5,7 +5,7 @@
 #include "mux/objects/attrs.h"
 #include "mux/persistence/gamedb_sqlite_internal.h"
 
-// Increment whenever the schema written by this module changes.
+// Increment whenever an incompatible schema change is made.
 const int GAMEDB_SCHEMA_VERSION = 25;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
@@ -66,8 +66,6 @@ const char schema_objects_sql[] =
     "(0, 1)),"
     " has_no_command_flag INTEGER NOT NULL DEFAULT 0 CHECK "
     "(has_no_command_flag IN (0, 1)),"
-    " has_quiet_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_quiet_flag IN (0, "
-    "1)),"
     " has_safe_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_safe_flag IN (0, 1)),"
     " has_suspect_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_suspect_flag IN "
     "(0, 1)),"

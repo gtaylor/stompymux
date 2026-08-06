@@ -384,8 +384,7 @@ void do_admin(CommandInvocation *invocation) {
   i = configuration_set(invocation->context->runtime->configuration_context,
                         invocation->first, invocation->second,
                         invocation->player);
-  if ((i >= 0) &&
-      !is_quiet(invocation->context->world->database, invocation->player))
+  if (i >= 0)
     notify_checked(&invocation->context->evaluation, invocation->player,
                    invocation->player, "Set.", MSG_ME_ALL | MSG_F_DOWN);
 }

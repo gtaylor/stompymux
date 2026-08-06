@@ -108,8 +108,7 @@ void do_alias(CommandInvocation *invocation) {
 
       delete_player_name(invocation->context->world, thing, oldalias);
       attribute_clear(evaluation->world->database, thing, A_ALIAS);
-      if (!is_quiet(evaluation->world->database, player))
-        notify_checked(evaluation, player, player, "Alias removed.", MSG_ME);
+      notify_checked(evaluation, player, player, "Alias removed.", MSG_ME);
     } else if (lookup_player(invocation->context->world, NOTHING, trimalias,
                              0) != NOTHING) {
 
@@ -134,8 +133,7 @@ void do_alias(CommandInvocation *invocation) {
       attribute_add(evaluation->world->database, thing, A_ALIAS, trimalias,
                     aflags);
       if (add_player_name(invocation->context->world, thing, trimalias)) {
-        if (!is_quiet(evaluation->world->database, player))
-          notify_checked(evaluation, player, player, "Alias set.", MSG_ME);
+        notify_checked(evaluation, player, player, "Alias set.", MSG_ME);
       } else {
         notify_checked(
             evaluation, player, player,
@@ -320,8 +318,7 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
         is_xcode(evaluation->world->database, thing));
     if (attrnum == A_XTYPE)
       btech_special_object_type_register(evaluation->btech, player, thing);
-    if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player) &&
-        !is_quiet(evaluation->world->database, thing))
+    if (!(key & SET_QUIET))
       notify_printf(evaluation, player, "%s/%s - %s",
                     game_object_name(evaluation->world->database, thing),
                     attr->name, strlen(attrtext) ? "Set." : "Cleared.");

@@ -146,7 +146,7 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
   }
 
   game_object_set_power(evaluation->world->database, target, fp->id, !negate);
-  if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player))
+  if (!(key & SET_QUIET))
     notify_printf(evaluation, player, "%s - %s %s",
                   game_object_name(evaluation->world->database, target),
                   fp->powername, negate ? "removed." : "granted.");

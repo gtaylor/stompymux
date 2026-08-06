@@ -52,8 +52,6 @@ bool game_object_has_flag(GameDatabase *database, DbRef object,
     return game_object->has_monitor_flag;
   case OBJECT_FLAG_NO_COMMAND:
     return game_object->has_no_command_flag;
-  case OBJECT_FLAG_QUIET:
-    return game_object->has_quiet_flag;
   case OBJECT_FLAG_SAFE:
     return game_object->has_safe_flag;
   case OBJECT_FLAG_SUSPECT:
@@ -119,9 +117,6 @@ void game_object_set_flag(GameDatabase *database, DbRef object, ObjectFlag flag,
     break;
   case OBJECT_FLAG_NO_COMMAND:
     game_object->has_no_command_flag = value;
-    break;
-  case OBJECT_FLAG_QUIET:
-    game_object->has_quiet_flag = value;
     break;
   case OBJECT_FLAG_SAFE:
     game_object->has_safe_flag = value;
@@ -307,7 +302,6 @@ FlagEntry gen_flags[] = {
     {"LIGHT", OBJECT_FLAG_LIGHT, 'l', flag_wizard},
     {"MONITOR", OBJECT_FLAG_MONITOR, 'M', flag_wizard},
     {"NO_COMMAND", OBJECT_FLAG_NO_COMMAND, 'n', flag_wizard},
-    {"QUIET", OBJECT_FLAG_QUIET, 'Q', flag_wizard},
     {"SAFE", OBJECT_FLAG_SAFE, 's', flag_wizard},
     {"SUSPECT", OBJECT_FLAG_SUSPECT, 'u', flag_wizard},
     {"TRANSPARENT", OBJECT_FLAG_TRANSPARENT, 't', flag_wizard},
@@ -390,7 +384,7 @@ void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
                    MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
-  if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player))
+  if (!(key & SET_QUIET))
     notify_printf(evaluation, player, "%s - %s %s",
                   game_object_name(evaluation->world->database, target),
                   flag->flagname, clear ? "cleared." : "set.");

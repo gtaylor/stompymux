@@ -683,11 +683,9 @@ void database_check(EvaluationContext *evaluation, DbRef player, int key) {
   check_floating(evaluation);
   object_purge_going(evaluation, full_check);
 
-  if (player != NOTHING) {
-    if (!is_quiet(evaluation->world->database, player))
-      notify_checked(evaluation, player, player, "Done.",
-                     MSG_ME_ALL | MSG_F_DOWN);
-  }
+  if (player != NOTHING)
+    notify_checked(evaluation, player, player, "Done.",
+                   MSG_ME_ALL | MSG_F_DOWN);
 }
 
 void do_dbck(CommandInvocation *invocation) {

@@ -40,7 +40,6 @@ functions. Lua logic can invoke an appropriate native command with
 | `LIGHT` | `l` | `has_light_flag` | Makes a non-DARK object visible inside a DARK location. |
 | `MONITOR` | `M` | `has_monitor_flag` | Subscribes a player to server monitor broadcasts. |
 | `NO_COMMAND` | `n` | `has_no_command_flag` | Excludes commands stored on the object from command matching. |
-| `QUIET` | `Q` | `has_quiet_flag` | Suppresses routine confirmations and many movement or management messages. |
 | `SAFE` | `s` | `has_safe_flag` | Protects a non-player object from normal destruction. |
 | `SUSPECT` | `u` | `has_suspect_flag` | Reports the player's connections and commands to monitoring staff and blocks commands that disallow suspect users. |
 | `TRANSPARENT` | `t` | `has_transparent_flag` | Exposes contents through native `look` presentation. |

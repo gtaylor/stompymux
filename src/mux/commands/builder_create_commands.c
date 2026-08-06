@@ -238,8 +238,7 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
    */
 
   game_object_set_location(evaluation->world->database, exit, dest);
-  if (!is_quiet(evaluation->world->database, player))
-    notify_checked(evaluation, player, player, "Linked.", MSG_ME);
+  notify_checked(evaluation, player, player, "Linked.", MSG_ME);
 }
 
 void do_link(CommandInvocation *invocation) {
@@ -317,8 +316,7 @@ void do_link(CommandInvocation *invocation) {
                      MSG_ME);
     } else {
       game_object_set_link(evaluation->world->database, thing, room);
-      if (!is_quiet(evaluation->world->database, player))
-        notify_checked(evaluation, player, player, "Home set.", MSG_ME);
+      notify_checked(evaluation, player, player, "Home set.", MSG_ME);
     }
     break;
   case OBJECT_TYPE_ROOM:
@@ -349,8 +347,7 @@ void do_link(CommandInvocation *invocation) {
                           nullptr, LUA_EVENT_NONE);
     } else {
       game_object_set_location(evaluation->world->database, thing, room);
-      if (!is_quiet(evaluation->world->database, player))
-        notify_checked(evaluation, player, player, "Dropto set.", MSG_ME);
+      notify_checked(evaluation, player, player, "Dropto set.", MSG_ME);
     }
     break;
   case OBJECT_TYPE_GARBAGE:
@@ -447,11 +444,9 @@ void do_create(CommandInvocation *invocation) {
   move_via_generic(evaluation, thing, player, NOTHING, 0);
   game_object_set_link(evaluation->world->database, thing,
                        new_home(evaluation, player));
-  if (!is_quiet(evaluation->world->database, player)) {
-    notify_printf(evaluation, player, "%s created as object #%ld",
-                  game_object_name(invocation->context->world->database, thing),
-                  thing);
-  }
+  notify_printf(evaluation, player, "%s created as object #%ld",
+                game_object_name(invocation->context->world->database, thing),
+                thing);
 }
 
 /*
@@ -563,17 +558,15 @@ void do_clone(CommandInvocation *invocation) {
    * Tell creator about it
    */
 
-  if (!is_quiet(evaluation->world->database, player)) {
-    if (arg2 && *arg2)
-      notify_printf(
-          evaluation, player, "%s cloned as %s, new copy is object #%ld.",
-          game_object_name(invocation->context->world->database, thing), arg2,
-          clone);
-    else
-      notify_printf(
-          evaluation, player, "%s cloned, new copy is object #%ld.",
-          game_object_name(invocation->context->world->database, thing), clone);
-  }
+  if (arg2 && *arg2)
+    notify_printf(evaluation, player,
+                  "%s cloned as %s, new copy is object #%ld.",
+                  game_object_name(invocation->context->world->database, thing),
+                  arg2, clone);
+  else
+    notify_printf(evaluation, player, "%s cloned, new copy is object #%ld.",
+                  game_object_name(invocation->context->world->database, thing),
+                  clone);
   /*
    * Put the new thing in its new home.  Break any dropto or link, then
    * * * * * * * try to re-establish it.

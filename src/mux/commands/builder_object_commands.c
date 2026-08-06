@@ -183,9 +183,7 @@ void do_name(CommandInvocation *invocation) {
     add_player_name(
         invocation->context->world, thing,
         game_object_pure_name(invocation->context->world->database, thing));
-    if (!is_quiet(evaluation->world->database, player) &&
-        !is_quiet(evaluation->world->database, thing))
-      notify_checked(evaluation, player, player, "Name set.", MSG_ME);
+    notify_checked(evaluation, player, player, "Name set.", MSG_ME);
     free_lbuf(buff);
     free_lbuf(compiled_name);
     return;
@@ -202,9 +200,7 @@ void do_name(CommandInvocation *invocation) {
      * everything ok, change the name
      */
     object_name_set(invocation->context->world->database, thing, newname);
-    if (!is_quiet(evaluation->world->database, player) &&
-        !is_quiet(evaluation->world->database, thing))
-      notify_checked(evaluation, player, player, "Name set.", MSG_ME);
+    notify_checked(evaluation, player, player, "Name set.", MSG_ME);
   }
   free_lbuf(compiled_name);
 }
@@ -238,13 +234,11 @@ void do_unlink(CommandInvocation *invocation) {
       switch (typeof_obj(evaluation->world->database, exit)) {
       case OBJECT_TYPE_EXIT:
         game_object_set_location(evaluation->world->database, exit, NOTHING);
-        if (!is_quiet(evaluation->world->database, player))
-          notify_checked(evaluation, player, player, "Unlinked.", MSG_ME);
+        notify_checked(evaluation, player, player, "Unlinked.", MSG_ME);
         break;
       case OBJECT_TYPE_ROOM:
         game_object_set_location(evaluation->world->database, exit, NOTHING);
-        if (!is_quiet(evaluation->world->database, player))
-          notify_checked(evaluation, player, player, "Dropto removed.", MSG_ME);
+        notify_checked(evaluation, player, player, "Dropto removed.", MSG_ME);
         break;
       default:
         notify_checked(evaluation, player, player, "You can't unlink that!",

@@ -156,9 +156,8 @@ void do_get(CommandInvocation *invocation) {
                      game_object_exits(evaluation->world->database, player),
                      thing));
     game_object_set_exits(evaluation->world->database, thing, player);
-    if (!is_quiet(evaluation->world->database, player))
-      notify_checked(evaluation, player, player, "Exit taken.",
-                     MSG_ME_ALL | MSG_F_DOWN);
+    notify_checked(evaluation, player, player, "Exit taken.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     break;
   default:
     notify_checked(evaluation, player, player, "You can't take that!",
@@ -299,9 +298,8 @@ void do_drop(CommandInvocation *invocation) {
                      thing));
     game_object_set_exits(evaluation->world->database, thing, loc);
 
-    if (!is_quiet(evaluation->world->database, player))
-      notify_checked(evaluation, player, player, "Exit dropped.",
-                     MSG_ME_ALL | MSG_F_DOWN);
+    notify_checked(evaluation, player, player, "Exit dropped.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     break;
   default:
     notify_checked(evaluation, player, player, "You can't drop that.",

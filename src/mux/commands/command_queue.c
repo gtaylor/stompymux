@@ -364,8 +364,6 @@ void do_halt(CommandInvocation *invocation) {
   }
 
   numhalted = halt_que(queue, player_targ, obj_targ);
-  if (is_quiet(queue->world->database, player))
-    return;
   if (numhalted == 1)
     notify_checked(evaluation, player, player, "1 queue entries removed.",
                    MSG_ME_ALL | MSG_F_DOWN);

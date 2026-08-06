@@ -421,10 +421,10 @@ static int check_snapshot(const char *path) {
           "'has_connected_flag', 'has_dark_flag', 'has_floating_flag', "
           "'has_gagged_flag', 'has_going_flag', 'has_halted_flag', "
           "'has_in_character_flag', 'has_light_flag', 'has_monitor_flag', "
-          "'has_no_command_flag', 'has_quiet_flag', "
+          "'has_no_command_flag', "
           "'has_safe_flag', 'has_suspect_flag', 'has_transparent_flag', "
           "'has_wizard_flag', 'has_xcode_flag', 'has_zombie_flag');",
-          23) == 0 &&
+          22) == 0 &&
       query_int(
           sqlite,
           "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1);",

@@ -77,7 +77,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       "has_floating_flag, has_gagged_flag, has_going_flag, "
       "has_halted_flag, "
       "has_in_character_flag, has_light_flag, has_monitor_flag, "
-      "has_no_command_flag, has_quiet_flag, has_safe_flag, "
+      "has_no_command_flag, has_safe_flag, "
       "has_suspect_flag, has_transparent_flag, has_wizard_flag, "
       "has_xcode_flag, has_zombie_flag, has_idle_power "
       "FROM objects "
@@ -115,7 +115,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
           result = -1;
       for (PowerId power = POWER_IDLE; result == 0 && power < POWER_COUNT;
            power++)
-        if (gamedb_column_bool(statement, 30 + (int)power, &powers[power]) < 0)
+        if (gamedb_column_bool(statement, 29 + (int)power, &powers[power]) < 0)
           result = -1;
       if (result != 0)
         continue;

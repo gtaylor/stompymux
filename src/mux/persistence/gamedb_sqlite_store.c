@@ -107,12 +107,12 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
           "has_dark_flag, has_floating_flag, has_gagged_flag, has_going_flag, "
           "has_halted_flag, has_in_character_flag, has_light_flag, "
           "has_monitor_flag, has_no_command_flag, "
-          "has_quiet_flag, has_safe_flag, has_suspect_flag, "
+          "has_safe_flag, has_suspect_flag, "
           "has_transparent_flag, has_wizard_flag, has_xcode_flag, "
           "has_zombie_flag, "
           "has_idle_power) "
           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
       gamedb_prepare(sqlite, &object_state,
                      "INSERT INTO object_state "
                      "(object_dbref, namespace, key, value_type, value) "
@@ -165,7 +165,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
     }
     for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++) {
       if (gamedb_bind_int(
-              objects, 31 + (int)power,
+              objects, 30 + (int)power,
               game_object_has_power(context->database, object, power)) < 0)
         return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state,
                                       0);

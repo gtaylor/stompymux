@@ -502,27 +502,9 @@ char *FindPilotingSkillName(Mech *mech) {
   return NULL;
 }
 
-#define MECHSKILL_PILOTING 0
-#define MECHSKILL_GUNNERY 1
-#define MECHSKILL_SPOTTING 2
-#define MECHSKILL_ARTILLERY 3
-#define NUM_MECHSKILLS 4
-
-// TODO: Replace this with a function.
-#define GENERIC_FIND_MECHSKILL(num, n)                                         \
-  if (is_quiet(mech->xcode.context->database, mech->mynum)) {                  \
-    str = btech_attribute_read(mech->xcode.context->database, mech->mynum,     \
-                               A_MECHSKILLS, (char[LBUF_SIZE]){0});            \
-    if (*str)                                                                  \
-      if (sscanf(str, "%d %d %d %d", &i[0], &i[1], &i[2], &i[3]) > num)        \
-        return i[num] - n;                                                     \
-  }
-
 int FindPilotPiloting(Mech *mech) {
   char *str;
-  int i[NUM_MECHSKILLS];
 
-  GENERIC_FIND_MECHSKILL(MECHSKILL_PILOTING, 0);
   if (mech_has_active_pilot(mech))
     if ((str = FindPilotingSkillName(mech)))
       return char_getskilltarget(mech->xcode.context, MechPilot(mech), str, 0);
@@ -534,10 +516,6 @@ int FindSPilotPiloting(Mech *mech) {
 }
 
 int FindPilotSpotting(Mech *mech) {
-  char *str;
-  int i[NUM_MECHSKILLS];
-
-  GENERIC_FIND_MECHSKILL(MECHSKILL_SPOTTING, 0);
   if (mech_has_active_pilot(mech))
     return (char_getskilltarget(mech->xcode.context, MechPilot(mech),
                                 "Gunnery-Spotting", 0));
@@ -545,10 +523,6 @@ int FindPilotSpotting(Mech *mech) {
 }
 
 int FindPilotArtyGun(Mech *mech) {
-  char *str;
-  int i[NUM_MECHSKILLS];
-
-  GENERIC_FIND_MECHSKILL(MECHSKILL_ARTILLERY, 0);
   if (mech_has_active_gunner(mech))
     return (char_getskilltarget(mech->xcode.context, GunPilot(mech),
                                 "Gunnery-Artillery", 0));
@@ -557,9 +531,7 @@ int FindPilotArtyGun(Mech *mech) {
 
 int FindPilotGunnery(Mech *mech, int weapindx) {
   char *str;
-  int i[NUM_MECHSKILLS];
 
-  GENERIC_FIND_MECHSKILL(MECHSKILL_GUNNERY, 0);
   if (mech_has_active_gunner(mech))
     if ((str = FindGunnerySkillName(mech, weapindx)))
       return char_getskilltarget(mech->xcode.context, GunPilot(mech), str, 0);

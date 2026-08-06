@@ -244,8 +244,7 @@ static void mech_startup_event(MuxEvent *e) {
       mech_landed_set(mech, true);
   }
   mech_communication_skill_set(mech, DEFAULT_COMM);
-  if (is_player(btech_context_database(context), mech_pilot_dbref(mech)) &&
-      !is_quiet(btech_context_database(context), mech_dbref(mech))) {
+  if (is_player(btech_context_database(context), mech_pilot_dbref(mech))) {
     mech_communication_skill_set(
         mech, char_getskilltarget(context, mech_pilot_dbref(mech),
                                   "Comm-Conventional", 0));

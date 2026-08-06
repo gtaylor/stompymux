@@ -271,7 +271,7 @@ void fcache_load(EvaluationContext *evaluation, FileCache *cache,
   buff = bufc = alloc_lbuf("fcache_load.lbuf");
   for (fp = cache->entries; fp < cache->entries + FC_LAST + 1; fp++) {
     i = fcache_read(evaluation, &fp->fileblock, fp->filename);
-    if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
+    if (player != NOTHING) {
       snprintf(sbuf, SBUF_SIZE, "%d", i);
       if (fp == cache->entries)
         safe_str("File sizes: ", buff, &bufc);
@@ -287,7 +287,7 @@ void fcache_load(EvaluationContext *evaluation, FileCache *cache,
     fcache_read_dir(evaluation, cache->configuration->conn_dir,
                     cache->connection_entries, &cache->connection_count,
                     MAX_CONN);
-  if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
+  if (player != NOTHING) {
     notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   }
   free_lbuf(buff);

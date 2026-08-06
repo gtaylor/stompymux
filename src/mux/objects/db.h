@@ -101,7 +101,6 @@ struct GameObject {
   bool has_light_flag;
   bool has_monitor_flag;
   bool has_no_command_flag;
-  bool has_quiet_flag;
   bool has_safe_flag;
   bool has_suspect_flag;
   bool has_transparent_flag;

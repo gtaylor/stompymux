@@ -76,8 +76,7 @@ int tele_contents(BtechContext *context, DbRef from, DbRef to, int flag) {
   SAFE_DOLIST(database, i, tmpnext, game_object_contents(database, from))
   if ((flag & TELE_ALL) || !is_wizard(database, i)) {
     if (flag & TELE_XP && !is_wizard(database, i))
-      if (!(is_quiet(database, from)))
-        lower_xp(context, i, btech_context_experience_loss(context));
+      lower_xp(context, i, btech_context_experience_loss(context));
     move_via_teleport(evaluation, i, to, 1, flag & TELE_LOUD ? 0 : 7);
     count++;
   }
@@ -501,8 +500,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
                  : 0));
   mech_communication_skill_set(mech, DEFAULT_COMM);
 
-  if (is_player(database, mech_pilot_dbref(mech)) &&
-      !is_quiet(database, mech_dbref(mech))) {
+  if (is_player(database, mech_pilot_dbref(mech))) {
     mech_communication_skill_set(
         mech, char_getskilltarget(mech_context(mech), mech_pilot_dbref(mech),
                                   "Comm-Conventional", 0));
