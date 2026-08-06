@@ -77,6 +77,7 @@ void display_flagtab(EvaluationContext *, DbRef);
 void flag_set(EvaluationContext *, WorldIndexes *indexes, DbRef, DbRef, char *,
               int);
 char *flag_description(GameDatabase *, DbRef, DbRef);
+char *flags_description(GameDatabase *, DbRef, DbRef);
 FlagEntry *find_flag(WorldIndexes *, DbRef, char *);
 char *decode_flags(GameDatabase *, DbRef, int, const ObjectFlagSet *);
 bool has_flag(WorldContext *world, DbRef, DbRef, char *);

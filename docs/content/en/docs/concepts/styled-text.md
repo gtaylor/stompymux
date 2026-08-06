@@ -12,8 +12,8 @@ when a user activates a rendered link.
 
 ```text
 @name drone=[fg=bright-cyan]Aegis[/]
-@desc drone=A shell of [fg=#d78700]burnished amber[/] metal.
-@idesc dropship=[fg=#8090ff bold]Cool blue light[/] fills the cabin.
+@attribute/set drone/Desc=A shell of [fg=#d78700]burnished amber[/] metal.
+@attribute/set dropship/Idesc=[fg=#8090ff bold]Cool blue light[/] fills the cabin.
 ```
 
 ## Syntax

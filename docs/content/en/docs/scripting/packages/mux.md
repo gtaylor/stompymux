@@ -54,6 +54,23 @@ without sending lock messages or moving the enactor.
 Methods accepting objects permit either an object handle or a dbref. Passing
 an invalid or garbage object raises a Lua error.
 
+## Native attributes
+
+`object:attribute()` exposes the same safe native-attribute set as the
+Wizard-only `@attribute` command. It is distinct from dynamic `object:state`.
+
+```lua
+local attributes = mux.object(ctx.object):attribute()
+attributes:set("Mechname", "H-7")
+local name = attributes:get("Mechname")
+local all = attributes:entries()
+```
+
+`get` returns `nil` for an unset attribute, `set(name, nil)` clears an
+attribute, and `entries` returns every supported attribute with empty strings
+for unset values. Lua modules are trusted server code, but only descriptions
+and BattleTech-native attributes are available through this API.
+
 ## Typed persistent state
 
 `object:state(namespace)` returns persistent state belonging to one named
@@ -110,7 +127,7 @@ assert(not mux.is_printable_ascii("caf\u00e9"))
 ```
 
 `mux.markup(value)` validates and returns the same styled-text markup accepted by
-`@name`, `@desc`, and `@idesc`.
+`@name` and `@attribute/set` for `Desc` or `Idesc`.
 
 ```lua
 local heading = mux.markup("[fg=#ff7000][bold]Warning[/][/]")

@@ -22,6 +22,7 @@
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
+#include "mux/world/object_set.h"
 
 extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
 
@@ -71,14 +72,38 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
                 object_state_count(evaluation->world->database, thing));
 }
 
+static void examine_native_attributes(EvaluationContext *evaluation,
+                                      DbRef player, DbRef thing) {
+  GameDatabase *database = evaluation->world->database;
+  bool has_attributes = false;
+
+  for (Attribute *entry = attr_table; entry->number; entry++) {
+    const char *value;
+
+    if (!object_attribute_is_administrable(entry->number))
+      continue;
+    value = attribute_get_raw(database, thing, entry->number);
+    if (!value || !*value)
+      continue;
+    if (!has_attributes) {
+      notify_checked(evaluation, player, player,
+                     "Attributes:", MSG_ME_ALL | MSG_F_DOWN);
+      has_attributes = true;
+    }
+    char label[MBUF_SIZE];
+
+    snprintf(label, sizeof label, "  %s", entry->name);
+    examine_notify_markup(evaluation, player, label, value);
+  }
+}
+
 void do_examine(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef player = invocation->player;
   const int key = invocation->key;
   char *name = invocation->first;
   DbRef thing, content, exit, loc;
-  char *temp, *buf2;
-  long aflags;
+  char *buf2;
 
   /*
    * This command is pointless if the player can't hear.
@@ -114,29 +139,23 @@ void do_examine(CommandInvocation *invocation) {
   buf2 = unparse_object(evaluation->world->database, evaluation, player, thing);
   examine_notify_markup(evaluation, player, nullptr, buf2);
   free_lbuf(buf2);
-  buf2 = flag_description(evaluation->world->database, player, thing);
+  notify_printf(
+      evaluation, player, "Type: %s",
+      object_types[typeof_obj(evaluation->world->database, thing)].name);
+  buf2 = flags_description(evaluation->world->database, player, thing);
   notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
   free_mbuf(buf2);
 
-  temp = alloc_lbuf("do_examine.info");
-  temp = attribute_get_string(evaluation->world->database, temp, thing, A_DESC,
-                              &aflags);
-  if (*temp)
-    examine_notify_markup(evaluation, player, "Desc", temp);
-  temp = attribute_get_string(evaluation->world->database, temp, thing, A_IDESC,
-                              &aflags);
-  if (*temp)
-    examine_notify_markup(evaluation, player, "Idesc", temp);
-
+  buf2 = power_description(evaluation->world->database, player, thing);
+  notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
+  free_mbuf(buf2);
+  examine_native_attributes(evaluation, player, thing);
   buf2 = unparse_object(evaluation->world->database, evaluation, player,
                         game_object_zone(evaluation->world->database, thing));
   notify_printf(evaluation, player, "Zone: %s", buf2);
   free_lbuf(buf2);
   lua_examine_object(invocation->context->runtime->lua_owner->runtime,
                      evaluation, player, thing);
-  buf2 = power_description(evaluation->world->database, player, thing);
-  notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
-  free_mbuf(buf2);
   if (!(key & EXAM_BRIEF))
     state_examine_namespaces(evaluation, player, thing);
   /*
@@ -271,7 +290,6 @@ void do_examine(CommandInvocation *invocation) {
   default:
     break;
   }
-  free_lbuf(temp);
 }
 
 void do_inventory(CommandInvocation *invocation) {

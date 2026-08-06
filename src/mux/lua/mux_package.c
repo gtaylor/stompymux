@@ -12,6 +12,7 @@ LuaMuxPackage *lua_mux_package_get(lua_State *state) {
 
 const char LUA_MUX_OBJECT_METATABLE[] = "btmux.object";
 const char LUA_MUX_STATE_METATABLE[] = "btmux.object_state";
+const char LUA_MUX_ATTRIBUTE_METATABLE[] = "btmux.object_attribute";
 
 bool lua_mux_package_transaction_begin(LuaMuxPackage *package) {
   return object_state_transaction_begin(&package->state_transaction,
@@ -41,6 +42,7 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_newtable(state);
   lua_mux_install_object_bindings(state, package);
   lua_mux_install_state_bindings(state, package);
+  lua_mux_install_attribute_bindings(state, package);
   lua_mux_install_text_bindings(state, package);
   lua_mux_install_connection_bindings(state, package);
   lua_setglobal(state, "mux");

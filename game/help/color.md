@@ -17,8 +17,8 @@ most recent style with `[/]`.
 
 ```text
 @name drone=[fg=bright-cyan]Aegis[/]
-@desc drone=A shell of [fg=#d78700]burnished amber[/] metal.
-@idesc dropship=[bg=#101830 fg=bright-white]Cool light fills the cabin.[/]
+@attribute/set drone/Desc=A shell of [fg=#d78700]burnished amber[/] metal.
+@attribute/set dropship/Idesc=[bg=#101830 fg=bright-white]Cool light fills the cabin.[/]
 ```
 
 Colors accept three forms: an opaque CSS/X11 name such as `red`, exactly six

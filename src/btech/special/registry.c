@@ -332,8 +332,9 @@ void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
   str = btech_attribute_read(context->database, key, A_XTYPE,
                              (char[LBUF_SIZE]){0});
   if (!(str && *str)) {
-    notify(btech_context_evaluation(context), player,
-           "You must first set the XTYPE using @xtype <object>=<type>");
+    notify(
+        btech_context_evaluation(context), player,
+        "You must first set Xtype using @attribute/set <object>/Xtype=<type>");
     notify(btech_context_evaluation(context), player,
            "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
            "AUTOPILOT, TURRET.");
@@ -543,6 +544,54 @@ void btech_special_object_flag_changed(BtechContext *context, DbRef player,
     c_xcode(context->database, obj);
   } else
     CreateNewSpecialObject(context, player, obj);
+}
+
+bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
+                                       const char *type, char *error,
+                                       size_t error_size) {
+  BtechSpecialObject *registered;
+  int requested = -1;
+
+  if (!*type) {
+    if (is_xcode(context->database, object)) {
+      snprintf(error, error_size, "cannot clear XTYPE while XCODE is set");
+      return false;
+    }
+    return true;
+  }
+  for (int index = 0; index < (int)NUM_SPECIAL_OBJECTS; index++) {
+    if (!strcmp(SpecialObjects[index].type, type)) {
+      requested = index;
+      break;
+    }
+  }
+  if (requested < 0) {
+    snprintf(error, error_size, "invalid XTYPE %s", type);
+    return false;
+  }
+  if (!is_xcode(context->database, object))
+    return true;
+
+  registered = btech_context_find_object(context, object);
+  if (registered && (int)registered->type != requested) {
+    snprintf(error, error_size,
+             "cannot change XTYPE while the XCODE object is registered");
+    return false;
+  }
+  return true;
+}
+
+void btech_special_object_type_register(BtechContext *context, DbRef player,
+                                        DbRef object) {
+  int type;
+
+  if (!is_xcode(context->database, object) ||
+      btech_context_find_object(context, object))
+    return;
+  type = btech_context_which_special_attribute(context, object);
+  if (type >= 0 && btech_special_object_data_size(&SpecialObjects[type]) > 0)
+    NewSpecialObject(context, object, type);
+  (void)player;
 }
 
 #undef notify

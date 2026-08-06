@@ -57,6 +57,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/btech_package.c
   ${MUX_MODULE_DIR}/lua/mux_package.c
   ${MUX_MODULE_DIR}/lua/mux_object_bindings.c
+  ${MUX_MODULE_DIR}/lua/mux_attribute_bindings.c
   ${MUX_MODULE_DIR}/lua/mux_text_bindings.c
   ${MUX_MODULE_DIR}/lua/mux_state_bindings.c
   ${MUX_MODULE_DIR}/lua/mux_connection_bindings.c

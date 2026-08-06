@@ -3,6 +3,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "btech/ids.h"
 
@@ -17,3 +18,9 @@ void btech_special_object_flag_changed(BtechContext *context,
                                        BtechObjectId player,
                                        BtechObjectId object,
                                        bool previously_enabled, bool enabled);
+bool btech_special_object_type_can_set(BtechContext *context,
+                                       BtechObjectId object, const char *type,
+                                       char *error, size_t error_size);
+void btech_special_object_type_register(BtechContext *context,
+                                        BtechObjectId player,
+                                        BtechObjectId object);

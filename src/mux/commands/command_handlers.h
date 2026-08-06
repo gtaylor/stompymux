@@ -21,6 +21,7 @@ void do_delcom(CommandInvocation *invocation);       /* deletes a comalias */
 void do_tapcom(DbRef, DbRef, int, char *, char *);   /* taps a channel */
 
 void do_admin(CommandInvocation *invocation); /* Change config parameters */
+void do_attribute(CommandInvocation *invocation);
 void do_alias(CommandInvocation *invocation);
 void do_boot(CommandInvocation *invocation);
 void do_chzone(CommandInvocation *invocation);

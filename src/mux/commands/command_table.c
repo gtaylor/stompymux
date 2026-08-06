@@ -38,6 +38,13 @@ NameTable boot_sw[] = {{"port", 1, CA_WIZARD, BOOT_PORT | SW_MULTIPLE},
                        {"quiet", 1, CA_WIZARD, BOOT_QUIET | SW_MULTIPLE},
                        {nullptr, 0, 0, 0}};
 
+NameTable attribute_sw[] = {
+    {"get", 1, CA_WIZARD, ATTRIBUTE_GET},
+    {"examine", 1, CA_WIZARD, ATTRIBUTE_EXAMINE},
+    {"set", 1, CA_WIZARD, ATTRIBUTE_SET},
+    {nullptr, 0, 0, 0},
+};
+
 NameTable chan_sw[] = {
     {"boot", 4, CA_PUBLIC, CHAN_BOOT | SW_MULTIPLE},
     {"create", 6, CA_PUBLIC, CHAN_CREATE | SW_MULTIPLE},
@@ -167,6 +174,12 @@ NameTable wall_sw[] = {{"emit", 1, CA_WIZARD, SAY_WALLEMIT},
 
 CMDENT command_table[] = {
     {"@admin", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_admin}},
+    {"@attribute",
+     attribute_sw,
+     CA_WIZARD,
+     0,
+     CS_TWO_ARG,
+     {.invoke = do_attribute}},
     {"@alias", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_alias}},
     {"@boot", boot_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_boot}},
     {"@chan", chan_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chan}},
@@ -190,8 +203,6 @@ CMDENT command_table[] = {
      DEST_ONE,
      CS_ONE_ARG,
      {.invoke = do_destroy}},
-    {"@desc", nullptr, CA_WIZARD, A_DESC, CS_TWO_ARG, {.invoke = do_setattr}},
-    {"@idesc", nullptr, CA_WIZARD, A_IDESC, CS_TWO_ARG, {.invoke = do_setattr}},
     {"@dig", dig_sw, CA_WIZARD, 0, CS_TWO_ARG | CS_ARGV, {.invoke = do_dig}},
     {"@disable",
      nullptr,

@@ -1111,7 +1111,7 @@ static int create_styled_object(int socket_fd) {
     return -1;
   }
   if (send_command(socket_fd,
-                   "@desc RenamedWidget=[send=\"look\" color=red bold "
+                   "@attribute/set RenamedWidget/Desc=[send=\"look\" color=red bold "
                    "hover.color=yellow tooltip=\"Inspect this object\" "
                    "title=\"Actions\" menu.1.label=\"Look\" "
                    "menu.1.send=\"look\" menu.2.label=\"Examine\" "
@@ -1146,7 +1146,8 @@ static int create_styled_object(int socket_fd) {
     fprintf(stderr, "OSC Tier 6 rendering failed\n");
     return -1;
   }
-  if (send_command(socket_fd, "@idesc RenamedWidget=[bg=blue]Inside[/]\r\n") <
+  if (send_command(socket_fd,
+                   "@attribute/set RenamedWidget/Idesc=[bg=blue]Inside[/]\r\n") <
           0 ||
       expect_text(socket_fd, "Idesc - Set.") < 0) {
     fprintf(stderr, "styled-object inside description failed\n");

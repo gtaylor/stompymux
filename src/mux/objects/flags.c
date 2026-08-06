@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "btech/context.h" // IWYU pragma: keep
+#include "btech/special_objects.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_keys.h"
 #include "mux/objects/db.h"
@@ -278,10 +279,20 @@ static bool flag_going(EvaluationContext *evaluation, DbRef target,
 
 static bool flag_xcode(EvaluationContext *evaluation, DbRef target,
                        DbRef player, ObjectFlag flag, bool clear) {
+  bool previously_enabled = is_xcode(evaluation->world->database, target);
+  bool changed;
+
   if (clear && is_xcode(evaluation->world->database, target) &&
       !is_god(evaluation->world->database, player))
     return false;
-  return flag_wizard(evaluation, target, player, flag, clear);
+  if (!flag_wizard(evaluation, target, player, flag, clear))
+    return false;
+  changed = previously_enabled != is_xcode(evaluation->world->database, target);
+  if (changed)
+    btech_special_object_flag_changed(
+        evaluation->btech, player, target, previously_enabled,
+        is_xcode(evaluation->world->database, target));
+  return true;
 }
 
 FlagEntry gen_flags[] = {
@@ -426,6 +437,22 @@ char *flag_description(GameDatabase *database, DbRef player, DbRef target) {
   *out = '\0';
   return buffer;
 }
+
+char *flags_description(GameDatabase *database, DbRef player, DbRef target) {
+  char *buffer = alloc_mbuf("flags_description");
+  char *out = buffer;
+
+  safe_mb_str("Flags:", buffer, &out);
+  (void)player;
+  for (FlagEntry *flag = gen_flags; flag->flagname; flag++)
+    if (game_object_has_flag(database, target, flag->id)) {
+      safe_mb_chr(' ', buffer, &out);
+      safe_mb_str(flag->flagname, buffer, &out);
+    }
+  *out = '\0';
+  return buffer;
+}
+
 char *unparse_object_numonly(GameDatabase *database, DbRef target) {
   char *buffer = alloc_lbuf("unparse_object_numonly");
   if (target == NOTHING)
