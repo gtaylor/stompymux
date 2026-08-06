@@ -151,8 +151,6 @@ NameTable pose_sw[] = {{"default", 1, CA_PUBLIC, 0},
                        {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
                        {nullptr, 0, 0, 0}};
 
-NameTable set_sw[] = {{"quiet", 1, CA_PUBLIC, SET_QUIET}, {nullptr, 0, 0, 0}};
-
 NameTable teleport_sw[] = {{"loud", 1, CA_PUBLIC, TELEPORT_DEFAULT},
                            {"quiet", 1, CA_PUBLIC, TELEPORT_QUIET},
                            {nullptr, 0, 0, 0}};
@@ -300,7 +298,7 @@ CMDENT command_table[] = {
      SRCH_SEARCH,
      CS_ONE_ARG,
      {.invoke = do_search}},
-    {"@set", set_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_set}},
+    {"@flag", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_flag}},
     {"@shutdown", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_shutdown}},
     {"@state", state_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_state}},
     {"@stats", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_stats}},

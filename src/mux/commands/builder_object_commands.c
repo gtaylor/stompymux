@@ -257,16 +257,15 @@ void do_unlink(CommandInvocation *invocation) {
 
 /*
  * ---------------------------------------------------------------------------
- * * do_set: Set flags on objects.
+ * * do_flag: Set flags on objects.
  */
-void do_set(CommandInvocation *invocation) {
+void do_flag(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
-  int key = invocation->key;
   char *name = invocation->first;
   char *flag = invocation->second;
   DbRef thing = match_controlled(&invocation->context->match, player, name);
   if (thing != NOTHING)
     flag_set(evaluation, invocation->context->world->indexes, thing, player,
-             flag, key);
+             flag, 0);
 }

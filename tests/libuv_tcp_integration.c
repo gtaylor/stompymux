@@ -961,6 +961,14 @@ static int create_styled_object(int socket_fd) {
           "cannot override a CSS/X11 name.") < 0 ||
       send_command(socket_fd, "color\r\n") < 0 ||
       expect_text(socket_fd, "Color mode: truecolor (override).") < 0 ||
+      send_command(socket_fd, "@flag me=monitor\r\n") < 0 ||
+      expect_text(socket_fd, "GeeOhDee - MONITOR set.") < 0 ||
+      send_command(socket_fd, "@flag me=!monitor\r\n") < 0 ||
+      expect_text(socket_fd, "GeeOhDee - MONITOR cleared.") < 0 ||
+      send_command(socket_fd, "@flag/quiet me=monitor\r\n") < 0 ||
+      expect_text(socket_fd, "Command @flag does not take switches.") < 0 ||
+      send_command(socket_fd, "@set me=monitor\r\n") < 0 ||
+      expect_text(socket_fd, "Huh?  (Type \"help\" for help.)") < 0 ||
       send_command(socket_fd, "say [fg=red]PublicPlain[/]\r\n") < 0 ||
       expect_text_without(socket_fd, "You say \"PublicPlain\"", "\033[") < 0 ||
       send_command(socket_fd, "page GOD=[fg=red]PrivatePlain[/]\r\n") < 0 ||

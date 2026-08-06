@@ -70,7 +70,7 @@ void do_quit(CommandInvocation *invocation);  /* Disconnect this session */
 void do_readcache(CommandInvocation *invocation); /* Reread text file cache */
 void do_say(CommandInvocation *invocation);       /* Messages to all. */
 void do_search(CommandInvocation *invocation);    /* Search matching objects. */
-void do_set(CommandInvocation *invocation);
+void do_flag(CommandInvocation *invocation);
 void do_setattr(CommandInvocation *invocation);  /* Set object attribute */
 void do_shutdown(CommandInvocation *invocation); /* Stop the game */
 void do_stats(CommandInvocation *invocation); /* Display object statistics. */

@@ -14,8 +14,8 @@ administrator should use the full flag name when issuing a command because
 `ANSI` and `XCODE` both use `X`:
 
 ```text
-@set <object>=<flag>
-@set <object>=!<flag>
+@flag <object>=<flag>
+@flag <object>=!<flag>
 ```
 
 The `mux` Lua package does not currently expose direct flag getter or setter
@@ -100,7 +100,7 @@ handlers add these restrictions:
 | `MONITOR` | Only Wizards or God may change it. |
 | `SUSPECT` | Only Wizards or God may change it. |
 | `WIZARD` | Only God may change it, and God cannot remove it from themself. |
-| `XCODE` | Wizards or God may set it; only God may clear it once set. |
+| `XCODE` | Wizards or God may set or clear it. |
 | `ZOMBIE` | Only Wizards or God may change it. |
 
 Flags not listed in this table have no additional flag-specific restriction.

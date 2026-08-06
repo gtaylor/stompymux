@@ -282,9 +282,6 @@ static bool flag_xcode(EvaluationContext *evaluation, DbRef target,
   bool previously_enabled = is_xcode(evaluation->world->database, target);
   bool changed;
 
-  if (clear && is_xcode(evaluation->world->database, target) &&
-      !is_god(evaluation->world->database, player))
-    return false;
   if (!flag_wizard(evaluation, target, player, flag, clear))
     return false;
   changed = previously_enabled != is_xcode(evaluation->world->database, target);

@@ -16,8 +16,8 @@ appear after an object's type letter in object descriptions. Use the full flag
 name when setting or clearing one:
 
 ```text
-@set <object>=<flag>
-@set <object>=!<flag>
+@flag <object>=<flag>
+@flag <object>=!<flag>
 ```
 
 The normal rules for controlling the target still apply. Lua may inspect and
