@@ -298,6 +298,20 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_parts COMMAND btech_parts_test)
 
+  add_executable(btech_random_test tests/btech_random.c
+    ${BTECH_SOURCE_DIR}/core/random_xoshiro.c
+    ${BTECH_SOURCE_DIR}/ui/mech_stat.c)
+  target_compile_definitions(btech_random_test PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_random_test PRIVATE -ffunction-sections)
+  target_link_options(btech_random_test PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_random_test PRIVATE btmux_options)
+  target_include_directories(btech_random_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_random COMMAND btech_random_test)
+
   add_executable(btech_persistence_schema_test
     tests/btech_persistence_schema.c
     ${BTECH_SOURCE_DIR}/persistence/schema.c)

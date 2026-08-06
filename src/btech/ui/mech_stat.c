@@ -13,7 +13,9 @@
 /* Make statistics 'bout what we do.. whatever it is we _do_ */
 
 #include <assert.h>
-#include <time.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
@@ -26,7 +28,10 @@
 #include "registry_api.h"
 
 void init_stat(BtechContext *context) {
-  btech_random_seed(&context->random, (unsigned long)time(nullptr));
+  if (!btech_random_seed_from_system(&context->random)) {
+    perror("getrandom");
+    exit(EXIT_FAILURE);
+  }
 }
 
 static const int chances[11] = {1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1};
@@ -67,62 +72,31 @@ void do_show_stat(CommandInvocation *invocation) {
 /*
  * Returns an integer chosen randomly from the interval [low,high].
  *
- * To eliminate bias from rounding error, this routine repeatedly takes some
- * number of high order bits from the Mersenne Twister, until it finds a value
- * <= (high - low).  If we take n bits, such that 2^n is the smallest power of
- * two greater than (high - low), then this procedure should only require
- * another iteration 50% or less of the time. (The actual value would be
- * (2^n - (high - low)) / (high - low).) It also always terminates due to the
- * statistical qualities of the Mersenne Twister, although possibly only after
- * several (but generally very few) iterations.
- *
- * For example, computing a D6 should require a second iteration 33% (1/3rd) of
- * the time, a third iteration 11% (1/9th) of the time, a fourth iteration 3.7%
- * (1/27th) of the time, a fifth iteration 1.2% of the time (1/81st) of the
- * time, a sixth iteration 0.4% (1/243rd) of the time, and so on.  Or in other
- * words, this will require fewer than six iterations 99.6% of the time, while
- * completely eliminating rounding bias.
+ * To eliminate modulo bias, this routine repeatedly draws from xoshiro256**
+ * until it finds a value in the largest multiple of the interval width that
+ * fits in a uint64_t. This requires at most one additional draw on average.
  *
  * This code is on the critical path, but modern processors can compute this
  * stuff really fast.  There's really no need to have the compiler inline it to
  * perform further optimization.
  */
 long btech_random_range(BtechContext *context, long low, long high) {
-  const unsigned long int range = (unsigned long int)(high - low);
+  uint64_t width;
+  uint64_t limit;
+  uint64_t value;
 
-  unsigned long value;
-  unsigned int nn;
-
+  assert(context != nullptr);
   assert(high >= low);
 
-  /*
-   * Compute n, the shift value.  We're using the 32-bit version of the
-   * Mersenne Twister, so we only need shifts up to 32. (If we did need a
-   * larger value, we would also need to expand our random number size.)
-   *
-   * We can special case some of the common values (such as n = 8 for
-   * range = 5, for the D6) if this loop becomes a concern.
-   */
-  for (nn = 0; nn < 32; nn++) {
-    if ((range >> nn) == 0)
-      break;
+  width = (uint64_t)high - (uint64_t)low + UINT64_C(1);
+  if (width == 0) {
+    return (long)btech_random_u64(&context->random);
   }
 
-  nn = 32 - nn;
-
-  /* Shifts >= bit width are undefined in C.  At least on x86, they
-   * apparently do nothing, which causes the following do-while loop to
-   * run until the generator returns 0.  */
-  if (nn == 32) {
-    return 0;
-  }
-
-  assert(nn < 32);
-
-  /* Repeatedly select random numbers until we get an acceptable one.  */
+  limit = UINT64_MAX - UINT64_MAX % width;
   do {
-    value = btech_random_u32(&context->random) >> nn;
-  } while (value > range);
+    value = btech_random_u64(&context->random);
+  } while (value >= limit);
 
-  return low + value;
+  return (long)((uint64_t)low + value % width);
 }

@@ -15,7 +15,7 @@ Each domain owns both its state and the operations that change that state:
 
 | Domain | Primary ownership |
 | --- | --- |
-| `core` | Runtime context, random generator, events, and heartbeat |
+| `core` | Runtime context, xoshiro256** random generator, events, and heartbeat |
 | `special` | Native special-object registry and typed object operations |
 | `map` | Battle maps, terrain, map objects, and cached LOS state |
 | `unit` | Mechs, templates, parts, sections, critical slots, and weapons |
@@ -30,6 +30,9 @@ Each domain owns both its state and the operations that change that state:
 | `scripting` | Native XCODE-value and script-function adapters |
 | `persistence` | SQLite schema and domain persistence adapters |
 | `integration` | Narrow adapters to MUX-owned services |
+
+The context-owned gameplay generator is xoshiro256**, seeded once from Linux
+OS entropy during BTech startup. Its runtime state is not persisted.
 
 Concrete `Mech`, `BattleMap`, `Autopilot`, and runtime-context layouts are
 private. Cross-domain interfaces use forward declarations, database object

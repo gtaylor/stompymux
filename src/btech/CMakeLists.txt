@@ -90,7 +90,7 @@ set(BTECH_SOURCES
   core/context.c
   core/heartbeat.c
   core/legacy_events.c
-  core/random_mt.c
+  core/random_xoshiro.c
   economy/econ.c
   economy/econ_cmds.c
   economy/unit_cost.c
