@@ -32,24 +32,22 @@ typedef struct EvaluationContext EvaluationContext;
 typedef struct Mech Mech;
 typedef struct BattleMap BattleMap;
 
-#define VERIFY 0
-#define SAVE 1
-#define LOAD 2
+constexpr int VERIFY = 0;
+constexpr int SAVE = 1;
+constexpr int LOAD = 2;
 
-#define XCODE_MAGIC 0x334D5442 /* v3 DB format */
+constexpr int SPECIAL_FREE = 0;
+constexpr int SPECIAL_ALLOC = 1;
 
-#define SPECIAL_FREE 0
-#define SPECIAL_ALLOC 1
-
-#define GFLAG_ALL 0
-#define GFLAG_MECH 1
-#define GFLAG_GROUNDVEH 2
-#define GFLAG_AERO 4
-#define GFLAG_DS 8
-#define GFLAG_VTOL 16
-#define GFLAG_NAVAL 32
-#define GFLAG_BSUIT 64
-#define GFLAG_MW 128
+constexpr int GFLAG_ALL = 0;
+constexpr int GFLAG_MECH = 1;
+constexpr int GFLAG_GROUNDVEH = 2;
+constexpr int GFLAG_AERO = 4;
+constexpr int GFLAG_DS = 8;
+constexpr int GFLAG_VTOL = 16;
+constexpr int GFLAG_NAVAL = 32;
+constexpr int GFLAG_BSUIT = 64;
+constexpr int GFLAG_MW = 128;
 
 #include "map.h"
 #include "map_obj_api.h"

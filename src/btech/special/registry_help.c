@@ -188,7 +188,7 @@ static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
 
 #define Len(s) ((!s || !*s) ? 0 : strlen(s))
 
-#define TAB 3
+static constexpr int TAB = 3;
 
 static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
                                int len, int initial) {

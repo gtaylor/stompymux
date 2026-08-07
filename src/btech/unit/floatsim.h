@@ -16,10 +16,10 @@
 
 /* Simulate floats by using ints in interesting way */
 
-#define INT_DECIMAL_BITS 8
+constexpr int INT_DECIMAL_BITS = 8;
 
 /* out of 32 */
-#define SHO_DECIMAL_BITS 5
+constexpr int SHO_DECIMAL_BITS = 5;
 
 /* out of 16 ; note : this makes signed ints only 0-1023, unsigneds 0-2047 */
 

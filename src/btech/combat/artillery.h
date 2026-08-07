@@ -34,9 +34,9 @@ typedef struct ArtilleryShot {
 } artillery_shot;
 
 /* Weapon values for artillery guns */
-#define IS_LTOM 30
-#define IS_THUMPER 31
-#define IS_SNIPER 32
-#define IS_ARROW 27
+constexpr int IS_LTOM = 30;
+constexpr int IS_THUMPER = 31;
+constexpr int IS_SNIPER = 32;
+constexpr int IS_ARROW = 27;
 
-#define CL_ARROW 71
+constexpr int CL_ARROW = 71;

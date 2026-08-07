@@ -20,70 +20,73 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mymath.h"
-#define NUM_ITEMS 1024
-#define NUM_ITEMS_M 512
-#define NUM_BAYS 4
-#define NUM_TURRETS 3
-#define C3I_NETWORK_SIZE 5
-#define C3_NETWORK_SIZE 11 /* Constant for the max size of the network */
-#define BRANDCOUNT 5
+constexpr int NUM_ITEMS = 1024;
+constexpr int NUM_ITEMS_M = 512;
+constexpr int NUM_BAYS = 4;
+constexpr int NUM_TURRETS = 3;
+constexpr int C3I_NETWORK_SIZE = 5;
+constexpr int C3_NETWORK_SIZE =
+    11; /* Constant for the max size of the network */
+constexpr int BRANDCOUNT = 5;
 
-#define LEFTSIDE 1
-#define RIGHTSIDE 2
-#define FRONT 3
-#define BACK 4
+constexpr int LEFTSIDE = 1;
+constexpr int RIGHTSIDE = 2;
+constexpr int FRONT = 3;
+constexpr int BACK = 4;
 
-#define STAND 1
-#define FALL 0
+constexpr int STAND = 1;
+constexpr int FALL = 0;
 
-#define TURN 30 /* 30 sec turn */
-#define KPH_PER_MP 10.75
-#define MP_PER_KPH 0.0930233              /* 1/KPH_PER_MP  */
-#define MP_PER_UPDATE_PER_KPH 0.003100777 /* MP_PER_KPH/30 */
-#define SCALEMAP 322.5                    /* 1/update      */
-#define HEXLEVEL 5                        /* levels/hex    */
-#define ZSCALE 64.5                       /* scalemap/hexlevel */
-#define XSCALE 0.1547                     /* hex constant  */
-#define YSCALE2 9.61482e-6                /* update**2     */
-#define MP1 10.75                         /* 2*MS_PER_MP   */
-#define MP2 21.50                         /* 2*MS_PER_MP   */
-#define MP3 32.25                         /* 3*MS_PER_MP   */
-#define MP4 43.00                         /* 4*MS_PER_MP   */
-#define MP5 53.75                         /* 5*MS_PER_MP   */
-#define MP6 64.50                         /* 6*MS_PER_MP   */
-#define MP9 96.75                         /* 9*MS_PER_MP   */
-#define DELTAFACING 1440.0
+constexpr int TURN = 30; /* 30 sec turn */
+constexpr double KPH_PER_MP = 10.75;
+constexpr double MP_PER_KPH = 0.0930233;              /* 1/KPH_PER_MP  */
+constexpr double MP_PER_UPDATE_PER_KPH = 0.003100777; /* MP_PER_KPH/30 */
+constexpr double SCALEMAP = 322.5;                    /* 1/update      */
+constexpr int HEXLEVEL = 5;                           /* levels/hex    */
+constexpr double ZSCALE = 64.5;                       /* scalemap/hexlevel */
+constexpr double XSCALE = 0.1547;                     /* hex constant  */
+constexpr double YSCALE2 = 9.61482e-6;                /* update**2     */
+constexpr double MP1 = 10.75;                         /* 2*MS_PER_MP   */
+constexpr double MP2 = 21.50;                         /* 2*MS_PER_MP   */
+constexpr double MP3 = 32.25;                         /* 3*MS_PER_MP   */
+constexpr double MP4 = 43.00;                         /* 4*MS_PER_MP   */
+constexpr double MP5 = 53.75;                         /* 5*MS_PER_MP   */
+constexpr double MP6 = 64.50;                         /* 6*MS_PER_MP   */
+constexpr double MP9 = 96.75;                         /* 9*MS_PER_MP   */
+constexpr double DELTAFACING = 1440.0;
 
-#define DEFAULT_FREQS 5
-#define FREQS 16
+constexpr int DEFAULT_FREQS = 5;
+constexpr int FREQS = 16;
 
-#define FREQ_DIGITAL 1
-#define FREQ_MUTE 2  /* For digital transmissions */
-#define FREQ_RELAY 4 /* For digital transmissions */
-#define FREQ_INFO 8  /* For digital transmissions */
-#define FREQ_SCAN 16
-#define FREQ_REST 32
+constexpr int FREQ_DIGITAL = 1;
+constexpr int FREQ_MUTE = 2;  /* For digital transmissions */
+constexpr int FREQ_RELAY = 4; /* For digital transmissions */
+constexpr int FREQ_INFO = 8;  /* For digital transmissions */
+constexpr int FREQ_SCAN = 16;
+constexpr int FREQ_REST = 32;
 
-#define RADIO_RELAY 1 /* ability to relay things */
-#define RADIO_INFO 2  /* ability to see where (digital) message comes from */
-#define RADIO_SCAN 4  /* ability to scan for frequencies */
-#define RADIO_NODIGITAL 8 /* lacks the ability to hear or set digital freqs */
+constexpr int RADIO_RELAY = 1; /* ability to relay things */
+constexpr int RADIO_INFO =
+    2; /* ability to see where (digital) message comes from */
+constexpr int RADIO_SCAN = 4; /* ability to scan for frequencies */
+constexpr int RADIO_NODIGITAL =
+    8; /* lacks the ability to hear or set digital freqs */
 
-#define CHTITLELEN 15
+constexpr int CHTITLELEN = 15;
 
-#define NOT_FOUND -1
-#define NUM_CRITICALS 12
+constexpr int NOT_FOUND = -1;
+constexpr int NUM_CRITICALS = 12;
 
-#define ARMOR 1
-#define INTERNAL 2
-#define REAR 3
+constexpr int ARMOR = 1;
+constexpr int INTERNAL = 2;
+constexpr int REAR = 3;
 
-#define NOARC 0
-#define FORWARDARC 1
-#define LSIDEARC 2
-#define RSIDEARC 4
-#define REARARC 8
-#define TURRETARC 16
+constexpr int NOARC = 0;
+constexpr int FORWARDARC = 1;
+constexpr int LSIDEARC = 2;
+constexpr int RSIDEARC = 4;
+constexpr int REARARC = 8;
+constexpr int TURRETARC = 16;
 
 /*
    Critical Types
@@ -95,16 +98,16 @@
  */
 
 /* Critical Types... */
-#define NUM_WEAPONS 192
-#define NUM_BOMBS 9
+constexpr int NUM_WEAPONS = 192;
+constexpr int NUM_BOMBS = 9;
 
-#define EMPTY 0
-#define WEAPON_BASE_INDEX 1
+constexpr int EMPTY = 0;
+constexpr int WEAPON_BASE_INDEX = 1;
 #define AMMO_BASE_INDEX (WEAPON_BASE_INDEX + NUM_WEAPONS) /* 193 */
 #define BOMB_BASE_INDEX (AMMO_BASE_INDEX + NUM_WEAPONS)   /* 385 */
 #define SPECIAL_BASE_INDEX (BOMB_BASE_INDEX + NUM_BOMBS)  /* 394 */
-#define OSPECIAL_BASE_INDEX 220
-#define CARGO_BASE_INDEX 512
+constexpr int OSPECIAL_BASE_INDEX = 220;
+constexpr int CARGO_BASE_INDEX = 512;
 
 #ifdef BT_ADVANCED_ECON
 #define SPECIALCOST_SIZE (CARGO_BASE_INDEX - SPECIAL_BASE_INDEX)
@@ -184,227 +187,227 @@
 #define Cargo I2Cargo
 
 /* To define one of these-> x=SPECIAL_BASE_INDEX+SHOULDER_OR_HIP */
-#define SHOULDER_OR_HIP 0
-#define UPPER_ACTUATOR 1
-#define LOWER_ACTUATOR 2
-#define HAND_OR_FOOT_ACTUATOR 3
-#define LIFE_SUPPORT 4
-#define SENSORS 5
-#define COCKPIT 6
-#define ENGINE 7
-#define GYRO 8
-#define HEAT_SINK 9
-#define JUMP_JET 10
-#define CASE 11
-#define FERRO_FIBROUS 12
-#define ENDO_STEEL 13
-#define TRIPLE_STRENGTH_MYOMER 14
-#define TARGETING_COMPUTER 15
-#define MASC 16
-#define C3_MASTER 17
-#define C3_SLAVE 18
-#define BEAGLE_PROBE 19
-#define ARTEMIS_IV 20
-#define ECM 21
-#define AXE 22
-#define SWORD 23
-#define MACE 24
-#define CLAW 25
-#define DS_AERODOOR 26
-#define DS_MECHDOOR 27
-#define FUELTANK 28
-#define TAG 29
-#define DS_TANKDOOR 30
-#define DS_CARGODOOR 31
-#define LAMEQUIP 32
-#define CASE_II 33
-#define STEALTH_ARMOR 34
-#define NULL_SIGNATURE_SYSTEM 35
-#define C3I 36
-#define ANGELECM 37
-#define HVY_FERRO_FIBROUS 38
-#define LT_FERRO_FIBROUS 39
-#define BLOODHOUND_PROBE 40
-#define PURIFIER_ARMOR 41
-#define KAGE_STEALTH_UNIT 42
-#define ACHILEUS_STEALTH_UNIT 43
-#define INFILTRATOR_STEALTH_UNIT 44
-#define INFILTRATORII_STEALTH_UNIT 45
-#define SUPERCHARGER 46
-#define DUAL_SAW 47
-#define LIGHT_BAP 48
-#define SPLIT_CRIT_LEFT 49
-#define SPLIT_CRIT_RIGHT 50
-#define HARDPOINT 51
+constexpr int SHOULDER_OR_HIP = 0;
+constexpr int UPPER_ACTUATOR = 1;
+constexpr int LOWER_ACTUATOR = 2;
+constexpr int HAND_OR_FOOT_ACTUATOR = 3;
+constexpr int LIFE_SUPPORT = 4;
+constexpr int SENSORS = 5;
+constexpr int COCKPIT = 6;
+constexpr int ENGINE = 7;
+constexpr int GYRO = 8;
+constexpr int HEAT_SINK = 9;
+constexpr int JUMP_JET = 10;
+constexpr int CASE = 11;
+constexpr int FERRO_FIBROUS = 12;
+constexpr int ENDO_STEEL = 13;
+constexpr int TRIPLE_STRENGTH_MYOMER = 14;
+constexpr int TARGETING_COMPUTER = 15;
+constexpr int MASC = 16;
+constexpr int C3_MASTER = 17;
+constexpr int C3_SLAVE = 18;
+constexpr int BEAGLE_PROBE = 19;
+constexpr int ARTEMIS_IV = 20;
+constexpr int ECM = 21;
+constexpr int AXE = 22;
+constexpr int SWORD = 23;
+constexpr int MACE = 24;
+constexpr int CLAW = 25;
+constexpr int DS_AERODOOR = 26;
+constexpr int DS_MECHDOOR = 27;
+constexpr int FUELTANK = 28;
+constexpr int TAG = 29;
+constexpr int DS_TANKDOOR = 30;
+constexpr int DS_CARGODOOR = 31;
+constexpr int LAMEQUIP = 32;
+constexpr int CASE_II = 33;
+constexpr int STEALTH_ARMOR = 34;
+constexpr int NULL_SIGNATURE_SYSTEM = 35;
+constexpr int C3I = 36;
+constexpr int ANGELECM = 37;
+constexpr int HVY_FERRO_FIBROUS = 38;
+constexpr int LT_FERRO_FIBROUS = 39;
+constexpr int BLOODHOUND_PROBE = 40;
+constexpr int PURIFIER_ARMOR = 41;
+constexpr int KAGE_STEALTH_UNIT = 42;
+constexpr int ACHILEUS_STEALTH_UNIT = 43;
+constexpr int INFILTRATOR_STEALTH_UNIT = 44;
+constexpr int INFILTRATORII_STEALTH_UNIT = 45;
+constexpr int SUPERCHARGER = 46;
+constexpr int DUAL_SAW = 47;
+constexpr int LIGHT_BAP = 48;
+constexpr int SPLIT_CRIT_LEFT = 49;
+constexpr int SPLIT_CRIT_RIGHT = 50;
+constexpr int HARDPOINT = 51;
 
-#define LBX2_AMMO 0
-#define LBX5_AMMO 1
-#define LBX10_AMMO 2
-#define LBX20_AMMO 3
-#define LRM_AMMO 4
-#define SRM_AMMO 5
-#define SSRM_AMMO 6
-#define NARC_LRM_AMMO 7
-#define NARC_SRM_AMMO 8
-#define NARC_SSRM_AMMO 9
-#define ARTEMIS_LRM_AMMO 10
-#define ARTEMIS_SRM_AMMO 11
-#define ARTEMIS_SSRM_AMMO 12
+constexpr int LBX2_AMMO = 0;
+constexpr int LBX5_AMMO = 1;
+constexpr int LBX10_AMMO = 2;
+constexpr int LBX20_AMMO = 3;
+constexpr int LRM_AMMO = 4;
+constexpr int SRM_AMMO = 5;
+constexpr int SSRM_AMMO = 6;
+constexpr int NARC_LRM_AMMO = 7;
+constexpr int NARC_SRM_AMMO = 8;
+constexpr int NARC_SSRM_AMMO = 9;
+constexpr int ARTEMIS_LRM_AMMO = 10;
+constexpr int ARTEMIS_SRM_AMMO = 11;
+constexpr int ARTEMIS_SSRM_AMMO = 12;
 
-#define PETROLEUM 13
-#define PHOSPHORUS 14
-#define HYDROGEN 15
-#define GOLD 16
-#define NATURAL_EXTRACTS 17
-#define MARIJUANA 18
-#define SULFUR 19
-#define SODIUM 20
-#define PLUTONIUM 21
-#define ORE 22
-#define METAL 23
-#define PLASTICS 24
-#define MEDICAL_SUPPLIES 25
-#define COMPUTERS 26
-#define EXPLOSIVES 27
+constexpr int PETROLEUM = 13;
+constexpr int PHOSPHORUS = 14;
+constexpr int HYDROGEN = 15;
+constexpr int GOLD = 16;
+constexpr int NATURAL_EXTRACTS = 17;
+constexpr int MARIJUANA = 18;
+constexpr int SULFUR = 19;
+constexpr int SODIUM = 20;
+constexpr int PLUTONIUM = 21;
+constexpr int ORE = 22;
+constexpr int METAL = 23;
+constexpr int PLASTICS = 24;
+constexpr int MEDICAL_SUPPLIES = 25;
+constexpr int COMPUTERS = 26;
+constexpr int EXPLOSIVES = 27;
 
-#define ES_INTERNAL 28
-#define FF_ARMOR 29
-#define XL_ENGINE 30
-#define DOUBLE_HEAT_SINK 31
-#define IC_ENGINE 32
+constexpr int ES_INTERNAL = 28;
+constexpr int FF_ARMOR = 29;
+constexpr int XL_ENGINE = 30;
+constexpr int DOUBLE_HEAT_SINK = 31;
+constexpr int IC_ENGINE = 32;
 
-#define S_ELECTRONIC 33
-#define S_INTERNAL 34
-#define S_ARMOR 35
-#define S_ACTUATOR 36
-#define S_AERO_FUEL 37
-#define S_DS_FUEL 38
-#define S_VTOL_FUEL 39
+constexpr int S_ELECTRONIC = 33;
+constexpr int S_INTERNAL = 34;
+constexpr int S_ARMOR = 35;
+constexpr int S_ACTUATOR = 36;
+constexpr int S_AERO_FUEL = 37;
+constexpr int S_DS_FUEL = 38;
+constexpr int S_VTOL_FUEL = 39;
 
-#define SWARM_LRM_AMMO 40
-#define SWARM1_LRM_AMMO 41
-#define INFERNO_SRM_AMMO 42
+constexpr int SWARM_LRM_AMMO = 40;
+constexpr int SWARM1_LRM_AMMO = 41;
+constexpr int INFERNO_SRM_AMMO = 42;
 
-#define XXL_ENGINE 43
-#define COMP_ENGINE 44
+constexpr int XXL_ENGINE = 43;
+constexpr int COMP_ENGINE = 44;
 
-#define HD_ARMOR 45
-#define RE_INTERNAL 46
-#define CO_INTERNAL 47
-#define MRM_AMMO 48
-#define LIGHT_ENGINE 49
-#define CASEII 50
-#define STH_ARMOR 51
-#define NULLSIGSYS 52
-#define SILICON 53
-#define HVY_FF_ARMOR 54
-#define LT_FF_ARMOR 55
+constexpr int HD_ARMOR = 45;
+constexpr int RE_INTERNAL = 46;
+constexpr int CO_INTERNAL = 47;
+constexpr int MRM_AMMO = 48;
+constexpr int LIGHT_ENGINE = 49;
+constexpr int CASEII = 50;
+constexpr int STH_ARMOR = 51;
+constexpr int NULLSIGSYS = 52;
+constexpr int SILICON = 53;
+constexpr int HVY_FF_ARMOR = 54;
+constexpr int LT_FF_ARMOR = 55;
 
-#define INARC_EXPLO_AMMO 56
-#define INARC_HAYWIRE_AMMO 57
-#define INARC_ECM_AMMO 58
-#define INARC_NEMESIS_AMMO 59
+constexpr int INARC_EXPLO_AMMO = 56;
+constexpr int INARC_HAYWIRE_AMMO = 57;
+constexpr int INARC_ECM_AMMO = 58;
+constexpr int INARC_NEMESIS_AMMO = 59;
 
-#define AC2_AP_AMMO 60
-#define AC5_AP_AMMO 61
-#define AC10_AP_AMMO 62
-#define AC20_AP_AMMO 63
-#define LAC2_AP_AMMO 64
-#define LAC5_AP_AMMO 65
-#define AC2_FLECHETTE_AMMO 66
-#define AC5_FLECHETTE_AMMO 67
-#define AC10_FLECHETTE_AMMO 68
-#define AC20_FLECHETTE_AMMO 69
-#define LAC2_FLECHETTE_AMMO 70
-#define LAC5_FLECHETTE_AMMO 71
-#define AC2_INCENDIARY_AMMO 72
-#define AC5_INCENDIARY_AMMO 73
-#define AC10_INCENDIARY_AMMO 74
-#define AC20_INCENDIARY_AMMO 75
-#define LAC2_INCENDIARY_AMMO 76
-#define LAC5_INCENDIARY_AMMO 77
-#define AC2_PRECISION_AMMO 78
-#define AC5_PRECISION_AMMO 79
-#define AC10_PRECISION_AMMO 80
-#define AC20_PRECISION_AMMO 81
-#define LAC2_PRECISION_AMMO 82
-#define LAC5_PRECISION_AMMO 83
-#define LR_DFM_AMMO 84
-#define SR_DFM_AMMO 85
-#define SLRM_AMMO 86
-#define ELRM_AMMO 87
-#define BSUIT_SENSOR 88
-#define BSUIT_LIFESUPPORT 89
-#define BSUIT_ELECTRONIC 90
-#define CARGO_OIL 91
-#define CARGO_WATER 92
-#define CARGO_EARTH 93
-#define CARGO_OXYGEN 94
-#define CARGO_NITROGEN 95
-#define CARGO_NICKEL 96
-#define CARGO_STEEL 97
-#define CARGO_IRON 98
-#define CARGO_BRASS 99
-#define CARGO_PLATINUM 100
-#define CARGO_COPPER 101
-#define CARGO_ALUMINUM 102
-#define CARGO_CONSUMER_GOOD 103
-#define CARGO_MACHINERY 104
-#define CARGO_SLAVES 105
-#define CARGO_TIMBIQUI_DARK 106
-#define CARGO_COCAINE 107
-#define CARGO_HEROINE 108
-#define CARGO_MARBLE 109
-#define CARGO_GLASS 110
-#define CARGO_DIAMOND 111
-#define CARGO_COAL 112
-#define CARGO_FOOD 113
-#define CARGO_ZINC 114
-#define CARGO_FABRIC 115
-#define CARGO_CLOTHING 116
-#define CARGO_WOOD 117
-#define CARGO_PULP 118
-#define CARGO_LUMBER 119
-#define CARGO_RUBBER 120
-#define CARGO_SEEDS 121
-#define CARGO_FERTILIZER 122
-#define CARGO_SALT 123
-#define CARGO_LITHIUM 124
-#define CARGO_HELIUM 125
-#define CARGO_LARIUM 126
-#define CARGO_URANIUM 127
-#define CARGO_IRIDIUM 128
-#define CARGO_TITANIUM 129
-#define CARGO_CONCRETE 130
-#define CARGO_FERROCRETE 131
-#define CARGO_BUILDING_SUPPLIES 132
-#define CARGO_KEVLAR 133
-#define CARGO_WASTE 134
-#define CARGO_LIVESTOCK 135
-#define CARGO_PAPER 136
-#define XL_GYRO 137
-#define HD_GYRO 138
-#define COMP_GYRO 139
-#define COMPACT_HEAT_SINK 140
-#define AMMO_LRM_STINGER 141
-#define AC2_CASELESS_AMMO 142
-#define AC5_CASELESS_AMMO 143
-#define AC10_CASELESS_AMMO 144
-#define AC20_CASELESS_AMMO 145
-#define LAC2_CASELESS_AMMO 146
-#define LAC5_CASELESS_AMMO 147
-#define AMMO_LRM_SGUIDED 148
-#define AMMO_ATM3_ER 149
-#define AMMO_ATM3_HE 150
-#define AMMO_ATM6_ER 151
-#define AMMO_ATM6_HE 152
-#define AMMO_ATM9_ER 153
-#define AMMO_ATM9_HE 154
-#define AMMO_ATM12_ER 155
-#define AMMO_ATM12_HE 156
+constexpr int AC2_AP_AMMO = 60;
+constexpr int AC5_AP_AMMO = 61;
+constexpr int AC10_AP_AMMO = 62;
+constexpr int AC20_AP_AMMO = 63;
+constexpr int LAC2_AP_AMMO = 64;
+constexpr int LAC5_AP_AMMO = 65;
+constexpr int AC2_FLECHETTE_AMMO = 66;
+constexpr int AC5_FLECHETTE_AMMO = 67;
+constexpr int AC10_FLECHETTE_AMMO = 68;
+constexpr int AC20_FLECHETTE_AMMO = 69;
+constexpr int LAC2_FLECHETTE_AMMO = 70;
+constexpr int LAC5_FLECHETTE_AMMO = 71;
+constexpr int AC2_INCENDIARY_AMMO = 72;
+constexpr int AC5_INCENDIARY_AMMO = 73;
+constexpr int AC10_INCENDIARY_AMMO = 74;
+constexpr int AC20_INCENDIARY_AMMO = 75;
+constexpr int LAC2_INCENDIARY_AMMO = 76;
+constexpr int LAC5_INCENDIARY_AMMO = 77;
+constexpr int AC2_PRECISION_AMMO = 78;
+constexpr int AC5_PRECISION_AMMO = 79;
+constexpr int AC10_PRECISION_AMMO = 80;
+constexpr int AC20_PRECISION_AMMO = 81;
+constexpr int LAC2_PRECISION_AMMO = 82;
+constexpr int LAC5_PRECISION_AMMO = 83;
+constexpr int LR_DFM_AMMO = 84;
+constexpr int SR_DFM_AMMO = 85;
+constexpr int SLRM_AMMO = 86;
+constexpr int ELRM_AMMO = 87;
+constexpr int BSUIT_SENSOR = 88;
+constexpr int BSUIT_LIFESUPPORT = 89;
+constexpr int BSUIT_ELECTRONIC = 90;
+constexpr int CARGO_OIL = 91;
+constexpr int CARGO_WATER = 92;
+constexpr int CARGO_EARTH = 93;
+constexpr int CARGO_OXYGEN = 94;
+constexpr int CARGO_NITROGEN = 95;
+constexpr int CARGO_NICKEL = 96;
+constexpr int CARGO_STEEL = 97;
+constexpr int CARGO_IRON = 98;
+constexpr int CARGO_BRASS = 99;
+constexpr int CARGO_PLATINUM = 100;
+constexpr int CARGO_COPPER = 101;
+constexpr int CARGO_ALUMINUM = 102;
+constexpr int CARGO_CONSUMER_GOOD = 103;
+constexpr int CARGO_MACHINERY = 104;
+constexpr int CARGO_SLAVES = 105;
+constexpr int CARGO_TIMBIQUI_DARK = 106;
+constexpr int CARGO_COCAINE = 107;
+constexpr int CARGO_HEROINE = 108;
+constexpr int CARGO_MARBLE = 109;
+constexpr int CARGO_GLASS = 110;
+constexpr int CARGO_DIAMOND = 111;
+constexpr int CARGO_COAL = 112;
+constexpr int CARGO_FOOD = 113;
+constexpr int CARGO_ZINC = 114;
+constexpr int CARGO_FABRIC = 115;
+constexpr int CARGO_CLOTHING = 116;
+constexpr int CARGO_WOOD = 117;
+constexpr int CARGO_PULP = 118;
+constexpr int CARGO_LUMBER = 119;
+constexpr int CARGO_RUBBER = 120;
+constexpr int CARGO_SEEDS = 121;
+constexpr int CARGO_FERTILIZER = 122;
+constexpr int CARGO_SALT = 123;
+constexpr int CARGO_LITHIUM = 124;
+constexpr int CARGO_HELIUM = 125;
+constexpr int CARGO_LARIUM = 126;
+constexpr int CARGO_URANIUM = 127;
+constexpr int CARGO_IRIDIUM = 128;
+constexpr int CARGO_TITANIUM = 129;
+constexpr int CARGO_CONCRETE = 130;
+constexpr int CARGO_FERROCRETE = 131;
+constexpr int CARGO_BUILDING_SUPPLIES = 132;
+constexpr int CARGO_KEVLAR = 133;
+constexpr int CARGO_WASTE = 134;
+constexpr int CARGO_LIVESTOCK = 135;
+constexpr int CARGO_PAPER = 136;
+constexpr int XL_GYRO = 137;
+constexpr int HD_GYRO = 138;
+constexpr int COMP_GYRO = 139;
+constexpr int COMPACT_HEAT_SINK = 140;
+constexpr int AMMO_LRM_STINGER = 141;
+constexpr int AC2_CASELESS_AMMO = 142;
+constexpr int AC5_CASELESS_AMMO = 143;
+constexpr int AC10_CASELESS_AMMO = 144;
+constexpr int AC20_CASELESS_AMMO = 145;
+constexpr int LAC2_CASELESS_AMMO = 146;
+constexpr int LAC5_CASELESS_AMMO = 147;
+constexpr int AMMO_LRM_SGUIDED = 148;
+constexpr int AMMO_ATM3_ER = 149;
+constexpr int AMMO_ATM3_HE = 150;
+constexpr int AMMO_ATM6_ER = 151;
+constexpr int AMMO_ATM6_HE = 152;
+constexpr int AMMO_ATM9_ER = 153;
+constexpr int AMMO_ATM9_HE = 154;
+constexpr int AMMO_ATM12_ER = 155;
+constexpr int AMMO_ATM12_HE = 156;
 
 #ifdef BT_COMPLEXREPAIRS
-#define TON_SENSORS_FIRST 157
+constexpr int TON_SENSORS_FIRST = 157;
 #define TON_SENSORS_LAST (TON_SENSORS_FIRST + 9)
 
 #define TON_MYOMER_FIRST (TON_SENSORS_LAST + 1)
@@ -478,22 +481,22 @@
 #endif
 
 /* Weapons structure and array... */
-#define TBEAM 0
-#define TMISSILE 1
-#define TARTILLERY 2
-#define TAMMO 3
-#define THAND 4
+constexpr int TBEAM = 0;
+constexpr int TMISSILE = 1;
+constexpr int TARTILLERY = 2;
+constexpr int TAMMO = 3;
+constexpr int THAND = 4;
 
 /* Tic status */
 
-#define TIC_NUM_DESTROYED -2
-#define TIC_NUM_RELOADING -3
-#define TIC_NUM_RECYCLING -4
-#define TIC_NUM_PHYSICAL -5
+constexpr int TIC_NUM_DESTROYED = -2;
+constexpr int TIC_NUM_RELOADING = -3;
+constexpr int TIC_NUM_RECYCLING = -4;
+constexpr int TIC_NUM_PHYSICAL = -5;
 
 /* This is the max weapons per area- assuming 12 critical location and */
 /* the smallest weapon requires 1 */
-#define MAX_WEAPS_SECTION 12
+constexpr int MAX_WEAPS_SECTION = 12;
 
 struct WeaponDefinition {
   char *name;
@@ -521,41 +524,46 @@ struct WeaponDefinition {
 };
 
 /* special weapon effects */
-#define NONE 0x00000000
-#define PULSE 0x00000001   /* Pulse laser */
-#define LBX 0x00000002     /* LBX AC */
-#define ULTRA 0x00000004   /* Ultra AC */
-#define STREAK 0x00000008  /* Streak missile */
-#define GAUSS 0x00000010   /* Gauss weapon */
-#define NARC 0x00000020    /* NARC launcher */
-#define IDF 0x00000040     /* Can be used w/ IDF */
-#define DAR 0x00000080     /* Has artillery-level delay on hit (1sec/2hex) */
-#define HYPER 0x00000100   /* Hyper AC */
-#define A_POD 0x00000200   /* Anti-infantry Pod */
-#define CLAT 0x00000400    /* Clan-tech */
-#define NOSPA 0x00000800   /* Does not allow special ammo (swarm, etc) */
-#define PC_HEAT 0x00001000 /* Heat-based PC weapon (laser/inferno/..) */
-#define PC_IMPA 0x00002000 /* Impact (weapons) */
-#define PC_SHAR 0x00004000 /* Shrapnel / slash (various kinds of weapons) */
-#define AMS 0x00008000     /* AntiMissileSystem */
-#define NOBOOM 0x00010000  /* No ammo boom */
-#define ATM 0x00020000     /* Was Caseless. Now ATM Missile */
-#define DFM 0x00040000     /* DFM - 2 worst rolls outta 3 for missiles */
-#define ELRM 0x00080000    /* ELRM - 2 worst rolls outta 3 for missiles under */
-#define MRM 0x00100000     /* MRM - +1 BTH */
-#define CHEAT 0x00200000   /* Can cause heat or damage */
+constexpr int NONE = 0x00000000;
+constexpr int PULSE = 0x00000001;  /* Pulse laser */
+constexpr int LBX = 0x00000002;    /* LBX AC */
+constexpr int ULTRA = 0x00000004;  /* Ultra AC */
+constexpr int STREAK = 0x00000008; /* Streak missile */
+constexpr int GAUSS = 0x00000010;  /* Gauss weapon */
+constexpr int NARC = 0x00000020;   /* NARC launcher */
+constexpr int IDF = 0x00000040;    /* Can be used w/ IDF */
+constexpr int DAR =
+    0x00000080; /* Has artillery-level delay on hit (1sec/2hex) */
+constexpr int HYPER = 0x00000100; /* Hyper AC */
+constexpr int A_POD = 0x00000200; /* Anti-infantry Pod */
+constexpr int CLAT = 0x00000400;  /* Clan-tech */
+constexpr int NOSPA = 0x00000800; /* Does not allow special ammo (swarm, etc) */
+constexpr int PC_HEAT =
+    0x00001000; /* Heat-based PC weapon (laser/inferno/..) */
+constexpr int PC_IMPA = 0x00002000; /* Impact (weapons) */
+constexpr int PC_SHAR =
+    0x00004000; /* Shrapnel / slash (various kinds of weapons) */
+constexpr int AMS = 0x00008000;    /* AntiMissileSystem */
+constexpr int NOBOOM = 0x00010000; /* No ammo boom */
+constexpr int ATM = 0x00020000;    /* Was Caseless. Now ATM Missile */
+constexpr int DFM = 0x00040000; /* DFM - 2 worst rolls outta 3 for missiles */
+constexpr int ELRM =
+    0x00080000; /* ELRM - 2 worst rolls outta 3 for missiles under */
+constexpr int MRM = 0x00100000;   /* MRM - +1 BTH */
+constexpr int CHEAT = 0x00200000; /* Can cause heat or damage */
 #define HVYW                                                                   \
   0x00400000 /* Clam HeavyWeapons (call 'm so cuz FA$A will undoubtly bring    \
                 more variants to the lasers) */
-#define RFAC 0x00800000     /* Rapid fire ACs */
-#define GMG 0x01000000      /* Gattling MGs */
-#define INARC 0x02000000    /* iNARC launcher */
-#define RAC 0x04000000      /* Rotary AC */
-#define HVYGAUSS 0x08000000 /* Heavy Gauss */
-#define ROCKET 0x10000000   /* Rocket launchers. +1 to hit, one shot wonders */
+constexpr int RFAC = 0x00800000;     /* Rapid fire ACs */
+constexpr int GMG = 0x01000000;      /* Gattling MGs */
+constexpr int INARC = 0x02000000;    /* iNARC launcher */
+constexpr int RAC = 0x04000000;      /* Rotary AC */
+constexpr int HVYGAUSS = 0x08000000; /* Heavy Gauss */
+constexpr int ROCKET =
+    0x10000000; /* Rocket launchers. +1 to hit, one shot wonders */
 #define SPLIT_CRITS                                                            \
   0x20000000 /* Certain weapons can split crits. Mark them appropriately */
-#define SNUBPPC 0x40000000 /* Snub-nosed PPC */
+constexpr int SNUBPPC = 0x40000000; /* Snub-nosed PPC */
 
 #define PCOMBAT (PC_HEAT | PC_IMPA | PC_SHAR)
 
@@ -564,50 +572,50 @@ struct WeaponDefinition {
 /* The unusual order is related to the locations of weapons of high */
 
 /* magnitude versus weapons of low mag */
-#define LARM 0
-#define RARM 1
-#define LTORSO 2
-#define RTORSO 3
-#define CTORSO 4
-#define LLEG 5
-#define RLEG 6
-#define HEAD 7
-#define NUM_SECTIONS 8
+constexpr int LARM = 0;
+constexpr int RARM = 1;
+constexpr int LTORSO = 2;
+constexpr int RTORSO = 3;
+constexpr int CTORSO = 4;
+constexpr int LLEG = 5;
+constexpr int RLEG = 6;
+constexpr int HEAD = 7;
+constexpr int NUM_SECTIONS = 8;
 
 /*  These defs are for Vehicles */
-#define LSIDE 0
-#define RSIDE 1
-#define FSIDE 2
-#define BSIDE 3
-#define TURRET 4
-#define ROTOR 5
-#define NUM_VEH_SECTIONS 6
+constexpr int LSIDE = 0;
+constexpr int RSIDE = 1;
+constexpr int FSIDE = 2;
+constexpr int BSIDE = 3;
+constexpr int TURRET = 4;
+constexpr int ROTOR = 5;
+constexpr int NUM_VEH_SECTIONS = 6;
 
 /* Aerofighter */
-#define AERO_NOSE 0
-#define AERO_LWING 1
-#define AERO_RWING 2
-#define AERO_AFT 3
-#define NUM_AERO_SECTIONS 4
+constexpr int AERO_NOSE = 0;
+constexpr int AERO_LWING = 1;
+constexpr int AERO_RWING = 2;
+constexpr int AERO_AFT = 3;
+constexpr int NUM_AERO_SECTIONS = 4;
 
-#define NUM_BSUIT_MEMBERS 8
+constexpr int NUM_BSUIT_MEMBERS = 8;
 
-#define DS_RWING 0  /* Right Front Side / Right Wing */
-#define DS_LWING 1  /* Left Front Side / Left Wing */
-#define DS_LRWING 2 /* Left Rear Side */
-#define DS_RRWING 3 /* Right Rear Side / Right Wing */
-#define DS_AFT 4
-#define DS_NOSE 5
+constexpr int DS_RWING = 0;  /* Right Front Side / Right Wing */
+constexpr int DS_LWING = 1;  /* Left Front Side / Left Wing */
+constexpr int DS_LRWING = 2; /* Left Rear Side */
+constexpr int DS_RRWING = 3; /* Right Rear Side / Right Wing */
+constexpr int DS_AFT = 4;
+constexpr int DS_NOSE = 5;
 
-#define NUM_DS_SECTIONS 6
+constexpr int NUM_DS_SECTIONS = 6;
 #define SpheroidDS(a) (MechType(a) == CLASS_SPHEROID_DS)
 #define SpheroidToRear(mech, a)                                                \
   if (MechType(mech) == CLASS_SPHEROID_DS)                                     \
   (a) = ((a) == DS_LWING ? DS_LRWING : DS_RRWING)
 
-#define NUM_TICS 4
-#define MAX_WEAPONS_PER_MECH 96 /* Thanks to crit limits */
-#define SINGLE_TICLONG_SIZE 32
+constexpr int NUM_TICS = 4;
+constexpr int MAX_WEAPONS_PER_MECH = 96; /* Thanks to crit limits */
+constexpr int SINGLE_TICLONG_SIZE = 32;
 #define TICLONGS (MAX_WEAPONS_PER_MECH / SINGLE_TICLONG_SIZE)
 
 /* structure for each critical hit section */

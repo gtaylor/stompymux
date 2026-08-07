@@ -34,5 +34,5 @@
 #ifdef MIN
 #undef MIN
 #endif
-#define TWOPIOVER360 0.0174533
-#define PI 3.141592654
+constexpr double TWOPIOVER360 = 0.0174533;
+constexpr double PI = 3.141592654;

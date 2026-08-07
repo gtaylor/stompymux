@@ -35,24 +35,24 @@ typedef enum MechPhysicalWeaponType {
  *
  * TODO: Can probably coalesce some of these with other subsystems.
  */
-#define ARMOR_TYPE_MASK 0x07
-#define ARMOR_FRONT 0x00    /* front armor */
-#define ARMOR_INTERNAL 0x01 /* internal armor */
-#define ARMOR_REAR 0x02     /* rear armor */
+constexpr int ARMOR_TYPE_MASK = 0x07;
+constexpr int ARMOR_FRONT = 0x00;    /* front armor */
+constexpr int ARMOR_INTERNAL = 0x01; /* internal armor */
+constexpr int ARMOR_REAR = 0x02;     /* rear armor */
 
-#define ARMOR_FLAG_OWNED 0x10     /* armor status by owner */
-#define ARMOR_FLAG_SHOW_DEST 0x20 /* show destroyed sections */
-#define ARMOR_FLAG_DIVIDE_10 0x40 /* divide displayed value by 10 */
+constexpr int ARMOR_FLAG_OWNED = 0x10;     /* armor status by owner */
+constexpr int ARMOR_FLAG_SHOW_DEST = 0x20; /* show destroyed sections */
+constexpr int ARMOR_FLAG_DIVIDE_10 = 0x40; /* divide displayed value by 10 */
 
 /*
  * Armor levels returned by ArmorEvaluateSerious().
  */
-#define ARMOR_LEVEL_GREAT 0
-#define ARMOR_LEVEL_GOOD 1
-#define ARMOR_LEVEL_LOW 2
-#define ARMOR_LEVEL_CRITICAL 3
-#define ARMOR_LEVEL_OPEN 4
-#define ARMOR_LEVEL_REPAIRING 5
+constexpr int ARMOR_LEVEL_GREAT = 0;
+constexpr int ARMOR_LEVEL_GOOD = 1;
+constexpr int ARMOR_LEVEL_LOW = 2;
+constexpr int ARMOR_LEVEL_CRITICAL = 3;
+constexpr int ARMOR_LEVEL_OPEN = 4;
+constexpr int ARMOR_LEVEL_REPAIRING = 5;
 
 /* mech.status.c */
 void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech);

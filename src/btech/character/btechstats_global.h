@@ -16,62 +16,62 @@
 
 #pragma once
 
-#define VALUES_HEALTH 1 /* Bruise and lethal damage */
-#define VALUES_SKILLS 2 /* Skill values and experience */
-#define VALUES_ATTRS 4  /* Core character attributes */
-#define VALUES_ADVS 8   /* Advantages and lives */
-#define VALUES_ALL 15
-#define VALUES_CO 6 /* Attr + Skill */
+constexpr int VALUES_HEALTH = 1; /* Bruise and lethal damage */
+constexpr int VALUES_SKILLS = 2; /* Skill values and experience */
+constexpr int VALUES_ATTRS = 4;  /* Core character attributes */
+constexpr int VALUES_ADVS = 8;   /* Advantages and lives */
+constexpr int VALUES_ALL = 15;
+constexpr int VALUES_CO = 6; /* Attr + Skill */
 
 #define CHAR_LASTSKILLTYPE CHAR_SOCIAL
 
 /* hmm. */
 
-#define CHAR_VALUE 0
-#define CHAR_SKILL 1
-#define CHAR_ADVANTAGE 2
-#define CHAR_ATTRIBUTE 3
+constexpr int CHAR_VALUE = 0;
+constexpr int CHAR_SKILL = 1;
+constexpr int CHAR_ADVANTAGE = 2;
+constexpr int CHAR_ATTRIBUTE = 3;
 
 /* 4 diff. skill types */
 
-#define CHAR_ATHLETIC 0x0001
-#define CHAR_MENTAL 0x0002
-#define CHAR_PHYSICAL 0x0004
-#define CHAR_SOCIAL 0x0008
+constexpr int CHAR_ATHLETIC = 0x0001;
+constexpr int CHAR_MENTAL = 0x0002;
+constexpr int CHAR_PHYSICAL = 0x0004;
+constexpr int CHAR_SOCIAL = 0x0008;
 
 /* Career-types */
-#define CAREER_CAVALRY 0x0010   /* Drive + Gun-Conv */
-#define CAREER_BMECH 0x0020     /* Bmech Pilot/Gun */
-#define CAREER_AERO 0x0040      /* Aero Pilot/Gun */
-#define CAREER_ARTILLERY 0x0080 /* Artillery-Gun */
-#define CAREER_DROPSHIP 0x0100  /* Dropship Pilot/Gun */
-#define CAREER_TECHMECH 0x0200
-#define CAREER_TECHVEH 0x0400
+constexpr int CAREER_CAVALRY = 0x0010;   /* Drive + Gun-Conv */
+constexpr int CAREER_BMECH = 0x0020;     /* Bmech Pilot/Gun */
+constexpr int CAREER_AERO = 0x0040;      /* Aero Pilot/Gun */
+constexpr int CAREER_ARTILLERY = 0x0080; /* Artillery-Gun */
+constexpr int CAREER_DROPSHIP = 0x0100;  /* Dropship Pilot/Gun */
+constexpr int CAREER_TECHMECH = 0x0200;
+constexpr int CAREER_TECHVEH = 0x0400;
 #define CAREER_TECH (CAREER_TECHMECH | CAREER_TECHVEH)
-#define CAREER_MISC 0x0800
-#define CAREER_ACADMISC 0x1000
-#define CAREER_RECON 0x2000
-#define SK_XP 0x4000 /* Always raise xp (not spammable) */
+constexpr int CAREER_MISC = 0x0800;
+constexpr int CAREER_ACADMISC = 0x1000;
+constexpr int CAREER_RECON = 0x2000;
+constexpr int SK_XP = 0x4000; /* Always raise xp (not spammable) */
 
 #define XP_MAX (256 * 256 * 256) /* Then we wrap ; tough beans */
 
 /* 3 diff. adv types */
 
-#define CHAR_ADV_VALUE 0
-#define CHAR_ADV_BOOL 1
-#define CHAR_ADV_EXCEPT 2
+constexpr int CHAR_ADV_VALUE = 0;
+constexpr int CHAR_ADV_BOOL = 1;
+constexpr int CHAR_ADV_EXCEPT = 2;
 
-#define CHAR_BLD 1
-#define CHAR_REF 2
-#define CHAR_INT 4
-#define CHAR_LRN 8
-#define CHAR_CHA 16
+constexpr int CHAR_BLD = 1;
+constexpr int CHAR_REF = 2;
+constexpr int CHAR_INT = 4;
+constexpr int CHAR_LRN = 8;
+constexpr int CHAR_CHA = 16;
 
-#define GREEN 0
-#define REGULAR 1
-#define VETEREN 2
-#define ELITE 3
-#define HISTORICAL 4
+constexpr int GREEN = 0;
+constexpr int REGULAR = 1;
+constexpr int VETEREN = 2;
+constexpr int ELITE = 3;
+constexpr int HISTORICAL = 4;
 
 #include "btech_api.h"
 #include "btechstats_api.h"
@@ -109,8 +109,8 @@
 #define char_slethal(a, b) char_svalue((a), "lethal", (b))
 #define char_smaxlethal(a, b) char_svalue((a), "maxlethal", (b))
 
-#define EE_NUMBER 11
-#define LIVES_NUMBER 5
+constexpr int EE_NUMBER = 11;
+constexpr int LIVES_NUMBER = 5;
 
 #define char_getstatvaluebycode(s, code)                                       \
   (code >= 0                                                                   \

@@ -38,7 +38,7 @@
 
 #include "mux/server/platform.h"
 
-#define MAX_STRING_LENGTH 8192
+constexpr int MAX_STRING_LENGTH = 8192;
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -60,8 +60,8 @@
 #include "mech_utils_api.h"
 #include "template_api.h"
 
-#define MODE_UNKNOWN 0
-#define MODE_NORMAL 1
+constexpr int MODE_UNKNOWN = 0;
+constexpr int MODE_NORMAL = 1;
 
 extern char *load_cmds[];
 extern char *internals[];

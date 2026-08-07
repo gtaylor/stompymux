@@ -13,45 +13,45 @@
 #include "section_types.h"
 /* status element... */
 
-#define LANDED 0x00000001        /* (a) For VTOL use only */
-#define TORSO_RIGHT 0x00000002   /* (b) Torso heading -= 60 degrees */
-#define TORSO_LEFT 0x00000004    /* (c) Torso heading += 60 degrees */
-#define STARTED 0x00000008       /* (d) Mech is warmed up */
-#define PARTIAL_COVER 0x00000010 /* (e) */
-#define DESTROYED 0x00000020     /* (f) */
-#define JUMPING 0x00000040       /* (g) Handled in UPDATE */
-#define FALLEN 0x00000080        /* (h) */
-#define DFA_ATTACK 0x00000100    /* (i) */
+constexpr int LANDED = 0x00000001;        /* (a) For VTOL use only */
+constexpr int TORSO_RIGHT = 0x00000002;   /* (b) Torso heading -= 60 degrees */
+constexpr int TORSO_LEFT = 0x00000004;    /* (c) Torso heading += 60 degrees */
+constexpr int STARTED = 0x00000008;       /* (d) Mech is warmed up */
+constexpr int PARTIAL_COVER = 0x00000010; /* (e) */
+constexpr int DESTROYED = 0x00000020;     /* (f) */
+constexpr int JUMPING = 0x00000040;       /* (g) Handled in UPDATE */
+constexpr int FALLEN = 0x00000080;        /* (h) */
+constexpr int DFA_ATTACK = 0x00000100;    /* (i) */
 #define PERFORMING_ACTION                                                      \
   0x00000200 /* (j) Set if the unit is performing some sort of action.         \
                 Controlled by SCode */
-#define FLIPPED_ARMS 0x00000400 /* (k) */
+constexpr int FLIPPED_ARMS = 0x00000400; /* (k) */
 #define AMS_ENABLED                                                            \
   0x00000800 /* (l) only settable if mech has ANTI-MISSILE_TECH */
 #define EXPLODE_SAFE                                                           \
   0x00001000 /* (m) Used to prevent a unit from doing EXPLODE AMMO */
-#define UNCONSCIOUS 0x00002000   /* (n) Pilot is unconscious */
-#define TOWED 0x00004000         /* (o) Someone's towing us */
-#define LOCK_TARGET 0x00008000   /* (p) We mean business */
-#define LOCK_BUILDING 0x00010000 /* (q) Hit building */
+constexpr int UNCONSCIOUS = 0x00002000;   /* (n) Pilot is unconscious */
+constexpr int TOWED = 0x00004000;         /* (o) Someone's towing us */
+constexpr int LOCK_TARGET = 0x00008000;   /* (p) We mean business */
+constexpr int LOCK_BUILDING = 0x00010000; /* (q) Hit building */
 #define LOCK_HEX                                                               \
   0x00020000 /* (r) Hit hex (clear / ignite, d'pend on weapon)                 \
               */
-#define LOCK_HEX_IGN 0x00040000 /* (s) */
-#define LOCK_HEX_CLR 0x00080000 /* (t) */
-#define MASC_ENABLED 0x00100000 /* (u) Using MASC */
+constexpr int LOCK_HEX_IGN = 0x00040000; /* (s) */
+constexpr int LOCK_HEX_CLR = 0x00080000; /* (t) */
+constexpr int MASC_ENABLED = 0x00100000; /* (u) Using MASC */
 #define BLINDED                                                                \
   0x00200000 /* (v) Pilot has been blinded momentarily by something */
-#define COMBAT_SAFE 0x00400000 /* (w) Can't be hurt */
+constexpr int COMBAT_SAFE = 0x00400000; /* (w) Can't be hurt */
 #define AUTOCON_WHEN_SHUTDOWN                                                  \
-  0x00800000                        /* (x) Autocon sees it even when shutdown */
-#define FIRED 0x01000000            /* (y) Fired at something */
-#define SCHARGE_ENABLED 0x02000000  /* (z) */
-#define HULLDOWN 0x04000000         /* (A) */
-#define UNDERSPECIAL 0x08000000     /* (B) */
-#define UNDERGRAVITY 0x10000000     /* (C) */
-#define UNDERTEMPERATURE 0x20000000 /* (D) */
-#define UNDERVACUUM 0x40000000      /* (E) */
+  0x00800000                      /* (x) Autocon sees it even when shutdown */
+constexpr int FIRED = 0x01000000; /* (y) Fired at something */
+constexpr int SCHARGE_ENABLED = 0x02000000;  /* (z) */
+constexpr int HULLDOWN = 0x04000000;         /* (A) */
+constexpr int UNDERSPECIAL = 0x08000000;     /* (B) */
+constexpr int UNDERGRAVITY = 0x10000000;     /* (C) */
+constexpr int UNDERTEMPERATURE = 0x20000000; /* (D) */
+constexpr int UNDERVACUUM = 0x40000000;      /* (E) */
 /* UNUSED                     0x80000000     (F) */
 
 #define CONDITIONS                                                             \
@@ -62,36 +62,45 @@
 /* status2 element */
 
 /* Specials status element */
-#define ECM_ENABLED 0x00000001     /* (a) Unit ECM is enabled */
-#define ECCM_ENABLED 0x00000002    /* (b) Unit ECCM is enabled */
-#define ECM_DISTURBANCE 0x00000004 /* (c) Unit affected by ECM */
-#define ECM_PROTECTED 0x00000008   /* (d) Unit protected by ECM */
+constexpr int ECM_ENABLED = 0x00000001;     /* (a) Unit ECM is enabled */
+constexpr int ECCM_ENABLED = 0x00000002;    /* (b) Unit ECCM is enabled */
+constexpr int ECM_DISTURBANCE = 0x00000004; /* (c) Unit affected by ECM */
+constexpr int ECM_PROTECTED = 0x00000008;   /* (d) Unit protected by ECM */
 #define ECM_COUNTERED                                                          \
-  0x00000010                           /* (e) ECM countered by ECCM.           \
-                                          This only happens if an enemy ECCM   \
-                                          is within range. */
-#define SLITE_ON 0x00000020            /* (f) Unit SLITE is enabled */
-#define STH_ARMOR_ON 0x00000040        /* (g) Unit has steath armor enabled */
-#define NULLSIGSYS_ON 0x00000080       /* (h) Unit has nullsig enabled */
-#define ANGEL_ECM_ENABLED 0x00000100   /* (i) Unit Angel ECM is enabled */
-#define ANGEL_ECCM_ENABLED 0x00000200  /* (j) Unit Angel ECCM is enabled */
-#define ANGEL_ECM_PROTECTED 0x00000400 /* (k) Unit protected by Angel ECM */
-#define ANGEL_ECM_DISTURBED 0x00000800 /* (l) Unit affected by Angel ECM */
-#define PER_ECM_ENABLED 0x00001000     /* (m) Unit Personal ECM is enabled */
-#define PER_ECCM_ENABLED 0x00002000    /* (n) Unit Personal ECCM is enabled */
+  0x00000010                             /* (e) ECM countered by ECCM.         \
+                                            This only happens if an enemy ECCM \
+                                            is within range. */
+constexpr int SLITE_ON = 0x00000020;     /* (f) Unit SLITE is enabled */
+constexpr int STH_ARMOR_ON = 0x00000040; /* (g) Unit has steath armor enabled */
+constexpr int NULLSIGSYS_ON = 0x00000080; /* (h) Unit has nullsig enabled */
+constexpr int ANGEL_ECM_ENABLED =
+    0x00000100; /* (i) Unit Angel ECM is enabled */
+constexpr int ANGEL_ECCM_ENABLED =
+    0x00000200; /* (j) Unit Angel ECCM is enabled */
+constexpr int ANGEL_ECM_PROTECTED =
+    0x00000400; /* (k) Unit protected by Angel ECM */
+constexpr int ANGEL_ECM_DISTURBED =
+    0x00000800; /* (l) Unit affected by Angel ECM */
+constexpr int PER_ECM_ENABLED =
+    0x00001000; /* (m) Unit Personal ECM is enabled */
+constexpr int PER_ECCM_ENABLED =
+    0x00002000; /* (n) Unit Personal ECCM is enabled */
 #define AUTOTURN_TURRET                                                        \
   0x00004000 /* (o) Unit Auto-Turret enabled to locked target */
 /* UNUSED                     0x00008000     (p) */
-#define SPRINTING 0x00010000 /* (q) Unit is Sprinting */
-#define EVADING 0x00020000   /* (r) Unit is Evading */
-#define DODGING 0x00040000   /* (s) Unit is Dodging */
+constexpr int SPRINTING = 0x00010000; /* (q) Unit is Sprinting */
+constexpr int EVADING = 0x00020000;   /* (r) Unit is Evading */
+constexpr int DODGING = 0x00040000;   /* (s) Unit is Dodging */
 #define ATTACKEMIT_MECH                                                        \
   0x00080000 /* (t) Units attacks sent to MechAttackEmits channel */
-#define UNIT_MOUNTED 0x00100000  /* (u) Unit has been mounted by a suit */
-#define UNIT_MOUNTING 0x00200000 /* (v) Unit is mounting another unit */
-#define FORTIFIED 0x00400000     /* (w) */
-#define WEAPONS_HOLD 0x00800000  /* (x) Unit is unable to fire */
-#define NO_GUN_XP 0x01000000     /* (y) Don't give gun xp if we fire at this */
+constexpr int UNIT_MOUNTED =
+    0x00100000; /* (u) Unit has been mounted by a suit */
+constexpr int UNIT_MOUNTING =
+    0x00200000;                          /* (v) Unit is mounting another unit */
+constexpr int FORTIFIED = 0x00400000;    /* (w) */
+constexpr int WEAPONS_HOLD = 0x00800000; /* (x) Unit is unable to fire */
+constexpr int NO_GUN_XP =
+    0x01000000; /* (y) Don't give gun xp if we fire at this */
 /* UNUSED                     0x02000000     (z) */
 /* UNUSED                     0x04000000     (A) */
 /* UNUSED                     0x08000000     (B) */
@@ -105,16 +114,16 @@
 #define MOVE_MODES_LOCK (SPRINTING | EVADING)
 
 /* Flags for mode handling */
-#define MODE_EVADE 0x1
-#define MODE_SPRINT 0x2
-#define MODE_ON 0x4
-#define MODE_OFF 0x8
-#define MODE_DODGE 0x10
-#define MODE_DG_USED 0x20
+constexpr int MODE_EVADE = 0x1;
+constexpr int MODE_SPRINT = 0x2;
+constexpr int MODE_ON = 0x4;
+constexpr int MODE_OFF = 0x8;
+constexpr int MODE_DODGE = 0x10;
+constexpr int MODE_DG_USED = 0x20;
 
 /* MechFullRecycle check flags */
-#define CHECK_WEAPS 0x1
-#define CHECK_PHYS 0x2
+constexpr int CHECK_WEAPS = 0x1;
+constexpr int CHECK_PHYS = 0x2;
 #define CHECK_BOTH (CHECK_WEAPS | CHECK_PHYS)
 
 #define MechLockFire(mech)                                                     \
@@ -128,122 +137,128 @@
 #define Uncon(a) (MechStatus(a) & UNCONSCIOUS)
 
 /* critstatus element */
-#define GYRO_DESTROYED 0x00000001         /* (a) */
-#define SENSORS_DAMAGED 0x00000002        /* (b) */
-#define TAG_DESTROYED 0x00000004          /* (c) */
-#define HIDDEN 0x00000008                 /* (d) */
-#define GYRO_DAMAGED 0x00000010           /* (e) */
-#define HIP_DAMAGED 0x00000020            /* (f) */
-#define LIFE_SUPPORT_DESTROYED 0x00000040 /* (g) */
-#define ANGEL_ECM_DESTROYED 0x00000080    /* (h) */
-#define C3I_DESTROYED 0x00000100          /* (i) */
-#define NSS_DESTROYED 0x00000200          /* (j) */
-#define SLITE_DEST 0x00000400             /* (k) */
-#define SLITE_LIT 0x00000800              /* (l) */
-#define LOAD_OK 0x00001000                /* (m) Carried load recalculated */
-#define OWEIGHT_OK 0x00002000             /* (n) Own weight recalculated */
-#define SPEED_OK 0x00004000               /* (o) Total speed recalculated */
-#define HEATCUTOFF 0x00008000             /* (p) */
-#define TOWABLE 0x00010000                /* (q) */
-#define HIP_DESTROYED 0x00020000          /* (r) */
-#define TC_DESTROYED 0x00040000           /* (s) */
-#define C3_DESTROYED 0x00080000           /* (t) */
-#define ECM_DESTROYED 0x00100000          /* (u) */
-#define BEAGLE_DESTROYED 0x00200000       /* (v) */
-#define JELLIED 0x00400000                /* (w) Got inferno gel on us */
-#define PC_INITIALIZED 0x00800000 /* (x) PC-initialization done already */
-#define SPINNING 0x01000000       /* (y) */
-#define CLAIRVOYANT 0x02000000  /* (z) See everything, regardless of blocked */
-#define INVISIBLE 0x04000000    /* (A) Unable to be seen by anyone */
-#define CHEAD 0x08000000        /* (B) Altered heading */
-#define OBSERVATORIC 0x10000000 /* (C) */
-#define BLOODHOUND_DESTROYED 0x20000000 /* (D) */
+constexpr int GYRO_DESTROYED = 0x00000001;         /* (a) */
+constexpr int SENSORS_DAMAGED = 0x00000002;        /* (b) */
+constexpr int TAG_DESTROYED = 0x00000004;          /* (c) */
+constexpr int HIDDEN = 0x00000008;                 /* (d) */
+constexpr int GYRO_DAMAGED = 0x00000010;           /* (e) */
+constexpr int HIP_DAMAGED = 0x00000020;            /* (f) */
+constexpr int LIFE_SUPPORT_DESTROYED = 0x00000040; /* (g) */
+constexpr int ANGEL_ECM_DESTROYED = 0x00000080;    /* (h) */
+constexpr int C3I_DESTROYED = 0x00000100;          /* (i) */
+constexpr int NSS_DESTROYED = 0x00000200;          /* (j) */
+constexpr int SLITE_DEST = 0x00000400;             /* (k) */
+constexpr int SLITE_LIT = 0x00000800;              /* (l) */
+constexpr int LOAD_OK = 0x00001000;          /* (m) Carried load recalculated */
+constexpr int OWEIGHT_OK = 0x00002000;       /* (n) Own weight recalculated */
+constexpr int SPEED_OK = 0x00004000;         /* (o) Total speed recalculated */
+constexpr int HEATCUTOFF = 0x00008000;       /* (p) */
+constexpr int TOWABLE = 0x00010000;          /* (q) */
+constexpr int HIP_DESTROYED = 0x00020000;    /* (r) */
+constexpr int TC_DESTROYED = 0x00040000;     /* (s) */
+constexpr int C3_DESTROYED = 0x00080000;     /* (t) */
+constexpr int ECM_DESTROYED = 0x00100000;    /* (u) */
+constexpr int BEAGLE_DESTROYED = 0x00200000; /* (v) */
+constexpr int JELLIED = 0x00400000;          /* (w) Got inferno gel on us */
+constexpr int PC_INITIALIZED =
+    0x00800000;                      /* (x) PC-initialization done already */
+constexpr int SPINNING = 0x01000000; /* (y) */
+constexpr int CLAIRVOYANT =
+    0x02000000; /* (z) See everything, regardless of blocked */
+constexpr int INVISIBLE = 0x04000000;    /* (A) Unable to be seen by anyone */
+constexpr int CHEAD = 0x08000000;        /* (B) Altered heading */
+constexpr int OBSERVATORIC = 0x10000000; /* (C) */
+constexpr int BLOODHOUND_DESTROYED = 0x20000000; /* (D) */
 #define MECH_STUNNED                                                           \
   0x40000000 /* (E) Is the mech stunned (Exile stun code)                      \
               */
 
 /* tankcritstatus element */
-#define TURRET_LOCKED 0x01
-#define TURRET_JAMMED 0x02 /* can be fixed by player */
-#define DUG_IN 0x04
-#define DIGGING_IN 0x08
+constexpr int TURRET_LOCKED = 0x01;
+constexpr int TURRET_JAMMED = 0x02; /* can be fixed by player */
+constexpr int DUG_IN = 0x04;
+constexpr int DIGGING_IN = 0x08;
 #define CREW_STUNNED                                                           \
   0x10 /* can't go over cruise speed, make any attacks at all, use radio. IE,  \
           can't do jack but turn */
-#define TAIL_ROTOR_DESTROYED 0x20
+constexpr int TAIL_ROTOR_DESTROYED = 0x20;
 
 /* specials element: used to tell quickly what type of tech the mech has */
-#define TRIPLE_MYOMER_TECH 0x01
-#define CL_ANTI_MISSILE_TECH 0x02
-#define IS_ANTI_MISSILE_TECH 0x04
-#define DOUBLE_HEAT_TECH 0x08
-#define MASC_TECH 0x10
-#define CLAN_TECH 0x20
-#define FLIPABLE_ARMS 0x40
-#define C3_MASTER_TECH 0x80
-#define C3_SLAVE_TECH 0x100
-#define ARTEMIS_IV_TECH 0x200
-#define ECM_TECH 0x400
-#define BEAGLE_PROBE_TECH 0x800
-#define SALVAGE_TECH 0x1000 /* 2x 'mech carrying capacity */
-#define CARGO_TECH 0x2000   /* 2x cargo carrying capacity */
-#define SLITE_TECH 0x4000
-#define LIGHT_BAP_TECH 0x8000 /* Removed the Loader_Tech... */
-#define AA_TECH 0x10000
-#define NS_TECH 0x20000
-#define SS_ABILITY 0x40000 /* Has sixth sense */
-#define FF_TECH 0x80000    /* Has ferro-fib. armor */
-#define ES_TECH 0x100000   /* Has endo-steel internals */
-#define XL_TECH 0x200000
-#define ICE_TECH 0x400000  /* ICE engine */
-#define FORCE_SHS 0x800000 /* Was Lifter */
-#define LE_TECH 0x1000000  /* Light engine */
-#define XXL_TECH 0x2000000
-#define CE_TECH 0x4000000
-#define REINFI_TECH 0x8000000
-#define COMPI_TECH 0x10000000
-#define HARDA_TECH 0x20000000
-#define CRITPROOF_TECH 0x40000000
+constexpr int TRIPLE_MYOMER_TECH = 0x01;
+constexpr int CL_ANTI_MISSILE_TECH = 0x02;
+constexpr int IS_ANTI_MISSILE_TECH = 0x04;
+constexpr int DOUBLE_HEAT_TECH = 0x08;
+constexpr int MASC_TECH = 0x10;
+constexpr int CLAN_TECH = 0x20;
+constexpr int FLIPABLE_ARMS = 0x40;
+constexpr int C3_MASTER_TECH = 0x80;
+constexpr int C3_SLAVE_TECH = 0x100;
+constexpr int ARTEMIS_IV_TECH = 0x200;
+constexpr int ECM_TECH = 0x400;
+constexpr int BEAGLE_PROBE_TECH = 0x800;
+constexpr int SALVAGE_TECH = 0x1000; /* 2x 'mech carrying capacity */
+constexpr int CARGO_TECH = 0x2000;   /* 2x cargo carrying capacity */
+constexpr int SLITE_TECH = 0x4000;
+constexpr int LIGHT_BAP_TECH = 0x8000; /* Removed the Loader_Tech... */
+constexpr int AA_TECH = 0x10000;
+constexpr int NS_TECH = 0x20000;
+constexpr int SS_ABILITY = 0x40000; /* Has sixth sense */
+constexpr int FF_TECH = 0x80000;    /* Has ferro-fib. armor */
+constexpr int ES_TECH = 0x100000;   /* Has endo-steel internals */
+constexpr int XL_TECH = 0x200000;
+constexpr int ICE_TECH = 0x400000;  /* ICE engine */
+constexpr int FORCE_SHS = 0x800000; /* Was Lifter */
+constexpr int LE_TECH = 0x1000000;  /* Light engine */
+constexpr int XXL_TECH = 0x2000000;
+constexpr int CE_TECH = 0x4000000;
+constexpr int REINFI_TECH = 0x8000000;
+constexpr int COMPI_TECH = 0x10000000;
+constexpr int HARDA_TECH = 0x20000000;
+constexpr int CRITPROOF_TECH = 0x40000000;
 /* 0x80000000 can not be used. */
 
 /*critstatus2 element */
-#define HDGYRO_DAMAGED 0x01      /* (a) HDGYRO is damaged */
-#define LIGHT_BAP_DESTROYED 0x02 /* (b) LIGHT_BAP Sensor Destroyed */
+constexpr int HDGYRO_DAMAGED = 0x01;      /* (a) HDGYRO is damaged */
+constexpr int LIGHT_BAP_DESTROYED = 0x02; /* (b) LIGHT_BAP Sensor Destroyed */
 
 /* specials2 element: used to tell quickly what type of tech the mech has */
-#define STEALTH_ARMOR_TECH 0x01   /* Stealth armor */
-#define HVY_FF_ARMOR_TECH 0x02    /* Heavy FF. 1.24 armor multi. 21 slots. */
-#define LASER_REF_ARMOR_TECH 0x04 /* Not yet implemented */
-#define REACTIVE_ARMOR_TECH 0x08  /* Not yet implemented */
-#define NULLSIGSYS_TECH 0x10      /* Null signature system */
-#define C3I_TECH 0x20             /* Improved C3 */
-#define SUPERCHARGER_TECH 0x40    /* Not yet implemented */
-#define IMPROVED_JJ_TECH 0x80
-#define MECHANICAL_JJ_TECH 0x100    /* Not yet implemented */
-#define COMPACT_HS_TECH 0x200       /* Not yet implemented */
-#define LASER_HS_TECH 0x400         /* Not yet implemented */
-#define BLOODHOUND_PROBE_TECH 0x800 /* BLoodhound Active Probe */
-#define ANGEL_ECM_TECH 0x1000       /* Angel ECM suite */
-#define WATCHDOG_TECH 0x2000        /* Not yet implemented */
-#define LT_FF_ARMOR_TECH 0x4000     /* Heavy FF. 1.06 armor multi. 7 slots. */
-#define TAG_TECH 0x8000             /* Target Aquisition Gear */
-#define OMNIMECH_TECH 0x10000       /* Is an omni mech */
-#define ARTEMISV_TECH 0x20000       /* Not yet implemented */
-#define CAMO_TECH 0x40000           /* Allows any unit to 'hide' */
-#define CARRIER_TECH 0x80000        /* Can be used as a carrier of mechs */
+constexpr int STEALTH_ARMOR_TECH = 0x01; /* Stealth armor */
+constexpr int HVY_FF_ARMOR_TECH =
+    0x02; /* Heavy FF. 1.24 armor multi. 21 slots. */
+constexpr int LASER_REF_ARMOR_TECH = 0x04; /* Not yet implemented */
+constexpr int REACTIVE_ARMOR_TECH = 0x08;  /* Not yet implemented */
+constexpr int NULLSIGSYS_TECH = 0x10;      /* Null signature system */
+constexpr int C3I_TECH = 0x20;             /* Improved C3 */
+constexpr int SUPERCHARGER_TECH = 0x40;    /* Not yet implemented */
+constexpr int IMPROVED_JJ_TECH = 0x80;
+constexpr int MECHANICAL_JJ_TECH = 0x100;    /* Not yet implemented */
+constexpr int COMPACT_HS_TECH = 0x200;       /* Not yet implemented */
+constexpr int LASER_HS_TECH = 0x400;         /* Not yet implemented */
+constexpr int BLOODHOUND_PROBE_TECH = 0x800; /* BLoodhound Active Probe */
+constexpr int ANGEL_ECM_TECH = 0x1000;       /* Angel ECM suite */
+constexpr int WATCHDOG_TECH = 0x2000;        /* Not yet implemented */
+constexpr int LT_FF_ARMOR_TECH =
+    0x4000;                      /* Heavy FF. 1.06 armor multi. 7 slots. */
+constexpr int TAG_TECH = 0x8000; /* Target Aquisition Gear */
+constexpr int OMNIMECH_TECH = 0x10000; /* Is an omni mech */
+constexpr int ARTEMISV_TECH = 0x20000; /* Not yet implemented */
+constexpr int CAMO_TECH = 0x40000;     /* Allows any unit to 'hide' */
+constexpr int CARRIER_TECH = 0x80000;  /* Can be used as a carrier of mechs */
 #define WATERPROOF_TECH                                                        \
   0x100000 /* Can the unit go underwater without problems                      \
               for use with tanks */
-#define XLGYRO_TECH 0x200000
-#define HDGYRO_TECH 0x400000
-#define CGYRO_TECH 0x800000
-#define TCOMP_TECH 0x1000000
-#define SMALLCOCKPIT_TECH 0x2000000
+constexpr int XLGYRO_TECH = 0x200000;
+constexpr int HDGYRO_TECH = 0x400000;
+constexpr int CGYRO_TECH = 0x800000;
+constexpr int TCOMP_TECH = 0x1000000;
+constexpr int SMALLCOCKPIT_TECH = 0x2000000;
 
 /* Infantry specials */
-#define INF_SWARM_TECH 0x01   /* Infantry/BSuits can swarm unfriendlies */
-#define INF_MOUNT_TECH 0x02   /* Infantry/BSuits can mount friendlies */
-#define INF_ANTILEG_TECH 0x04 /* Infantry/BSuits can make anti-leg attacks */
+constexpr int INF_SWARM_TECH =
+    0x01; /* Infantry/BSuits can swarm unfriendlies */
+constexpr int INF_MOUNT_TECH = 0x02; /* Infantry/BSuits can mount friendlies */
+constexpr int INF_ANTILEG_TECH =
+    0x04; /* Infantry/BSuits can make anti-leg attacks */
 #define CS_PURIFIER_STEALTH_TECH                                               \
   0x08 /* CS Purifier stealth technology. +3 at 0MP, +2 at 1MP, +1 at 2MP, +3  \
           at 3+MP. */
@@ -269,11 +284,11 @@
    FC_INFILTRATORII_STEALTH_TECH)
 
 /* TargComp types */
-#define TARGCOMP_NORMAL 0
-#define TARGCOMP_SHORT 1
-#define TARGCOMP_LONG 2
-#define TARGCOMP_MULTI 3
-#define TARGCOMP_AA 4
+constexpr int TARGCOMP_NORMAL = 0;
+constexpr int TARGCOMP_SHORT = 1;
+constexpr int TARGCOMP_LONG = 2;
+constexpr int TARGCOMP_MULTI = 3;
+constexpr int TARGCOMP_AA = 4;
 
 /*
         Notes on unimplemented stuff:
@@ -367,12 +382,12 @@
  */
 
 /* Status stuff for common_checks function */
-#define MECH_STARTED 0x1
-#define MECH_PILOT 0x2
-#define MECH_PILOT_CON 0x4
-#define MECH_MAP 0x8
-#define MECH_CONSISTENT 0x10
-#define MECH_PILOTONLY 0x20
+constexpr int MECH_STARTED = 0x1;
+constexpr int MECH_PILOT = 0x2;
+constexpr int MECH_PILOT_CON = 0x4;
+constexpr int MECH_MAP = 0x8;
+constexpr int MECH_CONSISTENT = 0x10;
+constexpr int MECH_PILOTONLY = 0x20;
 #define MECH_USUAL                                                             \
   (MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOT | MECH_STARTED)
 #define MECH_USUALS (MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOT)

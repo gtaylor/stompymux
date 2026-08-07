@@ -29,9 +29,9 @@ SPATHRESULT *CalculatePath(int x1, int y1, int x2, int y2, int errper);
 #ifdef _SPATH_C
 
 #ifdef HEX_BASED
-#define NBCOUNT 6
+constexpr int NBCOUNT = 6;
 #else
-#define NBCOUNT 8
+constexpr int NBCOUNT = 8;
 #endif
 
 typedef struct NODETYPE {

@@ -21,25 +21,25 @@
         strstr(MechWeapons[a].name, "Flamer")) */
 
 /* these are types of modifiers */
-#define HEAT 1
-#define RANGE 2
-#define DAMAGE 3
-#define POWER_SPIKE 4
-#define WEAPON_JAMMED 5
-#define WEAPON_DUD 6
-#define CRAZY_MISSILES 7
+constexpr int HEAT = 1;
+constexpr int RANGE = 2;
+constexpr int DAMAGE = 3;
+constexpr int POWER_SPIKE = 4;
+constexpr int WEAPON_JAMMED = 5;
+constexpr int WEAPON_DUD = 6;
+constexpr int CRAZY_MISSILES = 7;
 
-#define FAIL_STATIC 1
+constexpr int FAIL_STATIC = 1;
 
 /* these are catagories of damage */
-#define FAIL_NONE 0
-#define FAIL_JAMMED 1
-#define FAIL_SHORTED 2
-#define FAIL_DUD 3
-#define FAIL_EMPTY 4
-#define FAIL_DESTROYED 5
-#define FAIL_AMMOJAMMED 6
-#define FAIL_AMMOCRITJAMMED 7
+constexpr int FAIL_NONE = 0;
+constexpr int FAIL_JAMMED = 1;
+constexpr int FAIL_SHORTED = 2;
+constexpr int FAIL_DUD = 3;
+constexpr int FAIL_EMPTY = 4;
+constexpr int FAIL_DESTROYED = 5;
+constexpr int FAIL_AMMOJAMMED = 6;
+constexpr int FAIL_AMMOCRITJAMMED = 7;
 
 typedef struct PartBrand {
   const char *name;

@@ -23,26 +23,29 @@ struct CriticalSlot {
 };
 
 /* Fire modes */
-#define DESTROYED_MODE 0x00000001 /* the part is destroyed */
-#define DISABLED_MODE 0x00000002  /* the part is disabled */
+constexpr int DESTROYED_MODE = 0x00000001; /* the part is destroyed */
+constexpr int DISABLED_MODE = 0x00000002;  /* the part is disabled */
 #define BROKEN_MODE                                                            \
   0x00000004 /* the part is part of a destroyed weapon/item                    \
               */
 #define DAMAGED_MODE                                                           \
-  0x00000008             /* the part is damaged from an enhanced critical */
-#define ON_TC 0x00000010 /* (T) Set if the wepons mounted with TC */
-#define REAR_MOUNT 0x00000020    /* (R) set if weapon is rear mounted */
-#define HOTLOAD_MODE 0x00000040  /* (H) Weapon's being hotloaded */
-#define HALFTON_MODE 0x00000080  /* Weapon is in halfton mode */
-#define OS_MODE 0x00000100       /* (O) In weapon itself : Weapon's one-shot */
-#define OS_USED 0x00000200       /* One-shot ammo _has_ been already used */
-#define ULTRA_MODE 0x00000400    /* (U) set if weapon is in Ultra firing mode */
-#define RFAC_MODE 0x00000800     /* (F) the weapon is set as a rapid fire AC */
-#define GATTLING_MODE 0x00001000 /* (G) For Gattling MGs */
-#define RAC_TWOSHOT_MODE 0x00002000  /* (2) RAC in two shot mode */
-#define RAC_FOURSHOT_MODE 0x00004000 /* (4) RAC in four shot mode */
-#define RAC_SIXSHOT_MODE 0x00008000  /* (6) RAC in six shot mode */
-#define HEAT_MODE 0x00010000         /* (H) Toggle a flamer into heat mode */
+  0x00000008 /* the part is damaged from an enhanced critical */
+constexpr int ON_TC = 0x00000010; /* (T) Set if the wepons mounted with TC */
+constexpr int REAR_MOUNT = 0x00000020;   /* (R) set if weapon is rear mounted */
+constexpr int HOTLOAD_MODE = 0x00000040; /* (H) Weapon's being hotloaded */
+constexpr int HALFTON_MODE = 0x00000080; /* Weapon is in halfton mode */
+constexpr int OS_MODE =
+    0x00000100; /* (O) In weapon itself : Weapon's one-shot */
+constexpr int OS_USED = 0x00000200; /* One-shot ammo _has_ been already used */
+constexpr int ULTRA_MODE =
+    0x00000400; /* (U) set if weapon is in Ultra firing mode */
+constexpr int RFAC_MODE =
+    0x00000800; /* (F) the weapon is set as a rapid fire AC */
+constexpr int GATTLING_MODE = 0x00001000;     /* (G) For Gattling MGs */
+constexpr int RAC_TWOSHOT_MODE = 0x00002000;  /* (2) RAC in two shot mode */
+constexpr int RAC_FOURSHOT_MODE = 0x00004000; /* (4) RAC in four shot mode */
+constexpr int RAC_SIXSHOT_MODE = 0x00008000;  /* (6) RAC in six shot mode */
+constexpr int HEAT_MODE = 0x00010000; /* (H) Toggle a flamer into heat mode */
 #define WILL_JETTISON_MODE                                                     \
   0x00020000 /* Set if the slot will get destroyed during a backpack jettison  \
                 (BSuits) */
@@ -59,21 +62,27 @@ struct CriticalSlot {
    HEAT_MODE)
 
 /* Ammo modes */
-#define LBX_MODE 0x00000001     /* (L) set if weapon is firing LBX ammo */
-#define ARTEMIS_MODE 0x00000002 /* (A) artemis compatible missiles/laucher */
-#define NARC_MODE 0x00000004    /* (N) narc compatible missiles/launcher */
-#define CLUSTER_MODE 0x00000008 /* (C) Set if weapon is firing cluster ammo */
-#define MINE_MODE 0x00000010    /* (M) Set if weapon's firing mines */
-#define SMOKE_MODE 0x00000020   /* (S) Set if weapon's firing smoke rounds */
+constexpr int LBX_MODE = 0x00000001; /* (L) set if weapon is firing LBX ammo */
+constexpr int ARTEMIS_MODE =
+    0x00000002; /* (A) artemis compatible missiles/laucher */
+constexpr int NARC_MODE =
+    0x00000004; /* (N) narc compatible missiles/launcher */
+constexpr int CLUSTER_MODE =
+    0x00000008; /* (C) Set if weapon is firing cluster ammo */
+constexpr int MINE_MODE = 0x00000010; /* (M) Set if weapon's firing mines */
+constexpr int SMOKE_MODE =
+    0x00000020; /* (S) Set if weapon's firing smoke rounds */
 #define INFERNO_MODE                                                           \
   0x00000040 /* (I) SRM's loaded with Inferno rounds (cause heat) */
-#define SWARM_MODE 0x00000080  /* (W) LRM's loaded with Swarm rounds */
-#define SWARM1_MODE 0x00000100 /* (1) LRM's loaded with Swarm1 rounds (FoF) */
+constexpr int SWARM_MODE = 0x00000080; /* (W) LRM's loaded with Swarm rounds */
+constexpr int SWARM1_MODE =
+    0x00000100; /* (1) LRM's loaded with Swarm1 rounds (FoF) */
 #define INARC_EXPLO_MODE                                                       \
   0x00000200 /* (X) inarc launcher firing explosive pods */
 #define INARC_HAYWIRE_MODE                                                     \
-  0x00000400                      /* (Y) inarc launcher firing haywire pods */
-#define INARC_ECM_MODE 0x00000800 /* (E) inarc launcher firing ecm pods */
+  0x00000400 /* (Y) inarc launcher firing haywire pods */
+constexpr int INARC_ECM_MODE =
+    0x00000800; /* (E) inarc launcher firing ecm pods */
 #define INARC_NEMESIS_MODE                                                     \
   0x00001000 /* (Z) inarc launcher firing nemesis pods */
 #define AC_AP_MODE                                                             \
@@ -84,17 +93,17 @@ struct CriticalSlot {
 #define AC_INCENDIARY_MODE                                                     \
   0x00008000 /* (D) autocannon firing incendiary rounds */
 #define AC_PRECISION_MODE                                                      \
-  0x00010000                    /* (P) autocannon firing precision rounds */
-#define STINGER_MODE 0x00020000 /* (T) AntiAir LRM */
+  0x00010000 /* (P) autocannon firing precision rounds */
+constexpr int STINGER_MODE = 0x00020000; /* (T) AntiAir LRM */
 #define AC_CASELESS_MODE                                                       \
   0x00040000 /* (U) autocannon firing caseless rounds                          \
               */
 #define SGUIDED_MODE                                                           \
   0x00080000 /* (G) LRM's loaded with Semi-Guided rounds (benefits only if     \
                 unit is lit by 'TAG' */
-#define ATM_ER_MODE 0x00100000  /* (R) ATM's in Extended Range mode */
-#define ATM_HE_MODE 0x00200000  /* (X) ATM's in High Explosive Mode */
-#define MML_LRM_MODE 0x00400000 /* (#) MML in LRM Mode */
+constexpr int ATM_ER_MODE = 0x00100000;  /* (R) ATM's in Extended Range mode */
+constexpr int ATM_HE_MODE = 0x00200000;  /* (X) ATM's in High Explosive Mode */
+constexpr int MML_LRM_MODE = 0x00400000; /* (#) MML in LRM Mode */
 
 #define ARTILLERY_MODES (CLUSTER_MODE | MINE_MODE | SMOKE_MODE)
 #define INARC_MODES                                                            \
@@ -111,7 +120,7 @@ struct CriticalSlot {
    ATM_MODES | MML_LRM_MODE)
 
 /* Enhanced critical damage flags */
-#define WEAP_DAM_MODERATE 0x00000001 /* +1 to hit */
+constexpr int WEAP_DAM_MODERATE = 0x00000001; /* +1 to hit */
 #define WEAP_DAM_EN_FOCUS                                                      \
   0x00000002 /* Energy weapons: Focus misaligned. -1 damage, +1 BTH at med and \
                 long range */
@@ -148,18 +157,19 @@ struct MechSection {
 };
 
 /* Section configurations */
-#define CASE_TECH 0x01         /* section has CASE technology */
-#define SECTION_DESTROYED 0x02 /* section has been destroyed */
-#define SECTION_BREACHED 0x04  /* section has been exposed to vacuum */
+constexpr int CASE_TECH = 0x01;         /* section has CASE technology */
+constexpr int SECTION_DESTROYED = 0x02; /* section has been destroyed */
+constexpr int SECTION_BREACHED = 0x04;  /* section has been exposed to vacuum */
 #define SECTION_FLOODED                                                        \
-  0x08            /* section has been flooded with water - Kipsta. 8/3/99 */
-#define AXED 0x10 /* arm was used to axe/sword someone */
+  0x08 /* section has been flooded with water - Kipsta. 8/3/99 */
+constexpr int AXED = 0x10; /* arm was used to axe/sword someone */
 #define STABILIZERS_DESTROYED                                                  \
   0x20 /* vehicle only. Double attacker mod for weapons from the section */
-#define CASEII_TECH 0x40 /* section has CASE II technology */
+constexpr int CASEII_TECH = 0x40; /* section has CASE II technology */
 
 /* Section specials */
-#define NARC_ATTACHED 0x00000001 /* set if mech has a NARC beacon attached. */
+constexpr int NARC_ATTACHED =
+    0x00000001; /* set if mech has a NARC beacon attached. */
 #define INARC_HOMING_ATTACHED                                                  \
   0x00000002 /* set if mech has an iNARC homing beacon attached. */
 #define INARC_HAYWIRE_ATTACHED                                                 \
@@ -168,46 +178,46 @@ struct MechSection {
   0x00000008 /* set if mech has an iNARC ecm beacon attached. */
 #define INARC_NEMESIS_ATTACHED                                                 \
   0x00000010 /* set if mech has an iNARC nemesis beacon attached. */
-#define CARRYING_CLUB 0x00000020 /* carrying a club in this location */
+constexpr int CARRYING_CLUB = 0x00000020; /* carrying a club in this location */
 
 /* ground combat types */
-#define CLASS_MECH 0
-#define CLASS_VEH_GROUND 1
-#define CLASS_VEH_NAVAL 3
+constexpr int CLASS_MECH = 0;
+constexpr int CLASS_VEH_GROUND = 1;
+constexpr int CLASS_VEH_NAVAL = 3;
 
 /* Air types */
-#define CLASS_VTOL 2
-#define CLASS_SPHEROID_DS 4 /* Spheroid DropShip */
-#define CLASS_AERO 5
-#define CLASS_MW 6 /* Ejected MechWarrior */
-#define CLASS_DS 7 /* AeroDyne DropShip */
-#define CLASS_BSUIT 8
-#define CLASS_LAST 8
+constexpr int CLASS_VTOL = 2;
+constexpr int CLASS_SPHEROID_DS = 4; /* Spheroid DropShip */
+constexpr int CLASS_AERO = 5;
+constexpr int CLASS_MW = 6; /* Ejected MechWarrior */
+constexpr int CLASS_DS = 7; /* AeroDyne DropShip */
+constexpr int CLASS_BSUIT = 8;
+constexpr int CLASS_LAST = 8;
 
 #define DropShip(a) ((a) == CLASS_DS || (a) == CLASS_SPHEROID_DS)
 #define IsDS(m) (DropShip(MechType(m)))
 
 /* ground movement types */
-#define MOVE_BIPED 0
-#define MOVE_QUAD 8
-#define MOVE_TRACK 1
-#define MOVE_WHEEL 2
-#define MOVE_HOVER 3
-#define MOVE_HULL 5
-#define MOVE_FOIL 6
-#define MOVE_SUB 9
+constexpr int MOVE_BIPED = 0;
+constexpr int MOVE_QUAD = 8;
+constexpr int MOVE_TRACK = 1;
+constexpr int MOVE_WHEEL = 2;
+constexpr int MOVE_HOVER = 3;
+constexpr int MOVE_HULL = 5;
+constexpr int MOVE_FOIL = 6;
+constexpr int MOVE_SUB = 9;
 
 /* Air movenement types */
-#define MOVE_VTOL 4
-#define MOVE_FLY 7
+constexpr int MOVE_VTOL = 4;
+constexpr int MOVE_FLY = 7;
 
-#define MOVE_NONE 10 /* Stationary, for one reason or another */
+constexpr int MOVE_NONE = 10; /* Stationary, for one reason or another */
 
-#define MOVENEMENT_LAST 10
+constexpr int MOVENEMENT_LAST = 10;
 
 /* Mech Preferences list */
-#define MECHPREF_PKILL 0x00000001  /* Kill MWs anyway */
-#define MECHPREF_SLWARN 0x00000002 /* Warn when lit by slite */
+constexpr int MECHPREF_PKILL = 0x00000001;  /* Kill MWs anyway */
+constexpr int MECHPREF_SLWARN = 0x00000002; /* Warn when lit by slite */
 #define MECHPREF_AUTOFALL                                                      \
   0x00000004 /* Jump off cliffs (don't try to avoid)                           \
               */
@@ -217,9 +227,12 @@ struct MechSection {
   0x00000010 /* Don't warn when ammo is getting low                            \
               */
 #define MECHPREF_STANDANYWAY                                                   \
-  0x00000020                           /* Try to stand even when BTH too high */
-#define MECHPREF_AUTOCON_SD 0x00000040 /* Autocon on non-started units */
-#define MECHPREF_NOFRIENDLYFIRE 0x00000080 /* Disallow firing on teammates */
-#define MECHPREF_TURNMODE 0x00000100 /* Tight or Normal for Maneuvering Ace */
+  0x00000020 /* Try to stand even when BTH too high */
+constexpr int MECHPREF_AUTOCON_SD =
+    0x00000040; /* Autocon on non-started units */
+constexpr int MECHPREF_NOFRIENDLYFIRE =
+    0x00000080; /* Disallow firing on teammates */
+constexpr int MECHPREF_TURNMODE =
+    0x00000100; /* Tight or Normal for Maneuvering Ace */
 #define MECHPREF_BTHDEBUG                                                      \
   0x00000200 /* Show BTH Debug or not (Can Get Spammy) */

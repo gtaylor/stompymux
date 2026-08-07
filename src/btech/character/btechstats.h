@@ -228,11 +228,11 @@ extern char *char_packages[9];
 
 /*************************************************************************/
 
-#define NUM_CHARLEVELS 5
+constexpr int NUM_CHARLEVELS = 5;
 
-#define NUM_CHARTYPES 6
+constexpr int NUM_CHARTYPES = 6;
 
-#define NUM_CHARPACKAGES 9
+constexpr int NUM_CHARPACKAGES = 9;
 
 /*
     XP is added only if the player is online AND

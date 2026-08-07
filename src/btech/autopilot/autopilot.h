@@ -26,7 +26,8 @@
 
 typedef struct MuxEvent MuxEvent;
 
-#define AUTOPILOT_MEMORY 100 /* Number of command slots available to AI */
+constexpr int AUTOPILOT_MEMORY =
+    100; /* Number of command slots available to AI */
 #define AUTOPILOT_MAX_ARGS                                                     \
   5 /* Max number of arguments for a given AI Command                          \
        Includes the command as the first argument */
@@ -35,27 +36,29 @@ typedef struct MuxEvent MuxEvent;
 #define AUTOPILOT_AUTOGUN                                                      \
   1 /* Is autogun enabled, ie: shoot what AI wants to                          \
      */
-#define AUTOPILOT_GUNZOMBIE 2
-#define AUTOPILOT_PILZOMBIE 4
-#define AUTOPILOT_ROAM 8       /* Are we roaming around */
-#define AUTOPILOT_LSENS 16     /* Should change sensors or user set them */
-#define AUTOPILOT_CHASETARG 32 /* Should chase the target */
+constexpr int AUTOPILOT_GUNZOMBIE = 2;
+constexpr int AUTOPILOT_PILZOMBIE = 4;
+constexpr int AUTOPILOT_ROAM = 8;   /* Are we roaming around */
+constexpr int AUTOPILOT_LSENS = 16; /* Should change sensors or user set them */
+constexpr int AUTOPILOT_CHASETARG = 32; /* Should chase the target */
 #define AUTOPILOT_WAS_CHASE_ON                                                 \
   64 /* Was chasetarg on, for use with movement stuff */
-#define AUTOPILOT_SWARMCHARGE 128
-#define AUTOPILOT_ASSIGNED_TARGET 256 /* We given a specific target ? */
+constexpr int AUTOPILOT_SWARMCHARGE = 128;
+constexpr int AUTOPILOT_ASSIGNED_TARGET =
+    256; /* We given a specific target ? */
 
 /* Various delays for the autopilot */
-#define AUTOPILOT_NC_DELAY 1 /* Generic command wait time before executing */
+constexpr int AUTOPILOT_NC_DELAY =
+    1; /* Generic command wait time before executing */
 
-#define AUTOPILOT_GOTO_TICK 4 /* How often to check any GOTO event */
+constexpr int AUTOPILOT_GOTO_TICK = 4; /* How often to check any GOTO event */
 #define AUTOPILOT_LEAVE_TICK                                                   \
   6 /* How often to check if we've left                                        \
        the bay/hangar */
-#define AUTOPILOT_WAITFOE_TICK 4
-#define AUTOPILOT_PURSUE_TICK 4
+constexpr int AUTOPILOT_WAITFOE_TICK = 4;
+constexpr int AUTOPILOT_PURSUE_TICK = 4;
 
-#define AUTOPILOT_FOLLOW_TICK 4
+constexpr int AUTOPILOT_FOLLOW_TICK = 4;
 #define AUTOPILOT_FOLLOW_UPDATE_TICK                                           \
   10 /* When should we update the target hex */
 
@@ -67,11 +70,11 @@ typedef struct MuxEvent MuxEvent;
   STARTUP_TIME + AUTOPILOT_NC_DELAY /* Delay for startup */
 
 /* Defines for the autogun/autosensor stuff */
-#define AUTO_GUN_TICK 1          /* Every second */
-#define AUTO_GUN_MAX_HEAT 6.0    /* Last heat we let heat go to */
-#define AUTO_GUN_MAX_TARGETS 100 /* Don't really use this one */
-#define AUTO_GUN_MAX_RANGE 30    /* Max range to look for targets */
-#define AUTO_GUN_UPDATE_TICK 30  /* When to look for a new target */
+constexpr int AUTO_GUN_TICK = 1;          /* Every second */
+constexpr double AUTO_GUN_MAX_HEAT = 6.0; /* Last heat we let heat go to */
+constexpr int AUTO_GUN_MAX_TARGETS = 100; /* Don't really use this one */
+constexpr int AUTO_GUN_MAX_RANGE = 30;    /* Max range to look for targets */
+constexpr int AUTO_GUN_UPDATE_TICK = 30;  /* When to look for a new target */
 #define AUTO_GUN_IDLE_TICK                                                     \
   10 /* How often to call autogun when in idle mode                            \
       */
@@ -80,10 +83,10 @@ typedef struct MuxEvent MuxEvent;
          other targets if our main target is beyond                            \
          this distance */
 #define AUTO_PROFILE_TICK                                                      \
-  180                            /* How often to update the weapon profile     \
-                                    of the AI */
-#define AUTO_PROFILE_MAX_SIZE 30 /* Size of the profile array */
-#define AUTO_SENSOR_TICK 30      /* Every 30 seconds or so */
+  180 /* How often to update the weapon profile                                \
+         of the AI */
+constexpr int AUTO_PROFILE_MAX_SIZE = 30; /* Size of the profile array */
+constexpr int AUTO_SENSOR_TICK = 30;      /* Every 30 seconds or so */
 
 #define Gunning(a) ((a)->flags & AUTOPILOT_AUTOGUN)
 #define StartGun(a) (a)->flags |= AUTOPILOT_AUTOGUN
@@ -95,12 +98,13 @@ typedef struct MuxEvent MuxEvent;
 #define UnassignTarget(a) (a)->flags &= ~(AUTOPILOT_ASSIGNED_TARGET)
 
 /* Chase Target stuff for use with auto_set_chasetarget_mode */
-#define AUTO_CHASETARGET_ON 1  /* Turns it on and resets the values */
-#define AUTO_CHASETARGET_OFF 2 /* Turns it off */
+constexpr int AUTO_CHASETARGET_ON = 1;  /* Turns it on and resets the values */
+constexpr int AUTO_CHASETARGET_OFF = 2; /* Turns it off */
 #define AUTO_CHASETARGET_REMEMBER                                              \
-  3                             /* Turns it on only if the AI remembers it     \
-                                   being on */
-#define AUTO_CHASETARGET_SAVE 4 /* Turns it off and saves that it was on */
+  3 /* Turns it on only if the AI remembers it                                 \
+       being on */
+constexpr int AUTO_CHASETARGET_SAVE =
+    4; /* Turns it off and saves that it was on */
 
 /* Is chasetarget mode on */
 #define ChasingTarget(a) ((a)->flags & AUTOPILOT_CHASETARG)
@@ -114,12 +118,12 @@ typedef struct MuxEvent MuxEvent;
 
 /* Roam Stuff */
 /* Types of ROAMing */
-#define AUTO_ROAM_MAP 1  /* Roaming the whole map */
-#define AUTO_ROAM_SPOT 2 /* Roaming a single area */
+constexpr int AUTO_ROAM_MAP = 1;  /* Roaming the whole map */
+constexpr int AUTO_ROAM_SPOT = 2; /* Roaming a single area */
 
 /* Tick values etc.. */
-#define AUTO_ROAM_TICK 3           /* How often to update */
-#define AUTO_ROAM_NEW_HEX_TICK 100 /* How often to pick a new hex */
+constexpr int AUTO_ROAM_TICK = 3;           /* How often to update */
+constexpr int AUTO_ROAM_NEW_HEX_TICK = 100; /* How often to pick a new hex */
 #define AUTO_ROAM_MAX_RADIUS                                                   \
   30 /* Max distance a person can make AI                                      \
         radius roam */
@@ -132,8 +136,8 @@ typedef struct MuxEvent MuxEvent;
        for a new roam hex */
 
 /*! \todo {Not sure what these are look into it} */
-#define AUTO_GOET 15
-#define AUTO_GOTT 240
+constexpr int AUTO_GOET = 15;
+constexpr int AUTO_GOTT = 240;
 
 #define DoStartGun(a)                                                          \
   do {                                                                         \

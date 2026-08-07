@@ -31,47 +31,47 @@
 
 /* In minutes */
 #if 1
-#define TECH_TICK 60
-#define TECH_UNIT "minute"
+constexpr int TECH_TICK = 60;
+constexpr char TECH_UNIT[] = "minute";
 #else
-#define TECH_TICK 1
-#define TECH_UNIT "second"
+constexpr int TECH_TICK = 1;
+constexpr char TECH_UNIT[] = "second";
 #endif
 
 /* Tech skill modifiers ; + = bad, - = good */
 #define PARTTYPE_DIFFICULTY(a) (1)
 #define WEAPTYPE_DIFFICULTY(a)                                                 \
   ((int)(sqrt((MechWeapons[Weapon2I(a)].criticals * 1.5) - 1.1)))
-#define REPAIR_DIFFICULTY 0
-#define REPLACE_DIFFICULTY 1
-#define RELOAD_DIFFICULTY 1
-#define FIXARMOR_DIFFICULTY 1
-#define FIXINTERNAL_DIFFICULTY 2
-#define REATTACH_DIFFICULTY 3
-#define REMOVEG_DIFFICULTY 1
-#define REMOVEP_DIFFICULTY 0
-#define REMOVES_DIFFICULTY 2
-#define RESEAL_DIFFICULTY 0 /* Added 8/4/99. Kipsta. */
-#define REPLACESUIT_DIFFICULTY 3
-#define ENHCRIT_DIFFICULTY 0
+constexpr int REPAIR_DIFFICULTY = 0;
+constexpr int REPLACE_DIFFICULTY = 1;
+constexpr int RELOAD_DIFFICULTY = 1;
+constexpr int FIXARMOR_DIFFICULTY = 1;
+constexpr int FIXINTERNAL_DIFFICULTY = 2;
+constexpr int REATTACH_DIFFICULTY = 3;
+constexpr int REMOVEG_DIFFICULTY = 1;
+constexpr int REMOVEP_DIFFICULTY = 0;
+constexpr int REMOVES_DIFFICULTY = 2;
+constexpr int RESEAL_DIFFICULTY = 0; /* Added 8/4/99. Kipsta. */
+constexpr int REPLACESUIT_DIFFICULTY = 3;
+constexpr int ENHCRIT_DIFFICULTY = 0;
 
 /* Times are in minutes */
-#define MOUNT_BOMB_TIME 5
-#define UMOUNT_BOMB_TIME 5
-#define REPLACEGUN_TIME 60
-#define REPLACEPART_TIME 45
-#define REPAIRGUN_TIME 20
-#define REPAIRENHCRIT_TIME 15
-#define REPAIRPART_TIME 15
-#define RELOAD_TIME 10
-#define FIXARMOR_TIME 3
-#define FIXINTERNAL_TIME 9
-#define REATTACH_TIME 240
-#define REMOVEP_TIME 40
-#define REMOVEG_TIME 40
-#define REMOVES_TIME 120
-#define RESEAL_TIME 60 /* Added 8/4/99. Kipsta. */
-#define REPLACESUIT_TIME 120
+constexpr int MOUNT_BOMB_TIME = 5;
+constexpr int UMOUNT_BOMB_TIME = 5;
+constexpr int REPLACEGUN_TIME = 60;
+constexpr int REPLACEPART_TIME = 45;
+constexpr int REPAIRGUN_TIME = 20;
+constexpr int REPAIRENHCRIT_TIME = 15;
+constexpr int REPAIRPART_TIME = 15;
+constexpr int RELOAD_TIME = 10;
+constexpr int FIXARMOR_TIME = 3;
+constexpr int FIXINTERNAL_TIME = 9;
+constexpr int REATTACH_TIME = 240;
+constexpr int REMOVEP_TIME = 40;
+constexpr int REMOVEG_TIME = 40;
+constexpr int REMOVES_TIME = 120;
+constexpr int RESEAL_TIME = 60; /* Added 8/4/99. Kipsta. */
+constexpr int REPLACESUIT_TIME = 120;
 
 #define TECHCOMMANDH(a) void a(DbRef player, void *data, char *buffer)
 #define TECHCOMMANDB                                                           \
@@ -134,9 +134,9 @@
 
 #define ETECHCOMMAND(a) void a(DbRef player, void *data, char *buffer)
 
-#define LOCMAX 16
-#define POSMAX 16
-#define EXTMAX 256
+constexpr int LOCMAX = 16;
+constexpr int POSMAX = 16;
+constexpr int EXTMAX = 256;
 #define PLAYERPOS (LOCMAX * POSMAX * EXTMAX)
 
 #define TECHEVENT(a)                                                           \

@@ -23,9 +23,9 @@ typedef struct StringifiedValue {
 } StringifiedValue;
 
 /* #define MAX_MENU_LENGTH 24 */
-#define MAX_MENU_LENGTH 400
-#define MAX_MENU_WIDTH 240
-#define MENU_CHAR_WIDTH 78
+constexpr int MAX_MENU_LENGTH = 400;
+constexpr int MAX_MENU_WIDTH = 240;
+constexpr int MENU_CHAR_WIDTH = 78;
 
 /*
 non-ticked toggle
@@ -40,19 +40,19 @@ string
    ...
    */
 
-#define CM_ONE 0x001       /* Just one / line */
-#define CM_TWO 0x002       /* Two / line */
-#define CM_THREE 0x004     /* Three / line */
-#define CM_FOUR 0x008      /* Four / line */
-#define CM_CENTER 0x010    /* Stuff's centered, not left-edge */
-#define CM_TOGGLE 0x020    /* Field that can be toggled */
-#define CM_NUMBER 0x040    /* Field with number in it (add/lower) */
-#define CM_LINE 0x080      /* No text, just blank line */
-#define CM_STRING 0x100    /* String with letter ahead of it */
-#define CM_NO_HILITE 0x200 /* No extra highlight */
-#define CM_NOTOG 0x400     /* Not really toggleable */
-#define CM_NORIGHT 0x800   /* No right-end field */
-#define CM_NOCUT 0x1000    /* Turn off cutoff */
+constexpr int CM_ONE = 0x001;       /* Just one / line */
+constexpr int CM_TWO = 0x002;       /* Two / line */
+constexpr int CM_THREE = 0x004;     /* Three / line */
+constexpr int CM_FOUR = 0x008;      /* Four / line */
+constexpr int CM_CENTER = 0x010;    /* Stuff's centered, not left-edge */
+constexpr int CM_TOGGLE = 0x020;    /* Field that can be toggled */
+constexpr int CM_NUMBER = 0x040;    /* Field with number in it (add/lower) */
+constexpr int CM_LINE = 0x080;      /* No text, just blank line */
+constexpr int CM_STRING = 0x100;    /* String with letter ahead of it */
+constexpr int CM_NO_HILITE = 0x200; /* No extra highlight */
+constexpr int CM_NOTOG = 0x400;     /* Not really toggleable */
+constexpr int CM_NORIGHT = 0x800;   /* No right-end field */
+constexpr int CM_NOCUT = 0x1000;    /* Turn off cutoff */
 
 #define LETTERFIRST (CM_TOGGLE | CM_NUMBER | CM_STRING)
 #define RIGHTEDGES (CM_TOGGLE | CM_NUMBER)

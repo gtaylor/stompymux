@@ -22,14 +22,14 @@ typedef struct MechUnitId {
 
 extern const struct WeaponDefinition MechWeapons[];
 
-#define TELE_ALL 1  /* Tele all, not just mortals */
-#define TELE_LOUD 4 /* Loudly teleport */
-#define TELE_XP 8   /* Lose 1/3 XP */
+constexpr int TELE_ALL = 1;  /* Tele all, not just mortals */
+constexpr int TELE_LOUD = 4; /* Loudly teleport */
+constexpr int TELE_XP = 8;   /* Lose 1/3 XP */
 
-#define MINE_STEP 1 /* Someone steps to a hex */
-#define MINE_LAND 2 /* Someone lands in a hex */
-#define MINE_FALL 3 /* Someone falls in the hex */
-#define MINE_DROP 4 /* Someone drops to ground in the hex */
+constexpr int MINE_STEP = 1; /* Someone steps to a hex */
+constexpr int MINE_LAND = 2; /* Someone lands in a hex */
+constexpr int MINE_FALL = 3; /* Someone falls in the hex */
+constexpr int MINE_DROP = 4; /* Someone drops to ground in the hex */
 
 #ifndef ECMD
 #define ECMD(a) extern void a(DbRef player, void *data, char *buffer)

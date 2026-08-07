@@ -16,19 +16,19 @@ typedef struct BtechContext BtechContext;
 #include "btech/context.h"
 #include "mux/server/platform.h"
 
-#define MAX_SENSORS 2
+constexpr int MAX_SENSORS = 2;
 #define NUMSENSORS(mech) 2
 
-#define MAPLOS_MAXX 70
-#define MAPLOS_MAXY 45
+constexpr int MAPLOS_MAXX = 70;
+constexpr int MAPLOS_MAXY = 45;
 
-#define MAPLOS_FLAG_SLITE 1
+constexpr int MAPLOS_FLAG_SLITE = 1;
 
-#define MAPLOSHEX_NOLOS 0
-#define MAPLOSHEX_SEEN 1
-#define MAPLOSHEX_SEETERRAIN 2
-#define MAPLOSHEX_SEEELEV 4
-#define MAPLOSHEX_LIT 8
+constexpr int MAPLOSHEX_NOLOS = 0;
+constexpr int MAPLOSHEX_SEEN = 1;
+constexpr int MAPLOSHEX_SEETERRAIN = 2;
+constexpr int MAPLOSHEX_SEEELEV = 4;
+constexpr int MAPLOSHEX_LIT = 8;
 #define MAPLOSHEX_SEE (MAPLOSHEX_SEETERRAIN | MAPLOSHEX_SEEELEV)
 
 #define LOS_MAP_GET_FLAG(los_map, x, y)                                        \

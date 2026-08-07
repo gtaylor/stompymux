@@ -25,24 +25,24 @@
 
  */
 
-#define MAX_MECHS_PER_MAP 250
+constexpr int MAX_MECHS_PER_MAP = 250;
 
 /* map links */
-#define MAP_UP 0
-#define MAP_DOWN 1
-#define MAP_RIGHT 2
-#define MAP_LEFT 3
+constexpr int MAP_UP = 0;
+constexpr int MAP_DOWN = 1;
+constexpr int MAP_RIGHT = 2;
+constexpr int MAP_LEFT = 3;
 
 /* Map size */
-#define MAPX 1000
-#define MAPY 1000
-#define MAP_NAME_SIZE 30
-#define NUM_MAP_LINKS 4
-#define DEFAULT_MAP_WIDTH 21
-#define DEFAULT_MAP_HEIGHT 11
-#define MAP_DISPLAY_WIDTH 21
-#define MAP_DISPLAY_HEIGHT 14
-#define MAX_ELEV 9
+constexpr int MAPX = 1000;
+constexpr int MAPY = 1000;
+constexpr int MAP_NAME_SIZE = 30;
+constexpr int NUM_MAP_LINKS = 4;
+constexpr int DEFAULT_MAP_WIDTH = 21;
+constexpr int DEFAULT_MAP_HEIGHT = 11;
+constexpr int MAP_DISPLAY_WIDTH = 21;
+constexpr int MAP_DISPLAY_HEIGHT = 14;
+constexpr int MAX_ELEV = 9;
 #define GRASSLAND ' '
 #define HEAVY_FOREST '"'
 #define LIGHT_FOREST '`'
@@ -67,15 +67,17 @@
 /*
  * Various Map flags, for use for setting different affects on the map
  */
-#define MAPFLAG_MAPO 1   /* (a) We got mapobjs */
-#define MAPFLAG_SPEC 2   /* (b) We're using special rules - gravity/temp */
-#define MAPFLAG_VACUUM 4 /* (c) We're in vacuum */
-#define MAPFLAG_FIRES 8  /* (d) We have eternal fires */
+constexpr int MAPFLAG_MAPO = 1; /* (a) We got mapobjs */
+constexpr int MAPFLAG_SPEC =
+    2; /* (b) We're using special rules - gravity/temp */
+constexpr int MAPFLAG_VACUUM = 4; /* (c) We're in vacuum */
+constexpr int MAPFLAG_FIRES = 8;  /* (d) We have eternal fires */
 #define MAPFLAG_UNDERGROUND                                                    \
-  16                         /* (e) We're underground. No ejecting, jumping,   \
-                                VTOL taking off */
-#define MAPFLAG_DARK 32      /* (f) We can't see map beyond sensor range */
-#define MAPFLAG_BRIDGESCS 64 /* (g) We can't destroy bridges on this map */
+  16 /* (e) We're underground. No ejecting, jumping,                           \
+        VTOL taking off */
+constexpr int MAPFLAG_DARK = 32; /* (f) We can't see map beyond sensor range */
+constexpr int MAPFLAG_BRIDGESCS =
+    64; /* (g) We can't destroy bridges on this map */
 #define MAPFLAG_NOBRIDGIFY                                                     \
   128 /* (h) We shouldn't convert roads into bridges                           \
        */
@@ -86,29 +88,30 @@
 
 #define TYPE_FIRE                                                              \
   0 /* Fire - datas = counter until next spread, datac = stuff to burn */
-#define TYPE_SMOKE 1 /* Smoke - datas = time until it gets lost */
+constexpr int TYPE_SMOKE = 1; /* Smoke - datas = time until it gets lost */
 #define TYPE_DEC                                                               \
   2 /* Decoration, like those 2 previous ones. obj = obj# of DS it is related  \
        to, datac = char it replaced */
-#define TYPE_LAST_DEC 2
+constexpr int TYPE_LAST_DEC = 2;
 #define TYPE_MINE                                                              \
-  3                  /* datac = type, datas = damage it causes, datai = extra  \
-                      */
-#define TYPE_BUILD 4 /* Building obj=# of the internal map */
+  3 /* datac = type, datas = damage it causes, datai = extra                   \
+     */
+constexpr int TYPE_BUILD = 4; /* Building obj=# of the internal map */
 #define TYPE_LEAVE                                                             \
   5 /* Reference to what happens when U leave ; obj=# of new map */
-#define TYPE_ENTRANCE 6 /* datac = dir of entry (0=dontcare), x/y */
+constexpr int TYPE_ENTRANCE = 6; /* datac = dir of entry (0=dontcare), x/y */
 
-#define TYPE_LINKED 7 /* If this exists, we got a maplink propably */
-#define TYPE_BITS 8   /* hangar / mine bit array, if any (in datai) */
-#define TYPE_B_LZ 9   /* Land-block */
-#define NUM_MAPOBJTYPES 10
+constexpr int TYPE_LINKED = 7; /* If this exists, we got a maplink propably */
+constexpr int TYPE_BITS = 8;   /* hangar / mine bit array, if any (in datai) */
+constexpr int TYPE_B_LZ = 9;   /* Land-block */
+constexpr int NUM_MAPOBJTYPES = 10;
 
-#define BUILDFLAG_CS 1   /* Externally CS */
-#define BUILDFLAG_CSI 2  /* Internally CS */
-#define BUILDFLAG_DSS 4  /* DontShowStep when someone steps on the base */
-#define BUILDFLAG_NOB 8  /* No way to break in */
-#define BUILDFLAG_HID 16 /* Really hidden */
+constexpr int BUILDFLAG_CS = 1;  /* Externally CS */
+constexpr int BUILDFLAG_CSI = 2; /* Internally CS */
+constexpr int BUILDFLAG_DSS =
+    4; /* DontShowStep when someone steps on the base */
+constexpr int BUILDFLAG_NOB = 8;  /* No way to break in */
+constexpr int BUILDFLAG_HID = 16; /* Really hidden */
 
 #define MapIsCS(map) (map->buildflag & BUILDFLAG_CSI)
 #define BuildIsCS(map) (map->buildflag & BUILDFLAG_CS)
@@ -140,7 +143,7 @@ typedef struct MapObject {
   struct MapObject *next;
 } MapObject;
 
-#define MECHMAPFLAG_MOVED 1 /* mech has moved since last LOS update */
+constexpr int MECHMAPFLAG_MOVED = 1; /* mech has moved since last LOS update */
 
 #define MECHLOSFLAG_SEEN BATTLE_MAP_LOS_SEEN
 #define MECHLOSFLAG_SEESP BATTLE_MAP_LOS_SEEN_PRIMARY
@@ -149,16 +152,16 @@ typedef struct MapObject {
 #define MECHLOSFLAG_MNTN BATTLE_MAP_LOS_MOUNTAIN
 
 #define MECHLOSFLAG_WOOD BATTLE_MAP_LOS_WOOD
-#define MECHLOSFLAG_WOOD2 0x0040 /* Heavywood = 2, Light = 1 */
-#define MECHLOSFLAG_WOOD3 0x0080
-#define MECHLOSFLAG_WOOD4 0x0100
-#define MECHLOSBYTES_WOOD 4
+constexpr int MECHLOSFLAG_WOOD2 = 0x0040; /* Heavywood = 2, Light = 1 */
+constexpr int MECHLOSFLAG_WOOD3 = 0x0080;
+constexpr int MECHLOSFLAG_WOOD4 = 0x0100;
+constexpr int MECHLOSBYTES_WOOD = 4;
 #define MECHLOSMAX_WOOD BATTLE_MAP_LOS_MAX_WOOD
 
 #define MECHLOSFLAG_WATER BATTLE_MAP_LOS_WATER
-#define MECHLOSFLAG_WATER2 0x0400
-#define MECHLOSFLAG_WATER3 0x0800
-#define MECHLOSBYTES_WATER 3
+constexpr int MECHLOSFLAG_WATER2 = 0x0400;
+constexpr int MECHLOSFLAG_WATER3 = 0x0800;
+constexpr int MECHLOSBYTES_WATER = 3;
 #define MECHLOSMAX_WATER BATTLE_MAP_LOS_MAX_WATER
 
 #define MECHLOSFLAG_PARTIAL BATTLE_MAP_LOS_PARTIAL_COVER
@@ -209,7 +212,7 @@ typedef struct BattleMap {
 } BattleMap;
 
 /* Used by navigate_sketch_map */
-#define NAVIGATE_LINES 13
+constexpr int NAVIGATE_LINES = 13;
 
 extern void newfreemap(DbRef key, void **data, int selector);
 extern void map_update(DbRef obj, void *data);

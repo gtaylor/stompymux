@@ -16,9 +16,9 @@
 
 #pragma once
 
-#define MECHPILOT 0
-#define MECHSTARTED 1
-#define MECHALL 2
+constexpr int MECHPILOT = 0;
+constexpr int MECHSTARTED = 1;
+constexpr int MECHALL = 2;
 
 #define cch(c) ccheck(player, mech, (c))
 #define ccheck(a, b, c)                                                        \
