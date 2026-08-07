@@ -21,6 +21,7 @@ typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLog ServerLog;
 typedef struct StyledTextPalette StyledTextPalette;
 typedef struct ObjectStateCollection ObjectStateCollection;
+typedef struct PlayerAccountState PlayerAccountState;
 typedef struct WorldIndexes WorldIndexes;
 typedef struct DescriptorRegistry DescriptorRegistry;
 typedef struct PlayerCache PlayerCache;
@@ -113,6 +114,7 @@ struct GameObject {
   AttributeStack *stackhead; /* Every object has a stack. */
 
   ObjectStateCollection *state;
+  PlayerAccountState *account; /* Present only for player objects. */
   NativeObjectState native;
 };
 

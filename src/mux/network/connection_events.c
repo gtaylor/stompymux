@@ -21,9 +21,9 @@
 #include "mux/network/connection_events.h"
 #include "mux/network/descriptor.h"
 #include "mux/network/network_output.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/objects/player_account.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
@@ -49,7 +49,6 @@ void descriptor_welcome(Descriptor *d) {
 
 void set_lastsite(Descriptor *d, char *lastsite) {
   CommandRuntime *runtime = descriptor_runtime(d);
-  long flags;
   char buf[LBUF_SIZE];
 
   if (d->player) {
@@ -57,10 +56,10 @@ void set_lastsite(Descriptor *d, char *lastsite) {
       strncpy(buf, lastsite, LBUF_SIZE - 1);
       buf[LBUF_SIZE - 1] = '\0';
     } else {
-      attribute_get_string(runtime->world->database, buf, d->player, A_LASTSITE,
-                           &flags);
+      snprintf(buf, sizeof(buf), "%s",
+               player_account_last_site(runtime->world->database, d->player));
     }
-    attribute_add_raw(runtime->world->database, d->player, A_LASTSITE, buf);
+    player_account_last_site_set(runtime->world->database, d->player, buf);
   }
 }
 
@@ -185,9 +184,8 @@ void announce_connect(DbRef player, Descriptor *d) {
                  game_object_name(runtime->world->database, player));
   dispatch_connection_event_scope(runtime, d, player, loc, LUA_EVENT_CONNECT,
                                   num >= 2, nullptr);
-  char *time_str = ctime(&runtime->clock->now);
-  time_str[strlen(time_str) - 1] = '\0';
-  record_login(&command->evaluation, player, 1, time_str, d->addr, d->username);
+  record_login(&command->evaluation, player, true, runtime->clock->now, d->addr,
+               d->username);
   look_in(&descriptor_runtime(d)->background_command->evaluation, player,
           game_object_location(runtime->world->database, player), LK_SHOWEXIT);
   command->enactor = temp;

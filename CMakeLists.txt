@@ -426,6 +426,14 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME object_state COMMAND object_state_test)
 
+  add_executable(player_account_test tests/player_account.c
+    ${MUX_SOURCE_DIR}/objects/player_account.c)
+  target_link_libraries(player_account_test PRIVATE btmux_options)
+  target_include_directories(player_account_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME player_account COMMAND player_account_test)
+
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
   target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)
   if(BTECH_ADVANCED_ECON)

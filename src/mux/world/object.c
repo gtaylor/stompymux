@@ -13,6 +13,7 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/objects/player_account.h"
 #include "mux/objects/powers.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
@@ -334,9 +335,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
 
   if (objtype == OBJECT_TYPE_PLAYER) {
     time(&tt);
-    buff = (char *)ctime(&tt);
-    buff[strlen(buff) - 1] = '\0';
-    attribute_add_raw(evaluation->world->database, obj, A_LAST, buff);
+    player_account_last_login_set(evaluation->world->database, obj, tt);
 
     add_player_name(evaluation->world, obj,
                     game_object_pure_name(evaluation->world->database, obj));

@@ -12,6 +12,7 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/objects/player_account.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
@@ -111,8 +112,17 @@ void do_page(CommandInvocation *invocation) {
     ispose = 1;
 
   if (!*message) {
-    attribute_get_string(evaluation->world->database, targetname, player,
-                         A_LASTPAGE, &aflags);
+    char *target_cursor = targetname;
+    for (size_t index = 0; index < player_account_last_page_count(
+                                       evaluation->world->database, player);
+         index++) {
+      if (index > 0)
+        safe_chr(' ', targetname, &target_cursor);
+      safe_str(tprintf("%ld", player_account_last_page_recipient(
+                                  evaluation->world->database, player, index)),
+               targetname, &target_cursor);
+    }
+    *target_cursor = '\0';
     if (!*tname) {
       if (!*targetname)
         notify_checked(evaluation, player, player, "You have not paged anyone.",
@@ -270,7 +280,16 @@ void do_page(CommandInvocation *invocation) {
     return;
   }
   *(bp2 - 1) = '\0';
-  attribute_add(evaluation->world->database, player, A_LASTPAGE, buf2, aflags);
+  DbRef *recipients = malloc((size_t)count * sizeof(*recipients));
+  if (recipients) {
+    size_t recipient_count = 0;
+    for (char *token = strtok(buf2, " ");
+         token && recipient_count < (size_t)count; token = strtok(nullptr, " "))
+      recipients[recipient_count++] = parse_dbref(token);
+    player_account_last_page_set(evaluation->world->database, player,
+                                 recipients, recipient_count);
+    free(recipients);
+  }
 
   if (count == 1) {
     if (*buf1) {

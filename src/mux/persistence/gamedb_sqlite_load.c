@@ -3,12 +3,14 @@
 #include <limits.h>
 #include <sqlite3.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
+#include "mux/objects/player_account.h"
 #include "mux/objects/powers.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/persistence/gamedb_sqlite_internal.h"
@@ -189,6 +191,168 @@ static int gamedb_load_native_state(PersistenceContext *context,
   return 0;
 }
 
+static int gamedb_load_player_accounts(PersistenceContext *context,
+                                       sqlite3 *sqlite) {
+  sqlite3_stmt *statement = nullptr;
+  bool *seen = calloc((size_t)context->database->top, sizeof(*seen));
+  DbRef object;
+  int step;
+
+  if (!seen || gamedb_prepare(
+                   sqlite, &statement,
+                   "SELECT object_dbref, password_hash, last_login, last_site, "
+                   "successful_login_count, failed_login_count, "
+                   "unreported_failed_login_count FROM player_state "
+                   "ORDER BY object_dbref;") < 0) {
+    free(seen);
+    return -1;
+  }
+  while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
+    const char *password_hash = nullptr;
+    const char *last_site = nullptr;
+    DbRef player;
+    long last_login = 0;
+    int64_t successful = sqlite3_column_int64(statement, 4);
+    int64_t failed = sqlite3_column_int64(statement, 5);
+    int64_t unreported = sqlite3_column_int64(statement, 6);
+
+    if (gamedb_column_long(statement, 0, &player) < 0 ||
+        !is_good_obj(context->database, player) ||
+        typeof_obj(context->database, player) != OBJECT_TYPE_PLAYER ||
+        seen[player] ||
+        (sqlite3_column_type(statement, 1) != SQLITE_NULL &&
+         gamedb_column_text(statement, 1, &password_hash, LBUF_SIZE) < 0) ||
+        (sqlite3_column_type(statement, 2) != SQLITE_NULL &&
+         (sqlite3_column_type(statement, 2) != SQLITE_INTEGER ||
+          gamedb_column_long(statement, 2, &last_login) < 0)) ||
+        (sqlite3_column_type(statement, 3) != SQLITE_NULL &&
+         gamedb_column_text(statement, 3, &last_site, LBUF_SIZE) < 0) ||
+        sqlite3_column_type(statement, 4) != SQLITE_INTEGER ||
+        sqlite3_column_type(statement, 5) != SQLITE_INTEGER ||
+        sqlite3_column_type(statement, 6) != SQLITE_INTEGER ||
+        !player_account_login_counts_set(context->database, player, successful,
+                                         failed, unreported) ||
+        (password_hash && !player_account_password_hash_set(
+                              context->database, player, password_hash)) ||
+        (last_site &&
+         !player_account_last_site_set(context->database, player, last_site)) ||
+        (sqlite3_column_type(statement, 2) != SQLITE_NULL &&
+         !player_account_last_login_set(context->database, player,
+                                        (time_t)last_login))) {
+      sqlite3_finalize(statement);
+      free(seen);
+      return -1;
+    }
+    seen[player] = true;
+  }
+  sqlite3_finalize(statement);
+  if (step != SQLITE_DONE) {
+    free(seen);
+    return -1;
+  }
+  DO_WHOLE_DB(context->database, object) {
+    if (typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER &&
+        !is_going(context->database, object) && !seen[object]) {
+      free(seen);
+      return -1;
+    }
+  }
+  free(seen);
+
+  statement = nullptr;
+  if (gamedb_prepare(sqlite, &statement,
+                     "SELECT player_dbref, outcome, position, occurred_at, "
+                     "host FROM player_login_history "
+                     "ORDER BY player_dbref, outcome, position;") < 0)
+    return -1;
+  while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
+    const char *host;
+    DbRef player;
+    long occurred_at;
+    int outcome;
+    int position;
+
+    if (gamedb_column_long(statement, 0, &player) < 0 ||
+        !is_good_obj(context->database, player) ||
+        typeof_obj(context->database, player) != OBJECT_TYPE_PLAYER ||
+        gamedb_column_int(statement, 1, &outcome) < 0 ||
+        (outcome != PLAYER_LOGIN_SUCCESS && outcome != PLAYER_LOGIN_FAILURE) ||
+        gamedb_column_int(statement, 2, &position) < 0 || position < 0 ||
+        gamedb_column_long(statement, 3, &occurred_at) < 0 ||
+        gamedb_column_text(statement, 4, &host, LBUF_SIZE) < 0 ||
+        !player_account_login_history_set(
+            context->database, player, (PlayerLoginOutcome)outcome,
+            (size_t)position, (time_t)occurred_at, host)) {
+      sqlite3_finalize(statement);
+      return -1;
+    }
+  }
+  sqlite3_finalize(statement);
+  if (step != SQLITE_DONE)
+    return -1;
+
+  statement = nullptr;
+  if (gamedb_prepare(sqlite, &statement,
+                     "SELECT player_dbref, position, recipient_dbref FROM "
+                     "player_last_page_recipients "
+                     "ORDER BY player_dbref, position;") < 0)
+    return -1;
+  DbRef current_player = NOTHING;
+  DbRef *recipients = nullptr;
+  size_t recipient_count = 0;
+  while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
+    DbRef player;
+    DbRef recipient;
+    int position;
+
+    if (gamedb_column_long(statement, 0, &player) < 0 ||
+        !is_good_obj(context->database, player) ||
+        typeof_obj(context->database, player) != OBJECT_TYPE_PLAYER ||
+        gamedb_column_int(statement, 1, &position) < 0 || position < 0 ||
+        gamedb_column_long(statement, 2, &recipient) < 0) {
+      free(recipients);
+      sqlite3_finalize(statement);
+      return -1;
+    }
+    if (player != current_player) {
+      if (current_player != NOTHING &&
+          !player_account_last_page_set(context->database, current_player,
+                                        recipients, recipient_count)) {
+        free(recipients);
+        sqlite3_finalize(statement);
+        return -1;
+      }
+      free(recipients);
+      recipients = nullptr;
+      recipient_count = 0;
+      current_player = player;
+    }
+    if ((size_t)position != recipient_count) {
+      free(recipients);
+      sqlite3_finalize(statement);
+      return -1;
+    }
+    DbRef *grown = realloc(recipients, (recipient_count + 1) * sizeof(*grown));
+    if (!grown) {
+      free(recipients);
+      sqlite3_finalize(statement);
+      return -1;
+    }
+    recipients = grown;
+    recipients[recipient_count++] = recipient;
+  }
+  sqlite3_finalize(statement);
+  if (step != SQLITE_DONE ||
+      (current_player != NOTHING &&
+       !player_account_last_page_set(context->database, current_player,
+                                     recipients, recipient_count))) {
+    free(recipients);
+    return -1;
+  }
+  free(recipients);
+  return 0;
+}
+
 static int gamedb_load_object_state(PersistenceContext *context,
                                     sqlite3 *sqlite) {
   sqlite3_stmt *statement = nullptr;
@@ -273,6 +437,7 @@ int gamedb_load(PersistenceContext *context, const char *path) {
     db_free(context->database);
     db_grow(context->database, db_top);
     if (gamedb_load_objects(context, sqlite, db_top) < 0 ||
+        gamedb_load_player_accounts(context, sqlite) < 0 ||
         gamedb_load_native_state(context, sqlite) < 0 ||
         gamedb_load_object_state(context, sqlite) < 0) {
       gamedb_log_failure(context->log, "loading snapshot data", path, sqlite);

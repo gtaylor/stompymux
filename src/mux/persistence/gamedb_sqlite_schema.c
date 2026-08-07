@@ -6,7 +6,7 @@
 #include "mux/persistence/gamedb_sqlite_internal.h"
 
 // Increment whenever an incompatible schema change is made.
-const int GAMEDB_SCHEMA_VERSION = 25;
+const int GAMEDB_SCHEMA_VERSION = 26;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 const int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -84,9 +84,31 @@ const char schema_objects_sql[] =
 const char schema_state_sql[] =
     "CREATE TABLE player_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
-    " password_hash TEXT, alias TEXT, last_login TEXT, login_data TEXT,"
-    " last_site TEXT, last_page TEXT"
+    " password_hash TEXT, alias TEXT, last_login INTEGER, last_site TEXT,"
+    " successful_login_count INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(successful_login_count >= 0),"
+    " failed_login_count INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(failed_login_count >= 0),"
+    " unreported_failed_login_count INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(unreported_failed_login_count >= 0 AND "
+    "unreported_failed_login_count <= failed_login_count)"
     ");"
+    "CREATE TABLE player_login_history ("
+    " player_dbref INTEGER NOT NULL REFERENCES player_state(object_dbref) "
+    "ON DELETE CASCADE,"
+    " outcome INTEGER NOT NULL CHECK (outcome IN (0, 1)),"
+    " position INTEGER NOT NULL CHECK (position >= 0 AND "
+    "((outcome = 0 AND position < 4) OR (outcome = 1 AND position < 3))),"
+    " occurred_at INTEGER NOT NULL, host TEXT NOT NULL,"
+    " PRIMARY KEY (player_dbref, outcome, position)"
+    ") WITHOUT ROWID;"
+    "CREATE TABLE player_last_page_recipients ("
+    " player_dbref INTEGER NOT NULL REFERENCES player_state(object_dbref) "
+    "ON DELETE CASCADE,"
+    " position INTEGER NOT NULL CHECK (position >= 0),"
+    " recipient_dbref INTEGER NOT NULL,"
+    " PRIMARY KEY (player_dbref, position)"
+    ") WITHOUT ROWID;"
     "CREATE TABLE btech_object_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
     " mech_preferred_id TEXT, map_color TEXT, mech_skills TEXT,"
@@ -111,12 +133,7 @@ const NativeColumn native_columns[] = {
     {A_DESC, "objects", "dbref", "description"},
     {A_IDESC, "objects", "dbref", "inside_description"},
     {A_DESTROYER, "objects", "dbref", "destroyer"},
-    {A_PASS, "player_state", "object_dbref", "password_hash"},
     {A_ALIAS, "player_state", "object_dbref", "alias"},
-    {A_LAST, "player_state", "object_dbref", "last_login"},
-    {A_LOGINDATA, "player_state", "object_dbref", "login_data"},
-    {A_LASTSITE, "player_state", "object_dbref", "last_site"},
-    {A_LASTPAGE, "player_state", "object_dbref", "last_page"},
     {A_MECHPREFID, "btech_object_state", "object_dbref", "mech_preferred_id"},
     {A_MAPCOLOR, "btech_object_state", "object_dbref", "map_color"},
     {A_MECHSKILLS, "btech_object_state", "object_dbref", "mech_skills"},

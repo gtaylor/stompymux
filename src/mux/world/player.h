@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include <stdbool.h>
+#include <time.h>
+
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/server/platform.h"
@@ -11,8 +14,8 @@ typedef struct CommandInvocation CommandInvocation;
 typedef struct EvaluationContext EvaluationContext;
 typedef struct WorldContext WorldContext;
 
-void record_login(EvaluationContext *evaluation, DbRef player, int is_new,
-                  char *host, char *username, char *ip_address);
+void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
+                  time_t occurred_at, const char *host, const char *username);
 int check_pass(WorldContext *world, DbRef player, const char *password);
 DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
                      char *name, char *password, char *host, char *username);

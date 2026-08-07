@@ -17,6 +17,7 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/objects/player_account.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
@@ -30,185 +31,61 @@
 #include "mux/world/object.h"
 #include "mux/world/player.h"
 
-// # of successful logins to save data for
-constexpr int NUM_GOOD = 4;
-// # of failed logins to save data for
-constexpr int NUM_BAD = 3;
-
-typedef struct hostdtm HOSTDTM;
-struct hostdtm {
-  char *host;
-  char *dtm;
-};
-
-typedef struct logindata LDATA;
-struct logindata {
-  HOSTDTM good[NUM_GOOD];
-  HOSTDTM bad[NUM_BAD];
-  int tot_good;
-  int tot_bad;
-  int new_bad;
-};
-
 extern time_t time(time_t *);
-
-/**
- * Decode login info.
- */
-static void decrypt_logindata(char *atrbuf, LDATA *info) {
-  int i;
-  char *tmpc;
-
-  info->tot_good = 0;
-  info->tot_bad = 0;
-  info->new_bad = 0;
-  for (i = 0; i < NUM_GOOD; i++) {
-    info->good[i].host = nullptr;
-    info->good[i].dtm = nullptr;
-  }
-  for (i = 0; i < NUM_BAD; i++) {
-    info->bad[i].host = nullptr;
-    info->bad[i].dtm = nullptr;
-  }
-
-  if (*atrbuf == '#') {
-    atrbuf++;
-    if (!(tmpc = grabto(&atrbuf, ';')))
-      return;
-    info->tot_good = clamped_atoi(tmpc);
-    for (i = 0; i < NUM_GOOD; i++) {
-      if (!(tmpc = grabto(&atrbuf, ';')))
-        return;
-      info->good[i].host = tmpc;
-      if (!(tmpc = grabto(&atrbuf, ';')))
-        return;
-      info->good[i].dtm = tmpc;
-    }
-    if (!(tmpc = grabto(&atrbuf, ';')))
-      return;
-    info->new_bad = clamped_atoi(tmpc);
-    if (!(tmpc = grabto(&atrbuf, ';')))
-      return;
-    info->tot_bad = clamped_atoi(tmpc);
-    for (i = 0; i < NUM_BAD; i++) {
-      if (!(tmpc = grabto(&atrbuf, ';')))
-        return;
-      info->bad[i].host = tmpc;
-      if (!(tmpc = grabto(&atrbuf, ';')))
-        return;
-      info->bad[i].dtm = tmpc;
-    }
-  }
-}
-
-/**
- * Encode login info.
- */
-static void encrypt_logindata(char *atrbuf, LDATA *info) {
-  char *bp, nullc;
-  int i;
-
-  /*
-   * Make sure the SPRINTF call tracks NUM_GOOD and NUM_BAD for the * *
-   *
-   * *  * * number of host/dtm pairs of each type.
-   */
-
-  nullc = '\0';
-  for (i = 0; i < NUM_GOOD; i++) {
-    if (!info->good[i].host)
-      info->good[i].host = &nullc;
-    if (!info->good[i].dtm)
-      info->good[i].dtm = &nullc;
-  }
-  for (i = 0; i < NUM_BAD; i++) {
-    if (!info->bad[i].host)
-      info->bad[i].host = &nullc;
-    if (!info->bad[i].dtm)
-      info->bad[i].dtm = &nullc;
-  }
-  bp = alloc_lbuf("encrypt_logindata");
-  snprintf(
-      bp, LBUF_SIZE, "#%d;%s;%s;%s;%s;%s;%s;%s;%s;%d;%d;%s;%s;%s;%s;%s;%s;",
-      info->tot_good, info->good[0].host, info->good[0].dtm, info->good[1].host,
-      info->good[1].dtm, info->good[2].host, info->good[2].dtm,
-      info->good[3].host, info->good[3].dtm, info->new_bad, info->tot_bad,
-      info->bad[0].host, info->bad[0].dtm, info->bad[1].host, info->bad[1].dtm,
-      info->bad[2].host, info->bad[2].dtm);
-  StringCopy(atrbuf, bp);
-  free_lbuf(bp);
-}
 
 /**
  * Record successful or failed login attempt.
  * If successful, report the number of failures since the last successful
  * login.
  */
-void record_login(EvaluationContext *evaluation, DbRef player, int isgood,
-                  char *ldate, char *lhost, char *lusername) {
-  LDATA login_info;
-  char *atrbuf;
-  long aflags;
-  int i;
+void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
+                  time_t occurred_at, const char *host, const char *username) {
+  GameDatabase *database = evaluation->world->database;
 
-  atrbuf =
-      attribute_get(evaluation->world->database, player, A_LOGINDATA, &aflags);
-  decrypt_logindata(atrbuf, &login_info);
-  if (isgood) {
-    if (login_info.new_bad > 0) {
+  if (successful) {
+    int64_t unreported =
+        player_account_unreported_failed_login_count(database, player);
+    if (unreported > 0) {
+      PlayerLoginRecordView latest_failure;
+      char timestamp[32];
+
       notify_checked(evaluation, player, player, "", MSG_ME_ALL | MSG_F_DOWN);
       notify_printf(
           evaluation, player,
-          "**** %d failed connect%s since your last successful connect. ****",
-          login_info.new_bad, (login_info.new_bad == 1 ? "" : "s"));
-      notify_printf(evaluation, player,
-                    "Most recent attempt was from %s on %s.",
-                    login_info.bad[0].host, login_info.bad[0].dtm);
+          "**** %lld failed connect%s since your last successful connect. "
+          "****",
+          (long long)unreported, unreported == 1 ? "" : "s");
+      if (player_account_login_history(database, player, PLAYER_LOGIN_FAILURE,
+                                       0, &latest_failure) &&
+          player_account_format_timestamp_utc(latest_failure.occurred_at,
+                                              timestamp, sizeof(timestamp)))
+        notify_printf(evaluation, player,
+                      "Most recent attempt was from %s on %s.",
+                      latest_failure.host, timestamp);
       notify_checked(evaluation, player, player, "", MSG_ME_ALL | MSG_F_DOWN);
-      login_info.new_bad = 0;
     }
-    for (i = NUM_GOOD - 1; i > 0; i--) {
-      login_info.good[i].dtm = login_info.good[i - 1].dtm;
-      login_info.good[i].host = login_info.good[i - 1].host;
-    }
-    login_info.good[0].dtm = ldate;
-    login_info.good[0].host = lhost;
-    login_info.tot_good++;
-    if (*lusername)
-      attribute_add_raw(evaluation->world->database, player, A_LASTSITE,
-                        tprintf("%s@%s", lusername, lhost));
+    player_account_login_record(database, player, PLAYER_LOGIN_SUCCESS,
+                                occurred_at, host);
+    if (username && *username)
+      player_account_last_site_set(database, player,
+                                   tprintf("%s@%s", username, host));
     else
-      attribute_add_raw(evaluation->world->database, player, A_LASTSITE, lhost);
+      player_account_last_site_set(database, player, host);
   } else {
-    for (i = NUM_BAD - 1; i > 0; i--) {
-      login_info.bad[i].dtm = login_info.bad[i - 1].dtm;
-      login_info.bad[i].host = login_info.bad[i - 1].host;
-    }
-    login_info.bad[0].dtm = ldate;
-    login_info.bad[0].host = lhost;
-    login_info.tot_bad++;
-    login_info.new_bad++;
+    player_account_login_record(database, player, PLAYER_LOGIN_FAILURE,
+                                occurred_at, host);
   }
-  encrypt_logindata(atrbuf, &login_info);
-  attribute_add_raw(evaluation->world->database, player, A_LOGINDATA, atrbuf);
-  free_lbuf(atrbuf);
 }
 
 /**
  * Test a password to see if it is correct.
  */
 int check_pass(WorldContext *world, DbRef player, const char *password) {
-  long aflags;
-  char *target;
-  int matches;
-
   if (strlen(password) >
       (size_t)world->configuration->player_password_length_limit)
     return 0;
-  target = attribute_get(world->database, player, A_PASS, &aflags);
-  matches = *target && password_verify(password, target);
-  free_lbuf(target);
-  return matches;
+  const char *target = player_account_password_hash(world->database, player);
+  return *target && password_verify(password, target);
 }
 
 /**
@@ -218,23 +95,16 @@ DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
                      char *name, char *password, char *host, char *username) {
   DbRef player;
   time_t tt;
-  char *time_str;
-
   time(&tt);
-  time_str = ctime(&tt);
-  time_str[strlen(time_str) - 1] = '\0';
 
   if ((player = lookup_player(world, NOTHING, name, 0)) == NOTHING)
     return NOTHING;
   if (!check_pass(world, player, password)) {
-    record_login(evaluation, player, 0, time_str, host, username);
+    record_login(evaluation, player, false, tt, host, username);
     return NOTHING;
   }
   time(&tt);
-  time_str = ctime(&tt);
-  time_str[strlen(time_str) - 1] = '\0';
-
-  attribute_add_raw(world->database, player, A_LAST, time_str);
+  player_account_last_login_set(world->database, player, tt);
   return player;
 }
 
@@ -297,12 +167,14 @@ DbRef create_player(EvaluationContext *evaluation, char *name, char *password) {
 /**
  * Display login history data.
  */
-static void disp_from_on(EvaluationContext *evaluation, DbRef player,
-                         char *dtm_str, char *host_str) {
-  if (dtm_str && *dtm_str && host_str && *host_str) {
-    notify_printf(evaluation, player, "     From: %s   On: %s", dtm_str,
-                  host_str);
-  }
+static void display_login_record(EvaluationContext *evaluation, DbRef player,
+                                 const PlayerLoginRecordView *record) {
+  char timestamp[32];
+  if (record->host && *record->host &&
+      player_account_format_timestamp_utc(record->occurred_at, timestamp,
+                                          sizeof(timestamp)))
+    notify_printf(evaluation, player, "     From: %s   On: %s", record->host,
+                  timestamp);
 }
 
 void do_last(CommandInvocation *invocation) {
@@ -311,10 +183,6 @@ void do_last(CommandInvocation *invocation) {
   char *who = invocation->first;
   WorldContext *world = invocation->context->world;
   DbRef target;
-  LDATA login_info;
-  char *atrbuf;
-  int i;
-  long aflags;
 
   if (!who || !*who || !(string_compare(world->configuration, who, "me"))) {
     target = player;
@@ -326,22 +194,31 @@ void do_last(CommandInvocation *invocation) {
     notify_checked(evaluation, player, player, "I couldn't find that player.",
                    MSG_ME_ALL | MSG_F_DOWN);
   } else {
-    atrbuf = attribute_get(world->database, target, A_LOGINDATA, &aflags);
-    decrypt_logindata(atrbuf, &login_info);
-
     notify_printf(&invocation->context->evaluation, player,
-                  "Total successful connects: %d", login_info.tot_good);
-    for (i = 0; i < NUM_GOOD; i++) {
-      disp_from_on(&invocation->context->evaluation, player,
-                   login_info.good[i].host, login_info.good[i].dtm);
+                  "Total successful connects: %lld",
+                  (long long)player_account_successful_login_count(
+                      world->database, target));
+    for (size_t index = 0;
+         index < player_account_login_history_count(world->database, target,
+                                                    PLAYER_LOGIN_SUCCESS);
+         index++) {
+      PlayerLoginRecordView record;
+      if (player_account_login_history(world->database, target,
+                                       PLAYER_LOGIN_SUCCESS, index, &record))
+        display_login_record(&invocation->context->evaluation, player, &record);
     }
-    notify_printf(&invocation->context->evaluation, player,
-                  "Total failed connects: %d", login_info.tot_bad);
-    for (i = 0; i < NUM_BAD; i++) {
-      disp_from_on(&invocation->context->evaluation, player,
-                   login_info.bad[i].host, login_info.bad[i].dtm);
+    notify_printf(
+        &invocation->context->evaluation, player, "Total failed connects: %lld",
+        (long long)player_account_failed_login_count(world->database, target));
+    for (size_t index = 0;
+         index < player_account_login_history_count(world->database, target,
+                                                    PLAYER_LOGIN_FAILURE);
+         index++) {
+      PlayerLoginRecordView record;
+      if (player_account_login_history(world->database, target,
+                                       PLAYER_LOGIN_FAILURE, index, &record))
+        display_login_record(&invocation->context->evaluation, player, &record);
     }
-    free_lbuf(atrbuf);
   }
 }
 

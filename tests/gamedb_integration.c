@@ -353,117 +353,117 @@ static int check_snapshot(const char *path) {
   sqlite = NULL;
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
     return -1;
-  ok =
-      query_int(
-          sqlite,
-          "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
-          "IN ('snapshot', 'objects', 'player_state', 'btech_object_state', "
-          "'object_state');",
-          5) == 0 &&
-      query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                25) == 0 &&
-      query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
-                1) == 0 &&
-      query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
-          0 &&
-      (query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 ||
-       query_int(sqlite, "SELECT count(*) FROM objects;", 7) == 0) &&
-      (query_int(sqlite, "SELECT count(*) FROM object_state;", 0) == 0 ||
-       query_int(sqlite, "SELECT count(*) FROM object_state;", 6) == 0) &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('object_state') "
-                "WHERE name IN ('namespace', 'key', 'value_type', 'value');",
-                4) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') "
-                "WHERE name = 'owner';",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name = 'has_idle_power';",
-                1) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name IN ('has_long_fingers_power', 'has_comm_all_power', "
-                "'has_see_hidden_power', 'has_no_destroy_power');",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name IN ('has_mech_power', 'has_mechrep_power', "
-                "'has_map_power', 'has_template_power', 'has_tech_power', "
-                "'has_security_power');",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name IN ('powers', 'powers2');",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name = 'has_pass_locks_power';",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name = 'admin_comment';",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name IN ('enter_alias', 'leave_alias');",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name IN ('flags', 'flags2', 'flags3');",
-                0) == 0 &&
-      query_int(
-          sqlite,
-          "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-          "name IN ('type', 'lua_parent', 'has_ansi_flag', "
-          "'has_audible_flag', 'has_auditorium_flag', 'has_blind_flag', "
-          "'has_connected_flag', 'has_dark_flag', 'has_floating_flag', "
-          "'has_gagged_flag', 'has_going_flag', 'has_halted_flag', "
-          "'has_in_character_flag', 'has_light_flag', 'has_monitor_flag', "
-          "'has_no_command_flag', "
-          "'has_safe_flag', 'has_suspect_flag', 'has_transparent_flag', "
-          "'has_wizard_flag', 'has_xcode_flag', 'has_zombie_flag');",
-          22) == 0 &&
-      query_int(
-          sqlite,
-          "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1);",
-          0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM sqlite_master WHERE name = 'vattrs';",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('snapshot') WHERE "
-                "name = 'attr_next';",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name = 'lock_expr';",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name = 'parent';",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info("
-                "'btech_object_state') WHERE name = 'mech_status';",
-                0) == 0 &&
-      query_int(
-          sqlite,
-          "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND "
-          "name IN ('commac_entries', 'commac_aliases', 'comsys_channels', "
-          "'comsys_channel_users', 'comsys_channel_messages', 'macro_sets', "
-          "'macro_entries');",
-          7) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info("
-                "'comsys_channel_users') WHERE name = 'title';",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info("
-                "'comsys_channels') WHERE name IN "
-                "('temp1', 'temp2', 'charge', 'charge_who', 'amount_col');",
-                0) == 0;
+  ok = query_int(
+           sqlite,
+           "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
+           "IN ('snapshot', 'objects', 'player_state', 'btech_object_state', "
+           "'object_state', 'player_login_history', "
+           "'player_last_page_recipients');",
+           7) == 0 &&
+       query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
+                 26) == 0 &&
+       query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
+                 1) == 0 &&
+       query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
+           0 &&
+       (query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 ||
+        query_int(sqlite, "SELECT count(*) FROM objects;", 7) == 0) &&
+       (query_int(sqlite, "SELECT count(*) FROM object_state;", 0) == 0 ||
+        query_int(sqlite, "SELECT count(*) FROM object_state;", 6) == 0) &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('object_state') "
+                 "WHERE name IN ('namespace', 'key', 'value_type', 'value');",
+                 4) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') "
+                 "WHERE name = 'owner';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name = 'has_idle_power';",
+                 1) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name IN ('has_long_fingers_power', 'has_comm_all_power', "
+                 "'has_see_hidden_power', 'has_no_destroy_power');",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name IN ('has_mech_power', 'has_mechrep_power', "
+                 "'has_map_power', 'has_template_power', 'has_tech_power', "
+                 "'has_security_power');",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name IN ('powers', 'powers2');",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name = 'has_pass_locks_power';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name = 'admin_comment';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name IN ('enter_alias', 'leave_alias');",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name IN ('flags', 'flags2', 'flags3');",
+                 0) == 0 &&
+       query_int(
+           sqlite,
+           "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+           "name IN ('type', 'lua_parent', 'has_ansi_flag', "
+           "'has_audible_flag', 'has_auditorium_flag', 'has_blind_flag', "
+           "'has_connected_flag', 'has_dark_flag', 'has_floating_flag', "
+           "'has_gagged_flag', 'has_going_flag', 'has_halted_flag', "
+           "'has_in_character_flag', 'has_light_flag', 'has_monitor_flag', "
+           "'has_no_command_flag', "
+           "'has_safe_flag', 'has_suspect_flag', 'has_transparent_flag', "
+           "'has_wizard_flag', 'has_xcode_flag', 'has_zombie_flag');",
+           22) == 0 &&
+       query_int(
+           sqlite,
+           "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1);",
+           0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM sqlite_master WHERE name = 'vattrs';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('snapshot') WHERE "
+                 "name = 'attr_next';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name = 'lock_expr';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name = 'parent';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info("
+                 "'btech_object_state') WHERE name = 'mech_status';",
+                 0) == 0 &&
+       query_int(
+           sqlite,
+           "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND "
+           "name IN ('commac_entries', 'commac_aliases', 'comsys_channels', "
+           "'comsys_channel_users', 'comsys_channel_messages', 'macro_sets', "
+           "'macro_entries');",
+           7) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info("
+                 "'comsys_channel_users') WHERE name = 'title';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info("
+                 "'comsys_channels') WHERE name IN "
+                 "('temp1', 'temp2', 'charge', 'charge_who', 'amount_col');",
+                 0) == 0;
   ok = ok &&
        query_int(
            sqlite,
@@ -639,8 +639,6 @@ static int seed_btech_special_objects(const char *path) {
                   "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, 1),"
                   "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, 1),"
                   "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, 1);"
-                  "INSERT INTO player_state (object_dbref) VALUES "
-                  "(2),(3),(4),(5),(6);"
                   "INSERT INTO btech_object_state (object_dbref, object_type) "
                   "VALUES "
                   "(2, 'MAP'), (3, 'MECH'), (4, 'MECHREP'),"
@@ -673,7 +671,8 @@ static int seed_styled_object_text(const char *path) {
   sqlite3 *sqlite = NULL;
   char *error = NULL;
   int result =
-      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) == SQLITE_OK &&
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
               sqlite3_exec(
                   sqlite,
                   "UPDATE objects SET "
@@ -821,7 +820,8 @@ static int set_invalid_utf8_name(const char *path, int invalid) {
                               : "UPDATE objects SET name = 'Limbo' WHERE "
                                 "dbref = 0;";
   int result =
-      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) == SQLITE_OK &&
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
               sqlite3_exec(sqlite, statement, NULL, NULL, NULL) == SQLITE_OK
           ? 0
           : -1;
@@ -837,11 +837,77 @@ static int set_nonascii_player_alias(const char *path, int invalid) {
                 "object_dbref = 1;"
               : "UPDATE player_state SET alias = NULL WHERE object_dbref = 1;";
   int result =
-      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) == SQLITE_OK &&
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
               sqlite3_exec(sqlite, statement, NULL, NULL, NULL) == SQLITE_OK
           ? 0
           : -1;
 
+  sqlite3_close(sqlite);
+  return result;
+}
+
+static int seed_player_account_state(const char *path) {
+  sqlite3 *sqlite = NULL;
+  char *error = NULL;
+  int result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
+              sqlite3_exec(
+                  sqlite,
+                  "UPDATE player_state SET password_hash = 'test-hash', "
+                  "last_login = 123456789, last_site = 'user@example.test', "
+                  "successful_login_count = 9, failed_login_count = 4, "
+                  "unreported_failed_login_count = 2 WHERE object_dbref = 1;"
+                  "INSERT INTO player_login_history "
+                  "(player_dbref, outcome, position, occurred_at, host) VALUES "
+                  "(1, 0, 0, 123456789, 'good.example.test'),"
+                  "(1, 1, 0, 123456700, 'bad.example.test');"
+                  "INSERT INTO player_last_page_recipients "
+                  "(player_dbref, position, recipient_dbref) VALUES "
+                  "(1, 0, 1), (1, 1, 9999);",
+                  NULL, NULL, &error) == SQLITE_OK
+          ? 0
+          : -1;
+  if (result < 0)
+    fprintf(stderr, "Player account fixture seed failed: %s\n",
+            error ? error : sqlite3_errmsg(sqlite));
+  sqlite3_free(error);
+  sqlite3_close(sqlite);
+  return result;
+}
+
+static int check_player_account_state(const char *path) {
+  sqlite3 *sqlite = NULL;
+  int result;
+
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
+    return -1;
+  result =
+      query_int(sqlite,
+                "SELECT last_login = 123456789 AND "
+                "successful_login_count = 9 AND failed_login_count = 4 AND "
+                "unreported_failed_login_count = 2 FROM player_state "
+                "WHERE object_dbref = 1;",
+                1) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM player_state WHERE "
+                        "object_dbref NOT IN (SELECT dbref FROM objects WHERE "
+                        "type = 3);",
+                        0) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM player_login_history WHERE "
+                        "player_dbref = 1 AND outcome = 0 AND position = 0 AND "
+                        "occurred_at = 123456789 AND "
+                        "host = 'good.example.test';",
+                        1) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM player_last_page_recipients "
+                        "WHERE player_dbref = 1 AND position = 1 AND "
+                        "recipient_dbref = 9999;",
+                        1) == 0
+          ? 0
+          : -1;
   sqlite3_close(sqlite);
   return result;
 }
@@ -1212,6 +1278,8 @@ int main(int argc, char *argv[]) {
     return 1;
   if (result == 0 && seed_styled_object_text(database) < 0)
     return 1;
+  if (result == 0 && seed_player_account_state(database) < 0)
+    return 1;
   file = fopen(sqlite_read_config, "w");
   if (!file)
     return 2;
@@ -1227,7 +1295,8 @@ int main(int argc, char *argv[]) {
        check_snapshot_dump_type(database, 0) < 0 ||
        check_btech_special_snapshot(database) < 0 ||
        check_btech_queued_command_state(database) < 0 ||
-       check_styled_object_text(database) < 0)) {
+       check_styled_object_text(database) < 0 ||
+       check_player_account_state(database) < 0)) {
     fprintf(stderr, "SQLite reload fixture failed: %s (status=%d)\n", directory,
             status);
     return 1;
@@ -1237,7 +1306,8 @@ int main(int argc, char *argv[]) {
                       !WIFSIGNALED(status) || WTERMSIG(status) != SIGKILL ||
                       check_snapshot_dump_type(crash_database, 1) < 0 ||
                       check_btech_special_snapshot(crash_database) < 0 ||
-                      check_btech_queued_command_state(crash_database) < 0)) {
+                      check_btech_queued_command_state(crash_database) < 0 ||
+                      check_player_account_state(crash_database) < 0)) {
     fprintf(stderr, "SQLite crash-dump fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
@@ -1248,7 +1318,8 @@ int main(int argc, char *argv[]) {
        !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
        check_snapshot_dump_type(killed_database, 4) < 0 ||
        check_btech_special_snapshot(killed_database) < 0 ||
-       check_btech_queued_command_state(killed_database) < 0)) {
+       check_btech_queued_command_state(killed_database) < 0 ||
+       check_player_account_state(killed_database) < 0)) {
     fprintf(stderr, "SQLite killed-dump fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
@@ -1258,7 +1329,8 @@ int main(int argc, char *argv[]) {
                                    &status) < 0 ||
        !WIFEXITED(status) || WEXITSTATUS(status) == 2 ||
        check_btech_special_snapshot(database) < 0 ||
-       check_btech_nondefault_state(database) < 0)) {
+       check_btech_nondefault_state(database) < 0 ||
+       check_player_account_state(database) < 0)) {
     fprintf(stderr, "SQLite-read fixture startup failed: %s (status=%d)\n",
             directory, status);
     return 1;
@@ -1299,22 +1371,20 @@ int main(int argc, char *argv[]) {
             directory);
     return 1;
   }
-  if (result == 0 &&
-      (set_invalid_utf8_name(database, 1) < 0 ||
-       run_server_in_directory(argv[1], sqlite_read_config, directory, 0,
-                               &status) < 0 ||
-       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
-       set_invalid_utf8_name(database, 0) < 0)) {
+  if (result == 0 && (set_invalid_utf8_name(database, 1) < 0 ||
+                      run_server_in_directory(argv[1], sqlite_read_config,
+                                              directory, 0, &status) < 0 ||
+                      !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
+                      set_invalid_utf8_name(database, 0) < 0)) {
     fprintf(stderr, "Invalid UTF-8 object name unexpectedly started: %s\n",
             directory);
     return 1;
   }
-  if (result == 0 &&
-      (set_nonascii_player_alias(database, 1) < 0 ||
-       run_server_in_directory(argv[1], sqlite_read_config, directory, 0,
-                               &status) < 0 ||
-       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
-       set_nonascii_player_alias(database, 0) < 0)) {
+  if (result == 0 && (set_nonascii_player_alias(database, 1) < 0 ||
+                      run_server_in_directory(argv[1], sqlite_read_config,
+                                              directory, 0, &status) < 0 ||
+                      !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
+                      set_nonascii_player_alias(database, 0) < 0)) {
     fprintf(stderr, "Non-ASCII player alias unexpectedly started: %s\n",
             directory);
     return 1;
@@ -1334,7 +1404,8 @@ int main(int argc, char *argv[]) {
       dump_failure = 1;
     if (dump_failure || check_snapshot(database) < 0 ||
         check_btech_special_snapshot(database) < 0 ||
-        check_btech_nondefault_state(database) < 0) {
+        check_btech_nondefault_state(database) < 0 ||
+        check_player_account_state(database) < 0) {
       fprintf(stderr,
               "SQLite dump failure did not retain the prior snapshot: %s\n",
               directory);

@@ -5,7 +5,7 @@
 #pragma once
 
 /* 1 through 4 are reserved for removed action and lock-failure attributes. */
-constexpr int A_PASS = 5; /* Password (only meaningful for players) */
+/* 5 is reserved for the removed player Password attribute. */
 constexpr int A_DESC = 6; /* Description */
 /* 7 is reserved for the removed Sex attribute. */
 /* 8 and 9 are reserved for removed action-message attributes. */
@@ -13,7 +13,7 @@ constexpr int A_DESC = 6; /* Description */
 /* 12 through 20 are reserved for removed action attributes. */
 /* 21 through 25 are reserved for removed payment and money attributes. */
 /* 26 through 29 are reserved for removed listen attributes and actions. */
-constexpr int A_LAST = 30; /* Date/time of last login (players only) */
+/* 30 is reserved for the removed player Last attribute. */
 /* 31 is reserved for the removed QueueMax attribute. */
 constexpr int A_IDESC = 32; /* Inside description (ENTER to get inside) */
 /* 33 and 34 are reserved for removed action-message attributes. */
@@ -51,9 +51,9 @@ constexpr int A_PFAIL = 78; /* Invoker page fail message */
 /* 79 through 81 are reserved for removed action-message attributes. */
 /* 82 is reserved for the removed Atport attribute. */
 /* 83 is reserved for the removed Privileges attribute. */
-constexpr int A_LOGINDATA = 84; /* Recent login information */
+/* 84 is reserved for the removed player Logindata attribute. */
 /* 85 through 87 are reserved for removed lock attributes. */
-constexpr int A_LASTSITE = 88; /* Last site logged in from, in cleartext */
+/* 88 is reserved for the removed player Lastsite attribute. */
 /* 89 through 92 are reserved for removed message prefix/filter attributes. */
 /* 93 and 94 are reserved for removed lock attributes. */
 /* 95 is reserved for the removed forwarding-list attribute. */
@@ -74,7 +74,7 @@ constexpr int A_LASTSITE = 88; /* Last site logged in from, in cleartext */
 constexpr int A_MECHPREFID = 146; /* Preferred Mech ID on map */
 constexpr int A_MAPCOLOR = 147;   /* Map color scheme */
 
-constexpr int A_LASTPAGE = 200; /* Player last paged */
+/* 200 is reserved for the removed player Lastpage attribute. */
 /* 204 is reserved for the removed Daily attribute. */
 /* 209 is reserved for the removed SpeechLock attribute. */
 constexpr int A_DESTROYER = 212; /* Who is destroying this object? */

@@ -13,6 +13,7 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
+#include "mux/objects/player_account.h"
 #include "mux/objects/powers.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
@@ -71,10 +72,6 @@ Attribute attr_table[] = {{"Alias", A_ALIAS},
                           {"Destroyer", A_DESTROYER},
                           {"Faction", A_FACTION},
                           {"Idesc", A_IDESC},
-                          {"Last", A_LAST},
-                          {"Lastpage", A_LASTPAGE},
-                          {"Lastsite", A_LASTSITE},
-                          {"Logindata", A_LOGINDATA},
                           {"LRSheight", A_LRSHEIGHT},
                           {"Mapcolor", A_MAPCOLOR},
                           {"Mapvis", A_MAPVIS},
@@ -88,7 +85,6 @@ Attribute attr_table[] = {{"Alias", A_ALIAS},
                           {"Pilot", A_PILOTNUM},
                           {"Tacsize", A_TACSIZE},
                           {"Xtype", A_XTYPE},
-                          {"*Password", A_PASS},
                           {"Techtime", A_TECHTIME},
                           {"*EconParts", A_ECONPARTS},
                           {"PLHEALTH", A_HEALTH},
@@ -211,12 +207,7 @@ void object_name_set(GameDatabase *database, DbRef thing, char *s) {
 }
 
 void object_password_set(GameDatabase *database, DbRef thing, const char *s) {
-  /* attribute_add_raw()'s buffer parameter isn't const-correct; s is only
-     read (copied) here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  attribute_add_raw(database, thing, A_PASS, (char *)s);
-#pragma clang diagnostic pop
+  player_account_password_hash_set(database, thing, s);
 }
 
 Attribute *attribute_by_name(GameDatabase *database, const char *s) {
@@ -336,6 +327,7 @@ void attribute_free(GameDatabase *database, DbRef thing) {
   free(database->objects[thing].lua_parent);
   database->objects[thing].lua_parent = nullptr;
   object_state_clear(database, thing);
+  player_account_clear(database, thing);
   for (int index = 0; index < 256; index++) {
     free(database->objects[thing].native.values[index]);
     database->objects[thing].native.values[index] = nullptr;

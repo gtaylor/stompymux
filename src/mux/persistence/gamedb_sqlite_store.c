@@ -9,6 +9,7 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
+#include "mux/objects/player_account.h"
 #include "mux/objects/powers.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/persistence/gamedb_sqlite_internal.h"
@@ -31,7 +32,7 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
   sqlite3_stmt *statement = nullptr;
   char query[256];
 
-  const char *tables[] = {"player_state", "btech_object_state"};
+  const char *tables[] = {"btech_object_state"};
   for (size_t index = 0; index < sizeof(tables) / sizeof(*tables); index++) {
     snprintf(query, sizeof(query), "INSERT INTO %s (object_dbref) VALUES (?);",
              tables[index]);
@@ -64,6 +65,91 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
     statement = nullptr;
   }
   return 0;
+}
+
+static int gamedb_store_player_account(GameDatabase *database, sqlite3 *sqlite,
+                                       DbRef player) {
+  sqlite3_stmt *state = nullptr;
+  sqlite3_stmt *history = nullptr;
+  sqlite3_stmt *last_page = nullptr;
+  const char *password_hash = player_account_password_hash(database, player);
+  const char *last_site = player_account_last_site(database, player);
+  time_t last_login;
+  bool has_last_login =
+      player_account_last_login(database, player, &last_login);
+  int result = -1;
+
+  if (gamedb_prepare(
+          sqlite, &state,
+          "INSERT INTO player_state "
+          "(object_dbref, password_hash, last_login, last_site, "
+          "successful_login_count, failed_login_count, "
+          "unreported_failed_login_count) VALUES (?, ?, ?, ?, ?, ?, ?);") < 0 ||
+      gamedb_bind_int(state, 1, player) < 0 ||
+      (*password_hash
+           ? sqlite3_bind_text(state, 2, password_hash, -1, SQLITE_TRANSIENT)
+           : sqlite3_bind_null(state, 2)) != SQLITE_OK ||
+      (has_last_login ? sqlite3_bind_int64(state, 3, last_login)
+                      : sqlite3_bind_null(state, 3)) != SQLITE_OK ||
+      (*last_site ? sqlite3_bind_text(state, 4, last_site, -1, SQLITE_TRANSIENT)
+                  : sqlite3_bind_null(state, 4)) != SQLITE_OK ||
+      sqlite3_bind_int64(
+          state, 5, player_account_successful_login_count(database, player)) !=
+          SQLITE_OK ||
+      sqlite3_bind_int64(state, 6,
+                         player_account_failed_login_count(database, player)) !=
+          SQLITE_OK ||
+      sqlite3_bind_int64(state, 7,
+                         player_account_unreported_failed_login_count(
+                             database, player)) != SQLITE_OK ||
+      gamedb_step(state) < 0)
+    goto done;
+
+  if (gamedb_prepare(sqlite, &history,
+                     "INSERT INTO player_login_history "
+                     "(player_dbref, outcome, position, occurred_at, host) "
+                     "VALUES (?, ?, ?, ?, ?);") < 0)
+    goto done;
+  for (PlayerLoginOutcome outcome = PLAYER_LOGIN_SUCCESS;
+       outcome <= PLAYER_LOGIN_FAILURE; outcome++) {
+    size_t count =
+        player_account_login_history_count(database, player, outcome);
+    for (size_t position = 0; position < count; position++) {
+      PlayerLoginRecordView record;
+      if (!player_account_login_history(database, player, outcome, position,
+                                        &record) ||
+          gamedb_bind_int(history, 1, player) < 0 ||
+          gamedb_bind_int(history, 2, outcome) < 0 ||
+          gamedb_bind_int(history, 3, (long)position) < 0 ||
+          sqlite3_bind_int64(history, 4, record.occurred_at) != SQLITE_OK ||
+          sqlite3_bind_text(history, 5, record.host, -1, SQLITE_TRANSIENT) !=
+              SQLITE_OK ||
+          gamedb_step(history) < 0)
+        goto done;
+    }
+  }
+
+  if (gamedb_prepare(sqlite, &last_page,
+                     "INSERT INTO player_last_page_recipients "
+                     "(player_dbref, position, recipient_dbref) "
+                     "VALUES (?, ?, ?);") < 0)
+    goto done;
+  for (size_t position = 0;
+       position < player_account_last_page_count(database, player); position++)
+    if (gamedb_bind_int(last_page, 1, player) < 0 ||
+        gamedb_bind_int(last_page, 2, (long)position) < 0 ||
+        gamedb_bind_int(last_page, 3,
+                        player_account_last_page_recipient(database, player,
+                                                           position)) < 0 ||
+        gamedb_step(last_page) < 0)
+      goto done;
+  result = 0;
+
+done:
+  sqlite3_finalize(state);
+  sqlite3_finalize(history);
+  sqlite3_finalize(last_page);
+  return result;
 }
 
 /*
@@ -173,7 +259,9 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
     if (gamedb_step(objects) < 0)
       return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
 
-    if (gamedb_store_native_state(context->database, sqlite, object) < 0)
+    if ((typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER &&
+         gamedb_store_player_account(context->database, sqlite, object) < 0) ||
+        gamedb_store_native_state(context->database, sqlite, object) < 0)
       return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
     for (size_t index = 0;
          index < object_state_count(context->database, object); index++) {
