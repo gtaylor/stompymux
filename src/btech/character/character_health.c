@@ -6,6 +6,7 @@ void character_stats_clear(PSTATS *s) {
   for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     s->values[i] = (char_values[i].type == CHAR_ATTRIBUTE ? 1 : 0);
     s->xp[i] = 0;
+    s->last_use[i] = 0;
   }
   char_slives(s, 1);
 }
@@ -33,10 +34,9 @@ void do_charclear(CommandInvocation *invocation) {
     return;
   }
 
-  silly_atr_set_in(database, thing, A_ATTRS, "");
-  silly_atr_set_in(database, thing, A_SKILLS, "");
-  silly_atr_set_in(database, thing, A_ADVS, "");
-  silly_atr_set_in(database, thing, A_HEALTH, "");
+  character_state_clear(database, thing);
+  if (thing == command->btech->cached_target_character)
+    command->btech->cached_target_character = -1;
   notify_printf(&command->evaluation, player, "Player #%ld stats cleared",
                 thing);
 }

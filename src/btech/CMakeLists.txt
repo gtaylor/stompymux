@@ -27,6 +27,7 @@ set(BTECH_SOURCES
   character/character_experience.c
   character/character_battle_value.c
   character/character_persistence.c
+  character/character_state_adapter.c
   character/failures.c
   character/pcombat.c
   combat/artillery.c

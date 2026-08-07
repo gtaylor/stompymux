@@ -6,7 +6,7 @@
 #include "mux/persistence/gamedb_sqlite_internal.h"
 
 // Increment whenever an incompatible schema change is made.
-const int GAMEDB_SCHEMA_VERSION = 27;
+const int GAMEDB_SCHEMA_VERSION = 28;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 const int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -114,12 +114,31 @@ const char schema_state_sql[] =
     " mech_preferred_id TEXT, map_color TEXT, mech_skills TEXT,"
     " object_type TEXT, tactical_size TEXT, lrs_height TEXT,"
     " contact_options TEXT, mech_name TEXT, mech_type TEXT,"
-    " mech_description TEXT, mw_template TEXT, faction TEXT, health TEXT,"
-    " character_attributes TEXT, build_links TEXT, build_entrances TEXT,"
-    " build_coordinates TEXT, advantages TEXT, pilot_dbref INTEGER,"
+    " mech_description TEXT, mw_template TEXT, faction TEXT,"
+    " build_links TEXT, build_entrances TEXT,"
+    " build_coordinates TEXT, pilot_dbref INTEGER,"
     " map_visibility TEXT, tech_complete_at INTEGER,"
-    " skills TEXT, personal_combat_equipment TEXT"
+    " personal_combat_equipment TEXT"
     ");"
+    "CREATE TABLE btech_character_state ("
+    " player_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref) ON DELETE "
+    "CASCADE,"
+    " bruise INTEGER NOT NULL CHECK (bruise BETWEEN 0 AND 255),"
+    " lethal INTEGER NOT NULL CHECK (lethal BETWEEN 0 AND 255),"
+    " build INTEGER NOT NULL CHECK (build BETWEEN 0 AND 255),"
+    " reflexes INTEGER NOT NULL CHECK (reflexes BETWEEN 0 AND 255),"
+    " intuition INTEGER NOT NULL CHECK (intuition BETWEEN 0 AND 255),"
+    " learn INTEGER NOT NULL CHECK (learn BETWEEN 0 AND 255),"
+    " charisma INTEGER NOT NULL CHECK (charisma BETWEEN 0 AND 255)"
+    ");"
+    "CREATE TABLE btech_character_values ("
+    " player_dbref INTEGER NOT NULL REFERENCES "
+    "btech_character_state(player_dbref) ON DELETE CASCADE,"
+    " value_name TEXT NOT NULL CHECK (length(value_name) BETWEEN 1 AND 255),"
+    " value INTEGER NOT NULL CHECK (value BETWEEN 0 AND 255),"
+    " xp INTEGER NOT NULL CHECK (xp >= 0), last_used INTEGER NOT NULL,"
+    " PRIMARY KEY (player_dbref, value_name)"
+    ") WITHOUT ROWID;"
     "CREATE TABLE btech_economy_parts ("
     " object_dbref INTEGER NOT NULL REFERENCES objects(dbref) ON DELETE "
     "CASCADE,"
@@ -153,16 +172,12 @@ const NativeColumn native_columns[] = {
     {A_MECHDESC, "btech_object_state", "object_dbref", "mech_description"},
     {A_MWTEMPLATE, "btech_object_state", "object_dbref", "mw_template"},
     {A_FACTION, "btech_object_state", "object_dbref", "faction"},
-    {A_HEALTH, "btech_object_state", "object_dbref", "health"},
-    {A_ATTRS, "btech_object_state", "object_dbref", "character_attributes"},
     {A_BUILDLINKS, "btech_object_state", "object_dbref", "build_links"},
     {A_BUILDENTRANCE, "btech_object_state", "object_dbref", "build_entrances"},
     {A_BUILDCOORD, "btech_object_state", "object_dbref", "build_coordinates"},
-    {A_ADVS, "btech_object_state", "object_dbref", "advantages"},
     {A_PILOTNUM, "btech_object_state", "object_dbref", "pilot_dbref"},
     {A_MAPVIS, "btech_object_state", "object_dbref", "map_visibility"},
     {A_TECHTIME, "btech_object_state", "object_dbref", "tech_complete_at"},
-    {A_SKILLS, "btech_object_state", "object_dbref", "skills"},
     {A_PCEQUIP, "btech_object_state", "object_dbref",
      "personal_combat_equipment"},
 };

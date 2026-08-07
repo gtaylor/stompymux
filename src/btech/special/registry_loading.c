@@ -271,6 +271,11 @@ void btech_special_objects_load(BtechContext *context) {
     InitSpecialHash(context, i);
   }
   init_btechstats(context);
+  if (!character_state_validate_all(context)) {
+    log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
+              "Invalid BTech character state in the game database");
+    exit(EXIT_FAILURE);
+  }
 #ifdef BTMUX_PERSISTENCE_TESTING
   /* The integration fixture creates its initial SQLite special-state rows. */
   if (getenv("BTMUX_TEST_BTECH_BOOTSTRAP")) {

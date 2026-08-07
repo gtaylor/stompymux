@@ -16,10 +16,10 @@
 
 #pragma once
 
-#define VALUES_HEALTH 1 /* In PLBRUISE / PLLETHAL */
-#define VALUES_SKILLS 2 /* In PLSKILLS */
-#define VALUES_ATTRS 4  /* In PLATTRS */
-#define VALUES_ADVS 8   /* In PLADVS */
+#define VALUES_HEALTH 1 /* Bruise and lethal damage */
+#define VALUES_SKILLS 2 /* Skill values and experience */
+#define VALUES_ATTRS 4  /* Core character attributes */
+#define VALUES_ADVS 8   /* Advantages and lives */
 #define VALUES_ALL 15
 #define VALUES_CO 6 /* Attr + Skill */
 

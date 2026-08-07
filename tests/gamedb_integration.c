@@ -358,10 +358,11 @@ static int check_snapshot(const char *path) {
            "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
            "IN ('snapshot', 'objects', 'player_state', 'btech_object_state', "
            "'object_state', 'player_login_history', "
-           "'player_last_page_recipients', 'btech_economy_parts');",
-           8) == 0 &&
+           "'player_last_page_recipients', 'btech_economy_parts', "
+           "'btech_character_state', 'btech_character_values');",
+           10) == 0 &&
        query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 27) == 0 &&
+                 28) == 0 &&
        query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                  1) == 0 &&
        query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
@@ -384,7 +385,8 @@ static int check_snapshot(const char *path) {
                  1) == 0 &&
        query_int(sqlite,
                  "SELECT count(*) FROM pragma_table_info('btech_object_state') "
-                 "WHERE name = 'economy_parts';",
+                 "WHERE name IN ('economy_parts', 'health', "
+                 "'character_attributes', 'advantages', 'skills');",
                  0) == 0 &&
        query_int(sqlite,
                  "SELECT count(*) FROM pragma_table_info('objects') WHERE "
@@ -851,6 +853,25 @@ static int set_nonascii_player_alias(const char *path, int invalid) {
   return result;
 }
 
+static int set_invalid_character_value_name(const char *path, int invalid) {
+  sqlite3 *sqlite = NULL;
+  const char *statement =
+      invalid
+          ? "UPDATE btech_character_values SET value_name = 'running' "
+            "WHERE player_dbref = 1 AND value_name = 'Running';"
+          : "UPDATE btech_character_values SET value_name = 'Running' "
+            "WHERE player_dbref = 1 AND value_name = 'running';";
+  int result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
+              sqlite3_exec(sqlite, statement, NULL, NULL, NULL) == SQLITE_OK
+          ? 0
+          : -1;
+
+  sqlite3_close(sqlite);
+  return result;
+}
+
 static int seed_player_account_state(const char *path) {
   sqlite3 *sqlite = NULL;
   char *error = NULL;
@@ -920,6 +941,92 @@ static int check_economy_parts(const char *path) {
                              1) == 0
                ? 0
                : -1;
+  sqlite3_close(sqlite);
+  return result;
+}
+
+static int seed_character_state(const char *path) {
+  sqlite3 *sqlite = NULL;
+  char *error = NULL;
+  int result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
+              sqlite3_exec(
+                  sqlite,
+                  "INSERT INTO btech_character_state "
+                  "(player_dbref, bruise, lethal, build, reflexes, intuition, "
+                  "learn, charisma) VALUES (1, 2, 3, 4, 5, 6, 7, 8);"
+                  "INSERT INTO btech_character_values "
+                  "(player_dbref, value_name, value, xp, last_used) VALUES "
+                  "(1, 'Running', 2, 300, 123456789),"
+                  "(1, 'Toughness', 1, 0, 0),"
+                  "(1, 'Lives', 0, 0, 0);",
+                  NULL, NULL, &error) == SQLITE_OK
+          ? 0
+          : -1;
+  if (result < 0)
+    fprintf(stderr, "Character state fixture seed failed: %s\n",
+            error ? error : sqlite3_errmsg(sqlite));
+  sqlite3_free(error);
+  sqlite3_close(sqlite);
+  return result;
+}
+
+static int check_character_state(const char *path) {
+  sqlite3 *sqlite = NULL;
+  int result;
+
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
+    return -1;
+  result =
+      query_int(sqlite,
+                "SELECT bruise = 2 AND lethal = 3 AND build = 4 AND "
+                "reflexes = 5 AND intuition = 6 AND learn = 7 AND "
+                "charisma = 8 FROM btech_character_state "
+                "WHERE player_dbref = 1;",
+                1) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM btech_character_values WHERE "
+                        "player_dbref = 1 AND value_name = 'Running' AND "
+                        "value = 2 AND xp = 300 AND "
+                        "last_used = 123456789;",
+                        1) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM btech_character_values WHERE "
+                        "player_dbref = 1 AND value_name = 'Lives' AND "
+                        "value = 0;",
+                        1) == 0
+          ? 0
+          : -1;
+  sqlite3_close(sqlite);
+  return result;
+}
+
+static int check_character_state_delete_cascade(const char *path) {
+  sqlite3 *sqlite = NULL;
+  int result = -1;
+
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK)
+    return -1;
+  if (query_int(sqlite,
+                "SELECT count(*) FROM pragma_foreign_key_list("
+                "'btech_character_state') WHERE \"table\" = 'objects' "
+                "AND on_delete = 'CASCADE';",
+                1) == 0 &&
+      sqlite3_exec(sqlite, "PRAGMA foreign_keys = ON; BEGIN;"
+                           "DELETE FROM btech_character_state "
+                           "WHERE player_dbref = 1;",
+                   NULL, NULL, NULL) == SQLITE_OK &&
+      query_int(sqlite,
+                "SELECT count(*) FROM btech_character_state "
+                "WHERE player_dbref = 1;",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM btech_character_values "
+                "WHERE player_dbref = 1;",
+                0) == 0)
+    result = 0;
+  sqlite3_exec(sqlite, "ROLLBACK;", NULL, NULL, NULL);
   sqlite3_close(sqlite);
   return result;
 }
@@ -1329,6 +1436,10 @@ int main(int argc, char *argv[]) {
     return 1;
   if (result == 0 && seed_economy_parts(database) < 0)
     return 1;
+  if (result == 0 && seed_character_state(database) < 0)
+    return 1;
+  if (result == 0 && check_character_state_delete_cascade(database) < 0)
+    return 1;
   file = fopen(sqlite_read_config, "w");
   if (!file)
     return 2;
@@ -1345,7 +1456,9 @@ int main(int argc, char *argv[]) {
        check_btech_special_snapshot(database) < 0 ||
        check_btech_queued_command_state(database) < 0 ||
        check_styled_object_text(database) < 0 ||
-       check_player_account_state(database) < 0 || check_economy_parts(database) < 0)) {
+       check_player_account_state(database) < 0 ||
+       check_economy_parts(database) < 0 ||
+       check_character_state(database) < 0)) {
     fprintf(stderr, "SQLite reload fixture failed: %s (status=%d)\n", directory,
             status);
     return 1;
@@ -1357,7 +1470,8 @@ int main(int argc, char *argv[]) {
                       check_btech_special_snapshot(crash_database) < 0 ||
                       check_btech_queued_command_state(crash_database) < 0 ||
                       check_player_account_state(crash_database) < 0 ||
-                      check_economy_parts(crash_database) < 0)) {
+                      check_economy_parts(crash_database) < 0 ||
+                      check_character_state(crash_database) < 0)) {
     fprintf(stderr, "SQLite crash-dump fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
@@ -1370,7 +1484,8 @@ int main(int argc, char *argv[]) {
        check_btech_special_snapshot(killed_database) < 0 ||
        check_btech_queued_command_state(killed_database) < 0 ||
        check_player_account_state(killed_database) < 0 ||
-       check_economy_parts(killed_database) < 0)) {
+       check_economy_parts(killed_database) < 0 ||
+       check_character_state(killed_database) < 0)) {
     fprintf(stderr, "SQLite killed-dump fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
@@ -1381,7 +1496,9 @@ int main(int argc, char *argv[]) {
        !WIFEXITED(status) || WEXITSTATUS(status) == 2 ||
        check_btech_special_snapshot(database) < 0 ||
        check_btech_nondefault_state(database) < 0 ||
-       check_player_account_state(database) < 0 || check_economy_parts(database) < 0)) {
+       check_player_account_state(database) < 0 ||
+       check_economy_parts(database) < 0 ||
+       check_character_state(database) < 0)) {
     fprintf(stderr, "SQLite-read fixture startup failed: %s (status=%d)\n",
             directory, status);
     return 1;
@@ -1437,6 +1554,17 @@ int main(int argc, char *argv[]) {
                       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
                       set_nonascii_player_alias(database, 0) < 0)) {
     fprintf(stderr, "Non-ASCII player alias unexpectedly started: %s\n",
+            directory);
+    return 1;
+  }
+  if (result == 0 &&
+      (set_invalid_character_value_name(database, 1) < 0 ||
+       run_server_in_directory(argv[1], sqlite_read_config, directory, 0,
+                               &status) < 0 ||
+       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
+       set_invalid_character_value_name(database, 0) < 0)) {
+    fprintf(stderr,
+            "Noncanonical character value name unexpectedly started: %s\n",
             directory);
     return 1;
   }

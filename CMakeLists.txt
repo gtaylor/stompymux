@@ -442,6 +442,33 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME economy_parts COMMAND economy_parts_test)
 
+  add_executable(character_state_test tests/character_state.c
+    ${MUX_SOURCE_DIR}/objects/character_state.c)
+  target_link_libraries(character_state_test PRIVATE btmux_options)
+  target_include_directories(character_state_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME character_state COMMAND character_state_test)
+
+  add_executable(character_state_adapter_test
+    tests/character_state_adapter.c
+    ${BTECH_SOURCE_DIR}/character/character_health.c
+    ${BTECH_SOURCE_DIR}/character/character_state_adapter.c
+    ${MUX_SOURCE_DIR}/objects/character_state.c)
+  target_compile_definitions(character_state_adapter_test
+    PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(character_state_adapter_test
+    PRIVATE -ffunction-sections)
+  target_link_options(character_state_adapter_test
+    PRIVATE -Wl,--gc-sections)
+  target_link_libraries(character_state_adapter_test PRIVATE btmux_options)
+  target_include_directories(character_state_adapter_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME character_state_adapter COMMAND character_state_adapter_test)
+
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
   target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)
   if(BTECH_ADVANCED_ECON)

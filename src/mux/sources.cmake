@@ -38,6 +38,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/communication/page_commands.c
   ${MUX_MODULE_DIR}/communication/pemit_commands.c
   ${MUX_MODULE_DIR}/objects/db.c
+  ${MUX_MODULE_DIR}/objects/character_state.c
   ${MUX_MODULE_DIR}/objects/economy_parts.c
   ${MUX_MODULE_DIR}/objects/object_state.c
   ${MUX_MODULE_DIR}/objects/player_account.c

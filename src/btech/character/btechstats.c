@@ -127,9 +127,10 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
 
 /*****************************/
 
-int char_getvaluecode(BtechContext *context, char *name) {
+int char_getvaluecode(BtechContext *context, const char *name) {
   int *ip;
-  char *tmpbuf, *tmpc1, *tmpc2;
+  char *tmpbuf, *tmpc2;
+  const char *tmpc1;
 
   tmpbuf = alloc_sbuf("getvaluecodefind");
   for (tmpc1 = name, tmpc2 = tmpbuf;

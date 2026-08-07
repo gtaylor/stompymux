@@ -23,6 +23,7 @@ typedef struct ServerLog ServerLog;
 typedef struct StyledTextPalette StyledTextPalette;
 typedef struct ObjectStateCollection ObjectStateCollection;
 typedef struct PlayerAccountState PlayerAccountState;
+typedef struct CharacterState CharacterState;
 typedef struct WorldIndexes WorldIndexes;
 typedef struct DescriptorRegistry DescriptorRegistry;
 typedef struct PlayerCache PlayerCache;
@@ -129,6 +130,7 @@ struct GameObject {
 
   ObjectStateCollection *state;
   PlayerAccountState *account; /* Present only for player objects. */
+  CharacterState *character;   /* Present only for player objects. */
   EconomyPartsState economy_parts;
   NativeObjectState native;
 };

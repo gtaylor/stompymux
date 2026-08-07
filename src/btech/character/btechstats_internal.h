@@ -36,6 +36,7 @@
 #include "mech_notify_api.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/objects/attrs.h"
+#include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -75,6 +76,7 @@ void character_stats_retrieve(BtechContext *context, DbRef player, int modes,
                               PSTATS *stats);
 void character_stats_store(BtechContext *context, DbRef player, PSTATS *stats,
                            int modes);
+bool character_state_validate_all(BtechContext *context);
 int character_xp_to_next_level(BtechContext *context, DbRef target, int code);
 PSTATS *character_stats_create(void);
 int char_getstatvalue(PSTATS *stats, char *name);

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
@@ -182,6 +183,56 @@ done:
   return result;
 }
 
+static int gamedb_store_character_state(GameDatabase *database, sqlite3 *sqlite,
+                                        DbRef player) {
+  sqlite3_stmt *state = nullptr;
+  sqlite3_stmt *value = nullptr;
+  CharacterFixedState fixed;
+  int result = -1;
+
+  if (!character_state_exists(database, player))
+    return 0;
+  if (!character_state_fixed_get(database, player, &fixed) ||
+      gamedb_prepare(sqlite, &state,
+                     "INSERT INTO btech_character_state "
+                     "(player_dbref, bruise, lethal, build, reflexes, "
+                     "intuition, learn, charisma) "
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
+      gamedb_bind_int(state, 1, player) < 0 ||
+      gamedb_bind_int(state, 2, fixed.bruise) < 0 ||
+      gamedb_bind_int(state, 3, fixed.lethal) < 0 ||
+      gamedb_bind_int(state, 4, fixed.build) < 0 ||
+      gamedb_bind_int(state, 5, fixed.reflexes) < 0 ||
+      gamedb_bind_int(state, 6, fixed.intuition) < 0 ||
+      gamedb_bind_int(state, 7, fixed.learn) < 0 ||
+      gamedb_bind_int(state, 8, fixed.charisma) < 0 || gamedb_step(state) < 0 ||
+      gamedb_prepare(sqlite, &value,
+                     "INSERT INTO btech_character_values "
+                     "(player_dbref, value_name, value, xp, last_used) "
+                     "VALUES (?, ?, ?, ?, ?);") < 0)
+    goto done;
+
+  for (size_t index = 0; index < character_state_value_count(database, player);
+       index++) {
+    CharacterValueStateView entry;
+    if (!character_state_value_entry(database, player, index, &entry) ||
+        gamedb_bind_int(value, 1, player) < 0 ||
+        sqlite3_bind_text(value, 2, entry.name, -1, SQLITE_TRANSIENT) !=
+            SQLITE_OK ||
+        gamedb_bind_int(value, 3, entry.value) < 0 ||
+        gamedb_bind_int(value, 4, entry.xp) < 0 ||
+        sqlite3_bind_int64(value, 5, entry.last_used) != SQLITE_OK ||
+        gamedb_step(value) < 0)
+      goto done;
+  }
+  result = 0;
+
+done:
+  sqlite3_finalize(state);
+  sqlite3_finalize(value);
+  return result;
+}
+
 /*
  * Populate a newly created SQLite database from the live in-memory game
  * state. The transaction is committed only after every table is complete.
@@ -290,7 +341,9 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
 
     if ((typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER &&
-         gamedb_store_player_account(context->database, sqlite, object) < 0) ||
+         (gamedb_store_player_account(context->database, sqlite, object) < 0 ||
+          gamedb_store_character_state(context->database, sqlite, object) <
+              0)) ||
         gamedb_store_native_state(context->database, sqlite, object) < 0 ||
         gamedb_store_economy_parts(context->database, sqlite, object) < 0)
       return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);

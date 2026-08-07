@@ -94,24 +94,20 @@ constexpr int A_MWTEMPLATE = 229; /* MW template to use (if any) */
 constexpr int A_FACTION = 230;    /* Faction */
 /* 231 and 232 are reserved for removed character job and rank attributes. */
 
-/* BT-stats: */
-constexpr int A_HEALTH = 233; /* Bruise,Lethal */
-constexpr int A_ATTRS = 234;  /* Attributes */
+/* 233 and 234 are reserved for removed character state attributes. */
 
 constexpr int A_BUILDLINKS = 235;    /* Links */
 constexpr int A_BUILDENTRANCE = 236; /* Entrance(s) */
 constexpr int A_BUILDCOORD = 237;    /* X/Y coord */
 
-/* BT-stats: */
-constexpr int A_ADVS = 238;     /* Advantages */
+/* 238 is reserved for the removed character advantages attribute. */
 constexpr int A_PILOTNUM = 239; /* Mech's pilot # */
 constexpr int A_MAPVIS = 240;   /* Visibility */
 /* 241 is reserved for the removed timezone attribute. */
 constexpr int A_TECHTIME = 242; /* Time (as a time_t number) until completion */
 /* 243 is reserved for the removed EconParts attribute. */
 
-/* BT-stats: */
-constexpr int A_SKILLS = 244;  /* Skills */
+/* 244 is reserved for the removed character skills attribute. */
 constexpr int A_PCEQUIP = 245; /* PCombat equipment */
 
 /* 246 through 250 are reserved for removed action attributes. */

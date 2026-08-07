@@ -9,6 +9,8 @@
 
 /* Generated at Mon Mar 22 10:40:18 CET 1999 from btechstats.c */
 
+#include <stdbool.h>
+
 #include "mux/commands/command_context.h"
 #include "mux/server/platform.h"
 
@@ -24,7 +26,7 @@ typedef struct UptimeText {
 /* btechstats.c */
 UptimeText uptime_text(int seconds);
 void list_charvaluestuff(EvaluationContext *evaluation, DbRef player, int flag);
-int char_getvaluecode(BtechContext *context, char *name);
+int char_getvaluecode(BtechContext *context, const char *name);
 int char_rollsaving(BtechContext *context);
 int char_rollunskilled(BtechContext *context);
 int char_rollskilled(BtechContext *context);
@@ -50,6 +52,7 @@ int char_getattrsavesucc(BtechContext *context, DbRef player, char *name);
 void zap_unneccessary_stats(void);
 void init_btechstats(BtechContext *context);
 void btech_stats_destroy(BtechContext *context);
+bool character_state_validate_all(BtechContext *context);
 void do_charclear(CommandInvocation *invocation);
 DbRef char_lookupplayer(BtechContext *context, DbRef player, DbRef cause,
                         int key, char *arg1);

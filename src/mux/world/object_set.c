@@ -166,16 +166,12 @@ bool object_attribute_is_administrable(int attribute_number) {
   case A_MECHDESC:
   case A_MWTEMPLATE:
   case A_FACTION:
-  case A_HEALTH:
-  case A_ATTRS:
   case A_BUILDLINKS:
   case A_BUILDENTRANCE:
   case A_BUILDCOORD:
-  case A_ADVS:
   case A_PILOTNUM:
   case A_MAPVIS:
   case A_TECHTIME:
-  case A_SKILLS:
   case A_PCEQUIP:
     return true;
   default:

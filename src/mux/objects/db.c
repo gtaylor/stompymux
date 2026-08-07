@@ -10,6 +10,7 @@
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
 #include "mux/objects/attrs.h"
+#include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
@@ -87,10 +88,6 @@ Attribute attr_table[] = {{"Alias", A_ALIAS},
                           {"Tacsize", A_TACSIZE},
                           {"Xtype", A_XTYPE},
                           {"Techtime", A_TECHTIME},
-                          {"PLHEALTH", A_HEALTH},
-                          {"PLATTRS", A_ATTRS},
-                          {"PLADVS", A_ADVS},
-                          {"PLSKILLS", A_SKILLS},
                           {nullptr, 0}};
 
 static char *set_string(char **ptr, char *new) {
@@ -328,6 +325,7 @@ void attribute_free(GameDatabase *database, DbRef thing) {
   database->objects[thing].lua_parent = nullptr;
   object_state_clear(database, thing);
   player_account_clear(database, thing);
+  character_state_clear(database, thing);
   economy_parts_clear(database, thing);
   for (int index = 0; index < 256; index++) {
     free(database->objects[thing].native.values[index]);

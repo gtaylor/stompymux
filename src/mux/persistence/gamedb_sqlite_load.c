@@ -2,11 +2,13 @@
 
 #include <limits.h>
 #include <sqlite3.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mux/objects/attrs.h"
+#include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
@@ -384,6 +386,73 @@ static int gamedb_load_economy_parts(PersistenceContext *context,
   return step == SQLITE_DONE ? 0 : -1;
 }
 
+static int gamedb_load_character_state(PersistenceContext *context,
+                                       sqlite3 *sqlite) {
+  sqlite3_stmt *statement = nullptr;
+  int step;
+
+  if (gamedb_prepare(sqlite, &statement,
+                     "SELECT player_dbref, bruise, lethal, build, reflexes, "
+                     "intuition, learn, charisma FROM btech_character_state "
+                     "ORDER BY player_dbref;") < 0)
+    return -1;
+  while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
+    DbRef player;
+    int fields[7];
+    if (gamedb_column_long(statement, 0, &player) < 0 ||
+        !is_good_obj(context->database, player) ||
+        typeof_obj(context->database, player) != OBJECT_TYPE_PLAYER ||
+        is_going(context->database, player))
+      goto invalid;
+    for (int column = 0; column < 7; column++)
+      if (gamedb_column_int(statement, column + 1, &fields[column]) < 0 ||
+          fields[column] < 0 || fields[column] > UINT8_MAX)
+        goto invalid;
+    CharacterFixedState fixed = {
+        .bruise = (unsigned char)fields[0],
+        .lethal = (unsigned char)fields[1],
+        .build = (unsigned char)fields[2],
+        .reflexes = (unsigned char)fields[3],
+        .intuition = (unsigned char)fields[4],
+        .learn = (unsigned char)fields[5],
+        .charisma = (unsigned char)fields[6],
+    };
+    if (!character_state_fixed_set(context->database, player, &fixed))
+      goto invalid;
+  }
+  sqlite3_finalize(statement);
+  if (step != SQLITE_DONE)
+    return -1;
+
+  statement = nullptr;
+  if (gamedb_prepare(sqlite, &statement,
+                     "SELECT player_dbref, value_name, value, xp, last_used "
+                     "FROM btech_character_values "
+                     "ORDER BY player_dbref, value_name;") < 0)
+    return -1;
+  while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
+    const char *name;
+    DbRef player;
+    int value, xp;
+    long last_used;
+    if (gamedb_column_long(statement, 0, &player) < 0 ||
+        !character_state_exists(context->database, player) ||
+        gamedb_column_text(statement, 1, &name, 256) < 0 ||
+        gamedb_column_int(statement, 2, &value) < 0 ||
+        gamedb_column_int(statement, 3, &xp) < 0 ||
+        gamedb_column_long(statement, 4, &last_used) < 0 ||
+        !character_state_value_set(context->database, player, name, value, xp,
+                                   (time_t)last_used))
+      goto invalid;
+  }
+  sqlite3_finalize(statement);
+  return step == SQLITE_DONE ? 0 : -1;
+
+invalid:
+  sqlite3_finalize(statement);
+  return -1;
+}
+
 static int gamedb_load_object_state(PersistenceContext *context,
                                     sqlite3 *sqlite) {
   sqlite3_stmt *statement = nullptr;
@@ -470,6 +539,7 @@ int gamedb_load(PersistenceContext *context, const char *path) {
     if (gamedb_load_objects(context, sqlite, db_top) < 0 ||
         gamedb_load_player_accounts(context, sqlite) < 0 ||
         gamedb_load_native_state(context, sqlite) < 0 ||
+        gamedb_load_character_state(context, sqlite) < 0 ||
         gamedb_load_economy_parts(context, sqlite) < 0 ||
         gamedb_load_object_state(context, sqlite) < 0) {
       gamedb_log_failure(context->log, "loading snapshot data", path, sqlite);
