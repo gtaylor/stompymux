@@ -5,8 +5,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct BtechContext BtechContext;
-
 enum {
   SWATER_IDX,
   DWATER_IDX,
@@ -32,7 +30,6 @@ enum {
   NUM_COLOR_IDX
 };
 
-#define DEFAULT_COLOR_STRING "BbWXYyRWWWXGgbRhYRnGR"
 #define DEFAULT_COLOR_SCHEME "BbWXYyRWWWXGgbRHYR\0GR"
 
 typedef struct MapColorScheme {
@@ -50,8 +47,7 @@ typedef struct MapText {
   size_t line_capacity;
 } MapText;
 
-void map_color_scheme_load(MapColorScheme *colors, BtechContext *context,
-                           DbRef player);
+void map_color_scheme_load(MapColorScheme *colors);
 char map_terrain_color_char(const MapColorScheme *colors, char terrain,
                             int elevation);
 const char *map_color_markup(char color);

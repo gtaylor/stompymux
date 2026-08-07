@@ -111,7 +111,7 @@ const char schema_state_sql[] =
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_object_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
-    " mech_preferred_id TEXT, map_color TEXT, mech_skills TEXT,"
+    " mech_preferred_id TEXT, mech_skills TEXT,"
     " object_type TEXT, tactical_size TEXT, lrs_height TEXT,"
     " contact_options TEXT, mech_name TEXT, mech_type TEXT,"
     " mech_description TEXT, mw_template TEXT, faction TEXT,"
@@ -161,7 +161,6 @@ const NativeColumn native_columns[] = {
     {A_DESTROYER, "objects", "dbref", "destroyer"},
     {A_ALIAS, "player_state", "object_dbref", "alias"},
     {A_MECHPREFID, "btech_object_state", "object_dbref", "mech_preferred_id"},
-    {A_MAPCOLOR, "btech_object_state", "object_dbref", "map_color"},
     {A_MECHSKILLS, "btech_object_state", "object_dbref", "mech_skills"},
     {A_XTYPE, "btech_object_state", "object_dbref", "object_type"},
     {A_TACSIZE, "btech_object_state", "object_dbref", "tactical_size"},

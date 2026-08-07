@@ -401,7 +401,7 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
                           5,
   };
 
-  map_color_scheme_load(&colors, map->xcode.context, player);
+  map_color_scheme_load(&colors);
 
   if (labels & 4) {
     navigate = 1;

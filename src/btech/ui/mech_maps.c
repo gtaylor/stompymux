@@ -15,7 +15,6 @@
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/server/game.h"
 #include "registry_api.h"
 
@@ -129,63 +128,7 @@ const char *GetTerrainName(BattleMap *map, int x, int y) {
 
 /* Player-customizable colors */
 
-void map_color_scheme_load(MapColorScheme *colors, BtechContext *context,
-                           DbRef player) {
-  char *str = btech_attribute_read(context->database, player, A_MAPCOLOR,
-                                   (char[LBUF_SIZE]){0});
-  int i;
-
-  if (*str && strlen(str) <= NUM_COLOR_IDX) {
-    memcpy(colors->values, DEFAULT_COLOR_STRING, NUM_COLOR_IDX);
-    memcpy(colors->values, str, strlen(str));
-    for (i = 0; i < NUM_COLOR_IDX; i++) {
-      switch (colors->values[i]) {
-      case 'f':
-      case 'F':
-      case 'I':
-      case 'i':
-      case 'H':
-      case 'x':
-      case 'X':
-      case 'r':
-      case 'R':
-      case 'g':
-      case 'G':
-      case 'y':
-      case 'Y':
-      case 'b':
-      case 'B':
-      case 'm':
-      case 'M':
-      case 'c':
-      case 'C':
-      case 'w':
-      case 'W':
-        break;
-      case 'h':
-        colors->values[i] = 'H';
-        break;
-      case 'n':
-        colors->values[i] = '\0';
-        break;
-      default:
-        notify_printf(btech_context_evaluation(context), player,
-                      "Invalid character '%c' in MAPCOLOR "
-                      "attribute!",
-                      colors->values[i]);
-        notify(btech_context_evaluation(context), player,
-               "Using default: " DEFAULT_COLOR_STRING);
-        memcpy(colors->values, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
-        return;
-      }
-    }
-    return;
-  } else if (*str) {
-    notify(btech_context_evaluation(context), player,
-           "Invalid MAPCOLOR attribute!");
-    notify(btech_context_evaluation(context), player,
-           "Using default: " DEFAULT_COLOR_STRING);
-  }
+void map_color_scheme_load(MapColorScheme *colors) {
   memcpy(colors->values, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
 }
 

@@ -486,7 +486,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   if (!(displayHeight % 2))
     displayHeight++;
 
-  map_color_scheme_load(&colors, mech_context(mech), player);
+  map_color_scheme_load(&colors);
 
   show_lrs_map(&colors, player, mech, map, x, y, displayHeight, mode);
 }

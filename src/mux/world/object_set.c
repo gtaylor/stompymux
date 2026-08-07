@@ -155,7 +155,6 @@ bool object_attribute_is_administrable(int attribute_number) {
   case A_DESC:
   case A_IDESC:
   case A_MECHPREFID:
-  case A_MAPCOLOR:
   case A_MECHSKILLS:
   case A_XTYPE:
   case A_TACSIZE:

@@ -72,7 +72,7 @@ constexpr int A_PFAIL = 78; /* Invoker page fail message */
 /* 144 is reserved for the removed Lastname attribute. */
 /* 145 is reserved for the Lua parent field, which is stored on the object. */
 constexpr int A_MECHPREFID = 146; /* Preferred Mech ID on map */
-constexpr int A_MAPCOLOR = 147;   /* Map color scheme */
+/* Attribute number 147 is reserved after removal of map color schemes. */
 
 /* 200 is reserved for the removed player Lastpage attribute. */
 /* 204 is reserved for the removed Daily attribute. */
