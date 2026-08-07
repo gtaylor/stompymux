@@ -312,14 +312,19 @@ static char *retrieve_value(void *data, int i, char *buffer) {
 
   void *bar = (void *)((long)data + xcode_data[i].rel_addr);
   char *(*tempfun)(int, Mech *);
+  char *(*bidirectional_tempfun)(int, Mech *, char *);
   char *(*buffered_tempfun)(Mech *, char *);
   char *(*buffered_bidirectional_tempfun)(int, Mech *, char *, char *);
 
   switch (xcode_data[i].type) {
-  case TYPE_STRFUNC_BD:
   case TYPE_STRFUNC:
     tempfun = (void *)xcode_data[i].rel_addr;
     snprintf(buffer, LBUF_SIZE, "%s", (char *)tempfun(0, (Mech *)data));
+    break;
+  case TYPE_STRFUNC_BD:
+    bidirectional_tempfun = (void *)xcode_data[i].rel_addr;
+    snprintf(buffer, LBUF_SIZE, "%s",
+             bidirectional_tempfun(0, (Mech *)data, nullptr));
     break;
   case TYPE_STRFUNC_BUF:
     buffered_tempfun = (void *)xcode_data[i].rel_addr;
