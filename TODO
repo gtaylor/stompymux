@@ -2,6 +2,7 @@
 
 ## MUX Todos in the /src/ dir
 
+* Clean up the registered attributes.
 * Edit attributes from @examine via OSC8 and prepare:?
 * Consolidate the various logging files in server
 * Remove arbitrary logs compile directive and keep it on
@@ -29,3 +30,5 @@
   the engine (e.g. @boot) rather than by its own step returning "cancel".
 
 ## BTech Todos in the /btech/ dir
+
+* See what `#define` statements we can turn into constexpr
