@@ -84,17 +84,15 @@ const char schema_objects_sql[] =
 const char schema_state_sql[] =
     "CREATE TABLE player_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
-    " password_hash TEXT, alias TEXT, last_login TEXT, last_name_change TEXT,"
-    " login_data TEXT, last_site TEXT, last_page TEXT, timeout INTEGER,"
-    " queue_limit INTEGER, privileges TEXT, timezone TEXT"
+    " password_hash TEXT, alias TEXT, last_login TEXT, login_data TEXT,"
+    " last_site TEXT, last_page TEXT"
     ");"
     "CREATE TABLE btech_object_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
     " mech_preferred_id TEXT, map_color TEXT, mech_skills TEXT,"
     " object_type TEXT, tactical_size TEXT, lrs_height TEXT,"
     " contact_options TEXT, mech_name TEXT, mech_type TEXT,"
-    " mech_description TEXT, mw_template TEXT,"
-    " faction TEXT, job TEXT, rank_number INTEGER, health TEXT,"
+    " mech_description TEXT, mw_template TEXT, faction TEXT, health TEXT,"
     " character_attributes TEXT, build_links TEXT, build_entrances TEXT,"
     " build_coordinates TEXT, advantages TEXT, pilot_dbref INTEGER,"
     " map_visibility TEXT, tech_complete_at INTEGER, economy_parts TEXT,"
@@ -116,14 +114,9 @@ const NativeColumn native_columns[] = {
     {A_PASS, "player_state", "object_dbref", "password_hash"},
     {A_ALIAS, "player_state", "object_dbref", "alias"},
     {A_LAST, "player_state", "object_dbref", "last_login"},
-    {A_LASTNAME, "player_state", "object_dbref", "last_name_change"},
     {A_LOGINDATA, "player_state", "object_dbref", "login_data"},
     {A_LASTSITE, "player_state", "object_dbref", "last_site"},
     {A_LASTPAGE, "player_state", "object_dbref", "last_page"},
-    {A_TIMEOUT, "player_state", "object_dbref", "timeout"},
-    {A_QUEUEMAX, "player_state", "object_dbref", "queue_limit"},
-    {A_PRIVS, "player_state", "object_dbref", "privileges"},
-    {A_TZ, "player_state", "object_dbref", "timezone"},
     {A_MECHPREFID, "btech_object_state", "object_dbref", "mech_preferred_id"},
     {A_MAPCOLOR, "btech_object_state", "object_dbref", "map_color"},
     {A_MECHSKILLS, "btech_object_state", "object_dbref", "mech_skills"},
@@ -136,8 +129,6 @@ const NativeColumn native_columns[] = {
     {A_MECHDESC, "btech_object_state", "object_dbref", "mech_description"},
     {A_MWTEMPLATE, "btech_object_state", "object_dbref", "mw_template"},
     {A_FACTION, "btech_object_state", "object_dbref", "faction"},
-    {A_JOB, "btech_object_state", "object_dbref", "job"},
-    {A_RANKNUM, "btech_object_state", "object_dbref", "rank_number"},
     {A_HEALTH, "btech_object_state", "object_dbref", "health"},
     {A_ATTRS, "btech_object_state", "object_dbref", "character_attributes"},
     {A_BUILDLINKS, "btech_object_state", "object_dbref", "build_links"},

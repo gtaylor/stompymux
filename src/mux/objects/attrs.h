@@ -13,9 +13,9 @@ constexpr int A_DESC = 6; /* Description */
 /* 12 through 20 are reserved for removed action attributes. */
 /* 21 through 25 are reserved for removed payment and money attributes. */
 /* 26 through 29 are reserved for removed listen attributes and actions. */
-constexpr int A_LAST = 30;     /* Date/time of last login (players only) */
-constexpr int A_QUEUEMAX = 31; /* Max. # of entries obj has in the queue */
-constexpr int A_IDESC = 32;    /* Inside description (ENTER to get inside) */
+constexpr int A_LAST = 30; /* Date/time of last login (players only) */
+/* 31 is reserved for the removed QueueMax attribute. */
+constexpr int A_IDESC = 32; /* Inside description (ENTER to get inside) */
 /* 33 and 34 are reserved for removed action-message attributes. */
 /* 35 and 36 are reserved for removed action attributes. */
 /* 37 is reserved for the removed Odesc attribute. */
@@ -27,7 +27,7 @@ constexpr int A_NAME = 43; /* Object name */
 /* 44 is reserved for the removed Comment attribute. */
 /* 45 and 46 are reserved for removed action-message attributes. */
 /* 47 is reserved. */
-constexpr int A_TIMEOUT = 48; /* Per-user disconnect timeout */
+/* 48 is reserved for the removed Timeout attribute. */
 /* 49 is reserved for the removed building quota attribute. */
 /* 50 and 51 are reserved for removed action-message attributes. */
 /* 52 is reserved for the removed Aleave attribute. */
@@ -50,7 +50,7 @@ constexpr int A_IDLE = 74;   /* Success page return message */
 constexpr int A_PFAIL = 78; /* Invoker page fail message */
 /* 79 through 81 are reserved for removed action-message attributes. */
 /* 82 is reserved for the removed Atport attribute. */
-constexpr int A_PRIVS = 83;     /* Individual permissions */
+/* 83 is reserved for the removed Privileges attribute. */
 constexpr int A_LOGINDATA = 84; /* Recent login information */
 /* 85 through 87 are reserved for removed lock attributes. */
 constexpr int A_LASTSITE = 88; /* Last site logged in from, in cleartext */
@@ -69,7 +69,7 @@ constexpr int A_LASTSITE = 88; /* Last site logged in from, in cleartext */
 /* 140 is reserved for the removed Atfail attribute. */
 /* 141 and 142 are reserved for removed lock failure attributes. */
 /* 143 is reserved for the removed Atofail attribute. */
-constexpr int A_LASTNAME = 144; /* Last time you changed your name */
+/* 144 is reserved for the removed Lastname attribute. */
 /* 145 is reserved for the Lua parent field, which is stored on the object. */
 constexpr int A_MECHPREFID = 146; /* Preferred Mech ID on map */
 constexpr int A_MAPCOLOR = 147;   /* Map color scheme */
@@ -92,9 +92,7 @@ constexpr int A_MECHDESC = 221;   /* Mech extra desc (for view) */
 /* Attribute number 222 is reserved after removal of softcoded mech status. */
 constexpr int A_MWTEMPLATE = 229; /* MW template to use (if any) */
 constexpr int A_FACTION = 230;    /* Faction */
-constexpr int A_JOB = 231;        /* Job field */
-constexpr int A_RANKNUM =
-    232; /* 'true' rank, the thing comparisons are done with */
+/* 231 and 232 are reserved for removed character job and rank attributes. */
 
 /* BT-stats: */
 constexpr int A_HEALTH = 233; /* Bruise,Lethal */
@@ -108,7 +106,7 @@ constexpr int A_BUILDCOORD = 237;    /* X/Y coord */
 constexpr int A_ADVS = 238;     /* Advantages */
 constexpr int A_PILOTNUM = 239; /* Mech's pilot # */
 constexpr int A_MAPVIS = 240;   /* Visibility */
-constexpr int A_TZ = 241;       /* Timezone */
+/* 241 is reserved for the removed timezone attribute. */
 constexpr int A_TECHTIME = 242; /* Time (as a time_t number) until completion */
 constexpr int A_ECONPARTS = 243; /* Econ parts */
 

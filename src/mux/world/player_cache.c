@@ -3,10 +3,8 @@
  */
 
 #include "mux/server/server_config.h" // IWYU pragma: keep
-#include <stdio.h>
 #include <stdlib.h>
 
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
@@ -48,25 +46,12 @@ void player_cache_destroy(PlayerCache *cache) {
 
   if (cache == nullptr)
     return;
-  pcache_sync(cache);
   while ((entry = cache->head) != nullptr) {
     cache->head = entry->next;
     free(entry);
   }
   red_black_tree_destroy(cache->tree);
   free(cache);
-}
-
-static void pcache_reload1(PlayerCache *cache, DbRef player, PCACHE *pp) {
-  char *cp;
-
-  cp = attribute_get_raw(cache->database, player, A_QUEUEMAX);
-  if (cp && *cp)
-    pp->qmax = atoi(cp);
-  else if (!is_wizard(cache->database, player))
-    pp->qmax = cache->configuration->command_queue_limit;
-  else
-    pp->qmax = -1;
 }
 
 PCACHE *pcache_find(PlayerCache *cache, DbRef player) {
@@ -85,32 +70,10 @@ PCACHE *pcache_find(PlayerCache *cache, DbRef player) {
   pp->queue = 0;
   pp->cflags = PF_REF;
   pp->player = player;
-  pcache_reload1(cache, player, pp);
   pp->next = cache->head;
   cache->head = pp;
   red_black_tree_insert(cache->tree, (void *)player, (void *)pp);
   return pp;
-}
-
-void pcache_reload(PlayerCache *cache, DbRef player) {
-  PCACHE *pp;
-
-  pp = pcache_find(cache, player);
-  if (!pp)
-    return;
-  pcache_reload1(cache, player, pp);
-}
-
-static void pcache_save(PlayerCache *cache, PCACHE *pp) {
-  IBUF tbuf;
-
-  if (pp->cflags & PF_DEAD)
-    return;
-  if (pp->cflags & PF_QMAX_CH) {
-    snprintf(tbuf, sizeof(tbuf), "%d", pp->qmax);
-    attribute_add_raw(cache->database, pp->player, A_QUEUEMAX, tbuf);
-  }
-  pp->cflags &= ~PF_QMAX_CH;
 }
 
 void pcache_trim(PlayerCache *cache) {
@@ -130,23 +93,11 @@ void pcache_trim(PlayerCache *cache) {
         pplast->next = ppnext;
       else
         cache->head = ppnext;
-      if (!(pp->cflags & PF_DEAD)) {
-        pcache_save(cache, pp);
+      if (!(pp->cflags & PF_DEAD))
         red_black_tree_delete(cache->tree, (void *)pp->player);
-      }
       free(pp);
       pp = ppnext;
     }
-  }
-}
-
-void pcache_sync(PlayerCache *cache) {
-  PCACHE *pp;
-
-  pp = cache->head;
-  while (pp) {
-    pcache_save(cache, pp);
-    pp = pp->next;
   }
 }
 
@@ -173,21 +124,7 @@ void queue_set(PlayerCache *cache, DbRef player, int val) {
 }
 
 int queue_maximum(PlayerCache *cache, DbRef player) {
-  PCACHE *pp;
-  int m;
-
-  m = 0;
-  if (is_player(cache->database, player)) {
-    pp = pcache_find(cache, player);
-    if (pp) {
-      if (pp->qmax >= 0) {
-        m = pp->qmax;
-      } else {
-        m = cache->database->top + 1;
-        if (m < cache->configuration->command_queue_limit)
-          m = cache->configuration->command_queue_limit;
-      }
-    }
-  }
-  return m;
+  return is_player(cache->database, player)
+             ? cache->configuration->command_queue_limit
+             : 0;
 }

@@ -117,32 +117,19 @@ void announce_connect(DbRef player, Descriptor *d) {
   CommandRuntime *runtime = descriptor_runtime(d);
   const ServerConfiguration *configuration = runtime->world->configuration;
   CommandContext *command = runtime->background_command;
-  DbRef loc, temp;
-  long aflags;
-  int num, key, count;
-  char *buf, *time_str;
-  Descriptor *dtemp;
-  DescriptorIterator iterator;
-
   descriptor_queue_string(d, "Connected.\n\n");
 
-  count = 0;
-  iterator = descriptor_iterator_connected(runtime->descriptors);
+  int count = 0;
+  DescriptorIterator iterator =
+      descriptor_iterator_connected(runtime->descriptors);
+  Descriptor *dtemp;
   while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
     count++;
 
   if (*runtime->record_players < count)
     *runtime->record_players = count;
 
-  buf = attribute_get(runtime->world->database, player, A_TIMEOUT, &aflags);
-  if (buf) {
-    d->timeout = clamped_atoi(buf);
-    if (d->timeout <= 0)
-      d->timeout = configuration->idle_timeout;
-  }
-  free_lbuf(buf);
-
-  loc = game_object_location(runtime->world->database, player);
+  DbRef loc = game_object_location(runtime->world->database, player);
   s_connected(runtime->world->database, player);
 
   if (is_wizard(runtime->world->database, player)) {
@@ -150,8 +137,8 @@ void announce_connect(DbRef player, Descriptor *d) {
       raw_notify(&command->evaluation, player, "*** Logins are disabled.");
     }
   }
-  buf = alloc_lbuf("announce_connect");
-  num = 0;
+  char *buf = alloc_lbuf("announce_connect");
+  int num = 0;
   iterator = descriptor_iterator_player(runtime->descriptors, player);
   while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
     num++;
@@ -179,12 +166,12 @@ void announce_connect(DbRef player, Descriptor *d) {
                   game_object_name(runtime->world->database, player));
   }
 
-  key = MSG_INV;
+  int key = MSG_INV;
   if ((loc != NOTHING) && !(is_dark(runtime->world->database, player) &&
                             is_wizard(runtime->world->database, player)))
     key |= MSG_NBR | MSG_NBR_EXITS | MSG_LOC;
 
-  temp = command->enactor;
+  DbRef temp = command->enactor;
   command->enactor = player;
   notify_checked(&command->evaluation, player, player, buf, key);
   free_lbuf(buf);
@@ -198,7 +185,7 @@ void announce_connect(DbRef player, Descriptor *d) {
                  game_object_name(runtime->world->database, player));
   dispatch_connection_event_scope(runtime, d, player, loc, LUA_EVENT_CONNECT,
                                   num >= 2, nullptr);
-  time_str = ctime(&runtime->clock->now);
+  char *time_str = ctime(&runtime->clock->now);
   time_str[strlen(time_str) - 1] = '\0';
   record_login(&command->evaluation, player, 1, time_str, d->addr, d->username);
   look_in(&descriptor_runtime(d)->background_command->evaluation, player,
@@ -316,31 +303,6 @@ int boot_by_port(DescriptorRegistry *descriptors, int port, int no_god,
     }
   }
   return count;
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * descriptor_reload: Reload parts of net descriptor that are based on db
- * info.
- */
-
-void descriptor_reload(GameDatabase *database,
-                       const ServerConfiguration *configuration,
-                       DescriptorRegistry *descriptors, DbRef player) {
-  Descriptor *d;
-  DescriptorIterator iterator = descriptor_iterator_player(descriptors, player);
-  char *buf;
-  Flag aflags;
-
-  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
-    buf = attribute_get(database, player, A_TIMEOUT, &aflags);
-    if (buf) {
-      d->timeout = clamped_atoi(buf);
-      if (d->timeout <= 0)
-        d->timeout = configuration->idle_timeout;
-    }
-    free_lbuf(buf);
-  }
 }
 
 /*

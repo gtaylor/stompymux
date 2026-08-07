@@ -411,7 +411,6 @@ void server_shutdown(ServerControl *control, DbRef player, int key,
      * Close the attribute text db and dump the header db
      */
 
-    pcache_sync(control->players);
     STARTLOG(control->log, LOG_ALWAYS, "DMP", "PANIC") {
       log_text("Panic dump: ");
       log_text(control->configuration->database.gamedb);
@@ -425,7 +424,6 @@ void server_shutdown(ServerControl *control, DbRef player, int key,
       ENDLOG(control->log);
     }
   } else if (key & SHUTDN_KILLED) {
-    pcache_sync(control->players);
     STARTLOG(control->log, LOG_ALWAYS, "DMP", "KILLED") {
       log_text("Killed dump: ");
       log_text(control->configuration->database.gamedb);
@@ -456,7 +454,6 @@ void dump_database(ServerControl *control) {
     log_text(control->configuration->database.gamedb);
     ENDLOG(control->log);
   }
-  pcache_sync(control->players);
 
   dump_database_internal(control, DUMP_NORMAL);
   STARTLOG(control->log, LOG_DBSAVES, "DMP", "DONE") {
@@ -473,8 +470,6 @@ void fork_and_dump(ServerControl *control, int key) {
 
   log_error(control->log, LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
             control->configuration->database.gamedb);
-
-  pcache_sync(control->players);
 
   if (!key || (key & DUMP_STRUCT)) {
     if (control->configuration->database.fork_dump) {

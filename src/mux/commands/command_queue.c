@@ -389,11 +389,6 @@ static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
   if (is_halted(queue->world->database, player))
     return nullptr;
 
-  /*
-   * Wizards and their objs may queue up to db_top+1 cmds. Players are
-   * * * * * * * limited to QUEUE_QUOTA. -mnp
-   */
-
   maximum = queue_maximum(queue->players, player);
   if (queue_adjust(queue->players, player, 1) > maximum) {
     notify_checked(evaluation, player, player,

@@ -20,6 +20,3 @@ int boot_off(DescriptorRegistry *descriptors, DbRef player,
              const char *message);
 int boot_by_port(DescriptorRegistry *descriptors, int port, int no_god,
                  char *message);
-void descriptor_reload(GameDatabase *database,
-                       const ServerConfiguration *configuration,
-                       DescriptorRegistry *descriptors, DbRef player);
