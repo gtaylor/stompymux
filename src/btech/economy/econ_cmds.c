@@ -30,12 +30,10 @@
 #include "coolmenu.h"
 #include "crit_api.h"
 #include "econ_api.h"
-#include "legacy_macros.h"
 #include "mech_api_types.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_partnames.h"
 #include "mech_partnames_api.h"
@@ -53,6 +51,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
+#include "registry_api.h"
 #include "special_object.h"
 #include "unit_cost_api.h"
 
@@ -79,15 +78,16 @@ void mech_cargo_weight_recalculate(Mech *mech) {
     if (economy_parts_entry(mech_context(mech)->database, mech_dbref(mech),
                             index, &entry) &&
         entry.part_id >= 0 && entry.part_id < NUM_ITEMS)
-      pile[entry.part_id] += ((IsBomb(entry.part_id)) ? 4 : 1) * entry.quantity;
+      pile[entry.part_id] +=
+          ((equipment_is_bomb(entry.part_id)) ? 4 : 1) * entry.quantity;
   if (mech_is_flying_type(mech))
     for (i = 0; i < NUM_SECTIONS; i++)
       for (j = 0; j < NUM_CRITICALS; j++) {
-        if (IsBomb((k = mech_critical_part_type(mech, i, j))))
+        if (equipment_is_bomb((k = mech_critical_part_type(mech, i, j))))
           pile[k]++;
-        else if (IsSpecial(k))
-          if (Special2I(k) == FUELTANK)
-            pile[I2Special(FUELTANK)]++;
+        else if (equipment_is_special(k))
+          if (special_from_equipment_index(k) == FUELTANK)
+            pile[special_equipment_index(FUELTANK)]++;
       }
   /* We've 'so-called' pile now */
   for (i = 0; i < NUM_ITEMS; i++)
@@ -96,8 +96,9 @@ void mech_cargo_weight_recalculate(Mech *mech) {
       weight += sw * pile[i];
     }
   if (mech_is_flying_type(mech)) {
-    mech_maximum_fuel_set(mech, mech_original_fuel(mech) +
-                                    2000 * pile[I2Special(FUELTANK)]);
+    mech_maximum_fuel_set(mech,
+                          mech_original_fuel(mech) +
+                              2000 * pile[special_equipment_index(FUELTANK)]);
     if (mech_fuel(mech) > mech_original_fuel(mech))
       weight += mech_fuel(mech) - mech_original_fuel(mech);
   }
@@ -115,8 +116,8 @@ int loading_bay_whine(DbRef player, DbRef cargobay, Mech *mech) {
   if (c && *c)
     if (sscanf(c, "%d %d %d", &i1, &i2, &i3) >= 2)
       if (mech_position_x(mech) != i1 || mech_position_y(mech) != i2) {
-        notify(btech_context_evaluation(mech_context(mech)), player,
-               "You're not where the cargo is!");
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "You're not where the cargo is!");
         if (i3)
           notify_printf(btech_context_evaluation(mech_context(mech)), player,
                         "Try looking around %d,%d instead.", i1, i2);
@@ -183,9 +184,9 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
 
   bzero(pile, sizeof(pile));
   bzero(pile2, sizeof(pile2));
-  CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
-  CreateMenuEntry_Simple(&c, header, CM_ONE | CM_CENTER);
-  CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, header, CM_ONE | CM_CENTER);
+  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   /* Then, we go on a mad rampage ;-) */
   for (size_t index = 0; index < economy_parts_entry_count(database, loc);
        index++) {
@@ -203,7 +204,8 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   for (i = 0; i < (int)part_name_count(context); i++) {
     const PartNameEntry *part_name = part_name_at(context, (size_t)i);
 
-    UNPACK_PART(part_name->index, id, brand);
+    id = packed_part_id(part_name->index);
+    brand = packed_part_brand(part_name->index);
     if ((buf && (x = pile2[brand][id])) || ((!buf && (x = pile[brand][id])))) {
       display_name = part_name_long(context, id, brand);
       if (!display_name.valid) {
@@ -222,28 +224,31 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
                (sw * x) / 1024.0);
       ch = tmpstr;
 #endif /* BT_PART_WEIGHTS */
-      CreateMenuEntry_Simple(&c, ch, CM_TWO);
+      cool_menu_entry_simple(&c, ch, CM_TWO);
       found++;
     }
   }
   if (!found)
-    CreateMenuEntry_Simple(&c, "None", CM_ONE);
-  CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
+    cool_menu_entry_simple(&c, "None", CM_ONE);
+  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
 
-#define MY_DO_LIST(context, t)                                                 \
-  if (*buffer)                                                                 \
-    list_matching(context, player,                                             \
-                  tprintf("Part listing for %s matching %s",                   \
-                          game_object_name((context)->database, t), buffer),   \
-                  t, buffer);                                                  \
-  else                                                                         \
-    list_matching(context, player,                                             \
-                  tprintf("Part listing for %s",                               \
-                          game_object_name((context)->database, t)),           \
-                  t, nullptr)
+static void list_manifest(BtechContext *context, DbRef player, DbRef location,
+                          char *filter) {
+  if (*filter)
+    list_matching(context, player,
+                  tprintf("Part listing for %s matching %s",
+                          game_object_name(context->database, location),
+                          filter),
+                  location, filter);
+  else
+    list_matching(context, player,
+                  tprintf("Part listing for %s",
+                          game_object_name(context->database, location)),
+                  location, nullptr);
+}
 
 void mech_manifest(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *object = data;
@@ -251,7 +256,8 @@ void mech_manifest(DbRef player, void *data, char *buffer) {
 
   while (isspace(*buffer))
     buffer++;
-  MY_DO_LIST(context, game_object_location(context->database, player));
+  list_manifest(context, player,
+                game_object_location(context->database, player), buffer);
 }
 
 void mech_stores(DbRef player, void *data, char *buffer) {
@@ -259,43 +265,60 @@ void mech_stores(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
   GameDatabase *database = context->database;
 
-  cch(MECH_USUAL);
-  DOCHECK_CONTEXT(
-      context,
-      game_object_location(database, mech_dbref(mech)) !=
-              mech_map_dbref(mech) ||
-          is_in_character(database,
-                          game_object_location(database, mech_dbref(mech))),
-      "You aren't inside a hangar!");
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
+  if (game_object_location(database, mech_dbref(mech)) !=
+          mech_map_dbref(mech) ||
+      is_in_character(database,
+                      game_object_location(database, mech_dbref(mech)))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You aren't inside a hangar!");
+    return;
+  }
   if (loading_bay_whine(player,
                         game_object_location(database, mech_dbref(mech)), mech))
     return;
   while (isspace(*buffer))
     buffer++;
-  MY_DO_LIST(mech_context(mech),
-             game_object_location(database, mech_dbref(mech)));
+  list_manifest(mech_context(mech), player,
+                game_object_location(database, mech_dbref(mech)), buffer);
 }
 
-#ifdef ECON_ALLOW_MULTIPLE_LOAD_UNLOAD
-#define silly_search(func)                                                     \
-  if (!count) {                                                                \
-    i = -1;                                                                    \
-    while (func(context, args[0], &i, &id, &brand))                            \
-      count++;                                                                 \
-    if (count > 0)                                                             \
-      sfun = func;                                                             \
-  }
-#else
-#define silly_search(func)                                                     \
-  if (!count) {                                                                \
-    i = -1;                                                                    \
-    while (func(context, args[0], &i, &id, &brand))                            \
-      count++;                                                                 \
-    DOCHECK_CONTEXT(context, count > 1, "Too many matches!");                  \
-    if (count > 0)                                                             \
-      sfun = func;                                                             \
-  }
+typedef int (*PartSearchFunction)(BtechContext *, const char *, int *, int *,
+                                  int *);
+
+static bool try_part_search(BtechContext *context, const char *pattern,
+                            PartSearchFunction candidate, int *count,
+                            PartSearchFunction *selected) {
+  int index = -1;
+  int id;
+  int brand;
+
+  if (*count)
+    return true;
+  while (candidate(context, pattern, &index, &id, &brand))
+    (*count)++;
+#ifndef ECON_ALLOW_MULTIPLE_LOAD_UNLOAD
+  if (*count > 1)
+    return false;
 #endif
+  if (*count > 0)
+    *selected = candidate;
+  return true;
+}
+
+static const char *modify_manifest(BtechContext *context, DbRef player,
+                                   DbRef location, int id, int brand,
+                                   int amount) {
+  const char *name = get_parts_long_name(context, id, brand);
+
+  econ_change_items(context, location, id, brand, amount);
+  btech_channel_send(context, BTECH_CHANNEL_MECH_ECON, "%s",
+                     tprintf("#%ld %s %d %s %s #%ld.", player,
+                             amount > 0 ? "added" : "removed", abs(amount),
+                             name, amount > 0 ? "to" : "from", location));
+  return name;
+}
 
 /* Handles adding or removing parts/commods from a map or unit's manifest.
  * btaddstores(), addstuff, and removestuff use this.
@@ -306,14 +329,17 @@ static void stuff_change_sub(BtechContext *context, DbRef player, char *buffer,
   int count = 0;
   int argc;
   char *args[2];
-  char *c;
+  const char *c;
   int num;
-  int (*sfun)(BtechContext *, const char *, int *i, int *id, int *brand) =
-      nullptr;
+  PartSearchFunction sfun = nullptr;
   int foo = 0;
 
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(context, argc < 2, "Invalid number of arguments!");
+  if (argc < 2) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
 
   /*
    * If we hit the max amount of parts addable at once, set quantity
@@ -324,33 +350,54 @@ static void stuff_change_sub(BtechContext *context, DbRef player, char *buffer,
     num = ADDSTORES_MAX;
   }
 
-  DOCHECK_CONTEXT(context, num <= 0, "Invalid amount!");
-  silly_search(find_matching_short_part);
-  silly_search(find_matching_vlong_part);
-  silly_search(find_matching_long_part);
-  DOCHECK_CONTEXT(context, count == 0,
-                  tprintf("Nothing matches '%s'!", args[0]));
-  DOCHECK_CONTEXT(
-      context, !mort && count > 20 && player != GOD,
-      tprintf("Wizards can't add more than 20 different objtypes at a "
-              "time. ('%s' matches: %d)",
-              args[0], count));
+  if (num <= 0) {
+    mecha_notify(btech_context_evaluation(context), player, "Invalid amount!");
+    return;
+  }
+  if (!try_part_search(context, args[0], find_matching_short_part, &count,
+                       &sfun)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Too many matches!");
+    return;
+  }
+  if (!try_part_search(context, args[0], find_matching_vlong_part, &count,
+                       &sfun)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Too many matches!");
+    return;
+  }
+  if (!try_part_search(context, args[0], find_matching_long_part, &count,
+                       &sfun)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Too many matches!");
+    return;
+  }
+  if (count == 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 tprintf("Nothing matches '%s'!", args[0]));
+    return;
+  }
+  if (!mort && count > 20 && player != GOD) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        tprintf("Wizards can't add more than 20 different objtypes at a "
+                "time. ('%s' matches: %d)",
+                args[0], count));
+    return;
+  }
   if (mort) {
-    DOCHECK_CONTEXT(context,
-                    game_object_location(context->database, player) != loc1,
-                    "You ain't in your 'mech!");
-    DOCHECK_CONTEXT(context,
-                    game_object_location(context->database, loc1) != loc2,
-                    "You ain't in hangar!");
+    if (game_object_location(context->database, player) != loc1) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You ain't in your 'mech!");
+      return;
+    }
+    if (game_object_location(context->database, loc1) != loc2) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You ain't in hangar!");
+      return;
+    }
   }
   i = -1;
-#define MY_ECON_MODIFY(loc, num)                                               \
-  econ_change_items(context, loc, id, brand, num);                             \
-  btech_channel_send(context, BTECH_CHANNEL_MECH_ECON, "%s",                   \
-                     tprintf("#%ld %s %d %s %s #%ld.", player,                 \
-                             num > 0 ? "added" : "removed", abs(num),          \
-                             (c = get_parts_long_name(context, id, brand)),    \
-                             num > 0 ? "to" : "from", loc))
   while (sfun(context, args[0], &i, &id, &brand)) {
     if (mort) {
       if (mod < 0)
@@ -362,7 +409,7 @@ static void stuff_change_sub(BtechContext *context, DbRef player, char *buffer,
     foo += count;
     if (!count)
       continue;
-    MY_ECON_MODIFY(loc1, mod * count);
+    c = modify_manifest(context, player, loc1, id, brand, mod * count);
     if (count)
       switch (mort) {
       case 0:
@@ -371,14 +418,19 @@ static void stuff_change_sub(BtechContext *context, DbRef player, char *buffer,
                       count > 1 ? "s" : "");
         break;
       case 1:
-        MY_ECON_MODIFY(loc2, (0 - mod) * count);
+        c = modify_manifest(context, player, loc2, id, brand,
+                            (0 - mod) * count);
         notify_printf(btech_context_evaluation(context), player,
                       "You %s %d %s%s.", mod > 0 ? "load" : "unload", count, c,
                       count > 1 ? "s" : "");
         break;
       }
   }
-  DOCHECK_CONTEXT(context, !foo, "Nothing matching that criteria was found!");
+  if (!foo) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Nothing matching that criteria was found!");
+    return;
+  }
 }
 
 void mech_Raddstuff(DbRef player, void *data, char *buffer) {
@@ -401,18 +453,27 @@ void mech_loadcargo(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(context, !(mech_technology_flags(mech) & CARGO_TECH),
-                  "This unit cannot haul cargo!");
-  DOCHECK_CONTEXT(context, fabs(mech_current_speed(mech)) > 0.0,
-                  "You're moving too fast!");
-  DOCHECK_CONTEXT(context,
-                  game_object_location(context->database, mech_dbref(mech)) !=
-                          mech_map_dbref(mech) ||
-                      is_in_character(context->database,
-                                      game_object_location(context->database,
-                                                           mech_dbref(mech))),
-                  "You aren't inside hangar!");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (!(mech_technology_flags(mech) & CARGO_TECH)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This unit cannot haul cargo!");
+    return;
+  }
+  if (fabs(mech_current_speed(mech)) > 0.0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're moving too fast!");
+    return;
+  }
+  if (game_object_location(context->database, mech_dbref(mech)) !=
+          mech_map_dbref(mech) ||
+      is_in_character(
+          context->database,
+          game_object_location(context->database, mech_dbref(mech)))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You aren't inside hangar!");
+    return;
+  }
   if (loading_bay_whine(
           player, game_object_location(context->database, mech_dbref(mech)),
           mech))
@@ -426,9 +487,13 @@ void mech_unloadcargo(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 
-  cch(MECH_USUALSO);
-  DOCHECK_CONTEXT(context, !(mech_technology_flags(mech) & CARGO_TECH),
-                  "This unit cannot haul cargo!");
+  if (!common_checks(player, mech, MECH_USUALSO))
+    return;
+  if (!(mech_technology_flags(mech) & CARGO_TECH)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This unit cannot haul cargo!");
+    return;
+  }
   stuff_change_sub(context, player, buffer, mech_dbref(mech),
                    mech_map_dbref(mech), -1, 1);
   mech_speed_correct(mech);
@@ -438,7 +503,7 @@ void mech_Rresetstuff(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *object = data;
   BtechContext *context = object->context;
 
-  notify(btech_context_evaluation(context), player, "Inventory cleaned!");
+  mecha_notify(btech_context_evaluation(context), player, "Inventory cleaned!");
   economy_parts_clear(context->database,
                       game_object_location(context->database, player));
   btech_channel_send(context, BTECH_CHANNEL_MECH_ECON, "%s",

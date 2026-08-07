@@ -6,7 +6,6 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "mech_api_types.h"
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
@@ -19,7 +18,6 @@
 #include "mech_events_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -29,7 +27,9 @@
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/formatting.h"
 #include "random.h"
+#include "registry_api.h"
 #include "section_types.h"
 
 typedef bool (*MechElectronicToggle)(Mech *mech, bool eccm);
@@ -41,8 +41,8 @@ static void mech_electronic_mode_toggle(DbRef player, Mech *mech,
                                         const char *offline_message,
                                         const char *missing_message) {
   if (!has_technology) {
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           missing_message);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 missing_message);
     return;
   }
   mech_notify(mech, MECHALL,
@@ -50,10 +50,13 @@ static void mech_electronic_mode_toggle(DbRef player, Mech *mech,
 }
 
 void mech_ecm(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_condition_summary(mech).ecm_destroyed,
-                  "Your Guardian ECM has been destroyed already!");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (mech_condition_summary(mech).ecm_destroyed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your Guardian ECM has been destroyed already!");
+    return;
+  }
   mech_electronic_mode_toggle(
       player, mech, mech_technology_flags(mech) & ECM_TECH, false,
       mech_ecm_mode_toggle, "You turn your ECM suite online (ECM mode).",
@@ -63,10 +66,13 @@ void mech_ecm(DbRef player, Mech *mech, char *buffer) {
 }
 
 void mech_eccm(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_condition_summary(mech).ecm_destroyed,
-                  "Your Guardian ECM has been destroyed already!");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (mech_condition_summary(mech).ecm_destroyed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your Guardian ECM has been destroyed already!");
+    return;
+  }
   mech_electronic_mode_toggle(
       player, mech, mech_technology_flags(mech) & ECM_TECH, true,
       mech_ecm_mode_toggle, "You turn your ECM suite online (ECCM mode).",
@@ -76,7 +82,8 @@ void mech_eccm(DbRef player, Mech *mech, char *buffer) {
 }
 
 void mech_perecm(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   mech_electronic_mode_toggle(
       player, mech,
       mech_infantry_technology_flags(mech) & FC_INFILTRATORII_STEALTH_TECH,
@@ -88,7 +95,8 @@ void mech_perecm(DbRef player, Mech *mech, char *buffer) {
 }
 
 void mech_pereccm(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   mech_electronic_mode_toggle(
       player, mech,
       mech_infantry_technology_flags(mech) & FC_INFILTRATORII_STEALTH_TECH,
@@ -100,10 +108,13 @@ void mech_pereccm(DbRef player, Mech *mech, char *buffer) {
 }
 
 void mech_angelecm(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_condition_summary(mech).angel_ecm_destroyed,
-                  "Your Angel ECM has been destroyed already!");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (mech_condition_summary(mech).angel_ecm_destroyed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your Angel ECM has been destroyed already!");
+    return;
+  }
   mech_electronic_mode_toggle(
       player, mech, mech_technology_flags_secondary(mech) & ANGEL_ECM_TECH,
       false, mech_angel_ecm_mode_toggle,
@@ -114,10 +125,13 @@ void mech_angelecm(DbRef player, Mech *mech, char *buffer) {
 }
 
 void mech_angeleccm(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_condition_summary(mech).angel_ecm_destroyed,
-                  "Your Angel ECM has been destroyed already!");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (mech_condition_summary(mech).angel_ecm_destroyed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your Angel ECM has been destroyed already!");
+    return;
+  }
   mech_electronic_mode_toggle(
       player, mech, mech_technology_flags_secondary(mech) & ANGEL_ECM_TECH,
       true, mech_angel_ecm_mode_toggle,
@@ -158,16 +172,19 @@ void mech_searchlight_change_event(MuxEvent *e) {
 }
 
 void mech_slite(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
   if (!(mech_technology_flags(mech) & SLITE_TECH)) {
     mech_notify(mech, MECHALL, "Your 'mech isn't equipped with searchlight!");
     return;
   }
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_condition_summary(mech).searchlight_destroyed,
-                  "Your searchlight has been destroyed already!");
+  if (mech_condition_summary(mech).searchlight_destroyed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your searchlight has been destroyed already!");
+    return;
+  }
 
   if (mech_event_count(mech, EVENT_SLITECHANGING)) {
     if (mech_condition_summary(mech).searchlight_on)
@@ -217,7 +234,8 @@ void mech_stealth_armor_change_event(MuxEvent *e) {
 }
 
 void mech_stealtharmor(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
   if (!(mech_technology_flags_secondary(mech) & STEALTH_ARMOR_TECH)) {
     mech_notify(mech, MECHALL,
@@ -279,7 +297,8 @@ void mech_null_signature_change_event(MuxEvent *e) {
 }
 
 void mech_nullsig(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
   if (!(mech_technology_flags_secondary(mech) & NULLSIGSYS_TECH)) {
     mech_notify(mech, MECHALL,
@@ -321,7 +340,8 @@ void show_narc_pods(DbRef player, Mech *mech, char *buffer) {
   char location[50];
   int i;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
   if (!(mech_has_section_special(mech, NARC_ATTACHED) ||
         mech_has_section_special(mech, INARC_HOMING_ATTACHED) ||
@@ -329,18 +349,18 @@ void show_narc_pods(DbRef player, Mech *mech, char *buffer) {
         mech_has_section_special(mech, INARC_ECM_ATTACHED) ||
         mech_has_section_special(mech, INARC_NEMESIS_ATTACHED))) {
 
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "There are no NARC or iNARC pods attached to this unit.");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "There are no NARC or iNARC pods attached to this unit.");
 
     return;
   }
 
-  notify(btech_context_evaluation(mech_context(mech)), player,
-         "=========================Attached NARC and iNARC "
-         "Pods========================");
-  notify(btech_context_evaluation(mech_context(mech)), player,
-         "-- Location ---||- NARC -||- iHoming -||- iHaywire -||- iECM "
-         "-||- iNemesis --");
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+               "=========================Attached NARC and iNARC "
+               "Pods========================");
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+               "-- Location ---||- NARC -||- iHoming -||- iHaywire -||- iECM "
+               "-||- iNemesis --");
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (mech_section_original_internal(mech, i) > 0) {
@@ -375,14 +395,16 @@ int mech_arm_base_to_hit_modifier(Mech *mech, int wSec) {
   int wRet = 0;
 
   if (mech_critical_is_nonfunctional(mech, wSec, 1) ||
-      mech_critical_part_type(mech, wSec, 1) != I2Special(UPPER_ACTUATOR))
+      mech_critical_part_type(mech, wSec, 1) !=
+          special_equipment_index(UPPER_ACTUATOR))
     wRet += 2;
   if (mech_critical_is_nonfunctional(mech, wSec, 2) ||
-      mech_critical_part_type(mech, wSec, 2) != I2Special(LOWER_ACTUATOR))
+      mech_critical_part_type(mech, wSec, 2) !=
+          special_equipment_index(LOWER_ACTUATOR))
     wRet += 2;
   if (mech_critical_is_nonfunctional(mech, wSec, 3) ||
       mech_critical_part_type(mech, wSec, 3) !=
-          I2Special(HAND_OR_FOOT_ACTUATOR))
+          special_equipment_index(HAND_OR_FOOT_ACTUATOR))
     wRet += 1;
 
   return wRet;
@@ -403,23 +425,38 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
   int wPodType = INARC_HOMING_ATTACHED;
   char strPodType[30];
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
-  DOCHECK_CONTEXT(mech_context(mech), mech_movement_type(mech) == MOVE_QUAD,
-                  "Quads can not knock of iNARC pods!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_parseattributes(buffer, args, 2) != 2,
-                  "Invalid number of arguments!");
+  if (mech_movement_type(mech) == MOVE_QUAD) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Quads can not knock of iNARC pods!");
+    return;
+  }
+  if (mech_parseattributes(buffer, args, 2) != 2) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguments!");
+    return;
+  }
 
   wLoc = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
                                 args[0]);
 
-  DOCHECK_CONTEXT(mech_context(mech), wLoc == -1, "Invalid section!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !mech_section_original_internal(mech, wLoc),
-                  "Invalid section!");
-  DOCHECK_CONTEXT(mech_context(mech), !mech_section_internal(mech, wLoc),
-                  "That section is destroyed!");
+  if (wLoc == -1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid section!");
+    return;
+  }
+  if (!mech_section_original_internal(mech, wLoc)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid section!");
+    return;
+  }
+  if (!mech_section_internal(mech, wLoc)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That section is destroyed!");
+    return;
+  }
 
   ArmorStringFromIndex(wLoc, strLocation, mech_class(mech),
                        mech_movement_type(mech));
@@ -442,40 +479,58 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
     break;
   }
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !mech_section_has_special(mech, wLoc, wPodType),
-                  tprintf("There are no iNarc %s pods attached to your %s!",
-                          strPodType, strLocation));
+  if (!mech_section_has_special(mech, wLoc, wPodType)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 tprintf("There are no iNarc %s pods attached to your %s!",
+                         strPodType, strLocation));
+    return;
+  }
 
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      ((!mech_section_internal(mech, RARM)) &&
-       (!mech_section_internal(mech, LARM))),
-      "You need at least one functioning arm to remove iNarc pods!");
+  if (((!mech_section_internal(mech, RARM)) &&
+       (!mech_section_internal(mech, LARM)))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You need at least one functioning arm to remove iNarc pods!");
+    return;
+  }
 
   if (wLoc == RARM) {
-    DOCHECK_CONTEXT(mech_context(mech), !mech_section_internal(mech, LARM),
-                    "Your Left Arm needs to be intact to take "
-                    "iNarc pods off your right arm!");
-    DOCHECK_CONTEXT(mech_context(mech),
-                    mech_section_has_recycling_weapon(mech, LARM),
-                    "You have weapons recycling on your Left Arm.");
-    DOCHECK_CONTEXT(mech_context(mech), mech_section_recycle_ticks(mech, LARM),
-                    "Your Left Arm is still recovering from your last attack.");
+    if (!mech_section_internal(mech, LARM)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Your Left Arm needs to be intact to take "
+                   "iNarc pods off your right arm!");
+      return;
+    }
+    if (mech_section_has_recycling_weapon(mech, LARM)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You have weapons recycling on your Left Arm.");
+      return;
+    }
+    if (mech_section_recycle_ticks(mech, LARM)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Your Left Arm is still recovering from your last attack.");
+      return;
+    }
 
     wArmToUse = LARM;
   }
 
   if (wLoc == LARM) {
-    DOCHECK_CONTEXT(mech_context(mech), !mech_section_internal(mech, RARM),
-                    "Your Right Arm needs to be intact to "
-                    "take iNarc pods off your Left Arm!");
-    DOCHECK_CONTEXT(mech_context(mech),
-                    mech_section_has_recycling_weapon(mech, RARM),
-                    "You have weapons recycling on your Right Arm.");
-    DOCHECK_CONTEXT(
-        mech_context(mech), mech_section_recycle_ticks(mech, RARM),
-        "Your Right Arm is still recovering from your last attack.");
+    if (!mech_section_internal(mech, RARM)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Your Right Arm needs to be intact to "
+                   "take iNarc pods off your Left Arm!");
+      return;
+    }
+    if (mech_section_has_recycling_weapon(mech, RARM)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You have weapons recycling on your Right Arm.");
+      return;
+    }
+    if (mech_section_recycle_ticks(mech, RARM)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Your Right Arm is still recovering from your last attack.");
+      return;
+    }
 
     wArmToUse = RARM;
   }
@@ -491,10 +546,13 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
         (!mech_section_internal(mech, LARM)))
       wLAAvail = 0;
 
-    DOCHECK_CONTEXT(
-        mech_context(mech), !(wLAAvail || wRAAvail),
-        "You need at least one arm that is not recycling and does not have "
-        "weapons recycling in it!");
+    if (!(wLAAvail || wRAAvail)) {
+      mecha_notify(
+          btech_context_evaluation(mech_context(mech)), player,
+          "You need at least one arm that is not recycling and does not have "
+          "weapons recycling in it!");
+      return;
+    }
 
     if (!wLAAvail)
       wBTHModLARM = 1000;
@@ -537,12 +595,12 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
     wSelfDamage = (mech_tonnage(mech) + 10 / 2) / 10;
 
     if (mech_critical_part_type(mech, wArmToUse, 2) !=
-            I2Special(LOWER_ACTUATOR) ||
+            special_equipment_index(LOWER_ACTUATOR) ||
         mech_critical_is_nonfunctional(mech, wArmToUse, 2))
       wSelfDamage = wSelfDamage / 2;
 
     if (mech_critical_part_type(mech, wArmToUse, 1) !=
-            I2Special(UPPER_ACTUATOR) ||
+            special_equipment_index(UPPER_ACTUATOR) ||
         mech_critical_is_nonfunctional(mech, wArmToUse, 1))
       wSelfDamage = wSelfDamage / 2;
 
@@ -582,26 +640,42 @@ void mech_inarc_pods_tank_remove_event(MuxEvent *e) {
 }
 
 void remove_inarc_pods_tank(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALSO);
+  if (!common_checks(player, mech, MECH_USUALSO))
+    return;
 
-  DOCHECK_CONTEXT(
-      mech_context(mech), (mech_desired_speed(mech) > 0),
-      "You can not be moving when attempting to remove iNarc pods!");
-  DOCHECK_CONTEXT(
-      mech_context(mech), (mech_current_speed(mech) > 0),
-      "You can not be moving when attempting to remove iNarc pods!");
+  if ((mech_desired_speed(mech) > 0)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can not be moving when attempting to remove iNarc pods!");
+    return;
+  }
+  if ((mech_current_speed(mech) > 0)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can not be moving when attempting to remove iNarc pods!");
+    return;
+  }
 
   if (mech_class(mech) == CLASS_VTOL)
-    DOCHECK_CONTEXT(mech_context(mech), !mech_is_landed(mech),
-                    "You must land before attempting to remove iNarc pods!");
+    if (!mech_is_landed(mech)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You must land before attempting to remove iNarc pods!");
+      return;
+    }
 
-  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_UNSTUN_CREW),
-                  "You're too stunned to remove iNarc pods!");
-  DOCHECK_CONTEXT(
-      mech_context(mech), mech_event_count(mech, EVENT_UNJAM_TURRET),
-      "You're too busy unjamming your turret to remove iNarc pods!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_UNJAM_AMMO),
-                  "You're too busy unjamming a weapon to remove iNarc pods!");
+  if (mech_event_count(mech, EVENT_UNSTUN_CREW)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're too stunned to remove iNarc pods!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_UNJAM_TURRET)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're too busy unjamming your turret to remove iNarc pods!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_UNJAM_AMMO)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're too busy unjamming a weapon to remove iNarc pods!");
+    return;
+  }
 
   if (!(mech_has_section_special(mech, INARC_HOMING_ATTACHED) ||
         mech_has_section_special(mech, INARC_HAYWIRE_ATTACHED) ||

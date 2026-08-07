@@ -21,7 +21,6 @@
 #include "btechstats_api.h"
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_bth_api.h"
@@ -33,7 +32,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -154,17 +152,27 @@ void mech_spot(DbRef player, void *data, char *buffer) {
   SpotLinkEventData *dat;
   BattleMap *mech_map;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   argc = mech_parseattributes(buffer, args, 5);
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK_CONTEXT(mech_context(mech), mech_move_mode_locked(mech),
-                  "You cannot spot while using a special movement mode.");
+  if (mech_move_mode_locked(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You cannot spot while using a special movement mode.");
+    return;
+  }
 #endif
-  DOCHECK_CONTEXT(mech_context(mech), argc != 1,
-                  "You may only use mech ID's to set spotter!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_class(mech) == CLASS_MW,
-                  "Spot ? You ? What with, your pretty blue eyes ? Hah!");
+  if (argc != 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You may only use mech ID's to set spotter!");
+    return;
+  }
+  if (mech_class(mech) == CLASS_MW) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Spot ? You ? What with, your pretty blue eyes ? Hah!");
+    return;
+  }
   targetID[0] = args[0][0];
   targetID[1] = args[0][1];
   targetID[2] = 0;
@@ -179,8 +187,11 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     return;
   }
   if (!strcasecmp(targetID, mech_id(mech, false).text)) {
-    DOCHECK_CONTEXT(mech_context(mech), mech_recycling_state(mech, CHECK_BOTH),
-                    "You have weapons recycling!");
+    if (mech_recycling_state(mech, CHECK_BOTH)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You have weapons recycling!");
+      return;
+    }
     mech_spotter_dbref_set(mech, mech_dbref(mech));
     mech_notify(mech, MECHALL, "You are now set as a spotter.");
     return;
@@ -189,17 +200,23 @@ void mech_spot(DbRef player, void *data, char *buffer) {
   if (target)
     LOS = mech_los_check(mech, target, mech_position_x(target),
                          mech_position_y(target), mech_range_to(mech, target));
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !target || (targetref == -1) ||
-                      mech_team(target) != mech_team(mech),
-                  "That target does not exist!");
+  if (!target || (targetref == -1) || mech_team(target) != mech_team(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That target does not exist!");
+    return;
+  }
 
-  DOCHECK_CONTEXT(
-      mech_context(mech), mech_class(target) == CLASS_MW,
-      "Spot ? That puny being ?! What with, those clear brown eyes ? Hah!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_spotter_dbref(target) != mech_dbref(target),
-                  "That 'mech is not set up as spotter!");
+  if (mech_class(target) == CLASS_MW) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "Spot ? That puny being ?! What with, those clear brown eyes ? Hah!");
+    return;
+  }
+  if (mech_spotter_dbref(target) != mech_dbref(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That 'mech is not set up as spotter!");
+    return;
+  }
 
   if (mech_spot_has_artillery(mech) && !LOS) {
     mech_notify(target, MECHALL,
@@ -221,9 +238,11 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     mech_event_schedule(mech, EVENT_SPOT_LOCK, mech_spot_event,
                         WEAPON_TICK * ((int)range / 10 + 5), (intptr_t)dat);
     return;
-  } else
-    DOCHECK_CONTEXT(mech_context(mech), !LOS,
-                    "You do not have LOS to that target!")
+  } else if (!LOS) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You do not have LOS to that target!");
+    return;
+  }
   mech_spotter_dbref_set(mech, targetref);
   mech_fire_adjustment_set(mech, 0);
   mech_printf(mech, MECHALL, "%s set as spotter.",
@@ -248,31 +267,48 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
 
   spotter =
       btech_context_get_mech(mech_context(mech), mech_spotter_dbref(mech));
-  DOCHECKMP1(!spotter, "There is no spotter avilable to IDF with!");
+  if (!spotter) {
+    mech_notify(mech, MECHPILOT, "There is no spotter avilable to IDF with!");
+    return 1;
+  }
 
   if (mech_spotter_dbref(spotter) != mech_dbref(spotter)) {
     mech_notify(mech, MECH_PILOT, "You do not have a spotter!");
     mech_spotter_dbref_set(mech, -1);
     return 1;
   }
-  DOCHECKMP1(mech_pilot_is_unconscious(spotter),
-             "Your spotter is unconscious!");
-  DOCHECKMP1(mech_is_blinded(spotter), "Your spotter can't see a thing!");
+  if (mech_pilot_is_unconscious(spotter)) {
+    mech_notify(mech, MECHPILOT, "Your spotter is unconscious!");
+    return 1;
+  }
+  if (mech_is_blinded(spotter)) {
+    mech_notify(mech, MECHPILOT, "Your spotter can't see a thing!");
+    return 1;
+  }
 
   /* Is the spotter set to a Mech or to a Hex? */
   if (mech_target_dbref(spotter) != -1) {
     target =
         btech_context_get_mech(mech_context(mech), mech_target_dbref(spotter));
-    DOCHECKMP1(!target, "Your spotter has invalid target!");
+    if (!target) {
+      mech_notify(mech, MECHPILOT, "Your spotter has invalid target!");
+      return 1;
+    }
     mapx = mech_position_x(target);
     mapy = mech_position_y(target);
     spot_range = mech_range_to(spotter, target);
     LOS = mech_los_check(spotter, target, mapx, mapy, spot_range);
-    DOCHECKMP1(!LOS, "You spotter does not have a target in LOS!");
+    if (!LOS) {
+      mech_notify(mech, MECHPILOT,
+                  "You spotter does not have a target in LOS!");
+      return 1;
+    }
     range = mech_range_to(mech, target);
-    DOCHECK0_CONTEXT(mech_context(mech),
-                     mech_is_in_water(target) && !mech_is_in_water(mech),
-                     "You can't fire into water with that weapon from here.");
+    if (mech_is_in_water(target) && !mech_is_in_water(mech)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You can't fire into water with that weapon from here.");
+      return 0;
+    }
 
     spotTerrain =
         weapon_catalogue_is_artillery(weapontype)
@@ -285,9 +321,11 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
                  mech_targeting_computer_type(spotter) != TARGCOMP_MULTI)
                     ? 2
                     : 0));
-    DOCHECK1_CONTEXT(mech_context(mech),
-                     weapon_catalogue_is_artillery(weapontype) && target,
-                     "You can only target hexes with this kind of artillery.");
+    if (weapon_catalogue_is_artillery(weapontype) && target) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You can only target hexes with this kind of artillery.");
+      return -1;
+    }
     if (!sight) {
       AccumulateSpotXP(mech_pilot_dbref(spotter), spotter, target);
       AccumulateArtyXP(mech_pilot_dbref(mech), mech, target);
@@ -299,8 +337,8 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
     return 1;
   }
   if (!(mech_target_hex_x(spotter) >= 0 && mech_target_hex_y(spotter) >= 0)) {
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Your spotter has no target set!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your spotter has no target set!");
     return 1;
   }
   if (!weapon_catalogue_is_artillery(weapontype))
@@ -324,8 +362,11 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
       FindRange(mech_position_real_x(spotter), mech_position_real_y(spotter),
                 mech_position_real_z(spotter), enemyX, enemyY, enemyZ);
   LOS = mech_los_check(spotter, target, mapx, mapy, spot_range);
-  DOCHECK0_CONTEXT(mech_context(mech), !LOS,
-                   "That target is not in your spotters line of sight!");
+  if (!LOS) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That target is not in your spotters line of sight!");
+    return 0;
+  }
   range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
                     mech_position_real_z(mech), enemyX, enemyY, enemyZ);
   spotTerrain =

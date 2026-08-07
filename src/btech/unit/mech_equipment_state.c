@@ -1,7 +1,7 @@
 #include "mech_equipment_api.h"
 
 #include "mech_internal.h"
-#include "mech_macros.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 
 int mech_critical_part_type(const Mech *mech, int section, int critical) {
@@ -43,9 +43,19 @@ int mech_critical_damage_flags(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].weapDamageFlags;
 }
 
+void mech_critical_damage_flags_set(Mech *mech, int section, int critical,
+                                    int flags) {
+  mech->ud.sections[section].criticals[critical].weapDamageFlags = flags;
+}
+
 int mech_critical_desired_ammo_section(const Mech *mech, int section,
                                        int critical) {
   return mech->ud.sections[section].criticals[critical].desiredAmmoLoc;
+}
+
+void mech_critical_desired_ammo_section_set(Mech *mech, int section,
+                                            int critical, int ammo_section) {
+  mech->ud.sections[section].criticals[critical].desiredAmmoLoc = ammo_section;
 }
 
 int mech_critical_temporary_failure(const Mech *mech, int section,
@@ -62,7 +72,7 @@ float mech_ammunition_slot_multiplier(const Mech *mech, int section,
   int part = mech_critical_part_type(mech, section, critical);
   int fire_mode = mech_critical_fire_mode(mech, section, critical);
   int ammo_mode = mech_critical_ammo_mode(mech, section, critical);
-  if (!IsAmmo(part) || (fire_mode & HALFTON_MODE) ||
+  if (!equipment_is_ammunition(part) || (fire_mode & HALFTON_MODE) ||
       (ammo_mode & (AC_AP_MODE | AC_PRECISION_MODE)))
     return 1.0F;
   return ammo_mode & AC_CASELESS_MODE ? 0.5F : 2.0F;
@@ -155,6 +165,14 @@ void mech_critical_destroy(Mech *mech, int section, int critical) {
   slot->brand %= 16;
 }
 
+void mech_critical_restore(Mech *mech, int section, int critical) {
+  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  slot->firemode &= ~(DESTROYED_MODE | HOTLOAD_MODE | DISABLED_MODE |
+                      BROKEN_MODE | DAMAGED_MODE);
+  slot->weapDamageFlags = 0;
+  slot->brand %= 16;
+}
+
 void mech_critical_jettison(Mech *mech, int section, int critical) {
   struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
   slot->firemode |= DESTROYED_MODE | IS_JETTISONED_MODE;
@@ -220,7 +238,7 @@ bool mech_critical_is_operational_special(const Mech *mech, int section,
                                           int critical, int special) {
   const struct CriticalSlot *slot =
       &mech->ud.sections[section].criticals[critical];
-  return slot->type == I2Special(special) &&
+  return slot->type == special_equipment_index(special) &&
          !(slot->firemode & (DISABLED_MODE | DESTROYED_MODE | BROKEN_MODE));
 }
 
@@ -293,7 +311,8 @@ bool mech_limbs_are_recycling(const Mech *mech) {
 
 bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical) {
   return mech_critical_data(mech, section, critical) > 0 &&
-         IsWeapon(mech_critical_part_type(mech, section, critical)) &&
+         equipment_is_weapon(
+             mech_critical_part_type(mech, section, critical)) &&
          !mech_critical_is_nonfunctional(mech, section, critical) &&
          !mech_section_is_destroyed(mech, section);
 }
@@ -341,12 +360,12 @@ int mech_section_critical_count(const Mech *mech, int section) {
 }
 
 bool mech_part_is_structural_placeholder(int part_type) {
-  return part_type == I2Special(ENDO_STEEL) ||
-         part_type == I2Special(FERRO_FIBROUS) ||
-         part_type == I2Special(TRIPLE_STRENGTH_MYOMER) ||
-         part_type == I2Special(STEALTH_ARMOR) ||
-         part_type == I2Special(HVY_FERRO_FIBROUS) ||
-         part_type == I2Special(LT_FERRO_FIBROUS);
+  return part_type == special_equipment_index(ENDO_STEEL) ||
+         part_type == special_equipment_index(FERRO_FIBROUS) ||
+         part_type == special_equipment_index(TRIPLE_STRENGTH_MYOMER) ||
+         part_type == special_equipment_index(STEALTH_ARMOR) ||
+         part_type == special_equipment_index(HVY_FERRO_FIBROUS) ||
+         part_type == special_equipment_index(LT_FERRO_FIBROUS);
 }
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {

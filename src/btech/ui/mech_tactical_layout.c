@@ -91,7 +91,7 @@ void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
       int elevation;
       int los_flags = MAPLOSHEX_SEE | MAPLOSHEX_SEEN;
       if (los_map)
-        los_flags = LOS_MAP_GET_FLAG(los_map, start_x + x, start_y + y);
+        los_flags = los_map_flag(los_map, start_x + x, start_y + y);
 
       if (!(los_flags & MAPLOSHEX_SEEN)) {
         terrain = 'X';

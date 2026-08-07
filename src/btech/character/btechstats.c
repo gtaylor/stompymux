@@ -1,5 +1,6 @@
 #define BTECHSTATS_C
 #include "btechstats_internal.h"
+#include "registry_api.h"
 
 UptimeText uptime_text(int seconds) {
   UptimeText uptime;
@@ -79,6 +80,22 @@ int character_xp_to_next_level(BtechContext *context, DbRef target, int code) {
 
 static int char_xp_bonus(PSTATS *s, int code) { return s->xp[code] / XP_MAX; }
 
+static int char_getstatvalue_by_code(PSTATS *stats, int code) {
+  if (code < 0)
+    return -1;
+  return stats->values[code] + (char_values[code].type == CHAR_SKILL
+                                    ? char_xp_bonus(stats, code)
+                                    : 0);
+}
+
+static void char_setstatvalue_by_code(PSTATS *stats, int code, int value) {
+  if (code < 0)
+    return;
+  if (code == EE_NUMBER)
+    stats->values[LIVES_NUMBER] += value - stats->values[code];
+  stats->values[code] = (unsigned char)value;
+}
+
 /*****************************/
 
 /*     list commands        */
@@ -92,7 +109,7 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
   char buf[80] = {0};
 
   if (flag == -1)
-    notify(evaluation, player, "List of charvalues available:");
+    mecha_notify(evaluation, player, "List of charvalues available:");
   if (flag >= 0) {
     notify_printf(evaluation, player,
                   "List of %s available:", btech_charvaluetype_names[flag]);
@@ -109,15 +126,15 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
       snprintf(buf + strlen(buf), 80 - strlen(buf), "%-23s ",
                char_values[i].name);
       if (!((++found) % 3)) {
-        notify(evaluation, player, buf);
+        mecha_notify(evaluation, player, buf);
         strcpy(buf, " ");
       }
     }
   }
   if (found % 3) {
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
-  notify(evaluation, player, " ");
+  mecha_notify(evaluation, player, " ");
   notify_printf(evaluation, player, "Total of %d things found.", found);
 }
 
@@ -218,14 +235,14 @@ int char_rolld6(BtechContext *context, int num) {
 int char_getstatvalue(PSTATS *s, char *name) {
   for (size_t i = 0; i < NUM_CHARVALUES; i++)
     if (!strcasecmp(char_values[i].name, name))
-      return char_getstatvaluebycode(s, i);
+      return char_getstatvalue_by_code(s, i);
   return -1;
 }
 
 void char_setstatvalue(PSTATS *s, char *name, int value) {
   for (size_t i = 0; i < NUM_CHARVALUES; i++)
     if (!strcasecmp(char_values[i].name, name)) {
-      char_setstatvaluebycode(s, i, value);
+      char_setstatvalue_by_code(s, i, value);
       return;
     }
 }
@@ -234,7 +251,7 @@ int character_value_by_code(BtechContext *context, DbRef player, int code) {
   PSTATS stats;
 
   character_stats_retrieve(context, player, VALUES_ALL, &stats);
-  return char_getstatvaluebycode((&stats), code);
+  return char_getstatvalue_by_code((&stats), code);
 }
 
 void character_value_set_by_code(BtechContext *context, DbRef player, int code,
@@ -242,7 +259,7 @@ void character_value_set_by_code(BtechContext *context, DbRef player, int code,
   PSTATS stats;
 
   character_stats_retrieve(context, player, VALUES_ALL, &stats);
-  char_setstatvaluebycode((&stats), code, value);
+  char_setstatvalue_by_code((&stats), code, value);
   character_stats_store(context, player, &stats, VALUES_ALL);
 }
 
@@ -269,19 +286,19 @@ static int char_getskilltargetbycode_base(BtechContext *context, DbRef player,
       context->cached_skill == code)
     return context->cached_skill_result + modifier;
   if (char_values[code].flag & CHAR_ATHLETIC)
-    val = char_gvalue(s, "build") + char_gvalue(s, "reflexes");
+    val = char_getstatvalue(s, "build") + char_getstatvalue(s, "reflexes");
   else if (char_values[code].flag & CHAR_PHYSICAL)
-    val = char_gvalue(s, "reflexes") + char_gvalue(s, "intuition");
+    val = char_getstatvalue(s, "reflexes") + char_getstatvalue(s, "intuition");
   else if (char_values[code].flag & CHAR_MENTAL)
-    val = char_gvalue(s, "intuition") + char_gvalue(s, "learn");
+    val = char_getstatvalue(s, "intuition") + char_getstatvalue(s, "learn");
   else if (char_values[code].flag & CHAR_PHYSICAL)
-    val = char_gvalue(s, "reflexes") + char_gvalue(s, "intuition");
+    val = char_getstatvalue(s, "reflexes") + char_getstatvalue(s, "intuition");
   else if (char_values[code].flag & CHAR_SOCIAL)
-    val = char_gvalue(s, "intuition") + char_gvalue(s, "charisma");
+    val = char_getstatvalue(s, "intuition") + char_getstatvalue(s, "charisma");
   else
     return 18;
   if (use_xp) {
-    skill = char_getstatvaluebycode(s, code);
+    skill = char_getstatvalue_by_code(s, code);
 
     if (skill == -1)
       return 18;

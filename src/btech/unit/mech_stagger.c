@@ -121,3 +121,7 @@ void mech_stagger_tracking_reset(Mech *mech) {
 }
 
 int mech_stagger_level(const Mech *mech) { return mech->rd.staggerDamage / 20; }
+
+int mech_stagger_damage_total(const Mech *mech) {
+  return mech->rd.staggerDamage;
+}

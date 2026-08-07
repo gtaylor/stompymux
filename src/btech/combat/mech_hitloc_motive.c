@@ -17,7 +17,6 @@
 #include "mech_crew_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"

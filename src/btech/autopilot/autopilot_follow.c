@@ -8,7 +8,6 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_events.h"
@@ -135,7 +134,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* See if its a valid number */
-  if (Readnum(target_dbref, argument)) {
+  if ((!((target_dbref) = atoi(argument)) && strcmp((argument), "0"))) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - AI #%ld attempting"
@@ -496,7 +495,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   }
 
   /* Try and read the value */
-  if (Readnum(target, argument)) {
+  if ((!((target) = atoi(argument)) && strcmp((argument), "0"))) {
 
     /* Not proper number so skip command goto next */
     snprintf(error_buf, MBUF_SIZE,

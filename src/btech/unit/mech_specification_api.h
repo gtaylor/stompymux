@@ -10,6 +10,7 @@ int mech_tonnage(const Mech *mech);
 void mech_tonnage_set(Mech *mech, int tonnage);
 int mech_real_tonnage(const Mech *mech);
 int mech_engine_rating(const Mech *mech);
+int mech_calculated_engine_rating(const Mech *mech);
 float mech_jump_speed(const Mech *mech);
 void mech_jump_speed_set(Mech *mech, float speed);
 void mech_jump_speed_lower(Mech *mech, float amount);

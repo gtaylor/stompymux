@@ -12,16 +12,17 @@
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_parts.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_api.h"
-#include "mech_tech.h"
+#include "mech_tech_api.h"
 #include "mech_tech_do_api.h"
+#include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
 #include "mux/support/alloc.h"
+#include "repair_job.h"
 #include "section_types.h"
 
 #define VERBOSE_ENDS
@@ -46,18 +47,20 @@ void mux_event_tickmech_removesection(MuxEvent *e) {
   loc = earg % LOCMAX;
   extra = earg / (LOCMAX * POSMAX);
 #ifndef BT_COMPLEXREPAIRS
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, ProperInternal(mech), 0,
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
+                 tech_proper_internal_part(mech), 0,
                  (2 * mech_section_internal(mech, loc)) / extra);
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, ProperArmor(mech), 0,
-                 (2 * mech_section_armor(mech, loc)) / extra);
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, Cargo(S_ELECTRONIC), 0,
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, tech_proper_armor_part(mech),
+                 0, (2 * mech_section_armor(mech, loc)) / extra);
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
+                 cargo_equipment_index(S_ELECTRONIC), 0,
                  mech_section_internal(mech, loc) / extra);
 #else
-  mech_parts_add(mech, loc, ProperInternal(mech), 0,
+  mech_parts_add(mech, loc, tech_proper_internal_part(mech), 0,
                  (2 * mech_section_internal(mech, loc)) / extra);
-  mech_parts_add(mech, loc, ProperArmor(mech), 0,
+  mech_parts_add(mech, loc, tech_proper_armor_part(mech), 0,
                  (2 * mech_section_armor(mech, loc)) / extra);
-  mech_parts_add(mech, loc, Cargo(S_ELECTRONIC), 0,
+  mech_parts_add(mech, loc, cargo_equipment_index(S_ELECTRONIC), 0,
                  mech_section_internal(mech, loc) / extra);
 #endif
   mech_Detach(mech, loc);
@@ -82,10 +85,13 @@ void mux_event_tickmech_removegun(MuxEvent *e) {
   int count = 0, nloc, ncrit, stype;
   int size;
 
-  UNPACK_LOCPOS_E(earg, loc, pos, extra);
+  RepairEventPayload payload = repair_event_payload_unpack(earg);
+  loc = payload.location;
+  pos = payload.position;
+  extra = payload.extra;
 
-  size =
-      GetWeaponCrits(mech, Weapon2I(mech_critical_part_type(mech, loc, pos)));
+  size = GetWeaponCrits(mech, weapon_from_equipment_index(
+                                  mech_critical_part_type(mech, loc, pos)));
   for (i = pos; i < MIN(NUM_CRITICALS, pos + size); i++) {
     mech_critical_destroy(mech, loc, i);
     count++;
@@ -140,7 +146,10 @@ void mux_event_tickmech_removepart(MuxEvent *e) {
   int loc, pos, extra;
   char buf[MBUF_SIZE];
 
-  UNPACK_LOCPOS_E(earg, loc, pos, extra);
+  RepairEventPayload payload = repair_event_payload_unpack(earg);
+  loc = payload.location;
+  pos = payload.position;
+  extra = payload.extra;
   mech_critical_destroy(mech, loc, pos);
   if (mech_class(mech) == CLASS_MECH)
     do_magic(mech);
@@ -234,8 +243,10 @@ void mux_event_tickmech_repairarmor(MuxEvent *e) {
       do_magic(mech);
     return;
   }
-  REPAIREVENT(FIXARMOR_TIME, mech, (amount * 16 + loc),
-              mux_event_tickmech_repairarmor, EVENT_REPAIR_FIX);
+  repair_event_schedule_minutes(
+      mech, FIXARMOR_TIME, EVENT_REPAIR_FIX, mux_event_tickmech_repairarmor,
+      (RepairEventPayload){
+          .location = loc, .position = amount, .player = player});
 }
 
 void mux_event_tickmech_repairinternal(MuxEvent *e) {
@@ -271,8 +282,11 @@ void mux_event_tickmech_repairinternal(MuxEvent *e) {
       do_magic(mech);
     return;
   }
-  REPAIREVENT(FIXINTERNAL_TIME, mech, (amount * 16 + loc),
-              mux_event_tickmech_repairinternal, EVENT_REPAIR_FIXI);
+  repair_event_schedule_minutes(mech, FIXINTERNAL_TIME, EVENT_REPAIR_FIXI,
+                                mux_event_tickmech_repairinternal,
+                                (RepairEventPayload){.location = loc,
+                                                     .position = amount,
+                                                     .player = player});
 }
 
 void mux_event_tickmech_reattach(MuxEvent *e) {
@@ -333,10 +347,13 @@ void mux_event_tickmech_replacegun(MuxEvent *e) {
   int count = 0, nloc, ncrit, stype;
   int size;
 
-  UNPACK_LOCPOS_E(earg, loc, pos, brand);
+  RepairEventPayload payload = repair_event_payload_unpack(earg);
+  loc = payload.location;
+  pos = payload.position;
+  brand = payload.extra;
 
-  size =
-      GetWeaponCrits(mech, Weapon2I(mech_critical_part_type(mech, loc, pos)));
+  size = GetWeaponCrits(mech, weapon_from_equipment_index(
+                                  mech_critical_part_type(mech, loc, pos)));
   for (i = pos; i < MIN(NUM_CRITICALS, pos + size); i++) {
     mech_RepairPart(mech, loc, i);
     mech_critical_temporary_failure_set(mech, loc, i, 0);
@@ -379,10 +396,12 @@ void mux_event_tickmech_repairgun(MuxEvent *e) {
   int count = 0, nloc, ncrit, stype;
   int size;
 
-  UNPACK_LOCPOS(earg, loc, pos);
+  RepairEventPayload payload = repair_event_payload_unpack(earg);
+  loc = payload.location;
+  pos = payload.position;
 
-  size =
-      GetWeaponCrits(mech, Weapon2I(mech_critical_part_type(mech, loc, pos)));
+  size = GetWeaponCrits(mech, weapon_from_equipment_index(
+                                  mech_critical_part_type(mech, loc, pos)));
   for (i = pos; i < MIN(NUM_CRITICALS, pos + size); i++) {
     mech_RepairPart(mech, loc, i);
     mech_critical_temporary_failure_set(mech, loc, i, 0);
@@ -418,7 +437,9 @@ void mux_event_tickmech_repairenhcrit(MuxEvent *e) {
   char buf[MBUF_SIZE];
   int wCritType, wWeapSize, wFirstCrit;
 
-  UNPACK_LOCPOS(earg, loc, pos);
+  RepairEventPayload payload = repair_event_payload_unpack(earg);
+  loc = payload.location;
+  pos = payload.position;
   ArmorStringFromIndex(loc, buf, mech_class(mech), mech_movement_type(mech));
   mech_printf(mech, MECHALL, "%s on %s has been repaired.",
               pos_part_name(mech, loc, pos).text, buf);
@@ -428,7 +449,7 @@ void mux_event_tickmech_repairenhcrit(MuxEvent *e) {
   wCritType = mech_critical_part_type(mech, loc, pos);
 
   /* Get the max number of crits for this weapon */
-  wWeapSize = GetWeaponCrits(mech, Weapon2I(wCritType));
+  wWeapSize = GetWeaponCrits(mech, weapon_from_equipment_index(wCritType));
 
   /* Find the first crit */
   wFirstCrit = FindFirstWeaponCrit(mech, loc, pos, 0, wCritType, wWeapSize);
@@ -442,7 +463,9 @@ void mux_event_tickmech_repairpart(MuxEvent *e) {
   int loc, pos;
   char buf[MBUF_SIZE];
 
-  UNPACK_LOCPOS(earg, loc, pos);
+  RepairEventPayload payload = repair_event_payload_unpack(earg);
+  loc = payload.location;
+  pos = payload.position;
   mech_RepairPart(mech, loc, pos);
   ArmorStringFromIndex(loc, buf, mech_class(mech), mech_movement_type(mech));
   do {
@@ -464,7 +487,10 @@ void mux_event_tickmech_reload(MuxEvent *e) {
   int loc, pos, extra;
   char buf[MBUF_SIZE];
 
-  UNPACK_LOCPOS_E(earg, loc, pos, extra);
+  RepairEventPayload payload = repair_event_payload_unpack(earg);
+  loc = payload.location;
+  pos = payload.position;
+  extra = payload.extra;
   if (extra) {
     mech_critical_data_set(mech, loc, pos, 0);
     if (extra > 1)

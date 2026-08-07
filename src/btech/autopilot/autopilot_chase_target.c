@@ -47,7 +47,7 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
    * AI is doing something else important so don't try to chase
    * anything */
 
-  if (ChasingTarget(autopilot)) {
+  if (autopilot_is_chasing_target(autopilot)) {
 
     /* Reset the flag */
     do_chasetarget = 0;
@@ -103,7 +103,8 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
         auto_delcommand(autopilot->mynum, autopilot, "-1");
 
         /* Add in autogun and follow and engage */
-        if (AssignedTarget(autopilot) && autopilot->target != -1) {
+        if (autopilot_has_assigned_target(autopilot) &&
+            autopilot->target != -1) {
           snprintf(buffer, LBUF_SIZE, "autogun target %ld", autopilot->target);
         } else {
           snprintf(buffer, LBUF_SIZE, "autogun on");
@@ -115,7 +116,7 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
         auto_engage(autopilot->mynum, autopilot, "");
 
         /* Log it */
-        print_autogun_log(autopilot, "Autogun Event Finished");
+        autopilot_autogun_log(autopilot, "Autogun Event Finished");
 
         return true;
 
@@ -183,7 +184,7 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
   /* Make sure multiple instances of autogun aren't running */
 
   /* Log it */
-  print_autogun_log(autopilot, "Autogun Event Finished");
+  autopilot_autogun_log(autopilot, "Autogun Event Finished");
 
   /* The End */
   return false;

@@ -25,7 +25,6 @@
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "environment_damage_api.h"
-#include "legacy_macros.h"
 #include "map_terrain.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
@@ -42,7 +41,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
 #include "mech_position_api.h"
@@ -71,7 +69,8 @@ void mech_land(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   BtechContext *context = mech_context(mech);
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   if (mech_class(mech) != CLASS_MECH && mech_class(mech) != CLASS_MW &&
       mech_class(mech) != CLASS_BSUIT && mech_class(mech) != CLASS_VEH_GROUND) {
     aero_land(player, data, buffer);
@@ -94,7 +93,8 @@ void mech_land(DbRef player, void *data, char *buffer) {
       mech_maybe_move(mech);
     }
   } else
-    notify(btech_context_evaluation(context), player, "You're not jumping!");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're not jumping!");
 }
 
 static bool mech_is_over_water(const Mech *mech) {
@@ -104,7 +104,7 @@ static bool mech_is_over_water(const Mech *mech) {
          mech_movement_type(mech) == MOVE_HULL;
 }
 
-static int mech_lower_surface_elevation(Mech *mech) {
+int mech_lower_surface_elevation(Mech *mech) {
   return mech_real_terrain_get(mech) != BATTLE_TERRAIN_BRIDGE
              ? mech_position_surface_elevation(mech)
              : bridge_w_elevation(mech);

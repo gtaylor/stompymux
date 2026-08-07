@@ -8,6 +8,7 @@
  */
 
 #include "mech_classification_api.h"
+#include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
 

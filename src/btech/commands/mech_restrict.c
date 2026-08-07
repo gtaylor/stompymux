@@ -16,7 +16,6 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_dynamic_api.h"
 #include "map_terrain.h"
@@ -28,7 +27,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -44,6 +42,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/doubly_linked_list.h"
+#include "mux/support/formatting.h"
 #include "mux/support/red_black_tree.h"
 #include "registry_api.h"
 
@@ -99,16 +98,21 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
   float fx, fy;
   int elevation;
 
-  cch(MECH_MAP);
+  if (!common_checks(player, mech, MECH_MAP))
+    return;
   argc = mech_parseattributes(buffer, args, 3);
-  DOCHECK_CONTEXT(mech_context(mech), argc != 2 && argc != 3,
-                  "Invalid number of arguments to SETXY!");
+  if (argc != 2 && argc != 3) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguments to SETXY!");
+    return;
+  }
   x = atoi(args[0]);
   y = atoi(args[1]);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  x >= mech_map->map_width || y >= mech_map->map_height ||
-                      x < 0 || y < 0,
-                  "Invalid coordinates!");
+  if (x >= mech_map->map_width || y >= mech_map->map_height || x < 0 || y < 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid coordinates!");
+    return;
+  }
   mech_position_xy_set(mech, x, y);
   MapCoordToRealCoord(x, y, &fx, &fy);
   mech_position_real_xy_set(mech, fx, fy);
@@ -143,10 +147,17 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   char targ[2];
 
   nargs = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(mech_context(mech), nargs < 1,
-                  "Invalid number of arguments to SETMAPINDX!");
+  if (nargs < 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguments to SETMAPINDX!");
+    return;
+  }
   newindex = atoi(args[0]);
-  DOCHECK_CONTEXT(mech_context(mech), newindex < -1, "Invalid map index!");
+  if (newindex < -1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid map index!");
+    return;
+  }
   if (newindex != -1) {
     if (!(newmap = ValidMap(mech_context(mech), player, newindex)))
       return;
@@ -162,8 +173,8 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   }
 
   if (newindex == -1) {
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Mech removed from map.");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Mech removed from map.");
     return;
   }
 
@@ -205,8 +216,11 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
       }
     }
   }
-  DOCHECK_CONTEXT(mech_context(mech), loop == MAX_MECHS_PER_MAP,
-                  "There are too many mechs on that map!");
+  if (loop == MAX_MECHS_PER_MAP) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "There are too many mechs on that map!");
+    return;
+  }
   add_mech_to_map(newmap, mech);
   mech_unit_id_set(mech, targ[0], targ[1]);
   if (mech_position_x(mech) > (newmap->map_width - 1) ||
@@ -217,8 +231,9 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     mech_position_real_xy_set(mech, fx, fy);
     mech_position_terrain_set(mech, map_terrain_get(newmap, 0, 0));
     mech_position_elevation_set(mech, map_elevation_get(newmap, 0, 0));
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "You're current position is out of bounds, Pos changed to 0,0");
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "You're current position is out of bounds, Pos changed to 0,0");
   }
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "MapIndex changed to %d", newindex);
@@ -234,18 +249,23 @@ void mech_Rsetteam(DbRef player, void *data, char *buffer) {
   int team;
   BattleMap *newmap;
 
-  DOCHECK_CONTEXT(mech_context(mech), mech_map_dbref(mech) == -1,
-                  "Mech is not on a map:  Can't set team");
+  if (mech_map_dbref(mech) == -1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Mech is not on a map:  Can't set team");
+    return;
+  }
   newmap = ValidMap(mech_context(mech), player, mech_map_dbref(mech));
   if (!newmap) {
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Map index reset!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Map index reset!");
     mech_map_dbref_set(mech, NOTHING);
     return;
   }
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_parseattributes(buffer, args, 1) != 1,
-                  "Invalid number of arguments!");
+  if (mech_parseattributes(buffer, args, 1) != 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguments!");
+    return;
+  }
   team = atoi(args[0]);
   if (team < 0)
     team = 0;

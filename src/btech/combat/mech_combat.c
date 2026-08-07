@@ -24,7 +24,6 @@
 #include "command_handlers_api.h"
 #include "failures.h"
 #include "failures_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_api.h"
 #include "map_obj_api.h"
@@ -47,7 +46,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -103,25 +101,34 @@ void mech_target(DbRef player, void *data, char *buffer) {
   char section[50];
   char type, move, index;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   argc = mech_parseattributes(buffer, args, 5);
-  DOCHECK_CONTEXT(context, argc != 1,
-                  "Invalid number of arguments to function!");
-  if (!strcmp(args[0], "-")) {
-    mech_targeting_aim_reset(mech);
-    notify(btech_context_evaluation(context), player, "Targetting disabled.");
+  if (argc != 1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number of arguments to function!");
     return;
   }
-  DOCHECK_CONTEXT(
-      context,
-      mech_target_dbref(mech) < 0 || !(target = btech_context_find_object(
-                                           context, mech_target_dbref(mech))),
-      "Error: You need to be locked onto something to target its part!");
+  if (!strcmp(args[0], "-")) {
+    mech_targeting_aim_reset(mech);
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Targetting disabled.");
+    return;
+  }
+  if (mech_target_dbref(mech) < 0 ||
+      !(target = btech_context_find_object(context, mech_target_dbref(mech)))) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "Error: You need to be locked onto something to target its part!");
+    return;
+  }
   type = mech_class(target);
   move = mech_movement_type(target);
-  DOCHECK_CONTEXT(context,
-                  (index = ArmorSectionFromString(type, move, args[0])) < 0,
-                  "Invalid location!");
+  if ((index = ArmorSectionFromString(type, move, args[0])) < 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid location!");
+    return;
+  }
   mech_targeting_aim_set(mech, index, type);
   ArmorStringFromIndex(index, section, type, move);
   notify_printf(btech_context_evaluation(context), player, "%s targetted.",
@@ -198,7 +205,8 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
   DbRef targetref;
   int mode;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
   argc = mech_parseattributes(buffer, args, 5);
   switch (argc) {
@@ -222,8 +230,11 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
                          mech_position_y(target), mech_range_to(mech, target));
     else
       targetref = -1;
-    DOCHECK_CONTEXT(context, targetref == -1 || !LOS,
-                    "That is not a valid targetID. Try again.");
+    if (targetref == -1 || !LOS) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "That is not a valid targetID. Try again.");
+      return;
+    }
 
     if (mech_condition_summary(mech).swarm_target > 0) {
       if (mech_condition_summary(mech).swarm_target != mech_dbref(target)) {
@@ -256,9 +267,11 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
     mech_map = btech_context_get_map(context, mech_map_dbref(mech));
     newx = atoi(args[0]);
     newy = atoi(args[1]);
-    DOCHECK_CONTEXT(mech_context(mech),
-                    !battle_map_coordinate_is_valid(mech_map, newx, newy),
-                    "Illegal coordinates!");
+    if (!battle_map_coordinate_is_valid(mech_map, newx, newy)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Illegal coordinates!");
+      return;
+    }
     mech_targeting_hex_xy_set(mech, newx, newy);
     if (mech_spotter_dbref(mech) == mech_dbref(mech))
       mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
@@ -281,7 +294,11 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    DOCHECK_CONTEXT(context, strlen(args[2]) > 1, "Invalid lock mode!");
+    if (strlen(args[2]) > 1) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Invalid lock mode!");
+      return;
+    }
     switch (toupper(args[2][0])) {
     case 'B':
       mode = LOCK_BUILDING;
@@ -296,16 +313,18 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
       mode = LOCK_HEX;
       break;
     default:
-      notify(btech_context_evaluation(context), player,
-             "Invalid mode selected!");
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Invalid mode selected!");
       return;
     }
     mech_map = btech_context_get_map(context, mech_map_dbref(mech));
     newx = atoi(args[0]);
     newy = atoi(args[1]);
-    DOCHECK_CONTEXT(mech_context(mech),
-                    !battle_map_coordinate_is_valid(mech_map, newx, newy),
-                    "Illegal coordinates!");
+    if (!battle_map_coordinate_is_valid(mech_map, newx, newy)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Illegal coordinates!");
+      return;
+    }
     mech_targeting_hex_xy_set(mech, newx, newy);
     if (mech_spotter_dbref(mech) == mech_dbref(mech))
       mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));

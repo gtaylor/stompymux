@@ -1,13 +1,12 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
+#include "map_conditions_api.h"
 #include "mech_classification_api.h"
 #include "mech_electronics_api.h"
 #include "mech_identity_api.h"
 #include "mech_map_render_internal.h"
 #include "mech_maps_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_status_types.h"
 #include "mux/objects/attrs.h"
@@ -39,10 +38,13 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
 
   /* Various checks for conditions and system of mech */
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(mech_context(mech), !mech_tactical_range(mech),
-                  "Your system seems to be inoperational.");
+  if (!mech_tactical_range(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your system seems to be inoperational.");
+    return;
+  }
 
-  if (MapIsDark(mech_map) ||
+  if (battle_map_is_dark(mech_map) ||
       (mech_class(mech) == CLASS_MW &&
        mech_context(mech)->configuration->btech_mw_losmap))
     dohexlos = 1;
@@ -77,7 +79,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
       break;
 
     default:
-      notify(evaluation, player, "Invalid tactical map flag.");
+      mecha_notify(evaluation, player, "Invalid tactical map flag.");
       return;
     }
 
@@ -85,8 +87,11 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
     argc--;
   }
 
-  DOCHECK_CONTEXT(mech_context(mech), dohexlos && (flags & (8 | 16 | 32)),
-                  "You can't see that much here!");
+  if (dohexlos && (flags & (8 | 16 | 32))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't see that much here!");
+    return;
+  }
 
   if (!parse_tacargs(player, mech, args, argc, mech_tactical_range(mech), &x,
                      &y))
@@ -105,9 +110,9 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
              displayHeight > 24 || displayHeight < 5 || displayWidth > 40 ||
              displayWidth < 5) {
 
-    notify(evaluation, player,
-           "Illegal Tacsize attribute. Must be in format "
-           "'Height Width' . Height : 5-24 Width : 5-40");
+    mecha_notify(evaluation, player,
+                 "Illegal Tacsize attribute. Must be in format "
+                 "'Height Width' . Height : 5-24 Width : 5-40");
     displayHeight = MAP_DISPLAY_HEIGHT;
     displayWidth = MAP_DISPLAY_WIDTH;
   }
@@ -131,14 +136,14 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   map_text = map_text_create(player, mech, mech_map, x, y, displayWidth,
                              displayHeight, flags, dohexlos);
   if (map_text == nullptr) {
-    notify(evaluation, player, "Unable to render the tactical map.");
+    mecha_notify(evaluation, player, "Unable to render the tactical map.");
     return;
   }
   maptext = map_text_lines(map_text);
 
   /* Draw the map for the player */
   for (i = 0; maptext[i]; i++)
-    notify(evaluation, player, maptext[i]);
+    mecha_notify(evaluation, player, maptext[i]);
   map_text_destroy(map_text);
 }
 

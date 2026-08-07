@@ -19,7 +19,6 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
-#include "legacy_macros.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
@@ -32,6 +31,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/doubly_linked_list.h"
+#include "mux/support/formatting.h"
 #include "mux/support/red_black_tree.h"
 #include "mycool.h"
 #include "registry_api.h"
@@ -141,8 +141,8 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
 
   /* Make sure they specified an argument */
   if (!*buffer) {
-    notify(btech_context_evaluation(autopilot->xcode.context), player,
-           "No argument used : Usage delcommand [num]\n");
+    mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+                 "No argument used : Usage delcommand [num]\n");
     notify_printf(btech_context_evaluation(autopilot->xcode.context), player,
                   "Must be within the range"
                   " 1 to %d or -1 for all\n",
@@ -151,7 +151,7 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
   }
 
   /* Make sure its a number */
-  if (Readnum(p, buffer)) {
+  if ((!((p) = atoi(buffer)) && strcmp((buffer), "0"))) {
     notify_printf(btech_context_evaluation(autopilot->xcode.context), player,
                   "Invalid Argument : Must be within the range"
                   " 1 to %d or -1 for all\n",
@@ -225,8 +225,8 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
       }
     }
 
-    notify(btech_context_evaluation(autopilot->xcode.context), player,
-           "All the commands have been removed.\n");
+    mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+                 "All the commands have been removed.\n");
   }
 }
 
@@ -236,9 +236,9 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
  */
 void auto_jump(DbRef player, void *data, char *buffer) {
   Autopilot *autopilot = data;
-  notify(btech_context_evaluation(autopilot->xcode.context), player,
-         "jump has been temporarly disabled till I can figure out"
-         " how I want to change it - Dany");
+  mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+               "jump has been temporarly disabled till I can figure out"
+               " how I want to change it - Dany");
 }
 
 /*
@@ -273,7 +273,11 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
   free(command);
 
   /* Make sure its a valid command */
-  DOCHECK_CONTEXT(autopilot->xcode.context, !acom[i].name, "Invalid Command!");
+  if (!acom[i].name) {
+    mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+                 "Invalid Command!");
+    return;
+  }
 
   /* Get the arguments for the command */
   if (acom[i].argcount > 0) {
@@ -290,8 +294,8 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
         if (args[j])
           free(args[j]);
       }
-      notify(btech_context_evaluation(autopilot->xcode.context), player,
-             "Not the proper number of arguments!");
+      mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+                   "Not the proper number of arguments!");
       return;
     }
 
@@ -332,30 +336,30 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
   char buf[MBUF_SIZE];
   int i;
 
-  addline();
+  cool_menu_add_line(&c);
 
   snprintf(
       buf, MBUF_SIZE, "Autopilot data for %s",
       game_object_name(autopilot->xcode.context->database, autopilot->mynum));
-  vsi(buf);
+  cool_menu_add_text(&c, buf);
 
   snprintf(
       buf, MBUF_SIZE, "Controling unit %s",
       game_object_name(autopilot->xcode.context->database,
                        game_object_location(autopilot->xcode.context->database,
                                             autopilot->mynum)));
-  vsi(buf);
+  cool_menu_add_text(&c, buf);
 
-  addline();
+  cool_menu_add_line(&c);
 
   snprintf(buf, MBUF_SIZE,
            "MyRef: #%ld  MechRef: #%ld  MapIndex: #%d  "
            "FSpeed: %d %% (Flag:%d)",
            autopilot->mynum, autopilot->mymechnum, autopilot->mapindex,
            autopilot->speed, autopilot->flags);
-  vsi(buf);
+  cool_menu_add_text(&c, buf);
 
-  addline();
+  cool_menu_add_line(&c);
 
   if (doubly_linked_list_size(autopilot->commands)) {
 
@@ -365,14 +369,14 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
           auto_command_text((AutopilotCommand *)doubly_linked_list_get_node(
                                 autopilot->commands, i))
               .text);
-      vsi(buf);
+      cool_menu_add_text(&c, buf);
     }
 
   } else {
-    vsi("No commands have been queued to date.");
+    cool_menu_add_text(&c, "No commands have been queued to date.");
   }
 
-  addline();
+  cool_menu_add_line(&c);
   ShowCoolMenu(btech_context_evaluation(autopilot->xcode.context), player, c);
   KillCoolMenu(c);
 }
@@ -382,10 +386,10 @@ void auto_eventstats(DbRef player, void *data, char *buffer) {
   Autopilot *autopilot = (Autopilot *)data;
   int i, j, total;
 
-  notify(btech_context_evaluation(autopilot->xcode.context), player,
-         "Events by type: ");
-  notify(btech_context_evaluation(autopilot->xcode.context), player,
-         "-------------------------------");
+  mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+               "Events by type: ");
+  mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+               "-------------------------------");
 
   total = 0;
 
@@ -400,8 +404,8 @@ void auto_eventstats(DbRef player, void *data, char *buffer) {
   }
 
   if (total) {
-    notify(btech_context_evaluation(autopilot->xcode.context), player,
-           "-------------------------------");
+    mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+                 "-------------------------------");
     notify_printf(btech_context_evaluation(autopilot->xcode.context), player,
                   "%d total", total);
   }
@@ -495,13 +499,22 @@ void auto_engage(DbRef player, void *data, char *buffer) {
       autopilot->xcode.context,
       (autopilot->mymechnum = game_object_location(
            autopilot->xcode.context->database, autopilot->mynum)));
-  DOCHECK_CONTEXT(autopilot->xcode.context, !autopilot,
-                  "Internal error! - Bad AI object!");
-  DOCHECK_CONTEXT(autopilot->xcode.context, !mech,
-                  "Error: The autopilot isn't inside a 'mech!");
-  DOCHECK_CONTEXT(
-      autopilot->xcode.context, auto_pilot_on(autopilot),
-      "The autopilot's already online! You have to disengage it first.");
+  if (!autopilot) {
+    mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+                 "Internal error! - Bad AI object!");
+    return;
+  }
+  if (!mech) {
+    mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+                 "Error: The autopilot isn't inside a 'mech!");
+    return;
+  }
+  if (auto_pilot_on(autopilot)) {
+    mecha_notify(
+        btech_context_evaluation(autopilot->xcode.context), player,
+        "The autopilot's already online! You have to disengage it first.");
+    return;
+  }
 
   if (mech_autopilot_dbref(mech) <= 0)
     auto_init(autopilot, mech);
@@ -512,8 +525,8 @@ void auto_engage(DbRef player, void *data, char *buffer) {
 
   autopilot->mapindex = mech_map_dbref(mech);
 
-  notify(btech_context_evaluation(autopilot->xcode.context), player,
-         "Engaging autopilot...");
+  mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+               "Engaging autopilot...");
   autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
                            AUTOPILOT_NC_DELAY, 0);
 
@@ -527,13 +540,16 @@ void auto_disengage(DbRef player, void *data, char *buffer) {
 
   Autopilot *autopilot = (Autopilot *)data;
 
-  DOCHECK_CONTEXT(
-      autopilot->xcode.context, !auto_pilot_on(autopilot),
-      "The autopilot's already offline! You have to engage it first.");
+  if (!auto_pilot_on(autopilot)) {
+    mecha_notify(
+        btech_context_evaluation(autopilot->xcode.context), player,
+        "The autopilot's already offline! You have to engage it first.");
+    return;
+  }
 
   auto_stop_pilot(autopilot);
-  notify(btech_context_evaluation(autopilot->xcode.context), player,
-         "Autopilot has been disengaged.");
+  mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+               "Autopilot has been disengaged.");
 
   return;
 }
@@ -573,7 +589,7 @@ void auto_goto_next_command(Autopilot *autopilot, int time) {
   auto_destroy_command_node(temp_command_node);
 
   /* Fire off the AUTO_COM event */
-  AUTO_COM(autopilot, time);
+  autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event, time, 0);
 }
 
 /*

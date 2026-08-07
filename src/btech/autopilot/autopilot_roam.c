@@ -10,7 +10,6 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
@@ -84,7 +83,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
     if (strcmp(args[0], "radius") == 0) {
 
       /* Need to grab distance and start hex */
-      if (Readnum(anchor_hex_x, args[1])) {
+      if ((!((anchor_hex_x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"
@@ -104,7 +103,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
         return;
       }
 
-      if (Readnum(anchor_hex_y, args[2])) {
+      if ((!((anchor_hex_y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"
@@ -125,7 +124,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
       }
 
       /* Need to grab distance and start hex */
-      if (Readnum(anchor_distance, args[3])) {
+      if ((!((anchor_distance) = atoi(args[3])) && strcmp((args[3]), "0"))) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"

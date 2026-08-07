@@ -10,8 +10,8 @@
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "eject_api.h"
-#include "legacy_macros.h"
 #include "map.h"
+#include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
@@ -25,7 +25,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -54,7 +53,7 @@ void mech_reactor_explode(Mech *wounded, Mech *attacker) {
   mech_section_destroy(wounded, attacker, 0, RLEG);
 
   /* Need to autoeject before the explosion reaches the head */
-  if (!MapIsUnderground(map))
+  if (!battle_map_is_underground(map))
     autoeject(wounded_pilot, wounded, 0);
 
   mech_section_destroy(wounded, attacker, 0, HEAD);
@@ -113,11 +112,11 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
         mech_critical_destroy(wounded, hitloc, i);
 
       critType = mech_critical_part_type(wounded, hitloc, i);
-      if (IsAmmo(critType)) {
+      if (equipment_is_ammunition(critType)) {
         mech_critical_data_set(wounded, hitloc, i, 0);
       }
-      if ((IsSpecial(critType))) {
-        switch (Special2I(critType)) {
+      if ((equipment_is_special(critType))) {
+        switch (special_from_equipment_index(critType)) {
         case UPPER_ACTUATOR:
         case LOWER_ACTUATOR:
         case HAND_OR_FOOT_ACTUATOR:

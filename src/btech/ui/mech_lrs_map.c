@@ -1,8 +1,8 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
+#include "map_conditions_api.h"
 #include "map_los.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
@@ -21,6 +21,7 @@
 #include "mux/server/game.h"
 #include "registry_api.h"
 
+#include "mux/support/formatting.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -238,7 +239,7 @@ static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
   }
 
   if (losmap)
-    losflag = LOS_MAP_GET_FLAG(losmap, x, y);
+    losflag = los_map_flag(losmap, x, y);
 
   /* If the losmap doesn't contain this hex, we return X in bold red
    * in both terrain and elevation mode.
@@ -313,9 +314,9 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
     snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff), "%c",
              trash1[2]);
   }
-  notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
-  notify(btech_context_evaluation(mech_context(mech)), player, midbuff);
-  notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player, midbuff);
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
 
   if (mode & LRS_MECHMODE) {
     for (i = 0; i < map->first_free; i++) {
@@ -402,8 +403,8 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
     }
     snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff),
              " %-3d", loop);
-    notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
-    notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
   }
 }
 
@@ -425,8 +426,11 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(mech_context(mech), !mech_long_range_sensor_range(mech),
-                  "Your system seems to be inoperational.");
+  if (!mech_long_range_sensor_range(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your system seems to be inoperational.");
+    return;
+  }
   if (!parse_tacargs(player, mech, &args[1], argc - 1,
                      mech_long_range_sensor_range(mech), &x, &y))
     return;
@@ -465,8 +469,9 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (MapIsDark(map) || (mech_class(mech) == CLASS_MW &&
-                         mech_context(mech)->configuration->btech_mw_losmap))
+  if (battle_map_is_dark(map) ||
+      (mech_class(mech) == CLASS_MW &&
+       mech_context(mech)->configuration->btech_mw_losmap))
     mode |= LRS_LOSMODE;
 
   str = btech_attribute_read(mech_context(mech)->database, player, A_LRSHEIGHT,
@@ -474,8 +479,8 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   if (*str) {
     displayHeight = atoi(str);
     if (displayHeight < 10 || displayHeight > 40) {
-      notify(btech_context_evaluation(mech_context(mech)), player,
-             "Illegal LRSHeight attribute.  Must be between 10 and 40");
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Illegal LRSHeight attribute.  Must be between 10 and 40");
       displayHeight = LRS_DISPLAY_HEIGHT;
     }
   }

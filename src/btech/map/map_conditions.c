@@ -16,7 +16,6 @@
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_conditions_api.h"
 #include "mech_api_types.h"
@@ -59,6 +58,46 @@ bool battle_map_bridges_have_capacity(const BattleMap *map) {
   return map->flags & MAPFLAG_BRIDGESCS;
 }
 
+bool battle_map_is_vacuum(const BattleMap *map) {
+  return map->flags & MAPFLAG_VACUUM;
+}
+
+bool battle_map_disables_bridgification(const BattleMap *map) {
+  return map->flags & MAPFLAG_NOBRIDGIFY;
+}
+
+bool battle_map_disables_friendly_fire(const BattleMap *map) {
+  return map->flags & MAPFLAG_NOFRIENDLYFIRE;
+}
+
+bool battle_map_disables_physicals(const BattleMap *map) {
+  return map->flags & MAPFLAG_NOPHYSICALS;
+}
+
+bool battle_map_build_is_complex(const BattleMap *map) {
+  return map->buildflag & BUILDFLAG_CSI;
+}
+
+bool battle_map_build_is_complex_structure(const BattleMap *map) {
+  return map->buildflag & BUILDFLAG_CS;
+}
+
+bool battle_map_build_is_hidden(const BattleMap *map) {
+  return map->buildflag & (BUILDFLAG_DSS | BUILDFLAG_HID);
+}
+
+bool battle_map_build_is_safe(const BattleMap *map) {
+  return map->buildflag & BUILDFLAG_NOB;
+}
+
+bool battle_map_build_is_invisible(const BattleMap *map) {
+  return map->buildflag & BUILDFLAG_HID;
+}
+
+bool battle_map_build_is_dropship_structure(const BattleMap *map) {
+  return map->buildflag & BUILDFLAG_DSS;
+}
+
 bool battle_map_is_dark(const BattleMap *map) {
   return map->flags & MAPFLAG_DARK;
 }
@@ -72,33 +111,62 @@ void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
   int vacuum = -1, underground = -1, grav, temp, argc;
   int fl;
 
-  DOCHECK_CONTEXT(map->xcode.context,
-                  (argc = mech_parseattributes(buffer, args, 4)) < 2,
-                  "(At least) 2 options required (gravity + temperature)");
-  DOCHECK_CONTEXT(map->xcode.context, argc > 4,
-                  "Too many options! Command accepts only 4 at max (gravity "
-                  "+ temperature + vacuum-flag + underground-flag)");
-  DOCHECK_CONTEXT(map->xcode.context, Readnum(grav, args[0]),
-                  "Invalid gravity (must be integer in range of 0 to 255)");
-  DOCHECK_CONTEXT(map->xcode.context, grav < 0 || grav > 255,
-                  "Invalid gravity (must be integer in range of 0 to 255)");
-  DOCHECK_CONTEXT(
-      map->xcode.context, Readnum(temp, args[1]),
-      "Invalid temperature (must be integer in range of -128 to 127");
-  DOCHECK_CONTEXT(
-      map->xcode.context, temp < -128 || temp > 127,
-      "Invalid temperature (must be integer in range of -128 to 127");
+  if ((argc = mech_parseattributes(buffer, args, 4)) < 2) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "(At least) 2 options required (gravity + temperature)");
+    return;
+  }
+  if (argc > 4) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Too many options! Command accepts only 4 at max (gravity "
+                 "+ temperature + vacuum-flag + underground-flag)");
+    return;
+  }
+  if ((!((grav) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Invalid gravity (must be integer in range of 0 to 255)");
+    return;
+  }
+  if (grav < 0 || grav > 255) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Invalid gravity (must be integer in range of 0 to 255)");
+    return;
+  }
+  if ((!((temp) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(
+        btech_context_evaluation(map->xcode.context), player,
+        "Invalid temperature (must be integer in range of -128 to 127");
+    return;
+  }
+  if (temp < -128 || temp > 127) {
+    mecha_notify(
+        btech_context_evaluation(map->xcode.context), player,
+        "Invalid temperature (must be integer in range of -128 to 127");
+    return;
+  }
   if (argc > 2) {
-    DOCHECK_CONTEXT(map->xcode.context, Readnum(vacuum, args[2]),
-                    "Invalid vacuum flag (must be integer, 0 or 1)");
-    DOCHECK_CONTEXT(map->xcode.context, vacuum < 0 || vacuum > 1,
-                    "Invalid vacuum flag (must be integer, 0 or 1)");
+    if ((!((vacuum) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+      mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                   "Invalid vacuum flag (must be integer, 0 or 1)");
+      return;
+    }
+    if (vacuum < 0 || vacuum > 1) {
+      mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                   "Invalid vacuum flag (must be integer, 0 or 1)");
+      return;
+    }
   }
   if (argc > 3) {
-    DOCHECK_CONTEXT(map->xcode.context, Readnum(underground, args[3]),
-                    "Invalid underground flag (must be integer, 0 or 1)");
-    DOCHECK_CONTEXT(map->xcode.context, underground < 0 || underground > 1,
-                    "Invalid underground flag (must be integer, 0 or 1)");
+    if ((!((underground) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+      mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                   "Invalid underground flag (must be integer, 0 or 1)");
+      return;
+    }
+    if (underground < 0 || underground > 1) {
+      mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                   "Invalid underground flag (must be integer, 0 or 1)");
+      return;
+    }
   }
   fl = (map->flags & (~(MAPFLAG_SPEC | MAPFLAG_VACUUM)));
   if (vacuum > 0)
@@ -112,8 +180,8 @@ void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
   map->temp = temp;
   map->grav = grav;
   map->flags = fl;
-  notify(btech_context_evaluation(map->xcode.context), player,
-         "Conditions set!");
+  mecha_notify(btech_context_evaluation(map->xcode.context), player,
+               "Conditions set!");
   alter_conditions(map);
 }
 
@@ -124,12 +192,12 @@ void map_conditions_apply(Mech *mech, BattleMap *map) {
     mech_environment_conditions_set(mech, false, false, false, false);
     return;
   }
-  mech_environment_conditions_set(mech, MapUnderSpecialRules(map),
-                                  MapTemperature(map) < -30 ||
-                                      MapTemperature(map) > 50,
-                                  MapGravity(map) != 100, MapIsVacuum(map));
+  mech_environment_conditions_set(
+      mech, battle_map_uses_special_rules(map),
+      battle_map_temperature(map) < -30 || battle_map_temperature(map) > 50,
+      battle_map_gravity(map) != 100, battle_map_is_vacuum(map));
 }
 
 bool battle_map_uses_special_rules(const BattleMap *map) {
-  return MapUnderSpecialRules(map);
+  return map->flags & MAPFLAG_SPEC;
 }

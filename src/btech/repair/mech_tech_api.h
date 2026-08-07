@@ -28,3 +28,5 @@ int tech_parsepart_advanced(Mech *mech, char *buffer, int *loc, int *pos,
 int tech_parsepart(Mech *mech, char *buffer, int *loc, int *pos, int *extra);
 int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand);
 int figure_latest_tech_event(Mech *mech);
+int tech_proper_armor_part(const Mech *mech);
+int tech_proper_internal_part(const Mech *mech);

@@ -73,7 +73,7 @@ void apply_mechDamage(Mech *omech, char *buf) {
               mech_critical_part_type(mech, i, j))) {
         if (mech_critical_is_destroyed(mech, i, j))
           mech_critical_destroyed_set(mech, i, j, false);
-        if (IsAmmo(mech_critical_part_type(mech, i, j)))
+        if (equipment_is_ammunition(mech_critical_part_type(mech, i, j)))
           mech_critical_data_set(mech, i, j,
                                  mech_critical_full_ammunition(mech, i, j));
         else
@@ -143,7 +143,7 @@ void apply_mechDamage(Mech *omech, char *buf) {
           mech_critical_temporary_failure_set(omech, i, j, 0);
           do_mag = 1;
         }
-        if (IsAmmo(mech_critical_part_type(mech, i, j))) {
+        if (equipment_is_ammunition(mech_critical_part_type(mech, i, j))) {
           if (mech_critical_data(mech, i, j) != mech_critical_data(omech, i, j))
             mech_critical_data_set(omech, i, j, mech_critical_data(mech, i, j));
         } else {
@@ -159,18 +159,25 @@ void apply_mechDamage(Mech *omech, char *buf) {
   mech_temporary_destroy(mech);
 }
 
-#define ADD(...)                                                               \
-  {                                                                            \
-    if (count++) {                                                             \
-      size_t len = strlen(buffer);                                             \
-      if (len + 1 < LBUF_SIZE) {                                               \
-        buffer[len] = ',';                                                     \
-        buffer[len + 1] = '\0';                                                \
-      }                                                                        \
-    }                                                                          \
-    snprintf(buffer + strlen(buffer), LBUF_SIZE - strlen(buffer),              \
-             __VA_ARGS__);                                                     \
+static void damage_list_append(char buffer[static LBUF_SIZE], int *count,
+                               const char *format, ...)
+    __attribute__((format(printf, 3, 4)));
+
+static void damage_list_append(char buffer[static LBUF_SIZE], int *count,
+                               const char *format, ...) {
+  if ((*count)++) {
+    size_t length = strlen(buffer);
+    if (length + 1 < LBUF_SIZE) {
+      buffer[length] = ',';
+      buffer[length + 1] = '\0';
+    }
   }
+  size_t length = strlen(buffer);
+  va_list arguments;
+  va_start(arguments, format);
+  vsnprintf(buffer + length, LBUF_SIZE - length, format, arguments);
+  va_end(arguments);
+}
 
 char *mechDamagefunc(int mode, Mech *mech, char *arg,
                      char buffer[static LBUF_SIZE]) {
@@ -189,38 +196,39 @@ char *mechDamagefunc(int mode, Mech *mech, char *arg,
   for (i = 0; i < NUM_SECTIONS; i++)
     if (mech_section_original_internal(mech, i)) {
       if (mech_section_armor(mech, i) != mech_section_original_armor(mech, i))
-        ADD("A:%d/%d", i,
-            mech_section_original_armor(mech, i) - mech_section_armor(mech, i));
+        damage_list_append(buffer, &count, "A:%d/%d", i,
+                           mech_section_original_armor(mech, i) -
+                               mech_section_armor(mech, i));
       if (mech_section_rear_armor(mech, i) !=
           mech_section_original_rear_armor(mech, i))
-        ADD("A(R):%d/%d", i,
-            mech_section_original_rear_armor(mech, i) -
-                mech_section_rear_armor(mech, i));
+        damage_list_append(buffer, &count, "A(R):%d/%d", i,
+                           mech_section_original_rear_armor(mech, i) -
+                               mech_section_rear_armor(mech, i));
     }
   for (i = 0; i < NUM_SECTIONS; i++)
     if (mech_section_original_internal(mech, i))
       if (mech_section_internal(mech, i) !=
           mech_section_original_internal(mech, i))
-        ADD("I:%d/%d", i,
-            mech_section_original_internal(mech, i) -
-                mech_section_internal(mech, i));
+        damage_list_append(buffer, &count, "I:%d/%d", i,
+                           mech_section_original_internal(mech, i) -
+                               mech_section_internal(mech, i));
   for (i = 0; i < NUM_SECTIONS; i++)
     for (j = 0; j < CritsInLoc(mech, i); j++) {
       if (mech_critical_part_type(mech, i, j) &&
           !mech_part_is_structural_placeholder(
               mech_critical_part_type(mech, i, j))) {
         if (mech_critical_is_destroyed(mech, i, j)) {
-          ADD("C:%d/%d", i, j);
+          damage_list_append(buffer, &count, "C:%d/%d", i, j);
         } else {
-          if (IsAmmo(mech_critical_part_type(mech, i, j))) {
+          if (equipment_is_ammunition(mech_critical_part_type(mech, i, j))) {
             if (mech_critical_data(mech, i, j) !=
                 mech_critical_full_ammunition(mech, i, j))
-              ADD("R:%d/%d(%d)", i, j,
-                  mech_critical_full_ammunition(mech, i, j) -
-                      mech_critical_data(mech, i, j));
+              damage_list_append(buffer, &count, "R:%d/%d(%d)", i, j,
+                                 mech_critical_full_ammunition(mech, i, j) -
+                                     mech_critical_data(mech, i, j));
           } else if (mech_critical_temporary_failure(mech, i, j))
-            ADD("G:%d/%d(%d)", i, j,
-                mech_critical_temporary_failure(mech, i, j));
+            damage_list_append(buffer, &count, "G:%d/%d(%d)", i, j,
+                               mech_critical_temporary_failure(mech, i, j));
         }
       }
     }
@@ -280,7 +288,7 @@ int text2bv(char *text) {
   int j = 0;
   int mode_not = 0;
 
-  if (!Readnum(j, text))
+  if (!(!((j) = atoi(text)) && strcmp((text), "0")))
     return j; /* Allow 'old style' as well */
 
   /* Valid bitvector letters are: a-z (=27), A-Z (=27 more) */

@@ -76,55 +76,5 @@ constexpr int HISTORICAL = 4;
 #include "btech_api.h"
 #include "btechstats_api.h"
 
-#define char_gvalue char_getstatvalue
-#define char_svalue char_setstatvalue
-
-#define char_getlives(a) char_getvalue(a, "lives")
-#define char_getxp(a) char_getvalue(a, "maxxp")
-#define char_getxpavail(a) char_getvalue(a, "xp")
-#define char_getxp(a) char_getvalue(a, "maxxp")
-#define char_getxpavail(a) char_getvalue(a, "xp")
-#define char_getbruise(a) char_getvalue((a), "bruise")
-#define char_getmaxbruise(a) char_getvalue((a), "maxbruise")
-#define char_getlethal(a) char_getvalue((a), "lethal")
-#define char_getmaxlethal(a) char_getvalue((a), "maxlethal")
-
-#define char_glives(a) char_gvalue(a, "lives")
-#define char_gxp(a) char_gvalue(a, "maxxp")
-#define char_gxpavail(a) char_gvalue(a, "xp")
-#define char_gbruise(a) char_gvalue((a), "bruise")
-#define char_gmaxbruise(a) (char_gvalue((a), "build") * 10)
-#define char_glethal(a) char_gvalue((a), "lethal")
-#define char_gmaxlethal(a) (char_gvalue((a), "build") * 10)
-
-#define char_setlives(a, b) char_setvalue((a), "lives", (b))
-#define char_setbruise(a, b) char_setvalue((a), "Bruise", (b))
-#define char_setmaxbruise(a, b) char_setvalue((a), "maxbruise", (b))
-#define char_setlethal(a, b) char_setvalue((a), "Lethal", (b))
-#define char_setmaxlethal(a, b) char_setvalue((a), "maxlethal", (b))
-
-#define char_slives(a, b) char_svalue((a), "lives", (b))
-#define char_sbruise(a, b) char_svalue((a), "bruise", (b))
-#define char_smaxbruise(a, b) char_svalue((a), "maxbruise", (b))
-#define char_slethal(a, b) char_svalue((a), "lethal", (b))
-#define char_smaxlethal(a, b) char_svalue((a), "maxlethal", (b))
-
 constexpr int EE_NUMBER = 11;
 constexpr int LIVES_NUMBER = 5;
-
-#define char_getstatvaluebycode(s, code)                                       \
-  (code >= 0                                                                   \
-       ? (s->values[code] +                                                    \
-          (char_values[code].type == CHAR_SKILL ? char_xp_bonus(s, code) : 0)) \
-       : -1)
-#define char_getstatvaluebycode(s, code)                                       \
-  (code >= 0                                                                   \
-       ? (s->values[code] +                                                    \
-          (char_values[code].type == CHAR_SKILL ? char_xp_bonus(s, code) : 0)) \
-       : -1)
-#define char_setstatvaluebycode(s, code, value)                                \
-  if (code >= 0) {                                                             \
-    if (code == EE_NUMBER)                                                     \
-      s->values[LIVES_NUMBER] += value - s->values[code];                      \
-    s->values[code] = value;                                                   \
-  }

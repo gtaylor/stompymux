@@ -23,7 +23,18 @@ constexpr int SHO_DECIMAL_BITS = 5;
 
 /* out of 16 ; note : this makes signed ints only 0-1023, unsigneds 0-2047 */
 
-#define FSIM2INT(a) ((a) >> INT_DECIMAL_BITS)
-#define FSIM2SHO(a) ((a) >> SHO_DECIMAL_BITS)
-#define INT2FSIM(a) ((a) << INT_DECIMAL_BITS)
-#define SHO2FSIM(a) ((a) << SHO_DECIMAL_BITS)
+static inline int float_simulation_to_int(int value) {
+  return value >> INT_DECIMAL_BITS;
+}
+
+static inline int float_simulation_to_short(int value) {
+  return value >> SHO_DECIMAL_BITS;
+}
+
+static inline int int_to_float_simulation(int value) {
+  return value << INT_DECIMAL_BITS;
+}
+
+static inline int short_to_float_simulation(int value) {
+  return value << SHO_DECIMAL_BITS;
+}

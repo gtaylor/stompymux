@@ -20,6 +20,7 @@
 
 #include <ctype.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +36,6 @@
 #include "coolmenu.h"
 #include "econ_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_api.h"
 #include "map_obj_api.h"
@@ -84,14 +84,31 @@
 
 char *mech_armor_status_set_value(Mech *mech, char *section, char *armor_type,
                                   char *value);
+
+typedef enum GmvSourceKind {
+  GMV_SOURCE_MECH_KEY,
+  GMV_SOURCE_FIELD_OFFSET,
+  GMV_SOURCE_CALLBACK,
+  GMV_SOURCE_SENTINEL,
+} GmvSourceKind;
+
+typedef union GmvSource {
+  MechScriptValueKey mech_key;
+  size_t field_offset;
+  char *(*string_callback)(int mode, Mech *mech);
+  char *(*bidirectional_callback)(int mode, Mech *mech, char *value);
+  char *(*buffered_callback)(Mech *mech, char *buffer);
+  char *(*buffered_bidirectional_callback)(int mode, Mech *mech, char *value,
+                                           char *buffer);
+} GmvSource;
+
 typedef struct {
   int gtype;
   char *name;
-  void *rel_addr;
+  GmvSourceKind source_kind;
+  GmvSource source;
   int type;
   int size;
-  bool mech_value;
-  MechScriptValueKey mech_key;
 } GMV;
 enum {
   TYPE_STRING,
@@ -114,27 +131,6 @@ enum {
   TYPE_DBREF_RO,
   TYPE_LAST_TYPE
 };
-#define MeField(Name, Key, Type) {GTYPE_MECH, Name, nullptr, Type, 0, true, Key}
-
-#define MeFieldS(Name, Key, Type, Size)                                        \
-  {GTYPE_MECH, Name, nullptr, Type, Size, true, Key}
-
-#define MeFunction(Name, Function, Type)                                       \
-  {GTYPE_MECH, Name, Function, Type, 0, false, 0}
-
-#define UglieM(dat) ((void *)&((BattleMap *)0)->dat)
-#define MaEntry(Name, Func, Type)                                              \
-  {GTYPE_MAP, Name, UglieM(Func), Type, 0, false, 0}
-#define MaEntryS(Name, Func, Type, Size)                                       \
-  {GTYPE_MAP, Name, UglieM(Func), Type, Size, false, 0}
-
-#define UglieT(dat) (void *)&((Turret *)0)->dat
-
-#define TuEntry(Name, Func, Type)                                              \
-  {GTYPE_TURRET, Name, UglieT(Func), Type, 0, false, 0}
-#define TuEntryS(Name, Func, Type, Size)                                       \
-  {GTYPE_TURRET, Name, UglieT(Func), Type, Size, false, 0}
-
 extern const int scode_in_out[TYPE_LAST_TYPE];
 extern GMV xcode_data[];
 

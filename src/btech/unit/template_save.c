@@ -1,16 +1,22 @@
+#include "mech_electronics_api.h"
+#include "mech_equipment_api.h"
+#include "mech_network_api.h"
+#include "mech_runtime_api.h"
+#include "mech_status_types.h"
 #include "template_internal.h"
+#include "weapon_catalogue_api.h"
 
 void try_to_find_name(char *mechref, Mech *mech) {
   const char *c;
 
   if ((c = find_mechname_by_mechref(mechref)))
-    strcpy(MechType_Name(mech), c);
+    strcpy(((mech)->ud.mech_name), c);
 }
 
 int DefaultFuelByType(Mech *mech) {
   int mod = 2;
 
-  switch (MechType(mech)) {
+  switch (((mech)->ud.type)) {
   case CLASS_VTOL:
     return 2000 * mod;
   case CLASS_AERO:
@@ -22,70 +28,85 @@ int DefaultFuelByType(Mech *mech) {
   return 0;
 }
 
+static void save_nondefault_range(FILE *fp, const Mech *mech, int current,
+                                  int computer_default, int legacy_default,
+                                  const char *name) {
+  int expected =
+      mech_computer_quality(mech) ? computer_default : legacy_default;
+
+  if (current != expected)
+    fprintf(fp, "%-16s { %d }\n", name, current);
+}
+
+static void save_nondefault_integer(FILE *fp, int expected, int current,
+                                    const char *name) {
+  if (expected != current)
+    fprintf(fp, "%-16s { %d }\n", name, current);
+}
+
 int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
   FILE *fp;
   int x, x2, inf_x;
   char **locs;
   char *d, *c = ctime(&mech->xcode.context->clock->now);
 
-  if (!MechComputer(mech))
+  if (!mech_computer_quality(mech))
     computer_conversion(mech);
-  if (!MechType_Name(mech)[0])
+  if (!((mech)->ud.mech_name)[0])
     try_to_find_name(reference, mech);
   if (!(fp = fopen(filename, "w")))
     return -1;
-  if (MechType_Name(mech)[0])
-    fprintf(fp, "Name             { %s }\n", MechType_Name(mech));
+  if (((mech)->ud.mech_name)[0])
+    fprintf(fp, "Name             { %s }\n", ((mech)->ud.mech_name));
   fprintf(fp, "Reference        { %s }\n", reference);
-  fprintf(fp, "Type             { %s }\n", mech_types[(short)MechType(mech)]);
-  fprintf(fp, "Unit_Era         { %s }\n", MechUnitEra(mech)),
-      fprintf(fp, "Unit_TRO         { %s }\n", MechUnitTRO(mech)),
+  fprintf(fp, "Type             { %s }\n",
+          mech_types[(short)((mech)->ud.type)]);
+  fprintf(fp, "Unit_Era         { %s }\n", ((mech)->ud.unit_era)),
+      fprintf(fp, "Unit_TRO         { %s }\n", ((mech)->ud.unit_tro)),
       fprintf(fp, "Move_Type        { %s }\n",
-              move_types[(short)MechMove(mech)]);
-  fprintf(fp, "Tons             { %d }\n", MechTons(mech));
+              move_types[(short)((mech)->ud.move)]);
+  fprintf(fp, "Tons             { %d }\n", ((mech)->ud.tons));
   if ((d = strrchr(c, '\n')))
     *d = 0;
   fprintf(fp, "Comment          { Saved by: %s(#%ld) at %s }\n",
           game_object_name(mech->xcode.context->database, player), player, c);
-#define SILLY_UTTERANCE(ran, cran, dran, name)                                 \
-  if ((!MechComputer(mech) && ran != dran) ||                                  \
-      (MechComputer(mech) && ran != cran))                                     \
-  fprintf(fp, "%-16s { %d }\n", name, ran)
+  save_nondefault_range(fp, mech, mech_tactical_range(mech),
+                        mech_default_tactical_range(mech), DEFAULT_TACRANGE,
+                        "Tac_Range");
+  save_nondefault_range(fp, mech, mech_long_range_sensor_range(mech),
+                        mech_default_long_range_sensor_range(mech),
+                        DEFAULT_LRSRANGE, "LRS_Range");
+  save_nondefault_range(fp, mech, mech_scanner_range(mech),
+                        mech_default_scanner_range(mech), DEFAULT_SCANRANGE,
+                        "Scan_Range");
+  save_nondefault_range(fp, mech, mech_radio_range(mech),
+                        mech_default_radio_range(mech), DEFAULT_RADIORANGE,
+                        "Radio_Range");
 
-  SILLY_UTTERANCE(MechTacRange(mech), MechComputersTacRange(mech),
-                  DEFAULT_TACRANGE, "Tac_Range");
-  SILLY_UTTERANCE(MechLRSRange(mech), MechComputersLRSRange(mech),
-                  DEFAULT_LRSRANGE, "LRS_Range");
-  SILLY_UTTERANCE(MechScanRange(mech), MechComputersScanRange(mech),
-                  DEFAULT_SCANRANGE, "Scan_Range");
-  SILLY_UTTERANCE(MechRadioRange(mech), MechComputersRadioRange(mech),
-                  DEFAULT_RADIORANGE, "Radio_Range");
+  save_nondefault_integer(fp, DEFAULT_COMPUTER, mech_computer_quality(mech),
+                          "Computer");
+  save_nondefault_integer(fp, DEFAULT_RADIO, mech_radio_quality(mech), "Radio");
+  save_nondefault_integer(fp, 0, ((mech)->ud.hsengoverride), "HSEngOverRide");
+  save_nondefault_integer(
+      fp, (((mech)->rd.specials) & ICE_TECH) ? 0 : DEFAULT_HEATSINKS,
+      ((mech)->ud.numsinks), "Heat_Sinks");
+  save_nondefault_integer(fp,
+                          generic_radio_type(mech_radio_quality(mech),
+                                             ((mech)->rd.specials) & CLAN_TECH),
+                          mech_radio_configuration(mech), "RadioType");
+  save_nondefault_integer(fp, 2000, ((mech)->ud.mechbv), "Mech_BV");
+  save_nondefault_integer(fp, 2000, ((mech)->ud.cargospace), "Cargo_Space");
+  save_nondefault_integer(fp, 0, ((mech)->ud.carmaxton), "Max_Ton");
+  save_nondefault_integer(fp, 2000, ((mech)->rd.maxsuits), "Max_Suits");
+  save_nondefault_integer(fp, 0, ((mech)->ud.si_orig), "SI");
+  save_nondefault_integer(fp, DefaultFuelByType(mech), ((mech)->ud.fuel_orig),
+                          "Fuel");
 
-#define SILLY_OUTPUT(def, now, name)                                           \
-  if ((def) != (now))                                                          \
-  fprintf(fp, "%-16s { %d }\n", name, now)
-
-  SILLY_OUTPUT(DEFAULT_COMPUTER, MechComputer(mech), "Computer");
-  SILLY_OUTPUT(DEFAULT_RADIO, MechRadio(mech), "Radio");
-  SILLY_OUTPUT(0, MechHSEngOverRide(mech), "HSEngOverRide");
-  SILLY_OUTPUT((MechSpecials(mech) & ICE_TECH) ? 0 : DEFAULT_HEATSINKS,
-               MechRealNumsinks(mech), "Heat_Sinks");
-  SILLY_OUTPUT(
-      generic_radio_type(MechRadio(mech), MechSpecials(mech) & CLAN_TECH),
-      MechRadioType(mech), "RadioType");
-  SILLY_OUTPUT(2000, MechBV(mech), "Mech_BV");
-  SILLY_OUTPUT(2000, CargoSpace(mech), "Cargo_Space");
-  SILLY_OUTPUT(0, CarMaxTon(mech), "Max_Ton");
-  SILLY_OUTPUT(2000, MechMaxSuits(mech), "Max_Suits");
-  SILLY_OUTPUT(0, AeroSIOrig(mech), "SI");
-
-  SILLY_OUTPUT(DefaultFuelByType(mech), AeroFuelOrig(mech), "Fuel");
-
-  fprintf(fp, "Max_Speed        { %.2f }\n", MechMaxSpeed(mech));
-  if (MechJumpSpeed(mech) > 0.0)
-    fprintf(fp, "Jump_Speed       { %.2f }\n", MechJumpSpeed(mech));
-  x = MechSpecials(mech);
-  x2 = MechSpecials2(mech);
+  fprintf(fp, "Max_Speed        { %.2f }\n", ((mech)->ud.maxspeed));
+  if (((mech)->rd.jumpspeed) > 0.0)
+    fprintf(fp, "Jump_Speed       { %.2f }\n", ((mech)->rd.jumpspeed));
+  x = ((mech)->rd.specials);
+  x2 = ((mech)->rd.specials2);
   /* Remove AMS'es, they're re-generated back on loadtime */
   x &= ~(CL_ANTI_MISSILE_TECH | IS_ANTI_MISSILE_TECH | SS_ABILITY);
   x &= /* Calculated at load-time */
@@ -93,7 +114,7 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
         C3_SLAVE_TECH | C3_MASTER_TECH | ARTEMIS_IV_TECH | ES_TECH | FF_TECH |
         LIGHT_BAP_TECH);
 
-  if (MechType(mech) == CLASS_MECH)
+  if (((mech)->ud.type) == CLASS_MECH)
     x &= ~(XL_TECH | XXL_TECH | CE_TECH | LE_TECH);
 
   /* Get rid of our specials2 */
@@ -106,15 +127,15 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
             build_bit_string2(specials, specials2, x, x2,
                               (char[BTECH_TEXT_CAPACITY]){0}));
 
-  inf_x = MechInfantrySpecials(mech);
+  inf_x = ((mech)->rd.infantry_specials);
 
   if (inf_x)
     fprintf(fp, "InfantrySpecials { %s }\n",
             build_bit_string(infantry_specials, inf_x,
                              (char[BTECH_TEXT_CAPACITY]){0}));
 
-  if ((locs = (char **)ProperSectionStringFromType(MechType(mech),
-                                                   MechMove(mech)))) {
+  if ((locs = (char **)ProperSectionStringFromType(((mech)->ud.type),
+                                                   ((mech)->ud.move)))) {
     dump_locations(fp, mech, (const char **)locs);
     fclose(fp);
     return 0;
@@ -305,7 +326,7 @@ void update_specials(Mech *mech) {
   int wcSthArmor = 0;
   int wcNSS = 0;
   int wcAngel = 0;
-  int cl = MechSpecials(mech) & CLAN_TECH;
+  int cl = ((mech)->rd.specials) & CLAN_TECH;
   int e_count = 0;
   int tTechOK = 1;
   int wcHvyFF = 0;
@@ -315,19 +336,19 @@ void update_specials(Mech *mech) {
   int awInfSpec[5];
   int wcSuits = 0;
 
-  MechSpecials(mech) &=
+  ((mech)->rd.specials) &=
       ~(BEAGLE_PROBE_TECH | TRIPLE_MYOMER_TECH | MASC_TECH | ECM_TECH |
         C3_SLAVE_TECH | C3_MASTER_TECH | ARTEMIS_IV_TECH | ES_TECH | FF_TECH |
         IS_ANTI_MISSILE_TECH | CL_ANTI_MISSILE_TECH | LIGHT_BAP_TECH);
-  if (MechType(mech) == CLASS_MECH)
-    MechSpecials(mech) &= ~(XL_TECH | XXL_TECH | CE_TECH | LE_TECH);
+  if (((mech)->ud.type) == CLASS_MECH)
+    ((mech)->rd.specials) &= ~(XL_TECH | XXL_TECH | CE_TECH | LE_TECH);
 
-  MechSpecials2(mech) &=
+  ((mech)->rd.specials2) &=
       ~(STEALTH_ARMOR_TECH | NULLSIGSYS_TECH | ANGEL_ECM_TECH |
         HVY_FF_ARMOR_TECH | LT_FF_ARMOR_TECH | TAG_TECH | C3I_TECH |
         BLOODHOUND_PROBE_TECH | TCOMP_TECH);
 
-  MechInfantrySpecials(mech) &=
+  ((mech)->rd.infantry_specials) &=
       ~(CS_PURIFIER_STEALTH_TECH | DC_KAGE_STEALTH_TECH |
         FWL_ACHILEUS_STEALTH_TECH | FC_INFILTRATOR_STEALTH_TECH |
         FC_INFILTRATORII_STEALTH_TECH);
@@ -337,62 +358,96 @@ void update_specials(Mech *mech) {
 
   for (x = 0; x < NUM_SECTIONS; x++) {
     e_count = 0;
-    MechSections(mech)[x].config &= ~CASE_TECH;
+    ((mech)->ud.sections)[x].config &= ~CASE_TECH;
     awcSthArmor[x] = 0;
     awcNSS[x] = 0;
 
     for (y = 0; y < CritsInLoc(mech, x); y++)
-      if ((t = GetPartType(mech, x, y))) {
-        switch (Special2I(t)) {
-#define TECHC(item, name)                                                      \
-  case item:                                                                   \
-    name++;                                                                    \
-    break;
-#define TECHCU(item, name)                                                     \
-  case item:                                                                   \
-    if (!PartIsNonfunctional(mech, x, y))                                      \
-      name++;                                                                  \
-    break;
-#define TECH(item, name)                                                       \
-  case item:                                                                   \
-    MechSpecials(mech) |= name;                                                \
-    break
-#define TECH2(item, name)                                                      \
-  case item:                                                                   \
-    MechSpecials2(mech) |= name;                                               \
-    break
-#define TECHU(item, name)                                                      \
-  case item:                                                                   \
-    if (!PartIsNonfunctional(mech, x, y))                                      \
-      MechSpecials(mech) |= name;                                              \
-    break
-          TECH(ARTEMIS_IV, ARTEMIS_IV_TECH);
-          TECHU(BEAGLE_PROBE, BEAGLE_PROBE_TECH);
-          TECHU(LIGHT_BAP, LIGHT_BAP_TECH);
-          TECH(ECM, ECM_TECH);
-          TECH2(TAG, TAG_TECH);
-          TECHU(C3_SLAVE, C3_SLAVE_TECH);
-          TECHCU(MASC, masc_count);
-          TECHC(C3_MASTER, c3_master_count);
-          TECHCU(C3I, wcC3i);
-          TECHCU(ANGELECM, wcAngel);
-          TECHC(TRIPLE_STRENGTH_MYOMER, tsm_count);
-          TECHC(FERRO_FIBROUS, ff_count);
-          TECHC(HVY_FERRO_FIBROUS, wcHvyFF);
-          TECHC(LT_FERRO_FIBROUS, wcLtFF);
-          TECHC(BLOODHOUND_PROBE, wcBloodhound);
-          TECHCU(TARGETING_COMPUTER, tc_count);
-          TECHC(ENDO_STEEL, es_count);
-          TECHC(PURIFIER_ARMOR, awInfSpec[0]);
-          TECHCU(KAGE_STEALTH_UNIT, awInfSpec[1]);
-          TECHCU(ACHILEUS_STEALTH_UNIT, awInfSpec[2]);
-          TECHCU(INFILTRATOR_STEALTH_UNIT, awInfSpec[3]);
-          TECHCU(INFILTRATORII_STEALTH_UNIT, awInfSpec[4]);
+      if ((t = mech_critical_part_type(mech, x, y))) {
+        switch (special_from_equipment_index(t)) {
+        case ARTEMIS_IV:
+          ((mech)->rd.specials) |= ARTEMIS_IV_TECH;
+          break;
+        case BEAGLE_PROBE:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            ((mech)->rd.specials) |= BEAGLE_PROBE_TECH;
+          break;
+        case LIGHT_BAP:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            ((mech)->rd.specials) |= LIGHT_BAP_TECH;
+          break;
+        case ECM:
+          ((mech)->rd.specials) |= ECM_TECH;
+          break;
+        case TAG:
+          ((mech)->rd.specials2) |= TAG_TECH;
+          break;
+        case C3_SLAVE:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            ((mech)->rd.specials) |= C3_SLAVE_TECH;
+          break;
+        case MASC:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            masc_count++;
+          break;
+        case C3_MASTER:
+          c3_master_count++;
+          break;
+        case C3I:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            wcC3i++;
+          break;
+        case ANGELECM:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            wcAngel++;
+          break;
+        case TRIPLE_STRENGTH_MYOMER:
+          tsm_count++;
+          break;
+        case FERRO_FIBROUS:
+          ff_count++;
+          break;
+        case HVY_FERRO_FIBROUS:
+          wcHvyFF++;
+          break;
+        case LT_FERRO_FIBROUS:
+          wcLtFF++;
+          break;
+        case BLOODHOUND_PROBE:
+          wcBloodhound++;
+          break;
+        case TARGETING_COMPUTER:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            tc_count++;
+          break;
+        case ENDO_STEEL:
+          es_count++;
+          break;
+        case PURIFIER_ARMOR:
+          awInfSpec[0]++;
+          break;
+        case KAGE_STEALTH_UNIT:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            awInfSpec[1]++;
+          break;
+        case ACHILEUS_STEALTH_UNIT:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            awInfSpec[2]++;
+          break;
+        case INFILTRATOR_STEALTH_UNIT:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            awInfSpec[3]++;
+          break;
+        case INFILTRATORII_STEALTH_UNIT:
+          if (!mech_critical_is_nonfunctional(mech, x, y))
+            awInfSpec[4]++;
+          break;
         case ENGINE:
           e_count++;
           break;
         case CASE:
-          MechSections(mech)[(MechType(mech) == CLASS_VEH_GROUND) ? BSIDE : x]
+          ((mech)->ud.sections)[(((mech)->ud.type) == CLASS_VEH_GROUND) ? BSIDE
+                                                                        : x]
               .config |= CASE_TECH;
           break;
         case STEALTH_ARMOR:
@@ -404,92 +459,97 @@ void update_specials(Mech *mech) {
           wcNSS++;
           break;
         }
-        if (IsWeapon(t) && IsAMS(Weapon2I(t))) {
-          if (MechWeapons[Weapon2I(t)].special & CLAT)
-            MechSpecials(mech) |= CL_ANTI_MISSILE_TECH;
+        if (equipment_is_weapon(t) &&
+            weapon_catalogue_is_anti_missile(weapon_from_equipment_index(t))) {
+          if (MechWeapons[weapon_from_equipment_index(t)].special & CLAT)
+            ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
           else
-            MechSpecials(mech) |= IS_ANTI_MISSILE_TECH;
+            ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
         }
       }
     if (x != CTORSO && e_count) {
       if (e_count > 3)
-        MechSpecials(mech) |= XXL_TECH;
+        ((mech)->rd.specials) |= XXL_TECH;
 
       else if (e_count == 2)
         if (cl)
-          MechSpecials(mech) |= XL_TECH;
+          ((mech)->rd.specials) |= XL_TECH;
 
         else
-          MechSpecials(mech) |= LE_TECH;
+          ((mech)->rd.specials) |= LE_TECH;
 
       else
-        MechSpecials(mech) |= XL_TECH;
+        ((mech)->rd.specials) |= XL_TECH;
     } else {
-      if (x == CTORSO && e_count < 4 && MechType(mech) == CLASS_MECH)
-        MechSpecials(mech) |= CE_TECH;
+      if (x == CTORSO && e_count < 4 && ((mech)->ud.type) == CLASS_MECH)
+        ((mech)->rd.specials) |= CE_TECH;
     }
   }
-  if ((MechSpecials(mech) & (XXL_TECH | XL_TECH | LE_TECH)) &&
-      (MechSpecials(mech) & CE_TECH))
+  if ((((mech)->rd.specials) & (XXL_TECH | XL_TECH | LE_TECH)) &&
+      (((mech)->rd.specials) & CE_TECH))
     btech_channel_send(
         mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("#%ld apparently is very weird: Compact engine AND XL/XXL?",
                 mech->mynum));
   if (tc_count) {
-    MechSpecials2(mech) |= TCOMP_TECH;
+    ((mech)->rd.specials2) |= TCOMP_TECH;
     for (x = 0; x < NUM_SECTIONS; x++)
       for (y = 0; y < CritsInLoc(mech, x); y++)
-        if (IsWeapon((t = GetPartType(mech, x, y))))
-          if (TCAble(t))
-            GetPartFireMode(mech, x, y) |= ON_TC;
+        if (equipment_is_weapon((t = mech_critical_part_type(mech, x, y))))
+          if (equipment_can_use_targeting_computer(t))
+            mech_critical_fire_mode_add(mech, x, y, ON_TC);
   }
-  if (masc_count >= MAX(1, (MechTons(mech) / (cl ? 25 : 20))))
-    MechSpecials(mech) |= MASC_TECH;
-#define ITech(var, cnt, spec)                                                  \
-  if (((var)) >= ((cnt)) || (MechType(mech) != CLASS_MECH && ((var) > 0)))     \
-  MechSpecials(mech) |= spec
+  if (masc_count >= MAX(1, (((mech)->ud.tons) / (cl ? 25 : 20))))
+    ((mech)->rd.specials) |= MASC_TECH;
+  if (ff_count >= (cl ? 7 : 14) ||
+      (((mech)->ud.type) != CLASS_MECH && ff_count > 0))
+    ((mech)->rd.specials) |= FF_TECH;
+  if (es_count >= (cl ? 7 : 14) ||
+      (((mech)->ud.type) != CLASS_MECH && es_count > 0))
+    ((mech)->rd.specials) |= ES_TECH;
+  if (tsm_count >= 6 || (((mech)->ud.type) != CLASS_MECH && tsm_count > 0))
+    ((mech)->rd.specials) |= TRIPLE_MYOMER_TECH;
+  if (wcAngel >= 2 || (((mech)->ud.type) != CLASS_MECH && wcAngel > 0))
+    ((mech)->rd.specials2) |= ANGEL_ECM_TECH;
+  if (wcHvyFF >= 21 || (((mech)->ud.type) != CLASS_MECH && wcHvyFF > 0))
+    ((mech)->rd.specials2) |= HVY_FF_ARMOR_TECH;
+  if (wcLtFF >= 7 || (((mech)->ud.type) != CLASS_MECH && wcLtFF > 0))
+    ((mech)->rd.specials2) |= LT_FF_ARMOR_TECH;
+  if (wcC3i >= 2 || (((mech)->ud.type) != CLASS_MECH && wcC3i > 0))
+    ((mech)->rd.specials2) |= C3I_TECH;
+  if (wcBloodhound >= 3 ||
+      (((mech)->ud.type) != CLASS_MECH && wcBloodhound > 0))
+    ((mech)->rd.specials2) |= BLOODHOUND_PROBE_TECH;
 
-#define ITech2(var, cnt, spec)                                                 \
-  if (((var)) >= ((cnt)) || (MechType(mech) != CLASS_MECH && ((var) > 0)))     \
-  MechSpecials2(mech) |= spec
-
-  ITech(ff_count, (cl ? 7 : 14), FF_TECH);
-  ITech(es_count, (cl ? 7 : 14), ES_TECH);
-  ITech(tsm_count, 6, TRIPLE_MYOMER_TECH);
-  ITech2(wcAngel, 2, ANGEL_ECM_TECH);
-  ITech2(wcHvyFF, 21, HVY_FF_ARMOR_TECH);
-  ITech2(wcLtFF, 7, LT_FF_ARMOR_TECH);
-  ITech2(wcC3i, 2, C3I_TECH);
-  ITech2(wcBloodhound, 3, BLOODHOUND_PROBE_TECH);
-
-  if (MechType(mech) == CLASS_MECH) {
+  if (((mech)->ud.type) == CLASS_MECH) {
     /* Be 'noisy' about some crits/techs */
     if ((ff_count > 0) && (ff_count < (cl ? 7 : 14)))
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                          tprintf("%s (#%ld) is missing FF Crits %d/%d!",
-                                 MechType_Ref(mech), mech->mynum, ff_count,
+                                 ((mech)->ud.mech_type), mech->mynum, ff_count,
                                  (cl ? 7 : 14)));
 
     if ((es_count > 0) && (es_count < (cl ? 7 : 14)))
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                          tprintf("%s (#%ld) is missing ES Crits %d/%d!",
-                                 MechType_Ref(mech), mech->mynum, es_count,
+                                 ((mech)->ud.mech_type), mech->mynum, es_count,
                                  (cl ? 7 : 14)));
 
     if ((tsm_count > 0) && (tsm_count < 6))
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                          tprintf("%s (#%ld) is missing TSM Crits %d/6!",
-                                 MechType_Ref(mech), mech->mynum, tsm_count));
+                                 ((mech)->ud.mech_type), mech->mynum,
+                                 tsm_count));
 
     if ((wcHvyFF > 0) && (wcHvyFF < 21))
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                          tprintf("%s (#%ld) is missing HvyFF Crits %d/21!",
-                                 MechType_Ref(mech), mech->mynum, wcHvyFF));
+                                 ((mech)->ud.mech_type), mech->mynum, wcHvyFF));
 
     if ((wcLtFF > 0) && (wcLtFF < 7))
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                          tprintf("%s (#%ld) is missing LtFF Crits %d/7!",
-                                 MechType_Ref(mech), mech->mynum, wcLtFF));
+                                 ((mech)->ud.mech_type), mech->mynum, wcLtFF));
   }
 
   /*
@@ -500,7 +560,7 @@ void update_specials(Mech *mech) {
   if (wcNSS > 0) {
     tTechOK = 1;
 
-    if (MechType(mech) != CLASS_MECH) {
+    if (((mech)->ud.type) != CLASS_MECH) {
       if (wcNSS < 1)
         tTechOK = 0;
     } else {
@@ -515,7 +575,7 @@ void update_specials(Mech *mech) {
     }
 
     if (tTechOK)
-      MechSpecials2(mech) |= NULLSIGSYS_TECH;
+      ((mech)->rd.specials2) |= NULLSIGSYS_TECH;
   }
 
   /*
@@ -526,10 +586,10 @@ void update_specials(Mech *mech) {
   if (wcSthArmor > 0) {
     tTechOK = 1;
 
-    if (!(MechSpecials(mech) & ECM_TECH)) {
+    if (!(((mech)->rd.specials) & ECM_TECH)) {
       tTechOK = 0;
     } else {
-      if (MechType(mech) != CLASS_MECH) {
+      if (((mech)->ud.type) != CLASS_MECH) {
         if (wcSthArmor < 1)
           tTechOK = 0;
       } else {
@@ -545,57 +605,57 @@ void update_specials(Mech *mech) {
     }
 
     if (tTechOK)
-      MechSpecials2(mech) |= STEALTH_ARMOR_TECH;
+      ((mech)->rd.specials2) |= STEALTH_ARMOR_TECH;
   }
 
   /* Let's do our suit checks */
-  if (MechType(mech) == CLASS_BSUIT) {
+  if (((mech)->ud.type) == CLASS_BSUIT) {
     wcSuits = bsuit_member_count(mech);
 
     if (awInfSpec[0] >= wcSuits)
-      MechInfantrySpecials(mech) |= CS_PURIFIER_STEALTH_TECH;
+      ((mech)->rd.infantry_specials) |= CS_PURIFIER_STEALTH_TECH;
 
     if (awInfSpec[1] >= wcSuits)
-      MechInfantrySpecials(mech) |= DC_KAGE_STEALTH_TECH;
+      ((mech)->rd.infantry_specials) |= DC_KAGE_STEALTH_TECH;
 
     if (awInfSpec[2] >= wcSuits)
-      MechInfantrySpecials(mech) |= FWL_ACHILEUS_STEALTH_TECH;
+      ((mech)->rd.infantry_specials) |= FWL_ACHILEUS_STEALTH_TECH;
 
     if (awInfSpec[3] >= wcSuits)
-      MechInfantrySpecials(mech) |= FC_INFILTRATOR_STEALTH_TECH;
+      ((mech)->rd.infantry_specials) |= FC_INFILTRATOR_STEALTH_TECH;
 
     if (awInfSpec[4] >= wcSuits)
-      MechInfantrySpecials(mech) |= FC_INFILTRATORII_STEALTH_TECH;
+      ((mech)->rd.infantry_specials) |= FC_INFILTRATORII_STEALTH_TECH;
   }
 
   /* New C3 Master code */
   if (c3_master_count > 0) {
-    MechTotalC3Masters(mech) = mech_c3_total_master_count(mech);
-    MechWorkingC3Masters(mech) = mech_c3_working_master_count(mech);
+    mech_c3_total_masters_set(mech, mech_c3_total_master_count(mech));
+    mech_c3_working_masters_set(mech, mech_c3_working_master_count(mech));
 
-    if (MechTotalC3Masters(mech) > 0)
-      MechSpecials(mech) |= C3_MASTER_TECH;
+    if (mech_c3_total_masters(mech) > 0)
+      ((mech)->rd.specials) |= C3_MASTER_TECH;
 
-    if (MechWorkingC3Masters(mech) == 0)
-      MechCritStatus(mech) |= C3_DESTROYED;
+    if (mech_c3_working_masters(mech) == 0)
+      ((mech)->rd.critstatus) |= C3_DESTROYED;
     else
-      MechCritStatus(mech) &= ~C3_DESTROYED;
+      ((mech)->rd.critstatus) &= ~C3_DESTROYED;
   }
 }
 
 int update_oweight(Mech *mech, int value) {
-  MechCritStatus(mech) |= OWEIGHT_OK;
+  ((mech)->rd.critstatus) |= OWEIGHT_OK;
 
   /* Check to prevent silliness */
   if (!mech->xcode.context->configuration->btech_dynspeed ||
-      (value == 1 && !Destroyed(mech)))
-    value = MechTons(mech) * 1024;
-  MechRTonsV(mech) = value;
+      (value == 1 && !mech_is_destroyed(mech)))
+    value = ((mech)->ud.tons) * 1024;
+  ((mech)->rd.row) = value;
   return value;
 }
 
 int mech_calculated_weight(Mech *mech) {
-  if (MechCritStatus(mech) & OWEIGHT_OK)
-    return MechRTonsV(mech);
+  if (((mech)->rd.critstatus) & OWEIGHT_OK)
+    return ((mech)->rd.row);
   return update_oweight(mech, mech_weight_sub(GOD, mech, -1));
 }

@@ -43,8 +43,6 @@ typedef struct NODETYPE {
   struct NODETYPE *next;           /* for filing purposes */
 } NODE;
 
-#define TileNum(x, y) ((x) + ((y) << 16))
-
 /**************************************************************************/
 
 /*                                 STACK                                  */

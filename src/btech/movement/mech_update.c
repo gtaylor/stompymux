@@ -32,7 +32,6 @@
 #include "mech_motion_integration_api.h"
 #include "mech_move_api.h"
 #include "mech_movement_validation_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_progress_api.h"

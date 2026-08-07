@@ -57,7 +57,7 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
   float range;
 
   /* Log It */
-  print_autogun_log(autopilot, "Autogun - Start Physical Attack Stage");
+  autopilot_autogun_log(autopilot, "Autogun - Start Physical Attack Stage");
 
   /* Get range from mech to current target */
   range =
@@ -123,10 +123,10 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
   if (physical_target && battle_map_unit_is_seen(map, mech, physical_target)) {
 
     /* Log It */
-    print_autogun_log(autopilot,
-                      "Autogun - Attempting physical attack against"
-                      " target #%ld",
-                      mech_dbref(physical_target));
+    autopilot_autogun_log(autopilot,
+                          "Autogun - Attempting physical attack against"
+                          " target #%ld",
+                          mech_dbref(physical_target));
 
     /* Calculate elevation difference */
     elevation_diff = mech_position_z(mech) - mech_position_z(target);
@@ -423,5 +423,5 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
   /* End of physical attack */
   /* Log It */
-  print_autogun_log(autopilot, "Autogun - End Physical Attack Stage");
+  autopilot_autogun_log(autopilot, "Autogun - End Physical Attack Stage");
 }

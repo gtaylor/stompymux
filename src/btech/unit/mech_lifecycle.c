@@ -1,6 +1,13 @@
 /* State transitions for a BTech unit's lifecycle. */
 
 #include "mech_lifecycle.h"
+#include "mech_classification_api.h"
+#include "mech_crew_api.h"
+#include "mech_equipment_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_status_types.h"
+#include "mech_targeting_api.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -16,9 +23,7 @@
 #include "mech_events_api.h"
 #include "mech_identity_api.h"
 #include "mech_internal.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
 #include "mech_stagger.h"
@@ -31,34 +36,34 @@
 #include "registry_api.h"
 
 void mech_power_up(Mech *mech) {
-  MechStatus(mech) |= STARTED;
-  MechTurnDamage(mech) = 0;
+  ((mech)->rd.status) |= STARTED;
+  ((mech)->rd.turndamage) = 0;
   mech_update_recycling(mech);
-  MechNumSeen(mech) = 0;
+  ((mech)->rd.num_seen) = 0;
   mech_start_seeing(mech);
 }
 
 void mech_power_down(Mech *mech) {
-  if (!Destroyed(mech)) {
+  if (!mech_is_destroyed(mech)) {
     mech_update_recycling(mech);
-    MechSpeed(mech) = 0.0;
-    MechCritStatus(mech) &= ~HEATCUTOFF;
-    MechStatus(mech) &= ~(STARTED | MASC_ENABLED);
-    MechStatus2(mech) &= ~(ECM_ENABLED | ECCM_ENABLED | PER_ECM_ENABLED |
-                           PER_ECCM_ENABLED | ANGEL_ECM_ENABLED |
-                           ANGEL_ECCM_ENABLED | NULLSIGSYS_ON | STH_ARMOR_ON);
-    MechDesiredSpeed(mech) = 0.0;
+    ((mech)->rd.speed) = 0.0;
+    ((mech)->rd.critstatus) &= ~HEATCUTOFF;
+    ((mech)->rd.status) &= ~(STARTED | MASC_ENABLED);
+    ((mech)->rd.status2) &= ~(
+        ECM_ENABLED | ECCM_ENABLED | PER_ECM_ENABLED | PER_ECCM_ENABLED |
+        ANGEL_ECM_ENABLED | ANGEL_ECCM_ENABLED | NULLSIGSYS_ON | STH_ARMOR_ON);
+    ((mech)->rd.desired_speed) = 0.0;
   }
-  MechPilot(mech) = -1;
-  MechTarget(mech) = -1;
+  mech_pilot_dbref_set(mech, -1);
+  mech_target_dbref_set(mech, -1);
   mech_event_cancel(mech, EVENT_STARTUP);
-  MechStatus2(mech) &= ~SLITE_ON;
-  MechCritStatus(mech) &= ~SLITE_LIT;
+  ((mech)->rd.status2) &= ~SLITE_ON;
+  ((mech)->rd.critstatus) &= ~SLITE_LIT;
   mech_event_cancel(mech, EVENT_MOVEMODE);
-  MechStatus2(mech) &= ~MOVE_MODES;
+  ((mech)->rd.status2) &= ~MOVE_MODES;
   mech_event_cancel(mech, EVENT_JUMP);
   mech_event_cancel(mech, EVENT_MOVE);
-  MechMASCCounter(mech) = 0;
+  ((mech)->rd.masc_value) = 0;
   mech_event_cancel(mech, EVENT_STAND);
   mech_event_cancel(mech, EVENT_JUMPSTABIL);
   mech_event_cancel(mech, EVENT_TAKEOFF);
@@ -68,70 +73,71 @@ void mech_power_down(Mech *mech) {
   mech_tag_stop(mech);
   mech_drop_club(mech);
   mech_event_cancel(mech, EVENT_MASC_FAIL);
-  MechChargeTarget(mech) = -1;
+  mech_charge_target_dbref_set(mech, -1);
   bsuit_swarm_stop(mech, 0);
-  MechSChargeCounter(mech) = 0;
-  if (MechCarrying(mech) > 0) {
+  ((mech)->rd.scharge_value) = 0;
+  if (((mech)->rd.carrying) > 0) {
     mech_dropoff(GOD, mech, "");
   }
 }
 
 void mech_mark_destroyed(Mech *mech) {
-  if (Uncon(mech)) {
-    MechStatus(mech) &= ~(BLINDED | UNCONSCIOUS);
+  if (mech_pilot_is_unconscious(mech)) {
+    ((mech)->rd.status) &= ~(BLINDED | UNCONSCIOUS);
     mech_notify(mech, MECHALL,
                 "The mech was destroyed while pilot was unconscious!");
   }
-  MechStatus(mech) &= ~BLINDED;
+  ((mech)->rd.status) &= ~BLINDED;
   mech_power_down(mech);
   mech_event_cancel(mech, EVENT_VEHICLEBURN);
   mech_stop_stagger_check(mech);
-  StaggerDamage(mech) = 0;
-  MechCritStatus(mech) &= ~JELLIED;
-  MechStatus(mech) |= DESTROYED;
-  MechCritStatus(mech) &= ~MECH_STUNNED;
+  mech_stagger_tracking_reset(mech);
+  ((mech)->rd.critstatus) &= ~JELLIED;
+  ((mech)->rd.status) |= DESTROYED;
+  ((mech)->rd.critstatus) &= ~MECH_STUNNED;
   bsuit_swarmers_stop(
       btech_context_get_map(mech->xcode.context, mech->mapindex), mech, 1);
   mech_events_cancel_all(mech);
-  if ((MechType(mech) == CLASS_MECH && Jumping(mech)) ||
-      (MechType(mech) != CLASS_MECH &&
-       MechZ(mech) > MechUpperElevation(mech))) {
+  if ((((mech)->ud.type) == CLASS_MECH && mech_is_jumping(mech)) ||
+      (((mech)->ud.type) != CLASS_MECH &&
+       ((mech)->pd.z) > mech_upper_surface_elevation(mech))) {
     mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
   }
 }
 
 void mech_destroy_and_place(Mech *mech) {
   mech_mark_destroyed(mech);
-  MechVerticalSpeed(mech) = 0.0;
+  ((mech)->rd.verticalspeed) = 0.0;
   if (mech_real_terrain_get(mech) == WATER ||
       mech_real_terrain_get(mech) == ICE) {
-    MechZ(mech) = -MechElev(mech);
+    ((mech)->pd.z) = -((mech)->pd.elev);
   } else if (mech_real_terrain_get(mech) == BRIDGE) {
-    if (MechZ(mech) >= MechUpperElevation(mech)) {
-      MechZ(mech) = MechUpperElevation(mech);
+    if (((mech)->pd.z) >= mech_upper_surface_elevation(mech)) {
+      ((mech)->pd.z) = mech_upper_surface_elevation(mech);
     } else {
-      MechZ(mech) = MechLowerElevation(mech);
+      ((mech)->pd.z) = mech_lower_surface_elevation(mech);
     }
   } else {
-    MechZ(mech) = MechElev(mech);
+    ((mech)->pd.z) = ((mech)->pd.elev);
   }
-  MechFZ(mech) = ZSCALE * MechZ(mech);
+  ((mech)->pd.fz) = ZSCALE * ((mech)->pd.z);
 }
 
 bool mech_has_pilot(const Mech *mech) {
-  return MechPilot(mech) > 0 &&
-         game_object_location(mech->xcode.context->database, MechPilot(mech)) ==
-             mech->mynum;
+  return mech_pilot_dbref(mech) > 0 &&
+         game_object_location(mech->xcode.context->database,
+                              mech_pilot_dbref(mech)) == mech->mynum;
 }
 
 bool mech_has_active_pilot(const Mech *mech) {
   return mech_has_pilot(mech) &&
-         (is_connected(mech->xcode.context->database, MechPilot(mech)) ||
-          !is_player(mech->xcode.context->database, MechPilot(mech)));
+         (is_connected(mech->xcode.context->database, mech_pilot_dbref(mech)) ||
+          !is_player(mech->xcode.context->database, mech_pilot_dbref(mech)));
 }
 
 bool mech_has_gunner(const Mech *mech) {
-  return (mech->xcode.context->combat_overrides.pilot && GunPilot(mech) > 0) ||
+  return (mech->xcode.context->combat_overrides.pilot &&
+          mech_gunner_dbref(mech) > 0) ||
          (!mech->xcode.context->combat_overrides.pilot && mech_has_pilot(mech));
 }
 
@@ -139,40 +145,42 @@ bool mech_has_active_gunner(const Mech *mech) {
   if (!mech->xcode.context->combat_overrides.pilot) {
     return mech_has_active_pilot(mech);
   }
-  return GunPilot(mech) > 0 &&
-         (is_connected(mech->xcode.context->database, GunPilot(mech)) ||
-          !is_player(mech->xcode.context->database, GunPilot(mech)));
+  return mech_gunner_dbref(mech) > 0 &&
+         (is_connected(mech->xcode.context->database,
+                       mech_gunner_dbref(mech)) ||
+          !is_player(mech->xcode.context->database, mech_gunner_dbref(mech)));
 }
 
 void mech_max_speed_set(Mech *mech, float speed) {
-  MechMaxSpeed(mech) = speed;
-  MechCritStatus(mech) &= ~SPEED_OK;
+  ((mech)->ud.maxspeed) = speed;
+  ((mech)->rd.critstatus) &= ~SPEED_OK;
   mech_speed_correct(mech);
 }
 
 void mech_max_speed_lower(Mech *mech, float amount) {
-  mech_max_speed_set(mech, MechMaxSpeed(mech) - amount);
+  mech_max_speed_set(mech, ((mech)->ud.maxspeed) - amount);
 }
 
 void mech_max_speed_divide(Mech *mech, float divisor) {
-  mech_max_speed_set(mech, MechMaxSpeed(mech) / divisor);
+  mech_max_speed_set(mech, ((mech)->ud.maxspeed) / divisor);
 }
 
 bool mech_can_jump(const Mech *mech) {
-  return !mech_event_count(mech, EVENT_JUMPSTABIL) && !Jumping(mech);
+  return !mech_event_count(mech, EVENT_JUMPSTABIL) && !mech_is_jumping(mech);
 }
 
 void mech_maybe_move(Mech *mech) {
-  if (!mech_event_count(mech, EVENT_MOVE) && Started(mech) &&
-      (!Fallen(mech) || MechType(mech) == CLASS_MECH)) {
+  if (!mech_event_count(mech, EVENT_MOVE) && mech_is_started(mech) &&
+      (!mech_is_fallen(mech) || ((mech)->ud.type) == CLASS_MECH)) {
     mech_event_schedule(mech, EVENT_MOVE,
-                        is_aero(mech) ? aero_move_event : mech_move_event,
+                        mech_is_aerospace_unit(mech) ? aero_move_event
+                                                     : mech_move_event,
                         MOVE_TICK, 0);
   }
 }
 
 void mech_update_recycling(Mech *mech) {
-  if (Started(mech) && !Destroyed(mech) &&
+  if (mech_is_started(mech) && !mech_is_destroyed(mech) &&
       mech->rd.last_weapon_recycle != mech->xcode.context->events->tick) {
     mech_weapon_recycle_update(mech);
   }
@@ -180,7 +188,7 @@ void mech_update_recycling(Mech *mech) {
 
 void mech_set_recycle_part(Mech *mech, int section, int critical, int value) {
   mech_update_recycling(mech);
-  SetPartData(mech, section, critical, value);
+  mech_critical_data_set(mech, section, critical, value);
 }
 
 void mech_set_recycle_limb(Mech *mech, int section, int value) {
@@ -189,20 +197,20 @@ void mech_set_recycle_limb(Mech *mech, int section, int value) {
 }
 
 void mech_make_fall(Mech *mech) {
-  MechStatus(mech) |= FALLEN;
-  MechStatus(mech) &= ~(TORSO_RIGHT | TORSO_LEFT | FLIPPED_ARMS);
+  ((mech)->rd.status) |= FALLEN;
+  ((mech)->rd.status) &= ~(TORSO_RIGHT | TORSO_LEFT | FLIPPED_ARMS);
   MarkForLOSUpdate(mech);
   mech_flood(mech);
   mech_event_cancel(mech, EVENT_STAND);
   mech_event_cancel(mech, EVENT_CHANGING_HULLDOWN);
-  MechStatus(mech) &= ~HULLDOWN;
+  ((mech)->rd.status) &= ~HULLDOWN;
   if (btech_context_stagger_mode(mech_context(mech))) {
     mech_stagger_damage_clear(mech);
   }
 }
 
 void mech_make_stand(Mech *mech) {
-  MechStatus(mech) &= ~FALLEN;
+  ((mech)->rd.status) &= ~FALLEN;
   MarkForLOSUpdate(mech);
 }
 
@@ -215,19 +223,19 @@ void mech_start_seeing(Mech *mech) {
 }
 
 void mech_continue_flying(Mech *mech) {
-  if (is_aero(mech) || MechMove(mech) == MOVE_VTOL) {
-    MechStatus(mech) &= ~LANDED;
-    MechZ(mech) += 1;
-    MechFZ(mech) = ZSCALE * MechZ(mech);
+  if (mech_is_aerospace_unit(mech) || ((mech)->ud.move) == MOVE_VTOL) {
+    ((mech)->rd.status) &= ~LANDED;
+    ((mech)->pd.z) += 1;
+    ((mech)->pd.fz) = ZSCALE * ((mech)->pd.z);
     mech_event_cancel(mech, EVENT_MOVE);
   }
 }
 
 void mech_drop_club(Mech *mech) {
-  if ((MechSections(mech)[RARM].specials & CARRYING_CLUB) ||
-      (MechSections(mech)[LARM].specials & CARRYING_CLUB)) {
-    MechSections(mech)[RARM].specials &= ~CARRYING_CLUB;
-    MechSections(mech)[LARM].specials &= ~CARRYING_CLUB;
+  if ((((mech)->ud.sections)[RARM].specials & CARRYING_CLUB) ||
+      (((mech)->ud.sections)[LARM].specials & CARRYING_CLUB)) {
+    ((mech)->ud.sections)[RARM].specials &= ~CARRYING_CLUB;
+    ((mech)->ud.sections)[LARM].specials &= ~CARRYING_CLUB;
     mech_notify(mech, MECHALL, "Your club falls to the ground and shatters.");
     mech_los_broadcast(mech, "'s club falls to the ground and shatters.");
   }
@@ -247,9 +255,9 @@ void mech_communications_clear(Mech *mech) {
 }
 
 bool mech_aero_has_free_fuel(const Mech *mech) {
-  return MechType(mech) == CLASS_VTOL &&
+  return ((mech)->ud.type) == CLASS_VTOL &&
          mech->xcode.context->configuration->btech_nofusionvtolfuel &&
-         !(MechSpecials(mech) & ICE_TECH);
+         !(((mech)->rd.specials) & ICE_TECH);
 }
 
 size_t mech_storage_size(void) { return sizeof(Mech); }

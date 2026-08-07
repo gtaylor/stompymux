@@ -37,11 +37,17 @@ OS entropy during BTech startup. Its runtime state is not persisted.
 Concrete `Mech`, `BattleMap`, `Autopilot`, and runtime-context layouts are
 private. Cross-domain interfaces use forward declarations, database object
 references, or domain operations rather than copying another domain's state.
-`unit/mech_internal.h` and `unit/mech_macros.h` may only be included by unit
-sources. Special-object layouts and lifecycle definitions in
-`special/registry_internal.h` likewise remain inside `special`. Commands use
-the narrow `special/command_registry.h` invocation contract; immutable command
-catalogues live beside their owning domains.
+`unit/mech_internal.h` may only be included by unit sources. Runtime Mech
+access goes through the typed domain APIs; the former `unit/mech_macros.h`
+umbrella is intentionally absent. Caller-controlled returns and notifications
+are ordinary C control flow; `core/legacy_macros.h` is also intentionally
+absent. The only function-like macros retained in BTech are the five command
+invoker declaration/definition generators.
+
+Special-object layouts and lifecycle definitions in
+`special/registry_internal.h` remain inside `special`. Commands use the narrow
+`special/command_registry.h` invocation contract; immutable command catalogues
+live beside their owning domains.
 
 The dependency direction is deliberately shallow:
 

@@ -6,7 +6,6 @@
 #include "mech_crew_api.h"
 #include "mech_identity_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"

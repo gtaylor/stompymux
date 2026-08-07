@@ -15,7 +15,6 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "map_terrain.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
@@ -29,7 +28,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_restrict_api.h"
@@ -44,6 +42,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
 
@@ -283,25 +282,51 @@ void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
   int x, y, z = ORBIT_Z, argc;
   BtechContext *context = mech_context(mech);
 
-  DOCHECK_CONTEXT(context, (argc = mech_parseattributes(buffer, args, 3)) < 2,
-                  "Invalid attributes!");
-  DOCHECK_CONTEXT(context, Readnum(x, args[0]), "Invalid number! (x)");
-  DOCHECK_CONTEXT(context, Readnum(y, args[1]), "Invalid number! (y)");
+  if ((argc = mech_parseattributes(buffer, args, 3)) < 2) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid attributes!");
+    return;
+  }
+  if ((!((x) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number! (x)");
+    return;
+  }
+  if ((!((y) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number! (y)");
+    return;
+  }
   if (argc == 3)
-    DOCHECK_CONTEXT(context, Readnum(z, args[2]), "Invalid number! (z)");
-  DOCHECK_CONTEXT(context, mech_is_out_of_control(mech),
-                  "OOD already in progress!");
+    if ((!((z) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Invalid number! (z)");
+      return;
+    }
+  if (mech_is_out_of_control(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "OOD already in progress!");
+    return;
+  }
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
-  DOCHECK_CONTEXT(context,
-                  mech_position_x(mech) != x || mech_position_y(mech) != y,
-                  "Invalid co-ordinates!");
-  DOCHECK_CONTEXT(context, mech_is_fallen(mech),
-                  "You'll have to get up first.");
-  DOCHECK_CONTEXT(context, mech_condition_summary(mech).digging,
-                  "You're too busy digging in.");
+  if (mech_position_x(mech) != x || mech_position_y(mech) != y) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid co-ordinates!");
+    return;
+  }
+  if (mech_is_fallen(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You'll have to get up first.");
+    return;
+  }
+  if (mech_condition_summary(mech).digging) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're too busy digging in.");
+    return;
+  }
   mech_position_z_set(mech, z);
   MarkForLOSUpdate(mech);
-  notify(btech_context_evaluation(context), player, "OOD initiated.");
+  mecha_notify(btech_context_evaluation(context), player, "OOD initiated.");
   if (mech_condition_summary(mech).evading)
     mech_evading_set(mech, false);
 

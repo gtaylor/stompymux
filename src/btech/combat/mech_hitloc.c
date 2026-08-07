@@ -12,6 +12,7 @@
 #include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
+#include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
 

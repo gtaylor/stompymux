@@ -19,11 +19,11 @@
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/formatting.h"
 #include "random.h"
 #include "registry_api.h"
 
@@ -45,14 +45,14 @@ void do_show_stat(CommandInvocation *invocation) {
   float f1, f2, chanceperc, optimalrolls;
 
   if (!statistics->total_rolls) {
-    notify(evaluation, player, "No rolls to show statistics for!");
+    mecha_notify(evaluation, player, "No rolls to show statistics for!");
     return;
   }
   for (i = 0; i < 11; i++) {
     if (i == 0) {
-      notify(evaluation, player,
-             "#    Rolls %Current  Optimal Rolls %Optimal  %Hit Chance "
-             " %Miss Chance");
+      mecha_notify(evaluation, player,
+                   "#    Rolls %Current  Optimal Rolls %Optimal  %Hit Chance "
+                   " %Miss Chance");
     }
     f1 = (float)chances[i] * 100.0 / 36.0;
     f2 = (float)statistics->rolls[i] * 100.0 / statistics->total_rolls;

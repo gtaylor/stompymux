@@ -33,12 +33,13 @@ void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player);
 #include "coolmenu.h"
 #include "mux/network/mux_event_alloc.h"
 
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
+static int minimum_int(int first, int second) {
+  return first < second ? first : second;
+}
+
+static int maximum_int(int first, int second) {
+  return first > second ? first : second;
+}
 
 int BOUNDED(int, int, int);
 
@@ -86,8 +87,8 @@ static int compute_length(const char *text) {
 void display_string(char **c, int *len, CoolMenu *m) {
   char truncated[LBUF_SIZE];
   int visible = compute_length(m->text);
-  int available = MAX(*len - 1, 0);
-  int copied_width = MIN(visible, available);
+  int available = maximum_int(*len - 1, 0);
+  int copied_width = minimum_int(visible, available);
   int p;
   int i;
 
@@ -100,7 +101,7 @@ void display_string(char **c, int *len, CoolMenu *m) {
   styled_text_truncate(nullptr, m->text, (size_t)copied_width, truncated,
                        sizeof(truncated));
   if (m->flags & CM_CENTER) {
-    p = MAX((*len - copied_width) / 2, 0);
+    p = maximum_int((*len - copied_width) / 2, 0);
     for (i = 0; i < p; i++)
       (*c)[i] = ' ';
     *c += p;
@@ -311,16 +312,16 @@ CoolMenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
 
   strcpy(buf, heading);
   buf[0] = toupper(buf[0]);
-  CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
-  CreateMenuEntry_Simple(&c, buf, CM_ONE | CM_CENTER);
-  CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
+  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   for (co = 0; strings[co]; co++)
     ;
   if (columns < 0)
     columns = CoolMenu_FPWBit(co, 18);
   for (i = 0; i < co; i++)
-    CreateMenuEntry_Normal(&c, strings[i], columns | type, i + 1, max);
-  CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
+    cool_menu_entry_normal(&c, strings[i], columns | type, i + 1, max);
+  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   return c;
 }
 
@@ -333,18 +334,18 @@ CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
 
   strcpy(buf, heading);
   buf[0] = toupper(buf[0]);
-  CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
-  CreateMenuEntry_Simple(&c, buf, CM_ONE | CM_CENTER);
+  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
   if (fun(0)[0] == '[') {
-    CreateMenuEntry_Normal(&c, fun(0), columns, 1, 0);
+    cool_menu_entry_normal(&c, fun(0), columns, 1, 0);
     sick = 1;
   }
-  CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   if (columns < 0)
     columns = CoolMenu_FPWBit(last, 18);
   for (i = sick; i < last; i++)
-    CreateMenuEntry_Normal(&c, fun(i), columns, i + 1 - sick, 0);
-  CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
+    cool_menu_entry_normal(&c, fun(i), columns, i + 1 - sick, 0);
+  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   return c;
 }
 
@@ -359,21 +360,21 @@ CoolMenu *SelCol_FunStringMenuContextK(int columns, char *heading,
 
   strcpy(buf, heading);
   buf[0] = toupper(buf[0]);
-  CreateMenuEntry_Simple(&c, nullptr, CM_ONE | CM_LINE);
-  CreateMenuEntry_Simple(&c, buf, CM_ONE | CM_CENTER);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
   fun(context, 0, entry);
   if (entry[0] == '[') {
-    CreateMenuEntry_Normal(&c, entry, columns, 1, 0);
+    cool_menu_entry_normal(&c, entry, columns, 1, 0);
     sick = 1;
   }
-  CreateMenuEntry_Simple(&c, nullptr, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   if (columns < 0)
     columns = CoolMenu_FPWBit(last, 18);
   for (i = sick; i < last; i++) {
     fun(context, i, entry);
-    CreateMenuEntry_Normal(&c, entry, columns, i + 1 - sick, 0);
+    cool_menu_entry_normal(&c, entry, columns, i + 1 - sick, 0);
   }
-  CreateMenuEntry_Simple(&c, nullptr, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   return c;
 }
 

@@ -15,6 +15,7 @@
 #include <time.h>
 
 #include "btech/context.h"
+#include "btech_event.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
@@ -27,7 +28,6 @@
 #include "mech_partnames_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
-#include "mech_tech.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/attrs.h"
@@ -35,9 +35,13 @@
 #include "mux/server/game.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
+#include "registry_api.h"
+#include "repair_job.h"
 
-#ifndef BT_COMPLEXREPAIRS
 int tech_proper_armor_part(const Mech *mech) {
+#ifdef BT_COMPLEXREPAIRS
+  return ProperArmor(mech);
+#else
   int technology = mech_technology_flags(mech);
   int secondary = mech_technology_flags_secondary(mech);
   int infantry = mech_infantry_technology_flags(mech);
@@ -48,18 +52,22 @@ int tech_proper_armor_part(const Mech *mech) {
               : secondary & LT_FF_ARMOR_TECH        ? LT_FF_ARMOR
               : infantry & CS_PURIFIER_STEALTH_TECH ? PURIFIER_ARMOR
                                                     : S_ARMOR;
-  return Cargo(armor);
+  return cargo_equipment_index(armor);
+#endif
 }
 
 int tech_proper_internal_part(const Mech *mech) {
+#ifdef BT_COMPLEXREPAIRS
+  return ProperInternal(mech);
+#else
   int technology = mech_technology_flags(mech);
   int internal = technology & ES_TECH       ? ES_INTERNAL
                  : technology & REINFI_TECH ? RE_INTERNAL
                  : technology & COMPI_TECH  ? CO_INTERNAL
                                             : S_INTERNAL;
-  return Cargo(internal);
-}
+  return cargo_equipment_index(internal);
 #endif
+}
 
 int game_lag(BtechContext *context) {
   if (!context->events->tick)
@@ -167,8 +175,8 @@ void tech_status(BtechContext *context, DbRef player, time_t dat) {
       dat = context->clock->now;
   }
   if (dat <= context->clock->now)
-    notify(btech_context_evaluation(context), player,
-           "You have no jobs pending!");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You have no jobs pending!");
   else {
     un = (dat - context->clock->now) / TECH_TICK;
     snprintf(buf, sizeof(buf), "You have %d %s%s of repairs pending", un,
@@ -182,7 +190,7 @@ void tech_status(BtechContext *context, DbRef player, time_t dat) {
                " and you're ready to do at least %d more %s%s of work.", un,
                TECH_UNIT, un == 1 ? "" : "s");
     }
-    notify(btech_context_evaluation(context), player, buf);
+    mecha_notify(btech_context_evaluation(context), player, buf);
   }
 }
 

@@ -24,7 +24,6 @@
 #include "crit_api.h"
 #include "eject_api.h"
 #include "environment_damage_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -45,7 +44,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_ood_api.h"
 #include "mech_pickup_api.h"
@@ -252,7 +250,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
     intDamage = 0;
   }
 
-  /*   while (SectIsDestroyed(wounded, hitloc) && !kill) */
+  /*   while (mech_section_is_destroyed(wounded, hitloc) && !kill) */
   while (((!mech_is_aerospace_unit(wounded) &&
            !mech_section_internal(wounded, hitloc)) ||
           (mech_is_aerospace_unit(wounded) &&

@@ -20,7 +20,6 @@
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "crit_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_bth_api.h"
@@ -32,7 +31,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -121,33 +119,48 @@ void bsuit_hide(DbRef player, void *data, char *buffer) {
   BattleMap *map = btech_context_find_object(context, mech_map_dbref(mech));
   int terrain;
 
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(context,
-                  ((mech_technology_flags_secondary(mech) & CAMO_TECH) ||
-                   is_wizard(btech_context_database(context), player))
-                      ? 0
-                      : mech_class(mech) != CLASS_BSUIT &&
-                            mech_class(mech) != CLASS_MW,
-                  "You aren't capable of such curious things.");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (((mech_technology_flags_secondary(mech) & CAMO_TECH) ||
+       is_wizard(btech_context_database(context), player))
+          ? 0
+          : mech_class(mech) != CLASS_BSUIT && mech_class(mech) != CLASS_MW) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You aren't capable of such curious things.");
+    return;
+  }
 
   if (!map) {
     mech_notify(mech, MECHALL, "You are not on a map!");
     return;
   }
 
-  DOCHECK_CONTEXT(context,
-                  mech_is_jumping(mech) || mech_is_out_of_control(mech),
-                  "Hide where? Up here?");
-  DOCHECK_CONTEXT(context, fabs(mech_current_speed(mech)) > MP1,
-                  "Come to a complete stop first.");
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_HIDE),
-                  "You are looking for cover already!");
-  DOCHECK_CONTEXT(
-      context, mech_movement_type(mech) == MOVE_VTOL && !mech_is_landed(mech),
-      "You must be landed!");
+  if (mech_is_jumping(mech) || mech_is_out_of_control(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Hide where? Up here?");
+    return;
+  }
+  if (fabs(mech_current_speed(mech)) > MP1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Come to a complete stop first.");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_HIDE)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are looking for cover already!");
+    return;
+  }
+  if (mech_movement_type(mech) == MOVE_VTOL && !mech_is_landed(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You must be landed!");
+    return;
+  }
 
-  DOCHECK_CONTEXT(context, mech_condition_summary(mech).swarm_target > 1,
-                  "Hide where? Not while on that!");
+  if (mech_condition_summary(mech).swarm_target > 1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Hide where? Not while on that!");
+    return;
+  }
 
   terrain =
       map_real_terrain_get(map, mech_position_x(mech), mech_position_y(mech));

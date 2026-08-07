@@ -4,14 +4,12 @@
 #include "btech_channel.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_electronics_api.h"
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_radio_api.h"
@@ -66,7 +64,9 @@ static void do_scramble(BtechContext *context, char *buffo, int ch, int bth) {
   }
 }
 
-#define my_modify(n, fact) (100 - (100 - (n)) / (fact))
+static int relay_signal_improve(int signal, int factor) {
+  return 100 - (100 - signal) / factor;
+}
 
 typedef struct CommRelayContext CommRelayContext;
 struct CommRelayContext {
@@ -128,8 +128,8 @@ static void scramble_message(const CommRelayContext *relay,
       }
 
       if (mr < range) {
-        do_scramble(context, buffo, my_modify((100 * mr) / MAX(1, range), 2),
-                    bth);
+        do_scramble(context, buffo,
+                    relay_signal_improve((100 * mr) / MAX(1, range), 2), bth);
         *isxp = 1;
       }
     }
@@ -566,10 +566,14 @@ void mech_radio(DbRef player, void *data, char *buffer) {
   /* radio <id>=message */
   /* Quick clone :-) */
   /* This is silly, but who cares. */
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
 
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_observer(mech),
-                  "You can't radio anyone.");
+  if (mech_is_observer(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't radio anyone.");
+    return;
+  }
   if ((argc = proper_parseattributes(buffer, args, 3)) != 3)
     fail = 1;
   if (!fail && (!args[1] || args[1][0] != '=' || args[1][1] != 0))
@@ -580,12 +584,13 @@ void mech_radio(DbRef player, void *data, char *buffer) {
   if (!fail) {
     target = FindTargetDBREFFromMapNumber(mech, args[0]);
     tempMech = btech_context_get_mech(mech_context(mech), target);
-    DOCHECK_CONTEXT(mech_context(mech),
-                    !tempMech || !mech_los_check(mech, tempMech,
-                                                 mech_position_x(tempMech),
-                                                 mech_position_y(tempMech),
-                                                 mech_range_to(mech, tempMech)),
-                    "Target is not in line of sight!");
+    if (!tempMech || !mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                                     mech_position_y(tempMech),
+                                     mech_range_to(mech, tempMech))) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Target is not in line of sight!");
+      return;
+    }
     mech_printf(mech, MECHSTARTED, "You radio %s with, '%s'",
                 mech_to_mech_display_id(mech, tempMech).text, args[2]);
     mech_printf(tempMech, MECHSTARTED, "%s radios you with, '%s'",
@@ -594,8 +599,11 @@ void mech_radio(DbRef player, void *data, char *buffer) {
                tprintf("%s radio'ed me '%s'",
                        mech_to_mech_display_id(tempMech, mech).text, args[2]));
   }
-  DOCHECK_CONTEXT(mech_context(mech), fail,
-                  "Invalid format! Usage: radio <letter><letter>=<message>");
+  if (fail) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid format! Usage: radio <letter><letter>=<message>");
+    return;
+  }
   for (i = 0; i < 3; i++) {
     if (args[i])
       free(args[i]);

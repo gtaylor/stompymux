@@ -35,7 +35,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
 #include "mech_sensor.h"
@@ -89,9 +88,10 @@ void mech_main_weapon_destroy(Mech *mech) {
     }
   }
   if (critfound) {
-    firstCrit = FindFirstWeaponCrit(mech, maxloc, -1, 0, I2Weapon(maxtype), 1);
-    mech_weapon_destroy(mech, maxloc, I2Weapon(maxtype), 1, firstCrit,
-                        GetWeaponCrits(mech, maxtype));
+    firstCrit = FindFirstWeaponCrit(mech, maxloc, -1, 0,
+                                    weapon_equipment_index(maxtype), 1);
+    mech_weapon_destroy(mech, maxloc, weapon_equipment_index(maxtype), 1,
+                        firstCrit, GetWeaponCrits(mech, maxtype));
     mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
                 &MechWeapons[maxtype].name[3]);
   }

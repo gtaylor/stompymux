@@ -8,6 +8,37 @@ cd "$root"
 
 status=0
 
+# Function-like macros are limited to the five command invoker generators.
+# Additions and stale allowlist entries both fail this check.
+macro_allowlist=tests/btech_function_macro_allowlist.txt
+actual_macros=$(mktemp)
+allowed_macros=$(mktemp)
+macro_definitions=$(mktemp)
+trap 'rm -f "$actual_macros" "$allowed_macros" "$macro_definitions"' EXIT
+
+rg -n --glob '*.{c,h}' '^\s*#\s*define\s+[A-Za-z_][A-Za-z0-9_]*\(' src/btech \
+  >"$macro_definitions"
+if [[ $(wc -l <"$macro_definitions") -ne 5 ]]; then
+  echo "src/btech: expected exactly five command-generator macro definitions"
+  status=1
+fi
+
+sed -E 's/^([^:]+):[0-9]+:.*#[[:space:]]*define[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)\(.*/\1:\2/' \
+  "$macro_definitions" |
+  sort -u >"$actual_macros"
+sed -E '/^[[:space:]]*(#|$)/d; s/[[:space:]]+#.*$//' "$macro_allowlist" |
+  sort -u >"$allowed_macros"
+
+while IFS= read -r macro; do
+  echo "$macro: non-allowlisted function-like macro"
+  status=1
+done < <(comm -23 "$actual_macros" "$allowed_macros")
+
+while IFS= read -r macro; do
+  echo "$macro_allowlist: stale macro allowlist entry: $macro"
+  status=1
+done < <(comm -13 "$actual_macros" "$allowed_macros")
+
 while IFS= read -r -d '' path; do
   lines=$(awk 'END { print NR }' "$path")
   if ((lines > 800)); then
@@ -39,6 +70,21 @@ done < <(rg -n '#if[[:space:]]+0|#if[[:space:]]+false' src/btech \
 
 if [[ -e src/btech/unit/mech.h ]]; then
   echo "src/btech/unit/mech.h: aggregate Mech layout header is not allowed"
+  status=1
+fi
+
+if [[ -e src/btech/repair/mech_tech.h ]]; then
+  echo "src/btech/repair/mech_tech.h: legacy repair macro header is not allowed"
+  status=1
+fi
+
+if [[ -e src/btech/core/legacy_macros.h ]]; then
+  echo "src/btech/core/legacy_macros.h: caller-control macros are not allowed"
+  status=1
+fi
+
+if [[ -e src/btech/ui/mech_notify.h ]]; then
+  echo "src/btech/ui/mech_notify.h: notification audiences belong to mech_notify_api.h"
   status=1
 fi
 

@@ -31,10 +31,6 @@ constexpr int MINE_LAND = 2; /* Someone lands in a hex */
 constexpr int MINE_FALL = 3; /* Someone falls in the hex */
 constexpr int MINE_DROP = 4; /* Someone drops to ground in the hex */
 
-#ifndef ECMD
-#define ECMD(a) extern void a(DbRef player, void *data, char *buffer)
-#endif
-
 #define A_MECHREF A_MECHTYPE
 #define WSDUMP_MASK_ER                                                         \
   "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %3d %2d"

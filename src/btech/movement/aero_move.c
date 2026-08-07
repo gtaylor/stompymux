@@ -22,7 +22,6 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "econ_cmds_api.h"
-#include "legacy_macros.h"
 #include "map_conditions_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
@@ -41,7 +40,6 @@
 #include "mech_lifecycle.h"
 #include "mech_lite_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -200,48 +198,76 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
       break;
 
   if ((j = atoi(buffer)))
-    DOCHECK_CONTEXT(
-        mech_context(mech),
-        !is_wizard(btech_context_database(mech_context(mech)), player),
-        "Insufficient access!");
+    if (!is_wizard(btech_context_database(mech_context(mech)), player)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Insufficient access!");
+      return;
+    }
 
-  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_TAKEOFF),
-                  "The launch sequence has already been initiated!");
-  DOCHECK_CONTEXT(mech_context(mech), i == (int)(NUM_LAND_TYPES),
-                  "This vehicle type cannot takeoff!");
-  cch(MECH_USUAL);
-  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).fortified,
-                  "Your fortified state prevents you from moving.");
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !(mech_is_aerospace_unit(mech) || mech_movement_type(mech) == MOVE_VTOL),
-      "Only VTOL, Aerospace fighters and Dropships can take off.");
-  DOCHECK_CONTEXT(mech_context(mech), !mech_is_landed(mech),
-                  "You haven't landed!");
+  if (mech_event_count(mech, EVENT_TAKEOFF)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The launch sequence has already been initiated!");
+    return;
+  }
+  if (i == (int)(NUM_LAND_TYPES)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This vehicle type cannot takeoff!");
+    return;
+  }
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
+  if (mech_condition_summary(mech).fortified) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your fortified state prevents you from moving.");
+    return;
+  }
+  if (!(mech_is_aerospace_unit(mech) ||
+        mech_movement_type(mech) == MOVE_VTOL)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Only VTOL, Aerospace fighters and Dropships can take off.");
+    return;
+  }
+  if (!mech_is_landed(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You haven't landed!");
+    return;
+  }
   if (mech_condition_summary(mech).fallen ||
       (mech_effective_maximum_speed(mech) <= MP1) ||
       ((mech_section_is_destroyed(mech, ROTOR)) &&
        mech_class(mech) == CLASS_VTOL)) {
-    DOCHECK_CONTEXT(mech_context(mech), mech_class(mech) == CLASS_VTOL,
-                    "The rotor's dead!");
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "The engines are dead!");
+    if (mech_class(mech) == CLASS_VTOL) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "The rotor's dead!");
+      return;
+    }
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The engines are dead!");
     return;
   }
   if (!mech_aero_has_free_fuel(mech) && mech_fuel(mech) < 1) {
-    DOCHECK_CONTEXT(mech_context(mech), mech_class(mech) == CLASS_VTOL,
-                    "Your VTOL's out of fuel!");
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Your craft's out of fuel! No taking off until it's refueled.");
+    if (mech_class(mech) == CLASS_VTOL) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Your VTOL's out of fuel!");
+      return;
+    }
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "Your craft's out of fuel! No taking off until it's refueled.");
     return;
   }
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_class(mech) == CLASS_AERO &&
-                      mech_current_speed(mech) < (MIN_TAKEOFF_SPEED * MP1),
-                  "You're moving too slowly to take off!");
-  DOCHECK_CONTEXT(
-      mech_context(mech), battle_map_is_underground(map),
-      "Realize the ceiling in this grotto is a bit to low for that!");
+  if (mech_class(mech) == CLASS_AERO &&
+      mech_current_speed(mech) < (MIN_TAKEOFF_SPEED * MP1)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're moving too slowly to take off!");
+    return;
+  }
+  if (battle_map_is_underground(map)) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "Realize the ceiling in this grotto is a bit to low for that!");
+    return;
+  }
   if (land_data[i].launchtime > 0)
     mech_notify(mech, MECHALL,
                 "Launch sequence initiated.. type 'land' to abort it.");
@@ -365,28 +391,36 @@ void aero_land(DbRef player, void *data, char *buffer) {
   double horiz = 0.0;
   int vert, vertmin = 0, vertmax = 0;
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_class(mech) != CLASS_VTOL &&
-                      mech_class(mech) != CLASS_AERO && !mech_is_dropship(mech),
-                  "You can't land this type of vehicle.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_class(mech) == CLASS_VTOL && mech_fuel(mech) <= 0 &&
-                      !mech_aero_has_free_fuel(mech),
-                  "You lack fuel to maneuver for landing!");
+  if (mech_class(mech) != CLASS_VTOL && mech_class(mech) != CLASS_AERO &&
+      !mech_is_dropship(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't land this type of vehicle.");
+    return;
+  }
+  if (mech_class(mech) == CLASS_VTOL && mech_fuel(mech) <= 0 &&
+      !mech_aero_has_free_fuel(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You lack fuel to maneuver for landing!");
+    return;
+  }
 
   for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
     if (mech_class(mech) == land_data[i].type)
       break;
   if (i == (int)(NUM_LAND_TYPES))
     return;
-  DOCHECK_CONTEXT(mech_context(mech),
-                  (mech_condition_summary(mech).fallen) &&
-                      (mech_class(mech) == CLASS_VTOL),
-                  "The rotor's dead!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  (mech_condition_summary(mech).fallen) &&
-                      (mech_class(mech) != CLASS_VTOL),
-                  "The engines are dead!");
+  if ((mech_condition_summary(mech).fallen) &&
+      (mech_class(mech) == CLASS_VTOL)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The rotor's dead!");
+    return;
+  }
+  if ((mech_condition_summary(mech).fallen) &&
+      (mech_class(mech) != CLASS_VTOL)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The engines are dead!");
+    return;
+  }
   if (mech_is_landed(mech)) {
     if (mech_event_count(mech, EVENT_TAKEOFF)) {
       mech_printf(
@@ -402,43 +436,51 @@ void aero_land(DbRef player, void *data, char *buffer) {
       mech_event_cancel(mech, EVENT_TAKEOFF);
       return;
     }
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "You're already landed!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're already landed!");
     return;
   }
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_position_z(mech) >
-                      mech_position_surface_elevation(mech) + 1,
-                  "You are too high to land here.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  ((horiz = my_sqrtm((double)mech_desired_speed(mech),
-                                     (double)mech_vertical_speed(mech))) >=
-                   ((double)1.0 + land_data[i].maxhoriz)),
-                  "You're moving too fast to land.");
-  DOCHECK_CONTEXT(mech_context(mech), horiz < land_data[i].minhoriz,
-                  "You're moving too slowly to land.");
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      ((vert = mech_vertical_speed(mech)) >
+  if (mech_position_z(mech) > mech_position_surface_elevation(mech) + 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are too high to land here.");
+    return;
+  }
+  if (((horiz = my_sqrtm((double)mech_desired_speed(mech),
+                         (double)mech_vertical_speed(mech))) >=
+       ((double)1.0 + land_data[i].maxhoriz))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're moving too fast to land.");
+    return;
+  }
+  if (horiz < land_data[i].minhoriz) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're moving too slowly to land.");
+    return;
+  }
+  if (((vert = mech_vertical_speed(mech)) >
        (vertmax = land_data[i].maxvertup)) ||
-          (mech_vertical_speed(mech) < (vertmin = land_data[i].maxvertdown)),
-      "You are moving too fast to land. ");
+      (mech_vertical_speed(mech) < (vertmin = land_data[i].maxvertdown))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are moving too fast to land. ");
+    return;
+  }
   if (mech_current_speed(mech) < land_data[i].minhoriz) {
     if (mech_motion_vector_z(mech) <= 0)
-      notify(
+      mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
           "You're falling, not landing! Pick up some horizontal speed first.");
     else
-      notify(btech_context_evaluation(mech_context(mech)), player,
-             "You're climbing not landing!");
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You're climbing not landing!");
     return;
   }
   t = mech_real_terrain_get(mech);
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !(t == BATTLE_TERRAIN_GRASSLAND || t == BATTLE_TERRAIN_ROAD ||
-        (mech_class(mech) == CLASS_VTOL && t == BATTLE_TERRAIN_BUILDING)),
-      "You can't land on this type of terrain.");
+  if (!(t == BATTLE_TERRAIN_GRASSLAND || t == BATTLE_TERRAIN_ROAD ||
+        (mech_class(mech) == CLASS_VTOL && t == BATTLE_TERRAIN_BUILDING))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't land on this type of terrain.");
+    return;
+  }
   if (mech_class(mech) != CLASS_VTOL && aero_current_landing_zone_check(mech)) {
     mech_notify(mech, MECHALL, "This location is no good for landing!");
     return;
@@ -486,8 +528,9 @@ void dropship_bridge_hit(Mech *mech) {
   mech_contents_kill_if_in_character(mech);
 }
 
-#define degsin(a) ((double)sin((double)(a) * M_PI / 180.0))
-#define degcos(a) ((double)cos((double)(a) * M_PI / 180.0))
+static double degrees_sine(double angle) { return sin(angle * M_PI / 180.0); }
+
+static double degrees_cosine(double angle) { return cos(angle * M_PI / 180.0); }
 
 #define AERO_BONUS 3
 
@@ -514,13 +557,13 @@ void aero_speed_update(Mech *mech) {
         mech, AcceptableDegree(mech_desired_heading_degrees(mech) +
                                btech_random_range(mech_context(mech), -3, 3)));
   }
-  wz = mech_desired_speed(mech) * degsin(mech_desired_angle(mech));
+  wz = mech_desired_speed(mech) * degrees_sine(mech_desired_angle(mech));
   if (mech_class(mech) == CLASS_AERO)
     ab = 2.5;
   if (mech_position_z(mech) < ATMO_Z)
     ab = ab / 2;
   /* First, we calculate the vector we want to be going */
-  xypart = mech_desired_speed(mech) * degcos(mech_desired_angle(mech));
+  xypart = mech_desired_speed(mech) * degrees_cosine(mech_desired_angle(mech));
   if (mech_fuel(mech) < 0) {
     wz = wz / 5.0;
     xypart = xypart / 5.0;
@@ -663,78 +706,6 @@ void aero_update(Mech *mech) {
   end_lite_check(mech);
 }
 
-void aero_thrust(DbRef player, void *data, char *arg) {
-  Mech *mech = (Mech *)data;
-  char *args[1];
-  float newspeed, maxspeed;
-
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_landed(mech), "You're landed!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_is_aerospace_unit(mech) &&
-                      mech_condition_summary(mech).spinning &&
-                      !mech_is_landed(mech),
-                  "You are unable to control your craft at the moment.");
-  if (mech_parseattributes(arg, args, 1) != 1) {
-    notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                  "Your current thrust is %.2f.", mech_desired_speed(mech));
-    return;
-  }
-  newspeed = atof(args[0]);
-  if ((mech_class(mech) == CLASS_AERO || mech_class(mech) == CLASS_DS))
-    DOCHECK_CONTEXT(mech_context(mech),
-                    newspeed < (MP1 * MIN_TAKEOFF_SPEED / ACCEL_MOD),
-                    tprintf("Minimum thrust you stay in air with is %.1f kph.",
-                            (float)MP1 * MIN_TAKEOFF_SPEED / ACCEL_MOD));
-  maxspeed = mech_effective_maximum_speed(mech);
-  if (!(maxspeed > 0.0))
-    maxspeed = 0.0;
-  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).fallen,
-                  "Your engine's dead, no way to thrust!");
-  DOCHECK_CONTEXT(mech_context(mech), newspeed < 0,
-                  "Doh, thrust backwards.. where's your sense of adventure?");
-  if (newspeed > maxspeed) {
-    notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                  "Maximum thrust: %.2f (%.2f kb/sec2)", maxspeed,
-                  maxspeed / 10);
-    return;
-  }
-  mech_desired_speed_set(mech, newspeed);
-  mech_printf(mech, MECHALL, "Thrust set to %.2f.", newspeed);
-  mech_maybe_move(mech);
-}
-
-void aero_vheading(DbRef player, void *data, char *arg, int flag) {
-  char *args[1];
-  int i = 0;
-  Mech *mech = (Mech *)data;
-
-  if (mech_parseattributes(arg, args, 1) != 1) {
-    notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                  "Present angle: %d degrees.", mech_desired_angle(mech));
-    return;
-  }
-  i = flag * atoi(args[0]);
-  if (abs(i) > 90)
-    i = 90 * flag;
-  DOCHECK_CONTEXT(mech_context(mech),
-                  abs(i) != 90 && mech_position_z(mech) < ATMO_Z &&
-                      (mech_class(mech) == CLASS_SPHEROID_DS),
-                  tprintf("You can go only up / down at <%d z!", ATMO_Z));
-  if (i >= 0)
-    mech_printf(mech, MECHALL, "Climbing angle set to %d degrees.", i);
-  else
-    mech_printf(mech, MECHALL, "Diving angle set to %d degrees.", 0 - i);
-  mech_desired_angle_set(mech, i);
-}
-
-void aero_climb(DbRef player, Mech *mech, char *arg) {
-  aero_vheading(player, mech, arg, 1);
-}
-
-void aero_dive(DbRef player, Mech *mech, char *arg) {
-  aero_vheading(player, mech, arg, -1);
-}
-
 static char *colorstr(int serious) {
   if (serious == 1)
     return "[fg=red bold]";
@@ -761,7 +732,8 @@ void aero_checklz(DbRef player, Mech *mech, char *buffer) {
   char *args[3];
   int x, y;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
 
   argc = mech_parseattributes(buffer, args, 3);
   switch (argc) {
@@ -771,11 +743,12 @@ void aero_checklz(DbRef player, Mech *mech, char *buffer) {
     if (!mech_is_observer(mech)) {
       float fx, fy;
       MapCoordToRealCoord(x, y, &fx, &fy);
-      DOCHECK_CONTEXT(mech_context(mech),
-                      FindHexRange(mech_position_real_x(mech),
-                                   mech_position_real_y(mech), fx,
-                                   fy) > mech_tactical_range(mech),
-                      "Out of range!");
+      if (FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
+                       fx, fy) > mech_tactical_range(mech)) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "Out of range!");
+        return;
+      }
     }
     break;
   case 0:
@@ -783,14 +756,18 @@ void aero_checklz(DbRef player, Mech *mech, char *buffer) {
     y = mech_position_y(mech);
     break;
   default:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Invalid number of parameters!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of parameters!");
     return;
   }
 
   ilz = aero_landing_zone_check(mech, x, y);
-  DOCHECKMA(!ilz,
-            tprintf("The hex (%d,%d) looks good enough for a landing.", x, y));
+  if (!ilz) {
+    mech_notify(
+        mech, MECHALL,
+        tprintf("The hex (%d,%d) looks good enough for a landing.", x, y));
+    return;
+  }
   ilz--;
   mech_printf(mech, MECHALL,
               "The hex (%d,%d) doesn't look good for landing: %s.", x, y,

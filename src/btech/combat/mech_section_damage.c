@@ -25,7 +25,6 @@
 #include "eject_api.h"
 #include "environment_damage_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_ammodump_api.h"
@@ -44,7 +43,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_ood_api.h"
 #include "mech_pickup_api.h"
@@ -147,10 +145,10 @@ void mech_weapon_destroy_random(Mech *mech, int hitloc) {
   if (b < 0)
     return;
 
-  firstCrit = FindFirstWeaponCrit(mech, hitloc, -1, 0, I2Weapon(b),
-                                  GetWeaponCrits(mech, b));
+  firstCrit = FindFirstWeaponCrit(
+      mech, hitloc, -1, 0, weapon_equipment_index(b), GetWeaponCrits(mech, b));
 
-  mech_weapon_destroy(mech, hitloc, I2Weapon(b), firstCrit, 1,
+  mech_weapon_destroy(mech, hitloc, weapon_equipment_index(b), firstCrit, 1,
                       GetWeaponCrits(mech, b));
   mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
               &MechWeapons[b].name[3]);
@@ -160,7 +158,7 @@ void mech_heat_sink_destroy(Mech *mech, int hitloc) {
   /* This can be done easily, or this can be done painfully. */
   /* Let's try the painful way, it's more fun that way. */
   int num;
-  int i = I2Special(HEAT_SINK);
+  int i = special_equipment_index(HEAT_SINK);
 
   if (FindObj(mech, hitloc, i)) {
     num = mech_heat_sink_critical_size(mech);
@@ -425,26 +423,52 @@ void mech_damage(DbRef player, Mech *mech, char *buffer) {
   int damage, clustersize;
   int isrear, iscritical;
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_parseattributes(buffer, args, 5) != 4,
-                  "Invalid arguments!");
-  DOCHECK_CONTEXT(mech_context(mech), Readnum(damage, args[0]),
-                  "Invalid damage!");
-  DOCHECK_CONTEXT(mech_context(mech), Readnum(clustersize, args[1]),
-                  "Invalid cluster size!");
-  DOCHECK_CONTEXT(mech_context(mech), Readnum(isrear, args[2]),
-                  "Invalid isrear flag!");
-  DOCHECK_CONTEXT(mech_context(mech), Readnum(iscritical, args[3]),
-                  "Invalid iscritical flag!");
-  DOCHECK_CONTEXT(mech_context(mech), damage <= 0 || damage > 1000,
-                  "Invalid damage!");
-  DOCHECK_CONTEXT(mech_context(mech), clustersize <= 0,
-                  "Invalid cluster size!");
-  DOCHECK_CONTEXT(
-      mech_context(mech), clustersize > damage,
-      "Invalid cluster size! (must be smaller than damage amount, but > 0)");
-  DOCHECK_CONTEXT(mech_context(mech), mech_class(mech) == CLASS_MW,
-                  "No MW killings!");
+  if (mech_parseattributes(buffer, args, 5) != 4) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid arguments!");
+    return;
+  }
+  if ((!((damage) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid damage!");
+    return;
+  }
+  if ((!((clustersize) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid cluster size!");
+    return;
+  }
+  if ((!((isrear) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid isrear flag!");
+    return;
+  }
+  if ((!((iscritical) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid iscritical flag!");
+    return;
+  }
+  if (damage <= 0 || damage > 1000) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid damage!");
+    return;
+  }
+  if (clustersize <= 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid cluster size!");
+    return;
+  }
+  if (clustersize > damage) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "Invalid cluster size! (must be smaller than damage amount, but > 0)");
+    return;
+  }
+  if (mech_class(mech) == CLASS_MW) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "No MW killings!");
+    return;
+  }
   mech_missile_apply_hits(mech, mech, -1, -1, isrear, iscritical, 0, -1, -1,
                           clustersize, damage / clustersize, 1, 0, 0, 0);
 }
@@ -455,9 +479,11 @@ void mech_damage_section(DbRef player, Mech *mech, char *buffer) {
 
   /* ARGS: <SECTION> <DAMAGE> <ISREAR> <ISCRITICAL> */
 
-  DOCHECK_CONTEXT(
-      mech_context(mech), mech_parseattributes(buffer, args, 5) != 4,
-      "Invalid Arguments: <SECTION> <DAMAGE> <ISREAR> <ISCRITICAL>");
+  if (mech_parseattributes(buffer, args, 5) != 4) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid Arguments: <SECTION> <DAMAGE> <ISREAR> <ISCRITICAL>");
+    return;
+  }
 
   section = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
                                    args[0]);
@@ -467,14 +493,26 @@ void mech_damage_section(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  DOCHECK_CONTEXT(mech_context(mech), Readnum(damage, args[1]),
-                  "Invalid damage (Arg 2) amount! (Must be a number!)");
-  DOCHECK_CONTEXT(mech_context(mech), Readnum(isrear, args[2]),
-                  "Isrear value (Arg 3) Invalid! (1 or 0)");
-  DOCHECK_CONTEXT(mech_context(mech), Readnum(iscritical, args[3]),
-                  "Iscritical value (Arg 4) Invalid! (1 or 0)");
-  DOCHECK_CONTEXT(mech_context(mech), damage <= 0 || damage > 1000,
-                  "Invalid damage (Arg 2 amount! (Must be >0 or <1000)");
+  if ((!((damage) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid damage (Arg 2) amount! (Must be a number!)");
+    return;
+  }
+  if ((!((isrear) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Isrear value (Arg 3) Invalid! (1 or 0)");
+    return;
+  }
+  if ((!((iscritical) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Iscritical value (Arg 4) Invalid! (1 or 0)");
+    return;
+  }
+  if (damage <= 0 || damage > 1000) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid damage (Arg 2 amount! (Must be >0 or <1000)");
+    return;
+  }
   DamageMech(mech, mech, 0, -1, section, isrear, iscritical, damage, 0, 0, 0,
              -1, 0, 1);
 }

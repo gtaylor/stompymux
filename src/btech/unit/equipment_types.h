@@ -117,80 +117,75 @@ constexpr int CARGO_BASE_INDEX = 512;
 #define BOMBCOST_SIZE NUM_BOMBS
 #endif
 
-#define IsAmmo(a) ((a) >= AMMO_BASE_INDEX && (a) < BOMB_BASE_INDEX)
-#define IsBomb(a) ((a) >= BOMB_BASE_INDEX && (a) < SPECIAL_BASE_INDEX)
-#define IsSpecial(a) ((a) >= SPECIAL_BASE_INDEX && (a) < CARGO_BASE_INDEX)
-#define IsCargo(a) ((a) >= CARGO_BASE_INDEX)
-#define IsActuator(a) (IsSpecial(a) && a <= I2Special(HAND_OR_FOOT_ACTUATOR))
-#define IsWeapon(a) ((a) >= WEAPON_BASE_INDEX && (a) < AMMO_BASE_INDEX)
-#define IsArtillery(a) (MechWeapons[a].type == TARTILLERY)
-#define IsMissile(a) (MechWeapons[a].type == TMISSILE)
-#define IsBallistic(a) (MechWeapons[a].type == TAMMO)
-#define IsEnergy(a) (MechWeapons[a].type == TBEAM)
+static inline bool equipment_is_ammunition(int equipment) {
+  return equipment >= AMMO_BASE_INDEX && equipment < BOMB_BASE_INDEX;
+}
 
-/* Fun Weapons that do affects */
-#define IsFlamer(a) (strstr(MechWeapons[a].name, "Flamer"))
-#define IsCoolant(a) (strstr(MechWeapons[a].name, "Coolant"))
-#define IsAcid(a) (strstr(MechWeapons[a].name, "Acid"))
+static inline bool equipment_is_bomb(int equipment) {
+  return equipment >= BOMB_BASE_INDEX && equipment < SPECIAL_BASE_INDEX;
+}
 
-#define GunRangeWithCheck(mech, sec, a)                                        \
-  (SectionUnderwater(mech, sec) > 0 ? GunWaterRange(a)                         \
-   : IsArtillery(a) ? (ARTILLERY_MAPSHEET_SIZE * MechWeapons[a].longrange)     \
-                    : (MechWeapons[a].longrange))
-#define EGunRangeWithCheck(mech, sec, a)                                       \
-  ((SectionUnderwater(mech, sec) > 0)                                          \
-       ? EGunWaterRange((mech)->xcode.context->configuration, a)               \
-   : ((mech)->xcode.context->configuration->btech_erange &&                    \
-      (MechWeapons[a].medrange * 2) > GunRange(a))                             \
-       ? (MechWeapons[a].medrange * 2)                                         \
-       : GunRange(a))
-#define GunRange(a)                                                            \
-  (IsArtillery(a) ? (ARTILLERY_MAPSHEET_SIZE * MechWeapons[a].longrange)       \
-                  : (MechWeapons[a].longrange))
-#define EGunRange(configuration, a)                                            \
-  (((configuration)->btech_erange &&                                           \
-    (MechWeapons[a].medrange * 2) > GunRange(a))                               \
-       ? (MechWeapons[a].medrange * 2)                                         \
-       : GunRange(a))
-#define GunWaterRange(a)                                                       \
-  (MechWeapons[a].longrange_water > 0    ? MechWeapons[a].longrange_water      \
-   : MechWeapons[a].medrange_water > 0   ? MechWeapons[a].medrange_water       \
-   : MechWeapons[a].shortrange_water > 0 ? MechWeapons[a].shortrange_water     \
-                                         : 0)
-#define EGunWaterRange(configuration, a)                                       \
-  (((configuration)->btech_erange &&                                           \
-    ((MechWeapons[a].medrange_water * 2) > GunWaterRange(a)) &&                \
-    (MechWeapons[a].longrange_water > 0))                                      \
-       ? (MechWeapons[a].medrange_water * 2)                                   \
-       : GunWaterRange(a))
-#define SectionUnderwater(mech, sec)                                           \
-  (MechZ(mech) >= 0                       ? 0                                  \
-   : (MechZ(mech) < -1) || (Fallen(mech)) ? 1                                  \
-   : ((sec == LLEG) || (sec == RLEG)) ||                                       \
-           (MechIsQuad(mech) && ((sec == LARM) || (sec == RARM)))              \
-       ? 1                                                                     \
-       : 0)
+static inline bool equipment_is_special(int equipment) {
+  return equipment >= SPECIAL_BASE_INDEX && equipment < CARGO_BASE_INDEX;
+}
 
-#define Ammo2WeaponI(a) ((a) - AMMO_BASE_INDEX)
-#define Ammo2Weapon(a) Ammo2WeaponI(a)
-#define Ammo2I(a) Ammo2Weapon(a)
-#define Bomb2I(a) ((a) - BOMB_BASE_INDEX)
-#define Special2I(a) ((a) - SPECIAL_BASE_INDEX)
-#define Cargo2I(a) ((a) - CARGO_BASE_INDEX)
-#define Weapon2I(a) ((a) - WEAPON_BASE_INDEX)
-#define I2Bomb(a) ((a) + BOMB_BASE_INDEX)
-#define I2Weapon(a) ((a) + WEAPON_BASE_INDEX)
-#define I2Ammo(a) ((a) + AMMO_BASE_INDEX)
-#define I2Special(a) ((a) + SPECIAL_BASE_INDEX)
-#define I2Cargo(a) ((a) + CARGO_BASE_INDEX)
-#define Special I2Special
-#define Cargo I2Cargo
+static inline bool equipment_is_cargo(int equipment) {
+  return equipment >= CARGO_BASE_INDEX;
+}
+
+static inline bool equipment_is_weapon(int equipment) {
+  return equipment >= WEAPON_BASE_INDEX && equipment < AMMO_BASE_INDEX;
+}
+
+static inline int ammunition_to_weapon_index(int equipment) {
+  return equipment - AMMO_BASE_INDEX;
+}
+
+static inline int bomb_equipment_index(int bomb) {
+  return bomb + BOMB_BASE_INDEX;
+}
+
+static inline int bomb_from_equipment_index(int equipment) {
+  return equipment - BOMB_BASE_INDEX;
+}
+
+static inline int special_equipment_index(int special) {
+  return special + SPECIAL_BASE_INDEX;
+}
+
+static inline int special_from_equipment_index(int equipment) {
+  return equipment - SPECIAL_BASE_INDEX;
+}
+
+static inline int cargo_equipment_index(int cargo) {
+  return cargo + CARGO_BASE_INDEX;
+}
+
+static inline int cargo_from_equipment_index(int equipment) {
+  return equipment - CARGO_BASE_INDEX;
+}
+
+static inline int weapon_equipment_index(int weapon) {
+  return weapon + WEAPON_BASE_INDEX;
+}
+
+static inline int weapon_from_equipment_index(int equipment) {
+  return equipment - WEAPON_BASE_INDEX;
+}
+
+static inline int ammunition_equipment_index(int weapon) {
+  return weapon + AMMO_BASE_INDEX;
+}
 
 /* To define one of these-> x=SPECIAL_BASE_INDEX+SHOULDER_OR_HIP */
 constexpr int SHOULDER_OR_HIP = 0;
 constexpr int UPPER_ACTUATOR = 1;
 constexpr int LOWER_ACTUATOR = 2;
 constexpr int HAND_OR_FOOT_ACTUATOR = 3;
+static inline bool equipment_is_actuator(int equipment) {
+  return equipment_is_special(equipment) &&
+         equipment <= special_equipment_index(HAND_OR_FOOT_ACTUATOR);
+}
 constexpr int LIFE_SUPPORT = 4;
 constexpr int SENSORS = 5;
 constexpr int COCKPIT = 6;
@@ -608,10 +603,6 @@ constexpr int DS_AFT = 4;
 constexpr int DS_NOSE = 5;
 
 constexpr int NUM_DS_SECTIONS = 6;
-#define SpheroidDS(a) (MechType(a) == CLASS_SPHEROID_DS)
-#define SpheroidToRear(mech, a)                                                \
-  if (MechType(mech) == CLASS_SPHEROID_DS)                                     \
-  (a) = ((a) == DS_LWING ? DS_LRWING : DS_RRWING)
 
 constexpr int NUM_TICS = 4;
 constexpr int MAX_WEAPONS_PER_MECH = 96; /* Thanks to crit limits */

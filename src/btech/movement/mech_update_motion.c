@@ -57,7 +57,7 @@ void mech_heading_update(Mech *mech) {
   if (btech_context_uses_fasa_turning(context)) {
     constexpr int FASA_TURN_MOD = 3 / 2;
     if (mech_is_jumping(mech))
-      offset = 2 * SHO2FSIM(1) * 2 * 360 * FASA_TURN_MOD / 60;
+      offset = 2 * short_to_float_simulation(1) * 2 * 360 * FASA_TURN_MOD / 60;
     else {
       float ts = mech_current_speed(mech);
 
@@ -68,8 +68,9 @@ void mech_heading_update(Mech *mech) {
       if (ts > maxspeed || maxspeed < 0.1) /* kludge */
         offset = 0;
       else {
-        offset = SHO2FSIM(1) * 2 * 360 * FASA_TURN_MOD / 60 * (maxspeed - ts) *
-                 (omaxspeed / maxspeed) * mw_mod * MP_PER_KPH / 6; /* hmm. */
+        offset = short_to_float_simulation(1) * 2 * 360 * FASA_TURN_MOD / 60 *
+                 (maxspeed - ts) * (omaxspeed / maxspeed) * mw_mod *
+                 MP_PER_KPH / 6; /* hmm. */
       }
     }
   } else {
@@ -80,12 +81,15 @@ void mech_heading_update(Mech *mech) {
         int gravity = battle_map_gravity(mech_map);
         jump_speed = jump_speed * 100 / (gravity > 50 ? gravity : 50);
       }
-      offset = SHO2FSIM(1) * 6 * (int)(jump_speed * MP_PER_KPH) * mw_mod;
+      offset = short_to_float_simulation(1) * 6 *
+               (int)(jump_speed * MP_PER_KPH) * mw_mod;
     } else if (fabs(mech_current_speed(mech)) < 1.0)
-      offset = SHO2FSIM(1) * 3 * maxspeed * MP_PER_KPH * mw_mod;
+      offset =
+          short_to_float_simulation(1) * 3 * maxspeed * MP_PER_KPH * mw_mod;
     else {
-      offset = SHO2FSIM(1) * 2 * maxspeed * MP_PER_KPH * mw_mod;
-      if ((SHO2FSIM(abs(normangle)) > offset) &&
+      offset =
+          short_to_float_simulation(1) * 2 * maxspeed * MP_PER_KPH * mw_mod;
+      if ((short_to_float_simulation(abs(normangle)) > offset) &&
           mech_current_speed(mech) > 2.0 * maxspeed / 3.0 + 0.1) {
         if (mech_current_speed(mech) > maxspeed)
           offset -= offset / 2 * maxspeed / mech_current_speed(mech);
@@ -111,8 +115,8 @@ void mech_heading_update(Mech *mech) {
   }
 #endif
   if (normangle < 0)
-    normangle += SHO2FSIM(360);
-  if (mech_is_dropship(mech) && offset >= SHO2FSIM(10))
-    offset = SHO2FSIM(10);
+    normangle += short_to_float_simulation(360);
+  if (mech_is_dropship(mech) && offset >= short_to_float_simulation(10))
+    offset = short_to_float_simulation(10);
   mech_heading_rotate_toward_desired(mech, offset);
 }

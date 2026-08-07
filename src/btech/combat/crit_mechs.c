@@ -41,7 +41,6 @@
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
 #include "mech_network_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
 #include "mech_runtime_api.h"
@@ -62,6 +61,7 @@
 #include "mux/support/formatting.h"
 #include "random.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
 
 int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
                                int hitloc, int critHit, int critType,
@@ -86,12 +86,13 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
                        mech_movement_type(wounded));
   mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT!![reset]");
 
-  if (IsAmmo(critType)) {
+  if (equipment_is_ammunition(critType)) {
     /* BOOM! */
     /* That's going to hurt... */
-    weapindx = Ammo2WeaponI(critType);
+    weapindx = ammunition_to_weapon_index(critType);
     damage = critData * MechWeapons[weapindx].damage;
-    if (IsMissile(weapindx) || IsArtillery(weapindx)) {
+    if (weapon_catalogue_is_missile(weapindx) ||
+        weapon_catalogue_is_artillery(weapindx)) {
       int missile_count =
           btech_context_missile_hit_count(context, weapindx, 10);
       if (missile_count > 0)
@@ -112,21 +113,22 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
     return 1;
   }
 
-  if (mech_critical_is_broken(wounded, hitloc, critHit) && IsWeapon(critType) &&
+  if (mech_critical_is_broken(wounded, hitloc, critHit) &&
+      equipment_is_weapon(critType) &&
       !mech_critical_is_disabled(wounded, hitloc, critHit)) {
     while (--critHit &&
            mech_critical_part_type(wounded, hitloc, critHit) == critType)
       if (mech_critical_is_destroyed(wounded, hitloc, critHit))
         break;
     mech_printf(wounded, MECHALL, "Your destroyed %s is damaged some more!",
-                &MechWeapons[Weapon2I(critType)].name[3]);
+                &MechWeapons[weapon_from_equipment_index(critType)].name[3]);
     mech_critical_destroy(wounded, hitloc, critHit + 1);
     return 1;
   }
 
   if (mech_critical_is_nonfunctional(wounded, hitloc, critHit)) {
-    if (IsSpecial(critType)) {
-      switch (Special2I(critType)) {
+    if (equipment_is_special(critType)) {
+      switch (special_from_equipment_index(critType)) {
       case LIFE_SUPPORT:
         strcpy(partBuf, "life support");
         break;
@@ -161,12 +163,12 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       case UPPER_ACTUATOR:
       case HAND_OR_FOOT_ACTUATOR:
         if (tLocIsArm) {
-          if (Special2I(critType) == HAND_OR_FOOT_ACTUATOR)
+          if (special_from_equipment_index(critType) == HAND_OR_FOOT_ACTUATOR)
             strcpy(partBuf, "hand actuator");
           else
             strcpy(partBuf, "arm actuator");
         } else {
-          if (Special2I(critType) == HAND_OR_FOOT_ACTUATOR)
+          if (special_from_equipment_index(critType) == HAND_OR_FOOT_ACTUATOR)
             strcpy(partBuf, "foot actuator");
           else
             strcpy(partBuf, "arm actuator");
@@ -226,9 +228,9 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       } // end switch() - Part Names
     } // end if()
 
-    if (IsWeapon(critType)) {
+    if (equipment_is_weapon(critType)) {
       mech_printf(wounded, MECHALL, "Part of your non-working %s has been hit!",
-                  &MechWeapons[Weapon2I(critType)].name[3]);
+                  &MechWeapons[weapon_from_equipment_index(critType)].name[3]);
     } else {
       mech_printf(wounded, MECHALL, "Part of your non-working %s has been hit!",
                   partBuf);
@@ -237,7 +239,7 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
     return 1;
   }
 
-  if (IsWeapon(critType)) {
+  if (equipment_is_weapon(critType)) {
     if (mech_weapon_critical_handle(attacker, wounded, hitloc, critHit,
                                     critType, LOS)) {
       return 1;
@@ -248,9 +250,9 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
     return 1;
   }
 
-  if (IsSpecial(critType)) {
+  if (equipment_is_special(critType)) {
     destroycrit = 1;
-    switch (Special2I(critType)) {
+    switch (special_from_equipment_index(critType)) {
     case LIFE_SUPPORT:
       mech_life_support_destroyed_set(wounded, true);
       mech_notify(wounded, MECHALL, "Your life support has been destroyed!");
@@ -476,16 +478,17 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       destroycrit = 0;
 
       if (tLocIsArm) {
-        if (Special2I(critType) == HAND_OR_FOOT_ACTUATOR)
+        if (special_from_equipment_index(critType) == HAND_OR_FOOT_ACTUATOR)
           mech_printf(wounded, MECHALL, "Your %s hand actuator is destroyed!",
                       hitloc == LARM ? "left" : "right");
         else
           mech_printf(wounded, MECHALL, "Your %s %s arm actuator is destroyed!",
                       hitloc == LARM ? "left" : "right",
-                      Special2I(critType) == LOWER_ACTUATOR ? "lower"
-                                                            : "upper");
+                      special_from_equipment_index(critType) == LOWER_ACTUATOR
+                          ? "lower"
+                          : "upper");
 
-        if ((Special2I(critType) == HAND_OR_FOOT_ACTUATOR) &&
+        if ((special_from_equipment_index(critType) == HAND_OR_FOOT_ACTUATOR) &&
             mech_section_carries_club(mech, hitloc))
           mech_drop_club(mech);
         if (mech_carried_dbref(mech) > 0) {

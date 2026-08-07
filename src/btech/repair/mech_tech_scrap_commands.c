@@ -15,21 +15,19 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "econ_api.h"
-#include "legacy_macros.h"
 #include "mech_classification_api.h"
 #include "mech_consistency_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_parts.h"
 #include "mech_specification_api.h"
 #include "mech_status_api.h"
 #include "mech_status_types.h"
-#include "mech_tech.h"
 #include "mech_tech_api.h"
 #include "mech_tech_commands_api.h"
 #include "mech_tech_do_api.h"
+#include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
@@ -37,45 +35,9 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "registry_api.h"
+#include "repair_job.h"
 #include "section_types.h"
-
-#define my_parsepart(loc, part)                                                \
-  switch (tech_parsepart(mech, buffer, loc, part, NULL)) {                     \
-  case -1:                                                                     \
-    notify(evaluation, player, "Invalid section!");                            \
-    return;                                                                    \
-  case -2:                                                                     \
-    notify(evaluation, player, "Invalid part!");                               \
-    return;                                                                    \
-  }
-
-#define my_parsepart2(loc, part, brand)                                        \
-  switch (tech_parsepart(mech, buffer, loc, part, brand)) {                    \
-  case -1:                                                                     \
-    notify(evaluation, player, "Invalid section!");                            \
-    return;                                                                    \
-  case -2:                                                                     \
-    notify(evaluation, player, "Invalid part!");                               \
-    return;                                                                    \
-  }
-
-#define my_parsegun(loc, part, brand)                                          \
-  switch (tech_parsegun(mech, buffer, loc, part, brand)) {                     \
-  case -1:                                                                     \
-    notify(evaluation, player, "Invalid gun #!");                              \
-    return;                                                                    \
-  case -2:                                                                     \
-    notify(evaluation, player, "Invalid object to replace with!");             \
-    return;                                                                    \
-  case -3:                                                                     \
-    notify(evaluation, player,                                                 \
-           "Invalid object type - not matching with original.");               \
-    return;                                                                    \
-  case -4:                                                                     \
-    notify(evaluation, player,                                                 \
-           "Invalid gun location - subscript out of range.");                  \
-    return;                                                                    \
-  }
 
 static int clan_modified_time(const Mech *mech, int time) {
   return MAX(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
@@ -86,119 +48,219 @@ typedef struct TechCheckContext {
   int location;
   int part;
 } TechCheckContext;
-TECHCOMMANDH(tech_removegun) {
-  TECHCOMMANDB;
-  TECHCOMMANDC;
-  my_parsegun(&loc, &part, NULL);
-  DOCHECK_CONTEXT(context, mech_section_is_destroyed(mech, loc),
-                  "That part's blown off! You can assume the gun's gone too!");
-  DOCHECK_CONTEXT(context, !IsWeapon(mech_critical_part_type(mech, loc, part)),
-                  "That's no gun!");
-  DOCHECK_CONTEXT(context, mech_critical_is_destroyed(mech, loc, part),
-                  "That gun's gone already!");
-  DOCHECK_CONTEXT(context, !ValidGunPos(mech, loc, part),
-                  "You can't remove middle of a gun!");
-  DOCHECK_CONTEXT(context, SomeoneScrappingPart(mech, loc, part),
-                  "Someone's scrapping it already!");
-  DOCHECK_CONTEXT(context, !CanScrapPart(mech, loc, part),
-                  "Someone's tinkering with it already!");
-  DOCHECK_CONTEXT(
-      context, SomeoneScrappingLoc(mech, loc),
-      "Someone's scrapping that section - no additional removals are "
-      "possible!");
-  DOCHECK_CONTEXT(context,
-                  player_techtime(context, player) >=
-                      btech_context_maximum_technology_time(context),
-                  "You're too tired to do that!");
+void tech_removegun(DbRef player, void *data, char *buffer) {
+  RepairCommandContext repair_command;
+  Mech *mech;
+  BtechContext *context;
+  EvaluationContext *evaluation;
+  int loc, part, mod = 2;
+  RepairCommandStatus repair_status = repair_command_context_initialize(
+      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  mech = repair_command.mech;
+  context = repair_command.context;
+  evaluation = repair_command.evaluation;
+  RepairSelection selection;
+  if (!repair_command_parse_gun(&repair_command, buffer, false, &selection))
+    return;
+  loc = selection.location;
+  part = selection.part;
+  if (mech_section_is_destroyed(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That part's blown off! You can assume the gun's gone too!");
+    return;
+  }
+  if (!equipment_is_weapon(mech_critical_part_type(mech, loc, part))) {
+    mecha_notify(btech_context_evaluation(context), player, "That's no gun!");
+    return;
+  }
+  if (mech_critical_is_destroyed(mech, loc, part)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That gun's gone already!");
+    return;
+  }
+  if (!ValidGunPos(mech, loc, part)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't remove middle of a gun!");
+    return;
+  }
+  if (SomeoneScrappingPart(mech, loc, part)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's scrapping it already!");
+    return;
+  }
+  if (!CanScrapPart(mech, loc, part)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's tinkering with it already!");
+    return;
+  }
+  if (SomeoneScrappingLoc(mech, loc)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "Someone's scrapping that section - no additional removals are "
+        "possible!");
+    return;
+  }
+  if (player_techtime(context, player) >=
+      btech_context_maximum_technology_time(context)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're too tired to do that!");
+    return;
+  }
 
   /* Ok.. Everything's valid (we hope). */
   if (tech_weapon_roll(player, mech, REMOVEG_DIFFICULTY) < 0) {
-    START(
-        "Ack! Your attempt is far from perfect, you try to recover the gun..");
+    mecha_notify(evaluation, player,
+                 "Ack! Your attempt is far from perfect, you try to recover "
+                 "the gun..");
     if (tech_weapon_roll(player, mech, REMOVEG_DIFFICULTY) < 0) {
-      START("No good. Consider the part gone.");
-      FAKEREPAIR(
+      mecha_notify(evaluation, player, "No good. Consider the part gone.");
+      int time =
           REMOVEG_TIME *
-              clan_modified_time(
-                  mech, GetWeaponCrits(mech, Weapon2I(mech_critical_part_type(
-                                                 mech, loc, part)))),
-          EVENT_REPAIR_SCRG, mech, PACK_LOCPOS_E(loc, part, mod));
+          clan_modified_time(
+              mech, GetWeaponCrits(
+                        mech, weapon_from_equipment_index(
+                                  mech_critical_part_type(mech, loc, part))));
+      repair_event_schedule_with_techtime(
+          &repair_command, time, mod, EVENT_REPAIR_SCRG, very_fake_func,
+          (RepairEventPayload){.location = loc,
+                               .position = part,
+                               .extra = mod,
+                               .player = player});
       mod = 3;
       return;
     }
   }
-  START("You start removing the gun..");
-  STARTREPAIR(
+  mecha_notify(evaluation, player, "You start removing the gun..");
+  int time =
       REMOVEG_TIME *
-          clan_modified_time(
-              mech, GetWeaponCrits(mech, Weapon2I(mech_critical_part_type(
-                                             mech, loc, part)))),
-      mech, PACK_LOCPOS_E(loc, part, mod), mux_event_tickmech_removegun,
-      EVENT_REPAIR_SCRG);
+      clan_modified_time(
+          mech,
+          GetWeaponCrits(mech, weapon_from_equipment_index(
+                                   mech_critical_part_type(mech, loc, part))));
+  repair_event_schedule_with_techtime(
+      &repair_command, time, mod, EVENT_REPAIR_SCRG,
+      mux_event_tickmech_removegun,
+      (RepairEventPayload){
+          .location = loc, .position = part, .extra = mod, .player = player});
 }
 
-TECHCOMMANDH(tech_removepart) {
-  TECHCOMMANDB;
-  TECHCOMMANDC;
-  my_parsepart(&loc, &part);
-  DOCHECK_CONTEXT(context,
-                  (t = mech_critical_part_type(mech, loc, part)) == EMPTY,
-                  "That location is empty!");
-  DOCHECK_CONTEXT(context, mech_section_is_destroyed(mech, loc),
-                  "That part's blown off! You can assume the part's gone too!");
-  DOCHECK_CONTEXT(context, IsWeapon(t),
-                  "That's a gun - use removegun instead!");
-  DOCHECK_CONTEXT(context, mech_critical_is_destroyed(mech, loc, part),
-                  "That part's gone already!");
-  DOCHECK_CONTEXT(context,
-                  mech_part_is_structural_placeholder(
-                      mech_critical_part_type(mech, loc, part)),
-                  "That type isn't scrappable!");
-  DOCHECK_CONTEXT(context,
-                  t == Special(ENDO_STEEL) || t == Special(FERRO_FIBROUS) ||
-                      t == Special(STEALTH_ARMOR) ||
-                      t == Special(HVY_FERRO_FIBROUS) ||
-                      t == Special(LT_FERRO_FIBROUS),
-                  "That type of item can't be removed!");
-  DOCHECK_CONTEXT(context, SomeoneScrappingPart(mech, loc, part),
-                  "Someone's scrapping it already!");
-  DOCHECK_CONTEXT(
-      context, SomeoneScrappingLoc(mech, loc),
-      "Someone's scrapping that section - no additional removals are "
-      "possible!");
-  DOCHECK_CONTEXT(context, !CanScrapPart(mech, loc, part),
-                  "Someone's tinkering with it already!");
-  DOCHECK_CONTEXT(context,
-                  player_techtime(context, player) >=
-                      btech_context_maximum_technology_time(context),
-                  "You're too tired to do that!");
+void tech_removepart(DbRef player, void *data, char *buffer) {
+  RepairCommandContext repair_command;
+  Mech *mech;
+  BtechContext *context;
+  EvaluationContext *evaluation;
+  int loc, part, t, mod = 2;
+  RepairCommandStatus repair_status = repair_command_context_initialize(
+      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  mech = repair_command.mech;
+  context = repair_command.context;
+  evaluation = repair_command.evaluation;
+  RepairSelection selection;
+  if (!repair_command_parse_part(&repair_command, buffer, true, false,
+                                 &selection))
+    return;
+  loc = selection.location;
+  part = selection.part;
+  if ((t = mech_critical_part_type(mech, loc, part)) == EMPTY) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That location is empty!");
+    return;
+  }
+  if (mech_section_is_destroyed(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That part's blown off! You can assume the part's gone too!");
+    return;
+  }
+  if (equipment_is_weapon(t)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That's a gun - use removegun instead!");
+    return;
+  }
+  if (mech_critical_is_destroyed(mech, loc, part)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That part's gone already!");
+    return;
+  }
+  if (mech_part_is_structural_placeholder(
+          mech_critical_part_type(mech, loc, part))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That type isn't scrappable!");
+    return;
+  }
+  if (t == special_equipment_index(ENDO_STEEL) ||
+      t == special_equipment_index(FERRO_FIBROUS) ||
+      t == special_equipment_index(STEALTH_ARMOR) ||
+      t == special_equipment_index(HVY_FERRO_FIBROUS) ||
+      t == special_equipment_index(LT_FERRO_FIBROUS)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That type of item can't be removed!");
+    return;
+  }
+  if (SomeoneScrappingPart(mech, loc, part)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's scrapping it already!");
+    return;
+  }
+  if (SomeoneScrappingLoc(mech, loc)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "Someone's scrapping that section - no additional removals are "
+        "possible!");
+    return;
+  }
+  if (!CanScrapPart(mech, loc, part)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's tinkering with it already!");
+    return;
+  }
+  if (player_techtime(context, player) >=
+      btech_context_maximum_technology_time(context)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're too tired to do that!");
+    return;
+  }
 
   /* Ok.. Everything's valid (we hope). */
-  START("You start removing the part..");
+  mecha_notify(evaluation, player, "You start removing the part..");
   if (tech_roll(player, mech, REMOVEP_DIFFICULTY) < 0) {
-    START(
-        "Ack! Your attempt is far from perfect, you try to recover the part..");
+    mecha_notify(evaluation, player,
+                 "Ack! Your attempt is far from perfect, you try to recover "
+                 "the part..");
     if (tech_roll(player, mech, REMOVEP_DIFFICULTY) < 0) {
-      START("No good. Consider the part gone.");
+      mecha_notify(evaluation, player, "No good. Consider the part gone.");
       mod = 3;
-      FAKEREPAIR(REMOVEP_TIME, EVENT_REPAIR_SCRP, mech,
-                 PACK_LOCPOS_E(loc, part, mod));
+      repair_event_schedule_with_techtime(
+          &repair_command, REMOVEP_TIME, mod, EVENT_REPAIR_SCRP, very_fake_func,
+          (RepairEventPayload){.location = loc,
+                               .position = part,
+                               .extra = mod,
+                               .player = player});
       return;
     }
   }
-  STARTREPAIR(REMOVEP_TIME, mech, PACK_LOCPOS_E(loc, part, mod),
-              mux_event_tickmech_removepart, EVENT_REPAIR_SCRP);
+  repair_event_schedule_with_techtime(
+      &repair_command, REMOVEP_TIME, mod, EVENT_REPAIR_SCRP,
+      mux_event_tickmech_removepart,
+      (RepairEventPayload){
+          .location = loc, .position = part, .extra = mod, .player = player});
 }
 
-#define CHECK_S(nloc)                                                          \
-  if (!mech_section_is_destroyed(mech, nloc))                                  \
-    return 1;                                                                  \
-  if (Invalid_Scrap_Path(mech, nloc))                                          \
-  return 1
-
-#define CHECK(tloc, nloc)                                                      \
-  case tloc:                                                                   \
-    CHECK_S(nloc)
+static bool invalid_scrap_dependency(Mech *mech, int location) {
+  return !mech_section_is_destroyed(mech, location) ||
+         Invalid_Scrap_Path(mech, location);
+}
 
 int Invalid_Scrap_Path(Mech *mech, int loc) {
   if (loc < 0)
@@ -206,42 +268,74 @@ int Invalid_Scrap_Path(Mech *mech, int loc) {
   if (mech_class(mech) != CLASS_MECH)
     return 0;
   switch (loc) {
-    CHECK(CTORSO, HEAD);
-    CHECK_S(LTORSO);
-    CHECK_S(RTORSO);
-    break;
-    CHECK(LTORSO, LARM);
-    break;
-    CHECK(RTORSO, RARM);
-    break;
+  case CTORSO:
+    return invalid_scrap_dependency(mech, HEAD) ||
+           invalid_scrap_dependency(mech, LTORSO) ||
+           invalid_scrap_dependency(mech, RTORSO);
+  case LTORSO:
+    return invalid_scrap_dependency(mech, LARM);
+  case RTORSO:
+    return invalid_scrap_dependency(mech, RARM);
   }
   return 0;
 }
 
-#undef CHECK
-#undef CHECK_S
-
-TECHCOMMANDH(tech_removesection) {
-  TECHCOMMANDB;
-  TECHCOMMANDC;
-  my_parsepart(&loc, NULL);
-  DOCHECK_CONTEXT(context, mech_section_is_destroyed(mech, loc),
-                  "That section's gone already!");
-  DOCHECK_CONTEXT(context, Invalid_Scrap_Path(mech, loc),
-                  "You need to remove the outer sections first!");
-  DOCHECK_CONTEXT(context, SomeoneScrappingLoc(mech, loc),
-                  "Someone's scrapping it already!");
-  DOCHECK_CONTEXT(context, !CanScrapLoc(mech, loc),
-                  "Someone's tinkering with it already!");
-  DOCHECK_CONTEXT(context,
-                  player_techtime(context, player) >=
-                      btech_context_maximum_technology_time(context),
-                  "You're too tired to do that!");
+void tech_removesection(DbRef player, void *data, char *buffer) {
+  RepairCommandContext repair_command;
+  Mech *mech;
+  BtechContext *context;
+  EvaluationContext *evaluation;
+  int loc, mod = 2;
+  RepairCommandStatus repair_status = repair_command_context_initialize(
+      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  mech = repair_command.mech;
+  context = repair_command.context;
+  evaluation = repair_command.evaluation;
+  RepairSelection selection;
+  if (!repair_command_parse_part(&repair_command, buffer, false, false,
+                                 &selection))
+    return;
+  loc = selection.location;
+  if (mech_section_is_destroyed(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That section's gone already!");
+    return;
+  }
+  if (Invalid_Scrap_Path(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You need to remove the outer sections first!");
+    return;
+  }
+  if (SomeoneScrappingLoc(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's scrapping it already!");
+    return;
+  }
+  if (!CanScrapLoc(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's tinkering with it already!");
+    return;
+  }
+  if (player_techtime(context, player) >=
+      btech_context_maximum_technology_time(context)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're too tired to do that!");
+    return;
+  }
 
   /* Ok.. Everything's valid (we hope). */
   if (tech_roll(player, mech, REMOVES_DIFFICULTY) < 0)
     mod = 3;
-  START("You start removing the section..");
-  STARTREPAIR(REMOVES_TIME, mech, PACK_LOCPOS_E(loc, 0, mod),
-              mux_event_tickmech_removesection, EVENT_REPAIR_SCRL);
+  mecha_notify(evaluation, player, "You start removing the section..");
+  repair_event_schedule_with_techtime(
+      &repair_command, REMOVES_TIME, mod, EVENT_REPAIR_SCRL,
+      mux_event_tickmech_removesection,
+      (RepairEventPayload){
+          .location = loc, .position = 0, .extra = mod, .player = player});
 }

@@ -3,6 +3,7 @@
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
+#include "mech_notify_api.h"
 #include "mech_physical_internal.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -46,9 +47,7 @@ void ChargeMech(Mech *mech, Mech *target) {
   BtechContext *context = mech_context(mech);
   char emit_buff[LBUF_SIZE];
 
-  /* Are they both charging ? */
   if (mech_charge_target_dbref(target) == mech_dbref(mech)) {
-    /* They are both charging each other */
     mech_charge = 1;
     target_charge = 1;
 
@@ -346,7 +345,7 @@ void ChargeMech(Mech *mech, Mech *target) {
 
     /* Since neither can charge lets exit */
     if (!mech_charge && !target_charge) {
-      /* MechChargeTarget(mech) and the others are set
+      /* mech_charge_target_dbref(mech) and the others are set
          after the return */
       mech_charge_reset(target);
       return;
@@ -549,7 +548,7 @@ void ChargeMech(Mech *mech, Mech *target) {
       mech_set_recycle_limb(target, TURRET, PHYSICAL_RECYCLE_TIME);
     }
 
-    /* MechChargeTarget(mech) and the others are set
+    /* mech_charge_target_dbref(mech) and the others are set
        after the return */
     mech_charge_reset(target);
     return;
@@ -567,48 +566,74 @@ void ChargeMech(Mech *mech, Mech *target) {
   }
 
   /* Check if they going fast enough to charge */
-  DOCHECKMA(mech_current_speed(mech) < MP1,
-            "You aren't moving fast enough to charge.");
+  if (mech_current_speed(mech) < MP1) {
+    mech_notify(mech, MECHALL, "You aren't moving fast enough to charge.");
+    return;
+  }
 
   /* Check to see if their sections cycling */
   if (mech_class(mech) == CLASS_MECH) {
-    DOCHECKMA(mech_section_recycle_ticks(mech, LLEG) ||
-                  mech_section_recycle_ticks(mech, RLEG),
-              "Your legs are still recovering from your last attack.");
-    DOCHECKMA(mech_section_recycle_ticks(mech, RARM) ||
-                  mech_section_recycle_ticks(mech, LARM),
-              "Your arms are still recovering from your last attack.");
+    if (mech_section_recycle_ticks(mech, LLEG) ||
+        mech_section_recycle_ticks(mech, RLEG)) {
+      mech_notify(mech, MECHALL,
+                  "Your legs are still recovering from your last attack.");
+      return;
+    }
+    if (mech_section_recycle_ticks(mech, RARM) ||
+        mech_section_recycle_ticks(mech, LARM)) {
+      mech_notify(mech, MECHALL,
+                  "Your arms are still recovering from your last attack.");
+      return;
+    }
   } else {
-    DOCHECKMA(mech_section_recycle_ticks(mech, FSIDE),
-              "You are still recovering from your last attack!");
+    if (mech_section_recycle_ticks(mech, FSIDE)) {
+      mech_notify(mech, MECHALL,
+                  "You are still recovering from your last attack!");
+      return;
+    }
   }
 
   /* See if either the target or the attacker are jumping */
-  DOCHECKMA(mech_is_jumping(target),
-            "Your target is jumping, you charge underneath it.");
-  DOCHECKMA(mech_is_jumping(mech),
-            "You can't charge while jumping, try death from above.");
+  if (mech_is_jumping(target)) {
+    mech_notify(mech, MECHALL,
+                "Your target is jumping, you charge underneath it.");
+    return;
+  }
+  if (mech_is_jumping(mech)) {
+    mech_notify(mech, MECHALL,
+                "You can't charge while jumping, try death from above.");
+    return;
+  }
 
   /* If target is fallen make sure you in a tank */
-  DOCHECKMA(mech_condition_summary(target).fallen &&
-                (mech_class(mech) != CLASS_VEH_GROUND),
-            "Your target's too low for you to charge it!");
+  if (mech_condition_summary(target).fallen &&
+      (mech_class(mech) != CLASS_VEH_GROUND)) {
+    mech_notify(mech, MECHALL, "Your target's too low for you to charge it!");
+    return;
+  }
 
   /* Only mechs can charge mechs */
-  DOCHECKMA((mech_class(mech) == CLASS_MECH) &&
-                (mech_class(target) != CLASS_MECH),
-            "You can only charge mechs!");
+  if ((mech_class(mech) == CLASS_MECH) && (mech_class(target) != CLASS_MECH)) {
+    mech_notify(mech, MECHALL, "You can only charge mechs!");
+    return;
+  }
 
   /* Only tanks can charge tanks and mechs */
-  DOCHECKMA((mech_class(mech) == CLASS_VEH_GROUND) &&
-                ((mech_class(target) != CLASS_MECH) &&
-                 (mech_class(target) != CLASS_VEH_GROUND)),
-            "You can only charge mechs and tanks!");
+  if ((mech_class(mech) == CLASS_VEH_GROUND) &&
+      ((mech_class(target) != CLASS_MECH) &&
+       (mech_class(target) != CLASS_VEH_GROUND))) {
+    mech_notify(mech, MECHALL, "You can only charge mechs and tanks!");
+    return;
+  }
 
   /* Check the arc make sure target is in front arc */
   iwa = charge_forward_arc(mech, target);
-  DOCHECKMA(!(iwa & FORWARDARC), "Your charge target is not in your forward "
-                                 "arc and you are unable to charge it.");
+  if (!(iwa & FORWARDARC)) {
+    mech_notify(mech, MECHALL,
+                "Your charge target is not in your forward "
+                "arc and you are unable to charge it.");
+    return;
+  }
 
   /* Damage inflicted by the charge */
   if (btech_context_uses_new_charge_rules(context))
@@ -634,8 +659,12 @@ void ChargeMech(Mech *mech, Mech *target) {
     target_damage++;
 
   /* Not enough damage done so no charge */
-  DOCHECKMP(target_damage <= 0,
-            "Your target pulls away from you and you are unable to charge it.");
+  if (target_damage <= 0) {
+    mech_notify(
+        mech, MECHPILOT,
+        "Your target pulls away from you and you are unable to charge it.");
+    return;
+  }
 
   /* BTH */
   baseToHit += FindPilotPiloting(mech) - FindSPilotPiloting(target);
@@ -652,8 +681,12 @@ void ChargeMech(Mech *mech, Mech *target) {
     baseToHit += 2;
 #endif
 
-  DOCHECKMA(baseToHit > 12,
-            tprintf("Charge: BTH %d\tYou choose not to charge.", baseToHit));
+  if (baseToHit > 12) {
+    mech_notify(
+        mech, MECHALL,
+        tprintf("Charge: BTH %d\tYou choose not to charge.", baseToHit));
+    return;
+  }
 
   /* Roll */
   roll = btech_random_roll(context);

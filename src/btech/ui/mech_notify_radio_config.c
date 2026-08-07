@@ -3,13 +3,11 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "mech_classification_api.h"
 #include "mech_electronics_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_radio_api.h"
 #include "mech_radio_render_internal.h"
@@ -22,6 +20,7 @@
 #include "mux/server/game.h"
 #include "registry_api.h"
 
+#include "mux/support/formatting.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,25 +38,56 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
   int i, j;
 
   /* UH, this is code that _pretends_ it works :-) */
-  skipws(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !*buffer, "Invalid input!");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid input!");
+    return;
+  }
   chn = toupper(*buffer) - 'A';
-  DOCHECK_CONTEXT(mech_context(mech),
-                  chn < 0 || chn >= mech_radio_channel_count(mech),
-                  "Invalid channel-letter!");
+  if (chn < 0 || chn >= mech_radio_channel_count(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid channel-letter!");
+    return;
+  }
   buffer++;
-  skipws(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !*buffer, "Invalid input!");
-  DOCHECK_CONTEXT(mech_context(mech), *buffer != '=', "Missing =!");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid input!");
+    return;
+  }
+  if (*buffer != '=') {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Missing =!");
+    return;
+  }
   buffer++;
-  skipws(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !*buffer, "Invalid input!");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid input!");
+    return;
+  }
   freq = atoi(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !freq && strcmp(buffer, "0"),
-                  "Invalid frequency!");
-  DOCHECK_CONTEXT(mech_context(mech), freq < 0, "Are you trying to kid me?");
-  DOCHECK_CONTEXT(mech_context(mech), freq > 999999,
-                  "Invalid frequency - range is from 0 to 999999.");
+  if (!freq && strcmp(buffer, "0")) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid frequency!");
+    return;
+  }
+  if (freq < 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Are you trying to kid me?");
+    return;
+  }
+  if (freq > 999999) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid frequency - range is from 0 to 999999.");
+    return;
+  }
   notify_printf(evaluation, player, "Channel %c set to %d.", 'A' + chn, freq);
   mech_radio_frequency_set(mech, chn, freq);
 
@@ -94,19 +124,36 @@ void mech_set_channeltitle(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
 
-  skipws(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !*buffer, "Invalid input!");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid input!");
+    return;
+  }
   chn = toupper(*buffer) - 'A';
-  DOCHECK_CONTEXT(mech_context(mech),
-                  chn < 0 || chn >= mech_radio_channel_count(mech),
-                  "Invalid channel-letter!");
+  if (chn < 0 || chn >= mech_radio_channel_count(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid channel-letter!");
+    return;
+  }
   buffer++;
-  skipws(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !*buffer, "Invalid input!");
-  DOCHECK_CONTEXT(mech_context(mech), *buffer != '=', "Missing =!");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid input!");
+    return;
+  }
+  if (*buffer != '=') {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Missing =!");
+    return;
+  }
   buffer++;
-  skipws(buffer);
-  if (!*buffer) {
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
     mech_radio_title_set(mech, chn, "");
     notify_printf(evaluation, player, "Channel %c title cleared.", 'A' + chn);
     return;
@@ -165,18 +212,35 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   char buf[SBUF_SIZE] = {0};
 
-  skipws(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !*buffer, "Invalid input!");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid input!");
+    return;
+  }
   chn = toupper(*buffer) - 'A';
-  DOCHECK_CONTEXT(mech_context(mech),
-                  chn < 0 || chn >= mech_radio_channel_count(mech),
-                  "Invalid channel-letter!");
+  if (chn < 0 || chn >= mech_radio_channel_count(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid channel-letter!");
+    return;
+  }
   buffer++;
-  skipws(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !*buffer, "Invalid input!");
-  DOCHECK_CONTEXT(mech_context(mech), *buffer != '=', "Missing =!");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid input!");
+    return;
+  }
+  if (*buffer != '=') {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Missing =!");
+    return;
+  }
   buffer++;
-  skipws(buffer);
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
   if (!buffer || !*buffer) {
     mech_radio_mode_set(mech, chn, 0);
     notify_printf(evaluation, player, "Channel %c <send> mode set to analog.",
@@ -187,16 +251,20 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
     switch (*buffer) {
     case 'D':
     case 'd':
-      DOCHECK_CONTEXT(mech_context(mech),
-                      mech_radio_capabilities(mech) & RADIO_NODIGITAL,
-                      "Your radio can't handle digital frequencies!");
+      if (mech_radio_capabilities(mech) & RADIO_NODIGITAL) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "Your radio can't handle digital frequencies!");
+        return;
+      }
       nm |= FREQ_DIGITAL;
       break;
     case 'I':
     case 'i':
-      DOCHECK_CONTEXT(mech_context(mech),
-                      !(mech_radio_capabilities(mech) & RADIO_INFO),
-                      "This unit is unable to use info functionality.");
+      if (!(mech_radio_capabilities(mech) & RADIO_INFO)) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "This unit is unable to use info functionality.");
+        return;
+      }
       nm |= FREQ_INFO;
       break;
     case 'U':
@@ -205,16 +273,20 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
       break;
     case 'E':
     case 'e':
-      DOCHECK_CONTEXT(mech_context(mech),
-                      !(mech_radio_capabilities(mech) & RADIO_RELAY),
-                      "This unit is unable to relay.");
+      if (!(mech_radio_capabilities(mech) & RADIO_RELAY)) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "This unit is unable to relay.");
+        return;
+      }
       nm |= FREQ_RELAY;
       break;
     case 'S':
     case 's':
-      DOCHECK_CONTEXT(mech_context(mech),
-                      !(mech_radio_capabilities(mech) & RADIO_SCAN),
-                      "This unit is unable to scan.");
+      if (!(mech_radio_capabilities(mech) & RADIO_SCAN)) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "This unit is unable to scan.");
+        return;
+      }
       nm |= FREQ_SCAN;
       break;
     default:
@@ -230,10 +302,16 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
     if (buffer)
       buffer++;
   }
-  DOCHECK_CONTEXT(mech_context(mech), !(nm & FREQ_DIGITAL) && (nm & FREQ_RELAY),
-                  "Error: Need digital transfer for relay to work.");
-  DOCHECK_CONTEXT(mech_context(mech), !(nm & FREQ_DIGITAL) && (nm & FREQ_INFO),
-                  "Error: Need digital transfer for transfer info to work.");
+  if (!(nm & FREQ_DIGITAL) && (nm & FREQ_RELAY)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Error: Need digital transfer for relay to work.");
+    return;
+  }
+  if (!(nm & FREQ_DIGITAL) && (nm & FREQ_INFO)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Error: Need digital transfer for transfer info to work.");
+    return;
+  }
   mech_radio_mode_set(mech, chn, nm);
   i = 0;
 
@@ -264,7 +342,7 @@ void mech_list_freqs(DbRef player, void *data, char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
 
   /* UH, this is code that _pretends_ it works :-) */
-  notify(evaluation, player, "# -- Mode -- Frequency -- Comtitle");
+  mecha_notify(evaluation, player, "# -- Mode -- Frequency -- Comtitle");
   for (i = 0; i < mech_radio_channel_count(mech); i++) {
     int mode = mech_radio_mode(mech, i);
     notify_printf(evaluation, player, "%c    %c%c%c%c    %-9d    %s", 'A' + i,
@@ -288,12 +366,18 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   char *args[3];
   int i;
 
-  cch(MECH_USUALS);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_is_destroyed(mech) || !mech_radio_range(mech),
-                  "Your communication gear is inoperative.");
-  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_UNSTUN_CREW),
-                  "You are too stunned to use the radio!");
+  if (!common_checks(player, mech, MECH_USUALS))
+    return;
+  if (mech_is_destroyed(mech) || !mech_radio_range(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your communication gear is inoperative.");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_UNSTUN_CREW)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are too stunned to use the radio!");
+    return;
+  }
   if ((argc = proper_parseattributes(buffer, args, 3)) != 3)
     fail = 1;
   if (!fail && strlen(args[0]) > 1)
@@ -307,8 +391,9 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   if (!fail)
     for (i = 0; args[2][i]; i++) {
       if ((BOUNDED(32, args[2][i], 255)) != args[2][i]) {
-        notify(evaluation, player,
-               "Invalid: No control characters in radio messages, please.");
+        mecha_notify(
+            evaluation, player,
+            "Invalid: No control characters in radio messages, please.");
         for (i = 0; i < 3; i++) {
           if (args[i])
             free(args[i]);
@@ -318,8 +403,8 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
     }
 
   if (fail) {
-    notify(evaluation, player,
-           "Invalid format! Usage: sendchannel <letter>=<string>");
+    mecha_notify(evaluation, player,
+                 "Invalid format! Usage: sendchannel <letter>=<string>");
     for (i = 0; i < 3; i++) {
       if (args[i])
         free(args[i]);

@@ -15,21 +15,19 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "econ_api.h"
-#include "legacy_macros.h"
 #include "mech_classification_api.h"
 #include "mech_consistency_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_parts.h"
 #include "mech_specification_api.h"
 #include "mech_status_api.h"
-#include "mech_tech.h"
 #include "mech_tech_api.h"
 #include "mech_tech_commands_api.h"
 #include "mech_tech_do_api.h"
+#include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
@@ -37,45 +35,9 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "registry_api.h"
+#include "repair_job.h"
 #include "section_types.h"
-
-#define my_parsepart(loc, part)                                                \
-  switch (tech_parsepart(mech, buffer, loc, part, NULL)) {                     \
-  case -1:                                                                     \
-    notify(evaluation, player, "Invalid section!");                            \
-    return;                                                                    \
-  case -2:                                                                     \
-    notify(evaluation, player, "Invalid part!");                               \
-    return;                                                                    \
-  }
-
-#define my_parsepart2(loc, part, brand)                                        \
-  switch (tech_parsepart(mech, buffer, loc, part, brand)) {                    \
-  case -1:                                                                     \
-    notify(evaluation, player, "Invalid section!");                            \
-    return;                                                                    \
-  case -2:                                                                     \
-    notify(evaluation, player, "Invalid part!");                               \
-    return;                                                                    \
-  }
-
-#define my_parsegun(loc, part, brand)                                          \
-  switch (tech_parsegun(mech, buffer, loc, part, brand)) {                     \
-  case -1:                                                                     \
-    notify(evaluation, player, "Invalid gun #!");                              \
-    return;                                                                    \
-  case -2:                                                                     \
-    notify(evaluation, player, "Invalid object to replace with!");             \
-    return;                                                                    \
-  case -3:                                                                     \
-    notify(evaluation, player,                                                 \
-           "Invalid object type - not matching with original.");               \
-    return;                                                                    \
-  case -4:                                                                     \
-    notify(evaluation, player,                                                 \
-           "Invalid gun location - subscript out of range.");                  \
-    return;                                                                    \
-  }
 
 typedef struct TechCheckContext {
   int matches;
@@ -83,23 +45,20 @@ typedef struct TechCheckContext {
   int part;
 } TechCheckContext;
 
-#define CHECK(tloc, nloc)                                                      \
-  case tloc:                                                                   \
-    if (mech_section_is_destroyed(mech, nloc))                                 \
-      return 1;                                                                \
-    break;
-
 int Invalid_Repair_Path(Mech *mech, int loc) {
   if (mech_class(mech) != CLASS_MECH)
     return 0;
   switch (loc) {
-    CHECK(HEAD, CTORSO);
-    CHECK(LTORSO, CTORSO);
-    CHECK(RTORSO, CTORSO);
-    CHECK(LARM, LTORSO);
-    CHECK(RARM, RTORSO);
-    CHECK(LLEG, CTORSO);
-    CHECK(RLEG, CTORSO);
+  case HEAD:
+  case LTORSO:
+  case RTORSO:
+  case LLEG:
+  case RLEG:
+    return mech_section_is_destroyed(mech, CTORSO);
+  case LARM:
+    return mech_section_is_destroyed(mech, LTORSO);
+  case RARM:
+    return mech_section_is_destroyed(mech, RTORSO);
   }
   return 0;
 }
@@ -123,7 +82,7 @@ int unit_is_fixable(Mech *mech) {
         return 0;
   }
   return 1;
-};
+}
 
 static int adjusted_technology_time(BtechContext *context, int base_time,
                                     int roll) {
@@ -147,49 +106,92 @@ static void take_section_materials(BtechContext *context, Mech *mech,
                                    int location) {
   int amount = mech_section_original_internal(mech, location);
   DbRef store = mech_parts_store_dbref(mech);
-  econ_change_items(context, store, ProperInternal(mech), 0, -amount);
-  econ_change_items(context, store, Cargo(S_ELECTRONIC), 0, -amount);
+  econ_change_items(context, store, tech_proper_internal_part(mech), 0,
+                    -amount);
+  econ_change_items(context, store, cargo_equipment_index(S_ELECTRONIC), 0,
+                    -amount);
 }
 
-TECHCOMMANDH(tech_reattach) {
-  TECHCOMMANDB;
+void tech_reattach(DbRef player, void *data, char *buffer) {
+  RepairCommandContext repair_command;
+  Mech *mech;
+  BtechContext *context;
+  EvaluationContext *evaluation;
+  int loc;
 
-  TECHCOMMANDC;
+  RepairCommandStatus repair_status = repair_command_context_initialize(
+      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  mech = repair_command.mech;
+  context = repair_command.context;
+  evaluation = repair_command.evaluation;
 
   int internal_stock = 0;
   int electric_stock = 0;
   int roll, rollmod, fixtime, base_fixtime, fail_fixtime;
 
-  my_parsepart(&loc, NULL);
-  DOCHECK_CONTEXT(context, mech_class(mech) == CLASS_BSUIT,
-                  "You can't reattach a Battlesuit! Use 'replacesuit'!");
-  DOCHECK_CONTEXT(context, !mech_section_is_destroyed(mech, loc),
-                  "That section isn't destroyed!");
-  DOCHECK_CONTEXT(context, Invalid_Repair_Path(mech, loc),
-                  "You need to reattach adjacent locations first!");
-  DOCHECK_CONTEXT(context, SomeoneAttaching(mech, loc),
-                  "Someone's attaching that section already!");
-  DOCHECK_CONTEXT(context, !unit_is_fixable(mech),
-                  "You see nothing to reattach it to (read:unit is cored).");
-  DOCHECK_CONTEXT(context,
-                  player_techtime(context, player) >=
-                      btech_context_maximum_technology_time(context),
-                  "You're too tired to do that!");
+  RepairSelection selection;
+  if (!repair_command_parse_part(&repair_command, buffer, false, false,
+                                 &selection))
+    return;
+  loc = selection.location;
+  if (mech_class(mech) == CLASS_BSUIT) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't reattach a Battlesuit! Use 'replacesuit'!");
+    return;
+  }
+  if (!mech_section_is_destroyed(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That section isn't destroyed!");
+    return;
+  }
+  if (Invalid_Repair_Path(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You need to reattach adjacent locations first!");
+    return;
+  }
+  if (SomeoneAttaching(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's attaching that section already!");
+    return;
+  }
+  if (!unit_is_fixable(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You see nothing to reattach it to (read:unit is cored).");
+    return;
+  }
+  if (player_techtime(context, player) >=
+      btech_context_maximum_technology_time(context)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're too tired to do that!");
+    return;
+  }
 
   internal_stock = econ_find_items(context, mech_parts_store_dbref(mech),
-                                   ProperInternal(mech), 0);
+                                   tech_proper_internal_part(mech), 0);
   electric_stock = econ_find_items(context, mech_parts_store_dbref(mech),
-                                   Cargo(S_ELECTRONIC), 0);
+                                   cargo_equipment_index(S_ELECTRONIC), 0);
 
-  DOCHECK_CONTEXT(
-      context, internal_stock < mech_section_original_internal(mech, loc),
-      tprintf("Not enough %ss in stock. You need %d more.",
-              part_name(context, ProperInternal(mech), 0).text,
-              mech_section_original_internal(mech, loc) - internal_stock));
-  DOCHECK_CONTEXT(
-      context, electric_stock < mech_section_original_internal(mech, loc),
-      tprintf("Not enough Electrics in stock. You need %d more.",
-              mech_section_original_internal(mech, loc) - electric_stock));
+  if (internal_stock < mech_section_original_internal(mech, loc)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        tprintf("Not enough %ss in stock. You need %d more.",
+                part_name(context, tech_proper_internal_part(mech), 0).text,
+                mech_section_original_internal(mech, loc) - internal_stock));
+    return;
+  }
+  if (electric_stock < mech_section_original_internal(mech, loc)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        tprintf("Not enough Electrics in stock. You need %d more.",
+                mech_section_original_internal(mech, loc) - electric_stock));
+    return;
+  }
 
   notify_printf(evaluation, player, "You start replacing the section...");
   rollmod = REATTACH_DIFFICULTY;
@@ -250,47 +252,91 @@ TECHCOMMANDH(tech_reattach) {
   //			   "You start replacing the section..");
 }
 
-TECHCOMMANDH(tech_replacesuit) {
+void tech_replacesuit(DbRef player, void *data, char *buffer) {
   int wSuits = 0;
 
-  TECHCOMMANDB;
+  RepairCommandContext repair_command;
+  Mech *mech;
+  BtechContext *context;
+  int loc;
 
-  TECHCOMMANDC;
-  my_parsepart(&loc, NULL);
-  DOCHECK_CONTEXT(context, mech_class(mech) != CLASS_BSUIT,
-                  "You can only use 'replacesuit' on a battlesuit unit!");
+  RepairCommandStatus repair_status = repair_command_context_initialize(
+      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  mech = repair_command.mech;
+  context = repair_command.context;
+  RepairSelection selection;
+  if (!repair_command_parse_part(&repair_command, buffer, false, false,
+                                 &selection))
+    return;
+  loc = selection.location;
+  if (mech_class(mech) != CLASS_BSUIT) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can only use 'replacesuit' on a battlesuit unit!");
+    return;
+  }
 
   wSuits = bsuit_member_count(mech);
 
-  DOCHECK_CONTEXT(
-      context, mech_maximum_battle_suits(mech) <= wSuits,
-      tprintf("This %s is already full! This %s only consists of %d suits!",
-              bsuit_formation_name_lowercase(mech),
-              bsuit_formation_name_lowercase(mech),
-              mech_maximum_battle_suits(mech)));
-  DOCHECK_CONTEXT(context,
-                  (loc >= mech_maximum_battle_suits(mech)) || (loc < 0),
-                  tprintf("Invalid suit! This %s only consists of %d suits!",
-                          bsuit_formation_name_lowercase(mech),
-                          mech_maximum_battle_suits(mech)));
+  if (mech_maximum_battle_suits(mech) <= wSuits) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        tprintf("This %s is already full! This %s only consists of %d suits!",
+                bsuit_formation_name_lowercase(mech),
+                bsuit_formation_name_lowercase(mech),
+                mech_maximum_battle_suits(mech)));
+    return;
+  }
+  if ((loc >= mech_maximum_battle_suits(mech)) || (loc < 0)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 tprintf("Invalid suit! This %s only consists of %d suits!",
+                         bsuit_formation_name_lowercase(mech),
+                         mech_maximum_battle_suits(mech)));
+    return;
+  }
 
-  DOCHECK_CONTEXT(context, !mech_section_is_destroyed(mech, loc),
-                  "That suit isn't destroyed!");
+  if (!mech_section_is_destroyed(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That suit isn't destroyed!");
+    return;
+  }
 
-  DOCHECK_CONTEXT(context, SomeoneReplacingSuit(mech, loc),
-                  "Someone's already rebuilding that suit!");
-  DOCHECK_CONTEXT(context, wSuits <= 0,
-                  "You are unable to replace the suits here! None of the "
-                  "buggers are still alive!");
-  DOCHECK_CONTEXT(context,
-                  player_techtime(context, player) >=
-                      btech_context_maximum_technology_time(context),
-                  "You're too tired to do that!");
+  if (SomeoneReplacingSuit(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's already rebuilding that suit!");
+    return;
+  }
+  if (wSuits <= 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are unable to replace the suits here! None of the "
+                 "buggers are still alive!");
+    return;
+  }
+  if (player_techtime(context, player) >=
+      btech_context_maximum_technology_time(context)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're too tired to do that!");
+    return;
+  }
 
-  DOTECH_LOC(REPLACESUIT_DIFFICULTY, replacesuit_fail, replacesuit_succ,
-             replacesuit_econ, REPLACESUIT_TIME, mech, loc,
-             mux_event_tickmech_replacesuit, EVENT_REPAIR_REPSUIT,
-             "You start replacing the missing suit.");
+  RepairSectionJob job = {
+      .difficulty = REPLACESUIT_DIFFICULTY,
+      .time = REPLACESUIT_TIME,
+      .event_data =
+          repair_event_payload_pack((RepairEventPayload){.location = loc}),
+      .event_type = EVENT_REPAIR_REPSUIT,
+      .event_callback = mux_event_tickmech_replacesuit,
+      .message = "You start replacing the missing suit.",
+      .resource = replacesuit_econ,
+      .failure = replacesuit_fail,
+      .success = replacesuit_succ,
+  };
+  (void)repair_section_job_execute(&repair_command, loc, &job);
 }
 
 /*
@@ -299,43 +345,106 @@ TECHCOMMANDH(tech_replacesuit) {
  * 8/4/99
  */
 
-TECHCOMMANDH(tech_reseal) {
-  TECHCOMMANDB;
+void tech_reseal(DbRef player, void *data, char *buffer) {
+  RepairCommandContext repair_command;
+  Mech *mech;
+  BtechContext *context;
+  int loc;
 
-  TECHCOMMANDC;
-  my_parsepart(&loc, NULL);
-  DOCHECK_CONTEXT(context, mech_section_is_destroyed(mech, loc),
-                  "That section is destroyed!");
-  DOCHECK_CONTEXT(context, !mech_section_is_flooded(mech, loc),
-                  "That has not been flooded!");
-  DOCHECK_CONTEXT(context, Invalid_Repair_Path(mech, loc),
-                  "You need to reattach adjacent locations first!");
-  DOCHECK_CONTEXT(context, SomeoneResealing(mech, loc),
-                  "Someone's sealing that section already!");
-  DOCHECK_CONTEXT(context,
-                  player_techtime(context, player) >=
-                      btech_context_maximum_technology_time(context),
-                  "You're too tired to do that!");
+  RepairCommandStatus repair_status = repair_command_context_initialize(
+      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  mech = repair_command.mech;
+  context = repair_command.context;
+  RepairSelection selection;
+  if (!repair_command_parse_part(&repair_command, buffer, false, false,
+                                 &selection))
+    return;
+  loc = selection.location;
+  if (mech_section_is_destroyed(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That section is destroyed!");
+    return;
+  }
+  if (!mech_section_is_flooded(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That has not been flooded!");
+    return;
+  }
+  if (Invalid_Repair_Path(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You need to reattach adjacent locations first!");
+    return;
+  }
+  if (SomeoneResealing(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's sealing that section already!");
+    return;
+  }
+  if (player_techtime(context, player) >=
+      btech_context_maximum_technology_time(context)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're too tired to do that!");
+    return;
+  }
 
-  DOTECH_LOC(RESEAL_DIFFICULTY, reseal_fail, reseal_succ, reseal_econ,
-             RESEAL_TIME, mech, loc, mux_event_tickmech_reseal,
-             EVENT_REPAIR_RESE, "You start resealing the section.");
+  RepairSectionJob job = {
+      .difficulty = RESEAL_DIFFICULTY,
+      .time = RESEAL_TIME,
+      .event_data =
+          repair_event_payload_pack((RepairEventPayload){.location = loc}),
+      .event_type = EVENT_REPAIR_RESE,
+      .event_callback = mux_event_tickmech_reseal,
+      .message = "You start resealing the section.",
+      .resource = reseal_econ,
+      .failure = reseal_fail,
+      .success = reseal_succ,
+  };
+  (void)repair_section_job_execute(&repair_command, loc, &job);
 }
 
-TECHCOMMANDH(tech_fixextra) {
-  TECHCOMMANDB;
+void tech_fixextra(DbRef player, void *data, char *buffer) {
+  RepairCommandContext repair_command;
+  Mech *mech;
+  EvaluationContext *evaluation;
 
-  TECHCOMMANDC;
-  notify(evaluation, player, "Fixed extra stuff - reseals, ammo feeds, etc.");
+  RepairCommandStatus repair_status = repair_command_context_initialize(
+      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  mech = repair_command.mech;
+  evaluation = repair_command.evaluation;
+  mecha_notify(evaluation, player,
+               "Fixed extra stuff - reseals, ammo feeds, etc.");
   do_fixextra(mech);
 }
 
-TECHCOMMANDH(tech_magic) {
-  TECHCOMMANDB;
+void tech_magic(DbRef player, void *data, char *buffer) {
+  RepairCommandContext repair_command;
+  Mech *mech;
+  EvaluationContext *evaluation;
 
-  TECHCOMMANDC;
-  notify(evaluation, player, "Doing the magic..");
+  RepairCommandStatus repair_status = repair_command_context_initialize(
+      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  mech = repair_command.mech;
+  evaluation = repair_command.evaluation;
+  mecha_notify(evaluation, player, "Doing the magic..");
   do_magic(mech);
   mech_int_check(mech, 1);
-  notify(evaluation, player, "Done!");
+  mecha_notify(evaluation, player, "Done!");
 }

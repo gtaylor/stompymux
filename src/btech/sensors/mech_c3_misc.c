@@ -14,7 +14,6 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_los_api.h"
 #include "map_los_types.h"
 #include "map_terrain.h"
@@ -29,7 +28,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_network_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -395,8 +393,8 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
       }
 
   for (i = 0; i < buffindex; i++)
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           bufflist[sbuff[i]]);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 bufflist[sbuff[i]]);
 
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "End %s Contact List", tIsC3 ? "C3" : "C3i");
@@ -450,7 +448,7 @@ void mech_network_show_status(DbRef player, Mech *mech, bool tIsC3) {
              getRemainingArmorPercent(otherMech),
              getRemainingInternalPercent(otherMech));
 
-    notify(btech_context_evaluation(mech_context(mech)), player, buff);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
   }
 
   notify_printf(btech_context_evaluation(mech_context(mech)), player,

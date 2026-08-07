@@ -14,7 +14,6 @@
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"

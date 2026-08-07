@@ -8,7 +8,6 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
@@ -23,6 +22,7 @@
 #include "mux/objects/db.h"
 #include "mux/server/diagnostics.h"
 #include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_settings.h"
@@ -153,13 +153,13 @@ char GetWeaponFireModeLetter_Model_Mode(int model, int mode) {
 
 char GetWeaponAmmoModeLetter(Mech *mech, int loop, int crit) {
   return GetWeaponAmmoModeLetter_Model_Mode(
-      Weapon2I(mech_critical_part_type(mech, loop, crit)),
+      weapon_from_equipment_index(mech_critical_part_type(mech, loop, crit)),
       mech_critical_ammo_mode(mech, loop, crit));
 }
 
 char GetWeaponFireModeLetter(Mech *mech, int loop, int crit) {
   return GetWeaponFireModeLetter_Model_Mode(
-      Weapon2I(mech_critical_part_type(mech, loop, crit)),
+      weapon_from_equipment_index(mech_critical_part_type(mech, loop, crit)),
       mech_critical_fire_mode(mech, loop, crit));
 }
 
@@ -202,15 +202,15 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
   if (conditions.combat_safe) {
     strcpy(buf + spaces, "[fg=blue bold]COMBAT SAFE[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.fortified) {
     strcpy(buf + spaces, "[fg=green bold]FORTIFIED[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.weapons_hold) {
     strcpy(buf + spaces, "[fg=red bold]WEAPONS HOLD[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (mech_is_fallen(mech)) {
     switch (mech_movement_type(mech)) {
@@ -245,50 +245,50 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
       strcpy(buf + spaces, "[fg=red bold]FOIL DESTROYED[reset]");
       break;
     }
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.hull_down) {
     strcpy(buf + spaces, "[fg=green bold]HULLDOWN[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.dug_in) {
     strcpy(buf + spaces, "[fg=green bold]DUG IN[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.digging) {
     strcpy(buf + spaces, "[fg=green]DIGGING IN[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.staggering) {
     strcpy(buf + spaces, "[fg=red bold]STAGGERING[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.searchlight_destroyed) {
     strcpy(buf + spaces, "[fg=red bold]SEARCHLIGHT DESTROYED[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (mech_searchlight_active(mech)) {
     strcpy(buf + spaces, "[fg=green bold]SEARCHLIGHT ON[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   } else if (conditions.illuminated) {
     strcpy(buf + spaces, "[fg=green bold]ILLUMINATED[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (mech_event_count(mech, EVENT_VEHICLEBURN) || mech_is_jellied(mech)) {
     strcpy(buf + spaces, "[fg=red bold]ON FIRE[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.hidden) {
     strcpy(buf + spaces, tprintf("[fg=green bold]HIDDEN[reset]"));
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (bsuit_has_enemy_swarmers(mech)) {
     strcpy(buf + spaces, "[fg=red bold]SWARMED BY ENEMY SUITS[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (bsuit_has_friendly_riders(mech)) {
     strcpy(buf + spaces, "[fg=red bold]MOUNTED BY FRIENDLY SUITS[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.swarm_target > 0) {
     Mech *swarm_target =
@@ -299,114 +299,114 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
       else
         strcpy(buf + spaces, "[fg=green bold]SWARMING ENEMY UNIT[reset]");
 
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
   }
 #ifdef BT_MOVEMENT_MODES
   if (conditions.dodging) {
     strcpy(buf + spaces, tprintf("[fg=red bold]DODGING[reset]"));
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.evading) {
     strcpy(buf + spaces, tprintf("[fg=red bold]EVADING[reset]"));
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.sprinting) {
     strcpy(buf + spaces, tprintf("[fg=red bold]SPRINTING[reset]"));
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (mech_event_count(mech, EVENT_MOVEMODE)) {
     strcpy(buf + spaces,
            tprintf("[fg=yellow bold]CHANGING MOVEMENT MODE[reset]"));
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (mech_event_count(mech, EVENT_SIDESLIP)) {
     strcpy(buf + spaces, tprintf("[fg=yellow bold]SIDESLIPPING[reset]"));
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (conditions.stunned) {
     strcpy(buf + spaces, "[fg=red bold]STUNNED[reset]");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
 #endif
   if (level == 0) { /* our own 'status' */
     if (conditions.ecm_protected) {
       strcpy(buf + spaces, "[fg=green bold]PROTECTED BY ECM[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (conditions.angel_ecm_protected) {
       strcpy(buf + spaces, "[fg=green bold]PROTECTED BY ANGEL ECM[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (mech_is_ecm_disturbed(mech)) {
       strcpy(buf + spaces, "[fg=yellow bold]AFFECTED BY ECM[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (conditions.angel_ecm_disturbed) {
       strcpy(buf + spaces, "[fg=yellow bold]AFFECTED BY ANGEL ECM[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (conditions.ecm_countered) {
       strcpy(buf + spaces, "[fg=yellow bold]COUNTERED BY ECCM[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (conditions.stealth_armor_active) {
       strcpy(buf + spaces, "[fg=green bold]STEALTH ARMOR ACTIVE[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (conditions.null_signature_active) {
       strcpy(buf + spaces,
              "[fg=green bold]NULL SIGNATURE SYSTEM ACTIVE[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, NARC_ATTACHED)) {
       strcpy(buf + spaces, "[fg=yellow bold]NARC POD ATTACHED[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, INARC_HOMING_ATTACHED)) {
       strcpy(buf + spaces, "[fg=yellow bold]INARC HOMING POD ATTACHED[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, INARC_HAYWIRE_ATTACHED)) {
       strcpy(buf + spaces, "[fg=yellow bold]INARC HAYWIRE POD ATTACHED[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, INARC_ECM_ATTACHED)) {
       strcpy(buf + spaces, "[fg=yellow bold]INARC ECM POD ATTACHED[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH)) {
       strcpy(buf + spaces, "[fg=yellow bold]EXTINGUISHING FIRE[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (conditions.turret_auto_turn) {
       strcpy(buf + spaces, "[fg=green bold]TURRET AUTO-TURN ENGAGED[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (mech_section_carries_club(mech, RARM)) {
       strcpy(buf + spaces, "[fg=green bold]CARRYING CLUB - RIGHT ARM[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
     if (mech_section_carries_club(mech, LARM)) {
       strcpy(buf + spaces, "[fg=green bold]CARRYING CLUB - LEFT ARM[reset]");
-      notify(evaluation, player, buf);
+      mecha_notify(evaluation, player, buf);
     }
   }
   if (level <= 1 && mech_is_destroyed(mech)) {
     strcpy(buf + spaces, "DESTROYED");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (level <= 1 && !mech_is_started(mech)) {
     strcpy(buf + spaces, "SHUTDOWN");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (level == 0 && conditions.torso_right) {
     strcpy(buf + spaces, "Torso is 60 degrees right");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
   if (level == 0 && conditions.torso_left) {
     strcpy(buf + spaces, "Torso is 60 degrees left");
-    notify(evaluation, player, buf);
+    mecha_notify(evaluation, player, buf);
   }
 }
 

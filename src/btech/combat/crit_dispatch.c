@@ -36,7 +36,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
 #include "mech_sensor.h"
@@ -116,14 +115,15 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
         critType = mech_critical_part_type(wounded, hitloc, i);
         if (!mech_critical_is_destroyed(wounded, hitloc, i) &&
             !mech_critical_is_damaged(wounded, hitloc, i) &&
-            critType != EMPTY && critType != Special(CASE) &&
-            critType != Special(FERRO_FIBROUS) &&
-            critType != Special(STEALTH_ARMOR) &&
-            critType != Special(HVY_FERRO_FIBROUS) &&
-            critType != Special(LT_FERRO_FIBROUS) &&
-            critType != Special(ENDO_STEEL) &&
-            critType != Special(TRIPLE_STRENGTH_MYOMER) &&
-            critType != Special(SUPERCHARGER) && critType != Special(MASC)) {
+            critType != EMPTY && critType != special_equipment_index(CASE) &&
+            critType != special_equipment_index(FERRO_FIBROUS) &&
+            critType != special_equipment_index(STEALTH_ARMOR) &&
+            critType != special_equipment_index(HVY_FERRO_FIBROUS) &&
+            critType != special_equipment_index(LT_FERRO_FIBROUS) &&
+            critType != special_equipment_index(ENDO_STEEL) &&
+            critType != special_equipment_index(TRIPLE_STRENGTH_MYOMER) &&
+            critType != special_equipment_index(SUPERCHARGER) &&
+            critType != special_equipment_index(MASC)) {
           critList[count] = i;
           count++;
         }

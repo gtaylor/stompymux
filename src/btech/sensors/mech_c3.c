@@ -12,7 +12,6 @@
 
 #include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "mech_c3_api.h"
 #include "mech_c3_misc_api.h"
 #include "mech_classification_api.h"
@@ -22,7 +21,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_network_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -65,7 +63,7 @@ bool mech_c3_master_slot_is_working(Mech *mech, int section, int slot) {
     tDoBump = 0;
 
     if ((t = mech_critical_part_type(mech, section, x))) {
-      if (Special2I(t) == C3_MASTER) {
+      if (special_from_equipment_index(t) == C3_MASTER) {
         if (x < wStartCheck) {
           tDoBump = 1;
         } else {
@@ -105,7 +103,7 @@ int mech_c3_working_master_count(Mech *mech) {
 
     for (y = 0; y < CritsInLoc(mech, x); y++) {
       if ((t = mech_critical_part_type(mech, x, y))) {
-        if (Special2I(t) == C3_MASTER) {
+        if (special_from_equipment_index(t) == C3_MASTER) {
           mech_network_debug(
               mech_context(mech),
               tprintf("...found a C3Master slot at section %d, slot %d on %ld.",
@@ -161,7 +159,7 @@ int mech_c3_total_master_count(Mech *mech) {
 
     for (y = 0; y < CritsInLoc(mech, x); y++) {
       if ((t = mech_critical_part_type(mech, x, y))) {
-        if (Special2I(t) == C3_MASTER) {
+        if (special_from_equipment_index(t) == C3_MASTER) {
           mech_network_debug(
               mech_context(mech),
               tprintf("...found a C3Master slot at section %d, slot %d on %ld.",
@@ -555,18 +553,30 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
   float range = 0.0;
   int maxC3Size = 0;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_parseattributes(buffer, args, 2) != 1,
-                  "Invalid number of arguments to function!");
+  if (mech_parseattributes(buffer, args, 2) != 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguments to function!");
+    return;
+  }
 
-  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(mech),
-                  "This unit is not equipped with C3!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).c3_destroyed,
-                  "Your C3 system is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_any_ecm_disturbed(mech),
-                  "Your C3 system is not currently operational!");
+  if (!mech_has_c3(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit is not equipped with C3!");
+    return;
+  }
+  if (mech_condition_summary(mech).c3_destroyed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your C3 system is destroyed!");
+    return;
+  }
+  if (mech_is_any_ecm_disturbed(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your C3 system is not currently operational!");
+    return;
+  }
 
   mech_c3_network_validate(mech);
 
@@ -588,8 +598,11 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
   /* Well, if we're here then we wanna connect to a network */
   /* Let's check to see if we're already in one... can't be in two at the same
    * time */
-  DOCHECK_CONTEXT(mech_context(mech), mech_c3_network_size(mech) > 0,
-                  "You are already in a C3 network!");
+  if (mech_c3_network_size(mech) > 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are already in a C3 network!");
+    return;
+  }
 
   /* Find who we're trying to connect to */
   refTarget = FindTargetDBREFFromMapNumber(mech, args[0]);
@@ -601,18 +614,36 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
   else
     refTarget = 0;
 
-  DOCHECK_CONTEXT(mech_context(mech), (refTarget < 1) || !LOS,
-                  "That is not a valid targetID. Try again.");
-  DOCHECK_CONTEXT(mech_context(mech), mech_team(mech) != mech_team(target),
-                  "You can't use the C3 network of unfriendly units!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_dbref(mech) == mech_dbref(target),
-                  "You can't connect to yourself!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_destroyed(target),
-                  "That unit is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), !mech_is_started(target),
-                  "That unit is not started!");
-  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(target),
-                  "That unit does not appear to be equipped with C3!");
+  if ((refTarget < 1) || !LOS) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That is not a valid targetID. Try again.");
+    return;
+  }
+  if (mech_team(mech) != mech_team(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't use the C3 network of unfriendly units!");
+    return;
+  }
+  if (mech_dbref(mech) == mech_dbref(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't connect to yourself!");
+    return;
+  }
+  if (mech_is_destroyed(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That unit is destroyed!");
+    return;
+  }
+  if (!mech_is_started(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That unit is not started!");
+    return;
+  }
+  if (!mech_has_c3(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That unit does not appear to be equipped with C3!");
+    return;
+  }
 
   /* validate the network of our target */
   mech_c3_network_validate(target);
@@ -626,9 +657,11 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
   maxC3Size = mech_c3_maximum_network_size(mech, target_network,
                                            target_network_size, target);
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  maxC3Size < (mech_c3_network_size(target) + 1),
-                  "That unit's C3 network is operating at maximum capacity!");
+  if (maxC3Size < (mech_c3_network_size(target) + 1)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That unit's C3 network is operating at maximum capacity!");
+    return;
+  }
 
   /* Connect us up */
   mech_notify(mech, MECHALL,
@@ -639,59 +672,102 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
 }
 
 void mech_c3_message(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
-  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(mech),
-                  "This unit is not equipped with C3!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).c3_destroyed,
-                  "Your C3 system is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_any_ecm_disturbed(mech),
-                  "Your C3 system is not currently operational!");
+  if (!mech_has_c3(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit is not equipped with C3!");
+    return;
+  }
+  if (mech_condition_summary(mech).c3_destroyed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your C3 system is destroyed!");
+    return;
+  }
+  if (mech_is_any_ecm_disturbed(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your C3 system is not currently operational!");
+    return;
+  }
 
   mech_c3_network_validate(mech);
 
-  DOCHECK_CONTEXT(mech_context(mech), mech_c3_network_size(mech) <= 0,
-                  "There are no other units in your C3 network!");
+  if (mech_c3_network_size(mech) <= 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "There are no other units in your C3 network!");
+    return;
+  }
 
-  skipws(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !*buffer,
-                  "What do you want to send on the C3 Network?");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "What do you want to send on the C3 Network?");
+    return;
+  }
 
   mech_network_send_message(player, mech, buffer, 1);
 }
 
 void mech_c3_targets(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
-  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(mech),
-                  "This unit is not equipped with C3!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).c3_destroyed,
-                  "Your C3 system is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_any_ecm_disturbed(mech),
-                  "Your C3 system is not currently operational!");
+  if (!mech_has_c3(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit is not equipped with C3!");
+    return;
+  }
+  if (mech_condition_summary(mech).c3_destroyed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your C3 system is destroyed!");
+    return;
+  }
+  if (mech_is_any_ecm_disturbed(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your C3 system is not currently operational!");
+    return;
+  }
 
   mech_c3_network_validate(mech);
 
-  DOCHECK_CONTEXT(mech_context(mech), mech_c3_network_size(mech) <= 0,
-                  "There are no other units in your C3 network!");
+  if (mech_c3_network_size(mech) <= 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "There are no other units in your C3 network!");
+    return;
+  }
 
   mech_network_show_targets(player, mech, 1);
 }
 
 void mech_c3_network(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
-  DOCHECK_CONTEXT(mech_context(mech), !mech_has_c3(mech),
-                  "This unit is not equipped with C3!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).c3_destroyed,
-                  "Your C3 system is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_any_ecm_disturbed(mech),
-                  "Your C3 system is not currently operational!");
+  if (!mech_has_c3(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit is not equipped with C3!");
+    return;
+  }
+  if (mech_condition_summary(mech).c3_destroyed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your C3 system is destroyed!");
+    return;
+  }
+  if (mech_is_any_ecm_disturbed(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your C3 system is not currently operational!");
+    return;
+  }
 
   mech_c3_network_validate(mech);
 
-  DOCHECK_CONTEXT(mech_context(mech), mech_c3_network_size(mech) <= 0,
-                  "There are no other units in your C3 network!");
+  if (mech_c3_network_size(mech) <= 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "There are no other units in your C3 network!");
+    return;
+  }
 
   mech_network_show_status(player, mech, 1);
 }

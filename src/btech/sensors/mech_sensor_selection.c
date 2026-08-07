@@ -3,13 +3,11 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_conditions_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_runtime_api.h"
 #include "mech_sensor.h"
@@ -84,8 +82,8 @@ static void sensor_mode(Mech *mech, char *msg, DbRef player, int p, int s,
     for (i = 0; i < strlen(msg); i++)
       buf[i] = '-';
     buf[strlen(msg)] = 0;
-    notify(btech_context_evaluation(mech_context(mech)), player, msg);
-    notify(btech_context_evaluation(mech_context(mech)), player, buf);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player, msg);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player, buf);
     notify_printf(btech_context_evaluation(mech_context(mech)), player,
                   "Primary:   %s", sensor_mode_text(mech, p, 0, verbose).text);
     notify_printf(btech_context_evaluation(mech_context(mech)), player,
@@ -255,11 +253,18 @@ void mech_sensor(DbRef player, void *data, char *buffer) {
 
   if (!mech)
     return;
-  DOCHECK_CONTEXT(
-      mech_context(mech), mech_class(mech) == CLASS_MW,
-      "You're using your eyes, and nothing you can do changes that!");
+  if (mech_class(mech) == CLASS_MW) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "You're using your eyes, and nothing you can do changes that!");
+    return;
+  }
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(mech_context(mech), argc > 2, "Invalid number of arguments!");
+  if (argc > 2) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguments!");
+    return;
+  }
   switch (argc) {
   case 0:
     show_sensor(player, mech, 0);
@@ -268,10 +273,11 @@ void mech_sensor(DbRef player, void *data, char *buffer) {
     show_sensor(player, mech, 1);
     break;
   case 2:
-    DOCHECK_CONTEXT(mech_context(mech),
-                    set_sensor(mech, toupper(args[0][0]), toupper(args[1][0])) <
-                        0,
-                    "Invalid arguments!");
+    if (set_sensor(mech, toupper(args[0][0]), toupper(args[1][0])) < 0) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid arguments!");
+      return;
+    }
     show_sensor(player, mech, 0);
     break;
   }

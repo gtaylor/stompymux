@@ -9,7 +9,6 @@
  */
 
 #include "btech/context.h"
-#include "legacy_macros.h"
 #include "mech_api_types.h"
 #include "mech_combat_api.h"
 #include "mech_contacts_api.h"
@@ -37,25 +36,25 @@ static Mech *turret_parent_mech(DbRef player, Turret *tur,
   Mech *mech = btech_context_find_object(tur->xcode.context, tur->parent);
 
   if (!btech_context_is_mech(tur->xcode.context, tur->parent)) {
-    notify(btech_context_evaluation(tur->xcode.context), player,
-           "Error: Turret's parentage is unknown.");
+    mecha_notify(btech_context_evaluation(tur->xcode.context), player,
+                 "Error: Turret's parentage is unknown.");
     return nullptr;
   }
   if (!require_gunner)
     return mech;
   if (tur->gunner < 0) {
-    notify(btech_context_evaluation(tur->xcode.context), player,
-           "The turret hasn't been initialized yet!");
+    mecha_notify(btech_context_evaluation(tur->xcode.context), player,
+                 "The turret hasn't been initialized yet!");
     return nullptr;
   }
   if (player != tur->gunner) {
-    notify(btech_context_evaluation(tur->xcode.context), player,
-           "You aren't the registered gunner! Go 'way!");
+    mecha_notify(btech_context_evaluation(tur->xcode.context), player,
+                 "You aren't the registered gunner! Go 'way!");
     return nullptr;
   }
   if (player == mech_pilot_dbref(mech)) {
-    notify(btech_context_evaluation(tur->xcode.context), player,
-           "You'll pilot and gun at once? Yah right :P");
+    mecha_notify(btech_context_evaluation(tur->xcode.context), player,
+                 "You'll pilot and gun at once? Yah right :P");
     return nullptr;
   }
   return mech;
@@ -309,17 +308,22 @@ void turret_initialize(DbRef player, void *data, char *buffer) {
   Turret *tur = data;
   if (turret_parent_mech(player, tur, false) == nullptr)
     return;
-  DOCHECK_CONTEXT(
-      tur->xcode.context,
-      player != tur->gunner &&
-          is_connected(tur->xcode.context->database, tur->gunner) &&
-          game_object_location(tur->xcode.context->database, tur->gunner) ==
-              game_object_location(tur->xcode.context->database, player),
-      tprintf("You need %s to leave or disconnect first.",
-              game_object_name(tur->xcode.context->database, tur->gunner)));
-  DOCHECK_CONTEXT(tur->xcode.context, player == tur->gunner,
-                  "You grap firmer hold on the joystick..");
-  notify_except(
+  if (player != tur->gunner &&
+      is_connected(tur->xcode.context->database, tur->gunner) &&
+      game_object_location(tur->xcode.context->database, tur->gunner) ==
+          game_object_location(tur->xcode.context->database, player)) {
+    mecha_notify(
+        btech_context_evaluation(tur->xcode.context), player,
+        tprintf("You need %s to leave or disconnect first.",
+                game_object_name(tur->xcode.context->database, tur->gunner)));
+    return;
+  }
+  if (player == tur->gunner) {
+    mecha_notify(btech_context_evaluation(tur->xcode.context), player,
+                 "You grap firmer hold on the joystick..");
+    return;
+  }
+  mecha_notify_except(
       btech_context_evaluation(tur->xcode.context), tur->mynum, NOTHING,
       tur->mynum,
       tprintf("%s initialized as gunner.",
@@ -331,9 +335,12 @@ void turret_deinitialize(DbRef player, void *data, char *buffer) {
   Turret *tur = data;
   if (turret_parent_mech(player, tur, false) == nullptr)
     return;
-  DOCHECK_CONTEXT(tur->xcode.context, player != tur->gunner,
-                  "You aren't gunner!");
-  notify_except(
+  if (player != tur->gunner) {
+    mecha_notify(btech_context_evaluation(tur->xcode.context), player,
+                 "You aren't gunner!");
+    return;
+  }
+  mecha_notify_except(
       btech_context_evaluation(tur->xcode.context), tur->mynum, NOTHING,
       tur->mynum,
       tprintf("%s deinitialized as gunner.",

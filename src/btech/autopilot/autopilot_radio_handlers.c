@@ -30,7 +30,6 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_events.h"
@@ -56,9 +55,6 @@
 
 void sendchannelstuff(Mech *mech, int freq, char *msg);
 
-#define BACMD(name)                                                            \
-  char *name(Autopilot *autopilot, Mech *mech, char **args, int argc, int chn)
-#define ACMD(name) static BACMD(name)
 void auto_radio_command_position(Autopilot *autopilot, Mech *mech, char **args,
                                  int argc, char *mesg) {
 
@@ -66,11 +62,11 @@ void auto_radio_command_position(Autopilot *autopilot, Mech *mech, char **args,
 
   /*! \todo {Add in some checks for validity of the arguments} */
 
-  if (Readnum(x, args[1])) {
+  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid first int");
     return;
   }
-  if (Readnum(y, args[2])) {
+  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalide second int");
     return;
   }
@@ -207,7 +203,7 @@ void auto_radio_command_speed(Autopilot *autopilot, Mech *mech, char **args,
 
   int speed = 100;
 
-  if (Readnum(speed, args[1])) {
+  if ((!((speed) = atoi(args[1])) && strcmp((args[1]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid value - not a number");
     return;
   }
@@ -277,11 +273,11 @@ void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech, char **args,
 
   int x, y;
 
-  if (Readnum(x, args[1])) {
+  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid first int");
     return;
   }
-  if (Readnum(y, args[2])) {
+  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalide second int");
     return;
   }
@@ -308,14 +304,14 @@ void auto_radio_command_target(Autopilot *autopilot, Mech *mech, char **args,
     autopilot->target_score = 0;
     autopilot->target_update_tick = AUTO_GUN_UPDATE_TICK;
 
-    if (AssignedTarget(autopilot)) {
-      UnassignTarget(autopilot);
+    if (autopilot_has_assigned_target(autopilot)) {
+      autopilot_assigned_target_set(autopilot, false);
     }
 
-    if (Gunning(autopilot)) {
-      DoStopGun(autopilot);
+    if (autopilot_is_gunning(autopilot)) {
+      autopilot_gunning_stop(autopilot);
     }
-    DoStartGun(autopilot);
+    autopilot_gunning_start(autopilot);
 
     snprintf(mesg, LBUF_SIZE, "shooting at whatever I want");
     return;
@@ -334,14 +330,14 @@ void auto_radio_command_target(Autopilot *autopilot, Mech *mech, char **args,
   autopilot->target_update_tick = 0;
 
   /* Let the AI know its an assigned target */
-  if (!AssignedTarget(autopilot)) {
-    AssignTarget(autopilot);
+  if (!autopilot_has_assigned_target(autopilot)) {
+    autopilot_assigned_target_set(autopilot, true);
   }
 
-  if (Gunning(autopilot)) {
-    DoStopGun(autopilot);
+  if (autopilot_is_gunning(autopilot)) {
+    autopilot_gunning_stop(autopilot);
   }
-  DoStartGun(autopilot);
+  autopilot_gunning_start(autopilot);
 
   snprintf(mesg, LBUF_SIZE, "aiming for [%s] (and ignoring everyone else)",
            args[1]);

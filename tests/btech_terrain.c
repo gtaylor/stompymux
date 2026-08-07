@@ -3,7 +3,6 @@
 #include "btech/context.h"
 #include "map.h"
 #include "mech_internal.h"
-#include "mech_macros.h"
 
 static char encoded_terrain[256];
 static char encoded_elevation[256];
@@ -49,7 +48,7 @@ int mech_underlying_terrain(Mech *mech) {
   return ROUGH;
 }
 
-char mech_position_terrain(const Mech *mech) { return MechTerrain(mech); }
+char mech_position_terrain(const Mech *mech) { return ((mech)->pd.terrain); }
 
 int main(void) {
   BtechContext context = {0};
@@ -79,10 +78,10 @@ int main(void) {
     return 1;
   }
 
-  MechTerrain(&mech) = SMOKE;
+  ((&mech)->pd.terrain) = SMOKE;
   if (mech_real_terrain_get(&mech) != ROUGH) {
     return 1;
   }
-  MechTerrain(&mech) = ROAD;
+  ((&mech)->pd.terrain) = ROAD;
   return mech_real_terrain_get(&mech) == ROAD ? 0 : 1;
 }

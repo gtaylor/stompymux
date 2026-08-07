@@ -20,6 +20,10 @@ int mech_real_tonnage(const Mech *mech) { return mech->rd.row / 1024; }
 int mech_engine_rating(const Mech *mech) {
   if (mech->rd.erat > 0)
     return mech->rd.erat;
+  return mech_calculated_engine_rating(mech);
+}
+
+int mech_calculated_engine_rating(const Mech *mech) {
   return (int)rint((2 * mech->ud.maxspeed / KPH_PER_MP) / 3) * mech->ud.tons;
 }
 

@@ -16,6 +16,12 @@ bool mech_is_aerospace_unit(const Mech *mech) {
 
 bool mech_is_quad(const Mech *mech) { return mech->ud.move == MOVE_QUAD; }
 
+bool mech_is_biped(const Mech *mech) { return mech->ud.move == MOVE_BIPED; }
+
+bool mech_is_rolling_aerospace_unit(const Mech *mech) {
+  return mech->ud.type == CLASS_AERO || mech->ud.type == CLASS_DS;
+}
+
 int mech_team(const Mech *mech) { return mech->pd.team; }
 
 void mech_team_set(Mech *mech, int team) { mech->pd.team = team; }

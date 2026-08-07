@@ -1,22 +1,25 @@
 /* Parts inventory operations used by BTech repairs. */
 
 #include "mech_parts.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 
 #include "btech/context.h"
 #include "econ_api.h"
-#include "legacy_macros.h"
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_status_api.h"
 #include "mech_tech_commands_api.h"
 #include "mech_utils_api.h" // IWYU pragma: keep
 #include "mux/objects/db.h"
 #include "mux/support/formatting.h"
+#include "registry_api.h"
 
 DbRef mech_parts_store_dbref(const Mech *mech) {
-  if (IsDS(mech)) {
-    return AeroBay(mech, 0);
+  if (mech_is_dropship(mech)) {
+    return ((mech)->pd.bay[0]);
   }
   return game_object_location(mech->xcode.context->database, mech->mynum);
 }
@@ -26,28 +29,29 @@ int mech_parts_alias(Mech *mech, int location, int part) {
   return alias_part(mech, part, location);
 #else
   (void)location;
-  if (IsActuator(part)) {
-    return Cargo(S_ACTUATOR);
+  if (equipment_is_actuator(part)) {
+    return cargo_equipment_index(S_ACTUATOR);
   }
-  if (part == Special(ENGINE)) {
-    if (MechSpecials(mech) & XL_TECH) {
-      return Cargo(XL_ENGINE);
+  if (part == special_equipment_index(ENGINE)) {
+    if (((mech)->rd.specials) & XL_TECH) {
+      return cargo_equipment_index(XL_ENGINE);
     }
-    if (MechSpecials(mech) & ICE_TECH) {
-      return Cargo(IC_ENGINE);
+    if (((mech)->rd.specials) & ICE_TECH) {
+      return cargo_equipment_index(IC_ENGINE);
     }
-    if (MechSpecials(mech) & XXL_TECH) {
-      return Cargo(XXL_ENGINE);
+    if (((mech)->rd.specials) & XXL_TECH) {
+      return cargo_equipment_index(XXL_ENGINE);
     }
-    if (MechSpecials(mech) & CE_TECH) {
-      return Cargo(COMP_ENGINE);
+    if (((mech)->rd.specials) & CE_TECH) {
+      return cargo_equipment_index(COMP_ENGINE);
     }
-    if (MechSpecials(mech) & LE_TECH) {
-      return Cargo(LIGHT_ENGINE);
+    if (((mech)->rd.specials) & LE_TECH) {
+      return cargo_equipment_index(LIGHT_ENGINE);
     }
   }
-  if (part == Special(HEAT_SINK) && MechHasDHS(mech)) {
-    return Cargo(DOUBLE_HEAT_SINK);
+  if (part == special_equipment_index(HEAT_SINK) &&
+      mech_has_double_heat_sinks(mech)) {
+    return cargo_equipment_index(DOUBLE_HEAT_SINK);
   }
   return part;
 #endif
@@ -75,13 +79,14 @@ bool mech_parts_consume(Mech *mech, DbRef player,
     const MechPartRequirement *requirement = &requirements[index];
     if (!mech_parts_available(mech, requirement->part, requirement->brand,
                               requirement->count)) {
-      notify(btech_context_evaluation(mech->xcode.context), player,
-             tprintf("Not enough units of %s in store! You need to have at "
-                     "least %d.",
-                     part_name(mech->xcode.context, requirement->part,
-                               requirement->brand)
-                         .text,
-                     requirement->count));
+      mecha_notify(
+          btech_context_evaluation(mech->xcode.context), player,
+          tprintf("Not enough units of %s in store! You need to have at "
+                  "least %d.",
+                  part_name(mech->xcode.context, requirement->part,
+                            requirement->brand)
+                      .text,
+                  requirement->count));
       return false;
     }
   }

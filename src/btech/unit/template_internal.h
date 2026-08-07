@@ -1,6 +1,5 @@
 #include "btech_event.h" // IWYU pragma: keep
-#include "legacy_macros.h"
-#include "map.h" // IWYU pragma: keep
+#include "map.h"         // IWYU pragma: keep
 #include "map_terrain.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
@@ -54,7 +53,6 @@ constexpr int MAX_STRING_LENGTH = 8192;
 #include "mech_c3_api.h"
 #include "mech_consistency_api.h"
 #include "mech_internal.h"
-#include "mech_macros.h"
 #include "mech_mechref_ident_api.h"
 #include "mech_partnames_api.h"
 #include "mech_utils_api.h"
@@ -80,21 +78,3 @@ extern char *infspecialsabrev[];
 extern const int num_def_weapons;
 extern const int template_internal_count;
 extern const int template_cargo_count;
-
-#define TCAble(t)                                                              \
-  ((MechWeapons[Weapon2I(t)].type == TBEAM ||                                  \
-    MechWeapons[Weapon2I(t)].type == TAMMO) &&                                 \
-   strcmp(&MechWeapons[Weapon2I(t)].name[3], "Flamer") &&                      \
-   strcmp(&MechWeapons[Weapon2I(t)].name[3], "MachineGun") &&                  \
-   strcmp(&MechWeapons[Weapon2I(t)].name[3], "LightMachineGun") &&             \
-   strcmp(&MechWeapons[Weapon2I(t)].name[3], "HeavyMachineGun") &&             \
-   !(MechWeapons[Weapon2I(t)].special & PCOMBAT))
-
-#define MechComputersScanRange(mech)                                           \
-  (generic_computer_multiplier(mech) * DEFAULT_SCANRANGE)
-#define MechComputersLRSRange(mech)                                            \
-  (generic_computer_multiplier(mech) * DEFAULT_LRSRANGE)
-#define MechComputersTacRange(mech)                                            \
-  (generic_computer_multiplier(mech) * DEFAULT_TACRANGE)
-#define MechComputersRadioRange(mech)                                          \
-  (DEFAULT_RADIORANGE * generic_radio_multiplier(mech))

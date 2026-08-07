@@ -14,17 +14,20 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
-#include "legacy_macros.h"
 #include "map.h" // IWYU pragma: keep
 #include "map_terrain.h"
 #include "mech_build_api.h"
 #include "mech_combat_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
+#include "mech_heat_api.h"
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_status_types.h"
 #include "mech_tic_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
@@ -78,9 +81,11 @@ void cleartic_sub(DbRef player, Mech *mech, char *buffer) {
   int argc;
   char *args[3];
 
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  (argc = mech_parseattributes(buffer, args, 3)) != 1,
-                  "Invalid number of arguments to function");
+  if ((argc = mech_parseattributes(buffer, args, 3)) != 1) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid number of arguments to function");
+    return;
+  }
   multi_weap_sel(mech, player, args[0], 2, cleartic_sub_func, nullptr);
 }
 
@@ -108,12 +113,17 @@ void addtic_sub(DbRef player, Mech *mech, char *buffer) {
   char *args[3];
   TicSelectionContext selection;
 
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  (argc = mech_parseattributes(buffer, args, 3)) != 2,
-                  "Invalid number of arguments to function!");
+  if ((argc = mech_parseattributes(buffer, args, 3)) != 2) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid number of arguments to function!");
+    return;
+  }
   ticnum = atoi(args[0]);
-  DOCHECK_CONTEXT(mech->xcode.context, !(ticnum >= 0 && ticnum < NUM_TICS),
-                  "Invalid tic number!");
+  if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid tic number!");
+    return;
+  }
   selection = (TicSelectionContext){.tic = ticnum};
   multi_weap_sel(mech, player, args[1], 0, addtic_sub_func, &selection);
 }
@@ -143,15 +153,21 @@ void deltic_sub(DbRef player, Mech *mech, char *buffer) {
   TicSelectionContext selection;
 
   argc = mech_parseattributes(buffer, args, 3);
-  DOCHECK_CONTEXT(mech->xcode.context, argc < 1 || argc > 2,
-                  "Invalid number of arguments to the function!");
+  if (argc < 1 || argc > 2) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid number of arguments to the function!");
+    return;
+  }
   if (argc == 1) {
     cleartic_sub(player, mech, buffer);
     return;
   }
   ticnum = atoi(args[0]);
-  DOCHECK_CONTEXT(mech->xcode.context, !(ticnum >= 0 && ticnum < NUM_TICS),
-                  "Invalid tic number!");
+  if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid tic number!");
+    return;
+  }
   selection = (TicSelectionContext){.tic = ticnum};
   multi_weap_sel(mech, player, args[1], 0, deltic_sub_func, &selection);
 }
@@ -162,7 +178,7 @@ int firetic_sub_func(Mech *mech, DbRef player, int low, int high,
   const TicSelectionContext *selection = context;
   BattleMap *mech_map =
       btech_context_get_map(mech->xcode.context, mech->mapindex);
-  int f = Fallen(mech);
+  int f = mech_is_fallen(mech);
 
   for (i = low; i <= high; i++) {
     notify_printf(btech_context_evaluation(mech->xcode.context), player,
@@ -176,12 +192,12 @@ int firetic_sub_func(Mech *mech, DbRef player, int low, int high,
             FireWeaponNumber(player, mech, mech_map, weapnum,
                              selection->argument_count, selection->arguments,
                              0);
-            if (f != (Fallen(mech))) {
-              if (Started(mech))
+            if (f != (mech_is_fallen(mech))) {
+              if (mech_is_started(mech))
                 mech_notify(mech, MECHALL,
                             "That fall causes you to stop your fire!");
               return 1;
-            } else if (!Started(mech))
+            } else if (!mech_is_started(mech))
               return 1;
             count++;
           }
@@ -197,14 +213,19 @@ void firetic_sub(DbRef player, Mech *mech, char *buffer) {
   char *args[5];
   TicSelectionContext selection;
 
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  (argc = mech_parseattributes(buffer, args, 5)) < 1,
-                  "Not enough arguments to function");
+  if ((argc = mech_parseattributes(buffer, args, 5)) < 1) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Not enough arguments to function");
+    return;
+  }
   ticnum = atoi(args[0]);
-  DOCHECK_CONTEXT(mech->xcode.context, !(ticnum >= 0 && ticnum < NUM_TICS),
-                  "TIC out of range!");
+  if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "TIC out of range!");
+    return;
+  }
 
-  /*   notify (player, tprintf ("Firing all weapons in TIC #%d at default
+  /*   mecha_notify(player, tprintf ("Firing all weapons in TIC #%d at default
    * target!", ticnum)); */
   selection = (TicSelectionContext){
       .tic = ticnum,
@@ -238,11 +259,14 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
         }
         snprintf(
             buffer, LBUF_SIZE, "#%2d %3s %-16s %s", j,
-            armor_section_abbreviation(MechType(mech), MechMove(mech), section)
+            armor_section_abbreviation(((mech)->ud.type), ((mech)->ud.move),
+                                       section)
                 .text,
-            &MechWeapons[Weapon2I(GetPartType(mech, section, critical))]
+            &MechWeapons[weapon_from_equipment_index(
+                             mech_critical_part_type(mech, section, critical))]
                  .name[3],
-            PartIsNonfunctional(mech, section, critical) ? "(*)" : "");
+            mech_critical_is_nonfunctional(mech, section, critical) ? "(*)"
+                                                                    : "");
         return buffer;
       }
       count++;
@@ -259,12 +283,17 @@ void listtic_sub(DbRef player, Mech *mech, char *buffer) {
   CoolMenu *c;
   ListTicContext list;
 
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  (argc = mech_parseattributes(buffer, args, 2)) != 1,
-                  "Invalid number of arguments!");
+  if ((argc = mech_parseattributes(buffer, args, 2)) != 1) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
   ticnum = atoi(args[0]);
-  DOCHECK_CONTEXT(mech->xcode.context, !(ticnum >= 0 && ticnum < NUM_TICS),
-                  "TIC out of range!");
+  if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "TIC out of range!");
+    return;
+  }
   for (i = 0; i < MAX_WEAPONS_PER_MECH; i++) {
     j = i / SINGLE_TICLONG_SIZE;
     k = i % SINGLE_TICLONG_SIZE;
@@ -286,37 +315,45 @@ void listtic_sub(DbRef player, Mech *mech, char *buffer) {
 void mech_cleartic(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALSM);
+  if (!common_checks(player, mech, MECH_USUALSM))
+    return;
   cleartic_sub(player, mech, buffer);
 }
 
 void mech_addtic(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALSM);
+  if (!common_checks(player, mech, MECH_USUALSM))
+    return;
   addtic_sub(player, mech, buffer);
 }
 
 void mech_deltic(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALSM);
+  if (!common_checks(player, mech, MECH_USUALSM))
+    return;
   deltic_sub(player, mech, buffer);
 }
 
 void mech_firetic(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech->xcode.context, WeaponsHold(mech),
-                  "Currently in weapons hold. Unable to fire weapons.");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (mech_condition_summary(mech).weapons_hold) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Currently in weapons hold. Unable to fire weapons.");
+    return;
+  }
   firetic_sub(player, mech, buffer);
 }
 
 void mech_listtic(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALSM);
+  if (!common_checks(player, mech, MECH_USUALSM))
+    return;
   listtic_sub(player, mech, buffer);
 }
 
@@ -326,11 +363,11 @@ void heat_cutoff_event(MuxEvent *e) {
   if (e->data2) {
     mech_notify(mech, MECHALL,
                 "[fg=yellow]Heat dissipation cutoff engaged![reset]");
-    MechCritStatus(mech) |= HEATCUTOFF;
+    ((mech)->rd.critstatus) |= HEATCUTOFF;
   } else {
     mech_notify(mech, MECHALL,
                 "[fg=green]Heat dissipation cutoff disengaged![reset]");
-    MechCritStatus(mech) &= ~(HEATCUTOFF);
+    ((mech)->rd.critstatus) &= ~(HEATCUTOFF);
   }
 }
 
@@ -338,25 +375,27 @@ void heat_cutoff(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
   if (mech->xcode.context->configuration->btech_heatcutoff < 1) {
-    notify(btech_context_evaluation(mech->xcode.context), player,
-           "This command has been disabled.");
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "This command has been disabled.");
     return;
   }
 
-  cch(MECH_USUALSMO);
+  if (!common_checks(player, mech, MECH_USUALSMO))
+    return;
   if (mech_event_count(mech, EVENT_HEATCUTOFFCHANGING)) {
-    notify(btech_context_evaluation(mech->xcode.context), player,
-           "You are already toggling heat cutoff status. Please be patient.");
+    mecha_notify(
+        btech_context_evaluation(mech->xcode.context), player,
+        "You are already toggling heat cutoff status. Please be patient.");
     return;
   }
-  if (Heatcutoff(mech)) {
-    notify(btech_context_evaluation(mech->xcode.context), player,
-           "Disengaging heat dissipation cutoff...");
+  if (mech_heat_cutoff_is_enabled(mech)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Disengaging heat dissipation cutoff...");
     mech_event_schedule(mech, EVENT_HEATCUTOFFCHANGING, heat_cutoff_event, 4,
                         0);
   } else {
-    notify(btech_context_evaluation(mech->xcode.context), player,
-           "Engaging heat dissipation cutoff...");
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Engaging heat dissipation cutoff...");
     mech_event_schedule(mech, EVENT_HEATCUTOFFCHANGING, heat_cutoff_event, 4,
                         1);
   }

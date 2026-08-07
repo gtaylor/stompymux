@@ -14,7 +14,6 @@
 #include "autopilot.h"
 #include "btech/context.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_bits_api.h"
 #include "map_dynamic_api.h"
 #include "map_obj_api.h"
@@ -32,6 +31,7 @@
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
+#include "mux/support/formatting.h"
 #include "mux/support/red_black_tree.h"
 #include "registry_api.h"
 #include "special_object.h"
@@ -56,12 +56,12 @@ void debug_savedb(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
 
   if (gamedb_dump(debug->context->persistence, DUMP_NORMAL) < 0)
-    notify(
+    mecha_notify(
         btech_context_evaluation(debug->context), player,
         "SQLite checkpoint failed; the previous snapshot remains available.");
   else
-    notify(btech_context_evaluation(debug->context), player,
-           "SQLite checkpoint complete.");
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "SQLite checkpoint complete.");
 }
 
 typedef struct DebugMemoryContext DebugMemoryContext;
@@ -135,7 +135,10 @@ void debug_memory(DbRef player, void *data, char *buffer) {
     memory.largest[i] = -1;
     memory.total[i] = 0;
   }
-  skipws(buffer);
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer)
+    buffer = "";
   if (strcmp(buffer, ""))
     memory.detail_player = player;
   else
@@ -191,7 +194,7 @@ void ShutDownMap(BtechContext *context, DbRef player, DbRef mapnumber) {
       }
     battle_map_dynamic_destroy(map);
     map->first_free = 0;
-    notify(btech_context_evaluation(context), player, "Map Cleared");
+    mecha_notify(btech_context_evaluation(context), player, "Map Cleared");
     return;
   }
 }
@@ -212,23 +215,45 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
   int vrt;
   int id, brand;
 
-  DOCHECK_CONTEXT(debug->context, mech_parseattributes(buffer, args, 3) != 2,
-                  "Invalid arguments!");
-  DOCHECK_CONTEXT(debug->context, Readnum(vrt, args[1]), "Invalid value!");
-  DOCHECK_CONTEXT(debug->context, vrt <= 0, "VRT needs to be >0");
-  DOCHECK_CONTEXT(debug->context, vrt > 127, "VRT can be at max 127");
-  DOCHECK_CONTEXT(
-      debug->context,
-      !find_matching_vlong_part(debug->context, args[0], nullptr, &id, &brand),
-      "That is no weapon!");
-  DOCHECK_CONTEXT(debug->context, !IsWeapon(id), "That is no weapon!");
+  if (mech_parseattributes(buffer, args, 3) != 2) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "Invalid arguments!");
+    return;
+  }
+  if ((!((vrt) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "Invalid value!");
+    return;
+  }
+  if (vrt <= 0) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "VRT needs to be >0");
+    return;
+  }
+  if (vrt > 127) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "VRT can be at max 127");
+    return;
+  }
+  if (!find_matching_vlong_part(debug->context, args[0], nullptr, &id,
+                                &brand)) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "That is no weapon!");
+    return;
+  }
+  if (!equipment_is_weapon(id)) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "That is no weapon!");
+    return;
+  }
   btech_weapon_settings_set_recycle_time(&debug->context->weapon_settings,
-                                         Weapon2I(id), vrt);
+                                         weapon_from_equipment_index(id), vrt);
   notify_printf(btech_context_evaluation(debug->context), player,
-                "VRT for %s set to %d.", MechWeapons[Weapon2I(id)].name, vrt);
+                "VRT for %s set to %d.",
+                MechWeapons[weapon_from_equipment_index(id)].name, vrt);
   log_error(debug->context->log, LOG_WIZARD, "WIZ", "CHANGE",
-            "VRT for %s set to %d by #%ld", MechWeapons[Weapon2I(id)].name, vrt,
-            player);
+            "VRT for %s set to %d by #%ld",
+            MechWeapons[weapon_from_equipment_index(id)].name, vrt, player);
 }
 
 void debug_setwbv(DbRef player, void *data, char *buffer) {
@@ -237,17 +262,35 @@ void debug_setwbv(DbRef player, void *data, char *buffer) {
   int bv;
   int id, brand;
 
-  DOCHECK_CONTEXT(debug->context, mech_parseattributes(buffer, args, 3) != 2,
-                  "Invalid arguments!");
-  DOCHECK_CONTEXT(debug->context, Readnum(bv, args[1]), "Invalid value!");
-  DOCHECK_CONTEXT(debug->context, bv < 0, "BV needs to be >=0");
-  DOCHECK_CONTEXT(
-      debug->context,
-      !find_matching_vlong_part(debug->context, args[0], nullptr, &id, &brand),
-      "That is no weapon!");
-  DOCHECK_CONTEXT(debug->context, !IsWeapon(id), "That is no weapon!");
+  if (mech_parseattributes(buffer, args, 3) != 2) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "Invalid arguments!");
+    return;
+  }
+  if ((!((bv) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "Invalid value!");
+    return;
+  }
+  if (bv < 0) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "BV needs to be >=0");
+    return;
+  }
+  if (!find_matching_vlong_part(debug->context, args[0], nullptr, &id,
+                                &brand)) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "That is no weapon!");
+    return;
+  }
+  if (!equipment_is_weapon(id)) {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "That is no weapon!");
+    return;
+  }
   btech_weapon_settings_set_battle_value(&debug->context->weapon_settings,
-                                         Weapon2I(id), bv);
+                                         weapon_from_equipment_index(id), bv);
   notify_printf(btech_context_evaluation(debug->context), player,
-                "BV for %s set to %d.", MechWeapons[Weapon2I(id)].name, bv);
+                "BV for %s set to %d.",
+                MechWeapons[weapon_from_equipment_index(id)].name, bv);
 }

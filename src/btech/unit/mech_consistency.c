@@ -4,36 +4,34 @@
  *  Copyright (c) 1997 Markus Stenberg
  *       All rights reserved
  */
-
-#include <math.h>
-#include <stdio.h>
-#include <strings.h>
-
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
-#include "legacy_macros.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_notify_api.h"
 #include "mech_partnames_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mycool.h"
-
+#include "registry_api.h"
+#include <math.h>
+#include <stdio.h>
+#include <strings.h>
 static const char mech_loc_table[][2] = {{CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2},
                                          {LARM, 3},   {RARM, 3},   {LLEG, 4},
                                          {RLEG, 4},   {-1, 0}};
-
 static const char quad_loc_table[][2] = {{CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2},
                                          {LARM, 4},   {RARM, 4},   {LLEG, 4},
                                          {RLEG, 4},   {-1, 0}};
-
 static const char int_data[][5] = {
     {10, 4, 3, 1, 2},      {15, 5, 4, 2, 3},     {20, 6, 5, 3, 4},
     {25, 8, 6, 4, 6},      {30, 10, 7, 5, 7},    {35, 11, 8, 6, 8},
@@ -42,7 +40,6 @@ static const char int_data[][5] = {
     {70, 22, 15, 11, 15},  {75, 23, 16, 12, 16}, {80, 25, 17, 13, 17},
     {85, 27, 18, 14, 18},  {90, 29, 19, 15, 19}, {95, 30, 20, 16, 20},
     {100, 31, 21, 17, 21}, {-1, 0, 0, 0, 0}};
-
 static const short engine_data[][2] = {{0, 0},
                                        {10, 1},
                                        {15, 1},
@@ -144,63 +141,71 @@ static const short engine_data[][2] = {{0, 0},
                                        {495, 405 * 2 + 1},
                                        {500, 462 * 2 + 1},
                                        {-1, 0}};
-
 int susp_factor(Mech *mech) {
-  int t = MechTons(mech);
-
-  if (MechMove(mech) == MOVE_TRACK)
+  int t = ((mech)->ud.tons);
+  if (((mech)->ud.move) == MOVE_TRACK)
     return 0;
-  if (MechMove(mech) == MOVE_WHEEL)
+  if (((mech)->ud.move) == MOVE_WHEEL)
     return 20;
-#define BattleMap(a, b)                                                        \
-  if (t <= a)                                                                  \
-  return b
-  if (MechMove(mech) == MOVE_FOIL) {
-    BattleMap(10, 60);
-    BattleMap(20, 105);
-    BattleMap(30, 150);
-    BattleMap(40, 195);
-    BattleMap(50, 255);
-    BattleMap(60, 300);
-    BattleMap(70, 345);
-    BattleMap(80, 390);
-    BattleMap(90, 435);
+  if (((mech)->ud.move) == MOVE_FOIL) {
+    if (t <= 10)
+      return 60;
+    if (t <= 20)
+      return 105;
+    if (t <= 30)
+      return 150;
+    if (t <= 40)
+      return 195;
+    if (t <= 50)
+      return 255;
+    if (t <= 60)
+      return 300;
+    if (t <= 70)
+      return 345;
+    if (t <= 80)
+      return 390;
+    if (t <= 90)
+      return 435;
     return 480;
   }
-  if (MechMove(mech) == MOVE_HOVER) {
-    BattleMap(10, 40);
-    BattleMap(20, 85);
-    BattleMap(30, 130);
-    BattleMap(40, 175);
+  if (((mech)->ud.move) == MOVE_HOVER) {
+    if (t <= 10)
+      return 40;
+    if (t <= 20)
+      return 85;
+    if (t <= 30)
+      return 130;
+    if (t <= 40)
+      return 175;
     return 235;
   }
-  if (MechMove(mech) == MOVE_HULL || MechMove(mech) == MOVE_SUB)
+  if (((mech)->ud.move) == MOVE_HULL || ((mech)->ud.move) == MOVE_SUB)
     return 30;
-  if (MechMove(mech) == MOVE_VTOL) {
-    BattleMap(10, 50);
-    BattleMap(20, 95);
+  if (((mech)->ud.move) == MOVE_VTOL) {
+    if (t <= 10)
+      return 50;
+    if (t <= 20)
+      return 95;
     return 140;
   }
   return 0;
 }
-
 int crit_weight(Mech *mech, int t) {
   int cl;
-
-  if (IsWeapon(t))
-    return MechWeapons[Weapon2I(t)].weight * 1024 / 100 /
-           GetWeaponCrits(mech, Weapon2I(t));
-  if (IsAmmo(t))
+  if (equipment_is_weapon(t))
+    return MechWeapons[weapon_from_equipment_index(t)].weight * 1024 / 100 /
+           GetWeaponCrits(mech, weapon_from_equipment_index(t));
+  if (equipment_is_ammunition(t))
     return 512;
-  if (!(IsSpecial(t)))
+  if (!(equipment_is_special(t)))
     return 1024;
 
-  t = Special2I(t);
-  cl = MechSpecials(mech) & CLAN_TECH;
+  t = special_from_equipment_index(t);
+  cl = ((mech)->rd.specials) & CLAN_TECH;
 
   switch (t) {
   case HEAT_SINK:
-    return 1024 / HS_Size(mech);
+    return 1024 / mech_heat_sink_critical_size(mech);
   case TARGETING_COMPUTER:
   case AXE:
   case CLAW:
@@ -215,31 +220,32 @@ int crit_weight(Mech *mech, int t) {
   case LAMEQUIP:
     return 1024;
   case C3I:
-    return 1280 * (MechType(mech) == CLASS_MECH ? 1 : 2);
+    return 1280 * (((mech)->ud.type) == CLASS_MECH ? 1 : 2);
   case ANGELECM:
-    return 1024 * (MechType(mech) == CLASS_MECH ? 1 : 2);
+    return 1024 * (((mech)->ud.type) == CLASS_MECH ? 1 : 2);
   case BLOODHOUND_PROBE:
     /* Bloodhound is 2 tons for 3 crits */
-    return 1024 * (MechType(mech) == CLASS_MECH ? 2 : 6) / 3;
+    return 1024 * (((mech)->ud.type) == CLASS_MECH ? 2 : 6) / 3;
   case C3_MASTER:
-    return 1024 * (MechType(mech) == CLASS_MECH ? 1 : 5);
+    return 1024 * (((mech)->ud.type) == CLASS_MECH ? 1 : 5);
   case SWORD:
     /* A Sword weighs 1/20th of the 'mech tonnage, rounded up to the half
        ton, and is 1/15th (rounded up to int) number of crits. */
-    return (ceil(MechTons(mech) / 10.) * 512) / (ceil(MechTons(mech) / 15.));
+    return (ceil(((mech)->ud.tons) / 10.) * 512) /
+           (ceil(((mech)->ud.tons) / 15.));
   case BEAGLE_PROBE:
-    return 1024 * 3 / (MechType(mech) == CLASS_MECH ? 4 : 2);
+    return 1024 * 3 / (((mech)->ud.type) == CLASS_MECH ? 4 : 2);
   case ECM:
     /* IS ECM is 1.5 tons for 2 crits, Clan ECM 1 ton for 1 crit. */
-    return 1024 * (cl ? 4 : MechType(mech) == CLASS_MECH ? 3 : 6) / 4;
+    return 1024 * (cl ? 4 : ((mech)->ud.type) == CLASS_MECH ? 3 : 6) / 4;
   case CASE:
     return 512;
   case LIGHT_BAP:
     return 512;
   case JUMP_JET:
-    if (MechTons(mech) <= 55)
+    if (((mech)->ud.tons) <= 55)
       return 512;
-    if (MechTons(mech) <= 85)
+    if (((mech)->ud.tons) <= 85)
       return 1024;
     return 2048;
   default:
@@ -248,34 +254,35 @@ int crit_weight(Mech *mech, int t) {
 }
 
 static int engine_weight(Mech *mech) {
-  int s = MechEngineSize(mech);
+  int s = mech_engine_rating(mech);
   int i;
 
-  if (MechType(mech) != CLASS_MECH)
+  if (((mech)->ud.type) != CLASS_MECH)
     s -= susp_factor(mech);
 
   for (i = 0; engine_data[i][0] >= 0; i++)
     if (s == engine_data[i][0]) {
       int weight = engine_data[i][1] * 512;
 
-      if (MechSpecials(mech) & ICE_TECH)
+      if (((mech)->rd.specials) & ICE_TECH)
         return weight * 2;
 
-      if (MechType(mech) == CLASS_VEH_GROUND || MechType(mech) == CLASS_VTOL ||
-          MechType(mech) == CLASS_VEH_NAVAL)
+      if (((mech)->ud.type) == CLASS_VEH_GROUND ||
+          ((mech)->ud.type) == CLASS_VTOL ||
+          ((mech)->ud.type) == CLASS_VEH_NAVAL)
         /* Vehicles need extra shielding in case of a fusion engine */
         weight = round_to_halfton(weight + weight / 2);
 
-      if (MechSpecials(mech) & XL_TECH)
+      if (((mech)->rd.specials) & XL_TECH)
         return round_to_halfton(weight / 2);
 
-      if (MechSpecials(mech) & XXL_TECH)
+      if (((mech)->rd.specials) & XXL_TECH)
         return round_to_halfton(weight / 3);
 
-      if (MechSpecials(mech) & LE_TECH)
+      if (((mech)->rd.specials) & LE_TECH)
         return round_to_halfton(weight * 3 / 4);
 
-      if (MechSpecials(mech) & CE_TECH)
+      if (((mech)->rd.specials) & CE_TECH)
         return round_to_halfton(weight + weight / 2);
 
       return weight;
@@ -283,7 +290,7 @@ static int engine_weight(Mech *mech) {
 
   /* Hack ensues! Most hovers are 1/5th engine weight. Doesn't always register
    * correctly. */
-  if (MechMove(mech) != MOVE_HOVER) {
+  if (((mech)->ud.move) != MOVE_HOVER) {
     btech_channel_send(
         mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Error in #%ld (%s) : No engine found!", mech->mynum,
@@ -299,8 +306,8 @@ static void calc_ints(Mech *mech, int *n, int *tot) {
   *n = 0;
   *tot = 0;
   for (i = 0; i < NUM_SECTIONS; i++) {
-    *n += GetSectInt(mech, i);
-    *tot += GetSectOInt(mech, i);
+    *n += mech_section_internal(mech, i);
+    *tot += mech_section_original_internal(mech, i);
   }
   *tot = MAX(1, *tot);
 }
@@ -309,21 +316,54 @@ static int ammo_weight(Mech *mech) {
   int i, j, t, w = 0;
 
   for (i = 0; i < NUM_SECTIONS; i++)
-    if (!SectIsDestroyed(mech, i))
+    if (!mech_section_is_destroyed(mech, i))
       for (j = 0; j < CritsInLoc(mech, i); j++)
-        if (IsAmmo((t = GetPartType(mech, i, j))))
-          w += GetPartData(mech, i, j) * 1024 /
-               MechWeapons[Ammo2I(GetPartType(mech, i, j))].ammoperton;
+        if (equipment_is_ammunition((t = mech_critical_part_type(mech, i, j))))
+          w += mech_critical_data(mech, i, j) * 1024 /
+               MechWeapons[ammunition_to_weapon_index(
+                               mech_critical_part_type(mech, i, j))]
+                   .ammoperton;
   return w;
 }
 
-#define MyGetSectOArmor(m, l)                                                  \
-  (interactive >= 0 ? GetSectOArmor(m, l) : GetSectArmor(m, l))
-#define MyGetSectORArmor(m, l)                                                 \
-  (interactive >= 0 ? GetSectORArmor(m, l) : GetSectRArmor(m, l))
-#define PLOC(a) if (interactive >= 0 || !SectIsDestroyed(mech, a))
-#define MyMechNumOsinks(m)                                                     \
-  ((interactive >= 0) ? (MechNumOsinks(m)) : (MechRealNumsinks(m)))
+static int section_weight_armor(const Mech *mech, int location,
+                                int interactive) {
+  return interactive >= 0 ? mech_section_original_armor(mech, location)
+                          : mech_section_armor(mech, location);
+}
+
+static int section_weight_rear_armor(const Mech *mech, int location,
+                                     int interactive) {
+  return interactive >= 0 ? mech_section_original_rear_armor(mech, location)
+                          : mech_section_rear_armor(mech, location);
+}
+
+static int weight_heat_sink_count(const Mech *mech, int interactive) {
+  return interactive >= 0 ? ((mech)->rd.onumsinks) : ((mech)->ud.numsinks);
+}
+
+static void weight_entry_add(CoolMenu **menu, int interactive, int *total,
+                             char *text, int weight) {
+  if (!weight)
+    return;
+  if (interactive > 0) {
+    cool_menu_add(menu, text);
+    cool_menu_add(menu, tprintf("      %6.2f", (float)weight / 1024.0));
+  }
+  *total += weight;
+}
+
+static void weight_counted_entry_add(CoolMenu **menu, int interactive,
+                                     int *total, char *text, int count,
+                                     int weight) {
+  if (!weight)
+    return;
+  if (interactive > 0) {
+    cool_menu_add(menu, text);
+    cool_menu_add(menu, tprintf("%5d %6.2f", count, (float)weight / 1024.0));
+  }
+  *total += weight;
+}
 int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   int pile[NUM_ITEMS_M];
   int i, j, w, cl, id;
@@ -339,153 +379,157 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
 
   bzero(pile, sizeof(pile));
   if (interactive > 0) {
-    addline();
-    cent(tprintf("Weight totals for %s", mech_display_id(mech).text));
-    addline();
+    cool_menu_add_line(&c);
+    cool_menu_add_centered(
+        &c, tprintf("Weight totals for %s", mech_display_id(mech).text));
+    cool_menu_add_line(&c);
   }
   calc_ints(mech, &ints_c, &ints_tot);
   for (i = 0; i < NUM_SECTIONS; i++) {
-    if (!GetSectOInt(mech, i))
+    if (!mech_section_original_internal(mech, i))
       continue;
-    armor += MyGetSectOArmor(mech, i);
-    armor += MyGetSectORArmor(mech, i);
-    PLOC(i)
-    for (j = 0; j < NUM_CRITICALS; j++) {
-      t = GetPartType(mech, i, j);
-      if (interactive >= 0 || !IsAmmo(t)) {
-        // Handle Split Crits
-        if (Special2I(t) == SPLIT_CRIT_RIGHT ||
-            Special2I(t) == SPLIT_CRIT_LEFT) {
-          temp = ReverseSplitCritLoc(mech, i, j);
-          if (temp >= 0) {
-            t = GetPartType(mech, temp, GetPartData(mech, i, j));
-            pile[t] += AmmoMod(mech, temp, GetPartData(mech, i, j));
-          }
-        } else
-          pile[t] += AmmoMod(mech, i, j);
+    armor += section_weight_armor(mech, i, interactive);
+    armor += section_weight_rear_armor(mech, i, interactive);
+    if (interactive >= 0 || !mech_section_is_destroyed(mech, i))
+      for (j = 0; j < NUM_CRITICALS; j++) {
+        t = mech_critical_part_type(mech, i, j);
+        if (interactive >= 0 || !equipment_is_ammunition(t)) {
+          // Handle Split Crits
+          if (special_from_equipment_index(t) == SPLIT_CRIT_RIGHT ||
+              special_from_equipment_index(t) == SPLIT_CRIT_LEFT) {
+            temp = ReverseSplitCritLoc(mech, i, j);
+            if (temp >= 0) {
+              t = mech_critical_part_type(mech, temp,
+                                          mech_critical_data(mech, i, j));
+              pile[t] += mech_ammunition_slot_multiplier(
+                  mech, temp, mech_critical_data(mech, i, j));
+            }
+          } else
+            pile[t] += mech_ammunition_slot_multiplier(mech, i, j);
+        }
       }
-    }
   }
-  shs_size = HS_Size(mech);
-  hs_eff = HS_Efficiency(mech);
-  cl = MechSpecials(mech) & CLAN_TECH;
-#define ADDENTRY(text, weight)                                                 \
-  if ((weight) != 0) {                                                         \
-    if (interactive > 0) {                                                     \
-      addmenu(text);                                                           \
-      addmenu(tprintf("      %6.2f", (float)(weight) / 1024.0));               \
-    };                                                                         \
-    total += weight;                                                           \
-  }
-#define ADDENTRY_C(text, count, weight)                                        \
-  if ((weight) != 0) {                                                         \
-    if (interactive > 0) {                                                     \
-      addmenu(text);                                                           \
-      addmenu(tprintf("%5d %6.2f", count, (float)(weight) / 1024.0));          \
-    };                                                                         \
-    total += weight;                                                           \
-  }
+  shs_size = mech_heat_sink_critical_size(mech);
+  hs_eff = mech_has_double_heat_sinks(mech) ? 2 : 1;
+  cl = ((mech)->rd.specials) & CLAN_TECH;
   snprintf(buf, sizeof(buf), "%-12s(%d rating)",
-           MechSpecials(mech) & XL_TECH    ? "Engine (XL)"
-           : MechSpecials(mech) & XXL_TECH ? "Engine (XXL)"
-           : MechSpecials(mech) & CE_TECH  ? "Engine (Compact)"
-           : MechSpecials(mech) & LE_TECH  ? "Engine (Light)"
-                                           : "Engine",
-           MechEngineSize(mech));
-  PLOC(CTORSO)
-  ADDENTRY(buf, engine_weight(mech));
-  PLOC(HEAD) {
-    if (MechSpecials2(mech) & SMALLCOCKPIT_TECH) {
-      ADDENTRY("Cockpit (Small)", 2 * 1024);
+           ((mech)->rd.specials) & XL_TECH    ? "Engine (XL)"
+           : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
+           : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
+           : ((mech)->rd.specials) & LE_TECH  ? "Engine (Light)"
+                                              : "Engine",
+           mech_engine_rating(mech));
+  if (interactive >= 0 || !mech_section_is_destroyed(mech, CTORSO))
+    weight_entry_add(&c, interactive, &total, buf, engine_weight(mech));
+  if (interactive >= 0 || !mech_section_is_destroyed(mech, HEAD)) {
+    if (((mech)->rd.specials2) & SMALLCOCKPIT_TECH) {
+      weight_entry_add(&c, interactive, &total, "Cockpit (Small)", 2 * 1024);
     } else {
-      ADDENTRY("Cockpit", 3 * 1024);
+      weight_entry_add(&c, interactive, &total, "Cockpit", 3 * 1024);
     }
   }
-  PLOC(CTORSO)
-  /* Store the base-line gyro weight */
-  gyro_calc = (MechEngineSize(mech) / 100.0);
+  if (interactive >= 0 || !mech_section_is_destroyed(mech, CTORSO))
+    /* Store the base-line gyro weight */
+    gyro_calc = (mech_engine_rating(mech) / 100.0);
 
   /* Figure out what kind of gyro we have and adjust weight accordingly */
-  if (MechSpecials2(mech) & XLGYRO_TECH) {
+  if (((mech)->rd.specials2) & XLGYRO_TECH) {
     /* XL Gyro is 1/2 normal gyro weight. */
-    ADDENTRY("Gyro (XL)", (int)(ceil(gyro_calc) * 1024) * 0.5);
-  } else if (MechSpecials2(mech) & HDGYRO_TECH) {
+    weight_entry_add(&c, interactive, &total, "Gyro (XL)",
+                     (int)(ceil(gyro_calc) * 1024) * 0.5);
+  } else if (((mech)->rd.specials2) & HDGYRO_TECH) {
     /* Hardened Gyro is 2x normal gyro weight. */
-    ADDENTRY("Gyro (Hardened)", (int)(ceil(gyro_calc) * 1024) * 2);
-  } else if (MechSpecials2(mech) & CGYRO_TECH) {
+    weight_entry_add(&c, interactive, &total, "Gyro (Hardened)",
+                     (int)(ceil(gyro_calc) * 1024) * 2);
+  } else if (((mech)->rd.specials2) & CGYRO_TECH) {
     /* Compact Gyro is 1.5x normal gyro weight. */
-    ADDENTRY("Gyro (Compact)", (int)(ceil(gyro_calc) * 1024) * 1.5);
+    weight_entry_add(&c, interactive, &total, "Gyro (Compact)",
+                     (int)(ceil(gyro_calc) * 1024) * 1.5);
   } else {
     /* Standard Gyro. */
-    ADDENTRY("Gyro", (int)ceil(gyro_calc) * 1024);
+    weight_entry_add(&c, interactive, &total, "Gyro",
+                     (int)ceil(gyro_calc) * 1024);
   }
 
-  ADDENTRY(
-      MechSpecials(mech) & REINFI_TECH  ? "Internals (Reinforced)"
-      : MechSpecials(mech) & COMPI_TECH ? "Internals (Composite)"
-      : MechSpecials(mech) & ES_TECH    ? "Internals (ES)"
-                                        : "Internals",
-      round_to_halfton(MechTons(mech) * 1024 *
+  weight_entry_add(
+      &c, interactive, &total,
+      ((mech)->rd.specials) & REINFI_TECH  ? "Internals (Reinforced)"
+      : ((mech)->rd.specials) & COMPI_TECH ? "Internals (Composite)"
+      : ((mech)->rd.specials) & ES_TECH    ? "Internals (ES)"
+                                           : "Internals",
+      round_to_halfton(((mech)->ud.tons) * 1024 *
                        (interactive >= 0 ? ints_tot : ints_c) / 5 / ints_tot /
-                       (MechSpecials(mech) & REINFI_TECH                ? 1
-                        : (MechSpecials(mech) & (ES_TECH | COMPI_TECH)) ? 4
-                                                                        : 2)));
+                       (((mech)->rd.specials) & REINFI_TECH ? 1
+                        : (((mech)->rd.specials) & (ES_TECH | COMPI_TECH))
+                            ? 4
+                            : 2)));
   armor_o = armor;
-  if (MechSpecials(mech) & FF_TECH)
+  if (((mech)->rd.specials) & FF_TECH)
     armor = armor * 50 / (cl ? 60 : 56);
-  else if (MechSpecials2(mech) & HVY_FF_ARMOR_TECH)
+  else if (((mech)->rd.specials2) & HVY_FF_ARMOR_TECH)
     armor = armor * 50 / 62;
-  else if (MechSpecials2(mech) & LT_FF_ARMOR_TECH)
+  else if (((mech)->rd.specials2) & LT_FF_ARMOR_TECH)
     armor = armor * 50 / 53;
 
-  ADDENTRY_C(MechSpecials2(mech) & STEALTH_ARMOR_TECH  ? "Armor (Stealth)"
-             : MechSpecials2(mech) & HVY_FF_ARMOR_TECH ? "Armor (Hvy FF)"
-             : MechSpecials2(mech) & LT_FF_ARMOR_TECH  ? "Armor (Lt FF)"
-             : MechSpecials(mech) & HARDA_TECH         ? "Armor (Hardened)"
-             : MechSpecials(mech) & FF_TECH            ? "Armor (FF)"
-                                                       : "Armor",
-             armor_o,
-             round_to_halfton(armor * 1024 /
-                              (MechSpecials(mech) & HARDA_TECH ? 8 : 16)));
+  weight_counted_entry_add(
+      &c, interactive, &total,
+      ((mech)->rd.specials2) & STEALTH_ARMOR_TECH  ? "Armor (Stealth)"
+      : ((mech)->rd.specials2) & HVY_FF_ARMOR_TECH ? "Armor (Hvy FF)"
+      : ((mech)->rd.specials2) & LT_FF_ARMOR_TECH  ? "Armor (Lt FF)"
+      : ((mech)->rd.specials) & HARDA_TECH         ? "Armor (Hardened)"
+      : ((mech)->rd.specials) & FF_TECH            ? "Armor (FF)"
+                                                   : "Armor",
+      armor_o,
+      round_to_halfton(armor * 1024 /
+                       (((mech)->rd.specials) & HARDA_TECH ? 8 : 16)));
 
   // ceil(armor /
 
-  //					(8. * (MechSpecials(mech) & HARDA_TECH ?
+  //					(8. * (((mech)->rd.specials) &
+  // HARDA_TECH ?
   // 2 : 1))) * 512);
 
-  if (MyMechNumOsinks(mech)) {
-    pile[Special(HEAT_SINK)] =
-        MAX(0, MyMechNumOsinks(mech) * shs_size / hs_eff -
-                   (MechSpecials(mech) & ICE_TECH ? 0 : 10) * shs_size);
+  if (weight_heat_sink_count(mech, interactive)) {
+    pile[special_equipment_index(HEAT_SINK)] =
+        MAX(0, weight_heat_sink_count(mech, interactive) * shs_size / hs_eff -
+                   (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size);
   } else if (interactive > 0)
-    cent(tprintf("WARNING: HS count may be off, due to certain odd things."));
+    cool_menu_add_centered(
+        &c,
+        tprintf("WARNING: HS count may be off, due to certain odd things."));
   for (i = 1; i < NUM_ITEMS_M; i++)
     if (pile[i]) {
-      if (IsWeapon(i)) {
-        id = Weapon2I(i);
-        ADDENTRY_C(MechWeapons[id].name, pile[i] / GetWeaponCrits(mech, id),
-                   crit_weight(mech, i) * pile[i]);
+      if (equipment_is_weapon(i)) {
+        id = weapon_from_equipment_index(i);
+        weight_counted_entry_add(&c, interactive, &total, MechWeapons[id].name,
+                                 pile[i] / GetWeaponCrits(mech, id),
+                                 crit_weight(mech, i) * pile[i]);
       } else {
         if ((w = crit_weight(mech, i)))
-          ADDENTRY_C(get_parts_long_name(mech->xcode.context, i, 0), pile[i],
-                     w * pile[i]);
+          weight_counted_entry_add(
+              &c, interactive, &total,
+              get_parts_long_name(mech->xcode.context, i, 0), pile[i],
+              w * pile[i]);
       }
     }
-  if (CargoSpace(mech))
-    ADDENTRY(tprintf("CargoSpace (%.2ft)", (float)CargoSpace(mech) / 100),
-             (int)(((float)CargoSpace(mech) /
-                    (MechSpecials2(mech) & CARRIER_TECH ? 1000
-                     : MechSpecials(mech) & CARGO_TECH  ? 100
-                                                        : 500)) *
-                   1024));
+  if (((mech)->ud.cargospace))
+    weight_entry_add(
+        &c, interactive, &total,
+        tprintf("CargoSpace (%.2ft)", (float)((mech)->ud.cargospace) / 100),
+        (int)(((float)((mech)->ud.cargospace) /
+               (((mech)->rd.specials2) & CARRIER_TECH ? 1000
+                : ((mech)->rd.specials) & CARGO_TECH  ? 100
+                                                      : 500)) *
+              1024));
 
   if (interactive > 0) {
-    addline();
-    vsi(tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
-                (total / 1024) > MechTons(mech) ? "[fg=red bold]" : "",
-                (float)(total) / 1024.0,
-                MechTons(mech) - (float)(total) / 1024.0));
-    addline();
+    cool_menu_add_line(&c);
+    cool_menu_add_text(
+        &c, tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
+                    (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
+                    (float)(total) / 1024.0,
+                    ((mech)->ud.tons) - (float)(total) / 1024.0));
+    cool_menu_add_line(&c);
     ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
   }
   KillCoolMenu(c);
@@ -498,7 +542,7 @@ static int tank_in_pieces(Mech *mech) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++)
-    if (GetSectInt(mech, i))
+    if (mech_section_internal(mech, i))
       return 0;
   return 1;
 }
@@ -519,121 +563,135 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   bzero(pile, sizeof(pile));
   calc_ints(mech, &ints_c, &ints_tot);
   if (interactive > 0) {
-    addline();
-    cent(tprintf("Weight totals for %s", mech_display_id(mech).text));
-    addline();
+    cool_menu_add_line(&c);
+    cool_menu_add_centered(
+        &c, tprintf("Weight totals for %s", mech_display_id(mech).text));
+    cool_menu_add_line(&c);
   }
   for (i = 0; i < NUM_SECTIONS; i++) {
-    if (!(GetSectOInt(mech, i)))
+    if (!(mech_section_original_internal(mech, i)))
       continue;
-    armor += MyGetSectOArmor(mech, i);
-    armor += MyGetSectORArmor(mech, i);
+    armor += section_weight_armor(mech, i, interactive);
+    armor += section_weight_rear_armor(mech, i, interactive);
     for (j = 0; j < CritsInLoc(mech, i); j++) {
-      if (!(t = GetPartType(mech, i, j)))
+      if (!(t = mech_critical_part_type(mech, i, j)))
         continue;
-      if (interactive >= 0 || !SectIsDestroyed(mech, i)) {
-        if (interactive >= 0 || !IsAmmo(t))
-          pile[t] += AmmoMod(mech, i, j);
-        if (i == TURRET && (MechType(mech) == CLASS_VEH_GROUND ||
-                            MechType(mech) == CLASS_VEH_NAVAL))
-          if (IsWeapon(t))
+      if (interactive >= 0 || !mech_section_is_destroyed(mech, i)) {
+        if (interactive >= 0 || !equipment_is_ammunition(t))
+          pile[t] += mech_ammunition_slot_multiplier(mech, i, j);
+        if (i == TURRET && (((mech)->ud.type) == CLASS_VEH_GROUND ||
+                            ((mech)->ud.type) == CLASS_VEH_NAVAL))
+          if (equipment_is_weapon(t))
             turr_stuff += crit_weight(mech, t);
       }
     }
   }
-  shs_size = HS_Size(mech);
-  hs_eff = HS_Efficiency(mech);
-  cl = MechSpecials(mech) & CLAN_TECH;
+  shs_size = mech_heat_sink_critical_size(mech);
+  hs_eff = mech_has_double_heat_sinks(mech) ? 2 : 1;
+  cl = ((mech)->rd.specials) & CLAN_TECH;
   es = susp_factor(mech);
   if (es)
     snprintf(buf, sizeof(buf), "%-12s(%d->%d eff/wt rat)",
-             MechSpecials(mech) & LE_TECH    ? "Engine (Light)"
-             : MechSpecials(mech) & CE_TECH  ? "Engine (Compact)"
-             : MechSpecials(mech) & XXL_TECH ? "Engine (XXL)"
-             : MechSpecials(mech) & XL_TECH  ? "Engine (XL)"
-             : MechSpecials(mech) & ICE_TECH ? "Engine (ICE)"
-                                             : "Engine",
-             MechEngineSize(mech), MechEngineSize(mech) - susp_factor(mech));
+             ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
+             : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
+             : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
+             : ((mech)->rd.specials) & XL_TECH  ? "Engine (XL)"
+             : ((mech)->rd.specials) & ICE_TECH ? "Engine (ICE)"
+                                                : "Engine",
+             mech_engine_rating(mech),
+             mech_engine_rating(mech) - susp_factor(mech));
   else
     snprintf(buf, sizeof(buf), "%-12s(%d rating)",
-             MechSpecials(mech) & LE_TECH    ? "Engine (Light)"
-             : MechSpecials(mech) & CE_TECH  ? "Engine (Compact)"
-             : MechSpecials(mech) & XXL_TECH ? "Engine (XXL)"
-             : MechSpecials(mech) & XL_TECH  ? "Engine (XL)"
-             : MechSpecials(mech) & ICE_TECH ? "Engine (ICE)"
-                                             : "Engine",
-             MechEngineSize(mech));
+             ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
+             : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
+             : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
+             : ((mech)->rd.specials) & XL_TECH  ? "Engine (XL)"
+             : ((mech)->rd.specials) & ICE_TECH ? "Engine (ICE)"
+                                                : "Engine",
+             mech_engine_rating(mech));
   if (!tank_in_pieces(mech)) {
-    ADDENTRY(buf, (es = engine_weight(mech)));
-    if (MechMove(mech) == MOVE_HOVER && es < (MechTons(mech) * 1024 / 5))
-      ADDENTRY("Engine size fix (-> 1/5 hover wt.)",
-               MechTons(mech) * 1024 / 5 - es);
-    ADDENTRY("Cockpit", round_to_quarterton(MechTons(mech) * 1024 / 20));
-    if (MechType(mech) == CLASS_VTOL || MechMove(mech) == MOVE_HOVER ||
-        MechMove(mech) == MOVE_HULL || MechMove(mech) == MOVE_SUB)
-      ADDENTRY("SpecialComponents",
-               round_to_halfton(MechTons(mech) * 1024 / 10));
+    weight_entry_add(&c, interactive, &total, buf, (es = engine_weight(mech)));
+    if (((mech)->ud.move) == MOVE_HOVER && es < (((mech)->ud.tons) * 1024 / 5))
+      weight_entry_add(&c, interactive, &total,
+                       "Engine size fix (-> 1/5 hover wt.)",
+                       ((mech)->ud.tons) * 1024 / 5 - es);
+    weight_entry_add(&c, interactive, &total, "Cockpit",
+                     round_to_quarterton(((mech)->ud.tons) * 1024 / 20));
+    if (((mech)->ud.type) == CLASS_VTOL || ((mech)->ud.move) == MOVE_HOVER ||
+        ((mech)->ud.move) == MOVE_HULL || ((mech)->ud.move) == MOVE_SUB)
+      weight_entry_add(&c, interactive, &total, "SpecialComponents",
+                       round_to_halfton(((mech)->ud.tons) * 1024 / 10));
   }
-  PLOC(TURRET)
-  if (turr_stuff)
-    ADDENTRY("Turret", round_to_quarterton((turr_stuff / 10)));
-  ADDENTRY(
-      MechSpecials(mech) & REINFI_TECH  ? "Internals (Reinforced)"
-      : MechSpecials(mech) & COMPI_TECH ? "Internals (Composite)"
-      : MechSpecials(mech) & ES_TECH    ? "Internals (ES)"
-                                        : "Internals",
-      round_to_halfton(MechTons(mech) * 1024 *
+  if (interactive >= 0 || !mech_section_is_destroyed(mech, TURRET))
+    if (turr_stuff)
+      weight_entry_add(&c, interactive, &total, "Turret",
+                       round_to_quarterton((turr_stuff / 10)));
+  weight_entry_add(
+      &c, interactive, &total,
+      ((mech)->rd.specials) & REINFI_TECH  ? "Internals (Reinforced)"
+      : ((mech)->rd.specials) & COMPI_TECH ? "Internals (Composite)"
+      : ((mech)->rd.specials) & ES_TECH    ? "Internals (ES)"
+                                           : "Internals",
+      round_to_halfton(((mech)->ud.tons) * 1024 *
                        (interactive >= 0 ? ints_tot : ints_c) / 5 / ints_tot /
-                       (MechSpecials(mech) & REINFI_TECH                ? 1
-                        : (MechSpecials(mech) & (ES_TECH | COMPI_TECH)) ? 4
-                                                                        : 2)));
+                       (((mech)->rd.specials) & REINFI_TECH ? 1
+                        : (((mech)->rd.specials) & (ES_TECH | COMPI_TECH))
+                            ? 4
+                            : 2)));
   armor_o = armor;
 
-  if (MechSpecials(mech) & FF_TECH)
+  if (((mech)->rd.specials) & FF_TECH)
     armor = armor * 50 / (cl ? 60 : 56);
-  else if (MechSpecials2(mech) & HVY_FF_ARMOR_TECH)
+  else if (((mech)->rd.specials2) & HVY_FF_ARMOR_TECH)
     armor = armor * 50 / 62;
-  else if (MechSpecials2(mech) & LT_FF_ARMOR_TECH)
+  else if (((mech)->rd.specials2) & LT_FF_ARMOR_TECH)
     armor = armor * 50 / 53;
-  else if (MechSpecials(mech) & HARDA_TECH)
+  else if (((mech)->rd.specials) & HARDA_TECH)
     armor *= 2;
 
-  ADDENTRY_C(MechSpecials2(mech) & STEALTH_ARMOR_TECH  ? "Armor (Stealth)"
-             : MechSpecials2(mech) & HVY_FF_ARMOR_TECH ? "Armor (Hvy FF)"
-             : MechSpecials2(mech) & LT_FF_ARMOR_TECH  ? "Armor (Lt FF)"
-             : MechSpecials(mech) & HARDA_TECH         ? "Armor (Hardened)"
-             : MechSpecials(mech) & FF_TECH            ? "Armor (FF)"
-                                                       : "Armor",
-             armor_o, round_to_halfton(armor * 1024 / 16));
+  weight_counted_entry_add(
+      &c, interactive, &total,
+      ((mech)->rd.specials2) & STEALTH_ARMOR_TECH  ? "Armor (Stealth)"
+      : ((mech)->rd.specials2) & HVY_FF_ARMOR_TECH ? "Armor (Hvy FF)"
+      : ((mech)->rd.specials2) & LT_FF_ARMOR_TECH  ? "Armor (Lt FF)"
+      : ((mech)->rd.specials) & HARDA_TECH         ? "Armor (Hardened)"
+      : ((mech)->rd.specials) & FF_TECH            ? "Armor (FF)"
+                                                   : "Armor",
+      armor_o, round_to_halfton(armor * 1024 / 16));
 
-  pile[Special(HEAT_SINK)] =
-      MAX(0, MechRealNumsinks(mech) * shs_size / hs_eff -
-                 (MechSpecials(mech) & ICE_TECH ? 0 : 10) * shs_size);
+  pile[special_equipment_index(HEAT_SINK)] =
+      MAX(0, ((mech)->ud.numsinks) * shs_size / hs_eff -
+                 (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size);
   for (i = 1; i < NUM_ITEMS_M; i++)
     if (pile[i]) {
-      if (IsWeapon(i)) {
-        id = Weapon2I(i);
-        ADDENTRY_C(MechWeapons[id].name, pile[i] / GetWeaponCrits(mech, id),
-                   crit_weight(mech, i) * pile[i]);
+      if (equipment_is_weapon(i)) {
+        id = weapon_from_equipment_index(i);
+        weight_counted_entry_add(&c, interactive, &total, MechWeapons[id].name,
+                                 pile[i] / GetWeaponCrits(mech, id),
+                                 crit_weight(mech, i) * pile[i]);
       } else if ((w = crit_weight(mech, i)))
-        ADDENTRY_C(get_parts_long_name(mech->xcode.context, i, 0), pile[i],
-                   w * pile[i]);
+        weight_counted_entry_add(&c, interactive, &total,
+                                 get_parts_long_name(mech->xcode.context, i, 0),
+                                 pile[i], w * pile[i]);
     }
-  if (CargoSpace(mech))
-    ADDENTRY(tprintf("CargoSpace (%.2ft)", (float)CargoSpace(mech) / 100),
-             (int)(((float)CargoSpace(mech) /
-                    (MechSpecials2(mech) & CARRIER_TECH ? 1000
-                     : MechSpecials(mech) & CARGO_TECH  ? 100
-                                                        : 500)) *
-                   1024));
+  if (((mech)->ud.cargospace))
+    weight_entry_add(
+        &c, interactive, &total,
+        tprintf("CargoSpace (%.2ft)", (float)((mech)->ud.cargospace) / 100),
+        (int)(((float)((mech)->ud.cargospace) /
+               (((mech)->rd.specials2) & CARRIER_TECH ? 1000
+                : ((mech)->rd.specials) & CARGO_TECH  ? 100
+                                                      : 500)) *
+              1024));
 
   if (interactive > 0) {
-    addline();
-    vsi(tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
-                (total / 1024) > MechTons(mech) ? "[fg=red bold]" : "",
-                (float)(total) / 1024.0,
-                MechTons(mech) - (float)(total) / 1024.0));
-    addline();
+    cool_menu_add_line(&c);
+    cool_menu_add_text(
+        &c, tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
+                    (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
+                    (float)(total) / 1024.0,
+                    ((mech)->ud.tons) - (float)(total) / 1024.0));
+    cool_menu_add_line(&c);
     ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
   }
   KillCoolMenu(c);
@@ -644,14 +702,14 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
 
 /* Returns: 1024 * MechWeight(in tons) */
 int mech_weight_sub(DbRef player, Mech *mech, int interactive) {
-  if (MechType(mech) == CLASS_MECH)
+  if (((mech)->ud.type) == CLASS_MECH)
     return mech_weight_sub_mech(player, mech, interactive);
-  if (MechType(mech) == CLASS_VEH_GROUND || MechType(mech) == CLASS_VTOL ||
-      MechType(mech) == CLASS_VEH_NAVAL)
+  if (((mech)->ud.type) == CLASS_VEH_GROUND ||
+      ((mech)->ud.type) == CLASS_VTOL || ((mech)->ud.type) == CLASS_VEH_NAVAL)
     return mech_weight_sub_veh(player, mech, interactive);
   if (interactive > 0)
-    notify(btech_context_evaluation(mech->xcode.context), player,
-           "Invalid vehicle type!");
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid vehicle type!");
   return 1;
 }
 
@@ -661,73 +719,78 @@ void mech_weight(DbRef player, void *data, char *buffer) {
   mech_weight_sub(player, mech, 1);
 }
 
-#define Table(i, j)                                                            \
-  (MechIsQuad(mech) ? quad_loc_table[i][j] : mech_loc_table[i][j])
+static int internal_location_table(const Mech *mech, int row, int column) {
+  return mech_is_quad(mech) ? quad_loc_table[row][column]
+                            : mech_loc_table[row][column];
+}
 
 static int real_int(Mech *mech, int loc, int ti) {
   int i;
 
   if (loc == HEAD)
     return 3;
-  for (i = 0; Table(i, 0) >= 0; i++)
-    if (loc == Table(i, 0))
+  for (i = 0; internal_location_table(mech, i, 0) >= 0; i++)
+    if (loc == internal_location_table(mech, i, 0))
       break;
-  if (Table(i, 0) < 0)
+  if (internal_location_table(mech, i, 0) < 0)
     return 0;
-  return int_data[ti][Table(i, 1)];
+  return int_data[ti][internal_location_table(mech, i, 1)];
 }
 
-#define tank_int(mech) MAX((MechTons(mech) + 5) / 10, 1)
+static int vehicle_internal_structure(const Mech *mech) {
+  return MAX((((mech)->ud.tons) + 5) / 10, 1);
+}
 
 void vehicle_int_check(Mech *mech, int noisy) {
   int i, j;
 
-  j = tank_int(mech);
+  j = vehicle_internal_structure(mech);
   for (i = 0; i < NUM_SECTIONS; i++)
-    if (GetSectOInt(mech, i) && GetSectOInt(mech, i) != j) {
+    if (mech_section_original_internal(mech, i) &&
+        mech_section_original_internal(mech, i) != j) {
       if (noisy)
         btech_channel_send(
             mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
                     "(should be %d, are %d)",
-                    MechType_Ref(mech), mech->mynum, i, j,
-                    GetSectOInt(mech, i)));
-      SetSectOInt(mech, i, j);
-      SetSectInt(mech, i, j);
+                    ((mech)->ud.mech_type), mech->mynum, i, j,
+                    mech_section_original_internal(mech, i)));
+      mech_section_original_internal_set(mech, i, j);
+      mech_section_internal_set(mech, i, j);
     }
 }
 
 void mech_int_check(Mech *mech, int noisy) {
   int i, j, k;
 
-  if (MechType(mech) != CLASS_MECH) {
-    if (MechType(mech) == CLASS_VEH_GROUND || MechType(mech) == CLASS_VTOL ||
-        MechType(mech) == CLASS_VEH_NAVAL)
+  if (((mech)->ud.type) != CLASS_MECH) {
+    if (((mech)->ud.type) == CLASS_VEH_GROUND ||
+        ((mech)->ud.type) == CLASS_VTOL || ((mech)->ud.type) == CLASS_VEH_NAVAL)
       vehicle_int_check(mech, noisy);
     return;
   }
   for (i = 0; int_data[i][0] >= 0; i++)
-    if (MechTons(mech) == int_data[i][0])
+    if (((mech)->ud.tons) == int_data[i][0])
       break;
   if (int_data[i][0] < 0) {
     if (noisy)
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                          tprintf("VERY odd tonnage for #%ld: %d.", mech->mynum,
-                                 MechTons(mech)));
+                                 ((mech)->ud.tons)));
     return;
   }
   k = i;
   for (i = 0; i < NUM_SECTIONS; i++) {
-    if (GetSectOInt(mech, i) != (j = real_int(mech, i, k))) {
+    if (mech_section_original_internal(mech, i) != (j = real_int(mech, i, k))) {
       if (noisy)
         btech_channel_send(
             mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
                     "(should be %d, are %d)",
-                    MechType_Ref(mech), mech->mynum, i, j,
-                    GetSectOInt(mech, i)));
-      SetSectOInt(mech, i, j);
-      SetSectInt(mech, i, j);
+                    ((mech)->ud.mech_type), mech->mynum, i, j,
+                    mech_section_original_internal(mech, i)));
+      mech_section_original_internal_set(mech, i, j);
+      mech_section_internal_set(mech, i, j);
     }
   }
 }

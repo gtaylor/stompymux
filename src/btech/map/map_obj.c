@@ -432,23 +432,20 @@ static void fire_spreading_event(MuxEvent *e) {
   FindMyCoord(map, new_smoke_hex_x[0], new_smoke_hex_y[0], 0, map->winddir,
               &new_smoke_hex_x[3], &new_smoke_hex_y[3]);
 
-#define Spr(n, ch)                                                             \
-  if (btech_random_roll(map->xcode.context) >= ch &&                           \
-      btech_random_range(map->xcode.context, 1, 60) <= map->windspeed) {       \
-    new_fire_hex_x[n] = new_smoke_hex_x[n];                                    \
-    new_fire_hex_y[n] = new_smoke_hex_y[n];                                    \
+  for (int candidate = 0; candidate < 4; candidate++) {
+    static const int thresholds[] = {9, 11, 11, 12};
+    if (btech_random_roll(map->xcode.context) >= thresholds[candidate] &&
+        btech_random_range(map->xcode.context, 1, 60) <= map->windspeed) {
+      new_fire_hex_x[candidate] = new_smoke_hex_x[candidate];
+      new_fire_hex_y[candidate] = new_smoke_hex_y[candidate];
+    }
   }
-  Spr(0, 9);
-  Spr(1, 11);
-  Spr(2, 11);
-  Spr(3, 12); /* 2 hexes 'downwind' */
-#undef Spr
   CheckForSmoke(map, new_smoke_hex_x, new_smoke_hex_y);
   CheckForFire(map, new_fire_hex_x, new_fire_hex_y);
-  flaggo = (o->datas -= FIRESPEED(map));
-  if (flaggo > FIRESPEED(map))
+  flaggo = (o->datas -= map_fire_speed(map));
+  if (flaggo > map_fire_speed(map))
     map_event_schedule(map, EVENT_DECORATION, fire_spreading_event,
-                       FIRESPEED(map), (intptr_t)o);
+                       map_fire_speed(map), (intptr_t)o);
   else
     map_event_schedule(map, EVENT_DECORATION, fire_dissipation_event, flaggo,
                        (intptr_t)o);
@@ -489,10 +486,10 @@ void add_decoration(BattleMap *map, int x, int y, int type, char data,
       map_event_schedule(map, EVENT_DECORATION, smoke_dissipation_event, flaggo,
                          (intptr_t)tmpo);
     if (type == TYPE_FIRE) {
-      foo.datas = foo.datas * FIRESPEED(map) * 4 / 3 / 60;
-      foo.datas = MAX(foo.datas, FIRESPEED(map) * 2);
+      foo.datas = foo.datas * map_fire_speed(map) * 4 / 3 / 60;
+      foo.datas = MAX(foo.datas, map_fire_speed(map) * 2);
       map_event_schedule(map, EVENT_DECORATION, fire_spreading_event,
-                         FIRESPEED(map), (intptr_t)tmpo);
+                         map_fire_speed(map), (intptr_t)tmpo);
     }
   }
 }

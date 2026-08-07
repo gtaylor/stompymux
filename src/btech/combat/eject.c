@@ -33,7 +33,6 @@
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "econ_cmds_api.h"
-#include "legacy_macros.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
@@ -45,7 +44,6 @@
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_ood_api.h"
 #include "mech_position_api.h"
@@ -130,11 +128,13 @@ void pickup_mw(Mech *mech, Mech *target) {
 
   mw = game_object_contents(btech_context_database(mech_context(mech)),
                             mech_dbref(target));
-  DOCHECKMA((mech_class(mech) != CLASS_MECH) &&
-                (mech_class(mech) != CLASS_VEH_GROUND) &&
-                (mech_class(mech) != CLASS_VTOL) &&
-                !(mech_technology_flags(mech) & SALVAGE_TECH),
-            "You can't pick up, period.")
+  if ((mech_class(mech) != CLASS_MECH) &&
+      (mech_class(mech) != CLASS_VEH_GROUND) &&
+      (mech_class(mech) != CLASS_VTOL) &&
+      !(mech_technology_flags(mech) & SALVAGE_TECH)) {
+    mech_notify(mech, MECHALL, "You can't pick up, period.");
+    return;
+  }
   if (mw > 0)
     notify_printf(evaluation, mw,
                   "%s scoops you up and brings you into the cockpit.",
@@ -181,9 +181,9 @@ static void char_eject(DbRef player, Mech *mech) {
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to create special obj for #%ld's ejection.", player));
     destroy_thing(evaluation, suit);
-    notify(evaluation, player,
-           "Sorry, something serious went wrong, contact a Wizard "
-           "(can't create RS object)");
+    mecha_notify(evaluation, player,
+                 "Sorry, something serious went wrong, contact a Wizard "
+                 "(can't create RS object)");
     return;
   }
   if (!mech_template_load(
@@ -193,9 +193,9 @@ static void char_eject(DbRef player, Mech *mech) {
         tprintf("Unable to load mechwarrior template for #%ld's ejection. (%s)",
                 player, (!d || !*d) ? "Default template" : d));
     destroy_thing(evaluation, suit);
-    notify(evaluation, player,
-           "Sorry, something serious went wrong, contact a Wizard "
-           "(can't load MWTemplate)");
+    mecha_notify(evaluation, player,
+                 "Sorry, something serious went wrong, contact a Wizard "
+                 "(can't load MWTemplate)");
     return;
   }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
@@ -227,7 +227,7 @@ static void char_eject(DbRef player, Mech *mech) {
   /* #endif
   #endif
   */
-  notify(evaluation, player, "You eject from the unit!");
+  mecha_notify(evaluation, player, "You eject from the unit!");
   if (mech_class(mech) == CLASS_MECH) {
     mech_critical_destroy(mech, HEAD, 2);
   }
@@ -239,49 +239,70 @@ static void char_eject(DbRef player, Mech *mech) {
 void mech_eject(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALS);
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_dropship(mech),
-                  "Dropships do not support ejection.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !((mech_class(mech) == CLASS_MECH) ||
-                    (mech_class(mech) == CLASS_VTOL) ||
-                    (mech_class(mech) == CLASS_VEH_GROUND)),
-                  "This unit has no ejection seat!");
-  DOCHECK_CONTEXT(
-      mech_context(mech), mech_is_flying_type(mech) && !mech_is_landed(mech),
-      "Regrettably, right now you can only eject when landed, sorry - no "
-      "parachute :P");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !is_in_character(btech_context_database(mech_context(mech)),
-                                   mech_dbref(mech)),
-                  "This unit isn't in character!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !btech_context_in_character_enabled(mech_context(mech)),
-                  "This MUX isn't in character!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !is_in_character(btech_context_database(mech_context(mech)),
-                                   game_object_location(btech_context_database(
-                                                            mech_context(mech)),
-                                                        mech_dbref(mech))),
-                  "Your location isn't in character!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_is_started(mech) && mech_pilot_dbref(mech) != player,
-                  "You aren't in da pilot's seat - no ejection for you!");
+  if (!common_checks(player, mech, MECH_USUALS))
+    return;
+  if (mech_is_dropship(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Dropships do not support ejection.");
+    return;
+  }
+  if (!((mech_class(mech) == CLASS_MECH) || (mech_class(mech) == CLASS_VTOL) ||
+        (mech_class(mech) == CLASS_VEH_GROUND))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit has no ejection seat!");
+    return;
+  }
+  if (mech_is_flying_type(mech) && !mech_is_landed(mech)) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "Regrettably, right now you can only eject when landed, sorry - no "
+        "parachute :P");
+    return;
+  }
+  if (!is_in_character(btech_context_database(mech_context(mech)),
+                       mech_dbref(mech))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit isn't in character!");
+    return;
+  }
+  if (!btech_context_in_character_enabled(mech_context(mech))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This MUX isn't in character!");
+    return;
+  }
+  if (!is_in_character(
+          btech_context_database(mech_context(mech)),
+          game_object_location(btech_context_database(mech_context(mech)),
+                               mech_dbref(mech)))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your location isn't in character!");
+    return;
+  }
+  if (mech_is_started(mech) && mech_pilot_dbref(mech) != player) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You aren't in da pilot's seat - no ejection for you!");
+    return;
+  }
   if (!mech_is_started(mech)) {
-    DOCHECK_CONTEXT(
-        mech_context(mech),
-        (char_lookupplayer(
+    if ((char_lookupplayer(
             mech_context(mech), GOD, GOD, 0,
             btech_attribute_read(btech_context_database(mech_context(mech)),
                                  mech_dbref(mech), A_PILOTNUM,
-                                 (char[LBUF_SIZE]){0}))) != player,
-        "You aren't the official pilot of this thing. Try 'disembark'");
+                                 (char[LBUF_SIZE]){0}))) != player) {
+      mecha_notify(
+          btech_context_evaluation(mech_context(mech)), player,
+          "You aren't the official pilot of this thing. Try 'disembark'");
+      return;
+    }
   }
   if (mech_class(mech) == CLASS_MECH)
-    DOCHECK_CONTEXT(
-        mech_context(mech), mech_critical_is_nonfunctional(mech, HEAD, 2),
-        "The parts of cockpit that control ejection are already used. Try "
-        "'disembark'");
+    if (mech_critical_is_nonfunctional(mech, HEAD, 2)) {
+      mecha_notify(
+          btech_context_evaluation(mech_context(mech)), player,
+          "The parts of cockpit that control ejection are already used. Try "
+          "'disembark'");
+      return;
+    }
   /* Ok.. time to eject ourselves */
   char_eject(player, mech);
 }
@@ -309,9 +330,9 @@ static void char_disembark(DbRef player, Mech *mech) {
         tprintf("Unable to create special obj for #%ld's disembarkation.",
                 player));
     destroy_thing(evaluation, suit);
-    notify(evaluation, player,
-           "Sorry, something serious went wrong, contact a Wizard "
-           "(can't create RS object)");
+    mecha_notify(evaluation, player,
+                 "Sorry, something serious went wrong, contact a Wizard "
+                 "(can't create RS object)");
     return;
   }
   if (!mech_template_load(
@@ -321,9 +342,9 @@ static void char_disembark(DbRef player, Mech *mech) {
                                "disembarkation. (%s)",
                                player, (!d || !*d) ? "Default template" : d));
     destroy_thing(evaluation, suit);
-    notify(evaluation, player,
-           "Sorry, something serious went wrong, contact a Wizard "
-           "(can't load MWTemplate)");
+    mecha_notify(evaluation, player,
+                 "Sorry, something serious went wrong, contact a Wizard "
+                 "(can't load MWTemplate)");
     return;
   }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
@@ -358,9 +379,10 @@ static void char_disembark(DbRef player, Mech *mech) {
                                                       mech_position_y(m)) +
                              1)) &&
       (mech_position_z(m) > 0)) {
-    notify(evaluation, player,
-           "You open the hatch and climb out of the unit. Maybe you should "
-           "have done this while the thing was closer to the ground...");
+    mecha_notify(
+        evaluation, player,
+        "You open the hatch and climb out of the unit. Maybe you should "
+        "have done this while the thing was closer to the ground...");
     mech_los_broadcast(m, tprintf("jumps out of %s... in mid air !",
                                   mech_display_id(mech).text));
     initial_speed =
@@ -370,7 +392,7 @@ static void char_disembark(DbRef player, Mech *mech) {
   } else {
     mech_los_broadcast(
         m, tprintf("climbs out of %s!", mech_display_id(mech).text));
-    notify(evaluation, player, "You climb out of the unit.");
+    mecha_notify(evaluation, player, "You climb out of the unit.");
   }
 }
 
@@ -380,36 +402,52 @@ static void char_disembark(DbRef player, Mech *mech) {
 void mech_disembark(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALS);
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !((mech_class(mech) == CLASS_MECH) || (mech_class(mech) == CLASS_VTOL) ||
-        (mech_class(mech) == CLASS_VEH_GROUND)),
-      "The door ! The door ? The Door ?!? Where's the exit in this damned "
-      "thing ?");
+  if (!common_checks(player, mech, MECH_USUALS))
+    return;
+  if (!((mech_class(mech) == CLASS_MECH) || (mech_class(mech) == CLASS_VTOL) ||
+        (mech_class(mech) == CLASS_VEH_GROUND))) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "The door ! The door ? The Door ?!? Where's the exit in this damned "
+        "thing ?");
+    return;
+  }
 
-  /*  DOCHECK_CONTEXT(mech->xcode.context, FlyingT(mech) && !Landed(mech),
-   * "What, in the air ? Are you suicidal ?"); */
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !is_in_character(btech_context_database(mech_context(mech)),
-                                   mech_dbref(mech)),
-                  "This unit isn't in character!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !btech_context_in_character_enabled(mech_context(mech)),
-                  "This MUX isn't in character!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !is_in_character(btech_context_database(mech_context(mech)),
-                                   game_object_location(btech_context_database(
-                                                            mech_context(mech)),
-                                                        mech_dbref(mech))),
-                  "Your location isn't in character!");
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      (mech_is_started(mech) || mech_event_count(mech, EVENT_STARTUP)) &&
-          (mech_pilot_dbref(mech) == player),
-      "While it's running!? Don't be daft.");
-  DOCHECK_CONTEXT(mech_context(mech), fabs(mech_current_speed(mech)) > 25.,
-                  "Are you suicidal ? That thing is moving too fast !");
+  /*  if (mech_is_flying_type(mech) &&
+   * !mech_is_landed(mech)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player, "What,
+  in the air ? Are you suicidal ?"); return;
+  } */
+  if (!is_in_character(btech_context_database(mech_context(mech)),
+                       mech_dbref(mech))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit isn't in character!");
+    return;
+  }
+  if (!btech_context_in_character_enabled(mech_context(mech))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This MUX isn't in character!");
+    return;
+  }
+  if (!is_in_character(
+          btech_context_database(mech_context(mech)),
+          game_object_location(btech_context_database(mech_context(mech)),
+                               mech_dbref(mech)))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your location isn't in character!");
+    return;
+  }
+  if ((mech_is_started(mech) || mech_event_count(mech, EVENT_STARTUP)) &&
+      (mech_pilot_dbref(mech) == player)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "While it's running!? Don't be daft.");
+    return;
+  }
+  if (fabs(mech_current_speed(mech)) > 25.) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Are you suicidal ? That thing is moving too fast !");
+    return;
+  }
   /* Ok.. time to disembark ourselves */
   char_disembark(player, mech);
 }
@@ -431,40 +469,51 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   /* Any IN_CHARACTER unit's pilot must match the invoker to disembark.
    * A unit that is not IC can be disembarked by anyone.
    */
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      is_in_character(database, mech_dbref(mech)) &&
-          !is_wizard(database, player) &&
-          (char_lookupplayer(
-               mech_context(mech), GOD, GOD, 0,
-               btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
-                                    (char[LBUF_SIZE]){0})) != player),
-      "This isn't your mech!");
+  if (is_in_character(database, mech_dbref(mech)) &&
+      !is_wizard(database, player) &&
+      (char_lookupplayer(
+           mech_context(mech), GOD, GOD, 0,
+           btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
+                                (char[LBUF_SIZE]){0})) != player)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This isn't your mech!");
+    return;
+  }
 
   /* Find the carrier that the invoker's unit is in and check it for validity.
    */
   newmech = game_object_location(database, mech_dbref(mech));
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !(is_good_obj(database, newmech) && is_xcode(database, newmech)),
-      "You're not being carried!");
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !(target = btech_context_get_mech(mech_context(mech), newmech)),
-      "Not being carried!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_map_dbref(target) == -1,
-                  "You are not on a map.");
+  if (!(is_good_obj(database, newmech) && is_xcode(database, newmech))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're not being carried!");
+    return;
+  }
+  if (!(target = btech_context_get_mech(mech_context(mech), newmech))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Not being carried!");
+    return;
+  }
+  if (mech_map_dbref(target) == -1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are not on a map.");
+    return;
+  }
 
   /* Don't allow repairing units to disembark */
   under_repairs = figure_latest_tech_event(mech);
-  DOCHECK_CONTEXT(
-      mech_context(mech), under_repairs,
-      "This 'Mech is still under repairs (see checkstatus for more info)");
+  if (under_repairs) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "This 'Mech is still under repairs (see checkstatus for more info)");
+    return;
+  }
 
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      fabs(mech_current_speed(target)) > mech_walking_speed(target),
-      "You cannot leave while the carrier is moving faster than walk speed!");
+  if (fabs(mech_current_speed(target)) > mech_walking_speed(target)) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "You cannot leave while the carrier is moving faster than walk speed!");
+    return;
+  }
 
   /* Carry out the disembarking. */
   mech_Rsetmapindex(GOD, (void *)mech,
@@ -475,8 +524,11 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   mech_position_z_set(mech, mech_position_z(target));
   mech_position_real_z_set(mech, ZSCALE * mech_position_z(mech));
   mymap = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  DOCHECK_CONTEXT(mech_context(mech), !mymap,
-                  "Major map error possible. Prolly should contact a wizard.");
+  if (!mymap) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Major map error possible. Prolly should contact a wizard.");
+    return;
+  }
 
   /* Teleport loudly so native enter events and other messages run. */
   move_via_teleport(evaluation, mech_dbref(mech), mech_map_dbref(mech), 1, 0);
@@ -529,8 +581,8 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
                                                        mech_position_y(mech)) &&
       mech_position_z(mech) > 0) {
 
-    notify(evaluation, player,
-           "You open the hatch and drop out of the unit....");
+    mecha_notify(evaluation, player,
+                 "You open the hatch and drop out of the unit....");
     mech_los_broadcast(
         mech, tprintf("drops out of %s and begins falling to the ground.",
                       mech_display_id(target).text));
@@ -541,20 +593,22 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
     if (mech_class(mech) == CLASS_BSUIT) {
       mech_los_broadcast(
           mech, tprintf("climbs out of %s!", mech_display_id(target).text));
-      notify(evaluation, player, "You climb out of the unit.");
+      mecha_notify(evaluation, player, "You climb out of the unit.");
     } else {
       /* If the carrier is destroyed, do damage to the disembarking unit. */
       if (mech_is_destroyed(target) || !mech_is_started(target)) {
         mech_los_broadcast(
             mech, tprintf("smashes open the ramp door and emerges from %s!",
                           mech_display_id(target).text));
-        notify(evaluation, player, "You smash open the door and break out.");
+        mecha_notify(evaluation, player,
+                     "You smash open the door and break out.");
         mech_fall(mech, 4, 0);
       } else {
         /* All is well. */
         mech_los_broadcast(mech, tprintf("emerges from the ramp out of %s!",
                                          mech_display_id(target).text));
-        notify(evaluation, player, "You emerge from the unit loading ramp.");
+        mecha_notify(evaluation, player,
+                     "You emerge from the unit loading ramp.");
         if (mech_is_landed(mech) &&
             mech_position_z(mech) >
                 battle_map_hex_elevation(mymap, mech_position_x(mech),

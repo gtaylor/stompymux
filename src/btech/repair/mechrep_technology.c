@@ -19,7 +19,6 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_terrain.h" // IWYU pragma: keep
 #include "mech_events.h"
 #include "mech_lifecycle.h"
@@ -32,6 +31,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "repair_job.h"
 
 #define MECH_STAT_C /* want to use the POSIX stat() call. */
 
@@ -58,21 +58,6 @@
 
 extern char *strtok(char *s, const char *ct);
 
-#define MECHREP_COMMON(a)                                                      \
-  struct RepairFacility *rep = (struct RepairFacility *)data;                  \
-  Mech *mech;                                                                  \
-  DOCHECK_CONTEXT(rep->xcode.context,                                          \
-                  !is_god(rep->xcode.context->database, player) &&             \
-                      !is_wizard(rep->xcode.context->database, player),        \
-                  "I'm sorry Dave, can't do that.");                           \
-  if (a) {                                                                     \
-    DOCHECK_CONTEXT(rep->xcode.context, rep->current_target == -1,             \
-                    "You must set a target first!");                           \
-    mech = btech_context_get_mech(rep->xcode.context, rep->current_target);    \
-    DOCHECK_CONTEXT(rep->xcode.context, mech == nullptr,                       \
-                    "The target's BTech data is not allocated.");              \
-  }
-
 /*--------------------------------------------------------------------------*/
 
 /* Code Begins                                                              */
@@ -93,16 +78,30 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
   int newdata;
   int max;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(rep->xcode.context, argc <= 2,
-                  "Invalid number of arguments!");
+  if (argc <= 2) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
   itemcode = FindSpecialItemCodeFromString(rep->xcode.context, args[0]);
 
   if (itemcode == -1)
     if (strcasecmp(args[0], "empty")) {
-      notify(btech_context_evaluation(rep->xcode.context), player,
-             "That is not a valid special object!");
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "That is not a valid special object!");
       DumpMechSpecialObjects(rep->xcode.context, player);
       return;
     }
@@ -117,90 +116,94 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
   subsect = atoi(args[2]);
   subsect--;
   max = CritsInLoc(mech, index);
-  DOCHECK_CONTEXT(rep->xcode.context, subsect < 0 || subsect >= max,
-                  "Critslot out of range!");
+  if (subsect < 0 || subsect >= max) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Critslot out of range!");
+    return;
+  }
   if (argc == 4)
     newdata = atoi(args[3]);
   else
     newdata = 0;
   mech_critical_part_type_set(mech, index, subsect,
-                              itemcode < 0 ? 0 : I2Special(itemcode));
+                              itemcode < 0 ? 0
+                                           : special_equipment_index(itemcode));
   mech_critical_data_set(mech, index, subsect, newdata);
   switch (itemcode) {
   case CASE:
     mech_section_configuration_add(
         mech, (mech_class(mech) == CLASS_VEH_GROUND) ? BSIDE : index,
         CASE_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "CASE Technology added to section.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "CASE Technology added to section.");
     break;
   case TRIPLE_STRENGTH_MYOMER:
     mech_technology_flags_add(mech, TRIPLE_MYOMER_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Triple Strength Myomer Technology added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Triple Strength Myomer Technology added to 'Mech.");
     break;
   case MASC:
     mech_technology_flags_add(mech, MASC_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Myomer Accelerator Signal Circuitry added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Myomer Accelerator Signal Circuitry added to 'Mech.");
     break;
   case C3_MASTER:
     mech_technology_flags_add(mech, C3_MASTER_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "C3 Command Unit added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "C3 Command Unit added to 'Mech.");
     break;
   case C3_SLAVE:
     mech_technology_flags_add(mech, C3_SLAVE_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "C3 Slave Unit added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "C3 Slave Unit added to 'Mech.");
     break;
   case ARTEMIS_IV:
     mech_technology_flags_add(mech, ARTEMIS_IV_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Artemis IV Fire-Control System added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Artemis IV Fire-Control System added to 'Mech.");
     notify_printf(btech_context_evaluation(rep->xcode.context), player,
                   "System will control the weapon which starts at slot %d.",
                   newdata);
     break;
   case ECM:
     mech_technology_flags_add(mech, ECM_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Guardian ECM Suite added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Guardian ECM Suite added to 'Mech.");
     break;
   case ANGELECM:
     mech_technology_flags_secondary_add(mech, ANGEL_ECM_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Angel ECM Suite added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Angel ECM Suite added to 'Mech.");
     break;
   case BEAGLE_PROBE:
     mech_technology_flags_add(mech, BEAGLE_PROBE_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Beagle Active Probe added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Beagle Active Probe added to 'Mech.");
     break;
   case LIGHT_BAP:
     mech_technology_flags_add(mech, LIGHT_BAP_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Light Beagle Active Probe added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Light Beagle Active Probe added to 'Mech.");
     break;
   case TAG:
     mech_technology_flags_secondary_add(mech, TAG_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "TAG added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "TAG added to 'Mech.");
     break;
   case C3I:
     mech_technology_flags_secondary_add(mech, C3I_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Improved C3 added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Improved C3 added to 'Mech.");
     break;
   case BLOODHOUND_PROBE:
     mech_technology_flags_secondary_add(mech, BLOODHOUND_PROBE_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Bloodhound Active Probe added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Bloodhound Active Probe added to 'Mech.");
     break;
   case TARGETING_COMPUTER:
     mech_technology_flags_secondary_add(mech, TCOMP_TECH);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Targeting Computer added to 'Mech.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Targeting Computer added to 'Mech.");
     break;
   case SPLIT_CRIT_LEFT:
   case SPLIT_CRIT_RIGHT:
@@ -236,18 +239,29 @@ void mechrep_Rshowtech(DbRef player, void *data, char *buffer) {
   char *techstring;
   char location[20];
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   flags = mech_technology_flags(mech);
   secondary_flags = mech_technology_flags_secondary(mech);
   infantry_flags = mech_infantry_technology_flags(mech);
-  notify(btech_context_evaluation(rep->xcode.context), player,
-         "--------Advanced Technology--------");
+  mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+               "--------Advanced Technology--------");
   if (flags & TRIPLE_MYOMER_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Triple Strength Myomer");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Triple Strength Myomer");
   if (flags & MASC_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Myomer Accelerator Signal Circuitry");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Myomer Accelerator Signal Circuitry");
   for (i = 0; i < NUM_SECTIONS; i++)
     if (mech_section_configuration_has(mech, i, CASE_TECH)) {
       ArmorStringFromIndex(i, location, mech_class(mech),
@@ -256,99 +270,101 @@ void mechrep_Rshowtech(DbRef player, void *data, char *buffer) {
                     "Cellular Ammunition Storage Equipment in %s", location);
     }
   if (flags & CLAN_TECH) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Mech is set to Clan Tech.  This means:");
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "    Mech automatically has Double Heat Sink Tech");
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "    Mech automatically has CASE in all sections");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Mech is set to Clan Tech.  This means:");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "    Mech automatically has Double Heat Sink Tech");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "    Mech automatically has CASE in all sections");
   }
   if (flags & DOUBLE_HEAT_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Mech uses Double Heat Sinks");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Mech uses Double Heat Sinks");
   if (flags & CL_ANTI_MISSILE_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Clan style Anti-Missile System");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Clan style Anti-Missile System");
   if (flags & IS_ANTI_MISSILE_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Inner Sphere style Anti-Missile System");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Inner Sphere style Anti-Missile System");
   if (flags & FLIPABLE_ARMS)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "The arms may be flipped into the rear firing arc");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "The arms may be flipped into the rear firing arc");
   if (flags & C3_MASTER_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "C3 Command Computer");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "C3 Command Computer");
   if (flags & C3_SLAVE_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "C3 Slave Computer");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "C3 Slave Computer");
   if (flags & ARTEMIS_IV_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Artemis IV Fire-Control System");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Artemis IV Fire-Control System");
   if (flags & ECM_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Guardian ECM Suite");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Guardian ECM Suite");
   if (flags & LIGHT_BAP_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Light Beagle Active Probe");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Light Beagle Active Probe");
   if (secondary_flags & ANGEL_ECM_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Angel ECM Suite");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Angel ECM Suite");
   if (flags & BEAGLE_PROBE_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Beagle Active Probe");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Beagle Active Probe");
   if (secondary_flags & TAG_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Target Aquisition Gear");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Target Aquisition Gear");
   if (secondary_flags & C3I_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player, "Improved C3");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Improved C3");
   if (secondary_flags & BLOODHOUND_PROBE_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Bloodhound Active Probe");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Bloodhound Active Probe");
   if (flags & ICE_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "It has ICE engine");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "It has ICE engine");
 
   /* Infantry related stuff */
   if (infantry_flags & INF_SWARM_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Can swarm enemy units");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Can swarm enemy units");
   if (infantry_flags & INF_MOUNT_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Can mount friendly units");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Can mount friendly units");
   if (infantry_flags & INF_ANTILEG_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Can do anti-leg attacks");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Can do anti-leg attacks");
   if (infantry_flags & CS_PURIFIER_STEALTH_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Has CS Purifier Stealth");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Has CS Purifier Stealth");
   if (infantry_flags & DC_KAGE_STEALTH_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Has DC Kage Stealth");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Has DC Kage Stealth");
   if (infantry_flags & FWL_ACHILEUS_STEALTH_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Has FWL Achileus Stealth");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Has FWL Achileus Stealth");
   if (infantry_flags & FC_INFILTRATOR_STEALTH_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Has FC Infiltrator Stealth");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Has FC Infiltrator Stealth");
   if (infantry_flags & FC_INFILTRATORII_STEALTH_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Has FC InfiltratorII Stealth");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Has FC InfiltratorII Stealth");
   if (infantry_flags & MUST_JETTISON_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Must jettison backpack before jumping/using specials");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Must jettison backpack before jumping/using specials");
   if (infantry_flags & CAN_JETTISON_TECH)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Can jettison backpack");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Can jettison backpack");
 
-  notify(btech_context_evaluation(rep->xcode.context), player,
-         "Brief version (May have something previous hadn't):");
+  mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+               "Brief version (May have something previous hadn't):");
   char tech_buffer[BTECH_TEXT_CAPACITY];
   mechrep_gettechstring(mech, tech_buffer);
   techstring = tech_buffer;
   if (techstring && techstring[0])
-    notify(btech_context_evaluation(rep->xcode.context), player, techstring);
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 techstring);
   else
-    notify(btech_context_evaluation(rep->xcode.context), player, "-");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player, "-");
 }
 
 void mechrep_gettechstring(Mech *mech, char *buffer) {
@@ -366,7 +382,7 @@ static void remove_critical_type(Mech *mech, int part_type) {
 }
 
 static void remove_case_technology(Mech *mech) {
-  remove_critical_type(mech, I2Special(CASE));
+  remove_critical_type(mech, special_equipment_index(CASE));
   for (int section = 0; section < NUM_SECTIONS; ++section)
     mech_section_configuration_remove(mech, section, CASE_TECH);
 }
@@ -374,7 +390,18 @@ static void remove_case_technology(Mech *mech) {
 void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   int nv, nv2;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   /* Compare what the user gave to our specials lists */
   nv = BuildBitVector(specials, buffer);
   nv2 = BuildBitVector(specials2, buffer);
@@ -382,10 +409,11 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   /* Make sure what they gave was valid */
   if (((nv < 0) && (nv2 < 0)) && (strcasecmp(buffer, "all") != 0) &&
       (strcasecmp(buffer, "Case") != 0)) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Invalid tech: Available techs:");
-    notify(btech_context_evaluation(rep->xcode.context), player, "\tAll");
-    notify(btech_context_evaluation(rep->xcode.context), player, "\tCase");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid tech: Available techs:");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player, "\tAll");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "\tCase");
 
     for (nv = 0; specials[nv]; nv++)
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
@@ -401,8 +429,8 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   /* Check to see if user specified anything */
   if (((!nv) && (!nv2)) && (strcasecmp(buffer, "all") != 0) &&
       (strcasecmp(buffer, "Case") != 0)) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Nothing specified");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Nothing specified");
     return;
   }
 
@@ -410,19 +438,19 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   if (strcasecmp(buffer, "all") == 0) {
 
     remove_case_technology(mech);
-    remove_critical_type(mech, I2Special(TRIPLE_STRENGTH_MYOMER));
-    remove_critical_type(mech, I2Special(MASC));
+    remove_critical_type(mech, special_equipment_index(TRIPLE_STRENGTH_MYOMER));
+    remove_critical_type(mech, special_equipment_index(MASC));
     mech_technology_flags_set(mech, 0);
     mech_technology_flags_secondary_set(mech, 0);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "All Advanced Technology Removed");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "All Advanced Technology Removed");
     return;
   }
 
   if (strcasecmp(buffer, "Case") == 0) {
     remove_case_technology(mech);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Case Technology Removed");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Case Technology Removed");
     return;
   }
 
@@ -430,10 +458,11 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
 
     if (strcasecmp(buffer, "TripleMyomerTech") == 0) {
       if (mech_technology_flags(mech) & TRIPLE_MYOMER_TECH)
-        remove_critical_type(mech, I2Special(TRIPLE_STRENGTH_MYOMER));
+        remove_critical_type(mech,
+                             special_equipment_index(TRIPLE_STRENGTH_MYOMER));
     } else if (strcasecmp(buffer, "Masc") == 0) {
       if (mech_technology_flags(mech) & MASC_TECH)
-        remove_critical_type(mech, I2Special(MASC));
+        remove_critical_type(mech, special_equipment_index(MASC));
     }
 
     mech_technology_flags_remove(mech, nv);
@@ -452,13 +481,24 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
 void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
   int nv, nv2;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   nv = BuildBitVector(specials, buffer);
   nv2 = BuildBitVector(specials2, buffer);
 
   if ((nv < 0) && (nv2 < 0)) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Invalid tech: Available techs:");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid tech: Available techs:");
 
     for (nv = 0; specials[nv]; nv++)
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
@@ -472,8 +512,8 @@ void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
   }
 
   if ((!nv) && (!nv2)) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Nothing set!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Nothing set!");
     return;
   }
 
@@ -494,25 +534,37 @@ void mechrep_Rdelinftech(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
   mech_infantry_technology_flags_set(mech, 0);
-  notify(btech_context_evaluation(mech_context(mech)), player,
-         "Advanced Infantry Technology Deleted");
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+               "Advanced Infantry Technology Deleted");
 }
 
 void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
   int nv;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   nv = BuildBitVector(infantry_specials, buffer);
 
   if (mech_class(mech) != CLASS_BSUIT) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "That is not a valid target for infantry technologies. Try a Suit!");
+    mecha_notify(
+        btech_context_evaluation(rep->xcode.context), player,
+        "That is not a valid target for infantry technologies. Try a Suit!");
     return;
   }
 
   if (nv < 0) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Invalid infantry tech: Available techs:");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid infantry tech: Available techs:");
 
     for (nv = 0; infantry_specials[nv]; nv++)
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
@@ -521,8 +573,8 @@ void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
   }
 
   if (!nv) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Nothing set!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Nothing set!");
     return;
   }
 
@@ -541,14 +593,31 @@ void mechrep_setcargospace(DbRef player, void *data, char *buffer) {
   int cargo;
   int max;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(rep->xcode.context, argc != 2,
-                  "Invalid number of arguements!");
+  if (argc != 2) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid number of arguements!");
+    return;
+  }
 
   cargo = (atoi(args[0]) * 50);
-  DOCHECK_CONTEXT(rep->xcode.context, cargo < 0 || cargo > 250000,
-                  "Doesn't that seem excessive?");
+  if (cargo < 0 || cargo > 250000) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Doesn't that seem excessive?");
+    return;
+  }
   mech_cargo_space_set(mech, cargo);
 
   max = (atoi(args[1]));

@@ -1,3 +1,9 @@
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_internal.h"
 
 int mech_recycling_state(Mech *mech, int num) {
@@ -6,21 +12,26 @@ int mech_recycling_state(Mech *mech, int num) {
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (num & CHECK_WEAPS && SectHasBusyWeap(mech, i))
       return 1;
-    if (num & CHECK_PHYS && MechSections(mech)[i].recycle > 0)
+    if (num & CHECK_PHYS && ((mech)->ud.sections)[i].recycle > 0)
       return 2;
   }
   return 0;
 }
 
 #ifdef BT_COMPLEXREPAIRS
-int GetPartMod(Mech *mech, int t) {
+int GetPartMod(const Mech *mech, int t) {
   int val, div, bound;
 
-  div = (t && t == Special(GYRO) ? 100 : t && t == Special(ENGINE) ? 20 : 10);
-  bound = (t && t == Special(GYRO) ? 3 : t && t == Special(ENGINE) ? 19 : 9);
-  val =
-      (t && (t == Special(GYRO) || t == Special(ENGINE)) ? MechEngineSize(mech)
-                                                         : MechTons(mech));
+  div = (t && t == special_equipment_index(GYRO)     ? 100
+         : t && t == special_equipment_index(ENGINE) ? 20
+                                                     : 10);
+  bound = (t && t == special_equipment_index(GYRO)     ? 3
+           : t && t == special_equipment_index(ENGINE) ? 19
+                                                       : 9);
+  val = (t && (t == special_equipment_index(GYRO) ||
+               t == special_equipment_index(ENGINE))
+             ? mech_engine_rating(mech)
+             : ((mech)->ud.tons));
 
   if (val % div != 0)
     val = val + (div - (val % div));
@@ -28,44 +39,45 @@ int GetPartMod(Mech *mech, int t) {
   return BOUNDED(0, (val / div) - 1, bound);
 }
 
-int ProperArmor(Mech *mech) {
+int ProperArmor(const Mech *mech) {
   /* For now they all use the same basic cargo parts. */
-  return Cargo(MechSpecials(mech) & FF_TECH               ? FF_ARMOR
-               : MechSpecials(mech) & HARDA_TECH          ? HD_ARMOR
-               : MechSpecials2(mech) & HVY_FF_ARMOR_TECH  ? HVY_FF_ARMOR
-               : MechSpecials2(mech) & LT_FF_ARMOR_TECH   ? LT_FF_ARMOR
-               : MechSpecials2(mech) & STEALTH_ARMOR_TECH ? STH_ARMOR
-                                                          : S_ARMOR);
+  return cargo_equipment_index(
+      ((mech)->rd.specials) & FF_TECH               ? FF_ARMOR
+      : ((mech)->rd.specials) & HARDA_TECH          ? HD_ARMOR
+      : ((mech)->rd.specials2) & HVY_FF_ARMOR_TECH  ? HVY_FF_ARMOR
+      : ((mech)->rd.specials2) & LT_FF_ARMOR_TECH   ? LT_FF_ARMOR
+      : ((mech)->rd.specials2) & STEALTH_ARMOR_TECH ? STH_ARMOR
+                                                    : S_ARMOR);
 }
 
-int ProperInternal(Mech *mech) {
+int ProperInternal(const Mech *mech) {
   int part = 0;
 
   if (mech->xcode.context->configuration->btech_complexrepair) {
-    part = (MechSpecials(mech) & ES_TECH       ? TON_ESINTERNAL_FIRST
-            : MechSpecials(mech) & REINFI_TECH ? TON_REINTERNAL_FIRST
-            : MechSpecials(mech) & COMPI_TECH  ? TON_COINTERNAL_FIRST
-                                               : TON_INTERNAL_FIRST);
+    part = (((mech)->rd.specials) & ES_TECH       ? TON_ESINTERNAL_FIRST
+            : ((mech)->rd.specials) & REINFI_TECH ? TON_REINTERNAL_FIRST
+            : ((mech)->rd.specials) & COMPI_TECH  ? TON_COINTERNAL_FIRST
+                                                  : TON_INTERNAL_FIRST);
     part += GetPartMod(mech, 0);
   } else {
-    part = (MechSpecials(mech) & ES_TECH       ? ES_INTERNAL
-            : MechSpecials(mech) & REINFI_TECH ? RE_INTERNAL
-            : MechSpecials(mech) & COMPI_TECH  ? CO_INTERNAL
-                                               : S_INTERNAL);
+    part = (((mech)->rd.specials) & ES_TECH       ? ES_INTERNAL
+            : ((mech)->rd.specials) & REINFI_TECH ? RE_INTERNAL
+            : ((mech)->rd.specials) & COMPI_TECH  ? CO_INTERNAL
+                                                  : S_INTERNAL);
   }
-  return Cargo(part);
+  return cargo_equipment_index(part);
 }
 
 int alias_part(Mech *mech, int t, int loc) {
   int part = 0;
 
-  if (!IsSpecial(t))
+  if (!equipment_is_special(t))
     return t;
 
   if (mech->xcode.context->configuration->btech_complexrepair) {
     int tonmod = GetPartMod(mech, t);
     int locmod;
-    if (MechIsQuad(mech))
+    if (mech_is_quad(mech))
       locmod =
           (loc == RARM || loc == LARM || loc == RLEG || loc == LLEG ? 2 : 0);
     else
@@ -73,65 +85,90 @@ int alias_part(Mech *mech, int t, int loc) {
                 : loc == LLEG || loc == RLEG ? 2
                                              : 0);
 
-    part = (locmod && (t == Special(SHOULDER_OR_HIP) ||
-                       t == Special(UPPER_ACTUATOR))
-                ? (locmod == 1 ? Cargo(TON_ARMUPPER_FIRST + tonmod)
-                               : Cargo(TON_LEGUPPER_FIRST + tonmod))
-            : locmod && t == Special(LOWER_ACTUATOR)
-                ? (locmod == 1 ? Cargo(TON_ARMLOWER_FIRST + tonmod)
-                               : Cargo(TON_LEGLOWER_FIRST + tonmod))
-            : locmod && t == Special(HAND_OR_FOOT_ACTUATOR)
-                ? (locmod == 1 ? Cargo(TON_ARMHAND_FIRST + tonmod)
-                               : Cargo(TON_LEGFOOT_FIRST + tonmod))
-            : t == Special(ENGINE) && MechSpecials(mech) & XL_TECH
-                ? Cargo(TON_ENGINE_XL_FIRST + tonmod)
-            : t == Special(ENGINE) && MechSpecials(mech) & ICE_TECH
-                ? Cargo(TON_ENGINE_ICE_FIRST + tonmod)
-            : t == Special(ENGINE) && MechSpecials(mech) & CE_TECH
-                ? Cargo(TON_ENGINE_COMP_FIRST + tonmod)
-            : t == Special(ENGINE) && MechSpecials(mech) & XXL_TECH
-                ? Cargo(TON_ENGINE_XXL_FIRST + tonmod)
-            : t == Special(ENGINE) && MechSpecials(mech) & LE_TECH
-                ? Cargo(TON_ENGINE_LIGHT_FIRST + tonmod)
-            : t == Special(ENGINE) ? Cargo(TON_ENGINE_FIRST + tonmod)
-            : t == Special(HEAT_SINK) &&
-                    MechSpecials(mech) & (DOUBLE_HEAT_TECH | CLAN_TECH)
-                ? Cargo(DOUBLE_HEAT_SINK)
-            : t == Special(HEAT_SINK) && MechSpecials2(mech) & COMPACT_HS_TECH
-                ? Cargo(COMPACT_HEAT_SINK)
-            : t == Special(GYRO) && MechSpecials2(mech) & XLGYRO_TECH
-                ? Cargo(TON_XLGYRO_FIRST + tonmod)
-            : t == Special(GYRO) && MechSpecials2(mech) & HDGYRO_TECH
-                ? Cargo(TON_HDGYRO_FIRST + tonmod)
-            : t == Special(GYRO) && MechSpecials2(mech) & CGYRO_TECH
-                ? Cargo(TON_CGYRO_FIRST + tonmod)
-            : t == Special(GYRO)     ? Cargo(TON_GYRO_FIRST + tonmod)
-            : t == Special(SENSORS)  ? Cargo(TON_SENSORS_FIRST + tonmod)
-            : t == Special(JUMP_JET) ? Cargo(TON_JUMPJET_FIRST + tonmod)
-                                     : t);
+    part =
+        (locmod && (t == special_equipment_index(SHOULDER_OR_HIP) ||
+                    t == special_equipment_index(UPPER_ACTUATOR))
+             ? (locmod == 1
+                    ? cargo_equipment_index(TON_ARMUPPER_FIRST + tonmod)
+                    : cargo_equipment_index(TON_LEGUPPER_FIRST + tonmod))
+         : locmod && t == special_equipment_index(LOWER_ACTUATOR)
+             ? (locmod == 1
+                    ? cargo_equipment_index(TON_ARMLOWER_FIRST + tonmod)
+                    : cargo_equipment_index(TON_LEGLOWER_FIRST + tonmod))
+         : locmod && t == special_equipment_index(HAND_OR_FOOT_ACTUATOR)
+             ? (locmod == 1 ? cargo_equipment_index(TON_ARMHAND_FIRST + tonmod)
+                            : cargo_equipment_index(TON_LEGFOOT_FIRST + tonmod))
+         : t == special_equipment_index(ENGINE) &&
+                 ((mech)->rd.specials) & XL_TECH
+             ? cargo_equipment_index(TON_ENGINE_XL_FIRST + tonmod)
+         : t == special_equipment_index(ENGINE) &&
+                 ((mech)->rd.specials) & ICE_TECH
+             ? cargo_equipment_index(TON_ENGINE_ICE_FIRST + tonmod)
+         : t == special_equipment_index(ENGINE) &&
+                 ((mech)->rd.specials) & CE_TECH
+             ? cargo_equipment_index(TON_ENGINE_COMP_FIRST + tonmod)
+         : t == special_equipment_index(ENGINE) &&
+                 ((mech)->rd.specials) & XXL_TECH
+             ? cargo_equipment_index(TON_ENGINE_XXL_FIRST + tonmod)
+         : t == special_equipment_index(ENGINE) &&
+                 ((mech)->rd.specials) & LE_TECH
+             ? cargo_equipment_index(TON_ENGINE_LIGHT_FIRST + tonmod)
+         : t == special_equipment_index(ENGINE)
+             ? cargo_equipment_index(TON_ENGINE_FIRST + tonmod)
+         : t == special_equipment_index(HEAT_SINK) &&
+                 ((mech)->rd.specials) & (DOUBLE_HEAT_TECH | CLAN_TECH)
+             ? cargo_equipment_index(DOUBLE_HEAT_SINK)
+         : t == special_equipment_index(HEAT_SINK) &&
+                 ((mech)->rd.specials2) & COMPACT_HS_TECH
+             ? cargo_equipment_index(COMPACT_HEAT_SINK)
+         : t == special_equipment_index(GYRO) &&
+                 ((mech)->rd.specials2) & XLGYRO_TECH
+             ? cargo_equipment_index(TON_XLGYRO_FIRST + tonmod)
+         : t == special_equipment_index(GYRO) &&
+                 ((mech)->rd.specials2) & HDGYRO_TECH
+             ? cargo_equipment_index(TON_HDGYRO_FIRST + tonmod)
+         : t == special_equipment_index(GYRO) &&
+                 ((mech)->rd.specials2) & CGYRO_TECH
+             ? cargo_equipment_index(TON_CGYRO_FIRST + tonmod)
+         : t == special_equipment_index(GYRO)
+             ? cargo_equipment_index(TON_GYRO_FIRST + tonmod)
+         : t == special_equipment_index(SENSORS)
+             ? cargo_equipment_index(TON_SENSORS_FIRST + tonmod)
+         : t == special_equipment_index(JUMP_JET)
+             ? cargo_equipment_index(TON_JUMPJET_FIRST + tonmod)
+             : t);
   } else {
-    part = (IsActuator(t) ? Cargo(S_ACTUATOR)
-            : t == Special(ENGINE) && MechSpecials(mech) & XL_TECH
-                ? Cargo(XL_ENGINE)
-            : t == Special(ENGINE) && MechSpecials(mech) & ICE_TECH
-                ? Cargo(IC_ENGINE)
-            : t == Special(ENGINE) && MechSpecials(mech) & CE_TECH
-                ? Cargo(COMP_ENGINE)
-            : t == Special(ENGINE) && MechSpecials(mech) & XXL_TECH
-                ? Cargo(XXL_ENGINE)
-            : t == Special(ENGINE) && MechSpecials(mech) & LE_TECH
-                ? Cargo(LIGHT_ENGINE)
-            : t == Special(HEAT_SINK) &&
-                    MechSpecials(mech) & (DOUBLE_HEAT_TECH | CLAN_TECH)
-                ? Cargo(DOUBLE_HEAT_SINK)
-            : t == Special(HEAT_SINK) && MechSpecials2(mech) & COMPACT_HS_TECH
-                ? Cargo(COMPACT_HEAT_SINK)
-            : t == Special(GYRO) && MechSpecials2(mech) & XLGYRO_TECH
-                ? Cargo(XL_GYRO)
-            : t == Special(GYRO) && MechSpecials2(mech) & HDGYRO_TECH
-                ? Cargo(HD_GYRO)
-            : t == Special(GYRO) && MechSpecials2(mech) & CGYRO_TECH
-                ? Cargo(COMP_GYRO)
+    part = (equipment_is_actuator(t) ? cargo_equipment_index(S_ACTUATOR)
+            : t == special_equipment_index(ENGINE) &&
+                    ((mech)->rd.specials) & XL_TECH
+                ? cargo_equipment_index(XL_ENGINE)
+            : t == special_equipment_index(ENGINE) &&
+                    ((mech)->rd.specials) & ICE_TECH
+                ? cargo_equipment_index(IC_ENGINE)
+            : t == special_equipment_index(ENGINE) &&
+                    ((mech)->rd.specials) & CE_TECH
+                ? cargo_equipment_index(COMP_ENGINE)
+            : t == special_equipment_index(ENGINE) &&
+                    ((mech)->rd.specials) & XXL_TECH
+                ? cargo_equipment_index(XXL_ENGINE)
+            : t == special_equipment_index(ENGINE) &&
+                    ((mech)->rd.specials) & LE_TECH
+                ? cargo_equipment_index(LIGHT_ENGINE)
+            : t == special_equipment_index(HEAT_SINK) &&
+                    ((mech)->rd.specials) & (DOUBLE_HEAT_TECH | CLAN_TECH)
+                ? cargo_equipment_index(DOUBLE_HEAT_SINK)
+            : t == special_equipment_index(HEAT_SINK) &&
+                    ((mech)->rd.specials2) & COMPACT_HS_TECH
+                ? cargo_equipment_index(COMPACT_HEAT_SINK)
+            : t == special_equipment_index(GYRO) &&
+                    ((mech)->rd.specials2) & XLGYRO_TECH
+                ? cargo_equipment_index(XL_GYRO)
+            : t == special_equipment_index(GYRO) &&
+                    ((mech)->rd.specials2) & HDGYRO_TECH
+                ? cargo_equipment_index(HD_GYRO)
+            : t == special_equipment_index(GYRO) &&
+                    ((mech)->rd.specials2) & CGYRO_TECH
+                ? cargo_equipment_index(COMP_GYRO)
                 : t);
   }
   return part;
@@ -140,11 +177,11 @@ int alias_part(Mech *mech, int t, int loc) {
 int ProperMyomer(Mech *mech) {
   int part;
 
-  part = (MechSpecials(mech) & TRIPLE_MYOMER_TECH ? TON_TRIPLEMYOMER_FIRST
-                                                  : TON_MYOMER_FIRST);
+  part = (((mech)->rd.specials) & TRIPLE_MYOMER_TECH ? TON_TRIPLEMYOMER_FIRST
+                                                     : TON_MYOMER_FIRST);
   part += GetPartMod(mech, 0);
 
-  return Cargo(part);
+  return cargo_equipment_index(part);
 }
 #endif
 
@@ -155,14 +192,15 @@ int HeatFactor(Mech *mech) {
   int factor = 0;
   char buf[LBUF_SIZE];
 
-  if (MechType(mech) != CLASS_MECH) {
-    factor = (((MechSpecials(mech) & ICE_TECH)) ? -1 : 21);
+  if (((mech)->ud.type) != CLASS_MECH) {
+    factor = (((((mech)->rd.specials) & ICE_TECH)) ? -1 : 21);
     return factor;
   } else {
-    factor =
-        (MechPlusHeat(mech) + (2 * (MechPlusHeat(mech) - MechMinusHeat(mech))));
-    return ((NullSigSysActive(mech) || HasWorkingECMSuite(mech) ||
-             StealthArmorActive(mech))
+    factor = (((mech)->rd.plus_heat) +
+              (2 * (((mech)->rd.plus_heat) - ((mech)->rd.minus_heat))));
+    return ((mech_condition_summary(mech).null_signature_active ||
+             mech_has_working_ecm_suite(mech) ||
+             mech_condition_summary(mech).stealth_armor_active)
                 ? -1
                 : factor);
   }
@@ -184,22 +222,24 @@ int WeaponIsNonfunctional(Mech *mech, int section, int crit, int numcrits) {
   int i;
 
   if (numcrits <= 0)
-    numcrits = GetWeaponCrits(mech, Weapon2I(GetPartType(mech, section, crit)));
+    numcrits =
+        GetWeaponCrits(mech, weapon_from_equipment_index(
+                                 mech_critical_part_type(mech, section, crit)));
 
   for (i = crit; i < MIN(NUM_CRITICALS, crit + numcrits); i++) {
-    if (PartIsDestroyed(mech, section, i))
+    if (mech_critical_is_destroyed(mech, section, i))
       dested++;
-    else if (PartIsDisabled(mech, section, i))
+    else if (mech_critical_is_disabled(mech, section, i))
       disabled++;
     count++;
   }
 
-  if (count < numcrits && MechType(mech) == CLASS_MECH) {
+  if (count < numcrits && ((mech)->ud.type) == CLASS_MECH) {
     if (GetSplitData(mech, section, crit, &nloc, &ncrit, &stype)) {
       for (i = ncrit; i < (numcrits - count); i++) {
-        if (PartIsDestroyed(mech, nloc, i))
+        if (mech_critical_is_destroyed(mech, nloc, i))
           dested++;
-        else if (PartIsDisabled(mech, nloc, i))
+        else if (mech_critical_is_disabled(mech, nloc, i))
           disabled++;
       }
     }
@@ -234,20 +274,20 @@ void unit_parts_list(Mech *mech, char buffer[static LBUF_SIZE]) {
   buffer[0] = '\0';
 
   safe_str(tprintf("%s:%d|",
-                   MechSpecials2(mech) & STEALTH_ARMOR_TECH  ? "ST_ARMOR"
-                   : MechSpecials2(mech) & HVY_FF_ARMOR_TECH ? "HVY_FF_ARMOR"
-                   : MechSpecials2(mech) & LT_FF_ARMOR_TECH  ? "LT_FF_ARMOR"
-                   : MechSpecials2(mech) & HARDA_TECH        ? "HD_ARMOR"
-                   : MechSpecials(mech) & FF_TECH            ? "FF_ARMOR"
-                                                             : "ARMOR",
+                   ((mech)->rd.specials2) & STEALTH_ARMOR_TECH  ? "ST_ARMOR"
+                   : ((mech)->rd.specials2) & HVY_FF_ARMOR_TECH ? "HVY_FF_ARMOR"
+                   : ((mech)->rd.specials2) & LT_FF_ARMOR_TECH  ? "LT_FF_ARMOR"
+                   : ((mech)->rd.specials2) & HARDA_TECH        ? "HD_ARMOR"
+                   : ((mech)->rd.specials) & FF_TECH            ? "FF_ARMOR"
+                                                                : "ARMOR",
                    mech_armorpoints(mech)),
            buffer, &bp);
 
   safe_str(tprintf("%s:%d|",
-                   MechSpecials(mech) & REINFI_TECH  ? "RE_INTERNALS"
-                   : MechSpecials(mech) & COMPI_TECH ? "CO_INTERNALS"
-                   : MechSpecials(mech) & ES_TECH    ? "ES_INTERNAL"
-                                                     : "INTERNAL",
+                   ((mech)->rd.specials) & REINFI_TECH  ? "RE_INTERNALS"
+                   : ((mech)->rd.specials) & COMPI_TECH ? "CO_INTERNALS"
+                   : ((mech)->rd.specials) & ES_TECH    ? "ES_INTERNAL"
+                                                        : "INTERNAL",
                    mech_intpoints(mech)),
            buffer, &bp);
 

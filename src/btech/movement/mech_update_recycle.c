@@ -9,6 +9,7 @@
  */
 
 #include "mech_update_api.h"
+#include "weapon_catalogue_api.h"
 
 #include "btech/context.h"
 #include "failures.h"
@@ -16,13 +17,11 @@
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
 #include "section_types.h"
-#include "weapon_catalogue_api.h"
 
 static bool mech_section_recycles(const Mech *mech) {
   int unit_class = mech_class(mech);

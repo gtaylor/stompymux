@@ -1,4 +1,6 @@
 #include "btechstats_internal.h"
+#include "mech_crew_api.h"
+#include "mech_runtime_api.h"
 
 void lower_xp(BtechContext *context, DbRef player, int promillage) {
   PSTATS stats, *s = &stats;

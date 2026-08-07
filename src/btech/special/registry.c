@@ -34,7 +34,6 @@
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "ds_turret_api.h"
-#include "legacy_macros.h"
 #include "map_dynamic_api.h"
 #include "mech_lifecycle.h"
 #include "mech_restrict_api.h"
@@ -238,15 +237,13 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   if (cmd && (type != GTYPE_MECH ||
               (type == GTYPE_MECH && btech_command_allowed_for_mech(
                                          ((Mech *)xcode_obj), cmd->flag)))) {
-#define SKIPSTUFF(a)                                                           \
-  while (*a && *a != ' ')                                                      \
-    a++;                                                                       \
-  while (*a == ' ')                                                            \
-  a++
     if (cmd->helpmsg[0] != '@' ||
         btech_special_command_access(context, player,
                                      typeOfObject->power_needed)) {
-      SKIPSTUFF(command);
+      while (*command && *command != ' ')
+        command++;
+      while (*command == ' ')
+        command++;
       const BtechCommandInvocation invocation = {
           .context = context,
           .evaluation = btech_context_evaluation(context),
@@ -257,11 +254,14 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
       };
       cmd->handler(&invocation);
     } else
-      notify(btech_context_evaluation(context), player,
-             "Sorry, that command is restricted!");
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Sorry, that command is restricted!");
     return 1;
   } else if (ishelp) {
-    SKIPSTUFF(command);
+    while (*command && *command != ' ')
+      command++;
+    while (*command == ' ')
+      command++;
     btech_special_object_help(context, player, typeOfObject->type, type,
                               location, typeOfObject->power_needed, location,
                               command);
@@ -332,13 +332,14 @@ void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
   str = btech_attribute_read(context->database, key, A_XTYPE,
                              (char[LBUF_SIZE]){0});
   if (!(str && *str)) {
-    notify(
+    mecha_notify(
         btech_context_evaluation(context), player,
         "You must first set Xtype using @attribute/set <object>/Xtype=<type>");
-    notify(btech_context_evaluation(context), player,
-           "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
-           "AUTOPILOT, TURRET.");
-    notify(btech_context_evaluation(context), player, "Resetting XCODE flag.");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
+                 "AUTOPILOT, TURRET.");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Resetting XCODE flag.");
     c_xcode(context->database, key); /* Reset the flag */
     return;
   }
@@ -351,16 +352,17 @@ void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
     if (btech_special_object_data_size(typeOfObject)) {
       new = NewSpecialObject(context, key, type);
       if (!new)
-        notify(btech_context_evaluation(context), player,
-               "Memory allocation failure!");
+        mecha_notify(btech_context_evaluation(context), player,
+                     "Memory allocation failure!");
     }
   } else {
-    notify(btech_context_evaluation(context), player,
-           "That is not a valid XTYPE!");
-    notify(btech_context_evaluation(context), player,
-           "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
-           "AUTOPILOT, TURRET.");
-    notify(btech_context_evaluation(context), player, "Resetting XCODE flag.");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That is not a valid XTYPE!");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
+                 "AUTOPILOT, TURRET.");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Resetting XCODE flag.");
     c_xcode(context->database, key);
   }
 }
@@ -376,20 +378,21 @@ void btech_special_object_dispose(BtechContext *context, DbRef player,
 
   i = btech_context_which_special_attribute(context, key);
   if (i < 0) {
-    notify(btech_context_evaluation(context), player,
-           "CRITICAL: Unable to free data, inconsistency somewhere. Please");
-    notify(btech_context_evaluation(context), player,
-           "contact a wizard about this _NOW_!");
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "CRITICAL: Unable to free data, inconsistency somewhere. Please");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "contact a wizard about this _NOW_!");
     return;
   }
   typeOfObject = &SpecialObjects[i];
 
   if (btech_special_object_data_size(typeOfObject) > 0 &&
       btech_context_which_special(context, key) != i) {
-    notify(btech_context_evaluation(context), player,
-           "Semi-critical error has occured. For some reason the "
-           "object's data differs\nfrom the data on the object. Please "
-           "contact a wizard about this.");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Semi-critical error has occured. For some reason the "
+                 "object's data differs\nfrom the data on the object. Please "
+                 "contact a wizard about this.");
     i = btech_context_which_special(context, key);
   }
   if (xcode_obj) {
@@ -399,10 +402,10 @@ void btech_special_object_dispose(BtechContext *context, DbRef player,
     mux_event_remove_data(context->events, xcode_obj);
     free(xcode_obj);
   } else if (btech_special_object_data_size(typeOfObject) > 0) {
-    notify(btech_context_evaluation(context), player,
-           "This object is not in the special object DBASE.");
-    notify(btech_context_evaluation(context), player,
-           "Please contact a wizard about this bug. ");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This object is not in the special object DBASE.");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Please contact a wizard about this bug. ");
   }
 }
 
@@ -444,8 +447,8 @@ void btech_context_release_owned_state(BtechContext *context) {
 }
 
 void Dump_Mech(BtechContext *context, DbRef player, int type, char *typestr) {
-  notify(btech_context_evaluation(context), player,
-         "Support discontinued. Bother a wiz if this bothers you.");
+  mecha_notify(btech_context_evaluation(context), player,
+               "Support discontinued. Bother a wiz if this bothers you.");
 }
 
 void DumpMechs(BtechContext *context, DbRef player) {
@@ -453,8 +456,8 @@ void DumpMechs(BtechContext *context, DbRef player) {
 }
 
 void DumpMaps(BtechContext *context, DbRef player) {
-  notify(btech_context_evaluation(context), player,
-         "Support discontinued. Bother a wiz if this bothers you.");
+  mecha_notify(btech_context_evaluation(context), player,
+               "Support discontinued. Bother a wiz if this bothers you.");
 }
 
 /***************** INTERNAL ROUTINES *************/

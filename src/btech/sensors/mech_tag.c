@@ -9,7 +9,6 @@
 
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_events.h"
@@ -17,7 +16,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_network_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_sensor_state_api.h"
@@ -67,24 +65,39 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   int LOS = 1;
   float range = 0.0;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
-  DOCHECK_CONTEXT(mech_context(mech), !mech_has_tag_system(mech),
-                  "This unit is not equipped with TAG!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_tag_is_destroyed(mech),
-                  "Your TAG system is destroyed!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_TAG_RECYCLE),
-                  "Your TAG system is recycling!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_parseattributes(buffer, args, 2) != 1,
-                  "Invalid number of arguments to function!");
+  if (!mech_has_tag_system(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit is not equipped with TAG!");
+    return;
+  }
+  if (mech_tag_is_destroyed(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your TAG system is destroyed!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_TAG_RECYCLE)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your TAG system is recycling!");
+    return;
+  }
+  if (mech_parseattributes(buffer, args, 2) != 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguments to function!");
+    return;
+  }
 
   /* Clear our TAG */
   if (!strcmp(args[0], "-")) {
     refTarget = mech_tag_target_dbref(mech);
 
-    DOCHECK_CONTEXT(mech_context(mech), refTarget <= 0,
-                    "You are not currently tagging anything!");
+    if (refTarget <= 0) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You are not currently tagging anything!");
+      return;
+    }
 
     mech_tag_stop(mech);
 
@@ -103,15 +116,27 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   } else
     refTarget = 0;
 
-  DOCHECK_CONTEXT(mech_context(mech), refTarget < 1 || !LOS,
-                  "That is not a valid TAG targetID. Try again.");
-  DOCHECK_CONTEXT(mech_context(mech), mech_team(mech) == mech_team(target),
-                  "You can't TAG friendly units!");
-  DOCHECK_CONTEXT(mech_context(mech), mech == target,
-                  "You can't TAG yourself!");
-  DOCHECK_CONTEXT(mech_context(mech), range > TAG_LONG,
-                  tprintf("Out of range! TAG ranges are %d/%d/%d", TAG_SHORT,
-                          TAG_MED, TAG_LONG));
+  if (refTarget < 1 || !LOS) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That is not a valid TAG targetID. Try again.");
+    return;
+  }
+  if (mech_team(mech) == mech_team(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't TAG friendly units!");
+    return;
+  }
+  if (mech == target) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't TAG yourself!");
+    return;
+  }
+  if (range > TAG_LONG) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 tprintf("Out of range! TAG ranges are %d/%d/%d", TAG_SHORT,
+                         TAG_MED, TAG_LONG));
+    return;
+  }
 
   /*
    * This should actually make a roll...

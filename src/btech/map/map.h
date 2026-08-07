@@ -113,26 +113,6 @@ constexpr int BUILDFLAG_DSS =
 constexpr int BUILDFLAG_NOB = 8;  /* No way to break in */
 constexpr int BUILDFLAG_HID = 16; /* Really hidden */
 
-#define MapIsCS(map) (map->buildflag & BUILDFLAG_CSI)
-#define BuildIsCS(map) (map->buildflag & BUILDFLAG_CS)
-#define BuildIsHidden(map) (map->buildflag & (BUILDFLAG_DSS | BUILDFLAG_HID))
-#define BuildIsSafe(map) (map->buildflag & BUILDFLAG_NOB)
-#define BuildIsInvis(map) (map->buildflag & BUILDFLAG_HID)
-#define BuildIsDSS(map) (map->buildflag & BUILDFLAG_DSS)
-
-#define MapUnderSpecialRules(map) ((map)->flags & MAPFLAG_SPEC)
-#define MapGravityMod(map) (map)->grav
-#define MapGravity MapGravityMod
-#define MapIsVacuum(map) ((map)->flags & MAPFLAG_VACUUM)
-#define MapTemperature(map) (map)->temp
-#define MapCloudbase(map) (map)->cloudbase
-#define MapIsUnderground(map) ((map)->flags & MAPFLAG_UNDERGROUND)
-#define MapIsDark(map) ((map)->flags & MAPFLAG_DARK)
-#define MapBridgesCS(map) ((map)->flags & MAPFLAG_BRIDGESCS)
-#define MapNoBridgify(map) ((map)->flags & MAPFLAG_NOBRIDGIFY)
-#define MapNoFriendlyFire(map) ((map)->flags & MAPFLAG_NOFRIENDLYFIRE)
-#define MapNoPhysicals(map) ((map)->flags & MAPFLAG_NOPHYSICALS)
-
 typedef struct MapObject {
   short x, y;
   DbRef obj;

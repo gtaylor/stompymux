@@ -1,4 +1,5 @@
 #include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 
 #include "mech_internal.h"
 #include "mech_status_types.h"
@@ -441,6 +442,13 @@ void mech_stunned_set(Mech *mech, bool stunned) {
     mech->rd.critstatus |= MECH_STUNNED;
   else
     mech->rd.critstatus &= ~MECH_STUNNED;
+}
+
+void mech_performing_action_set(Mech *mech, bool performing) {
+  if (performing)
+    mech->rd.status |= PERFORMING_ACTION;
+  else
+    mech->rd.status &= ~PERFORMING_ACTION;
 }
 
 void mech_searchlight_set(Mech *mech, bool enabled) {

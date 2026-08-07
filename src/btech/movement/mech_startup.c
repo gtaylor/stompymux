@@ -24,7 +24,6 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "econ_cmds_api.h"
-#include "legacy_macros.h"
 #include "map_los_api.h"
 #include "map_terrain.h"
 #include "mech_api_types.h"
@@ -38,7 +37,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -273,44 +271,83 @@ void mech_startup(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
   GameDatabase *database = btech_context_database(context);
 
-  cch(MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON);
-  skipws(buffer);
-  DOCHECK_CONTEXT(context,
-                  !(is_good_obj(database, player) &&
-                    (is_alive(database, player) || is_xcode(database, player))),
-                  "That is not a valid player!");
-  DOCHECK_CONTEXT(context, unit_class == CLASS_MW && mech_is_started(mech),
-                  "You're up and about already!");
-  DOCHECK_CONTEXT(
-      context, mech_is_towed(mech),
-      "You're being towed! Wait for drop-off before starting again!");
-  DOCHECK_CONTEXT(context, mech_map_dbref(mech) < 0, "You are not on any map!");
-  DOCHECK_CONTEXT(context, mech_is_destroyed(mech), "This 'Mech is destroyed!");
-  DOCHECK_CONTEXT(context, mech_is_started(mech),
-                  "This 'Mech is already started!");
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_STARTUP),
-                  "This 'Mech is already starting!");
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH),
-                  "You're way too busy putting out fires!");
+  if (!common_checks(player, mech, MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON))
+    return;
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer)
+    buffer = "";
+  if (!(is_good_obj(database, player) &&
+        (is_alive(database, player) || is_xcode(database, player)))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That is not a valid player!");
+    return;
+  }
+  if (unit_class == CLASS_MW && mech_is_started(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're up and about already!");
+    return;
+  }
+  if (mech_is_towed(mech)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "You're being towed! Wait for drop-off before starting again!");
+    return;
+  }
+  if (mech_map_dbref(mech) < 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are not on any map!");
+    return;
+  }
+  if (mech_is_destroyed(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This 'Mech is destroyed!");
+    return;
+  }
+  if (mech_is_started(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This 'Mech is already started!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_STARTUP)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This 'Mech is already starting!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're way too busy putting out fires!");
+    return;
+  }
   n = figure_latest_tech_event(mech);
-  DOCHECK_CONTEXT(
-      context, n,
-      "This 'Mech is still under repairs (see checkstatus for more info)");
-  DOCHECK_CONTEXT(context, mech_excess_heat(mech) > 30.0F,
-                  "This 'Mech is too hot to start back up!");
-  DOCHECK_CONTEXT(
-      context,
-      is_in_character(database, mech_dbref(mech)) &&
-          !is_wizard(database, player) &&
-          (char_lookupplayer(
-               context, GOD, GOD, 0,
-               btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
-                                    (char[LBUF_SIZE]){0})) != player),
-      "This isn't your mech!");
+  if (n) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "This 'Mech is still under repairs (see checkstatus for more info)");
+    return;
+  }
+  if (mech_excess_heat(mech) > 30.0F) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This 'Mech is too hot to start back up!");
+    return;
+  }
+  if (is_in_character(database, mech_dbref(mech)) &&
+      !is_wizard(database, player) &&
+      (char_lookupplayer(
+           context, GOD, GOD, 0,
+           btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
+                                (char[LBUF_SIZE]){0})) != player)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This isn't your mech!");
+    return;
+  }
   n = 0;
   if (*buffer && !strncasecmp(buffer, "override", strlen(buffer))) {
-    DOCHECK_CONTEXT(context, !is_wizard(database, player),
-                    "Insufficient access!");
+    if (!is_wizard(database, player)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Insufficient access!");
+      return;
+    }
     n = BOOT_MESSAGE_COUNT - 1;
   }
   mech_pilot_dbref_set(mech, player);
@@ -337,16 +374,22 @@ void mech_shutdown(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition;
 
-  DOCHECK_CONTEXT(
-      context,
-      (!mech_is_started(mech) && !mech_event_count(mech, EVENT_STARTUP)),
-      "The 'mech hasn't been started yet!");
-  DOCHECK_CONTEXT(context, unit_class == CLASS_MW,
-                  "You snore for a while.. and then _start_ yourself back up.");
-  DOCHECK_CONTEXT(context,
-                  mech_is_dropship(mech) && !mech_is_landed(mech) &&
-                      !is_wizard(btech_context_database(context), player),
-                  "No shutdowns in mid-air! Are you suicidal?");
+  if ((!mech_is_started(mech) && !mech_event_count(mech, EVENT_STARTUP))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "The 'mech hasn't been started yet!");
+    return;
+  }
+  if (unit_class == CLASS_MW) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You snore for a while.. and then _start_ yourself back up.");
+    return;
+  }
+  if (mech_is_dropship(mech) && !mech_is_landed(mech) &&
+      !is_wizard(btech_context_database(context), player)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "No shutdowns in mid-air! Are you suicidal?");
+    return;
+  }
   if (mech_pilot_dbref(mech) == -1)
     return;
   if (mech_event_count(mech, EVENT_STARTUP)) {

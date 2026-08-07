@@ -37,7 +37,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
 #include "mech_position_api.h"
@@ -325,7 +324,7 @@ void mech_vtol_crash_start(Mech *objMech) {
          MechVerticalSpeed(objMech) = 0;
          mech_notify(objMech, MECHALL, "You fall rapidly from the sky!");
          mech_los_broadcast(objMech, "plummets from the sky!");
-         mech_fall(objMech, MechsElevation(objMech), 0);
+         mech_fall(objMech, mech_height_above_surface(objMech), 0);
        */
     }
   }

@@ -15,7 +15,6 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "failures.h"
-#include "legacy_macros.h"
 #include "mech_bth_api.h"
 #include "mech_classification_api.h"
 #include "mech_damage_api.h"
@@ -23,7 +22,6 @@
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
@@ -31,6 +29,9 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
+#include "weapon_catalogue_api.h"
 
 static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
                                          int critical);
@@ -44,7 +45,7 @@ static void mech_weapon_critical_data(Mech *mech, int section, int critical,
   wCritType = mech_critical_part_type(mech, section, critical);
 
   /* Get the weapon index */
-  *weapon_index = Weapon2I(wCritType);
+  *weapon_index = weapon_from_equipment_index(wCritType);
 
   /* Get the max number of crits for this weapon */
   *weapon_size = GetWeaponCrits(mech, *weapon_index);
@@ -109,7 +110,7 @@ int mech_weapon_critical_heat_modifier(Mech *mech, int section, int critical) {
   mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
                             &wFirstCrit);
 
-  if (!IsEnergy(wWeapIndex))
+  if (!weapon_catalogue_is_energy(wWeapIndex))
     return 0;
 
   /* Iterate over the crits and see if we have any enhanced damage */
@@ -145,7 +146,7 @@ int mech_weapon_critical_damage_penalty(Mech *mech, int section, int critical) {
   mech_weapon_critical_data(mech, section, critical, &wWeapIndex, &wWeapSize,
                             &wFirstCrit);
 
-  if (!IsEnergy(wWeapIndex))
+  if (!weapon_catalogue_is_energy(wWeapIndex))
     return 0;
 
   /* Iterate over the crits and see if we have any enhanced damage */
@@ -362,7 +363,7 @@ void mech_weapon_critical_apply(Mech *mech, Mech *attacker, int LOS,
 
   if (!tDestroyWeapon) {
     /* See what damage we do */
-    if (IsEnergy(wWeapIndex)) {
+    if (weapon_catalogue_is_energy(wWeapIndex)) {
       if (wCritRoll <= 3) {
         tNoCrit = 1;
       } else if (wCritRoll <= 5) {
@@ -383,7 +384,7 @@ void mech_weapon_critical_apply(Mech *mech, Mech *attacker, int LOS,
       } else {
         tDestroyWeapon = 1;
       }
-    } else if (IsMissile(wWeapIndex)) {
+    } else if (weapon_catalogue_is_missile(wWeapIndex)) {
       if (wCritRoll <= 3) {
         tNoCrit = 1;
       } else if (wCritRoll <= 5) {
@@ -401,7 +402,8 @@ void mech_weapon_critical_apply(Mech *mech, Mech *attacker, int LOS,
       } else {
         tDestroyWeapon = 1;
       }
-    } else if (IsBallistic(wWeapIndex) || IsArtillery(wWeapIndex)) {
+    } else if (weapon_catalogue_is_ballistic(wWeapIndex) ||
+               weapon_catalogue_is_artillery(wWeapIndex)) {
       if (wCritRoll <= 3) {
         tNoCrit = 1;
       } else if (wCritRoll <= 5) {
@@ -459,14 +461,15 @@ void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
   char strLocation[80] = {0};
   char weapbuff[LBUF_SIZE] = {0};
 
-  cch(MECH_USUALSP);
+  if (!common_checks(player, mech, MECH_USUALSP))
+    return;
 
-  notify(btech_context_evaluation(mech_context(mech)), player,
-         "=========================WEAPON SYSTEMS "
-         "STATUS=========================");
-  notify(btech_context_evaluation(mech_context(mech)), player,
-         "[##] -------- Weapon Name -------- || Location -------- || "
-         "Status -----");
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+               "=========================WEAPON SYSTEMS "
+               "STATUS=========================");
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+               "[##] -------- Weapon Name -------- || Location -------- || "
+               "Status -----");
 
   for (secIter = 0; secIter < NUM_SECTIONS; secIter++) {
     wWeapsInSec =
@@ -524,7 +527,8 @@ void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
           strcat(weapbuff, "|| [fg=green bold]OPERATIONAL[reset]");
       }
 
-      notify(btech_context_evaluation(mech_context(mech)), player, weapbuff);
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   weapbuff);
 
       mech_weapon_damage_info_show(player, mech, secIter, critical[weapIter]);
     }
@@ -602,7 +606,7 @@ static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
                     awDamage[0] > 1 ? "s" : "", awDamage[0]);
     }
 
-    if (IsEnergy(wWeapIndex)) {
+    if (weapon_catalogue_is_energy(wWeapIndex)) {
       if (awDamage[1] > 0) {
         notify_printf(evaluation, player,
                       "      Focus misalignment (%d hit%s): -%d damage. +%d to "
@@ -618,7 +622,7 @@ static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
                       awDamage[2], awDamage[2] > 1 ? "s" : "", awDamage[2],
                       awDamage[2] + 1);
       }
-    } else if (IsMissile(wWeapIndex)) {
+    } else if (weapon_catalogue_is_missile(wWeapIndex)) {
       if (awDamage[1] > 0) {
         notify_printf(
             evaluation, player,
@@ -633,7 +637,8 @@ static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
                       "Explodes on %d or less.",
                       awDamage[2], awDamage[2] > 1 ? "s" : "", awDamage[2] + 1);
       }
-    } else if (IsBallistic(wWeapIndex) || IsArtillery(wWeapIndex)) {
+    } else if (weapon_catalogue_is_ballistic(wWeapIndex) ||
+               weapon_catalogue_is_artillery(wWeapIndex)) {
       if (awDamage[1] > 0) {
         notify_printf(evaluation, player,
                       "      [fg=red bold]Barrel damage (%d hit%s): Jams on a "
@@ -671,5 +676,5 @@ static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
   }
 
   if (tPrintSpace)
-    notify(evaluation, player, " ");
+    mecha_notify(evaluation, player, " ");
 }

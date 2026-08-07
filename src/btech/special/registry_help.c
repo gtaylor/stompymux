@@ -34,7 +34,6 @@
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "ds_turret_api.h"
-#include "legacy_macros.h"
 #include "map_dynamic_api.h"
 #include "mech_lifecycle.h"
 #include "mech_restrict_api.h"
@@ -77,6 +76,12 @@
 #include "mycool.h"
 #include "registry_internal.h"
 #include "turret.h"
+
+static const char *command_help_message(int special_type, int command) {
+  const char *message = SpecialObjects[special_type].commands[command].helpmsg;
+  return message + (message[0] == '@');
+}
+
 void center_string(char *destination, size_t destination_size,
                    const char *source, int width) {
   if (destination == nullptr || destination_size == 0)
@@ -135,7 +140,7 @@ static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
   /* XXX: Not entirely sure what this is for.  */
 #ifndef ONE_LINE_TEXTS
   if (!msg) {
-    sim(" ", MLen);
+    cool_menu_add_with_flags(&c, " ", MLen);
     *d = c;
     return NULL;
   }
@@ -176,7 +181,7 @@ static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
     buf[e - msg] = '\0';
   }
 
-  sim(buf, MLen);
+  cool_menu_add_with_flags(&c, buf, MLen);
 
   /* Move pointer to start of next line.  */
   if (*e == ' ')
@@ -186,14 +191,16 @@ static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
   return *e ? e : NULL;
 }
 
-#define Len(s) ((!s || !*s) ? 0 : strlen(s))
+static int help_text_length(const char *text) {
+  return text == nullptr || *text == '\0' ? 0 : (int)strlen(text);
+}
 
 static constexpr int TAB = 3;
 
 static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
                                int len, int initial) {
-  int l1 = Len(msg1);
-  int l2 = Len(msg2);
+  int l1 = help_text_length(msg1);
+  int l2 = help_text_length(msg2);
   int nl1, nl2;
 
 #ifndef ONE_LINE_TEXTS
@@ -203,8 +210,8 @@ static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
       do_ugly_things(d, msg2, initial ? len : len - TAB, initial ? 0 : 0 - TAB);
   if (!msg1 && !msg2)
     return;
-  nl1 = Len(msg1);
-  nl2 = Len(msg2);
+  nl1 = help_text_length(msg1);
+  nl2 = help_text_length(msg2);
   if (nl1 != l1 || nl2 != l2) /* To prevent infinite loops */
     cut_apart_helpmsgs(d, msg1, msg2, len, 0);
 #else
@@ -212,7 +219,7 @@ static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
 
   while (msg1 && *msg1) {
     msg1 = do_ugly_things(d, msg1, len * 2 - 1, first);
-    nl1 = Len(msg1);
+    nl1 = help_text_length(msg1);
     if (nl1 == l1)
       break;
     l1 = nl1;
@@ -220,7 +227,7 @@ static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
   }
   while (msg2 && *msg2) {
     msg2 = do_ugly_things(d, msg2, len * 2 - TAB, 0 - TAB);
-    nl2 = Len(msg2);
+    nl2 = help_text_length(msg2);
     if (nl2 == l2)
       break;
     l2 = nl2;
@@ -264,19 +271,18 @@ void btech_special_object_help(BtechContext *context, DbRef player,
     pos[0][1] = i;
     count = 1;
   }
-  sim(NULL, CM_ONE | CM_LINE);
+  cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
   if (!arg || !*arg) {
-#define HELPMSG(a)                                                             \
-  &SpecialObjects[id]                                                          \
-       .commands[a]                                                            \
-       .helpmsg[SpecialObjects[id].commands[a].helpmsg[0] == '@']
     for (i = 0; i < count; i++) {
       if (count > 1) {
-        center_string(buf, sizeof(buf), HELPMSG(pos[i][0]), 70);
+        center_string(buf, sizeof(buf), command_help_message(id, pos[i][0]),
+                      70);
         d = buf;
-        sim(tprintf("%s%s%s", "[fg=green]", d, "[reset]"), CM_ONE);
+        cool_menu_add_with_flags(
+            &c, tprintf("%s%s%s", "[fg=green]", d, "[reset]"), CM_ONE);
       } else
-        sim(tprintf("%s command listing: ", type), CM_ONE | CM_CENTER);
+        cool_menu_add_with_flags(&c, tprintf("%s command listing: ", type),
+                                 CM_ONE | CM_CENTER);
       for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1]; j++)
         if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
             btech_special_command_access(context, player, powerneeded))
@@ -289,37 +295,42 @@ void btech_special_object_help(BtechContext *context, DbRef player,
               d++;
             if (*d == ' ')
               *d = 0;
-            sim(buf, CM_FOUR);
+            cool_menu_add_with_flags(&c, buf, CM_FOUR);
             csho++;
           }
     }
     if (!csho)
-      vsi(tprintf("There are no commands you are authorized to use here."));
+      cool_menu_add_text(
+          &c, tprintf("There are no commands you are authorized to use here."));
     else {
-      sim(NULL, CM_ONE | CM_LINE);
+      cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
       if (count > 1)
-        vsi("Additional info available with 'HELP SUBTOPIC'");
+        cool_menu_add_text(&c,
+                           "Additional info available with 'HELP SUBTOPIC'");
       else
-        vsi("Additional info available with 'HELP ALL'");
+        cool_menu_add_text(&c, "Additional info available with 'HELP ALL'");
     }
   } else {
     /* Try to find matching subtopic, or ALL */
     if (!strcasecmp(arg, "all")) {
       if (count > 1) {
-        vsi("ALL not available for objects with subcategories.");
+        cool_menu_add_text(&c,
+                           "ALL not available for objects with subcategories.");
         dc = -2;
       } else
         dc = -1;
     } else {
       if (count == 1) {
-        vsi("This object doesn't have any other detailed help than 'HELP ALL'");
+        cool_menu_add_text(
+            &c,
+            "This object doesn't have any other detailed help than 'HELP ALL'");
         dc = -2;
       } else {
         for (i = 0; i < count; i++)
-          if (!strcasecmp(arg, HELPMSG(pos[i][0])))
+          if (!strcasecmp(arg, command_help_message(id, pos[i][0])))
             break;
         if (i == count) {
-          vsi("Subcategory not found.");
+          cool_menu_add_text(&c, "Subcategory not found.");
           dc = -2;
         } else
           dc = i;
@@ -329,8 +340,10 @@ void btech_special_object_help(BtechContext *context, DbRef player,
       for (i = 0; i < count; i++)
         if (dc == -1 || i == dc) {
           if (count > 1) {
-            center_string(buf, sizeof(buf), HELPMSG(pos[i][0]), 70);
-            vsi(tprintf("%s%s%s", "[fg=green]", buf, "[reset]"));
+            center_string(buf, sizeof(buf), command_help_message(id, pos[i][0]),
+                          70);
+            cool_menu_add_text(&c,
+                               tprintf("%s%s%s", "[fg=green]", buf, "[reset]"));
           }
           for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1];
                j++)
@@ -340,11 +353,11 @@ void btech_special_object_help(BtechContext *context, DbRef player,
                   btech_command_allowed_for_mech(
                       mech, SpecialObjects[id].commands[j].flag))
                 cut_apart_helpmsgs(&c, SpecialObjects[id].commands[j].name,
-                                   HELPMSG(j), 37, 1);
+                                   command_help_message(id, j), 37, 1);
         }
     }
   }
-  sim(NULL, CM_ONE | CM_LINE);
+  cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
   ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }

@@ -60,105 +60,204 @@ static int btech_special_table_count(sqlite3 *sqlite, const char *table,
   return result;
 }
 
+static int btech_special_require_rows(sqlite3 *sqlite, const char *table,
+                                      int expected) {
+  int actual;
+  return expected < 0 ||
+                 btech_special_table_count(sqlite, table, &actual) < 0 ||
+                 actual != expected
+             ? -1
+             : 0;
+}
+
 /* Require one parent and every fixed child row for each preallocated object. */
 static int btech_special_validate_required_rows(sqlite3 *sqlite,
                                                 BtechContext *context) {
   BTECH_SPECIAL_OBJECT_COUNTS counts = {0, 0, 0, 0, 0};
-  int expected;
-  int actual;
 
   red_black_tree_walk(context->special_objects, WALK_INORDER,
                       btech_special_count_objects, &counts);
-#define REQUIRE_ROWS(table, rows)                                              \
-  do {                                                                         \
-    expected = (rows);                                                         \
-    if (expected < 0 ||                                                        \
-        btech_special_table_count(sqlite, table, &actual) < 0 ||               \
-        actual != expected)                                                    \
-      return -1;                                                               \
-  } while (0)
-  REQUIRE_ROWS("btech_maps", counts.maps);
-  REQUIRE_ROWS("btech_mechs", counts.mechs);
-  REQUIRE_ROWS("btech_mechrep", counts.mechreps);
-  REQUIRE_ROWS("btech_turrets", counts.turrets);
-  REQUIRE_ROWS("btech_autopilots", counts.autopilots);
-  REQUIRE_ROWS("btech_mech_sections", counts.mechs * NUM_SECTIONS);
-  REQUIRE_ROWS("btech_mech_criticals",
-               counts.mechs * NUM_SECTIONS * NUM_CRITICALS);
-  REQUIRE_ROWS("btech_mech_positions", counts.mechs);
-  REQUIRE_ROWS("btech_mech_bays", counts.mechs * NUM_BAYS);
-  REQUIRE_ROWS("btech_mech_turrets", counts.mechs * NUM_TURRETS);
-  REQUIRE_ROWS("btech_mech_c3", counts.mechs);
-  REQUIRE_ROWS("btech_mech_c3_nodes",
-               counts.mechs * (C3I_NETWORK_SIZE + C3_NETWORK_SIZE));
-  REQUIRE_ROWS("btech_mech_tics", counts.mechs * NUM_TICS * TICLONGS);
-  REQUIRE_ROWS("btech_mech_frequencies", counts.mechs * FREQS);
-  REQUIRE_ROWS("btech_mech_runtime", counts.mechs);
-  REQUIRE_ROWS("btech_mech_runtime_unused", counts.mechs * 5);
+  if (btech_special_require_rows(sqlite, "btech_maps", counts.maps) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mechs", counts.mechs) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mechrep", counts.mechreps) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_turrets", counts.turrets) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_autopilots",
+                                 counts.autopilots) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_sections",
+                                 counts.mechs * NUM_SECTIONS) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_criticals",
+                                 counts.mechs * NUM_SECTIONS * NUM_CRITICALS) <
+      0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_positions", counts.mechs) <
+      0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_bays",
+                                 counts.mechs * NUM_BAYS) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_turrets",
+                                 counts.mechs * NUM_TURRETS) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_c3", counts.mechs) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_c3_nodes",
+                                 counts.mechs *
+                                     (C3I_NETWORK_SIZE + C3_NETWORK_SIZE)) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_tics",
+                                 counts.mechs * NUM_TICS * TICLONGS) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_frequencies",
+                                 counts.mechs * FREQS) < 0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_runtime", counts.mechs) <
+      0)
+    return -1;
+  if (btech_special_require_rows(sqlite, "btech_mech_runtime_unused",
+                                 counts.mechs * 5) < 0)
+    return -1;
 #ifndef BT_CALCULATE_BV
-  REQUIRE_ROWS("btech_mech_unit_aux", counts.mechs * 11);
+  if (btech_special_require_rows(sqlite, "btech_mech_unit_aux",
+                                 counts.mechs * 11) < 0)
+    return -1;
 #else
-  REQUIRE_ROWS("btech_mech_unit_aux", counts.mechs * 4);
+  if (btech_special_require_rows(sqlite, "btech_mech_unit_aux",
+                                 counts.mechs * 4) < 0)
+    return -1;
 #endif
-  REQUIRE_ROWS("btech_turret_tics", counts.turrets * NUM_TICS);
-#undef REQUIRE_ROWS
+  if (btech_special_require_rows(sqlite, "btech_turret_tics",
+                                 counts.turrets * NUM_TICS) < 0)
+    return -1;
   return 0;
+}
+
+typedef int (*BtechSqliteLoader)(sqlite3 *sqlite);
+typedef int (*BtechSqliteContextLoader)(sqlite3 *sqlite, BtechContext *context);
+
+static int btech_special_load_stage(sqlite3 *sqlite, BtechContext *context,
+                                    const char *stage,
+                                    BtechSqliteLoader loader) {
+  if (loader(sqlite) >= 0)
+    return 0;
+  log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
+            "SQLite BTech validation failed at %s.", stage);
+  return -1;
+}
+
+static int btech_special_load_context_stage(sqlite3 *sqlite,
+                                            BtechContext *context,
+                                            const char *stage,
+                                            BtechSqliteContextLoader loader) {
+  if (loader(sqlite, context) >= 0)
+    return 0;
+  log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
+            "SQLite BTech validation failed at %s.", stage);
+  return -1;
 }
 
 /* Load every BTech table only after the normal special-object allocators run.
  */
 int btech_special_load_all(sqlite3 *sqlite, BtechContext *context) {
-#define BTECH_LOAD(stage, function)                                            \
-  do {                                                                         \
-    if ((function)(sqlite) < 0) {                                              \
-      log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",                       \
-                "SQLite BTech validation failed at %s.", (char *)stage);       \
-      return -1;                                                               \
-    }                                                                          \
-  } while (0)
-#define BTECH_LOAD_CONTEXT(stage, function)                                    \
-  do {                                                                         \
-    if ((function)(sqlite, context) < 0) {                                     \
-      log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",                       \
-                "SQLite BTech validation failed at %s.", (char *)stage);       \
-      return -1;                                                               \
-    }                                                                          \
-  } while (0)
-  BTECH_LOAD("metadata", btech_special_validate_metadata);
-  BTECH_LOAD_CONTEXT("required rows", btech_special_validate_required_rows);
-  BTECH_LOAD_CONTEXT("map parents", btech_special_load_map_parents);
-  BTECH_LOAD_CONTEXT("map hexes", btech_special_load_map_hexes);
-  BTECH_LOAD_CONTEXT("map slots", btech_special_load_map_slots);
-  BTECH_LOAD_CONTEXT("map LOS", btech_special_load_map_los);
-  BTECH_LOAD("map child counts", btech_special_validate_map_child_counts);
-  BTECH_LOAD_CONTEXT("map objects", btech_special_load_map_objects);
-  BTECH_LOAD_CONTEXT("map bits", btech_special_load_map_bits);
-  BTECH_LOAD_CONTEXT("mech parents", btech_special_load_mech_parents);
-  BTECH_LOAD_CONTEXT("mech sections", btech_special_load_mech_sections);
-  BTECH_LOAD_CONTEXT("mech criticals", btech_special_load_mech_criticals);
-  BTECH_LOAD_CONTEXT("mech positions", btech_special_load_mech_positions);
-  BTECH_LOAD_CONTEXT("mech bays", btech_special_load_mech_bays);
-  BTECH_LOAD_CONTEXT("mech turrets", btech_special_load_mech_turrets);
-  BTECH_LOAD_CONTEXT("mech C3", btech_special_load_mech_c3);
-  BTECH_LOAD_CONTEXT("mech C3 nodes", btech_special_load_mech_c3_nodes);
-  BTECH_LOAD_CONTEXT("mech tics", btech_special_load_mech_tics);
-  BTECH_LOAD_CONTEXT("mech frequencies", btech_special_load_mech_frequencies);
-  BTECH_LOAD_CONTEXT("mech runtime", btech_special_load_mech_runtime);
-  BTECH_LOAD_CONTEXT("mech unit auxiliary", btech_special_load_mech_unit_aux);
-  BTECH_LOAD_CONTEXT("mech runtime auxiliary",
-                     btech_special_load_mech_runtime_unused);
-  BTECH_LOAD_CONTEXT("mech stagger damage",
-                     btech_special_load_mech_stagger_damage);
-  BTECH_LOAD_CONTEXT("mech repair consoles", btech_special_load_mechrep);
-  BTECH_LOAD_CONTEXT("turrets", btech_special_load_turrets);
-  BTECH_LOAD_CONTEXT("turret tics", btech_special_load_turret_tics);
-  BTECH_LOAD_CONTEXT("autopilots", btech_special_load_autopilots);
-  BTECH_LOAD_CONTEXT("autopilot commands",
-                     btech_special_load_autopilot_commands);
-  BTECH_LOAD_CONTEXT("autopilot paths", btech_special_load_autopilot_path);
-  BTECH_LOAD_CONTEXT("repair events", btech_special_load_repair_events);
-#undef BTECH_LOAD_CONTEXT
-#undef BTECH_LOAD
+  if (btech_special_load_stage(sqlite, context, "metadata",
+                               btech_special_validate_metadata) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "required rows",
+                                       btech_special_validate_required_rows) <
+      0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "map parents",
+                                       btech_special_load_map_parents) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "map hexes",
+                                       btech_special_load_map_hexes) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "map slots",
+                                       btech_special_load_map_slots) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "map LOS",
+                                       btech_special_load_map_los) < 0)
+    return -1;
+  if (btech_special_load_stage(sqlite, context, "map child counts",
+                               btech_special_validate_map_child_counts) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "map objects",
+                                       btech_special_load_map_objects) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "map bits",
+                                       btech_special_load_map_bits) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech parents",
+                                       btech_special_load_mech_parents) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech sections",
+                                       btech_special_load_mech_sections) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech criticals",
+                                       btech_special_load_mech_criticals) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech positions",
+                                       btech_special_load_mech_positions) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech bays",
+                                       btech_special_load_mech_bays) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech turrets",
+                                       btech_special_load_mech_turrets) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech C3",
+                                       btech_special_load_mech_c3) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech C3 nodes",
+                                       btech_special_load_mech_c3_nodes) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech tics",
+                                       btech_special_load_mech_tics) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech frequencies",
+                                       btech_special_load_mech_frequencies) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech runtime",
+                                       btech_special_load_mech_runtime) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech unit auxiliary",
+                                       btech_special_load_mech_unit_aux) < 0)
+    return -1;
+  if (btech_special_load_context_stage(
+          sqlite, context, "mech runtime auxiliary",
+          btech_special_load_mech_runtime_unused) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech stagger damage",
+                                       btech_special_load_mech_stagger_damage) <
+      0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "mech repair consoles",
+                                       btech_special_load_mechrep) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "turrets",
+                                       btech_special_load_turrets) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "turret tics",
+                                       btech_special_load_turret_tics) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "autopilots",
+                                       btech_special_load_autopilots) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "autopilot commands",
+                                       btech_special_load_autopilot_commands) <
+      0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "autopilot paths",
+                                       btech_special_load_autopilot_path) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "repair events",
+                                       btech_special_load_repair_events) < 0)
+    return -1;
   return 0;
 }
 

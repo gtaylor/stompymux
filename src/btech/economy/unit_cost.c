@@ -1,5 +1,6 @@
 #include "part_cost_api.h"
 #include "unit_cost_api.h"
+#include "weapon_catalogue_api.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -31,20 +32,21 @@ extern const int cargoweight[];
 #endif
 
 int btech_part_weight(int part) {
-  if (IsWeapon(part))
-    return 10.24 * MechWeapons[Weapon2I(part)].weight;
-  else if (IsAmmo(part))
+  if (equipment_is_weapon(part))
+    return 10.24 * MechWeapons[weapon_from_equipment_index(part)].weight;
+  else if (equipment_is_ammunition(part))
     return 1024;
-  else if (IsBomb(part))
-    return 102 * bomb_weight(Bomb2I(part));
+  else if (equipment_is_bomb(part))
+    return 102 * bomb_weight(bomb_from_equipment_index(part));
 #ifndef BT_PART_WEIGHTS
-  else if (IsSpecial(part) && part <= I2Special(CLAW))
+  else if (equipment_is_special(part) && part <= special_equipment_index(CLAW))
     return 1024;
 #else
-  else if (IsSpecial(part)) /* && i <= I2Special(LAMEQUIP) */
-    return internalsweight[Special2I(part)];
-  else if (IsCargo(part))
-    return cargoweight[Cargo2I(part)];
+  else if (equipment_is_special(
+               part)) /* && i <= special_equipment_index(LAMEQUIP) */
+    return internalsweight[special_from_equipment_index(part)];
+  else if (equipment_is_cargo(part))
+    return cargoweight[cargo_from_equipment_index(part)];
 #endif /* BT_PART_WEIGHTS */
   else
     /* hmm.. tricky, suppose we'll make things light */
@@ -91,16 +93,16 @@ void btech_part_cost_sets(
 
 unsigned long long btech_part_cost_get(const BtechContext *context, int part) {
   const BtechPartCosts *costs = context->part_costs;
-  if (IsWeapon(part))
-    return costs->weapons[Weapon2I(part)];
-  else if (IsAmmo(part))
-    return costs->ammunition[Ammo2I(part)];
-  else if (IsSpecial(part))
-    return costs->specials[Special2I(part)];
-  else if (IsBomb(part))
-    return costs->bombs[Bomb2I(part)];
-  else if (IsCargo(part))
-    return costs->cargo[Cargo2I(part)];
+  if (equipment_is_weapon(part))
+    return costs->weapons[weapon_from_equipment_index(part)];
+  else if (equipment_is_ammunition(part))
+    return costs->ammunition[ammunition_to_weapon_index(part)];
+  else if (equipment_is_special(part))
+    return costs->specials[special_from_equipment_index(part)];
+  else if (equipment_is_bomb(part))
+    return costs->bombs[bomb_from_equipment_index(part)];
+  else if (equipment_is_cargo(part))
+    return costs->cargo[cargo_from_equipment_index(part)];
   else
     return 0;
 }
@@ -108,16 +110,16 @@ unsigned long long btech_part_cost_get(const BtechContext *context, int part) {
 void btech_part_cost_set(BtechContext *context, int part,
                          unsigned long long cost) {
   BtechPartCosts *costs = context->part_costs;
-  if (IsWeapon(part))
-    costs->weapons[Weapon2I(part)] = cost;
-  else if (IsAmmo(part))
-    costs->ammunition[Ammo2I(part)] = cost;
-  else if (IsSpecial(part))
-    costs->specials[Special2I(part)] = cost;
-  else if (IsBomb(part))
-    costs->bombs[Bomb2I(part)] = cost;
-  else if (IsCargo(part))
-    costs->cargo[Cargo2I(part)] = cost;
+  if (equipment_is_weapon(part))
+    costs->weapons[weapon_from_equipment_index(part)] = cost;
+  else if (equipment_is_ammunition(part))
+    costs->ammunition[ammunition_to_weapon_index(part)] = cost;
+  else if (equipment_is_special(part))
+    costs->specials[special_from_equipment_index(part)] = cost;
+  else if (equipment_is_bomb(part))
+    costs->bombs[bomb_from_equipment_index(part)] = cost;
+  else if (equipment_is_cargo(part))
+    costs->cargo[cargo_from_equipment_index(part)] = cost;
 }
 
 static void mech_cost_add(const Mech *mech, float *total, const char *desc,
@@ -138,17 +140,17 @@ static void mech_cost_add_arm_actuators(Mech *mech, int loc, float *total) {
   int const tons = mech_tonnage(mech);
   for (i = 0; i < NUM_CRITICALS; i++) {
     int part = mech_critical_part_type(mech, loc, i);
-    if (!IsActuator(part))
+    if (!equipment_is_actuator(part))
       continue;
-    else if (Special2I(part) == SHOULDER_OR_HIP)
+    else if (special_from_equipment_index(part) == SHOULDER_OR_HIP)
       continue;
     // BMR Says don't count this.
     // mech_cost_add(mech, total, "Shoulder Actuator", 0);
-    else if (Special2I(part) == UPPER_ACTUATOR)
+    else if (special_from_equipment_index(part) == UPPER_ACTUATOR)
       mech_cost_add(mech, total, "ARM Upper Actuator", (tons * 100));
-    else if (Special2I(part) == LOWER_ACTUATOR)
+    else if (special_from_equipment_index(part) == LOWER_ACTUATOR)
       mech_cost_add(mech, total, "ARM Lower Actuator", (tons * 50));
-    else if (Special2I(part) == HAND_OR_FOOT_ACTUATOR)
+    else if (special_from_equipment_index(part) == HAND_OR_FOOT_ACTUATOR)
       mech_cost_add(mech, total, "ARM Hand Actuator", (tons * 80));
   }
 }
@@ -158,16 +160,16 @@ static void mech_cost_add_leg_actuators(Mech *mech, int loc, float *total) {
   int const tons = mech_tonnage(mech);
   for (i = 0; i < NUM_CRITICALS; i++) {
     int part = mech_critical_part_type(mech, loc, i);
-    if (!IsActuator(part))
+    if (!equipment_is_actuator(part))
       continue;
-    else if (Special2I(part) == SHOULDER_OR_HIP)
+    else if (special_from_equipment_index(part) == SHOULDER_OR_HIP)
       continue;
     // BMR Says don't count the Hip
-    else if (Special2I(part) == UPPER_ACTUATOR)
+    else if (special_from_equipment_index(part) == UPPER_ACTUATOR)
       mech_cost_add(mech, total, "LEG Upper Actuator", (tons * 150));
-    else if (Special2I(part) == LOWER_ACTUATOR)
+    else if (special_from_equipment_index(part) == LOWER_ACTUATOR)
       mech_cost_add(mech, total, "LEG Lower Actuator", (tons * 80));
-    else if (Special2I(part) == HAND_OR_FOOT_ACTUATOR)
+    else if (special_from_equipment_index(part) == HAND_OR_FOOT_ACTUATOR)
       mech_cost_add(mech, total, "LEG Actuator", (tons * 120));
   }
 }
@@ -281,11 +283,11 @@ unsigned long long mech_fasa_cost(Mech *mech) {
       for (ii = 0; ii < NUM_CRITICALS; ii++) {
         if (!(part = mech_critical_part_type(mech, i, ii)))
           continue;
-        if (!IsWeapon(part))
+        if (!equipment_is_weapon(part))
           continue;
         if (i == TURRET)
           turret += crit_weight(mech, part);
-        if (IsEnergy(part)) {
+        if (weapon_catalogue_is_energy(part)) {
           pamp += crit_weight(mech, part);
           btech_channel_send(
               mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
@@ -498,11 +500,11 @@ unsigned long long mech_fasa_cost(Mech *mech) {
   for (i = 0; i < NUM_SECTIONS; i++)
     for (ii = 0; ii < NUM_CRITICALS; ii++) {
       part = mech_critical_part_type(mech, i, ii);
-      if (IsActuator(part) || part == EMPTY)
+      if (equipment_is_actuator(part) || part == EMPTY)
         continue;
-      if (IsSpecial(part))
+      if (equipment_is_special(part))
         /* These parts are handled above, don't count their crits */
-        switch (Special2I(part)) {
+        switch (special_from_equipment_index(part)) {
         case LIFE_SUPPORT:
           continue;
         case SENSORS:
@@ -579,16 +581,16 @@ unsigned long long mech_fasa_cost(Mech *mech) {
         default:
           break;
         }
-      if (IsAmmo(part))
+      if (equipment_is_ammunition(part))
         /* Need Something in here to do CASE for CLAN mechs */
         if ((technology & CLAN_TECH))
           clan_case_sections[i] = 1;
       continue;
-      if (IsWeapon(part))
+      if (equipment_is_weapon(part))
         continue;
 
       long indiv_part_cost = btech_part_cost_get(mech_context(mech), part);
-      if (unit_class != CLASS_MECH && IsWeapon(part)) {
+      if (unit_class != CLASS_MECH && equipment_is_weapon(part)) {
         indiv_part_cost *= MechWeapons[part - 1].criticals;
         // btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
         // tprintf("Part#: %s(%d) Crits: %d", MechWeapons[part-1].name, part-1,

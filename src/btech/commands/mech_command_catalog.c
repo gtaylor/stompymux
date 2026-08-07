@@ -1,11 +1,8 @@
 #include "command_invokers.h"
 
-#define SHEADER(a, b) {a, b, b, NULL}
-#define HEADER(a) SHEADER(0, a)
-
 const BtechCommandDefinition mechcommands[] = {
     /* Movement */
-    HEADER("Movement"),
+    {0, "Movement", "Movement", nullptr},
 
     {0, "HEADING [num]",
      "Shows/Changes your heading to <NUM> (<NUM> in degrees)",
@@ -69,7 +66,7 @@ const BtechCommandDefinition mechcommands[] = {
      btech_command_invoke_mech_dodge},
 #endif
     /* Radio */
-    HEADER("Radio"),
+    {0, "Radio", "Radio", nullptr},
     {0, "LISTCHANNELS", "Lists set frequencies + comtitles for them.",
      btech_command_invoke_mech_list_freqs},
     {0, "SENDCHANNEL <LETTER> = <STRING>",
@@ -89,7 +86,7 @@ const BtechCommandDefinition mechcommands[] = {
      btech_command_invoke_mech_set_channeltitle},
 
     /* Weapons */
-    HEADER("Weapons"),
+    {0, "Weapons", "Weapons", nullptr},
     {0, "LOCK [<TARGET-ID> | <X> <Y> | <X> <Y> <B|H|I|C> | -]",
      "Sets the target to the (3rd argument :  B = building, C = clear, I = "
      "ignite, H = hex (clear/ignite/break ice/destroy bridge)) /, - = Clears "
@@ -207,7 +204,7 @@ const BtechCommandDefinition mechcommands[] = {
      btech_command_invoke_mech_listtic},
 
     /* Information */
-    HEADER("Information"),
+    {0, "Information", "Information", nullptr},
 
     {0, "BRIEF [<LTR> <VAL>]",
      "Shows brief status / Sets brief for <ltr> to <val>.",
@@ -239,7 +236,7 @@ const BtechCommandDefinition mechcommands[] = {
      btech_command_invoke_mech_weapon_status},
 
     /* Navigation */
-    HEADER("Navigation"),
+    {0, "Navigation", "Navigation", nullptr},
     {0, "BEARING [<X Y>] [<X Y>]", "Same format as range.",
      btech_command_invoke_mech_bearing},
 
@@ -264,7 +261,7 @@ const BtechCommandDefinition mechcommands[] = {
      btech_command_invoke_mech_vector},
 
     /* Special */
-    HEADER("Special"),
+    {0, "Special", "Special", nullptr},
 
     {12, "CHECKLZ", "Checks if the landing-zone is good for a landing",
      btech_command_invoke_aero_checklz},
@@ -439,7 +436,7 @@ const BtechCommandDefinition mechcommands[] = {
      btech_command_invoke_remove_inarc_pods_tank},
 
     /* Physical */
-    SHEADER(1, "Physical"),
+    {1, "Physical", "Physical", nullptr},
     {1, "AXE [R | L | B] [<TARGET-ID>]", "Axes a target",
      btech_command_invoke_mech_axe},
 
@@ -477,7 +474,7 @@ const BtechCommandDefinition mechcommands[] = {
      btech_command_invoke_bsuit_pack_jettison},
 
     /* Repairing */
-    HEADER("Repair"),
+    {0, "Repair", "Repair", nullptr},
     {0, "CHECKSTATUS", "Checks mech's techstatus",
      btech_command_invoke_tech_checkstatus},
     {0, "DAMAGES", "Shows the mech's damages",
@@ -530,7 +527,7 @@ const BtechCommandDefinition mechcommands[] = {
 
 #ifdef BT_CARGO_COMMANDS
     /* Cargo */
-    HEADER("Cargo"),
+    {0, "Cargo", "Cargo", nullptr},
 
     {0, "LOADCARGO <NAME> <COUNT>", "Loads up <COUNT> <NAME>s from the bay.",
      btech_command_invoke_mech_loadcargo},
@@ -542,7 +539,7 @@ const BtechCommandDefinition mechcommands[] = {
 #endif
 
     /* Restricted commands */
-    HEADER("@Restricted"),
+    {0, "@Restricted", "@Restricted", nullptr},
     {0, "@CREATEBAYS [.. list of DBrefs, seperated by space]",
      "@Creates / Disables bays on a DS", btech_command_invoke_mech_createbays},
     {0, "@SETMECH <NAME> <VALUE|DATA>", "@Sets xcode value on object",

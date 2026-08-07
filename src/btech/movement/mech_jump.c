@@ -24,7 +24,6 @@
 #include "btechstats_api.h"
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -42,7 +41,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
 #include "mech_position_api.h"
@@ -88,55 +86,106 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   bool dfa_attack = false;
 
   mech_map = btech_context_get_map(context, mech_map_dbref(mech));
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   condition = mech_condition_summary(mech);
-  DOCHECK_CONTEXT(context, condition.fortified,
-                  "Your fortified state prevents you from moving.");
+  if (condition.fortified) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Your fortified state prevents you from moving.");
+    return;
+  }
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK_CONTEXT(context, mech_move_mode_locked(mech),
-                  "Movement modes disallow jumping.");
+  if (mech_move_mode_locked(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Movement modes disallow jumping.");
+    return;
+  }
 #endif
-  DOCHECK_CONTEXT(context,
-                  mech_class(mech) != CLASS_MECH &&
-                      mech_class(mech) != CLASS_MW &&
-                      mech_class(mech) != CLASS_BSUIT &&
-                      mech_class(mech) != CLASS_VEH_GROUND,
-                  "This unit cannot jump.");
-  DOCHECK_CONTEXT(context, mech_carried_dbref(mech) > 0,
-                  "You can't jump while towing someone!");
-  DOCHECK_CONTEXT(context,
-                  (mech_maximum_speed(mech) -
-                   mech_cargo_maximum_speed(mech, mech_maximum_speed(mech))) >
-                      MP1,
-                  "No, with this cargo you won't!");
-  DOCHECK_CONTEXT(context, mech_is_fallen(mech),
-                  "You can't Jump from a FALLEN position");
-  DOCHECK_CONTEXT(context, condition.hull_down,
-                  "You can't Jump while hulldown");
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_CHANGING_HULLDOWN),
-                  "You are busy changing your hulldown mode");
-  DOCHECK_CONTEXT(context, mech_is_jumping(mech), "You're already jumping!");
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_JUMPSTABIL),
-                  "You haven't stabilized from your last jump yet.");
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_STAND),
-                  "You haven't finished standing up yet.");
-  DOCHECK_CONTEXT(context, fabs(mech_jump_speed(mech)) <= 0.0,
-                  "This mech doesn't have jump jets!");
+  if (mech_class(mech) != CLASS_MECH && mech_class(mech) != CLASS_MW &&
+      mech_class(mech) != CLASS_BSUIT && mech_class(mech) != CLASS_VEH_GROUND) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This unit cannot jump.");
+    return;
+  }
+  if (mech_carried_dbref(mech) > 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't jump while towing someone!");
+    return;
+  }
+  if ((mech_maximum_speed(mech) -
+       mech_cargo_maximum_speed(mech, mech_maximum_speed(mech))) > MP1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "No, with this cargo you won't!");
+    return;
+  }
+  if (mech_is_fallen(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't Jump from a FALLEN position");
+    return;
+  }
+  if (condition.hull_down) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't Jump while hulldown");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_CHANGING_HULLDOWN)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are busy changing your hulldown mode");
+    return;
+  }
+  if (mech_is_jumping(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're already jumping!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_JUMPSTABIL)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You haven't stabilized from your last jump yet.");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_STAND)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You haven't finished standing up yet.");
+    return;
+  }
+  if (fabs(mech_jump_speed(mech)) <= 0.0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This mech doesn't have jump jets!");
+    return;
+  }
   argc = mech_parseattributes(buffer, args, 3);
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_DUMP),
-                  "You can not jump while dumping ammo!");
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_UNJAM_AMMO),
-                  "You can not jump while unjamming your weapon!");
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_REMOVE_PODS),
-                  "You are too busy removing iNARC pods!");
-  DOCHECK_CONTEXT(context, battle_map_is_underground(mech_map),
-                  "Realize the ceiling in this grotto is a bit to low for "
-                  "that!");
-  DOCHECK_CONTEXT(context, mech_is_out_of_control(mech),
-                  "You can't jump while orbital dropping!");
+  if (mech_event_count(mech, EVENT_DUMP)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can not jump while dumping ammo!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_UNJAM_AMMO)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can not jump while unjamming your weapon!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_REMOVE_PODS)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are too busy removing iNARC pods!");
+    return;
+  }
+  if (battle_map_is_underground(mech_map)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Realize the ceiling in this grotto is a bit to low for "
+                 "that!");
+    return;
+  }
+  if (mech_is_out_of_control(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't jump while orbital dropping!");
+    return;
+  }
 
-  DOCHECK_CONTEXT(context, condition.swarm_target > 0,
-                  "Perhaps you should dismount your ride first!");
+  if (condition.swarm_target > 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Perhaps you should dismount your ride first!");
+    return;
+  }
 
   if (condition.staggering) {
     mech_notify(mech, MECHALL, "The damage inhibits your coordination...");
@@ -154,48 +203,79 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   if (bsuit_jettison_validate(mech))
     return;
 
-  DOCHECK_CONTEXT(context, argc > 2, "Too many arguments to JUMP function!");
-  DOCHECK_CONTEXT(context, argc < 0,
-                  "Invalid number of arguments to JUMP function!");
+  if (argc > 2) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Too many arguments to JUMP function!");
+    return;
+  }
+  if (argc < 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number of arguments to JUMP function!");
+    return;
+  }
   mech_dfa_attacking_set(mech, false); /* By default no DFA */
   switch (argc) {
   case 0:
     /* DFA current target... */
 
-    DOCHECK_CONTEXT(context, mech_class(mech) != CLASS_MECH,
-                    "Only mechs can do Death From Above attacks!");
+    if (mech_class(mech) != CLASS_MECH) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Only mechs can do Death From Above attacks!");
+      return;
+    }
 
     target = mech_target_dbref(mech);
     tempMech = btech_context_get_mech(context, target);
-    DOCHECK_CONTEXT(context, !tempMech, "Invalid Target!");
+    if (!tempMech) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Invalid Target!");
+      return;
+    }
     range = mech_range_to(mech, tempMech);
-    DOCHECK_CONTEXT(context,
-                    !mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                                    mech_position_y(tempMech), range),
-                    "Target is not in line of sight!");
-    DOCHECK_CONTEXT(context, mech_class(tempMech) == CLASS_MW,
-                    "Even you can't aim your jump well enough to squish that!");
+    if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                        mech_position_y(tempMech), range)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Target is not in line of sight!");
+      return;
+    }
+    if (mech_class(tempMech) == CLASS_MW) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Even you can't aim your jump well enough to squish that!");
+      return;
+    }
     mapx = mech_position_x(tempMech);
     mapy = mech_position_y(tempMech);
     mech_dfa_target_dbref_set(mech, mech_target_dbref(mech));
     break;
   case 1:
     /* Jump Target */
-    DOCHECK_CONTEXT(context, mech_class(mech) != CLASS_MECH,
-                    "Only mechs can do Death From Above attacks!");
+    if (mech_class(mech) != CLASS_MECH) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Only mechs can do Death From Above attacks!");
+      return;
+    }
 
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
     target = FindTargetDBREFFromMapNumber(mech, targetID);
     tempMech = btech_context_get_mech(context, target);
-    DOCHECK_CONTEXT(context, !tempMech, "Target is not in line of sight!");
+    if (!tempMech) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Target is not in line of sight!");
+      return;
+    }
     range = mech_range_to(mech, tempMech);
-    DOCHECK_CONTEXT(context,
-                    !mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                                    mech_position_y(tempMech), range),
-                    "Target is not in line of sight!");
-    DOCHECK_CONTEXT(context, mech_class(tempMech) == CLASS_MW,
-                    "Even you can't aim your jump well enough to squish that!");
+    if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                        mech_position_y(tempMech), range)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Target is not in line of sight!");
+      return;
+    }
+    if (mech_class(tempMech) == CLASS_MW) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Even you can't aim your jump well enough to squish that!");
+      return;
+    }
     mapx = mech_position_x(tempMech);
     mapy = mech_position_y(tempMech);
     mech_dfa_target_dbref_set(mech, mech_dbref(tempMech));
@@ -211,19 +291,27 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     RealCoordToMapCoord(&mapx, &mapy, realx, realy);
     break;
   }
-  DOCHECK_CONTEXT(context,
-                  !battle_map_coordinate_is_valid(mech_map, mapx, mapy),
-                  "That would take you off the map!");
-  DOCHECK_CONTEXT(
-      context, mech_position_x(mech) == mapx && mech_position_y(mech) == mapy,
-      "You're already in the target hex.");
+  if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That would take you off the map!");
+    return;
+  }
+  if (mech_position_x(mech) == mapx && mech_position_y(mech) == mapy) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're already in the target hex.");
+    return;
+  }
   sz = mech_position_z(mech);
   if (map_real_terrain_get(mech_map, mapx, mapy) == BATTLE_TERRAIN_ICE)
     tz = 0;
   else
     tz = battle_map_hex_elevation(mech_map, mapx, mapy);
   jps = mech_adjusted_jump_speed_mp(mech, mech_map);
-  DOCHECK_CONTEXT(context, range > jps, "That target is out of range!");
+  if (range > jps) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target is out of range!");
+    return;
+  }
   dfa_attack = mech_class(mech) != CLASS_BSUIT && tempMech;
   if (dfa_attack)
     mech_dfa_attacking_set(mech, true);
@@ -236,11 +324,20 @@ void mech_jump(DbRef player, void *data, char *buffer) {
      value: 2 * 1 + 2 = 4
    */
   mech_jump_apex_elevation_set(mech, MIN(jps + 1 - range / 3, 2 * range + 2));
-  DOCHECK_CONTEXT(context, (tz - sz) > jps,
-                  "That target's high for you to reach with a single jump!");
-  DOCHECK_CONTEXT(context, (sz - tz) > jps,
-                  "That target's low for you to reach with a single jump!");
-  DOCHECK_CONTEXT(context, sz < -1, "Glub glub glub.");
+  if ((tz - sz) > jps) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target's high for you to reach with a single jump!");
+    return;
+  }
+  if ((sz - tz) > jps) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target's low for you to reach with a single jump!");
+    return;
+  }
+  if (sz < -1) {
+    mecha_notify(btech_context_evaluation(context), player, "Glub glub glub.");
+    return;
+  }
   MapCoordToRealCoord(mapx, mapy, &realx, &realy);
   bearing = FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
                         realx, realy);

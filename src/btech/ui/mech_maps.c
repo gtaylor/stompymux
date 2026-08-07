@@ -1,7 +1,7 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
+#include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_electronics_api.h"
@@ -18,6 +18,7 @@
 #include "mux/server/game.h"
 #include "registry_api.h"
 
+#include "mux/support/formatting.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -53,9 +54,11 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
   case 2:
     bearing = atoi(args[0]);
     range = atof(args[1]);
-    DOCHECK0_CONTEXT(mech_context(mech),
-                     !mech_is_observer(mech) && abs((int)range) > maxrange,
-                     "Those coordinates are out of sensor range!");
+    if (!mech_is_observer(mech) && abs((int)range) > maxrange) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Those coordinates are out of sensor range!");
+      return 0;
+    }
     FindXY(mech_position_real_x(mech), mech_position_real_y(mech), bearing,
            range, &fx, &fy);
     RealCoordToMapCoord(x, y, fx, fy);
@@ -64,14 +67,23 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
     map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
     tempMech =
         btech_context_get_mech(mech_context(mech), FindMechOnMap(map, args[0]));
-    DOCHECK0_CONTEXT(mech_context(mech), !tempMech, "No such target.");
+    if (!tempMech) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "No such target.");
+      return 0;
+    }
     range = mech_range_to(mech, tempMech);
-    DOCHECK0_CONTEXT(mech_context(mech),
-                     !mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                                     mech_position_y(tempMech), range),
-                     "No such target.");
-    DOCHECK0_CONTEXT(mech_context(mech), abs((int)range) > maxrange,
-                     "Target is out of scanner range.");
+    if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                        mech_position_y(tempMech), range)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "No such target.");
+      return 0;
+    }
+    if (abs((int)range) > maxrange) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Target is out of scanner range.");
+      return 0;
+    }
     *x = mech_position_x(tempMech);
     *y = mech_position_y(tempMech);
     return 1;
@@ -80,8 +92,8 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
     *y = mech_position_y(mech);
     return 1;
   default:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Invalid number of parameters!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of parameters!");
     return 0;
   }
 }
@@ -148,13 +160,15 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
 
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
-  dolos = MapIsDark(mech_map) ||
+  dolos = battle_map_is_dark(mech_map) ||
           (mech_class(mech) == CLASS_MW &&
            mech_context(mech)->configuration->btech_mw_losmap);
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_map->map_width <= 0 || mech_map->map_height <= 0,
-                  "Nothing to see on this map, move along.");
+  if (mech_map->map_width <= 0 || mech_map->map_height <= 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Nothing to see on this map, move along.");
+    return;
+  }
 
   argc = mech_parseattributes(buffer, args, 3);
   if (!parse_tacargs(player, mech, args, argc, mech_tactical_range(mech), &x,
@@ -163,7 +177,7 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
 
   map_text = map_text_create(player, mech, mech_map, x, y, 5, 5, 4, dolos);
   if (map_text == nullptr) {
-    notify(evaluation, player, "Unable to render the tactical map.");
+    mecha_notify(evaluation, player, "Unable to render the tactical map.");
     return;
   }
   maptext = map_text_lines(map_text);
@@ -210,7 +224,7 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
 
   navigate_sketch_mechs(mech, mech_map, x, y, mybuff);
   for (i = 0; i < NAVIGATE_LINES; i++)
-    notify(evaluation, player, mybuff[i]);
+    mecha_notify(evaluation, player, mybuff[i]);
 }
 
 /* INDENT OFF */

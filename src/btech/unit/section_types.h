@@ -194,9 +194,6 @@ constexpr int CLASS_DS = 7; /* AeroDyne DropShip */
 constexpr int CLASS_BSUIT = 8;
 constexpr int CLASS_LAST = 8;
 
-#define DropShip(a) ((a) == CLASS_DS || (a) == CLASS_SPHEROID_DS)
-#define IsDS(m) (DropShip(MechType(m)))
-
 /* ground movement types */
 constexpr int MOVE_BIPED = 0;
 constexpr int MOVE_QUAD = 8;

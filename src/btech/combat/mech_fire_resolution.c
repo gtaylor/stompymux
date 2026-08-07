@@ -24,7 +24,6 @@
 #include "command_handlers_api.h"
 #include "failures.h"
 #include "failures_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_api.h"
 #include "map_obj_api.h"
@@ -50,7 +49,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_progress_api.h"
@@ -90,7 +88,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   int roll;
   int r1, r2, r3;
   int type = -1, modifier;
-  int isarty = (IsArtillery(weapindx));
+  int isarty = (weapon_catalogue_is_artillery(weapindx));
   int range_ok = 1;
   int wGattlingShots =
       0; /* If we're a gattling MG, then we need to figure out how many shots */
@@ -107,33 +105,50 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   int mode = mech_critical_fire_mode(mech, section, critical);
   int wAmmoMode = mech_critical_ammo_mode(mech, section, critical);
 
-  DOCHECKMA((wAmmoMode & STINGER_MODE) && ishex,
-            "Stinger missiles cannot shoot hexes!");
-  DOCHECKMA((wAmmoMode & STINGER_MODE) && target &&
-                !(mech_is_jumping(target) || mech_cocoon_integrity(target) ||
-                  (mech_is_flying_type(target) && !mech_is_landed(target))),
-            "Stinger missiles can only engage airborne targets!");
+  if ((wAmmoMode & STINGER_MODE) && ishex) {
+    mech_notify(mech, MECHALL, "Stinger missiles cannot shoot hexes!");
+    return;
+  }
+  if ((wAmmoMode & STINGER_MODE) && target &&
+      !(mech_is_jumping(target) || mech_cocoon_integrity(target) ||
+        (mech_is_flying_type(target) && !mech_is_landed(target)))) {
+    mech_notify(mech, MECHALL,
+                "Stinger missiles can only engage airborne targets!");
+    return;
+  }
 
   /* If its a coolant gun set to heat, set the target
    * to the mech (ie it shoots itself with coolant gun) */
-  if (IsCoolant(weapindx) && mode & HEAT_MODE)
+  if (weapon_catalogue_is_coolant(weapindx) && mode & HEAT_MODE)
     target = mech;
 
-  DOCHECKMA((mech_section_is_underwater(mech, section) &&
-             (MechWeapons[weapindx].shortrange_water <= 0)),
-            "This weapon may not be fired underwater.");
-  DOCHECKMA(mech_event_count(mech, EVENT_UNSTUN_CREW),
-            "You are too stunned to fire a weapon!");
-  DOCHECKMA(mech_event_count(mech, EVENT_UNJAM_TURRET),
-            "You are too busy unjamming your turret!");
-  DOCHECKMA(mech_event_count(mech, EVENT_UNJAM_AMMO),
-            "You are too busy unjamming a weapon!");
-  DOCHECKMA(mech_event_count(mech, EVENT_REMOVE_PODS),
-            "You are too busy removing iNARC pods!");
+  if ((mech_section_is_underwater(mech, section) &&
+       (MechWeapons[weapindx].shortrange_water <= 0))) {
+    mech_notify(mech, MECHALL, "This weapon may not be fired underwater.");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_UNSTUN_CREW)) {
+    mech_notify(mech, MECHALL, "You are too stunned to fire a weapon!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_UNJAM_TURRET)) {
+    mech_notify(mech, MECHALL, "You are too busy unjamming your turret!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_UNJAM_AMMO)) {
+    mech_notify(mech, MECHALL, "You are too busy unjamming a weapon!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_REMOVE_PODS)) {
+    mech_notify(mech, MECHALL, "You are too busy removing iNARC pods!");
+    return;
+  }
 
-  DOCHECKMA((mech_swarm_target(mech) > 0) &&
-                ((!target) || (mech_swarm_target(mech) != mech_dbref(target))),
-            "You're too busy holding on for dear life!");
+  if ((mech_swarm_target(mech) > 0) &&
+      ((!target) || (mech_swarm_target(mech) != mech_dbref(target)))) {
+    mech_notify(mech, MECHALL, "You're too busy holding on for dear life!");
+    return;
+  }
 
   if (mech_swarm_target(mech) > 0) {
     if (target && (mech_swarm_target(mech) == mech_dbref(target)))
@@ -212,17 +227,20 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     strcpy(buf2, "");
     if (mech_aim_section(mech) != NUM_SECTIONS &&
         mech_aim_unit_class(mech) == mech_class(target) &&
-        !IsMissile(weapindx)) {
+        !weapon_catalogue_is_missile(weapindx)) {
       ArmorStringFromIndex(mech_aim_section(mech), buf3, mech_class(target),
                            mech_movement_type(target));
       snprintf(buf2, sizeof(buf2), "'s %s", buf3);
     }
 
     if (sight) {
-      DOCHECKMA(baseToHit >= 900,
-                tprintf("You aim %s at %s%s - Out of range.",
-                        &MechWeapons[weapindx].name[3],
-                        mech_to_mech_display_id(mech, target).text, buf2));
+      if (baseToHit >= 900) {
+        mech_notify(mech, MECHALL,
+                    tprintf("You aim %s at %s%s - Out of range.",
+                            &MechWeapons[weapindx].name[3],
+                            mech_to_mech_display_id(mech, target).text, buf2));
+        return;
+      }
 
       mech_c3_track_emit(mech, c3Ref, c3Mech);
 
@@ -235,10 +253,13 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
       return;
     }
     if (baseToHit > 12) {
-      DOCHECKMA(baseToHit >= 900,
-                tprintf("Fire %s at %s%s - Out of range.",
-                        &MechWeapons[weapindx].name[3],
-                        mech_to_mech_display_id(mech, target).text, buf2));
+      if (baseToHit >= 900) {
+        mech_notify(mech, MECHALL,
+                    tprintf("Fire %s at %s%s - Out of range.",
+                            &MechWeapons[weapindx].name[3],
+                            mech_to_mech_display_id(mech, target).text, buf2));
+        return;
+      }
       mech_printf(
           mech, MECHALL, "Fire %s at %s%s - BTH: %d  Roll: Impossible! %s",
           &MechWeapons[weapindx].name[3],
@@ -411,11 +432,11 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                     "[fg=red bold]Propellant from your %s ignites and "
                     "destroys it![reset]",
                     &(MechWeapons[weapindx].name[3]));
-        firstCrit =
-            FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
-                                GetWeaponCrits(mech, weapindx));
-        mech_weapon_destroy(mech, section, I2Weapon(weapindx), firstCrit,
-                            GetWeaponCrits(mech, weapindx),
+        firstCrit = FindFirstWeaponCrit(mech, section, -1, 0,
+                                        weapon_equipment_index(weapindx),
+                                        GetWeaponCrits(mech, weapindx));
+        mech_weapon_destroy(mech, section, weapon_equipment_index(weapindx),
+                            firstCrit, GetWeaponCrits(mech, weapindx),
                             GetWeaponCrits(mech, weapindx));
         mech_los_broadcast(mech, "shudders from an internal explosion!");
         /* Apply damage equal to one shot, follow crits as well */
@@ -439,10 +460,11 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
           "[fg=red bold]A catastrophic misload on your %s destroys it and "
           "causes an internal explosion![reset]",
           &(MechWeapons[weapindx].name[3]));
-      firstCrit = FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
+      firstCrit = FindFirstWeaponCrit(mech, section, -1, 0,
+                                      weapon_equipment_index(weapindx),
                                       GetWeaponCrits(mech, weapindx));
-      mech_weapon_destroy(mech, section, I2Weapon(weapindx), firstCrit,
-                          GetWeaponCrits(mech, weapindx),
+      mech_weapon_destroy(mech, section, weapon_equipment_index(weapindx),
+                          firstCrit, GetWeaponCrits(mech, weapindx),
                           GetWeaponCrits(mech, weapindx));
       mech_los_broadcast(mech, "shudders from an internal explosion!");
       DamageMech(mech, mech, 0, -1, section, 0, 0, 0,
@@ -487,10 +509,11 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     if (roll == 2) {
       mech_printf(mech, MECHALL, "The loader jams on your %s, destroying it!",
                   &(MechWeapons[weapindx].name[3]));
-      firstCrit = FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
+      firstCrit = FindFirstWeaponCrit(mech, section, -1, 0,
+                                      weapon_equipment_index(weapindx),
                                       GetWeaponCrits(mech, weapindx));
-      mech_weapon_destroy(mech, section, I2Weapon(weapindx), firstCrit,
-                          GetWeaponCrits(mech, weapindx),
+      mech_weapon_destroy(mech, section, weapon_equipment_index(weapindx),
+                          firstCrit, GetWeaponCrits(mech, weapindx),
                           GetWeaponCrits(mech, weapindx));
       return;
     }
@@ -498,7 +521,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
 
   /* See if the sucker will explode from damage taken */
   if (mech_weapon_critical_can_explode(mech, section, critical, roll)) {
-    if (IsEnergy(weapindx)) {
+    if (weapon_catalogue_is_energy(weapindx)) {
       mech_printf(mech, MECHALL,
                   "[fg=red bold]The damaged charging crystal on your %s "
                   "overloads![reset]",
@@ -513,10 +536,11 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
     }
 
     mech_los_broadcast(mech, "shudders from an internal explosion!");
-    firstCrit = FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
+    firstCrit = FindFirstWeaponCrit(mech, section, -1, 0,
+                                    weapon_equipment_index(weapindx),
                                     GetWeaponCrits(mech, weapindx));
-    mech_weapon_destroy(mech, section, I2Weapon(weapindx), firstCrit,
-                        GetWeaponCrits(mech, weapindx),
+    mech_weapon_destroy(mech, section, weapon_equipment_index(weapindx),
+                        firstCrit, GetWeaponCrits(mech, weapindx),
                         GetWeaponCrits(mech, weapindx));
     DamageMech(mech, mech, 0, -1, section, 0, 0, 0,
                MechWeapons[weapindx].damage, -1, 0, -1, 0, 1);
@@ -599,7 +623,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
                     mech_critical_ammo_mode(mech, section, critical),
                     baseToHit <= roll);
   } else if (range_ok) {
-    if (IsMissile(weapindx)) {
+    if (weapon_catalogue_is_missile(weapindx)) {
       mech_hit_resolve(mech, weapindx, section, critical, target, mapx, mapy,
                        LOS, type, modifier, (roll >= RbaseToHit) && range_ok,
                        baseToHit, wGattlingShots, tIsSwarmAttack, roll);
@@ -686,7 +710,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   } else {
     mech_weapon_heat_add(mech, (float)MechWeapons[weapindx].heat);
 
-    if (IsEnergy(weapindx))
+    if (weapon_catalogue_is_energy(weapindx))
       mech_weapon_heat_add(mech, (float)mech_weapon_critical_heat_modifier(
                                      mech, section, critical));
 

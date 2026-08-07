@@ -7,7 +7,6 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
-#include "legacy_macros.h"
 #include "map_obj_api.h"
 #include "mech_classification_api.h"
 #include "mech_events.h"
@@ -119,7 +118,7 @@ void auto_leave_event(MuxEvent *muxevent) {
 
     dir = 0;
 
-  } else if (Readnum(dir, argument)) {
+  } else if ((!((dir) = atoi(argument)) && strcmp((argument), "0"))) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"

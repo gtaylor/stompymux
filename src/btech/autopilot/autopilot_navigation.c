@@ -3,7 +3,6 @@
 #include "autopilot.h"
 #include "btech/context.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "mech_combat_api.h"
 #include "mech_identity_api.h"
 #include "mech_position_api.h"
@@ -59,16 +58,21 @@ void mech_snipe(DbRef player, Mech *mech, char *buffer) {
   DbRef d;
   Mech *target_mech;
 
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !is_wizard(btech_context_database(mech_context(mech)), player),
-      "Permission denied.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_parseattributes(buffer, args, 3) != 2,
-                  "Please supply target ID _and_ weapon(s) to use");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  (d = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0,
-                  "Invalid target!");
+  if (!is_wizard(btech_context_database(mech_context(mech)), player)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Permission denied.");
+    return;
+  }
+  if (mech_parseattributes(buffer, args, 3) != 2) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Please supply target ID _and_ weapon(s) to use");
+    return;
+  }
+  if ((d = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid target!");
+    return;
+  }
   target_mech = btech_context_get_mech(mech_context(mech), d);
   multi_weap_sel(mech, player, args[1], 1, mech_snipe_func, target_mech);
 }

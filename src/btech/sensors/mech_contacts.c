@@ -16,7 +16,6 @@
 #include "btech_event.h"
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_building_query_api.h"
 #include "map_los_types.h"
 #include "map_object_query_api.h"
@@ -31,7 +30,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -47,6 +45,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "registry_api.h"
@@ -101,28 +100,47 @@ void mech_brief(DbRef player, void *data, char *buffer) {
   char c;
   int v;
 
-  cch(MECH_USUALSM);
-  skipws(buffer);
-  if (!*buffer) {
+  if (!common_checks(player, mech, MECH_USUALSM))
+    return;
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
     show_brief_flags(player, mech);
     return;
   }
   c = *buffer;
   buffer++;
-  skipws(buffer);
-  DOCHECK_CONTEXT(mech_context(mech), !*buffer, "Argument missing!");
-  DOCHECK_CONTEXT(mech_context(mech), Readnum(v, buffer), "Invalid number!");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Argument missing!");
+    return;
+  }
+  if ((!((v) = atoi(buffer)) && strcmp((buffer), "0"))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number!");
+    return;
+  }
   switch (toupper(c)) {
 #ifdef ADVANCED_LOS
   case 'A':
-    DOCHECK_CONTEXT(mech_context(mech), v < 0 || v > 6, "Number out of range!");
+    if (v < 0 || v > 6) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Number out of range!");
+      return;
+    }
     v = BOUNDED(0, v, 6);
     mech_brief_mode_set(mech, mech_brief_mode(mech) % 4 + v * 4);
     mech_printf(mech, MECHALL, "Autocontact brevity set to %s.", ac_desc[v]);
     return;
 #endif
   case 'C':
-    DOCHECK_CONTEXT(mech_context(mech), v < 0 || v > 3, "Number out of range!");
+    if (v < 0 || v > 3) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Number out of range!");
+      return;
+    }
     v = BOUNDED(0, v, 3);
     mech_brief_mode_set(mech, ((mech_brief_mode(mech) / 4) * 4) + v);
     mech_printf(mech, MECHALL, "Contact brevity set to %s.", c_desc[v]);
@@ -334,7 +352,8 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   LuaLockInvocation lock;
   LuaLockResult lock_result;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   argc = mech_parseattributes(buffer, args, 1);
 
   isvb = (mech_brief_mode(mech) % 4);
@@ -399,8 +418,8 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   }
 
   if (isvb <= 2)
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Line of Sight Contacts:");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Line of Sight Contacts:");
 
   for (loop = 0; loop < battle_map_unit_count(mech_map); loop++) {
     const DbRef contact_dbref = battle_map_unit_dbref(mech_map, loop);
@@ -493,38 +512,38 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       snprintf(buff, sizeof(buff), "[%s] %-17s  Tonnage: %d",
                mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
                mech_name, mech_tonnage(tempMech));
-      notify(btech_context_evaluation(mech_context(mech)), player, buff);
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      Range: %.1f hex\tBearing: %d degrees",
                range, bearing);
-      notify(btech_context_evaluation(mech_context(mech)), player, buff);
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      Speed: %.1f KPH\tHeading: %d degrees",
                mech_current_speed(tempMech), mech_contact_heading(tempMech));
-      notify(btech_context_evaluation(mech_context(mech)), player, buff);
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      X, Y: %3d, %3d \tHeat: %.0f deg C.",
                mech_position_x(tempMech), mech_position_y(tempMech),
                mech_excess_heat(tempMech));
-      notify(btech_context_evaluation(mech_context(mech)), player, buff);
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      Movement Type: %s", move_type);
-      notify(btech_context_evaluation(mech_context(mech)), player, buff);
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       notify_printf(
           btech_context_evaluation(mech_context(mech)), player,
           "      Mech is in %s Arc",
           GetArcID(mech, InWeaponArc(mech, mech_position_real_x(tempMech),
                                      mech_position_real_y(tempMech))));
       if (mech_is_destroyed(tempMech))
-        notify(btech_context_evaluation(mech_context(mech)), player,
-               "      Mech Destroyed");
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "      Mech Destroyed");
       if (!mech_is_started(tempMech))
-        notify(btech_context_evaluation(mech_context(mech)), player,
-               "      Mech Shutdown");
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "      Mech Shutdown");
       if (mech_is_fallen(tempMech))
-        notify(btech_context_evaluation(mech_context(mech)), player,
-               "      Mech has Fallen!");
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "      Mech has Fallen!");
       if (mech_is_jumping(tempMech))
         notify_printf(btech_context_evaluation(mech_context(mech)), player,
                       "      Mech is Jumping!\tJump Heading: %d",
                       mech_jump_heading_degrees(tempMech));
-      notify(btech_context_evaluation(mech_context(mech)), player, " ");
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player, " ");
     }
   }
 
@@ -611,13 +630,13 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           sbuff[j] = loop;
         }
     for (loop = 0; loop < buffindex; loop++)
-      notify(btech_context_evaluation(mech_context(mech)), player,
-             bufflist[sbuff[loop]]);
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   bufflist[sbuff[loop]]);
   }
 
   if (isvb <= 2)
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "End Contact List");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "End Contact List");
 }
 
 #undef SEE_DEAD

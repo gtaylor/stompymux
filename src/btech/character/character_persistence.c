@@ -1,4 +1,5 @@
 #include "btechstats_internal.h"
+#include "registry_api.h"
 
 void debug_xptop(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
@@ -12,12 +13,23 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
 
   bzero(top, sizeof(top));
   bzero(topv, sizeof(topv));
-  skipws(buffer);
-  DOCHECK_CONTEXT(context, !*buffer, "Invalid argument!");
-  DOCHECK_CONTEXT(context, (hm = char_getvaluecode(context, buffer)) < 0,
-                  "Invalid value name!");
-  DOCHECK_CONTEXT(context, char_values[hm].type != CHAR_SKILL,
-                  "Only skills have XP (for now at least)");
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer || !*buffer) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid argument!");
+    return;
+  }
+  if ((hm = char_getvaluecode(context, buffer)) < 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid value name!");
+    return;
+  }
+  if (char_values[hm].type != CHAR_SKILL) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Only skills have XP (for now at least)");
+    return;
+  }
   DO_WHOLE_DB(context->database, i) {
     if (!is_player(context->database, i))
       continue;
@@ -43,16 +55,16 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
         top[i] = top[count];
       }
     }
-  addline();
+  cool_menu_add_line(&c);
   for (i = 0; i < MIN(16, count); i++) {
-    addmenu(
-        tprintf("%3d. %s", i + 1, game_object_name(context->database, top[i])));
-    addmenu(tprintf("%d (%.3f %%)", topv[i], (100.0 * topv[i]) / gt));
+    cool_menu_add(&c, tprintf("%3d. %s", i + 1,
+                              game_object_name(context->database, top[i])));
+    cool_menu_add(&c, tprintf("%d (%.3f %%)", topv[i], (100.0 * topv[i]) / gt));
   }
-  addline();
+  cool_menu_add_line(&c);
   if (gt) {
-    addmenu(tprintf("Grand total: %d points", gt));
-    addline();
+    cool_menu_add(&c, tprintf("Grand total: %d points", gt));
+    cool_menu_add_line(&c);
   }
   ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
@@ -64,15 +76,30 @@ void debug_setxplevel(DbRef player, void *data, char *buffer) {
   char *args[3];
   int xpt, code;
 
-  DOCHECK_CONTEXT(context, mech_parseattributes(buffer, args, 3) != 2,
-                  "Invalid arguments!");
-  DOCHECK_CONTEXT(context, Readnum(xpt, args[1]), "Invalid value!");
-  DOCHECK_CONTEXT(context, xpt < 0,
-                  "Threshold needs to be >=0 (0 = no gains possible)");
-  DOCHECK_CONTEXT(context, (code = char_getvaluecode(context, args[0])) < 0,
-                  "That isn't any charvalue!");
-  DOCHECK_CONTEXT(context, char_values[code].type != CHAR_SKILL,
-                  "That isn't any skill!");
+  if (mech_parseattributes(buffer, args, 3) != 2) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid arguments!");
+    return;
+  }
+  if ((!((xpt) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(btech_context_evaluation(context), player, "Invalid value!");
+    return;
+  }
+  if (xpt < 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Threshold needs to be >=0 (0 = no gains possible)");
+    return;
+  }
+  if ((code = char_getvaluecode(context, args[0])) < 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That isn't any charvalue!");
+    return;
+  }
+  if (char_values[code].type != CHAR_SKILL) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That isn't any skill!");
+    return;
+  }
   char_values[code].xpthreshold = xpt;
   log_error(context->log, LOG_WIZARD, "WIZ", "CHANGE",
             "Exp threshold for %s changed to %d by #%ld",

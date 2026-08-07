@@ -88,15 +88,6 @@ constexpr int AUTO_GUN_UPDATE_TICK = 30;  /* When to look for a new target */
 constexpr int AUTO_PROFILE_MAX_SIZE = 30; /* Size of the profile array */
 constexpr int AUTO_SENSOR_TICK = 30;      /* Every 30 seconds or so */
 
-#define Gunning(a) ((a)->flags & AUTOPILOT_AUTOGUN)
-#define StartGun(a) (a)->flags |= AUTOPILOT_AUTOGUN
-#define StopGun(a) (a)->flags &= ~(AUTOPILOT_AUTOGUN | AUTOPILOT_GUNZOMBIE)
-
-/* Do we have an assigned target */
-#define AssignedTarget(a) ((a)->flags & AUTOPILOT_ASSIGNED_TARGET)
-#define AssignTarget(a) (a)->flags |= AUTOPILOT_ASSIGNED_TARGET
-#define UnassignTarget(a) (a)->flags &= ~(AUTOPILOT_ASSIGNED_TARGET)
-
 /* Chase Target stuff for use with auto_set_chasetarget_mode */
 constexpr int AUTO_CHASETARGET_ON = 1;  /* Turns it on and resets the values */
 constexpr int AUTO_CHASETARGET_OFF = 2; /* Turns it off */
@@ -105,16 +96,6 @@ constexpr int AUTO_CHASETARGET_OFF = 2; /* Turns it off */
        being on */
 constexpr int AUTO_CHASETARGET_SAVE =
     4; /* Turns it off and saves that it was on */
-
-/* Is chasetarget mode on */
-#define ChasingTarget(a) ((a)->flags & AUTOPILOT_CHASETARG)
-#define StartChasingTarget(a) (a)->flags |= AUTOPILOT_CHASETARG
-#define StopChasingTarget(a) (a)->flags &= ~(AUTOPILOT_CHASETARG)
-
-/* Was chasetarget mode on ? */
-#define WasChasingTarget(a) ((a)->flags & AUTOPILOT_WAS_CHASE_ON)
-#define RememberChasingTarget(a) (a)->flags |= AUTOPILOT_WAS_CHASE_ON
-#define ForgetChasingTarget(a) (a)->flags &= ~(AUTOPILOT_WAS_CHASE_ON)
 
 /* Roam Stuff */
 /* Types of ROAMing */
@@ -139,128 +120,10 @@ constexpr int AUTO_ROAM_NEW_HEX_TICK = 100; /* How often to pick a new hex */
 constexpr int AUTO_GOET = 15;
 constexpr int AUTO_GOTT = 240;
 
-#define DoStartGun(a)                                                          \
-  do {                                                                         \
-    StartGun(a);                                                               \
-    a->flags &= ~AUTOPILOT_GUNZOMBIE;                                          \
-  } while (0)
-
-#define DoStopGun(a) StopGun(a)
-
-#define Zombify(a)                                                             \
-  do {                                                                         \
-    a->flags |= AUTOPILOT_GUNZOMBIE;                                           \
-    StopGun(a);                                                                \
-  } while (0)
-
-#define PilZombify(a)                                                          \
-  do {                                                                         \
-    a->flags |= AUTOPILOT_PILZOMBIE;                                           \
-  } while (0)
-
-#define UnZombify(a)                                                           \
-  do {                                                                         \
-    if (a->flags & AUTOPILOT_GUNZOMBIE) {                                      \
-      StartGun(a);                                                             \
-      a->flags &= ~AUTOPILOT_GUNZOMBIE;                                        \
-    }                                                                          \
-  } while (0)
-
-#define UnZombifyAuto(a)                                                       \
-  do {                                                                         \
-    if (Gunning(a))                                                            \
-      UnZombify(a);                                                            \
-    if (a->flags & AUTOPILOT_PILZOMBIE) {                                      \
-      a->flags &= ~AUTOPILOT_PILZOMBIE;                                        \
-      autopilot_event_schedule(a, EVENT_AUTOCOM, auto_com_event, 1, 0);        \
-    }                                                                          \
-  } while (0)
-
 void autopilot_resume_for_mech(Mech *mech);
 
-/*! \todo {Get rid of these} */
-
-#define GVAL(a, b)                                                             \
-  (((a->program_counter + (b)) < a->first_free)                                \
-       ? a->commands[(a->program_counter + (b))]                               \
-       : -1)
-
-#define CCLEN(a) (1 + acom[a->commands[a->program_counter]].argcount)
-
-#define PG(a) a->program_counter
-
-/* Command Macros */
-
-/* Basic checks for the autopilot */
-#define AUTO_CHECKS(a)                                                         \
-  if (game_object_location(a->xcode.context->database, a->mynum) !=            \
-      a->mymechnum)                                                            \
-    return;                                                                    \
-  if (Destroyed(mech))                                                         \
-    return;
-
-/* Shortcut to the auto_com_event function */
-#define AUTO_COM(a, n)                                                         \
-  autopilot_event_schedule(a, EVENT_AUTOCOM, auto_com_event, (n), 0);
-
-/*! \todo {Get rid of this once we're done} */
-#define ADVANCE_PG(a)                                                          \
-  PG(a) += CCLEN(a);                                                           \
-  REDO(a, AUTOPILOT_NC_DELAY)
-
-/* Force the unit to start up */
-#define AUTO_PSTART(a, mech)                                                   \
-  if (!Started(mech)) {                                                        \
-    auto_command_startup(a, mech);                                             \
-    return;                                                                    \
-  }
-
-/* Force the unit to startup as well as try to stand */
-#define AUTO_GSTART(a, mech)                                                   \
-  AUTO_PSTART(a, mech);                                                        \
-  if (MechType(mech) == CLASS_MECH && Fallen(mech) &&                          \
-      !(CountDestroyedLegs(mech) > 0)) {                                       \
-    if (!mech_event_count(mech, EVENT_STAND))                                  \
-      mech_stand(a->mynum, mech, "");                                          \
-    AUTO_COM(a, AUTOPILOT_NC_DELAY);                                           \
-    return;                                                                    \
-  };                                                                           \
-  if (MechType(mech) == CLASS_VTOL && Landed(mech) &&                          \
-      !SectIsDestroyed(mech, ROTOR)) {                                         \
-    if (!mech_event_count(mech, EVENT_TAKEOFF))                                \
-      aero_takeoff(a->mynum, mech, "");                                        \
-    AUTO_COM(a, AUTOPILOT_NC_DELAY);                                           \
-    return;                                                                    \
-  }
-
-/* Macros for quick access to bitfield code */
-#define HexOffSet(x, y) (x * MAPY + y)
-#define HexOffSetNode(node) (HexOffSet(node->x, node->y))
-
-#define WhichByte(hex_offset) ((hex_offset) >> 3)
-#define WhichBit(hex_offset) ((hex_offset) & 7)
-
-#define CheckHexBit(array, offset)                                             \
-  (array[WhichByte(offset)] & (1 << WhichBit(offset)) ? 1 : 0)
-#define SetHexBit(array, offset)                                               \
-  do {                                                                         \
-    array[offset >> 3] = array[offset >> 3] | (1 << (offset & 7));             \
-  } while (0)
-#define ClearHexBit(array, offset)                                             \
-  do {                                                                         \
-    array[offset >> 3] = array[offset >> 3] & ~(1 << (offset & 7));            \
-  } while (0)
-
-#ifdef DEBUG_AUTOGUN
-#define print_autogun_log(autopilot, ...)                                      \
-  do {                                                                         \
-    fprintf(stderr, "AI: %d AUTOGUN ", autopilot->mynum);                      \
-    fprintf(stderr, __VA_ARGS__);                                              \
-    fprintf(stderr, "\n");                                                     \
-  } while (0)
-#else
-#define print_autogun_log(autopilot, ...)
-#endif
+void autopilot_autogun_log(const Autopilot *autopilot, const char *format, ...)
+    __attribute__((format(printf, 2, 3)));
 
 /*
  * Profile node structure
@@ -337,6 +200,76 @@ typedef struct Autopilot {
   int b_msc, w_msc, b_bsc, w_bsc, b_dan, w_dan, last_upd;
 
 } Autopilot;
+
+static inline bool autopilot_is_gunning(const Autopilot *autopilot) {
+  return autopilot->flags & AUTOPILOT_AUTOGUN;
+}
+
+static inline void autopilot_gunning_flag_set(Autopilot *autopilot) {
+  autopilot->flags |= AUTOPILOT_AUTOGUN;
+}
+
+static inline void autopilot_gunning_stop(Autopilot *autopilot) {
+  autopilot->flags &=
+      (unsigned short)~(AUTOPILOT_AUTOGUN | AUTOPILOT_GUNZOMBIE);
+}
+
+static inline void autopilot_gunning_start(Autopilot *autopilot) {
+  autopilot->flags |= AUTOPILOT_AUTOGUN;
+  autopilot->flags &= (unsigned short)~AUTOPILOT_GUNZOMBIE;
+}
+
+static inline void autopilot_gunning_suspend(Autopilot *autopilot) {
+  autopilot->flags &= (unsigned short)~AUTOPILOT_AUTOGUN;
+  autopilot->flags |= AUTOPILOT_GUNZOMBIE;
+}
+
+static inline void autopilot_pilot_suspend(Autopilot *autopilot) {
+  autopilot->flags |= AUTOPILOT_PILZOMBIE;
+}
+
+static inline void autopilot_gunning_resume(Autopilot *autopilot) {
+  if (autopilot->flags & AUTOPILOT_GUNZOMBIE)
+    autopilot_gunning_start(autopilot);
+}
+
+void autopilot_resume(Autopilot *autopilot);
+
+static inline bool autopilot_has_assigned_target(const Autopilot *autopilot) {
+  return autopilot->flags & AUTOPILOT_ASSIGNED_TARGET;
+}
+
+static inline void autopilot_assigned_target_set(Autopilot *autopilot,
+                                                 bool assigned) {
+  if (assigned)
+    autopilot->flags |= AUTOPILOT_ASSIGNED_TARGET;
+  else
+    autopilot->flags &= (unsigned short)~AUTOPILOT_ASSIGNED_TARGET;
+}
+
+static inline bool autopilot_is_chasing_target(const Autopilot *autopilot) {
+  return autopilot->flags & AUTOPILOT_CHASETARG;
+}
+
+static inline void autopilot_chasing_target_set(Autopilot *autopilot,
+                                                bool chasing) {
+  if (chasing)
+    autopilot->flags |= AUTOPILOT_CHASETARG;
+  else
+    autopilot->flags &= (unsigned short)~AUTOPILOT_CHASETARG;
+}
+
+static inline bool autopilot_was_chasing_target(const Autopilot *autopilot) {
+  return autopilot->flags & AUTOPILOT_WAS_CHASE_ON;
+}
+
+static inline void autopilot_chasing_target_memory_set(Autopilot *autopilot,
+                                                       bool remembered) {
+  if (remembered)
+    autopilot->flags |= AUTOPILOT_WAS_CHASE_ON;
+  else
+    autopilot->flags &= (unsigned short)~AUTOPILOT_WAS_CHASE_ON;
+}
 
 /* command_node struct to store AI
  * commands for the AI command list */

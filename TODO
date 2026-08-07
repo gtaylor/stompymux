@@ -2,7 +2,6 @@
 
 ## MUX Todos in the /src/ dir
 
-* Clean up the registered attributes.
 * Edit attributes from @examine via OSC8 and prepare:?
 * Consolidate the various logging files in server
 * Remove arbitrary logs compile directive and keep it on
@@ -31,4 +30,7 @@
 
 ## BTech Todos in the /btech/ dir
 
-* See what `#define` statements we can turn into constexpr
+* Enum for special weapons effects?
+* Enums for sections?
+* Enums for parts and components instead of standalone constants?
+* Break commodities out of hcode?

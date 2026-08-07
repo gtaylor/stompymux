@@ -34,7 +34,6 @@
 #include "crit_api.h"
 #include "econ_cmds_api.h"
 #include "eject_api.h"
-#include "legacy_macros.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
@@ -46,7 +45,6 @@
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_ood_api.h"
 #include "mech_position_api.h"
@@ -82,46 +80,66 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   LuaLockResult lock_result;
 
   if (player != GOD)
-    cch(MECH_USUAL);
+    if (!common_checks(player, mech, MECH_USUAL))
+      return;
   if (mech_class(mech) == CLASS_MW) {
     argc = mech_parseattributes(buffer, args, 1);
-    DOCHECK_CONTEXT(mech_context(mech), argc != 1,
-                    "Invalid number of arguements.");
+    if (argc != 1) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid number of arguements.");
+      return;
+    }
     target_num = FindTargetDBREFFromMapNumber(mech, args[0]);
-    DOCHECK_CONTEXT(mech_context(mech), target_num == -1,
-                    "That target is not in your line of sight.");
+    if (target_num == -1) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "That target is not in your line of sight.");
+      return;
+    }
     target = btech_context_get_mech(mech_context(mech), target_num);
-    DOCHECK_CONTEXT(mech_context(mech),
-                    !target ||
-                        !mech_los_check(mech, target, mech_position_x(target),
-                                        mech_position_y(target),
-                                        mech_range_to(mech, target)),
-                    "That target is not in your line of sight.");
-    DOCHECK_CONTEXT(mech_context(mech), mech_cocoon_integrity(target),
-                    "You should wait for your target to land first");
-    DOCHECK_CONTEXT(mech_context(mech),
-                    mech_position_z(mech) > (mech_position_z(target) + 1),
-                    "You are too high above the target.");
-    DOCHECK_CONTEXT(mech_context(mech),
-                    mech_position_z(mech) < (mech_position_z(target) - 1),
-                    "You can't reach that high !");
-    DOCHECK_CONTEXT(mech_context(mech),
-                    mech_position_x(mech) != mech_position_x(target) ||
-                        mech_position_y(mech) != mech_position_y(target),
-                    "You need to be in the same hex!");
-    DOCHECK_CONTEXT(
-        mech_context(mech),
-        (!is_in_character(btech_context_database(mech_context(mech)),
+    if (!target ||
+        !mech_los_check(mech, target, mech_position_x(target),
+                        mech_position_y(target), mech_range_to(mech, target))) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "That target is not in your line of sight.");
+      return;
+    }
+    if (mech_cocoon_integrity(target)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You should wait for your target to land first");
+      return;
+    }
+    if (mech_position_z(mech) > (mech_position_z(target) + 1)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You are too high above the target.");
+      return;
+    }
+    if (mech_position_z(mech) < (mech_position_z(target) - 1)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You can't reach that high !");
+      return;
+    }
+    if (mech_position_x(mech) != mech_position_x(target) ||
+        mech_position_y(mech) != mech_position_y(target)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You need to be in the same hex!");
+      return;
+    }
+    if ((!is_in_character(btech_context_database(mech_context(mech)),
                           mech_dbref(mech))) ||
-            (!is_in_character(btech_context_database(mech_context(mech)),
-                              mech_dbref(target))),
-        "You don't really see a way to get in there.");
-    DOCHECK_CONTEXT(
-        mech_context(mech),
-        (mech_class(target) == CLASS_VEH_GROUND ||
+        (!is_in_character(btech_context_database(mech_context(mech)),
+                          mech_dbref(target)))) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You don't really see a way to get in there.");
+      return;
+    }
+    if ((mech_class(target) == CLASS_VEH_GROUND ||
          mech_class(target) == CLASS_VTOL) &&
-            !unit_is_fixable(target),
-        "You can't find and entrance amid the mass of twisted metal.");
+        !unit_is_fixable(target)) {
+      mecha_notify(
+          btech_context_evaluation(mech_context(mech)), player,
+          "You can't find and entrance amid the mass of twisted metal.");
+      return;
+    }
 
     if (!lock_test(evaluation, player, player, mech_dbref(mech),
                    mech_dbref(target), LUA_LOCK_ENTER,
@@ -141,24 +159,38 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     if (!lock_result.defined) {
 
       /* Check their teams */
-      DOCHECK_CONTEXT(mech_context(mech), mech_team(mech) != mech_team(target),
-                      "Locked. Damn !");
+      if (mech_team(mech) != mech_team(target)) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "Locked. Damn !");
+        return;
+      }
     }
 
-    DOCHECK_CONTEXT(mech_context(mech), fabs(mech_current_speed(target)) > 15.,
-                    "Are you suicidal ? That thing is moving too fast !");
+    if (fabs(mech_current_speed(target)) > 15.) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Are you suicidal ? That thing is moving too fast !");
+      return;
+    }
 
     if (mech_class(target) == CLASS_MECH) {
-      DOCHECK_CONTEXT(
-          mech_context(mech), !mech_section_internal(target, HEAD),
-          "Okay, just climb up to-- Wait... where did the head go??");
-      DOCHECK_CONTEXT(mech_context(mech),
-                      mech_critical_is_destroyed(target, HEAD, 2),
-                      "Okay, just climb up and open-- "
-                      "WTF ? Someone stole the cockpit!");
-      DOCHECK_CONTEXT(
-          mech_context(mech), mech_critical_is_nonfunctional(target, HEAD, 2),
-          "Okay, just climb up and open-- hey, this door won't budge!");
+      if (!mech_section_internal(target, HEAD)) {
+        mecha_notify(
+            btech_context_evaluation(mech_context(mech)), player,
+            "Okay, just climb up to-- Wait... where did the head go??");
+        return;
+      }
+      if (mech_critical_is_destroyed(target, HEAD, 2)) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "Okay, just climb up and open-- "
+                     "WTF ? Someone stole the cockpit!");
+        return;
+      }
+      if (mech_critical_is_nonfunctional(target, HEAD, 2)) {
+        mecha_notify(
+            btech_context_evaluation(mech_context(mech)), player,
+            "Okay, just climb up and open-- hey, this door won't budge!");
+        return;
+      }
     }
     mech_notify(mech, MECHALL,
                 tprintf("You climb into %s.", mech_display_id(target).text));
@@ -172,56 +204,94 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   /* What heppens with a Bsuit squad? */
   /* Check if the vechile has cargo capacity, or is an Omni Mech */
   argc = mech_parseattributes(buffer, args, 1);
-  DOCHECK_CONTEXT(mech_context(mech), argc != 1,
-                  "Invalid number of arguements.");
+  if (argc != 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguements.");
+    return;
+  }
   target_num = FindTargetDBREFFromMapNumber(mech, args[0]);
-  DOCHECK_CONTEXT(mech_context(mech), target_num == -1,
-                  "That target is not in your line of sight.");
+  if (target_num == -1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That target is not in your line of sight.");
+    return;
+  }
   target = btech_context_get_mech(mech_context(mech), target_num);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !target ||
-                      !mech_los_check(mech, target, mech_position_x(target),
-                                      mech_position_y(target),
-                                      mech_range_to(mech, target)),
-                  "That target is not in your line of sight.");
-  DOCHECK_CONTEXT(mech_context(mech), mech_carried_dbref(mech) == target_num,
-                  "You cannot embark what your towing!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_condition_summary(mech).fallen ||
-                      mech_event_count(mech, EVENT_STAND),
-                  "Help! I've fallen and I can't get up!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !mech_is_started(mech) || mech_is_destroyed(mech),
-                  "Ha Ha Ha.");
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_jumping(mech),
-                  "You cannot do that while jumping!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_jumping(target),
-                  "You cannot do that while it is jumping!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_technology_flags_secondary(mech) & CARRIER_TECH &&
-                      (mech_is_dropship(target) ? mech_is_dropship(mech) : 1),
-                  "You're a bit bulky to do that yourself.");
-  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).hidden,
-                  "You cannot embark while hidden.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_tonnage(mech) > mech_carrier_maximum_tonnage(target),
-                  "You are too large for that class of carrier.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_class(mech) != CLASS_BSUIT &&
-                      !(mech_technology_flags_secondary(target) & CARRIER_TECH),
-                  "This unit can't handle your mass.");
-  DOCHECK_CONTEXT(mech_context(mech), mech_maximum_speed(mech) < MP1,
-                  "You are to overloaded to enter.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_position_z(mech) > (mech_position_z(target) + 1),
-                  "You are too high above the target.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_position_z(mech) < (mech_position_z(target) - 1),
-                  "You can't reach that high !");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_position_x(mech) != mech_position_x(target) ||
-                      mech_position_y(mech) != mech_position_y(target),
-                  "You need to be in the same hex!");
+  if (!target ||
+      !mech_los_check(mech, target, mech_position_x(target),
+                      mech_position_y(target), mech_range_to(mech, target))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That target is not in your line of sight.");
+    return;
+  }
+  if (mech_carried_dbref(mech) == target_num) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You cannot embark what your towing!");
+    return;
+  }
+  if (mech_condition_summary(mech).fallen ||
+      mech_event_count(mech, EVENT_STAND)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Help! I've fallen and I can't get up!");
+    return;
+  }
+  if (!mech_is_started(mech) || mech_is_destroyed(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Ha Ha Ha.");
+    return;
+  }
+  if (mech_is_jumping(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You cannot do that while jumping!");
+    return;
+  }
+  if (mech_is_jumping(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You cannot do that while it is jumping!");
+    return;
+  }
+  if (mech_technology_flags_secondary(mech) & CARRIER_TECH &&
+      (mech_is_dropship(target) ? mech_is_dropship(mech) : 1)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're a bit bulky to do that yourself.");
+    return;
+  }
+  if (mech_condition_summary(mech).hidden) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You cannot embark while hidden.");
+    return;
+  }
+  if (mech_tonnage(mech) > mech_carrier_maximum_tonnage(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are too large for that class of carrier.");
+    return;
+  }
+  if (mech_class(mech) != CLASS_BSUIT &&
+      !(mech_technology_flags_secondary(target) & CARRIER_TECH)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit can't handle your mass.");
+    return;
+  }
+  if (mech_maximum_speed(mech) < MP1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are to overloaded to enter.");
+    return;
+  }
+  if (mech_position_z(mech) > (mech_position_z(target) + 1)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are too high above the target.");
+    return;
+  }
+  if (mech_position_z(mech) < (mech_position_z(target) - 1)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't reach that high !");
+    return;
+  }
+  if (mech_position_x(mech) != mech_position_x(target) ||
+      mech_position_y(mech) != mech_position_y(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You need to be in the same hex!");
+    return;
+  }
 
   if (!lock_test(evaluation, player, player, mech_dbref(mech),
                  mech_dbref(target), LUA_LOCK_ENTER,
@@ -240,50 +310,65 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   if (!lock_result.defined) {
 
     /* Check their teams */
-    DOCHECK_CONTEXT(mech_context(mech), mech_team(mech) != mech_team(target),
-                    "Locked. Damn !");
+    if (mech_team(mech) != mech_team(target)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Locked. Damn !");
+      return;
+    }
   }
 
-  DOCHECK_CONTEXT(mech_context(mech), fabs(mech_current_speed(target)) > 0,
-                  "Are you suicidal ? That thing is moving too fast !");
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !is_in_character(btech_context_database(mech_context(mech)),
+  if (fabs(mech_current_speed(target)) > 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Are you suicidal ? That thing is moving too fast !");
+    return;
+  }
+  if (!is_in_character(btech_context_database(mech_context(mech)),
                        mech_dbref(mech)) ||
-          !is_in_character(btech_context_database(mech_context(mech)),
-                           mech_dbref(target)),
-      "You don't really see a way to get in there.");
+      !is_in_character(btech_context_database(mech_context(mech)),
+                       mech_dbref(target))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You don't really see a way to get in there.");
+    return;
+  }
 
   /* New message system for when someone tries to embark
    * but their sections are still cycling (or weapons) */
   if ((tmp = mech_recycling_state(mech, CHECK_BOTH))) {
 
     if (tmp == 1) {
-      notify(evaluation, player, "You have weapons recycling!");
+      mecha_notify(evaluation, player, "You have weapons recycling!");
     } else if (tmp == 2) {
-      notify(evaluation, player,
-             "You are still recovering from your previous action!");
+      mecha_notify(evaluation, player,
+                   "You are still recovering from your previous action!");
     } else {
-      notify(evaluation, player, "error");
+      mecha_notify(evaluation, player, "error");
     }
     return;
   }
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  (mech_tonnage(mech) * 100) > mech_cargo_space(target),
-                  "Not enough cargospace for you!");
+  if ((mech_tonnage(mech) * 100) > mech_cargo_space(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Not enough cargospace for you!");
+    return;
+  }
   if (mech_carried_dbref(mech) > 0) {
-    DOCHECK_CONTEXT(mech_context(mech),
-                    !(towee = btech_context_get_mech(mech_context(mech),
-                                                     mech_carried_dbref(mech))),
-                    "Internal error caused by towed unit! Contact a wizard!");
-    DOCHECK_CONTEXT(mech_context(mech),
-                    mech_tonnage(towee) > mech_carrier_maximum_tonnage(target),
-                    "Your towed unit is  too large for that class of carrier.");
-    DOCHECK_CONTEXT(mech_context(mech),
-                    ((mech_tonnage(mech) + mech_tonnage(towee)) * 100) >
-                        mech_cargo_space(target),
-                    "Not enough cargospace for you and your towed unit!");
+    if (!(towee = btech_context_get_mech(mech_context(mech),
+                                         mech_carried_dbref(mech)))) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Internal error caused by towed unit! Contact a wizard!");
+      return;
+    }
+    if (mech_tonnage(towee) > mech_carrier_maximum_tonnage(target)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Your towed unit is  too large for that class of carrier.");
+      return;
+    }
+    if (((mech_tonnage(mech) + mech_tonnage(towee)) * 100) >
+        mech_cargo_space(target)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Not enough cargospace for you and your towed unit!");
+      return;
+    }
   }
   if (mech_class(mech) == CLASS_BSUIT) {
     mech_notify(mech, MECHALL,
@@ -364,9 +449,9 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to create special obj for #%ld's ejection.", player));
     destroy_thing(evaluation, suit);
-    notify(evaluation, player,
-           "Sorry, something serious went wrong, contact a Wizard "
-           "(can't create RS object)");
+    mecha_notify(evaluation, player,
+                 "Sorry, something serious went wrong, contact a Wizard "
+                 "(can't create RS object)");
     return;
   }
   if (!mech_template_load(
@@ -376,9 +461,9 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
         tprintf("Unable to load mechwarrior template for #%ld's ejection. (%s)",
                 player, (!d || !*d) ? "Default template" : d));
     destroy_thing(evaluation, suit);
-    notify(evaluation, player,
-           "Sorry, something serious went wrong, contact a Wizard "
-           "(can't load MWTemplate)");
+    mecha_notify(evaluation, player,
+                 "Sorry, something serious went wrong, contact a Wizard "
+                 "(can't load MWTemplate)");
     return;
   }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
@@ -404,22 +489,22 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
   sizeof(m->freqmodes[0])); #else #ifdef RANDOM_CHAN_ON_EJECT
   */
   mech_radio_frequency_set(m, 0, random() % 1000000);
-  notify(evaluation, player,
-         tprintf("Emergency radio channel set to %d.",
-                 mech_radio_frequency(m, 0)));
+  mecha_notify(evaluation, player,
+               tprintf("Emergency radio channel set to %d.",
+                       mech_radio_frequency(m, 0)));
   /* #endif
   #endif
   */
 
   if (tIsBSuit) {
     mech_los_broadcast(m, "climbs out of one of the destroyed suits!");
-    notify(evaluation, player, "You climb out of the unit!");
+    mecha_notify(evaluation, player, "You climb out of the unit!");
   } else {
     mech_los_broadcast(m,
                        tprintf("ejected from %s!", mech_display_id(mech).text));
     mech_ood_initiate(
         player, m,
         tprintf("%d %d %d", mech_position_x(m), mech_position_y(m), 150));
-    notify(evaluation, player, "You eject from the unit!");
+    mecha_notify(evaluation, player, "You eject from the unit!");
   }
 }

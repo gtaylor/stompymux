@@ -24,7 +24,6 @@
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -32,12 +31,6 @@
 #include "mech_utils_api.h"
 #include "mux/support/formatting.h"
 #include "section_types.h"
-
-static int mech_lower_surface_elevation(Mech *mech) {
-  return mech_real_terrain_get(mech) != BATTLE_TERRAIN_BRIDGE
-             ? mech_position_surface_elevation(mech)
-             : bridge_w_elevation(mech);
-}
 
 void mech_naval_altitude_check(Mech *mech, int previous_z) {
   char terrain = mech_real_terrain_get(mech);

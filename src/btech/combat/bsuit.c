@@ -20,7 +20,6 @@
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "crit_api.h"
-#include "legacy_macros.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_bth_api.h"
@@ -34,7 +33,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -259,23 +257,35 @@ void bsuit_swarmers_position_update(BattleMap *map, Mech *mech) {
 int bsuit_action_validate(Mech *mech, DbRef player) {
   int i;
 
-  DOCHECK1_CONTEXT(mech_context(mech), mech_is_jumping(mech),
-                   "Unavailable when jumping - sorry.");
-  DOCHECK1_CONTEXT(mech_context(mech), mech_swarm_target(mech) > 0,
-                   "You are already busy with a special attack!");
+  if (mech_is_jumping(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Unavailable when jumping - sorry.");
+    return -1;
+  }
+  if (mech_swarm_target(mech) > 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are already busy with a special attack!");
+    return -1;
+  }
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK1_CONTEXT(mech_context(mech), mech_move_mode_locked(mech),
-                   "Unavailable when performing movement modes - deal.");
+  if (mech_move_mode_locked(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Unavailable when performing movement modes - deal.");
+    return -1;
+  }
 #endif
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
-    DOCHECK1_CONTEXT(
-        mech_context(mech),
-        !mech_section_is_destroyed(mech, i) &&
-            mech_section_recycle_ticks(mech, i),
-        tprintf("Suit %d is still recovering from attack.", i + 1));
-    DOCHECK1_CONTEXT(mech_context(mech),
-                     mech_section_has_recycling_weapon(mech, i),
-                     "You have weapons recycling!");
+    if (!mech_section_is_destroyed(mech, i) &&
+        mech_section_recycle_ticks(mech, i)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   tprintf("Suit %d is still recovering from attack.", i + 1));
+      return -1;
+    }
+    if (mech_section_has_recycling_weapon(mech, i)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You have weapons recycling!");
+      return -1;
+    }
   }
 
   return 0;
@@ -298,13 +308,18 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
   int targetnum;
   Mech *t = NULL;
 
-  DOCHECK1_CONTEXT(mech_context(mech),
-                   (argc = mech_parseattributes(buffer, args, 3)) > 1,
-                   "Invalid arguments!");
+  if ((argc = mech_parseattributes(buffer, args, 3)) > 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid arguments!");
+    return -1;
+  }
   switch (argc) {
   case 0:
-    DOCHECK1_CONTEXT(mech_context(mech), mech_target_dbref(mech) <= 0,
-                     "You do not have a default target set!");
+    if (mech_target_dbref(mech) <= 0) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You do not have a default target set!");
+      return -1;
+    }
     t = btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
     if (!(t)) {
       mech_notify(mech, MECHALL, "Invalid default target!");
@@ -316,28 +331,50 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
-    DOCHECK1_CONTEXT(mech_context(mech), targetnum <= 0,
-                     "Target is not in line of sight!");
+    if (targetnum <= 0) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Target is not in line of sight!");
+      return -1;
+    }
     t = btech_context_get_mech(mech_context(mech), targetnum);
-    DOCHECK1_CONTEXT(mech_context(mech), !(t), "Invalid default target!");
+    if (!(t)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid default target!");
+      return -1;
+    }
     break;
   default:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Invalid target!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid target!");
     return 1;
   }
   range = mech_range_to(mech, t);
-  DOCHECK1_CONTEXT(mech_context(mech),
-                   !mech_los_check_unblocked(mech, t, mech_position_x(t),
-                                             mech_position_y(t), range),
-                   "Target is not in line of sight!");
-  DOCHECK1_CONTEXT(mech_context(mech), range >= 1.0, "Target out of range!");
-  DOCHECK1_CONTEXT(mech_context(mech), mech_is_jumping(t),
-                   "That target's unreachable right now!");
-  DOCHECK1_CONTEXT(mech_context(mech), mech_class(t) != CLASS_MECH,
-                   "That target is of invalid type.");
-  DOCHECK1_CONTEXT(mech_context(mech), mech_is_destroyed(t),
-                   "A dead 'mech? C'mon :P");
+  if (!mech_los_check_unblocked(mech, t, mech_position_x(t), mech_position_y(t),
+                                range)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Target is not in line of sight!");
+    return -1;
+  }
+  if (range >= 1.0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Target out of range!");
+    return -1;
+  }
+  if (mech_is_jumping(t)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That target's unreachable right now!");
+    return -1;
+  }
+  if (mech_class(t) != CLASS_MECH) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That target is of invalid type.");
+    return -1;
+  }
+  if (mech_is_destroyed(t)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "A dead 'mech? C'mon :P");
+    return -1;
+  }
   *target = t;
   return 0;
 }
@@ -371,8 +408,12 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
   int baseToHit = 4;
   int tIsMount = 0;
 
-  cch(MECH_USUALO);
-  skipws(buffer);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer)
+    buffer = "";
 
   /* Stop swarming... */
   if (!strcmp(buffer, "-")) {
@@ -505,7 +546,8 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
   int wCritRoll = 0;
   char strAttackLoc[50];
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
   if (!(mech_infantry_technology_flags(mech) & INF_ANTILEG_TECH)) {
     mech_notify(mech, MECHALL,
@@ -522,10 +564,16 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
   if (bsuit_target_find(player, mech, &target, buffer))
     return;
 
-  DOCHECK_CONTEXT(mech_context(mech), IsMechLegLess(mech),
-                  "That mech has no legs to grab!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_team(mech) == mech_team(target),
-                  "You can't attack the leg of a friendly mech!");
+  if (IsMechLegLess(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That mech has no legs to grab!");
+    return;
+  }
+  if (mech_team(mech) == mech_team(target)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't attack the leg of a friendly mech!");
+    return;
+  }
 
   switch (bsuit_member_count(mech)) {
   case 1:
@@ -673,10 +721,13 @@ void bsuit_pack_jettison(DbRef player, void *data, char *buffer) {
   int wcSuits = 0;
   int i, j;
 
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  (!(mech_infantry_technology_flags(mech) & CAN_JETTISON_TECH)),
-                  "You have no backpack that is capable of being jettisoned!");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if ((!(mech_infantry_technology_flags(mech) & CAN_JETTISON_TECH))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You have no backpack that is capable of being jettisoned!");
+    return;
+  }
 
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
     for (j = 0; j < NUM_CRITICALS; j++) {

@@ -6,7 +6,6 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "failures.h"
-#include "legacy_macros.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
@@ -16,7 +15,6 @@
 #include "mech_events_api.h"
 #include "mech_identity_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -25,6 +23,8 @@
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
 #include "section_types.h"
 #include "weapon_settings.h"
 
@@ -38,11 +38,12 @@ void mech_ams(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   if (!(mech_technology_flags(mech) &
         (IS_ANTI_MISSILE_TECH | CL_ANTI_MISSILE_TECH))) {
-    notify(btech_context_evaluation(context), player,
-           "This mech is not equipped with AMS");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This mech is not equipped with AMS");
     return;
   }
   bool enabled = !mech_condition_summary(mech).ams_enabled;
@@ -56,13 +57,17 @@ void mech_fliparms(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 
-  cch(MECH_USUALMO);
-  DOCHECK_CONTEXT(context, mech_condition_summary(mech).fallen,
-                  "You're using your arms to support yourself. Try "
-                  "flipping something else.");
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
+  if (mech_condition_summary(mech).fallen) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You're using your arms to support yourself. Try "
+                 "flipping something else.");
+    return;
+  }
   if (!(mech_technology_flags(mech) & FLIPABLE_ARMS)) {
-    notify(btech_context_evaluation(context), player,
-           "You cannot flip the arms in this mech");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You cannot flip the arms in this mech");
     return;
   }
   bool flipped = mech_condition_summary(mech).arms_flipped;
@@ -117,40 +122,62 @@ static int mech_toggle_mode_sub_func(Mech *mech, DbRef player, int index,
   weaptype =
       FindWeaponNumberOnMech_Advanced(mech, index, &section, &critical, 0);
 
-  DOCHECK0_CONTEXT(mech_context(mech), weaptype == -1,
-                   "The weapons system chirps: 'Illegal Weapon Number!'");
-  DOCHECK0_CONTEXT(
-      mech_context(mech), weaptype == -2,
-      "The weapons system chirps: 'That Weapon has been destroyed!'");
-  DOCHECK0_CONTEXT(
-      mech_context(mech), weaptype == -3,
-      "The weapon system chirps: 'That weapon is still reloading!'");
-  DOCHECK0_CONTEXT(
-      mech_context(mech), weaptype == -4,
-      "The weapon system chirps: 'That weapon is still recharging!'");
-  DOCHECK0_CONTEXT(
-      mech_context(mech),
-      mech_critical_temporary_failure(mech, section, critical) ==
-          FAIL_AMMOJAMMED,
-      "The ammo feed mechanism for that weapon is jammed! Unable to "
-      "change modes!");
-  DOCHECK0_CONTEXT(mech_context(mech),
-                   mech_critical_fire_mode(mech, section, critical) & OS_MODE,
-                   "One-shot weapons' mode cannot be altered!");
-  DOCHECK0_CONTEXT(mech_context(mech),
-                   mech_weapon_ammo_feed_is_locked(mech, section, critical),
-                   "That weapon's ammo feed mechanism is damaged!");
-
-  if (toggle->special_kind == 6) {
-    DOCHECK0_CONTEXT(mech_context(mech),
-                     !FindArtemisForWeapon(mech, section, critical),
-                     "You do not have an Artemis system for that weapon.");
+  if (weaptype == -1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The weapons system chirps: 'Illegal Weapon Number!'");
+    return 0;
+  }
+  if (weaptype == -2) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "The weapons system chirps: 'That Weapon has been destroyed!'");
+    return 0;
+  }
+  if (weaptype == -3) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The weapon system chirps: 'That weapon is still reloading!'");
+    return 0;
+  }
+  if (weaptype == -4) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "The weapon system chirps: 'That weapon is still recharging!'");
+    return 0;
+  }
+  if (mech_critical_temporary_failure(mech, section, critical) ==
+      FAIL_AMMOJAMMED) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The ammo feed mechanism for that weapon is jammed! Unable to "
+                 "change modes!");
+    return 0;
+  }
+  if (mech_critical_fire_mode(mech, section, critical) & OS_MODE) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "One-shot weapons' mode cannot be altered!");
+    return 0;
+  }
+  if (mech_weapon_ammo_feed_is_locked(mech, section, critical)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That weapon's ammo feed mechanism is damaged!");
+    return 0;
   }
 
-  weaptype = Weapon2I(mech_critical_part_type(mech, section, critical));
+  if (toggle->special_kind == 6) {
+    if (!FindArtemisForWeapon(mech, section, critical)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You do not have an Artemis system for that weapon.");
+      return 0;
+    }
+  }
 
-  DOCHECK0_CONTEXT(mech_context(mech), MechWeapons[weaptype].special & ROCKET,
-                   "Rocket launchers' mode cannot be altered!");
+  weaptype = weapon_from_equipment_index(
+      mech_critical_part_type(mech, section, critical));
+
+  if (MechWeapons[weaptype].special & ROCKET) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Rocket launchers' mode cannot be altered!");
+    return 0;
+  }
 
   if ((toggle->special_kind == 6 && (MechWeapons[weaptype].type == TMISSILE)) ||
       (toggle->special_kind == 5 && (MechWeapons[weaptype].type == TAMMO)
@@ -167,13 +194,14 @@ static int mech_toggle_mode_sub_func(Mech *mech, DbRef player, int index,
         !(MechWeapons[weaptype].special & NARC)))) {
 
     if (toggle->special_kind == 0 && (toggle->special & TARTILLERY))
-      DOCHECK0_CONTEXT(
-          mech_context(mech),
-          (mech_critical_ammo_mode(mech, section, critical) &
+      if ((mech_critical_ammo_mode(mech, section, critical) &
            ARTILLERY_MODES) &&
-              !(mech_critical_ammo_mode(mech, section, critical) &
-                toggle->mode),
-          "That weapon has already been set to fire special rounds!");
+          !(mech_critical_ammo_mode(mech, section, critical) & toggle->mode)) {
+        mecha_notify(
+            btech_context_evaluation(mech_context(mech)), player,
+            "That weapon has already been set to fire special rounds!");
+        return 0;
+      }
     /* Fitz - Group RAC/INARC select: Handle clearing RAC and INARC modes first
      */
     if ((toggle->special == RAC) && !toggle->mode) {
@@ -230,8 +258,8 @@ static int mech_toggle_mode_sub_func(Mech *mech, DbRef player, int index,
     }
   }
   if (toggle->special != RAC) /* Keep RAC type weapons on this setting */
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           toggle->cannot_message);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 toggle->cannot_message);
   return 0;
 }
 #ifdef __clang__
@@ -253,16 +281,19 @@ static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
       .cannot_message = cant,
   };
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_parseattributes(buffer, args, 1) != 1,
-                  "Please specify a weapon number.");
+  if (mech_parseattributes(buffer, args, 1) != 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Please specify a weapon number.");
+    return;
+  }
   multi_weap_sel(mech, player, args[0], 1, mech_toggle_mode_sub_func, &toggle);
 }
 
 void mech_flamerheat(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, CHEAT, HEAT_MODE, 1,
                        "Weapon %d has been set to HEAT mode",
                        "Weapon %d has been set to normal mode",
@@ -272,7 +303,8 @@ void mech_flamerheat(DbRef player, void *data, char *buffer) {
 void mech_ultra(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, ULTRA, ULTRA_MODE, 1,
                        "Weapon %d has been set to ultra fire mode",
                        "Weapon %d has been set to normal fire mode",
@@ -284,7 +316,8 @@ void mech_inarc_ammo_toggle(DbRef player, void *data, char *buffer) {
   int wcArgs = 0;
   char *args[2];
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
   wcArgs = mech_parseattributes(buffer, args, 2);
 
@@ -335,7 +368,8 @@ void mech_inarc_ammo_toggle(DbRef player, void *data, char *buffer) {
 void mech_explosive(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
 
   mech_toggle_mode_sub(player, mech, buffer, 1, NARC, NARC_MODE, 0,
                        "Weapon %d has been set to fire explosive rounds",
@@ -346,7 +380,8 @@ void mech_explosive(DbRef player, void *data, char *buffer) {
 void mech_lbx(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, LBX, LBX_MODE, 0,
                        "Weapon %d has been set to LBX fire mode",
                        "Weapon %d has been set to normal fire mode",
@@ -356,7 +391,8 @@ void mech_lbx(DbRef player, void *data, char *buffer) {
 void mech_armorpiercing(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_AP_MODE, 0,
                        "Weapon %d has been set to fire AP rounds",
                        "Weapon %d has been set to fire normal rounds",
@@ -365,7 +401,8 @@ void mech_armorpiercing(DbRef player, void *data, char *buffer) {
 
 void mech_caseless(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_CASELESS_MODE, 0,
                        "Weapon %d has been set to fire CASELESS rounds",
                        "Weapon %d has been set to fire normal rounds",
@@ -375,7 +412,8 @@ void mech_caseless(DbRef player, void *data, char *buffer) {
 void mech_flechette(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_FLECHETTE_MODE, 0,
                        "Weapon %d has been set to fire Flechette rounds",
                        "Weapon %d has been set to fire normal rounds",
@@ -385,7 +423,8 @@ void mech_flechette(DbRef player, void *data, char *buffer) {
 void mech_incendiary(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_INCENDIARY_MODE, 0,
                        "Weapon %d has been set to fire Incendiary rounds",
                        "Weapon %d has been set to fire normal rounds",
@@ -395,7 +434,8 @@ void mech_incendiary(DbRef player, void *data, char *buffer) {
 void mech_precision(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_PRECISION_MODE, 0,
                        "Weapon %d has been set to fire Precision rounds",
                        "Weapon %d has been set to fire normal rounds",
@@ -405,7 +445,8 @@ void mech_precision(DbRef player, void *data, char *buffer) {
 void mech_rapidfire(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, RFAC_MODE, 1,
                        "Weapon %d has been set to Rapid Fire mode",
                        "Weapon %d has been set to normal fire mode",
@@ -415,7 +456,8 @@ void mech_rapidfire(DbRef player, void *data, char *buffer) {
 void mech_stinger(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 2, 0, STINGER_MODE, 0,
                        "Weapon %d has been set to fire stinger missiles.",
                        "Weapon %d has been set to fire normal missiles",
@@ -476,21 +518,34 @@ static int mech_unjamammo_func(Mech *mech, DbRef player, int index, int high,
   char location[50];
 
   weaptype = FindWeaponNumberOnMech(mech, index, &section, &critical);
-  DOCHECK0_CONTEXT(mech_context(mech), weaptype == -1,
-                   "The weapons system chirps: 'Illegal Weapon Number!'");
-  DOCHECK0_CONTEXT(
-      mech_context(mech), weaptype == -2,
-      "The weapons system chirps: 'That Weapon has been destroyed!'");
-  DOCHECK0_CONTEXT(mech_context(mech),
-                   mech_critical_temporary_failure(mech, section, critical) !=
-                       FAIL_AMMOJAMMED,
-                   "The ammo feed mechanism for that weapon is not jammed.");
-  DOCHECK0_CONTEXT(mech_context(mech), mech_is_jumping(mech),
-                   "You can't unjam the ammo feed while jumping!");
-  DOCHECK0_CONTEXT(mech_context(mech),
-                   mech_desired_speed(mech) >
-                       2.0F * mech_effective_maximum_speed(mech) / 3.0F + 0.1F,
-                   "You can't unjam the ammo feed while running!");
+  if (weaptype == -1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The weapons system chirps: 'Illegal Weapon Number!'");
+    return 0;
+  }
+  if (weaptype == -2) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "The weapons system chirps: 'That Weapon has been destroyed!'");
+    return 0;
+  }
+  if (mech_critical_temporary_failure(mech, section, critical) !=
+      FAIL_AMMOJAMMED) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The ammo feed mechanism for that weapon is not jammed.");
+    return 0;
+  }
+  if (mech_is_jumping(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't unjam the ammo feed while jumping!");
+    return 0;
+  }
+  if (mech_desired_speed(mech) >
+      2.0F * mech_effective_maximum_speed(mech) / 3.0F + 0.1F) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't unjam the ammo feed while running!");
+    return 0;
+  }
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (mech_section_has_recycling_weapon(mech, i)) {
@@ -502,8 +557,11 @@ static int mech_unjamammo_func(Mech *mech, DbRef player, int index, int high,
     }
   }
 
-  DOCHECK0_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_UNJAM_AMMO),
-                   "You are already unjamming a weapon!");
+  if (mech_event_count(mech, EVENT_UNJAM_AMMO)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are already unjamming a weapon!");
+    return 0;
+  }
 
   mech_event_schedule(mech, EVENT_UNJAM_AMMO, mech_unjam_ammo_event, 60,
                       (long)index);
@@ -515,17 +573,21 @@ void mech_unjamammo(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   char *args[1];
 
-  cch(MECH_USUALMO);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_parseattributes(buffer, args, 1) != 1,
-                  "Please specify a weapon number.");
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
+  if (mech_parseattributes(buffer, args, 1) != 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Please specify a weapon number.");
+    return;
+  }
   multi_weap_sel(mech, player, args[0], 1, mech_unjamammo_func, nullptr);
 }
 
 void mech_gattling(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, GMG, GATTLING_MODE, 1,
                        "Weapon %d has been set to Gattling mode",
                        "Weapon %d has been set to normal fire mode",
@@ -535,7 +597,8 @@ void mech_gattling(DbRef player, void *data, char *buffer) {
 void mech_artemis(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(
       player, mech, buffer, 6, TMISSILE, ARTEMIS_MODE, 0,
       "Weapon %d has been set to fire Artemis IV compatible missiles.",
@@ -546,7 +609,8 @@ void mech_artemis(DbRef player, void *data, char *buffer) {
 void mech_narc(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(
       player, mech, buffer, 0, TMISSILE, NARC_MODE, 0,
       "Weapon %d has been set to fire Narc Beacon compatible missiles.",
@@ -557,7 +621,8 @@ void mech_narc(DbRef player, void *data, char *buffer) {
 void mech_swarm(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 2, 0, SWARM_MODE, 0,
                        "Weapon %d has been set to fire Swarm missiles.",
                        "Weapon %d has been set to fire normal missiles",
@@ -567,7 +632,8 @@ void mech_swarm(DbRef player, void *data, char *buffer) {
 void mech_sguided(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 2, 0, SGUIDED_MODE, 0,
                        "Weapon %d has been set to fire Sguided missiles.",
                        "Weapon %d has been set to fire normal missiles",
@@ -577,7 +643,8 @@ void mech_sguided(DbRef player, void *data, char *buffer) {
 void mech_atmrange(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(
       player, mech, buffer, 2, TMISSILE, ATM_ER_MODE, 0,
       "Weapon %d has been set to fire Extended Range missiles.",
@@ -588,7 +655,8 @@ void mech_atmrange(DbRef player, void *data, char *buffer) {
 void mech_atmexplosive(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(
       player, mech, buffer, 2, TMISSILE, ATM_HE_MODE, 0,
       "Weapon %d has been set to fire High Explosive missiles.",
@@ -599,7 +667,8 @@ void mech_atmexplosive(DbRef player, void *data, char *buffer) {
 void mech_swarm1(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 2, 0, SWARM1_MODE, 0,
                        "Weapon %d has been set to fire Swarm1 missiles.",
                        "Weapon %d has been set to fire normal missiles",
@@ -609,7 +678,8 @@ void mech_swarm1(DbRef player, void *data, char *buffer) {
 void mech_inferno(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 4, 0, INFERNO_MODE, 0,
                        "Weapon %d has been set to fire Inferno missiles.",
                        "Weapon %d has been set to fire normal missiles",
@@ -618,7 +688,8 @@ void mech_inferno(DbRef player, void *data, char *buffer) {
 
 void mech_hotload(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 1, IDF, HOTLOAD_MODE, 1,
                        "Hotloading for weapon %d has been toggled on.",
                        "Hotloading for weapon %d has been toggled off.",
@@ -628,7 +699,8 @@ void mech_hotload(DbRef player, void *data, char *buffer) {
 void mech_cluster(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 0, TARTILLERY, CLUSTER_MODE, 0,
                        "Weapon %d has been set to fire cluster rounds.",
                        "Weapon %d has been set to fire normal rounds",
@@ -638,7 +710,8 @@ void mech_cluster(DbRef player, void *data, char *buffer) {
 void mech_smoke(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 4, 0, SMOKE_MODE, 0,
                        "Weapon %d has been set to fire smoke rounds.",
                        "Weapon %d has been set to fire normal rounds",
@@ -648,7 +721,8 @@ void mech_smoke(DbRef player, void *data, char *buffer) {
 void mech_mine(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  cch(MECH_USUALMO);
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
   mech_toggle_mode_sub(player, mech, buffer, 4, 0, MINE_MODE, 0,
                        "Weapon %d has been set to fire mine rounds.",
                        "Weapon %d has been set to fire normal rounds",

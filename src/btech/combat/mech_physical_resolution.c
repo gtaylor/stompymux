@@ -4,6 +4,7 @@
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
+#include "mech_notify_api.h"
 #include "mech_physical_internal.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -55,12 +56,14 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
       (AttackType == PA_SAW)) {
 
     if (mech_critical_is_nonfunctional(mech, sect, 1) ||
-        mech_critical_part_type(mech, sect, 1) != I2Special(UPPER_ACTUATOR)) {
+        mech_critical_part_type(mech, sect, 1) !=
+            special_equipment_index(UPPER_ACTUATOR)) {
       baseToHit += 2;
     }
 
     if (mech_critical_is_nonfunctional(mech, sect, 2) ||
-        mech_critical_part_type(mech, sect, 2) != I2Special(LOWER_ACTUATOR)) {
+        mech_critical_part_type(mech, sect, 2) !=
+            special_equipment_index(LOWER_ACTUATOR)) {
       baseToHit += 2;
     }
 
@@ -69,7 +72,7 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     if ((AttackType == PA_PUNCH) || (AttackType == PA_KICK)) {
       if (mech_critical_is_nonfunctional(mech, sect, 3) ||
           mech_critical_part_type(mech, sect, 3) !=
-              I2Special(HAND_OR_FOOT_ACTUATOR)) {
+              special_equipment_index(HAND_OR_FOOT_ACTUATOR)) {
         baseToHit += 1;
       }
     }
@@ -79,19 +82,23 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     /* Only check lower/upper acts since without shoulder or hand you can't
      * club */
     if (mech_critical_is_nonfunctional(mech, RARM, 1) ||
-        mech_critical_part_type(mech, sect, 1) != I2Special(UPPER_ACTUATOR)) {
+        mech_critical_part_type(mech, sect, 1) !=
+            special_equipment_index(UPPER_ACTUATOR)) {
       baseToHit += 2;
     }
     if (mech_critical_is_nonfunctional(mech, RARM, 2) ||
-        mech_critical_part_type(mech, sect, 2) != I2Special(LOWER_ACTUATOR)) {
+        mech_critical_part_type(mech, sect, 2) !=
+            special_equipment_index(LOWER_ACTUATOR)) {
       baseToHit += 2;
     }
     if (mech_critical_is_nonfunctional(mech, LARM, 1) ||
-        mech_critical_part_type(mech, sect, 1) != I2Special(UPPER_ACTUATOR)) {
+        mech_critical_part_type(mech, sect, 1) !=
+            special_equipment_index(UPPER_ACTUATOR)) {
       baseToHit += 2;
     }
     if (mech_critical_is_nonfunctional(mech, LARM, 2) ||
-        mech_critical_part_type(mech, sect, 2) != I2Special(LOWER_ACTUATOR)) {
+        mech_critical_part_type(mech, sect, 2) !=
+            special_equipment_index(LOWER_ACTUATOR)) {
       baseToHit += 2;
     }
   }
@@ -110,12 +117,18 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
   case -1:
   case 0:
     // No argument
-    DOCHECKMA(mech_target_dbref(mech) == -1, "You do not have a target set!");
+    if (mech_target_dbref(mech) == -1) {
+      mech_notify(mech, MECHALL, "You do not have a target set!");
+      return;
+    }
 
     // Populate target variable with current lock.
     target =
         btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
-    DOCHECKMA(!target, "Invalid default target!");
+    if (!target) {
+      mech_notify(mech, MECHALL, "Invalid default target!");
+      return;
+    }
 
     break;
   default:
@@ -128,8 +141,14 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
     target = btech_context_get_mech(mech_context(mech), targetnum);
 
-    DOCHECKMA(targetnum == -1, "Target is not in line of sight!");
-    DOCHECKMA(!target, "Invalid default target!");
+    if (targetnum == -1) {
+      mech_notify(mech, MECHALL, "Target is not in line of sight!");
+      return;
+    }
+    if (!target) {
+      mech_notify(mech, MECHALL, "Invalid default target!");
+      return;
+    }
   } // end switch() - argc checking
 
   // Is the target swarming us?
@@ -170,53 +189,81 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
 
   range = mech_range_to(mech, target);
 
-  DOCHECKMA(!mech_los_check_unblocked(mech, target, mech_position_x(target),
-                                      mech_position_y(target), range),
-            "Target is not in line of sight!");
+  if (!mech_los_check_unblocked(mech, target, mech_position_x(target),
+                                mech_position_y(target), range)) {
+    mech_notify(mech, MECHALL, "Target is not in line of sight!");
+    return;
+  }
 
   // BSuits have to be <= 0.5 hexes to attack units.
   if ((mech_class(target) == CLASS_BSUIT) || (mech_class(target) == CLASS_MW))
     maxRange = 0.5;
 
-  DOCHECKMA(range >= maxRange, "Target out of range!");
+  if (range >= maxRange) {
+    mech_notify(mech, MECHALL, "Target out of range!");
+    return;
+  }
 
-  DOCHECKMA(mech_is_jumping(target),
-            "You can't perform physical attacks on airborne mechs!");
+  if (mech_is_jumping(target)) {
+    mech_notify(mech, MECHALL,
+                "You can't perform physical attacks on airborne mechs!");
+    return;
+  }
 
-  DOCHECKMA(battle_map_blocks_physical_attacks(mech_map),
-            "You cannot perform physical attacks here!");
+  if (battle_map_blocks_physical_attacks(mech_map)) {
+    mech_notify(mech, MECHALL, "You cannot perform physical attacks here!");
+    return;
+  }
 
-  DOCHECKMA(mech_team(target) == mech_team(mech) &&
-                mech_condition_summary(mech).friendly_fire_safety,
-            "You can't attack a teammate with FFSafeties on!");
+  if (mech_team(target) == mech_team(mech) &&
+      mech_condition_summary(mech).friendly_fire_safety) {
+    mech_notify(mech, MECHALL,
+                "You can't attack a teammate with FFSafeties on!");
+    return;
+  }
 
-  DOCHECKMA(mech_team(target) == mech_team(mech) &&
-                battle_map_blocks_friendly_fire(mech_map),
-            "Friendly Fire? I don't think so...");
+  if (mech_team(target) == mech_team(mech) &&
+      battle_map_blocks_friendly_fire(mech_map)) {
+    mech_notify(mech, MECHALL, "Friendly Fire? I don't think so...");
+    return;
+  }
 
-  DOCHECKMA(mech_class(target) == CLASS_MW &&
-                !mech_condition_summary(mech).player_killer,
-            "That's a living, breathing person! Switch off the safety first, "
-            "if you really want to assassinate the target.");
+  if (mech_class(target) == CLASS_MW &&
+      !mech_condition_summary(mech).player_killer) {
+    mech_notify(
+        mech, MECHALL,
+        "That's a living, breathing person! Switch off the safety first, "
+        "if you really want to assassinate the target.");
+    return;
+  }
 
-  DOCHECKMA(mech_condition_summary(mech).stunned,
-            "You are still recovering from your stunning experience!");
+  if (mech_condition_summary(mech).stunned) {
+    mech_notify(mech, MECHALL,
+                "You are still recovering from your stunning experience!");
+    return;
+  }
   /*
    * Attack-Specific checks.
    */
-  DOCHECKMA(AttackType == PA_PUNCH &&
-                (mech_class(target) == CLASS_VEH_GROUND) &&
-                !mech_condition_summary(mech).fallen,
-            "You can't punch vehicles unless you are prone!");
+  if (AttackType == PA_PUNCH && (mech_class(target) == CLASS_VEH_GROUND) &&
+      !mech_condition_summary(mech).fallen) {
+    mech_notify(mech, MECHALL,
+                "You can't punch vehicles unless you are prone!");
+    return;
+  }
 
   // As per BMR, can only trip mechs.
-  DOCHECKMA(AttackType == PA_TRIP && mech_class(target) != CLASS_MECH,
-            "You can only trip mechs!");
+  if (AttackType == PA_TRIP && mech_class(target) != CLASS_MECH) {
+    mech_notify(mech, MECHALL, "You can only trip mechs!");
+    return;
+  }
 
   // Can't trip mechs that are fallen or in the process of standing.
-  DOCHECKMA(AttackType == PA_TRIP && (mech_condition_summary(target).fallen ||
-                                      mech_event_count(target, EVENT_STAND)),
-            "Your target is already down!");
+  if (AttackType == PA_TRIP && (mech_condition_summary(target).fallen ||
+                                mech_event_count(target, EVENT_STAND))) {
+    mech_notify(mech, MECHALL, "Your target is already down!");
+    return;
+  }
 
   // We're attacking a ground/naval unit.
   if (mech_movement_type(target) != MOVE_VTOL &&
@@ -265,22 +312,31 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
       } // end if() - Check isTooLow
     } // end if() - Target is too low checks.
 
-    DOCHECKMA((AttackType == PA_KICK || AttackType == PA_TRIP) &&
-                  mech_position_z(mech) < mech_position_z(target),
-              "The target is too high in elevation for you to kick at.");
+    if ((AttackType == PA_KICK || AttackType == PA_TRIP) &&
+        mech_position_z(mech) < mech_position_z(target)) {
+      mech_notify(mech, MECHALL,
+                  "The target is too high in elevation for you to kick at.");
+      return;
+    }
 
-    DOCHECKMA(mech_position_z(mech) - mech_position_z(target) > 1 ||
-                  mech_position_z(target) - mech_position_z(mech) > 1,
-              "You can't attack, the elevation difference is too large.");
+    if (mech_position_z(mech) - mech_position_z(target) > 1 ||
+        mech_position_z(target) - mech_position_z(mech) > 1) {
+      mech_notify(mech, MECHALL,
+                  "You can't attack, the elevation difference is too large.");
+      return;
+    }
 
-    DOCHECKMA((AttackType == PA_KICK || AttackType == PA_TRIP) &&
-                  (mech_position_z(target) < mech_position_z(mech) &&
-                   (((mech_class(target) == CLASS_MECH) &&
-                     mech_condition_summary(target).fallen) ||
-                    (mech_class(target) == CLASS_VEH_GROUND) ||
-                    (mech_class(target) == CLASS_BSUIT) ||
-                    (mech_class(target) == CLASS_MW))),
-              "The target is too low in elevation for you to kick.")
+    if ((AttackType == PA_KICK || AttackType == PA_TRIP) &&
+        (mech_position_z(target) < mech_position_z(mech) &&
+         (((mech_class(target) == CLASS_MECH) &&
+           mech_condition_summary(target).fallen) ||
+          (mech_class(target) == CLASS_VEH_GROUND) ||
+          (mech_class(target) == CLASS_BSUIT) ||
+          (mech_class(target) == CLASS_MW)))) {
+      mech_notify(mech, MECHALL,
+                  "The target is too low in elevation for you to kick.");
+      return;
+    }
 
   } else { // We're attacking a VTOL/Aero.
 
@@ -297,9 +353,12 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
       return;
     }
 
-    DOCHECKMA(!(mech_position_z(target) - mech_position_z(mech) > -1 &&
-                mech_position_z(target) - mech_position_z(mech) < 4),
-              "You can't attack, the elevation difference is too large.");
+    if (!(mech_position_z(target) - mech_position_z(mech) > -1 &&
+          mech_position_z(target) - mech_position_z(mech) < 4)) {
+      mech_notify(mech, MECHALL,
+                  "You can't attack, the elevation difference is too large.");
+      return;
+    }
   } // end if/else() - Ground/VTOL + Physical Z comparisons
 
   /* Check weapon arc! */
@@ -316,7 +375,10 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
 
     iwa = physical_forward_arc(mech, target);
 
-    DOCHECKMA(!(iwa & FORWARDARC), "Target is not in your 'real' forward arc!");
+    if (!(iwa & FORWARDARC)) {
+      mech_notify(mech, MECHALL, "Target is not in your 'real' forward arc!");
+      return;
+    }
 
   } else { // We're punching, clubbing, or other sharp things.
 
@@ -326,18 +388,26 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
     if (AttackType == PA_CLUB) {
       // Clubs are a frontal attack. Go off of the forward arc, don't
       // take arms into account.
-      DOCHECKMA(!(iwa & FORWARDARC) && swarmingUs != 1,
-                "Target is not in your forward arc!");
+      if (!(iwa & FORWARDARC) && swarmingUs != 1) {
+        mech_notify(mech, MECHALL, "Target is not in your forward arc!");
+        return;
+      }
     } else {
       // For other attacks, check on a per-arm basis.
       if (sect == RARM) {
         // We're attacking with right arm. Forward or right will do.
-        DOCHECKMA(!((iwa & FORWARDARC) || (iwa & RSIDEARC) || swarmingUs),
-                  "Target is not in your forward or right side arc!");
+        if (!((iwa & FORWARDARC) || (iwa & RSIDEARC) || swarmingUs)) {
+          mech_notify(mech, MECHALL,
+                      "Target is not in your forward or right side arc!");
+          return;
+        }
       } else {
         // We're attacking with left arm. Forward or left will do.
-        DOCHECKMA(!((iwa & FORWARDARC) || (iwa & LSIDEARC)) || swarmingUs,
-                  "Target is not in your forward or left side arc!");
+        if (!((iwa & FORWARDARC) || (iwa & LSIDEARC)) || swarmingUs) {
+          mech_notify(mech, MECHALL,
+                      "Target is not in your forward or left side arc!");
+          return;
+        }
 
       } // end
 
@@ -389,9 +459,13 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
 
   // As per BMR, can only physical bsuits with punches, axes, or swords.
   // Added saw since it's the same idea.
-  DOCHECKMA(AttackType == PA_KICK && mech_class(target) == CLASS_BSUIT &&
-                mech_swarm_target(target) > 0,
-            "You can't hit a swarmed suit with that, try a hand-held weapon!");
+  if (AttackType == PA_KICK && mech_class(target) == CLASS_BSUIT &&
+      mech_swarm_target(target) > 0) {
+    mech_notify(
+        mech, MECHALL,
+        "You can't hit a swarmed suit with that, try a hand-held weapon!");
+    return;
+  }
 
   // Terrain mods - Courtesy of RST
   // Heavy & Light are from Total Warfare and

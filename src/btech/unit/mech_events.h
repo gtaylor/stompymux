@@ -128,5 +128,3 @@ constexpr int EVENT_SCHARGE_REGEN = 77; /* SCHARGE recovery during non-use */
 constexpr int EVENT_CHECK_STAGGER = 78;
 constexpr int EVENT_MOVEMODE = 79;
 constexpr int EVENT_SIDESLIP = 80;
-
-#define ETEMPL(a) void a(MuxEvent *e)

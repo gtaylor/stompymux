@@ -1,7 +1,6 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_combat_api.h"
@@ -10,7 +9,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
@@ -42,13 +40,14 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
   int running_sum = 0;
 
   mech_weapon_recycle_update(mech);
-  notify(evaluation, player, "================WEAPON SYSTEMS================");
+  mecha_notify(evaluation, player,
+               "================WEAPON SYSTEMS================");
   if (mech_class(mech) == CLASS_BSUIT)
-    notify(evaluation, player,
-           "----- Weapon ------ [##]  Holder ------ Status");
+    mecha_notify(evaluation, player,
+                 "----- Weapon ------ [##]  Holder ------ Status");
   else
-    notify(evaluation, player,
-           "----- Weapon ------ [##]  Location ---- Status");
+    mecha_notify(evaluation, player,
+                 "----- Weapon ------ [##]  Location ---- Status");
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     if (mech_section_is_destroyed(mech, loop))
       continue;
@@ -72,7 +71,7 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
             strcat(weapbuff, "[fg=green]Ready[reset]");
           }
         }
-        notify(evaluation, player, weapbuff);
+        mecha_notify(evaluation, player, weapbuff);
       }
       running_sum += count;
     }
@@ -88,13 +87,14 @@ void mech_sight(DbRef player, void *data, char *buffer) {
   int weapnum;
 
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   argc = mech_parseattributes(buffer, args, 5);
   if (argc >= 1) {
     weapnum = atoi(args[0]);
     FireWeaponNumber(player, mech, mech_map, weapnum, argc, args, 1);
   } else {
-    notify(evaluation, player, "Not enough arguments to the function");
+    mecha_notify(evaluation, player, "Not enough arguments to the function");
   }
 }
 
@@ -107,7 +107,8 @@ void mech_view(DbRef player, void *data, char *buffer) {
   int argc;
   char *target_desc;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   argc = mech_parseattributes(buffer, args, 2);
   if (argc == 0) { /* default target */
     if (mech_target_dbref(mech) == -1) {
@@ -121,18 +122,20 @@ void mech_view(DbRef player, void *data, char *buffer) {
       mech_targeting_target_clear(mech);
       return;
     }
-    DOCHECK_CONTEXT(
-        mech_context(mech),
-        !mech_los_check_unblocked(mech, target, mech_position_x(target),
+    if (!mech_los_check_unblocked(mech, target, mech_position_x(target),
                                   mech_position_y(target),
-                                  mech_range_to(mech, target)),
-        "That target isn't seen well enough by the scannfers for viewing!");
+                                  mech_range_to(mech, target))) {
+      mecha_notify(
+          btech_context_evaluation(mech_context(mech)), player,
+          "That target isn't seen well enough by the scannfers for viewing!");
+      return;
+    }
     if (*(target_desc = btech_attribute_read(mech_context(target)->database,
                                              mech_dbref(target), A_MECHDESC,
                                              (char[LBUF_SIZE]){0})))
-      notify(evaluation, player, target_desc);
+      mecha_notify(evaluation, player, target_desc);
     else
-      notify(evaluation, player, "That target has no markings.");
+      mecha_notify(evaluation, player, "That target has no markings.");
   } else if (argc == 1) { /* ID number */
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
@@ -150,19 +153,22 @@ void mech_view(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    DOCHECK_CONTEXT(
-        mech_context(mech),
-        !mech_los_check_unblocked(mech, target, mech_position_x(target),
+    if (!mech_los_check_unblocked(mech, target, mech_position_x(target),
                                   mech_position_y(target),
-                                  mech_range_to(mech, target)),
-        "That target isn't seen well enough by the scanners for viewing!");
+                                  mech_range_to(mech, target))) {
+      mecha_notify(
+          btech_context_evaluation(mech_context(mech)), player,
+          "That target isn't seen well enough by the scanners for viewing!");
+      return;
+    }
 
     if (*(target_desc = btech_attribute_read(mech_context(target)->database,
                                              mech_dbref(target), A_MECHDESC,
                                              (char[LBUF_SIZE]){0})))
-      notify(evaluation, player, target_desc);
+      mecha_notify(evaluation, player, target_desc);
     else
-      notify(evaluation, player, "That target has no markings.");
+      mecha_notify(evaluation, player, "That target has no markings.");
   } else
-    notify(evaluation, player, "Invalid number of arguments to function.");
+    mecha_notify(evaluation, player,
+                 "Invalid number of arguments to function.");
 }

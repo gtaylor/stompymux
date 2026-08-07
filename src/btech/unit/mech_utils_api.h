@@ -191,9 +191,9 @@ float Calculate_Offensive_BV(Mech *mech);
 void unit_parts_list(Mech *mech, char buffer[static LBUF_SIZE]);
 int mech_recycling_state(Mech *mech, int num);
 #ifdef BT_COMPLEXREPAIRS
-int GetPartMod(Mech *mech, int t);
-int ProperArmor(Mech *mech);
-int ProperInternal(Mech *mech);
+int GetPartMod(const Mech *mech, int t);
+int ProperArmor(const Mech *mech);
+int ProperInternal(const Mech *mech);
 int alias_part(Mech *mech, int t, int loc);
 int ProperMyomer(Mech *mech);
 #endif

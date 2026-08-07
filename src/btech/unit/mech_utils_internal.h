@@ -27,7 +27,6 @@
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "ds_bay_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
@@ -37,9 +36,7 @@
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_restrict_api.h"
 #include "mech_startup_api.h"
@@ -85,11 +82,17 @@ static inline int mech_weapon_battle_value(const Mech *mech, int weapon_index) {
 enum { BTECH_BV_SKILL_LIMIT = 8 };
 extern float skillmul[BTECH_BV_SKILL_LIMIT][BTECH_BV_SKILL_LIMIT];
 
-#define LAZY_SKILLMUL(n)                                                       \
-  ((n) < 0                           ? 0                                       \
-   : (n) >= BTECH_BV_SKILL_LIMIT - 1 ? BTECH_BV_SKILL_LIMIT - 1                \
-                                     : (n))
+static inline int battle_value_skill_index(int skill) {
+  return skill < 0                           ? 0
+         : skill >= BTECH_BV_SKILL_LIMIT - 1 ? BTECH_BV_SKILL_LIMIT - 1
+                                             : skill;
+}
 
 /* TODO: We can use M_PI if exists, otherwise define something reasonable.  */
-#define DEG2RAD(d) ((float)(d) * (3.14159265f / 180.f))
-#define RAD2DEG(d) ((float)(d) * (180.f / 3.14159265f))
+static inline float degrees_to_radians(float degrees) {
+  return degrees * (3.14159265F / 180.0F);
+}
+
+static inline float radians_to_degrees(float radians) {
+  return radians * (180.0F / 3.14159265F);
+}

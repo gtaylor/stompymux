@@ -24,9 +24,9 @@
 #include "command_handlers_api.h"
 #include "failures.h"
 #include "failures_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_api.h"
+#include "map_conditions_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -49,7 +49,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -81,11 +80,19 @@ void mech_fireweapon(DbRef player, void *data, char *buffer) {
 
   BtechContext *context = mech_context(mech);
   mech_map = btech_context_get_map(context, mech_map_dbref(mech));
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(context, mech_condition_summary(mech).weapons_hold,
-                  "Currently in weapons hold. Unable to fire weapons.");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (mech_condition_summary(mech).weapons_hold) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Currently in weapons hold. Unable to fire weapons.");
+    return;
+  }
   argc = mech_parseattributes(buffer, args, 5);
-  DOCHECK_CONTEXT(context, argc < 1, "Not enough arguments to the function");
+  if (argc < 1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Not enough arguments to the function");
+    return;
+  }
   weapnum = atoi(args[0]);
   FireWeaponNumber(player, mech, mech_map, weapnum, argc, args, 0);
 }
@@ -133,11 +140,13 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
 
   if (mech_class(mech) == CLASS_BSUIT) {
     for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
-      DOCHECK1_CONTEXT(
-          context,
-          !mech_section_is_destroyed(mech, i) &&
-              mech_section_recycle_ticks(mech, i),
-          tprintf("Suit %d is still recovering from attack.", i + 1));
+      if (!mech_section_is_destroyed(mech, i) &&
+          mech_section_recycle_ticks(mech, i)) {
+        mecha_notify(
+            btech_context_evaluation(context), player,
+            tprintf("Suit %d is still recovering from attack.", i + 1));
+        return -1;
+      }
     }
   }
 
@@ -155,42 +164,65 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     mech_event_cancel(mech, EVENT_HIDE);
   }
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK0_CONTEXT(context, mech_move_mode_locked(mech),
-                   "You cannot fire while using a special movement mode.");
+  if (mech_move_mode_locked(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You cannot fire while using a special movement mode.");
+    return 0;
+  }
 #endif
-  DOCHECK0_CONTEXT(context,
-                   mech_spotter_dbref(mech) > 0 &&
-                       mech_spotter_dbref(mech) == mech_dbref(mech),
-                   "You cannot fire while spotting.");
-  DOCHECK0_CONTEXT(context, weapnum < 0,
-                   "The weapons system chirps: 'Illegal Weapon Number!'");
+  if (mech_spotter_dbref(mech) > 0 &&
+      mech_spotter_dbref(mech) == mech_dbref(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You cannot fire while spotting.");
+    return 0;
+  }
+  if (weapnum < 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "The weapons system chirps: 'Illegal Weapon Number!'");
+    return 0;
+  }
 
   weaptype = FindWeaponNumberOnMech_Advanced(mech, weapnum, &section, &critical,
                                              sight);
 
-  DOCHECK0_CONTEXT(context, weaptype == -1,
-                   "The weapons system chirps: 'Illegal Weapon Number!'");
+  if (weaptype == -1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "The weapons system chirps: 'Illegal Weapon Number!'");
+    return 0;
+  }
 
   mode = mech_critical_fire_mode(mech, section, critical);
 
   if (!sight) {
 
     /* Exile Stun Code Check */
-    DOCHECK0_CONTEXT(
-        context, conditions.stunned,
-        "You cannot take actions while stunned! That includes finding the "
-        "trigger.");
+    if (conditions.stunned) {
+      mecha_notify(
+          btech_context_evaluation(context), player,
+          "You cannot take actions while stunned! That includes finding the "
+          "trigger.");
+      return 0;
+    }
 
-    DOCHECK0_CONTEXT(
-        context, mech_critical_temporary_failure(mech, section, critical),
-        "The weapons system chirps: 'That weapon is still unusable - "
-        "please stand by.'");
-    DOCHECK0_CONTEXT(
-        context, weaptype == -3,
-        "The weapons system chirps: 'That weapon is still reloading!'");
-    DOCHECK0_CONTEXT(
-        context, weaptype == -4,
-        "The weapons system chirps: 'That weapon is still recharging!'");
+    if (mech_critical_temporary_failure(mech, section, critical)) {
+      mecha_notify(
+          btech_context_evaluation(context), player,
+          "The weapons system chirps: 'That weapon is still unusable - "
+          "please stand by.'");
+      return 0;
+    }
+    if (weaptype == -3) {
+      mecha_notify(
+          btech_context_evaluation(context), player,
+          "The weapons system chirps: 'That weapon is still reloading!'");
+      return 0;
+    }
+    if (weaptype == -4) {
+      mecha_notify(
+          btech_context_evaluation(context), player,
+          "The weapons system chirps: 'That weapon is still recharging!'");
+      return 0;
+    }
 
     /* New fancy message for when they try and fire a weapon and the section
      * is busy */
@@ -206,72 +238,101 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
       return 0;
     }
 
-    DOCHECK0_CONTEXT(context, mech_section_carries_club(mech, section),
-                     "You're carrying a club in that arm.");
+    if (mech_section_carries_club(mech, section)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You're carrying a club in that arm.");
+      return 0;
+    }
 
     if (conditions.fallen && mech_class(mech) == CLASS_MECH) {
 
       /* if a quad has 3 of 4 legs dead, it can't fire at all while prone */
       wcDeadLegs = CountDestroyedLegs(mech);
       if (mech_is_quad(mech))
-        DOCHECK0_CONTEXT(context, wcDeadLegs > 2,
-                         "Quads need at least 3 legs to fire while prone.");
+        if (wcDeadLegs > 2) {
+          mecha_notify(btech_context_evaluation(context), player,
+                       "Quads need at least 3 legs to fire while prone.");
+          return 0;
+        }
 
       /* quads with all 4 legs can fire all weapons while prone. They do not
        * need to prop. */
       if (!mech_is_quad(mech) || (mech_is_quad(mech) && wcDeadLegs > 0)) {
-        DOCHECK0_CONTEXT(context, section == RLEG || section == LLEG,
-                         "You cannot fire leg mounted weapons when prone.");
+        if (section == RLEG || section == LLEG) {
+          mecha_notify(btech_context_evaluation(context), player,
+                       "You cannot fire leg mounted weapons when prone.");
+          return 0;
+        }
         switch (section) {
         case RARM:
-          DOCHECK0_CONTEXT(
-              context,
-              mech_section_has_recycling_weapon(mech, LARM) ||
-                  mech_section_recycle_ticks(mech, LARM) ||
-                  mech_section_is_destroyed(mech, LARM),
-              "You currently can't use your Left Arm to prop yourself up.");
+          if (mech_section_has_recycling_weapon(mech, LARM) ||
+              mech_section_recycle_ticks(mech, LARM) ||
+              mech_section_is_destroyed(mech, LARM)) {
+            mecha_notify(
+                btech_context_evaluation(context), player,
+                "You currently can't use your Left Arm to prop yourself up.");
+            return 0;
+          }
           break;
         case LARM:
-          DOCHECK0_CONTEXT(
-              context,
-              mech_section_has_recycling_weapon(mech, RARM) ||
-                  mech_section_recycle_ticks(mech, RARM) ||
-                  mech_section_is_destroyed(mech, RARM),
-              "Your currently can't use your Right Arm to prop yourself up.");
+          if (mech_section_has_recycling_weapon(mech, RARM) ||
+              mech_section_recycle_ticks(mech, RARM) ||
+              mech_section_is_destroyed(mech, RARM)) {
+            mecha_notify(
+                btech_context_evaluation(context), player,
+                "Your currently can't use your Right Arm to prop yourself up.");
+            return 0;
+          }
           break;
         default:
-          DOCHECK0_CONTEXT(context,
-                           (mech_section_has_recycling_weapon(mech, RARM) ||
-                            mech_section_recycle_ticks(mech, RARM) ||
-                            mech_section_is_destroyed(mech, RARM)) &&
-                               (mech_section_has_recycling_weapon(mech, LARM) ||
-                                mech_section_recycle_ticks(mech, LARM) ||
-                                mech_section_is_destroyed(mech, LARM)),
-                           "You currently don't have any arms to spare to prop "
-                           "yourself up.");
+          if ((mech_section_has_recycling_weapon(mech, RARM) ||
+               mech_section_recycle_ticks(mech, RARM) ||
+               mech_section_is_destroyed(mech, RARM)) &&
+              (mech_section_has_recycling_weapon(mech, LARM) ||
+               mech_section_recycle_ticks(mech, LARM) ||
+               mech_section_is_destroyed(mech, LARM))) {
+            mecha_notify(btech_context_evaluation(context), player,
+                         "You currently don't have any arms to spare to prop "
+                         "yourself up.");
+            return 0;
+          }
         }
       }
     }
   }
 
   if (bsuit_has_friendly_riders(mech)) {
-    DOCHECK0_CONTEXT(
-        context,
-        ((section == CTORSO) || (section == RTORSO) || (section == LTORSO)),
-        "You cannot fire torso-mounted weapons while you have battlesuits on "
-        "you!");
+    if (((section == CTORSO) || (section == RTORSO) || (section == LTORSO))) {
+      mecha_notify(
+          btech_context_evaluation(context), player,
+          "You cannot fire torso-mounted weapons while you have battlesuits on "
+          "you!");
+      return 0;
+    }
   }
 
-  DOCHECK0_CONTEXT(context, conditions.dug_in && section != TURRET,
-                   "Only turret weapons are available while in cover.");
-  DOCHECK0_CONTEXT(
-      context,
-      weaptype == -2 || (mech_critical_temporary_failure(
-                             mech, section, critical) == FAIL_DESTROYED),
-      "The weapons system chirps: 'That weapon has been destroyed!'");
-  DOCHECK0_CONTEXT(context, MechWeapons[weaptype].special & AMS,
-                   "That weapon is defensive only!");
-  DOCHECK0_CONTEXT(context, argc > 3, "Invalid number of arguments!");
+  if (conditions.dug_in && section != TURRET) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Only turret weapons are available while in cover.");
+    return 0;
+  }
+  if (weaptype == -2 || (mech_critical_temporary_failure(
+                             mech, section, critical) == FAIL_DESTROYED)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "The weapons system chirps: 'That weapon has been destroyed!'");
+    return 0;
+  }
+  if (MechWeapons[weaptype].special & AMS) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That weapon is defensive only!");
+    return 0;
+  }
+  if (argc > 3) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number of arguments!");
+    return 0;
+  }
 
   if ((MechWeapons[weaptype].special & IDF) && mech_spotter_dbref(mech) != -1 &&
       mech_target_dbref(mech) == -1) {
@@ -282,12 +343,14 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
 
   /* We're set to look at a spotter, its a non-idf weapon. We should just not
    * fire */
-  DOCHECK0_CONTEXT(
-      context,
-      (mech_spotter_dbref(mech) != -1) &&
-          !(MechWeapons[weaptype].special & IDF),
-      "The weapon system chirps: 'Somone is spotting for you. Remove your "
-      "spotter to fire non-IDF weapons'");
+  if ((mech_spotter_dbref(mech) != -1) &&
+      !(MechWeapons[weaptype].special & IDF)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "The weapon system chirps: 'Somone is spotting for you. Remove your "
+        "spotter to fire non-IDF weapons'");
+    return 0;
+  }
 
   switch (argc) {
 
@@ -295,12 +358,16 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
   case 1:
 
     /* If its a coolant gun in heat mode we should shot our mech */
-    if (IsCoolant(weaptype) && (mode & HEAT_MODE)) {
+    if (weapon_catalogue_is_coolant(weaptype) && (mode & HEAT_MODE)) {
 
       /* Setting our mech as the target and the other parameters
        * as well */
       tempMech = mech;
-      DOCHECK0_CONTEXT(context, !tempMech, "Error in FireWeaponNumber routine");
+      if (!tempMech) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "Error in FireWeaponNumber routine");
+        return 0;
+      }
       enemyX = mech_position_real_x(tempMech);
       enemyY = mech_position_real_y(tempMech);
       enemyZ = mech_position_real_z(tempMech);
@@ -311,39 +378,54 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
 
     } else {
 
-      DOCHECK0_CONTEXT(context, !FindTargetXY(mech, &enemyX, &enemyY, &enemyZ),
-                       "You do not have a default target set!");
+      if (!FindTargetXY(mech, &enemyX, &enemyY, &enemyZ)) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "You do not have a default target set!");
+        return 0;
+      }
 
       if (mech_target_dbref(mech) != -1) {
 
         tempMech = btech_context_get_mech(context, mech_target_dbref(mech));
-        DOCHECK0_CONTEXT(context, !tempMech,
-                         "Error in FireWeaponNumber routine");
+        if (!tempMech) {
+          mecha_notify(btech_context_evaluation(context), player,
+                       "Error in FireWeaponNumber routine");
+          return 0;
+        }
         mapx = mech_position_x(tempMech);
         mapy = mech_position_y(tempMech);
         range = mech_range_to(mech, tempMech);
         LOS = mech_los_check_unblocked(mech, tempMech, mapx, mapy, range);
 
         if (!(MechWeapons[weaptype].special & IDF)) {
-          DOCHECK0_CONTEXT(context, !LOS,
-                           "That target is not in your line of sight!");
-        } else if (MapIsUnderground(mech_map)) {
-          DOCHECK0_CONTEXT(
-              context, !LOS,
-              "That target is not in your direct line of sight, and "
-              "you cannot fire your IDF weapons underground!");
+          if (!LOS) {
+            mecha_notify(btech_context_evaluation(context), player,
+                         "That target is not in your line of sight!");
+            return 0;
+          }
+        } else if (battle_map_is_underground(mech_map)) {
+          if (!LOS) {
+            mecha_notify(btech_context_evaluation(context), player,
+                         "That target is not in your direct line of sight, and "
+                         "you cannot fire your IDF weapons underground!");
+            return 0;
+          }
         }
         if (btech_context_idf_requires_spotter(context) &&
             (MechWeapons[weaptype].special & IDF) &&
             (mech_spotter_dbref(mech) == -1))
-          DOCHECK0_CONTEXT(context, !LOS,
-                           "That target is not in your direct line of sight"
-                           " and you do not have a spotter set!!");
+          if (!LOS) {
+            mecha_notify(btech_context_evaluation(context), player,
+                         "That target is not in your direct line of sight"
+                         " and you do not have a spotter set!!");
+            return 0;
+          }
       } else {
 
         /* default target is a hex */
         ishex = 1;
-        if (!sight && !IsArtillery(weaptype) && conditions.unit_target_lock) {
+        if (!sight && !weapon_catalogue_is_artillery(weaptype) &&
+            conditions.unit_target_lock) {
 
           /* look for enemies in the default hex cause they may have moved */
           if ((tempMech =
@@ -377,28 +459,43 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
         if (btech_context_idf_requires_spotter(context) &&
             (MechWeapons[weaptype].special & IDF) &&
             (mech_spotter_dbref(mech) == -1))
-          DOCHECK0_CONTEXT(context, !LOS,
-                           "That hex target is not in your direct line of sight"
-                           " and you do not have a spotter set!!");
+          if (!LOS) {
+            mecha_notify(btech_context_evaluation(context), player,
+                         "That hex target is not in your direct line of sight"
+                         " and you do not have a spotter set!!");
+            return 0;
+          }
 
-        if (!(IsArtillery(weaptype) || (MechWeapons[weaptype].special & IDF))) {
-          DOCHECK0_CONTEXT(context, !LOS,
-                           "That hex target is not in your line of sight!");
-        } else if (MapIsUnderground(mech_map)) {
-          DOCHECK0_CONTEXT(
-              context, !LOS,
-              "That target is not in your direct line of sight, and "
-              "you cannot fire your IDF weapons underground!");
+        if (!(weapon_catalogue_is_artillery(weaptype) ||
+              (MechWeapons[weaptype].special & IDF))) {
+          if (!LOS) {
+            mecha_notify(btech_context_evaluation(context), player,
+                         "That hex target is not in your line of sight!");
+            return 0;
+          }
+        } else if (battle_map_is_underground(mech_map)) {
+          if (!LOS) {
+            mecha_notify(btech_context_evaluation(context), player,
+                         "That target is not in your direct line of sight, and "
+                         "you cannot fire your IDF weapons underground!");
+            return 0;
+          }
         }
       }
 
       if (mech_class(mech) != CLASS_BSUIT) {
         MechWeaponArcCheck arc =
             mech_weapon_arc_check(mech, enemyX, enemyY, section, critical);
-        DOCHECK0_CONTEXT(context, arc == MECH_WEAPON_ARC_NOT_CONTROLLED,
-                         "That arc's weapons aren't under your control!");
-        DOCHECK0_CONTEXT(context, arc == MECH_WEAPON_ARC_OUTSIDE,
-                         "Default target is not in your weapons arc!");
+        if (arc == MECH_WEAPON_ARC_NOT_CONTROLLED) {
+          mecha_notify(btech_context_evaluation(context), player,
+                       "That arc's weapons aren't under your control!");
+          return 0;
+        }
+        if (arc == MECH_WEAPON_ARC_OUTSIDE) {
+          mecha_notify(btech_context_evaluation(context), player,
+                       "Default target is not in your weapons arc!");
+          return 0;
+        }
       }
     }
     break;
@@ -408,10 +505,17 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     targetID[0] = args[1][0];
     targetID[1] = args[1][1];
     target = FindTargetDBREFFromMapNumber(mech, targetID);
-    DOCHECK0_CONTEXT(context, target == -1,
-                     "That target is not in your line of sight!");
+    if (target == -1) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "That target is not in your line of sight!");
+      return 0;
+    }
     tempMech = btech_context_get_mech(context, target);
-    DOCHECK0_CONTEXT(context, !tempMech, "Error in FireWeaponNumber routine!");
+    if (!tempMech) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Error in FireWeaponNumber routine!");
+      return 0;
+    }
     enemyX = mech_position_real_x(tempMech);
     enemyY = mech_position_real_y(tempMech);
     enemyZ = mech_position_real_z(tempMech);
@@ -423,16 +527,25 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     LOS = mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
                                    mech_position_y(tempMech), range);
 
-    DOCHECK0_CONTEXT(context, !LOS,
-                     "That target is not in your line of sight!");
+    if (!LOS) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "That target is not in your line of sight!");
+      return 0;
+    }
 
     if (mech_class(mech) != CLASS_BSUIT) {
       MechWeaponArcCheck arc =
           mech_weapon_arc_check(mech, enemyX, enemyY, section, critical);
-      DOCHECK0_CONTEXT(context, arc == MECH_WEAPON_ARC_NOT_CONTROLLED,
-                       "That arc's weapons aren't under your control!");
-      DOCHECK0_CONTEXT(context, arc == MECH_WEAPON_ARC_OUTSIDE,
-                       "That target is not in your weapons arc!");
+      if (arc == MECH_WEAPON_ARC_NOT_CONTROLLED) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "That arc's weapons aren't under your control!");
+        return 0;
+      }
+      if (arc == MECH_WEAPON_ARC_OUTSIDE) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "That target is not in your weapons arc!");
+        return 0;
+      }
     }
     break;
 
@@ -442,11 +555,13 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     mapx = atoi(args[1]);
     mapy = atoi(args[2]);
     ishex = 1;
-    DOCHECK0_CONTEXT(context,
-                     !battle_map_coordinate_is_valid(mech_map, mapx, mapy),
-                     "Map coordinates out of range!");
+    if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Map coordinates out of range!");
+      return 0;
+    }
 
-    if (!sight && !IsArtillery(weaptype))
+    if (!sight && !weapon_catalogue_is_artillery(weaptype))
 
       /* look for enemies in that hex... */
       if ((tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 0))) {
@@ -465,10 +580,16 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     if (mech_class(mech) != CLASS_BSUIT) {
       MechWeaponArcCheck arc =
           mech_weapon_arc_check(mech, enemyX, enemyY, section, critical);
-      DOCHECK0_CONTEXT(context, arc == MECH_WEAPON_ARC_NOT_CONTROLLED,
-                       "That arc's weapons aren't under your control!");
-      DOCHECK0_CONTEXT(context, arc == MECH_WEAPON_ARC_OUTSIDE,
-                       "That hex target is not in your weapons arc!");
+      if (arc == MECH_WEAPON_ARC_NOT_CONTROLLED) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "That arc's weapons aren't under your control!");
+        return 0;
+      }
+      if (arc == MECH_WEAPON_ARC_OUTSIDE) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "That hex target is not in your weapons arc!");
+        return 0;
+      }
     }
 
     /* Don't check LOS for missile weapons */
@@ -476,9 +597,12 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
                       mech_position_real_z(mech), enemyX, enemyY, enemyZ);
     LOS = mech_los_check_unblocked(mech, tempMech, mapx, mapy, range);
 
-    if (!IsArtillery(weaptype))
-      DOCHECK0_CONTEXT(context, !LOS,
-                       "That hex target is not in your line of sight!");
+    if (!weapon_catalogue_is_artillery(weaptype))
+      if (!LOS) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "That hex target is not in your line of sight!");
+        return 0;
+      }
     break;
 
   default:
@@ -486,31 +610,45 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
   }
 
   if (tempMech) {
-    DOCHECK0_CONTEXT(context, IsArtillery(weaptype),
-                     "You can only target hexes with this kind of artillery.");
-    DOCHECK0_CONTEXT(context, mech_swarm_target(tempMech) == mech_dbref(mech),
-                     "You are unable to use your weapons against a 'swarmer!");
-    DOCHECK0_CONTEXT(context,
-                     mech_condition_summary(tempMech).stealth_armor_active &&
-                         ((mech_target_dbref(mech) != mech_dbref(tempMech)) ||
-                          mech_event_count(mech, EVENT_LOCK)),
-                     "You need a stable lock to fire on that target!");
-    DOCHECK0_CONTEXT(context,
-                     !IsCoolant(weaptype) &&
-                         mech_team(tempMech) == mech_team(mech) &&
-                         conditions.friendly_fire_safety,
-                     "You can't fire on a teammate with FFSafeties on!");
-    DOCHECK0_CONTEXT(context,
-                     !IsCoolant(weaptype) &&
-                         mech_team(tempMech) == mech_team(mech) &&
-                         battle_map_blocks_friendly_fire(mech_map),
-                     "Friendly Fire? I don't think so...");
-    DOCHECK0_CONTEXT(
-        context,
-        mech_class(tempMech) == CLASS_MW && mech_class(mech) != CLASS_MW &&
-            !conditions.player_killer,
-        "That's a living, breathing person! Switch off the safety first, "
-        "if you really want to assassinate the target.");
+    if (weapon_catalogue_is_artillery(weaptype)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You can only target hexes with this kind of artillery.");
+      return 0;
+    }
+    if (mech_swarm_target(tempMech) == mech_dbref(mech)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You are unable to use your weapons against a 'swarmer!");
+      return 0;
+    }
+    if (mech_condition_summary(tempMech).stealth_armor_active &&
+        ((mech_target_dbref(mech) != mech_dbref(tempMech)) ||
+         mech_event_count(mech, EVENT_LOCK))) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You need a stable lock to fire on that target!");
+      return 0;
+    }
+    if (!weapon_catalogue_is_coolant(weaptype) &&
+        mech_team(tempMech) == mech_team(mech) &&
+        conditions.friendly_fire_safety) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You can't fire on a teammate with FFSafeties on!");
+      return 0;
+    }
+    if (!weapon_catalogue_is_coolant(weaptype) &&
+        mech_team(tempMech) == mech_team(mech) &&
+        battle_map_blocks_friendly_fire(mech_map)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Friendly Fire? I don't think so...");
+      return 0;
+    }
+    if (mech_class(tempMech) == CLASS_MW && mech_class(mech) != CLASS_MW &&
+        !conditions.player_killer) {
+      mecha_notify(
+          btech_context_evaluation(context), player,
+          "That's a living, breathing person! Switch off the safety first, "
+          "if you really want to assassinate the target.");
+      return 0;
+    }
   }
 
   FireWeapon(mech, mech_map, tempMech, LOS, weaptype, weapnum, section,

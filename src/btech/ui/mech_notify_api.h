@@ -18,6 +18,12 @@
 typedef struct BattleMap BattleMap;
 typedef struct EvaluationContext EvaluationContext;
 
+typedef enum MechNotifyAudience {
+  MECHPILOT,
+  MECHSTARTED,
+  MECHALL,
+} MechNotifyAudience;
+
 typedef struct MechDisplayId {
   char text[SBUF_SIZE];
 } MechDisplayId;
@@ -52,6 +58,6 @@ void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message);
 void MapBroadcast(BattleMap *map, char *message);
 void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
                        BattleMap *mech_map, char *weapname, int IsHit);
-void mech_notify(Mech *mech, int type, const char *buffer);
-void mech_printf(Mech *mech, int type, const char *format, ...)
-    __attribute__((format(printf, 3, 4)));
+void mech_notify(Mech *mech, MechNotifyAudience audience, const char *buffer);
+void mech_printf(Mech *mech, MechNotifyAudience audience, const char *format,
+                 ...) __attribute__((format(printf, 3, 4)));

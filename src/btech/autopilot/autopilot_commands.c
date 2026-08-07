@@ -11,7 +11,6 @@
 #include "command_handlers_api.h"
 #include "eject_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
@@ -189,12 +188,12 @@ void auto_set_chasetarget_mode(Autopilot *autopilot, int mode) {
   case AUTO_CHASETARGET_ON:
 
     /* Start Chasing */
-    if (!ChasingTarget(autopilot))
-      StartChasingTarget(autopilot);
+    if (!autopilot_is_chasing_target(autopilot))
+      autopilot_chasing_target_set(autopilot, true);
 
     /* Reset this flag because we don't need it set */
-    if (WasChasingTarget(autopilot))
-      ForgetChasingTarget(autopilot);
+    if (autopilot_was_chasing_target(autopilot))
+      autopilot_chasing_target_memory_set(autopilot, false);
 
     /* Flags to reset */
     autopilot->chase_target = -10;
@@ -205,30 +204,30 @@ void auto_set_chasetarget_mode(Autopilot *autopilot, int mode) {
   case AUTO_CHASETARGET_OFF:
 
     /* Stop Chasing */
-    if (ChasingTarget(autopilot))
-      StopChasingTarget(autopilot);
+    if (autopilot_is_chasing_target(autopilot))
+      autopilot_chasing_target_set(autopilot, false);
 
     /* Reset this flag because we don't need it set */
-    if (WasChasingTarget(autopilot))
-      ForgetChasingTarget(autopilot);
+    if (autopilot_was_chasing_target(autopilot))
+      autopilot_chasing_target_memory_set(autopilot, false);
 
     break;
 
   case AUTO_CHASETARGET_REMEMBER:
 
     /* If we we had chasetarget on - turn it back on */
-    if (WasChasingTarget(autopilot)) {
+    if (autopilot_was_chasing_target(autopilot)) {
 
       /* Start chasing */
-      if (!ChasingTarget(autopilot))
-        StartChasingTarget(autopilot);
+      if (!autopilot_is_chasing_target(autopilot))
+        autopilot_chasing_target_set(autopilot, true);
 
       /* Reset the values */
       autopilot->chase_target = -10;
       autopilot->chasetarg_update_tick = AUTOPILOT_CHASETARG_UPDATE_TICK;
 
       /* Unset the flag because we don't need it now */
-      ForgetChasingTarget(autopilot);
+      autopilot_chasing_target_memory_set(autopilot, false);
     }
 
     break;
@@ -237,10 +236,10 @@ void auto_set_chasetarget_mode(Autopilot *autopilot, int mode) {
 
     /* If we are chasing a target turn this off
      * but save it */
-    if (ChasingTarget(autopilot)) {
+    if (autopilot_is_chasing_target(autopilot)) {
 
-      StopChasingTarget(autopilot);
-      RememberChasingTarget(autopilot);
+      autopilot_chasing_target_set(autopilot, false);
+      autopilot_chasing_target_memory_set(autopilot, true);
     }
 
     break;
@@ -283,19 +282,19 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
       autopilot->target_update_tick = AUTO_GUN_UPDATE_TICK;
 
       /* Check if assigned target flag on */
-      if (AssignedTarget(autopilot)) {
-        UnassignTarget(autopilot);
+      if (autopilot_has_assigned_target(autopilot)) {
+        autopilot_assigned_target_set(autopilot, false);
       }
 
       /* Get the AI going */
       if (!auto_command_prepare_unit(autopilot, mech))
         return;
 
-      if (Gunning(autopilot)) {
-        DoStopGun(autopilot);
+      if (autopilot_is_gunning(autopilot)) {
+        autopilot_gunning_stop(autopilot);
       }
 
-      DoStartGun(autopilot);
+      autopilot_gunning_start(autopilot);
 
     } else if (strcmp(args[0], "off") == 0) {
 
@@ -305,12 +304,12 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
       autopilot->target_update_tick = 0;
 
       /* Check if Assigned Target Flag on */
-      if (AssignedTarget(autopilot)) {
-        UnassignTarget(autopilot);
+      if (autopilot_has_assigned_target(autopilot)) {
+        autopilot_assigned_target_set(autopilot, false);
       }
 
-      if (Gunning(autopilot)) {
-        DoStopGun(autopilot);
+      if (autopilot_is_gunning(autopilot)) {
+        autopilot_gunning_stop(autopilot);
       }
 
     } else {
@@ -330,7 +329,7 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
     if (strcmp(args[0], "target") == 0) {
 
       /* Read in the 2nd argument - the target */
-      if (Readnum(target_dbref, args[1])) {
+      if ((!((target_dbref) = atoi(args[1])) && strcmp((args[1]), "0"))) {
 
         /* Invalid command */
         snprintf(error_buf, MBUF_SIZE,
@@ -375,19 +374,19 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
       autopilot->target_update_tick = 0;
 
       /* Set the Assigned Flag */
-      if (!AssignedTarget(autopilot)) {
-        AssignTarget(autopilot);
+      if (!autopilot_has_assigned_target(autopilot)) {
+        autopilot_assigned_target_set(autopilot, true);
       }
 
       /* Get the AI going */
       if (!auto_command_prepare_unit(autopilot, mech))
         return;
 
-      if (Gunning(autopilot)) {
-        DoStopGun(autopilot);
+      if (autopilot_is_gunning(autopilot)) {
+        autopilot_gunning_stop(autopilot);
       }
 
-      DoStartGun(autopilot);
+      autopilot_gunning_start(autopilot);
 
     } else {
 
@@ -435,7 +434,7 @@ void auto_command_pickup(Autopilot *autopilot, Mech *mech) {
 
   /* Read in the argument */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if (Readnum(target, argument)) {
+  if ((!((target) = atoi(argument)) && strcmp((argument), "0"))) {
 
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld given bad"
@@ -483,7 +482,7 @@ void auto_command_speed(Autopilot *autopilot) {
 
   /* Read in the argument */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if (Readnum(speed, argument)) {
+  if ((!((speed) = atoi(argument)) && strcmp((argument), "0"))) {
 
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld given bad"
@@ -529,7 +528,7 @@ void auto_command_embark(Autopilot *autopilot, Mech *mech) {
 
   /* Read in the argument */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if (Readnum(target, argument)) {
+  if ((!((target) = atoi(argument)) && strcmp((argument), "0"))) {
 
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld given bad"

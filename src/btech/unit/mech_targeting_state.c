@@ -52,6 +52,10 @@ void mech_targeting_lock_mode_add(Mech *mech, int lock_mode) {
 
 DbRef mech_target_dbref(const Mech *mech) { return mech->rd.target; }
 
+void mech_target_dbref_set(Mech *mech, DbRef target) {
+  mech->rd.target = target;
+}
+
 DbRef mech_charge_target_dbref(const Mech *mech) { return mech->rd.chgtarget; }
 
 void mech_charge_target_dbref_set(Mech *mech, DbRef target) {
@@ -97,6 +101,10 @@ void mech_fire_adjustment_increment(Mech *mech) { mech->rd.fire_adjustment++; }
 int mech_fire_adjustment(const Mech *mech) { return mech->rd.fire_adjustment; }
 
 int mech_targeting_computer_type(const Mech *mech) { return mech->ud.targcomp; }
+
+void mech_targeting_computer_type_set(Mech *mech, int type) {
+  mech->ud.targcomp = type;
+}
 
 int mech_aim_section(const Mech *mech) { return mech->rd.aim; }
 

@@ -32,7 +32,6 @@
 #include "btech_channel.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_bits_api.h"
 #include "map_obj_api.h"
@@ -40,7 +39,6 @@
 #include "map_units_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
@@ -347,26 +345,46 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
   if (!map)
     return;
 
-#define READINT(from, to)                                                      \
-  DOCHECK_CONTEXT(battle_map_context(map), Readnum(to, from), "Invalid number!")
-
   argc = mech_parseattributes(buffer, args, 6);
-  DOCHECK_CONTEXT(battle_map_context(map), argc < 4 || argc > 5,
-                  "Invalid arguments!");
-  READINT(args[0], x);
-  READINT(args[1], y);
-  READINT(args[3], str);
+  if (argc < 4 || argc > 5) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid arguments!");
+    return;
+  }
+  if ((!((x) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid number!");
+    return;
+  }
+  if ((!((y) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid number!");
+    return;
+  }
+  if ((!((str) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid number!");
+    return;
+  }
 
   if (argc == 5)
-    READINT(args[4], extra);
+    if ((!((extra) = atoi(args[4])) && strcmp((args[4]), "0"))) {
+      mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                   "Invalid number!");
+      return;
+    }
 
-  DOCHECK_CONTEXT(battle_map_context(map),
-                  (type = compare_array(mine_type_names, args[2])) < 0,
-                  "Invalid mine type!");
-  DOCHECK_CONTEXT(
-      battle_map_context(map),
-      !((x >= 0) && (x < map->map_width) && (y >= 0) && (y < map->map_height)),
-      "X,Y out of range!");
+  if ((type = compare_array(mine_type_names, args[2])) < 0) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid mine type!");
+    return;
+  }
+  if (!((x >= 0) && (x < map->map_width) && (y >= 0) &&
+        (y < map->map_height))) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "X,Y out of range!");
+    return;
+  }
 
   bzero(&foo, sizeof(foo));
   foo.x = x;
@@ -408,20 +426,31 @@ void mine_field_scan(DbRef player, Mech *mech, float range, int x, int y) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   MapObject *o;
 
-  DOCHECK_CONTEXT(mech_context(mech), !is_mine_hex(map, x, y),
-                  "You see nothing else of interest in the hex, either.");
+  if (!is_mine_hex(map, x, y)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You see nothing else of interest in the hex, either.");
+    return;
+  }
 
   for (o = map->MapObject[TYPE_MINE]; o; o = o->next)
     if (o->x == x && o->y == y)
       break;
 
-  DOCHECK_CONTEXT(mech_context(mech), !o,
-                  "You see nothing else of interest in the hex, either.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  btech_random_range(mech_context(mech), 2, 9) < ((int)range),
-                  "You see nothing else of interest in the hex, either.");
-  DOCHECK_CONTEXT(mech_context(mech), !MadePerceptionRoll(mech, 0),
-                  "You see nothing else of interest in the hex, either.");
+  if (!o) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You see nothing else of interest in the hex, either.");
+    return;
+  }
+  if (btech_random_range(mech_context(mech), 2, 9) < ((int)range)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You see nothing else of interest in the hex, either.");
+    return;
+  }
+  if (!MadePerceptionRoll(mech, 0)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You see nothing else of interest in the hex, either.");
+    return;
+  }
   mech_notify(mech, MECHALL,
               "Small bomblets litter the hex, interesting... You vaguely "
               "recall them from some class or other.");

@@ -1,3 +1,6 @@
+#include "mech_equipment_api.h"
+#include "mech_heat_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_internal.h"
 
 #ifdef BT_CALCULATE_BV
@@ -93,20 +96,20 @@ float Calculate_Defensive_BV(Mech *mech) {
    */
   engine_mod = 1.00;
 
-  if (MechSpecials(mech) & LE_TECH)
+  if (((mech)->rd.specials) & LE_TECH)
     engine_mod = 0.75;
 
-  if (MechSpecials(mech) & XL_TECH) {
-    if (MechSpecials(mech) & CLAN_TECH)
+  if (((mech)->rd.specials) & XL_TECH) {
+    if (((mech)->rd.specials) & CLAN_TECH)
       engine_mod = 0.75;
     else
       engine_mod = 0.50;
   }
 
-  if (MechSpecials(mech) & XXL_TECH)
+  if (((mech)->rd.specials) & XXL_TECH)
     engine_mod = 0.50;
 
-  if (MechType(mech) != CLASS_MECH)
+  if (((mech)->ud.type) != CLASS_MECH)
     engine_mod = 1.00;
 
   Calc_AddDefBV(mech, &defbv, "Internal/Engine",
@@ -118,10 +121,10 @@ float Calculate_Defensive_BV(Mech *mech) {
    * Heavy Duty Modifier = 1.0
    * Everything Else     = 0.5
    */
-  if (MechType(mech) == CLASS_MECH)
+  if (((mech)->ud.type) == CLASS_MECH)
     Calc_AddDefBV(mech, &defbv, "Gyro (Mech Only)",
-                  MechTons(mech) *
-                      (MechSpecials2(mech) & HDGYRO_TECH ? 1.0 : 0.5));
+                  ((mech)->ud.tons) *
+                      (((mech)->rd.specials2) & HDGYRO_TECH ? 1.0 : 0.5));
 
   /* DEFENSIVE ITEMS/WEAPONS
    * All Defensive items at their BV value (ECM, A-Pod, B-Pod, BAP, AMS, etc)
@@ -129,9 +132,9 @@ float Calculate_Defensive_BV(Mech *mech) {
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     for (ii = 0; ii < NUM_CRITICALS; ii++) {
-      part = GetPartType(mech, i, ii);
-      if (IsSpecial(part)) {
-        switch (Special2I(part)) {
+      part = mech_critical_part_type(mech, i, ii);
+      if (equipment_is_special(part)) {
+        switch (special_from_equipment_index(part)) {
         case ECM:
           /* Checking for a full System. Mechas are 2 crits per full system */
           ecm_count++;
@@ -145,32 +148,32 @@ float Calculate_Defensive_BV(Mech *mech) {
         }
       } /* End IfSpecial */
 
-      if (IsAmmo(part)) {
-        weapindx = Ammo2WeaponI(part);
+      if (equipment_is_ammunition(part)) {
+        weapindx = ammunition_to_weapon_index(part);
         if (MechWeapons[weapindx].special & AMS) {
           Calc_AddDefBV(mech, &defbv, "AMS Ammo",
                         MechWeapons[weapindx].ammo_bv);
         }
-        if (MechType(mech) == CLASS_MECH) {
+        if (((mech)->ud.type) == CLASS_MECH) {
           if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) &&
-              (MechSpecials(mech) & CLAN_TECH)) {
+              (((mech)->rd.specials) & CLAN_TECH)) {
 
             Calc_SubDefBV(mech, &defbv, "Explosive Ammo", 15.0);
 
-          } else if ((MechSpecials(mech) & (XL_TECH | XXL_TECH))) {
+          } else if ((((mech)->rd.specials) & (XL_TECH | XXL_TECH))) {
 
             Calc_SubDefBV(mech, &defbv, "Exp Ammo in XL/XXL", 15.0);
 
           } else if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) ||
-                     !(MechSections(mech)[i].config & CASE_TECH)) {
+                     !(((mech)->ud.sections)[i].config & CASE_TECH)) {
 
             Calc_SubDefBV(mech, &defbv, "Exp Ammo Fusion/!CASE", 15.0);
           }
         }
       } /* End IsAmmo */
 
-      if (IsWeapon(part)) {
-        weapindx = Weapon2I(part);
+      if (equipment_is_weapon(part)) {
+        weapindx = weapon_from_equipment_index(part);
         if (MechWeapons[weapindx].special & A_POD) {
           Calc_AddDefBV(mech, &defbv, "A POD",
                         mech_weapon_battle_value(mech, weapindx));
@@ -185,24 +188,24 @@ float Calculate_Defensive_BV(Mech *mech) {
                                 }
         */
         if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) &&
-            (MechSpecials(mech) & CLAN_TECH)) {
+            (((mech)->rd.specials) & CLAN_TECH)) {
           if (MechWeapons[weapindx].special & GAUSS) {
             Calc_SubDefBV(mech, &defbv, "Gauss Crit", 1.0);
           }
-        } else if ((MechSpecials(mech) & (XL_TECH | XXL_TECH))) {
+        } else if ((((mech)->rd.specials) & (XL_TECH | XXL_TECH))) {
           if (MechWeapons[weapindx].special & GAUSS) {
             Calc_SubDefBV(mech, &defbv, "Gauss Crit XL/XXL", 1.0);
           }
         } else if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) &&
-                   !(MechSections(mech)[i].config & CASE_TECH)) {
+                   !(((mech)->ud.sections)[i].config & CASE_TECH)) {
           if (MechWeapons[weapindx].special & GAUSS) {
             Calc_SubDefBV(mech, &defbv, "Gauss Crit !Case", 1.0);
           }
         } else if ((((i == RARM) &&
-                     !(MechSections(mech)[RTORSO].config & CASE_TECH)) ||
+                     !(((mech)->ud.sections)[RTORSO].config & CASE_TECH)) ||
                     ((i == LARM) &&
-                     !(MechSections(mech)[LTORSO].config & CASE_TECH))) &&
-                   !(MechSpecials(mech) & (XL_TECH | XXL_TECH))) {
+                     !(((mech)->ud.sections)[LTORSO].config & CASE_TECH))) &&
+                   !(((mech)->rd.specials) & (XL_TECH | XXL_TECH))) {
           if (MechWeapons[weapindx].special & GAUSS) {
             Calc_SubDefBV(mech, &defbv, "Gauss Crit Fusion/!Case", 1.0);
           }
@@ -215,20 +218,20 @@ float Calculate_Defensive_BV(Mech *mech) {
 
   /* TODO: Angel ECM, Bloodhound, Light_BAP */
 
-  if ((((ecm_count / 2) > 0) && (MechType(mech) == CLASS_MECH)) ||
-      ((ecm_count > 0) && (MechType(mech) != CLASS_MECH)) ||
-      ((ecm_count > 0) && (MechType(mech) == CLASS_MECH) &&
-       (MechSpecials(mech) &
+  if ((((ecm_count / 2) > 0) && (((mech)->ud.type) == CLASS_MECH)) ||
+      ((ecm_count > 0) && (((mech)->ud.type) != CLASS_MECH)) ||
+      ((ecm_count > 0) && (((mech)->ud.type) == CLASS_MECH) &&
+       (((mech)->rd.specials) &
         CLAN_TECH))) { /* ECM is 2 crits for mechas, one Crit for Clan Mechas.
                           One System = 61 BV */
 
     Calc_AddDefBV(mech, &defbv, "ECM", 61.0);
   }
 
-  if ((((bap_count / 2) > 0) && (MechType(mech) == CLASS_MECH)) ||
-      ((bap_count > 0) && (MechType(mech) != CLASS_MECH)) ||
-      ((bap_count > 0) && (MechType(mech) == CLASS_MECH) &&
-       (MechSpecials(mech) &
+  if ((((bap_count / 2) > 0) && (((mech)->ud.type) == CLASS_MECH)) ||
+      ((bap_count > 0) && (((mech)->ud.type) != CLASS_MECH)) ||
+      ((bap_count > 0) && (((mech)->ud.type) == CLASS_MECH) &&
+       (((mech)->rd.specials) &
         CLAN_TECH))) { /* BAP is 2 crits for mechas, one Crit for Clan Mechas.
                           One System = 10 BV */
 
@@ -239,21 +242,21 @@ float Calculate_Defensive_BV(Mech *mech) {
   /* Mainly for vehicles. Chart on Techmanual, Page 316 */
   /* We're doing a reverse on the values to make the addtion easy */
 
-  if (MechMove(mech) == MOVE_TRACK)
+  if (((mech)->ud.move) == MOVE_TRACK)
     Calc_SubDefBV(mech, &defbv, "UnitType Tracked", defbv * 0.1);
 
-  if (MechMove(mech) == MOVE_WHEEL)
+  if (((mech)->ud.move) == MOVE_WHEEL)
     Calc_SubDefBV(mech, &defbv, "UnitType Wheeled", defbv * 0.2);
 
-  if (MechMove(mech) == MOVE_HOVER)
+  if (((mech)->ud.move) == MOVE_HOVER)
     Calc_SubDefBV(mech, &defbv, "UnitType Hover", defbv * 0.3);
 
-  if ((MechMove(mech) == MOVE_SUB || MechMove(mech) == MOVE_FOIL ||
-       MechMove(mech) == MOVE_HULL))
-    if (MechMove(mech) != MOVE_HOVER)
+  if ((((mech)->ud.move) == MOVE_SUB || ((mech)->ud.move) == MOVE_FOIL ||
+       ((mech)->ud.move) == MOVE_HULL))
+    if (((mech)->ud.move) != MOVE_HOVER)
       Calc_SubDefBV(mech, &defbv, "UnitType Naval", defbv * 0.4);
 
-  if (MechMove(mech) == MOVE_VTOL)
+  if (((mech)->ud.move) == MOVE_VTOL)
     Calc_SubDefBV(mech, &defbv, "UnitType VTOL", defbv * 0.3);
 
   /* TODO: Airship, Aero (DS is 1.0, no need) */
@@ -266,18 +269,19 @@ float Calculate_Defensive_BV(Mech *mech) {
    */
 
   /* Determine base mp */
-  jump_mp = (int)(MechJumpSpeed(mech) / MP1);
-  run_mp = (int)(MMaxSpeed(mech) / MP1);
+  jump_mp = (int)(((mech)->rd.jumpspeed) / MP1);
+  run_mp = (int)(mech_effective_maximum_speed(mech) / MP1);
 
-  if (MechSpecials(mech) & TRIPLE_MYOMER_TECH)
-    run_mp = ceil((rint((MMaxSpeed(mech) / 1.5) / MP1) + 1) * 1.5);
+  if (((mech)->rd.specials) & TRIPLE_MYOMER_TECH)
+    run_mp = ceil((rint((mech_effective_maximum_speed(mech) / 1.5) / MP1) + 1) *
+                  1.5);
 
-  if (MechSpecials(mech) & MASC_TECH) {
-    if (MechSpecials2(mech) & SUPERCHARGER_TECH) {
+  if (((mech)->rd.specials) & MASC_TECH) {
+    if (((mech)->rd.specials2) & SUPERCHARGER_TECH) {
       run_mp = ((run_mp * 2) / 3) * 2.5; /* walk mp * 2.5, round down */
     }
     run_mp = ((run_mp * 2) / 3) * 2; /* 2x walk mp */
-  } else if (MechSpecials2(mech) & SUPERCHARGER_TECH) {
+  } else if (((mech)->rd.specials2) & SUPERCHARGER_TECH) {
     run_mp = ((run_mp * 2) / 3) * 2; /* 2x walk mp */
   }
 
@@ -298,8 +302,8 @@ float Calculate_Defensive_BV(Mech *mech) {
   if (run_mp == 1 || run_mp == 2)
     move_mod = 0;
 
-  if (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_VTOL ||
-      MechType(mech) == CLASS_AERO)
+  if (((mech)->ud.type) == CLASS_BSUIT || ((mech)->ud.type) == CLASS_VTOL ||
+      ((mech)->ud.type) == CLASS_AERO)
     /* vtol/aero/suit = +1 move mod */
     move_mod++;
 
@@ -308,7 +312,7 @@ float Calculate_Defensive_BV(Mech *mech) {
 
   /* TODO: Add Camo/BA adjustments (TechManual, p315) */
 
-  if (MechSpecials(mech) & STEALTH_ARMOR_TECH)
+  if (((mech)->rd.specials) & STEALTH_ARMOR_TECH)
     move_mod = move_mod + 2;
 
   def_factor = (move_mod * .1);
@@ -343,13 +347,13 @@ float Calculate_Offensive_BV(Mech *mech) {
 
   /* First Find Heat Efficiency */
 
-  jump_mp = (int)(MechJumpSpeed(mech) / MP1);
-  heat_sinks = MechActiveNumsinks(mech);
+  jump_mp = (int)(((mech)->rd.jumpspeed) / MP1);
+  heat_sinks = mech_active_heat_sinks(mech);
   heat_efficiency = 6 + heat_sinks - (jump_mp > 2 ? jump_mp : 2);
 
   /* Let's Gather Weapons First*/
   for (i = 0; i < NUM_SECTIONS; i++) {
-    count = FindWeapons(mech, i, weaparray, weapdata, critical);
+    count = FindWeapons_Advanced(mech, i, weaparray, weapdata, critical, 1);
     if (count <= 0) {
       continue;
     }
@@ -403,7 +407,7 @@ float Calculate_Offensive_BV(Mech *mech) {
 
   /* TODO: Add Tonnage */
 
-  Calc_AddOffBV(mech, &offbv, "MechTonnage", MechTons(mech));
+  Calc_AddOffBV(mech, &offbv, "MechTonnage", ((mech)->ud.tons));
 
   /* TODO: Speed Factor */
 

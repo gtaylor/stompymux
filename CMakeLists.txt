@@ -261,8 +261,59 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_terrain COMMAND btech_terrain_test)
 
+  add_executable(btech_value_helpers_test tests/btech_value_helpers.c)
+  target_compile_definitions(btech_value_helpers_test PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(btech_value_helpers_test PRIVATE btmux_options)
+  target_include_directories(btech_value_helpers_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_value_helpers COMMAND btech_value_helpers_test)
+
+  add_executable(btech_caller_control_test tests/btech_caller_control.c
+    ${BTECH_SOURCE_DIR}/ui/mech_notify_radio_config.c
+    ${BTECH_SOURCE_DIR}/unit/mech_identity_state.c
+    ${BTECH_SOURCE_DIR}/unit/mech_radio_state.c)
+  target_compile_definitions(btech_caller_control_test PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_caller_control_test PRIVATE -ffunction-sections)
+  target_link_options(btech_caller_control_test PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_caller_control_test PRIVATE btmux_options)
+  target_include_directories(btech_caller_control_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_caller_control COMMAND btech_caller_control_test)
+
+  add_executable(btech_repair_payload_test tests/btech_repair_payload.c
+    ${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+  target_compile_definitions(btech_repair_payload_test PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(btech_repair_payload_test PRIVATE btmux_options)
+  target_include_directories(btech_repair_payload_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_repair_payload COMMAND btech_repair_payload_test)
+
+  add_executable(btech_script_descriptors_test
+    tests/btech_script_descriptors.c)
+  target_compile_definitions(btech_script_descriptors_test
+    PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(btech_script_descriptors_test PRIVATE btmux_options)
+  target_include_directories(btech_script_descriptors_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_script_descriptors COMMAND btech_script_descriptors_test)
+
   add_executable(btech_lifecycle_test tests/btech_lifecycle.c
-    ${BTECH_SOURCE_DIR}/unit/mech_lifecycle.c)
+    ${BTECH_SOURCE_DIR}/unit/mech_lifecycle.c
+    ${BTECH_SOURCE_DIR}/unit/mech_crew_state.c
+    ${BTECH_SOURCE_DIR}/unit/mech_targeting_state.c
+    ${BTECH_SOURCE_DIR}/unit/mech_sensor_state.c)
   target_compile_definitions(btech_lifecycle_test PRIVATE BTECH_INTERNAL=1)
   target_compile_options(btech_lifecycle_test PRIVATE -ffunction-sections)
   target_link_options(btech_lifecycle_test PRIVATE -Wl,--gc-sections)
@@ -285,8 +336,23 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_targeting COMMAND btech_targeting_test)
 
+  add_executable(btech_operator_systems_test tests/btech_operator_systems.c
+    ${BTECH_SOURCE_DIR}/unit/mech_crew_state.c
+    ${BTECH_SOURCE_DIR}/unit/mech_electronics_state.c
+    ${BTECH_SOURCE_DIR}/unit/mech_network_state.c)
+  target_compile_definitions(btech_operator_systems_test PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(btech_operator_systems_test PRIVATE btmux_options)
+  target_include_directories(btech_operator_systems_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_operator_systems COMMAND btech_operator_systems_test)
+
   add_executable(btech_parts_test tests/btech_parts.c
-    ${BTECH_SOURCE_DIR}/unit/mech_parts.c)
+    ${BTECH_SOURCE_DIR}/unit/mech_classification_state.c
+    ${BTECH_SOURCE_DIR}/unit/mech_parts.c
+    ${BTECH_SOURCE_DIR}/unit/mech_specification_state.c)
   target_compile_definitions(btech_parts_test PRIVATE BTECH_INTERNAL=1)
   target_compile_options(btech_parts_test PRIVATE -ffunction-sections)
   target_link_options(btech_parts_test PRIVATE -Wl,--gc-sections)

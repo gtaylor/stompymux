@@ -24,7 +24,6 @@ enum { BOMB_GRAVITY = 1 };
 #include "command_handlers_api.h"
 #include "coolmenu.h"
 #include "econ_cmds_api.h"
-#include "legacy_macros.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "math.h"
@@ -34,7 +33,6 @@ enum { BOMB_GRAVITY = 1 };
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -92,31 +90,33 @@ static void bomb_list(Mech *mech, DbRef player) {
                                       nullptr};
   CoolMenu *c = nullptr;
 
-  addline();
-  cent(tprintf("Bomb payload for %s:", mech_display_id(mech).text));
-  addline();
+  cool_menu_add_line(&c);
+  cool_menu_add_centered(
+      &c, tprintf("Bomb payload for %s:", mech_display_id(mech).text));
+  cool_menu_add_line(&c);
   for (i = 0; i < NUM_SECTIONS; i++) {
     fb = 1;
     for (j = 0; j < NUM_CRITICALS; j++)
-      if (IsBomb((k = mech_critical_part_type(mech, i, j)))) {
-        k = Bomb2I(k);
+      if (equipment_is_bomb((k = mech_critical_part_type(mech, i, j)))) {
+        k = bomb_from_equipment_index(k);
         if (fb) {
           ArmorStringFromIndex(i, location, mech_class(mech),
                                mech_movement_type(mech));
           fb = 0;
         }
         if (!bc) {
-          vsi(tprintf("#  %-20s %-5s %-5s %s", "Location", "Weight", "Power",
-                      "Type"));
+          cool_menu_add_text(&c, tprintf("#  %-20s %-5s %-5s %s", "Location",
+                                         "Weight", "Power", "Type"));
         }
-        vsi(tprintf("%-2d %-20s %5d %5d %s", bc + 1, location,
-                    bombs[k].weight / 10, bombs[k].aff, types[bombs[k].type]));
+        cool_menu_add_text(&c, tprintf("%-2d %-20s %5d %5d %s", bc + 1,
+                                       location, bombs[k].weight / 10,
+                                       bombs[k].aff, types[bombs[k].type]));
         bc++;
       }
   }
   if (!bc)
-    cent("No bombs installed.");
-  addline();
+    cool_menu_add_centered(&c, "No bombs installed.");
+  cool_menu_add_line(&c);
   ShowCoolMenu(btech_context_evaluation(mech_context(mech)), player, c);
   KillCoolMenu(c);
 }
@@ -247,12 +247,15 @@ static void bomb_drop(Mech *mech, DbRef player, int bn) {
   BombShot *s;
   BattleMap *map;
 
-  DOCHECK_CONTEXT(mech_context(mech), bn < 0,
-                  "Negative bomb number? Gimme a break.");
+  if (bn < 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Negative bomb number? Gimme a break.");
+    return;
+  }
   bn--;
   for (i = 0; i < NUM_SECTIONS; i++)
     for (j = 0; j < NUM_CRITICALS; j++)
-      if (IsBomb((k = mech_critical_part_type(mech, i, j))) &&
+      if (equipment_is_bomb((k = mech_critical_part_type(mech, i, j))) &&
           !mech_critical_is_destroyed(mech, i, j)) {
         if (bc == bn) {
           lloc = i;
@@ -260,16 +263,25 @@ static void bomb_drop(Mech *mech, DbRef player, int bn) {
         }
         bc++;
       }
-  DOCHECK_CONTEXT(mech_context(mech), !bc, "No bombs installed.");
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !(map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech))),
-      "You're on invalid map!");
-  DOCHECK_CONTEXT(mech_context(mech), bn < 0 || bn >= bc,
-                  "No bomb with such number installed! (See BOMB LIST)");
+  if (!bc) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "No bombs installed.");
+    return;
+  }
+  if (!(map =
+            btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're on invalid map!");
+    return;
+  }
+  if (bn < 0 || bn >= bc) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "No bomb with such number installed! (See BOMB LIST)");
+    return;
+  }
   mech_los_broadcast(mech,
                      "detaches a small object that starts falling down..");
-  k = Bomb2I(mech_critical_part_type(mech, lloc, lpos));
+  k = bomb_from_equipment_index(mech_critical_part_type(mech, lloc, lpos));
   mech_notify(mech, MECHALL, "The ship trembles as you detach a bomb..");
   t = bomb_calculate_destination(mech, &x, &y);
   ob = (int)t / 10;
@@ -307,26 +319,45 @@ void mech_bomb(DbRef player, void *data, char *buffer) {
   int argc;
   int bn;
 
-  cch(MECH_USUALSO);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !(argc = mech_parseattributes(buffer, args, 3)),
-                  "(At least) one option required.");
-  DOCHECK_CONTEXT(mech_context(mech), argc > 2, "Too many arguments!");
+  if (!common_checks(player, mech, MECH_USUALSO))
+    return;
+  if (!(argc = mech_parseattributes(buffer, args, 3))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "(At least) one option required.");
+    return;
+  }
+  if (argc > 2) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Too many arguments!");
+    return;
+  }
   if (!strcasecmp(args[0], "list")) {
     bomb_list(mech, player);
     return;
   }
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_landed(mech),
-                  "The craft is landed!");
+  if (mech_is_landed(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The craft is landed!");
+    return;
+  }
   if (!strcasecmp(args[0], "aim")) {
     bomb_aim(mech, player);
     return;
   }
-  DOCHECK_CONTEXT(mech_context(mech), strcasecmp(args[0], "drop"),
-                  "Invalid argument to BOMB!");
-  DOCHECK_CONTEXT(mech_context(mech), argc < 2,
-                  "The BOMB commands needs to know WHICH bomb to drop!");
-  DOCHECK_CONTEXT(mech_context(mech), Readnum(bn, args[1]),
-                  "Invalid bomb number!");
+  if (strcasecmp(args[0], "drop")) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid argument to BOMB!");
+    return;
+  }
+  if (argc < 2) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "The BOMB commands needs to know WHICH bomb to drop!");
+    return;
+  }
+  if ((!((bn) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid bomb number!");
+    return;
+  }
   bomb_drop(mech, player, bn);
 }

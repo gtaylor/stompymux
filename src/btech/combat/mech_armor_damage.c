@@ -23,7 +23,6 @@
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "eject_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
@@ -41,7 +40,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_ood_api.h"
 #include "mech_pickup_api.h"
@@ -144,8 +142,8 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
 
     /* Silly stuff */
     /*
-       SetSectArmor(wounded, hitloc, MAX(0, intDamage =
-       GetSectArmor(wounded, hitloc) - damage));
+       mech_section_armor_set(wounded, hitloc, MAX(0, intDamage =
+       mech_section_armor(wounded, hitloc) - damage));
        intDamage = abs(intDamage);
      */
 

@@ -1,4 +1,10 @@
+#include "mech_electronics_api.h"
+#include "mech_equipment_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "registry_api.h"
 #include "template_internal.h"
+#include "weapon_catalogue_api.h"
 
 static bool template_load_error(FILE *fp, Mech *mech, DbRef player,
                                 bool condition, bool global, const char *format,
@@ -20,7 +26,8 @@ static bool template_load_error(FILE *fp, Mech *mech, DbRef player,
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                        message);
   } else {
-    notify(btech_context_evaluation(mech->xcode.context), player, message);
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 message);
   }
 #else
   (void)mech;
@@ -58,12 +65,12 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   } else {
     ptr++;
   }
-  strncpy(MechType_Ref(mech), ptr, 25);
-  MechType_Ref(mech)[24] = '\0';
+  strncpy(((mech)->ud.mech_type), ptr, 25);
+  ((mech)->ud.mech_type)[24] = '\0';
 
   silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHREF,
-                   MechType_Ref(mech));
-  MechRadioType(mech) = 0;
+                   ((mech)->ud.mech_type));
+  mech_radio_configuration_set(mech, 0);
   while (fgets(line, 512, fp)) {
     line[strlen(line) - 1] = '\0';
     j = line;
@@ -91,7 +98,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       selection = 9999;
     else if ((selection = compare_array(load_cmds, cmd)) == -1) {
       /* Initial premise: we will have a mech type before we get to this */
-      section = find_section(cmd, MechType(mech), MechMove(mech));
+      section = find_section(cmd, ((mech)->ud.type), ((mech)->ud.move));
       if (template_load_error(
               fp, mech, player, section == -1 && !ok_count, false,
               "New template loading system: %s is invalid template file.",
@@ -103,7 +110,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                               cmd)) {
         return -1;
       }
-      MechSections(mech)[section].recycle = 0;
+      ((mech)->ud.sections)[section].recycle = 0;
       ok_count++;
       continue;
     }
@@ -111,100 +118,108 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     switch (selection) {
     case 0: /* Reference */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      if (strcmp(tmpc, MechType_Ref(mech))) {
+      if (strcmp(tmpc, ((mech)->ud.mech_type))) {
         btech_channel_send(
             mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Template %s has Reference <-> Filename mismatch : %s <-> "
                     "%s - It is automatically fixed by saving again.",
-                    filename, tmpc, MechType_Ref(mech)));
-        tmpc = MechType_Ref(mech);
+                    filename, tmpc, ((mech)->ud.mech_type)));
+        tmpc = ((mech)->ud.mech_type);
       }
       silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHREF,
                        tmpc);
-      strcpy(MechType_Ref(mech), tmpc);
+      strcpy(((mech)->ud.mech_type), tmpc);
       break;
     case 1: /* Type */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      MechType(mech) = compare_array(mech_types, tmpc);
-      if (template_load_error(fp, mech, player, MechType(mech) == -1, true,
+      ((mech)->ud.type) = compare_array(mech_types, tmpc);
+      if (template_load_error(fp, mech, player, ((mech)->ud.type) == -1, true,
                               "Error while loading: Type %s not found.",
                               tmpc)) {
         return -1;
       }
-      AeroFuel(mech) = AeroFuelOrig(mech) = DefaultFuelByType(mech);
+      ((mech)->ud.fuel) = ((mech)->ud.fuel_orig) = DefaultFuelByType(mech);
       break;
     case 2: /* Movement Type */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      MechMove(mech) = compare_array(move_types, tmpc);
-      if (template_load_error(fp, mech, player, MechMove(mech) == -1, true,
+      ((mech)->ud.move) = compare_array(move_types, tmpc);
+      if (template_load_error(fp, mech, player, ((mech)->ud.move) == -1, true,
                               "Error while loading: Type %s not found.",
                               tmpc)) {
         return -1;
       }
       break;
     case 3: /* Tons */
-      MechTons(mech) = atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      ((mech)->ud.tons) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 4: /* Tac_Range */
-      MechTacRange(mech) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      mech_tactical_range_set(
+          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 5: /* LRS_Range */
-      MechLRSRange(mech) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      mech_long_range_sensor_range_set(
+          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 6: /* Radio Range */
-      MechRadioRange(mech) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      mech_radio_range_set(
+          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 7: /* Scan Range */
-      MechScanRange(mech) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      mech_scanner_range_set(
+          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 8: /* Heat Sinks */
-      MechRealNumsinks(mech) =
+      ((mech)->ud.numsinks) =
           atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 9: /* Max Speed */
       mech_max_speed_set(
           mech, atof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
-      TemplateMaxSpeed(mech) = MechMaxSpeed(mech);
+      ((mech)->ud.template_maxspeed) = ((mech)->ud.maxspeed);
       break;
     case 10: /* Specials */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
 
       if (CheckSpecialsList(specials, specials2, tmpc)) {
-        MechSpecials(mech) |= BuildBitVectorNoErr(specials, tmpc);
-        MechSpecials2(mech) |= BuildBitVectorNoErr(specials2, tmpc);
+        ((mech)->rd.specials) |= BuildBitVectorNoErr(specials, tmpc);
+        ((mech)->rd.specials2) |= BuildBitVectorNoErr(specials2, tmpc);
       } else if (template_load_error(
-                     fp, mech, player, MechSpecials(mech) == -1, true,
+                     fp, mech, player, ((mech)->rd.specials) == -1, true,
                      "Error while loading: Invalid specials - %s.", tmpc)) {
         return -1;
       }
       break;
     case 11: /* Armor */
-      SetSectOArmor(mech, section,
-                    atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
-      SetSectArmor(mech, section, GetSectOArmor(mech, section));
+      mech_section_original_armor_set(
+          mech, section,
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      mech_section_armor_set(mech, section,
+                             mech_section_original_armor(mech, section));
       break;
     case 12: /* Internals */
-      SetSectOInt(mech, section,
-                  atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
-      SetSectInt(mech, section, GetSectOInt(mech, section));
+      mech_section_original_internal_set(
+          mech, section,
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      mech_section_internal_set(mech, section,
+                                mech_section_original_internal(mech, section));
       break;
     case 13: /* Rear */
-      SetSectORArmor(mech, section,
-                     atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
-      SetSectRArmor(mech, section, GetSectORArmor(mech, section));
+      mech_section_original_rear_armor_set(
+          mech, section,
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      mech_section_rear_armor_set(
+          mech, section, mech_section_original_rear_armor(mech, section));
       break;
     case 14: /* Config */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      MechSections(mech)[section].config =
+      ((mech)->ud.sections)[section].config =
           BuildBitVector(section_configs, tmpc) &
           ~(CASE_TECH | SECTION_DESTROYED);
       if (template_load_error(
-              fp, mech, player, MechSections(mech)[section].config == -1, true,
-              "Error while loading: Invalid location config: %s.", tmpc)) {
+              fp, mech, player, ((mech)->ud.sections)[section].config == -1,
+              true, "Error while loading: Invalid location config: %s.",
+              tmpc)) {
         return -1;
       }
       break;
@@ -229,21 +244,22 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                               true, "Unable to find %s", buf)) {
         return -1;
       }
-      SetPartType(mech, section, critical, type);
+      mech_critical_part_type_set(mech, section, critical, type);
       if (!mech->xcode.context->configuration->btech_parts)
         brand = 0;
-      SetPartBrand(mech, section, critical, brand);
-      SetPartDesiredAmmoLoc(mech, section, critical, -1);
+      mech_critical_brand_set(mech, section, critical, brand);
+      mech_critical_desired_ammo_section_set(mech, section, critical, -1);
 
-      if (IsWeapon(type)) {
+      if (equipment_is_weapon(type)) {
         /* Thanks to legacy of past, we _do_ have to do this.. sniff */
-        if (IsAMS(Weapon2I(type))) {
-          if (MechWeapons[Weapon2I(type)].special & CLAT)
-            MechSpecials(mech) |= CL_ANTI_MISSILE_TECH;
+        if (weapon_catalogue_is_anti_missile(
+                weapon_from_equipment_index(type))) {
+          if (MechWeapons[weapon_from_equipment_index(type)].special & CLAT)
+            ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
           else
-            MechSpecials(mech) |= IS_ANTI_MISSILE_TECH;
+            ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
         }
-        SetPartData(mech, section, critical, 0);
+        mech_critical_data_set(mech, section, critical, 0);
         line2 = one_arg(line2, buf); /* Don't need the '-' */
         line2 = one_arg(line2, buf);
 
@@ -267,17 +283,17 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         if (wAmmoModes < 0)
           wAmmoModes = 0;
 
-        GetPartFireMode(mech, section, critical) = wFireModes;
-        GetPartAmmoMode(mech, section, critical) = wAmmoModes;
+        mech_critical_fire_mode_set(mech, section, critical, wFireModes);
+        mech_critical_ammo_mode_set(mech, section, critical, wAmmoModes);
 
         line2 = one_arg(line2, buf);
         if (mech->xcode.context->configuration->btech_parts)
           if (atoi(buf)) {
-            SetPartBrand(mech, section, critical, atoi(buf));
+            mech_critical_brand_set(mech, section, critical, atoi(buf));
           }
-      } else if (IsAmmo(type)) {
+      } else if (equipment_is_ammunition(type)) {
         line2 = one_arg(line2, buf);
-        GetPartData(mech, section, critical) = atoi(buf);
+        mech_critical_data_set(mech, section, critical, atoi(buf));
         line2 = one_arg(line2, buf);
 
         /*              wFireModes = BuildBitVector(crit_fire_modes, buf); */
@@ -299,146 +315,151 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         if (wAmmoModes < 0)
           wAmmoModes = 0;
 
-        GetPartFireMode(mech, section, critical) = wFireModes;
-        GetPartAmmoMode(mech, section, critical) = wAmmoModes;
+        mech_critical_fire_mode_set(mech, section, critical, wFireModes);
+        mech_critical_ammo_mode_set(mech, section, critical, wAmmoModes);
 
-        if (GetPartData(mech, section, critical) <
+        if (mech_critical_data(mech, section, critical) <
             FullAmmo(mech, section, critical)) {
-          GetPartFireMode(mech, section, critical) |= HALFTON_MODE;
-          if (GetPartData(mech, section, critical) >
+          mech_critical_fire_mode_add(mech, section, critical, HALFTON_MODE);
+          if (mech_critical_data(mech, section, critical) >
               FullAmmo(mech, section, critical))
-            GetPartFireMode(mech, section, critical) &= ~HALFTON_MODE;
+            mech_critical_fire_mode_clear(mech, section, critical,
+                                          HALFTON_MODE);
         }
 
-        if (GetPartData(mech, section, critical) !=
+        if (mech_critical_data(mech, section, critical) !=
                 FullAmmo(mech, section, critical) &&
-            MechType(mech) != CLASS_MW && MechType(mech) != CLASS_BSUIT) {
+            ((mech)->ud.type) != CLASS_MW && ((mech)->ud.type) != CLASS_BSUIT) {
           btech_channel_send(
               mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
               tprintf("Invalid ammo crit for %s in #%ld %s (%d/%d)",
-                      MechWeapons[Ammo2I(type)].name, mech->mynum, filename,
-                      GetPartData(mech, section, critical),
+                      MechWeapons[ammunition_to_weapon_index(type)].name,
+                      mech->mynum, filename,
+                      mech_critical_data(mech, section, critical),
                       FullAmmo(mech, section, critical)));
-          SetPartData(mech, section, critical,
-                      FullAmmo(mech, section, critical));
+          mech_critical_data_set(mech, section, critical,
+                                 FullAmmo(mech, section, critical));
         }
       } else {
         if ((line2 = one_arg(line2, buf)))
-          GetPartData(mech, section, critical) = atoi(buf);
+          mech_critical_data_set(mech, section, critical, atoi(buf));
         else
-          GetPartData(mech, section, critical) = 0;
-        GetPartFireMode(mech, section, critical) = 0;
-        GetPartAmmoMode(mech, section, critical) = 0;
+          mech_critical_data_set(mech, section, critical, 0);
+        mech_critical_fire_mode_set(mech, section, critical, 0);
+        mech_critical_ammo_mode_set(mech, section, critical, 0);
         if ((line2 = one_arg(line2, buf)))
           if ((line2 = one_arg(line2, buf))) {
             if (mech->xcode.context->configuration->btech_parts)
               if (atoi(buf)) {
-                SetPartBrand(mech, section, critical, atoi(buf));
+                mech_critical_brand_set(mech, section, critical, atoi(buf));
               }
           }
       }
       for (x = (lpos + 1); x <= hpos; x++) {
-        SetPartType(mech, section, x, GetPartType(mech, section, lpos));
-        SetPartData(mech, section, x, GetPartData(mech, section, lpos));
-        SetPartFireMode(mech, section, x, GetPartFireMode(mech, section, lpos));
-        SetPartAmmoMode(mech, section, x, GetPartAmmoMode(mech, section, lpos));
-        SetPartBrand(mech, section, x, GetPartBrand(mech, section, lpos));
+        mech_critical_part_type_set(
+            mech, section, x, mech_critical_part_type(mech, section, lpos));
+        mech_critical_data_set(mech, section, x,
+                               mech_critical_data(mech, section, lpos));
+        mech_critical_fire_mode_set(
+            mech, section, x, mech_critical_fire_mode(mech, section, lpos));
+        mech_critical_ammo_mode_set(
+            mech, section, x, mech_critical_ammo_mode(mech, section, lpos));
+        mech_critical_brand_set(mech, section, x,
+                                mech_critical_brand(mech, section, lpos));
       }
       break;
     case 15: /* Mech's Computer level */
-      MechComputer(mech) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      mech_computer_quality_set(
+          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 16: /* Name of the mech */
-      strcpy(MechType_Name(mech),
+      strcpy(((mech)->ud.mech_name),
              read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 17: /* Jj's */
-      MechJumpSpeed(mech) =
+      ((mech)->rd.jumpspeed) =
           atof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 18: /* Radio */
-      MechRadio(mech) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      mech_radio_quality_set(
+          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 19: /* SI */
-      AeroSI(mech) = AeroSIOrig(mech) =
+      ((mech)->ud.si) = ((mech)->ud.si_orig) =
           atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 20: /* Fuel */
-      AeroFuel(mech) = AeroFuelOrig(mech) =
+      ((mech)->ud.fuel) = ((mech)->ud.fuel_orig) =
           atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 21: /* Comment */
       break;
     case 22: /* Radio_freqs */
-      MechRadioType(mech) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      mech_radio_configuration_set(
+          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 23: /* Mech battle value */
-      MechBV(mech) = atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      ((mech)->ud.mechbv) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 24: /* Cargospace */
-      CargoSpace(mech) =
+      ((mech)->ud.cargospace) =
           atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 25: /* Maxsuits */
-      MechMaxSuits(mech) =
+      ((mech)->rd.maxsuits) =
           atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 26: /* Specials */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
 
       if (CheckSpecialsList(infantry_specials, 0, tmpc))
-        MechInfantrySpecials(mech) |=
+        ((mech)->rd.infantry_specials) |=
             BuildBitVectorNoErr(infantry_specials, tmpc);
 
       break;
     case 27: /* Carmaxton */
-      CarMaxTon(mech) =
+      ((mech)->ud.carmaxton) =
           atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 28:
-      MechHSEngOverRide(mech) =
+      ((mech)->ud.hsengoverride) =
           atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 29:
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       if (strlen(tmpc) == 1) /* just the \0 */
         tmpc = "Undefined";
-      strcpy(MechUnitEra(mech), tmpc);
+      strcpy(((mech)->ud.unit_era), tmpc);
       break;
     case 30:
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       if (strlen(tmpc) == 1) /* just the \0 */
         tmpc = "Undefined";
-      strcpy(MechUnitTRO(mech), tmpc);
+      strcpy(((mech)->ud.unit_tro), tmpc);
       break;
     }
   }
   fclose(fp);
-  MechEngineSizeV(mech) = MechEngineSizeC(mech);
+  ((mech)->rd.erat) = mech_calculated_engine_rating(mech);
   /* So we're not getting 'blank' ERA/TRO values, we'll default to 'Undefined'
    */
-  if (strlen(MechUnitEra(mech)) == 0) {
+  if (strlen(((mech)->ud.unit_era)) == 0) {
     tmpc = "Undefined";
-    strcpy(MechUnitEra(mech), tmpc);
+    strcpy(((mech)->ud.unit_era), tmpc);
   }
-  if (strlen(MechUnitTRO(mech)) == 0) {
+  if (strlen(((mech)->ud.unit_tro)) == 0) {
     tmpc = "Undefined";
-    strcpy(MechUnitTRO(mech), tmpc);
+    strcpy(((mech)->ud.unit_tro), tmpc);
   }
-#define Set(a, b)                                                              \
-  if (!(a))                                                                    \
-  a = b
-  if (!(MechSpecials(mech) & ICE_TECH))
-    Set(MechRealNumsinks(mech), DEFAULT_HEATSINKS);
-  if (MechType(mech) == CLASS_MECH)
+  if (!(((mech)->rd.specials) & ICE_TECH) && !((mech)->ud.numsinks))
+    ((mech)->ud.numsinks) = DEFAULT_HEATSINKS;
+  if (((mech)->ud.type) == CLASS_MECH)
     do_sub_magic(mech, 1);
-  if (MechType(mech) == CLASS_MW)
+  if (((mech)->ud.type) == CLASS_MW)
     mech_power_up(mech);
 
-  if (MechType(mech) == CLASS_MECH)
+  if (((mech)->ud.type) == CLASS_MECH)
     value = 8;
   else
     value = 6;
@@ -446,66 +467,83 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   if (mech->xcode.context->configuration->btech_parts)
     for (x = 0; x < value; x++)
       for (y = 0; y < CritsInLoc(mech, x); y++)
-        if ((t = GetPartType(mech, x, y))) {
-          if (GetPartBrand(mech, x, y))
+        if ((t = mech_critical_part_type(mech, x, y))) {
+          if (mech_critical_brand(mech, x, y))
             continue;
-          if (IsAmmo(t))
+          if (equipment_is_ammunition(t))
             continue;
-          if (IsBomb(t))
+          if (equipment_is_bomb(t))
             continue;
-          SetPartBrand(mech, x, y,
-                       isClan ? DEFAULT_CLPART_LEVEL : DEFAULT_PART_LEVEL);
+          mech_critical_brand_set(
+              mech, x, y, isClan ? DEFAULT_CLPART_LEVEL : DEFAULT_PART_LEVEL);
         }
   if (isClan) {
-    Set(MechComputer(mech), DEFAULT_CLCOMPUTER);
-    Set(MechRadio(mech), DEFAULT_CLRADIO);
+    if (!mech_computer_quality(mech))
+      mech_computer_quality_set(mech, DEFAULT_CLCOMPUTER);
+    if (!mech_radio_quality(mech))
+      mech_radio_quality_set(mech, DEFAULT_CLRADIO);
   } else {
-    Set(MechComputer(mech), DEFAULT_COMPUTER);
-    Set(MechRadio(mech), DEFAULT_RADIO);
+    if (!mech_computer_quality(mech))
+      mech_computer_quality_set(mech, DEFAULT_COMPUTER);
+    if (!mech_radio_quality(mech))
+      mech_radio_quality_set(mech, DEFAULT_RADIO);
   }
-  if (!MechRadioType(mech))
-    MechRadioType(mech) = generic_radio_type(MechRadio(mech), isClan);
-  if (!MechComputer(mech)) {
-    Set(MechScanRange(mech), DEFAULT_SCANRANGE);
-    Set(MechLRSRange(mech), DEFAULT_LRSRANGE);
-    Set(MechRadioRange(mech), DEFAULT_RADIORANGE);
-    Set(MechTacRange(mech), DEFAULT_TACRANGE);
+  if (!mech_radio_configuration(mech))
+    mech_radio_configuration_set(
+        mech, generic_radio_type(mech_radio_quality(mech), isClan));
+  if (!mech_computer_quality(mech)) {
+    if (!mech_scanner_range(mech))
+      mech_scanner_range_set(mech, DEFAULT_SCANRANGE);
+    if (!mech_long_range_sensor_range(mech))
+      mech_long_range_sensor_range_set(mech, DEFAULT_LRSRANGE);
+    if (!mech_radio_range(mech))
+      mech_radio_range_set(mech, DEFAULT_RADIORANGE);
+    if (!mech_tactical_range(mech))
+      mech_tactical_range_set(mech, DEFAULT_TACRANGE);
   } else {
-    Set(MechScanRange(mech), MechComputersScanRange(mech));
-    Set(MechLRSRange(mech), MechComputersLRSRange(mech));
-    Set(MechRadioRange(mech), MechComputersRadioRange(mech));
-    Set(MechTacRange(mech), MechComputersTacRange(mech));
+    if (!mech_scanner_range(mech))
+      mech_scanner_range_set(mech, mech_default_scanner_range(mech));
+    if (!mech_long_range_sensor_range(mech))
+      mech_long_range_sensor_range_set(
+          mech, mech_default_long_range_sensor_range(mech));
+    if (!mech_radio_range(mech))
+      mech_radio_range_set(mech, mech_default_radio_range(mech));
+    if (!mech_tactical_range(mech))
+      mech_tactical_range_set(mech, mech_default_tactical_range(mech));
   }
 #if 1 /* Don't know if we're ready for this yet - aw, what the hell :) */
-  MechSpecials(mech) &= ~FLIPABLE_ARMS;
-  if (MechType(mech) == CLASS_MECH)
-    if ((GetPartType(mech, LARM, 2) != Special(LOWER_ACTUATOR)) &&
-        (GetPartType(mech, RARM, 2) != Special(LOWER_ACTUATOR)) &&
-        (GetPartType(mech, LARM, 3) != Special(HAND_OR_FOOT_ACTUATOR)) &&
-        (GetPartType(mech, RARM, 3) != Special(HAND_OR_FOOT_ACTUATOR)))
-      MechSpecials(mech) |= FLIPABLE_ARMS;
+  ((mech)->rd.specials) &= ~FLIPABLE_ARMS;
+  if (((mech)->ud.type) == CLASS_MECH)
+    if ((mech_critical_part_type(mech, LARM, 2) !=
+         special_equipment_index(LOWER_ACTUATOR)) &&
+        (mech_critical_part_type(mech, RARM, 2) !=
+         special_equipment_index(LOWER_ACTUATOR)) &&
+        (mech_critical_part_type(mech, LARM, 3) !=
+         special_equipment_index(HAND_OR_FOOT_ACTUATOR)) &&
+        (mech_critical_part_type(mech, RARM, 3) !=
+         special_equipment_index(HAND_OR_FOOT_ACTUATOR)))
+      ((mech)->rd.specials) |= FLIPABLE_ARMS;
 #endif
   update_specials(mech);
-  MechXPMod(mech) = 1.0;     /* Default it to 1 (no mod effect at all) */
-  MechUnitsKilled(mech) = 0; /* Clear the mechs killed */
+  ((mech)->rd.xpmod) = 1.0;      /* Default it to 1 (no mod effect at all) */
+  ((mech)->rd.units_killed) = 0; /* Clear the mechs killed */
   mech_int_check(mech, 1);
   x = mech_weight_sub(GOD, mech, 0);
-  y = MechTons(mech) * 1024;
+  y = ((mech)->ud.tons) * 1024;
   /* While we're at it, lets report those that are overweight */
   if ((x - y) > 40)
-    if (MechType(mech) != CLASS_BSUIT && MechMove(mech) != MOVE_NONE)
+    if (((mech)->ud.type) != CLASS_BSUIT && ((mech)->ud.move) != MOVE_NONE)
       btech_channel_send(
           mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf(
               "Error in %s template: %.1f tons of 'stuff', yet %d ton frame.",
-              MechType_Ref(mech), x / 1024.0, y / 1024));
+              ((mech)->ud.mech_type), x / 1024.0, y / 1024));
   update_oweight(mech, x);
   if ((map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     map_conditions_apply(mech, map);
   /* To prevent certain funny occurences.. */
   for (i = 0; i < NUM_SECTIONS; i++) {
-    if (!(GetSectOInt(mech, i))) {
-      SetSectDestroyed(mech, i);
+    if (!(mech_section_original_internal(mech, i))) {
     }
   }
   return 0;

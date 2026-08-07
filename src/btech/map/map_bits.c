@@ -17,19 +17,18 @@
 #include "map_obj_api.h"
 #include "mux/network/mux_event_alloc.h"
 
-#define realnum(x) ((x) / 4 + ((x) % 4 ? 1 : 0))
-#define boffs(x) (2 * ((x) % 4))
-#define boffsbit(x, n) ((1 << boffs(x)) * n)
-#define btsetbit(arr, x, y, n)                                                 \
-  create_if_neccessary(arr, map, y);                                           \
-  arr[y][realnum(x)] |= boffsbit(x, n)
-#define btunsetbit(arr, x, y, n)                                               \
-  if (arr[y])                                                                  \
-  arr[y][realnum(x)] &= ~(boffsbit(x, n))
-#define btissetbit(arr, x, y, n) (arr[y][realnum(x)] & boffsbit(x, n))
+constexpr unsigned char BIT_MINE = 1;
+constexpr unsigned char BIT_HANGAR = 2;
 
-#define BIT_MINE 1
-#define BIT_HANGAR 2
+static size_t map_bits_byte_count(int hex_count) {
+  return (size_t)(hex_count / 4 + (hex_count % 4 ? 1 : 0));
+}
+
+static size_t map_bits_byte_index(int x) { return (size_t)x / 4; }
+
+static unsigned char map_bits_mask(int x, unsigned char bits) {
+  return (unsigned char)(bits << (2 * (x % 4)));
+}
 
 /* Main idea: By using 2 bits / hex in external array, we can _fast_
    figure out if a certain hex has mines / hangars or not. Downside is
@@ -39,7 +38,24 @@ static void create_if_neccessary(unsigned char **foo, BattleMap *map, int y) {
   int xs = map->map_width;
 
   if (!foo[y])
-    Create(foo[y], unsigned char, realnum(xs));
+    Create(foo[y], unsigned char, map_bits_byte_count(xs));
+}
+
+static void map_bits_set(unsigned char **bits, BattleMap *map, int x, int y,
+                         unsigned char value) {
+  create_if_neccessary(bits, map, y);
+  bits[y][map_bits_byte_index(x)] |= map_bits_mask(x, value);
+}
+
+static void map_bits_unset(unsigned char **bits, int x, int y,
+                           unsigned char value) {
+  if (bits[y])
+    bits[y][map_bits_byte_index(x)] &= (unsigned char)~map_bits_mask(x, value);
+}
+
+static bool map_bits_is_set(unsigned char *const *bits, int x, int y,
+                            unsigned char value) {
+  return bits[y][map_bits_byte_index(x)] & map_bits_mask(x, value);
 }
 
 /* Okay, now we got code to load / save the bits.. but what will we do with
@@ -66,28 +82,28 @@ void set_hex_enterable(BattleMap *map, int x, int y) {
   unsigned char **foo;
 
   foo = grab_us_an_array(map);
-  btsetbit(foo, x, y, BIT_HANGAR);
+  map_bits_set(foo, map, x, y, BIT_HANGAR);
 }
 
 void set_hex_mine(BattleMap *map, int x, int y) {
   unsigned char **foo;
 
   foo = grab_us_an_array(map);
-  btsetbit(foo, x, y, BIT_MINE);
+  map_bits_set(foo, map, x, y, BIT_MINE);
 }
 
 void unset_hex_enterable(BattleMap *map, int x, int y) {
   unsigned char **foo;
 
   foo = grab_us_an_array(map);
-  btunsetbit(foo, x, y, BIT_HANGAR);
+  map_bits_unset(foo, x, y, BIT_HANGAR);
 }
 
 void unset_hex_mine(BattleMap *map, int x, int y) {
   unsigned char **foo;
 
   foo = grab_us_an_array(map);
-  btunsetbit(foo, x, y, BIT_MINE);
+  map_bits_unset(foo, x, y, BIT_MINE);
 }
 
 int is_mine_hex(BattleMap *map, int x, int y) {
@@ -100,7 +116,7 @@ int is_mine_hex(BattleMap *map, int x, int y) {
   foo = grab_us_an_array(map);
   if (!foo[y])
     return 0;
-  return (btissetbit(foo, x, y, BIT_MINE));
+  return map_bits_is_set(foo, x, y, BIT_MINE);
 }
 
 int is_hangar_hex(BattleMap *map, int x, int y) {
@@ -113,7 +129,7 @@ int is_hangar_hex(BattleMap *map, int x, int y) {
   foo = grab_us_an_array(map);
   if (!foo[y])
     return 0;
-  return (btissetbit(foo, x, y, BIT_HANGAR));
+  return map_bits_is_set(foo, x, y, BIT_HANGAR);
 }
 
 void clear_hex_bits(BattleMap *map, int bits) {
@@ -131,14 +147,14 @@ void clear_hex_bits(BattleMap *map, int bits) {
         switch (bits) {
         case 1:
         case 2:
-          if (btissetbit(foo, j, i, bits))
-            btunsetbit(foo, j, i, bits);
+          if (map_bits_is_set(foo, j, i, (unsigned char)bits))
+            map_bits_unset(foo, j, i, (unsigned char)bits);
           break;
         case 0:
-          if (btissetbit(foo, j, i, 1))
-            btunsetbit(foo, j, i, 1);
-          if (btissetbit(foo, j, i, 2))
-            btunsetbit(foo, j, i, 2);
+          if (map_bits_is_set(foo, j, i, BIT_MINE))
+            map_bits_unset(foo, j, i, BIT_MINE);
+          if (map_bits_is_set(foo, j, i, BIT_HANGAR))
+            map_bits_unset(foo, j, i, BIT_HANGAR);
           break;
         }
       }
@@ -155,6 +171,6 @@ int bit_size(BattleMap *map) {
   foo = grab_us_an_array(map);
   for (i = 0; i < ys; i++)
     if (foo[i])
-      s += realnum(xs);
+      s += map_bits_byte_count(xs);
   return s;
 }

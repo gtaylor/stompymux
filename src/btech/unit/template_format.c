@@ -1,4 +1,7 @@
+#include "mech_electronics_api.h"
+#include "mech_equipment_api.h"
 #include "template_internal.h"
+#include "weapon_catalogue_api.h"
 
 int compare_array(char *list[], char *command) {
   int x;
@@ -147,42 +150,49 @@ char *build_bit_string3(char *bitdescs[], char *bitdescs2[], char *bitdescs3[],
   return buffer;
 }
 
-#define QDM(a)                                                                 \
-  case I2Special(a):                                                           \
-    return 1
 static int InvalidVehicleItem(Mech *mech, int x, int y) {
   int t;
 
-  t = GetPartType(mech, x, y);
+  t = mech_critical_part_type(mech, x, y);
   switch (t) {
-    QDM(SHOULDER_OR_HIP);
-    QDM(UPPER_ACTUATOR);
-    QDM(LOWER_ACTUATOR);
-    QDM(HAND_OR_FOOT_ACTUATOR);
-    QDM(ENGINE);
-    QDM(GYRO);
-    QDM(JUMP_JET);
+  case SPECIAL_BASE_INDEX + SHOULDER_OR_HIP:
+  case SPECIAL_BASE_INDEX + UPPER_ACTUATOR:
+  case SPECIAL_BASE_INDEX + LOWER_ACTUATOR:
+  case SPECIAL_BASE_INDEX + HAND_OR_FOOT_ACTUATOR:
+  case SPECIAL_BASE_INDEX + ENGINE:
+  case SPECIAL_BASE_INDEX + GYRO:
+  case SPECIAL_BASE_INDEX + JUMP_JET:
+    return 1;
   }
   return 0;
 }
 
+static bool part_weapon_name_allowed(const ServerConfiguration *configuration,
+                                     int weapon, int brand, int *is_clan) {
 #ifndef CLAN_SUPPORT
-#define CLCH(a)                                                                \
-  do {                                                                         \
-    if (MechWeapons[a].special & (CLAT))                                       \
-      return NULL;                                                             \
-  } while (0)
+  (void)configuration;
+  (void)brand;
+  (void)is_clan;
+  return !(MechWeapons[weapon].special & CLAT);
 #else
-#define CLCH(a)                                                                \
-  do {                                                                         \
-    if (brand) {                                                               \
-      if ((!configuration->btech_parts) || (MechWeapons[a].special & CLAT))    \
-        return NULL;                                                           \
-      else if (MechWeapons[a].special & CLAT)                                  \
-        isclan = 1;                                                            \
-    }                                                                          \
-  } while (0)
+  if (brand) {
+    if (!configuration->btech_parts || (MechWeapons[weapon].special & CLAT))
+      return false;
+    if (MechWeapons[weapon].special & CLAT)
+      *is_clan = 1;
+  }
+  return true;
 #endif
+}
+
+static int part_weapon_short_name_offset(int weapon) {
+#ifdef CLAN_SUPPORT
+  return !strncasecmp(MechWeapons[weapon].name, "CL.", 2) ? 0 : 3;
+#else
+  (void)weapon;
+  return 3;
+#endif
+}
 
 static char *part_figure_out_name_sub(const ServerConfiguration *configuration,
                                       int i, int j, int brand,
@@ -192,29 +202,41 @@ static char *part_figure_out_name_sub(const ServerConfiguration *configuration,
 
   if (!i)
     return nullptr;
-  if (IsWeapon(i) && i < I2Weapon(num_def_weapons)) {
-    CLCH(Weapon2I(i));
-    source = &MechWeapons[Weapon2I(i)].name[(j && !isclan) ? 3 : 0];
+  if (equipment_is_weapon(i) && i < weapon_equipment_index(num_def_weapons)) {
+    if (!part_weapon_name_allowed(configuration, weapon_from_equipment_index(i),
+                                  brand, &isclan))
+      return nullptr;
+    source = &MechWeapons[weapon_from_equipment_index(i)]
+                  .name[(j && !isclan) ? 3 : 0];
     snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
     return buffer;
-  } else if (IsAmmo(i) && i < I2Ammo(num_def_weapons)) {
-    CLCH(Ammo2WeaponI(i));
-    if (MechWeapons[Ammo2WeaponI(i)].type != TBEAM &&
-        MechWeapons[Ammo2WeaponI(i)].type != THAND &&
-        !(MechWeapons[Ammo2WeaponI(i)].special & PCOMBAT)) {
+  } else if (equipment_is_ammunition(i) &&
+             i < ammunition_equipment_index(num_def_weapons)) {
+    if (!part_weapon_name_allowed(configuration, ammunition_to_weapon_index(i),
+                                  brand, &isclan))
+      return nullptr;
+    if (MechWeapons[ammunition_to_weapon_index(i)].type != TBEAM &&
+        MechWeapons[ammunition_to_weapon_index(i)].type != THAND &&
+        !(MechWeapons[ammunition_to_weapon_index(i)].special & PCOMBAT)) {
       snprintf(buffer, BTECH_TEXT_CAPACITY, "Ammo_%s",
-               &MechWeapons[Ammo2WeaponI(i)].name[(j && !isclan) ? 3 : 0]);
+               &MechWeapons[ammunition_to_weapon_index(i)]
+                    .name[(j && !isclan) ? 3 : 0]);
       return buffer;
     }
   } else if (!brand) {
-    if (IsBomb(i)) {
-      snprintf(buffer, BTECH_TEXT_CAPACITY, "Bomb_%s", bomb_name(Bomb2I(i)));
+    if (equipment_is_bomb(i)) {
+      snprintf(buffer, BTECH_TEXT_CAPACITY, "Bomb_%s",
+               bomb_name(bomb_from_equipment_index(i)));
       return buffer;
-    } else if (IsSpecial(i) && i < I2Special(template_internal_count)) {
-      snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", internals[Special2I(i)]);
+    } else if (equipment_is_special(i) &&
+               i < special_equipment_index(template_internal_count)) {
+      snprintf(buffer, BTECH_TEXT_CAPACITY, "%s",
+               internals[special_from_equipment_index(i)]);
       return buffer;
-    } else if (IsCargo(i) && i < I2Cargo(template_cargo_count)) {
-      snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", cargo[Cargo2I(i)]);
+    } else if (equipment_is_cargo(i) &&
+               i < cargo_equipment_index(template_cargo_count)) {
+      snprintf(buffer, BTECH_TEXT_CAPACITY, "%s",
+               cargo[cargo_from_equipment_index(i)]);
       return buffer;
     }
   }
@@ -244,30 +266,31 @@ char *my_shortform(const char *source,
   return buffer;
 }
 
-#undef CLCH
-#ifdef CLAN_SUPPORT
-#define CLCH(a) ((!strncasecmp(MechWeapons[a].name, "CL.", 2)) ? 0 : 3)
-#else
-#define CLCH(a) 3
-#endif
-
 char *part_figure_out_shname(int i, char buffer[static BTECH_TEXT_CAPACITY]) {
   char name[BTECH_TEXT_CAPACITY] = {0};
 
   if (!i)
     return nullptr;
-  if (IsWeapon(i) && i < I2Weapon(num_def_weapons)) {
+  if (equipment_is_weapon(i) && i < weapon_equipment_index(num_def_weapons)) {
     snprintf(name, sizeof(name), "%s",
-             &MechWeapons[Weapon2I(i)].name[CLCH(Weapon2I(i))]);
-  } else if (IsAmmo(i) && i < I2Ammo(num_def_weapons)) {
+             &MechWeapons[weapon_from_equipment_index(i)]
+                  .name[part_weapon_short_name_offset(
+                      weapon_from_equipment_index(i))]);
+  } else if (equipment_is_ammunition(i) &&
+             i < ammunition_equipment_index(num_def_weapons)) {
     snprintf(name, sizeof(name), "Ammo_%s",
-             &MechWeapons[Ammo2WeaponI(i)].name[CLCH(Ammo2WeaponI(i))]);
-  } else if (IsBomb(i))
-    snprintf(name, sizeof(name), "Bomb_%s", bomb_name(Bomb2I(i)));
-  else if (IsSpecial(i) && i < I2Special(template_internal_count))
-    snprintf(name, sizeof(name), "%s", internals[Special2I(i)]);
-  if (IsCargo(i) && i < I2Cargo(template_cargo_count))
-    snprintf(name, sizeof(name), "%s", cargo[Cargo2I(i)]);
+             &MechWeapons[ammunition_to_weapon_index(i)]
+                  .name[part_weapon_short_name_offset(
+                      ammunition_to_weapon_index(i))]);
+  } else if (equipment_is_bomb(i))
+    snprintf(name, sizeof(name), "Bomb_%s",
+             bomb_name(bomb_from_equipment_index(i)));
+  else if (equipment_is_special(i) &&
+           i < special_equipment_index(template_internal_count))
+    snprintf(name, sizeof(name), "%s",
+             internals[special_from_equipment_index(i)]);
+  if (equipment_is_cargo(i) && i < cargo_equipment_index(template_cargo_count))
+    snprintf(name, sizeof(name), "%s", cargo[cargo_from_equipment_index(i)]);
   if (!name[0])
     return nullptr;
   return my_shortform(name, buffer);
@@ -291,30 +314,35 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
   int z;
   int wFireModes, wAmmoModes;
 
-  if (!GetPartType(mech, x, y))
+  if (!mech_critical_part_type(mech, x, y))
     return 1;
-  if (MechType(mech) != CLASS_MECH && InvalidVehicleItem(mech, x, y))
+  if (((mech)->ud.type) != CLASS_MECH && InvalidVehicleItem(mech, x, y))
     return 1;
   for (y1 = y + 1; y1 < 12; y1++) {
-    if (GetPartType(mech, x, y1) != GetPartType(mech, x, y))
+    if (mech_critical_part_type(mech, x, y1) !=
+        mech_critical_part_type(mech, x, y))
       break;
-    if (GetPartData(mech, x, y1) != GetPartData(mech, x, y))
+    if (mech_critical_data(mech, x, y1) != mech_critical_data(mech, x, y))
       break;
-    if (GetPartFireMode(mech, x, y1) != GetPartFireMode(mech, x, y))
+    if (mech_critical_fire_mode(mech, x, y1) !=
+        mech_critical_fire_mode(mech, x, y))
       break;
-    if (GetPartAmmoMode(mech, x, y1) != GetPartAmmoMode(mech, x, y))
+    if (mech_critical_ammo_mode(mech, x, y1) !=
+        mech_critical_ammo_mode(mech, x, y))
       break;
     if (mech->xcode.context->configuration->btech_parts)
-      if (GetPartBrand(mech, x, y1) != GetPartBrand(mech, x, y))
+      if (mech_critical_brand(mech, x, y1) != mech_critical_brand(mech, x, y))
         break;
   }
   y1--;
-  if (IsWeapon(GetPartType(mech, x, y))) {
+  if (equipment_is_weapon(mech_critical_part_type(mech, x, y))) {
     /* Nonbeams, or flamers don't have TC */
-    if (!TCAble(GetPartType(mech, x, y)))
+    if (!equipment_can_use_targeting_computer(
+            mech_critical_part_type(mech, x, y)))
       flaggo = ON_TC;
     if (((y1 - y) + 1) >
-        (z = GetWeaponCrits(mech, Weapon2I(GetPartType(mech, x, y)))))
+        (z = GetWeaponCrits(mech, weapon_from_equipment_index(
+                                      mech_critical_part_type(mech, x, y)))))
       y1 = y + z - 1;
   }
   if (y != y1)
@@ -322,47 +350,49 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
   else
     snprintf(crit, 32, "CRIT_%d", y + 1);
 
-  wFireModes = GetPartFireMode(mech, x, y);
+  wFireModes = mech_critical_fire_mode(mech, x, y);
   wFireModes &= ~flaggo;
-  wAmmoModes = GetPartAmmoMode(mech, x, y);
+  wAmmoModes = mech_critical_ammo_mode(mech, x, y);
 
-  if (IsWeapon(GetPartType(mech, x, y)))
-    fprintf(
-        fp, "    %s		  { %s - %s %s}\n", crit,
-        get_parts_vlong_name(mech->xcode.context, GetPartType(mech, x, y), 0),
-        (wFireModes || wAmmoModes)
-            ? build_bit_string_delimited2(crit_fire_modes, crit_ammo_modes,
-                                          wFireModes, wAmmoModes,
-                                          (char[BTECH_TEXT_CAPACITY]){0})
-            : "-",
-        !mech->xcode.context->configuration->btech_parts
-            ? ""
-            : tprintf("%d ", GetPartBrand(mech, x, y)));
-  else if (IsAmmo(MechSections(mech)[x].criticals[y].type))
-    fprintf(
-        fp, "    %s		  { %s %d %s - }\n", crit,
-        get_parts_vlong_name(mech->xcode.context, GetPartType(mech, x, y), 0),
-        FullAmmo(mech, x, y),
-        (MechSections(mech)[x].criticals[y].firemode ||
-         MechSections(mech)[x].criticals[y].ammomode)
-            ? build_bit_string_delimited2(
-                  crit_fire_modes, crit_ammo_modes,
-                  MechSections(mech)[x].criticals[y].firemode,
-                  MechSections(mech)[x].criticals[y].ammomode,
-                  (char[BTECH_TEXT_CAPACITY]){0})
-            : "-");
-  else if (IsBomb(MechSections(mech)[x].criticals[y].type))
-    fprintf(
-        fp, "    %s		  { %s - - - }\n", crit,
-        get_parts_vlong_name(mech->xcode.context, GetPartType(mech, x, y), 0));
+  if (equipment_is_weapon(mech_critical_part_type(mech, x, y)))
+    fprintf(fp, "    %s		  { %s - %s %s}\n", crit,
+            get_parts_vlong_name(mech->xcode.context,
+                                 mech_critical_part_type(mech, x, y), 0),
+            (wFireModes || wAmmoModes)
+                ? build_bit_string_delimited2(crit_fire_modes, crit_ammo_modes,
+                                              wFireModes, wAmmoModes,
+                                              (char[BTECH_TEXT_CAPACITY]){0})
+                : "-",
+            !mech->xcode.context->configuration->btech_parts
+                ? ""
+                : tprintf("%d ", mech_critical_brand(mech, x, y)));
+  else if (equipment_is_ammunition(((mech)->ud.sections)[x].criticals[y].type))
+    fprintf(fp, "    %s		  { %s %d %s - }\n", crit,
+            get_parts_vlong_name(mech->xcode.context,
+                                 mech_critical_part_type(mech, x, y), 0),
+            FullAmmo(mech, x, y),
+            (((mech)->ud.sections)[x].criticals[y].firemode ||
+             ((mech)->ud.sections)[x].criticals[y].ammomode)
+                ? build_bit_string_delimited2(
+                      crit_fire_modes, crit_ammo_modes,
+                      ((mech)->ud.sections)[x].criticals[y].firemode,
+                      ((mech)->ud.sections)[x].criticals[y].ammomode,
+                      (char[BTECH_TEXT_CAPACITY]){0})
+                : "-");
+  else if (equipment_is_bomb(((mech)->ud.sections)[x].criticals[y].type))
+    fprintf(fp, "    %s		  { %s - - - }\n", crit,
+            get_parts_vlong_name(mech->xcode.context,
+                                 mech_critical_part_type(mech, x, y), 0));
   else {
-    fprintf(
-        fp, "    %s		  { %s %s - %s}\n", crit,
-        get_parts_vlong_name(mech->xcode.context, GetPartType(mech, x, y), 0),
-        GetPartData(mech, x, y) ? tprintf("%d", GetPartData(mech, x, y)) : "-",
-        !mech->xcode.context->configuration->btech_parts
-            ? ""
-            : tprintf("%d ", GetPartBrand(mech, x, y)));
+    fprintf(fp, "    %s		  { %s %s - %s}\n", crit,
+            get_parts_vlong_name(mech->xcode.context,
+                                 mech_critical_part_type(mech, x, y), 0),
+            mech_critical_data(mech, x, y)
+                ? tprintf("%d", mech_critical_data(mech, x, y))
+                : "-",
+            !mech->xcode.context->configuration->btech_parts
+                ? ""
+                : tprintf("%d ", mech_critical_brand(mech, x, y)));
   }
   return (y1 - y + 1);
 }
@@ -373,20 +403,23 @@ void dump_locations(FILE *fp, Mech *mech, const char *locdesc[]) {
   char *ch;
 
   for (x = 0; locdesc[x]; x++) {
-    if (!GetSectOInt(mech, x))
+    if (!mech_section_original_internal(mech, x))
       continue;
     strcpy(buf, locdesc[x]);
     for (ch = buf; *ch; ch++)
       if (*ch == ' ')
         *ch = '_';
     fprintf(fp, "%s\n", buf);
-    if (GetSectOArmor(mech, x))
-      fprintf(fp, "  Armor            { %d }\n", GetSectOArmor(mech, x));
-    if (GetSectOInt(mech, x))
-      fprintf(fp, "  Internals        { %d }\n", GetSectOInt(mech, x));
-    if (GetSectORArmor(mech, x))
-      fprintf(fp, "  Rear             { %d }\n", GetSectORArmor(mech, x));
-    y = MechSections(mech)[x].config;
+    if (mech_section_original_armor(mech, x))
+      fprintf(fp, "  Armor            { %d }\n",
+              mech_section_original_armor(mech, x));
+    if (mech_section_original_internal(mech, x))
+      fprintf(fp, "  Internals        { %d }\n",
+              mech_section_original_internal(mech, x));
+    if (mech_section_original_rear_armor(mech, x))
+      fprintf(fp, "  Rear             { %d }\n",
+              mech_section_original_rear_armor(mech, x));
+    y = ((mech)->ud.sections)[x].config;
     y &= ~CASE_TECH;
     if (y)
       fprintf(
@@ -399,7 +432,7 @@ void dump_locations(FILE *fp, Mech *mech, const char *locdesc[]) {
 }
 
 float generic_computer_multiplier(Mech *mech) {
-  switch (MechComputer(mech)) {
+  switch (mech_computer_quality(mech)) {
   case 1:
     return 0.8;
   case 2:
@@ -427,7 +460,7 @@ int generic_radio_type(int i, int isClan) {
 }
 
 float generic_radio_multiplier(Mech *mech) {
-  switch (MechRadio(mech)) {
+  switch (mech_radio_quality(mech)) {
   case 1:
     return 0.8;
   case 2:
@@ -445,7 +478,7 @@ float generic_radio_multiplier(Mech *mech) {
 void computer_conversion(Mech *mech) {
   int l = 0;
 
-  switch (MechScanRange(mech)) {
+  switch (mech_scanner_range(mech)) {
   case 20:
     l = 2;
     break;
@@ -457,10 +490,11 @@ void computer_conversion(Mech *mech) {
     break;
   }
   if (l) {
-    MechComputer(mech) = l;
-    MechScanRange(mech) = MechComputersScanRange(mech);
-    MechTacRange(mech) = MechComputersTacRange(mech);
-    MechLRSRange(mech) = MechComputersLRSRange(mech);
-    MechRadioRange(mech) = MechComputersRadioRange(mech);
+    mech_computer_quality_set(mech, l);
+    mech_scanner_range_set(mech, mech_default_scanner_range(mech));
+    mech_tactical_range_set(mech, mech_default_tactical_range(mech));
+    mech_long_range_sensor_range_set(
+        mech, mech_default_long_range_sensor_range(mech));
+    mech_radio_range_set(mech, mech_default_radio_range(mech));
   }
 }

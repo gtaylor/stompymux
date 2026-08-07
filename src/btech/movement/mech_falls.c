@@ -14,7 +14,6 @@
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "environment_damage_api.h"
-#include "legacy_macros.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "mech_api_types.h"
@@ -29,7 +28,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
 #include "mech_position_api.h"
@@ -51,11 +49,13 @@ static bool mech_fall_is_in_water(Mech *mech) {
          mech_position_z(mech) < 0;
 }
 
+#ifdef BT_MOVEMENT_MODES
 static int mech_fall_movement_mode_delay(const Mech *mech) {
   return mech_class(mech) == CLASS_BSUIT || mech_class(mech) == CLASS_MW
              ? TURN / 2
              : TURN;
 }
+#endif
 
 void mech_fall(Mech *mech, int levels, int seemsg) {
   int roll, spread, i, hitloc, hitGroup = 0;

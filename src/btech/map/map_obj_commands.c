@@ -1,28 +1,29 @@
 #include "map_obj_internal.h"
 
 #include "mech_classification_api.h"
+#include "registry_api.h"
 
 void list_mapobjs(DbRef player, BattleMap *map) {
   MapObject *tmp;
   int i;
 
-  notify(btech_context_evaluation(map->xcode.context), player,
-         "X   Y   Type  obj   dc   ds     di");
-  notify(btech_context_evaluation(map->xcode.context), player,
-         "--------------------------------------------");
+  mecha_notify(btech_context_evaluation(map->xcode.context), player,
+               "X   Y   Type  obj   dc   ds     di");
+  mecha_notify(btech_context_evaluation(map->xcode.context), player,
+               "--------------------------------------------");
   for (i = 0; i < NUM_MAPOBJTYPES; i++)
     for (tmp = first_mapobj(map, i); tmp; tmp = next_mapobj(tmp)) {
       if (i == TYPE_BITS)
-        notify(btech_context_evaluation(map->xcode.context), player,
-               "--- MAP/HANGAR INFORMATION OBJECT ---");
+        mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                     "--- MAP/HANGAR INFORMATION OBJECT ---");
       else
         notify_printf(btech_context_evaluation(map->xcode.context), player,
                       "%-3d %-3d %-5s %-5d %-4d %-6d %ld", tmp->x, tmp->y,
                       map_types[i], (int)tmp->obj, tmp->datac, tmp->datas,
                       tmp->datai);
     }
-  notify(btech_context_evaluation(map->xcode.context), player,
-         "--------------------------------------------");
+  mecha_notify(btech_context_evaluation(map->xcode.context), player,
+               "--------------------------------------------");
 }
 
 void map_addfire(DbRef player, void *data, char *buffer) {
@@ -32,8 +33,8 @@ void map_addfire(DbRef player, void *data, char *buffer) {
   int x, y, d;
 
   if (mech_parseattributes(buffer, args, 3) != 3) {
-    notify(btech_context_evaluation(map->xcode.context), player,
-           "Error: Invalid number of attributes to addfire command.");
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Error: Invalid number of attributes to addfire command.");
     return;
   }
   x = atoi(args[0]);
@@ -50,8 +51,8 @@ void map_addsmoke(DbRef player, void *data, char *buffer) {
   int x, y, d;
 
   if (mech_parseattributes(buffer, args, 3) != 3) {
-    notify(btech_context_evaluation(map->xcode.context), player,
-           "Error: Invalid number of attributes to addsmoke command.");
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Error: Invalid number of attributes to addsmoke command.");
     return;
   }
   x = atoi(args[0]);
@@ -73,21 +74,40 @@ void map_add_block(DbRef player, void *data, char *buffer) {
 
   if (!map)
     return;
-#define READINT(from, to)                                                      \
-  DOCHECK_CONTEXT(map->xcode.context, Readnum(to, from), "Invalid number!")
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(map->xcode.context, argc < 3 || argc > 4,
-                  "Invalid arguments!");
-  READINT(args[0], x);
-  READINT(args[1], y);
-  READINT(args[2], str);
+  if (argc < 3 || argc > 4) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Invalid arguments!");
+    return;
+  }
+  if ((!((x) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Invalid number!");
+    return;
+  }
+  if ((!((y) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Invalid number!");
+    return;
+  }
+  if ((!((str) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Invalid number!");
+    return;
+  }
   if (argc == 4)
-    READINT(args[3], team);
+    if ((!((team) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+      mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                   "Invalid number!");
+      return;
+    }
 
-  DOCHECK_CONTEXT(
-      map->xcode.context,
-      !((x >= 0) && (x < map->map_width) && (y >= 0) && (y < map->map_height)),
-      "X,Y out of range!");
+  if (!((x >= 0) && (x < map->map_width) && (y >= 0) &&
+        (y < map->map_height))) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "X,Y out of range!");
+    return;
+  }
 
   bzero(&foo, sizeof(MapObject));
   foo.x = x;
@@ -153,12 +173,15 @@ void map_delobj(DbRef player, void *data, char *buffer) {
 
   switch (mech_parseattributes(buffer, args, 3)) {
   case 0:
-    notify(btech_context_evaluation(map->xcode.context), player,
-           "Error: Invalid number of attributes to delobj command.");
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Error: Invalid number of attributes to delobj command.");
     return;
   case 1:
-    DOCHECK_CONTEXT(map->xcode.context,
-                    (tt = listmatch(map_types, args[0])) < 0, "Invalid type!");
+    if ((tt = listmatch(map_types, args[0])) < 0) {
+      mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                   "Invalid type!");
+      return;
+    }
     for (foo = map->MapObject[tt]; foo; foo = foo2) {
       foo2 = next_mapobj(foo);
       del_mapobj(map, foo, tt, 1);
@@ -186,8 +209,11 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                   "%d objects at (%d,%d) deleted.", count, x, y);
     break;
   case 3:
-    DOCHECK_CONTEXT(map->xcode.context,
-                    (tt = listmatch(map_types, args[0])) < 0, "Invalid type!");
+    if ((tt = listmatch(map_types, args[0])) < 0) {
+      mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                   "Invalid type!");
+      return;
+    }
     x = atoi(args[1]);
     y = atoi(args[2]);
     for (foo = first_mapobj(map, tt); foo; foo = foo2) {
@@ -203,8 +229,8 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                   "%d %s at (%d,%d) deleted.", count, map_types[tt], x, y);
     break;
   default:
-    notify(btech_context_evaluation(map->xcode.context), player,
-           "Invalid number of arguments!");
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Invalid number of arguments!");
     return;
   }
   if (mdel)

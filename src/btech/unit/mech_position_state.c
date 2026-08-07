@@ -77,12 +77,14 @@ float mech_range_to(const Mech *mech, const Mech *target) {
 
 float mech_vertical_speed(const Mech *mech) { return mech->rd.verticalspeed; }
 
-int mech_heading_degrees(const Mech *mech) { return FSIM2SHO(mech->pd.facing); }
+int mech_heading_degrees(const Mech *mech) {
+  return float_simulation_to_short(mech->pd.facing);
+}
 
 int mech_heading_fixed(const Mech *mech) { return mech->pd.facing; }
 
 int mech_heading_fixed_difference(const Mech *mech) {
-  return mech->pd.facing - SHO2FSIM(mech->rd.desiredfacing);
+  return mech->pd.facing - short_to_float_simulation(mech->rd.desiredfacing);
 }
 
 bool mech_heading_changed(const Mech *mech) {
@@ -174,7 +176,7 @@ void mech_desired_heading_set(Mech *mech, int heading) {
 }
 
 void mech_heading_set(Mech *mech, int heading) {
-  mech->pd.facing = SHO2FSIM(AcceptableDegree(heading));
+  mech->pd.facing = short_to_float_simulation(AcceptableDegree(heading));
 }
 
 void mech_heading_fixed_set(Mech *mech, int heading) {
@@ -184,22 +186,22 @@ void mech_heading_fixed_set(Mech *mech, int heading) {
 void mech_heading_rotate_toward_desired(Mech *mech, int fixed_offset) {
   int difference = mech_heading_fixed_difference(mech);
   if (difference < 0)
-    difference += SHO2FSIM(360);
+    difference += short_to_float_simulation(360);
 
-  if (difference > SHO2FSIM(180)) {
+  if (difference > short_to_float_simulation(180)) {
     mech->pd.facing += fixed_offset;
     if (mech_heading_degrees(mech) >= 360)
       mech->pd.facing = mech_heading_degrees(mech) % 360;
     difference += fixed_offset;
-    if (difference >= SHO2FSIM(360))
-      mech->pd.facing = SHO2FSIM(mech->rd.desiredfacing);
+    if (difference >= short_to_float_simulation(360))
+      mech->pd.facing = short_to_float_simulation(mech->rd.desiredfacing);
   } else {
     mech->pd.facing -= fixed_offset;
     if (mech->pd.facing < 0)
-      mech->pd.facing += SHO2FSIM(360);
+      mech->pd.facing += short_to_float_simulation(360);
     difference -= fixed_offset;
     if (difference < 0)
-      mech->pd.facing = SHO2FSIM(mech->rd.desiredfacing);
+      mech->pd.facing = short_to_float_simulation(mech->rd.desiredfacing);
   }
 
   mech->rd.critstatus |= CHEAD;
@@ -249,9 +251,10 @@ void mech_jump_destination_y_set(Mech *mech, int destination_y) {
 }
 
 void mech_fall_heading_apply(Mech *mech, int offset) {
-  mech->pd.facing += SHO2FSIM(offset);
-  mech->pd.facing = SHO2FSIM(AcceptableDegree(FSIM2SHO(mech->pd.facing)));
-  mech->rd.desiredfacing = FSIM2SHO(mech->pd.facing);
+  mech->pd.facing += short_to_float_simulation(offset);
+  mech->pd.facing = short_to_float_simulation(
+      AcceptableDegree(float_simulation_to_short(mech->pd.facing)));
+  mech->rd.desiredfacing = float_simulation_to_short(mech->pd.facing);
 }
 
 void mech_jump_apex_elevation_set(Mech *mech, int elevation) {

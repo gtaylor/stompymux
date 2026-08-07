@@ -1,0 +1,7 @@
+# The only retained function-like preprocessor forms generate command invokers.
+# Each entry is an exact path:name pair.
+src/btech/commands/command_invokers_mech.c:DEFINE_BTECH_COMMAND_INVOKER # owned Mech command definitions
+src/btech/commands/command_invokers_other.c:DEFINE_BTECH_COMMAND_INVOKER # owned non-Mech command definitions
+src/btech/commands/typed_command_invokers.c:DEFINE_MAP_COMMAND_INVOKER # typed map command definitions
+src/btech/commands/typed_command_invokers.c:DEFINE_MECH_COMMAND_INVOKER # typed Mech command definitions
+src/btech/special/command_invokers.h:DECLARE_BTECH_COMMAND_INVOKER # shared command declarations

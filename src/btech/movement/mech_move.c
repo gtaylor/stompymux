@@ -24,7 +24,6 @@
 #include "btechstats_api.h"
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
@@ -43,7 +42,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
 #include "mech_position_api.h"
@@ -114,28 +112,40 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   long i;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !(((mech_movement_type(mech) == MOVE_QUAD) &&
+  if (!(((mech_movement_type(mech) == MOVE_QUAD) &&
          (CountDestroyedLegs(mech) == 0)) ||
         ((mech_class(mech) == CLASS_VTOL) ||
          (mech_class(mech) == MOVE_HOVER)) ||
         ((HasBoolAdvantage(mech_context(mech), player, "maneuvering_ace") &&
-          (mech_pilot_dbref(mech) == player)))),
-      "You cannot alter your lateral movement!");
+          (mech_pilot_dbref(mech) == player))))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You cannot alter your lateral movement!");
+    return;
+  }
 
-  skipws(buffer);
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer)
+    buffer = "";
 
   for (i = 0; lateral_modes[i].name; i++)
     if (!strcasecmp(lateral_modes[i].name, buffer))
       break;
-  DOCHECK_CONTEXT(mech_context(mech), !lateral_modes[i].name, "Invalid mode!");
+  if (!lateral_modes[i].name) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid mode!");
+    return;
+  }
 
   if (lateral_modes[i].ofs == mech_lateral_movement(mech)) {
-    DOCHECK_CONTEXT(mech_context(mech), !mech_event_count(mech, EVENT_LATERAL),
-                    "You are going that way already!");
+    if (!mech_event_count(mech, EVENT_LATERAL)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You are going that way already!");
+      return;
+    }
     mech_notify(mech, MECHALL, "Lateral mode change aborted.");
     mech_event_cancel(mech, EVENT_LATERAL);
     return;
@@ -152,8 +162,8 @@ void mech_turnmode(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
   if (!mech_has_pilot(mech) || mech_pilot_dbref(mech) != player) {
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "You're not the pilot!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're not the pilot!");
     return;
   }
 
@@ -191,17 +201,26 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
   char strLocation[50];
   char *args[1];
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
 
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_parseattributes(buffer, args, 1) != 1,
-                  "Invalid number of arguments!");
-  DOCHECK_CONTEXT(mech_context(mech), CountDestroyedLegs(mech) > 0,
-                  "You can't perform a bootlegger with destroyed legs!");
-  DOCHECK_CONTEXT(mech_context(mech), fMechSpeed < fMinSpeed,
-                  tprintf("You are going too slow to perform a bootlegger! The "
-                          "required minimum speed is %4.1f KPH.",
-                          fMinSpeed));
+  if (mech_parseattributes(buffer, args, 1) != 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguments!");
+    return;
+  }
+  if (CountDestroyedLegs(mech) > 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't perform a bootlegger with destroyed legs!");
+    return;
+  }
+  if (fMechSpeed < fMinSpeed) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 tprintf("You are going too slow to perform a bootlegger! The "
+                         "required minimum speed is %4.1f KPH.",
+                         fMinSpeed));
+    return;
+  }
 
   switch (toupper(args[0][0])) {
   case 'R':
@@ -212,8 +231,11 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     break;
   }
 
-  DOCHECK_CONTEXT(mech_context(mech), wHeadingChange == 0,
-                  "Invalid turn direction!");
+  if (wHeadingChange == 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid turn direction!");
+    return;
+  }
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     if ((i == LLEG) || (i == RLEG) ||
@@ -266,7 +288,10 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
 
   wBTHMod = mech_movement_maximum_int(wBTHMod, 1);
 
-  skipws(buffer);
+  while (buffer && *buffer && isspace((unsigned char)*buffer))
+    buffer++;
+  if (!buffer)
+    buffer = "";
 
   btech_channel_send(
       mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
@@ -317,14 +342,21 @@ void mech_eta(DbRef player, void *data, char *buffer) {
   int etahr, etamin;
   char *args[3];
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(mech_context(mech), argc == 1,
-                  "Invalid number of arguments!");
+  if (argc == 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid number of arguments!");
+    return;
+  }
   switch (argc) {
   case 0:
-    DOCHECK_CONTEXT(mech_context(mech), !mech_targets_hex(mech),
-                    "You have invalid default target for ETA!");
+    if (!mech_targets_hex(mech)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "You have invalid default target for ETA!");
+      return;
+    }
     eta_x = mech_target_hex_x(mech);
     eta_y = mech_target_hex_y(mech);
     break;
@@ -333,8 +365,8 @@ void mech_eta(DbRef player, void *data, char *buffer) {
     eta_y = atoi(args[1]);
     break;
   default:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Invalid arguments!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid arguments!");
     return;
   }
   MapCoordToRealCoord(eta_x, eta_y, &fx, &fy);
@@ -485,20 +517,33 @@ void mech_drop(DbRef player, void *data, char *buffer) {
   int wDropBTH = 0;
   int tHasSwarmers = 0;
 
-  cch(MECH_USUAL);
-  DOCHECK_CONTEXT(mech_context(mech), mech_class(mech) == CLASS_BSUIT,
-                  "No crawling!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_class(mech) != CLASS_MECH &&
-                      mech_class(mech) != CLASS_MW,
-                  "You can't prone in this!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).fallen,
-                  "You are already prone.");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_is_jumping(mech) || mech_is_out_of_control(mech),
-                  "You can't prone in the air!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_STAND),
-                  "You can't drop while trying to stand up!");
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
+  if (mech_class(mech) == CLASS_BSUIT) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "No crawling!");
+    return;
+  }
+  if (mech_class(mech) != CLASS_MECH && mech_class(mech) != CLASS_MW) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't prone in this!");
+    return;
+  }
+  if (mech_condition_summary(mech).fallen) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are already prone.");
+    return;
+  }
+  if (mech_is_jumping(mech) || mech_is_out_of_control(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't prone in the air!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_STAND)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can't drop while trying to stand up!");
+    return;
+  }
 
   s1 = mech_effective_maximum_speed(mech) / 3.0;
 
@@ -576,40 +621,69 @@ void mech_stand(DbRef player, void *data, char *buffer) {
   int bth, mechstandtime, standanyway = 0, standcarefulmod = 0;
   int i;
 
-  cch(MECH_USUAL);
-  DOCHECK_CONTEXT(mech_context(mech), mech_class(mech) == CLASS_BSUIT,
-                  "You're standing already!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_class(mech) != CLASS_MECH &&
-                      mech_class(mech) != CLASS_MW,
-                  "This vehicle cannot stand like a 'Mech.");
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_jumping(mech),
-                  "You're standing while jumping!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_out_of_control(mech),
-                  "You're standing while flying!");
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
+  if (mech_class(mech) == CLASS_BSUIT) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're standing already!");
+    return;
+  }
+  if (mech_class(mech) != CLASS_MECH && mech_class(mech) != CLASS_MW) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This vehicle cannot stand like a 'Mech.");
+    return;
+  }
+  if (mech_is_jumping(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're standing while jumping!");
+    return;
+  }
+  if (mech_is_out_of_control(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're standing while flying!");
+    return;
+  }
 
   /* set the number of dead legs we have */
   wcDeadLegs = CountDestroyedLegs(mech);
 
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      (((mech_movement_type(mech) == MOVE_QUAD) && (wcDeadLegs > 3)) ||
-       (!(mech_movement_type(mech) == MOVE_QUAD) && (wcDeadLegs > 1))),
-      "You have no legs to stand on!");
-  DOCHECK_CONTEXT(mech_context(mech), wcDeadLegs > 2,
-                  "You'd be far too unstable!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_has_destroyed_gyro(mech),
-                  "You cannot stand with a destroyed gyro!");
+  if ((((mech_movement_type(mech) == MOVE_QUAD) && (wcDeadLegs > 3)) ||
+       (!(mech_movement_type(mech) == MOVE_QUAD) && (wcDeadLegs > 1)))) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You have no legs to stand on!");
+    return;
+  }
+  if (wcDeadLegs > 2) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You'd be far too unstable!");
+    return;
+  }
+  if (mech_has_destroyed_gyro(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You cannot stand with a destroyed gyro!");
+    return;
+  }
 
-  DOCHECK_CONTEXT(mech_context(mech), !mech_condition_summary(mech).fallen,
-                  "You're already standing!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_STANDFAIL),
-                  "You're still recovering from your last attempt!");
-  DOCHECK_CONTEXT(mech_context(mech), mech_condition_summary(mech).hull_down,
-                  "You can not stand while hulldown");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_event_count(mech, EVENT_CHANGING_HULLDOWN),
-                  "You are busy changing your hulldown mode");
+  if (!mech_condition_summary(mech).fallen) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're already standing!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_STANDFAIL)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're still recovering from your last attempt!");
+    return;
+  }
+  if (mech_condition_summary(mech).hull_down) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You can not stand while hulldown");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_CHANGING_HULLDOWN)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are busy changing your hulldown mode");
+    return;
+  }
 
   bth = mech_pilot_skill_roll_target(mech, 0);
 
@@ -642,9 +716,12 @@ void mech_stand(DbRef player, void *data, char *buffer) {
     }
   }
 
-  DOCHECK_CONTEXT(
-      mech_context(mech), !standanyway && bth > 12,
-      "You would fail; use 'stand anyway' if you really want to stand.");
+  if (!standanyway && bth > 12) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "You would fail; use 'stand anyway' if you really want to stand.");
+    return;
+  }
 
   mech_make_stand(mech);
 

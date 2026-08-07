@@ -19,10 +19,10 @@
 #include <string.h>
 
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "registry_api.h"
 
 char *btech_attribute_read(GameDatabase *database, int id, int flag,
                            char buffer[static LBUF_SIZE]) {
@@ -47,7 +47,7 @@ void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player) {
   int i;
 
   for (i = 0; mapt[i]; i++)
-    notify(evaluation, player, mapt[i]);
+    mecha_notify(evaluation, player, mapt[i]);
 }
 
 int BOUNDED(int min, int val, int max) {

@@ -25,7 +25,6 @@
 #include "mech_heat_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_partnames_api.h"
 #include "mech_pickup_api.h"
@@ -137,7 +136,7 @@ void mech_ammunition_decrement(Mech *mech, int weapindx, int section,
 }
 
 void mech_ammunition_expenditure_check(Mech *mech, int weapindx, int ns) {
-  int targ = I2Ammo(weapindx);
+  int targ = ammunition_equipment_index(weapindx);
   int cnt = 0, slots = 0;
   int t, t2;
   int i, j, cl;
@@ -167,10 +166,11 @@ void mech_ammunition_expenditure_check(Mech *mech, int weapindx, int ns) {
   /* Okay, we have case of warning here */
   if (mech_is_started(mech))
     if ((sev * 65536 + weapindx) % 65536)
-      mech_printf(
-          mech, MECHALL, "%sWARNING: Ammo for %s is running low.[reset]",
-          sev ? "[fg=red bold]" : "[fg=yellow bold]",
-          get_parts_long_name(mech_context(mech), I2Weapon(weapindx), 0));
+      mech_printf(mech, MECHALL,
+                  "%sWARNING: Ammo for %s is running low.[reset]",
+                  sev ? "[fg=red bold]" : "[fg=yellow bold]",
+                  get_parts_long_name(mech_context(mech),
+                                      weapon_equipment_index(weapindx), 0));
 }
 
 void mech_heat_effect_apply(Mech *mech, Mech *tempMech, int heatdam,

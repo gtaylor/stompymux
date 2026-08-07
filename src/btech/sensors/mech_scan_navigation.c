@@ -1,7 +1,6 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -9,7 +8,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_restrict_api.h"
@@ -47,7 +45,8 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
 
   x1 = y1 = -1;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   x0 = mech_position_real_x(mech);
   y0 = mech_position_real_y(mech);
   if (mech_map_dbref(mech) != -1) {
@@ -62,13 +61,13 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
           if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
                               mech_position_y(tempMech),
                               mech_range_to(mech, tempMech))) {
-            notify(evaluation, player, "Target is not in line of sight!");
+            mecha_notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
         }
       }
       if (!FindTargetXY(mech, &x1, &y1, &z1)) {
-        notify(evaluation, player, "There is no default target!");
+        mecha_notify(evaluation, player, "There is no default target!");
       } else {
         strcpy(buff, "Bearing to default target is: ");
       }
@@ -78,7 +77,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
       iy1 = atoi(args[1]);
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map))) {
-        notify(evaluation, player, "Invalid map coordinates!");
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Bearing to  %d,%d is: ", ix1, iy1);
@@ -94,7 +93,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
             iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
             ix0 <= battle_map_width(mech_map) && iy0 >= 0 &&
             iy0 < battle_map_height(mech_map))) {
-        notify(evaluation, player, "Invalid map coordinates!");
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
         snprintf(buff, sizeof(buff), "Bearing to %d,%d from %d,%d is: ", ix1,
@@ -103,17 +102,17 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
       }
     } else {
-      notify(evaluation, player,
-             "Invalid number of attributes to Bearing function!");
+      mecha_notify(evaluation, player,
+                   "Invalid number of attributes to Bearing function!");
     }
     if (x1 != -1) {
       temp = FindBearing(x0, y0, x1, y1);
       snprintf(trash, sizeof(trash), "%.0f degrees.", temp);
       strcat(buff, trash);
-      notify(evaluation, player, buff);
+      mecha_notify(evaluation, player, buff);
     }
   } else {
-    notify(evaluation, player, "You are not on a map!");
+    mecha_notify(evaluation, player, "You are not on a map!");
   }
 }
 
@@ -135,7 +134,8 @@ void mech_range(DbRef player, void *data, char *buffer) {
 
   x1 = y1 = -1;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   x0 = mech_position_real_x(mech);
   y0 = mech_position_real_y(mech);
   z0 = mech_position_real_z(mech);
@@ -151,13 +151,16 @@ void mech_range(DbRef player, void *data, char *buffer) {
           if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
                               mech_position_y(tempMech),
                               mech_range_to(mech, tempMech))) {
-            notify(evaluation, player, "Target is not in line of sight!");
+            mecha_notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
         }
       }
-      DOCHECK_CONTEXT(mech_context(mech), !FindTargetXY(mech, &x1, &y1, &z1),
-                      "There is no default target!");
+      if (!FindTargetXY(mech, &x1, &y1, &z1)) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "There is no default target!");
+        return;
+      }
       if (battle_map_is_dark(mech_map) && !tempMech)
         z1 = ZSCALE * mech_position_z(mech);
       strcpy(buff, "Range to default target is: ");
@@ -167,7 +170,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
       iy1 = atoi(args[1]);
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map))) {
-        notify(evaluation, player, "Invalid map coordinates!");
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Range to  %d,%d is: ", ix1, iy1);
@@ -188,7 +191,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
             iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
             ix0 <= battle_map_width(mech_map) && iy0 >= 0 &&
             iy0 < battle_map_height(mech_map))) {
-        notify(evaluation, player, "Invalid map coordinates!");
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
         snprintf(buff, sizeof(buff), "Range to %d,%d from %d,%d is: ", ix1, iy1,
@@ -203,8 +206,8 @@ void mech_range(DbRef player, void *data, char *buffer) {
         }
       }
     } else {
-      notify(evaluation, player,
-             "Invalid number of attributes to Range function!");
+      mecha_notify(evaluation, player,
+                   "Invalid number of attributes to Range function!");
       x1 = y1 = -1;
     }
     if (x1 != -1) {
@@ -218,10 +221,10 @@ void mech_range(DbRef player, void *data, char *buffer) {
       else
         snprintf(trash, sizeof(trash), "%s hexes.", buf1);
       strcat(buff, trash);
-      notify(evaluation, player, buff);
+      mecha_notify(evaluation, player, buff);
     }
   } else {
-    notify(evaluation, player, "You are not on a map!");
+    mecha_notify(evaluation, player, "You are not on a map!");
   }
 }
 
@@ -243,7 +246,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
 
   x1 = y1 = -1;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   x0 = mech_position_real_x(mech);
   y0 = mech_position_real_y(mech);
   z0 = mech_position_real_z(mech);
@@ -259,13 +263,16 @@ void mech_vector(DbRef player, void *data, char *buffer) {
           if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
                               mech_position_y(tempMech),
                               mech_range_to(mech, tempMech))) {
-            notify(evaluation, player, "Target is not in line of sight!");
+            mecha_notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
         }
       }
-      DOCHECK_CONTEXT(mech_context(mech), !FindTargetXY(mech, &x1, &y1, &z1),
-                      "There is no default target!");
+      if (!FindTargetXY(mech, &x1, &y1, &z1)) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "There is no default target!");
+        return;
+      }
       strcpy(buff, "Vector to default target is: ");
     } else if (argc == 2) {
       /* Range to X, Y */
@@ -273,7 +280,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       iy1 = atoi(args[1]);
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map))) {
-        notify(evaluation, player, "Invalid map coordinates!");
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Vector to  %d,%d is: ", ix1, iy1);
@@ -287,7 +294,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       iz1 = atoi(args[2]);
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map))) {
-        notify(evaluation, player, "Invalid map coordinates!");
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Vector to  %d,%d,%d is: ", ix1, iy1, iz1);
@@ -305,7 +312,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
             iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
             ix0 <= battle_map_width(mech_map) && iy0 >= 0 &&
             iy0 < battle_map_height(mech_map))) {
-        notify(evaluation, player, "Invalid map coordinates!");
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
         snprintf(buff, sizeof(buff), "Vector to %d,%d from %d,%d is: ", ix1,
@@ -327,7 +334,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
             iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
             ix0 <= battle_map_width(mech_map) && iy0 >= 0 &&
             iy0 < battle_map_height(mech_map))) {
-        notify(evaluation, player, "Invalid map coordinates!");
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
         snprintf(buff, sizeof(buff),
@@ -340,8 +347,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       }
 
     } else {
-      notify(evaluation, player,
-             "Invalid number of attributes to Vector function!");
+      mecha_notify(evaluation, player,
+                   "Invalid number of attributes to Vector function!");
       x1 = y1 = -1;
     }
     if (x1 != -1) {
@@ -369,9 +376,9 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                  FindZBearing(x0, y0, z0, x1, y1, z1));
       strcat(buff, trash);
 
-      notify(evaluation, player, buff);
+      mecha_notify(evaluation, player, buff);
     }
   } else {
-    notify(evaluation, player, "You are not on a map!");
+    mecha_notify(evaluation, player, "You are not on a map!");
   }
 }

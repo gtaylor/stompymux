@@ -1,5 +1,8 @@
 #include "btechstats_internal.h"
+#include "mech_crew_api.h"
+#include "mech_equipment_api.h"
 #include "mech_move_api.h"
+#include "mech_runtime_api.h"
 
 int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
   PSTATS stats, *s = &stats;
@@ -8,7 +11,7 @@ int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
   strcpy(buf, name);
   character_stats_retrieve(context, player,
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
-  if (char_gvalue(s, buf) == 1)
+  if (char_getstatvalue(s, buf) == 1)
     return 1;
   else
     return 0;
@@ -352,14 +355,21 @@ void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef target;
   int targetcode, flaggo;
 
-  FUNCHECK((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
-               NOTHING,
-           "#-1 INVALID TARGET");
-  FUNCHECK(!is_wizard(context->database, player), "#-1 PERMISSION DENIED!");
-  if (Readnum(targetcode, fargs[1]))
+  if ((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
+      NOTHING) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
+    return;
+  }
+  if (!is_wizard(context->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED!");
+    return;
+  }
+  if ((!((targetcode) = atoi(fargs[1])) && strcmp((fargs[1]), "0")))
     targetcode = char_getvaluecode(context, fargs[1]);
-  FUNCHECK(targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES),
-           "#-1 INVALID VALUE");
+  if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
+    return;
+  }
   flaggo = atoi(fargs[2]);
   if (char_values[targetcode].type == CHAR_SKILL && flaggo == 4) {
     safe_tprintf_str(buff, bufc, "%d",
@@ -397,21 +407,30 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef target;
   int targetcode, targetvalue, flaggo;
 
-  FUNCHECK((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
-               NOTHING,
-           "#-1 INVALID TARGET");
-  FUNCHECK(!is_wizard(context->database, player), "#-1 PERMISSION DENIED!");
-  if (Readnum(targetcode, fargs[1]))
+  if ((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
+      NOTHING) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
+    return;
+  }
+  if (!is_wizard(context->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED!");
+    return;
+  }
+  if ((!((targetcode) = atoi(fargs[1])) && strcmp((fargs[1]), "0")))
     targetcode = char_getvaluecode(context, fargs[1]);
-  FUNCHECK(targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES),
-           "#-1 INVALID VALUE");
+  if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
+    return;
+  }
   targetvalue = atoi(fargs[2]);
   flaggo = atoi(fargs[3]);
 
   /* We supposedly have everything at hand.. */
   if (flaggo) {
-    FUNCHECK(char_values[targetcode].type != CHAR_SKILL,
-             "#-1 ONLY SKILLS CAN HAVE FLAG");
+    if (char_values[targetcode].type != CHAR_SKILL) {
+      safe_tprintf_str(buff, bufc, "#-1 ONLY SKILLS CAN HAVE FLAG");
+      return;
+    }
   }
   switch (flaggo) {
   case 0:

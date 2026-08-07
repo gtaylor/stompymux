@@ -15,15 +15,12 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "econ_api.h"
-#include "legacy_macros.h"
 #include "mech_consistency_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_parts.h"
 #include "mech_status_api.h"
-#include "mech_tech.h"
 #include "mech_tech_api.h"
 #include "mech_tech_commands_api.h"
 #include "mech_tech_do_api.h"
@@ -34,6 +31,8 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "registry_api.h"
+#include "repair_job.h"
 
 typedef struct TechCheckContext {
   int matches;
@@ -46,7 +45,9 @@ static void tech_check_locpart(MuxEvent *e, void *data) {
   int loc, pos;
   long l = (long)e->data2;
 
-  UNPACK_LOCPOS(l, loc, pos);
+  RepairEventPayload payload = repair_event_payload_unpack(l);
+  loc = payload.location;
+  pos = payload.position;
   if (loc == context->location && pos == context->part)
     context->matches++;
 }
@@ -60,49 +61,43 @@ static void tech_check_loc(MuxEvent *e, void *data) {
     context->matches++;
 }
 
-#define CHECK(t, fun)                                                          \
-  TechCheckContext check = {.location = loc, .part = part};                    \
-  mech_event_visit(mech, t, fun, &check);                                      \
-  return check.matches
+static int tech_event_part_count(Mech *mech, int location, int part,
+                                 int event_type) {
+  TechCheckContext check = {.location = location, .part = part};
+  mech_event_visit(mech, event_type, tech_check_locpart, &check);
+  return check.matches;
+}
 
-#define CHECKL(t, fun)                                                         \
-  TechCheckContext check = {.location = loc};                                  \
-  mech_event_visit(mech, t, fun, &check);                                      \
-  return check.matches
-
-#define CHECK2(t, t2, fun)                                                     \
-  TechCheckContext check = {.location = loc, .part = part};                    \
-  mech_event_visit(mech, t, fun, &check);                                      \
-  mech_event_visit(mech, t2, fun, &check);                                     \
-  return check.matches
+static int tech_event_location_count(Mech *mech, int location, int event_type) {
+  TechCheckContext check = {.location = location};
+  mech_event_visit(mech, event_type, tech_check_loc, &check);
+  return check.matches;
+}
 
 /* Replace/reload */
 int SomeoneRepairing_s(Mech *mech, int loc, int part, int t) {
-  CHECK(t, tech_check_locpart);
+  return tech_event_part_count(mech, loc, part, t);
 }
 
-#define DAT(t)                                                                 \
-  if (SomeoneRepairing_s(mech, loc, part, t))                                  \
-  return 1
-
 int SomeoneRepairing(Mech *mech, int loc, int part) {
-  DAT(EVENT_REPAIR_RELO);
-  DAT(EVENT_REPAIR_REPL);
-  DAT(EVENT_REPAIR_REPLG);
-  DAT(EVENT_REPAIR_REPAP);
-  DAT(EVENT_REPAIR_REPAG);
-  DAT(EVENT_REPAIR_MOB);
-  DAT(EVENT_REPAIR_REPENHCRIT);
+  const int event_types[] = {EVENT_REPAIR_RELO,      EVENT_REPAIR_REPL,
+                             EVENT_REPAIR_REPLG,     EVENT_REPAIR_REPAP,
+                             EVENT_REPAIR_REPAG,     EVENT_REPAIR_MOB,
+                             EVENT_REPAIR_REPENHCRIT};
+  for (size_t index = 0; index < (sizeof(event_types) / sizeof(event_types[0]));
+       index++)
+    if (SomeoneRepairing_s(mech, loc, part, event_types[index]))
+      return 1;
   return 0;
 }
 
 /* Fixinternal/armor */
 int SomeoneFixingA(Mech *mech, int loc) {
-  CHECKL(EVENT_REPAIR_FIX, tech_check_loc);
+  return tech_event_location_count(mech, loc, EVENT_REPAIR_FIX);
 }
 
 int SomeoneFixingI(Mech *mech, int loc) {
-  CHECKL(EVENT_REPAIR_FIXI, tech_check_loc);
+  return tech_event_location_count(mech, loc, EVENT_REPAIR_FIXI);
 }
 
 int SomeoneFixing(Mech *mech, int loc) {
@@ -111,11 +106,11 @@ int SomeoneFixing(Mech *mech, int loc) {
 
 /* Reattach */
 int SomeoneAttaching(Mech *mech, int loc) {
-  CHECKL(EVENT_REPAIR_REAT, tech_check_loc);
+  return tech_event_location_count(mech, loc, EVENT_REPAIR_REAT);
 }
 
 int SomeoneReplacingSuit(Mech *mech, int loc) {
-  CHECKL(EVENT_REPAIR_REPSUIT, tech_check_loc);
+  return tech_event_location_count(mech, loc, EVENT_REPAIR_REPSUIT);
 }
 
 /* Reseal
@@ -125,23 +120,22 @@ int SomeoneReplacingSuit(Mech *mech, int loc) {
  */
 
 int SomeoneResealing(Mech *mech, int loc) {
-  CHECKL(EVENT_REPAIR_RESE, tech_check_loc);
+  return tech_event_location_count(mech, loc, EVENT_REPAIR_RESE);
 }
 
 int SomeoneScrappingLoc(Mech *mech, int loc) {
-  CHECKL(EVENT_REPAIR_SCRL, tech_check_loc);
+  return tech_event_location_count(mech, loc, EVENT_REPAIR_SCRL);
 }
 
 int SomeoneScrappingPart(Mech *mech, int loc, int part) {
-  DAT(EVENT_REPAIR_SCRP);
-  DAT(EVENT_REPAIR_SCRG);
-  DAT(EVENT_REPAIR_UMOB);
+  const int event_types[] = {EVENT_REPAIR_SCRP, EVENT_REPAIR_SCRG,
+                             EVENT_REPAIR_UMOB};
+  for (size_t index = 0; index < (sizeof(event_types) / sizeof(event_types[0]));
+       index++)
+    if (SomeoneRepairing_s(mech, loc, part, event_types[index]))
+      return 1;
   return 0;
 }
-
-#undef CHECK
-#undef CHECK2
-#undef DAT
 
 int CanScrapLoc(Mech *mech, int loc) {
   TechCheckContext check = {.location = loc % 8};
@@ -177,7 +171,11 @@ void tech_checkstatus(DbRef player, void *data, char *buffer) {
   int i = figure_latest_tech_event(mech);
   UptimeText uptime;
 
-  DOCHECK_CONTEXT(context, !i, "The mech's ready to rock!");
+  if (!i) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "The mech's ready to rock!");
+    return;
+  }
   uptime = uptime_text(game_lag_time(context, i));
   notify_printf(evaluation, player,
                 "The 'mech has approximately %s until done.", uptime.text);

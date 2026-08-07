@@ -1,5 +1,15 @@
 #include "sqlite_internal.h"
 
+static int bind_runtime_int(sqlite3_stmt *statement, int *index,
+                            sqlite3_int64 value) {
+  return btech_special_bind_int(statement, (*index)++, value);
+}
+
+static int bind_runtime_real(sqlite3_stmt *statement, int *index,
+                             double value) {
+  return btech_special_bind_real(statement, (*index)++, value);
+}
+
 void btech_finalize_object_statements(BTECH_OBJECT_STORE_CONTEXT *context) {
   sqlite3_finalize(context->mechrep);
   sqlite3_finalize(context->turret);
@@ -269,110 +279,197 @@ int btech_store_simple_object(void *key, void *data, int depth,
     }
     if (context->result == 0) {
       runtime_index = 1;
-#define BTECH_RUNTIME_INT(value)                                               \
-  btech_special_bind_int(context->runtime, runtime_index++,                    \
-                         (sqlite3_int64)(value))
-#define BTECH_RUNTIME_REAL(value)                                              \
-  btech_special_bind_real(context->runtime, runtime_index++, (double)(value))
-      if (BTECH_RUNTIME_INT((DbRef)key) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.jumptop) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.aim) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.basetohit) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.pilotskillbase) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.engineheat) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.masc_value) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.aim_type) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.sensor[0]) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.sensor[1]) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.fire_adjustment) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.vis_mod) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.chargetimer) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.chargedist) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.staggerstamp) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.mech_prefs) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.jumplength) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.goingx) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.goingy) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.desiredfacing) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.angle) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.jumpheading) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.targx) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.targy) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.targz) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.turretfacing) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.turndamage) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.lateral) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.num_seen) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.lx) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.ly) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.chgtarget) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.dfatarget) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.target) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.swarming) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.swarmedby) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.carrying) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.spotter) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.heat) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.weapheat) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.plus_heat) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.minus_heat) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.startfx) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.startfy) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.startfz) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.endfz) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.verticalspeed) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.speed) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.desired_speed) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.jumpspeed) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.critstatus) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.status) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.status2) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.specials) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.specials2) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.specialsstatus) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.tankcritstatus) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.last_weapon_recycle) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.cargo_weight) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.lastrndu) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.rnd) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.last_ds_msg) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.boom_start) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.maxfuel) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.lastused) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.cocoon) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.commconv) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.commconv_last) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.onumsinks) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.disabled_hs) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.autopilot_num) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.heatboom_last) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.sspin) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.can_see) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.row) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.rcw) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.rspd) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.erat) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.per) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.wxf) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.last_startup) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.maxsuits) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.infantry_specials) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.scharge_value) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.staggerDamage) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.lastStaggerNotify) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.critstatus2) < 0 ||
-          BTECH_RUNTIME_REAL(snapshot.runtime.xpmod) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.shots_fired) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.shots_hit) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.shots_missed) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.damage_taken) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.damage_inflicted) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.units_killed) < 0 ||
-          BTECH_RUNTIME_INT(snapshot.runtime.lastStaggerCheck) < 0 ||
+      if (bind_runtime_int(context->runtime, &runtime_index, (DbRef)key) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.jumptop) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.aim) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.basetohit) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.pilotskillbase) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.engineheat) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.masc_value) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.aim_type) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.sensor[0]) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.sensor[1]) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.fire_adjustment) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.vis_mod) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.chargetimer) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.chargedist) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.staggerstamp) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.mech_prefs) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.jumplength) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.goingx) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.goingy) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.desiredfacing) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.angle) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.jumpheading) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.targx) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.targy) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.targz) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.turretfacing) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.turndamage) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.lateral) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.num_seen) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.lx) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.ly) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.chgtarget) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.dfatarget) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.target) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.swarming) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.swarmedby) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.carrying) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.spotter) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.heat) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.weapheat) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.plus_heat) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.minus_heat) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.startfx) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.startfy) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.startfz) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.endfz) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.verticalspeed) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.speed) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.desired_speed) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.jumpspeed) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.critstatus) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.status) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.status2) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.specials) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.specials2) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.specialsstatus) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.tankcritstatus) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.last_weapon_recycle) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.cargo_weight) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.lastrndu) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.rnd) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.last_ds_msg) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.boom_start) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.maxfuel) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.lastused) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.cocoon) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.commconv) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.commconv_last) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.onumsinks) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.disabled_hs) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.autopilot_num) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.heatboom_last) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.sspin) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.can_see) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.row) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.rcw) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.rspd) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.erat) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.per) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.wxf) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.last_startup) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.maxsuits) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.infantry_specials) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.scharge_value) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.staggerDamage) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.lastStaggerNotify) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.critstatus2) < 0 ||
+          bind_runtime_real(context->runtime, &runtime_index,
+                            snapshot.runtime.xpmod) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.shots_fired) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.shots_hit) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.shots_missed) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.damage_taken) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.damage_inflicted) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.units_killed) < 0 ||
+          bind_runtime_int(context->runtime, &runtime_index,
+                           snapshot.runtime.lastStaggerCheck) < 0 ||
           btech_special_step(context->runtime) < 0)
         context->result = -1;
-#undef BTECH_RUNTIME_INT
-#undef BTECH_RUNTIME_REAL
     }
     for (index = 0; context->result == 0 && index < 5; index++) {
       if (btech_special_bind_int(context->runtime_unused, 1, (DbRef)key) < 0 ||

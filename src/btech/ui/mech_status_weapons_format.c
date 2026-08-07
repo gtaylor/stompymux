@@ -7,7 +7,6 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "failures.h"
-#include "legacy_macros.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_enhanced_criticals_api.h"
@@ -23,6 +22,12 @@
 #include "mech_tag_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
+
+static void recycle_status_append(char *buffer, size_t capacity,
+                                  const char *part, const char *status) {
+  size_t length = strlen(buffer);
+  snprintf(buffer + length, capacity - length, "%s: %s ", part, status);
+}
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -213,7 +218,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                                              : "[fg=green]",
                conditions.masc_counter, conditions.masc_enabled ? "On" : "Off");
 
-    notify(evaluation, player, tempbuff);
+    mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
@@ -223,7 +228,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
              "%d tons free, %d tons max unit size",
              mech_cargo_space(mech) / 100, mech_carrier_maximum_tonnage(mech));
-    notify(evaluation, player, tempbuff);
+    mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
@@ -243,7 +248,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " BloodhoundProbe");
 
-    notify(evaluation, player, tempbuff);
+    mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
@@ -275,7 +280,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " InfiltratorIIStealth");
 
-    notify(evaluation, player, tempbuff);
+    mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
@@ -302,65 +307,79 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " BackPackJettison");
 
-    notify(evaluation, player, tempbuff);
+    mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
   if (infantry_technology & MUST_JETTISON_TECH) {
     strcpy(tempbuff, "Requirements: Must jettison backpack before using "
                      "special abilities or jumping");
-    notify(evaluation, player, tempbuff);
+    mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
   mech_update_recycling(mech);
   if (mech_class(mech) == CLASS_MECH && !compact) {
     tempbuff[0] = 0;
 
-#define SHOW(part, loc)                                                        \
-  snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),   \
-           "%s: %s ", part, loc)
-
     bool is_quad = mech_movement_type(mech) == MOVE_QUAD;
-    SHOW(is_quad ? "FLLEG" : "LARM", section_recycle_status(mech, LARM));
-    SHOW(is_quad ? "FRLEG" : "RARM", section_recycle_status(mech, RARM));
-    SHOW(is_quad ? "RLLEG" : "LLEG", section_recycle_status(mech, LLEG));
-    SHOW(is_quad ? "RRLEG" : "RLEG", section_recycle_status(mech, RLEG));
+    recycle_status_append(tempbuff, sizeof(tempbuff),
+                          is_quad ? "FLLEG" : "LARM",
+                          section_recycle_status(mech, LARM));
+    recycle_status_append(tempbuff, sizeof(tempbuff),
+                          is_quad ? "FRLEG" : "RARM",
+                          section_recycle_status(mech, RARM));
+    recycle_status_append(tempbuff, sizeof(tempbuff),
+                          is_quad ? "RLLEG" : "LLEG",
+                          section_recycle_status(mech, LLEG));
+    recycle_status_append(tempbuff, sizeof(tempbuff),
+                          is_quad ? "RRLEG" : "RLEG",
+                          section_recycle_status(mech, RLEG));
 
     if (hasPhysical(mech, LARM, PHY_AXE))
-      SHOW("Axe[LA]", physical_recycle_status(mech, LARM, PHY_AXE));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Axe[LA]",
+                            physical_recycle_status(mech, LARM, PHY_AXE));
 
     if (hasPhysical(mech, RARM, PHY_AXE))
-      SHOW("Axe[RA]", physical_recycle_status(mech, RARM, PHY_AXE));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Axe[RA]",
+                            physical_recycle_status(mech, RARM, PHY_AXE));
 
     if (hasPhysical(mech, LARM, PHY_SWORD))
-      SHOW("Sword[LA]", physical_recycle_status(mech, LARM, PHY_SWORD));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Sword[LA]",
+                            physical_recycle_status(mech, LARM, PHY_SWORD));
 
     if (hasPhysical(mech, RARM, PHY_SWORD))
-      SHOW("Sword[RA]", physical_recycle_status(mech, RARM, PHY_SWORD));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Sword[RA]",
+                            physical_recycle_status(mech, RARM, PHY_SWORD));
 
     if (hasPhysical(mech, LARM, PHY_CLAW))
-      SHOW("Claw[LA]", physical_recycle_status(mech, LARM, PHY_CLAW));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Claw[LA]",
+                            physical_recycle_status(mech, LARM, PHY_CLAW));
 
     if (hasPhysical(mech, RARM, PHY_CLAW))
-      SHOW("Claw[RA]", physical_recycle_status(mech, RARM, PHY_CLAW));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Claw[RA]",
+                            physical_recycle_status(mech, RARM, PHY_CLAW));
 
     if (hasPhysical(mech, LARM, PHY_MACE))
-      SHOW("Mace[LA]", physical_recycle_status(mech, LARM, PHY_MACE));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Mace[LA]",
+                            physical_recycle_status(mech, LARM, PHY_MACE));
 
     if (hasPhysical(mech, RARM, PHY_MACE))
-      SHOW("Mace[RA]", physical_recycle_status(mech, RARM, PHY_MACE));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Mace[RA]",
+                            physical_recycle_status(mech, RARM, PHY_MACE));
 
     if (hasPhysical(mech, LARM, PHY_SAW))
-      SHOW("Saw[LA]", physical_recycle_status(mech, LARM, PHY_SAW));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Saw[LA]",
+                            physical_recycle_status(mech, LARM, PHY_SAW));
 
     if (hasPhysical(mech, RARM, PHY_SAW))
-      SHOW("Saw[RA]", physical_recycle_status(mech, RARM, PHY_SAW));
+      recycle_status_append(tempbuff, sizeof(tempbuff), "Saw[RA]",
+                            physical_recycle_status(mech, RARM, PHY_SAW));
 
-    notify(evaluation, player, tempbuff);
+    mecha_notify(evaluation, player, tempbuff);
 
     if (conditions.arms_flipped)
-      notify(evaluation, player,
-             "*** Mech arms are flipped into the rear arc ***");
+      mecha_notify(evaluation, player,
+                   "*** Mech arms are flipped into the rear arc ***");
   } else if (mech_class(mech) == CLASS_BSUIT && !compact) {
     for (i = 0; i < NUM_BSUIT_MEMBERS; i++)
       if (mech_section_internal(mech, i))
@@ -368,7 +387,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     if (i < NUM_BSUIT_MEMBERS) {
       snprintf(tempbuff, sizeof(tempbuff), "Team status (special attacks): %s",
                section_recycle_status(mech, i));
-      notify(evaluation, player, tempbuff);
+      mecha_notify(evaluation, player, tempbuff);
     }
 
   } else if (((mech_class(mech) == CLASS_VEH_GROUND) ||
@@ -384,22 +403,22 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     }
 
     if (*tempbuff)
-      notify(evaluation, player, tempbuff);
+      mecha_notify(evaluation, player, tempbuff);
   }
 
   ammoweapcount = FindAmmunition(mech, ammoweap, ammo, ammomax, modearray, 0);
   if (!compact) {
-    notify(evaluation, player,
-           "==================WEAPON "
-           "SYSTEMS===========================AMMUNITION========");
+    mecha_notify(evaluation, player,
+                 "==================WEAPON "
+                 "SYSTEMS===========================AMMUNITION========");
     if (mech_class(mech) == CLASS_BSUIT)
-      notify(evaluation, player,
-             "------ Weapon --------- [##] Holder ------ Status ||--- "
-             "Ammo Type ---- Rounds");
+      mecha_notify(evaluation, player,
+                   "------ Weapon --------- [##] Holder ------ Status ||--- "
+                   "Ammo Type ---- Rounds");
     else
-      notify(evaluation, player,
-             "------ Weapon --------- [##] Location ---- Status ||--- "
-             "Ammo Type ---- Rounds");
+      mecha_notify(evaluation, player,
+                   "------ Weapon --------- [##] Location ---- Status ||--- "
+                   "Ammo Type ---- Rounds");
   }
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 0);
@@ -510,7 +529,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       }
       strcat(weapbuff, weapname);
       if (!compact)
-        notify(evaluation, player, weapbuff);
+        mecha_notify(evaluation, player, weapbuff);
     }
     running_sum += count;
   }
@@ -529,7 +548,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       strcat(astrAmmoSpacer, weapname);
       strcat(astrAmmoSpacer, tempbuff);
 
-      notify(evaluation, player, astrAmmoSpacer);
+      mecha_notify(evaluation, player, astrAmmoSpacer);
 
       running_sum++;
     }

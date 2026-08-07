@@ -19,7 +19,6 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_terrain.h" // IWYU pragma: keep
 #include "mech_events.h"
 #include "mech_lifecycle.h" // IWYU pragma: keep
@@ -31,6 +30,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "repair_job.h"
 
 #define MECH_STAT_C /* want to use the POSIX stat() call. */
 
@@ -58,21 +58,6 @@
 
 extern char *strtok(char *s, const char *ct);
 
-#define MECHREP_COMMON(a)                                                      \
-  struct RepairFacility *rep = (struct RepairFacility *)data;                  \
-  Mech *mech;                                                                  \
-  DOCHECK_CONTEXT(rep->xcode.context,                                          \
-                  !is_god(rep->xcode.context->database, player) &&             \
-                      !is_wizard(rep->xcode.context->database, player),        \
-                  "I'm sorry Dave, can't do that.");                           \
-  if (a) {                                                                     \
-    DOCHECK_CONTEXT(rep->xcode.context, rep->current_target == -1,             \
-                    "You must set a target first!");                           \
-    mech = btech_context_get_mech(rep->xcode.context, rep->current_target);    \
-    DOCHECK_CONTEXT(rep->xcode.context, mech == nullptr,                       \
-                    "The target's BTech data is not allocated.");              \
-  }
-
 /*--------------------------------------------------------------------------*/
 
 /* Code Begins                                                              */
@@ -87,53 +72,53 @@ void invalid_section(DbRef player, Mech *mech) {
   int mechtype = mech_class(mech);
   int movetype = mech_movement_type(mech);
 
-  notify(btech_context_evaluation(mech_context(mech)), player,
-         "Not a legal armor location, must be one of:");
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+               "Not a legal armor location, must be one of:");
 
   switch (mechtype) {
   case CLASS_MW:
   case CLASS_MECH:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "HEAD (H), CTORSO (CT), LTORSO (LT), RTORSO (RT)");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "HEAD (H), CTORSO (CT), LTORSO (LT), RTORSO (RT)");
 
     if (movetype == MOVE_QUAD)
-      notify(btech_context_evaluation(mech_context(mech)), player,
-             "LARM (LA), RARM (RA), LLEG (LL), RLEG (RL)");
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "LARM (LA), RARM (RA), LLEG (LL), RLEG (RL)");
     else
-      notify(btech_context_evaluation(mech_context(mech)), player,
-             "FLLEG (FLL), FRLEG (FRL), RLLEG (RLL), RRLEG (RRL)");
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "FLLEG (FLL), FRLEG (FRL), RLLEG (RLL), RRLEG (RRL)");
 
     break;
   case CLASS_VEH_NAVAL:
   case CLASS_VEH_GROUND:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), TURRET (TU)");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), TURRET (TU)");
     break;
   case CLASS_VTOL:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), ROTOR (RO)");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), ROTOR (RO)");
     break;
   case CLASS_AERO:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "NOSE (N), LWING (LW), RWING (RW), ASIDE (AS)");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "NOSE (N), LWING (LW), RWING (RW), ASIDE (AS)");
     break;
   case CLASS_DS:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "NOSE (N), LWING (LW), RWING (RW), LRWING (LR), RRWING "
-           "(RR), ASIDE (AS)");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "NOSE (N), LWING (LW), RWING (RW), LRWING (LR), RRWING "
+                 "(RR), ASIDE (AS)");
     break;
   case CLASS_SPHEROID_DS:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "NOSE (N), FRSIDE (FR), FLSIDE (FL), RLSIDE (RL), RRSIDE "
-           "(RR), ASIDE (AS)");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "NOSE (N), FRSIDE (FR), FLSIDE (FL), RLSIDE (RL), RRSIDE "
+                 "(RR), ASIDE (AS)");
     break;
   case CLASS_BSUIT:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "S1, S2, S3, S4, S5, S6, S7, S8");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "S1, S2, S3, S4, S5, S6, S7, S8");
     break;
   default:
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "Invalid or unknown unit type!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid or unknown unit type!");
   }
 }
 
@@ -146,9 +131,24 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
   int index;
   int temp;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(rep->xcode.context, !argc, "Invalid number of arguments!");
+  if (!argc) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
   index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
                                  args[0]);
 
@@ -164,8 +164,8 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     // One Argument Given.
     temp = atoi(args[1]);
     if (temp < 0)
-      notify(btech_context_evaluation(rep->xcode.context), player,
-             "Invalid armor value!");
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Invalid armor value!");
     else {
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Front armor set to    : %d", temp);
@@ -178,8 +178,8 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     // Two Arguments Given.
     temp = atoi(args[2]);
     if (temp < 0)
-      notify(btech_context_evaluation(rep->xcode.context), player,
-             "Invalid Internal armor value!");
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Invalid Internal armor value!");
     else {
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Internal armor set to : %d", temp);
@@ -193,8 +193,8 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     temp = atoi(args[3]);
     if (index == CTORSO || index == RTORSO || index == LTORSO) {
       if (temp < 0)
-        notify(btech_context_evaluation(rep->xcode.context), player,
-               "Invalid Rear armor value!");
+        mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                     "Invalid Rear armor value!");
       else {
         notify_printf(btech_context_evaluation(rep->xcode.context), player,
                       "Rear armor set to     : %d", temp);
@@ -202,8 +202,8 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
         mech_section_original_rear_armor_set(mech, index, temp);
       }
     } else
-      notify(btech_context_evaluation(rep->xcode.context), player,
-             "Only the torso can have rear armor.");
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Only the torso can have rear armor.");
   }
 }
 
@@ -225,10 +225,25 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   int argstoiter;    /* Holder for figuring out how many args to scan */
   char flagholder;   /* Holder for flag comparisons */
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
 
   argc = mech_parseattributes(buffer, args, 20);
-  DOCHECK_CONTEXT(rep->xcode.context, argc < 3, "Invalid number of arguments!")
+  if (argc < 3) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
 
   index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
                                  args[1]);
@@ -310,8 +325,11 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
     for (loop = 0; loop < argc; loop++) {
       temp = atoi(args[2 + loop]);
       temp--; /* From 1 based to 0 based */
-      DOCHECK_CONTEXT(rep->xcode.context, temp < 0 || temp > NUM_CRITICALS,
-                      "Bad critical location!");
+      if (temp < 0 || temp > NUM_CRITICALS) {
+        mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                     "Bad critical location!");
+        return;
+      }
       int fire_mode = 0;
 
       /* If this is a Rocket Launcher, use isrocket to set the OS flag */
@@ -325,8 +343,9 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
       /* Rockets are OS too */ // NOT! -=RST
       if (isoneshot)
         fire_mode |= OS_MODE;
-      mech_critical_configure(mech, index, temp, I2Weapon(weapindex), 0,
-                              fire_mode, 0);
+      mech_critical_configure(mech, index, temp,
+                              weapon_equipment_index(weapindex), 0, fire_mode,
+                              0);
     }
     if (MechWeapons[weapindex].special & AMS) {
       if (MechWeapons[weapindex].special & CLAT)
@@ -344,29 +363,43 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
   int argc;
   int section, critical, weaptype;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(rep->xcode.context, argc < 2,
-                  "MECHREP: Invalid Syntax. Try FireMode <Weapon#> <Mode>");
+  if (argc < 2) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "MECHREP: Invalid Syntax. Try FireMode <Weapon#> <Mode>");
+    return;
+  }
 
   weaptype = FindWeaponNumberOnMech_Advanced(mech, atoi(args[0]), &section,
                                              &critical, 0);
 
   if (weaptype < 0) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Invalid Weapon #!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid Weapon #!");
     return;
   }
 
   if (MechWeapons[weaptype].ammoperton == 0) {
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "That weapon doesn't require ammo!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That weapon doesn't require ammo!");
     return;
   }
 
   if (mech_critical_fire_mode(mech, section, critical) & OS_MODE) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Keeping One Shot Mode!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Keeping One Shot Mode!");
     mech_critical_ammo_mode_set(mech, section, critical, 0);
   } else if (!(mech_critical_fire_mode(mech, section, critical) &
                HALFTON_MODE)) {
@@ -450,8 +483,8 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
     mech_critical_fire_mode_set(mech, section, critical, 0);
   }
 
-  notify(btech_context_evaluation(rep->xcode.context), player,
-         "Firemode changed!");
+  mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+               "Firemode changed!");
 }
 /*
  * Logic for the 'reload' mechrep command.
@@ -463,15 +496,29 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
   int weapindex;
   int subsect;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(rep->xcode.context, argc <= 2,
-                  "Invalid number of arguments!");
+  if (argc <= 2) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
   weapindex = WeaponIndexFromString(rep->xcode.context, args[0]);
 
   if (weapindex == -1) {
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "That is not a valid weapon!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "That is not a valid weapon!");
     DumpWeapons(mech_context(mech), player);
     return;
   }
@@ -487,14 +534,17 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
 
   subsect = atoi(args[2]);
   subsect--; /* from 1 based to 0 based */
-  DOCHECK_CONTEXT(rep->xcode.context,
-                  subsect < 0 || subsect >= CritsInLoc(mech, index),
-                  "Critslot out of range!");
+  if (subsect < 0 || subsect >= CritsInLoc(mech, index)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Critslot out of range!");
+    return;
+  }
   if (MechWeapons[weapindex].ammoperton == 0)
-    notify(btech_context_evaluation(mech_context(mech)), player,
-           "That weapon doesn't require ammo!");
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That weapon doesn't require ammo!");
   else {
-    mech_critical_part_type_set(mech, index, subsect, I2Ammo(weapindex));
+    mech_critical_part_type_set(mech, index, subsect,
+                                ammunition_equipment_index(weapindex));
     if (!(mech_critical_fire_mode(mech, index, subsect) & HALFTON_MODE)) {
       mech_critical_fire_mode_set(mech, index, subsect, 0);
       mech_critical_ammo_mode_set(mech, index, subsect, 0);
@@ -581,8 +631,8 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
 
     mech_critical_data_set(mech, index, subsect,
                            FullAmmo(mech, index, subsect));
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Weapon loaded!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Weapon loaded!");
   }
 }
 
@@ -595,9 +645,24 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
   int index;
   int subsect;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(rep->xcode.context, argc < 2, "Invalid number of arguments!");
+  if (argc < 2) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
 
   index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
                                  args[0]);
@@ -610,18 +675,21 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
 
   subsect = atoi(args[1]);
   subsect--; /* from 1 based to 0 based */
-  DOCHECK_CONTEXT(rep->xcode.context,
-                  subsect < 0 || subsect >= CritsInLoc(mech, index),
-                  "Critslot out of range!");
-  if (MechWeapons[Ammo2I(mech_critical_part_type(mech, index, subsect))]
+  if (subsect < 0 || subsect >= CritsInLoc(mech, index)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Critslot out of range!");
+    return;
+  }
+  if (MechWeapons[ammunition_to_weapon_index(
+                      mech_critical_part_type(mech, index, subsect))]
           .ammoperton == 0)
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "That weapon doesn't require ammo!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "That weapon doesn't require ammo!");
   else {
     mech_critical_data_set(mech, index, subsect,
                            FullAmmo(mech, index, subsect));
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Weapon restocked!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Weapon restocked!");
   }
 }
 
@@ -634,9 +702,24 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   int index;
   int temp = 0;
 
-  MECHREP_COMMON(1);
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(rep->xcode.context, argc < 2, "Invalid number of arguments!");
+  if (argc < 2) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
   index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
                                  args[0]);
 
@@ -647,7 +730,11 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   }
   if (argc > 2) {
     temp = atoi(args[2]);
-    DOCHECK_CONTEXT(rep->xcode.context, temp < 0, "Illegal value for armor!");
+    if (temp < 0) {
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Illegal value for armor!");
+      return;
+    }
   }
 
   switch (args[1][0]) {
@@ -655,15 +742,15 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   case 'a':
     /* armor */
     mech_section_armor_set(mech, index, temp);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Armor repaired!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Armor repaired!");
     break;
   case 'I':
   case 'i':
     /* internal */
     mech_section_internal_set(mech, index, temp);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Internal structure repaired!");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Internal structure repaired!");
     break;
   case 'C':
   case 'c':
@@ -671,11 +758,11 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
     temp--;
     if (temp >= 0 && temp < NUM_CRITICALS) {
       mech_RepairPart(mech, index, temp);
-      notify(btech_context_evaluation(rep->xcode.context), player,
-             "Critical location repaired!");
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Critical location repaired!");
     } else {
-      notify(btech_context_evaluation(rep->xcode.context), player,
-             "Critical Location out of range!");
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Critical Location out of range!");
     }
     break;
   case 'R':
@@ -683,23 +770,23 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
     /* rear */
     if (index == CTORSO || index == LTORSO || index == RTORSO) {
       mech_section_rear_armor_set(mech, index, temp);
-      notify(btech_context_evaluation(rep->xcode.context), player,
-             "Rear armor repaired!");
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Rear armor repaired!");
     } else {
-      notify(btech_context_evaluation(rep->xcode.context), player,
-             "Only the center, rear and left torso have rear armor!");
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Only the center, rear and left torso have rear armor!");
     }
     break;
   case 'S':
   case 's':
     /* reattach */
     mech_ReAttach(mech, index);
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Section reattached.");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Section reattached.");
     break;
   default:
-    notify(btech_context_evaluation(rep->xcode.context), player,
-           "Illegal Type-> must be ARMOR, INTERNAL, CRIT, REAR");
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Illegal Type-> must be ARMOR, INTERNAL, CRIT, REAR");
     return;
   }
 }

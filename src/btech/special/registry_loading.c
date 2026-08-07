@@ -34,7 +34,6 @@
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "ds_turret_api.h"
-#include "legacy_macros.h"
 #include "map_dynamic_api.h"
 #include "mech_lifecycle.h"
 #include "mech_restrict_api.h"
@@ -208,7 +207,7 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
 
     if (!autopilot->mymechnum || !(autopilot->mymech = btech_context_get_mech(
                                        context, autopilot->mymechnum))) {
-      DoStopGun(autopilot);
+      autopilot_gunning_stop(autopilot);
     } else {
       /*
        * Weapon lists and range profiles are caches derived from the restored
@@ -228,9 +227,10 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
           autopilot->commands &&
           doubly_linked_list_size(autopilot->commands) > 0 &&
           !mux_event_count_type_data(context->events, EVENT_AUTOCOM, autopilot))
-        AUTO_COM(autopilot, AUTOPILOT_NC_DELAY);
-      if (Gunning(autopilot))
-        DoStartGun(autopilot);
+        autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
+                                 AUTOPILOT_NC_DELAY, 0);
+      if (autopilot_is_gunning(autopilot))
+        autopilot_gunning_start(autopilot);
     }
   }
 

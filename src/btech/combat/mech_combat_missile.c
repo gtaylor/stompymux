@@ -10,6 +10,7 @@
 
 #include "map_terrain.h"
 #include "mech_lifecycle.h"
+#include "weapon_catalogue_api.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -31,7 +32,6 @@
 #include "mech_hitloc_api.h"
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -42,7 +42,6 @@
 #include "pcombat_api.h"
 #include "registry_api.h"
 #include "section_types.h"
-#include "weapon_catalogue_api.h"
 
 static void swap_ints(int *left, int *right) {
   int temporary = *left;
@@ -94,7 +93,7 @@ void mech_missile_apply_hits(Mech *mech, Mech *target, int hitX, int hitY,
 
     strcpy(buf, "");
 
-    if (IsMissile(weapindx))
+    if (weapon_catalogue_is_missile(weapindx))
       snprintf(buf, SBUF_SIZE, "%s%s", "missile",
                orig_num_missiles > 1 ? "s" : "");
     else if (ammoMode & LBX_MODE)
@@ -175,7 +174,8 @@ int mech_missile_hit_index(Mech *mech, Mech *hitMech, int weapindx,
   /*
    * Figure out the modifiers to the roll table for missiles
    */
-  if (IsMissile(weapindx) && (tUseArtemisBonus || tUseNARCBonus))
+  if (weapon_catalogue_is_missile(weapindx) &&
+      (tUseArtemisBonus || tUseNARCBonus))
     wRollInc = 2;
 
   /* Roll 3 times... if we're hotloading, we'll use the 2 lowest */
@@ -231,7 +231,7 @@ int mech_missile_hit_target(Mech *mech, int weapindx, int wSection,
   char strLocName[30];
   int missileindex = 0;
   /* Check to see if we're a NARC or iNARC launcher firing homing missiles */
-  if (IsMissile(weapindx)) {
+  if (weapon_catalogue_is_missile(weapindx)) {
     if ((MechWeapons[weapindx].special & NARC) &&
         !(mech_critical_ammo_mode(mech, wSection, wCritSlot) & NARC_MODE))
       wNARCType = 1;
@@ -523,8 +523,8 @@ int mech_ams_locate_defenses(Mech *target, int *AMStype, int *ammoLoc,
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     for (j = 0; j < NUM_CRITICALS; j++)
-      if (IsWeapon((t = mech_critical_part_type(target, i, j))))
-        if (weapon_catalogue_is_anti_missile(Weapon2I(t)))
+      if (equipment_is_weapon((t = mech_critical_part_type(target, i, j))))
+        if (weapon_catalogue_is_anti_missile(weapon_from_equipment_index(t)))
           if (!(mech_critical_is_nonfunctional(target, i, j) ||
                 mech_weapon_is_recycling_at(target, i, j)))
             break;
@@ -535,7 +535,7 @@ int mech_ams_locate_defenses(Mech *target, int *AMStype, int *ammoLoc,
   if (i == NUM_SECTIONS)
     return 0;
 
-  w = Weapon2I(t);
+  w = weapon_from_equipment_index(t);
   AMSsect = i;
   AMScrit = j;
   *AMStype = w;

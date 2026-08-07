@@ -24,6 +24,12 @@ void mech_c3_working_masters_set(Mech *mech, int count) {
   mech->sd.wWorkingC3Masters = count;
 }
 
+int mech_c3_total_masters(const Mech *mech) { return mech->sd.wTotalC3Masters; }
+
+void mech_c3_total_masters_set(Mech *mech, int count) {
+  mech->sd.wTotalC3Masters = count;
+}
+
 int mech_c3i_network_size(const Mech *mech) { return mech->sd.wC3iNetworkSize; }
 
 void mech_c3i_network_size_set(Mech *mech, int size) {

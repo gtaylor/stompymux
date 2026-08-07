@@ -12,7 +12,6 @@
 #include "btech/context.h"
 #include "btech_event.h" // IWYU pragma: keep
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -22,7 +21,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -31,6 +29,7 @@
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
 
@@ -189,8 +188,8 @@ void ice_growth(DbRef player, BattleMap *map, int num) {
     notify_printf(btech_context_evaluation(battle_map_context(map)), player,
                   "%d hexes 'iced'.", count);
   else
-    notify(btech_context_evaluation(battle_map_context(map)), player,
-           "No hexes 'iced'.");
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "No hexes 'iced'.");
 }
 
 void ice_melt(DbRef player, BattleMap *map, int num) {
@@ -214,19 +213,24 @@ void ice_melt(DbRef player, BattleMap *map, int num) {
     notify_printf(btech_context_evaluation(battle_map_context(map)), player,
                   "%d hexes melted.", count);
   else
-    notify(btech_context_evaluation(battle_map_context(map)), player,
-           "No hexes melted.");
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "No hexes melted.");
 }
 
 void map_addice(DbRef player, BattleMap *map, char *buffer) {
   char *args[2];
   int num;
 
-  DOCHECK_CONTEXT(battle_map_context(map),
-                  mech_parseattributes(buffer, args, 2) != 1,
-                  "Invalid arguments!");
-  DOCHECK_CONTEXT(battle_map_context(map), Readnum(num, args[0]),
-                  "Invalid number!");
+  if (mech_parseattributes(buffer, args, 2) != 1) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid arguments!");
+    return;
+  }
+  if ((!((num) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid number!");
+    return;
+  }
   ice_growth(player, map, num);
 }
 
@@ -234,11 +238,16 @@ void map_delice(DbRef player, BattleMap *map, char *buffer) {
   char *args[2];
   int num;
 
-  DOCHECK_CONTEXT(battle_map_context(map),
-                  mech_parseattributes(buffer, args, 2) != 1,
-                  "Invalid arguments!");
-  DOCHECK_CONTEXT(battle_map_context(map), Readnum(num, args[0]),
-                  "Invalid number!");
+  if (mech_parseattributes(buffer, args, 2) != 1) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid arguments!");
+    return;
+  }
+  if ((!((num) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid number!");
+    return;
+  }
   ice_melt(player, map, num);
 }
 

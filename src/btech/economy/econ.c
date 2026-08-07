@@ -41,10 +41,11 @@ void econ_change_items(BtechContext *context, DbRef d, int id, int brand,
     economy_parts_set_quantity(database, d, id, brand, 0);
     return;
   }
-  if (!(IsActuator(id)))
+  if (!(equipment_is_actuator(id)))
     economy_parts_set_quantity(database, d, id, brand, base);
-  if (IsActuator(id))
-    econ_change_items(context, d, Cargo(S_ACTUATOR), brand, base);
+  if (equipment_is_actuator(id))
+    econ_change_items(context, d, cargo_equipment_index(S_ACTUATOR), brand,
+                      base);
   /* Successfully changed */
 }
 

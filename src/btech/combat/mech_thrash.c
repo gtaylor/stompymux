@@ -24,7 +24,6 @@
 #include "btechstats_api.h"
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
@@ -43,7 +42,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
 #include "mech_position_api.h"
@@ -86,18 +84,28 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   char locName[50];
   int damage, tempDamage;
 
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(context, !mech_is_fallen(mech),
-                  "You need to be prone to thrash!");
-  DOCHECK_CONTEXT(context, !map, "Invalid map! Contact a wizard!");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (!mech_is_fallen(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You need to be prone to thrash!");
+    return;
+  }
+  if (!map) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid map! Contact a wizard!");
+    return;
+  }
 
   terrain =
       map_real_terrain_get(map, mech_position_x(mech), mech_position_y(mech));
 
-  DOCHECK_CONTEXT(
-      context,
-      !((terrain == GRASSLAND) || (terrain == ROAD) || (terrain == BRIDGE)),
-      "Thrashing only works in clear terrain or on roads or bridges.");
+  if (!((terrain == GRASSLAND) || (terrain == ROAD) || (terrain == BRIDGE))) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "Thrashing only works in clear terrain or on roads or bridges.");
+    return;
+  }
 
   /* Check locations */
   for (i = 0; i < 4; i++) {
@@ -111,11 +119,17 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
     ArmorStringFromIndex(tempLoc, locName, mech_class(mech),
                          mech_movement_type(mech));
 
-    DOCHECK_CONTEXT(context, mech_section_has_recycling_weapon(mech, tempLoc),
-                    tprintf("You have weapons recycling on your %s.", locName));
-    DOCHECK_CONTEXT(
-        context, mech_section_recycle_ticks(mech, tempLoc),
-        tprintf("Your %s is still recovering from your last attack.", locName));
+    if (mech_section_has_recycling_weapon(mech, tempLoc)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   tprintf("You have weapons recycling on your %s.", locName));
+      return;
+    }
+    if (mech_section_recycle_ticks(mech, tempLoc)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   tprintf("Your %s is still recovering from your last attack.",
+                           locName));
+      return;
+    }
   }
 
   /* Can't thrash if we have no limbs */

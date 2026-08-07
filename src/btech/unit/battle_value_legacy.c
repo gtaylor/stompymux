@@ -1,4 +1,12 @@
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
+#include "mech_heat_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_internal.h"
+
+static float walking_speed(float maximum_speed) {
+  return 2.0F * maximum_speed / 3.0F;
+}
 
 #ifdef BT_CALCULATE_BV
 int CalculateBV(Mech *mech, int gunstat, int pilstat) {
@@ -13,35 +21,35 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
     return 0;
 
   if (gunstat == 100 || pilstat == 100) {
-    if (mech->xcode.context->events->tick - MechBVLast(mech) < 30)
-      return MechBV(mech);
+    if (mech->xcode.context->events->tick - ((mech)->ud.mechbv_last) < 30)
+      return ((mech)->ud.mechbv);
     else
-      MechBVLast(mech) = mech->xcode.context->events->tick;
+      ((mech)->ud.mechbv_last) = mech->xcode.context->events->tick;
   }
 
-  type = MechType(mech);
-  move = MechMove(mech);
-  mechspec = MechSpecials(mech);
-  mechspec2 = MechSpecials2(mech);
+  type = ((mech)->ud.type);
+  move = ((mech)->ud.move);
+  mechspec = ((mech)->rd.specials);
+  mechspec2 = ((mech)->rd.specials2);
   if (gunstat == 100)
     pilskl = FindPilotPiloting(mech);
   if (pilstat == 100)
     gunskl = FindAverageGunnery(mech);
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    armor +=
-        (debug1 = GetSectArmor(mech, i) * (mechspec & HARDA_TECH ? 200 : 100));
+    armor += (debug1 = mech_section_armor(mech, i) *
+                       (mechspec & HARDA_TECH ? 200 : 100));
     if (type == CLASS_MECH && (i == CTORSO || i == LTORSO || i == RTORSO)) {
-      armor += (debug2 = GetSectRArmor(mech, i) *
+      armor += (debug2 = mech_section_rear_armor(mech, i) *
                          (mechspec & HARDA_TECH ? 200 : 100));
     }
-    if (!is_aero(mech))
-      intern +=
-          (debug3 = GetSectInt(mech, i) * (mechspec & COMPI_TECH    ? 50
-                                           : mechspec & REINFI_TECH ? 200
-                                                                    : 100));
+    if (!mech_is_aerospace_unit(mech))
+      intern += (debug3 = mech_section_internal(mech, i) *
+                          (mechspec & COMPI_TECH    ? 50
+                           : mechspec & REINFI_TECH ? 200
+                                                    : 100));
     else
-      intern = (debug3 = AeroSI(mech));
+      intern = (debug3 = ((mech)->ud.si));
 #ifdef DEBUG_BV
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("Armoradd : %d ArmorRadd : %d Internadd : %d",
@@ -54,9 +62,9 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
 
     debug1 = debug2 = debug3 = debug4 = 0;
     for (ii = 0; ii < CritsInLoc(mech, i); ii++) {
-      if (IsWeapon(temp = GetPartType(mech, i, ii))) {
-        weapindx = (Weapon2I(temp));
-        if (PartIsNonfunctional(mech, i, ii)) {
+      if (equipment_is_weapon(temp = mech_critical_part_type(mech, i, ii))) {
+        weapindx = (weapon_from_equipment_index(temp));
+        if (mech_critical_is_nonfunctional(mech, i, ii)) {
           if (type == CLASS_MECH)
             ii += (MechWeapons[weapindx].criticals - 1);
           continue;
@@ -80,7 +88,8 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
           offweapbv +=
               (debug1 =
                    (mech_weapon_battle_value(mech, weapindx) *
-                    (GetPartFireMode(mech, i, ii) & REAR_MOUNT ? 50 : 100)) *
+                    (mech_critical_fire_mode(mech, i, ii) & REAR_MOUNT ? 50
+                                                                       : 100)) *
                    (float)((float)3000 /
                            (float)(mech_weapon_recycle_time(mech, weapindx) *
                                    100)));
@@ -96,7 +105,7 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
 #endif
         }
         if (type == CLASS_MECH) {
-          if (!(GetPartFireMode(mech, i, ii) & REAR_MOUNT)) {
+          if (!(mech_critical_fire_mode(mech, i, ii) & REAR_MOUNT)) {
             tempheat =
                 ((MechWeapons[weapindx].heat * 100) *
                  (float)((float)3000 /
@@ -119,16 +128,19 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
         }
         if (type == CLASS_MECH)
           ii += (MechWeapons[weapindx].criticals - 1);
-      } else if (IsAmmo(temp)) {
-        if (PartIsNonfunctional(mech, i, ii) || !GetPartData(mech, i, ii))
+      } else if (equipment_is_ammunition(temp)) {
+        if (mech_critical_is_nonfunctional(mech, i, ii) ||
+            !mech_critical_data(mech, i, ii))
           continue;
-        mul = ((temp2 = GetPartAmmoMode(mech, i, ii)) & AC_AP_MODE ? 4
-               : temp2 & AC_PRECISION_MODE                         ? 6
-               : temp2 & (SWARM_MODE | SWARM1_MODE | STINGER_MODE) ? 1.5
-                                                                   : 1);
-        mul = (mul * ((float)((float)GetPartData(mech, i, ii) /
-                              (float)MechWeapons[weapindx = Ammo2WeaponI(temp)]
-                                  .ammoperton)));
+        mul = ((temp2 = mech_critical_ammo_mode(mech, i, ii)) & AC_AP_MODE ? 4
+               : temp2 & AC_PRECISION_MODE                                 ? 6
+               : temp2 & (SWARM_MODE | SWARM1_MODE | STINGER_MODE)         ? 1.5
+                                                                           : 1);
+        mul = (mul *
+               ((float)((float)mech_critical_data(mech, i, ii) /
+                        (float)MechWeapons[weapindx =
+                                               ammunition_to_weapon_index(temp)]
+                            .ammoperton)));
 
 #ifdef DEBUG_BV
         btech_channel_send(
@@ -179,8 +191,10 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
 #endif
         }
       }
-      if ((IsAmmo(temp) ||
-           (IsWeapon(temp) && MechWeapons[(Weapon2I(temp))].special & GAUSS)) &&
+      if ((equipment_is_ammunition(temp) ||
+           (equipment_is_weapon(temp) &&
+            MechWeapons[(weapon_from_equipment_index(temp))].special &
+                GAUSS)) &&
           type == CLASS_MECH) {
         if (mechspec & CLAN_TECH)
           if (i == CTORSO || i == HEAD || i == RLEG || i == LLEG) {
@@ -203,7 +217,7 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
           continue;
         }
         if ((i == CTORSO || i == RLEG || i == LLEG || i == HEAD) &&
-            !(MechSections(mech)[i].config & CASE_TECH)) {
+            !(((mech)->ud.sections)[i].config & CASE_TECH)) {
 
 #ifdef DEBUG_BV
           btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
@@ -214,8 +228,8 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
           continue;
         }
         if ((i == RARM || i == LARM) &&
-            (!(MechSections(mech)[i].config & CASE_TECH) &&
-             !(MechSections(mech)[(i == RARM ? RTORSO : LTORSO)].config &
+            (!(((mech)->ud.sections)[i].config & CASE_TECH) &&
+             !(((mech)->ud.sections)[(i == RARM ? RTORSO : LTORSO)].config &
                CASE_TECH))) {
 
 #ifdef DEBUG_BV
@@ -230,12 +244,12 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
     }
   }
   if (type == CLASS_MECH) {
-    mostheat +=
-        (MechJumpSpeed(mech) > 0 ? MAX((MechJumpSpeed(mech) / MP1) * 100, 300)
-                                 : 200);
+    mostheat += (((mech)->rd.jumpspeed) > 0
+                     ? MAX((((mech)->rd.jumpspeed) / MP1) * 100, 300)
+                     : 200);
     if (mechspec2 & (NULLSIGSYS_TECH | STEALTH_ARMOR_TECH))
       mostheat += 1000;
-    if ((temp = (mostheat - (MechActiveNumsinks(mech) * 100))) > 0) {
+    if ((temp = (mostheat - (mech_active_heat_sinks(mech) * 100))) > 0) {
       deduct += temp * 5;
 #ifdef DEBUG_BV
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
@@ -262,8 +276,8 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
       mul = 1.125;
     else
       mul = 0.75;
-  } else if (mechspec & ICE_TECH || MechType(mech) == CLASS_VEH_GROUND ||
-             MechType(mech) == CLASS_VEH_NAVAL) {
+  } else if (mechspec & ICE_TECH || ((mech)->ud.type) == CLASS_VEH_GROUND ||
+             ((mech)->ud.type) == CLASS_VEH_NAVAL) {
     mul = 0.5;
   } else {
     mul = 1.5;
@@ -274,7 +288,7 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
                      tprintf("InternMul : %.2f", mul));
 #endif
 
-  armor = (armor * (MechType(mech) == CLASS_MECH ? 2 : 1));
+  armor = (armor * (((mech)->ud.type) == CLASS_MECH ? 2 : 1));
   intern = intern * mul;
   mul = 1.00;
 
@@ -284,7 +298,7 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
       tprintf("ArmorEnd : %d IntEnd : %d", armor / 100, intern / 100));
 #endif
 
-  maxspeed = MMaxSpeed(mech);
+  maxspeed = mech_effective_maximum_speed(mech);
   if (mechspec & MASC_TECH || mechspec2 & SUPERCHARGER_TECH) {
     if (mechspec & MASC_TECH && mechspec2 & SUPERCHARGER_TECH)
       maxspeed = maxspeed * 2.5;
@@ -292,7 +306,7 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
       maxspeed = maxspeed * 1.5;
   }
   if (mechspec & TRIPLE_MYOMER_TECH)
-    maxspeed = ((WalkingSpeed(maxspeed) + MP1) * 1.5);
+    maxspeed = ((walking_speed(maxspeed) + MP1) * 1.5);
 
   if (maxspeed <= MP2) {
     mul = 1.0;
@@ -312,22 +326,22 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
     mul = 1.7;
   }
 
-  if (IsDS(mech))
+  if (mech_is_dropship(mech))
     mul = 1.0;
-  else if (is_aero(mech))
+  else if (mech_is_aerospace_unit(mech))
     mul = 1.1;
 
   if (mechspec2 & (NULLSIGSYS_TECH | STEALTH_ARMOR_TECH))
     mul += 1.5;
-  if (MechInfantrySpecials(mech) & DC_KAGE_STEALTH_TECH)
+  if (((mech)->rd.infantry_specials) & DC_KAGE_STEALTH_TECH)
     mul += .75;
-  if (MechInfantrySpecials(mech) & FWL_ACHILEUS_STEALTH_TECH)
+  if (((mech)->rd.infantry_specials) & FWL_ACHILEUS_STEALTH_TECH)
     mul += 1.5;
-  if (MechInfantrySpecials(mech) & CS_PURIFIER_STEALTH_TECH)
+  if (((mech)->rd.infantry_specials) & CS_PURIFIER_STEALTH_TECH)
     mul += 2.0;
-  if (MechInfantrySpecials(mech) & FC_INFILTRATOR_STEALTH_TECH)
+  if (((mech)->rd.infantry_specials) & FC_INFILTRATOR_STEALTH_TECH)
     mul += .75;
-  if (MechInfantrySpecials(mech) & FC_INFILTRATOR_STEALTH_TECH)
+  if (((mech)->rd.infantry_specials) & FC_INFILTRATOR_STEALTH_TECH)
     mul += 2.0;
 
 #ifdef DEBUG_BV
@@ -335,11 +349,11 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
                      tprintf("DefBVMul : %.2f", mul));
 #endif
 
-  defbv = (armor + intern + (MechTons(mech) * 100) + defweapbv);
+  defbv = (armor + intern + (((mech)->ud.tons) * 100) + defweapbv);
 
 #ifdef DEBUG_BV
   btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("DefBV Tonnage added : %d", MechTons(mech)));
+                     tprintf("DefBV Tonnage added : %d", ((mech)->ud.tons)));
 #endif
 
   if ((defbv - deduct) < 1)
@@ -363,13 +377,13 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
                      tprintf("DefBV : %d", defbv / 100));
 #endif
 
-  if ((type == CLASS_MECH || is_aero(mech)) &&
-      mostheat > (MechActiveNumsinks(mech) * 100)) {
+  if ((type == CLASS_MECH || mech_is_aerospace_unit(mech)) &&
+      mostheat > (mech_active_heat_sinks(mech) * 100)) {
 #ifdef DEBUG_BV
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("Pre-Heat OffWeapBV : %d", offweapbv / 100));
 #endif
-    i = (((MechActiveNumsinks(mech) / 100) * offweapbv) / mostheat);
+    i = (((mech_active_heat_sinks(mech) / 100) * offweapbv) / mostheat);
     ii = ((offweapbv - i) / 2);
     offweapbv = i + ii;
 
@@ -379,12 +393,14 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
 #endif
   }
   /*
-  mul = pow(((((MMaxSpeed(mech) / MP1) + (type == CLASS_AERO || type == CLASS_DS
-  ? 0 : (MechJumpSpeed(mech) / MP1)) + (mechspec & MASC_TECH ? 1 : 0) +
-  (mechspec & TRIPLE_MYOMER_TECH ? 1 : 0)+ (mechspec2 & SUPERCHARGER_TECH ? 1 :
-  0) - 5) / 10) + 1), 1.2);
+  mul = pow(((((mech_effective_maximum_speed(mech) / MP1) + (type == CLASS_AERO
+  || type == CLASS_DS ? 0 : (((mech)->rd.jumpspeed) / MP1)) + (mechspec &
+  MASC_TECH ? 1 : 0) + (mechspec & TRIPLE_MYOMER_TECH ? 1 : 0)+ (mechspec2 &
+  SUPERCHARGER_TECH ? 1 : 0) - 5) / 10) + 1), 1.2);
   */
-  mul = pow((((((IsDS(mech) ? WalkingSpeed(MMaxSpeed(mech)) : MMaxSpeed(mech)) /
+  mul = pow((((((mech_is_dropship(mech)
+                     ? walking_speed(mech_effective_maximum_speed(mech))
+                     : mech_effective_maximum_speed(mech)) /
                 MP1) +
                (mechspec & MASC_TECH ? 1 : 0) +
                (mechspec & TRIPLE_MYOMER_TECH ? 1 : 0) +
@@ -402,8 +418,9 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
     mul += .3;
 
   offweapbv = offweapbv * mul;
-  if (type != CLASS_AERO && type != CLASS_DS && MechJumpSpeed(mech) > 0)
-    offweapbv += ((MechJumpSpeed(mech) / MP1) * (100 * (MechTons(mech) / 5)));
+  if (type != CLASS_AERO && type != CLASS_DS && ((mech)->rd.jumpspeed) > 0)
+    offweapbv +=
+        ((((mech)->rd.jumpspeed) / MP1) * (100 * (((mech)->ud.tons) / 5)));
   offbv = offweapbv;
 
 #ifdef DEBUG_BV
@@ -414,7 +431,8 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
                              offbv / 100, (offbv + defbv) / 100));
 #endif
 
-  mul = (skillmul[LAZY_SKILLMUL(gunskl)][LAZY_SKILLMUL(pilskl)]);
+  mul = (skillmul[battle_value_skill_index(gunskl)]
+                 [battle_value_skill_index(pilskl)]);
 
 #ifdef DEBUG_BV
   btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",

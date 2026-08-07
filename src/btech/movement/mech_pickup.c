@@ -21,7 +21,6 @@
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "eject_api.h"
-#include "legacy_macros.h"
 #include "map_units_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
@@ -33,7 +32,6 @@
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
 #include "mech_position_api.h"
@@ -77,122 +75,210 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
 
   if (player != GOD)
-    cch(MECH_USUAL);
+    if (!common_checks(player, mech, MECH_USUAL))
+      return;
   argc = mech_parseattributes(buffer, args, 1);
-  DOCHECK_CONTEXT(context, mech_condition_summary(mech).fortified,
-                  "You cannot tow while fortified.");
+  if (mech_condition_summary(mech).fortified) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You cannot tow while fortified.");
+    return;
+  }
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK_CONTEXT(context, mech_move_mode_locked(mech),
-                  "You cannot tow currently in this movement mode!");
+  if (mech_move_mode_locked(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You cannot tow currently in this movement mode!");
+    return;
+  }
 #endif
-  DOCHECK_CONTEXT(context, argc != 1, "Invalid number of arguments.");
+  if (argc != 1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number of arguments.");
+    return;
+  }
   target_num = FindTargetDBREFFromMapNumber(mech, args[0]);
-  DOCHECK_CONTEXT(context, target_num == -1,
-                  "That target is not in your line of sight.");
+  if (target_num == -1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target is not in your line of sight.");
+    return;
+  }
   target = btech_context_get_mech(context, target_num);
-  DOCHECK_CONTEXT(context,
-                  !target ||
-                      !mech_los_check(mech, target, mech_position_x(target),
-                                      mech_position_y(target),
-                                      mech_range_to(mech, target)),
-                  "That target is not in your line of sight.");
-  DOCHECK_CONTEXT(context, mech_condition_summary(target).fortified,
-                  "Your target is fortified and cannot be towed.");
-  DOCHECK_CONTEXT(context,
-                  mech_technology_flags_secondary(target) & CARRIER_TECH &&
-                      !(mech_technology_flags_secondary(mech) & CARRIER_TECH),
-                  "You cannot handle the mass on that carrier.");
-  DOCHECK_CONTEXT(context, mech_carries_club(mech),
-                  "You can't pickup while you're carrying a club!");
-  DOCHECK_CONTEXT(context, mech_is_jumping(mech),
-                  "You can't pickup while jumping!");
-  DOCHECK_CONTEXT(context, mech_is_jumping(target),
-                  "What are you going to do? Grab it from mid air?");
-  DOCHECK_CONTEXT(context, mech_is_fallen(mech),
-                  "You are in no position to pick anything up!");
-  DOCHECK_CONTEXT(context, mech_position_z(mech) > mech_position_z(target) + 3,
-                  "You are too high above the target.");
-  DOCHECK_CONTEXT(context, mech_position_z(mech) < mech_position_z(target) - 2,
-                  "You are too far below the target.");
-  DOCHECK_CONTEXT(context,
-                  mech_position_x(mech) != mech_position_x(target) ||
-                      mech_position_y(mech) != mech_position_y(target),
-                  "You need to be in the same hex!");
-  DOCHECK_CONTEXT(context,
-                  mech_position_z(target) <= 0 &&
-                      mech_real_terrain_get(target) == BATTLE_TERRAIN_BRIDGE &&
-                      mech_position_z(mech) > 0,
-                  "You need to be under the bridge to pick up this unit.");
-  DOCHECK_CONTEXT(context, mech_is_towed(target),
-                  "That target's already being towed by someone!");
-  DOCHECK_CONTEXT(
-      context, mech_condition_summary(target).swarm_target == mech_dbref(mech),
-      "You can't grab hold!");
-  DOCHECK_CONTEXT(context,
-                  mech_tonnage(mech) < 5 ||
-                      (!is_in_character(btech_context_database(context),
-                                        mech_dbref(target)) &&
-                       !mech_is_towable(target)),
-                  "You can't tow that!");
-  DOCHECK_CONTEXT(context, mech_condition_summary(target).hidden,
-                  "You cannot pickup hiding targets....");
-  DOCHECK_CONTEXT(context, mech_event_count(target, EVENT_VEHICLEBURN),
-                  "You can't tow a burning unit!");
-  DOCHECK_CONTEXT(
-      context, mech_is_out_of_control(target),
-      "You can't tow a unit that is still OODing. Wait until it lands!");
+  if (!target ||
+      !mech_los_check(mech, target, mech_position_x(target),
+                      mech_position_y(target), mech_range_to(mech, target))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target is not in your line of sight.");
+    return;
+  }
+  if (mech_condition_summary(target).fortified) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Your target is fortified and cannot be towed.");
+    return;
+  }
+  if (mech_technology_flags_secondary(target) & CARRIER_TECH &&
+      !(mech_technology_flags_secondary(mech) & CARRIER_TECH)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You cannot handle the mass on that carrier.");
+    return;
+  }
+  if (mech_carries_club(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't pickup while you're carrying a club!");
+    return;
+  }
+  if (mech_is_jumping(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't pickup while jumping!");
+    return;
+  }
+  if (mech_is_jumping(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "What are you going to do? Grab it from mid air?");
+    return;
+  }
+  if (mech_is_fallen(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are in no position to pick anything up!");
+    return;
+  }
+  if (mech_position_z(mech) > mech_position_z(target) + 3) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are too high above the target.");
+    return;
+  }
+  if (mech_position_z(mech) < mech_position_z(target) - 2) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are too far below the target.");
+    return;
+  }
+  if (mech_position_x(mech) != mech_position_x(target) ||
+      mech_position_y(mech) != mech_position_y(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You need to be in the same hex!");
+    return;
+  }
+  if (mech_position_z(target) <= 0 &&
+      mech_real_terrain_get(target) == BATTLE_TERRAIN_BRIDGE &&
+      mech_position_z(mech) > 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You need to be under the bridge to pick up this unit.");
+    return;
+  }
+  if (mech_is_towed(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target's already being towed by someone!");
+    return;
+  }
+  if (mech_condition_summary(target).swarm_target == mech_dbref(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't grab hold!");
+    return;
+  }
+  if (mech_tonnage(mech) < 5 ||
+      (!is_in_character(btech_context_database(context), mech_dbref(target)) &&
+       !mech_is_towable(target))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't tow that!");
+    return;
+  }
+  if (mech_condition_summary(target).hidden) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You cannot pickup hiding targets....");
+    return;
+  }
+  if (mech_event_count(target, EVENT_VEHICLEBURN)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't tow a burning unit!");
+    return;
+  }
+  if (mech_is_out_of_control(target)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "You can't tow a unit that is still OODing. Wait until it lands!");
+    return;
+  }
   if (mech_class(target) == CLASS_MW) {
     pickup_mw(mech, target);
     return;
   } else {
     if (mech_class(mech) == CLASS_MECH) {
-      DOCHECKMA(mech_movement_type(mech) == MOVE_QUAD,
-                "You've got four left feet, you can't tow!");
-      DOCHECKMA(mech_section_is_destroyed(mech, LARM),
-                "Your left arm is destroyed, you can't pick up anything.");
-      DOCHECKMA(mech_section_is_destroyed(mech, RARM),
-                "Your right arm is destroyed, you can't pick up anything.");
-      DOCHECKMA(!(mech_critical_is_operational_special(mech, RARM, 3,
-                                                       HAND_OR_FOOT_ACTUATOR) &&
-                  mech_critical_is_operational_special(mech, RARM, 0,
-                                                       SHOULDER_OR_HIP)) &&
-                    !(mech_critical_is_operational_special(
-                          mech, LARM, 3, HAND_OR_FOOT_ACTUATOR) &&
-                      mech_critical_is_operational_special(mech, LARM, 0,
-                                                           SHOULDER_OR_HIP)),
-                "You need functioning arm to pick things up!");
-    } else
-      DOCHECK_CONTEXT(context, !(mech_technology_flags(mech) & SALVAGE_TECH),
-                      "You can't pick that up in this MECH/VEHICLE");
+      if (mech_movement_type(mech) == MOVE_QUAD) {
+        mech_notify(mech, MECHALL, "You've got four left feet, you can't tow!");
+        return;
+      }
+      if (mech_section_is_destroyed(mech, LARM)) {
+        mech_notify(mech, MECHALL,
+                    "Your left arm is destroyed, you can't pick up anything.");
+        return;
+      }
+      if (mech_section_is_destroyed(mech, RARM)) {
+        mech_notify(mech, MECHALL,
+                    "Your right arm is destroyed, you can't pick up anything.");
+        return;
+      }
+      if (!(mech_critical_is_operational_special(mech, RARM, 3,
+                                                 HAND_OR_FOOT_ACTUATOR) &&
+            mech_critical_is_operational_special(mech, RARM, 0,
+                                                 SHOULDER_OR_HIP)) &&
+          !(mech_critical_is_operational_special(mech, LARM, 3,
+                                                 HAND_OR_FOOT_ACTUATOR) &&
+            mech_critical_is_operational_special(mech, LARM, 0,
+                                                 SHOULDER_OR_HIP))) {
+        mech_notify(mech, MECHALL,
+                    "You need functioning arm to pick things up!");
+        return;
+      }
+    } else if (!(mech_technology_flags(mech) & SALVAGE_TECH)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You can't pick that up in this MECH/VEHICLE");
+      return;
+    }
   }
-  DOCHECK_CONTEXT(context, mech_carried_dbref(mech) > 0,
-                  "You are already carrying a Mech");
-  DOCHECK_CONTEXT(context,
-                  fabsf(mech_current_speed(mech)) > 1.0F ||
-                      fabsf(mech_vertical_speed(mech)) > 1.0F,
-                  "You are moving too fast to attempt a pickup.");
-  DOCHECK_CONTEXT(context, mech_is_dropship(target), "You can't pick that up!");
-  DOCHECK_CONTEXT(context, mech_movement_type(target) == MOVE_NONE,
-                  "That's simply immobile!");
-  DOCHECK_CONTEXT(
-      context, mech_team(mech) != mech_team(target) && mech_is_started(target),
-      "You can't pick that up!");
+  if (mech_carried_dbref(mech) > 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are already carrying a Mech");
+    return;
+  }
+  if (fabsf(mech_current_speed(mech)) > 1.0F ||
+      fabsf(mech_vertical_speed(mech)) > 1.0F) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are moving too fast to attempt a pickup.");
+    return;
+  }
+  if (mech_is_dropship(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't pick that up!");
+    return;
+  }
+  if (mech_movement_type(target) == MOVE_NONE) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That's simply immobile!");
+    return;
+  }
+  if (mech_team(mech) != mech_team(target) && mech_is_started(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't pick that up!");
+    return;
+  }
 
   /* Not on the same team, unit is !destroyed, don't allow.. Prevents picking up
    * from heat shutdown, etc */
   /* Allow Team 0 (Administrative Team for Box Drops, etc) */
-  DOCHECK_CONTEXT(context,
-                  mech_team(mech) != mech_team(target) &&
-                      !mech_is_destroyed(target) && !mech_is_started(target) &&
-                      mech_team(target) != 0,
-                  "You can't pick that up!");
+  if (mech_team(mech) != mech_team(target) && !mech_is_destroyed(target) &&
+      !mech_is_started(target) && mech_team(target) != 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't pick that up!");
+    return;
+  }
 
   if (mech_event_count(target, EVENT_MOVE) &&
       !mech_event_count(target, EVENT_FALL) && !mech_is_out_of_control(target))
     mech_event_cancel(target, EVENT_MOVE);
 
-  DOCHECK_CONTEXT(context, mech_event_count(target, EVENT_MOVE),
-                  "You can't pick up a moving target!");
+  if (mech_event_count(target, EVENT_MOVE)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't pick up a moving target!");
+    return;
+  }
 
   mech_printf(target, MECHALL, "%s attaches his tow lines to you.",
               mech_to_mech_display_id(target, mech).text);
@@ -242,118 +328,209 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
 
   if (player != GOD)
-    cch(MECH_USUAL);
+    if (!common_checks(player, mech, MECH_USUAL))
+      return;
 
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(context, argc != 2, "Invalid number of arguments.");
+  if (argc != 2) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number of arguments.");
+    return;
+  }
 
-  DOCHECK_CONTEXT(context, mech_is_out_of_control(mech),
-                  "You can't attach cables while floating in the air!");
+  if (mech_is_out_of_control(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't attach cables while floating in the air!");
+    return;
+  }
 
   /* Check the towing unit. */
   towMech_num = FindTargetDBREFFromMapNumber(mech, args[0]);
-  DOCHECK_CONTEXT(context, towMech_num == -1,
-                  "That towing unit is not in your line of sight.");
+  if (towMech_num == -1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That towing unit is not in your line of sight.");
+    return;
+  }
   towMech = btech_context_get_mech(context, towMech_num);
-  DOCHECK_CONTEXT(context,
-                  !towMech ||
-                      !mech_los_check(mech, towMech, mech_position_x(towMech),
-                                      mech_position_y(towMech),
-                                      mech_range_to(mech, towMech)),
-                  "That towing unit is not in your line of sight.");
-  DOCHECK_CONTEXT(context,
-                  mech_position_x(mech) != mech_position_x(towMech) ||
-                      mech_position_y(mech) != mech_position_y(towMech),
-                  "You need to be in the same hex as the towing unit!");
-  DOCHECK_CONTEXT(context, mech_is_jumping(towMech),
-                  "That towing unit is currently flying through the air!");
-  DOCHECK_CONTEXT(context, mech_position_z(mech) != mech_position_z(towMech),
-                  "You must be on the same elevation as the towing unit!");
-  DOCHECK_CONTEXT(context, mech_carried_dbref(towMech) > 0,
-                  "That towing unit is towing someone else!");
-  DOCHECK_CONTEXT(context, mech_is_towed(towMech),
-                  "That towing unit is already being towed by someone!");
-  DOCHECK_CONTEXT(context, mech_class(towMech) == CLASS_MW,
-                  "That unit can not tow!");
-  DOCHECK_CONTEXT(context, mech_movement_type(towMech) == MOVE_NONE,
-                  "That unit can not tow!");
-  DOCHECK_CONTEXT(context, mech_tonnage(towMech) < 5, "That unit can not tow!");
-  DOCHECK_CONTEXT(context, mech_is_destroyed(towMech),
-                  "Destroyed units can not tow!");
-  DOCHECK_CONTEXT(context,
-                  mech_tonnage(towMech) < 5 ||
-                      !is_in_character(btech_context_database(context),
-                                       mech_dbref(towMech)),
-                  "That unit can not tow!");
-  DOCHECK_CONTEXT(context, mech_event_count(towMech, EVENT_VEHICLEBURN),
-                  "You can not attach tow cables to a burning unit!");
-  DOCHECK_CONTEXT(
-      context, mech_technology_flags(towMech) & SALVAGE_TECH,
-      "That is a dedicated towing unit and can pick up the target itself!");
-  DOCHECK_CONTEXT(
-      context,
-      fabsf(mech_current_speed(towMech)) > 0.0F ||
-          fabsf(mech_vertical_speed(towMech)) > 0.0F,
-      "The towing unit is moving to fast for you to grab the tow cables!");
-  DOCHECK_CONTEXT(context, mech_team(towMech) != mech_team(mech),
-                  "You can not grab the tow cables from that unit!");
-  DOCHECK_CONTEXT(context,
-                  mech_class(towMech) != CLASS_MECH &&
-                      mech_class(towMech) != CLASS_VEH_GROUND,
-                  "That unit can not tow!");
+  if (!towMech ||
+      !mech_los_check(mech, towMech, mech_position_x(towMech),
+                      mech_position_y(towMech), mech_range_to(mech, towMech))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That towing unit is not in your line of sight.");
+    return;
+  }
+  if (mech_position_x(mech) != mech_position_x(towMech) ||
+      mech_position_y(mech) != mech_position_y(towMech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You need to be in the same hex as the towing unit!");
+    return;
+  }
+  if (mech_is_jumping(towMech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That towing unit is currently flying through the air!");
+    return;
+  }
+  if (mech_position_z(mech) != mech_position_z(towMech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You must be on the same elevation as the towing unit!");
+    return;
+  }
+  if (mech_carried_dbref(towMech) > 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That towing unit is towing someone else!");
+    return;
+  }
+  if (mech_is_towed(towMech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That towing unit is already being towed by someone!");
+    return;
+  }
+  if (mech_class(towMech) == CLASS_MW) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not tow!");
+    return;
+  }
+  if (mech_movement_type(towMech) == MOVE_NONE) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not tow!");
+    return;
+  }
+  if (mech_tonnage(towMech) < 5) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not tow!");
+    return;
+  }
+  if (mech_is_destroyed(towMech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Destroyed units can not tow!");
+    return;
+  }
+  if (mech_tonnage(towMech) < 5 ||
+      !is_in_character(btech_context_database(context), mech_dbref(towMech))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not tow!");
+    return;
+  }
+  if (mech_event_count(towMech, EVENT_VEHICLEBURN)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can not attach tow cables to a burning unit!");
+    return;
+  }
+  if (mech_technology_flags(towMech) & SALVAGE_TECH) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "That is a dedicated towing unit and can pick up the target itself!");
+    return;
+  }
+  if (fabsf(mech_current_speed(towMech)) > 0.0F ||
+      fabsf(mech_vertical_speed(towMech)) > 0.0F) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "The towing unit is moving to fast for you to grab the tow cables!");
+    return;
+  }
+  if (mech_team(towMech) != mech_team(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can not grab the tow cables from that unit!");
+    return;
+  }
+  if (mech_class(towMech) != CLASS_MECH &&
+      mech_class(towMech) != CLASS_VEH_GROUND) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not tow!");
+    return;
+  }
 
   /* Check the target */
   target_num = FindTargetDBREFFromMapNumber(mech, args[1]);
-  DOCHECK_CONTEXT(context, target_num == -1,
-                  "That target is not in your line of sight.");
+  if (target_num == -1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target is not in your line of sight.");
+    return;
+  }
   target = btech_context_get_mech(context, target_num);
-  DOCHECK_CONTEXT(context,
-                  !target ||
-                      !mech_los_check(mech, target, mech_position_x(target),
-                                      mech_position_y(target),
-                                      mech_range_to(mech, target)),
-                  "That target is not in your line of sight.");
-  DOCHECK_CONTEXT(context,
-                  mech_position_x(mech) != mech_position_x(target) ||
-                      mech_position_y(mech) != mech_position_y(target),
-                  "You need to be in the same hex as the target!");
-  DOCHECK_CONTEXT(context, mech_is_jumping(target),
-                  "That target is currently flying through the air!");
-  DOCHECK_CONTEXT(context, mech_position_z(mech) != mech_position_z(target),
-                  "You must be on the same elevation as the target!");
-  DOCHECK_CONTEXT(context, mech_carried_dbref(target) > 0,
-                  "That target is towing someone else!");
-  DOCHECK_CONTEXT(context, mech_is_towed(target),
-                  "That target is already being towed by someone!");
-  DOCHECK_CONTEXT(
-      context,
-      !is_in_character(btech_context_database(context), mech_dbref(target)) &&
-          !mech_is_towable(target),
-      "That unit can not be towed!");
-  DOCHECK_CONTEXT(context, mech_class(target) == CLASS_MW,
-                  "That unit can not be towed!");
-  DOCHECK_CONTEXT(context, mech_movement_type(target) == MOVE_NONE,
-                  "That unit can not be towed!");
-  DOCHECK_CONTEXT(context, mech_is_dropship(target),
-                  "That unit can not be towed!");
-  DOCHECK_CONTEXT(context, mech_event_count(target, EVENT_VEHICLEBURN),
-                  "You can not attach tow cables to a burning unit!");
-  DOCHECK_CONTEXT(
-      context,
-      fabsf(mech_current_speed(target)) > 0.0F ||
-          fabsf(mech_vertical_speed(target)) > 0.0F,
-      "The target is moving to fast for you to attach the tow cables!");
-  DOCHECK_CONTEXT(
-      context, mech_team(target) != mech_team(mech) && mech_is_started(target),
-      "That unit can not be towed!");
+  if (!target ||
+      !mech_los_check(mech, target, mech_position_x(target),
+                      mech_position_y(target), mech_range_to(mech, target))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target is not in your line of sight.");
+    return;
+  }
+  if (mech_position_x(mech) != mech_position_x(target) ||
+      mech_position_y(mech) != mech_position_y(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You need to be in the same hex as the target!");
+    return;
+  }
+  if (mech_is_jumping(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target is currently flying through the air!");
+    return;
+  }
+  if (mech_position_z(mech) != mech_position_z(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You must be on the same elevation as the target!");
+    return;
+  }
+  if (mech_carried_dbref(target) > 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target is towing someone else!");
+    return;
+  }
+  if (mech_is_towed(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That target is already being towed by someone!");
+    return;
+  }
+  if (!is_in_character(btech_context_database(context), mech_dbref(target)) &&
+      !mech_is_towable(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not be towed!");
+    return;
+  }
+  if (mech_class(target) == CLASS_MW) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not be towed!");
+    return;
+  }
+  if (mech_movement_type(target) == MOVE_NONE) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not be towed!");
+    return;
+  }
+  if (mech_is_dropship(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not be towed!");
+    return;
+  }
+  if (mech_event_count(target, EVENT_VEHICLEBURN)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can not attach tow cables to a burning unit!");
+    return;
+  }
+  if (fabsf(mech_current_speed(target)) > 0.0F ||
+      fabsf(mech_vertical_speed(target)) > 0.0F) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "The target is moving to fast for you to attach the tow cables!");
+    return;
+  }
+  if (mech_team(target) != mech_team(mech) && mech_is_started(target)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit can not be towed!");
+    return;
+  }
 
   if (mech_event_count(target, EVENT_MOVE) &&
       !mech_event_count(target, EVENT_FALL) && !mech_is_out_of_control(target))
     mech_event_cancel(target, EVENT_MOVE);
 
-  DOCHECK_CONTEXT(
-      context, mech_event_count(target, EVENT_MOVE),
-      "The target is moving to fast for you to attach the tow cables!");
+  if (mech_event_count(target, EVENT_MOVE)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "The target is moving to fast for you to attach the tow cables!");
+    return;
+  }
 
   strcpy(mechName, mech_display_id(mech).text);
   strcpy(towMechName, mech_display_id(towMech).text);
@@ -393,34 +570,55 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
   char targetName[SBUF_SIZE];
   BtechContext *context = mech_context(mech);
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
 
   argc = mech_parseattributes(buffer, args, 1);
-  DOCHECK_CONTEXT(context, argc != 1, "Invalid number of arguments.");
+  if (argc != 1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number of arguments.");
+    return;
+  }
 
   towMech_num = FindTargetDBREFFromMapNumber(mech, args[0]);
-  DOCHECK_CONTEXT(context, towMech_num == -1,
-                  "That towing unit is not in your line of sight.");
+  if (towMech_num == -1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That towing unit is not in your line of sight.");
+    return;
+  }
   towMech = btech_context_get_mech(context, towMech_num);
-  DOCHECK_CONTEXT(context,
-                  !towMech ||
-                      !mech_los_check(mech, towMech, mech_position_x(towMech),
-                                      mech_position_y(towMech),
-                                      mech_range_to(mech, towMech)),
-                  "That towing unit is not in your line of sight.");
-  DOCHECK_CONTEXT(context,
-                  mech_position_x(mech) != mech_position_x(towMech) ||
-                      mech_position_y(mech) != mech_position_y(towMech),
-                  "You need to be in the same hex as the towing unit!");
-  DOCHECK_CONTEXT(context, mech_position_z(mech) != mech_position_z(towMech),
-                  "You must be on the same elevation as the towing unit!");
-  DOCHECK_CONTEXT(context, mech_carried_dbref(towMech) <= 0,
-                  "That unit is not towing anyone!");
+  if (!towMech ||
+      !mech_los_check(mech, towMech, mech_position_x(towMech),
+                      mech_position_y(towMech), mech_range_to(mech, towMech))) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That towing unit is not in your line of sight.");
+    return;
+  }
+  if (mech_position_x(mech) != mech_position_x(towMech) ||
+      mech_position_y(mech) != mech_position_y(towMech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You need to be in the same hex as the towing unit!");
+    return;
+  }
+  if (mech_position_z(mech) != mech_position_z(towMech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You must be on the same elevation as the towing unit!");
+    return;
+  }
+  if (mech_carried_dbref(towMech) <= 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That unit is not towing anyone!");
+    return;
+  }
 
   aRef = mech_carried_dbref(towMech);
   mech_carried_dbref_set(towMech, -1);
   target = btech_context_get_mech(context, aRef);
-  DOCHECK_CONTEXT(context, !target, "The towed unit was invalid!");
+  if (!target) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "The towed unit was invalid!");
+    return;
+  }
   mech_towed_set(target, false);
 
   strcpy(mechName, mech_display_id(mech).text);
@@ -457,14 +655,22 @@ void mech_dropoff(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
 
   if (player != GOD)
-    cch(MECH_USUAL);
+    if (!common_checks(player, mech, MECH_USUAL))
+      return;
 
-  DOCHECK_CONTEXT(context, mech_carried_dbref(mech) <= 0,
-                  "You aren't carrying a mech!");
+  if (mech_carried_dbref(mech) <= 0) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You aren't carrying a mech!");
+    return;
+  }
   aRef = mech_carried_dbref(mech);
   mech_carried_dbref_set(mech, -1);
   target = btech_context_get_mech(context, aRef);
-  DOCHECK_CONTEXT(context, !target, "You were towing invalid target!");
+  if (!target) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You were towing invalid target!");
+    return;
+  }
   mech_towed_set(target, false);
   mech_notify(mech, MECHALL, "You drop the mech you were carrying.");
   mech_notify(target, MECHALL, "You have been released from towing.");

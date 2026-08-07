@@ -8,7 +8,6 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
-#include "legacy_macros.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
@@ -73,7 +72,7 @@ void auto_goto_event(MuxEvent *e) {
 
   /* Get the first argument - x coord */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if (!argument || Readnum(tx, argument)) {
+  if (!argument || (!((tx) = atoi(argument)) && strcmp((argument), "0"))) {
     /*! \todo {add a thing here incase the argument isn't a number} */
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -83,7 +82,7 @@ void auto_goto_event(MuxEvent *e) {
 
   /* Get the second argument - y coord */
   argument = auto_get_command_arg(autopilot, 1, 2);
-  if (!argument || Readnum(ty, argument)) {
+  if (!argument || (!((ty) = atoi(argument)) && strcmp((argument), "0"))) {
     /*! \todo {add a thing here incase the argument isn't a number} */
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -210,7 +209,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   }
 
   /* Read in the argument */
-  if (Readnum(tx, argument)) {
+  if ((!((tx) = atoi(argument)) && strcmp((argument), "0"))) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
@@ -242,7 +241,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   }
 
   /* Read in the argument */
-  if (Readnum(ty, argument)) {
+  if ((!((ty) = atoi(argument)) && strcmp((argument), "0"))) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
@@ -382,7 +381,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     }
 
     /* Now change it into a number and make sure its valid */
-    if (Readnum(tx, argument)) {
+    if ((!((tx) = atoi(argument)) && strcmp((argument), "0"))) {
 
       snprintf(error_buf, MBUF_SIZE,
                "Internal AI Error - Attempting to"
@@ -415,7 +414,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     }
 
     /* Read second argument into a number and make sure its ok */
-    if (Readnum(ty, argument)) {
+    if ((!((ty) = atoi(argument)) && strcmp((argument), "0"))) {
 
       snprintf(error_buf, MBUF_SIZE,
                "Internal AI Error - Attempting to"

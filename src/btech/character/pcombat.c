@@ -14,7 +14,6 @@
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_utils_api.h"
 #include "section_types.h"

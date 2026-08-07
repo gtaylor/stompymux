@@ -126,15 +126,7 @@ constexpr int CHECK_WEAPS = 0x1;
 constexpr int CHECK_PHYS = 0x2;
 #define CHECK_BOTH (CHECK_WEAPS | CHECK_PHYS)
 
-#define MechLockFire(mech)                                                     \
-  ((MechStatus(mech) & LOCK_TARGET) &&                                         \
-   !(MechStatus(mech) &                                                        \
-     (LOCK_BUILDING | LOCK_HEX | LOCK_HEX_IGN | LOCK_HEX_CLR)))
-
 /* Macros for accessing some parts */
-#define Blinded(a) (MechStatus(a) & BLINDED)
-#define Started(a) (MechStatus(a) & STARTED)
-#define Uncon(a) (MechStatus(a) & UNCONSCIOUS)
 
 /* critstatus element */
 constexpr int GYRO_DESTROYED = 0x00000001;         /* (a) */

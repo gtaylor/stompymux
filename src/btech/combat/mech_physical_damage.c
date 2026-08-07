@@ -5,6 +5,7 @@
 #include "mech_equipment_api.h"
 #include "mech_heat_api.h"
 #include "mech_identity_api.h"
+#include "mech_notify_api.h"
 #include "mech_physical_internal.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -271,33 +272,52 @@ int DeathFromAbove(Mech *mech, Mech *target) {
       return 0;
     }
   // Our target is no longer on the map.
-  DOCHECKMA0((mech_map_dbref(mech) != mech_map_dbref(target)),
-             "Your target is no longer valid.");
+  if ((mech_map_dbref(mech) != mech_map_dbref(target))) {
+    mech_notify(mech, MECHALL, "Your target is no longer valid.");
+    return 0;
+  }
 
 #ifdef BT_MOVEMENT_MODES
-  DOCHECKMA0(mech_condition_summary(mech).dodging ||
-                 mech_move_mode_locked(mech),
-             "You cannot use physicals while using a special movement mode.");
+  if (mech_condition_summary(mech).dodging || mech_move_mode_locked(mech)) {
+    mech_notify(
+        mech, MECHALL,
+        "You cannot use physicals while using a special movement mode.");
+    return 0;
+  }
 #endif
 
-  DOCHECKMA0(mech_section_recycle_ticks(mech, LLEG) ||
-                 mech_section_recycle_ticks(mech, RLEG),
-             "Your legs are still recovering from your last attack.");
-  DOCHECKMA0(mech_section_recycle_ticks(mech, RARM) ||
-                 mech_section_recycle_ticks(mech, LARM),
-             "Your arms are still recovering from your last attack.");
+  if (mech_section_recycle_ticks(mech, LLEG) ||
+      mech_section_recycle_ticks(mech, RLEG)) {
+    mech_notify(mech, MECHALL,
+                "Your legs are still recovering from your last attack.");
+    return 0;
+  }
+  if (mech_section_recycle_ticks(mech, RARM) ||
+      mech_section_recycle_ticks(mech, LARM)) {
+    mech_notify(mech, MECHALL,
+                "Your arms are still recovering from your last attack.");
+    return 0;
+  }
 
-  DOCHECKMA0(mech_is_jumping(target),
-             "Your target is airborne, you cannot land on it.");
+  if (mech_is_jumping(target)) {
+    mech_notify(mech, MECHALL,
+                "Your target is airborne, you cannot land on it.");
+    return 0;
+  }
 
   if ((mech_class(target) == CLASS_VTOL) ||
       (mech_class(target) == CLASS_AERO) || (mech_class(target) == CLASS_DS))
-    DOCHECKMA0(!mech_is_landed(target),
-               "Your target is airborne, you cannot land on it.");
+    if (!mech_is_landed(target)) {
+      mech_notify(mech, MECHALL,
+                  "Your target is airborne, you cannot land on it.");
+      return 0;
+    }
 
-  DOCHECKMA0((mech_team(mech) == mech_team(target)) &&
-                 battle_map_blocks_friendly_fire(map),
-             "Friendly DFA? I don't think so....");
+  if ((mech_team(mech) == mech_team(target)) &&
+      battle_map_blocks_friendly_fire(map)) {
+    mech_notify(mech, MECHALL, "Friendly DFA? I don't think so....");
+    return 0;
+  }
   if (btech_context_physical_attacks_use_pilot_skill(context))
     baseToHit = FindPilotPiloting(mech);
 
@@ -313,10 +333,14 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     baseToHit += 2;
 #endif
 
-  DOCHECKMA0(
-      baseToHit > 12,
-      tprintf("DFA: BTH %d\tYou choose not to attack and land from your jump.",
-              baseToHit));
+  if (baseToHit > 12) {
+    mech_notify(
+        mech, MECHALL,
+        tprintf(
+            "DFA: BTH %d\tYou choose not to attack and land from your jump.",
+            baseToHit));
+    return 0;
+  }
 
   roll = btech_random_roll(context);
   mech_printf(mech, MECHALL, "DFA: BTH %d\tRoll: %d", baseToHit, roll);

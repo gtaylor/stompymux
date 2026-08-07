@@ -24,7 +24,6 @@
 #include "command_handlers_api.h"
 #include "failures.h"
 #include "failures_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_api.h"
 #include "map_obj_api.h"
@@ -45,7 +44,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_spot_api.h"
 #include "mech_targeting_api.h"
@@ -60,6 +58,7 @@
 #include "pcombat_api.h"
 #include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 
 const char *mech_hex_target_description(const Mech *mech) {
@@ -169,13 +168,15 @@ void mech_terrain_possibly_ignite(Mech *mech, BattleMap *map, int weapindx,
   if (!strcmp(&MechWeapons[weapindx].name[3], "Flamer") ||
       !strcmp(&MechWeapons[weapindx].name[3], "HeavyFlamer"))
     bth = 4;
-  else if (IsMissile(weapindx) && (ammoMode & INFERNO_MODE))
+  else if (weapon_catalogue_is_missile(weapindx) && (ammoMode & INFERNO_MODE))
     bth = 5;
-  else if (IsBallistic(weapindx) && (ammoMode & AC_FLECHETTE_MODE))
+  else if (weapon_catalogue_is_ballistic(weapindx) &&
+           (ammoMode & AC_FLECHETTE_MODE))
     bth = 5;
-  else if (IsEnergy(weapindx) && weapon_can_ignite(weapindx))
+  else if (weapon_catalogue_is_energy(weapindx) && weapon_can_ignite(weapindx))
     bth = 5;
-  else if ((IsMissile(weapindx) || IsBallistic(weapindx)) &&
+  else if ((weapon_catalogue_is_missile(weapindx) ||
+            weapon_catalogue_is_ballistic(weapindx)) &&
            weapon_can_ignite(weapindx))
     bth = 9;
 

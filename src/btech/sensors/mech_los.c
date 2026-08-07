@@ -19,7 +19,6 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map_conditions_api.h"
 #include "map_los_api.h"
 #include "map_los_types.h"
@@ -32,7 +31,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_lostracer_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -421,8 +419,9 @@ int mech_los_check(Mech *mech, Mech *target, int x, int y, float hex_range) {
 }
 
 void mech_losemit(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALSP);
+  if (!common_checks(player, mech, MECH_USUALSP))
+    return;
   mech_los_broadcast(mech, buffer);
-  notify(btech_context_evaluation(mech_context(mech)), player,
-         "Broadcast done.");
+  mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+               "Broadcast done.");
 }

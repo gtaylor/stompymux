@@ -23,12 +23,12 @@
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_runtime_api.h"
 #include "mech_startup_api.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
+#include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 
 extern const int num_def_weapons;
@@ -209,18 +209,18 @@ static int part_brand_failure_index(int type) {
     return COMPUTER_INDEX;
   if (type == -2)
     return RADIO_INDEX;
-  if (IsWeapon(type))
-    if (type < I2Weapon(num_def_weapons)) {
-      type = Weapon2I(type);
+  if (equipment_is_weapon(type))
+    if (type < weapon_equipment_index(num_def_weapons)) {
+      type = weapon_from_equipment_index(type);
       if (MechWeapons[type].special & PCOMBAT)
         return -1;
-      if (IsFlamer(type))
+      if (weapon_catalogue_is_flamer(type))
         return FLAMMER_INDEX;
-      if (IsEnergy(type))
+      if (weapon_catalogue_is_energy(type))
         return ENERGY_INDEX;
-      if (IsAutocannon(type))
+      if (weapon_catalogue_is_ballistic(type))
         return AC_INDEX;
-      if (IsMissile(type))
+      if (weapon_catalogue_is_missile(type))
         return MISSILE_INDEX;
       return -1;
     }
@@ -535,7 +535,7 @@ void mech_weapon_failure_check(Mech *mech, int weapnum, int weaptype,
   if (mech_context(mech)->configuration->btech_parts) {
     if (!l)
       l = 5;
-    if (MechWeapons[Weapon2I(t)].special & PCOMBAT)
+    if (MechWeapons[weapon_from_equipment_index(t)].special & PCOMBAT)
       return;
   } else
     return;

@@ -1,8 +1,13 @@
 #include "mech_electronics_api.h"
 
+#include "btconfig.h"
 #include "mech_internal.h"
 
 int mech_computer_quality(const Mech *mech) { return mech->ud.computer; }
+
+void mech_computer_quality_set(Mech *mech, int quality) {
+  mech->ud.computer = quality;
+}
 
 int mech_radio_quality(const Mech *mech) { return mech->ud.radio; }
 
@@ -56,4 +61,54 @@ void mech_sensor_ranges_disable(Mech *mech) {
   mech->ud.lrs_range = 0;
   mech->ud.tac_range = 0;
   mech->ud.scan_range = 0;
+}
+
+static float mech_computer_range_multiplier(const Mech *mech) {
+  switch (mech_computer_quality(mech)) {
+  case 1:
+    return 0.8F;
+  case 2:
+    return 1.0F;
+  case 3:
+    return 1.25F;
+  case 4:
+    return 1.5F;
+  case 5:
+    return 1.75F;
+  default:
+    return 0.0F;
+  }
+}
+
+static float mech_radio_range_multiplier(const Mech *mech) {
+  switch (mech_radio_quality(mech)) {
+  case 1:
+    return 0.8F;
+  case 2:
+    return 1.0F;
+  case 3:
+    return 1.25F;
+  case 4:
+    return 1.5F;
+  case 5:
+    return 1.75F;
+  default:
+    return 0.0F;
+  }
+}
+
+int mech_default_scanner_range(const Mech *mech) {
+  return (int)(mech_computer_range_multiplier(mech) * DEFAULT_SCANRANGE);
+}
+
+int mech_default_long_range_sensor_range(const Mech *mech) {
+  return (int)(mech_computer_range_multiplier(mech) * DEFAULT_LRSRANGE);
+}
+
+int mech_default_tactical_range(const Mech *mech) {
+  return (int)(mech_computer_range_multiplier(mech) * DEFAULT_TACRANGE);
+}
+
+int mech_default_radio_range(const Mech *mech) {
+  return (int)(DEFAULT_RADIORANGE * mech_radio_range_multiplier(mech));
 }

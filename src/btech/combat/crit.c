@@ -37,7 +37,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
 #include "mech_position_api.h"
@@ -107,7 +106,7 @@ void mech_explosion_apply(Mech *wounded, Mech *attacker) {
 
 void mech_arm_actuator_criticals_normalize(Mech *objMech, int wLoc,
                                            int wCritType) {
-  switch (Special2I(wCritType)) {
+  switch (special_from_equipment_index(wCritType)) {
   case SHOULDER_OR_HIP:
     /* +4 to BTH with weapons in arm */
     mech_section_base_to_hit_set(objMech, wLoc, 4);
@@ -123,7 +122,7 @@ void mech_arm_actuator_criticals_normalize(Mech *objMech, int wLoc,
 
 void mech_leg_actuator_criticals_normalize(Mech *objMech, int wLoc,
                                            int wCritType) {
-  switch (Special2I(wCritType)) {
+  switch (special_from_equipment_index(wCritType)) {
   case SHOULDER_OR_HIP:
     /*
        speed cut in half
@@ -168,8 +167,8 @@ void mech_section_actuator_criticals_normalize(Mech *objMech, int wLoc) {
     wCritType = mech_critical_part_type(objMech, wLoc, i);
 
     if (mech_critical_is_destroyed(objMech, wLoc, i)) {
-      if (IsSpecial(wCritType)) {
-        switch (Special2I(wCritType)) {
+      if (equipment_is_special(wCritType)) {
+        switch (special_from_equipment_index(wCritType)) {
         case SHOULDER_OR_HIP:
           tHasShoulderOrHipCrit = 1;
 
@@ -195,9 +194,9 @@ void mech_section_actuator_criticals_normalize(Mech *objMech, int wLoc) {
 
       if (mech_critical_is_destroyed(objMech, wLoc, i)) {
 
-        if (IsSpecial(wCritType)) {
+        if (equipment_is_special(wCritType)) {
 
-          switch (Special2I(wCritType)) {
+          switch (special_from_equipment_index(wCritType)) {
           case UPPER_ACTUATOR:
           case LOWER_ACTUATOR:
           case HAND_OR_FOOT_ACTUATOR:

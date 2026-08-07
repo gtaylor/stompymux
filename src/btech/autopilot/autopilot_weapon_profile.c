@@ -265,7 +265,7 @@ void auto_update_profile_event(Autopilot *autopilot) {
      * lets not try to access it
      */
     dprintk("ap mymechnum is bad");
-    StopGun(autopilot);
+    autopilot_gunning_stop(autopilot);
     return;
   }
 
@@ -287,7 +287,7 @@ void auto_update_profile_event(Autopilot *autopilot) {
   }
 
   /* Log Message */
-  print_autogun_log(autopilot, "Profiling Unit #%ld", mech_dbref(mech));
+  autopilot_autogun_log(autopilot, "Profiling Unit #%ld", mech_dbref(mech));
 
   /* Destroy the arrays first, don't worry about the weap
    * structures because we can clear them with the ddlist
@@ -346,7 +346,8 @@ void auto_update_profile_event(Autopilot *autopilot) {
       /* Does it work? */
       if (WeaponIsNonfunctional(
               mech, section, critical[weapon_number],
-              GetWeaponCrits(mech, Weapon2I(weaparray[weapon_number]))) > 0)
+              GetWeaponCrits(mech, weapon_from_equipment_index(
+                                       weaparray[weapon_number]))) > 0)
         continue;
 
       /* Ok made it this far, lets add it to our list */
@@ -423,7 +424,7 @@ void auto_update_profile_event(Autopilot *autopilot) {
   }
 
   /* Log Message */
-  print_autogun_log(autopilot, "Finished Profiling");
+  autopilot_autogun_log(autopilot, "Finished Profiling");
 }
 
 /*

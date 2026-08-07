@@ -13,7 +13,6 @@
 #include "mech_events_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_stagger.h"
 #include "mech_targeting_api.h"

@@ -6,7 +6,6 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "map_terrain.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
@@ -20,7 +19,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -30,6 +28,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "random.h"
+#include "registry_api.h"
 #include "section_types.h"
 
 static void mech_mascr_event(MuxEvent *e) {
@@ -103,9 +102,13 @@ void mech_masc(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 
-  cch(MECH_USUALMO);
-  DOCHECK_CONTEXT(context, !(mech_technology_flags(mech) & MASC_TECH),
-                  "Your toy ain't prepared for what you're askin' it!");
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
+  if (!(mech_technology_flags(mech) & MASC_TECH)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Your toy ain't prepared for what you're askin' it!");
+    return;
+  }
   if (mech_condition_summary(mech).masc_enabled) {
     mech_notify(mech, MECHALL, "MASC has been turned off.");
     mech_masc_enabled_set(mech, false);
@@ -114,8 +117,11 @@ void mech_masc(DbRef player, void *data, char *buffer) {
     mech_event_schedule(mech, EVENT_MASC_REGEN, mech_mascr_event, MASC_TICK, 0);
     return;
   }
-  DOCHECK_CONTEXT(context, mech_effective_maximum_speed(mech) < MP1,
-                  "You can't move. How is MASC going to work?");
+  if (mech_effective_maximum_speed(mech) < MP1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't move. How is MASC going to work?");
+    return;
+  }
   mech_notify(mech, MECHALL, "MASC has been turned on.");
   mech_masc_enabled_set(mech, true);
   mech_event_cancel(mech, EVENT_MASC_REGEN);
@@ -174,7 +180,7 @@ static void mech_scharge_event(MuxEvent *e) {
   if (mech_class(mech) == CLASS_MECH) {
     for (j = 0; j < mech_section_critical_count(mech, CTORSO); j++) {
       critType = mech_critical_part_type(mech, CTORSO, j);
-      if (critType == I2Special(SUPERCHARGER)) {
+      if (critType == special_equipment_index(SUPERCHARGER)) {
         if (!mech_critical_is_destroyed(mech, CTORSO, j))
           mech_critical_destroy(mech, CTORSO, j);
       }
@@ -184,7 +190,7 @@ static void mech_scharge_event(MuxEvent *e) {
 
     for (j = 0; count && j < mech_section_critical_count(mech, CTORSO); j++) {
       critType = mech_critical_part_type(mech, CTORSO, j);
-      if (critType == I2Special(ENGINE) &&
+      if (critType == special_equipment_index(ENGINE) &&
           !mech_critical_is_destroyed(mech, CTORSO, j)) {
         mech_critical_destroy(mech, CTORSO, j);
         if (!mech_is_destroyed(mech) && mech_is_started(mech)) {
@@ -219,10 +225,13 @@ void mech_scharge(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 
-  cch(MECH_USUALMO);
-  DOCHECK_CONTEXT(context,
-                  !(mech_technology_flags_secondary(mech) & SUPERCHARGER_TECH),
-                  "Your toy ain't prepared for what you're askin' it!");
+  if (!common_checks(player, mech, MECH_USUALMO))
+    return;
+  if (!(mech_technology_flags_secondary(mech) & SUPERCHARGER_TECH)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Your toy ain't prepared for what you're askin' it!");
+    return;
+  }
   if (mech_condition_summary(mech).supercharger_enabled) {
     mech_notify(mech, MECHALL, "Supercharger has been turned off.");
     mech_supercharger_enabled_set(mech, false);
@@ -232,8 +241,11 @@ void mech_scharge(DbRef player, void *data, char *buffer) {
                         SCHARGE_TICK, 0);
     return;
   }
-  DOCHECK_CONTEXT(context, mech_effective_maximum_speed(mech) < MP1,
-                  "How much can you Supercharge if you can't move?");
+  if (mech_effective_maximum_speed(mech) < MP1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "How much can you Supercharge if you can't move?");
+    return;
+  }
   mech_notify(mech, MECHALL, "Supercharger has been turned on.");
   mech_supercharger_enabled_set(mech, true);
   mech_event_cancel(mech, EVENT_SCHARGE_REGEN);
@@ -263,29 +275,54 @@ void mech_dig(DbRef player, void *data, char *buffer) {
   MechConditionSummary condition;
   char terrain;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   condition = mech_condition_summary(mech);
   terrain = mech_real_terrain_get(mech);
-  DOCHECK_CONTEXT(context, condition.fortified,
-                  "You are already fortified, there's no need to dig.");
-  DOCHECK_CONTEXT(context, fabs(mech_current_speed(mech)) > 0.0,
-                  "You are moving!");
-  DOCHECK_CONTEXT(
-      context, mech_heading_degrees(mech) != mech_desired_heading_degrees(mech),
-      "You are turning!");
-  DOCHECK_CONTEXT(context, mech_movement_type(mech) == MOVE_NONE,
-                  "You are stationary!");
-  DOCHECK_CONTEXT(context, condition.dug_in, "You are already dug in!");
-  DOCHECK_CONTEXT(context, condition.digging, "You are already digging in!");
-  DOCHECK_CONTEXT(context, mech_is_out_of_control(mech),
-                  "While dropping? I think not.");
-  DOCHECK_CONTEXT(
-      context,
-      terrain == BATTLE_TERRAIN_ROAD || terrain == BATTLE_TERRAIN_BRIDGE ||
-          terrain == BATTLE_TERRAIN_BUILDING || terrain == BATTLE_TERRAIN_WALL,
-      "The surface is slightly too hard for you to dig in.");
-  DOCHECK_CONTEXT(context, terrain == BATTLE_TERRAIN_WATER,
-                  "In water? Who are you kidding?");
+  if (condition.fortified) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are already fortified, there's no need to dig.");
+    return;
+  }
+  if (fabs(mech_current_speed(mech)) > 0.0) {
+    mecha_notify(btech_context_evaluation(context), player, "You are moving!");
+    return;
+  }
+  if (mech_heading_degrees(mech) != mech_desired_heading_degrees(mech)) {
+    mecha_notify(btech_context_evaluation(context), player, "You are turning!");
+    return;
+  }
+  if (mech_movement_type(mech) == MOVE_NONE) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are stationary!");
+    return;
+  }
+  if (condition.dug_in) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are already dug in!");
+    return;
+  }
+  if (condition.digging) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You are already digging in!");
+    return;
+  }
+  if (mech_is_out_of_control(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "While dropping? I think not.");
+    return;
+  }
+  if (terrain == BATTLE_TERRAIN_ROAD || terrain == BATTLE_TERRAIN_BRIDGE ||
+      terrain == BATTLE_TERRAIN_BUILDING || terrain == BATTLE_TERRAIN_WALL) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "The surface is slightly too hard for you to dig in.");
+    return;
+  }
+  if (terrain == BATTLE_TERRAIN_WATER) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "In water? Who are you kidding?");
+    return;
+  }
 
   mech_digging_set(mech, true);
   mech_event_schedule(mech, EVENT_DIG, mech_dig_event, 20, 0);
@@ -321,12 +358,19 @@ void mech_fixturret(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   condition = mech_condition_summary(mech);
-  DOCHECK_CONTEXT(context, condition.turret_locked,
-                  "Your turret is locked! You need a repairbay to fix it!");
-  DOCHECK_CONTEXT(context, !condition.turret_jammed,
-                  "Your turret is not jammed!");
+  if (condition.turret_locked) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Your turret is locked! You need a repairbay to fix it!");
+    return;
+  }
+  if (!condition.turret_jammed) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Your turret is not jammed!");
+    return;
+  }
   mech_event_schedule(mech, EVENT_UNJAM_TURRET, mech_unjam_turret_event, 60, 0);
   mech_notify(mech, MECHALL, "You start to repair your jammed turret.");
 }

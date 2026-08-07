@@ -12,6 +12,7 @@
 #include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
+#include "mech_notify_api.h"
 #include "mech_specification_api.h"
 
 int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,

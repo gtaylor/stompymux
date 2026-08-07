@@ -22,7 +22,7 @@
 #include "mech_parts.h"
 #include "mech_persistence.h"
 #include "mech_stagger.h"
-#include "mech_tech.h"
+#include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
 #include "mechrep.h"
 #include "mux/network/mux_event.h"

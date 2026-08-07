@@ -1,7 +1,6 @@
 #include "command_handlers_api.h"
 
 #include "btech/context.h"
-#include "legacy_macros.h"
 #include "mech_crew_api.h"
 #include "mech_identity_api.h"
 #include "mech_runtime_api.h"
@@ -19,33 +18,51 @@ int common_checks(DbRef player, Mech *mech, int flags) {
   mech_last_use_reset(mech);
 
   if (flags & MECH_STARTED) {
-    DOCHECK0_CONTEXT(context, mech_is_destroyed(mech), "You are destroyed!");
-    DOCHECK0_CONTEXT(context, !mech_is_started(mech), "Reactor is not online!");
+    if (mech_is_destroyed(mech)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You are destroyed!");
+      return 0;
+    }
+    if (!mech_is_started(mech)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Reactor is not online!");
+      return 0;
+    }
   }
 
   if (flags & MECH_PILOT)
-    DOCHECK0_CONTEXT(context, mech_is_blinded(mech),
-                     "You are momentarily blinded!");
+    if (mech_is_blinded(mech)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You are momentarily blinded!");
+      return 0;
+    }
 
   if (flags & MECH_PILOT_CON)
-    DOCHECK0_CONTEXT(
-        context,
-        mech_pilot_is_unconscious(mech) &&
-            (!mech_is_started(mech) || player == mech_pilot_dbref(mech)),
-        "You are unconscious....zzzzzzz");
+    if (mech_pilot_is_unconscious(mech) &&
+        (!mech_is_started(mech) || player == mech_pilot_dbref(mech))) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You are unconscious....zzzzzzz");
+      return 0;
+    }
 
   if (flags & MECH_PILOTONLY)
-    DOCHECK0_CONTEXT(context,
-                     !is_wizard(btech_context_database(context), player) &&
-                         is_in_character(btech_context_database(context),
-                                         mech_dbref(mech)) &&
-                         mech_pilot_dbref(mech) != player,
-                     "Now now, only the pilot can push that button.");
+    if (!is_wizard(btech_context_database(context), player) &&
+        is_in_character(btech_context_database(context), mech_dbref(mech)) &&
+        mech_pilot_dbref(mech) != player) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Now now, only the pilot can push that button.");
+      return 0;
+    }
 
   if (flags & MECH_MAP) {
-    DOCHECK0_CONTEXT(context, mech_map_dbref(mech) < 0, "You are on no map!");
+    if (mech_map_dbref(mech) < 0) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "You are on no map!");
+      return 0;
+    }
     if (btech_context_get_map(context, mech_map_dbref(mech)) == nullptr) {
-      notify(evaluation, player, "You are on an invalid map! Map index reset!");
+      mecha_notify(evaluation, player,
+                   "You are on an invalid map! Map index reset!");
       mech_shutdown(player, mech, "");
       mech_map_dbref_set(mech, -1);
       return 0;

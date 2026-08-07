@@ -1,9 +1,12 @@
+#include "mech_equipment_api.h"
+#include "mech_status_types.h"
 #include "template_internal.h"
+#include "weapon_catalogue_api.h"
 
 void DumpMechSpecialObjects(BtechContext *context, DbRef player) {
   CoolMenu *c;
 
-  c = AutoCol_StringMenu("MechSpecials available", internals);
+  c = auto_column_string_menu("MechSpecials available", internals);
   ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
@@ -18,7 +21,8 @@ static char *dumpweapon_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
     i--;
     snprintf(buffer, LBUF_SIZE, WDUMP_MASK, MechWeapons[i].name,
              MechWeapons[i].heat, MechWeapons[i].damage, MechWeapons[i].min,
-             MechWeapons[i].shortrange, MechWeapons[i].medrange, GunRange(i),
+             MechWeapons[i].shortrange, MechWeapons[i].medrange,
+             weapon_catalogue_effective_range(i, false),
              btech_weapon_settings_recycle_time(weapon_settings, i),
              MechWeapons[i].criticals, MechWeapons[i].ammoperton);
   }
@@ -41,16 +45,16 @@ char *techlist_func(Mech *mech, char *buffer) {
              hascase = 0;
 
   snprintf(bufa, SBUF_SIZE, "%s",
-           build_bit_string(specialsabrev, MechSpecials(mech),
+           build_bit_string(specialsabrev, ((mech)->rd.specials),
                             (char[BTECH_TEXT_CAPACITY]){0}));
   snprintf(bufb, SBUF_SIZE, "%s",
-           build_bit_string(specialsabrev2, MechSpecials2(mech),
+           build_bit_string(specialsabrev2, ((mech)->rd.specials2),
                             (char[BTECH_TEXT_CAPACITY]){0}));
   snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
 
-  if (MechType(mech) == CLASS_BSUIT) {
+  if (((mech)->ud.type) == CLASS_BSUIT) {
     snprintf(bufc, SBUF_SIZE, "%s",
-             build_bit_string(infspecialsabrev, MechInfantrySpecials(mech),
+             build_bit_string(infspecialsabrev, ((mech)->rd.infantry_specials),
                               (char[BTECH_TEXT_CAPACITY]){0}));
     snprintf(buffer, MBUF_SIZE, "%s %s %s", bufa, bufb, bufc);
   } else
@@ -59,53 +63,57 @@ char *techlist_func(Mech *mech, char *buffer) {
   if (!(strstr(buffer, "XL") || strstr(buffer, "XXL") ||
         strstr(buffer, "LENG") || strstr(buffer, "ICE") ||
         strstr(buffer, "CENG")) &&
-      (MechType(mech) != CLASS_BSUIT))
+      (((mech)->ud.type) != CLASS_BSUIT))
     strcat(buffer, " FUS ");
 
   for (i = 0; i < NUM_SECTIONS; i++)
     for (ii = 0; ii < NUM_CRITICALS; ii++) {
-      part = GetPartType(mech, i, ii);
-      if (part == I2Special(AXE) && !axe) {
+      part = mech_critical_part_type(mech, i, ii);
+      if (part == special_equipment_index(AXE) && !axe) {
         axe = 1;
         strcat(buffer, " AXE");
       }
-      if (part == I2Special(CLAW) && !claw) {
+      if (part == special_equipment_index(CLAW) && !claw) {
         claw = 1;
         strcat(buffer, " CLAW");
       }
-      if (part == I2Special(MACE) && !mace) {
+      if (part == special_equipment_index(MACE) && !mace) {
         mace = 1;
         strcat(buffer, " MACE");
       }
-      if (part == I2Special(DUAL_SAW) && !saw) {
+      if (part == special_equipment_index(DUAL_SAW) && !saw) {
         saw = 1;
         strcat(buffer, " DUAL_SAW");
       }
-      if (part == I2Special(SWORD) && !sword) {
+      if (part == special_equipment_index(SWORD) && !sword) {
         sword = 1;
         strcat(buffer, " SWORD");
       }
-      if ((MechSections(mech)[i].config & CASE_TECH) && !hascase) {
+      if ((((mech)->ud.sections)[i].config & CASE_TECH) && !hascase) {
         hascase = 1;
         strcat(buffer, " CASE");
       }
     }
 
-  if (CargoSpace(mech))
+  if (((mech)->ud.cargospace))
     strcat(buffer, " INFC");
 
-  if (MechType(mech) == CLASS_VTOL)
+  if (((mech)->ud.type) == CLASS_VTOL)
     strcat(buffer, " VTOL");
 
-  if (MechType(mech) == CLASS_MECH && MechMove(mech) != MOVE_QUAD) {
-    if ((OkayCritSectS(RARM, 3, HAND_OR_FOOT_ACTUATOR) &&
-         OkayCritSectS(RARM, 0, SHOULDER_OR_HIP)) ||
-        (OkayCritSectS(LARM, 3, HAND_OR_FOOT_ACTUATOR) &&
-         OkayCritSectS(LARM, 0, SHOULDER_OR_HIP)) ||
-        MechSpecials(mech) & SALVAGE_TECH)
+  if (((mech)->ud.type) == CLASS_MECH && ((mech)->ud.move) != MOVE_QUAD) {
+    if ((mech_critical_is_operational_special(mech, RARM, 3,
+                                              HAND_OR_FOOT_ACTUATOR) &&
+         mech_critical_is_operational_special(mech, RARM, 0,
+                                              SHOULDER_OR_HIP)) ||
+        (mech_critical_is_operational_special(mech, LARM, 3,
+                                              HAND_OR_FOOT_ACTUATOR) &&
+         mech_critical_is_operational_special(mech, LARM, 0,
+                                              SHOULDER_OR_HIP)) ||
+        ((mech)->rd.specials) & SALVAGE_TECH)
       strcat(buffer, " MTOW");
   } else {
-    if (MechSpecials(mech) & SALVAGE_TECH)
+    if (((mech)->rd.specials) & SALVAGE_TECH)
       strcat(buffer, " MTOW");
   }
 
@@ -145,14 +153,15 @@ char *payloadlist_func(Mech *mech, char *buffer) {
   for (section_loop = 0; section_loop < NUM_SECTIONS; section_loop++) {
 
     /* Get all the weapons for that section */
-    count = FindWeapons(mech, section_loop, weaparray, weapdata, critical);
+    count = FindWeapons_Advanced(mech, section_loop, weaparray, weapdata,
+                                 critical, 1);
     /* Check if any weapons in that section */
     if (count <= 0)
       continue;
 
     /* Loop through all the weapons found and store their values */
     for (weap_loop = 0; weap_loop < count; weap_loop++) {
-      if (!(PartIsBroken(mech, section_loop, critical[weap_loop]))) {
+      if (!(mech_critical_is_broken(mech, section_loop, critical[weap_loop]))) {
         /* Loop to put weapons in the temp array and keep count */
         for (put_loop = 0; put_loop < 8 * MAX_WEAPS_SECTION; put_loop++) {
 
@@ -181,11 +190,11 @@ char *payloadlist_func(Mech *mech, char *buffer) {
     for (count = 0; count < MAX_WEAPS_SECTION; count++) {
 
       /* Get the Part at that spot */
-      temp_crit = GetPartType(mech, section_loop, count);
+      temp_crit = mech_critical_part_type(mech, section_loop, count);
 
       /* Is it Ammo? */
-      if (IsAmmo(temp_crit)) {
-        if (!PartIsDestroyed(mech, section_loop, count)) {
+      if (equipment_is_ammunition(temp_crit)) {
+        if (!mech_critical_is_destroyed(mech, section_loop, count)) {
           /* Loop to put weapons in the temp array and keep count */
           for (put_loop = weap_count; put_loop < 8 * MAX_WEAPS_SECTION;
                put_loop++) {
@@ -270,19 +279,19 @@ char *partlist_func(Mech *mech, char *buffer) {
     for (count = 0; count < MAX_WEAPS_SECTION; count++) {
 
       /* Get the Part at that spot */
-      temp_crit = GetPartType(mech, section_loop, count);
-      if (PartIsDestroyed(mech, section_loop, count))
+      temp_crit = mech_critical_part_type(mech, section_loop, count);
+      if (mech_critical_is_destroyed(mech, section_loop, count))
         continue;
 
       /*	Things we don't need */
-      if (IsAmmo(temp_crit))
+      if (equipment_is_ammunition(temp_crit))
         continue;
-      if (IsWeapon(temp_crit))
+      if (equipment_is_weapon(temp_crit))
         continue;
       if (temp_crit < 1)
         continue;
 
-      switch (Special2I(temp_crit)) {
+      switch (special_from_equipment_index(temp_crit)) {
       case ENDO_STEEL:
       case LT_FERRO_FIBROUS:
       case HVY_FERRO_FIBROUS:
@@ -315,7 +324,7 @@ char *partlist_func(Mech *mech, char *buffer) {
   /* Final loop to print out the full part list to the buffer and return it */
   for (put_loop = 0; put_loop < (part_count); put_loop++) {
 
-    switch (Special2I(partlist_items[put_loop])) {
+    switch (special_from_equipment_index(partlist_items[put_loop])) {
     case LOWER_ACTUATOR:
     case UPPER_ACTUATOR:
     case SHOULDER_OR_HIP:
@@ -324,12 +333,12 @@ char *partlist_func(Mech *mech, char *buffer) {
       break;
     case ENGINE:
       snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-               MechSpecials(mech) & LE_TECH    ? "Light_Engine"
-               : MechSpecials(mech) & CE_TECH  ? "Compact_Engine"
-               : MechSpecials(mech) & XXL_TECH ? "XXL_Engine"
-               : MechSpecials(mech) & XL_TECH  ? "XL_Engine"
-               : MechSpecials(mech) & ICE_TECH ? "ICE_Engine"
-                                               : "Engine",
+               ((mech)->rd.specials) & LE_TECH    ? "Light_Engine"
+               : ((mech)->rd.specials) & CE_TECH  ? "Compact_Engine"
+               : ((mech)->rd.specials) & XXL_TECH ? "XXL_Engine"
+               : ((mech)->rd.specials) & XL_TECH  ? "XL_Engine"
+               : ((mech)->rd.specials) & ICE_TECH ? "ICE_Engine"
+                                                  : "Engine",
                partlist_count[put_loop]);
 
       /* If we are not at the end, then put a | as a spacer */
@@ -342,9 +351,9 @@ char *partlist_func(Mech *mech, char *buffer) {
       break;
     case GYRO:
       snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-               MechSpecials2(mech) & XLGYRO_TECH   ? "XL_Gyro"
-               : MechSpecials2(mech) & HDGYRO_TECH ? "HeavyDuty_Gyro"
-                                                   : "Gyro",
+               ((mech)->rd.specials2) & XLGYRO_TECH   ? "XL_Gyro"
+               : ((mech)->rd.specials2) & HDGYRO_TECH ? "HeavyDuty_Gyro"
+                                                      : "Gyro",
                partlist_count[put_loop]);
 
       /* If we are not at the end, then put a | as a spacer */
@@ -357,8 +366,8 @@ char *partlist_func(Mech *mech, char *buffer) {
       break;
     case HEAT_SINK:
       snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-               MechSpecials2(mech) & COMPACT_HS_TECH ? "Compact_HeatSink"
-               : MechSpecials(mech) & (DOUBLE_HEAT_TECH | CLAN_TECH)
+               ((mech)->rd.specials2) & COMPACT_HS_TECH ? "Compact_HeatSink"
+               : ((mech)->rd.specials) & (DOUBLE_HEAT_TECH | CLAN_TECH)
                    ? "Double_HeatSink"
                    : "HeatSink",
                partlist_count[put_loop]);

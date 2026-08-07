@@ -6,7 +6,6 @@
 #include "btech/context.h"
 #include "equipment_types.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
 #include "mech_position_api.h"

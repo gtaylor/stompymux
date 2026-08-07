@@ -6,7 +6,6 @@
  */
 
 #include "btech_event.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
@@ -18,7 +17,6 @@
 #include "mech_hitloc_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -134,17 +132,25 @@ void vehicle_fire_extinguish_event(MuxEvent *e) {
 }
 
 void vehicle_fire_extinguish(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALS);
+  if (!common_checks(player, mech, MECH_USUALS))
+    return;
 
-  DOCHECK_CONTEXT(mech_context(mech), mech_is_started(mech),
-                  "Your tank is started! You can not extinguish the "
-                  "flames while your tank is started!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  !mech_event_count(mech, EVENT_VEHICLEBURN),
-                  "This unit is not on fire!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH),
-                  "You're already trying to put out the fire!");
+  if (mech_is_started(mech)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Your tank is started! You can not extinguish the "
+                 "flames while your tank is started!");
+    return;
+  }
+  if (!mech_event_count(mech, EVENT_VEHICLEBURN)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "This unit is not on fire!");
+    return;
+  }
+  if (mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You're already trying to put out the fire!");
+    return;
+  }
 
   mech_notify(mech, MECHALL, "You begin to extinguish the fires!");
 

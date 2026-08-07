@@ -21,7 +21,6 @@
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -172,13 +171,13 @@ void auto_sensor_event(Autopilot *autopilot) {
 
   /* Mech is dead so stop trying to shoot things */
   if (mech_is_destroyed(mech)) {
-    DoStopGun(autopilot);
+    autopilot_gunning_stop(autopilot);
     return;
   }
 
   /* Mech isn't started */
   if (!mech_is_started(mech)) {
-    Zombify(autopilot);
+    autopilot_gunning_suspend(autopilot);
     return;
   }
 
@@ -192,7 +191,7 @@ void auto_sensor_event(Autopilot *autopilot) {
             btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))) {
 
     /* Bad Map */
-    Zombify(autopilot);
+    autopilot_gunning_suspend(autopilot);
     return;
   }
 

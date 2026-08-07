@@ -2,21 +2,23 @@
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
+#include "mech_notify_api.h"
 #include "mech_physical_internal.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
+#include "registry_api.h"
 
 static bool physical_arm_check(DbRef player, Mech *mech, const char *verb) {
   BtechContext *context = mech_context(mech);
 
   if (mech_class(mech) == CLASS_MW || mech_class(mech) == CLASS_BSUIT) {
-    notify(btech_context_evaluation(context), player,
-           tprintf("You cannot %s without a 'mech!", verb));
+    mecha_notify(btech_context_evaluation(context), player,
+                 tprintf("You cannot %s without a 'mech!", verb));
     return false;
   }
   if (mech_class(mech) != CLASS_MECH) {
-    notify(btech_context_evaluation(context), player,
-           tprintf("You cannot %s with this vehicle!", verb));
+    mecha_notify(btech_context_evaluation(context), player,
+                 tprintf("You cannot %s with this vehicle!", verb));
     return false;
   }
   return true;
@@ -26,8 +28,9 @@ static bool physical_quad_check(DbRef player, Mech *mech, const char *verb) {
   if (mech_class(mech) != CLASS_MECH || !mech_is_quad(mech))
     return true;
 
-  notify(btech_context_evaluation(mech_context(mech)), player,
-         tprintf("What are you going to %s with, your front right leg?", verb));
+  mecha_notify(
+      btech_context_evaluation(mech_context(mech)), player,
+      tprintf("What are you going to %s with, your front right leg?", verb));
   return false;
 }
 
@@ -45,20 +48,13 @@ int all_limbs_recycled(Mech *mech) {
                 "Your legs are still recovering from your last attack.");
     return 0;
   }
-  // Fall through to success.
   return 1;
 } // end all_limbs_recycled()
 
-/**
- * Returns the correct verb for each physical attack.
- */
 char *phys_form(int AttackType, int add_s) {
-  // Holds our attack verb.
   char *verb;
 
-  // See if we need the verb with an s on the end.
   if (add_s) {
-    // With the S.
     switch (AttackType) {
     case PA_PUNCH:
       verb = "punchs";
@@ -87,12 +83,10 @@ char *phys_form(int AttackType, int add_s) {
     case PA_CLAW:
       verb = "claws";
       break;
-      // Ohboy, we're using some funky, unknown physical.
     default:
       verb = "??bugs??";
     } // end switch()
   } else {
-    // Without the S.
     switch (AttackType) {
     case PA_PUNCH:
       verb = "punch";
@@ -130,44 +124,42 @@ char *phys_form(int AttackType, int add_s) {
   return verb;
 } // end phys_form
 
-#define phys_message(txt) mech_los_broadcast_unit(mech, target, txt)
-
 void phys_succeed(Mech *mech, Mech *target, int at) {
-  phys_message(tprintf("%s %%s!", phys_form(at, 1)));
+  mech_los_broadcast_unit(mech, target, tprintf("%s %%s!", phys_form(at, 1)));
 }
 
 void phys_fail(Mech *mech, Mech *target, int at) {
-  phys_message(tprintf("attempts to %s %%s!", phys_form(at, 0)));
+  mech_los_broadcast_unit(mech, target,
+                          tprintf("attempts to %s %%s!", phys_form(at, 0)));
 }
 
-/*
- * All 'mechs with arms can punch.
- */
 int have_punch(Mech *mech, int loc) { return 1; }
 
 /**
  * Does our unit have an axe?
  */
 int have_axe(Mech *mech, int loc) {
-  return FindObj(mech, loc, I2Special(AXE)) >= (mech_tonnage(mech) / 15);
+  return FindObj(mech, loc, special_equipment_index(AXE)) >=
+         (mech_tonnage(mech) / 15);
 }
 
 int have_claw(Mech *mech, int loc) {
-  return FindObj(mech, loc, I2Special(CLAW)) >= (mech_tonnage(mech) / 15);
+  return FindObj(mech, loc, special_equipment_index(CLAW)) >=
+         (mech_tonnage(mech) / 15);
 }
 
 /**
  * Does our unit have a dual_saw?
  */
 int have_saw(Mech *mech, int loc) {
-  return FindObj(mech, loc, I2Special(DUAL_SAW)) >= 7;
+  return FindObj(mech, loc, special_equipment_index(DUAL_SAW)) >= 7;
 }
 
 /**
  * Does our unit have a sword?
  */
 int have_sword(Mech *mech, int loc) {
-  return FindObj(mech, loc, I2Special(SWORD)) >=
+  return FindObj(mech, loc, special_equipment_index(SWORD)) >=
          ((mech_tonnage(mech) + 15) / 20);
 }
 
@@ -175,7 +167,8 @@ int have_sword(Mech *mech, int loc) {
  * Does our unit have a mace?
  */
 int have_mace(Mech *mech, int loc) {
-  return FindObj(mech, loc, I2Special(MACE)) >= (mech_tonnage(mech) / 10);
+  return FindObj(mech, loc, special_equipment_index(MACE)) >=
+         (mech_tonnage(mech) / 10);
 }
 
 /*
@@ -265,7 +258,6 @@ int get_arm_args(int *using, int *argc, char ***args, Mech *mech,
     break;
   } // end switch()
 
-  // Fall through to success.
   return 0;
 } // end get_arm_args()
 
@@ -292,7 +284,6 @@ int punch_checkArm(Mech *mech, int arm) {
         arm_used);
     return 0;
   }
-  // Fall through to success.
   return 1;
 } // end checkArm()
 
@@ -309,7 +300,8 @@ void mech_punch(DbRef player, void *data, char *buffer) {
   int punching = P_LEFT | P_RIGHT;
 
   // Carry out the common checks (started, on map, etc.)
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   // Make sure we have arms to punch with.
   if (!physical_arm_check(player, mech, "punch"))
     return;
@@ -359,7 +351,8 @@ void mech_club(DbRef player, void *data, char *buffer) {
   int clubLoc = -1;
 
   // Make sure unit is started, on map, etc.
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   // Make sure we're in a biped.
   if (!physical_arm_check(player, mech, "club"))
     return;
@@ -373,39 +366,61 @@ void mech_club(DbRef player, void *data, char *buffer) {
     clubLoc = LARM;
 
   if (clubLoc == -1) {
-    DOCHECKMA(mech_real_terrain_get(mech) != HEAVY_FOREST &&
-                  mech_real_terrain_get(mech) != LIGHT_FOREST,
-              "You can not seem to find any trees around to club with.");
+    if (mech_real_terrain_get(mech) != HEAVY_FOREST &&
+        mech_real_terrain_get(mech) != LIGHT_FOREST) {
+      mech_notify(mech, MECHALL,
+                  "You can not seem to find any trees around to club with.");
+      return;
+    }
     // Since we have trees nearby, assume the club goes to right hand.
     clubLoc = RARM;
   }
 
   argc = mech_parseattributes(buffer, args, 5);
 
-  DOCHECKMA(mech_section_is_destroyed(mech, LARM),
-            "Your left arm is destroyed, you can't club.");
-  DOCHECKMA(mech_section_is_destroyed(mech, RARM),
-            "Your right arm is destroyed, you can't club.");
-  DOCHECKMA(
-      !mech_critical_is_operational_special(mech, RARM, 0, SHOULDER_OR_HIP),
-      "You can't club anyone with a destroyed or missing right shoulder.");
-  DOCHECKMA(
-      !mech_critical_is_operational_special(mech, LARM, 0, SHOULDER_OR_HIP),
-      "You can't club anyone with a destroyed or missing left shoulder.");
-  DOCHECKMA(!mech_critical_is_operational_special(mech, RARM, 3,
-                                                  HAND_OR_FOOT_ACTUATOR),
-            "You can't club anyone with a destroyed or missing right hand.");
-  DOCHECKMA(!mech_critical_is_operational_special(mech, LARM, 3,
-                                                  HAND_OR_FOOT_ACTUATOR),
-            "You can't club anyone with a destroyed or missing left hand.");
+  if (mech_section_is_destroyed(mech, LARM)) {
+    mech_notify(mech, MECHALL, "Your left arm is destroyed, you can't club.");
+    return;
+  }
+  if (mech_section_is_destroyed(mech, RARM)) {
+    mech_notify(mech, MECHALL, "Your right arm is destroyed, you can't club.");
+    return;
+  }
+  if (!mech_critical_is_operational_special(mech, RARM, 0, SHOULDER_OR_HIP)) {
+    mech_notify(
+        mech, MECHALL,
+        "You can't club anyone with a destroyed or missing right shoulder.");
+    return;
+  }
+  if (!mech_critical_is_operational_special(mech, LARM, 0, SHOULDER_OR_HIP)) {
+    mech_notify(
+        mech, MECHALL,
+        "You can't club anyone with a destroyed or missing left shoulder.");
+    return;
+  }
+  if (!mech_critical_is_operational_special(mech, RARM, 3,
+                                            HAND_OR_FOOT_ACTUATOR)) {
+    mech_notify(
+        mech, MECHALL,
+        "You can't club anyone with a destroyed or missing right hand.");
+    return;
+  }
+  if (!mech_critical_is_operational_special(mech, LARM, 3,
+                                            HAND_OR_FOOT_ACTUATOR)) {
+    mech_notify(mech, MECHALL,
+                "You can't club anyone with a destroyed or missing left hand.");
+    return;
+  }
 
   // Clubbing is usually done with the right arm but a club may be
   // grabbed by the left hand. Clubbing requires both arms to be cycled,
   // but only one is checked by PhysicalAttack(). So, we check both
   // here just in case.
-  DOCHECKMA(mech_section_has_recycling_weapon(mech, LARM) ||
-                mech_section_has_recycling_weapon(mech, RARM),
-            "You have weapons recycling on your arms.");
+  if (mech_section_has_recycling_weapon(mech, LARM) ||
+      mech_section_has_recycling_weapon(mech, RARM)) {
+    mech_notify(mech, MECHALL, "You have weapons recycling on your arms.");
+    return;
+  }
 
   PhysicalAttack(
       mech, 5,
@@ -455,7 +470,8 @@ void mech_axe(DbRef player, void *data, char *buffer) {
   int using = P_LEFT | P_RIGHT;
 
   // Make sure we're started, on a map, etc.
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   // Do we have arms?
   if (!physical_arm_check(player, mech, "axe"))
     return;
@@ -484,8 +500,12 @@ void mech_axe(DbRef player, void *data, char *buffer) {
       PhysicalAttack(mech, 5, rtohit, PA_AXE, argc, args, mech_map, RARM);
   }
   // We don't have an axe.
-  DOCHECKMA(!using, "You may lack the axe, but not the will! Try punch/club "
-                    "until you find one.");
+  if (!using) {
+    mech_notify(mech, MECHALL,
+                "You may lack the axe, but not the will! Try punch/club "
+                "until you find one.");
+    return;
+  }
 } // end mech_axe()
 
 /**
@@ -522,7 +542,8 @@ void mech_saw(DbRef player, void *data, char *buffer) {
   int using = P_LEFT | P_RIGHT;
 
   // Make sure we're started, on a map, etc.
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   // Do we have arms?
   if (!physical_arm_check(player, mech, "saw"))
     return;
@@ -551,7 +572,10 @@ void mech_saw(DbRef player, void *data, char *buffer) {
       PhysicalAttack(mech, 7, rtohit, PA_SAW, argc, args, mech_map, RARM);
   }
   // We don't have a saw.
-  DOCHECKMA(!using, "You don't have a dual saw!");
+  if (!using) {
+    mech_notify(mech, MECHALL, "You don't have a dual saw!");
+    return;
+  }
 } // end mech_saw()
 
 /**
@@ -567,7 +591,8 @@ void mech_claw(DbRef player, void *data, char *buffer) {
   int using = P_LEFT | P_RIGHT;
 
   // Carry out the common checks (started, on map, etc.)
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   // Make sure we have arms to claw with.
   if (!physical_arm_check(player, mech, "claw"))
     return;
@@ -603,8 +628,11 @@ void mech_claw(DbRef player, void *data, char *buffer) {
   }
 
   // We don't have a claw
-  DOCHECKMA(!using,
-            "You do not have any claws! Try punching/clubbing instead!");
+  if (!using) {
+    mech_notify(mech, MECHALL,
+                "You do not have any claws! Try punching/clubbing instead!");
+    return;
+  }
 
 } // end mech_claw()
 
@@ -651,7 +679,8 @@ void mech_mace(DbRef player, void *data, char *buffer) {
   int using = P_LEFT | P_RIGHT;
 
   // Make sure we're started, on a map, etc.
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   // Do we have arms?
   if (!physical_arm_check(player, mech, "mace"))
     return;
@@ -680,7 +709,10 @@ void mech_mace(DbRef player, void *data, char *buffer) {
       PhysicalAttack(mech, 4, rtohit, PA_MACE, argc, args, mech_map, RARM);
   }
   // We don't have a mace.
-  DOCHECKMA(!using, "You don't have a mace!");
+  if (!using) {
+    mech_notify(mech, MECHALL, "You don't have a mace!");
+    return;
+  }
 } // end mech_mace()
 
 /**
@@ -726,7 +758,8 @@ void mech_sword(DbRef player, void *data, char *buffer) {
   int using = P_LEFT | P_RIGHT;
 
   // Make sure we're started, on a map, etc.
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   // Do we have arms to chop with?
   if (!physical_arm_check(player, mech, "chop"))
     return;
@@ -756,7 +789,10 @@ void mech_sword(DbRef player, void *data, char *buffer) {
       PhysicalAttack(mech, 10, rtohit, PA_SWORD, argc, args, mech_map, RARM);
   }
   // Ninja what?
-  DOCHECKMA(!using, "You have no sword to chop people with!");
+  if (!using) {
+    mech_notify(mech, MECHALL, "You have no sword to chop people with!");
+    return;
+  }
 } // end mech_sword()
 
 /**

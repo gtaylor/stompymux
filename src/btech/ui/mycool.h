@@ -14,12 +14,25 @@
 
 #pragma once
 
-#define addmenu(str) CreateMenuEntry_Simple(&c, str, CM_TWO)
-#define addmenu4(str) CreateMenuEntry_Simple(&c, str, CM_FOUR)
-#define addline() CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE)
-#define addempty() CreateMenuEntry_Simple(&c, " ", CM_ONE)
-#define addnull() CreateMenuEntry_Simple(&c, " ", CM_TWO)
+#include "coolmenu.h"
 
-#define vsi(str) CreateMenuEntry_VSimple(&c, str)
-#define sim(str, flag) CreateMenuEntry_Simple(&c, str, flag)
-#define cent(str) sim(str, CM_ONE | CM_CENTER)
+static inline void cool_menu_add(CoolMenu **menu, char *text) {
+  cool_menu_entry_simple(menu, text, CM_TWO);
+}
+
+static inline void cool_menu_add_line(CoolMenu **menu) {
+  cool_menu_entry_simple(menu, nullptr, CM_ONE | CM_LINE);
+}
+
+static inline void cool_menu_add_text(CoolMenu **menu, char *text) {
+  cool_menu_entry_very_simple(menu, text);
+}
+
+static inline void cool_menu_add_with_flags(CoolMenu **menu, char *text,
+                                            int flags) {
+  cool_menu_entry_simple(menu, text, flags);
+}
+
+static inline void cool_menu_add_centered(CoolMenu **menu, char *text) {
+  cool_menu_add_with_flags(menu, text, CM_ONE | CM_CENTER);
+}

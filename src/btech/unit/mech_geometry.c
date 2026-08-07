@@ -1,3 +1,4 @@
+#include "mech_targeting_api.h"
 #include "mech_utils_internal.h"
 
 float FindRange(float x0, float y0, float z0, float x1, float y1, float z1) {
@@ -203,29 +204,32 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
       continue;
     if (other == mech)
       continue;
-    if (MechX(other) != x || MechY(other) != y)
+    if (((other)->pd.x) != x || ((other)->pd.y) != y)
       continue;
     if (!mech_los_check(mech, other, x, y, 0.5))
       continue;
 
-    fx = MechFX(other) - corner_fx;
+    fx = ((other)->pd.fx) - corner_fx;
     column = fx / NAV_COLUMN_WIDTH + NAV_X_OFFSET;
 
-    fy = MechFY(other) - corner_fy;
+    fy = ((other)->pd.fy) - corner_fy;
     row = fy / NAV_ROW_HEIGHT + NAV_Y_OFFSET;
 
     if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
       continue;
 
-    buff[row][column] = MechSeemsFriend(mech, other) ? 'x' : 'X';
+    buff[row][column] = mech->pd.team == other->pd.team &&
+                                mech_los_check_unblocked(mech, other, 0, 0, 0)
+                            ? 'x'
+                            : 'X';
   }
 
   /* Draw 'mech last so we always see it. */
 
-  fx = MechFX(mech) - corner_fx;
+  fx = ((mech)->pd.fx) - corner_fx;
   column = fx / NAV_COLUMN_WIDTH + NAV_X_OFFSET;
 
-  fy = MechFY(mech) - corner_fy;
+  fy = ((mech)->pd.fy) - corner_fy;
   row = fy / NAV_ROW_HEIGHT + NAV_Y_OFFSET;
 
   if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
@@ -237,17 +241,18 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
 int FindTargetXY(Mech *mech, float *x, float *y, float *z) {
   Mech *tempMech;
 
-  if (MechTarget(mech) != -1) {
-    tempMech = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+  if (mech_target_dbref(mech) != -1) {
+    tempMech =
+        btech_context_get_mech(mech->xcode.context, mech_target_dbref(mech));
     if (tempMech) {
-      *x = MechFX(tempMech);
-      *y = MechFY(tempMech);
-      *z = MechFZ(tempMech);
+      *x = ((tempMech)->pd.fx);
+      *y = ((tempMech)->pd.fy);
+      *z = ((tempMech)->pd.fz);
       return 1;
     }
-  } else if (MechTargX(mech) != -1 && MechTargY(mech) != -1) {
-    MapCoordToRealCoord(MechTargX(mech), MechTargY(mech), x, y);
-    *z = (float)ZSCALE * (MechTargZ(mech));
+  } else if (mech_target_hex_x(mech) != -1 && mech_target_hex_y(mech) != -1) {
+    MapCoordToRealCoord(mech_target_hex_x(mech), mech_target_hex_y(mech), x, y);
+    *z = (float)ZSCALE * (mech_target_hex_z(mech));
 
     return 1;
   }

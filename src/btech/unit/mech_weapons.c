@@ -1,3 +1,7 @@
+#include "btech/context.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_utils_internal.h"
 #include "weapon_catalogue_api.h"
 
@@ -17,7 +21,31 @@
   }
 
 bool weapon_catalogue_is_artillery(int weapon_index) {
-  return IsArtillery(weapon_index);
+  return MechWeapons[weapon_index].type == TARTILLERY;
+}
+
+bool weapon_catalogue_is_missile(int weapon_index) {
+  return MechWeapons[weapon_index].type == TMISSILE;
+}
+
+bool weapon_catalogue_is_ballistic(int weapon_index) {
+  return MechWeapons[weapon_index].type == TAMMO;
+}
+
+bool weapon_catalogue_is_energy(int weapon_index) {
+  return MechWeapons[weapon_index].type == TBEAM;
+}
+
+bool weapon_catalogue_is_flamer(int weapon_index) {
+  return strstr(MechWeapons[weapon_index].name, "Flamer") != nullptr;
+}
+
+bool weapon_catalogue_is_coolant(int weapon_index) {
+  return strstr(MechWeapons[weapon_index].name, "Coolant") != nullptr;
+}
+
+bool weapon_catalogue_is_acid(int weapon_index) {
+  return strstr(MechWeapons[weapon_index].name, "Acid") != nullptr;
 }
 
 bool weapon_catalogue_supports_indirect_fire(int weapon_index) {
@@ -26,6 +54,16 @@ bool weapon_catalogue_supports_indirect_fire(int weapon_index) {
 
 bool weapon_catalogue_is_anti_missile(int weapon_index) {
   return MechWeapons[weapon_index].special & AMS;
+}
+
+bool equipment_can_use_targeting_computer(int equipment_index) {
+  int weapon_index = weapon_from_equipment_index(equipment_index);
+  const char *name = &MechWeapons[weapon_index].name[3];
+  return (MechWeapons[weapon_index].type == TBEAM ||
+          MechWeapons[weapon_index].type == TAMMO) &&
+         strcmp(name, "Flamer") && strcmp(name, "MachineGun") &&
+         strcmp(name, "LightMachineGun") && strcmp(name, "HeavyMachineGun") &&
+         !(MechWeapons[weapon_index].special & PCOMBAT);
 }
 
 bool weapon_catalogue_is_hot_loaded(int weapon_index, int fire_mode) {
@@ -48,18 +86,34 @@ int weapon_catalogue_cluster_size(int weapon_index) {
 }
 
 int weapon_catalogue_effective_range(int weapon_index, bool extended) {
-  int normal = GunRange(weapon_index);
+  int normal =
+      weapon_catalogue_is_artillery(weapon_index)
+          ? ARTILLERY_MAPSHEET_SIZE * MechWeapons[weapon_index].longrange
+          : MechWeapons[weapon_index].longrange;
   int extended_range = MechWeapons[weapon_index].medrange * 2;
   return extended && extended_range > normal ? extended_range : normal;
 }
 
 int weapon_catalogue_effective_water_range(int weapon_index, bool extended) {
-  int normal = GunWaterRange(weapon_index);
+  int normal = MechWeapons[weapon_index].longrange_water > 0
+                   ? MechWeapons[weapon_index].longrange_water
+               : MechWeapons[weapon_index].medrange_water > 0
+                   ? MechWeapons[weapon_index].medrange_water
+               : MechWeapons[weapon_index].shortrange_water > 0
+                   ? MechWeapons[weapon_index].shortrange_water
+                   : 0;
   int extended_range = MechWeapons[weapon_index].medrange_water * 2;
   return extended && extended_range > normal &&
                  MechWeapons[weapon_index].longrange_water > 0
              ? extended_range
              : normal;
+}
+
+int weapon_catalogue_range_for_section(const Mech *mech, int section,
+                                       int weapon_index, bool extended) {
+  if (mech_section_is_underwater(mech, section))
+    return weapon_catalogue_effective_water_range(weapon_index, extended);
+  return weapon_catalogue_effective_range(weapon_index, extended);
 }
 
 /* ASSERTION: Weapons must be located next to each other in criticals. */
@@ -72,10 +126,10 @@ int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
   int num_crits = 0, i;
 
   for (loop = 0; loop < MAX_WEAPS_SECTION; loop++) {
-    temp = GetPartType(mech, index, loop);
-    data = GetPartData(mech, index, loop);
-    if (IsWeapon(temp)) {
-      temp = Weapon2I(temp);
+    temp = mech_critical_part_type(mech, index, loop);
+    data = mech_critical_data(mech, index, loop);
+    if (equipment_is_weapon(temp)) {
+      temp = weapon_from_equipment_index(temp);
       if (weapcount == 0) {
         lastweap = temp;
         weapdataarray[weapcount] = data;
@@ -114,16 +168,16 @@ int FindAmmunition(Mech *mech, unsigned char *weaparray,
 
   for (index = 0; index < NUM_SECTIONS; index++)
     for (loop = 0; loop < MAX_WEAPS_SECTION; loop++) {
-      temp = GetPartType(mech, index, loop);
-      if (IsAmmo(temp)) {
-        data = GetPartData(mech, index, loop);
-        mode = (GetPartAmmoMode(mech, index, loop) & AMMO_MODES);
-        temp = Ammo2Weapon(temp);
+      temp = mech_critical_part_type(mech, index, loop);
+      if (equipment_is_ammunition(temp)) {
+        data = mech_critical_data(mech, index, loop);
+        mode = (mech_critical_ammo_mode(mech, index, loop) & AMMO_MODES);
+        temp = ammunition_to_weapon_index(temp);
         duplicate = 0;
 
         for (i = 0; i < weapcount; i++) {
           if (temp == weaparray[i] && mode == modearray[i]) {
-            if (!(PartIsNonfunctional(mech, index, loop)))
+            if (!(mech_critical_is_nonfunctional(mech, index, loop)))
               ammoarray[i] += data;
             ammomaxarray[i] += FullAmmo(mech, index, loop);
             duplicate = 1;
@@ -133,7 +187,7 @@ int FindAmmunition(Mech *mech, unsigned char *weaparray,
         if (!duplicate) {
           weaparray[weapcount] = temp;
 
-          if (!(PartIsNonfunctional(mech, index, loop)))
+          if (!(mech_critical_is_nonfunctional(mech, index, loop)))
             ammoarray[weapcount] = data;
           else
             ammoarray[weapcount] = 0;
@@ -167,23 +221,27 @@ int FindLegHeatSinks(Mech *mech) {
   int heatsinks = 0;
 
   for (loop = 0; loop < NUM_CRITICALS; loop++) {
-    if (GetPartType(mech, LLEG, loop) == I2Special((HEAT_SINK)) &&
-        !PartIsNonfunctional(mech, LLEG, loop))
+    if (mech_critical_part_type(mech, LLEG, loop) ==
+            special_equipment_index((HEAT_SINK)) &&
+        !mech_critical_is_nonfunctional(mech, LLEG, loop))
       heatsinks++;
-    if (GetPartType(mech, RLEG, loop) == I2Special((HEAT_SINK)) &&
-        !PartIsNonfunctional(mech, RLEG, loop))
+    if (mech_critical_part_type(mech, RLEG, loop) ==
+            special_equipment_index((HEAT_SINK)) &&
+        !mech_critical_is_nonfunctional(mech, RLEG, loop))
       heatsinks++;
     /*
      * Added by Kipsta on 8/5/99
      * Quads can get 'arm' HS in the water too
      */
 
-    if (MechIsQuad(mech)) {
-      if (GetPartType(mech, LARM, loop) == I2Special((HEAT_SINK)) &&
-          !PartIsNonfunctional(mech, LARM, loop))
+    if (mech_is_quad(mech)) {
+      if (mech_critical_part_type(mech, LARM, loop) ==
+              special_equipment_index((HEAT_SINK)) &&
+          !mech_critical_is_nonfunctional(mech, LARM, loop))
         heatsinks++;
-      if (GetPartType(mech, RARM, loop) == I2Special((HEAT_SINK)) &&
-          !PartIsNonfunctional(mech, RARM, loop))
+      if (mech_critical_part_type(mech, RARM, loop) ==
+              special_equipment_index((HEAT_SINK)) &&
+          !mech_critical_is_nonfunctional(mech, RARM, loop))
         heatsinks++;
     }
   }
@@ -206,7 +264,8 @@ int FindWeaponNumberOnMech_Advanced(Mech *mech, int number, int *section,
   int index;
 
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    num_weaps = FindWeapons(mech, loop, weaparray, weapdata, critical);
+    num_weaps =
+        FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
 
     if (num_weaps <= 0)
       continue;
@@ -214,7 +273,7 @@ int FindWeaponNumberOnMech_Advanced(Mech *mech, int number, int *section,
     if (number < running_sum + num_weaps) {
       /* we found it... */
       index = number - running_sum;
-      if (PartIsNonfunctional(mech, loop, critical[index])) {
+      if (mech_critical_is_nonfunctional(mech, loop, critical[index])) {
         *section = loop;
         *crit = critical[index];
         return TIC_NUM_DESTROYED;
@@ -226,10 +285,10 @@ int FindWeaponNumberOnMech_Advanced(Mech *mech, int number, int *section,
                    : TIC_NUM_RELOADING;
       } else {
 
-        if (MechSections(mech)[loop].recycle &&
-            (MechType(mech) == CLASS_MECH ||
-             MechType(mech) == CLASS_VEH_GROUND ||
-             MechType(mech) == CLASS_VTOL) &&
+        if (((mech)->ud.sections)[loop].recycle &&
+            (((mech)->ud.type) == CLASS_MECH ||
+             ((mech)->ud.type) == CLASS_VEH_GROUND ||
+             ((mech)->ud.type) == CLASS_VTOL) &&
             !sight) {
 
           *section = loop;
@@ -262,13 +321,14 @@ int FindWeaponFromIndex(Mech *mech, int weapindx, int *section, int *crit) {
   int index;
 
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    num_weaps = FindWeapons(mech, loop, weaparray, weapdata, critical);
+    num_weaps =
+        FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
     for (index = 0; index < num_weaps; index++)
       if (weaparray[index] == weapindx) {
         *section = loop;
         *crit = critical[index];
-        if (!PartIsNonfunctional(mech, loop, index) &&
-            !WpnIsRecycling(mech, loop, index))
+        if (!mech_critical_is_nonfunctional(mech, loop, index) &&
+            !mech_weapon_is_recycling_at(mech, loop, index))
           return 1;
         /* Return if not Recycling/Destroyed */
         /* Otherwise keep looking */
@@ -289,7 +349,8 @@ int FindWeaponIndex(Mech *mech, int number) {
   if (number < 0)
     return -1; /* Anti-crash */
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    num_weaps = FindWeapons(mech, loop, weaparray, weapdata, critical);
+    num_weaps =
+        FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (num_weaps <= 0)
       continue;
     if (number < running_sum + num_weaps) {
@@ -306,18 +367,20 @@ int FullAmmo(Mech *mech, int loc, int pos) {
   int baseammo;
   int overage;
 
-  baseammo = MechWeapons[Ammo2I(GetPartType(mech, loc, pos))].ammoperton;
-  if ((GetPartAmmoMode(mech, loc, pos) & AC_AP_MODE) ||
-      (GetPartAmmoMode(mech, loc, pos) & AC_PRECISION_MODE) ||
-      (GetPartFireMode(mech, loc, pos) & HALFTON_MODE)) {
+  baseammo = MechWeapons[ammunition_to_weapon_index(
+                             mech_critical_part_type(mech, loc, pos))]
+                 .ammoperton;
+  if ((mech_critical_ammo_mode(mech, loc, pos) & AC_AP_MODE) ||
+      (mech_critical_ammo_mode(mech, loc, pos) & AC_PRECISION_MODE) ||
+      (mech_critical_fire_mode(mech, loc, pos) & HALFTON_MODE)) {
     return baseammo >> 1;
   }
 
-  if ((GetPartAmmoMode(mech, loc, pos) & AC_CASELESS_MODE)) {
+  if ((mech_critical_ammo_mode(mech, loc, pos) & AC_CASELESS_MODE)) {
     return baseammo << 1;
   }
 
-  if ((GetPartAmmoMode(mech, loc, pos) & MML_LRM_MODE)) {
+  if ((mech_critical_ammo_mode(mech, loc, pos) & MML_LRM_MODE)) {
     baseammo = baseammo * 1200;
     overage = baseammo % 1000;
     if (overage > 499)
@@ -335,13 +398,13 @@ int findAmmoInSection(Mech *mech, int section, int type, int nogof, int gof) {
 
   /* Can't use LBX ammo as normal, but can use Narc and Artemis as normal */
   for (wIter = 0; wIter < NUM_CRITICALS; wIter++) {
-    if (GetPartType(mech, section, wIter) == type &&
-        !PartIsNonfunctional(mech, section, wIter) &&
-        (!nogof || !(GetPartAmmoMode(mech, section, wIter) & nogof)) &&
-        (!gof || (GetPartAmmoMode(mech, section, wIter) & gof))) {
+    if (mech_critical_part_type(mech, section, wIter) == type &&
+        !mech_critical_is_nonfunctional(mech, section, wIter) &&
+        (!nogof || !(mech_critical_ammo_mode(mech, section, wIter) & nogof)) &&
+        (!gof || (mech_critical_ammo_mode(mech, section, wIter) & gof))) {
 
-      if (!PartIsNonfunctional(mech, section, wIter) &&
-          GetPartData(mech, section, wIter) > 0)
+      if (!mech_critical_is_nonfunctional(mech, section, wIter) &&
+          mech_critical_data(mech, section, wIter) > 0)
         return wIter;
     }
   }
@@ -360,16 +423,17 @@ int FindAmmoForWeapon_sub(Mech *mech, int weapSection, int weapCritical,
   int wFirstCrit = 0;
   int wDesiredLoc = -1;
 
-  desired = I2Ammo(weapindx);
+  desired = ammunition_equipment_index(weapindx);
 
   /* The data on the desired location */
   if ((weapSection > -1) && (weapCritical > -1)) {
-    wCritType = GetPartType(mech, weapSection, weapCritical);
-    wWeapSize = GetWeaponCrits(mech, Weapon2I(wCritType));
+    wCritType = mech_critical_part_type(mech, weapSection, weapCritical);
+    wWeapSize = GetWeaponCrits(mech, weapon_from_equipment_index(wCritType));
     wFirstCrit = FindFirstWeaponCrit(mech, weapSection, weapCritical, 0,
                                      wCritType, wWeapSize);
 
-    wDesiredLoc = GetPartDesiredAmmoLoc(mech, weapSection, wFirstCrit);
+    wDesiredLoc =
+        mech_critical_desired_ammo_section(mech, weapSection, wFirstCrit);
 
     if (wDesiredLoc >= 0) {
       foundSlot = findAmmoInSection(mech, wDesiredLoc, desired, nogof, gof);
@@ -423,14 +487,14 @@ int CountAmmoForWeapon(Mech *mech, int weapindx) {
   int wcAmmo = 0;
   int wAmmoIdx;
 
-  wAmmoIdx = I2Ammo(weapindx);
+  wAmmoIdx = ammunition_equipment_index(weapindx);
 
   for (wSecIter = 0; wSecIter < NUM_SECTIONS; wSecIter++) {
     for (wSlotIter = 0; wSlotIter < NUM_CRITICALS; wSlotIter++) {
-      if ((GetPartType(mech, wSecIter, wSlotIter) == wAmmoIdx) &&
-          !PartIsNonfunctional(mech, wSecIter, wSlotIter) &&
-          (GetPartData(mech, wSecIter, wSlotIter) > 0))
-        wcAmmo += GetPartData(mech, wSecIter, wSlotIter);
+      if ((mech_critical_part_type(mech, wSecIter, wSlotIter) == wAmmoIdx) &&
+          !mech_critical_is_nonfunctional(mech, wSecIter, wSlotIter) &&
+          (mech_critical_data(mech, wSecIter, wSlotIter) > 0))
+        wcAmmo += mech_critical_data(mech, wSecIter, wSlotIter);
     }
   }
 
@@ -442,29 +506,29 @@ int FindArtemisForWeapon(Mech *mech, int section, int critical) {
   int critloop;
   int desired;
 
-  desired = I2Special(ARTEMIS_IV);
+  desired = special_equipment_index(ARTEMIS_IV);
   for (critloop = 0; critloop < NUM_CRITICALS; critloop++) {
-    if (GetPartType(mech, section, critloop) == desired &&
-        !PartIsNonfunctional(mech, section, critloop)) {
-      if (GetPartData(mech, section, critloop) == (critical + 1))
+    if (mech_critical_part_type(mech, section, critloop) == desired &&
+        !mech_critical_is_nonfunctional(mech, section, critloop)) {
+      if (mech_critical_data(mech, section, critloop) == (critical + 1))
         return 1;
     }
   }
-  if (MechType(mech) == CLASS_MECH &&
+  if (((mech)->ud.type) == CLASS_MECH &&
       section == CTORSO) { // if it's mech, and torso missile, search in head
     for (critloop = 0; critloop < 6; critloop++) {
-      if (GetPartType(mech, HEAD, critloop) == desired &&
-          !PartIsNonfunctional(mech, HEAD, critloop)) {
-        if (GetPartData(mech, HEAD, critloop) == (critical + 1))
+      if (mech_critical_part_type(mech, HEAD, critloop) == desired &&
+          !mech_critical_is_nonfunctional(mech, HEAD, critloop)) {
+        if (mech_critical_data(mech, HEAD, critloop) == (critical + 1))
           return 1;
       }
     }
-  } else if (MechType(mech) == CLASS_VEH_GROUND &&
+  } else if (((mech)->ud.type) == CLASS_VEH_GROUND &&
              section == TURRET) { // same thing for turret & aft
     for (critloop = 0; critloop < NUM_CRITICALS; critloop++) {
-      if (GetPartType(mech, BSIDE, critloop) == desired &&
-          !PartIsNonfunctional(mech, BSIDE, critloop)) {
-        if (GetPartData(mech, BSIDE, critloop) == (critical + 1))
+      if (mech_critical_part_type(mech, BSIDE, critloop) == desired &&
+          !mech_critical_is_nonfunctional(mech, BSIDE, critloop)) {
+        if (mech_critical_data(mech, BSIDE, critloop) == (critical + 1))
           return 1;
       }
     }
@@ -473,7 +537,7 @@ int FindArtemisForWeapon(Mech *mech, int section, int critical) {
 }
 
 int ReverseSplitCritLoc(Mech *mech, int sect, int crit) {
-  if (MechType(mech) != CLASS_MECH)
+  if (((mech)->ud.type) != CLASS_MECH)
     return -1;
 
   switch (sect) {
@@ -488,7 +552,8 @@ int ReverseSplitCritLoc(Mech *mech, int sect, int crit) {
   case LTORSO:
     return LARM;
   case CTORSO:
-    return (Special2I(GetPartType(mech, sect, crit)) == SPLIT_CRIT_RIGHT
+    return (special_from_equipment_index(
+                mech_critical_part_type(mech, sect, crit)) == SPLIT_CRIT_RIGHT
                 ? RTORSO
                 : LTORSO);
   }
@@ -499,8 +564,8 @@ int FindSplitCrits(Mech *mech, int sect, int type, int crit) {
   int i;
 
   for (i = 0; i < CritsInLoc(mech, sect); i++)
-    if (GetPartType(mech, sect, i) == type &&
-        GetPartData(mech, sect, i) == crit)
+    if (mech_critical_part_type(mech, sect, i) == type &&
+        mech_critical_data(mech, sect, i) == crit)
       return i;
 
   return -1;
@@ -509,21 +574,21 @@ int GetSplitData(Mech *mech, int sect, int data, int *ssect, int *scrit,
                  int *stype) {
   switch (sect) {
   case RARM: // right arm goes to right torso
-    *stype = I2Special(SPLIT_CRIT_RIGHT);
+    *stype = special_equipment_index(SPLIT_CRIT_RIGHT);
     if ((*scrit = FindSplitCrits(mech, RTORSO, *stype, data)) >= 0) {
       *ssect = RTORSO;
       return 1;
     }
     break;
   case LARM: // left arm goes to left torso
-    *stype = I2Special(SPLIT_CRIT_LEFT);
+    *stype = special_equipment_index(SPLIT_CRIT_LEFT);
     if ((*scrit = FindSplitCrits(mech, LTORSO, *stype, data)) >= 0) {
       *ssect = LTORSO;
       return 1;
     }
     break;
   case RTORSO: // torso more complex, need to go thru arm, leg, torso
-    *stype = I2Special(SPLIT_CRIT_RIGHT);
+    *stype = special_equipment_index(SPLIT_CRIT_RIGHT);
     if ((*scrit = FindSplitCrits(mech, CTORSO, *stype, data)) >= 0) {
       *ssect = CTORSO;
       return 1;
@@ -536,7 +601,7 @@ int GetSplitData(Mech *mech, int sect, int data, int *ssect, int *scrit,
     }
     break;
   case LTORSO: // same for left torso
-    *stype = I2Special(SPLIT_CRIT_LEFT);
+    *stype = special_equipment_index(SPLIT_CRIT_LEFT);
     if ((*scrit = FindSplitCrits(mech, CTORSO, *stype, data)) >= 0) {
       *ssect = CTORSO;
       return 1;
@@ -562,15 +627,17 @@ int FindDestructiveAmmo(Mech *mech, int *section, int *critical) {
 
   for (loop = 0; loop < NUM_SECTIONS; loop++)
     for (critloop = 0; critloop < NUM_CRITICALS; critloop++)
-      if (IsAmmo(GetPartType(mech, loop, critloop)) &&
-          !PartIsDestroyed(mech, loop, critloop)) {
-        data = GetPartData(mech, loop, critloop);
-        type = GetPartType(mech, loop, critloop);
-        weapindx = Ammo2WeaponI(type);
+      if (equipment_is_ammunition(
+              mech_critical_part_type(mech, loop, critloop)) &&
+          !mech_critical_is_destroyed(mech, loop, critloop)) {
+        data = mech_critical_data(mech, loop, critloop);
+        type = mech_critical_part_type(mech, loop, critloop);
+        weapindx = ammunition_to_weapon_index(type);
         damage = data * MechWeapons[weapindx].damage;
         if (MechWeapons[weapindx].special & GAUSS)
           continue;
-        if (IsMissile(weapindx) || IsArtillery(weapindx)) {
+        if (weapon_catalogue_is_missile(weapindx) ||
+            weapon_catalogue_is_artillery(weapindx)) {
           const MissileHitEntry *entry = missile_hit_registry_find_weapon(
               &mech->xcode.context->missile_hits, weapindx);
           if (entry != nullptr)
@@ -596,18 +663,20 @@ int FindInfernoAmmo(Mech *mech, int *section, int *critical) {
 
   for (loop = 0; loop < NUM_SECTIONS; loop++)
     for (critloop = 0; critloop < NUM_CRITICALS; critloop++)
-      if (IsAmmo(GetPartType(mech, loop, critloop)) &&
-          !PartIsDestroyed(mech, loop, critloop)) {
-        data = GetPartData(mech, loop, critloop);
-        type = GetPartType(mech, loop, critloop);
-        mode = GetPartAmmoMode(mech, loop, critloop);
+      if (equipment_is_ammunition(
+              mech_critical_part_type(mech, loop, critloop)) &&
+          !mech_critical_is_destroyed(mech, loop, critloop)) {
+        data = mech_critical_data(mech, loop, critloop);
+        type = mech_critical_part_type(mech, loop, critloop);
+        mode = mech_critical_ammo_mode(mech, loop, critloop);
         if (!(mode & INFERNO_MODE))
           continue;
-        weapindx = Ammo2WeaponI(type);
+        weapindx = ammunition_to_weapon_index(type);
         damage = data * MechWeapons[weapindx].damage;
         if (MechWeapons[weapindx].special & GAUSS)
           continue;
-        if (IsMissile(weapindx) || IsArtillery(weapindx)) {
+        if (weapon_catalogue_is_missile(weapindx) ||
+            weapon_catalogue_is_artillery(weapindx)) {
           const MissileHitEntry *entry = missile_hit_registry_find_weapon(
               &mech->xcode.context->missile_hits, weapindx);
           if (entry != nullptr)
@@ -628,12 +697,12 @@ int FindRoundsForWeapon(Mech *mech, int weapindx) {
   int desired;
   int found = 0;
 
-  desired = I2Ammo(weapindx);
+  desired = ammunition_equipment_index(weapindx);
   for (loop = 0; loop < NUM_SECTIONS; loop++)
     for (critloop = 0; critloop < NUM_CRITICALS; critloop++)
-      if (GetPartType(mech, loop, critloop) == desired &&
-          !PartIsNonfunctional(mech, loop, critloop))
-        found += GetPartData(mech, loop, critloop);
+      if (mech_critical_part_type(mech, loop, critloop) == desired &&
+          !mech_critical_is_nonfunctional(mech, loop, critloop))
+        found += mech_critical_data(mech, loop, critloop);
   return found;
 }
 

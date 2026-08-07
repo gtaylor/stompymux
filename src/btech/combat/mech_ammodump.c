@@ -18,7 +18,6 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "mech_ammodump_api.h"
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
@@ -28,7 +27,6 @@
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_partnames_api.h"
 #include "mech_position_api.h"
@@ -40,7 +38,9 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
+#include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 
 static void mech_dump_event(MuxEvent *ev) {
   Mech *mech = (Mech *)ev->data;
@@ -58,7 +58,7 @@ static void mech_dump_event(MuxEvent *ev) {
   if (!arg) {
     for (; i >= 0; i--)
       for (l = mech_section_critical_count(mech, i) - 1; l >= 0; l--)
-        if (IsAmmo(mech_critical_part_type(mech, i, l)))
+        if (equipment_is_ammunition(mech_critical_part_type(mech, i, l)))
           if (mech_critical_data(mech, i, l))
             mech_ammunition_dump_decrease(mech, i, l, &e);
     if (e > 1)
@@ -75,7 +75,7 @@ static void mech_dump_event(MuxEvent *ev) {
     loc = arg - 1;
     l = mech_section_critical_count(mech, loc);
     for (i = 0; i < l; i++)
-      if (IsAmmo(mech_critical_part_type(mech, loc, i)))
+      if (equipment_is_ammunition(mech_critical_part_type(mech, loc, i)))
         if (!mech_critical_is_nonfunctional(mech, loc, i))
           if ((d = mech_critical_data(mech, loc, i)))
             mech_ammunition_dump_decrease(mech, loc, i, &e);
@@ -95,17 +95,18 @@ static void mech_dump_event(MuxEvent *ev) {
     weapindx = (arg / 256) - 1;
     for (; i >= 0; i--)
       for (l = mech_section_critical_count(mech, i) - 1; l >= 0; l--)
-        if (IsAmmo(mech_critical_part_type(mech, i, l)))
-          if (Ammo2WeaponI(mech_critical_part_type(mech, i, l)) == weapindx)
+        if (equipment_is_ammunition(mech_critical_part_type(mech, i, l)))
+          if (ammunition_to_weapon_index(mech_critical_part_type(mech, i, l)) ==
+              weapindx)
             if (mech_critical_data(mech, i, l))
               mech_ammunition_dump_decrease(mech, i, l, &e);
     if (e > 1)
       mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
                           arg);
     else {
-      mech_printf(
-          mech, MECHALL, "Ammunition for %s dumped!",
-          get_parts_long_name(mech_context(mech), I2Weapon(weapindx), 0));
+      mech_printf(mech, MECHALL, "Ammunition for %s dumped!",
+                  get_parts_long_name(mech_context(mech),
+                                      weapon_equipment_index(weapindx), 0));
       mech_los_broadcast(
           mech, "no longer has ammo dumping from hatches on its back.");
     }
@@ -146,19 +147,30 @@ void mech_dump(DbRef player, void *data, char *buffer) {
   char buf[MBUF_SIZE];
   long type = 0;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(mech_context(mech), argc < 1,
-                  "Not enough arguments to the function");
+  if (argc < 1) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Not enough arguments to the function");
+    return;
+  }
   weapnum = atoi(args[0]);
 
-  DOCHECKMA(mech_is_jumping(mech), "You can't dump ammo while jumping!");
-  DOCHECKMA(mech_is_running_at_desired_speed(mech),
-            "You can't dump ammo while running!");
+  if (mech_is_jumping(mech)) {
+    mech_notify(mech, MECHALL, "You can't dump ammo while jumping!");
+    return;
+  }
+  if (mech_is_running_at_desired_speed(mech)) {
+    mech_notify(mech, MECHALL, "You can't dump ammo while running!");
+    return;
+  }
 
   if (!strcasecmp(args[0], "stop")) {
-    DOCHECKMA(!mech_event_count(mech, EVENT_DUMP),
-              "You aren't dumping anything!");
+    if (!mech_event_count(mech, EVENT_DUMP)) {
+      mech_notify(mech, MECHALL, "You aren't dumping anything!");
+      return;
+    }
     mech_notify(mech, MECHALL, "Ammo dumping halted.");
     mech_event_cancel(mech, EVENT_DUMP);
     mech_los_broadcast(mech,
@@ -169,11 +181,17 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     i = mech_class(mech) == CLASS_MECH ? 7 : 5;
     for (; i >= 0; i--)
       for (l = mech_section_critical_count(mech, i) - 1; l >= 0; l--)
-        if (IsAmmo(mech_critical_part_type(mech, i, l)))
+        if (equipment_is_ammunition(mech_critical_part_type(mech, i, l)))
           if (mech_critical_data(mech, i, l))
             count++;
-    DOCHECKMA(!count, "You have no ammo to dump!");
-    DOCHECKMA(mech_dumping_type(mech, 0), "You're already dumping your ammo!");
+    if (!count) {
+      mech_notify(mech, MECHALL, "You have no ammo to dump!");
+      return;
+    }
+    if (mech_dumping_type(mech, 0)) {
+      mech_notify(mech, MECHALL, "You're already dumping your ammo!");
+      return;
+    }
     mech_event_cancel(mech, EVENT_DUMP);
     mech_notify(mech, MECHALL, "Starting dumping of all ammunition..");
     mech_los_broadcast(mech, "starts dumping ammo from hatches on its back.");
@@ -181,25 +199,37 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     return;
   } else if (!weapnum && strcmp(args[0], "0")) {
     /* Try to find hitloc instead */
-    DOCHECKMA(mech_event_count(mech, EVENT_DUMP),
-              "You're already dumping some ammo!");
+    if (mech_event_count(mech, EVENT_DUMP)) {
+      mech_notify(mech, MECHALL, "You're already dumping some ammo!");
+      return;
+    }
     loc = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
                                  args[0]);
-    DOCHECK_CONTEXT(mech_context(mech), loc < 0,
-                    "Invalid location or weapon number!");
+    if (loc < 0) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid location or weapon number!");
+      return;
+    }
     ArmorStringFromIndex(loc, buf, mech_class(mech), mech_movement_type(mech));
     if (args[1]) {
       i = atoi(args[1]);
       i--;
       if (i >= 0 && i < 12) {
-        if (IsAmmo(mech_critical_part_type(mech, loc, i)))
+        if (equipment_is_ammunition(mech_critical_part_type(mech, loc, i)))
           if (!mech_critical_is_nonfunctional(mech, loc, i))
             if ((d = mech_critical_data(mech, loc, i)))
               count++;
-        DOCHECKMA(!count,
-                  tprintf("There is no ammunition in %s crit %i!", buf, i + 1));
+        if (!count) {
+          mech_notify(
+              mech, MECHALL,
+              tprintf("There is no ammunition in %s crit %i!", buf, i + 1));
+          return;
+        }
         type = (((i + 1) << 8) | (loc + 1));
-        DOCHECKMA(type & ~0xFFFF, "Internal inconsistency, dump failed!");
+        if (type & ~0xFFFF) {
+          mech_notify(mech, MECHALL, "Internal inconsistency, dump failed!");
+          return;
+        }
         type = type << 16;
         mech_printf(mech, MECHALL,
                     "Starting dumping of ammunition in %s crit %i..", buf,
@@ -213,11 +243,14 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     }
     l = mech_section_critical_count(mech, loc);
     for (i = 0; i < l; i++)
-      if (IsAmmo(mech_critical_part_type(mech, loc, i)))
+      if (equipment_is_ammunition(mech_critical_part_type(mech, loc, i)))
         if (!mech_critical_is_nonfunctional(mech, loc, i))
           if ((d = mech_critical_data(mech, loc, i)))
             count++;
-    DOCHECKMA(!count, tprintf("There is no ammunition in %s!", buf));
+    if (!count) {
+      mech_notify(mech, MECHALL, tprintf("There is no ammunition in %s!", buf));
+      return;
+    }
     type = loc + 1;
     mech_printf(mech, MECHALL, "Starting dumping of ammunition in %s..", buf);
     mech_los_broadcast(mech, "starts dumping ammo from hatches on its back.");
@@ -231,25 +264,38 @@ void mech_dump(DbRef player, void *data, char *buffer) {
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("CHEATER: #%d tried to crash mux with command 'dump %d'!",
                 (int)player, weapnum));
-  DOCHECKMA(mech_event_count(mech, EVENT_DUMP),
-            "You're already dumping some ammo!");
-  DOCHECK_CONTEXT(mech_context(mech), weapindx < 0, "Invalid weapon number!");
+  if (mech_event_count(mech, EVENT_DUMP)) {
+    mech_notify(mech, MECHALL, "You're already dumping some ammo!");
+    return;
+  }
+  if (weapindx < 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid weapon number!");
+    return;
+  }
   FindWeaponNumberOnMech(mech, weapnum, &section, &critical);
-  DOCHECK_CONTEXT(mech_context(mech),
-                  MechWeapons[weapindx].type == TBEAM ||
-                      MechWeapons[weapindx].type == THAND,
-                  "That weapon doesn't use ammunition!");
-  DOCHECK_CONTEXT(
-      mech_context(mech),
-      !FindAmmoForWeapon_sub(mech, -1, -1, weapindx, 0, &ammoLoc, &ammoCrit, 0,
-                             0),
-      "You don't have any ammunition for that weapon stored on this mech!");
-  DOCHECK_CONTEXT(mech_context(mech),
-                  mech_critical_data(mech, ammoLoc, ammoCrit) == 0,
-                  "You are out of ammunition for that weapon already!");
+  if (MechWeapons[weapindx].type == TBEAM ||
+      MechWeapons[weapindx].type == THAND) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "That weapon doesn't use ammunition!");
+    return;
+  }
+  if (!FindAmmoForWeapon_sub(mech, -1, -1, weapindx, 0, &ammoLoc, &ammoCrit, 0,
+                             0)) {
+    mecha_notify(
+        btech_context_evaluation(mech_context(mech)), player,
+        "You don't have any ammunition for that weapon stored on this mech!");
+    return;
+  }
+  if (mech_critical_data(mech, ammoLoc, ammoCrit) == 0) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "You are out of ammunition for that weapon already!");
+    return;
+  }
   type = 256 * (weapindx + 1);
   mech_printf(mech, MECHALL, "Starting dumping %s ammunition..",
-              get_parts_long_name(mech_context(mech), I2Weapon(weapindx), 0));
+              get_parts_long_name(mech_context(mech),
+                                  weapon_equipment_index(weapindx), 0));
   mech_los_broadcast(mech, "starts dumping ammo from hatches on its back.");
   mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, type);
 }
@@ -265,10 +311,11 @@ int mech_ammunition_dump_decrease(Mech *mech, int loc, int pos, int *hm) {
 
   /* It _is_ ammo, and contains something */
 
-  if (IsAmmo((index = mech_critical_part_type(mech, loc, pos))))
+  if (equipment_is_ammunition(
+          (index = mech_critical_part_type(mech, loc, pos))))
     if (!mech_critical_is_nonfunctional(mech, loc, pos))
       if ((c = mech_critical_data(mech, loc, pos))) {
-        weapindx = Ammo2WeaponI(index);
+        weapindx = ammunition_to_weapon_index(index);
         if (MechWeapons[weapindx].ammoperton < DUMP_SPEED) {
           if ((btech_context_event_tick(mech_context(mech)) %
                (DUMP_SPEED / MechWeapons[weapindx].ammoperton)))
@@ -319,15 +366,15 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
       for (wSlotIter = mech_section_critical_count(mech, wSecIter) - 1;
            wSlotIter >= 0; wSlotIter--) {
         part_type = mech_critical_part_type(mech, wSecIter, wSlotIter);
-        if (IsAmmo(part_type))
+        if (equipment_is_ammunition(part_type))
           if (mech_critical_data(mech, wSecIter, wSlotIter)) {
             ammunition_items[wcAmmoItems].damage =
-                weapon_maximum_ammunition_damage(mech_context(mech),
-                                                 Ammo2WeaponI(part_type));
+                weapon_maximum_ammunition_damage(
+                    mech_context(mech), ammunition_to_weapon_index(part_type));
             ammunition_items[wcAmmoItems].location = wSecIter;
             ammunition_items[wcAmmoItems].slot = wSlotIter;
             ammunition_items[wcAmmoItems].weapon_index =
-                Ammo2WeaponI(part_type);
+                ammunition_to_weapon_index(part_type);
             ammunition_items[wcAmmoItems].part_type = part_type;
             wcAmmoItems++;
           }
@@ -339,15 +386,16 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
       part_type = mech_critical_part_type(mech, wLoc, wSlotIter);
 
       /*     part_type = mech_critical_part_type(mech, wSecIter, wSlotIter); */
-      if (IsAmmo(part_type))
+      if (equipment_is_ammunition(part_type))
         if (!mech_critical_is_nonfunctional(mech, wLoc, wSlotIter) &&
             mech_critical_data(mech, wLoc, wSlotIter)) {
           ammunition_items[wcAmmoItems].damage =
-              weapon_maximum_ammunition_damage(mech_context(mech),
-                                               Ammo2WeaponI(part_type));
+              weapon_maximum_ammunition_damage(
+                  mech_context(mech), ammunition_to_weapon_index(part_type));
           ammunition_items[wcAmmoItems].location = wLoc;
           ammunition_items[wcAmmoItems].slot = wSlotIter;
-          ammunition_items[wcAmmoItems].weapon_index = Ammo2WeaponI(part_type);
+          ammunition_items[wcAmmoItems].weapon_index =
+              ammunition_to_weapon_index(part_type);
           ammunition_items[wcAmmoItems].part_type = part_type;
           wcAmmoItems++;
         }
@@ -358,13 +406,15 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
       for (wSlotIter = mech_section_critical_count(mech, wSecIter) - 1;
            wSlotIter >= 0; wSlotIter--) {
         part_type = mech_critical_part_type(mech, wSecIter, wSlotIter);
-        if (IsAmmo(part_type) && (Ammo2WeaponI(part_type) == weapon_index)) {
+        if (equipment_is_ammunition(part_type) &&
+            (ammunition_to_weapon_index(part_type) == weapon_index)) {
           ammunition_items[wcAmmoItems].damage =
-              weapon_maximum_ammunition_damage(mech_context(mech),
-                                               Ammo2WeaponI(part_type));
+              weapon_maximum_ammunition_damage(
+                  mech_context(mech), ammunition_to_weapon_index(part_type));
           ammunition_items[wcAmmoItems].location = wSecIter;
           ammunition_items[wcAmmoItems].slot = wSlotIter;
-          ammunition_items[wcAmmoItems].weapon_index = Ammo2WeaponI(part_type);
+          ammunition_items[wcAmmoItems].weapon_index =
+              ammunition_to_weapon_index(part_type);
           ammunition_items[wcAmmoItems].part_type = part_type;
           wcAmmoItems++;
         }
@@ -374,10 +424,11 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
     wSlotIter = ((wEventData >> 24) & 0xFF) - 1;
     part_type = mech_critical_part_type(mech, wSecIter, wSlotIter);
     ammunition_items[wcAmmoItems].damage = weapon_maximum_ammunition_damage(
-        mech_context(mech), Ammo2WeaponI(part_type));
+        mech_context(mech), ammunition_to_weapon_index(part_type));
     ammunition_items[wcAmmoItems].location = wSecIter;
     ammunition_items[wcAmmoItems].slot = wSlotIter;
-    ammunition_items[wcAmmoItems].weapon_index = Ammo2WeaponI(part_type);
+    ammunition_items[wcAmmoItems].weapon_index =
+        ammunition_to_weapon_index(part_type);
     ammunition_items[wcAmmoItems].part_type = part_type;
     wcAmmoItems++;
   }
@@ -391,11 +442,11 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
     if (wBlowDamage > 0) {
       mech_los_broadcast(
           mech, "'s rear armor lights up as ammo being dumped ignites!");
-      mech_printf(
-          mech, MECHALL,
-          "[fg=red bold]Some of the %s ammo dumping out of your mech "
-          "ignites![reset]",
-          get_parts_long_name(mech_context(mech), I2Weapon(weapon_index), 0));
+      mech_printf(mech, MECHALL,
+                  "[fg=red bold]Some of the %s ammo dumping out of your mech "
+                  "ignites![reset]",
+                  get_parts_long_name(mech_context(mech),
+                                      weapon_equipment_index(weapon_index), 0));
       DamageMech(mech, attacker, 0, -1, wHitLoc, 1, 0, wBlowDamage, -1, -1, 0,
                  -1, 0, 1);
       /*
@@ -415,7 +466,8 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
 int weapon_maximum_ammunition_damage(BtechContext *context, int weapon_index) {
   int damage = MechWeapons[weapon_index].damage;
 
-  if (IsMissile(weapon_index) || IsArtillery(weapon_index)) {
+  if (weapon_catalogue_is_missile(weapon_index) ||
+      weapon_catalogue_is_artillery(weapon_index)) {
     int missile_count =
         btech_context_missile_hit_count(context, weapon_index, 10);
     if (missile_count > 0)

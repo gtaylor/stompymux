@@ -1,24 +1,28 @@
 #include "map_building_query_api.h"
+#include "map_conditions_api.h"
 #include "map_obj_internal.h"
+#include "weapon_catalogue_api.h"
 
 #include "mech_condition_api.h"
 #include "mech_identity_api.h"
+#include "mech_notify_api.h"
 #include "mech_position_api.h"
+#include "registry_api.h"
 
 bool battle_map_building_is_invisible(const BattleMap *map) {
-  return BuildIsInvis(map);
+  return battle_map_build_is_invisible(map);
 }
 
 bool battle_map_building_is_hidden(const BattleMap *map) {
-  return BuildIsHidden(map);
+  return battle_map_build_is_hidden(map);
 }
 
 bool battle_map_building_is_safe(const BattleMap *map) {
-  return BuildIsSafe(map);
+  return battle_map_build_is_safe(map);
 }
 
 bool battle_map_building_is_command_center(const BattleMap *map) {
-  return BuildIsCS(map);
+  return battle_map_build_is_complex_structure(map);
 }
 
 int battle_map_building_integrity(const BattleMap *map) { return map->cf; }
@@ -101,7 +105,7 @@ static void damage_cf(Mech *mech, MapObject *o, int from, int to, int damage) {
     mech_printf(mech, MECHALL,
                 "You hit %s for %d points of damage, destroying it!",
                 structure_name(mech_context(mech)->database, o).text, damage);
-    notify_except(
+    mecha_notify_except(
         btech_context_evaluation(mech_context(mech)), o->obj, NOTHING, o->obj,
         tprintf("%s is hit for %d more points of damage, destroying it!",
                 MyToUpper(structure_name(mech_context(mech)->database, o).text),
@@ -113,7 +117,7 @@ static void damage_cf(Mech *mech, MapObject *o, int from, int to, int damage) {
   } else {
     mech_printf(mech, MECHALL, "You hit %s for %d points of damage.",
                 structure_name(mech_context(mech)->database, o).text, damage);
-    notify_except(
+    mecha_notify_except(
         btech_context_evaluation(mech_context(mech)), o->obj, NOTHING, o->obj,
         tprintf("%s is hit for %d points of damage.",
                 MyToUpper(structure_name(mech_context(mech)->database, o).text),
@@ -137,7 +141,7 @@ void hit_building(Mech *mech, int x, int y, int weapindx, int damage) {
   if (!(nmap = btech_context_get_map(mech_context(mech), o->obj)))
     return;
   if (!damage) {
-    if (!IsMissile(weapindx))
+    if (!weapon_catalogue_is_missile(weapindx))
       damage = MechWeapons[weapindx].damage;
     else {
       /* Missile weapon.  Multiple Hit locations... */
@@ -157,7 +161,8 @@ void hit_building(Mech *mech, int x, int y, int weapindx, int damage) {
   }
   if (!damage)
     return;
-  if (MapIsCS(map) || BuildIsCS(nmap)) {
+  if (battle_map_build_is_complex(map) ||
+      battle_map_build_is_complex_structure(nmap)) {
     mech_notify(mech, MECHALL, "Your shot only scratches the paint!");
     return;
   }
@@ -206,9 +211,9 @@ void steppable_base_check(Mech *mech, int x, int y) {
     return;
   if (!(nmap = btech_context_get_map(mech_context(mech), o->obj)))
     return;
-  if (BuildIsDSS(nmap))
+  if (battle_map_build_is_dropship_structure(nmap))
     return;
-  if (BuildIsHidden(nmap) && !MadePerceptionRoll(mech, 0))
+  if (battle_map_build_is_hidden(nmap) && !MadePerceptionRoll(mech, 0))
     return;
   mech_printf(mech, MECHALL, "%s has CF of %d.",
               MyToUpper(structure_name(mech_context(mech)->database, o).text),
@@ -233,8 +238,8 @@ void show_building_in_hex(Mech *mech, int x, int y) {
     mech_notify(mech, MECHALL, "The sensors detect no building in the hex!");
     return;
   }
-  if (BuildIsInvis(nmap) ||
-      (BuildIsHidden(nmap) &&
+  if (battle_map_build_is_invisible(nmap) ||
+      (battle_map_build_is_hidden(nmap) &&
        !MadePerceptionRoll(
            mech, (int)(FindRange(mech_position_x(mech), mech_position_y(mech),
                                  mech_position_z(mech), x, y, 0) +

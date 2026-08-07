@@ -15,8 +15,12 @@ void mech_critical_fire_mode_set(Mech *mech, int section, int critical,
 void mech_critical_ammo_mode_set(Mech *mech, int section, int critical,
                                  int modes);
 int mech_critical_damage_flags(const Mech *mech, int section, int critical);
+void mech_critical_damage_flags_set(Mech *mech, int section, int critical,
+                                    int flags);
 int mech_critical_desired_ammo_section(const Mech *mech, int section,
                                        int critical);
+void mech_critical_desired_ammo_section_set(Mech *mech, int section,
+                                            int critical, int ammo_section);
 int mech_critical_temporary_failure(const Mech *mech, int section,
                                     int critical);
 int mech_critical_full_ammunition(const Mech *mech, int section, int critical);
@@ -47,6 +51,7 @@ void mech_critical_part_type_set(Mech *mech, int section, int critical,
 void mech_critical_destroyed_set(Mech *mech, int section, int critical,
                                  bool destroyed);
 void mech_critical_destroy(Mech *mech, int section, int critical);
+void mech_critical_restore(Mech *mech, int section, int critical);
 void mech_critical_jettison(Mech *mech, int section, int critical);
 int mech_section_original_armor(const Mech *mech, int section);
 int mech_section_original_rear_armor(const Mech *mech, int section);

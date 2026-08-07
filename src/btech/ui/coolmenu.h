@@ -67,14 +67,22 @@ typedef struct CoolMenu {
   struct CoolMenu *next;
 } CoolMenu;
 
-#define CreateMenuEntry_VSimple(c, text)                                       \
-  CreateMenuEntry_Normal(c, text, CM_ONE, 0, 999)
-#define CreateMenuEntry_Simple(c, text, flag)                                  \
-  CreateMenuEntry_Normal(c, text, flag, 0, 999)
-#define CreateMenuEntry_Normal(c, text, flag, id, mv)                          \
-  CreateMenuEntry_Killer(c, text, flag, id, 0, mv)
 void CreateMenuEntry_Killer(CoolMenu **c, char *text, int flag, int id,
                             int value, int maxvalue);
+
+static inline void cool_menu_entry_normal(CoolMenu **menu, char *text,
+                                          int flags, int id, int max_value) {
+  CreateMenuEntry_Killer(menu, text, flags, id, 0, max_value);
+}
+
+static inline void cool_menu_entry_simple(CoolMenu **menu, char *text,
+                                          int flags) {
+  cool_menu_entry_normal(menu, text, flags, 0, 999);
+}
+
+static inline void cool_menu_entry_very_simple(CoolMenu **menu, char *text) {
+  cool_menu_entry_normal(menu, text, CM_ONE, 0, 999);
+}
 
 void KillCoolMenu(CoolMenu *c);
 void ShowCoolMenu(EvaluationContext *evaluation, DbRef player, CoolMenu *c);
@@ -95,9 +103,16 @@ CoolMenu *SelCol_FunStringMenuContextK(int columns, char *heading,
 /* Same, except we dunno how many entries we got */
 CoolMenu *SelCol_FunStringMenu(int columns, char *heading, char *(*fun)(int));
 
-#define AutoCol_Menu(hea, stri, typ) SelCol_Menu(-1, hea, stri, typ, 0)
-#define AutoCol_StringMenu(head, str) AutoCol_Menu(head, str, 0)
-#define AutoCol_FunStringMenuK(hea, fun, las)                                  \
-  SelCol_FunStringMenuK(-1, hea, fun, las)
-#define AutoCol_FunStringMenu(hea, fun) SelCol_FunStringMenuK(-1, hea, fun)
-#define SelCol_StringMenu(col, head, str) SelCol_Menu(col, head, str, 0, 0)
+static inline CoolMenu *auto_column_menu(char *heading, char **strings,
+                                         int type) {
+  return SelCol_Menu(-1, heading, strings, type, 0);
+}
+
+static inline CoolMenu *auto_column_string_menu(char *heading, char **strings) {
+  return auto_column_menu(heading, strings, 0);
+}
+
+static inline CoolMenu *selected_column_string_menu(int columns, char *heading,
+                                                    char **strings) {
+  return SelCol_Menu(columns, heading, strings, 0, 0);
+}

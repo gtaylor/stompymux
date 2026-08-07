@@ -32,8 +32,13 @@
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
-#define INDEX2X(los_map, i) (((i) % (los_map)->xsize) + (los_map)->startx)
-#define INDEX2Y(los_map, i) (((i) / (los_map)->xsize) + (los_map)->starty)
+static int los_map_index_x(const HexLosMap *los_map, int index) {
+  return index % los_map->xsize + los_map->startx;
+}
+
+static int los_map_index_y(const HexLosMap *los_map, int index) {
+  return index / los_map->xsize + los_map->starty;
+}
 
 bool battle_map_unit_is_seen(const BattleMap *map, const Mech *observer,
                              const Mech *target) {
@@ -268,9 +273,9 @@ static void trace_slitelos(HexLosMap *los_map, BattleMap *map, Mech *mech,
   int trace_range = 0;
   int trace_x, trace_y, trace_height;
   float trace_a;
-  int trace_coordnum =
-      trace_los(map, mech_position_x(mech), mech_position_y(mech),
-                INDEX2X(los_map, index), INDEX2Y(los_map, index), trace);
+  int trace_coordnum = trace_los(
+      map, mech_position_x(mech), mech_position_y(mech),
+      los_map_index_x(los_map, index), los_map_index_y(los_map, index), trace);
 
   for (; trace_range < trace_coordnum; trace_range++) {
     trace_x = trace->points[trace_range].x;
@@ -337,21 +342,25 @@ static void litemark_map(HexLosMap *los_map, BattleMap *map, LosTrace *trace) {
   }
 }
 
-#define DEF_MINA(mech, sn) (mech_sensor_sees_terrain(mech, sn) ? -20 : 1000)
+static float default_minimum_angle(Mech *mech, int sensor) {
+  return mech_sensor_sees_terrain(mech, sensor) ? -20.0F : 1000.0F;
+}
 
 static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
                             int index, int tracew, float start_height,
                             LosTrace *trace) {
   int trace_water[MAX_SENSORS] = {tracew, tracew};
-  float minangle[MAX_SENSORS] = {DEF_MINA(mech, 0), DEF_MINA(mech, 1)};
-  float blockangle[MAX_SENSORS] = {DEF_MINA(mech, 0), DEF_MINA(mech, 1)};
+  float minangle[MAX_SENSORS] = {default_minimum_angle(mech, 0),
+                                 default_minimum_angle(mech, 1)};
+  float blockangle[MAX_SENSORS] = {default_minimum_angle(mech, 0),
+                                   default_minimum_angle(mech, 1)};
   int woodcount[MAX_SENSORS] = {0, 0};
   int watercount[MAX_SENSORS] = {0, 0};
   int trace_range = 0;
 
-  int trace_coordnum =
-      trace_los(map, mech_position_x(mech), mech_position_y(mech),
-                INDEX2X(los_map, index), INDEX2Y(los_map, index), trace);
+  int trace_coordnum = trace_los(
+      map, mech_position_x(mech), mech_position_y(mech),
+      los_map_index_x(los_map, index), los_map_index_y(los_map, index), trace);
 
   for (; trace_range < trace_coordnum; trace_range++) {
     int seestate;
@@ -364,7 +373,7 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
     int trace_terrain = map_real_terrain_get(map, trace_x, trace_y);
     int nsensor, newwoods;
 
-    for (nsensor = 0; nsensor < NUMSENSORS(mech); nsensor++) {
+    for (nsensor = 0; nsensor < MAX_SENSORS; nsensor++) {
 
       /* If the current hex and all its terrain ('blockangle') lies
        * below our minimum angle of sight, we won't see it at all;

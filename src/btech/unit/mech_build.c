@@ -20,7 +20,6 @@
 #include "mech_build_api.h"
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_partnames_api.h"
 #include "mech_utils_api.h"
 #include "missile_hit_registry.h"
@@ -103,7 +102,7 @@ bool missile_hit_registry_initialize(MissileHitRegistry *registry,
     registry->entries[index] = MISSILE_HIT_DEFINITIONS[index];
     if (find_matching_vlong_part(context, registry->entries[index].name,
                                  nullptr, &id, &brand))
-      registry->entries[index].weapon_index = Weapon2I(id);
+      registry->entries[index].weapon_index = weapon_from_equipment_index(id);
     else
       registry->entries[index].weapon_index = -1;
   }
@@ -143,42 +142,60 @@ void FillDefaultCriticals(Mech *mech, int index) {
   int loop;
 
   for (loop = 0; loop < NUM_CRITICALS; loop++) {
-    MechSections(mech)[index].criticals[loop].type = EMPTY;
-    MechSections(mech)[index].criticals[loop].data = 0;
-    MechSections(mech)[index].criticals[loop].firemode = 0;
-    MechSections(mech)[index].criticals[loop].ammomode = 0;
+    ((mech)->ud.sections)[index].criticals[loop].type = EMPTY;
+    ((mech)->ud.sections)[index].criticals[loop].data = 0;
+    ((mech)->ud.sections)[index].criticals[loop].firemode = 0;
+    ((mech)->ud.sections)[index].criticals[loop].ammomode = 0;
   }
 
-  if (MechType(mech) == CLASS_AERO)
+  if (((mech)->ud.type) == CLASS_AERO)
     switch (index) {
     case AERO_AFT:
       for (loop = 0; loop < 12; loop++)
-        MechSections(mech)[index].criticals[loop].type = I2Special(HEAT_SINK);
-      MechSections(mech)[index].criticals[2].type = I2Special(ENGINE);
-      MechSections(mech)[index].criticals[10].type = I2Special(ENGINE);
+        ((mech)->ud.sections)[index].criticals[loop].type =
+            special_equipment_index(HEAT_SINK);
+      ((mech)->ud.sections)[index].criticals[2].type =
+          special_equipment_index(ENGINE);
+      ((mech)->ud.sections)[index].criticals[10].type =
+          special_equipment_index(ENGINE);
       break;
     }
-  if (MechType(mech) == CLASS_MECH)
+  if (((mech)->ud.type) == CLASS_MECH)
     switch (index) {
     case HEAD:
-      MechSections(mech)[index].criticals[0].type = I2Special(LIFE_SUPPORT);
-      MechSections(mech)[index].criticals[1].type = I2Special(SENSORS);
-      MechSections(mech)[index].criticals[2].type = I2Special(COCKPIT);
-      MechSections(mech)[index].criticals[4].type = I2Special(SENSORS);
-      MechSections(mech)[index].criticals[5].type = I2Special(LIFE_SUPPORT);
+      ((mech)->ud.sections)[index].criticals[0].type =
+          special_equipment_index(LIFE_SUPPORT);
+      ((mech)->ud.sections)[index].criticals[1].type =
+          special_equipment_index(SENSORS);
+      ((mech)->ud.sections)[index].criticals[2].type =
+          special_equipment_index(COCKPIT);
+      ((mech)->ud.sections)[index].criticals[4].type =
+          special_equipment_index(SENSORS);
+      ((mech)->ud.sections)[index].criticals[5].type =
+          special_equipment_index(LIFE_SUPPORT);
       break;
 
     case CTORSO:
-      MechSections(mech)[index].criticals[0].type = I2Special(ENGINE);
-      MechSections(mech)[index].criticals[1].type = I2Special(ENGINE);
-      MechSections(mech)[index].criticals[2].type = I2Special(ENGINE);
-      MechSections(mech)[index].criticals[3].type = I2Special(GYRO);
-      MechSections(mech)[index].criticals[4].type = I2Special(GYRO);
-      MechSections(mech)[index].criticals[5].type = I2Special(GYRO);
-      MechSections(mech)[index].criticals[6].type = I2Special(GYRO);
-      MechSections(mech)[index].criticals[7].type = I2Special(ENGINE);
-      MechSections(mech)[index].criticals[8].type = I2Special(ENGINE);
-      MechSections(mech)[index].criticals[9].type = I2Special(ENGINE);
+      ((mech)->ud.sections)[index].criticals[0].type =
+          special_equipment_index(ENGINE);
+      ((mech)->ud.sections)[index].criticals[1].type =
+          special_equipment_index(ENGINE);
+      ((mech)->ud.sections)[index].criticals[2].type =
+          special_equipment_index(ENGINE);
+      ((mech)->ud.sections)[index].criticals[3].type =
+          special_equipment_index(GYRO);
+      ((mech)->ud.sections)[index].criticals[4].type =
+          special_equipment_index(GYRO);
+      ((mech)->ud.sections)[index].criticals[5].type =
+          special_equipment_index(GYRO);
+      ((mech)->ud.sections)[index].criticals[6].type =
+          special_equipment_index(GYRO);
+      ((mech)->ud.sections)[index].criticals[7].type =
+          special_equipment_index(ENGINE);
+      ((mech)->ud.sections)[index].criticals[8].type =
+          special_equipment_index(ENGINE);
+      ((mech)->ud.sections)[index].criticals[9].type =
+          special_equipment_index(ENGINE);
       break;
 
     case RTORSO:
@@ -189,11 +206,14 @@ void FillDefaultCriticals(Mech *mech, int index) {
     case RARM:
     case LLEG:
     case RLEG:
-      MechSections(mech)[index].criticals[0].type = I2Special(SHOULDER_OR_HIP);
-      MechSections(mech)[index].criticals[1].type = I2Special(UPPER_ACTUATOR);
-      MechSections(mech)[index].criticals[2].type = I2Special(LOWER_ACTUATOR);
-      MechSections(mech)[index].criticals[3].type =
-          I2Special(HAND_OR_FOOT_ACTUATOR);
+      ((mech)->ud.sections)[index].criticals[0].type =
+          special_equipment_index(SHOULDER_OR_HIP);
+      ((mech)->ud.sections)[index].criticals[1].type =
+          special_equipment_index(UPPER_ACTUATOR);
+      ((mech)->ud.sections)[index].criticals[2].type =
+          special_equipment_index(LOWER_ACTUATOR);
+      ((mech)->ud.sections)[index].criticals[3].type =
+          special_equipment_index(HAND_OR_FOOT_ACTUATOR);
       break;
     }
 }
@@ -257,8 +277,8 @@ int WeaponIndexFromString(BtechContext *context, char *string) {
   int id, brand;
 
   if (find_matching_vlong_part(context, string, nullptr, &id, &brand))
-    if (IsWeapon(id))
-      return Weapon2I(id);
+    if (equipment_is_weapon(id))
+      return weapon_from_equipment_index(id);
   return -1;
 }
 
@@ -266,7 +286,7 @@ int FindSpecialItemCodeFromString(BtechContext *context, char *buffer) {
   int id, brand;
 
   if (find_matching_vlong_part(context, buffer, nullptr, &id, &brand))
-    if (IsSpecial(id))
-      return Special2I(id);
+    if (equipment_is_special(id))
+      return special_from_equipment_index(id);
   return -1;
 }

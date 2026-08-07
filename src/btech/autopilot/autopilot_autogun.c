@@ -14,6 +14,7 @@
  */
 
 #include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 #include "autopilot.h"
@@ -43,6 +44,22 @@ static void format_target_id(char buffer[static LBUF_SIZE],
                              const Mech *target) {
   MechUnitId id = mech_unit_id(target);
   snprintf(buffer, LBUF_SIZE, "%c%c", id.first, id.second);
+}
+
+void autopilot_autogun_log(const Autopilot *autopilot, const char *format,
+                           ...) {
+#ifdef DEBUG_AUTOGUN
+  va_list arguments;
+
+  fprintf(stderr, "AI: %ld AUTOGUN ", autopilot->mynum);
+  va_start(arguments, format);
+  vfprintf(stderr, format, arguments);
+  va_end(arguments);
+  fprintf(stderr, "\n");
+#else
+  (void)autopilot;
+  (void)format;
+#endif
 }
 
 void auto_gun_event(Autopilot *autopilot) {
@@ -78,36 +95,36 @@ void auto_gun_event(Autopilot *autopilot) {
 
   /* Ok our mech is dead we're done */
   if (mech_is_destroyed(mech)) {
-    DoStopGun(autopilot);
+    autopilot_gunning_stop(autopilot);
     return;
   }
 
   /*! \todo {Need to change this incase the AI shuts down while fighting} */
   if (!mech_is_started(mech)) {
-    Zombify(autopilot);
+    autopilot_gunning_suspend(autopilot);
     return;
   }
 
   /* Not on map - so lets calm down */
   if (!(map =
             btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))) {
-    Zombify(autopilot);
+    autopilot_gunning_suspend(autopilot);
     return;
   }
 
   /* Log it */
-  print_autogun_log(autopilot, "Autogun Event Started");
+  autopilot_autogun_log(autopilot, "Autogun Event Started");
 
   /* check for a gun profile. */
   if (autopilot->weaplist == nullptr) {
-    print_autogun_log(autopilot, "Autogun Event Finished");
+    autopilot_autogun_log(autopilot, "Autogun Event Finished");
     return;
   }
 
   /* OODing so don't shoot any guns */
   if (mech_is_out_of_control(mech)) {
     /* Log It */
-    print_autogun_log(autopilot, "Autogun Event Finished");
+    autopilot_autogun_log(autopilot, "Autogun Event Finished");
     return;
   }
 
@@ -138,7 +155,8 @@ void auto_gun_event(Autopilot *autopilot) {
           mech_position_real_x(mech), mech_position_real_y(mech),
           mech_position_real_x(target), mech_position_real_y(target));
 
-      if ((range >= (float)AUTO_GUN_MAX_RANGE) && !AssignedTarget(autopilot)) {
+      if ((range >= (float)AUTO_GUN_MAX_RANGE) &&
+          !autopilot_has_assigned_target(autopilot)) {
 
         /* Target is to far away */
         autopilot->target = -1;
@@ -148,10 +166,10 @@ void auto_gun_event(Autopilot *autopilot) {
   }
 
   /* Were we given a target and its no longer there? */
-  if (AssignedTarget(autopilot) && autopilot->target == -1) {
+  if (autopilot_has_assigned_target(autopilot) && autopilot->target == -1) {
 
     /* Ok we had an assigned target but its gone now */
-    UnassignTarget(autopilot);
+    autopilot_assigned_target_set(autopilot, false);
 
     /*! \todo {Possibly add a radio message saying target destroyed} */
   }
@@ -159,12 +177,12 @@ void auto_gun_event(Autopilot *autopilot) {
   /* Do we need to look for a new target */
   if (autopilot->target == -1 ||
       (autopilot->target_update_tick >= AUTO_GUN_UPDATE_TICK &&
-       !AssignedTarget(autopilot))) {
+       !autopilot_has_assigned_target(autopilot))) {
 
     /* Ok looking for a new target */
 
     /* Log It */
-    print_autogun_log(autopilot, "Autogun - Looking for new target");
+    autopilot_autogun_log(autopilot, "Autogun - Looking for new target");
 
     /* Reset the update ticker */
     autopilot->target_update_tick = 0;
@@ -186,9 +204,9 @@ void auto_gun_event(Autopilot *autopilot) {
         target_score = auto_calc_target_score(autopilot, mech, target, map);
 
         /* Log It */
-        print_autogun_log(autopilot,
-                          "Autogun - Possible target #%d with score %d",
-                          mech_dbref(target), target_score);
+        autopilot_autogun_log(autopilot,
+                              "Autogun - Possible target #%ld with score %d",
+                              mech_dbref(target), target_score);
 
         /* If target has a score add it to RedBlackTree */
         if (target_score > 0) {
@@ -244,8 +262,8 @@ void auto_gun_event(Autopilot *autopilot) {
       red_black_tree_destroy(targets);
 
       /* Log It */
-      print_autogun_log(autopilot, "Autogun in idle mode");
-      print_autogun_log(autopilot, "Autogun Event Finished");
+      autopilot_autogun_log(autopilot, "Autogun in idle mode");
+      autopilot_autogun_log(autopilot, "Autogun Event Finished");
       return;
     }
 
@@ -258,11 +276,12 @@ void auto_gun_event(Autopilot *autopilot) {
         (AutopilotTarget *)red_black_tree_search(targets, SEARCH_LAST, nullptr);
 
     /* Log It */
-    print_autogun_log(autopilot, "Autogun - Best target #%d with score %d",
-                      temp_target_node->target_dbref,
-                      temp_target_node->target_score);
-    print_autogun_log(autopilot, "Autogun - Current target #%d with score %d",
-                      autopilot->target, autopilot->target_score);
+    autopilot_autogun_log(autopilot, "Autogun - Best target #%ld with score %d",
+                          temp_target_node->target_dbref,
+                          temp_target_node->target_score);
+    autopilot_autogun_log(autopilot,
+                          "Autogun - Current target #%ld with score %d",
+                          autopilot->target, autopilot->target_score);
 
     if (autopilot->target > -1 && autopilot->target_score > 0) {
 
@@ -280,8 +299,8 @@ void auto_gun_event(Autopilot *autopilot) {
           autopilot->target = temp_target_node->target_dbref;
           autopilot->target_score = temp_target_node->target_score;
 
-          print_autogun_log(autopilot, "Switching Target to #%d",
-                            autopilot->target);
+          autopilot_autogun_log(autopilot, "Switching Target to #%ld",
+                                autopilot->target);
         }
 
         /* Else: Don't switch targets */
@@ -310,8 +329,9 @@ void auto_gun_event(Autopilot *autopilot) {
   /* End of picking a new target */
 
   /* Log It */
-  print_autogun_log(autopilot, "Autogun - Current target #%d with score %d",
-                    autopilot->target, autopilot->target_score);
+  autopilot_autogun_log(autopilot,
+                        "Autogun - Current target #%ld with score %d",
+                        autopilot->target, autopilot->target_score);
 
   /* Setup the current target */
   if (!(target =
@@ -325,8 +345,8 @@ void auto_gun_event(Autopilot *autopilot) {
     autopilot->target_score = 0;
 
     /* Log It */
-    print_autogun_log(autopilot, "Autogun - No valid current targets");
-    print_autogun_log(autopilot, "Autogun Event Finished");
+    autopilot_autogun_log(autopilot, "Autogun - No valid current targets");
+    autopilot_autogun_log(autopilot, "Autogun Event Finished");
     return;
   }
 
@@ -338,8 +358,8 @@ void auto_gun_event(Autopilot *autopilot) {
     mech_set_target(autopilot->mynum, mech, buffer);
 
     /* Log It */
-    print_autogun_log(autopilot, "Autogun - Locking target #%d",
-                      autopilot->target);
+    autopilot_autogun_log(autopilot, "Autogun - Locking target #%ld",
+                          autopilot->target);
   }
 
   /* Primary target isn't in LOS. Let's re-run in 5s */
@@ -371,8 +391,8 @@ void auto_gun_event(Autopilot *autopilot) {
     autopilot->target_score = 0;
 
     /* Log It */
-    print_autogun_log(autopilot, "Autogun - No valid current target");
-    print_autogun_log(autopilot, "Autogun Event Finished");
+    autopilot_autogun_log(autopilot, "Autogun - No valid current target");
+    autopilot_autogun_log(autopilot, "Autogun Event Finished");
     return;
 
   } else if (mech_is_destroyed(target) ||
@@ -383,13 +403,13 @@ void auto_gun_event(Autopilot *autopilot) {
     autopilot->target_score = 0;
 
     /* Log it */
-    print_autogun_log(autopilot, "Autogun - Target Gone");
-    print_autogun_log(autopilot, "Autogun Event Finished");
+    autopilot_autogun_log(autopilot, "Autogun - Target Gone");
+    autopilot_autogun_log(autopilot, "Autogun Event Finished");
     return;
   }
 
   /* Log It */
-  print_autogun_log(autopilot, "Autogun - Starting Weapon Attack Phase");
+  autopilot_autogun_log(autopilot, "Autogun - Starting Weapon Attack Phase");
 
   /* Get range from mech to current target */
   range =
@@ -399,15 +419,16 @@ void auto_gun_event(Autopilot *autopilot) {
   /* This probably unnecessary but since it doesn't
    * take much to calc range it should be ok for
    * testing for now */
-  if ((range >= (float)AUTO_GUN_MAX_RANGE) && !AssignedTarget(autopilot)) {
+  if ((range >= (float)AUTO_GUN_MAX_RANGE) &&
+      !autopilot_has_assigned_target(autopilot)) {
 
     /* Target is to far - reset */
     autopilot->target = -1;
     autopilot->target_score = 0;
 
     /* Log it */
-    print_autogun_log(autopilot, "Autogun - Target out of range");
-    print_autogun_log(autopilot, "Autogun Event Finished");
+    autopilot_autogun_log(autopilot, "Autogun - Target out of range");
+    autopilot_autogun_log(autopilot, "Autogun Event Finished");
     return;
   }
 
@@ -439,7 +460,8 @@ void auto_gun_event(Autopilot *autopilot) {
       /* Check to see if the weapon even works */
       if (mech_weapon_is_nonfunctional_at(
               mech, temp_weapon_node->section, temp_weapon_node->critical,
-              Weapon2I(temp_weapon_node->weapon_db_number))) {
+              weapon_from_equipment_index(
+                  temp_weapon_node->weapon_db_number))) {
 
         /* Weapon Doesn't work so go to next one */
         temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
@@ -740,10 +762,10 @@ void auto_gun_event(Autopilot *autopilot) {
       mech_fireweapon(autopilot->mynum, mech, buffer);
 
       /* Log It */
-      print_autogun_log(autopilot,
-                        "Autogun - Fired Weapon #%d "
-                        "at target #%d",
-                        temp_weapon_node->weapon_number, autopilot->target);
+      autopilot_autogun_log(autopilot,
+                            "Autogun - Fired Weapon #%d "
+                            "at target #%ld",
+                            temp_weapon_node->weapon_number, autopilot->target);
 
       /* Ok check to see if weapon was fired if so account for the
        * heat */
@@ -761,7 +783,7 @@ void auto_gun_event(Autopilot *autopilot) {
   }
 
   /* Log It */
-  print_autogun_log(autopilot, "Autogun - End Weapon Attack Phase");
+  autopilot_autogun_log(autopilot, "Autogun - End Weapon Attack Phase");
 
   if (autogun_chase_target(autopilot, mech, map, target))
     return;

@@ -20,7 +20,6 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "coolmenu.h"
-#include "legacy_macros.h"
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
 #include "mech_events.h"
@@ -31,13 +30,15 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_api.h"
-#include "mech_tech.h"
 #include "mech_tech_api.h"
+#include "mech_tech_events_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mycool.h"
+#include "registry_api.h"
+#include "repair_job.h"
 
 static void describe_repairs(MuxEvent *e, void *menu_context) {
   CoolMenu **menu = menu_context;
@@ -51,7 +52,10 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
   int fail = (e->function == very_fake_func);
   BtechContext *context = mech_context(mech);
 
-  UNPACK_LOCPOS_E(earg, loc, pos, extra);
+  RepairEventPayload payload = repair_event_payload_unpack(earg);
+  loc = payload.location;
+  pos = payload.position;
+  extra = payload.extra;
   snprintf(buf, sizeof(buf), "%s%s",
            armor_section_abbreviation(mech_class(mech),
                                       mech_movement_type(mech), loc % 8)
@@ -168,7 +172,7 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
     break;
   }
 
-  CreateMenuEntry_VSimple(menu, buf2);
+  cool_menu_entry_very_simple(menu, buf2);
 }
 
 void tech_repairs(DbRef player, Mech *mech, char *buffer) {
@@ -177,29 +181,41 @@ void tech_repairs(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   bool is_wizard_player = is_wizard(btech_context_database(context), player);
 
-  DOCHECK_CONTEXT(context,
-                  mech_event_count(mech, EVENT_STARTUP) && !is_wizard_player,
-                  "The mech's starting up! Please stop the sequence first.");
-  DOCHECK_CONTEXT(context, mech_is_started(mech) && !is_wizard_player,
-                  "The mech's started up ; please shut it down first.");
-  DOCHECK_CONTEXT(context,
-                  btech_context_limits_repairs_to_stalls(context) &&
-                      !mech_is_dropship(mech) &&
-                      mech_repair_stall_dbref(mech) <= 0 && !is_wizard_player,
-                  "The 'mech isn't in a repair stall!");
+  if (mech_event_count(mech, EVENT_STARTUP) && !is_wizard_player) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "The mech's starting up! Please stop the sequence first.");
+    return;
+  }
+  if (mech_is_started(mech) && !is_wizard_player) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "The mech's started up ; please shut it down first.");
+    return;
+  }
+  if (btech_context_limits_repairs_to_stalls(context) &&
+      !mech_is_dropship(mech) && mech_repair_stall_dbref(mech) <= 0 &&
+      !is_wizard_player) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "The 'mech isn't in a repair stall!");
+    return;
+  }
 
-  DOCHECK_CONTEXT(context, !figure_latest_tech_event(mech),
-                  "This 'mech has no repairs pending!");
-  addline();
-  cent(tprintf("Repairs/Scrapping in progress (%s)",
-               mech_display_id(mech).text));
-  vsi(tprintf("%-5s %-4s %s", "Plr", "Time", "Location + Description"));
-  addline();
+  if (!figure_latest_tech_event(mech)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "This 'mech has no repairs pending!");
+    return;
+  }
+  cool_menu_add_line(&c);
+  cool_menu_add_centered(&c, tprintf("Repairs/Scrapping in progress (%s)",
+                                     mech_display_id(mech).text));
+  cool_menu_add_text(
+      &c, tprintf("%-5s %-4s %s", "Plr", "Time", "Location + Description"));
+  cool_menu_add_line(&c);
   for (i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
     mech_event_visit(mech, i, describe_repairs, &c);
-  addline();
-  vsi("Note: Time = Time remaining in minutes. Plr = Tech's dbref");
-  addline();
+  cool_menu_add_line(&c);
+  cool_menu_add_text(
+      &c, "Note: Time = Time remaining in minutes. Plr = Tech's dbref");
+  cool_menu_add_line(&c);
   ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }

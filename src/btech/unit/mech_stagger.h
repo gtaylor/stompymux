@@ -25,3 +25,4 @@ bool mech_stagger_damage_get(const Mech *mech, int index,
                              MechStaggerDamageSnapshot *snapshot);
 void mech_stagger_tracking_reset(Mech *mech);
 int mech_stagger_level(const Mech *mech);
+int mech_stagger_damage_total(const Mech *mech);

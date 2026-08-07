@@ -26,13 +26,13 @@
 #include "btechstats_api.h"
 #include "btechstats_global.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "mech_utils_api.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/commands/command_queue.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "registry_api.h"
 #include "value_handlers_api.h"
 
 void do_show(CommandInvocation *invocation) {
@@ -54,8 +54,8 @@ void do_show(CommandInvocation *invocation) {
   char buf[MBUF_SIZE] = {0};
 
   if (!is_wizard(database, player)) {
-    notify(&command->evaluation, player,
-           "You aren't cleared to know this stuff yet!");
+    mecha_notify(&command->evaluation, player,
+                 "You aren't cleared to know this stuff yet!");
     return;
   }
 
@@ -64,7 +64,7 @@ void do_show(CommandInvocation *invocation) {
     for (i = 0; cmds_help[i]; i++)
       snprintf(buf + strlen(buf), MBUF_SIZE - strlen(buf), "%c %s",
                i > 0 ? ',' : ' ', cmds_help[i]);
-    notify(&command->evaluation, player, buf);
+    mecha_notify(&command->evaluation, player, buf);
     return;
   }
   i = listmatch(cmds, arg1);
@@ -89,6 +89,7 @@ void do_show(CommandInvocation *invocation) {
     list_charvaluestuff(&command->evaluation, player, CHAR_ATTRIBUTE);
     return;
   }
-  notify(&command->evaluation, player, "Invalid arguments to +show command!");
+  mecha_notify(&command->evaluation, player,
+               "Invalid arguments to +show command!");
   return;
 }

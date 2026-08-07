@@ -13,23 +13,23 @@
 #include "coolmenu.h"
 #include "environment_damage_api.h"
 #include "failures.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "mech_build_api.h"
 #include "mech_combat_misc_api.h"
+#include "mech_condition_api.h"
 #include "mech_damage_api.h"
 #include "mech_ecm_api.h"
 #include "mech_enhanced_criticals_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_status_types.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
@@ -38,6 +38,8 @@
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "random.h"
+#include "registry_api.h"
+#include "weapon_catalogue_api.h"
 
 static int mech_disableweap_func(Mech *mech, DbRef player, int index, int high,
                                  void *context) {
@@ -46,20 +48,32 @@ static int mech_disableweap_func(Mech *mech, DbRef player, int index, int high,
 
   weaptype =
       FindWeaponNumberOnMech_Advanced(mech, index, &section, &critical, 1);
-  DOCHECK0_CONTEXT(mech->xcode.context, weaptype == -1,
-                   "The weapons system chirps: 'Illegal Weapon Number!'");
-  DOCHECK0_CONTEXT(
-      mech->xcode.context, weaptype == -2,
-      "The weapons system chirps: 'That Weapon has been destroyed!'");
-  weaptype = Weapon2I(GetPartType(mech, section, critical));
-  DOCHECK0_CONTEXT(mech->xcode.context,
-                   !(MechWeapons[weaptype].special & GAUSS),
-                   "You can only disable Gauss weapons.");
-  DOCHECK0_CONTEXT(
-      mech->xcode.context, WpnIsRecycling(mech, section, critical),
-      "The weapon system chirps: 'That weapon is still recharging!'");
+  if (weaptype == -1) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "The weapons system chirps: 'Illegal Weapon Number!'");
+    return 0;
+  }
+  if (weaptype == -2) {
+    mecha_notify(
+        btech_context_evaluation(mech->xcode.context), player,
+        "The weapons system chirps: 'That Weapon has been destroyed!'");
+    return 0;
+  }
+  weaptype = weapon_from_equipment_index(
+      mech_critical_part_type(mech, section, critical));
+  if (!(MechWeapons[weaptype].special & GAUSS)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "You can only disable Gauss weapons.");
+    return 0;
+  }
+  if (mech_weapon_is_recycling_at(mech, section, critical)) {
+    mecha_notify(
+        btech_context_evaluation(mech->xcode.context), player,
+        "The weapon system chirps: 'That weapon is still recharging!'");
+    return 0;
+  }
 
-  SetPartTempNuke(mech, section, critical, FAIL_DESTROYED);
+  mech_critical_temporary_failure_set(mech, section, critical, FAIL_DESTROYED);
   mech_printf(mech, MECHALL, "You power down weapon %d.", index);
   return 0;
 }
@@ -68,10 +82,13 @@ void mech_disableweap(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   char *args[1];
 
-  cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  mech_parseattributes(buffer, args, 1) != 1,
-                  "Please specify a weapon number.");
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
+  if (mech_parseattributes(buffer, args, 1) != 1) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Please specify a weapon number.");
+    return;
+  }
 
   multi_weap_sel(mech, player, args[0], 1, mech_disableweap_func, nullptr);
 }
@@ -90,12 +107,12 @@ int FindMainWeapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
   int maxcount = 0;
 
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    if (SectIsDestroyed(mech, loop))
+    if (mech_section_is_destroyed(mech, loop))
       continue;
-    count = FindWeapons(mech, loop, weaparray, weapdata, critical);
+    count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
       for (ii = 0; ii < count; ii++) {
-        if (!PartIsBroken(mech, loop, critical[ii])) {
+        if (!mech_critical_is_broken(mech, loop, critical[ii])) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
           tempcrit = (int)btech_random_i31(&mech->xcode.context->random);
           if (tempcrit > maxcrit) {
@@ -115,18 +132,22 @@ int FindMainWeapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
 }
 
 void mech_auto_turret(DbRef player, Mech *mech, char *buffer) {
-  cch(MECH_USUALSO);
+  if (!common_checks(player, mech, MECH_USUALSO))
+    return;
 
-  DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, TURRET),
-                  "You have no turret to autoturn!");
+  if (!mech_section_internal(mech, TURRET)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "You have no turret to autoturn!");
+    return;
+  }
 
   mech_printf(mech, MECHALL, "Automatic turret turning is now %s",
-              (MechStatus2(mech) & AUTOTURN_TURRET) ? "OFF" : "ON");
+              (((mech)->rd.status2) & AUTOTURN_TURRET) ? "OFF" : "ON");
 
-  if (MechStatus2(mech) & AUTOTURN_TURRET)
-    MechStatus2(mech) &= ~AUTOTURN_TURRET;
+  if (((mech)->rd.status2) & AUTOTURN_TURRET)
+    ((mech)->rd.status2) &= ~AUTOTURN_TURRET;
   else
-    MechStatus2(mech) |= AUTOTURN_TURRET;
+    ((mech)->rd.status2) |= AUTOTURN_TURRET;
 }
 
 void mech_usebin(DbRef player, Mech *mech, char *buffer) {
@@ -135,76 +156,113 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
   int wSection, wCritSlot, wWeapNum, wWeapType;
   char *args[2];
 
-  cch(MECH_USUALSO);
+  if (!common_checks(player, mech, MECH_USUALSO))
+    return;
 
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  mech_parseattributes(buffer, args, 2) != 2,
-                  "Invalid number of arguments!");
+  if (mech_parseattributes(buffer, args, 2) != 2) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
 
-  DOCHECK_CONTEXT(mech->xcode.context, Readnum(wWeapNum, args[0]),
-                  tprintf("Invalid value: %s", args[0]));
+  if ((!((wWeapNum) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 tprintf("Invalid value: %s", args[0]));
+    return;
+  }
   wWeapType = FindWeaponNumberOnMech(mech, wWeapNum, &wSection, &wCritSlot);
 
-  DOCHECK_CONTEXT(mech->xcode.context, wWeapType == -1,
-                  "The weapons system chirps: 'Illegal Weapon Number!'");
-  DOCHECK_CONTEXT(
-      mech->xcode.context, wWeapType == -2,
-      "The weapons system chirps: 'That Weapon has been destroyed!'");
-  DOCHECK_CONTEXT(
-      mech->xcode.context, wWeapType == -3,
-      "The weapon system chirps: 'That weapon is still reloading!'");
-  DOCHECK_CONTEXT(
-      mech->xcode.context, wWeapType == -4,
-      "The weapon system chirps: 'That weapon is still recharging!'");
-  DOCHECK_CONTEXT(mech->xcode.context, IsEnergy(wWeapType),
-                  "Energy weapons do not use ammo!");
+  if (wWeapType == -1) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "The weapons system chirps: 'Illegal Weapon Number!'");
+    return;
+  }
+  if (wWeapType == -2) {
+    mecha_notify(
+        btech_context_evaluation(mech->xcode.context), player,
+        "The weapons system chirps: 'That Weapon has been destroyed!'");
+    return;
+  }
+  if (wWeapType == -3) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "The weapon system chirps: 'That weapon is still reloading!'");
+    return;
+  }
+  if (wWeapType == -4) {
+    mecha_notify(
+        btech_context_evaluation(mech->xcode.context), player,
+        "The weapon system chirps: 'That weapon is still recharging!'");
+    return;
+  }
+  if (weapon_catalogue_is_energy(wWeapType)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Energy weapons do not use ammo!");
+    return;
+  }
 
   if (args[1][0] == '-') {
     mech_printf(mech, MECHALL, "Prefered ammo source reset for weapon #%d",
                 wWeapNum);
-    SetPartDesiredAmmoLoc(mech, wSection, wCritSlot, -1);
+    mech_critical_desired_ammo_section_set(mech, wSection, wCritSlot, -1);
     return;
   }
 
-  wLoc = ArmorSectionFromString(MechType(mech), MechMove(mech), args[1]);
+  wLoc = ArmorSectionFromString(((mech)->ud.type), ((mech)->ud.move), args[1]);
 
-  DOCHECK_CONTEXT(mech->xcode.context, wLoc == -1, "Invalid section!");
-  DOCHECK_CONTEXT(mech->xcode.context, !GetSectOInt(mech, wLoc),
-                  "Invalid section!");
-  DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, wLoc),
-                  "That section is destroyed!");
+  if (wLoc == -1) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid section!");
+    return;
+  }
+  if (!mech_section_original_internal(mech, wLoc)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Invalid section!");
+    return;
+  }
+  if (!mech_section_internal(mech, wLoc)) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "That section is destroyed!");
+    return;
+  }
 
-  ArmorStringFromIndex(wLoc, strLocation, MechType(mech), MechMove(mech));
-  wCurLoc = GetPartDesiredAmmoLoc(mech, wSection, wCritSlot);
+  ArmorStringFromIndex(wLoc, strLocation, ((mech)->ud.type), ((mech)->ud.move));
+  wCurLoc = mech_critical_desired_ammo_section(mech, wSection, wCritSlot);
 
-  DOCHECK_CONTEXT(
-      mech->xcode.context, wCurLoc == wLoc,
-      tprintf("Prefered ammo source already set to %s for weapon #%d",
-              strLocation, wWeapNum));
+  if (wCurLoc == wLoc) {
+    mecha_notify(
+        btech_context_evaluation(mech->xcode.context), player,
+        tprintf("Prefered ammo source already set to %s for weapon #%d",
+                strLocation, wWeapNum));
+    return;
+  }
 
   mech_printf(mech, MECHALL, "Prefered ammo source set to %s for weapon #%d",
               strLocation, wWeapNum);
-  SetPartDesiredAmmoLoc(mech, wSection, wCritSlot, wLoc);
+  mech_critical_desired_ammo_section_set(mech, wSection, wCritSlot, wLoc);
 }
 
 void mech_safety(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
-  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW,
-                  "Your weapons dont have safeties.");
+  if (((mech)->ud.type) == CLASS_MW) {
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                 "Your weapons dont have safeties.");
+    return;
+  }
   if (buffer && !strcasecmp(buffer, "on")) {
-    UnSetMechPKiller(mech);
+    mech_player_killer_set(mech, false);
     mech_notify(mech, MECHALL, "Safeties flipped [fg=green bold]ON[reset].");
     return;
   }
   if (buffer && !strcasecmp(buffer, "off")) {
-    SetMechPKiller(mech);
+    mech_player_killer_set(mech, true);
     mech_notify(mech, MECHALL, "Safeties flipped [fg=red bold]OFF[reset].");
     return;
   }
 
   mech_printf(mech, MECHPILOT, "Weapon safeties are [bold]%s[reset]",
-              MechPKiller(mech) ? "[fg=red]OFF" : "[fg=green]ON");
+              mech_condition_summary(mech).player_killer ? "[fg=red]OFF"
+                                                         : "[fg=green]ON");
   return;
 }
 
@@ -243,8 +301,9 @@ static char *display_mechpref(void *context, int i,
   struct mechpref_info info = mech_preferences[i];
   char *state;
 
-  if (((MechPrefs(mech) & info.bit) && (info.flags & MECHPREF_FLAG_INVERTED)) ||
-      (!(MechPrefs(mech) & info.bit) &&
+  if (((((mech)->rd.mech_prefs) & info.bit) &&
+       (info.flags & MECHPREF_FLAG_INVERTED)) ||
+      (!(((mech)->rd.mech_prefs) & info.bit) &&
        !(info.flags & MECHPREF_FLAG_INVERTED))) {
     if (info.flags & MECHPREF_FLAG_NEGATIVE)
       state = "[fg=green bold]OFF[reset]";
@@ -268,7 +327,8 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
   char buf[LBUF_SIZE];
   CoolMenu *c;
 
-  cch(MECH_USUALSMO);
+  if (!common_checks(player, mech, MECH_USUALSMO))
+    return;
   nargs = mech_parseattributes(buffer, args, 2);
 
   /* Default, no arguments passed */
@@ -294,7 +354,7 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
     }
     if (i == NUM_MECHPREFERENCES) {
       snprintf(buf, LBUF_SIZE, "Unknown MechPreference: %s", args[0]);
-      notify(btech_context_evaluation(mech->xcode.context), player, buf);
+      mecha_notify(btech_context_evaluation(mech->xcode.context), player, buf);
       return;
     }
 
@@ -309,9 +369,9 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
           (strcasecmp(args[1], "OFF") != 0)) {
 
         /* Insert notify here */
-        notify(btech_context_evaluation(mech->xcode.context), player,
-               "Only accept ON or OFF as valid extra "
-               "parameter for mechprefs pref");
+        mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                     "Only accept ON or OFF as valid extra "
+                     "parameter for mechprefs pref");
         return;
       }
 
@@ -320,36 +380,36 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
 
         /* Set the bit */
         if (info.flags & MECHPREF_FLAG_INVERTED) {
-          MechPrefs(mech) &= ~(info.bit);
+          ((mech)->rd.mech_prefs) &= ~(info.bit);
         } else {
-          MechPrefs(mech) |= (info.bit);
+          ((mech)->rd.mech_prefs) |= (info.bit);
         }
 
       } else {
 
         /* Unset the bit */
         if (info.flags & MECHPREF_FLAG_INVERTED) {
-          MechPrefs(mech) |= (info.bit);
+          ((mech)->rd.mech_prefs) |= (info.bit);
         } else {
-          MechPrefs(mech) &= ~(info.bit);
+          ((mech)->rd.mech_prefs) &= ~(info.bit);
         }
       }
 
     } else {
 
       /* If set, unset it, otherwise set the preference */
-      if (MechPrefs(mech) & info.bit)
-        MechPrefs(mech) &= ~(info.bit);
+      if (((mech)->rd.mech_prefs) & info.bit)
+        ((mech)->rd.mech_prefs) &= ~(info.bit);
       else
-        MechPrefs(mech) |= (info.bit);
+        ((mech)->rd.mech_prefs) |= (info.bit);
     }
 
     /* Which way did the preference get changed and
      * is it the default or non-standard mode of
      * the preference */
-    if (((MechPrefs(mech) & info.bit) &&
+    if (((((mech)->rd.mech_prefs) & info.bit) &&
          (info.flags & MECHPREF_FLAG_INVERTED)) ||
-        (!(MechPrefs(mech) & info.bit) &&
+        (!(((mech)->rd.mech_prefs) & info.bit) &&
          !(info.flags & MECHPREF_FLAG_INVERTED))) {
 
       if (info.flags & MECHPREF_FLAG_NEGATIVE)
@@ -367,6 +427,6 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
 
     /* Tell them the preference has been changed */
     snprintf(buf, LBUF_SIZE, "%s %s", info.msg, newstate);
-    notify(btech_context_evaluation(mech->xcode.context), player, buf);
+    mecha_notify(btech_context_evaluation(mech->xcode.context), player, buf);
   }
 }

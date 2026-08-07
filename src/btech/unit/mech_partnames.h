@@ -25,7 +25,10 @@ typedef struct PartNameEntry {
   int index;
 } PartNameEntry;
 
-#define PACKED_PART(id, brand) (NUM_ITEMS * brand + id)
-#define UNPACK_PART(from, id, brand)                                           \
-  id = from % NUM_ITEMS;                                                       \
-  brand = from / NUM_ITEMS
+static inline int packed_part(int id, int brand) {
+  return NUM_ITEMS * brand + id;
+}
+
+static inline int packed_part_id(int packed) { return packed % NUM_ITEMS; }
+
+static inline int packed_part_brand(int packed) { return packed / NUM_ITEMS; }

@@ -10,11 +10,12 @@
 
 #include "btech/context.h"
 #include "btech_event.h"
-#include "legacy_macros.h"
 #include "map_obj_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
 #include "special_object.h"
 
 void debug_EventTypes(DbRef player, void *data, char *buffer) {
@@ -22,9 +23,10 @@ void debug_EventTypes(DbRef player, void *data, char *buffer) {
   int i, j, k, tot = 0;
 
   (void)buffer;
-  notify(btech_context_evaluation(debug->context), player, "Events by type: ");
-  notify(btech_context_evaluation(debug->context), player,
-         "-------------------------------");
+  mecha_notify(btech_context_evaluation(debug->context), player,
+               "Events by type: ");
+  mecha_notify(btech_context_evaluation(debug->context), player,
+               "-------------------------------");
   MuxEventScheduler *events = debug->context->events;
   k = mux_event_last_type(events);
   for (i = 0; i <= k; i++) {
@@ -36,8 +38,8 @@ void debug_EventTypes(DbRef player, void *data, char *buffer) {
                   btech_event_name(i), j);
   }
   if (tot)
-    notify(btech_context_evaluation(debug->context), player,
-           "-------------------------------");
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "-------------------------------");
   notify_printf(btech_context_evaluation(debug->context), player, "%d total",
                 tot);
 }

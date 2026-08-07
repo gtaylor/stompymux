@@ -1,6 +1,4 @@
-#include "mech_notify.h"
 #include "btech/context.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_crew_api.h"
@@ -306,7 +304,7 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
   }
 }
 
-void mech_notify(Mech *mech, int type, const char *buffer) {
+void mech_notify(Mech *mech, MechNotifyAudience audience, const char *buffer) {
   int i;
 
   if (mech_pilot_is_unconscious(mech))
@@ -318,24 +316,25 @@ void mech_notify(Mech *mech, int type, const char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   /* Let's do colorization too, just in case. */
 
-  if (type == MECHPILOT) {
+  if (audience == MECHPILOT) {
     if (mech_has_pilot(mech))
-      notify(evaluation, mech_pilot_dbref(mech), buffer);
+      mecha_notify(evaluation, mech_pilot_dbref(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);
-  } else if ((type == MECHALL && !mech_is_destroyed(mech)) ||
-             (type == MECHSTARTED && mech_is_started(mech))) {
-    notify_except(evaluation, mech_dbref(mech), NOTHING, mech_dbref(mech),
-                  buffer);
+  } else if ((audience == MECHALL && !mech_is_destroyed(mech)) ||
+             (audience == MECHSTARTED && mech_is_started(mech))) {
+    mecha_notify_except(evaluation, mech_dbref(mech), NOTHING, mech_dbref(mech),
+                        buffer);
     if (btech_context_combat_arcs_enabled(mech_context(mech)))
       for (i = 0; i < NUM_TURRETS; i++)
         if (mech_turret_dbref(mech, i) > 0)
-          notify_except(evaluation, mech_turret_dbref(mech, i), NOTHING,
-                        mech_turret_dbref(mech, i), buffer);
+          mecha_notify_except(evaluation, mech_turret_dbref(mech, i), NOTHING,
+                              mech_turret_dbref(mech, i), buffer);
   }
 }
 
-void mech_printf(Mech *mech, int type, const char *format, ...) {
+void mech_printf(Mech *mech, MechNotifyAudience audience, const char *format,
+                 ...) {
   char buffer[LBUF_SIZE];
   int i;
   va_list ap;
@@ -353,19 +352,19 @@ void mech_printf(Mech *mech, int type, const char *format, ...) {
   vsnprintf(buffer, LBUF_SIZE, format, ap);
   va_end(ap);
 
-  if (type == MECHPILOT) {
+  if (audience == MECHPILOT) {
     if (mech_has_pilot(mech))
-      notify(evaluation, mech_pilot_dbref(mech), buffer);
+      mecha_notify(evaluation, mech_pilot_dbref(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);
-  } else if ((type == MECHALL && !mech_is_destroyed(mech)) ||
-             (type == MECHSTARTED && mech_is_started(mech))) {
-    notify_except(evaluation, mech_dbref(mech), NOTHING, mech_dbref(mech),
-                  buffer);
+  } else if ((audience == MECHALL && !mech_is_destroyed(mech)) ||
+             (audience == MECHSTARTED && mech_is_started(mech))) {
+    mecha_notify_except(evaluation, mech_dbref(mech), NOTHING, mech_dbref(mech),
+                        buffer);
     if (btech_context_combat_arcs_enabled(mech_context(mech)))
       for (i = 0; i < NUM_TURRETS; i++)
         if (mech_turret_dbref(mech, i) > 0)
-          notify_except(evaluation, mech_turret_dbref(mech, i), NOTHING,
-                        mech_turret_dbref(mech, i), buffer);
+          mecha_notify_except(evaluation, mech_turret_dbref(mech, i), NOTHING,
+                              mech_turret_dbref(mech, i), buffer);
   }
 }

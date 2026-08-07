@@ -24,7 +24,6 @@
 #include "command_handlers_api.h"
 #include "failures.h"
 #include "failures_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_api.h"
 #include "map_obj_api.h"
@@ -50,7 +49,6 @@
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -132,7 +130,7 @@ int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
   /* Check to see if we have an energy weapon and we're modding the damage based
    * on range */
   if (btech_context_range_modifies_damage(mech_context(mech)) &&
-      IsEnergy(weapindx)) {
+      weapon_catalogue_is_energy(weapindx)) {
     if (fRange <= 1.0)
       wWeapDamage++;
     else {
@@ -218,7 +216,8 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
   const char *missile_fake_name = nullptr;
   int maximum_missile_hits;
   int tUsingTC =
-      ((wFireMode & ON_TC) && !IsArtillery(weapindx) && !IsMissile(weapindx) &&
+      ((wFireMode & ON_TC) && !weapon_catalogue_is_artillery(weapindx) &&
+       !weapon_catalogue_is_missile(weapindx) &&
        !mech_condition_summary(mech).targeting_computer_destroyed &&
        ((mech_aim_section(mech) != NUM_SECTIONS) && hitMech &&
         (mech_aim_unit_class(mech) == mech_class(hitMech))));
@@ -238,7 +237,7 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
     }
   }
 
-  if (!IsMissile(weapindx)) {
+  if (!weapon_catalogue_is_missile(weapindx)) {
     wWeapDamage = mech_hit_damage_determine(
         mech, wSection, wCritSlot, hitMech, hitX, hitY, weapindx,
         wGattlingShots, wBaseWeapDamage, wAmmoMode, type, modifier, 0);
@@ -262,13 +261,14 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
    * Ok, if we're not an artillery weapon or missile and we're not in
    * LBX, RAC, Ultra or RFAC mode...
    */
-  if (!IsArtillery(weapindx) && !IsMissile(weapindx) && !tIsUltra && !tIsLBX &&
+  if (!weapon_catalogue_is_artillery(weapindx) &&
+      !weapon_catalogue_is_missile(weapindx) && !tIsUltra && !tIsLBX &&
       !tIsRAC) {
 
     if (hitMech) {
 
       /* Flamers - if in heat mode don't do damage */
-      if ((IsFlamer(weapindx)) && (wFireMode & HEAT_MODE)) {
+      if ((weapon_catalogue_is_flamer(weapindx)) && (wFireMode & HEAT_MODE)) {
 
         mech_notify(
             hitMech, MECHALL,
@@ -279,7 +279,8 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
         mech_weapon_heat_add(hitMech, (float)wBaseWeapDamage);
         return;
 
-      } else if ((IsCoolant(weapindx)) && (mech_class(hitMech) != CLASS_MW)) {
+      } else if ((weapon_catalogue_is_coolant(weapindx)) &&
+                 (mech_class(hitMech) != CLASS_MW)) {
 
         /* Its a Coolant Gun */
         /* So now we figure out if we want to hit our unit with it
@@ -357,7 +358,7 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
   if (maximum_missile_hits == 0)
     return;
 
-  if (IsMissile(weapindx)) {
+  if (weapon_catalogue_is_missile(weapindx)) {
     if (player_roll < bth) {
       return;
     } else

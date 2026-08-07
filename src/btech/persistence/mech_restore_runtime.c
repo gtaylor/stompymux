@@ -21,87 +21,180 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
       break;
     }
     mech_persistence_snapshot_export(mech, &snapshot);
-#define RUNTIME_CHAR(column, field)                                            \
-  btech_special_column_char(statement, column, &snapshot.runtime.field)
-#define RUNTIME_SHORT(column, field)                                           \
-  btech_special_column_short(statement, column, &snapshot.runtime.field)
-#define RUNTIME_INT(column, field)                                             \
-  btech_special_column_int(statement, column, &snapshot.runtime.field)
-#define RUNTIME_REAL(column, field)                                            \
-  btech_special_column_real(statement, column, &snapshot.runtime.field)
-#define RUNTIME_DBREF(column, field)                                           \
-  btech_special_column_dbref(context->database, statement, column,             \
-                             &snapshot.runtime.field)
-    if (RUNTIME_CHAR(1, jumptop) < 0 || RUNTIME_CHAR(2, aim) < 0 ||
-        RUNTIME_CHAR(3, basetohit) < 0 || RUNTIME_CHAR(4, pilotskillbase) < 0 ||
-        RUNTIME_CHAR(5, engineheat) < 0 || RUNTIME_CHAR(6, masc_value) < 0 ||
-        RUNTIME_CHAR(7, aim_type) < 0 ||
+    if (btech_special_column_char(statement, 1, &snapshot.runtime.jumptop) <
+            0 ||
+        btech_special_column_char(statement, 2, &snapshot.runtime.aim) < 0 ||
+        btech_special_column_char(statement, 3, &snapshot.runtime.basetohit) <
+            0 ||
+        btech_special_column_char(statement, 4,
+                                  &snapshot.runtime.pilotskillbase) < 0 ||
+        btech_special_column_char(statement, 5, &snapshot.runtime.engineheat) <
+            0 ||
+        btech_special_column_char(statement, 6, &snapshot.runtime.masc_value) <
+            0 ||
+        btech_special_column_char(statement, 7, &snapshot.runtime.aim_type) <
+            0 ||
         btech_special_column_char(statement, 8, &snapshot.runtime.sensor[0]) <
             0 ||
         btech_special_column_char(statement, 9, &snapshot.runtime.sensor[1]) <
             0 ||
         btech_special_column_uchar(statement, 10,
                                    &snapshot.runtime.fire_adjustment) < 0 ||
-        RUNTIME_CHAR(11, vis_mod) < 0 || RUNTIME_CHAR(12, chargetimer) < 0 ||
-        RUNTIME_REAL(13, chargedist) < 0 ||
-        RUNTIME_CHAR(14, staggerstamp) < 0 || RUNTIME_INT(15, mech_prefs) < 0 ||
-        RUNTIME_SHORT(16, jumplength) < 0 || RUNTIME_SHORT(17, goingx) < 0 ||
-        RUNTIME_SHORT(18, goingy) < 0 || RUNTIME_SHORT(19, desiredfacing) < 0 ||
-        RUNTIME_SHORT(20, angle) < 0 || RUNTIME_SHORT(21, jumpheading) < 0 ||
-        RUNTIME_SHORT(22, targx) < 0 || RUNTIME_SHORT(23, targy) < 0 ||
-        RUNTIME_SHORT(24, targz) < 0 || RUNTIME_SHORT(25, turretfacing) < 0 ||
-        RUNTIME_SHORT(26, turndamage) < 0 || RUNTIME_SHORT(27, lateral) < 0 ||
-        RUNTIME_SHORT(28, num_seen) < 0 || RUNTIME_SHORT(29, lx) < 0 ||
-        RUNTIME_SHORT(30, ly) < 0 || RUNTIME_DBREF(31, chgtarget) < 0 ||
-        RUNTIME_DBREF(32, dfatarget) < 0 || RUNTIME_DBREF(33, target) < 0 ||
-        RUNTIME_DBREF(34, swarming) < 0 || RUNTIME_DBREF(35, swarmedby) < 0 ||
-        RUNTIME_DBREF(36, carrying) < 0 || RUNTIME_DBREF(37, spotter) < 0 ||
-        RUNTIME_REAL(38, heat) < 0 || RUNTIME_REAL(39, weapheat) < 0 ||
-        RUNTIME_REAL(40, plus_heat) < 0 || RUNTIME_REAL(41, minus_heat) < 0 ||
-        RUNTIME_REAL(42, startfx) < 0 || RUNTIME_REAL(43, startfy) < 0 ||
-        RUNTIME_REAL(44, startfz) < 0 || RUNTIME_REAL(45, endfz) < 0 ||
-        RUNTIME_REAL(46, verticalspeed) < 0 || RUNTIME_REAL(47, speed) < 0 ||
-        RUNTIME_REAL(48, desired_speed) < 0 ||
-        RUNTIME_REAL(49, jumpspeed) < 0 || RUNTIME_INT(50, critstatus) < 0 ||
-        RUNTIME_INT(51, status) < 0 || RUNTIME_INT(52, status2) < 0 ||
-        RUNTIME_INT(53, specials) < 0 || RUNTIME_INT(54, specials2) < 0 ||
-        RUNTIME_INT(55, specialsstatus) < 0 ||
-        RUNTIME_INT(56, tankcritstatus) < 0 ||
+        btech_special_column_char(statement, 11, &snapshot.runtime.vis_mod) <
+            0 ||
+        btech_special_column_char(statement, 12,
+                                  &snapshot.runtime.chargetimer) < 0 ||
+        btech_special_column_real(statement, 13, &snapshot.runtime.chargedist) <
+            0 ||
+        btech_special_column_char(statement, 14,
+                                  &snapshot.runtime.staggerstamp) < 0 ||
+        btech_special_column_int(statement, 15, &snapshot.runtime.mech_prefs) <
+            0 ||
+        btech_special_column_short(statement, 16,
+                                   &snapshot.runtime.jumplength) < 0 ||
+        btech_special_column_short(statement, 17, &snapshot.runtime.goingx) <
+            0 ||
+        btech_special_column_short(statement, 18, &snapshot.runtime.goingy) <
+            0 ||
+        btech_special_column_short(statement, 19,
+                                   &snapshot.runtime.desiredfacing) < 0 ||
+        btech_special_column_short(statement, 20, &snapshot.runtime.angle) <
+            0 ||
+        btech_special_column_short(statement, 21,
+                                   &snapshot.runtime.jumpheading) < 0 ||
+        btech_special_column_short(statement, 22, &snapshot.runtime.targx) <
+            0 ||
+        btech_special_column_short(statement, 23, &snapshot.runtime.targy) <
+            0 ||
+        btech_special_column_short(statement, 24, &snapshot.runtime.targz) <
+            0 ||
+        btech_special_column_short(statement, 25,
+                                   &snapshot.runtime.turretfacing) < 0 ||
+        btech_special_column_short(statement, 26,
+                                   &snapshot.runtime.turndamage) < 0 ||
+        btech_special_column_short(statement, 27, &snapshot.runtime.lateral) <
+            0 ||
+        btech_special_column_short(statement, 28, &snapshot.runtime.num_seen) <
+            0 ||
+        btech_special_column_short(statement, 29, &snapshot.runtime.lx) < 0 ||
+        btech_special_column_short(statement, 30, &snapshot.runtime.ly) < 0 ||
+        btech_special_column_dbref(context->database, statement, 31,
+                                   &snapshot.runtime.chgtarget) < 0 ||
+        btech_special_column_dbref(context->database, statement, 32,
+                                   &snapshot.runtime.dfatarget) < 0 ||
+        btech_special_column_dbref(context->database, statement, 33,
+                                   &snapshot.runtime.target) < 0 ||
+        btech_special_column_dbref(context->database, statement, 34,
+                                   &snapshot.runtime.swarming) < 0 ||
+        btech_special_column_dbref(context->database, statement, 35,
+                                   &snapshot.runtime.swarmedby) < 0 ||
+        btech_special_column_dbref(context->database, statement, 36,
+                                   &snapshot.runtime.carrying) < 0 ||
+        btech_special_column_dbref(context->database, statement, 37,
+                                   &snapshot.runtime.spotter) < 0 ||
+        btech_special_column_real(statement, 38, &snapshot.runtime.heat) < 0 ||
+        btech_special_column_real(statement, 39, &snapshot.runtime.weapheat) <
+            0 ||
+        btech_special_column_real(statement, 40, &snapshot.runtime.plus_heat) <
+            0 ||
+        btech_special_column_real(statement, 41, &snapshot.runtime.minus_heat) <
+            0 ||
+        btech_special_column_real(statement, 42, &snapshot.runtime.startfx) <
+            0 ||
+        btech_special_column_real(statement, 43, &snapshot.runtime.startfy) <
+            0 ||
+        btech_special_column_real(statement, 44, &snapshot.runtime.startfz) <
+            0 ||
+        btech_special_column_real(statement, 45, &snapshot.runtime.endfz) < 0 ||
+        btech_special_column_real(statement, 46,
+                                  &snapshot.runtime.verticalspeed) < 0 ||
+        btech_special_column_real(statement, 47, &snapshot.runtime.speed) < 0 ||
+        btech_special_column_real(statement, 48,
+                                  &snapshot.runtime.desired_speed) < 0 ||
+        btech_special_column_real(statement, 49, &snapshot.runtime.jumpspeed) <
+            0 ||
+        btech_special_column_int(statement, 50, &snapshot.runtime.critstatus) <
+            0 ||
+        btech_special_column_int(statement, 51, &snapshot.runtime.status) < 0 ||
+        btech_special_column_int(statement, 52, &snapshot.runtime.status2) <
+            0 ||
+        btech_special_column_int(statement, 53, &snapshot.runtime.specials) <
+            0 ||
+        btech_special_column_int(statement, 54, &snapshot.runtime.specials2) <
+            0 ||
+        btech_special_column_int(statement, 55,
+                                 &snapshot.runtime.specialsstatus) < 0 ||
+        btech_special_column_int(statement, 56,
+                                 &snapshot.runtime.tankcritstatus) < 0 ||
         btech_special_column_time(statement, 57,
                                   &snapshot.runtime.last_weapon_recycle) < 0 ||
-        RUNTIME_INT(58, cargo_weight) < 0 || RUNTIME_INT(59, lastrndu) < 0 ||
-        RUNTIME_INT(60, rnd) < 0 || RUNTIME_INT(61, last_ds_msg) < 0 ||
-        RUNTIME_INT(62, boom_start) < 0 || RUNTIME_INT(63, maxfuel) < 0 ||
-        RUNTIME_INT(64, lastused) < 0 || RUNTIME_INT(65, cocoon) < 0 ||
-        RUNTIME_INT(66, commconv) < 0 || RUNTIME_INT(67, commconv_last) < 0 ||
-        RUNTIME_INT(68, onumsinks) < 0 || RUNTIME_INT(69, disabled_hs) < 0 ||
-        RUNTIME_INT(70, autopilot_num) < 0 ||
-        RUNTIME_INT(71, heatboom_last) < 0 || RUNTIME_INT(72, sspin) < 0 ||
-        RUNTIME_INT(73, can_see) < 0 || RUNTIME_INT(74, row) < 0 ||
-        RUNTIME_INT(75, rcw) < 0 || RUNTIME_REAL(76, rspd) < 0 ||
-        RUNTIME_INT(77, erat) < 0 || RUNTIME_INT(78, per) < 0 ||
-        RUNTIME_INT(79, wxf) < 0 || RUNTIME_INT(80, last_startup) < 0 ||
-        RUNTIME_INT(81, maxsuits) < 0 ||
-        RUNTIME_INT(82, infantry_specials) < 0 ||
-        RUNTIME_CHAR(83, scharge_value) < 0 ||
-        RUNTIME_INT(84, staggerDamage) < 0 ||
-        RUNTIME_INT(85, lastStaggerNotify) < 0 ||
-        RUNTIME_INT(86, critstatus2) < 0 || RUNTIME_REAL(87, xpmod) < 0 ||
-        RUNTIME_INT(88, shots_fired) < 0 || RUNTIME_INT(89, shots_hit) < 0 ||
-        RUNTIME_INT(90, shots_missed) < 0 ||
-        RUNTIME_INT(91, damage_taken) < 0 ||
-        RUNTIME_INT(92, damage_inflicted) < 0 ||
-        RUNTIME_INT(93, units_killed) < 0 ||
+        btech_special_column_int(statement, 58,
+                                 &snapshot.runtime.cargo_weight) < 0 ||
+        btech_special_column_int(statement, 59, &snapshot.runtime.lastrndu) <
+            0 ||
+        btech_special_column_int(statement, 60, &snapshot.runtime.rnd) < 0 ||
+        btech_special_column_int(statement, 61, &snapshot.runtime.last_ds_msg) <
+            0 ||
+        btech_special_column_int(statement, 62, &snapshot.runtime.boom_start) <
+            0 ||
+        btech_special_column_int(statement, 63, &snapshot.runtime.maxfuel) <
+            0 ||
+        btech_special_column_int(statement, 64, &snapshot.runtime.lastused) <
+            0 ||
+        btech_special_column_int(statement, 65, &snapshot.runtime.cocoon) < 0 ||
+        btech_special_column_int(statement, 66, &snapshot.runtime.commconv) <
+            0 ||
+        btech_special_column_int(statement, 67,
+                                 &snapshot.runtime.commconv_last) < 0 ||
+        btech_special_column_int(statement, 68, &snapshot.runtime.onumsinks) <
+            0 ||
+        btech_special_column_int(statement, 69, &snapshot.runtime.disabled_hs) <
+            0 ||
+        btech_special_column_int(statement, 70,
+                                 &snapshot.runtime.autopilot_num) < 0 ||
+        btech_special_column_int(statement, 71,
+                                 &snapshot.runtime.heatboom_last) < 0 ||
+        btech_special_column_int(statement, 72, &snapshot.runtime.sspin) < 0 ||
+        btech_special_column_int(statement, 73, &snapshot.runtime.can_see) <
+            0 ||
+        btech_special_column_int(statement, 74, &snapshot.runtime.row) < 0 ||
+        btech_special_column_int(statement, 75, &snapshot.runtime.rcw) < 0 ||
+        btech_special_column_real(statement, 76, &snapshot.runtime.rspd) < 0 ||
+        btech_special_column_int(statement, 77, &snapshot.runtime.erat) < 0 ||
+        btech_special_column_int(statement, 78, &snapshot.runtime.per) < 0 ||
+        btech_special_column_int(statement, 79, &snapshot.runtime.wxf) < 0 ||
+        btech_special_column_int(statement, 80,
+                                 &snapshot.runtime.last_startup) < 0 ||
+        btech_special_column_int(statement, 81, &snapshot.runtime.maxsuits) <
+            0 ||
+        btech_special_column_int(statement, 82,
+                                 &snapshot.runtime.infantry_specials) < 0 ||
+        btech_special_column_char(statement, 83,
+                                  &snapshot.runtime.scharge_value) < 0 ||
+        btech_special_column_int(statement, 84,
+                                 &snapshot.runtime.staggerDamage) < 0 ||
+        btech_special_column_int(statement, 85,
+                                 &snapshot.runtime.lastStaggerNotify) < 0 ||
+        btech_special_column_int(statement, 86, &snapshot.runtime.critstatus2) <
+            0 ||
+        btech_special_column_real(statement, 87, &snapshot.runtime.xpmod) < 0 ||
+        btech_special_column_int(statement, 88, &snapshot.runtime.shots_fired) <
+            0 ||
+        btech_special_column_int(statement, 89, &snapshot.runtime.shots_hit) <
+            0 ||
+        btech_special_column_int(statement, 90,
+                                 &snapshot.runtime.shots_missed) < 0 ||
+        btech_special_column_int(statement, 91,
+                                 &snapshot.runtime.damage_taken) < 0 ||
+        btech_special_column_int(statement, 92,
+                                 &snapshot.runtime.damage_inflicted) < 0 ||
+        btech_special_column_int(statement, 93,
+                                 &snapshot.runtime.units_killed) < 0 ||
         btech_special_column_time(statement, 94,
                                   &snapshot.runtime.lastStaggerCheck) < 0)
       result = -1;
     else
       mech_persistence_runtime_restore(mech, &snapshot);
-#undef RUNTIME_CHAR
-#undef RUNTIME_SHORT
-#undef RUNTIME_INT
-#undef RUNTIME_REAL
-#undef RUNTIME_DBREF
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;

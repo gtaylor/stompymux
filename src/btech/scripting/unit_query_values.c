@@ -6,6 +6,7 @@
 #include "mech_progress_api.h"
 #include "mech_radio_api.h"
 #include "mech_specification_api.h"
+#include "registry_api.h"
 
 void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs,
@@ -17,14 +18,24 @@ void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
   int mapdbref;
   BattleMap *map;
 
-  FUNCHECK(nfargs < 2 || nfargs > 3, "#-1 BTLOADMAP TAKES 2 OR 3 ARGUMENTS");
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
+  if (nfargs < 2 || nfargs > 3) {
+    safe_tprintf_str(buff, bufc, "#-1 BTLOADMAP TAKES 2 OR 3 ARGUMENTS");
+    return;
+  }
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
   mapdbref = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(!is_good_obj(context->btech->database, mapdbref),
-           "#-1 INVALID TARGET");
+  if (!is_good_obj(context->btech->database, mapdbref)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
+    return;
+  }
   map = btech_context_get_map(context->btech, mapdbref);
-  FUNCHECK(!map, "#-1 INVALID TARGET");
+  if (!map) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
+    return;
+  }
   switch (map_checkmapfile(map, fargs[1])) {
   case -1:
     safe_str("#-1 MAP NOT FOUND", buff, bufc);
@@ -59,13 +70,20 @@ void fun_btloadmech(char *buff, char **bufc, DbRef player, DbRef cause,
   int mechdbref;
   Mech *mech;
 
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
   mechdbref = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(!is_good_obj(context->btech->database, mechdbref),
-           "#-1 INVALID TARGET");
+  if (!is_good_obj(context->btech->database, mechdbref)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
+    return;
+  }
   mech = btech_context_get_mech(context->btech, mechdbref);
-  FUNCHECK(!mech, "#-1 INVALID TARGET");
+  if (!mech) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
+    return;
+  }
   if (mech_template_load(player, mech, fargs[1]) == 1) {
     mux_event_remove_data(context->btech->events, (void *)mech);
     clear_mech_from_LOS(mech);
@@ -86,13 +104,20 @@ void fun_btmechfreqs(char *buff, char **bufc, DbRef player, DbRef cause,
   Mech *mech;
   int i;
 
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
   mechdbref = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(!is_good_obj(context->btech->database, mechdbref),
-           "#-1 INVALID TARGET");
+  if (!is_good_obj(context->btech->database, mechdbref)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
+    return;
+  }
   mech = btech_context_get_mech(context->btech, mechdbref);
-  FUNCHECK(!mech, "#-1 INVALID TARGET");
+  if (!mech) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
+    return;
+  }
 
   for (i = 0; i < mech_radio_channel_count(mech); i++) {
     if (i)
@@ -118,13 +143,17 @@ void fun_btgetweight(char *buff, char **bufc, DbRef player, DbRef cause,
   float sw = 0;
   int i = -1, p, b;
 
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
 
   if (!find_matching_long_part(context->btech, fargs[0], &i, &p, &b)) {
     i = -1;
-    FUNCHECK(!find_matching_vlong_part(context->btech, fargs[0], &i, &p, &b),
-             "#-1 INVALID PART NAME");
+    if (!find_matching_vlong_part(context->btech, fargs[0], &i, &p, &b)) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID PART NAME");
+      return;
+    }
   }
   sw = btech_part_weight(p);
   if (sw <= 0)
@@ -145,17 +174,28 @@ void fun_btremovestores(char *buff, char **bufc, DbRef player, DbRef cause,
   int p, b;
 
   it = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(it == NOTHING ||
-               !is_examinable(context->world->database, player, it),
-           "#-1");
-  FUNCHECK(!(foo = btech_context_find_object(context->btech, it)), "#-1");
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK(Readnum(num, fargs[2]), "#-2 Illegal Value");
+  if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
+    safe_tprintf_str(buff, bufc, "#-1");
+    return;
+  }
+  if (!(foo = btech_context_find_object(context->btech, it))) {
+    safe_tprintf_str(buff, bufc, "#-1");
+    return;
+  }
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
+  if ((!((num) = atoi(fargs[2])) && strcmp((fargs[2]), "0"))) {
+    safe_tprintf_str(buff, bufc, "#-2 Illegal Value");
+    return;
+  }
   if (!find_matching_long_part(context->btech, fargs[1], &i, &p, &b)) {
     i = -1;
-    FUNCHECK(!find_matching_vlong_part(context->btech, fargs[1], &i, &p, &b),
-             "#-1 INVALID PART NAME");
+    if (!find_matching_vlong_part(context->btech, fargs[1], &i, &p, &b)) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID PART NAME");
+      return;
+    }
   }
   econ_change_items(context->btech, it, p, b, 0 - num);
   safe_tprintf_str(buff, bufc, "%d", econ_find_items(context->btech, it, p, b));
@@ -182,7 +222,7 @@ void fun_bttechtime(char *buff, char **bufc, DbRef player, DbRef cause,
     strcpy(buf, "00:00.00");
   }
 
-  notify(context, player, buf);
+  mecha_notify(context, player, buf);
 }
 
 void fun_btcritslot(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -197,19 +237,27 @@ void fun_btcritslot(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
   Mech *mech;
 
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
 
   if (!argument_count_in_range("BTCRITSLOT", nfargs, 3, 4, buff, bufc))
     return;
 
   it = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(it == NOTHING ||
-               !is_examinable(context->world->database, player, it),
-           "#-1 NOT A MECH");
-  FUNCHECK(!btech_context_is_mech(context->btech, it), "#-1 NOT A MECH");
-  FUNCHECK(!(mech = btech_context_find_object(context->btech, it)),
-           "#-1 INVALID MECH");
+  if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
+    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
+    return;
+  }
+  if (!btech_context_is_mech(context->btech, it)) {
+    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
+    return;
+  }
+  if (!(mech = btech_context_find_object(context->btech, it))) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
+    return;
+  }
 
   safe_tprintf_str(
       buff, bufc, "%s",
@@ -227,13 +275,17 @@ void fun_btcritslot_ref(char *buff, char **bufc, DbRef player, DbRef cause,
    */
   Mech *mech;
 
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
 
   if (!argument_count_in_range("BTCRITSLOT_REF", nfargs, 3, 4, buff, bufc))
     return;
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
+  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
+    return;
+  }
 
   safe_tprintf_str(
       buff, bufc, "%s",
@@ -252,64 +304,106 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
   float fxA, fyA, fxB, fyB;
   int xA, yA, zA, xB, yB, zB;
 
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#=1 PERMISSION DENIED");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#=1 PERMISSION DENIED");
+    return;
+  }
 
   if (!argument_count_in_range("BTGETRANGE", nfargs, 3, 7, buff, bufc))
     return;
 
   mapdb = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(mapdb == NOTHING ||
-               !is_examinable(context->world->database, player, mapdb),
-           "#-1 INVALID MAPDB");
-  FUNCHECK(!btech_context_is_map(context->btech, mapdb), "#-1 OBJECT NOT MAP");
-  FUNCHECK(!(map = btech_context_get_map(context->btech, mapdb)),
-           "#-1 INVALID MAP");
+  if (mapdb == NOTHING ||
+      !is_examinable(context->world->database, player, mapdb)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID MAPDB");
+    return;
+  }
+  if (!btech_context_is_map(context->btech, mapdb)) {
+    safe_tprintf_str(buff, bufc, "#-1 OBJECT NOT MAP");
+    return;
+  }
+  if (!(map = btech_context_get_map(context->btech, mapdb))) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
+    return;
+  }
 
   switch (nfargs) {
   case 3:
     mechAdb = match_thing(&context->command->match, player, fargs[1]);
-    FUNCHECK(mechAdb == NOTHING ||
-                 !is_examinable(context->world->database, player, mechAdb),
-             "#-1 INVALID MECHDBREF");
+    if (mechAdb == NOTHING ||
+        !is_examinable(context->world->database, player, mechAdb)) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID MECHDBREF");
+      return;
+    }
     mechBdb = match_thing(&context->command->match, player, fargs[2]);
-    FUNCHECK(mechBdb == NOTHING ||
-                 !is_examinable(context->world->database, player, mechBdb),
-             "#-1 INVALID MECHDBREF");
-    FUNCHECK(!btech_context_is_mech(context->btech, mechAdb) ||
-                 !btech_context_is_mech(context->btech, mechBdb),
-             "#-1 INVALID MECH");
-    FUNCHECK(!(mechA = btech_context_get_mech(context->btech, mechAdb)) ||
-                 !(mechB = btech_context_get_mech(context->btech, mechBdb)),
-             "#-1 INVALID MECH");
-    FUNCHECK(mech_map_dbref(mechA) != mapdb || mech_map_dbref(mechB) != mapdb,
-             "#-1 MECH NOT ON MAP");
+    if (mechBdb == NOTHING ||
+        !is_examinable(context->world->database, player, mechBdb)) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID MECHDBREF");
+      return;
+    }
+    if (!btech_context_is_mech(context->btech, mechAdb) ||
+        !btech_context_is_mech(context->btech, mechBdb)) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
+      return;
+    }
+    if (!(mechA = btech_context_get_mech(context->btech, mechAdb)) ||
+        !(mechB = btech_context_get_mech(context->btech, mechBdb))) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
+      return;
+    }
+    if (mech_map_dbref(mechA) != mapdb || mech_map_dbref(mechB) != mapdb) {
+      safe_tprintf_str(buff, bufc, "#-1 MECH NOT ON MAP");
+      return;
+    }
     safe_tprintf_str(buff, bufc, "%f", mech_range_to(mechA, mechB));
     return;
   case 4:
     if (strspn(fargs[1], NUMBERS) < 1) {
       mechAdb = match_thing(&context->command->match, player, fargs[1]);
-      FUNCHECK(strspn(fargs[2], NUMBERS) < 1, "#-1 INVALID COORDS");
+      if (strspn(fargs[2], NUMBERS) < 1) {
+        safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+        return;
+      }
       xA = atoi(fargs[2]);
-      FUNCHECK(strspn(fargs[3], NUMBERS) < 1, "#-1 INVALID COORDS");
+      if (strspn(fargs[3], NUMBERS) < 1) {
+        safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+        return;
+      }
       yA = atoi(fargs[3]);
     } else {
-      FUNCHECK(strspn(fargs[1], NUMBERS) < 1, "#-1 INVALID COORDS");
+      if (strspn(fargs[1], NUMBERS) < 1) {
+        safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+        return;
+      }
       xA = atoi(fargs[1]);
-      FUNCHECK(strspn(fargs[2], NUMBERS) < 1, "#-1 INVALID COORDS");
+      if (strspn(fargs[2], NUMBERS) < 1) {
+        safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+        return;
+      }
       yA = atoi(fargs[2]);
       mechAdb = match_thing(&context->command->match, player, fargs[3]);
     }
-    FUNCHECK(mechAdb == NOTHING ||
-                 !is_examinable(context->world->database, player, mechAdb),
-             "#-1 INVALID MECHDBREF");
-    FUNCHECK(!btech_context_is_mech(context->btech, mechAdb),
-             "#-1 INVALID MECH");
-    FUNCHECK(!(mechA = btech_context_get_mech(context->btech, mechAdb)),
-             "#-1 INVALID MECH");
-    FUNCHECK(mech_map_dbref(mechA) != mapdb, "#-1 MECH NOT ON MAP");
-    FUNCHECK(xA < 0 || yA < 0 || xA >= map->map_width || yA >= map->map_height,
-             "#-1 INVALID COORDS");
+    if (mechAdb == NOTHING ||
+        !is_examinable(context->world->database, player, mechAdb)) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID MECHDBREF");
+      return;
+    }
+    if (!btech_context_is_mech(context->btech, mechAdb)) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
+      return;
+    }
+    if (!(mechA = btech_context_get_mech(context->btech, mechAdb))) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
+      return;
+    }
+    if (mech_map_dbref(mechA) != mapdb) {
+      safe_tprintf_str(buff, bufc, "#-1 MECH NOT ON MAP");
+      return;
+    }
+    if (xA < 0 || yA < 0 || xA >= map->map_width || yA >= map->map_height) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
     safe_tprintf_str(buff, bufc, "%f",
                      FindRange(mech_position_real_x(mechA),
@@ -323,32 +417,60 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
       if (strspn(fargs[1], NUMBERS) < 1) {
         // mech first
         mechAdb = match_thing(&context->command->match, player, fargs[1]);
-        FUNCHECK(strspn(fargs[2], NUMBERS) < 1, "#-1 INVALID COORDS");
+        if (strspn(fargs[2], NUMBERS) < 1) {
+          safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+          return;
+        }
         xA = atoi(fargs[2]);
-        FUNCHECK(strspn(fargs[3], NUMBERS) < 1, "#-1 INVALID COORDS");
+        if (strspn(fargs[3], NUMBERS) < 1) {
+          safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+          return;
+        }
         yA = atoi(fargs[3]);
-        FUNCHECK(strspn(fargs[4], NUMBERS) < 1, "#-1 INVALID COORDS");
+        if (strspn(fargs[4], NUMBERS) < 1) {
+          safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+          return;
+        }
         zA = atoi(fargs[4]);
       } else {
-        FUNCHECK(strspn(fargs[1], NUMBERS) < 1, "#-1 INVALID COORDS");
+        if (strspn(fargs[1], NUMBERS) < 1) {
+          safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+          return;
+        }
         xA = atoi(fargs[1]);
-        FUNCHECK(strspn(fargs[2], NUMBERS) < 1, "#-1 INVALID COORDS");
+        if (strspn(fargs[2], NUMBERS) < 1) {
+          safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+          return;
+        }
         yA = atoi(fargs[2]);
-        FUNCHECK(strspn(fargs[3], NUMBERS) < 1, "#-1 INVALID COORDS");
+        if (strspn(fargs[3], NUMBERS) < 1) {
+          safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+          return;
+        }
         zA = atoi(fargs[3]);
         mechAdb = match_thing(&context->command->match, player, fargs[4]);
       }
-      FUNCHECK(mechAdb == NOTHING ||
-                   !is_examinable(context->world->database, player, mechAdb),
-               "#-1 INVALID MECHDBREF");
-      FUNCHECK(!btech_context_is_mech(context->btech, mechAdb),
-               "#-1 INVALID MECH");
-      FUNCHECK(!(mechA = btech_context_get_mech(context->btech, mechAdb)),
-               "#-1 INVALID MECH");
-      FUNCHECK(mech_map_dbref(mechA) != mapdb, "#-1 MECH NOT ON MAP");
-      FUNCHECK(xA < 0 || yA < 0 || xA >= map->map_width ||
-                   yA >= map->map_height,
-               "#-1 INVALID COORDS");
+      if (mechAdb == NOTHING ||
+          !is_examinable(context->world->database, player, mechAdb)) {
+        safe_tprintf_str(buff, bufc, "#-1 INVALID MECHDBREF");
+        return;
+      }
+      if (!btech_context_is_mech(context->btech, mechAdb)) {
+        safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
+        return;
+      }
+      if (!(mechA = btech_context_get_mech(context->btech, mechAdb))) {
+        safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
+        return;
+      }
+      if (mech_map_dbref(mechA) != mapdb) {
+        safe_tprintf_str(buff, bufc, "#-1 MECH NOT ON MAP");
+        return;
+      }
+      if (xA < 0 || yA < 0 || xA >= map->map_width || yA >= map->map_height) {
+        safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+        return;
+      }
       MapCoordToRealCoord(xA, yA, &fxA, &fyA);
       safe_tprintf_str(
           buff, bufc, "%f",
@@ -357,18 +479,34 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
       return;
     }
     // tihs is the (map, x1, y1, x2, y2) condition
-    FUNCHECK(strspn(fargs[1], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (strspn(fargs[1], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     xA = atoi(fargs[1]);
-    FUNCHECK(strspn(fargs[2], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (strspn(fargs[2], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     yA = atoi(fargs[2]);
-    FUNCHECK(xA < 0 || yA < 0 || xA >= map->map_width || yA >= map->map_height,
-             "#-1 INVALID COORDS");
-    FUNCHECK(strspn(fargs[3], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (xA < 0 || yA < 0 || xA >= map->map_width || yA >= map->map_height) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
+    if (strspn(fargs[3], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     xB = atoi(fargs[3]);
-    FUNCHECK(strspn(fargs[4], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (strspn(fargs[4], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     yB = atoi(fargs[4]);
-    FUNCHECK(xB < 0 || yB < 0 || xB >= map->map_width || yB >= map->map_height,
-             "#-1 INVALID COORDS");
+    if (xB < 0 || yB < 0 || xB >= map->map_width || yB >= map->map_height) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
     MapCoordToRealCoord(xB, yB, &fxB, &fyB);
     safe_tprintf_str(
@@ -377,17 +515,35 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
                   fyB, battle_map_hex_elevation(map, xB, yB) * ZSCALE));
     return;
   case 7:
-    FUNCHECK(strspn(fargs[1], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (strspn(fargs[1], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     xA = atoi(fargs[1]);
-    FUNCHECK(strspn(fargs[2], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (strspn(fargs[2], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     yA = atoi(fargs[2]);
-    FUNCHECK(strspn(fargs[3], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (strspn(fargs[3], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     zA = atoi(fargs[3]);
-    FUNCHECK(strspn(fargs[4], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (strspn(fargs[4], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     xB = atoi(fargs[4]);
-    FUNCHECK(strspn(fargs[5], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (strspn(fargs[5], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     yB = atoi(fargs[5]);
-    FUNCHECK(strspn(fargs[6], NUMBERS) < 1, "#-1 INVALID COORDS");
+    if (strspn(fargs[6], NUMBERS) < 1) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+      return;
+    }
     zB = atoi(fargs[6]);
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
     MapCoordToRealCoord(xB, yB, &fxB, &fyB);
@@ -411,13 +567,22 @@ void fun_btsetmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
   float newmaxspeed = atof(fargs[1]);
 
   it = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(it == NOTHING ||
-               !is_examinable(context->world->database, player, it),
-           "#-1 NOT A MECH");
-  FUNCHECK(!btech_context_is_mech(context->btech, it), "#-1 NOT A MECH");
-  FUNCHECK(!(mech = btech_context_find_object(context->btech, it)), "#-1");
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
+  if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
+    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
+    return;
+  }
+  if (!btech_context_is_mech(context->btech, it)) {
+    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
+    return;
+  }
+  if (!(mech = btech_context_find_object(context->btech, it))) {
+    safe_tprintf_str(buff, bufc, "#-1");
+    return;
+  }
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
 
   mech_maximum_speed_set(mech, newmaxspeed);
   mech_speed_correct(mech);
@@ -433,13 +598,22 @@ void fun_btgetrealmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
   float speed;
 
   it = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(it == NOTHING ||
-               !is_examinable(context->world->database, player, it),
-           "#-1 NOT A MECH");
-  FUNCHECK(!btech_context_is_mech(context->btech, it), "#-1 NOT A MECH");
-  FUNCHECK(!(mech = btech_context_find_object(context->btech, it)), "#-1");
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
+  if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
+    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
+    return;
+  }
+  if (!btech_context_is_mech(context->btech, it)) {
+    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
+    return;
+  }
+  if (!(mech = btech_context_find_object(context->btech, it))) {
+    safe_tprintf_str(buff, bufc, "#-1");
+    return;
+  }
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
 
   speed = mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 
@@ -455,13 +629,22 @@ void fun_btgetbv(char *buff, char **bufc, DbRef player, DbRef cause,
   int bv;
 
   it = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(it == NOTHING ||
-               !is_examinable(context->world->database, player, it),
-           "#-1 NOT A MECH");
-  FUNCHECK(!btech_context_is_mech(context->btech, it), "#-1 NOT A MECH");
-  FUNCHECK(!(mech = btech_context_find_object(context->btech, it)), "#-1");
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
+  if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
+    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
+    return;
+  }
+  if (!btech_context_is_mech(context->btech, it)) {
+    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
+    return;
+  }
+  if (!(mech = btech_context_find_object(context->btech, it))) {
+    safe_tprintf_str(buff, bufc, "#-1");
+    return;
+  }
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
 
   bv = CalculateBV(mech, 100, 100);
   mech_battle_value_set(mech, bv);
@@ -476,10 +659,14 @@ void fun_btgetbv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
                      EvaluationContext *context) {
 #ifdef BT_CALCULATE_BV
   Mech *mech;
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
+  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
+    return;
+  }
 
   mech_battle_value_set(mech, CalculateBV(mech, 4, 5));
   safe_tprintf_str(buff, bufc, "%d", mech_battle_value(mech));
@@ -493,10 +680,14 @@ void fun_btgetdbv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
                       EvaluationContext *context) {
 #ifdef BT_CALCULATE_BV
   Mech *mech;
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
+  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
+    return;
+  }
 
   safe_tprintf_str(buff, bufc, "%.2f", Calculate_Defensive_BV(mech));
 #else
@@ -509,10 +700,14 @@ void fun_btgetobv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
                       EvaluationContext *context) {
 #ifdef BT_CALCULATE_BV
   Mech *mech;
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
+  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
+    return;
+  }
 
   safe_tprintf_str(buff, bufc, "%.2f", Calculate_Offensive_BV(mech));
 #else
@@ -528,10 +723,14 @@ void fun_btgetbv2_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   float obv;
   float dbv;
 
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
+  if (!is_wizard(context->world->database, player)) {
+    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
+    return;
+  }
+  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
+    return;
+  }
 
   dbv = Calculate_Defensive_BV(mech);
   obv = Calculate_Offensive_BV(mech);
@@ -540,201 +739,4 @@ void fun_btgetbv2_ref(char *buff, char **bufc, DbRef player, DbRef cause,
 #else
   safe_tprintf_str(buff, bufc, "#-1 BATTLE VALUE SUPPORT DISABLED");
 #endif
-}
-
-void fun_bttechlist(char *buff, char **bufc, DbRef player, DbRef cause,
-                    char *fargs[], int nfargs, char *cargs[], int ncargs,
-                    EvaluationContext *context) {
-  DbRef it;
-  Mech *mech;
-  char *infostr;
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  it = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(it == NOTHING ||
-               !is_examinable(context->world->database, player, it),
-           "#-1 NOT A MECH");
-  FUNCHECK(!btech_context_is_mech(context->btech, it), "#-1 NOT A MECH");
-  FUNCHECK(!(mech = btech_context_find_object(context->btech, it)), "#-1");
-  infostr = techlist_func(mech, (char[MBUF_SIZE]){0});
-  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : " ");
-}
-
-void fun_bttechlist_ref(char *buff, char **bufc, DbRef player, DbRef cause,
-                        char *fargs[], int nfargs, char *cargs[], int ncargs,
-                        EvaluationContext *context) {
-  Mech *mech;
-  char *infostr;
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
-
-  infostr = techlist_func(mech, (char[MBUF_SIZE]){0});
-  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1");
-}
-
-/* Function to return the 'payload' of a unit
- * ie: the Guns and Ammo
- * in a list format like <item_1> <# of 1>|...|<item_n> <# of n>
- * Dany - 06/2005 */
-void fun_btpayload_ref(char *buff, char **bufc, DbRef player, DbRef cause,
-                       char *fargs[], int nfargs, char *cargs[], int ncargs,
-                       EvaluationContext *context) {
-  Mech *mech;
-  char *infostr;
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
-
-  infostr = payloadlist_func(mech, (char[MBUF_SIZE]){0});
-  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1");
-}
-
-void fun_btshowstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
-                          char *fargs[], int nfargs, char *cargs[], int ncargs,
-                          EvaluationContext *context) {
-  DbRef outplayer;
-  Mech *mech;
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
-  outplayer = match_thing(&context->command->match, player, fargs[1]);
-  FUNCHECK(outplayer == NOTHING ||
-               !is_examinable(context->world->database, player, outplayer) ||
-               !is_player(context->btech->database, outplayer),
-           "#-1");
-
-  mech_status(outplayer, (void *)mech, "R");
-  safe_tprintf_str(buff, bufc, "1");
-}
-
-void fun_btshowwspecs_ref(char *buff, char **bufc, DbRef player, DbRef cause,
-                          char *fargs[], int nfargs, char *cargs[], int ncargs,
-                          EvaluationContext *context) {
-  DbRef outplayer;
-  Mech *mech;
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
-  outplayer = match_thing(&context->command->match, player, fargs[1]);
-  FUNCHECK(outplayer == NOTHING ||
-               !is_examinable(context->world->database, player, outplayer) ||
-               !is_player(context->btech->database, outplayer),
-           "#-1");
-
-  mech_weaponspecs(outplayer, (void *)mech, "");
-  safe_tprintf_str(buff, bufc, "1");
-}
-
-void fun_btshowcritstatus_ref(char *buff, char **bufc, DbRef player,
-                              DbRef cause, char *fargs[], int nfargs,
-                              char *cargs[], int ncargs,
-                              EvaluationContext *context) {
-  DbRef outplayer;
-  Mech *mech;
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
-           "#-1 NO SUCH MECH");
-  outplayer = match_thing(&context->command->match, player, fargs[1]);
-  FUNCHECK(outplayer == NOTHING ||
-               !is_examinable(context->world->database, player, outplayer) ||
-               !is_player(context->btech->database, outplayer),
-           "#-1");
-
-  mech_critstatus(outplayer, (void *)mech, fargs[2]);
-  safe_tprintf_str(buff, bufc, "1");
-}
-
-void fun_btengrate(char *buff, char **bufc, DbRef player, DbRef cause,
-                   char *fargs[], int nfargs, char *cargs[], int ncargs,
-                   EvaluationContext *context) {
-  DbRef mechdb;
-  Mech *mech;
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  mechdb = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(mechdb == NOTHING ||
-               !is_examinable(context->world->database, player, mechdb),
-           "#-1 NOT A MECH");
-  FUNCHECK(!btech_context_is_mech(context->btech, mechdb), "#-1 NOT A MECH");
-  FUNCHECK(!(mech = btech_context_get_mech(context->btech, mechdb)), "#-1");
-
-  safe_tprintf_str(buff, bufc, "%d %d", mech_engine_rating(mech),
-                   susp_factor(mech));
-}
-
-void fun_btengrate_ref(char *buff, char **bufc, DbRef player, DbRef cause,
-                       char *fargs[], int nfargs, char *cargs[], int ncargs,
-                       EvaluationContext *context) {
-  Mech *mech;
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK(!(mech = load_refmech(context->btech, fargs[0])), "#-1 INVALID REF");
-
-  safe_tprintf_str(buff, bufc, "%d %d", mech_engine_rating(mech),
-                   susp_factor(mech));
-}
-
-void fun_btfasabasecost_ref(char *buff, char **bufc, DbRef player, DbRef cause,
-                            char *fargs[], int nfargs, char *cargs[],
-                            int ncargs, EvaluationContext *context) {
-#ifdef BT_ADVANCED_ECON
-  Mech *mech;
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK(!(mech = load_refmech(context->btech, fargs[0])), "#-1 INVALID REF");
-
-  safe_tprintf_str(buff, bufc, "%llu", mech_fasa_cost(mech));
-#else
-  safe_tprintf_str(buff, bufc, "#-1 NO ECONDB SUPPORT");
-#endif
-}
-
-void fun_btunitpartslist_ref(char *buff, char **bufc, DbRef player, DbRef cause,
-                             char *fargs[], int nfargs, char *cargs[],
-                             int ncargs, EvaluationContext *context) {
-  Mech *mech;
-  char parts[LBUF_SIZE];
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  FUNCHECK(!(mech = load_refmech(context->btech, fargs[0])), "#-1 INVALID REF");
-
-  unit_parts_list(mech, parts);
-  safe_tprintf_str(buff, bufc, "%s", parts);
-}
-
-void fun_btunitpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
-                         char *fargs[], int nfargs, char *cargs[], int ncargs,
-                         EvaluationContext *context) {
-
-  DbRef mechdb;
-  Mech *mech;
-  char parts[LBUF_SIZE];
-
-  FUNCHECK(!is_wizard(context->world->database, player),
-           "#-1 PERMISSION DENIED");
-  mechdb = match_thing(&context->command->match, player, fargs[0]);
-  FUNCHECK(mechdb == NOTHING ||
-               !is_examinable(context->world->database, player, mechdb),
-           "#-1 NOT A MECH");
-  FUNCHECK(!btech_context_is_mech(context->btech, mechdb), "#-1 NOT A MECH");
-  FUNCHECK(!(mech = btech_context_get_mech(context->btech, mechdb)), "#-1");
-
-  unit_parts_list(mech, parts);
-  safe_tprintf_str(buff, bufc, "%s", parts);
 }

@@ -98,6 +98,7 @@ set(BTECH_SOURCES
   integration/debug.c
   integration/debug_command_catalog.c
   map/map.c
+  map/map_unit_list.c
   map/map_command_catalog.c
   map/map_bits.c
   map/map_coding.c
@@ -110,6 +111,7 @@ set(BTECH_SOURCES
   map/map_buildings.c
   map/map_terrain.c
   movement/aero_bomb.c
+  movement/aero_controls.c
   movement/aero_move.c
   movement/aero_flight_math.c
   movement/ds_bay.c
@@ -173,13 +175,17 @@ set(BTECH_SOURCES
   repair/mech_tech.c
   repair/repair_command_catalog.c
   repair/mech_tech_commands.c
+  repair/mech_tech_ammo_commands.c
   repair/mech_tech_scrap_commands.c
   repair/mech_tech_part_commands.c
+  repair/mech_tech_structure_commands.c
   repair/mech_tech_section_commands.c
   repair/mech_tech_damages.c
   repair/mech_tech_do.c
   repair/mech_tech_events.c
   repair/mech_tech_repairs.c
+  repair/repair_job.c
+  repair/repair_event_payload.c
   repair/mechrep.c
   repair/mechrep_templates.c
   repair/mechrep_construction.c
@@ -188,8 +194,10 @@ set(BTECH_SOURCES
   scripting/special_command_catalog.c
   scripting/los_store_values.c
   scripting/registry_values.c
+  scripting/value_catalog.c
   scripting/repair_map_values.c
   scripting/unit_query_values.c
+  scripting/unit_query_reports.c
   scripting/unit_values.c
   scripting/world_values.c
   sensors/los_trace.c

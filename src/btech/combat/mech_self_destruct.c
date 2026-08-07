@@ -7,7 +7,6 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "environment_damage_api.h"
-#include "legacy_macros.h"
 #include "mech_ammunition_explosion_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
@@ -18,7 +17,6 @@
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_identity_api.h"
-#include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -27,6 +25,8 @@
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
 #include "section_types.h"
 
 static void mech_self_destruct_event(MuxEvent *event) {
@@ -100,29 +100,45 @@ void mech_explode(DbRef player, void *data, char *buffer) {
   bool ammunition = true;
   bool override;
 
-  cch(MECH_USUALO);
+  if (!common_checks(player, mech, MECH_USUALO))
+    return;
   override = strstr(buffer, "override") != nullptr &&
              is_wizard(btech_context_database(context), player);
   int argument_count = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(context, argument_count < 1, "Invalid number of arguments!");
+  if (argument_count < 1) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number of arguments!");
+    return;
+  }
 
   if (!override) {
     for (int section = 0; section < NUM_SECTIONS; section++) {
       if (!mech_section_is_destroyed(mech, section))
-        DOCHECK_CONTEXT(context,
-                        mech_section_has_recycling_weapon(mech, section),
-                        "You have weapons recycling!");
-      DOCHECK_CONTEXT(context, mech_section_recycle_ticks(mech, section),
-                      "You are still recovering from your last attack.");
+        if (mech_section_has_recycling_weapon(mech, section)) {
+          mecha_notify(btech_context_evaluation(context), player,
+                       "You have weapons recycling!");
+          return;
+        }
+      if (mech_section_recycle_ticks(mech, section)) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "You are still recovering from your last attack.");
+        return;
+      }
     }
   }
 
   if (!strcasecmp(buffer, "stop")) {
     if (!override)
-      DOCHECK_CONTEXT(context, !btech_context_self_destruct_can_stop(context),
-                      "It's too late to turn back now!");
-    DOCHECK_CONTEXT(context, !mech_event_count(mech, EVENT_EXPLODE),
-                    "Your mech isn't undergoing a self-destruct sequence!");
+      if (!btech_context_self_destruct_can_stop(context)) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "It's too late to turn back now!");
+        return;
+      }
+    if (!mech_event_count(mech, EVENT_EXPLODE)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Your mech isn't undergoing a self-destruct sequence!");
+      return;
+    }
 
     mech_event_cancel(mech, EVENT_EXPLODE);
     mech_notify(mech, MECHALL, "Self-destruction sequence aborted.");
@@ -134,20 +150,31 @@ void mech_explode(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  DOCHECK_CONTEXT(context, mech_event_count(mech, EVENT_EXPLODE),
-                  "Your mech is already undergoing a self-destruct sequence!");
+  if (mech_event_count(mech, EVENT_EXPLODE)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Your mech is already undergoing a self-destruct sequence!");
+    return;
+  }
   if (!strcasecmp(buffer, "ammo")) {
     if (!override) {
-      DOCHECK_CONTEXT(context,
-                      !btech_context_self_destruct_ammunition_enabled(context),
-                      "You can't bring yourself to do it!");
-      DOCHECK_CONTEXT(context, mech_condition_summary(mech).self_destruct_safe,
-                      "That's not a possibility here.");
+      if (!btech_context_self_destruct_ammunition_enabled(context)) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "You can't bring yourself to do it!");
+        return;
+      }
+      if (mech_condition_summary(mech).self_destruct_safe) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "That's not a possibility here.");
+        return;
+      }
     }
     int damage =
         FindDestructiveAmmo(mech, &ammunition_section, &ammunition_critical);
-    DOCHECK_CONTEXT(context, !damage,
-                    "There is no 'damaging' ammo on your 'mech!");
+    if (!damage) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "There is no 'damaging' ammo on your 'mech!");
+      return;
+    }
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_DEBUG, "%s",
         tprintf("#%ld in #%ld initiates the ammo explosion sequence.", player,
@@ -156,13 +183,21 @@ void mech_explode(DbRef player, void *data, char *buffer) {
     time /= 2;
   } else {
     if (!override) {
-      DOCHECK_CONTEXT(context,
-                      !btech_context_self_destruct_reactor_enabled(context),
-                      "You can't bring yourself to do it!");
-      DOCHECK_CONTEXT(context, mech_class(mech) != CLASS_MECH,
-                      "Only mechs can do the 'big boom' effect.");
-      DOCHECK_CONTEXT(context, mech_technology_flags(mech) & ICE_TECH,
-                      "You need a fusion reactor.");
+      if (!btech_context_self_destruct_reactor_enabled(context)) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "You can't bring yourself to do it!");
+        return;
+      }
+      if (mech_class(mech) != CLASS_MECH) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "Only mechs can do the 'big boom' effect.");
+        return;
+      }
+      if (mech_technology_flags(mech) & ICE_TECH) {
+        mecha_notify(btech_context_evaluation(context), player,
+                     "You need a fusion reactor.");
+        return;
+      }
     }
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_DEBUG, "%s",

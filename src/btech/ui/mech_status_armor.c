@@ -7,7 +7,6 @@
 
 #include "btconfig.h"
 #include "equipment_types.h"
-#include "legacy_macros.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
@@ -17,6 +16,7 @@
 #include "mux/commands/command_context.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/support/formatting.h"
+#include "registry_api.h"
 #include "section_types.h"
 
 int ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *ret_armor_value) {
@@ -261,6 +261,28 @@ typedef enum {
   BTS_CONDITIONAL_2     /* binary conditional */
 } BTS_State;
 
+static void armor_template_commit(char destination[static LBUF_SIZE],
+                                  char **destination_position,
+                                  const char **saved_source,
+                                  const char *source_position) {
+  size_t destination_length = (size_t)(*destination_position - destination);
+  size_t source_length = (size_t)(source_position - *saved_source);
+  size_t available = LBUF_SIZE - 1 - destination_length;
+  if (source_length > available)
+    source_length = available;
+  memcpy(*destination_position, *saved_source, source_length);
+  *destination_position += source_length;
+  *saved_source = source_position;
+}
+
+static void armor_template_append(char destination[static LBUF_SIZE],
+                                  char **position, char value) {
+  if ((size_t)(*position - destination) < LBUF_SIZE - 1)
+    *(*position)++ = value;
+}
+
+static int ascii_digit_value(char value) { return value - '0'; }
+
 void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                       int owner) {
   const char *srcbuf, *sbp, *saved_sbp;
@@ -367,36 +389,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   dbp = destbuf;
 
   saved_sbp = srcbuf;
-#define COMMIT_SAVED_SBP()                                                     \
-  /* TODO: It's fine to make this a real function.  */                         \
-  do {                                                                         \
-    const int maxlen = sizeof(destbuf) - 1;                                    \
-    const int dstlen = dbp - destbuf;                                          \
-                                                                               \
-    int srclen = sbp - saved_sbp;                                              \
-                                                                               \
-    if (dstlen < maxlen) {                                                     \
-      if (dstlen + srclen > maxlen)                                            \
-        srclen = maxlen - dstlen;                                              \
-                                                                               \
-      memcpy(dbp, saved_sbp, srclen);                                          \
-      dbp += srclen;                                                           \
-    }                                                                          \
-                                                                               \
-    saved_sbp = sbp;                                                           \
-  } while (0)
-
   for (sbp = srcbuf; *sbp; sbp++) {
-#define SAFE_CHR_DBP(c)                                                        \
-  do {                                                                         \
-    if ((size_t)(dbp - destbuf) < (sizeof(destbuf) - 1))                       \
-      *dbp++ = (c);                                                            \
-  } while (0)
-
-#define ASCII_ATOI(c)                                                          \
-  /* TODO: This is dependent on the way ASCII encodes digits.  */              \
-  ((c) - '0')
-
     BTS_State next_state = current_state;
 
     /* Dispatch on current state.  */
@@ -407,10 +400,11 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
        * encoding the digits from 0 to 7.
        */
       if (*sbp >= '1' && *sbp <= '7') {
-        COMMIT_SAVED_SBP();
+        armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
         saved_sbp = sbp + 1;
 
-        safe_str(armor_key_text(ASCII_ATOI(*sbp), owner).text, destbuf, &dbp);
+        safe_str(armor_key_text(ascii_digit_value(*sbp), owner).text, destbuf,
+                 &dbp);
       }
 
       next_state = BTS_NORMAL;
@@ -419,17 +413,17 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     case BTS_NORMAL: /* normal characters */
       switch (*sbp) {
       case '&':
-        COMMIT_SAVED_SBP();
+        armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
         next_state = BTS_SUBSTITUTE_ARMOR;
         break;
 
       case '@':
-        COMMIT_SAVED_SBP();
+        armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
         next_state = BTS_CONDITIONAL_1;
         break;
 
       case '!':
-        COMMIT_SAVED_SBP();
+        armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
         next_state = BTS_CONDITIONAL_2;
         break;
       }
@@ -445,7 +439,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
           saved_sbp = sbp + 1;
           next_state = BTS_NORMAL;
 
-          SAFE_CHR_DBP('&');
+          armor_template_append(destbuf, &dbp, '&');
           break;
 
         case '+':
@@ -479,7 +473,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
             break;
           }
 
-          tmp_value1 = ASCII_ATOI(tmp_value1);
+          tmp_value1 = ascii_digit_value(tmp_value1);
           break;
         } else {
           /* Expect section number.  */
@@ -511,9 +505,10 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         }
 
         /* FIXME: Ponder semantics of gflag.  */
-        safe_str(
-            armor_field_text(mech, ASCII_ATOI(*sbp), tmp_flag, tmp_value1).text,
-            destbuf, &dbp);
+        safe_str(armor_field_text(mech, ascii_digit_value(*sbp), tmp_flag,
+                                  tmp_value1)
+                     .text,
+                 destbuf, &dbp);
 
         saved_sbp = sbp + 1;
         next_state = BTS_NORMAL;
@@ -528,7 +523,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       switch (sbp - saved_sbp) {
       case 1: /* get critical section */
         if (isdigit(*sbp)) {
-          tmp_value1 = ASCII_ATOI(*sbp);
+          tmp_value1 = ascii_digit_value(*sbp);
         } else {
           next_state = BTS_NORMAL;
         }
@@ -539,9 +534,9 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         next_state = BTS_NORMAL;
 
         if (mech_section_internal(mech, tmp_value1)) {
-          SAFE_CHR_DBP(*sbp);
+          armor_template_append(destbuf, &dbp, *sbp);
         } else {
-          SAFE_CHR_DBP(' ');
+          armor_template_append(destbuf, &dbp, ' ');
         }
         break;
 
@@ -554,7 +549,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       switch (sbp - saved_sbp) {
       case 1: /* get first critical section */
         if (isdigit(*sbp)) {
-          tmp_value1 = ASCII_ATOI(*sbp);
+          tmp_value1 = ascii_digit_value(*sbp);
         } else {
           next_state = BTS_NORMAL;
         }
@@ -562,7 +557,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
       case 2: /* get second critical section */
         if (isdigit(*sbp)) {
-          tmp_value2 = ASCII_ATOI(*sbp);
+          tmp_value2 = ascii_digit_value(*sbp);
         } else {
           next_state = BTS_NORMAL;
         }
@@ -574,9 +569,9 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
         if (mech_section_internal(mech, tmp_value1) ||
             mech_section_internal(mech, tmp_value2)) {
-          SAFE_CHR_DBP(*sbp);
+          armor_template_append(destbuf, &dbp, *sbp);
         } else {
-          SAFE_CHR_DBP(' ');
+          armor_template_append(destbuf, &dbp, ' ');
         }
         break;
 
@@ -603,24 +598,21 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
        * functions, but more extensive changes would be
        * disruptive.
        */
-      COMMIT_SAVED_SBP();
-      SAFE_CHR_DBP('\r');
+      armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
+      armor_template_append(destbuf, &dbp, '\r');
       /* \n written later.  */
     } else {
       current_state = next_state;
     }
-#undef ASCII_ATOI
-#undef SAFE_CHR_DBP
   }
 
   /* Finish up.  */
-  COMMIT_SAVED_SBP();
-#undef COMMIT_SAVED_SBP
+  armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
 
   /* Send formatted status.  */
   *dbp = '\0';
 
-  notify(evaluation, player, destbuf);
+  mecha_notify(evaluation, player, destbuf);
 }
 
 /*
@@ -660,7 +652,8 @@ int hasPhysical(Mech *objMech, int wLoc, int wPhysType) {
     return 0;
   } // end switch()
 
-  return FindObjWithDest(objMech, wLoc, I2Special(wType)) >= wSize;
+  return FindObjWithDest(objMech, wLoc, special_equipment_index(wType)) >=
+         wSize;
 } // end hasPhysical()
 
 int canUsePhysical(Mech *objMech, int wLoc, int wPhysType) {

@@ -1,4 +1,10 @@
+#include "mech_classification_api.h"
+#include "mech_crew_api.h"
+#include "mech_equipment_api.h"
+#include "mech_position_api.h"
 #include "mech_utils_internal.h"
+#include "registry_api.h"
+#include "weapon_catalogue_api.h"
 
 int btech_random_roll(BtechContext *context) {
   int i = btech_random_range(context, 1, 6) + btech_random_range(context, 1, 6);
@@ -47,10 +53,10 @@ int MyHexDist(int x1, int y1, int x2, int y2, int tc) {
 int CountDestroyedLegs(Mech *objMech) {
   int wcDeadLegs = 0;
 
-  if (MechType(objMech) != CLASS_MECH)
+  if (((objMech)->ud.type) != CLASS_MECH)
     return 0;
 
-  if (MechIsQuad(objMech)) {
+  if (mech_is_quad(objMech)) {
     if (IsLegDestroyed(objMech, LARM))
       wcDeadLegs++;
 
@@ -68,17 +74,18 @@ int CountDestroyedLegs(Mech *objMech) {
 }
 
 int IsLegDestroyed(Mech *objMech, int wLoc) {
-  return (SectIsDestroyed(objMech, wLoc) || SectIsBreached(objMech, wLoc) ||
-          SectIsFlooded(objMech, wLoc));
+  return (mech_section_is_destroyed(objMech, wLoc) ||
+          mech_section_is_breached(objMech, wLoc) ||
+          mech_section_is_flooded(objMech, wLoc));
 }
 
 int IsMechLegLess(Mech *objMech) {
   int wcMaxLegs = 0;
 
-  if (MechType(objMech) != CLASS_MECH)
+  if (((objMech)->ud.type) != CLASS_MECH)
     return 0;
 
-  if (MechIsQuad(objMech))
+  if (mech_is_quad(objMech))
     wcMaxLegs = 4;
   else
     wcMaxLegs = 2;
@@ -102,7 +109,7 @@ int FindFirstWeaponCrit(Mech *objMech, int wLoc, int wSlot, int wStartSlot,
   wFirstCrit = -1;
 
   for (wCritIter = wStartSlot; wCritIter < NUM_CRITICALS; wCritIter++) {
-    if (GetPartType(objMech, wLoc, wCritIter) == wCritType) {
+    if (mech_critical_part_type(objMech, wLoc, wCritIter) == wCritType) {
       wCritsInLoc++;
 
       if (wFirstCrit == -1)
@@ -144,10 +151,10 @@ int checkAllSections(Mech *mech, int specialToFind) {
 }
 
 int checkSectionForSpecial(Mech *mech, int specialToFind, int wSec) {
-  if (SectIsDestroyed(mech, wSec))
+  if (mech_section_is_destroyed(mech, wSec))
     return 0;
 
-  if (MechSections(mech)[wSec].specials & specialToFind)
+  if (((mech)->ud.sections)[wSec].specials & specialToFind)
     return 1;
 
   return 0;
@@ -159,9 +166,9 @@ int getRemainingInternalPercent(Mech *mech) {
   float wRemaining = 0;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    wMax += GetSectOInt(mech, i);
+    wMax += mech_section_original_internal(mech, i);
 
-    wRemaining += GetSectInt(mech, i);
+    wRemaining += mech_section_internal(mech, i);
   }
 
   if (wMax == 0)
@@ -176,11 +183,11 @@ int getRemainingArmorPercent(Mech *mech) {
   float wRemaining = 0;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    wMax += GetSectOArmor(mech, i);
-    wMax += GetSectORArmor(mech, i);
+    wMax += mech_section_original_armor(mech, i);
+    wMax += mech_section_original_rear_armor(mech, i);
 
-    wRemaining += GetSectArmor(mech, i);
-    wRemaining += GetSectRArmor(mech, i);
+    wRemaining += mech_section_armor(mech, i);
+    wRemaining += mech_section_rear_armor(mech, i);
   }
 
   if (wMax == 0)
@@ -193,8 +200,8 @@ int FindObj(Mech *mech, int loc, int type) {
   int count = 0, i;
 
   for (i = 0; i < NUM_CRITICALS; i++)
-    if (GetPartType(mech, loc, i) == type)
-      if (!PartIsNonfunctional(mech, loc, i))
+    if (mech_critical_part_type(mech, loc, i) == type)
+      if (!mech_critical_is_nonfunctional(mech, loc, i))
         count++;
   return count;
 }
@@ -203,7 +210,7 @@ int FindObjWithDest(Mech *mech, int loc, int type) {
   int count = 0, i;
 
   for (i = 0; i < NUM_CRITICALS; i++)
-    if (GetPartType(mech, loc, i) == type)
+    if (mech_critical_part_type(mech, loc, i) == type)
       count++;
   return count;
 }
@@ -228,15 +235,14 @@ Mech *find_mech_in_hex(Mech *mech, BattleMap *mech_map, int x, int y,
                                                  mech_map->mechsOnMap[loop]);
       if (!target)
         continue;
-      if (!(MechX(target) == x && MechY(target) == y) && !(needlos & 2))
+      if (!(((target)->pd.x) == x && ((target)->pd.y) == y) && !(needlos & 2))
         continue;
       if (needlos) {
         if (needlos & 1)
-          if (!mech_los_check(mech, target, x, y,
-                              FlMechRange(mech_map, mech, target)))
+          if (!mech_los_check(mech, target, x, y, mech_range_to(mech, target)))
             continue;
         if (needlos & 2) {
-          if (MechTeam(mech) != MechTeam(target))
+          if (((mech)->pd.team) != ((target)->pd.team))
             continue;
           if (!(MechSeesHex(target, mech_map, x, y)))
             continue;
@@ -255,9 +261,9 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
   int mod, nmod = 0;
   int wMaxShots = 0;
   int wRoundsToCheck = 1;
-  int wWeapMode = GetPartFireMode(mech, section, critical);
+  int wWeapMode = mech_critical_fire_mode(mech, section, critical);
   int tResetMode = 0;
-  DbRef player = GunPilot(mech);
+  DbRef player = mech_gunner_dbref(mech);
 
   /* Return if it's an energy or PC weapon */
   if (MechWeapons[weapindx].type == TBEAM ||
@@ -266,16 +272,21 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
 
   /* Check for rocket launchers */
   if (MechWeapons[weapindx].special == ROCKET) {
-    DOCHECK0_CONTEXT(mech->xcode.context, wWeapMode & ROCKET_FIRED,
-                     "That weapon has already been used!");
+    if (wWeapMode & ROCKET_FIRED) {
+      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                   "That weapon has already been used!");
+      return 0;
+    }
     return 1;
   }
 
   /* Check for One-Shots */
   if (wWeapMode & OS_MODE) {
-    DOCHECK0_CONTEXT(mech->xcode.context,
-                     GetPartFireMode(mech, section, critical) & OS_USED,
-                     "That weapon has already been used!");
+    if (mech_critical_fire_mode(mech, section, critical) & OS_USED) {
+      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                   "That weapon has already been used!");
+      return 0;
+    }
     return 1;
   }
   /* Check RACs - No special ammo type possible */
@@ -283,19 +294,19 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
     wMaxShots = CountAmmoForWeapon(mech, weapindx);
 
     if ((wWeapMode & RAC_TWOSHOT_MODE) && (wMaxShots < 2)) {
-      GetPartFireMode(mech, section, critical) &= ~RAC_TWOSHOT_MODE;
+      mech_critical_fire_mode_clear(mech, section, critical, RAC_TWOSHOT_MODE);
 
       return 1;
     }
 
     if ((wWeapMode & RAC_FOURSHOT_MODE) && (wMaxShots < 4)) {
-      GetPartFireMode(mech, section, critical) &= ~RAC_FOURSHOT_MODE;
+      mech_critical_fire_mode_clear(mech, section, critical, RAC_FOURSHOT_MODE);
 
       return 1;
     }
 
     if ((wWeapMode & RAC_SIXSHOT_MODE) && (wMaxShots < 6)) {
-      GetPartFireMode(mech, section, critical) &= ~RAC_SIXSHOT_MODE;
+      mech_critical_fire_mode_clear(mech, section, critical, RAC_SIXSHOT_MODE);
 
       return 1;
     }
@@ -315,65 +326,77 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
   if ((wWeapMode & ULTRA_MODE) || (wWeapMode & RFAC_MODE))
     wRoundsToCheck = 2;
 
-  mod = GetPartAmmoMode(mech, section, critical) & AMMO_MODES;
+  mod = mech_critical_ammo_mode(mech, section, critical) & AMMO_MODES;
 
   if (!mod) {
-    DOCHECK0_CONTEXT(
-        mech->xcode.context,
-        !FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
-                               ammoLoc, ammoCrit, AMMO_MODES, 0),
-        "You don't have any ammo for that weapon stored on this mech!");
+    if (!FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
+                               ammoLoc, ammoCrit, AMMO_MODES, 0)) {
+      mecha_notify(
+          btech_context_evaluation(mech->xcode.context), player,
+          "You don't have any ammo for that weapon stored on this mech!");
+      return 0;
+    }
 
-    DOCHECK0_CONTEXT(mech->xcode.context,
-                     !GetPartData(mech, *ammoLoc, *ammoCrit),
-                     "You are out of ammo for that weapon!");
+    if (!mech_critical_data(mech, *ammoLoc, *ammoCrit)) {
+      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                   "You are out of ammo for that weapon!");
+      return 0;
+    }
 
     if (wRoundsToCheck > 1) {
-      GetPartData(mech, *ammoLoc, *ammoCrit)--;
+      mech_critical_data_set(mech, *ammoLoc, *ammoCrit,
+                             mech_critical_data(mech, *ammoLoc, *ammoCrit) - 1);
 
       if (FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
                                 ammoLoc1, ammoCrit1, AMMO_MODES, 0)) {
-        if (!GetPartData(mech, *ammoLoc1, *ammoCrit1))
+        if (!mech_critical_data(mech, *ammoLoc1, *ammoCrit1))
           tResetMode = 1;
       } else
         tResetMode = 1;
 
       if (tResetMode)
-        GetPartFireMode(mech, section, critical) &= ~wWeapMode;
+        mech_critical_fire_mode_clear(mech, section, critical, wWeapMode);
 
-      GetPartData(mech, *ammoLoc, *ammoCrit)++;
+      mech_critical_data_set(mech, *ammoLoc, *ammoCrit,
+                             mech_critical_data(mech, *ammoLoc, *ammoCrit) + 1);
     }
   } else {
-    if (IsArtillery(weapindx))
+    if (weapon_catalogue_is_artillery(weapindx))
       nmod = (~mod) & ARTILLERY_MODES;
     else
       nmod = (~mod) & AMMO_MODES;
     mod = (mod & AMMO_MODES);
 
-    DOCHECK0_CONTEXT(
-        mech->xcode.context,
-        !FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
-                               ammoLoc, ammoCrit, nmod, mod),
-        "You don't have any ammo for that weapon stored on this mech!");
+    if (!FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
+                               ammoLoc, ammoCrit, nmod, mod)) {
+      mecha_notify(
+          btech_context_evaluation(mech->xcode.context), player,
+          "You don't have any ammo for that weapon stored on this mech!");
+      return 0;
+    }
 
-    DOCHECK0_CONTEXT(mech->xcode.context,
-                     !GetPartData(mech, *ammoLoc, *ammoCrit),
-                     "You are out of the special ammo type for that weapon!");
+    if (!mech_critical_data(mech, *ammoLoc, *ammoCrit)) {
+      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                   "You are out of the special ammo type for that weapon!");
+      return 0;
+    }
 
     if (wRoundsToCheck > 1) {
-      GetPartData(mech, *ammoLoc, *ammoCrit)--;
+      mech_critical_data_set(mech, *ammoLoc, *ammoCrit,
+                             mech_critical_data(mech, *ammoLoc, *ammoCrit) - 1);
 
       if (FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
                                 ammoLoc1, ammoCrit1, nmod, mod)) {
-        if (!GetPartData(mech, *ammoLoc1, *ammoCrit1))
+        if (!mech_critical_data(mech, *ammoLoc1, *ammoCrit1))
           tResetMode = 1;
       } else
         tResetMode = 1;
 
       if (tResetMode)
-        GetPartFireMode(mech, section, critical) &= ~wWeapMode;
+        mech_critical_fire_mode_clear(mech, section, critical, wWeapMode);
 
-      GetPartData(mech, *ammoLoc, *ammoCrit)++;
+      mech_critical_data_set(mech, *ammoLoc, *ammoCrit,
+                             mech_critical_data(mech, *ammoLoc, *ammoCrit) + 1);
     }
   }
 
@@ -391,29 +414,31 @@ void ChannelEmitKill(Mech *mech, Mech *attacker, const char *reason) {
     return;
 
   if (mech != attacker)
-    MechUnitsKilled(attacker) = MechUnitsKilled(attacker) + 1;
+    ((attacker)->rd.units_killed) = ((attacker)->rd.units_killed) + 1;
 
   if (reason) {
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
-                               mech->mynum, MechType_Ref(mech), attacker->mynum,
-                               MechType_Ref(attacker), reason));
+                               mech->mynum, ((mech)->ud.mech_type),
+                               attacker->mynum, ((attacker)->ud.mech_type),
+                               reason));
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEATHS, "%s",
                        tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
-                               mech->mynum, MechType_Ref(mech), attacker->mynum,
-                               MechType_Ref(attacker), reason));
+                               mech->mynum, ((mech)->ud.mech_type),
+                               attacker->mynum, ((attacker)->ud.mech_type),
+                               reason));
   } else {
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("#%ld [%s] has been killed by #%ld [%s]",
-                               mech->mynum, MechType_Ref(mech), attacker->mynum,
-                               MechType_Ref(attacker)));
+                               mech->mynum, ((mech)->ud.mech_type),
+                               attacker->mynum, ((attacker)->ud.mech_type)));
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEATHS, "%s",
                        tprintf("#%ld [%s] has been killed by #%ld [%s]",
-                               mech->mynum, MechType_Ref(mech), attacker->mynum,
-                               MechType_Ref(attacker)));
+                               mech->mynum, ((mech)->ud.mech_type),
+                               attacker->mynum, ((attacker)->ud.mech_type)));
   }
 
-  if (IsDS(mech)) {
+  if (mech_is_dropship(mech)) {
     if (reason) {
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
                          tprintf("#%ld has been killed by #%ld (%s)",

@@ -2,7 +2,6 @@
 #include "btconfig.h"
 #include "btech/context.h"
 #include "ds_bay_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_los.h"
 #include "map_obj_api.h"

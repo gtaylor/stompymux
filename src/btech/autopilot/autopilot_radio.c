@@ -30,7 +30,6 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "legacy_macros.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
@@ -59,7 +58,7 @@ void autopilot_radio_clear_commands(Autopilot *autopilot, char *buffer) {
   auto_disengage(autopilot->mynum, autopilot, "");
   auto_delcommand(autopilot->mynum, autopilot, "-1");
   if (autopilot->target >= -1) {
-    if (AssignedTarget(autopilot) && autopilot->target != -1)
+    if (autopilot_has_assigned_target(autopilot) && autopilot->target != -1)
       snprintf(buffer, SBUF_SIZE, "autogun target %ld", autopilot->target);
     else
       snprintf(buffer, SBUF_SIZE, "autogun on");
@@ -67,9 +66,6 @@ void autopilot_radio_clear_commands(Autopilot *autopilot, char *buffer) {
   }
 }
 
-#define BACMD(name)                                                            \
-  char *name(Autopilot *autopilot, Mech *mech, char **args, int argc, int chn)
-#define ACMD(name) static BACMD(name)
 void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech, char **args,
                                 int argc, char *mesg) {
 
@@ -82,14 +78,14 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech, char **args,
     autopilot->target_update_tick = AUTO_GUN_UPDATE_TICK;
 
     /* Reset the Assigned target flag */
-    if (AssignedTarget(autopilot)) {
-      UnassignTarget(autopilot);
+    if (autopilot_has_assigned_target(autopilot)) {
+      autopilot_assigned_target_set(autopilot, false);
     }
 
-    if (Gunning(autopilot)) {
-      DoStopGun(autopilot);
+    if (autopilot_is_gunning(autopilot)) {
+      autopilot_gunning_stop(autopilot);
     }
-    DoStartGun(autopilot);
+    autopilot_gunning_start(autopilot);
 
     snprintf(mesg, LBUF_SIZE, "shooting at whatever I want");
     return;
@@ -102,12 +98,12 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech, char **args,
     autopilot->target_update_tick = 0;
 
     /* Reset this flag since we don't want to be shooting anything */
-    if (AssignedTarget(autopilot)) {
-      UnassignTarget(autopilot);
+    if (autopilot_has_assigned_target(autopilot)) {
+      autopilot_assigned_target_set(autopilot, false);
     }
 
-    if (Gunning(autopilot))
-      DoStopGun(autopilot);
+    if (autopilot_is_gunning(autopilot))
+      autopilot_gunning_stop(autopilot);
 
     snprintf(mesg, LBUF_SIZE, "powering down weapons");
     return;
@@ -118,8 +114,9 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech, char **args,
     /* Right now we're only going to allow them to specify a value
      * between 0 and 100 - basicly how much percentage wise over
      * the current value does the new target have to be to switch */
-    if (argc == 3 && !Readnum(threshold, args[2]) && threshold >= 0 &&
-        threshold <= 100) {
+    if (argc == 3 &&
+        !(!((threshold) = atoi(args[2])) && strcmp((args[2]), "0")) &&
+        threshold >= 0 && threshold <= 100) {
 
       /* Set the new threshold value */
       autopilot->target_threshold = threshold;
@@ -196,11 +193,11 @@ void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech, char **args,
   int x, y;
   char buffer[SBUF_SIZE];
 
-  if (Readnum(x, args[1])) {
+  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!First number not an integer");
     return;
   }
-  if (Readnum(y, args[2])) {
+  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!First number not an integer");
     return;
   }
@@ -307,11 +304,11 @@ void auto_radio_command_goto(Autopilot *autopilot, Mech *mech, char **args,
   char buffer[SBUF_SIZE];
   BattleMap *map;
 
-  if (Readnum(x, args[1])) {
+  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!First number not integer");
     return;
   }
-  if (Readnum(y, args[2])) {
+  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Second number not integer");
     return;
   }
@@ -345,7 +342,7 @@ void auto_radio_command_heading(Autopilot *autopilot, Mech *mech, char **args,
   int heading;
   char buffer[SBUF_SIZE];
 
-  if (Readnum(heading, args[1])) {
+  if ((!((heading) = atoi(args[1])) && strcmp((args[1]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Number not integer");
     return;
   }
@@ -436,11 +433,11 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech, char **args,
     snprintf(mesg, LBUF_SIZE, "jumping on [%s]", args[1]);
     return;
   } else {
-    if (Readnum(bear, args[1])) {
+    if ((!((bear) = atoi(args[1])) && strcmp((args[1]), "0"))) {
       snprintf(mesg, LBUF_SIZE, "!Invalid bearing");
       return;
     }
-    if (Readnum(rng, args[2])) {
+    if ((!((rng) = atoi(args[2])) && strcmp((args[2]), "0"))) {
       snprintf(mesg, LBUF_SIZE, "!Invalid range");
       return;
     }
@@ -460,14 +457,14 @@ void auto_radio_command_leavebase(Autopilot *autopilot, Mech *mech, char **args,
   char buffer[SBUF_SIZE];
   int direction;
 
-  if (Readnum(direction, args[1])) {
+  if ((!((direction) = atoi(args[1])) && strcmp((args[1]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid value for direction");
     return;
   }
 
   /* Make sure chasetarget doesn't interfere with this */
-  if (ChasingTarget(autopilot)) {
-    StopChasingTarget(autopilot);
+  if (autopilot_is_chasing_target(autopilot)) {
+    autopilot_chasing_target_set(autopilot, false);
   }
 
   autopilot_radio_clear_commands(autopilot, buffer);
@@ -487,11 +484,11 @@ void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech, char **args,
   int x, y;
   char buffer[SBUF_SIZE];
 
-  if (Readnum(x, args[1])) {
+  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!First number not integer");
     return;
   }
-  if (Readnum(y, args[2])) {
+  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Second number not integer");
     return;
   }
@@ -520,8 +517,8 @@ void auto_radio_command_pickup(Autopilot *autopilot, Mech *mech, char **args,
   }
 
   /* Make sure chasetarget doesn't interfere with this */
-  if (ChasingTarget(autopilot)) {
-    StopChasingTarget(autopilot);
+  if (autopilot_is_chasing_target(autopilot)) {
+    autopilot_chasing_target_set(autopilot, false);
   }
 
   autopilot_radio_clear_commands(autopilot, buffer);
