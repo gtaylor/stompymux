@@ -87,7 +87,6 @@ Attribute attr_table[] = {{"Alias", A_ALIAS},
                           {"Pilot", A_PILOTNUM},
                           {"Tacsize", A_TACSIZE},
                           {"Xtype", A_XTYPE},
-                          {"Techtime", A_TECHTIME},
                           {nullptr, 0}};
 
 static char *set_string(char **ptr, char *new) {
