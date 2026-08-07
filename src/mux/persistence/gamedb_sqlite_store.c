@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "mux/objects/db.h"
+#include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
 #include "mux/objects/player_account.h"
@@ -152,6 +153,35 @@ done:
   return result;
 }
 
+static int gamedb_store_economy_parts(GameDatabase *database, sqlite3 *sqlite,
+                                      DbRef object) {
+  sqlite3_stmt *statement = nullptr;
+  int result = -1;
+
+  if (gamedb_prepare(sqlite, &statement,
+                     "INSERT INTO btech_economy_parts "
+                     "(object_dbref, part_id, brand_id, quantity) "
+                     "VALUES (?, ?, ?, ?);") < 0)
+    return -1;
+  for (size_t index = 0; index < economy_parts_entry_count(database, object);
+       index++) {
+    EconomyPartEntryView entry;
+
+    if (!economy_parts_entry(database, object, index, &entry) ||
+        gamedb_bind_int(statement, 1, object) < 0 ||
+        gamedb_bind_int(statement, 2, entry.part_id) < 0 ||
+        gamedb_bind_int(statement, 3, entry.brand_id) < 0 ||
+        gamedb_bind_int(statement, 4, entry.quantity) < 0 ||
+        gamedb_step(statement) < 0)
+      goto done;
+  }
+  result = 0;
+
+done:
+  sqlite3_finalize(statement);
+  return result;
+}
+
 /*
  * Populate a newly created SQLite database from the live in-memory game
  * state. The transaction is committed only after every table is complete.
@@ -261,7 +291,8 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
 
     if ((typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER &&
          gamedb_store_player_account(context->database, sqlite, object) < 0) ||
-        gamedb_store_native_state(context->database, sqlite, object) < 0)
+        gamedb_store_native_state(context->database, sqlite, object) < 0 ||
+        gamedb_store_economy_parts(context->database, sqlite, object) < 0)
       return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
     for (size_t index = 0;
          index < object_state_count(context->database, object); index++) {

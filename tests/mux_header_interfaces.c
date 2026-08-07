@@ -27,6 +27,7 @@
 #include "mux/network/telnet_socket.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
+#include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/player_account.h"
 #include "mux/objects/powers.h"

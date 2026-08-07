@@ -434,6 +434,14 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME player_account COMMAND player_account_test)
 
+  add_executable(economy_parts_test tests/economy_parts.c
+    ${MUX_SOURCE_DIR}/objects/economy_parts.c)
+  target_link_libraries(economy_parts_test PRIVATE btmux_options)
+  target_include_directories(economy_parts_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME economy_parts COMMAND economy_parts_test)
+
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
   target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)
   if(BTECH_ADVANCED_ECON)

@@ -175,7 +175,6 @@ bool object_attribute_is_administrable(int attribute_number) {
   case A_PILOTNUM:
   case A_MAPVIS:
   case A_TECHTIME:
-  case A_ECONPARTS:
   case A_SKILLS:
   case A_PCEQUIP:
     return true;

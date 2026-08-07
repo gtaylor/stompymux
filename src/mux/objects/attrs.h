@@ -108,7 +108,7 @@ constexpr int A_PILOTNUM = 239; /* Mech's pilot # */
 constexpr int A_MAPVIS = 240;   /* Visibility */
 /* 241 is reserved for the removed timezone attribute. */
 constexpr int A_TECHTIME = 242; /* Time (as a time_t number) until completion */
-constexpr int A_ECONPARTS = 243; /* Econ parts */
+/* 243 is reserved for the removed EconParts attribute. */
 
 /* BT-stats: */
 constexpr int A_SKILLS = 244;  /* Skills */

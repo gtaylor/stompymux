@@ -358,10 +358,10 @@ static int check_snapshot(const char *path) {
            "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
            "IN ('snapshot', 'objects', 'player_state', 'btech_object_state', "
            "'object_state', 'player_login_history', "
-           "'player_last_page_recipients');",
-           7) == 0 &&
+           "'player_last_page_recipients', 'btech_economy_parts');",
+           8) == 0 &&
        query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 26) == 0 &&
+                 27) == 0 &&
        query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                  1) == 0 &&
        query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
@@ -382,6 +382,10 @@ static int check_snapshot(const char *path) {
                  "SELECT count(*) FROM pragma_table_info('objects') WHERE "
                  "name = 'has_idle_power';",
                  1) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('btech_object_state') "
+                 "WHERE name = 'economy_parts';",
+                 0) == 0 &&
        query_int(sqlite,
                  "SELECT count(*) FROM pragma_table_info('objects') WHERE "
                  "name IN ('has_long_fingers_power', 'has_comm_all_power', "
@@ -877,6 +881,49 @@ static int seed_player_account_state(const char *path) {
   return result;
 }
 
+static int seed_economy_parts(const char *path) {
+  sqlite3 *sqlite = NULL;
+  char *error = NULL;
+  int result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
+              sqlite3_exec(sqlite,
+                           "INSERT INTO btech_economy_parts "
+                           "(object_dbref, part_id, brand_id, quantity) VALUES "
+                           "(1, 42, 0, 3), (1, 5, 2, 9);",
+                           NULL, NULL, &error) == SQLITE_OK
+          ? 0
+          : -1;
+  if (result < 0)
+    fprintf(stderr, "Economy parts fixture seed failed: %s\n",
+            error ? error : sqlite3_errmsg(sqlite));
+  sqlite3_free(error);
+  sqlite3_close(sqlite);
+  return result;
+}
+
+static int check_economy_parts(const char *path) {
+  sqlite3 *sqlite = NULL;
+  int result;
+
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
+    return -1;
+  result = query_int(sqlite,
+                     "SELECT count(*) FROM btech_economy_parts "
+                     "WHERE object_dbref = 1 AND part_id = 42 AND "
+                     "brand_id = 0 AND quantity = 3;",
+                     1) == 0 &&
+                   query_int(sqlite,
+                             "SELECT count(*) FROM btech_economy_parts "
+                             "WHERE object_dbref = 1 AND part_id = 5 AND "
+                             "brand_id = 2 AND quantity = 9;",
+                             1) == 0
+               ? 0
+               : -1;
+  sqlite3_close(sqlite);
+  return result;
+}
+
 static int check_player_account_state(const char *path) {
   sqlite3 *sqlite = NULL;
   int result;
@@ -1280,6 +1327,8 @@ int main(int argc, char *argv[]) {
     return 1;
   if (result == 0 && seed_player_account_state(database) < 0)
     return 1;
+  if (result == 0 && seed_economy_parts(database) < 0)
+    return 1;
   file = fopen(sqlite_read_config, "w");
   if (!file)
     return 2;
@@ -1296,7 +1345,7 @@ int main(int argc, char *argv[]) {
        check_btech_special_snapshot(database) < 0 ||
        check_btech_queued_command_state(database) < 0 ||
        check_styled_object_text(database) < 0 ||
-       check_player_account_state(database) < 0)) {
+       check_player_account_state(database) < 0 || check_economy_parts(database) < 0)) {
     fprintf(stderr, "SQLite reload fixture failed: %s (status=%d)\n", directory,
             status);
     return 1;
@@ -1307,7 +1356,8 @@ int main(int argc, char *argv[]) {
                       check_snapshot_dump_type(crash_database, 1) < 0 ||
                       check_btech_special_snapshot(crash_database) < 0 ||
                       check_btech_queued_command_state(crash_database) < 0 ||
-                      check_player_account_state(crash_database) < 0)) {
+                      check_player_account_state(crash_database) < 0 ||
+                      check_economy_parts(crash_database) < 0)) {
     fprintf(stderr, "SQLite crash-dump fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
@@ -1319,7 +1369,8 @@ int main(int argc, char *argv[]) {
        check_snapshot_dump_type(killed_database, 4) < 0 ||
        check_btech_special_snapshot(killed_database) < 0 ||
        check_btech_queued_command_state(killed_database) < 0 ||
-       check_player_account_state(killed_database) < 0)) {
+       check_player_account_state(killed_database) < 0 ||
+       check_economy_parts(killed_database) < 0)) {
     fprintf(stderr, "SQLite killed-dump fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
@@ -1330,7 +1381,7 @@ int main(int argc, char *argv[]) {
        !WIFEXITED(status) || WEXITSTATUS(status) == 2 ||
        check_btech_special_snapshot(database) < 0 ||
        check_btech_nondefault_state(database) < 0 ||
-       check_player_account_state(database) < 0)) {
+       check_player_account_state(database) < 0 || check_economy_parts(database) < 0)) {
     fprintf(stderr, "SQLite-read fixture startup failed: %s (status=%d)\n",
             directory, status);
     return 1;

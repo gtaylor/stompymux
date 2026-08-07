@@ -47,6 +47,7 @@
 #include "mech_utils_api.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
+#include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
@@ -68,18 +69,17 @@ void mech_cargo_weight_recalculate(Mech *mech) {
   int pile[NUM_ITEMS];
   int sw, weight = 0; /* in 1/10 tons */
   int i, j, k;
-  char *t;
-  int i1, i2, i3;
+  EconomyPartEntryView entry;
 
-  t = btech_attribute_read(mech_context(mech)->database, mech_dbref(mech),
-                           A_ECONPARTS, (char[LBUF_SIZE]){0});
   bzero(pile, sizeof(pile));
-  while (*t) {
-    if (*t == '[')
-      if ((sscanf(t, "[%d,%d,%d]", &i1, &i2, &i3)) == 3)
-        pile[i1] += ((IsBomb(i1)) ? 4 : 1) * i3;
-    t++;
-  }
+  for (size_t index = 0;
+       index < economy_parts_entry_count(mech_context(mech)->database,
+                                         mech_dbref(mech));
+       index++)
+    if (economy_parts_entry(mech_context(mech)->database, mech_dbref(mech),
+                            index, &entry) &&
+        entry.part_id >= 0 && entry.part_id < NUM_ITEMS)
+      pile[entry.part_id] += ((IsBomb(entry.part_id)) ? 4 : 1) * entry.quantity;
   if (mech_is_flying_type(mech))
     for (i = 0; i < NUM_SECTIONS; i++)
       for (j = 0; j < NUM_CRITICALS; j++) {
@@ -127,22 +127,20 @@ int loading_bay_whine(DbRef player, DbRef cargobay, Mech *mech) {
 
 void econ_fix_stuff(BtechContext *context, DbRef player, DbRef loc) {
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
-  char *t;
-  int ol, nl, items = 0, kinds = 0;
-  int i1, i2, i3, id, brand;
+  size_t old_entries, new_entries;
+  int items = 0, kinds = 0;
+  int id, brand;
+  EconomyPartEntryView entry;
 
   bzero(pile, sizeof(pile));
-  t = btech_attribute_read(context->database, loc, A_ECONPARTS,
-                           (char[LBUF_SIZE]){0});
-  ol = strlen(t);
-  while (*t) {
-    if (*t == '[')
-      if ((sscanf(t, "[%d,%d,%d]", &i1, &i2, &i3)) == 3)
-        if (!mech_part_is_structural_placeholder(i1))
-          pile[i2][i1] += i3;
-    t++;
-  }
-  silly_atr_set_in(context->database, loc, A_ECONPARTS, "");
+  old_entries = economy_parts_entry_count(context->database, loc);
+  for (size_t index = 0; index < old_entries; index++)
+    if (economy_parts_entry(context->database, loc, index, &entry) &&
+        entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
+        entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT &&
+        !mech_part_is_structural_placeholder(entry.part_id))
+      pile[entry.brand_id][entry.part_id] += entry.quantity;
+  economy_parts_clear(context->database, loc);
   for (id = 0; id < NUM_ITEMS; id++)
     for (brand = 0; brand <= BRANDCOUNT; brand++)
       if (pile[brand][id] > 0 && get_parts_long_name(context, id, brand)) {
@@ -150,11 +148,10 @@ void econ_fix_stuff(BtechContext *context, DbRef player, DbRef loc) {
         kinds++;
         items += pile[brand][id];
       }
-  t = btech_attribute_read(context->database, loc, A_ECONPARTS,
-                           (char[LBUF_SIZE]){0});
-  nl = strlen(t);
+  new_entries = economy_parts_entry_count(context->database, loc);
   notify_printf(btech_context_evaluation(context), player,
-                "Fixing done. Original length: %d. New length: %d.", ol, nl);
+                "Fixing done. Original entries: %zu. New entries: %zu.",
+                old_entries, new_entries);
   notify_printf(btech_context_evaluation(context), player,
                 "Items in new: %d. Unique items in new: %d.", items, kinds);
 }
@@ -172,13 +169,13 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   GameDatabase *database = context->database;
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
   int pile2[BRANDCOUNT + 1][NUM_ITEMS];
-  char *t, *ch;
+  char *ch;
   PartDisplayName display_name;
-  int i1, i2, i3, id, brand;
+  int id, brand;
   int x, i;
 
-#ifdef BT_PART_WEIGHTS
   char tmpstr[LBUF_SIZE];
+#ifdef BT_PART_WEIGHTS
   int sw = 0;
 #endif /* BT_PART_WEIGHTS */
   CoolMenu *c = NULL;
@@ -190,12 +187,14 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   CreateMenuEntry_Simple(&c, header, CM_ONE | CM_CENTER);
   CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
   /* Then, we go on a mad rampage ;-) */
-  t = btech_attribute_read(database, loc, A_ECONPARTS, (char[LBUF_SIZE]){0});
-  while (*t) {
-    if (*t == '[')
-      if ((sscanf(t, "[%d,%d,%d]", &i1, &i2, &i3)) == 3)
-        pile[i2][i1] += i3;
-    t++;
+  for (size_t index = 0; index < economy_parts_entry_count(database, loc);
+       index++) {
+    EconomyPartEntryView entry;
+
+    if (economy_parts_entry(database, loc, index, &entry) &&
+        entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
+        entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT)
+      pile[entry.brand_id][entry.part_id] += entry.quantity;
   }
   i = 0;
   if (buf)
@@ -215,15 +214,15 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
         continue;
       }
 #ifndef BT_PART_WEIGHTS
-      ch = display_name.text;
+      snprintf(tmpstr, LBUF_SIZE, "%s x%d", display_name.text, x);
+      ch = tmpstr;
 #else
       sw = btech_part_weight(id);
-      snprintf(tmpstr, LBUF_SIZE, "%s (%.1ft)", display_name.text,
+      snprintf(tmpstr, LBUF_SIZE, "%s x%d (%.1ft)", display_name.text, x,
                (sw * x) / 1024.0);
       ch = tmpstr;
 #endif /* BT_PART_WEIGHTS */
-      /* x = amount of things */
-      CreateMenuEntry_Killer(&c, ch, CM_TWO | CM_NUMBER | CM_NOTOG, 0, x, x);
+      CreateMenuEntry_Simple(&c, ch, CM_TWO);
       found++;
     }
   }
@@ -440,9 +439,8 @@ void mech_Rresetstuff(DbRef player, void *data, char *buffer) {
   BtechContext *context = object->context;
 
   notify(btech_context_evaluation(context), player, "Inventory cleaned!");
-  silly_atr_set_in(context->database,
-                   game_object_location(context->database, player), A_ECONPARTS,
-                   "");
+  economy_parts_clear(context->database,
+                      game_object_location(context->database, player));
   btech_channel_send(context, BTECH_CHANNEL_MECH_ECON, "%s",
                      tprintf("#%ld reset #%ld's stuff.", player,
                              game_object_location(context->database, player)));

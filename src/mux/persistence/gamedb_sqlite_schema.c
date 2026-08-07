@@ -6,7 +6,7 @@
 #include "mux/persistence/gamedb_sqlite_internal.h"
 
 // Increment whenever an incompatible schema change is made.
-const int GAMEDB_SCHEMA_VERSION = 26;
+const int GAMEDB_SCHEMA_VERSION = 27;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 const int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -117,9 +117,16 @@ const char schema_state_sql[] =
     " mech_description TEXT, mw_template TEXT, faction TEXT, health TEXT,"
     " character_attributes TEXT, build_links TEXT, build_entrances TEXT,"
     " build_coordinates TEXT, advantages TEXT, pilot_dbref INTEGER,"
-    " map_visibility TEXT, tech_complete_at INTEGER, economy_parts TEXT,"
+    " map_visibility TEXT, tech_complete_at INTEGER,"
     " skills TEXT, personal_combat_equipment TEXT"
     ");"
+    "CREATE TABLE btech_economy_parts ("
+    " object_dbref INTEGER NOT NULL REFERENCES objects(dbref) ON DELETE "
+    "CASCADE,"
+    " part_id INTEGER NOT NULL, brand_id INTEGER NOT NULL,"
+    " quantity INTEGER NOT NULL CHECK (quantity > 0),"
+    " PRIMARY KEY (object_dbref, part_id, brand_id)"
+    ") WITHOUT ROWID;"
     "CREATE TABLE object_state ("
     " object_dbref INTEGER NOT NULL REFERENCES objects(dbref),"
     " namespace TEXT NOT NULL,"
@@ -155,7 +162,6 @@ const NativeColumn native_columns[] = {
     {A_PILOTNUM, "btech_object_state", "object_dbref", "pilot_dbref"},
     {A_MAPVIS, "btech_object_state", "object_dbref", "map_visibility"},
     {A_TECHTIME, "btech_object_state", "object_dbref", "tech_complete_at"},
-    {A_ECONPARTS, "btech_object_state", "object_dbref", "economy_parts"},
     {A_SKILLS, "btech_object_state", "object_dbref", "skills"},
     {A_PCEQUIP, "btech_object_state", "object_dbref",
      "personal_combat_equipment"},

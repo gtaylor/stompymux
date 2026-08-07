@@ -1,4 +1,5 @@
 #include "mech_template_api.h"
+#include "mux/objects/economy_parts.h"
 #include "values_internal.h"
 
 void fun_btunderrepair(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -28,7 +29,6 @@ void fun_btstores(char *buff, char **bufc, DbRef player, DbRef cause,
   int i = -1, x = 0;
   int p, b;
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
-  char *t;
 
   FUNCHECK(!is_wizard(context->world->database, player),
            "#-1 PERMISSION DENIED");
@@ -47,13 +47,15 @@ void fun_btstores(char *buff, char **bufc, DbRef player, DbRef cause,
                      econ_find_items(context->btech, it, p, b));
   } else {
     memset(pile, 0, sizeof(pile));
-    t = btech_attribute_read(context->world->database, it, A_ECONPARTS,
-                             (char[LBUF_SIZE]){0});
-    while (*t) {
-      if (*t == '[')
-        if ((sscanf(t, "[%d,%d,%d]", &i, &p, &b)) == 3)
-          pile[p][i] += b;
-      t++;
+    for (size_t index = 0;
+         index < economy_parts_entry_count(context->world->database, it);
+         index++) {
+      EconomyPartEntryView entry;
+
+      if (economy_parts_entry(context->world->database, it, index, &entry) &&
+          entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
+          entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT)
+        pile[entry.brand_id][entry.part_id] += entry.quantity;
     }
     for (i = 0; i < (int)part_name_count(context->btech); i++) {
       const PartNameEntry *part_name = part_name_at(context->btech, (size_t)i);
@@ -80,7 +82,6 @@ void fun_btstores_short(char *buff, char **bufc, DbRef player, DbRef cause,
   int i = -1, x = 0;
   int p, b;
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
-  char *t;
 
   FUNCHECK(!is_wizard(context->world->database, player),
            "#-1 PERMISSION DENIED");
@@ -99,13 +100,15 @@ void fun_btstores_short(char *buff, char **bufc, DbRef player, DbRef cause,
                      econ_find_items(context->btech, it, p, b));
   } else {
     memset(pile, 0, sizeof(pile));
-    t = btech_attribute_read(context->world->database, it, A_ECONPARTS,
-                             (char[LBUF_SIZE]){0});
-    while (*t) {
-      if (*t == '[')
-        if ((sscanf(t, "[%d,%d,%d]", &i, &p, &b)) == 3)
-          pile[p][i] += b;
-      t++;
+    for (size_t index = 0;
+         index < economy_parts_entry_count(context->world->database, it);
+         index++) {
+      EconomyPartEntryView entry;
+
+      if (economy_parts_entry(context->world->database, it, index, &entry) &&
+          entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
+          entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT)
+        pile[entry.brand_id][entry.part_id] += entry.quantity;
     }
     for (i = 0; i < (int)part_name_count(context->btech); i++) {
       const PartNameEntry *part_name = part_name_at(context->btech, (size_t)i);

@@ -8,6 +8,7 @@
 
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
+#include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
 #include "mux/objects/player_account.h"
@@ -353,6 +354,36 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
   return 0;
 }
 
+static int gamedb_load_economy_parts(PersistenceContext *context,
+                                     sqlite3 *sqlite) {
+  sqlite3_stmt *statement = nullptr;
+  int step;
+
+  if (gamedb_prepare(sqlite, &statement,
+                     "SELECT object_dbref, part_id, brand_id, quantity "
+                     "FROM btech_economy_parts "
+                     "ORDER BY object_dbref, part_id, brand_id;") < 0)
+    return -1;
+  while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
+    DbRef object;
+    int part_id, brand_id, quantity;
+
+    if (gamedb_column_long(statement, 0, &object) < 0 ||
+        !is_good_obj(context->database, object) ||
+        is_going(context->database, object) ||
+        gamedb_column_int(statement, 1, &part_id) < 0 ||
+        gamedb_column_int(statement, 2, &brand_id) < 0 ||
+        gamedb_column_int(statement, 3, &quantity) < 0 || quantity <= 0 ||
+        !economy_parts_set_quantity(context->database, object, part_id,
+                                    brand_id, quantity)) {
+      sqlite3_finalize(statement);
+      return -1;
+    }
+  }
+  sqlite3_finalize(statement);
+  return step == SQLITE_DONE ? 0 : -1;
+}
+
 static int gamedb_load_object_state(PersistenceContext *context,
                                     sqlite3 *sqlite) {
   sqlite3_stmt *statement = nullptr;
@@ -439,6 +470,7 @@ int gamedb_load(PersistenceContext *context, const char *path) {
     if (gamedb_load_objects(context, sqlite, db_top) < 0 ||
         gamedb_load_player_accounts(context, sqlite) < 0 ||
         gamedb_load_native_state(context, sqlite) < 0 ||
+        gamedb_load_economy_parts(context, sqlite) < 0 ||
         gamedb_load_object_state(context, sqlite) < 0) {
       gamedb_log_failure(context->log, "loading snapshot data", path, sqlite);
     } else if (gamedb_load_extensions(context, sqlite, path) < 0) {

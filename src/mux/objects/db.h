@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "mux/commands/command_context.h"
@@ -36,6 +37,19 @@ struct Attribute {
 typedef struct NativeObjectState NativeObjectState;
 struct NativeObjectState {
   char *values[256];
+};
+
+typedef struct EconomyPartEntry EconomyPartEntry;
+struct EconomyPartEntry {
+  int part_id;
+  int brand_id;
+  int quantity;
+};
+
+typedef struct EconomyPartsState EconomyPartsState;
+struct EconomyPartsState {
+  EconomyPartEntry *entries;
+  size_t count;
 };
 
 typedef struct AttributeStack AttributeStack;
@@ -115,6 +129,7 @@ struct GameObject {
 
   ObjectStateCollection *state;
   PlayerAccountState *account; /* Present only for player objects. */
+  EconomyPartsState economy_parts;
   NativeObjectState native;
 };
 
