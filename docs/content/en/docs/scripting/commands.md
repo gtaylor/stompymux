@@ -96,7 +96,7 @@ Every command handler receives a context table as its first argument.
 Use `ctx.enactor` for player-facing notifications. An object module may use
 `ctx.object` with the [`mux` package](packages/mux/) to store persistent state.
 Global handlers must not assume an object is present. Use `ctx.descriptor`
-with [`mux.flow_start`](packages/mux/#muxflow_startdescriptor-module-first_step)
+with [`mux.flow_start`](packages/mux/flow-start/)
 to start an [interactive flow](flows/) on the connection that issued the
 command.
 

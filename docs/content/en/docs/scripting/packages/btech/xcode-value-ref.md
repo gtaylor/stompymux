@@ -1,0 +1,40 @@
+---
+title: btech.xcode_value_ref
+linkTitle: btech.xcode_value_ref
+type: docs
+weight: 226
+---
+
+# `btech.xcode_value_ref`
+
+Reads a script-visible native field from a unit template.
+
+## Function
+
+### Synopsis
+
+```lua
+btech.xcode_value_ref( reference, name )
+```
+
+### Arguments
+
+`string reference`
+: The unit template reference.
+
+`string name`
+: The field name.
+
+### Returns
+
+`string result`
+: The handler's serialized text result.
+
+## Notes
+
+This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error. The reference is resolved from the configured unit-template database.
+
+## See Also
+
+- [`btech`](../)
+- [`btech.xcode_value`](../xcode-value/)

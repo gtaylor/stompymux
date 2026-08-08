@@ -5,4 +5,9 @@ type: docs
 weight: 1000
 ---
 
-Package reference material for the Lua scripting environment.
+Reference material for the Lua scripting environment.
+
+| Package | Description |
+| --- | --- |
+| [`mux`](mux/) | Built-in objects, persistent state, styled text, connections, and interactive flows. |
+| [`btech`](btech/) | BattleTech units, maps, geometry, repairs, parts, stores, and character data. |

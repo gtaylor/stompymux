@@ -40,7 +40,7 @@ entries; object modules may also provide `events`, `locks`, successful action
 pattern syntax, access behavior, and the handler context table.
 
 A module's `flows` table holds named step functions that
-[`mux.flow_start`](packages/mux/#muxflow_startdescriptor-module-first_step)
+[`mux.flow_start`](packages/mux/flow-start/)
 can drive as a multi-step conversation on a connected player's own
 descriptor - the interactive counterpart to `commands` for menus, prompts,
 and confirmations. See [Interactive flows](flows/).

@@ -1,0 +1,40 @@
+---
+title: btech.set_part_cost
+linkTitle: btech.set_part_cost
+type: docs
+weight: 254
+---
+
+# `btech.set_part_cost`
+
+Sets the configured cost of a part.
+
+## Function
+
+### Synopsis
+
+```lua
+btech.set_part_cost( part_name, cost )
+```
+
+### Arguments
+
+`string part_name`
+: A recognized long or very-long part name.
+
+`number cost`
+: The non-negative cost.
+
+### Returns
+
+`boolean success`
+: `true` after the operation completes without a legacy error.
+
+## Notes
+
+This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error. This operation requires a build with advanced economy support.
+
+## See Also
+
+- [`btech`](../)
+- [`btech.part_cost`](../part-cost/)

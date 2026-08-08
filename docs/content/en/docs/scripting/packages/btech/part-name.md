@@ -1,0 +1,39 @@
+---
+title: btech.part_name
+linkTitle: btech.part_name
+type: docs
+weight: 245
+---
+
+# `btech.part_name`
+
+Returns a name for a packed part ID.
+
+## Function
+
+### Synopsis
+
+```lua
+btech.part_name( part, size )
+```
+
+### Arguments
+
+`number part`
+: The packed part ID.
+
+`string size`
+: `"short"`, `"long"`, or `"vlong"`.
+
+### Returns
+
+`string result`
+: The handler's serialized text result.
+
+## Notes
+
+This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+
+## See Also
+
+- [`btech`](../)
