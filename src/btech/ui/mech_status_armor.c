@@ -19,7 +19,8 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-int ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *ret_armor_value) {
+ArmorLevel ArmorEvaluateSerious(Mech *mech, int loc, int flag,
+                                int *ret_armor_value) {
   int armor_value;
   int armor_percent, armor_denom;
   int repair_flag = 0;

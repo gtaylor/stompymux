@@ -348,6 +348,8 @@ skip_nuke:
     } else
       tKillMech = 1;
     break;
+  default:
+    break;
   }
 
   if (tKillMech) {

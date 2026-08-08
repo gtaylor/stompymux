@@ -325,6 +325,8 @@ int mech_hit_location_transfer(Mech *mech, int hitloc) {
       break;
     }
     break;
+  default:
+    break;
   }
   return -1;
 }

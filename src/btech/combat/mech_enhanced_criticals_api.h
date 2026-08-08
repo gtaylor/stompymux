@@ -7,10 +7,11 @@
 
 #include <stdbool.h>
 
+#include "mech_bth_api.h"
 #include "mux/server/platform.h"
 
 int mech_weapon_critical_to_hit_modifier(Mech *mech, int section, int critical,
-                                         int range_bracket);
+                                         WeaponRangeBracket range_bracket);
 int mech_weapon_critical_heat_modifier(Mech *mech, int section, int critical);
 int mech_weapon_critical_damage_penalty(Mech *mech, int section, int critical);
 bool mech_weapon_critical_can_explode(Mech *mech, int section, int critical,

@@ -180,7 +180,8 @@ void auto_cal_mapindex(BtechContext *context, Mech *mech) {
  * Figured this was easier then coding a bunch of blocks of
  * stuff all over the place.
  */
-void auto_set_chasetarget_mode(Autopilot *autopilot, int mode) {
+void auto_set_chasetarget_mode(Autopilot *autopilot,
+                               AutopilotChaseTargetMode mode) {
 
   /* Depending on the mode we do different things */
   switch (mode) {

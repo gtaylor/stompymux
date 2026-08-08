@@ -23,8 +23,9 @@ static int physical_forward_arc(Mech *mech, const Mech *target) {
   return arc;
 }
 
-void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
-                    int argc, char **args, BattleMap *mech_map, int sect) {
+void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
+                    PhysicalAttackType AttackType, int argc, char **args,
+                    BattleMap *mech_map, int sect) {
   Mech *target;
   float range;
   float maxRange = 1;

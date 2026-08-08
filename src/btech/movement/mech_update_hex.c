@@ -735,6 +735,8 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       }
     }
     break;
+  case MOVE_NONE:
+    break;
   }
 
   if (!done) {

@@ -31,7 +31,7 @@ int mech_fasa_hit_location(Mech *mech, int hitGroup, int *iscritical,
 
   btech_context_hit_roll_record(context, roll);
 
-  switch (mech_class(mech)) {
+  switch ((int)mech_class(mech)) {
   case CLASS_BSUIT:
   case CLASS_MW:
   case CLASS_MECH:

@@ -50,9 +50,6 @@
 #include "template_api.h"
 
 /* Selectors */
-#define SPECIAL_FREE 0
-#define SPECIAL_ALLOC 1
-
 extern char *strtok(char *s, const char *ct);
 
 /*--------------------------------------------------------------------------*/
@@ -65,13 +62,16 @@ extern char *strtok(char *s, const char *ct);
 
 /* Alloc/free routine */
 
-void newfreemechrep(DbRef key, void **data, int selector) {
+void newfreemechrep(DbRef key, void **data,
+                    BtechSpecialLifecycleOperation selector) {
   struct RepairFacility *new = *data;
 
   switch (selector) {
   case SPECIAL_ALLOC:
     new->mynum = key;
     new->current_target = -1;
+    break;
+  case SPECIAL_FREE:
     break;
   }
 }

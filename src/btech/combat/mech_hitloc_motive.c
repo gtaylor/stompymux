@@ -31,7 +31,7 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
 
   wRoll = btech_random_roll(mech_context(mech)) + wRollMod;
 
-  switch (mech_movement_type(mech)) {
+  switch ((int)mech_movement_type(mech)) {
   case MOVE_TRACK:
     strcpy(strVhlTypeName, "tank");
     break;

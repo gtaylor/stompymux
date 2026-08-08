@@ -100,9 +100,6 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
 }
 
 /* Selectors */
-#define SPECIAL_FREE 0
-#define SPECIAL_ALLOC 1
-
 /* Displays a map to player when they use the VIEW <X> <Y> command
  * with a Map Object */
 void map_view(DbRef player, void *data, char *buffer) {
@@ -676,7 +673,8 @@ void initialize_map_empty(BattleMap *new, DbRef key) {
 }
 
 /* Mem alloc/free routines */
-void newfreemap(DbRef key, void **data, int selector) {
+void newfreemap(DbRef key, void **data,
+                BtechSpecialLifecycleOperation selector) {
   BattleMap *new = *data;
   int i;
 

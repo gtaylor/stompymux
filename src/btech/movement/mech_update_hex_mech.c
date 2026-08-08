@@ -53,7 +53,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
   bool skid_cliff = btech_context_uses_skid_cliff_rules(context);
   MechConditionSummary condition = mech_condition_summary(mech);
 
-  switch (mech_movement_type(mech)) {
+  switch ((int)mech_movement_type(mech)) {
   case MOVE_BIPED:
   case MOVE_QUAD:
 

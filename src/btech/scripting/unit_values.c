@@ -33,7 +33,7 @@ char *mechTypefunc(int mode, Mech *mech, char *arg) {
     return mech_types[(short)mech_class(mech)];
   /* Should _alter_ mechtype.. weeeel. */
   if ((i = compare_array(mech_types, arg)) >= 0)
-    mech_class_set(mech, i);
+    mech_class_set(mech, (UnitClass)i);
   return NULL;
 }
 
@@ -43,7 +43,7 @@ char *mechMovefunc(int mode, Mech *mech, char *arg) {
   if (!mode)
     return move_types[(short)mech_movement_type(mech)];
   if ((i = compare_array(move_types, arg)) >= 0)
-    mech_movement_type_set(mech, i);
+    mech_movement_type_set(mech, (MechMovementType)i);
   return NULL;
 }
 

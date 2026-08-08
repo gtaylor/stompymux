@@ -118,7 +118,7 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
   if (!(((mech_movement_type(mech) == MOVE_QUAD) &&
          (CountDestroyedLegs(mech) == 0)) ||
         ((mech_class(mech) == CLASS_VTOL) ||
-         (mech_class(mech) == MOVE_HOVER)) ||
+         ((int)mech_class(mech) == (int)MOVE_HOVER)) ||
         ((HasBoolAdvantage(mech_context(mech), player, "maneuvering_ace") &&
           (mech_pilot_dbref(mech) == player))))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

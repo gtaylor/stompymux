@@ -55,8 +55,8 @@ void PhysicalTrip(Mech *mech, Mech *target) {
 /*
  * Damage the victim.
  */
-void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
-                    int sect, int glance) {
+void PhysicalDamage(Mech *mech, Mech *target, int weightdmg,
+                    PhysicalAttackType AttackType, int sect, int glance) {
 
   int hitloc = 0, damage, hitgroup = 0, isrear, iscritical;
 
@@ -209,6 +209,8 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
         hitloc = mech_kick_hit_location(target, hitgroup);
       }
     }
+    break;
+  default:
     break;
   }
 

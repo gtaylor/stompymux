@@ -129,7 +129,7 @@ void mech_target(DbRef player, void *data, char *buffer) {
                  "Invalid location!");
     return;
   }
-  mech_targeting_aim_set(mech, index, type);
+  mech_targeting_aim_set(mech, index, (UnitClass)type);
   ArmorStringFromIndex(index, section, type, move);
   notify_printf(btech_context_evaluation(context), player, "%s targetted.",
                 section);

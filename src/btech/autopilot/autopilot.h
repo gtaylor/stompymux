@@ -89,13 +89,12 @@ constexpr int AUTO_PROFILE_MAX_SIZE = 30; /* Size of the profile array */
 constexpr int AUTO_SENSOR_TICK = 30;      /* Every 30 seconds or so */
 
 /* Chase Target stuff for use with auto_set_chasetarget_mode */
-constexpr int AUTO_CHASETARGET_ON = 1;  /* Turns it on and resets the values */
-constexpr int AUTO_CHASETARGET_OFF = 2; /* Turns it off */
-#define AUTO_CHASETARGET_REMEMBER                                              \
-  3 /* Turns it on only if the AI remembers it                                 \
-       being on */
-constexpr int AUTO_CHASETARGET_SAVE =
-    4; /* Turns it off and saves that it was on */
+typedef enum AutopilotChaseTargetMode : int {
+  AUTO_CHASETARGET_ON = 1,       /* Turns it on and resets the values */
+  AUTO_CHASETARGET_OFF = 2,      /* Turns it off */
+  AUTO_CHASETARGET_REMEMBER = 3, /* Only if the AI remembers it being on */
+  AUTO_CHASETARGET_SAVE = 4,     /* Turns it off and remembers it was on */
+} AutopilotChaseTargetMode;
 
 /* Roam Stuff */
 /* Types of ROAMing */
@@ -370,11 +369,13 @@ void auto_goto_next_command(Autopilot *autopilot, int time);
 char *auto_get_command_arg(Autopilot *autopilot, int command_number,
                            int arg_number);
 int auto_get_command_enum(Autopilot *autopilot, int command_number);
-void auto_newautopilot(DbRef key, void **data, int selector);
+void auto_newautopilot(DbRef key, void **data,
+                       BtechSpecialLifecycleOperation operation);
 
 /* From autopilot_commands.c */
 void auto_cal_mapindex(BtechContext *context, Mech *mech);
-void auto_set_chasetarget_mode(Autopilot *autopilot, int mode);
+void auto_set_chasetarget_mode(Autopilot *autopilot,
+                               AutopilotChaseTargetMode mode);
 void auto_command_startup(Autopilot *autopilot, Mech *mech);
 void auto_command_shutdown(Autopilot *autopilot, Mech *mech);
 void auto_command_pickup(Autopilot *autopilot, Mech *mech);

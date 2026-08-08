@@ -58,8 +58,10 @@ constexpr int MAX_STRING_LENGTH = 8192;
 #include "mech_utils_api.h"
 #include "template_api.h"
 
-constexpr int MODE_UNKNOWN = 0;
-constexpr int MODE_NORMAL = 1;
+typedef enum TemplateMode : int {
+  MODE_UNKNOWN = 0,
+  MODE_NORMAL = 1,
+} TemplateMode;
 
 extern char *load_cmds[];
 extern char *internals[];

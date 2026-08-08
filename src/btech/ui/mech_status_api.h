@@ -47,12 +47,16 @@ constexpr int ARMOR_FLAG_DIVIDE_10 = 0x40; /* divide displayed value by 10 */
 /*
  * Armor levels returned by ArmorEvaluateSerious().
  */
-constexpr int ARMOR_LEVEL_GREAT = 0;
-constexpr int ARMOR_LEVEL_GOOD = 1;
-constexpr int ARMOR_LEVEL_LOW = 2;
-constexpr int ARMOR_LEVEL_CRITICAL = 3;
-constexpr int ARMOR_LEVEL_OPEN = 4;
-constexpr int ARMOR_LEVEL_REPAIRING = 5;
+typedef enum ArmorLevel : int {
+  ARMOR_LEVEL_GREAT = 0,
+  ARMOR_LEVEL_GOOD = 1,
+  ARMOR_LEVEL_LOW = 2,
+  ARMOR_LEVEL_CRITICAL = 3,
+  ARMOR_LEVEL_OPEN = 4,
+  ARMOR_LEVEL_REPAIRING = 5,
+} ArmorLevel;
+
+static_assert(ARMOR_LEVEL_GREAT == 0 && ARMOR_LEVEL_REPAIRING == 5);
 
 /* mech.status.c */
 void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech);
@@ -79,7 +83,7 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                     int index);
 char *evaluate_ammo_amount(int now, int max);
 void PrintWeaponStatus(EvaluationContext *evaluation, Mech *mech, DbRef player);
-int ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *opt);
+ArmorLevel ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *opt);
 void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                       int owner);
 int hasPhysical(Mech *objMech, int wLoc, int wPhysType);

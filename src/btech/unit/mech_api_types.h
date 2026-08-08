@@ -26,10 +26,14 @@ constexpr int TELE_ALL = 1;  /* Tele all, not just mortals */
 constexpr int TELE_LOUD = 4; /* Loudly teleport */
 constexpr int TELE_XP = 8;   /* Lose 1/3 XP */
 
-constexpr int MINE_STEP = 1; /* Someone steps to a hex */
-constexpr int MINE_LAND = 2; /* Someone lands in a hex */
-constexpr int MINE_FALL = 3; /* Someone falls in the hex */
-constexpr int MINE_DROP = 4; /* Someone drops to ground in the hex */
+typedef enum MineTriggerReason : int {
+  MINE_STEP = 1, /* Someone steps to a hex */
+  MINE_LAND = 2, /* Someone lands in a hex */
+  MINE_FALL = 3, /* Someone falls in the hex */
+  MINE_DROP = 4, /* Someone drops to ground in the hex */
+} MineTriggerReason;
+
+static_assert(MINE_STEP == 1 && MINE_DROP == 4);
 
 #define A_MECHREF A_MECHTYPE
 #define WSDUMP_MASK_ER                                                         \

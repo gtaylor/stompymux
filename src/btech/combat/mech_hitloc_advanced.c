@@ -37,7 +37,7 @@ int mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
 
   btech_context_hit_roll_record(context, roll);
 
-  switch (mech_class(mech)) {
+  switch ((int)mech_class(mech)) {
   case CLASS_VEH_GROUND:
     switch (hitGroup) {
     case LEFTSIDE:

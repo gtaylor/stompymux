@@ -103,6 +103,8 @@ static float mech_los_height(Mech *mech) {
   case CLASS_MW:
   case CLASS_VEH_NAVAL:
     return 0.01;
+  default:
+    break;
   }
   return 0.2;
 }

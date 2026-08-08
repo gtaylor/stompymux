@@ -145,7 +145,7 @@ int mech_hit_group(Mech *mech, Mech *target) {
       mech_heading_degrees(target));
 
   /* Determine hit group.  */
-  switch (mech_class(target)) {
+  switch ((int)mech_class(target)) {
   case CLASS_MECH:
     /* Mech rules.  */
     if (ad >= (360 - m_fs_hw) || ad <= (0 + m_fs_hw)) {
@@ -247,7 +247,7 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
     *isrear = 1;
   if (mech_aim_unit_class(mech) == mech_class(target) &&
       btech_random_range(mech_context(mech), 1, 6) >= 3)
-    switch (mech_class(target)) {
+    switch ((int)mech_class(target)) {
     case CLASS_MECH:
     case CLASS_MW:
       switch (mech_aim_section(mech)) {

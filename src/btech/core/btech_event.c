@@ -31,52 +31,52 @@ void btech_context_owned_event_schedule(BtechContext *context, void *object,
                 (void *)data);
 }
 
-void mech_event_schedule(Mech *mech, int type, MuxEventCallback callback,
-                         int delay, intptr_t data) {
+void mech_event_schedule(Mech *mech, MechEventType type,
+                         MuxEventCallback callback, int delay, intptr_t data) {
   if (mech_dbref(mech) > 0) {
     btech_event_schedule(mech_context(mech)->events, mech, type, callback,
                          delay, data);
   }
 }
 
-void autopilot_event_schedule(Autopilot *autopilot, int type,
+void autopilot_event_schedule(Autopilot *autopilot, MechEventType type,
                               MuxEventCallback callback, int delay,
                               intptr_t data) {
   btech_event_schedule(autopilot->xcode.context->events, autopilot, type,
                        callback, delay, data);
 }
 
-void map_event_schedule(BattleMap *map, int type, MuxEventCallback callback,
-                        int delay, intptr_t data) {
+void map_event_schedule(BattleMap *map, MechEventType type,
+                        MuxEventCallback callback, int delay, intptr_t data) {
   btech_event_schedule(map->xcode.context->events, map, type, callback, delay,
                        data);
 }
 
-int mech_event_count(const Mech *mech, int type) {
+int mech_event_count(const Mech *mech, MechEventType type) {
   return btech_event_count(mech_context(mech)->events, mech, type);
 }
 
-int mech_event_count_data(const Mech *mech, int type, intptr_t data) {
+int mech_event_count_data(const Mech *mech, MechEventType type, intptr_t data) {
   return btech_event_count_data(mech_context(mech)->events, mech, type, data);
 }
 
-long mech_event_first_delay(const Mech *mech, int type) {
+long mech_event_first_delay(const Mech *mech, MechEventType type) {
   return btech_event_first_delay(mech_context(mech)->events, mech, type);
 }
 
-int mech_event_last_delay(const Mech *mech, int type) {
+int mech_event_last_delay(const Mech *mech, MechEventType type) {
   return btech_event_last_delay(mech_context(mech)->events, mech, type);
 }
 
-long mech_event_data(const Mech *mech, int type) {
+long mech_event_data(const Mech *mech, MechEventType type) {
   return btech_event_data(mech_context(mech)->events, mech, type);
 }
 
-void mech_event_cancel(Mech *mech, int type) {
+void mech_event_cancel(Mech *mech, MechEventType type) {
   btech_event_cancel(mech_context(mech)->events, mech, type);
 }
 
-void mech_event_cancel_data(Mech *mech, int type, intptr_t data) {
+void mech_event_cancel_data(Mech *mech, MechEventType type, intptr_t data) {
   btech_event_cancel_data(mech_context(mech)->events, mech, type, data);
 }
 
@@ -84,7 +84,7 @@ void mech_events_cancel_all(Mech *mech) {
   btech_events_cancel_all(mech_context(mech)->events, mech);
 }
 
-void mech_event_visit(Mech *mech, int type, MuxEventVisitor visitor,
+void mech_event_visit(Mech *mech, MechEventType type, MuxEventVisitor visitor,
                       void *context) {
   mux_event_visit_type_data(mech_context(mech)->events, type, mech, visitor,
                             context);

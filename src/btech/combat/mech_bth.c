@@ -116,7 +116,7 @@ int mech_normal_to_hit_calculate(Mech *mech, BattleMap *mech_map, int section,
   int rangecheck = 0;
   int j, rbth = 0;
   float enemyX, enemyY, enemyZ;
-  int wRangeBracket = RANGE_TOFAR;
+  WeaponRangeBracket wRangeBracket = RANGE_TOFAR;
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);
   *c3Ref = -1;
@@ -503,9 +503,10 @@ int mech_artillery_to_hit_calculate(Mech *mech, int section, int weapindx,
   return baseToHit - mech_fire_adjustment(mech);
 }
 
-int mech_range_to_hit_calculate(Mech *mech, Mech *target, int section,
-                                int weapindx, float frange, int firemode,
-                                int ammomode, int *wBTH) {
+WeaponRangeBracket mech_range_to_hit_calculate(Mech *mech, Mech *target,
+                                               int section, int weapindx,
+                                               float frange, int firemode,
+                                               int ammomode, int *wBTH) {
   int range;
   int wTargetStealth = 0;
   BtechContext *context = mech_context(mech);
@@ -644,9 +645,11 @@ int mech_range_to_hit_calculate(Mech *mech, Mech *target, int section,
   return RANGE_SHORT;
 }
 
-int mech_c3_range_to_hit_calculate(Mech *mech, Mech *target, int section,
-                                   int weapindx, float realRange, float c3Range,
-                                   int mode, int *wBTH) {
+WeaponRangeBracket mech_c3_range_to_hit_calculate(Mech *mech, Mech *target,
+                                                  int section, int weapindx,
+                                                  float realRange,
+                                                  float c3Range, int mode,
+                                                  int *wBTH) {
   int realRangeAdj = 0.0;
   int c3RangeAdj = 0.0;
   int wTargetStealth = 0;

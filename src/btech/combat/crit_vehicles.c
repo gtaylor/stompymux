@@ -596,6 +596,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
       break;
     }
     break;
+  default:
+    break;
   }
 }
 

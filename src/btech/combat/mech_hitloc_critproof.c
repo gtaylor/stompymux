@@ -35,7 +35,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
     return TURRET;
 
   btech_context_hit_roll_record(context, roll);
-  switch (mech_class(mech)) {
+  switch ((int)mech_class(mech)) {
   case CLASS_BSUIT:
     if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
       return btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1);

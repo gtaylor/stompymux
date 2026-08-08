@@ -51,9 +51,6 @@
 #include "template_api.h"
 
 /* Selectors */
-#define SPECIAL_FREE 0
-#define SPECIAL_ALLOC 1
-
 extern char *strtok(char *s, const char *ct);
 
 /*--------------------------------------------------------------------------*/

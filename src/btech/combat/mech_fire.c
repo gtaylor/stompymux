@@ -198,6 +198,8 @@ void vehicle_fire_check(Mech *objMech, int fromHexFire) {
   case MOVE_HOVER:
     wRoll += 4;
     break;
+  default:
+    break;
   }
 
   if (wRoll < 8) /* don't do jack if it's < 8 */

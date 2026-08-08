@@ -1,11 +1,12 @@
 #pragma once
 
 #include "mech_api_types.h"
+#include "section_types.h"
 
 #include <stdbool.h>
 
-int mech_movement_type(const Mech *mech);
-void mech_movement_type_set(Mech *mech, int movement_type);
+MechMovementType mech_movement_type(const Mech *mech);
+void mech_movement_type_set(Mech *mech, MechMovementType movement_type);
 int mech_tonnage(const Mech *mech);
 void mech_tonnage_set(Mech *mech, int tonnage);
 int mech_real_tonnage(const Mech *mech);

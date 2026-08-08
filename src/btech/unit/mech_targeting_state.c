@@ -23,9 +23,9 @@ void mech_targeting_lock_modes_clear(Mech *mech) {
 
 void mech_targeting_aim_reset(Mech *mech) { mech->rd.aim = NUM_SECTIONS; }
 
-void mech_targeting_aim_set(Mech *mech, int section, int unit_class) {
+void mech_targeting_aim_set(Mech *mech, int section, UnitClass unit_class) {
   mech->rd.aim = section;
-  mech->rd.aim_type = unit_class;
+  mech->rd.aim_type = (char)unit_class;
 }
 
 void mech_targeting_target_clear(Mech *mech) {
@@ -100,15 +100,19 @@ void mech_fire_adjustment_increment(Mech *mech) { mech->rd.fire_adjustment++; }
 
 int mech_fire_adjustment(const Mech *mech) { return mech->rd.fire_adjustment; }
 
-int mech_targeting_computer_type(const Mech *mech) { return mech->ud.targcomp; }
+TargetingComputerType mech_targeting_computer_type(const Mech *mech) {
+  return (TargetingComputerType)mech->ud.targcomp;
+}
 
-void mech_targeting_computer_type_set(Mech *mech, int type) {
-  mech->ud.targcomp = type;
+void mech_targeting_computer_type_set(Mech *mech, TargetingComputerType type) {
+  mech->ud.targcomp = (char)type;
 }
 
 int mech_aim_section(const Mech *mech) { return mech->rd.aim; }
 
-int mech_aim_unit_class(const Mech *mech) { return mech->rd.aim_type; }
+UnitClass mech_aim_unit_class(const Mech *mech) {
+  return (UnitClass)mech->rd.aim_type;
+}
 
 bool mech_targets_building(const Mech *mech) {
   return mech->rd.status & LOCK_BUILDING;

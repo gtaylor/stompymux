@@ -46,10 +46,6 @@
 #include "mux/support/red_black_tree.h"
 #include "registry_api.h"
 
-/* Selectors for new/free function */
-#define SPECIAL_FREE 0
-#define SPECIAL_ALLOC 1
-
 void clear_mech_from_LOS(Mech *mech) {
   BattleMap *map;
   int i;
@@ -274,12 +270,10 @@ void mech_Rsetteam(DbRef player, void *data, char *buffer) {
                 "Team set to %d", team);
 }
 
-#define SPECIAL_FREE 0
-#define SPECIAL_ALLOC 1
-
 extern void auto_stop_pilot(Autopilot *autopilot);
 /* Alloc/free routine */
-void newfreemech(DbRef key, void **data, int selector) {
+void newfreemech(DbRef key, void **data,
+                 BtechSpecialLifecycleOperation selector) {
   Mech *new = *data;
   BattleMap *map;
   int i;

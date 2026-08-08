@@ -16,7 +16,7 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
   int hitloc = 0;
   BtechContext *context = mech_context(mech);
 
-  switch (mech_class(mech)) {
+  switch ((int)mech_class(mech)) {
   case CLASS_BSUIT:
     if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
       return btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1);

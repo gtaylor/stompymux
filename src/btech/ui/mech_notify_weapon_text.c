@@ -244,6 +244,8 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
     case MOVE_FOIL:
       strcpy(buf + spaces, "[fg=red bold]FOIL DESTROYED[reset]");
       break;
+    case MOVE_NONE:
+      break;
     }
     mecha_notify(evaluation, player, buf);
   }

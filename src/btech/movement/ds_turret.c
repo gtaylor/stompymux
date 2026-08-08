@@ -288,18 +288,19 @@ void turret_weaponspecs(DbRef player, void *data, char *buffer) {
   turret_targeting_scope_leave(&scope, tur, mech);
 }
 
-enum { TURRET_LIFECYCLE_ALLOC = 1 };
-
 /* Alloc/free routine */
-void turret_lifecycle_update(DbRef key, void **data, int selector) {
+void turret_lifecycle_update(DbRef key, void **data,
+                             BtechSpecialLifecycleOperation selector) {
   Turret *new = *data;
 
   switch (selector) {
-  case TURRET_LIFECYCLE_ALLOC:
+  case SPECIAL_ALLOC:
     new->mynum = key;
     new->target = -1;
     new->targx = -1;
     new->targy = -1;
+    break;
+  case SPECIAL_FREE:
     break;
   }
 }

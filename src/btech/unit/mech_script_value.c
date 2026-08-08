@@ -399,7 +399,8 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     ((mech)->pd.elev) = value.integer;
     return true;
   case MECH_SCRIPT_TARGETING_COMPUTER:
-    mech_targeting_computer_type_set(mech, value.integer);
+    mech_targeting_computer_type_set(mech,
+                                     (TargetingComputerType)value.integer);
     return true;
   case MECH_SCRIPT_LONG_RANGE_SENSOR_RANGE:
     mech_long_range_sensor_range_set(mech, value.integer);

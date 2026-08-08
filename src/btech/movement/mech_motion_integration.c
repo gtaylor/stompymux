@@ -260,6 +260,8 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
     mech_position_real_xy_translate(mech, step->delta_x, step->delta_y);
     mech_position_z_set(mech, 0);
     break;
+  case MOVE_NONE:
+    return false;
   }
 
   return true;

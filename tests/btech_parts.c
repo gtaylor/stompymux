@@ -2,7 +2,9 @@
 
 #include "btech/context.h"
 #include "btmux_build_config.h"
+#include "mech_classification_api.h"
 #include "mech_internal.h"
+#include "mech_specification_api.h"
 #include "mux/objects/db.h"
 
 static int inventory_count = 6;
@@ -40,7 +42,14 @@ int main(void) {
   Mech mech = {.xcode.context = &context, .mynum = 1};
   constexpr int part = 777;
 
-  ((&mech)->ud.type) = CLASS_MECH;
+  mech_class_set(&mech, CLASS_VTOL);
+  mech_movement_type_set(&mech, MOVE_VTOL);
+  if (mech_class(&mech) != CLASS_VTOL || mech.ud.type != CLASS_VTOL ||
+      mech_movement_type(&mech) != MOVE_VTOL || mech.ud.move != MOVE_VTOL) {
+    return 1;
+  }
+  mech_class_set(&mech, CLASS_MECH);
+  mech_movement_type_set(&mech, MOVE_BIPED);
   objects[1].location = 42;
   if (!mech_parts_available(&mech, part, 4, 6) ||
       mech_parts_available(&mech, part, 4, 7)) {

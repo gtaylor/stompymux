@@ -16,25 +16,31 @@
 #include "mech_lifecycle.h"
 
 /* these are types of modifiers */
-constexpr int HEAT = 1;
-constexpr int RANGE = 2;
-constexpr int DAMAGE = 3;
-constexpr int POWER_SPIKE = 4;
-constexpr int WEAPON_JAMMED = 5;
-constexpr int WEAPON_DUD = 6;
-constexpr int CRAZY_MISSILES = 7;
+typedef enum FailureModifierType : int {
+  HEAT = 1,
+  RANGE = 2,
+  DAMAGE = 3,
+  POWER_SPIKE = 4,
+  WEAPON_JAMMED = 5,
+  WEAPON_DUD = 6,
+  CRAZY_MISSILES = 7,
+} FailureModifierType;
 
-constexpr int FAIL_STATIC = 1;
+typedef enum GenericFailureType : int {
+  FAIL_STATIC = 1,
+} GenericFailureType;
 
 /* these are catagories of damage */
-constexpr int FAIL_NONE = 0;
-constexpr int FAIL_JAMMED = 1;
-constexpr int FAIL_SHORTED = 2;
-constexpr int FAIL_DUD = 3;
-constexpr int FAIL_EMPTY = 4;
-constexpr int FAIL_DESTROYED = 5;
-constexpr int FAIL_AMMOJAMMED = 6;
-constexpr int FAIL_AMMOCRITJAMMED = 7;
+typedef enum TemporaryFailureStatus : int {
+  FAIL_NONE = 0,
+  FAIL_JAMMED = 1,
+  FAIL_SHORTED = 2,
+  FAIL_DUD = 3,
+  FAIL_EMPTY = 4,
+  FAIL_DESTROYED = 5,
+  FAIL_AMMOJAMMED = 6,
+  FAIL_AMMOCRITJAMMED = 7,
+} TemporaryFailureStatus;
 
 typedef struct PartBrand {
   const char *name;

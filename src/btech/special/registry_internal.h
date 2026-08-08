@@ -32,12 +32,11 @@ typedef struct EvaluationContext EvaluationContext;
 typedef struct Mech Mech;
 typedef struct BattleMap BattleMap;
 
-constexpr int VERIFY = 0;
-constexpr int SAVE = 1;
-constexpr int LOAD = 2;
-
-constexpr int SPECIAL_FREE = 0;
-constexpr int SPECIAL_ALLOC = 1;
+typedef enum BtechSpecialStorageOperation : int {
+  VERIFY = 0,
+  SAVE = 1,
+  LOAD = 2,
+} BtechSpecialStorageOperation;
 
 constexpr int GFLAG_ALL = 0;
 constexpr int GFLAG_MECH = 1;
@@ -56,8 +55,8 @@ constexpr int GFLAG_MW = 128;
 void btech_heartbeat_start(BtechContext *context);
 void btech_heartbeat_stop(BtechContext *context);
 
-typedef void (*BtechSpecialLifecycleHandler)(DbRef object, void **data,
-                                             int operation);
+typedef void (*BtechSpecialLifecycleHandler)(
+    DbRef object, void **data, BtechSpecialLifecycleOperation operation);
 typedef void (*BtechSpecialUpdateHandler)(DbRef object, void *data);
 typedef size_t (*BtechSpecialStorageSize)(void);
 

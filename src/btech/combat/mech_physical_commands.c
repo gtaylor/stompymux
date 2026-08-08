@@ -22,7 +22,8 @@ void mech_kick(DbRef player, void *data, char *buffer) {
 /**
  * Mech kick/trip routines.
  */
-void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
+void mech_kickortrip(DbRef player, void *data, char *buffer,
+                     PhysicalAttackType AttackType) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));

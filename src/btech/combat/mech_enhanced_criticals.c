@@ -56,7 +56,7 @@ static void mech_weapon_critical_data(Mech *mech, int section, int critical,
 }
 
 int mech_weapon_critical_to_hit_modifier(Mech *mech, int section, int critical,
-                                         int rangeBracket) {
+                                         WeaponRangeBracket rangeBracket) {
   int wWeapSize = 0;
   int wFirstCrit = 0;
   int wWeapIndex = 0;

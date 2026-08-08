@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mux/server/platform.h"
+#include "special_object.h"
 
 void turret_addtic(DbRef player, void *data, char *buffer);
 void turret_deltic(DbRef player, void *data, char *buffer);
@@ -23,6 +24,7 @@ void turret_report(DbRef player, void *data, char *buffer);
 void turret_scan(DbRef player, void *data, char *buffer);
 void turret_status(DbRef player, void *data, char *buffer);
 void turret_weaponspecs(DbRef player, void *data, char *buffer);
-void turret_lifecycle_update(DbRef key, void **data, int selector);
+void turret_lifecycle_update(DbRef key, void **data,
+                             BtechSpecialLifecycleOperation operation);
 void turret_initialize(DbRef player, void *data, char *buffer);
 void turret_deinitialize(DbRef player, void *data, char *buffer);

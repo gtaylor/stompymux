@@ -190,6 +190,8 @@ void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
         case MOVE_FOIL:
           mech_notify(wounded, MECHALL, "Your craft suddenly slows!");
           break;
+        default:
+          break;
         }
         mech_max_speed_lower(wounded, MP1);
       }
@@ -218,6 +220,9 @@ void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
         case MOVE_FOIL:
           mech_notify(wounded, MECHALL,
                       "Your engines cut out and you drift to a halt!");
+          break;
+        default:
+          break;
         }
         mech_max_speed_set(wounded, 0.0);
 

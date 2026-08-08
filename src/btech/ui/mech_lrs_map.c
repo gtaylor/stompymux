@@ -70,6 +70,8 @@ char GetLRSMechChar(Mech *mech, Mech *other) {
   case MOVE_FOIL:
     c = 'f';
     break;
+  case MOVE_NONE:
+    break;
   }
   if (!mech_seems_friendly(mech, other))
     c = toupper(c);

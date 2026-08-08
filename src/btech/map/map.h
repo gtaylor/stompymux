@@ -194,5 +194,6 @@ typedef struct BattleMap {
 /* Used by navigate_sketch_map */
 constexpr int NAVIGATE_LINES = 13;
 
-extern void newfreemap(DbRef key, void **data, int selector);
+extern void newfreemap(DbRef key, void **data,
+                       BtechSpecialLifecycleOperation operation);
 extern void map_update(DbRef obj, void *data);

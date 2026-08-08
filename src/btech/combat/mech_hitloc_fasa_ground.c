@@ -22,7 +22,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);
 
-  switch (mech_class(mech)) {
+  switch ((int)mech_class(mech)) {
   case CLASS_VEH_GROUND:
     switch (hitGroup) {
 
@@ -36,7 +36,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         if (btech_context_uses_tank_friendly_criticals(context)) {
           if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch (mech_movement_type(mech)) {
+            switch ((int)mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
                           "One of your tracks is seriously damaged!");
@@ -64,7 +64,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* Cripple tank */
         if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch (mech_movement_type(mech)) {
+          switch ((int)mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(
                 mech, MECHALL,
@@ -96,7 +96,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* MP -1 */
         if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch (mech_movement_type(mech)) {
+          switch ((int)mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(mech, MECHALL, "One of your tracks is damaged!");
             break;
@@ -150,7 +150,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         if (btech_context_uses_tank_friendly_criticals(context)) {
           if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch (mech_movement_type(mech)) {
+            switch ((int)mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
                           "One of your tracks is seriously damaged!");
@@ -178,7 +178,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* Cripple Tank */
         if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch (mech_movement_type(mech)) {
+          switch ((int)mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(
                 mech, MECHALL,
@@ -210,7 +210,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* MP -1 */
         if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch (mech_movement_type(mech)) {
+          switch ((int)mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(mech, MECHALL, "One of your tracks is damaged!");
             break;
@@ -277,7 +277,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             if (!condition.fallen) {
               mech_notify(mech, MECHALL,
                           "[fg=yellow bold]CRITICAL HIT![reset]");
-              switch (mech_movement_type(mech)) {
+              switch ((int)mech_movement_type(mech)) {
               case MOVE_TRACK:
                 mech_notify(mech, MECHALL,
                             "One of your tracks is seriously damaged!");
@@ -305,7 +305,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           /* Cripple tank */
           if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch (mech_movement_type(mech)) {
+            switch ((int)mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
                           "One of your tracks is destroyed, immobilizing your "
@@ -338,7 +338,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         if (btech_context_uses_tank_critical_shielding(context)) {
           if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch (mech_movement_type(mech)) {
+            switch ((int)mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL, "One of your tracks is damaged!");
               break;

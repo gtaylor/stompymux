@@ -10,13 +10,15 @@
 /* Generated at Tue Feb  9 14:31:38 CET 1999 from mechrep.c */
 
 #include "mux/server/platform.h"
+#include "special_object.h"
 
 #pragma once
 
 typedef struct BtechContext BtechContext;
 
 /* mechrep.c */
-void newfreemechrep(DbRef key, void **data, int selector);
+void newfreemechrep(DbRef key, void **data,
+                    BtechSpecialLifecycleOperation operation);
 void mechrep_Rresetcrits(DbRef player, void *data, char *buffer);
 void mechrep_Rdisplaysection(DbRef player, void *data, char *buffer);
 void mechrep_Rsetradio(DbRef player, void *data, char *buffer);

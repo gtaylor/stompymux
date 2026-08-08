@@ -63,7 +63,7 @@
 #include "section_types.h"
 
 struct land_data_type {
-  int type;
+  UnitClass type;
   int maxvertup;
   int maxvertdown;
   int minhoriz;

@@ -12,6 +12,7 @@
 #pragma once
 
 #include "mux/server/platform.h"
+#include "special_object.h"
 
 /* map.c */
 void debug_fixmap(DbRef player, void *data, char *buffer);
@@ -27,7 +28,8 @@ void map_setmapsize(DbRef player, void *data, char *buffer);
 void map_clearmechs(DbRef player, void *data, char *buffer);
 void map_update(DbRef obj, void *data);
 void initialize_map_empty(BattleMap *new, DbRef key);
-void newfreemap(DbRef key, void **data, int selector);
+void newfreemap(DbRef key, void **data,
+                BtechSpecialLifecycleOperation operation);
 int map_sizefun(void *data, int flag);
 void map_listmechs(DbRef player, void *data, char *buffer);
 void clear_hex(Mech *mech, int x, int y, int meant);

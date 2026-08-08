@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include "mech_physical.h"
 #include "mux/server/platform.h"
 
 /* mech.physical.c */
@@ -28,16 +29,18 @@ void mech_mace(DbRef player, void *data, char *buffer);
 void mech_claw(DbRef player, void *data, char *buffer);
 void mech_kick(DbRef player, void *data, char *buffer);
 void mech_trip(DbRef player, void *data, char *buffer);
-void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType);
+void mech_kickortrip(DbRef player, void *data, char *buffer,
+                     PhysicalAttackType attack_type);
 void mech_charge(DbRef player, void *data, char *buffer);
-char *phys_form(int AttackType, int add_s);
-void phys_succeed(Mech *mech, Mech *target, int at);
-void phys_fail(Mech *mech, Mech *target, int at);
-void PhysicalAttack(Mech *mech, int damageweight, int baseToHit, int AttackType,
-                    int argc, char **args, BattleMap *mech_map, int sect);
+char *phys_form(PhysicalAttackType attack_type, int add_s);
+void phys_succeed(Mech *mech, Mech *target, PhysicalAttackType attack_type);
+void phys_fail(Mech *mech, Mech *target, PhysicalAttackType attack_type);
+void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
+                    PhysicalAttackType attack_type, int argc, char **args,
+                    BattleMap *mech_map, int sect);
 void PhysicalTrip(Mech *mech, Mech *target);
-void PhysicalDamage(Mech *mech, Mech *target, int weightdmg, int AttackType,
-                    int sect, int glance);
+void PhysicalDamage(Mech *mech, Mech *target, int weightdmg,
+                    PhysicalAttackType attack_type, int sect, int glance);
 int DeathFromAbove(Mech *mech, Mech *target);
 void ChargeMech(Mech *mech, Mech *target);
 int checkGrabClubLocation(Mech *mech, int section, int emit);

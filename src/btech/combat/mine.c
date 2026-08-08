@@ -250,7 +250,7 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
   }
 }
 
-void mine_field_trigger(Mech *mech, int reason) {
+void mine_field_trigger(Mech *mech, MineTriggerReason reason) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int x = mech_position_x(mech);

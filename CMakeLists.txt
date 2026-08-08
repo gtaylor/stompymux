@@ -394,6 +394,17 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/include"
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_header_interfaces COMMAND btech_header_interfaces_test)
+
+  add_executable(btech_enum_types_test tests/btech_enum_types.c)
+  target_compile_definitions(btech_enum_types_test PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(btech_enum_types_test PRIVATE btmux_options)
+  target_include_directories(btech_enum_types_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_enum_types COMMAND btech_enum_types_test)
+
   add_test(NAME btech_architecture
     COMMAND bash "${CMAKE_SOURCE_DIR}/tests/check_btech_architecture.sh"
                  "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}")

@@ -51,7 +51,7 @@ int all_limbs_recycled(Mech *mech) {
   return 1;
 } // end all_limbs_recycled()
 
-char *phys_form(int AttackType, int add_s) {
+char *phys_form(PhysicalAttackType AttackType, int add_s) {
   char *verb;
 
   if (add_s) {
@@ -124,11 +124,11 @@ char *phys_form(int AttackType, int add_s) {
   return verb;
 } // end phys_form
 
-void phys_succeed(Mech *mech, Mech *target, int at) {
+void phys_succeed(Mech *mech, Mech *target, PhysicalAttackType at) {
   mech_los_broadcast_unit(mech, target, tprintf("%s %%s!", phys_form(at, 1)));
 }
 
-void phys_fail(Mech *mech, Mech *target, int at) {
+void phys_fail(Mech *mech, Mech *target, PhysicalAttackType at) {
   mech_los_broadcast_unit(mech, target,
                           tprintf("attempts to %s %%s!", phys_form(at, 0)));
 }

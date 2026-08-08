@@ -701,14 +701,12 @@ int auto_get_command_enum(Autopilot *autopilot, int command_number) {
   return command_enum;
 }
 
-#define SPECIAL_FREE 0
-#define SPECIAL_ALLOC 1
-
 /*
  * Called when either creating a new autopilot - SPECIAL_ALLOC
  * or when destroying an autopilot - SPECIAL_FREE
  */
-void auto_newautopilot(DbRef key, void **data, int selector) {
+void auto_newautopilot(DbRef key, void **data,
+                       BtechSpecialLifecycleOperation selector) {
 
   Autopilot *autopilot = *data;
   Mech *mech;

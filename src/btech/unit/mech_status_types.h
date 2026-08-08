@@ -276,12 +276,6 @@ constexpr int INF_ANTILEG_TECH =
    FC_INFILTRATORII_STEALTH_TECH)
 
 /* TargComp types */
-constexpr int TARGCOMP_NORMAL = 0;
-constexpr int TARGCOMP_SHORT = 1;
-constexpr int TARGCOMP_LONG = 2;
-constexpr int TARGCOMP_MULTI = 3;
-constexpr int TARGCOMP_AA = 4;
-
 /*
         Notes on unimplemented stuff:
 

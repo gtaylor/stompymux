@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mech_api_types.h"
+#include "section_types.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -9,9 +10,17 @@ typedef struct MechTargetingOverride {
   uint64_t private_storage[3];
 } MechTargetingOverride;
 
+typedef enum TargetingComputerType : int {
+  TARGCOMP_NORMAL = 0,
+  TARGCOMP_SHORT = 1,
+  TARGCOMP_LONG = 2,
+  TARGCOMP_MULTI = 3,
+  TARGCOMP_AA = 4,
+} TargetingComputerType;
+
 void mech_targeting_lock_modes_clear(Mech *mech);
 void mech_targeting_aim_reset(Mech *mech);
-void mech_targeting_aim_set(Mech *mech, int section, int unit_class);
+void mech_targeting_aim_set(Mech *mech, int section, UnitClass unit_class);
 void mech_targeting_target_clear(Mech *mech);
 void mech_targeting_unit_set(Mech *mech, DbRef target);
 void mech_targeting_hex_xy_set(Mech *mech, int x, int y);
@@ -35,10 +44,10 @@ void mech_spotter_dbref_set(Mech *mech, DbRef spotter);
 void mech_fire_adjustment_set(Mech *mech, int adjustment);
 void mech_fire_adjustment_increment(Mech *mech);
 int mech_fire_adjustment(const Mech *mech);
-int mech_targeting_computer_type(const Mech *mech);
-void mech_targeting_computer_type_set(Mech *mech, int type);
+TargetingComputerType mech_targeting_computer_type(const Mech *mech);
+void mech_targeting_computer_type_set(Mech *mech, TargetingComputerType type);
 int mech_aim_section(const Mech *mech);
-int mech_aim_unit_class(const Mech *mech);
+UnitClass mech_aim_unit_class(const Mech *mech);
 bool mech_targets_building(const Mech *mech);
 bool mech_targets_hex(const Mech *mech);
 bool mech_targets_hex_for_ignition(const Mech *mech);

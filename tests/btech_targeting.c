@@ -32,11 +32,11 @@ int main(void) {
   mech_charge_target_dbref_set(&mech, 10);
   mech_dfa_target_dbref_set(&mech, 11);
   mech_spotter_dbref_set(&mech, 12);
-  mech_targeting_computer_type_set(&mech, 13);
+  mech_targeting_computer_type_set(&mech, TARGCOMP_AA);
   if (mech_aim_section(&mech) != NUM_SECTIONS ||
       mech_charge_target_dbref(&mech) != 10 ||
       mech_dfa_target_dbref(&mech) != 11 || mech_spotter_dbref(&mech) != 12 ||
-      mech_targeting_computer_type(&mech) != 13)
+      mech_targeting_computer_type(&mech) != TARGCOMP_AA)
     return 3;
 
   mech.rd.status = STARTED | LOCK_TARGET;

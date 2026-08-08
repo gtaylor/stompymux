@@ -29,6 +29,11 @@ typedef enum {
   GTYPE_UNUSED1 /* placeholder for old chargen object */
 } BtechSpecialObjectType;
 
+typedef enum BtechSpecialLifecycleOperation : int {
+  SPECIAL_FREE = 0,
+  SPECIAL_ALLOC = 1,
+} BtechSpecialLifecycleOperation;
+
 /*
  * Base "class" for all XCODE objects.  Every XCODE object should start with a
  * field of this type, called 'xcode' by convention.

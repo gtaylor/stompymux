@@ -537,6 +537,9 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
     case CLASS_BSUIT:
       mecha_notify(evaluation, player,
                    "      Type: BATTLESUIT(S)       Movement: BIPED");
+      break;
+    default:
+      break;
     }
     break;
   case MOVE_QUAD:

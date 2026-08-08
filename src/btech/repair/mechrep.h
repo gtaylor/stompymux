@@ -62,4 +62,5 @@ extern void mechrep_Rsettype(DbRef player, void *data, char *buffer);
 extern void mechrep_Rshowtech(DbRef player, void *data, char *buffer);
 
 /* Mem alloc/free routines */
-void newfreemechrep(DbRef key, void **data, int selector);
+void newfreemechrep(DbRef key, void **data,
+                    BtechSpecialLifecycleOperation operation);

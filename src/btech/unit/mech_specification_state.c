@@ -5,10 +5,12 @@
 #include "mech_internal.h"
 #include "mech_status_types.h"
 
-int mech_movement_type(const Mech *mech) { return mech->ud.move; }
+MechMovementType mech_movement_type(const Mech *mech) {
+  return (MechMovementType)mech->ud.move;
+}
 
-void mech_movement_type_set(Mech *mech, int movement_type) {
-  mech->ud.move = movement_type;
+void mech_movement_type_set(Mech *mech, MechMovementType movement_type) {
+  mech->ud.move = (char)movement_type;
 }
 
 int mech_tonnage(const Mech *mech) { return mech->ud.tons; }
