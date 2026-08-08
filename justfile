@@ -46,7 +46,7 @@ install:
 run:
     cd game && ulimit -c unlimited && exec ./stompymux stompymux.toml
 
-install-and-run: install run
+build-and-run: build install run
 
 docsite:
     npm --prefix docs run build

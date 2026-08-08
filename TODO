@@ -11,7 +11,6 @@
 * Make integration tests not conflict with running games
 * Maybe: Figure out external RPC
 * Maybe: Figure out external event streaming. Websockets?
-* See if we can reduce malloc usage
 
 ## GMCP
 
