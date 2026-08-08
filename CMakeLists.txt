@@ -180,7 +180,7 @@ target_compile_options(btmux_options INTERFACE
   -Wstrict-prototypes -Wold-style-definition -Wvla -Wmissing-prototypes
   -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
   -Wbad-function-cast -Wswitch-enum -Wimplicit-fallthrough -Wunused-macros -Wfloat-equal -Wpedantic
-  -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings -Wconversion
+  -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings -Wconversion -Wunsafe-buffer-usage
   -Wsign-conversion>)
 if(BTECH_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
