@@ -139,7 +139,7 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
     return;
   if (remaining < 1)
     remaining = 1;
-  if (event->function == very_fake_func)
+  if (event->function == mech_event_failure_marker)
     remaining = -remaining;
   if (btech_special_bind_int(context->statement, 1, mech_dbref(mech)) < 0 ||
       btech_special_bind_int(context->statement, 2, context->type) < 0 ||

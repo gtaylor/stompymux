@@ -6,6 +6,7 @@
 
 #include "btech/context.h"
 #include "btech_event.h"
+#include "btech_text_builder.h"
 #include "failures.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
@@ -433,21 +434,22 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
         *tmpc = '_';
     }
     for (ii = 0; ii < count; ii++) {
+      BtechTextBuilder weapon_text;
+      btech_text_builder_initialize(&weapon_text, weapbuff, sizeof(weapbuff));
       int fire_mode = mech_critical_fire_mode(mech, loop, critical[ii]);
       if (MechWeapons[weaparray[ii]].special & AMS)
-        snprintf(weapbuff, sizeof(weapbuff), " %-16.16s %c%c%c%c%c [%2d] ",
-                 &MechWeapons[weaparray[ii]].name[3], ' ',
-                 conditions.ams_enabled ? ' ' : 'O',
-                 conditions.ams_enabled ? 'O' : 'F',
-                 conditions.ams_enabled ? 'N' : 'F', ' ', running_sum + ii);
+        btech_text_builder_append_format(
+            &weapon_text, " %-16.16s %c%c%c%c%c [%2d] ",
+            &MechWeapons[weaparray[ii]].name[3], ' ',
+            conditions.ams_enabled ? ' ' : 'O',
+            conditions.ams_enabled ? 'O' : 'F',
+            conditions.ams_enabled ? 'N' : 'F', ' ', running_sum + ii);
       else {
-        if (fire_mode & OS_MODE)
-          strcpy(tmpbuf, "OS ");
-        else
-          tmpbuf[0] = 0;
-        strcat(tmpbuf, &MechWeapons[weaparray[ii]].name[3]);
-        snprintf(
-            weapbuff, sizeof(weapbuff), " %-16.16s %c%c%c%c%c [%2d] ", tmpbuf,
+        snprintf(tmpbuf, sizeof(tmpbuf), "%s%s",
+                 fire_mode & OS_MODE ? "OS " : "",
+                 &MechWeapons[weaparray[ii]].name[3]);
+        btech_text_builder_append_format(
+            &weapon_text, " %-16.16s %c%c%c%c%c [%2d] ", tmpbuf,
             (fire_mode & REAR_MOUNT) ? 'R' : ' ',
             (((fire_mode & OS_USED) || (fire_mode & ROCKET_FIRED)) ? '-'
              : (fire_mode & OS_MODE)                               ? 'O'
@@ -464,54 +466,54 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       if (compact)
         append_status(compact_buffer, compact_buffer_size, "%s|%s",
                       &MechWeapons[weaparray[ii]].name[3], location);
-      strcat(weapbuff, location);
+      btech_text_builder_append(&weapon_text, location);
 
       int temporary_failure =
           mech_critical_temporary_failure(mech, loop, critical[ii]);
       if (mech_critical_is_broken(mech, loop, critical[ii]) ||
           temporary_failure == FAIL_DESTROYED)
-        strcat(weapbuff, "[fg=black bold]*****[reset]  || ");
+        btech_text_builder_append(&weapon_text,
+                                  "[fg=black bold]*****[reset]  || ");
       else if (mech_critical_is_disabled(mech, loop, critical[ii]))
-        strcat(weapbuff, "[fg=red]DISABLE[reset]|| ");
+        btech_text_builder_append(&weapon_text, "[fg=red]DISABLE[reset]|| ");
       else if (temporary_failure) {
         switch (temporary_failure) {
         case FAIL_JAMMED:
-          strcat(weapbuff, "[fg=red]JAMMED[reset] || ");
+          btech_text_builder_append(&weapon_text, "[fg=red]JAMMED[reset] || ");
           break;
         case FAIL_SHORTED:
-          strcat(weapbuff, "[fg=red]SHORTED[reset]|| ");
+          btech_text_builder_append(&weapon_text, "[fg=red]SHORTED[reset]|| ");
           break;
         case FAIL_EMPTY:
-          strcat(weapbuff, " [fg=red]EMPTY[reset] || ");
+          btech_text_builder_append(&weapon_text, " [fg=red]EMPTY[reset] || ");
           break;
         case FAIL_DUD:
-          strcat(weapbuff, "[fg=red]DUD[reset]    || ");
+          btech_text_builder_append(&weapon_text, "[fg=red]DUD[reset]    || ");
           break;
         case FAIL_AMMOJAMMED:
-          strcat(weapbuff, "[fg=red]AMMOJAM[reset]|| ");
+          btech_text_builder_append(&weapon_text, "[fg=red]AMMOJAM[reset]|| ");
           break;
         }
       } else if (fire_mode & ROCKET_FIRED)
-        strcat(weapbuff, "[fg=black bold]Empty[reset]  || ");
+        btech_text_builder_append(&weapon_text,
+                                  "[fg=black bold]Empty[reset]  || ");
       else if (weapdata[ii])
-        strcat(weapbuff, tprintf(" %2d    || ",
-                                 weapdata[ii] / WEAPON_TICK +
-                                     (weapdata[ii] % WEAPON_TICK ? 1 : 0)));
+        btech_text_builder_append_format(
+            &weapon_text, " %2d    || ",
+            weapdata[ii] / WEAPON_TICK + (weapdata[ii] % WEAPON_TICK ? 1 : 0));
       else if (mech_weapon_damaged_slot_count_at(mech, loop, critical[ii]))
-        strcat(weapbuff, "[fg=red]DAMAGED[reset]|| ");
+        btech_text_builder_append(&weapon_text, "[fg=red]DAMAGED[reset]|| ");
       else
-        strcat(weapbuff, "[fg=green]Ready[reset]  || ");
+        btech_text_builder_append(&weapon_text, "[fg=green]Ready[reset]  || ");
 
       if ((ii + running_sum) < ammoweapcount) {
         ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(
             ammoweap[ii + running_sum], modearray[ii + running_sum]);
-        snprintf(weapname, sizeof(weapname), "%-16.16s %c",
-                 &MechWeapons[ammoweap[ii + running_sum]].name[3], ammo_mode);
-        snprintf(tempbuff, sizeof(tempbuff), "  %s%3d%s",
+        snprintf(weapname, sizeof(weapname), "%-16.16s %c  %s%3d%s",
+                 &MechWeapons[ammoweap[ii + running_sum]].name[3], ammo_mode,
                  evaluate_ammo_amount(ammo[ii + running_sum],
                                       ammomax[ii + running_sum]),
                  ammo[ii + running_sum], "[reset]");
-        strcat(weapname, tempbuff);
         if (compact) {
           if (ammo_mode && ammo_mode != ' ')
             append_status(compact_buffer, compact_buffer_size, "|%s|%d|%c ",
@@ -527,7 +529,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
           append_status(compact_buffer, compact_buffer_size, " ");
         snprintf(weapname, sizeof(weapname), "   ");
       }
-      strcat(weapbuff, weapname);
+      btech_text_builder_append(&weapon_text, weapname);
       if (!compact)
         mecha_notify(evaluation, player, weapbuff);
     }
@@ -536,17 +538,14 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
 
   if (running_sum < ammoweapcount) {
     while (running_sum < ammoweapcount) {
-      strcpy(astrAmmoSpacer,
-             "                                                  || ");
       ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(ammoweap[running_sum],
                                                      modearray[running_sum]);
-      snprintf(weapname, sizeof(weapname), "%-16.16s %c",
-               &MechWeapons[ammoweap[running_sum]].name[3], ammo_mode);
-      snprintf(tempbuff, sizeof(tempbuff), "  %s%3d%s",
+      snprintf(astrAmmoSpacer, sizeof(astrAmmoSpacer),
+               "                                                  || "
+               "%-16.16s %c  %s%3d%s",
+               &MechWeapons[ammoweap[running_sum]].name[3], ammo_mode,
                evaluate_ammo_amount(ammo[running_sum], ammomax[running_sum]),
                ammo[running_sum], "[reset]");
-      strcat(astrAmmoSpacer, weapname);
-      strcat(astrAmmoSpacer, tempbuff);
 
       mecha_notify(evaluation, player, astrAmmoSpacer);
 

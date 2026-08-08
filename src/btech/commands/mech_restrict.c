@@ -44,6 +44,7 @@
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/formatting.h"
 #include "mux/support/red_black_tree.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 void clear_mech_from_LOS(Mech *mech) {
@@ -102,8 +103,11 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments to SETXY!");
     return;
   }
-  x = atoi(args[0]);
-  y = atoi(args[1]);
+  if (!parse_int_checked(args[0], &x) || !parse_int_checked(args[1], &y)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid coordinates!");
+    return;
+  }
   if (x >= mech_map->map_width || y >= mech_map->map_height || x < 0 || y < 0) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid coordinates!");
@@ -122,7 +126,11 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
     z = mech_position_z(mech);
     mech_position_land_if_flying(mech);
   } else {
-    z = atoi(args[2]);
+    if (!parse_int_checked(args[2], &z)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid Z coordinate!");
+      return;
+    }
     mech_position_z_set(mech, z);
     mech_position_elevation_set(mech, map_elevation_get(mech_map, x, y));
   }
@@ -148,8 +156,7 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments to SETMAPINDX!");
     return;
   }
-  newindex = atoi(args[0]);
-  if (newindex < -1) {
+  if (!parse_int_checked(args[0], &newindex) || newindex < -1) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid map index!");
     return;
@@ -262,7 +269,11 @@ void mech_Rsetteam(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  team = atoi(args[0]);
+  if (!parse_int_checked(args[0], &team)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid team!");
+    return;
+  }
   if (team < 0)
     team = 0;
   mech_team_set(mech, team);

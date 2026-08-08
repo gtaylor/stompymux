@@ -174,7 +174,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
             parttype, mech_critical_brand(mech, loc, part), -1);
       tech_addtechtime(context, player, fixtime);
       btech_context_event_schedule(
-          context, mech, EVENT_REPAIR_REPLG, very_fake_func,
+          context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker,
           MAX(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack((RepairEventPayload){
               .location = loc, .position = part, .extra = brand}) +
@@ -204,7 +204,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
             fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
       tech_addtechtime(context, player, fixtime);
       btech_context_event_schedule(
-          context, mech, EVENT_REPAIR_REPLG, very_fake_func,
+          context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker,
           MAX(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack((RepairEventPayload){
               .location = loc, .position = part, .extra = brand}) +
@@ -581,7 +581,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
           parttype, mech_critical_brand(mech, loc, part), -1);
       tech_addtechtime(context, player, fixtime);
       btech_context_event_schedule(
-          context, mech, EVENT_REPAIR_REPL, very_fake_func,
+          context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker,
           MAX(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack(
               (RepairEventPayload){.location = loc, .position = part}) +
@@ -611,7 +611,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
             fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
       tech_addtechtime(context, player, fixtime);
       btech_context_event_schedule(
-          context, mech, EVENT_REPAIR_REPL, very_fake_func,
+          context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker,
           MAX(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack(
               (RepairEventPayload){.location = loc, .position = part}) +

@@ -297,6 +297,31 @@ void match_neighbor(MatchContext *match_context) {
   }
 }
 
+bool matches_exit_from_list(const char *string, const char *pattern) {
+  while (*pattern) {
+    const char *candidate = string;
+    while (*candidate && *pattern && *pattern != EXIT_DELIMITER &&
+           ascii_to_lower(*candidate) == ascii_to_lower(*pattern)) {
+      candidate++;
+      pattern++;
+    }
+
+    if (*candidate == '\0') {
+      while (*pattern && isspace((unsigned char)*pattern))
+        pattern++;
+      if (*pattern == '\0' || *pattern == EXIT_DELIMITER)
+        return true;
+    }
+
+    while (*pattern && *pattern++ != EXIT_DELIMITER)
+      ;
+    while (isspace((unsigned char)*pattern))
+      pattern++;
+  }
+
+  return false;
+}
+
 static int match_exit_internal(MatchContext *match_context, DbRef loc,
                                DbRef baseloc, int local) {
   DbRef exit;
@@ -323,9 +348,9 @@ static int match_exit_internal(MatchContext *match_context, DbRef loc,
         return 1;
       }
     }
-    if (matches_exit_from_list(md.string,
-                               (char *)game_object_pure_name(
-                                   md.evaluation->world->database, exit))) {
+    if (matches_exit_from_list(
+            md.string,
+            game_object_pure_name(md.evaluation->world->database, exit))) {
       promote_match(match_context, exit, CON_COMPLETE | local);
       result = 1;
     }

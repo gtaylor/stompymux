@@ -24,6 +24,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
 #include "mux/support/doubly_linked_list.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -72,8 +73,7 @@ void auto_goto_event(MuxEvent *e) {
 
   /* Get the first argument - x coord */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if (!argument || (!((tx) = atoi(argument)) && strcmp((argument), "0"))) {
-    /*! \todo {add a thing here incase the argument isn't a number} */
+  if (!argument || !parse_int_checked(argument, &tx)) {
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -82,8 +82,7 @@ void auto_goto_event(MuxEvent *e) {
 
   /* Get the second argument - y coord */
   argument = auto_get_command_arg(autopilot, 1, 2);
-  if (!argument || (!((ty) = atoi(argument)) && strcmp((argument), "0"))) {
-    /*! \todo {add a thing here incase the argument isn't a number} */
+  if (!argument || !parse_int_checked(argument, &ty)) {
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -209,7 +208,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   }
 
   /* Read in the argument */
-  if ((!((tx) = atoi(argument)) && strcmp((argument), "0"))) {
+  if (!parse_int_checked(argument, &tx)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
@@ -241,7 +240,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   }
 
   /* Read in the argument */
-  if ((!((ty) = atoi(argument)) && strcmp((argument), "0"))) {
+  if (!parse_int_checked(argument, &ty)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
@@ -381,7 +380,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     }
 
     /* Now change it into a number and make sure its valid */
-    if ((!((tx) = atoi(argument)) && strcmp((argument), "0"))) {
+    if (!parse_int_checked(argument, &tx)) {
 
       snprintf(error_buf, MBUF_SIZE,
                "Internal AI Error - Attempting to"
@@ -414,7 +413,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     }
 
     /* Read second argument into a number and make sure its ok */
-    if ((!((ty) = atoi(argument)) && strcmp((argument), "0"))) {
+    if (!parse_int_checked(argument, &ty)) {
 
       snprintf(error_buf, MBUF_SIZE,
                "Internal AI Error - Attempting to"

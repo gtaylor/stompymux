@@ -16,6 +16,7 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 #include "mux/support/formatting.h"
@@ -52,8 +53,12 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
 
   switch (argc) {
   case 2:
-    bearing = atoi(args[0]);
-    range = atof(args[1]);
+    if (!parse_int_checked(args[0], &bearing) ||
+        !parse_float_checked(args[1], &range)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid bearing or range.");
+      return 0;
+    }
     if (!mech_is_observer(mech) && abs((int)range) > maxrange) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Those coordinates are out of sensor range!");

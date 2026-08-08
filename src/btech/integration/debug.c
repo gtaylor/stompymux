@@ -33,6 +33,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/formatting.h"
 #include "mux/support/red_black_tree.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "special_object.h"
 #include "weapon_settings.h"
@@ -205,8 +206,13 @@ void debug_shutdown(DbRef player, void *data, char *buffer) {
   int argc;
 
   argc = mech_parseattributes(buffer, args, 3);
-  if (argc > 0)
-    ShutDownMap(debug->context, player, atoi(args[0]));
+  long map_number;
+  if (argc > 0 && parse_long_checked(args[0], &map_number)) {
+    ShutDownMap(debug->context, player, map_number);
+  } else {
+    mecha_notify(btech_context_evaluation(debug->context), player,
+                 "Invalid map number!");
+  }
 }
 
 void debug_setvrt(DbRef player, void *data, char *buffer) {
@@ -220,7 +226,7 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if ((!((vrt) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if (!parse_int_checked(args[1], &vrt)) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "Invalid value!");
     return;
@@ -267,7 +273,7 @@ void debug_setwbv(DbRef player, void *data, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if ((!((bv) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if (!parse_int_checked(args[1], &bv)) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "Invalid value!");
     return;

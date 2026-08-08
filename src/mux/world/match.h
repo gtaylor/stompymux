@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 #include "mux/commands/command_context.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
@@ -30,6 +32,7 @@ extern void match_here(MatchContext *);
 extern void match_home(MatchContext *);
 extern void match_possession(MatchContext *);
 extern void match_neighbor(MatchContext *);
+bool matches_exit_from_list(const char *string, const char *pattern);
 extern void match_exit(MatchContext *);
 extern void match_carried_exit(MatchContext *);
 extern void match_everything(MatchContext *, int);

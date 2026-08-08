@@ -105,7 +105,7 @@ void mux_event_tickmech_removegun(MuxEvent *e) {
   }
 
   ArmorStringFromIndex(loc, buf, mech_class(mech), mech_movement_type(mech));
-  if (extra == 2 && (e->function != very_fake_func)) {
+  if (extra == 2 && (e->function != mech_event_failure_marker)) {
 #ifndef BT_COMPLEXREPAIRS
     mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
                    FindAmmoType(mech, loc, pos),
@@ -154,7 +154,7 @@ void mux_event_tickmech_removepart(MuxEvent *e) {
   if (mech_class(mech) == CLASS_MECH)
     do_magic(mech);
   ArmorStringFromIndex(loc, buf, mech_class(mech), mech_movement_type(mech));
-  if (extra == 2 && (e->function != very_fake_func)) {
+  if (extra == 2 && (e->function != mech_event_failure_marker)) {
 #ifndef BT_COMPLEXREPAIRS
     mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
                    FindAmmoType(mech, loc, pos),

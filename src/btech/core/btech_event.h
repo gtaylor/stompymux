@@ -18,6 +18,9 @@ typedef struct Autopilot Autopilot;
 typedef void (*MuxEventCallback)(MuxEvent *event);
 typedef void (*MuxEventVisitor)(MuxEvent *event, void *context);
 
+/* Marker callback persisted for scheduled work whose skill roll failed. */
+void mech_event_failure_marker(MuxEvent *event);
+
 void mech_event_schedule(Mech *mech, MechEventType type,
                          MuxEventCallback callback, int delay, intptr_t data);
 void autopilot_event_schedule(Autopilot *autopilot, MechEventType type,

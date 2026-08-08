@@ -274,6 +274,20 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_value_helpers COMMAND btech_value_helpers_test)
 
+  add_executable(btech_safe_helpers_test tests/btech_safe_helpers.c
+    ${BTECH_SOURCE_DIR}/core/btech_text_builder.c
+    ${MUX_SOURCE_DIR}/support/stringutil.c)
+  target_compile_definitions(btech_safe_helpers_test PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_safe_helpers_test PRIVATE -ffunction-sections)
+  target_link_options(btech_safe_helpers_test PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_safe_helpers_test PRIVATE btmux_options)
+  target_include_directories(btech_safe_helpers_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_safe_helpers COMMAND btech_safe_helpers_test)
+
   add_executable(btech_caller_control_test tests/btech_caller_control.c
     ${BTECH_SOURCE_DIR}/ui/mech_notify_radio_config.c
     ${BTECH_SOURCE_DIR}/unit/mech_identity_state.c

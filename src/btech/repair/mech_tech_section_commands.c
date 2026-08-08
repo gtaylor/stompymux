@@ -213,7 +213,7 @@ void tech_reattach(DbRef player, void *data, char *buffer) {
       take_section_materials(context, mech, loc);
       tech_addtechtime(context, player, fixtime);
       schedule_section_repair(context, mech, player, loc, EVENT_REPAIR_REAT,
-                              very_fake_func);
+                              mech_event_failure_marker);
 
     } else {
       notify_printf(evaluation, player, "You manage to replace the section...");
