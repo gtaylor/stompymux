@@ -7,34 +7,5 @@ ARG STYLUA_VERSION=2.5.2
 # [Optional] Uncomment this section to install additional vcpkg ports.
 # RUN su vscode -c "${VCPKG_ROOT}/vcpkg install <your-port-name-here>"
 
-RUN apt-get update \
-    && apt-get -y install --no-install-recommends ca-certificates curl \
-    && curl --location --proto '=https' --tlsv1.2 --fail --silent --show-error \
-    https://apt.llvm.org/llvm-snapshot.gpg.key \
-    --output /etc/apt/trusted.gpg.d/apt.llvm.org.asc \
-    && echo 'deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' \
-    > /etc/apt/sources.list.d/llvm.list \
-    && apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends \
-    build-essential clang-22 clang-format-22 clang-tidy-22 clang-tools-22 libclang-rt-22-dev \
-    clangd-22 libsqlite3-dev sqlite3 unzip \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN CMAKE_ARCHIVE="cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" \
-    && curl --location --proto '=https' --tlsv1.2 --fail --silent --show-error \
-    "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/${CMAKE_ARCHIVE}" \
-    --output "/tmp/${CMAKE_ARCHIVE}" \
-    && tar --extract --gzip --file "/tmp/${CMAKE_ARCHIVE}" --strip-components=1 --directory /usr/local \
-    && rm "/tmp/${CMAKE_ARCHIVE}"
-
-RUN curl --proto '=https' --tlsv1.2 --fail --silent --show-error \
-    https://just.systems/install.sh --output /tmp/just-install.sh \
-    && bash /tmp/just-install.sh --to /usr/local/bin --tag "${JUST_VERSION}" \
-    && rm /tmp/just-install.sh
-
-RUN STYLUA_ARCHIVE="stylua-linux-x86_64.zip" \
-    && curl --location --proto '=https' --tlsv1.2 --fail --silent --show-error \
-    "https://github.com/JohnnyMorganz/StyLua/releases/download/v${STYLUA_VERSION}/${STYLUA_ARCHIVE}" \
-    --output "/tmp/${STYLUA_ARCHIVE}" \
-    && unzip -q "/tmp/${STYLUA_ARCHIVE}" -d /usr/local/bin \
-    && rm "/tmp/${STYLUA_ARCHIVE}"
+COPY install-tools.sh /tmp/install-tools.sh
+RUN bash /tmp/install-tools.sh && rm /tmp/install-tools.sh
