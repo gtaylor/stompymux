@@ -44,11 +44,11 @@ When writing C code, use the following naming conventions:
 
 ## Available clang tools
 
-I've installed `clang-20`. There are a number of other tools installed, but they all have the version `-20` suffix:
+I've installed `clang-22`. There are a number of other tools installed, but they all have the version `-22` suffix:
 
-* clang-tidy-20
-* clang-format-20
-* clang-apply-replacements-20
-* clang-query-20
+* clang-tidy-22
+* clang-format-22
+* clang-apply-replacements-22
+* clang-query-22
 
 See `ls /usr/bin/clang*` for a full list.

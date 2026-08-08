@@ -30,7 +30,4 @@
 
 ## BTech Todos in the /btech/ dir
 
-* Enum for special weapons effects?
-* Enums for sections?
-* Enums for parts and components instead of standalone constants?
 * Break commodities out of hcode?

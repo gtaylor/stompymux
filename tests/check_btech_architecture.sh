@@ -806,7 +806,7 @@ if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   status=1
 fi
 
-header_compiler=${BTECH_HEADER_COMPILER:-clang-20}
+header_compiler=${BTECH_HEADER_COMPILER:-clang-22}
 header_flags=(
   -DBTECH_INTERNAL=1
   -DBTMUX_PERSISTENCE_TESTING=1
@@ -815,6 +815,7 @@ header_flags=(
   -Wextra
   -Wno-unused-parameter
   -Werror
+  -Wno-gcc-install-dir-libstdcxx
   -Wformat=2
   -Wshadow
   "-I$root/src/btech/include"

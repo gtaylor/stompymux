@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 4.3)
 
 if(NOT DEFINED CMAKE_C_COMPILER)
-  find_program(CMAKE_C_COMPILER NAMES clang-20 REQUIRED)
+  find_program(CMAKE_C_COMPILER NAMES clang-22 REQUIRED)
 endif()
 
 project(StompyMUX LANGUAGES C)
@@ -49,12 +49,12 @@ option(BTECH_ENABLE_IWYU "Run Include What You Use during project compilation" O
 
 if(BTECH_ENABLE_CLANG_TIDY)
   # Needs to understand C23 `constexpr`, which landed in Clang 19.
-  find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy-20 clang-tidy-19 clang-tidy REQUIRED)
+  find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy-22 clang-tidy REQUIRED)
   set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
 endif()
 
 if(BTECH_ENABLE_IWYU)
-  find_program(IWYU_EXECUTABLE NAMES include-what-you-use-20 include-what-you-use REQUIRED)
+  find_program(IWYU_EXECUTABLE NAMES include-what-you-use-22 include-what-you-use REQUIRED)
   set(BTECH_IWYU_COMMAND "${IWYU_EXECUTABLE}")
 endif()
 
@@ -173,7 +173,7 @@ configure_file(src/cmake/version.h.in "${CMAKE_BINARY_DIR}/mux/server/version.h"
 
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
-  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wformat=2 -Wshadow>)
+  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wno-gcc-install-dir-libstdcxx -Wformat=2 -Wshadow>)
 if(BTECH_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
   target_link_options(btmux_options INTERFACE -fsanitize=address)

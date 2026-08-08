@@ -36,7 +36,7 @@ void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
                          int display_columns, int top_offset, int left_offset,
                          bool use_color, bool use_hex_los,
                          bool show_underlying_terrain) {
-  static const char hex_rows[2][310] = {
+  static const char hex_rows[2][311] = {
       "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
       "][\\][/]["
       "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"

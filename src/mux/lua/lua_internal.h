@@ -55,8 +55,8 @@ extern const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT];
 extern const char *const LUA_LOCK_NAMES[LUA_LOCK_COUNT];
 extern const char *const LUA_LOCK_OPERATION_NAMES[LUA_LOCK_OPERATION_COUNT];
 extern const char *const LUA_MESSAGE_NAMES[LUA_MESSAGE_COUNT];
-extern const char
-    *const LUA_MESSAGE_OPERATION_NAMES[LUA_MESSAGE_OPERATION_COUNT];
+extern const char *const
+    LUA_MESSAGE_OPERATION_NAMES[LUA_MESSAGE_OPERATION_COUNT];
 
 void lua_set_error(char *error, size_t error_size, const char *format, ...)
     __attribute__((format(printf, 3, 4)));

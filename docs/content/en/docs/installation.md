@@ -26,16 +26,16 @@ Before compiling the sources and running your own game, you'll need to ensure th
 following dependencies are present:
 
 * CMake 4.3 or higher
-* Clang 20 or higher
+* Clang 22 or higher
 * [Just](https://github.com/casey/just) 1.56 or higher
 
 ### Include What You Use
 
 The optional `just iwyu` check requires an IWYU release built against the same
-Clang major version as the project. For Clang 20, install
-`libclang-20-dev`, then build and install IWYU 0.24 (the `clang_20` branch)
+Clang major version as the project. For Clang 22, install
+`libclang-22-dev`, then build and install IWYU 0.26 (the `clang_22` branch)
 from the [upstream repository](https://github.com/include-what-you-use/include-what-you-use).
-Make the executable available as `include-what-you-use-20`, or set `IWYU` to
+Make the executable available as `include-what-you-use-22`, or set `IWYU` to
 its path when running the check:
 
 ```shell

@@ -441,7 +441,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
                             : technology_secondary & STEALTH_ARMOR_TECH ? 50000
                             : technology & HARDA_TECH                   ? 15000
                             : technology_secondary & LT_FF_ARMOR_TECH   ? 15000
-                            : technology_secondary & HVY_FF_ARMOR_TECH  ? 25000
+                            : technology_secondary & HVY_FF_ARMOR_TECH ? 25000
                                                                        : 10000);
 #if COST_DEBUG
     btech_channel_send(
