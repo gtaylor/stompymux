@@ -34,7 +34,7 @@ iwyu:
     cmake --build {{iwyu_build_dir}} --clean-first --target btech stompymux -j "$(nproc)"
 
 build:
-    cmake -S . -B {{build_dir}} -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     cmake --build {{build_dir}} -j "$(nproc)"
 
 test:

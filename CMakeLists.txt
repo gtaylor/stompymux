@@ -25,6 +25,9 @@ set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
+add_compile_options(-Wno-gcc-install-dir-libstdcxx)
+add_link_options(-Wno-gcc-install-dir-libstdcxx)
+
 include(GNUInstallDirs)
 include(CTest)
 
@@ -173,7 +176,7 @@ configure_file(src/cmake/version.h.in "${CMAKE_BINARY_DIR}/mux/server/version.h"
 
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
-  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wno-gcc-install-dir-libstdcxx -Wformat=2 -Wshadow>)
+  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wformat=2 -Wshadow>)
 if(BTECH_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
   target_link_options(btmux_options INTERFACE -fsanitize=address)
