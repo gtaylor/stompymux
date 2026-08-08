@@ -532,9 +532,9 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  strcpy(mechName, mech_display_id(mech).text);
-  strcpy(towMechName, mech_display_id(towMech).text);
-  strcpy(targetName, mech_display_id(target).text);
+  strlcpy(mechName, mech_display_id(mech).text, sizeof(mechName));
+  strlcpy(towMechName, mech_display_id(towMech).text, sizeof(towMechName));
+  strlcpy(targetName, mech_display_id(target).text, sizeof(targetName));
 
   mech_printf(target, MECHALL, "%s attaches tow lines from %s to you.",
               mechName, towMechName);
@@ -621,9 +621,9 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
   }
   mech_towed_set(target, false);
 
-  strcpy(mechName, mech_display_id(mech).text);
-  strcpy(towMechName, mech_display_id(towMech).text);
-  strcpy(targetName, mech_display_id(target).text);
+  strlcpy(mechName, mech_display_id(mech).text, sizeof(mechName));
+  strlcpy(towMechName, mech_display_id(towMech).text, sizeof(towMechName));
+  strlcpy(targetName, mech_display_id(target).text, sizeof(targetName));
 
   mech_printf(mech, MECHALL, "You detach %s's tow lines from %s.", towMechName,
               targetName);

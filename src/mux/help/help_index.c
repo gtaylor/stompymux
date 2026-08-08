@@ -146,20 +146,26 @@ static char *help_slurp_file(const char *path, size_t *out_length) {
     return nullptr;
   if (fseek(fp, 0, SEEK_END) != 0 || (size = ftell(fp)) < 0 ||
       fseek(fp, 0, SEEK_SET) != 0) {
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return nullptr;
     return nullptr;
   }
   buffer = malloc((size_t)size + 1);
   if (!buffer) {
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return nullptr;
     return nullptr;
   }
   if (fread(buffer, 1, (size_t)size, fp) != (size_t)size) {
     free(buffer);
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return nullptr;
     return nullptr;
   }
-  fclose(fp);
+  if (fclose(fp) != 0) {
+    free(buffer);
+    return nullptr;
+  }
   // File length is converted only after ftell() verifies it is non-negative.
   *(char *)checked_storage_at(buffer, (size_t)size + 1, sizeof(char),
                               (size_t)size) = '\0';

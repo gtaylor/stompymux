@@ -102,7 +102,7 @@ static int scan_template_dir(MechTemplateRegistry *registry,
       if (link == nullptr)
         continue;
 
-      strcpy(link->name, ent->d_name);
+      strlcpy(link->name, ent->d_name, sizeof(link->name));
       link->next = registry->directories;
       registry->directories = link;
       continue;
@@ -268,7 +268,8 @@ oldstyle:
     fp = fopen(registry->resolved_path, "r");
   }
   if (fp) {
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return nullptr;
     return registry->resolved_path;
   }
   return nullptr;

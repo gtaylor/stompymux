@@ -353,8 +353,8 @@ static char *configuration_toml_join_strings(toml_datum_t array,
       continue;
     if (*(const char *)checked_storage_at_const(out, total, sizeof(char), 0) !=
         '\0')
-      strcat(out, sep);
-    strcat(out, element.u.s);
+      strlcat(out, sep, total);
+    strlcat(out, element.u.s, total);
   }
   return out;
 }

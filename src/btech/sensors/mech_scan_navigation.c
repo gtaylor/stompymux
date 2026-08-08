@@ -117,7 +117,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
     if (x1 >= 0.0F) {
       const int bearing = FindBearing(x0, y0, x1, y1);
       snprintf(trash, sizeof(trash), "%d degrees.", bearing);
-      strcat(buff, trash);
+      strlcat(buff, trash, sizeof(buff));
       mecha_notify(evaluation, player, buff);
     }
   } else {
@@ -229,7 +229,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
                  buf2);
       else
         snprintf(trash, sizeof(trash), "%s hexes.", buf1);
-      strcat(buff, trash);
+      strlcat(buff, trash, sizeof(buff));
       mecha_notify(evaluation, player, buff);
     }
   } else {
@@ -371,7 +371,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                  buf2);
       else
         snprintf(trash, sizeof(trash), "%s hexes and ", buf1);
-      strcat(buff, trash);
+      strlcat(buff, trash, sizeof(buff));
 
       /* bearing */
       const int bearing = FindBearing(x0, y0, x1, y1);
@@ -383,7 +383,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                   : z1 < z0 ? '-'
                             : ' '),
                  FindZBearing(x0, y0, z0, x1, y1, z1));
-      strcat(buff, trash);
+      strlcat(buff, trash, sizeof(buff));
 
       mecha_notify(evaluation, player, buff);
     }

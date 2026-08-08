@@ -434,16 +434,16 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
                       lrs_hex_text(colors, mech, map, i, loop, &prevct, mode,
                                    &mechs, last_mech, losmap)
                           .text);
-      strcat(botbuff, " ");
+      strlcat(botbuff, " ", sizeof(botbuff));
     }
 
     if (mode & (LRS_COLORMODE | LRS_ELEVCOLORMODE)) {
       if (prevct) {
-        strcat(topbuff, "[reset]");
+        strlcat(topbuff, "[reset]", sizeof(topbuff));
         prevct = 0;
       }
       if (prevcb) {
-        strcat(botbuff, "[reset]");
+        strlcat(botbuff, "[reset]", sizeof(botbuff));
         prevcb = 0;
       }
     }

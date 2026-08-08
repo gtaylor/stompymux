@@ -302,7 +302,7 @@ CoolMenu *SelCol_Menu(int columns, char *heading, char *const *strings,
   int i, co = 0;
   char buf[LBUF_SIZE];
 
-  strcpy(buf, heading);
+  strlcpy(buf, heading, sizeof(buf));
   buf[0] = ascii_to_upper(buf[0]);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
@@ -326,7 +326,7 @@ CoolMenu *SelCol_ConstMenu(int columns, const char *heading,
   int count = 0;
   char heading_buffer[LBUF_SIZE];
 
-  strcpy(heading_buffer, heading);
+  strlcpy(heading_buffer, heading, sizeof(heading_buffer));
   heading_buffer[0] = ascii_to_upper(heading_buffer[0]);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, heading_buffer, CM_ONE | CM_CENTER);
@@ -350,7 +350,7 @@ CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
   char buf[LBUF_SIZE];
   int sick = 0;
 
-  strcpy(buf, heading);
+  strlcpy(buf, heading, sizeof(buf));
   buf[0] = ascii_to_upper(buf[0]);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
@@ -376,7 +376,7 @@ CoolMenu *SelCol_FunStringMenuContextK(int columns, const char *heading,
   char entry[LBUF_SIZE];
   int sick = 0;
 
-  strcpy(buf, heading);
+  strlcpy(buf, heading, sizeof(buf));
   buf[0] = ascii_to_upper(buf[0]);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);

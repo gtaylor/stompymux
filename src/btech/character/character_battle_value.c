@@ -69,7 +69,7 @@ int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
   PSTATS stats, *s = &stats;
   char buf[SBUF_SIZE];
 
-  strcpy(buf, name);
+  strlcpy(buf, name, sizeof(buf));
   character_stats_retrieve(context, player,
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
   if (char_getstatvalue(s, buf) == 1)
@@ -287,8 +287,10 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   xp = BOUNDED(1, (int)(multiplier * (double)damage / 100.0),
                mech_context(attacker)->configuration->btech_xpgain_cap);
 
-  strcpy(buf, game_object_name(mech_context(attacker)->database,
-                               mech_dbref(wounded)));
+  strlcpy(
+      buf,
+      game_object_name(mech_context(attacker)->database, mech_dbref(wounded)),
+      sizeof(buf));
 
   // Emit XP gain over MechAttackXP
   if (char_gainxp(context, pilot, skname, (int)xp)) {
@@ -388,8 +390,10 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
 
   xp = BOUNDED(1, (int)(multiplier * numOccurences) / 100,
                50); /*Hardcoded limit */
-  strcpy(buf, game_object_name(mech_context(attacker)->database,
-                               mech_dbref(wounded)));
+  strlcpy(
+      buf,
+      game_object_name(mech_context(attacker)->database, mech_dbref(wounded)),
+      sizeof(buf));
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */

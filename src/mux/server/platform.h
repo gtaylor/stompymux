@@ -58,7 +58,7 @@ constexpr int HASH_FACTOR = 16; /* How much hashing you want. */
 
 constexpr int OUTPUT_BLOCK_SIZE = 16384;
 static inline char *StringCopy(char *dst, const char *src) {
-  return strcpy(dst, src);
+  return strcpy(dst, src); // NOLINT(clang-analyzer-security.insecureAPI.strcpy)
 }
 static inline char *StringCopyTrunc(char *dst, const char *src, size_t n) {
   return strncpy(dst, src, n);

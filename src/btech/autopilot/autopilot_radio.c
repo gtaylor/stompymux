@@ -461,7 +461,7 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
       snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");
       return;
     }
-    strcpy(buffer, autopilot_argument_list_get(args, 1));
+    strlcpy(buffer, autopilot_argument_list_get(args, 1), sizeof(buffer));
     mech_jump(autopilot->mynum, mech, buffer);
     snprintf(mesg, LBUF_SIZE, "jumping on [%s]",
              autopilot_argument_list_get(args, 1));

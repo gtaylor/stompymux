@@ -617,7 +617,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
 #ifdef DEBUG_ASTAR
   /* Close Log file */
-  fclose(logfile);
+  if (fclose(logfile) != 0)
+    return 0;
 #endif
 
   /* End */

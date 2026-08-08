@@ -467,7 +467,7 @@ void auto_command_pickup(Autopilot *autopilot, Mech *mech) {
   }
 
   /* Now try and pick it up */
-  strcpy(buf, mech_id(tempmech, true).text);
+  strlcpy(buf, mech_id(tempmech, true).text, sizeof(buf));
   mech_pickup(GOD, mech, buf);
 
   /*! \todo {Possibly add in something either here or in autopilot_radio.c
@@ -560,7 +560,7 @@ void auto_command_embark(Autopilot *autopilot, Mech *mech) {
     return;
   }
 
-  strcpy(buf, mech_id(tempmech, true).text);
+  strlcpy(buf, mech_id(tempmech, true).text, sizeof(buf));
   mech_embark(GOD, mech, buf);
 }
 

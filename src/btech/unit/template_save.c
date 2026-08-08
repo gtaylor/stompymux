@@ -16,7 +16,7 @@ void try_to_find_name(char *mechref, Mech *mech) {
   const char *c;
 
   if ((c = find_mechname_by_mechref(mechref)))
-    strcpy(((mech)->ud.mech_name), c);
+    strlcpy(((mech)->ud.mech_name), c, sizeof(((mech)->ud.mech_name)));
 }
 
 int DefaultFuelByType(Mech *mech) {
@@ -142,15 +142,16 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
                              infantry_technology_name_count(), inf_x,
                              (char[BTECH_TEXT_CAPACITY]){0}));
 
+  int result = -1;
   if ((locs =
            ProperSectionStringFromType(((mech)->ud.type), ((mech)->ud.move)))) {
     dump_locations(fp, mech, locs,
                    mech_section_name_count(mech->ud.type, mech->ud.move));
-    fclose(fp);
-    return 0;
+    result = 0;
   }
-  fclose(fp);
-  return -1;
+  if (fclose(fp) != 0)
+    return -1;
+  return result;
 }
 
 static void skip_template_whitespace(FILE *fp) {
@@ -215,7 +216,7 @@ int find_section(char *cmd, int type, int mtype) {
   char section[20];
   const char *const *locs;
 
-  strcpy(section, cmd);
+  strlcpy(section, cmd, sizeof(section));
   size_t section_length = strlen(section);
   for (size_t index = 0; index < section_length; index++) {
     char *character =

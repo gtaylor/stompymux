@@ -49,7 +49,8 @@ static int template_load_modern(DbRef player, Mech *mech, const char *id) {
     return 0;
   if (!(fp = fopen(filename, "r")))
     return 0;
-  fclose(fp);
+  if (fclose(fp) != 0)
+    return 0;
   return load_template(player, mech, filename) >= 0 ? 1 : 0;
 }
 
@@ -95,7 +96,8 @@ static bool template_load_error(FILE *fp, Mech *mech, bool condition,
   (void)format;
 #endif
   if (fp) {
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return true;
   }
   return true;
 }
@@ -218,7 +220,8 @@ static int template_load_legacy(Mech *mech, const char *id) {
     mech_radio_range_set(mech, DEFAULT_RADIORANGE);
   else
     mech_radio_range_set(mech, i1);
-  fclose(fp);
+  if (fclose(fp) != 0)
+    return -1;
   return 1;
 }
 

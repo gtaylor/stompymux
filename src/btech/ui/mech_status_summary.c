@@ -104,9 +104,10 @@ void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech) {
         mecha_notify(evaluation, player, buff);
         arc = InWeaponArc(mech, mech_position_real_x(tempMech),
                           mech_position_real_y(tempMech));
-        strcpy(buff,
-               tprintf("Target in %s Weapons Arc",
-                       (arc & TURRETARC) ? "Turret" : GetArcID(mech, arc)));
+        strlcpy(buff,
+                tprintf("Target in %s Weapons Arc",
+                        (arc & TURRETARC) ? "Turret" : GetArcID(mech, arc)),
+                sizeof(buff));
         if (mech_aim_section(mech) == NUM_SECTIONS ||
             mech_aim_unit_class(mech) != mech_class(tempMech))
           strcpy(location, "None");
@@ -116,7 +117,7 @@ void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech) {
                                mech_movement_type(tempMech));
         snprintf(buff1, sizeof(buff1), "\t   Aimed Shot Location: %s",
                  location);
-        strcat(buff, buff1);
+        strlcat(buff, buff1, sizeof(buff));
       } else
         snprintf(buff, sizeof(buff), "Target: NOT in line of sight!\n");
     }
@@ -176,14 +177,16 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   char mech_ref[100] = {0};
   char move_type[50] = {0};
 
-  strcpy(mech_name,
-         usex ? mech_model_name(mech)
-              : btech_attribute_read(context->database, mech_dbref(mech),
-                                     A_MECHNAME, (char[LBUF_SIZE]){0}));
-  strcpy(mech_ref,
-         usex ? mech_model_reference(mech)
-              : btech_attribute_read(context->database, mech_dbref(mech),
-                                     A_MECHREF, (char[LBUF_SIZE]){0}));
+  strlcpy(mech_name,
+          usex ? mech_model_name(mech)
+               : btech_attribute_read(context->database, mech_dbref(mech),
+                                      A_MECHNAME, (char[LBUF_SIZE]){0}),
+          sizeof(mech_name));
+  strlcpy(mech_ref,
+          usex ? mech_model_reference(mech)
+               : btech_attribute_read(context->database, mech_dbref(mech),
+                                      A_MECHREF, (char[LBUF_SIZE]){0}),
+          sizeof(mech_ref));
 
   switch (mech_class(mech)) {
   case CLASS_MW:

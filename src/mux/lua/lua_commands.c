@@ -288,7 +288,9 @@ static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
     notify_printf(evaluation, player, "Lua parent read failed: %s",
                   strerror(errno));
   free(line);
-  fclose(stream);
+  if (fclose(stream) != 0)
+    notify_printf(evaluation, player, "Lua parent close failed: %s",
+                  strerror(errno));
   notify_checked(evaluation, player, player, "-- End Lua parent --", MSG_ME);
 }
 

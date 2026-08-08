@@ -311,7 +311,7 @@ void btech_special_object_help(BtechContext *context, DbRef player,
             btech_special_command_access(context, player, powerneeded))
           if (id != GTYPE_MECH ||
               btech_command_allowed_for_mech(mech, command->flag)) {
-            strcpy(buf, command->name);
+            strlcpy(buf, command->name, sizeof(buf));
             const size_t name_length = strcspn(buf, " ");
             *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
                                         name_length) = '\0';

@@ -39,7 +39,8 @@ static bool template_load_error(FILE *fp, Mech *mech, DbRef player,
   (void)format;
 #endif
   if (fp) {
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return true;
   }
   return true;
 }
@@ -96,7 +97,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       ptr = checked_mutable_string_suffix(ptr, 1);
       ptr = checked_mutable_string_suffix(ptr, strspn(ptr, " \t\n\v\f\r"));
     } else {
-      strcpy(cmd, line);
+      strlcpy(cmd, line, sizeof(cmd));
       strcpy(line, "");
       ptr = NULL;
     }
@@ -135,7 +136,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       }
       silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHREF,
                        tmpc);
-      strcpy(((mech)->ud.mech_type), tmpc);
+      strlcpy(((mech)->ud.mech_type), tmpc, sizeof(((mech)->ud.mech_type)));
       break;
     case 1: /* Type */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
@@ -396,8 +397,9 @@ int load_template(DbRef player, Mech *mech, char *filename) {
           mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 16: /* Name of the mech */
-      strcpy(((mech)->ud.mech_name),
-             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      strlcpy(((mech)->ud.mech_name),
+              read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+              sizeof(((mech)->ud.mech_name)));
       break;
     case 17: /* Jj's */
       ((mech)->rd.jumpspeed) =
@@ -455,18 +457,19 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (strlen(tmpc) == 1) /* just the \0 */
         strcpy(((mech)->ud.unit_era), "Undefined");
       else
-        strcpy(((mech)->ud.unit_era), tmpc);
+        strlcpy(((mech)->ud.unit_era), tmpc, sizeof(((mech)->ud.unit_era)));
       break;
     case 30:
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       if (strlen(tmpc) == 1) /* just the \0 */
         strcpy(((mech)->ud.unit_tro), "Undefined");
       else
-        strcpy(((mech)->ud.unit_tro), tmpc);
+        strlcpy(((mech)->ud.unit_tro), tmpc, sizeof(((mech)->ud.unit_tro)));
       break;
     }
   }
-  fclose(fp);
+  if (fclose(fp) != 0)
+    return -1;
   ((mech)->rd.erat) = mech_calculated_engine_rating(mech);
   /* So we're not getting 'blank' ERA/TRO values, we'll default to 'Undefined'
    */

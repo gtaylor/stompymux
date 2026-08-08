@@ -94,42 +94,42 @@ char *techlist_func(Mech *mech, char *buffer) {
         strstr(buffer, "LENG") || strstr(buffer, "ICE") ||
         strstr(buffer, "CENG")) &&
       (((mech)->ud.type) != CLASS_BSUIT))
-    strcat(buffer, " FUS ");
+    strlcat(buffer, " FUS ", sizeof(buffer));
 
   for (i = 0; i < NUM_SECTIONS; i++)
     for (ii = 0; ii < NUM_CRITICALS; ii++) {
       part = mech_critical_part_type(mech, i, ii);
       if (part == special_equipment_index(AXE) && !axe) {
         axe = 1;
-        strcat(buffer, " AXE");
+        strlcat(buffer, " AXE", sizeof(buffer));
       }
       if (part == special_equipment_index(CLAW) && !claw) {
         claw = 1;
-        strcat(buffer, " CLAW");
+        strlcat(buffer, " CLAW", sizeof(buffer));
       }
       if (part == special_equipment_index(MACE) && !mace) {
         mace = 1;
-        strcat(buffer, " MACE");
+        strlcat(buffer, " MACE", sizeof(buffer));
       }
       if (part == special_equipment_index(DUAL_SAW) && !saw) {
         saw = 1;
-        strcat(buffer, " DUAL_SAW");
+        strlcat(buffer, " DUAL_SAW", sizeof(buffer));
       }
       if (part == special_equipment_index(SWORD) && !sword) {
         sword = 1;
-        strcat(buffer, " SWORD");
+        strlcat(buffer, " SWORD", sizeof(buffer));
       }
       if (mech_section_configuration_has(mech, i, CASE_TECH) && !hascase) {
         hascase = 1;
-        strcat(buffer, " CASE");
+        strlcat(buffer, " CASE", sizeof(buffer));
       }
     }
 
   if (((mech)->ud.cargospace))
-    strcat(buffer, " INFC");
+    strlcat(buffer, " INFC", sizeof(buffer));
 
   if (((mech)->ud.type) == CLASS_VTOL)
-    strcat(buffer, " VTOL");
+    strlcat(buffer, " VTOL", sizeof(buffer));
 
   if (((mech)->ud.type) == CLASS_MECH && ((mech)->ud.move) != MOVE_QUAD) {
     if ((mech_critical_is_operational_special(mech, RARM, 3,
@@ -141,10 +141,10 @@ char *techlist_func(Mech *mech, char *buffer) {
          mech_critical_is_operational_special(mech, LARM, 0,
                                               SHOULDER_OR_HIP)) ||
         ((mech)->rd.specials) & SALVAGE_TECH)
-      strcat(buffer, " MTOW");
+      strlcat(buffer, " MTOW", sizeof(buffer));
   } else {
     if (((mech)->rd.specials) & SALVAGE_TECH)
-      strcat(buffer, " MTOW");
+      strlcat(buffer, " MTOW", sizeof(buffer));
   }
 
   return buffer;

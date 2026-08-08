@@ -412,7 +412,7 @@ void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
       continue;
     const char *const *location = checked_storage_at_const(
         locdesc, location_count, sizeof(*locdesc), (size_t)x);
-    strcpy(buf, *location);
+    strlcpy(buf, *location, sizeof(buf));
     size_t location_length = strlen(buf);
     for (size_t index = 0; index < location_length; index++) {
       char *character =

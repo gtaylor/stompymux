@@ -469,7 +469,7 @@ void ChannelEmitKill(Mech *mech, Mech *attacker, const char *reason) {
 
       if (reason_copy) {
         /* Safe because reason is a KILL_TYPE_*. */
-        strcpy(reason_copy, reason);
+        strlcpy(reason_copy, reason, sizeof(reason_copy));
 
         args[0] = reason_copy;
         nargs = 1;

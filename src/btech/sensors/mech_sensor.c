@@ -452,7 +452,7 @@ unsigned short mech_sensor_visibility_update(Mech *mech, unsigned short flags,
                    mech_to_mech_display_id_base(mech, target, wlf).text,
                    GetArcID(mech, arc));
         if (st & AUTOCON_WARN)
-          strcat(buf, "[reset]");
+          strlcat(buf, "[reset]", sizeof(buf));
         mech_notify(mech, MECHALL, buf);
       }
       if (mech_targeting_has_lock_on(mech, mech_dbref(target))) {
@@ -516,7 +516,7 @@ unsigned short mech_sensor_visibility_update(Mech *mech, unsigned short flags,
                    GetArcID(mech, arc));
         }
         if (st & AUTOCON_WARN)
-          strcat(buf, "[reset]");
+          strlcat(buf, "[reset]", sizeof(buf));
         mech_notify(mech, MECHALL, buf);
       }
       if (mech_team(mech) != mech_team(target))

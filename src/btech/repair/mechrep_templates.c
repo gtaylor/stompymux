@@ -154,7 +154,7 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
                 "Saving %s...", args[0]);
   snprintf(openfile, sizeof(openfile), "%s/",
            btech_context_mech_template_path(mech_context(mech)));
-  strcat(openfile, args[0]);
+  strlcat(openfile, args[0], sizeof(openfile));
   if (!(fp = fopen(openfile, "w"))) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Unable to open/create mech file! Sorry.");
@@ -179,7 +179,11 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
   }
   fprintf(fp, "%d %d\n", mech_class(mech), mech_movement_type(mech));
   fprintf(fp, "%d\n", mech_radio_range(mech));
-  fclose(fp);
+  if (fclose(fp) != 0) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Unable to finish saving the mech file.");
+    return;
+  }
   mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                "Saving complete!");
 }
@@ -224,7 +228,7 @@ void mechrep_Rsavetemp2(DbRef player, void *data, char *buffer) {
                 "Saving %s", args[0]);
   snprintf(openfile, sizeof(openfile), "%s/",
            btech_context_mech_template_path(mech_context(mech)));
-  strcat(openfile, args[0]);
+  strlcat(openfile, args[0], sizeof(openfile));
 
   // Just warn on overweight.
   if (mech_weight_sub(GOD, mech, -1) > (mech_tonnage(mech) * 1024))

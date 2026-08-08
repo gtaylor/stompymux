@@ -75,16 +75,16 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
         snprintf(weapbuff, sizeof(weapbuff), " %-18.18s [%2d]  ",
                  checked_string_suffix(weapon_catalogue_name(weapon_index), 3),
                  running_sum + ii);
-        strcat(weapbuff, location);
+        strlcat(weapbuff, location, sizeof(weapbuff));
 
         if (mech_critical_is_nonfunctional(mech, loop,
                                            scan_weapon_integer(critical, ii))) {
-          strcat(weapbuff, "[fg=black bold]*****[reset]");
+          strlcat(weapbuff, "[fg=black bold]*****[reset]", sizeof(weapbuff));
         } else {
           if (scan_weapon_byte(weapdata, ii)) {
-            strcat(weapbuff, "-----");
+            strlcat(weapbuff, "-----", sizeof(weapbuff));
           } else {
-            strcat(weapbuff, "[fg=green]Ready[reset]");
+            strlcat(weapbuff, "[fg=green]Ready[reset]", sizeof(weapbuff));
           }
         }
         mecha_notify(evaluation, player, weapbuff);

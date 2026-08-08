@@ -340,7 +340,8 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
     btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
                        tprintf("Map #%ld: Invalid height and or/width on %s",
                                map->mynum, mapname));
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return -2;
     return -2; // Bad Height/Width
   }
 
@@ -357,14 +358,14 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
         tprintf("Map #%ld: Mapfile possibly corrupt and/or "
                 "height/width flipped. Height != what was read in %s",
                 map->mynum, mapname));
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return -3;
     return -3;
   }
 
   // Everything is good if we get past the above
 
-  fclose(fp);
-  return 1;
+  return fclose(fp) == 0 ? 1 : -1;
 }
 
 int map_load(BattleMap *map, char *mapname) {
@@ -395,7 +396,8 @@ int map_load(BattleMap *map, char *mapname) {
     btech_channel_send(
         map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
         tprintf("Map #%ld: Invalid height and/or width", map->mynum));
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return -1;
     return -1;
   }
   // height is constrained to [1, MAPY] immediately above.
@@ -439,7 +441,8 @@ int map_load(BattleMap *map, char *mapname) {
                        tprintf("Error: EOF reached prematurely. "
                                "(x%d != %d || y%d != %d)",
                                j, width, i, height));
-    fclose(fp);
+    if (fclose(fp) != 0)
+      return -2;
     return -2;
   }
   map->grav = 100;
@@ -456,7 +459,8 @@ int map_load(BattleMap *map, char *mapname) {
   if (!battle_map_disables_bridgification(map))
     make_bridges(map);
   strncpy(map->mapname, mapname, MAP_NAME_SIZE);
-  fclose(fp);
+  if (fclose(fp) != 0)
+    return -1;
   return 0;
 }
 
@@ -586,9 +590,13 @@ void map_savemap(DbRef player, void *data, char *buffer) {
   }
   if ((i = (map->flags & ~(MAPFLAG_MAPO))))
     fprintf(fp, "%d: %d %d\n", i, map->grav, map->temp);
+  if (fclose(fp) != 0) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Unable to finish saving the map file.");
+    return;
+  }
   mecha_notify(btech_context_evaluation(map->xcode.context), player,
                "Saving complete!");
-  fclose(fp);
 }
 
 void map_setmapsize(DbRef player, void *data, char *buffer) {

@@ -348,7 +348,8 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
     bearing = FindBearing(
         mech_position_real_x(mech), mech_position_real_y(mech),
         mech_position_real_x(otherMech), mech_position_real_y(otherMech));
-    strcpy(move_type, GetMoveTypeID(mech_movement_type(otherMech)));
+    strlcpy(move_type, GetMoveTypeID(mech_movement_type(otherMech)),
+            sizeof(move_type));
 
     /* Get our weapon arc */
     arc = InWeaponArc(mech, mech_position_real_x(otherMech),
@@ -449,7 +450,8 @@ void mech_network_show_status(DbRef player, Mech *mech, bool tIsC3) {
         mech_position_real_x(mech), mech_position_real_y(mech),
         mech_position_real_x(otherMech), mech_position_real_y(otherMech));
 
-    strcpy(move_type, GetMoveTypeID(mech_movement_type(otherMech)));
+    strlcpy(move_type, GetMoveTypeID(mech_movement_type(otherMech)),
+            sizeof(move_type));
 
     mech_name = btech_attribute_read(mech_context(otherMech)->database,
                                      mech_dbref(otherMech), A_MECHNAME,

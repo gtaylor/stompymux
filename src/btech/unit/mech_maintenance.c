@@ -21,9 +21,11 @@ void ArmorStringFromIndex(int index, char *buffer, UnitClass type,
                           MechMovementType movement_type) {
   size_t location_count = mech_section_name_count(type, movement_type);
   if (index >= 0 && (size_t)index < location_count) {
+    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
     strcpy(buffer, mech_section_name(type, movement_type, (size_t)index));
     return;
   }
+  // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
   strcpy(buffer, "Invalid!!");
 }
 

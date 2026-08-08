@@ -505,13 +505,13 @@ void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
       snprintf(weapbuff, sizeof(weapbuff), "[%2d] %-29.29s || ", wcWeaps++,
                weapon_display_name(weapon_index));
 
-      strcat(weapbuff, strLocation);
+      strlcat(weapbuff, strLocation, sizeof(weapbuff));
       wDamagedSlots = 0;
 
       if (mech_critical_is_broken(mech, secIter, weapon_critical) ||
           mech_critical_temporary_failure(mech, secIter, weapon_critical) ==
               FAIL_DESTROYED)
-        strcat(weapbuff, "|| [fg=red bold]DESTROYED[reset]");
+        strlcat(weapbuff, "|| [fg=red bold]DESTROYED[reset]", sizeof(weapbuff));
       else {
 
         if (mech_class(mech) == CLASS_MECH)
@@ -519,31 +519,34 @@ void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
               mech_weapon_damaged_slot_count_at(mech, secIter, weapon_critical);
 
         if (mech_critical_is_disabled(mech, secIter, weapon_critical))
-          strcat(weapbuff, "|| [fg=red bold]DISABLED[reset]");
+          strlcat(weapbuff, "|| [fg=red bold]DISABLED[reset]",
+                  sizeof(weapbuff));
         else if (mech_critical_temporary_failure(mech, secIter,
                                                  weapon_critical)) {
           switch (
               mech_critical_temporary_failure(mech, secIter, weapon_critical)) {
           case FAIL_JAMMED:
-            strcat(weapbuff, "|| [fg=yellow]JAMMED[reset]");
+            strlcat(weapbuff, "|| [fg=yellow]JAMMED[reset]", sizeof(weapbuff));
             break;
           case FAIL_SHORTED:
-            strcat(weapbuff, "|| [fg=blue]SHORTED[reset]");
+            strlcat(weapbuff, "|| [fg=blue]SHORTED[reset]", sizeof(weapbuff));
             break;
           case FAIL_EMPTY:
-            strcat(weapbuff, "|| [fg=cyan]EMPTY[reset]");
+            strlcat(weapbuff, "|| [fg=cyan]EMPTY[reset]", sizeof(weapbuff));
             break;
           case FAIL_DUD:
-            strcat(weapbuff, "|| [fg=yellow]DUD[reset]");
+            strlcat(weapbuff, "|| [fg=yellow]DUD[reset]", sizeof(weapbuff));
             break;
           case FAIL_AMMOJAMMED:
-            strcat(weapbuff, "|| [fg=yellow]AMMOJAM[reset]");
+            strlcat(weapbuff, "|| [fg=yellow]AMMOJAM[reset]", sizeof(weapbuff));
             break;
           }
         } else if (wDamagedSlots > 0)
-          strcat(weapbuff, "|| [fg=yellow bold]DAMAGED[reset]");
+          strlcat(weapbuff, "|| [fg=yellow bold]DAMAGED[reset]",
+                  sizeof(weapbuff));
         else
-          strcat(weapbuff, "|| [fg=green bold]OPERATIONAL[reset]");
+          strlcat(weapbuff, "|| [fg=green bold]OPERATIONAL[reset]",
+                  sizeof(weapbuff));
       }
 
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,

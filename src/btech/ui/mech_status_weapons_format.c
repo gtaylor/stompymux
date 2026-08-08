@@ -446,7 +446,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                          mech_movement_type(mech));
     snprintf(location, sizeof(location), "%-14.14s", tempbuff);
     if (compact) {
-      strcpy(location, tempbuff);
+      strlcpy(location, tempbuff, sizeof(location));
       if ((tmpc = strchr(location, ' ')))
         *tmpc = '_';
     }

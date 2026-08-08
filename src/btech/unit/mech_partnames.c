@@ -187,11 +187,12 @@ static int create_brandname(PartNameRegistry *registry,
     return 0;
   }
   if (b) {
-    strcpy(buf2, c);
-    strcpy(buf3, my_shortform(brn, (char[BTECH_TEXT_CAPACITY]){0}));
+    strlcpy(buf2, c, sizeof(buf2));
+    strlcpy(buf3, my_shortform(brn, (char[BTECH_TEXT_CAPACITY]){0}),
+            sizeof(buf3));
     snprintf(buf, sizeof(buf), "%s.%s", buf3, buf2);
   } else
-    strcpy(buf, c);
+    strlcpy(buf, c, sizeof(buf));
   p->shorty = strdup(buf);
   p->index = packed_part(id, b);
   *part_index_slot(registry, b, id) = p;
