@@ -535,6 +535,8 @@ void mech_weapon_failure_check(Mech *mech, int weapnum, int weaptype,
   if (mech_context(mech)->configuration->btech_parts) {
     if (!l)
       l = 5;
+    if (!equipment_is_weapon(t))
+      return;
     if (MechWeapons[weapon_from_equipment_index(t)].special & PCOMBAT)
       return;
   } else

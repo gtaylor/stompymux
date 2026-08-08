@@ -352,6 +352,8 @@ int map_load(BattleMap *map, char *mapname) {
     width = DEFAULT_MAP_WIDTH;
     height = DEFAULT_MAP_HEIGHT;
   }
+  // height is constrained to [1, MAPY] immediately above.
+  // NOLINTNEXTLINE(clang-analyzer-optin.taint.TaintedAlloc)
   Create(map->map, unsigned char *, height);
 
   for (i = 0; i < height; i++)

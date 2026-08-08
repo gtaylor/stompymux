@@ -18,7 +18,11 @@
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
 
-POWERENT gen_powers[] = {{"idle", POWER_IDLE, 0}, {nullptr, POWER_NONE, 0}};
+static POWERENT gen_powers[2] = {
+    {"idle", POWER_IDLE, 0},
+    {nullptr, POWER_NONE, 0},
+};
+constexpr size_t GEN_POWER_COUNT = 1;
 
 /**
  * Initialize power hash tables.
@@ -30,7 +34,8 @@ void init_powertab(WorldIndexes *indexes) {
   const char *bp;
 
   hash_table_initialize(&indexes->powers, 15 * HASH_FACTOR);
-  for (fp = gen_powers; fp->powername; fp++) {
+  for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
+    fp = &gen_powers[index];
     for (np = nbuf, bp = fp->powername; *bp; np++, bp++)
       *np = ascii_to_lower(*bp);
     *np = '\0';
@@ -47,7 +52,8 @@ void display_powertab(EvaluationContext *evaluation, DbRef player) {
 
   bp = buf = alloc_lbuf("display_powertab");
   safe_str("Powers:", buf, &bp);
-  for (fp = gen_powers; fp->powername; fp++) {
+  for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
+    fp = &gen_powers[index];
     if ((fp->listperm & CA_WIZARD) &&
         !is_wizard(evaluation->world->database, player))
       continue;
@@ -192,7 +198,8 @@ char *power_description(GameDatabase *database, DbRef player, DbRef target) {
 
   safe_mb_str("Powers:", buff, &bp);
 
-  for (fp = gen_powers; fp->powername; fp++) {
+  for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
+    fp = &gen_powers[index];
     if (game_object_has_power(database, target, fp->id)) {
       if ((fp->listperm & CA_WIZARD) && !is_wizard(database, player))
         continue;

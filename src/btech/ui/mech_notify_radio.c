@@ -45,6 +45,7 @@ static void append_lbuf(char *buffer, size_t size, const char *fmt, ...) {
     return;
 
   va_start(ap, fmt);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(buffer + len, size - len, fmt, ap);
   va_end(ap);
 }

@@ -181,6 +181,7 @@ void log_error(ServerLog *log, int key, const char *primary,
   }
 
   va_start(ap, format);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(buffer, LBUF_SIZE, format, ap);
   va_end(ap);
 

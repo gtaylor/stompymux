@@ -20,6 +20,7 @@ static bool template_load_error(FILE *fp, Mech *mech, DbRef player,
   char message[LBUF_SIZE] = {0};
   va_list args;
   va_start(args, format);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(message, sizeof(message), format, args);
   va_end(args);
   if (global) {
@@ -105,9 +106,9 @@ int load_template(DbRef player, Mech *mech, char *filename) {
               filename)) {
         return -1;
       }
-      if (template_load_error(fp, mech, player, section == -1, true,
-                              "Error while loading: Section %s not found.",
-                              cmd)) {
+      if (section == -1) {
+        template_load_error(fp, mech, player, true, true,
+                            "Error while loading: Section %s not found.", cmd);
         return -1;
       }
       ((mech)->ud.sections)[section].recycle = 0;

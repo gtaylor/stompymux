@@ -29,6 +29,7 @@ void diagnostics_log(const char *file, int line, const char *func,
 
   diagnostics_print_prefix(file, line, func);
   va_start(args, format);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vfprintf(stderr, format, args);
   va_end(args);
   fprintf(stderr, "\n");

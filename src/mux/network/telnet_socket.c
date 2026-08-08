@@ -256,6 +256,7 @@ static void descriptor_read(uv_stream_t *stream, ssize_t read_size,
       read_size >= 9 && strncmp("@segfault", buffer->base, 9) == 0) {
     descriptor_queue_string(descriptor,
                             "@segfault failed. (check logfile for reason.)\n");
+    // NOLINTNEXTLINE(clang-analyzer-core.FixedAddressDereference)
     *(char *)0xDEADBEEF = '9';
   }
   descriptor_telnet_receive(descriptor, buffer->base, (size_t)read_size);

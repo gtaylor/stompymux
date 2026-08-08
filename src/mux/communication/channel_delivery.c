@@ -49,6 +49,7 @@ void send_channel_v(EvaluationContext *evaluation, const char *chan,
 
   if (!(ch = select_channel(evaluation->runtime->channels, chan)))
     return;
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(data, LBUF_SIZE, format, arguments);
 
   safe_chr('[', buf, &bp);
@@ -247,6 +248,7 @@ void comsys_channel_printf(EvaluationContext *evaluation, struct channel *ch,
   char buffer[LBUF_SIZE];
   memset(buffer, 0, LBUF_SIZE);
   va_start(ap, messfmt);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(buffer, LBUF_SIZE - 1, messfmt, ap);
   va_end(ap);
 

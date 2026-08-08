@@ -78,7 +78,8 @@ static char *dbrefs_to_names(WorldContext *world, DbRef player, char *list,
       }
     }
   }
-  *(bp - 2) = '\0';
+  if (bp != namelist)
+    *(bp - 2) = '\0';
   return bp;
 }
 
@@ -307,8 +308,10 @@ void do_page(CommandInvocation *invocation) {
       }
     }
   } else {
-    *(bp - 2) = ')';
-    *(bp - 1) = '\0';
+    if (bp - buf1 >= 2) {
+      *(bp - 2) = ')';
+      *(bp - 1) = '\0';
+    }
 
     if (*buf1) {
       if (ispose != 1) {

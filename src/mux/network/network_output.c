@@ -62,6 +62,7 @@ void notify_printf(EvaluationContext *evaluation, DbRef player,
 
   va_start(ap, format);
 
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(buffer, LBUF_SIZE - 1, format, ap);
   va_end(ap);
 
@@ -102,6 +103,7 @@ void raw_broadcast(DescriptorRegistry *descriptors, int inflags,
     return;
 
   va_start(ap, template);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(buff, LBUF_SIZE, template, ap);
   buff[LBUF_SIZE - 1] = '\0';
 

@@ -84,6 +84,7 @@ static bool template_load_error(FILE *fp, Mech *mech, bool condition,
   char message[LBUF_SIZE] = {0};
   va_list args;
   va_start(args, format);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(message, sizeof(message), format, args);
   va_end(args);
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",

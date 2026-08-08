@@ -1,4 +1,8 @@
 #include "registry_api.h"
+
+// The static value catalog guarantees source-kind/type pairings. Clang's
+// analyzer cannot infer that a field-only type always has a field offset.
+// NOLINTBEGIN(clang-analyzer-core.NonNullParamChecker,clang-analyzer-core.NullDereference)
 #include "values_internal.h"
 
 /* INDENT OFF */
@@ -460,3 +464,5 @@ void list_xcodestuff(DbRef player, void *data, char *buffer) {
   ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
+
+// NOLINTEND(clang-analyzer-core.NonNullParamChecker,clang-analyzer-core.NullDereference)

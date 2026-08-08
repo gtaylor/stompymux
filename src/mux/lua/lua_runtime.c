@@ -32,6 +32,7 @@ void lua_set_error(char *error, size_t error_size, const char *format, ...) {
   if (!error || !error_size)
     return;
   va_start(arguments, format);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(error, error_size, format, arguments);
   va_end(arguments);
 }
@@ -136,6 +137,10 @@ int lua_resolve_path(LuaRuntime *runtime, LUA_MODULE_ROOT root,
   char candidate[PATH_MAX];
   size_t root_length;
 
+  if (root < LUA_ROOT_OBJECT_LOGIC || root >= LUA_ROOT_COUNT) {
+    lua_set_error(error, error_size, "Lua module root is invalid");
+    return 0;
+  }
   if (!lua_valid_relative_path(path)) {
     lua_set_error(error, error_size, "Lua paths must be relative .lua files");
     return 0;

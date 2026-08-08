@@ -175,6 +175,7 @@ static void damage_list_append(char buffer[static LBUF_SIZE], int *count,
   size_t length = strlen(buffer);
   va_list arguments;
   va_start(arguments, format);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(buffer + length, LBUF_SIZE - length, format, arguments);
   va_end(arguments);
 }

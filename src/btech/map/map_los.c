@@ -485,7 +485,7 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
 
   /* Some safeguarding on size */
 
-  if (xsz > MAPLOS_MAXX || ysz > MAPLOS_MAXY) {
+  if (xsz < 1 || ysz < 1 || xsz > MAPLOS_MAXX || ysz > MAPLOS_MAXY) {
     btech_channel_send(map->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                        tprintf("xsize (%d vs %d) or ysize (%d vs %d) "
                                "to CalculateLOSMap too large, for mech #%ld",

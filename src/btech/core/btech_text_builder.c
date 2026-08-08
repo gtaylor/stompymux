@@ -53,8 +53,8 @@ bool btech_text_builder_append_format(BtechTextBuilder *builder,
   const size_t available = builder->capacity - builder->length;
   va_list arguments;
   va_start(arguments, format);
-  const int count =
-      vsnprintf(builder->text + builder->length, available, format, arguments);
+  const int count = vsnprintf( // NOLINT(clang-analyzer-security.VAList)
+      builder->text + builder->length, available, format, arguments);
   va_end(arguments);
 
   if (count < 0 || (size_t)count >= available) {

@@ -75,13 +75,18 @@ static char *help_slurp_file(const char *path, size_t *out_length) {
     return nullptr;
   }
   buffer = malloc((size_t)size + 1);
+  if (!buffer) {
+    fclose(fp);
+    return nullptr;
+  }
   if (fread(buffer, 1, (size_t)size, fp) != (size_t)size) {
     free(buffer);
     fclose(fp);
     return nullptr;
   }
   fclose(fp);
-  buffer[size] = '\0';
+  // File length is converted only after ftell() verifies it is non-negative.
+  buffer[size] = '\0'; // NOLINT(clang-analyzer-security.ArrayBound)
   if (out_length)
     *out_length = (size_t)size;
   return buffer;
