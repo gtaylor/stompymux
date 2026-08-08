@@ -39,6 +39,7 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -47,6 +48,10 @@ static void swap_ints(int *left, int *right) {
   int temporary = *left;
   *left = *right;
   *right = temporary;
+}
+
+static Mech **swarm_target_slot(Mech **targets, size_t count, size_t index) {
+  return checked_storage_at(targets, count, sizeof(*targets), index);
 }
 
 void mech_missile_apply_hits(Mech *mech, Mech *target, int hitX, int hitY,
@@ -144,7 +149,7 @@ int mech_missile_hit_index(Mech *mech, Mech *hitMech, int weapindx,
   int r1, r2, r3;
   int tHotloading =
       (mech_critical_fire_mode(mech, wSection, wCritSlot) & HOTLOAD_MODE) &&
-      (MechWeapons[weapindx].special & IDF);
+      weapon_catalogue_supports_indirect_fire(weapindx);
   int wRollInc = 0;
   int wFinalRoll = 0;
   int tUseArtemisBonus =
@@ -195,7 +200,7 @@ int mech_missile_hit_index(Mech *mech, Mech *hitMech, int weapindx,
 
   if ((!hitMech || !mech_condition_summary(hitMech).angel_ecm_protected) &&
       !firing_condition.angel_ecm_disturbed &&
-      (MechWeapons[weapindx].special & STREAK)) {
+      weapon_catalogue_is_streak(weapindx)) {
     return 10;
   }
 
@@ -232,10 +237,10 @@ int mech_missile_hit_target(Mech *mech, int weapindx, int wSection,
   int missileindex = 0;
   /* Check to see if we're a NARC or iNARC launcher firing homing missiles */
   if (weapon_catalogue_is_missile(weapindx)) {
-    if ((MechWeapons[weapindx].special & NARC) &&
+    if (weapon_catalogue_is_narc(weapindx) &&
         !(mech_critical_ammo_mode(mech, wSection, wCritSlot) & NARC_MODE))
       wNARCType = 1;
-    else if ((MechWeapons[weapindx].special & INARC) &&
+    else if (weapon_catalogue_is_inarc(weapindx) &&
              !(mech_critical_ammo_mode(mech, wSection, wCritSlot) &
                INARC_EXPLO_MODE)) {
 
@@ -375,17 +380,18 @@ int mech_missile_hit_target(Mech *mech, int weapindx, int wSection,
   } else {
     if (btech_context_glancing_blows_enabled(mech_context(mech)) &&
         (player_roll == baseToHit) && hitMech) {
-      if (!(MechWeapons[weapindx].special & STREAK)) {
+      if (!weapon_catalogue_is_streak(weapindx)) {
         mech_los_broadcast(hitMech, "is nicked by a glancing blow!");
         mech_notify(hitMech, MECHALL, "You are nicked by a glancing blow!");
       }
     }
-    mech_missile_apply_hits(
-        mech, hitMech, hitX, hitY, isrear, iscritical, weapindx,
-        mech_critical_fire_mode(mech, wSection, wCritSlot),
-        mech_critical_ammo_mode(mech, wSection, wCritSlot), hit,
-        MechWeapons[weapindx].damage, weapon_catalogue_cluster_size(weapindx),
-        LOS, baseToHit, tIsSwarmAttack);
+    mech_missile_apply_hits(mech, hitMech, hitX, hitY, isrear, iscritical,
+                            weapindx,
+                            mech_critical_fire_mode(mech, wSection, wCritSlot),
+                            mech_critical_ammo_mode(mech, wSection, wCritSlot),
+                            hit, weapon_catalogue_damage(weapindx),
+                            weapon_catalogue_cluster_size(weapindx), LOS,
+                            baseToHit, tIsSwarmAttack);
   }
 
   return incoming - hit;
@@ -433,7 +439,7 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
     /* Try to acquire a new target NOT in the star */
     if (present_target == MAX_STAR)
       return;
-    star[present_target++] = hitMech;
+    *swarm_target_slot(star, MAX_STAR, (size_t)present_target++) = hitMech;
     source = hitMech;
     hitMech = nullptr;
     for (i = 0; i < battle_map_unit_count(map); i++)
@@ -441,7 +447,7 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
                                                 battle_map_unit_dbref(map, i))))
         if (!fof || (mech_team(tempMech) != mech_team(mech))) {
           for (j = 0; j < present_target; j++)
-            if (tempMech == star[j])
+            if (tempMech == *swarm_target_slot(star, MAX_STAR, (size_t)j))
               break;
           if (mech_condition_summary(tempMech).combat_safe)
             continue;
@@ -487,7 +493,7 @@ int mech_ams_intercept(Mech *mech, Mech *hitMech, int incoming, int type,
                        int ammoLoc, int ammoCrit, int LOS, int missilesDidHit) {
   int num_missiles_shotdown;
 
-  if (MechWeapons[type].special & CLAT)
+  if (weapon_catalogue_is_clan_anti_missile(type))
     num_missiles_shotdown = btech_random_roll(mech_context(mech));
   else
     num_missiles_shotdown = btech_random_range_int(mech_context(mech), 1, 6);
@@ -550,7 +556,8 @@ int mech_ams_locate_defenses(Mech *target, int *AMStype, int *ammoLoc,
   mech_set_recycle_part(
       target, AMSsect, AMScrit,
       btech_context_weapon_recycle_time(mech_context(target), w));
-  mech_weapon_heat_add(target, (float)MechWeapons[w].heat);
+  const int weapon_heat = weapon_catalogue_heat(w);
+  mech_weapon_heat_add(target, (float)weapon_heat);
   return 1;
 }
 

@@ -14,8 +14,8 @@ bool is_good_obj(GameDatabase *database, DbRef object) {
 }
 
 int main(void) {
-  GameObject objects[2] = {0};
-  GameDatabase database = {.objects = objects, .top = 2, .size = 2};
+  GameObject objects[3] = {0};
+  GameDatabase database = {.object_storage = objects, .top = 2, .size = 2};
   CharacterFixedState fixed;
   CharacterValueStateView value;
 
@@ -64,7 +64,7 @@ int main(void) {
   game_object_set_type(&database, 0, OBJECT_TYPE_GARBAGE);
   character_state_clear(&database, 0);
   game_object_set_type(&database, 0, OBJECT_TYPE_PLAYER);
-  return objects[0].character ||
+  return game_database_object(&database, 0)->character ||
                  !character_state_fixed_get(&database, 0, &fixed) ||
                  fixed.build != 1 || fixed.bruise != 0
              ? 1

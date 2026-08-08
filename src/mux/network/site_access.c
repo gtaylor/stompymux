@@ -144,7 +144,7 @@ void make_ulist(GameDatabase *database, DescriptorRegistry *descriptors,
 
 DbRef find_connected_name(GameDatabase *database,
                           DescriptorRegistry *descriptors, DbRef player,
-                          char *name) {
+                          const char *name) {
   Descriptor *d;
   DescriptorIterator iterator = descriptor_iterator_connected(descriptors);
   DbRef found;

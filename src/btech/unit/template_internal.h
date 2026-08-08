@@ -65,7 +65,10 @@ typedef enum TemplateMode : int {
 
 extern const char *load_cmds[];
 extern const char *internals[];
+size_t template_internal_name_count(void);
+const char *template_internal_name(int index);
 extern const char *cargo[];
+const char *template_cargo_name(int index);
 extern const char *section_configs[];
 extern const char *move_types[];
 extern const char *mech_types[];

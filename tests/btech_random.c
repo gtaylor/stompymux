@@ -4,7 +4,29 @@
 
 #include "btech/context.h"
 #include "mech_utils_api.h"
+#include "mux/support/checked_storage.h"
 #include "random.h"
+
+typedef struct TestRange {
+  long low;
+  long high;
+} TestRange;
+
+static const uint64_t *expected_value(const uint64_t *values, size_t count,
+                                      size_t index) {
+  return checked_storage_at_const(values, count, sizeof(*values), index);
+}
+
+static const TestRange *test_range(const TestRange *ranges, size_t count,
+                                   size_t index) {
+  return checked_storage_at_const(ranges, count, sizeof(*ranges), index);
+}
+
+static const uint64_t *random_state_value(const BtechRandom *random,
+                                          size_t index) {
+  return checked_storage_at_const(random->state, BTECH_RANDOM_STATE_SIZE,
+                                  sizeof(*random->state), index);
+}
 
 static int test_reference_sequence(void) {
   static const uint64_t expected[] = {
@@ -17,7 +39,9 @@ static int test_reference_sequence(void) {
   btech_random_seed(&random, UINT64_C(1));
   for (size_t index = 0; index < sizeof(expected) / sizeof(expected[0]);
        index++) {
-    if (btech_random_u64(&random) != expected[index]) {
+    if (btech_random_u64(&random) !=
+        *expected_value(expected, sizeof(expected) / sizeof(expected[0]),
+                        index)) {
       return 1;
     }
   }
@@ -45,7 +69,7 @@ static int test_seed_behavior(void) {
     }
   }
   for (size_t index = 0; index < BTECH_RANDOM_STATE_SIZE; index++) {
-    if (zero_seed.state[index] != 0) {
+    if (*random_state_value(&zero_seed, index) != 0) {
       return 0;
     }
   }
@@ -53,10 +77,7 @@ static int test_seed_behavior(void) {
 }
 
 static int test_ranges(void) {
-  static const struct {
-    long low;
-    long high;
-  } ranges[] = {
+  static const TestRange ranges[] = {
       {0, 0},
       {-10, 10},
       {1, 6},
@@ -67,11 +88,12 @@ static int test_ranges(void) {
 
   btech_random_seed(&context.random, UINT64_C(99));
   for (size_t range = 0; range < sizeof(ranges) / sizeof(ranges[0]); range++) {
+    const TestRange *bounds =
+        test_range(ranges, sizeof(ranges) / sizeof(ranges[0]), range);
     for (int draw = 0; draw < 1000; draw++) {
-      long value =
-          btech_random_range(&context, ranges[range].low, ranges[range].high);
+      long value = btech_random_range(&context, bounds->low, bounds->high);
 
-      if (value < ranges[range].low || value > ranges[range].high) {
+      if (value < bounds->low || value > bounds->high) {
         return 1;
       }
     }

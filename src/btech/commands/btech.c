@@ -32,6 +32,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "value_handlers_api.h"
 
@@ -62,13 +63,18 @@ void do_show(CommandInvocation *invocation) {
 
   if (!arg1 || !*arg1) {
     strcpy(buf, "Valid arguments:");
-    for (i = 0; cmds_help[i]; i++)
-      snprintf(buf + strlen(buf), MBUF_SIZE - strlen(buf), "%c %s",
-               i > 0 ? ',' : ' ', cmds_help[i]);
+    const size_t help_count = sizeof(cmds_help) / sizeof(*cmds_help) - 1;
+    for (size_t index = 0; index < help_count; index++) {
+      const char *const *help = checked_storage_at_const(
+          cmds_help, help_count, sizeof(*cmds_help), index);
+      char entry[80];
+      snprintf(entry, sizeof(entry), "%c %s", index > 0 ? ',' : ' ', *help);
+      strncat(buf, entry, sizeof(buf) - strlen(buf) - 1);
+    }
     mecha_notify(&command->evaluation, player, buf);
     return;
   }
-  i = listmatch(cmds, arg1);
+  i = listmatch(cmds, 6, arg1);
   /* Do da cmd */
   switch (i) {
   case MECHVALUES:

@@ -29,6 +29,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "random.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -463,7 +464,7 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
                        mech_movement_type(mech));
 
   /* Figure out wot type of pods we want to remove */
-  switch (toupper(args[1][0])) {
+  switch (ascii_to_upper(*checked_string_suffix(args[1], 0))) {
   case 'Y':
     strcpy(strPodType, "Haywire");
     wPodType = INARC_HAYWIRE_ATTACHED;

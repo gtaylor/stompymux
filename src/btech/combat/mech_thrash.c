@@ -27,6 +27,7 @@
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_condition_api.h"
@@ -43,6 +44,21 @@
 #include "mech_los_api.h"
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
+
+static int thrashing_limb(int index) {
+  switch (index) {
+  case 0:
+    return RARM;
+  case 1:
+    return LARM;
+  case 2:
+    return LLEG;
+  case 3:
+    return RLEG;
+  default:
+    abort();
+  }
+}
 #include "mech_physical_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -78,7 +94,6 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(mech));
   int terrain;
   int limbs = 4;
-  int aLimbs[] = {RARM, LARM, LLEG, RLEG};
   int i;
   int tempLoc;
   char locName[50];
@@ -109,7 +124,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
 
   /* Check locations */
   for (i = 0; i < 4; i++) {
-    tempLoc = aLimbs[i];
+    tempLoc = thrashing_limb(i);
 
     if (mech_section_is_destroyed(mech, tempLoc)) {
       limbs--;
@@ -151,9 +166,10 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
                      "starts to flail its arms and legs like a wild beast!");
 
   /* Let's see who we can smack around */
-  for (i = 0; i < map->first_free; i++) {
-    if (map->mechsOnMap[i] >= 0) {
-      target = (Mech *)btech_context_find_object(context, map->mechsOnMap[i]);
+  for (i = 0; i < battle_map_unit_count(map); i++) {
+    const DbRef unit = battle_map_unit_dbref(map, i);
+    if (unit >= 0) {
+      target = (Mech *)btech_context_find_object(context, unit);
 
       if (!target)
         continue;
@@ -204,7 +220,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   }
 
   for (i = 0; i < 4; i++) {
-    tempLoc = aLimbs[i];
+    tempLoc = thrashing_limb(i);
 
     if (mech_section_is_destroyed(mech, tempLoc))
       continue;

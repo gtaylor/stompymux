@@ -42,6 +42,7 @@
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -334,8 +335,10 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
     }
     break;
   case 1:
-    targetID[0] = args[0][0];
-    targetID[1] = args[0][1];
+    char *const *argument = checked_storage_at_const(
+        args, sizeof(args) / sizeof(*args), sizeof(*args), 0);
+    targetID[0] = *checked_string_suffix(*argument, 0);
+    targetID[1] = *checked_string_suffix(*argument, 1);
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
     if (targetnum <= 0) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -416,8 +419,9 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
+  if (buffer != nullptr)
+    buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(char),
+                                strspn(buffer, " \t\r\n\f\v"));
   if (!buffer) {
     static char empty_buffer[] = "";
     buffer = empty_buffer;

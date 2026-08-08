@@ -13,19 +13,22 @@
  */
 
 #include "mux/commands/command_context.h"
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "btech_text_builder.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 
 typedef struct EvaluationContext EvaluationContext;
 
-void KillText(char **mapt);
-void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player);
+void KillText(char **lines, size_t count);
+void ShowText(EvaluationContext *evaluation, char **lines, size_t count,
+              DbRef player);
 
 /*
    Simple menu system for cool menus ;-)
@@ -39,10 +42,6 @@ static int minimum_int(int first, int second) {
 
 static int maximum_int(int first, int second) {
   return first > second ? first : second;
-}
-
-static size_t menu_format_capacity(int length) {
-  return length > 0 ? (size_t)length : 0;
 }
 
 int BOUNDED(int, int, int);
@@ -68,27 +67,21 @@ static int count_following_with(CoolMenu *c, int num) {
   return count;
 }
 
-static void display_line(char **c, int *len, CoolMenu *m) {
-  char *ch = *c;
-  int i;
-
+static void display_line(BtechTextBuilder *output, int *len, CoolMenu *m) {
   (void)m;
 
-  snprintf(ch, menu_format_capacity(*len), "[fg=blue]");
-  ch += strlen(ch);
-  for (i = 0; i < *len; i++)
-    *(ch++) = '-';
-  snprintf(ch, menu_format_capacity(*len), "[reset]");
-  ch += strlen(ch);
+  btech_text_builder_append(output, "[fg=blue]");
+  for (int i = 0; i < *len; i++)
+    btech_text_builder_append_character(output, '-');
+  btech_text_builder_append(output, "[reset]");
   *len = 0;
-  *c = ch;
 }
 
 static int compute_length(const char *text) {
   return (int)styled_text_width(nullptr, text);
 }
 
-static void display_string(char **c, int *len, CoolMenu *m) {
+static void display_string(BtechTextBuilder *output, int *len, CoolMenu *m) {
   char truncated[LBUF_SIZE];
   int visible = compute_length(m->text);
   int available = maximum_int(*len - 1, 0);
@@ -98,8 +91,7 @@ static void display_string(char **c, int *len, CoolMenu *m) {
 
   if (m->flags & CM_NOCUT) {
     *len = 1;
-    strcpy(*c, m->text);
-    *c += strlen(*c);
+    btech_text_builder_append(output, m->text);
     return;
   }
   styled_text_truncate(nullptr, m->text, (size_t)copied_width, truncated,
@@ -107,31 +99,24 @@ static void display_string(char **c, int *len, CoolMenu *m) {
   if (m->flags & CM_CENTER) {
     p = maximum_int((*len - copied_width) / 2, 0);
     for (i = 0; i < p; i++)
-      (*c)[i] = ' ';
-    *c += p;
-    strcpy(*c, "[fg=blue bold]");
-    *c += strlen(*c);
-    strcpy(*c, truncated);
-    *c += strlen(*c);
-    strcpy(*c, "[reset]");
-    *c += strlen(*c);
-    **c = 0;
+      btech_text_builder_append_character(output, ' ');
+    btech_text_builder_append(output, "[fg=blue bold]");
+    btech_text_builder_append(output, truncated);
+    btech_text_builder_append(output, "[reset]");
     *len -= p + copied_width;
   } else {
-    strcpy(*c, truncated);
-    *c += strlen(*c);
+    btech_text_builder_append(output, truncated);
     *len -= copied_width;
   }
 }
 
-static void display_toggle_end(char **c, int maxlen, CoolMenu *m) {
+static void display_toggle_end(BtechTextBuilder *output, CoolMenu *m) {
   if (m->value)
-    snprintf(*c, menu_format_capacity(maxlen),
-             " %s<[fg=blue]X[reset][bold]>[reset]",
-             !(m->flags & CM_NO_HILITE) ? "[bold]" : "");
+    btech_text_builder_append_format(
+        output, " %s<[fg=blue]X[reset][bold]>[reset]",
+        !(m->flags & CM_NO_HILITE) ? "[bold]" : "");
   else
-    snprintf(*c, menu_format_capacity(maxlen), " < >");
-  *c += strlen(*c);
+    btech_text_builder_append(output, " < >");
 }
 
 /* Turn value into equivalent with kilo, mega, giga, tera, peta, exa, zetta
@@ -145,28 +130,28 @@ static StringifiedValue stringified_value(int v) {
     do {
       i++;
       v /= 1000;
-    } while (v > 999 && suffixes[i]);
+    } while (v > 999 && *checked_string_suffix(suffixes, (size_t)i));
 
-    if (!suffixes[i])
+    if (!*checked_string_suffix(suffixes, (size_t)i))
       i--;
     snprintf(result.text, sizeof(result.text), "%d%c", BOUNDED(0, v, 999),
-             suffixes[i]);
+             *checked_string_suffix(suffixes, (size_t)i));
   } else
     snprintf(result.text, sizeof(result.text), "%d", BOUNDED(0, v, 999));
   return result;
 }
 
-static void display_number_end(char **c, int maxlen, CoolMenu *m) {
+static void display_number_end(BtechTextBuilder *output, CoolMenu *m) {
   if (m->value >= 0) {
-    snprintf(*c, menu_format_capacity(maxlen), " [fg=green]%s%4s[reset]",
-             (m->value > 0 && !(m->flags & CM_NO_HILITE)) ? "[bold]" : "",
-             stringified_value(m->value).text);
+    btech_text_builder_append_format(
+        output, " [fg=green]%s%4s[reset]",
+        (m->value > 0 && !(m->flags & CM_NO_HILITE)) ? "[bold]" : "",
+        stringified_value(m->value).text);
   } else
-    snprintf(*c, menu_format_capacity(maxlen), " ____");
-  *c += strlen(*c);
+    btech_text_builder_append(output, " ____");
 }
 
-static char *display_entry(char *ch, int maxlen, CoolMenu *c) {
+static void display_entry(BtechTextBuilder *output, int maxlen, CoolMenu *c) {
   int i, j = 0, t = 0;
 
   /* returns: number of characters to forward the main pointer with.
@@ -177,10 +162,10 @@ static char *display_entry(char *ch, int maxlen, CoolMenu *c) {
     else
       maxlen -= 4;
     t = ((c->flags & (CM_TOGGLE | CM_NUMBER)) && c->value);
-    snprintf(ch, menu_format_capacity(maxlen), "%s[%c]%s ",
-             (t && !(c->flags & CM_NO_HILITE)) ? "[fg=red bold]" : "[fg=red]",
-             t ? (c->letter + 'A' - 'a') : c->letter, "[reset]");
-    ch += strlen(ch);
+    btech_text_builder_append_format(
+        output, "%s[%c]%s ",
+        (t && !(c->flags & CM_NO_HILITE)) ? "[fg=red bold]" : "[fg=red]",
+        t ? (c->letter + 'A' - 'a') : c->letter, "[reset]");
   }
   if (c->flags & (RIGHTEDGES) && !(c->flags & CM_NORIGHT)) {
     if (c->flags & CM_NUMBER)
@@ -190,44 +175,41 @@ static char *display_entry(char *ch, int maxlen, CoolMenu *c) {
     j = 1;
   }
   if (t && !(c->flags & (CM_NO_HILITE))) {
-    snprintf(ch, menu_format_capacity(maxlen), "[bold]");
-    ch += strlen(ch);
+    btech_text_builder_append(output, "[bold]");
   }
   if (c->flags & CM_LINE)
-    display_line(&ch, &maxlen, c);
+    display_line(output, &maxlen, c);
   else
-    display_string(&ch, &maxlen, c);
+    display_string(output, &maxlen, c);
   if (t && !(c->flags & (CM_NO_HILITE))) {
-    snprintf(ch, menu_format_capacity(maxlen), "[reset]");
-    ch += strlen(ch);
+    btech_text_builder_append(output, "[reset]");
   }
   if (maxlen > 0 && !(c->flags & CM_NOCUT)) {
     for (i = 0; i < maxlen; i++)
-      *(ch++) = ' ';
+      btech_text_builder_append_character(output, ' ');
   }
   if (j) {
     if (c->flags & CM_TOGGLE)
-      display_toggle_end(&ch, maxlen, c);
+      display_toggle_end(output, c);
     else if (c->flags & CM_NUMBER)
-      display_number_end(&ch, maxlen, c);
-    *(ch++) = ' ';
+      display_number_end(output, c);
+    btech_text_builder_append_character(output, ' ');
   }
-  *ch = 0;
-  return ch;
 }
 
 static void display_entries(CoolMenu *c, int wnum, int num, char *text) {
   int i;
-  char *ch = text;
   int single_length = (MENU_CHAR_WIDTH / wnum);
+  BtechTextBuilder output;
+  btech_text_builder_initialize(&output, text, MAX_MENU_WIDTH);
 
   for (i = 0; i < num; i++) {
-    ch = display_entry(ch, single_length, c);
+    display_entry(&output, single_length, c);
     c = c->next;
   }
 }
 
-char **MakeCoolMenuText(CoolMenu *c) {
+char **MakeCoolMenuText(CoolMenu *c, size_t *line_count) {
   char **m;
   int pos = 0;
   int n, rn;
@@ -238,15 +220,21 @@ char **MakeCoolMenuText(CoolMenu *c) {
   while (c)
     if ((n = number_of_entries(c)))
       if ((rn = count_following_with(c, n))) {
-        Create(m[pos], char, MAX_MENU_WIDTH);
+        char *line;
+        Create(line, char, MAX_MENU_WIDTH);
+        char **line_slot =
+            checked_storage_at(m, MAX_MENU_LENGTH + 1, sizeof(*m), (size_t)pos);
+        *line_slot = line;
 
         /* 	  display_entries(c,rn,m[pos++]); */
-        display_entries(c, n, rn, m[pos++]);
+        display_entries(c, n, rn, line);
+        pos++;
         while (rn > 0 && c) {
           rn--;
           c = c->next;
         }
       }
+  *line_count = (size_t)pos;
   return m;
 }
 
@@ -292,11 +280,10 @@ void KillCoolMenu(CoolMenu *c) {
 }
 
 void ShowCoolMenu(EvaluationContext *evaluation, DbRef player, CoolMenu *c) {
-  char **ch;
-
-  ch = MakeCoolMenuText(c);
-  ShowText(evaluation, ch, player);
-  KillText(ch);
+  size_t line_count = 0;
+  char **ch = MakeCoolMenuText(c, &line_count);
+  ShowText(evaluation, ch, line_count, player);
+  KillText(ch, line_count);
 }
 
 int CoolMenu_FPWBit(int number, int maxlen) {
@@ -309,44 +296,49 @@ int CoolMenu_FPWBit(int number, int maxlen) {
   return CM_FOUR;
 }
 
-CoolMenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
-                      int max) {
+CoolMenu *SelCol_Menu(int columns, char *heading, char *const *strings,
+                      size_t string_count, int type, int max) {
   CoolMenu *c = NULL;
   int i, co = 0;
   char buf[LBUF_SIZE];
 
   strcpy(buf, heading);
-  buf[0] = (char)toupper((unsigned char)buf[0]);
+  buf[0] = ascii_to_upper(buf[0]);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
-  for (co = 0; strings[co]; co++)
-    ;
+  co = (int)string_count;
   if (columns < 0)
     columns = CoolMenu_FPWBit(co, 18);
-  for (i = 0; i < co; i++)
-    cool_menu_entry_normal(&c, strings[i], columns | type, i + 1, max);
+  for (i = 0; i < co; i++) {
+    const char *entry = *(char *const *)checked_storage_at_const(
+        strings, string_count, sizeof(*strings), (size_t)i);
+    cool_menu_entry_normal(&c, entry, columns | type, i + 1, max);
+  }
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   return c;
 }
 
 CoolMenu *SelCol_ConstMenu(int columns, const char *heading,
-                           const char *const strings[], int type, int max) {
+                           const char *const strings[], size_t string_count,
+                           int type, int max) {
   CoolMenu *c = nullptr;
   int count = 0;
   char heading_buffer[LBUF_SIZE];
 
   strcpy(heading_buffer, heading);
-  heading_buffer[0] = (char)toupper((unsigned char)heading_buffer[0]);
+  heading_buffer[0] = ascii_to_upper(heading_buffer[0]);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, heading_buffer, CM_ONE | CM_CENTER);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
-  for (; strings[count]; count++)
-    ;
+  count = (int)string_count;
   if (columns < 0)
     columns = CoolMenu_FPWBit(count, 18);
-  for (int index = 0; index < count; index++)
-    cool_menu_entry_normal(&c, strings[index], columns | type, index + 1, max);
+  for (int index = 0; index < count; index++) {
+    const char *entry = *(const char *const *)checked_storage_at_const(
+        strings, string_count, sizeof(*strings), (size_t)index);
+    cool_menu_entry_normal(&c, entry, columns | type, index + 1, max);
+  }
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   return c;
 }
@@ -359,7 +351,7 @@ CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
   int sick = 0;
 
   strcpy(buf, heading);
-  buf[0] = (char)toupper((unsigned char)buf[0]);
+  buf[0] = ascii_to_upper(buf[0]);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
   if (fun(0)[0] == '[') {
@@ -385,7 +377,7 @@ CoolMenu *SelCol_FunStringMenuContextK(int columns, const char *heading,
   int sick = 0;
 
   strcpy(buf, heading);
-  buf[0] = (char)toupper((unsigned char)buf[0]);
+  buf[0] = ascii_to_upper(buf[0]);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
   fun(context, 0, entry);

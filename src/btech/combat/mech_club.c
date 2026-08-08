@@ -6,6 +6,7 @@
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
+#include "mux/support/stringutil.h"
 int checkGrabClubLocation(Mech *mech, int section, int emit) {
   int tCanGrab = 1;
   char buf[100] = {0};
@@ -55,7 +56,8 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
   wcArgs = mech_parseattributes(buffer, args, 1);
 
   // If we grabclub -, we're attempting to drop it.
-  if (wcArgs >= 1 && toupper(args[0][0]) == '-') {
+  if (wcArgs >= 1 &&
+      ascii_to_upper(*checked_string_suffix(args[0], 0)) == '-') {
     if (mech_section_carries_club(mech, LARM) ||
         mech_section_carries_club(mech, RARM)) {
       mech_drop_club(mech);
@@ -118,7 +120,7 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
   } else {
 
     // Figure out which arm to use.
-    switch (toupper(args[0][0])) {
+    switch (ascii_to_upper(*checked_string_suffix(args[0], 0))) {
     case 'R':
       location = RARM;
       break;

@@ -18,6 +18,7 @@
 
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
+#include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
 #include "equipment_types.h"
 #include "mech_identity_api.h"
@@ -26,7 +27,69 @@
 #include "missile_hit_registry.h"
 #include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
+
+static RedBlackTree *autopilot_weapon_profile_slot(Autopilot *autopilot,
+                                                   int range) {
+  if (range < 0)
+    abort();
+  return checked_storage_at(autopilot->profile, AUTO_PROFILE_MAX_SIZE,
+                            sizeof(RedBlackTree), (size_t)range);
+}
+
+void autopilot_weapon_profiles_initialize(Autopilot *autopilot) {
+  memset(autopilot->profile, 0, sizeof(autopilot->profile));
+}
+
+void autopilot_weapon_profiles_clear(Autopilot *autopilot) {
+  for (int range = 0; range < AUTO_PROFILE_MAX_SIZE; range++) {
+    RedBlackTree *profile = autopilot_weapon_profile_slot(autopilot, range);
+    if (*profile != nullptr)
+      red_black_tree_destroy(*profile);
+    *profile = nullptr;
+  }
+}
+
+RedBlackTree autopilot_weapon_profile_get(const Autopilot *autopilot,
+                                          int range) {
+  if (range < 0)
+    abort();
+  const RedBlackTree *profile =
+      checked_storage_at_const(autopilot->profile, AUTO_PROFILE_MAX_SIZE,
+                               sizeof(RedBlackTree), (size_t)range);
+  return *profile;
+}
+
+void autopilot_weapon_profile_set(Autopilot *autopilot, int range,
+                                  RedBlackTree profile) {
+  *autopilot_weapon_profile_slot(autopilot, range) = profile;
+}
+
+int *autopilot_weapon_range_score_key(AutopilotWeapon *weapon, int range) {
+  if (range < 0)
+    abort();
+  return checked_storage_at(weapon->range_scores, AUTO_PROFILE_MAX_SIZE,
+                            sizeof(int), (size_t)range);
+}
+
+static unsigned char autopilot_weapon_number_at(const unsigned char *weapons,
+                                                int index) {
+  if (index < 0)
+    abort();
+  const unsigned char *weapon = checked_storage_at_const(
+      weapons, MAX_WEAPS_SECTION, sizeof(unsigned char), (size_t)index);
+  return *weapon;
+}
+
+static int autopilot_weapon_critical_at(const int *criticals, int index) {
+  if (index < 0)
+    abort();
+  const int *critical = checked_storage_at_const(criticals, MAX_WEAPS_SECTION,
+                                                 sizeof(int), (size_t)index);
+  return *critical;
+}
 
 static AutopilotWeapon *auto_create_weapon_node(int weapon_number,
                                                 int weapon_db_number,
@@ -156,6 +219,8 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
 
   int weapon_damage;
   int weapon_heat;
+  const WeaponRangeProfile weapon_ranges =
+      weapon_catalogue_ranges(weapon_db_number);
 
   /* Simple Calc */
 
@@ -173,18 +238,18 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
   minrange_score = 0;
 
   /* Don't bother trying to set a value if its outside its range */
-  if (range >= MechWeapons[weapon_db_number].longrange) {
+  if (range >= weapon_ranges.long_range) {
     return weapon_score;
   }
 
   /* Are we at LR ? */
-  if (range >= MechWeapons[weapon_db_number].medrange) {
+  if (range >= weapon_ranges.medium_range) {
     range_score = 215;
   }
 
   /* Are we at MR ? */
-  if (range >= MechWeapons[weapon_db_number].shortrange &&
-      range < MechWeapons[weapon_db_number].medrange) {
+  if (range >= weapon_ranges.short_range &&
+      range < weapon_ranges.medium_range) {
     range_score = 390;
   }
 
@@ -192,15 +257,15 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
   /* Use a polynomial equation here because at 2 under min its equiv to MR, at
    * 4 under its equiv to LR, so we want it to balance out the range score */
   /* score = -12.5(min - range)^2 - 25 * (min - range) */
-  if (range < MechWeapons[weapon_db_number].min) {
-    const int minimum_range_delta = MechWeapons[weapon_db_number].min - range;
+  if (range < weapon_ranges.minimum) {
+    const int minimum_range_delta = weapon_ranges.minimum - range;
     minrange_score =
         -12.5F * (float)(minimum_range_delta * minimum_range_delta) -
         25.0F * (float)minimum_range_delta;
   }
 
   /* Get the damage for the weapon */
-  if (MechWeapons[weapon_db_number].type == TMISSILE) {
+  if (weapon_catalogue_is_missile(weapon_db_number)) {
     const MissileHitEntry *entry = missile_hit_registry_find_weapon(
         &context->missile_hits, weapon_db_number);
 
@@ -212,10 +277,10 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
      * 5 */
     if (entry != nullptr)
       weapon_damage =
-          entry->num_missiles[5] * MechWeapons[weapon_db_number].damage;
+          entry->num_missiles[5] * weapon_catalogue_damage(weapon_db_number);
 
   } else {
-    weapon_damage = MechWeapons[weapon_db_number].damage;
+    weapon_damage = weapon_catalogue_damage(weapon_db_number);
   }
 
   /* Get the damage score */
@@ -223,7 +288,7 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
   damage_score = 50 * weapon_damage;
 
   /* Get the heat */
-  weapon_heat = MechWeapons[weapon_db_number].heat;
+  weapon_heat = weapon_catalogue_heat(weapon_db_number);
 
   /* Get the heat score */
   /* Straight inverse linear plot - more heat bad... */
@@ -294,15 +359,7 @@ void auto_update_profile_event(Autopilot *autopilot) {
    * weaplist */
 
   /* Zero the array of RedBlackTree stuff */
-  for (range = 0; range < AUTO_PROFILE_MAX_SIZE; range++) {
-
-    if (autopilot->profile[range]) {
-
-      /* Destroy RedBlackTree */
-      red_black_tree_destroy(autopilot->profile[range]);
-    }
-    autopilot->profile[range] = nullptr;
-  }
+  autopilot_weapon_profiles_clear(autopilot);
 
   /* Check to see if the weaplist exists */
   if (autopilot->weaplist != nullptr) {
@@ -334,35 +391,37 @@ void auto_update_profile_event(Autopilot *autopilot) {
     /* loop through the possible weapons */
     for (weapon_number = 0; weapon_number < weapon_count_section;
          weapon_number++) {
+      const int weapon_index =
+          (int)autopilot_weapon_number_at(weaparray, weapon_number);
+      const int critical_index =
+          autopilot_weapon_critical_at(critical, weapon_number);
 
       /* Count it even if its not a valid weapon like AMS */
       /* This is so when we go to fire the weapon we know
        * which one to send in the command */
       weapon_count++;
 
-      if (MechWeapons[weaparray[weapon_number]].special & AMS)
+      if (weapon_catalogue_is_anti_missile(weapon_index))
         continue;
 
       /* Does it work? */
       if (WeaponIsNonfunctional(
-              mech, section, critical[weapon_number],
-              GetWeaponCrits(mech, weapon_from_equipment_index(
-                                       weaparray[weapon_number]))) > 0)
+              mech, section, critical_index,
+              GetWeaponCrits(mech, weapon_from_equipment_index(weapon_index))) >
+          0)
         continue;
 
       /* Ok made it this far, lets add it to our list */
-      temp_weapon_node =
-          auto_create_weapon_node(weapon_count, weaparray[weapon_number],
-                                  section, critical[weapon_number]);
+      temp_weapon_node = auto_create_weapon_node(weapon_count, weapon_index,
+                                                 section, critical_index);
 
       temp_dllist_node = doubly_linked_list_create_node(temp_weapon_node);
       doubly_linked_list_insert_end(autopilot->weaplist, temp_dllist_node);
 
       /* Check the max range */
-      if (autopilot->mech_max_range <
-          MechWeapons[weaparray[weapon_number]].longrange) {
-        autopilot->mech_max_range =
-            MechWeapons[weaparray[weapon_number]].longrange;
+      const int long_range = weapon_catalogue_ranges(weapon_index).long_range;
+      if (autopilot->mech_max_range < long_range) {
+        autopilot->mech_max_range = long_range;
       }
     }
   }
@@ -381,9 +440,9 @@ void auto_update_profile_event(Autopilot *autopilot) {
     temp_weapon_node = (AutopilotWeapon *)doubly_linked_list_get_node(
         autopilot->weaplist, weapon_number);
 
-    for (range = 0;
-         range < MechWeapons[temp_weapon_node->weapon_db_number].longrange;
-         range++) {
+    const int long_range =
+        weapon_catalogue_ranges(temp_weapon_node->weapon_db_number).long_range;
+    for (range = 0; range < long_range; range++) {
 
       /* Out side the the range of AI's profile system */
       if (range >= AUTO_PROFILE_MAX_SIZE) {
@@ -391,13 +450,16 @@ void auto_update_profile_event(Autopilot *autopilot) {
       }
 
       /* Score the weapon */
-      temp_weapon_node->range_scores[range] = auto_calc_weapon_score(
+      int *range_score =
+          autopilot_weapon_range_score_key(temp_weapon_node, range);
+      *range_score = auto_calc_weapon_score(
           autopilot->xcode.context, temp_weapon_node->weapon_db_number, range);
 
       /* If RedBlackTree for this range doesn't exist, create it */
-      if (autopilot->profile[range] == nullptr) {
-        autopilot->profile[range] =
-            red_black_tree_init(&auto_generic_compare, nullptr);
+      RedBlackTree profile = autopilot_weapon_profile_get(autopilot, range);
+      if (profile == nullptr) {
+        profile = red_black_tree_init(&auto_generic_compare, nullptr);
+        autopilot_weapon_profile_set(autopilot, range, profile);
       }
 
       /* Check to see if the score exists in the tree
@@ -405,18 +467,15 @@ void auto_update_profile_event(Autopilot *autopilot) {
        * overlaping keys */
       while (1) {
 
-        if (red_black_tree_exists(autopilot->profile[range],
-                                  &temp_weapon_node->range_scores[range])) {
-          temp_weapon_node->range_scores[range]++;
+        if (red_black_tree_exists(profile, range_score)) {
+          (*range_score)++;
         } else {
           break;
         }
       }
 
       /* Add it to tree */
-      red_black_tree_insert(autopilot->profile[range],
-                            &temp_weapon_node->range_scores[range],
-                            temp_weapon_node);
+      red_black_tree_insert(profile, range_score, temp_weapon_node);
     }
 
     /* Increment */

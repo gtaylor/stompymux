@@ -27,12 +27,13 @@
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/access.h"
 #include "mux/world/move.h"
 #include "registry_api.h"
 
 #include "mux/support/formatting.h"
-#include <ctype.h>
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
@@ -145,9 +146,9 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
                  "Invalid arguments to command!");
     return;
   }
-  tmpc = args[0];
-  if (argc > 0 && *tmpc && !(*(tmpc + 1)))
-    target = (char)tolower((unsigned char)*tmpc);
+  tmpc = argc > 0 ? args[0] : nullptr;
+  if (tmpc != nullptr && *tmpc && *checked_string_suffix(tmpc, 1) == '\0')
+    target = ascii_to_lower(*tmpc);
   else
     target = 0;
   if (!common_checks(player, mech, MECH_USUAL))

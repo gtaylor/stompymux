@@ -50,6 +50,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
@@ -92,18 +93,59 @@ const BtechSpecialObjectDefinition SpecialObjects[BTECH_SPECIAL_OBJECT_COUNT] =
      {"TURRET", turretcommands, sizeof(Turret), nullptr,
       turret_lifecycle_update, 0, nullptr, POWER_NONE}};
 
+const BtechSpecialObjectDefinition *btech_special_object_definition(int type) {
+  if (type < 0)
+    abort();
+  return checked_storage_at_const(SpecialObjects, BTECH_SPECIAL_OBJECT_COUNT,
+                                  sizeof(*SpecialObjects), (size_t)type);
+}
+
+static HashTable *special_command_table(BtechContext *context, size_t type) {
+  return checked_storage_at(context->special_commands,
+                            context->special_command_count,
+                            sizeof(*context->special_commands), type);
+}
+
+size_t btech_special_command_count(int type) {
+  switch (type) {
+  case GTYPE_MECH:
+    return mech_command_count();
+  case GTYPE_DEBUG:
+    return debug_command_count();
+  case GTYPE_MECHREP:
+    return repair_command_count();
+  case GTYPE_MAP:
+    return map_command_count();
+  case GTYPE_AUTO:
+    return autopilot_command_count();
+  case GTYPE_TURRET:
+    return turret_command_count();
+  default:
+    abort();
+  }
+}
+
+const BtechCommandDefinition *btech_special_command_definition(int type,
+                                                               size_t index) {
+  const BtechSpecialObjectDefinition *definition =
+      btech_special_object_definition(type);
+  return checked_storage_at_const(definition->commands,
+                                  btech_special_command_count(type),
+                                  sizeof(*definition->commands), index);
+}
+
 int btech_special_object_type_count(void) { return BTECH_SPECIAL_OBJECT_COUNT; }
 
 const char *btech_special_object_type_name(int type) {
   if (type < 0 || type >= BTECH_SPECIAL_OBJECT_COUNT)
     return "Unknown";
-  return SpecialObjects[type].type;
+  return btech_special_object_definition(type)->type;
 }
 
 size_t btech_special_object_storage_size(int type) {
   if (type < 0 || type >= BTECH_SPECIAL_OBJECT_COUNT)
     return 0;
-  return btech_special_object_data_size(&SpecialObjects[type]);
+  return btech_special_object_data_size(btech_special_object_definition(type));
 }
 
 #define NUM_SPECIAL_OBJECTS BTECH_SPECIAL_OBJECT_COUNT
@@ -204,11 +246,12 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   const BtechSpecialObjectDefinition *typeOfObject;
   int type;
   const BtechCommandDefinition *cmd;
-  char *tmpc, *tmpchar;
+  char *tmpc;
   int ishelp;
 
   type = btech_context_which_special(context, location);
-  if (type < 0 || (btech_special_object_data_size(&SpecialObjects[type]) > 0 &&
+  if (type < 0 || (btech_special_object_data_size(
+                       btech_special_object_definition(type)) > 0 &&
                    !(xcode_obj = red_black_tree_find(context->special_objects,
                                                      (void *)location)))) {
     if (type >= 0 || !is_xcode(context->database, location) ||
@@ -216,7 +259,8 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
       return 0;
     if ((type = btech_context_which_special_attribute(context, location)) >=
         0) {
-      if (btech_special_object_data_size(&SpecialObjects[type]) > 0)
+      if (btech_special_object_data_size(
+              btech_special_object_definition(type)) > 0)
         return 0;
     } else
       return 0;
@@ -225,33 +269,40 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   if (type > (int)(NUM_SPECIAL_OBJECTS))
     return 0;
 #endif
-  typeOfObject = &SpecialObjects[type];
+  typeOfObject = btech_special_object_definition(type);
+  const size_t command_name_length = strcspn(command, " ");
   tmpc = strstr(command, " ");
   if (tmpc)
     *tmpc = 0;
   ishelp = !strcmp(command, "HELP");
-  for (tmpchar = command; *tmpchar; tmpchar++)
-    *tmpchar = ascii_to_lower(*tmpchar);
-  cmd = hash_table_find_const(command, &context->special_commands[type]);
+  for (size_t index = 0; index < command_name_length; ++index) {
+    char *character =
+        checked_storage_at(command, strlen(command) + 1, sizeof(char), index);
+    *character = ascii_to_lower(*character);
+  }
+  cmd = hash_table_find_const(command,
+                              special_command_table(context, (size_t)type));
   if (tmpc)
     *tmpc = ' ';
+  const char *argument_start =
+      checked_string_suffix(command, command_name_length);
+  const size_t argument_offset =
+      command_name_length + strspn(argument_start, " ");
+  char *arguments = checked_storage_at(command, strlen(command) + 1,
+                                       sizeof(char), argument_offset);
   if (cmd && (type != GTYPE_MECH ||
               (type == GTYPE_MECH && btech_command_allowed_for_mech(
                                          ((Mech *)xcode_obj), cmd->flag)))) {
-    if (cmd->helpmsg[0] != '@' ||
+    if (*cmd->helpmsg != '@' ||
         btech_special_command_access(context, player,
                                      typeOfObject->power_needed)) {
-      while (*command && *command != ' ')
-        command++;
-      while (*command == ' ')
-        command++;
       const BtechCommandInvocation invocation = {
           .context = context,
           .evaluation = btech_context_evaluation(context),
           .actor = player,
           .object_id = location,
           .object = xcode_obj,
-          .arguments = command,
+          .arguments = arguments,
       };
       cmd->handler(&invocation);
     } else
@@ -259,13 +310,9 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
                    "Sorry, that command is restricted!");
     return 1;
   } else if (ishelp) {
-    while (*command && *command != ' ')
-      command++;
-    while (*command == ' ')
-      command++;
     btech_special_object_help(context, player, typeOfObject->type, type,
                               location, typeOfObject->power_needed, location,
-                              command);
+                              arguments);
     return 1;
   }
   return 0;
@@ -305,7 +352,8 @@ void *NewSpecialObject(BtechContext *context, DbRef id, int type) {
   BtechSpecialObject *xcode_obj = NULL;
   if (type < 0 || type >= BTECH_SPECIAL_OBJECT_COUNT)
     return nullptr;
-  size_t data_size = btech_special_object_data_size(&SpecialObjects[type]);
+  size_t data_size =
+      btech_special_object_data_size(btech_special_object_definition(type));
 
   if (data_size) {
     xcode_obj = (BtechSpecialObject *)calloc(1, data_size);
@@ -317,8 +365,9 @@ void *NewSpecialObject(BtechContext *context, DbRef id, int type) {
     xcode_obj->size = data_size;
     xcode_obj->context = context;
 
-    if (SpecialObjects[type].lifecycle)
-      SpecialObjects[type].lifecycle(id, (void **)&xcode_obj, SPECIAL_ALLOC);
+    if (btech_special_object_definition(type)->lifecycle)
+      btech_special_object_definition(type)->lifecycle(id, (void **)&xcode_obj,
+                                                       SPECIAL_ALLOC);
 
     red_black_tree_insert(context->special_objects, (void *)id, xcode_obj);
   }
@@ -351,7 +400,7 @@ void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
   type = btech_context_which_special_attribute(context, key);
   if (type > -1) {
     /* We found the proper special object */
-    typeOfObject = &SpecialObjects[type];
+    typeOfObject = btech_special_object_definition(type);
     if (btech_special_object_data_size(typeOfObject)) {
       new = NewSpecialObject(context, key, type);
       if (!new)
@@ -388,7 +437,7 @@ void btech_special_object_dispose(BtechContext *context, DbRef player,
                  "contact a wizard about this _NOW_!");
     return;
   }
-  typeOfObject = &SpecialObjects[i];
+  typeOfObject = btech_special_object_definition(i);
 
   if (btech_special_object_data_size(typeOfObject) > 0 &&
       btech_context_which_special(context, key) != i) {
@@ -415,7 +464,8 @@ void btech_special_object_dispose(BtechContext *context, DbRef player,
 static void destroy_special_object(void *key, void *data, void *arg) {
   BtechContext *context = arg;
   BtechSpecialObject *xcode_obj = data;
-  const BtechSpecialObjectDefinition *type = &SpecialObjects[xcode_obj->type];
+  const BtechSpecialObjectDefinition *type =
+      btech_special_object_definition((int)xcode_obj->type);
 
   mux_event_remove_data(context->events, xcode_obj);
   if (type->lifecycle)
@@ -433,7 +483,7 @@ void btech_context_release_owned_state(BtechContext *context) {
     context->special_objects = nullptr;
   }
   for (size_t i = 0; i < context->special_command_count; i++)
-    hash_table_destroy(&context->special_commands[i]);
+    hash_table_destroy(special_command_table(context, i));
   free(context->special_commands);
   context->special_commands = nullptr;
   context->special_command_count = 0;
@@ -494,7 +544,7 @@ int btech_context_which_special_attribute(BtechContext *context, DbRef key) {
                              (char[LBUF_SIZE]){0});
   if (str && *str) {
     for (i = 0; i < (int)(NUM_SPECIAL_OBJECTS); i++) {
-      if (!strcmp(SpecialObjects[i].type, str)) {
+      if (!strcmp(btech_special_object_definition(i)->type, str)) {
         returnValue = i;
         break;
       }
@@ -520,24 +570,26 @@ void *btech_context_find_object(BtechContext *context, DbRef key) {
 }
 
 void InitSpecialHash(BtechContext *context, int which) {
-  const char *tmp;
-  char *tmpc;
-  int i;
   char buf[MBUF_SIZE];
 
-  hash_table_initialize(&context->special_commands[which], 20 * HASH_FACTOR);
-  for (i = 0; (tmp = SpecialObjects[which].commands[i].name); i++) {
-    if (!btech_command_definition_has_handler(
-            &SpecialObjects[which].commands[i]))
+  hash_table_initialize(special_command_table(context, (size_t)which),
+                        20 * HASH_FACTOR);
+  for (size_t index = 0; index < btech_special_command_count(which); ++index) {
+    const BtechCommandDefinition *command =
+        btech_special_command_definition(which, index);
+    if (!btech_command_definition_has_handler(command))
       continue;
-    tmpc = buf;
-    for (; *tmp && *tmp != ' '; tmp++)
-      *(tmpc++) = ascii_to_lower(*tmp);
-    *tmpc = 0;
-    if ((tmpc = strstr(buf, " ")))
-      *tmpc = 0;
-    hash_table_add_const(buf, &SpecialObjects[which].commands[i],
-                         &context->special_commands[which]);
+    const size_t name_length = strcspn(command->name, " ");
+    if (name_length >= sizeof(buf))
+      continue;
+    for (size_t name_index = 0; name_index < name_length; ++name_index) {
+      *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char), name_index) =
+          ascii_to_lower(*checked_string_suffix(command->name, name_index));
+    }
+    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char), name_length) =
+        '\0';
+    hash_table_add_const(buf, command,
+                         special_command_table(context, (size_t)which));
   }
 }
 
@@ -567,7 +619,7 @@ bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
     return true;
   }
   for (int index = 0; index < (int)NUM_SPECIAL_OBJECTS; index++) {
-    if (!strcmp(SpecialObjects[index].type, type)) {
+    if (!strcmp(btech_special_object_definition(index)->type, type)) {
       requested = index;
       break;
     }
@@ -596,7 +648,8 @@ void btech_special_object_type_register(BtechContext *context, DbRef player,
       btech_context_find_object(context, object))
     return;
   type = btech_context_which_special_attribute(context, object);
-  if (type >= 0 && btech_special_object_data_size(&SpecialObjects[type]) > 0)
+  if (type >= 0 &&
+      btech_special_object_data_size(btech_special_object_definition(type)) > 0)
     NewSpecialObject(context, object, type);
   (void)player;
 }

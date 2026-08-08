@@ -52,17 +52,17 @@ static bool read_entry(lua_State *state, GameDatabase *database, DbRef player,
 
 int main(void) {
   lua_State *state = luaL_newstate();
-  GameObject objects[4] = {0};
-  GameDatabase database = {.objects = objects, .top = 4, .size = 4};
+  GameObject objects[5] = {0};
+  GameDatabase database = {.object_storage = objects, .top = 4, .size = 4};
   LuaCommandAccess access;
 
   if (state == nullptr)
     return 2;
-  objects[GOD].type = OBJECT_TYPE_PLAYER;
-  objects[GOD].has_wizard_flag = true;
-  objects[2].type = OBJECT_TYPE_PLAYER;
-  objects[2].has_wizard_flag = true;
-  objects[3].type = OBJECT_TYPE_PLAYER;
+  game_database_object(&database, GOD)->type = OBJECT_TYPE_PLAYER;
+  game_database_object(&database, GOD)->has_wizard_flag = true;
+  game_database_object(&database, 2)->type = OBJECT_TYPE_PLAYER;
+  game_database_object(&database, 2)->has_wizard_flag = true;
+  game_database_object(&database, 3)->type = OBJECT_TYPE_PLAYER;
 
   if (!read_access(state, nullptr, LUA_COMMAND_ACCESS_PUBLIC) ||
       !read_access(state, "public", LUA_COMMAND_ACCESS_PUBLIC) ||

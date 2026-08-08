@@ -1,52 +1,27 @@
 #include "checked_conversion.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
 #include "mech_heat_api.h"
+#include "mech_identity_api.h"
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_template_api.h"
 #include "mech_utils_internal.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
 
 void ArmorStringFromIndex(int index, char *buffer, UnitClass type,
                           MechMovementType movement_type) {
-  const char *const *locs = ProperSectionStringFromType(type, movement_type);
-  int high = 0;
-
-  switch (type) {
-  case CLASS_MECH:
-  case CLASS_MW:
-    high = NUM_SECTIONS;
-    break;
-  case CLASS_VEH_GROUND:
-  case CLASS_VEH_NAVAL:
-    high = (NUM_VEH_SECTIONS - 1);
-    break;
-  case CLASS_VTOL:
-    high = NUM_VEH_SECTIONS;
-    break;
-  case CLASS_AERO:
-    high = NUM_AERO_SECTIONS;
-    break;
-  case CLASS_SPHEROID_DS:
-  case CLASS_DS:
-    high = NUM_DS_SECTIONS;
-    break;
-  case CLASS_BSUIT:
-    high = NUM_BSUIT_MEMBERS;
-    break;
-  default:
-    strcpy(buffer, "Invalid!!");
-    return;
-  }
-  if (high > 0 && index < high && locs) {
-    strcpy(buffer, locs[index]);
+  size_t location_count = mech_section_name_count(type, movement_type);
+  if (index >= 0 && (size_t)index < location_count) {
+    strcpy(buffer, mech_section_name(type, movement_type, (size_t)index));
     return;
   }
   strcpy(buffer, "Invalid!!");
@@ -167,16 +142,19 @@ int IsInWeaponArc(Mech *mech, float x, float y, int section, int critical) {
 }
 
 int GetWeaponCrits(Mech *mech, int weapindx) {
-  return (((mech)->ud.type) == CLASS_MECH) ? (MechWeapons[weapindx].criticals)
-                                           : 1;
+  return (((mech)->ud.type) == CLASS_MECH)
+             ? weapon_catalogue_critical_slots(weapindx)
+             : 1;
 }
 
-int listmatch(const char *const *foo, const char *mat) {
-  int i;
-
-  for (i = 0; foo[i]; i++)
-    if (!strcasecmp(foo[i], mat))
-      return i;
+int listmatch(const char *const *values, size_t value_count,
+              const char *match) {
+  for (size_t i = 0; i < value_count; i++) {
+    const char *const *value =
+        checked_storage_at_const(values, value_count, sizeof(*values), i);
+    if (!strcasecmp(*value, match))
+      return clamp_size_to_int(i);
+  }
   return -1;
 }
 
@@ -350,7 +328,8 @@ void do_magic(Mech *mech) {
       } else {
         t = mech_critical_part_type(mech, i, j);
         if (weapon_catalogue_is_anti_missile(weapon_from_equipment_index(t))) {
-          if (MechWeapons[weapon_from_equipment_index(t)].special & CLAT)
+          if (weapon_catalogue_has_special(weapon_from_equipment_index(t),
+                                           CLAT))
             ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
           else
             ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
@@ -360,7 +339,7 @@ void do_magic(Mech *mech) {
       }
     }
 
-    ((mech)->ud.sections)[i].config &= ~STABILIZERS_DESTROYED;
+    mech_section_configuration_remove(mech, i, STABILIZERS_DESTROYED);
 
     if (mech_section_is_destroyed(mech, i))
       mech_section_destroy(&opp, nullptr, 0, i);
@@ -385,11 +364,12 @@ void do_magic(Mech *mech) {
   ((mech)->rd.tankcritstatus) |= ((&opp)->rd.tankcritstatus) & (~tankCritMask);
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    ((mech)->ud.sections)[i].basetohit = ((&opp)->ud.sections)[i].basetohit;
-    ((mech)->ud.sections)[i].specials = ((&opp)->ud.sections)[i].specials;
-    ((mech)->ud.sections)[i].specials &=
-        ~(INARC_HOMING_ATTACHED | INARC_HAYWIRE_ATTACHED | INARC_ECM_ATTACHED |
-          INARC_NEMESIS_ATTACHED);
+    mech_section_base_to_hit_set(mech, i, mech_section_base_to_hit(&opp, i));
+    mech_section_specials_set(mech, i, mech_section_specials(&opp, i));
+    mech_section_special_remove(mech, i,
+                                INARC_HOMING_ATTACHED | INARC_HAYWIRE_ATTACHED |
+                                    INARC_ECM_ATTACHED |
+                                    INARC_NEMESIS_ATTACHED);
   }
 
   /* Case of undestroying */
@@ -517,7 +497,8 @@ void mech_FillPartAmmo(Mech *mech, int loc, int pos) {
 
   if (!equipment_is_ammunition(t))
     return;
-  if (!(to = MechWeapons[ammunition_to_weapon_index(t)].ammoperton))
+  if (!(to =
+            weapon_catalogue_ammunition_per_ton(ammunition_to_weapon_index(t))))
     return;
   mech_critical_data_set(mech, loc, pos, FullAmmo(mech, loc, pos));
 }
@@ -543,7 +524,7 @@ void MarkForLOSUpdate(Mech *mech) {
   if (!(mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     return;
   mech_map->moves++;
-  mech_map->mechflags[mech->mapnumber] = 1;
+  battle_map_unit_moved_set(mech_map, mech_map_slot(mech));
 }
 
 void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
@@ -560,13 +541,14 @@ void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
   int i1, i2, i3;
   int section, critical;
 
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
+  if (buffer)
+    buffer =
+        checked_mutable_string_suffix(buffer, strspn(buffer, " \t\n\v\f\r"));
   if (!buffer)
     buffer = empty_buffer;
   if ((c = strstr(buffer, ","))) {
     *c = 0;
-    c++;
+    c = checked_mutable_string_suffix(c, 1);
   }
   if (sscanf(buffer, "%d-%d", &i1, &i2) == 2) {
     if (i1 < 0 || i1 >= MAX_WEAPONS_PER_MECH) {

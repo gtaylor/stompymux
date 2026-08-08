@@ -80,6 +80,8 @@ void send_channel_v(EvaluationContext *evaluation, const char *chan,
     __attribute__((format(printf, 3, 0)));
 struct channel *select_channel(ChannelRegistry *channels, const char *channel);
 struct comuser *select_user(struct channel *ch, DbRef player);
+struct comuser *channel_user_at(const struct channel *channel, size_t index);
+struct comuser **channel_user_slot(struct channel *channel, size_t index);
 void do_addcom(CommandInvocation *invocation);
 void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *alias,
                       char *channel);

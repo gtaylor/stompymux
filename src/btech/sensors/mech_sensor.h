@@ -109,6 +109,8 @@ typedef enum SensorAttribute {
   SENSOR_ATTR_SEISMIC,
 } SensorAttribute;
 
+const SensorDefinition *mech_sensor_definition(int sensor);
+
 #ifdef _MECH_SENSOR_C
 const SensorDefinition sensors[] = {
     {"Vislight", "V", 0, 60, 0, vislight_see, vislight_csee, vislight_tohit, -1,

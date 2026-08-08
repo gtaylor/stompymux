@@ -3,8 +3,34 @@
 #include "mech_heat_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_internal.h"
+#include "mux/support/checked_storage.h"
+#include "weapon_catalogue_api.h"
+
+#include <stdlib.h>
 
 #ifdef BT_CALCULATE_BV
+static int battle_value_table_get(const int values[64], int index) {
+  if (index < 0)
+    abort();
+  return *(const int *)checked_storage_at_const(values, 64, sizeof(*values),
+                                                (size_t)index);
+}
+
+static void battle_value_table_set(int values[64], int index, int value) {
+  if (index < 0)
+    abort();
+  int *slot = checked_storage_at(values, 64, sizeof(*values), (size_t)index);
+  *slot = value;
+}
+
+static unsigned char battle_value_weapon_get(const unsigned char *values,
+                                             int index) {
+  if (index < 0)
+    abort();
+  return *(const unsigned char *)checked_storage_at_const(
+      values, MAX_WEAPS_SECTION, sizeof(*values), (size_t)index);
+}
+
 int FindAverageGunnery(Mech *mech) {
 #if 1
   /* NULLTODO : Get the multiple skills for gunnery and such ported or working
@@ -156,8 +182,9 @@ float Calculate_Defensive_BV(Mech *mech) {
 
       if (equipment_is_ammunition(part)) {
         weapindx = ammunition_to_weapon_index(part);
-        if (MechWeapons[weapindx].special & AMS) {
-          const int ammo_bv = MechWeapons[weapindx].ammo_bv;
+        if (weapon_catalogue_has_special(weapindx, AMS)) {
+          const int ammo_bv =
+              weapon_catalogue_ammunition_battle_value(weapindx);
 
           Calc_AddDefBV(mech, &defbv, "AMS Ammo", (float)ammo_bv);
         }
@@ -172,7 +199,7 @@ float Calculate_Defensive_BV(Mech *mech) {
             Calc_SubDefBV(mech, &defbv, "Exp Ammo in XL/XXL", 15.0F);
 
           } else if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) ||
-                     !(((mech)->ud.sections)[i].config & CASE_TECH)) {
+                     !(mech_section_configuration(mech, i) & CASE_TECH)) {
 
             Calc_SubDefBV(mech, &defbv, "Exp Ammo Fusion/!CASE", 15.0F);
           }
@@ -181,12 +208,12 @@ float Calculate_Defensive_BV(Mech *mech) {
 
       if (equipment_is_weapon(part)) {
         weapindx = weapon_from_equipment_index(part);
-        if (MechWeapons[weapindx].special & A_POD) {
+        if (weapon_catalogue_has_special(weapindx, A_POD)) {
           const int weapon_bv = mech_weapon_battle_value(mech, weapindx);
 
           Calc_AddDefBV(mech, &defbv, "A POD", (float)weapon_bv);
         }
-        if (MechWeapons[weapindx].special & AMS) {
+        if (weapon_catalogue_has_special(weapindx, AMS)) {
           const int weapon_bv = mech_weapon_battle_value(mech, weapindx);
 
           Calc_AddDefBV(mech, &defbv, "AMS", (float)weapon_bv);
@@ -198,24 +225,24 @@ float Calculate_Defensive_BV(Mech *mech) {
         */
         if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) &&
             (((mech)->rd.specials) & CLAN_TECH)) {
-          if (MechWeapons[weapindx].special & GAUSS) {
+          if (weapon_catalogue_has_special(weapindx, GAUSS)) {
             Calc_SubDefBV(mech, &defbv, "Gauss Crit", 1.0F);
           }
         } else if ((((mech)->rd.specials) & (XL_TECH | XXL_TECH))) {
-          if (MechWeapons[weapindx].special & GAUSS) {
+          if (weapon_catalogue_has_special(weapindx, GAUSS)) {
             Calc_SubDefBV(mech, &defbv, "Gauss Crit XL/XXL", 1.0F);
           }
         } else if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) &&
-                   !(((mech)->ud.sections)[i].config & CASE_TECH)) {
-          if (MechWeapons[weapindx].special & GAUSS) {
+                   !(mech_section_configuration(mech, i) & CASE_TECH)) {
+          if (weapon_catalogue_has_special(weapindx, GAUSS)) {
             Calc_SubDefBV(mech, &defbv, "Gauss Crit !Case", 1.0F);
           }
         } else if ((((i == RARM) &&
-                     !(((mech)->ud.sections)[RTORSO].config & CASE_TECH)) ||
-                    ((i == LARM) &&
-                     !(((mech)->ud.sections)[LTORSO].config & CASE_TECH))) &&
+                     !(mech_section_configuration(mech, RTORSO) & CASE_TECH)) ||
+                    ((i == LARM) && !(mech_section_configuration(mech, LTORSO) &
+                                      CASE_TECH))) &&
                    !(((mech)->rd.specials) & (XL_TECH | XXL_TECH))) {
-          if (MechWeapons[weapindx].special & GAUSS) {
+          if (weapon_catalogue_has_special(weapindx, GAUSS)) {
             Calc_SubDefBV(mech, &defbv, "Gauss Crit Fusion/!Case", 1.0F);
           }
         }
@@ -370,16 +397,19 @@ float Calculate_Offensive_BV(Mech *mech) {
     }
 
     for (ii = 0; ii < count; ii++) {
+      const int weapon = battle_value_weapon_get(weaparray, ii);
 
       /* Exclude Defensive Weapons */
-      if (MechWeapons[weaparray[ii]].special & AMS)
+      if (weapon_catalogue_has_special(weapon, AMS))
         continue;
 
-      weaptable[tablecount] = weaparray[ii];
+      battle_value_table_set(weaptable, tablecount, weapon);
       /* TODO: Modify Ultra/RAC/Streak/Oneshot HEAT values.
        * TC/Oneshot/Rear/Artemis BV Values */
-      heattable[tablecount] = MechWeapons[weaparray[ii]].heat;
-      bvtable[tablecount] = MechWeapons[weaparray[ii]].battlevalue;
+      battle_value_table_set(heattable, tablecount,
+                             weapon_catalogue_heat(weapon));
+      battle_value_table_set(bvtable, tablecount,
+                             weapon_catalogue_battle_value(weapon));
       tablecount++;
     }
   }
@@ -388,34 +418,41 @@ float Calculate_Offensive_BV(Mech *mech) {
 
   for (i = 0; i < (tablecount - 1); i++) {
     for (j = 0; j < tablecount - i - 1; j++) {
-      if (bvtable[j] > bvtable[j + 1]) {
-        wt = weaptable[j];
-        ht = heattable[j];
-        bt = bvtable[j];
-        weaptable[j] = weaptable[j + 1];
-        heattable[j] = heattable[j + 1];
-        bvtable[j] = bvtable[j + 1];
-        weaptable[j + 1] = wt;
-        heattable[j + 1] = ht;
-        bvtable[j + 1] = bt;
+      if (battle_value_table_get(bvtable, j) >
+          battle_value_table_get(bvtable, j + 1)) {
+        wt = battle_value_table_get(weaptable, j);
+        ht = battle_value_table_get(heattable, j);
+        bt = battle_value_table_get(bvtable, j);
+        battle_value_table_set(weaptable, j,
+                               battle_value_table_get(weaptable, j + 1));
+        battle_value_table_set(heattable, j,
+                               battle_value_table_get(heattable, j + 1));
+        battle_value_table_set(bvtable, j,
+                               battle_value_table_get(bvtable, j + 1));
+        battle_value_table_set(weaptable, j + 1, wt);
+        battle_value_table_set(heattable, j + 1, ht);
+        battle_value_table_set(bvtable, j + 1, bt);
       }
     }
   }
 
   /* Go through temp tables, adding BV. Half BV if > heat efficiency */
   for (i = (tablecount - 1); i >= 0; i--) {
-    if (heatcount + heattable[i] > heat_efficiency) {
-      const int reduced_bv = bvtable[i] / 2;
+    const int weapon = battle_value_table_get(weaptable, i);
+    const int heat = battle_value_table_get(heattable, i);
+    const int battle_value = battle_value_table_get(bvtable, i);
+    if (heatcount + heat > heat_efficiency) {
+      const int reduced_bv = battle_value / 2;
 
-      Calc_AddOffBV(mech, &offbv, MechWeapons[weaptable[i]].name,
+      Calc_AddOffBV(mech, &offbv, weapon_catalogue_name(weapon),
                     (float)reduced_bv);
     } else {
-      const int weapon_bv = bvtable[i];
+      const int weapon_bv = battle_value;
 
-      Calc_AddOffBV(mech, &offbv, MechWeapons[weaptable[i]].name,
+      Calc_AddOffBV(mech, &offbv, weapon_catalogue_name(weapon),
                     (float)weapon_bv);
     }
-    heatcount = heatcount + heattable[i];
+    heatcount = heatcount + heat;
   }
 
   /* TODO: Physical Weapons */

@@ -19,13 +19,25 @@
 #include "mech_utils_api.h"
 #include "mux/objects/attrs.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+static unsigned char scan_weapon_byte(const unsigned char *values, int index) {
+  return *(const unsigned char *)checked_storage_at_const(
+      values, MAX_WEAPS_SECTION, sizeof(*values), (size_t)index);
+}
+
+static int scan_weapon_integer(const int *values, int index) {
+  return *(const int *)checked_storage_at_const(values, MAX_WEAPS_SECTION,
+                                                sizeof(*values), (size_t)index);
+}
 
 void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
@@ -59,14 +71,17 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
       snprintf(location, sizeof(location), "%-14.14s", tempbuff);
 
       for (ii = 0; ii < count; ii++) {
+        const int weapon_index = scan_weapon_byte(weaparray, ii);
         snprintf(weapbuff, sizeof(weapbuff), " %-18.18s [%2d]  ",
-                 &MechWeapons[weaparray[ii]].name[3], running_sum + ii);
+                 checked_string_suffix(weapon_catalogue_name(weapon_index), 3),
+                 running_sum + ii);
         strcat(weapbuff, location);
 
-        if (mech_critical_is_nonfunctional(mech, loop, critical[ii])) {
+        if (mech_critical_is_nonfunctional(mech, loop,
+                                           scan_weapon_integer(critical, ii))) {
           strcat(weapbuff, "[fg=black bold]*****[reset]");
         } else {
-          if (weapdata[ii]) {
+          if (scan_weapon_byte(weapdata, ii)) {
             strcat(weapbuff, "-----");
           } else {
             strcat(weapbuff, "[fg=green]Ready[reset]");
@@ -139,7 +154,7 @@ void mech_view(DbRef player, void *data, char *buffer) {
       mecha_notify(evaluation, player, "That target has no markings.");
   } else if (argc == 1) { /* ID number */
     targetID[0] = args[0][0];
-    targetID[1] = args[0][1];
+    targetID[1] = *checked_string_suffix(*args, 1);
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
     if (targetnum == -1) {
       mech_notify(mech, MECHPILOT, "Target is not in line of sight!");

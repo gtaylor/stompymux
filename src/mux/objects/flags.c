@@ -16,8 +16,20 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
+
+static bool *object_flag_value_at(ObjectFlagSet *flags, ObjectFlag flag) {
+  return checked_storage_at(flags->values, OBJECT_FLAG_COUNT,
+                            sizeof(*flags->values), (size_t)flag);
+}
+
+static const bool *object_flag_value_at_const(const ObjectFlagSet *flags,
+                                              ObjectFlag flag) {
+  return checked_storage_at_const(flags->values, OBJECT_FLAG_COUNT,
+                                  sizeof(*flags->values), (size_t)flag);
+}
 
 bool game_object_has_flag(GameDatabase *database, DbRef object,
                           ObjectFlag flag) {
@@ -150,17 +162,18 @@ void game_object_clear_flags(GameDatabase *database, DbRef object) {
 void game_object_flags_copy(GameDatabase *database, DbRef object,
                             ObjectFlagSet *flags) {
   for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
-    flags->values[flag] = game_object_has_flag(database, object, flag);
+    *object_flag_value_at(flags, flag) =
+        game_object_has_flag(database, object, flag);
 }
 
 bool object_flag_set_has(const ObjectFlagSet *flags, ObjectFlag flag) {
   return flag > OBJECT_FLAG_NONE && flag < OBJECT_FLAG_COUNT &&
-         flags->values[flag];
+         *object_flag_value_at_const(flags, flag);
 }
 
 void object_flag_set_set(ObjectFlagSet *flags, ObjectFlag flag, bool value) {
   if (flag > OBJECT_FLAG_NONE && flag < OBJECT_FLAG_COUNT)
-    flags->values[flag] = value;
+    *object_flag_value_at(flags, flag) = value;
 }
 
 bool is_good_obj(GameDatabase *database, DbRef x) {
@@ -190,22 +203,29 @@ bool is_linkable(GameDatabase *database, DbRef player, DbRef target) {
 
 void mark(GameDatabase *database, DbRef x) {
   const unsigned char mask = (unsigned char)(1U << (x & 7));
-  database->markbits->chunk[x >> 3] =
-      (char)((unsigned char)database->markbits->chunk[x >> 3] | mask);
+  char *byte = checked_storage_at(database->markbits->chunk,
+                                  sizeof(database->markbits->chunk),
+                                  sizeof(char), (size_t)(x >> 3));
+  *byte = (char)((unsigned char)*byte | mask);
 }
 void unmark(GameDatabase *database, DbRef x) {
   const unsigned char mask = (unsigned char)(1U << (x & 7));
-  database->markbits->chunk[x >> 3] =
-      (char)((unsigned char)database->markbits->chunk[x >> 3] &
-             (unsigned char)~mask);
+  char *byte = checked_storage_at(database->markbits->chunk,
+                                  sizeof(database->markbits->chunk),
+                                  sizeof(char), (size_t)(x >> 3));
+  *byte = (char)((unsigned char)*byte & (unsigned char)~mask);
 }
 bool is_marked(GameDatabase *database, DbRef x) {
-  return ((unsigned char)database->markbits->chunk[x >> 3] &
-          (unsigned char)(1U << (x & 7))) != 0;
+  const char *byte = checked_storage_at_const(database->markbits->chunk,
+                                              sizeof(database->markbits->chunk),
+                                              sizeof(char), (size_t)(x >> 3));
+  return ((unsigned char)*byte & (unsigned char)(1U << (x & 7))) != 0;
 }
 void unmark_all(GameDatabase *database) {
   for (DbRef index = 0; index < ((database->top + 7) >> 3); index++)
-    database->markbits->chunk[index] = 0;
+    *(char *)checked_storage_at(database->markbits->chunk,
+                                sizeof(database->markbits->chunk), sizeof(char),
+                                (size_t)index) = 0;
 }
 
 bool see_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
@@ -310,7 +330,16 @@ FlagEntry gen_flags[] = {
     {"ZOMBIE", OBJECT_FLAG_ZOMBIE, 'z', flag_wizard},
     {nullptr, OBJECT_FLAG_NONE, ' ', nullptr}};
 
-ObjectEntry object_types[8] = {
+static size_t flag_entry_count(void) {
+  return sizeof(gen_flags) / sizeof(*gen_flags) - 1;
+}
+
+static FlagEntry *flag_entry_at(size_t index) {
+  return checked_storage_at(gen_flags, flag_entry_count(), sizeof(*gen_flags),
+                            index);
+}
+
+static const ObjectEntry object_types[8] = {
     {"ROOM", 'R', CA_PUBLIC, OF_CONTENTS | OF_EXITS | OF_DROPTO | OF_HOME},
     {"THING", ' ', CA_PUBLIC,
      OF_CONTENTS | OF_LOCATION | OF_EXITS | OF_HOME | OF_SIBLINGS},
@@ -323,14 +352,44 @@ ObjectEntry object_types[8] = {
     {"TYPE6", '#', CA_GOD, 0},
     {"TYPE7", '#', CA_GOD, 0}};
 
+const ObjectEntry *object_type_entry(int type) {
+  switch (type) {
+  case OBJECT_TYPE_ROOM:
+    return &object_types[0];
+  case OBJECT_TYPE_THING:
+    return &object_types[1];
+  case OBJECT_TYPE_EXIT:
+    return &object_types[2];
+  case OBJECT_TYPE_PLAYER:
+    return &object_types[3];
+  case OBJECT_TYPE_INVALID:
+    return &object_types[4];
+  case OBJECT_TYPE_GARBAGE:
+    return &object_types[5];
+  case 6:
+    return &object_types[6];
+  case OBJECT_TYPE_NOTYPE:
+    return &object_types[7];
+  default:
+    return &object_types[4];
+  }
+}
+
 void init_flagtab(WorldIndexes *indexes) {
   char buffer[SBUF_SIZE];
   hash_table_initialize(&indexes->flags, 100 * HASH_FACTOR);
-  for (FlagEntry *flag = gen_flags; flag->flagname; flag++) {
-    char *out = buffer;
-    for (const char *in = flag->flagname; *in; in++, out++)
-      *out = ascii_to_lower(*in);
-    *out = '\0';
+  for (size_t index = 0; index < flag_entry_count(); index++) {
+    FlagEntry *flag = flag_entry_at(index);
+    size_t name_length = strlen(flag->flagname);
+    for (size_t name_index = 0; name_index < name_length; name_index++) {
+      const char *input = checked_storage_at_const(flag->flagname, name_length,
+                                                   sizeof(char), name_index);
+      char *output =
+          checked_storage_at(buffer, sizeof(buffer), sizeof(char), name_index);
+      *output = ascii_to_lower(*input);
+    }
+    *(char *)checked_storage_at(buffer, sizeof(buffer), sizeof(char),
+                                name_length) = '\0';
     hash_table_add(buffer, (int *)flag, &indexes->flags);
   }
 }
@@ -338,7 +397,8 @@ void display_flagtab(EvaluationContext *evaluation, DbRef player) {
   char *buffer = alloc_lbuf("display_flagtab");
   char *out = buffer;
   safe_str("Flags:", buffer, &out);
-  for (FlagEntry *flag = gen_flags; flag->flagname; flag++) {
+  for (size_t index = 0; index < flag_entry_count(); index++) {
+    FlagEntry *flag = flag_entry_at(index);
     safe_chr(' ', buffer, &out);
     safe_str(flag->flagname, buffer, &out);
     safe_chr('(', buffer, &out);
@@ -351,21 +411,34 @@ void display_flagtab(EvaluationContext *evaluation, DbRef player) {
 }
 FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing, char *flagname) {
   (void)thing;
-  for (char *character = flagname; *character; character++)
+  for (size_t index = 0; index < strlen(flagname); index++) {
+    char *character =
+        checked_storage_at(flagname, strlen(flagname), sizeof(char), index);
     *character = ascii_to_lower(*character);
+  }
   return (FlagEntry *)hash_table_find(flagname, &indexes->flags);
 }
 void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
               DbRef target, DbRef player, char *name, int key) {
   bool clear = false;
-  while (*name && isspace((unsigned char)*name))
-    name++;
+  size_t offset = 0;
+  size_t length = strlen(name);
+  while (offset < length &&
+         (isspace)(*(const unsigned char *)checked_storage_at_const(
+             name, length, sizeof(char), offset)))
+    offset++;
+  name = checked_mutable_string_suffix(name, offset);
   if (*name == '!') {
     clear = true;
-    name++;
+    name = checked_mutable_string_suffix(name, 1);
   }
-  while (*name && isspace((unsigned char)*name))
-    name++;
+  length = strlen(name);
+  offset = 0;
+  while (offset < length &&
+         (isspace)(*(const unsigned char *)checked_storage_at_const(
+             name, length, sizeof(char), offset)))
+    offset++;
+  name = checked_mutable_string_suffix(name, offset);
   if (!*name) {
     notify_checked(evaluation, player, player,
                    clear ? "You must specify a flag to clear."
@@ -398,9 +471,11 @@ char *decode_flags(GameDatabase *database, DbRef player, int type,
     StringCopy(buffer, "#-2 ERROR");
     return buffer;
   }
-  if (object_types[type].lett != ' ')
-    safe_sb_chr(object_types[type].lett, buffer, &out);
-  for (FlagEntry *flag = gen_flags; flag->flagname; flag++) {
+  const ObjectEntry *object_type = object_type_entry(type);
+  if (object_type->lett != ' ')
+    safe_sb_chr(object_type->lett, buffer, &out);
+  for (size_t index = 0; index < flag_entry_count(); index++) {
+    FlagEntry *flag = flag_entry_at(index);
     if (!object_flag_set_has(flags, flag->id))
       continue;
     safe_sb_chr(flag->flaglett, buffer, &out);
@@ -417,14 +492,17 @@ char *flag_description(GameDatabase *database, DbRef player, DbRef target) {
   char *buffer = alloc_mbuf("flag_description");
   char *out = buffer;
   safe_mb_str("Type: ", buffer, &out);
-  safe_mb_str(object_types[typeof_obj(database, target)].name, buffer, &out);
+  safe_mb_str(object_type_entry(typeof_obj(database, target))->name, buffer,
+              &out);
   safe_mb_str(" Flags:", buffer, &out);
   (void)player;
-  for (FlagEntry *flag = gen_flags; flag->flagname; flag++)
+  for (size_t index = 0; index < flag_entry_count(); index++) {
+    FlagEntry *flag = flag_entry_at(index);
     if (game_object_has_flag(database, target, flag->id)) {
       safe_mb_chr(' ', buffer, &out);
       safe_mb_str(flag->flagname, buffer, &out);
     }
+  }
   *out = '\0';
   return buffer;
 }
@@ -435,11 +513,13 @@ char *flags_description(GameDatabase *database, DbRef player, DbRef target) {
 
   safe_mb_str("Flags:", buffer, &out);
   (void)player;
-  for (FlagEntry *flag = gen_flags; flag->flagname; flag++)
+  for (size_t index = 0; index < flag_entry_count(); index++) {
+    FlagEntry *flag = flag_entry_at(index);
     if (game_object_has_flag(database, target, flag->id)) {
       safe_mb_chr(' ', buffer, &out);
       safe_mb_str(flag->flagname, buffer, &out);
     }
+  }
   *out = '\0';
   return buffer;
 }
@@ -481,18 +561,24 @@ bool convert_flags(EvaluationContext *evaluation, DbRef player, char *list,
                    ObjectFlagSet *flags, long *type) {
   *flags = (ObjectFlagSet){0};
   *type = OBJECT_TYPE_NOTYPE;
-  for (char *character = list; *character; character++) {
+  size_t list_length = strlen(list);
+  for (size_t character_index = 0; character_index < list_length;
+       character_index++) {
+    char *character =
+        checked_storage_at(list, list_length, sizeof(char), character_index);
     bool handled = false;
     for (int index = 0; index < 8 && !handled; index++)
-      if (object_types[index].lett == *character) {
+      if (object_type_entry(index)->lett == *character) {
         *type = index;
         handled = true;
       }
-    for (FlagEntry *flag = gen_flags; flag->flagname && !handled; flag++)
+    for (size_t index = 0; index < flag_entry_count() && !handled; index++) {
+      FlagEntry *flag = flag_entry_at(index);
       if (flag->flaglett == *character) {
         object_flag_set_set(flags, flag->id, true);
         handled = true;
       }
+    }
     if (!handled) {
       notify_printf(evaluation, player,
                     "%c: Flag unknown or not valid for specified object type",

@@ -33,6 +33,7 @@
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/version.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/password.h"
 #include "mux/world/database_check.h"
@@ -546,10 +547,15 @@ int main(int argc, char *argv[]) {
   MuxServer server;
   char *config_file;
   int mindb;
+  char *argument_one =
+      argc > 1
+          ? *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 1)
+          : nullptr;
 
-  if (argc > 3 || (argc > 2 && strcmp(argv[1], "-s")) ||
-      (argc > 1 && !strcmp(argv[1], "--restart"))) {
-    fprintf(stderr, "Usage: %s [-s] [config-file]\n", argv[0]);
+  if (argc > 3 || (argc > 2 && strcmp(argument_one, "-s")) ||
+      (argc > 1 && !strcmp(argument_one, "--restart"))) {
+    fprintf(stderr, "Usage: %s [-s] [config-file]\n",
+            *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 0));
     exit(1);
   }
 
@@ -561,12 +567,13 @@ int main(int argc, char *argv[]) {
   config_file = (char *)CONF_FILE;
 #pragma clang diagnostic pop
   if (argc > 1) {
-    if (!strcmp(argv[1], "-s")) {
+    if (!strcmp(argument_one, "-s")) {
       mindb = 1;
       if (argc == 3)
-        config_file = argv[2];
+        config_file =
+            *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 2);
     } else {
-      config_file = argv[1];
+      config_file = argument_one;
     }
   }
   if (!mux_server_create(&server)) {

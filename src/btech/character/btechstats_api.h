@@ -58,7 +58,7 @@ void btech_stats_destroy(BtechContext *context);
 bool character_state_validate_all(BtechContext *context);
 void do_charclear(CommandInvocation *invocation);
 DbRef char_lookupplayer(BtechContext *context, DbRef player, DbRef cause,
-                        int key, char *arg1);
+                        int key, const char *arg1);
 void initialize_pc(DbRef player, Mech *mech);
 void fix_pilotdamage(Mech *mech, DbRef player);
 int mw_ic_bth(Mech *mech);

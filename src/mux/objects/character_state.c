@@ -8,6 +8,7 @@
 
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/support/checked_storage.h"
 
 typedef struct CharacterValueState CharacterValueState;
 struct CharacterValueState {
@@ -22,6 +23,11 @@ struct CharacterState {
   CharacterValueState *values;
   size_t value_count;
 };
+
+static CharacterValueState *character_value(CharacterValueState *values,
+                                            size_t count, size_t index) {
+  return checked_storage_at(values, count, sizeof(*values), index);
+}
 
 static const CharacterFixedState default_fixed_state = {
     .build = 1,
@@ -61,7 +67,7 @@ void character_state_clear(GameDatabase *database, DbRef player) {
   if (!state)
     return;
   for (size_t index = 0; index < state->value_count; index++)
-    free(state->values[index].name);
+    free(character_value(state->values, state->value_count, index)->name);
   free(state->values);
   free(state);
   game_database_object(database, player)->character = nullptr;
@@ -95,7 +101,8 @@ bool character_state_fixed_set(GameDatabase *database, DbRef player,
 
 static size_t value_find(const CharacterState *state, const char *name) {
   for (size_t index = 0; index < state->value_count; index++)
-    if (strcmp(state->values[index].name, name) == 0)
+    if (strcmp(character_value(state->values, state->value_count, index)->name,
+               name) == 0)
       return index;
   return state->value_count;
 }
@@ -115,11 +122,13 @@ bool character_state_value_entry(GameDatabase *database, DbRef player,
       !(state = game_database_object(database, player)->character) ||
       index >= state->value_count)
     return false;
+  const CharacterValueState *stored =
+      character_value(state->values, state->value_count, index);
   *entry = (CharacterValueStateView){
-      .name = state->values[index].name,
-      .value = state->values[index].value,
-      .xp = state->values[index].xp,
-      .last_used = state->values[index].last_used,
+      .name = stored->name,
+      .value = stored->value,
+      .xp = stored->xp,
+      .last_used = stored->last_used,
   };
   return true;
 }
@@ -162,14 +171,17 @@ bool character_state_value_set(GameDatabase *database, DbRef player,
       return false;
     }
     state->values = grown;
-    state->values[index] = (CharacterValueState){
-        .name = stored_name,
-    };
+    *character_value(state->values, state->value_count + 1, index) =
+        (CharacterValueState){
+            .name = stored_name,
+        };
     state->value_count++;
   }
-  state->values[index].value = (unsigned char)value;
-  state->values[index].xp = xp;
-  state->values[index].last_used = last_used;
+  CharacterValueState *stored =
+      character_value(state->values, state->value_count, index);
+  stored->value = (unsigned char)value;
+  stored->xp = xp;
+  stored->last_used = last_used;
   return true;
 }
 
@@ -184,8 +196,9 @@ bool character_state_value_remove(GameDatabase *database, DbRef player,
   index = value_find(state, name);
   if (index == state->value_count)
     return true;
-  free(state->values[index].name);
-  state->values[index] = state->values[state->value_count - 1];
+  free(character_value(state->values, state->value_count, index)->name);
+  *character_value(state->values, state->value_count, index) = *character_value(
+      state->values, state->value_count, state->value_count - 1);
   state->value_count--;
   if (state->value_count == 0) {
     free(state->values);

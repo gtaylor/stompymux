@@ -9,6 +9,16 @@
 #include "mux/network/mux_event.h"
 #include "mux/server/runtime_clock.h"
 #include "mux/server/server_config.h"
+#include "mux/support/checked_storage.h"
+
+static int *integer_slot(int *values, size_t count, size_t index) {
+  return checked_storage_at(values, count, sizeof(*values), index);
+}
+
+static int integer_value(const int *values, size_t count, size_t index) {
+  return *(const int *)checked_storage_at_const(values, count, sizeof(*values),
+                                                index);
+}
 
 BtechContext *btech_context_create(const BtechDependencies *dependencies) {
   if (dependencies == nullptr)
@@ -471,13 +481,26 @@ int btech_context_event_tick(const BtechContext *context) {
 void btech_context_hit_roll_record(BtechContext *context, int roll) {
   assert(context != nullptr);
   assert(roll >= 2 && roll <= 12);
-  context->random.statistics.hit_rolls[roll - 2]++;
+  int *count = integer_slot(context->random.statistics.hit_rolls, 11,
+                            (size_t)(roll - 2));
+  (*count)++;
   context->random.statistics.total_hit_rolls++;
+}
+
+void btech_context_roll_record(BtechContext *context, int roll) {
+  assert(context != nullptr);
+  assert(roll >= 2 && roll <= 12);
+  int *count =
+      integer_slot(context->random.statistics.rolls, 11, (size_t)(roll - 2));
+  (*count)++;
+  context->random.statistics.total_rolls++;
 }
 
 void btech_context_critical_roll_record(BtechContext *context, int roll) {
   assert(context != nullptr);
-  context->random.statistics.critical_rolls[roll - 2]++;
+  int *count = integer_slot(context->random.statistics.critical_rolls, 11,
+                            (size_t)(roll - 2));
+  (*count)++;
   context->random.statistics.total_critical_rolls++;
 }
 
@@ -491,7 +514,9 @@ int btech_context_missile_hit_count(const BtechContext *context,
   assert(context != nullptr);
   const MissileHitEntry *entry =
       missile_hit_registry_find_weapon(&context->missile_hits, weapon_index);
-  return entry ? entry->num_missiles[roll_index] : 0;
+  return entry ? integer_value(entry->num_missiles,
+                               BTECH_MISSILE_HIT_ROLL_COUNT, (size_t)roll_index)
+               : 0;
 }
 
 bool btech_context_has_missile_hit_table(const BtechContext *context,
@@ -506,7 +531,9 @@ int btech_context_missile_hit_count_by_name(const BtechContext *context,
   assert(context != nullptr);
   const MissileHitEntry *entry =
       missile_hit_registry_find_name(&context->missile_hits, name);
-  return entry ? entry->num_missiles[roll_index] : 0;
+  return entry ? integer_value(entry->num_missiles,
+                               BTECH_MISSILE_HIT_ROLL_COUNT, (size_t)roll_index)
+               : 0;
 }
 
 int btech_context_weapon_recycle_time(const BtechContext *context,

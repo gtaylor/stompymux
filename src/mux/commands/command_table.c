@@ -20,6 +20,7 @@
 #include "mux/server/configuration_context.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
 #include "mux/world/inventory_commands.h"
@@ -386,16 +387,44 @@ CMDENT command_table[] = {
      {.invoke = do_say}},
     {(char *)nullptr, nullptr, 0, 0, 0, {nullptr}}};
 
+size_t command_table_entry_count(void) {
+  return sizeof(command_table) / sizeof(command_table[0]) - 1;
+}
+
+CMDENT *command_table_entry_at(size_t index) {
+  return checked_storage_at(command_table, command_table_entry_count(),
+                            sizeof(*command_table), index);
+}
+
+CMDENT *command_prefix_entry_at(const CommandRegistry *registry, size_t index) {
+  return *(CMDENT *const *)checked_storage_at_const(
+      registry->prefix_commands,
+      sizeof(registry->prefix_commands) / sizeof(*registry->prefix_commands),
+      sizeof(*registry->prefix_commands), index);
+}
+
+void command_prefix_entry_set(CommandRegistry *registry, size_t index,
+                              CMDENT *entry) {
+  void **slot = checked_storage_at(registry->prefix_commands,
+                                   sizeof(registry->prefix_commands) /
+                                       sizeof(*registry->prefix_commands),
+                                   sizeof(*registry->prefix_commands), index);
+
+  *slot = entry;
+}
+
 void init_cmdtab(CommandRegistry *registry) {
-  CMDENT *cp;
   hash_table_initialize(&registry->commands, 250 * HASH_FACTOR);
 
   /*
    * Load the builtin commands
    */
 
-  for (cp = command_table; cp->cmdname; cp++)
+  for (size_t index = 0; index < command_table_entry_count(); index++) {
+    CMDENT *cp = command_table_entry_at(index);
+
     hash_table_add(cp->cmdname, (int *)cp, &registry->commands);
+  }
 
   set_prefix_cmds(registry);
 
@@ -413,7 +442,9 @@ void command_aliases_destroy(HashTable *commands) {
     CMDENT *command = hash_table_find(key, commands);
     bool built_in = false;
 
-    for (CMDENT *candidate = command_table; candidate->cmdname; candidate++) {
+    for (size_t index = 0; index < command_table_entry_count(); index++) {
+      CMDENT *candidate = command_table_entry_at(index);
+
       if (command == candidate) {
         built_in = true;
         break;
@@ -425,14 +456,19 @@ void command_aliases_destroy(HashTable *commands) {
     if (grown == nullptr)
       break;
     aliases = grown;
-    aliases[alias_count++] = command;
+    *(CMDENT **)checked_storage_at(aliases, alias_count + 1, sizeof(*aliases),
+                                   alias_count) = command;
+    alias_count++;
   }
   for (size_t index = 0; index < alias_count; index++) {
+    CMDENT *alias = *(CMDENT *const *)checked_storage_at_const(
+        aliases, alias_count, sizeof(*aliases), index);
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-    free((void *)aliases[index]->cmdname);
+    free((void *)alias->cmdname);
 #pragma clang diagnostic pop
-    free(aliases[index]);
+    free(alias);
   }
   free(aliases);
 }
@@ -448,12 +484,17 @@ void set_prefix_cmds(CommandRegistry *registry) {
   for (size_t i = 0; i < sizeof(registry->prefix_commands) /
                              sizeof(*registry->prefix_commands);
        i++)
-    registry->prefix_commands[i] = nullptr;
-  registry->prefix_commands['"'] = hash_table_find("\"", &registry->commands);
-  registry->prefix_commands[':'] = hash_table_find(":", &registry->commands);
-  registry->prefix_commands[';'] = hash_table_find(";", &registry->commands);
-  registry->prefix_commands['\\'] = hash_table_find("\\", &registry->commands);
-  registry->prefix_commands['#'] = hash_table_find("#", &registry->commands);
+    command_prefix_entry_set(registry, i, nullptr);
+  command_prefix_entry_set(registry, '"',
+                           hash_table_find("\"", &registry->commands));
+  command_prefix_entry_set(registry, ':',
+                           hash_table_find(":", &registry->commands));
+  command_prefix_entry_set(registry, ';',
+                           hash_table_find(";", &registry->commands));
+  command_prefix_entry_set(registry, '\\',
+                           hash_table_find("\\", &registry->commands));
+  command_prefix_entry_set(registry, '#',
+                           hash_table_find("#", &registry->commands));
 }
 
 /*

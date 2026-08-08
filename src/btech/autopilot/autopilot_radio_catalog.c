@@ -45,6 +45,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 
 void sendchannelstuff(Mech *mech, int freq, char *msg);
@@ -86,3 +87,12 @@ AutopilotRadioCommand const autopilot_radio_commands[] = {
     {"sw", "sweight", 2, 1, auto_radio_command_sweight},
     {"ta", "target", 1, 0, auto_radio_command_target},
     {NULL, NULL, 0, 0, NULL}};
+
+const AutopilotRadioCommand *autopilot_radio_command_at(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(autopilot_radio_commands,
+                                  sizeof(autopilot_radio_commands) /
+                                      sizeof(AutopilotRadioCommand),
+                                  sizeof(AutopilotRadioCommand), (size_t)index);
+}

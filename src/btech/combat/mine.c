@@ -59,13 +59,27 @@
  * know if a unit has moved to a certain spot
  *
  * The others are the explosive do damage kind */
-static const char *mine_type_names[] = {"Standard", "Inferno", "Command",
-                                        "Vibra",    "Trigger", nullptr};
+static const char *mine_type_name(int type) {
+  switch (type) {
+  case 0:
+    return "Standard";
+  case 1:
+    return "Inferno";
+  case 2:
+    return "Command";
+  case 3:
+    return "Vibra";
+  case 4:
+    return "Trigger";
+  default:
+    return nullptr;
+  }
+}
 
 static int mine_type_index(const char *name) {
-  for (size_t index = 0; mine_type_names[index] != nullptr; index++)
-    if (!strcasecmp(mine_type_names[index], name))
-      return (int)index;
+  for (int index = 0; mine_type_name(index) != nullptr; index++)
+    if (!strcasecmp(mine_type_name(index), name))
+      return index;
   return -1;
 }
 
@@ -405,7 +419,7 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
 
   notify_printf(btech_context_evaluation(battle_map_context(map)), player,
                 "%s mine added to (%d,%d) (strength: %d / extra: %d)",
-                mine_type_names[type], x, y, str, extra);
+                mine_type_name(type), x, y, str, extra);
   mine_fields_recalculate(map);
 }
 

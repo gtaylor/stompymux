@@ -24,6 +24,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/builder_object_commands.c
   ${MUX_MODULE_DIR}/commands/command_parser.c
   ${MUX_MODULE_DIR}/commands/macro.c
+  ${MUX_MODULE_DIR}/commands/macro_storage.c
   ${MUX_MODULE_DIR}/commands/action_messages.c
   ${MUX_MODULE_DIR}/communication/commac.c
   ${MUX_MODULE_DIR}/communication/access_policy.c

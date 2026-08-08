@@ -42,6 +42,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
@@ -50,6 +51,26 @@
 #define TARG_LOS_SOMETHING 2
 
 #define DEBUG_C3 0
+
+typedef struct C3ContactLine {
+  float sort_range;
+  char text[120];
+} C3ContactLine;
+
+static DbRef *c3_network_slot(DbRef *network, int index) {
+  return checked_storage_at(network, C3_NETWORK_SIZE, sizeof(*network),
+                            (size_t)index);
+}
+
+static DbRef c3_network_value(const DbRef *network, int index) {
+  return *(const DbRef *)checked_storage_at_const(
+      network, C3_NETWORK_SIZE, sizeof(*network), (size_t)index);
+}
+
+static C3ContactLine *c3_contact_line(C3ContactLine *lines, int index) {
+  return checked_storage_at(lines, BATTLE_MAP_UNIT_CAPACITY, sizeof(*lines),
+                            (size_t)index);
+}
 
 static bool mech_has_c3(const Mech *mech) {
   return mech_technology_flags(mech) & (C3_MASTER_TECH | C3_SLAVE_TECH);
@@ -67,7 +88,7 @@ Mech *mech_network_temporary_unit(BtechContext *context, int wIdx,
   if ((wIdx > networkSize) || (wIdx < 0))
     return NULL;
 
-  refOtherMech = myNetwork[wIdx];
+  refOtherMech = c3_network_value(myNetwork, wIdx);
 
   if (refOtherMech > 0) {
     tempMech = btech_context_get_mech(context, refOtherMech);
@@ -158,7 +179,7 @@ void mech_network_build_temporary(Mech *mech, DbRef *myNetwork,
 
   /* Re-init the network */
   for (i = 0; i < C3_NETWORK_SIZE; i++)
-    myNetwork[i] = -1;
+    *c3_network_slot(myNetwork, i) = -1;
 
   *networkSize = 0;
 
@@ -181,7 +202,7 @@ void mech_network_build_temporary(Mech *mech, DbRef *myNetwork,
     if (!is_good_obj(mech_context(otherMech)->database, mech_dbref(otherMech)))
       continue;
 
-    myTempNetwork[tempNetworkSize] = mech_dbref(otherMech);
+    *c3_network_slot(myTempNetwork, tempNetworkSize) = mech_dbref(otherMech);
     tempNetworkSize++;
   }
 
@@ -201,7 +222,7 @@ void mech_network_build_temporary(Mech *mech, DbRef *myNetwork,
   }
 
   for (i = 0; i < tempNetworkSize; i++)
-    myNetwork[i] = myTempNetwork[i];
+    *c3_network_slot(myNetwork, i) = c3_network_value(myTempNetwork, i);
 
   *networkSize = tempNetworkSize;
 }
@@ -241,7 +262,7 @@ void mech_network_send_message(DbRef player, Mech *mech, const char *msg,
 void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
   BattleMap *objMap =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int i, j, wTemp, bearing;
+  int i, j, bearing;
   Mech *otherMech;
   float realRange, c3Range;
   char buff[LBUF_SIZE];
@@ -254,10 +275,8 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
   int wSeeTarget = TARG_LOS_NONE;
   int wC3SeeTarget = TARG_LOS_NONE;
   int tShowStatusInfo = 0;
-  char bufflist[BATTLE_MAP_UNIT_CAPACITY][120];
-  float rangelist[BATTLE_MAP_UNIT_CAPACITY];
+  C3ContactLine contacts[BATTLE_MAP_UNIT_CAPACITY];
   int buffindex = 0;
-  int sbuff[BATTLE_MAP_UNIT_CAPACITY];
   int networkSize;
   DbRef myNetwork[C3_NETWORK_SIZE];
   DbRef c3Ref;
@@ -375,27 +394,26 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
                  ? "[reset]"
                  : "");
 
-    rangelist[buffindex] = realRange;
-    rangelist[buffindex] += mech_is_destroyed(otherMech) ? 10000 : 0;
-    strcpy(bufflist[buffindex++], buff);
+    C3ContactLine *contact = c3_contact_line(contacts, buffindex++);
+    contact->sort_range =
+        realRange + (mech_is_destroyed(otherMech) ? 10000.0F : 0.0F);
+    snprintf(contact->text, sizeof(contact->text), "%s", buff);
   }
-
-  for (i = 0; i < buffindex; i++)
-    sbuff[i] = i;
 
   /* print a sorted list of detected mechs */
   /* use the ever-popular bubble sort */
   for (i = 0; i < (buffindex - 1); i++)
     for (j = (i + 1); j < buffindex; j++)
-      if (rangelist[sbuff[j]] > rangelist[sbuff[i]]) {
-        wTemp = sbuff[i];
-        sbuff[i] = sbuff[j];
-        sbuff[j] = wTemp;
+      if (c3_contact_line(contacts, j)->sort_range >
+          c3_contact_line(contacts, i)->sort_range) {
+        C3ContactLine temporary = *c3_contact_line(contacts, i);
+        *c3_contact_line(contacts, i) = *c3_contact_line(contacts, j);
+        *c3_contact_line(contacts, j) = temporary;
       }
 
   for (i = 0; i < buffindex; i++)
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 bufflist[sbuff[i]]);
+                 c3_contact_line(contacts, i)->text);
 
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "End %s Contact List", tIsC3 ? "C3" : "C3i");

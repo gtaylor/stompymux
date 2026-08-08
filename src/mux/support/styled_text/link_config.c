@@ -28,8 +28,9 @@ void styled_link_config_destroy(StyledLinkConfig *config) {
   free(config->selection.value);
   free(config->preset);
   for (size_t index = 0; index < config->menu_count; index++) {
-    free(config->menu[index].label);
-    free(config->menu[index].action);
+    StyledLinkMenuItem *item = styled_link_menu_item_at(config, index);
+    free(item->label);
+    free(item->action);
   }
   free(config->menu);
   *config = (StyledLinkConfig){0};
@@ -66,7 +67,8 @@ bool styled_link_config_valid(const StyledLinkConfig *config, char *error,
     return false;
   }
   for (size_t index = 0; index < config->menu_count; index++) {
-    const StyledLinkMenuItem *item = &config->menu[index];
+    const StyledLinkMenuItem *item =
+        styled_link_menu_item_at_const(config, index);
 
     if (item->separator)
       continue;
@@ -115,7 +117,8 @@ bool styled_link_config_valid(const StyledLinkConfig *config, char *error,
 bool styled_link_preset_config_valid(const StyledLinkConfig *config,
                                      char *error, size_t error_size) {
   for (size_t index = 0; index < config->menu_count; index++) {
-    const StyledLinkMenuItem *item = &config->menu[index];
+    const StyledLinkMenuItem *item =
+        styled_link_menu_item_at_const(config, index);
 
     if (item->separator)
       continue;
@@ -161,13 +164,15 @@ bool styled_link_config_copy(StyledLinkConfig *destination,
       goto fail;
     destination->menu_count = source->menu_count;
     for (size_t index = 0; index < source->menu_count; index++) {
-      destination->menu[index] = source->menu[index];
-      destination->menu[index].label = nullptr;
-      destination->menu[index].action = nullptr;
-      if (!copy_link_text(&destination->menu[index].label,
-                          source->menu[index].label) ||
-          !copy_link_text(&destination->menu[index].action,
-                          source->menu[index].action))
+      StyledLinkMenuItem *destination_item =
+          styled_link_menu_item_at(destination, index);
+      const StyledLinkMenuItem *source_item =
+          styled_link_menu_item_at_const(source, index);
+      *destination_item = *source_item;
+      destination_item->label = nullptr;
+      destination_item->action = nullptr;
+      if (!copy_link_text(&destination_item->label, source_item->label) ||
+          !copy_link_text(&destination_item->action, source_item->action))
         goto fail;
     }
   }
@@ -219,16 +224,18 @@ bool styled_link_config_merge(StyledLinkConfig *base,
                               const StyledLinkConfig *overlay) {
   merge_link_properties(&base->style.base, &overlay->style.base);
   for (size_t index = 0; index < STYLED_LINK_STATE_COUNT; index++)
-    merge_link_properties(&base->style.states[index],
-                          &overlay->style.states[index]);
+    merge_link_properties(
+        styled_link_style_state(&base->style, index),
+        styled_link_style_state_const(&overlay->style, index));
   merge_link_properties(&base->title_style, &overlay->title_style);
   if (!merge_link_text(&base->tooltip, overlay->tooltip) ||
       !merge_link_text(&base->title, overlay->title))
     return false;
   if (overlay->menu_count > 0) {
     for (size_t index = 0; index < base->menu_count; index++) {
-      free(base->menu[index].label);
-      free(base->menu[index].action);
+      StyledLinkMenuItem *item = styled_link_menu_item_at(base, index);
+      free(item->label);
+      free(item->action);
     }
     free(base->menu);
     base->menu = nullptr;
@@ -318,7 +325,8 @@ bool styled_link_config_present(const StyledLinkConfig *config) {
       config->disabled != STYLED_BOOLEAN_UNSET)
     return true;
   for (size_t index = 0; index < STYLED_LINK_STATE_COUNT; index++) {
-    if (styled_link_properties_present(&config->style.states[index]))
+    if (styled_link_properties_present(
+            styled_link_style_state_const(&config->style, index)))
       return true;
   }
   return false;
@@ -326,7 +334,8 @@ bool styled_link_config_present(const StyledLinkConfig *config) {
 
 bool styled_link_has_states(const StyledLinkConfig *config) {
   for (size_t index = 0; index < STYLED_LINK_STATE_COUNT; index++) {
-    if (styled_link_properties_present(&config->style.states[index]))
+    if (styled_link_properties_present(
+            styled_link_style_state_const(&config->style, index)))
       return true;
   }
   return false;

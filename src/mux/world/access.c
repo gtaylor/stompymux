@@ -73,9 +73,9 @@ void handle_ears(EvaluationContext *evaluation, DbRef thing, int could_hear,
     buff = alloc_lbuf("handle_ears.grow");
     StringCopy(buff, game_object_name(evaluation->world->database, thing));
     if (is_exit(evaluation->world->database, thing)) {
-      for (bp = buff; *bp && (*bp != ';'); bp++)
-        ;
-      *bp = '\0';
+      bp = strchr(buff, ';');
+      if (bp)
+        *bp = '\0';
     }
     notify_checked(evaluation, thing, thing,
                    tprintf("%s grows ears and can now hear.", buff),
@@ -85,9 +85,9 @@ void handle_ears(EvaluationContext *evaluation, DbRef thing, int could_hear,
     buff = alloc_lbuf("handle_ears.lose");
     StringCopy(buff, game_object_name(evaluation->world->database, thing));
     if (is_exit(evaluation->world->database, thing)) {
-      for (bp = buff; *bp && (*bp != ';'); bp++)
-        ;
-      *bp = '\0';
+      bp = strchr(buff, ';');
+      if (bp)
+        *bp = '\0';
     }
     notify_checked(evaluation, thing, thing,
                    tprintf("%s loses its ears and becomes deaf.", buff),

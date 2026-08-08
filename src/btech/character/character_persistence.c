@@ -1,31 +1,42 @@
 #include "btechstats_internal.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
+
+typedef struct CharacterXpRanking {
+  DbRef player;
+  int experience;
+} CharacterXpRanking;
+
+static CharacterXpRanking *ranking_at(CharacterXpRanking *rankings,
+                                      size_t count, size_t index) {
+  return checked_storage_at(rankings, count, sizeof(*rankings), index);
+}
 
 void debug_xptop(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
   BtechContext *context = debug->context;
   int hm, i, j;
-  DbRef top[MAX_PLAYERS_ON];
-  int topv[MAX_PLAYERS_ON];
+  CharacterXpRanking rankings[MAX_PLAYERS_ON];
   int count = 0, gt = 0;
   CoolMenu *c = NULL;
   PSTATS stats, *s = &stats;
 
-  bzero(top, sizeof(top));
-  bzero(topv, sizeof(topv));
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  bzero(rankings, sizeof(rankings));
+  const char *skill_name = buffer;
+  if (skill_name != nullptr)
+    skill_name =
+        checked_string_suffix(skill_name, strspn(skill_name, " \t\r\n\f\v"));
+  if (skill_name == nullptr || !*skill_name) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid argument!");
     return;
   }
-  if ((hm = char_getvaluecode(context, buffer)) < 0) {
+  if ((hm = char_getvaluecode(context, skill_name)) < 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid value name!");
     return;
   }
-  if (char_values[hm].type != CHAR_SKILL) {
+  if (character_value_definition(hm)->type != CHAR_SKILL) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Only skills have XP (for now at least)");
     return;
@@ -36,30 +47,39 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
     if (is_wizard(context->database, i))
       continue;
     character_stats_retrieve(context, i, VALUES_SKILLS, s);
-    if (!s->xp[hm])
+    int xp = character_stats_xp_get(s, hm);
+    if (!xp)
       continue;
-    top[count] = i;
-    topv[count] = s->xp[hm] % XP_MAX;
-    gt += topv[count];
+    if (count >= MAX_PLAYERS_ON)
+      break;
+    CharacterXpRanking *ranking =
+        ranking_at(rankings, MAX_PLAYERS_ON, (size_t)count);
+    ranking->player = i;
+    ranking->experience = xp % XP_MAX;
+    gt += ranking->experience;
     count++;
   }
   for (i = 0; i < (count - 1); i++)
     for (j = i + 1; j < count; j++) {
-      if (topv[j] > topv[i]) {
-        topv[count] = topv[j];
-        topv[j] = topv[i];
-        topv[i] = topv[count];
-
-        top[count] = top[j];
-        top[j] = top[i];
-        top[i] = top[count];
+      CharacterXpRanking *left =
+          ranking_at(rankings, MAX_PLAYERS_ON, (size_t)i);
+      CharacterXpRanking *right =
+          ranking_at(rankings, MAX_PLAYERS_ON, (size_t)j);
+      if (right->experience > left->experience) {
+        const CharacterXpRanking temporary = *right;
+        *right = *left;
+        *left = temporary;
       }
     }
   cool_menu_add_line(&c);
   for (i = 0; i < MIN(16, count); i++) {
-    cool_menu_add(&c, tprintf("%3d. %s", i + 1,
-                              game_object_name(context->database, top[i])));
-    cool_menu_add(&c, tprintf("%d (%.3f %%)", topv[i], (100.0 * topv[i]) / gt));
+    const CharacterXpRanking *ranking =
+        ranking_at(rankings, MAX_PLAYERS_ON, (size_t)i);
+    cool_menu_add(
+        &c, tprintf("%3d. %s", i + 1,
+                    game_object_name(context->database, ranking->player)));
+    cool_menu_add(&c, tprintf("%d (%.3f %%)", ranking->experience,
+                              (100.0 * ranking->experience) / gt));
   }
   cool_menu_add_line(&c);
   if (gt) {
@@ -95,15 +115,16 @@ void debug_setxplevel(DbRef player, void *data, char *buffer) {
                  "That isn't any charvalue!");
     return;
   }
-  if (char_values[code].type != CHAR_SKILL) {
+  const CharacterValue *definition = character_value_definition(code);
+  if (definition->type != CHAR_SKILL) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That isn't any skill!");
     return;
   }
-  char_values[code].xpthreshold = xpt;
+  character_value_xp_threshold_set(code, xpt);
   log_error(context->log, LOG_WIZARD, "WIZ", "CHANGE",
-            "Exp threshold for %s changed to %d by #%ld",
-            char_values[code].name, xpt, player);
+            "Exp threshold for %s changed to %d by #%ld", definition->name, xpt,
+            player);
 }
 
 int btthreshold_func(BtechContext *context, char *skillname) {
@@ -114,7 +135,7 @@ int btthreshold_func(BtechContext *context, char *skillname) {
   code = char_getvaluecode(context, skillname);
   if (code < 0)
     return -1;
-  if (char_values[code].type != CHAR_SKILL)
+  if (character_value_definition(code)->type != CHAR_SKILL)
     return -1;
-  return char_values[code].xpthreshold;
+  return character_value_definition(code)->xpthreshold;
 }

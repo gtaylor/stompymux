@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/server/platform.h"
 
 typedef struct CommandContext CommandContext;
@@ -42,6 +44,9 @@ typedef void (*CommandTwoVectorsHandler)(DbRef player, DbRef cause, int key,
                                          int vector_count,
                                          char **command_arguments,
                                          int command_argument_count);
+
+char *command_invocation_vector_at(const CommandInvocation *invocation,
+                                   size_t index);
 
 void command_invocation_call_no_arguments(CommandNoArgumentsHandler handler,
                                           CommandInvocation *invocation);

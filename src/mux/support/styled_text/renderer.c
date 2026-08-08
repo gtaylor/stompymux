@@ -18,36 +18,59 @@
 #include "mux/support/styled_text/palette.h"
 #include "mux/support/styled_text/render.h"
 
+static const char *renderer_suffix(const char *text, size_t length,
+                                   size_t offset) {
+  return checked_storage_at_const(text, length + 1, sizeof(char), offset);
+}
+
+static char renderer_character(const char *text, size_t length, size_t index) {
+  return *renderer_suffix(text, length, index);
+}
+
+static int *renderer_parameter(int *parameters, size_t index) {
+  return checked_storage_at(parameters, SGR_PARAMETER_LIMIT,
+                            sizeof(*parameters), index);
+}
+
+static int renderer_parameter_value(const int *parameters,
+                                    size_t parameter_count, size_t index) {
+  return *(const int *)checked_storage_at_const(parameters, parameter_count,
+                                                sizeof(*parameters), index);
+}
+
 bool styled_sgr_parse(const char *cursor, const char **end, int *parameters,
                       size_t *parameter_count) {
-  const char *scan;
+  const size_t length = strlen(cursor);
+  size_t offset = 2;
   int value = 0;
   bool have_digit = false;
 
-  if (cursor[0] != '\033' || cursor[1] != '[')
+  if (length < 2 || renderer_character(cursor, length, 0) != '\033' ||
+      renderer_character(cursor, length, 1) != '[')
     return false;
-  scan = cursor + 2;
   *parameter_count = 0;
-  while (*scan) {
-    if (isdigit((unsigned char)*scan)) {
+  while (offset < length) {
+    const char character = renderer_character(cursor, length, offset);
+    if ((isdigit)((unsigned char)character)) {
       if (value > (INT_MAX - 9) / 10)
         return false;
-      value = value * 10 + (*scan - '0');
+      value = value * 10 + (character - '0');
       have_digit = true;
-      scan++;
+      offset++;
       continue;
     }
-    if (*scan == ';' || *scan == 'm') {
+    if (character == ';' || character == 'm') {
       if (*parameter_count >= SGR_PARAMETER_LIMIT)
         return false;
-      parameters[(*parameter_count)++] = have_digit ? value : 0;
+      *renderer_parameter(parameters, (*parameter_count)++) =
+          have_digit ? value : 0;
       value = 0;
       have_digit = false;
-      if (*scan == 'm') {
-        *end = scan + 1;
+      if (character == 'm') {
+        *end = renderer_suffix(cursor, length, offset + 1);
         return true;
       }
-      scan++;
+      offset++;
       continue;
     }
     return false;
@@ -56,28 +79,36 @@ bool styled_sgr_parse(const char *cursor, const char **end, int *parameters,
 }
 
 const char *styled_skip_escape(const char *cursor) {
-  const char *scan = cursor + 1;
+  const size_t length = strlen(cursor);
+  size_t offset = length > 0 ? 1 : 0;
 
-  if (*scan == '[') {
-    scan++;
-    while (*scan &&
-           ((unsigned char)*scan < 0x40 || (unsigned char)*scan > 0x7e))
-      scan++;
-    if (*scan)
-      scan++;
-    return scan;
+  if (offset < length && renderer_character(cursor, length, offset) == '[') {
+    offset++;
+    while (offset < length &&
+           ((unsigned char)renderer_character(cursor, length, offset) < 0x40 ||
+            (unsigned char)renderer_character(cursor, length, offset) > 0x7e))
+      offset++;
+    if (offset < length)
+      offset++;
+    return renderer_suffix(cursor, length, offset);
   }
-  if (*scan == ']') {
-    scan++;
-    while (*scan && *scan != '\a' && !(*scan == '\033' && scan[1] == '\\'))
-      scan++;
-    if (*scan == '\a')
-      return scan + 1;
-    if (*scan)
-      return scan + 2;
-    return scan;
+  if (offset < length && renderer_character(cursor, length, offset) == ']') {
+    offset++;
+    while (offset < length &&
+           renderer_character(cursor, length, offset) != '\a' &&
+           !(renderer_character(cursor, length, offset) == '\033' &&
+             offset + 1 < length &&
+             renderer_character(cursor, length, offset + 1) == '\\'))
+      offset++;
+    if (offset < length && renderer_character(cursor, length, offset) == '\a')
+      offset++;
+    else if (offset < length)
+      offset += 2;
+    return renderer_suffix(cursor, length, offset);
   }
-  return *scan ? scan + 1 : scan;
+  if (offset < length)
+    offset++;
+  return renderer_suffix(cursor, length, offset);
 }
 
 static const int terminal_ansi_colors[16][3] = {
@@ -86,6 +117,14 @@ static const int terminal_ansi_colors[16][3] = {
     {128, 128, 128}, {255, 0, 0},   {0, 255, 0},   {255, 255, 0},
     {0, 0, 255},     {255, 0, 255}, {0, 255, 255}, {255, 255, 255},
 };
+
+static int color_channel(const int colors[][3], size_t color_count,
+                         size_t color, size_t channel) {
+  const int *entry =
+      checked_storage_at_const(colors, color_count, sizeof(*colors), color);
+  return *(const int *)checked_storage_at_const(entry, 3, sizeof(*entry),
+                                                channel);
+}
 
 TerminalColorDepth terminal_color_depth_from_type(const char *name) {
   if (!name)
@@ -111,7 +150,7 @@ bool terminal_mtts_parse(const char *name, TerminalColorDepth *depth,
   if (!name || !depth || !is_screen_reader || strncasecmp(name, "MTTS ", 5))
     return false;
   errno = 0;
-  capabilities = strtol(name + 5, &end, 10);
+  capabilities = strtol(checked_string_suffix(name, 5), &end, 10);
   if (errno != 0 || *end != '\0' || capabilities < 0)
     return false;
   *is_screen_reader = (capabilities & MTTS_SCREEN_READER) != 0;
@@ -127,12 +166,6 @@ bool terminal_mtts_parse(const char *name, TerminalColorDepth *depth,
 }
 
 static void ansi_256_rgb(int index, int *red, int *green, int *blue) {
-  static const int base[16][3] = {
-      {0, 0, 0},       {128, 0, 0},   {0, 128, 0},   {128, 128, 0},
-      {0, 0, 128},     {128, 0, 128}, {0, 128, 128}, {192, 192, 192},
-      {128, 128, 128}, {255, 0, 0},   {0, 255, 0},   {255, 255, 0},
-      {0, 0, 255},     {255, 0, 255}, {0, 255, 255}, {255, 255, 255},
-  };
   static const int cube[] = {0, 95, 135, 175, 215, 255};
 
   if (index < 0)
@@ -140,14 +173,17 @@ static void ansi_256_rgb(int index, int *red, int *green, int *blue) {
   if (index > 255)
     index = 255;
   if (index < 16) {
-    *red = base[index][0];
-    *green = base[index][1];
-    *blue = base[index][2];
+    *red = color_channel(terminal_ansi_colors, 16, (size_t)index, 0);
+    *green = color_channel(terminal_ansi_colors, 16, (size_t)index, 1);
+    *blue = color_channel(terminal_ansi_colors, 16, (size_t)index, 2);
   } else if (index < 232) {
     int cube_index = index - 16;
-    *red = cube[cube_index / 36];
-    *green = cube[(cube_index / 6) % 6];
-    *blue = cube[cube_index % 6];
+    *red = *(const int *)checked_storage_at_const(cube, 6, sizeof(*cube),
+                                                  (size_t)(cube_index / 36));
+    *green = *(const int *)checked_storage_at_const(
+        cube, 6, sizeof(*cube), (size_t)((cube_index / 6) % 6));
+    *blue = *(const int *)checked_storage_at_const(cube, 6, sizeof(*cube),
+                                                   (size_t)(cube_index % 6));
   } else {
     *red = *green = *blue = 8 + (index - 232) * 10;
   }
@@ -168,8 +204,10 @@ static int nearest_ansi(int red, int green, int blue) {
 
   for (int index = 0; index < 16; index++) {
     int distance = distance_squared(
-        red, green, blue, terminal_ansi_colors[index][0],
-        terminal_ansi_colors[index][1], terminal_ansi_colors[index][2]);
+        red, green, blue,
+        color_channel(terminal_ansi_colors, 16, (size_t)index, 0),
+        color_channel(terminal_ansi_colors, 16, (size_t)index, 1),
+        color_channel(terminal_ansi_colors, 16, (size_t)index, 2));
     if (distance < best_distance) {
       best = index;
       best_distance = distance;
@@ -210,7 +248,8 @@ static void render_sgr(const int *parameters, size_t parameter_count,
                        TerminalColorDepth depth, char *output,
                        size_t output_size, size_t *used) {
   for (size_t index = 0; index < parameter_count; index++) {
-    int parameter = parameters[index];
+    int parameter =
+        renderer_parameter_value(parameters, parameter_count, index);
     bool foreground;
     int red;
     int green;
@@ -218,13 +257,20 @@ static void render_sgr(const int *parameters, size_t parameter_count,
 
     if ((parameter == 38 || parameter == 48) && index + 1 < parameter_count) {
       foreground = parameter == 38;
-      if (parameters[index + 1] == 2 && index + 4 < parameter_count) {
-        red = parameters[index + 2];
-        green = parameters[index + 3];
-        blue = parameters[index + 4];
+      if (renderer_parameter_value(parameters, parameter_count, index + 1) ==
+              2 &&
+          index + 4 < parameter_count) {
+        red = renderer_parameter_value(parameters, parameter_count, index + 2);
+        green =
+            renderer_parameter_value(parameters, parameter_count, index + 3);
+        blue = renderer_parameter_value(parameters, parameter_count, index + 4);
         index += 4;
-      } else if (parameters[index + 1] == 5 && index + 2 < parameter_count) {
-        ansi_256_rgb(parameters[index + 2], &red, &green, &blue);
+      } else if (renderer_parameter_value(parameters, parameter_count,
+                                          index + 1) == 5 &&
+                 index + 2 < parameter_count) {
+        ansi_256_rgb(
+            renderer_parameter_value(parameters, parameter_count, index + 2),
+            &red, &green, &blue);
         index += 2;
       } else {
         continue;
@@ -265,11 +311,11 @@ static bool parse_osc8(const char *cursor, const char **end, bool *is_close) {
 
   if (strncmp(cursor, "\033]8;;", 5) != 0)
     return false;
-  terminator = strstr(cursor + 5, "\033\\");
+  terminator = strstr(checked_string_suffix(cursor, 5), "\033\\");
   if (terminator == nullptr)
     return false;
-  *is_close = terminator == cursor + 5;
-  *end = terminator + 2;
+  *is_close = strlen(cursor) - strlen(terminator) == 5;
+  *end = checked_string_suffix(terminator, 2);
   return true;
 }
 
@@ -286,8 +332,10 @@ static void styled_text_render_ansi(const char *styled,
   if (!styled)
     return;
 
-  for (const char *cursor = styled; *cursor;) {
-    if (*cursor != '\033') {
+  const size_t styled_length = strlen(styled);
+  for (size_t cursor_offset = 0; cursor_offset < styled_length;) {
+    const char *cursor = renderer_suffix(styled, styled_length, cursor_offset);
+    if (renderer_character(styled, styled_length, cursor_offset) != '\033') {
       size_t consumed;
       size_t available = link_open && output_size > OSC8_CLOSE_SIZE
                              ? output_size - OSC8_CLOSE_SIZE
@@ -295,7 +343,7 @@ static void styled_text_render_ansi(const char *styled,
       if (!styled_append_utf8_codepoint(output, available, &used, cursor,
                                         &consumed))
         break;
-      cursor += consumed;
+      cursor_offset += consumed;
       continue;
     }
     int parameters[SGR_PARAMETER_LIMIT];
@@ -307,12 +355,12 @@ static void styled_text_render_ansi(const char *styled,
                              : output_size;
       render_sgr(parameters, parameter_count, depth, output, available, &used);
       saw_sgr = true;
-      cursor = end;
+      cursor_offset += strlen(cursor) - strlen(end);
     } else {
       bool is_close;
 
       if (parse_osc8(cursor, &end, &is_close)) {
-        size_t length = (size_t)(end - cursor);
+        size_t length = strlen(cursor) - strlen(end);
         size_t available = is_close ? output_size
                            : output_size > OSC8_CLOSE_SIZE
                                ? output_size - OSC8_CLOSE_SIZE
@@ -320,12 +368,12 @@ static void styled_text_render_ansi(const char *styled,
 
         if (styled_append_bytes(output, available, &used, cursor, length)) {
           link_open = !is_close;
-          cursor = end;
+          cursor_offset += length;
           continue;
         }
         break;
       }
-      cursor = styled_skip_escape(cursor);
+      cursor_offset += strlen(cursor) - strlen(styled_skip_escape(cursor));
     }
   }
   if (link_open)

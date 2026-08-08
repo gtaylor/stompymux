@@ -22,6 +22,7 @@
 #include "crit_api.h"
 #include "map.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_bth_api.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
@@ -71,10 +72,11 @@ static void mech_hide_event(MuxEvent *e) {
   if (!map)
     return;
 
-  for (i = 0; i < map->first_free; i++) {
-    if (map->mechsOnMap[i] <= 0)
+  for (i = 0; i < battle_map_unit_count(map); i++) {
+    const DbRef unit = battle_map_unit_dbref(map, i);
+    if (unit <= 0)
       continue;
-    if (!(t = btech_context_get_mech(context, map->mechsOnMap[i])))
+    if (!(t = btech_context_get_mech(context, unit)))
       continue;
     if (mech_is_clairvoyant(t) || mech_is_observer(t) || mech_is_invisible(t))
       continue;

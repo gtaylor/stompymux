@@ -19,6 +19,7 @@
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_conditions_api.h"
+#include "map_units_api.h"
 #include "mech_api_types.h"
 #include "mech_runtime_api.h"
 #include "mux/server/platform.h"
@@ -28,9 +29,9 @@ void alter_conditions(BattleMap *map) {
   int i;
   Mech *mech;
 
-  for (i = 0; i < map->first_free; i++)
-    if ((mech =
-             btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]))) {
+  for (i = 0; i < battle_map_unit_count(map); i++)
+    if ((mech = btech_context_get_mech(map->xcode.context,
+                                       battle_map_unit_dbref(map, i)))) {
       map_conditions_apply(mech, map);
     }
 }

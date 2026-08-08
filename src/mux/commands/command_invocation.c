@@ -2,6 +2,17 @@
 
 #include "mux/commands/command_invocation.h"
 
+#include "mux/support/checked_storage.h"
+
+char *command_invocation_vector_at(const CommandInvocation *invocation,
+                                   size_t index) {
+  if (invocation->vector_count < 0)
+    return nullptr;
+  return *(char *const *)checked_storage_at_const(
+      invocation->vector, (size_t)invocation->vector_count,
+      sizeof(*invocation->vector), index);
+}
+
 void command_invocation_call_no_arguments(CommandNoArgumentsHandler handler,
                                           CommandInvocation *invocation) {
   handler(invocation->player, invocation->cause, invocation->key);

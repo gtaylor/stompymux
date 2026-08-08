@@ -4,16 +4,17 @@
 
 #include "mux/help/help_frontmatter.h"
 #include "mux/help/help_types.h"
+#include "mux/support/checked_storage.h"
 
 static int help_frontmatter_test_full_success(void) {
   static const char toml[] = "title = \"About\"\n"
-                            "description = \"All about this game\"\n"
-                            "keywords = [\"wizards\", \"about\"]\n"
-                            "article_tags = [\"show_in_index\"]\n"
-                            "show_index_for_article_tags = [\"subdir\"]\n"
-                            "index_style = \"columnar\"\n"
-                            "weight = 3\n"
-                            "wizard_only = true\n";
+                             "description = \"All about this game\"\n"
+                             "keywords = [\"wizards\", \"about\"]\n"
+                             "article_tags = [\"show_in_index\"]\n"
+                             "show_index_for_article_tags = [\"subdir\"]\n"
+                             "index_style = \"columnar\"\n"
+                             "weight = 3\n"
+                             "wizard_only = true\n";
   HelpArticle article;
   char error[256];
   int ok;
@@ -27,13 +28,16 @@ static int help_frontmatter_test_full_success(void) {
        !strcmp(article.description, "All about this game") &&
        article.keywords.count == 2 &&
        !strcmp(article.keywords.items[0], "wizards") &&
-       !strcmp(article.keywords.items[1], "about") &&
+       !strcmp(*(char *const *)checked_storage_at_const(
+                   article.keywords.items, article.keywords.count,
+                   sizeof(*article.keywords.items), 1),
+               "about") &&
        article.article_tags.count == 1 &&
        !strcmp(article.article_tags.items[0], "show_in_index") &&
        article.show_index_for_article_tags.count == 1 &&
        !strcmp(article.show_index_for_article_tags.items[0], "subdir") &&
-       article.index_style == HELP_INDEX_STYLE_COLUMNAR &&
-       article.has_weight && article.weight == 3 && article.wizard_only;
+       article.index_style == HELP_INDEX_STYLE_COLUMNAR && article.has_weight &&
+       article.weight == 3 && article.wizard_only;
   help_frontmatter_free(&article);
   return ok;
 }
@@ -52,8 +56,8 @@ static int help_frontmatter_test_missing_field(const char *toml) {
 
 static int help_frontmatter_test_optional_defaults(void) {
   static const char toml[] = "title = \"About\"\n"
-                            "description = \"desc\"\n"
-                            "keywords = [\"about\"]\n";
+                             "description = \"desc\"\n"
+                             "keywords = [\"about\"]\n";
   HelpArticle article;
   char error[256];
   int ok;
@@ -71,9 +75,9 @@ static int help_frontmatter_test_optional_defaults(void) {
 
 static int help_frontmatter_test_unrecognized_index_style(void) {
   static const char toml[] = "title = \"About\"\n"
-                            "description = \"desc\"\n"
-                            "keywords = [\"about\"]\n"
-                            "index_style = \"grid\"\n";
+                             "description = \"desc\"\n"
+                             "keywords = [\"about\"]\n"
+                             "index_style = \"grid\"\n";
   HelpArticle article;
   char error[256];
   int ok;
@@ -109,7 +113,8 @@ int main(void) {
   if (!help_frontmatter_test_missing_field(
           "title = \"t\"\nkeywords = [\"a\"]\n"))
     return 3;
-  if (!help_frontmatter_test_missing_field("title = \"t\"\ndescription = \"d\"\n"))
+  if (!help_frontmatter_test_missing_field(
+          "title = \"t\"\ndescription = \"d\"\n"))
     return 4;
   if (!help_frontmatter_test_optional_defaults())
     return 5;

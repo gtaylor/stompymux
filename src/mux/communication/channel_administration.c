@@ -16,6 +16,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -52,7 +53,7 @@ void do_channel_membership_flags(CommandInvocation *invocation) {
   s = arg2;
   if (*s == '!') {
     add_remove = 0;
-    s++;
+    s = checked_mutable_string_suffix(s, 1);
   }
   switch (flag) {
   case 3:
@@ -172,17 +173,24 @@ int do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {
   char *t;
   char *ch;
   char *alias;
-  char *s;
 
   alias = alloc_lbuf("do_comsystem");
-  s = alias;
-  for (t = cmd; *t && *t != ' '; *s++ = *t++)
-    /* nothing */;
+  const size_t length = strlen(cmd);
+  size_t offset = 0;
 
-  *s = '\0';
+  while (offset < length) {
+    const char character = *(const char *)checked_storage_at_const(
+        cmd, length + 1, sizeof(char), offset);
 
-  if (*t)
-    t++;
+    if (character == ' ')
+      break;
+    *(char *)checked_storage_at(alias, LBUF_SIZE, sizeof(char), offset) =
+        character;
+    offset++;
+  }
+  *(char *)checked_storage_at(alias, LBUF_SIZE, sizeof(char), offset) = '\0';
+  t = checked_storage_at(cmd, length + 1, sizeof(char),
+                         offset < length ? offset + 1 : offset);
 
   ch = comsys_channel_from_alias(evaluation, who, alias);
   if (ch && *ch) {
@@ -235,7 +243,7 @@ void do_channel_flags(CommandInvocation *invocation) {
   }
   if (*flag == '!') {
     enable = false;
-    flag++;
+    flag = checked_mutable_string_suffix(flag, 1);
   }
   if (strcasecmp(flag, "public") == 0)
     flag_value = CHANNEL_PUBLIC;

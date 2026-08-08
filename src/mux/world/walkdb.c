@@ -4,6 +4,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
@@ -18,6 +19,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 #include "mux/world/search.h"
@@ -111,23 +113,23 @@ void do_stats(CommandInvocation *invocation) {
  */
 int search_criteria_setup(EvaluationContext *context, DbRef player,
                           char *searchfor, SearchCriteria *parm) {
-  char *searchtype, *t;
+  static char empty[] = "";
+  char *searchtype;
   int err;
 
   /* Split <type>=<target>,<low>,<high>. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
   searchtype = parse_to(context->world->configuration, &searchfor, '=',
                         COMMAND_PARSE_STRIP_TRAILING);
   if (!searchtype)
-    searchtype = (char *)"";
+    searchtype = empty;
   if (!searchfor)
-    searchfor = (char *)"";
-  for (t = searchtype; *t; t++) {
-    if (isupper((unsigned char)*t))
-      *t = (char)tolower((unsigned char)*t);
+    searchfor = empty;
+  for (size_t index = 0; index < strlen(searchtype); index++) {
+    char *character =
+        checked_storage_at(searchtype, strlen(searchtype), sizeof(char), index);
+    if ((isupper)((unsigned char)*character))
+      *character = (char)(tolower)((unsigned char)*character);
   }
-#pragma clang diagnostic pop
   /*
    * Strip any range arguments
    */
@@ -535,7 +537,9 @@ void object_list_add(ObjectList *list, DbRef item) {
   } else {
     block = list->tail;
   }
-  block->data[list->count++] = item;
+  *(DbRef *)checked_storage_at(block->data, (size_t)block_capacity,
+                               sizeof(*block->data), (size_t)list->count++) =
+      item;
 }
 
 DbRef object_list_first(ObjectList *list) {
@@ -545,7 +549,11 @@ DbRef object_list_first(ObjectList *list) {
     return NOTHING;
   list->cursor_block = list->head;
   list->cursor_index = 0;
-  return list->cursor_block->data[list->cursor_index++];
+  constexpr size_t block_capacity =
+      (LBUF_SIZE - sizeof(ObjectListBlock *)) / sizeof(DbRef);
+  return *(const DbRef *)checked_storage_at_const(
+      list->cursor_block->data, block_capacity,
+      sizeof(*list->cursor_block->data), (size_t)list->cursor_index++);
 }
 
 DbRef object_list_next(ObjectList *list) {
@@ -557,7 +565,9 @@ DbRef object_list_next(ObjectList *list) {
     return NOTHING;
   if (list->cursor_block == list->tail && list->cursor_index >= list->count)
     return NOTHING;
-  thing = list->cursor_block->data[list->cursor_index++];
+  thing = *(const DbRef *)checked_storage_at_const(
+      list->cursor_block->data, (size_t)block_capacity,
+      sizeof(*list->cursor_block->data), (size_t)list->cursor_index++);
   if (list->cursor_index >= block_capacity) {
     list->cursor_block = list->cursor_block->next;
     list->cursor_index = 0;

@@ -20,7 +20,9 @@
 #include "mux/network/mux_event.h"
 #include "mux/network/network_output.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -35,10 +37,12 @@ typedef struct SensorModeText {
 void mech_sensors_disable_requiring(Mech *mech, int technology) {
   int primary = mech_sensor_index(mech, 0);
   int secondary = mech_sensor_index(mech, 1);
-  bool primary_requires = sensors[primary].required_special == technology &&
-                          sensors[primary].specials_set == 1;
-  bool secondary_requires = sensors[secondary].required_special == technology &&
-                            sensors[secondary].specials_set == 1;
+  bool primary_requires =
+      mech_sensor_definition(primary)->required_special == technology &&
+      mech_sensor_definition(primary)->specials_set == 1;
+  bool secondary_requires =
+      mech_sensor_definition(secondary)->required_special == technology &&
+      mech_sensor_definition(secondary)->specials_set == 1;
 
   if (!primary_requires && !secondary_requires)
     return;
@@ -57,18 +61,19 @@ static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
     return mode;
   }
 
-  if (sensors[sn].full_vision) {
-    snprintf(buf, sizeof(mode.text), "%s ", sensors[sn].sensor_name);
+  if (mech_sensor_definition(sn)->full_vision) {
+    snprintf(buf, sizeof(mode.text), "%s ",
+             mech_sensor_definition(sn)->sensor_name);
     mech_sensor_description_append(buf, sizeof(mode.text), mech, sn, verbose);
   } else {
     if (full || mech_movement_type(mech) == MOVE_NONE ||
         mech_class(mech) == CLASS_BSUIT)
       snprintf(buf, sizeof(mode.text), "%s in 360 degree scanning mode ",
-               sensors[sn].sensor_name);
+               mech_sensor_definition(sn)->sensor_name);
     else
       snprintf(buf, sizeof(mode.text),
                "%s in 120 degree scanning mode (Forward arc) ",
-               sensors[sn].sensor_name);
+               mech_sensor_definition(sn)->sensor_name);
     mech_sensor_description_append(buf, sizeof(mode.text), mech, sn, verbose);
   }
   return mode;
@@ -76,12 +81,14 @@ static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
 static void sensor_mode(Mech *mech, const char *msg, DbRef player, int p, int s,
                         int verbose) {
   char buf[MBUF_SIZE];
-  size_t i;
 
   if (p != s) {
-    for (i = 0; i < strlen(msg); i++)
-      buf[i] = '-';
-    buf[strlen(msg)] = 0;
+    const size_t message_length = strlen(msg);
+    const size_t line_length =
+        message_length < sizeof(buf) - 1 ? message_length : sizeof(buf) - 1;
+    memset(buf, '-', line_length);
+    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char), line_length) =
+        '\0';
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, msg);
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, buf);
     notify_printf(btech_context_evaluation(mech_context(mech)), player,
@@ -119,18 +126,24 @@ static const char SensorInf[] = "vliesrbVLIESRB";
 char *mech_sensor_info(Mech *mech, char buffer[static LBUF_SIZE]) {
   SensorSelection selection = {0};
 
-  buffer[0] = SensorInf[(short)mech_sensor_index(mech, 0)];
-  buffer[1] = SensorInf[(short)mech_sensor_index(mech, 1)];
+  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 0) =
+      *checked_string_suffix(SensorInf, (size_t)mech_sensor_index(mech, 0));
+  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 1) =
+      *checked_string_suffix(SensorInf, (size_t)mech_sensor_index(mech, 1));
   if (mech_event_count(mech, EVENT_SCHANGE)) {
     mech_event_visit(mech, EVENT_SCHANGE, sensor_selection_read, &selection);
     if (selection.found) {
-      buffer[2] = SensorInf[selection.primary + NUM_SENSORS];
-      buffer[3] = SensorInf[selection.secondary + NUM_SENSORS];
-      buffer[4] = '\0';
+      *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 2) =
+          *checked_string_suffix(SensorInf,
+                                 (size_t)(selection.primary + NUM_SENSORS));
+      *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 3) =
+          *checked_string_suffix(SensorInf,
+                                 (size_t)(selection.secondary + NUM_SENSORS));
+      *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 4) = '\0';
       return buffer;
     }
   }
-  buffer[2] = '\0';
+  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 2) = '\0';
   return buffer;
 }
 
@@ -178,36 +191,37 @@ int mech_sensor_can_change_to(Mech *mech, int s) {
   }
   /* < 0, means you you don't have the sensors if you _do_ have the bit
      > 0, means you have the sensors if you have the bit */
-  if ((i = sensors[s].required_special)) {
-    if (!mech_supports_sensor_requirement(mech, sensors[s].specials_set, i)) {
+  if ((i = mech_sensor_definition(s)->required_special)) {
+    if (!mech_supports_sensor_requirement(
+            mech, mech_sensor_definition(s)->specials_set, i)) {
       mech_printf(mech, MECHALL, "You lack the %s sensors!",
-                  sensors[s].sensor_name);
+                  mech_sensor_definition(s)->sensor_name);
       return 0;
     }
   }
 
-  if (sensors[s].min_light >= 0 &&
-      sensors[s].min_light > battle_map_light(map)) {
+  if (mech_sensor_definition(s)->min_light >= 0 &&
+      mech_sensor_definition(s)->min_light > battle_map_light(map)) {
     if (!mech_is_destroyed(mech) && mech_is_started(mech))
       mech_printf(mech, MECHALL, "It's now too dark to use %s!",
-                  sensors[s].sensor_name);
+                  mech_sensor_definition(s)->sensor_name);
     return 0;
   }
-  if (sensors[s].max_light >= 0 &&
-      sensors[s].max_light < battle_map_light(map)) {
+  if (mech_sensor_definition(s)->max_light >= 0 &&
+      mech_sensor_definition(s)->max_light < battle_map_light(map)) {
     if (!mech_is_destroyed(mech) && mech_is_started(mech))
       mech_printf(mech, MECHALL, "The light's kinda too bright now to use %s!",
-                  sensors[s].sensor_name);
+                  mech_sensor_definition(s)->sensor_name);
     return 0;
   }
 
-  switch (sensors[s].attribute_check) {
+  switch (mech_sensor_definition(s)->attribute_check) {
   case SENSOR_ATTR_SEISMIC:
     if (mech_class(mech) == CLASS_MW || mech_class(mech) == CLASS_BSUIT ||
         mech_class(mech) == CLASS_VEH_NAVAL ||
         mech_movement_type(mech) == MOVE_HOVER) {
       mech_printf(mech, MECHALL, "You lack the %s sensors!",
-                  sensors[s].sensor_name);
+                  mech_sensor_definition(s)->sensor_name);
       return 0;
     }
 
@@ -221,11 +235,13 @@ void sensor_light_availability_check(Mech *mech) {
   int p = mech_sensor_index(mech, 0), s = mech_sensor_index(mech, 1);
   int same = (p == s);
 
-  if (sensors[p].min_light >= 0 || sensors[p].max_light >= 0)
+  if (mech_sensor_definition(p)->min_light >= 0 ||
+      mech_sensor_definition(p)->max_light >= 0)
     if (!mech_sensor_can_change_to(mech, p))
       p = 0;
 
-  if (!same && (sensors[s].min_light >= 0 || sensors[s].max_light >= 0))
+  if (!same && (mech_sensor_definition(s)->min_light >= 0 ||
+                mech_sensor_definition(s)->max_light >= 0))
     if (!mech_sensor_can_change_to(mech, s))
       s = 0;
   mech_sensors_set(mech, p, s);
@@ -238,9 +254,9 @@ static int set_sensor(Mech *mech, char ps, char ss) {
   if (!mech_is_started(mech))
     return 0;
   for (i = 0; i < (int)NUM_SENSORS; i++) {
-    if (sensors[i].match_letter[0] == ps)
+    if (*mech_sensor_definition(i)->match_letter == ps)
       prim = i;
-    if (sensors[i].match_letter[0] == ss)
+    if (*mech_sensor_definition(i)->match_letter == ss)
       sec = i;
   }
   if (prim < 0 || sec < 0)
@@ -284,8 +300,8 @@ void mech_sensor(DbRef player, void *data, char *buffer) {
     show_sensor(player, mech, 1);
     break;
   case 2:
-    const char primary = (char)toupper((unsigned char)args[0][0]);
-    const char secondary = (char)toupper((unsigned char)args[1][0]);
+    const char primary = ascii_to_upper(*checked_string_suffix(args[0], 0));
+    const char secondary = ascii_to_upper(*checked_string_suffix(args[1], 0));
     if (set_sensor(mech, primary, secondary) < 0) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Invalid arguments!");

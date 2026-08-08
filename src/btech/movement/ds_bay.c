@@ -44,11 +44,71 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/world/access.h"
 #include "mux/world/move.h"
 #include "registry_api.h"
 #include "section_types.h"
+
+static char *bay_argument(char **arguments, size_t count, int index) {
+  if (index < 0)
+    abort();
+  char **slot =
+      checked_storage_at(arguments, count, sizeof(*arguments), (size_t)index);
+  return *slot;
+}
+
+static int dropship_direction_section(int direction) {
+  switch (direction % 6) {
+  case 0:
+    return DS_NOSE;
+  case 1:
+    return DS_RWING;
+  case 2:
+    return DS_RRWING;
+  case 3:
+    return DS_AFT;
+  case 4:
+    return DS_LRWING;
+  case 5:
+    return DS_LWING;
+  default:
+    abort();
+  }
+}
+
+static int dropship_direction_x(int direction) {
+  switch (direction % 6) {
+  case 0:
+  case 3:
+    return 0;
+  case 1:
+  case 2:
+    return 1;
+  case 4:
+  case 5:
+    return -1;
+  default:
+    abort();
+  }
+}
+
+static int dropship_direction_y(int direction) {
+  switch (direction % 6) {
+  case 0:
+    return -1;
+  case 1:
+  case 5:
+    return 0;
+  case 2:
+  case 3:
+  case 4:
+    return 1;
+  default:
+    abort();
+  }
+}
 
 void mech_createbays(DbRef player, void *data, char *buffer) {
   char *args[NUM_BAYS + 1];
@@ -66,7 +126,8 @@ void mech_createbays(DbRef player, void *data, char *buffer) {
     return;
   }
   for (i = 0; i < argc; i++) {
-    it = match_thing(&btech_context_command(context)->match, player, args[i]);
+    it = match_thing(&btech_context_command(context)->match, player,
+                     bay_argument(args, NUM_BAYS + 1, i));
     if (it == NOTHING) {
       mecha_notify(btech_context_evaluation(context), player,
                    tprintf("Argument %d is invalid.", i + 1));
@@ -87,20 +148,15 @@ void mech_createbays(DbRef player, void *data, char *buffer) {
                 argc);
 }
 
-extern const int dirs[6][2];
-
-static const int dir2loc[6] = {DS_NOSE, DS_RWING,  DS_RRWING,
-                               DS_AFT,  DS_LRWING, DS_LWING};
-
 int dropship_bay_number(Mech *ds, int dir) {
   int bayn = 0;
   int i, j;
 
   for (i = 0; i <= dir; i++) {
     for (j = 0; j < NUM_CRITICALS; j++)
-      if (mech_critical_part_type(ds, dir2loc[i % 6], j) ==
+      if (mech_critical_part_type(ds, dropship_direction_section(i), j) ==
               special_equipment_index(DS_MECHDOOR) ||
-          mech_critical_part_type(ds, dir2loc[i % 6], j) ==
+          mech_critical_part_type(ds, dropship_direction_section(i), j) ==
               special_equipment_index(DS_AERODOOR))
         break;
     if (j != NUM_CRITICALS) {
@@ -131,8 +187,8 @@ int dropship_bay_in_adjacent_hex(Mech *seer, Mech *ds, int *bayn) {
 
   for (i = t; i < (t + 6); i++) {
 
-    int bay_x = mech_position_x(ds) + dirs[i % 6][0];
-    int bay_y = mech_position_y(ds) + dirs[i % 6][1] +
+    int bay_x = mech_position_x(ds) + dropship_direction_x(i);
+    int bay_y = mech_position_y(ds) + dropship_direction_y(i) +
                 dropship_hex_row_adjustment(mech_position_x(ds), bay_x);
     if (bay_x == mech_position_x(seer) && bay_y == mech_position_y(seer)) {
       if ((*bayn = dropship_bay_number(ds, ((i - t + 6) % 6))) >= 0)
@@ -235,12 +291,12 @@ static int dropship_bay_is_open(Mech *mech, Mech *ds, DbRef bayref) {
         j = dropship_bay_direction(ds, i);
         for (i = 0; i < NUM_CRITICALS; i++) {
           if (((mech_is_aerospace_unit(mech) &&
-                mech_critical_part_type(ds, dir2loc[j], i) ==
+                mech_critical_part_type(ds, dropship_direction_section(j), i) ==
                     special_equipment_index(DS_AERODOOR)) ||
                (!mech_is_aerospace_unit(mech) &&
-                mech_critical_part_type(ds, dir2loc[j], i) ==
+                mech_critical_part_type(ds, dropship_direction_section(j), i) ==
                     special_equipment_index(DS_MECHDOOR))) &&
-              !mech_critical_is_destroyed(ds, dir2loc[j], i))
+              !mech_critical_is_destroyed(ds, dropship_direction_section(j), i))
             return 1;
         }
         return 0;
@@ -427,10 +483,9 @@ static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
     return;
   }
   i = dropship_bay_direction(ds, i);
-  nx =
-      dirs[(mech_dropship_bearing_sector(ds) + i) % 6][0] + mech_position_x(ds);
-  ny = dirs[(mech_dropship_bearing_sector(ds) + i) % 6][1] +
-       mech_position_y(ds) +
+  const int direction = (mech_dropship_bearing_sector(ds) + i) % 6;
+  nx = dropship_direction_x(direction) + mech_position_x(ds);
+  ny = dropship_direction_y(direction) + mech_position_y(ds) +
        dropship_hex_row_adjustment(mech_position_x(ds), nx);
   nx = BOUNDED(0, nx, battle_map_width(mech_map) - 1);
   ny = BOUNDED(0, ny, battle_map_height(mech_map) - 1);

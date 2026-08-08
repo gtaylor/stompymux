@@ -6,14 +6,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
+
 typedef struct BtechTableNames {
   char **items;
   size_t count;
 } BtechTableNames;
 
+static char **btech_table_name_slot(char **items, size_t count, size_t index) {
+  return checked_storage_at(items, count, sizeof(*items), index);
+}
+
+static char *btech_table_name(const BtechTableNames *names, size_t index) {
+  char *const *slot = checked_storage_at_const(names->items, names->count,
+                                               sizeof(*names->items), index);
+  return *slot;
+}
+
 static void btech_table_names_destroy(BtechTableNames *names) {
   for (size_t index = 0; index < names->count; index++)
-    free(names->items[index]);
+    free(btech_table_name(names, index));
   free(names->items);
   *names = (BtechTableNames){0};
 }
@@ -42,8 +54,10 @@ static int btech_table_names_load(sqlite3 *database, BtechTableNames *names) {
       break;
     }
     names->items = items;
-    names->items[names->count] = strdup((const char *)value);
-    if (names->items[names->count] == nullptr) {
+    char **slot =
+        btech_table_name_slot(names->items, names->count + 1, names->count);
+    *slot = strdup((const char *)value);
+    if (*slot == nullptr) {
       result = -1;
       break;
     }
@@ -57,8 +71,8 @@ static int btech_table_names_load(sqlite3 *database, BtechTableNames *names) {
 
 static int btech_tables_drop(sqlite3 *database, const BtechTableNames *names) {
   for (size_t index = 0; index < names->count; index++) {
-    char *sql =
-        sqlite3_mprintf("DROP TABLE IF EXISTS \"%w\";", names->items[index]);
+    char *sql = sqlite3_mprintf("DROP TABLE IF EXISTS \"%w\";",
+                                btech_table_name(names, index));
     if (sql == nullptr)
       return -1;
     int status = sqlite3_exec(database, sql, nullptr, nullptr, nullptr);

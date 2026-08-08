@@ -1,8 +1,38 @@
 #include "mech_persistence.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "mech_internal.h"
+#include "mux/support/checked_storage.h"
+
+static struct MechSection *persistence_section(Mech *mech, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(mech->ud.sections, NUM_SECTIONS,
+                            sizeof(*mech->ud.sections), (size_t)index);
+}
+
+static struct CriticalSlot *persistence_critical(Mech *mech, int section,
+                                                 int slot) {
+  if (slot < 0)
+    abort();
+  struct MechSection *section_data = persistence_section(mech, section);
+  return checked_storage_at(section_data->criticals, NUM_CRITICALS,
+                            sizeof(*section_data->criticals), (size_t)slot);
+}
+
+static DbRef *persistence_dbref(DbRef *values, size_t count, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(values, count, sizeof(*values), (size_t)index);
+}
+
+static int *persistence_int(int *values, size_t count, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(values, count, sizeof(*values), (size_t)index);
+}
 
 void mech_persistence_snapshot_export(const Mech *mech,
                                       MechPersistenceSnapshot *snapshot) {
@@ -35,12 +65,12 @@ void mech_persistence_identity_restore(
 
 void mech_persistence_section_restore(Mech *mech, int section_index,
                                       const struct MechSection *section) {
-  mech->ud.sections[section_index] = *section;
+  *persistence_section(mech, section_index) = *section;
 }
 
 void mech_persistence_critical_restore(Mech *mech, int section_index, int slot,
                                        const struct CriticalSlot *critical) {
-  mech->ud.sections[section_index].criticals[slot] = *critical;
+  *persistence_critical(mech, section_index, slot) = *critical;
 }
 
 void mech_persistence_position_restore(
@@ -53,12 +83,12 @@ void mech_persistence_position_restore(
 }
 
 void mech_persistence_bay_restore(Mech *mech, int bay_index, DbRef bay_dbref) {
-  mech->pd.bay[bay_index] = bay_dbref;
+  *persistence_dbref(mech->pd.bay, NUM_BAYS, bay_index) = bay_dbref;
 }
 
 void mech_persistence_turret_restore(Mech *mech, int turret_index,
                                      DbRef turret_dbref) {
-  mech->pd.turret[turret_index] = turret_dbref;
+  *persistence_dbref(mech->pd.turret, NUM_TURRETS, turret_index) = turret_dbref;
 }
 
 void mech_persistence_network_restore(Mech *mech,
@@ -69,23 +99,35 @@ void mech_persistence_network_restore(Mech *mech,
 void mech_persistence_network_node_restore(Mech *mech, int network_type,
                                            int node_index, DbRef node_dbref) {
   if (network_type == 0)
-    mech->sd.C3iNetwork[node_index] = node_dbref;
+    *persistence_dbref(mech->sd.C3iNetwork, C3I_NETWORK_SIZE, node_index) =
+        node_dbref;
   else
-    mech->sd.C3Network[node_index] = node_dbref;
+    *persistence_dbref(mech->sd.C3Network, C3_NETWORK_SIZE, node_index) =
+        node_dbref;
 }
 
 void mech_persistence_tic_restore(Mech *mech, int tic_index, int word_index,
                                   unsigned long value) {
-  mech->tic[tic_index][word_index] = value;
+  if (tic_index < 0 || word_index < 0)
+    abort();
+  unsigned long (*tic_row)[TICLONGS] = checked_storage_at(
+      mech->tic, NUM_TICS, sizeof(*mech->tic), (size_t)tic_index);
+  unsigned long *word = checked_storage_at(
+      *tic_row, TICLONGS, sizeof(**tic_row), (size_t)word_index);
+  *word = value;
 }
 
 void mech_persistence_frequency_restore(Mech *mech, int frequency_index,
                                         int frequency, int mode,
                                         const char *title) {
-  mech->freq[frequency_index] = frequency;
-  mech->freqmodes[frequency_index] = mode;
-  memcpy(mech->chantitle[frequency_index], title,
-         sizeof(mech->chantitle[frequency_index]));
+  *persistence_int(mech->freq, FREQS, frequency_index) = frequency;
+  *persistence_int(mech->freqmodes, FREQS, frequency_index) = mode;
+  if (frequency_index < 0)
+    abort();
+  char (*channel_title)[CHTITLELEN + 1] =
+      checked_storage_at(mech->chantitle, FREQS, sizeof(*mech->chantitle),
+                         (size_t)frequency_index);
+  memcpy(*channel_title, title, sizeof(*channel_title));
 }
 
 void mech_persistence_runtime_restore(Mech *mech,

@@ -5,30 +5,45 @@
 
 #include <ctype.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 
 static char *parse_cleanup(const ServerConfiguration *configuration, int flags,
-                           bool first, char *result, char *cursor) {
+                           bool first, char *text, size_t capacity,
+                           size_t result_offset, size_t cursor_offset) {
   if ((configuration->space_compress ||
        (flags & COMMAND_PARSE_STRIP_TRAILING)) &&
-      !(flags & COMMAND_PARSE_NO_COMPRESS) && !first && cursor[-1] == ' ')
-    cursor--;
+      !(flags & COMMAND_PARSE_NO_COMPRESS) && !first && cursor_offset > 0 &&
+      *(const char *)checked_storage_at_const(text, capacity, sizeof(char),
+                                              cursor_offset - 1) == ' ')
+    cursor_offset--;
 
-  if ((flags & COMMAND_PARSE_STRIP_AROUND) && result[0] == '{' &&
-      cursor > result && cursor[-1] == '}') {
-    result++;
+  if ((flags & COMMAND_PARSE_STRIP_AROUND) &&
+      *(const char *)checked_storage_at_const(text, capacity, sizeof(char),
+                                              result_offset) == '{' &&
+      cursor_offset > result_offset &&
+      *(const char *)checked_storage_at_const(text, capacity, sizeof(char),
+                                              cursor_offset - 1) == '}') {
+    result_offset++;
     if (configuration->space_compress &&
         (!(flags & COMMAND_PARSE_NO_COMPRESS) ||
          (flags & COMMAND_PARSE_STRIP_LEADING)))
-      while (*result && isspace((unsigned char)*result))
-        result++;
-    cursor--;
-    while (cursor > result && isspace((unsigned char)cursor[-1]))
-      cursor--;
+      while (*(const char *)checked_storage_at_const(
+                 text, capacity, sizeof(char), result_offset) != '\0' &&
+             (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+                 text, capacity, sizeof(char), result_offset)))
+        result_offset++;
+    cursor_offset--;
+    while (cursor_offset > result_offset &&
+           (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+               text, capacity, sizeof(char), cursor_offset - 1)))
+      cursor_offset--;
   }
-  *cursor = '\0';
-  return result;
+  *(char *)checked_storage_at(text, capacity, sizeof(char), cursor_offset) =
+      '\0';
+  return checked_mutable_string_suffix(text, result_offset);
 }
 
 char *parse_to(const ServerConfiguration *configuration, char **source,
@@ -41,74 +56,100 @@ char *parse_to(const ServerConfiguration *configuration, char **source,
     return empty;
   }
 
-  char *result = *source;
+  char *text = *source;
+  const size_t length = strlen(text);
+  const size_t capacity = length + 1;
+  size_t result_offset = 0;
   if ((configuration->space_compress ||
        (flags & COMMAND_PARSE_STRIP_LEADING)) &&
       !(flags & COMMAND_PARSE_NO_COMPRESS)) {
-    while (*result && isspace((unsigned char)*result))
-      result++;
+    while (result_offset < length &&
+           (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+               text, capacity, sizeof(char), result_offset)))
+      result_offset++;
   }
 
   char stack[32];
   size_t depth = 0;
   int brace_depth = 0;
   bool first = true;
-  char *read = result;
-  char *write = result;
-  while (*read) {
-    if (*read == '\\' && read[1]) {
-      *write++ = *read++;
-      *write++ = *read++;
+  size_t read_offset = result_offset;
+  size_t write_offset = result_offset;
+  while (read_offset < length) {
+    char character = *(const char *)checked_storage_at_const(
+        text, capacity, sizeof(char), read_offset);
+
+    if (character == '\\' && read_offset + 1 < length) {
+      *(char *)checked_storage_at(text, capacity, sizeof(char),
+                                  write_offset++) = character;
+      read_offset++;
+      *(char *)checked_storage_at(text, capacity, sizeof(char),
+                                  write_offset++) =
+          *(const char *)checked_storage_at_const(text, capacity, sizeof(char),
+                                                  read_offset++);
       first = false;
       continue;
     }
 
-    if (*read == '{') {
+    if (character == '{') {
       brace_depth++;
       if (!(flags & COMMAND_PARSE_STRIP) || brace_depth > 1)
-        *write++ = *read;
-      read++;
+        *(char *)checked_storage_at(text, capacity, sizeof(char),
+                                    write_offset++) = character;
+      read_offset++;
       first = false;
       continue;
     }
-    if (*read == '}' && brace_depth > 0) {
+    if (character == '}' && brace_depth > 0) {
       brace_depth--;
       if (!(flags & COMMAND_PARSE_STRIP) || brace_depth > 0)
-        *write++ = *read;
-      read++;
+        *(char *)checked_storage_at(text, capacity, sizeof(char),
+                                    write_offset++) = character;
+      read_offset++;
       first = false;
       continue;
     }
 
-    if (brace_depth == 0 && (*read == '(' || *read == '[')) {
+    if (brace_depth == 0 && (character == '(' || character == '[')) {
       if (depth < sizeof(stack))
-        stack[depth++] = *read == '(' ? ')' : ']';
-    } else if (brace_depth == 0 && depth > 0 && *read == stack[depth - 1]) {
+        *(char *)checked_storage_at(stack, sizeof(stack), sizeof(char),
+                                    depth++) = character == '(' ? ')' : ']';
+    } else if (brace_depth == 0 && depth > 0 &&
+               character ==
+                   *(const char *)checked_storage_at_const(
+                       stack, sizeof(stack), sizeof(char), depth - 1)) {
       depth--;
-    } else if (brace_depth == 0 && depth == 0 && *read == delimiter) {
-      char *after = read + 1;
-      result = parse_cleanup(configuration, flags, first, result, write);
-      *source = after;
+    } else if (brace_depth == 0 && depth == 0 && character == delimiter) {
+      char *result = parse_cleanup(configuration, flags, first, text, capacity,
+                                   result_offset, write_offset);
+
+      *source =
+          checked_storage_at(text, capacity, sizeof(char), read_offset + 1);
       return result;
     }
 
-    if (*read == ' ' && configuration->space_compress &&
+    if (character == ' ' && configuration->space_compress &&
         !(flags & COMMAND_PARSE_NO_COMPRESS)) {
       if (first) {
-        read++;
-        result++;
+        read_offset++;
+        result_offset++;
         continue;
       }
-      if (write > result && write[-1] == ' ') {
-        read++;
+      if (write_offset > result_offset &&
+          *(const char *)checked_storage_at_const(text, capacity, sizeof(char),
+                                                  write_offset - 1) == ' ') {
+        read_offset++;
         continue;
       }
     }
     first = false;
-    *write++ = *read++;
+    *(char *)checked_storage_at(text, capacity, sizeof(char), write_offset++) =
+        character;
+    read_offset++;
   }
 
-  result = parse_cleanup(configuration, flags, first, result, write);
+  char *result = parse_cleanup(configuration, flags, first, text, capacity,
+                               result_offset, write_offset);
   *source = nullptr;
   return result;
 }
@@ -117,7 +158,8 @@ char *parse_arglist(const ServerConfiguration *configuration, char *string,
                     char delimiter, int flags, char *arguments[],
                     DbRef max_arguments) {
   for (DbRef i = 0; i < max_arguments; i++)
-    arguments[i] = nullptr;
+    *(char **)checked_storage_at(arguments, (size_t)max_arguments,
+                                 sizeof(*arguments), (size_t)i) = nullptr;
   if (string == nullptr)
     return nullptr;
 
@@ -126,8 +168,11 @@ char *parse_arglist(const ServerConfiguration *configuration, char *string,
   for (DbRef i = 0; i < max_arguments && list != nullptr; i++) {
     char separator = i < max_arguments - 1 ? ',' : '\0';
     char *argument = parse_to(configuration, &list, separator, flags);
-    arguments[i] = alloc_lbuf("parse_arglist");
-    StringCopy(arguments[i], argument);
+    char **slot = checked_storage_at(arguments, (size_t)max_arguments,
+                                     sizeof(*arguments), (size_t)i);
+
+    *slot = alloc_lbuf("parse_arglist");
+    StringCopy(*slot, argument);
   }
   return remainder;
 }

@@ -145,12 +145,12 @@ void hit_building(Mech *mech, int x, int y, int weapindx, int damage) {
     return;
   if (!damage) {
     if (!weapon_catalogue_is_missile(weapindx))
-      damage = MechWeapons[weapindx].damage;
+      damage = weapon_catalogue_damage(weapindx);
     else {
       /* Missile weapon.  Multiple Hit locations... */
       if (!btech_context_has_missile_hit_table(mech_context(mech), weapindx))
         return;
-      if ((MechWeapons[weapindx].type == STREAK) &&
+      if ((weapon_catalogue_type(weapindx) == STREAK) &&
           !mech_condition_summary(mech).angel_ecm_disturbed)
         num_missiles_hit =
             btech_context_missile_hit_count(mech_context(mech), weapindx, 10);
@@ -159,7 +159,7 @@ void hit_building(Mech *mech, int x, int y, int weapindx, int damage) {
         num_missiles_hit = btech_context_missile_hit_count(mech_context(mech),
                                                            weapindx, hit_roll);
       }
-      damage = num_missiles_hit * MechWeapons[weapindx].damage;
+      damage = num_missiles_hit * weapon_catalogue_damage(weapindx);
     }
   }
   if (!damage)
@@ -265,7 +265,7 @@ int obj_size(BattleMap *map) {
   int i;
 
   for (i = 0; i < NUM_MAPOBJTYPES; i++)
-    if (map->MapObject[i])
+    if (first_mapobj(map, i))
       for (m = first_mapobj(map, i); m; m = next_mapobj(m))
         s += sizeof(MapObject);
   return s;

@@ -45,6 +45,8 @@ void mux_event_tickmech_removesection(MuxEvent *e) {
   /* changed Special2I to Special on AddPartsM statements */
   loc = earg % LOCMAX;
   extra = earg / (LOCMAX * POSMAX);
+  if (extra == 0)
+    return;
 #ifndef BT_COMPLEXREPAIRS
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
                  tech_proper_internal_part(mech), 0,

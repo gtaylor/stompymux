@@ -11,6 +11,7 @@
 #include "mux/objects/object_state.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
+#include "mux/support/checked_storage.h"
 
 constexpr size_t OBJECT_STATE_NAMESPACE_LIMIT = 127;
 constexpr size_t OBJECT_STATE_KEY_LIMIT = 255;
@@ -32,11 +33,31 @@ struct ObjectStateCollection {
   size_t bytes;
 };
 
+static ObjectStateEntry *
+object_state_entry_slot(ObjectStateCollection *collection, size_t index) {
+  return checked_storage_at(collection->entries, collection->capacity,
+                            sizeof(*collection->entries), index);
+}
+
+static const ObjectStateEntry *
+object_state_entry_const(const ObjectStateCollection *collection,
+                         size_t index) {
+  return checked_storage_at_const(collection->entries, collection->capacity,
+                                  sizeof(*collection->entries), index);
+}
+
 typedef struct ObjectStateTransactionObject ObjectStateTransactionObject;
 struct ObjectStateTransactionObject {
   DbRef object;
   ObjectStateCollection *collection;
 };
+
+static ObjectStateTransactionObject *
+object_state_transaction_object(ObjectStateTransaction *transaction,
+                                size_t index) {
+  return checked_storage_at(transaction->objects, transaction->object_capacity,
+                            sizeof(ObjectStateTransactionObject), index);
+}
 
 static void object_state_error(char *error, size_t error_size,
                                const char *format, ...)
@@ -55,16 +76,23 @@ static void object_state_error(char *error, size_t error_size,
 }
 
 bool object_state_name_is_valid(const char *name) {
-  const unsigned char *cursor = (const unsigned char *)name;
-
-  if (!cursor || !((*cursor >= 'A' && *cursor <= 'Z') ||
-                   (*cursor >= 'a' && *cursor <= 'z')))
+  if (name == nullptr)
     return false;
-  for (; *cursor; cursor++) {
-    if (!((*cursor >= 'A' && *cursor <= 'Z') ||
-          (*cursor >= 'a' && *cursor <= 'z') ||
-          (*cursor >= '0' && *cursor <= '9')) &&
-        *cursor != '_' && *cursor != '-' && *cursor != '.' && *cursor != '/')
+  const size_t length = strlen(name);
+  if (length == 0)
+    return false;
+  for (size_t index = 0; index < length; index++) {
+    const unsigned char character =
+        *(const unsigned char *)checked_storage_at_const(name, length + 1,
+                                                         sizeof(char), index);
+    if (index == 0 && !((character >= 'A' && character <= 'Z') ||
+                        (character >= 'a' && character <= 'z')))
+      return false;
+    if (!((character >= 'A' && character <= 'Z') ||
+          (character >= 'a' && character <= 'z') ||
+          (character >= '0' && character <= '9')) &&
+        character != '_' && character != '-' && character != '.' &&
+        character != '/')
       return false;
   }
   return true;
@@ -85,8 +113,8 @@ static size_t object_state_find(const ObjectStateCollection *collection,
 
   while (low < high) {
     size_t middle = low + (high - low) / 2;
-    int comparison = object_state_entry_compare(&collection->entries[middle],
-                                                name_space, key);
+    int comparison = object_state_entry_compare(
+        object_state_entry_const(collection, middle), name_space, key);
     if (comparison == 0) {
       *found = true;
       return middle;
@@ -140,7 +168,8 @@ static bool object_state_value_copy(ObjectStateValue *destination,
     return false;
   if (source->as.string.length > 0)
     memcpy(data, source->as.string.data, source->as.string.length);
-  data[source->as.string.length] = '\0';
+  *(char *)checked_storage_at(data, source->as.string.length + 1, sizeof(char),
+                              source->as.string.length) = '\0';
   destination->as.string.data = data;
   return true;
 }
@@ -149,9 +178,10 @@ static void object_state_collection_destroy(ObjectStateCollection *collection) {
   if (!collection)
     return;
   for (size_t index = 0; index < collection->count; index++) {
-    free(collection->entries[index].name_space);
-    free(collection->entries[index].key);
-    object_state_value_destroy(&collection->entries[index].value);
+    ObjectStateEntry *entry = object_state_entry_slot(collection, index);
+    free(entry->name_space);
+    free(entry->key);
+    object_state_value_destroy(&entry->value);
   }
   free(collection->entries);
   free(collection);
@@ -172,8 +202,8 @@ object_state_collection_clone(const ObjectStateCollection *source) {
   }
   copy->capacity = source->count;
   for (size_t index = 0; index < source->count; index++) {
-    ObjectStateEntry *destination = &copy->entries[index];
-    const ObjectStateEntry *entry = &source->entries[index];
+    ObjectStateEntry *destination = object_state_entry_slot(copy, index);
+    const ObjectStateEntry *entry = object_state_entry_const(source, index);
 
     destination->name_space = strdup(entry->name_space);
     destination->key = strdup(entry->key);
@@ -266,9 +296,9 @@ static bool object_state_collection_set(GameDatabase *database,
     return false;
   }
   if (found) {
-    old_bytes = object_state_entry_bytes(collection->entries[index].name_space,
-                                         collection->entries[index].key,
-                                         &collection->entries[index].value);
+    const ObjectStateEntry *entry = object_state_entry_const(collection, index);
+    old_bytes =
+        object_state_entry_bytes(entry->name_space, entry->key, &entry->value);
   }
   if (!found && collection->count >= object_state_entry_limit(database)) {
     object_state_error(error, error_size, "object state exceeds %zu entries",
@@ -288,8 +318,9 @@ static bool object_state_collection_set(GameDatabase *database,
     return false;
   }
   if (found) {
-    object_state_value_destroy(&collection->entries[index].value);
-    collection->entries[index].value = value_copy;
+    ObjectStateEntry *entry = object_state_entry_slot(collection, index);
+    object_state_value_destroy(&entry->value);
+    entry->value = value_copy;
     collection->bytes = collection->bytes - old_bytes + new_bytes;
     return true;
   }
@@ -315,9 +346,10 @@ static bool object_state_collection_set(GameDatabase *database,
     return false;
   }
   if (index < collection->count)
-    memmove(&collection->entries[index + 1], &collection->entries[index],
+    memmove(object_state_entry_slot(collection, index + 1),
+            object_state_entry_slot(collection, index),
             (collection->count - index) * sizeof(*collection->entries));
-  collection->entries[index] = (ObjectStateEntry){
+  *object_state_entry_slot(collection, index) = (ObjectStateEntry){
       .name_space = namespace_copy, .key = key_copy, .value = value_copy};
   collection->count++;
   collection->bytes += new_bytes;
@@ -335,7 +367,7 @@ static bool object_state_collection_delete(ObjectStateCollection *collection,
   index = object_state_find(collection, name_space, key, &found);
   if (!found)
     return false;
-  ObjectStateEntry *entry = &collection->entries[index];
+  ObjectStateEntry *entry = object_state_entry_slot(collection, index);
   collection->bytes -=
       object_state_entry_bytes(entry->name_space, entry->key, &entry->value);
   free(entry->name_space);
@@ -343,7 +375,8 @@ static bool object_state_collection_delete(ObjectStateCollection *collection,
   object_state_value_destroy(&entry->value);
   collection->count--;
   if (index < collection->count)
-    memmove(&collection->entries[index], &collection->entries[index + 1],
+    memmove(object_state_entry_slot(collection, index),
+            object_state_entry_slot(collection, index + 1),
             (collection->count - index) * sizeof(*collection->entries));
   return true;
 }
@@ -370,7 +403,7 @@ const ObjectStateValue *object_state_get(GameDatabase *database, DbRef object,
   if (!collection)
     return nullptr;
   index = object_state_find(collection, name_space, key, &found);
-  return found ? &collection->entries[index].value : nullptr;
+  return found ? &object_state_entry_slot(collection, index)->value : nullptr;
 }
 
 bool object_state_set(GameDatabase *database, DbRef object,
@@ -418,10 +451,11 @@ bool object_state_entry(GameDatabase *database, DbRef object, size_t index,
   collection = game_database_object(database, object)->state;
   if (!collection || index >= collection->count)
     return false;
+  const ObjectStateEntry *stored = object_state_entry_const(collection, index);
   *entry = (ObjectStateEntryView){
-      .name_space = collection->entries[index].name_space,
-      .key = collection->entries[index].key,
-      .value = &collection->entries[index].value,
+      .name_space = stored->name_space,
+      .key = stored->key,
+      .value = &stored->value,
   };
   return true;
 }
@@ -470,11 +504,11 @@ bool object_state_transaction_begin(ObjectStateTransaction *transaction,
 static ObjectStateTransactionObject *
 object_state_transaction_find(ObjectStateTransaction *transaction,
                               DbRef object) {
-  ObjectStateTransactionObject *objects = transaction->objects;
-
   for (size_t index = 0; index < transaction->object_count; index++) {
-    if (objects[index].object == object)
-      return &objects[index];
+    ObjectStateTransactionObject *candidate =
+        object_state_transaction_object(transaction, index);
+    if (candidate->object == object)
+      return candidate;
   }
   return nullptr;
 }
@@ -509,8 +543,8 @@ object_state_transaction_require(ObjectStateTransaction *transaction,
     transaction->objects = objects;
     transaction->object_capacity = capacity;
   }
-  objects = transaction->objects;
-  target = &objects[transaction->object_count];
+  target =
+      object_state_transaction_object(transaction, transaction->object_count);
   target->object = object;
   target->collection = object_state_collection_clone(
       game_database_object(transaction->database, object)->state);
@@ -533,7 +567,8 @@ object_state_transaction_get(ObjectStateTransaction *transaction, DbRef object,
   if (!target)
     return object_state_get(transaction->database, object, name_space, key);
   index = object_state_find(target->collection, name_space, key, &found);
-  return found ? &target->collection->entries[index].value : nullptr;
+  return found ? &object_state_entry_slot(target->collection, index)->value
+               : nullptr;
 }
 
 bool object_state_transaction_set(ObjectStateTransaction *transaction,
@@ -571,7 +606,8 @@ size_t object_state_transaction_count(ObjectStateTransaction *transaction,
   if (!collection)
     return 0;
   for (size_t index = 0; index < collection->count; index++) {
-    if (!strcmp(collection->entries[index].name_space, name_space))
+    if (!strcmp(object_state_entry_const(collection, index)->name_space,
+                name_space))
       count++;
   }
   return count;
@@ -590,7 +626,7 @@ bool object_state_transaction_entry(ObjectStateTransaction *transaction,
   if (!collection || !entry)
     return false;
   for (size_t position = 0; position < collection->count; position++) {
-    ObjectStateEntry *candidate = &collection->entries[position];
+    ObjectStateEntry *candidate = object_state_entry_slot(collection, position);
     if (strcmp(candidate->name_space, name_space))
       continue;
     if (current++ != index)
@@ -607,10 +643,9 @@ bool object_state_transaction_entry(ObjectStateTransaction *transaction,
 
 static void
 object_state_transaction_reset(ObjectStateTransaction *transaction) {
-  ObjectStateTransactionObject *objects = transaction->objects;
-
   for (size_t index = 0; index < transaction->object_count; index++)
-    object_state_collection_destroy(objects[index].collection);
+    object_state_collection_destroy(
+        object_state_transaction_object(transaction, index)->collection);
   transaction->object_count = 0;
   transaction->depth = 0;
   transaction->database = nullptr;
@@ -619,8 +654,6 @@ object_state_transaction_reset(ObjectStateTransaction *transaction) {
 
 void object_state_transaction_finish(ObjectStateTransaction *transaction,
                                      bool commit) {
-  ObjectStateTransactionObject *objects = transaction->objects;
-
   if (transaction->depth == 0)
     return;
   if (!commit)
@@ -630,11 +663,13 @@ void object_state_transaction_finish(ObjectStateTransaction *transaction,
     return;
   if (!transaction->rollback_only) {
     for (size_t index = 0; index < transaction->object_count; index++) {
+      ObjectStateTransactionObject *stored =
+          object_state_transaction_object(transaction, index);
       GameObject *object =
-          game_database_object(transaction->database, objects[index].object);
+          game_database_object(transaction->database, stored->object);
       object_state_collection_destroy(object->state);
-      object->state = objects[index].collection;
-      objects[index].collection = nullptr;
+      object->state = stored->collection;
+      stored->collection = nullptr;
     }
   }
   object_state_transaction_reset(transaction);

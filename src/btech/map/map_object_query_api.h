@@ -5,7 +5,10 @@
 typedef struct BattleMap BattleMap;
 typedef struct MapObject MapObject;
 
-enum { BATTLE_MAP_OBJECT_BUILDING = 4 };
+enum {
+  BATTLE_MAP_OBJECT_MINE = 3,
+  BATTLE_MAP_OBJECT_BUILDING = 4,
+};
 
 MapObject *battle_map_object_first(BattleMap *map, int type);
 MapObject *battle_map_object_next(MapObject *object);

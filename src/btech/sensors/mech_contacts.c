@@ -45,7 +45,9 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "registry_api.h"
@@ -83,16 +85,43 @@ static const char *const c_desc[] = {
     "2 - Short form, the usual one, but do not see buildings",
     "3 - Shorter form"};
 
+typedef struct ContactLine {
+  float sort_range;
+  char text[120];
+} ContactLine;
+
+static const char *contact_description(const char *const *descriptions,
+                                       size_t count, int index) {
+  return *(const char *const *)checked_storage_at_const(
+      descriptions, count, sizeof(*descriptions), (size_t)index);
+}
+
+static ContactLine *contact_line(ContactLine *lines, int index) {
+  return checked_storage_at(lines, BATTLE_MAP_UNIT_CAPACITY, sizeof(*lines),
+                            (size_t)index);
+}
+
+static void status_string_append(MechStatusString *status, size_t *length,
+                                 char value) {
+  *(char *)checked_storage_at(status->text, sizeof(status->text), sizeof(char),
+                              *length) = value;
+  ++*length;
+}
+
 void show_brief_flags(DbRef player, Mech *mech) {
   notify_printf(
       btech_context_evaluation(mech_context(mech)), player,
       "Brief status for %s:", mech_to_mech_display_id(mech, mech).text);
 #ifdef ADVANCED_LOS
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                "    (A)utocontacts: %s", ac_desc[mech_brief_mode(mech) / 4]);
+                "    (A)utocontacts: %s",
+                contact_description(ac_desc, sizeof(ac_desc) / sizeof(*ac_desc),
+                                    mech_brief_mode(mech) / 4));
 #endif
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                "    (C)ontacts:     %s", c_desc[mech_brief_mode(mech) % 4]);
+                "    (C)ontacts:     %s",
+                contact_description(c_desc, sizeof(c_desc) / sizeof(*c_desc),
+                                    mech_brief_mode(mech) % 4));
 }
 
 void mech_brief(DbRef player, void *data, char *buffer) {
@@ -102,16 +131,17 @@ void mech_brief(DbRef player, void *data, char *buffer) {
 
   if (!common_checks(player, mech, MECH_USUALSM))
     return;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
+  if (buffer != nullptr)
+    buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(char),
+                                strspn(buffer, " \t\r\n\f\v"));
   if (!buffer || !*buffer) {
     show_brief_flags(player, mech);
     return;
   }
   c = *buffer;
-  buffer++;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
+  buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(char), 1);
+  buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(char),
+                              strspn(buffer, " \t\r\n\f\v"));
   if (!buffer || !*buffer) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Argument missing!");
@@ -122,7 +152,7 @@ void mech_brief(DbRef player, void *data, char *buffer) {
                  "Invalid number!");
     return;
   }
-  switch (toupper(c)) {
+  switch (ascii_to_upper(c)) {
 #ifdef ADVANCED_LOS
   case 'A':
     if (v < 0 || v > 6) {
@@ -132,7 +162,9 @@ void mech_brief(DbRef player, void *data, char *buffer) {
     }
     v = BOUNDED(0, v, 6);
     mech_brief_mode_set(mech, mech_brief_mode(mech) % 4 + v * 4);
-    mech_printf(mech, MECHALL, "Autocontact brevity set to %s.", ac_desc[v]);
+    mech_printf(
+        mech, MECHALL, "Autocontact brevity set to %s.",
+        contact_description(ac_desc, sizeof(ac_desc) / sizeof(*ac_desc), v));
     return;
 #endif
   case 'C':
@@ -143,7 +175,9 @@ void mech_brief(DbRef player, void *data, char *buffer) {
     }
     v = BOUNDED(0, v, 3);
     mech_brief_mode_set(mech, ((mech_brief_mode(mech) / 4) * 4) + v);
-    mech_printf(mech, MECHALL, "Contact brevity set to %s.", c_desc[v]);
+    mech_printf(
+        mech, MECHALL, "Contact brevity set to %s.",
+        contact_description(c_desc, sizeof(c_desc) / sizeof(*c_desc), v));
     return;
   }
 }
@@ -174,96 +208,95 @@ char mech_contact_weapon_arc(int arc) {
 /* who: 0 for friend, 1 for enemy, 2 for 'self' */
 MechStatusString mech_status_string(Mech *target, int who) {
   MechStatusString status = {0};
-  char *statusstr = status.text;
-  int sptr = 0;
+  size_t sptr = 0;
 
   const MechConditionSummary condition = mech_condition_summary(target);
 
   if (mech_is_destroyed(target))
-    statusstr[sptr++] = 'D';
+    status_string_append(&status, &sptr, 'D');
 
   if (mech_event_count(target, EVENT_STARTUP))
-    statusstr[sptr++] = 's';
+    status_string_append(&status, &sptr, 's');
   else if (!mech_is_started(target))
-    statusstr[sptr++] = 'S';
+    status_string_append(&status, &sptr, 'S');
 
   if (mech_event_count(target, EVENT_STAND))
-    statusstr[sptr++] = 'f';
+    status_string_append(&status, &sptr, 'f');
   else if (mech_is_fallen(target))
-    statusstr[sptr++] = 'F';
+    status_string_append(&status, &sptr, 'F');
 
   if (mech_event_count(target, EVENT_CHANGING_HULLDOWN))
-    statusstr[sptr++] = 'h';
+    status_string_append(&status, &sptr, 'h');
   else if (condition.hull_down)
-    statusstr[sptr++] = 'H';
+    status_string_append(&status, &sptr, 'H');
 
   if (mech_is_towed(target))
-    statusstr[sptr++] = 'T';
+    status_string_append(&status, &sptr, 'T');
   else if (mech_carried_dbref(target) > 0)
-    statusstr[sptr++] = 't';
+    status_string_append(&status, &sptr, 't');
 
   if (mech_is_jumping(target))
-    statusstr[sptr++] = 'J';
+    status_string_append(&status, &sptr, 'J');
 
   if (mech_is_out_of_control(target))
-    statusstr[sptr++] = 'O';
+    status_string_append(&status, &sptr, 'O');
 
   if (mech_excess_heat(target) != 0.0F)
-    statusstr[sptr++] = '+';
+    status_string_append(&status, &sptr, '+');
 
   if (mech_is_jellied(target))
-    statusstr[sptr++] = 'I';
+    status_string_append(&status, &sptr, 'I');
 
   if (mech_event_count(target, EVENT_VEHICLEBURN))
-    statusstr[sptr++] = 'B';
+    status_string_append(&status, &sptr, 'B');
 
   if (mech_searchlight_active(target))
-    statusstr[sptr++] = 'L';
+    status_string_append(&status, &sptr, 'L');
 
   if (condition.illuminated)
-    statusstr[sptr++] = 'l';
+    status_string_append(&status, &sptr, 'l');
 
   if (condition.swarm_target > 0)
-    statusstr[sptr++] = 'W';
+    status_string_append(&status, &sptr, 'W');
 
   if (mech_contact_carries_club(target))
-    statusstr[sptr++] = 'C';
+    status_string_append(&status, &sptr, 'C');
 
   if (mech_has_attached_homing_beacon(target)) {
     if (who == 1)
-      statusstr[sptr++] = 'N';
+      status_string_append(&status, &sptr, 'N');
     else
-      statusstr[sptr++] = 'n';
+      status_string_append(&status, &sptr, 'n');
   }
 #ifndef ECM_ON_CONTACTS
   if (who > 1) {
 #endif
     if (condition.eccm_enabled || condition.angel_eccm_enabled)
-      statusstr[sptr++] = 'P';
+      status_string_append(&status, &sptr, 'P');
 
     if (condition.ecm_active || condition.angel_ecm_active)
-      statusstr[sptr++] = 'E';
+      status_string_append(&status, &sptr, 'E');
 
     if (condition.ecm_protected || condition.angel_ecm_protected)
-      statusstr[sptr++] = 'p';
+      status_string_append(&status, &sptr, 'p');
 
     if (mech_is_any_ecm_disturbed(target))
-      statusstr[sptr++] = 'e';
+      status_string_append(&status, &sptr, 'e');
 #ifndef ECM_ON_CONTACTS
   }
 #endif
 
   if (condition.spinning)
-    statusstr[sptr++] = 'X';
+    status_string_append(&status, &sptr, 'X');
 
 #ifdef BT_MOVEMENT_MODES
   if (condition.sprinting)
-    statusstr[sptr++] = 'M';
+    status_string_append(&status, &sptr, 'M');
   if (condition.evading)
-    statusstr[sptr++] = 'm';
+    status_string_append(&status, &sptr, 'm');
 #endif
 
-  statusstr[sptr] = '\0';
+  status_string_append(&status, &sptr, '\0');
   return status;
 }
 
@@ -336,9 +369,9 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
             *tmp_map;
   MapObject *building;
   int loop, i, j, argc, bearing, buffindex = 0;
-  char *args[1], bufflist[BATTLE_MAP_UNIT_CAPACITY][120], buff[100];
-  int sbuff[BATTLE_MAP_UNIT_CAPACITY];
-  float range, rangelist[BATTLE_MAP_UNIT_CAPACITY], fx, fy;
+  char *args[1], buff[100];
+  ContactLine contacts[BATTLE_MAP_UNIT_CAPACITY];
+  float range, fx, fy;
   char weaponarc;
   const char *mech_name;
   unsigned char see_what;
@@ -358,7 +391,8 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
 
   isvb = (mech_brief_mode(mech) % 4);
   if (argc > 0) {
-    if (args[0][0] == '+') {
+    char *argument = *(char **)checked_storage_at(args, 1, sizeof(*args), 0);
+    if (*argument == '+') {
       str = btech_attribute_read(mech_context(mech)->database, player,
                                  A_CONTACTOPT, (char[LBUF_SIZE]){0});
       if (!*str)
@@ -371,7 +405,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           strcpy(buff, default_contactoptions);
       }
     } else {
-      strncpy(buff, args[0], 50);
+      strncpy(buff, argument, 50);
       buff[49] = 0;
     }
 
@@ -380,10 +414,10 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
     else
       see_what = 0x0;
 
-    for (loop = 0; loop < 50 && buff[loop]; loop++) {
-      char c;
-
-      c = buff[loop];
+    for (loop = 0; loop < 50; loop++) {
+      const char c = *checked_string_suffix(buff, (size_t)loop);
+      if (c == '\0')
+        break;
 
       if (c == 'd')
 
@@ -495,7 +529,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
                (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
                mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
-               move_type[0], mech_name, mech_position_x(tempMech),
+               *move_type, mech_name, mech_position_x(tempMech),
                mech_position_y(tempMech), mech_position_z(tempMech),
                (double)range, bearing, (double)mech_current_speed(tempMech),
                mech_contact_heading(tempMech), cStatus1, cStatus2, cStatus3,
@@ -505,9 +539,12 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                    ? "[reset]"
                    : "");
 
-      rangelist[buffindex] = range;
-      rangelist[buffindex] += mech_is_destroyed(tempMech) ? 10000 : 0;
-      strcpy(bufflist[buffindex++], buff);
+      if (buffindex < BATTLE_MAP_UNIT_CAPACITY) {
+        ContactLine *contact = contact_line(contacts, buffindex++);
+        contact->sort_range =
+            range + (mech_is_destroyed(tempMech) ? 10000.0F : 0.0F);
+        snprintf(contact->text, sizeof(contact->text), "%s", buff);
+      }
     } else {
       snprintf(buff, sizeof(buff), "[%s] %-17s  Tonnage: %d",
                mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
@@ -614,26 +651,28 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                                                                 : ' ',
                battle_map_building_is_hidden(tmp_map) ? 'H' : ' ',
                j ? "[reset]" : "");
-      rangelist[buffindex] = range + 20000;
-      strcpy(bufflist[buffindex++], buff);
+      if (buffindex < BATTLE_MAP_UNIT_CAPACITY) {
+        ContactLine *contact = contact_line(contacts, buffindex++);
+        contact->sort_range = range + 20000.0F;
+        snprintf(contact->text, sizeof(contact->text), "%s", buff);
+      }
     }
   }
 
   if (isvb) {
-    for (i = 0; i < buffindex; i++)
-      sbuff[i] = i;
     /* print a sorted list of detected mechs */
     /* use the ever-popular bubble sort */
     for (i = 0; i < (buffindex - 1); i++)
       for (j = (i + 1); j < buffindex; j++)
-        if (rangelist[sbuff[j]] > rangelist[sbuff[i]]) {
-          loop = sbuff[i];
-          sbuff[i] = sbuff[j];
-          sbuff[j] = loop;
+        if (contact_line(contacts, j)->sort_range >
+            contact_line(contacts, i)->sort_range) {
+          ContactLine temporary = *contact_line(contacts, i);
+          *contact_line(contacts, i) = *contact_line(contacts, j);
+          *contact_line(contacts, j) = temporary;
         }
     for (loop = 0; loop < buffindex; loop++)
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                   bufflist[sbuff[loop]]);
+                   contact_line(contacts, loop)->text);
   }
 
   if (isvb <= 2)

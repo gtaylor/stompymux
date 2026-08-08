@@ -14,6 +14,9 @@
 #include "mux/server/platform.h"
 
 typedef struct Autopilot Autopilot;
+typedef struct AutopilotCommandDefinition AutopilotCommandDefinition;
+
+const AutopilotCommandDefinition *autopilot_command_definition_at(int index);
 
 /* autopilot_commands.c */
 int auto_valid_progline(Autopilot *a, int p);

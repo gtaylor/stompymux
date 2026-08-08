@@ -41,8 +41,8 @@ void econ_change_items(BtechContext *context, DbRef store, int part, int brand,
 }
 
 int main(void) {
-  GameObject objects[2] = {0};
-  GameDatabase database = {.objects = objects};
+  GameObject object_storage[3] = {0};
+  GameDatabase database = {.object_storage = object_storage, .size = 2};
   BtechContext context = {.database = &database};
   Mech mech = {.xcode.context = &context, .mynum = 1};
   constexpr int part = 777;
@@ -55,7 +55,7 @@ int main(void) {
   }
   mech_class_set(&mech, CLASS_MECH);
   mech_movement_type_set(&mech, MOVE_BIPED);
-  objects[1].location = 42;
+  game_database_object(&database, 1)->location = 42;
   if (!mech_parts_available(&mech, part, 4, 6) ||
       mech_parts_available(&mech, part, 4, 7)) {
     return 1;

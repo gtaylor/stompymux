@@ -36,7 +36,9 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "repair_job.h"
 
@@ -185,12 +187,14 @@ void tech_status(BtechContext *context, DbRef player, time_t dat) {
         (intptr_t)((dat - context->clock->now) / TECH_TICK));
     snprintf(buf, sizeof(buf), "You have %d %s%s of repairs pending", un,
              TECH_UNIT, un != 1 ? "s" : "");
+    size_t used = strlen(buf);
+    char *append_at = checked_storage_at(buf, sizeof(buf), sizeof(*buf), used);
     if (un >= context->configuration->btech_maxtechtime)
-      snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+      snprintf(append_at, sizeof(buf) - used,
                " and you're too tired to do more efficiently.");
     else {
       un = context->configuration->btech_maxtechtime - un;
-      snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+      snprintf(append_at, sizeof(buf) - used,
                " and you're ready to do at least %d more %s%s of work.", un,
                TECH_UNIT, un == 1 ? "" : "s");
     }
@@ -230,7 +234,7 @@ int tech_parsepart_advanced(Mech *mech, char *buffer, int *loc, int *pos,
       return -1;
   } else {
     if (argc == 2) {
-      if (toupper(args[1][0]) != 'R')
+      if (ascii_to_upper(*checked_string_suffix(args[1], 0)) != 'R')
         return -1;
       isrear = 8;
     }
@@ -285,9 +289,11 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
       return -1;
   }
   t = mech_critical_part_type(mech, *loc, *pos);
-  if (brand != NULL && argc > 1 && !atoi(args[argc - 1])) {
-    if (!find_matching_long_part(mech_context(mech), args[argc - 1], &c, &pi,
-                                 &pb))
+  char **last_argument_slot =
+      checked_storage_at(args, (size_t)argc, sizeof(*args), (size_t)(argc - 1));
+  if (brand != NULL && argc > 1 && !atoi(*last_argument_slot)) {
+    if (!find_matching_long_part(mech_context(mech), *last_argument_slot, &c,
+                                 &pi, &pb))
       return -2;
     if (pi != t)
       return -3;

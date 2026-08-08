@@ -1,13 +1,76 @@
 #include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
 #include "mech_physical_internal.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
 #include "mech_targeting_api.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
+
+static int sword_check_arm(Mech *mech, int arm) {
+  const char *arm_used = arm == RARM ? "right" : "left";
+
+  if (mech_section_is_destroyed(mech, arm)) {
+    mech_printf(mech, MECHALL,
+                "Your %s arm is destroyed, you can't use a sword with it.",
+                arm_used);
+    return 0;
+  }
+  if (!mech_critical_is_operational_special(mech, arm, 0, SHOULDER_OR_HIP)) {
+    mech_printf(
+        mech, MECHALL,
+        "Your %s shoulder is destroyed, you can't use a sword with that arm.",
+        arm_used);
+    return 0;
+  }
+  if (!mech_critical_is_operational_special(mech, arm, 3,
+                                            HAND_OR_FOOT_ACTUATOR)) {
+    mech_printf(
+        mech, MECHALL,
+        "Your %s hand is destroyed, you can't use a sword with that arm.",
+        arm_used);
+    return 0;
+  }
+  return 1;
+}
+
+void mech_sword(DbRef player, void *data, char *buffer) {
+  Mech *mech = data;
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
+  char *argument_list[5];
+  char **arguments = argument_list;
+  int argument_count;
+  int left_to_hit = 3;
+  int right_to_hit = 3;
+  int using = P_LEFT | P_RIGHT;
+
+  if (!common_checks(player, mech, MECH_USUALO) ||
+      !physical_arm_check(player, mech, "chop") ||
+      !physical_quad_check(player, mech, "chop"))
+    return;
+
+  argument_count = mech_parseattributes(buffer, arguments, 5);
+  if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
+    left_to_hit = right_to_hit = FindPilotPiloting(mech) - 2;
+  if (get_arm_args(&using, &argument_count, &arguments, mech, have_sword,
+                   "a sword"))
+    return;
+
+  if ((using & P_LEFT) && sword_check_arm(mech, LARM))
+    PhysicalAttack(mech, 10, left_to_hit, PA_SWORD, argument_count, arguments,
+                   map, LARM);
+  if ((using & P_RIGHT) && sword_check_arm(mech, RARM))
+    PhysicalAttack(mech, 10, right_to_hit, PA_SWORD, argument_count, arguments,
+                   map, RARM);
+  if (!using)
+    mech_notify(mech, MECHALL, "You have no sword to chop people with!");
+}
+
 void mech_trip(DbRef player, void *data, char *buffer) {
   mech_kickortrip(player, data, buffer, PA_TRIP);
 } // end mech_trip()
@@ -227,14 +290,17 @@ void mech_charge(DbRef player, void *data, char *buffer) {
 
     // We've supplied an argument, either a '-' or an ID.
   case 1:
-    if (args[0][0] == '-') {
+    char **first_slot =
+        checked_storage_at(args, (size_t)argc, sizeof(*args), 0);
+    const char *first = *first_slot;
+    if (*first == '-') {
       mech_charge_reset(mech);
       mech_notify(mech, MECHPILOT, "You are no longer charging.");
       return;
     }
 
-    targetID[0] = args[0][0];
-    targetID[1] = args[0][1];
+    targetID[0] = *checked_string_suffix(first, 0);
+    targetID[1] = *checked_string_suffix(first, 1);
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
 
     if (targetnum == -1) {

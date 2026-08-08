@@ -17,6 +17,7 @@
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
@@ -40,9 +41,9 @@ void command_list_access(EvaluationContext *evaluation,
                          const ServerConfiguration *configuration,
                          CommandRegistry *registry, DbRef player) {
   char buff[SBUF_SIZE];
-  CMDENT *cmdp;
+  for (size_t index = 0; index < command_table_entry_count(); index++) {
+    CMDENT *cmdp = command_table_entry_at(index);
 
-  for (cmdp = command_table; cmdp->cmdname; cmdp++) {
     if (check_access(evaluation->world->database, configuration, player,
                      cmdp->perms)) {
       if (!(cmdp->perms & CF_DARK)) {
@@ -63,9 +64,9 @@ void command_list_switches(EvaluationContext *evaluation,
                            const ServerConfiguration *configuration,
                            DbRef player) {
   char buff[SBUF_SIZE];
-  CMDENT *cmdp;
+  for (size_t index = 0; index < command_table_entry_count(); index++) {
+    CMDENT *cmdp = command_table_entry_at(index);
 
-  for (cmdp = command_table; cmdp->cmdname; cmdp++) {
     if (cmdp->switches) {
       if (check_access(evaluation->world->database, configuration, player,
                        cmdp->perms)) {
@@ -87,20 +88,35 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
               ConfigurationContext *context) {
   CMDENT *cmdp;
   char *ap;
-  int set_switch;
+  const size_t length = strlen(str);
+  size_t offset = 0;
+  bool set_switch;
 
-  for (ap = str; *ap && !isspace((unsigned char)*ap) && (*ap != '/'); ap++)
-    ;
-  if (*ap == '/') {
-    set_switch = 1;
-    *ap++ = '\0';
-  } else {
-    set_switch = 0;
-    if (*ap)
-      *ap++ = '\0';
-    while (*ap && isspace((unsigned char)*ap))
-      ap++;
+  while (offset < length) {
+    const char character = *(const char *)checked_storage_at_const(
+        str, length + 1, sizeof(char), offset);
+
+    if ((isspace)((unsigned char)character) || character == '/')
+      break;
+    offset++;
   }
+  ap = checked_storage_at(str, length + 1, sizeof(char), offset);
+  if (*ap == '/') {
+    set_switch = true;
+    *ap = '\0';
+    offset++;
+  } else {
+    set_switch = false;
+    if (*ap) {
+      *ap = '\0';
+      offset++;
+    }
+    while (offset < length &&
+           (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+               str, length + 1, sizeof(char), offset)))
+      offset++;
+  }
+  ap = checked_storage_at(str, length + 1, sizeof(char), offset);
 
   cmdp = (CMDENT *)hash_table_find(str, &context->command_registry->commands);
   if (cmdp != nullptr) {
@@ -137,8 +153,14 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
               */
     return -1;
 
-  for (ap = orig; *ap && (*ap != '/'); ap++)
-    ;
+  const size_t orig_length = strlen(orig);
+  size_t switch_offset = 0;
+
+  while (switch_offset < orig_length &&
+         *(const char *)checked_storage_at_const(
+             orig, orig_length + 1, sizeof(char), switch_offset) != '/')
+    switch_offset++;
+  ap = checked_storage_at(orig, orig_length + 1, sizeof(char), switch_offset);
   if (*ap == '/') {
 
     /*
@@ -146,7 +168,9 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
      * * * * * * command + a switch
      */
 
-    *ap++ = '\0';
+    *ap = '\0';
+    ap = checked_storage_at(orig, orig_length + 1, sizeof(char),
+                            switch_offset + 1);
 
     /*
      * Look up the command

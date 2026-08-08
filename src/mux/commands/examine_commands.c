@@ -19,6 +19,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -86,7 +87,9 @@ static void examine_native_attributes(EvaluationContext *evaluation,
   GameDatabase *database = evaluation->world->database;
   bool has_attributes = false;
 
-  for (Attribute *entry = attr_table; entry->number; entry++) {
+  for (size_t index = 0; index < native_attribute_count(); index++) {
+    Attribute *entry = native_attribute_at(index);
+
     const char *value;
 
     if (!object_attribute_is_administrable(entry->number))
@@ -150,7 +153,7 @@ void do_examine(CommandInvocation *invocation) {
   free_lbuf(buf2);
   notify_printf(
       evaluation, player, "Type: %s",
-      object_types[typeof_obj(evaluation->world->database, thing)].name);
+      object_type_entry(typeof_obj(evaluation->world->database, thing))->name);
   buf2 = flags_description(evaluation->world->database, player, thing);
   notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
   free_mbuf(buf2);
@@ -329,9 +332,17 @@ void do_inventory(CommandInvocation *invocation) {
       /*
        * chop off first exit alias to display
        */
-      for (s = game_object_name(evaluation->world->database, thing);
-           *s && (*s != ';'); s++)
-        safe_chr(*s, buff, &e);
+      s = game_object_name(evaluation->world->database, thing);
+      const size_t name_length = strlen(s);
+
+      for (size_t index = 0; index < name_length; index++) {
+        const char character = *(const char *)checked_storage_at_const(
+            s, name_length + 1, sizeof(char), index);
+
+        if (character == ';')
+          break;
+        safe_chr(character, buff, &e);
+      }
       safe_str("  ", buff, &e);
     }
     *e = 0;

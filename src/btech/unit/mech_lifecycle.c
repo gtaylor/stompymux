@@ -196,7 +196,7 @@ void mech_set_recycle_part(Mech *mech, int section, int critical, int value) {
 
 void mech_set_recycle_limb(Mech *mech, int section, int value) {
   mech_update_recycling(mech);
-  mech->ud.sections[section].recycle = clamp_int_to_char(value);
+  mech_section_recycle_ticks_set(mech, section, value);
 }
 
 void mech_make_fall(Mech *mech) {

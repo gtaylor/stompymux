@@ -2,7 +2,16 @@
 
 #include "checked_conversion.h"
 #include "mech_classification_api.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
+
+static const char *map_type_name(int type) {
+  if (type < 0)
+    abort();
+  const char *const *name = checked_storage_at_const(
+      map_types, NUM_MAPOBJTYPES + 1, sizeof(*map_types), (size_t)type);
+  return *name;
+}
 
 void list_mapobjs(DbRef player, BattleMap *map) {
   MapObject *tmp;
@@ -20,7 +29,7 @@ void list_mapobjs(DbRef player, BattleMap *map) {
       else
         notify_printf(btech_context_evaluation(map->xcode.context), player,
                       "%-3d %-3d %-5s %-5d %-4d %-6d %ld", tmp->x, tmp->y,
-                      map_types[i], (int)tmp->obj, tmp->datac, tmp->datas,
+                      map_type_name(i), (int)tmp->obj, tmp->datac, tmp->datas,
                       tmp->datai);
     }
   mecha_notify(btech_context_evaluation(map->xcode.context), player,
@@ -116,7 +125,7 @@ void map_add_block(DbRef player, void *data, char *buffer) {
   foo.datai = str;
   foo.obj = player;
   foo.datac = team;
-  add_mapobj(map, &map->MapObject[TYPE_B_LZ], &foo, 1);
+  add_mapobj_to_type(map, TYPE_B_LZ, &foo, 1);
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "Landingzone-block added to %d,%d (distance: %d)", x, y, str);
 }
@@ -146,7 +155,7 @@ void map_setlinked(DbRef player, void *data, char *buffer) {
 
   bzero(&foo, sizeof(MapObject));
   foo.datac = 1;
-  add_mapobj(map, &map->MapObject[TYPE_LINKED], &foo, 1);
+  add_mapobj_to_type(map, TYPE_LINKED, &foo, 1);
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "Map set to linked.");
 }
@@ -178,12 +187,12 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                  "Error: Invalid number of attributes to delobj command.");
     return;
   case 1:
-    if ((tt = listmatch(map_types, args[0])) < 0) {
+    if ((tt = listmatch(map_types, NUM_MAPOBJTYPES, args[0])) < 0) {
       mecha_notify(btech_context_evaluation(map->xcode.context), player,
                    "Invalid type!");
       return;
     }
-    for (foo = map->MapObject[tt]; foo; foo = foo2) {
+    for (foo = first_mapobj(map, tt); foo; foo = foo2) {
       foo2 = next_mapobj(foo);
       del_mapobj(map, foo, tt, 1);
       count++;
@@ -210,7 +219,7 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                   "%d objects at (%d,%d) deleted.", count, x, y);
     break;
   case 3:
-    if ((tt = listmatch(map_types, args[0])) < 0) {
+    if ((tt = listmatch(map_types, NUM_MAPOBJTYPES, args[0])) < 0) {
       mecha_notify(btech_context_evaluation(map->xcode.context), player,
                    "Invalid type!");
       return;
@@ -227,7 +236,7 @@ void map_delobj(DbRef player, void *data, char *buffer) {
       }
     }
     notify_printf(btech_context_evaluation(map->xcode.context), player,
-                  "%d %s at (%d,%d) deleted.", count, map_types[tt], x, y);
+                  "%d %s at (%d,%d) deleted.", count, map_type_name(tt), x, y);
     break;
   default:
     mecha_notify(btech_context_evaluation(map->xcode.context), player,

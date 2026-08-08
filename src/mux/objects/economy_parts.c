@@ -7,6 +7,13 @@
 
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/support/checked_storage.h"
+
+static EconomyPartEntry *economy_part(EconomyPartsState *parts, size_t count,
+                                      size_t index) {
+  return checked_storage_at(parts->entries, count, sizeof(*parts->entries),
+                            index);
+}
 
 void economy_parts_clear(GameDatabase *database, DbRef object) {
   if (!database || object < 0 || object >= database->top)
@@ -21,8 +28,8 @@ static size_t economy_parts_find(GameDatabase *database, DbRef object,
   EconomyPartsState *parts =
       &game_database_object(database, object)->economy_parts;
   for (size_t index = 0; index < parts->count; index++)
-    if (parts->entries[index].part_id == part_id &&
-        parts->entries[index].brand_id == brand_id)
+    if (economy_part(parts, parts->count, index)->part_id == part_id &&
+        economy_part(parts, parts->count, index)->brand_id == brand_id)
       return index;
   return parts->count;
 }
@@ -42,10 +49,11 @@ bool economy_parts_entry(GameDatabase *database, DbRef object, size_t index,
   parts = &game_database_object(database, object)->economy_parts;
   if (index >= parts->count)
     return false;
+  const EconomyPartEntry *stored = economy_part(parts, parts->count, index);
   *entry = (EconomyPartEntryView){
-      .part_id = parts->entries[index].part_id,
-      .brand_id = parts->entries[index].brand_id,
-      .quantity = parts->entries[index].quantity,
+      .part_id = stored->part_id,
+      .brand_id = stored->brand_id,
+      .quantity = stored->quantity,
   };
   return true;
 }
@@ -59,7 +67,9 @@ int economy_parts_quantity(GameDatabase *database, DbRef object, int part_id,
     return 0;
   parts = &game_database_object(database, object)->economy_parts;
   index = economy_parts_find(database, object, part_id, brand_id);
-  return index < parts->count ? parts->entries[index].quantity : 0;
+  return index < parts->count
+             ? economy_part(parts, parts->count, index)->quantity
+             : 0;
 }
 
 bool economy_parts_set_quantity(GameDatabase *database, DbRef object,
@@ -74,14 +84,15 @@ bool economy_parts_set_quantity(GameDatabase *database, DbRef object,
   if (quantity <= 0) {
     if (index == parts->count)
       return true;
-    parts->entries[index] = parts->entries[parts->count - 1];
+    *economy_part(parts, parts->count, index) =
+        *economy_part(parts, parts->count, parts->count - 1);
     parts->count--;
     if (parts->count == 0)
       economy_parts_clear(database, object);
     return true;
   }
   if (index < parts->count) {
-    parts->entries[index].quantity = quantity;
+    economy_part(parts, parts->count, index)->quantity = quantity;
     return true;
   }
   if (parts->count == SIZE_MAX / sizeof(*parts->entries))
@@ -91,10 +102,11 @@ bool economy_parts_set_quantity(GameDatabase *database, DbRef object,
   if (!grown)
     return false;
   parts->entries = grown;
-  parts->entries[parts->count++] = (EconomyPartEntry){
+  *economy_part(parts, parts->count + 1, parts->count) = (EconomyPartEntry){
       .part_id = part_id,
       .brand_id = brand_id,
       .quantity = quantity,
   };
+  parts->count++;
   return true;
 }

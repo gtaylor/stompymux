@@ -147,6 +147,7 @@ OK, enough of this.  Let's get on to the code.
 #include "map_units_api.h"
 #include "mech_api_types.h"
 #include "mech_lostracer_api.h"
+#include "mux/support/checked_storage.h"
 
 static constexpr float DEG60 = 1.0471976F;
 static constexpr float DEG30 = 0.5235988F;
@@ -162,10 +163,21 @@ typedef enum HexDirection {
   HEX_NORTHWEST,
 } HexDirection;
 
+const LosTracePoint *los_trace_point_at(const LosTrace *trace, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(trace->points, LOS_TRACE_CAPACITY,
+                                  sizeof(*trace->points), (size_t)index);
+}
+
 static void los_trace_store(LosTrace *trace, int *count, int x, int y) {
   assert(*count < LOS_TRACE_CAPACITY);
-  trace->points[*count].x = x;
-  trace->points[(*count)++].y = y;
+  LosTracePoint *point =
+      checked_storage_at(trace->points, LOS_TRACE_CAPACITY,
+                         sizeof(*trace->points), (size_t)*count);
+  point->x = x;
+  point->y = y;
+  ++*count;
 }
 
 static int los_trace_elevation(BattleMap *map, int x, int y) {

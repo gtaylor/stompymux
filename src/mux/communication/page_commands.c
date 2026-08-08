@@ -16,6 +16,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/match.h"
@@ -78,8 +79,13 @@ static char *dbrefs_to_names(WorldContext *world, DbRef player, char *list,
       }
     }
   }
-  if (bp != namelist)
-    *(bp - 2) = '\0';
+  if (bp != namelist) {
+    const size_t length = strlen(namelist);
+
+    if (length >= 2)
+      *(char *)checked_storage_at(namelist, LBUF_SIZE, sizeof(char),
+                                  length - 2) = '\0';
+  }
   return bp;
 }
 
@@ -197,11 +203,11 @@ void do_page(CommandInvocation *invocation) {
               evaluation, target, player,
               tprintf("From afar, to (%s):%s %s %s", buf1, aladd,
                       game_object_name(evaluation->world->database, player),
-                      message + 1),
+                      checked_string_suffix(message, 1)),
               MSG_ME_ALL | MSG_F_DOWN);
           break;
         case ';':
-          message++;
+          message = checked_mutable_string_suffix(message, 1);
           notify_checked(
               evaluation, target, player,
               tprintf("From afar, to (%s):%s %s%s", buf1, aladd,
@@ -210,7 +216,7 @@ void do_page(CommandInvocation *invocation) {
               MSG_ME_ALL | MSG_F_DOWN);
           break;
         case '"':
-          message++;
+          message = checked_mutable_string_suffix(message, 1);
           [[fallthrough]];
         default:
           notify_checked(
@@ -239,11 +245,11 @@ void do_page(CommandInvocation *invocation) {
             evaluation, target, player,
             tprintf("From afar,%s %s %s", aladd,
                     game_object_name(evaluation->world->database, player),
-                    message + 1),
+                    checked_string_suffix(message, 1)),
             MSG_ME_ALL | MSG_F_DOWN);
         break;
       case ';':
-        message++;
+        message = checked_mutable_string_suffix(message, 1);
         notify_checked(
             evaluation, target, player,
             tprintf("From afar,%s %s%s", aladd,
@@ -252,7 +258,7 @@ void do_page(CommandInvocation *invocation) {
             MSG_ME_ALL | MSG_F_DOWN);
         break;
       case '"':
-        message++;
+        message = checked_mutable_string_suffix(message, 1);
         [[fallthrough]];
       default:
         notify_checked(
@@ -270,7 +276,11 @@ void do_page(CommandInvocation *invocation) {
       /* this is terminating the string above when there is no more to add to
        * the list removing the ", "
        */
-      *(bp - 2) = '\0';
+      const size_t name_list_length = strlen(buf1);
+
+      if (name_list_length >= 2)
+        *(char *)checked_storage_at(buf1, LBUF_SIZE, sizeof(char),
+                                    name_list_length - 2) = '\0';
       count++;
     }
   }
@@ -280,13 +290,19 @@ void do_page(CommandInvocation *invocation) {
     free_lbuf(buf2);
     return;
   }
-  *(bp2 - 1) = '\0';
+  const size_t reference_list_length = strlen(buf2);
+
+  if (reference_list_length > 0)
+    *(char *)checked_storage_at(buf2, LBUF_SIZE, sizeof(char),
+                                reference_list_length - 1) = '\0';
   DbRef *recipients = malloc((size_t)count * sizeof(*recipients));
   if (recipients) {
     size_t recipient_count = 0;
     for (char *token = strtok(buf2, " ");
          token && recipient_count < (size_t)count; token = strtok(nullptr, " "))
-      recipients[recipient_count++] = parse_dbref(token);
+      *(DbRef *)checked_storage_at(recipients, (size_t)count,
+                                   sizeof(*recipients), recipient_count++) =
+          parse_dbref(token);
     player_account_last_page_set(evaluation->world->database, player,
                                  recipients, recipient_count);
     free(recipients);
@@ -297,34 +313,38 @@ void do_page(CommandInvocation *invocation) {
       if (ispose != 1) {
         notify_printf(evaluation, player, "You paged %s with '%s'.", buf1, mp);
       } else {
-        if (mp[0] == ':')
+        if (*mp == ':')
           notify_printf(evaluation, player, "Long distance to %s: %s %s", buf1,
                         game_object_name(evaluation->world->database, player),
-                        mp + 1);
+                        checked_string_suffix(mp, 1));
         else
           notify_printf(evaluation, player, "Long distance to %s: %s%s", buf1,
                         game_object_name(evaluation->world->database, player),
-                        mp + 1);
+                        checked_string_suffix(mp, 1));
       }
     }
   } else {
-    if (bp - buf1 >= 2) {
-      *(bp - 2) = ')';
-      *(bp - 1) = '\0';
+    const size_t name_list_length = strlen(buf1);
+
+    if (name_list_length >= 2) {
+      *(char *)checked_storage_at(buf1, LBUF_SIZE, sizeof(char),
+                                  name_list_length - 2) = ')';
+      *(char *)checked_storage_at(buf1, LBUF_SIZE, sizeof(char),
+                                  name_list_length - 1) = '\0';
     }
 
     if (*buf1) {
       if (ispose != 1) {
         notify_printf(evaluation, player, "You paged (%s with '%s'.", buf1, mp);
       } else {
-        if (mp[0] == ':')
+        if (*mp == ':')
           notify_printf(evaluation, player, "Long distance to (%s: %s %s", buf1,
                         game_object_name(evaluation->world->database, player),
-                        mp + 1);
+                        checked_string_suffix(mp, 1));
         else
           notify_printf(evaluation, player, "Long distance to (%s: %s%s", buf1,
                         game_object_name(evaluation->world->database, player),
-                        mp + 1);
+                        checked_string_suffix(mp, 1));
       }
     }
   }

@@ -70,6 +70,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mycool.h"
 #include "part_cost_api.h"
@@ -82,6 +83,14 @@
 #include "unit_cost_api.h"
 #include "value_handlers_api.h"
 #include "weapon_settings.h"
+
+static inline char *script_function_argument(char *const arguments[],
+                                             int argument_count, size_t index) {
+  if (argument_count <= 0)
+    return nullptr;
+  return *(char *const *)checked_storage_at_const(
+      arguments, (size_t)argument_count, sizeof(*arguments), index);
+}
 
 const char *mech_armor_status_set_value(Mech *mech, const char *section,
                                         const char *armor_type,
@@ -135,6 +144,8 @@ enum {
 };
 extern const int scode_in_out[TYPE_LAST_TYPE];
 extern GMV xcode_data[];
+size_t xcode_descriptor_count(void);
+const GMV *xcode_descriptor_at(size_t index);
 
 int text2bv(const char *text);
 char *bv2text(int value, char *buffer);

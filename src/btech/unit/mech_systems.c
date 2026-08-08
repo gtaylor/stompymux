@@ -1,9 +1,11 @@
 #include "checked_conversion.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
 #include "mech_position_api.h"
 #include "mech_utils_internal.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
 
@@ -14,8 +16,7 @@ int btech_random_roll(BtechContext *context) {
   long second_roll = btech_random_range(context, 1, 6);
   int i = clamp_intptr_to_int(first_roll + second_roll);
 
-  context->random.statistics.rolls[i - 2]++;
-  context->random.statistics.total_rolls++;
+  btech_context_roll_record(context, i);
   return i;
 }
 
@@ -159,7 +160,7 @@ int checkSectionForSpecial(Mech *mech, int specialToFind, int wSec) {
   if (mech_section_is_destroyed(mech, wSec))
     return 0;
 
-  if (((mech)->ud.sections)[wSec].specials & specialToFind)
+  if (mech_section_has_special(mech, wSec, specialToFind))
     return 1;
 
   return 0;
@@ -230,14 +231,13 @@ int FindObjWithDest(Mech *mech, int loc, int type) {
  */
 Mech *find_mech_in_hex(Mech *mech, BattleMap *mech_map, int x, int y,
                        int needlos) {
-  int loop;
   Mech *target;
 
-  for (loop = 0; loop < mech_map->first_free; loop++)
-    if (mech_map->mechsOnMap[loop] != mech->mynum &&
-        mech_map->mechsOnMap[loop] != -1) {
-      target = (Mech *)btech_context_find_object(mech->xcode.context,
-                                                 mech_map->mechsOnMap[loop]);
+  for (int loop = 0; loop < battle_map_unit_count(mech_map); loop++) {
+    DbRef target_dbref = battle_map_unit_dbref(mech_map, loop);
+    if (target_dbref != mech->mynum && target_dbref != -1) {
+      target =
+          (Mech *)btech_context_find_object(mech->xcode.context, target_dbref);
       if (!target)
         continue;
       if (!(((target)->pd.x) == x && ((target)->pd.y) == y) && !(needlos & 2))
@@ -257,7 +257,8 @@ Mech *find_mech_in_hex(Mech *mech, BattleMap *mech_map, int x, int y,
       }
       return target;
     }
-  return NULL;
+  }
+  return nullptr;
 }
 
 int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
@@ -271,12 +272,12 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
   DbRef player = mech_gunner_dbref(mech);
 
   /* Return if it's an energy or PC weapon */
-  if (MechWeapons[weapindx].type == TBEAM ||
-      MechWeapons[weapindx].type == THAND)
+  if (weapon_catalogue_type(weapindx) == TBEAM ||
+      weapon_catalogue_type(weapindx) == THAND)
     return 1;
 
   /* Check for rocket launchers */
-  if (MechWeapons[weapindx].special == ROCKET) {
+  if (weapon_catalogue_specials(weapindx) == ROCKET) {
     if (wWeapMode & ROCKET_FIRED) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    "That weapon has already been used!");
@@ -295,7 +296,7 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
     return 1;
   }
   /* Check RACs - No special ammo type possible */
-  if (MechWeapons[weapindx].special & RAC) {
+  if (weapon_catalogue_has_special(weapindx, RAC)) {
     wMaxShots = CountAmmoForWeapon(mech, weapindx);
 
     if ((wWeapMode & RAC_TWOSHOT_MODE) && (wMaxShots < 2)) {
@@ -486,13 +487,21 @@ void ChannelEmitKill(Mech *mech, Mech *attacker, const char *reason) {
 }
 
 #define NUM_NEIGHBORS 6
-const int dirs[6][2] = {{0, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
+typedef struct HexOffset {
+  int x;
+  int y;
+} HexOffset;
+
+static const HexOffset NEIGHBOR_OFFSETS[NUM_NEIGHBORS] = {
+    {0, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
 
 void visit_neighbor_hexes(BattleMap *map, int tx, int ty,
                           NeighborHexCallback callback, void *context) {
   for (int i = 0; i < NUM_NEIGHBORS; i++) {
-    int x1 = tx + dirs[i][0];
-    int y1 = ty + dirs[i][1];
+    const HexOffset *offset = checked_storage_at_const(
+        NEIGHBOR_OFFSETS, NUM_NEIGHBORS, sizeof(*NEIGHBOR_OFFSETS), (size_t)i);
+    int x1 = tx + offset->x;
+    int y1 = ty + offset->y;
     if (tx % 2 && !(x1 % 2))
       y1--;
     if (x1 < 0 || x1 >= map->map_width || y1 < 0 || y1 >= map->map_height)

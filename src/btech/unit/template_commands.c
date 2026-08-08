@@ -32,3 +32,7 @@ const char *load_cmds[] = {"Reference",
                            "Unit_Era",
                            "Unit_TRO",
                            NULL};
+
+size_t template_load_command_count(void) {
+  return sizeof(load_cmds) / sizeof(*load_cmds) - 1;
+}

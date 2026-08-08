@@ -33,11 +33,22 @@
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
 #define C3_POS_IN_NETWORK -1
 #define C3_POS_NO_ROOM -2
+
+static DbRef *c3i_network_slot(DbRef *network, int index) {
+  return checked_storage_at(network, C3I_NETWORK_SIZE, sizeof(*network),
+                            (size_t)index);
+}
+
+static DbRef c3i_network_value(const DbRef *network, int index) {
+  return *(const DbRef *)checked_storage_at_const(
+      network, C3I_NETWORK_SIZE, sizeof(*network), (size_t)index);
+}
 
 static bool mech_has_c3i(const Mech *mech) {
   return mech_technology_flags_secondary(mech) & C3I_TECH;
@@ -224,13 +235,13 @@ void mech_c3i_network_validate(Mech *mech) {
                        tprintf("VALIDATE INFO: %ld is now in %ld's C3i network",
                                mech_dbref(otherMech), mech_dbref(mech)));
 
-    myTempNetwork[networkSize++] = mech_dbref(otherMech);
+    *c3i_network_slot(myTempNetwork, networkSize++) = mech_dbref(otherMech);
   }
 
   mech_c3i_network_clear(mech, 0);
 
   for (i = 0; i < networkSize; i++)
-    mech_c3i_network_node_set(mech, i, myTempNetwork[i]);
+    mech_c3i_network_node_set(mech, i, c3i_network_value(myTempNetwork, i));
 
   mech_c3i_network_size_set(mech, networkSize);
 
@@ -382,8 +393,9 @@ void mech_c3i_message(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
+  if (buffer != nullptr)
+    buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(char),
+                                strspn(buffer, " \t\r\n\f\v"));
   if (!buffer || !*buffer) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "What do you want to send on the C3i Network?");

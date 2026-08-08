@@ -16,18 +16,27 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 
 static unsigned long lua_schedule_hash(const char *path, const char *name,
                                        DbRef object, time_t minute) {
-  const unsigned char *text;
   unsigned long hash = 2166136261U;
+  size_t index;
 
-  for (text = (const unsigned char *)path; *text; text++)
-    hash = (hash ^ *text) * 16777619U;
-  for (text = (const unsigned char *)name; *text; text++)
-    hash = (hash ^ *text) * 16777619U;
+  for (index = 0; index < strlen(path); index++) {
+    const unsigned char *character =
+        checked_storage_at_const(path, strlen(path), sizeof(*character), index);
+
+    hash = (hash ^ *character) * 16777619U;
+  }
+  for (index = 0; index < strlen(name); index++) {
+    const unsigned char *character =
+        checked_storage_at_const(name, strlen(name), sizeof(*character), index);
+
+    hash = (hash ^ *character) * 16777619U;
+  }
   hash ^= (unsigned long)object;
   hash ^= (unsigned long)minute;
   return hash;
@@ -58,7 +67,8 @@ static int lua_schedule_add_job(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     return 0;
   }
   runtime->schedule_jobs = jobs;
-  job = &jobs[runtime->schedule_job_count++];
+  runtime->schedule_job_count++;
+  job = lua_schedule_job_at(runtime, runtime->schedule_job_count - 1);
   memset(job, 0, sizeof(*job));
   job->root = root;
   job->object = object;
@@ -197,7 +207,7 @@ void lua_schedule_tick(LuaRuntime *runtime, time_t now) {
     runtime->schedule_high_water = minute;
     for (index = 0; index < runtime->global_module_count; index++)
       lua_schedule_collect_module(runtime, LUA_ROOT_GLOBAL_LOGIC,
-                                  runtime->global_modules[index], NOTHING,
+                                  lua_global_module_at(runtime, index), NOTHING,
                                   minute);
     for (object = 0; object < runtime->services->database->top; object++) {
       char path[PATH_MAX];
@@ -211,14 +221,15 @@ void lua_schedule_tick(LuaRuntime *runtime, time_t now) {
     }
   }
   for (index = 0; index < runtime->schedule_job_count;) {
-    LUA_SCHEDULE_JOB *job = &runtime->schedule_jobs[index];
+    LUA_SCHEDULE_JOB *job = lua_schedule_job_at(runtime, index);
 
     if (now >= job->expires) {
       free(job->path);
       free(job->name);
       free(job->cron);
-      runtime->schedule_jobs[index] =
-          runtime->schedule_jobs[--runtime->schedule_job_count];
+      if (index + 1 < runtime->schedule_job_count)
+        *job = *lua_schedule_job_at(runtime, runtime->schedule_job_count - 1);
+      runtime->schedule_job_count--;
       continue;
     }
     if (now >= job->due) {
@@ -226,8 +237,9 @@ void lua_schedule_tick(LuaRuntime *runtime, time_t now) {
       free(job->path);
       free(job->name);
       free(job->cron);
-      runtime->schedule_jobs[index] =
-          runtime->schedule_jobs[--runtime->schedule_job_count];
+      if (index + 1 < runtime->schedule_job_count)
+        *job = *lua_schedule_job_at(runtime, runtime->schedule_job_count - 1);
+      runtime->schedule_job_count--;
       continue;
     }
     index++;
@@ -330,8 +342,8 @@ void do_luaschedule(CommandInvocation *invocation) {
   if (*argument) {
     if (!strncmp(argument, "global_logic/", 13)) {
       lua_schedule_show_module(&invocation->context->evaluation, player,
-                               inspection, LUA_ROOT_GLOBAL_LOGIC, argument + 13,
-                               0);
+                               inspection, LUA_ROOT_GLOBAL_LOGIC,
+                               checked_string_suffix(argument, 13), 0);
       goto done;
     }
     if (lua_valid_relative_path(argument)) {
@@ -368,13 +380,13 @@ void do_luaschedule(CommandInvocation *invocation) {
     for (index = 0; index < runtime->global_module_count; index++) {
       int count;
 
-      if (lua_schedule_count(inspection, LUA_ROOT_GLOBAL_LOGIC,
-                             runtime->global_modules[index], &count, error,
-                             sizeof(error)) &&
+      const char *module = lua_global_module_at(runtime, index);
+
+      if (lua_schedule_count(inspection, LUA_ROOT_GLOBAL_LOGIC, module, &count,
+                             error, sizeof(error)) &&
           count)
         notify_printf(&invocation->context->evaluation, player,
-                      "global_logic/%s: %d schedules (global)",
-                      runtime->global_modules[index], count);
+                      "global_logic/%s: %d schedules (global)", module, count);
     }
     for (object = 0; object < runtime->services->database->top; object++) {
       char path[PATH_MAX];
@@ -383,8 +395,13 @@ void do_luaschedule(CommandInvocation *invocation) {
           !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
         continue;
       for (index = 0; index < path_count; index++) {
-        if (!strcmp(paths[index], path)) {
-          counts[index]++;
+        char **stored_path =
+            checked_storage_at(paths, path_count, sizeof(*paths), index);
+        size_t *stored_count =
+            checked_storage_at(counts, path_count, sizeof(*counts), index);
+
+        if (!strcmp(*stored_path, path)) {
+          (*stored_count)++;
           break;
         }
       }
@@ -399,20 +416,28 @@ void do_luaschedule(CommandInvocation *invocation) {
         if (!new_counts)
           break;
         counts = new_counts;
-        paths[path_count] = strdup(path);
-        counts[path_count++] = 1;
+        *(char **)checked_storage_at(paths, path_count + 1, sizeof(*paths),
+                                     path_count) = strdup(path);
+        *(size_t *)checked_storage_at(counts, path_count + 1, sizeof(*counts),
+                                      path_count) = 1;
+        path_count++;
       }
     }
     for (index = 0; index < path_count; index++) {
       int count;
 
-      if (lua_schedule_count(inspection, LUA_ROOT_OBJECT_LOGIC, paths[index],
+      char **stored_path =
+          checked_storage_at(paths, path_count, sizeof(*paths), index);
+      size_t *stored_count =
+          checked_storage_at(counts, path_count, sizeof(*counts), index);
+
+      if (lua_schedule_count(inspection, LUA_ROOT_OBJECT_LOGIC, *stored_path,
                              &count, error, sizeof(error)) &&
           count)
         notify_printf(&invocation->context->evaluation, player,
                       "object_logic/%s: %d schedules (%zu objects)",
-                      paths[index], count, counts[index]);
-      free(paths[index]);
+                      *stored_path, count, *stored_count);
+      free(*stored_path);
     }
     free(paths);
     free(counts);

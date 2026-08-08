@@ -3,6 +3,7 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 
 #include "mux/commands/command_context.h"
@@ -13,6 +14,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h" // IWYU pragma: keep
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/match.h"
 
 static DbRef promote_dflt(DbRef old, DbRef new) {
@@ -38,7 +40,9 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
                       char *target, DbRef dflt) {
   DbRef result, result1;
   int control;
-  char *buff, *start, *place, *s1, *d1, *temp;
+  char *buff;
+  size_t target_length = strlen(target);
+  size_t target_offset = 0;
 
   /*
    * First, check normally
@@ -51,34 +55,39 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
    * Didn't find it directly.  Recursively do a contents check
    */
 
-  start = target;
-  while (*target) {
+  while (target_offset < target_length) {
 
     /*
      * Fail if no ' characters
      */
 
-    place = target;
-    target = (char *)index(place, '\'');
-    if ((target == nullptr) || !*target)
+    size_t apostrophe_offset = target_offset;
+    while (apostrophe_offset < target_length &&
+           *(const char *)checked_storage_at_const(
+               target, target_length, sizeof(char), apostrophe_offset) != '\'')
+      apostrophe_offset++;
+    if (apostrophe_offset == target_length)
       return dflt;
 
     /*
      * If string started with a ', skip past it
      */
 
-    if (place == target) {
-      target++;
+    if (target_offset == apostrophe_offset) {
+      target_offset++;
       continue;
     }
     /*
      * If next character is not an s or a space, skip past
      */
 
-    temp = target++;
-    if (!*target)
+    size_t container_length = apostrophe_offset;
+    target_offset = apostrophe_offset + 1;
+    if (target_offset == target_length)
       return dflt;
-    if ((*target != 's') && (*target != 'S') && (*target != ' '))
+    char character = *(const char *)checked_storage_at_const(
+        target, target_length, sizeof(char), target_offset);
+    if (character != 's' && character != 'S' && character != ' ')
       continue;
 
     /*
@@ -87,11 +96,12 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
      * * character is a space.
      */
 
-    if (*target != ' ') {
-      target++;
-      if (!*target)
+    if (character != ' ') {
+      target_offset++;
+      if (target_offset == target_length)
         return dflt;
-      if (*target != ' ')
+      if (*(const char *)checked_storage_at_const(
+              target, target_length, sizeof(char), target_offset) != ' ')
         continue;
     }
     /*
@@ -100,9 +110,9 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
      */
 
     buff = alloc_lbuf("is_posess");
-    for (s1 = start, d1 = buff; *s1 && (s1 < temp); *d1++ = (*s1++))
-      ;
-    *d1 = '\0';
+    memcpy(buff, target, container_length);
+    *(char *)checked_storage_at(buff, LBUF_SIZE, sizeof(char),
+                                container_length) = '\0';
 
     /*
      * Look for the container here and in our inventory.  Skip *
@@ -139,10 +149,11 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
      * Look for the object in the container
      */
 
-    init_match(match_context, result1, target, OBJECT_TYPE_NOTYPE);
+    char *remainder = checked_mutable_string_suffix(target, target_offset);
+    init_match(match_context, result1, remainder, OBJECT_TYPE_NOTYPE);
     match_possession(match_context);
     result = match_result(match_context);
-    result = match_possessed(match_context, player, result1, target, result);
+    result = match_possessed(match_context, player, result1, remainder, result);
     if (is_good_obj(match_context->evaluation->world->database, result))
       return result;
     dflt = promote_dflt(dflt, result);
@@ -164,20 +175,30 @@ void parse_range(GameDatabase *database,
   if (buff1 && *buff1) {
     buff2 = parse_to(configuration, &buff1, ',', COMMAND_PARSE_STRIP_TRAILING);
     if (buff1 && *buff1) {
-      while (*buff1 && isspace((unsigned char)*buff1))
-        buff1++;
+      size_t offset = 0;
+      size_t length = strlen(buff1);
+      while (offset < length &&
+             (isspace)(*(const unsigned char *)checked_storage_at_const(
+                 buff1, length, sizeof(char), offset)))
+        offset++;
+      buff1 = checked_mutable_string_suffix(buff1, offset);
       if (*buff1 == NUMBER_TOKEN)
-        buff1++;
+        buff1 = checked_mutable_string_suffix(buff1, 1);
       *high_bound = atoi(buff1);
       if (*high_bound >= database->top)
         *high_bound = database->top - 1;
     } else {
       *high_bound = database->top - 1;
     }
-    while (*buff2 && isspace((unsigned char)*buff2))
-      buff2++;
+    size_t offset = 0;
+    size_t length = strlen(buff2);
+    while (offset < length &&
+           (isspace)(*(const unsigned char *)checked_storage_at_const(
+               buff2, length, sizeof(char), offset)))
+      offset++;
+    buff2 = checked_mutable_string_suffix(buff2, offset);
     if (*buff2 == NUMBER_TOKEN)
-      buff2++;
+      buff2 = checked_mutable_string_suffix(buff2, 1);
     *low_bound = atoi(buff2);
     if (*low_bound < 0)
       *low_bound = 0;
@@ -189,25 +210,27 @@ void parse_range(GameDatabase *database,
 
 int parse_thing_slash(MatchContext *match_context, DbRef player, char *thing,
                       char **after, DbRef *it) {
-  char *str;
+  size_t length = strlen(thing);
+  size_t offset = 0;
 
   /*
    * get name up to /
    */
-  for (str = thing; *str && (*str != '/'); str++)
-    ;
+  while (offset < length && *(const char *)checked_storage_at_const(
+                                thing, length, sizeof(char), offset) != '/')
+    offset++;
 
   /*
    * If no / in string, return failure
    */
 
-  if (!*str) {
+  if (offset == length) {
     *after = nullptr;
     *it = NOTHING;
     return 0;
   }
-  *str++ = '\0';
-  *after = str;
+  *(char *)checked_storage_at(thing, length + 1, sizeof(char), offset) = '\0';
+  *after = checked_storage_at(thing, length + 1, sizeof(char), offset + 1);
 
   /*
    * Look for the object

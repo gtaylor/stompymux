@@ -11,9 +11,9 @@
 
 char *mechIDfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   const MechUnitId id = mech_unit_id(mech);
-  buffer[0] = id.first;
-  buffer[1] = id.second;
-  buffer[2] = '\0';
+  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 0) = id.first;
+  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 1) = id.second;
+  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 2) = '\0';
   return buffer;
 }
 
@@ -36,10 +36,10 @@ char *mechTypefunc(int mode, Mech *mech, char *arg) {
 
   if (!mode) {
     const UnitClass unit_class = mech_class(mech);
-    return mech_types[unit_class];
+    return template_unit_class_name((size_t)unit_class);
   }
   /* Should _alter_ mechtype.. weeeel. */
-  if ((i = compare_array(mech_types, arg)) >= 0)
+  if ((i = compare_array(mech_types, template_unit_class_count(), arg)) >= 0)
     mech_class_set(mech, (UnitClass)i);
   return nullptr;
 }
@@ -49,9 +49,9 @@ char *mechMovefunc(int mode, Mech *mech, char *arg) {
 
   if (!mode) {
     const MechMovementType movement_type = mech_movement_type(mech);
-    return move_types[movement_type];
+    return template_movement_type_name((size_t)movement_type);
   }
-  if ((i = compare_array(move_types, arg)) >= 0)
+  if ((i = compare_array(move_types, template_movement_type_count(), arg)) >= 0)
     mech_movement_type_set(mech, (MechMovementType)i);
   return NULL;
 }
@@ -66,7 +66,6 @@ char *mechTechTimefunc(Mech *mech, char buffer[static LBUF_SIZE]) {
 void apply_mechDamage(Mech *omech, char *buf) {
   Mech *mech = mech_temporary_clone(omech);
   int i, j, i1, i2, i3;
-  char *s;
   int do_mag = 0;
 
   if (mech == nullptr)
@@ -89,46 +88,46 @@ void apply_mechDamage(Mech *omech, char *buf) {
           mech_critical_temporary_failure_set(mech, i, j, 0);
       }
   }
-  s = buf;
-  while (*s) {
-    while (*s && (*s == ' ' || *s == ','))
-      s++;
-    if (!(*s))
+  size_t offset = 0;
+  const size_t input_length = strlen(buf);
+  while (offset < input_length) {
+    offset += strspn(checked_string_suffix(buf, offset), " ,");
+    if (offset >= input_length)
       break;
+    const char *token = checked_string_suffix(buf, offset);
     /* Parse the keyword ; it's one of the many known types */
-    if (sscanf(s, "A:%d/%d", &i1, &i2) == 2) {
+    if (sscanf(token, "A:%d/%d", &i1, &i2) == 2) {
       /* Ordinary armor damage */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         mech_section_armor_set(mech, i1,
                                mech_section_original_armor(mech, i1) - i2);
-    } else if (sscanf(s, "A(R):%d/%d", &i1, &i2) == 2) {
+    } else if (sscanf(token, "A(R):%d/%d", &i1, &i2) == 2) {
       /* Ordinary rear armor damage */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         mech_section_rear_armor_set(
             mech, i1, mech_section_original_rear_armor(mech, i1) - i2);
-    } else if (sscanf(s, "I:%d/%d", &i1, &i2) == 2) {
+    } else if (sscanf(token, "I:%d/%d", &i1, &i2) == 2) {
       /* Ordinary int damage */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         mech_section_internal_set(
             mech, i1, mech_section_original_internal(mech, i1) - i2);
-    } else if (sscanf(s, "C:%d/%d", &i1, &i2) == 2) {
+    } else if (sscanf(token, "C:%d/%d", &i1, &i2) == 2) {
       /* Dest'ed crit */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         mech_critical_destroyed_set(mech, i1, i2, true);
-    } else if (sscanf(s, "G:%d/%d(%d)", &i1, &i2, &i3) == 3) {
+    } else if (sscanf(token, "G:%d/%d(%d)", &i1, &i2, &i3) == 3) {
       /* Glitch */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         if (i2 >= 0 && i2 < NUM_CRITICALS)
           mech_critical_temporary_failure_set(mech, i1, i2, i3);
-    } else if (sscanf(s, "R:%d/%d(%d)", &i1, &i2, &i3) == 3) {
+    } else if (sscanf(token, "R:%d/%d(%d)", &i1, &i2, &i3) == 3) {
       /* Reload */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         if (i2 >= 0 && i2 < NUM_CRITICALS)
           mech_critical_data_set(
               mech, i1, i2, mech_critical_full_ammunition(mech, i1, i2) - i3);
     }
-    while (*s && (*s != ' ' && *s != ','))
-      s++;
+    offset += strcspn(token, " ,");
   }
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (mech_section_internal(mech, i) != mech_section_internal(omech, i))
@@ -177,15 +176,19 @@ static void damage_list_append(char buffer[static LBUF_SIZE], int *count,
   if ((*count)++) {
     size_t length = strlen(buffer);
     if (length + 1 < LBUF_SIZE) {
-      buffer[length] = ',';
-      buffer[length + 1] = '\0';
+      *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), length) =
+          ',';
+      *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), length + 1) =
+          '\0';
     }
   }
   size_t length = strlen(buffer);
   va_list arguments;
   va_start(arguments, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(buffer + length, LBUF_SIZE - length, format, arguments);
+  vsnprintf(
+      checked_storage_region(buffer, LBUF_SIZE, length, LBUF_SIZE - length),
+      LBUF_SIZE - length, format, arguments);
   va_end(arguments);
 }
 
@@ -294,7 +297,6 @@ static int bv_val(int in, int mode) {
 }
 
 int text2bv(const char *text) {
-  const char *c;
   int j = 0;
   int mode_not = 0;
 
@@ -302,13 +304,19 @@ int text2bv(const char *text) {
     return j; /* Allow 'old style' as well */
 
   /* Valid bitvector letters are: a-z (=27), A-Z (=27 more) */
-  for (c = text; *c; c++) {
-    if (*c == '!') {
+  const size_t text_length = strlen(text);
+  for (size_t index = 0; index < text_length; ++index) {
+    char current = *checked_string_suffix(text, index);
+    if (current == '!') {
       mode_not = 1;
-      c++;
+      ++index;
+      if (index >= text_length)
+        break;
+      current = *checked_string_suffix(text, index);
     };
-    if ((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z')) {
-      int k = bv_val(*c, 0);
+    if ((current >= 'a' && current <= 'z') ||
+        (current >= 'A' && current <= 'Z')) {
+      int k = bv_val(current, 0);
 
       if (k) {
         if (mode_not)
@@ -324,17 +332,22 @@ int text2bv(const char *text) {
 
 char *bv2text(int i, char *buffer) {
   int p = 1;
-  char *c = buffer;
+  size_t output = 0;
 
   while (i > 0) {
-    if (i & 1)
-      *(c++) = clamp_int_to_char(bv_val(p, 1));
+    if (i & 1) {
+      *(char *)checked_storage_at(buffer, SBUF_SIZE, sizeof(char), output) =
+          clamp_int_to_char(bv_val(p, 1));
+      ++output;
+    }
     i >>= 1;
     p <<= 1;
   }
-  if (c == buffer)
-    *(c++) = '-';
-  *c = 0;
+  if (output == 0) {
+    *(char *)checked_storage_at(buffer, SBUF_SIZE, sizeof(char), output) = '-';
+    ++output;
+  }
+  *(char *)checked_storage_at(buffer, SBUF_SIZE, sizeof(char), output) = '\0';
   return buffer;
 }
 

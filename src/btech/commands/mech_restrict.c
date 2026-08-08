@@ -13,12 +13,15 @@
 #include <string.h>
 
 #include "autopilot.h"
+#include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_dynamic_api.h"
+#include "map_los_api.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_api_types.h"
 #include "mech_build_api.h"
 #include "mech_c3_api.h"
@@ -42,6 +45,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/formatting.h"
 #include "mux/support/red_black_tree.h"
@@ -54,7 +58,7 @@ static char random_mech_id_character(BtechContext *context) {
 }
 
 static char normalized_mech_id_character(char value) {
-  const int uppercase = toupper((unsigned char)value);
+  const int uppercase = ascii_to_upper(value);
   return (char)BOUNDED('A', uppercase, 'Z');
 }
 
@@ -73,20 +77,21 @@ void clear_mech_from_LOS(Mech *mech) {
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
                      tprintf("LOS info for #%d cleared.", mech_dbref(mech)));
 #endif
-  for (i = 0; i < map->first_free; i++) {
-    map->LOSinfo[mech_map_slot(mech)][i] = 0;
-    map->LOSinfo[i][mech_map_slot(mech)] = 0;
+  for (i = 0; i < battle_map_unit_count(map); i++) {
+    battle_map_los_flags_set(map, mech_map_slot(mech), i, 0);
+    battle_map_los_flags_set(map, i, mech_map_slot(mech), 0);
 
-    if (map->mechsOnMap[i] >= 0 && i != mech_map_slot(mech)) {
-      if (!(mek =
-                btech_context_get_mech(mech_context(mech), map->mechsOnMap[i])))
+    const DbRef unit = battle_map_unit_dbref(map, i);
+    if (unit >= 0 && i != mech_map_slot(mech)) {
+      if (!(mek = btech_context_get_mech(mech_context(mech), unit)))
         continue;
       if (mech_targeting_has_lock_on(mek, mech_dbref(mech))) {
         mech_notify(mek, MECHALL,
                     "Weapon system reports the lock has been lost.");
         mech_lose_lock(mek);
       }
-      if ((map->LOSinfo[i][mech_map_slot(mech)] & MECHLOSFLAG_SEEN) &&
+      if ((battle_map_los_flags(map, i, mech_map_slot(mech)) &
+           MECHLOSFLAG_SEEN) &&
           mech_team(mek) != mech_team(mech))
         mech_seen_count_decrement(mek);
     }
@@ -194,24 +199,29 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
 
   /* Just make it random */
   /* Find a clear spot for this mech */
-  if (nargs > 1 && strlen(args[1]) > 1) {
-    targ[0] = args[1][0];
-    targ[1] = args[1][1];
+  const char *preferred_id =
+      nargs > 1
+          ? *(char **)checked_storage_at(args, (size_t)nargs, sizeof(*args), 1)
+          : nullptr;
+  if (preferred_id != nullptr && strlen(preferred_id) > 1) {
+    targ[0] = *checked_string_suffix(preferred_id, 0);
+    targ[1] = *checked_string_suffix(preferred_id, 1);
   } else if ((tempstr = btech_attribute_read(mech_context(mech)->database,
                                              mech_dbref(mech), A_MECHPREFID,
                                              (char[LBUF_SIZE]){0})) &&
              strlen(tempstr) > 1) {
-    targ[0] = tempstr[0];
-    targ[1] = tempstr[1];
+    targ[0] = *checked_string_suffix(tempstr, 0);
+    targ[1] = *checked_string_suffix(tempstr, 1);
   } else {
     targ[0] = random_mech_id_character(mech_context(mech));
     targ[1] = random_mech_id_character(mech_context(mech));
   }
   targ[0] = normalized_mech_id_character(targ[0]);
   targ[1] = normalized_mech_id_character(targ[1]);
-  for (loop = 0; (loop < newmap->first_free && !notdone); loop++) {
-    if ((tempMech = (Mech *)btech_context_find_object(
-             mech_context(mech), newmap->mechsOnMap[loop]))) {
+  for (loop = 0; (loop < battle_map_unit_count(newmap) && !notdone); loop++) {
+    const DbRef unit = battle_map_unit_dbref(newmap, loop);
+    if ((tempMech =
+             (Mech *)btech_context_find_object(mech_context(mech), unit))) {
       MechUnitId const id = mech_unit_id(tempMech);
       if (id.first == targ[0] && id.second == targ[1])
         notdone = 1;
@@ -221,9 +231,10 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     targ[0] = random_mech_id_character(mech_context(mech));
     targ[1] = random_mech_id_character(mech_context(mech));
     notdone = 0;
-    for (loop = 0; (loop < newmap->first_free && !notdone); loop++) {
-      if ((tempMech = (Mech *)btech_context_find_object(
-               mech_context(mech), newmap->mechsOnMap[loop]))) {
+    for (loop = 0; (loop < battle_map_unit_count(newmap) && !notdone); loop++) {
+      const DbRef unit = battle_map_unit_dbref(newmap, loop);
+      if ((tempMech =
+               (Mech *)btech_context_find_object(mech_context(mech), unit))) {
         MechUnitId const id = mech_unit_id(tempMech);
         if (id.first == targ[0] && id.second == targ[1])
           notdone = 1;
@@ -337,13 +348,8 @@ void newfreemech(DbRef key, void **data,
         /* Destroy any astar path list thats on the AI */
         auto_destroy_astar_path(autopilot);
 
-        /* Destroy profile array */
-        for (i = 0; i < AUTO_PROFILE_MAX_SIZE; i++) {
-          if (autopilot->profile[i]) {
-            red_black_tree_destroy(autopilot->profile[i]);
-          }
-          autopilot->profile[i] = NULL;
-        }
+        /* Destroy profile storage. */
+        autopilot_weapon_profiles_clear(autopilot);
 
         /* Destroy weaponlist */
         auto_destroy_weaplist(autopilot);

@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
+
 #include "test_support.h"
 
 int styled_text_osc8_tests(void) {
@@ -125,22 +127,39 @@ int styled_text_osc8_tests(void) {
     return 1;
 
   memcpy(oversized_link, "[link=\"https://", 15);
-  memset(oversized_link + 15, 'a', 4090);
-  memcpy(oversized_link + 4105, "\"]x[/]", 7);
+  memset(
+      checked_storage_region(oversized_link, sizeof(oversized_link), 15, 4090),
+      'a', 4090);
+  memcpy(
+      checked_storage_region(oversized_link, sizeof(oversized_link), 4105, 7),
+      "\"]x[/]", 7);
   oversized_link[4112] = '\0';
   const char selection_prefix[] =
       "[send=\"x\" selection.group=\"g\" selection.value=\"";
   size_t selection_prefix_size = strlen(selection_prefix);
   memcpy(oversized_selection, selection_prefix, selection_prefix_size);
-  memset(oversized_selection + selection_prefix_size, 'a', 4000);
-  memcpy(oversized_selection + selection_prefix_size + 4000, "\"]x[/]", 7);
-  oversized_selection[selection_prefix_size + 4007] = '\0';
+  memset(checked_storage_region(oversized_selection,
+                                sizeof(oversized_selection),
+                                selection_prefix_size, 4000),
+         'a', 4000);
+  memcpy(checked_storage_region(oversized_selection,
+                                sizeof(oversized_selection),
+                                selection_prefix_size + 4000, 7),
+         "\"]x[/]", 7);
+  *(char *)checked_storage_at(oversized_selection, sizeof(oversized_selection),
+                              sizeof(char), selection_prefix_size + 4007) =
+      '\0';
   const char tooltip_prefix[] = "[send=\"x\" tooltip=\"";
   size_t tooltip_prefix_size = strlen(tooltip_prefix);
   memcpy(oversized_tooltip, tooltip_prefix, tooltip_prefix_size);
-  memset(oversized_tooltip + tooltip_prefix_size, 'a', 4050);
-  memcpy(oversized_tooltip + tooltip_prefix_size + 4050, "\"]x[/]", 7);
-  oversized_tooltip[tooltip_prefix_size + 4057] = '\0';
+  memset(checked_storage_region(oversized_tooltip, sizeof(oversized_tooltip),
+                                tooltip_prefix_size, 4050),
+         'a', 4050);
+  memcpy(checked_storage_region(oversized_tooltip, sizeof(oversized_tooltip),
+                                tooltip_prefix_size + 4050, 7),
+         "\"]x[/]", 7);
+  *(char *)checked_storage_at(oversized_tooltip, sizeof(oversized_tooltip),
+                              sizeof(char), tooltip_prefix_size + 4057) = '\0';
 
   if (!expect_compile("[fg=red]Red[/]", red) ||
       !expect_compile("[fg=red]red [bold]bold[/] red[/]", nested) ||
@@ -530,7 +549,8 @@ int styled_text_osc8_tests(void) {
                                   &send_only, small_link, sizeof(small_link));
   if (!result &&
       (!strstr(small_link, "\033]8;;send:x\033\\") || strlen(small_link) < 7 ||
-       strcmp(small_link + strlen(small_link) - 7, "\033]8;;\033\\")))
+       strcmp(checked_string_suffix(small_link, strlen(small_link) - 7),
+              "\033]8;;\033\\")))
     result = 1;
   styled_text_render_with_options(
       styled_text_test_palette,
@@ -538,7 +558,8 @@ int styled_text_osc8_tests(void) {
       &tier_three_tooltip, small_tier_three, sizeof(small_tier_three));
   if (!result &&
       (!strstr(small_tier_three, "?config=") || strlen(small_tier_three) < 7 ||
-       strcmp(small_tier_three + strlen(small_tier_three) - 7,
+       strcmp(checked_string_suffix(small_tier_three,
+                                    strlen(small_tier_three) - 7),
               "\033]8;;\033\\")))
     result = 1;
   styled_text_render_with_options(
@@ -547,7 +568,9 @@ int styled_text_osc8_tests(void) {
       &tier_four_behavior, small_tier_four, sizeof(small_tier_four));
   if (!result &&
       (!strstr(small_tier_four, "?config=") || strlen(small_tier_four) < 7 ||
-       strcmp(small_tier_four + strlen(small_tier_four) - 7, "\033]8;;\033\\")))
+       strcmp(
+           checked_string_suffix(small_tier_four, strlen(small_tier_four) - 7),
+           "\033]8;;\033\\")))
     result = 1;
   styled_text_render_with_options(
       styled_text_test_palette,
@@ -556,7 +579,9 @@ int styled_text_osc8_tests(void) {
       &tier_five_selection, small_tier_five, sizeof(small_tier_five));
   if (!result &&
       (!strstr(small_tier_five, "?config=") || strlen(small_tier_five) < 7 ||
-       strcmp(small_tier_five + strlen(small_tier_five) - 7, "\033]8;;\033\\")))
+       strcmp(
+           checked_string_suffix(small_tier_five, strlen(small_tier_five) - 7),
+           "\033]8;;\033\\")))
     result = 1;
 
   styled_text_palette_destroy(styled_text_test_palette);

@@ -1,5 +1,7 @@
 #include "template_internal.h"
 
+#include "mux/support/checked_storage.h"
+
 const char *cargo[] = {"Ammo_LBX2",
                        "Ammo_LBX5_LBX",
                        "Ammo_LBX10_LBX",
@@ -439,3 +441,11 @@ const char *cargo[] = {"Ammo_LBX2",
                        NULL};
 
 const int template_cargo_count = sizeof(cargo) / sizeof(*cargo) - 1;
+
+const char *template_cargo_name(int index) {
+  if (index < 0)
+    return nullptr;
+  const char *const *name = checked_storage_at_const(
+      cargo, (size_t)template_cargo_count, sizeof(*cargo), (size_t)index);
+  return *name;
+}

@@ -16,6 +16,7 @@
 #include "mech_sensor_state_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
@@ -57,8 +58,8 @@ void mech_sensor_visibility_refresh(Mech *mech) {
 
     /* Then update the SEES flags. */
 #ifdef ADVANCED_LOS
-    mech_sensor_visibility_update(
-        seer, &los_flags, range, -1, -1, mech, battle_map_visibility(map),
+    los_flags = mech_sensor_visibility_update(
+        seer, los_flags, range, -1, -1, mech, battle_map_visibility(map),
         battle_map_light(map), battle_map_cloud_base(map), 2, 0);
     battle_map_los_flags_set(map, i, num, los_flags);
 #endif
@@ -95,13 +96,14 @@ void mech_sensors_scramble_infrared_and_liteamp(Mech *mech, int time,
       continue;
 
     int sensor = mech_sensor_index(observer, 0);
-    if (sensors[sensor].match_letter[0] == 'I' ||
-        sensors[sensor].match_letter[1] == 'I') {
+    const char *match_letter = mech_sensor_definition(sensor)->match_letter;
+    if (*match_letter == 'I' ||
+        *checked_string_suffix(match_letter, 1) == 'I') {
       if (chance && btech_random_range(mech_context(mech), 1, 100) > chance)
         continue;
       mech_notify(observer, MECHALL, inframsg);
-    } else if (sensors[sensor].match_letter[0] == 'L' ||
-               sensors[sensor].match_letter[1] == 'L') {
+    } else if (*match_letter == 'L' ||
+               *checked_string_suffix(match_letter, 1) == 'L') {
       if (chance && btech_random_range(mech_context(mech), 1, 100) > chance)
         continue;
       mech_notify(observer, MECHALL, liteampmsg);

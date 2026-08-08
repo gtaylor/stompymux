@@ -1,27 +1,34 @@
+#include "btech_text_builder.h"
 #include "checked_conversion.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
+#include "mux/support/checked_storage.h"
 #include "template_internal.h"
 #include "weapon_catalogue_api.h"
 
-int compare_array(char *list[], char *command) {
-  int x;
-
+int compare_array(char *const list[], size_t count, const char *command) {
   if (!list)
     return -1;
-  for (x = 0; list[x]; x++)
-    if (!strcasecmp(list[x], command))
-      return x;
+  for (size_t index = 0; index < count; index++) {
+    char *const *entry =
+        checked_storage_at_const(list, count, sizeof(*list), index);
+    if (!strcasecmp(*entry, command))
+      return clamp_size_to_int(index);
+  }
 
   return -1;
 }
 
-int compare_const_array(const char *const list[], const char *command) {
+int compare_const_array(const char *const list[], size_t count,
+                        const char *command) {
   if (!list)
     return -1;
-  for (int index = 0; list[index]; index++)
-    if (!strcasecmp(list[index], command))
-      return index;
+  for (size_t index = 0; index < count; index++) {
+    const char *const *entry =
+        checked_storage_at_const(list, count, sizeof(*list), index);
+    if (!strcasecmp(*entry, command))
+      return clamp_size_to_int(index);
+  }
   return -1;
 }
 
@@ -31,134 +38,100 @@ static int bit_is_set(int data, size_t index) {
   return (((unsigned int)data & (1U << index)) != 0U);
 }
 
-char *one_arg(char *argument, char *first_arg) {
-  while (*argument && isspace((unsigned char)*argument))
-    argument++;
-
-  while (*argument && !isspace((unsigned char)*argument))
-    *(first_arg++) = *(argument++);
-  *first_arg = '\0';
-  return argument;
+char *one_arg(char *argument, char *first_arg, size_t first_arg_capacity) {
+  size_t start = strspn(argument, " \t\n\v\f\r");
+  char *word = checked_mutable_string_suffix(argument, start);
+  size_t length = strcspn(word, " \t\n\v\f\r");
+  if (length >= first_arg_capacity)
+    length = first_arg_capacity - 1;
+  memcpy(first_arg, word, length);
+  char *terminator = checked_storage_at(first_arg, first_arg_capacity,
+                                        sizeof(*first_arg), length);
+  *terminator = '\0';
+  return checked_mutable_string_suffix(word, strcspn(word, " \t\n\v\f\r"));
 }
 
-char *one_arg_delim(char *argument, char *first_arg) {
-  while (*argument && (isspace((unsigned char)*argument) || *argument == '|'))
-    argument++;
-
-  while (*argument && (!(*argument == '|')))
-    *(first_arg++) = *(argument++);
-
-  *first_arg = '\0';
-  return argument;
+char *one_arg_delim(char *argument, char *first_arg,
+                    size_t first_arg_capacity) {
+  size_t start = strspn(argument, " \t\n\v\f\r|");
+  char *word = checked_mutable_string_suffix(argument, start);
+  size_t source_length = strcspn(word, "|");
+  size_t copy_length = source_length;
+  if (copy_length >= first_arg_capacity)
+    copy_length = first_arg_capacity - 1;
+  memcpy(first_arg, word, copy_length);
+  char *terminator = checked_storage_at(first_arg, first_arg_capacity,
+                                        sizeof(*first_arg), copy_length);
+  *terminator = '\0';
+  return checked_mutable_string_suffix(word, source_length);
 }
 
-char *build_bit_string(const char *const bitdescs[], int data, char *buffer) {
-  size_t length;
-
-  buffer[0] = 0;
-  for (size_t index = 0; bitdescs[index]; index++) {
+static void append_bit_names(BtechTextBuilder *builder,
+                             const char *const descriptions[], size_t count,
+                             int data, char delimiter) {
+  for (size_t index = 0; index < count; index++) {
     if (bit_is_set(data, index)) {
-      strcat(buffer, bitdescs[index]);
-      strcat(buffer, " ");
+      const char *const *description = checked_storage_at_const(
+          descriptions, count, sizeof(*descriptions), index);
+      btech_text_builder_append(builder, *description);
+      btech_text_builder_append_character(builder, delimiter);
     }
   }
-  length = strlen(buffer);
-  if (length > 0 && buffer[length - 1] == ' ')
-    buffer[length - 1] = '\0';
+}
+
+static void remove_trailing_delimiter(BtechTextBuilder *builder,
+                                      char delimiter) {
+  if (builder->length == 0)
+    return;
+  char *last = checked_storage_at(builder->text, builder->capacity,
+                                  sizeof(*builder->text), builder->length - 1);
+  if (*last == delimiter) {
+    *last = '\0';
+    builder->length--;
+  }
+}
+
+char *build_bit_string(const char *const bitdescs[], size_t count, int data,
+                       char *buffer) {
+  BtechTextBuilder builder;
+  btech_text_builder_initialize(&builder, buffer, BTECH_TEXT_CAPACITY);
+  append_bit_names(&builder, bitdescs, count, data, ' ');
+  remove_trailing_delimiter(&builder, ' ');
   return buffer;
 }
 
-char *build_bit_string2(const char *const bitdescs[],
-                        const char *const bitdescs2[], int data, int data2,
-                        char *buffer) {
-  size_t length;
-
-  buffer[0] = 0;
-
-  for (size_t index = 0; bitdescs[index]; index++) {
-    if (bit_is_set(data, index)) {
-      strcat(buffer, bitdescs[index]);
-      strcat(buffer, " ");
-    }
-  }
-
-  for (size_t index = 0; bitdescs2[index]; index++) {
-    if (bit_is_set(data2, index)) {
-      strcat(buffer, bitdescs2[index]);
-      strcat(buffer, " ");
-    }
-  }
-
-  length = strlen(buffer);
-  if (length > 0 && buffer[length - 1] == ' ') {
-    buffer[length - 1] = '\0';
-  }
-
+char *build_bit_string2(const char *const bitdescs[], size_t count,
+                        const char *const bitdescs2[], size_t count2, int data,
+                        int data2, char *buffer) {
+  BtechTextBuilder builder;
+  btech_text_builder_initialize(&builder, buffer, BTECH_TEXT_CAPACITY);
+  append_bit_names(&builder, bitdescs, count, data, ' ');
+  append_bit_names(&builder, bitdescs2, count2, data2, ' ');
+  remove_trailing_delimiter(&builder, ' ');
   return buffer;
 }
 
-char *build_bit_string_delimited2(const char *const bitdescs[],
-                                  const char *const bitdescs2[], int data,
-                                  int data2, char *buffer) {
-  size_t length;
-
-  buffer[0] = 0;
-
-  for (size_t index = 0; bitdescs[index]; index++) {
-    if (bit_is_set(data, index)) {
-      strcat(buffer, bitdescs[index]);
-      strcat(buffer, "|");
-    }
-  }
-
-  for (size_t index = 0; bitdescs2[index]; index++) {
-    if (bit_is_set(data2, index)) {
-      strcat(buffer, bitdescs2[index]);
-      strcat(buffer, "|");
-    }
-  }
-
-  length = strlen(buffer);
-  if (length > 0 && buffer[length - 1] == '|') {
-    buffer[length - 1] = '\0';
-  }
-
+char *build_bit_string_delimited2(const char *const bitdescs[], size_t count,
+                                  const char *const bitdescs2[], size_t count2,
+                                  int data, int data2, char *buffer) {
+  BtechTextBuilder builder;
+  btech_text_builder_initialize(&builder, buffer, BTECH_TEXT_CAPACITY);
+  append_bit_names(&builder, bitdescs, count, data, '|');
+  append_bit_names(&builder, bitdescs2, count2, data2, '|');
+  remove_trailing_delimiter(&builder, '|');
   return buffer;
 }
 
-char *build_bit_string3(const char *const bitdescs[],
-                        const char *const bitdescs2[],
-                        const char *const bitdescs3[], int data, int data2,
-                        int data3, char *buffer) {
-  size_t length;
-
-  buffer[0] = 0;
-
-  for (size_t index = 0; bitdescs[index]; index++) {
-    if (bit_is_set(data, index)) {
-      strcat(buffer, bitdescs[index]);
-      strcat(buffer, " ");
-    }
-  }
-
-  for (size_t index = 0; bitdescs2[index]; index++) {
-    if (bit_is_set(data2, index)) {
-      strcat(buffer, bitdescs2[index]);
-      strcat(buffer, " ");
-    }
-  }
-
-  for (size_t index = 0; bitdescs3[index]; index++) {
-    if (bit_is_set(data3, index)) {
-      strcat(buffer, bitdescs3[index]);
-      strcat(buffer, " ");
-    }
-  }
-
-  length = strlen(buffer);
-  if (length > 0 && buffer[length - 1] == ' ')
-    buffer[length - 1] = '\0';
-
+char *build_bit_string3(const char *const bitdescs[], size_t count,
+                        const char *const bitdescs2[], size_t count2,
+                        const char *const bitdescs3[], size_t count3, int data,
+                        int data2, int data3, char *buffer) {
+  BtechTextBuilder builder;
+  btech_text_builder_initialize(&builder, buffer, BTECH_TEXT_CAPACITY);
+  append_bit_names(&builder, bitdescs, count, data, ' ');
+  append_bit_names(&builder, bitdescs2, count2, data2, ' ');
+  append_bit_names(&builder, bitdescs3, count3, data3, ' ');
+  remove_trailing_delimiter(&builder, ' ');
   return buffer;
 }
 
@@ -185,21 +158,22 @@ static bool part_weapon_name_allowed(const ServerConfiguration *configuration,
   (void)configuration;
   (void)brand;
   (void)is_clan;
-  return !(MechWeapons[weapon].special & CLAT);
+  return !weapon_catalogue_has_special(weapon, CLAT);
 #else
   if (brand) {
-    if (!configuration->btech_parts || (MechWeapons[weapon].special & CLAT))
+    if (!configuration->btech_parts ||
+        weapon_catalogue_has_special(weapon, CLAT))
       return false;
-    if (MechWeapons[weapon].special & CLAT)
+    if (weapon_catalogue_has_special(weapon, CLAT))
       *is_clan = 1;
   }
   return true;
 #endif
 }
 
-static int part_weapon_short_name_offset(int weapon) {
+static size_t part_weapon_short_name_offset(int weapon) {
 #ifdef CLAN_SUPPORT
-  return !strncasecmp(MechWeapons[weapon].name, "CL.", 2) ? 0 : 3;
+  return !strncasecmp(weapon_catalogue_name(weapon), "CL.", 2) ? 0 : 3;
 #else
   (void)weapon;
   return 3;
@@ -218,8 +192,9 @@ static char *part_figure_out_name_sub(const ServerConfiguration *configuration,
     if (!part_weapon_name_allowed(configuration, weapon_from_equipment_index(i),
                                   brand, &isclan))
       return nullptr;
-    source = &MechWeapons[weapon_from_equipment_index(i)]
-                  .name[(j && !isclan) ? 3 : 0];
+    source = checked_string_suffix(
+        weapon_catalogue_name(weapon_from_equipment_index(i)),
+        (j && !isclan) ? 3 : 0);
     snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
     return buffer;
   } else if (equipment_is_ammunition(i) &&
@@ -227,12 +202,13 @@ static char *part_figure_out_name_sub(const ServerConfiguration *configuration,
     if (!part_weapon_name_allowed(configuration, ammunition_to_weapon_index(i),
                                   brand, &isclan))
       return nullptr;
-    if (MechWeapons[ammunition_to_weapon_index(i)].type != TBEAM &&
-        MechWeapons[ammunition_to_weapon_index(i)].type != THAND &&
-        !(MechWeapons[ammunition_to_weapon_index(i)].special & PCOMBAT)) {
+    int weapon = ammunition_to_weapon_index(i);
+    if (weapon_catalogue_type(weapon) != TBEAM &&
+        weapon_catalogue_type(weapon) != THAND &&
+        !weapon_catalogue_has_special(weapon, PCOMBAT)) {
       snprintf(buffer, BTECH_TEXT_CAPACITY, "Ammo_%s",
-               &MechWeapons[ammunition_to_weapon_index(i)]
-                    .name[(j && !isclan) ? 3 : 0]);
+               checked_string_suffix(weapon_catalogue_name(weapon),
+                                     (j && !isclan) ? 3 : 0));
       return buffer;
     }
   } else if (!brand) {
@@ -243,12 +219,12 @@ static char *part_figure_out_name_sub(const ServerConfiguration *configuration,
     } else if (equipment_is_special(i) &&
                i < special_equipment_index(template_internal_count)) {
       snprintf(buffer, BTECH_TEXT_CAPACITY, "%s",
-               internals[special_from_equipment_index(i)]);
+               template_internal_name(special_from_equipment_index(i)));
       return buffer;
     } else if (equipment_is_cargo(i) &&
                i < cargo_equipment_index(template_cargo_count)) {
       snprintf(buffer, BTECH_TEXT_CAPACITY, "%s",
-               cargo[cargo_from_equipment_index(i)]);
+               template_cargo_name(cargo_from_equipment_index(i)));
       return buffer;
     }
   }
@@ -257,23 +233,36 @@ static char *part_figure_out_name_sub(const ServerConfiguration *configuration,
 
 char *my_shortform(const char *source,
                    char buffer[static BTECH_TEXT_CAPACITY]) {
-  const char *cursor;
-  char *destination = buffer;
-  char *end = buffer + BTECH_TEXT_CAPACITY - 1;
-
   if (!source)
     return nullptr;
   if (strlen(source) <= 4 && !strchr(source, '/'))
     snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
   else {
-    for (cursor = source; *cursor && destination < end; cursor++)
-      if (isdigit(*cursor) || isupper(*cursor) || *cursor == '_')
-        *destination++ = *cursor;
-    *destination = '\0';
-    if (destination == buffer + 1 && source[1] && destination < end) {
-      *destination++ = source[1];
-      *destination = '\0';
+    size_t source_length = strlen(source);
+    size_t output_length = 0;
+    for (size_t index = 0;
+         index < source_length && output_length < BTECH_TEXT_CAPACITY - 1;
+         index++) {
+      const char *character = checked_storage_at_const(
+          source, source_length + 1, sizeof(*source), index);
+      if ((*character >= '0' && *character <= '9') ||
+          (*character >= 'A' && *character <= 'Z') || *character == '_') {
+        char *destination = checked_storage_at(
+            buffer, BTECH_TEXT_CAPACITY, sizeof(*buffer), output_length++);
+        *destination = *character;
+      }
     }
+    if (output_length == 1 && source_length > 1 &&
+        output_length < BTECH_TEXT_CAPACITY - 1) {
+      const char *second = checked_storage_at_const(source, source_length + 1,
+                                                    sizeof(*source), 1);
+      char *destination = checked_storage_at(buffer, BTECH_TEXT_CAPACITY,
+                                             sizeof(*buffer), output_length++);
+      *destination = *second;
+    }
+    char *terminator = checked_storage_at(buffer, BTECH_TEXT_CAPACITY,
+                                          sizeof(*buffer), output_length);
+    *terminator = '\0';
   }
   return buffer;
 }
@@ -284,25 +273,27 @@ char *part_figure_out_shname(int i, char buffer[static BTECH_TEXT_CAPACITY]) {
   if (!i)
     return nullptr;
   if (equipment_is_weapon(i) && i < weapon_equipment_index(num_def_weapons)) {
-    snprintf(name, sizeof(name), "%s",
-             &MechWeapons[weapon_from_equipment_index(i)]
-                  .name[part_weapon_short_name_offset(
-                      weapon_from_equipment_index(i))]);
+    snprintf(
+        name, sizeof(name), "%s",
+        checked_string_suffix(
+            weapon_catalogue_name(weapon_from_equipment_index(i)),
+            part_weapon_short_name_offset(weapon_from_equipment_index(i))));
   } else if (equipment_is_ammunition(i) &&
              i < ammunition_equipment_index(num_def_weapons)) {
     snprintf(name, sizeof(name), "Ammo_%s",
-             &MechWeapons[ammunition_to_weapon_index(i)]
-                  .name[part_weapon_short_name_offset(
-                      ammunition_to_weapon_index(i))]);
+             checked_string_suffix(
+                 weapon_catalogue_name(ammunition_to_weapon_index(i)),
+                 part_weapon_short_name_offset(ammunition_to_weapon_index(i))));
   } else if (equipment_is_bomb(i))
     snprintf(name, sizeof(name), "Bomb_%s",
              bomb_name(bomb_from_equipment_index(i)));
   else if (equipment_is_special(i) &&
            i < special_equipment_index(template_internal_count))
     snprintf(name, sizeof(name), "%s",
-             internals[special_from_equipment_index(i)]);
+             template_internal_name(special_from_equipment_index(i)));
   if (equipment_is_cargo(i) && i < cargo_equipment_index(template_cargo_count))
-    snprintf(name, sizeof(name), "%s", cargo[cargo_from_equipment_index(i)]);
+    snprintf(name, sizeof(name), "%s",
+             template_cargo_name(cargo_from_equipment_index(i)));
   if (!name[0])
     return nullptr;
   return my_shortform(name, buffer);
@@ -371,29 +362,29 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
             get_parts_vlong_name(mech->xcode.context,
                                  mech_critical_part_type(mech, x, y), 0),
             (wFireModes || wAmmoModes)
-                ? build_bit_string_delimited2(crit_fire_modes, crit_ammo_modes,
-                                              wFireModes, wAmmoModes,
-                                              (char[BTECH_TEXT_CAPACITY]){0})
+                ? build_bit_string_delimited2(
+                      crit_fire_modes, template_critical_fire_mode_count(),
+                      crit_ammo_modes, template_critical_ammo_mode_count(),
+                      wFireModes, wAmmoModes, (char[BTECH_TEXT_CAPACITY]){0})
                 : "-",
             !mech->xcode.context->configuration->btech_parts
                 ? ""
                 : tprintf("%d ", mech_critical_brand(mech, x, y)));
-  else if (equipment_is_ammunition(((mech)->ud.sections)[x].criticals[y].type))
+  else if (equipment_is_ammunition(mech_critical_part_type(mech, x, y)))
     fprintf(fp, "    %s		  { %s %d %s - }\n", crit,
             get_parts_vlong_name(mech->xcode.context,
                                  mech_critical_part_type(mech, x, y), 0),
             FullAmmo(mech, x, y),
-            (((mech)->ud.sections)[x].criticals[y].firemode ||
-             ((mech)->ud.sections)[x].criticals[y].ammomode)
+            (mech_critical_fire_mode(mech, x, y) ||
+             mech_critical_ammo_mode(mech, x, y))
                 ? build_bit_string_delimited2(
-                      crit_fire_modes, crit_ammo_modes,
-                      clamp_unsigned_int_to_int(
-                          ((mech)->ud.sections)[x].criticals[y].firemode),
-                      clamp_unsigned_int_to_int(
-                          ((mech)->ud.sections)[x].criticals[y].ammomode),
+                      crit_fire_modes, template_critical_fire_mode_count(),
+                      crit_ammo_modes, template_critical_ammo_mode_count(),
+                      mech_critical_fire_mode(mech, x, y),
+                      mech_critical_ammo_mode(mech, x, y),
                       (char[BTECH_TEXT_CAPACITY]){0})
                 : "-");
-  else if (equipment_is_bomb(((mech)->ud.sections)[x].criticals[y].type))
+  else if (equipment_is_bomb(mech_critical_part_type(mech, x, y)))
     fprintf(fp, "    %s		  { %s - - - }\n", crit,
             get_parts_vlong_name(mech->xcode.context,
                                  mech_critical_part_type(mech, x, y), 0));
@@ -411,18 +402,24 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
   return (y1 - y + 1);
 }
 
-void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[]) {
+void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
+                    size_t location_count) {
   int x, y, l;
   char buf[512];
-  char *ch;
 
-  for (x = 0; locdesc[x]; x++) {
+  for (x = 0; (size_t)x < location_count; x++) {
     if (!mech_section_original_internal(mech, x))
       continue;
-    strcpy(buf, locdesc[x]);
-    for (ch = buf; *ch; ch++)
-      if (*ch == ' ')
-        *ch = '_';
+    const char *const *location = checked_storage_at_const(
+        locdesc, location_count, sizeof(*locdesc), (size_t)x);
+    strcpy(buf, *location);
+    size_t location_length = strlen(buf);
+    for (size_t index = 0; index < location_length; index++) {
+      char *character =
+          checked_storage_at(buf, sizeof(buf), sizeof(*buf), index);
+      if (*character == ' ')
+        *character = '_';
+    }
     fprintf(fp, "%s\n", buf);
     if (mech_section_original_armor(mech, x))
       fprintf(fp, "  Armor            { %d }\n",
@@ -433,12 +430,13 @@ void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[]) {
     if (mech_section_original_rear_armor(mech, x))
       fprintf(fp, "  Rear             { %d }\n",
               mech_section_original_rear_armor(mech, x));
-    y = ((mech)->ud.sections)[x].config;
+    y = mech_section_configuration(mech, x);
     y &= ~CASE_TECH;
     if (y)
-      fprintf(
-          fp, "  Config           { %s }\n",
-          build_bit_string(section_configs, y, (char[BTECH_TEXT_CAPACITY]){0}));
+      fprintf(fp, "  Config           { %s }\n",
+              build_bit_string(section_configs,
+                               template_section_configuration_count(), y,
+                               (char[BTECH_TEXT_CAPACITY]){0}));
     l = CritsInLoc(mech, x);
     for (y = 0; y < l;)
       y += dump_item(fp, mech, x, y);

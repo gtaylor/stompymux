@@ -3,13 +3,20 @@
 static CharacterFixedState fixed_state_from_stats(BtechContext *context,
                                                   PSTATS *stats) {
   return (CharacterFixedState){
-      .bruise = stats->values[char_getvaluecode(context, "Bruise")],
-      .lethal = stats->values[char_getvaluecode(context, "Lethal")],
-      .build = stats->values[char_getvaluecode(context, "Build")],
-      .reflexes = stats->values[char_getvaluecode(context, "Reflexes")],
-      .intuition = stats->values[char_getvaluecode(context, "Intuition")],
-      .learn = stats->values[char_getvaluecode(context, "Learn")],
-      .charisma = stats->values[char_getvaluecode(context, "Charisma")],
+      .bruise = character_stats_value_get(stats,
+                                          char_getvaluecode(context, "Bruise")),
+      .lethal = character_stats_value_get(stats,
+                                          char_getvaluecode(context, "Lethal")),
+      .build =
+          character_stats_value_get(stats, char_getvaluecode(context, "Build")),
+      .reflexes = character_stats_value_get(
+          stats, char_getvaluecode(context, "Reflexes")),
+      .intuition = character_stats_value_get(
+          stats, char_getvaluecode(context, "Intuition")),
+      .learn =
+          character_stats_value_get(stats, char_getvaluecode(context, "Learn")),
+      .charisma = character_stats_value_get(
+          stats, char_getvaluecode(context, "Charisma")),
   };
 }
 
@@ -17,22 +24,31 @@ static void fixed_state_to_stats(BtechContext *context,
                                  const CharacterFixedState *fixed, int modes,
                                  PSTATS *stats) {
   if (modes & VALUES_HEALTH) {
-    stats->values[char_getvaluecode(context, "Bruise")] = fixed->bruise;
-    stats->values[char_getvaluecode(context, "Lethal")] = fixed->lethal;
+    character_stats_value_set(stats, char_getvaluecode(context, "Bruise"),
+                              fixed->bruise);
+    character_stats_value_set(stats, char_getvaluecode(context, "Lethal"),
+                              fixed->lethal);
   }
   if (modes & VALUES_ATTRS) {
-    stats->values[char_getvaluecode(context, "Build")] = fixed->build;
-    stats->values[char_getvaluecode(context, "Reflexes")] = fixed->reflexes;
-    stats->values[char_getvaluecode(context, "Intuition")] = fixed->intuition;
-    stats->values[char_getvaluecode(context, "Learn")] = fixed->learn;
-    stats->values[char_getvaluecode(context, "Charisma")] = fixed->charisma;
+    character_stats_value_set(stats, char_getvaluecode(context, "Build"),
+                              fixed->build);
+    character_stats_value_set(stats, char_getvaluecode(context, "Reflexes"),
+                              fixed->reflexes);
+    character_stats_value_set(stats, char_getvaluecode(context, "Intuition"),
+                              fixed->intuition);
+    character_stats_value_set(stats, char_getvaluecode(context, "Learn"),
+                              fixed->learn);
+    character_stats_value_set(stats, char_getvaluecode(context, "Charisma"),
+                              fixed->charisma);
   }
 }
 
 static bool selected_variable_value(int code, int modes) {
-  return ((modes & VALUES_SKILLS) && char_values[code].type == CHAR_SKILL) ||
+  return ((modes & VALUES_SKILLS) &&
+          character_value_definition(code)->type == CHAR_SKILL) ||
          ((modes & VALUES_ADVS) &&
-          (char_values[code].type == CHAR_ADVANTAGE || code == LIVES_NUMBER));
+          (character_value_definition(code)->type == CHAR_ADVANTAGE ||
+           code == LIVES_NUMBER));
 }
 
 static void store_variable_values(BtechContext *context, DbRef player,
@@ -41,22 +57,24 @@ static void store_variable_values(BtechContext *context, DbRef player,
     if (!selected_variable_value(code, modes))
       continue;
     int default_value = code == LIVES_NUMBER ? 1 : 0;
-    if (stats->values[code] == default_value && stats->xp[code] == 0 &&
-        stats->last_use[code] == 0) {
-      character_state_value_remove(context->database, player,
-                                   char_values[code].name);
+    const CharacterValue *definition = character_value_definition(code);
+    if (character_stats_value_get(stats, code) == default_value &&
+        character_stats_xp_get(stats, code) == 0 &&
+        character_stats_last_use_get(stats, code) == 0) {
+      character_state_value_remove(context->database, player, definition->name);
       continue;
     }
-    character_state_value_set(context->database, player, char_values[code].name,
-                              stats->values[code], stats->xp[code],
-                              stats->last_use[code]);
+    character_state_value_set(context->database, player, definition->name,
+                              character_stats_value_get(stats, code),
+                              character_stats_xp_get(stats, code),
+                              character_stats_last_use_get(stats, code));
   }
 }
 
 static void retrieve_variable_values(BtechContext *context, DbRef player,
                                      int modes, PSTATS *stats) {
   if (modes & VALUES_ADVS)
-    stats->values[LIVES_NUMBER] = 1;
+    character_stats_value_set(stats, LIVES_NUMBER, 1);
   for (size_t index = 0;
        index < character_state_value_count(context->database, player);
        index++) {
@@ -66,9 +84,9 @@ static void retrieve_variable_values(BtechContext *context, DbRef player,
     int code = char_getvaluecode(context, entry.name);
     if (code < 0 || !selected_variable_value(code, modes))
       continue;
-    stats->values[code] = entry.value;
-    stats->xp[code] = entry.xp;
-    stats->last_use[code] = entry.last_used;
+    character_stats_value_set(stats, code, entry.value);
+    character_stats_xp_set(stats, code, entry.xp);
+    character_stats_last_use_set(stats, code, entry.last_used);
   }
 }
 
@@ -124,9 +142,12 @@ bool character_state_validate_all(BtechContext *context) {
                                        &entry))
         return false;
       int code = char_getvaluecode(context, entry.name);
-      if (code < 0 || strcmp(entry.name, char_values[code].name) != 0 ||
-          (char_values[code].type != CHAR_SKILL &&
-           char_values[code].type != CHAR_ADVANTAGE && code != LIVES_NUMBER))
+      if (code < 0)
+        return false;
+      const CharacterValue *definition = character_value_definition(code);
+      if (strcmp(entry.name, definition->name) != 0 ||
+          (definition->type != CHAR_SKILL &&
+           definition->type != CHAR_ADVANTAGE && code != LIVES_NUMBER))
         return false;
     }
   }

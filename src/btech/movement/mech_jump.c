@@ -56,6 +56,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -258,8 +259,9 @@ void mech_jump(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    targetID[0] = args[0][0];
-    targetID[1] = args[0][1];
+    char **target_argument_slot = checked_storage_at(args, 3, sizeof(*args), 0);
+    targetID[0] = *checked_string_suffix(*target_argument_slot, 0);
+    targetID[1] = *checked_string_suffix(*target_argument_slot, 1);
     target = FindTargetDBREFFromMapNumber(mech, targetID);
     tempMech = btech_context_get_mech(context, target);
     if (!tempMech) {

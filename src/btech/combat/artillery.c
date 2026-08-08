@@ -46,10 +46,12 @@
 #include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mymath.h"
 #include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 
 static void artillery_hit(artillery_shot *s);
 
@@ -59,12 +61,21 @@ static const char *artillery_type(artillery_shot *s) {
   return "a round";
 }
 
-static struct {
+typedef struct ArtilleryDirection {
   int dir;
   const char *desc;
-} arty_dirs[] = {{0, "north"},       {60, "northeast"},  {90, "east"},
-                 {120, "southeast"}, {180, "south"},     {240, "southwest"},
-                 {270, "west"},      {300, "northwest"}, {0, NULL}};
+} ArtilleryDirection;
+
+static const ArtilleryDirection arty_dirs[] = {
+    {0, "north"},       {60, "northeast"},  {90, "east"},
+    {120, "southeast"}, {180, "south"},     {240, "southwest"},
+    {270, "west"},      {300, "northwest"}, {0, nullptr}};
+
+static const ArtilleryDirection *artillery_direction_at(size_t index) {
+  return checked_storage_at_const(arty_dirs,
+                                  sizeof(arty_dirs) / sizeof(*arty_dirs),
+                                  sizeof(*arty_dirs), index);
+}
 
 static const char *artillery_direction(artillery_shot *s) {
   float fx, fy, tx, ty;
@@ -73,8 +84,8 @@ static const char *artillery_direction(artillery_shot *s) {
   MapCoordToRealCoord(s->from_x, s->from_y, &fx, &fy);
   MapCoordToRealCoord(s->to_x, s->to_y, &tx, &ty);
   b = FindBearing(fx, fy, tx, ty);
-  for (i = 0; arty_dirs[i].desc; i++) {
-    d = abs(b - arty_dirs[i].dir);
+  for (i = 0; artillery_direction_at((size_t)i)->desc; i++) {
+    d = abs(b - artillery_direction_at((size_t)i)->dir);
     if (best < 0 || d < bestd) {
       best = i;
       bestd = d;
@@ -82,7 +93,7 @@ static const char *artillery_direction(artillery_shot *s) {
   }
   if (best < 0)
     return "Invalid";
-  return arty_dirs[best].desc;
+  return artillery_direction_at((size_t)best)->desc;
 }
 
 int artillery_round_flight_time(float fx, float fy, float tx, float ty) {
@@ -168,10 +179,10 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
   else
     ground_zero = MAX(0, battle_map_hex_elevation(map, tx, ty));
 
-  for (loop = 0; loop < map->first_free; loop++)
-    if (map->mechsOnMap[loop] >= 0) {
-      tempMech = btech_context_get_mech(battle_map_context(map),
-                                        map->mechsOnMap[loop]);
+  for (loop = 0; loop < battle_map_unit_count(map); loop++) {
+    const DbRef unit = battle_map_unit_dbref(map, loop);
+    if (unit >= 0) {
+      tempMech = btech_context_get_mech(battle_map_context(map), unit);
       if (!tempMech)
         continue;
       if (mech_position_x(tempMech) != tx || mech_position_y(tempMech) != ty)
@@ -223,6 +234,7 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
       }
       mech_heat_effect_apply(nullptr, tempMech, heatdam, false);
     }
+  }
 }
 
 void blast_hit_hex(BattleMap *map, int dam, int singlehitsize, int heatdam,
@@ -386,10 +398,13 @@ static void artillery_cluster_hit(BattleMap *map, artillery_shot *s, int type,
   int xd, yd, x, y;
   int i;
 
-  int targets[5][5];
+  typedef struct ArtilleryTargetGrid {
+    int cells[25];
+  } ArtilleryTargetGrid;
+  ArtilleryTargetGrid targets;
   int d;
 
-  bzero(targets, sizeof(targets));
+  bzero(&targets, sizeof(targets));
   for (i = 0; i < dam; i++) {
     do {
       xd = btech_random_range_int(battle_map_context(map), -2, 0) +
@@ -400,11 +415,15 @@ static void artillery_cluster_hit(BattleMap *map, artillery_shot *s, int type,
       y = ty + yd;
     } while (x < 0 || x >= map->map_width || y < 0 || y >= map->map_height);
     /* Whee.. it's time to drop a bomb to the hex */
-    targets[xd + 2][yd + 2]++;
+    int *target = checked_storage_at(targets.cells, 25, sizeof(*targets.cells),
+                                     (size_t)((xd + 2) * 5 + yd + 2));
+    (*target)++;
   }
   for (xd = 0; xd < 5; xd++)
     for (yd = 0; yd < 5; yd++)
-      if ((d = targets[xd][yd]))
+      if ((d = *(const int *)checked_storage_at_const(targets.cells, 25,
+                                                      sizeof(*targets.cells),
+                                                      (size_t)(xd * 5 + yd))))
         artillery_hit_hex(map, s, type, mode, d * 2, xd + tx - 2, yd + ty - 2,
                           1);
 }
@@ -455,7 +474,7 @@ static void artillery_hit(artillery_shot *s) {
   int weight;
   BattleMap *map = btech_context_get_map(s->context, s->map);
   int original_x = 0, original_y = 0;
-  int dam = MechWeapons[s->type].damage;
+  int dam = weapon_catalogue_damage(s->type);
 
   if (!map)
     return;
@@ -480,18 +499,21 @@ static void artillery_hit(artillery_shot *s) {
   }
   /* It's time to run for your lives, lil' ones ;-) */
   if (!(s->mode & ARTILLERY_MODES))
-    HexLOSBroadcast(map, s->to_x, s->to_y,
-                    tprintf("%s fire hits $H!", &MechWeapons[s->type].name[3]));
+    HexLOSBroadcast(
+        map, s->to_x, s->to_y,
+        tprintf("%s fire hits $H!",
+                checked_string_suffix(weapon_catalogue_name(s->type), 3)));
   else if (s->mode & CLUSTER_MODE)
     HexLOSBroadcast(map, s->to_x, s->to_y,
                     "A rain of small bomblets hits $H's surroundings!");
   else if (s->mode & MINE_MODE)
     HexLOSBroadcast(map, s->to_x, s->to_y, "A rain of small bomblets hits $H!");
   else if (s->mode & SMOKE_MODE)
-    HexLOSBroadcast(map, s->to_x, s->to_y,
-                    tprintf("A %s %s hits $h, and smoke starts to billow!",
-                            &MechWeapons[s->type].name[3],
-                            &(artillery_type(s)[2])));
+    HexLOSBroadcast(
+        map, s->to_x, s->to_y,
+        tprintf("A %s %s hits $h, and smoke starts to billow!",
+                checked_string_suffix(weapon_catalogue_name(s->type), 3),
+                checked_string_suffix(artillery_type(s), 2)));
 
   /* Basic theory:
      - smoke / ordinary rounds are spread with the ordinary functions

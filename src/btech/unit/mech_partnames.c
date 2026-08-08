@@ -22,6 +22,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
@@ -59,6 +60,45 @@ typedef enum PartNameField {
   PART_NAME_VERY_LONG,
 } PartNameField;
 
+static PartNameEntry **part_index_slot(PartNameRegistry *registry, int brand,
+                                       int id) {
+  if (brand < 0 || brand > BRANDCOUNT || id < 0 || id >= NUM_ITEMS)
+    abort();
+  size_t index = (size_t)brand * NUM_ITEMS + (size_t)id;
+  return checked_storage_at(registry->index_sorted,
+                            (BRANDCOUNT + 1) * NUM_ITEMS,
+                            sizeof(PartNameEntry *), index);
+}
+
+static PartNameEntry *part_index_entry(PartNameRegistry *registry, int brand,
+                                       int id) {
+  return *part_index_slot(registry, brand, id);
+}
+
+static PartNameEntry **sorted_slot(PartNameEntry **entries, size_t count,
+                                   size_t index) {
+  return checked_storage_at(entries, count, sizeof(*entries), index);
+}
+
+static PartNameEntry *sorted_entry(PartNameEntry **entries, size_t count,
+                                   size_t index) {
+  return *sorted_slot(entries, count, index);
+}
+
+static void lowercase_name(char output[static MBUF_SIZE], const char *name) {
+  size_t length = strlen(name);
+  for (size_t index = 0; index < length; index++) {
+    const char *source =
+        checked_storage_at_const(name, length + 1, sizeof(*name), index);
+    char *destination =
+        checked_storage_at(output, MBUF_SIZE, sizeof(*output), index);
+    *destination = ascii_to_lower(*source);
+  }
+  char *terminator =
+      checked_storage_at(output, MBUF_SIZE, sizeof(*output), length);
+  *terminator = '\0';
+}
+
 static const char *part_name_field(const PartNameEntry *entry,
                                    PartNameField field) {
   switch (field) {
@@ -72,24 +112,32 @@ static const char *part_name_field(const PartNameEntry *entry,
   return "";
 }
 
-static void insert_sorted_name(PartNameEntry **entries, int count,
-                               PartNameEntry *entry, PartNameField field) {
+static void insert_sorted_name(PartNameEntry **entries, size_t capacity,
+                               int count, PartNameEntry *entry,
+                               PartNameField field) {
   int insertion = 0;
 
-  while (insertion < count &&
-         strcmp(part_name_field(entry, field),
-                part_name_field(entries[insertion], field)) >= 0)
+  while (
+      insertion < count &&
+      strcmp(part_name_field(entry, field),
+             part_name_field(sorted_entry(entries, capacity, (size_t)insertion),
+                             field)) >= 0)
     insertion++;
   for (int index = count; index > insertion; index--)
-    entries[index] = entries[index - 1];
-  entries[insertion] = entry;
+    *sorted_slot(entries, capacity, (size_t)index) =
+        sorted_entry(entries, capacity, (size_t)(index - 1));
+  *sorted_slot(entries, capacity, (size_t)insertion) = entry;
 }
 
 static void insert_sorted_brandname(PartNameRegistry *registry, int count,
                                     PartNameEntry *entry) {
-  insert_sorted_name(registry->short_sorted, count, entry, PART_NAME_SHORT);
-  insert_sorted_name(registry->long_sorted, count, entry, PART_NAME_LONG);
-  insert_sorted_name(registry->vlong_sorted, count, entry, PART_NAME_VERY_LONG);
+  size_t capacity = (size_t)registry->object_count;
+  insert_sorted_name(registry->short_sorted, capacity, count, entry,
+                     PART_NAME_SHORT);
+  insert_sorted_name(registry->long_sorted, capacity, count, entry,
+                     PART_NAME_LONG);
+  insert_sorted_name(registry->vlong_sorted, capacity, count, entry,
+                     PART_NAME_VERY_LONG);
 }
 
 extern const char *mech_part_brand_name(int, int);
@@ -146,7 +194,7 @@ static int create_brandname(PartNameRegistry *registry,
     strcpy(buf, c);
   p->shorty = strdup(buf);
   p->index = packed_part(id, b);
-  registry->index_sorted[b][id] = p;
+  *part_index_slot(registry, b, id) = p;
   return 1;
 }
 
@@ -156,7 +204,6 @@ void initialize_partname_tables(BtechContext *context) {
   int i;
   int j, c = 0, m, n;
   char tmpbuf[MBUF_SIZE];
-  char *tmpc1, *tmpc2;
 
   if (registry == nullptr)
     exit(EXIT_FAILURE);
@@ -167,28 +214,25 @@ void initialize_partname_tables(BtechContext *context) {
   Create(registry->short_sorted, PartNameEntry *, (size_t)c);
   Create(registry->long_sorted, PartNameEntry *, (size_t)c);
   Create(registry->vlong_sorted, PartNameEntry *, (size_t)c);
+  registry->object_count = c;
   /* bubble-sort 'em and insert to array */
   i = 0;
   for (m = 0; m <= BRANDCOUNT; m++)
     for (n = 0; n < NUM_ITEMS; n++)
-      if (registry->index_sorted[m][n])
-        insert_sorted_brandname(registry, i++, registry->index_sorted[m][n]);
+      if (part_index_entry(registry, m, n))
+        insert_sorted_brandname(registry, i++,
+                                part_index_entry(registry, m, n));
   hash_table_initialize(&registry->short_hash, 20 * HASH_FACTOR);
   hash_table_initialize(&registry->vlong_hash, 20 * HASH_FACTOR);
   for (i = 0; i < c; i++) {
-    for (tmpc1 = registry->short_sorted[i]->shorty, tmpc2 = tmpbuf; *tmpc1;
-         tmpc1++, tmpc2++)
-      *tmpc2 = ascii_to_lower(*tmpc1);
-    *tmpc2 = 0;
+    PartNameEntry *entry =
+        sorted_entry(registry->short_sorted, (size_t)c, (size_t)i);
+    lowercase_name(tmpbuf, entry->shorty);
     hash_table_add(tmpbuf, (void *)(intptr_t)(i + 1), &registry->short_hash);
 
-    for (tmpc1 = registry->short_sorted[i]->vlongy, tmpc2 = tmpbuf; *tmpc1;
-         tmpc1++, tmpc2++)
-      *tmpc2 = ascii_to_lower(*tmpc1);
-    *tmpc2 = 0;
+    lowercase_name(tmpbuf, entry->vlongy);
     hash_table_add(tmpbuf, (void *)(intptr_t)(i + 1), &registry->vlong_hash);
   }
-  registry->object_count = c;
 }
 
 static const char *get_part_name(BtechContext *context, int id, int brand,
@@ -197,9 +241,9 @@ static const char *get_part_name(BtechContext *context, int id, int brand,
 
   if (id < 0 || id >= NUM_ITEMS || brand < 0 || brand > BRANDCOUNT)
     return nullptr;
-  PartNameEntry *entry = registry->index_sorted[brand][id];
+  PartNameEntry *entry = part_index_entry(registry, brand, id);
   if (!entry && brand)
-    entry = registry->index_sorted[0][id];
+    entry = part_index_entry(registry, 0, id);
   return entry ? part_name_field(entry, field) : nullptr;
 }
 
@@ -222,21 +266,19 @@ int find_matching_vlong_part(BtechContext *context, const char *wc, int *ind,
                              int *id, int *brand) {
   PartNameRegistry *registry = context->part_names;
   PartNameEntry *p;
-  const char *tmpc1;
-  char *tmpc2;
   char tmpbuf[MBUF_SIZE];
-  int *i;
+  void *match;
 
   if (ind && *ind >= 0)
     return 0;
-  for (tmpc1 = wc, tmpc2 = tmpbuf; *tmpc1; tmpc1++, tmpc2++) {
-    *tmpc2 = ascii_to_lower(*tmpc1);
-  }
-  *tmpc2 = 0;
-  if ((i = hash_table_find(tmpbuf, &registry->vlong_hash))) {
-    if ((p = registry->short_sorted[(intptr_t)i - 1])) {
+  lowercase_name(tmpbuf, wc);
+  if ((match = hash_table_find(tmpbuf, &registry->vlong_hash))) {
+    intptr_t match_index = (intptr_t)match;
+    if ((p = sorted_entry(registry->short_sorted,
+                          (size_t)registry->object_count,
+                          (size_t)(match_index - 1)))) {
       if (ind)
-        *ind = clamp_intptr_to_int((intptr_t)i);
+        *ind = clamp_intptr_to_int(match_index);
       *id = packed_part_id(p->index);
       *brand = packed_part_brand(p->index);
       return 1;
@@ -250,12 +292,15 @@ int find_matching_long_part(BtechContext *context, const char *wc, int *i,
   PartNameRegistry *registry = context->part_names;
   PartNameEntry *p;
 
-  for ((*i)++; *i < registry->object_count; (*i)++)
-    if (wildcard_match(wc, (p = registry->long_sorted[*i])->longy)) {
+  for ((*i)++; *i < registry->object_count; (*i)++) {
+    p = sorted_entry(registry->long_sorted, (size_t)registry->object_count,
+                     (size_t)*i);
+    if (wildcard_match(wc, p->longy)) {
       *id = packed_part_id(p->index);
       *brand = packed_part_brand(p->index);
       return 1;
     }
+  }
   return 0;
 }
 
@@ -263,20 +308,18 @@ int find_matching_short_part(BtechContext *context, const char *wc, int *ind,
                              int *id, int *brand) {
   PartNameRegistry *registry = context->part_names;
   PartNameEntry *p;
-  const char *tmpc1;
-  char *tmpc2;
   char tmpbuf[MBUF_SIZE];
-  int *i;
+  void *match;
 
   if (*ind >= 0)
     return 0;
-  for (tmpc1 = wc, tmpc2 = tmpbuf; *tmpc1; tmpc1++, tmpc2++) {
-    *tmpc2 = ascii_to_lower(*tmpc1);
-  }
-  *tmpc2 = 0;
-  if ((i = hash_table_find(tmpbuf, &registry->short_hash))) {
-    if ((p = registry->short_sorted[(intptr_t)i - 1])) {
-      *ind = clamp_intptr_to_int((intptr_t)i);
+  lowercase_name(tmpbuf, wc);
+  if ((match = hash_table_find(tmpbuf, &registry->short_hash))) {
+    intptr_t match_index = (intptr_t)match;
+    if ((p = sorted_entry(registry->short_sorted,
+                          (size_t)registry->object_count,
+                          (size_t)(match_index - 1)))) {
+      *ind = clamp_intptr_to_int(match_index);
       *id = packed_part_id(p->index);
       *brand = packed_part_brand(p->index);
       return 1;
@@ -292,11 +335,13 @@ void ListForms(DbRef player, void *data, char *buffer) {
 
   mecha_notify(btech_context_evaluation(debug->context), player,
                "Listing of forms:");
-  for (i = 0; i < registry->object_count; i++)
+  for (i = 0; i < registry->object_count; i++) {
+    PartNameEntry *entry = sorted_entry(
+        registry->short_sorted, (size_t)registry->object_count, (size_t)i);
     notify_printf(btech_context_evaluation(debug->context), player,
-                  "%3d %-20s %-25s %s", i, registry->short_sorted[i]->shorty,
-                  registry->short_sorted[i]->longy,
-                  registry->short_sorted[i]->vlongy);
+                  "%3d %-20s %-25s %s", i, entry->shorty, entry->longy,
+                  entry->vlongy);
+  }
 }
 
 void fun_btpartmatch(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -444,7 +489,8 @@ void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
 
   listed = 0;
   for (index = 0; index < registry->object_count; index++) {
-    part_name = registry->long_sorted[index];
+    part_name = sorted_entry(registry->long_sorted,
+                             (size_t)registry->object_count, (size_t)index);
     part = part_name->index % NUM_ITEMS;
     if (!btpartslist_matches(category, part))
       continue;
@@ -492,7 +538,9 @@ void fun_btpartname(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  infostr = partname_func(context->btech, index, fargs[1][0]);
+  char *const *name_type_slot =
+      checked_storage_at_const(fargs, (size_t)nfargs, sizeof(*fargs), 1);
+  infostr = partname_func(context->btech, index, **name_type_slot);
   safe_tprintf_str(buff, bufc, "%s", infostr);
 }
 
@@ -506,7 +554,7 @@ const char *partname_func(BtechContext *context, int index, int size) {
   if (brand < 0 || brand > BRANDCOUNT || id < 0 || id >= NUM_ITEMS)
     return "#-1 INVALID PART NUMBER";
 
-  p = registry->index_sorted[brand][id];
+  p = part_index_entry(registry, brand, id);
   if (!p)
     return "#-1 INVALID PART NUMBER";
 
@@ -532,7 +580,8 @@ size_t part_name_count(const BtechContext *context) {
 const PartNameEntry *part_name_at(const BtechContext *context, size_t index) {
   if (index >= part_name_count(context))
     return nullptr;
-  return context->part_names->short_sorted[index];
+  return sorted_entry(context->part_names->short_sorted,
+                      part_name_count(context), index);
 }
 
 void destroy_partname_tables(BtechContext *context) {
@@ -544,7 +593,7 @@ void destroy_partname_tables(BtechContext *context) {
   hash_table_destroy(&registry->vlong_hash);
   for (int brand = 0; brand <= BRANDCOUNT; brand++)
     for (int id = 0; id < NUM_ITEMS; id++) {
-      PartNameEntry *part_name = registry->index_sorted[brand][id];
+      PartNameEntry *part_name = part_index_entry(registry, brand, id);
 
       if (part_name == nullptr)
         continue;

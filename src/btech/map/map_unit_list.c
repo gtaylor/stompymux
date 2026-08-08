@@ -5,10 +5,12 @@
 #include "map.h"
 #include "map_api.h"
 #include "map_obj_api.h"
+#include "map_units_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
@@ -30,22 +32,25 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
                  "Supply target type too!");
     return;
   }
-  switch (listmatch(cmds, args[0])) {
+  char **argument_slot = checked_storage_at(args, 2, sizeof(*args), 0);
+  switch (listmatch(cmds, 2, *argument_slot)) {
   case MECHS:
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
                  "--- Mechs on Map ---");
-    for (i = 0; i < map->first_free; i++) {
-      if (map->mechsOnMap[i] != -1) {
-        tempMech =
-            btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
-        id = mech_id(tempMech, false);
-        if (tempMech)
+    for (i = 0; i < battle_map_unit_count(map); i++) {
+      const DbRef unit_dbref = battle_map_unit_dbref(map, i);
+      if (unit_dbref != -1) {
+        tempMech = btech_context_get_mech(map->xcode.context, unit_dbref);
+        if (tempMech) {
+          id = mech_id(tempMech, false);
           strcpy(valid, "Valid Data");
-        else
+        } else {
+          id = (MechId){0};
           strcpy(valid, "Invalid Object Data!  Remove this Mech!");
+        }
         notify_printf(btech_context_evaluation(map->xcode.context), player,
-                      "Mech DB Number: %ld : [%s]\t%s", map->mechsOnMap[i],
-                      id.text, valid);
+                      "Mech DB Number: %ld : [%s]\t%s", unit_dbref, id.text,
+                      valid);
         count++;
       }
     }
@@ -64,6 +69,6 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
     break;
   }
   notify_printf(btech_context_evaluation(map->xcode.context), player,
-                "Invalid argument (%s)!", args[0]);
+                "Invalid argument (%s)!", *argument_slot);
   return;
 }

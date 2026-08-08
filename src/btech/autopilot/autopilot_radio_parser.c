@@ -24,6 +24,7 @@
 #include <strings.h>
 
 #include "autopilot.h"
+#include "autopilot_argument_list_api.h"
 #include "autopilot_radio_internal.h"
 #include "bsuit_api.h"
 #include "btech/context.h"
@@ -48,6 +49,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 
 void sendchannelstuff(Mech *mech, int freq, char *msg);
@@ -129,8 +131,8 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
                         char *buffer) {
 
   int argc, cmd;
-  char *args[2];
-  char *command_args[AUTOPILOT_MAX_ARGS];
+  AutopilotArgumentList args;
+  AutopilotArgumentList command_args;
   char mech_id[3];
   char message[LBUF_SIZE];
   char reply[LBUF_SIZE];
@@ -142,48 +144,51 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
   if (mech_is_destroyed(mech))
     return;
 
+  autopilot_argument_list_initialize(&args, 2);
+  autopilot_argument_list_initialize(&command_args, AUTOPILOT_MAX_ARGS);
+
   /* Get the args - just need the first one */
-  if (proper_explodearguments(buffer, args, 2) < 2) {
-    /* free args */
-    for (i = 0; i < 2; i++) {
-      if (args[i])
-        free(args[i]);
-    }
+  if (proper_explodearguments(
+          buffer, autopilot_argument_list_parser_storage(&args), 2) < 2) {
+    autopilot_argument_list_destroy(&args);
+    autopilot_argument_list_destroy(&command_args);
     return;
   }
 
   /* Check to see if the command was given to this AI */
-  if (strcmp(args[0], "all")) {
+  if (strcmp(autopilot_argument_list_get(&args, 0), "all")) {
     MechUnitId id = mech_unit_id(mech);
     mech_id[0] = id.first;
     mech_id[1] = id.second;
     mech_id[2] = '\0';
 
-    if (strcasecmp(mech_id, args[0])) {
-      /* free args */
-      for (i = 0; i < 2; i++) {
-        if (args[i])
-          free(args[i]);
-      }
+    if (strcasecmp(mech_id, autopilot_argument_list_get(&args, 0))) {
+      autopilot_argument_list_destroy(&args);
+      autopilot_argument_list_destroy(&command_args);
       return;
     }
   }
 
   /* Parse the command */
   cmd = -1;
-  argc = proper_explodearguments(args[1], command_args, AUTOPILOT_MAX_ARGS);
+  argc = proper_explodearguments(
+      autopilot_argument_list_get(&args, 1),
+      autopilot_argument_list_parser_storage(&command_args),
+      AUTOPILOT_MAX_ARGS);
 
   /* Loop through the various possible commands looking for ours */
-  for (i = 0; autopilot_radio_commands[i].abbreviation; i++) {
-    if (!strncmp(autopilot_radio_commands[i].abbreviation, command_args[0],
-                 strlen(autopilot_radio_commands[i].abbreviation)))
-      if (!strncmp(autopilot_radio_commands[i].name, command_args[0],
-                   strlen(command_args[0]))) {
-        if (argc == (autopilot_radio_commands[i].argument_count + 1)) {
+  const AutopilotRadioCommand *radio_command = autopilot_radio_command_at(0);
+  const char *command_name = autopilot_argument_list_get(&command_args, 0);
+  for (i = 0; radio_command->abbreviation; i++) {
+    if (!strncmp(radio_command->abbreviation, command_name,
+                 strlen(radio_command->abbreviation)))
+      if (!strncmp(radio_command->name, command_name, strlen(command_name))) {
+        if (argc == (radio_command->argument_count + 1)) {
           cmd = i;
           break;
         }
       }
+    radio_command = autopilot_radio_command_at(i + 1);
   }
 
   /* Did we find a command */
@@ -192,15 +197,8 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
     snprintf(message, LBUF_SIZE, "Unable to comprehend the command.");
     auto_reply(mech, message);
 
-    /* free args */
-    for (i = 0; i < 2; i++) {
-      if (args[i])
-        free(args[i]);
-    }
-    for (i = 0; i < AUTOPILOT_MAX_ARGS; i++) {
-      if (command_args[i])
-        free(command_args[i]);
-    }
+    autopilot_argument_list_destroy(&args);
+    autopilot_argument_list_destroy(&command_args);
     return;
   }
 
@@ -209,21 +207,13 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
   memset(reply, 0, sizeof(reply));
 
   /* Call the radio command function */
-  (*(autopilot_radio_commands[cmd].handler))(autopilot, mech, command_args,
-                                             argc, message);
+  radio_command->handler(autopilot, mech, &command_args, argc, message);
 
   /* If its a silent command there is no reply */
-  if (autopilot_radio_commands[cmd].silent) {
+  if (radio_command->silent) {
 
-    /* Free args and exit */
-    for (i = 0; i < 2; i++) {
-      if (args[i])
-        free(args[i]);
-    }
-    for (i = 0; i < AUTOPILOT_MAX_ARGS; i++) {
-      if (command_args[i])
-        free(command_args[i]);
-    }
+    autopilot_argument_list_destroy(&args);
+    autopilot_argument_list_destroy(&command_args);
     return;
   }
 
@@ -233,7 +223,8 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
     /* Check if there was an error message
      * otherwise add a front and back to the message */
     if (message[0] == '!') {
-      build_auto_reply(reply, "ERROR: ", message + 1, "!");
+      build_auto_reply(reply, "ERROR: ", checked_string_suffix(message, 1),
+                       "!");
     } else {
 
       switch (btech_random_range(mech_context(mech), 0, 20)) {
@@ -280,20 +271,13 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
 
     auto_reply(mech, reply);
 
-  } else if (!autopilot_radio_commands[cmd].silent) {
+  } else if (!radio_command->silent) {
 
     /* Command isn't silent but it didn't return a message */
     snprintf(reply, LBUF_SIZE, "Ok.");
     auto_reply(mech, reply);
   }
 
-  /* free args */
-  for (i = 0; i < 2; i++) {
-    if (args[i])
-      free(args[i]);
-  }
-  for (i = 0; i < AUTOPILOT_MAX_ARGS; i++) {
-    if (command_args[i])
-      free(command_args[i]);
-  }
+  autopilot_argument_list_destroy(&args);
+  autopilot_argument_list_destroy(&command_args);
 }

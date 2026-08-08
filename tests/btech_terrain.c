@@ -7,29 +7,34 @@
 #include "map_obj_api.h"
 #include "mech_internal.h"
 #include "mech_position_api.h"
+#include "mux/support/checked_storage.h"
 
 static char encoded_terrain[256];
 static char encoded_elevation[256];
 static int next_encoding = 1;
 static int terrain_updates;
 
+static char *encoded_value(char values[256], int index) {
+  return checked_storage_at(values, 256, sizeof(*values), (size_t)index);
+}
+
 int map_coding_get_index(MapCodingRegistry *registry, char terrain,
                          char elevation) {
   (void)registry;
   int encoding = next_encoding++;
-  encoded_terrain[encoding] = terrain;
-  encoded_elevation[encoding] = elevation;
+  *encoded_value(encoded_terrain, encoding) = terrain;
+  *encoded_value(encoded_elevation, encoding) = elevation;
   return encoding;
 }
 
 char map_coding_get_elevation(const MapCodingRegistry *registry, int index) {
   (void)registry;
-  return encoded_elevation[index];
+  return *encoded_value(encoded_elevation, index);
 }
 
 char map_coding_get_terrain(const MapCodingRegistry *registry, int index) {
   (void)registry;
-  return encoded_terrain[index];
+  return *encoded_value(encoded_terrain, index);
 }
 
 void UpdateMechsTerrain(BattleMap *map, int x, int y, int terrain) {
@@ -58,7 +63,8 @@ int main(void) {
   BtechContext context = {0};
   unsigned char row[2] = {0};
   unsigned char *rows[] = {row};
-  BattleMap map = {.xcode.context = &context, .map = rows};
+  BattleMap map = {
+      .xcode.context = &context, .map_width = 2, .map_height = 1, .map = rows};
   Mech mech = {0};
 
   map_hex_set(&map, 0, 0, ROAD, 3);

@@ -22,6 +22,7 @@
 #include "mech_status_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "section_types.h"
 #include "weapon_settings.h"
@@ -29,12 +30,38 @@
 #ifdef BT_PART_WEIGHTS
 extern const int internalsweight[];
 extern const int cargoweight[];
+extern const int template_internal_count;
+extern const int template_cargo_count;
 #endif
+
+static const int *int_at(const int *values, size_t count, size_t index) {
+  return checked_storage_at_const(values, count, sizeof(*values), index);
+}
+
+static int *mutable_int_at(int *values, size_t count, size_t index) {
+  return checked_storage_at(values, count, sizeof(*values), index);
+}
+
+static const unsigned char *weapon_index_at(const unsigned char *values,
+                                            size_t count, size_t index) {
+  return checked_storage_at_const(values, count, sizeof(*values), index);
+}
+
+static const unsigned short *unsigned_short_at(const unsigned short *values,
+                                               size_t count, size_t index) {
+  return checked_storage_at_const(values, count, sizeof(*values), index);
+}
+
+static const unsigned int *unsigned_int_at(const unsigned int *values,
+                                           size_t count, size_t index) {
+  return checked_storage_at_const(values, count, sizeof(*values), index);
+}
 
 int btech_part_weight(int part) {
   if (equipment_is_weapon(part)) {
     const int weapon_index = weapon_from_equipment_index(part);
-    const float part_weight = 10.24F * (float)MechWeapons[weapon_index].weight;
+    const int catalogue_weight = weapon_catalogue_weight(weapon_index);
+    const float part_weight = 10.24F * (float)catalogue_weight;
     return (int)part_weight;
   } else if (equipment_is_ammunition(part))
     return 1024;
@@ -46,9 +73,11 @@ int btech_part_weight(int part) {
 #else
   else if (equipment_is_special(
                part)) /* && i <= special_equipment_index(LAMEQUIP) */
-    return internalsweight[special_from_equipment_index(part)];
+    return *int_at(internalsweight, (size_t)template_internal_count,
+                   (size_t)special_from_equipment_index(part));
   else if (equipment_is_cargo(part))
-    return cargoweight[cargo_from_equipment_index(part)];
+    return *int_at(cargoweight, (size_t)template_cargo_count,
+                   (size_t)cargo_from_equipment_index(part));
 #endif /* BT_PART_WEIGHTS */
   else
     /* hmm.. tricky, suppose we'll make things light */
@@ -63,6 +92,23 @@ struct BtechPartCosts {
   unsigned long long cargo[CARGOCOST_SIZE];
   unsigned long long bombs[BOMBCOST_SIZE];
 };
+
+static unsigned long long *part_cost_at(unsigned long long *costs, size_t count,
+                                        size_t index) {
+  return checked_storage_at(costs, count, sizeof(*costs), index);
+}
+
+static const unsigned long long *
+part_cost_at_const(const unsigned long long *costs, size_t count,
+                   size_t index) {
+  return checked_storage_at_const(costs, count, sizeof(*costs), index);
+}
+
+static BtechPartCostSet *part_cost_set_at(BtechPartCostSet *sets,
+                                          size_t index) {
+  return checked_storage_at(sets, BTECH_PART_COST_SET_COUNT, sizeof(*sets),
+                            index);
+}
 
 void btech_part_costs_initialize(BtechContext *context) {
   context->part_costs = calloc(1, sizeof(*context->part_costs));
@@ -83,28 +129,35 @@ void btech_part_cost_sets(
     const BtechContext *context,
     BtechPartCostSet sets[static BTECH_PART_COST_SET_COUNT]) {
   const BtechPartCosts *costs = context->part_costs;
-  sets[0] =
+  *part_cost_set_at(sets, 0) =
       (BtechPartCostSet){costs->specials, SPECIALCOST_SIZE, SPECIAL_BASE_INDEX};
-  sets[1] =
+  *part_cost_set_at(sets, 1) =
       (BtechPartCostSet){costs->ammunition, AMMOCOST_SIZE, AMMO_BASE_INDEX};
-  sets[2] =
+  *part_cost_set_at(sets, 2) =
       (BtechPartCostSet){costs->weapons, WEAPCOST_SIZE, WEAPON_BASE_INDEX};
-  sets[3] = (BtechPartCostSet){costs->cargo, CARGOCOST_SIZE, CARGO_BASE_INDEX};
-  sets[4] = (BtechPartCostSet){costs->bombs, BOMBCOST_SIZE, BOMB_BASE_INDEX};
+  *part_cost_set_at(sets, 3) =
+      (BtechPartCostSet){costs->cargo, CARGOCOST_SIZE, CARGO_BASE_INDEX};
+  *part_cost_set_at(sets, 4) =
+      (BtechPartCostSet){costs->bombs, BOMBCOST_SIZE, BOMB_BASE_INDEX};
 }
 
 unsigned long long btech_part_cost_get(const BtechContext *context, int part) {
   const BtechPartCosts *costs = context->part_costs;
   if (equipment_is_weapon(part))
-    return costs->weapons[weapon_from_equipment_index(part)];
+    return *part_cost_at_const(costs->weapons, WEAPCOST_SIZE,
+                               (size_t)weapon_from_equipment_index(part));
   else if (equipment_is_ammunition(part))
-    return costs->ammunition[ammunition_to_weapon_index(part)];
+    return *part_cost_at_const(costs->ammunition, AMMOCOST_SIZE,
+                               (size_t)ammunition_to_weapon_index(part));
   else if (equipment_is_special(part))
-    return costs->specials[special_from_equipment_index(part)];
+    return *part_cost_at_const(costs->specials, SPECIALCOST_SIZE,
+                               (size_t)special_from_equipment_index(part));
   else if (equipment_is_bomb(part))
-    return costs->bombs[bomb_from_equipment_index(part)];
+    return *part_cost_at_const(costs->bombs, BOMBCOST_SIZE,
+                               (size_t)bomb_from_equipment_index(part));
   else if (equipment_is_cargo(part))
-    return costs->cargo[cargo_from_equipment_index(part)];
+    return *part_cost_at_const(costs->cargo, CARGOCOST_SIZE,
+                               (size_t)cargo_from_equipment_index(part));
   else
     return 0;
 }
@@ -113,15 +166,20 @@ void btech_part_cost_set(BtechContext *context, int part,
                          unsigned long long cost) {
   BtechPartCosts *costs = context->part_costs;
   if (equipment_is_weapon(part))
-    costs->weapons[weapon_from_equipment_index(part)] = cost;
+    *part_cost_at(costs->weapons, WEAPCOST_SIZE,
+                  (size_t)weapon_from_equipment_index(part)) = cost;
   else if (equipment_is_ammunition(part))
-    costs->ammunition[ammunition_to_weapon_index(part)] = cost;
+    *part_cost_at(costs->ammunition, AMMOCOST_SIZE,
+                  (size_t)ammunition_to_weapon_index(part)) = cost;
   else if (equipment_is_special(part))
-    costs->specials[special_from_equipment_index(part)] = cost;
+    *part_cost_at(costs->specials, SPECIALCOST_SIZE,
+                  (size_t)special_from_equipment_index(part)) = cost;
   else if (equipment_is_bomb(part))
-    costs->bombs[bomb_from_equipment_index(part)] = cost;
+    *part_cost_at(costs->bombs, BOMBCOST_SIZE,
+                  (size_t)bomb_from_equipment_index(part)) = cost;
   else if (equipment_is_cargo(part))
-    costs->cargo[cargo_from_equipment_index(part)] = cost;
+    *part_cost_at(costs->cargo, CARGOCOST_SIZE,
+                  (size_t)cargo_from_equipment_index(part)) = cost;
 }
 
 static void mech_cost_add(const Mech *mech, double *total, const char *desc,
@@ -469,8 +527,10 @@ unsigned long long mech_fasa_cost(Mech *mech) {
       continue;
 
     for (ii = 0; ii < count; ii++) {
-      mech_cost_add(mech, &total, MechWeapons[weaparray[ii]].name,
-                    MechWeapons[weaparray[ii]].cost);
+      const int weapon_index =
+          *weapon_index_at(weaparray, MAX_WEAPS_SECTION, (size_t)ii);
+      mech_cost_add(mech, &total, weapon_catalogue_name(weapon_index),
+                    weapon_catalogue_cost(weapon_index));
     }
   }
 
@@ -483,17 +543,29 @@ unsigned long long mech_fasa_cost(Mech *mech) {
       btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
                          "Ammo Costs");
     for (i = 0; i < ammoweapcount; i++) {
+      const int weapon_index =
+          *weapon_index_at(ammoweap, 8 * MAX_WEAPS_SECTION, (size_t)i);
+      const int maximum_ammunition =
+          *unsigned_short_at(ammomax, 8 * MAX_WEAPS_SECTION, (size_t)i);
+      const int ammunition_per_ton =
+          weapon_catalogue_ammunition_per_ton(weapon_index);
+      const int ammunition_cost =
+          weapon_catalogue_ammunition_cost(weapon_index);
       /* ArtemisIV ammo is X2 */
       /* Interesting way to handle half_tons */
-      if (ammomax[i] < MechWeapons[ammoweap[i]].ammoperton)
-        mech_cost_add(mech, &total, MechWeapons[ammoweap[i]].name,
-                      MechWeapons[ammoweap[i]].ammo_cost /
-                          (MechWeapons[ammoweap[i]].ammoperton / ammomax[i]));
+      if (maximum_ammunition < ammunition_per_ton)
+        mech_cost_add(mech, &total, weapon_catalogue_name(weapon_index),
+                      ammunition_cost /
+                          (ammunition_per_ton / maximum_ammunition));
       else
-        mech_cost_add(mech, &total, MechWeapons[ammoweap[i]].name,
-                      MechWeapons[ammoweap[i]].ammo_cost *
-                          (ammomax[i] / MechWeapons[ammoweap[i]].ammoperton) *
-                          ((modearray[i] & ARTEMIS_MODE) ? 2 : 1));
+        mech_cost_add(mech, &total, weapon_catalogue_name(weapon_index),
+                      ammunition_cost *
+                          (maximum_ammunition / ammunition_per_ton) *
+                          ((*unsigned_int_at(modearray, 8 * MAX_WEAPS_SECTION,
+                                             (size_t)i) &
+                            ARTEMIS_MODE)
+                               ? 2
+                               : 1));
     }
   }
 
@@ -588,7 +660,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
       if (equipment_is_ammunition(part))
         /* Need Something in here to do CASE for CLAN mechs */
         if ((technology & CLAN_TECH))
-          clan_case_sections[i] = 1;
+          *mutable_int_at(clan_case_sections, NUM_SECTIONS, (size_t)i) = 1;
       continue;
       if (equipment_is_weapon(part))
         continue;
@@ -597,7 +669,8 @@ unsigned long long mech_fasa_cost(Mech *mech) {
           btech_part_cost_get(mech_context(mech), part);
       if (unit_class != CLASS_MECH && equipment_is_weapon(part)) {
         const unsigned long long critical_slots =
-            (unsigned long long)(unsigned char)MechWeapons[part - 1].criticals;
+            (unsigned long long)(unsigned char)weapon_catalogue_critical_slots(
+                part - 1);
         indiv_part_cost *= critical_slots;
         // btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
         // tprintf("Part#: %s(%d) Crits: %d", MechWeapons[part-1].name, part-1,
@@ -622,7 +695,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
   /* Clan Case */
   if ((technology & CLAN_TECH)) {
     for (i = 0; i < NUM_SECTIONS; i++) {
-      if (clan_case_sections[i] == 1)
+      if (*int_at(clan_case_sections, NUM_SECTIONS, (size_t)i) == 1)
         mech_cost_add(mech, &total, "Clan CASE Section", 50000);
     }
   }

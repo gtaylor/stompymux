@@ -15,16 +15,26 @@ ci: check-mux-source-size fmt-check build test
 
 agent-checks: ci
 
+checks: ci
+
 check-mux-source-size:
     status=0; while IFS= read -r -d '' source; do lines=$(awk 'END { print NR }' "$source"); if (( lines > 800 )); then echo "$source: $lines lines (maximum 800)"; status=1; fi; done < <(find src/mux -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0); exit "$status"
 
-fmt:
+fmt-c:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i
+
+fmt-lua:
     {{stylua}} --glob '**/*.lua' -- game/lua
 
-fmt-check:
+fmt: fmt-c fmt-lua
+
+fmt-check-c:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} --dry-run --Werror
+
+fmt-check-lua:
     {{stylua}} --check --glob '**/*.lua' -- game/lua
+
+fmt-check: fmt-check-c fmt-check-lua
 
 tidy:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
@@ -47,6 +57,8 @@ run:
     cd game && ulimit -c unlimited && exec ./stompymux stompymux.toml
 
 build-and-run: build install run
+
+check-and-run: checks install run
 
 docsite:
     npm --prefix docs run build

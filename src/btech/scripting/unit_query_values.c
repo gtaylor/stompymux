@@ -11,9 +11,9 @@
 void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs,
                    EvaluationContext *context) {
-  /* fargs[0] = mapobject
-     fargs[1] = mapname
-     fargs[2] = clear or not to clear
+  /* script_function_argument(fargs, nfargs, 0) = mapobject
+     script_function_argument(fargs, nfargs, 1) = mapname
+     script_function_argument(fargs, nfargs, 2) = clear or not to clear
    */
   DbRef mapdbref;
   BattleMap *map;
@@ -26,7 +26,8 @@ void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  mapdbref = match_thing(&context->command->match, player, fargs[0]);
+  mapdbref = match_thing(&context->command->match, player,
+                         script_function_argument(fargs, nfargs, 0));
   if (!is_good_obj(context->btech->database, mapdbref)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
@@ -36,7 +37,7 @@ void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
   }
-  switch (map_checkmapfile(map, fargs[1])) {
+  switch (map_checkmapfile(map, script_function_argument(fargs, nfargs, 1))) {
   case -1:
     safe_str("#-1 MAP NOT FOUND", buff, bufc);
     return;
@@ -47,14 +48,14 @@ void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 INVALID MAP HEIGHT NOT LOADED PROPERLY", buff, bufc);
     return;
   case 1:
-    map_load(map, fargs[1]);
+    map_load(map, script_function_argument(fargs, nfargs, 1));
     break;
   default:
     safe_str("#-1 UNKNOWN ERROR", buff, bufc);
     return;
   }
   /* For now, we're gonna ignore the third arg, and just clear mechs anyways*/
-  /*	if(nfargs > 2 && xlate(fargs[2])) */
+  /*	if(nfargs > 2 && xlate(script_function_argument(fargs, nfargs, 2))) */
   map_clearmechs(player, (void *)map, "");
   /* Brain deadness. Clear the mapobjs too!!! */
   del_mapobjs(map);
@@ -64,8 +65,8 @@ void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btloadmech(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs,
                     EvaluationContext *context) {
-  /* fargs[0] = mechobject
-     fargs[1] = mechref
+  /* script_function_argument(fargs, nfargs, 0) = mechobject
+     script_function_argument(fargs, nfargs, 1) = mechref
    */
   DbRef mechdbref;
   Mech *mech;
@@ -74,7 +75,8 @@ void fun_btloadmech(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  mechdbref = match_thing(&context->command->match, player, fargs[0]);
+  mechdbref = match_thing(&context->command->match, player,
+                          script_function_argument(fargs, nfargs, 0));
   if (!is_good_obj(context->btech->database, mechdbref)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
@@ -84,7 +86,8 @@ void fun_btloadmech(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
   }
-  if (mech_template_load(player, mech, fargs[1]) == 1) {
+  if (mech_template_load(player, mech,
+                         script_function_argument(fargs, nfargs, 1)) == 1) {
     mux_event_remove_data(context->btech->events, (void *)mech);
     clear_mech_from_LOS(mech);
     safe_str("1", buff, bufc);
@@ -98,7 +101,7 @@ extern const char radio_colorstr[];
 void fun_btmechfreqs(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs,
                      EvaluationContext *context) {
-  /* fargs[0] = mechobject
+  /* script_function_argument(fargs, nfargs, 0) = mechobject
    */
   DbRef mechdbref;
   Mech *mech;
@@ -108,7 +111,8 @@ void fun_btmechfreqs(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  mechdbref = match_thing(&context->command->match, player, fargs[0]);
+  mechdbref = match_thing(&context->command->match, player,
+                          script_function_argument(fargs, nfargs, 0));
   if (!is_good_obj(context->btech->database, mechdbref)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
@@ -127,7 +131,9 @@ void fun_btmechfreqs(char *buff, char **bufc, DbRef player, DbRef cause,
                      mech_radio_frequency(mech, i),
                      bv2text(mode % FREQ_REST, (char[SBUF_SIZE]){0}));
     if (mode / FREQ_REST) {
-      safe_tprintf_str(buff, bufc, "|%c", radio_colorstr[mode / FREQ_REST - 1]);
+      safe_tprintf_str(buff, bufc, "|%c",
+                       *checked_string_suffix(radio_colorstr,
+                                              (size_t)(mode / FREQ_REST - 1)));
     } else {
       safe_str("|-", buff, bufc);
     }
@@ -138,7 +144,7 @@ void fun_btgetweight(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs,
                      EvaluationContext *context) {
   /*
-     fargs[0] = stringname of part
+     script_function_argument(fargs, nfargs, 0) = stringname of part
    */
   float sw = 0.0F;
   int i = -1, p, b;
@@ -148,9 +154,13 @@ void fun_btgetweight(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  if (!find_matching_long_part(context->btech, fargs[0], &i, &p, &b)) {
+  if (!find_matching_long_part(context->btech,
+                               script_function_argument(fargs, nfargs, 0), &i,
+                               &p, &b)) {
     i = -1;
-    if (!find_matching_vlong_part(context->btech, fargs[0], &i, &p, &b)) {
+    if (!find_matching_vlong_part(context->btech,
+                                  script_function_argument(fargs, nfargs, 0),
+                                  &i, &p, &b)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID PART NAME");
       return;
     }
@@ -165,16 +175,17 @@ void fun_btgetweight(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btremovestores(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs,
                         EvaluationContext *context) {
-  /* fargs[0] = id of the bay */
-  /* fargs[1] = name of the part */
-  /* fargs[2] = amount */
+  /* script_function_argument(fargs, nfargs, 0) = id of the bay */
+  /* script_function_argument(fargs, nfargs, 1) = name of the part */
+  /* script_function_argument(fargs, nfargs, 2) = amount */
   DbRef it;
   int i = -1;
   int num = 0;
   void *foo;
   int p, b;
 
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return;
@@ -187,13 +198,18 @@ void fun_btremovestores(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((!((num) = atoi(fargs[2])) && strcmp((fargs[2]), "0"))) {
+  if ((!((num) = atoi(script_function_argument(fargs, nfargs, 2))) &&
+       strcmp((script_function_argument(fargs, nfargs, 2)), "0"))) {
     safe_tprintf_str(buff, bufc, "#-2 Illegal Value");
     return;
   }
-  if (!find_matching_long_part(context->btech, fargs[1], &i, &p, &b)) {
+  if (!find_matching_long_part(context->btech,
+                               script_function_argument(fargs, nfargs, 1), &i,
+                               &p, &b)) {
     i = -1;
-    if (!find_matching_vlong_part(context->btech, fargs[1], &i, &p, &b)) {
+    if (!find_matching_vlong_part(context->btech,
+                                  script_function_argument(fargs, nfargs, 1),
+                                  &i, &p, &b)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID PART NAME");
       return;
     }
@@ -229,11 +245,11 @@ void fun_bttechtime(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btcritslot(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs,
                     EvaluationContext *context) {
-  /* fargs[0] = id of the mech
-     fargs[1] = location name
-     fargs[2] = critslot
-     fargs[3] = partname type flag, 0 template name, 1 repair part name
-     (differentiate Ammo types basically)
+  /* script_function_argument(fargs, nfargs, 0) = id of the mech
+     script_function_argument(fargs, nfargs, 1) = location name
+     script_function_argument(fargs, nfargs, 2) = critslot
+     script_function_argument(fargs, nfargs, 3) = partname type flag, 0 template
+     name, 1 repair part name (differentiate Ammo types basically)
    */
   DbRef it;
   Mech *mech;
@@ -246,7 +262,8 @@ void fun_btcritslot(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!argument_count_in_range("BTCRITSLOT", nfargs, 3, 4, buff, bufc))
     return;
 
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -260,19 +277,22 @@ void fun_btcritslot(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  safe_tprintf_str(
-      buff, bufc, "%s",
-      critslot_func(mech, fargs[1], fargs[2], fargs[3], (char[MBUF_SIZE]){0}));
+  safe_tprintf_str(buff, bufc, "%s",
+                   critslot_func(mech,
+                                 script_function_argument(fargs, nfargs, 1),
+                                 script_function_argument(fargs, nfargs, 2),
+                                 script_function_argument(fargs, nfargs, 3),
+                                 (char[MBUF_SIZE]){0}));
 }
 
 void fun_btcritslot_ref(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs,
                         EvaluationContext *context) {
-  /* fargs[0] = ref
-     fargs[1] = location name
-     fargs[2] = critslot
-     fargs[3] = partname type flag, 0 template name, 1 repair part name
-     (differentiate Ammo types basically)
+  /* script_function_argument(fargs, nfargs, 0) = ref
+     script_function_argument(fargs, nfargs, 1) = location name
+     script_function_argument(fargs, nfargs, 2) = critslot
+     script_function_argument(fargs, nfargs, 3) = partname type flag, 0 template
+     name, 1 repair part name (differentiate Ammo types basically)
    */
   Mech *mech;
 
@@ -283,14 +303,18 @@ void fun_btcritslot_ref(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!argument_count_in_range("BTCRITSLOT_REF", nfargs, 3, 4, buff, bufc))
     return;
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
 
-  safe_tprintf_str(
-      buff, bufc, "%s",
-      critslot_func(mech, fargs[1], fargs[2], fargs[3], (char[MBUF_SIZE]){0}));
+  safe_tprintf_str(buff, bufc, "%s",
+                   critslot_func(mech,
+                                 script_function_argument(fargs, nfargs, 1),
+                                 script_function_argument(fargs, nfargs, 2),
+                                 script_function_argument(fargs, nfargs, 3),
+                                 (char[MBUF_SIZE]){0}));
 }
 
 #define NUMBERS ".0123456789"
@@ -307,7 +331,7 @@ static float map_hex_scaled_elevation(BattleMap *map, int x, int y) {
 void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs,
                     EvaluationContext *context) {
-  /* fargs[0] - [4] Combos of XY or DBref */
+  /* script_function_argument(fargs, nfargs, 0) - [4] Combos of XY or DBref */
   DbRef mechAdb, mechBdb, mapdb;
   Mech *mechA, *mechB;
   BattleMap *map;
@@ -322,7 +346,8 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!argument_count_in_range("BTGETRANGE", nfargs, 3, 7, buff, bufc))
     return;
 
-  mapdb = match_thing(&context->command->match, player, fargs[0]);
+  mapdb = match_thing(&context->command->match, player,
+                      script_function_argument(fargs, nfargs, 0));
   if (mapdb == NOTHING ||
       !is_examinable(context->world->database, player, mapdb)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MAPDB");
@@ -339,13 +364,15 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
 
   switch (nfargs) {
   case 3:
-    mechAdb = match_thing(&context->command->match, player, fargs[1]);
+    mechAdb = match_thing(&context->command->match, player,
+                          script_function_argument(fargs, nfargs, 1));
     if (mechAdb == NOTHING ||
         !is_examinable(context->world->database, player, mechAdb)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID MECHDBREF");
       return;
     }
-    mechBdb = match_thing(&context->command->match, player, fargs[2]);
+    mechBdb = match_thing(&context->command->match, player,
+                          script_function_argument(fargs, nfargs, 2));
     if (mechBdb == NOTHING ||
         !is_examinable(context->world->database, player, mechBdb)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID MECHDBREF");
@@ -368,30 +395,32 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "%f", (double)mech_range_to(mechA, mechB));
     return;
   case 4:
-    if (strspn(fargs[1], NUMBERS) < 1) {
-      mechAdb = match_thing(&context->command->match, player, fargs[1]);
-      if (strspn(fargs[2], NUMBERS) < 1) {
+    if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
+      mechAdb = match_thing(&context->command->match, player,
+                            script_function_argument(fargs, nfargs, 1));
+      if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
         return;
       }
-      xA = atoi(fargs[2]);
-      if (strspn(fargs[3], NUMBERS) < 1) {
+      xA = atoi(script_function_argument(fargs, nfargs, 2));
+      if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
         return;
       }
-      yA = atoi(fargs[3]);
+      yA = atoi(script_function_argument(fargs, nfargs, 3));
     } else {
-      if (strspn(fargs[1], NUMBERS) < 1) {
+      if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
         return;
       }
-      xA = atoi(fargs[1]);
-      if (strspn(fargs[2], NUMBERS) < 1) {
+      xA = atoi(script_function_argument(fargs, nfargs, 1));
+      if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
         return;
       }
-      yA = atoi(fargs[2]);
-      mechAdb = match_thing(&context->command->match, player, fargs[3]);
+      yA = atoi(script_function_argument(fargs, nfargs, 2));
+      mechAdb = match_thing(&context->command->match, player,
+                            script_function_argument(fargs, nfargs, 3));
     }
     if (mechAdb == NOTHING ||
         !is_examinable(context->world->database, player, mechAdb)) {
@@ -422,43 +451,46 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
                                        map_hex_scaled_elevation(map, xA, yA)));
     return;
   case 5:
-    if (strspn(fargs[1], NUMBERS) < 1 || strspn(fargs[4], NUMBERS) < 1) {
+    if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1 ||
+        strspn(script_function_argument(fargs, nfargs, 4), NUMBERS) < 1) {
       // this is the (map, mech, x, y, z) or (map, x, y, z, mech) condition
-      if (strspn(fargs[1], NUMBERS) < 1) {
+      if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
         // mech first
-        mechAdb = match_thing(&context->command->match, player, fargs[1]);
-        if (strspn(fargs[2], NUMBERS) < 1) {
+        mechAdb = match_thing(&context->command->match, player,
+                              script_function_argument(fargs, nfargs, 1));
+        if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        xA = atoi(fargs[2]);
-        if (strspn(fargs[3], NUMBERS) < 1) {
+        xA = atoi(script_function_argument(fargs, nfargs, 2));
+        if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        yA = atoi(fargs[3]);
-        if (strspn(fargs[4], NUMBERS) < 1) {
+        yA = atoi(script_function_argument(fargs, nfargs, 3));
+        if (strspn(script_function_argument(fargs, nfargs, 4), NUMBERS) < 1) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        zA = atoi(fargs[4]);
+        zA = atoi(script_function_argument(fargs, nfargs, 4));
       } else {
-        if (strspn(fargs[1], NUMBERS) < 1) {
+        if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        xA = atoi(fargs[1]);
-        if (strspn(fargs[2], NUMBERS) < 1) {
+        xA = atoi(script_function_argument(fargs, nfargs, 1));
+        if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        yA = atoi(fargs[2]);
-        if (strspn(fargs[3], NUMBERS) < 1) {
+        yA = atoi(script_function_argument(fargs, nfargs, 2));
+        if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        zA = atoi(fargs[3]);
-        mechAdb = match_thing(&context->command->match, player, fargs[4]);
+        zA = atoi(script_function_argument(fargs, nfargs, 3));
+        mechAdb = match_thing(&context->command->match, player,
+                              script_function_argument(fargs, nfargs, 4));
       }
       if (mechAdb == NOTHING ||
           !is_examinable(context->world->database, player, mechAdb)) {
@@ -490,30 +522,30 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
       return;
     }
     // tihs is the (map, x1, y1, x2, y2) condition
-    if (strspn(fargs[1], NUMBERS) < 1) {
+    if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    xA = atoi(fargs[1]);
-    if (strspn(fargs[2], NUMBERS) < 1) {
+    xA = atoi(script_function_argument(fargs, nfargs, 1));
+    if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    yA = atoi(fargs[2]);
+    yA = atoi(script_function_argument(fargs, nfargs, 2));
     if (xA < 0 || yA < 0 || xA >= map->map_width || yA >= map->map_height) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    if (strspn(fargs[3], NUMBERS) < 1) {
+    if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    xB = atoi(fargs[3]);
-    if (strspn(fargs[4], NUMBERS) < 1) {
+    xB = atoi(script_function_argument(fargs, nfargs, 3));
+    if (strspn(script_function_argument(fargs, nfargs, 4), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    yB = atoi(fargs[4]);
+    yB = atoi(script_function_argument(fargs, nfargs, 4));
     if (xB < 0 || yB < 0 || xB >= map->map_width || yB >= map->map_height) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
@@ -526,36 +558,36 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
                           fyB, map_hex_scaled_elevation(map, xB, yB)));
     return;
   case 7:
-    if (strspn(fargs[1], NUMBERS) < 1) {
+    if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    xA = atoi(fargs[1]);
-    if (strspn(fargs[2], NUMBERS) < 1) {
+    xA = atoi(script_function_argument(fargs, nfargs, 1));
+    if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    yA = atoi(fargs[2]);
-    if (strspn(fargs[3], NUMBERS) < 1) {
+    yA = atoi(script_function_argument(fargs, nfargs, 2));
+    if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    zA = atoi(fargs[3]);
-    if (strspn(fargs[4], NUMBERS) < 1) {
+    zA = atoi(script_function_argument(fargs, nfargs, 3));
+    if (strspn(script_function_argument(fargs, nfargs, 4), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    xB = atoi(fargs[4]);
-    if (strspn(fargs[5], NUMBERS) < 1) {
+    xB = atoi(script_function_argument(fargs, nfargs, 4));
+    if (strspn(script_function_argument(fargs, nfargs, 5), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    yB = atoi(fargs[5]);
-    if (strspn(fargs[6], NUMBERS) < 1) {
+    yB = atoi(script_function_argument(fargs, nfargs, 5));
+    if (strspn(script_function_argument(fargs, nfargs, 6), NUMBERS) < 1) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    zB = atoi(fargs[6]);
+    zB = atoi(script_function_argument(fargs, nfargs, 6));
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
     MapCoordToRealCoord(xB, yB, &fxB, &fyB);
     safe_tprintf_str(buff, bufc, "%f",
@@ -571,14 +603,17 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btsetmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs,
                        EvaluationContext *context) {
-  /* fargs[0] = id of the mech
-     fargs[1] = what the new maxspeed should be set too
+  /* script_function_argument(fargs, nfargs, 0) = id of the mech
+     script_function_argument(fargs, nfargs, 1) = what the new maxspeed should
+     be set too
    */
   DbRef it;
   Mech *mech;
-  float newmaxspeed = strtof(fargs[1], nullptr);
+  float newmaxspeed =
+      strtof(script_function_argument(fargs, nfargs, 1), nullptr);
 
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -609,7 +644,8 @@ void fun_btgetrealmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
   Mech *mech;
   float speed;
 
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -640,7 +676,8 @@ void fun_btgetbv(char *buff, char **bufc, DbRef player, DbRef cause,
   Mech *mech;
   int bv;
 
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -675,7 +712,8 @@ void fun_btgetbv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
@@ -696,7 +734,8 @@ void fun_btgetdbv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
@@ -716,7 +755,8 @@ void fun_btgetobv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
@@ -739,7 +779,8 @@ void fun_btgetbv2_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }

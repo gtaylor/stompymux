@@ -22,26 +22,14 @@
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mycool.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
 #include <math.h>
 #include <stdio.h>
 #include <strings.h>
-static const char mech_loc_table[][2] = {{CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2},
-                                         {LARM, 3},   {RARM, 3},   {LLEG, 4},
-                                         {RLEG, 4},   {-1, 0}};
-static const char quad_loc_table[][2] = {{CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2},
-                                         {LARM, 4},   {RARM, 4},   {LLEG, 4},
-                                         {RLEG, 4},   {-1, 0}};
-static const char int_data[][5] = {
-    {10, 4, 3, 1, 2},      {15, 5, 4, 2, 3},     {20, 6, 5, 3, 4},
-    {25, 8, 6, 4, 6},      {30, 10, 7, 5, 7},    {35, 11, 8, 6, 8},
-    {40, 12, 10, 6, 10},   {45, 14, 11, 7, 11},  {50, 16, 12, 8, 12},
-    {55, 18, 13, 9, 13},   {60, 20, 14, 10, 14}, {65, 21, 15, 10, 15},
-    {70, 22, 15, 11, 15},  {75, 23, 16, 12, 16}, {80, 25, 17, 13, 17},
-    {85, 27, 18, 14, 18},  {90, 29, 19, 15, 19}, {95, 30, 20, 16, 20},
-    {100, 31, 21, 17, 21}, {-1, 0, 0, 0, 0}};
 static const short engine_data[][2] = {{0, 0},
                                        {10, 1},
                                        {15, 1},
@@ -143,6 +131,44 @@ static const short engine_data[][2] = {{0, 0},
                                        {495, 405 * 2 + 1},
                                        {500, 462 * 2 + 1},
                                        {-1, 0}};
+
+typedef struct PartPile {
+  int values[NUM_ITEMS_M];
+} PartPile;
+
+static int *part_pile_slot(PartPile *pile, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(pile->values, NUM_ITEMS_M, sizeof(*pile->values),
+                            (size_t)index);
+}
+
+static int part_pile_get(const PartPile *pile, int index) {
+  if (index < 0)
+    abort();
+  return *(const int *)checked_storage_at_const(
+      pile->values, NUM_ITEMS_M, sizeof(*pile->values), (size_t)index);
+}
+
+static void part_pile_add(PartPile *pile, int index, int value) {
+  *part_pile_slot(pile, index) += value;
+}
+
+static void part_pile_set(PartPile *pile, int index, int value) {
+  *part_pile_slot(pile, index) = value;
+}
+
+static const short *engine_definition(size_t index) {
+  return checked_storage_at_const(engine_data,
+                                  sizeof(engine_data) / sizeof(*engine_data),
+                                  sizeof(*engine_data), index);
+}
+
+static short engine_definition_value(const short *definition, size_t index) {
+  return *(const short *)checked_storage_at_const(definition, 2,
+                                                  sizeof(*definition), index);
+}
+
 int susp_factor(Mech *mech) {
   int t = ((mech)->ud.tons);
   if (((mech)->ud.move) == MOVE_TRACK)
@@ -195,8 +221,8 @@ int susp_factor(Mech *mech) {
 int crit_weight(Mech *mech, int t) {
   int cl;
   if (equipment_is_weapon(t))
-    return MechWeapons[weapon_from_equipment_index(t)].weight * 1024 / 100 /
-           GetWeaponCrits(mech, weapon_from_equipment_index(t));
+    return weapon_catalogue_weight(weapon_from_equipment_index(t)) * 1024 /
+           100 / GetWeaponCrits(mech, weapon_from_equipment_index(t));
   if (equipment_is_ammunition(t))
     return 512;
   if (!(equipment_is_special(t)))
@@ -257,9 +283,13 @@ int engine_weight(Mech *mech) {
   int i;
   if (((mech)->ud.type) != CLASS_MECH)
     s -= susp_factor(mech);
-  for (i = 0; engine_data[i][0] >= 0; i++)
-    if (s == engine_data[i][0]) {
-      int weight = engine_data[i][1] * 512;
+  for (i = 0;; i++) {
+    const short *definition = engine_definition((size_t)i);
+    const short rating = engine_definition_value(definition, 0);
+    if (rating < 0)
+      break;
+    if (s == rating) {
+      int weight = engine_definition_value(definition, 1) * 512;
       if (((mech)->rd.specials) & ICE_TECH)
         return weight * 2;
       if (((mech)->ud.type) == CLASS_VEH_GROUND ||
@@ -277,6 +307,7 @@ int engine_weight(Mech *mech) {
         return round_to_halfton(weight + weight / 2);
       return weight;
     }
+  }
 
   /* Hack ensues! Most hovers are 1/5th engine weight. Doesn't always register
    * correctly. */
@@ -310,9 +341,8 @@ static int ammo_weight(Mech *mech) {
       for (j = 0; j < CritsInLoc(mech, i); j++)
         if (equipment_is_ammunition((t = mech_critical_part_type(mech, i, j))))
           w += mech_critical_data(mech, i, j) * 1024 /
-               MechWeapons[ammunition_to_weapon_index(
-                               mech_critical_part_type(mech, i, j))]
-                   .ammoperton;
+               weapon_catalogue_ammunition_per_ton(ammunition_to_weapon_index(
+                   mech_critical_part_type(mech, i, j)));
   return w;
 }
 
@@ -365,7 +395,7 @@ static void weight_counted_entry_add(CoolMenu **menu, int interactive,
   *total += weight;
 }
 int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
-  int pile[NUM_ITEMS_M];
+  PartPile pile;
   int i, j, w, cl, id;
   int armor = 0, armor_o;
   int total = 0;
@@ -377,7 +407,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   float gyro_calc = -1;
   int t, temp;
 
-  bzero(pile, sizeof(pile));
+  bzero(&pile, sizeof(pile));
   if (interactive > 0) {
     cool_menu_add_line(&c);
     cool_menu_add_centered(
@@ -401,12 +431,14 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
             if (temp >= 0) {
               t = mech_critical_part_type(mech, temp,
                                           mech_critical_data(mech, i, j));
-              pile[t] += clamp_float_to_int(mech_ammunition_slot_multiplier(
-                  mech, temp, mech_critical_data(mech, i, j)));
+              part_pile_add(&pile, t,
+                            clamp_float_to_int(mech_ammunition_slot_multiplier(
+                                mech, temp, mech_critical_data(mech, i, j))));
             }
           } else
-            pile[t] +=
-                clamp_float_to_int(mech_ammunition_slot_multiplier(mech, i, j));
+            part_pile_add(&pile, t,
+                          clamp_float_to_int(
+                              mech_ammunition_slot_multiplier(mech, i, j)));
         }
       }
   }
@@ -491,26 +523,29 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   // 2 : 1))) * 512);
 
   if (weight_heat_sink_count(mech, interactive)) {
-    pile[special_equipment_index(HEAT_SINK)] =
+    part_pile_set(
+        &pile, special_equipment_index(HEAT_SINK),
         MAX(0, weight_heat_sink_count(mech, interactive) * shs_size / hs_eff -
-                   (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size);
+                   (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size));
   } else if (interactive > 0)
     cool_menu_add_centered(
         &c,
         tprintf("WARNING: HS count may be off, due to certain odd things."));
   for (i = 1; i < NUM_ITEMS_M; i++)
-    if (pile[i]) {
+    if (part_pile_get(&pile, i)) {
+      const int part_count = part_pile_get(&pile, i);
       if (equipment_is_weapon(i)) {
         id = weapon_from_equipment_index(i);
-        weight_counted_entry_add(&c, interactive, &total, MechWeapons[id].name,
-                                 pile[i] / GetWeaponCrits(mech, id),
-                                 crit_weight(mech, i) * pile[i]);
+        weight_counted_entry_add(&c, interactive, &total,
+                                 weapon_catalogue_name(id),
+                                 part_count / GetWeaponCrits(mech, id),
+                                 crit_weight(mech, i) * part_count);
       } else {
         if ((w = crit_weight(mech, i)))
           weight_counted_entry_add(
               &c, interactive, &total,
-              get_parts_long_name(mech->xcode.context, i, 0), pile[i],
-              w * pile[i]);
+              get_parts_long_name(mech->xcode.context, i, 0), part_count,
+              w * part_count);
       }
     }
   if (((mech)->ud.cargospace))
@@ -550,7 +585,7 @@ static int tank_in_pieces(Mech *mech) {
 }
 
 int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
-  int pile[NUM_ITEMS_M];
+  PartPile pile;
   int i, j, w, cl, id, t;
   int armor = 0, armor_o;
   int total = 0;
@@ -562,7 +597,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   int turr_stuff = 0;
   int ints_c, ints_tot;
 
-  bzero(pile, sizeof(pile));
+  bzero(&pile, sizeof(pile));
   calc_ints(mech, &ints_c, &ints_tot);
   if (interactive > 0) {
     cool_menu_add_line(&c);
@@ -580,8 +615,9 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
         continue;
       if (interactive >= 0 || !mech_section_is_destroyed(mech, i)) {
         if (interactive >= 0 || !equipment_is_ammunition(t))
-          pile[t] +=
-              clamp_float_to_int(mech_ammunition_slot_multiplier(mech, i, j));
+          part_pile_add(
+              &pile, t,
+              clamp_float_to_int(mech_ammunition_slot_multiplier(mech, i, j)));
         if (i == TURRET && (((mech)->ud.type) == CLASS_VEH_GROUND ||
                             ((mech)->ud.type) == CLASS_VEH_NAVAL))
           if (equipment_is_weapon(t))
@@ -662,20 +698,23 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
                                                    : "Armor",
       armor_o, round_to_halfton(armor * 1024 / 16));
 
-  pile[special_equipment_index(HEAT_SINK)] =
+  part_pile_set(
+      &pile, special_equipment_index(HEAT_SINK),
       MAX(0, ((mech)->ud.numsinks) * shs_size / hs_eff -
-                 (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size);
+                 (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size));
   for (i = 1; i < NUM_ITEMS_M; i++)
-    if (pile[i]) {
+    if (part_pile_get(&pile, i)) {
+      const int part_count = part_pile_get(&pile, i);
       if (equipment_is_weapon(i)) {
         id = weapon_from_equipment_index(i);
-        weight_counted_entry_add(&c, interactive, &total, MechWeapons[id].name,
-                                 pile[i] / GetWeaponCrits(mech, id),
-                                 crit_weight(mech, i) * pile[i]);
+        weight_counted_entry_add(&c, interactive, &total,
+                                 weapon_catalogue_name(id),
+                                 part_count / GetWeaponCrits(mech, id),
+                                 crit_weight(mech, i) * part_count);
       } else if ((w = crit_weight(mech, i)))
         weight_counted_entry_add(&c, interactive, &total,
                                  get_parts_long_name(mech->xcode.context, i, 0),
-                                 pile[i], w * pile[i]);
+                                 part_count, w * part_count);
     }
   if (((mech)->ud.cargospace))
     weight_entry_add(
@@ -721,80 +760,4 @@ void mech_weight(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
 
   mech_weight_sub(player, mech, 1);
-}
-
-static int internal_location_table(const Mech *mech, int row, int column) {
-  return mech_is_quad(mech) ? quad_loc_table[row][column]
-                            : mech_loc_table[row][column];
-}
-
-static int real_int(Mech *mech, int loc, int ti) {
-  int i;
-
-  if (loc == HEAD)
-    return 3;
-  for (i = 0; internal_location_table(mech, i, 0) >= 0; i++)
-    if (loc == internal_location_table(mech, i, 0))
-      break;
-  if (internal_location_table(mech, i, 0) < 0)
-    return 0;
-  return int_data[ti][internal_location_table(mech, i, 1)];
-}
-
-static int vehicle_internal_structure(const Mech *mech) {
-  return MAX((((mech)->ud.tons) + 5) / 10, 1);
-}
-
-void vehicle_int_check(Mech *mech, int noisy) {
-  int i, j;
-
-  j = vehicle_internal_structure(mech);
-  for (i = 0; i < NUM_SECTIONS; i++)
-    if (mech_section_original_internal(mech, i) &&
-        mech_section_original_internal(mech, i) != j) {
-      if (noisy)
-        btech_channel_send(
-            mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-            tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
-                    "(should be %d, are %d)",
-                    ((mech)->ud.mech_type), mech->mynum, i, j,
-                    mech_section_original_internal(mech, i)));
-      mech_section_original_internal_set(mech, i, j);
-      mech_section_internal_set(mech, i, j);
-    }
-}
-
-void mech_int_check(Mech *mech, int noisy) {
-  int i, j, k;
-
-  if (((mech)->ud.type) != CLASS_MECH) {
-    if (((mech)->ud.type) == CLASS_VEH_GROUND ||
-        ((mech)->ud.type) == CLASS_VTOL || ((mech)->ud.type) == CLASS_VEH_NAVAL)
-      vehicle_int_check(mech, noisy);
-    return;
-  }
-  for (i = 0; int_data[i][0] >= 0; i++)
-    if (((mech)->ud.tons) == int_data[i][0])
-      break;
-  if (int_data[i][0] < 0) {
-    if (noisy)
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                         tprintf("VERY odd tonnage for #%ld: %d.", mech->mynum,
-                                 ((mech)->ud.tons)));
-    return;
-  }
-  k = i;
-  for (i = 0; i < NUM_SECTIONS; i++) {
-    if (mech_section_original_internal(mech, i) != (j = real_int(mech, i, k))) {
-      if (noisy)
-        btech_channel_send(
-            mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-            tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
-                    "(should be %d, are %d)",
-                    ((mech)->ud.mech_type), mech->mynum, i, j,
-                    mech_section_original_internal(mech, i)));
-      mech_section_original_internal_set(mech, i, j);
-      mech_section_internal_set(mech, i, j);
-    }
-  }
 }

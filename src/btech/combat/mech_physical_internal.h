@@ -42,6 +42,8 @@
 #include "registry_api.h"
 
 int have_punch(Mech *mech, int location);
+bool physical_arm_check(DbRef player, Mech *mech, const char *verb);
+bool physical_quad_check(DbRef player, Mech *mech, const char *verb);
 int phys_common_checks(Mech *mech);
 int get_arm_args(int *using, int *argument_count, char ***arguments, Mech *mech,
                  int (*has_weapon)(Mech *mech, int location),
@@ -58,7 +60,7 @@ void physical_damage_apply_without_experience(Mech *target, Mech *attacker,
 
 enum { CHARGE_SECTIONS = 6 };
 
-extern const int resect[CHARGE_SECTIONS];
+int physical_charge_section(int index);
 
 /**
  * Checks to see if all limbs have recycled from any previous physical attacks.

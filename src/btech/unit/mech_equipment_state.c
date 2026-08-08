@@ -4,73 +4,100 @@
 #include "mech_internal.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
+#include "mux/support/checked_storage.h"
+
+static const struct MechSection *section_at(const Mech *mech, int section) {
+  return checked_storage_at_const(mech->ud.sections, NUM_SECTIONS,
+                                  sizeof *mech->ud.sections, (size_t)section);
+}
+
+static struct MechSection *section_at_mutable(Mech *mech, int section) {
+  return checked_storage_at(mech->ud.sections, NUM_SECTIONS,
+                            sizeof *mech->ud.sections, (size_t)section);
+}
+
+static const struct CriticalSlot *critical_at(const Mech *mech, int section,
+                                              int critical) {
+  const struct MechSection *section_storage = section_at(mech, section);
+  return checked_storage_at_const(section_storage->criticals, NUM_CRITICALS,
+                                  sizeof *section_storage->criticals,
+                                  (size_t)critical);
+}
+
+static struct CriticalSlot *critical_at_mutable(Mech *mech, int section,
+                                                int critical) {
+  struct MechSection *section_storage = section_at_mutable(mech, section);
+  return checked_storage_at(section_storage->criticals, NUM_CRITICALS,
+                            sizeof *section_storage->criticals,
+                            (size_t)critical);
+}
 
 int mech_critical_part_type(const Mech *mech, int section, int critical) {
-  return mech->ud.sections[section].criticals[critical].type;
+  return critical_at(mech, section, critical)->type;
 }
 
 int mech_critical_brand(const Mech *mech, int section, int critical) {
-  return mech->ud.sections[section].criticals[critical].brand % 16;
+  return critical_at(mech, section, critical)->brand % 16;
 }
 
 void mech_critical_brand_set(Mech *mech, int section, int critical, int brand) {
-  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  struct CriticalSlot *slot = critical_at_mutable(mech, section, critical);
   int failure_bits = slot->brand & 0xF0;
   int clamped_brand = brand < 0 ? 0 : brand > 15 ? 15 : brand;
   slot->brand = clamp_int_to_unsigned_char(failure_bits | clamped_brand);
 }
 
 int mech_critical_data(const Mech *mech, int section, int critical) {
-  return mech->ud.sections[section].criticals[critical].data;
+  return critical_at(mech, section, critical)->data;
 }
 
 int mech_critical_fire_mode(const Mech *mech, int section, int critical) {
   return clamp_unsigned_int_to_int(
-      mech->ud.sections[section].criticals[critical].firemode);
+      critical_at(mech, section, critical)->firemode);
 }
 
 int mech_critical_ammo_mode(const Mech *mech, int section, int critical) {
   return clamp_unsigned_int_to_int(
-      mech->ud.sections[section].criticals[critical].ammomode);
+      critical_at(mech, section, critical)->ammomode);
 }
 
 void mech_critical_fire_mode_set(Mech *mech, int section, int critical,
                                  int modes) {
-  mech->ud.sections[section].criticals[critical].firemode =
+  critical_at_mutable(mech, section, critical)->firemode =
       clamp_int_to_unsigned_int(modes);
 }
 
 void mech_critical_ammo_mode_set(Mech *mech, int section, int critical,
                                  int modes) {
-  mech->ud.sections[section].criticals[critical].ammomode =
+  critical_at_mutable(mech, section, critical)->ammomode =
       clamp_int_to_unsigned_int(modes);
 }
 
 int mech_critical_damage_flags(const Mech *mech, int section, int critical) {
   return clamp_unsigned_int_to_int(
-      mech->ud.sections[section].criticals[critical].weapDamageFlags);
+      critical_at(mech, section, critical)->weapDamageFlags);
 }
 
 void mech_critical_damage_flags_set(Mech *mech, int section, int critical,
                                     int flags) {
-  mech->ud.sections[section].criticals[critical].weapDamageFlags =
+  critical_at_mutable(mech, section, critical)->weapDamageFlags =
       clamp_int_to_unsigned_int(flags);
 }
 
 int mech_critical_desired_ammo_section(const Mech *mech, int section,
                                        int critical) {
-  return mech->ud.sections[section].criticals[critical].desiredAmmoLoc;
+  return critical_at(mech, section, critical)->desiredAmmoLoc;
 }
 
 void mech_critical_desired_ammo_section_set(Mech *mech, int section,
                                             int critical, int ammo_section) {
-  mech->ud.sections[section].criticals[critical].desiredAmmoLoc =
+  critical_at_mutable(mech, section, critical)->desiredAmmoLoc =
       clamp_int_to_short(ammo_section);
 }
 
 int mech_critical_temporary_failure(const Mech *mech, int section,
                                     int critical) {
-  return mech->ud.sections[section].criticals[critical].brand >> 4;
+  return critical_at(mech, section, critical)->brand >> 4;
 }
 
 int mech_critical_full_ammunition(const Mech *mech, int section, int critical) {
@@ -113,49 +140,49 @@ bool mech_critical_is_nonfunctional(const Mech *mech, int section,
 
 void mech_critical_temporary_failure_set(Mech *mech, int section, int critical,
                                          int failure) {
-  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  struct CriticalSlot *slot = critical_at_mutable(mech, section, critical);
   int clamped_failure = failure < 0 ? 0 : failure > 15 ? 15 : failure;
   slot->brand =
       clamp_int_to_unsigned_char((slot->brand & 0x0F) | (clamped_failure << 4));
 }
 
 void mech_critical_data_set(Mech *mech, int section, int critical, int data) {
-  mech->ud.sections[section].criticals[critical].data =
+  critical_at_mutable(mech, section, critical)->data =
       clamp_int_to_unsigned_char(data);
 }
 
 void mech_critical_fire_mode_clear(Mech *mech, int section, int critical,
                                    int modes) {
-  mech->ud.sections[section].criticals[critical].firemode &=
+  critical_at_mutable(mech, section, critical)->firemode &=
       ~clamp_int_to_unsigned_int(modes);
 }
 
 void mech_critical_fire_mode_add(Mech *mech, int section, int critical,
                                  int modes) {
-  mech->ud.sections[section].criticals[critical].firemode |=
+  critical_at_mutable(mech, section, critical)->firemode |=
       clamp_int_to_unsigned_int(modes);
 }
 
 void mech_critical_ammo_mode_clear(Mech *mech, int section, int critical,
                                    int modes) {
-  mech->ud.sections[section].criticals[critical].ammomode &=
+  critical_at_mutable(mech, section, critical)->ammomode &=
       ~clamp_int_to_unsigned_int(modes);
 }
 
 void mech_critical_ammo_mode_add(Mech *mech, int section, int critical,
                                  int modes) {
-  mech->ud.sections[section].criticals[critical].ammomode |=
+  critical_at_mutable(mech, section, critical)->ammomode |=
       clamp_int_to_unsigned_int(modes);
 }
 
 void mech_critical_damage_flags_add(Mech *mech, int section, int critical,
                                     int flags) {
-  mech->ud.sections[section].criticals[critical].weapDamageFlags |=
+  critical_at_mutable(mech, section, critical)->weapDamageFlags |=
       clamp_int_to_unsigned_int(flags);
 }
 
 void mech_critical_damage_repair(Mech *mech, int section, int critical) {
-  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  struct CriticalSlot *slot = critical_at_mutable(mech, section, critical);
   slot->firemode &= ~clamp_int_to_unsigned_int(DAMAGED_MODE);
   slot->weapDamageFlags = 0;
   slot->brand %= 16;
@@ -163,13 +190,13 @@ void mech_critical_damage_repair(Mech *mech, int section, int critical) {
 
 void mech_critical_part_type_set(Mech *mech, int section, int critical,
                                  int part_type) {
-  mech->ud.sections[section].criticals[critical].type =
+  critical_at_mutable(mech, section, critical)->type =
       clamp_int_to_unsigned_short(part_type);
 }
 
 void mech_critical_destroyed_set(Mech *mech, int section, int critical,
                                  bool destroyed) {
-  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  struct CriticalSlot *slot = critical_at_mutable(mech, section, critical);
   if (destroyed)
     slot->firemode |= clamp_int_to_unsigned_int(DESTROYED_MODE);
   else
@@ -177,7 +204,7 @@ void mech_critical_destroyed_set(Mech *mech, int section, int critical,
 }
 
 void mech_critical_destroy(Mech *mech, int section, int critical) {
-  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  struct CriticalSlot *slot = critical_at_mutable(mech, section, critical);
   slot->firemode |= clamp_int_to_unsigned_int(DESTROYED_MODE);
   slot->firemode &=
       ~clamp_int_to_unsigned_int(BROKEN_MODE | DISABLED_MODE | DAMAGED_MODE);
@@ -186,7 +213,7 @@ void mech_critical_destroy(Mech *mech, int section, int critical) {
 }
 
 void mech_critical_restore(Mech *mech, int section, int critical) {
-  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  struct CriticalSlot *slot = critical_at_mutable(mech, section, critical);
   slot->firemode &=
       ~clamp_int_to_unsigned_int(DESTROYED_MODE | HOTLOAD_MODE | DISABLED_MODE |
                                  BROKEN_MODE | DAMAGED_MODE);
@@ -195,100 +222,113 @@ void mech_critical_restore(Mech *mech, int section, int critical) {
 }
 
 void mech_critical_jettison(Mech *mech, int section, int critical) {
-  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  struct CriticalSlot *slot = critical_at_mutable(mech, section, critical);
   slot->firemode |=
       clamp_int_to_unsigned_int(DESTROYED_MODE | IS_JETTISONED_MODE);
   slot->firemode &= ~clamp_int_to_unsigned_int(BROKEN_MODE | DISABLED_MODE);
 }
 
 int mech_section_original_armor(const Mech *mech, int section) {
-  return mech->ud.sections[section].armor_orig;
+  return section_at(mech, section)->armor_orig;
 }
 
 int mech_section_original_rear_armor(const Mech *mech, int section) {
-  return mech->ud.sections[section].rear_orig;
+  return section_at(mech, section)->rear_orig;
 }
 
 int mech_section_armor(const Mech *mech, int section) {
-  return mech->ud.sections[section].armor;
+  return section_at(mech, section)->armor;
 }
 
 int mech_section_rear_armor(const Mech *mech, int section) {
-  return mech->ud.sections[section].rear;
+  return section_at(mech, section)->rear;
 }
 
 int mech_section_internal(const Mech *mech, int section) {
-  return mech->ud.sections[section].internal;
+  return section_at(mech, section)->internal;
 }
 
 int mech_section_original_internal(const Mech *mech, int section) {
-  return mech->ud.sections[section].internal_orig;
+  return section_at(mech, section)->internal_orig;
 }
 
 bool mech_section_is_destroyed(const Mech *mech, int section) {
   int unit_class = mech->ud.type;
   bool is_dropship = unit_class == CLASS_DS || unit_class == CLASS_SPHEROID_DS;
   bool is_aerospace = unit_class == CLASS_AERO || is_dropship;
-  return mech->ud.sections[section].armor == 0 &&
-         (is_aerospace || mech->ud.sections[section].internal == 0) &&
-         !is_dropship;
+  const struct MechSection *section_storage = section_at(mech, section);
+  return section_storage->armor == 0 &&
+         (is_aerospace || section_storage->internal == 0) && !is_dropship;
 }
 
 bool mech_section_is_flooded(const Mech *mech, int section) {
-  return mech->ud.sections[section].config & SECTION_FLOODED;
+  return section_at(mech, section)->config & SECTION_FLOODED;
 }
 
 bool mech_section_is_breached(const Mech *mech, int section) {
-  return mech->ud.sections[section].config & SECTION_BREACHED;
+  return section_at(mech, section)->config & SECTION_BREACHED;
 }
 
 void mech_section_flooded_set(Mech *mech, int section, bool flooded) {
   if (flooded)
-    mech->ud.sections[section].config |= SECTION_FLOODED;
+    section_at_mutable(mech, section)->config |= SECTION_FLOODED;
   else
-    mech->ud.sections[section].config &= ~SECTION_FLOODED;
+    section_at_mutable(mech, section)->config &= ~SECTION_FLOODED;
 }
 
 void mech_section_breached_set(Mech *mech, int section, bool breached) {
   if (breached)
-    mech->ud.sections[section].config |= SECTION_BREACHED;
+    section_at_mutable(mech, section)->config |= SECTION_BREACHED;
   else
-    mech->ud.sections[section].config &= ~SECTION_BREACHED;
+    section_at_mutable(mech, section)->config &= ~SECTION_BREACHED;
 }
 
 bool mech_critical_is_operational_special(const Mech *mech, int section,
                                           int critical, int special) {
-  const struct CriticalSlot *slot =
-      &mech->ud.sections[section].criticals[critical];
+  const struct CriticalSlot *slot = critical_at(mech, section, critical);
   return slot->type == special_equipment_index(special) &&
          !(slot->firemode & (DISABLED_MODE | DESTROYED_MODE | BROKEN_MODE));
 }
 
 bool mech_section_carries_club(const Mech *mech, int section) {
-  return mech->ud.sections[section].specials & CARRYING_CLUB;
+  return section_at(mech, section)->specials & CARRYING_CLUB;
 }
 
 bool mech_section_has_special(const Mech *mech, int section, int special) {
-  return mech->ud.sections[section].specials & special;
+  return section_at(mech, section)->specials & special;
+}
+
+int mech_section_specials(const Mech *mech, int section) {
+  return section_at(mech, section)->specials;
+}
+
+void mech_section_specials_set(Mech *mech, int section, int specials) {
+  section_at_mutable(mech, section)->specials =
+      clamp_int_to_unsigned_short(specials);
 }
 
 bool mech_section_configuration_has(const Mech *mech, int section,
                                     int configuration) {
-  return mech->ud.sections[section].config & configuration;
+  return section_at(mech, section)->config & configuration;
 }
 
 int mech_section_configuration(const Mech *mech, int section) {
-  return mech->ud.sections[section].config;
+  return section_at(mech, section)->config;
+}
+
+void mech_section_configuration_set(Mech *mech, int section,
+                                    int configuration) {
+  section_at_mutable(mech, section)->config = clamp_int_to_char(configuration);
 }
 
 void mech_section_configuration_add(Mech *mech, int section,
                                     int configuration) {
-  mech->ud.sections[section].config |= configuration;
+  section_at_mutable(mech, section)->config |= configuration;
 }
 
 void mech_section_configuration_remove(Mech *mech, int section,
                                        int configuration) {
-  mech->ud.sections[section].config &= ~configuration;
+  section_at_mutable(mech, section)->config &= ~configuration;
 }
 
 bool mech_has_section_special(const Mech *mech, int special) {
@@ -299,36 +339,36 @@ bool mech_has_section_special(const Mech *mech, int special) {
 }
 
 void mech_section_special_add(Mech *mech, int section, int special) {
-  mech->ud.sections[section].specials |= special;
+  section_at_mutable(mech, section)->specials |= special;
 }
 
 void mech_section_special_remove(Mech *mech, int section, int special) {
-  mech->ud.sections[section].specials &= ~special;
+  section_at_mutable(mech, section)->specials &= ~special;
 }
 
 void mech_section_specials_clear(Mech *mech, int section) {
-  mech->ud.sections[section].specials = 0;
+  section_at_mutable(mech, section)->specials = 0;
 }
 
 bool mech_has_attached_inarc_ecm(const Mech *mech) {
   for (int section = 0; section < NUM_SECTIONS; section++)
-    if (mech->ud.sections[section].internal &&
-        (mech->ud.sections[section].specials & INARC_ECM_ATTACHED))
+    if (section_at(mech, section)->internal &&
+        (section_at(mech, section)->specials & INARC_ECM_ATTACHED))
       return true;
   return false;
 }
 
 bool mech_has_attached_homing_beacon(const Mech *mech) {
   for (int section = 0; section < NUM_SECTIONS; section++)
-    if (mech->ud.sections[section].specials &
+    if (section_at(mech, section)->specials &
         (NARC_ATTACHED | INARC_HOMING_ATTACHED))
       return true;
   return false;
 }
 
 bool mech_limbs_are_recycling(const Mech *mech) {
-  return mech->ud.sections[RARM].recycle || mech->ud.sections[LARM].recycle ||
-         mech->ud.sections[RLEG].recycle || mech->ud.sections[LLEG].recycle;
+  return section_at(mech, RARM)->recycle || section_at(mech, LARM)->recycle ||
+         section_at(mech, RLEG)->recycle || section_at(mech, LLEG)->recycle;
 }
 
 bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical) {
@@ -350,11 +390,11 @@ bool mech_weapon_is_nonfunctional_at(Mech *mech, int section, int critical,
 }
 
 int mech_section_recycle_ticks(const Mech *mech, int section) {
-  return mech->ud.sections[section].recycle;
+  return section_at(mech, section)->recycle;
 }
 
 void mech_section_recycle_ticks_set(Mech *mech, int section, int ticks) {
-  mech->ud.sections[section].recycle = clamp_int_to_char(ticks);
+  section_at_mutable(mech, section)->recycle = clamp_int_to_char(ticks);
 }
 
 int mech_last_weapon_recycle_tick(const Mech *mech) {
@@ -366,15 +406,15 @@ void mech_last_weapon_recycle_tick_set(Mech *mech, int tick) {
 }
 
 int mech_section_base_to_hit(const Mech *mech, int section) {
-  return mech->ud.sections[section].basetohit;
+  return section_at(mech, section)->basetohit;
 }
 
 void mech_section_base_to_hit_set(Mech *mech, int section, int modifier) {
-  mech->ud.sections[section].basetohit = clamp_int_to_char(modifier);
+  section_at_mutable(mech, section)->basetohit = clamp_int_to_char(modifier);
 }
 
 void mech_section_base_to_hit_add(Mech *mech, int section, int modifier) {
-  mech->ud.sections[section].basetohit += modifier;
+  section_at_mutable(mech, section)->basetohit += modifier;
 }
 
 int mech_section_critical_count(Mech *mech, int section) {
@@ -391,37 +431,40 @@ bool mech_part_is_structural_placeholder(int part_type) {
 }
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {
-  mech->ud.sections[section].armor = clamp_int_to_unsigned_char(armor);
+  section_at_mutable(mech, section)->armor = clamp_int_to_unsigned_char(armor);
   mech->rd.critstatus &= ~OWEIGHT_OK;
 }
 
 void mech_section_rear_armor_set(Mech *mech, int section, int armor) {
-  mech->ud.sections[section].rear = clamp_int_to_unsigned_char(armor);
+  section_at_mutable(mech, section)->rear = clamp_int_to_unsigned_char(armor);
   mech->rd.critstatus &= ~OWEIGHT_OK;
 }
 
 void mech_section_original_armor_set(Mech *mech, int section, int armor) {
-  mech->ud.sections[section].armor_orig = clamp_int_to_unsigned_char(armor);
+  section_at_mutable(mech, section)->armor_orig =
+      clamp_int_to_unsigned_char(armor);
 }
 
 void mech_section_original_rear_armor_set(Mech *mech, int section, int armor) {
-  mech->ud.sections[section].rear_orig = clamp_int_to_unsigned_char(armor);
+  section_at_mutable(mech, section)->rear_orig =
+      clamp_int_to_unsigned_char(armor);
 }
 
 void mech_section_internal_set(Mech *mech, int section, int internal) {
-  mech->ud.sections[section].internal = clamp_int_to_unsigned_char(internal);
+  section_at_mutable(mech, section)->internal =
+      clamp_int_to_unsigned_char(internal);
   mech->rd.critstatus &= ~OWEIGHT_OK;
 }
 
 void mech_section_original_internal_set(Mech *mech, int section, int internal) {
-  mech->ud.sections[section].internal_orig =
+  section_at_mutable(mech, section)->internal_orig =
       clamp_int_to_unsigned_char(internal);
 }
 
 void mech_critical_configure(Mech *mech, int section, int critical,
                              int part_type, int data, int fire_mode,
                              int ammo_mode) {
-  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  struct CriticalSlot *slot = critical_at_mutable(mech, section, critical);
   slot->type = clamp_int_to_unsigned_short(part_type);
   slot->data = clamp_int_to_unsigned_char(data);
   slot->firemode = clamp_int_to_unsigned_int(fire_mode);

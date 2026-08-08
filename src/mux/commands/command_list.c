@@ -28,6 +28,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
@@ -64,22 +65,30 @@ static void list_object_lua_command(void *data, const char *source,
 
 static size_t list_object_lua_command_source(LuaRuntime *lua,
                                              LuaCommandListContext *context,
-                                             DbRef object, bool visited[]) {
-  if (!is_good_obj(context->database, object) || visited[object])
+                                             DbRef object, bool visited[],
+                                             size_t visited_count) {
+  if (!is_good_obj(context->database, object))
     return 0;
-  visited[object] = true;
+  bool *was_visited = checked_storage_at(visited, visited_count,
+                                         sizeof(*visited), (size_t)object);
+
+  if (*was_visited)
+    return 0;
+  *was_visited = true;
   return lua_visit_object_commands(lua, object, context->player,
                                    list_object_lua_command, context);
 }
 
 static size_t list_object_lua_command_sources(LuaRuntime *lua,
                                               LuaCommandListContext *context,
-                                              DbRef first, bool visited[]) {
+                                              DbRef first, bool visited[],
+                                              size_t visited_count) {
   DbRef object;
   size_t count = 0;
 
   DOLIST(context->database, object, first) {
-    count += list_object_lua_command_source(lua, context, object, visited);
+    count += list_object_lua_command_source(lua, context, object, visited,
+                                            visited_count);
   }
   return count;
 }
@@ -100,18 +109,22 @@ static size_t list_reachable_object_lua_commands(CommandRuntime *runtime,
   if (!visited)
     return 0;
   if (!is_no_command(database, player))
-    count += list_object_lua_command_source(lua, &context, player, visited);
+    count += list_object_lua_command_source(lua, &context, player, visited,
+                                            (size_t)database->top);
   if (has_location(database, player)) {
     DbRef location = game_object_location(database, player);
 
     count += list_object_lua_command_sources(
-        lua, &context, game_object_contents(database, location), visited);
+        lua, &context, game_object_contents(database, location), visited,
+        (size_t)database->top);
     if (!is_no_command(database, location))
-      count += list_object_lua_command_source(lua, &context, location, visited);
+      count += list_object_lua_command_source(lua, &context, location, visited,
+                                              (size_t)database->top);
   }
   if (has_contents(database, player))
     count += list_object_lua_command_sources(
-        lua, &context, game_object_contents(database, player), visited);
+        lua, &context, game_object_contents(database, player), visited,
+        (size_t)database->top);
 
   if (has_location(database, player)) {
     DbRef location = game_object_location(database, player);
@@ -123,16 +136,16 @@ static size_t list_reachable_object_lua_commands(CommandRuntime *runtime,
         if (location != player_zone)
           count += list_object_lua_command_sources(
               lua, &context, game_object_contents(database, location_zone),
-              visited);
+              visited, (size_t)database->top);
       } else if (!is_no_command(database, location_zone)) {
         count += list_object_lua_command_source(lua, &context, location_zone,
-                                                visited);
+                                                visited, (size_t)database->top);
       }
     }
     if (player_zone != NOTHING && !is_no_command(database, player_zone) &&
         location_zone != player_zone)
-      count +=
-          list_object_lua_command_source(lua, &context, player_zone, visited);
+      count += list_object_lua_command_source(lua, &context, player_zone,
+                                              visited, (size_t)database->top);
   }
   free(visited);
   return count;
@@ -146,26 +159,33 @@ static void list_cmdtable(EvaluationContext *evaluation,
       .database = runtime->world->database,
       .player = player,
   };
-  CMDENT *cmdp;
-  char *buf, *bp;
-  const char *cp;
+  char *buf;
+  size_t used = 0;
   size_t count;
 
   buf = alloc_lbuf("list_cmdtable");
-  bp = buf;
-  for (cp = "Built-in commands:"; *cp; cp++)
-    *bp++ = *cp;
-  for (cmdp = command_table; cmdp->cmdname; cmdp++) {
+  const char prefix[] = "Built-in commands:";
+
+  memcpy(buf, prefix, sizeof(prefix) - 1);
+  used = sizeof(prefix) - 1;
+  for (size_t index = 0; index < command_table_entry_count(); index++) {
+    CMDENT *cmdp = command_table_entry_at(index);
+
     if (check_access(evaluation->world->database, configuration, player,
                      cmdp->perms)) {
       if (!(cmdp->perms & CF_DARK)) {
-        *bp++ = ' ';
-        for (cp = cmdp->cmdname; *cp; cp++)
-          *bp++ = *cp;
+        const size_t name_length = strlen(cmdp->cmdname);
+
+        if (name_length > LBUF_SIZE - used - 2)
+          abort();
+        *(char *)checked_storage_at(buf, LBUF_SIZE, sizeof(char), used++) = ' ';
+        memcpy(checked_storage_region(buf, LBUF_SIZE, used, name_length),
+               cmdp->cmdname, name_length);
+        used += name_length;
       }
     }
   }
-  *bp = '\0';
+  *(char *)checked_storage_at(buf, LBUF_SIZE, sizeof(char), used) = '\0';
 
   notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buf);
@@ -217,8 +237,6 @@ static void list_df_flags(EvaluationContext *evaluation,
  * ---------------------------------------------------------------------------
  * * list_options: List more game options from the context configuration.
  */
-
-static const char *ed[] = {"Disabled", "Enabled"};
 
 static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
                          DbRef player) {
@@ -298,7 +316,8 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
            configuration->command_quota_increment);
   raw_notify(evaluation, player, buff);
 
-  snprintf(buff, MBUF_SIZE, "Spaces...%s", ed[configuration->space_compress]);
+  snprintf(buff, MBUF_SIZE, "Spaces...%s",
+           configuration->space_compress ? "Enabled" : "Disabled");
   raw_notify(evaluation, player, buff);
 
   snprintf(buff, MBUF_SIZE,
@@ -334,7 +353,14 @@ static void list_process(EvaluationContext *evaluation,
 
   curr = clock->current_sample;
   last = 1 - curr;
-  dur = clock->sample_time[curr] - clock->sample_time[last];
+  dur = *(const int *)checked_storage_at_const(
+            clock->sample_time,
+            sizeof(clock->sample_time) / sizeof(*clock->sample_time),
+            sizeof(*clock->sample_time), (size_t)curr) -
+        *(const int *)checked_storage_at_const(
+            clock->sample_time,
+            sizeof(clock->sample_time) / sizeof(*clock->sample_time),
+            sizeof(*clock->sample_time), (size_t)last);
   if (dur > 0) {
   }
   maxfds = getdtablesize();

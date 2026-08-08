@@ -4,28 +4,50 @@
 
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
+
+static unsigned char utf8_byte_at(const char *text, size_t length,
+                                  size_t index) {
+  return *(const unsigned char *)checked_storage_at_const(text, length,
+                                                          sizeof(char), index);
+}
+
+static const char *utf8_suffix(const char *text, size_t length, size_t offset) {
+  return checked_storage_region_const(text, length, offset, length - offset);
+}
+
+static char *utf8_destination_suffix(char *text, size_t capacity,
+                                     size_t offset) {
+  return checked_storage_region(text, capacity, offset, capacity - offset);
+}
+
+static void utf8_write_byte(char *text, size_t capacity, size_t index,
+                            char value) {
+  *(char *)checked_storage_at(text, capacity, sizeof(char), index) = value;
+}
+
 static bool utf8_is_continuation(unsigned char byte) {
   return byte >= 0x80 && byte <= 0xbf;
 }
 
 bool utf8_decode(const char *text, size_t length, Utf8DecodeResult *result) {
-  const unsigned char *bytes = (const unsigned char *)text;
   uint32_t codepoint;
   size_t needed;
 
-  if (length == 0)
+  if (text == nullptr || result == nullptr || length == 0)
     return false;
-  if (bytes[0] <= 0x7f) {
-    codepoint = bytes[0];
+  const unsigned char first = utf8_byte_at(text, length, 0);
+  if (first <= 0x7f) {
+    codepoint = first;
     needed = 1;
-  } else if (bytes[0] >= 0xc2 && bytes[0] <= 0xdf) {
-    codepoint = bytes[0] & 0x1f;
+  } else if (first >= 0xc2 && first <= 0xdf) {
+    codepoint = first & 0x1f;
     needed = 2;
-  } else if (bytes[0] >= 0xe0 && bytes[0] <= 0xef) {
-    codepoint = bytes[0] & 0x0f;
+  } else if (first >= 0xe0 && first <= 0xef) {
+    codepoint = first & 0x0f;
     needed = 3;
-  } else if (bytes[0] >= 0xf0 && bytes[0] <= 0xf4) {
-    codepoint = bytes[0] & 0x07;
+  } else if (first >= 0xf0 && first <= 0xf4) {
+    codepoint = first & 0x07;
     needed = 4;
   } else {
     return false;
@@ -33,9 +55,10 @@ bool utf8_decode(const char *text, size_t length, Utf8DecodeResult *result) {
   if (length < needed)
     return false;
   for (size_t index = 1; index < needed; index++) {
-    if (!utf8_is_continuation(bytes[index]))
+    const unsigned char byte = utf8_byte_at(text, length, index);
+    if (!utf8_is_continuation(byte))
       return false;
-    codepoint = (codepoint << 6) | (bytes[index] & 0x3f);
+    codepoint = (codepoint << 6) | (byte & 0x3f);
   }
   if ((needed == 3 && codepoint < 0x800) ||
       (needed == 4 && codepoint < 0x10000) ||
@@ -51,7 +74,8 @@ bool utf8_validate(const char *text, size_t length) {
   size_t offset = 0;
 
   while (offset < length) {
-    if (!utf8_decode(text + offset, length - offset, &decoded))
+    if (!utf8_decode(utf8_suffix(text, length, offset), length - offset,
+                     &decoded))
       return false;
     offset += decoded.length;
   }
@@ -63,7 +87,8 @@ bool utf8_validate_printable(const char *text, size_t length) {
   size_t offset = 0;
 
   while (offset < length) {
-    if (!utf8_decode(text + offset, length - offset, &decoded))
+    if (!utf8_decode(utf8_suffix(text, length, offset), length - offset,
+                     &decoded))
       return false;
     if (decoded.codepoint <= 0x1f ||
         (decoded.codepoint >= 0x7f && decoded.codepoint <= 0x9f))
@@ -74,10 +99,9 @@ bool utf8_validate_printable(const char *text, size_t length) {
 }
 
 bool utf8_is_printable_ascii(const char *text, size_t length) {
-  const unsigned char *bytes = (const unsigned char *)text;
-
   for (size_t index = 0; index < length; index++) {
-    if (bytes[index] < 0x20 || bytes[index] > 0x7e)
+    const unsigned char byte = utf8_byte_at(text, length, index);
+    if (byte < 0x20 || byte > 0x7e)
       return false;
   }
   return true;
@@ -88,7 +112,8 @@ size_t utf8_valid_prefix_length(const char *text, size_t length) {
   size_t offset = 0;
 
   while (offset < length) {
-    if (!utf8_decode(text + offset, length - offset, &decoded))
+    if (!utf8_decode(utf8_suffix(text, length, offset), length - offset,
+                     &decoded))
       break;
     offset += decoded.length;
   }
@@ -96,13 +121,12 @@ size_t utf8_valid_prefix_length(const char *text, size_t length) {
 }
 
 size_t utf8_previous_codepoint_start(const char *text, size_t length) {
-  const unsigned char *bytes = (const unsigned char *)text;
   size_t start;
 
   if (length == 0)
     return 0;
   start = length - 1;
-  while (start > 0 && utf8_is_continuation(bytes[start]))
+  while (start > 0 && utf8_is_continuation(utf8_byte_at(text, length, start)))
     start--;
   return start;
 }
@@ -116,21 +140,22 @@ size_t utf8_copy_truncated(char *destination, size_t destination_size,
 
   if (destination_size == 0)
     return 0;
-  destination[0] = '\0';
+  utf8_write_byte(destination, destination_size, 0, '\0');
   if (source == nullptr)
     return 0;
   source_length = strlen(source);
   while (source_offset < source_length &&
-         utf8_decode(source + source_offset, source_length - source_offset,
-                     &decoded)) {
-    if (destination_offset + decoded.length >= destination_size)
+         utf8_decode(utf8_suffix(source, source_length, source_offset),
+                     source_length - source_offset, &decoded)) {
+    if (decoded.length >= destination_size - destination_offset)
       break;
-    memcpy(destination + destination_offset, source + source_offset,
-           decoded.length);
+    memcpy(utf8_destination_suffix(destination, destination_size,
+                                   destination_offset),
+           utf8_suffix(source, source_length, source_offset), decoded.length);
     source_offset += decoded.length;
     destination_offset += decoded.length;
   }
-  destination[destination_offset] = '\0';
+  utf8_write_byte(destination, destination_size, destination_offset, '\0');
   return destination_offset;
 }
 
@@ -140,10 +165,8 @@ void utf8_validator_initialize(Utf8ValidatorState *state) {
 
 bool utf8_validator_feed(Utf8ValidatorState *state, const char *text,
                          size_t length) {
-  const unsigned char *bytes = (const unsigned char *)text;
-
   for (size_t index = 0; index < length; index++) {
-    unsigned char byte = bytes[index];
+    unsigned char byte = utf8_byte_at(text, length, index);
 
     if (state->remaining == 0) {
       if (byte <= 0x7f)
@@ -195,9 +218,9 @@ size_t utf8_sanitize(char *destination, size_t destination_size,
     const char *value;
     size_t value_length;
 
-    if (utf8_decode(source + source_offset, source_length - source_offset,
-                    &decoded)) {
-      value = source + source_offset;
+    if (utf8_decode(utf8_suffix(source, source_length, source_offset),
+                    source_length - source_offset, &decoded)) {
+      value = utf8_suffix(source, source_length, source_offset);
       value_length = decoded.length;
       source_offset += decoded.length;
     } else {
@@ -205,11 +228,13 @@ size_t utf8_sanitize(char *destination, size_t destination_size,
       value_length = sizeof(replacement) - 1;
       source_offset++;
     }
-    if (destination_offset + value_length >= destination_size)
+    if (value_length >= destination_size - destination_offset)
       break;
-    memcpy(destination + destination_offset, value, value_length);
+    memcpy(utf8_destination_suffix(destination, destination_size,
+                                   destination_offset),
+           value, value_length);
     destination_offset += value_length;
   }
-  destination[destination_offset] = '\0';
+  utf8_write_byte(destination, destination_size, destination_offset, '\0');
   return destination_offset;
 }

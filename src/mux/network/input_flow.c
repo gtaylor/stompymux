@@ -14,6 +14,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 
@@ -26,6 +27,17 @@ struct InputFlow {
   char step[FLOW_STEP_NAME_SIZE];
   char *last_prompt;
 };
+
+static const FlowMenuItem *flow_menu_item_at(const FlowMenuItem *items,
+                                             size_t item_count, size_t index) {
+  return checked_storage_at_const(items, item_count, sizeof(*items), index);
+}
+
+static unsigned char flow_input_at(const char *input, size_t length,
+                                   size_t index) {
+  return *(const unsigned char *)checked_storage_at_const(input, length,
+                                                          sizeof(char), index);
+}
 
 static void flow_send_prompt(Descriptor *d, const char *prompt) {
   descriptor_queue_string(d, tprintf("[bold]%s[reset]", prompt ? prompt : ""));
@@ -128,9 +140,12 @@ void flow_render_menu(char *buffer, size_t buffer_size, const char *header,
     safe_copy_str("\r\n", buffer, &bufc, max);
   }
   for (index = 0; index < item_count; index++) {
-    safe_copy_str(items[index].key, buffer, &bufc, max);
+    const FlowMenuItem *item =
+        flow_menu_item_at(items, (size_t)item_count, (size_t)index);
+
+    safe_copy_str(item->key, buffer, &bufc, max);
     safe_copy_str(") ", buffer, &bufc, max);
-    safe_copy_str(items[index].label, buffer, &bufc, max);
+    safe_copy_str(item->label, buffer, &bufc, max);
     safe_copy_str("\r\n", buffer, &bufc, max);
   }
   *bufc = '\0';
@@ -138,36 +153,45 @@ void flow_render_menu(char *buffer, size_t buffer_size, const char *header,
 
 int flow_match_menu(const FlowMenuItem *items, int item_count,
                     const char *input) {
-  const char *start;
-  const char *end;
-  size_t length;
+  size_t input_length = strlen(input);
+  size_t start = 0;
+  size_t end = input_length;
   int index;
 
-  while (*input && isascii((unsigned char)*input) &&
-         isspace((unsigned char)*input))
-    input++;
-  start = input;
-  end = start + strlen(start);
-  while (end > start && isascii((unsigned char)end[-1]) &&
-         isspace((unsigned char)end[-1]))
+  while (start < input_length &&
+         isascii(flow_input_at(input, input_length, start)) &&
+         (isspace)(flow_input_at(input, input_length, start)))
+    start++;
+  while (end > start && isascii(flow_input_at(input, input_length, end - 1)) &&
+         (isspace)(flow_input_at(input, input_length, end - 1)))
     end--;
-  length = (size_t)(end - start);
 
   for (index = 0; index < item_count; index++) {
-    if (strlen(items[index].key) == length &&
-        strncasecmp(items[index].key, start, length) == 0)
+    const FlowMenuItem *item =
+        flow_menu_item_at(items, (size_t)item_count, (size_t)index);
+    size_t length = end - start;
+
+    if (strlen(item->key) == length &&
+        strncasecmp(item->key, checked_string_suffix(input, start), length) ==
+            0)
       return index;
   }
   return -1;
 }
 
 FlowYesNo flow_parse_yesno(const char *input) {
-  while (*input && isascii((unsigned char)*input) &&
-         isspace((unsigned char)*input))
-    input++;
-  if (*input == 'y' || *input == 'Y')
+  size_t length = strlen(input);
+  size_t offset = 0;
+
+  while (offset < length && isascii(flow_input_at(input, length, offset)) &&
+         (isspace)(flow_input_at(input, length, offset)))
+    offset++;
+  if (offset == length)
+    return FLOW_YESNO_INVALID;
+  unsigned char character = flow_input_at(input, length, offset);
+  if (character == 'y' || character == 'Y')
     return FLOW_YESNO_YES;
-  if (*input == 'n' || *input == 'N')
+  if (character == 'n' || character == 'N')
     return FLOW_YESNO_NO;
   return FLOW_YESNO_INVALID;
 }

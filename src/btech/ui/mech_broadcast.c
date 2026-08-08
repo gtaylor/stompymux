@@ -1,6 +1,7 @@
 
 #include "btech/context.h"
 #include "map.h"
+#include "map_units_api.h"
 #include "mech_broadcast_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
@@ -12,11 +13,11 @@ int MapLimitedBroadcast2d(BattleMap *map, float x, float y, float range,
                           const char *message) {
   int count = 0;
 
-  for (int index = 0; index < map->first_free; index++) {
-    if (map->mechsOnMap[index] < 0)
+  for (int index = 0; index < battle_map_unit_count(map); index++) {
+    const DbRef candidate = battle_map_unit_dbref(map, index);
+    if (candidate < 0)
       continue;
-    Mech *mech =
-        btech_context_get_mech(map->xcode.context, map->mechsOnMap[index]);
+    Mech *mech = btech_context_get_mech(battle_map_context(map), candidate);
     if (mech && FindXYRange(x, y, mech_position_real_x(mech),
                             mech_position_real_y(mech)) <= range) {
       mech_notify(mech, MECHSTARTED, message);
@@ -30,11 +31,11 @@ int MapLimitedBroadcast3d(BattleMap *map, float x, float y, float z,
                           float range, const char *message) {
   int count = 0;
 
-  for (int index = 0; index < map->first_free; index++) {
-    if (map->mechsOnMap[index] == -1)
+  for (int index = 0; index < battle_map_unit_count(map); index++) {
+    const DbRef candidate = battle_map_unit_dbref(map, index);
+    if (candidate == -1)
       continue;
-    Mech *mech =
-        btech_context_get_mech(map->xcode.context, map->mechsOnMap[index]);
+    Mech *mech = btech_context_get_mech(battle_map_context(map), candidate);
     if (mech && FindRange(x, y, z, mech_position_real_x(mech),
                           mech_position_real_y(mech),
                           mech_position_real_z(mech)) <= range) {
@@ -46,8 +47,8 @@ int MapLimitedBroadcast3d(BattleMap *map, float x, float y, float z,
 }
 
 void MechBroadcast(Mech *mech, Mech *target, BattleMap *map, char *buffer) {
-  for (int index = 0; index < map->first_free; index++) {
-    DbRef candidate = map->mechsOnMap[index];
+  for (int index = 0; index < battle_map_unit_count(map); index++) {
+    DbRef candidate = battle_map_unit_dbref(map, index);
     if (candidate == mech_dbref(mech) || candidate == -1 ||
         (target && candidate == mech_dbref(target)))
       continue;

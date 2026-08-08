@@ -11,8 +11,8 @@ bool is_good_obj(GameDatabase *database, DbRef object) {
 }
 
 int main(void) {
-  GameObject objects[2] = {0};
-  GameDatabase database = {.objects = objects, .top = 2, .size = 2};
+  GameObject objects[3] = {0};
+  GameDatabase database = {.object_storage = objects, .top = 2, .size = 2};
   EconomyPartEntryView entry;
 
   game_object_set_type(&database, 0, OBJECT_TYPE_THING);
@@ -32,9 +32,12 @@ int main(void) {
     return 1;
   game_object_set_type(&database, 1, OBJECT_TYPE_GARBAGE);
   economy_parts_clear(&database, 1);
-  if (objects[1].economy_parts.entries || objects[1].economy_parts.count != 0)
+  if (game_database_object(&database, 1)->economy_parts.entries ||
+      game_database_object(&database, 1)->economy_parts.count != 0)
     return 1;
   economy_parts_clear(&database, 0);
-  return objects[0].economy_parts.entries || objects[0].economy_parts.count ? 1
-                                                                            : 0;
+  return game_database_object(&database, 0)->economy_parts.entries ||
+                 game_database_object(&database, 0)->economy_parts.count
+             ? 1
+             : 0;
 }

@@ -13,6 +13,14 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "mux/support/checked_storage.h"
+
+static const char *string_catalog_item(const char *const *items, size_t count,
+                                       size_t index) {
+  return *(const char *const *)checked_storage_at_const(items, count,
+                                                        sizeof(*items), index);
+}
+
 static int run_server(const char *binary_path, const char *config,
                       int make_minimal, int *status) {
   struct timespec delay;
@@ -856,11 +864,10 @@ static int set_nonascii_player_alias(const char *path, int invalid) {
 static int set_invalid_character_value_name(const char *path, int invalid) {
   sqlite3 *sqlite = NULL;
   const char *statement =
-      invalid
-          ? "UPDATE btech_character_values SET value_name = 'running' "
-            "WHERE player_dbref = 1 AND value_name = 'Running';"
-          : "UPDATE btech_character_values SET value_name = 'Running' "
-            "WHERE player_dbref = 1 AND value_name = 'running';";
+      invalid ? "UPDATE btech_character_values SET value_name = 'running' "
+                "WHERE player_dbref = 1 AND value_name = 'Running';"
+              : "UPDATE btech_character_values SET value_name = 'Running' "
+                "WHERE player_dbref = 1 AND value_name = 'running';";
   int result =
       sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
                   SQLITE_OK &&
@@ -1013,9 +1020,10 @@ static int check_character_state_delete_cascade(const char *path) {
                 "'btech_character_state') WHERE \"table\" = 'objects' "
                 "AND on_delete = 'CASCADE';",
                 1) == 0 &&
-      sqlite3_exec(sqlite, "PRAGMA foreign_keys = ON; BEGIN;"
-                           "DELETE FROM btech_character_state "
-                           "WHERE player_dbref = 1;",
+      sqlite3_exec(sqlite,
+                   "PRAGMA foreign_keys = ON; BEGIN;"
+                   "DELETE FROM btech_character_state "
+                   "WHERE player_dbref = 1;",
                    NULL, NULL, NULL) == SQLITE_OK &&
       query_int(sqlite,
                 "SELECT count(*) FROM btech_character_state "
@@ -1359,7 +1367,11 @@ int main(int argc, char *argv[]) {
   struct stat snapshot_before;
   struct stat snapshot_after;
 
-  if (argc != 2 || !mkdtemp(directory))
+  if (argc != 2)
+    return 2;
+  const char *server =
+      string_catalog_item((const char *const *)argv, (size_t)argc, 1);
+  if (!mkdtemp(directory))
     return 2;
   if (snprintf(config, sizeof(config), "%s/game.conf", directory) < 0 ||
       snprintf(missing_config, sizeof(missing_config), "%s/missing.conf",
@@ -1390,7 +1402,7 @@ int main(int argc, char *argv[]) {
   if (fclose(file) != 0)
     return 2;
 
-  result = run_server(argv[1], config, 1, &status) == 0 && WIFEXITED(status) &&
+  result = run_server(server, config, 1, &status) == 0 && WIFEXITED(status) &&
                    WEXITSTATUS(status) == 0 && check_snapshot(database) == 0 &&
                    check_minimal_lua_parents(database) == 0
 #ifdef BTMUX_TEST_ADVANCED_ECON
@@ -1415,7 +1427,7 @@ int main(int argc, char *argv[]) {
   if (result == 0) {
     if (setenv("BTMUX_TEST_BTECH_BOOTSTRAP", "1", 1) < 0)
       return 1;
-    result = run_server_in_directory(argv[1], bootstrap_config, directory, 0,
+    result = run_server_in_directory(server, bootstrap_config, directory, 0,
                                      &status) == 0 &&
                      WIFEXITED(status) && WEXITSTATUS(status) != 2 &&
                      check_btech_special_snapshot(database) == 0
@@ -1449,7 +1461,7 @@ int main(int argc, char *argv[]) {
   if (fclose(file) != 0)
     return 2;
   if (result == 0 &&
-      (run_server_in_directory_after(argv[1], sqlite_read_config, directory, 0,
+      (run_server_in_directory_after(server, sqlite_read_config, directory, 0,
                                      &status) < 0 ||
        !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
        check_snapshot_dump_type(database, 0) < 0 ||
@@ -1463,7 +1475,7 @@ int main(int argc, char *argv[]) {
             status);
     return 1;
   }
-  if (result == 0 && (run_server_crash_in_directory(argv[1], sqlite_read_config,
+  if (result == 0 && (run_server_crash_in_directory(server, sqlite_read_config,
                                                     directory, &status) < 0 ||
                       !WIFSIGNALED(status) || WTERMSIG(status) != SIGKILL ||
                       check_snapshot_dump_type(crash_database, 1) < 0 ||
@@ -1476,22 +1488,21 @@ int main(int argc, char *argv[]) {
             directory, status);
     return 1;
   }
-  if (result == 0 &&
-      (run_server_killed_in_directory(argv[1], sqlite_read_config, directory,
-                                      &status) < 0 ||
-       !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
-       check_snapshot_dump_type(killed_database, 4) < 0 ||
-       check_btech_special_snapshot(killed_database) < 0 ||
-       check_btech_queued_command_state(killed_database) < 0 ||
-       check_player_account_state(killed_database) < 0 ||
-       check_economy_parts(killed_database) < 0 ||
-       check_character_state(killed_database) < 0)) {
+  if (result == 0 && (run_server_killed_in_directory(server, sqlite_read_config,
+                                                     directory, &status) < 0 ||
+                      !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
+                      check_snapshot_dump_type(killed_database, 4) < 0 ||
+                      check_btech_special_snapshot(killed_database) < 0 ||
+                      check_btech_queued_command_state(killed_database) < 0 ||
+                      check_player_account_state(killed_database) < 0 ||
+                      check_economy_parts(killed_database) < 0 ||
+                      check_character_state(killed_database) < 0)) {
     fprintf(stderr, "SQLite killed-dump fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
   }
   if (result == 0 &&
-      (run_server_in_directory_for(argv[1], sqlite_read_config, directory, 0, 2,
+      (run_server_in_directory_for(server, sqlite_read_config, directory, 0, 2,
                                    &status) < 0 ||
        !WIFEXITED(status) || WEXITSTATUS(status) == 2 ||
        check_btech_special_snapshot(database) < 0 ||
@@ -1515,13 +1526,17 @@ int main(int argc, char *argv[]) {
            table_index < sizeof(btech_special_writer_tables) /
                              sizeof(btech_special_writer_tables[0]);
            table_index++) {
-        if (check_btech_writer_fault(argv[1], sqlite_read_config, directory,
-                                     database,
-                                     btech_special_writer_tables[table_index],
-                                     phases[phase_index]) < 0) {
+        const char *table =
+            string_catalog_item(btech_special_writer_tables,
+                                sizeof(btech_special_writer_tables) /
+                                    sizeof(btech_special_writer_tables[0]),
+                                table_index);
+        const char *phase = string_catalog_item(
+            phases, sizeof(phases) / sizeof(phases[0]), phase_index);
+        if (check_btech_writer_fault(server, sqlite_read_config, directory,
+                                     database, table, phase) < 0) {
           fprintf(stderr, "BTech writer %s fault test failed for %s: %s\n",
-                  phases[phase_index], btech_special_writer_tables[table_index],
-                  directory);
+                  phase, table, directory);
           result = 1;
           break;
         }
@@ -1531,7 +1546,7 @@ int main(int argc, char *argv[]) {
       return 1;
   }
   if (result == 0 && (set_invalid_power_value(database, 2) < 0 ||
-                      run_server_in_directory(argv[1], sqlite_read_config,
+                      run_server_in_directory(server, sqlite_read_config,
                                               directory, 0, &status) < 0 ||
                       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
                       set_invalid_power_value(database, 1) < 0)) {
@@ -1540,7 +1555,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   if (result == 0 && (set_invalid_utf8_name(database, 1) < 0 ||
-                      run_server_in_directory(argv[1], sqlite_read_config,
+                      run_server_in_directory(server, sqlite_read_config,
                                               directory, 0, &status) < 0 ||
                       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
                       set_invalid_utf8_name(database, 0) < 0)) {
@@ -1549,7 +1564,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   if (result == 0 && (set_nonascii_player_alias(database, 1) < 0 ||
-                      run_server_in_directory(argv[1], sqlite_read_config,
+                      run_server_in_directory(server, sqlite_read_config,
                                               directory, 0, &status) < 0 ||
                       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
                       set_nonascii_player_alias(database, 0) < 0)) {
@@ -1557,12 +1572,11 @@ int main(int argc, char *argv[]) {
             directory);
     return 1;
   }
-  if (result == 0 &&
-      (set_invalid_character_value_name(database, 1) < 0 ||
-       run_server_in_directory(argv[1], sqlite_read_config, directory, 0,
-                               &status) < 0 ||
-       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
-       set_invalid_character_value_name(database, 0) < 0)) {
+  if (result == 0 && (set_invalid_character_value_name(database, 1) < 0 ||
+                      run_server_in_directory(server, sqlite_read_config,
+                                              directory, 0, &status) < 0 ||
+                      !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
+                      set_invalid_character_value_name(database, 0) < 0)) {
     fprintf(stderr,
             "Noncanonical character value name unexpectedly started: %s\n",
             directory);
@@ -1571,7 +1585,7 @@ int main(int argc, char *argv[]) {
   if (result == 0) {
     dump_failure = stat(database, &snapshot_before) < 0 ||
                    chmod(sqlite_directory, 0500) < 0 ||
-                   run_server_in_directory(argv[1], sqlite_read_config,
+                   run_server_in_directory(server, sqlite_read_config,
                                            directory, 0, &status) < 0 ||
                    !WIFEXITED(status) || WEXITSTATUS(status) != 0;
     if (chmod(sqlite_directory, 0700) < 0)
@@ -1593,25 +1607,25 @@ int main(int argc, char *argv[]) {
   }
 #ifdef BTMUX_TEST_ADVANCED_ECON
   if (result == 0 &&
-      (run_server(argv[1], config, 0, &status) < 0 || !WIFEXITED(status) ||
+      (run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
        WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
        check_zero_economy(database) < 0 || check_commac_snapshot(database) < 0))
     result = 1;
 
   if (result == 0 &&
       (insert_sparse_economy_cost(database) < 0 ||
-       check_btech_writer_fault(argv[1], config, directory, database,
+       check_btech_writer_fault(server, config, directory, database,
                                 "btech_economy_costs", "prepare") < 0 ||
-       check_btech_writer_fault(argv[1], config, directory, database,
+       check_btech_writer_fault(server, config, directory, database,
                                 "btech_economy_costs", "step") < 0 ||
-       run_server(argv[1], config, 0, &status) < 0 || !WIFEXITED(status) ||
+       run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
        WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
        check_sparse_economy_cost(database) < 0 ||
        check_commac_snapshot(database) < 0))
     result = 1;
 #else
   if (result == 0 &&
-      (run_server(argv[1], config, 0, &status) < 0 || !WIFEXITED(status) ||
+      (run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
        WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
        check_commac_snapshot(database) < 0))
     result = 1;
@@ -1619,13 +1633,13 @@ int main(int argc, char *argv[]) {
 
 #ifdef BTMUX_TEST_ADVANCED_ECON
   if (result == 0 && (drop_sqlite_economy(database) < 0 ||
-                      run_server(argv[1], config, 0, &status) < 0 ||
+                      run_server(server, config, 0, &status) < 0 ||
                       !WIFEXITED(status) || WEXITSTATUS(status) != 2))
     result = 1;
 #endif
 
   if (result == 0 && (remove_btech_runtime_row(database) < 0 ||
-                      run_server_in_directory(argv[1], sqlite_read_config,
+                      run_server_in_directory(server, sqlite_read_config,
                                               directory, 0, &status) < 0 ||
                       !WIFEXITED(status) || WEXITSTATUS(status) == 0)) {
     fprintf(stderr, "Corrupt SQLite BTech fixture unexpectedly started: %s\n",
@@ -1639,7 +1653,7 @@ int main(int argc, char *argv[]) {
   fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
     return 2;
-  if (result == 0 && (run_server(argv[1], missing_config, 1, &status) < 0 ||
+  if (result == 0 && (run_server(server, missing_config, 1, &status) < 0 ||
                       !WIFEXITED(status) || WEXITSTATUS(status) != 2))
     result = 1;
 

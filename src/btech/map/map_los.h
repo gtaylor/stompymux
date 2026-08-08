@@ -42,10 +42,7 @@ typedef struct HexLosMap {
 
 int los_map_hex_index(const HexLosMap *los_map, int x, int y);
 
-static inline unsigned char los_map_flag(const HexLosMap *los_map, int x,
-                                         int y) {
-  return los_map->map[los_map_hex_index(los_map, x, y)];
-}
+unsigned char los_map_flag(const HexLosMap *los_map, int x, int y);
 
 bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech,
                        int start_x, int start_y, int x_size, int y_size);

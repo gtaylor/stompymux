@@ -31,3 +31,8 @@ struct commac *create_new_commac(void);
 void destroy_commac(struct commac *c);
 void add_commac(ChannelRegistry *registry, struct commac *c);
 void del_commac(ChannelRegistry *registry, DbRef who);
+char *commac_alias_at(const struct commac *commac, size_t index);
+char *commac_channel_at(const struct commac *commac, size_t index);
+char **commac_channel_slot(struct commac *commac, size_t index);
+int commac_macro_at(const struct commac *commac, size_t index);
+void commac_macro_set(struct commac *commac, size_t index, int value);

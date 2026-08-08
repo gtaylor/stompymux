@@ -57,6 +57,8 @@ void persistence_context_initialize(
     PersistenceContext *context, const ServerConfiguration *configuration,
     GameDatabase *database, ChannelRegistry *channels, MacroRegistry *macros,
     time_t *now, int *record_players, WorldContext *world, ServerLog *log);
+PersistenceSqliteExtension *
+persistence_extension_at(PersistenceContext *context, size_t index);
 
 /*
  * Register a named SQLite extension before gamedb_load() or gamedb_dump().

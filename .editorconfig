@@ -13,6 +13,18 @@ indent_style = space
 indent_size = 2
 continuation_indent = 2
 
+[*.md]
+indent_style = space
+indent_size = 2
+
+[*.yaml]
+indent_style = space
+indent_size = 2
+
+[*.toml]
+indent_style = space
+indent_size = 2
+
 [*.{c,h}]
 indent_style = space
 indent_size = 2

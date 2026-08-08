@@ -16,6 +16,31 @@ const char *const styled_link_state_names[STYLED_LINK_STATE_COUNT] = {
     "selected", "disabled", "link",          "any-link",
 };
 
+typedef struct StyledDirectiveCursor {
+  const char *text;
+  size_t length;
+  size_t offset;
+} StyledDirectiveCursor;
+
+static const char *directive_suffix(const char *text, size_t length,
+                                    size_t offset) {
+  return checked_storage_at_const(text, length + 1, sizeof(char), offset);
+}
+
+static char directive_character(const char *text, size_t length, size_t index) {
+  return *directive_suffix(text, length, index);
+}
+
+static bool directive_is_space(char character) {
+  return (isspace)((unsigned char)character) != 0;
+}
+
+static const char *styled_link_state_name(size_t index) {
+  return *(const char *const *)checked_storage_at_const(
+      styled_link_state_names, STYLED_LINK_STATE_COUNT,
+      sizeof(*styled_link_state_names), index);
+}
+
 static bool parse_styled_boolean(const char *value, StyledBoolean *result) {
   if (value == nullptr || !strcasecmp(value, "true")) {
     *result = STYLED_BOOLEAN_TRUE;
@@ -111,17 +136,22 @@ static bool apply_link_property(const StyledTextPalette *palette,
   if (!dot)
     return apply_link_properties(palette, property, value, properties, error,
                                  error_size);
-  if (dot == property || dot[1] == '\0' || strchr(dot + 1, '.') ||
-      (size_t)(dot - property) >= sizeof(state)) {
+  const size_t property_length = strlen(property);
+  const size_t dot_offset = property_length - strlen(dot);
+  const char *field =
+      directive_suffix(property, property_length, dot_offset + 1);
+  if (dot_offset == 0 || *field == '\0' || strchr(field, '.') ||
+      dot_offset >= sizeof(state)) {
     styled_set_error(error, error_size, "unknown OSC 8 style state");
     return false;
   }
-  memcpy(state, property, (size_t)(dot - property));
-  state[dot - property] = '\0';
+  memcpy(state, property, dot_offset);
+  *(char *)checked_storage_at(state, sizeof(state), sizeof(char), dot_offset) =
+      '\0';
   properties = nullptr;
   for (size_t index = 0; index < STYLED_LINK_STATE_COUNT; index++) {
-    if (!strcasecmp(state, styled_link_state_names[index])) {
-      properties = &style->states[index];
+    if (!strcasecmp(state, styled_link_state_name(index))) {
+      properties = styled_link_style_state(style, index);
       break;
     }
   }
@@ -129,55 +159,74 @@ static bool apply_link_property(const StyledTextPalette *palette,
     styled_set_error(error, error_size, "unknown OSC 8 style state");
     return false;
   }
-  return apply_link_properties(palette, dot + 1, value, properties, error,
+  return apply_link_properties(palette, field, value, properties, error,
                                error_size);
 }
 
-static bool next_link_directive(const char **cursor, const char *end,
-                                char *name, size_t name_size, char *value,
+static bool next_link_directive(StyledDirectiveCursor *cursor, char *name,
+                                size_t name_size, char *value,
                                 size_t value_size, const char **parsed_value,
                                 bool *quoted, char *error, size_t error_size) {
-  const char *start;
+  size_t start;
   size_t name_length;
   size_t used = 0;
 
-  while (*cursor < end && isspace((unsigned char)**cursor))
-    (*cursor)++;
-  if (*cursor == end)
+  while (cursor->offset < cursor->length &&
+         directive_is_space(
+             directive_character(cursor->text, cursor->length, cursor->offset)))
+    cursor->offset++;
+  if (cursor->offset == cursor->length)
     return false;
-  start = *cursor;
-  while (*cursor < end && !isspace((unsigned char)**cursor) && **cursor != '=')
-    (*cursor)++;
-  name_length = (size_t)(*cursor - start);
+  start = cursor->offset;
+  while (cursor->offset < cursor->length &&
+         !directive_is_space(directive_character(cursor->text, cursor->length,
+                                                 cursor->offset)) &&
+         directive_character(cursor->text, cursor->length, cursor->offset) !=
+             '=')
+    cursor->offset++;
+  name_length = cursor->offset - start;
   if (name_length == 0 || name_length >= name_size) {
     styled_set_error(error, error_size, "invalid OSC 8 link property");
     return false;
   }
-  memcpy(name, start, name_length);
-  name[name_length] = '\0';
+  memcpy(name, directive_suffix(cursor->text, cursor->length, start),
+         name_length);
+  *(char *)checked_storage_at(name, name_size, sizeof(char), name_length) =
+      '\0';
   *parsed_value = nullptr;
   *quoted = false;
-  if (*cursor == end || isspace((unsigned char)**cursor))
+  if (cursor->offset == cursor->length ||
+      directive_is_space(
+          directive_character(cursor->text, cursor->length, cursor->offset)))
     return true;
 
-  (*cursor)++;
-  if (*cursor == end) {
+  cursor->offset++;
+  if (cursor->offset == cursor->length) {
     styled_set_error(error, error_size, "OSC 8 link property value is empty");
     return false;
   }
-  if (**cursor == '"') {
+  if (directive_character(cursor->text, cursor->length, cursor->offset) ==
+      '"') {
     *quoted = true;
-    (*cursor)++;
-    while (*cursor < end && **cursor != '"') {
-      unsigned char byte = (unsigned char)*(*cursor)++;
+    cursor->offset++;
+    while (cursor->offset < cursor->length &&
+           directive_character(cursor->text, cursor->length, cursor->offset) !=
+               '"') {
+      unsigned char byte = (unsigned char)directive_character(
+          cursor->text, cursor->length, cursor->offset++);
 
       if (byte == '\\') {
-        if (*cursor == end || (**cursor != '\\' && **cursor != '"')) {
+        if (cursor->offset == cursor->length ||
+            (directive_character(cursor->text, cursor->length,
+                                 cursor->offset) != '\\' &&
+             directive_character(cursor->text, cursor->length,
+                                 cursor->offset) != '"')) {
           styled_set_error(error, error_size,
                            "invalid escape in OSC 8 link property");
           return false;
         }
-        byte = (unsigned char)*(*cursor)++;
+        byte = (unsigned char)directive_character(cursor->text, cursor->length,
+                                                  cursor->offset++);
       }
       if (byte < 0x20 || byte == 0x7f || used + 1 >= value_size) {
         styled_set_error(error, error_size,
@@ -186,30 +235,38 @@ static bool next_link_directive(const char **cursor, const char *end,
                              : "OSC 8 link property value is too long");
         return false;
       }
-      value[used++] = (char)byte;
+      *(char *)checked_storage_at(value, value_size, sizeof(char), used++) =
+          (char)byte;
     }
-    if (*cursor == end || **cursor != '"') {
+    if (cursor->offset == cursor->length ||
+        directive_character(cursor->text, cursor->length, cursor->offset) !=
+            '"') {
       styled_set_error(error, error_size,
                        "unterminated OSC 8 link property value");
       return false;
     }
-    (*cursor)++;
-    if (*cursor < end && !isspace((unsigned char)**cursor)) {
+    cursor->offset++;
+    if (cursor->offset < cursor->length &&
+        !directive_is_space(directive_character(cursor->text, cursor->length,
+                                                cursor->offset))) {
       styled_set_error(error, error_size,
                        "unexpected text after quoted OSC 8 value");
       return false;
     }
   } else {
-    while (*cursor < end && !isspace((unsigned char)**cursor)) {
+    while (cursor->offset < cursor->length &&
+           !directive_is_space(directive_character(cursor->text, cursor->length,
+                                                   cursor->offset))) {
       if (used + 1 >= value_size) {
         styled_set_error(error, error_size,
                          "OSC 8 link property value is too long");
         return false;
       }
-      value[used++] = *(*cursor)++;
+      *(char *)checked_storage_at(value, value_size, sizeof(char), used++) =
+          directive_character(cursor->text, cursor->length, cursor->offset++);
     }
   }
-  value[used] = '\0';
+  *(char *)checked_storage_at(value, value_size, sizeof(char), used) = '\0';
   if (!utf8_validate_printable(value, used)) {
     styled_set_error(error, error_size,
                      "OSC 8 link property must be printable, valid UTF-8");
@@ -221,23 +278,27 @@ static bool next_link_directive(const char **cursor, const char *end,
 
 static bool parse_menu_property(const char *property, size_t *index,
                                 const char **field) {
-  const char *cursor;
+  const size_t length = strlen(property);
+  size_t cursor = 5;
   size_t value = 0;
 
   if (strncasecmp(property, "menu.", 5))
     return false;
-  cursor = property + 5;
-  if (!isdigit((unsigned char)*cursor))
+  if (cursor >= length ||
+      !(isdigit)((unsigned char)directive_character(property, length, cursor)))
     return false;
-  while (isdigit((unsigned char)*cursor)) {
+  while (cursor < length && (isdigit)((unsigned char)directive_character(
+                                property, length, cursor))) {
     if (value > OSC8_URI_LIMIT)
       return false;
-    value = value * 10 + (size_t)(*cursor++ - '0');
+    value = value * 10 +
+            (size_t)(directive_character(property, length, cursor++) - '0');
   }
-  if (value == 0 || value > OSC8_URI_LIMIT || *cursor != '.' || !cursor[1])
+  if (value == 0 || value > OSC8_URI_LIMIT || cursor + 1 >= length ||
+      directive_character(property, length, cursor) != '.')
     return false;
   *index = value - 1;
-  *field = cursor + 1;
+  *field = directive_suffix(property, length, cursor + 1);
   return true;
 }
 
@@ -254,12 +315,13 @@ static StyledLinkMenuItem *styled_link_menu_item(StyledLinkConfig *config,
                        "out of memory parsing OSC 8 context menu");
       return nullptr;
     }
-    memset(menu + config->menu_count, 0,
-           (new_count - config->menu_count) * sizeof(*menu));
+    memset(
+        checked_storage_at(menu, new_count, sizeof(*menu), config->menu_count),
+        0, (new_count - config->menu_count) * sizeof(*menu));
     config->menu = menu;
     config->menu_count = new_count;
   }
-  return &config->menu[index];
+  return styled_link_menu_item_at(config, index);
 }
 
 static bool apply_menu_property(StyledLinkConfig *config, size_t index,
@@ -320,11 +382,13 @@ static bool parse_uint32_milliseconds(const char *value, bool quoted,
 
   if (quoted || !value || !*value)
     return false;
-  for (const unsigned char *cursor = (const unsigned char *)value; *cursor;
-       cursor++) {
-    if (!isdigit(*cursor))
+  const size_t length = strlen(value);
+  for (size_t index = 0; index < length; index++) {
+    const unsigned char character =
+        (unsigned char)directive_character(value, length, index);
+    if (!(isdigit)(character))
       return false;
-    uint64_t digit = (uint64_t)(*cursor - '0');
+    uint64_t digit = (uint64_t)(character - '0');
     if (parsed > (UINT32_MAX - digit) / 10)
       return false;
     parsed = parsed * 10 + digit;
@@ -364,7 +428,7 @@ static bool apply_visibility_property(StyledLinkVisibility *visibility,
     return true;
   }
   if (!strncasecmp(property, "expire.", 7)) {
-    const char *field = property + 7;
+    const char *field = checked_string_suffix(property, 7);
 
     if (!strcasecmp(field, "outputDelay")) {
       if (!parse_uint32_milliseconds(value, quoted, &visibility->output_delay))
@@ -463,8 +527,9 @@ static bool apply_link_config_property(const StyledTextPalette *palette,
     return styled_link_text_replace(destination, value, error, error_size);
   }
   if (!strncasecmp(property, "title.", 6))
-    return apply_link_properties(palette, property + 6, value,
-                                 &config->title_style, error, error_size);
+    return apply_link_properties(palette, checked_string_suffix(property, 6),
+                                 value, &config->title_style, error,
+                                 error_size);
   if (parse_menu_property(property, &menu_index, &menu_field))
     return apply_menu_property(config, menu_index, menu_field, value, quoted,
                                error, error_size);
@@ -473,10 +538,12 @@ static bool apply_link_config_property(const StyledTextPalette *palette,
     return false;
   }
   if (!strncasecmp(property, "visibility.", 11))
-    return apply_visibility_property(&config->visibility, property + 11, value,
+    return apply_visibility_property(&config->visibility,
+                                     checked_string_suffix(property, 11), value,
                                      quoted, error, error_size);
   if (!strncasecmp(property, "selection.", 10))
-    return apply_selection_property(&config->selection, property + 10, value,
+    return apply_selection_property(&config->selection,
+                                    checked_string_suffix(property, 10), value,
                                     quoted, error, error_size);
   if (!strcasecmp(property, "spoiler") || !strcasecmp(property, "disabled")) {
     StyledBoolean *destination =
@@ -502,7 +569,7 @@ bool styled_style_directive_apply(const StyledTextPalette *palette,
   StyledDecoration decoration;
 
   if (value)
-    value++;
+    value = checked_string_suffix(value, 1);
 
   if (name_length == 4 && !strncasecmp(directive, "bold", name_length)) {
     if (!parse_styled_boolean(value, &boolean))
@@ -570,19 +637,25 @@ bool styled_link_directives_parse(
     const StyledTextPalette *palette, const char *directives, const char *end,
     StyledLinkConfig *config, StyledState *fallback, bool allow_ansi_fallback,
     bool validate_complete, char *error, size_t error_size) {
-  while (directives < end) {
+  const size_t directives_length = strlen(directives) - strlen(end);
+  StyledDirectiveCursor cursor = {
+      .text = directives,
+      .length = directives_length,
+  };
+  while (cursor.offset < cursor.length) {
     char name[64];
     char value[OSC8_URI_LIMIT + 1];
     const char *parsed_value;
     bool quoted;
 
-    while (directives < end && isspace((unsigned char)*directives))
-      directives++;
-    if (directives == end)
+    while (cursor.offset < cursor.length &&
+           directive_is_space(
+               directive_character(cursor.text, cursor.length, cursor.offset)))
+      cursor.offset++;
+    if (cursor.offset == cursor.length)
       break;
-    if (!next_link_directive(&directives, end, name, sizeof(name), value,
-                             sizeof(value), &parsed_value, &quoted, error,
-                             error_size))
+    if (!next_link_directive(&cursor, name, sizeof(name), value, sizeof(value),
+                             &parsed_value, &quoted, error, error_size))
       return false;
     if ((!strcasecmp(name, "blink") || !strcasecmp(name, "inverse")) &&
         !parsed_value) {

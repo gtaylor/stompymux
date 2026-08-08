@@ -27,8 +27,7 @@ int main(void) {
   mech_pilot_skill_modifier_set(&unit, 3);
   mech_base_to_hit_modifier_set(&unit, 4);
   mech_perception_target_set(&unit, 5);
-  if (mech_pilot_status(&unit) != 2 ||
-      mech_pilot_skill_modifier(&unit) != 3 ||
+  if (mech_pilot_status(&unit) != 2 || mech_pilot_skill_modifier(&unit) != 3 ||
       mech_base_to_hit_modifier(&unit) != 4 ||
       mech_perception_target(&unit) != 5)
     return 3;
@@ -36,14 +35,11 @@ int main(void) {
   mech_computer_quality_set(&unit, 4);
   mech_radio_quality_set(&unit, 5);
   mech_radio_configuration_set(&unit, 23);
-  if (mech_default_scanner_range(&unit) !=
-          (int)(DEFAULT_SCANRANGE * 1.5F) ||
+  if (mech_default_scanner_range(&unit) != (int)(DEFAULT_SCANRANGE * 1.5F) ||
       mech_default_long_range_sensor_range(&unit) !=
           (int)(DEFAULT_LRSRANGE * 1.5F) ||
-      mech_default_tactical_range(&unit) !=
-          (int)(DEFAULT_TACRANGE * 1.5F) ||
-      mech_default_radio_range(&unit) !=
-          (int)(DEFAULT_RADIORANGE * 1.75F) ||
+      mech_default_tactical_range(&unit) != (int)(DEFAULT_TACRANGE * 1.5F) ||
+      mech_default_radio_range(&unit) != (int)(DEFAULT_RADIORANGE * 1.75F) ||
       mech_radio_configuration(&unit) != 23)
     return 4;
 

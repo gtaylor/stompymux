@@ -1,10 +1,12 @@
 #include "mech_specification_api.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 #include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
+#include "mux/support/checked_storage.h"
 
 MechMovementType mech_movement_type(const Mech *mech) {
   return (MechMovementType)mech->ud.move;
@@ -205,7 +207,13 @@ int mech_original_structural_integrity(const Mech *mech) {
   return mech->ud.si_orig;
 }
 
-DbRef mech_bay_dbref(const Mech *mech, int bay) { return mech->pd.bay[bay]; }
+DbRef mech_bay_dbref(const Mech *mech, int bay) {
+  if (bay < 0)
+    abort();
+  const DbRef *slot = checked_storage_at_const(
+      mech->pd.bay, NUM_BAYS, sizeof(*mech->pd.bay), (size_t)bay);
+  return *slot;
+}
 
 void mech_maximum_fuel_set(Mech *mech, int fuel) { mech->rd.maxfuel = fuel; }
 
@@ -226,7 +234,11 @@ void mech_sixth_sense_set(Mech *mech, bool enabled) {
 }
 
 void mech_bay_dbref_set(Mech *mech, int bay, DbRef bay_dbref) {
-  mech->pd.bay[bay] = bay_dbref;
+  if (bay < 0)
+    abort();
+  DbRef *slot = checked_storage_at(mech->pd.bay, NUM_BAYS,
+                                   sizeof(*mech->pd.bay), (size_t)bay);
+  *slot = bay_dbref;
 }
 
 int mech_carried_cargo_weight(const Mech *mech) {

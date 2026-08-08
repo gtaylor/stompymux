@@ -56,10 +56,17 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
+
+void mech_stand_empty(DbRef player, void *data) {
+  char arguments[] = "";
+
+  mech_stand(player, data, arguments);
+}
 
 static bool mech_control_requires_water(const Mech *mech) {
   return mech_movement_type(mech) == MOVE_HULL ||
@@ -274,6 +281,13 @@ static const struct MechSpeedName {
 } speed_tables[] = {{"walk", 1},   {"run", 2},   {"stop", 0}, {"back", -1},
                     {"cruise", 1}, {"flank", 2}, {nullptr, 0}};
 
+static const struct MechSpeedName *speed_table_entry(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(speed_tables, 7, sizeof(*speed_tables),
+                                  (size_t)index);
+}
+
 void mech_speed(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   BtechContext *context = mech_context(mech);
@@ -374,14 +388,15 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   maxspeed = maxspeed > 0.0F ? maxspeed : 0.0F;
 
   walkspeed = mech_control_walking_speed(maxspeed);
-  newspeed = strtof(args[0], nullptr);
+  char **speed_argument_slot = checked_storage_at(args, 1, sizeof(*args), 0);
+  newspeed = strtof(*speed_argument_slot, nullptr);
 
   if (newspeed < 0.1F) {
 
     /* Possibly a string speed instead? */
-    for (i = 0; speed_tables[i].name; i++)
-      if (!strcasecmp(speed_tables[i].name, args[0])) {
-        switch (speed_tables[i].flag) {
+    for (i = 0; speed_table_entry(i)->name; i++)
+      if (!strcasecmp(speed_table_entry(i)->name, *speed_argument_slot)) {
+        switch (speed_table_entry(i)->flag) {
         case 0:
           newspeed = 0.0F;
           break;

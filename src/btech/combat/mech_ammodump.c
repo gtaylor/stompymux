@@ -37,10 +37,30 @@
 #include "mux/network/mux_event.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
+
+static DumpingAmmunitionItem *ammunition_item_at(DumpingAmmunitionItem *items,
+                                                 size_t index) {
+  return checked_storage_at(items, MAX_WEAPONS_PER_MECH, sizeof(*items), index);
+}
+
+static void ammunition_item_add(DumpingAmmunitionItem *items, int *count,
+                                BtechContext *context, int part_type,
+                                int location, int slot) {
+  if (*count < 0 || *count >= MAX_WEAPONS_PER_MECH)
+    abort();
+  DumpingAmmunitionItem *item = ammunition_item_at(items, (size_t)*count);
+  item->weapon_index = ammunition_to_weapon_index(part_type);
+  item->damage = weapon_maximum_ammunition_damage(context, item->weapon_index);
+  item->location = location;
+  item->slot = slot;
+  item->part_type = part_type;
+  (*count)++;
+}
 
 static void mech_dump_event(MuxEvent *ev) {
   Mech *mech = (Mech *)ev->data;
@@ -274,8 +294,8 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     return;
   }
   FindWeaponNumberOnMech(mech, weapnum, &section, &critical);
-  if (MechWeapons[weapindx].type == TBEAM ||
-      MechWeapons[weapindx].type == THAND) {
+  if (weapon_catalogue_is_energy(weapindx) ||
+      weapon_catalogue_is_hand_to_hand(weapindx)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That weapon doesn't use ammunition!");
     return;
@@ -316,14 +336,16 @@ int mech_ammunition_dump_decrease(Mech *mech, int loc, int pos, int *hm) {
     if (!mech_critical_is_nonfunctional(mech, loc, pos))
       if ((c = mech_critical_data(mech, loc, pos))) {
         weapindx = ammunition_to_weapon_index(index);
-        if (MechWeapons[weapindx].ammoperton < DUMP_SPEED) {
+        const int ammunition_per_ton =
+            weapon_catalogue_ammunition_per_ton(weapindx);
+        if (ammunition_per_ton < DUMP_SPEED) {
           if ((btech_context_event_tick(mech_context(mech)) %
-               (DUMP_SPEED / MechWeapons[weapindx].ammoperton)))
+               (DUMP_SPEED / ammunition_per_ton)))
             return ammunition_dump_result(2, hm);
           /* fine, we remove 1 */
           rem = 1;
         } else
-          rem = MIN(c, MechWeapons[weapindx].ammoperton / DUMP_SPEED);
+          rem = MIN(c, ammunition_per_ton / DUMP_SPEED);
         mech_ammunition_expenditure_check(mech, weapindx, rem - 1);
         mech_critical_data_set(mech, loc, pos, c - rem);
         if (c <= rem)
@@ -368,15 +390,9 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
         part_type = mech_critical_part_type(mech, wSecIter, wSlotIter);
         if (equipment_is_ammunition(part_type))
           if (mech_critical_data(mech, wSecIter, wSlotIter)) {
-            ammunition_items[wcAmmoItems].damage =
-                weapon_maximum_ammunition_damage(
-                    mech_context(mech), ammunition_to_weapon_index(part_type));
-            ammunition_items[wcAmmoItems].location = wSecIter;
-            ammunition_items[wcAmmoItems].slot = wSlotIter;
-            ammunition_items[wcAmmoItems].weapon_index =
-                ammunition_to_weapon_index(part_type);
-            ammunition_items[wcAmmoItems].part_type = part_type;
-            wcAmmoItems++;
+            ammunition_item_add(ammunition_items, &wcAmmoItems,
+                                mech_context(mech), part_type, wSecIter,
+                                wSlotIter);
           }
       }
   } else if (wEventData < 256) { /* Location specific ammo dump */
@@ -389,15 +405,8 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
       if (equipment_is_ammunition(part_type))
         if (!mech_critical_is_nonfunctional(mech, wLoc, wSlotIter) &&
             mech_critical_data(mech, wLoc, wSlotIter)) {
-          ammunition_items[wcAmmoItems].damage =
-              weapon_maximum_ammunition_damage(
-                  mech_context(mech), ammunition_to_weapon_index(part_type));
-          ammunition_items[wcAmmoItems].location = wLoc;
-          ammunition_items[wcAmmoItems].slot = wSlotIter;
-          ammunition_items[wcAmmoItems].weapon_index =
-              ammunition_to_weapon_index(part_type);
-          ammunition_items[wcAmmoItems].part_type = part_type;
-          wcAmmoItems++;
+          ammunition_item_add(ammunition_items, &wcAmmoItems,
+                              mech_context(mech), part_type, wLoc, wSlotIter);
         }
     }
   } else if (wEventData < 65536) { /* Weapon specific ammo dump */
@@ -408,37 +417,27 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
         part_type = mech_critical_part_type(mech, wSecIter, wSlotIter);
         if (equipment_is_ammunition(part_type) &&
             (ammunition_to_weapon_index(part_type) == weapon_index)) {
-          ammunition_items[wcAmmoItems].damage =
-              weapon_maximum_ammunition_damage(
-                  mech_context(mech), ammunition_to_weapon_index(part_type));
-          ammunition_items[wcAmmoItems].location = wSecIter;
-          ammunition_items[wcAmmoItems].slot = wSlotIter;
-          ammunition_items[wcAmmoItems].weapon_index =
-              ammunition_to_weapon_index(part_type);
-          ammunition_items[wcAmmoItems].part_type = part_type;
-          wcAmmoItems++;
+          ammunition_item_add(ammunition_items, &wcAmmoItems,
+                              mech_context(mech), part_type, wSecIter,
+                              wSlotIter);
         }
       }
   } else { /* crit specific dump */
     wSecIter = ((wEventData >> 16) & 0xFF) - 1;
     wSlotIter = ((wEventData >> 24) & 0xFF) - 1;
     part_type = mech_critical_part_type(mech, wSecIter, wSlotIter);
-    ammunition_items[wcAmmoItems].damage = weapon_maximum_ammunition_damage(
-        mech_context(mech), ammunition_to_weapon_index(part_type));
-    ammunition_items[wcAmmoItems].location = wSecIter;
-    ammunition_items[wcAmmoItems].slot = wSlotIter;
-    ammunition_items[wcAmmoItems].weapon_index =
-        ammunition_to_weapon_index(part_type);
-    ammunition_items[wcAmmoItems].part_type = part_type;
-    wcAmmoItems++;
+    ammunition_item_add(ammunition_items, &wcAmmoItems, mech_context(mech),
+                        part_type, wSecIter, wSlotIter);
   }
 
   if (wcAmmoItems > 0) {
     wRndIdx = btech_random_range_int(mech_context(mech), 0, wcAmmoItems - 1);
-    wBlowDamage = ammunition_items[wRndIdx].damage;
-    wSecIter = ammunition_items[wRndIdx].location;
-    wSlotIter = ammunition_items[wRndIdx].slot;
-    weapon_index = ammunition_items[wRndIdx].weapon_index;
+    const DumpingAmmunitionItem *item =
+        ammunition_item_at(ammunition_items, (size_t)wRndIdx);
+    wBlowDamage = item->damage;
+    wSecIter = item->location;
+    wSlotIter = item->slot;
+    weapon_index = item->weapon_index;
     if (wBlowDamage > 0) {
       mech_los_broadcast(
           mech, "'s rear armor lights up as ammo being dumped ignites!");
@@ -464,7 +463,7 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
 }
 
 int weapon_maximum_ammunition_damage(BtechContext *context, int weapon_index) {
-  int damage = MechWeapons[weapon_index].damage;
+  int damage = weapon_catalogue_damage(weapon_index);
 
   if (weapon_catalogue_is_missile(weapon_index) ||
       weapon_catalogue_is_artillery(weapon_index)) {

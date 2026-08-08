@@ -174,8 +174,8 @@ configure_file(src/cmake/btmux_build_config.h.in
 string(TIMESTAMP MUX_BUILD_DATE "%a %b %d %H:%M:%S %Z %Y")
 configure_file(src/cmake/version.h.in "${CMAKE_BINARY_DIR}/mux/server/version.h" @ONLY)
 
-add_library(btmux_options INTERFACE)
-target_compile_options(btmux_options INTERFACE
+add_library(btmux_compile_options INTERFACE)
+target_compile_options(btmux_compile_options INTERFACE
   $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wformat=2 -Wshadow
   -Wstrict-prototypes -Wold-style-definition -Wvla -Wmissing-prototypes
   -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
@@ -183,13 +183,23 @@ target_compile_options(btmux_options INTERFACE
   -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings -Wconversion -Wunsafe-buffer-usage
   -Wsign-conversion>)
 if(BTECH_ENABLE_ASAN)
-  target_compile_options(btmux_options INTERFACE -fsanitize=address)
-  target_link_options(btmux_options INTERFACE -fsanitize=address)
+  target_compile_options(btmux_compile_options INTERFACE -fsanitize=address)
+  target_link_options(btmux_compile_options INTERFACE -fsanitize=address)
 endif()
 if(BTECH_ENABLE_UBSAN)
-  target_compile_options(btmux_options INTERFACE -fsanitize=undefined)
-  target_link_options(btmux_options INTERFACE -fsanitize=undefined)
+  target_compile_options(btmux_compile_options INTERFACE -fsanitize=undefined)
+  target_link_options(btmux_compile_options INTERFACE -fsanitize=undefined)
 endif()
+
+add_library(btmux_checked_storage STATIC
+  ${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_link_libraries(btmux_checked_storage PRIVATE btmux_compile_options)
+target_include_directories(btmux_checked_storage PRIVATE
+  "${CMAKE_SOURCE_DIR}/src")
+
+add_library(btmux_options INTERFACE)
+target_link_libraries(btmux_options INTERFACE
+  btmux_compile_options btmux_checked_storage)
 
 set(BTECH_PRIVATE_INCLUDE_DIRS
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot"
@@ -400,9 +410,10 @@ if(BUILD_TESTING)
     tests/btech_persistence_schema.c
     ${BTECH_SOURCE_DIR}/persistence/schema.c)
   target_link_libraries(btech_persistence_schema_test
-    PRIVATE btmux_options SQLite3::SQLite3)
+    PRIVATE btmux_options btmux_checked_storage SQLite3::SQLite3)
   target_include_directories(btech_persistence_schema_test PRIVATE
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/include")
+    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/include"
+    "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_persistence_schema COMMAND btech_persistence_schema_test)
 
   add_executable(btech_header_interfaces_test
@@ -447,6 +458,8 @@ if(BUILD_TESTING)
   add_executable(libuv_tcp_integration_test tests/libuv_tcp_integration.c)
   target_link_libraries(libuv_tcp_integration_test
     PRIVATE btmux_options SQLite3::SQLite3)
+  target_include_directories(libuv_tcp_integration_test PRIVATE
+    "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME libuv_tcp_integration
     COMMAND libuv_tcp_integration_test
       $<TARGET_FILE:stompymux> "${CMAKE_SOURCE_DIR}/game")
@@ -566,6 +579,8 @@ if(BUILD_TESTING)
 
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
   target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)
+  target_include_directories(gamedb_integration_test PRIVATE
+    "${CMAKE_SOURCE_DIR}/src")
   if(BTECH_ADVANCED_ECON)
     target_compile_definitions(gamedb_integration_test
       PRIVATE BTMUX_TEST_ADVANCED_ECON=1)
@@ -576,7 +591,8 @@ if(BUILD_TESTING)
   add_executable(lua_module_smoke_test tests/lua_module_smoke.c)
   target_link_libraries(lua_module_smoke_test PRIVATE btmux_options luajit m)
   target_include_directories(lua_module_smoke_test PRIVATE
-    "${LUAJIT_SOURCE_DIR}/src")
+    "${LUAJIT_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME lua_module_smoke
     COMMAND lua_module_smoke_test
       "${CMAKE_SOURCE_DIR}/game/lua/packages"
@@ -603,6 +619,8 @@ if(BUILD_TESTING)
   add_executable(libtelnet_integration_test tests/libtelnet_integration.c)
   target_link_libraries(libtelnet_integration_test
     PRIVATE btmux_options libtelnet)
+  target_include_directories(libtelnet_integration_test PRIVATE
+    "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME libtelnet_integration COMMAND libtelnet_integration_test)
 
   add_executable(telnet_environment_test tests/telnet_environment.c

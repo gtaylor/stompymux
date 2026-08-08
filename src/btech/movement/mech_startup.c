@@ -14,6 +14,7 @@
  *
  */
 
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
@@ -50,6 +51,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -129,6 +131,17 @@ static const char *const naval_bootmsgs[BOOT_MESSAGE_COUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
+static const char *
+startup_message(const char *const messages[static BOOT_MESSAGE_COUNT],
+                long timer) {
+  if (timer < 0)
+    abort();
+  const size_t index = (size_t)timer;
+  const char *const *message = checked_storage_at_const(
+      messages, BOOT_MESSAGE_COUNT, sizeof(*messages), index);
+  return *message;
+}
+
 static int mech_startup_step_delay(const Mech *mech) {
   return mech_class(mech) == CLASS_BSUIT ? 1
                                          : STARTUP_TIME / BOOT_MESSAGE_COUNT;
@@ -153,33 +166,33 @@ static void mech_startup_event(MuxEvent *e) {
 #pragma clang diagnostic ignored "-Wformat-security"
 #endif
   if (mech_is_aerospace_unit(mech)) {
-    mech_printf(mech, MECHALL, aero_bootmsgs[timer]);
+    mech_printf(mech, MECHALL, startup_message(aero_bootmsgs, timer));
   } else if (unit_class == CLASS_BSUIT) {
-    mech_printf(mech, MECHALL, bsuit_bootmsgs[timer]);
+    mech_printf(mech, MECHALL, startup_message(bsuit_bootmsgs, timer));
   } else
     switch (movement_type) {
     case MOVE_HOVER:
-      mech_printf(mech, MECHALL, hover_bootmsgs[timer]);
+      mech_printf(mech, MECHALL, startup_message(hover_bootmsgs, timer));
       break;
     case MOVE_TRACK:
-      mech_printf(mech, MECHALL, track_bootmsgs[timer]);
+      mech_printf(mech, MECHALL, startup_message(track_bootmsgs, timer));
       break;
     case MOVE_WHEEL:
-      mech_printf(mech, MECHALL, wheel_bootmsgs[timer]);
+      mech_printf(mech, MECHALL, startup_message(wheel_bootmsgs, timer));
       break;
     case MOVE_VTOL:
-      mech_printf(mech, MECHALL, vtol_bootmsgs[timer]);
+      mech_printf(mech, MECHALL, startup_message(vtol_bootmsgs, timer));
       break;
     case MOVE_BIPED:
-      mech_printf(mech, MECHALL, bootmsgs[timer]);
+      mech_printf(mech, MECHALL, startup_message(bootmsgs, timer));
       break;
     case MOVE_HULL:
     case MOVE_FOIL:
     case MOVE_SUB:
-      mech_printf(mech, MECHALL, naval_bootmsgs[timer]);
+      mech_printf(mech, MECHALL, startup_message(naval_bootmsgs, timer));
       break;
     default:
-      mech_printf(mech, MECHALL, bootmsgs[timer]);
+      mech_printf(mech, MECHALL, startup_message(bootmsgs, timer));
       break;
     }
 #ifdef __clang__
@@ -274,8 +287,10 @@ void mech_startup(DbRef player, void *data, const char *buffer) {
 
   if (!common_checks(player, mech, MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON))
     return;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
+  if (buffer != nullptr)
+    buffer =
+        checked_storage_at_const(buffer, strlen(buffer) + 1, sizeof(*buffer),
+                                 strspn(buffer, " \t\r\n\f\v"));
   if (!buffer)
     buffer = "";
   if (!(is_good_obj(database, player) &&

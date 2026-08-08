@@ -14,6 +14,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 
 typedef struct LuaParentCheck LuaParentCheck;
 struct LuaParentCheck {
@@ -24,13 +25,32 @@ struct LuaParentCheck {
 
 typedef LuaParentCheck LUA_PARENT_CHECK;
 
+static LUA_PARENT_CHECK *lua_parent_check_at(LUA_PARENT_CHECK *checks,
+                                             size_t check_count, size_t index) {
+  return checked_storage_at(checks, check_count, sizeof(*checks), index);
+}
+
+static char *lua_module_at(char *const *modules, size_t module_count,
+                           size_t index) {
+  return *(char *const *)checked_storage_at_const(modules, module_count,
+                                                  sizeof(*modules), index);
+}
+
+static const char *lua_name_at(const char *const *names, size_t count,
+                               size_t index) {
+  return *(const char *const *)checked_storage_at_const(names, count,
+                                                        sizeof(*names), index);
+}
+
 static void lua_free_parent_checks(LUA_PARENT_CHECK *checks,
                                    size_t check_count) {
   size_t index;
 
   for (index = 0; index < check_count; index++) {
-    free(checks[index].path);
-    free(checks[index].error);
+    LUA_PARENT_CHECK *check = lua_parent_check_at(checks, check_count, index);
+
+    free(check->path);
+    free(check->error);
   }
   free(checks);
 }
@@ -58,10 +78,12 @@ static int lua_add_parent_check(LUA_PARENT_CHECK **checks, size_t *check_count,
     return 0;
   }
   *checks = replacement;
-  (*checks)[*check_count].path = path_copy;
-  (*checks)[*check_count].error = detail_copy;
-  (*checks)[*check_count].object_count = 1;
   (*check_count)++;
+  LUA_PARENT_CHECK *check =
+      lua_parent_check_at(*checks, *check_count, *check_count - 1);
+  check->path = path_copy;
+  check->error = detail_copy;
+  check->object_count = 1;
   return 1;
 }
 
@@ -85,8 +107,10 @@ static int lua_check_luaparents(EvaluationContext *evaluation,
     if (!*path)
       continue;
     for (index = 0; index < check_count; index++) {
-      if (!strcmp(checks[index].path, path)) {
-        checks[index].object_count++;
+      LUA_PARENT_CHECK *check = lua_parent_check_at(checks, check_count, index);
+
+      if (!strcmp(check->path, path)) {
+        check->object_count++;
         break;
       }
     }
@@ -100,10 +124,12 @@ static int lua_check_luaparents(EvaluationContext *evaluation,
     }
   }
   for (index = 0; index < check_count; index++) {
+    LUA_PARENT_CHECK *check = lua_parent_check_at(checks, check_count, index);
+
     notify_printf(evaluation, player, "%zu %s are unable to read %s: %s",
-                  checks[index].object_count,
-                  checks[index].object_count == 1 ? "object" : "objects",
-                  checks[index].path, checks[index].error);
+                  check->object_count,
+                  check->object_count == 1 ? "object" : "objects", check->path,
+                  check->error);
   }
   *has_errors = check_count > 0;
   lua_free_parent_checks(checks, check_count);
@@ -149,8 +175,9 @@ int lua_check(EvaluationContext *evaluation, LuaRuntime *source, DbRef player,
     if (module_count > 1)
       qsort(modules, module_count, sizeof(*modules), lua_compare_module_paths);
     for (index = 0; index < module_count; index++) {
-      if (!lua_check_one_module(runtime, root, modules[index], error,
-                                error_size)) {
+      if (!lua_check_one_module(runtime, root,
+                                lua_module_at(modules, module_count, index),
+                                error, error_size)) {
         lua_free_modules(modules, module_count);
         result = 0;
         goto done;
@@ -235,14 +262,19 @@ lua_examine_named_functions(LuaRuntime *runtime, EvaluationContext *evaluation,
   bool found = false;
   int index;
 
+  if (first < 0 || count < first)
+    return;
+
   lua_getfield(state, module, table_name);
   if (lua_istable(state, -1)) {
     for (index = first; index < count; index++) {
-      lua_getfield(state, -1, names[index]);
+      const char *name = lua_name_at(names, (size_t)count, (size_t)index);
+
+      lua_getfield(state, -1, name);
       if (lua_isfunction(state, -1)) {
         if (!found)
           notify_printf(evaluation, player, "%s:", label);
-        notify_printf(evaluation, player, "  %s", names[index]);
+        notify_printf(evaluation, player, "  %s", name);
         found = true;
       }
       lua_pop(state, 1);
@@ -276,14 +308,17 @@ void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
     bool found = false;
     static const char *names[] = {"internal_appearance", "external_appearance",
                                   "mech_status"};
+    const size_t name_count = sizeof(names) / sizeof(*names);
 
-    for (size_t index = 0; index < sizeof(names) / sizeof(*names); index++) {
-      lua_getfield(state, module, names[index]);
+    for (size_t index = 0; index < name_count; index++) {
+      const char *name = lua_name_at(names, name_count, index);
+
+      lua_getfield(state, module, name);
       if (lua_isfunction(state, -1)) {
         if (!found)
           notify_checked(evaluation, player, player,
                          "Lua appearances:", MSG_ME);
-        notify_printf(evaluation, player, "  %s", names[index]);
+        notify_printf(evaluation, player, "  %s", name);
         found = true;
       }
       lua_pop(state, 1);

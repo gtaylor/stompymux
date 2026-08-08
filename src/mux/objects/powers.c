@@ -15,6 +15,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
 
@@ -24,21 +25,32 @@ static POWERENT gen_powers[2] = {
 };
 constexpr size_t GEN_POWER_COUNT = 1;
 
+static POWERENT *power_entry_at(size_t index) {
+  return checked_storage_at(gen_powers, GEN_POWER_COUNT, sizeof(*gen_powers),
+                            index);
+}
+
 /**
  * Initialize power hash tables.
  */
 void init_powertab(WorldIndexes *indexes) {
   POWERENT *fp;
   char nbuf[SBUF_SIZE];
-  char *np;
-  const char *bp;
 
   hash_table_initialize(&indexes->powers, 15 * HASH_FACTOR);
   for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
-    fp = &gen_powers[index];
-    for (np = nbuf, bp = fp->powername; *bp; np++, bp++)
-      *np = ascii_to_lower(*bp);
-    *np = '\0';
+    fp = power_entry_at(index);
+    size_t length = strlen(fp->powername);
+    for (size_t character_index = 0; character_index < length;
+         character_index++) {
+      const char *input = checked_storage_at_const(
+          fp->powername, length, sizeof(char), character_index);
+      char *output =
+          checked_storage_at(nbuf, sizeof(nbuf), sizeof(char), character_index);
+      *output = ascii_to_lower(*input);
+    }
+    *(char *)checked_storage_at(nbuf, sizeof(nbuf), sizeof(char), length) =
+        '\0';
     hash_table_add(nbuf, (int *)fp, &indexes->powers);
   }
 }
@@ -53,7 +65,7 @@ void display_powertab(EvaluationContext *evaluation, DbRef player) {
   bp = buf = alloc_lbuf("display_powertab");
   safe_str("Powers:", buf, &bp);
   for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
-    fp = &gen_powers[index];
+    fp = power_entry_at(index);
     if ((fp->listperm & CA_WIZARD) &&
         !is_wizard(evaluation->world->database, player))
       continue;
@@ -68,16 +80,17 @@ void display_powertab(EvaluationContext *evaluation, DbRef player) {
 }
 
 POWERENT *find_power(WorldIndexes *indexes, DbRef thing, char *powername) {
-  char *cp;
-
   (void)thing;
 
   /*
    * Make sure the power name is valid
    */
 
-  for (cp = powername; *cp; cp++)
-    *cp = ascii_to_lower(*cp);
+  for (size_t index = 0; index < strlen(powername); index++) {
+    char *character =
+        checked_storage_at(powername, strlen(powername), sizeof(char), index);
+    *character = ascii_to_lower(*character);
+  }
   return (POWERENT *)hash_table_find(powername, &indexes->powers);
 }
 
@@ -110,14 +123,24 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
    */
 
   negate = false;
-  while (*power && isspace((unsigned char)*power))
-    power++;
+  size_t length = strlen(power);
+  size_t offset = 0;
+  while (offset < length &&
+         (isspace)(*(const unsigned char *)checked_storage_at_const(
+             power, length, sizeof(char), offset)))
+    offset++;
+  power = checked_mutable_string_suffix(power, offset);
   if (*power == '!') {
     negate = true;
-    power++;
+    power = checked_mutable_string_suffix(power, 1);
   }
-  while (*power && isspace((unsigned char)*power))
-    power++;
+  length = strlen(power);
+  offset = 0;
+  while (offset < length &&
+         (isspace)(*(const unsigned char *)checked_storage_at_const(
+             power, length, sizeof(char), offset)))
+    offset++;
+  power = checked_mutable_string_suffix(power, offset);
 
   /*
    * Make sure a power name was specified
@@ -199,7 +222,7 @@ char *power_description(GameDatabase *database, DbRef player, DbRef target) {
   safe_mb_str("Powers:", buff, &bp);
 
   for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
-    fp = &gen_powers[index];
+    fp = power_entry_at(index);
     if (game_object_has_power(database, target, fp->id)) {
       if ((fp->listperm & CA_WIZARD) && !is_wizard(database, player))
         continue;

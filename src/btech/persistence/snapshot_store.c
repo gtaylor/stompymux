@@ -1,6 +1,26 @@
 #include "sqlite_internal.h"
 
+#include "map_los_api.h"
+#include "map_units_api.h"
 #include "mech_identity_api.h"
+#include "mux/support/checked_storage.h"
+
+static unsigned char *const *stored_bits_row(unsigned char **bits, int height,
+                                             int row) {
+  if (row < 0)
+    abort();
+  return checked_storage_at_const(bits, (size_t)height, sizeof(*bits),
+                                  (size_t)row);
+}
+
+static unsigned char stored_bits_byte(const unsigned char *row, int count,
+                                      int index) {
+  if (index < 0)
+    abort();
+  const unsigned char *value =
+      checked_storage_at_const(row, (size_t)count, sizeof(*row), (size_t)index);
+  return *value;
+}
 
 int btech_store_map(void *key, void *data, int depth, void *argument) {
   BTECH_MAP_STORE_CONTEXT *context = argument;
@@ -58,7 +78,8 @@ int btech_store_map(void *key, void *data, int depth, void *argument) {
       if (btech_special_bind_int(context->hex, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->hex, 2, x) < 0 ||
           btech_special_bind_int(context->hex, 3, y) < 0 ||
-          btech_special_bind_int(context->hex, 4, map->map[y][x]) < 0 ||
+          btech_special_bind_int(context->hex, 4,
+                                 battle_map_encoded_hex(map, x, y)) < 0 ||
           btech_special_step(context->hex) < 0)
         context->result = -1;
     }
@@ -66,8 +87,10 @@ int btech_store_map(void *key, void *data, int depth, void *argument) {
   for (index = 0; context->result == 0 && index < map->first_free; index++) {
     if (btech_special_bind_int(context->slot, 1, (DbRef)key) < 0 ||
         btech_special_bind_int(context->slot, 2, index) < 0 ||
-        btech_special_bind_int(context->slot, 3, map->mechsOnMap[index]) < 0 ||
-        btech_special_bind_int(context->slot, 4, map->mechflags[index]) < 0 ||
+        btech_special_bind_int(context->slot, 3,
+                               battle_map_unit_dbref(map, index)) < 0 ||
+        btech_special_bind_int(context->slot, 4,
+                               battle_map_unit_flags(map, index)) < 0 ||
         btech_special_step(context->slot) < 0) {
       context->result = -1;
       break;
@@ -77,8 +100,8 @@ int btech_store_map(void *key, void *data, int depth, void *argument) {
       if (btech_special_bind_int(context->los, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->los, 2, index) < 0 ||
           btech_special_bind_int(context->los, 3, target) < 0 ||
-          btech_special_bind_int(context->los, 4, map->LOSinfo[index][target]) <
-              0 ||
+          btech_special_bind_int(
+              context->los, 4, battle_map_los_flags(map, index, target)) < 0 ||
           btech_special_step(context->los) < 0)
         context->result = -1;
     }
@@ -88,8 +111,8 @@ int btech_store_map(void *key, void *data, int depth, void *argument) {
     if (object_type == TYPE_BITS)
       continue;
     ordinal = 0;
-    for (object = map->MapObject[object_type]; context->result == 0 && object;
-         object = object->next, ordinal++) {
+    for (object = first_mapobj(map, object_type);
+         context->result == 0 && object; object = object->next, ordinal++) {
       if (btech_special_bind_int(context->object, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->object, 2, object_type) < 0 ||
           btech_special_bind_int(context->object, 3, ordinal) < 0 ||
@@ -103,18 +126,21 @@ int btech_store_map(void *key, void *data, int depth, void *argument) {
         context->result = -1;
     }
   }
-  if (context->result == 0 && map->MapObject[TYPE_BITS]) {
-    bits = (unsigned char **)(void *)map->MapObject[TYPE_BITS]->datai;
+  MapObject *bits_object = first_mapobj(map, TYPE_BITS);
+  if (context->result == 0 && bits_object) {
+    bits = (unsigned char **)(void *)bits_object->datai;
     bytes_per_row = map->map_width / 4 + (map->map_width % 4 ? 1 : 0);
     for (index = 0; context->result == 0 && index < map->map_height; index++) {
-      if (!bits[index])
+      unsigned char *const *row = stored_bits_row(bits, map->map_height, index);
+      if (!*row)
         continue;
       for (byte_index = 0; byte_index < bytes_per_row; byte_index++) {
         if (btech_special_bind_int(context->bits, 1, (DbRef)key) < 0 ||
             btech_special_bind_int(context->bits, 2, index) < 0 ||
             btech_special_bind_int(context->bits, 3, byte_index) < 0 ||
-            btech_special_bind_int(context->bits, 4, bits[index][byte_index]) <
-                0 ||
+            btech_special_bind_int(
+                context->bits, 4,
+                stored_bits_byte(*row, bytes_per_row, byte_index)) < 0 ||
             btech_special_step(context->bits) < 0)
           context->result = -1;
       }

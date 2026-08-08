@@ -59,10 +59,10 @@ constexpr char KILL_TYPE_ENGINE[] =
 void ChannelEmitKill(Mech *mech, Mech *attacker, const char *reason);
 
 BattleMap *ValidMap(BtechContext *context, DbRef player, DbRef map);
-DbRef FindMechOnMap(BattleMap *map, char *mechid);
+DbRef FindMechOnMap(BattleMap *map, const char *mechid);
 Mech *find_mech_in_hex(Mech *mech, BattleMap *mech_map, int x, int y,
                        int needlos);
-DbRef FindTargetDBREFFromMapNumber(Mech *mech, char *mapnum);
+DbRef FindTargetDBREFFromMapNumber(Mech *mech, const char *mapnum);
 
 /* Map Math */
 int AcceptableDegree(int d);
@@ -84,8 +84,10 @@ int FindZBearing(float x0, float y0, float z0, float x1, float y1, float z1);
 int FindBearing(float x0, float y0, float x1, float y1);
 int InWeaponArc(Mech *mech, float x, float y);
 int IsInWeaponArc(Mech *mech, float x, float y, int section, int critical);
+typedef void (*NavigatePlotCallback)(int row, int column, char marker,
+                                     void *context);
 void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
-                           char buff[][MBUF_SIZE]);
+                           NavigatePlotCallback plot, void *context);
 int FindTargetXY(Mech *mech, float *x, float *y, float *z);
 
 /* Skill lookups */
@@ -142,10 +144,12 @@ int FindRoundsForWeapon(Mech *mech, int weapindx);
 int HeatFactor(Mech *mech);
 int WeaponIsNonfunctional(Mech *mech, int section, int crit, int numcrits);
 const char *const *ProperSectionStringFromType(int type, int mtype);
+size_t mech_section_name_count(int type, int movement_type);
+const char *mech_section_name(int type, int movement_type, size_t index);
 void ArmorStringFromIndex(int index, char *buffer, UnitClass type,
                           MechMovementType movement_type);
 int GetWeaponCrits(Mech *mech, int weapindx);
-int listmatch(const char *const *foo, const char *mat);
+int listmatch(const char *const *values, size_t value_count, const char *match);
 typedef int (*MultiWeaponSelectionCallback)(Mech *mech, DbRef player, int low,
                                             int high, void *context);
 void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,

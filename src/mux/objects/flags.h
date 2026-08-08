@@ -59,7 +59,8 @@ typedef struct ObjectEntry {
   /** Structural capabilities, composed from the OF_* constants below. */
   int flags;
 } ObjectEntry;
-extern ObjectEntry object_types[8];
+
+const ObjectEntry *object_type_entry(int type);
 
 constexpr int OF_CONTENTS = 0x0001;
 constexpr int OF_LOCATION = 0x0002;
@@ -111,22 +112,22 @@ static inline bool is_thing(GameDatabase *database, DbRef x) {
   return typeof_obj(database, x) == OBJECT_TYPE_THING;
 }
 static inline bool has_location(GameDatabase *database, DbRef x) {
-  return (object_types[typeof_obj(database, x)].flags & OF_LOCATION) != 0;
+  return (object_type_entry(typeof_obj(database, x))->flags & OF_LOCATION) != 0;
 }
 static inline bool has_contents(GameDatabase *database, DbRef x) {
-  return (object_types[typeof_obj(database, x)].flags & OF_CONTENTS) != 0;
+  return (object_type_entry(typeof_obj(database, x))->flags & OF_CONTENTS) != 0;
 }
 static inline bool has_exits(GameDatabase *database, DbRef x) {
-  return (object_types[typeof_obj(database, x)].flags & OF_EXITS) != 0;
+  return (object_type_entry(typeof_obj(database, x))->flags & OF_EXITS) != 0;
 }
 static inline bool has_siblings(GameDatabase *database, DbRef x) {
-  return (object_types[typeof_obj(database, x)].flags & OF_SIBLINGS) != 0;
+  return (object_type_entry(typeof_obj(database, x))->flags & OF_SIBLINGS) != 0;
 }
 static inline bool has_home(GameDatabase *database, DbRef x) {
-  return (object_types[typeof_obj(database, x)].flags & OF_HOME) != 0;
+  return (object_type_entry(typeof_obj(database, x))->flags & OF_HOME) != 0;
 }
 static inline bool has_dropto(GameDatabase *database, DbRef x) {
-  return (object_types[typeof_obj(database, x)].flags & OF_DROPTO) != 0;
+  return (object_type_entry(typeof_obj(database, x))->flags & OF_DROPTO) != 0;
 }
 
 bool is_good_obj(GameDatabase *database, DbRef x);

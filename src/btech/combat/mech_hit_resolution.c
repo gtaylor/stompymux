@@ -76,6 +76,7 @@ int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
   float fRange = 0.0;
   int wWeapDamage = wBaseWeapDamage;
   int wClearDamage = 0;
+  const WeaponRangeProfile ranges = weapon_catalogue_ranges(weapindx);
 
   /* Find the range to our target */
   if (hitMech)
@@ -92,18 +93,18 @@ int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
     wWeapDamage = wGattlingShots;
 
   /* If we're a heavy gauss rifle, damage gets altered by range. */
-  if (MechWeapons[weapindx].special & HVYGAUSS) {
-    if (fRange > (float)MechWeapons[weapindx].medrange)
+  if (weapon_catalogue_is_heavy_gauss(weapindx)) {
+    if (fRange > (float)ranges.medium_range)
       wWeapDamage = 10;
-    else if (fRange > (float)MechWeapons[weapindx].shortrange)
+    else if (fRange > (float)ranges.short_range)
       wWeapDamage = 20;
   }
 
   /* If we're a snub ppc, damage gets altered by range. */
-  if (MechWeapons[weapindx].special & SNUBPPC) {
-    if (fRange > (float)MechWeapons[weapindx].medrange)
+  if (weapon_catalogue_is_snub_ppc(weapindx)) {
+    if (fRange > (float)ranges.medium_range)
       wWeapDamage = 5;
-    else if (fRange > (float)MechWeapons[weapindx].shortrange)
+    else if (fRange > (float)ranges.short_range)
       wWeapDamage = 8;
   }
 
@@ -135,14 +136,14 @@ int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
       wWeapDamage++;
     else {
       if (mech_section_is_underwater(mech, wSection)) {
-        if (fRange > (float)MechWeapons[weapindx].longrange_water)
+        if (fRange > (float)ranges.water_long_range)
           wWeapDamage = (wWeapDamage / 2);
-        else if (fRange > (float)MechWeapons[weapindx].medrange_water)
+        else if (fRange > (float)ranges.water_medium_range)
           wWeapDamage--;
       } else {
-        if (fRange > (float)MechWeapons[weapindx].longrange)
+        if (fRange > (float)ranges.long_range)
           wWeapDamage = (wWeapDamage / 2);
-        else if (fRange > (float)MechWeapons[weapindx].medrange)
+        else if (fRange > (float)ranges.medium_range)
           wWeapDamage--;
       }
     }
@@ -204,7 +205,7 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
   int hitloc = 0;
   int roll;
   int aim_hit = 0;
-  int wBaseWeapDamage = MechWeapons[weapindx].damage;
+  int wBaseWeapDamage = weapon_catalogue_damage(weapindx);
   int wWeapDamage = 0;
   int num_missiles_hit;
   int wFireMode = mech_critical_fire_mode(mech, wSection, wCritSlot);

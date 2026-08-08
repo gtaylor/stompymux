@@ -20,6 +20,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 
@@ -60,7 +61,8 @@ static char *examine_state_string(const ObjectStateString *string) {
 
   safe_chr('"', rendered, &cursor);
   for (size_t index = 0; index < string->length; index++) {
-    const unsigned char byte = (unsigned char)string->data[index];
+    const unsigned char byte = *(const unsigned char *)checked_storage_at_const(
+        string->data, string->length, sizeof(unsigned char), index);
     char escaped[5];
 
     switch (byte) {
@@ -164,9 +166,19 @@ static void do_state_examine(CommandInvocation *invocation) {
   if (!name || !*name) {
     thing = game_object_location(evaluation->world->database, player);
   } else {
-    name_space = strchr(name, '/');
-    if (name_space)
-      *name_space++ = '\0';
+    const size_t name_length = strlen(name);
+    size_t slash_offset = 0;
+
+    while (slash_offset < name_length &&
+           *(const char *)checked_storage_at_const(
+               name, name_length + 1, sizeof(char), slash_offset) != '/')
+      slash_offset++;
+    if (slash_offset < name_length) {
+      *(char *)checked_storage_at(name, name_length + 1, sizeof(char),
+                                  slash_offset) = '\0';
+      name_space = checked_storage_at(name, name_length + 1, sizeof(char),
+                                      slash_offset + 1);
+    }
     if (!*name) {
       notify_checked(evaluation, player, player, "You must specify an object.",
                      MSG_ME);
@@ -196,29 +208,37 @@ struct StateAddress {
 };
 
 static bool state_split_last_word(char *text, char **prefix, char **word) {
-  char *end;
-  char *start;
-  char *separator;
-
   if (!text || !*text)
     return false;
-  end = text + strlen(text);
-  while (end > text && isspace((unsigned char)end[-1]))
+  const size_t length = strlen(text);
+  size_t end = length;
+  size_t start;
+  size_t separator;
+
+  while (end > 0 &&
+         (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+             text, length + 1, sizeof(char), end - 1)))
     end--;
-  *end = '\0';
+  *(char *)checked_storage_at(text, length + 1, sizeof(char), end) = '\0';
   start = end;
-  while (start > text && !isspace((unsigned char)start[-1]))
+  while (start > 0 &&
+         !(isspace)((unsigned char)*(const char *)checked_storage_at_const(
+             text, length + 1, sizeof(char), start - 1)))
     start--;
-  if (start == text)
+  if (start == 0)
     return false;
   separator = start;
-  while (separator > text && isspace((unsigned char)separator[-1]))
+  while (separator > 0 &&
+         (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+             text, length + 1, sizeof(char), separator - 1)))
     separator--;
-  *separator = '\0';
-  if (!*text || !*start)
+  *(char *)checked_storage_at(text, length + 1, sizeof(char), separator) = '\0';
+  char *word_start = checked_storage_at(text, length + 1, sizeof(char), start);
+
+  if (!*text || !*word_start)
     return false;
   *prefix = text;
-  *word = start;
+  *word = word_start;
   return true;
 }
 
@@ -249,13 +269,23 @@ static bool state_parse_address(CommandInvocation *invocation, char *text,
                    "Expected <object>/<namespace> <attribute_name>.", MSG_ME);
     return false;
   }
-  slash = strchr(target, '/');
-  if (!slash || slash == target || !slash[1]) {
+  const size_t target_length = strlen(target);
+  size_t slash_offset = 0;
+
+  while (slash_offset < target_length &&
+         *(const char *)checked_storage_at_const(
+             target, target_length + 1, sizeof(char), slash_offset) != '/')
+    slash_offset++;
+  if (slash_offset == 0 || slash_offset + 1 >= target_length) {
     notify_checked(evaluation, invocation->player, invocation->player,
                    "Expected <object>/<namespace> <attribute_name>.", MSG_ME);
     return false;
   }
-  *slash++ = '\0';
+  slash =
+      checked_storage_at(target, target_length + 1, sizeof(char), slash_offset);
+  *slash = '\0';
+  slash = checked_storage_at(target, target_length + 1, sizeof(char),
+                             slash_offset + 1);
   address->name_space = slash;
   if (!object_state_name_is_valid(address->name_space) ||
       !object_state_name_is_valid(address->key)) {
@@ -301,7 +331,8 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
   char *decoded;
   size_t output = 0;
 
-  if (length < 2 || text[length - 1] != '"') {
+  if (length < 2 || *(const char *)checked_storage_at_const(
+                        text, length + 1, sizeof(char), length - 1) != '"') {
     snprintf(error, error_size, "unterminated quoted string");
     return false;
   }
@@ -311,10 +342,12 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
     return false;
   }
   for (size_t index = 1; index < length - 1; index++) {
-    unsigned char byte = (unsigned char)text[index];
+    unsigned char byte = (unsigned char)*(const char *)checked_storage_at_const(
+        text, length + 1, sizeof(char), index);
 
     if (byte != '\\') {
-      decoded[output++] = (char)byte;
+      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+          (char)byte;
       continue;
     }
     if (++index >= length - 1) {
@@ -322,33 +355,43 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
       snprintf(error, error_size, "incomplete string escape");
       return false;
     }
-    byte = (unsigned char)text[index];
+    byte = (unsigned char)*(const char *)checked_storage_at_const(
+        text, length + 1, sizeof(char), index);
     switch (byte) {
     case '"':
     case '\\':
-      decoded[output++] = (char)byte;
+      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+          (char)byte;
       break;
     case 'n':
-      decoded[output++] = '\n';
+      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+          '\n';
       break;
     case 'r':
-      decoded[output++] = '\r';
+      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+          '\r';
       break;
     case 't':
-      decoded[output++] = '\t';
+      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+          '\t';
       break;
     case 'x': {
       int high;
       int low;
 
       if (index + 2 >= length - 1 ||
-          (high = state_hex_digit((unsigned char)text[index + 1])) < 0 ||
-          (low = state_hex_digit((unsigned char)text[index + 2])) < 0) {
+          (high = state_hex_digit(
+               (unsigned char)*(const char *)checked_storage_at_const(
+                   text, length + 1, sizeof(char), index + 1))) < 0 ||
+          (low = state_hex_digit(
+               (unsigned char)*(const char *)checked_storage_at_const(
+                   text, length + 1, sizeof(char), index + 2))) < 0) {
         free(decoded);
         snprintf(error, error_size, "invalid hexadecimal string escape");
         return false;
       }
-      decoded[output++] = (char)((high << 4) | low);
+      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+          (char)((high << 4) | low);
       index += 2;
       break;
     }
@@ -358,7 +401,7 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
       return false;
     }
   }
-  decoded[output] = '\0';
+  *(char *)checked_storage_at(decoded, length, sizeof(char), output) = '\0';
   *owned = decoded;
   *value = (ObjectStateValue){
       .type = OBJECT_STATE_STRING,
@@ -459,9 +502,20 @@ static void do_state_wipe(CommandInvocation *invocation) {
                    "Expected <object> or <object>/<namespace>.", MSG_ME);
     return;
   }
-  name_space = strchr(target, '/');
-  if (name_space)
-    *name_space++ = '\0';
+  const size_t target_length = strlen(target);
+  size_t slash_offset = 0;
+
+  while (slash_offset < target_length &&
+         *(const char *)checked_storage_at_const(
+             target, target_length + 1, sizeof(char), slash_offset) != '/')
+    slash_offset++;
+  name_space = nullptr;
+  if (slash_offset < target_length) {
+    *(char *)checked_storage_at(target, target_length + 1, sizeof(char),
+                                slash_offset) = '\0';
+    name_space = checked_storage_at(target, target_length + 1, sizeof(char),
+                                    slash_offset + 1);
+  }
   if (!state_match_object(invocation, target, &object))
     return;
   if (!name_space) {

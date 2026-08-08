@@ -58,6 +58,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "random.h"
 #include "registry_api.h"
@@ -90,7 +91,7 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
     /* BOOM! */
     /* That's going to hurt... */
     weapindx = ammunition_to_weapon_index(critType);
-    damage = critData * MechWeapons[weapindx].damage;
+    damage = critData * weapon_catalogue_damage(weapindx);
     if (weapon_catalogue_is_missile(weapindx) ||
         weapon_catalogue_is_artillery(weapindx)) {
       int missile_count =
@@ -98,8 +99,9 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       if (missile_count > 0)
         damage *= missile_count;
     }
-    if (MechWeapons[weapindx].special & (GAUSS | NOBOOM)) {
-      if (MechWeapons[weapindx].special & GAUSS)
+    if (weapon_catalogue_is_gauss(weapindx) ||
+        weapon_catalogue_does_not_explode(weapindx)) {
+      if (weapon_catalogue_is_gauss(weapindx))
         mech_notify(wounded, MECHALL,
                     "One of your Gauss Rifle ammo feeds is destroyed");
       mech_critical_destroy(wounded, hitloc, critHit);
@@ -120,8 +122,10 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
            mech_critical_part_type(wounded, hitloc, critHit) == critType)
       if (mech_critical_is_destroyed(wounded, hitloc, critHit))
         break;
-    mech_printf(wounded, MECHALL, "Your destroyed %s is damaged some more!",
-                &MechWeapons[weapon_from_equipment_index(critType)].name[3]);
+    mech_printf(
+        wounded, MECHALL, "Your destroyed %s is damaged some more!",
+        checked_string_suffix(
+            weapon_catalogue_name(weapon_from_equipment_index(critType)), 3));
     mech_critical_destroy(wounded, hitloc, critHit + 1);
     return 1;
   }
@@ -229,8 +233,10 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
     } // end if()
 
     if (equipment_is_weapon(critType)) {
-      mech_printf(wounded, MECHALL, "Part of your non-working %s has been hit!",
-                  &MechWeapons[weapon_from_equipment_index(critType)].name[3]);
+      mech_printf(
+          wounded, MECHALL, "Part of your non-working %s has been hit!",
+          checked_string_suffix(
+              weapon_catalogue_name(weapon_from_equipment_index(critType)), 3));
     } else {
       mech_printf(wounded, MECHALL, "Part of your non-working %s has been hit!",
                   partBuf);

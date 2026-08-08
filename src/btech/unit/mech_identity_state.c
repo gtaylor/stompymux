@@ -3,13 +3,16 @@
 #include <string.h>
 
 #include "mech_internal.h"
+#include "mux/support/checked_storage.h"
 
 BtechContext *mech_context(const Mech *mech) { return mech->xcode.context; }
 
 DbRef mech_dbref(const Mech *mech) { return mech->mynum; }
 
 DbRef mech_turret_dbref(const Mech *mech, int turret) {
-  return mech->pd.turret[turret];
+  const DbRef *turret_dbref = checked_storage_at_const(
+      mech->pd.turret, NUM_TURRETS, sizeof(*mech->pd.turret), (size_t)turret);
+  return *turret_dbref;
 }
 
 DbRef mech_map_dbref(const Mech *mech) { return mech->mapindex; }

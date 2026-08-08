@@ -1,4 +1,5 @@
 #include "mux/support/red_black_tree.h"
+#include "mux/support/checked_storage.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -7,6 +8,10 @@ typedef struct WalkResult {
   int values[16];
   size_t count;
 } WalkResult;
+
+static int *int_slot(int *values, size_t count, size_t index) {
+  return checked_storage_at(values, count, sizeof(*values), index);
+}
 
 static int compare_ints(void *left, void *right, void *context) {
   const int a = *(int *)left;
@@ -21,7 +26,7 @@ static int collect_walk(void *key, void *data, int depth, void *context) {
 
   (void)key;
   (void)depth;
-  result->values[result->count++] = *(int *)data;
+  *int_slot(result->values, 16, result->count++) = *(int *)data;
   return 1;
 }
 
@@ -49,22 +54,23 @@ int main(void) {
   RedBlackTree tree = red_black_tree_init(compare_ints, nullptr);
 
   if (tree == nullptr || red_black_tree_size(tree) != 0 ||
-      red_black_tree_find(tree, &keys[0]) != nullptr ||
-      red_black_tree_exists(tree, &keys[0]) ||
+      red_black_tree_find(tree, int_slot(keys, 7, 0)) != nullptr ||
+      red_black_tree_exists(tree, int_slot(keys, 7, 0)) ||
       red_black_tree_search(tree, SEARCH_FIRST, nullptr) != nullptr ||
       red_black_tree_index(tree, 0) != nullptr ||
-      red_black_tree_delete(tree, &keys[0]) != nullptr)
+      red_black_tree_delete(tree, int_slot(keys, 7, 0)) != nullptr)
     return 1;
 
   for (size_t index = 0; index < 7; index++)
-    red_black_tree_insert(tree, &keys[index], &values[index]);
+    red_black_tree_insert(tree, int_slot(keys, 7, index),
+                          int_slot(values, 7, index));
   if (red_black_tree_size(tree) != 7)
     return 1;
 
-  red_black_tree_insert(tree, &keys[4], &replacement);
+  red_black_tree_insert(tree, int_slot(keys, 7, 4), &replacement);
   if (red_black_tree_size(tree) != 7 ||
-      red_black_tree_find(tree, &keys[4]) != &replacement ||
-      !red_black_tree_exists(tree, &keys[4]))
+      red_black_tree_find(tree, int_slot(keys, 7, 4)) != &replacement ||
+      !red_black_tree_exists(tree, int_slot(keys, 7, 4)))
     return 1;
 
   int below = 0;
@@ -93,13 +99,13 @@ int main(void) {
     return 1;
   for (size_t index = 0; index < walk.count; index++) {
     int expected = index == 2 ? replacement : (int)index + 1;
-    if (walk.values[index] != expected)
+    if (*int_slot(walk.values, 16, index) != expected)
       return 1;
   }
 
   int deletion_order[] = {1, 2, 6, 4};
   for (size_t index = 0; index < 4; index++) {
-    int key = deletion_order[index];
+    int key = *int_slot(deletion_order, 4, index);
     if (red_black_tree_delete(tree, &key) == nullptr ||
         red_black_tree_exists(tree, &key))
       return 1;

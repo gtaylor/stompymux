@@ -30,6 +30,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "repair_job.h"
@@ -39,6 +40,12 @@ typedef struct TechCheckContext {
   int location;
   int part;
 } TechCheckContext;
+
+static int tech_int_at(const int *values, size_t count, size_t index) {
+  const int *value =
+      checked_storage_at_const(values, count, sizeof(*values), index);
+  return *value;
+}
 
 static void tech_check_locpart(MuxEvent *e, void *data) {
   TechCheckContext *context = data;
@@ -86,7 +93,10 @@ int SomeoneRepairing(Mech *mech, int loc, int part) {
                              EVENT_REPAIR_REPENHCRIT};
   for (size_t index = 0; index < (sizeof(event_types) / sizeof(event_types[0]));
        index++)
-    if (SomeoneRepairing_s(mech, loc, part, event_types[index]))
+    if (SomeoneRepairing_s(
+            mech, loc, part,
+            tech_int_at(event_types, sizeof(event_types) / sizeof(*event_types),
+                        index)))
       return 1;
   return 0;
 }
@@ -132,7 +142,10 @@ int SomeoneScrappingPart(Mech *mech, int loc, int part) {
                              EVENT_REPAIR_UMOB};
   for (size_t index = 0; index < (sizeof(event_types) / sizeof(event_types[0]));
        index++)
-    if (SomeoneRepairing_s(mech, loc, part, event_types[index]))
+    if (SomeoneRepairing_s(
+            mech, loc, part,
+            tech_int_at(event_types, sizeof(event_types) / sizeof(*event_types),
+                        index)))
       return 1;
   return 0;
 }
@@ -159,7 +172,7 @@ int ValidGunPos(Mech *mech, int loc, int pos) {
                                           critical_f, 1)) < 0)
     return 0;
   for (i = 0; i < num_weaps_f; i++)
-    if (critical_f[i] == pos)
+    if (tech_int_at(critical_f, MAX_WEAPS_SECTION, (size_t)i) == pos)
       return 1;
   return 0;
 }

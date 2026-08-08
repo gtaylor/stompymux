@@ -18,6 +18,7 @@
 #include "map_dynamic_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_api_types.h"
 #include "mech_lifecycle.h"
 #include "mech_partnames_api.h"
@@ -31,12 +32,19 @@
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "special_object.h"
+#include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
+
+static char *debug_argument(char **arguments, size_t count, size_t index) {
+  char **slot = checked_storage_at(arguments, count, sizeof(*arguments), index);
+  return *slot;
+}
 
 void debug_list(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
@@ -46,10 +54,16 @@ void debug_list(DbRef player, void *data, char *buffer) {
   argc = mech_parseattributes(buffer, args, 3);
   if (argc == 0)
     return;
-  else if (args[0][0] == 'M' || args[0][0] == 'm')
-    if (args[0][1] == 'E' || args[0][1] == 'e')
+  char *first_argument = debug_argument(args, 3, 0);
+  const size_t argument_length = strlen(first_argument);
+  const char first_character =
+      argument_length > 0 ? *checked_string_suffix(first_argument, 0) : '\0';
+  const char second_character =
+      argument_length > 1 ? *checked_string_suffix(first_argument, 1) : '\0';
+  if (first_character == 'M' || first_character == 'm')
+    if (second_character == 'E' || second_character == 'e')
       DumpMechs(debug->context, player);
-  if (args[0][1] == 'A' || args[0][1] == 'a')
+  if (second_character == 'A' || second_character == 'a')
     DumpMaps(debug->context, player);
 }
 
@@ -65,14 +79,27 @@ void debug_savedb(DbRef player, void *data, char *buffer) {
                  "SQLite checkpoint complete.");
 }
 
+typedef struct DebugMemoryStat {
+  int number;
+  size_t smallest;
+  size_t largest;
+  size_t total;
+} DebugMemoryStat;
+
 typedef struct DebugMemoryContext DebugMemoryContext;
 struct DebugMemoryContext {
-  int *number;
-  size_t *smallest;
-  size_t *largest;
-  size_t *total;
+  DebugMemoryStat *stats;
+  size_t stat_count;
   DbRef detail_player;
 };
+
+static DebugMemoryStat *debug_memory_stat(DebugMemoryContext *memory,
+                                          int type) {
+  if (type < 0)
+    abort();
+  return checked_storage_at(memory->stats, memory->stat_count,
+                            sizeof(*memory->stats), (size_t)type);
+}
 static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   const DbRef key_val = (DbRef)key;
   BtechSpecialObject *const xcode_obj = data;
@@ -89,7 +116,7 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   case GTYPE_MAP:
     map = (BattleMap *)xcode_obj;
     if (map->map) {
-      size += sizeof(map->map[0][0]) * (size_t)map->map_width *
+      size += sizeof(unsigned char) * (size_t)map->map_width *
               (size_t)map->map_height;
       size += (size_t)bit_size(map);
       size += (size_t)obj_size(map);
@@ -103,12 +130,13 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
     break;
   }
 
-  if (memory->number[type] == 0 || size < memory->smallest[type])
-    memory->smallest[type] = size;
-  if (memory->number[type] == 0 || size > memory->largest[type])
-    memory->largest[type] = size;
-  memory->total[type] += size;
-  memory->number[type]++;
+  DebugMemoryStat *stat = debug_memory_stat(memory, type);
+  if (stat->number == 0 || size < stat->smallest)
+    stat->smallest = size;
+  if (stat->number == 0 || size > stat->largest)
+    stat->largest = size;
+  stat->total += size;
+  stat->number++;
 
   if (memory->detail_player > 0)
     notify_printf(
@@ -123,25 +151,19 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
 void debug_memory(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
   BtechContext *context = debug->context;
-  int i;
   size_t gtotal = 0;
   int type_count = btech_special_object_type_count();
   DebugMemoryContext memory = {0};
 
-  Create(memory.number, int, (size_t)type_count);
-  Create(memory.smallest, size_t, (size_t)type_count);
-  Create(memory.largest, size_t, (size_t)type_count);
-  Create(memory.total, size_t, (size_t)type_count);
-
-  for (i = 0; i < type_count; i++) {
-    memory.number[i] = 0;
-    memory.smallest[i] = 0;
-    memory.largest[i] = 0;
-    memory.total[i] = 0;
-  }
+  memory.stat_count = (size_t)type_count;
+  memory.stats = calloc(memory.stat_count, sizeof(*memory.stats));
+  if (memory.stats == nullptr)
+    abort();
   const char *request = buffer;
-  while (request && *request && isspace((unsigned char)*request))
-    request++;
+  if (request != nullptr)
+    request =
+        checked_storage_at_const(request, strlen(request) + 1, sizeof(*request),
+                                 strspn(request, " \t\r\n\f\v"));
   if (!request)
     request = "";
   if (strcmp(request, ""))
@@ -150,29 +172,26 @@ void debug_memory(DbRef player, void *data, char *buffer) {
     memory.detail_player = -1;
   red_black_tree_walk(context->special_objects, WALK_INORDER, debug_check_stuff,
                       &memory);
-  for (i = 0; i < type_count; i++) {
-    if (memory.number[i]) {
-      if (memory.smallest[i] == memory.largest[i])
+  for (int i = 0; i < type_count; i++) {
+    DebugMemoryStat *stat = debug_memory_stat(&memory, i);
+    if (stat->number) {
+      if (stat->smallest == stat->largest)
         notify_printf(btech_context_evaluation(debug->context), player,
-                      "%4d %-20s: %zu bytes total, %zu each", memory.number[i],
-                      btech_special_object_type_name(i), memory.total[i],
-                      memory.total[i] / (size_t)memory.number[i]);
+                      "%4d %-20s: %zu bytes total, %zu each", stat->number,
+                      btech_special_object_type_name(i), stat->total,
+                      stat->total / (size_t)stat->number);
       else
         notify_printf(
             btech_context_evaluation(debug->context), player,
             "%4d %-20s: %zu bytes total, %zu avg, %zu/%zu small/large",
-            memory.number[i], btech_special_object_type_name(i),
-            memory.total[i], memory.total[i] / (size_t)memory.number[i],
-            memory.smallest[i], memory.largest[i]);
+            stat->number, btech_special_object_type_name(i), stat->total,
+            stat->total / (size_t)stat->number, stat->smallest, stat->largest);
     }
-    gtotal += memory.total[i];
+    gtotal += stat->total;
   }
   notify_printf(btech_context_evaluation(debug->context), player,
                 "Grand total: %zu bytes.", gtotal);
-  free(memory.number);
-  free(memory.total);
-  free(memory.smallest);
-  free(memory.largest);
+  free(memory.stats);
 }
 
 void ShutDownMap(BtechContext *context, DbRef player, DbRef mapnumber) {
@@ -185,19 +204,21 @@ void ShutDownMap(BtechContext *context, DbRef player, DbRef mapnumber) {
   xcode_obj = red_black_tree_find(context->special_objects, (void *)mapnumber);
   if (xcode_obj) {
     map = (BattleMap *)xcode_obj;
-    for (j = 0; j < map->first_free; j++)
-      if (map->mechsOnMap[j] != -1) {
-        mech = btech_context_get_mech(context, map->mechsOnMap[j]);
+    for (j = 0; j < battle_map_unit_count(map); j++) {
+      const DbRef unit_dbref = battle_map_unit_dbref(map, j);
+      if (unit_dbref != -1) {
+        mech = btech_context_get_mech(context, unit_dbref);
         if (mech) {
           notify_printf(
               btech_context_evaluation(context), player,
               "Shutting down Mech #%ld and resetting map index to -1....",
-              map->mechsOnMap[j]);
+              unit_dbref);
           mech_shutdown(GOD, (void *)mech, "");
           mech_position_reset_origin(mech);
           remove_mech_from_map(map, mech);
         }
       }
+    }
     battle_map_dynamic_destroy(map);
     map->first_free = 0;
     mecha_notify(btech_context_evaluation(context), player, "Map Cleared");
@@ -212,7 +233,7 @@ void debug_shutdown(DbRef player, void *data, char *buffer) {
 
   argc = mech_parseattributes(buffer, args, 3);
   long map_number;
-  if (argc > 0 && parse_long_checked(args[0], &map_number)) {
+  if (argc > 0 && parse_long_checked(debug_argument(args, 3, 0), &map_number)) {
     ShutDownMap(debug->context, player, map_number);
   } else {
     mecha_notify(btech_context_evaluation(debug->context), player,
@@ -231,7 +252,7 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if (!parse_int_checked(args[1], &vrt)) {
+  if (!parse_int_checked(debug_argument(args, 3, 1), &vrt)) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "Invalid value!");
     return;
@@ -246,8 +267,8 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
                  "VRT can be at max 127");
     return;
   }
-  if (!find_matching_vlong_part(debug->context, args[0], nullptr, &id,
-                                &brand)) {
+  if (!find_matching_vlong_part(debug->context, debug_argument(args, 3, 0),
+                                nullptr, &id, &brand)) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "That is no weapon!");
     return;
@@ -259,12 +280,13 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
   }
   btech_weapon_settings_set_recycle_time(&debug->context->weapon_settings,
                                          weapon_from_equipment_index(id), vrt);
+  const int weapon_index = weapon_from_equipment_index(id);
   notify_printf(btech_context_evaluation(debug->context), player,
-                "VRT for %s set to %d.",
-                MechWeapons[weapon_from_equipment_index(id)].name, vrt);
+                "VRT for %s set to %d.", weapon_catalogue_name(weapon_index),
+                vrt);
   log_error(debug->context->log, LOG_WIZARD, "WIZ", "CHANGE",
-            "VRT for %s set to %d by #%ld",
-            MechWeapons[weapon_from_equipment_index(id)].name, vrt, player);
+            "VRT for %s set to %d by #%ld", weapon_catalogue_name(weapon_index),
+            vrt, player);
 }
 
 void debug_setwbv(DbRef player, void *data, char *buffer) {
@@ -278,7 +300,7 @@ void debug_setwbv(DbRef player, void *data, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if (!parse_int_checked(args[1], &bv)) {
+  if (!parse_int_checked(debug_argument(args, 3, 1), &bv)) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "Invalid value!");
     return;
@@ -288,8 +310,8 @@ void debug_setwbv(DbRef player, void *data, char *buffer) {
                  "BV needs to be >=0");
     return;
   }
-  if (!find_matching_vlong_part(debug->context, args[0], nullptr, &id,
-                                &brand)) {
+  if (!find_matching_vlong_part(debug->context, debug_argument(args, 3, 0),
+                                nullptr, &id, &brand)) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "That is no weapon!");
     return;
@@ -303,5 +325,5 @@ void debug_setwbv(DbRef player, void *data, char *buffer) {
                                          weapon_from_equipment_index(id), bv);
   notify_printf(btech_context_evaluation(debug->context), player,
                 "BV for %s set to %d.",
-                MechWeapons[weapon_from_equipment_index(id)].name, bv);
+                weapon_catalogue_name(weapon_from_equipment_index(id)), bv);
 }

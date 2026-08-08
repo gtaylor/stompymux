@@ -1,6 +1,8 @@
 #include "btech/context.h"
+#include "btech_text_builder.h"
 #include "map.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_crew_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
@@ -11,6 +13,7 @@
 #include "mech_runtime_api.h"
 #include "mech_sensor_api.h"
 #include "mech_utils_api.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
@@ -35,11 +38,11 @@ void mech_los_broadcast(Mech *mech, const char *message) {
   mech_sensor_visibility_refresh(mech);
   if (!mech_map)
     return;
-  for (i = 0; i < mech_map->first_free; i++)
-    if (mech_map->mechsOnMap[i] != -1 &&
-        mech_map->mechsOnMap[i] != mech_dbref(mech))
-      if ((tempMech = btech_context_get_mech(mech_map->xcode.context,
-                                             mech_map->mechsOnMap[i])))
+  for (i = 0; i < battle_map_unit_count(mech_map); i++) {
+    const DbRef candidate = battle_map_unit_dbref(mech_map, i);
+    if (candidate != -1 && candidate != mech_dbref(mech))
+      if ((tempMech =
+               btech_context_get_mech(battle_map_context(mech_map), candidate)))
         if (mech_los_check(tempMech, mech, mech_position_x(mech),
                            mech_position_y(mech),
                            mech_range_to(tempMech, mech))) {
@@ -48,6 +51,7 @@ void mech_los_broadcast(Mech *mech, const char *message) {
                    *message != '\'' ? " " : "", message);
           mech_notify(tempMech, MECHSTARTED, buf);
         }
+  }
 }
 
 int MechSeesHexF(Mech *mech, BattleMap *map, float x, float y, int ix, int iy) {
@@ -78,53 +82,49 @@ void HexLOSBroadcast(BattleMap *mech_map, int x, int y, const char *message) {
   if (!mech_map)
     return;
   MapCoordToRealCoord(x, y, &fx, &fy);
-  for (i = 0; i < mech_map->first_free; i++)
-    if (mech_map->mechsOnMap[i] != -1)
-      if ((tempMech = btech_context_get_mech(mech_map->xcode.context,
-                                             mech_map->mechsOnMap[i])))
+  for (i = 0; i < battle_map_unit_count(mech_map); i++) {
+    const DbRef candidate = battle_map_unit_dbref(mech_map, i);
+    if (candidate != -1)
+      if ((tempMech =
+               btech_context_get_mech(battle_map_context(mech_map), candidate)))
         if (MechSeesHexF(tempMech, mech_map, fx, fy, x, y)) {
           char tbuf[LBUF_SIZE];
-          const char *c;
-          char *d = tbuf;
-          int done;
+          BtechTextBuilder output;
+          btech_text_builder_initialize(&output, tbuf, sizeof(tbuf));
+          const size_t message_length = strlen(message);
 
-          for (c = message; *c; c++) {
-            done = 0;
-            if (*c == '$') {
-              if (*(c + 1) == 'h' || *(c + 1) == 'H') {
-                c++;
-                if (*c == 'h') {
-                  if (x == mech_position_x(tempMech) &&
-                      y == mech_position_y(tempMech))
-                    strcpy(d, "your hex");
+          for (size_t input = 0; input < message_length;) {
+            const char character = *checked_string_suffix(message, input);
+            if (character == '$' && input + 1 == message_length)
+              break;
+            if (character == '$' && input + 1 < message_length) {
+              const char placeholder =
+                  *checked_string_suffix(message, input + 1);
+              if (placeholder == 'h' || placeholder == 'H') {
+                const bool current_hex = x == mech_position_x(tempMech) &&
+                                         y == mech_position_y(tempMech);
+                if (placeholder == 'h') {
+                  if (current_hex)
+                    btech_text_builder_append(&output, "your hex");
                   else
-                    snprintf(d, (size_t)(tbuf + sizeof(tbuf) - d), "%d,%d", x,
-                             y);
-                  while (*d)
-                    d++;
+                    btech_text_builder_append_format(&output, "%d,%d", x, y);
+                } else if (current_hex) {
+                  btech_text_builder_append(&output,
+                                            "[fg=red bold]YOUR HEX[reset]");
                 } else {
-                  /* Dangerous */
-                  if (x == mech_position_x(tempMech) &&
-                      y == mech_position_y(tempMech))
-                    strcpy(d, "[fg=red bold]YOUR HEX[reset]");
-                  else
-                    snprintf(d, (size_t)(tbuf + sizeof(tbuf) - d),
-                             "[fg=yellow bold]%d,%d[reset]", x, y);
-                  while (*d)
-                    d++;
+                  btech_text_builder_append_format(
+                      &output, "[fg=yellow bold]%d,%d[reset]", x, y);
                 }
-                done = 1;
+                input += 2;
+                continue;
               }
             }
-            if (!done)
-              *(d++) = *c;
+            btech_text_builder_append_character(&output, character);
+            input++;
           }
-          /* Apparently, it's necessary to remove trailing $'s ?? */
-          if (d > tbuf && *(d - 1) == '$')
-            d--;
-          *d = '\0';
           mech_notify(tempMech, MECHSTARTED, tbuf);
         }
+  }
 }
 
 static void format_mech_los_message(char *buffer, size_t buffer_size,
@@ -136,8 +136,13 @@ static void format_mech_los_message(char *buffer, size_t buffer_size,
     snprintf(buffer, buffer_size, "%s", message);
     return;
   }
-  snprintf(buffer, buffer_size, "%.*s%s%s", (int)(placeholder - message),
-           message, target_name, placeholder + 2);
+  const size_t prefix_length = (size_t)(placeholder - message);
+  BtechTextBuilder output;
+  btech_text_builder_initialize(&output, buffer, buffer_size);
+  btech_text_builder_append_count(&output, message, prefix_length);
+  btech_text_builder_append(&output, target_name);
+  btech_text_builder_append(&output,
+                            checked_string_suffix(message, prefix_length + 2));
 }
 
 void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
@@ -153,12 +158,11 @@ void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
     return;
   mech_sensor_visibility_refresh(mech);
   mech_sensor_visibility_refresh(target);
-  for (i = 0; i < mech_map->first_free; i++)
-    if (mech_map->mechsOnMap[i] != -1 &&
-        mech_map->mechsOnMap[i] != mech_dbref(mech) &&
-        mech_map->mechsOnMap[i] != mech_dbref(target))
-      if ((tempMech = btech_context_get_mech(mech_context(mech),
-                                             mech_map->mechsOnMap[i]))) {
+  for (i = 0; i < battle_map_unit_count(mech_map); i++) {
+    const DbRef candidate = battle_map_unit_dbref(mech_map, i);
+    if (candidate != -1 && candidate != mech_dbref(mech) &&
+        candidate != mech_dbref(target))
+      if ((tempMech = btech_context_get_mech(mech_context(mech), candidate))) {
         a = mech_los_check(tempMech, mech, mech_position_x(mech),
                            mech_position_y(mech),
                            mech_range_to(tempMech, mech));
@@ -166,20 +170,21 @@ void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
                            mech_position_y(target),
                            mech_range_to(tempMech, target));
         if (a || b) {
-          char *obp = oddbuff2;
-
           format_mech_los_message(
               oddbuff, sizeof(oddbuff), message,
               b ? mech_to_mech_display_id(tempMech, target).text : "someone");
-          safe_str(a ? mech_to_mech_display_id(tempMech, mech).text : "Someone",
-                   oddbuff2, &obp);
+          BtechTextBuilder output;
+          btech_text_builder_initialize(&output, oddbuff2, sizeof(oddbuff2));
+          btech_text_builder_append(
+              &output,
+              a ? mech_to_mech_display_id(tempMech, mech).text : "Someone");
           if (*oddbuff != '\'')
-            safe_chr(' ', oddbuff2, &obp);
-          safe_str(oddbuff, oddbuff2, &obp);
-          *obp = '\0';
+            btech_text_builder_append_character(&output, ' ');
+          btech_text_builder_append(&output, oddbuff);
           mech_notify(tempMech, MECHSTARTED, oddbuff2);
         }
       }
+  }
 }
 
 void MapBroadcast(BattleMap *map, char *message) {
@@ -187,11 +192,13 @@ void MapBroadcast(BattleMap *map, char *message) {
   int i;
   Mech *tempMech;
 
-  for (i = 0; i < map->first_free; i++)
-    if (map->mechsOnMap[i] != -1)
+  for (i = 0; i < battle_map_unit_count(map); i++) {
+    const DbRef candidate = battle_map_unit_dbref(map, i);
+    if (candidate != -1)
       if ((tempMech =
-               btech_context_get_mech(map->xcode.context, map->mechsOnMap[i])))
+               btech_context_get_mech(battle_map_context(map), candidate)))
         mech_notify(tempMech, MECHSTARTED, message);
+  }
 }
 
 void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
@@ -218,14 +225,14 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
     fx = mech_position_real_x(target);
     fy = mech_position_real_y(target);
     fz = mech_position_real_z(target);
-    for (loop = 0; loop < mech_map->first_free; loop++)
-      if (mech_map->mechsOnMap[loop] != mech_dbref(mech) &&
-          mech_map->mechsOnMap[loop] != -1 &&
-          mech_map->mechsOnMap[loop] != mech_dbref(target)) {
+    for (loop = 0; loop < battle_map_unit_count(mech_map); loop++) {
+      const DbRef candidate = battle_map_unit_dbref(mech_map, loop);
+      if (candidate != mech_dbref(mech) && candidate != -1 &&
+          candidate != mech_dbref(target)) {
         attacker = 0;
         defender = 0;
-        tempMech = (Mech *)btech_context_find_object(
-            mech_context(mech), mech_map->mechsOnMap[loop]);
+        tempMech =
+            (Mech *)btech_context_find_object(mech_context(mech), candidate);
         if (!tempMech)
           continue;
         if (mech_los_check(tempMech, mech, mech_position_x(mech),
@@ -260,6 +267,7 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
           mech_printf(tempMech, MECHSTARTED, "Something %s %s with a %s",
                       IsHit ? "hits" : "misses", buff, weapname);
       }
+    }
   } else {
     mapx = x;
     mapy = y;
@@ -267,13 +275,13 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
     int elevation = map_base_elevation(mech_map, x, y);
     fz = ZSCALE * (float)elevation;
     snprintf(buff, sizeof(buff), "hex %d %d!", mapx, mapy);
-    for (loop = 0; loop < mech_map->first_free; loop++)
-      if (mech_map->mechsOnMap[loop] != mech_dbref(mech) &&
-          mech_map->mechsOnMap[loop] != -1) {
+    for (loop = 0; loop < battle_map_unit_count(mech_map); loop++) {
+      const DbRef candidate = battle_map_unit_dbref(mech_map, loop);
+      if (candidate != mech_dbref(mech) && candidate != -1) {
         attacker = 0;
         defender = 0;
-        tempMech = (Mech *)btech_context_find_object(
-            mech_context(mech), mech_map->mechsOnMap[loop]);
+        tempMech =
+            (Mech *)btech_context_find_object(mech_context(mech), candidate);
         if (!tempMech)
           continue;
         if (mech_los_check(tempMech, mech, mech_position_x(mech),
@@ -304,6 +312,7 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
           mech_printf(tempMech, MECHSTARTED, "Something fires a %s at %s",
                       weapname, buff);
       }
+    }
   }
 }
 

@@ -1,30 +1,61 @@
 #include "sqlite_internal.h"
 
 #include "checked_conversion.h"
+#include "map_los_api.h"
+#include "mux/support/checked_storage.h"
+
+static unsigned short **restore_los_row(BattleMap *map, size_t count,
+                                        int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(map->LOSinfo, count, sizeof(*map->LOSinfo),
+                            (size_t)index);
+}
+
+static DbRef *restore_unit_slot(BattleMap *map, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(map->mechsOnMap, (size_t)map->first_free,
+                            sizeof(*map->mechsOnMap), (size_t)index);
+}
+
+static char *restore_unit_flag(BattleMap *map, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(map->mechflags, (size_t)map->first_free,
+                            sizeof(*map->mechflags), (size_t)index);
+}
+
+static unsigned char *restore_map_cell(BattleMap *map, int x, int y) {
+  if (x < 0 || y < 0)
+    abort();
+  unsigned char **row = checked_storage_at(map->map, (size_t)map->map_height,
+                                           sizeof(*map->map), (size_t)y);
+  return checked_storage_at(*row, (size_t)map->map_width, sizeof(**row),
+                            (size_t)x);
+}
+
+static MapObject **restore_object_slot(BattleMap *map, int type) {
+  if (type < 0)
+    abort();
+  return checked_storage_at(map->MapObject, NUM_MAPOBJTYPES,
+                            sizeof(*map->MapObject), (size_t)type);
+}
+
+static unsigned char **restore_bits_row(unsigned char **bits, int height,
+                                        int y) {
+  if (y < 0)
+    abort();
+  return checked_storage_at(bits, (size_t)height, sizeof(*bits), (size_t)y);
+}
 
 static int btech_special_resize_map(BattleMap *map, int width, int height) {
-  unsigned char **grid;
-  int y;
-
   if (width < 1 || width > MAPX || height < 1 || height > MAPY)
     return -1;
-  grid = calloc((size_t)height, sizeof(*grid));
+  unsigned char **grid = battle_map_grid_create(width, height);
   if (!grid)
     return -1;
-  for (y = 0; y < height; y++) {
-    grid[y] = calloc((size_t)width, sizeof(*grid[y]));
-    if (!grid[y]) {
-      while (y-- > 0)
-        free(grid[y]);
-      free(grid);
-      return -1;
-    }
-  }
-  if (map->map) {
-    for (y = 0; y < map->map_height; y++)
-      free(map->map[y]);
-    free(map->map);
-  }
+  battle_map_grid_destroy(map->map, map->map_height);
   map->map = grid;
   map->map_width = clamp_int_to_short(width);
   map->map_height = clamp_int_to_short(height);
@@ -47,8 +78,8 @@ static int btech_special_allocate_map_dynamic(BattleMap *map) {
   for (index = 0; map->mechsOnMap && map->mechflags && map->LOSinfo &&
                   index < map->first_free;
        index++) {
-    map->LOSinfo[index] =
-        calloc(allocation_count, sizeof(*map->LOSinfo[index]));
+    unsigned short **row = restore_los_row(map, allocation_count, index);
+    *row = calloc(allocation_count, sizeof(**row));
   }
   if (map->mechsOnMap && map->mechflags && map->LOSinfo &&
       index == map->first_free) {
@@ -57,7 +88,7 @@ static int btech_special_allocate_map_dynamic(BattleMap *map) {
   }
   if (map->LOSinfo)
     for (index = 0; index < map->first_free; index++)
-      free(map->LOSinfo[index]);
+      free(*restore_los_row(map, allocation_count, index));
   free(map->LOSinfo);
   free(map->mechflags);
   free(map->mechsOnMap);
@@ -236,7 +267,7 @@ int btech_special_load_map_hexes(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    map->map[y][x] = (unsigned char)value;
+    *restore_map_cell(map, x, y) = (unsigned char)value;
     if (++expected_x == map->map_width) {
       expected_x = 0;
       expected_y++;
@@ -302,8 +333,8 @@ int btech_special_load_map_slots(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    map->mechsOnMap[slot] = mech_dbref;
-    map->mechflags[slot] = (char)flags;
+    *restore_unit_slot(map, slot) = mech_dbref;
+    *restore_unit_flag(map, slot) = (char)flags;
     expected_slot++;
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -370,7 +401,7 @@ int btech_special_load_map_los(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    map->LOSinfo[source][target] = (unsigned short)flags;
+    battle_map_los_flags_set(map, source, target, (unsigned short)flags);
     if (++expected_target == map->first_free) {
       expected_target = 0;
       expected_source++;
@@ -477,7 +508,7 @@ int btech_special_load_map_objects(sqlite3 *sqlite, BtechContext *context) {
       current_map = map_dbref;
       current_object_type = object_type;
       expected_ordinal = 0;
-      tail = &map->MapObject[object_type];
+      tail = restore_object_slot(map, object_type);
       source.type = (char)object_type;
     }
     if (ordinal != expected_ordinal || x < 0 || x >= map->map_width || y < 0 ||
@@ -557,7 +588,7 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
         break;
       }
       map = btech_context_get_map(context, map_dbref);
-      if (!map || map->MapObject[TYPE_BITS]) {
+      if (!map || first_mapobj(map, TYPE_BITS)) {
         result = -1;
         break;
       }
@@ -569,7 +600,7 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
       memset(&source, 0, sizeof(source));
       source.type = TYPE_BITS;
       source.datai = (long)(void *)bits;
-      if (!add_mapobj(map, &map->MapObject[TYPE_BITS], &source, 0)) {
+      if (!add_mapobj_to_type(map, TYPE_BITS, &source, 0)) {
         free(bits);
         result = -1;
         break;
@@ -590,15 +621,19 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
         result = -1;
         break;
       }
-      bits[y] = calloc((size_t)bytes_per_row, sizeof(*bits[y]));
-      if (!bits[y]) {
+      unsigned char **row = restore_bits_row(bits, map->map_height, y);
+      *row = calloc((size_t)bytes_per_row, sizeof(**row));
+      if (!*row) {
         result = -1;
         break;
       }
       current_y = y;
       expected_byte = 0;
     }
-    bits[y][byte_index] = (unsigned char)value;
+    unsigned char *row = *restore_bits_row(bits, map->map_height, y);
+    unsigned char *byte = checked_storage_at(row, (size_t)bytes_per_row,
+                                             sizeof(*row), (size_t)byte_index);
+    *byte = (unsigned char)value;
     expected_byte++;
   }
   if (result == 0 && step != SQLITE_DONE)

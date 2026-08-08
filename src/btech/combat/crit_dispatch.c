@@ -50,6 +50,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "random.h"
 #include "registry_api.h"
@@ -124,7 +125,8 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
             critType != special_equipment_index(TRIPLE_STRENGTH_MYOMER) &&
             critType != special_equipment_index(SUPERCHARGER) &&
             critType != special_equipment_index(MASC)) {
-          critList[count] = i;
+          *(int *)checked_storage_at(critList, NUM_CRITICALS, sizeof(*critList),
+                                     (size_t)count) = i;
           count++;
         }
       }
@@ -134,7 +136,9 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     }
 
     index = btech_random_range_int(context, 0, count - 1);
-    critHit = critList[index]; /* This one should be linear */
+    critHit = *(const int *)checked_storage_at_const(
+        critList, NUM_CRITICALS, sizeof(*critList),
+        (size_t)index); /* This one should be linear */
 
     critType = mech_critical_part_type(wounded, hitloc, critHit);
     critData = mech_critical_data(wounded, hitloc, critHit);

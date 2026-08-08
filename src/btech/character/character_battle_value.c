@@ -3,6 +3,67 @@
 #include "mech_equipment_api.h"
 #include "mech_move_api.h"
 #include "mech_runtime_api.h"
+#include "mux/support/checked_storage.h"
+#include "weapon_catalogue_api.h"
+
+static const char *function_argument(char *const *arguments, int count,
+                                     size_t index) {
+  if (count < 0)
+    abort();
+  char *const *argument = checked_storage_at_const(arguments, (size_t)count,
+                                                   sizeof(*arguments), index);
+  return *argument;
+}
+
+static double zero_pilot_base_skill(int skill) {
+  switch (skill) {
+  case 0:
+    return 2.05;
+  case 1:
+    return 1.85;
+  case 2:
+    return 1.65;
+  case 3:
+    return 1.45;
+  case 4:
+    return 1.25;
+  case 5:
+    return 1.15;
+  case 6:
+    return 1.05;
+  case 7:
+    return 0.95;
+  default:
+    abort();
+  }
+}
+
+static int bth_modifier_value(int bth) {
+  switch (bth) {
+  case 3:
+    return 1;
+  case 4:
+    return 3;
+  case 5:
+    return 6;
+  case 6:
+    return 10;
+  case 7:
+    return 15;
+  case 8:
+    return 21;
+  case 9:
+    return 26;
+  case 10:
+    return 30;
+  case 11:
+    return 33;
+  case 12:
+    return 35;
+  default:
+    return 0;
+  }
+}
 
 int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
   PSTATS stats, *s = &stats;
@@ -16,12 +77,6 @@ int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
   else
     return 0;
 }
-
-const int bth_modifier[] = /* Starts from '3' , in 1/36's */
-    {
-        /*  3 4 5  6  7  8  9 10 11 12 */
-        1, 3, 6, 10, 15, 21, 26, 30, 33, 35, 0, 0, 0, 0 /* pad, just in case */
-};
 
 static int ton_value(const Mech *mech) {
   return MAX(1, mech_tonnage(mech) /
@@ -60,9 +115,6 @@ static double getPilotBVMod(Mech *mech, int weapindx) {
    * (that's <gun skill>+ <pilot skill>+)
    */
 
-  const double zeroPilotBaseSkills[] = {2.05, 1.85, 1.65, 1.45,
-                                        1.25, 1.15, 1.05, 0.95};
-
   int myGSkill = FindPilotGunnery(mech, weapindx);
   int myPSkill = FindPilotPiloting(mech);
   double baseMod = 0.0;
@@ -72,11 +124,11 @@ static double getPilotBVMod(Mech *mech, int weapindx) {
    */
   if (myGSkill < 0) {
     const int gunnery_penalty = abs(myGSkill);
-    baseMod = zeroPilotBaseSkills[0] + gunnery_penalty * 0.20;
+    baseMod = zero_pilot_base_skill(0) + gunnery_penalty * 0.20;
   } else if (myGSkill > 7) {
-    baseMod = zeroPilotBaseSkills[7] - myGSkill * 0.10;
+    baseMod = zero_pilot_base_skill(7) - myGSkill * 0.10;
   } else {
-    baseMod = zeroPilotBaseSkills[myGSkill];
+    baseMod = zero_pilot_base_skill(myGSkill);
   }
 
   return baseMod - myPSkill * 0.05;
@@ -169,7 +221,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
                                    mech_dbref(attacker), mech_dbref(wounded)));
       return; /* sure hits aren't interesting */
     }
-    multiplier = 2.0 * multiplier * bth_modifier[bth - 3] / 36.0;
+    multiplier = 2.0 * multiplier * bth_modifier_value(bth) / 36.0;
   }
 
   /* Need to do a BV mod between the mechs */
@@ -198,9 +250,9 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   my_speed = new_move_value(attacker) + 1;
   th_speed = new_move_value(wounded) + 1;
 
-  if (MechWeapons[weapindx].type == TMISSILE)
+  if (weapon_catalogue_is_missile(weapindx))
     weapTypeMod = mech_context(attacker)->configuration->btech_xp_missilemod;
-  else if (MechWeapons[weapindx].type == TAMMO)
+  else if (weapon_catalogue_is_ballistic(weapindx))
     weapTypeMod = mech_context(attacker)->configuration->btech_xp_ammomod;
 
   if (mech_context(attacker)->configuration->btech_defaultweapdam > 1)
@@ -323,7 +375,7 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
     multiplier = multiplier * th_speed * th_speed / my_speed / my_speed;
   }
 
-  multiplier = multiplier * bth_modifier[bth - 3] / 36;
+  multiplier = multiplier * bth_modifier_value(bth) / 36;
   multiplier = multiplier * 2; /* For average shot */
   if (mech_context(attacker)->configuration->btech_perunit_xpmod) {
     const double experience_modifier = mech_experience_modifier(attacker);
@@ -361,7 +413,8 @@ void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef target;
   int targetcode, flaggo;
 
-  if ((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
+  if ((target = char_lookupplayer(context, player, cause, 0,
+                                  function_argument(fargs, nfargs, 0))) ==
       NOTHING) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
@@ -370,29 +423,34 @@ void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED!");
     return;
   }
-  if ((!((targetcode) = atoi(fargs[1])) && strcmp((fargs[1]), "0")))
-    targetcode = char_getvaluecode(context, fargs[1]);
+  const char *value_name = function_argument(fargs, nfargs, 1);
+  if ((!((targetcode) = atoi(value_name)) && strcmp(value_name, "0")))
+    targetcode = char_getvaluecode(context, value_name);
   if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
     return;
   }
-  flaggo = atoi(fargs[2]);
-  if (char_values[targetcode].type == CHAR_SKILL && flaggo == 4) {
+  flaggo = atoi(function_argument(fargs, nfargs, 2));
+  if (character_value_definition(targetcode)->type == CHAR_SKILL &&
+      flaggo == 4) {
     safe_tprintf_str(buff, bufc, "%d",
                      character_xp_to_next_level(context, target, targetcode));
     return;
   }
-  if (char_values[targetcode].type == CHAR_SKILL && flaggo == 3) {
+  if (character_value_definition(targetcode)->type == CHAR_SKILL &&
+      flaggo == 3) {
     character_stats_retrieve(context, target, VALUES_SKILLS, &stats);
-    safe_tprintf_str(buff, bufc, "%d", stats.values[targetcode]);
+    safe_tprintf_str(buff, bufc, "%d",
+                     character_stats_value_get(&stats, targetcode));
     return;
   }
-  if (char_values[targetcode].type == CHAR_SKILL && flaggo == 2) {
+  if (character_value_definition(targetcode)->type == CHAR_SKILL &&
+      flaggo == 2) {
     safe_tprintf_str(buff, bufc, "%d",
                      char_getxpbycode(context, target, targetcode));
     return;
   }
-  if (char_values[targetcode].type == CHAR_SKILL && flaggo) {
+  if (character_value_definition(targetcode)->type == CHAR_SKILL && flaggo) {
     safe_tprintf_str(buff, bufc, "%d",
                      char_getskilltargetbycode(context, target, targetcode, 0));
     return;
@@ -413,7 +471,8 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef target;
   int targetcode, targetvalue, flaggo;
 
-  if ((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
+  if ((target = char_lookupplayer(context, player, cause, 0,
+                                  function_argument(fargs, nfargs, 0))) ==
       NOTHING) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
@@ -422,18 +481,19 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED!");
     return;
   }
-  if ((!((targetcode) = atoi(fargs[1])) && strcmp((fargs[1]), "0")))
-    targetcode = char_getvaluecode(context, fargs[1]);
+  const char *value_name = function_argument(fargs, nfargs, 1);
+  if ((!((targetcode) = atoi(value_name)) && strcmp(value_name, "0")))
+    targetcode = char_getvaluecode(context, value_name);
   if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
     return;
   }
-  targetvalue = atoi(fargs[2]);
-  flaggo = atoi(fargs[3]);
+  targetvalue = atoi(function_argument(fargs, nfargs, 2));
+  flaggo = atoi(function_argument(fargs, nfargs, 3));
 
   /* We supposedly have everything at hand.. */
   if (flaggo) {
-    if (char_values[targetcode].type != CHAR_SKILL) {
+    if (character_value_definition(targetcode)->type != CHAR_SKILL) {
       safe_tprintf_str(buff, bufc, "#-1 ONLY SKILLS CAN HAVE FLAG");
       return;
     }
@@ -447,7 +507,7 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
     character_value_set_by_code(context, target, targetcode, targetvalue);
     safe_tprintf_str(buff, bufc, "%s's %s set to %d",
                      game_object_name(context->database, target),
-                     char_values[targetcode].name,
+                     character_value_definition(targetcode)->name,
                      character_value_by_code(context, target, targetcode));
     break;
 
@@ -471,7 +531,7 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
 
     safe_tprintf_str(buff, bufc, "%s's %s set to %d",
                      game_object_name(context->database, target),
-                     char_values[targetcode].name,
+                     character_value_definition(targetcode)->name,
                      targetvalue >= 0
                          ? character_value_by_code(context, target, targetcode)
                          : 0);
@@ -486,23 +546,24 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
 
     btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
                        tprintf("%ld set %ld's %s XP to %d", player, target,
-                               char_values[targetcode].name, targetvalue));
+                               character_value_definition(targetcode)->name,
+                               targetvalue));
     safe_tprintf_str(buff, bufc, "%s's %s XP set to %d.",
                      game_object_name(context->database, target),
-                     char_values[targetcode].name, targetvalue);
+                     character_value_definition(targetcode)->name, targetvalue);
 
     break;
 
   default:
     /* Any other flaggo value will addxp for the skill */
     char_gainxpbycode(context, target, targetcode, targetvalue, 1);
-    btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
-                       tprintf("#%ld added %d more %s XP to #%ld", player,
-                               targetvalue, char_values[targetcode].name,
-                               target));
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_XP, "%s",
+        tprintf("#%ld added %d more %s XP to #%ld", player, targetvalue,
+                character_value_definition(targetcode)->name, target));
     safe_tprintf_str(buff, bufc, "%s gained %d more %s XP.",
                      game_object_name(context->database, target), targetvalue,
-                     char_values[targetcode].name);
+                     character_value_definition(targetcode)->name);
 
     break;
   }
@@ -538,14 +599,15 @@ void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
 
   if (nfargs == 2) {
-    target = char_lookupplayer(context, player, cause, 0, fargs[1]);
+    target = char_lookupplayer(context, player, cause, 0,
+                               function_argument(fargs, nfargs, 1));
     if (target == NOTHING) {
       safe_str("#-1 FUNCTION (BTCHARLIST) INVALID TARGET", buff, bufc);
       return;
     }
   }
 
-  switch (listmatch(cmds, fargs[0])) {
+  switch (listmatch(cmds, 3, fargs[0])) {
   case CHSKI:
     type = CHAR_SKILL;
     break;
@@ -560,10 +622,11 @@ void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  for (i = 0; i < (int)(NUM_CHARVALUES); ++i)
-    if (type == char_values[i].type) {
+  for (i = 0; i < (int)(NUM_CHARVALUES); ++i) {
+    const CharacterValue *definition = character_value_definition(i);
+    if (type == definition->type) {
       if (nfargs == 2 && type != CHAR_ATTRIBUTE) {
-        int targetcode = char_getvaluecode(context, char_values[i].name);
+        int targetcode = char_getvaluecode(context, definition->name);
         if (character_value_by_code(context, target, targetcode) == 0 &&
             (type == CHAR_SKILL &&
              char_getxpbycode(context, target, targetcode) == 0))
@@ -573,7 +636,8 @@ void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
         first = 0;
       else
         safe_str(" ", buff, bufc);
-      safe_str(char_values[i].name, buff, bufc);
+      safe_str(definition->name, buff, bufc);
     }
+  }
   return;
 }

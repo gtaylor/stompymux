@@ -5,6 +5,38 @@
 #include <stdlib.h>
 #include <strings.h>
 
+#include "mux/support/checked_storage.h"
+
+char *commac_alias_at(const struct commac *commac, size_t index) {
+  if (index >= (size_t)commac->maxchannels)
+    abort();
+  return checked_storage_at(commac->alias, (size_t)commac->maxchannels * 6,
+                            sizeof(char), index * 6);
+}
+
+char *commac_channel_at(const struct commac *commac, size_t index) {
+  return *(char *const *)checked_storage_at_const(
+      commac->channels, (size_t)commac->numchannels, sizeof(*commac->channels),
+      index);
+}
+
+char **commac_channel_slot(struct commac *commac, size_t index) {
+  return checked_storage_at(commac->channels, (size_t)commac->maxchannels,
+                            sizeof(*commac->channels), index);
+}
+
+int commac_macro_at(const struct commac *commac, size_t index) {
+  return *(const int *)checked_storage_at_const(
+      commac->macros, sizeof(commac->macros) / sizeof(commac->macros[0]),
+      sizeof(*commac->macros), index);
+}
+
+void commac_macro_set(struct commac *commac, size_t index, int value) {
+  *(int *)checked_storage_at(commac->macros,
+                             sizeof(commac->macros) / sizeof(commac->macros[0]),
+                             sizeof(*commac->macros), index) = value;
+}
+
 #include "mux/communication/channel_registry.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -22,13 +54,14 @@ void purge_commac(ChannelRegistry *registry, GameDatabase *database) {
         */
 
   for (i = 0; i < COMMAC_BUCKET_COUNT; i++) {
-    c = registry->commacs[i];
+    c = channel_registry_bucket_at(registry, (size_t)i);
     while (c) {
       d = c;
       c = c->next;
-      if (d->numchannels == 0 && d->curmac == -1 && d->macros[1] == -1 &&
-          d->macros[2] == -1 && d->macros[3] == -1 && d->macros[4] == -1 &&
-          d->macros[0] == -1) {
+      if (d->numchannels == 0 && d->curmac == -1 &&
+          commac_macro_at(d, 1) == -1 && commac_macro_at(d, 2) == -1 &&
+          commac_macro_at(d, 3) == -1 && commac_macro_at(d, 4) == -1 &&
+          commac_macro_at(d, 0) == -1) {
         del_commac(registry, d->who);
         continue;
       }
@@ -54,7 +87,7 @@ struct commac *create_new_commac(void) {
 
   c->curmac = -1;
   for (i = 0; i < 5; i++)
-    c->macros[i] = -1;
+    commac_macro_set(c, (size_t)i, -1);
 
   c->next = nullptr;
   return c;
@@ -66,7 +99,8 @@ struct commac *get_commac(ChannelRegistry *registry, DbRef which) {
   if (which < 0)
     return nullptr;
 
-  c = registry->commacs[which % COMMAC_BUCKET_COUNT];
+  c = channel_registry_bucket_at(registry,
+                                 (size_t)(which % COMMAC_BUCKET_COUNT));
 
   while (c && (c->who != which))
     c = c->next;
@@ -83,8 +117,10 @@ void add_commac(ChannelRegistry *registry, struct commac *c) {
   if (c->who < 0)
     return;
 
-  c->next = registry->commacs[c->who % COMMAC_BUCKET_COUNT];
-  registry->commacs[c->who % COMMAC_BUCKET_COUNT] = c;
+  const size_t bucket = (size_t)(c->who % COMMAC_BUCKET_COUNT);
+
+  c->next = channel_registry_bucket_at(registry, bucket);
+  channel_registry_bucket_set(registry, bucket, c);
 }
 
 void del_commac(ChannelRegistry *registry, DbRef who) {
@@ -94,13 +130,15 @@ void del_commac(ChannelRegistry *registry, DbRef who) {
   if (who < 0)
     return;
 
-  c = registry->commacs[who % COMMAC_BUCKET_COUNT];
+  const size_t bucket = (size_t)(who % COMMAC_BUCKET_COUNT);
+
+  c = channel_registry_bucket_at(registry, bucket);
 
   if (c == nullptr)
     return;
 
   if (c->who == who) {
-    registry->commacs[who % COMMAC_BUCKET_COUNT] = c->next;
+    channel_registry_bucket_set(registry, bucket, c->next);
     destroy_commac(c);
     return;
   }
@@ -122,7 +160,7 @@ void destroy_commac(struct commac *c) {
 
   free(c->alias);
   for (i = 0; i < c->numchannels; i++)
-    free(c->channels[i]);
+    free(commac_channel_at(c, (size_t)i));
   free(c->channels);
   free(c);
 }
@@ -136,15 +174,20 @@ void sort_com_aliases(struct commac *c) {
   cont = 1;
   while (cont) {
     cont = 0;
-    for (i = 0; i < c->numchannels - 1; i++)
-      if (strcasecmp(c->alias + i * 6, c->alias + (i + 1) * 6) > 0) {
-        StringCopy(buffer, c->alias + i * 6);
-        StringCopy(c->alias + i * 6, c->alias + (i + 1) * 6);
-        StringCopy(c->alias + (i + 1) * 6, buffer);
-        s = c->channels[i];
-        c->channels[i] = c->channels[i + 1];
-        c->channels[i + 1] = s;
+    for (i = 0; i < c->numchannels - 1; i++) {
+      char *left_alias = commac_alias_at(c, (size_t)i);
+      char *right_alias = commac_alias_at(c, (size_t)i + 1);
+
+      if (strcasecmp(left_alias, right_alias) > 0) {
+        StringCopy(buffer, left_alias);
+        StringCopy(left_alias, right_alias);
+        StringCopy(right_alias, buffer);
+        s = commac_channel_at(c, (size_t)i);
+        *commac_channel_slot(c, (size_t)i) =
+            commac_channel_at(c, (size_t)i + 1);
+        *commac_channel_slot(c, (size_t)i + 1) = s;
         cont = 1;
       }
+    }
   }
 }

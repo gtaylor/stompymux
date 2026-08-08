@@ -23,7 +23,10 @@
 #include "btmux_build_config.h"
 #include "checked_conversion.h"
 #include "map.h"
+#include "map_conditions_api.h"
+#include "map_los_api.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_equipment_api.h"
@@ -48,6 +51,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
 
 #undef WEAPON_RECYCLE_DEBUG
 
@@ -233,8 +237,6 @@ void mech_jump_event(MuxEvent *e) {
     mech_event_cancel(mech, EVENT_JUMP);
 }
 
-extern const int PilotStatusRollNeeded[];
-
 void mech_recovery_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
 
@@ -362,7 +364,6 @@ void mech_plos_event(MuxEvent *e) {
   int mapvis;
   int maplight;
   float range;
-  int i;
 
   if (!mech_is_started(mech))
     return;
@@ -374,19 +375,23 @@ void mech_plos_event(MuxEvent *e) {
   mapvis = map->mapvis;
   maplight = map->maplight;
   ((mech)->rd.can_see) = 0;
-  for (i = 0; i < map->first_free; i++)
-    if (map->mechsOnMap[i] > 0 && map->mechsOnMap[i] != mech->mynum)
-      if (!(map->LOSinfo[mech->mapnumber][i] & MECHLOSFLAG_SEEN)) {
-        target =
-            btech_context_find_object(mech->xcode.context, map->mechsOnMap[i]);
+  for (int i = 0; i < battle_map_unit_count(map); i++) {
+    DbRef target_dbref = battle_map_unit_dbref(map, i);
+    unsigned short los_flags =
+        battle_map_los_flags(map, mech_map_slot(mech), i);
+    if (target_dbref > 0 && target_dbref != mech_dbref(mech))
+      if (!(los_flags & MECHLOSFLAG_SEEN)) {
+        target = btech_context_find_object(mech->xcode.context, target_dbref);
         if (!target)
           continue;
         range = mech_range_to(mech, target);
         ((mech)->rd.can_see)++;
-        mech_sensor_visibility_update(mech, &map->LOSinfo[mech->mapnumber][i],
-                                      range, -1, -1, target, mapvis, maplight,
-                                      map->cloudbase, 1, 0);
+        los_flags = mech_sensor_visibility_update(
+            mech, los_flags, range, -1, -1, target, mapvis, maplight,
+            battle_map_cloud_base(map), 1, 0);
+        battle_map_los_flags_set(map, mech_map_slot(mech), i, los_flags);
       }
+  }
 }
 
 void aero_move_event(MuxEvent *e) {
@@ -502,7 +507,7 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
     return;
   }
 
-  if (MechWeapons[wWeapStatus].special & RAC) {
+  if (weapon_catalogue_has_special(wWeapStatus, RAC)) {
     wRoll = btech_random_roll(objMech->xcode.context);
     wRollNeeded = FindPilotGunnery(objMech, wWeapStatus) + 3;
 

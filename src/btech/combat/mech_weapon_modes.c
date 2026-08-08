@@ -25,8 +25,10 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 
 static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
@@ -174,25 +176,27 @@ static int mech_toggle_mode_sub_func(Mech *mech, DbRef player, int index,
   weaptype = weapon_from_equipment_index(
       mech_critical_part_type(mech, section, critical));
 
-  if (MechWeapons[weaptype].special & ROCKET) {
+  if (weapon_catalogue_is_rocket(weaptype)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Rocket launchers' mode cannot be altered!");
     return 0;
   }
 
-  if ((toggle->special_kind == 6 && (MechWeapons[weaptype].type == TMISSILE)) ||
-      (toggle->special_kind == 5 && (MechWeapons[weaptype].type == TAMMO)
+  const int weapon_type = weapon_catalogue_type(weaptype);
+  if ((toggle->special_kind == 6 && weapon_type == TMISSILE) ||
+      (toggle->special_kind == 5 && weapon_type == TAMMO
 
-       && !(MechWeapons[weaptype].special & toggle->special)) ||
-      (toggle->special_kind == 4 && (MechWeapons[weaptype].type == TMISSILE) &&
-       !(MechWeapons[weaptype].type & (IDF | DAR))) ||
-      (toggle->special_kind == 2 && (MechWeapons[weaptype].special & IDF) &&
-       !(MechWeapons[weaptype].special & DAR)) ||
+       && !weapon_catalogue_has_special(weaptype, toggle->special)) ||
+      (toggle->special_kind == 4 && weapon_type == TMISSILE &&
+       !(weapon_type & (IDF | DAR))) ||
+      (toggle->special_kind == 2 &&
+       weapon_catalogue_supports_indirect_fire(weaptype) &&
+       !weapon_catalogue_has_special(weaptype, DAR)) ||
       (toggle->special_kind == 1 && toggle->special &&
-       (MechWeapons[weaptype].special & toggle->special)) ||
+       weapon_catalogue_has_special(weaptype, toggle->special)) ||
       (toggle->special_kind <= 0 && toggle->special &&
-       (MechWeapons[weaptype].type == toggle->special &&
-        !(MechWeapons[weaptype].special & NARC)))) {
+       (weapon_type == toggle->special &&
+        !weapon_catalogue_is_narc(weaptype)))) {
 
     if (toggle->special_kind == 0 && (toggle->special & TARTILLERY))
       if ((mech_critical_ammo_mode(mech, section, critical) &
@@ -328,7 +332,7 @@ void mech_inarc_ammo_toggle(DbRef player, void *data, char *buffer) {
                          "Weapon %d is already set to fire INARC Homing pods",
                          "That weapon is not an INARC launcher!");
   else {
-    switch (toupper(args[1][0])) {
+    switch (ascii_to_upper(*checked_string_suffix(args[1], 0))) {
     case 'X':
       mech_toggle_mode_sub(
           player, mech, buffer, 1, INARC, INARC_EXPLO_MODE, 0,

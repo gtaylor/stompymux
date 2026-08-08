@@ -57,7 +57,9 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
@@ -73,44 +75,58 @@ static int mech_stand_time(const Mech *mech) {
   return (int)delay;
 }
 
-float mech_jump_speed_for_map(const Mech *mech, const BattleMap *map) {
-  float speed = mech_jump_speed(mech);
-  if (mech_is_under_gravity(mech) && map != nullptr) {
-    const int gravity = mech_movement_maximum_int(50, battle_map_gravity(map));
-    speed = speed * 100.0F / (float)gravity;
-  }
-  return speed;
-}
-
-int mech_jump_speed_mp_for_map(const Mech *mech, const BattleMap *map) {
-  return (int)(mech_jump_speed_for_map(mech, map) * MP_PER_KPH);
-}
-
-static const struct {
+typedef struct LateralMode {
   const char *name;
   const char *full;
   int ofs;
-} lateral_modes[] = {{"nw", "Front/Left", 300}, {"fl", "Front/Left", 300},
-                     {"ne", "Front/Right", 60}, {"fr", "Front/Right", 60},
-                     {"sw", "Rear/Left", 240},  {"rl", "Rear/Left", 240},
-                     {"se", "Rear/Right", 120}, {"rr", "Rear/Right", 120},
-                     {"-", "None", 0},          {nullptr, nullptr, 0}};
+} LateralMode;
+
+static const LateralMode lateral_modes[] = {
+    {"nw", "Front/Left", 300}, {"fl", "Front/Left", 300},
+    {"ne", "Front/Right", 60}, {"fr", "Front/Right", 60},
+    {"sw", "Rear/Left", 240},  {"rl", "Rear/Left", 240},
+    {"se", "Rear/Right", 120}, {"rr", "Rear/Right", 120},
+    {"-", "None", 0},          {nullptr, nullptr, 0}};
+
+static const LateralMode *lateral_mode(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(lateral_modes, 10, sizeof(*lateral_modes),
+                                  (size_t)index);
+}
+
+static char *move_argument(char **arguments, size_t count, int index) {
+  if (index < 0)
+    abort();
+  char **slot =
+      checked_storage_at(arguments, count, sizeof(*arguments), (size_t)index);
+  return *slot;
+}
+
+static void move_arguments_destroy(char **arguments, size_t count) {
+  for (size_t index = 0; index < count; index++) {
+    char **slot =
+        checked_storage_at(arguments, count, sizeof(*arguments), index);
+    free(*slot);
+    *slot = nullptr;
+  }
+}
 
 bool mech_lateral_mode_details(int mode, const char **description,
                                int *offset) {
-  if (mode < 0 || lateral_modes[mode].name == nullptr)
+  if (mode < 0 || mode >= 10 || lateral_mode(mode)->name == nullptr)
     return false;
-  *description = lateral_modes[mode].full;
-  *offset = lateral_modes[mode].ofs;
+  *description = lateral_mode(mode)->full;
+  *offset = lateral_mode(mode)->ofs;
   return true;
 }
 
 const char *mech_lateral_description(Mech *mech) {
   int i;
 
-  for (i = 0; mech_lateral_movement(mech) != lateral_modes[i].ofs; i++)
+  for (i = 0; mech_lateral_movement(mech) != lateral_mode(i)->ofs; i++)
     ;
-  return lateral_modes[i].full;
+  return lateral_mode(i)->full;
 }
 
 void mech_lateral(DbRef player, void *data, char *buffer) {
@@ -140,19 +156,19 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
   }
 
   const char *mode = buffer ? buffer : "";
-  while (*mode && isspace((unsigned char)*mode))
-    mode++;
+  mode = checked_storage_at_const(mode, strlen(mode) + 1, sizeof(*mode),
+                                  strspn(mode, " \t\r\n\f\v"));
 
-  for (i = 0; lateral_modes[i].name; i++)
-    if (!strcasecmp(lateral_modes[i].name, mode))
+  for (i = 0; lateral_mode((int)i)->name; i++)
+    if (!strcasecmp(lateral_mode((int)i)->name, mode))
       break;
-  if (!lateral_modes[i].name) {
+  if (!lateral_mode((int)i)->name) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid mode!");
     return;
   }
 
-  if (lateral_modes[i].ofs == mech_lateral_movement(mech)) {
+  if (lateral_mode((int)i)->ofs == mech_lateral_movement(mech)) {
     if (!mech_event_count(mech, EVENT_LATERAL)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "You are going that way already!");
@@ -165,7 +181,7 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
 
   mech_printf(mech, MECHALL,
               "Wanted lateral movement mode changed to %s (%d offset).",
-              lateral_modes[i].full, lateral_modes[i].ofs);
+              lateral_mode((int)i)->full, lateral_mode((int)i)->ofs);
   mech_event_cancel(mech, EVENT_LATERAL);
   mech_event_schedule(mech, EVENT_LATERAL, mech_lateral_event, LATERAL_TICK, i);
 }
@@ -234,7 +250,10 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  switch (toupper(args[0][0])) {
+  char *turn_argument = move_argument(args, 1, 0);
+  const char *turn_character = checked_storage_at_const(
+      turn_argument, strlen(turn_argument) + 1, sizeof(*turn_argument), 0);
+  switch (ascii_to_upper(*turn_character)) {
   case 'R':
     wHeadingChange = 90;
     break;
@@ -368,8 +387,8 @@ void mech_eta(DbRef player, void *data, char *buffer) {
     eta_y = mech_target_hex_y(mech);
     break;
   case 2:
-    eta_x = atoi(args[0]);
-    eta_y = atoi(args[1]);
+    eta_x = atoi(move_argument(args, 3, 0));
+    eta_y = atoi(move_argument(args, 3, 1));
     break;
   default:
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -628,12 +647,11 @@ void mech_drop(DbRef player, void *data, const char *buffer) {
 
 void mech_stand(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  char *args[2];
+  char *args[2] = {0};
   int wcDeadLegs = 0;
   int tNeedsPSkill = 1;
   int tDoStand = 1;
   int bth, mechstandtime, standanyway = 0, standcarefulmod = 0;
-  int i;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;
@@ -703,17 +721,14 @@ void mech_stand(DbRef player, void *data, char *buffer) {
 
   /* Check to see if the user specified an argument for the command */
   if (proper_explodearguments(buffer, args, 2)) {
-    if (strcmp(args[0], "check") == 0) {
+    if (strcmp(move_argument(args, 2, 0), "check") == 0) {
       notify_printf(btech_context_evaluation(mech_context(mech)), player,
                     "Your BTH to stand would be: %d", bth);
-      for (i = 0; i < 2; i++) {
-        if (args[i])
-          free(args[i]);
-      }
+      move_arguments_destroy(args, 2);
       return;
-    } else if (strcmp(args[0], "anyway") == 0) {
+    } else if (strcmp(move_argument(args, 2, 0), "anyway") == 0) {
       standanyway = 1;
-    } else if ((strcmp(args[0], "careful") == 0) &&
+    } else if ((strcmp(move_argument(args, 2, 0), "careful") == 0) &&
                btech_context_stand_careful_modifier(mech_context(mech))) {
       standcarefulmod = -2;
     } else {
@@ -722,10 +737,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
                     btech_context_stand_careful_modifier(mech_context(mech))
                         ? ", 'stand careful' or 'stand anyway'"
                         : " or 'stand anyway'");
-      for (i = 0; i < 2; i++) {
-        if (args[i])
-          free(args[i]);
-      }
+      move_arguments_destroy(args, 2);
       return;
     }
   }
@@ -783,14 +795,5 @@ void mech_stand(DbRef player, void *data, char *buffer) {
     mech_event_schedule(mech, EVENT_STAND, mech_stand_event, mechstandtime, 0);
   }
   /* Free args */
-  for (i = 0; i < 2; i++) {
-    if (args[i])
-      free(args[i]);
-  }
-}
-
-void mech_stand_empty(DbRef player, void *data) {
-  char arguments[] = "";
-
-  mech_stand(player, data, arguments);
+  move_arguments_destroy(args, 2);
 }

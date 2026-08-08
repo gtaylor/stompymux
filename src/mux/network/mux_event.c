@@ -61,6 +61,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
+#include "mux/support/checked_storage.h"
 
 void mux_event_scheduler_initialize(MuxEventScheduler *scheduler) {
   memset(scheduler, 0, sizeof(*scheduler));
@@ -94,9 +95,6 @@ void mux_event_scheduler_destroy(MuxEventScheduler *scheduler) {
   mux_event_scheduler_initialize(scheduler);
 }
 
-/* Stack of the events according to date */
-#define mux_event_first_in_type (scheduler->first_by_type)
-
 /* Whole list (dual linked) */
 #define mux_event_list (scheduler->events)
 
@@ -107,6 +105,18 @@ void mux_event_scheduler_destroy(MuxEventScheduler *scheduler) {
 /* The main add-to-lists event handling function */
 
 static void mux_event_delete(MuxEvent *);
+
+static MuxEvent **mux_event_type_slot(MuxEventScheduler *scheduler, int type) {
+  if (type < 0 || type > scheduler->last_type)
+    abort();
+  return checked_storage_at(scheduler->first_by_type,
+                            (size_t)scheduler->last_type + 1,
+                            sizeof(*scheduler->first_by_type), (size_t)type);
+}
+
+static MuxEvent *mux_event_type_head(MuxEventScheduler *scheduler, int type) {
+  return *mux_event_type_slot(scheduler, type);
+}
 
 static void mux_event_main_list_add(MuxEventScheduler *scheduler, MuxEvent *e) {
   MuxEvent *old_head = mux_event_list;
@@ -133,12 +143,13 @@ static void mux_event_main_list_remove(MuxEvent *e) {
 
 static void mux_event_type_list_add(MuxEventScheduler *scheduler, int type,
                                     MuxEvent *e) {
-  MuxEvent *old_head = mux_event_first_in_type[type];
+  MuxEvent **head = mux_event_type_slot(scheduler, type);
+  MuxEvent *old_head = *head;
 
   e->next_in_type = old_head;
   if (old_head)
     old_head->prev_in_type = e;
-  mux_event_first_in_type[type] = e;
+  *head = e;
   e->prev_in_type = nullptr;
 }
 
@@ -150,16 +161,18 @@ static void mux_event_type_list_remove(MuxEvent *e) {
     e->prev_in_type->next_in_type = e->next_in_type;
   if (e->next_in_type)
     e->next_in_type->prev_in_type = e->prev_in_type;
-  if (mux_event_first_in_type[type] == e) {
-    mux_event_first_in_type[type] = e->next_in_type;
-    if (mux_event_first_in_type[type])
-      mux_event_first_in_type[type]->prev_in_type = nullptr;
+  MuxEvent **head = mux_event_type_slot(scheduler, type);
+  if (*head == e) {
+    *head = e->next_in_type;
+    if (*head)
+      (*head)->prev_in_type = nullptr;
   }
 }
 
 #define is_zombie(e) (e->flags & FLAG_ZOMBIE)
 #define LoopType(type, var)                                                    \
-  for (var = mux_event_first_in_type[type]; var; var = var->next_in_type)      \
+  for (var = mux_event_type_head(scheduler, type); var;                        \
+       var = var->next_in_type)                                                \
     if (!is_zombie(var))
 
 #define LoopEvent(var)                                                         \
@@ -182,22 +195,29 @@ void mux_event_add(MuxEventScheduler *scheduler, int time, int flags, int type,
   MuxEvent *e = (MuxEvent *)0xDEADBEEF;
   int i;
 
+  if (type < 0)
+    return;
   if (time < 1)
     time = 1;
-  /* Nasty thing about the new system : we _do_ have to allocate
-     mux_event_first_in_type dynamically. */
+  /* Event type heads grow with the highest registered type. */
   if (type > last_muxevent_type) {
-    mux_event_first_in_type = realloc(mux_event_first_in_type,
-                                      sizeof(MuxEvent *) * (size_t)(type + 1));
-    for (i = last_muxevent_type + 1; i <= type; i++)
-      mux_event_first_in_type[i] = nullptr;
+    int previous_last_type = last_muxevent_type;
+    MuxEvent **heads =
+        realloc(scheduler->first_by_type, sizeof(*heads) * (size_t)(type + 1));
+    if (heads == nullptr)
+      return;
+    scheduler->first_by_type = heads;
     last_muxevent_type = type;
+    for (i = previous_last_type + 1; i <= type; i++)
+      *mux_event_type_slot(scheduler, i) = nullptr;
   }
   if (mux_event_free_list) {
     e = mux_event_free_list;
     mux_event_free_list = mux_event_free_list->next;
   } else {
     e = malloc(sizeof(MuxEvent));
+    if (e == nullptr)
+      return;
     memset(e, 0, sizeof(MuxEvent));
   }
 
@@ -248,8 +268,8 @@ int mux_event_run_by_type(MuxEventScheduler *scheduler, int type) {
   MuxEvent *e;
   int ran = 0;
 
-  if (type <= last_muxevent_type) {
-    for (e = mux_event_first_in_type[type]; e; e = e->next_in_type) {
+  if (type >= 0 && type <= last_muxevent_type) {
+    for (e = mux_event_type_head(scheduler, type); e; e = e->next_in_type) {
       if (!is_zombie(e)) {
         e->function(e);
         e->flags |= FLAG_ZOMBIE;
@@ -287,7 +307,7 @@ void mux_event_remove_type_data(MuxEventScheduler *scheduler, int type,
 
   if (type > last_muxevent_type)
     return;
-  for (e = mux_event_first_in_type[type]; e; e = e->next_in_type)
+  for (e = mux_event_type_head(scheduler, type); e; e = e->next_in_type)
     if (e->data == data) {
 
       e->flags |= FLAG_ZOMBIE;
@@ -300,7 +320,7 @@ void mux_event_remove_type_data2(MuxEventScheduler *scheduler, int type,
 
   if (type > last_muxevent_type)
     return;
-  for (e = mux_event_first_in_type[type]; e; e = e->next_in_type)
+  for (e = mux_event_type_head(scheduler, type); e; e = e->next_in_type)
     if (e->data2 == data)
       e->flags |= FLAG_ZOMBIE;
 }
@@ -311,7 +331,7 @@ void mux_event_remove_type_data_data(MuxEventScheduler *scheduler, int type,
 
   if (type > last_muxevent_type)
     return;
-  for (e = mux_event_first_in_type[type]; e; e = e->next_in_type)
+  for (e = mux_event_type_head(scheduler, type); e; e = e->next_in_type)
     if (e->data == data && e->data2 == data2)
       e->flags |= FLAG_ZOMBIE;
 }

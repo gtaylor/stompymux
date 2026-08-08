@@ -33,5 +33,6 @@ void aero_vheading(DbRef player, void *data, char *arg, int flag);
 void aero_climb(DbRef player, Mech *mech, char *arg);
 void aero_dive(DbRef player, Mech *mech, char *arg);
 int aero_landing_zone_check(Mech *mech, int x, int y);
+const char *aero_landing_reason(int index);
 void dropship_land_warning(Mech *mech, int serious);
 void aero_checklz(DbRef player, Mech *mech, char *buffer);

@@ -4,7 +4,46 @@
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_utils_internal.h"
+#include "mux/support/checked_storage.h"
 #include "weapon_catalogue_api.h"
+
+extern const int num_def_weapons;
+
+static const struct WeaponDefinition *weapon_catalogue_entry(int weapon_index) {
+  if (weapon_index < 0)
+    abort();
+  return checked_storage_at_const(MechWeapons, (size_t)num_def_weapons,
+                                  sizeof(struct WeaponDefinition),
+                                  (size_t)weapon_index);
+}
+
+static unsigned char *weapon_byte_slot(unsigned char *values, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(values, MAX_WEAPS_SECTION, sizeof(*values),
+                            (size_t)index);
+}
+
+static unsigned short *weapon_short_slot(unsigned short *values, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(values, MAX_WEAPS_SECTION, sizeof(*values),
+                            (size_t)index);
+}
+
+static unsigned int *weapon_mode_slot(unsigned int *values, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(values, MAX_WEAPS_SECTION, sizeof(*values),
+                            (size_t)index);
+}
+
+static int *weapon_critical_slot(int *values, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(values, MAX_WEAPS_SECTION, sizeof(*values),
+                            (size_t)index);
+}
 
 // Added i < 9 for Split crit tests
 #define UGLYTEST                                                               \
@@ -22,90 +61,271 @@
   }
 
 bool weapon_catalogue_is_artillery(int weapon_index) {
-  return MechWeapons[weapon_index].type == TARTILLERY;
+  return weapon_catalogue_entry(weapon_index)->type == TARTILLERY;
 }
 
 bool weapon_catalogue_is_missile(int weapon_index) {
-  return MechWeapons[weapon_index].type == TMISSILE;
+  return weapon_catalogue_entry(weapon_index)->type == TMISSILE;
 }
 
 bool weapon_catalogue_is_ballistic(int weapon_index) {
-  return MechWeapons[weapon_index].type == TAMMO;
+  return weapon_catalogue_entry(weapon_index)->type == TAMMO;
 }
 
 bool weapon_catalogue_is_energy(int weapon_index) {
-  return MechWeapons[weapon_index].type == TBEAM;
+  return weapon_catalogue_entry(weapon_index)->type == TBEAM;
+}
+
+bool weapon_catalogue_is_hand_to_hand(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->type == THAND;
 }
 
 bool weapon_catalogue_is_flamer(int weapon_index) {
-  return strstr(MechWeapons[weapon_index].name, "Flamer") != nullptr;
+  return strstr(weapon_catalogue_entry(weapon_index)->name, "Flamer") !=
+         nullptr;
 }
 
 bool weapon_catalogue_is_coolant(int weapon_index) {
-  return strstr(MechWeapons[weapon_index].name, "Coolant") != nullptr;
+  return strstr(weapon_catalogue_entry(weapon_index)->name, "Coolant") !=
+         nullptr;
 }
 
 bool weapon_catalogue_is_acid(int weapon_index) {
-  return strstr(MechWeapons[weapon_index].name, "Acid") != nullptr;
+  return strstr(weapon_catalogue_entry(weapon_index)->name, "Acid") != nullptr;
 }
 
 bool weapon_catalogue_supports_indirect_fire(int weapon_index) {
-  return MechWeapons[weapon_index].special & IDF;
+  return weapon_catalogue_entry(weapon_index)->special & IDF;
 }
 
 bool weapon_catalogue_is_anti_missile(int weapon_index) {
-  return MechWeapons[weapon_index].special & AMS;
+  return weapon_catalogue_entry(weapon_index)->special & AMS;
+}
+
+bool weapon_catalogue_is_personal_combat(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & PCOMBAT) != 0;
+}
+
+bool weapon_catalogue_is_gauss(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & GAUSS) != 0;
+}
+
+bool weapon_catalogue_does_not_explode(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & NOBOOM) != 0;
+}
+
+bool weapon_catalogue_is_narc(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & NARC) != 0;
+}
+
+bool weapon_catalogue_is_inarc(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & INARC) != 0;
+}
+
+bool weapon_catalogue_is_clan_anti_missile(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & CLAT) != 0;
+}
+
+bool weapon_catalogue_is_pulse(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & PULSE) != 0;
+}
+
+bool weapon_catalogue_is_mrm(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & MRM) != 0;
+}
+
+bool weapon_catalogue_is_heavy(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & HVYW) != 0;
+}
+
+bool weapon_catalogue_is_rocket(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & ROCKET) != 0;
+}
+
+bool weapon_catalogue_is_only_rocket(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->special == ROCKET;
+}
+
+bool weapon_catalogue_is_dead_fire_missile(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & DFM) != 0;
+}
+
+bool weapon_catalogue_is_extended_lrm(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & ELRM) != 0;
+}
+
+bool weapon_catalogue_is_streak(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & STREAK) != 0;
+}
+
+bool weapon_catalogue_is_rotary_autocannon(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & RAC) != 0;
+}
+
+bool weapon_catalogue_is_heavy_gauss(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & HVYGAUSS) != 0;
+}
+
+bool weapon_catalogue_is_snub_ppc(int weapon_index) {
+  return (weapon_catalogue_entry(weapon_index)->special & SNUBPPC) != 0;
+}
+
+bool weapon_catalogue_can_ignite_terrain(int weapon_index) {
+  const char *name =
+      checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
+  return strcmp(name, "ERSmallLaser") && strcmp(name, "SmallLaser") &&
+         strcmp(name, "SmallPulseLaser") && strcmp(name, "X-SmallPulseLaser") &&
+         strcmp(name, "ERSmallPulseLaser") && strcmp(name, "HeavySmallLaser") &&
+         strcmp(name, "GaussRifle") && strcmp(name, "LightGaussRifle") &&
+         strcmp(name, "HeavyGaussRifle") && strcmp(name, "MagshotGaussRifle") &&
+         strcmp(name, "MachineGun") && strcmp(name, "LightMachineGun") &&
+         strcmp(name, "HeavyMachineGun") && strcmp(name, "StreakSRM-2") &&
+         strcmp(name, "SRM-2") && strcmp(name, "NarcBeacon") &&
+         strcmp(name, "iNarcBeacon");
+}
+
+bool weapon_catalogue_can_clear_terrain(int weapon_index) {
+  const char *name =
+      checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
+  return strcmp(name, "ERSmallLaser") && strcmp(name, "SmallLaser") &&
+         strcmp(name, "SmallPulseLaser") && strcmp(name, "X-SmallPulseLaser") &&
+         strcmp(name, "ERSmallPulseLaser") && strcmp(name, "HeavySmallLaser") &&
+         strcmp(name, "MachineGun") && strcmp(name, "LightMachineGun") &&
+         strcmp(name, "HeavyMachineGun") && strcmp(name, "AC/2") &&
+         strcmp(name, "UltraAC/2") && strcmp(name, "CaselessAC/2") &&
+         strcmp(name, "HyperAC/2") && strcmp(name, "LightAC/2") &&
+         strcmp(name, "RotaryAC/2") && strcmp(name, "LB2-XAC") &&
+         strcmp(name, "AC/5") && strcmp(name, "UltraAC/5") &&
+         strcmp(name, "CaselessAC/5") && strcmp(name, "HyperAC/5") &&
+         strcmp(name, "LightAC/5") && strcmp(name, "RotaryAC/5") &&
+         strcmp(name, "LB5-XAC") && strcmp(name, "StreakSRM-2") &&
+         strcmp(name, "SRM-2");
+}
+
+bool weapon_catalogue_is_terrain_flamer(int weapon_index) {
+  const char *name =
+      checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
+  return !strcmp(name, "Flamer") || !strcmp(name, "HeavyFlamer");
+}
+
+int weapon_catalogue_personal_combat_flags(int weapon_index) {
+  return (int)(weapon_catalogue_entry(weapon_index)->special & PCOMBAT);
+}
+
+int weapon_catalogue_type(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->type;
+}
+
+long weapon_catalogue_specials(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->special;
+}
+
+bool weapon_catalogue_has_special(int weapon_index, int special) {
+  return (weapon_catalogue_entry(weapon_index)->special & special) != 0;
 }
 
 bool equipment_can_use_targeting_computer(int equipment_index) {
   int weapon_index = weapon_from_equipment_index(equipment_index);
-  const char *name = &MechWeapons[weapon_index].name[3];
-  return (MechWeapons[weapon_index].type == TBEAM ||
-          MechWeapons[weapon_index].type == TAMMO) &&
-         strcmp(name, "Flamer") && strcmp(name, "MachineGun") &&
-         strcmp(name, "LightMachineGun") && strcmp(name, "HeavyMachineGun") &&
-         !(MechWeapons[weapon_index].special & PCOMBAT);
+  const struct WeaponDefinition *weapon = weapon_catalogue_entry(weapon_index);
+  const char *name = strchr(weapon->name, '.');
+  if (name == nullptr)
+    return false;
+  return (weapon->type == TBEAM || weapon->type == TAMMO) &&
+         strcmp(name, ".Flamer") && strcmp(name, ".MachineGun") &&
+         strcmp(name, ".LightMachineGun") && strcmp(name, ".HeavyMachineGun") &&
+         !(weapon->special & PCOMBAT);
 }
 
 bool weapon_catalogue_is_hot_loaded(int weapon_index, int fire_mode) {
   return (fire_mode & HOTLOAD_MODE) &&
-         (MechWeapons[weapon_index].special & IDF);
+         (weapon_catalogue_entry(weapon_index)->special & IDF);
 }
 
 const char *weapon_catalogue_name(int weapon_index) {
-  return MechWeapons[weapon_index].name;
+  return weapon_catalogue_entry(weapon_index)->name;
 }
 
 int weapon_catalogue_damage(int weapon_index) {
-  return MechWeapons[weapon_index].damage;
+  return weapon_catalogue_entry(weapon_index)->damage;
+}
+
+int weapon_catalogue_heat(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->heat;
+}
+
+int weapon_catalogue_recycle_time(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->vrt;
+}
+
+int weapon_catalogue_ammunition_per_ton(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->ammoperton;
+}
+
+int weapon_catalogue_explosion_damage(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->explosiondamage;
+}
+
+int weapon_catalogue_weight(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->weight;
+}
+
+int weapon_catalogue_cost(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->cost;
+}
+
+int weapon_catalogue_ammunition_cost(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->ammo_cost;
+}
+
+int weapon_catalogue_battle_value(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->battlevalue;
+}
+
+int weapon_catalogue_ammunition_battle_value(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->ammo_bv;
+}
+
+int weapon_catalogue_critical_slots(int weapon_index) {
+  return weapon_catalogue_entry(weapon_index)->criticals;
+}
+
+WeaponRangeProfile weapon_catalogue_ranges(int weapon_index) {
+  const struct WeaponDefinition *weapon = weapon_catalogue_entry(weapon_index);
+  return (WeaponRangeProfile){
+      .minimum = weapon->min,
+      .short_range = weapon->shortrange,
+      .medium_range = weapon->medrange,
+      .long_range = weapon->longrange,
+      .water_minimum = weapon->min_water,
+      .water_short_range = weapon->shortrange_water,
+      .water_medium_range = weapon->medrange_water,
+      .water_long_range = weapon->longrange_water,
+  };
 }
 
 int weapon_catalogue_cluster_size(int weapon_index) {
-  const struct WeaponDefinition *weapon = &MechWeapons[weapon_index];
+  const struct WeaponDefinition *weapon = weapon_catalogue_entry(weapon_index);
   return (weapon->special & (IDF | MRM | ROCKET)) && weapon->damage == 1 ? 5
                                                                          : 1;
 }
 
 int weapon_catalogue_effective_range(int weapon_index, bool extended) {
-  int normal =
-      weapon_catalogue_is_artillery(weapon_index)
-          ? ARTILLERY_MAPSHEET_SIZE * MechWeapons[weapon_index].longrange
-          : MechWeapons[weapon_index].longrange;
-  int extended_range = MechWeapons[weapon_index].medrange * 2;
+  const struct WeaponDefinition *weapon = weapon_catalogue_entry(weapon_index);
+  int normal = weapon_catalogue_is_artillery(weapon_index)
+                   ? ARTILLERY_MAPSHEET_SIZE * weapon->longrange
+                   : weapon->longrange;
+  int extended_range = weapon->medrange * 2;
   return extended && extended_range > normal ? extended_range : normal;
 }
 
 int weapon_catalogue_effective_water_range(int weapon_index, bool extended) {
-  int normal = MechWeapons[weapon_index].longrange_water > 0
-                   ? MechWeapons[weapon_index].longrange_water
-               : MechWeapons[weapon_index].medrange_water > 0
-                   ? MechWeapons[weapon_index].medrange_water
-               : MechWeapons[weapon_index].shortrange_water > 0
-                   ? MechWeapons[weapon_index].shortrange_water
-                   : 0;
-  int extended_range = MechWeapons[weapon_index].medrange_water * 2;
-  return extended && extended_range > normal &&
-                 MechWeapons[weapon_index].longrange_water > 0
+  const struct WeaponDefinition *weapon = weapon_catalogue_entry(weapon_index);
+  int normal = weapon->longrange_water > 0    ? weapon->longrange_water
+               : weapon->medrange_water > 0   ? weapon->medrange_water
+               : weapon->shortrange_water > 0 ? weapon->shortrange_water
+                                              : 0;
+  int extended_range = weapon->medrange_water * 2;
+  return extended && extended_range > normal && weapon->longrange_water > 0
              ? extended_range
              : normal;
 }
@@ -133,9 +353,11 @@ int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
       temp = weapon_from_equipment_index(temp);
       if (weapcount == 0) {
         lastweap = temp;
-        weapdataarray[weapcount] = clamp_int_to_unsigned_char(data);
-        weaparray[weapcount] = clamp_int_to_unsigned_char(temp);
-        critical[weapcount] = loop;
+        *weapon_byte_slot(weapdataarray, weapcount) =
+            clamp_int_to_unsigned_char(data);
+        *weapon_byte_slot(weaparray, weapcount) =
+            clamp_int_to_unsigned_char(temp);
+        *weapon_critical_slot(critical, weapcount) = loop;
         weapcount++;
         num_crits = 1;
         continue;
@@ -143,9 +365,11 @@ int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
       if (!num_crits || temp != lastweap ||
           (num_crits == GetWeaponCrits(mech, temp))) {
         UGLYTEST;
-        weaparray[weapcount] = clamp_int_to_unsigned_char(temp);
-        weapdataarray[weapcount] = clamp_int_to_unsigned_char(data);
-        critical[weapcount] = loop;
+        *weapon_byte_slot(weaparray, weapcount) =
+            clamp_int_to_unsigned_char(temp);
+        *weapon_byte_slot(weapdataarray, weapcount) =
+            clamp_int_to_unsigned_char(data);
+        *weapon_critical_slot(critical, weapcount) = loop;
         lastweap = temp;
         num_crits = 1;
         weapcount++;
@@ -177,26 +401,31 @@ int FindAmmunition(Mech *mech, unsigned char *weaparray,
         duplicate = 0;
 
         for (i = 0; i < weapcount; i++) {
-          if (temp == weaparray[i] && mode == modearray[i]) {
+          if (temp == *weapon_byte_slot(weaparray, i) &&
+              mode == *weapon_mode_slot(modearray, i)) {
             if (!(mech_critical_is_nonfunctional(mech, index, loop)))
-              ammoarray[i] = clamp_int_to_unsigned_short(ammoarray[i] + data);
-            ammomaxarray[i] = clamp_int_to_unsigned_short(
-                ammomaxarray[i] + FullAmmo(mech, index, loop));
+              *weapon_short_slot(ammoarray, i) = clamp_int_to_unsigned_short(
+                  *weapon_short_slot(ammoarray, i) + data);
+            *weapon_short_slot(ammomaxarray, i) = clamp_int_to_unsigned_short(
+                *weapon_short_slot(ammomaxarray, i) +
+                FullAmmo(mech, index, loop));
             duplicate = 1;
           }
         }
 
         if (!duplicate) {
-          weaparray[weapcount] = clamp_int_to_unsigned_char(temp);
+          *weapon_byte_slot(weaparray, weapcount) =
+              clamp_int_to_unsigned_char(temp);
 
           if (!(mech_critical_is_nonfunctional(mech, index, loop)))
-            ammoarray[weapcount] = clamp_int_to_unsigned_short(data);
+            *weapon_short_slot(ammoarray, weapcount) =
+                clamp_int_to_unsigned_short(data);
           else
-            ammoarray[weapcount] = 0;
+            *weapon_short_slot(ammoarray, weapcount) = 0;
 
-          ammomaxarray[weapcount] =
+          *weapon_short_slot(ammomaxarray, weapcount) =
               clamp_int_to_unsigned_short(FullAmmo(mech, index, loop));
-          modearray[weapcount] = mode;
+          *weapon_mode_slot(modearray, weapcount) = mode;
 
           weapcount++;
         }
@@ -205,12 +434,14 @@ int FindAmmunition(Mech *mech, unsigned char *weaparray,
   /* Then, prune entries with 0 ammo left */
   if (!returnall) {
     for (i = 0; i < weapcount; i++)
-      if (!ammoarray[i]) {
+      if (!*weapon_short_slot(ammoarray, i)) {
         for (j = i + 1; j < weapcount; j++) {
-          weaparray[j - 1] = weaparray[j];
-          ammoarray[j - 1] = ammoarray[j];
-          ammomaxarray[j - 1] = ammomaxarray[j];
-          modearray[j - 1] = modearray[j];
+          *weapon_byte_slot(weaparray, j - 1) = *weapon_byte_slot(weaparray, j);
+          *weapon_short_slot(ammoarray, j - 1) =
+              *weapon_short_slot(ammoarray, j);
+          *weapon_short_slot(ammomaxarray, j - 1) =
+              *weapon_short_slot(ammomaxarray, j);
+          *weapon_mode_slot(modearray, j - 1) = *weapon_mode_slot(modearray, j);
         }
         i--;
         weapcount--;
@@ -276,34 +507,36 @@ int FindWeaponNumberOnMech_Advanced(Mech *mech, int number, int *section,
     if (number < running_sum + num_weaps) {
       /* we found it... */
       index = number - running_sum;
-      if (mech_critical_is_nonfunctional(mech, loop, critical[index])) {
+      int critical_index = *weapon_critical_slot(critical, index);
+      int weapon_index = *weapon_byte_slot(weaparray, index);
+      if (mech_critical_is_nonfunctional(mech, loop, critical_index)) {
         *section = loop;
-        *crit = critical[index];
+        *crit = critical_index;
         return TIC_NUM_DESTROYED;
-      } else if (weapdata[index] > 0 && !sight) {
+      } else if (*weapon_byte_slot(weapdata, index) > 0 && !sight) {
         *section = loop;
-        *crit = critical[index];
-        return (MechWeapons[weaparray[index]].type == TBEAM)
+        *crit = critical_index;
+        return (weapon_catalogue_type(weapon_index) == TBEAM)
                    ? TIC_NUM_RECYCLING
                    : TIC_NUM_RELOADING;
       } else {
 
-        if (((mech)->ud.sections)[loop].recycle &&
+        if (mech_section_recycle_ticks(mech, loop) &&
             (((mech)->ud.type) == CLASS_MECH ||
              ((mech)->ud.type) == CLASS_VEH_GROUND ||
              ((mech)->ud.type) == CLASS_VTOL) &&
             !sight) {
 
           *section = loop;
-          *crit = critical[index];
+          *crit = critical_index;
           /* just did a physical attack */
           return TIC_NUM_PHYSICAL;
         }
 
         /* The recylce data for the weapon is clear- it is ready to fire! */
         *section = loop;
-        *crit = critical[index];
-        return weaparray[index];
+        *crit = critical_index;
+        return weapon_index;
       }
     } else
       running_sum += num_weaps;
@@ -327,9 +560,9 @@ int FindWeaponFromIndex(Mech *mech, int weapindx, int *section, int *crit) {
     num_weaps =
         FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
     for (index = 0; index < num_weaps; index++)
-      if (weaparray[index] == weapindx) {
+      if (*weapon_byte_slot(weaparray, index) == weapindx) {
         *section = loop;
-        *crit = critical[index];
+        *crit = *weapon_critical_slot(critical, index);
         if (!mech_critical_is_nonfunctional(mech, loop, index) &&
             !mech_weapon_is_recycling_at(mech, loop, index))
           return 1;
@@ -359,7 +592,7 @@ int FindWeaponIndex(Mech *mech, int number) {
     if (number < running_sum + num_weaps) {
       /* we found it... */
       index = number - running_sum;
-      return weaparray[index];
+      return *weapon_byte_slot(weaparray, index);
     }
     running_sum += num_weaps;
   }
@@ -370,9 +603,8 @@ int FullAmmo(const Mech *mech, int loc, int pos) {
   int baseammo;
   int overage;
 
-  baseammo = MechWeapons[ammunition_to_weapon_index(
-                             mech_critical_part_type(mech, loc, pos))]
-                 .ammoperton;
+  baseammo = weapon_catalogue_ammunition_per_ton(
+      ammunition_to_weapon_index(mech_critical_part_type(mech, loc, pos)));
   if ((mech_critical_ammo_mode(mech, loc, pos) & AC_AP_MODE) ||
       (mech_critical_ammo_mode(mech, loc, pos) & AC_PRECISION_MODE) ||
       (mech_critical_fire_mode(mech, loc, pos) & HALFTON_MODE)) {
@@ -482,289 +714,4 @@ int FindAmmoForWeapon(Mech *mech, int weapindx, int start, int *section,
                       int *critical) {
   return FindAmmoForWeapon_sub(mech, -1, -1, weapindx, start, section, critical,
                                AMMO_MODES, 0);
-}
-
-int CountAmmoForWeapon(Mech *mech, int weapindx) {
-  int wSecIter;
-  int wSlotIter;
-  int wcAmmo = 0;
-  int wAmmoIdx;
-
-  wAmmoIdx = ammunition_equipment_index(weapindx);
-
-  for (wSecIter = 0; wSecIter < NUM_SECTIONS; wSecIter++) {
-    for (wSlotIter = 0; wSlotIter < NUM_CRITICALS; wSlotIter++) {
-      if ((mech_critical_part_type(mech, wSecIter, wSlotIter) == wAmmoIdx) &&
-          !mech_critical_is_nonfunctional(mech, wSecIter, wSlotIter) &&
-          (mech_critical_data(mech, wSecIter, wSlotIter) > 0))
-        wcAmmo += mech_critical_data(mech, wSecIter, wSlotIter);
-    }
-  }
-
-  return wcAmmo;
-}
-
-/* Function taken from 3065. Credit to RebelST) */
-int FindArtemisForWeapon(Mech *mech, int section, int critical) {
-  int critloop;
-  int desired;
-
-  desired = special_equipment_index(ARTEMIS_IV);
-  for (critloop = 0; critloop < NUM_CRITICALS; critloop++) {
-    if (mech_critical_part_type(mech, section, critloop) == desired &&
-        !mech_critical_is_nonfunctional(mech, section, critloop)) {
-      if (mech_critical_data(mech, section, critloop) == (critical + 1))
-        return 1;
-    }
-  }
-  if (((mech)->ud.type) == CLASS_MECH &&
-      section == CTORSO) { // if it's mech, and torso missile, search in head
-    for (critloop = 0; critloop < 6; critloop++) {
-      if (mech_critical_part_type(mech, HEAD, critloop) == desired &&
-          !mech_critical_is_nonfunctional(mech, HEAD, critloop)) {
-        if (mech_critical_data(mech, HEAD, critloop) == (critical + 1))
-          return 1;
-      }
-    }
-  } else if (((mech)->ud.type) == CLASS_VEH_GROUND &&
-             section == TURRET) { // same thing for turret & aft
-    for (critloop = 0; critloop < NUM_CRITICALS; critloop++) {
-      if (mech_critical_part_type(mech, BSIDE, critloop) == desired &&
-          !mech_critical_is_nonfunctional(mech, BSIDE, critloop)) {
-        if (mech_critical_data(mech, BSIDE, critloop) == (critical + 1))
-          return 1;
-      }
-    }
-  }
-  return 0;
-}
-
-int ReverseSplitCritLoc(Mech *mech, int sect, int crit) {
-  if (((mech)->ud.type) != CLASS_MECH)
-    return -1;
-
-  switch (sect) {
-  case LARM:
-  case LLEG:
-    return LTORSO;
-  case RARM:
-  case RLEG:
-    return RTORSO;
-  case RTORSO:
-    return RARM;
-  case LTORSO:
-    return LARM;
-  case CTORSO:
-    return (special_from_equipment_index(
-                mech_critical_part_type(mech, sect, crit)) == SPLIT_CRIT_RIGHT
-                ? RTORSO
-                : LTORSO);
-  }
-  return -1;
-}
-
-int FindSplitCrits(Mech *mech, int sect, int type, int crit) {
-  int i;
-
-  for (i = 0; i < CritsInLoc(mech, sect); i++)
-    if (mech_critical_part_type(mech, sect, i) == type &&
-        mech_critical_data(mech, sect, i) == crit)
-      return i;
-
-  return -1;
-}
-int GetSplitData(Mech *mech, int sect, int data, int *ssect, int *scrit,
-                 int *stype) {
-  switch (sect) {
-  case RARM: // right arm goes to right torso
-    *stype = special_equipment_index(SPLIT_CRIT_RIGHT);
-    if ((*scrit = FindSplitCrits(mech, RTORSO, *stype, data)) >= 0) {
-      *ssect = RTORSO;
-      return 1;
-    }
-    break;
-  case LARM: // left arm goes to left torso
-    *stype = special_equipment_index(SPLIT_CRIT_LEFT);
-    if ((*scrit = FindSplitCrits(mech, LTORSO, *stype, data)) >= 0) {
-      *ssect = LTORSO;
-      return 1;
-    }
-    break;
-  case RTORSO: // torso more complex, need to go thru arm, leg, torso
-    *stype = special_equipment_index(SPLIT_CRIT_RIGHT);
-    if ((*scrit = FindSplitCrits(mech, CTORSO, *stype, data)) >= 0) {
-      *ssect = CTORSO;
-      return 1;
-    } else if ((*scrit = FindSplitCrits(mech, RARM, *stype, data)) >= 0) {
-      *ssect = RARM;
-      return 1;
-    } else if ((*scrit = FindSplitCrits(mech, RLEG, *stype, data)) >= 0) {
-      *ssect = RLEG;
-      return 1;
-    }
-    break;
-  case LTORSO: // same for left torso
-    *stype = special_equipment_index(SPLIT_CRIT_LEFT);
-    if ((*scrit = FindSplitCrits(mech, CTORSO, *stype, data)) >= 0) {
-      *ssect = CTORSO;
-      return 1;
-    } else if ((*scrit = FindSplitCrits(mech, LARM, *stype, data)) >= 0) {
-      *ssect = LARM;
-      return 1;
-    } else if ((*scrit = FindSplitCrits(mech, LLEG, *stype, data)) >= 0) {
-      *ssect = LLEG;
-      return 1;
-    }
-    break;
-  }
-  return 0;
-}
-
-int FindDestructiveAmmo(Mech *mech, int *section, int *critical) {
-  int loop;
-  int critloop;
-  int maxdamage = 0;
-  int damage;
-  [[maybe_unused]] int weapindx;
-  int type, data;
-
-  for (loop = 0; loop < NUM_SECTIONS; loop++)
-    for (critloop = 0; critloop < NUM_CRITICALS; critloop++)
-      if (equipment_is_ammunition(
-              mech_critical_part_type(mech, loop, critloop)) &&
-          !mech_critical_is_destroyed(mech, loop, critloop)) {
-        data = mech_critical_data(mech, loop, critloop);
-        type = mech_critical_part_type(mech, loop, critloop);
-        weapindx = ammunition_to_weapon_index(type);
-        damage = data * MechWeapons[weapindx].damage;
-        if (MechWeapons[weapindx].special & GAUSS)
-          continue;
-        if (weapon_catalogue_is_missile(weapindx) ||
-            weapon_catalogue_is_artillery(weapindx)) {
-          const MissileHitEntry *entry = missile_hit_registry_find_weapon(
-              &mech->xcode.context->missile_hits, weapindx);
-          if (entry != nullptr)
-            damage *= entry->num_missiles[10];
-        }
-        if (damage > maxdamage) {
-          *section = loop;
-          *critical = critloop;
-          maxdamage = damage;
-        }
-      }
-  return (maxdamage);
-}
-
-int FindInfernoAmmo(Mech *mech, int *section, int *critical) {
-  int loop;
-  int critloop;
-  int maxdamage = 0;
-  int damage;
-  int weapindx;
-  int type, data;
-  int mode;
-
-  for (loop = 0; loop < NUM_SECTIONS; loop++)
-    for (critloop = 0; critloop < NUM_CRITICALS; critloop++)
-      if (equipment_is_ammunition(
-              mech_critical_part_type(mech, loop, critloop)) &&
-          !mech_critical_is_destroyed(mech, loop, critloop)) {
-        data = mech_critical_data(mech, loop, critloop);
-        type = mech_critical_part_type(mech, loop, critloop);
-        mode = mech_critical_ammo_mode(mech, loop, critloop);
-        if (!(mode & INFERNO_MODE))
-          continue;
-        weapindx = ammunition_to_weapon_index(type);
-        damage = data * MechWeapons[weapindx].damage;
-        if (MechWeapons[weapindx].special & GAUSS)
-          continue;
-        if (weapon_catalogue_is_missile(weapindx) ||
-            weapon_catalogue_is_artillery(weapindx)) {
-          const MissileHitEntry *entry = missile_hit_registry_find_weapon(
-              &mech->xcode.context->missile_hits, weapindx);
-          if (entry != nullptr)
-            damage *= entry->num_missiles[10];
-        }
-        if (damage > maxdamage) {
-          *section = loop;
-          *critical = critloop;
-          maxdamage = damage;
-        }
-      }
-  return (maxdamage);
-}
-
-int FindRoundsForWeapon(Mech *mech, int weapindx) {
-  int loop;
-  int critloop;
-  int desired;
-  int found = 0;
-
-  desired = ammunition_equipment_index(weapindx);
-  for (loop = 0; loop < NUM_SECTIONS; loop++)
-    for (critloop = 0; critloop < NUM_CRITICALS; critloop++)
-      if (mech_critical_part_type(mech, loop, critloop) == desired &&
-          !mech_critical_is_nonfunctional(mech, loop, critloop))
-        found += mech_critical_data(mech, loop, critloop);
-  return found;
-}
-
-const char *quad_locs[NUM_SECTIONS + 1] = {"Front Left Leg",
-                                           "Front Right Leg",
-                                           "Left Torso",
-                                           "Right Torso",
-                                           "Center Torso",
-                                           "Rear Left Leg",
-                                           "Rear Right Leg",
-                                           "Head",
-                                           NULL};
-
-const char *mech_locs[NUM_SECTIONS + 1] = {
-    "Left Arm", "Right Arm", "Left Torso", "Right Torso", "Center Torso",
-    "Left Leg", "Right Leg", "Head",       NULL};
-
-const char *bsuit_locs[NUM_BSUIT_MEMBERS + 1] = {"Suit 1", "Suit 2", "Suit 3",
-                                                 "Suit 4", "Suit 5", "Suit 6",
-                                                 "Suit 7", "Suit 8", NULL};
-
-const char *veh_locs[NUM_VEH_SECTIONS + 1] = {
-    "Left Side", "Right Side", "Front Side", "Aft Side",
-    "Turret",    "Rotor",      NULL};
-
-const char *aero_locs[NUM_AERO_SECTIONS + 1] = {"Nose", "Left Wing",
-                                                "Right Wing", "Aft Side", NULL};
-
-const char *ds_locs[NUM_DS_SECTIONS + 1] = {
-    "Right Wing", "Left Wing", "Left Rear Wing", "Right Rear Wing", "Aft",
-    "Nose",       NULL};
-
-const char *ds_spher_locs[NUM_DS_SECTIONS + 1] = {"Front Right Side",
-                                                  "Front Left Side",
-                                                  "Rear Left Side",
-                                                  "Rear Right Side",
-                                                  "Aft",
-                                                  "Nose",
-                                                  NULL};
-
-const char *const *ProperSectionStringFromType(int type, int mtype) {
-  switch (type) {
-  case CLASS_BSUIT:
-    return bsuit_locs;
-  case CLASS_MECH:
-  case CLASS_MW:
-    if (mtype == MOVE_QUAD)
-      return quad_locs;
-    return mech_locs;
-  case CLASS_VEH_GROUND:
-  case CLASS_VEH_NAVAL:
-  case CLASS_VTOL:
-    return veh_locs;
-  case CLASS_AERO:
-    return aero_locs;
-  case CLASS_SPHEROID_DS:
-    return ds_spher_locs;
-  case CLASS_DS:
-    return ds_locs;
-  }
-  return NULL;
 }

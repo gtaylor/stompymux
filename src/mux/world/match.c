@@ -12,6 +12,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 #include "mux/world/object_spatial.h"
@@ -113,33 +114,45 @@ static void promote_match(MatchContext *match_context, DbRef what,
  */
 
 static char *munge_space_for_match(MatchContext *match_context, char *name) {
-  char *p, *q;
+  size_t input = 0;
+  size_t output = 0;
+  size_t length = strlen(name);
 
-  p = name;
-  q = md.normalized;
-  while (isspace((unsigned char)*p))
-    p++; /*
-          * remove inital spaces
-          */
-  while (*p) {
-    while (*p && !isspace((unsigned char)*p))
-      *q++ = *p++;
-    while (*p && isspace((unsigned char)*++p))
-      ;
-    if (*p)
-      *q++ = ' ';
-  }
-  *q = '\0'; /*
-              * remove terminal spaces and terminate * * *
-              *
-              * * string
+  while (input < length &&
+         (isspace)(*(const unsigned char *)checked_storage_at_const(
+             name, length, sizeof(char), input)))
+    input++; /*
+              * remove inital spaces
               */
+  while (input < length) {
+    while (input < length &&
+           !(isspace)(*(const unsigned char *)checked_storage_at_const(
+               name, length, sizeof(char), input))) {
+      *(char *)checked_storage_at(md.normalized, sizeof(md.normalized),
+                                  sizeof(char), output++) =
+          *(const char *)checked_storage_at_const(name, length, sizeof(char),
+                                                  input++);
+    }
+    while (input < length &&
+           (isspace)(*(const unsigned char *)checked_storage_at_const(
+               name, length, sizeof(char), input)))
+      input++;
+    if (input < length)
+      *(char *)checked_storage_at(md.normalized, sizeof(md.normalized),
+                                  sizeof(char), output++) = ' ';
+  }
+  *(char *)checked_storage_at(md.normalized, sizeof(md.normalized),
+                              sizeof(char), output) =
+      '\0'; /*
+             * remove terminal spaces and terminate * * *
+             *
+             * * string
+             */
   return md.normalized;
 }
 
 void match_player(MatchContext *match_context) {
   DbRef match;
-  char *p;
 
   if (md.confidence >= CON_DBREF) {
     return;
@@ -150,9 +163,14 @@ void match_player(MatchContext *match_context) {
     return;
   }
   if (*md.string == LOOKUP_TOKEN) {
-    for (p = md.string + 1; isspace((unsigned char)*p); p++)
-      ;
-    match = lookup_player(md.evaluation->world, NOTHING, p, 1);
+    size_t length = strlen(md.string);
+    size_t offset = 1;
+    while (offset < length &&
+           (isspace)(*(const unsigned char *)checked_storage_at_const(
+               md.string, length, sizeof(char), offset)))
+      offset++;
+    match = lookup_player(md.evaluation->world, NOTHING,
+                          checked_mutable_string_suffix(md.string, offset), 1);
     if (is_good_obj(md.evaluation->world->database, match)) {
       promote_match(match_context, match, CON_TOKEN);
     }
@@ -172,7 +190,7 @@ static DbRef absolute_name(MatchContext *match_context, int need_pound) {
     if (*md.string != NUMBER_TOKEN) {
       return NOTHING;
     } else {
-      mname++;
+      mname = checked_mutable_string_suffix(mname, 1);
     }
   }
   match = parse_dbref(mname);
@@ -298,25 +316,46 @@ void match_neighbor(MatchContext *match_context) {
 }
 
 bool matches_exit_from_list(const char *string, const char *pattern) {
-  while (*pattern) {
-    const char *candidate = string;
-    while (*candidate && *pattern && *pattern != EXIT_DELIMITER &&
-           ascii_to_lower(*candidate) == ascii_to_lower(*pattern)) {
-      candidate++;
-      pattern++;
+  size_t pattern_length = strlen(pattern);
+  size_t pattern_offset = 0;
+  size_t string_length = strlen(string);
+  while (pattern_offset < pattern_length) {
+    size_t candidate_offset = 0;
+    while (candidate_offset < string_length &&
+           pattern_offset < pattern_length &&
+           *(const char *)checked_storage_at_const(
+               pattern, pattern_length, sizeof(char), pattern_offset) !=
+               EXIT_DELIMITER &&
+           ascii_to_lower(*(const char *)checked_storage_at_const(
+               string, string_length, sizeof(char), candidate_offset)) ==
+               ascii_to_lower(*(const char *)checked_storage_at_const(
+                   pattern, pattern_length, sizeof(char), pattern_offset))) {
+      candidate_offset++;
+      pattern_offset++;
     }
 
-    if (*candidate == '\0') {
-      while (*pattern && isspace((unsigned char)*pattern))
-        pattern++;
-      if (*pattern == '\0' || *pattern == EXIT_DELIMITER)
+    if (candidate_offset == string_length) {
+      while (pattern_offset < pattern_length &&
+             (isspace)(*(const unsigned char *)checked_storage_at_const(
+                 pattern, pattern_length, sizeof(char), pattern_offset)))
+        pattern_offset++;
+      if (pattern_offset == pattern_length ||
+          *(const char *)checked_storage_at_const(
+              pattern, pattern_length, sizeof(char), pattern_offset) ==
+              EXIT_DELIMITER)
         return true;
     }
 
-    while (*pattern && *pattern++ != EXIT_DELIMITER)
-      ;
-    while (isspace((unsigned char)*pattern))
-      pattern++;
+    while (pattern_offset < pattern_length) {
+      char character = *(const char *)checked_storage_at_const(
+          pattern, pattern_length, sizeof(char), pattern_offset++);
+      if (character == EXIT_DELIMITER)
+        break;
+    }
+    while (pattern_offset < pattern_length &&
+           (isspace)(*(const unsigned char *)checked_storage_at_const(
+               pattern, pattern_length, sizeof(char), pattern_offset)))
+      pattern_offset++;
   }
 
   return false;

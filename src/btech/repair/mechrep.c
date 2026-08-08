@@ -46,6 +46,7 @@
 #include "mechrep_api.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/support/stringutil.h"
 #include "section_types.h"
 #include "template_api.h"
 
@@ -228,7 +229,8 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  switch (toupper(args[0][0])) {
+  char *movement = *(char **)checked_storage_at(args, 1, sizeof(*args), 0);
+  switch (ascii_to_upper(*movement)) {
   case 'M':
     mech_class_set(mech, CLASS_MECH);
     mech_movement_type_set(mech, MOVE_BIPED);
@@ -508,7 +510,8 @@ void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  switch (toupper(args[0][0])) {
+  char *movement = *(char **)checked_storage_at(args, 1, sizeof(*args), 0);
+  switch (ascii_to_upper(*movement)) {
   case 'T':
     mech_movement_type_set(mech, MOVE_TRACK);
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -520,7 +523,7 @@ void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
                  "Movement set to WHEELED");
     break;
   case 'H':
-    switch (toupper(args[0][1])) {
+    switch (ascii_to_upper(*checked_string_suffix(movement, 1))) {
     case 'O':
       mech_movement_type_set(mech, MOVE_HOVER);
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -554,7 +557,7 @@ void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
                  "Movement set to SUB");
     break;
   case 'F':
-    switch (toupper(args[0][1])) {
+    switch (ascii_to_upper(*checked_string_suffix(movement, 1))) {
     case 'O':
       mech_movement_type_set(mech, MOVE_FOIL);
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,

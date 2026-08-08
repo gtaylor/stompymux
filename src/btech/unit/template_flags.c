@@ -1,11 +1,10 @@
 #include "template_internal.h"
 
-int count_special_items() {
-  int i = 0;
+#include "checked_conversion.h"
+#include "mux/support/checked_storage.h"
 
-  while (internals[i])
-    i++;
-  return i;
+int count_special_items() {
+  return clamp_size_to_int(template_internal_name_count());
 }
 
 const char *section_configs[] = {"Case", "Destroyed", NULL};
@@ -123,3 +122,63 @@ const char *infantry_specials[] = {"Swarm_Attack_Tech",
 const char *infspecialsabrev[] = {
     "SWARM",    "MFRIEND",  "ALEG",   "PSTEALTH", "KSTEALTH", "ASTEALTH",
     "ISTEALTH", "2STEALTH", "MJPACK", "CJPACK",   NULL};
+
+size_t template_section_configuration_count(void) {
+  return sizeof(section_configs) / sizeof(*section_configs) - 1;
+}
+
+size_t template_unit_class_count(void) {
+  return sizeof(mech_types) / sizeof(*mech_types) - 1;
+}
+
+size_t template_movement_type_count(void) {
+  return sizeof(move_types) / sizeof(*move_types) - 1;
+}
+
+size_t template_critical_fire_mode_count(void) {
+  return sizeof(crit_fire_modes) / sizeof(*crit_fire_modes) - 1;
+}
+
+size_t template_critical_ammo_mode_count(void) {
+  return sizeof(crit_ammo_modes) / sizeof(*crit_ammo_modes) - 1;
+}
+
+size_t primary_technology_name_count(void) {
+  return sizeof(specials) / sizeof(*specials) - 1;
+}
+
+const char *primary_technology_name(size_t index) {
+  return *(const char *const *)checked_storage_at_const(
+      specials, primary_technology_name_count(), sizeof(*specials), index);
+}
+
+size_t secondary_technology_name_count(void) {
+  return sizeof(specials2) / sizeof(*specials2) - 1;
+}
+
+const char *secondary_technology_name(size_t index) {
+  return *(const char *const *)checked_storage_at_const(
+      specials2, secondary_technology_name_count(), sizeof(*specials2), index);
+}
+
+size_t infantry_technology_name_count(void) {
+  return sizeof(infantry_specials) / sizeof(*infantry_specials) - 1;
+}
+
+const char *infantry_technology_name(size_t index) {
+  return *(const char *const *)checked_storage_at_const(
+      infantry_specials, infantry_technology_name_count(),
+      sizeof(*infantry_specials), index);
+}
+
+char *template_unit_class_name(size_t index) {
+  return *(char *const *)checked_storage_at_const(
+      mech_types, sizeof(mech_types) / sizeof(*mech_types) - 1,
+      sizeof(*mech_types), index);
+}
+
+char *template_movement_type_name(size_t index) {
+  return *(char *const *)checked_storage_at_const(
+      move_types, sizeof(move_types) / sizeof(*move_types) - 1,
+      sizeof(*move_types), index);
+}

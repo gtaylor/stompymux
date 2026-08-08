@@ -7,37 +7,58 @@
 #include "btech/context.h"
 #include "mux/communication/comsys.h"
 
-static const char *const channel_names[BTECH_CHANNEL_COUNT] = {
-    [BTECH_CHANNEL_SCEN_ERRORS] = "ScenErrors",
-    [BTECH_CHANNEL_SCEN_STATUS] = "ScenStatus",
-    [BTECH_CHANNEL_MECH_AI] = "MechAI",
-    [BTECH_CHANNEL_MECH_CUSTOM] = "MechCustom",
-    [BTECH_CHANNEL_DB_INFO] = "DBInfo",
-    [BTECH_CHANNEL_MECH_DEBUG] = "MechDebugInfo",
-    [BTECH_CHANNEL_MECH_DEATHS] = "MechDeaths",
-    [BTECH_CHANNEL_MECH_ECON] = "MechEconInfo",
-    [BTECH_CHANNEL_MECH_ERRORS] = "MechErrors",
-    [BTECH_CHANNEL_MAP_ERRORS] = "MapErrors",
-    [BTECH_CHANNEL_EVENT_INFO] = "EventInfo",
-    [BTECH_CHANNEL_MECH_SENSOR] = "MechSensor",
-    [BTECH_CHANNEL_MINE_TRIGGERS] = "MineTriggers",
-    [BTECH_CHANNEL_MECH_XP] = "MechXP",
-    [BTECH_CHANNEL_DS_INFO] = "DSInfo",
-    [BTECH_CHANNEL_MECH_ATTACK_EMITS] = "MechAttackEmits",
-    [BTECH_CHANNEL_MECH_ATTACKS] = "MechAttacks",
-    [BTECH_CHANNEL_MECH_ATTACK_XP] = "MechAttackXP",
-    [BTECH_CHANNEL_MECH_BTH_DEBUG] = "MechBTHDebug",
-    [BTECH_CHANNEL_MECH_FREQS] = "MechFreqs",
-    [BTECH_CHANNEL_MECH_PILOT_XP] = "MechPilotXP",
-    [BTECH_CHANNEL_MECH_TECH_XP] = "MechTechXP",
-    [BTECH_CHANNEL_TAC_INFO] = "TACInfo",
-};
-
 const char *btech_channel_name(BtechChannel channel) {
-  if (channel < 0 || channel >= BTECH_CHANNEL_COUNT) {
+  switch (channel) {
+  case BTECH_CHANNEL_SCEN_ERRORS:
+    return "ScenErrors";
+  case BTECH_CHANNEL_SCEN_STATUS:
+    return "ScenStatus";
+  case BTECH_CHANNEL_MECH_AI:
+    return "MechAI";
+  case BTECH_CHANNEL_MECH_CUSTOM:
+    return "MechCustom";
+  case BTECH_CHANNEL_DB_INFO:
+    return "DBInfo";
+  case BTECH_CHANNEL_MECH_DEBUG:
+    return "MechDebugInfo";
+  case BTECH_CHANNEL_MECH_DEATHS:
+    return "MechDeaths";
+  case BTECH_CHANNEL_MECH_ECON:
+    return "MechEconInfo";
+  case BTECH_CHANNEL_MECH_ERRORS:
+    return "MechErrors";
+  case BTECH_CHANNEL_MAP_ERRORS:
+    return "MapErrors";
+  case BTECH_CHANNEL_EVENT_INFO:
+    return "EventInfo";
+  case BTECH_CHANNEL_MECH_SENSOR:
+    return "MechSensor";
+  case BTECH_CHANNEL_MINE_TRIGGERS:
+    return "MineTriggers";
+  case BTECH_CHANNEL_MECH_XP:
+    return "MechXP";
+  case BTECH_CHANNEL_DS_INFO:
+    return "DSInfo";
+  case BTECH_CHANNEL_MECH_ATTACK_EMITS:
+    return "MechAttackEmits";
+  case BTECH_CHANNEL_MECH_ATTACKS:
+    return "MechAttacks";
+  case BTECH_CHANNEL_MECH_ATTACK_XP:
+    return "MechAttackXP";
+  case BTECH_CHANNEL_MECH_BTH_DEBUG:
+    return "MechBTHDebug";
+  case BTECH_CHANNEL_MECH_FREQS:
+    return "MechFreqs";
+  case BTECH_CHANNEL_MECH_PILOT_XP:
+    return "MechPilotXP";
+  case BTECH_CHANNEL_MECH_TECH_XP:
+    return "MechTechXP";
+  case BTECH_CHANNEL_TAC_INFO:
+    return "TACInfo";
+  case BTECH_CHANNEL_COUNT:
     return nullptr;
   }
-  return channel_names[channel];
+  return nullptr;
 }
 
 void btech_channel_send(BtechContext *context, BtechChannel channel,

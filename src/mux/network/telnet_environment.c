@@ -6,6 +6,7 @@
 
 #include "libtelnet.h"
 #include "mux/network/telnet_environment.h"
+#include "mux/support/checked_storage.h"
 
 constexpr size_t TELNET_ENVIRONMENT_MAX_ENTRIES = 64;
 constexpr size_t TELNET_ENVIRONMENT_MAX_NAME_SIZE = 256;
@@ -35,6 +36,33 @@ struct TelnetEnvironment {
   size_t total_size;
 };
 
+static TelnetEnvironmentEntry *
+telnet_environment_entry_at(TelnetEnvironment *environment, size_t index) {
+  return checked_storage_at(environment->entries,
+                            TELNET_ENVIRONMENT_MAX_ENTRIES,
+                            sizeof(*environment->entries), index);
+}
+
+static const TelnetEnvironmentEntry *
+telnet_environment_entry_at_const(const TelnetEnvironment *environment,
+                                  size_t index) {
+  return checked_storage_at_const(environment->entries,
+                                  TELNET_ENVIRONMENT_MAX_ENTRIES,
+                                  sizeof(*environment->entries), index);
+}
+
+static TelnetEnvironmentUpdate *
+telnet_environment_update_at(TelnetEnvironmentUpdate *updates, size_t index) {
+  return checked_storage_at(updates, TELNET_ENVIRONMENT_MAX_ENTRIES,
+                            sizeof(*updates), index);
+}
+
+static unsigned char telnet_environment_byte(const unsigned char *buffer,
+                                             size_t size, size_t index) {
+  return *(const unsigned char *)checked_storage_at_const(
+      buffer, size, sizeof(*buffer), index);
+}
+
 static bool telnet_environment_kind_valid(TelnetEnvironmentKind kind) {
   return kind == TELNET_ENVIRONMENT_VAR || kind == TELNET_ENVIRONMENT_USERVAR;
 }
@@ -53,7 +81,8 @@ void telnet_environment_clear(TelnetEnvironment *environment) {
   if (environment == nullptr)
     return;
   for (size_t index = 0; index < environment->count; index++)
-    telnet_environment_entry_destroy(&environment->entries[index]);
+    telnet_environment_entry_destroy(
+        telnet_environment_entry_at(environment, index));
   environment->count = 0;
   environment->total_size = 0;
 }
@@ -70,7 +99,8 @@ static size_t telnet_environment_find(const TelnetEnvironment *environment,
       (name == nullptr && name_size != 0))
     return SIZE_MAX;
   for (size_t index = 0; index < environment->count; index++) {
-    const TelnetEnvironmentEntry *entry = &environment->entries[index];
+    const TelnetEnvironmentEntry *entry =
+        telnet_environment_entry_at_const(environment, index);
 
     if (entry->kind == kind && entry->name_size == name_size &&
         memcmp(entry->name, name, name_size) == 0)
@@ -103,10 +133,12 @@ bool descriptor_telnet_environment_get(const Descriptor *descriptor,
                                   name_size);
   if (index == SIZE_MAX)
     return false;
+  const TelnetEnvironmentEntry *stored =
+      telnet_environment_entry_at_const(descriptor->telnet_environment, index);
   if (value != nullptr)
-    *value = descriptor->telnet_environment->entries[index].value;
+    *value = stored->value;
   if (value_size != nullptr)
-    *value_size = descriptor->telnet_environment->entries[index].value_size;
+    *value_size = stored->value_size;
   return true;
 }
 
@@ -136,7 +168,8 @@ bool descriptor_telnet_environment_entry(const Descriptor *descriptor,
   if (descriptor == nullptr || descriptor->telnet_environment == nullptr ||
       entry == nullptr || index >= descriptor->telnet_environment->count)
     return false;
-  stored = &descriptor->telnet_environment->entries[index];
+  stored =
+      telnet_environment_entry_at_const(descriptor->telnet_environment, index);
   *entry = (TelnetEnvironmentEntryView){
       .kind = stored->kind,
       .name = stored->name,
@@ -150,8 +183,10 @@ bool descriptor_telnet_environment_entry(const Descriptor *descriptor,
 static void telnet_environment_updates_destroy(TelnetEnvironmentUpdate *updates,
                                                size_t count) {
   for (size_t index = 0; index < count; index++) {
-    free(updates[index].name);
-    free(updates[index].value);
+    TelnetEnvironmentUpdate *update =
+        telnet_environment_update_at(updates, index);
+    free(update->name);
+    free(update->value);
   }
 }
 
@@ -165,7 +200,7 @@ static bool telnet_environment_parse_bytes(const unsigned char *buffer,
   unsigned char *shrunk;
 
   while (*position < size) {
-    unsigned char byte = buffer[*position];
+    unsigned char byte = telnet_environment_byte(buffer, size, *position);
 
     if (byte == TELNET_ENVIRON_VAR || byte == TELNET_ENVIRON_USERVAR ||
         (parsing_name && byte == TELNET_ENVIRON_VALUE))
@@ -176,7 +211,7 @@ static bool telnet_environment_parse_bytes(const unsigned char *buffer,
     if (byte == TELNET_ENVIRON_ESC) {
       if (*position == size)
         return false;
-      byte = buffer[(*position)++];
+      byte = telnet_environment_byte(buffer, size, (*position)++);
     }
     if (*bytes_size == maximum)
       return false;
@@ -185,7 +220,8 @@ static bool telnet_environment_parse_bytes(const unsigned char *buffer,
       if (*bytes == nullptr)
         return false;
     }
-    (*bytes)[(*bytes_size)++] = byte;
+    *(unsigned char *)checked_storage_at(*bytes, maximum, sizeof(**bytes),
+                                         (*bytes_size)++) = byte;
   }
   if (*bytes_size != 0 && *bytes_size != maximum) {
     shrunk = realloc(*bytes, *bytes_size);
@@ -204,16 +240,17 @@ static bool telnet_environment_parse_updates(const char *raw_buffer,
 
   *update_count = 0;
   if (size == 0 ||
-      (buffer[0] != TELNET_ENVIRON_IS && buffer[0] != TELNET_ENVIRON_INFO))
+      (telnet_environment_byte(buffer, size, 0) != TELNET_ENVIRON_IS &&
+       telnet_environment_byte(buffer, size, 0) != TELNET_ENVIRON_INFO))
     return false;
   while (position < size) {
     TelnetEnvironmentUpdate *update;
-    unsigned char marker = buffer[position++];
+    unsigned char marker = telnet_environment_byte(buffer, size, position++);
 
     if ((marker != TELNET_ENVIRON_VAR && marker != TELNET_ENVIRON_USERVAR) ||
         *update_count == TELNET_ENVIRONMENT_MAX_ENTRIES)
       goto fail;
-    update = &updates[(*update_count)++];
+    update = telnet_environment_update_at(updates, (*update_count)++);
     *update = (TelnetEnvironmentUpdate){
         .kind = marker == TELNET_ENVIRON_VAR ? TELNET_ENVIRONMENT_VAR
                                              : TELNET_ENVIRONMENT_USERVAR};
@@ -221,7 +258,8 @@ static bool telnet_environment_parse_updates(const char *raw_buffer,
                                         &update->name, &update->name_size) ||
         update->name_size == 0)
       goto fail;
-    if (position < size && buffer[position] == TELNET_ENVIRON_VALUE) {
+    if (position < size && telnet_environment_byte(buffer, size, position) ==
+                               TELNET_ENVIRON_VALUE) {
       position++;
       update->has_value = true;
       if (!telnet_environment_parse_bytes(buffer, size, &position, false,
@@ -244,14 +282,17 @@ static bool telnet_environment_remove(TelnetEnvironment *environment,
 
   if (index == SIZE_MAX)
     return true;
-  environment->total_size -= environment->entries[index].name_size +
-                             environment->entries[index].value_size;
-  telnet_environment_entry_destroy(&environment->entries[index]);
+  TelnetEnvironmentEntry *stored =
+      telnet_environment_entry_at(environment, index);
+  environment->total_size -= stored->name_size + stored->value_size;
+  telnet_environment_entry_destroy(stored);
   if (index + 1 < environment->count)
-    memmove(&environment->entries[index], &environment->entries[index + 1],
+    memmove(telnet_environment_entry_at(environment, index),
+            telnet_environment_entry_at(environment, index + 1),
             (environment->count - index - 1) * sizeof(*environment->entries));
   environment->count--;
-  environment->entries[environment->count] = (TelnetEnvironmentEntry){0};
+  *telnet_environment_entry_at(environment, environment->count) =
+      (TelnetEnvironmentEntry){0};
   return true;
 }
 
@@ -262,10 +303,11 @@ static bool telnet_environment_set(TelnetEnvironment *environment,
   size_t previous_size = 0;
   size_t new_total;
 
-  if (index != SIZE_MAX)
-    previous_size = environment->entries[index].name_size +
-                    environment->entries[index].value_size;
-  else if (environment->count == TELNET_ENVIRONMENT_MAX_ENTRIES)
+  if (index != SIZE_MAX) {
+    const TelnetEnvironmentEntry *stored =
+        telnet_environment_entry_at_const(environment, index);
+    previous_size = stored->name_size + stored->value_size;
+  } else if (environment->count == TELNET_ENVIRONMENT_MAX_ENTRIES)
     return false;
   if (update->name_size > SIZE_MAX - update->value_size)
     return false;
@@ -281,8 +323,9 @@ static bool telnet_environment_set(TelnetEnvironment *environment,
   if (index == SIZE_MAX)
     index = environment->count++;
   else
-    telnet_environment_entry_destroy(&environment->entries[index]);
-  environment->entries[index] = (TelnetEnvironmentEntry){
+    telnet_environment_entry_destroy(
+        telnet_environment_entry_at(environment, index));
+  *telnet_environment_entry_at(environment, index) = (TelnetEnvironmentEntry){
       .kind = update->kind,
       .name = update->name,
       .name_size = update->name_size,
@@ -302,7 +345,8 @@ telnet_environment_clone(const TelnetEnvironment *environment) {
   if (copy == nullptr)
     return nullptr;
   for (size_t index = 0; index < environment->count; index++) {
-    const TelnetEnvironmentEntry *source = &environment->entries[index];
+    const TelnetEnvironmentEntry *source =
+        telnet_environment_entry_at_const(environment, index);
     TelnetEnvironmentUpdate update = {
         .kind = source->kind,
         .name = malloc(source->name_size),
@@ -344,7 +388,8 @@ bool telnet_environment_receive(TelnetEnvironment *environment,
   if (environment == nullptr ||
       !telnet_environment_parse_updates(buffer, size, updates, &update_count))
     return false;
-  updated = (unsigned char)buffer[0] == TELNET_ENVIRON_IS
+  updated = (unsigned char)telnet_environment_byte(
+                (const unsigned char *)buffer, size, 0) == TELNET_ENVIRON_IS
                 ? telnet_environment_create()
                 : telnet_environment_clone(environment);
   if (updated == nullptr) {
@@ -352,7 +397,8 @@ bool telnet_environment_receive(TelnetEnvironment *environment,
     return false;
   }
   for (size_t index = 0; index < update_count; index++) {
-    TelnetEnvironmentUpdate *update = &updates[index];
+    TelnetEnvironmentUpdate *update =
+        telnet_environment_update_at(updates, index);
 
     if (update->has_value)
       result = telnet_environment_set(updated, update);

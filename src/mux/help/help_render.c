@@ -1,6 +1,7 @@
 /* help_render.c - Renders help articles to plain text for display. */
 
 #include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,44 @@
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
+
+static char *help_buffer_slot(HelpTextBuffer *buffer, size_t index) {
+  return checked_storage_at(buffer->data, buffer->capacity, sizeof(char),
+                            index);
+}
+
+static char help_buffer_character(const HelpTextBuffer *buffer, size_t index) {
+  return *(const char *)checked_storage_at_const(buffer->data, buffer->capacity,
+                                                 sizeof(char), index);
+}
+
+static char help_text_character(const char *text, size_t length, size_t index) {
+  return *(const char *)checked_storage_at_const(text, length + 1, sizeof(char),
+                                                 index);
+}
+
+static const char *help_text_suffix(const char *text, size_t length,
+                                    size_t offset) {
+  return checked_storage_at_const(text, length + 1, sizeof(char), offset);
+}
+
+static const char *help_string_list_item(const HelpStringList *list,
+                                         size_t index) {
+  return *(char *const *)checked_storage_at_const(list->items, list->count,
+                                                  sizeof(*list->items), index);
+}
+
+static const HelpArticle **help_article_slot(const HelpArticle **articles,
+                                             size_t capacity, size_t index) {
+  return checked_storage_at(articles, capacity, sizeof(*articles), index);
+}
+
+static const HelpArticle *help_article_item(const HelpArticle *const *articles,
+                                            size_t count, size_t index) {
+  return *(const HelpArticle *const *)checked_storage_at_const(
+      articles, count, sizeof(*articles), index);
+}
 
 void help_text_buffer_init(HelpTextBuffer *buffer) {
   buffer->data = nullptr;
@@ -30,15 +69,34 @@ void help_text_buffer_free(HelpTextBuffer *buffer) {
 
 static void help_text_buffer_append(HelpTextBuffer *buffer, const char *text,
                                     size_t length) {
-  if (buffer->length + length + 1 > buffer->capacity) {
-    buffer->capacity = (buffer->capacity ? buffer->capacity * 2 : 256);
-    while (buffer->capacity < buffer->length + length + 1)
-      buffer->capacity *= 2;
-    buffer->data = realloc(buffer->data, buffer->capacity);
+  size_t required;
+
+  if (length > SIZE_MAX - buffer->length - 1)
+    abort();
+  required = buffer->length + length + 1;
+  if (required > buffer->capacity) {
+    size_t capacity = buffer->capacity ? buffer->capacity : 256;
+
+    while (capacity < required) {
+      if (capacity > SIZE_MAX / 2) {
+        capacity = required;
+        break;
+      }
+      capacity *= 2;
+    }
+    char *data = realloc(buffer->data, capacity);
+
+    if (data == nullptr)
+      abort();
+    buffer->data = data;
+    buffer->capacity = capacity;
   }
-  memcpy(buffer->data + buffer->length, text, length);
+  if (length > 0)
+    memcpy(checked_storage_region(buffer->data, buffer->capacity,
+                                  buffer->length, length),
+           checked_storage_region_const(text, length, 0, length), length);
   buffer->length += length;
-  buffer->data[buffer->length] = '\0';
+  *help_buffer_slot(buffer, buffer->length) = '\0';
 }
 
 static void help_text_buffer_append_str(HelpTextBuffer *buffer,
@@ -48,39 +106,43 @@ static void help_text_buffer_append_str(HelpTextBuffer *buffer,
 
 static void help_text_buffer_append_code(HelpTextBuffer *buffer,
                                          const char *text) {
-  for (const char *cursor = text; *cursor; cursor++) {
-    if (*cursor == '[')
+  const size_t length = strlen(text);
+
+  for (size_t index = 0; index < length; index++) {
+    if (help_text_character(text, length, index) == '[')
       help_text_buffer_append_str(buffer, "[");
-    help_text_buffer_append(buffer, cursor, 1);
+    help_text_buffer_append(buffer, help_text_suffix(text, length, index), 1);
   }
 }
 
 static bool help_url_is_external(const char *url) {
-  const char *body;
+  size_t body_offset;
   size_t length;
 
   if (url == nullptr)
     return false;
+  length = strlen(url);
   if (!strncasecmp(url, "http:", 5))
-    body = url + 5;
+    body_offset = 5;
   else if (!strncasecmp(url, "https:", 6))
-    body = url + 6;
+    body_offset = 6;
   else if (!strncasecmp(url, "ftp:", 4))
-    body = url + 4;
+    body_offset = 4;
   else
     return false;
-  length = strlen(url);
-  if (*body == '\0' || length > 4096)
+  if (body_offset >= length || length > 4096)
     return false;
   for (size_t index = 0; index < length; index++) {
-    unsigned char byte = (unsigned char)url[index];
+    unsigned char byte = (unsigned char)help_text_character(url, length, index);
     bool unreserved =
         (byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
         (byte >= '0' && byte <= '9') || strchr("-._~", byte) != nullptr;
 
     if (byte == '%' && index + 2 < length &&
-        isxdigit((unsigned char)url[index + 1]) &&
-        isxdigit((unsigned char)url[index + 2])) {
+        (isxdigit)((unsigned char)help_text_character(url, length,
+                                                      index + 1)) &&
+        (isxdigit)((unsigned char)help_text_character(url, length,
+                                                      index + 2))) {
       index += 2;
       continue;
     }
@@ -92,10 +154,14 @@ static bool help_url_is_external(const char *url) {
 
 static void help_text_buffer_append_quoted(HelpTextBuffer *buffer,
                                            const char *text) {
-  for (const char *cursor = text; *cursor; cursor++) {
-    if (*cursor == '\\' || *cursor == '"')
+  const size_t length = strlen(text);
+
+  for (size_t index = 0; index < length; index++) {
+    const char character = help_text_character(text, length, index);
+
+    if (character == '\\' || character == '"')
       help_text_buffer_append_str(buffer, "\\");
-    help_text_buffer_append(buffer, cursor, 1);
+    help_text_buffer_append(buffer, help_text_suffix(text, length, index), 1);
   }
 }
 
@@ -111,10 +177,11 @@ static void help_text_buffer_append_help_link(HelpTextBuffer *buffer,
 static void help_render_ensure_blank_line(HelpTextBuffer *buffer) {
   if (buffer->length == 0)
     return;
-  if (buffer->length >= 2 && buffer->data[buffer->length - 1] == '\n' &&
-      buffer->data[buffer->length - 2] == '\n')
+  if (buffer->length >= 2 &&
+      help_buffer_character(buffer, buffer->length - 1) == '\n' &&
+      help_buffer_character(buffer, buffer->length - 2) == '\n')
     return;
-  if (buffer->data[buffer->length - 1] != '\n')
+  if (help_buffer_character(buffer, buffer->length - 1) != '\n')
     help_text_buffer_append_str(buffer, "\n");
   help_text_buffer_append_str(buffer, "\n");
 }
@@ -122,7 +189,7 @@ static void help_render_ensure_blank_line(HelpTextBuffer *buffer) {
 static void help_render_ensure_newline(HelpTextBuffer *buffer) {
   if (buffer->length == 0)
     return;
-  if (buffer->data[buffer->length - 1] != '\n')
+  if (help_buffer_character(buffer, buffer->length - 1) != '\n')
     help_text_buffer_append_str(buffer, "\n");
 }
 
@@ -132,23 +199,29 @@ static bool help_article_matches_tags(const HelpArticle *article,
 
   for (i = 0; i < article->article_tags.count; i++)
     for (j = 0; j < tags->count; j++)
-      if (!strcmp(article->article_tags.items[i], tags->items[j]))
+      if (!strcmp(help_string_list_item(&article->article_tags, i),
+                  help_string_list_item(tags, j)))
         return true;
   return false;
 }
 
 static int help_index_entry_compare(const void *a, const void *b) {
-  const HelpArticle *left = *(const HelpArticle *const *)a;
-  const HelpArticle *right = *(const HelpArticle *const *)b;
+  const HelpArticle *left;
+  const HelpArticle *right;
+
+  memcpy(&left, a, sizeof(left));
+  memcpy(&right, b, sizeof(right));
 
   if (left->has_weight && right->has_weight) {
     if (left->weight != right->weight)
       return left->weight < right->weight ? -1 : 1;
-    return strcasecmp(left->keywords.items[0], right->keywords.items[0]);
+    return strcasecmp(help_string_list_item(&left->keywords, 0),
+                      help_string_list_item(&right->keywords, 0));
   }
   if (left->has_weight != right->has_weight)
     return left->has_weight ? -1 : 1;
-  return strcasecmp(left->article_tags.items[0], right->article_tags.items[0]);
+  return strcasecmp(help_string_list_item(&left->article_tags, 0),
+                    help_string_list_item(&right->article_tags, 0));
 }
 
 static void help_render_index_section(const HelpIndex *index,
@@ -173,14 +246,15 @@ static void help_render_index_section(const HelpIndex *index,
     if (!help_article_matches_tags(candidate,
                                    &index_article->show_index_for_article_tags))
       continue;
-    entries[count++] = candidate;
+    *help_article_slot(entries, total, count++) = candidate;
   }
   qsort(entries, count, sizeof(const HelpArticle *), help_index_entry_compare);
 
   help_render_ensure_blank_line(out);
   if (index_article->index_style == HELP_INDEX_STYLE_COLUMNAR) {
     for (i = 0; i < count; i++) {
-      const char *topic = entries[i]->keywords.items[0];
+      const HelpArticle *entry = help_article_item(entries, count, i);
+      const char *topic = help_string_list_item(&entry->keywords, 0);
       size_t topic_length = strlen(topic);
 
       help_text_buffer_append_help_link(out, topic);
@@ -199,14 +273,15 @@ static void help_render_index_section(const HelpIndex *index,
       help_text_buffer_append_str(out, header);
     }
     for (i = 0; i < count; i++) {
-      const char *topic = entries[i]->keywords.items[0];
+      const HelpArticle *entry = help_article_item(entries, count, i);
+      const char *topic = help_string_list_item(&entry->keywords, 0);
       size_t topic_length = strlen(topic);
 
       help_text_buffer_append_help_link(out, topic);
       for (size_t padding = topic_length; padding < 20; padding++)
         help_text_buffer_append_str(out, " ");
       help_text_buffer_append_str(out, " ");
-      help_text_buffer_append_str(out, entries[i]->description);
+      help_text_buffer_append_str(out, entry->description);
       help_text_buffer_append_str(out, "\n");
     }
   }
@@ -325,32 +400,43 @@ void help_article_render_body(const HelpIndex *index,
 
 void help_render_send(EvaluationContext *evaluation, DbRef player,
                       const HelpTextBuffer *buffer) {
-  const char *cursor = buffer->data;
+  size_t offset = 0;
 
-  if (!cursor)
+  if (buffer->data == nullptr)
     return;
-  while (*cursor) {
-    const char *line_end = strchr(cursor, '\n');
-    size_t line_length =
-        line_end ? (size_t)(line_end - cursor) : strlen(cursor);
+  while (offset < buffer->length &&
+         help_buffer_character(buffer, offset) != '\0') {
+    size_t source_length = 0;
     char line[LBUF_SIZE];
+
+    while (offset + source_length < buffer->length &&
+           help_buffer_character(buffer, offset + source_length) != '\0' &&
+           help_buffer_character(buffer, offset + source_length) != '\n')
+      source_length++;
+    size_t line_length = source_length;
 
     if (line_length >= sizeof(line))
       line_length = sizeof(line) - 1;
-    if (line_length == 0) {
+    if (source_length == 0) {
       /* notify_checked() silently drops empty messages, so a blank line needs a
        * single space to actually reach the player. */
       notify_checked(evaluation, player, player, " ", MSG_ME_ALL | MSG_F_DOWN);
-      if (!line_end)
+      if (help_buffer_character(buffer, offset) != '\n')
         break;
-      cursor = line_end + 1;
+      offset++;
       continue;
     }
-    memcpy(line, cursor, line_length);
-    line[line_length] = '\0';
+    memcpy(line,
+           checked_storage_region_const(buffer->data, buffer->capacity, offset,
+                                        line_length),
+           line_length);
+    *(char *)checked_storage_at(line, sizeof(line), sizeof(char), line_length) =
+        '\0';
     notify_checked(evaluation, player, player, line, MSG_ME_ALL | MSG_F_DOWN);
-    if (!line_end)
+    offset += source_length;
+    if (offset >= buffer->length ||
+        help_buffer_character(buffer, offset) != '\n')
       break;
-    cursor = line_end + 1;
+    offset++;
   }
 }

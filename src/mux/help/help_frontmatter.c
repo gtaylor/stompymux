@@ -6,7 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
 #include "tomlc17.h"
+
+static char **help_string_slot(HelpStringList *list, size_t index) {
+  return checked_storage_at(list->items, list->count, sizeof(*list->items),
+                            index);
+}
 
 static char *help_frontmatter_dup(const char *s) {
   size_t length;
@@ -27,13 +33,14 @@ static bool help_frontmatter_copy_string_list(toml_datum_t array,
   out->count = (size_t)array.u.arr.size;
   out->items = malloc(out->count * sizeof(char *));
   for (i = 0; i < out->count; i++) {
-    toml_datum_t element = array.u.arr.elem[i];
+    toml_datum_t element = *(const toml_datum_t *)checked_storage_at_const(
+        array.u.arr.elem, out->count, sizeof(*array.u.arr.elem), i);
 
     if (element.type != TOML_STRING) {
-      out->items[i] = help_frontmatter_dup("");
+      *help_string_slot(out, i) = help_frontmatter_dup("");
       continue;
     }
-    out->items[i] = help_frontmatter_dup(element.u.s);
+    *help_string_slot(out, i) = help_frontmatter_dup(element.u.s);
   }
   return true;
 }
@@ -51,7 +58,8 @@ bool help_frontmatter_parse(const char *text, size_t length, HelpArticle *out,
    * NUL-terminated copy first. */
   nul_terminated = malloc(length + 1);
   memcpy(nul_terminated, text, length);
-  nul_terminated[length] = '\0';
+  *(char *)checked_storage_at(nul_terminated, length + 1, sizeof(char),
+                              length) = '\0';
   result = toml_parse(nul_terminated, (int)length);
   free(nul_terminated);
   if (!result.ok) {
@@ -126,13 +134,13 @@ void help_frontmatter_free(HelpArticle *article) {
   free(article->title);
   free(article->description);
   for (i = 0; i < article->keywords.count; i++)
-    free(article->keywords.items[i]);
+    free(*help_string_slot(&article->keywords, i));
   free(article->keywords.items);
   for (i = 0; i < article->article_tags.count; i++)
-    free(article->article_tags.items[i]);
+    free(*help_string_slot(&article->article_tags, i));
   free(article->article_tags.items);
   for (i = 0; i < article->show_index_for_article_tags.count; i++)
-    free(article->show_index_for_article_tags.items[i]);
+    free(*help_string_slot(&article->show_index_for_article_tags, i));
   free(article->show_index_for_article_tags.items);
   free(article->relative_path);
 }

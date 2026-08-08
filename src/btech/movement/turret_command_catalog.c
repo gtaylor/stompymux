@@ -1,3 +1,4 @@
+#include "command_catalogs.h"
 #include "command_invokers.h"
 
 const BtechCommandDefinition turretcommands[] = {
@@ -69,3 +70,7 @@ const BtechCommandDefinition turretcommands[] = {
     {0, "WEAPONSPECS", "Shows the specifications for your weapons",
      btech_command_invoke_turret_weaponspecs},
     {0, NULL, NULL, NULL}};
+
+size_t turret_command_count(void) {
+  return sizeof(turretcommands) / sizeof(*turretcommands) - 1;
+}

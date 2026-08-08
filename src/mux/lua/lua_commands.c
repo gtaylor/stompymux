@@ -22,6 +22,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 
@@ -164,7 +165,7 @@ int lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
     return 0;
   for (index = 0; index < runtime->global_module_count; index++) {
     if (lua_module_command_match(runtime, descriptor, LUA_ROOT_GLOBAL_LOGIC,
-                                 runtime->global_modules[index], NOTHING,
+                                 lua_global_module_at(runtime, index), NOTHING,
                                  player, cause, command, 1))
       return 1;
   }
@@ -179,8 +180,8 @@ size_t lua_visit_global_commands(LuaRuntime *runtime, DbRef player,
     return 0;
   for (size_t index = 0; index < runtime->global_module_count; index++)
     count += lua_visit_module_commands(runtime, LUA_ROOT_GLOBAL_LOGIC,
-                                       runtime->global_modules[index], NOTHING,
-                                       player, visitor, context);
+                                       lua_global_module_at(runtime, index),
+                                       NOTHING, player, visitor, context);
   return count;
 }
 
@@ -271,8 +272,16 @@ static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
                   "Lua parent object_logic/%s (attached on #%ld):", path,
                   source);
   while ((length = getline(&line, &capacity, stream)) >= 0) {
-    while (length > 0 && (line[length - 1] == '\n' || line[length - 1] == '\r'))
-      line[--length] = '\0';
+    while (length > 0) {
+      const char character = *(const char *)checked_storage_at_const(
+          line, capacity, sizeof(char), (size_t)length - 1);
+
+      if (character != '\n' && character != '\r')
+        break;
+      length--;
+      *(char *)checked_storage_at(line, capacity, sizeof(char),
+                                  (size_t)length) = '\0';
+    }
     raw_notify(evaluation, player, line);
   }
   if (ferror(stream))

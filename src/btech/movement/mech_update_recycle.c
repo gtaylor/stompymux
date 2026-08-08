@@ -11,6 +11,8 @@
 #include "mech_update_api.h"
 #include "weapon_catalogue_api.h"
 
+#include <stdlib.h>
+
 #include "btech/context.h"
 #include "failures.h"
 #include "mech_api_types.h"
@@ -21,7 +23,24 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
+#include "mux/support/checked_storage.h"
 #include "section_types.h"
+
+static int recycle_int_at(const int *values, int index) {
+  if (index < 0)
+    abort();
+  const int *value = checked_storage_at_const(values, MAX_WEAPS_SECTION,
+                                              sizeof(*values), (size_t)index);
+  return *value;
+}
+
+static int recycle_weapon_at(const unsigned char *values, int index) {
+  if (index < 0)
+    abort();
+  const unsigned char *value = checked_storage_at_const(
+      values, MAX_WEAPS_SECTION, sizeof(*values), (size_t)index);
+  return *value;
+}
 
 static bool mech_section_recycles(const Mech *mech) {
   int unit_class = mech_class(mech);
@@ -54,7 +73,7 @@ int mech_weapon_recycle_update(Mech *mech) {
     int count = FindWeapons_Advanced(mech, section, weapon_types, weapon_data,
                                      criticals, 1);
     for (int weapon = 0; weapon < count; weapon++) {
-      int critical = criticals[weapon];
+      int critical = recycle_int_at(criticals, weapon);
       if (!mech_weapon_is_recycling_at(mech, section, critical))
         continue;
 
@@ -78,7 +97,9 @@ int mech_weapon_recycle_update(Mech *mech) {
             : (mech_critical_fire_mode(mech, section, critical) & ROCKET_FIRED)
                 ? ""
                 : "[fg=green]%s finished recycling.[reset]",
-            &weapon_catalogue_name(weapon_types[weapon])[3]);
+            checked_string_suffix(
+                weapon_catalogue_name(recycle_weapon_at(weapon_types, weapon)),
+                3));
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif

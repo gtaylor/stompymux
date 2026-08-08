@@ -1,4 +1,5 @@
 #include "checked_conversion.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
@@ -8,6 +9,8 @@
 #include "mech_sensor_state_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_internal.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
 
@@ -15,7 +18,11 @@ static const char *const mechtypenames[CLASS_LAST + 1] = {
     "mech", "tank", "VTOL", "vessel", "aerofighter", "DropShip"};
 
 const char *mechtypename(Mech *foo) {
-  return mechtypenames[(int)((foo)->ud.type)];
+  UnitClass unit_class = mech_class(foo);
+  const char *const *name =
+      checked_storage_at_const(mechtypenames, CLASS_LAST + 1,
+                               sizeof(*mechtypenames), (size_t)unit_class);
+  return *name;
 }
 
 int mech_armorpoints(Mech *mech) {
@@ -82,15 +89,15 @@ MechId mech_id(Mech *mech, bool lowercase) {
   id.text[2] = '\0';
 
   if (lowercase) {
-    id.text[0] = clamp_int_to_char(tolower((unsigned char)id.text[0]));
-    id.text[1] = clamp_int_to_char(tolower((unsigned char)id.text[1]));
+    id.text[0] = ascii_to_lower(id.text[0]);
+    id.text[1] = ascii_to_lower(id.text[1]);
   }
   return id;
 }
 
 char *MyToUpper(char *string) {
   if (*string)
-    *string = clamp_int_to_char(toupper((unsigned char)*string));
+    *string = ascii_to_upper(*string);
   return string;
 }
 
@@ -117,9 +124,12 @@ int SectHasBusyWeap(Mech *mech, int sect) {
   unsigned char weapdata[MAX_WEAPS_SECTION];
 
   count = FindWeapons_Advanced(mech, sect, weaptype, weapdata, critical, 1);
-  for (i = 0; i < count; i++)
-    if (mech_weapon_is_recycling_at(mech, sect, critical[i]))
+  for (i = 0; i < count; i++) {
+    const int *critical_index = checked_storage_at_const(
+        critical, MAX_WEAPS_SECTION, sizeof(*critical), (size_t)i);
+    if (mech_weapon_is_recycling_at(mech, sect, *critical_index))
       return 1;
+  }
   return 0;
 }
 
@@ -152,21 +162,21 @@ BattleMap *ValidMap(BtechContext *context, DbRef player, DbRef map) {
   return maps;
 }
 
-DbRef FindMechOnMap(BattleMap *map, char *mechid) {
-  int loop;
+DbRef FindMechOnMap(BattleMap *map, const char *mechid) {
   Mech *tempMech;
 
-  for (loop = 0; loop < map->first_free; loop++)
-    if (map->mechsOnMap[loop] != -1) {
-      tempMech =
-          btech_context_get_mech(map->xcode.context, map->mechsOnMap[loop]);
+  for (int loop = 0; loop < battle_map_unit_count(map); loop++) {
+    DbRef candidate = battle_map_unit_dbref(map, loop);
+    if (candidate != -1) {
+      tempMech = btech_context_get_mech(map->xcode.context, candidate);
       if (tempMech && !strncasecmp(((tempMech)->ID), mechid, 2))
         return tempMech->mynum;
     }
+  }
   return -1;
 }
 
-DbRef FindTargetDBREFFromMapNumber(Mech *mech, char *mapnum) {
+DbRef FindTargetDBREFFromMapNumber(Mech *mech, const char *mapnum) {
   BattleMap *map;
 
   if (mech->mapindex == -1)
@@ -445,9 +455,9 @@ const char *FindGunnerySkillName(Mech *mech, int weapindx) {
       return "Gunnery-Spacecraft";
     case CLASS_MW:
       if (weapindx >= 0) {
-        if (!strcmp(MechWeapons[weapindx].name, "PC.Sword"))
+        if (!strcmp(weapon_catalogue_name(weapindx), "PC.Sword"))
           return "Blade";
-        if (!strcmp(MechWeapons[weapindx].name, "PC.Vibroblade"))
+        if (!strcmp(weapon_catalogue_name(weapindx), "PC.Vibroblade"))
           return "Blade";
       }
       return "Small_Arms";
@@ -455,16 +465,16 @@ const char *FindGunnerySkillName(Mech *mech, int weapindx) {
   } else {
 
     if (weapindx < 0)
-      return NULL;
+      return nullptr;
     if (((mech)->ud.type) == CLASS_MW) {
       if (weapindx >= 0) {
-        if (!strcmp(MechWeapons[weapindx].name, "PC.Blade"))
+        if (!strcmp(weapon_catalogue_name(weapindx), "PC.Blade"))
           return "Blade";
-        if (!strcmp(MechWeapons[weapindx].name, "PC.Vibroblade"))
+        if (!strcmp(weapon_catalogue_name(weapindx), "PC.Vibroblade"))
           return "Blade";
-        if (!strcmp(MechWeapons[weapindx].name, "PC.Blazer"))
+        if (!strcmp(weapon_catalogue_name(weapindx), "PC.Blazer"))
           return "Support_Weapons";
-        if (!strcmp(MechWeapons[weapindx].name, "PC.HeavyGyrojetGun"))
+        if (!strcmp(weapon_catalogue_name(weapindx), "PC.HeavyGyrojetGun"))
           return "Support_Weapons";
         return "Small_Arms";
       }

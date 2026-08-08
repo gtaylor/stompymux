@@ -26,6 +26,7 @@
 #include "mux/server/server_config.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
@@ -77,6 +78,24 @@ int check_access(GameDatabase *database,
 }
 
 static inline bool is_protected(CMDENT *cmdp, int x) { return cmdp->perms & x; }
+
+static char **command_argument_slot(char **arguments, size_t capacity,
+                                    size_t index) {
+  return checked_storage_at(arguments, capacity, sizeof(*arguments), index);
+}
+
+static char *command_split_slash(char *text) {
+  const size_t length = strlen(text);
+  size_t offset = 0;
+
+  while (offset < length && *(const char *)checked_storage_at_const(
+                                text, length + 1, sizeof(char), offset) != '/')
+    offset++;
+  if (offset == length)
+    return nullptr;
+  *(char *)checked_storage_at(text, length + 1, sizeof(char), offset) = '\0';
+  return checked_storage_at(text, length + 1, sizeof(char), offset + 1);
+}
 
 static void command_invoke(CMDENT *command, CommandContext *context,
                            DbRef player, DbRef cause, int key, char *unparsed,
@@ -179,9 +198,7 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
 
   if (switchp && cmdp->switches) {
     do {
-      buf1 = (char *)index(switchp, '/');
-      if (buf1)
-        *buf1++ = '\0';
+      buf1 = command_split_slash(switchp);
       xkey = name_table_search(context->world->database,
                                context->world->configuration, player,
                                cmdp->switches, switchp);
@@ -281,7 +298,10 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
 
       parse_arglist(context->world->configuration, arg, '\0', parse_flags, args,
                     MAX_ARG);
-      for (nargs = 0; (nargs < MAX_ARG) && args[nargs]; nargs++)
+      for (nargs = 0;
+           nargs < MAX_ARG &&
+           *command_argument_slot(args, MAX_ARG, (size_t)nargs) != nullptr;
+           nargs++)
         ;
 
       /*
@@ -295,9 +315,9 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
        * Free the argument buffers
        */
 
-      for (i = 0; i <= nargs; i++)
-        if (args[i])
-          free_lbuf(args[i]);
+      for (i = 0; i < nargs; i++)
+        if (*command_argument_slot(args, MAX_ARG, (size_t)i) != nullptr)
+          free_lbuf(*command_argument_slot(args, MAX_ARG, (size_t)i));
 
     } else {
 
@@ -335,8 +355,7 @@ void process_command(CommandContext *context, char *command, char *args[],
   const DbRef player = context->player;
   const DbRef cause = context->enactor;
   const bool interactive = context->interactive;
-  char *p = nullptr, *q = nullptr, *arg = nullptr, *lcbuf = nullptr,
-       *slashp = nullptr;
+  char *arg = nullptr, *lcbuf = nullptr, *slashp = nullptr;
   const char *cmdsave = nullptr;
   int succ = 0, lua_succ = 0, i = 0;
   DbRef exit = 0;
@@ -409,24 +428,46 @@ void process_command(CommandContext *context, char *command, char *args[],
    * Eat leading whitespace, and space-compress if configured
    */
 
-  while (*command && isspace((unsigned char)*command))
-    command++;
+  size_t command_length = strlen(command);
+  size_t command_offset = 0;
+
+  while (command_offset < command_length &&
+         (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+             command, command_length + 1, sizeof(char), command_offset)))
+    command_offset++;
+  command = checked_mutable_string_suffix(command, command_offset);
+  command_length -= command_offset;
   context->debug_command = command;
 
   /*
    * Can we fix the @npemit thing?
    */
   if (configuration->space_compress && strncmp(command, "@npemit", 7)) {
-    p = q = command;
-    while (*p) {
-      while (*p && !isspace((unsigned char)*p))
-        *q++ = *p++;
-      while (*p && isspace((unsigned char)*p))
-        p++;
-      if (*p)
-        *q++ = ' ';
+    size_t read_offset = 0;
+    size_t write_offset = 0;
+
+    while (read_offset < command_length) {
+      while (read_offset < command_length) {
+        const char character = *(const char *)checked_storage_at_const(
+            command, command_length + 1, sizeof(char), read_offset);
+
+        if ((isspace)((unsigned char)character))
+          break;
+        *(char *)checked_storage_at(command, command_length + 1, sizeof(char),
+                                    write_offset++) = character;
+        read_offset++;
+      }
+      while (read_offset < command_length &&
+             (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+                 command, command_length + 1, sizeof(char), read_offset)))
+        read_offset++;
+      if (read_offset < command_length)
+        *(char *)checked_storage_at(command, command_length + 1, sizeof(char),
+                                    write_offset++) = ' ';
     }
-    *q = '\0';
+    *(char *)checked_storage_at(command, command_length + 1, sizeof(char),
+                                write_offset) = '\0';
+    command_length = write_offset;
   }
 
   /*
@@ -436,14 +477,15 @@ void process_command(CommandContext *context, char *command, char *args[],
    * and they can never be the HOME command.
    */
 
-  i = command[0] & 0xff;
-  if ((registry->prefix_commands[i] != nullptr) && command[0]) {
-    process_cmdent(context, registry->prefix_commands[i], nullptr, player,
-                   cause, interactive, command, command, args, nargs);
+  i = (unsigned char)*command;
+  CMDENT *prefix_command = command_prefix_entry_at(registry, (size_t)i);
+  if (prefix_command != nullptr && *command) {
+    process_cmdent(context, prefix_command, nullptr, player, cause, interactive,
+                   command, command, args, nargs);
     context->debug_command = cmdsave;
     goto exit;
   }
-  if ((command[0] == '.') && interactive) {
+  if ((*command == '.') && interactive) {
     macerr = do_macro(&context->match, context->runtime->command_registry,
                       context->runtime->macros, player, command, &macroout);
     if (!macerr)
@@ -507,28 +549,33 @@ void process_command(CommandContext *context, char *command, char *args[],
    */
 
   lcbuf = alloc_lbuf("process_commands.LCbuf");
-  for (p = command, q = lcbuf; *p && !isspace((unsigned char)*p); p++, q++)
-    *q = ascii_to_lower(*p); /*
-                              * Make lowercase command
-                              */
-  *q++ = '\0';               /*
-                              * Terminate command
-                              */
-  while (*p && isspace((unsigned char)*p))
-    p++;   /*
-            * Skip spaces before arg
-            */
-  arg = p; /*
-            * Remember where arg starts
-            */
+  size_t name_length = 0;
+
+  while (name_length < command_length) {
+    const char character = *(const char *)checked_storage_at_const(
+        command, command_length + 1, sizeof(char), name_length);
+
+    if ((isspace)((unsigned char)character))
+      break;
+    *(char *)checked_storage_at(lcbuf, LBUF_SIZE, sizeof(char), name_length) =
+        ascii_to_lower(character);
+    name_length++;
+  }
+  *(char *)checked_storage_at(lcbuf, LBUF_SIZE, sizeof(char), name_length) =
+      '\0';
+  size_t argument_offset = name_length;
+
+  while (argument_offset < command_length &&
+         (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+             command, command_length + 1, sizeof(char), argument_offset)))
+    argument_offset++;
+  arg = checked_mutable_string_suffix(command, argument_offset);
 
   /*
    * Strip off any command switches and save them
    */
 
-  slashp = (char *)index(lcbuf, '/');
-  if (slashp)
-    *slashp++ = '\0';
+  slashp = command_split_slash(lcbuf);
 
   /*
    * Check for a builtin command (or an alias of a builtin command)

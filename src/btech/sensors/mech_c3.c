@@ -30,8 +30,19 @@
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+
+static DbRef *c3_network_slot(DbRef *network, int index) {
+  return checked_storage_at(network, C3_NETWORK_SIZE, sizeof(*network),
+                            (size_t)index);
+}
+
+static DbRef c3_network_value(const DbRef *network, int index) {
+  return *(const DbRef *)checked_storage_at_const(
+      network, C3_NETWORK_SIZE, sizeof(*network), (size_t)index);
+}
 
 #define C3_POS_IN_NETWORK -1
 #define C3_POS_NO_ROOM -2
@@ -208,7 +219,7 @@ int mech_c3_maximum_network_size(Mech *mech, const DbRef *myTempNetwork,
 
   /* First we iterate over the list and find all the masters */
   for (i = 0; i < tempNetworkSize; i++) {
-    otherRef = myTempNetwork[i];
+    otherRef = c3_network_value(myTempNetwork, i);
     otherMech = btech_context_get_mech(mech_context(mech), otherRef);
 
     if (!otherMech)
@@ -272,7 +283,7 @@ int mech_c3_network_trim(Mech *mech, DbRef *myTempNetwork,
   newNetworkSize = tempNetworkSize;
 
   for (i = 0; i < C3_NETWORK_SIZE; i++)
-    newNetwork[i] = -1;
+    *c3_network_slot(newNetwork, i) = -1;
 
   /* Get our count of max units */
   maxC3Size = mech_c3_maximum_network_size(mech, myTempNetwork, tempNetworkSize,
@@ -289,27 +300,27 @@ int mech_c3_network_trim(Mech *mech, DbRef *myTempNetwork,
 
     /* First put our masters in */
     for (i = 0; i < tempNetworkSize; i++) {
-      otherRef = myTempNetwork[i];
+      otherRef = c3_network_value(myTempNetwork, i);
       otherMech = btech_context_get_mech(mech_context(mech), otherRef);
 
       if (!otherMech)
         continue;
 
       if (mech_c3_working_masters(otherMech) > 0)
-        newNetwork[newNetworkSize++] = otherRef;
+        *c3_network_slot(newNetwork, newNetworkSize++) = otherRef;
     }
 
     /* Next we put in slaves up to the max amount */
     if (newNetworkSize < maxC3Size) {
       for (i = 0; i < tempNetworkSize; i++) {
-        otherRef = myTempNetwork[i];
+        otherRef = c3_network_value(myTempNetwork, i);
         otherMech = btech_context_get_mech(mech_context(mech), otherRef);
 
         if (!otherMech)
           continue;
 
         if (mech_c3_working_masters(otherMech) == 0)
-          newNetwork[newNetworkSize++] = otherRef;
+          *c3_network_slot(newNetwork, newNetworkSize++) = otherRef;
 
         if (newNetworkSize >= maxC3Size)
           break;
@@ -318,7 +329,7 @@ int mech_c3_network_trim(Mech *mech, DbRef *myTempNetwork,
 
     /* Now, refill our other temp network */
     for (i = 0; i < newNetworkSize; i++)
-      myTempNetwork[i] = newNetwork[i];
+      *c3_network_slot(myTempNetwork, i) = c3_network_value(newNetwork, i);
   }
 
   return newNetworkSize;
@@ -511,14 +522,14 @@ void mech_c3_network_validate(Mech *mech) {
         tprintf("C3 VALIDATE INFO: %ld is now in %ld's C3 network",
                 mech_dbref(otherMech), mech_dbref(mech)));
 
-    myTempNetwork[networkSize] = mech_dbref(otherMech);
+    *c3_network_slot(myTempNetwork, networkSize) = mech_dbref(otherMech);
     networkSize++;
   }
 
   mech_c3_network_clear(mech, 0);
 
   for (i = 0; i < networkSize; i++)
-    mech_c3_network_node_set(mech, i, myTempNetwork[i]);
+    mech_c3_network_node_set(mech, i, c3_network_value(myTempNetwork, i));
 
   mech_c3_network_size_set(mech, networkSize);
 
@@ -539,7 +550,7 @@ void mech_c3_network_validate(Mech *mech) {
     mech_c3_network_clear(mech, 0);
 
     for (i = 0; i < networkSize; i++)
-      mech_c3_network_node_set(mech, i, myTempNetwork[i]);
+      mech_c3_network_node_set(mech, i, c3_network_value(myTempNetwork, i));
 
     mech_c3_network_size_set(mech, networkSize);
   }
@@ -653,7 +664,7 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
   DbRef target_network[C3_NETWORK_SIZE];
   const int target_network_size = mech_c3_network_size(target);
   for (int i = 0; i < target_network_size; ++i)
-    target_network[i] = mech_c3_network_node(target, i);
+    *c3_network_slot(target_network, i) = mech_c3_network_node(target, i);
   maxC3Size = mech_c3_maximum_network_size(mech, target_network,
                                            target_network_size, target);
 
@@ -699,8 +710,9 @@ void mech_c3_message(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
+  if (buffer != nullptr)
+    buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(char),
+                                strspn(buffer, " \t\r\n\f\v"));
   if (!buffer || !*buffer) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "What do you want to send on the C3 Network?");

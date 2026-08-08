@@ -22,6 +22,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/password.h"
@@ -238,8 +239,11 @@ int add_player_name(WorldContext *world, DbRef player, char *name) {
   tp = temp = alloc_lbuf("add_player_name");
   safe_str(name, temp, &tp);
   *tp = '\0';
-  for (tp = temp; *tp; tp++)
-    *tp = ascii_to_lower(*tp);
+  for (size_t index = 0; index < strlen(temp); index++) {
+    char *character =
+        checked_storage_at(temp, strlen(temp), sizeof(char), index);
+    *character = ascii_to_lower(*character);
+  }
 
   p = (long *)hash_table_find(temp, &world->indexes->players);
   if (p) {
@@ -291,8 +295,11 @@ int delete_player_name(WorldContext *world, DbRef player, char *name) {
   tp = temp = alloc_lbuf("delete_player_name");
   safe_str(name, temp, &tp);
   *tp = '\0';
-  for (tp = temp; *tp; tp++)
-    *tp = ascii_to_lower(*tp);
+  for (size_t index = 0; index < strlen(temp); index++) {
+    char *character =
+        checked_storage_at(temp, strlen(temp), sizeof(char), index);
+    *character = ascii_to_lower(*character);
+  }
 
   p = (long *)hash_table_find(temp, &world->indexes->players);
   if (!p || (*p == NOTHING) || ((player != NOTHING) && (*p != player))) {
@@ -305,7 +312,7 @@ int delete_player_name(WorldContext *world, DbRef player, char *name) {
   return 1;
 }
 
-DbRef lookup_player(WorldContext *world, DbRef doer, char *name,
+DbRef lookup_player(WorldContext *world, DbRef doer, const char *name,
                     int check_who) {
   DbRef *p, thing;
   char *temp, *tp;
@@ -314,10 +321,10 @@ DbRef lookup_player(WorldContext *world, DbRef doer, char *name,
     return doer;
 
   if (*name == NUMBER_TOKEN) {
-    name++;
-    if (!is_number(name))
+    const char *numeric_name = checked_string_suffix(name, 1);
+    if (!is_number(numeric_name))
       return NOTHING;
-    thing = clamped_atol(name);
+    thing = clamped_atol(numeric_name);
     if (!is_good_obj(world->database, thing))
       return NOTHING;
     if (!((typeof_obj(world->database, thing) == OBJECT_TYPE_PLAYER) ||
@@ -328,8 +335,11 @@ DbRef lookup_player(WorldContext *world, DbRef doer, char *name,
   tp = temp = alloc_lbuf("lookup_player");
   safe_str(name, temp, &tp);
   *tp = '\0';
-  for (tp = temp; *tp; tp++)
-    *tp = ascii_to_lower(*tp);
+  for (size_t index = 0; index < strlen(temp); index++) {
+    char *character =
+        checked_storage_at(temp, strlen(temp), sizeof(char), index);
+    *character = ascii_to_lower(*character);
+  }
   p = (long *)hash_table_find(temp, &world->indexes->players);
   free_lbuf(temp);
   if (!p) {

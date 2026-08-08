@@ -8,11 +8,12 @@
 
 bool styled_append_bytes(char *output, size_t output_size, size_t *used,
                          const char *value, size_t length) {
-  if (*used + length >= output_size)
+  if (length >= output_size || *used >= output_size - length)
     return false;
-  memcpy(output + *used, value, length);
+  memcpy(checked_storage_region(output, output_size, *used, length), value,
+         length);
   *used += length;
-  output[*used] = '\0';
+  *(char *)checked_storage_at(output, output_size, sizeof(char), *used) = '\0';
   return true;
 }
 

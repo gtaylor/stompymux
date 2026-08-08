@@ -37,6 +37,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "random.h"
 #include "registry_api.h"
@@ -62,7 +63,7 @@ static int mech_disableweap_func(Mech *mech, DbRef player, int index, int high,
   }
   weaptype = weapon_from_equipment_index(
       mech_critical_part_type(mech, section, critical));
-  if (!(MechWeapons[weaptype].special & GAUSS)) {
+  if (!weapon_catalogue_has_special(weaptype, GAUSS)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "You can only disable Gauss weapons.");
     return 0;
@@ -113,7 +114,9 @@ int FindMainWeapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
     count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
       for (ii = 0; ii < count; ii++) {
-        if (!mech_critical_is_broken(mech, loop, critical[ii])) {
+        const int critical_index = *(const int *)checked_storage_at_const(
+            critical, MAX_WEAPS_SECTION, sizeof(*critical), (size_t)ii);
+        if (!mech_critical_is_broken(mech, loop, critical_index)) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
           tempcrit = (int)btech_random_i31(&mech->xcode.context->random);
           if (tempcrit > maxcrit) {
@@ -126,9 +129,12 @@ int FindMainWeapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
       }
     }
   }
-  if (critfound)
-    return callback(mech, maxloc, weaparray[maxcount], maxcount, maxcrit);
-  else
+  if (critfound) {
+    const unsigned char weapon =
+        *(const unsigned char *)checked_storage_at_const(
+            weaparray, MAX_WEAPS_SECTION, sizeof(*weaparray), (size_t)maxcount);
+    return callback(mech, maxloc, weapon, maxcount, maxcrit);
+  } else
     return 0;
 }
 
@@ -296,10 +302,15 @@ static struct mechpref_info {
 #define NUM_MECHPREFERENCES                                                    \
   (sizeof(mech_preferences) / sizeof(struct mechpref_info))
 
+static struct mechpref_info mech_preference(size_t index) {
+  return *(const struct mechpref_info *)checked_storage_at_const(
+      mech_preferences, NUM_MECHPREFERENCES, sizeof(*mech_preferences), index);
+}
+
 static char *display_mechpref(void *context, int i,
                               char buffer[static LBUF_SIZE]) {
   Mech *mech = context;
-  struct mechpref_info info = mech_preferences[i];
+  struct mechpref_info info = mech_preference((size_t)i);
   const char *state;
 
   if (((((mech)->rd.mech_prefs) & info.bit) &&
@@ -350,7 +361,7 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
     /* Looking through the different mech preferences to find the
      * one the user wants to change */
     for (i = 0; i < NUM_MECHPREFERENCES; i++) {
-      if (strcasecmp(args[0], mech_preferences[i].name) == 0)
+      if (strcasecmp(args[0], mech_preference(i).name) == 0)
         break;
     }
     if (i == NUM_MECHPREFERENCES) {
@@ -360,7 +371,7 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
     }
 
     /* Get the current setting */
-    info = mech_preferences[i];
+    info = mech_preference(i);
 
     /* Did they provide a ON or OFF flag */
     if (nargs == 2) {

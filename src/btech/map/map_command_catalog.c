@@ -1,3 +1,4 @@
+#include "command_catalogs.h"
 #include "command_invokers.h"
 
 const BtechCommandDefinition mapcommands[] = {
@@ -69,3 +70,7 @@ const BtechCommandDefinition mapcommands[] = {
     {0, "CLEARSTUFF", "@Removes all stuff from map",
      btech_command_invoke_mech_Rresetstuff},
     {0, NULL, NULL, NULL}};
+
+size_t map_command_count(void) {
+  return sizeof(mapcommands) / sizeof(*mapcommands) - 1;
+}

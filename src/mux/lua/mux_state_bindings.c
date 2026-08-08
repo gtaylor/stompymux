@@ -9,6 +9,7 @@
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
 #include "mux/objects/object_state.h"
+#include "mux/support/checked_storage.h"
 
 static int lua_mux_object_state(lua_State *state) {
   LuaMuxObject *object = lua_mux_check_object_handle(state, 1);
@@ -28,7 +29,8 @@ static int lua_mux_object_state(lua_State *state) {
       .generation = object->generation,
   };
   memcpy(handle->name_space, name_space, length);
-  handle->name_space[length] = '\0';
+  *(char *)checked_storage_at(handle->name_space, sizeof(handle->name_space),
+                              sizeof(char), length) = '\0';
   luaL_getmetatable(state, LUA_MUX_STATE_METATABLE);
   lua_setmetatable(state, -2);
   return 1;

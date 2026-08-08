@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <utils.h>
 
 #include "mux/commands/action_messages.h"
@@ -23,6 +24,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
@@ -211,8 +213,14 @@ void do_force_prefixed(CommandInvocation *invocation) {
   cp = parse_to(invocation->context->world->configuration, &command, ' ', 0);
   if (!command)
     return;
-  while (*command && isspace((unsigned char)*command))
-    command++;
+  const size_t command_length = strlen(command);
+  size_t offset = 0;
+
+  while (offset < command_length &&
+         (isspace)((unsigned char)*(const char *)checked_storage_at_const(
+             command, command_length + 1, sizeof(char), offset)))
+    offset++;
+  command = checked_mutable_string_suffix(command, offset);
   if (*command) {
     CommandInvocation force_invocation = *invocation;
 
@@ -415,15 +423,19 @@ void list_global_controls(EvaluationContext *evaluation,
                           ServerConfiguration *configuration, DbRef player) {
   char *buf = alloc_lbuf("list_global_controls");
   char *bp = buf;
+  constexpr size_t control_count =
+      sizeof(enable_names) / sizeof(enable_names[0]) - 1;
 
   safe_str("Global parameters:", buf, &bp);
-  for (const NameTable *control = enable_names; control->name; control++) {
+  for (size_t index = 0; index < control_count; index++) {
+    const NameTable *control = checked_storage_at_const(
+        enable_names, control_count, sizeof(*enable_names), index);
     const bool *is_enabled = global_control_value(configuration, control->flag);
 
     safe_chr(' ', buf, &bp);
     safe_str(control->name, buf, &bp);
     safe_str(*is_enabled ? "...enabled" : "...disabled", buf, &bp);
-    if ((control + 1)->name)
+    if (index + 1 < control_count)
       safe_chr(';', buf, &bp);
   }
   *bp = '\0';

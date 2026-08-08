@@ -49,6 +49,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
@@ -74,8 +75,10 @@
 #include "turret.h"
 
 static const char *command_help_message(int special_type, int command) {
-  const char *message = SpecialObjects[special_type].commands[command].helpmsg;
-  return message + (message[0] == '@');
+  const BtechCommandDefinition *definition =
+      btech_special_command_definition(special_type, (size_t)command);
+  const char *message = definition->helpmsg;
+  return checked_string_suffix(message, *message == '@' ? 1 : 0);
 }
 
 void center_string(char *destination, size_t destination_size,
@@ -90,25 +93,25 @@ void center_string(char *destination, size_t destination_size,
   if (padding > destination_size - 1)
     padding = destination_size - 1;
   memset(destination, ' ', padding);
-  snprintf(destination + padding, destination_size - padding, "%s", source);
+  snprintf(checked_storage_region(destination, destination_size, padding,
+                                  destination_size - padding),
+           destination_size - padding, "%s", source);
 }
 
 static void help_color_initialize(const char *from, char *to) {
-  size_t i;
   char buf[LBUF_SIZE];
   char *tp = to;
 
-  for (i = 0; from[i] && from[i] != ' '; i++)
-    ;
-  if (from[i]) {
+  const size_t first_word_length = strcspn(from, " ");
+  if (*checked_string_suffix(from, first_word_length) != '\0') {
 
-    /*      from[i]=0; */
-    strncpy(buf, from, i);
-    buf[i] = 0;
+    strncpy(buf, from, first_word_length);
+    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
+                                first_word_length) = '\0';
     safe_str("[fg=blue bold]", to, &tp);
     safe_str(buf, to, &tp);
     safe_str("[reset] ", to, &tp);
-    safe_str(&from[i + 1], to, &tp);
+    safe_str(checked_string_suffix(from, first_word_length + 1), to, &tp);
 
     /*      from[i]=' '; */
   } else {
@@ -131,7 +134,6 @@ static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
                                   int initial) {
   CoolMenu *c = *d;
   size_t msg_len;
-  const char *e;
   char buf[LBUF_SIZE];
   size_t text_length;
 
@@ -156,13 +158,13 @@ static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
    */
   msg_len = strlen(msg);
 
-  if (msg_len <= (size_t)len) {
-    /* Line fits, don't split anything.  */
-    e = msg + msg_len;
-  } else {
-    /* Split at last space on line.  */
-    for (e = msg + len - 1; *e != ' '; e--)
-      ;
+  size_t break_offset = msg_len;
+  if (msg_len > (size_t)len) {
+    break_offset = (size_t)len - 1;
+    while (break_offset > 0 && *checked_string_suffix(msg, break_offset) != ' ')
+      --break_offset;
+    if (break_offset == 0)
+      break_offset = (size_t)len;
   }
 
   if (initial > 0) {
@@ -171,25 +173,29 @@ static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
   } else if (initial < 0) {
     /* Write indented line.  */
     const size_t indentation = (size_t)(-initial);
-    text_length = (size_t)(e - msg);
+    text_length = break_offset;
     memset(buf, ' ', indentation);
-    memcpy(buf + indentation, msg, text_length);
-    buf[text_length + indentation] = '\0';
+    memcpy(checked_storage_region(buf, sizeof(buf), indentation, text_length),
+           msg, text_length);
+    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
+                                text_length + indentation) = '\0';
   } else {
     /* Write unindented line.  */
-    text_length = (size_t)(e - msg);
+    text_length = break_offset;
     memcpy(buf, msg, text_length);
-    buf[text_length] = '\0';
+    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char), text_length) =
+        '\0';
   }
 
   cool_menu_add_with_flags(&c, buf, MLen);
 
   /* Move pointer to start of next line.  */
-  if (*e == ' ')
-    e++;
+  if (*checked_string_suffix(msg, break_offset) == ' ')
+    ++break_offset;
 
   *d = c;
-  return *e ? e : NULL;
+  const char *remainder = checked_string_suffix(msg, break_offset);
+  return *remainder ? remainder : NULL;
 }
 
 static int help_text_length(const char *text) {
@@ -237,68 +243,82 @@ static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
 #endif
 }
 
+typedef struct HelpSection {
+  int start;
+  int length;
+} HelpSection;
+
+static HelpSection *help_section(HelpSection *sections, int index) {
+  return checked_storage_at(sections, 100, sizeof(*sections), (size_t)index);
+}
+
 void btech_special_object_help(BtechContext *context, DbRef player,
                                const char *type, int id, DbRef loc,
                                PowerId powerneeded, DbRef objid, char *arg) {
   int i, j;
   Mech *mech = NULL;
-  int pos[100][2];
+  HelpSection sections[100];
   int count = 0, csho = 0;
   CoolMenu *c = NULL;
   char buf[LBUF_SIZE];
-  char *d;
   int dc;
 
   if (id == GTYPE_MECH)
     mech = btech_context_get_mech(context, loc);
-  bzero(pos, sizeof(pos));
-  for (i = 0; SpecialObjects[id].commands[i].name; i++) {
-    if (!btech_command_definition_has_handler(
-            &SpecialObjects[id].commands[i]) &&
-        (SpecialObjects[id].commands[i].helpmsg[0] != '@' ||
+  bzero(sections, sizeof(sections));
+  const int command_count = (int)btech_special_command_count(id);
+  for (i = 0; i < command_count; i++) {
+    const BtechCommandDefinition *command =
+        btech_special_command_definition(id, (size_t)i);
+    if (!btech_command_definition_has_handler(command) &&
+        (*command->helpmsg != '@' ||
          btech_special_command_access(context, player, powerneeded)))
-      if (id != GTYPE_MECH || btech_command_allowed_for_mech(
-                                  mech, SpecialObjects[id].commands[i].flag)) {
+      if (id != GTYPE_MECH ||
+          btech_command_allowed_for_mech(mech, command->flag)) {
         if (count)
-          pos[count - 1][1] = i - pos[count - 1][0];
-        pos[count][0] = i;
+          help_section(sections, count - 1)->length =
+              i - help_section(sections, count - 1)->start;
+        help_section(sections, count)->start = i;
         count++;
       }
   }
   if (count)
-    pos[count - 1][1] = i - pos[count - 1][0];
+    help_section(sections, count - 1)->length =
+        i - help_section(sections, count - 1)->start;
   else {
-    pos[0][0] = 0;
-    pos[0][1] = i;
+    help_section(sections, 0)->start = 0;
+    help_section(sections, 0)->length = i;
     count = 1;
   }
   cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
   if (!arg || !*arg) {
     for (i = 0; i < count; i++) {
       if (count > 1) {
-        center_string(buf, sizeof(buf), command_help_message(id, pos[i][0]),
-                      70);
-        d = buf;
+        center_string(
+            buf, sizeof(buf),
+            command_help_message(id, help_section(sections, i)->start), 70);
         cool_menu_add_with_flags(
-            &c, tprintf("%s%s%s", "[fg=green]", d, "[reset]"), CM_ONE);
+            &c, tprintf("%s%s%s", "[fg=green]", buf, "[reset]"), CM_ONE);
       } else
         cool_menu_add_with_flags(&c, tprintf("%s command listing: ", type),
                                  CM_ONE | CM_CENTER);
-      for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1]; j++)
-        if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
+      const HelpSection *section = help_section(sections, i);
+      for (j = section->start + (count == 1 ? 0 : 1);
+           j < section->start + section->length; j++) {
+        const BtechCommandDefinition *command =
+            btech_special_command_definition(id, (size_t)j);
+        if (*command->helpmsg != '@' ||
             btech_special_command_access(context, player, powerneeded))
           if (id != GTYPE_MECH ||
-              btech_command_allowed_for_mech(
-                  mech, SpecialObjects[id].commands[j].flag)) {
-            strcpy(buf, SpecialObjects[id].commands[j].name);
-            d = buf;
-            while (*d && *d != ' ')
-              d++;
-            if (*d == ' ')
-              *d = 0;
+              btech_command_allowed_for_mech(mech, command->flag)) {
+            strcpy(buf, command->name);
+            const size_t name_length = strcspn(buf, " ");
+            *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
+                                        name_length) = '\0';
             cool_menu_add_with_flags(&c, buf, CM_FOUR);
             csho++;
           }
+      }
     }
     if (!csho)
       cool_menu_add_text(
@@ -328,7 +348,8 @@ void btech_special_object_help(BtechContext *context, DbRef player,
         dc = -2;
       } else {
         for (i = 0; i < count; i++)
-          if (!strcasecmp(arg, command_help_message(id, pos[i][0])))
+          if (!strcasecmp(arg, command_help_message(
+                                   id, help_section(sections, i)->start)))
             break;
         if (i == count) {
           cool_menu_add_text(&c, "Subcategory not found.");
@@ -341,20 +362,24 @@ void btech_special_object_help(BtechContext *context, DbRef player,
       for (i = 0; i < count; i++)
         if (dc == -1 || i == dc) {
           if (count > 1) {
-            center_string(buf, sizeof(buf), command_help_message(id, pos[i][0]),
-                          70);
+            center_string(
+                buf, sizeof(buf),
+                command_help_message(id, help_section(sections, i)->start), 70);
             cool_menu_add_text(&c,
                                tprintf("%s%s%s", "[fg=green]", buf, "[reset]"));
           }
-          for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1];
-               j++)
-            if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
+          const HelpSection *section = help_section(sections, i);
+          for (j = section->start + (count == 1 ? 0 : 1);
+               j < section->start + section->length; j++) {
+            const BtechCommandDefinition *command =
+                btech_special_command_definition(id, (size_t)j);
+            if (*command->helpmsg != '@' ||
                 btech_special_command_access(context, player, powerneeded))
               if (id != GTYPE_MECH ||
-                  btech_command_allowed_for_mech(
-                      mech, SpecialObjects[id].commands[j].flag))
-                cut_apart_helpmsgs(&c, SpecialObjects[id].commands[j].name,
+                  btech_command_allowed_for_mech(mech, command->flag))
+                cut_apart_helpmsgs(&c, command->name,
                                    command_help_message(id, j), 37, 1);
+          }
         }
     }
   }

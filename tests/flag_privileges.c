@@ -3,19 +3,19 @@
 #include "mux/objects/flags.h"
 
 int main(void) {
-  GameObject objects[5] = {0};
+  GameObject objects[6] = {0};
   GameDatabase database = {
-      .objects = objects,
+      .object_storage = objects,
       .top = 5,
       .size = 5,
   };
 
-  objects[GOD].type = OBJECT_TYPE_PLAYER;
-  objects[GOD].has_wizard_flag = true;
-  objects[2].type = OBJECT_TYPE_PLAYER;
-  objects[2].has_wizard_flag = true;
-  objects[3].type = OBJECT_TYPE_PLAYER;
-  objects[4].type = OBJECT_TYPE_THING;
+  game_database_object(&database, GOD)->type = OBJECT_TYPE_PLAYER;
+  game_database_object(&database, GOD)->has_wizard_flag = true;
+  game_database_object(&database, 2)->type = OBJECT_TYPE_PLAYER;
+  game_database_object(&database, 2)->has_wizard_flag = true;
+  game_database_object(&database, 3)->type = OBJECT_TYPE_PLAYER;
+  game_database_object(&database, 4)->type = OBJECT_TYPE_THING;
 
   if (!is_controls(&database, GOD, GOD) || !is_controls(&database, GOD, 2) ||
       !is_controls(&database, GOD, 3) || !is_controls(&database, GOD, 4))

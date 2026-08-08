@@ -12,6 +12,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 
 const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT] = {
     [LUA_EVENT_NONE] = nullptr,
@@ -105,10 +106,16 @@ const char *const LUA_MESSAGE_OPERATION_NAMES[LUA_MESSAGE_OPERATION_COUNT] = {
     [LUA_MESSAGE_OPERATION_TELEPORT] = "teleport",
 };
 
+static const char *lua_name_at(const char *const *names, size_t count,
+                               size_t index) {
+  return *(const char *const *)checked_storage_at_const(names, count,
+                                                        sizeof(*names), index);
+}
+
 const char *lua_event_name(LuaEventType event) {
   if ((unsigned int)event >= LUA_EVENT_COUNT)
     return nullptr;
-  return LUA_EVENT_NAMES[event];
+  return lua_name_at(LUA_EVENT_NAMES, LUA_EVENT_COUNT, (size_t)event);
 }
 
 bool lua_event_name_is_known(const char *name) {
@@ -117,7 +124,8 @@ bool lua_event_name_is_known(const char *name) {
   if (!name)
     return false;
   for (event = LUA_EVENT_SUCCESS; event < LUA_EVENT_COUNT; event++) {
-    if (!strcmp(name, LUA_EVENT_NAMES[event]))
+    if (!strcmp(name,
+                lua_name_at(LUA_EVENT_NAMES, LUA_EVENT_COUNT, (size_t)event)))
       return true;
   }
   return false;
@@ -126,13 +134,14 @@ bool lua_event_name_is_known(const char *name) {
 const char *lua_lock_name(LuaLockType lock) {
   if ((unsigned int)lock >= LUA_LOCK_COUNT)
     return nullptr;
-  return LUA_LOCK_NAMES[lock];
+  return lua_name_at(LUA_LOCK_NAMES, LUA_LOCK_COUNT, (size_t)lock);
 }
 
 const char *lua_lock_operation_name(LuaLockOperation operation) {
   if ((unsigned int)operation >= LUA_LOCK_OPERATION_COUNT)
     return nullptr;
-  return LUA_LOCK_OPERATION_NAMES[operation];
+  return lua_name_at(LUA_LOCK_OPERATION_NAMES, LUA_LOCK_OPERATION_COUNT,
+                     (size_t)operation);
 }
 
 bool lua_lock_name_is_known(const char *name) {
@@ -141,7 +150,8 @@ bool lua_lock_name_is_known(const char *name) {
   if (!name)
     return false;
   for (lock = LUA_LOCK_DEFAULT; lock < LUA_LOCK_COUNT; lock++) {
-    if (!strcmp(name, LUA_LOCK_NAMES[lock]))
+    if (!strcmp(name,
+                lua_name_at(LUA_LOCK_NAMES, LUA_LOCK_COUNT, (size_t)lock)))
       return true;
   }
   return false;
@@ -150,13 +160,14 @@ bool lua_lock_name_is_known(const char *name) {
 const char *lua_message_name(LuaMessageType message) {
   if ((unsigned int)message >= LUA_MESSAGE_COUNT)
     return nullptr;
-  return LUA_MESSAGE_NAMES[message];
+  return lua_name_at(LUA_MESSAGE_NAMES, LUA_MESSAGE_COUNT, (size_t)message);
 }
 
 const char *lua_message_operation_name(LuaMessageOperation operation) {
   if ((unsigned int)operation >= LUA_MESSAGE_OPERATION_COUNT)
     return nullptr;
-  return LUA_MESSAGE_OPERATION_NAMES[operation];
+  return lua_name_at(LUA_MESSAGE_OPERATION_NAMES, LUA_MESSAGE_OPERATION_COUNT,
+                     (size_t)operation);
 }
 
 bool lua_message_name_is_known(const char *name) {
@@ -165,7 +176,8 @@ bool lua_message_name_is_known(const char *name) {
   if (!name)
     return false;
   for (message = LUA_MESSAGE_SUCCESS; message < LUA_MESSAGE_COUNT; message++) {
-    if (!strcmp(name, LUA_MESSAGE_NAMES[message]))
+    if (!strcmp(name, lua_name_at(LUA_MESSAGE_NAMES, LUA_MESSAGE_COUNT,
+                                  (size_t)message)))
       return true;
   }
   return false;
@@ -204,8 +216,11 @@ void lua_push_context(GameDatabase *database, Descriptor *descriptor,
   }
   lua_newtable(state);
   for (index = 0; index < nargs; index++) {
-    if (args[index]) {
-      lua_pushstring(state, args[index]);
+    char *argument = *(char *const *)checked_storage_at_const(
+        args, (size_t)nargs, sizeof(*args), (size_t)index);
+
+    if (argument) {
+      lua_pushstring(state, argument);
       lua_rawseti(state, -2, index + 1);
     }
   }
@@ -275,7 +290,8 @@ void lua_appearance_evaluate(LuaRuntime *runtime,
                       "appearance string contains an embedded NUL");
       } else {
         memcpy(result->rendered, rendered, length);
-        result->rendered[length] = '\0';
+        *(char *)checked_storage_at(result->rendered, sizeof(result->rendered),
+                                    sizeof(char), length) = '\0';
         result->defined = true;
       }
     }
@@ -335,7 +351,8 @@ void lua_mech_status_evaluate(LuaRuntime *runtime,
                       "mech_status contains an embedded NUL");
       } else {
         memcpy(result->rendered, rendered, length);
-        result->rendered[length] = '\0';
+        *(char *)checked_storage_at(result->rendered, sizeof(result->rendered),
+                                    sizeof(char), length) = '\0';
         result->defined = true;
       }
     }
@@ -499,7 +516,8 @@ static bool lua_result_copy_message(lua_State *state, int table,
     return false;
   }
   memcpy(destination, message, length);
-  destination[length] = '\0';
+  *(char *)checked_storage_at(destination, LBUF_SIZE, sizeof(char), length) =
+      '\0';
   *present = true;
   lua_pop(state, 1);
   return true;

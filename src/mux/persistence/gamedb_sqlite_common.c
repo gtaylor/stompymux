@@ -14,6 +14,7 @@
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/utf8.h"
 
 #ifndef O_DIRECTORY
@@ -27,6 +28,11 @@ void gamedb_log_failure(ServerLog *log, const char *stage, const char *path,
   detail = sqlite ? sqlite3_errmsg(sqlite) : strerror(errno);
   log_error(log, LOG_ALWAYS, "GDB", "FAIL", "SQLite %s for %s: %s", stage, path,
             detail);
+}
+
+const NativeColumn *gamedb_native_column_at(size_t index) {
+  return checked_storage_at_const(native_columns, native_column_count,
+                                  sizeof(*native_columns), index);
 }
 
 /* Report a subsystem persistence failure with its registered extension name. */
@@ -47,7 +53,8 @@ int gamedb_load_extensions(PersistenceContext *context, sqlite3 *sqlite,
   size_t index;
 
   for (index = 0; index < context->extension_count; index++) {
-    PersistenceSqliteExtension *extension = &context->extensions[index];
+    PersistenceSqliteExtension *extension =
+        persistence_extension_at(context, index);
     if (extension->load == nullptr)
       continue;
     if (extension->load(sqlite, context, extension->context) < 0) {
@@ -64,7 +71,8 @@ int gamedb_store_extensions(PersistenceContext *context, sqlite3 *sqlite) {
   size_t index;
 
   for (index = 0; index < context->extension_count; index++) {
-    PersistenceSqliteExtension *extension = &context->extensions[index];
+    PersistenceSqliteExtension *extension =
+        persistence_extension_at(context, index);
     if (extension->store(sqlite, context, extension->context) < 0) {
       gamedb_log_extension_failure(context->log, "writing", extension->name,
                                    context->configuration->database.gamedb,
@@ -153,7 +161,8 @@ int gamedb_fsync_directory(const char *path) {
   if (!slash)
     StringCopy(directory, ".");
   else if (slash == directory)
-    slash[1] = '\0';
+    *(char *)checked_storage_at(directory, sizeof(directory), sizeof(char), 1) =
+        '\0';
   else
     *slash = '\0';
 

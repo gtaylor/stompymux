@@ -87,14 +87,15 @@ static inline void cool_menu_entry_very_simple(CoolMenu **menu,
 
 void KillCoolMenu(CoolMenu *c);
 void ShowCoolMenu(EvaluationContext *evaluation, DbRef player, CoolMenu *c);
-char **MakeCoolMenuText(CoolMenu *c);
+char **MakeCoolMenuText(CoolMenu *c, size_t *line_count);
 int CoolMenu_FPWBit(int number, int maxlen);
 
 /* Automated 'nice' looking menus: */
-CoolMenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
-                      int max);
+CoolMenu *SelCol_Menu(int columns, char *heading, char *const *strings,
+                      size_t string_count, int type, int max);
 CoolMenu *SelCol_ConstMenu(int columns, const char *heading,
-                           const char *const strings[], int type, int max);
+                           const char *const strings[], size_t string_count,
+                           int type, int max);
 
 /* last = how many entries we have */
 CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
@@ -107,21 +108,23 @@ CoolMenu *SelCol_FunStringMenuContextK(int columns, const char *heading,
 CoolMenu *SelCol_FunStringMenu(int columns, char *heading, char *(*fun)(int));
 
 static inline CoolMenu *auto_column_menu(char *heading, char **strings,
-                                         int type) {
-  return SelCol_Menu(-1, heading, strings, type, 0);
+                                         size_t string_count, int type) {
+  return SelCol_Menu(-1, heading, strings, string_count, type, 0);
 }
 
-static inline CoolMenu *auto_column_string_menu(char *heading, char **strings) {
-  return auto_column_menu(heading, strings, 0);
+static inline CoolMenu *auto_column_string_menu(char *heading, char **strings,
+                                                size_t string_count) {
+  return auto_column_menu(heading, strings, string_count, 0);
 }
 
 static inline CoolMenu *
-auto_column_const_string_menu(const char *heading,
-                              const char *const strings[]) {
-  return SelCol_ConstMenu(-1, heading, strings, 0, 0);
+auto_column_const_string_menu(const char *heading, const char *const strings[],
+                              size_t string_count) {
+  return SelCol_ConstMenu(-1, heading, strings, string_count, 0, 0);
 }
 
 static inline CoolMenu *selected_column_string_menu(int columns, char *heading,
-                                                    char **strings) {
-  return SelCol_Menu(columns, heading, strings, 0, 0);
+                                                    char **strings,
+                                                    size_t string_count) {
+  return SelCol_Menu(columns, heading, strings, string_count, 0, 0);
 }

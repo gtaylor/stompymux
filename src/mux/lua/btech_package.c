@@ -10,6 +10,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 
 typedef void BtechLuaHandler(char *, char **, DbRef, DbRef, char **, int,
                              char **, int, EvaluationContext *);
@@ -190,23 +191,41 @@ static BtechLuaEntry btech_lua_entries[] = {
 };
 
 static void btech_lua_push_list(lua_State *state, char *value) {
-  char *cursor = value;
-  char *token;
+  const size_t length = strlen(value);
+  size_t offset = 0;
   int index = 1;
 
   lua_newtable(state);
-  while (cursor && *cursor) {
-    while (*cursor == ' ' || *cursor == '|')
-      cursor++;
-    if (!*cursor)
+  while (offset < length) {
+    while (offset < length) {
+      const char character = *(const char *)checked_storage_at_const(
+          value, length + 1, sizeof(char), offset);
+
+      if (character != ' ' && character != '|')
+        break;
+      offset++;
+    }
+    if (offset == length)
       break;
-    token = cursor;
-    while (*cursor && *cursor != ' ' && *cursor != '|')
-      cursor++;
-    if (*cursor)
-      *cursor++ = '\0';
+    const size_t token_offset = offset;
+
+    while (offset < length) {
+      const char character = *(const char *)checked_storage_at_const(
+          value, length + 1, sizeof(char), offset);
+
+      if (character == ' ' || character == '|')
+        break;
+      offset++;
+    }
+    char *token =
+        checked_storage_at(value, length + 1, sizeof(char), token_offset);
+
+    if (offset < length)
+      *(char *)checked_storage_at(value, length + 1, sizeof(char), offset++) =
+          '\0';
     char *end = nullptr;
-    long number = strtol(token[0] == '#' ? token + 1 : token, &end, 10);
+    long number = strtol(
+        *token == '#' ? checked_string_suffix(token, 1) : token, &end, 10);
     if (end && *end == '\0')
       lua_pushinteger(state, number);
     else
@@ -238,14 +257,18 @@ static int btech_lua_invoke(lua_State *state) {
       value = lua_toboolean(state, index + 1) ? "1" : "0";
     else
       value = luaL_checkstring(state, index + 1);
-    arguments[index] = alloc_lbuf("btech_lua_argument");
-    StringCopy(arguments[index], value);
+    char **slot = checked_storage_at(arguments, MAX_ARG, sizeof(*arguments),
+                                     (size_t)index);
+
+    *slot = alloc_lbuf("btech_lua_argument");
+    StringCopy(*slot, value);
   }
   entry->handler(buffer, &cursor, GOD, GOD, arguments, argument_count, nullptr,
                  0, &package->services->background_command->evaluation);
   *cursor = '\0';
   for (int index = 0; index < argument_count; index++)
-    free_lbuf(arguments[index]);
+    free_lbuf(*(char *const *)checked_storage_at_const(
+        arguments, MAX_ARG, sizeof(*arguments), (size_t)index));
   if (!strncmp(buffer, "#-", 2) || !strcmp(buffer, "?")) {
     char error[LBUF_SIZE];
     snprintf(error, sizeof(error), "%s", buffer);
@@ -275,7 +298,13 @@ static int btech_lua_invoke(lua_State *state) {
 
 void lua_btech_package_install(lua_State *state, LuaBtechPackage *package) {
   lua_newtable(state);
-  for (BtechLuaEntry *entry = btech_lua_entries; entry->name; entry++) {
+  constexpr size_t entry_count =
+      sizeof(btech_lua_entries) / sizeof(btech_lua_entries[0]) - 1;
+
+  for (size_t index = 0; index < entry_count; index++) {
+    BtechLuaEntry *entry = checked_storage_at(
+        btech_lua_entries, entry_count, sizeof(*btech_lua_entries), index);
+
     lua_pushlightuserdata(state, package);
     lua_pushlightuserdata(state, entry);
     lua_pushcclosure(state, btech_lua_invoke, 2);

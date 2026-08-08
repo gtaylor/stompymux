@@ -712,3 +712,12 @@ GMV xcode_data[] = {
      .name = nullptr,
      .source_kind = GMV_SOURCE_SENTINEL,
      .type = TYPE_STRING}};
+
+size_t xcode_descriptor_count(void) {
+  return sizeof(xcode_data) / sizeof(*xcode_data) - 1;
+}
+
+const GMV *xcode_descriptor_at(size_t index) {
+  return checked_storage_at_const(xcode_data, xcode_descriptor_count(),
+                                  sizeof(*xcode_data), index);
+}

@@ -163,7 +163,6 @@ void do_open(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   int key = invocation->key;
   char *direction = invocation->first;
-  char **links = invocation->vector;
   int nlinks = invocation->vector_count;
   DbRef loc, destnum;
   char *dest;
@@ -173,7 +172,7 @@ void do_open(CommandInvocation *invocation) {
    */
 
   if (nlinks >= 1)
-    dest = links[0];
+    dest = command_invocation_vector_at(invocation, 0);
   else
     dest = nullptr;
 
@@ -192,7 +191,9 @@ void do_open(CommandInvocation *invocation) {
     destnum = parse_linkable_room(evaluation, &invocation->context->match,
                                   player, dest);
     if (destnum != NOTHING) {
-      open_exit(evaluation, player, destnum, links[1], tprintf("%ld", loc));
+      open_exit(evaluation, player, destnum,
+                command_invocation_vector_at(invocation, 1),
+                tprintf("%ld", loc));
     }
   }
 }
@@ -371,7 +372,6 @@ void do_dig(CommandInvocation *invocation) {
   DbRef cause = invocation->cause;
   int key = invocation->key;
   char *name = invocation->first;
-  char **args = invocation->vector;
   int nargs = invocation->vector_count;
   DbRef room;
   char buff[SBUF_SIZE];
@@ -396,16 +396,21 @@ void do_dig(CommandInvocation *invocation) {
   notify_printf(evaluation, player, "%s created with room number %ld.",
                 game_object_name(evaluation->world->database, room), room);
 
-  if ((nargs >= 1) && args[0] && *args[0]) {
+  char *forward_exit =
+      nargs >= 1 ? command_invocation_vector_at(invocation, 0) : nullptr;
+  char *back_exit =
+      nargs >= 2 ? command_invocation_vector_at(invocation, 1) : nullptr;
+
+  if (forward_exit != nullptr && *forward_exit) {
     snprintf(buff, SBUF_SIZE, "%ld", room);
     open_exit(evaluation, player,
               game_object_location(evaluation->world->database, player),
-              args[0], buff);
+              forward_exit, buff);
   }
-  if ((nargs >= 2) && args[1] && *args[1]) {
+  if (back_exit != nullptr && *back_exit) {
     snprintf(buff, SBUF_SIZE, "%ld",
              game_object_location(evaluation->world->database, player));
-    open_exit(evaluation, player, room, args[1], buff);
+    open_exit(evaluation, player, room, back_exit, buff);
   }
   if (key == DIG_TELEPORT)
     (void)move_via_teleport(evaluation, player, room, cause, 0);

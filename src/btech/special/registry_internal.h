@@ -81,6 +81,10 @@ enum { BTECH_SPECIAL_OBJECT_COUNT = 6 };
 
 extern const BtechSpecialObjectDefinition
     SpecialObjects[BTECH_SPECIAL_OBJECT_COUNT];
+const BtechSpecialObjectDefinition *btech_special_object_definition(int type);
+size_t btech_special_command_count(int type);
+const BtechCommandDefinition *btech_special_command_definition(int type,
+                                                               size_t index);
 
 void btech_registry_tree_initialize(BtechContext *context);
 int btech_command_allowed_for_mech(Mech *mech, int command_flag);

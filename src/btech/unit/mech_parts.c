@@ -14,6 +14,7 @@
 #include "mech_tech_commands_api.h"
 #include "mech_utils_api.h" // IWYU pragma: keep
 #include "mux/objects/db.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
@@ -76,7 +77,8 @@ bool mech_parts_consume(Mech *mech, DbRef player,
                         const MechPartRequirement requirements[],
                         size_t count) {
   for (size_t index = 0; index < count; ++index) {
-    const MechPartRequirement *requirement = &requirements[index];
+    const MechPartRequirement *requirement = checked_storage_at_const(
+        requirements, count, sizeof(*requirements), index);
     if (!mech_parts_available(mech, requirement->part, requirement->brand,
                               requirement->count)) {
       mecha_notify(
@@ -91,7 +93,8 @@ bool mech_parts_consume(Mech *mech, DbRef player,
     }
   }
   for (size_t index = 0; index < count; ++index) {
-    const MechPartRequirement *requirement = &requirements[index];
+    const MechPartRequirement *requirement = checked_storage_at_const(
+        requirements, count, sizeof(*requirements), index);
     mech_parts_take(mech, requirement->part, requirement->brand,
                     requirement->count);
   }

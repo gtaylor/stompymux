@@ -27,6 +27,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/validation.h"
 #include "mux/world/move.h"
 #include "mux/world/player.h"
@@ -67,6 +68,12 @@ LoginThrottle *login_throttle_create(void) {
   return calloc(1, sizeof(LoginThrottle));
 }
 
+static LoginThrottleEntry *login_throttle_entry_at(LoginThrottle *throttle,
+                                                   size_t index) {
+  return checked_storage_at(throttle->entries, LOGIN_THROTTLE_ENTRIES,
+                            sizeof(*throttle->entries), index);
+}
+
 void login_throttle_destroy(LoginThrottle *throttle) { free(throttle); }
 
 static LoginThrottleEntry *
@@ -76,12 +83,15 @@ login_throttle_entry(LoginThrottle *throttle,
   LoginThrottleEntry *oldest;
   int index;
 
-  oldest = &throttle->entries[0];
+  oldest = login_throttle_entry_at(throttle, 0);
   for (index = 0; index < LOGIN_THROTTLE_ENTRIES; index++) {
-    if (!strcmp(throttle->entries[index].address, address))
-      return &throttle->entries[index];
-    if (throttle->entries[index].last_refill < oldest->last_refill)
-      oldest = &throttle->entries[index];
+    LoginThrottleEntry *entry =
+        login_throttle_entry_at(throttle, (size_t)index);
+
+    if (!strcmp(entry->address, address))
+      return entry;
+    if (entry->last_refill < oldest->last_refill)
+      oldest = entry;
   }
   snprintf(oldest->address, sizeof(oldest->address), "%s", address);
   oldest->last_refill = now;
@@ -319,10 +329,18 @@ static void connect_flow_data_free(void *flow_data) {
 }
 
 static int connect_flow_blank(const char *input) {
-  while (*input && isascii((unsigned char)*input) &&
-         isspace((unsigned char)*input))
-    input++;
-  return *input == '\0';
+  size_t length = strlen(input);
+  size_t offset = 0;
+
+  while (offset < length) {
+    unsigned char character = *(const unsigned char *)checked_storage_at_const(
+        input, length, sizeof(char), offset);
+
+    if (!isascii(character) || !(isspace)(character))
+      break;
+    offset++;
+  }
+  return offset == length;
 }
 
 static FlowOutcome connect_flow_step_username(Descriptor *d, void *flow_data,

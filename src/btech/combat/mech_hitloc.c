@@ -15,6 +15,7 @@
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
+#include "mux/support/checked_storage.h"
 
 int mech_punch_hit_location(Mech *target, int hitGroup) {
   BtechContext *context = mech_context(target);
@@ -296,11 +297,15 @@ int mech_battle_suit_hit_location(Mech *mech) {
   BtechContext *context = mech_context(mech);
 
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++)
-    if (mech_section_internal(mech, i))
-      table[last++] = i;
+    if (mech_section_internal(mech, i)) {
+      *(int *)checked_storage_at(table, NUM_BSUIT_MEMBERS, sizeof(*table),
+                                 (size_t)last++) = i;
+    }
   if (!last)
     return -1;
-  return table[btech_random_range_int(context, 0, last - 1)];
+  return *(const int *)checked_storage_at_const(
+      table, NUM_BSUIT_MEMBERS, sizeof(*table),
+      (size_t)btech_random_range_int(context, 0, last - 1));
 }
 
 int mech_hit_location_transfer(Mech *mech, int hitloc) {

@@ -48,10 +48,22 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "random.h"
 #include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
+
+static int critical_at(int *criticals, size_t index) {
+  return *(const int *)checked_storage_at_const(criticals, MAX_WEAPS_SECTION,
+                                                sizeof(*criticals), index);
+}
+
+static unsigned char weapon_at(unsigned char *weapons, size_t index) {
+  return *(const unsigned char *)checked_storage_at_const(
+      weapons, MAX_WEAPS_SECTION, sizeof(*weapons), index);
+}
 
 void mech_main_weapon_destroy(Mech *mech) {
   unsigned char weaparray[MAX_WEAPS_SECTION];
@@ -74,14 +86,16 @@ void mech_main_weapon_destroy(Mech *mech) {
     count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
       for (ii = 0; ii < count; ii++) {
-        if (!mech_critical_is_broken(mech, loop, critical[ii])) {
+        const int current_critical = critical_at(critical, (size_t)ii);
+        const unsigned char current_weapon = weapon_at(weaparray, (size_t)ii);
+        if (!mech_critical_is_broken(mech, loop, current_critical)) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
           tempcrit = (int)btech_context_random_i31(context);
           if (tempcrit > maxcrit) {
             critfound = 1;
             maxcrit = tempcrit;
             maxloc = loop;
-            maxtype = weaparray[ii];
+            maxtype = current_weapon;
           }
         }
       }
@@ -93,7 +107,7 @@ void mech_main_weapon_destroy(Mech *mech) {
     mech_weapon_destroy(mech, maxloc, weapon_equipment_index(maxtype), 1,
                         firstCrit, GetWeaponCrits(mech, maxtype));
     mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
-                &MechWeapons[maxtype].name[3]);
+                checked_string_suffix(weapon_catalogue_name(maxtype), 3));
   }
 }
 

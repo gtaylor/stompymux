@@ -3,6 +3,7 @@
 
 #include "btech/context.h"
 #include "btech_channel.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_internal.h"
 #include "mech_notify_api.h"
@@ -62,6 +63,23 @@ char *tprintf(const char *format, ...) {
 int mech_team(const Mech *mech) {
   (void)mech;
   return 0;
+}
+
+char ascii_to_upper(char character) {
+  if (character >= 'a' && character <= 'z')
+    return (char)(character - ('a' - 'A'));
+  return character;
+}
+
+int battle_map_unit_count(const BattleMap *map) {
+  (void)map;
+  return 0;
+}
+
+DbRef battle_map_unit_dbref(const BattleMap *map, int index) {
+  (void)map;
+  (void)index;
+  return NOTHING;
 }
 
 static bool frequency_is(Mech *mech, const char *input, int expected,

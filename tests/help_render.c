@@ -7,6 +7,7 @@
 #include "mux/help/help_render.h"
 #include "mux/help/help_types.h"
 #include "mux/server/game.h"
+#include "mux/support/checked_storage.h"
 
 static const HelpArticle *test_articles;
 static size_t test_article_count;
@@ -31,7 +32,8 @@ size_t help_index_article_count(const HelpIndex *index) {
 const HelpArticle *help_index_article_at(const HelpIndex *index,
                                          size_t article_index) {
   (void)index;
-  return &test_articles[article_index];
+  return checked_storage_at_const(test_articles, test_article_count,
+                                  sizeof(*test_articles), article_index);
 }
 
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,

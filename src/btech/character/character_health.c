@@ -3,15 +3,31 @@
 #include "mech_equipment_api.h"
 #include "mech_notify_api.h"
 #include "mech_runtime_api.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
+
+static int player_character_section(size_t index) {
+  switch (index) {
+  case 0:
+    return HEAD;
+  case 1:
+    return CTORSO;
+  case 2:
+    return RARM;
+  case 3:
+    return RLEG;
+  default:
+    abort();
+  }
+}
 
 void character_stats_clear(PSTATS *s) {
-  int i;
-
-  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
-    s->values[i] = (char_values[i].type == CHAR_ATTRIBUTE ? 1 : 0);
-    s->xp[i] = 0;
-    s->last_use[i] = 0;
+  for (int i = 0; i < NUM_CHARVALUES; i++) {
+    character_stats_value_set(
+        s, i, character_value_definition(i)->type == CHAR_ATTRIBUTE ? 1 : 0);
+    character_stats_xp_set(s, i, 0);
+    character_stats_last_use_set(s, i, 0);
   }
   char_setstatvalue(s, "lives", 1);
 }
@@ -47,7 +63,7 @@ void do_charclear(CommandInvocation *invocation) {
 }
 
 DbRef char_lookupplayer(BtechContext *context, DbRef player, DbRef cause,
-                        int key, char *arg1) {
+                        int key, const char *arg1) {
   WorldContext world = {
       .database = context->database,
       .configuration = context->configuration,
@@ -90,7 +106,6 @@ void initialize_pc(DbRef player, Mech *mech) {
   int ammo1;
   int ammo2;
   int i, id, brand;
-  int pc_loc_to_mech_loc[] = {HEAD, CTORSO, RARM, RLEG};
 
   if (!mech_player_character_initialization_begin(mech))
     return;
@@ -132,7 +147,8 @@ void initialize_pc(DbRef player, Mech *mech) {
       }
       if (equipment_is_weapon(id)) {
         mech_critical_configure(mech, LARM, 0, id, 0, 0, 0);
-        if ((i = MechWeapons[weapon_from_equipment_index(id)].ammoperton)) {
+        if ((i = weapon_catalogue_ammunition_per_ton(
+                 weapon_from_equipment_index(id)))) {
           mech_critical_configure(
               mech, LARM, 1,
               ammunition_equipment_index(weapon_from_equipment_index(id)),
@@ -153,7 +169,8 @@ void initialize_pc(DbRef player, Mech *mech) {
       }
       if (equipment_is_weapon(id)) {
         mech_critical_configure(mech, RARM, 0, id, 0, 0, 0);
-        if ((i = MechWeapons[weapon_from_equipment_index(id)].ammoperton)) {
+        if ((i = weapon_catalogue_ammunition_per_ton(
+                 weapon_from_equipment_index(id)))) {
           mech_critical_configure(
               mech, RARM, 1,
               ammunition_equipment_index(weapon_from_equipment_index(id)),
@@ -171,18 +188,23 @@ void initialize_pc(DbRef player, Mech *mech) {
                   player, buf1));
       return;
     }
-    for (i = 0; buf1[i]; i++)
-      if (!isdigit(buf1[i])) {
+    for (size_t index = 0; index < strlen(buf1); index++) {
+      const char *armor_character =
+          checked_storage_at_const(buf1, sizeof(buf1), sizeof(char), index);
+      if (*armor_character < '0' || *armor_character > '9') {
         btech_channel_send(
             context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Invalid armor char for %s(#%ld) in %s (pos %d,%c)",
                     game_object_name(mech_context(mech)->database, player),
-                    player, buf1, i + 1, buf1[i]));
+                    player, buf1, (int)index + 1, *armor_character));
         return;
       }
-    for (i = 0; buf1[i]; i++) {
-      buf4[0] = buf1[i];
-      mech_section_armor_set(mech, pc_loc_to_mech_loc[i], atoi(buf4));
+    }
+    for (size_t index = 0; index < strlen(buf1); index++) {
+      const char *armor_character =
+          checked_storage_at_const(buf1, sizeof(buf1), sizeof(char), index);
+      buf4[0] = *armor_character;
+      mech_section_armor_set(mech, player_character_section(index), atoi(buf4));
     }
   }
 }
@@ -202,7 +224,24 @@ void fix_pilotdamage(Mech *mech, DbRef player) {
   mech_pilot_status_set(mech, (bruise + lethal) / playerBLD);
 }
 
-const int PilotStatusRollNeeded[] = {0, 3, 5, 7, 10, 11};
+static int pilot_status_roll_needed(int status) {
+  switch (status) {
+  case 0:
+    return 0;
+  case 1:
+    return 3;
+  case 2:
+    return 5;
+  case 3:
+    return 7;
+  case 4:
+    return 10;
+  case 5:
+    return 11;
+  default:
+    abort();
+  }
+}
 
 int mw_ic_bth(Mech *mech) {
   BtechContext *context = mech_context(mech);
@@ -260,7 +299,7 @@ int handlemwconc(Mech *mech, int initial) {
         mech_movement_stop(mech);
         return 0;
       }
-    m = PilotStatusRollNeeded[BOUNDED(0, mech_pilot_status(mech), 4)];
+    m = pilot_status_roll_needed(BOUNDED(0, mech_pilot_status(mech), 4));
   }
   if (initial && mech_pilot_is_unconscious(mech))
     return 0;

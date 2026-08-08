@@ -10,21 +10,29 @@
 #include "mech_notify_api.h"
 #include "mech_status_types.h"
 #include "mux/objects/attrs.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
-#include <ctype.h>
 #include <stdio.h>
+
+static char *tactical_command_argument(char *const *arguments, size_t index) {
+  return *(char *const *)checked_storage_at_const(arguments, 4,
+                                                  sizeof(*arguments), index);
+}
+
+static bool ascii_is_alpha(char value) {
+  return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
+}
 
 void mech_tacmap(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  int argc, i;
+  int argc;
   short x, y;
   char *args_vec[4];
-  char **args = args_vec;
   BattleMap *mech_map;
   int displayHeight = MAP_DISPLAY_HEIGHT, displayWidth = MAP_DISPLAY_WIDTH;
   char *str;
-  char *const *maptext;
   MapText *map_text;
   int flags = 3, dohexlos = 0;
 
@@ -37,7 +45,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   /* Various checks for conditions and system of mech */
-  argc = mech_parseattributes(buffer, args, 4);
+  argc = mech_parseattributes(buffer, args_vec, 4);
   if (!mech_tactical_range(mech)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Your system seems to be inoperational.");
@@ -51,9 +59,12 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
 
   /* Check to see which type of tactical to display
    * if they specified a particular one */
-  if (argc > 0 && isalpha((unsigned char)args[0][0]) && args[0][1] == '\0') {
+  size_t first_argument = 0;
+  char *first = argc > 0 ? tactical_command_argument(args_vec, 0) : nullptr;
+  if (first != nullptr && ascii_is_alpha(*first) &&
+      *checked_string_suffix(first, 1) == '\0') {
 
-    switch (tolower((unsigned char)args[0][0])) {
+    switch (ascii_to_lower(*first)) {
     case 'c':
       flags |= 8; /* Show cliffs */
       break;
@@ -83,7 +94,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    args++;
+    first_argument = 1;
     argc--;
   }
 
@@ -93,8 +104,8 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (!parse_tacargs(player, mech, args, argc, mech_tactical_range(mech), &x,
-                     &y))
+  if (!parse_tacargs(player, mech, args_vec, 4, first_argument, argc,
+                     mech_tactical_range(mech), &x, &y))
     return;
 
   /* Get the Tacsize attribute from
@@ -139,11 +150,9 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
     mecha_notify(evaluation, player, "Unable to render the tactical map.");
     return;
   }
-  maptext = map_text_lines(map_text);
-
   /* Draw the map for the player */
-  for (i = 0; maptext[i]; i++)
-    mecha_notify(evaluation, player, maptext[i]);
+  for (size_t line = 0; line < map_text_line_count(map_text); line++)
+    mecha_notify(evaluation, player, map_text_line(map_text, line));
   map_text_destroy(map_text);
 }
 

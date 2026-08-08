@@ -22,6 +22,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
 /* default (runtime-resettable) cache parameters */
@@ -44,27 +45,38 @@ void server_configuration_destroy(ServerConfiguration *configuration) {
 
 static void *configuration_resolve_location(ConfigurationContext *context,
                                             const CONF *entry) {
-  uintptr_t location = (uintptr_t)entry->loc;
+  uintptr_t location = entry->location;
+
+  if (location == CONFIGURATION_LIST_NAMES_LOCATION)
+    return list_names;
 
   if (location > 0 && location <= sizeof(ServerConfiguration))
-    return (char *)context->configuration + location - 1;
+    return checked_storage_region(context->configuration,
+                                  sizeof(*context->configuration),
+                                  (size_t)location - 1, 1);
   if (location > sizeof(ServerConfiguration) &&
       location <= sizeof(ServerConfiguration) + sizeof(CommandRegistry))
-    return (char *)context->command_registry + location -
-           sizeof(ServerConfiguration) - 1;
+    return checked_storage_region(
+        context->command_registry, sizeof(*context->command_registry),
+        (size_t)location - sizeof(ServerConfiguration) - 1, 1);
   if (location > sizeof(ServerConfiguration) + sizeof(CommandRegistry) &&
       location <= sizeof(ServerConfiguration) + sizeof(CommandRegistry) +
                       sizeof(WorldIndexes))
-    return (char *)context->world_indexes + location -
-           sizeof(ServerConfiguration) - sizeof(CommandRegistry) - 1;
+    return checked_storage_region(
+        context->world_indexes, sizeof(*context->world_indexes),
+        (size_t)location - sizeof(ServerConfiguration) -
+            sizeof(CommandRegistry) - 1,
+        1);
   if (location > sizeof(ServerConfiguration) + sizeof(CommandRegistry) +
                      sizeof(WorldIndexes) &&
       location <= sizeof(ServerConfiguration) + sizeof(CommandRegistry) +
                       sizeof(WorldIndexes) + sizeof(AccessControlStore))
-    return (char *)context->world->access_control + location -
-           sizeof(ServerConfiguration) - sizeof(CommandRegistry) -
-           sizeof(WorldIndexes) - 1;
-  return entry->loc;
+    return checked_storage_region(
+        context->world->access_control, sizeof(*context->world->access_control),
+        (size_t)location - sizeof(ServerConfiguration) -
+            sizeof(CommandRegistry) - sizeof(WorldIndexes) - 1,
+        1);
+  return nullptr;
 }
 
 /*
@@ -331,7 +343,6 @@ int configuration_status_from_succfail(DbRef player, char *cmd, int success,
 
 int configuration_set(ConfigurationContext *context, char *cp, char *ap,
                       DbRef player) {
-  CONF *tp;
   int i;
   char *buff = nullptr;
 
@@ -340,7 +351,8 @@ int configuration_set(ConfigurationContext *context, char *cp, char *ap,
    * call the handler to parse the argument.
    */
 
-  for (tp = conftable; tp->pname; tp++) {
+  for (size_t index = 0; index < configuration_entry_count(); index++) {
+    CONF *tp = configuration_entry_at(index);
     if (!strcmp(tp->pname, cp)) {
       if (!context->configuration->is_initializing &&
           !check_access(context->database, context->configuration, player,
@@ -433,10 +445,10 @@ int configuration_read(ConfigurationContext *context, char *fn) {
  * * configuration_list_access: List access to config directives.
  */
 void configuration_list_access(EvaluationContext *evaluation, DbRef player) {
-  CONF *tp;
   char buff[MBUF_SIZE];
 
-  for (tp = conftable; tp->pname; tp++) {
+  for (size_t index = 0; index < configuration_entry_count(); index++) {
+    CONF *tp = configuration_entry_at(index);
     if (is_god(evaluation->world->database, player) ||
         check_access(evaluation->world->database,
                      evaluation->world->configuration, player, tp->flags)) {

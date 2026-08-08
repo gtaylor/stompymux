@@ -5,6 +5,7 @@
 #include "ai_api.h"
 #include "autopilot.h"
 #include "autopilot_api.h"
+#include "autopilot_argument_list_api.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
@@ -33,20 +34,22 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
   char *argument;
   char error_buf[MBUF_SIZE];
-  char *args[4];
+  AutopilotArgumentList args;
   int argc;
-  int i;
   int anchor_hex_x;
   int anchor_hex_y;
   int anchor_distance;
 
   BattleMap *map;
 
+  autopilot_argument_list_initialize(&args, 4);
+
   /* Read in the argument */
   argument = auto_get_command_arg(autopilot, 1, 1);
 
   /* Parse the argument */
-  argc = proper_explodearguments(argument, args, 4);
+  argc = proper_explodearguments(
+      argument, autopilot_argument_list_parser_storage(&args), 4);
 
   /* Free the argument */
   free(argument);
@@ -55,7 +58,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
   if (argc == 1) {
 
     /* Wander the map aimlessly */
-    if (strcmp(args[0], "map") == 0) {
+    if (strcmp(autopilot_argument_list_get(&args, 0), "map") == 0) {
 
       /* Set flags */
       autopilot->roam_type = AUTO_ROAM_MAP;
@@ -80,10 +83,12 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
   } else if (argc == 4) {
 
     /* Stay within a certain radius */
-    if (strcmp(args[0], "radius") == 0) {
+    if (strcmp(autopilot_argument_list_get(&args, 0), "radius") == 0) {
 
       /* Need to grab distance and start hex */
-      if ((!((anchor_hex_x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+      const char *anchor_x_argument = autopilot_argument_list_get(&args, 1);
+      if ((!((anchor_hex_x) = atoi(anchor_x_argument)) &&
+           strcmp(anchor_x_argument, "0"))) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"
@@ -94,16 +99,14 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
-        /* Free Args */
-        for (i = 0; i < 4; i++) {
-          if (args[i])
-            free(args[i]);
-        }
+        autopilot_argument_list_destroy(&args);
 
         return;
       }
 
-      if ((!((anchor_hex_y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+      const char *anchor_y_argument = autopilot_argument_list_get(&args, 2);
+      if ((!((anchor_hex_y) = atoi(anchor_y_argument)) &&
+           strcmp(anchor_y_argument, "0"))) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"
@@ -114,17 +117,15 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
-        /* Free Args */
-        for (i = 0; i < 4; i++) {
-          if (args[i])
-            free(args[i]);
-        }
+        autopilot_argument_list_destroy(&args);
 
         return;
       }
 
       /* Need to grab distance and start hex */
-      if ((!((anchor_distance) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+      const char *distance_argument = autopilot_argument_list_get(&args, 3);
+      if ((!((anchor_distance) = atoi(distance_argument)) &&
+           strcmp(distance_argument, "0"))) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"
@@ -135,11 +136,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
-        /* Free Args */
-        for (i = 0; i < 4; i++) {
-          if (args[i])
-            free(args[i]);
-        }
+        autopilot_argument_list_destroy(&args);
 
         return;
       }
@@ -161,11 +158,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
-        /* Free Args */
-        for (i = 0; i < 4; i++) {
-          if (args[i])
-            free(args[i]);
-        }
+        autopilot_argument_list_destroy(&args);
 
         return;
       }
@@ -187,11 +180,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
-        /* Free Args */
-        for (i = 0; i < 4; i++) {
-          if (args[i])
-            free(args[i]);
-        }
+        autopilot_argument_list_destroy(&args);
 
         return;
       }
@@ -232,11 +221,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
   }
 
-  /* Free Args */
-  for (i = 0; i < 4; i++) {
-    if (args[i])
-      free(args[i]);
-  }
+  autopilot_argument_list_destroy(&args);
 }
 
 /*

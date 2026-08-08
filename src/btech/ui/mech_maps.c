@@ -17,12 +17,30 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 #include "mux/support/formatting.h"
 #include <stdlib.h>
 #include <string.h>
+
+static char *navigate_line(char lines[NAVIGATE_LINES][MBUF_SIZE], int index) {
+  return checked_storage_at(lines, NAVIGATE_LINES, sizeof(*lines),
+                            (size_t)index);
+}
+
+typedef struct NavigateCanvas {
+  char (*lines)[MBUF_SIZE];
+} NavigateCanvas;
+
+static void navigate_plot(int row, int column, char marker, void *context) {
+  NavigateCanvas *canvas = context;
+  char *line = navigate_line(canvas->lines, row);
+  char *cell =
+      checked_storage_at(line, MBUF_SIZE, sizeof(*line), (size_t)column);
+  *cell = marker;
+}
 
 void mech_findcenter(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
@@ -45,8 +63,15 @@ void mech_findcenter(DbRef player, void *data, char *buffer) {
                             mech_position_real_y(mech), fx, fy));
 }
 
-int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
-                  short *x, short *y) {
+static char *tactical_argument(char *const *args, size_t argument_capacity,
+                               size_t index) {
+  return *(char *const *)checked_storage_at_const(args, argument_capacity,
+                                                  sizeof(*args), index);
+}
+
+int parse_tacargs(DbRef player, Mech *mech, char *const *args,
+                  size_t argument_capacity, size_t first_argument, int argc,
+                  int maxrange, short *x, short *y) {
   int bearing;
   float range, fx, fy;
   Mech *tempMech;
@@ -54,8 +79,12 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
 
   switch (argc) {
   case 2:
-    if (!parse_int_checked(args[0], &bearing) ||
-        !parse_float_checked(args[1], &range)) {
+    if (!parse_int_checked(
+            tactical_argument(args, argument_capacity, first_argument),
+            &bearing) ||
+        !parse_float_checked(
+            tactical_argument(args, argument_capacity, first_argument + 1),
+            &range)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Invalid bearing or range.");
       return 0;
@@ -71,8 +100,10 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
     return 1;
   case 1:
     map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-    tempMech =
-        btech_context_get_mech(mech_context(mech), FindMechOnMap(map, args[0]));
+    tempMech = btech_context_get_mech(
+        mech_context(mech),
+        FindMechOnMap(
+            map, tactical_argument(args, argument_capacity, first_argument)));
     if (!tempMech) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "No such target.");
@@ -153,8 +184,8 @@ void map_color_scheme_load(MapColorScheme *colors) {
 void mech_navigate(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   char mybuff[NAVIGATE_LINES][MBUF_SIZE];
+  NavigateCanvas canvas = {.lines = mybuff};
   BattleMap *mech_map;
-  char *const *maptext;
   MapText *map_text;
   char *args[3];
   int i, dolos, argc;
@@ -177,8 +208,8 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   }
 
   argc = mech_parseattributes(buffer, args, 3);
-  if (!parse_tacargs(player, mech, args, argc, mech_tactical_range(mech), &x,
-                     &y))
+  if (!parse_tacargs(player, mech, args, 3, 0, argc, mech_tactical_range(mech),
+                     &x, &y))
     return;
 
   map_text = map_text_create(player, mech, mech_map, x, y, 5, 5, 4, dolos);
@@ -186,51 +217,49 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
     mecha_notify(evaluation, player, "Unable to render the tactical map.");
     return;
   }
-  maptext = map_text_lines(map_text);
-
-  snprintf(mybuff[0], MBUF_SIZE,
+  snprintf(navigate_line(mybuff, 0), MBUF_SIZE,
            "              0                                          %.150s",
-           maptext[0]);
-  snprintf(mybuff[1], MBUF_SIZE,
+           map_text_line(map_text, 0));
+  snprintf(navigate_line(mybuff, 1), MBUF_SIZE,
            "         ___________                                     %.150s",
-           maptext[1]);
-  snprintf(mybuff[2], MBUF_SIZE,
+           map_text_line(map_text, 1));
+  snprintf(navigate_line(mybuff, 2), MBUF_SIZE,
            "        /           \\          Location:%4d,%4d, %3d   %.150s",
            mech_position_x(mech), mech_position_y(mech), mech_position_z(mech),
-           maptext[2]);
+           map_text_line(map_text, 2));
   snprintf(
-      mybuff[3], MBUF_SIZE,
+      navigate_line(mybuff, 3), MBUF_SIZE,
       "  300  /             \\  60     Terrain: %14s   %.150s",
       GetTerrainName(mech_map, mech_position_x(mech), mech_position_y(mech)),
-      maptext[3]);
-  snprintf(mybuff[4], MBUF_SIZE,
+      map_text_line(map_text, 3));
+  snprintf(navigate_line(mybuff, 4), MBUF_SIZE,
            "      /               \\                                  %.150s",
-           maptext[4]);
-  snprintf(mybuff[5], MBUF_SIZE,
+           map_text_line(map_text, 4));
+  snprintf(navigate_line(mybuff, 5), MBUF_SIZE,
            "     /                 \\                                 %.150s",
-           maptext[5]);
-  snprintf(mybuff[6], MBUF_SIZE,
+           map_text_line(map_text, 5));
+  snprintf(navigate_line(mybuff, 6), MBUF_SIZE,
            "270 (                   )  90  Speed:           %6.1f   %.150s",
-           (double)mech_current_speed(mech), maptext[6]);
-  snprintf(mybuff[7], MBUF_SIZE,
+           (double)mech_current_speed(mech), map_text_line(map_text, 6));
+  snprintf(navigate_line(mybuff, 7), MBUF_SIZE,
            "     \\                 /       Vertical Speed:  %6.1f   %.150s",
-           (double)mech_vertical_speed(mech), maptext[7]);
-  snprintf(mybuff[8], MBUF_SIZE,
+           (double)mech_vertical_speed(mech), map_text_line(map_text, 7));
+  snprintf(navigate_line(mybuff, 8), MBUF_SIZE,
            "      \\               /        Heading:           %4d   %.150s",
-           mech_heading_degrees(mech), maptext[8]);
-  snprintf(mybuff[9], MBUF_SIZE,
+           mech_heading_degrees(mech), map_text_line(map_text, 8));
+  snprintf(navigate_line(mybuff, 9), MBUF_SIZE,
            "  240  \\             /  120                              %.150s",
-           maptext[9]);
-  snprintf(mybuff[10], MBUF_SIZE,
+           map_text_line(map_text, 9));
+  snprintf(navigate_line(mybuff, 10), MBUF_SIZE,
            "        \\___________/                                    %.150s",
-           maptext[10]);
-  snprintf(mybuff[11], MBUF_SIZE, "                      ");
-  snprintf(mybuff[12], MBUF_SIZE, "             180");
+           map_text_line(map_text, 10));
+  snprintf(navigate_line(mybuff, 11), MBUF_SIZE, "                      ");
+  snprintf(navigate_line(mybuff, 12), MBUF_SIZE, "             180");
   map_text_destroy(map_text);
 
-  navigate_sketch_mechs(mech, mech_map, x, y, mybuff);
+  navigate_sketch_mechs(mech, mech_map, x, y, navigate_plot, &canvas);
   for (i = 0; i < NAVIGATE_LINES; i++)
-    mecha_notify(evaluation, player, mybuff[i]);
+    mecha_notify(evaluation, player, navigate_line(mybuff, i));
 }
 
 /* INDENT OFF */

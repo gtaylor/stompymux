@@ -163,7 +163,7 @@ static int template_load_legacy(Mech *mech, const char *id) {
                             "Insufficient data reading section %d!", i)) {
       return -1;
     }
-    ((mech)->ud.sections)[i].recycle = 0;
+    mech_section_recycle_ticks_set(mech, i, 0);
     mech_section_armor_set(mech, i, i1);
     mech_section_original_armor_set(mech, i, i1);
     mech_section_internal_set(mech, i, i2);
@@ -174,7 +174,7 @@ static int template_load_legacy(Mech *mech, const char *id) {
        things differently here */
     if (i4 & 4)
       i4 &= ~4;
-    ((mech)->ud.sections)[i].config = clamp_int_to_char(i4);
+    mech_section_configuration_set(mech, i, i4);
     for (j = 0; j < NUM_CRITICALS; j++) {
       if (template_load_error(
               fp, mech, fscanf(fp, "%d %d %d\n", &i1, &i2, &i3) < 3,
@@ -194,7 +194,7 @@ static int template_load_legacy(Mech *mech, const char *id) {
           weapon_catalogue_is_anti_missile(
               (t = weapon_from_equipment_index(
                    mech_critical_part_type(mech, i, j))))) {
-        if (MechWeapons[t].special & CLAT)
+        if (weapon_catalogue_has_special(t, CLAT))
           ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
         else
           ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;

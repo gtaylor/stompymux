@@ -3,8 +3,31 @@
 #include "map.h"
 #include "map_los.h"
 #include "map_terrain.h"
+#include "mux/support/checked_storage.h"
 
+#include <stdlib.h>
 #include <string.h>
+
+typedef struct TacticalCanvas {
+  char *data;
+  size_t capacity;
+  int display_columns;
+} TacticalCanvas;
+
+static char *tactical_canvas_at(TacticalCanvas *canvas, int offset) {
+  if (offset < 0)
+    abort();
+  return checked_storage_at(canvas->data, canvas->capacity, sizeof(char),
+                            (size_t)offset);
+}
+
+static void *tactical_canvas_region(TacticalCanvas *canvas, int offset,
+                                    int length) {
+  if (offset < 0 || length < 0)
+    abort();
+  return checked_storage_region(canvas->data, canvas->capacity, (size_t)offset,
+                                (size_t)length);
+}
 
 static int minimum_int(int left, int right) {
   return left < right ? left : right;
@@ -24,19 +47,22 @@ int tactical_hex_offset(int x, int y, int display_columns,
   return (y * 2 + 1 - column_is_odd) * display_columns + x * 3 + 1;
 }
 
-static void tactical_row_sketch(char *position, int left_offset,
-                                const char *source, int length) {
-  if (left_offset < 0 || length < 0)
-    return;
-  memset(position, ' ', (size_t)left_offset);
-  memcpy(position + left_offset, source, (size_t)length);
-  position[left_offset + length] = '\0';
+static void tactical_row_sketch(TacticalCanvas *canvas, int row_offset,
+                                int left_offset, const char *source,
+                                int length) {
+  if (row_offset < 0 || left_offset < 0 || length < 0)
+    abort();
+  memset(tactical_canvas_region(canvas, row_offset, left_offset), ' ',
+         (size_t)left_offset);
+  memcpy(tactical_canvas_region(canvas, row_offset + left_offset, length),
+         source, (size_t)length);
+  *tactical_canvas_at(canvas, row_offset + left_offset + length) = '\0';
 }
 
-void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
-                         int start_y, int width, int height,
-                         int display_columns, int top_offset, int left_offset,
-                         bool use_color, bool use_hex_los,
+void tactical_map_sketch(char *buffer, size_t buffer_capacity, BattleMap *map,
+                         Mech *mech, int start_x, int start_y, int width,
+                         int height, int display_columns, int top_offset,
+                         int left_offset, bool use_color, bool use_hex_los,
                          bool show_underlying_terrain) {
   static const char hex_rows[2][311] = {
       "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
@@ -61,25 +87,36 @@ void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
   int map_columns = tactical_display_columns(width);
   HexLosMap los_map_storage;
   HexLosMap *los_map = nullptr;
-  char *position = buffer;
+  TacticalCanvas canvas = {
+      .data = buffer,
+      .capacity = buffer_capacity,
+      .display_columns = display_columns,
+  };
 
   for (int y = 0; y < top_offset; y++) {
-    memset(position, ' ', (size_t)(display_columns - 1));
-    position[display_columns - 1] = '\0';
-    position += display_columns;
+    const int row_offset = y * display_columns;
+    memset(tactical_canvas_region(&canvas, row_offset, display_columns - 1),
+           ' ', (size_t)(display_columns - 1));
+    *tactical_canvas_at(&canvas, row_offset + display_columns - 1) = '\0';
   }
   for (int y = 0; y < height; y++) {
-    tactical_row_sketch(position, left_offset, hex_rows[first_column_is_odd],
+    const char (*first_row)[311] = checked_storage_at_const(
+        hex_rows, 2, sizeof(*hex_rows), (size_t)first_column_is_odd);
+    const char (*second_row)[311] = checked_storage_at_const(
+        hex_rows, 2, sizeof(*hex_rows), (size_t)!first_column_is_odd);
+    int row_offset = (top_offset + y * 2) * display_columns;
+    tactical_row_sketch(&canvas, row_offset, left_offset, *first_row,
                         map_columns);
-    position += display_columns;
-    tactical_row_sketch(position, left_offset, hex_rows[!first_column_is_odd],
+    row_offset += display_columns;
+    tactical_row_sketch(&canvas, row_offset, left_offset, *second_row,
                         map_columns);
-    position += display_columns;
   }
-  tactical_row_sketch(position, left_offset, hex_rows[first_column_is_odd],
-                      map_columns);
+  const char (*last_row)[311] = checked_storage_at_const(
+      hex_rows, 2, sizeof(*hex_rows), (size_t)first_column_is_odd);
+  tactical_row_sketch(&canvas, (top_offset + height * 2) * display_columns,
+                      left_offset, *last_row, map_columns);
 
-  position = buffer + top_offset * display_columns + left_offset;
+  const int map_origin_offset = top_offset * display_columns + left_offset;
   width = minimum_int(width, map->map_width - start_x);
   height = minimum_int(height, map->map_height - start_y);
   if (use_hex_los &&
@@ -142,14 +179,17 @@ void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
         break;
       }
 
-      char *base = position + tactical_hex_offset(x, y, display_columns,
-                                                  first_column_is_odd);
-      base[0] = top_character;
-      base[1] = top_character;
-      base[display_columns] = bottom_character;
+      const int base_offset =
+          map_origin_offset +
+          tactical_hex_offset(x, y, display_columns, first_column_is_odd);
+      *tactical_canvas_at(&canvas, base_offset) = top_character;
+      *tactical_canvas_at(&canvas, base_offset + 1) = top_character;
+      *tactical_canvas_at(&canvas, base_offset + display_columns) =
+          bottom_character;
       if (elevation > 0)
         bottom_character = (char)('0' + elevation);
-      base[display_columns + 1] = bottom_character;
+      *tactical_canvas_at(&canvas, base_offset + display_columns + 1) =
+          bottom_character;
     }
   }
 }

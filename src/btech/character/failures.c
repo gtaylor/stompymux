@@ -31,6 +31,7 @@
 #include "mech_startup_api.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
+#include "mux/support/checked_storage.h"
 #include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 
@@ -207,6 +208,21 @@ static const PartFailure failures[] = {
     {"[fg=red bold]Your entire radio system suddenly shorts out![reset]", 0,
      FailureRadioShort, FAIL_NONE, REQ_RADIO}};
 
+static const PartBrand *part_brand_at(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(brands, sizeof(brands) / sizeof(*brands),
+                                  sizeof(*brands), (size_t)index);
+}
+
+static const PartFailure *part_failure_at(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(failures,
+                                  sizeof(failures) / sizeof(*failures),
+                                  sizeof(*failures), (size_t)index);
+}
+
 static int part_brand_failure_index(int type) {
   if (type == -1)
     return COMPUTER_INDEX;
@@ -215,7 +231,7 @@ static int part_brand_failure_index(int type) {
   if (equipment_is_weapon(type))
     if (type < weapon_equipment_index(num_def_weapons)) {
       type = weapon_from_equipment_index(type);
-      if (MechWeapons[type].special & PCOMBAT)
+      if (weapon_catalogue_is_personal_combat(type))
         return -1;
       if (weapon_catalogue_is_flamer(type))
         return FLAMMER_INDEX;
@@ -238,7 +254,7 @@ const char *mech_part_brand_name(int type, int level) {
   i = part_brand_failure_index(type);
   if (i < 0)
     return NULL;
-  return brands[i * 5 / 6 + level - 1].name;
+  return part_brand_at(i * 5 / 6 + level - 1)->name;
 }
 
 static int failure_index_for_critical(const Mech *mech, int section,
@@ -251,7 +267,7 @@ static int failure_index_for_critical(const Mech *mech, int section,
 static void FailureRadioStatic(Mech *mech, int weapnum, int weaptype,
                                int section, int critical, int roll,
                                int *modifier, int *type) {
-  int mod = failures[part_brand_failure_index(-2) + roll - 1].data;
+  int mod = part_failure_at(part_brand_failure_index(-2) + roll - 1)->data;
 
   *modifier = mod;
   *type = FAIL_STATIC;
@@ -310,7 +326,7 @@ static void FailureRadioShort(Mech *mech, int weapnum, int weaptype,
 static void FailureRadioRange(Mech *mech, int weapnum, int weaptype,
                               int section, int critical, int roll,
                               int *modifier, int *type) {
-  int mod = failures[part_brand_failure_index(-2) + roll - 1].data;
+  int mod = part_failure_at(part_brand_failure_index(-2) + roll - 1)->data;
 
   mod = MIN(mech_radio_range(mech) - 1, mod);
   mech_event_schedule(mech, EVENT_MRECOVERY, mech_rrec_event,
@@ -331,7 +347,7 @@ static void FailureComputerShutdown(Mech *mech, int weapnum, int weaptype,
 static void FailureComputerScanner(Mech *mech, int weapnum, int weaptype,
                                    int section, int critical, int roll,
                                    int *modifier, int *type) {
-  int tmp = failures[part_brand_failure_index(-1) + roll - 1].data;
+  int tmp = part_failure_at(part_brand_failure_index(-1) + roll - 1)->data;
 
   switch (tmp) {
   case 1:
@@ -396,28 +412,24 @@ static void FailureComputerTarget(Mech *mech, int weapnum, int weaptype,
 static void FailureWeaponMissiles(Mech *mech, int weapnum, int weaptype,
                                   int section, int critical, int roll,
                                   int *modifier, int *type) {
-  mech_critical_temporary_failure_set(
-      mech, section, critical,
-      failures[failure_index_for_critical(mech, section, critical) + roll]
-          .type);
+  const PartFailure *failure = part_failure_at(
+      failure_index_for_critical(mech, section, critical) + roll);
+  mech_critical_temporary_failure_set(mech, section, critical, failure->type);
   *type = CRAZY_MISSILES;
-  *modifier =
-      failures[failure_index_for_critical(mech, section, critical) + roll].data;
+  *modifier = failure->data;
 }
 
 static void FailureWeaponDud(Mech *mech, int weapnum, int weaptype, int section,
                              int critical, int roll, int *modifier, int *type) {
-  if (failures[failure_index_for_critical(mech, section, critical) + roll]
-          .type == FAIL_NONE) {
+  const PartFailure *failure = part_failure_at(
+      failure_index_for_critical(mech, section, critical) + roll);
+  if (failure->type == FAIL_NONE) {
     mech_set_recycle_part(mech, section, critical,
                           btech_weapon_settings_recycle_time(
                               &mech_context(mech)->weapon_settings, weaptype));
     return;
   }
-  mech_critical_temporary_failure_set(
-      mech, section, critical,
-      failures[failure_index_for_critical(mech, section, critical) + roll]
-          .type);
+  mech_critical_temporary_failure_set(mech, section, critical, failure->type);
   *type = WEAPON_DUD;
   if (roll == 6) {
     mech_critical_temporary_failure_set(mech, section, critical,
@@ -430,10 +442,9 @@ static void FailureWeaponDud(Mech *mech, int weapnum, int weaptype, int section,
 static void FailureWeaponJammed(Mech *mech, int weapnum, int weaptype,
                                 int section, int critical, int roll,
                                 int *modifier, int *type) {
-  mech_critical_temporary_failure_set(
-      mech, section, critical,
-      failures[failure_index_for_critical(mech, section, critical) + roll]
-          .type);
+  const PartFailure *failure = part_failure_at(
+      failure_index_for_critical(mech, section, critical) + roll);
+  mech_critical_temporary_failure_set(mech, section, critical, failure->type);
   *type = WEAPON_JAMMED;
   mech_set_recycle_part(mech, section, critical,
                         btech_random_range_int(mech_context(mech), 20, 40));
@@ -443,8 +454,10 @@ static void FailureWeaponDamage(Mech *mech, int weapnum, int weaptype,
                                 int section, int critical, int roll,
                                 int *modifier, int *type) {
   const int percentage =
-      failures[failure_index_for_critical(mech, section, critical) + roll].data;
-  *modifier = (MechWeapons[weaptype].damage * percentage) / 100;
+      part_failure_at(failure_index_for_critical(mech, section, critical) +
+                      roll)
+          ->data;
+  *modifier = (weapon_catalogue_damage(weaptype) * percentage) / 100;
   *type = DAMAGE;
 }
 
@@ -452,18 +465,19 @@ static void FailureWeaponHeat(Mech *mech, int weapnum, int weaptype,
                               int section, int critical, int roll,
                               int *modifier, int *type) {
   const int percentage =
-      failures[failure_index_for_critical(mech, section, critical) + roll].data;
-  *modifier = (MechWeapons[weaptype].heat * percentage) / 100;
+      part_failure_at(failure_index_for_critical(mech, section, critical) +
+                      roll)
+          ->data;
+  *modifier = (weapon_catalogue_heat(weaptype) * percentage) / 100;
   *type = HEAT;
 }
 
 static void FailureWeaponSpike(Mech *mech, int weapnum, int weaptype,
                                int section, int critical, int roll,
                                int *modifier, int *type) {
-  mech_critical_temporary_failure_set(
-      mech, section, critical,
-      failures[failure_index_for_critical(mech, section, critical) + roll]
-          .type);
+  const PartFailure *failure = part_failure_at(
+      failure_index_for_critical(mech, section, critical) + roll);
+  mech_critical_temporary_failure_set(mech, section, critical, failure->type);
   *type = POWER_SPIKE;
   if (roll == 6) {
     mech_critical_temporary_failure_set(mech, section, critical,
@@ -491,13 +505,14 @@ void mech_generic_failure_check(Mech *mech, int type, int *result, int *mod) {
   if (btech_random_range_int(mech_context(mech), 1, 5000) != 42)
     return; /* ~1/5000 chance */
   if (btech_random_range_int(mech_context(mech), 1, 100) <=
-      brands[(i + l - 1) * 5 / 6].success)
+      part_brand_at((i + l - 1) * 5 / 6)->success)
     return;
   roll = btech_random_range_int(mech_context(mech), 1, 6);
   if (roll == 6)
     roll = btech_random_range_int(mech_context(mech), 1, 6);
   in = i + roll - 1;
-  switch (failures[in].flag) {
+  const PartFailure *failure = part_failure_at(in);
+  switch (failure->flag) {
   case REQ_TARGET:
     if (mech_target_dbref(mech) <= 0)
       return;
@@ -524,9 +539,9 @@ void mech_generic_failure_check(Mech *mech, int type, int *result, int *mod) {
       return;
     break;
   }
-  if (failures[in].message && strcmp(failures[in].message, "none"))
-    mech_notify(mech, MECHALL, failures[in].message);
-  failures[in].func(mech, -1, -1, -1, -1, roll, mod, result);
+  if (failure->message && strcmp(failure->message, "none"))
+    mech_notify(mech, MECHALL, failure->message);
+  failure->func(mech, -1, -1, -1, -1, roll, mod, result);
 }
 
 void mech_weapon_failure_check(Mech *mech, int weapnum, int weaptype,
@@ -545,24 +560,25 @@ void mech_weapon_failure_check(Mech *mech, int weapnum, int weaptype,
       l = 5;
     if (!equipment_is_weapon(t))
       return;
-    if (MechWeapons[weapon_from_equipment_index(t)].special & PCOMBAT)
+    if (weapon_catalogue_is_personal_combat(weapon_from_equipment_index(t)))
       return;
   } else
     return;
   if (btech_random_range_int(mech_context(mech), 1, 10) < 9)
     return;
   if (btech_random_range_int(mech_context(mech), 1, 100) <=
-      brands[(i + l - 1) * 5 / 6].success)
+      part_brand_at((i + l - 1) * 5 / 6)->success)
     return;
   roll = btech_random_range_int(mech_context(mech), 1, 6);
   if (roll == 6)
     roll = btech_random_range_int(mech_context(mech), 1, 6);
   in = i + roll - 1;
-  if (failures[in].flag & REQ_HEAT)
-    if (!MechWeapons[weaptype].heat)
+  const PartFailure *failure = part_failure_at(in);
+  if (failure->flag & REQ_HEAT)
+    if (!weapon_catalogue_heat(weaptype))
       return;
-  if (failures[in].message && strcmp(failures[in].message, "none"))
-    mech_notify(mech, MECHALL, failures[in].message);
-  failures[in].func(mech, weapnum, weaptype, section, critical, roll, modifier,
-                    type);
+  if (failure->message && strcmp(failure->message, "none"))
+    mech_notify(mech, MECHALL, failure->message);
+  failure->func(mech, weapnum, weaptype, section, critical, roll, modifier,
+                type);
 }

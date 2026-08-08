@@ -167,6 +167,17 @@ static const NamedColor built_in_colors[] = {
     {nullptr, 0, 0, 0},
 };
 
+static const NamedColor *built_in_color(size_t index) {
+  return checked_storage_at_const(
+      built_in_colors, sizeof(built_in_colors) / sizeof(built_in_colors[0]),
+      sizeof(*built_in_colors), index);
+}
+
+static char palette_character(const char *text, size_t length, size_t index) {
+  return *(const char *)checked_storage_at_const(text, length + 1, sizeof(char),
+                                                 index);
+}
+
 StyledTextPalette *styled_text_palette_create(void) {
   return calloc(1, sizeof(StyledTextPalette));
 }
@@ -175,10 +186,11 @@ void styled_text_palette_destroy(StyledTextPalette *palette) {
   if (!palette)
     return;
   for (size_t index = 0; index < palette->count; index++)
-    free(palette->colors[index].name);
+    free(styled_palette_color(palette, index)->name);
   for (size_t index = 0; index < palette->preset_count; index++) {
-    free(palette->presets[index].name);
-    styled_link_config_destroy(&palette->presets[index].config);
+    StyledTextPreset *preset = styled_palette_preset(palette, index);
+    free(preset->name);
+    styled_link_config_destroy(&preset->config);
   }
   free(palette->colors);
   free(palette->presets);
@@ -193,16 +205,18 @@ static bool styled_text_color_name_valid(const char *name) {
   length = strlen(name);
   if (length > 60)
     return false;
-  for (const char *cursor = name; *cursor; cursor++) {
-    unsigned char ch = (unsigned char)*cursor;
-    if (!isalnum(ch) && ch != '-' && ch != '_')
+  for (size_t index = 0; index < length; index++) {
+    unsigned char ch = (unsigned char)palette_character(name, length, index);
+    if (!(isalnum)(ch) && ch != '-' && ch != '_')
       return false;
   }
   return true;
 }
 
 static const NamedColor *styled_text_builtin_color(const char *name) {
-  for (const NamedColor *color = built_in_colors; color->name; color++) {
+  const size_t count = sizeof(built_in_colors) / sizeof(built_in_colors[0]);
+  for (size_t index = 0; index + 1 < count; index++) {
+    const NamedColor *color = built_in_color(index);
     if (!strcasecmp(name, color->name))
       return color;
   }
@@ -238,10 +252,11 @@ bool styled_text_palette_set_rgb(StyledTextPalette *palette, const char *name,
     return false;
   }
   for (size_t index = 0; index < palette->count; index++) {
-    if (!strcasecmp(name, palette->colors[index].name)) {
-      palette->colors[index].red = red;
-      palette->colors[index].green = green;
-      palette->colors[index].blue = blue;
+    CustomNamedColor *color = styled_palette_color(palette, index);
+    if (!strcasecmp(name, color->name)) {
+      color->red = red;
+      color->green = green;
+      color->blue = blue;
       return true;
     }
   }
@@ -256,7 +271,7 @@ bool styled_text_palette_set_rgb(StyledTextPalette *palette, const char *name,
     palette->colors = colors;
     palette->capacity = capacity;
   }
-  entry = &palette->colors[palette->count];
+  entry = styled_palette_color(palette, palette->count);
   entry->name = strdup(name);
   if (!entry->name) {
     styled_set_error(error, error_size, "unable to allocate named color");
@@ -270,49 +285,48 @@ bool styled_text_palette_set_rgb(StyledTextPalette *palette, const char *name,
 }
 
 static bool parse_hex_byte(const char *value, int *result) {
-  int high;
-  int low;
+  const unsigned char first = (unsigned char)palette_character(value, 2, 0);
+  const unsigned char second = (unsigned char)palette_character(value, 2, 1);
 
-  if (!isxdigit((unsigned char)value[0]) || !isxdigit((unsigned char)value[1]))
+  if (!(isxdigit)(first) || !(isxdigit)(second))
     return false;
-  high = isdigit((unsigned char)value[0])
-             ? value[0] - '0'
-             : tolower((unsigned char)value[0]) - 'a' + 10;
-  low = isdigit((unsigned char)value[1])
-            ? value[1] - '0'
-            : tolower((unsigned char)value[1]) - 'a' + 10;
+  int high = (isdigit)(first) ? first - '0' : (tolower)(first) - 'a' + 10;
+  int low = (isdigit)(second) ? second - '0' : (tolower)(second) - 'a' + 10;
   *result = high * 16 + low;
   return true;
 }
 
-static bool parse_rgb_channel(const char **cursor, int *result,
-                              char terminator) {
+static bool parse_rgb_channel(const char *text, size_t length, size_t *offset,
+                              int *result, char terminator) {
   int value = 0;
   int digits = 0;
 
-  while (isdigit((unsigned char)**cursor)) {
+  while (*offset < length &&
+         (isdigit)((unsigned char)palette_character(text, length, *offset))) {
     if (value > 255)
       return false;
-    value = value * 10 + (**cursor - '0');
-    (*cursor)++;
+    value = value * 10 + (palette_character(text, length, *offset) - '0');
+    (*offset)++;
     digits++;
   }
-  if (digits == 0 || value > 255 || **cursor != terminator)
+  if (digits == 0 || value > 255 || *offset >= length ||
+      palette_character(text, length, *offset) != terminator)
     return false;
-  (*cursor)++;
+  (*offset)++;
   *result = value;
   return true;
 }
 
 static bool parse_rgb_function(const char *value, StyledColor *color) {
-  const char *cursor = value;
+  const size_t length = strlen(value);
+  size_t offset = 4;
 
-  if (strncasecmp(cursor, "rgb(", 4))
+  if (strncasecmp(value, "rgb(", 4))
     return false;
-  cursor += 4;
-  if (!parse_rgb_channel(&cursor, &color->red, ',') ||
-      !parse_rgb_channel(&cursor, &color->green, ',') ||
-      !parse_rgb_channel(&cursor, &color->blue, ')') || *cursor != '\0')
+  if (!parse_rgb_channel(value, length, &offset, &color->red, ',') ||
+      !parse_rgb_channel(value, length, &offset, &color->green, ',') ||
+      !parse_rgb_channel(value, length, &offset, &color->blue, ')') ||
+      offset != length)
     return false;
   color->kind = STYLED_COLOR_RGB;
   return true;
@@ -320,10 +334,11 @@ static bool parse_rgb_function(const char *value, StyledColor *color) {
 
 bool styled_color_parse(const StyledTextPalette *palette, const char *value,
                         StyledColor *color) {
-  if (value[0] == '#' && strlen(value) == 7) {
-    if (!parse_hex_byte(value + 1, &color->red) ||
-        !parse_hex_byte(value + 3, &color->green) ||
-        !parse_hex_byte(value + 5, &color->blue))
+  const size_t length = strlen(value);
+  if (length == 7 && palette_character(value, length, 0) == '#') {
+    if (!parse_hex_byte(checked_string_suffix(value, 1), &color->red) ||
+        !parse_hex_byte(checked_string_suffix(value, 3), &color->green) ||
+        !parse_hex_byte(checked_string_suffix(value, 5), &color->blue))
       return false;
     color->kind = STYLED_COLOR_RGB;
     return true;
@@ -345,7 +360,8 @@ bool styled_color_parse(const StyledTextPalette *palette, const char *value,
 
   if (palette) {
     for (size_t index = 0; index < palette->count; index++) {
-      const CustomNamedColor *named = &palette->colors[index];
+      const CustomNamedColor *named =
+          styled_palette_color_const(palette, index);
       if (strcasecmp(value, named->name) != 0)
         continue;
       *color = (StyledColor){

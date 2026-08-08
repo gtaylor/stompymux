@@ -14,18 +14,21 @@ bool styled_text_preset_name_valid(const char *name) {
   if (!name || !*name)
     return false;
   length = strlen(name);
-  unsigned char first = (unsigned char)name[0];
+  unsigned char first = (unsigned char)*(const char *)checked_storage_at_const(
+      name, length + 1, sizeof(char), 0);
   if (length > 60 ||
       !((first >= 'A' && first <= 'Z') || (first >= 'a' && first <= 'z') ||
         (first >= '0' && first <= '9')))
     return false;
-  for (const unsigned char *cursor = (const unsigned char *)name; *cursor;
-       cursor++) {
-    bool alphanumeric = (*cursor >= 'A' && *cursor <= 'Z') ||
-                        (*cursor >= 'a' && *cursor <= 'z') ||
-                        (*cursor >= '0' && *cursor <= '9');
-    if (!alphanumeric && *cursor != '.' && *cursor != '_' && *cursor != '~' &&
-        *cursor != '-')
+  for (size_t index = 0; index < length; index++) {
+    const unsigned char character =
+        (unsigned char)*(const char *)checked_storage_at_const(
+            name, length + 1, sizeof(char), index);
+    bool alphanumeric = (character >= 'A' && character <= 'Z') ||
+                        (character >= 'a' && character <= 'z') ||
+                        (character >= '0' && character <= '9');
+    if (!alphanumeric && character != '.' && character != '_' &&
+        character != '~' && character != '-')
       return false;
   }
   return true;
@@ -37,8 +40,10 @@ styled_text_palette_find_preset(const StyledTextPalette *palette,
   if (!palette || !name)
     return nullptr;
   for (size_t index = 0; index < palette->preset_count; index++) {
-    if (!strcmp(palette->presets[index].name, name))
-      return &palette->presets[index];
+    const StyledTextPreset *preset =
+        styled_palette_preset_const(palette, index);
+    if (!strcmp(preset->name, name))
+      return preset;
   }
   return nullptr;
 }
@@ -113,9 +118,10 @@ bool styled_text_palette_set_preset(StyledTextPalette *palette,
                      "preset name must use 1-60 URI-safe ASCII characters");
     return false;
   }
-  if (!styled_link_directives_parse(palette, directives,
-                                    directives + strlen(directives), &config,
-                                    &unused, false, false, error, error_size))
+  if (!styled_link_directives_parse(
+          palette, directives,
+          checked_string_suffix(directives, strlen(directives)), &config,
+          &unused, false, false, error, error_size))
     goto fail;
   if (config.preset) {
     styled_set_error(error, error_size, "OSC 8 presets cannot inherit presets");
@@ -132,12 +138,13 @@ bool styled_text_palette_set_preset(StyledTextPalette *palette,
     goto fail;
   }
   while (position < palette->preset_count &&
-         strcmp(palette->presets[position].name, name) < 0)
+         strcmp(styled_palette_preset(palette, position)->name, name) < 0)
     position++;
   if (position < palette->preset_count &&
-      !strcmp(palette->presets[position].name, name)) {
-    styled_link_config_destroy(&palette->presets[position].config);
-    palette->presets[position].config = config;
+      !strcmp(styled_palette_preset(palette, position)->name, name)) {
+    StyledTextPreset *preset = styled_palette_preset(palette, position);
+    styled_link_config_destroy(&preset->config);
+    preset->config = config;
     return true;
   }
   if (palette->preset_count == palette->preset_capacity) {
@@ -152,13 +159,17 @@ bool styled_text_palette_set_preset(StyledTextPalette *palette,
     palette->presets = presets;
     palette->preset_capacity = capacity;
   }
-  memmove(&palette->presets[position + 1], &palette->presets[position],
-          (palette->preset_count - position) * sizeof(*palette->presets));
-  palette->presets[position] =
-      (StyledTextPreset){.name = strdup(name), .config = config};
-  if (!palette->presets[position].name) {
-    memmove(&palette->presets[position], &palette->presets[position + 1],
+  if (position < palette->preset_count)
+    memmove(styled_palette_preset(palette, position + 1),
+            styled_palette_preset(palette, position),
             (palette->preset_count - position) * sizeof(*palette->presets));
+  *styled_palette_preset(palette, position) =
+      (StyledTextPreset){.name = strdup(name), .config = config};
+  if (!styled_palette_preset(palette, position)->name) {
+    if (position < palette->preset_count)
+      memmove(styled_palette_preset(palette, position),
+              styled_palette_preset(palette, position + 1),
+              (palette->preset_count - position) * sizeof(*palette->presets));
     styled_set_error(error, error_size, "unable to allocate OSC 8 preset");
     goto fail;
   }
@@ -186,8 +197,8 @@ bool styled_text_palette_render_preset(const StyledTextPalette *palette,
   output[0] = '\0';
   if (!palette || index >= palette->preset_count || !options ||
       !options->osc_hyperlinks_presets ||
-      !styled_text_preset_uri(&palette->presets[index], options, uri,
-                              sizeof(uri)))
+      !styled_text_preset_uri(styled_palette_preset_const(palette, index),
+                              options, uri, sizeof(uri)))
     return false;
   return styled_emit_link_open(uri, output, output_size, &used) &&
          styled_emit_link_close(output, output_size, &used);

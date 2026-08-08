@@ -17,6 +17,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "mux/support/checked_storage.h"
+
 /* Number of simultaneous clients used to exercise descriptor registry growth.
  */
 constexpr size_t TEST_CONNECTION_COUNT = 20;
@@ -35,6 +37,36 @@ constexpr unsigned char TELNET_ENVIRON_VAR = 0;
 constexpr unsigned char TELNET_ENVIRON_VALUE = 1;
 constexpr unsigned char TELNET_ENVIRON_ESC = 2;
 constexpr unsigned char TELNET_ENVIRON_USERVAR = 3;
+
+static void *buffer_suffix(void *buffer, size_t capacity, size_t offset) {
+  return checked_storage_region(buffer, capacity, offset, capacity - offset);
+}
+
+static const void *constant_buffer_suffix(const void *buffer, size_t capacity,
+                                          size_t offset) {
+  return checked_storage_region_const(buffer, capacity, offset,
+                                      capacity - offset);
+}
+
+static void append_byte(unsigned char *buffer, size_t capacity, size_t *size,
+                        unsigned char value) {
+  unsigned char *slot =
+      checked_storage_at(buffer, capacity, sizeof(*buffer), *size);
+  *slot = value;
+  (*size)++;
+}
+
+static int *socket_slot(int *sockets, size_t index) {
+  return checked_storage_at(sockets, TEST_CONNECTION_COUNT, sizeof(*sockets),
+                            index);
+}
+
+static char *process_argument(char **arguments, int count, int index) {
+  if (count < 0 || index < 0)
+    abort();
+  return *(char **)checked_storage_at(arguments, (size_t)count,
+                                      sizeof(*arguments), (size_t)index);
+}
 
 /* Wait for child to exit successfully, killing it after the timeout. */
 static int wait_child(pid_t child) {
@@ -269,7 +301,8 @@ static int send_bytes(int socket_fd, const unsigned char *bytes, size_t size) {
   size_t sent = 0;
 
   while (sent < size) {
-    ssize_t result = write(socket_fd, bytes + sent, size - sent);
+    ssize_t result = write(socket_fd, constant_buffer_suffix(bytes, size, sent),
+                           size - sent);
 
     if (result <= 0)
       return -1;
@@ -319,7 +352,8 @@ static int negotiate_utf8(int socket_fd) {
 
     if (poll(&readable, 1, 500) != 1)
       continue;
-    size = read(socket_fd, received + received_size,
+    size = read(socket_fd,
+                buffer_suffix(received, sizeof(received), received_size),
                 sizeof(received) - received_size);
     if (size <= 0)
       return -1;
@@ -712,7 +746,8 @@ static int negotiate_new_environ(int socket_fd) {
 
     if (poll(&readable, 1, 500) != 1)
       continue;
-    size = read(socket_fd, received + received_size,
+    size = read(socket_fd,
+                buffer_suffix(received, sizeof(received), received_size),
                 sizeof(received) - received_size);
     if (size <= 0)
       return -1;
@@ -732,14 +767,14 @@ static int send_ttype(int socket_fd, const char *value) {
 
   if (value_size + 6 > sizeof(response))
     return -1;
-  response[size++] = TELNET_IAC;
-  response[size++] = TELNET_SB;
-  response[size++] = TELNET_TTYPE;
-  response[size++] = TELNET_TTYPE_IS;
-  memcpy(response + size, value, value_size);
+  append_byte(response, sizeof(response), &size, TELNET_IAC);
+  append_byte(response, sizeof(response), &size, TELNET_SB);
+  append_byte(response, sizeof(response), &size, TELNET_TTYPE);
+  append_byte(response, sizeof(response), &size, TELNET_TTYPE_IS);
+  memcpy(buffer_suffix(response, sizeof(response), size), value, value_size);
   size += value_size;
-  response[size++] = TELNET_IAC;
-  response[size++] = TELNET_SE;
+  append_byte(response, sizeof(response), &size, TELNET_IAC);
+  append_byte(response, sizeof(response), &size, TELNET_SE);
   return send_bytes(socket_fd, response, size);
 }
 
@@ -778,12 +813,14 @@ static int expect_text(int socket_fd, const char *expected) {
       idle_attempts++;
       continue;
     }
-    size = read(socket_fd, received + received_size,
+    size = read(socket_fd,
+                buffer_suffix(received, sizeof(received), received_size),
                 sizeof(received) - received_size - 1);
     if (size <= 0)
       return -1;
     received_size += (size_t)size;
-    received[received_size] = '\0';
+    *(char *)checked_storage_at(received, sizeof(received), sizeof(char),
+                                received_size) = '\0';
     if (strstr(received, expected))
       return 0;
     if (received_size == sizeof(received) - 1)
@@ -807,12 +844,14 @@ static int expect_text_without(int socket_fd, const char *expected,
       idle_attempts++;
       continue;
     }
-    size = read(socket_fd, received + received_size,
+    size = read(socket_fd,
+                buffer_suffix(received, sizeof(received), received_size),
                 sizeof(received) - received_size - 1);
     if (size <= 0)
       return -1;
     received_size += (size_t)size;
-    received[received_size] = '\0';
+    *(char *)checked_storage_at(received, sizeof(received), sizeof(char),
+                                received_size) = '\0';
     if (strstr(received, forbidden)) {
       fprintf(stderr, "received forbidden '%s' while expecting '%s': '%s'\n",
               forbidden, expected, received);
@@ -841,12 +880,14 @@ static int expect_three_texts(int socket_fd, const char *first,
       idle_attempts++;
       continue;
     }
-    size = read(socket_fd, received + received_size,
+    size = read(socket_fd,
+                buffer_suffix(received, sizeof(received), received_size),
                 sizeof(received) - received_size - 1);
     if (size <= 0)
       return -1;
     received_size += (size_t)size;
-    received[received_size] = '\0';
+    *(char *)checked_storage_at(received, sizeof(received), sizeof(char),
+                                received_size) = '\0';
     if (strstr(received, first) && strstr(received, second) &&
         strstr(received, third))
       return 0;
@@ -933,8 +974,7 @@ static int exercise_split_modules(int socket_fd) {
                  expect_text(socket_fd, "Taken.") < 0 ||
                  send_command(socket_fd, "@destroy MovementWidget\r\n") < 0 ||
                  expect_text(socket_fd,
-                             "The object shakes and begins to crumble.") < 0
-                 ||
+                             "The object shakes and begins to crumble.") < 0 ||
                  send_command(socket_fd, "@open SplitExit\r\n") < 0 ||
                  expect_text(socket_fd, "Opened.") < 0 ||
                  send_command(socket_fd, "@link SplitExit=here\r\n") < 0 ||
@@ -1120,19 +1160,20 @@ static int create_styled_object(int socket_fd) {
     fprintf(stderr, "styled-object rename failed\n");
     return -1;
   }
-  if (send_command(socket_fd,
-                   "@attribute/set RenamedWidget/Desc=[send=\"look\" color=red bold "
-                   "hover.color=yellow tooltip=\"Inspect this object\" "
-                   "title=\"Actions\" menu.1.label=\"Look\" "
-                   "menu.1.send=\"look\" menu.2.label=\"Examine\" "
-                   "menu.2.prompt=\"examine RenamedWidget\" "
-                   "visibility.action=conceal visibility.delay=500 "
-                   "visibility.expire.prompt spoiler "
-                   "selection.group=\"objects\" "
-                   "selection.value=\"description\" selection.selected "
-                   "selection.exclusive=false selection.disabled=false "
-                   "disabled=false]Description[/]"
-                   "\r\n") < 0 ||
+  if (send_command(
+          socket_fd,
+          "@attribute/set RenamedWidget/Desc=[send=\"look\" color=red bold "
+          "hover.color=yellow tooltip=\"Inspect this object\" "
+          "title=\"Actions\" menu.1.label=\"Look\" "
+          "menu.1.send=\"look\" menu.2.label=\"Examine\" "
+          "menu.2.prompt=\"examine RenamedWidget\" "
+          "visibility.action=conceal visibility.delay=500 "
+          "visibility.expire.prompt spoiler "
+          "selection.group=\"objects\" "
+          "selection.value=\"description\" selection.selected "
+          "selection.exclusive=false selection.disabled=false "
+          "disabled=false]Description[/]"
+          "\r\n") < 0 ||
       expect_text(socket_fd, "Desc - Set.") < 0) {
     fprintf(stderr, "styled-object description failed\n");
     return -1;
@@ -1156,9 +1197,9 @@ static int create_styled_object(int socket_fd) {
     fprintf(stderr, "OSC Tier 6 rendering failed\n");
     return -1;
   }
-  if (send_command(socket_fd,
-                   "@attribute/set RenamedWidget/Idesc=[bg=blue]Inside[/]\r\n") <
-          0 ||
+  if (send_command(
+          socket_fd,
+          "@attribute/set RenamedWidget/Idesc=[bg=blue]Inside[/]\r\n") < 0 ||
       expect_text(socket_fd, "Idesc - Set.") < 0) {
     fprintf(stderr, "styled-object inside description failed\n");
     return -1;
@@ -1265,15 +1306,17 @@ int main(int argc, char **argv) {
   int result = 1;
 
   for (size_t index = 0; index < TEST_CONNECTION_COUNT; index++)
-    socket_fds[index] = -1;
+    *socket_slot(socket_fds, index) = -1;
   if (argc != 3)
     return 1;
   if (mkdtemp(directory) == nullptr)
     return 1;
-  snprintf(copy_source, sizeof(copy_source), "%s/.", argv[2]);
+  snprintf(copy_source, sizeof(copy_source), "%s/.",
+           process_argument(argv, argc, 2));
   if (run_command("cp", "-a", copy_source, directory) < 0)
     goto done;
-  snprintf(source_config, sizeof(source_config), "%s/stompymux.toml", argv[2]);
+  snprintf(source_config, sizeof(source_config), "%s/stompymux.toml",
+           process_argument(argv, argc, 2));
   snprintf(target_config, sizeof(target_config), "%s/stompymux.toml",
            directory);
   port = choose_port();
@@ -1285,7 +1328,8 @@ int main(int argc, char **argv) {
   if (child == 0) {
     if (chdir(directory) < 0)
       _exit(127);
-    execl(argv[1], argv[1], "stompymux.toml", nullptr);
+    char *server = process_argument(argv, argc, 1);
+    execl(server, server, "stompymux.toml", nullptr);
     _exit(127);
   }
   if (wait_child_failure(child) < 0) {
@@ -1303,36 +1347,38 @@ int main(int argc, char **argv) {
   if (child == 0) {
     if (chdir(directory) < 0)
       _exit(127);
-    execl(argv[1], argv[1], "stompymux.toml", nullptr);
+    char *server = process_argument(argv, argc, 1);
+    execl(server, server, "stompymux.toml", nullptr);
     _exit(127);
   }
   for (size_t index = 0; index < TEST_CONNECTION_COUNT; index++) {
-    socket_fds[index] = connect_when_ready(port);
-    if (socket_fds[index] < 0) {
+    int *socket_fd = socket_slot(socket_fds, index);
+    *socket_fd = connect_when_ready(port);
+    if (*socket_fd < 0) {
       fprintf(stderr, "connection %zu failed\n", index);
       goto done;
     }
-    readable = (struct pollfd){.fd = socket_fds[index], .events = POLLIN};
+    readable = (struct pollfd){.fd = *socket_fd, .events = POLLIN};
     if (poll(&readable, 1, 5000) != 1 ||
-        read(socket_fds[index], received, sizeof(received)) <= 0) {
+        read(*socket_fd, received, sizeof(received)) <= 0) {
       fprintf(stderr, "connection %zu welcome failed\n", index);
       goto done;
     }
-    if (index == 0 && negotiate_utf8(socket_fds[index]) < 0) {
+    if (index == 0 && negotiate_utf8(*socket_fd) < 0) {
       fprintf(stderr, "UTF-8 negotiation failed\n");
       goto done;
     }
-    if (index == 0 && negotiate_new_environ(socket_fds[index]) < 0) {
+    if (index == 0 && negotiate_new_environ(*socket_fd) < 0) {
       fprintf(stderr, "NEW-ENVIRON negotiation failed\n");
       goto done;
     }
-    if (index == 0 && negotiate_mtts(socket_fds[index]) < 0) {
+    if (index == 0 && negotiate_mtts(*socket_fd) < 0) {
       fprintf(stderr, "MTTS negotiation failed\n");
       goto done;
     }
   }
-  if (create_styled_object(socket_fds[0]) < 0 ||
-      exercise_plain_osc_fallback(socket_fds[1]) < 0)
+  if (create_styled_object(*socket_slot(socket_fds, 0)) < 0 ||
+      exercise_plain_osc_fallback(*socket_slot(socket_fds, 1)) < 0)
     goto done;
   if (kill(child, SIGTERM) < 0 || wait_child(child) < 0)
     goto done;
@@ -1345,8 +1391,9 @@ int main(int argc, char **argv) {
 
 done:
   for (size_t index = 0; index < TEST_CONNECTION_COUNT; index++) {
-    if (socket_fds[index] >= 0)
-      close(socket_fds[index]);
+    const int socket_fd = *socket_slot(socket_fds, index);
+    if (socket_fd >= 0)
+      close(socket_fd);
   }
   if (child > 0) {
     kill(child, SIGKILL);

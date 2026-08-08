@@ -1,12 +1,36 @@
 #include "mech_equipment_api.h"
 #include "mech_status_types.h"
+#include "mux/support/checked_storage.h"
 #include "template_internal.h"
 #include "weapon_catalogue_api.h"
+
+enum { INVENTORY_ITEM_CAPACITY = 8 * MAX_WEAPS_SECTION };
+
+static int *inventory_item_slot(int *items, int index) {
+  return checked_storage_at(items, INVENTORY_ITEM_CAPACITY, sizeof(*items),
+                            (size_t)index);
+}
+
+static short *inventory_count_slot(short *counts, int index) {
+  return checked_storage_at(counts, INVENTORY_ITEM_CAPACITY, sizeof(*counts),
+                            (size_t)index);
+}
+
+static unsigned char *section_weapon_slot(unsigned char *weapons, int index) {
+  return checked_storage_at(weapons, MAX_WEAPS_SECTION, sizeof(*weapons),
+                            (size_t)index);
+}
+
+static int *section_critical_slot(int *criticals, int index) {
+  return checked_storage_at(criticals, MAX_WEAPS_SECTION, sizeof(*criticals),
+                            (size_t)index);
+}
 
 void DumpMechSpecialObjects(BtechContext *context, DbRef player) {
   CoolMenu *c;
 
-  c = auto_column_const_string_menu("MechSpecials available", internals);
+  c = auto_column_const_string_menu("MechSpecials available", internals,
+                                    (size_t)template_internal_count);
   ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
@@ -19,12 +43,14 @@ static char *dumpweapon_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
     snprintf(buffer, LBUF_SIZE, WDUMP_MASKS);
   else {
     i--;
-    snprintf(buffer, LBUF_SIZE, WDUMP_MASK, MechWeapons[i].name,
-             MechWeapons[i].heat, MechWeapons[i].damage, MechWeapons[i].min,
-             MechWeapons[i].shortrange, MechWeapons[i].medrange,
+    WeaponRangeProfile ranges = weapon_catalogue_ranges(i);
+    snprintf(buffer, LBUF_SIZE, WDUMP_MASK, weapon_catalogue_name(i),
+             weapon_catalogue_heat(i), weapon_catalogue_damage(i),
+             ranges.minimum, ranges.short_range, ranges.medium_range,
              weapon_catalogue_effective_range(i, false),
              btech_weapon_settings_recycle_time(weapon_settings, i),
-             MechWeapons[i].criticals, MechWeapons[i].ammoperton);
+             weapon_catalogue_critical_slots(i),
+             weapon_catalogue_ammunition_per_ton(i));
   }
   return buffer;
 }
@@ -45,16 +71,20 @@ char *techlist_func(Mech *mech, char *buffer) {
              hascase = 0;
 
   snprintf(bufa, SBUF_SIZE, "%s",
-           build_bit_string(specialsabrev, ((mech)->rd.specials),
+           build_bit_string(specialsabrev, primary_technology_name_count(),
+                            ((mech)->rd.specials),
                             (char[BTECH_TEXT_CAPACITY]){0}));
   snprintf(bufb, SBUF_SIZE, "%s",
-           build_bit_string(specialsabrev2, ((mech)->rd.specials2),
+           build_bit_string(specialsabrev2, secondary_technology_name_count(),
+                            ((mech)->rd.specials2),
                             (char[BTECH_TEXT_CAPACITY]){0}));
   snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
 
   if (((mech)->ud.type) == CLASS_BSUIT) {
     snprintf(bufc, SBUF_SIZE, "%s",
-             build_bit_string(infspecialsabrev, ((mech)->rd.infantry_specials),
+             build_bit_string(infspecialsabrev,
+                              infantry_technology_name_count(),
+                              ((mech)->rd.infantry_specials),
                               (char[BTECH_TEXT_CAPACITY]){0}));
     snprintf(buffer, MBUF_SIZE, "%s %s %s", bufa, bufb, bufc);
   } else
@@ -89,7 +119,7 @@ char *techlist_func(Mech *mech, char *buffer) {
         sword = 1;
         strcat(buffer, " SWORD");
       }
-      if ((((mech)->ud.sections)[i].config & CASE_TECH) && !hascase) {
+      if (mech_section_configuration_has(mech, i, CASE_TECH) && !hascase) {
         hascase = 1;
         strcat(buffer, " CASE");
       }
@@ -133,8 +163,8 @@ char *payloadlist_func(Mech *mech, char *buffer) {
   int count, weap_count, ammo_count, section_loop, weap_loop, put_loop;
   char payloadbuff[120] = {0};
 
-  int payload_items[8 * MAX_WEAPS_SECTION];
-  short payload_items_count[8 * MAX_WEAPS_SECTION];
+  int payload_items[INVENTORY_ITEM_CAPACITY];
+  short payload_items_count[INVENTORY_ITEM_CAPACITY];
 
   /* Clear the buffer */
   snprintf(buffer, MBUF_SIZE, "%s", "");
@@ -144,9 +174,9 @@ char *payloadlist_func(Mech *mech, char *buffer) {
   ammo_count = 0;
 
   /* Initialize array */
-  for (put_loop = 0; put_loop < 8 * MAX_WEAPS_SECTION; put_loop++) {
-    payload_items[put_loop] = -1;
-    payload_items_count[put_loop] = 0;
+  for (put_loop = 0; put_loop < INVENTORY_ITEM_CAPACITY; put_loop++) {
+    *inventory_item_slot(payload_items, put_loop) = -1;
+    *inventory_count_slot(payload_items_count, put_loop) = 0;
   }
 
   /* Get the weapons for each sections */
@@ -161,18 +191,20 @@ char *payloadlist_func(Mech *mech, char *buffer) {
 
     /* Loop through all the weapons found and store their values */
     for (weap_loop = 0; weap_loop < count; weap_loop++) {
-      if (!(mech_critical_is_broken(mech, section_loop, critical[weap_loop]))) {
+      int critical_index = *section_critical_slot(critical, weap_loop);
+      int weapon = *section_weapon_slot(weaparray, weap_loop);
+      if (!mech_critical_is_broken(mech, section_loop, critical_index)) {
         /* Loop to put weapons in the temp array and keep count */
-        for (put_loop = 0; put_loop < 8 * MAX_WEAPS_SECTION; put_loop++) {
+        for (put_loop = 0; put_loop < INVENTORY_ITEM_CAPACITY; put_loop++) {
 
           /* Check to see if there is already an entry */
-          if (payload_items[put_loop] == weaparray[weap_loop]) {
-            payload_items_count[put_loop]++;
+          if (*inventory_item_slot(payload_items, put_loop) == weapon) {
+            (*inventory_count_slot(payload_items_count, put_loop))++;
             break;
             /* Ok, see if there is no entry */
-          } else if (payload_items[put_loop] == -1) {
-            payload_items[put_loop] = weaparray[weap_loop];
-            payload_items_count[put_loop]++;
+          } else if (*inventory_item_slot(payload_items, put_loop) == -1) {
+            *inventory_item_slot(payload_items, put_loop) = weapon;
+            (*inventory_count_slot(payload_items_count, put_loop))++;
             weap_count++;
             break;
           }
@@ -196,17 +228,17 @@ char *payloadlist_func(Mech *mech, char *buffer) {
       if (equipment_is_ammunition(temp_crit)) {
         if (!mech_critical_is_destroyed(mech, section_loop, count)) {
           /* Loop to put weapons in the temp array and keep count */
-          for (put_loop = weap_count; put_loop < 8 * MAX_WEAPS_SECTION;
+          for (put_loop = weap_count; put_loop < INVENTORY_ITEM_CAPACITY;
                put_loop++) {
 
             /* Check to see if there is already an entry */
-            if (payload_items[put_loop] == temp_crit) {
-              payload_items_count[put_loop]++;
+            if (*inventory_item_slot(payload_items, put_loop) == temp_crit) {
+              (*inventory_count_slot(payload_items_count, put_loop))++;
               break;
               /* Ok, see if there is no entry */
-            } else if (payload_items[put_loop] == -1) {
-              payload_items[put_loop] = temp_crit;
-              payload_items_count[put_loop]++;
+            } else if (*inventory_item_slot(payload_items, put_loop) == -1) {
+              *inventory_item_slot(payload_items, put_loop) = temp_crit;
+              (*inventory_count_slot(payload_items_count, put_loop))++;
               ammo_count++;
               break;
             }
@@ -226,13 +258,16 @@ char *payloadlist_func(Mech *mech, char *buffer) {
     /* If its a weapon use this method of printing it out
      * Else use the part method */
     if (put_loop < weap_count) {
-      snprintf(payloadbuff, sizeof(payloadbuff), "%s:%d",
-               &MechWeapons[payload_items[put_loop]].name[0],
-               payload_items_count[put_loop]);
+      snprintf(
+          payloadbuff, sizeof(payloadbuff), "%s:%d",
+          weapon_catalogue_name(*inventory_item_slot(payload_items, put_loop)),
+          *inventory_count_slot(payload_items_count, put_loop));
     } else {
       snprintf(payloadbuff, sizeof(payloadbuff), "%s:%d",
-               partname_func(mech->xcode.context, payload_items[put_loop], 'V'),
-               payload_items_count[put_loop]);
+               partname_func(mech->xcode.context,
+                             *inventory_item_slot(payload_items, put_loop),
+                             'V'),
+               *inventory_count_slot(payload_items_count, put_loop));
     }
 
     /* If we are not at the end, then put a | as a spacer */
@@ -256,8 +291,8 @@ char *partlist_func(Mech *mech, char *buffer) {
   int count, part_count, section_loop, put_loop, act_count;
   char partlistbuff[120] = {0};
 
-  int partlist_items[8 * MAX_WEAPS_SECTION];
-  short partlist_count[8 * MAX_WEAPS_SECTION];
+  int partlist_items[INVENTORY_ITEM_CAPACITY];
+  short partlist_count[INVENTORY_ITEM_CAPACITY];
 
   /* Clear the buffer */
   snprintf(buffer, LBUF_SIZE, "%s", "");
@@ -267,9 +302,9 @@ char *partlist_func(Mech *mech, char *buffer) {
   act_count = 0;
 
   /* Initialize array */
-  for (put_loop = 0; put_loop < 8 * MAX_WEAPS_SECTION; put_loop++) {
-    partlist_items[put_loop] = -1;
-    partlist_count[put_loop] = 0;
+  for (put_loop = 0; put_loop < INVENTORY_ITEM_CAPACITY; put_loop++) {
+    *inventory_item_slot(partlist_items, put_loop) = -1;
+    *inventory_count_slot(partlist_count, put_loop) = 0;
   }
 
   /* Get the parts for each sections */
@@ -301,16 +336,16 @@ char *partlist_func(Mech *mech, char *buffer) {
         break;
       }
       /* Loop to put parts in the temp array and keep count */
-      for (put_loop = 0; put_loop < 8 * MAX_WEAPS_SECTION; put_loop++) {
+      for (put_loop = 0; put_loop < INVENTORY_ITEM_CAPACITY; put_loop++) {
 
         /* Check to see if there is already an entry */
-        if (partlist_items[put_loop] == temp_crit) {
-          partlist_count[put_loop]++;
+        if (*inventory_item_slot(partlist_items, put_loop) == temp_crit) {
+          (*inventory_count_slot(partlist_count, put_loop))++;
           break;
           /* Ok, see if there is no entry */
-        } else if (partlist_items[put_loop] == -1) {
-          partlist_items[put_loop] = temp_crit;
-          partlist_count[put_loop]++;
+        } else if (*inventory_item_slot(partlist_items, put_loop) == -1) {
+          *inventory_item_slot(partlist_items, put_loop) = temp_crit;
+          (*inventory_count_slot(partlist_count, put_loop))++;
           part_count++;
           break;
         }
@@ -324,12 +359,14 @@ char *partlist_func(Mech *mech, char *buffer) {
   /* Final loop to print out the full part list to the buffer and return it */
   for (put_loop = 0; put_loop < (part_count); put_loop++) {
 
-    switch (special_from_equipment_index(partlist_items[put_loop])) {
+    int part = *inventory_item_slot(partlist_items, put_loop);
+    int count_for_part = *inventory_count_slot(partlist_count, put_loop);
+    switch (special_from_equipment_index(part)) {
     case LOWER_ACTUATOR:
     case UPPER_ACTUATOR:
     case SHOULDER_OR_HIP:
     case HAND_OR_FOOT_ACTUATOR:
-      act_count = act_count + partlist_count[put_loop];
+      act_count = act_count + count_for_part;
       break;
     case ENGINE:
       snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
@@ -339,7 +376,7 @@ char *partlist_func(Mech *mech, char *buffer) {
                : ((mech)->rd.specials) & XL_TECH  ? "XL_Engine"
                : ((mech)->rd.specials) & ICE_TECH ? "ICE_Engine"
                                                   : "Engine",
-               partlist_count[put_loop]);
+               count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
@@ -354,7 +391,7 @@ char *partlist_func(Mech *mech, char *buffer) {
                ((mech)->rd.specials2) & XLGYRO_TECH   ? "XL_Gyro"
                : ((mech)->rd.specials2) & HDGYRO_TECH ? "HeavyDuty_Gyro"
                                                       : "Gyro",
-               partlist_count[put_loop]);
+               count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
@@ -370,7 +407,7 @@ char *partlist_func(Mech *mech, char *buffer) {
                : ((mech)->rd.specials) & (DOUBLE_HEAT_TECH | CLAN_TECH)
                    ? "Double_HeatSink"
                    : "HeatSink",
-               partlist_count[put_loop]);
+               count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
@@ -381,10 +418,8 @@ char *partlist_func(Mech *mech, char *buffer) {
       strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
       break;
     default:
-      snprintf(
-          partlistbuff, sizeof(partlistbuff), "%s:%d",
-          partname_func(mech->xcode.context, partlist_items[put_loop], 'V'),
-          partlist_count[put_loop]);
+      snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
+               partname_func(mech->xcode.context, part, 'V'), count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {

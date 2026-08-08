@@ -22,6 +22,7 @@
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 
 char *btech_attribute_read(GameDatabase *database, DbRef id, int flag,
@@ -36,19 +37,24 @@ void silly_atr_set_in(GameDatabase *database, DbRef id, int flag,
   attribute_add_raw(database, id, flag, data);
 }
 
-void KillText(char **mapt) {
-  int i;
-
-  for (i = 0; mapt[i]; i++)
-    free(mapt[i]);
-  free(mapt);
+static char **text_slot(char **lines, size_t count, size_t index) {
+  return checked_storage_at(lines, count, sizeof(*lines), index);
 }
 
-void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player) {
-  int i;
+void FreeTextItems(char **lines, size_t count) {
+  for (size_t index = 0; index < count; ++index)
+    free(*text_slot(lines, count, index));
+}
 
-  for (i = 0; mapt[i]; i++)
-    mecha_notify(evaluation, player, mapt[i]);
+void KillText(char **lines, size_t count) {
+  FreeTextItems(lines, count);
+  free(lines);
+}
+
+void ShowText(EvaluationContext *evaluation, char **lines, size_t count,
+              DbRef player) {
+  for (size_t index = 0; index < count; ++index)
+    mecha_notify(evaluation, player, *text_slot(lines, count, index));
 }
 
 int BOUNDED(int min, int val, int max) {
@@ -131,80 +137,89 @@ char *first_parseattribute(char *buffer) {
  */
 
 int proper_parseattributes(char *buffer, char **args, int max) {
-  int count = 0;
-  size_t length;
-  char *start;
-
   if (max <= 0)
     return 0;
   const size_t argument_capacity = (size_t)max;
   memset(args, 0, sizeof(*args) * argument_capacity);
 
-  start = buffer;
-  while (count < (max - 1) && *start) {
+  size_t count = 0;
+  size_t offset = 0;
+  const size_t buffer_length = strlen(buffer);
+  while (count < argument_capacity - 1 && offset < buffer_length) {
+    const char *start = checked_string_suffix(buffer, offset);
+    char **slot = text_slot(args, argument_capacity, count);
     if (*start == '=') {
-      args[count++] = strndup(start, 1);
-      start++;
+      *slot = strndup(start, 1);
+      ++count;
+      ++offset;
       continue;
     }
-    length = strcspn(start, " \t=");
-    args[count++] = strndup(start, length);
-    start += length;
-    if (*start != '=' && *start != '\x0')
-      start++;
+    const size_t length = strcspn(start, " \t=");
+    *slot = strndup(start, length);
+    ++count;
+    offset += length;
+    const char current = *checked_string_suffix(buffer, offset);
+    if (current != '=' && current != '\0')
+      ++offset;
   }
-  if (*start) {
-    args[max - 1] = strdup(start);
-    count++;
+  if (offset < buffer_length) {
+    *text_slot(args, argument_capacity, argument_capacity - 1) =
+        strdup(checked_string_suffix(buffer, offset));
+    ++count;
   }
-  return count;
+  return (int)count;
 }
 
 int silly_parseattributes(char *buffer, char **args, int max) {
-  char bufferi[LBUF_SIZE], foobuff[LBUF_SIZE];
-  char *a, *b;
-  int count = 0;
-  char *parsed = buffer;
-  int num_args = 0;
-
   if (max <= 0)
     return 0;
   const size_t argument_capacity = (size_t)max;
   memset(args, 0, sizeof(*args) * argument_capacity);
 
-  b = bufferi;
-  for (a = buffer; *a && a; a++)
-    if (*a == '=') {
-      *(b++) = ' ';
-      *(b++) = '=';
-      *(b++) = ' ';
-    } else
-      *(b++) = *a;
-  *b = 0;
-  /* Got da silly string in bufferi variable */
-
-  while ((count < max) && parsed) {
-    if (!count) {
-      /* first time through */
-      parsed = strtok(bufferi, " \t");
+  char expanded[LBUF_SIZE];
+  size_t output = 0;
+  const size_t input_length = strlen(buffer);
+  for (size_t input = 0; input < input_length; ++input) {
+    const char value = *checked_string_suffix(buffer, input);
+    const size_t needed = value == '=' ? 3 : 1;
+    if (output + needed >= sizeof(expanded))
+      return 0;
+    if (value == '=') {
+      *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
+                                  output++) = ' ';
+      *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
+                                  output++) = '=';
+      *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
+                                  output++) = ' ';
     } else {
-      parsed = strtok(NULL, " \t");
+      *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
+                                  output++) = value;
     }
-    args[count] = parsed; /* Set the args pointer */
-    if (parsed)
-      num_args++; /* Actual count of arguments */
-    count++;      /* Loop to make sure we don't overrun our */
-                  /* buffer */
   }
-  /* Hrm. Now all we gotta do is append -rest- of data to end of _last_ arg */
-  if (args[max - 1] && args[max - 1][0]) {
-    strcpy(foobuff, args[max - 1]);
-    while ((parsed = strtok(NULL, " \t")))
-      snprintf(foobuff + strlen(foobuff), sizeof(foobuff) - strlen(foobuff),
-               " %s", parsed);
-    args[max - 1] = foobuff;
+  *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
+                              output) = '\0';
+
+  char *save_pointer = nullptr;
+  char *parsed = strtok_r(expanded, " \t", &save_pointer);
+  size_t count = 0;
+  while (parsed != nullptr && count < argument_capacity) {
+    if (count == argument_capacity - 1) {
+      char remainder[LBUF_SIZE];
+      snprintf(remainder, sizeof(remainder), "%s", parsed);
+      while ((parsed = strtok_r(nullptr, " \t", &save_pointer)) != nullptr) {
+        const size_t used = strlen(remainder);
+        snprintf(checked_storage_at(remainder, sizeof(remainder), sizeof(char),
+                                    used),
+                 sizeof(remainder) - used, " %s", parsed);
+      }
+      *text_slot(args, argument_capacity, count) = strdup(remainder);
+    } else {
+      *text_slot(args, argument_capacity, count) = strdup(parsed);
+      parsed = strtok_r(nullptr, " \t", &save_pointer);
+    }
+    ++count;
   }
-  return num_args;
+  return (int)count;
 }
 
 /*
@@ -236,28 +251,32 @@ int silly_parseattributes(char *buffer, char **args, int max) {
  * strings.
  */
 
-int proper_explodearguments(char *buffer, char **args, int max) {
+int proper_explodearguments(const char *buffer, char **args, int max) {
   int count = 0;
-  size_t length;
-  char *start;
 
   if (max <= 0)
     return 0;
   const size_t argument_capacity = (size_t)max;
   memset(args, 0, sizeof(*args) * argument_capacity);
 
-  start = buffer;
-  while (count < max - 1 && *start) {
-    length = strcspn(start, " \t");
-    args[count++] = strndup(start, length);
-    start += length;
-    if (*start != '\x0')
-      start++;
-  }
-  if (*start) {
-    args[max - 1] = strdup(start);
+  char *storage = strdup(buffer);
+  if (storage == nullptr)
+    return 0;
+  char *remaining = storage;
+  while (count < max - 1 && remaining != nullptr && *remaining) {
+    char *field = strsep(&remaining, " \t");
+    char **slot = checked_storage_at(args, argument_capacity, sizeof(char *),
+                                     (size_t)count);
+    *slot = strdup(field);
     count++;
   }
+  if (remaining != nullptr && *remaining) {
+    char **slot = checked_storage_at(args, argument_capacity, sizeof(char *),
+                                     argument_capacity - 1);
+    *slot = strdup(remaining);
+    count++;
+  }
+  free(storage);
   return count;
 }
 
@@ -273,7 +292,7 @@ int mech_parseattributes(char *buffer, char **args, int maxargs) {
 
   while ((count < maxargs) && parsed) {
     parsed = strtok(!count ? buffer : NULL, " \t");
-    args[count] = parsed; /* Set the args pointer */
+    *text_slot(args, argument_capacity, (size_t)count) = parsed;
     if (parsed)
       num_args++; /* Actual count of arguments */
     count++;      /* Loop to make sure we don't overrun our */

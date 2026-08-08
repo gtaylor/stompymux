@@ -58,6 +58,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mymath.h"
 #include "registry_api.h"
@@ -96,6 +97,13 @@ static const struct land_data_type land_data[] = {
 
 #define NUM_LAND_TYPES (sizeof(land_data) / sizeof(struct land_data_type))
 
+static const struct land_data_type *land_data_entry(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(land_data, NUM_LAND_TYPES, sizeof(*land_data),
+                                  (size_t)index);
+}
+
 static void aero_takeoff_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   BattleMap *map =
@@ -105,7 +113,7 @@ static void aero_takeoff_event(MuxEvent *e) {
 
   if (mech_is_dropship(mech))
     for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
-      if (mech_class(mech) == land_data[i].type)
+      if (mech_class(mech) == land_data_entry(i)->type)
         break;
   if (count > 0) {
     if (count > 5) {
@@ -114,7 +122,7 @@ static void aero_takeoff_event(MuxEvent *e) {
     } else
       mech_printf(mech, MECHALL, "Launch countdown: %ld.", count);
     if (i >= 0) {
-      if (count == (land_data[i].launchtime / 4))
+      if (count == (land_data_entry(i)->launchtime / 4))
         dropship_notification_broadcast(
             mech, "'s engines start to glow with unbearable intensity..");
       switch (count) {
@@ -158,12 +166,12 @@ static void aero_takeoff_event(MuxEvent *e) {
       return;
     }
     for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
-      if (mech_class(mech) == land_data[i].type)
+      if (mech_class(mech) == land_data_entry(i)->type)
         break;
   }
   mech_spinning_set(mech, false);
-  mech_notify(mech, MECHALL, land_data[i].takeoff);
-  mech_los_broadcast(mech, land_data[i].takeoff_others);
+  mech_notify(mech, MECHALL, land_data_entry(i)->takeoff);
+  mech_los_broadcast(mech, land_data_entry(i)->takeoff_others);
   mech_motion_vector_reset(mech);
   if (mech_is_dropship(mech))
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
@@ -195,7 +203,7 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
   long j;
 
   for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
-    if (mech_class(mech) == land_data[i].type)
+    if (mech_class(mech) == land_data_entry(i)->type)
       break;
 
   if ((j = atoi(buffer)))
@@ -269,7 +277,7 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
         "Realize the ceiling in this grotto is a bit to low for that!");
     return;
   }
-  if (land_data[i].launchtime > 0)
+  if (land_data_entry(i)->launchtime > 0)
     mech_notify(mech, MECHALL,
                 "Launch sequence initiated.. type 'land' to abort it.");
   dropship_notification_broadcast_if_due(mech,
@@ -287,7 +295,7 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
   }
   mech_event_cancel(mech, EVENT_HIDE);
   mech_event_schedule(mech, EVENT_TAKEOFF, aero_takeoff_event, 1,
-                      (void *)j ? j : land_data[i].launchtime);
+                      (void *)j ? j : land_data_entry(i)->launchtime);
 }
 
 void DS_BlastNearbyMechsAndTrees(Mech *mech, const char *hitmsg,
@@ -340,6 +348,15 @@ enum { NO_ERROR, INVALID_TERRAIN, UNEVEN_TERRAIN, BLOCKED_LZ };
 
 static const char *const reasons[] = {"Improper terrain", "Uneven ground",
                                       "Blocked landing zone"};
+
+const char *aero_landing_reason(int index) {
+  if (index < 0)
+    abort();
+  const char *const *reason =
+      checked_storage_at_const(reasons, sizeof(reasons) / sizeof(*reasons),
+                               sizeof(*reasons), (size_t)index);
+  return *reason;
+}
 
 typedef struct LandingZoneCheck LandingZoneCheck;
 struct LandingZoneCheck {
@@ -407,7 +424,7 @@ void aero_land(DbRef player, void *data, const char *buffer) {
   }
 
   for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
-    if (mech_class(mech) == land_data[i].type)
+    if (mech_class(mech) == land_data_entry(i)->type)
       break;
   if (i == (int)(NUM_LAND_TYPES))
     return;
@@ -449,25 +466,26 @@ void aero_land(DbRef player, void *data, const char *buffer) {
   }
   if (((horiz = my_sqrtm((double)mech_desired_speed(mech),
                          (double)mech_vertical_speed(mech))) >=
-       ((double)1.0 + land_data[i].maxhoriz))) {
+       ((double)1.0 + land_data_entry(i)->maxhoriz))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You're moving too fast to land.");
     return;
   }
-  if (horiz < land_data[i].minhoriz) {
+  if (horiz < land_data_entry(i)->minhoriz) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You're moving too slowly to land.");
     return;
   }
   const float vertical_speed = mech_vertical_speed(mech);
   const float current_speed = mech_current_speed(mech);
-  if (((vert = (double)vertical_speed) > (vertmax = land_data[i].maxvertup)) ||
-      ((double)vertical_speed < (vertmin = land_data[i].maxvertdown))) {
+  if (((vert = (double)vertical_speed) >
+       (vertmax = land_data_entry(i)->maxvertup)) ||
+      ((double)vertical_speed < (vertmin = land_data_entry(i)->maxvertdown))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You are moving too fast to land. ");
     return;
   }
-  if ((double)current_speed < land_data[i].minhoriz) {
+  if ((double)current_speed < land_data_entry(i)->minhoriz) {
     if (mech_motion_vector_z(mech) <= 0)
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
@@ -494,8 +512,8 @@ void aero_land(DbRef player, void *data, const char *buffer) {
                                mech_dbref(mech), mech_position_x(mech),
                                mech_position_y(mech), battle_map_dbref(map)));
 
-  mech_notify(mech, MECHALL, land_data[i].landmsg);
-  mech_los_broadcast(mech, land_data[i].landmsg_others);
+  mech_notify(mech, MECHALL, land_data_entry(i)->landmsg);
+  mech_los_broadcast(mech, land_data_entry(i)->landmsg_others);
   mech_position_z_set(mech, mech_position_surface_elevation(mech));
   mech_landed_set(mech, true);
   mech_current_speed_set(mech, 0.0F);
@@ -737,57 +755,8 @@ void dropship_land_warning(Mech *mech, int serious) {
     return;
   ilz--;
   mech_printf(mech, MECHALL, "%sWARNING: %s - %s[reset]", colorstr(serious),
-              reasons[ilz],
+              aero_landing_reason(ilz),
               serious == 1   ? "CLIMB UP NOW!!!"
               : serious == 0 ? "No further descent is advisable."
                              : "Please do not even consider landing here.");
-}
-
-void aero_checklz(DbRef player, Mech *mech, char *buffer) {
-  int ilz, argc;
-  char *args[3];
-  int x, y;
-
-  if (!common_checks(player, mech, MECH_USUAL))
-    return;
-
-  argc = mech_parseattributes(buffer, args, 3);
-  switch (argc) {
-  case 2:
-    x = atoi(args[0]);
-    y = atoi(args[1]);
-    if (!mech_is_observer(mech)) {
-      float fx, fy;
-      int const tactical_range = mech_tactical_range(mech);
-      float const tactical_range_float = (float)tactical_range;
-      MapCoordToRealCoord(x, y, &fx, &fy);
-      if (FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                       fx, fy) > tactical_range_float) {
-        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                     "Out of range!");
-        return;
-      }
-    }
-    break;
-  case 0:
-    x = mech_position_x(mech);
-    y = mech_position_y(mech);
-    break;
-  default:
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 "Invalid number of parameters!");
-    return;
-  }
-
-  ilz = aero_landing_zone_check(mech, x, y);
-  if (!ilz) {
-    mech_notify(
-        mech, MECHALL,
-        tprintf("The hex (%d,%d) looks good enough for a landing.", x, y));
-    return;
-  }
-  ilz--;
-  mech_printf(mech, MECHALL,
-              "The hex (%d,%d) doesn't look good for landing: %s.", x, y,
-              reasons[ilz]);
 }

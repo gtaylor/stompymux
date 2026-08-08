@@ -19,6 +19,60 @@
 #include "mux/server/maintenance.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
+
+static char **lua_module_slot(char **modules, size_t capacity, size_t index) {
+  return checked_storage_at(modules, capacity, sizeof(*modules), index);
+}
+
+static char *lua_module_item(char *const *modules, size_t count, size_t index) {
+  return *(char *const *)checked_storage_at_const(modules, count,
+                                                  sizeof(*modules), index);
+}
+
+static const char *lua_runtime_root(const LuaRuntime *runtime,
+                                    LUA_MODULE_ROOT root) {
+  return checked_storage_at_const(runtime->roots, LUA_ROOT_COUNT,
+                                  sizeof(*runtime->roots), (size_t)root);
+}
+
+static char *lua_split_at(char *text, char delimiter) {
+  const size_t length = strlen(text);
+  size_t offset = 0;
+
+  while (offset < length &&
+         *(const char *)checked_storage_at_const(text, length + 1, sizeof(char),
+                                                 offset) != delimiter)
+    offset++;
+  if (offset == length)
+    return nullptr;
+  *(char *)checked_storage_at(text, length + 1, sizeof(char), offset) = '\0';
+  return checked_storage_at(text, length + 1, sizeof(char), offset + 1);
+}
+
+static char **lua_string_slot(char **items, size_t count, size_t index) {
+  return checked_storage_at(items, count, sizeof(*items), index);
+}
+
+static char *lua_string_item(char *const *items, size_t count, size_t index) {
+  return *(char *const *)checked_storage_at_const(items, count, sizeof(*items),
+                                                  index);
+}
+
+static const char *lua_const_string_item(const char *const *items, size_t count,
+                                         size_t index) {
+  return *(const char *const *)checked_storage_at_const(items, count,
+                                                        sizeof(*items), index);
+}
+
+static int *lua_int_slot(int *items, size_t count, size_t index) {
+  return checked_storage_at(items, count, sizeof(*items), index);
+}
+
+static int lua_int_item(const int *items, size_t count, size_t index) {
+  return *(const int *)checked_storage_at_const(items, count, sizeof(*items),
+                                                index);
+}
 
 int lua_compare_module_paths(const void *left, const void *right) {
   const char *const *left_path = left;
@@ -31,7 +85,7 @@ void lua_free_modules(char **modules, size_t module_count) {
   size_t index;
 
   for (index = 0; index < module_count; index++)
-    free(modules[index]);
+    free(lua_module_item(modules, module_count, index));
   free(modules);
 }
 
@@ -52,7 +106,8 @@ static int lua_add_module(char ***modules, size_t *module_count,
     return 0;
   }
   *modules = replacement;
-  (*modules)[(*module_count)++] = copy;
+  *lua_module_slot(*modules, *module_count + 1, *module_count) = copy;
+  (*module_count)++;
   return 1;
 }
 
@@ -64,13 +119,14 @@ int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
   struct dirent *entry;
 
   if (relative[0]) {
-    if (!lua_join_path(directory, sizeof(directory), runtime->roots[root],
-                       relative)) {
+    if (!lua_join_path(directory, sizeof(directory),
+                       lua_runtime_root(runtime, root), relative)) {
       lua_set_error(error, error_size, "Lua module path is too long");
       return 0;
     }
   } else {
-    snprintf(directory, sizeof(directory), "%s", runtime->roots[root]);
+    snprintf(directory, sizeof(directory), "%s",
+             lua_runtime_root(runtime, root));
   }
   stream = opendir(directory);
   if (!stream) {
@@ -96,8 +152,8 @@ int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     } else {
       snprintf(child_relative, sizeof(child_relative), "%s", entry->d_name);
     }
-    if (!lua_join_path(child_path, sizeof(child_path), runtime->roots[root],
-                       child_relative)) {
+    if (!lua_join_path(child_path, sizeof(child_path),
+                       lua_runtime_root(runtime, root), child_relative)) {
       lua_set_error(error, error_size, "Lua module path is too long");
       closedir(stream);
       return 0;
@@ -114,7 +170,7 @@ int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     }
     name_length = strlen(entry->d_name);
     if (!S_ISREG(status.st_mode) || name_length < 5 ||
-        strcmp(entry->d_name + name_length - 4, ".lua"))
+        strcmp(checked_string_suffix(entry->d_name, name_length - 4), ".lua"))
       continue;
     if (!lua_add_module(modules, module_count, child_relative, error,
                         error_size)) {
@@ -135,12 +191,13 @@ static int lua_collect_global_modules(LuaRuntime *runtime, const char *relative,
 
 static int lua_cron_parse_number(const char *text, long *value) {
   char *end;
-  const char *cursor;
+  const size_t length = strlen(text);
 
   if (!*text)
     return 0;
-  for (cursor = text; *cursor; cursor++) {
-    if (!isdigit((unsigned char)*cursor))
+  for (size_t index = 0; index < length; index++) {
+    if (!(isdigit)((unsigned char)*(const char *)checked_storage_at_const(
+            text, length + 1, sizeof(char), index)))
       return 0;
   }
   errno = 0;
@@ -159,19 +216,16 @@ static int lua_cron_field_matches(const char *field, int value, int minimum,
   *is_wildcard = !strcmp(field, "*");
   part = copy;
   while (part) {
-    char *next = strchr(part, ',');
+    char *next = lua_split_at(part, ',');
     char *step_text;
     long step = 1;
     long first;
     long last;
 
-    if (next)
-      *next++ = '\0';
     if (!*part)
       return -1;
-    step_text = strchr(part, '/');
+    step_text = lua_split_at(part, '/');
     if (step_text) {
-      *step_text++ = '\0';
       if (strchr(step_text, '/') || !lua_cron_parse_number(step_text, &step) ||
           step < 1)
         return -1;
@@ -180,10 +234,9 @@ static int lua_cron_field_matches(const char *field, int value, int minimum,
       first = minimum;
       last = maximum;
     } else {
-      char *dash = strchr(part, '-');
+      char *dash = lua_split_at(part, '-');
 
       if (dash) {
-        *dash++ = '\0';
         if (strchr(dash, '-') || !lua_cron_parse_number(part, &first) ||
             !lua_cron_parse_number(dash, &last))
           return -1;
@@ -222,28 +275,34 @@ int lua_cron_matches(const char *cron, time_t when, char *error,
   for (index = 0; index < 5; index++) {
     if (!field)
       goto invalid;
-    fields[index] = field;
+    *lua_string_slot(fields, 5, (size_t)index) = field;
     field = strtok(nullptr, " \t");
   }
   if (field || !gmtime_r(&when, &utc))
     goto invalid;
-  values[0] = utc.tm_min;
-  values[1] = utc.tm_hour;
-  values[2] = utc.tm_mday;
-  values[3] = utc.tm_mon + 1;
-  values[4] = utc.tm_wday;
+  *lua_int_slot(values, 5, 0) = utc.tm_min;
+  *lua_int_slot(values, 5, 1) = utc.tm_hour;
+  *lua_int_slot(values, 5, 2) = utc.tm_mday;
+  *lua_int_slot(values, 5, 3) = utc.tm_mon + 1;
+  *lua_int_slot(values, 5, 4) = utc.tm_wday;
   for (index = 0; index < 5; index++) {
-    matches[index] =
-        lua_cron_field_matches(fields[index], values[index], minimums[index],
-                               maximums[index], &wildcards[index]);
-    if (matches[index] < 0)
+    int *wildcard = lua_int_slot(wildcards, 5, (size_t)index);
+    int *match = lua_int_slot(matches, 5, (size_t)index);
+
+    *match = lua_cron_field_matches(lua_string_item(fields, 5, (size_t)index),
+                                    lua_int_item(values, 5, (size_t)index),
+                                    lua_int_item(minimums, 5, (size_t)index),
+                                    lua_int_item(maximums, 5, (size_t)index),
+                                    wildcard);
+    if (*match < 0)
       goto invalid;
   }
-  if (!matches[0] || !matches[1] || !matches[3])
+  if (!lua_int_item(matches, 5, 0) || !lua_int_item(matches, 5, 1) ||
+      !lua_int_item(matches, 5, 3))
     return 0;
-  if (!wildcards[2] && !wildcards[4])
-    return matches[2] || matches[4];
-  return matches[2] && matches[4];
+  if (!lua_int_item(wildcards, 5, 2) && !lua_int_item(wildcards, 5, 4))
+    return lua_int_item(matches, 5, 2) || lua_int_item(matches, 5, 4);
+  return lua_int_item(matches, 5, 2) && lua_int_item(matches, 5, 4);
 
 invalid:
   lua_set_error(error, error_size, "invalid cron expression %s", cron);
@@ -397,13 +456,17 @@ static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     for (size_t index = 0;
          index < sizeof(appearance_names) / sizeof(*appearance_names);
          index++) {
-      lua_getfield(runtime->state, -1, appearance_names[index]);
+      const char *appearance = lua_const_string_item(
+          appearance_names,
+          sizeof(appearance_names) / sizeof(*appearance_names), index);
+
+      lua_getfield(runtime->state, -1, appearance);
       if (!lua_isnil(runtime->state, -1) &&
           (root != LUA_ROOT_OBJECT_LOGIC ||
            !lua_isfunction(runtime->state, -1))) {
         lua_set_error(error, error_size,
                       "%s in %s must be a function in an object module",
-                      appearance_names[index], path);
+                      appearance, path);
         lua_settop(runtime->state, top);
         return 0;
       }
@@ -543,7 +606,8 @@ static int lua_load_global_modules(LuaRuntime *runtime, char *error,
           sizeof(*runtime->global_modules), lua_compare_module_paths);
   for (index = 0; index < runtime->global_module_count; index++) {
     if (!lua_verify_module(runtime, LUA_ROOT_GLOBAL_LOGIC,
-                           runtime->global_modules[index], error, error_size))
+                           lua_global_module_at(runtime, index), error,
+                           error_size))
       return 0;
   }
   return 1;

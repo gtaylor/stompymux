@@ -2,6 +2,78 @@
 
 #include <stdint.h>
 
+#include "autopilot_argument_list_api.h"
+#include "mux/support/checked_storage.h"
+
+static const struct MechSection *
+stored_section(const MechPersistenceSnapshot *snapshot, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(snapshot->definition.sections, NUM_SECTIONS,
+                                  sizeof(*snapshot->definition.sections),
+                                  (size_t)index);
+}
+
+static const struct CriticalSlot *
+stored_critical(const struct MechSection *section, int slot) {
+  if (slot < 0)
+    abort();
+  return checked_storage_at_const(section->criticals, NUM_CRITICALS,
+                                  sizeof(*section->criticals), (size_t)slot);
+}
+
+static DbRef stored_dbref(const DbRef *values, size_t count, int index) {
+  if (index < 0)
+    abort();
+  const DbRef *value =
+      checked_storage_at_const(values, count, sizeof(*values), (size_t)index);
+  return *value;
+}
+
+static int stored_int(const int *values, size_t count, int index) {
+  if (index < 0)
+    abort();
+  const int *value =
+      checked_storage_at_const(values, count, sizeof(*values), (size_t)index);
+  return *value;
+}
+
+static int stored_char(const char *values, size_t count, int index) {
+  if (index < 0)
+    abort();
+  const char *value =
+      checked_storage_at_const(values, count, sizeof(*values), (size_t)index);
+  return *value;
+}
+
+static unsigned long stored_unsigned_long(const unsigned long *values,
+                                          size_t count, int index) {
+  if (index < 0)
+    abort();
+  const unsigned long *value =
+      checked_storage_at_const(values, count, sizeof(*values), (size_t)index);
+  return *value;
+}
+
+static unsigned long stored_tic(const MechPersistenceSnapshot *snapshot,
+                                int tic, int word) {
+  if (tic < 0 || word < 0)
+    abort();
+  const unsigned long (*row)[TICLONGS] = checked_storage_at_const(
+      snapshot->tics, NUM_TICS, sizeof(*snapshot->tics), (size_t)tic);
+  return stored_unsigned_long(*row, TICLONGS, word);
+}
+
+static const char *stored_channel_title(const MechPersistenceSnapshot *snapshot,
+                                        int index) {
+  if (index < 0)
+    abort();
+  const char (*title)[CHTITLELEN + 1] = checked_storage_at_const(
+      snapshot->channel_titles, FREQS, sizeof(*snapshot->channel_titles),
+      (size_t)index);
+  return *title;
+}
+
 static int bind_runtime_int(sqlite3_stmt *statement, int *index,
                             sqlite3_int64 value) {
   return btech_special_bind_int(statement, (*index)++, value);
@@ -140,7 +212,7 @@ int btech_store_simple_object(void *key, void *data, int depth,
         btech_special_step(context->mech) < 0)
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_SECTIONS; index++) {
-      struct MechSection *section = &snapshot.definition.sections[index];
+      const struct MechSection *section = stored_section(&snapshot, index);
       if (btech_special_bind_int(context->section, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->section, 2, index) < 0 ||
           btech_special_bind_int(context->section, 3, section->armor) < 0 ||
@@ -160,7 +232,7 @@ int btech_store_simple_object(void *key, void *data, int depth,
         break;
       }
       for (slot = 0; context->result == 0 && slot < NUM_CRITICALS; slot++) {
-        struct CriticalSlot *critical = &section->criticals[slot];
+        const struct CriticalSlot *critical = stored_critical(section, slot);
         if (btech_special_bind_int(context->critical, 1, (DbRef)key) < 0 ||
             btech_special_bind_int(context->critical, 2, index) < 0 ||
             btech_special_bind_int(context->critical, 3, slot) < 0 ||
@@ -217,16 +289,18 @@ int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < NUM_BAYS; index++) {
       if (btech_special_bind_int(context->bay, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->bay, 2, index) < 0 ||
-          btech_special_bind_int(context->bay, 3,
-                                 snapshot.position.bay[index]) < 0 ||
+          btech_special_bind_int(
+              context->bay, 3,
+              stored_dbref(snapshot.position.bay, NUM_BAYS, index)) < 0 ||
           btech_special_step(context->bay) < 0)
         context->result = -1;
     }
     for (index = 0; context->result == 0 && index < NUM_TURRETS; index++) {
       if (btech_special_bind_int(context->mech_turret, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->mech_turret, 2, index) < 0 ||
-          btech_special_bind_int(context->mech_turret, 3,
-                                 snapshot.position.turret[index]) < 0 ||
+          btech_special_bind_int(
+              context->mech_turret, 3,
+              stored_dbref(snapshot.position.turret, NUM_TURRETS, index)) < 0 ||
           btech_special_step(context->mech_turret) < 0)
         context->result = -1;
     }
@@ -253,9 +327,12 @@ int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0;
          context->result == 0 && index < C3I_NETWORK_SIZE + C3_NETWORK_SIZE;
          index++) {
-      DbRef node = index < C3I_NETWORK_SIZE
-                       ? snapshot.network.C3iNetwork[index]
-                       : snapshot.network.C3Network[index - C3I_NETWORK_SIZE];
+      DbRef node =
+          index < C3I_NETWORK_SIZE
+              ? stored_dbref(snapshot.network.C3iNetwork, C3I_NETWORK_SIZE,
+                             index)
+              : stored_dbref(snapshot.network.C3Network, C3_NETWORK_SIZE,
+                             index - C3I_NETWORK_SIZE);
       int network = index < C3I_NETWORK_SIZE ? 0 : 1;
       int node_index =
           index < C3I_NETWORK_SIZE ? index : index - C3I_NETWORK_SIZE;
@@ -271,8 +348,8 @@ int btech_store_simple_object(void *key, void *data, int depth,
         if (btech_special_bind_int(context->tic, 1, (DbRef)key) < 0 ||
             btech_special_bind_int(context->tic, 2, index) < 0 ||
             btech_special_bind_int(context->tic, 3, slot) < 0 ||
-            bind_unsigned_long(context->tic, 4, snapshot.tics[index][slot]) <
-                0 ||
+            bind_unsigned_long(context->tic, 4,
+                               stored_tic(&snapshot, index, slot)) < 0 ||
             btech_special_step(context->tic) < 0)
           context->result = -1;
       }
@@ -280,12 +357,14 @@ int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < FREQS; index++) {
       if (btech_special_bind_int(context->frequency, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->frequency, 2, index) < 0 ||
-          btech_special_bind_int(context->frequency, 3,
-                                 snapshot.frequencies[index]) < 0 ||
-          btech_special_bind_int(context->frequency, 4,
-                                 snapshot.frequency_modes[index]) < 0 ||
+          btech_special_bind_int(
+              context->frequency, 3,
+              stored_int(snapshot.frequencies, FREQS, index)) < 0 ||
+          btech_special_bind_int(
+              context->frequency, 4,
+              stored_int(snapshot.frequency_modes, FREQS, index)) < 0 ||
           sqlite3_bind_text(context->frequency, 5,
-                            snapshot.channel_titles[index], -1,
+                            stored_channel_title(&snapshot, index), -1,
                             SQLITE_TRANSIENT) != SQLITE_OK ||
           btech_special_step(context->frequency) < 0)
         context->result = -1;
@@ -487,8 +566,9 @@ int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < 5; index++) {
       if (btech_special_bind_int(context->runtime_unused, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->runtime_unused, 2, index) < 0 ||
-          btech_special_bind_int(context->runtime_unused, 3,
-                                 snapshot.runtime.unused[index]) < 0 ||
+          btech_special_bind_int(
+              context->runtime_unused, 3,
+              stored_int(snapshot.runtime.unused, 5, index)) < 0 ||
           btech_special_step(context->runtime_unused) < 0)
         context->result = -1;
     }
@@ -513,8 +593,9 @@ int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < 3; index++) {
       if (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->unit_aux, 2, 8 + index) < 0 ||
-          btech_special_bind_int(context->unit_aux, 3,
-                                 snapshot.definition.unused_char[index]) < 0 ||
+          btech_special_bind_int(
+              context->unit_aux, 3,
+              stored_char(snapshot.definition.unused_char, 3, index)) < 0 ||
           btech_special_step(context->unit_aux) < 0)
         context->result = -1;
     }
@@ -557,7 +638,9 @@ int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < NUM_TICS; index++) {
       if (btech_special_bind_int(context->turret_tic, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->turret_tic, 2, index) < 0 ||
-          bind_unsigned_long(context->turret_tic, 3, turret->tic[index]) < 0 ||
+          bind_unsigned_long(
+              context->turret_tic, 3,
+              stored_unsigned_long(turret->tic, NUM_TICS, index)) < 0 ||
           btech_special_step(context->turret_tic) < 0)
         context->result = -1;
     }
@@ -646,7 +729,9 @@ int btech_store_simple_object(void *key, void *data, int depth,
       for (argument_index = 0;
            context->result == 0 && argument_index <= command->argcount;
            argument_index++) {
-        if (!command->args[argument_index] ||
+        const char *command_argument = autopilot_argument_list_get(
+            &command->arguments, (size_t)argument_index);
+        if (!command_argument ||
             btech_special_bind_int(context->autopilot_command_arg, 1,
                                    (DbRef)key) < 0 ||
             btech_special_bind_int(context->autopilot_command_arg, 2,
@@ -654,7 +739,7 @@ int btech_store_simple_object(void *key, void *data, int depth,
             btech_special_bind_int(context->autopilot_command_arg, 3,
                                    argument_index) < 0 ||
             sqlite3_bind_text(context->autopilot_command_arg, 4,
-                              command->args[argument_index], -1,
+                              command_argument, -1,
                               SQLITE_TRANSIENT) != SQLITE_OK ||
             btech_special_step(context->autopilot_command_arg) < 0)
           context->result = -1;

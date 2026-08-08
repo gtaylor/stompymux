@@ -1,22 +1,82 @@
 #include "mech_map_render_internal.h"
 
-#include <assert.h>
-#include <ctype.h>
+#include "mux/support/checked_storage.h"
+
 #include <string.h>
+
+typedef struct MapTextBuilder {
+  MapText *text;
+  size_t length;
+} MapTextBuilder;
+
+static bool map_text_builder_append(MapTextBuilder *builder, const void *source,
+                                    size_t length) {
+  if (builder->length > builder->text->buffer_capacity ||
+      length > builder->text->buffer_capacity - builder->length)
+    return false;
+  memcpy(checked_storage_region(builder->text->buffer,
+                                builder->text->buffer_capacity, builder->length,
+                                length),
+         source, length);
+  builder->length += length;
+  return true;
+}
+
+static bool map_text_builder_append_char(MapTextBuilder *builder, char value) {
+  return map_text_builder_append(builder, &value, sizeof(value));
+}
+
+static bool map_text_set_line(MapText *text, size_t line, size_t offset) {
+  if (line >= text->line_capacity || offset >= text->buffer_capacity)
+    return false;
+  char **line_slot = checked_storage_at(text->lines, text->line_capacity,
+                                        sizeof(*text->lines), line);
+  *line_slot = checked_storage_at(text->buffer, text->buffer_capacity,
+                                  sizeof(*text->buffer), offset);
+  return true;
+}
+
+static bool map_text_end_lines(MapText *text, size_t line) {
+  if (line >= text->line_capacity)
+    return false;
+  char **line_slot = checked_storage_at(text->lines, text->line_capacity,
+                                        sizeof(*text->lines), line);
+  *line_slot = nullptr;
+  return true;
+}
+
+static bool ascii_is_lower(unsigned char value) {
+  return value >= 'a' && value <= 'z';
+}
+
+static bool ascii_is_upper(unsigned char value) {
+  return value >= 'A' && value <= 'Z';
+}
+
+static bool ascii_is_digit(unsigned char value) {
+  return value >= '0' && value <= '9';
+}
 
 bool style_tac_map(MapText *text, const MapColorScheme *colors,
                    const char *sketch, int dispcols, int disprows) {
-  size_t pos = 0;
+  if (dispcols <= 0 || disprows < 0)
+    return false;
+  const size_t sketch_capacity = (size_t)dispcols * (size_t)disprows;
+  MapTextBuilder builder = {.text = text};
   int line = 0;
+  int column = 0;
   char cur_colour = '\0';
-  const char *line_start;
-  const char *src = sketch;
 
-  line_start = src;
-  text->lines[0] = text->buffer;
+  if (!map_text_set_line(text, 0, 0))
+    return false;
   while (line < disprows) {
     char new_colour;
-    const unsigned char input = (unsigned char)*src++;
+    const size_t source_offset =
+        (size_t)line * (size_t)dispcols + (size_t)column;
+    const unsigned char input =
+        (unsigned char)*(const char *)checked_storage_at_const(
+            sketch, sketch_capacity, sizeof(char), source_offset);
+    column++;
     char c = (char)input;
 
     if (input == '\0') {
@@ -24,17 +84,18 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
        * End of line.
        */
       if (cur_colour != '\0') {
-        memcpy(text->buffer + pos, "[reset]", 7);
-        pos += 7;
+        if (!map_text_builder_append(&builder, "[reset]", 7))
+          return false;
       }
-      text->buffer[pos++] = '\0';
+      if (!map_text_builder_append_char(&builder, '\0'))
+        return false;
       line++;
       if (line >= disprows) {
         break; /* Done */
       }
-      line_start += dispcols;
-      src = line_start;
-      text->lines[line] = text->buffer + pos;
+      column = 0;
+      if (!map_text_set_line(text, (size_t)line, builder.length))
+        return false;
       continue;
     }
 
@@ -81,11 +142,11 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
       break;
 
     default:
-      if (islower(input)) { /* Friendly con */
+      if (ascii_is_lower(input)) { /* Friendly con */
         new_colour = colors->values[FRIEND_IDX];
-      } else if (isupper(input)) { /* Enemy con */
+      } else if (ascii_is_upper(input)) { /* Enemy con */
         new_colour = colors->values[ENEMY_IDX];
-      } else if (isdigit(input)) { /* Elevation */
+      } else if (ascii_is_digit(input)) { /* Elevation */
         new_colour = cur_colour;
       } else {
         new_colour = map_terrain_color_char(colors, c, 0);
@@ -95,18 +156,15 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
 
     if (new_colour != cur_colour) {
       const char *markup = map_color_markup(new_colour);
-      memcpy(text->buffer + pos, "[reset]", 7);
-      pos += 7;
-      memcpy(text->buffer + pos, markup, strlen(markup));
-      pos += strlen(markup);
+      if (!map_text_builder_append(&builder, "[reset]", 7) ||
+          !map_text_builder_append(&builder, markup, strlen(markup)))
+        return false;
       cur_colour = new_colour;
     }
-    text->buffer[pos++] = c;
-    assert(pos + 32 <= text->buffer_capacity);
+    if (!map_text_builder_append_char(&builder, c))
+      return false;
   }
-  assert((size_t)line < text->line_capacity);
-  text->lines[line] = nullptr;
-  return true;
+  return map_text_end_lines(text, (size_t)line);
 }
 
 /*

@@ -1,5 +1,8 @@
+#include "mux/support/checked_storage.h"
 #include "sqlite_internal.h"
 
+#include "autopilot_argument_list_api.h"
+#include "autopilot_commands_api.h"
 #include "checked_conversion.h"
 
 static void *btech_special_object(BtechContext *context, DbRef object,
@@ -150,7 +153,9 @@ int btech_special_load_turret_tics(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    turret->tic[tic_index] = (unsigned long)value;
+    unsigned long *tic = checked_storage_at(
+        turret->tic, NUM_TICS, sizeof(*turret->tic), (size_t)tic_index);
+    *tic = (unsigned long)value;
     expected_tic++;
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -253,11 +258,12 @@ int btech_special_load_autopilots(sqlite3 *sqlite, BtechContext *context) {
 /* Resolve the live command callback from the durable command enum. */
 static const AutopilotCommandDefinition *
 btech_special_autopilot_command(int command_enum) {
-  int index;
-
-  for (index = 0; index < AUTO_NUM_COMMANDS && acom[index].name; index++)
-    if (acom[index].command_enum == command_enum)
-      return &acom[index];
+  for (int index = 0; index < AUTO_NUM_COMMANDS; index++) {
+    const AutopilotCommandDefinition *definition =
+        autopilot_command_definition_at(index);
+    if (definition->name && definition->command_enum == command_enum)
+      return definition;
+  }
   return NULL;
 }
 
@@ -282,6 +288,7 @@ static int btech_special_load_autopilot_command_args(
   command = calloc(1, sizeof(*command));
   if (!command)
     return -1;
+  autopilot_argument_list_initialize(&command->arguments, AUTOPILOT_MAX_ARGS);
   statement = NULL;
   result = sqlite3_prepare_v2(
                sqlite,
@@ -306,12 +313,13 @@ static int btech_special_load_autopilot_command_args(
       result = -1;
       break;
     }
-    command->args[argument_index] =
-        strndup((const char *)value, (size_t)length);
-    if (!command->args[argument_index]) {
+    char *argument = strndup((const char *)value, (size_t)length);
+    if (!argument) {
       result = -1;
       break;
     }
+    autopilot_argument_list_set(&command->arguments, (size_t)argument_index,
+                                argument);
     argument_index++;
   }
   if (result == 0 && (step != SQLITE_DONE || argument_index != argument_count))

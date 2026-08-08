@@ -1,7 +1,6 @@
 #include "mech_status_api.h"
 #include "mech_status_render_internal.h"
 
-#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +38,9 @@
 #include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -74,7 +75,8 @@ void append_status(char *buffer, size_t size, const char *fmt, ...) {
 
   va_start(ap, fmt);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(buffer + len, size - len, fmt, ap);
+  vsnprintf(checked_storage_region(buffer, size, len, size - len), size - len,
+            fmt, ap);
   va_end(ap);
 }
 
@@ -225,9 +227,8 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       if (mech_condition_summary(mech).dfa_attacking &&
           mech_dfa_target_dbref(mech) != -1) {
         tempMech = btech_context_get_mech(context, mech_dfa_target_dbref(mech));
-        snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff),
-                 "  Death From Above Target: %s",
-                 mech_to_mech_display_id(mech, tempMech).text);
+        append_status(buff, sizeof(buff), "  Death From Above Target: %s",
+                      mech_to_mech_display_id(mech, tempMech).text);
       }
       mecha_notify(evaluation, player, buff);
     }
@@ -268,9 +269,8 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       if (mech_condition_summary(mech).dfa_attacking &&
           mech_dfa_target_dbref(mech) != -1) {
         tempMech = btech_context_get_mech(context, mech_dfa_target_dbref(mech));
-        snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff),
-                 "  Death From Above Target: %s",
-                 mech_to_mech_display_id(mech, tempMech).text);
+        append_status(buff, sizeof(buff), "  Death From Above Target: %s",
+                      mech_to_mech_display_id(mech, tempMech).text);
       }
       mecha_notify(evaluation, player, buff);
     }
@@ -418,7 +418,13 @@ void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
 
 #define HEAT_LEVEL_NONE 27
 
-static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
+static char heat_fill_character(const char *fill, char state) {
+  if (state < 0)
+    abort();
+  return *checked_string_suffix(fill, (size_t)state);
+}
+
+static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
                                int length) {
   int counter = 0, heat = displayed_speed(mech_heat_production(mech)),
       minheat = displayed_speed(mech_heat_dissipation(mech)), start = 0;
@@ -443,7 +449,8 @@ static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
     btech_text_builder_append(&text, " [fg=black bold]");
 
   for (counter = start; counter < minheat; counter++) {
-    btech_text_builder_append_character(&text, fillchar[(short)state]);
+    btech_text_builder_append_character(&text,
+                                        heat_fill_character(fillchar, state));
     if (heat && !--heat)
       state = 0;
   }
@@ -452,7 +459,8 @@ static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
 
   btech_text_builder_append(&text, "[fg=green bold]|[reset][fg=green]");
   for (; counter < minheat + HEAT_LEVEL_BGREEN; counter++) {
-    btech_text_builder_append_character(&text, fillchar[(short)state]);
+    btech_text_builder_append_character(&text,
+                                        heat_fill_character(fillchar, state));
     if (heat && !--heat)
       state = 0;
   }
@@ -461,7 +469,8 @@ static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
 
   btech_text_builder_append(&text, "[bold]");
   for (; counter < minheat + HEAT_LEVEL_LYELLOW; counter++) {
-    btech_text_builder_append_character(&text, fillchar[(short)state]);
+    btech_text_builder_append_character(&text,
+                                        heat_fill_character(fillchar, state));
     if (heat && !--heat)
       state = 0;
   }
@@ -471,7 +480,8 @@ static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
   btech_text_builder_append(&text,
                             "[reset][fg=yellow bold]|[reset][fg=yellow]");
   for (; counter < minheat + HEAT_LEVEL_BYELLOW; counter++) {
-    btech_text_builder_append_character(&text, fillchar[(short)state]);
+    btech_text_builder_append_character(&text,
+                                        heat_fill_character(fillchar, state));
     if (heat && !--heat)
       state = 0;
   }
@@ -480,7 +490,8 @@ static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
 
   btech_text_builder_append(&text, "[bold]");
   for (; counter < minheat + HEAT_LEVEL_LRED; counter++) {
-    btech_text_builder_append_character(&text, fillchar[(short)state]);
+    btech_text_builder_append_character(&text,
+                                        heat_fill_character(fillchar, state));
     if (heat && !--heat)
       state = 0;
   }
@@ -489,7 +500,8 @@ static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
 
   btech_text_builder_append(&text, "[reset][fg=red bold]|[reset][fg=red]");
   for (; counter < minheat + HEAT_LEVEL_BRED; counter++) {
-    btech_text_builder_append_character(&text, fillchar[(short)state]);
+    btech_text_builder_append_character(&text,
+                                        heat_fill_character(fillchar, state));
     if (heat && !--heat)
       state = 0;
   }
@@ -498,7 +510,8 @@ static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
 
   btech_text_builder_append(&text, "[bold]");
   for (; counter < minheat + HEAT_LEVEL_TOP; counter++) {
-    btech_text_builder_append_character(&text, fillchar[(short)state]);
+    btech_text_builder_append_character(&text,
+                                        heat_fill_character(fillchar, state));
     if (heat && !--heat)
       state = 0;
   }
@@ -652,126 +665,4 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                                            mech_carried_dbref(mech))))
       notify_printf(evaluation, player, "Towing %s.",
                     mech_to_mech_display_id(mech, tempMech).text);
-}
-
-/* Status commands! */
-void mech_status(DbRef player, void *data, const char *buffer) {
-  Mech *mech = (Mech *)data;
-  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
-  int doweap = 0, doinfo = 0, doarmor = 0, doshort = 0, doheat = 0, loop;
-  int i;
-  int usex = 0;
-  bool weird = false;
-  char buf[LBUF_SIZE] = {0};
-  char weird_buffer[LBUF_SIZE] = {0};
-
-  if (!common_checks(player, mech, MECH_USUALSM))
-    return;
-  if (!buffer || !strlen(buffer))
-    // No arguments, we'll go with our default 'status' output.
-    doweap = doinfo = doarmor = doheat = 1;
-  else {
-    // Argument provided, only show certain parts.
-    for (loop = 0; buffer[loop]; loop++) {
-      switch (toupper(buffer[loop])) {
-      case 'R':
-        doweap = doinfo = doarmor = doheat = usex = 1;
-        break;
-      case 'A':
-        // Armor status
-        if (toupper(buffer[loop + 1]) == 'R')
-          while (buffer[loop + 1] && buffer[loop + 1] != ' ')
-            loop++;
-        doarmor = 1;
-        break;
-      case 'I':
-        // Speed/Heading/Heat
-        doinfo = 1;
-        if (toupper(buffer[loop + 1]) == 'N')
-          while (buffer[loop + 1] && buffer[loop + 1] != ' ')
-            loop++;
-        break;
-      case 'W':
-        // Weapons list.
-        doweap = 1;
-        if (toupper(buffer[loop + 1]) == 'E')
-          while (buffer[loop + 1] && buffer[loop + 1] != ' ')
-            loop++;
-        break;
-      case 'N':
-        // Really weird status display.
-        weird = true;
-        break;
-      case 'S':
-        // Very short one-line status.
-        doshort = 1;
-        break;
-      case 'H':
-        // Just the heat bar.
-        doheat = 1;
-        break;
-      }
-    }
-  }
-
-  // Very short one-line status.
-  if (doshort) {
-    PrintShortInfo(evaluation, player, mech);
-    return;
-  }
-
-  // Really weird status display.
-  if (weird) {
-    snprintf(buf, sizeof(buf), "%s %s %d %d/%d/%d %d ",
-             mech_model_reference(mech), mech_model_name(mech),
-             mech_tonnage(mech),
-             displayed_speed(mech_maximum_speed(mech) / MP1) * 2 / 3,
-             displayed_speed(mech_maximum_speed(mech) / MP1),
-             displayed_speed(mech_jump_speed(mech) / MP1),
-             displayed_speed(mech_active_heat_sinks(mech)));
-    memcpy(weird_buffer, buf, sizeof(weird_buffer));
-
-  } else if (!doheat || (doarmor | doinfo | doweap))
-    PrintGenericStatus(evaluation, player, mech, 1, usex);
-
-  // Show our armor diagram.
-  if (doarmor) {
-    if (!weird) {
-      PrintArmorStatus(evaluation, player, mech, 1);
-      mecha_notify(evaluation, player, " ");
-    } else {
-      for (i = 0; i < NUM_SECTIONS; i++)
-        if (mech_section_original_armor(mech, i)) {
-          if (mech_section_original_rear_armor(mech, i))
-            snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%d|%d|%d ",
-                     mech_section_original_armor(mech, i),
-                     mech_section_original_internal(mech, i),
-                     mech_section_original_rear_armor(mech, i));
-          else
-            snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%d|%d ",
-                     mech_section_original_armor(mech, i),
-                     mech_section_original_internal(mech, i));
-        }
-    }
-  }
-
-  // Standard heat/heading/dive/etc.
-  if (doinfo && !weird) {
-    PrintInfoStatus(evaluation, player, mech, 1);
-    // mecha_notify(evaluation, player, " ");
-  }
-
-  // Show our heat bar by itself.
-  if (!doinfo && doheat && mech_uses_heat(mech)) {
-    PrintHeatBar(evaluation, player, mech);
-  }
-
-  // Weapons readout.
-  if (doweap)
-    print_weapon_status(evaluation, mech, player, weird, weird_buffer,
-                        sizeof(weird_buffer));
-
-  // Really strange, short status info.
-  if (weird)
-    mecha_notify(evaluation, player, weird_buffer);
 }

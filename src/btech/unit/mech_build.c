@@ -12,7 +12,6 @@
  */
 
 #include <assert.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -24,10 +23,37 @@
 #include "mech_partnames_api.h"
 #include "mech_utils_api.h"
 #include "missile_hit_registry.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
+#include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 #include "weapons.h"
 
 const int num_def_weapons = NUM_DEF_WEAPONS;
+
+static BtechWeaponRuntimeValues *
+weapon_runtime_values(BtechWeaponSettings *settings, size_t index) {
+  return checked_storage_at(settings->values, settings->count,
+                            sizeof(*settings->values), index);
+}
+
+static const BtechWeaponRuntimeValues *
+weapon_runtime_values_const(const BtechWeaponSettings *settings, size_t index) {
+  return checked_storage_at_const(settings->values, settings->count,
+                                  sizeof(*settings->values), index);
+}
+
+static MissileHitEntry *missile_hit_entry(MissileHitRegistry *registry,
+                                          size_t index) {
+  return checked_storage_at(registry->entries, registry->count,
+                            sizeof(*registry->entries), index);
+}
+
+static const MissileHitEntry *
+missile_hit_entry_const(const MissileHitRegistry *registry, size_t index) {
+  return checked_storage_at_const(registry->entries, registry->count,
+                                  sizeof(*registry->entries), index);
+}
 
 bool btech_weapon_settings_initialize(BtechWeaponSettings *settings) {
   *settings = (BtechWeaponSettings){0};
@@ -36,9 +62,9 @@ bool btech_weapon_settings_initialize(BtechWeaponSettings *settings) {
     return false;
   settings->count = num_def_weapons;
   for (size_t index = 0; index < settings->count; index++) {
-    settings->values[index] = (BtechWeaponRuntimeValues){
-        .recycle_time = MechWeapons[index].vrt,
-        .battle_value = MechWeapons[index].battlevalue,
+    *weapon_runtime_values(settings, index) = (BtechWeaponRuntimeValues){
+        .recycle_time = weapon_catalogue_recycle_time((int)index),
+        .battle_value = weapon_catalogue_battle_value((int)index),
     };
   }
   return true;
@@ -60,20 +86,22 @@ static bool btech_weapon_settings_contains(const BtechWeaponSettings *settings,
 int btech_weapon_settings_recycle_time(const BtechWeaponSettings *settings,
                                        int weapon_index) {
   assert(btech_weapon_settings_contains(settings, weapon_index));
-  return settings->values[weapon_index].recycle_time;
+  return weapon_runtime_values_const(settings, (size_t)weapon_index)
+      ->recycle_time;
 }
 
 int btech_weapon_settings_battle_value(const BtechWeaponSettings *settings,
                                        int weapon_index) {
   assert(btech_weapon_settings_contains(settings, weapon_index));
-  return settings->values[weapon_index].battle_value;
+  return weapon_runtime_values_const(settings, (size_t)weapon_index)
+      ->battle_value;
 }
 
 bool btech_weapon_settings_set_recycle_time(BtechWeaponSettings *settings,
                                             int weapon_index, int value) {
   if (!btech_weapon_settings_contains(settings, weapon_index))
     return false;
-  settings->values[weapon_index].recycle_time = value;
+  weapon_runtime_values(settings, (size_t)weapon_index)->recycle_time = value;
   return true;
 }
 
@@ -81,7 +109,7 @@ bool btech_weapon_settings_set_battle_value(BtechWeaponSettings *settings,
                                             int weapon_index, int value) {
   if (!btech_weapon_settings_contains(settings, weapon_index))
     return false;
-  settings->values[weapon_index].battle_value = value;
+  weapon_runtime_values(settings, (size_t)weapon_index)->battle_value = value;
   return true;
 }
 
@@ -100,12 +128,14 @@ bool missile_hit_registry_initialize(MissileHitRegistry *registry,
     int id;
     int brand;
 
-    registry->entries[index] = MISSILE_HIT_DEFINITIONS[index];
-    if (find_matching_vlong_part(context, registry->entries[index].name,
-                                 nullptr, &id, &brand))
-      registry->entries[index].weapon_index = weapon_from_equipment_index(id);
+    MissileHitEntry *entry = missile_hit_entry(registry, index);
+    *entry = *(const MissileHitEntry *)checked_storage_at_const(
+        MISSILE_HIT_DEFINITIONS, definition_count + 1,
+        sizeof(*MISSILE_HIT_DEFINITIONS), index);
+    if (find_matching_vlong_part(context, entry->name, nullptr, &id, &brand))
+      entry->weapon_index = weapon_from_equipment_index(id);
     else
-      registry->entries[index].weapon_index = -1;
+      entry->weapon_index = -1;
   }
   return true;
 }
@@ -123,8 +153,8 @@ missile_hit_registry_find_weapon(const MissileHitRegistry *registry,
   if (registry == nullptr)
     return nullptr;
   for (size_t index = 0; index < registry->count; index++)
-    if (registry->entries[index].weapon_index == weapon_index)
-      return &registry->entries[index];
+    if (missile_hit_entry_const(registry, index)->weapon_index == weapon_index)
+      return missile_hit_entry_const(registry, index);
   return nullptr;
 }
 
@@ -134,8 +164,8 @@ missile_hit_registry_find_name(const MissileHitRegistry *registry,
   if (registry == nullptr || name == nullptr)
     return nullptr;
   for (size_t index = 0; index < registry->count; index++)
-    if (strcmp(registry->entries[index].name, name) == 0)
-      return &registry->entries[index];
+    if (strcmp(missile_hit_entry_const(registry, index)->name, name) == 0)
+      return missile_hit_entry_const(registry, index);
   return nullptr;
 }
 
@@ -143,10 +173,7 @@ void FillDefaultCriticals(Mech *mech, int index) {
   int loop;
 
   for (loop = 0; loop < NUM_CRITICALS; loop++) {
-    ((mech)->ud.sections)[index].criticals[loop].type = EMPTY;
-    ((mech)->ud.sections)[index].criticals[loop].data = 0;
-    ((mech)->ud.sections)[index].criticals[loop].firemode = 0;
-    ((mech)->ud.sections)[index].criticals[loop].ammomode = 0;
+    mech_critical_configure(mech, index, loop, EMPTY, 0, 0, 0);
   }
 
   if (((mech)->ud.type) == CLASS_AERO)
@@ -222,55 +249,66 @@ void FillDefaultCriticals(Mech *mech, int index) {
 ArmorSectionAbbreviation
 armor_section_abbreviation(UnitClass type, MechMovementType movement_type,
                            int loc) {
-  const char *const *locs;
   ArmorSectionAbbreviation abbreviation = {0};
-  char *cursor = abbreviation.text;
-  int i;
-
-  locs = ProperSectionStringFromType(type, movement_type);
-  for (i = 0; locs[loc][i]; i++)
-    if (isupper(locs[loc][i]) || isdigit(locs[loc][i]))
-      *(cursor++) = locs[loc][i];
-  *cursor = '\0';
+  if (loc < 0)
+    return abbreviation;
+  const char *name = mech_section_name(type, movement_type, (size_t)loc);
+  if (name == nullptr)
+    return abbreviation;
+  const size_t length = strlen(name);
+  size_t output = 0;
+  for (size_t input = 0;
+       input < length && output + 1 < sizeof(abbreviation.text); input++) {
+    const char character = *checked_string_suffix(name, input);
+    if ((character >= 'A' && character <= 'Z') ||
+        (character >= '0' && character <= '9')) {
+      *(char *)checked_storage_at(abbreviation.text, sizeof(abbreviation.text),
+                                  sizeof(char), output++) = character;
+    }
+  }
+  *(char *)checked_storage_at(abbreviation.text, sizeof(abbreviation.text),
+                              sizeof(char), output) = '\0';
   return abbreviation;
 }
 
 int ArmorSectionFromString(UnitClass type, MechMovementType movement_type,
                            const char *string) {
-  const char *const *locs;
   int i, j;
-  char *c, *d;
+  const char *c, *d;
 
-  if (!string[0])
+  if (string == nullptr || !*string)
     return -1;
-  locs = ProperSectionStringFromType(type, movement_type);
-  if (!locs)
+  const size_t location_count = mech_section_name_count(type, movement_type);
+  if (location_count == 0)
     return -1;
   /* Then, methodically compare against each other until a suitable
      match is found */
-  for (i = 0; locs[i]; i++)
-    if (!strcasecmp(string, locs[i]))
+  for (i = 0; (size_t)i < location_count; i++)
+    if (!strcasecmp(string, mech_section_name(type, movement_type, (size_t)i)))
       return i;
-  for (i = 0; locs[i]; i++) {
-    if (toupper(string[0]) != locs[i][0])
+  for (i = 0; (size_t)i < location_count; i++) {
+    const char first = ascii_to_upper(*string);
+    const char *left = mech_section_name(type, movement_type, (size_t)i);
+    if (first != *left)
       continue;
-    for (j = (i + 1); locs[j]; j++)
-      if (toupper(string[0]) == locs[j][0])
+    for (j = i + 1; (size_t)j < location_count; j++)
+      if (first == *mech_section_name(type, movement_type, (size_t)j))
         break;
-    if (!locs[j])
+    if ((size_t)j == location_count)
       return i;
     /* Ok, comparison between these two, then */
-    c = strstr(locs[i], " ");
-    d = strstr(locs[j], " ");
-    if (!c && !string[1] && d)
+    c = strstr(left, " ");
+    d = strstr(mech_section_name(type, movement_type, (size_t)j), " ");
+    const char second = *checked_string_suffix(string, 1);
+    if (!c && !second && d)
       return i;
     if (!c && !d)
       return -1;
-    if (!string[1])
+    if (!second)
       continue;
-    if (c && toupper(string[1]) == *(++c))
+    if (c && ascii_to_upper(second) == *checked_string_suffix(c, 1))
       return i;
-    if (d && toupper(string[1]) == *(++d))
+    if (d && ascii_to_upper(second) == *checked_string_suffix(d, 1))
       return j;
   }
   return -1;

@@ -1,5 +1,6 @@
 #include "checked_conversion.h"
 #include "map_obj_internal.h"
+#include "mux/support/checked_storage.h"
 
 typedef struct MapLinkUpdateStats {
   int builds;
@@ -7,10 +8,28 @@ typedef struct MapLinkUpdateStats {
   int entrances;
 } MapLinkUpdateStats;
 
-static const struct {
+typedef struct MapDirection {
   int x, y;
   char dir;
-} DIRECTION_TABLE[4] = {{1, 0, 'n'}, {2, 1, 'e'}, {1, 2, 's'}, {0, 1, 'w'}};
+} MapDirection;
+
+static const MapDirection DIRECTION_TABLE[4] = {
+    {1, 0, 'n'}, {2, 1, 'e'}, {1, 2, 's'}, {0, 1, 'w'}};
+
+static const MapDirection *direction_entry(int direction) {
+  if (direction < 0)
+    abort();
+  return checked_storage_at_const(DIRECTION_TABLE, 4, sizeof(*DIRECTION_TABLE),
+                                  (size_t)direction);
+}
+
+static char *link_argument(char **arguments, size_t count, int index) {
+  if (index < 0)
+    abort();
+  char **slot =
+      checked_storage_at(arguments, count, sizeof(*arguments), (size_t)index);
+  return *slot;
+}
 
 static void recursively_update_links(BtechContext *context, DbRef from,
                                      DbRef loc, MapLinkUpdateStats *stats);
@@ -27,8 +46,9 @@ int parse_coord(BattleMap *map, int dir, char *data, int *x, int *y) {
   doh = atoi(data);
   if (doh < 0)
     return 0;
-  tox = DIRECTION_TABLE[dir].x;
-  toy = DIRECTION_TABLE[dir].y;
+  const MapDirection *direction = direction_entry(dir);
+  tox = direction->x;
+  toy = direction->y;
   tx = (map->map_width * tox) / 2;
   if (tx >= map->map_width)
     tx = map->map_width - 1;
@@ -66,11 +86,11 @@ static void add_entrances(DbRef loc, BattleMap *map, char *data,
   strcpy(buf, data);
   if (mech_parseattributes(buf, args, 4) == 4) {
     for (i = 0; i < 4; i++)
-      if ((parse_coord(map, i, args[i], &x, &y))) {
-        foo.datac = DIRECTION_TABLE[i].dir;
+      if ((parse_coord(map, i, link_argument(args, 4, i), &x, &y))) {
+        foo.datac = direction_entry(i)->dir;
         foo.x = clamp_int_to_short(x);
         foo.y = clamp_int_to_short(y);
-        add_mapobj(map, &map->MapObject[TYPE_ENTRANCE], &foo, 1);
+        add_mapobj_to_type(map, TYPE_ENTRANCE, &foo, 1);
         if (stats != nullptr)
           stats->entrances++;
       }
@@ -94,7 +114,7 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
   strcpy(buf, data);
   if ((found = mech_parseattributes(buf, args, 500)) > 0)
     for (i = 0; i < found; i++) {
-      targ = atoi(args[i]);
+      targ = atoi(link_argument(args, 500, i));
       if (targ < 0 || !btech_context_find_object(map->xcode.context, targ) ||
           targ == loc)
         continue;
@@ -110,7 +130,7 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
       foo.x = clamp_int_to_short(x);
       foo.y = clamp_int_to_short(y);
       foo.obj = targ;
-      add_mapobj(map, &map->MapObject[TYPE_BUILD], &foo, 1);
+      add_mapobj_to_type(map, TYPE_BUILD, &foo, 1);
       if (stats != nullptr)
         stats->builds++;
       recursively_update_links(map->xcode.context, loc, targ, stats);
@@ -135,7 +155,7 @@ static void recursively_update_links(BtechContext *context, DbRef from,
     if (stats != nullptr)
       stats->leaves++;
     foo.obj = from;
-    add_mapobj(map, &map->MapObject[TYPE_LEAVE], &foo, 0);
+    add_mapobj_to_type(map, TYPE_LEAVE, &foo, 0);
     del_mapobjst(map, TYPE_ENTRANCE);
     /* Places you can enter this place from.. it's more or less
        directly taken from BUILDENTRANCE */

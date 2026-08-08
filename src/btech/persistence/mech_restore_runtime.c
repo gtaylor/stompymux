@@ -1,4 +1,17 @@
+#include "mux/support/checked_storage.h"
 #include "sqlite_internal.h"
+
+static int *runtime_restore_int_slot(int *values, size_t count, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(values, count, sizeof(*values), (size_t)index);
+}
+
+static char *runtime_restore_char_slot(char *values, size_t count, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(values, count, sizeof(*values), (size_t)index);
+}
 
 int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
@@ -242,10 +255,13 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
       if (mech) {
 #ifndef BT_CALCULATE_BV
         for (index = 0; index < 11; index++)
-          if (!seen[index])
+          if (!*runtime_restore_int_slot(seen, 11, index))
             result = -1;
 #else
-        if (!seen[0] || !seen[8] || !seen[9] || !seen[10])
+        if (!*runtime_restore_int_slot(seen, 11, 0) ||
+            !*runtime_restore_int_slot(seen, 11, 8) ||
+            !*runtime_restore_int_slot(seen, 11, 9) ||
+            !*runtime_restore_int_slot(seen, 11, 10))
           result = -1;
 #endif
         if (result < 0)
@@ -261,28 +277,30 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
       mech_persistence_snapshot_export(mech, &snapshot);
     }
 #ifdef BT_CALCULATE_BV
-    if ((slot > 0 && slot < 8) || seen[slot]) {
+    if ((slot > 0 && slot < 8) || *runtime_restore_int_slot(seen, 11, slot)) {
 #else
-    if (seen[slot]) {
+    if (*runtime_restore_int_slot(seen, 11, slot)) {
 #endif
       result = -1;
       break;
     }
-    seen[slot] = 1;
+    *runtime_restore_int_slot(seen, 11, slot) = 1;
 #ifndef BT_CALCULATE_BV
     if (slot < 8)
       snapshot.definition.unused[slot] = value;
     else if (value < CHAR_MIN || value > CHAR_MAX)
       result = -1;
     else
-      snapshot.definition.unused_char[slot - 8] = (char)value;
+      *runtime_restore_char_slot(snapshot.definition.unused_char, 3, slot - 8) =
+          (char)value;
 #else
     if (slot == 0)
       snapshot.definition.mechbv_last = value;
     else if (value < CHAR_MIN || value > CHAR_MAX)
       result = -1;
     else
-      snapshot.definition.unused_char[slot - 8] = (char)value;
+      *runtime_restore_char_slot(snapshot.definition.unused_char, 3, slot - 8) =
+          (char)value;
 #endif
     if (result == 0)
       mech_persistence_identity_restore(mech, &snapshot);
@@ -292,10 +310,13 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
   if (result == 0 && mech) {
 #ifndef BT_CALCULATE_BV
     for (index = 0; index < 11; index++)
-      if (!seen[index])
+      if (!*runtime_restore_int_slot(seen, 11, index))
         result = -1;
 #else
-    if (!seen[0] || !seen[8] || !seen[9] || !seen[10])
+    if (!*runtime_restore_int_slot(seen, 11, 0) ||
+        !*runtime_restore_int_slot(seen, 11, 8) ||
+        !*runtime_restore_int_slot(seen, 11, 9) ||
+        !*runtime_restore_int_slot(seen, 11, 10))
       result = -1;
 #endif
   }
@@ -354,7 +375,7 @@ int btech_special_load_mech_runtime_unused(sqlite3 *sqlite,
       result = -1;
       break;
     }
-    snapshot.runtime.unused[slot] = value;
+    *runtime_restore_int_slot(snapshot.runtime.unused, 5, slot) = value;
     mech_persistence_runtime_restore(mech, &snapshot);
     expected_slot++;
   }

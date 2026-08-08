@@ -20,6 +20,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/utf8.h"
 #include "mux/support/validation.h"
 #include "mux/world/player.h"
@@ -115,12 +116,17 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
     } else {
       for (ObjectFlag flag = OBJECT_FLAG_ANSI;
            result == 0 && flag < OBJECT_FLAG_COUNT; flag++)
-        if (gamedb_column_bool(statement, 9 + (int)flag, &object_flags[flag]) <
-            0)
+        if (gamedb_column_bool(
+                statement, 9 + (int)flag,
+                checked_storage_at(object_flags, OBJECT_FLAG_COUNT,
+                                   sizeof(*object_flags), (size_t)flag)) < 0)
           result = -1;
       for (PowerId power = POWER_IDLE; result == 0 && power < POWER_COUNT;
            power++)
-        if (gamedb_column_bool(statement, 29 + (int)power, &powers[power]) < 0)
+        if (gamedb_column_bool(statement, 29 + (int)power,
+                               checked_storage_at(powers, POWER_COUNT,
+                                                  sizeof(*powers),
+                                                  (size_t)power)) < 0)
           result = -1;
       if (result != 0)
         continue;
@@ -142,9 +148,14 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       game_object_clear_flags(context->database, object);
       for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
         game_object_set_flag(context->database, object, flag,
-                             object_flags[flag]);
+                             *(const bool *)checked_storage_at_const(
+                                 object_flags, OBJECT_FLAG_COUNT,
+                                 sizeof(*object_flags), (size_t)flag));
       for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++)
-        game_object_set_power(context->database, object, power, powers[power]);
+        game_object_set_power(
+            context->database, object, power,
+            *(const bool *)checked_storage_at_const(
+                powers, POWER_COUNT, sizeof(*powers), (size_t)power));
       if (typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER)
         c_connected(context->database, object);
     }
@@ -160,7 +171,7 @@ static int gamedb_load_native_state(PersistenceContext *context,
   char query[256];
 
   for (size_t index = 0; index < native_column_count; index++) {
-    const NativeColumn *column = &native_columns[index];
+    const NativeColumn *column = gamedb_native_column_at(index);
     sqlite3_stmt *statement = nullptr;
     int step;
 
@@ -222,7 +233,9 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
     if (gamedb_column_long(statement, 0, &player) < 0 ||
         !is_good_obj(context->database, player) ||
         typeof_obj(context->database, player) != OBJECT_TYPE_PLAYER ||
-        seen[player] ||
+        *(const bool *)checked_storage_at_const(
+            seen, (size_t)context->database->top, sizeof(*seen),
+            (size_t)player) ||
         (sqlite3_column_type(statement, 1) != SQLITE_NULL &&
          gamedb_column_text(statement, 1, &password_hash, LBUF_SIZE) < 0) ||
         (sqlite3_column_type(statement, 2) != SQLITE_NULL &&
@@ -246,7 +259,8 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
       free(seen);
       return -1;
     }
-    seen[player] = true;
+    *(bool *)checked_storage_at(seen, (size_t)context->database->top,
+                                sizeof(*seen), (size_t)player) = true;
   }
   sqlite3_finalize(statement);
   if (step != SQLITE_DONE) {
@@ -255,7 +269,10 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
   }
   DO_WHOLE_DB(context->database, object) {
     if (typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER &&
-        !is_going(context->database, object) && !seen[object]) {
+        !is_going(context->database, object) &&
+        !*(const bool *)checked_storage_at_const(
+            seen, (size_t)context->database->top, sizeof(*seen),
+            (size_t)object)) {
       free(seen);
       return -1;
     }
@@ -342,7 +359,10 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
       return -1;
     }
     recipients = grown;
-    recipients[recipient_count++] = recipient;
+    recipient_count++;
+    *(DbRef *)checked_storage_at(recipients, recipient_count,
+                                 sizeof(*recipients), recipient_count - 1) =
+        recipient;
   }
   sqlite3_finalize(statement);
   if (step != SQLITE_DONE ||
@@ -404,18 +424,28 @@ static int gamedb_load_character_state(PersistenceContext *context,
         typeof_obj(context->database, player) != OBJECT_TYPE_PLAYER ||
         is_going(context->database, player))
       goto invalid;
-    for (int column = 0; column < 7; column++)
-      if (gamedb_column_int(statement, column + 1, &fields[column]) < 0 ||
-          fields[column] < 0 || fields[column] > UINT8_MAX)
+    for (int column = 0; column < 7; column++) {
+      int *field =
+          checked_storage_at(fields, 7, sizeof(*fields), (size_t)column);
+      if (gamedb_column_int(statement, column + 1, field) < 0 || *field < 0 ||
+          *field > UINT8_MAX)
         goto invalid;
+    }
     CharacterFixedState fixed = {
-        .bruise = (unsigned char)fields[0],
-        .lethal = (unsigned char)fields[1],
-        .build = (unsigned char)fields[2],
-        .reflexes = (unsigned char)fields[3],
-        .intuition = (unsigned char)fields[4],
-        .learn = (unsigned char)fields[5],
-        .charisma = (unsigned char)fields[6],
+        .bruise = (unsigned char)*(const int *)checked_storage_at_const(
+            fields, 7, sizeof(*fields), 0),
+        .lethal = (unsigned char)*(const int *)checked_storage_at_const(
+            fields, 7, sizeof(*fields), 1),
+        .build = (unsigned char)*(const int *)checked_storage_at_const(
+            fields, 7, sizeof(*fields), 2),
+        .reflexes = (unsigned char)*(const int *)checked_storage_at_const(
+            fields, 7, sizeof(*fields), 3),
+        .intuition = (unsigned char)*(const int *)checked_storage_at_const(
+            fields, 7, sizeof(*fields), 4),
+        .learn = (unsigned char)*(const int *)checked_storage_at_const(
+            fields, 7, sizeof(*fields), 5),
+        .charisma = (unsigned char)*(const int *)checked_storage_at_const(
+            fields, 7, sizeof(*fields), 6),
     };
     if (!character_state_fixed_set(context->database, player, &fixed))
       goto invalid;

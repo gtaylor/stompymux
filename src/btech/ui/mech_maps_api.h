@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/server/platform.h"
 
 typedef struct MapText MapText;
@@ -28,6 +30,8 @@ void TacMapTerr(BattleMap *mech_map, int x, int y, char *terr, char *elev,
 MapText *map_text_create(DbRef player, Mech *mech, BattleMap *mech_map, int x,
                          int y, int xw, int yw, int labels, int dohexlos);
 char *const *map_text_lines(const MapText *text);
+size_t map_text_line_count(const MapText *text);
+const char *map_text_line(const MapText *text, size_t index);
 void map_text_destroy(MapText *text);
 void mech_tacmap(DbRef player, void *data, char *buffer);
 void mech_enterbase(DbRef player, void *data, char *buffer);

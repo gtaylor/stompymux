@@ -19,6 +19,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_control.h"
+#include "mux/support/checked_storage.h"
 
 struct HelpIndex {
   ServerLog *log;
@@ -31,34 +32,108 @@ struct HelpIndex {
   char *root_directory;
 };
 
+static HelpArticle *help_article_slot(HelpArticleVector *vector, size_t index) {
+  return checked_storage_at(vector->items, vector->capacity,
+                            sizeof(*vector->items), index);
+}
+
+static HelpArticle *help_article_item(HelpArticleVector *vector, size_t index) {
+  return checked_storage_at(vector->items, vector->count,
+                            sizeof(*vector->items), index);
+}
+
+static const HelpArticle *
+help_article_item_const(const HelpArticleVector *vector, size_t index) {
+  return checked_storage_at_const(vector->items, vector->count,
+                                  sizeof(*vector->items), index);
+}
+
+static HelpKeywordEntry *help_keyword_slot(HelpIndex *index, size_t capacity,
+                                           size_t position) {
+  return checked_storage_at(index->keywords, capacity, sizeof(*index->keywords),
+                            position);
+}
+
+static const HelpKeywordEntry *help_keyword_item(const HelpIndex *index,
+                                                 size_t position) {
+  return checked_storage_at_const(index->keywords, index->keyword_count,
+                                  sizeof(*index->keywords), position);
+}
+
+static const char *help_string_item(const HelpStringList *list, size_t index) {
+  return *(char *const *)checked_storage_at_const(list->items, list->count,
+                                                  sizeof(*list->items), index);
+}
+
+static char **help_name_slot(char **names, size_t capacity, size_t index) {
+  return checked_storage_at(names, capacity, sizeof(*names), index);
+}
+
+static char *help_name_item(char *const *names, size_t count, size_t index) {
+  return *(char *const *)checked_storage_at_const(names, count, sizeof(*names),
+                                                  index);
+}
+
+static char help_character_at(const char *text, size_t length, size_t index) {
+  return *(const char *)checked_storage_at_const(text, length + 1, sizeof(char),
+                                                 index);
+}
+
 static char *help_join_path(const char *base, const char *name) {
   size_t base_length = strlen(base);
   size_t name_length = strlen(name);
-  char *joined = malloc(base_length + 1 + name_length + 1);
+  size_t capacity;
+  char *joined;
+
+  if (base_length > SIZE_MAX - name_length - 2)
+    return nullptr;
+  capacity = base_length + name_length + 2;
+  joined = malloc(capacity);
+  if (joined == nullptr)
+    return nullptr;
 
   memcpy(joined, base, base_length);
-  joined[base_length] = '/';
-  memcpy(joined + base_length + 1, name, name_length + 1);
+  *(char *)checked_storage_at(joined, capacity, sizeof(char), base_length) =
+      '/';
+  memcpy(checked_storage_region(joined, capacity, base_length + 1,
+                                name_length + 1),
+         name, name_length + 1);
   return joined;
 }
 
 static int help_index_name_compare(const void *a, const void *b) {
-  return strcmp(*(char *const *)a, *(char *const *)b);
+  const char *left;
+  const char *right;
+
+  memcpy(&left, a, sizeof(left));
+  memcpy(&right, b, sizeof(right));
+  return strcmp(left, right);
 }
 
 static int help_index_keyword_compare(const void *a, const void *b) {
-  return strcmp(((const HelpKeywordEntry *)a)->keyword,
-                ((const HelpKeywordEntry *)b)->keyword);
+  HelpKeywordEntry left;
+  HelpKeywordEntry right;
+
+  memcpy(&left, a, sizeof(left));
+  memcpy(&right, b, sizeof(right));
+  return strcmp(left.keyword, right.keyword);
 }
 
 static void help_article_vector_push(HelpArticleVector *vector,
                                      const HelpArticle *article) {
   if (vector->count == vector->capacity) {
-    vector->capacity = vector->capacity ? vector->capacity * 2 : 16;
-    vector->items =
-        realloc(vector->items, vector->capacity * sizeof(HelpArticle));
+    size_t capacity = vector->capacity ? vector->capacity * 2 : 16;
+    HelpArticle *items;
+
+    if (capacity < vector->capacity || capacity > SIZE_MAX / sizeof(*items))
+      abort();
+    items = realloc(vector->items, capacity * sizeof(*items));
+    if (items == nullptr)
+      abort();
+    vector->items = items;
+    vector->capacity = capacity;
   }
-  vector->items[vector->count++] = *article;
+  *help_article_slot(vector, vector->count++) = *article;
 }
 
 static char *help_slurp_file(const char *path, size_t *out_length) {
@@ -86,7 +161,8 @@ static char *help_slurp_file(const char *path, size_t *out_length) {
   }
   fclose(fp);
   // File length is converted only after ftell() verifies it is non-negative.
-  buffer[size] = '\0'; // NOLINT(clang-analyzer-security.ArrayBound)
+  *(char *)checked_storage_at(buffer, (size_t)size + 1, sizeof(char),
+                              (size_t)size) = '\0';
   if (out_length)
     *out_length = (size_t)size;
   return buffer;
@@ -101,37 +177,50 @@ static bool help_locate_frontmatter(const char *content,
                                     const char **toml_start,
                                     size_t *toml_length,
                                     const char **body_start) {
-  const char *cursor;
-  const char *line_end;
-  const char *p;
+  const size_t content_length = strlen(content);
+  size_t line_end = 0;
+  size_t toml_offset;
+  size_t cursor;
 
-  if (strncmp(content, "+++", 3) != 0)
+  if (content_length < 3 || strncmp(content, "+++", 3) != 0)
     return false;
-  line_end = strchr(content, '\n');
-  if (!line_end)
+  while (line_end < content_length &&
+         help_character_at(content, content_length, line_end) != '\n')
+    line_end++;
+  if (line_end == content_length)
     return false;
-  for (p = content + 3; p < line_end; p++) {
-    if (*p != '\r' && *p != ' ' && *p != '\t')
+  for (size_t index = 3; index < line_end; index++) {
+    const char character = help_character_at(content, content_length, index);
+
+    if (character != '\r' && character != ' ' && character != '\t')
       return false;
   }
-  *toml_start = line_end + 1;
+  toml_offset = line_end + 1;
+  *toml_start = checked_string_suffix(content, toml_offset);
 
-  cursor = *toml_start;
+  cursor = toml_offset;
   for (;;) {
     size_t line_length;
     size_t trimmed_length;
 
-    line_end = strchr(cursor, '\n');
-    line_length = line_end ? (size_t)(line_end - cursor) : strlen(cursor);
+    line_end = cursor;
+    while (line_end < content_length &&
+           help_character_at(content, content_length, line_end) != '\n')
+      line_end++;
+    line_length = line_end - cursor;
     trimmed_length = line_length;
-    if (trimmed_length > 0 && cursor[trimmed_length - 1] == '\r')
+    if (trimmed_length > 0 &&
+        help_character_at(content, content_length,
+                          cursor + trimmed_length - 1) == '\r')
       trimmed_length--;
-    if (trimmed_length == 3 && strncmp(cursor, "+++", 3) == 0) {
-      *toml_length = (size_t)(cursor - *toml_start);
-      *body_start = line_end ? line_end + 1 : cursor + line_length;
+    if (trimmed_length == 3 &&
+        strncmp(checked_string_suffix(content, cursor), "+++", 3) == 0) {
+      *toml_length = cursor - toml_offset;
+      *body_start = checked_string_suffix(
+          content, line_end < content_length ? line_end + 1 : line_end);
       return true;
     }
-    if (!line_end)
+    if (line_end == content_length)
       return false;
     cursor = line_end + 1;
   }
@@ -230,20 +319,30 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
     if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
       continue;
     if (name_count == name_capacity) {
-      name_capacity = name_capacity ? name_capacity * 2 : 16;
-      entry_names = realloc(entry_names, name_capacity * sizeof(char *));
+      size_t capacity = name_capacity ? name_capacity * 2 : 16;
+      char **names;
+
+      if (capacity < name_capacity || capacity > SIZE_MAX / sizeof(*names))
+        abort();
+      names = realloc(entry_names, capacity * sizeof(*names));
+      if (names == nullptr)
+        abort();
+      entry_names = names;
+      name_capacity = capacity;
     }
-    entry_names[name_count++] = strdup(entry->d_name);
+    *help_name_slot(entry_names, name_capacity, name_count++) =
+        strdup(entry->d_name);
   }
   closedir(stream);
   if (name_count > 0)
     qsort(entry_names, name_count, sizeof(char *), help_index_name_compare);
 
   for (i = 0; i < name_count; i++) {
-    char *absolute_child = help_join_path(absolute_dir, entry_names[i]);
+    char *entry_name = help_name_item(entry_names, name_count, i);
+    char *absolute_child = help_join_path(absolute_dir, entry_name);
     char *relative_child = relative_prefix[0]
-                               ? help_join_path(relative_prefix, entry_names[i])
-                               : strdup(entry_names[i]);
+                               ? help_join_path(relative_prefix, entry_name)
+                               : strdup(entry_name);
     struct stat status;
 
     if (stat(absolute_child, &status) == 0) {
@@ -251,16 +350,17 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
         help_index_walk_directory(evaluation, index, absolute_child,
                                   relative_child, player, error_count);
       } else if (S_ISREG(status.st_mode)) {
-        size_t name_length = strlen(entry_names[i]);
+        size_t name_length = strlen(entry_name);
 
-        if (name_length > 3 && !strcmp(entry_names[i] + name_length - 3, ".md"))
+        if (name_length > 3 &&
+            !strcmp(checked_string_suffix(entry_name, name_length - 3), ".md"))
           help_index_process_file(evaluation, index, absolute_child,
                                   relative_child, player, error_count);
       }
     }
     free(absolute_child);
     free(relative_child);
-    free(entry_names[i]);
+    free(entry_name);
   }
   free(entry_names);
 }
@@ -272,32 +372,38 @@ static void help_index_build_keywords(EvaluationContext *evaluation,
   size_t i, k;
 
   for (i = 0; i < index->articles.count; i++)
-    total_keywords += index->articles.items[i].keywords.count;
+    total_keywords += help_article_item(&index->articles, i)->keywords.count;
   if (total_keywords == 0)
     return;
   index->keywords = malloc(total_keywords * sizeof(HelpKeywordEntry));
 
   for (i = 0; i < index->articles.count; i++) {
-    HelpArticle *article = &index->articles.items[i];
+    HelpArticle *article = help_article_item(&index->articles, i);
 
     for (k = 0; k < article->keywords.count; k++) {
-      char *keyword_lower = strdup(article->keywords.items[k]);
-      char *p;
+      char *keyword_lower = strdup(help_string_item(&article->keywords, k));
+      size_t keyword_length = strlen(keyword_lower);
       size_t existing;
       bool duplicate = false;
 
-      for (p = keyword_lower; *p; p++)
-        *p = (char)tolower((unsigned char)*p);
+      for (size_t position = 0; position < keyword_length; position++) {
+        char *character = checked_storage_at(keyword_lower, keyword_length + 1,
+                                             sizeof(char), position);
+
+        *character = (char)(tolower)((unsigned char)*character);
+      }
 
       for (existing = 0; existing < index->keyword_count; existing++) {
-        if (!strcmp(index->keywords[existing].keyword, keyword_lower)) {
+        if (!strcmp(help_keyword_item(index, existing)->keyword,
+                    keyword_lower)) {
           duplicate = true;
           break;
         }
       }
       if (duplicate) {
-        HelpArticle *owner =
-            &index->articles.items[index->keywords[existing].article_index];
+        HelpArticle *owner = help_article_item(
+            &index->articles,
+            help_keyword_item(index, existing)->article_index);
 
         if (index->log != nullptr)
           log_error(index->log, LOG_STARTUP, "HLP", "DUPKW",
@@ -314,8 +420,11 @@ static void help_index_build_keywords(EvaluationContext *evaluation,
         free(keyword_lower);
         continue;
       }
-      index->keywords[index->keyword_count].keyword = keyword_lower;
-      index->keywords[index->keyword_count].article_index = i;
+      HelpKeywordEntry *keyword =
+          help_keyword_slot(index, total_keywords, index->keyword_count);
+
+      keyword->keyword = keyword_lower;
+      keyword->article_index = i;
       index->keyword_count++;
     }
   }
@@ -327,12 +436,12 @@ static void help_index_reset(HelpIndex *index) {
   size_t i;
 
   for (i = 0; i < index->articles.count; i++)
-    help_frontmatter_free(&index->articles.items[i]);
+    help_frontmatter_free(help_article_item(&index->articles, i));
   free(index->articles.items);
   index->articles = (HelpArticleVector){0};
 
   for (i = 0; i < index->keyword_count; i++)
-    free(index->keywords[i].keyword);
+    free(help_keyword_item(index, i)->keyword);
   free(index->keywords);
   index->keywords = nullptr;
   index->keyword_count = 0;
@@ -352,7 +461,8 @@ static void help_index_rebuild(EvaluationContext *evaluation, HelpIndex *index,
   help_index_build_keywords(evaluation, index, player, &warning_count);
 
   for (i = 0; i < index->articles.count; i++) {
-    if (!strcmp(index->articles.items[i].relative_path, "index.md")) {
+    if (!strcmp(help_article_item(&index->articles, i)->relative_path,
+                "index.md")) {
       index->default_article_index = i;
       break;
     }
@@ -408,7 +518,8 @@ void help_index_reload(EvaluationContext *evaluation, HelpIndex *index,
 const HelpArticle *help_index_default_article(const HelpIndex *index) {
   if (index->default_article_index == SIZE_MAX)
     return nullptr;
-  return &index->articles.items[index->default_article_index];
+  return help_article_item_const(&index->articles,
+                                 index->default_article_index);
 }
 
 const HelpArticle *help_index_find_exact(const HelpIndex *index,
@@ -419,11 +530,12 @@ const HelpArticle *help_index_find_exact(const HelpIndex *index,
 
   while (low < high) {
     size_t mid = low + (high - low) / 2;
-    int comparison = strcmp(index->keywords[mid].keyword, keyword_lower);
+    const HelpKeywordEntry *keyword = help_keyword_item(index, mid);
+    int comparison = strcmp(keyword->keyword, keyword_lower);
 
     if (comparison == 0) {
       const HelpArticle *article =
-          &index->articles.items[index->keywords[mid].article_index];
+          help_article_item_const(&index->articles, keyword->article_index);
 
       if (article->wizard_only && !viewer_is_wizard)
         return nullptr;
@@ -443,7 +555,7 @@ size_t help_index_article_count(const HelpIndex *index) {
 
 const HelpArticle *help_index_article_at(const HelpIndex *index,
                                          size_t article_index) {
-  return &index->articles.items[article_index];
+  return help_article_item_const(&index->articles, article_index);
 }
 
 size_t help_index_last_error_count(const HelpIndex *index) {
@@ -460,12 +572,13 @@ size_t help_index_keyword_count(const HelpIndex *index) {
 
 const char *help_index_keyword_at(const HelpIndex *index,
                                   size_t keyword_index) {
-  return index->keywords[keyword_index].keyword;
+  return help_keyword_item(index, keyword_index)->keyword;
 }
 
 const HelpArticle *help_index_keyword_article_at(const HelpIndex *index,
                                                  size_t keyword_index) {
-  return &index->articles.items[index->keywords[keyword_index].article_index];
+  return help_article_item_const(
+      &index->articles, help_keyword_item(index, keyword_index)->article_index);
 }
 
 char *help_index_read_body(const HelpIndex *index, const HelpArticle *article,

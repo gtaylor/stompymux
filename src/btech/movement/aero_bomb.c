@@ -44,6 +44,7 @@ static const float BOMB_GRAVITY = 1.0F;
 #include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mycool.h"
 #include "mymath.h"
@@ -80,16 +81,37 @@ static const BombInfo bombs[] = {{"10_Inferno", 10, BOMB_KIND_INFERNO, 30},
                                  {"100_Standard", 100, BOMB_KIND_STANDARD, 250},
                                  {nullptr, 0, BOMB_KIND_STANDARD, 0}};
 
-int bomb_weight(int i) { return bombs[i].weight; }
+static const BombInfo *bomb_info(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(bombs, 10, sizeof(*bombs), (size_t)index);
+}
 
-const char *bomb_name(int i) { return bombs[i].name; }
+static const char *bomb_kind_name(BombKind kind) {
+  switch (kind) {
+  case BOMB_KIND_STANDARD:
+    return "Standard";
+  case BOMB_KIND_INFERNO:
+    return "Inferno";
+  case BOMB_KIND_CLUSTER:
+    return "Cluster";
+  }
+  abort();
+}
+
+static char *bomb_argument(char **arguments, size_t count, size_t index) {
+  char **slot = checked_storage_at(arguments, count, sizeof(*arguments), index);
+  return *slot;
+}
+
+int bomb_weight(int i) { return bomb_info(i)->weight; }
+
+const char *bomb_name(int i) { return bomb_info(i)->name; }
 
 static void bomb_list(Mech *mech, DbRef player) {
   int bc = 0, fb;
   int i, j, k;
   char location[20];
-  static const char *const types[] = {"Standard", "Inferno", "Cluster",
-                                      nullptr};
   CoolMenu *c = nullptr;
 
   cool_menu_add_line(&c);
@@ -110,9 +132,10 @@ static void bomb_list(Mech *mech, DbRef player) {
           cool_menu_add_text(&c, tprintf("#  %-20s %-5s %-5s %s", "Location",
                                          "Weight", "Power", "Type"));
         }
+        const BombInfo *bomb = bomb_info(k);
         cool_menu_add_text(&c, tprintf("%-2d %-20s %5d %5d %s", bc + 1,
-                                       location, bombs[k].weight / 10,
-                                       bombs[k].aff, types[bombs[k].type]));
+                                       location, bomb->weight / 10, bomb->aff,
+                                       bomb_kind_name(bomb->type)));
         bc++;
       }
   }
@@ -162,42 +185,35 @@ static void bomb_hit_hexes(BattleMap *map, int x, int y, int hitnb,
 }
 
 static void bomb_hit(BombShot *s) {
-  switch (bombs[s->type].type) {
+  const BombInfo *bomb = bomb_info(s->type);
+  const int direct_damage =
+      bomb->type == BOMB_KIND_INFERNO ? bomb->aff / 2 : bomb->aff;
+  const int heat_damage = bomb->type == BOMB_KIND_INFERNO ? bomb->aff : 0;
+  switch (bomb->type) {
   case BOMB_KIND_STANDARD:
     HexLOSBroadcast(s->map, s->x, s->y, "A blast rocks the area around $H!");
-    bomb_hit_hexes(
-        s->map, s->x, s->y, 1, 0,
-        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff / 2
-                                                 : bombs[s->type].aff,
-        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff : 0,
-        "You receive a direct hit!", "receives a direct hit!",
-        "You are hit by shrapnel!", "is hit by shrapnel!");
+    bomb_hit_hexes(s->map, s->x, s->y, 1, 0, direct_damage, heat_damage,
+                   "You receive a direct hit!", "receives a direct hit!",
+                   "You are hit by shrapnel!", "is hit by shrapnel!");
     break;
   case BOMB_KIND_INFERNO:
     HexLOSBroadcast(
         s->map, s->x, s->y,
         "A fiery blast occurs in $H, spraying flaming gel everywhere!");
-    bomb_hit_hexes(
-        s->map, s->x, s->y, 1, 0,
-        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff / 2
-                                                 : bombs[s->type].aff,
-        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff : 0,
-        "You receive a direct hit!", "receives a direct hit!",
-        "You are hit by the globs of flaming gel!", "is hit by the globs!");
+    bomb_hit_hexes(s->map, s->x, s->y, 1, 0, direct_damage, heat_damage,
+                   "You receive a direct hit!", "receives a direct hit!",
+                   "You are hit by the globs of flaming gel!",
+                   "is hit by the globs!");
     break;
   case BOMB_KIND_CLUSTER:
     HexLOSBroadcast(
         s->map, s->x, s->y,
         "A bomb drops rain of small bomblets in $H's surroundings!");
-    bomb_hit_hexes(
-        s->map, s->x, s->y, 1, 1,
-        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff / 2
-                                                 : bombs[s->type].aff,
-        bombs[s->type].type == BOMB_KIND_INFERNO ? bombs[s->type].aff : 0,
-        "You are hit by ton of small munitions!",
-        "is hit by many small munitions!",
-        "You are hit by some of the small munitions!",
-        "is hit by some small munitions!");
+    bomb_hit_hexes(s->map, s->x, s->y, 1, 1, direct_damage, heat_damage,
+                   "You are hit by ton of small munitions!",
+                   "is hit by many small munitions!",
+                   "You are hit by some of the small munitions!",
+                   "is hit by some small munitions!");
     break;
   }
 }
@@ -347,7 +363,7 @@ void mech_bomb(DbRef player, void *data, char *buffer) {
                  "Too many arguments!");
     return;
   }
-  if (!strcasecmp(args[0], "list")) {
+  if (!strcasecmp(bomb_argument(args, 3, 0), "list")) {
     bomb_list(mech, player);
     return;
   }
@@ -356,11 +372,11 @@ void mech_bomb(DbRef player, void *data, char *buffer) {
                  "The craft is landed!");
     return;
   }
-  if (!strcasecmp(args[0], "aim")) {
+  if (!strcasecmp(bomb_argument(args, 3, 0), "aim")) {
     bomb_aim(mech, player);
     return;
   }
-  if (strcasecmp(args[0], "drop")) {
+  if (strcasecmp(bomb_argument(args, 3, 0), "drop")) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid argument to BOMB!");
     return;
@@ -370,7 +386,8 @@ void mech_bomb(DbRef player, void *data, char *buffer) {
                  "The BOMB commands needs to know WHICH bomb to drop!");
     return;
   }
-  if ((!((bn) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if ((!((bn) = atoi(bomb_argument(args, 3, 1))) &&
+       strcmp(bomb_argument(args, 3, 1), "0"))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid bomb number!");
     return;

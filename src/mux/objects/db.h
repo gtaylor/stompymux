@@ -5,12 +5,14 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_runtime.h"
 #include "mux/server/log.h" // IWYU pragma: keep
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/world_context.h"
 
 struct GameDatabase; // IWYU pragma: keep
@@ -63,6 +65,8 @@ extern Attribute *attribute_by_number(GameDatabase *database, int anum);
 extern Attribute *attribute_by_name(GameDatabase *database, const char *s);
 
 extern Attribute attr_table[];
+size_t native_attribute_count(void);
+Attribute *native_attribute_at(size_t index);
 
 constexpr char ATR_INFO_CHAR = '\1'; /* Leadin char for attr control data */
 
@@ -143,8 +147,8 @@ struct DatabaseMarkBuffer {
 };
 
 struct GameDatabase {
-  GameObject *objects;
-  NAME *pure_names;
+  GameObject *object_storage;
+  NAME *pure_name_storage;
   char name_buffer[MBUF_SIZE];
   char pure_name_buffer[LBUF_SIZE];
   int top;
@@ -173,7 +177,13 @@ void game_database_destroy(GameDatabase *database);
 
 static inline GameObject *game_database_object(GameDatabase *database,
                                                DbRef object) {
-  return &database->objects[object];
+  if (database == nullptr || database->size < 0 || object < -1 ||
+      object >= database->size) {
+    abort();
+  }
+  return checked_storage_at(database->object_storage,
+                            (size_t)database->size + 1, sizeof(GameObject),
+                            (size_t)(object + 1));
 }
 
 static inline uint64_t game_object_generation(GameDatabase *database,

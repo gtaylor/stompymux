@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
+
 #include "test_support.h"
 
 int styled_text_preset_tests(void) {
@@ -62,7 +64,8 @@ int styled_text_preset_tests(void) {
       !strstr(preset_definition, "preset:danger?config=") ||
       !strstr(preset_definition, "%22s%22%3A") ||
       !strstr(preset_definition, "%22t%22%3A%22Dangerous%20action%22") ||
-      strcmp(preset_definition + strlen(preset_definition) - 7,
+      strcmp(checked_string_suffix(preset_definition,
+                                   strlen(preset_definition) - 7),
              "\033]8;;\033\\")) {
     fprintf(stderr, "OSC 8 preset setup or definition failed: %s\n", error);
     styled_text_palette_destroy(styled_text_test_palette);

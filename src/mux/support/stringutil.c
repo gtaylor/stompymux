@@ -6,12 +6,14 @@
 #include <errno.h>
 #include <limits.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 
 #ifdef __linux__
@@ -20,10 +22,31 @@ char *___strtok;
 #endif
 
 /** Returns whether a parser stopped at only trailing whitespace. */
+static char checked_character_at(const char *text, size_t length,
+                                 size_t index) {
+  return *(const char *)checked_storage_at_const(text, length, sizeof(char),
+                                                 index);
+}
+
+static char *checked_character_slot(char *text, size_t capacity, size_t index) {
+  return checked_storage_at(text, capacity, sizeof(char), index);
+}
+
+static bool character_is_space(char character) {
+  return (isspace)((unsigned char)character) != 0;
+}
+
+static bool character_is_alphanumeric(char character) {
+  return (isalnum)((unsigned char)character) != 0;
+}
+
 static bool parse_finished(const char *end) {
-  while (isspace((unsigned char)*end))
-    end++;
-  return *end == '\0';
+  const size_t length = strlen(end);
+  for (size_t index = 0; index < length; index++) {
+    if (!character_is_space(checked_character_at(end, length + 1, index)))
+      return false;
+  }
+  return true;
 }
 
 /**
@@ -83,14 +106,14 @@ bool parse_float_checked(const char *text, float *value) {
 /** Converts one ASCII lowercase letter to uppercase, leaving others intact. */
 char ascii_to_upper(char character) {
   if (character >= 'a' && character <= 'z')
-    return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[character - 'a'];
+    return (char)(character - ('a' - 'A'));
   return character;
 }
 
 /** Converts one ASCII uppercase letter to lowercase, leaving others intact. */
 char ascii_to_lower(char character) {
   if (character >= 'A' && character <= 'Z')
-    return "abcdefghijklmnopqrstuvwxyz"[character - 'A'];
+    return (char)(character + ('a' - 'A'));
   return character;
 }
 
@@ -128,11 +151,44 @@ int clamped_atoi(const char *str) {
 
 /** Converts a mutable string to ASCII uppercase in place; accepts nullptr. */
 char *upcasestr(char *s) {
-  char *p;
-
-  for (p = s; p && *p; p++)
-    *p = ascii_to_upper(*p);
+  if (s == nullptr)
+    return nullptr;
+  const size_t length = strlen(s);
+  for (size_t index = 0; index < length; index++) {
+    char *slot = checked_character_slot(s, length + 1, index);
+    *slot = ascii_to_upper(*slot);
+  }
   return s;
+}
+
+static char *normalize_spaces(const char *string, const char *allocation_name) {
+  char *buffer = alloc_lbuf(allocation_name);
+  if (buffer == nullptr)
+    return nullptr;
+
+  size_t output_index = 0;
+  bool pending_space = false;
+  if (string != nullptr) {
+    const size_t length = strlen(string);
+    for (size_t input_index = 0; input_index < length; input_index++) {
+      const char character =
+          checked_character_at(string, length + 1, input_index);
+      if (character_is_space(character)) {
+        pending_space = output_index > 0;
+      } else {
+        if (pending_space && output_index < (size_t)LBUF_SIZE - 1) {
+          *checked_character_slot(buffer, LBUF_SIZE, output_index++) = ' ';
+        }
+        pending_space = false;
+        if (output_index < (size_t)LBUF_SIZE - 1) {
+          *checked_character_slot(buffer, LBUF_SIZE, output_index++) =
+              character;
+        }
+      }
+    }
+  }
+  *checked_character_slot(buffer, LBUF_SIZE, output_index) = '\0';
+  return buffer;
 }
 
 /**
@@ -140,29 +196,7 @@ char *upcasestr(char *s) {
  * leading and trailing whitespace removed. The caller must free the lbuf.
  */
 char *munge_space(char *string) {
-  char *buffer, *p, *q;
-
-  buffer = alloc_lbuf("munge_space");
-  p = string;
-  q = buffer;
-  while (p && *p && isspace((unsigned char)*p))
-    p++; /*
-          * remove inital spaces
-          */
-  while (p && *p) {
-    while (*p && !isspace((unsigned char)*p))
-      *q++ = *p++;
-    while (*p && isspace((unsigned char)*++p))
-      ;
-    if (*p)
-      *q++ = ' ';
-  }
-  *q = '\0'; /*
-              * remove terminal spaces and terminate * * *
-              *
-              * * string
-              */
-  return (buffer);
+  return normalize_spaces(string, "munge_space");
 }
 
 /**
@@ -170,33 +204,7 @@ char *munge_space(char *string) {
  * whitespace runs compressed. The caller must free the lbuf.
  */
 char *trim_spaces(char *string) {
-  char *buffer, *p, *q;
-
-  buffer = alloc_lbuf("trim_spaces");
-  p = string;
-  q = buffer;
-  while (p && *p && isspace((unsigned char)*p)) /*
-                                                 * remove inital spaces
-                                                 */
-    p++;
-  while (p && *p) {
-    while (*p && !isspace((unsigned char)*p)) /*
-                                               * copy nonspace chars
-                                               */
-      *q++ = *p++;
-    while (*p && isspace((unsigned char)*p)) /*
-                                              * compress spaces
-                                              */
-      p++;
-    if (*p)
-      *q++ = ' '; /*
-                   * leave one space
-                   */
-  }
-  *q = '\0'; /*
-              * terminate string
-              */
-  return (buffer);
+  return normalize_spaces(string, "trim_spaces");
 }
 
 /**
@@ -204,18 +212,22 @@ char *trim_spaces(char *string) {
  * current field, and advances the caller's pointer to the following field.
  */
 char *grabto(char **str, char targ) {
-  char *savec, *cp;
-
   if (!str || !*str || !**str)
     return nullptr;
 
-  savec = cp = *str;
-  while (*cp && *cp != targ)
-    cp++;
-  if (*cp)
-    *cp++ = '\0';
-  *str = cp;
-  return savec;
+  char *field = *str;
+  const size_t length = strlen(field);
+  size_t index = 0;
+  while (index < length &&
+         checked_character_at(field, length + 1, index) != targ) {
+    index++;
+  }
+  if (index < length) {
+    *checked_character_slot(field, length + 1, index) = '\0';
+    index++;
+  }
+  *str = checked_mutable_string_suffix(field, index);
+  return field;
 }
 
 /**
@@ -224,48 +236,58 @@ char *grabto(char **str, char targ) {
  */
 int string_compare(const ServerConfiguration *configuration, const char *s1,
                    const char *s2) {
-  if (!configuration->space_compress) {
-    while (*s1 && *s2 && ascii_to_lower(*s1) == ascii_to_lower(*s2))
-      s1++, s2++;
+  const size_t length1 = strlen(s1);
+  const size_t length2 = strlen(s2);
+  size_t index1 = 0;
+  size_t index2 = 0;
 
-    return (ascii_to_lower(*s1) - ascii_to_lower(*s2));
+  if (!configuration->space_compress) {
+    while (index1 < length1 && index2 < length2 &&
+           ascii_to_lower(checked_character_at(s1, length1 + 1, index1)) ==
+               ascii_to_lower(checked_character_at(s2, length2 + 1, index2))) {
+      index1++;
+      index2++;
+    }
+    return ascii_to_lower(checked_character_at(s1, length1 + 1, index1)) -
+           ascii_to_lower(checked_character_at(s2, length2 + 1, index2));
   } else {
-    while (isspace((unsigned char)*s1))
-      s1++;
-    while (isspace((unsigned char)*s2))
-      s2++;
-    while (*s1 && *s2 &&
-           ((ascii_to_lower(*s1) == ascii_to_lower(*s2)) ||
-            (isspace((unsigned char)*s1) && isspace((unsigned char)*s2)))) {
-      if (isspace((unsigned char)*s1) &&
-          isspace((unsigned char)*s2)) { /*
-                                          * skip all
-                                          * other
-                                          * spaces
-                                          */
-        while (isspace((unsigned char)*s1))
-          s1++;
-        while (isspace((unsigned char)*s2))
-          s2++;
+    while (index1 < length1 &&
+           character_is_space(checked_character_at(s1, length1 + 1, index1)))
+      index1++;
+    while (index2 < length2 &&
+           character_is_space(checked_character_at(s2, length2 + 1, index2)))
+      index2++;
+    while (index1 < length1 && index2 < length2) {
+      const char character1 = checked_character_at(s1, length1 + 1, index1);
+      const char character2 = checked_character_at(s2, length2 + 1, index2);
+      if (character_is_space(character1) && character_is_space(character2)) {
+        while (index1 < length1 && character_is_space(checked_character_at(
+                                       s1, length1 + 1, index1)))
+          index1++;
+        while (index2 < length2 && character_is_space(checked_character_at(
+                                       s2, length2 + 1, index2)))
+          index2++;
+      } else if (ascii_to_lower(character1) == ascii_to_lower(character2)) {
+        index1++;
+        index2++;
       } else {
-        s1++;
-        s2++;
+        break;
       }
     }
-    if ((*s1) && (*s2))
+    if (index1 < length1 && index2 < length2)
       return (1);
-    if (isspace((unsigned char)*s1)) {
-      while (isspace((unsigned char)*s1))
-        s1++;
-      return (*s1);
+    while (index1 < length1 &&
+           character_is_space(checked_character_at(s1, length1 + 1, index1)))
+      index1++;
+    if (index1 < length1) {
+      return checked_character_at(s1, length1 + 1, index1);
     }
-    if (isspace((unsigned char)*s2)) {
-      while (isspace((unsigned char)*s2))
-        s2++;
-      return (*s2);
+    while (index2 < length2 &&
+           character_is_space(checked_character_at(s2, length2 + 1, index2)))
+      index2++;
+    if (index2 < length2) {
+      return checked_character_at(s2, length2 + 1, index2);
     }
-    if ((*s1) || (*s2))
-      return (1);
     return (0);
   }
 }
@@ -275,17 +297,20 @@ int string_compare(const ServerConfiguration *configuration, const char *s1,
  * matched characters, or zero if the complete nonempty prefix does not match.
  */
 int string_prefix(const char *string, const char *prefix) {
-  int count = 0;
+  const size_t string_length = strlen(string);
+  const size_t prefix_length = strlen(prefix);
+  size_t count = 0;
 
-  while (*string && *prefix &&
-         ascii_to_lower(*string) == ascii_to_lower(*prefix))
-    string++, prefix++, count++;
-  if (*prefix == '\0') /*
-                        * Matched all of prefix
-                        */
-    return (count);
-  else
-    return (0);
+  while (
+      count < string_length && count < prefix_length &&
+      ascii_to_lower(checked_character_at(string, string_length + 1, count)) ==
+          ascii_to_lower(
+              checked_character_at(prefix, prefix_length + 1, count))) {
+    count++;
+  }
+  if (count != prefix_length)
+    return 0;
+  return count > (size_t)INT_MAX ? INT_MAX : (int)count;
 }
 
 /**
@@ -293,20 +318,23 @@ int string_prefix(const char *string, const char *prefix) {
  * Returns a pointer into src, or nullptr when no word matches.
  */
 const char *string_match(const char *src, const char *sub) {
-  if ((*sub != '\0') && (src)) {
-    while (*src) {
-      if (string_prefix(src, sub))
-        return src;
-      /*
-       * else scan to beginning of next word
-       */
-      while (*src && isalnum((unsigned char)*src))
-        src++;
-      while (*src && !isalnum((unsigned char)*src))
-        src++;
-    }
+  if (src == nullptr || sub == nullptr || *sub == '\0')
+    return nullptr;
+
+  const size_t length = strlen(src);
+  size_t index = 0;
+  while (index < length) {
+    const char *word = checked_string_suffix(src, index);
+    if (string_prefix(word, sub))
+      return word;
+    while (index < length && character_is_alphanumeric(
+                                 checked_character_at(src, length + 1, index)))
+      index++;
+    while (index < length && !character_is_alphanumeric(
+                                 checked_character_at(src, length + 1, index)))
+      index++;
   }
-  return 0;
+  return nullptr;
 }
 
 /**
@@ -314,44 +342,31 @@ const char *string_match(const char *src, const char *sub) {
  * by new. The caller must free the returned lbuf.
  */
 char *replace_string(const char *old, const char *new, const char *string) {
-  char *result, *r;
-  const char *s;
-  int olen;
-
-  if (string == nullptr)
+  if (old == nullptr || new == nullptr || string == nullptr)
     return nullptr;
-  s = string;
-  olen = (int)strlen(old);
-  r = result = alloc_lbuf("replace_string");
-  while (*s) {
 
-    /*
-     * Copy up to the next occurrence of the first char of OLD
-     */
+  const size_t old_length = strlen(old);
+  const size_t string_length = strlen(string);
+  char *result = alloc_lbuf("replace_string");
+  if (result == nullptr)
+    return nullptr;
+  char *output = result;
 
-    while (*s && *s != *old) {
-      safe_chr(*s, result, &r);
-      s++;
-    }
-
-    /*
-     * If we are really at an OLD, append NEW to the result and *
-     *
-     * *  * *  * * bump the input string past the occurrence of
-     * OLD. *  * * * Otherwise, copy the char and try again.
-     */
-
-    if (*s) {
-      if (!strncmp(old, s, (size_t)olen)) {
-        safe_str(new, result, &r);
-        s += olen;
-      } else {
-        safe_chr(*s, result, &r);
-        s++;
-      }
+  size_t index = 0;
+  while (index < string_length) {
+    const bool matches =
+        old_length > 0 && old_length <= string_length - index &&
+        memcmp(old, checked_string_suffix(string, index), old_length) == 0;
+    if (matches) {
+      safe_str(new, result, &output);
+      index += old_length;
+    } else {
+      safe_chr(checked_character_at(string, string_length + 1, index), result,
+               &output);
+      index++;
     }
   }
-  *r = '\0';
+  *output = '\0';
   return result;
 }
 
@@ -360,26 +375,32 @@ char *replace_string(const char *old, const char *new, const char *string) {
  * at least min characters, unless str exactly consumes target.
  */
 int minmatch(const char *str, const char *target, int min) {
-  while (*str && *target && (ascii_to_lower(*str) == ascii_to_lower(*target))) {
-    str++;
-    target++;
+  const size_t str_length = strlen(str);
+  const size_t target_length = strlen(target);
+  size_t index = 0;
+  while (index < str_length && index < target_length &&
+         ascii_to_lower(checked_character_at(str, str_length + 1, index)) ==
+             ascii_to_lower(
+                 checked_character_at(target, target_length + 1, index))) {
+    index++;
     min--;
   }
-  if (*str)
+  if (index < str_length)
     return 0;
-  if (!*target)
+  if (index == target_length)
     return 1;
   return ((min <= 0) ? 1 : 0);
 }
 
 /** Duplicates s with malloc; returns nullptr on failure and must be freed. */
 char *strsave(const char *s) {
-  char *p;
-  p = (char *)malloc(sizeof(char) * (strlen(s) + 1));
-
-  if (p)
-    StringCopy(p, s);
-  return p;
+  if (s == nullptr)
+    return nullptr;
+  const size_t size = strlen(s) + 1;
+  char *copy = malloc(size);
+  if (copy != nullptr)
+    memcpy(copy, s, size);
+  return copy;
 }
 
 /**
@@ -387,15 +408,27 @@ char *strsave(const char *s) {
  * number of source bytes not copied. This function does not add a terminator.
  */
 int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
-  char *tp;
-
-  tp = *bufp;
-  if (src == nullptr)
+  if (src == nullptr || buff == nullptr || bufp == nullptr || *bufp == nullptr)
     return 0;
-  while (*src && ((tp - buff) < max))
-    *tp++ = *src++;
-  *bufp = tp;
-  return (int)strlen(src);
+  const uintptr_t base_address = (uintptr_t)buff;
+  const uintptr_t cursor_address = (uintptr_t)*bufp;
+  if (max < 0 || cursor_address < base_address ||
+      cursor_address - base_address > (uintptr_t)max) {
+    return strlen(src) > (size_t)INT_MAX ? INT_MAX : (int)strlen(src);
+  }
+
+  const size_t source_length = strlen(src);
+  size_t source_index = 0;
+  size_t output_index = (size_t)(cursor_address - base_address);
+  while (source_index < source_length && output_index < (size_t)max) {
+    *checked_character_slot(buff, (size_t)max + 1, output_index) =
+        checked_character_at(src, source_length + 1, source_index);
+    source_index++;
+    output_index++;
+  }
+  *bufp = checked_character_slot(buff, (size_t)max + 1, output_index);
+  const size_t remaining = source_length - source_index;
+  return remaining > (size_t)INT_MAX ? INT_MAX : (int)remaining;
 }
 
 /**
@@ -403,16 +436,19 @@ int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
  * success or one when no space remains; it does not add a terminator.
  */
 int safe_copy_chr(char src, char *buff, char **bufp, int max) {
-  char *tp;
-  int retval;
-
-  tp = *bufp;
-  retval = 0;
-  if ((tp - buff) < max) {
-    *tp++ = src;
-  } else {
-    retval = 1;
+  if (buff == nullptr || bufp == nullptr || *bufp == nullptr || max < 0)
+    return 1;
+  const uintptr_t base_address = (uintptr_t)buff;
+  const uintptr_t cursor_address = (uintptr_t)*bufp;
+  if (cursor_address < base_address ||
+      cursor_address - base_address > (uintptr_t)max) {
+    return 1;
   }
-  *bufp = tp;
-  return retval;
+
+  const size_t output_index = (size_t)(cursor_address - base_address);
+  if (output_index >= (size_t)max)
+    return 1;
+  *checked_character_slot(buff, (size_t)max + 1, output_index) = src;
+  *bufp = checked_character_slot(buff, (size_t)max + 1, output_index + 1);
+  return 0;
 }

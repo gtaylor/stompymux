@@ -16,6 +16,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/player.h"
 
@@ -26,8 +27,10 @@ void comsys_clear_player(EvaluationContext *evaluation, DbRef player) {
   c = get_commac(evaluation->runtime->channels, player);
 
   for (i = (c->numchannels) - 1; i > -1; --i) {
-    comsys_delete_channel_alias(evaluation, player, c->channels[i]);
-    free(c->channels[i]);
+    char *channel = commac_channel_at(c, (size_t)i);
+
+    comsys_delete_channel_alias(evaluation, player, channel);
+    free(channel);
     c->numchannels--;
   }
 }
@@ -53,7 +56,8 @@ void do_allcom(CommandInvocation *invocation) {
     return;
   }
   for (i = 0; i < c->numchannels; i++) {
-    comsys_process_alias_command(evaluation, player, c->channels[i], arg1);
+    comsys_process_alias_command(evaluation, player,
+                                 commac_channel_at(c, (size_t)i), arg1);
     if (strcasecmp(arg1, "who") == 0)
       raw_notify(evaluation, player, "");
   }
@@ -71,19 +75,29 @@ void do_channelwho(CommandInvocation *invocation) {
   int i;
   char ansibuffer[LBUF_SIZE];
 
-  cp = strchr(arg1, '/');
-  if (!cp) {
+  const size_t argument_length = strlen(arg1);
+  size_t slash_offset = 0;
+
+  while (slash_offset < argument_length &&
+         *(const char *)checked_storage_at_const(
+             arg1, argument_length + 1, sizeof(char), slash_offset) != '/')
+    slash_offset++;
+  if (slash_offset == argument_length) {
     strncpy(channel, arg1, 100);
-    channel[99] = '\0';
+    *(char *)checked_storage_at(channel, sizeof(channel), sizeof(char), 99) =
+        '\0';
   } else {
     /* channelname/all */
-    if (cp - arg1 >= 100) {
+    if (slash_offset >= sizeof(channel)) {
       raw_notify(evaluation, player, "Channel name too long.");
       return;
     }
-    strncpy(channel, arg1, (size_t)(cp - arg1));
-    channel[cp - arg1] = '\0';
-    if (*++cp == 'a')
+    strncpy(channel, arg1, slash_offset);
+    *(char *)checked_storage_at(channel, sizeof(channel), sizeof(char),
+                                slash_offset) = '\0';
+    cp = checked_storage_at(arg1, argument_length + 1, sizeof(char),
+                            slash_offset + 1);
+    if (*cp == 'a')
       flag = 1;
   }
 
@@ -99,7 +113,7 @@ void do_channelwho(CommandInvocation *invocation) {
   notify_printf(evaluation, player, "%-29.29s %-6.6s %-6.6s", "Name", "Status",
                 "Player");
   for (i = 0; i < ch->num_users; i++) {
-    user = ch->users[i];
+    user = channel_user_at(ch, (size_t)i);
     if ((flag || is_undead(evaluation->world->database, user->who)) &&
         (!is_hidden(evaluation->world->database, user->who) ||
          ((ch->type & CHANNEL_TRANSPARENT) &&
@@ -158,7 +172,7 @@ static void do_comconnectraw_notify(EvaluationContext *evaluation, DbRef player,
 }
 
 static void do_comconnectchannel(EvaluationContext *evaluation, DbRef player,
-                                 char *channel, char *alias, int i) {
+                                 char *channel, const char *alias) {
   struct channel *ch;
   struct comuser *user;
 
@@ -172,12 +186,11 @@ static void do_comconnectchannel(EvaluationContext *evaluation, DbRef player,
         ch->on_users = user;
       } else
         notify_printf(evaluation, player,
-                      "Bad Comsys Alias: %s for Channel: %s", alias + i * 6,
-                      channel);
+                      "Bad Comsys Alias: %s for Channel: %s", alias, channel);
     }
   } else
     notify_printf(evaluation, player, "Bad Comsys Alias: %s for Channel: %s",
-                  alias + i * 6, channel);
+                  alias, channel);
 }
 
 void do_comdisconnect(EvaluationContext *evaluation, DbRef player) {
@@ -187,8 +200,10 @@ void do_comdisconnect(EvaluationContext *evaluation, DbRef player) {
   c = get_commac(evaluation->runtime->channels, player);
 
   for (i = 0; i < c->numchannels; i++) {
-    comsys_disconnect_channel(evaluation, player, c->channels[i]);
-    do_comdisconnectraw_notify(evaluation, player, c->channels[i]);
+    char *channel = commac_channel_at(c, (size_t)i);
+
+    comsys_disconnect_channel(evaluation, player, channel);
+    do_comdisconnectraw_notify(evaluation, player, channel);
   }
   send_channel(evaluation, "MUXConnections", "* %s has disconnected *",
                game_object_name(evaluation->world->database, player));
@@ -202,8 +217,11 @@ void do_comconnect(EvaluationContext *evaluation, DbRef player, Descriptor *d) {
   c = get_commac(evaluation->runtime->channels, player);
 
   for (i = 0; i < c->numchannels; i++) {
-    do_comconnectchannel(evaluation, player, c->channels[i], c->alias, i);
-    do_comconnectraw_notify(evaluation, player, c->channels[i]);
+    char *channel = commac_channel_at(c, (size_t)i);
+
+    do_comconnectchannel(evaluation, player, channel,
+                         commac_alias_at(c, (size_t)i));
+    do_comconnectraw_notify(evaluation, player, channel);
   }
   lsite = d->addr;
   if (lsite && *lsite)

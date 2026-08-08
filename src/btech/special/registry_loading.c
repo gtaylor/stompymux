@@ -2,6 +2,7 @@
 #include "map.h"         // IWYU pragma: keep
 #include "map_api.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_parts.h"               // IWYU pragma: keep
 #include "mech_scan_api.h"            // IWYU pragma: keep
 #include "mech_status_api.h"          // IWYU pragma: keep
@@ -28,6 +29,7 @@
 #include <string.h>
 #include <strings.h>
 
+#include "autopilot_weapon_profile_api.h"
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
@@ -86,9 +88,9 @@ static int remove_from_all_maps_func(void *key, void *data, int depth,
 
     if (!(map = btech_context_get_map(mech_context(mech), (DbRef)key)))
       return 1;
-    for (i = 0; i < map->first_free; i++)
-      if (map->mechsOnMap[i] == mech_dbref(mech))
-        map->mechsOnMap[i] = -1;
+    for (i = 0; i < battle_map_unit_count(map); i++)
+      if (battle_map_unit_dbref(map, i) == mech_dbref(mech))
+        battle_map_unit_slot_clear(map, i);
   }
   return 1;
 }
@@ -118,9 +120,9 @@ static int remove_from_all_maps_except_func(void *key, void *data, int depth,
       return 1;
     if (!(map = btech_context_get_map(mech_context(mech), key_val)))
       return 1;
-    for (i = 0; i < map->first_free; i++)
-      if (map->mechsOnMap[i] == mech_dbref(mech))
-        map->mechsOnMap[i] = -1;
+    for (i = 0; i < battle_map_unit_count(map); i++)
+      if (battle_map_unit_dbref(map, i) == mech_dbref(mech))
+        battle_map_unit_slot_clear(map, i);
   }
   return 1;
 }
@@ -193,13 +195,9 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
   if (xcode_obj->type == GTYPE_AUTO) {
     Autopilot *const autopilot = (Autopilot *)xcode_obj;
 
-    int i;
-
     /* Commands and A* paths are restored before these derived caches. */
     autopilot->weaplist = NULL;
-    for (i = 0; i < AUTO_PROFILE_MAX_SIZE; i++) {
-      autopilot->profile[i] = NULL;
-    }
+    autopilot_weapon_profiles_initialize(autopilot);
 
     if (!autopilot->mymechnum || !(autopilot->mymech = btech_context_get_mech(
                                        context, autopilot->mymechnum))) {
@@ -259,7 +257,8 @@ void btech_special_objects_load(BtechContext *context) {
       !is_halted(context->database, i)) {
     type = btech_context_which_special_attribute(context, i);
     if (type >= 0) {
-      if (btech_special_object_data_size(&SpecialObjects[type]) > 0)
+      if (btech_special_object_data_size(
+              btech_special_object_definition(type)) > 0)
         NewSpecialObject(context, i, type);
     } else
       c_xcode(context->database, i); /* Reset the flag */
@@ -301,11 +300,13 @@ static int UpdateSpecialObject_func(void *key, void *data, int depth,
   BtechSpecialObject *const xcode_obj = data;
   BtechContext *const context = arg;
 
-  if (!SpecialObjects[xcode_obj->type].updateTime)
+  const BtechSpecialObjectDefinition *definition =
+      btech_special_object_definition((int)xcode_obj->type);
+  if (!definition->updateTime)
     return 1;
-  if ((context->clock->now % SpecialObjects[xcode_obj->type].updateTime))
+  if ((context->clock->now % definition->updateTime))
     return 1;
-  SpecialObjects[xcode_obj->type].update((DbRef)key, xcode_obj);
+  definition->update((DbRef)key, xcode_obj);
   return 1;
 }
 

@@ -24,6 +24,7 @@
 #include <strings.h>
 
 #include "autopilot.h"
+#include "autopilot_argument_list_api.h"
 #include "autopilot_radio_internal.h"
 #include "bsuit_api.h"
 #include "btech/context.h"
@@ -55,18 +56,21 @@
 
 void sendchannelstuff(Mech *mech, int freq, char *msg);
 
-void auto_radio_command_position(Autopilot *autopilot, Mech *mech, char **args,
-                                 int argc, char *mesg) {
+void auto_radio_command_position(Autopilot *autopilot, Mech *mech,
+                                 AutopilotArgumentList *args, int argc,
+                                 char *mesg) {
 
   int x, y;
 
   /*! \todo {Add in some checks for validity of the arguments} */
 
-  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
+       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid first int");
     return;
   }
-  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
+       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalide second int");
     return;
   }
@@ -79,8 +83,9 @@ void auto_radio_command_position(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to force AI to go prone
  */
-void auto_radio_command_prone(Autopilot *autopilot, Mech *mech, char **args,
-                              int argc, char *mesg) {
+void auto_radio_command_prone(Autopilot *autopilot, Mech *mech,
+                              AutopilotArgumentList *args, int argc,
+                              char *mesg) {
 
   mech_drop(autopilot->mynum, mech, "");
   snprintf(mesg, LBUF_SIZE, "hitting the deck");
@@ -90,8 +95,9 @@ void auto_radio_command_prone(Autopilot *autopilot, Mech *mech, char **args,
  * Radio command so the AI can report its status
  */
 /*! \todo {Add something that tells more info then this} */
-void auto_radio_command_report(Autopilot *autopilot, Mech *mech, char **args,
-                               int argc, char *mesg) {
+void auto_radio_command_report(Autopilot *autopilot, Mech *mech,
+                               AutopilotArgumentList *args, int argc,
+                               char *mesg) {
 
   char buffer[MBUF_SIZE];
   Mech *target;
@@ -146,8 +152,9 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to reset the AI's internal flags what not
  */
-void auto_radio_command_reset(Autopilot *autopilot, Mech *mech, char **args,
-                              int argc, char *mesg) {
+void auto_radio_command_reset(Autopilot *autopilot, Mech *mech,
+                              AutopilotArgumentList *args, int argc,
+                              char *mesg) {
 
   auto_disengage(autopilot->mynum, autopilot, "");
   auto_delcommand(autopilot->mynum, autopilot, "-1");
@@ -160,8 +167,9 @@ void auto_radio_command_reset(Autopilot *autopilot, Mech *mech, char **args,
  * Radio command to alter or let the AI alter
  * its sensors
  */
-void auto_radio_command_sensor(Autopilot *autopilot, Mech *mech, char **args,
-                               int argc, char *mesg) {
+void auto_radio_command_sensor(Autopilot *autopilot, Mech *mech,
+                               AutopilotArgumentList *args, int argc,
+                               char *mesg) {
 
   char buf[SBUF_SIZE];
 
@@ -172,7 +180,8 @@ void auto_radio_command_sensor(Autopilot *autopilot, Mech *mech, char **args,
   if ((argc - 1) == 2) {
 
     /* Set the user specified sensors */
-    snprintf(buf, SBUF_SIZE, "%s %s", args[1], args[2]);
+    snprintf(buf, SBUF_SIZE, "%s %s", autopilot_argument_list_get(args, 1),
+             autopilot_argument_list_get(args, 2));
     mech_sensor(autopilot->mynum, mech, buf);
     autopilot->flags |= AUTOPILOT_LSENS;
     snprintf(mesg, LBUF_SIZE, "updated my sensors");
@@ -188,8 +197,9 @@ void auto_radio_command_sensor(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to force AI to shutdown
  */
-void auto_radio_command_shutdown(Autopilot *autopilot, Mech *mech, char **args,
-                                 int argc, char *mesg) {
+void auto_radio_command_shutdown(Autopilot *autopilot, Mech *mech,
+                                 AutopilotArgumentList *args, int argc,
+                                 char *mesg) {
 
   mech_shutdown(autopilot->mynum, mech, "");
   snprintf(mesg, LBUF_SIZE, "shutting down");
@@ -198,12 +208,14 @@ void auto_radio_command_shutdown(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to alter the speed of an AI (% of speed)
  */
-void auto_radio_command_speed(Autopilot *autopilot, Mech *mech, char **args,
-                              int argc, char *mesg) {
+void auto_radio_command_speed(Autopilot *autopilot, Mech *mech,
+                              AutopilotArgumentList *args, int argc,
+                              char *mesg) {
 
   int speed = 100;
 
-  if ((!((speed) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if ((!((speed) = atoi(autopilot_argument_list_get(args, 1))) &&
+       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid value - not a number");
     return;
   }
@@ -220,8 +232,9 @@ void auto_radio_command_speed(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio Command to force AI to stand
  */
-void auto_radio_command_stand(Autopilot *autopilot, Mech *mech, char **args,
-                              int argc, char *mesg) {
+void auto_radio_command_stand(Autopilot *autopilot, Mech *mech,
+                              AutopilotArgumentList *args, int argc,
+                              char *mesg) {
 
   mech_stand_empty(autopilot->mynum, mech);
   snprintf(mesg, LBUF_SIZE, "standing up");
@@ -230,11 +243,13 @@ void auto_radio_command_stand(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to force AI to startup
  */
-void auto_radio_command_startup(Autopilot *autopilot, Mech *mech, char **args,
-                                int argc, char *mesg) {
+void auto_radio_command_startup(Autopilot *autopilot, Mech *mech,
+                                AutopilotArgumentList *args, int argc,
+                                char *mesg) {
 
   if (argc > 1) {
-    if (!strncasecmp(args[1], "override", strlen(args[1]))) {
+    if (!strncasecmp(autopilot_argument_list_get(args, 1), "override",
+                     strlen(autopilot_argument_list_get(args, 1)))) {
       mech_startup(autopilot->mynum, mech, "override");
       snprintf(mesg, LBUF_SIZE, "emergency override startup triggered");
       return;
@@ -248,8 +263,9 @@ void auto_radio_command_startup(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to stop the AI
  */
-void auto_radio_command_stop(Autopilot *autopilot, Mech *mech, char **args,
-                             int argc, char *mesg) {
+void auto_radio_command_stop(Autopilot *autopilot, Mech *mech,
+                             AutopilotArgumentList *args, int argc,
+                             char *mesg) {
 
   char buffer[SBUF_SIZE];
 
@@ -268,16 +284,19 @@ void auto_radio_command_stop(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Command for the old goto, will phase it out
  */
-void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech, char **args,
-                                int argc, char *mesg) {
+void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech,
+                                AutopilotArgumentList *args, int argc,
+                                char *mesg) {
 
   int x, y;
 
-  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
+       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid first int");
     return;
   }
-  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
+       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalide second int");
     return;
   }
@@ -292,12 +311,13 @@ void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Tell the AI to target a specific unit
  */
-void auto_radio_command_target(Autopilot *autopilot, Mech *mech, char **args,
-                               int argc, char *mesg) {
+void auto_radio_command_target(Autopilot *autopilot, Mech *mech,
+                               AutopilotArgumentList *args, int argc,
+                               char *mesg) {
 
   DbRef targetref;
 
-  if (!strcmp(args[1], "-")) {
+  if (!strcmp(autopilot_argument_list_get(args, 1), "-")) {
 
     /* Basicly doing the same as 'autogun on' */
     autopilot->target = -1;
@@ -318,7 +338,8 @@ void auto_radio_command_target(Autopilot *autopilot, Mech *mech, char **args,
 
   } else {
 
-    targetref = FindTargetDBREFFromMapNumber(mech, args[1]);
+    targetref = FindTargetDBREFFromMapNumber(
+        mech, autopilot_argument_list_get(args, 1));
     if (targetref <= 0) {
       snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");
       return;
@@ -340,5 +361,5 @@ void auto_radio_command_target(Autopilot *autopilot, Mech *mech, char **args,
   autopilot_gunning_start(autopilot);
 
   snprintf(mesg, LBUF_SIZE, "aiming for [%s] (and ignoring everyone else)",
-           args[1]);
+           autopilot_argument_list_get(args, 1));
 }

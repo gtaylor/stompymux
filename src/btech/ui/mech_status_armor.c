@@ -1,11 +1,12 @@
 #include "mech_status_api.h"
 #include "mech_status_templates_internal.h"
 
-#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "btconfig.h"
+#include "btech_text_builder.h"
 #include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
@@ -15,6 +16,7 @@
 #include "mech_utils_api.h"
 #include "mux/commands/command_context.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -105,6 +107,20 @@ static const char *const armordamcolorstr[] = {
 /* Armor location character (enemy scan). Last one is for armor under repair. */
 static const char armordamltrstr[] = "OoxX*?";
 
+static const char *armor_damage_color(int level) {
+  if (level < 0)
+    abort();
+  return *(const char *const *)checked_storage_at_const(
+      armordamcolorstr, sizeof(armordamcolorstr) / sizeof(*armordamcolorstr),
+      sizeof(*armordamcolorstr), (size_t)level);
+}
+
+static char armor_damage_letter(int level) {
+  if (level < 0)
+    abort();
+  return *checked_string_suffix(armordamltrstr, (size_t)level);
+}
+
 /*
  * XXX: memcpy/memset() are technically only standard as of C99, so strictly we
  * should autoconf-ize this with portability wrappers.  They're pretty common
@@ -125,8 +141,6 @@ typedef struct ArmorFieldText {
 static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
                                          const int flag, const size_t width) {
   ArmorDamageText result = {0};
-  char *asp;
-
   char armor_buf[23 + 1];
 
   if (flag & ARMOR_FLAG_DIVIDE_10) {
@@ -146,26 +160,27 @@ static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
 
     /* Fixed width.  Some snprintf()s have a $*d extension that we
      * aren't going to use.  */
-    asp = result.text;
-
     if (armor_len < width) {
       /* Right justify.  */
-      memset(asp, ' ', width - armor_len);
-      asp += width - armor_len;
-
-      memcpy(asp, armor_buf, armor_len);
-      asp += armor_len;
+      const size_t padding = width - armor_len;
+      memset(
+          checked_storage_region(result.text, sizeof(result.text), 0, padding),
+          ' ', padding);
+      memcpy(checked_storage_region(result.text, sizeof(result.text), padding,
+                                    armor_len),
+             armor_buf, armor_len);
     } else {
       /* Right truncate.  */
-      memcpy(asp, armor_buf + (armor_len - width), width);
-      asp += width;
+      memcpy(checked_storage_region(result.text, sizeof(result.text), 0, width),
+             checked_string_suffix(armor_buf, armor_len - width), width);
     }
   } else {
     /* Use adversarial (scan) fill characters.  */
-    memset(result.text, armordamltrstr[(size_t)armor_level], width);
+    memset(result.text, armor_damage_letter(armor_level), width);
   }
 
-  result.text[width] = '\0';
+  *(char *)checked_storage_at(result.text, sizeof(result.text), sizeof(char),
+                              width) = '\0';
 
   return result;
 }
@@ -190,9 +205,10 @@ static ArmorKeyText armor_key_text(int line_key, int owner) {
   } else {
     /* Line 2-6 = armor level symbols.  */
     /* XXX: Probably safe from buffer overflows.  */
+    const int armor_level = 6 - line_key;
+    const char letter = armor_damage_letter(armor_level);
     snprintf(result.text, sizeof(result.text), "%s%c%c [reset]",
-             armordamcolorstr[6 - line_key], armordamltrstr[6 - line_key],
-             armordamltrstr[6 - line_key]);
+             armor_damage_color(armor_level), letter, letter);
   }
 
   return result;
@@ -222,14 +238,15 @@ static ArmorFieldText armor_field_text(Mech *mech, const int loc,
   if (!(flag & ARMOR_FLAG_SHOW_DEST) && !mech_section_internal(mech, loc)) {
     /* Blank field. (Destroyed section.) */
     memset(result.text, ' ', (size_t)width);
-    result.text[width] = '\0';
+    *(char *)checked_storage_at(result.text, sizeof(result.text), sizeof(char),
+                                (size_t)width) = '\0';
     return result;
   }
 
   ArmorDamageText damage =
       armor_damage_text(armor_level, armor_value, flag, (size_t)width);
   snprintf(result.text, sizeof(result.text), "%s%s[reset]",
-           armordamcolorstr[(size_t)armor_level], damage.text);
+           armor_damage_color(armor_level), damage.text);
 
   return result;
 }
@@ -264,33 +281,25 @@ typedef enum {
   BTS_CONDITIONAL_2     /* binary conditional */
 } BTS_State;
 
-static void armor_template_commit(char destination[static LBUF_SIZE],
-                                  char **destination_position,
-                                  const char **saved_source,
-                                  const char *source_position) {
-  size_t destination_length = (size_t)(*destination_position - destination);
-  size_t source_length = (size_t)(source_position - *saved_source);
-  size_t available = LBUF_SIZE - 1 - destination_length;
-  if (source_length > available)
-    source_length = available;
-  memcpy(*destination_position, *saved_source, source_length);
-  *destination_position += source_length;
-  *saved_source = source_position;
+static void armor_template_commit(BtechTextBuilder *destination,
+                                  const char *source, size_t *saved_position,
+                                  size_t source_position) {
+  if (source_position < *saved_position)
+    abort();
+  const size_t length = source_position - *saved_position;
+  btech_text_builder_append_count(
+      destination, checked_string_suffix(source, *saved_position), length);
+  *saved_position = source_position;
 }
 
-static void armor_template_append(char destination[static LBUF_SIZE],
-                                  char **position, char value) {
-  if ((size_t)(*position - destination) < LBUF_SIZE - 1)
-    *(*position)++ = value;
-}
+static bool ascii_is_digit(char value) { return value >= '0' && value <= '9'; }
 
 static int ascii_digit_value(int value) { return value - '0'; }
 
 void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                       int owner) {
-  const char *srcbuf, *sbp, *saved_sbp;
-
-  char destbuf[LBUF_SIZE], *dbp;
+  const char *srcbuf;
+  char destbuf[LBUF_SIZE];
 
   BTS_State current_state = BTS_START_OF_LINE;
   int tmp_value1 = 0, tmp_value2 = 0;
@@ -398,10 +407,14 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   }
 
   /* Perform substitution on template.  */
-  dbp = destbuf;
-
-  saved_sbp = srcbuf;
-  for (sbp = srcbuf; *sbp; sbp++) {
+  BtechTextBuilder destination;
+  btech_text_builder_initialize(&destination, destbuf, sizeof(destbuf));
+  size_t saved_source_position = 0;
+  const size_t source_length = strlen(srcbuf);
+  for (size_t source_position = 0; source_position < source_length;
+       source_position++) {
+    const char source_character =
+        *checked_string_suffix(srcbuf, source_position);
     BTS_State next_state = current_state;
 
     /* Dispatch on current state.  */
@@ -411,58 +424,63 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
        * XXX: Portability note: Depends on a specific way of
        * encoding the digits from 0 to 7.
        */
-      if (*sbp >= '1' && *sbp <= '7') {
-        armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
-        saved_sbp = sbp + 1;
+      if (source_character >= '1' && source_character <= '7') {
+        armor_template_commit(&destination, srcbuf, &saved_source_position,
+                              source_position);
+        saved_source_position = source_position + 1;
 
-        safe_str(armor_key_text(ascii_digit_value(*sbp), owner).text, destbuf,
-                 &dbp);
+        ArmorKeyText key =
+            armor_key_text(ascii_digit_value(source_character), owner);
+        btech_text_builder_append(&destination, key.text);
       }
 
       next_state = BTS_NORMAL;
       break;
 
     case BTS_NORMAL: /* normal characters */
-      switch (*sbp) {
+      switch (source_character) {
       case '&':
-        armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
+        armor_template_commit(&destination, srcbuf, &saved_source_position,
+                              source_position);
         next_state = BTS_SUBSTITUTE_ARMOR;
         break;
 
       case '@':
-        armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
+        armor_template_commit(&destination, srcbuf, &saved_source_position,
+                              source_position);
         next_state = BTS_CONDITIONAL_1;
         break;
 
       case '!':
-        armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
+        armor_template_commit(&destination, srcbuf, &saved_source_position,
+                              source_position);
         next_state = BTS_CONDITIONAL_2;
         break;
       }
       break;
 
     case BTS_SUBSTITUTE_ARMOR: /* armor status substitution */
-      switch (sbp - saved_sbp) {
+      switch (source_position - saved_source_position) {
         int tmp_flag;
 
       case 1: /* optional width digit or type flag */
-        switch (*sbp) {
+        switch (source_character) {
         case '&':
-          saved_sbp = sbp + 1;
+          saved_source_position = source_position + 1;
           next_state = BTS_NORMAL;
 
-          armor_template_append(destbuf, &dbp, '&');
+          btech_text_builder_append_character(&destination, '&');
           break;
 
         case '+':
         case ':':
         case '-':
-          tmp_value1 = *sbp;
+          tmp_value1 = source_character;
           break;
 
         default:
-          if (isdigit(*sbp)) {
-            tmp_value1 = *sbp;
+          if (ascii_is_digit(source_character)) {
+            tmp_value1 = source_character;
           } else {
             next_state = BTS_NORMAL;
           }
@@ -471,13 +489,13 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         break;
 
       case 2: /* location or type flag */
-        if (isdigit(tmp_value1)) {
+        if (ascii_is_digit((char)tmp_value1)) {
           /* Expect type code.  */
-          switch (*sbp) {
+          switch (source_character) {
           case '+':
           case '-':
           case ':':
-            tmp_value2 = *sbp;
+            tmp_value2 = source_character;
             break;
 
           default:
@@ -517,12 +535,11 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         }
 
         /* FIXME: Ponder semantics of gflag.  */
-        safe_str(armor_field_text(mech, ascii_digit_value(*sbp), tmp_flag,
-                                  tmp_value1)
-                     .text,
-                 destbuf, &dbp);
+        ArmorFieldText field = armor_field_text(
+            mech, ascii_digit_value(source_character), tmp_flag, tmp_value1);
+        btech_text_builder_append(&destination, field.text);
 
-        saved_sbp = sbp + 1;
+        saved_source_position = source_position + 1;
         next_state = BTS_NORMAL;
         break;
 
@@ -532,23 +549,23 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       break;
 
     case BTS_CONDITIONAL_1: /* '@' unary conditional */
-      switch (sbp - saved_sbp) {
+      switch (source_position - saved_source_position) {
       case 1: /* get critical section */
-        if (isdigit(*sbp)) {
-          tmp_value1 = ascii_digit_value(*sbp);
+        if (ascii_is_digit(source_character)) {
+          tmp_value1 = ascii_digit_value(source_character);
         } else {
           next_state = BTS_NORMAL;
         }
         break;
 
       case 2: /* copy conditional character */
-        saved_sbp = sbp + 1;
+        saved_source_position = source_position + 1;
         next_state = BTS_NORMAL;
 
         if (mech_section_internal(mech, tmp_value1)) {
-          armor_template_append(destbuf, &dbp, *sbp);
+          btech_text_builder_append_character(&destination, source_character);
         } else {
-          armor_template_append(destbuf, &dbp, ' ');
+          btech_text_builder_append_character(&destination, ' ');
         }
         break;
 
@@ -558,32 +575,32 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       break;
 
     case BTS_CONDITIONAL_2: /* '!' binary conditional */
-      switch (sbp - saved_sbp) {
+      switch (source_position - saved_source_position) {
       case 1: /* get first critical section */
-        if (isdigit(*sbp)) {
-          tmp_value1 = ascii_digit_value(*sbp);
+        if (ascii_is_digit(source_character)) {
+          tmp_value1 = ascii_digit_value(source_character);
         } else {
           next_state = BTS_NORMAL;
         }
         break;
 
       case 2: /* get second critical section */
-        if (isdigit(*sbp)) {
-          tmp_value2 = ascii_digit_value(*sbp);
+        if (ascii_is_digit(source_character)) {
+          tmp_value2 = ascii_digit_value(source_character);
         } else {
           next_state = BTS_NORMAL;
         }
         break;
 
       case 3: /* copy conditional character */
-        saved_sbp = sbp + 1;
+        saved_source_position = source_position + 1;
         next_state = BTS_NORMAL;
 
         if (mech_section_internal(mech, tmp_value1) ||
             mech_section_internal(mech, tmp_value2)) {
-          armor_template_append(destbuf, &dbp, *sbp);
+          btech_text_builder_append_character(&destination, source_character);
         } else {
-          armor_template_append(destbuf, &dbp, ' ');
+          btech_text_builder_append_character(&destination, ' ');
         }
         break;
 
@@ -597,7 +614,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     }
 
     /* Common logic.  */
-    if (*sbp == '\n') {
+    if (source_character == '\n') {
       current_state = BTS_START_OF_LINE;
 
       /*
@@ -610,8 +627,9 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
        * functions, but more extensive changes would be
        * disruptive.
        */
-      armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
-      armor_template_append(destbuf, &dbp, '\r');
+      armor_template_commit(&destination, srcbuf, &saved_source_position,
+                            source_position);
+      btech_text_builder_append_character(&destination, '\r');
       /* \n written later.  */
     } else {
       current_state = next_state;
@@ -619,11 +637,10 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   }
 
   /* Finish up.  */
-  armor_template_commit(destbuf, &dbp, &saved_sbp, sbp);
+  armor_template_commit(&destination, srcbuf, &saved_source_position,
+                        source_length);
 
   /* Send formatted status.  */
-  *dbp = '\0';
-
   mecha_notify(evaluation, player, destbuf);
 }
 

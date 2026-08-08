@@ -23,8 +23,46 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 
 const char LUA_MODULES_KEY[] = "btmux.lua.modules";
+
+const char *lua_global_module_at(const LuaRuntime *runtime, size_t index) {
+  return *(char *const *)checked_storage_at_const(
+      runtime->global_modules, runtime->global_module_count,
+      sizeof(*runtime->global_modules), index);
+}
+
+char *lua_global_module_slot(LuaRuntime *runtime, size_t index) {
+  return *(char **)checked_storage_at(runtime->global_modules,
+                                      runtime->global_module_count,
+                                      sizeof(*runtime->global_modules), index);
+}
+
+const char *lua_runtime_root_at(const LuaRuntime *runtime,
+                                LUA_MODULE_ROOT root) {
+  return checked_storage_at_const(runtime->roots, LUA_ROOT_COUNT,
+                                  sizeof(*runtime->roots), (size_t)root);
+}
+
+char *lua_runtime_root_slot(LuaRuntime *runtime, LUA_MODULE_ROOT root) {
+  return checked_storage_at(runtime->roots, LUA_ROOT_COUNT,
+                            sizeof(*runtime->roots), (size_t)root);
+}
+
+LUA_SCHEDULE_JOB *lua_schedule_job_at(LuaRuntime *runtime, size_t index) {
+  return checked_storage_at(runtime->schedule_jobs, runtime->schedule_job_count,
+                            sizeof(*runtime->schedule_jobs), index);
+}
+
+static char lua_text_at(const char *text, size_t length, size_t index) {
+  return *(const char *)checked_storage_at_const(text, length, sizeof(char),
+                                                 index);
+}
+
+static char *lua_text_slot(char *text, size_t capacity, size_t index) {
+  return checked_storage_at(text, capacity, sizeof(char), index);
+}
 
 void lua_set_error(char *error, size_t error_size, const char *format, ...) {
   va_list arguments;
@@ -79,26 +117,38 @@ void lua_log_load_error(LuaRuntime *runtime, DbRef object, const char *path,
 }
 
 int lua_valid_relative_path(const char *path) {
-  const char *part;
+  size_t path_length;
+  size_t part_offset;
 
-  if (!path || !*path || path[0] == '/' || !strstr(path, ".lua"))
+  if (!path || !*path)
     return 0;
-  if (strlen(path) < 5 || strcmp(path + strlen(path) - 4, ".lua"))
+  path_length = strlen(path);
+  if (lua_text_at(path, path_length, 0) == '/' || path_length < 5 ||
+      strcmp(checked_string_suffix(path, path_length - 4), ".lua"))
     return 0;
-  for (part = path; *part;) {
-    const char *end = strchr(part, '/');
-    size_t length = end ? (size_t)(end - part) : strlen(part);
+  for (part_offset = 0; part_offset < path_length;) {
+    size_t length = 0;
     size_t index;
 
-    if (!length || (length == 1 && part[0] == '.') ||
-        (length == 2 && part[0] == '.' && part[1] == '.'))
+    while (part_offset + length < path_length &&
+           lua_text_at(path, path_length, part_offset + length) != '/')
+      length++;
+    if (!length ||
+        (length == 1 && lua_text_at(path, path_length, part_offset) == '.') ||
+        (length == 2 && lua_text_at(path, path_length, part_offset) == '.' &&
+         lua_text_at(path, path_length, part_offset + 1) == '.'))
       return 0;
     for (index = 0; index < length; index++) {
-      if (!isalnum((unsigned char)part[index]) && part[index] != '_' &&
-          part[index] != '-' && part[index] != '.')
+      unsigned char character =
+          (unsigned char)lua_text_at(path, path_length, part_offset + index);
+
+      if (!(isalnum)(character) && character != '_' && character != '-' &&
+          character != '.')
         return 0;
     }
-    part = end ? end + 1 : part + length;
+    part_offset += length;
+    if (part_offset < path_length)
+      part_offset++;
   }
   return 1;
 }
@@ -122,12 +172,14 @@ int lua_join_path(char *destination, size_t destination_size, const char *first,
   size_t first_length = strlen(first);
   size_t second_length = strlen(second);
 
-  if (first_length >= destination_size ||
+  if (!destination_size || first_length >= destination_size ||
       second_length >= destination_size - first_length - 1)
     return 0;
   memcpy(destination, first, first_length);
-  destination[first_length] = '/';
-  memcpy(destination + first_length + 1, second, second_length + 1);
+  *lua_text_slot(destination, destination_size, first_length) = '/';
+  memcpy(checked_storage_region(destination, destination_size, first_length + 1,
+                                second_length + 1),
+         second, second_length + 1);
   return 1;
 }
 
@@ -145,8 +197,9 @@ int lua_resolve_path(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     lua_set_error(error, error_size, "Lua paths must be relative .lua files");
     return 0;
   }
-  if (!lua_join_path(candidate, sizeof(candidate), runtime->roots[root],
-                     path)) {
+  const char *root_path = lua_runtime_root_at(runtime, root);
+
+  if (!lua_join_path(candidate, sizeof(candidate), root_path, path)) {
     lua_set_error(error, error_size, "Lua path is too long");
     return 0;
   }
@@ -154,9 +207,10 @@ int lua_resolve_path(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     lua_set_error(error, error_size, "Lua file %s is unavailable", path);
     return 0;
   }
-  root_length = strlen(runtime->roots[root]);
-  if (strncmp(resolved, runtime->roots[root], root_length) ||
-      (resolved[root_length] && resolved[root_length] != '/')) {
+  root_length = strlen(root_path);
+  if (strncmp(resolved, root_path, root_length) ||
+      (lua_text_at(resolved, strlen(resolved) + 1, root_length) &&
+       lua_text_at(resolved, strlen(resolved) + 1, root_length) != '/')) {
     lua_set_error(error, error_size, "Lua path escapes %s",
                   lua_root_name(root));
     return 0;
@@ -174,14 +228,18 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
                                   "loadstring", "load",      "collectgarbage",
                                   "module",     "require",   "getfenv",
                                   "setfenv",    nullptr};
-  int index;
+  const size_t blocked_count = sizeof(blocked) / sizeof(*blocked) - 1;
+  size_t index;
 
   luaL_openlibs(runtime->state);
   if (!luaJIT_setmode(runtime->state, 0, LUAJIT_MODE_ENGINE | LUAJIT_MODE_ON))
     return false;
-  for (index = 0; blocked[index]; index++) {
+  for (index = 0; index < blocked_count; index++) {
+    const char *name = *(const char *const *)checked_storage_at_const(
+        blocked, blocked_count, sizeof(*blocked), index);
+
     lua_pushnil(runtime->state);
-    lua_setglobal(runtime->state, blocked[index]);
+    lua_setglobal(runtime->state, name);
   }
   runtime->mux_package.context = runtime;
   runtime->mux_package.services = runtime->services;
@@ -279,6 +337,7 @@ static int lua_require_module(lua_State *state) {
   char path[PATH_MAX];
   char resolved[PATH_MAX];
   size_t index;
+  size_t name_length;
   char error[LBUF_SIZE];
 
   if (!strcmp(name, "btech")) {
@@ -286,20 +345,27 @@ static int lua_require_module(lua_State *state) {
     return 1;
   }
 
-  if (!*name || name[0] == '.' || name[strlen(name) - 1] == '.')
+  name_length = strlen(name);
+  if (!name_length || lua_text_at(name, name_length, 0) == '.' ||
+      lua_text_at(name, name_length, name_length - 1) == '.')
     return luaL_error(state, "invalid module name");
-  for (index = 0; name[index]; index++) {
-    if (!isalnum((unsigned char)name[index]) && name[index] != '_' &&
-        name[index] != '.')
+  for (index = 0; index < name_length; index++) {
+    unsigned char character =
+        (unsigned char)lua_text_at(name, name_length, index);
+
+    if (!(isalnum)(character) && character != '_' && character != '.')
       return luaL_error(state, "invalid module name");
   }
   if (snprintf(path, sizeof(path), "%s.lua", name) >= (int)sizeof(path))
     return luaL_error(state, "module name is too long");
-  for (index = 0; path[index]; index++) {
-    if (path[index] == '.')
-      path[index] = '/';
+  for (index = 0; index < strlen(path); index++) {
+    char *character = lua_text_slot(path, sizeof(path), index);
+
+    if (*character == '.')
+      *character = '/';
   }
-  snprintf(path + strlen(path) - 4, 5, ".lua");
+  snprintf(checked_storage_region(path, sizeof(path), strlen(path) - 4, 5), 5,
+           ".lua");
   if (lua_resolve_path(runtime, root, path, resolved, sizeof(resolved), error,
                        sizeof(error))) {
     if (!lua_load_module(runtime, root, path, error, sizeof(error)))
@@ -359,9 +425,11 @@ LuaRuntime *lua_runtime_create(LuaOwner *owner, const LuaServices *services,
       free(runtime);
       return nullptr;
     }
-    if (!realpath(directory, runtime->roots[root]) &&
+    char *root_path = lua_runtime_root_slot(runtime, root);
+
+    if (!realpath(directory, root_path) &&
         (errno != ENOENT || mkdir(directory, 0755) < 0 ||
-         !realpath(directory, runtime->roots[root]))) {
+         !realpath(directory, root_path))) {
       lua_set_error(error, error_size, "unable to open Lua %s directory",
                     lua_root_name(root));
       free(runtime);
@@ -393,13 +461,15 @@ void lua_runtime_destroy(LuaRuntime *runtime) {
     lua_close(runtime->state);
   if (runtime->global_modules) {
     for (index = 0; index < runtime->global_module_count; index++)
-      free(runtime->global_modules[index]);
+      free(lua_global_module_slot(runtime, index));
     free(runtime->global_modules);
   }
   for (index = 0; index < runtime->schedule_job_count; index++) {
-    free(runtime->schedule_jobs[index].path);
-    free(runtime->schedule_jobs[index].name);
-    free(runtime->schedule_jobs[index].cron);
+    LUA_SCHEDULE_JOB *job = lua_schedule_job_at(runtime, index);
+
+    free(job->path);
+    free(job->name);
+    free(job->cron);
   }
   free(runtime->schedule_jobs);
   free(runtime);

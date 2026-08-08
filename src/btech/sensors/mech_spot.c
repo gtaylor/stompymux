@@ -41,6 +41,7 @@
 #include "mech_utils_api.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -183,7 +184,7 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     return;
   }
   targetID[0] = args[0][0];
-  targetID[1] = args[0][1];
+  targetID[1] = *checked_string_suffix(*args, 1);
   targetID[2] = 0;
   targetref = FindTargetDBREFFromMapNumber(mech, targetID);
   if (!strcmp(args[0], "-")) {

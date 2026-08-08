@@ -22,7 +22,8 @@ DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
 DbRef create_player(EvaluationContext *evaluation, char *name, char *password);
 int add_player_name(WorldContext *world, DbRef player, char *name);
 int delete_player_name(WorldContext *world, DbRef player, char *name);
-DbRef lookup_player(WorldContext *world, DbRef player, char *name, int check);
+DbRef lookup_player(WorldContext *world, DbRef player, const char *name,
+                    int check);
 void load_player_names(WorldContext *world);
 void badname_add(WorldContext *world, char *name);
 void badname_remove(WorldContext *world, char *name);

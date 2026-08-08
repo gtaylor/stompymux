@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 
+#include "mux/support/checked_storage.h"
 #include "test_support.h"
 
 int main(void) {
@@ -16,8 +17,10 @@ int main(void) {
   };
 
   for (size_t index = 0; index < sizeof(suites) / sizeof(suites[0]); index++) {
-    if (suites[index].run() != 0) {
-      fprintf(stderr, "styled-text suite failed: %s\n", suites[index].name);
+    const typeof(suites[0]) *suite = checked_storage_at_const(
+        suites, sizeof(suites) / sizeof(suites[0]), sizeof(*suites), index);
+    if (suite->run() != 0) {
+      fprintf(stderr, "styled-text suite failed: %s\n", suite->name);
       return 1;
     }
   }

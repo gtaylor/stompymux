@@ -24,6 +24,7 @@
 #include <strings.h>
 
 #include "autopilot.h"
+#include "autopilot_argument_list_api.h"
 #include "autopilot_radio_internal.h"
 #include "bsuit_api.h"
 #include "btech/context.h"
@@ -66,12 +67,13 @@ void autopilot_radio_clear_commands(Autopilot *autopilot, char *buffer) {
   }
 }
 
-void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech, char **args,
-                                int argc, char *mesg) {
+void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
+                                AutopilotArgumentList *args, int argc,
+                                char *mesg) {
 
   int threshold;
 
-  if (strcmp(args[1], "on") == 0) {
+  if (strcmp(autopilot_argument_list_get(args, 1), "on") == 0) {
 
     autopilot->target = -1;
     autopilot->target_score = 0;
@@ -90,7 +92,7 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech, char **args,
     snprintf(mesg, LBUF_SIZE, "shooting at whatever I want");
     return;
 
-  } else if (strcmp(args[1], "off") == 0) {
+  } else if (strcmp(autopilot_argument_list_get(args, 1), "off") == 0) {
 
     /* Reset the AI */
     autopilot->target = -2;
@@ -108,14 +110,15 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech, char **args,
     snprintf(mesg, LBUF_SIZE, "powering down weapons");
     return;
 
-  } else if (strcmp(args[1], "threshold") == 0) {
+  } else if (strcmp(autopilot_argument_list_get(args, 1), "threshold") == 0) {
 
     /* Ok user specifying a threshold" */
     /* Right now we're only going to allow them to specify a value
      * between 0 and 100 - basicly how much percentage wise over
      * the current value does the new target have to be to switch */
     if (argc == 3 &&
-        !(!((threshold) = atoi(args[2])) && strcmp((args[2]), "0")) &&
+        !(!((threshold) = atoi(autopilot_argument_list_get(args, 2))) &&
+          strcmp((autopilot_argument_list_get(args, 2)), "0")) &&
         threshold >= 0 && threshold <= 100) {
 
       /* Set the new threshold value */
@@ -142,16 +145,17 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Tell the AI to chase whatever its targeting
  */
-void auto_radio_command_chasetarg(Autopilot *autopilot, Mech *mech, char **args,
-                                  int argc, char *mesg) {
+void auto_radio_command_chasetarg(Autopilot *autopilot, Mech *mech,
+                                  AutopilotArgumentList *args, int argc,
+                                  char *mesg) {
 
-  if (strcmp(args[1], "on") == 0) {
+  if (strcmp(autopilot_argument_list_get(args, 1), "on") == 0) {
 
     auto_set_chasetarget_mode(autopilot, AUTO_CHASETARGET_ON);
     snprintf(mesg, LBUF_SIZE, "Chase Target Mode is Activated");
     return;
 
-  } else if (strcmp(args[1], "off") == 0) {
+  } else if (strcmp(autopilot_argument_list_get(args, 1), "off") == 0) {
 
     auto_set_chasetarget_mode(autopilot, AUTO_CHASETARGET_OFF);
     snprintf(mesg, LBUF_SIZE, "Chase Target Mode is Deactivated");
@@ -163,13 +167,15 @@ void auto_radio_command_chasetarg(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to force AI to [dumbly] follow a given target
  */
-void auto_radio_command_dfollow(Autopilot *autopilot, Mech *mech, char **args,
-                                int argc, char *mesg) {
+void auto_radio_command_dfollow(Autopilot *autopilot, Mech *mech,
+                                AutopilotArgumentList *args, int argc,
+                                char *mesg) {
 
   DbRef targetref;
   char buffer[SBUF_SIZE];
 
-  targetref = FindTargetDBREFFromMapNumber(mech, args[1]);
+  targetref =
+      FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
     snprintf(mesg, LBUF_SIZE, "!Invalid target to follow");
     return;
@@ -181,23 +187,27 @@ void auto_radio_command_dfollow(Autopilot *autopilot, Mech *mech, char **args,
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
   snprintf(mesg, LBUF_SIZE, "following %s [dumbly] (%d degrees, %d away)",
-           args[1], autopilot->ofsx, autopilot->ofsy);
+           autopilot_argument_list_get(args, 1), autopilot->ofsx,
+           autopilot->ofsy);
 }
 
 /*
  * Radio command to force AI to [dumbly] goto a given hex
  */
-void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech, char **args,
-                              int argc, char *mesg) {
+void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech,
+                              AutopilotArgumentList *args, int argc,
+                              char *mesg) {
 
   int x, y;
   char buffer[SBUF_SIZE];
 
-  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
+       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!First number not an integer");
     return;
   }
-  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
+       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!First number not an integer");
     return;
   }
@@ -213,8 +223,9 @@ void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to force AI to drop whatever its carrying
  */
-void auto_radio_command_dropoff(Autopilot *autopilot, Mech *mech, char **args,
-                                int argc, char *mesg) {
+void auto_radio_command_dropoff(Autopilot *autopilot, Mech *mech,
+                                AutopilotArgumentList *args, int argc,
+                                char *mesg) {
 
   char buffer[SBUF_SIZE];
 
@@ -229,13 +240,15 @@ void auto_radio_command_dropoff(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to force AI to embark a carrier
  */
-void auto_radio_command_embark(Autopilot *autopilot, Mech *mech, char **args,
-                               int argc, char *mesg) {
+void auto_radio_command_embark(Autopilot *autopilot, Mech *mech,
+                               AutopilotArgumentList *args, int argc,
+                               char *mesg) {
 
   DbRef targetref;
   char buffer[SBUF_SIZE];
 
-  targetref = FindTargetDBREFFromMapNumber(mech, args[1]);
+  targetref =
+      FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
     snprintf(mesg, LBUF_SIZE, "!Invalid target to embark");
     return;
@@ -245,22 +258,26 @@ void auto_radio_command_embark(Autopilot *autopilot, Mech *mech, char **args,
   snprintf(buffer, SBUF_SIZE, "embark %ld", targetref);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "embarking %s", args[1]);
+  snprintf(mesg, LBUF_SIZE, "embarking %s",
+           autopilot_argument_list_get(args, 1));
   return;
 }
 
 /*
  * Radio command to force AI to enterbase
  */
-void auto_radio_command_enterbase(Autopilot *autopilot, Mech *mech, char **args,
-                                  int argc, char *mesg) {
+void auto_radio_command_enterbase(Autopilot *autopilot, Mech *mech,
+                                  AutopilotArgumentList *args, int argc,
+                                  char *mesg) {
 
   char buffer[SBUF_SIZE];
 
   autopilot_radio_clear_commands(autopilot, buffer);
   if (argc - 1) {
-    snprintf(buffer, SBUF_SIZE, "enterbase %s", args[1]);
-    snprintf(mesg, LBUF_SIZE, "entering base (%s side)", args[1]);
+    snprintf(buffer, SBUF_SIZE, "enterbase %s",
+             autopilot_argument_list_get(args, 1));
+    snprintf(mesg, LBUF_SIZE, "entering base (%s side)",
+             autopilot_argument_list_get(args, 1));
   } else {
     strncpy(buffer, "enterbase n", SBUF_SIZE);
     snprintf(mesg, LBUF_SIZE, "entering base");
@@ -273,13 +290,15 @@ void auto_radio_command_enterbase(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * New smart follow system based on A*'s goto
  */
-void auto_radio_command_follow(Autopilot *autopilot, Mech *mech, char **args,
-                               int argc, char *mesg) {
+void auto_radio_command_follow(Autopilot *autopilot, Mech *mech,
+                               AutopilotArgumentList *args, int argc,
+                               char *mesg) {
 
   char buffer[SBUF_SIZE];
   DbRef targetref;
 
-  targetref = FindTargetDBREFFromMapNumber(mech, args[1]);
+  targetref =
+      FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
     snprintf(mesg, LBUF_SIZE, "!Invalid target to follow");
     return;
@@ -290,25 +309,29 @@ void auto_radio_command_follow(Autopilot *autopilot, Mech *mech, char **args,
   snprintf(buffer, SBUF_SIZE, "follow %ld", targetref);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "following %s (%d degrees, %d away)", args[1],
-           autopilot->ofsx, autopilot->ofsy);
+  snprintf(mesg, LBUF_SIZE, "following %s (%d degrees, %d away)",
+           autopilot_argument_list_get(args, 1), autopilot->ofsx,
+           autopilot->ofsy);
 }
 
 /*
  * Smart goto system based on Astar path finding
  */
-void auto_radio_command_goto(Autopilot *autopilot, Mech *mech, char **args,
-                             int argc, char *mesg) {
+void auto_radio_command_goto(Autopilot *autopilot, Mech *mech,
+                             AutopilotArgumentList *args, int argc,
+                             char *mesg) {
 
   int x, y;
   char buffer[SBUF_SIZE];
   BattleMap *map;
 
-  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
+       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!First number not integer");
     return;
   }
-  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
+       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Second number not integer");
     return;
   }
@@ -336,13 +359,15 @@ void auto_radio_command_goto(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to alter an AI's heading
  */
-void auto_radio_command_heading(Autopilot *autopilot, Mech *mech, char **args,
-                                int argc, char *mesg) {
+void auto_radio_command_heading(Autopilot *autopilot, Mech *mech,
+                                AutopilotArgumentList *args, int argc,
+                                char *mesg) {
 
   int heading;
   char buffer[SBUF_SIZE];
 
-  if ((!((heading) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if ((!((heading) = atoi(autopilot_argument_list_get(args, 1))) &&
+       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Number not integer");
     return;
   }
@@ -359,8 +384,9 @@ void auto_radio_command_heading(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Help message, lists the various commands for the AI
  */
-void auto_radio_command_help(Autopilot *autopilot, Mech *mech, char **args,
-                             int argc, char *mesg) {
+void auto_radio_command_help(Autopilot *autopilot, Mech *mech,
+                             AutopilotArgumentList *args, int argc,
+                             char *mesg) {
 
   int i;
 
@@ -368,12 +394,16 @@ void auto_radio_command_help(Autopilot *autopilot, Mech *mech, char **args,
 
   snprintf(mesg, LBUF_SIZE, "The following commands are possible:");
 
-  for (i = 0; autopilot_radio_commands[i].name; i++) {
-    if (i > 0 && !strcmp(autopilot_radio_commands[i].name,
-                         autopilot_radio_commands[i - 1].name))
+  const char *previous_name = nullptr;
+  for (i = 0;; i++) {
+    const AutopilotRadioCommand *command = autopilot_radio_command_at(i);
+    if (command->name == nullptr)
+      break;
+    if (previous_name != nullptr && !strcmp(command->name, previous_name))
       continue;
     strncat(mesg, " ", LBUF_SIZE);
-    strncat(mesg, autopilot_radio_commands[i].name, LBUF_SIZE);
+    strncat(mesg, command->name, LBUF_SIZE);
+    previous_name = command->name;
   }
 
   auto_reply(mech, mesg);
@@ -382,8 +412,9 @@ void auto_radio_command_help(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to force AI to try and hide itself
  */
-void auto_radio_command_hide(Autopilot *autopilot, Mech *mech, char **args,
-                             int argc, char *mesg) {
+void auto_radio_command_hide(Autopilot *autopilot, Mech *mech,
+                             AutopilotArgumentList *args, int argc,
+                             char *mesg) {
 
   if ((mech_technology_flags_secondary(mech) & CAMO_TECH)
           ? 0
@@ -411,8 +442,9 @@ void auto_radio_command_hide(Autopilot *autopilot, Mech *mech, char **args,
  * Radio command to force AI to jump either on a target or
  * in a given direction range
  */
-void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech, char **args,
-                                int argc, char *mesg) {
+void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
+                                AutopilotArgumentList *args, int argc,
+                                char *mesg) {
 
   DbRef target;
   char buffer[SBUF_SIZE];
@@ -424,26 +456,33 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech, char **args,
   }
 
   if ((argc - 1) == 1) {
-    if ((target = FindTargetDBREFFromMapNumber(mech, args[1])) <= 0) {
+    if ((target = FindTargetDBREFFromMapNumber(
+             mech, autopilot_argument_list_get(args, 1))) <= 0) {
       snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");
       return;
     }
-    strcpy(buffer, args[1]);
+    strcpy(buffer, autopilot_argument_list_get(args, 1));
     mech_jump(autopilot->mynum, mech, buffer);
-    snprintf(mesg, LBUF_SIZE, "jumping on [%s]", args[1]);
+    snprintf(mesg, LBUF_SIZE, "jumping on [%s]",
+             autopilot_argument_list_get(args, 1));
     return;
   } else {
-    if ((!((bear) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+    if ((!((bear) = atoi(autopilot_argument_list_get(args, 1))) &&
+         strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
       snprintf(mesg, LBUF_SIZE, "!Invalid bearing");
       return;
     }
-    if ((!((rng) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+    if ((!((rng) = atoi(autopilot_argument_list_get(args, 2))) &&
+         strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
       snprintf(mesg, LBUF_SIZE, "!Invalid range");
       return;
     }
-    snprintf(buffer, SBUF_SIZE, "%s %s", args[1], args[2]);
+    snprintf(buffer, SBUF_SIZE, "%s %s", autopilot_argument_list_get(args, 1),
+             autopilot_argument_list_get(args, 2));
     mech_jump(autopilot->mynum, mech, buffer);
-    snprintf(mesg, LBUF_SIZE, "jump %s degrees %s hexes", args[1], args[2]);
+    snprintf(mesg, LBUF_SIZE, "jump %s degrees %s hexes",
+             autopilot_argument_list_get(args, 1),
+             autopilot_argument_list_get(args, 2));
     return;
   }
 }
@@ -451,13 +490,15 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to force AI to leavebase
  */
-void auto_radio_command_leavebase(Autopilot *autopilot, Mech *mech, char **args,
-                                  int argc, char *mesg) {
+void auto_radio_command_leavebase(Autopilot *autopilot, Mech *mech,
+                                  AutopilotArgumentList *args, int argc,
+                                  char *mesg) {
 
   char buffer[SBUF_SIZE];
   int direction;
 
-  if ((!((direction) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if ((!((direction) = atoi(autopilot_argument_list_get(args, 1))) &&
+       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid value for direction");
     return;
   }
@@ -478,17 +519,20 @@ void auto_radio_command_leavebase(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Old goto system - will phase out
  */
-void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech, char **args,
-                              int argc, char *mesg) {
+void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech,
+                              AutopilotArgumentList *args, int argc,
+                              char *mesg) {
 
   int x, y;
   char buffer[SBUF_SIZE];
 
-  if ((!((x) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
+       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!First number not integer");
     return;
   }
-  if ((!((y) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
+       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
     snprintf(mesg, LBUF_SIZE, "!Second number not integer");
     return;
   }
@@ -504,13 +548,15 @@ void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech, char **args,
 /*
  * Radio command to force AI to pickup a target
  */
-void auto_radio_command_pickup(Autopilot *autopilot, Mech *mech, char **args,
-                               int argc, char *mesg) {
+void auto_radio_command_pickup(Autopilot *autopilot, Mech *mech,
+                               AutopilotArgumentList *args, int argc,
+                               char *mesg) {
 
   DbRef targetref;
   char buffer[SBUF_SIZE];
 
-  targetref = FindTargetDBREFFromMapNumber(mech, args[1]);
+  targetref =
+      FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
     snprintf(mesg, LBUF_SIZE, "!Invalid target to pickup");
     return;
@@ -526,7 +572,8 @@ void auto_radio_command_pickup(Autopilot *autopilot, Mech *mech, char **args,
   snprintf(buffer, SBUF_SIZE, "pickup %ld", targetref);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "picking up %s", args[1]);
+  snprintf(mesg, LBUF_SIZE, "picking up %s",
+           autopilot_argument_list_get(args, 1));
 }
 
 /*

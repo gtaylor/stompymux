@@ -11,6 +11,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_registries.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 
 typedef int (*ConfigurationIntInterpreter)(int *value, char *text, long extra,
@@ -53,15 +54,12 @@ static int configuration_call_direct(ConfigurationInterpreter interpreter,
         function, value, text, extra, player, command, context);               \
   }
 
-#define CONFIG_LOC(member)                                                     \
-  ((int *)(uintptr_t)(offsetof(ServerConfiguration, member) + 1))
+#define CONFIG_LOC(member) (offsetof(ServerConfiguration, member) + 1)
 #define COMMAND_LOC(member)                                                    \
-  ((int *)(uintptr_t)(sizeof(ServerConfiguration) +                            \
-                      offsetof(CommandRegistry, member) + 1))
+  (sizeof(ServerConfiguration) + offsetof(CommandRegistry, member) + 1)
 #define ACCESS_LOC(member)                                                     \
-  ((int *)(uintptr_t)(sizeof(ServerConfiguration) + sizeof(CommandRegistry) +  \
-                      sizeof(WorldIndexes) +                                   \
-                      offsetof(AccessControlStore, member) + 1))
+  (sizeof(ServerConfiguration) + sizeof(CommandRegistry) +                     \
+   sizeof(WorldIndexes) + offsetof(AccessControlStore, member) + 1)
 
 DEFINE_CONFIGURATION_ADAPTER(cf_access)
 DEFINE_CONFIGURATION_ADAPTER(cf_badname)
@@ -80,17 +78,15 @@ DEFINE_CONFIGURATION_ADAPTER(cf_string)
 DEFINE_CONFIGURATION_ADAPTER(configuration_modify_bits)
 
 CONF conftable[] = {
-    {"access", cf_access_configuration_adapter, CA_GOD, nullptr,
+    {"access", cf_access_configuration_adapter, CA_GOD, 0,
      (long)access_nametab},
     {"alias", cf_cmd_alias_configuration_adapter, CA_GOD, COMMAND_LOC(commands),
      0},
-    {"bad_name", cf_badname_configuration_adapter, CA_GOD, nullptr, 0},
+    {"bad_name", cf_badname_configuration_adapter, CA_GOD, 0, 0},
     {"badsite_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(site_file), 32},
-    {"named_color", cf_named_color_configuration_adapter, CA_DISABLED, nullptr,
-     0},
-    {"osc8_preset", cf_osc8_preset_configuration_adapter, CA_DISABLED, nullptr,
-     0},
+    {"named_color", cf_named_color_configuration_adapter, CA_DISABLED, 0, 0},
+    {"osc8_preset", cf_osc8_preset_configuration_adapter, CA_DISABLED, 0, 0},
     {"btech_explode_reactor", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(btech_explode_reactor), 0},
     {"btech_explode_time", cf_int_configuration_adapter, CA_GOD,
@@ -274,7 +270,7 @@ CONF conftable[] = {
      CONFIG_LOC(command_quota_increment), 0},
     {"command_quota_max", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(command_quota_max), 0},
-    {"config_access", cf_cf_access_configuration_adapter, CA_GOD, nullptr,
+    {"config_access", cf_cf_access_configuration_adapter, CA_GOD, 0,
      (long)access_nametab},
     {"conn_timeout", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(conn_timeout), 0},
@@ -297,8 +293,8 @@ CONF conftable[] = {
     {"dump_offset", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(dump_offset), 0},
     {"default_exit_flags", cf_set_flags_configuration_adapter, CA_GOD,
-     (int *)CONFIG_LOC(default_exit_flags), 0},
-    {"flag_alias", cf_flagalias_configuration_adapter, CA_GOD, nullptr, 0},
+     CONFIG_LOC(default_exit_flags), 0},
+    {"flag_alias", cf_flagalias_configuration_adapter, CA_GOD, 0, 0},
     {"forbid_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(access_sites), H_FORBIDDEN},
     {"fork_dump", cf_bool_configuration_adapter, CA_GOD,
@@ -310,7 +306,7 @@ CONF conftable[] = {
     {"game_database", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(database.gamedb),
      sizeof(((ServerConfiguration *)nullptr)->database.gamedb)},
-    {"good_name", cf_badname_configuration_adapter, CA_GOD, nullptr, 1},
+    {"good_name", cf_badname_configuration_adapter, CA_GOD, 0, 1},
     {"help_directory", cf_string_configuration_adapter, CA_GOD,
      CONFIG_LOC(help_dir), sizeof(((ServerConfiguration *)nullptr)->help_dir)},
     {"idle_interval", cf_int_configuration_adapter, CA_GOD,
@@ -320,7 +316,7 @@ CONF conftable[] = {
     {"initial_size", cf_int_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(init_size), 0},
     {"list_access", cf_ntab_access_configuration_adapter, CA_GOD,
-     (int *)list_names, (long)access_nametab},
+     CONFIGURATION_LIST_NAMES_LOCATION, (long)access_nametab},
     {"lua_directory", cf_string_configuration_adapter, CA_GOD,
      CONFIG_LOC(lua.directory),
      sizeof(((ServerConfiguration *)nullptr)->lua.directory)},
@@ -399,7 +395,7 @@ CONF conftable[] = {
     {"permit_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(access_sites), 0},
     {"default_player_flags", cf_set_flags_configuration_adapter, CA_GOD,
-     (int *)CONFIG_LOC(default_player_flags), 0},
+     CONFIG_LOC(default_player_flags), 0},
     {"player_password_length_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(player_password_length_limit), 0},
     {"player_name_spaces", cf_bool_configuration_adapter, CA_GOD,
@@ -428,7 +424,7 @@ CONF conftable[] = {
     {"login_hash_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(login_hash_limit), 0},
     {"default_room_flags", cf_set_flags_configuration_adapter, CA_GOD,
-     (int *)CONFIG_LOC(default_room_flags), 0},
+     CONFIG_LOC(default_room_flags), 0},
     {"space_compress", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(space_compress), 0},
     {"stack_limit", cf_int_configuration_adapter, CA_GOD,
@@ -436,14 +432,23 @@ CONF conftable[] = {
     {"suspect_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(suspect_sites), H_SUSPECT},
     {"default_thing_flags", cf_set_flags_configuration_adapter, CA_GOD,
-     (int *)CONFIG_LOC(default_thing_flags), 0},
+     CONFIG_LOC(default_thing_flags), 0},
     {"command_quota_interval", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(command_quota_interval), 0},
     {"trust_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(suspect_sites), 0},
     {"player_zone", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(player_zone), 0},
-    {nullptr, nullptr, 0, nullptr, 0}};
+    {nullptr, nullptr, 0, 0, 0}};
+
+size_t configuration_entry_count(void) {
+  return sizeof(conftable) / sizeof(*conftable) - 1;
+}
+
+CONF *configuration_entry_at(size_t index) {
+  return checked_storage_at(conftable, configuration_entry_count(),
+                            sizeof(*conftable), index);
+}
 
 /*
  * ---------------------------------------------------------------------------

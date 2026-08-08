@@ -51,10 +51,35 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "special_object.h"
 #include "unit_cost_api.h"
+
+typedef struct PartPile {
+  int quantities[NUM_ITEMS];
+} PartPile;
+
+typedef struct BrandedPartPile {
+  PartPile brands[BRANDCOUNT + 1];
+} BrandedPartPile;
+
+static int *part_pile_slot(PartPile *pile, int part_id) {
+  if (part_id < 0)
+    abort();
+  return checked_storage_at(pile->quantities, NUM_ITEMS,
+                            sizeof(*pile->quantities), (size_t)part_id);
+}
+
+static int *branded_part_pile_slot(BrandedPartPile *pile, int brand,
+                                   int part_id) {
+  if (brand < 0)
+    abort();
+  PartPile *brand_pile = checked_storage_at(
+      pile->brands, BRANDCOUNT + 1, sizeof(*pile->brands), (size_t)brand);
+  return part_pile_slot(brand_pile, part_id);
+}
 
 #ifdef BT_PART_WEIGHTS
 /* From template.c */
@@ -66,12 +91,12 @@ extern const int cargoweight[];
 /* Also sets the fuel we have ; but I digress */
 
 void mech_cargo_weight_recalculate(Mech *mech) {
-  int pile[NUM_ITEMS];
+  PartPile pile;
   int sw, weight = 0; /* in 1/10 tons */
   int i, j, k;
   EconomyPartEntryView entry;
 
-  bzero(pile, sizeof(pile));
+  bzero(&pile, sizeof(pile));
   for (size_t index = 0;
        index < economy_parts_entry_count(mech_context(mech)->database,
                                          mech_dbref(mech));
@@ -79,27 +104,28 @@ void mech_cargo_weight_recalculate(Mech *mech) {
     if (economy_parts_entry(mech_context(mech)->database, mech_dbref(mech),
                             index, &entry) &&
         entry.part_id >= 0 && entry.part_id < NUM_ITEMS)
-      pile[entry.part_id] +=
-          ((equipment_is_bomb(entry.part_id)) ? 4 : 1) * entry.quantity;
+      *part_pile_slot(&pile, entry.part_id) +=
+          (equipment_is_bomb(entry.part_id) ? 4 : 1) * entry.quantity;
   if (mech_is_flying_type(mech))
     for (i = 0; i < NUM_SECTIONS; i++)
       for (j = 0; j < NUM_CRITICALS; j++) {
         if (equipment_is_bomb((k = mech_critical_part_type(mech, i, j))))
-          pile[k]++;
+          (*part_pile_slot(&pile, k))++;
         else if (equipment_is_special(k))
           if (special_from_equipment_index(k) == FUELTANK)
-            pile[special_equipment_index(FUELTANK)]++;
+            (*part_pile_slot(&pile, special_equipment_index(FUELTANK)))++;
       }
   /* We've 'so-called' pile now */
   for (i = 0; i < NUM_ITEMS; i++)
-    if (pile[i]) {
+    if (*part_pile_slot(&pile, i)) {
       sw = btech_part_weight(i);
-      weight += sw * pile[i];
+      weight += sw * *part_pile_slot(&pile, i);
     }
   if (mech_is_flying_type(mech)) {
-    mech_maximum_fuel_set(mech,
-                          mech_original_fuel(mech) +
-                              2000 * pile[special_equipment_index(FUELTANK)]);
+    mech_maximum_fuel_set(
+        mech,
+        mech_original_fuel(mech) +
+            2000 * *part_pile_slot(&pile, special_equipment_index(FUELTANK)));
     if (mech_fuel(mech) > mech_original_fuel(mech))
       weight += mech_fuel(mech) - mech_original_fuel(mech);
   }
@@ -128,27 +154,30 @@ int loading_bay_whine(DbRef player, DbRef cargobay, Mech *mech) {
 }
 
 void econ_fix_stuff(BtechContext *context, DbRef player, DbRef loc) {
-  int pile[BRANDCOUNT + 1][NUM_ITEMS];
+  BrandedPartPile pile;
   size_t old_entries, new_entries;
   int items = 0, kinds = 0;
   int id, brand;
   EconomyPartEntryView entry;
 
-  bzero(pile, sizeof(pile));
+  bzero(&pile, sizeof(pile));
   old_entries = economy_parts_entry_count(context->database, loc);
   for (size_t index = 0; index < old_entries; index++)
     if (economy_parts_entry(context->database, loc, index, &entry) &&
         entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
         entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT &&
         !mech_part_is_structural_placeholder(entry.part_id))
-      pile[entry.brand_id][entry.part_id] += entry.quantity;
+      *branded_part_pile_slot(&pile, entry.brand_id, entry.part_id) +=
+          entry.quantity;
   economy_parts_clear(context->database, loc);
   for (id = 0; id < NUM_ITEMS; id++)
     for (brand = 0; brand <= BRANDCOUNT; brand++)
-      if (pile[brand][id] > 0 && get_parts_long_name(context, id, brand)) {
-        econ_change_items(context, loc, id, brand, pile[brand][id]);
+      if (*branded_part_pile_slot(&pile, brand, id) > 0 &&
+          get_parts_long_name(context, id, brand)) {
+        const int quantity = *branded_part_pile_slot(&pile, brand, id);
+        econ_change_items(context, loc, id, brand, quantity);
         kinds++;
-        items += pile[brand][id];
+        items += quantity;
       }
   new_entries = economy_parts_entry_count(context->database, loc);
   notify_printf(btech_context_evaluation(context), player,
@@ -169,8 +198,8 @@ void mech_Rfixstuff(DbRef player, void *data, char *buffer) {
 void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
                    char *buf) {
   GameDatabase *database = context->database;
-  int pile[BRANDCOUNT + 1][NUM_ITEMS];
-  int pile2[BRANDCOUNT + 1][NUM_ITEMS];
+  BrandedPartPile pile;
+  BrandedPartPile matching_pile;
   char *ch;
   PartDisplayName display_name;
   int id, brand;
@@ -183,8 +212,8 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   CoolMenu *c = NULL;
   int found = 0;
 
-  bzero(pile, sizeof(pile));
-  bzero(pile2, sizeof(pile2));
+  bzero(&pile, sizeof(pile));
+  bzero(&matching_pile, sizeof(matching_pile));
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, header, CM_ONE | CM_CENTER);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
@@ -196,24 +225,27 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
     if (economy_parts_entry(database, loc, index, &entry) &&
         entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
         entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT)
-      pile[entry.brand_id][entry.part_id] += entry.quantity;
+      *branded_part_pile_slot(&pile, entry.brand_id, entry.part_id) +=
+          entry.quantity;
   }
   i = 0;
   if (buf)
     while (find_matching_long_part(context, buf, &i, &id, &brand))
-      pile2[brand][id] = pile[brand][id];
+      *branded_part_pile_slot(&matching_pile, brand, id) =
+          *branded_part_pile_slot(&pile, brand, id);
   for (i = 0; i < (int)part_name_count(context); i++) {
     const PartNameEntry *part_name = part_name_at(context, (size_t)i);
 
     id = packed_part_id(part_name->index);
     brand = packed_part_brand(part_name->index);
-    if ((buf && (x = pile2[brand][id])) || ((!buf && (x = pile[brand][id])))) {
+    if ((buf && (x = *branded_part_pile_slot(&matching_pile, brand, id))) ||
+        (!buf && (x = *branded_part_pile_slot(&pile, brand, id)))) {
       display_name = part_name_long(context, id, brand);
       if (!display_name.valid) {
         btech_channel_send(
             context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("#%ld in %ld encountered odd thing: %d %d/%d's.", player,
-                    loc, pile[brand][id], id, brand));
+                    loc, *branded_part_pile_slot(&pile, brand, id), id, brand));
         continue;
       }
 #ifndef BT_PART_WEIGHTS
@@ -255,8 +287,8 @@ void mech_manifest(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *object = data;
   BtechContext *context = object->context;
 
-  while (isspace(*buffer))
-    buffer++;
+  buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(*buffer),
+                              strspn(buffer, " \t\r\n\f\v"));
   list_manifest(context, player,
                 game_object_location(context->database, player), buffer);
 }
@@ -279,8 +311,8 @@ void mech_stores(DbRef player, void *data, char *buffer) {
   if (loading_bay_whine(player,
                         game_object_location(database, mech_dbref(mech)), mech))
     return;
-  while (isspace(*buffer))
-    buffer++;
+  buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(*buffer),
+                              strspn(buffer, " \t\r\n\f\v"));
   list_manifest(mech_context(mech), player,
                 game_object_location(database, mech_dbref(mech)), buffer);
 }

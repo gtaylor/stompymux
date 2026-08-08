@@ -5,6 +5,7 @@
 #include "map_conditions_api.h"
 #include "map_los.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_electronics_api.h"
 #include "mech_identity_api.h"
@@ -19,14 +20,46 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 #include "mux/support/formatting.h"
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+typedef struct LrsMechList {
+  Mech *items[MAX_MECHS_PER_MAP + 1];
+} LrsMechList;
+
+static Mech **lrs_mech_slot(LrsMechList *list, int index) {
+  return checked_storage_at(list->items, MAX_MECHS_PER_MAP + 1,
+                            sizeof(*list->items), (size_t)index);
+}
+
+static Mech *lrs_mech_at(const LrsMechList *list, int index) {
+  return *(Mech *const *)checked_storage_at_const(
+      list->items, MAX_MECHS_PER_MAP + 1, sizeof(*list->items), (size_t)index);
+}
+
+static void lrs_text_append(char *buffer, size_t capacity, const char *format,
+                            ...) __attribute__((format(printf, 3, 4)));
+
+static void lrs_text_append(char *buffer, size_t capacity, const char *format,
+                            ...) {
+  const size_t used = strlen(buffer);
+  if (used >= capacity)
+    return;
+  va_list arguments;
+  va_start(arguments, format);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
+  vsnprintf(checked_storage_region(buffer, capacity, used, capacity - used),
+            capacity - used, format, arguments);
+  va_end(arguments);
+}
 
 static bool mech_seems_friendly(Mech *mech, Mech *other) {
   return mech_team(mech) == mech_team(other) &&
@@ -75,7 +108,7 @@ char GetLRSMechChar(Mech *mech, Mech *other) {
     break;
   }
   if (!mech_seems_friendly(mech, other))
-    c = (char)toupper((unsigned char)c);
+    c = ascii_to_upper(c);
   return c;
 }
 
@@ -118,9 +151,10 @@ char map_terrain_color_char(const MapColorScheme *colors, char terrain,
 }
 
 const char *map_color_markup(char color) {
-  bool bold = isupper((unsigned char)color);
+  bool bold = color >= 'A' && color <= 'Z';
+  const char normalized = bold ? (char)(color + ('a' - 'A')) : color;
 
-  switch (tolower((unsigned char)color)) {
+  switch (normalized) {
   case 'x':
     return bold ? "[fg=black bold]" : "[fg=black]";
   case 'r':
@@ -232,20 +266,23 @@ static MapCellText lrs_elevation_text(const MapColorScheme *colors,
 
 static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
                                 BattleMap *map, int x, int y, char *prevc,
-                                int mode, Mech **mechs, int lm,
+                                int mode, const LrsMechList *mechs, int lm,
                                 HexLosMap *losmap) {
   int losflag = MAPLOSHEX_SEE | MAPLOSHEX_SEEN;
 
   if (mode & LRS_MECHMODE) {
-    while (mechs[lm] && mech_position_y(mechs[lm]) < y)
+    while (lrs_mech_at(mechs, lm) &&
+           mech_position_y(lrs_mech_at(mechs, lm)) < y)
       lm++;
-    while (mechs[lm] && mech_position_y(mechs[lm]) == y &&
-           mech_position_x(mechs[lm]) < x)
+    while (lrs_mech_at(mechs, lm) &&
+           mech_position_y(lrs_mech_at(mechs, lm)) == y &&
+           mech_position_x(lrs_mech_at(mechs, lm)) < x)
       lm++;
-    if (mechs[lm] && mech_position_y(mechs[lm]) == y &&
-        mech_position_x(mechs[lm]) == x)
-      return lrs_mech_text(colors, mech, mechs[lm], mode & LRS_COLORMODE,
-                           prevc);
+    if (lrs_mech_at(mechs, lm) &&
+        mech_position_y(lrs_mech_at(mechs, lm)) == y &&
+        mech_position_x(lrs_mech_at(mechs, lm)) == x)
+      return lrs_mech_text(colors, mech, lrs_mech_at(mechs, lm),
+                           mode & LRS_COLORMODE, prevc);
   }
 
   if (losmap)
@@ -286,7 +323,7 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
   char midbuff[LBUF_SIZE] = "    ";
   char trash1[16]; /* temp var to hold the map coordinate label */
   short oddcol = 0;
-  Mech *mechs[MAX_MECHS_PER_MAP];
+  LrsMechList mechs = {0};
   int last_mech = 0;
   char prevct = 0, prevcb = 0;
   HexLosMap los_map_storage;
@@ -317,21 +354,20 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
   /* Display the top labels */
   for (i = b_width; i <= e_width; i++) {
     snprintf(trash1, sizeof(trash1), "%3d", i);
-    snprintf(topbuff + strlen(topbuff), sizeof(topbuff) - strlen(topbuff), "%c",
-             trash1[0]);
-    snprintf(midbuff + strlen(midbuff), sizeof(midbuff) - strlen(midbuff), "%c",
-             trash1[1]);
-    snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff), "%c",
-             trash1[2]);
+    lrs_text_append(topbuff, sizeof(topbuff), "%c", *trash1);
+    lrs_text_append(midbuff, sizeof(midbuff), "%c",
+                    *checked_string_suffix(trash1, 1));
+    lrs_text_append(botbuff, sizeof(botbuff), "%c",
+                    *checked_string_suffix(trash1, 2));
   }
   mecha_notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
   mecha_notify(btech_context_evaluation(mech_context(mech)), player, midbuff);
   mecha_notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
 
   if (mode & LRS_MECHMODE) {
-    for (i = 0; i < map->first_free; i++) {
+    for (i = 0; i < battle_map_unit_count(map); i++) {
       if ((oMech = btech_context_get_mech(mech_context(mech),
-                                          map->mechsOnMap[i]))) {
+                                          battle_map_unit_dbref(map, i)))) {
         if ((mech == oMech) ||
             (mech_position_y(oMech) >= b_height &&
              mech_position_y(oMech) <= e_height &&
@@ -340,24 +376,27 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
              mech_los_check(mech, oMech, mech_position_x(oMech),
                             mech_position_y(oMech),
                             mech_range_to(mech, oMech))))
-          mechs[last_mech++] = oMech;
+          *lrs_mech_slot(&mechs, last_mech++) = oMech;
       }
     }
     for (i = 0; i < (last_mech - 1); i++) /* Bubble-sort the list
                                            *  to y/x order */
       for (loop = (i + 1); loop < last_mech; loop++) {
-        if (mech_position_y(mechs[i]) > mech_position_y(mechs[loop])) {
-          oMech = mechs[i];
-          mechs[i] = mechs[loop];
-          mechs[loop] = oMech;
-        } else if (mech_position_y(mechs[i]) == mech_position_y(mechs[loop]) &&
-                   mech_position_x(mechs[i]) > mech_position_x(mechs[loop])) {
-          oMech = mechs[i];
-          mechs[i] = mechs[loop];
-          mechs[loop] = oMech;
+        if (mech_position_y(lrs_mech_at(&mechs, i)) >
+            mech_position_y(lrs_mech_at(&mechs, loop))) {
+          oMech = lrs_mech_at(&mechs, i);
+          *lrs_mech_slot(&mechs, i) = lrs_mech_at(&mechs, loop);
+          *lrs_mech_slot(&mechs, loop) = oMech;
+        } else if (mech_position_y(lrs_mech_at(&mechs, i)) ==
+                       mech_position_y(lrs_mech_at(&mechs, loop)) &&
+                   mech_position_x(lrs_mech_at(&mechs, i)) >
+                       mech_position_x(lrs_mech_at(&mechs, loop))) {
+          oMech = lrs_mech_at(&mechs, i);
+          *lrs_mech_slot(&mechs, i) = lrs_mech_at(&mechs, loop);
+          *lrs_mech_slot(&mechs, loop) = oMech;
         }
       }
-    mechs[last_mech] = nullptr;
+    *lrs_mech_slot(&mechs, last_mech) = nullptr;
     last_mech = 0;
   }
 
@@ -370,34 +409,31 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
     snprintf(topbuff, sizeof(topbuff), "%3d ", loop);
     strcpy(botbuff, "    ");
     if (mode & LRS_MECHMODE)
-      while (mechs[last_mech] && mech_position_y(mechs[last_mech]) < loop)
+      while (lrs_mech_at(&mechs, last_mech) &&
+             mech_position_y(lrs_mech_at(&mechs, last_mech)) < loop)
         last_mech++;
 
     for (i = b_width; i < e_width; i += 2) {
-      snprintf(topbuff + strlen(topbuff), sizeof(topbuff) - strlen(topbuff),
-               oddcol ? "%s " : " %s",
-               lrs_hex_text(colors, mech, map, i + !oddcol, loop, &prevct, mode,
-                            mechs, last_mech, losmap)
-                   .text);
+      lrs_text_append(topbuff, sizeof(topbuff), oddcol ? "%s " : " %s",
+                      lrs_hex_text(colors, mech, map, i + !oddcol, loop,
+                                   &prevct, mode, &mechs, last_mech, losmap)
+                          .text);
 
-      snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff),
-               oddcol ? " %s" : "%s ",
-               lrs_hex_text(colors, mech, map, i + oddcol, loop, &prevcb, mode,
-                            mechs, last_mech, losmap)
-                   .text);
+      lrs_text_append(botbuff, sizeof(botbuff), oddcol ? " %s" : "%s ",
+                      lrs_hex_text(colors, mech, map, i + oddcol, loop, &prevcb,
+                                   mode, &mechs, last_mech, losmap)
+                          .text);
     }
     if (i == e_width && !oddcol) {
-      snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff),
-               "%s",
-               lrs_hex_text(colors, mech, map, i, loop, &prevcb, mode, mechs,
-                            last_mech, losmap)
-                   .text);
+      lrs_text_append(botbuff, sizeof(botbuff), "%s",
+                      lrs_hex_text(colors, mech, map, i, loop, &prevcb, mode,
+                                   &mechs, last_mech, losmap)
+                          .text);
     } else if (i == e_width) {
-      snprintf(topbuff + strlen(topbuff), sizeof(topbuff) - strlen(topbuff),
-               "%s",
-               lrs_hex_text(colors, mech, map, i, loop, &prevct, mode, mechs,
-                            last_mech, losmap)
-                   .text);
+      lrs_text_append(topbuff, sizeof(topbuff), "%s",
+                      lrs_hex_text(colors, mech, map, i, loop, &prevct, mode,
+                                   &mechs, last_mech, losmap)
+                          .text);
       strcat(botbuff, " ");
     }
 
@@ -411,8 +447,7 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
         prevcb = 0;
       }
     }
-    snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff),
-             " %-3d", loop);
+    lrs_text_append(botbuff, sizeof(botbuff), " %-3d", loop);
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
   }
@@ -441,7 +476,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
                  "Your system seems to be inoperational.");
     return;
   }
-  if (!parse_tacargs(player, mech, &args[1], argc - 1,
+  if (!parse_tacargs(player, mech, args, 5, 1, argc - 1,
                      mech_long_range_sensor_range(mech), &x, &y))
     return;
   switch (args[0][0]) {

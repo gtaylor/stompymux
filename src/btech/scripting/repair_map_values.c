@@ -3,15 +3,29 @@
 #include "registry_api.h"
 #include "values_internal.h"
 
+typedef struct ScriptPartPile {
+  int values[BRANDCOUNT + 1][NUM_ITEMS];
+} ScriptPartPile;
+
+static int *script_part_pile_slot(ScriptPartPile *pile, int brand,
+                                  int part_id) {
+  int (*brand_values)[NUM_ITEMS] = checked_storage_at(
+      pile->values, BRANDCOUNT + 1, sizeof(*pile->values), (size_t)brand);
+  return checked_storage_at(*brand_values, NUM_ITEMS, sizeof(**brand_values),
+                            (size_t)part_id);
+}
+
 void fun_btunderrepair(char *buff, char **bufc, DbRef player, DbRef cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs,
                        EvaluationContext *context) {
-  /* fargs[0] = ref of the mech to be checked */
+  /* script_function_argument(fargs, nfargs, 0) = ref of the mech to be checked
+   */
   int n;
   Mech *mech;
   DbRef it;
 
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return;
@@ -28,12 +42,12 @@ void fun_btunderrepair(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btstores(char *buff, char **bufc, DbRef player, DbRef cause,
                   char *fargs[], int nfargs, char *cargs[], int ncargs,
                   EvaluationContext *context) {
-  /* fargs[0] = id of the bay/mech */
-  /* fargs[1] = (optional) name of the part */
+  /* script_function_argument(fargs, nfargs, 0) = id of the bay/mech */
+  /* script_function_argument(fargs, nfargs, 1) = (optional) name of the part */
   DbRef it;
   int i = -1, x = 0;
   int p, b;
-  int pile[BRANDCOUNT + 1][NUM_ITEMS];
+  ScriptPartPile pile;
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
@@ -44,16 +58,21 @@ void fun_btstores(char *buff, char **bufc, DbRef player, DbRef cause,
                      "#-1 FUNCTION (BTSTORES) EXPECTS 1 OR 2 ARGUMENTS");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (!is_good_obj(context->btech->database, it)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
   }
   if (nfargs > 1) {
     i = -1;
-    if (!find_matching_long_part(context->btech, fargs[1], &i, &p, &b)) {
+    if (!find_matching_long_part(context->btech,
+                                 script_function_argument(fargs, nfargs, 1), &i,
+                                 &p, &b)) {
       i = -1;
-      if (!find_matching_vlong_part(context->btech, fargs[1], &i, &p, &b)) {
+      if (!find_matching_vlong_part(context->btech,
+                                    script_function_argument(fargs, nfargs, 1),
+                                    &i, &p, &b)) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID PART NAME");
         return;
       }
@@ -61,7 +80,7 @@ void fun_btstores(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "%d",
                      econ_find_items(context->btech, it, p, b));
   } else {
-    memset(pile, 0, sizeof(pile));
+    memset(&pile, 0, sizeof(pile));
     for (size_t index = 0;
          index < economy_parts_entry_count(context->world->database, it);
          index++) {
@@ -70,17 +89,18 @@ void fun_btstores(char *buff, char **bufc, DbRef player, DbRef cause,
       if (economy_parts_entry(context->world->database, it, index, &entry) &&
           entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
           entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT)
-        pile[entry.brand_id][entry.part_id] += entry.quantity;
+        *script_part_pile_slot(&pile, entry.brand_id, entry.part_id) +=
+            entry.quantity;
     }
     for (i = 0; i < (int)part_name_count(context->btech); i++) {
       const PartNameEntry *part_name = part_name_at(context->btech, (size_t)i);
 
       p = packed_part_id(part_name->index);
       b = packed_part_brand(part_name->index);
-      if (pile[b][p]) {
+      if (*script_part_pile_slot(&pile, b, p)) {
         if (x)
           safe_str("|", buff, bufc);
-        x = pile[b][p];
+        x = *script_part_pile_slot(&pile, b, p);
         safe_tprintf_str(buff, bufc, "%s:%d",
                          part_name_long(context->btech, p, b).text, x);
       }
@@ -92,12 +112,12 @@ void fun_btstores_short(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs,
                         EvaluationContext *context) {
   /* same as fun_btstores, except we return the shorter part name */
-  /* fargs[0] = id of the bay/mech */
-  /* fargs[1] = (optional) name of the part */
+  /* script_function_argument(fargs, nfargs, 0) = id of the bay/mech */
+  /* script_function_argument(fargs, nfargs, 1) = (optional) name of the part */
   DbRef it;
   int i = -1, x = 0;
   int p, b;
-  int pile[BRANDCOUNT + 1][NUM_ITEMS];
+  ScriptPartPile pile;
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
@@ -108,16 +128,21 @@ void fun_btstores_short(char *buff, char **bufc, DbRef player, DbRef cause,
                      "#-1 FUNCTION (BTSTORES) EXPECTS 1 OR 2 ARGUMENTS");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (!is_good_obj(context->btech->database, it)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
   }
   if (nfargs > 1) {
     i = -1;
-    if (!find_matching_long_part(context->btech, fargs[1], &i, &p, &b)) {
+    if (!find_matching_long_part(context->btech,
+                                 script_function_argument(fargs, nfargs, 1), &i,
+                                 &p, &b)) {
       i = -1;
-      if (!find_matching_vlong_part(context->btech, fargs[1], &i, &p, &b)) {
+      if (!find_matching_vlong_part(context->btech,
+                                    script_function_argument(fargs, nfargs, 1),
+                                    &i, &p, &b)) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID PART NAME");
         return;
       }
@@ -125,7 +150,7 @@ void fun_btstores_short(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "%d",
                      econ_find_items(context->btech, it, p, b));
   } else {
-    memset(pile, 0, sizeof(pile));
+    memset(&pile, 0, sizeof(pile));
     for (size_t index = 0;
          index < economy_parts_entry_count(context->world->database, it);
          index++) {
@@ -134,17 +159,18 @@ void fun_btstores_short(char *buff, char **bufc, DbRef player, DbRef cause,
       if (economy_parts_entry(context->world->database, it, index, &entry) &&
           entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
           entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT)
-        pile[entry.brand_id][entry.part_id] += entry.quantity;
+        *script_part_pile_slot(&pile, entry.brand_id, entry.part_id) +=
+            entry.quantity;
     }
     for (i = 0; i < (int)part_name_count(context->btech); i++) {
       const PartNameEntry *part_name = part_name_at(context->btech, (size_t)i);
 
       p = packed_part_id(part_name->index);
       b = packed_part_brand(part_name->index);
-      if (pile[b][p]) {
+      if (*script_part_pile_slot(&pile, b, p)) {
         if (x)
           safe_str("|", buff, bufc);
-        x = pile[b][p];
+        x = *script_part_pile_slot(&pile, b, p);
         safe_tprintf_str(buff, bufc, "%s:%d", part_name->longy, x);
       }
     }
@@ -154,9 +180,9 @@ void fun_btstores_short(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btmapterr(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs,
                    EvaluationContext *context) {
-  /* fargs[0] = reference of map
-     fargs[1] = x
-     fargs[2] = y
+  /* script_function_argument(fargs, nfargs, 0) = reference of map
+     script_function_argument(fargs, nfargs, 1) = x
+     script_function_argument(fargs, nfargs, 2) = y
    */
   DbRef it;
   BattleMap *map;
@@ -164,7 +190,8 @@ void fun_btmapterr(char *buff, char **bufc, DbRef player, DbRef cause,
   int spec;
   char terr;
 
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return;
@@ -178,11 +205,13 @@ void fun_btmapterr(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
-  if ((!((x) = atoi(fargs[1])) && strcmp((fargs[1]), "0"))) {
+  if ((!((x) = atoi(script_function_argument(fargs, nfargs, 1))) &&
+       strcmp((script_function_argument(fargs, nfargs, 1)), "0"))) {
     safe_tprintf_str(buff, bufc, "#-2");
     return;
   }
-  if ((!((y) = atoi(fargs[2])) && strcmp((fargs[2]), "0"))) {
+  if ((!((y) = atoi(script_function_argument(fargs, nfargs, 2))) &&
+       strcmp((script_function_argument(fargs, nfargs, 2)), "0"))) {
     safe_tprintf_str(buff, bufc, "#-2");
     return;
   }
@@ -200,9 +229,9 @@ void fun_btmapterr(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btmapelev(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs,
                    EvaluationContext *context) {
-  /* fargs[0] = reference of map
-     fargs[1] = x
-     fargs[2] = y
+  /* script_function_argument(fargs, nfargs, 0) = reference of map
+     script_function_argument(fargs, nfargs, 1) = x
+     script_function_argument(fargs, nfargs, 2) = y
    */
   DbRef it;
   int i;
@@ -210,7 +239,8 @@ void fun_btmapelev(char *buff, char **bufc, DbRef player, DbRef cause,
   int x, y;
   int spec;
 
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return;
@@ -224,11 +254,13 @@ void fun_btmapelev(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
-  if ((!((x) = atoi(fargs[1])) && strcmp((fargs[1]), "0"))) {
+  if ((!((x) = atoi(script_function_argument(fargs, nfargs, 1))) &&
+       strcmp((script_function_argument(fargs, nfargs, 1)), "0"))) {
     safe_tprintf_str(buff, bufc, "#-2");
     return;
   }
-  if ((!((y) = atoi(fargs[2])) && strcmp((fargs[2]), "0"))) {
+  if ((!((y) = atoi(script_function_argument(fargs, nfargs, 2))) &&
+       strcmp((script_function_argument(fargs, nfargs, 2)), "0"))) {
     safe_tprintf_str(buff, bufc, "#-2");
     return;
   }
@@ -244,13 +276,13 @@ void fun_btmapelev(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void list_xcodevalues(EvaluationContext *context, DbRef player) {
-  int i;
-
   mecha_notify(context, player,
                "Xcode attributes accessible thru get/setxcodevalue:");
-  for (i = 0; xcode_data[i].name; i++)
+  for (size_t index = 0; index < xcode_descriptor_count(); ++index) {
+    const GMV *descriptor = xcode_descriptor_at(index);
     mecha_notify(context, player,
-                 tprintf("\t%d\t%s", xcode_data[i].gtype, xcode_data[i].name));
+                 tprintf("\t%d\t%s", descriptor->gtype, descriptor->name));
+  }
 }
 
 /* Glue functions for easy scode interface to ton of hcode stuff */
@@ -258,7 +290,7 @@ void list_xcodevalues(EvaluationContext *context, DbRef player) {
 void fun_btdesignex(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs,
                     EvaluationContext *context) {
-  char *id = fargs[0];
+  char *id = script_function_argument(fargs, nfargs, 0);
 
   if (mech_template_resolve_path(
           context->btech, context->btech->configuration->database.mech_db,
@@ -271,8 +303,8 @@ void fun_btdesignex(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btsectstatus(char *buff, char **bufc, DbRef player, DbRef cause,
                       char *fargs[], int nfargs, char *cargs[], int ncargs,
                       EvaluationContext *context) {
-  /* fargs[0] = id of the mech
-   * fargs[1] = location to show
+  /* script_function_argument(fargs, nfargs, 0) = id of the mech
+   * script_function_argument(fargs, nfargs, 1) = location to show
    */
   DbRef it;
   char *sectstr;
@@ -282,7 +314,8 @@ void fun_btsectstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -295,15 +328,17 @@ void fun_btsectstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
-  sectstr = sectstatus_func(mech, fargs[1],
-                            (char[MBUF_SIZE]){0}); /* fargs[1] unguaranteed ! */
+  sectstr = sectstatus_func(
+      mech, script_function_argument(fargs, nfargs, 1),
+      (char[MBUF_SIZE]){
+          0}); /* script_function_argument(fargs, nfargs, 1) unguaranteed ! */
   safe_tprintf_str(buff, bufc, "%s", sectstr);
 }
 
 void fun_btdamages(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs,
                    EvaluationContext *context) {
-  /* fargs[0] = id of the mech
+  /* script_function_argument(fargs, nfargs, 0) = id of the mech
    */
   DbRef it;
   char damage_jobs[LBUF_SIZE * 2];
@@ -313,7 +348,8 @@ void fun_btdamages(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -333,8 +369,8 @@ void fun_btdamages(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btcritstatus(char *buff, char **bufc, DbRef player, DbRef cause,
                       char *fargs[], int nfargs, char *cargs[], int ncargs,
                       EvaluationContext *context) {
-  /* fargs[0] = id of the mech
-   * fargs[1] = location to show
+  /* script_function_argument(fargs, nfargs, 0) = id of the mech
+   * script_function_argument(fargs, nfargs, 1) = location to show
    */
   DbRef it;
   char *critstr;
@@ -344,7 +380,8 @@ void fun_btcritstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -357,16 +394,18 @@ void fun_btcritstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
-  critstr = critstatus_func(mech, fargs[1],
-                            (char[MBUF_SIZE]){0}); /* fargs[1] unguaranteed ! */
+  critstr = critstatus_func(
+      mech, script_function_argument(fargs, nfargs, 1),
+      (char[MBUF_SIZE]){
+          0}); /* script_function_argument(fargs, nfargs, 1) unguaranteed ! */
   safe_tprintf_str(buff, bufc, "%s", critstr ? critstr : "#-1 ERROR");
 }
 
 void fun_btarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs,
                        EvaluationContext *context) {
-  /* fargs[0] = id of the mech
-   * fargs[1] = location to show
+  /* script_function_argument(fargs, nfargs, 0) = id of the mech
+   * script_function_argument(fargs, nfargs, 1) = location to show
    */
   DbRef it;
   const char *infostr;
@@ -376,7 +415,8 @@ void fun_btarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -390,19 +430,22 @@ void fun_btarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   infostr = armorstatus_func(
-      mech, fargs[1], (char[MBUF_SIZE]){0}); /* fargs[1] unguaranteed ! */
+      mech, script_function_argument(fargs, nfargs, 1),
+      (char[MBUF_SIZE]){
+          0}); /* script_function_argument(fargs, nfargs, 1) unguaranteed ! */
   safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
 void fun_btweapons(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs,
                    EvaluationContext *context) {
-  /* fargs[0] = id of mech
+  /* script_function_argument(fargs, nfargs, 0) = id of mech
    */
 
   DbRef it;
   Mech *mech;
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
 
   int i;
 
@@ -427,8 +470,8 @@ void fun_btweapons(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btweaponstatus(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs,
                         EvaluationContext *context) {
-  /* fargs[0] = id of the mech
-   * fargs[1] = location to show
+  /* script_function_argument(fargs, nfargs, 0) = id of the mech
+   * script_function_argument(fargs, nfargs, 1) = location to show
    */
   DbRef it;
   const char *infostr;
@@ -444,7 +487,8 @@ void fun_btweaponstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -457,16 +501,17 @@ void fun_btweaponstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
-  infostr = weaponstatus_func(mech, nfargs == 2 ? fargs[1] : NULL,
-                              (char[MBUF_SIZE]){0});
+  infostr = weaponstatus_func(
+      mech, nfargs == 2 ? script_function_argument(fargs, nfargs, 1) : NULL,
+      (char[MBUF_SIZE]){0});
   safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
 void fun_btcritstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
                           char *fargs[], int nfargs, char *cargs[], int ncargs,
                           EvaluationContext *context) {
-  /* fargs[0] = ref of the mech
-   * fargs[1] = location to show
+  /* script_function_argument(fargs, nfargs, 0) = ref of the mech
+   * script_function_argument(fargs, nfargs, 1) = location to show
    */
   char *critstr;
   Mech *mech;
@@ -475,20 +520,23 @@ void fun_btcritstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
-  critstr = critstatus_func(mech, fargs[1],
-                            (char[MBUF_SIZE]){0}); /* fargs[1] unguaranteed ! */
+  critstr = critstatus_func(
+      mech, script_function_argument(fargs, nfargs, 1),
+      (char[MBUF_SIZE]){
+          0}); /* script_function_argument(fargs, nfargs, 1) unguaranteed ! */
   safe_tprintf_str(buff, bufc, "%s", critstr ? critstr : "#-1 ERROR");
 }
 
 void fun_btarmorstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
                            char *fargs[], int nfargs, char *cargs[], int ncargs,
                            EvaluationContext *context) {
-  /* fargs[0] = ref of the mech
-   * fargs[1] = location to show
+  /* script_function_argument(fargs, nfargs, 0) = ref of the mech
+   * script_function_argument(fargs, nfargs, 1) = location to show
    */
   const char *infostr;
   Mech *mech;
@@ -497,20 +545,23 @@ void fun_btarmorstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
   infostr = armorstatus_func(
-      mech, fargs[1], (char[MBUF_SIZE]){0}); /* fargs[1] unguaranteed ! */
+      mech, script_function_argument(fargs, nfargs, 1),
+      (char[MBUF_SIZE]){
+          0}); /* script_function_argument(fargs, nfargs, 1) unguaranteed ! */
   safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
 void fun_btweaponstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
                             char *fargs[], int nfargs, char *cargs[],
                             int ncargs, EvaluationContext *context) {
-  /* fargs[0] = ref of the mech
-   * fargs[1] = location to show
+  /* script_function_argument(fargs, nfargs, 0) = ref of the mech
+   * script_function_argument(fargs, nfargs, 1) = location to show
    */
   char *infostr;
   Mech *mech;
@@ -525,22 +576,24 @@ void fun_btweaponstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
-  infostr = weaponstatus_func(mech, nfargs == 2 ? fargs[1] : NULL,
-                              (char[MBUF_SIZE]){0});
+  infostr = weaponstatus_func(
+      mech, nfargs == 2 ? script_function_argument(fargs, nfargs, 1) : NULL,
+      (char[MBUF_SIZE]){0});
   safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
 void fun_btsetarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
                           char *fargs[], int nfargs, char *cargs[], int ncargs,
                           EvaluationContext *context) {
-  /* fargs[0] = id of the mech
-   * fargs[1] = location to set
-   * fargs[2] = what to change
-   * fargs[3] = value to change to.
+  /* script_function_argument(fargs, nfargs, 0) = id of the mech
+   * script_function_argument(fargs, nfargs, 1) = location to set
+   * script_function_argument(fargs, nfargs, 2) = what to change
+   * script_function_argument(fargs, nfargs, 3) = value to change to.
    */
   DbRef it;
   const char *infostr;
@@ -550,7 +603,8 @@ void fun_btsetarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -563,8 +617,12 @@ void fun_btsetarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
-  infostr = mech_armor_status_set_value(mech, fargs[1], fargs[2],
-                                        fargs[3]); /* fargs[1] unguaranteed ! */
+  infostr = mech_armor_status_set_value(
+      mech, script_function_argument(fargs, nfargs, 1),
+      script_function_argument(fargs, nfargs, 2),
+      script_function_argument(
+          fargs, nfargs,
+          3)); /* script_function_argument(fargs, nfargs, 1) unguaranteed ! */
   safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
@@ -572,7 +630,7 @@ void fun_btthreshold(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs,
                      EvaluationContext *context) {
   /*
-   * fargs[0] = skill to query
+   * script_function_argument(fargs, nfargs, 0) = skill to query
    */
   int xpth;
 
@@ -580,7 +638,8 @@ void fun_btthreshold(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  xpth = btthreshold_func(context->btech, fargs[0]);
+  xpth = btthreshold_func(context->btech,
+                          script_function_argument(fargs, nfargs, 0));
   safe_tprintf_str(buff, bufc, xpth < 0 ? "#%d ERROR" : "%d", xpth);
 }
 
@@ -588,13 +647,14 @@ void fun_btdamagemech(char *buff, char **bufc, DbRef player, DbRef cause,
                       char *fargs[], int nfargs, char *cargs[], int ncargs,
                       EvaluationContext *context) {
   /*
-   * fargs[0] = dbref of MECH object
-   * fargs[1] = total amount of damage
-   * fargs[2] = clustersize
-   * fargs[3] = direction of 'attack'
-   * fargs[4] = (try to) force crit
-   * fargs[5] = message to send to damaged 'mech
-   * fargs[6] = message to mech_los_broadcast, prepended by mech name
+   * script_function_argument(fargs, nfargs, 0) = dbref of MECH object
+   * script_function_argument(fargs, nfargs, 1) = total amount of damage
+   * script_function_argument(fargs, nfargs, 2) = clustersize
+   * script_function_argument(fargs, nfargs, 3) = direction of 'attack'
+   * script_function_argument(fargs, nfargs, 4) = (try to) force crit
+   * script_function_argument(fargs, nfargs, 5) = message to send to damaged
+   * 'mech script_function_argument(fargs, nfargs, 6) = message to
+   * mech_los_broadcast, prepended by mech name
    */
 
   int totaldam, clustersize, direction, iscrit;
@@ -605,7 +665,8 @@ void fun_btdamagemech(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -618,35 +679,40 @@ void fun_btdamagemech(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 UNABLE TO GET MECHDATA");
     return;
   }
-  if ((!((totaldam) = atoi(fargs[1])) && strcmp((fargs[1]), "0")) ||
+  if ((!((totaldam) = atoi(script_function_argument(fargs, nfargs, 1))) &&
+       strcmp((script_function_argument(fargs, nfargs, 1)), "0")) ||
       totaldam < 1 || totaldam > 1000) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID 2ND ARG");
     return;
   }
-  if ((!((clustersize) = atoi(fargs[2])) && strcmp((fargs[2]), "0")) ||
+  if ((!((clustersize) = atoi(script_function_argument(fargs, nfargs, 2))) &&
+       strcmp((script_function_argument(fargs, nfargs, 2)), "0")) ||
       clustersize < 1) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID 3RD ARG");
     return;
   }
-  if ((!((direction) = atoi(fargs[3])) && strcmp((fargs[3]), "0"))) {
+  if ((!((direction) = atoi(script_function_argument(fargs, nfargs, 3))) &&
+       strcmp((script_function_argument(fargs, nfargs, 3)), "0"))) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID 4TH ARG");
     return;
   }
-  if ((!((iscrit) = atoi(fargs[4])) && strcmp((fargs[4]), "0"))) {
+  if ((!((iscrit) = atoi(script_function_argument(fargs, nfargs, 4))) &&
+       strcmp((script_function_argument(fargs, nfargs, 4)), "0"))) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID 5TH ARG");
     return;
   }
   safe_tprintf_str(buff, bufc, "%d",
-                   mech_damage_apply_clusters(player, mech, totaldam,
-                                              clustersize, direction, iscrit,
-                                              fargs[5], fargs[6]));
+                   mech_damage_apply_clusters(
+                       player, mech, totaldam, clustersize, direction, iscrit,
+                       script_function_argument(fargs, nfargs, 5),
+                       script_function_argument(fargs, nfargs, 6)));
 }
 
 void fun_bttechstatus(char *buff, char **bufc, DbRef player, DbRef cause,
                       char *fargs[], int nfargs, char *cargs[], int ncargs,
                       EvaluationContext *context) {
   /*
-   * fargs[0] = dbref of MECH object
+   * script_function_argument(fargs, nfargs, 0) = dbref of MECH object
    */
 
   DbRef it;
@@ -657,7 +723,8 @@ void fun_bttechstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;

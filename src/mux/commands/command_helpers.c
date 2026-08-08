@@ -9,6 +9,7 @@
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/validation.h"
 #include "mux/world/match.h"
@@ -17,26 +18,37 @@ char *trim_space_sep(char *string, char separator) {
   if (*string == '\0' || separator != ' ')
     return string;
 
-  while (*string == ' ')
-    string++;
+  const size_t length = strlen(string);
+  size_t start = 0;
+  size_t end = length;
 
-  char *end = string + strlen(string);
-  while (end > string && end[-1] == ' ')
+  while (start < length && *(const char *)checked_storage_at_const(
+                               string, length + 1, sizeof(char), start) == ' ')
+    start++;
+  while (end > start && *(const char *)checked_storage_at_const(
+                            string, length + 1, sizeof(char), end - 1) == ' ')
     end--;
-  *end = '\0';
-  return string;
+  *(char *)checked_storage_at(string, length + 1, sizeof(char), end) = '\0';
+  return checked_mutable_string_suffix(string, start);
 }
 
 char *next_token(char *string, char separator) {
-  while (*string && *string != separator)
-    string++;
-  if (!*string)
+  const size_t length = strlen(string);
+  size_t offset = 0;
+
+  while (offset < length &&
+         *(const char *)checked_storage_at_const(
+             string, length + 1, sizeof(char), offset) != separator)
+    offset++;
+  if (offset == length)
     return nullptr;
-  string++;
+  offset++;
   if (separator == ' ')
-    while (*string == separator)
-      string++;
-  return string;
+    while (offset < length &&
+           *(const char *)checked_storage_at_const(
+               string, length + 1, sizeof(char), offset) == separator)
+      offset++;
+  return checked_mutable_string_suffix(string, offset);
 }
 
 DbRef match_thing(MatchContext *match, DbRef player, char *name) {
@@ -75,6 +87,16 @@ static const UptimeUnit uptime_units[] = {
     {1, "second"},
 };
 
+static const UptimeUnit *uptime_unit_at(size_t index) {
+  return checked_storage_at_const(
+      uptime_units, sizeof(uptime_units) / sizeof(uptime_units[0]),
+      sizeof(*uptime_units), index);
+}
+
+static int *uptime_value_slot(int *values, size_t count, size_t index) {
+  return checked_storage_at(values, count, sizeof(*values), index);
+}
+
 char *get_uptime_to_string(int uptime) {
   char *result = alloc_sbuf("get_uptime_to_string");
   if (uptime <= 0) {
@@ -84,21 +106,31 @@ char *get_uptime_to_string(int uptime) {
 
   int remaining = uptime;
   int populated = 0;
-  int values[sizeof(uptime_units) / sizeof(uptime_units[0])] = {0};
-  for (size_t i = 0; i < sizeof(uptime_units) / sizeof(uptime_units[0]); i++) {
-    values[i] = remaining / uptime_units[i].multiplier;
-    remaining %= uptime_units[i].multiplier;
-    if (values[i] > 0)
+  constexpr size_t unit_count = sizeof(uptime_units) / sizeof(uptime_units[0]);
+  int values[unit_count] = {0};
+  for (size_t i = 0; i < unit_count; i++) {
+    const UptimeUnit *unit = uptime_unit_at(i);
+    int *value = uptime_value_slot(values, unit_count, i);
+
+    *value = remaining / unit->multiplier;
+    remaining %= unit->multiplier;
+    if (*value > 0)
       populated++;
   }
 
   result[0] = '\0';
-  for (size_t i = 0; i < sizeof(uptime_units) / sizeof(uptime_units[0]); i++) {
-    if (values[i] == 0)
+  for (size_t i = 0; i < unit_count; i++) {
+    const UptimeUnit *unit = uptime_unit_at(i);
+    const int value = *uptime_value_slot(values, unit_count, i);
+
+    if (value == 0)
       continue;
     populated--;
-    snprintf(result + strlen(result), SBUF_SIZE - strlen(result), "%d %s%s",
-             values[i], uptime_units[i].name, values[i] == 1 ? "" : "s");
+    size_t used = strlen(result);
+
+    snprintf(checked_storage_region(result, SBUF_SIZE, used, SBUF_SIZE - used),
+             SBUF_SIZE - used, "%d %s%s", value, unit->name,
+             value == 1 ? "" : "s");
     if (populated > 1)
       strlcat(result, ", ", SBUF_SIZE);
     else if (populated == 1)
@@ -108,9 +140,9 @@ char *get_uptime_to_string(int uptime) {
 }
 
 int xlate(char *argument) {
-  if (argument[0] == '#') {
-    argument++;
-    if (argument[0] == '-')
+  if (*argument == '#') {
+    argument = checked_mutable_string_suffix(argument, 1);
+    if (*argument == '-')
       return 0;
     return is_integer(argument) ? atoi(argument) : 0;
   }

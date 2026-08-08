@@ -12,6 +12,7 @@
 #include "map_los.h"
 #include "map_los_api.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "btech_channel.h"
@@ -20,6 +21,7 @@
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_identity_api.h"
 #include "mech_lostracer_api.h"
@@ -29,8 +31,53 @@
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+
+static unsigned short *battle_map_los_cell(BattleMap *map, int observer,
+                                           int target) {
+  if (observer < 0 || target < 0)
+    abort();
+  unsigned short **row_slot =
+      checked_storage_at(map->LOSinfo, (size_t)map->dynamic_size,
+                         sizeof(*map->LOSinfo), (size_t)observer);
+  return checked_storage_at(*row_slot, (size_t)map->dynamic_size,
+                            sizeof(**row_slot), (size_t)target);
+}
+
+static const unsigned short *
+battle_map_los_cell_const(const BattleMap *map, int observer, int target) {
+  if (observer < 0 || target < 0)
+    abort();
+  unsigned short *const *row_slot =
+      checked_storage_at_const(map->LOSinfo, (size_t)map->dynamic_size,
+                               sizeof(*map->LOSinfo), (size_t)observer);
+  return checked_storage_at_const(*row_slot, (size_t)map->dynamic_size,
+                                  sizeof(**row_slot), (size_t)target);
+}
+
+static unsigned char *los_map_cell(HexLosMap *los_map, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(los_map->map, MAPLOS_MAXX * MAPLOS_MAXY,
+                            sizeof(*los_map->map), (size_t)index);
+}
+
+static const unsigned char *los_map_cell_const(const HexLosMap *los_map,
+                                               int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(los_map->map, MAPLOS_MAXX * MAPLOS_MAXY,
+                                  sizeof(*los_map->map), (size_t)index);
+}
+
+static const LosTracePoint *los_trace_point(const LosTrace *trace, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(trace->points, LOS_TRACE_CAPACITY,
+                                  sizeof(*trace->points), (size_t)index);
+}
 
 static int los_map_index_x(const HexLosMap *los_map, int index) {
   return index % los_map->xsize + los_map->startx;
@@ -42,43 +89,45 @@ static int los_map_index_y(const HexLosMap *los_map, int index) {
 
 bool battle_map_unit_is_seen(const BattleMap *map, const Mech *observer,
                              const Mech *target) {
-  return map->LOSinfo[mech_map_slot(observer)][mech_map_slot(target)] &
+  return *battle_map_los_cell_const(map, mech_map_slot(observer),
+                                    mech_map_slot(target)) &
          MECHLOSFLAG_SEEN;
 }
 
 bool battle_map_unit_los_is_blocked(const BattleMap *map, const Mech *observer,
                                     const Mech *target) {
-  return map->LOSinfo[mech_map_slot(observer)][mech_map_slot(target)] &
+  return *battle_map_los_cell_const(map, mech_map_slot(observer),
+                                    mech_map_slot(target)) &
          MECHLOSFLAG_BLOCK;
 }
 
 int battle_map_unit_los_wood_count(const BattleMap *map, const Mech *observer,
                                    const Mech *target) {
-  const int flags =
-      map->LOSinfo[mech_map_slot(observer)][mech_map_slot(target)];
+  const int flags = *battle_map_los_cell_const(map, mech_map_slot(observer),
+                                               mech_map_slot(target));
   return (flags / MECHLOSFLAG_WOOD) % MECHLOSMAX_WOOD;
 }
 
 int battle_map_unit_los_water_count(const BattleMap *map, const Mech *observer,
                                     const Mech *target) {
-  const int flags =
-      map->LOSinfo[mech_map_slot(observer)][mech_map_slot(target)];
+  const int flags = *battle_map_los_cell_const(map, mech_map_slot(observer),
+                                               mech_map_slot(target));
   return (flags / MECHLOSFLAG_WATER) % MECHLOSMAX_WATER;
 }
 
 unsigned short battle_map_los_flags(const BattleMap *map, int observer_index,
                                     int target_index) {
-  return map->LOSinfo[observer_index][target_index];
+  return *battle_map_los_cell_const(map, observer_index, target_index);
 }
 
 void battle_map_los_flags_set(BattleMap *map, int observer_index,
                               int target_index, unsigned short flags) {
-  map->LOSinfo[observer_index][target_index] = flags;
+  *battle_map_los_cell(map, observer_index, target_index) = flags;
 }
 
 void battle_map_los_observer_clear(BattleMap *map, int observer_index) {
   for (int target_index = 0; target_index < map->first_free; target_index++)
-    map->LOSinfo[observer_index][target_index] = 0;
+    *battle_map_los_cell(map, observer_index, target_index) = 0;
 }
 
 int los_map_hex_index(const HexLosMap *map_info, int x, int y) {
@@ -90,6 +139,10 @@ int los_map_hex_index(const HexLosMap *map_info, int x, int y) {
     return 0;
   }
   return ((y - map_info->starty) * map_info->xsize) + (x - map_info->startx);
+}
+
+unsigned char los_map_flag(const HexLosMap *los_map, int x, int y) {
+  return *los_map_cell_const(los_map, los_map_hex_index(los_map, x, y));
 }
 
 static float mech_los_height(Mech *mech) {
@@ -119,7 +172,8 @@ static void set_hexlosinfo(HexLosMap *los_map, int x, int y, int flag) {
       y < los_map->starty || y >= los_map->starty + los_map->ysize) {
     return;
   }
-  los_map->map[los_map_hex_index(los_map, x, y)] |= flag | MAPLOSHEX_SEEN;
+  *los_map_cell(los_map, los_map_hex_index(los_map, x, y)) |=
+      flag | MAPLOSHEX_SEEN;
 }
 
 static int hexlit(HexLosMap *los_map, int x, int y) {
@@ -128,7 +182,8 @@ static int hexlit(HexLosMap *los_map, int x, int y) {
     return 0;
   }
 
-  return los_map->map[los_map_hex_index(los_map, x, y)] & MAPLOSHEX_LIT;
+  return *los_map_cell(los_map, los_map_hex_index(los_map, x, y)) &
+         MAPLOSHEX_LIT;
 }
 
 static void set_sliteinfo(HexLosMap *los_map, int x, int y, int flag) {
@@ -137,7 +192,7 @@ static void set_sliteinfo(HexLosMap *los_map, int x, int y, int flag) {
     return;
   }
   los_map->flags |= MAPLOS_FLAG_SLITE;
-  los_map->map[los_map_hex_index(los_map, x, y)] |= flag;
+  *los_map_cell(los_map, los_map_hex_index(los_map, x, y)) |= flag;
 }
 
 /* To efficiently set all hexes NOLOS if neither sensor supports seeing
@@ -158,7 +213,8 @@ static int mech_los_sees_through_woods(Mech *mech, BattleMap *map, int nwoods,
                                        int sensor) {
   int sn = mech_sensor_index(mech, sensor);
   int fake_losflag = nwoods * MECHLOSFLAG_WOOD;
-  int res = sensors[sn].can_see(mech, nullptr, map, 1, fake_losflag);
+  int res =
+      mech_sensor_definition(sn)->can_see(mech, nullptr, map, 1, fake_losflag);
 
   return res;
 }
@@ -167,7 +223,8 @@ static int mech_los_sees_over_mountain(Mech *mech, BattleMap *map, int sensor) {
   int sn = mech_sensor_index(mech, sensor);
   int fake_losflag = MECHLOSFLAG_MNTN;
 
-  return sensors[sn].can_see(mech, nullptr, map, 1, fake_losflag);
+  return mech_sensor_definition(sn)->can_see(mech, nullptr, map, 1,
+                                             fake_losflag);
 }
 
 static int mech_los_sees_through_water(Mech *mech, BattleMap *map, int nwater,
@@ -175,14 +232,16 @@ static int mech_los_sees_through_water(Mech *mech, BattleMap *map, int nwater,
   int sn = mech_sensor_index(mech, sensor);
   int fake_losflag = nwater * MECHLOSFLAG_WATER;
 
-  return sensors[sn].can_see(mech, nullptr, map, 1, fake_losflag);
+  return mech_sensor_definition(sn)->can_see(mech, nullptr, map, 1,
+                                             fake_losflag);
 }
 
 static int mech_los_sees_range(HexLosMap *los_map, Mech *mech, BattleMap *map,
                                int x, int y, int z, int sensor) {
   int sn = mech_sensor_index(mech, sensor);
   float fx, fy, range;
-  float maxvis = (float)sensors[sn].maximum_visibility;
+  const SensorDefinition *sensor_definition = mech_sensor_definition(sn);
+  float maxvis = (float)sensor_definition->maximum_visibility;
 
   MapCoordToRealCoord(x, y, &fx, &fy);
   range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
@@ -197,7 +256,7 @@ static int mech_los_sees_range(HexLosMap *los_map, Mech *mech, BattleMap *map,
   if (sn == 1 && map->maplight == 0) /* L sensors in darkness */
     maxvis *= 2;
 
-  if (!sensors[sn].full_vision) {
+  if (!sensor_definition->full_vision) {
     int arc = InWeaponArc(mech, fx, fy);
 
     if (!(arc & (FORWARDARC | TURRETARC))) {
@@ -288,8 +347,9 @@ static void trace_slitelos(HexLosMap *los_map, BattleMap *map, Mech *mech,
       los_map_index_x(los_map, index), los_map_index_y(los_map, index), trace);
 
   for (; trace_range < trace_coordnum; trace_range++) {
-    trace_x = trace->points[trace_range].x;
-    trace_y = trace->points[trace_range].y;
+    const LosTracePoint *point = los_trace_point(trace, trace_range);
+    trace_x = point->x;
+    trace_y = point->y;
 
     trace_height = MAX(0, map_elevation_get(map, trace_x, trace_y));
 
@@ -328,10 +388,11 @@ static void litemark_map(HexLosMap *los_map, BattleMap *map, LosTrace *trace) {
     visit_neighbor_hexes(map, fire->x, fire->y, litemark_callback, los_map);
   }
 
-  for (i = 0; i < map->first_free; i++) {
-    if (map->mechsOnMap[i] < 0)
+  for (i = 0; i < battle_map_unit_count(map); i++) {
+    const DbRef unit_dbref = battle_map_unit_dbref(map, i);
+    if (unit_dbref < 0)
       continue;
-    mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
+    mech = btech_context_get_mech(map->xcode.context, unit_dbref);
     if (!mech)
       continue;
 
@@ -357,16 +418,33 @@ static float default_minimum_angle(Mech *mech, int sensor) {
   return mech_sensor_sees_terrain(mech, sensor) ? -20.0F : 1000.0F;
 }
 
+typedef struct SensorTraceState {
+  int trace_water;
+  float minimum_angle;
+  float block_angle;
+  int wood_count;
+  int water_count;
+} SensorTraceState;
+
+static SensorTraceState *sensor_trace_state(SensorTraceState *states,
+                                            int sensor) {
+  if (sensor < 0)
+    abort();
+  return checked_storage_at(states, MAX_SENSORS, sizeof(*states),
+                            (size_t)sensor);
+}
+
 static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
                             int index, int tracew, float start_height,
                             LosTrace *trace) {
-  int trace_water[MAX_SENSORS] = {tracew, tracew};
-  float minangle[MAX_SENSORS] = {default_minimum_angle(mech, 0),
-                                 default_minimum_angle(mech, 1)};
-  float blockangle[MAX_SENSORS] = {default_minimum_angle(mech, 0),
-                                   default_minimum_angle(mech, 1)};
-  int woodcount[MAX_SENSORS] = {0, 0};
-  int watercount[MAX_SENSORS] = {0, 0};
+  SensorTraceState states[MAX_SENSORS] = {
+      {.trace_water = tracew,
+       .minimum_angle = default_minimum_angle(mech, 0),
+       .block_angle = default_minimum_angle(mech, 0)},
+      {.trace_water = tracew,
+       .minimum_angle = default_minimum_angle(mech, 1),
+       .block_angle = default_minimum_angle(mech, 1)},
+  };
   int trace_range = 0;
 
   int trace_coordnum = trace_los(
@@ -375,8 +453,9 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
 
   for (; trace_range < trace_coordnum; trace_range++) {
     int seestate;
-    int trace_x = trace->points[trace_range].x;
-    int trace_y = trace->points[trace_range].y;
+    const LosTracePoint *point = los_trace_point(trace, trace_range);
+    int trace_x = point->x;
+    int trace_y = point->y;
     int trace_height = map_elevation_get(map, trace_x, trace_y);
 
     float trace_a =
@@ -387,6 +466,7 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
     int nsensor, newwoods;
 
     for (nsensor = 0; nsensor < MAX_SENSORS; nsensor++) {
+      SensorTraceState *state = sensor_trace_state(states, nsensor);
 
       /* If the current hex and all its terrain ('blockangle') lies
        * below our minimum angle of sight, we won't see it at all;
@@ -396,7 +476,7 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
        * of sight' is to set trace_ba to an impossible angle.
        */
 
-      if (trace_ba < minangle[nsensor]) {
+      if (trace_ba < state->minimum_angle) {
         set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_NOLOS);
         goto hexinfluence;
       }
@@ -407,7 +487,7 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
 
       if (seestate == 0) {
         set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_NOLOS);
-        minangle[nsensor] = blockangle[nsensor] = 1000;
+        state->minimum_angle = state->block_angle = 1000;
         goto hexinfluence;
       }
 
@@ -420,45 +500,45 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
       case LIGHT_FOREST:
         newwoods++;
         /* Because we aren't in water, we stop tracing below water */
-        trace_water[nsensor] = 0;
+        state->trace_water = 0;
         break;
       }
 
       if (!newwoods) {
 
-        if (trace_a < minangle[nsensor] ||
+        if (trace_a < state->minimum_angle ||
             (seestate < 0 && !hexlit(los_map, trace_x, trace_y))) {
           set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_NOLOS);
         } else {
           set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_SEE);
-          blockangle[nsensor] = minangle[nsensor] = trace_a;
-          woodcount[nsensor] = 0;
+          state->block_angle = state->minimum_angle = trace_a;
+          state->wood_count = 0;
         }
         goto hexinfluence;
       }
 
-      if (blockangle[nsensor] < trace_a) {
-        minangle[nsensor] = trace_a;
-        blockangle[nsensor] = trace_ba;
-        woodcount[nsensor] = newwoods;
+      if (state->block_angle < trace_a) {
+        state->minimum_angle = trace_a;
+        state->block_angle = trace_ba;
+        state->wood_count = newwoods;
       } else if (!mech_los_sees_through_woods(
-                     mech, map, woodcount[nsensor] + newwoods, nsensor)) {
-        if (trace_ba >= blockangle[nsensor]) {
-          minangle[nsensor] = blockangle[nsensor];
-          blockangle[nsensor] = trace_ba;
-          woodcount[nsensor] = newwoods;
+                     mech, map, state->wood_count + newwoods, nsensor)) {
+        if (trace_ba >= state->block_angle) {
+          state->minimum_angle = state->block_angle;
+          state->block_angle = trace_ba;
+          state->wood_count = newwoods;
         } else
-          minangle[nsensor] = trace_ba;
+          state->minimum_angle = trace_ba;
       } else {
-        minangle[nsensor] = trace_a;
-        woodcount[nsensor] += newwoods;
+        state->minimum_angle = trace_a;
+        state->wood_count += newwoods;
       }
 
       if (trace_terrain == WATER) {
-        if (trace_water[nsensor])
-          watercount[nsensor]++;
-        if (!trace_water[nsensor] ||
-            !mech_los_sees_through_water(mech, map, watercount[nsensor],
+        if (state->trace_water)
+          state->water_count++;
+        if (!state->trace_water ||
+            !mech_los_sees_through_water(mech, map, state->water_count,
                                          nsensor)) {
           if (seestate < 0 && !hexlit(los_map, trace_x, trace_y))
             set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_NOLOS);
@@ -474,14 +554,14 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
       if (trace_terrain == WATER &&
           !mech_los_sees_through_water(mech, map, 1, nsensor)) {
         set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_NOLOS);
-        minangle[nsensor] = blockangle[nsensor] = 1000;
+        state->minimum_angle = state->block_angle = 1000;
         continue;
       }
-      trace_water[nsensor] = 0;
+      state->trace_water = 0;
       if (trace_terrain == MOUNTAINS &&
           !mech_los_sees_over_mountain(mech, map, nsensor)) {
         set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_NOLOS);
-        minangle[nsensor] = blockangle[nsensor] = 1000;
+        state->minimum_angle = state->block_angle = 1000;
         continue;
       }
     }
@@ -555,31 +635,31 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
    */
 
   for (index = 0; index < xsz; index++) {
-    if (los_map->map[index] & MAPLOSHEX_SEEN)
+    if (*los_map_cell(los_map, index) & MAPLOSHEX_SEEN)
       continue;
     trace_maphexlos(los_map, map, mech, index, underterrain || bothworlds,
                     start_height, &trace);
   }
   for (index = (ysz - 1) * xsz; index < ysz * xsz; index++) {
-    if (los_map->map[index] & MAPLOSHEX_SEEN)
+    if (*los_map_cell(los_map, index) & MAPLOSHEX_SEEN)
       continue;
     trace_maphexlos(los_map, map, mech, index, underterrain || bothworlds,
                     start_height, &trace);
   }
   for (index = xsz; index < ysz * xsz; index += xsz) {
-    if (los_map->map[index] & MAPLOSHEX_SEEN)
+    if (*los_map_cell(los_map, index) & MAPLOSHEX_SEEN)
       continue;
     trace_maphexlos(los_map, map, mech, index, underterrain || bothworlds,
                     start_height, &trace);
   }
   for (index = 2 * xsz - 1; index < ysz * xsz; index += xsz) {
-    if (los_map->map[index] & MAPLOSHEX_SEEN)
+    if (*los_map_cell(los_map, index) & MAPLOSHEX_SEEN)
       continue;
     trace_maphexlos(los_map, map, mech, index, underterrain || bothworlds,
                     start_height, &trace);
   }
   for (index = 0; index < xsz * ysz; index++) {
-    if (los_map->map[index] & MAPLOSHEX_SEEN)
+    if (*los_map_cell(los_map, index) & MAPLOSHEX_SEEN)
       continue;
     trace_maphexlos(los_map, map, mech, index, underterrain || bothworlds,
                     start_height, &trace);

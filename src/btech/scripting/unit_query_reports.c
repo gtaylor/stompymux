@@ -17,7 +17,8 @@ void fun_bttechlist(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  it = match_thing(&context->command->match, player, fargs[0]);
+  it = match_thing(&context->command->match, player,
+                   script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
@@ -44,7 +45,8 @@ void fun_bttechlist_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
@@ -67,7 +69,8 @@ void fun_btpayload_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
@@ -86,11 +89,13 @@ void fun_btshowstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
-  outplayer = match_thing(&context->command->match, player, fargs[1]);
+  outplayer = match_thing(&context->command->match, player,
+                          script_function_argument(fargs, nfargs, 1));
   if (outplayer == NOTHING ||
       !is_examinable(context->world->database, player, outplayer) ||
       !is_player(context->btech->database, outplayer)) {
@@ -112,11 +117,13 @@ void fun_btshowwspecs_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
-  outplayer = match_thing(&context->command->match, player, fargs[1]);
+  outplayer = match_thing(&context->command->match, player,
+                          script_function_argument(fargs, nfargs, 1));
   if (outplayer == NOTHING ||
       !is_examinable(context->world->database, player, outplayer) ||
       !is_player(context->btech->database, outplayer)) {
@@ -139,11 +146,13 @@ void fun_btshowcritstatus_ref(char *buff, char **bufc, DbRef player,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((mech = load_refmech(context->btech, fargs[0])) == NULL) {
+  if ((mech = load_refmech(context->btech, script_function_argument(
+                                               fargs, nfargs, 0))) == NULL) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return;
   }
-  outplayer = match_thing(&context->command->match, player, fargs[1]);
+  outplayer = match_thing(&context->command->match, player,
+                          script_function_argument(fargs, nfargs, 1));
   if (outplayer == NOTHING ||
       !is_examinable(context->world->database, player, outplayer) ||
       !is_player(context->btech->database, outplayer)) {
@@ -151,7 +160,8 @@ void fun_btshowcritstatus_ref(char *buff, char **bufc, DbRef player,
     return;
   }
 
-  mech_critstatus(outplayer, (void *)mech, fargs[2]);
+  mech_critstatus(outplayer, (void *)mech,
+                  script_function_argument(fargs, nfargs, 2));
   safe_tprintf_str(buff, bufc, "1");
 }
 
@@ -165,7 +175,8 @@ void fun_btengrate(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  mechdb = match_thing(&context->command->match, player, fargs[0]);
+  mechdb = match_thing(&context->command->match, player,
+                       script_function_argument(fargs, nfargs, 0));
   if (mechdb == NOTHING ||
       !is_examinable(context->world->database, player, mechdb)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
@@ -193,7 +204,8 @@ void fun_btengrate_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if (!(mech = load_refmech(context->btech, fargs[0]))) {
+  if (!(mech = load_refmech(context->btech,
+                            script_function_argument(fargs, nfargs, 0)))) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID REF");
     return;
   }
@@ -212,7 +224,8 @@ void fun_btfasabasecost_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if (!(mech = load_refmech(context->btech, fargs[0]))) {
+  if (!(mech = load_refmech(context->btech,
+                            script_function_argument(fargs, nfargs, 0)))) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID REF");
     return;
   }
@@ -233,7 +246,8 @@ void fun_btunitpartslist_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if (!(mech = load_refmech(context->btech, fargs[0]))) {
+  if (!(mech = load_refmech(context->btech,
+                            script_function_argument(fargs, nfargs, 0)))) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID REF");
     return;
   }
@@ -254,7 +268,8 @@ void fun_btunitpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  mechdb = match_thing(&context->command->match, player, fargs[0]);
+  mechdb = match_thing(&context->command->match, player,
+                       script_function_argument(fargs, nfargs, 0));
   if (mechdb == NOTHING ||
       !is_examinable(context->world->database, player, mechdb)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");

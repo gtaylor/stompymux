@@ -100,57 +100,11 @@ Buildings can't accidently be set on fire.
 */
 
 static bool weapon_can_ignite(int weapindx) {
-  if (strcmp(&MechWeapons[weapindx].name[3], "ERSmallLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "SmallLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "SmallPulseLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "X-SmallPulseLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "ERSmallPulseLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "HeavySmallLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "GaussRifle") &&
-      strcmp(&MechWeapons[weapindx].name[3], "LightGaussRifle") &&
-      strcmp(&MechWeapons[weapindx].name[3], "HeavyGaussRifle") &&
-      strcmp(&MechWeapons[weapindx].name[3], "MagshotGaussRifle") &&
-      strcmp(&MechWeapons[weapindx].name[3], "MachineGun") &&
-      strcmp(&MechWeapons[weapindx].name[3], "LightMachineGun") &&
-      strcmp(&MechWeapons[weapindx].name[3], "HeavyMachineGun") &&
-      strcmp(&MechWeapons[weapindx].name[3], "StreakSRM-2") &&
-      strcmp(&MechWeapons[weapindx].name[3], "SRM-2") &&
-      strcmp(&MechWeapons[weapindx].name[3], "NarcBeacon") &&
-      strcmp(&MechWeapons[weapindx].name[3], "iNarcBeacon"))
-    return 1;
-
-  return 0;
+  return weapon_catalogue_can_ignite_terrain(weapindx);
 }
 
 static bool weapon_can_clear(int weapindx) {
-  if (strcmp(&MechWeapons[weapindx].name[3], "ERSmallLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "SmallLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "SmallPulseLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "X-SmallPulseLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "ERSmallPulseLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "HeavySmallLaser") &&
-      strcmp(&MechWeapons[weapindx].name[3], "MachineGun") &&
-      strcmp(&MechWeapons[weapindx].name[3], "LightMachineGun") &&
-      strcmp(&MechWeapons[weapindx].name[3], "HeavyMachineGun") &&
-      strcmp(&MechWeapons[weapindx].name[3], "AC/2") &&
-      strcmp(&MechWeapons[weapindx].name[3], "UltraAC/2") &&
-      strcmp(&MechWeapons[weapindx].name[3], "CaselessAC/2") &&
-      strcmp(&MechWeapons[weapindx].name[3], "HyperAC/2") &&
-      strcmp(&MechWeapons[weapindx].name[3], "LightAC/2") &&
-      strcmp(&MechWeapons[weapindx].name[3], "RotaryAC/2") &&
-      strcmp(&MechWeapons[weapindx].name[3], "LB2-XAC") &&
-      strcmp(&MechWeapons[weapindx].name[3], "AC/5") &&
-      strcmp(&MechWeapons[weapindx].name[3], "UltraAC/5") &&
-      strcmp(&MechWeapons[weapindx].name[3], "CaselessAC/5") &&
-      strcmp(&MechWeapons[weapindx].name[3], "HyperAC/5") &&
-      strcmp(&MechWeapons[weapindx].name[3], "LightAC/5") &&
-      strcmp(&MechWeapons[weapindx].name[3], "RotaryAC/5") &&
-      strcmp(&MechWeapons[weapindx].name[3], "LB5-XAC") &&
-      strcmp(&MechWeapons[weapindx].name[3], "StreakSRM-2") &&
-      strcmp(&MechWeapons[weapindx].name[3], "SRM-2"))
-    return 1;
-
-  return 0;
+  return weapon_catalogue_can_clear_terrain(weapindx);
 }
 
 void mech_terrain_possibly_ignite(Mech *mech, BattleMap *map, int weapindx,
@@ -159,14 +113,13 @@ void mech_terrain_possibly_ignite(Mech *mech, BattleMap *map, int weapindx,
   int roll = btech_random_roll(mech_context(mech));
   int bth = 13;
 
-  if (MechWeapons[weapindx].special & PCOMBAT)
+  if (weapon_catalogue_is_personal_combat(weapindx))
     return;
 
   if ((terrain != LIGHT_FOREST) && (terrain != HEAVY_FOREST))
     return;
 
-  if (!strcmp(&MechWeapons[weapindx].name[3], "Flamer") ||
-      !strcmp(&MechWeapons[weapindx].name[3], "HeavyFlamer"))
+  if (weapon_catalogue_is_terrain_flamer(weapindx))
     bth = 4;
   else if (weapon_catalogue_is_missile(weapindx) && (ammoMode & INFERNO_MODE))
     bth = 5;
@@ -191,7 +144,7 @@ void mech_terrain_possibly_clear(Mech *mech, BattleMap *map, int weapindx,
   int igniteRoll = btech_random_roll(mech_context(mech));
   int clearRoll = btech_random_roll(mech_context(mech));
 
-  if (MechWeapons[weapindx].special & PCOMBAT)
+  if (weapon_catalogue_is_personal_combat(weapindx))
     return;
 
   if (!intentional)

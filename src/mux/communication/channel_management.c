@@ -18,6 +18,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/fifo.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/utf8.h"
@@ -181,7 +182,7 @@ void channel_destroy(struct channel *channel) {
   if (channel == nullptr)
     return;
   for (int index = 0; index < channel->num_users; index++)
-    free(channel->users[index]);
+    free(channel_user_at(channel, (size_t)index));
   free(channel->users);
   while (channel->last_messages != nullptr &&
          fifo_length(&channel->last_messages) > 0) {
@@ -267,16 +268,18 @@ void do_comlist(CommandInvocation *invocation) {
              "Alias     Channel             Status Description");
 
   for (i = 0; i < c->numchannels; i++) {
-    ch = select_channel(evaluation->runtime->channels, c->channels[i]);
+    char *channel_name = commac_channel_at(c, (size_t)i);
+
+    ch = select_channel(evaluation->runtime->channels, channel_name);
     if ((user = select_user(ch, player))) {
       comlist_description(evaluation->world->database, ch, description,
                           (size_t)description_width + 1);
       notify_printf(evaluation, player, "%-9.9s %-19.19s %-6.6s %.*s",
-                    c->alias + i * 6, c->channels[i], (user->on ? "on" : "off"),
-                    description_width, description);
+                    commac_alias_at(c, (size_t)i), channel_name,
+                    (user->on ? "on" : "off"), description_width, description);
     } else {
       notify_printf(evaluation, player, "Bad Comsys Alias: %s for Channel: %s",
-                    c->alias + i * 6, c->channels[i]);
+                    commac_alias_at(c, (size_t)i), channel_name);
     }
   }
   raw_notify(evaluation, player, "-- End of comlist --");
@@ -286,8 +289,6 @@ static void comlist_description(GameDatabase *database, struct channel *ch,
                                 char *buffer, size_t buffer_size) {
   long flags;
   char *description;
-  char *source;
-  char *destination;
 
   if (buffer_size == 0)
     return;
@@ -300,17 +301,19 @@ static void comlist_description(GameDatabase *database, struct channel *ch,
   if (!*description) {
     strlcpy(buffer, "No description.", buffer_size);
   } else {
-    source = description;
-    destination = buffer;
-    while (*source && (size_t)(destination - buffer) < buffer_size - 1) {
-      if (*source == '\r' || *source == '\n')
-        *destination = ' ';
-      else
-        *destination = *source;
-      destination++;
-      source++;
+    const size_t description_length = strlen(description);
+    size_t output = 0;
+
+    while (output < description_length && output < buffer_size - 1) {
+      const char character = *(const char *)checked_storage_at_const(
+          description, description_length + 1, sizeof(char), output);
+
+      *(char *)checked_storage_at(buffer, buffer_size, sizeof(char), output) =
+          character == '\r' || character == '\n' ? ' ' : character;
+      output++;
     }
-    *destination = '\0';
+    *(char *)checked_storage_at(buffer, buffer_size, sizeof(char), output) =
+        '\0';
   }
   free_lbuf(description);
 }

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "mux/server/configuration_toml.h"
+#include "mux/support/checked_storage.h"
 
 typedef struct {
   char pname[64];
@@ -12,17 +13,29 @@ typedef struct {
 
 typedef struct {
   RecordedCall calls[64];
-  int count;
+  size_t count;
 } CallLog;
+
+static RecordedCall *call_log_slot(CallLog *log, size_t index) {
+  return checked_storage_at(log->calls,
+                            sizeof(log->calls) / sizeof(log->calls[0]),
+                            sizeof(*log->calls), index);
+}
+
+static const RecordedCall *call_log_item(const CallLog *log, size_t index) {
+  return checked_storage_at_const(log->calls,
+                                  sizeof(log->calls) / sizeof(log->calls[0]),
+                                  sizeof(*log->calls), index);
+}
 
 static int recording_set_fn(const char *pname, const char *args, void *ctx) {
   CallLog *log = ctx;
 
   if (log->count < 64) {
-    snprintf(log->calls[log->count].pname, sizeof(log->calls[0].pname), "%s",
-             pname);
-    snprintf(log->calls[log->count].args, sizeof(log->calls[0].args), "%s",
-             args);
+    RecordedCall *call = call_log_slot(log, log->count);
+
+    snprintf(call->pname, sizeof(call->pname), "%s", pname);
+    snprintf(call->args, sizeof(call->args), "%s", args);
   }
   log->count++;
   return 0;
@@ -30,13 +43,14 @@ static int recording_set_fn(const char *pname, const char *args, void *ctx) {
 
 static int call_log_find(const CallLog *log, const char *pname,
                          const char *args) {
-  int i;
-  int limit;
+  size_t i;
+  size_t limit;
 
   limit = log->count < 64 ? log->count : 64;
   for (i = 0; i < limit; i++) {
-    if (!strcmp(log->calls[i].pname, pname) &&
-        !strcmp(log->calls[i].args, args))
+    const RecordedCall *call = call_log_item(log, i);
+
+    if (!strcmp(call->pname, pname) && !strcmp(call->args, args))
       return 1;
   }
   return 0;
@@ -296,7 +310,7 @@ static int test_include_override_and_merge(const char *fixture_dir) {
   char errbuf[256];
   CallLog log = {0};
   int ok;
-  int i;
+  size_t i;
   const char *port_args = nullptr;
   int saw_dump_interval = 0;
   const char *color_args = nullptr;
@@ -307,12 +321,14 @@ static int test_include_override_and_merge(const char *fixture_dir) {
   if (!ok)
     return 0;
   for (i = 0; i < log.count && i < 64; i++) {
-    if (!strcmp(log.calls[i].pname, "port"))
-      port_args = log.calls[i].args;
-    if (!strcmp(log.calls[i].pname, "dump_interval"))
+    const RecordedCall *call = call_log_item(&log, i);
+
+    if (!strcmp(call->pname, "port"))
+      port_args = call->args;
+    if (!strcmp(call->pname, "dump_interval"))
       saw_dump_interval = 1;
-    if (!strcmp(log.calls[i].pname, "named_color"))
-      color_args = log.calls[i].args;
+    if (!strcmp(call->pname, "named_color"))
+      color_args = call->args;
   }
   /* main.toml's own port (1111) must win over extra.toml's (2222); a key
    * only present in extra.toml must still come through. */
@@ -358,10 +374,14 @@ static int test_include_cycle_fails(const char *fixture_dir) {
 }
 
 int main(int argc, char *argv[]) {
+  const char *fixture_dir;
+
   if (argc != 2) {
     fprintf(stderr, "usage: %s <fixture-directory>\n", argv[0]);
     return 1;
   }
+  fixture_dir = *(char *const *)checked_storage_at_const(argv, (size_t)argc,
+                                                         sizeof(*argv), 1);
 
   if (!test_scalar_dispatch())
     return 2;
@@ -383,13 +403,13 @@ int main(int argc, char *argv[]) {
     return 9;
   if (!test_unmapped_key_skipped())
     return 10;
-  if (!test_include_override_and_merge(argv[1]))
+  if (!test_include_override_and_merge(fixture_dir))
     return 11;
-  if (!test_malformed_toml_fails(argv[1]))
+  if (!test_malformed_toml_fails(fixture_dir))
     return 12;
-  if (!test_missing_include_fails(argv[1]))
+  if (!test_missing_include_fails(fixture_dir))
     return 13;
-  if (!test_include_cycle_fails(argv[1]))
+  if (!test_include_cycle_fails(fixture_dir))
     return 14;
   return 0;
 }

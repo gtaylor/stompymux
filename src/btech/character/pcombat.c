@@ -16,8 +16,10 @@
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
 #include "mech_utils_api.h"
+#include "mux/support/checked_storage.h"
 #include "pcombat_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 
 typedef struct PersonalArmorDefinition {
   const char *name;
@@ -46,12 +48,18 @@ static const PersonalArmorDefinition PERSONAL_ARMOR[] = {
     {"Black Robes", CTORSO, 8, PC_IMPA | PC_SHAR | PC_HEAT, 60, 80, 140},
     {nullptr, -1, -1, 0, 0, 0, 0}};
 
+static const PersonalArmorDefinition *personal_armor_at(size_t index) {
+  return checked_storage_at_const(
+      PERSONAL_ARMOR, sizeof(PERSONAL_ARMOR) / sizeof(*PERSONAL_ARMOR),
+      sizeof(*PERSONAL_ARMOR), index);
+}
+
 int personal_combat_damage_to_unit(Mech *target, int weapindx, int dam) {
   int i = 0;
 
   if (mech_class(target) == CLASS_MW)
     return dam;
-  if (weapindx < 0 || !(MechWeapons[weapindx].special & PCOMBAT))
+  if (weapindx < 0 || !weapon_catalogue_is_personal_combat(weapindx))
     return dam;
   i = dam / 100;
   dam = dam % 100;
@@ -63,7 +71,7 @@ int personal_combat_damage_to_unit(Mech *target, int weapindx, int dam) {
 int unit_damage_to_personal_combat(Mech *target, int weapindx, int dam) {
   int i = 0, j;
 
-  if (weapindx >= 0 && MechWeapons[weapindx].special & PCOMBAT)
+  if (weapindx >= 0 && weapon_catalogue_is_personal_combat(weapindx))
     return dam;
   if (mech_class(target) != CLASS_MW)
     return dam;
@@ -88,7 +96,7 @@ static int pcombat_hitloc(int loc) {
 
 int personal_armor_reduce_damage(Mech *wounded, int cause, int hitloc,
                                  int intDamage, int id) {
-  int i;
+  size_t armor_index;
   int block;
   int noblock = 0;
 
@@ -101,10 +109,14 @@ int personal_armor_reduce_damage(Mech *wounded, int cause, int hitloc,
   hitloc = pcombat_hitloc(hitloc);
   if (!mech_section_armor(wounded, hitloc))
     return intDamage;
-  for (i = 0; PERSONAL_ARMOR[i].name; i++)
-    if (PERSONAL_ARMOR[i].loc == hitloc &&
-        PERSONAL_ARMOR[i].loci == mech_section_armor(wounded, hitloc))
+  const size_t armor_count = sizeof(PERSONAL_ARMOR) / sizeof(*PERSONAL_ARMOR);
+  for (armor_index = 0; armor_index < armor_count; armor_index++) {
+    const PersonalArmorDefinition *candidate = personal_armor_at(armor_index);
+    if (candidate->name == nullptr ||
+        (candidate->loc == hitloc &&
+         candidate->loci == mech_section_armor(wounded, hitloc)))
       break;
+  }
   if (btech_random_range_int(mech_context(wounded), 1, 5) == 1) {
     if (btech_random_range_int(mech_context(wounded), 1, 2) == 1)
       intDamage = intDamage * 2;
@@ -112,16 +124,17 @@ int personal_armor_reduce_damage(Mech *wounded, int cause, int hitloc,
       noblock = 1;
   } else if (btech_random_range_int(mech_context(wounded), 1, 10) == 2)
     intDamage = intDamage / 2;
-  if (!PERSONAL_ARMOR[i].name)
+  const PersonalArmorDefinition *armor = personal_armor_at(armor_index);
+  if (!armor->name)
     return intDamage;
-  if (cause >= 0 &&
-      !((PERSONAL_ARMOR[i].deft) & (MechWeapons[cause].special & PCOMBAT)) &&
-      (MechWeapons[cause].special & PCOMBAT))
+  const int personal_combat_flags =
+      cause >= 0 ? weapon_catalogue_personal_combat_flags(cause) : 0;
+  if (cause >= 0 && !(armor->deft & personal_combat_flags) &&
+      personal_combat_flags)
     return intDamage;
-  block = BOUNDED(btech_random_range_int(mech_context(wounded), 1,
-                                         (PERSONAL_ARMOR[i].defmin / 2)),
-                  abs(intDamage * PERSONAL_ARMOR[i].defpros / 100),
-                  PERSONAL_ARMOR[i].defmax / 2);
+  block = BOUNDED(
+      btech_random_range_int(mech_context(wounded), 1, (armor->defmin / 2)),
+      abs(intDamage * armor->defpros / 100), armor->defmax / 2);
   if (noblock)
     block = 0;
   if (abs(intDamage) < block) {

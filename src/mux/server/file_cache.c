@@ -19,6 +19,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/utf8.h"
 
 typedef struct filecache_hdr FCACHE;
@@ -49,6 +50,15 @@ struct FileCache {
 
 constexpr int MAX_CONN = 100;
 
+static FCACHE *fcache_entry_at(FCACHE *entries, size_t count, size_t index) {
+  return checked_storage_at(entries, count, sizeof(*entries), index);
+}
+
+static const FCACHE *fcache_entry_at_const(const FCACHE *entries, size_t count,
+                                           size_t index) {
+  return checked_storage_at_const(entries, count, sizeof(*entries), index);
+}
+
 static FBLOCK *fcache_fill(FBLOCK *fp, char ch) {
   FBLOCK *tfp;
 
@@ -64,7 +74,8 @@ static FBLOCK *fcache_fill(FBLOCK *fp, char ch) {
     fp->hdr.nchars = 0;
     tfp->hdr.nxt = fp;
   }
-  fp->data[fp->hdr.nchars++] = ch;
+  *(char *)checked_storage_at(fp->data, sizeof(fp->data), sizeof(char),
+                              (size_t)fp->hdr.nchars++) = ch;
   return fp;
 }
 
@@ -127,7 +138,9 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
       valid_utf8 = false;
 
     for (n = 0; valid_utf8 && n < nmax; n++) {
-      switch (buff[n]) {
+      char character = *(const char *)checked_storage_at_const(
+          buff, (size_t)nmax, sizeof(char), (size_t)n);
+      switch (character) {
       case '\n':
         fp = fcache_fill(fp, '\r');
         fp = fcache_fill(fp, '\n');
@@ -137,7 +150,7 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
       case '\r':
         break;
       default:
-        fp = fcache_fill(fp, buff[n]);
+        fp = fcache_fill(fp, character);
         tchars++;
       }
     }
@@ -189,7 +202,7 @@ static void fcache_read_dir(EvaluationContext *evaluation, const char *dir,
   char buf[LBUF_SIZE] = {0};
 
   for (int index = 0; index < *cnt; index++)
-    fcache_clear_entry(&foo[index]);
+    fcache_clear_entry(fcache_entry_at(foo, (size_t)max, (size_t)index));
   memset(foo, 0, sizeof(FCACHE) * (size_t)max);
   if (!(d = opendir(dir)))
     return;
@@ -201,7 +214,9 @@ static void fcache_read_dir(EvaluationContext *evaluation, const char *dir,
     if (!strstr(de->d_name, ".txt"))
       continue;
     snprintf(buf, sizeof(buf), "%s/%s", dir, de->d_name);
-    fcache_read(evaluation, &(foo[*cnt].fileblock), buf);
+    fcache_read(evaluation,
+                &fcache_entry_at(foo, (size_t)max, (size_t)*cnt)->fileblock,
+                buf);
     (*cnt)++;
   }
   closedir(d);
@@ -209,33 +224,36 @@ static void fcache_read_dir(EvaluationContext *evaluation, const char *dir,
 
 void fcache_rawdump(const FileCache *cache, int fd, int num) {
   int cnt, remaining;
-  char *start;
   FBLOCK *fp;
 
   if ((num < 0) || (num > FC_LAST))
     return;
-  fp = cache->entries[num].fileblock;
+  fp = fcache_entry_at_const(cache->entries, FC_LAST + 1, (size_t)num)
+           ->fileblock;
 
   while (fp != nullptr) {
-    start = fp->data;
     remaining = fp->hdr.nchars;
+    size_t offset = 0;
     while (remaining > 0) {
-
-      cnt = (int)write(fd, start, (size_t)remaining);
+      cnt = (int)write(fd,
+                       checked_storage_region_const(fp->data, sizeof(fp->data),
+                                                    offset, (size_t)remaining),
+                       (size_t)remaining);
       if (cnt < 0)
         return;
       remaining -= cnt;
-      start += cnt;
+      offset += (size_t)cnt;
     }
     fp = fp->hdr.nxt;
   }
   return;
 }
 
-static void fcache_dumpbase(Descriptor *d, const FCACHE fc[], int num) {
+static void fcache_dumpbase(Descriptor *d, const FCACHE fc[], size_t count,
+                            int num) {
   FBLOCK *fp;
 
-  fp = fc[num].fileblock;
+  fp = fcache_entry_at_const(fc, count, (size_t)num)->fileblock;
 
   while (fp != nullptr) {
     descriptor_queue_write(d, fp->data, fp->hdr.nchars);
@@ -246,11 +264,13 @@ static void fcache_dumpbase(Descriptor *d, const FCACHE fc[], int num) {
 void fcache_dump(const FileCache *cache, Descriptor *d, int num) {
   if ((num < 0) || (num > FC_LAST))
     return;
-  fcache_dumpbase(d, cache->entries, num);
+  fcache_dumpbase(d, cache->entries, FC_LAST + 1, num);
 }
 
 void fcache_dump_conn(const FileCache *cache, Descriptor *d, int num) {
-  fcache_dumpbase(d, cache->connection_entries, num);
+  if (num < 0 || num >= cache->connection_count)
+    return;
+  fcache_dumpbase(d, cache->connection_entries, MAX_CONN, num);
 }
 
 void fcache_send(FileCache *cache, DbRef player, int num) {
@@ -264,17 +284,17 @@ void fcache_send(FileCache *cache, DbRef player, int num) {
 
 void fcache_load(EvaluationContext *evaluation, FileCache *cache,
                  DbRef player) {
-  FCACHE *fp;
   char *buff, *bufc;
   char sbuf[SBUF_SIZE];
   int i;
 
   buff = bufc = alloc_lbuf("fcache_load.lbuf");
-  for (fp = cache->entries; fp < cache->entries + FC_LAST + 1; fp++) {
+  for (int index = 0; index <= FC_LAST; index++) {
+    FCACHE *fp = fcache_entry_at(cache->entries, FC_LAST + 1, (size_t)index);
     i = fcache_read(evaluation, &fp->fileblock, fp->filename);
     if (player != NOTHING) {
       snprintf(sbuf, SBUF_SIZE, "%d", i);
-      if (fp == cache->entries)
+      if (index == 0)
         safe_str("File sizes: ", buff, &bufc);
       else
         safe_str("  ", buff, &bufc);
@@ -303,14 +323,16 @@ FileCache *file_cache_create(EvaluationContext *evaluation,
     return nullptr;
   cache->configuration = configuration;
   cache->descriptors = descriptors;
-  cache->entries[FC_CONN] = (FCACHE){configuration->conn_file, nullptr, "Conn"};
-  cache->entries[FC_CONN_SITE] =
+  *fcache_entry_at(cache->entries, FC_LAST + 1, FC_CONN) =
+      (FCACHE){configuration->conn_file, nullptr, "Conn"};
+  *fcache_entry_at(cache->entries, FC_LAST + 1, FC_CONN_SITE) =
       (FCACHE){configuration->site_file, nullptr, "Conn/Badsite"};
-  cache->entries[FC_CONN_DOWN] =
+  *fcache_entry_at(cache->entries, FC_LAST + 1, FC_CONN_DOWN) =
       (FCACHE){configuration->down_file, nullptr, "Conn/Down"};
-  cache->entries[FC_CONN_FULL] =
+  *fcache_entry_at(cache->entries, FC_LAST + 1, FC_CONN_FULL) =
       (FCACHE){configuration->full_file, nullptr, "Conn/Full"};
-  cache->entries[FC_QUIT] = (FCACHE){configuration->quit_file, nullptr, "Quit"};
+  *fcache_entry_at(cache->entries, FC_LAST + 1, FC_QUIT) =
+      (FCACHE){configuration->quit_file, nullptr, "Quit"};
   fcache_load(evaluation, cache, NOTHING);
   return cache;
 }
@@ -319,9 +341,11 @@ void file_cache_destroy(FileCache *cache) {
   if (cache == nullptr)
     return;
   for (int index = 0; index <= FC_LAST; index++)
-    fcache_clear_entry(&cache->entries[index]);
+    fcache_clear_entry(
+        fcache_entry_at(cache->entries, FC_LAST + 1, (size_t)index));
   for (int index = 0; index < cache->connection_count; index++)
-    fcache_clear_entry(&cache->connection_entries[index]);
+    fcache_clear_entry(
+        fcache_entry_at(cache->connection_entries, MAX_CONN, (size_t)index));
   free(cache);
 }
 

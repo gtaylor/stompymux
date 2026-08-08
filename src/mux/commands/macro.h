@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/commands/command_context.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/commac.h"
@@ -43,6 +45,11 @@ typedef struct CommandRegistry CommandRegistry;
 void macro_registry_initialize(MacroRegistry *registry,
                                ChannelRegistry *channels);
 void macro_registry_destroy(MacroRegistry *registry);
+MacroSet *macro_registry_item(const MacroRegistry *registry, size_t index);
+MacroSet **macro_registry_slot(MacroRegistry *registry, size_t index);
+char *macro_string_item(const MacroSet *set, size_t index);
+char **macro_string_slot(MacroSet *set, size_t index);
+char *macro_alias_at(const MacroSet *set, size_t index);
 
 void init_mactab(CommandRegistry *commands);
 MacroSet *get_macro_set(MacroRegistry *registry, DbRef player, int which);

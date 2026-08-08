@@ -20,6 +20,7 @@ extern const char schema_objects_sql[];
 extern const char schema_state_sql[];
 extern const NativeColumn native_columns[];
 extern const size_t native_column_count;
+const NativeColumn *gamedb_native_column_at(size_t index);
 
 void gamedb_log_failure(ServerLog *log, const char *stage, const char *path,
                         sqlite3 *sqlite);

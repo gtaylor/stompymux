@@ -53,11 +53,25 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "random.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
+
+static int *critical_slot(int *criticals, size_t count, size_t index) {
+  return checked_storage_at(criticals, count, sizeof(*criticals), index);
+}
+
+static unsigned char *weapon_slot(unsigned char *weapons, size_t count,
+                                  size_t index) {
+  return checked_storage_at(weapons, count, sizeof(*weapons), index);
+}
+
+static const char *weapon_display_name(int weapon_index) {
+  return checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
+}
 
 int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
                                 int critHit, int critType, int LOS) {
@@ -87,14 +101,13 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
   }
 
   /* Gauss rifle-ish weapons explode when critted */
-  if ((MechWeapons[weapon_from_equipment_index(critType)].special & GAUSS) &&
-      !wWeapDestroyed) {
+  const int weapon_index = weapon_from_equipment_index(critType);
+  if (weapon_catalogue_is_gauss(weapon_index) && !wWeapDestroyed) {
     mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
-                &MechWeapons[weapon_from_equipment_index(critType)].name[3]);
+                weapon_display_name(weapon_index));
 
-    mech_printf(
-        wounded, MECHALL, "It explodes for %d points damage.",
-        MechWeapons[weapon_from_equipment_index(critType)].explosiondamage);
+    mech_printf(wounded, MECHALL, "It explodes for %d points damage.",
+                weapon_catalogue_explosion_damage(weapon_index));
 
     if (!mech_is_destroyed(wounded)) {
       snprintf(msgbuf, MBUF_SIZE,
@@ -106,10 +119,9 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
                         wMaxCrits);
 
     if (attacker) {
-      DamageMech(
-          wounded, attacker, 0, -1, hitloc, 0, 0, 0,
-          MechWeapons[weapon_from_equipment_index(critType)].explosiondamage,
-          -1, 7, -1, 0, 1);
+      DamageMech(wounded, attacker, 0, -1, hitloc, 0, 0, 0,
+                 weapon_catalogue_explosion_damage(weapon_index), -1, 7, -1, 0,
+                 1);
     }
     /* Rule Reference: BMR Revised, Page 16-17 (Ammo Explosion=2 Bruise) */
     /* Rule Reference: Total Warfare, Page 41 (Ammo Explosion=2 Bruise) */
@@ -132,7 +144,7 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
                  weapon_from_equipment_index(critType))) { /* Have to shut down
                                            AMS when its critted */
     mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
-                &MechWeapons[weapon_from_equipment_index(critType)].name[3]);
+                weapon_display_name(weapon_index));
 
     mech_ams_enabled_set(wounded, false);
     mech_technology_flags_remove(wounded,
@@ -143,7 +155,7 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
              !wWeapDestroyed) { /* And crit hotloaded LRMs */
     if (FindAmmoForWeapon(wounded, weapon_from_equipment_index(critType), 0,
                           &wAmmoSection, &wAmmoCritSlot) > 0) {
-      damage = MechWeapons[weapon_from_equipment_index(critType)].damage;
+      damage = weapon_catalogue_damage(weapon_index);
 
       if (weapon_catalogue_is_missile(weapon_from_equipment_index(critType)) ||
           weapon_catalogue_is_artillery(
@@ -156,7 +168,7 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
       }
 
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
-                  &MechWeapons[weapon_from_equipment_index(critType)].name[3]);
+                  weapon_display_name(weapon_index));
 
       mech_printf(
           wounded, MECHALL,
@@ -192,13 +204,13 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
             &wAmmoSection, &wAmmoCritSlot, 0, AC_INCENDIARY_MODE) > 0) {
 
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
-                  &MechWeapons[weapon_from_equipment_index(critType)].name[3]);
+                  weapon_display_name(weapon_index));
 
       mech_printf(
           wounded, MECHALL,
           "[fg=red bold]The incendiary ammunition in your launcher ignites "
           "for %d points of damage![reset]",
-          MechWeapons[weapon_from_equipment_index(critType)].damage);
+          weapon_catalogue_damage(weapon_index));
 
       if (!mech_is_destroyed(wounded)) {
         snprintf(msgbuf, MBUF_SIZE,
@@ -211,8 +223,7 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
 
       if (attacker) {
         DamageMech(wounded, attacker, 0, -1, hitloc, 0, 0, 0,
-                   MechWeapons[weapon_from_equipment_index(critType)].damage,
-                   -1, 7, -1, 0, 1);
+                   weapon_catalogue_damage(weapon_index), -1, 7, -1, 0, 1);
 
         return 1;
       }
@@ -243,15 +254,19 @@ void mech_main_weapon_jam(Mech *mech) {
     count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
       for (ii = 0; ii < count; ii++) {
-        if (!mech_critical_is_broken(mech, loop, critical[ii])) {
+        const int current_critical =
+            *critical_slot(critical, MAX_WEAPS_SECTION, (size_t)ii);
+        const unsigned char current_weapon =
+            *weapon_slot(weaparray, MAX_WEAPS_SECTION, (size_t)ii);
+        if (!mech_critical_is_broken(mech, loop, current_critical)) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
           tempcrit = (int)btech_context_random_i31(context);
           if (tempcrit > maxcrit) {
             critfound = 1;
             maxcrit = tempcrit;
             maxloc = loop;
-            maxtype = weaparray[ii];
-            critnum = critical[ii];
+            maxtype = current_weapon;
+            critnum = current_critical;
           }
         }
       }
@@ -261,7 +276,7 @@ void mech_main_weapon_jam(Mech *mech) {
   if (critfound) {
     mech_critical_temporary_failure_set(mech, maxloc, critnum, FAIL_DESTROYED);
     mech_printf(mech, MECHALL, "[fg=red bold]Your %s is jammed![reset]",
-                &MechWeapons[maxtype].name[3]);
+                weapon_display_name(maxtype));
   }
 }
 
@@ -280,7 +295,7 @@ void mech_random_weapon_select(Mech *objMech, int wLoc, int *critNum,
       if (!mech_critical_is_broken(objMech, wLoc, wIter)) {
         if (!wIgnoreJams || (wIgnoreJams && !mech_critical_temporary_failure(
                                                 objMech, wLoc, wIter))) {
-          awCrits[wcWeaps] = wIter;
+          *critical_slot(awCrits, MAX_WEAPS_SECTION, (size_t)wcWeaps) = wIter;
 
           wcWeaps++;
         }
@@ -297,8 +312,9 @@ void mech_random_weapon_select(Mech *objMech, int wLoc, int *critNum,
    * Now randomly pick one
    */
 
-  *critNum =
-      awCrits[btech_random_range_int(mech_context(objMech), 0, wcWeaps - 1)];
+  *critNum = *critical_slot(
+      awCrits, MAX_WEAPS_SECTION,
+      (size_t)btech_random_range_int(mech_context(objMech), 0, wcWeaps - 1));
 }
 
 /*
@@ -424,7 +440,7 @@ void mech_weapon_jam_critical_apply(Mech *objMech, int wLoc) {
   wWeapIdx = weapon_from_equipment_index(wCritType);
 
   if (wWeapIdx >= 0) {
-    switch (MechWeapons[wWeapIdx].type) {
+    switch (weapon_catalogue_type(wWeapIdx)) {
     case TBEAM:
     case TMISSILE:
     case TARTILLERY:
@@ -432,20 +448,20 @@ void mech_weapon_jam_critical_apply(Mech *objMech, int wLoc) {
       mech_printf(objMech, MECHALL,
                   "[fg=red bold]The shot causes your %s to temporarily short "
                   "out![reset]",
-                  &MechWeapons[wWeapIdx].name[3]);
+                  weapon_display_name(wWeapIdx));
       break;
     case TAMMO:
       wCritType = FAIL_JAMMED;
       mech_printf(objMech, MECHALL,
                   "[fg=red bold]The shot temporarily jams your %s![reset]",
-                  &MechWeapons[wWeapIdx].name[3]);
+                  weapon_display_name(wWeapIdx));
       break;
     default:
       wCritType = FAIL_SHORTED;
       mech_printf(objMech, MECHALL,
                   "[fg=red bold]The shot causes your %s to temporarily short "
                   "out![reset]",
-                  &MechWeapons[wWeapIdx].name[3]);
+                  weapon_display_name(wWeapIdx));
       break;
     }
 
@@ -491,7 +507,7 @@ void mech_weapon_destroyed_critical_apply(Mech *objAttacker, Mech *objMech,
 
     mech_weapon_destroy(objMech, wLoc, wCritType, firstCrit, 1, 1);
     mech_printf(objMech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
-                &MechWeapons[wWeapIdx].name[3]);
+                weapon_display_name(wWeapIdx));
   }
 }
 
@@ -541,7 +557,7 @@ void mech_ammunition_critical_apply(Mech *objMech, Mech *objAttacker, int wLoc,
 
       if (equipment_is_ammunition(wPartType) &&
           mech_critical_data(objMech, wSecIter, wSlotIter) &&
-          (!(MechWeapons[wWeapIdx].special & GAUSS))) {
+          !weapon_catalogue_is_gauss(wWeapIdx)) {
         wTempDamage = weapon_maximum_ammunition_damage(
                           context, ammunition_to_weapon_index(wPartType)) *
                       mech_critical_data(objMech, wSecIter, wSlotIter);

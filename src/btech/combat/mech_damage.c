@@ -63,6 +63,7 @@
 #include "pcombat_api.h"
 #include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
                 int hitloc, int isrear, int iscritical, int damage,
                 int intDamage, int cause, int bth, int wWeapIndx, int wAmmoMode,
@@ -439,7 +440,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
                   mech_model_reference(wounded), mech_dbref(attacker),
                   mech_dbref(wounded), bth, isrear ? "Rear " : "",
                   hitloc != -1 ? locationBuff : "NONE",
-                  &MechWeapons[wWeapIndx].name[0], damage - intDamage,
+                  weapon_catalogue_name(wWeapIndx), damage - intDamage,
                   mech_section_internal(wounded, hitloc) < intDamage
                       ? intDamage -
                             (intDamage - mech_section_internal(wounded, hitloc))
@@ -517,7 +518,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
   /* For now, only check IS PlasmaRifles. Can use this for Clan PlasmaCannon
    * later */
   if (wWeapIndx > 0) {
-    if (strstr(MechWeapons[wWeapIndx].name, "IS.PlasmaRifle")) {
+    if (strstr(weapon_catalogue_name(wWeapIndx), "IS.PlasmaRifle")) {
       if (mech_class(wounded) == CLASS_MECH)
         mech_plasma_hit(attacker, wounded, LOS);
     }

@@ -24,8 +24,8 @@
 #include "mux/server/platform.h"
 
 #ifdef BTECHSTATS_C
-const char *btech_charvaluetype_names[] = {"Char_value", "Char_skill",
-                                           "Char_advantage", "Char_attribute"};
+static const char *const btech_charvaluetype_names[] = {
+    "Char_value", "Char_skill", "Char_advantage", "Char_attribute"};
 
 const char *btech_charskillflag_names[] = {"Athletic", "Mental", "Physical",
                                            "Social"};
@@ -38,17 +38,17 @@ const char *btech_charskillflag_names[] = {"Athletic", "Mental", "Physical",
 
 /* *INDENT-OFF* */
 
-struct CharacterValue {
+typedef struct CharacterValue {
   const char *name;
   char type;
   int flag;
   int xpthreshold;
-};
+} CharacterValue;
 
 enum { NUM_CHARVALUES = 119 };
 
 #ifdef BTECHSTATS_C
-struct CharacterValue char_values[NUM_CHARVALUES] = {
+static CharacterValue char_values[NUM_CHARVALUES] = {
 
     {"XP", CHAR_VALUE, 0, 0},
     {"MaxXP", CHAR_VALUE, 0, 0},
@@ -222,7 +222,6 @@ const char *char_packages[] = {"None",
                                "Basic_University",
                                "Advanced_University"};
 #else
-extern struct CharacterValue char_values[NUM_CHARVALUES];
 extern const char *char_levels[5];
 extern const char *char_types[6];
 extern const char *char_packages[9];
@@ -243,9 +242,9 @@ constexpr int NUM_CHARPACKAGES = 9;
 
 typedef struct {
   DbRef DbRef;
-  unsigned char values[NUM_CHARVALUES];
-  time_t last_use[NUM_CHARVALUES];
-  int xp[NUM_CHARVALUES];
+  unsigned char value_storage[NUM_CHARVALUES];
+  time_t last_use_storage[NUM_CHARVALUES];
+  int xp_storage[NUM_CHARVALUES];
 } PSTATS;
 
 #endif

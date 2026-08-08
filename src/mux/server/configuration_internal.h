@@ -15,12 +15,15 @@ struct ConfigurationEntry {
   const char *pname;
   ConfigurationInterpreter interpreter;
   int flags;
-  int *loc;
+  uintptr_t location;
   long extra;
 };
 
 typedef ConfigurationEntry CONF;
+constexpr uintptr_t CONFIGURATION_LIST_NAMES_LOCATION = UINTPTR_MAX;
 extern CONF conftable[];
+size_t configuration_entry_count(void);
+CONF *configuration_entry_at(size_t index);
 extern NameTable logdata_nametab[];
 extern NameTable logoptions_nametab[];
 extern NameTable access_nametab[];

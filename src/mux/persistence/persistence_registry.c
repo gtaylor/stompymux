@@ -5,6 +5,13 @@
 #include <time.h>
 
 #include "mux/persistence/gamedb.h"
+#include "mux/support/checked_storage.h"
+
+PersistenceSqliteExtension *
+persistence_extension_at(PersistenceContext *context, size_t index) {
+  return checked_storage_at(context->extensions, context->extension_count,
+                            sizeof(*context->extensions), index);
+}
 
 void persistence_context_initialize(
     PersistenceContext *context, const ServerConfiguration *configuration,
@@ -32,7 +39,8 @@ int persistence_register_sqlite_extension(PersistenceContext *context,
   if (name == nullptr || *name == '\0' || store == nullptr)
     return -1;
   for (size_t index = 0; index < context->extension_count; index++) {
-    PersistenceSqliteExtension *extension = &context->extensions[index];
+    PersistenceSqliteExtension *extension =
+        persistence_extension_at(context, index);
     if (!strcmp(extension->name, name))
       return extension->load == load && extension->store == store &&
                      extension->context == extension_context
@@ -41,10 +49,9 @@ int persistence_register_sqlite_extension(PersistenceContext *context,
   }
   if (context->extension_count == PERSISTENCE_MAX_SQLITE_EXTENSIONS)
     return -1;
-  context->extensions[context->extension_count++] =
-      (PersistenceSqliteExtension){.name = name,
-                                   .load = load,
-                                   .store = store,
-                                   .context = extension_context};
+  context->extension_count++;
+  *persistence_extension_at(context, context->extension_count -
+                                         1) = (PersistenceSqliteExtension){
+      .name = name, .load = load, .store = store, .context = extension_context};
   return 0;
 }

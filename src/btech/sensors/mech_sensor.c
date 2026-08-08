@@ -38,6 +38,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
@@ -53,17 +54,25 @@
 #include "mech_tag_api.h"
 #include "mech_utils_api.h"
 
+const SensorDefinition *mech_sensor_definition(int sensor) {
+  if (sensor < 0)
+    abort();
+  return checked_storage_at_const(sensors, NUM_SENSORS, sizeof(*sensors),
+                                  (size_t)sensor);
+}
+
 static int mech_sensor_maximum_range(const Mech *mech, int sensor) {
   int stationary_bonus =
       sensor >= 2 && mech_movement_type(mech) == MOVE_NONE ? 140 : 100;
-  return sensors[sensor].maximum_visibility * stationary_bonus / 100;
+  return mech_sensor_definition(sensor)->maximum_visibility * stationary_bonus /
+         100;
 }
 
 static float mech_sensor_range_as_float(int range) { return (float)range; }
 
 static int mech_sensor_minimum_variable_range(const Mech *mech, int sensor) {
   return mech_sensor_maximum_range(mech, sensor) -
-         sensors[sensor].maximum_variation;
+         mech_sensor_definition(sensor)->maximum_variation;
 }
 
 static bool mech_sensor_sees_in_all_directions(const Mech *mech) {
@@ -89,8 +98,8 @@ int mech_sensor_to_hit_bonus(Mech *mech, Mech *target, int flag, int maplight,
   if (!(flag & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY)))
     return 10000;
   if (!(flag & BATTLE_MAP_LOS_SEEN_PRIMARY)) {
-    bth2 = 1 + sensors[mech_sensor_index(mech, 1)].to_hit_bonus(
-                   mech, target, map, flag, maplight);
+    bth2 = 1 + mech_sensor_definition(mech_sensor_index(mech, 1))
+                   ->to_hit_bonus(mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("%d: BTH S+%d", mech_dbref(mech), bth2));
@@ -99,18 +108,18 @@ int mech_sensor_to_hit_bonus(Mech *mech, Mech *target, int flag, int maplight,
   }
   if (!(flag & BATTLE_MAP_LOS_SEEN_SECONDARY) ||
       (mech_sensor_index(mech, 0) == mech_sensor_index(mech, 1))) {
-    bth1 = sensors[mech_sensor_index(mech, 0)].to_hit_bonus(mech, target, map,
-                                                            flag, maplight);
+    bth1 = mech_sensor_definition(mech_sensor_index(mech, 0))
+               ->to_hit_bonus(mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("%d: BTH P+%d", mech_dbref(mech), bth1));
 #endif
     return bth1;
   }
-  bth1 = sensors[mech_sensor_index(mech, 0)].to_hit_bonus(mech, target, map,
-                                                          flag, maplight);
-  bth2 = 1 + sensors[mech_sensor_index(mech, 1)].to_hit_bonus(mech, target, map,
-                                                              flag, maplight);
+  bth1 = mech_sensor_definition(mech_sensor_index(mech, 0))
+             ->to_hit_bonus(mech, target, map, flag, maplight);
+  bth2 = 1 + mech_sensor_definition(mech_sensor_index(mech, 1))
+                 ->to_hit_bonus(mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                      tprintf("%d: BTH +%d/+%d", mech_dbref(mech), bth1, bth2));
@@ -139,7 +148,8 @@ int mech_sensor_can_see(Mech *mech, Mech *target, int *flag, int arc,
       sn = mech_sensor_index(mech, i);
       /* No chance */
 
-      if (!sensors[sn].full_vision && !(arc & (FORWARDARC | TURRETARC)) &&
+      if (!mech_sensor_definition(sn)->full_vision &&
+          !(arc & (FORWARDARC | TURRETARC)) &&
           !mech_sensor_sees_in_all_directions(mech))
         continue;
       if (mech_sensor_range_as_float(mech_sensor_maximum_range(mech, sn)) <
@@ -161,19 +171,20 @@ int mech_sensor_can_see(Mech *mech, Mech *target, int *flag, int arc,
           continue;
       }
 
-      if (!sensors[sn].can_see(mech, target, map, range, *flag))
+      if (!mech_sensor_definition(sn)->can_see(mech, target, map, range, *flag))
         continue;
 
-      if (!sensors[sn].see_chance(target, map, sn, range, mapvis, maplight))
+      if (!mech_sensor_definition(sn)->see_chance(target, map, sn, range,
+                                                  mapvis, maplight))
         continue;
 
-      if (sensors[sn].maximum_variation &&
+      if (mech_sensor_definition(sn)->maximum_variation &&
           mech_sensor_range_as_float(
               mech_sensor_minimum_variable_range(mech, sn)) < range)
         if (mech_sensor_range_as_float(
                 mech_sensor_minimum_variable_range(mech, sn) +
                 (mech_sensor_visibility_modifier(mech) *
-                 (sensors[sn].maximum_variation + 1)) /
+                 (mech_sensor_definition(sn)->maximum_variation + 1)) /
                     100) < range)
           continue;
       j += (i + 1);
@@ -188,17 +199,19 @@ int mech_sensor_can_see(Mech *mech, Mech *target, int *flag, int arc,
            ? (mech_position_z(target) >= cloudbase)
            : (mech_position_z(target) < cloudbase)))
     return 0;
-  if (!sensors[sn].can_see(mech, target, map, range, *flag))
+  if (!mech_sensor_definition(sn)->can_see(mech, target, map, range, *flag))
     return 0;
-  if (!sensors[sn].see_chance(target, map, sn, range, mapvis, maplight))
+  if (!mech_sensor_definition(sn)->see_chance(target, map, sn, range, mapvis,
+                                              maplight))
     return 0;
-  if (sensors[sn].maximum_variation &&
+  if (mech_sensor_definition(sn)->maximum_variation &&
       mech_sensor_range_as_float(mech_sensor_minimum_variable_range(mech, sn)) <
           range)
     if (mech_sensor_range_as_float(
             mech_sensor_minimum_variable_range(mech, sn) +
             mech_sensor_visibility_modifier(mech) *
-                (sensors[sn].maximum_variation + 1) / 100) < range)
+                (mech_sensor_definition(sn)->maximum_variation + 1) / 100) <
+        range)
       return 0;
   return 3;
 }
@@ -230,18 +243,22 @@ int mech_sensor_arc_base_chance(int type, int arc) {
   return base;
 }
 
-extern const int bth_modifier[];
-
 /* Slow, but sacrifices we make for sake of playability.. :-) */
 int mech_sensor_driver_base_chance(Mech *mech) {
   int i = 1;
+  int perception = mech_perception_target(mech);
 
-  if (mech_perception_target(mech) <= 2)
+  if (perception <= 2)
     i = 36;
-  else if (mech_perception_target(mech) >= 12)
+  else if (perception >= 12)
     i = 1;
-  else
-    i = (36 - bth_modifier[mech_perception_target(mech) - 2]);
+  else {
+    static const int modifiers[] = {3, 6, 10, 15, 21, 26, 30, 33, 35};
+    const int modifier = *(const int *)checked_storage_at_const(
+        modifiers, sizeof(modifiers) / sizeof(*modifiers), sizeof(*modifiers),
+        (size_t)(perception - 3));
+    i = 36 - modifier;
+  }
   return 64 + i; /* Padded a bit */
 }
 
@@ -255,17 +272,18 @@ int mech_sensor_detects(Mech *mech, Mech *target, int f, int arc, float range,
                      ? mech_sensor_driver_base_chance(mech)
                      : 100)) /
                100;
-  int ch2 =
-      sensors[snum].see_chance(target, map, snum, range, mapvis, maplight);
+  int ch2 = mech_sensor_definition(snum)->see_chance(target, map, snum, range,
+                                                     mapvis, maplight);
 
-  if (!ch2 || !sensors[snum].can_see(mech, target, map, range, f))
+  if (!ch2 ||
+      !mech_sensor_definition(snum)->can_see(mech, target, map, range, f))
     return 0;
   if (target && mech_is_dropship(target))
     chance = chance * 4;
   if (target && mech_condition_summary(target).hidden &&
       mech_team(mech) != mech_team(target)) {
 
-    if (sensors[snum].match_letter[0] == 'B' &&
+    if (mech_sensor_definition(snum)->match_letter[0] == 'B' &&
         mech_is_stealth_infantry(target) && !mech_is_purifier_infantry(target))
       return 0;
 
@@ -306,7 +324,8 @@ int mech_sensor_detects_now(Mech *mech, Mech *target, int f, int arc,
     for (i = 0; i < 2; i++) {
       sn = mech_sensor_index(mech, i);
       /* No chance */
-      if (!sensors[sn].full_vision && !(arc & (FORWARDARC | TURRETARC)) &&
+      if (!mech_sensor_definition(sn)->full_vision &&
+          !(arc & (FORWARDARC | TURRETARC)) &&
           !mech_sensor_sees_in_all_directions(mech))
         continue;
       if (mech_sensor_range_as_float(mech_sensor_maximum_range(mech, sn)) <
@@ -334,9 +353,12 @@ SensorFlagText sensor_flag_text(int flags) {
     if (flags & (1 << j)) {
       if (buffer[0] == '\0')
         snprintf(buffer, sizeof(text.text), "%d", j);
-      else
-        snprintf(buffer + strlen(buffer), sizeof(text.text) - strlen(buffer),
-                 ",%d", j);
+      else {
+        const size_t used = strlen(buffer);
+        snprintf(checked_storage_region(buffer, sizeof(text.text), used,
+                                        sizeof(text.text) - used),
+                 sizeof(text.text) - used, ",%d", j);
+      }
     }
   return text;
 }
@@ -375,18 +397,19 @@ static int valid_to_notice(Mech *mech, Mech *targ, int los) {
   }
 }
 
-void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
-                                   int x, int y, Mech *target, int mapvis,
-                                   int maplight, int cloudbase, int seeanew,
-                                   int wlf) {
+unsigned short mech_sensor_visibility_update(Mech *mech, unsigned short flags,
+                                             float range, int x, int y,
+                                             Mech *target, int mapvis,
+                                             int maplight, int cloudbase,
+                                             int seeanew, int wlf) {
   int arc;
   float x1, y1;
   int sc, sl, st;
-  int f = *fl;
+  int f = flags;
   char buf[MBUF_SIZE] = {0};
 
   if (!mech_is_started(mech))
-    return;
+    return flags;
   if (target) {
     x1 = mech_position_real_x(target);
     y1 = mech_position_real_y(target);
@@ -415,12 +438,14 @@ void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
           strcpy(buf, "[fg=yellow]");
         else
           buf[0] = 0;
-        if (st & AUTOCON_SHORT)
-          snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-                   "Lost: %s, %s arc.",
+        if (st & AUTOCON_SHORT) {
+          const size_t used = strlen(buf);
+          snprintf(checked_storage_region(buf, sizeof(buf), used,
+                                          sizeof(buf) - used),
+                   sizeof(buf) - used, "Lost: %s, %s arc.",
                    mech_to_mech_display_id_base(mech, target, wlf).text,
                    GetArcID(mech, arc));
-        else
+        } else
           snprintf(buf, sizeof(buf),
                    "You have lost %s from your scanners. It was last in your "
                    "%s arc.",
@@ -446,15 +471,13 @@ void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
 #endif
       mech_possible_contact_count_increment(mech);
     }
-    *fl = (unsigned short)f;
-    return;
+    return (unsigned short)f;
   }
   if ((sc = mech_sensor_can_see(mech, target, &f, arc, range, mapvis, maplight,
                                 cloudbase))) {
     if (!seeanew) {
       mech_possible_contact_count_increment(mech);
-      *fl = (unsigned short)f;
-      return;
+      return (unsigned short)f;
     }
     if ((sl = mech_sensor_detects_now(mech, target, f, arc, range, mapvis,
                                       maplight))) {
@@ -469,7 +492,6 @@ void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
         autopilot_resume_for_mech(mech);
       }
       f |= BATTLE_MAP_LOS_SEEN;
-      *fl = (unsigned short)f;
       if (!mech_is_observer(mech) &&
           (mech_is_started(target) || mech_autocon_when_shutdown(mech) ||
            mech_autocon_include_shutdown_targets(mech)) &&
@@ -478,15 +500,21 @@ void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
           strcpy(buf, "[fg=red]");
         else
           buf[0] = 0;
-        if (st & AUTOCON_SHORT)
-          snprintf(
-              buf + strlen(buf), sizeof(buf) - strlen(buf), "Seen: %s, %s arc.",
-              mech_to_mech_display_id(mech, target).text, GetArcID(mech, arc));
-        else
-          snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-                   "You notice %s in your %s arc.",
+        if (st & AUTOCON_SHORT) {
+          const size_t used = strlen(buf);
+          snprintf(checked_storage_region(buf, sizeof(buf), used,
+                                          sizeof(buf) - used),
+                   sizeof(buf) - used, "Seen: %s, %s arc.",
                    mech_to_mech_display_id(mech, target).text,
                    GetArcID(mech, arc));
+        } else {
+          const size_t used = strlen(buf);
+          snprintf(checked_storage_region(buf, sizeof(buf), used,
+                                          sizeof(buf) - used),
+                   sizeof(buf) - used, "You notice %s in your %s arc.",
+                   mech_to_mech_display_id(mech, target).text,
+                   GetArcID(mech, arc));
+        }
         if (st & AUTOCON_WARN)
           strcat(buf, "[reset]");
         mech_notify(mech, MECHALL, buf);
@@ -505,7 +533,7 @@ void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
     } else
       mech_possible_contact_count_increment(mech);
   }
-  *fl = (unsigned short)f;
+  return (unsigned short)f;
 }
 
 static void sensor_update_los_pair(BattleMap *map, int observer_index,
@@ -539,14 +567,14 @@ static void sensor_update_los_pair(BattleMap *map, int observer_index,
 
 #ifdef ADVANCED_LOS
   (void)always_update_sensors;
-  mech_sensor_visibility_update(
-      observer, &flags, range, -1, -1, target, battle_map_visibility(map),
+  flags = mech_sensor_visibility_update(
+      observer, flags, range, -1, -1, target, battle_map_visibility(map),
       battle_map_light(map), battle_map_cloud_base(map), 0, was_visible);
   battle_map_los_flags_set(map, observer_index, target_index, flags);
 #else
   if (always_update_sensors) {
-    mech_sensor_visibility_update(
-        observer, &flags, range, -1, -1, target, battle_map_visibility(map),
+    flags = mech_sensor_visibility_update(
+        observer, flags, range, -1, -1, target, battle_map_visibility(map),
         battle_map_light(map), battle_map_cloud_base(map), 0, was_visible);
     battle_map_los_flags_set(map, observer_index, target_index, flags);
   }
@@ -594,15 +622,18 @@ void mech_sensor_description_append(char *buf, int size, Mech *mech, int sn,
   if (used >= capacity)
     return;
   if (!verbose)
-    snprintf(buf + used, capacity - used, "(R:%s)",
-             sensors[sn].range_description);
+    snprintf(checked_storage_region(buf, capacity, used, capacity - used),
+             capacity - used, "(R:%s)",
+             mech_sensor_definition(sn)->range_description);
   else {
-    snprintf(buf + used, capacity - used,
-             "\n\tRange:      %s\n\tBlocked by: %s",
-             sensors[sn].range_description, sensors[sn].block_description);
+    snprintf(checked_storage_region(buf, capacity, used, capacity - used),
+             capacity - used, "\n\tRange:      %s\n\tBlocked by: %s",
+             mech_sensor_definition(sn)->range_description,
+             mech_sensor_definition(sn)->block_description);
     used = strlen(buf);
-    if (sensors[sn].special_description && used < capacity)
-      snprintf(buf + used, capacity - used, "\n\tNotes:      %s",
-               sensors[sn].special_description);
+    if (mech_sensor_definition(sn)->special_description && used < capacity)
+      snprintf(checked_storage_region(buf, capacity, used, capacity - used),
+               capacity - used, "\n\tNotes:      %s",
+               mech_sensor_definition(sn)->special_description);
   }
 }

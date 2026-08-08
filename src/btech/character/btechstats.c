@@ -1,6 +1,107 @@
 #define BTECHSTATS_C
 #include "btechstats_internal.h"
+#include "checked_conversion.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
+
+static size_t character_value_index(int code) {
+  if (code < 0 || code >= NUM_CHARVALUES)
+    abort();
+  return (size_t)code;
+}
+
+const CharacterValue *character_value_definition(int code) {
+  return checked_storage_at_const(char_values, NUM_CHARVALUES,
+                                  sizeof(*char_values),
+                                  character_value_index(code));
+}
+
+const char *character_value_type_name(int type) {
+  if (type < CHAR_VALUE || type > CHAR_ATTRIBUTE)
+    return "Unknown";
+  const char *const *name = checked_storage_at_const(
+      btech_charvaluetype_names,
+      sizeof(btech_charvaluetype_names) / sizeof(*btech_charvaluetype_names),
+      sizeof(*btech_charvaluetype_names), (size_t)type);
+  return *name;
+}
+
+void character_value_xp_threshold_set(int code, int threshold) {
+  CharacterValue *definition =
+      checked_storage_at(char_values, NUM_CHARVALUES, sizeof(*char_values),
+                         character_value_index(code));
+  definition->xpthreshold = threshold;
+}
+
+unsigned char character_stats_value_get(const PSTATS *stats, int code) {
+  const unsigned char *value = checked_storage_at_const(
+      stats->value_storage, NUM_CHARVALUES, sizeof(*stats->value_storage),
+      character_value_index(code));
+  return *value;
+}
+
+void character_stats_value_set(PSTATS *stats, int code, int value) {
+  unsigned char *destination = checked_storage_at(
+      stats->value_storage, NUM_CHARVALUES, sizeof(*stats->value_storage),
+      character_value_index(code));
+  *destination = clamp_int_to_unsigned_char(value);
+}
+
+int character_stats_xp_get(const PSTATS *stats, int code) {
+  const int *value = checked_storage_at_const(stats->xp_storage, NUM_CHARVALUES,
+                                              sizeof(*stats->xp_storage),
+                                              character_value_index(code));
+  return *value;
+}
+
+void character_stats_xp_set(PSTATS *stats, int code, int value) {
+  int *destination = checked_storage_at(stats->xp_storage, NUM_CHARVALUES,
+                                        sizeof(*stats->xp_storage),
+                                        character_value_index(code));
+  *destination = value;
+}
+
+time_t character_stats_last_use_get(const PSTATS *stats, int code) {
+  const time_t *value = checked_storage_at_const(
+      stats->last_use_storage, NUM_CHARVALUES, sizeof(*stats->last_use_storage),
+      character_value_index(code));
+  return *value;
+}
+
+void character_stats_last_use_set(PSTATS *stats, int code, time_t value) {
+  time_t *destination = checked_storage_at(
+      stats->last_use_storage, NUM_CHARVALUES, sizeof(*stats->last_use_storage),
+      character_value_index(code));
+  *destination = value;
+}
+
+static HashTable *character_value_hash(BtechContext *context, size_t index) {
+  return checked_storage_at(context->player_value_hashes, 2,
+                            sizeof(*context->player_value_hashes), index);
+}
+
+static char **character_short_name_slot(BtechContext *context, int code) {
+  return checked_storage_at(
+      context->char_value_short_names, context->char_value_count,
+      sizeof(*context->char_value_short_names), character_value_index(code));
+}
+
+static void lowercase_copy(char *destination, size_t capacity,
+                           const char *source) {
+  const size_t source_length = strlen(source);
+  const size_t copy_length =
+      source_length < capacity - 1 ? source_length : capacity - 1;
+  for (size_t index = 0; index < copy_length; index++) {
+    char *output =
+        checked_storage_at(destination, capacity, sizeof(char), index);
+    const char *input = checked_storage_at_const(source, source_length + 1,
+                                                 sizeof(char), index);
+    *output = ascii_to_lower(*input);
+  }
+  char *terminator =
+      checked_storage_at(destination, capacity, sizeof(char), copy_length);
+  *terminator = '\0';
+}
 
 UptimeText uptime_text(int seconds) {
   UptimeText uptime;
@@ -20,14 +121,16 @@ static int char_getskilltargetbycode_noxp(BtechContext *context, DbRef player,
                                           int code, int modifier);
 
 int figure_xp_bonus(BtechContext *context, DbRef player, PSTATS *s, int code) {
-  int t = char_values[code].xpthreshold;
+  int t = character_value_definition(code)->xpthreshold;
   int tx, bon, btar;
 
   if (t <= 0)
     return 0;
   /* KLUDGE */
-  s->xp[code] = s->xp[code] %
-                XP_MAX; /* reset exp modifier - this probably _was_ cached */
+  character_stats_xp_set(
+      s, code,
+      character_stats_xp_get(s, code) %
+          XP_MAX); /* reset exp modifier - this probably _was_ cached */
   btar = char_getskilltargetbycode_base(context, player, s, code, 0, 0);
   while (btar > 4) {
     btar--;
@@ -39,7 +142,7 @@ int figure_xp_bonus(BtechContext *context, DbRef player, PSTATS *s, int code) {
   }
   if (t < 1)
     t = 1;
-  tx = s->xp[code] % XP_MAX;
+  tx = character_stats_xp_get(s, code) % XP_MAX;
   bon = 0;
   while (tx > t) {
     bon++;
@@ -50,7 +153,7 @@ int figure_xp_bonus(BtechContext *context, DbRef player, PSTATS *s, int code) {
 }
 
 int character_xp_to_next_level(BtechContext *context, DbRef target, int code) {
-  int xpthresh = char_values[code].xpthreshold;
+  int xpthresh = character_value_definition(code)->xpthreshold;
   int start_skill, target_skill, counter, running_total = 1;
 
   if (xpthresh <= 0)
@@ -78,22 +181,28 @@ int character_xp_to_next_level(BtechContext *context, DbRef target, int code) {
 
 /* Right now applies to only very few select skills */
 
-static int char_xp_bonus(PSTATS *s, int code) { return s->xp[code] / XP_MAX; }
+static int char_xp_bonus(PSTATS *s, int code) {
+  return character_stats_xp_get(s, code) / XP_MAX;
+}
 
 static int char_getstatvalue_by_code(PSTATS *stats, int code) {
   if (code < 0)
     return -1;
-  return stats->values[code] + (char_values[code].type == CHAR_SKILL
-                                    ? char_xp_bonus(stats, code)
-                                    : 0);
+  return character_stats_value_get(stats, code) +
+         (character_value_definition(code)->type == CHAR_SKILL
+              ? char_xp_bonus(stats, code)
+              : 0);
 }
 
 static void char_setstatvalue_by_code(PSTATS *stats, int code, int value) {
   if (code < 0)
     return;
   if (code == EE_NUMBER)
-    stats->values[LIVES_NUMBER] += value - stats->values[code];
-  stats->values[code] = (unsigned char)value;
+    character_stats_value_set(stats, LIVES_NUMBER,
+                              character_stats_value_get(stats, LIVES_NUMBER) +
+                                  value -
+                                  character_stats_value_get(stats, code));
+  character_stats_value_set(stats, code, value);
 }
 
 /*****************************/
@@ -112,19 +221,21 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
     mecha_notify(evaluation, player, "List of charvalues available:");
   if (flag >= 0) {
     notify_printf(evaluation, player,
-                  "List of %s available:", btech_charvaluetype_names[flag]);
+                  "List of %s available:", character_value_type_name(flag));
   }
   buf[0] = 0;
   for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     ok = 0;
-    type = char_values[i].type;
+    type = character_value_definition(i)->type;
     if (flag < 0)
       ok = 1;
     else if (type == flag)
       ok = 1;
     if (ok) {
-      snprintf(buf + strlen(buf), 80 - strlen(buf), "%-23s ",
-               char_values[i].name);
+      char entry[25];
+      snprintf(entry, sizeof(entry), "%-23s ",
+               character_value_definition(i)->name);
+      strncat(buf, entry, sizeof(buf) - strlen(buf) - 1);
       if (!((++found) % 3)) {
         mecha_notify(evaluation, player, buf);
         strcpy(buf, " ");
@@ -146,16 +257,12 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
 
 int char_getvaluecode(BtechContext *context, const char *name) {
   int *ip;
-  char *tmpbuf, *tmpc2;
-  const char *tmpc1;
+  char *tmpbuf;
 
   tmpbuf = alloc_sbuf("getvaluecodefind");
-  for (tmpc1 = name, tmpc2 = tmpbuf;
-       *tmpc1 && ((tmpbuf - tmpc2) < (SBUF_SIZE - 1)); tmpc1++, tmpc2++)
-    *tmpc2 = ascii_to_lower(*tmpc1);
-  *tmpc2 = 0;
-  if ((ip = hash_table_find(tmpbuf, &context->player_value_hashes[0])) == NULL)
-    ip = hash_table_find(tmpbuf, &context->player_value_hashes[1]);
+  lowercase_copy(tmpbuf, SBUF_SIZE, name);
+  if ((ip = hash_table_find(tmpbuf, character_value_hash(context, 0))) == NULL)
+    ip = hash_table_find(tmpbuf, character_value_hash(context, 1));
   free_sbuf(tmpbuf);
   return (int)(intptr_t)ip - 1;
 }
@@ -234,14 +341,14 @@ int char_rolld6(BtechContext *context, int num) {
 
 int char_getstatvalue(PSTATS *s, const char *name) {
   for (int i = 0; i < NUM_CHARVALUES; i++)
-    if (!strcasecmp(char_values[i].name, name))
+    if (!strcasecmp(character_value_definition(i)->name, name))
       return char_getstatvalue_by_code(s, i);
   return -1;
 }
 
 void char_setstatvalue(PSTATS *s, const char *name, int value) {
   for (int i = 0; i < NUM_CHARVALUES; i++)
-    if (!strcasecmp(char_values[i].name, name)) {
+    if (!strcasecmp(character_value_definition(i)->name, name)) {
       char_setstatvalue_by_code(s, i, value);
       return;
     }
@@ -281,20 +388,21 @@ static int char_getskilltargetbycode_base(BtechContext *context, DbRef player,
 
   if (code == -1)
     return 18;
-  if (char_values[code].type != CHAR_SKILL)
+  const CharacterValue *definition = character_value_definition(code);
+  if (definition->type != CHAR_SKILL)
     return 18;
   if (use_xp && context->cached_target_character == player &&
       context->cached_skill == code)
     return context->cached_skill_result + modifier;
-  if (char_values[code].flag & CHAR_ATHLETIC)
+  if (definition->flag & CHAR_ATHLETIC)
     val = char_getstatvalue(s, "build") + char_getstatvalue(s, "reflexes");
-  else if (char_values[code].flag & CHAR_PHYSICAL)
+  else if (definition->flag & CHAR_PHYSICAL)
     val = char_getstatvalue(s, "reflexes") + char_getstatvalue(s, "intuition");
-  else if (char_values[code].flag & CHAR_MENTAL)
+  else if (definition->flag & CHAR_MENTAL)
     val = char_getstatvalue(s, "intuition") + char_getstatvalue(s, "learn");
-  else if (char_values[code].flag & CHAR_PHYSICAL)
+  else if (definition->flag & CHAR_PHYSICAL)
     val = char_getstatvalue(s, "reflexes") + char_getstatvalue(s, "intuition");
-  else if (char_values[code].flag & CHAR_SOCIAL)
+  else if (definition->flag & CHAR_SOCIAL)
     val = char_getstatvalue(s, "intuition") + char_getstatvalue(s, "charisma");
   else
     return 18;
@@ -308,7 +416,7 @@ static int char_getskilltargetbycode_base(BtechContext *context, DbRef player,
     context->cached_skill_result = 18 - val - skill;
     return context->cached_skill_result + modifier;
   } else {
-    skill = s->values[code];
+    skill = character_stats_value_get(s, code);
     if (skill == -1)
       return (18);
     return 18 - val - skill;
@@ -343,7 +451,7 @@ int char_getxpbycode(BtechContext *context, DbRef player, int code) {
   if (code < 0)
     return 0;
   character_stats_retrieve(context, player, VALUES_SKILLS, s);
-  return s->xp[code] % XP_MAX;
+  return character_stats_xp_get(s, code) % XP_MAX;
 }
 
 int char_gainxpbycode(BtechContext *context, DbRef player, int code, int amount,
@@ -358,13 +466,16 @@ int char_gainxpbycode(BtechContext *context, DbRef player, int code, int amount,
    * within 30s to keep from spamming
    */
   if (override == 0)
-    if (!((context->clock->now > (s->last_use[code] + 30)) ||
-          (char_values[code].flag & SK_XP)))
+    if (!((context->clock->now >
+           (character_stats_last_use_get(s, code) + 30)) ||
+          (character_value_definition(code)->flag & SK_XP)))
       return 0;
-  s->last_use[code] = context->clock->now;
-  s->xp[code] += amount;
-  s->xp[code] =
-      s->xp[code] % XP_MAX + XP_MAX * figure_xp_bonus(context, player, s, code);
+  character_stats_last_use_set(s, code, context->clock->now);
+  character_stats_xp_set(s, code, character_stats_xp_get(s, code) + amount);
+  character_stats_xp_set(s, code,
+                         character_stats_xp_get(s, code) % XP_MAX +
+                             XP_MAX *
+                                 figure_xp_bonus(context, player, s, code));
   character_stats_store(context, player, s, VALUES_SKILLS);
   return 1;
 }
@@ -467,10 +578,7 @@ int char_getattrsavesucc(BtechContext *context, DbRef player,
 /************************/
 
 void init_btechstats(BtechContext *context) {
-  char *tmpbuf, *tmpc2, *write_cursor;
-  const char *name_cursor;
-  long i;
-  int j;
+  char *tmpbuf;
 
   context->player_value_hashes =
       calloc(2, sizeof(*context->player_value_hashes));
@@ -480,32 +588,32 @@ void init_btechstats(BtechContext *context) {
       context->char_value_short_names == nullptr)
     exit(EXIT_FAILURE);
   context->char_value_count = NUM_CHARVALUES;
-  hash_table_initialize(&context->player_value_hashes[0], 20 * HASH_FACTOR);
-  hash_table_initialize(&context->player_value_hashes[1], 20 * HASH_FACTOR);
+  hash_table_initialize(character_value_hash(context, 0), 20 * HASH_FACTOR);
+  hash_table_initialize(character_value_hash(context, 1), 20 * HASH_FACTOR);
   tmpbuf = alloc_sbuf("getvaluecode");
-  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
-    for (name_cursor = char_values[i].name, tmpc2 = tmpbuf; *name_cursor;
-         name_cursor++, tmpc2++)
-      *tmpc2 = ascii_to_lower(*name_cursor);
-    *tmpc2 = '\0';
-    hash_table_add(tmpbuf, (int *)(i + 1), &context->player_value_hashes[0]);
-    tmpbuf[0] = '\0';
-    write_cursor = tmpbuf;
-    for (j = 0; char_values[i].name[j]; j++) {
-      if (!isupper(char_values[i].name[j]))
+  for (int i = 0; i < NUM_CHARVALUES; i++) {
+    const char *name = character_value_definition(i)->name;
+    lowercase_copy(tmpbuf, SBUF_SIZE, name);
+    hash_table_add(tmpbuf, (int *)(intptr_t)(i + 1),
+                   character_value_hash(context, 0));
+    *(char *)checked_storage_at(tmpbuf, SBUF_SIZE, sizeof(char), 0) = '\0';
+    const size_t name_length = strlen(name);
+    for (size_t j = 0; j < name_length; j++) {
+      const char *character =
+          checked_storage_at_const(name, name_length + 1, sizeof(char), j);
+      if (*character < 'A' || *character > 'Z')
         continue;
-      strncpy(write_cursor, &char_values[i].name[j], 3);
-      write_cursor += 3;
+      char fragment[4];
+      snprintf(fragment, sizeof(fragment), "%.3s", character);
+      strncat(tmpbuf, fragment, SBUF_SIZE - strlen(tmpbuf) - 1);
     }
-    *write_cursor = '\0';
     if (strlen(tmpbuf) <= 3) {
-      strncpy(tmpbuf, char_values[i].name, 5);
-      tmpbuf[5] = '\0';
+      snprintf(tmpbuf, SBUF_SIZE, "%.5s", name);
     }
-    context->char_value_short_names[i] = strdup(tmpbuf);
-    for (write_cursor = tmpbuf; *write_cursor; write_cursor++)
-      *write_cursor = ascii_to_lower(*write_cursor);
-    hash_table_add(tmpbuf, (int *)(i + 1), &context->player_value_hashes[1]);
+    *character_short_name_slot(context, i) = strdup(tmpbuf);
+    lowercase_copy(tmpbuf, SBUF_SIZE, tmpbuf);
+    hash_table_add(tmpbuf, (int *)(intptr_t)(i + 1),
+                   character_value_hash(context, 1));
   }
   free_sbuf(tmpbuf);
 }
@@ -515,13 +623,13 @@ void btech_stats_destroy(BtechContext *context) {
     return;
 
   if (context->player_value_hashes != nullptr) {
-    hash_table_destroy(&context->player_value_hashes[0]);
-    hash_table_destroy(&context->player_value_hashes[1]);
+    hash_table_destroy(character_value_hash(context, 0));
+    hash_table_destroy(character_value_hash(context, 1));
     free(context->player_value_hashes);
     context->player_value_hashes = nullptr;
   }
   for (size_t i = 0; i < context->char_value_count; i++)
-    free(context->char_value_short_names[i]);
+    free(*character_short_name_slot(context, (int)i));
   free(context->char_value_short_names);
   context->char_value_short_names = nullptr;
   context->char_value_count = 0;

@@ -33,10 +33,11 @@ int mech_sensor_detects(Mech *mech, Mech *target, int f, int arc, float range,
 int mech_sensor_detects_now(Mech *mech, Mech *target, int f, int arc,
                             float range, int mapvis, int maplight);
 SensorFlagText sensor_flag_text(int flags);
-void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
-                                   int x, int y, Mech *target, int mapvis,
-                                   int maplight, int cloudbase, int seeanew,
-                                   int wlf);
+unsigned short mech_sensor_visibility_update(Mech *mech, unsigned short flags,
+                                             float range, int x, int y,
+                                             Mech *target, int mapvis,
+                                             int maplight, int cloudbase,
+                                             int seeanew, int wlf);
 void mech_sensor_map_los_update(DbRef obj, BattleMap *map);
 void mech_sensor_description_append(char *buf, int size, Mech *mech, int sn,
                                     int verbose);

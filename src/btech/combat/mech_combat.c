@@ -8,7 +8,6 @@
  *       All rights reserved
  */
 
-#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,7 +58,9 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
 #include "weapon_settings.h"
@@ -174,7 +175,10 @@ static void mech_ss_event(MuxEvent *ev) {
     return;
   if (!mech_has_active_pilot(mech))
     return;
-  mech_notify(mech, MECHPILOT, ss_messages[BOUNDED(0, i, 8)]);
+  const char *const *message = checked_storage_at_const(
+      ss_messages, sizeof(ss_messages) / sizeof(*ss_messages),
+      sizeof(*ss_messages), (size_t)BOUNDED(0, i, 8));
+  mech_notify(mech, MECHPILOT, *message);
 }
 
 void mech_sixth_sense_check(Mech *mech, Mech *target) {
@@ -213,8 +217,10 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
   argc = mech_parseattributes(buffer, args, 5);
   switch (argc) {
   case 1:
+    char *const *first_argument = checked_storage_at_const(
+        args, sizeof(args) / sizeof(*args), sizeof(*args), 0);
     mech_map = btech_context_get_map(context, mech_map_dbref(mech));
-    if (args[0][0] == '-') {
+    if (**first_argument == '-') {
       mech_targeting_target_clear(mech);
       mech_notify(mech, MECHALL, "All locks cleared.");
       mech_stop_lock(mech);
@@ -222,8 +228,8 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
         mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
       return;
     }
-    targetID[0] = args[0][0];
-    targetID[1] = args[0][1];
+    targetID[0] = *checked_string_suffix(*first_argument, 0);
+    targetID[1] = *checked_string_suffix(*first_argument, 1);
     targetref = FindTargetDBREFFromMapNumber(mech, targetID);
     target = btech_context_get_mech(context, targetref);
     if (target)
@@ -301,7 +307,7 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
                    "Invalid lock mode!");
       return;
     }
-    switch (toupper(args[2][0])) {
+    switch (ascii_to_upper(*checked_string_suffix(args[2], 0))) {
     case 'B':
       mode = LOCK_BUILDING;
       break;

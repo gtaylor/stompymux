@@ -18,6 +18,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 
 constexpr int LUA_FLOW_MAX_FIELDS = 16;
 constexpr int LUA_FLOW_KEY_SIZE = 32;
@@ -35,12 +36,19 @@ typedef struct LuaFlowData {
   int field_count;
 } LuaFlowData;
 
+static LuaFlowField *lua_flow_field_at(LuaFlowData *data, size_t index) {
+  return checked_storage_at(data->fields, LUA_FLOW_MAX_FIELDS,
+                            sizeof(*data->fields), index);
+}
+
 static void lua_flow_data_clear_fields(LuaFlowData *data) {
   int index;
 
   for (index = 0; index < data->field_count; index++) {
-    free_lbuf(data->fields[index].value);
-    data->fields[index].value = nullptr;
+    LuaFlowField *field = lua_flow_field_at(data, (size_t)index);
+
+    free_lbuf(field->value);
+    field->value = nullptr;
   }
   data->field_count = 0;
 }
@@ -60,8 +68,10 @@ static void lua_flow_decode(lua_State *state, LuaFlowData *data) {
 
   lua_newtable(state);
   for (index = 0; index < data->field_count; index++) {
-    lua_pushstring(state, data->fields[index].value);
-    lua_setfield(state, -2, data->fields[index].key);
+    LuaFlowField *field = lua_flow_field_at(data, (size_t)index);
+
+    lua_pushstring(state, field->value);
+    lua_setfield(state, -2, field->key);
   }
   lua_setfield(state, -2, "flow");
 }
@@ -77,7 +87,7 @@ static void lua_flow_encode(LuaRuntime *runtime, lua_State *state,
     if (lua_type(state, -2) == LUA_TSTRING &&
         (lua_isstring(state, -1) || lua_isnumber(state, -1)) &&
         data->field_count < LUA_FLOW_MAX_FIELDS) {
-      LuaFlowField *field = &data->fields[data->field_count];
+      LuaFlowField *field = lua_flow_field_at(data, (size_t)data->field_count);
 
       StringCopyTrunc(field->key, lua_tostring(state, -2),
                       LUA_FLOW_KEY_SIZE - 1);

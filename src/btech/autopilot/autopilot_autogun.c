@@ -19,6 +19,7 @@
 
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
+#include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
 #include "equipment_types.h"
 #include "map_los_api.h"
@@ -39,11 +40,19 @@
 #include "mux/server/platform.h"
 #include "mux/support/red_black_tree.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
 
 static void format_target_id(char buffer[static LBUF_SIZE],
                              const Mech *target) {
   MechUnitId id = mech_unit_id(target);
   snprintf(buffer, LBUF_SIZE, "%c%c", id.first, id.second);
+}
+
+static AutopilotWeapon *
+autopilot_weapon_profile_previous(RedBlackTree profile, AutopilotWeapon *weapon,
+                                  int range) {
+  return red_black_tree_search(profile, SEARCH_PREV,
+                               autopilot_weapon_range_score_key(weapon, range));
 }
 
 void autopilot_autogun_log(const Autopilot *autopilot, const char *format,
@@ -433,8 +442,14 @@ void auto_gun_event(Autopilot *autopilot) {
     return;
   }
 
+  const int profile_range = (int)range;
+  RedBlackTree weapon_profile =
+      range >= 0.0F && range < (float)AUTO_GUN_MAX_RANGE
+          ? autopilot_weapon_profile_get(autopilot, profile_range)
+          : nullptr;
+
   /* Cycle through Guns while watching the heat */
-  if ((range < (float)AUTO_GUN_MAX_RANGE) && autopilot->profile[(int)range]) {
+  if (weapon_profile != nullptr) {
 
     /* Ok we got weapons lets use them */
 
@@ -454,7 +469,7 @@ void auto_gun_event(Autopilot *autopilot) {
 
     /* Get first weapon */
     temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-        autopilot->profile[(int)range], SEARCH_LAST, nullptr);
+        weapon_profile, SEARCH_LAST, nullptr);
 
     while (temp_weapon_node) {
 
@@ -465,9 +480,8 @@ void auto_gun_event(Autopilot *autopilot) {
                   temp_weapon_node->weapon_db_number))) {
 
         /* Weapon Doesn't work so go to next one */
-        temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-            autopilot->profile[(int)range], SEARCH_PREV,
-            &temp_weapon_node->range_scores[(int)range]);
+        temp_weapon_node = autopilot_weapon_profile_previous(
+            weapon_profile, temp_weapon_node, profile_range);
 
         continue;
       }
@@ -477,19 +491,18 @@ void auto_gun_event(Autopilot *autopilot) {
                                       temp_weapon_node->critical)) {
 
         /* Go to the next one */
-        temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-            autopilot->profile[(int)range], SEARCH_PREV,
-            &temp_weapon_node->range_scores[(int)range]);
+        temp_weapon_node = autopilot_weapon_profile_previous(
+            weapon_profile, temp_weapon_node, profile_range);
 
         continue;
       }
 
-      if (MechWeapons[temp_weapon_node->weapon_db_number].special & AMS) {
+      if (weapon_catalogue_is_anti_missile(
+              temp_weapon_node->weapon_db_number)) {
 
         /* Ok its an AMS so go to next weapon */
-        temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-            autopilot->profile[(int)range], SEARCH_PREV,
-            &temp_weapon_node->range_scores[(int)range]);
+        temp_weapon_node = autopilot_weapon_profile_previous(
+            weapon_profile, temp_weapon_node, profile_range);
         continue;
       }
 
@@ -503,24 +516,23 @@ void auto_gun_event(Autopilot *autopilot) {
           !(mech_is_jumping(target) || mech_is_out_of_control(target) ||
             (mech_is_flying_type(target) && !mech_is_landed(target)))) {
 
-        temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-            autopilot->profile[(int)range], SEARCH_PREV,
-            &temp_weapon_node->range_scores[(int)range]);
+        temp_weapon_node = autopilot_weapon_profile_previous(
+            weapon_profile, temp_weapon_node, profile_range);
         continue;
       }
 
       /* Check heat levels, since the heat isn't updated untill we're done
        * we have to manage the heat ourselves */
       /*! \todo {Add a check also for aeros} */
+      const int weapon_heat =
+          weapon_catalogue_heat(temp_weapon_node->weapon_db_number);
       if ((mech_class(mech) == CLASS_MECH) &&
-          ((accumulate_heat +
-            (float)MechWeapons[temp_weapon_node->weapon_db_number].heat -
+          ((accumulate_heat + (float)weapon_heat -
             mech_heat_dissipation(mech)) > AUTO_GUN_MAX_HEAT)) {
 
         /* Would make ourselves to hot to fire this gun */
-        temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-            autopilot->profile[(int)range], SEARCH_PREV,
-            &temp_weapon_node->range_scores[(int)range]);
+        temp_weapon_node = autopilot_weapon_profile_previous(
+            weapon_profile, temp_weapon_node, profile_range);
 
         continue;
       }
@@ -583,9 +595,8 @@ void auto_gun_event(Autopilot *autopilot) {
               } else {
 
                 /* Can't do anything so go to next weapon */
-                temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-                    autopilot->profile[(int)range], SEARCH_PREV,
-                    &temp_weapon_node->range_scores[(int)range]);
+                temp_weapon_node = autopilot_weapon_profile_previous(
+                    weapon_profile, temp_weapon_node, profile_range);
 
                 continue;
               }
@@ -597,9 +608,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
             /* Weapon is forward torso or leg mounted weapon
              * so no way to shoot with */
-            temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-                autopilot->profile[(int)range], SEARCH_PREV,
-                &temp_weapon_node->range_scores[(int)range]);
+            temp_weapon_node = autopilot_weapon_profile_previous(
+                weapon_profile, temp_weapon_node, profile_range);
 
             continue;
           }
@@ -614,9 +624,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
             /* No way can we hit him with leg mounted
              * weapons so lets go to next one */
-            temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-                autopilot->profile[(int)range], SEARCH_PREV,
-                &temp_weapon_node->range_scores[(int)range]);
+            temp_weapon_node = autopilot_weapon_profile_previous(
+                weapon_profile, temp_weapon_node, profile_range);
 
             continue;
           }
@@ -631,9 +640,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
             /* No way can we hit him with leg mounted
              * weapons so lets go to next one */
-            temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-                autopilot->profile[(int)range], SEARCH_PREV,
-                &temp_weapon_node->range_scores[(int)range]);
+            temp_weapon_node = autopilot_weapon_profile_previous(
+                weapon_profile, temp_weapon_node, profile_range);
 
             continue;
           }
@@ -649,9 +657,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
             /* No way can we hit the guy with a rear
              * gun so lets go to next one */
-            temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-                autopilot->profile[(int)range], SEARCH_PREV,
-                &temp_weapon_node->range_scores[(int)range]);
+            temp_weapon_node = autopilot_weapon_profile_previous(
+                weapon_profile, temp_weapon_node, profile_range);
 
             continue;
           }
@@ -672,9 +679,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
             /* Weapon is not rear mounted so skip it and
              * go to the next weapon */
-            temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-                autopilot->profile[(int)range], SEARCH_PREV,
-                &temp_weapon_node->range_scores[(int)range]);
+            temp_weapon_node = autopilot_weapon_profile_previous(
+                weapon_profile, temp_weapon_node, profile_range);
 
             continue;
           }
@@ -687,9 +693,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
             /* Weapon is rear mounted so skip it and
              * go to the next weapon */
-            temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-                autopilot->profile[(int)range], SEARCH_PREV,
-                &temp_weapon_node->range_scores[(int)range]);
+            temp_weapon_node = autopilot_weapon_profile_previous(
+                weapon_profile, temp_weapon_node, profile_range);
 
             continue;
           }
@@ -698,9 +703,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
           /* The attacker is in a zone we can't possibly
            * shoot into, so just go to next weapon */
-          temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-              autopilot->profile[(int)range], SEARCH_PREV,
-              &temp_weapon_node->range_scores[(int)range]);
+          temp_weapon_node = autopilot_weapon_profile_previous(
+              weapon_profile, temp_weapon_node, profile_range);
 
           continue;
         }
@@ -743,9 +747,8 @@ void auto_gun_event(Autopilot *autopilot) {
                              temp_weapon_node->critical)) {
 
             /* Not in the arc so lets go to the next weapon */
-            temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-                autopilot->profile[(int)range], SEARCH_PREV,
-                &temp_weapon_node->range_scores[(int)range]);
+            temp_weapon_node = autopilot_weapon_profile_previous(
+                weapon_profile, temp_weapon_node, profile_range);
 
             continue;
           }
@@ -772,13 +775,12 @@ void auto_gun_event(Autopilot *autopilot) {
        * heat */
       if (mech_weapon_is_recycling_at(mech, temp_weapon_node->section,
                                       temp_weapon_node->critical)) {
-        accumulate_heat += MechWeapons[temp_weapon_node->weapon_db_number].heat;
+        accumulate_heat += (float)weapon_heat;
       }
 
       /* Ok go to the next weapon */
-      temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-          autopilot->profile[(int)range], SEARCH_PREV,
-          &temp_weapon_node->range_scores[(int)range]);
+      temp_weapon_node = autopilot_weapon_profile_previous(
+          weapon_profile, temp_weapon_node, profile_range);
 
     } /* End of cycling through weapons */
   }

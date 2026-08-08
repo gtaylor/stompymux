@@ -14,6 +14,7 @@
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 
 static void help_command_send_article(EvaluationContext *evaluation,
@@ -70,7 +71,6 @@ void do_help(CommandInvocation *invocation) {
   bool viewer_is_wizard =
       is_wizard(invocation->context->world->database, player);
   const HelpArticle *article;
-  char *p;
 
   if (*message == '\0') {
     article = help_index_default_article(help);
@@ -85,8 +85,14 @@ void do_help(CommandInvocation *invocation) {
     return;
   }
 
-  for (p = message; *p; p++)
-    *p = ascii_to_lower(*p);
+  const size_t length = strlen(message);
+
+  for (size_t index = 0; index < length; index++) {
+    char *character =
+        checked_storage_at(message, length + 1, sizeof(char), index);
+
+    *character = ascii_to_lower(*character);
+  }
 
   article = help_index_find_exact(help, message, viewer_is_wizard);
   if (article) {

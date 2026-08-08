@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "btech/context.h"
+#include "mux/support/checked_storage.h"
 
 /*
  * Implement a name cache of a template names.  This allows differences
@@ -47,6 +48,12 @@ struct MechTemplateRegistry {
   size_t template_capacity;
   char resolved_path[1024];
 };
+
+static TemplateDirectoryEntry *template_entry_at(MechTemplateRegistry *registry,
+                                                 size_t index) {
+  return checked_storage_at(registry->templates, registry->template_capacity,
+                            sizeof(*registry->templates), index);
+}
 
 /*
  * The ordering function for the template name cache.  Used to sort and
@@ -121,10 +128,10 @@ static int scan_template_dir(MechTemplateRegistry *registry,
       registry->template_capacity = capacity;
     }
 
-    snprintf(registry->templates[registry->template_count].name,
-             sizeof(registry->templates[registry->template_count].name), "%s",
-             ent->d_name);
-    registry->templates[registry->template_count].dir = parent;
+    TemplateDirectoryEntry *entry =
+        template_entry_at(registry, registry->template_count);
+    snprintf(entry->name, sizeof(entry->name), "%s", ent->d_name);
+    entry->dir = parent;
     registry->template_count++;
   }
 
@@ -251,9 +258,13 @@ oldstyle:
   snprintf(registry->resolved_path, sizeof(registry->resolved_path), "%s/%s",
            mech_path, id);
   fp = fopen(registry->resolved_path, "r");
-  for (i = 0; !fp && subdirs[i]; i++) {
+  const size_t subdir_count = sizeof(subdirs) / sizeof(*subdirs) - 1;
+  for (size_t subdir_index = 0; !fp && subdir_index < subdir_count;
+       subdir_index++) {
+    const char *const *subdir = checked_storage_at_const(
+        subdirs, subdir_count, sizeof(*subdirs), subdir_index);
     snprintf(registry->resolved_path, sizeof(registry->resolved_path),
-             "%s/%s/%s", mech_path, subdirs[i], id);
+             "%s/%s/%s", mech_path, *subdir, id);
     fp = fopen(registry->resolved_path, "r");
   }
   if (fp) {

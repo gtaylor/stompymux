@@ -18,6 +18,7 @@
 #include "mux/server/game.h"
 #include "mux/server/server_config.h"
 #include "mux/server/timer.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/database_check.h"
 #include "mux/world/player_cache.h"
 
@@ -154,16 +155,27 @@ static void dispatch(MaintenanceContext *maintenance) {
 
     maintenance->clock->metrics_deadline = 15 + maintenance->clock->now;
     curr = maintenance->clock->current_sample;
-    if (maintenance->clock->now > maintenance->clock->sample_time[curr]) {
+    int *sample_time = checked_storage_at(
+        maintenance->clock->sample_time, 2,
+        sizeof(*maintenance->clock->sample_time), (size_t)curr);
+    if (maintenance->clock->now > *sample_time) {
 
       struct rusage usage;
 
       curr = 1 - curr;
       getrusage(RUSAGE_SELF, &usage);
-      maintenance->clock->shared_memory[curr] = (int)usage.ru_ixrss;
-      maintenance->clock->private_memory[curr] = (int)usage.ru_idrss;
-      maintenance->clock->stack_memory[curr] = (int)usage.ru_isrss;
-      maintenance->clock->sample_time[curr] = (int)maintenance->clock->now;
+      *(int *)checked_storage_at(maintenance->clock->shared_memory, 2,
+                                 sizeof(*maintenance->clock->shared_memory),
+                                 (size_t)curr) = (int)usage.ru_ixrss;
+      *(int *)checked_storage_at(maintenance->clock->private_memory, 2,
+                                 sizeof(*maintenance->clock->private_memory),
+                                 (size_t)curr) = (int)usage.ru_idrss;
+      *(int *)checked_storage_at(maintenance->clock->stack_memory, 2,
+                                 sizeof(*maintenance->clock->stack_memory),
+                                 (size_t)curr) = (int)usage.ru_isrss;
+      *(int *)checked_storage_at(maintenance->clock->sample_time, 2,
+                                 sizeof(*maintenance->clock->sample_time),
+                                 (size_t)curr) = (int)maintenance->clock->now;
       maintenance->clock->current_sample = curr;
     }
   }

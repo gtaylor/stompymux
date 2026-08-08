@@ -19,6 +19,7 @@
 
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/wild.h"
 
@@ -38,19 +39,62 @@ struct WildcardContext {
   int argument_count;
 };
 
+typedef struct WildCursor {
+  const char *text;
+  size_t length;
+  size_t offset;
+} WildCursor;
+
+static WildCursor wild_cursor(const char *text) {
+  return (WildCursor){.text = text, .length = strlen(text), .offset = 0};
+}
+
+static char wild_cursor_current(const WildCursor *cursor) {
+  if (cursor->offset == cursor->length)
+    return '\0';
+  return *(const char *)checked_storage_at_const(cursor->text, cursor->length,
+                                                 sizeof(char), cursor->offset);
+}
+
+static void wild_cursor_advance(WildCursor *cursor) {
+  if (cursor->offset < cursor->length)
+    cursor->offset++;
+}
+
+static const char *wild_cursor_suffix(const WildCursor *cursor,
+                                      size_t additional) {
+  return checked_string_suffix(cursor->text, cursor->offset + additional);
+}
+
+static char *wild_argument_at(const WildcardContext *context, int argument) {
+  return *(char *const *)checked_storage_at_const(
+      context->arguments, (size_t)context->argument_count,
+      sizeof(*context->arguments), (size_t)argument);
+}
+
+static void wild_capture_character(const WildcardContext *context, int argument,
+                                   char character) {
+  char *capture = wild_argument_at(context, argument);
+  *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char), 0) = character;
+  *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char), 1) = '\0';
+}
+
 /**
  * Do a wildcard match, without remembering the wild data.
  * This routine will cause crashes if fed NULLs instead of strings.
  */
 int quick_wild(const char *tstr, const char *dstr) {
-  while (*tstr != '*') {
-    switch (*tstr) {
+  WildCursor pattern = wild_cursor(tstr);
+  WildCursor data = wild_cursor(dstr);
+
+  while (wild_cursor_current(&pattern) != '*') {
+    switch (wild_cursor_current(&pattern)) {
     case '?':
       /*
        * Single character match.  Return false if at * end
        * * * * of data.
        */
-      if (!*dstr)
+      if (!wild_cursor_current(&data))
         return 0;
       break;
     case '\\':
@@ -58,7 +102,7 @@ int quick_wild(const char *tstr, const char *dstr) {
        * Escape character.  Move up, and force literal * *
        * * * match of next character.
        */
-      tstr++;
+      wild_cursor_advance(&pattern);
       /*
        * FALL THROUGH
        */
@@ -68,63 +112,67 @@ int quick_wild(const char *tstr, const char *dstr) {
        * Literal character.  Check for a match. * If * * *
        * matching end of data, return true.
        */
-      if (is_notequal(*dstr, *tstr))
+      if (is_notequal(wild_cursor_current(&data),
+                      wild_cursor_current(&pattern)))
         return 0;
-      if (!*dstr)
+      if (!wild_cursor_current(&data))
         return 1;
     }
-    tstr++;
-    dstr++;
+    wild_cursor_advance(&pattern);
+    wild_cursor_advance(&data);
   }
 
   /*
    * Skip over '*'.
    */
 
-  tstr++;
+  wild_cursor_advance(&pattern);
 
   /*
    * Return true on trailing '*'.
    */
 
-  if (!*tstr)
+  if (!wild_cursor_current(&pattern))
     return 1;
 
   /*
    * Skip over wildcards.
    */
 
-  while ((*tstr == '?') || (*tstr == '*')) {
-    if (*tstr == '?') {
-      if (!*dstr)
+  while (wild_cursor_current(&pattern) == '?' ||
+         wild_cursor_current(&pattern) == '*') {
+    if (wild_cursor_current(&pattern) == '?') {
+      if (!wild_cursor_current(&data))
         return 0;
-      dstr++;
+      wild_cursor_advance(&data);
     }
-    tstr++;
+    wild_cursor_advance(&pattern);
   }
 
   /*
    * Skip over a backslash in the pattern string if it is there.
    */
 
-  if (*tstr == '\\')
-    tstr++;
+  if (wild_cursor_current(&pattern) == '\\')
+    wild_cursor_advance(&pattern);
 
   /*
    * Return true on trailing '*'.
    */
 
-  if (!*tstr)
+  if (!wild_cursor_current(&pattern))
     return 1;
 
   /*
    * Scan for possible matches.
    */
 
-  while (*dstr) {
-    if (is_equal(*dstr, *tstr) && quick_wild(tstr + 1, dstr + 1))
+  while (wild_cursor_current(&data)) {
+    if (is_equal(wild_cursor_current(&data), wild_cursor_current(&pattern)) &&
+        quick_wild(wild_cursor_suffix(&pattern, 1),
+                   wild_cursor_suffix(&data, 1)))
       return 1;
-    dstr++;
+    wild_cursor_advance(&data);
   }
   return 0;
 }
@@ -139,20 +187,21 @@ int quick_wild(const char *tstr, const char *dstr) {
  */
 static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
                  int arg) {
-  const char *datapos;
+  WildCursor pattern = wild_cursor(tstr);
+  WildCursor data = wild_cursor(dstr);
+  size_t data_capture_offset;
   int argpos, numextra;
 
-  while (*tstr != '*') {
-    switch (*tstr) {
+  while (wild_cursor_current(&pattern) != '*') {
+    switch (wild_cursor_current(&pattern)) {
     case '?':
       /*
        * Single character match.  Return false if at * end
        * * * * of data.
        */
-      if (!*dstr)
+      if (!wild_cursor_current(&data))
         return 0;
-      context->arguments[arg][0] = *dstr;
-      context->arguments[arg][1] = '\0';
+      wild_capture_character(context, arg, wild_cursor_current(&data));
       arg++;
 
       /*
@@ -160,14 +209,15 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
        */
 
       if (arg >= context->argument_count)
-        return quick_wild(tstr + 1, dstr + 1);
+        return quick_wild(wild_cursor_suffix(&pattern, 1),
+                          wild_cursor_suffix(&data, 1));
       break;
     case '\\':
       /*
        * Escape character.  Move up, and force literal * *
        * * * match of next character.
        */
-      tstr++;
+      wild_cursor_advance(&pattern);
       /*
        * FALL THROUGH
        */
@@ -177,29 +227,32 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
        * Literal character.  Check for a match. * If * * *
        * matching end of data, return true.
        */
-      if (is_notequal(*dstr, *tstr))
+      if (is_notequal(wild_cursor_current(&data),
+                      wild_cursor_current(&pattern)))
         return 0;
-      if (!*dstr)
+      if (!wild_cursor_current(&data))
         return 1;
     }
-    tstr++;
-    dstr++;
+    wild_cursor_advance(&pattern);
+    wild_cursor_advance(&data);
   }
 
   /*
    * If at end of pattern, slurp the rest, and leave.
    */
 
-  if (!tstr[1]) {
-    StringCopyTrunc(context->arguments[arg], dstr, LBUF_SIZE - 1);
-    context->arguments[arg][LBUF_SIZE - 1] = '\0';
+  if (!*wild_cursor_suffix(&pattern, 1)) {
+    char *capture = wild_argument_at(context, arg);
+    StringCopyTrunc(capture, wild_cursor_suffix(&data, 0), LBUF_SIZE - 1);
+    *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char),
+                                LBUF_SIZE - 1) = '\0';
     return 1;
   }
   /*
    * Remember current position for filling in the '*' return.
    */
 
-  datapos = dstr;
+  data_capture_offset = data.offset;
   argpos = arg;
 
   /*
@@ -213,7 +266,8 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
        *
        * * before a fixed string.
        */
-      context->arguments[argpos][0] = '\0';
+      *(char *)checked_storage_at(wild_argument_at(context, argpos), LBUF_SIZE,
+                                  sizeof(char), 0) = '\0';
       argpos++;
 
       /*
@@ -221,16 +275,18 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
        */
 
       if (argpos >= context->argument_count)
-        return quick_wild(tstr, dstr);
+        return quick_wild(wild_cursor_suffix(&pattern, 0),
+                          wild_cursor_suffix(&data, 0));
 
       /*
        * Fill in any intervening '?'s
        */
 
       while (argpos < arg) {
-        context->arguments[argpos][0] = *datapos;
-        context->arguments[argpos][1] = '\0';
-        datapos++;
+        char character = *(const char *)checked_storage_at_const(
+            data.text, data.length, sizeof(char), data_capture_offset);
+        wild_capture_character(context, argpos, character);
+        data_capture_offset++;
         argpos++;
 
         /*
@@ -238,14 +294,15 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
          */
 
         if (argpos >= context->argument_count)
-          return quick_wild(tstr, dstr);
+          return quick_wild(wild_cursor_suffix(&pattern, 0),
+                            wild_cursor_suffix(&data, 0));
       }
     }
     /*
      * Skip over the '*' for now...
      */
 
-    tstr++;
+    wild_cursor_advance(&pattern);
     arg++;
 
     /*
@@ -253,22 +310,22 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
      */
 
     numextra = 0;
-    while (*tstr == '?') {
-      if (!*dstr)
+    while (wild_cursor_current(&pattern) == '?') {
+      if (!wild_cursor_current(&data))
         return 0;
-      tstr++;
-      dstr++;
+      wild_cursor_advance(&pattern);
+      wild_cursor_advance(&data);
       arg++;
       numextra++;
     }
-  } while (*tstr == '*');
+  } while (wild_cursor_current(&pattern) == '*');
 
   /*
    * Skip over a backslash in the pattern string if it is there.
    */
 
-  if (*tstr == '\\')
-    tstr++;
+  if (wild_cursor_current(&pattern) == '\\')
+    wild_cursor_advance(&pattern);
 
   /*
    * Check for possible matches.  This loop terminates either at * end
@@ -280,34 +337,43 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
      * Scan forward until first character matches.
      */
 
-    if (*tstr)
-      while (is_notequal(*dstr, *tstr)) {
-        if (!*dstr)
+    if (wild_cursor_current(&pattern))
+      while (is_notequal(wild_cursor_current(&data),
+                         wild_cursor_current(&pattern))) {
+        if (!wild_cursor_current(&data))
           return 0;
-        dstr++;
+        wild_cursor_advance(&data);
       }
     else
-      while (*dstr)
-        dstr++;
+      while (wild_cursor_current(&data))
+        wild_cursor_advance(&data);
 
     /*
      * The first character matches, now.  Check if the rest * * *
      *
      * * does, using the fastest method, as usual.
      */
-    if (!*dstr || ((arg < context->argument_count)
-                       ? wild1(context, tstr + 1, dstr + 1, arg)
-                       : quick_wild(tstr + 1, dstr + 1))) {
+    if (!wild_cursor_current(&data) ||
+        ((arg < context->argument_count)
+             ? wild1(context, wild_cursor_suffix(&pattern, 1),
+                     wild_cursor_suffix(&data, 1), arg)
+             : quick_wild(wild_cursor_suffix(&pattern, 1),
+                          wild_cursor_suffix(&data, 1)))) {
 
       /*
        * Found a match!  Fill in all remaining arguments. *
        *
        * *  * *  * * First do the '*'...
        */
-      StringCopyTrunc(context->arguments[argpos], datapos,
-                      (size_t)((dstr - datapos) - numextra));
-      context->arguments[argpos][(dstr - datapos) - numextra] = '\0';
-      datapos = dstr - numextra;
+      size_t capture_length =
+          data.offset - data_capture_offset - (size_t)numextra;
+      char *capture = wild_argument_at(context, argpos);
+      StringCopyTrunc(capture,
+                      checked_string_suffix(data.text, data_capture_offset),
+                      capture_length);
+      *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char),
+                                  capture_length) = '\0';
+      data_capture_offset = data.offset - (size_t)numextra;
       argpos++;
 
       /*
@@ -317,9 +383,10 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
       while (numextra) {
         if (argpos >= context->argument_count)
           return 1;
-        context->arguments[argpos][0] = *datapos;
-        context->arguments[argpos][1] = '\0';
-        datapos++;
+        char character = *(const char *)checked_storage_at_const(
+            data.text, data.length, sizeof(char), data_capture_offset);
+        wild_capture_character(context, argpos, character);
+        data_capture_offset++;
         argpos++;
         numextra--;
       }
@@ -330,7 +397,7 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
 
       return 1;
     } else {
-      dstr++;
+      wild_cursor_advance(&data);
     }
   }
 }
@@ -346,29 +413,32 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
  */
 int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
   int i, value;
-  const char *scan;
   WildcardContext context = {.arguments = args, .argument_count = nargs};
+  WildCursor pattern = wild_cursor(tstr);
+  WildCursor data = wild_cursor(dstr);
 
   /*
    * Initialize the return array.
    */
 
   for (i = 0; i < nargs; i++)
-    args[i] = nullptr;
+    *(char **)checked_storage_at(args, (size_t)nargs, sizeof(*args),
+                                 (size_t)i) = nullptr;
 
   /*
    * Do fast match.
    */
 
-  while ((*tstr != '*') && (*tstr != '?')) {
-    if (*tstr == '\\')
-      tstr++;
-    if (is_notequal(*dstr, *tstr))
+  while (wild_cursor_current(&pattern) != '*' &&
+         wild_cursor_current(&pattern) != '?') {
+    if (wild_cursor_current(&pattern) == '\\')
+      wild_cursor_advance(&pattern);
+    if (is_notequal(wild_cursor_current(&data), wild_cursor_current(&pattern)))
       return 0;
-    if (!*dstr)
+    if (!wild_cursor_current(&data))
       return 1;
-    tstr++;
-    dstr++;
+    wild_cursor_advance(&pattern);
+    wild_cursor_advance(&data);
   }
 
   /*
@@ -376,40 +446,48 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
    */
 
   i = 0;
-  scan = tstr;
-  while (*scan && (i < nargs)) {
-    switch (*scan) {
+  WildCursor scan = pattern;
+  while (wild_cursor_current(&scan) && i < nargs) {
+    switch (wild_cursor_current(&scan)) {
     case '?':
-      args[i] = alloc_lbuf("wild.?");
-      memset(args[i], 0, LBUF_SIZE);
+      *(char **)checked_storage_at(args, (size_t)nargs, sizeof(*args),
+                                   (size_t)i) = alloc_lbuf("wild.?");
+      memset(wild_argument_at(&context, i), 0, LBUF_SIZE);
       i++;
       break;
     case '*':
-      args[i] = alloc_lbuf("wild.*");
-      memset(args[i], 0, LBUF_SIZE);
+      *(char **)checked_storage_at(args, (size_t)nargs, sizeof(*args),
+                                   (size_t)i) = alloc_lbuf("wild.*");
+      memset(wild_argument_at(&context, i), 0, LBUF_SIZE);
       i++;
       break;
     default:
       break;
     }
-    scan++;
+    wild_cursor_advance(&scan);
   }
 
   /*
    * Do the match.
    */
 
-  value = nargs ? wild1(&context, tstr, dstr, 0) : quick_wild(tstr, dstr);
+  value = nargs ? wild1(&context, wild_cursor_suffix(&pattern, 0),
+                        wild_cursor_suffix(&data, 0), 0)
+                : quick_wild(wild_cursor_suffix(&pattern, 0),
+                             wild_cursor_suffix(&data, 0));
 
   /*
    * Clean out any fake match data left by wild1.
    */
 
-  for (i = 0; i < nargs; i++)
-    if ((args[i] != nullptr) && (!*args[i] || !value)) {
-      free_lbuf(args[i]);
-      args[i] = nullptr;
+  for (i = 0; i < nargs; i++) {
+    char **argument =
+        checked_storage_at(args, (size_t)nargs, sizeof(*args), (size_t)i);
+    if ((*argument != nullptr) && (!**argument || !value)) {
+      free_lbuf(*argument);
+      *argument = nullptr;
     }
+  }
   return value;
 }
 
@@ -422,14 +500,14 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
 int wild_match(const char *tstr, const char *dstr) {
   switch (*tstr) {
   case '>':
-    tstr++;
-    if (isdigit((unsigned char)*tstr) || (*tstr == '-'))
+    tstr = checked_string_suffix(tstr, 1);
+    if ((isdigit)((unsigned char)*tstr) || (*tstr == '-'))
       return (atoi(tstr) < atoi(dstr));
     else
       return (strcmp(tstr, dstr) < 0);
   case '<':
-    tstr++;
-    if (isdigit((unsigned char)*tstr) || (*tstr == '-'))
+    tstr = checked_string_suffix(tstr, 1);
+    if ((isdigit)((unsigned char)*tstr) || (*tstr == '-'))
       return (atoi(tstr) > atoi(dstr));
     else
       return (strcmp(tstr, dstr) > 0);

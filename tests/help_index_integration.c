@@ -9,6 +9,7 @@
 #include "mux/help/help_types.h"
 #include "mux/objects/db.h"
 #include "mux/server/log.h"
+#include "mux/support/checked_storage.h"
 
 void notify_printf(EvaluationContext *evaluation, DbRef player,
                    const char *format, ...);
@@ -20,6 +21,18 @@ void log_error(ServerLog *log, int key, const char *primary,
   (void)primary;
   (void)secondary;
   (void)format;
+}
+
+static const char *test_string_item(const char *const *items, size_t count,
+                                    size_t index) {
+  return *(const char *const *)checked_storage_at_const(items, count,
+                                                        sizeof(*items), index);
+}
+
+static const char *test_help_string_item(const HelpStringList *list,
+                                         size_t index) {
+  return *(char *const *)checked_storage_at_const(list->items, list->count,
+                                                  sizeof(*list->items), index);
 }
 
 void notify_printf(EvaluationContext *evaluation, DbRef player,
@@ -67,12 +80,15 @@ int main(int argc, char *argv[]) {
   const HelpArticle *default_article;
   HelpIndex *index;
   HelpIndex *second_index;
+  const char *help_directory;
 
   if (argc != 2) {
     fprintf(stderr, "usage: %s <help-directory>\n", argv[0]);
     return 1;
   }
-  index = help_index_create(nullptr, nullptr, argv[1], NOTHING);
+  help_directory = *(char *const *)checked_storage_at_const(argv, (size_t)argc,
+                                                            sizeof(*argv), 1);
+  index = help_index_create(nullptr, nullptr, help_directory, NOTHING);
   if (index == nullptr)
     return 2;
 
@@ -121,24 +137,29 @@ int main(int argc, char *argv[]) {
   article = help_index_find_exact(index, "@chan", true);
   if (!article || strcmp(article->relative_path, "wizard_commands/chan.md") ||
       article->show_index_for_article_tags.count != 1 ||
-      strcmp(article->show_index_for_article_tags.items[0], "chan_switches")) {
+      strcmp(test_help_string_item(&article->show_index_for_article_tags, 0),
+             "chan_switches")) {
     fprintf(stderr, "expected '@chan' to resolve to its switch index\n");
     return 7;
   }
 
   for (size_t i = 0; i < sizeof(chan_keywords) / sizeof(chan_keywords[0]);
        i++) {
-    article = help_index_find_exact(index, chan_keywords[i], false);
+    const char *keyword = test_string_item(
+        chan_keywords, sizeof(chan_keywords) / sizeof(chan_keywords[0]), i);
+
+    article = help_index_find_exact(index, keyword, false);
     if (article) {
       fprintf(stderr, "expected '%s' help to be hidden from a non-wizard\n",
-              chan_keywords[i]);
+              keyword);
       return 8;
     }
-    article = help_index_find_exact(index, chan_keywords[i], true);
+    article = help_index_find_exact(index, keyword, true);
     if (!article || !article->wizard_only || article->article_tags.count != 1 ||
-        strcmp(article->article_tags.items[0], "chan_switches")) {
+        strcmp(test_help_string_item(&article->article_tags, 0),
+               "chan_switches")) {
       fprintf(stderr, "expected '%s' to resolve to a @chan switch article\n",
-              chan_keywords[i]);
+              keyword);
       return 8;
     }
   }
@@ -155,7 +176,8 @@ int main(int argc, char *argv[]) {
   article = help_index_find_exact(index, "@help", true);
   if (!article || strcmp(article->relative_path, "wizard_commands/help.md") ||
       article->show_index_for_article_tags.count != 1 ||
-      strcmp(article->show_index_for_article_tags.items[0], "help_switches")) {
+      strcmp(test_help_string_item(&article->show_index_for_article_tags, 0),
+             "help_switches")) {
     fprintf(stderr, "expected '@help' to resolve to its switch index\n");
     return 8;
   }
@@ -167,7 +189,8 @@ int main(int argc, char *argv[]) {
   }
   article = help_index_find_exact(index, "@help/reload", true);
   if (!article || !article->wizard_only || article->article_tags.count != 1 ||
-      strcmp(article->article_tags.items[0], "help_switches")) {
+      strcmp(test_help_string_item(&article->article_tags, 0),
+             "help_switches")) {
     fprintf(stderr, "expected '@help/reload' to resolve to a switch article\n");
     return 8;
   }
@@ -197,31 +220,39 @@ int main(int argc, char *argv[]) {
   article = help_index_find_exact(index, "@lua", true);
   if (!article || strcmp(article->relative_path, "wizard_commands/lua.md") ||
       article->show_index_for_article_tags.count != 1 ||
-      strcmp(article->show_index_for_article_tags.items[0], "lua_switches")) {
+      strcmp(test_help_string_item(&article->show_index_for_article_tags, 0),
+             "lua_switches")) {
     fprintf(stderr, "expected '@lua' to resolve to its switch index\n");
     return 8;
   }
   for (size_t i = 0; i < sizeof(lua_keywords) / sizeof(lua_keywords[0]); i++) {
-    article = help_index_find_exact(index, lua_keywords[i], false);
+    const char *keyword = test_string_item(
+        lua_keywords, sizeof(lua_keywords) / sizeof(lua_keywords[0]), i);
+
+    article = help_index_find_exact(index, keyword, false);
     if (article) {
       fprintf(stderr, "expected '%s' help to be hidden from a non-wizard\n",
-              lua_keywords[i]);
+              keyword);
       return 8;
     }
-    article = help_index_find_exact(index, lua_keywords[i], true);
+    article = help_index_find_exact(index, keyword, true);
     if (!article || !article->wizard_only || article->article_tags.count != 1 ||
-        strcmp(article->article_tags.items[0], "lua_switches")) {
+        strcmp(test_help_string_item(&article->article_tags, 0),
+               "lua_switches")) {
       fprintf(stderr, "expected '%s' to resolve to a @lua switch article\n",
-              lua_keywords[i]);
+              keyword);
       return 8;
     }
   }
   for (size_t i = 0;
        i < sizeof(removed_lua_keywords) / sizeof(removed_lua_keywords[0]);
        i++) {
-    if (help_index_find_exact(index, removed_lua_keywords[i], true)) {
-      fprintf(stderr, "expected removed '%s' help to be absent\n",
-              removed_lua_keywords[i]);
+    const char *keyword = test_string_item(
+        removed_lua_keywords,
+        sizeof(removed_lua_keywords) / sizeof(removed_lua_keywords[0]), i);
+
+    if (help_index_find_exact(index, keyword, true)) {
+      fprintf(stderr, "expected removed '%s' help to be absent\n", keyword);
       return 8;
     }
   }
@@ -234,23 +265,28 @@ int main(int argc, char *argv[]) {
   article = help_index_find_exact(index, "@state", true);
   if (!article || strcmp(article->relative_path, "wizard_commands/state.md") ||
       article->show_index_for_article_tags.count != 1 ||
-      strcmp(article->show_index_for_article_tags.items[0], "state_switches")) {
+      strcmp(test_help_string_item(&article->show_index_for_article_tags, 0),
+             "state_switches")) {
     fprintf(stderr, "expected '@state' to resolve to its switch index\n");
     return 8;
   }
   for (size_t i = 0; i < sizeof(state_keywords) / sizeof(state_keywords[0]);
        i++) {
-    article = help_index_find_exact(index, state_keywords[i], false);
+    const char *keyword = test_string_item(
+        state_keywords, sizeof(state_keywords) / sizeof(state_keywords[0]), i);
+
+    article = help_index_find_exact(index, keyword, false);
     if (article) {
       fprintf(stderr, "expected '%s' help to be hidden from a non-wizard\n",
-              state_keywords[i]);
+              keyword);
       return 8;
     }
-    article = help_index_find_exact(index, state_keywords[i], true);
+    article = help_index_find_exact(index, keyword, true);
     if (!article || !article->wizard_only || article->article_tags.count != 1 ||
-        strcmp(article->article_tags.items[0], "state_switches")) {
+        strcmp(test_help_string_item(&article->article_tags, 0),
+               "state_switches")) {
       fprintf(stderr, "expected '%s' to resolve to a @state switch article\n",
-              state_keywords[i]);
+              keyword);
       return 8;
     }
   }
@@ -277,7 +313,7 @@ int main(int argc, char *argv[]) {
     return 11;
   }
 
-  second_index = help_index_create(nullptr, nullptr, argv[1], NOTHING);
+  second_index = help_index_create(nullptr, nullptr, help_directory, NOTHING);
   if (second_index == nullptr)
     return 12;
   help_index_destroy(index);

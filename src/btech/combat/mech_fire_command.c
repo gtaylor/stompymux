@@ -64,11 +64,18 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
+
+static const char *fire_argument(char *const *arguments, size_t index) {
+  char *const *argument =
+      checked_storage_at_const(arguments, 5, sizeof(*arguments), index);
+  return *argument;
+}
 #include "weapon_settings.h"
 
 void mech_fireweapon(DbRef player, void *data, char *buffer) {
@@ -323,7 +330,7 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
         "The weapons system chirps: 'That weapon has been destroyed!'");
     return 0;
   }
-  if (MechWeapons[weaptype].special & AMS) {
+  if (weapon_catalogue_is_anti_missile(weaptype)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That weapon is defensive only!");
     return 0;
@@ -334,8 +341,8 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     return 0;
   }
 
-  if ((MechWeapons[weaptype].special & IDF) && mech_spotter_dbref(mech) != -1 &&
-      mech_target_dbref(mech) == -1) {
+  if (weapon_catalogue_supports_indirect_fire(weaptype) &&
+      mech_spotter_dbref(mech) != -1 && mech_target_dbref(mech) == -1) {
     mech_spot_fire(player, mech, mech_map, weapnum, weaptype, sight, section,
                    critical);
     return 1;
@@ -344,7 +351,7 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
   /* We're set to look at a spotter, its a non-idf weapon. We should just not
    * fire */
   if ((mech_spotter_dbref(mech) != -1) &&
-      !(MechWeapons[weaptype].special & IDF)) {
+      !weapon_catalogue_supports_indirect_fire(weaptype)) {
     mecha_notify(
         btech_context_evaluation(context), player,
         "The weapon system chirps: 'Somone is spotting for you. Remove your "
@@ -397,7 +404,7 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
         range = mech_range_to(mech, tempMech);
         LOS = mech_los_check_unblocked(mech, tempMech, mapx, mapy, range);
 
-        if (!(MechWeapons[weaptype].special & IDF)) {
+        if (!weapon_catalogue_supports_indirect_fire(weaptype)) {
           if (!LOS) {
             mecha_notify(btech_context_evaluation(context), player,
                          "That target is not in your line of sight!");
@@ -412,7 +419,7 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
           }
         }
         if (btech_context_idf_requires_spotter(context) &&
-            (MechWeapons[weaptype].special & IDF) &&
+            weapon_catalogue_supports_indirect_fire(weaptype) &&
             (mech_spotter_dbref(mech) == -1))
           if (!LOS) {
             mecha_notify(btech_context_evaluation(context), player,
@@ -458,7 +465,7 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
 
         /* Check for Spotter here */
         if (btech_context_idf_requires_spotter(context) &&
-            (MechWeapons[weaptype].special & IDF) &&
+            weapon_catalogue_supports_indirect_fire(weaptype) &&
             (mech_spotter_dbref(mech) == -1))
           if (!LOS) {
             mecha_notify(btech_context_evaluation(context), player,
@@ -468,7 +475,7 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
           }
 
         if (!(weapon_catalogue_is_artillery(weaptype) ||
-              (MechWeapons[weaptype].special & IDF))) {
+              weapon_catalogue_supports_indirect_fire(weaptype))) {
           if (!LOS) {
             mecha_notify(btech_context_evaluation(context), player,
                          "That hex target is not in your line of sight!");
@@ -503,8 +510,8 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
 
   case 2:
     /* Fire at the numbered target */
-    targetID[0] = args[1][0];
-    targetID[1] = args[1][1];
+    targetID[0] = *checked_string_suffix(fire_argument(args, 1), 0);
+    targetID[1] = *checked_string_suffix(fire_argument(args, 1), 1);
     target = FindTargetDBREFFromMapNumber(mech, targetID);
     if (target == -1) {
       mecha_notify(btech_context_evaluation(context), player,
@@ -553,8 +560,8 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
   case 3:
 
     /* Fire at the Map X Y */
-    mapx = atoi(args[1]);
-    mapy = atoi(args[2]);
+    mapx = atoi(fire_argument(args, 1));
+    mapy = atoi(fire_argument(args, 2));
     ishex = 1;
     if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
       mecha_notify(btech_context_evaluation(context), player,

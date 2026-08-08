@@ -5,6 +5,7 @@
 #include "libtelnet.h"
 #include "mux/network/descriptor.h"
 #include "mux/network/telnet_environment.h"
+#include "mux/support/checked_storage.h"
 
 static bool expect_value(const Descriptor *descriptor,
                          TelnetEnvironmentKind kind, const void *name,
@@ -160,11 +161,16 @@ int main(void) {
     telnet_environment_destroy(descriptor.telnet_environment);
     return 1;
   }
-  oversized[0] = TELNET_ENVIRON_INFO;
-  oversized[1] = TELNET_ENVIRON_VAR;
-  oversized[2] = 'X';
-  oversized[3] = TELNET_ENVIRON_VALUE;
-  memset(oversized + 4, 'x', oversized_size - 4);
+  *(char *)checked_storage_at(oversized, oversized_size, sizeof(char), 0) =
+      TELNET_ENVIRON_INFO;
+  *(char *)checked_storage_at(oversized, oversized_size, sizeof(char), 1) =
+      TELNET_ENVIRON_VAR;
+  *(char *)checked_storage_at(oversized, oversized_size, sizeof(char), 2) = 'X';
+  *(char *)checked_storage_at(oversized, oversized_size, sizeof(char), 3) =
+      TELNET_ENVIRON_VALUE;
+  memset(
+      checked_storage_region(oversized, oversized_size, 4, oversized_size - 4),
+      'x', oversized_size - 4);
   result &= !telnet_environment_receive(descriptor.telnet_environment,
                                         oversized, oversized_size);
   free(oversized);

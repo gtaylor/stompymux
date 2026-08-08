@@ -2,6 +2,7 @@
 #include "mech_status_render_internal.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "btech/context.h"
@@ -23,16 +24,53 @@
 #include "mech_tag_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
+#include "mux/support/checked_storage.h"
 
 static void recycle_status_append(char *buffer, size_t capacity,
                                   const char *part, const char *status) {
   size_t length = strlen(buffer);
-  snprintf(buffer + length, capacity - length, "%s: %s ", part, status);
+  if (length >= capacity)
+    return;
+  snprintf(checked_storage_region(buffer, capacity, length, capacity - length),
+           capacity - length, "%s: %s ", part, status);
 }
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
+
+enum { AMMO_STATUS_CAPACITY = 8 * MAX_WEAPS_SECTION };
+
+static unsigned char weapon_status_byte(const unsigned char *values,
+                                        size_t capacity, int index) {
+  if (index < 0)
+    abort();
+  return *(const unsigned char *)checked_storage_at_const(
+      values, capacity, sizeof(*values), (size_t)index);
+}
+
+static unsigned short weapon_status_short(const unsigned short *values,
+                                          int index) {
+  if (index < 0)
+    abort();
+  return *(const unsigned short *)checked_storage_at_const(
+      values, AMMO_STATUS_CAPACITY, sizeof(*values), (size_t)index);
+}
+
+static unsigned int weapon_status_mode(const unsigned int *values, int index) {
+  if (index < 0)
+    abort();
+  return *(const unsigned int *)checked_storage_at_const(
+      values, AMMO_STATUS_CAPACITY, sizeof(*values), (size_t)index);
+}
+
+static int weapon_status_critical(const int *values, int index) {
+  if (index < 0)
+    abort();
+  return *(const int *)checked_storage_at_const(values, MAX_WEAPS_SECTION,
+                                                sizeof(*values), (size_t)index);
+}
 
 static const char *section_recycle_status(Mech *mech, int section) {
   int recycle = mech_section_recycle_ticks(mech, section);
@@ -94,130 +132,122 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     strcpy(tempbuff, "AdvTech: ");
 
     if (technology & ECM_TECH) {
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "ECM(%s)  ",
-               conditions.ecm_destroyed ? "[fg=red bold]XX[reset]"
-               : conditions.ecm_enabled
-                   ? (conditions.ecm_active ? "[fg=green bold]ECM[reset]"
-                                            : "[fg=red bold]ECM[reset]")
-               : conditions.eccm_enabled  ? "[fg=green bold]ECCM[reset]"
-               : conditions.ecm_countered ? "[fg=red]Off[reset]"
-                                          : "[fg=green]Off[reset]");
-    }
-
-    if (technology_secondary & ANGEL_ECM_TECH) {
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "AngelECM(%s)  ",
-               conditions.angel_ecm_destroyed ? "[fg=red bold]XX[reset]"
-               : conditions.angel_ecm_enabled
-                   ? (conditions.angel_ecm_active ? "[fg=green bold]ECM[reset]"
-                                                  : "[fg=red bold]ECM[reset]")
-               : conditions.angel_eccm_enabled ? "[fg=green bold]ECCM[reset]"
-               : conditions.ecm_countered      ? "[fg=red]Off[reset]"
+      append_status(tempbuff, sizeof(tempbuff), "ECM(%s)  ",
+                    conditions.ecm_destroyed ? "[fg=red bold]XX[reset]"
+                    : conditions.ecm_enabled
+                        ? (conditions.ecm_active ? "[fg=green bold]ECM[reset]"
+                                                 : "[fg=red bold]ECM[reset]")
+                    : conditions.eccm_enabled  ? "[fg=green bold]ECCM[reset]"
+                    : conditions.ecm_countered ? "[fg=red]Off[reset]"
                                                : "[fg=green]Off[reset]");
     }
 
+    if (technology_secondary & ANGEL_ECM_TECH) {
+      append_status(
+          tempbuff, sizeof(tempbuff), "AngelECM(%s)  ",
+          conditions.angel_ecm_destroyed ? "[fg=red bold]XX[reset]"
+          : conditions.angel_ecm_enabled
+              ? (conditions.angel_ecm_active ? "[fg=green bold]ECM[reset]"
+                                             : "[fg=red bold]ECM[reset]")
+          : conditions.angel_eccm_enabled ? "[fg=green bold]ECCM[reset]"
+          : conditions.ecm_countered      ? "[fg=red]Off[reset]"
+                                          : "[fg=green]Off[reset]");
+    }
+
     if (infantry_technology & FC_INFILTRATORII_STEALTH_TECH) {
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "PersonalECM(%s)  ",
-               conditions.personal_ecm_enabled
-                   ? (conditions.personal_ecm_active
-                          ? "[fg=green bold]ECM[reset]"
-                          : "[fg=red bold]ECM[reset]")
-               : conditions.personal_eccm_enabled ? "[fg=green bold]ECCM[reset]"
-               : conditions.ecm_countered         ? "[fg=red]Off[reset]"
-                                                  : "[fg=green]Off[reset]");
+      append_status(
+          tempbuff, sizeof(tempbuff), "PersonalECM(%s)  ",
+          conditions.personal_ecm_enabled
+              ? (conditions.personal_ecm_active ? "[fg=green bold]ECM[reset]"
+                                                : "[fg=red bold]ECM[reset]")
+          : conditions.personal_eccm_enabled ? "[fg=green bold]ECCM[reset]"
+          : conditions.ecm_countered         ? "[fg=red]Off[reset]"
+                                             : "[fg=green]Off[reset]");
     }
 
     if (technology_secondary & STEALTH_ARMOR_TECH) {
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "SthArmor(%s)  ",
-               conditions.ecm_destroyed          ? "[fg=red bold]XX[reset]"
-               : conditions.stealth_armor_active ? "[fg=green bold]On[reset]"
-                                                 : "[fg=green]Rdy[reset]");
+      append_status(tempbuff, sizeof(tempbuff), "SthArmor(%s)  ",
+                    conditions.ecm_destroyed ? "[fg=red bold]XX[reset]"
+                    : conditions.stealth_armor_active
+                        ? "[fg=green bold]On[reset]"
+                        : "[fg=green]Rdy[reset]");
     }
 
     if (technology_secondary & NULLSIGSYS_TECH) {
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "NullSigSys(%s)  ",
-               conditions.null_signature_destroyed ? "[fg=red bold]XX[reset]"
-               : conditions.null_signature_active  ? "[fg=green bold]On[reset]"
-                                                   : "[fg=green]Rdy[reset]");
+      append_status(
+          tempbuff, sizeof(tempbuff), "NullSigSys(%s)  ",
+          conditions.null_signature_destroyed ? "[fg=red bold]XX[reset]"
+          : conditions.null_signature_active  ? "[fg=green bold]On[reset]"
+                                              : "[fg=green]Rdy[reset]");
     }
 
     if (technology & SLITE_TECH) {
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "SLITE(%s)  ",
-               conditions.searchlight_destroyed ? "[fg=red bold]XX[reset]"
-               : mech_searchlight_active(mech)  ? "[fg=green bold]On[reset]"
-                                                : "[fg=green]Off[reset]");
+      append_status(tempbuff, sizeof(tempbuff), "SLITE(%s)  ",
+                    conditions.searchlight_destroyed ? "[fg=red bold]XX[reset]"
+                    : mech_searchlight_active(mech) ? "[fg=green bold]On[reset]"
+                                                    : "[fg=green]Off[reset]");
     }
 
     if (has_c3_master)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "%sC3M[reset]  ",
-               conditions.c3_destroyed           ? "[fg=red]"
-               : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
-               : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
-                                                 : "[fg=green]");
+      append_status(tempbuff, sizeof(tempbuff), "%sC3M[reset]  ",
+                    conditions.c3_destroyed           ? "[fg=red]"
+                    : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
+                    : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
+                                                      : "[fg=green]");
 
     if (has_c3_slave)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "%sC3S[reset]  ",
-               conditions.c3_destroyed           ? "[fg=red]"
-               : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
-               : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
-                                                 : "[fg=green]");
+      append_status(tempbuff, sizeof(tempbuff), "%sC3S[reset]  ",
+                    conditions.c3_destroyed           ? "[fg=red]"
+                    : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
+                    : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
+                                                      : "[fg=green]");
 
     if (has_c3i)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "%sC3i[reset]  ",
-               conditions.c3i_destroyed          ? "[fg=red]"
-               : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
-               : mech_c3i_network_size(mech) > 0 ? "[fg=green bold]"
-                                                 : "[fg=green]");
+      append_status(tempbuff, sizeof(tempbuff), "%sC3i[reset]  ",
+                    conditions.c3i_destroyed          ? "[fg=red]"
+                    : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
+                    : mech_c3i_network_size(mech) > 0 ? "[fg=green bold]"
+                                                      : "[fg=green]");
 
     if (technology & TRIPLE_MYOMER_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "TSM(%s)  ",
-               mech_excess_heat(mech) >= 9.0F ? "[fg=green bold]On[reset]"
-                                              : "[fg=green]Off[reset]");
+      append_status(tempbuff, sizeof(tempbuff), "TSM(%s)  ",
+                    mech_excess_heat(mech) >= 9.0F ? "[fg=green bold]On[reset]"
+                                                   : "[fg=green]Off[reset]");
 
     if (has_tag) {
       DbRef tag_target_dbref = mech_tag_target_dbref(mech);
       Mech *tag_target =
           btech_context_get_mech(mech_context(mech), tag_target_dbref);
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "TAG(%s)  ",
-               mech_tag_is_destroyed(mech) ? "[fg=red bold]XX[reset]"
-               : (!tag_target ||
-                  mech_tagged_by_dbref(tag_target) != mech_dbref(mech))
-                   ? (mech_event_count(mech, EVENT_TAG_RECYCLE)
-                          ? "[fg=yellow bold]Not Rdy[reset]"
-                          : "[fg=green]Rdy[reset]")
-                   : tprintf("%s%s[reset]",
-                             (mech_event_count(mech, EVENT_TAG_RECYCLE)
-                                  ? "[fg=yellow bold]"
-                                  : "[bold]"),
-                             mech_to_mech_display_id(mech, tag_target).text));
+      append_status(
+          tempbuff, sizeof(tempbuff), "TAG(%s)  ",
+          mech_tag_is_destroyed(mech) ? "[fg=red bold]XX[reset]"
+          : (!tag_target ||
+             mech_tagged_by_dbref(tag_target) != mech_dbref(mech))
+              ? (mech_event_count(mech, EVENT_TAG_RECYCLE)
+                     ? "[fg=yellow bold]Not Rdy[reset]"
+                     : "[fg=green]Rdy[reset]")
+              : tprintf("%s%s[reset]",
+                        (mech_event_count(mech, EVENT_TAG_RECYCLE)
+                             ? "[fg=yellow bold]"
+                             : "[bold]"),
+                        mech_to_mech_display_id(mech, tag_target).text));
     }
 
     if (technology_secondary & SUPERCHARGER_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "SCHARGE: %s%d[reset] (%s)",
-               conditions.supercharger_counter > 3   ? "[fg=red bold]"
-               : conditions.supercharger_counter > 0 ? "[fg=yellow bold]"
-                                                     : "[fg=green]",
-               conditions.supercharger_counter,
-               conditions.supercharger_enabled ? "On" : "Off");
+      append_status(tempbuff, sizeof(tempbuff), "SCHARGE: %s%d[reset] (%s)",
+                    conditions.supercharger_counter > 3   ? "[fg=red bold]"
+                    : conditions.supercharger_counter > 0 ? "[fg=yellow bold]"
+                                                          : "[fg=green]",
+                    conditions.supercharger_counter,
+                    conditions.supercharger_enabled ? "On" : "Off");
 
     if (technology & MASC_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "MASC: %s%d[reset] (%s)",
-               conditions.masc_counter > 3   ? "[fg=red bold]"
-               : conditions.masc_counter > 0 ? "[fg=yellow bold]"
-                                             : "[fg=green]",
-               conditions.masc_counter, conditions.masc_enabled ? "On" : "Off");
+      append_status(tempbuff, sizeof(tempbuff), "MASC: %s%d[reset] (%s)",
+                    conditions.masc_counter > 3   ? "[fg=red bold]"
+                    : conditions.masc_counter > 0 ? "[fg=yellow bold]"
+                                                  : "[fg=green]",
+                    conditions.masc_counter,
+                    conditions.masc_enabled ? "On" : "Off");
 
     mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
@@ -226,9 +256,9 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
   if (technology_secondary & CARRIER_TECH) {
     strcpy(tempbuff, "Carrier: ");
 
-    snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-             "%d tons free, %d tons max unit size",
-             mech_cargo_space(mech) / 100, mech_carrier_maximum_tonnage(mech));
+    append_status(
+        tempbuff, sizeof(tempbuff), "%d tons free, %d tons max unit size",
+        mech_cargo_space(mech) / 100, mech_carrier_maximum_tonnage(mech));
     mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
@@ -238,16 +268,13 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     strcpy(tempbuff, "AdvSensors:");
 
     if (technology & AA_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " Radar");
+      append_status(tempbuff, sizeof(tempbuff), " Radar");
 
     if (technology & BEAGLE_PROBE_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " BeagleProbe");
+      append_status(tempbuff, sizeof(tempbuff), " BeagleProbe");
 
     if (technology_secondary & BLOODHOUND_PROBE_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " BloodhoundProbe");
+      append_status(tempbuff, sizeof(tempbuff), " BloodhoundProbe");
 
     mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
@@ -262,24 +289,19 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     strcpy(tempbuff, "AdvItems:");
 
     if (infantry_technology & CS_PURIFIER_STEALTH_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " PurifierStealth");
+      append_status(tempbuff, sizeof(tempbuff), " PurifierStealth");
 
     if (infantry_technology & DC_KAGE_STEALTH_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " KageStealth");
+      append_status(tempbuff, sizeof(tempbuff), " KageStealth");
 
     if (infantry_technology & FWL_ACHILEUS_STEALTH_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " AchileusStealth");
+      append_status(tempbuff, sizeof(tempbuff), " AchileusStealth");
 
     if (infantry_technology & FC_INFILTRATOR_STEALTH_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " InfiltratorStealth");
+      append_status(tempbuff, sizeof(tempbuff), " InfiltratorStealth");
 
     if (infantry_technology & FC_INFILTRATORII_STEALTH_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " InfiltratorIIStealth");
+      append_status(tempbuff, sizeof(tempbuff), " InfiltratorIIStealth");
 
     mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
@@ -293,20 +315,16 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     strcpy(tempbuff, "Special Actions:");
 
     if (infantry_technology & INF_MOUNT_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " MountFriends");
+      append_status(tempbuff, sizeof(tempbuff), " MountFriends");
 
     if (infantry_technology & INF_SWARM_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " SwarmAttack");
+      append_status(tempbuff, sizeof(tempbuff), " SwarmAttack");
 
     if (infantry_technology & INF_ANTILEG_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " AntiLegAttack");
+      append_status(tempbuff, sizeof(tempbuff), " AntiLegAttack");
 
     if (infantry_technology & CAN_JETTISON_TECH)
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               " BackPackJettison");
+      append_status(tempbuff, sizeof(tempbuff), " BackPackJettison");
 
     mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
@@ -398,9 +416,8 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     *tempbuff = 0;
 
     if (mech_section_recycle_ticks(mech, FSIDE)) {
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "Vehicle status (charge): %s",
-               section_recycle_status(mech, FSIDE));
+      append_status(tempbuff, sizeof(tempbuff), "Vehicle status (charge): %s",
+                    section_recycle_status(mech, FSIDE));
     }
 
     if (*tempbuff)
@@ -436,26 +453,29 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     for (ii = 0; ii < count; ii++) {
       BtechTextBuilder weapon_text;
       btech_text_builder_initialize(&weapon_text, weapbuff, sizeof(weapbuff));
-      int fire_mode = mech_critical_fire_mode(mech, loop, critical[ii]);
-      if (MechWeapons[weaparray[ii]].special & AMS)
+      const int critical_index = weapon_status_critical(critical, ii);
+      const int weapon_index =
+          weapon_status_byte(weaparray, MAX_WEAPS_SECTION, ii);
+      const char *weapon_name =
+          checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
+      int fire_mode = mech_critical_fire_mode(mech, loop, critical_index);
+      if (weapon_catalogue_has_special(weapon_index, AMS))
         btech_text_builder_append_format(
-            &weapon_text, " %-16.16s %c%c%c%c%c [%2d] ",
-            &MechWeapons[weaparray[ii]].name[3], ' ',
+            &weapon_text, " %-16.16s %c%c%c%c%c [%2d] ", weapon_name, ' ',
             conditions.ams_enabled ? ' ' : 'O',
             conditions.ams_enabled ? 'O' : 'F',
             conditions.ams_enabled ? 'N' : 'F', ' ', running_sum + ii);
       else {
         snprintf(tmpbuf, sizeof(tmpbuf), "%s%s",
-                 fire_mode & OS_MODE ? "OS " : "",
-                 &MechWeapons[weaparray[ii]].name[3]);
+                 fire_mode & OS_MODE ? "OS " : "", weapon_name);
         btech_text_builder_append_format(
             &weapon_text, " %-16.16s %c%c%c%c%c [%2d] ", tmpbuf,
             (fire_mode & REAR_MOUNT) ? 'R' : ' ',
             (((fire_mode & OS_USED) || (fire_mode & ROCKET_FIRED)) ? '-'
              : (fire_mode & OS_MODE)                               ? 'O'
                                                                    : ' '),
-            GetWeaponAmmoModeLetter(mech, loop, critical[ii]),
-            GetWeaponFireModeLetter(mech, loop, critical[ii]),
+            GetWeaponAmmoModeLetter(mech, loop, critical_index),
+            GetWeaponFireModeLetter(mech, loop, critical_index),
             ((fire_mode & ON_TC) && !conditions.targeting_computer_destroyed)
                 ? 'T'
             : (fire_mode & IS_JETTISONED_MODE) ? 'J'
@@ -464,17 +484,17 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
             running_sum + ii);
       }
       if (compact)
-        append_status(compact_buffer, compact_buffer_size, "%s|%s",
-                      &MechWeapons[weaparray[ii]].name[3], location);
+        append_status(compact_buffer, compact_buffer_size, "%s|%s", weapon_name,
+                      location);
       btech_text_builder_append(&weapon_text, location);
 
       int temporary_failure =
-          mech_critical_temporary_failure(mech, loop, critical[ii]);
-      if (mech_critical_is_broken(mech, loop, critical[ii]) ||
+          mech_critical_temporary_failure(mech, loop, critical_index);
+      if (mech_critical_is_broken(mech, loop, critical_index) ||
           temporary_failure == FAIL_DESTROYED)
         btech_text_builder_append(&weapon_text,
                                   "[fg=black bold]*****[reset]  || ");
-      else if (mech_critical_is_disabled(mech, loop, critical[ii]))
+      else if (mech_critical_is_disabled(mech, loop, critical_index))
         btech_text_builder_append(&weapon_text, "[fg=red]DISABLE[reset]|| ");
       else if (temporary_failure) {
         switch (temporary_failure) {
@@ -497,32 +517,38 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       } else if (fire_mode & ROCKET_FIRED)
         btech_text_builder_append(&weapon_text,
                                   "[fg=black bold]Empty[reset]  || ");
-      else if (weapdata[ii])
-        btech_text_builder_append_format(
-            &weapon_text, " %2d    || ",
-            weapdata[ii] / WEAPON_TICK + (weapdata[ii] % WEAPON_TICK ? 1 : 0));
-      else if (mech_weapon_damaged_slot_count_at(mech, loop, critical[ii]))
+      else if (weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii)) {
+        const int recycle = weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii);
+        btech_text_builder_append_format(&weapon_text, " %2d    || ",
+                                         recycle / WEAPON_TICK +
+                                             (recycle % WEAPON_TICK ? 1 : 0));
+      } else if (mech_weapon_damaged_slot_count_at(mech, loop, critical_index))
         btech_text_builder_append(&weapon_text, "[fg=red]DAMAGED[reset]|| ");
       else
         btech_text_builder_append(&weapon_text, "[fg=green]Ready[reset]  || ");
 
       if ((ii + running_sum) < ammoweapcount) {
+        const int ammunition_index = ii + running_sum;
+        const int ammunition_weapon = weapon_status_byte(
+            ammoweap, AMMO_STATUS_CAPACITY, ammunition_index);
+        const int ammunition = weapon_status_short(ammo, ammunition_index);
+        const int maximum_ammunition =
+            weapon_status_short(ammomax, ammunition_index);
+        const char *ammunition_name =
+            checked_string_suffix(weapon_catalogue_name(ammunition_weapon), 3);
         ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(
-            ammoweap[ii + running_sum], modearray[ii + running_sum]);
+            ammunition_weapon, weapon_status_mode(modearray, ammunition_index));
         snprintf(weapname, sizeof(weapname), "%-16.16s %c  %s%3d%s",
-                 &MechWeapons[ammoweap[ii + running_sum]].name[3], ammo_mode,
-                 evaluate_ammo_amount(ammo[ii + running_sum],
-                                      ammomax[ii + running_sum]),
-                 ammo[ii + running_sum], "[reset]");
+                 ammunition_name, ammo_mode,
+                 evaluate_ammo_amount(ammunition, maximum_ammunition),
+                 ammunition, "[reset]");
         if (compact) {
           if (ammo_mode && ammo_mode != ' ')
             append_status(compact_buffer, compact_buffer_size, "|%s|%d|%c ",
-                          &MechWeapons[ammoweap[ii + running_sum]].name[3],
-                          ammo[ii + running_sum], ammo_mode);
+                          ammunition_name, ammunition, ammo_mode);
           else
             append_status(compact_buffer, compact_buffer_size, "|%s|%d ",
-                          &MechWeapons[ammoweap[ii + running_sum]].name[3],
-                          ammo[ii + running_sum]);
+                          ammunition_name, ammunition);
         }
       } else {
         if (compact)
@@ -538,14 +564,19 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
 
   if (running_sum < ammoweapcount) {
     while (running_sum < ammoweapcount) {
-      ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(ammoweap[running_sum],
-                                                     modearray[running_sum]);
-      snprintf(astrAmmoSpacer, sizeof(astrAmmoSpacer),
-               "                                                  || "
-               "%-16.16s %c  %s%3d%s",
-               &MechWeapons[ammoweap[running_sum]].name[3], ammo_mode,
-               evaluate_ammo_amount(ammo[running_sum], ammomax[running_sum]),
-               ammo[running_sum], "[reset]");
+      const int ammunition_weapon =
+          weapon_status_byte(ammoweap, AMMO_STATUS_CAPACITY, running_sum);
+      const int ammunition = weapon_status_short(ammo, running_sum);
+      const int maximum_ammunition = weapon_status_short(ammomax, running_sum);
+      ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(
+          ammunition_weapon, weapon_status_mode(modearray, running_sum));
+      snprintf(
+          astrAmmoSpacer, sizeof(astrAmmoSpacer),
+          "                                                  || "
+          "%-16.16s %c  %s%3d%s",
+          checked_string_suffix(weapon_catalogue_name(ammunition_weapon), 3),
+          ammo_mode, evaluate_ammo_amount(ammunition, maximum_ammunition),
+          ammunition, "[reset]");
 
       mecha_notify(evaluation, player, astrAmmoSpacer);
 

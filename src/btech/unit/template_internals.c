@@ -1,5 +1,7 @@
 #include "template_internal.h"
 
+#include "mux/support/checked_storage.h"
+
 const char *internals[] = {"ShoulderOrHip",
                            "UpperActuator",
                            "LowerActuator",
@@ -53,6 +55,19 @@ const char *internals[] = {"ShoulderOrHip",
                            "SplitCrit_Right",
                            "Hardpoint",
                            NULL};
+
+size_t template_internal_name_count(void) {
+  return sizeof(internals) / sizeof(*internals) - 1;
+}
+
+const char *template_internal_name(int index) {
+  if (index < 0)
+    return nullptr;
+  const char *const *name =
+      checked_storage_at_const(internals, template_internal_name_count(),
+                               sizeof(*internals), (size_t)index);
+  return *name;
+}
 
 #ifdef BT_PART_WEIGHTS
 const int internalsweight[] = {

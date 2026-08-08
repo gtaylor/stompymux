@@ -8,6 +8,7 @@
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/object_set.h"
 
 static Attribute *lua_mux_attribute_name(lua_State *state,
@@ -72,7 +73,7 @@ static int lua_mux_attribute_set(lua_State *state) {
       return luaL_argerror(state, 3, "invalid attribute value");
     }
     memcpy(text, value, length);
-    text[length] = '\0';
+    *(char *)checked_storage_at(text, LBUF_SIZE, sizeof(char), length) = '\0';
   }
   set = object_attribute_set(
       &handle->package->services->background_command->evaluation, GOD,
@@ -88,7 +89,9 @@ static int lua_mux_attribute_entries(lua_State *state) {
   GameDatabase *database = handle->package->services->database;
 
   lua_newtable(state);
-  for (Attribute *attribute = attr_table; attribute->number; attribute++) {
+  for (size_t index = 0; index < native_attribute_count(); index++) {
+    Attribute *attribute = native_attribute_at(index);
+
     const char *value;
 
     if (!object_attribute_is_administrable(attribute->number))

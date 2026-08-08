@@ -18,6 +18,7 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/red_black_tree.h"
 #include "registry_api.h"
@@ -32,18 +33,31 @@ static short autopilot_map_coordinate(int coordinate) {
 
 static void *astar_key(int value) { return (void *)(intptr_t)value; }
 
-static bool autopilot_hex_bit_is_set(const unsigned char *array, int offset) {
-  return array[(unsigned int)offset >> 3] & (1U << (offset & 7));
+typedef struct AutopilotHexBitSet {
+  unsigned char bytes[(MAPX * MAPY) / 8];
+} AutopilotHexBitSet;
+
+static unsigned char *autopilot_hex_bit_byte(AutopilotHexBitSet *bits,
+                                             int offset) {
+  if (offset < 0 || offset >= MAPX * MAPY)
+    abort();
+  return checked_storage_at(bits->bytes, sizeof(bits->bytes),
+                            sizeof(unsigned char), (size_t)offset >> 3);
 }
 
-static void autopilot_hex_bit_set(unsigned char *array, int offset,
+static bool autopilot_hex_bit_is_set(AutopilotHexBitSet *bits, int offset) {
+  const unsigned char byte = *autopilot_hex_bit_byte(bits, offset);
+  return (byte & (1U << (offset & 7))) != 0;
+}
+
+static void autopilot_hex_bit_set(AutopilotHexBitSet *bits, int offset,
                                   bool enabled) {
-  unsigned int byte = (unsigned int)offset >> 3;
-  unsigned char mask = (unsigned char)(1U << (offset & 7));
+  unsigned char *byte = autopilot_hex_bit_byte(bits, offset);
+  const unsigned char mask = (unsigned char)(1U << (offset & 7));
   if (enabled)
-    array[byte] |= mask;
+    *byte |= mask;
   else
-    array[byte] &= (unsigned char)~mask;
+    *byte &= (unsigned char)~mask;
 }
 
 /* Experimental (highly) path finding system based on the A* 'a-star'
@@ -101,8 +115,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   int found_path = 0;
 
   /* Our bit arrays */
-  unsigned char closed_list_bitfield[(MAPX * MAPY) / 8];
-  unsigned char open_list_bitfield[(MAPX * MAPY) / 8];
+  AutopilotHexBitSet closed_list_bitfield = {0};
+  AutopilotHexBitSet open_list_bitfield = {0};
 
   float x1, y1, x2, y2;                 /* Floating point vars for real cords */
   short map_x1, map_y1, map_x2, map_y2; /* The actual map 'hexes' */
@@ -141,10 +155,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   fprintf(logfile, "%s", log_msg);
 #endif
 
-  /* Zero the bitfields */
-  memset(closed_list_bitfield, 0, sizeof(closed_list_bitfield));
-  memset(open_list_bitfield, 0, sizeof(open_list_bitfield));
-
   /* Setup the trees */
   open_list_by_score = red_black_tree_init(astar_compare, nullptr);
   open_list_by_xy = red_black_tree_init(astar_compare, nullptr);
@@ -178,7 +188,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                         temp_astar_node);
   red_black_tree_insert(open_list_by_xy, astar_key(temp_astar_node->hexoffset),
                         temp_astar_node);
-  autopilot_hex_bit_set(open_list_bitfield, temp_astar_node->hexoffset, true);
+  autopilot_hex_bit_set(&open_list_bitfield, temp_astar_node->hexoffset, true);
 
 #ifdef DEBUG_ASTAR
   /* Log it */
@@ -205,7 +215,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                           astar_key(parent_astar_node->f_score));
     red_black_tree_delete(open_list_by_xy,
                           astar_key(parent_astar_node->hexoffset));
-    autopilot_hex_bit_set(open_list_bitfield, parent_astar_node->hexoffset,
+    autopilot_hex_bit_set(&open_list_bitfield, parent_astar_node->hexoffset,
                           false);
 
 #ifdef DEBUG_ASTAR
@@ -221,7 +231,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
     /* Add it to the closed list */
     red_black_tree_insert(closed_list, astar_key(parent_astar_node->hexoffset),
                           parent_astar_node);
-    autopilot_hex_bit_set(closed_list_bitfield, parent_astar_node->hexoffset,
+    autopilot_hex_bit_set(&closed_list_bitfield, parent_astar_node->hexoffset,
                           true);
 
 #ifdef DEBUG_ASTAR
@@ -236,7 +246,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
     /* Now we check to see if we added the end hex to the closed list.
      * When this happens it means we are done */
-    if (autopilot_hex_bit_is_set(closed_list_bitfield,
+    if (autopilot_hex_bit_is_set(&closed_list_bitfield,
                                  autopilot_hex_offset(end_x, end_y))) {
       found_path = 1;
 
@@ -277,7 +287,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
       /* Check to see if its in the closed list
        * if so just ignore it */
-      if (autopilot_hex_bit_is_set(closed_list_bitfield, hexoffset))
+      if (autopilot_hex_bit_is_set(&closed_list_bitfield, hexoffset))
         continue;
 
       /* Check to see if we can enter it */
@@ -379,7 +389,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       }
 
       /* Is it already on the openlist */
-      if (autopilot_hex_bit_is_set(open_list_bitfield, hexoffset)) {
+      if (autopilot_hex_bit_is_set(&open_list_bitfield, hexoffset)) {
 
         /* Ok need to compare the scores and if necessary recalc
          * and change stuff */
@@ -398,7 +408,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                                 astar_key(temp_astar_node->f_score));
           red_black_tree_delete(open_list_by_xy,
                                 astar_key(temp_astar_node->hexoffset));
-          autopilot_hex_bit_set(open_list_bitfield, temp_astar_node->hexoffset,
+          autopilot_hex_bit_set(&open_list_bitfield, temp_astar_node->hexoffset,
                                 false);
 
 #ifdef DEBUG_ASTAR
@@ -478,7 +488,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       red_black_tree_insert(open_list_by_xy,
                             astar_key(temp_astar_node->hexoffset),
                             temp_astar_node);
-      autopilot_hex_bit_set(open_list_bitfield, temp_astar_node->hexoffset,
+      autopilot_hex_bit_set(&open_list_bitfield, temp_astar_node->hexoffset,
                             true);
 
 #ifdef DEBUG_ASTAR

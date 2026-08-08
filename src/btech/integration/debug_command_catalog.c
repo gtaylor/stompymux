@@ -1,3 +1,4 @@
+#include "command_catalogs.h"
 #include "command_invokers.h"
 
 const BtechCommandDefinition debugcommands[] = {
@@ -24,3 +25,7 @@ const BtechCommandDefinition debugcommands[] = {
     {0, "XPTOP <SKILL>", "@Shows list of people champ in the <SKILL>",
      btech_command_invoke_debug_xptop},
     {0, NULL, NULL, NULL}};
+
+size_t debug_command_count(void) {
+  return sizeof(debugcommands) / sizeof(*debugcommands) - 1;
+}

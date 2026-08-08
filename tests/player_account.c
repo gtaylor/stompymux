@@ -65,8 +65,8 @@ static int check_utc_format(void) {
 }
 
 int main(void) {
-  GameObject objects[2] = {0};
-  GameDatabase database = {.objects = objects, .top = 2, .size = 2};
+  GameObject objects[3] = {0};
+  GameDatabase database = {.object_storage = objects, .top = 2, .size = 2};
   DbRef recipients[] = {42, 7, 999};
   time_t last_login;
 
@@ -91,7 +91,8 @@ int main(void) {
     return 1;
   }
   player_account_clear(&database, 0);
-  if (objects[0].account || *player_account_password_hash(&database, 0))
+  if (game_database_object(&database, 0)->account ||
+      *player_account_password_hash(&database, 0))
     return 1;
   return 0;
 }

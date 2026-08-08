@@ -75,8 +75,9 @@ void ChargeMech(Mech *mech, Mech *target) {
     /* Check the sections of the first unit for weapons that are cycling */
     done = 0;
     for (i = 0; i < CHARGE_SECTIONS && !done; i++) {
-      if (mech_section_has_recycling_weapon(mech, resect[i])) {
-        ArmorStringFromIndex(resect[i], location, mech_class(mech),
+      const int section = physical_charge_section(i);
+      if (mech_section_has_recycling_weapon(mech, section)) {
+        ArmorStringFromIndex(section, location, mech_class(mech),
                              mech_movement_type(mech));
         mech_printf(mech, MECHALL, "You have weapons recycling on your %s.",
                     location);
@@ -88,8 +89,9 @@ void ChargeMech(Mech *mech, Mech *target) {
     /* Check the sections of the second unit for weapons that are cycling */
     done = 0;
     for (i = 0; i < CHARGE_SECTIONS && !done; i++) {
-      if (mech_section_has_recycling_weapon(target, resect[i])) {
-        ArmorStringFromIndex(resect[i], location, mech_class(target),
+      const int section = physical_charge_section(i);
+      if (mech_section_has_recycling_weapon(target, section)) {
+        ArmorStringFromIndex(section, location, mech_class(target),
                              mech_movement_type(target));
         mech_printf(target, MECHALL, "You have weapons recycling on your %s.",
                     location);
@@ -534,7 +536,8 @@ void ChargeMech(Mech *mech, Mech *target) {
     /* Cycle the sections so they can't make another attack for a while */
     if (mech_class(mech) == CLASS_MECH) {
       for (i = 0; i < CHARGE_SECTIONS; i++)
-        mech_set_recycle_limb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
+        mech_set_recycle_limb(mech, physical_charge_section(i),
+                              PHYSICAL_RECYCLE_TIME);
     } else {
       mech_set_recycle_limb(mech, FSIDE, PHYSICAL_RECYCLE_TIME);
       mech_set_recycle_limb(mech, TURRET, PHYSICAL_RECYCLE_TIME);
@@ -542,7 +545,8 @@ void ChargeMech(Mech *mech, Mech *target) {
 
     if (mech_class(target) == CLASS_MECH) {
       for (i = 0; i < CHARGE_SECTIONS; i++)
-        mech_set_recycle_limb(target, resect[i], PHYSICAL_RECYCLE_TIME);
+        mech_set_recycle_limb(target, physical_charge_section(i),
+                              PHYSICAL_RECYCLE_TIME);
     } else {
       mech_set_recycle_limb(target, FSIDE, PHYSICAL_RECYCLE_TIME);
       mech_set_recycle_limb(target, TURRET, PHYSICAL_RECYCLE_TIME);
@@ -766,7 +770,8 @@ void ChargeMech(Mech *mech, Mech *target) {
   /* Cycle the sections so they can't make another attack for a while */
   if (mech_class(mech) == CLASS_MECH) {
     for (i = 0; i < CHARGE_SECTIONS; i++)
-      mech_set_recycle_limb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
+      mech_set_recycle_limb(mech, physical_charge_section(i),
+                            PHYSICAL_RECYCLE_TIME);
   } else {
     mech_set_recycle_limb(mech, FSIDE, PHYSICAL_RECYCLE_TIME);
     mech_set_recycle_limb(mech, TURRET, PHYSICAL_RECYCLE_TIME);

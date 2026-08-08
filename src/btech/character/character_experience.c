@@ -8,15 +8,17 @@ void lower_xp(BtechContext *context, DbRef player, int promillage) {
 
   character_stats_retrieve(context, player, VALUES_ALL, s);
   for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
-    if (!s->xp[i])
+    int xp = character_stats_xp_get(s, i);
+    if (!xp)
       continue;
-    if (s->xp[i] < 0) {
-      s->xp[i] = 0;
+    if (xp < 0) {
+      character_stats_xp_set(s, i, 0);
       continue;
     }
-    s->xp[i] = (s->xp[i] % XP_MAX) * promillage / 1000;
-    s->xp[i] =
-        s->xp[i] % XP_MAX + XP_MAX * figure_xp_bonus(context, player, s, i);
+    character_stats_xp_set(s, i, (xp % XP_MAX) * promillage / 1000);
+    character_stats_xp_set(s, i,
+                           character_stats_xp_get(s, i) % XP_MAX +
+                               XP_MAX * figure_xp_bonus(context, player, s, i));
   }
   character_stats_store(context, player, s, VALUES_ALL);
 }

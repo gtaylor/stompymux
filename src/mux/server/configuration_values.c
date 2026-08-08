@@ -14,6 +14,7 @@
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
 #include "mux/support/styled_text/palette.h"
@@ -82,8 +83,11 @@ int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd,
    */
 
   retval = 0;
+  if (extra <= 0)
+    return -1;
   if (strlen(str) >= (size_t)extra) {
-    str[extra - 1] = '\0';
+    *(char *)checked_storage_at(str, strlen(str) + 1, sizeof(char),
+                                (size_t)extra - 1) = '\0';
     if (context->configuration->is_initializing) {
       log_error(context->log, LOG_STARTUP, "CNF", "NFND",
                 "%s: String truncated", cmd);
@@ -146,7 +150,7 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
     negate = 0;
     if (*sp == '!') {
       negate = 1;
-      sp++;
+      sp = checked_mutable_string_suffix(sp, 1);
     }
     /*
      * Set or clear the appropriate bit
@@ -342,22 +346,29 @@ int cf_osc8_preset(void *vp, char *str, long extra, DbRef player, char *cmd,
                    ConfigurationContext *context) {
   char *directives;
   char error[256];
+  size_t length = strlen(str);
+  size_t offset = 0;
 
   (void)vp;
   (void)extra;
-  directives = str;
-  while (*directives && !isspace((unsigned char)*directives))
-    directives++;
-  if (!*directives) {
+  while (offset < length &&
+         !(isspace)(*(const unsigned char *)checked_storage_at_const(
+             str, length, sizeof(char), offset)))
+    offset++;
+  if (offset == length) {
     configuration_log_syntax(context, player, cmd,
                              "Expected NAME DIRECTIVES: ", str);
     if (context->configuration->is_initializing)
       context->fatal_error = true;
     return -1;
   }
-  *directives++ = '\0';
-  while (isspace((unsigned char)*directives))
-    directives++;
+  *(char *)checked_storage_at(str, length + 1, sizeof(char), offset) = '\0';
+  offset++;
+  while (offset < length &&
+         (isspace)(*(const unsigned char *)checked_storage_at_const(
+             str, length, sizeof(char), offset)))
+    offset++;
+  directives = checked_storage_at(str, length + 1, sizeof(char), offset);
   if (!styled_text_palette_set_preset(context->world->styled_text_palette, str,
                                       directives, error, sizeof(error))) {
     configuration_log_syntax(context, player, cmd, error, "");
@@ -375,15 +386,22 @@ int cf_osc8_preset(void *vp, char *str, long extra, DbRef player, char *cmd,
 
 int cf_cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
                  ConfigurationContext *context) {
-  CONF *tp;
   char *ap;
+  size_t length = strlen(str);
+  size_t offset = 0;
 
-  for (ap = str; *ap && !isspace((unsigned char)*ap); ap++)
-    ;
-  if (*ap)
-    *ap++ = '\0';
+  while (offset < length &&
+         !(isspace)(*(const unsigned char *)checked_storage_at_const(
+             str, length, sizeof(char), offset)))
+    offset++;
+  if (offset < length) {
+    *(char *)checked_storage_at(str, length + 1, sizeof(char), offset) = '\0';
+    offset++;
+  }
+  ap = checked_storage_at(str, length + 1, sizeof(char), offset);
 
-  for (tp = conftable; tp->pname; tp++) {
+  for (size_t index = 0; index < configuration_entry_count(); index++) {
+    CONF *tp = configuration_entry_at(index);
     if (!strcmp(tp->pname, str)) {
       return configuration_modify_bits(&tp->flags, ap, extra, player, cmd,
                                        context);

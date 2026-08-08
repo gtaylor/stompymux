@@ -8,6 +8,7 @@
 
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/support/checked_storage.h"
 
 typedef struct PlayerLoginRecord PlayerLoginRecord;
 struct PlayerLoginRecord {
@@ -30,6 +31,11 @@ struct PlayerAccountState {
   DbRef *last_page_recipients;
   size_t last_page_count;
 };
+
+static PlayerLoginRecord *login_record(PlayerLoginRecord *records, size_t limit,
+                                       size_t index) {
+  return checked_storage_at(records, limit, sizeof(*records), index);
+}
 
 static PlayerAccountState *player_account(GameDatabase *database,
                                           DbRef player) {
@@ -78,9 +84,13 @@ void player_account_clear(GameDatabase *database, DbRef player) {
   free(account->password_hash);
   free(account->last_site);
   for (size_t index = 0; index < account->successful_history_count; index++)
-    free(account->successful_history[index].host);
+    free(login_record(account->successful_history, PLAYER_SUCCESS_HISTORY_LIMIT,
+                      index)
+             ->host);
   for (size_t index = 0; index < account->failed_history_count; index++)
-    free(account->failed_history[index].host);
+    free(login_record(account->failed_history, PLAYER_FAILURE_HISTORY_LIMIT,
+                      index)
+             ->host);
   free(account->last_page_recipients);
   free(account);
   game_database_object(database, player)->account = nullptr;
@@ -191,11 +201,14 @@ bool player_account_login_record(GameDatabase *database, DbRef player,
     return false;
   records = history(account, outcome, &count, &limit);
   if (*count == limit)
-    free(records[limit - 1].host);
+    free(login_record(records, limit, limit - 1)->host);
   else
     (*count)++;
-  memmove(&records[1], &records[0], (*count - 1) * sizeof(*records));
-  records[0] = (PlayerLoginRecord){.occurred_at = occurred_at, .host = copy};
+  if (*count > 1)
+    memmove(login_record(records, limit, 1), login_record(records, limit, 0),
+            (*count - 1) * sizeof(*records));
+  *login_record(records, limit, 0) =
+      (PlayerLoginRecord){.occurred_at = occurred_at, .host = copy};
   if (outcome == PLAYER_LOGIN_SUCCESS) {
     if (account->successful_logins < INT64_MAX)
       account->successful_logins++;
@@ -233,9 +246,9 @@ bool player_account_login_history(GameDatabase *database, DbRef player,
   records = history(account, outcome, &count, &limit);
   if (position >= *count)
     return false;
-  *record =
-      (PlayerLoginRecordView){.occurred_at = records[position].occurred_at,
-                              .host = records[position].host};
+  const PlayerLoginRecord *stored = login_record(records, limit, position);
+  *record = (PlayerLoginRecordView){.occurred_at = stored->occurred_at,
+                                    .host = stored->host};
   return true;
 }
 
@@ -259,10 +272,10 @@ bool player_account_login_history_set(GameDatabase *database, DbRef player,
     return false;
   }
   if (position < *count)
-    free(records[position].host);
+    free(login_record(records, limit, position)->host);
   else
     (*count)++;
-  records[position] =
+  *login_record(records, limit, position) =
       (PlayerLoginRecord){.occurred_at = occurred_at, .host = copy};
   return true;
 }
@@ -277,7 +290,9 @@ DbRef player_account_last_page_recipient(GameDatabase *database, DbRef player,
   PlayerAccountState *account = player_account(database, player);
   if (!account || position >= account->last_page_count)
     return NOTHING;
-  return account->last_page_recipients[position];
+  return *(const DbRef *)checked_storage_at_const(account->last_page_recipients,
+                                                  account->last_page_count,
+                                                  sizeof(DbRef), position);
 }
 
 bool player_account_last_page_set(GameDatabase *database, DbRef player,

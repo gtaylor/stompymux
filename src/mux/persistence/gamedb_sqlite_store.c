@@ -17,6 +17,7 @@
 #include "mux/persistence/gamedb_sqlite_internal.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
+#include "mux/support/checked_storage.h"
 
 static int gamedb_finish_snapshot(sqlite3 *sqlite, sqlite3_stmt *snapshot,
                                   sqlite3_stmt *objects,
@@ -35,9 +36,12 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
   char query[256];
 
   const char *tables[] = {"btech_object_state"};
-  for (size_t index = 0; index < sizeof(tables) / sizeof(*tables); index++) {
+  const size_t table_count = sizeof(tables) / sizeof(*tables);
+  for (size_t index = 0; index < table_count; index++) {
+    const char *table = *(const char *const *)checked_storage_at_const(
+        tables, table_count, sizeof(*tables), index);
     snprintf(query, sizeof(query), "INSERT INTO %s (object_dbref) VALUES (?);",
-             tables[index]);
+             table);
     if (gamedb_prepare(sqlite, &statement, query) < 0 ||
         gamedb_bind_int(statement, 1, object) < 0 ||
         gamedb_step(statement) < 0) {
@@ -48,7 +52,7 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
     statement = nullptr;
   }
   for (size_t index = 0; index < native_column_count; index++) {
-    const NativeColumn *column = &native_columns[index];
+    const NativeColumn *column = gamedb_native_column_at(index);
     const char *value = attribute_get_raw(database, object, column->field);
 
     if (!value)

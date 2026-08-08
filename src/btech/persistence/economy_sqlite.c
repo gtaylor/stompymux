@@ -2,7 +2,20 @@
 
 #include <limits.h>
 
+#include "mux/support/checked_storage.h"
+
 #ifdef BT_ADVANCED_ECON
+
+static BtechPartCostSet *cost_set_at(BtechPartCostSet *sets, size_t index) {
+  return checked_storage_at(sets, BTECH_PART_COST_SET_COUNT, sizeof(*sets),
+                            index);
+}
+
+static unsigned long long cost_at(const BtechPartCostSet *set, size_t index) {
+  const unsigned long long *cost = checked_storage_at_const(
+      set->costs, set->count, sizeof(*set->costs), index);
+  return *cost;
+}
 
 /* Execute a statement that does not return rows. */
 static int btech_sqlite_exec(sqlite3 *sqlite, const char *sql) {
@@ -101,7 +114,7 @@ static int btech_part_from_name(BtechContext *btech, const char *item_name,
 
   btech_part_cost_sets(btech, cost_sets);
   for (index = 0; index < BTECH_PART_COST_SET_COUNT; index++) {
-    cost_set = &cost_sets[index];
+    cost_set = cost_set_at(cost_sets, index);
     for (item_index = 0; item_index < cost_set->count; item_index++) {
       if (cost_set->first_part > INT_MAX ||
           item_index > (size_t)(INT_MAX - cost_set->first_part))
@@ -226,9 +239,10 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
   result = 0;
   btech_part_cost_sets(btech, cost_sets);
   for (index = 0; result == 0 && index < BTECH_PART_COST_SET_COUNT; index++) {
-    cost_set = &cost_sets[index];
+    cost_set = cost_set_at(cost_sets, index);
     for (item_index = 0; item_index < cost_set->count; item_index++) {
-      if (!cost_set->costs[item_index])
+      const unsigned long long item_cost = cost_at(cost_set, item_index);
+      if (!item_cost)
         continue;
       if (cost_set->first_part > INT_MAX ||
           item_index > (size_t)(INT_MAX - cost_set->first_part)) {
@@ -237,8 +251,7 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
       }
       part = cost_set->first_part + (int)item_index;
       part_name = btech_part_name(btech->configuration, part, generated_name);
-      length =
-          snprintf(cost, sizeof(cost), "%llu", cost_set->costs[item_index]);
+      length = snprintf(cost, sizeof(cost), "%llu", item_cost);
       if (!part_name || length < 0 || (size_t)length >= sizeof(cost) ||
           sqlite3_bind_text(statement, 1, part_name, -1, SQLITE_TRANSIENT) !=
               SQLITE_OK ||

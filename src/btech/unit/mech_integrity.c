@@ -13,7 +13,7 @@ int mech_recycling_state(Mech *mech, int num) {
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (num & CHECK_WEAPS && SectHasBusyWeap(mech, i))
       return 1;
-    if (num & CHECK_PHYS && ((mech)->ud.sections)[i].recycle > 0)
+    if (num & CHECK_PHYS && mech_section_recycle_ticks(mech, i) > 0)
       return 2;
   }
   return 0;

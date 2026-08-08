@@ -5,6 +5,7 @@
 
 #include "aero_move_api.h"
 #include "autopilot.h"
+#include "autopilot_argument_list_api.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
@@ -25,6 +26,7 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -98,6 +100,14 @@ const AutopilotCommandDefinition acom[AUTO_NUM_COMMANDS + 1] = {
      nullptr},                              /* disembark from a carrier */
     {"unload", 0, COMMAND_UNLOAD, nullptr}, /* unload cargo */
     {nullptr, 0, AUTO_NUM_COMMANDS, nullptr}};
+
+const AutopilotCommandDefinition *autopilot_command_definition_at(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(acom, AUTO_NUM_COMMANDS + 1,
+                                  sizeof(AutopilotCommandDefinition),
+                                  (size_t)index);
+}
 
 /* backwards compat till I can fix all of these */
 /* \todo {Get rid of these once we're done redoing the AI} */
@@ -258,15 +268,18 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
   Mech *target;
   char *argument;
   char error_buf[MBUF_SIZE];
-  char *args[AUTOPILOT_MAX_ARGS - 1];
+  AutopilotArgumentList args;
   int argc;
-  int i;
+
+  autopilot_argument_list_initialize(&args, AUTOPILOT_MAX_ARGS - 1);
 
   /* Read in the argument */
   argument = auto_get_command_arg(autopilot, 1, 1);
 
   /* Parse the argument */
-  argc = proper_explodearguments(argument, args, AUTOPILOT_MAX_ARGS - 1);
+  argc = proper_explodearguments(argument,
+                                 autopilot_argument_list_parser_storage(&args),
+                                 AUTOPILOT_MAX_ARGS - 1);
 
   /* Free the argument */
   free(argument);
@@ -275,7 +288,7 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
   if (argc == 1) {
 
     /* Ok its either going to be on or off */
-    if (strcmp(args[0], "on") == 0) {
+    if (strcmp(autopilot_argument_list_get(&args, 0), "on") == 0) {
 
       /* Reset the AI parameters */
       autopilot->target = -1;
@@ -288,8 +301,10 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
       }
 
       /* Get the AI going */
-      if (!auto_command_prepare_unit(autopilot, mech))
+      if (!auto_command_prepare_unit(autopilot, mech)) {
+        autopilot_argument_list_destroy(&args);
         return;
+      }
 
       if (autopilot_is_gunning(autopilot)) {
         autopilot_gunning_stop(autopilot);
@@ -297,7 +312,7 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
 
       autopilot_gunning_start(autopilot);
 
-    } else if (strcmp(args[0], "off") == 0) {
+    } else if (strcmp(autopilot_argument_list_get(&args, 0), "off") == 0) {
 
       /* Reset the target */
       autopilot->target = -2;
@@ -327,10 +342,12 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
   } else if (argc == 2) {
 
     /* Check for 'target' */
-    if (strcmp(args[0], "target") == 0) {
+    if (strcmp(autopilot_argument_list_get(&args, 0), "target") == 0) {
 
       /* Read in the 2nd argument - the target */
-      if ((!((target_dbref) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+      const char *target_argument = autopilot_argument_list_get(&args, 1);
+      if ((!((target_dbref) = atoi(target_argument)) &&
+           strcmp(target_argument, "0"))) {
 
         /* Invalid command */
         snprintf(error_buf, MBUF_SIZE,
@@ -340,11 +357,7 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
-        /* Free Args */
-        for (i = 0; i < AUTOPILOT_MAX_ARGS - 1; i++) {
-          if (args[i])
-            free(args[i]);
-        }
+        autopilot_argument_list_destroy(&args);
 
         return;
       }
@@ -360,11 +373,7 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
-        /* Free Args */
-        for (i = 0; i < AUTOPILOT_MAX_ARGS - 1; i++) {
-          if (args[i])
-            free(args[i]);
-        }
+        autopilot_argument_list_destroy(&args);
 
         return;
       }
@@ -380,8 +389,10 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
       }
 
       /* Get the AI going */
-      if (!auto_command_prepare_unit(autopilot, mech))
+      if (!auto_command_prepare_unit(autopilot, mech)) {
+        autopilot_argument_list_destroy(&args);
         return;
+      }
 
       if (autopilot_is_gunning(autopilot)) {
         autopilot_gunning_stop(autopilot);
@@ -401,11 +412,7 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
     }
   }
 
-  /* Free Args */
-  for (i = 0; i < AUTOPILOT_MAX_ARGS - 1; i++) {
-    if (args[i])
-      free(args[i]);
-  }
+  autopilot_argument_list_destroy(&args);
 }
 
 /*

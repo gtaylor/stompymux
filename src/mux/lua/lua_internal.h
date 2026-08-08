@@ -50,6 +50,13 @@ struct LuaRuntime {
   LuaBtechPackage btech_package;
 };
 
+const char *lua_global_module_at(const LuaRuntime *runtime, size_t index);
+char *lua_global_module_slot(LuaRuntime *runtime, size_t index);
+const char *lua_runtime_root_at(const LuaRuntime *runtime,
+                                LUA_MODULE_ROOT root);
+char *lua_runtime_root_slot(LuaRuntime *runtime, LUA_MODULE_ROOT root);
+LUA_SCHEDULE_JOB *lua_schedule_job_at(LuaRuntime *runtime, size_t index);
+
 extern const char LUA_MODULES_KEY[];
 extern const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT];
 extern const char *const LUA_LOCK_NAMES[LUA_LOCK_COUNT];

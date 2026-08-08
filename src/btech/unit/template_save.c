@@ -1,10 +1,16 @@
+#include "btech_text_builder.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
 #include "mech_network_api.h"
 #include "mech_runtime_api.h"
 #include "mech_status_types.h"
+#include "mux/support/checked_storage.h"
 #include "template_internal.h"
 #include "weapon_catalogue_api.h"
+
+static int *template_integer_slot(int *values, size_t count, int index) {
+  return checked_storage_at(values, count, sizeof(*values), (size_t)index);
+}
 
 void try_to_find_name(char *mechref, Mech *mech) {
   const char *c;
@@ -60,11 +66,11 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
     fprintf(fp, "Name             { %s }\n", ((mech)->ud.mech_name));
   fprintf(fp, "Reference        { %s }\n", reference);
   fprintf(fp, "Type             { %s }\n",
-          mech_types[(short)((mech)->ud.type)]);
+          template_unit_class_name((size_t)mech->ud.type));
   fprintf(fp, "Unit_Era         { %s }\n", ((mech)->ud.unit_era)),
       fprintf(fp, "Unit_TRO         { %s }\n", ((mech)->ud.unit_tro)),
       fprintf(fp, "Move_Type        { %s }\n",
-              move_types[(short)((mech)->ud.move)]);
+              template_movement_type_name((size_t)mech->ud.move));
   fprintf(fp, "Tons             { %d }\n", ((mech)->ud.tons));
   if ((d = strrchr(c, '\n')))
     *d = 0;
@@ -124,19 +130,22 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
 
   if (x || x2)
     fprintf(fp, "Specials         { %s }\n",
-            build_bit_string2(specials, specials2, x, x2,
-                              (char[BTECH_TEXT_CAPACITY]){0}));
+            build_bit_string2(specials, primary_technology_name_count(),
+                              specials2, secondary_technology_name_count(), x,
+                              x2, (char[BTECH_TEXT_CAPACITY]){0}));
 
   inf_x = ((mech)->rd.infantry_specials);
 
   if (inf_x)
     fprintf(fp, "InfantrySpecials { %s }\n",
-            build_bit_string(infantry_specials, inf_x,
+            build_bit_string(infantry_specials,
+                             infantry_technology_name_count(), inf_x,
                              (char[BTECH_TEXT_CAPACITY]){0}));
 
   if ((locs =
            ProperSectionStringFromType(((mech)->ud.type), ((mech)->ud.move)))) {
-    dump_locations(fp, mech, locs);
+    dump_locations(fp, mech, locs,
+                   mech_section_name_count(mech->ud.type, mech->ud.move));
     fclose(fp);
     return 0;
   }
@@ -147,66 +156,79 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
 static void skip_template_whitespace(FILE *fp) {
   int c;
 
-  while ((c = fgetc(fp)) != EOF && isspace((unsigned char)c))
+  while ((c = fgetc(fp)) != EOF && (c == ' ' || c == '\t' || c == '\n' ||
+                                    c == '\v' || c == '\f' || c == '\r'))
     ;
   if (c != EOF)
     ungetc(c, fp);
 }
 
 char *read_desc(FILE *fp, char *data, char *buffer) {
-  char keep[MAX_STRING_LENGTH + 500];
-  char *t, *tmp;
-  char *point;
+  BtechTextBuilder builder;
+  btech_text_builder_initialize(&builder, buffer, BTECH_TEXT_CAPACITY);
+  char *opening;
 
-  keep[0] = '\0';
-  if (data && (tmp = strchr(data, '{'))) {
+  if (data && (opening = strchr(data, '{'))) {
     skip_template_whitespace(fp);
-    while (isspace(*(++tmp)))
-      ;
-    if ((t = strchr(tmp, '}'))) {
-      while (isspace(*(t--)))
-        ;
-      *(t++) = '\0';
-      strcpy(buffer, tmp);
-      return buffer;
-    } else {
-      strcpy(keep, tmp);
-      strcat(keep, "\r\n");
-      t = tmp + strlen(tmp) - 1;
-      while (fgets(data, 512, fp)) {
-        skip_template_whitespace(fp);
-        if ((tmp = strchr(data, '}')) != NULL) {
-          *tmp = 0;
-          strcat(keep, data);
+    char *content = checked_mutable_string_suffix(opening, 1);
+    content =
+        checked_mutable_string_suffix(content, strspn(content, " \t\n\v\f\r"));
+    char *closing = strchr(content, '}');
+    if (closing) {
+      size_t content_length = (size_t)(closing - content);
+      while (content_length > 0) {
+        const char *last = checked_storage_at_const(
+            content, strlen(content) + 1, sizeof(*content), content_length - 1);
+        if (!strchr(" \t\n\v\f\r", *last))
           break;
-        } else {
-          point = data + strlen(data) - 1;
-          *(point++) = '\r';
-          *(point++) = '\n';
-          *point = '\0';
-          strcat(keep, data);
-        }
+        content_length--;
       }
+      btech_text_builder_append_count(&builder, content, content_length);
+      return buffer;
+    }
+    btech_text_builder_append(&builder, content);
+    btech_text_builder_append(&builder, "\r\n");
+    while (fgets(data, 512, fp)) {
+      skip_template_whitespace(fp);
+      closing = strchr(data, '}');
+      if (closing) {
+        btech_text_builder_append_count(&builder, data,
+                                        (size_t)(closing - data));
+        break;
+      }
+      size_t length = strlen(data);
+      while (length > 0) {
+        const char *last = checked_storage_at_const(data, length + 1,
+                                                    sizeof(*data), length - 1);
+        if (*last != '\n' && *last != '\r')
+          break;
+        length--;
+      }
+      btech_text_builder_append_count(&builder, data, length);
+      btech_text_builder_append(&builder, "\r\n");
     }
   }
-  strcpy(buffer, keep);
   return buffer;
 }
 
 int find_section(char *cmd, int type, int mtype) {
   char section[20];
-  char *ch;
   const char *const *locs;
 
   strcpy(section, cmd);
-  for (ch = section; *ch; ch++)
-    if (*ch == '_')
-      *ch = ' ';
+  size_t section_length = strlen(section);
+  for (size_t index = 0; index < section_length; index++) {
+    char *character =
+        checked_storage_at(section, sizeof(section), sizeof(*section), index);
+    if (*character == '_')
+      *character = ' ';
+  }
   locs = ProperSectionStringFromType(type, mtype);
-  return compare_const_array(locs, section);
+  return compare_const_array(locs, mech_section_name_count(type, mtype),
+                             section);
 }
 
-long BuildBitVector(const char *const list[], char *line) {
+long BuildBitVector(const char *const list[], size_t count, char *line) {
   long bv = 0;
   int temp;
   char buf[30];
@@ -215,15 +237,16 @@ long BuildBitVector(const char *const list[], char *line) {
     return 0;
 
   while (*line) {
-    line = one_arg(line, buf);
-    if ((temp = compare_const_array(list, buf)) == -1)
+    line = one_arg(line, buf, sizeof(buf));
+    if ((temp = compare_const_array(list, count, buf)) == -1)
       return -1;
     bv |= 1U << temp;
   }
   return bv;
 }
 
-long BuildBitVectorWithDelim(const char *const list[], char *line) {
+long BuildBitVectorWithDelim(const char *const list[], size_t count,
+                             char *line) {
   long bv = 0;
   int temp;
   char buf[30];
@@ -232,9 +255,9 @@ long BuildBitVectorWithDelim(const char *const list[], char *line) {
     return 0;
 
   while (*line) {
-    line = one_arg_delim(line, buf);
+    line = one_arg_delim(line, buf, sizeof(buf));
 
-    if ((temp = compare_const_array(list, buf)) == -1)
+    if ((temp = compare_const_array(list, count, buf)) == -1)
       return -1;
 
     bv |= 1U << temp;
@@ -243,7 +266,7 @@ long BuildBitVectorWithDelim(const char *const list[], char *line) {
   return bv;
 }
 
-long BuildBitVectorNoErr(const char *const list[], char *line) {
+long BuildBitVectorNoErr(const char *const list[], size_t count, char *line) {
   long bv = 0;
   int temp;
   char buf[30];
@@ -252,17 +275,18 @@ long BuildBitVectorNoErr(const char *const list[], char *line) {
     return 0;
 
   while (*line) {
-    line = one_arg(line, buf);
+    line = one_arg(line, buf, sizeof(buf));
 
-    if ((temp = compare_const_array(list, buf)) != -1)
+    if ((temp = compare_const_array(list, count, buf)) != -1)
       bv |= 1U << temp;
   }
 
   return bv;
 }
 
-int CheckSpecialsList(const char *const special_list[],
-                      const char *const special_list2[], char *line) {
+int CheckSpecialsList(const char *const special_list[], size_t count,
+                      const char *const special_list2[], size_t count2,
+                      char *line) {
   int wSpecCheck = -1, wSpec2Check = -1;
   char buf[30];
 
@@ -270,13 +294,13 @@ int CheckSpecialsList(const char *const special_list[],
     return 0;
 
   while (*line) {
-    line = one_arg(line, buf);
+    line = one_arg(line, buf, sizeof(buf));
 
     if (special_list)
-      wSpecCheck = compare_const_array(special_list, buf);
+      wSpecCheck = compare_const_array(special_list, count, buf);
 
     if (special_list2)
-      wSpec2Check = compare_const_array(special_list2, buf);
+      wSpec2Check = compare_const_array(special_list2, count2, buf);
 
     if ((wSpecCheck == -1) && (wSpec2Check == -1))
       return 0;
@@ -286,29 +310,21 @@ int CheckSpecialsList(const char *const special_list[],
 }
 
 int WeaponIFromString(char *data) {
-  int x = 0;
-  ;
-
-  while (MechWeapons[x].name) {
-    if (!strcasecmp(MechWeapons[x].name, data))
+  for (int x = 0; x < num_def_weapons; x++) {
+    if (!strcasecmp(weapon_catalogue_name(x), data))
       return x + 1; /* weapons start at 1 not 0 */
-    x++;
   }
   return -1;
 }
 
 int AmmoIFromString(char *data) {
-  int x = 0;
-  char *ptr;
-
-  ptr = data;
-  while (*ptr != '_')
-    ptr++;
-  ptr++;
-  while (MechWeapons[x].name) {
-    if (!strcasecmp(MechWeapons[x].name, ptr))
+  char *separator = strchr(data, '_');
+  if (!separator)
+    return -1;
+  char *name = checked_mutable_string_suffix(separator, 1);
+  for (int x = 0; x < num_def_weapons; x++) {
+    if (!strcasecmp(weapon_catalogue_name(x), name))
       return x + 101;
-    x++;
   }
   return -1;
 }
@@ -354,13 +370,13 @@ void update_specials(Mech *mech) {
         FC_INFILTRATORII_STEALTH_TECH);
 
   for (x = 0; x < 5; x++)
-    awInfSpec[x] = 0;
+    *template_integer_slot(awInfSpec, 5, x) = 0;
 
   for (x = 0; x < NUM_SECTIONS; x++) {
     e_count = 0;
-    ((mech)->ud.sections)[x].config &= ~CASE_TECH;
-    awcSthArmor[x] = 0;
-    awcNSS[x] = 0;
+    mech_section_configuration_remove(mech, x, CASE_TECH);
+    *template_integer_slot(awcSthArmor, NUM_SECTIONS, x) = 0;
+    *template_integer_slot(awcNSS, NUM_SECTIONS, x) = 0;
 
     for (y = 0; y < CritsInLoc(mech, x); y++)
       if ((t = mech_critical_part_type(mech, x, y))) {
@@ -424,44 +440,45 @@ void update_specials(Mech *mech) {
           es_count++;
           break;
         case PURIFIER_ARMOR:
-          awInfSpec[0]++;
+          (*template_integer_slot(awInfSpec, 5, 0))++;
           break;
         case KAGE_STEALTH_UNIT:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            awInfSpec[1]++;
+            (*template_integer_slot(awInfSpec, 5, 1))++;
           break;
         case ACHILEUS_STEALTH_UNIT:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            awInfSpec[2]++;
+            (*template_integer_slot(awInfSpec, 5, 2))++;
           break;
         case INFILTRATOR_STEALTH_UNIT:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            awInfSpec[3]++;
+            (*template_integer_slot(awInfSpec, 5, 3))++;
           break;
         case INFILTRATORII_STEALTH_UNIT:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            awInfSpec[4]++;
+            (*template_integer_slot(awInfSpec, 5, 4))++;
           break;
         case ENGINE:
           e_count++;
           break;
         case CASE:
-          ((mech)->ud.sections)[(((mech)->ud.type) == CLASS_VEH_GROUND) ? BSIDE
-                                                                        : x]
-              .config |= CASE_TECH;
+          mech_section_configuration_add(
+              mech, ((mech)->ud.type) == CLASS_VEH_GROUND ? BSIDE : x,
+              CASE_TECH);
           break;
         case STEALTH_ARMOR:
-          awcSthArmor[x]++;
+          (*template_integer_slot(awcSthArmor, NUM_SECTIONS, x))++;
           wcSthArmor++;
           break;
         case NULL_SIGNATURE_SYSTEM:
-          awcNSS[x]++;
+          (*template_integer_slot(awcNSS, NUM_SECTIONS, x))++;
           wcNSS++;
           break;
         }
         if (equipment_is_weapon(t) &&
             weapon_catalogue_is_anti_missile(weapon_from_equipment_index(t))) {
-          if (MechWeapons[weapon_from_equipment_index(t)].special & CLAT)
+          if (weapon_catalogue_has_special(weapon_from_equipment_index(t),
+                                           CLAT))
             ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
           else
             ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
@@ -566,7 +583,7 @@ void update_specials(Mech *mech) {
     } else {
       for (x = 0; x < NUM_SECTIONS; x++) {
         if (x != HEAD) {
-          if (awcNSS[x] < 1) {
+          if (*template_integer_slot(awcNSS, NUM_SECTIONS, x) < 1) {
             tTechOK = 0;
             break;
           }
@@ -595,7 +612,7 @@ void update_specials(Mech *mech) {
       } else {
         for (x = 0; x < NUM_SECTIONS; x++) {
           if ((x != HEAD) && (x != CTORSO)) {
-            if (awcSthArmor[x] < 2) {
+            if (*template_integer_slot(awcSthArmor, NUM_SECTIONS, x) < 2) {
               tTechOK = 0;
               break;
             }
@@ -612,19 +629,19 @@ void update_specials(Mech *mech) {
   if (((mech)->ud.type) == CLASS_BSUIT) {
     wcSuits = bsuit_member_count(mech);
 
-    if (awInfSpec[0] >= wcSuits)
+    if (*template_integer_slot(awInfSpec, 5, 0) >= wcSuits)
       ((mech)->rd.infantry_specials) |= CS_PURIFIER_STEALTH_TECH;
 
-    if (awInfSpec[1] >= wcSuits)
+    if (*template_integer_slot(awInfSpec, 5, 1) >= wcSuits)
       ((mech)->rd.infantry_specials) |= DC_KAGE_STEALTH_TECH;
 
-    if (awInfSpec[2] >= wcSuits)
+    if (*template_integer_slot(awInfSpec, 5, 2) >= wcSuits)
       ((mech)->rd.infantry_specials) |= FWL_ACHILEUS_STEALTH_TECH;
 
-    if (awInfSpec[3] >= wcSuits)
+    if (*template_integer_slot(awInfSpec, 5, 3) >= wcSuits)
       ((mech)->rd.infantry_specials) |= FC_INFILTRATOR_STEALTH_TECH;
 
-    if (awInfSpec[4] >= wcSuits)
+    if (*template_integer_slot(awInfSpec, 5, 4) >= wcSuits)
       ((mech)->rd.infantry_specials) |= FC_INFILTRATORII_STEALTH_TECH;
   }
 

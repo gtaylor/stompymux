@@ -1,3 +1,4 @@
+#include "command_catalogs.h"
 #include "command_invokers.h"
 
 const BtechCommandDefinition mechcommands[] = {
@@ -570,3 +571,7 @@ const BtechCommandDefinition mechcommands[] = {
     {0, "SETXY <X> <Y>", "@Sets the x & y value of the mech.",
      btech_command_invoke_mech_Rsetxy},
     {0, NULL, NULL, NULL}};
+
+size_t mech_command_count(void) {
+  return sizeof(mechcommands) / sizeof(*mechcommands) - 1;
+}

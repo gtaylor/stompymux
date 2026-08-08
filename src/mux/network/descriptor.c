@@ -22,6 +22,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_control.h"
+#include "mux/support/checked_storage.h"
 
 /* Human-readable labels for DescriptorShutdownReason values. */
 static const char *descriptor_disconnect_reasons[] = {
@@ -56,6 +57,32 @@ struct DescriptorRegistry {
   size_t count;
 };
 
+static Descriptor **descriptor_registry_slot(DescriptorRegistry *registry,
+                                             size_t index) {
+  return checked_storage_at(registry->slots, registry->capacity,
+                            sizeof(*registry->slots), index);
+}
+
+static const char *
+descriptor_shutdown_reason_at(DescriptorShutdownReason reason) {
+  const size_t count = sizeof(descriptor_disconnect_reasons) /
+                       sizeof(*descriptor_disconnect_reasons);
+
+  return *(const char *const *)checked_storage_at_const(
+      descriptor_disconnect_reasons, count,
+      sizeof(*descriptor_disconnect_reasons), (size_t)reason);
+}
+
+static const char *
+descriptor_shutdown_message_at(DescriptorShutdownReason reason) {
+  const size_t count = sizeof(descriptor_disconnect_messages) /
+                       sizeof(*descriptor_disconnect_messages);
+
+  return *(const char *const *)checked_storage_at_const(
+      descriptor_disconnect_messages, count,
+      sizeof(*descriptor_disconnect_messages), (size_t)reason);
+}
+
 /* Clear buffered input before destroying descriptor. */
 static void descriptor_clear_input(Descriptor *descriptor) {
   descriptor->input_tail = 0;
@@ -75,8 +102,10 @@ static bool descriptor_registry_grow(DescriptorRegistry *registry) {
   slots = realloc(registry->slots, new_capacity * sizeof(*registry->slots));
   if (slots == nullptr)
     return false;
-  memset(&slots[old_capacity], 0,
-         (new_capacity - old_capacity) * sizeof(*slots));
+  memset(checked_storage_region(slots, new_capacity * sizeof(*slots),
+                                old_capacity * sizeof(*slots),
+                                (new_capacity - old_capacity) * sizeof(*slots)),
+         0, (new_capacity - old_capacity) * sizeof(*slots));
   registry->slots = slots;
   registry->capacity = new_capacity;
   return true;
@@ -119,12 +148,12 @@ bool descriptor_register(DescriptorRegistry *registry, Descriptor *descriptor) {
   size_t slot;
 
   for (slot = 0; slot < registry->capacity; slot++) {
-    if (registry->slots[slot] == nullptr)
+    if (*descriptor_registry_slot(registry, slot) == nullptr)
       break;
   }
   if (slot == registry->capacity && !descriptor_registry_grow(registry))
     return false;
-  registry->slots[slot] = descriptor;
+  *descriptor_registry_slot(registry, slot) = descriptor;
   registry->count++;
   descriptor->registry = registry;
   descriptor_retain(descriptor);
@@ -137,9 +166,11 @@ static void descriptor_unregister(Descriptor *descriptor) {
   size_t slot;
 
   for (slot = 0; slot < registry->capacity; slot++) {
-    if (registry->slots[slot] != descriptor)
+    Descriptor **stored = descriptor_registry_slot(registry, slot);
+
+    if (*stored != descriptor)
       continue;
-    registry->slots[slot] = nullptr;
+    *stored = nullptr;
     registry->count--;
     descriptor->registry = nullptr;
     return;
@@ -195,7 +226,8 @@ Descriptor *descriptor_iterator_next(DescriptorIterator *iterator) {
   Descriptor *descriptor;
 
   while (iterator->next_slot < iterator->registry->capacity) {
-    descriptor = iterator->registry->slots[iterator->next_slot++];
+    descriptor =
+        *descriptor_registry_slot(iterator->registry, iterator->next_slot++);
     if (descriptor != nullptr &&
         descriptor_iterator_matches(iterator, descriptor))
       return descriptor;
@@ -277,7 +309,7 @@ void descriptor_shutdown(Descriptor *descriptor,
               "[%d/%s] Logout by %s(#%ld), <Reason: %s>",
               descriptor->descriptor, descriptor->addr,
               game_object_name(runtime->world->database, descriptor->player),
-              descriptor->player, descriptor_disconnect_reasons[reason]);
+              descriptor->player, descriptor_shutdown_reason_at(reason));
 
     flags = unparse_flags(descriptor_runtime(descriptor)->world->database, GOD,
                           descriptor->player);
@@ -288,12 +320,12 @@ void descriptor_shutdown(Descriptor *descriptor,
         runtime->clock->now - descriptor->connected_at,
         game_object_location(descriptor_runtime(descriptor)->world->database,
                              descriptor->player),
-        descriptor->addr, descriptor_disconnect_reasons[reason],
+        descriptor->addr, descriptor_shutdown_reason_at(reason),
         game_object_name(runtime->world->database, descriptor->player));
     free_sbuf(flags);
 
     descriptor_announce_disconnect(descriptor->player, descriptor,
-                                   descriptor_disconnect_messages[reason]);
+                                   descriptor_shutdown_message_at(reason));
   }
   descriptor_release(descriptor); // NOLINT(clang-analyzer-unix.Malloc)
 }

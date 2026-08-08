@@ -30,6 +30,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/render.h"
@@ -49,7 +50,9 @@ void make_portlist(DescriptorRegistry *descriptors, DbRef player, DbRef target,
     }
   }
   if (i) {
-    (*bufc)--;
+    size_t length = strlen(buff);
+
+    *bufc = checked_mutable_string_suffix(buff, length - 1);
   }
   **bufc = '\0';
 }
@@ -137,16 +140,26 @@ static char *trimmed_name(GameDatabase *database, DbRef player) {
   return cbuff;
 }
 
-static void dump_users(Descriptor *e, char *match) {
+static void dump_users(Descriptor *e, const char *match) {
   CommandRuntime *runtime = descriptor_runtime(e);
   Descriptor *d;
   DescriptorIterator iterator =
       descriptor_iterator_connected(runtime->descriptors);
   int count;
-  char *buf, *fp, *sp, flist[4], slist[4];
+  char *buf, flist[4], slist[4];
+  size_t flist_length;
+  size_t slist_length;
 
-  while (match && *match && isspace((unsigned char)*match))
-    match++;
+  if (match) {
+    size_t match_length = strlen(match);
+    size_t offset = 0;
+
+    while (offset < match_length &&
+           (isspace)(*(const unsigned char *)checked_storage_at_const(
+               match, match_length, sizeof(char), offset)))
+      offset++;
+    match = checked_string_suffix(match, offset);
+  }
   if (!match || !*match)
     match = nullptr;
 
@@ -161,22 +174,29 @@ static void dump_users(Descriptor *e, char *match) {
       continue;
     count++;
 
-    fp = flist;
-    sp = slist;
+    flist_length = 0;
+    slist_length = 0;
     if (is_hidden(runtime->world->database, d->player)) {
       if (d->is_autodark)
-        *fp++ = 'd';
+        *(char *)checked_storage_at(flist, sizeof(flist), sizeof(char),
+                                    flist_length++) = 'd';
       else if (is_dark(runtime->world->database, d->player))
-        *fp++ = 'D';
+        *(char *)checked_storage_at(flist, sizeof(flist), sizeof(char),
+                                    flist_length++) = 'D';
     }
     if (is_suspect(runtime->world->database, d->player))
-      *fp++ = '+';
+      *(char *)checked_storage_at(flist, sizeof(flist), sizeof(char),
+                                  flist_length++) = '+';
     if (d->host_info & H_FORBIDDEN)
-      *sp++ = 'F';
+      *(char *)checked_storage_at(slist, sizeof(slist), sizeof(char),
+                                  slist_length++) = 'F';
     if (d->host_info & H_SUSPECT)
-      *sp++ = '+';
-    *fp = '\0';
-    *sp = '\0';
+      *(char *)checked_storage_at(slist, sizeof(slist), sizeof(char),
+                                  slist_length++) = '+';
+    *(char *)checked_storage_at(flist, sizeof(flist), sizeof(char),
+                                flist_length) = '\0';
+    *(char *)checked_storage_at(slist, sizeof(slist), sizeof(char),
+                                slist_length) = '\0';
 
     snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
              trimmed_name(runtime->world->database, d->player),
@@ -200,7 +220,7 @@ static void dump_users(Descriptor *e, char *match) {
   free_lbuf(buf);
 }
 
-static void dump_sessions(Descriptor *e, char *match) {
+static void dump_sessions(Descriptor *e, const char *match) {
   CommandRuntime *runtime = descriptor_runtime(e);
   Descriptor *d;
   DescriptorIterator iterator =
@@ -208,8 +228,16 @@ static void dump_sessions(Descriptor *e, char *match) {
   int count;
   char *buf;
 
-  while (match && *match && isspace((unsigned char)*match))
-    match++;
+  if (match) {
+    size_t match_length = strlen(match);
+    size_t offset = 0;
+
+    while (offset < match_length &&
+           (isspace)(*(const unsigned char *)checked_storage_at_const(
+               match, match_length, sizeof(char), offset)))
+      offset++;
+    match = checked_string_suffix(match, offset);
+  }
   if (!match || !*match)
     match = nullptr;
 
@@ -302,7 +330,8 @@ static int telnet_environment_view_compare(const void *left,
 static void telnet_append_escaped(char *buffer, char **position,
                                   const unsigned char *value, size_t size) {
   for (size_t index = 0; index < size; index++) {
-    unsigned char byte = value[index];
+    unsigned char byte = *(const unsigned char *)checked_storage_at_const(
+        value, size, sizeof(*value), index);
 
     if (byte == '\\')
       safe_str("\\\\", buffer, position);
@@ -313,6 +342,12 @@ static void telnet_append_escaped(char *buffer, char **position,
     else
       safe_str(tprintf("\\x%02X", byte), buffer, position);
   }
+}
+
+static TelnetEnvironmentEntryView *
+telnet_environment_view_at(TelnetEnvironmentEntryView *entries, size_t count,
+                           size_t index) {
+  return checked_storage_at(entries, count, sizeof(*entries), index);
 }
 
 static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
@@ -335,12 +370,14 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
   if (count > sizeof(entries) / sizeof(entries[0]))
     count = sizeof(entries) / sizeof(entries[0]);
   for (size_t index = 0; index < count; index++)
-    descriptor_telnet_environment_entry(descriptor, index, &entries[index]);
+    descriptor_telnet_environment_entry(
+        descriptor, index, telnet_environment_view_at(entries, count, index));
   qsort(entries, count, sizeof(entries[0]), telnet_environment_view_compare);
   notify_checked(evaluation, viewer, viewer,
                  "    Variables:", MSG_ME_ALL | MSG_F_DOWN);
   for (size_t index = 0; index < count; index++) {
-    TelnetEnvironmentEntryView *entry = &entries[index];
+    TelnetEnvironmentEntryView *entry =
+        telnet_environment_view_at(entries, count, index);
     size_t value_position = 0;
     bool first_chunk = true;
 
@@ -359,8 +396,11 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
       } else {
         safe_str("        value += \"", buffer, &position);
       }
-      telnet_append_escaped(buffer, &position, entry->value + value_position,
-                            chunk_size);
+      telnet_append_escaped(
+          buffer, &position,
+          checked_storage_region_const(entry->value, entry->value_size,
+                                       value_position, chunk_size),
+          chunk_size);
       safe_chr('"', buffer, &position);
       *position = '\0';
       notify_checked(evaluation, viewer, viewer, buffer,

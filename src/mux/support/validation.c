@@ -8,8 +8,23 @@
 #include <strings.h>
 
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/utf8.h"
+
+static char validation_character(const char *text, size_t length,
+                                 size_t index) {
+  return *(const char *)checked_storage_at_const(text, length + 1, sizeof(char),
+                                                 index);
+}
+
+static bool validation_is_space(char character) {
+  return (isspace)((unsigned char)character) != 0;
+}
+
+static bool validation_is_digit(char character) {
+  return (isdigit)((unsigned char)character) != 0;
+}
 
 static bool ascii_is_alpha(unsigned char byte) {
   return (byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z');
@@ -20,86 +35,64 @@ static bool ascii_is_alnum(unsigned char byte) {
 }
 
 int is_integer(char *str) {
-  while (*str && isspace((unsigned char)*str))
-    str++;           /*
-                      * Leading spaces
-                      */
-  if (*str == '-') { /*
-                      * Leading minus
-                      */
-    str++;
-    if (!*str)
-      return 0; /*
-                 * but not if just a minus
-                 */
-  }
-  if (!isdigit((unsigned char)*str)) /*
-                                      * Need at least 1 integer
-                                      */
+  if (str == nullptr)
     return 0;
-  while (*str && isdigit((unsigned char)*str))
-    str++; /*
-            * The number (int)
-            */
-  while (*str && isspace((unsigned char)*str))
-    str++; /*
-            * Trailing spaces
-            */
-  return (*str ? 0 : 1);
+  const size_t length = strlen(str);
+  size_t index = 0;
+  while (index < length &&
+         validation_is_space(validation_character(str, length, index)))
+    index++;
+  if (index < length && validation_character(str, length, index) == '-')
+    index++;
+  if (index >= length ||
+      !validation_is_digit(validation_character(str, length, index)))
+    return 0;
+  while (index < length &&
+         validation_is_digit(validation_character(str, length, index)))
+    index++;
+  while (index < length &&
+         validation_is_space(validation_character(str, length, index)))
+    index++;
+  return index == length;
 }
 
 /**
  * Checks for the presence of a number
  */
-int is_number(char *str) {
-  int got_one;
-
-  while (*str && isspace((unsigned char)*str))
-    str++;           /*
-                      * Leading spaces
-                      */
-  if (*str == '-') { /*
-                      * Leading minus
-                      */
-    str++;
-    if (!*str)
-      return 0; /*
-                 * but not if just a minus
-                 */
+int is_number(const char *str) {
+  if (str == nullptr)
+    return 0;
+  const size_t length = strlen(str);
+  size_t index = 0;
+  bool got_digit = false;
+  while (index < length &&
+         validation_is_space(validation_character(str, length, index)))
+    index++;
+  if (index < length && validation_character(str, length, index) == '-')
+    index++;
+  while (index < length &&
+         validation_is_digit(validation_character(str, length, index))) {
+    got_digit = true;
+    index++;
   }
-  got_one = 0;
-  if (isdigit((unsigned char)*str))
-    got_one = 1; /*
-                  * Need at least one digit
-                  */
-  while (*str && isdigit((unsigned char)*str))
-    str++; /*
-            * The number (int)
-            */
-  if (*str == '.')
-    str++; /*
-            * decimal point
-            */
-  if (isdigit((unsigned char)*str))
-    got_one = 1; /*
-                  * Need at least one digit
-                  */
-  while (*str && isdigit((unsigned char)*str))
-    str++; /*
-            * The number (fract)
-            */
-  while (*str && isspace((unsigned char)*str))
-    str++; /*
-            * Trailing spaces
-            */
-  return ((*str || !got_one) ? 0 : 1);
+  if (index < length && validation_character(str, length, index) == '.')
+    index++;
+  while (index < length &&
+         validation_is_digit(validation_character(str, length, index))) {
+    got_digit = true;
+    index++;
+  }
+  while (index < length &&
+         validation_is_space(validation_character(str, length, index)))
+    index++;
+  return got_digit && index == length;
 }
 
 int ok_name(const ServerConfiguration *configuration, const char *name) {
-  const char *cp;
-
   if (name == nullptr || *name == '\0')
     return 0;
+
+  const size_t length = strlen(name);
 
   /* Disallow leading spaces */
 
@@ -116,8 +109,7 @@ int ok_name(const ServerConfiguration *configuration, const char *name) {
   /*
    * Disallow trailing spaces
    */
-  cp = name + strlen(name) - 1;
-  if (*cp == ' ')
+  if (validation_character(name, length, length - 1) == ' ')
     return 0;
 
   /*
@@ -133,7 +125,7 @@ int ok_name(const ServerConfiguration *configuration, const char *name) {
 }
 
 int ok_player_name(const ServerConfiguration *configuration, const char *name) {
-  const char *cp, *good_chars;
+  const char *good_chars;
 
   /*
    * No leading spaces
@@ -159,10 +151,12 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
    * Make sure name only contains legal characters
    */
 
-  for (cp = name; cp && *cp; cp++) {
-    if (ascii_is_alnum((unsigned char)*cp))
+  const size_t length = strlen(name);
+  for (size_t index = 0; index < length; index++) {
+    const char character = validation_character(name, length, index);
+    if (ascii_is_alnum((unsigned char)character))
       continue;
-    if (!index(good_chars, *cp))
+    if (!strchr(good_chars, character))
       return 0;
   }
   return 1;
@@ -171,7 +165,8 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
 int ok_new_player_name(const ServerConfiguration *configuration,
                        const char *name) {
   return name != nullptr && strlen(name) >= 2 &&
-         ascii_is_alpha((unsigned char)*name) &&
+         ascii_is_alpha(
+             (unsigned char)validation_character(name, strlen(name), 0)) &&
          ok_player_name(configuration, name);
 }
 
@@ -188,7 +183,9 @@ int ok_password(const ServerConfiguration *configuration,
     return 0;
 
   while (offset < length) {
-    if (!utf8_decode(password + offset, length - offset, &decoded) ||
+    if (!utf8_decode(checked_storage_region_const(password, length, offset,
+                                                  length - offset),
+                     length - offset, &decoded) ||
         decoded.codepoint == ' ') {
       return 0;
     }
@@ -198,7 +195,8 @@ int ok_password(const ServerConfiguration *configuration,
   /*
    * Needed.  Change it if you like, but be sure yours is the same.
    */
-  if ((strlen(password) == 13) && (password[0] == 'X') && (password[1] == 'X'))
+  if (length == 13 && validation_character(password, length, 0) == 'X' &&
+      validation_character(password, length, 1) == 'X')
     return 0;
 
   return 1;

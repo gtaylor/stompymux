@@ -1,3 +1,4 @@
+#include "command_catalogs.h"
 #include "command_invokers.h"
 
 const BtechCommandDefinition mechrepcommands[] = {
@@ -79,3 +80,7 @@ const BtechCommandDefinition mechrepcommands[] = {
      "@Sets cargospace and max cargo tonnage",
      btech_command_invoke_mechrep_setcargospace},
     {0, NULL, NULL, NULL}};
+
+size_t repair_command_count(void) {
+  return sizeof(mechrepcommands) / sizeof(*mechrepcommands) - 1;
+}

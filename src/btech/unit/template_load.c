@@ -3,6 +3,7 @@
 #include "mech_equipment_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "template_internal.h"
 #include "weapon_catalogue_api.h"
@@ -47,7 +48,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   char line[MAX_STRING_LENGTH], buf[MAX_STRING_LENGTH];
   int x, y, value, i;
   char cmd[MAX_STRING_LENGTH];
-  char *ptr, *j, *k, *line2;
+  char *ptr, *line2;
   int section = 0, critical, selection, type, brand;
   FILE *fp = fopen(filename, "r");
   char *tmpc;
@@ -62,10 +63,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     return -1;
 
   ptr = strrchr(filename, '/');
-  if (ptr == NULL) {
+  if (ptr == nullptr) {
     ptr = filename;
   } else {
-    ptr++;
+    ptr = checked_mutable_string_suffix(ptr, 1);
   }
   strncpy(((mech)->ud.mech_type), ptr, 25);
   ((mech)->ud.mech_type)[24] = '\0';
@@ -74,23 +75,26 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                    ((mech)->ud.mech_type));
   mech_radio_configuration_set(mech, 0);
   while (fgets(line, 512, fp)) {
-    line[strlen(line) - 1] = '\0';
-    j = line;
-    while (isspace(*j))
-      j++;
-    if (j != line)
-      memmove(line, j, strlen(j) + 1);
-    if ((ptr = strchr(line, ' '))) {
-      if ((tmpc = strchr(line, '\t')) < ptr)
-        if (tmpc)
-          ptr = tmpc;
-      j = line;
-      k = cmd;
-      while (j != ptr)
-        *(k++) = *(j++);
-      *k = 0;
-      for (ptr++; isspace(*ptr); ptr++)
-        ;
+    size_t line_length = strlen(line);
+    if (line_length > 0) {
+      char *last = checked_storage_at(line, sizeof(line), sizeof(*line),
+                                      line_length - 1);
+      if (*last == '\n')
+        *last = '\0';
+    }
+    size_t leading = strspn(line, " \t\n\v\f\r");
+    if (leading > 0) {
+      char *content = checked_mutable_string_suffix(line, leading);
+      memmove(line, content, strlen(content) + 1);
+    }
+    if ((ptr = strpbrk(line, " \t"))) {
+      size_t command_length = (size_t)(ptr - line);
+      memcpy(cmd, line, command_length);
+      char *terminator =
+          checked_storage_at(cmd, sizeof(cmd), sizeof(*cmd), command_length);
+      *terminator = '\0';
+      ptr = checked_mutable_string_suffix(ptr, 1);
+      ptr = checked_mutable_string_suffix(ptr, strspn(ptr, " \t\n\v\f\r"));
     } else {
       strcpy(cmd, line);
       strcpy(line, "");
@@ -98,7 +102,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     }
     if (!strncasecmp(cmd, "CRIT_", 5))
       selection = 9999;
-    else if ((selection = compare_const_array(load_cmds, cmd)) == -1) {
+    else if ((selection = compare_const_array(
+                  load_cmds, template_load_command_count(), cmd)) == -1) {
       /* Initial premise: we will have a mech type before we get to this */
       section = find_section(cmd, ((mech)->ud.type), ((mech)->ud.move));
       if (template_load_error(
@@ -112,7 +117,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                             "Error while loading: Section %s not found.", cmd);
         return -1;
       }
-      ((mech)->ud.sections)[section].recycle = 0;
+      mech_section_recycle_ticks_set(mech, section, 0);
       ok_count++;
       continue;
     }
@@ -134,7 +139,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 1: /* Type */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      type = compare_const_array(mech_types, tmpc);
+      type = compare_const_array(mech_types, template_unit_class_count(), tmpc);
       if (template_load_error(fp, mech, player, type == -1, true,
                               "Error while loading: Type %s not found.",
                               tmpc)) {
@@ -145,7 +150,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 2: /* Movement Type */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      type = compare_const_array(move_types, tmpc);
+      type =
+          compare_const_array(move_types, template_movement_type_count(), tmpc);
       if (template_load_error(fp, mech, player, type == -1, true,
                               "Error while loading: Type %s not found.",
                               tmpc)) {
@@ -186,9 +192,13 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     case 10: /* Specials */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
 
-      if (CheckSpecialsList(specials, specials2, tmpc)) {
-        ((mech)->rd.specials) |= BuildBitVectorNoErr(specials, tmpc);
-        ((mech)->rd.specials2) |= BuildBitVectorNoErr(specials2, tmpc);
+      if (CheckSpecialsList(specials, primary_technology_name_count(),
+                            specials2, secondary_technology_name_count(),
+                            tmpc)) {
+        ((mech)->rd.specials) |= BuildBitVectorNoErr(
+            specials, primary_technology_name_count(), tmpc);
+        ((mech)->rd.specials2) |= BuildBitVectorNoErr(
+            specials2, secondary_technology_name_count(), tmpc);
       } else if (template_load_error(
                      fp, mech, player, ((mech)->rd.specials) == -1, true,
                      "Error while loading: Invalid specials - %s.", tmpc)) {
@@ -218,11 +228,14 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 14: /* Config */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      ((mech)->ud.sections)[section].config =
-          clamp_long_to_char(BuildBitVector(section_configs, tmpc) &
-                             ~(CASE_TECH | SECTION_DESTROYED));
+      mech_section_configuration_set(
+          mech, section,
+          clamp_long_to_int(
+              BuildBitVector(section_configs,
+                             template_section_configuration_count(), tmpc) &
+              ~(CASE_TECH | SECTION_DESTROYED)));
       if (template_load_error(
-              fp, mech, player, ((mech)->ud.sections)[section].config == -1,
+              fp, mech, player, mech_section_configuration(mech, section) == -1,
               true, "Error while loading: Invalid location config: %s.",
               tmpc)) {
         return -1;
@@ -239,7 +252,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         break;
       critical = lpos;
       line2 = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      line2 = one_arg(line2, buf);
+      line2 = one_arg(line2, buf, sizeof(buf));
       if (!strncasecmp(buf, "CL.", 3))
         isClan = 1;
       if (template_load_error(fp, mech, player,
@@ -259,23 +272,24 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         /* Thanks to legacy of past, we _do_ have to do this.. sniff */
         if (weapon_catalogue_is_anti_missile(
                 weapon_from_equipment_index(type))) {
-          if (MechWeapons[weapon_from_equipment_index(type)].special & CLAT)
+          if (weapon_catalogue_has_special(weapon_from_equipment_index(type),
+                                           CLAT))
             ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
           else
             ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
         }
         mech_critical_data_set(mech, section, critical, 0);
-        line2 = one_arg(line2, buf); /* Don't need the '-' */
-        line2 = one_arg(line2, buf);
+        line2 = one_arg(line2, buf, sizeof(buf)); /* Don't need the '-' */
+        line2 = one_arg(line2, buf, sizeof(buf));
 
         /*              wFireModes = BuildBitVector(crit_fire_modes, buf); */
 
         /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
 
-        wFireModes =
-            clamp_long_to_int(BuildBitVectorWithDelim(crit_fire_modes, buf));
-        wAmmoModes =
-            clamp_long_to_int(BuildBitVectorWithDelim(crit_ammo_modes, buf));
+        wFireModes = clamp_long_to_int(BuildBitVectorWithDelim(
+            crit_fire_modes, template_critical_fire_mode_count(), buf));
+        wAmmoModes = clamp_long_to_int(BuildBitVectorWithDelim(
+            crit_ammo_modes, template_critical_ammo_mode_count(), buf));
 
         if (template_load_error(
                 fp, mech, player, wFireModes < 0 && wAmmoModes < 0, true,
@@ -293,24 +307,24 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         mech_critical_fire_mode_set(mech, section, critical, wFireModes);
         mech_critical_ammo_mode_set(mech, section, critical, wAmmoModes);
 
-        line2 = one_arg(line2, buf);
+        line2 = one_arg(line2, buf, sizeof(buf));
         if (mech->xcode.context->configuration->btech_parts)
           if (atoi(buf)) {
             mech_critical_brand_set(mech, section, critical, atoi(buf));
           }
       } else if (equipment_is_ammunition(type)) {
-        line2 = one_arg(line2, buf);
+        line2 = one_arg(line2, buf, sizeof(buf));
         mech_critical_data_set(mech, section, critical, atoi(buf));
-        line2 = one_arg(line2, buf);
+        line2 = one_arg(line2, buf, sizeof(buf));
 
         /*              wFireModes = BuildBitVector(crit_fire_modes, buf); */
 
         /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
 
-        wFireModes =
-            clamp_long_to_int(BuildBitVectorWithDelim(crit_fire_modes, buf));
-        wAmmoModes =
-            clamp_long_to_int(BuildBitVectorWithDelim(crit_ammo_modes, buf));
+        wFireModes = clamp_long_to_int(BuildBitVectorWithDelim(
+            crit_fire_modes, template_critical_fire_mode_count(), buf));
+        wAmmoModes = clamp_long_to_int(BuildBitVectorWithDelim(
+            crit_ammo_modes, template_critical_ammo_mode_count(), buf));
 
         if (template_load_error(
                 fp, mech, player, wFireModes < 0 && wAmmoModes < 0, true,
@@ -342,7 +356,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
           btech_channel_send(
               mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
               tprintf("Invalid ammo crit for %s in #%ld %s (%d/%d)",
-                      MechWeapons[ammunition_to_weapon_index(type)].name,
+                      weapon_catalogue_name(ammunition_to_weapon_index(type)),
                       mech->mynum, filename,
                       mech_critical_data(mech, section, critical),
                       FullAmmo(mech, section, critical)));
@@ -350,14 +364,14 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                                  FullAmmo(mech, section, critical));
         }
       } else {
-        if ((line2 = one_arg(line2, buf)))
+        if ((line2 = one_arg(line2, buf, sizeof(buf))))
           mech_critical_data_set(mech, section, critical, atoi(buf));
         else
           mech_critical_data_set(mech, section, critical, 0);
         mech_critical_fire_mode_set(mech, section, critical, 0);
         mech_critical_ammo_mode_set(mech, section, critical, 0);
-        if ((line2 = one_arg(line2, buf)))
-          if ((line2 = one_arg(line2, buf))) {
+        if ((line2 = one_arg(line2, buf, sizeof(buf))))
+          if ((line2 = one_arg(line2, buf, sizeof(buf)))) {
             if (mech->xcode.context->configuration->btech_parts)
               if (atoi(buf)) {
                 mech_critical_brand_set(mech, section, critical, atoi(buf));
@@ -422,9 +436,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     case 26: /* Specials */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
 
-      if (CheckSpecialsList(infantry_specials, 0, tmpc))
-        ((mech)->rd.infantry_specials) |=
-            BuildBitVectorNoErr(infantry_specials, tmpc);
+      if (CheckSpecialsList(infantry_specials, infantry_technology_name_count(),
+                            nullptr, 0, tmpc))
+        ((mech)->rd.infantry_specials) |= BuildBitVectorNoErr(
+            infantry_specials, infantry_technology_name_count(), tmpc);
 
       break;
     case 27: /* Carmaxton */

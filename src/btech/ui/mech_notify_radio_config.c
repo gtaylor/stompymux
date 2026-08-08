@@ -2,8 +2,10 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
+#include "btech_text_builder.h"
 #include "command_handlers_api.h"
 #include "map.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_electronics_api.h"
 #include "mech_events.h"
@@ -18,13 +20,71 @@
 #include "mux/communication/comsys.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 #include "mux/support/formatting.h"
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+typedef struct RadioCommandCursor {
+  char *text;
+  size_t length;
+  size_t position;
+} RadioCommandCursor;
+
+typedef struct RadioCommandArguments {
+  char *items[3];
+} RadioCommandArguments;
+
+static RadioCommandCursor radio_command_cursor(char *text) {
+  return (RadioCommandCursor){
+      .text = text,
+      .length = text != nullptr ? strlen(text) : 0,
+  };
+}
+
+static bool ascii_is_space(char value) {
+  return value == ' ' || value == '\t' || value == '\n' || value == '\r' ||
+         value == '\f' || value == '\v';
+}
+
+static char radio_cursor_current(const RadioCommandCursor *cursor) {
+  return cursor->position < cursor->length
+             ? *checked_string_suffix(cursor->text, cursor->position)
+             : '\0';
+}
+
+static void radio_cursor_advance(RadioCommandCursor *cursor) {
+  if (cursor->position < cursor->length)
+    cursor->position++;
+}
+
+static void radio_cursor_skip_spaces(RadioCommandCursor *cursor) {
+  while (ascii_is_space(radio_cursor_current(cursor)))
+    radio_cursor_advance(cursor);
+}
+
+static char *radio_cursor_remaining(const RadioCommandCursor *cursor) {
+  return cursor->text != nullptr
+             ? checked_mutable_string_suffix(cursor->text, cursor->position)
+             : nullptr;
+}
+
+static char *radio_command_argument(const RadioCommandArguments *arguments,
+                                    int index) {
+  if (index < 0)
+    abort();
+  return *(char *const *)checked_storage_at_const(
+      arguments->items, 3, sizeof(*arguments->items), (size_t)index);
+}
+
+static void radio_command_arguments_destroy(RadioCommandArguments *arguments) {
+  for (int index = 0; index < 3; index++)
+    free(radio_command_argument(arguments, index));
+}
 
 void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
   int chn = -1;
@@ -36,44 +96,43 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i, j;
+  RadioCommandCursor input = radio_command_cursor(buffer);
 
   /* UH, this is code that _pretends_ it works :-) */
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  radio_cursor_skip_spaces(&input);
+  if (radio_cursor_current(&input) == '\0') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid input!");
     return;
   }
-  chn = toupper(*buffer) - 'A';
+  chn = ascii_to_upper(radio_cursor_current(&input)) - 'A';
   if (chn < 0 || chn >= mech_radio_channel_count(mech)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid channel-letter!");
     return;
   }
-  buffer++;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  radio_cursor_advance(&input);
+  radio_cursor_skip_spaces(&input);
+  if (radio_cursor_current(&input) == '\0') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid input!");
     return;
   }
-  if (*buffer != '=') {
+  if (radio_cursor_current(&input) != '=') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Missing =!");
     return;
   }
-  buffer++;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  radio_cursor_advance(&input);
+  radio_cursor_skip_spaces(&input);
+  if (radio_cursor_current(&input) == '\0') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid input!");
     return;
   }
-  freq = atoi(buffer);
-  if (!freq && strcmp(buffer, "0")) {
+  char *frequency_text = radio_cursor_remaining(&input);
+  freq = atoi(frequency_text);
+  if (!freq && strcmp(frequency_text, "0")) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid frequency!");
     return;
@@ -97,9 +156,9 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
    * against the one set. If it matches it emits message
    */
   if (freq > 0 && map) {
-    for (i = 0; i < map->first_free; i++) {
-      if (!(t = btech_context_find_object(mech_context(mech),
-                                          map->mechsOnMap[i])))
+    for (i = 0; i < battle_map_unit_count(map); i++) {
+      const DbRef candidate = battle_map_unit_dbref(map, i);
+      if (!(t = btech_context_find_object(mech_context(mech), candidate)))
         continue;
       if (t == mech)
         continue;
@@ -123,44 +182,43 @@ void mech_set_channeltitle(DbRef player, void *data, char *buffer) {
   int chn = -1;
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
+  RadioCommandCursor input = radio_command_cursor(buffer);
 
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  radio_cursor_skip_spaces(&input);
+  if (radio_cursor_current(&input) == '\0') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid input!");
     return;
   }
-  chn = toupper(*buffer) - 'A';
+  chn = ascii_to_upper(radio_cursor_current(&input)) - 'A';
   if (chn < 0 || chn >= mech_radio_channel_count(mech)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid channel-letter!");
     return;
   }
-  buffer++;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  radio_cursor_advance(&input);
+  radio_cursor_skip_spaces(&input);
+  if (radio_cursor_current(&input) == '\0') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid input!");
     return;
   }
-  if (*buffer != '=') {
+  if (radio_cursor_current(&input) != '=') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Missing =!");
     return;
   }
-  buffer++;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  radio_cursor_advance(&input);
+  radio_cursor_skip_spaces(&input);
+  if (radio_cursor_current(&input) == '\0') {
     mech_radio_title_set(mech, chn, "");
     notify_printf(evaluation, player, "Channel %c title cleared.", 'A' + chn);
     return;
   }
-  mech_radio_title_set(mech, chn, buffer);
+  char *title = radio_cursor_remaining(&input);
+  mech_radio_title_set(mech, chn, title);
   notify_printf(evaluation, player, "Channel %c title set to set to %s.",
-                'A' + chn, buffer);
+                'A' + chn, title);
 }
 
 /*                    1234567890123456 */
@@ -186,70 +244,93 @@ static const char *const radio_color_styles[] = {
     "[fg=white bold]",
 };
 
+static const char *radio_color_style(int index) {
+  if (index < 0)
+    abort();
+  return *(const char *const *)checked_storage_at_const(
+      radio_color_styles,
+      sizeof(radio_color_styles) / sizeof(*radio_color_styles),
+      sizeof(*radio_color_styles), (size_t)index);
+}
+
+static const typeof(*OBSERVER_TEAM_COLORS) *observer_team_color(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(OBSERVER_TEAM_COLORS,
+                                  sizeof(OBSERVER_TEAM_COLORS) /
+                                      sizeof(*OBSERVER_TEAM_COLORS),
+                                  sizeof(*OBSERVER_TEAM_COLORS), (size_t)index);
+}
+
+static char radio_color_character(int index) {
+  if (index < 0)
+    abort();
+  return *checked_string_suffix(radio_colorstr, (size_t)index);
+}
+
 void radio_color_code(char buffer[static 32], Mech *m, int i, int obs,
                       int team) {
   int t = mech_radio_mode(m, i) / FREQ_REST;
   int ii;
 
-  buffer[0] = '\0';
+  *(char *)checked_storage_at(buffer, 32, sizeof(char), 0) = '\0';
   if (!obs) {
     if (!t)
       return;
-    snprintf(buffer, 32, "%s", radio_color_styles[t - 1]);
+    snprintf(buffer, 32, "%s", radio_color_style(t - 1));
   } else {
     if (team > 15)
       team = team % 15;
     for (ii = 0; ii < 15; ii++) {
-      if (team == OBSERVER_TEAM_COLORS[ii].team)
-        snprintf(buffer, 32, "%s", OBSERVER_TEAM_COLORS[ii].color_code);
+      const typeof(*OBSERVER_TEAM_COLORS) *color = observer_team_color(ii);
+      if (team == color->team)
+        snprintf(buffer, 32, "%s", color->color_code);
     }
   }
 }
 
 void mech_set_channelmode(DbRef player, void *data, char *buffer) {
   int chn = -1, nm = 0, i;
-  size_t buf_length;
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   char buf[SBUF_SIZE] = {0};
+  RadioCommandCursor input = radio_command_cursor(buffer);
 
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  radio_cursor_skip_spaces(&input);
+  if (radio_cursor_current(&input) == '\0') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid input!");
     return;
   }
-  chn = toupper(*buffer) - 'A';
+  chn = ascii_to_upper(radio_cursor_current(&input)) - 'A';
   if (chn < 0 || chn >= mech_radio_channel_count(mech)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid channel-letter!");
     return;
   }
-  buffer++;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  radio_cursor_advance(&input);
+  radio_cursor_skip_spaces(&input);
+  if (radio_cursor_current(&input) == '\0') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid input!");
     return;
   }
-  if (*buffer != '=') {
+  if (radio_cursor_current(&input) != '=') {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Missing =!");
     return;
   }
-  buffer++;
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer || !*buffer) {
+  radio_cursor_advance(&input);
+  radio_cursor_skip_spaces(&input);
+  if (radio_cursor_current(&input) == '\0') {
     mech_radio_mode_set(mech, chn, 0);
     notify_printf(evaluation, player, "Channel %c <send> mode set to analog.",
                   'A' + chn);
     return;
   }
-  while (buffer && *buffer) {
-    switch (*buffer) {
+  while (radio_cursor_current(&input) != '\0') {
+    const char mode_character = radio_cursor_current(&input);
+    switch (mode_character) {
     case 'D':
     case 'd':
       if (mech_radio_capabilities(mech) & RADIO_NODIGITAL) {
@@ -291,17 +372,16 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
       nm |= FREQ_SCAN;
       break;
     default:
-      for (i = 0; radio_colorstr[i]; i++)
-        if (*buffer == radio_colorstr[i]) {
+      for (i = 0; radio_color_character(i); i++)
+        if (mode_character == radio_color_character(i)) {
           nm = nm % FREQ_REST + FREQ_REST * (i + 1);
           break;
         }
-      if (!radio_colorstr[i])
-        buffer = nullptr;
+      if (!radio_color_character(i))
+        input.position = input.length;
       break;
     }
-    if (buffer)
-      buffer++;
+    radio_cursor_advance(&input);
   }
   if (!(nm & FREQ_DIGITAL) && (nm & FREQ_RELAY)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -314,24 +394,23 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
     return;
   }
   mech_radio_mode_set(mech, chn, nm);
-  buf_length = 0;
+  BtechTextBuilder flags;
+  btech_text_builder_initialize(&flags, buf, sizeof(buf));
 
   if (nm & FREQ_INFO)
-    buf[buf_length++] = 'I';
+    btech_text_builder_append_character(&flags, 'I');
   if (nm & FREQ_MUTE)
-    buf[buf_length++] = 'U';
+    btech_text_builder_append_character(&flags, 'U');
   if (nm & FREQ_RELAY)
-    buf[buf_length++] = 'E';
+    btech_text_builder_append_character(&flags, 'E');
   if (nm & FREQ_SCAN)
-    buf[buf_length++] = 'S';
-  if (!buf_length)
-    buf[buf_length++] = '-';
+    btech_text_builder_append_character(&flags, 'S');
+  if (flags.length == 0)
+    btech_text_builder_append_character(&flags, '-');
   if (nm / FREQ_REST) {
-    snprintf(buf + buf_length, sizeof(buf) - buf_length, "/color:%c",
-             radio_colorstr[nm / FREQ_REST - 1]);
-    buf_length = strlen(buf);
+    btech_text_builder_append_format(&flags, "/color:%c",
+                                     radio_color_character(nm / FREQ_REST - 1));
   }
-  buf[buf_length] = 0;
   notify_printf(evaluation, player,
                 "Channel %c <send> mode set to %s (flags:%s).", 'A' + chn,
                 nm & FREQ_DIGITAL ? "digital" : "analog", buf);
@@ -349,10 +428,11 @@ void mech_list_freqs(DbRef player, void *data, char *buffer) {
     notify_printf(evaluation, player, "%c    %c%c%c%c    %-9d    %s", 'A' + i,
                   mode & FREQ_DIGITAL ? 'D' : 'A',
                   mode & FREQ_RELAY ? 'R' : '-', mode & FREQ_MUTE ? 'M' : '-',
-                  mode & FREQ_SCAN    ? 'S'
-                  : mode >= FREQ_REST ? radio_colorstr[mode / FREQ_REST - 1]
-                  : mode & FREQ_INFO  ? 'I'
-                                      : '-',
+                  mode & FREQ_SCAN ? 'S'
+                  : mode >= FREQ_REST
+                      ? radio_color_character(mode / FREQ_REST - 1)
+                  : mode & FREQ_INFO ? 'I'
+                                     : '-',
                   mech_radio_frequency(mech, i), mech_radio_title(mech, i));
   }
 }
@@ -364,8 +444,7 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   int fail = 0;
   int argc;
   int chn = 0;
-  char *args[3];
-  int i;
+  RadioCommandArguments arguments = {0};
 
   if (!common_checks(player, mech, MECH_USUALS))
     return;
@@ -379,37 +458,37 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
                  "You are too stunned to use the radio!");
     return;
   }
-  if ((argc = proper_parseattributes(buffer, args, 3)) != 3)
+  if ((argc = proper_parseattributes(buffer, arguments.items, 3)) != 3)
     fail = 1;
-  if (!fail && strlen(args[0]) > 1)
+  char *channel_text = radio_command_argument(&arguments, 0);
+  char *message = radio_command_argument(&arguments, 2);
+  if (!fail && strlen(channel_text) > 1)
     fail = 1;
-  if (!fail && args[0][0] >= 'a' && args[0][0] <= 'z')
-    chn = args[0][0] - 'a';
-  if (!fail && args[0][0] >= 'A' && args[0][0] <= 'Z')
-    chn = args[0][0] - 'Z';
+  const char channel_character = !fail ? *channel_text : '\0';
+  if (!fail && channel_character >= 'a' && channel_character <= 'z')
+    chn = channel_character - 'a';
+  if (!fail && channel_character >= 'A' && channel_character <= 'Z')
+    chn = channel_character - 'Z';
   if (!fail && (chn >= mech_radio_channel_count(mech) || chn < 0))
     fail = 1;
-  if (!fail)
-    for (i = 0; args[2][i]; i++) {
-      if ((BOUNDED(32, args[2][i], 255)) != args[2][i]) {
+  if (!fail) {
+    const size_t message_length = strlen(message);
+    for (size_t index = 0; index < message_length; index++) {
+      const char character = *checked_string_suffix(message, index);
+      if ((BOUNDED(32, character, 255)) != character) {
         mecha_notify(
             evaluation, player,
             "Invalid: No control characters in radio messages, please.");
-        for (i = 0; i < 3; i++) {
-          if (args[i])
-            free(args[i]);
-        }
+        radio_command_arguments_destroy(&arguments);
         return;
       }
     }
+  }
 
   if (fail) {
     mecha_notify(evaluation, player,
                  "Invalid format! Usage: sendchannel <letter>=<string>");
-    for (i = 0; i < 3; i++) {
-      if (args[i])
-        free(args[i]);
-    }
+    radio_command_arguments_destroy(&arguments);
     return;
   }
 
@@ -422,13 +501,10 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
         "on map #%d 0-freqs \"%s\"",
         (int)player,
         game_object_name(btech_context_database(mech_context(mech)), player),
-        (int)mech_dbref(mech), chn + 'A', (int)mech_map_dbref(mech), args[2]);
+        (int)mech_dbref(mech), chn + 'A', (int)mech_map_dbref(mech), message);
   }
 
-  sendchannelstuff(mech, chn, args[2]);
-  for (i = 0; i < 3; i++) {
-    if (args[i])
-      free(args[i]);
-  }
+  sendchannelstuff(mech, chn, message);
+  radio_command_arguments_destroy(&arguments);
   mine_command_detonate(mech, mech_radio_frequency(mech, chn));
 }

@@ -13,7 +13,9 @@
 #include <string.h>
 
 #include "autopilot.h"
+#include "autopilot_argument_list_api.h"
 #include "autopilot_commands_api.h"
+#include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
@@ -36,7 +38,6 @@
 #include "mycool.h"
 #include "registry_api.h"
 
-extern const AutopilotCommandDefinition acom[AUTO_NUM_COMMANDS + 1];
 /*
  * Creates a new command_node for the AI's
  * command list
@@ -50,6 +51,7 @@ static AutopilotCommand *auto_create_command_node() {
     return NULL;
 
   memset(temp, 0, sizeof(AutopilotCommand));
+  autopilot_argument_list_initialize(&temp->arguments, AUTOPILOT_MAX_ARGS);
   temp->ai_command_function = NULL;
 
   return temp;
@@ -60,15 +62,7 @@ static AutopilotCommand *auto_create_command_node() {
  */
 void auto_destroy_command_node(AutopilotCommand *node) {
 
-  int i;
-
-  /* Free the args */
-  for (i = 0; i < AUTOPILOT_MAX_ARGS; i++) {
-    if (node->args[i]) {
-      free(node->args[i]);
-      node->args[i] = NULL;
-    }
-  }
+  autopilot_argument_list_destroy(&node->arguments);
 
   /* Free the node */
   free(node);
@@ -112,18 +106,22 @@ static AutoCommandText auto_command_text(AutopilotCommand *node) {
   int i;
   size_t len;
 
-  snprintf(buf, sizeof(command.text), "%-10s", node->args[0]);
+  snprintf(buf, sizeof(command.text), "%-10s",
+           autopilot_argument_list_get(&node->arguments, 0));
 
   /* Loop through the args and print the commands */
-  for (i = 1; i < AUTOPILOT_MAX_ARGS; i++)
-    if (node->args[i]) {
+  for (i = 1; i < AUTOPILOT_MAX_ARGS; i++) {
+    const char *argument =
+        autopilot_argument_list_get(&node->arguments, (size_t)i);
+    if (argument != nullptr) {
       len = strlen(buf);
       if (len < sizeof(command.text) - 1)
         strncat(buf, " ", sizeof(command.text) - len - 1);
       len = strlen(buf);
       if (len < sizeof(command.text) - 1)
-        strncat(buf, node->args[i], sizeof(command.text) - len - 1);
+        strncat(buf, argument, sizeof(command.text) - len - 1);
     }
+  }
 
   return command;
 }
@@ -247,53 +245,52 @@ void auto_jump(DbRef player, void *data, char *buffer) {
 void auto_addcommand(DbRef player, void *data, char *buffer) {
 
   Autopilot *autopilot = (Autopilot *)data;
-  char *args[AUTOPILOT_MAX_ARGS]; /* args[0] is the command the rest are
-                                                                     args for
-                                     the command */
+  AutopilotArgumentList args;
   char *command; /* temp string to get the name of the command */
   int argc;
-  int i, j;
+  int i;
 
   AutopilotCommand *temp_command_node;
   DoublyLinkedListNode *temp_dllist_node;
 
-  /* Clear the Args */
-  memset(args, 0, sizeof(char *) * AUTOPILOT_MAX_ARGS);
+  autopilot_argument_list_initialize(&args, AUTOPILOT_MAX_ARGS);
 
   command = first_parseattribute(buffer);
 
   /* Look at the buffer and try and get the command */
-  for (i = 0; acom[i].name; i++) {
-    if ((!strncmp(command, acom[i].name, strlen(command))) &&
-        (!strncmp(acom[i].name, command, strlen(acom[i].name))))
+  const AutopilotCommandDefinition *definition =
+      autopilot_command_definition_at(0);
+  for (i = 0; definition->name; i++) {
+    if ((!strncmp(command, definition->name, strlen(command))) &&
+        (!strncmp(definition->name, command, strlen(definition->name))))
       break;
+    definition = autopilot_command_definition_at(i + 1);
   }
 
   /* Free the command string we dont need it anymore */
   free(command);
 
   /* Make sure its a valid command */
-  if (!acom[i].name) {
+  if (!definition->name) {
+    autopilot_argument_list_destroy(&args);
     mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
                  "Invalid Command!");
     return;
   }
 
   /* Get the arguments for the command */
-  if (acom[i].argcount > 0) {
+  if (definition->argcount > 0) {
 
     /* Parse the buffer for commands
      * Its argcount + 1 because we are parsing the command + its
      * arguments */
-    argc = proper_explodearguments(buffer, args, acom[i].argcount + 1);
+    argc = proper_explodearguments(
+        buffer, autopilot_argument_list_parser_storage(&args),
+        definition->argcount + 1);
 
-    if (argc != acom[i].argcount + 1) {
+    if (argc != definition->argcount + 1) {
 
-      /* Free the args before we quit */
-      for (j = 0; j < AUTOPILOT_MAX_ARGS; j++) {
-        if (args[j])
-          free(args[j]);
-      }
+      autopilot_argument_list_destroy(&args);
       mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
                    "Not the proper number of arguments!");
       return;
@@ -302,20 +299,23 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
   } else {
 
     /* Copy the command to the first arg */
-    args[0] = strdup(acom[i].name);
+    autopilot_argument_list_set(&args, 0, strdup(definition->name));
   }
 
   /* Build the command node */
   temp_command_node = auto_create_command_node();
 
-  for (j = 0; j < AUTOPILOT_MAX_ARGS; j++) {
-    if (args[j])
-      temp_command_node->args[j] = args[j];
+  for (size_t index = 0; index < AUTOPILOT_MAX_ARGS; index++) {
+    char *argument = autopilot_argument_list_take(&args, index);
+    if (argument != nullptr)
+      autopilot_argument_list_set(&temp_command_node->arguments, index,
+                                  argument);
   }
+  autopilot_argument_list_destroy(&args);
 
-  temp_command_node->argcount = (unsigned char)acom[i].argcount;
-  temp_command_node->command_enum = acom[i].command_enum;
-  temp_command_node->ai_command_function = acom[i].ai_command_function;
+  temp_command_node->argcount = (unsigned char)definition->argcount;
+  temp_command_node->command_enum = definition->command_enum;
+  temp_command_node->ai_command_function = definition->ai_command_function;
 
   /* Add the command to the list */
   temp_dllist_node = doubly_linked_list_create_node(temp_command_node);
@@ -629,7 +629,9 @@ char *auto_get_command_arg(Autopilot *autopilot, int command_number,
 
   /*! \todo {Add in check incase the command node doesn't exist} */
 
-  if (!temp_command_node->args[arg_number]) {
+  const char *stored_argument = autopilot_argument_list_get(
+      &temp_command_node->arguments, (size_t)arg_number);
+  if (!stored_argument) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error: Trying to "
              "access Arg #%d for AI #%ld Command #%d but it doesn't exist",
@@ -639,7 +641,7 @@ char *auto_get_command_arg(Autopilot *autopilot, int command_number,
     return NULL;
   }
 
-  argument = strndup(temp_command_node->args[arg_number], MBUF_SIZE);
+  argument = strndup(stored_argument, MBUF_SIZE);
 
   return argument;
 }
@@ -711,8 +713,6 @@ void auto_newautopilot(DbRef key, void **data,
   Autopilot *autopilot = *data;
   Mech *mech;
   AutopilotCommand *temp;
-  int i;
-
   switch (selector) {
   case SPECIAL_ALLOC:
     autopilot->mynum = key;
@@ -724,9 +724,7 @@ void auto_newautopilot(DbRef key, void **data,
     autopilot->astar_path = NULL;
     autopilot->weaplist = NULL;
 
-    for (i = 0; i < AUTO_PROFILE_MAX_SIZE; i++) {
-      autopilot->profile[i] = NULL;
-    }
+    autopilot_weapon_profiles_initialize(autopilot);
 
     /* And some things not set null */
     autopilot->speed = 100;
@@ -758,12 +756,7 @@ void auto_newautopilot(DbRef key, void **data,
     auto_destroy_astar_path(autopilot);
 
     /* Destroy profile array */
-    for (i = 0; i < AUTO_PROFILE_MAX_SIZE; i++) {
-      if (autopilot->profile[i]) {
-        red_black_tree_destroy(autopilot->profile[i]);
-      }
-      autopilot->profile[i] = NULL;
-    }
+    autopilot_weapon_profiles_clear(autopilot);
 
     /* Destroy weaponlist */
     auto_destroy_weaplist(autopilot);

@@ -54,20 +54,28 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
+#include "weapon_catalogue_api.h"
 
 static const char *const MyColorStrings[] = {"", "[fg=green bold]",
                                              "[fg=yellow bold]", "[fg=red]"};
 static const char *const MyMessageStrings[] = {
     "ERROR[reset]", "low.[reset]", "critical![reset]", "BREACHED![reset]"};
 static inline const char *MySeriousColorStr(Mech *mech, int index) {
-  return MyColorStrings[index % 4];
+  const char *const *value = checked_storage_at_const(
+      MyColorStrings, sizeof(MyColorStrings) / sizeof(*MyColorStrings),
+      sizeof(*MyColorStrings), (size_t)(index % 4));
+  return *value;
 }
 
 static inline const char *MySeriousStr(Mech *mech, int index) {
-  return MyMessageStrings[index % 4];
+  const char *const *value = checked_storage_at_const(
+      MyMessageStrings, sizeof(MyMessageStrings) / sizeof(*MyMessageStrings),
+      sizeof(*MyMessageStrings), (size_t)(index % 4));
+  return *value;
 }
 
 static inline int MySeriousnessCheck(Mech *mech, int hitloc) {
@@ -184,17 +192,19 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS,
     btech_context_critical_roll_record(context, r);
     /* Do the AP ammo thang */
     if (tAPCritical) {
-      if (!strcmp(&MechWeapons[wWeapIndx].name[3], "AC/2"))
+      const char *weapon_name =
+          checked_string_suffix(weapon_catalogue_name(wWeapIndx), 3);
+      if (!strcmp(weapon_name, "AC/2"))
         r -= 4;
-      else if (!strcmp(&MechWeapons[wWeapIndx].name[3], "LightAC/2"))
+      else if (!strcmp(weapon_name, "LightAC/2"))
         r -= 4;
-      else if (!strcmp(&MechWeapons[wWeapIndx].name[3], "AC/5"))
+      else if (!strcmp(weapon_name, "AC/5"))
         r -= 3;
-      else if (!strcmp(&MechWeapons[wWeapIndx].name[3], "LightAC/5"))
+      else if (!strcmp(weapon_name, "LightAC/5"))
         r -= 3;
-      else if (!strcmp(&MechWeapons[wWeapIndx].name[3], "AC/10"))
+      else if (!strcmp(weapon_name, "AC/10"))
         r -= 2;
-      else if (!strcmp(&MechWeapons[wWeapIndx].name[3], "AC/20"))
+      else if (!strcmp(weapon_name, "AC/20"))
         r -= 1;
       else
         r -= 10;

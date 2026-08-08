@@ -6,9 +6,10 @@
 #include "mech_physical_internal.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 
-static bool physical_arm_check(DbRef player, Mech *mech, const char *verb) {
+bool physical_arm_check(DbRef player, Mech *mech, const char *verb) {
   BtechContext *context = mech_context(mech);
 
   if (mech_class(mech) == CLASS_MW || mech_class(mech) == CLASS_BSUIT) {
@@ -24,7 +25,7 @@ static bool physical_arm_check(DbRef player, Mech *mech, const char *verb) {
   return true;
 }
 
-static bool physical_quad_check(DbRef player, Mech *mech, const char *verb) {
+bool physical_quad_check(DbRef player, Mech *mech, const char *verb) {
   if (mech_class(mech) != CLASS_MECH || !mech_is_quad(mech))
     return true;
 
@@ -208,29 +209,40 @@ int phys_common_checks(Mech *mech) {
 int get_arm_args(int *using, int *argc, char ***args, Mech *mech,
                  int (*have_fn)(Mech *mech, int loc), const char *weapon) {
 
-  if (*argc != 0 && args[0][0][0] != '\0' && args[0][0][1] == '\0') {
-    const int arm = toupper((unsigned char)args[0][0][0]);
+  if (*argc != 0) {
+    char **first_slot =
+        checked_storage_at(*args, (size_t)*argc, sizeof(**args), 0);
+    const char *first = *first_slot;
+    if (strlen(first) != 1)
+      goto arm_selection_complete;
+    const int arm =
+        *first >= 'a' && *first <= 'z' ? *first - 'a' + 'A' : *first;
 
     // Determine which flag we're dealing with (Both, Left, Right)
     switch (arm) {
     case 'B':
       *using = P_LEFT | P_RIGHT;
       --*argc;
-      ++*args;
+      if (*argc > 0)
+        *args = checked_storage_at(*args, (size_t)*argc + 1, sizeof(**args), 1);
       break;
 
     case 'L':
       *using = P_LEFT;
       --*argc;
-      ++*args;
+      if (*argc > 0)
+        *args = checked_storage_at(*args, (size_t)*argc + 1, sizeof(**args), 1);
       break;
 
     case 'R':
       *using = P_RIGHT;
       --*argc;
-      ++*args;
+      if (*argc > 0)
+        *args = checked_storage_at(*args, (size_t)*argc + 1, sizeof(**args), 1);
     } // end switch()
   } // end if()
+
+arm_selection_complete:
 
   // Check for the presence of specified arms, or pick one. *using set in
   // the above switch statement.
@@ -714,87 +726,3 @@ void mech_mace(DbRef player, void *data, char *buffer) {
     return;
   }
 } // end mech_mace()
-
-/**
- * Check our arms to see if they can chop.
- */
-static int sword_checkArm(Mech *mech, int arm) {
-  const char *arm_used = (arm == RARM ? "right" : "left");
-
-  if (mech_section_is_destroyed(mech, arm)) {
-    mech_printf(mech, MECHALL,
-                "Your %s arm is destroyed, you can't use a sword with it.",
-                arm_used);
-    return 0;
-  } else if (!mech_critical_is_operational_special(mech, arm, 0,
-                                                   SHOULDER_OR_HIP)) {
-    mech_printf(
-        mech, MECHALL,
-        "Your %s shoulder is destroyed, you can't use a sword with that arm.",
-        arm_used);
-    return 0;
-  } else if (!mech_critical_is_operational_special(mech, arm, 3,
-                                                   HAND_OR_FOOT_ACTUATOR)) {
-    mech_printf(
-        mech, MECHALL,
-        "Your %s hand is destroyed, you can't use a sword with that arm.",
-        arm_used);
-    return 0;
-  }
-  // Fall through to success.
-  return 1;
-} // end sword_checkArm()
-
-/**
- * Mech sword routines.
- */
-void mech_sword(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-  BattleMap *mech_map =
-      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  char *argl[5];
-  char **args = argl;
-  int argc, ltohit = 3, rtohit = 3;
-  int using = P_LEFT | P_RIGHT;
-
-  // Make sure we're started, on a map, etc.
-  if (!common_checks(player, mech, MECH_USUALO))
-    return;
-  // Do we have arms to chop with?
-  if (!physical_arm_check(player, mech, "chop"))
-    return;
-  // Quads can't do it.
-  if (!physical_quad_check(player, mech, "chop"))
-    return;
-
-  argc = mech_parseattributes(buffer, args, 5);
-
-  // If btech_phys_use_pskill is defined, use the pilot's piloting skill,
-  // otherwise use a constant skill 3.
-  if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
-    ltohit = rtohit = FindPilotPiloting(mech) - 2;
-
-  // Which arm(s) have sword crits?
-  if (get_arm_args(&using, &argc, &args, mech, have_sword, "a sword")) {
-    return;
-  }
-
-  if (using & P_LEFT) {
-    if (sword_checkArm(mech, LARM))
-      PhysicalAttack(mech, 10, ltohit, PA_SWORD, argc, args, mech_map, LARM);
-  }
-
-  if (using & P_RIGHT) {
-    if (sword_checkArm(mech, RARM))
-      PhysicalAttack(mech, 10, rtohit, PA_SWORD, argc, args, mech_map, RARM);
-  }
-  // Ninja what?
-  if (!using) {
-    mech_notify(mech, MECHALL, "You have no sword to chop people with!");
-    return;
-  }
-} // end mech_sword()
-
-/**
- * Mech tripping command hook.
- */

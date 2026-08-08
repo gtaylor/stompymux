@@ -3,8 +3,8 @@
 #include "autopilot.h"
 
 typedef void (*AutopilotRadioHandler)(Autopilot *autopilot, Mech *mech,
-                                      char **arguments, int argument_count,
-                                      char *message);
+                                      AutopilotArgumentList *arguments,
+                                      int argument_count, char *message);
 
 typedef struct AutopilotRadioCommand {
   char const *abbreviation;
@@ -15,5 +15,6 @@ typedef struct AutopilotRadioCommand {
 } AutopilotRadioCommand;
 
 extern AutopilotRadioCommand const autopilot_radio_commands[];
+const AutopilotRadioCommand *autopilot_radio_command_at(int index);
 
 void autopilot_radio_clear_commands(Autopilot *autopilot, char *buffer);

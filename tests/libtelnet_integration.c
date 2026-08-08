@@ -6,6 +6,21 @@
 #include <zlib.h>
 
 #include "libtelnet.h"
+#include "mux/support/checked_storage.h"
+
+static const void *test_region_const(const void *buffer, size_t size,
+                                     size_t offset) {
+  return checked_storage_region_const(buffer, size, offset, size - offset);
+}
+
+static void *test_region(void *buffer, size_t size, size_t offset) {
+  return checked_storage_region(buffer, size, offset, size - offset);
+}
+
+static unsigned char test_byte(const char *buffer, size_t size, size_t index) {
+  return *(const unsigned char *)checked_storage_at_const(buffer, size,
+                                                          sizeof(char), index);
+}
 
 enum {
   telnet_charset_option = 42,
@@ -46,7 +61,8 @@ static int append(char *destination, size_t *destination_size,
                   size_t source_size) {
   if (source_size > destination_capacity - *destination_size)
     return 0;
-  memcpy(destination + *destination_size, source, source_size);
+  memcpy(test_region(destination, destination_capacity, *destination_size),
+         source, source_size);
   *destination_size += source_size;
   return 1;
 }
@@ -111,27 +127,29 @@ static void test_handle_charset(telnet_t *telnet, struct test_context *context,
 
   if (size == 0)
     return;
-  if (buffer[0] == telnet_charset_accepted) {
+  if (test_byte(buffer, size, 0) == telnet_charset_accepted) {
     context->charset_request_pending = 0;
-    context->charset_utf8 = test_charset_is_utf8(buffer + 1, size - 1);
+    context->charset_utf8 =
+        test_charset_is_utf8(test_region_const(buffer, size, 1), size - 1);
     return;
   }
-  if (buffer[0] == telnet_charset_rejected) {
+  if (test_byte(buffer, size, 0) == telnet_charset_rejected) {
     context->charset_request_pending = 0;
     return;
   }
-  if (buffer[0] != telnet_charset_request || size < 3 ||
+  if (test_byte(buffer, size, 0) != telnet_charset_request || size < 3 ||
       context->charset_request_pending) {
     test_send_charset_rejected(telnet);
     return;
   }
 
-  separator = buffer[1];
+  separator = (char)test_byte(buffer, size, 1);
   start = 2;
   for (current = start; current <= size; current++) {
-    if (current != size && buffer[current] != separator)
+    if (current != size && test_byte(buffer, size, current) != separator)
       continue;
-    if (test_charset_is_utf8(buffer + start, current - start)) {
+    if (test_charset_is_utf8(test_region_const(buffer, size, start),
+                             current - start)) {
       context->charset_utf8 = 1;
       test_send_charset_accepted(telnet);
       return;
@@ -148,7 +166,7 @@ static void test_handle_gmcp(telnet_t *telnet, struct test_context *context,
 
   if (context->gmcp_enabled && size >= package_size &&
       memcmp(buffer, core_ping, package_size) == 0 &&
-      (size == package_size || buffer[package_size] == ' ')) {
+      (size == package_size || test_byte(buffer, size, package_size) == ' ')) {
     telnet_subnegotiation(telnet, telnet_gmcp_option, core_ping, package_size);
   }
 }
@@ -203,7 +221,9 @@ static void test_event_handler(telnet_t *telnet, telnet_event_t *event,
   case TELNET_EV_ENVIRON:
     if (event->environ.cmd == TELNET_ENVIRON_IS) {
       for (size_t index = 0; index < event->environ.size; index++) {
-        const struct telnet_environ_t *value = &event->environ.values[index];
+        const struct telnet_environ_t *value =
+            checked_storage_at_const(event->environ.values, event->environ.size,
+                                     sizeof(*event->environ.values), index);
 
         if (value->type == TELNET_ENVIRON_VAR &&
             strcmp(value->var, "USER") == 0)
@@ -220,8 +240,10 @@ static void test_event_handler(telnet_t *telnet, telnet_event_t *event,
     } else if (event->sub.telopt == TELNET_TELOPT_NAWS &&
                event->sub.size == 4) {
       buffer = (const unsigned char *)event->sub.buffer;
-      context->terminal_width = (buffer[0] << 8) | buffer[1];
-      context->terminal_height = (buffer[2] << 8) | buffer[3];
+      context->terminal_width = (test_byte((const char *)buffer, 4, 0) << 8) |
+                                test_byte((const char *)buffer, 4, 1);
+      context->terminal_height = (test_byte((const char *)buffer, 4, 2) << 8) |
+                                 test_byte((const char *)buffer, 4, 3);
     }
     break;
   case TELNET_EV_IAC:
@@ -268,7 +290,8 @@ static int expect_mccp_data(const char *actual, size_t actual_size,
     fprintf(stderr, "Unable to allocate MCCP2 payload\n");
     return 0;
   }
-  memcpy(compressed, actual + sizeof(marker), actual_size - sizeof(marker));
+  memcpy(compressed, test_region_const(actual, actual_size, sizeof(marker)),
+         actual_size - sizeof(marker));
   stream.next_in = compressed;
   stream.avail_in = (uInt)(actual_size - sizeof(marker));
   stream.next_out = (Bytef *)output;
@@ -474,7 +497,8 @@ int main(void) {
 
   context.sent_size = 0;
   telnet_recv(telnet, ttype_will, 1);
-  telnet_recv(telnet, ttype_will + 1, sizeof(ttype_will) - 1);
+  telnet_recv(telnet, test_region_const(ttype_will, sizeof(ttype_will), 1),
+              sizeof(ttype_will) - 1);
   result &= expect_bytes(context.sent, context.sent_size, ttype_send,
                          sizeof(ttype_send), "terminal type request");
 

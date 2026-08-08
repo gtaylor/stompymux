@@ -247,7 +247,24 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg,
 /* Rules make no distinction about Torso not needing recycled  We'll let Head
  * slide for now */
 
-const int resect[CHARGE_SECTIONS] = {LARM, RARM, LLEG, RLEG, LTORSO, RTORSO};
+int physical_charge_section(int index) {
+  switch (index) {
+  case 0:
+    return LARM;
+  case 1:
+    return RARM;
+  case 2:
+    return LLEG;
+  case 3:
+    return RLEG;
+  case 4:
+    return LTORSO;
+  case 5:
+    return RTORSO;
+  default:
+    abort();
+  }
+}
 
 /*
  * Executed at the end of a DFA
@@ -268,14 +285,16 @@ int DeathFromAbove(Mech *mech, Mech *target) {
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(mech));
 
   /* Weapons recycling check on each major section */
-  for (i = 0; i < DFA_SECTIONS; i++)
-    if (mech_section_has_recycling_weapon(mech, resect[i])) {
-      ArmorStringFromIndex(resect[i], location, mech_class(mech),
+  for (i = 0; i < DFA_SECTIONS; i++) {
+    const int section = physical_charge_section(i);
+    if (mech_section_has_recycling_weapon(mech, section)) {
+      ArmorStringFromIndex(section, location, mech_class(mech),
                            mech_movement_type(mech));
       mech_printf(mech, MECHALL, "You have weapons recycling on your %s.",
                   location);
       return 0;
     }
+  }
   // Our target is no longer on the map.
   if ((mech_map_dbref(mech) != mech_map_dbref(target))) {
     mech_notify(mech, MECHALL, "Your target is no longer valid.");
@@ -467,7 +486,8 @@ int DeathFromAbove(Mech *mech, Mech *target) {
   }
 
   for (i = 0; i < DFA_SECTIONS; i++)
-    mech_set_recycle_limb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
+    mech_set_recycle_limb(mech, physical_charge_section(i),
+                          PHYSICAL_RECYCLE_TIME);
 
   return 1;
 } // end DeathFromAbove()

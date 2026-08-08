@@ -2,6 +2,7 @@
 #include "mech_utils_internal.h"
 
 #include "checked_conversion.h"
+#include "map_units_api.h"
 
 float FindRange(float x0, float y0, float z0, float x1, float y1, float z1) {
   const float dx = x0 - x1;
@@ -187,20 +188,20 @@ void MapCoordToRealCoord(int hex_x, int hex_y, float *cart_x, float *cart_y) {
 #define NAV_MAX_WIDTH 4 + 21 + 2
 
 void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
-                           char buff[][MBUF_SIZE]) {
+                           NavigatePlotCallback plot, void *context) {
   float corner_fx, corner_fy, fx, fy;
-  int i, row, column;
+  int row, column;
   Mech *other;
 
   MapCoordToRealCoord(x, y, &corner_fx, &corner_fy);
   corner_fx -= 2.0F * ALPHA;
   corner_fy -= HALF_Y;
 
-  for (i = 0; i < map->first_free; i++) {
-    if (map->mechsOnMap[i] < 0)
+  for (int i = 0; i < battle_map_unit_count(map); i++) {
+    DbRef other_dbref = battle_map_unit_dbref(map, i);
+    if (other_dbref < 0)
       continue;
-    if (!(other = btech_context_find_object(mech->xcode.context,
-                                            map->mechsOnMap[i])))
+    if (!(other = btech_context_find_object(mech->xcode.context, other_dbref)))
       continue;
     if (other == mech)
       continue;
@@ -218,10 +219,12 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
     if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
       continue;
 
-    buff[row][column] = mech->pd.team == other->pd.team &&
-                                mech_los_check_unblocked(mech, other, 0, 0, 0)
-                            ? 'x'
-                            : 'X';
+    plot(row, column,
+         mech->pd.team == other->pd.team &&
+                 mech_los_check_unblocked(mech, other, 0, 0, 0)
+             ? 'x'
+             : 'X',
+         context);
   }
 
   /* Draw 'mech last so we always see it. */
@@ -235,7 +238,7 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
   if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
     return;
 
-  buff[row][column] = '*';
+  plot(row, column, '*', context);
 }
 
 int FindTargetXY(Mech *mech, float *x, float *y, float *z) {

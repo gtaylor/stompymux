@@ -2,6 +2,21 @@
 
 #include "mux/communication/channel_registry.h"
 
+#include "mux/support/checked_storage.h"
+
+Commac *channel_registry_bucket_at(const ChannelRegistry *registry,
+                                   size_t bucket) {
+  return *(Commac *const *)checked_storage_at_const(
+      registry->commacs, COMMAC_BUCKET_COUNT, sizeof(*registry->commacs),
+      bucket);
+}
+
+void channel_registry_bucket_set(ChannelRegistry *registry, size_t bucket,
+                                 Commac *entry) {
+  *(Commac **)checked_storage_at(registry->commacs, COMMAC_BUCKET_COUNT,
+                                 sizeof(*registry->commacs), bucket) = entry;
+}
+
 #include <assert.h>
 
 #include "mux/communication/commac.h"
@@ -17,13 +32,13 @@ void channel_registry_initialize(ChannelRegistry *registry) {
 void channel_registry_destroy(ChannelRegistry *registry) {
   assert(registry != nullptr);
   for (int bucket = 0; bucket < COMMAC_BUCKET_COUNT; bucket++) {
-    Commac *entry = registry->commacs[bucket];
+    Commac *entry = channel_registry_bucket_at(registry, (size_t)bucket);
     while (entry != nullptr) {
       Commac *next = entry->next;
       destroy_commac(entry);
       entry = next;
     }
-    registry->commacs[bucket] = nullptr;
+    channel_registry_bucket_set(registry, (size_t)bucket, nullptr);
   }
   if (registry->channels.tree != nullptr) {
     struct channel *channel = hash_table_first_entry(&registry->channels);

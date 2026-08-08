@@ -17,6 +17,7 @@
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -26,39 +27,59 @@ extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
 
 static void look_append_quoted_target(const char *target, char *buffer,
                                       char **cursor) {
-  for (const char *scan = target; *scan; scan++) {
-    if (*scan == '\\' || *scan == '"')
+  const size_t length = strlen(target);
+
+  for (size_t index = 0; index < length; index++) {
+    const char character = *(const char *)checked_storage_at_const(
+        target, length + 1, sizeof(char), index);
+
+    if (character == '\\' || character == '"')
       safe_chr('\\', buffer, cursor);
-    safe_chr(*scan, buffer, cursor);
+    safe_chr(character, buffer, cursor);
   }
 }
 
 static void look_exit_parts(const StyledTextPalette *palette,
                             const char *stored_name, char *display,
                             char *command) {
-  const char *primary_end = strchr(stored_name, ';');
-  const char *command_start = stored_name;
-  const char *command_end =
-      primary_end ? primary_end : stored_name + strlen(stored_name);
+  const size_t stored_length = strlen(stored_name);
+  size_t primary_end = 0;
+  size_t command_start = 0;
+  size_t command_end;
   char raw_command[LBUF_SIZE];
-  size_t display_size = (size_t)(command_end - stored_name);
+
+  while (primary_end < stored_length &&
+         *(const char *)checked_storage_at_const(
+             stored_name, stored_length + 1, sizeof(char), primary_end) != ';')
+    primary_end++;
+  command_end = primary_end;
+  size_t display_size = command_end;
 
   if (display_size >= LBUF_SIZE)
     display_size = LBUF_SIZE - 1;
   memcpy(display, stored_name, display_size);
-  display[display_size] = '\0';
+  *(char *)checked_storage_at(display, LBUF_SIZE, sizeof(char), display_size) =
+      '\0';
 
-  if (primary_end && primary_end[1] != '\0' && primary_end[1] != ';') {
+  if (primary_end < stored_length && primary_end + 1 < stored_length &&
+      *(const char *)checked_storage_at_const(stored_name, stored_length + 1,
+                                              sizeof(char),
+                                              primary_end + 1) != ';') {
     command_start = primary_end + 1;
-    command_end = strchr(command_start, ';');
-    if (!command_end)
-      command_end = command_start + strlen(command_start);
+    command_end = command_start;
+    while (command_end < stored_length &&
+           *(const char *)checked_storage_at_const(
+               stored_name, stored_length + 1, sizeof(char), command_end) !=
+               ';')
+      command_end++;
   }
-  size_t command_size = (size_t)(command_end - command_start);
+  size_t command_size = command_end - command_start;
   if (command_size >= sizeof(raw_command))
     command_size = sizeof(raw_command) - 1;
-  memcpy(raw_command, command_start, command_size);
-  raw_command[command_size] = '\0';
+  memcpy(raw_command, checked_string_suffix(stored_name, command_start),
+         command_size);
+  *(char *)checked_storage_at(raw_command, sizeof(raw_command), sizeof(char),
+                              command_size) = '\0';
   styled_text_strip(palette, raw_command, command, LBUF_SIZE);
 }
 

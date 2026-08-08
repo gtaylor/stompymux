@@ -20,6 +20,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
@@ -190,15 +191,20 @@ Attribute *object_attribute_administrable_by_name(GameDatabase *database,
 static bool object_attribute_command_target(CommandInvocation *invocation,
                                             char *address, DbRef *object,
                                             Attribute **attribute) {
-  char *name = strchr(address, '/');
+  size_t length = strlen(address);
+  size_t slash = 0;
+  while (slash < length && *(const char *)checked_storage_at_const(
+                               address, length, sizeof(char), slash) != '/')
+    slash++;
 
-  if (!name || !name[1]) {
+  if (slash == length || slash + 1 == length) {
     notify_checked(&invocation->context->evaluation, invocation->player,
                    invocation->player, "Specify an object and attribute.",
                    MSG_ME);
     return false;
   }
-  *name++ = '\0';
+  *(char *)checked_storage_at(address, length + 1, sizeof(char), slash) = '\0';
+  char *name = checked_storage_at(address, length + 1, sizeof(char), slash + 1);
   *object = match_controlled(&invocation->context->match, invocation->player,
                              address);
   if (*object == NOTHING)
@@ -235,7 +241,9 @@ void do_attribute(CommandInvocation *invocation) {
                               invocation->first);
     if (object == NOTHING)
       return;
-    for (Attribute *entry = attr_table; entry->number; entry++) {
+    for (size_t index = 0; index < native_attribute_count(); index++) {
+      Attribute *entry = native_attribute_at(index);
+
       const char *value;
 
       if (!object_attribute_is_administrable(entry->number))

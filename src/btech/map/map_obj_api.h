@@ -37,12 +37,12 @@ void del_mapobjst(BattleMap *map, int type);
 void del_mapobjs(BattleMap *map);
 MapObject *add_mapobj(BattleMap *map, MapObject **to, MapObject *from,
                       int flag);
+MapObject *add_mapobj_to_type(BattleMap *map, int type, MapObject *from,
+                              int flag);
 int FindXEven(int wind, int x);
 int FindYEven(int wind, int y);
 int FindXOdd(int wind, int x);
 int FindYOdd(int wind, int y);
-void CheckForFire(BattleMap *map, int x[], int y[]);
-void CheckForSmoke(BattleMap *map, int x[], int y[]);
 void add_decoration(BattleMap *map, int x, int y, int type, char data,
                     int flaggo);
 void list_mapobjs(DbRef player, BattleMap *map);

@@ -5,9 +5,14 @@
 #include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
+#include "mux/support/checked_storage.h"
 
 int mech_sensor_index(const Mech *mech, int slot) {
-  return mech->rd.sensor[slot];
+  if (slot < 0)
+    abort();
+  const char *sensor = checked_storage_at_const(
+      mech->rd.sensor, 2, sizeof(*mech->rd.sensor), (size_t)slot);
+  return *sensor;
 }
 
 void mech_sensors_set(Mech *mech, int primary, int secondary) {

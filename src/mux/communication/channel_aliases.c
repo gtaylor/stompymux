@@ -20,9 +20,21 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/utf8.h"
 #include "mux/world/player.h"
+
+struct comuser *channel_user_at(const struct channel *channel, size_t index) {
+  return *(struct comuser *const *)checked_storage_at_const(
+      channel->users, (size_t)channel->num_users, sizeof(*channel->users),
+      index);
+}
+
+struct comuser **channel_user_slot(struct channel *channel, size_t index) {
+  return checked_storage_at(channel->users, (size_t)channel->max_users,
+                            sizeof(*channel->users), index);
+}
 
 void do_joinchannel(EvaluationContext *evaluation, DbRef player,
                     struct channel *ch) {
@@ -37,15 +49,18 @@ void do_joinchannel(EvaluationContext *evaluation, DbRef player,
       ch->max_users += 10;
       ch->users =
           realloc(ch->users, sizeof(struct comuser *) * (size_t)ch->max_users);
-      memset(ch->users + (ch->num_users - 1), 0,
+      memset(checked_storage_at(ch->users, (size_t)ch->max_users,
+                                sizeof(*ch->users), (size_t)ch->num_users - 1),
+             0,
              sizeof(struct comuser *) *
                  (size_t)(ch->max_users - ch->num_users));
     }
     user = (struct comuser *)malloc(sizeof(struct comuser));
 
-    for (i = ch->num_users - 1; i > 0 && ch->users[i - 1]->who > player; i--)
-      ch->users[i] = ch->users[i - 1];
-    ch->users[i] = user;
+    for (i = ch->num_users - 1;
+         i > 0 && channel_user_at(ch, (size_t)i - 1)->who > player; i--)
+      *channel_user_slot(ch, (size_t)i) = channel_user_at(ch, (size_t)i - 1);
+    *channel_user_slot(ch, (size_t)i) = user;
 
     user->who = player;
     user->on = 1;
@@ -82,9 +97,11 @@ void comsys_leave_channel(EvaluationContext *evaluation, DbRef player,
 
   /* Trigger ALEAVE of any channel objects on the channel */
   for (i = ch->num_users - 1; i > 0; i--) {
-    if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
+    struct comuser *member = channel_user_at(ch, (size_t)i);
+
+    if (typeof_obj(evaluation->world->database, member->who) ==
         OBJECT_TYPE_THING)
-      notify_event(evaluation, nullptr, player, player, ch->users[i]->who,
+      notify_event(evaluation, nullptr, player, player, member->who,
                    LUA_EVENT_LEAVE, (char **)nullptr, 0);
   }
 
@@ -167,13 +184,15 @@ struct comuser *select_user(struct channel *ch, DbRef player) {
 
   while (dir && (first <= last)) {
     current = (first + last) / 2;
-    if (ch->users[current] == nullptr) {
+    struct comuser *candidate = channel_user_at(ch, (size_t)current);
+
+    if (candidate == nullptr) {
       last--;
       continue;
     }
-    if (ch->users[current]->who == player)
+    if (candidate->who == player)
       dir = 0;
-    else if (ch->users[current]->who < player) {
+    else if (candidate->who < player) {
       dir = 1;
       first = current + 1;
     } else {
@@ -183,7 +202,7 @@ struct comuser *select_user(struct channel *ch, DbRef player) {
   }
 
   if (!dir)
-    return ch->users[current];
+    return channel_user_at(ch, (size_t)current);
   else
     return nullptr;
 }
@@ -237,14 +256,15 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
                "Warning: you are already listed on that channel.");
   }
   c = get_commac(evaluation->runtime->channels, player);
-  for (where = 0;
-       where < c->numchannels && (strcasecmp(arg1, c->alias + where * 6) > 0);
+  for (where = 0; where < c->numchannels &&
+                  (strcasecmp(arg1, commac_alias_at(c, (size_t)where)) > 0);
        where++)
     ;
-  if (where < c->numchannels && !strcasecmp(arg1, c->alias + where * 6)) {
+  if (where < c->numchannels &&
+      !strcasecmp(arg1, commac_alias_at(c, (size_t)where))) {
     notify_printf(evaluation, player,
                   "That alias is already in use for channel %s.",
-                  c->channels[where]);
+                  commac_channel_at(c, (size_t)where));
     return;
   }
   if (c->numchannels >= c->maxchannels) {
@@ -253,17 +273,21 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
     c->channels = realloc(c->channels, sizeof(char *) * (size_t)c->maxchannels);
   }
   if (where < c->numchannels) {
-    memmove(c->alias + 6 * (where + 1), c->alias + 6 * where,
+    memmove(commac_alias_at(c, (size_t)where + 1),
+            commac_alias_at(c, (size_t)where),
             (size_t)(6 * (c->numchannels - where)));
-    memmove(c->channels + where + 1, c->channels + where,
+    memmove(commac_channel_slot(c, (size_t)where + 1),
+            commac_channel_slot(c, (size_t)where),
             sizeof(c->channels) * (size_t)(c->numchannels - where));
   }
 
   c->numchannels++;
 
-  strncpy(c->alias + 6 * where, arg1, 5);
-  c->alias[where * 6 + 5] = '\0';
-  c->channels[where] = strdup(ch->name);
+  char *alias = commac_alias_at(c, (size_t)where);
+
+  strncpy(alias, arg1, 5);
+  *(char *)checked_storage_at(alias, 6, sizeof(char), 5) = '\0';
+  *commac_channel_slot(c, (size_t)where) = strdup(ch->name);
 
   do_joinchannel(evaluation, player, ch);
   notify_printf(evaluation, player, "Channel %s added with alias %s.", ch->name,
@@ -290,16 +314,20 @@ void do_delcom(CommandInvocation *invocation) {
   c = get_commac(evaluation->runtime->channels, player);
 
   for (i = 0; i < c->numchannels; i++) {
-    if (!strcasecmp(arg1, c->alias + i * 6)) {
-      comsys_delete_channel_alias(evaluation, player, c->channels[i]);
-      notify_printf(evaluation, player, "Channel %s deleted.", c->channels[i]);
-      free(c->channels[i]);
+    if (!strcasecmp(arg1, commac_alias_at(c, (size_t)i))) {
+      char *channel = commac_channel_at(c, (size_t)i);
+
+      comsys_delete_channel_alias(evaluation, player, channel);
+      notify_printf(evaluation, player, "Channel %s deleted.", channel);
+      free(channel);
 
       c->numchannels--;
       if (i < c->numchannels) {
-        memmove(c->alias + 6 * i, c->alias + 6 * (i + 1),
+        memmove(commac_alias_at(c, (size_t)i),
+                commac_alias_at(c, (size_t)i + 1),
                 (size_t)(6 * (c->numchannels - i)));
-        memmove(c->channels + i, c->channels + i + 1,
+        memmove(commac_channel_slot(c, (size_t)i),
+                commac_channel_slot(c, (size_t)i + 1),
                 sizeof(c->channels) * (size_t)(c->numchannels - i));
       }
       return;
@@ -320,14 +348,16 @@ void comsys_delete_channel_alias(EvaluationContext *evaluation, DbRef player,
 
     /* Trigger ALEAVE of any channel objects on the channel */
     for (i = ch->num_users - 1; i > 0; i--) {
-      if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
+      struct comuser *member = channel_user_at(ch, (size_t)i);
+
+      if (typeof_obj(evaluation->world->database, member->who) ==
           OBJECT_TYPE_THING)
-        notify_event(evaluation, nullptr, player, player, ch->users[i]->who,
+        notify_event(evaluation, nullptr, player, player, member->who,
                      LUA_EVENT_LEAVE, (char **)nullptr, 0);
     }
 
     for (i = 0; i < ch->num_users; i++) {
-      user = ch->users[i];
+      user = channel_user_at(ch, (size_t)i);
       if (user->who == player) {
         comsys_disconnect_channel(evaluation, player, channel);
         if (user->on && !is_dark(evaluation->world->database, player)) {
@@ -342,8 +372,9 @@ void comsys_delete_channel_alias(EvaluationContext *evaluation, DbRef player,
         free(user);
         ch->num_users--;
         if (i < ch->num_users)
-          memmove(ch->users + i, ch->users + i + 1,
-                  sizeof(ch->users) * (size_t)(ch->num_users - i));
+          memmove(channel_user_slot(ch, (size_t)i),
+                  channel_user_slot(ch, (size_t)i + 1),
+                  sizeof(*ch->users) * (size_t)(ch->num_users - i));
       }
     }
   }

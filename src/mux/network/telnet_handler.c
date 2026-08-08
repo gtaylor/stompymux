@@ -19,6 +19,7 @@
 #include "mux/server/log.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/render.h"
 #include "mux/support/utf8.h"
 #include "mux/world/world_context.h"
@@ -38,6 +39,12 @@ static void telnet_send_mssp(Descriptor *descriptor);
 static void telnet_send_mssp_pair(telnet_t *telnet, const char *name,
                                   const char *value);
 static void telnet_send_new_environ_request(telnet_t *telnet);
+
+static unsigned char telnet_byte_at(const void *buffer, size_t size,
+                                    size_t index) {
+  return *(const unsigned char *)checked_storage_at_const(
+      buffer, size, sizeof(unsigned char), index);
+}
 static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
                                  void *user_data);
 
@@ -152,7 +159,7 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
   unsigned char current;
 
   for (iter = 0; iter < size; iter++) {
-    current = (unsigned char)buffer[iter];
+    current = telnet_byte_at(buffer, size, iter);
     if (current == '\n') {
       d->input_size = 0;
       if (!utf8_validate_printable(d->input, (size_t)d->input_tail)) {
@@ -187,14 +194,17 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
       if (d->input_tail > 0) {
         size_t new_tail =
             utf8_previous_codepoint_start(d->input, (size_t)d->input_tail);
-        memset(d->input + new_tail, 0, (size_t)d->input_tail - new_tail);
+        memset(checked_storage_region(d->input, sizeof(d->input), new_tail,
+                                      (size_t)d->input_tail - new_tail),
+               0, (size_t)d->input_tail - new_tail);
         d->input_size -= d->input_tail - (int)new_tail;
         d->input_tail = (int)new_tail;
       }
     } else if (current >= 0x20 && current != 0x7f) {
       if ((size_t)d->input_tail >= sizeof(d->input) - 1)
         continue;
-      d->input[d->input_tail++] = (char)current;
+      *(char *)checked_storage_at(d->input, sizeof(d->input), sizeof(char),
+                                  (size_t)d->input_tail++) = (char)current;
       d->input_size++;
     }
   }
@@ -235,20 +245,21 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
   if (size == 0)
     return;
 
-  if (buffer[0] == telnet_charset_accepted) {
+  if (telnet_byte_at(buffer, size, 0) == telnet_charset_accepted) {
     d->is_charset_request_pending = false;
-    d->is_charset_utf8 = telnet_charset_is_utf8(buffer + 1, size - 1);
+    d->is_charset_utf8 = telnet_charset_is_utf8(
+        checked_storage_region_const(buffer, size, 1, size - 1), size - 1);
     if (!d->is_charset_utf8) {
       log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "CHARSET",
                 "Descriptor %d accepted unsupported charset.", d->descriptor);
     }
     return;
   }
-  if (buffer[0] == telnet_charset_rejected) {
+  if (telnet_byte_at(buffer, size, 0) == telnet_charset_rejected) {
     d->is_charset_request_pending = false;
     return;
   }
-  if (buffer[0] != telnet_charset_request || size < 3) {
+  if (telnet_byte_at(buffer, size, 0) != telnet_charset_request || size < 3) {
     telnet_send_charset_rejected(d->telnet);
     return;
   }
@@ -257,12 +268,14 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
     return;
   }
 
-  separator = buffer[1];
+  separator = (char)telnet_byte_at(buffer, size, 1);
   start = 2;
   for (current = start; current <= size; current++) {
-    if (current != size && buffer[current] != separator)
+    if (current != size && telnet_byte_at(buffer, size, current) != separator)
       continue;
-    if (telnet_charset_is_utf8(buffer + start, current - start)) {
+    if (telnet_charset_is_utf8(
+            checked_storage_region_const(buffer, size, start, current - start),
+            current - start)) {
       d->is_charset_utf8 = true;
       telnet_send_charset_accepted(d->telnet);
       return;
@@ -278,7 +291,8 @@ static void telnet_handle_gmcp(Descriptor *d, const char *buffer, size_t size) {
 
   if (!d->is_gmcp_enabled || size < package_size ||
       memcmp(buffer, core_ping, package_size) != 0 ||
-      (size > package_size && buffer[package_size] != ' '))
+      (size > package_size &&
+       telnet_byte_at(buffer, size, package_size) != ' '))
     return;
 
   telnet_send_gmcp(d->telnet, core_ping);
@@ -406,12 +420,16 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     } else if (event->sub.telopt == TELNET_TELOPT_NAWS &&
                event->sub.size == 4) {
       buffer = (const unsigned char *)event->sub.buffer;
-      d->terminal_width = (buffer[0] << 8) | buffer[1];
-      d->terminal_height = (buffer[2] << 8) | buffer[3];
+      d->terminal_width =
+          (telnet_byte_at(buffer, 4, 0) << 8) | telnet_byte_at(buffer, 4, 1);
+      d->terminal_height =
+          (telnet_byte_at(buffer, 4, 2) << 8) | telnet_byte_at(buffer, 4, 3);
     } else if (event->sub.telopt == TELNET_TELOPT_NEW_ENVIRON &&
                d->is_new_environ_enabled && event->sub.size > 0 &&
-               (event->sub.buffer[0] == TELNET_ENVIRON_IS ||
-                event->sub.buffer[0] == TELNET_ENVIRON_INFO)) {
+               (telnet_byte_at(event->sub.buffer, event->sub.size, 0) ==
+                    TELNET_ENVIRON_IS ||
+                telnet_byte_at(event->sub.buffer, event->sub.size, 0) ==
+                    TELNET_ENVIRON_INFO)) {
       if (!telnet_environment_receive(d->telnet_environment, event->sub.buffer,
                                       event->sub.size))
         log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ENVIRON",

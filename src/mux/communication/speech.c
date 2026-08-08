@@ -3,6 +3,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "mux/commands/action_messages.h"
 #include "mux/commands/command_handlers.h"
@@ -16,6 +17,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
@@ -85,13 +87,16 @@ void do_say(CommandInvocation *invocation) {
   key &= ~(SAY_NOTAG | SAY_HERE | SAY_ROOM);
 
   if (key == SAY_PREFIX) {
-    switch (*message++) {
+    const char prefix = *message;
+
+    message = checked_mutable_string_suffix(message, *message ? 1 : 0);
+    switch (prefix) {
     case '"':
       key = SAY_SAY;
       break;
     case ':':
       if (*message == ' ') {
-        message++;
+        message = checked_mutable_string_suffix(message, 1);
         key = SAY_POSE_NOSPC;
       } else {
         key = SAY_POSE;
@@ -194,12 +199,12 @@ void do_say(CommandInvocation *invocation) {
                 player, message);
       break;
     case ';':
-      message++;
+      message = checked_mutable_string_suffix(message, 1);
       say_shout(&invocation->context->evaluation, 0, announce_msg, say_flags,
                 player, message);
       break;
     case '"':
-      message++;
+      message = checked_mutable_string_suffix(message, 1);
       [[fallthrough]];
     default:
       buf2 = alloc_lbuf("do_say.shout");
@@ -230,12 +235,12 @@ void do_say(CommandInvocation *invocation) {
                 broadcast_msg, say_flags, player, message);
       break;
     case ';':
-      message++;
+      message = checked_mutable_string_suffix(message, 1);
       say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD,
                 broadcast_msg, say_flags, player, message);
       break;
     case '"':
-      message++;
+      message = checked_mutable_string_suffix(message, 1);
       [[fallthrough]];
     default:
       buf2 = alloc_lbuf("do_say.wizshout");
@@ -266,12 +271,12 @@ void do_say(CommandInvocation *invocation) {
                 say_flags, player, message);
       break;
     case ';':
-      message++;
+      message = checked_mutable_string_suffix(message, 1);
       say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD, admin_msg,
                 say_flags, player, message);
       break;
     case '"':
-      message++;
+      message = checked_mutable_string_suffix(message, 1);
       [[fallthrough]];
     default:
       buf2 = alloc_lbuf("do_say.adminshout");

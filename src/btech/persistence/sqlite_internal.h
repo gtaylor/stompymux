@@ -43,7 +43,6 @@
 #include "template_api.h"
 #include "turret.h"
 
-extern const AutopilotCommandDefinition acom[AUTO_NUM_COMMANDS + 1];
 typedef struct btech_map_store_context BTECH_MAP_STORE_CONTEXT;
 struct btech_map_store_context {
   sqlite3_stmt *map;

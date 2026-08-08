@@ -1,5 +1,7 @@
 set(BTECH_SOURCES
+  autopilot/autopilot_argument_list.c
   autopilot/autopilot_ai.c
+  autopilot/ai_simulation.c
   autopilot/autopilot_navigation.c
   autopilot/autopilot_pathfinding.c
   autopilot/autopilot_autogun.c
@@ -110,15 +112,18 @@ set(BTECH_SOURCES
   map/map_links.c
   map/map_buildings.c
   map/map_terrain.c
+  map/map_terrain_updates.c
   movement/aero_bomb.c
   movement/aero_controls.c
   movement/aero_move.c
+  movement/aero_landing_check.c
   movement/aero_flight_math.c
   movement/ds_bay.c
   movement/ds_turret.c
   movement/dropship_notification.c
   movement/mech_ice.c
   movement/mech_move.c
+  movement/mech_jump_speed.c
   movement/mech_move_controls.c
   movement/mech_jump.c
   movement/mech_stance.c
@@ -238,6 +243,7 @@ set(BTECH_SOURCES
   ui/mech_status_armor_templates.c
   ui/mech_status_parts.c
   ui/mech_status_summary.c
+  ui/mech_status_command.c
   ui/mech_status_weapons.c
   ui/mech_status_weapons_format.c
   ui/menu.c
@@ -253,6 +259,7 @@ set(BTECH_SOURCES
   unit/mech_damage_history.c
   unit/mech_electronics_state.c
   unit/mech_consistency.c
+  unit/mech_internal_consistency.c
   unit/mech_events.c
   unit/mech_equipment_state.c
   unit/mech_geometry.c
@@ -270,6 +277,7 @@ set(BTECH_SOURCES
   unit/mech_systems.c
   unit/mech_tic.c
   unit/mech_weapons.c
+  unit/mech_ammunition.c
   unit/template_cargo.c
   unit/template_cargo_weights.c
   unit/template_commands.c

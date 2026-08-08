@@ -2,11 +2,19 @@
 #include "map_object_query_api.h"
 
 #include "checked_conversion.h"
+#include "mux/support/checked_storage.h"
+
+static MapObject **map_object_slot(BattleMap *map, int type) {
+  if (type < 0)
+    abort();
+  return checked_storage_at(map->MapObject, NUM_MAPOBJTYPES,
+                            sizeof(*map->MapObject), (size_t)type);
+}
 
 MapObject *next_mapobj(MapObject *object) { return object->next; }
 
 MapObject *first_mapobj(BattleMap *map, int type) {
-  return map->MapObject[type];
+  return *map_object_slot(map, type);
 }
 
 MapObject *battle_map_object_first(BattleMap *map, int type) {
@@ -97,15 +105,15 @@ void del_mapobj(BattleMap *map, MapObject *mapob, int type, int zap) {
   BattleMap *tmap;
   if (!(map->flags & MAPFLAG_MAPO))
     return;
-  if (map->MapObject[type] != mapob) {
-    for (tmp = map->MapObject[type]; tmp->next && tmp->next != mapob;
-         tmp = tmp->next)
+  MapObject **object_slot = map_object_slot(map, type);
+  if (*object_slot != mapob) {
+    for (tmp = *object_slot; tmp->next && tmp->next != mapob; tmp = tmp->next)
       ;
     if (!tmp->next)
       return;
     tmp->next = mapob->next;
   } else
-    map->MapObject[type] = mapob->next;
+    *object_slot = mapob->next;
   /* Then, the silly thing. Decorations, they suck */
   if (type <= TYPE_LAST_DEC) {
     /* Need to alter terrain back to 'usual' */
@@ -125,8 +133,11 @@ void del_mapobj(BattleMap *map, MapObject *mapob, int type, int zap) {
   if (type == TYPE_BITS && mapob->datai != 0) {
     unsigned char **bits = (unsigned char **)mapob->datai;
 
-    for (int y = 0; y < map->map_height; y++)
-      free(bits[y]);
+    for (int y = 0; y < map->map_height; y++) {
+      unsigned char **row = checked_storage_at(bits, (size_t)map->map_height,
+                                               sizeof(*bits), (size_t)y);
+      free(*row);
+    }
     free(bits);
   }
   free(mapob);
@@ -135,8 +146,9 @@ void del_mapobj(BattleMap *map, MapObject *mapob, int type, int zap) {
 void del_mapobjst(BattleMap *map, int type) {
   if (!(map->flags & MAPFLAG_MAPO))
     return;
-  while (map->MapObject[type])
-    del_mapobj(map, map->MapObject[type], type, 3);
+  MapObject **object_slot = map_object_slot(map, type);
+  while (*object_slot)
+    del_mapobj(map, *object_slot, type, 3);
 }
 
 void del_mapobjs(BattleMap *map) {
@@ -158,6 +170,11 @@ MapObject *add_mapobj(BattleMap *map, MapObject **to, MapObject *from,
   bcopy(from, realto, sizeof(MapObject));
   *to = realto;
   return realto;
+}
+
+MapObject *add_mapobj_to_type(BattleMap *map, int type, MapObject *from,
+                              int flag) {
+  return add_mapobj(map, map_object_slot(map, type), from, flag);
 }
 
 static void smoke_dissipation_event(MuxEvent *e) {
@@ -342,37 +359,51 @@ int FindYOdd(int wind, int y) {
 
 #define NUM_SPREAD_HEX 4
 
-void CheckForFire(BattleMap *map, int x[], int y[]) {
+typedef struct SpreadHex {
+  int x;
+  int y;
+} SpreadHex;
+
+static SpreadHex *spread_hex(SpreadHex *hexes, int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(hexes, NUM_SPREAD_HEX, sizeof(*hexes),
+                            (size_t)index);
+}
+
+static void check_for_fire(BattleMap *map, SpreadHex hexes[]) {
   int i;
 
   for (i = 0; i < NUM_SPREAD_HEX; i++) {
-    if (x[i] < 0 || y[i] < 0)
+    SpreadHex *hex = spread_hex(hexes, i);
+    if (hex->x < 0 || hex->y < 0)
       continue;
     /* Cackle */
-    char terrain = map_real_terrain_get(map, x[i], y[i]);
+    char terrain = map_real_terrain_get(map, hex->x, hex->y);
     if (terrain == LIGHT_FOREST || terrain == HEAVY_FOREST)
-      add_decoration(map, x[i], y[i], TYPE_FIRE, FIRE,
+      add_decoration(map, hex->x, hex->y, TYPE_FIRE, FIRE,
                      btech_random_range_int(map->xcode.context, 60, 180));
   }
 }
 
-void CheckForSmoke(BattleMap *map, int x[], int y[]) {
+static void check_for_smoke(BattleMap *map, SpreadHex hexes[]) {
   int i;
 
   for (i = 0; i < NUM_SPREAD_HEX; i++) {
-    if (x[i] < 0 || y[i] < 0)
+    SpreadHex *hex = spread_hex(hexes, i);
+    if (hex->x < 0 || hex->y < 0)
       continue;
-    if (find_decorations(map, x[i], y[i]))
+    if (find_decorations(map, hex->x, hex->y))
       continue;
     /* Cackle */
-    switch (map_terrain_get(map, x[i], y[i])) {
+    switch (map_terrain_get(map, hex->x, hex->y)) {
     case BUILDING:
     case WALL:
       continue;
     default:
       break;
     }
-    add_decoration(map, x[i], y[i], TYPE_SMOKE, SMOKE,
+    add_decoration(map, hex->x, hex->y, TYPE_SMOKE, SMOKE,
                    btech_random_range_int(map->xcode.context, 90, 150));
   }
 }
@@ -403,10 +434,8 @@ static void fire_spreading_event(MuxEvent *e) {
   MapObject *o = (MapObject *)e->data2;
   int x, y, loop;
   int flaggo;
-  int new_fire_hex_x[4];
-  int new_fire_hex_y[4];
-  int new_smoke_hex_x[4];
-  int new_smoke_hex_y[4];
+  SpreadHex new_fire_hexes[NUM_SPREAD_HEX];
+  SpreadHex new_smoke_hexes[NUM_SPREAD_HEX];
 
   /*   if (btech_random_range(map->xcode.context, 1, 10) == 3) */
 
@@ -424,26 +453,26 @@ static void fire_spreading_event(MuxEvent *e) {
   x = o->x;
   y = o->y;
   for (loop = 0; loop < 3; loop++) {
-    new_fire_hex_x[loop] = -1;
-    new_fire_hex_y[loop] = -1;
-    FindMyCoord(map, x, y, loop, map->winddir, &new_smoke_hex_x[loop],
-                &new_smoke_hex_y[loop]);
+    *spread_hex(new_fire_hexes, loop) = (SpreadHex){.x = -1, .y = -1};
+    SpreadHex *smoke_hex = spread_hex(new_smoke_hexes, loop);
+    FindMyCoord(map, x, y, loop, map->winddir, &smoke_hex->x, &smoke_hex->y);
   }
-  new_fire_hex_x[3] = -1;
-  new_fire_hex_y[3] = -1;
-  FindMyCoord(map, new_smoke_hex_x[0], new_smoke_hex_y[0], 0, map->winddir,
-              &new_smoke_hex_x[3], &new_smoke_hex_y[3]);
+  *spread_hex(new_fire_hexes, 3) = (SpreadHex){.x = -1, .y = -1};
+  SpreadHex *first_smoke_hex = spread_hex(new_smoke_hexes, 0);
+  SpreadHex *last_smoke_hex = spread_hex(new_smoke_hexes, 3);
+  FindMyCoord(map, first_smoke_hex->x, first_smoke_hex->y, 0, map->winddir,
+              &last_smoke_hex->x, &last_smoke_hex->y);
 
   for (int candidate = 0; candidate < 4; candidate++) {
-    static const int thresholds[] = {9, 11, 11, 12};
-    if (btech_random_roll(map->xcode.context) >= thresholds[candidate] &&
+    const int threshold = candidate == 0 ? 9 : candidate == 3 ? 12 : 11;
+    if (btech_random_roll(map->xcode.context) >= threshold &&
         btech_random_range(map->xcode.context, 1, 60) <= map->windspeed) {
-      new_fire_hex_x[candidate] = new_smoke_hex_x[candidate];
-      new_fire_hex_y[candidate] = new_smoke_hex_y[candidate];
+      *spread_hex(new_fire_hexes, candidate) =
+          *spread_hex(new_smoke_hexes, candidate);
     }
   }
-  CheckForSmoke(map, new_smoke_hex_x, new_smoke_hex_y);
-  CheckForFire(map, new_fire_hex_x, new_fire_hex_y);
+  check_for_smoke(map, new_smoke_hexes);
+  check_for_fire(map, new_fire_hexes);
   flaggo = (o->datas -= map_fire_speed(map));
   if (flaggo > map_fire_speed(map))
     map_event_schedule(map, EVENT_DECORATION, fire_spreading_event,
@@ -482,7 +511,7 @@ void add_decoration(BattleMap *map, int x, int y, int type, char data,
   }
   map_terrain_set(map, x, y, data);
   foo.datas = clamp_int_to_short(flaggo);
-  tmpo = add_mapobj(map, &map->MapObject[type], &foo, 1);
+  tmpo = add_mapobj(map, map_object_slot(map, type), &foo, 1);
   if (flaggo) {
     if (type == TYPE_SMOKE)
       map_event_schedule(map, EVENT_DECORATION, smoke_dissipation_event, flaggo,

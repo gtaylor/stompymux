@@ -222,9 +222,10 @@ const char *techstatus_func(Mech *mech) {
   int flags = mech_technology_flags(mech);
   int secondary_flags = mech_technology_flags_secondary(mech);
   return (flags || secondary_flags)
-             ? build_bit_string_delimited2(specials, specials2, flags,
-                                           secondary_flags,
-                                           (char[BTECH_TEXT_CAPACITY]){0})
+             ? build_bit_string_delimited2(
+                   specials, primary_technology_name_count(), specials2,
+                   secondary_technology_name_count(), flags, secondary_flags,
+                   (char[BTECH_TEXT_CAPACITY]){0})
              : "";
 }
 
@@ -372,7 +373,9 @@ void mechrep_Rshowtech(DbRef player, void *data, char *buffer) {
 }
 
 void mechrep_gettechstring(Mech *mech, char *buffer) {
-  build_bit_string3(specials, specials2, infantry_specials,
+  build_bit_string3(specials, primary_technology_name_count(), specials2,
+                    secondary_technology_name_count(), infantry_specials,
+                    infantry_technology_name_count(),
                     mech_technology_flags(mech),
                     mech_technology_flags_secondary(mech),
                     mech_infantry_technology_flags(mech), buffer);
@@ -393,8 +396,10 @@ static void remove_case_technology(Mech *mech) {
 
 void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   int nv, nv2;
-  const long parsed_nv = BuildBitVector(specials, buffer);
-  const long parsed_nv2 = BuildBitVector(specials2, buffer);
+  const long parsed_nv =
+      BuildBitVector(specials, primary_technology_name_count(), buffer);
+  const long parsed_nv2 =
+      BuildBitVector(specials2, secondary_technology_name_count(), buffer);
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -425,13 +430,13 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "\tCase");
 
-    for (nv = 0; specials[nv]; nv++)
+    for (size_t index = 0; index < primary_technology_name_count(); ++index)
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                    "\t%s", specials[nv]);
+                    "\t%s", primary_technology_name(index));
 
-    for (nv = 0; specials2[nv]; nv++)
+    for (size_t index = 0; index < secondary_technology_name_count(); ++index)
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                    "\t%s", specials2[nv]);
+                    "\t%s", secondary_technology_name(index));
 
     return;
   }
@@ -490,8 +495,10 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
 
 void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
   int nv, nv2;
-  const long parsed_nv = BuildBitVector(specials, buffer);
-  const long parsed_nv2 = BuildBitVector(specials2, buffer);
+  const long parsed_nv =
+      BuildBitVector(specials, primary_technology_name_count(), buffer);
+  const long parsed_nv2 =
+      BuildBitVector(specials2, secondary_technology_name_count(), buffer);
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -516,13 +523,13 @@ void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Invalid tech: Available techs:");
 
-    for (nv = 0; specials[nv]; nv++)
+    for (size_t index = 0; index < primary_technology_name_count(); ++index)
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                    "\t%s", specials[nv]);
+                    "\t%s", primary_technology_name(index));
 
-    for (nv = 0; specials2[nv]; nv++)
+    for (size_t index = 0; index < secondary_technology_name_count(); ++index)
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                    "\t%s", specials2[nv]);
+                    "\t%s", secondary_technology_name(index));
 
     return;
   }
@@ -535,14 +542,16 @@ void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
 
   if (nv > 0) {
     mech_technology_flags_add(mech, nv);
-    notify_printf(
-        btech_context_evaluation(rep->xcode.context), player, "Set: %s",
-        build_bit_string(specials, nv, (char[BTECH_TEXT_CAPACITY]){0}));
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "Set: %s",
+                  build_bit_string(specials, primary_technology_name_count(),
+                                   nv, (char[BTECH_TEXT_CAPACITY]){0}));
   } else {
     mech_technology_flags_secondary_add(mech, nv2);
-    notify_printf(
-        btech_context_evaluation(rep->xcode.context), player, "Set: %s",
-        build_bit_string(specials2, nv2, (char[BTECH_TEXT_CAPACITY]){0}));
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "Set: %s",
+                  build_bit_string(specials2, secondary_technology_name_count(),
+                                   nv2, (char[BTECH_TEXT_CAPACITY]){0}));
   }
 }
 
@@ -556,7 +565,8 @@ void mechrep_Rdelinftech(DbRef player, void *data, char *buffer) {
 
 void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
   int nv;
-  const long parsed_nv = BuildBitVector(infantry_specials, buffer);
+  const long parsed_nv = BuildBitVector(
+      infantry_specials, infantry_technology_name_count(), buffer);
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -587,9 +597,9 @@ void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Invalid infantry tech: Available techs:");
 
-    for (nv = 0; infantry_specials[nv]; nv++)
+    for (size_t index = 0; index < infantry_technology_name_count(); ++index)
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                    "\t%s", infantry_specials[nv]);
+                    "\t%s", infantry_technology_name(index));
     return;
   }
 
@@ -601,10 +611,10 @@ void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
 
   if (nv > 0) {
     mech_infantry_technology_flags_add(mech, nv);
-    notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                  "Set: %s",
-                  build_bit_string(infantry_specials, nv,
-                                   (char[BTECH_TEXT_CAPACITY]){0}));
+    notify_printf(
+        btech_context_evaluation(rep->xcode.context), player, "Set: %s",
+        build_bit_string(infantry_specials, infantry_technology_name_count(),
+                         nv, (char[BTECH_TEXT_CAPACITY]){0}));
   }
 }
 

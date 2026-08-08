@@ -25,5 +25,5 @@ void make_ulist(GameDatabase *database, DescriptorRegistry *descriptors,
                 DbRef player, char *buffer, char **cursor);
 DbRef find_connected_name(GameDatabase *database,
                           DescriptorRegistry *descriptors, DbRef player,
-                          char *name);
+                          const char *name);
 void descriptor_run_command(Descriptor *descriptor, char *command);

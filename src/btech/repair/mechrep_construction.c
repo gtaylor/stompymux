@@ -28,6 +28,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "repair_job.h"
@@ -47,8 +48,10 @@
 #include "mechrep_api.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/support/stringutil.h"
 #include "section_types.h"
 #include "template_api.h"
+#include "weapon_catalogue_api.h"
 
 /* Selectors */
 extern char *strtok(char *s, const char *ct);
@@ -58,6 +61,12 @@ extern char *strtok(char *s, const char *ct);
 /* Code Begins                                                              */
 
 /*--------------------------------------------------------------------------*/
+
+static char *construction_argument(char **arguments, size_t capacity,
+                                   size_t index) {
+  return *(char **)checked_storage_at(arguments, capacity, sizeof(*arguments),
+                                      index);
+}
 
 /* Alloc free function */
 
@@ -272,7 +281,8 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
    * locations.
    */
   for (loop = 0; loop < argstoiter; loop++) {
-    flagholder = toupper(args[3 + loop][0]);
+    char *flag_argument = construction_argument(args, 20, (size_t)(3 + loop));
+    flagholder = ascii_to_upper(*flag_argument);
 
     if (flagholder == 'T') {
       /* Targeting Computer */
@@ -291,7 +301,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
      * they'll see error messages about crit counts. Need
      * to find a better way to fool-proof this.
      */
-    if (isalpha(flagholder))
+    if (flagholder >= 'A' && flagholder <= 'Z')
       argc--;
 
   } /* end for */
@@ -318,7 +328,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
                     "Weapon will be split! %d additional crits needed.",
                     weapnumcrits - argc);
     for (loop = 0; loop < argc; loop++) {
-      temp = atoi(args[2 + loop]);
+      temp = atoi(construction_argument(args, 20, (size_t)(2 + loop)));
       temp--; /* From 1 based to 0 based */
       if (temp < 0 || temp > NUM_CRITICALS) {
         mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -342,8 +352,8 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
                               weapon_equipment_index(weapindex), 0, fire_mode,
                               0);
     }
-    if (MechWeapons[weapindex].special & AMS) {
-      if (MechWeapons[weapindex].special & CLAT)
+    if (weapon_catalogue_has_special(weapindex, AMS)) {
+      if (weapon_catalogue_has_special(weapindex, CLAT))
         mech_technology_flags_add(mech, CL_ANTI_MISSILE_TECH);
       else
         mech_technology_flags_add(mech, IS_ANTI_MISSILE_TECH);
@@ -386,7 +396,7 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (MechWeapons[weaptype].ammoperton == 0) {
+  if (weapon_catalogue_ammunition_per_ton(weaptype) == 0) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That weapon doesn't require ammo!");
     return;
@@ -403,7 +413,7 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
     mech_critical_ammo_mode_set(mech, section, critical, 0);
   }
 
-  switch (toupper(args[1][0])) {
+  switch (ascii_to_upper(*checked_string_suffix(args[1], 0))) {
   case 'W':
     mech_critical_ammo_mode_add(mech, section, critical, SWARM_MODE);
     break;
@@ -534,7 +544,7 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
                  "Critslot out of range!");
     return;
   }
-  if (MechWeapons[weapindex].ammoperton == 0)
+  if (weapon_catalogue_ammunition_per_ton(weapindex) == 0)
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That weapon doesn't require ammo!");
   else {
@@ -546,7 +556,7 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
     }
 
     if (argc > 3)
-      switch (toupper(args[3][0])) {
+      switch (ascii_to_upper(*checked_string_suffix(args[3], 0))) {
       case '+':
         mech_critical_fire_mode_add(mech, index, subsect, HALFTON_MODE);
         break;
@@ -675,9 +685,8 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
                  "Critslot out of range!");
     return;
   }
-  if (MechWeapons[ammunition_to_weapon_index(
-                      mech_critical_part_type(mech, index, subsect))]
-          .ammoperton == 0)
+  if (weapon_catalogue_ammunition_per_ton(ammunition_to_weapon_index(
+          mech_critical_part_type(mech, index, subsect))) == 0)
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "That weapon doesn't require ammo!");
   else {

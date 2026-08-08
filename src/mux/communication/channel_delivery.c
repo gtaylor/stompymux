@@ -22,6 +22,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/fifo.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/player.h"
@@ -76,7 +77,7 @@ char *comsys_channel_from_alias(EvaluationContext *evaluation, DbRef player,
 
   while (dir && (first <= last)) {
     current = (first + last) / 2;
-    dir = strcasecmp(alias, c->alias + 6 * current);
+    dir = strcasecmp(alias, commac_alias_at(c, (size_t)current));
     if (dir < 0)
       last = current - 1;
     else
@@ -84,7 +85,7 @@ char *comsys_channel_from_alias(EvaluationContext *evaluation, DbRef player,
   }
 
   if (!dir)
-    return c->channels[current];
+    return commac_channel_at(c, (size_t)current);
   else {
     /* This function's other branch returns a genuinely mutable char *
        from c->channels[]; the return type can't be const. */
@@ -138,7 +139,11 @@ void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
   struct comuser *user;
 
   if ((strlen(arg1) + strlen(arg2)) > LBUF_SIZE / 2) {
-    arg2[LBUF_SIZE / 2 - strlen(arg1)] = '\0';
+    const size_t name_length = strlen(arg1);
+    const size_t limit =
+        name_length < LBUF_SIZE / 2 ? LBUF_SIZE / 2 - name_length : 0;
+
+    *(char *)checked_storage_at(arg2, LBUF_SIZE, sizeof(char), limit) = '\0';
   }
   if (!*arg2) {
     raw_notify(evaluation, player, "No message.");
@@ -187,7 +192,8 @@ void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
     return;
   } else {
     char plain_message[LBUF_SIZE];
-    const char *message = (*arg2 == ':' || *arg2 == ';') ? arg2 + 1 : arg2;
+    const char *message =
+        (*arg2 == ':' || *arg2 == ';') ? checked_string_suffix(arg2, 1) : arg2;
 
     styled_text_strip(evaluation->world->styled_text_palette, message,
                       plain_message, sizeof(plain_message));

@@ -33,11 +33,41 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
+#include "weapon_catalogue_api.h"
+
+static const unsigned long *tic_word(const Mech *mech, int tic, int word) {
+  if (tic < 0 || word < 0)
+    abort();
+  size_t index = (size_t)tic * TICLONGS + (size_t)word;
+  return checked_storage_at_const(mech->tic, NUM_TICS * TICLONGS,
+                                  sizeof(unsigned long), index);
+}
+
+static unsigned long *tic_word_mutable(Mech *mech, int tic, int word) {
+  if (tic < 0 || word < 0)
+    abort();
+  size_t index = (size_t)tic * TICLONGS + (size_t)word;
+  return checked_storage_at(mech->tic, NUM_TICS * TICLONGS,
+                            sizeof(unsigned long), index);
+}
+
+static void tic_weapon_add(Mech *mech, int tic, int weapon_number) {
+  int word = weapon_number / SINGLE_TICLONG_SIZE;
+  unsigned int bit = (unsigned int)weapon_number % SINGLE_TICLONG_SIZE;
+  *tic_word_mutable(mech, tic, word) |= 1UL << bit;
+}
+
+static void tic_weapon_remove(Mech *mech, int tic, int weapon_number) {
+  int word = weapon_number / SINGLE_TICLONG_SIZE;
+  unsigned int bit = (unsigned int)weapon_number % SINGLE_TICLONG_SIZE;
+  *tic_word_mutable(mech, tic, word) &= ~(1UL << bit);
+}
 
 bool mech_tic_contains_weapon(const Mech *mech, int tic, int weapon_number) {
   const int word = weapon_number / SINGLE_TICLONG_SIZE;
   const int bit = weapon_number % SINGLE_TICLONG_SIZE;
-  return mech->tic[tic][word] & (1 << bit);
+  return *tic_word(mech, tic, word) & (1UL << (unsigned int)bit);
 }
 #include "mux/support/formatting.h"
 #include "registry_api.h"
@@ -70,7 +100,7 @@ int cleartic_sub_func(Mech *mech, DbRef player, int low, int high,
 
   for (i = low; i <= high; i++) {
     for (j = 0; j < TICLONGS; j++)
-      mech->tic[i][j] = 0;
+      *tic_word_mutable(mech, i, j) = 0;
     notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "TIC #%d cleared!", i);
   }
@@ -95,9 +125,7 @@ int addtic_sub_func(Mech *mech, DbRef player, int low, int high,
   const TicSelectionContext *selection = context;
 
   for (i = low; i <= high; i++) {
-    size_t word = (size_t)i / SINGLE_TICLONG_SIZE;
-    unsigned int bit = (unsigned int)i % SINGLE_TICLONG_SIZE;
-    mech->tic[selection->tic][word] |= 1UL << bit;
+    tic_weapon_add(mech, selection->tic, i);
   }
   if (low != high)
     notify_printf(btech_context_evaluation(mech->xcode.context), player,
@@ -135,9 +163,7 @@ int deltic_sub_func(Mech *mech, DbRef player, int low, int high,
   const TicSelectionContext *selection = context;
 
   for (i = low; i <= high; i++) {
-    size_t word = (size_t)i / SINGLE_TICLONG_SIZE;
-    unsigned int bit = (unsigned int)i % SINGLE_TICLONG_SIZE;
-    mech->tic[selection->tic][word] &= ~(1UL << bit);
+    tic_weapon_remove(mech, selection->tic, i);
   }
   if (low != high)
     notify_printf(btech_context_evaluation(mech->xcode.context), player,
@@ -187,9 +213,9 @@ int firetic_sub_func(Mech *mech, DbRef player, int low, int high,
                   "Firing weapons in tic #%d!", i);
     count = 0;
     for (k = 0; k < TICLONGS; k++)
-      if (mech->tic[i][k])
+      if (*tic_word(mech, i, k))
         for (j = 0; j < SINGLE_TICLONG_SIZE; j++)
-          if (mech->tic[i][k] & (1 << j)) {
+          if (*tic_word(mech, i, k) & (1UL << (unsigned int)j)) {
             weapnum = k * SINGLE_TICLONG_SIZE + j;
             FireWeaponNumber(player, mech, mech_map, weapnum,
                              selection->argument_count, selection->arguments,
@@ -238,7 +264,7 @@ void firetic_sub(DbRef player, Mech *mech, char *buffer) {
 }
 
 static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
-  int j, k, l, section, critical;
+  int j, section, critical;
   int count = 0;
   ListTicContext *list = context;
   Mech *mech = list->mech;
@@ -250,25 +276,23 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
   }
   rtar = i / 2 + (i % 2 ? ((list->weapon_count + 1) / 2) : 0);
   for (j = 0; j < MAX_WEAPONS_PER_MECH; j++) {
-    k = (int)((size_t)j / SINGLE_TICLONG_SIZE);
-    l = (int)((unsigned int)j % SINGLE_TICLONG_SIZE);
-    if (mech->tic[list->tic][(size_t)k] & (1UL << (unsigned int)l)) {
+    if (mech_tic_contains_weapon(mech, list->tic, j)) {
       if (count == rtar) {
         if ((FindWeaponNumberOnMech(mech, j, &section, &critical)) == -1) {
-          mech->tic[list->tic][(size_t)k] &= ~(1UL << (unsigned int)l);
+          tic_weapon_remove(mech, list->tic, j);
           j = MAX_WEAPONS_PER_MECH;
           continue;
         }
-        snprintf(
-            buffer, LBUF_SIZE, "#%2d %3s %-16s %s", j,
-            armor_section_abbreviation(((mech)->ud.type), ((mech)->ud.move),
-                                       section)
-                .text,
-            &MechWeapons[weapon_from_equipment_index(
-                             mech_critical_part_type(mech, section, critical))]
-                 .name[3],
-            mech_critical_is_nonfunctional(mech, section, critical) ? "(*)"
-                                                                    : "");
+        snprintf(buffer, LBUF_SIZE, "#%2d %3s %-16s %s", j,
+                 armor_section_abbreviation(((mech)->ud.type),
+                                            ((mech)->ud.move), section)
+                     .text,
+                 checked_string_suffix(
+                     weapon_catalogue_name(weapon_from_equipment_index(
+                         mech_critical_part_type(mech, section, critical))),
+                     3),
+                 mech_critical_is_nonfunctional(mech, section, critical) ? "(*)"
+                                                                         : "");
         return buffer;
       }
       count++;
@@ -281,7 +305,7 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
 void listtic_sub(DbRef player, Mech *mech, char *buffer) {
   int ticnum, argc;
   char *args[2];
-  int i, j, k, count = 0;
+  int i, count = 0;
   CoolMenu *c;
   ListTicContext list;
 
@@ -297,9 +321,7 @@ void listtic_sub(DbRef player, Mech *mech, char *buffer) {
     return;
   }
   for (i = 0; i < MAX_WEAPONS_PER_MECH; i++) {
-    j = i / SINGLE_TICLONG_SIZE;
-    k = i % SINGLE_TICLONG_SIZE;
-    if (mech->tic[ticnum][j] & (1 << k))
+    if (mech_tic_contains_weapon(mech, ticnum, i))
       count++;
   }
   list = (ListTicContext){

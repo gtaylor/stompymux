@@ -202,19 +202,18 @@ int mech_los_calculate_flags(Mech *mech, Mech *target, BattleMap *map, int x,
 
   if (coordcount > 0) { /* not in same hex ; in same hex, you see always */
     for (i = 0; i < coordcount; i++) {
+      const LosTracePoint *point = los_trace_point_at(&trace, i);
       pos_z += z_inc;
 #ifndef BT_PARTIAL
       partial_z += p_z_inc;
 #endif
-      if (!battle_map_coordinate_is_valid(map, trace.points[i].x,
-                                          trace.points[i].y))
+      if (!battle_map_coordinate_is_valid(map, point->x, point->y))
         continue;
       /* Should be possible to see into water.. perhaps. But not
          on vislight */
-      terrain = map_real_terrain_get(map, trace.points[i].x, trace.points[i].y);
+      terrain = map_real_terrain_get(map, point->x, point->y);
       /* get the current height */
-      height =
-          battle_map_hex_elevation(map, trace.points[i].x, trace.points[i].y);
+      height = battle_map_hex_elevation(map, point->x, point->y);
       const float height_as_float = (float)height;
 
       /* If you, persoanlly, are underwater, the only way you can see someone
@@ -243,7 +242,7 @@ int mech_los_calculate_flags(Mech *mech, Mech *target, BattleMap *map, int x,
       } else { /* Viewer is not underwater */
         /* keep track of how many wooded hexes we cross */
         if (pos_z < height_as_float + 2.0F) {
-          switch (map_terrain_get(map, trace.points[i].x, trace.points[i].y)) {
+          switch (map_terrain_get(map, point->x, point->y)) {
           case BATTLE_TERRAIN_SMOKE:
             if (i < coordcount - 1)
               new_flag |= BATTLE_MAP_LOS_SMOKE;
@@ -306,9 +305,10 @@ int mech_los_calculate_flags(Mech *mech, Mech *target, BattleMap *map, int x,
 
   if (coordcount >= 2)
     if (dopartials) {
+      const LosTracePoint *penultimate =
+          los_trace_point_at(&trace, coordcount - 2);
       if (mech_position_z(target) >= mech_position_z(mech) &&
-          (battle_map_hex_elevation(map, trace.points[coordcount - 2].x,
-                                    trace.points[coordcount - 2].y) ==
+          (battle_map_hex_elevation(map, penultimate->x, penultimate->y) ==
            (mech_position_z(target) + 1)))
         new_flag |= BATTLE_MAP_LOS_PARTIAL_COVER;
       if (mech_position_z(target) == -1 &&

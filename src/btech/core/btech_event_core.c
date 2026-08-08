@@ -5,6 +5,7 @@
 
 #include "btech_event.h"
 #include "mux/network/mux_event.h"
+#include "mux/support/checked_storage.h"
 
 static const char *const event_names[] = {
     "NONAME",     "Move",        "DHIT",       "Startup",    "Lock",
@@ -30,10 +31,10 @@ static void *event_payload(intptr_t data) { return (void *)data; }
 const char *btech_event_name(int type) {
   constexpr size_t event_name_count =
       sizeof(event_names) / sizeof(event_names[0]) - 1;
-  if (type < 0 || (size_t)type >= event_name_count) {
-    return event_names[0];
-  }
-  return event_names[type];
+  const size_t index =
+      type < 0 || (size_t)type >= event_name_count ? 0 : (size_t)type;
+  return *(const char *const *)checked_storage_at_const(
+      event_names, event_name_count, sizeof(*event_names), index);
 }
 
 void btech_event_schedule(MuxEventScheduler *events, void *object, int type,

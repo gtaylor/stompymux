@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/styled_text/render.h"
 
@@ -127,6 +128,30 @@ typedef struct StyledLinkConfig {
   char *preset;
 } StyledLinkConfig;
 
+static inline StyledLinkMenuItem *
+styled_link_menu_item_at(StyledLinkConfig *config, size_t index) {
+  return checked_storage_at(config->menu, config->menu_count,
+                            sizeof(*config->menu), index);
+}
+
+static inline const StyledLinkMenuItem *
+styled_link_menu_item_at_const(const StyledLinkConfig *config, size_t index) {
+  return checked_storage_at_const(config->menu, config->menu_count,
+                                  sizeof(*config->menu), index);
+}
+
+static inline StyledLinkProperties *
+styled_link_style_state(StyledLinkStyle *style, size_t index) {
+  return checked_storage_at(style->states, STYLED_LINK_STATE_COUNT,
+                            sizeof(*style->states), index);
+}
+
+static inline const StyledLinkProperties *
+styled_link_style_state_const(const StyledLinkStyle *style, size_t index) {
+  return checked_storage_at_const(style->states, STYLED_LINK_STATE_COUNT,
+                                  sizeof(*style->states), index);
+}
+
 typedef struct StyledTextPreset {
   char *name;
   StyledLinkConfig config;
@@ -147,6 +172,30 @@ struct StyledTextPalette {
   size_t preset_count;
   size_t preset_capacity;
 };
+
+static inline CustomNamedColor *styled_palette_color(StyledTextPalette *palette,
+                                                     size_t index) {
+  return checked_storage_at(palette->colors, palette->capacity,
+                            sizeof(*palette->colors), index);
+}
+
+static inline const CustomNamedColor *
+styled_palette_color_const(const StyledTextPalette *palette, size_t index) {
+  return checked_storage_at_const(palette->colors, palette->capacity,
+                                  sizeof(*palette->colors), index);
+}
+
+static inline StyledTextPreset *
+styled_palette_preset(StyledTextPalette *palette, size_t index) {
+  return checked_storage_at(palette->presets, palette->preset_capacity,
+                            sizeof(*palette->presets), index);
+}
+
+static inline const StyledTextPreset *
+styled_palette_preset_const(const StyledTextPalette *palette, size_t index) {
+  return checked_storage_at_const(palette->presets, palette->preset_capacity,
+                                  sizeof(*palette->presets), index);
+}
 
 enum {
   STYLE_STACK_LIMIT = 32,

@@ -8,13 +8,14 @@
  *
  */
 
-#include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "mech_parts.h"
 #include "mux/server/platform.h"
 /* All the *_{succ|fail|econ} functions belong here */
 #include "btech/context.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
@@ -25,10 +26,13 @@
 #include "mech_tech_do_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "repair_job.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 
 static bool parts_consume_one(DbRef player, Mech *mech, int location, int part,
                               int brand, int count) {
@@ -68,7 +72,7 @@ static bool parts_consume_four(DbRef player, Mech *mech, int first_part,
                             sizeof(requirements) / sizeof(requirements[0]));
 }
 
-static const struct {
+typedef struct AmmoType {
   char name;         /* Letter identifying the ammo in 'reload' */
   const char *lname; /* Long name (for printing) */
   int aflag;         /* Flag to set on the crittype */
@@ -83,7 +87,9 @@ static const struct {
   int nspec;         /* disallowes 'special' flags: if non-zero,
                                 weapon cannot have any of these bits set,
                                 in the special flag, to allow this ammo */
-} ammo_types[] = {
+} AmmoType;
+
+static const AmmoType ammo_types[] = {
     {'-', "normal", 0, -1, -1, 0, 0},
     {'L', "cluster", LBX_MODE, -1, -1, LBX, 0},
     {'A', "artemis", ARTEMIS_MODE, TMISSILE, -1, 0, DAR | NARC | INARC},
@@ -107,30 +113,38 @@ static const struct {
     {'#', "lrmmode", MML_LRM_MODE, TMISSILE, -1, IDF, DAR},
     {0, NULL, 0, 0, 0, 0, 0}};
 
+static const AmmoType *ammo_type(int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at_const(ammo_types, 22, sizeof(*ammo_types),
+                                  (size_t)index);
+}
+
 int valid_ammo_mode(Mech *mech, int loc, int part, int let) {
   int w, i;
 
   if (!equipment_is_ammunition(mech_critical_part_type(mech, loc, part)) ||
       !let)
     return -1;
-  let = toupper(let);
+  let = ascii_to_upper(clamp_int_to_char(let));
   w = ammunition_to_weapon_index(mech_critical_part_type(mech, loc, part));
 
-  if (MechWeapons[w].special & NOSPA)
+  if (weapon_catalogue_has_special(w, NOSPA))
     return -1;
 
-  for (i = 0; ammo_types[i].name; i++) {
-    if (ammo_types[i].name != let)
+  for (i = 0; ammo_type(i)->name; i++) {
+    const AmmoType *type = ammo_type(i);
+    if (type->name != let)
       continue;
-    if (ammo_types[i].rtype >= 0 && MechWeapons[w].type != ammo_types[i].rtype)
+    if (type->rtype >= 0 && weapon_catalogue_type(w) != type->rtype)
       continue;
-    if (ammo_types[i].rspec && !(MechWeapons[w].special & ammo_types[i].rspec))
+    if (type->rspec && !weapon_catalogue_has_special(w, type->rspec))
       continue;
-    if (ammo_types[i].ntype >= 0 && MechWeapons[w].type == ammo_types[i].ntype)
+    if (type->ntype >= 0 && weapon_catalogue_type(w) == type->ntype)
       continue;
-    if (ammo_types[i].nspec && (MechWeapons[w].special & ammo_types[i].nspec))
+    if (type->nspec && weapon_catalogue_has_special(w, type->nspec))
       continue;
-    return ammo_types[i].aflag;
+    return type->aflag;
   }
   return -1;
 }
@@ -144,21 +158,21 @@ int FindAmmoType(Mech *mech, int loc, int part) {
     return t;
   t = ammunition_to_weapon_index(t);
 
-  if (strstr(MechWeapons[t].name, "StreakSRM"))
+  if (strstr(weapon_catalogue_name(t), "StreakSRM"))
     base = SSRM_AMMO;
-  else if (strstr(MechWeapons[t].name, "StreakLRM"))
+  else if (strstr(weapon_catalogue_name(t), "StreakLRM"))
     base = SLRM_AMMO;
-  else if (strstr(MechWeapons[t].name, "ELRM"))
+  else if (strstr(weapon_catalogue_name(t), "ELRM"))
     base = ELRM_AMMO;
-  else if (strstr(MechWeapons[t].name, "LR_DFM"))
+  else if (strstr(weapon_catalogue_name(t), "LR_DFM"))
     base = LR_DFM_AMMO;
-  else if (strstr(MechWeapons[t].name, "SR_DFM"))
+  else if (strstr(weapon_catalogue_name(t), "SR_DFM"))
     base = SR_DFM_AMMO;
-  else if (strstr(MechWeapons[t].name, "LRM"))
+  else if (strstr(weapon_catalogue_name(t), "LRM"))
     base = LRM_AMMO;
-  else if (strstr(MechWeapons[t].name, "SRM"))
+  else if (strstr(weapon_catalogue_name(t), "SRM"))
     base = SRM_AMMO;
-  else if (strstr(MechWeapons[t].name, "MRM"))
+  else if (strstr(weapon_catalogue_name(t), "MRM"))
     base = MRM_AMMO;
 
   if (!(m & AMMO_MODES)) {
@@ -169,13 +183,13 @@ int FindAmmoType(Mech *mech, int loc, int part) {
   }
 
   if (m & LBX_MODE) {
-    if (strstr(MechWeapons[t].name, "LB20"))
+    if (strstr(weapon_catalogue_name(t), "LB20"))
       base = LBX20_AMMO;
-    else if (strstr(MechWeapons[t].name, "LB10"))
+    else if (strstr(weapon_catalogue_name(t), "LB10"))
       base = LBX10_AMMO;
-    else if (strstr(MechWeapons[t].name, "LB5"))
+    else if (strstr(weapon_catalogue_name(t), "LB5"))
       base = LBX5_AMMO;
-    else if (strstr(MechWeapons[t].name, "LB2"))
+    else if (strstr(weapon_catalogue_name(t), "LB2"))
       base = LBX2_AMMO;
     if (base < 0)
       return ammunition_equipment_index(t);
@@ -184,77 +198,77 @@ int FindAmmoType(Mech *mech, int loc, int part) {
 
   if (m & AC_MODES) {
     if (m & AC_AP_MODE) {
-      if (strstr(MechWeapons[t].name, "AC/2"))
+      if (strstr(weapon_catalogue_name(t), "AC/2"))
         base = AC2_AP_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/5"))
+      if (strstr(weapon_catalogue_name(t), "AC/5"))
         base = AC5_AP_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/10"))
+      if (strstr(weapon_catalogue_name(t), "AC/10"))
         base = AC10_AP_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/20"))
+      if (strstr(weapon_catalogue_name(t), "AC/20"))
         base = AC20_AP_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/2"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/2"))
         base = LAC2_AP_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/5"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/5"))
         base = LAC5_AP_AMMO;
     }
 
     if (m & AC_FLECHETTE_MODE) {
-      if (strstr(MechWeapons[t].name, "AC/2"))
+      if (strstr(weapon_catalogue_name(t), "AC/2"))
         base = AC2_FLECHETTE_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/5"))
+      if (strstr(weapon_catalogue_name(t), "AC/5"))
         base = AC5_FLECHETTE_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/10"))
+      if (strstr(weapon_catalogue_name(t), "AC/10"))
         base = AC10_FLECHETTE_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/20"))
+      if (strstr(weapon_catalogue_name(t), "AC/20"))
         base = AC20_FLECHETTE_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/2"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/2"))
         base = LAC2_FLECHETTE_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/5"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/5"))
         base = LAC5_FLECHETTE_AMMO;
     }
 
     if (m & AC_INCENDIARY_MODE) {
-      if (strstr(MechWeapons[t].name, "AC/2"))
+      if (strstr(weapon_catalogue_name(t), "AC/2"))
         base = AC2_INCENDIARY_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/5"))
+      if (strstr(weapon_catalogue_name(t), "AC/5"))
         base = AC5_INCENDIARY_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/10"))
+      if (strstr(weapon_catalogue_name(t), "AC/10"))
         base = AC10_INCENDIARY_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/20"))
+      if (strstr(weapon_catalogue_name(t), "AC/20"))
         base = AC20_INCENDIARY_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/2"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/2"))
         base = LAC2_INCENDIARY_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/5"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/5"))
         base = LAC5_INCENDIARY_AMMO;
     }
 
     if (m & AC_PRECISION_MODE) {
-      if (strstr(MechWeapons[t].name, "AC/2"))
+      if (strstr(weapon_catalogue_name(t), "AC/2"))
         base = AC2_PRECISION_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/5"))
+      if (strstr(weapon_catalogue_name(t), "AC/5"))
         base = AC5_PRECISION_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/10"))
+      if (strstr(weapon_catalogue_name(t), "AC/10"))
         base = AC10_PRECISION_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/20"))
+      if (strstr(weapon_catalogue_name(t), "AC/20"))
         base = AC20_PRECISION_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/2"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/2"))
         base = LAC2_PRECISION_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/5"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/5"))
         base = LAC5_PRECISION_AMMO;
     }
 
     if (m & AC_CASELESS_MODE) {
-      if (strstr(MechWeapons[t].name, "AC/2"))
+      if (strstr(weapon_catalogue_name(t), "AC/2"))
         base = AC2_CASELESS_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/5"))
+      if (strstr(weapon_catalogue_name(t), "AC/5"))
         base = AC5_CASELESS_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/10"))
+      if (strstr(weapon_catalogue_name(t), "AC/10"))
         base = AC10_CASELESS_AMMO;
-      if (strstr(MechWeapons[t].name, "AC/20"))
+      if (strstr(weapon_catalogue_name(t), "AC/20"))
         base = AC20_CASELESS_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/2"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/2"))
         base = LAC2_CASELESS_AMMO;
-      if (strstr(MechWeapons[t].name, "LightAC/5"))
+      if (strstr(weapon_catalogue_name(t), "LightAC/5"))
         base = LAC5_CASELESS_AMMO;
     }
     if (base < 0)

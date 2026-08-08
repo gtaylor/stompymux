@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
+
 /*
  * ---------------------------------------------------------------------------
  * ConfigTomlKind: how a mapped directive's TOML value is flattened back into
@@ -272,10 +274,51 @@ static const ConfigTomlMapping config_toml_map[] = {
     {nullptr, nullptr, CFG_KIND_SCALAR},
 };
 
-static const ConfigTomlMapping *configuration_toml_map_find(const char *path) {
-  const ConfigTomlMapping *m;
+static size_t configuration_toml_array_count(toml_datum_t array) {
+  return array.type == TOML_ARRAY && array.u.arr.size > 0
+             ? (size_t)array.u.arr.size
+             : 0;
+}
 
-  for (m = config_toml_map; m->pname != nullptr; m++) {
+static toml_datum_t configuration_toml_array_item(toml_datum_t array,
+                                                  size_t index) {
+  return *(const toml_datum_t *)checked_storage_at_const(
+      array.u.arr.elem, configuration_toml_array_count(array),
+      sizeof(*array.u.arr.elem), index);
+}
+
+static size_t configuration_toml_table_count(toml_datum_t table) {
+  return table.type == TOML_TABLE && table.u.tab.size > 0
+             ? (size_t)table.u.tab.size
+             : 0;
+}
+
+static const char *configuration_toml_table_key(toml_datum_t table,
+                                                size_t index) {
+  return *(const char *const *)checked_storage_at_const(
+      table.u.tab.key, configuration_toml_table_count(table),
+      sizeof(*table.u.tab.key), index);
+}
+
+static toml_datum_t configuration_toml_table_value(toml_datum_t table,
+                                                   size_t index) {
+  return *(const toml_datum_t *)checked_storage_at_const(
+      table.u.tab.value, configuration_toml_table_count(table),
+      sizeof(*table.u.tab.value), index);
+}
+
+static const ConfigTomlMapping *configuration_toml_mapping_at(size_t index) {
+  return checked_storage_at_const(
+      config_toml_map, sizeof(config_toml_map) / sizeof(config_toml_map[0]) - 1,
+      sizeof(*config_toml_map), index);
+}
+
+static const ConfigTomlMapping *configuration_toml_map_find(const char *path) {
+  const size_t count = sizeof(config_toml_map) / sizeof(config_toml_map[0]) - 1;
+
+  for (size_t index = 0; index < count; index++) {
+    const ConfigTomlMapping *m = configuration_toml_mapping_at(index);
+
     if (!strcmp(m->toml_path, path))
       return m;
   }
@@ -291,23 +334,27 @@ static char *configuration_toml_join_strings(toml_datum_t array,
                                              const char *sep) {
   size_t total;
   size_t seplen;
-  int i;
   char *out;
 
   seplen = strlen(sep);
   total = 1;
-  for (i = 0; i < array.u.arr.size; i++) {
-    if (array.u.arr.elem[i].type == TOML_STRING)
-      total += strlen(array.u.arr.elem[i].u.s) + seplen;
+  for (size_t i = 0; i < configuration_toml_array_count(array); i++) {
+    toml_datum_t element = configuration_toml_array_item(array, i);
+
+    if (element.type == TOML_STRING)
+      total += strlen(element.u.s) + seplen;
   }
   out = malloc(total);
-  out[0] = '\0';
-  for (i = 0; i < array.u.arr.size; i++) {
-    if (array.u.arr.elem[i].type != TOML_STRING)
+  *(char *)checked_storage_at(out, total, sizeof(char), 0) = '\0';
+  for (size_t i = 0; i < configuration_toml_array_count(array); i++) {
+    toml_datum_t element = configuration_toml_array_item(array, i);
+
+    if (element.type != TOML_STRING)
       continue;
-    if (out[0] != '\0')
+    if (*(const char *)checked_storage_at_const(out, total, sizeof(char), 0) !=
+        '\0')
       strcat(out, sep);
-    strcat(out, array.u.arr.elem[i].u.s);
+    strcat(out, element.u.s);
   }
   return out;
 }
@@ -336,7 +383,6 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
   char scalar_buf[512];
   char *joined;
   char *args;
-  int i;
 
   switch (m->kind) {
   case CFG_KIND_SCALAR:
@@ -364,10 +410,12 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       fprintf(stderr, "configuration_toml: '%s' expected an array\n", path);
       return;
     }
-    for (i = 0; i < value.u.arr.size; i++) {
-      if (value.u.arr.elem[i].type != TOML_STRING)
+    for (size_t i = 0; i < configuration_toml_array_count(value); i++) {
+      toml_datum_t element = configuration_toml_array_item(value, i);
+
+      if (element.type != TOML_STRING)
         continue;
-      set_fn(m->pname, value.u.arr.elem[i].u.s, ctx);
+      set_fn(m->pname, element.u.s, ctx);
     }
     return;
 
@@ -376,16 +424,16 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       fprintf(stderr, "configuration_toml: '%s' expected a table\n", path);
       return;
     }
-    for (i = 0; i < value.u.tab.size; i++) {
+    for (size_t i = 0; i < configuration_toml_table_count(value); i++) {
+      toml_datum_t element = configuration_toml_table_value(value, i);
+      const char *key = configuration_toml_table_key(value, i);
       size_t len;
 
-      if (value.u.tab.value[i].type != TOML_STRING)
+      if (element.type != TOML_STRING)
         continue;
-      len =
-          strlen(value.u.tab.key[i]) + 1 + strlen(value.u.tab.value[i].u.s) + 1;
+      len = strlen(key) + 1 + strlen(element.u.s) + 1;
       args = malloc(len);
-      snprintf(args, len, "%s %s", value.u.tab.key[i],
-               value.u.tab.value[i].u.s);
+      snprintf(args, len, "%s %s", key, element.u.s);
       set_fn(m->pname, args, ctx);
       free(args);
     }
@@ -397,21 +445,21 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       set_fn(m->pname, "", ctx);
       return;
     }
-    for (i = 0; i < value.u.tab.size; i++) {
+    for (size_t i = 0; i < configuration_toml_table_count(value); i++) {
+      toml_datum_t element = configuration_toml_table_value(value, i);
+      const char *key = configuration_toml_table_key(value, i);
       size_t len;
 
-      if (value.u.tab.value[i].type != TOML_STRING) {
+      if (element.type != TOML_STRING) {
         fprintf(stderr, "configuration_toml: '%s.%s' expected a string\n", path,
-                value.u.tab.key[i]);
-        len = strlen(value.u.tab.key[i]) + 2;
+                key);
+        len = strlen(key) + 2;
         args = malloc(len);
-        snprintf(args, len, "%s ", value.u.tab.key[i]);
+        snprintf(args, len, "%s ", key);
       } else {
-        len = strlen(value.u.tab.key[i]) + 1 +
-              strlen(value.u.tab.value[i].u.s) + 1;
+        len = strlen(key) + 1 + strlen(element.u.s) + 1;
         args = malloc(len);
-        snprintf(args, len, "%s %s", value.u.tab.key[i],
-                 value.u.tab.value[i].u.s);
+        snprintf(args, len, "%s %s", key, element.u.s);
       }
       set_fn(m->pname, args, ctx);
       free(args);
@@ -423,8 +471,9 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       fprintf(stderr, "configuration_toml: '%s' expected a table\n", path);
       return;
     }
-    for (i = 0; i < value.u.tab.size; i++) {
-      toml_datum_t perm_value = value.u.tab.value[i];
+    for (size_t i = 0; i < configuration_toml_table_count(value); i++) {
+      toml_datum_t perm_value = configuration_toml_table_value(value, i);
+      const char *key = configuration_toml_table_key(value, i);
       const char *perms = nullptr;
       char *owned = nullptr;
       size_t len;
@@ -437,12 +486,12 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       } else {
         fprintf(stderr,
                 "configuration_toml: '%s.%s' expected a string or array\n",
-                path, value.u.tab.key[i]);
+                path, key);
         continue;
       }
-      len = strlen(value.u.tab.key[i]) + 1 + strlen(perms) + 1;
+      len = strlen(key) + 1 + strlen(perms) + 1;
       args = malloc(len);
-      snprintf(args, len, "%s %s", value.u.tab.key[i], perms);
+      snprintf(args, len, "%s %s", key, perms);
       set_fn(m->pname, args, ctx);
       free(args);
       free(owned);
@@ -454,36 +503,44 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       fprintf(stderr, "configuration_toml: '%s' expected a table\n", path);
       return;
     }
-    for (i = 0; i < value.u.tab.size; i++) {
-      toml_datum_t rgb = value.u.tab.value[i];
+    for (size_t i = 0; i < configuration_toml_table_count(value); i++) {
+      toml_datum_t rgb = configuration_toml_table_value(value, i);
+      const char *key = configuration_toml_table_key(value, i);
       size_t len;
+      toml_datum_t red;
+      toml_datum_t green;
+      toml_datum_t blue;
 
-      if (rgb.type != TOML_ARRAY || rgb.u.arr.size != 3 ||
-          rgb.u.arr.elem[0].type != TOML_INT64 ||
-          rgb.u.arr.elem[1].type != TOML_INT64 ||
-          rgb.u.arr.elem[2].type != TOML_INT64) {
+      if (rgb.type != TOML_ARRAY || configuration_toml_array_count(rgb) != 3) {
         fprintf(stderr,
                 "configuration_toml: '%s.%s' expected three RGB integers\n",
-                path, value.u.tab.key[i]);
+                path, key);
         continue;
       }
-      if (rgb.u.arr.elem[0].u.int64 < 0 || rgb.u.arr.elem[0].u.int64 > 255 ||
-          rgb.u.arr.elem[1].u.int64 < 0 || rgb.u.arr.elem[1].u.int64 > 255 ||
-          rgb.u.arr.elem[2].u.int64 < 0 || rgb.u.arr.elem[2].u.int64 > 255) {
+      red = configuration_toml_array_item(rgb, 0);
+      green = configuration_toml_array_item(rgb, 1);
+      blue = configuration_toml_array_item(rgb, 2);
+      if (red.type != TOML_INT64 || green.type != TOML_INT64 ||
+          blue.type != TOML_INT64) {
+        fprintf(stderr,
+                "configuration_toml: '%s.%s' expected three RGB integers\n",
+                path, key);
+        continue;
+      }
+      if (red.u.int64 < 0 || red.u.int64 > 255 || green.u.int64 < 0 ||
+          green.u.int64 > 255 || blue.u.int64 < 0 || blue.u.int64 > 255) {
         fprintf(stderr,
                 "configuration_toml: '%s.%s' RGB values must be from 0 "
                 "through 255\n",
-                path, value.u.tab.key[i]);
+                path, key);
         continue;
       }
-      len = strlen(value.u.tab.key[i]) + 96;
+      len = strlen(key) + 96;
       args = malloc(len);
       if (!args)
         continue;
-      snprintf(args, len, "%s %lld %lld %lld", value.u.tab.key[i],
-               (long long)rgb.u.arr.elem[0].u.int64,
-               (long long)rgb.u.arr.elem[1].u.int64,
-               (long long)rgb.u.arr.elem[2].u.int64);
+      snprintf(args, len, "%s %lld %lld %lld", key, (long long)red.u.int64,
+               (long long)green.u.int64, (long long)blue.u.int64);
       set_fn(m->pname, args, ctx);
       free(args);
     }
@@ -494,22 +551,22 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       fprintf(stderr, "configuration_toml: '%s' expected an array\n", path);
       return;
     }
-    for (i = 0; i < value.u.arr.size; i++) {
-      toml_datum_t entry = value.u.arr.elem[i];
+    for (size_t i = 0; i < configuration_toml_array_count(value); i++) {
+      toml_datum_t entry = configuration_toml_array_item(value, i);
       toml_datum_t address;
       toml_datum_t mask;
       size_t len;
 
       if (entry.type != TOML_TABLE) {
-        fprintf(stderr, "configuration_toml: '%s[%d]' expected a table\n", path,
-                i);
+        fprintf(stderr, "configuration_toml: '%s[%zu]' expected a table\n",
+                path, i);
         continue;
       }
       address = toml_get(entry, "address");
       mask = toml_get(entry, "mask");
       if (address.type != TOML_STRING || mask.type != TOML_STRING) {
         fprintf(stderr,
-                "configuration_toml: '%s[%d]' requires string 'address' and "
+                "configuration_toml: '%s[%zu]' requires string 'address' and "
                 "'mask'\n",
                 path, i);
         continue;
@@ -533,11 +590,9 @@ static void configuration_toml_walk_table(toml_datum_t table,
                                           const char *parent_path, bool is_root,
                                           ConfigDirectiveSetFn set_fn,
                                           void *ctx) {
-  int i;
-
-  for (i = 0; i < table.u.tab.size; i++) {
-    const char *key = table.u.tab.key[i];
-    toml_datum_t val = table.u.tab.value[i];
+  for (size_t i = 0; i < configuration_toml_table_count(table); i++) {
+    const char *key = configuration_toml_table_key(table, i);
+    toml_datum_t val = configuration_toml_table_value(table, i);
     char child_path[256];
     const ConfigTomlMapping *m;
 
@@ -581,6 +636,8 @@ static void configuration_toml_dirname(const char *path, char *out,
   const char *slash;
   size_t len;
 
+  if (out_size == 0)
+    return;
   slash = strrchr(path, '/');
   if (slash == nullptr) {
     out[0] = '\0';
@@ -590,7 +647,7 @@ static void configuration_toml_dirname(const char *path, char *out,
   if (len >= out_size)
     len = out_size - 1;
   memcpy(out, path, len);
-  out[len] = '\0';
+  *(char *)checked_storage_at(out, out_size, sizeof(char), len) = '\0';
 }
 
 static void configuration_toml_resolve(const char *base_dir, const char *rel,
@@ -633,7 +690,8 @@ static bool configuration_toml_load_merged(const char *path, int depth,
   configuration_toml_dirname(path, base_dir, sizeof(base_dir));
   have_acc = false;
   for (i = 0; i < include_array.u.arr.size; i++) {
-    toml_datum_t entry = include_array.u.arr.elem[i];
+    toml_datum_t entry =
+        configuration_toml_array_item(include_array, (size_t)i);
     char resolved[768];
     toml_result_t inc_result;
 

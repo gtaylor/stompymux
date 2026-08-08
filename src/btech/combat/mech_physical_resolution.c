@@ -10,6 +10,7 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_targeting_api.h"
+#include "mux/support/checked_storage.h"
 
 static int physical_forward_arc(Mech *mech, const Mech *target) {
   MechConditionSummary condition = mech_condition_summary(mech);
@@ -138,8 +139,10 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
     // with the physical attack.
 
     // Populate target variable from user input.
-    targetID[0] = args[0][0];
-    targetID[1] = args[0][1];
+    char **first_slot =
+        checked_storage_at(args, (size_t)argc, sizeof(*args), 0);
+    targetID[0] = *checked_string_suffix(*first_slot, 0);
+    targetID[1] = *checked_string_suffix(*first_slot, 1);
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
     target = btech_context_get_mech(mech_context(mech), targetnum);
 

@@ -38,8 +38,10 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 
 void mech_ammunition_decrement(Mech *mech, int weapindx, int section,
                                int critical, int ammoLoc, int ammoCrit,
@@ -53,12 +55,12 @@ void mech_ammunition_decrement(Mech *mech, int weapindx, int section,
   int firstCrit = 0;
 
   /* If we're an energy weapon or a PC weapon, return */
-  if (!(MechWeapons[weapindx].type != TBEAM &&
-        MechWeapons[weapindx].type != THAND))
+  if (weapon_catalogue_is_energy(weapindx) ||
+      weapon_catalogue_is_hand_to_hand(weapindx))
     return;
 
   /* If we're a rocket launcher, fire our load and return */
-  if (MechWeapons[weapindx].special == ROCKET) {
+  if (weapon_catalogue_is_only_rocket(weapindx)) {
     weapSize = GetWeaponCrits(mech, weapindx);
     firstCrit = FindFirstWeaponCrit(
         mech, section, critical, 0,
@@ -84,7 +86,7 @@ void mech_ammunition_decrement(Mech *mech, int weapindx, int section,
            (mech_critical_fire_mode(mech, section, critical) & RFAC_MODE))));
 
   if ((mech_critical_fire_mode(mech, section, critical) & GATTLING_MODE) ||
-      (MechWeapons[weapindx].special & RAC)) {
+      weapon_catalogue_is_rotary_autocannon(weapindx)) {
     if (mech_critical_fire_mode(mech, section, critical) & GATTLING_MODE)
       wShotsLeft = wGattlingShots * 3;
     else {
@@ -156,8 +158,8 @@ void mech_ammunition_expenditure_check(Mech *mech, int weapindx, int ns) {
         slots += mech_ammunition_slot_multiplier(mech, i, j);
       }
   }
-  t = BOUNDED(3, (int)(slots * (float)MechWeapons[weapindx].ammoperton / 8.0F),
-              30);
+  const int ammunition_per_ton = weapon_catalogue_ammunition_per_ton(weapindx);
+  t = BOUNDED(3, (int)(slots * (float)ammunition_per_ton / 8.0F), 30);
   t2 = 2 * t;
   if ((cnt == (t + ns)) || (ns && cnt >= t && cnt < (t + ns)))
     sev = 1;
@@ -335,8 +337,11 @@ void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason) {
     } else
       mech_los_broadcast(target, "has been destroyed!");
     if (showboom) {
-      for (loop = 0; loop < BOOM_LENGTH; loop++)
-        mech_notify(target, MECHALL, BOOM[loop]);
+      for (loop = 0; loop < BOOM_LENGTH; loop++) {
+        const char *const *message = checked_storage_at_const(
+            BOOM, BOOM_LENGTH, sizeof(*BOOM), (size_t)loop);
+        mech_notify(target, MECHALL, *message);
+      }
     }
     switch (mech_class(target)) {
     case CLASS_MW:

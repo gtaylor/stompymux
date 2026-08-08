@@ -40,9 +40,9 @@ static int check_committed_values(GameDatabase *database) {
 }
 
 int main(void) {
-  GameObject objects[2] = {0};
+  GameObject objects[3] = {0};
   GameDatabase database = {
-      .objects = objects,
+      .object_storage = objects,
       .top = 2,
       .size = 2,
   };

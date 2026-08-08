@@ -1,10 +1,5 @@
 #include "mux/commands/macro.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-
 #include "mux/commands/command_helpers.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/commac.h"
@@ -17,31 +12,38 @@
 #include "mux/server/server_config.h" // IWYU pragma: keep
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/utf8.h"
 #include "mux/support/validation.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
-void macro_registry_initialize(MacroRegistry *registry,
-                               ChannelRegistry *channels) {
-  memset(registry, 0, sizeof(*registry));
-  registry->channels = channels;
+static MacroSet *macro_registry_storage_item(const MacroRegistry *registry,
+                                             size_t index) {
+  return *(MacroSet *const *)checked_storage_at_const(
+      registry->sets, (size_t)registry->capacity, sizeof(*registry->sets),
+      index);
 }
-void macro_registry_destroy(MacroRegistry *registry) {
-  if (registry == nullptr)
-    return;
-  ChannelRegistry *channels = registry->channels;
-  for (int index = 0; index < registry->count; index++) {
-    MacroSet *set = registry->sets[index];
-    for (int macro = 0; macro < set->macro_count; macro++)
-      free(set->string[macro]);
-    free(set->desc);
-    free(set->alias);
-    free(set->string);
-    free(set);
-  }
-  free(registry->sets);
-  macro_registry_initialize(registry, channels);
+
+static char *macro_string_storage_item(const MacroSet *set, size_t index) {
+  return *(char *const *)checked_storage_at_const(
+      set->string, (size_t)set->macro_capacity, sizeof(*set->string), index);
+}
+
+static int *commac_macro_slot(struct commac *commac, size_t index) {
+  return checked_storage_at(commac->macros,
+                            sizeof(commac->macros) / sizeof(commac->macros[0]),
+                            sizeof(*commac->macros), index);
+}
+
+static int commac_macro_item(const struct commac *commac, size_t index) {
+  return *(const int *)checked_storage_at_const(
+      commac->macros, sizeof(commac->macros) / sizeof(commac->macros[0]),
+      sizeof(*commac->macros), index);
 }
 static bool is_valid_macro_index(const MacroRegistry *registry, int index) {
   return index >= 0 && index < registry->count;
@@ -57,13 +59,22 @@ MACENT macro_table[] = {{"add", do_add_macro},       {"clear", do_clear_macro},
                         {"gex", do_gex_macro},       {"glist", do_list_macro},
                         {"list", do_status_macro},   {"undef", do_undef_macro},
                         {(char *)nullptr, nullptr}};
-void init_mactab(CommandRegistry *commands) {
-  MACENT *mp;
+static size_t macro_command_count(void) {
+  return sizeof(macro_table) / sizeof(macro_table[0]) - 1;
+}
 
+static MACENT *macro_command_at(size_t index) {
+  return checked_storage_at(macro_table, macro_command_count(),
+                            sizeof(*macro_table), index);
+}
+void init_mactab(CommandRegistry *commands) {
   hash_table_initialize(&commands->macros, 5 * HASH_FACTOR);
 
-  for (mp = macro_table; mp->cmdname; mp++)
+  for (size_t index = 0; index < macro_command_count(); index++) {
+    MACENT *mp = macro_command_at(index);
+
     hash_table_add(mp->cmdname, (int *)mp, &commands->macros);
+  }
 }
 int do_macro(MatchContext *match, CommandRegistry *commands,
              MacroRegistry *registry, DbRef player, char *in, char **out) {
@@ -72,7 +83,7 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
   MACENT *mp;
   char *old;
 
-  cmd = in + 1;
+  cmd = checked_mutable_string_suffix(in, 1);
 
   if (!is_player(match->evaluation->world->database, player)) {
     macro_notify(match, player, "MACRO: Only players may use macro_sets.");
@@ -82,10 +93,19 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
 
   StringCopy(old, in);
 
-  for (s = cmd; *s && *s != ' '; s++)
-    ;
-  if (*s == ' ')
-    *s++ = 0;
+  const size_t command_length = strlen(cmd);
+  size_t command_end = 0;
+
+  while (command_end < command_length &&
+         *(const char *)checked_storage_at_const(
+             cmd, command_length + 1, sizeof(char), command_end) != ' ')
+    command_end++;
+  s = checked_storage_at(cmd, command_length + 1, sizeof(char), command_end);
+  if (*s == ' ') {
+    *s = 0;
+    s = checked_storage_at(cmd, command_length + 1, sizeof(char),
+                           command_end + 1);
+  }
 
   mp = (MACENT *)hash_table_find(cmd, &commands->macros);
   if (mp != nullptr) {
@@ -116,7 +136,7 @@ void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   char *unparse;
 
   for (i = 0; i < registry->count; i++) {
-    m = registry->sets[i];
+    m = macro_registry_item(registry, (size_t)i);
 
     if (can_read_macros(match->evaluation->world->database, player, m)) {
       if (!notified) {
@@ -151,7 +171,7 @@ void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 
   first = -1;
   for (i = 0; i < 5 && first < 0; i++)
-    if (c->macros[i] == -1)
+    if (commac_macro_item(c, (size_t)i) == -1)
       first = i;
 
   if (first < 0) {
@@ -160,9 +180,9 @@ void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   } else if (is_number(s)) {
     set = clamped_atoi(s);
     if (set >= 0 && set < registry->count) {
-      m = registry->sets[set];
+      m = macro_registry_item(registry, (size_t)set);
       if (can_read_macros(match->evaluation->world->database, player, m)) {
-        c->macros[first] = set;
+        *commac_macro_slot(c, (size_t)first) = set;
         notify_printf(match->evaluation, player,
                       "MACRO: Macro set %d added in the %d slot.", set, first);
       } else {
@@ -188,8 +208,8 @@ void do_del_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 
   if (is_number(s)) {
     set = clamped_atoi(s);
-    if (set >= 0 && set < 5 && c->macros[set] >= 0) {
-      c->macros[set] = -1;
+    if (set >= 0 && set < 5 && commac_macro_item(c, (size_t)set) >= 0) {
+      *commac_macro_slot(c, (size_t)set) = -1;
       notify_printf(match->evaluation, player, "MACRO: Macro slot %d cleared.",
                     set);
       if (set == c->curmac) {
@@ -236,7 +256,7 @@ void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     }
     if (*s == '!') {
       sign = 0;
-      s++;
+      s = checked_mutable_string_suffix(s, 1);
     } else
       sign = 1;
 
@@ -310,7 +330,7 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     registry->count - 1);
       return;
     } else
-      m = registry->sets[which];
+      m = macro_registry_item(registry, (size_t)which);
   } else {
     macro_notify(match, player, "MACRO: I do not see that set here.");
     return;
@@ -320,8 +340,8 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     notify_printf(match->evaluation, player, "Macro Definitions for %s",
                   m->desc);
     for (i = 0; i < m->macro_count; i++) {
-      snprintf(buffer, sizeof(buffer), "  %-5.5s: %s", m->alias + i * 5,
-               m->string[i]);
+      snprintf(buffer, sizeof(buffer), "  %-5.5s: %s",
+               macro_alias_at(m, (size_t)i), macro_string_item(m, (size_t)i));
       macro_notify(match, player, buffer);
     }
   } else
@@ -337,7 +357,8 @@ void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 
   if (is_number(s)) {
     set = clamped_atoi(s);
-    if (set >= 0 && set < 5 && is_valid_macro_index(registry, c->macros[set])) {
+    if (set >= 0 && set < 5 &&
+        is_valid_macro_index(registry, commac_macro_item(c, (size_t)set))) {
       c->curmac = set;
       notify_printf(match->evaluation, player, "MACRO: Current slot set to %d.",
                     set);
@@ -361,16 +382,18 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                "#: Num  Description                         Owner            "
                "         LRW");
   for (i = 0; i < 5; i++) {
-    if (c->macros[i] >= 0)
-      if (!(is_valid_macro_index(registry, c->macros[i])))
+    const int macro_index = commac_macro_item(c, (size_t)i);
+
+    if (macro_index >= 0)
+      if (!(is_valid_macro_index(registry, macro_index)))
         notify_printf(match->evaluation, player, "%d: INVALID MACRO SET!", i);
       else {
-        m = registry->sets[c->macros[i]];
+        m = macro_registry_item(registry, (size_t)macro_index);
         unparse = unparse_object(match->evaluation->world->database,
                                  match->evaluation, player, m->player);
         notify_printf(
             match->evaluation, player, "%d: %-4d %-35.35s %-24.24s  %c%c%c", i,
-            c->macros[i], m->desc, unparse, m->status & MACRO_L ? 'L' : '-',
+            macro_index, m->desc, unparse, m->status & MACRO_L ? 'L' : '-',
             m->status & MACRO_R ? 'R' : '-', m->status & MACRO_W ? 'W' : '-');
         free_lbuf(unparse);
       }
@@ -397,8 +420,8 @@ void do_ex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     notify_printf(match->evaluation, player, "Macro Definitions for %s",
                   m->desc);
     for (i = 0; i < m->macro_count; i++) {
-      snprintf(buffer, sizeof(buffer), "  %-5.5s: %s", m->alias + i * 5,
-               m->string[i]);
+      snprintf(buffer, sizeof(buffer), "  %-5.5s: %s",
+               macro_alias_at(m, (size_t)i), macro_string_item(m, (size_t)i));
       macro_notify(match, player, buffer);
     }
   } else
@@ -440,9 +463,9 @@ void clear_macro_set(MacroRegistry *registry, int set) {
   int i, j;
 
   if (is_valid_macro_index(registry, set)) {
-    m = registry->sets[set];
+    m = macro_registry_item(registry, (size_t)set);
     for (i = 0; i < m->macro_count; i++) {
-      free(m->string[i]);
+      free(macro_string_item(m, (size_t)i));
     }
     free(m->alias);
     free(m->string);
@@ -450,19 +473,22 @@ void clear_macro_set(MacroRegistry *registry, int set) {
 
     registry->count--;
     for (i = set; i < registry->count; i++)
-      registry->sets[i] = registry->sets[i + 1];
-    registry->sets[i] = nullptr;
+      *macro_registry_slot(registry, (size_t)i) =
+          macro_registry_storage_item(registry, (size_t)i + 1);
+    *macro_registry_slot(registry, (size_t)i) = nullptr;
   }
   for (i = 0; i < COMMAC_BUCKET_COUNT; i++) {
-    c = registry->channels->commacs[i];
+    c = channel_registry_bucket_at(registry->channels, (size_t)i);
     while (c) {
       for (j = 0; j < 5; j++) {
-        if (c->macros[j] == set) {
-          c->macros[j] = -1;
+        int *macro = commac_macro_slot(c, (size_t)j);
+
+        if (*macro == set) {
+          *macro = -1;
           if (c->curmac == j)
             c->curmac = -1;
-        } else if (c->macros[j] > set) {
-          c->macros[j]--;
+        } else if (*macro > set) {
+          (*macro)--;
         }
       }
       c = c->next;
@@ -482,12 +508,14 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     macro_notify(match, player,
                  "MACRO: You are not currently editing a macro set.");
     return;
-  } else if (c->macros[c->curmac] == -1) {
+  } else if (commac_macro_item(c, (size_t)c->curmac) == -1) {
     macro_notify(match, player, "MACRO: That is not a valid macro set.");
     return;
   }
-  set = c->macros[c->curmac];
-  m = is_valid_macro_index(registry, set) ? registry->sets[set] : nullptr;
+  set = commac_macro_item(c, (size_t)c->curmac);
+  m = is_valid_macro_index(registry, set)
+          ? macro_registry_item(registry, (size_t)set)
+          : nullptr;
 
   if (is_valid_macro_index(registry, set)) {
     if ((player != m->player) &&
@@ -526,22 +554,50 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     macro_notify(match, player, "MACRO: Permission denied.");
     return;
   }
-  for (alias = cmd; *alias && *alias == ' '; alias++)
-    *alias = 0;
+  char *input = cmd;
+  const size_t input_length = strlen(input);
+  size_t offset = 0;
 
-  cmd = alias;
-  for (; *cmd && *cmd != ' ' && *cmd != '='; cmd++)
-    ;
-  while (*cmd && *cmd == ' ')
-    *cmd++ = '\0';
-  if (*cmd != '=') {
+  while (offset < input_length &&
+         *(const char *)checked_storage_at_const(input, input_length + 1,
+                                                 sizeof(char), offset) == ' ') {
+    *(char *)checked_storage_at(input, input_length + 1, sizeof(char), offset) =
+        '\0';
+    offset++;
+  }
+  alias = checked_storage_at(input, input_length + 1, sizeof(char), offset);
+  while (offset < input_length) {
+    const char character = *(const char *)checked_storage_at_const(
+        input, input_length + 1, sizeof(char), offset);
+
+    if (character == ' ' || character == '=')
+      break;
+    offset++;
+  }
+  while (offset < input_length &&
+         *(const char *)checked_storage_at_const(input, input_length + 1,
+                                                 sizeof(char), offset) == ' ') {
+    *(char *)checked_storage_at(input, input_length + 1, sizeof(char), offset) =
+        '\0';
+    offset++;
+  }
+  if (*(const char *)checked_storage_at_const(input, input_length + 1,
+                                              sizeof(char), offset) != '=') {
     macro_notify(match, player,
                  "MACRO: You must specify an = in your macro definition");
     return;
   }
-  *cmd++ = 0;
-  while (*cmd && *cmd == ' ')
-    *cmd++ = 0;
+  *(char *)checked_storage_at(input, input_length + 1, sizeof(char), offset) =
+      0;
+  offset++;
+  while (offset < input_length &&
+         *(const char *)checked_storage_at_const(input, input_length + 1,
+                                                 sizeof(char), offset) == ' ') {
+    *(char *)checked_storage_at(input, input_length + 1, sizeof(char), offset) =
+        0;
+    offset++;
+  }
+  cmd = checked_storage_at(input, input_length + 1, sizeof(char), offset);
 
   s = cmd;
 
@@ -560,14 +616,15 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
         MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
-  for (j = 0; j < m->macro_count && (strcasecmp(alias, m->alias + j * 5) > 0);
+  for (j = 0; j < m->macro_count &&
+              (strcasecmp(alias, macro_alias_at(m, (size_t)j)) > 0);
        j++)
     ;
-  if (j < m->macro_count && !strcasecmp(alias, m->alias + j * 5)) {
+  if (j < m->macro_count && !strcasecmp(alias, macro_alias_at(m, (size_t)j))) {
     macro_notify(match, player,
                  "MACRO: That alias is already defined in this set.");
-    snprintf(buffer, sizeof(buffer), "%-4.4s:%s", m->alias + j * 5,
-             m->string[j]);
+    snprintf(buffer, sizeof(buffer), "%-4.4s:%s", macro_alias_at(m, (size_t)j),
+             macro_string_item(m, (size_t)j));
     macro_notify(match, player, buffer);
     return;
   }
@@ -577,8 +634,11 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     ns = malloc(sizeof(char *) * (size_t)m->macro_capacity);
 
     for (i = 0; i < m->macro_count; i++) {
-      StringCopy(na + i * 5, m->alias + i * 5);
-      ns[i] = m->string[i];
+      StringCopy(checked_storage_at(na, (size_t)m->macro_capacity * 5,
+                                    sizeof(char), (size_t)i * 5),
+                 macro_alias_at(m, (size_t)i));
+      *(char **)checked_storage_at(ns, (size_t)m->macro_capacity, sizeof(*ns),
+                                   (size_t)i) = macro_string_item(m, (size_t)i);
     }
     free(m->alias);
     free(m->string);
@@ -587,14 +647,14 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
   where = m->macro_count++;
   for (i = where; i > j; i--) {
-    StringCopy(m->alias + i * 5, m->alias + (i - 1) * 5);
-    m->string[i] = m->string[i - 1];
+    StringCopy(macro_alias_at(m, (size_t)i), macro_alias_at(m, (size_t)i - 1));
+    *macro_string_slot(m, (size_t)i) = macro_string_item(m, (size_t)i - 1);
   }
 
   where = j;
-  StringCopy(m->alias + where * 5, alias);
-  m->string[where] = malloc(strlen(s) + 1);
-  StringCopy(m->string[where], s);
+  StringCopy(macro_alias_at(m, (size_t)where), alias);
+  *macro_string_slot(m, (size_t)where) = malloc(strlen(s) + 1);
+  StringCopy(macro_string_item(m, (size_t)where), s);
   snprintf(buffer, sizeof(buffer), "MACRO: Macro %s:%s defined.", alias, s);
   macro_notify(match, player, buffer);
 }
@@ -611,12 +671,14 @@ void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     return;
   }
   for (i = 0; i < m->macro_count; i++) {
-    if (!strcmp(m->alias + i * 5, cmd)) {
-      free(m->string[i]);
+    if (!strcmp(macro_alias_at(m, (size_t)i), cmd)) {
+      free(macro_string_item(m, (size_t)i));
       m->macro_count--;
       for (; i < m->macro_count; i++) {
-        StringCopy(m->alias + i * 5, m->alias + i * 5 + 5);
-        m->string[i] = m->string[i + 1];
+        StringCopy(macro_alias_at(m, (size_t)i),
+                   macro_alias_at(m, (size_t)i + 1));
+        *macro_string_slot(m, (size_t)i) =
+            macro_string_storage_item(m, (size_t)i + 1);
       }
       macro_notify(match, player, "MACRO: Macro deleted from set.");
       return;
@@ -642,16 +704,18 @@ char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
                    * End the string
                    */
   for (i = 0; i < 5; i++) {
-    if (is_valid_macro_index(registry, c->macros[i])) {
-      m = registry->sets[c->macros[i]];
+    const int macro_index = commac_macro_item(c, (size_t)i);
+
+    if (is_valid_macro_index(registry, macro_index)) {
+      m = macro_registry_item(registry, (size_t)macro_index);
       if (m->macro_count > 0) {
         first = 0;
         last = m->macro_count - 1;
         dir = 1;
-        next = in + 1;
+        next = checked_mutable_string_suffix(in, 1);
         while (dir && (first <= last)) {
           current = (first + last) / 2;
-          dir = strcmp(next, m->alias + 5 * current);
+          dir = strcmp(next, macro_alias_at(m, (size_t)current));
           if (dir < 0)
             last = current - 1;
           else
@@ -659,22 +723,41 @@ char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
         }
 
         if (!dir) {
-          tar = m->string[current];
+          tar = macro_string_item(m, (size_t)current);
 #if 1 /* Original MUSE code */
-          next = buff;
-          while (*tar) {
-            if (*tar == '%' && *(tar + 1) == '*') {
-              *next++ = '*';
-              tar += 2;
-            } else if (*tar == '*') {
-              *next = 0;
-              strlcat(next, s, (size_t)(LBUF_SIZE - (next - buff)));
-              tar++;
-              next += strlen(next);
-            } else
-              *next++ = *tar++;
+          const size_t replacement_length = strlen(tar);
+          size_t replacement_offset = 0;
+          size_t output_offset = 0;
+
+          while (replacement_offset < replacement_length &&
+                 output_offset < LBUF_SIZE - 1) {
+            const char character = *(const char *)checked_storage_at_const(
+                tar, replacement_length + 1, sizeof(char), replacement_offset);
+
+            if (character == '%' &&
+                replacement_offset + 1 < replacement_length &&
+                *(const char *)checked_storage_at_const(
+                    tar, replacement_length + 1, sizeof(char),
+                    replacement_offset + 1) == '*') {
+              *(char *)checked_storage_at(buff, LBUF_SIZE, sizeof(char),
+                                          output_offset++) = '*';
+              replacement_offset += 2;
+            } else if (character == '*') {
+              char *destination = checked_storage_at(
+                  buff, LBUF_SIZE, sizeof(char), output_offset);
+              const size_t remaining = LBUF_SIZE - output_offset;
+
+              strlcpy(destination, s, remaining);
+              output_offset += strlen(destination);
+              replacement_offset++;
+            } else {
+              *(char *)checked_storage_at(buff, LBUF_SIZE, sizeof(char),
+                                          output_offset++) = character;
+              replacement_offset++;
+            }
           }
-          *next = 0;
+          *(char *)checked_storage_at(buff, LBUF_SIZE, sizeof(char),
+                                      output_offset) = 0;
 #else
           while (*tar) {
             switch (*tar) {
@@ -708,93 +791,4 @@ char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
   }
   free_lbuf(buff);
   return nullptr;
-}
-
-MacroSet *get_macro_set(MacroRegistry *registry, DbRef player, int which) {
-  int set;
-  struct commac *c;
-
-  c = get_commac(registry->channels, player);
-
-  if (c) {
-    set = -1;
-    if (which >= 0 && which < 5)
-      set = c->macros[which];
-    else if (c->curmac >= 0)
-      set = c->macros[c->curmac];
-
-    if (set == -1)
-      return nullptr;
-    else
-      return registry->sets[set];
-  } else
-    return nullptr;
-}
-
-void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
-                     char *s) {
-  int first;
-  int i;
-  struct commac *c;
-  MacroSet **nm;
-  int set;
-
-  c = get_commac(registry->channels, player);
-  first = -1;
-  for (i = 0; i < 5 && first < 0; i++)
-    if (c->macros[i] == -1)
-      first = i;
-  if (first < 0) {
-    macro_notify(match, player,
-                 "MACRO: Sorry, you already have 5 sets defined on you.");
-    return;
-  }
-  if (registry->count >= registry->capacity) {
-    registry->capacity += 10;
-    nm = (MacroSet **)malloc(sizeof(MacroSet *) * (size_t)registry->capacity);
-
-    for (i = 0; i < registry->count; i++)
-      nm[i] = registry->sets[i];
-    free(registry->sets);
-    registry->sets = nm;
-  }
-  set = registry->count++;
-  registry->sets[set] = (MacroSet *)malloc(sizeof(MacroSet));
-
-  registry->sets[set]->player = (int)player;
-  registry->sets[set]->status = 0;
-  registry->sets[set]->macro_count = 0;
-  registry->sets[set]->macro_capacity = 0;
-  registry->sets[set]->alias = nullptr;
-  registry->sets[set]->string = nullptr;
-  registry->sets[set]->desc = malloc(strlen(s) + 1);
-  StringCopy(registry->sets[set]->desc, s);
-  c->curmac = first;
-  c->macros[first] = set;
-
-  notify_printf(match->evaluation, player,
-                "MACRO: Macro set %d created with description %s.", set, s);
-}
-
-int can_write_macros(DbRef player, MacroSet *m) {
-  if (m->status & MACRO_L)
-    return 0;
-
-  if (m->player == player)
-    return 1;
-  else
-    return m->status & MACRO_W;
-}
-
-int can_read_macros(GameDatabase *database, DbRef player, MacroSet *m) {
-  if (is_wizard(database, player))
-    return 1;
-
-  if (!m)
-    return 0;
-
-  if (m->player == player)
-    return 1;
-  else
-    return m->status & MACRO_R;
 }

@@ -57,10 +57,12 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
 #include "section_types.h"
+#include "weapon_catalogue_api.h"
 void mech_weapon_destroy(Mech *wounded, int hitloc, int type, int startCrit,
                          int numcrits, int totalcrits) {
   int i;
@@ -151,7 +153,7 @@ void mech_weapon_destroy_random(Mech *mech, int hitloc) {
   mech_weapon_destroy(mech, hitloc, weapon_equipment_index(b), firstCrit, 1,
                       GetWeaponCrits(mech, b));
   mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
-              &MechWeapons[b].name[3]);
+              checked_string_suffix(weapon_catalogue_name(b), 3));
 }
 
 void mech_heat_sink_destroy(Mech *mech, int hitloc) {

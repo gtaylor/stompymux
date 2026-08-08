@@ -14,6 +14,7 @@
  *
  */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -36,10 +37,28 @@
 #include "mux/network/mux_event.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mycool.h"
 #include "registry_api.h"
 #include "repair_job.h"
+
+static void repair_append(char *buffer, size_t capacity, const char *format,
+                          ...) __attribute__((format(printf, 3, 4)));
+
+static void repair_append(char *buffer, size_t capacity, const char *format,
+                          ...) {
+  const size_t used = strlen(buffer);
+  if (used >= capacity)
+    return;
+  char *destination =
+      checked_storage_at(buffer, capacity, sizeof(*buffer), used);
+  va_list arguments;
+  va_start(arguments, format);
+  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
+  vsnprintf(destination, capacity - used, format, arguments);
+  va_end(arguments);
+}
 
 static void describe_repairs(MuxEvent *e, void *menu_context) {
   CoolMenu **menu = menu_context;
@@ -63,113 +82,99 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
                .text,
            loc >= 8 ? "(R)" : "");
   snprintf(buf2, sizeof(buf2), "%-5ld ", player);
-  snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%-4d ",
-           game_lag_time(context, (e->tick - e->scheduler->tick) / 60));
+  repair_append(buf2, sizeof(buf2), "%-4d ",
+                game_lag_time(context, (e->tick - e->scheduler->tick) / 60));
   switch (type) {
   case EVENT_REPAIR_REPL:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d Replacement of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d Replacement of %s", buf,
+                  pos + 1, pos_part_name(mech, loc, pos).text);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_REPLG:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d Replacement of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d Replacement of %s", buf,
+                  pos + 1, pos_part_name(mech, loc, pos).text);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_REAT:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s Reattachment", buf);
+    repair_append(buf2, sizeof(buf2), "%5s Reattachment", buf);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_RELO:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d %sload of %s", buf, pos + 1, extra ? "Un" : "Re",
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d %sload of %s", buf, pos + 1,
+                  extra ? "Un" : "Re", pos_part_name(mech, loc, pos).text);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_FIX:
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-               "%5s:%-2d Failed armor repair", buf, 0);
+      repair_append(buf2, sizeof(buf2), "%5s:%-2d Failed armor repair", buf, 0);
     else
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-               "%5s:%-2d Repair of armor - possibly next point", buf, pos);
+      repair_append(buf2, sizeof(buf2),
+                    "%5s:%-2d Repair of armor - possibly next point", buf, pos);
     break;
   case EVENT_REPAIR_FIXI:
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-               "%5s:%-2d Failed internal repair", buf, 0);
+      repair_append(buf2, sizeof(buf2), "%5s:%-2d Failed internal repair", buf,
+                    0);
     else
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-               "%5s:%-2d Repair of internals - possibly next point", buf, pos);
+      repair_append(buf2, sizeof(buf2),
+                    "%5s:%-2d Repair of internals - possibly next point", buf,
+                    pos);
     break;
   case EVENT_REPAIR_SCRL:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%5s Removal",
-             buf);
+    repair_append(buf2, sizeof(buf2), "%5s Removal", buf);
     break;
   case EVENT_REPAIR_SCRP:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d Scrapping of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d Scrapping of %s", buf, pos + 1,
+                  pos_part_name(mech, loc, pos).text);
     break;
   case EVENT_REPAIR_SCRG:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d Scrapping of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d Scrapping of %s", buf, pos + 1,
+                  pos_part_name(mech, loc, pos).text);
     break;
   case EVENT_REPAIR_REPAG:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d Repair of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d Repair of %s", buf, pos + 1,
+                  pos_part_name(mech, loc, pos).text);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_REPAP:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d Repair of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d Repair of %s", buf, pos + 1,
+                  pos_part_name(mech, loc, pos).text);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_REPENHCRIT:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d Repair of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d Repair of %s", buf, pos + 1,
+                  pos_part_name(mech, loc, pos).text);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_MOB:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d Mounting of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d Mounting of %s", buf, pos + 1,
+                  pos_part_name(mech, loc, pos).text);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_UMOB:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s:%-2d Removing of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "%5s:%-2d Removing of %s", buf, pos + 1,
+                  pos_part_name(mech, loc, pos).text);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_REPSUIT:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
-             "%5s Replacing suit", buf);
+    repair_append(buf2, sizeof(buf2), "%5s Replacing suit", buf);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   // Added Reseal description
   case EVENT_REPAIR_RESE:
-    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%5s Reseal",
-             buf);
+    repair_append(buf2, sizeof(buf2), "%5s Reseal", buf);
     if (fail)
-      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+      repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   }
 

@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <sys/random.h>
 
+#include "mux/support/checked_storage.h"
+
 static uint64_t rotate_left(uint64_t value, int count) {
   return (value << count) | (value >> (64 - count));
 }
@@ -21,7 +23,9 @@ void btech_random_seed(BtechRandom *random, uint64_t seed) {
   assert(random != nullptr);
 
   for (size_t index = 0; index < BTECH_RANDOM_STATE_SIZE; index++) {
-    random->state[index] = splitmix64_next(&seed);
+    uint64_t *state = checked_storage_at(random->state, BTECH_RANDOM_STATE_SIZE,
+                                         sizeof(*random->state), index);
+    *state = splitmix64_next(&seed);
   }
   random->initialized = true;
 }
@@ -33,7 +37,9 @@ bool btech_random_seed_from_system(BtechRandom *random) {
   assert(random != nullptr);
 
   while (offset < sizeof(seed)) {
-    ssize_t bytes = getrandom((char *)&seed + offset, sizeof(seed) - offset, 0);
+    void *destination =
+        checked_storage_at(&seed, sizeof(seed), sizeof(unsigned char), offset);
+    ssize_t bytes = getrandom(destination, sizeof(seed) - offset, 0);
 
     if (bytes > 0) {
       offset += (size_t)bytes;

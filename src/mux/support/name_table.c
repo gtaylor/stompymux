@@ -3,6 +3,7 @@
  */
 
 #include <ctype.h>
+#include <string.h>
 
 #include "mux/commands/command.h"
 #include "mux/objects/flags.h"
@@ -12,9 +13,31 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
+
+constexpr size_t NAME_TABLE_MAX_ENTRIES = 1024;
+
+static bool name_table_is_sentinel(const void *element) {
+  return ((const NameTable *)element)->name == nullptr;
+}
+
+static size_t name_table_count(const NameTable *table) {
+  return checked_storage_sentinel_count(
+      table, sizeof(*table), NAME_TABLE_MAX_ENTRIES, name_table_is_sentinel);
+}
+
+static NameTable *name_table_entry_at(NameTable *table, size_t count,
+                                      size_t index) {
+  return checked_storage_at(table, count, sizeof(*table), index);
+}
+
+static const NameTable *name_table_entry_at_const(const NameTable *table,
+                                                  size_t count, size_t index) {
+  return checked_storage_at_const(table, count, sizeof(*table), index);
+}
 
 /*
  * ---------------------------------------------------------------------------
@@ -24,9 +47,9 @@
 int name_table_search(GameDatabase *database,
                       const ServerConfiguration *configuration, DbRef player,
                       const NameTable *ntab, char *flagname) {
-  const NameTable *nt;
-
-  for (nt = ntab; nt->name; nt++) {
+  size_t count = name_table_count(ntab);
+  for (size_t index = 0; index < count; index++) {
+    const NameTable *nt = name_table_entry_at_const(ntab, count, index);
     if (minmatch(flagname, nt->name, nt->minlen)) {
       if (check_access(database, configuration, player, nt->perm)) {
         return nt->flag;
@@ -47,9 +70,9 @@ NameTable *name_table_find_entry(GameDatabase *database,
                                  const ServerConfiguration *configuration,
                                  DbRef player, NameTable *ntab,
                                  char *flagname) {
-  NameTable *nt;
-
-  for (nt = ntab; nt->name; nt++) {
+  size_t count = name_table_count(ntab);
+  for (size_t index = 0; index < count; index++) {
+    NameTable *nt = name_table_entry_at(ntab, count, index);
     if (minmatch(flagname, nt->name, nt->minlen)) {
       if (check_access(database, configuration, player, nt->perm)) {
         return nt;
@@ -68,22 +91,20 @@ void name_table_display(EvaluationContext *evaluation,
                         const ServerConfiguration *configuration, DbRef player,
                         NameTable *ntab, const char *prefix, int list_if_none) {
   char *buf, *bp;
-  const char *cp;
-  NameTable *nt;
   int got_one;
 
   buf = alloc_lbuf("name_table_display");
   bp = buf;
   got_one = 0;
-  for (cp = prefix; *cp; cp++)
-    *bp++ = *cp;
-  for (nt = ntab; nt->name; nt++) {
+  safe_str(prefix, buf, &bp);
+  size_t count = name_table_count(ntab);
+  for (size_t index = 0; index < count; index++) {
+    NameTable *nt = name_table_entry_at(ntab, count, index);
     if (is_god(evaluation->world->database, player) ||
         check_access(evaluation->world->database, configuration, player,
                      nt->perm)) {
-      *bp++ = ' ';
-      for (cp = nt->name; *cp; cp++)
-        *bp++ = *cp;
+      safe_chr(' ', buf, &bp);
+      safe_str(nt->name, buf, &bp);
       got_one = 1;
     }
   }
@@ -104,32 +125,27 @@ void name_table_interpret(EvaluationContext *evaluation,
                           const char *prefix, const char *true_text,
                           const char *false_text) {
   char *buf, *bp;
-  const char *cp;
-  NameTable *nt;
 
   buf = alloc_lbuf("name_table_interpret");
   bp = buf;
-  for (cp = prefix; *cp; cp++)
-    *bp++ = *cp;
-  nt = ntab;
-  while (nt->name) {
+  safe_str(prefix, buf, &bp);
+  size_t count = name_table_count(ntab);
+  for (size_t index = 0; index < count; index++) {
+    NameTable *nt = name_table_entry_at(ntab, count, index);
     if (is_god(evaluation->world->database, player) ||
         check_access(evaluation->world->database, configuration, player,
                      nt->perm)) {
-      *bp++ = ' ';
-      for (cp = nt->name; *cp; cp++)
-        *bp++ = *cp;
-      *bp++ = '.';
-      *bp++ = '.';
-      *bp++ = '.';
+      safe_chr(' ', buf, &bp);
+      safe_str(nt->name, buf, &bp);
+      safe_str("...", buf, &bp);
+      const char *text;
       if ((flagword & nt->flag) != 0)
-        cp = true_text;
+        text = true_text;
       else
-        cp = false_text;
-      while (*cp)
-        *bp++ = *cp++;
-      if ((++nt)->name)
-        *bp++ = ';';
+        text = false_text;
+      safe_str(text, buf, &bp);
+      if (index + 1 < count)
+        safe_chr(';', buf, &bp);
     }
   }
   *bp = '\0';
@@ -147,26 +163,22 @@ void name_table_list_set(EvaluationContext *evaluation,
                          NameTable *ntab, int flagword, const char *prefix,
                          int list_if_none) {
   char *buf, *bp;
-  const char *cp;
-  NameTable *nt;
   int got_one;
 
   buf = bp = alloc_lbuf("name_table_list_set");
-  for (cp = prefix; *cp; cp++)
-    *bp++ = *cp;
-  nt = ntab;
+  safe_str(prefix, buf, &bp);
+  size_t count = name_table_count(ntab);
   got_one = 0;
-  while (nt->name) {
+  for (size_t index = 0; index < count; index++) {
+    NameTable *nt = name_table_entry_at(ntab, count, index);
     if (((flagword & nt->flag) != 0) &&
         (is_god(evaluation->world->database, player) ||
          check_access(evaluation->world->database, configuration, player,
                       nt->perm))) {
-      *bp++ = ' ';
-      for (cp = nt->name; *cp; cp++)
-        *bp++ = *cp;
+      safe_chr(' ', buf, &bp);
+      safe_str(nt->name, buf, &bp);
       got_one = 1;
     }
-    nt++;
   }
   *bp = '\0';
   if (got_one || list_if_none)
@@ -176,16 +188,27 @@ void name_table_list_set(EvaluationContext *evaluation,
 
 int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd,
                    ConfigurationContext *context) {
-  NameTable *np;
   char *ap;
+  size_t length = strlen(str);
+  size_t offset = 0;
 
-  for (ap = str; *ap && !isspace((unsigned char)*ap); ap++)
-    ;
-  if (*ap)
-    *ap++ = '\0';
-  while (*ap && isspace((unsigned char)*ap))
-    ap++;
-  for (np = (NameTable *)vp; np->name; np++) {
+  while (offset < length &&
+         !(isspace)(*(const unsigned char *)checked_storage_at_const(
+             str, length, sizeof(char), offset)))
+    offset++;
+  if (offset < length) {
+    *(char *)checked_storage_at(str, length + 1, sizeof(char), offset) = '\0';
+    offset++;
+  }
+  while (offset < length &&
+         (isspace)(*(const unsigned char *)checked_storage_at_const(
+             str, length, sizeof(char), offset)))
+    offset++;
+  ap = checked_storage_at(str, length + 1, sizeof(char), offset);
+  NameTable *table = vp;
+  size_t count = name_table_count(table);
+  for (size_t index = 0; index < count; index++) {
+    NameTable *np = name_table_entry_at(table, count, index);
     if (minmatch(str, np->name, np->minlen)) {
       return configuration_modify_bits(&(np->perm), ap, extra, player, cmd,
                                        context);

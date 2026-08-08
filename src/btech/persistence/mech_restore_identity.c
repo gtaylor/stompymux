@@ -1,4 +1,23 @@
+#include "mux/support/checked_storage.h"
 #include "sqlite_internal.h"
+
+static struct MechSection *snapshot_section(MechPersistenceSnapshot *snapshot,
+                                            int index) {
+  if (index < 0)
+    abort();
+  return checked_storage_at(snapshot->definition.sections, NUM_SECTIONS,
+                            sizeof(*snapshot->definition.sections),
+                            (size_t)index);
+}
+
+static struct CriticalSlot *snapshot_critical(MechPersistenceSnapshot *snapshot,
+                                              int section, int slot) {
+  if (slot < 0)
+    abort();
+  struct MechSection *section_data = snapshot_section(snapshot, section);
+  return checked_storage_at(section_data->criticals, NUM_CRITICALS,
+                            sizeof(*section_data->criticals), (size_t)slot);
+}
 
 int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
@@ -238,7 +257,7 @@ int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    section = &snapshot.definition.sections[section_index];
+    section = snapshot_section(&snapshot, section_index);
     section->armor = (unsigned char)armor;
     section->internal = (unsigned char)internal;
     section->rear = (unsigned char)rear;
@@ -344,7 +363,7 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    critical = &snapshot.definition.sections[section_index].criticals[slot];
+    critical = snapshot_critical(&snapshot, section_index, slot);
     critical->brand = (unsigned char)brand;
     critical->data = (unsigned char)data;
     critical->type = (unsigned short)item_type;

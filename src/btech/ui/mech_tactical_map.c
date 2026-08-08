@@ -5,7 +5,9 @@
 #include "map.h"
 #include "map_los.h"
 #include "map_obj_api.h"
+#include "map_object_query_api.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
@@ -18,6 +20,7 @@
 #include "mech_utils_api.h"
 #include "mine.h"
 #include "mux/server/game.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 
 #include <ctype.h>
@@ -25,6 +28,53 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+typedef struct TacticalDirection {
+  int x;
+  int y;
+} TacticalDirection;
+
+static const TacticalDirection TACTICAL_DIRECTIONS[] = {
+    {0, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
+
+enum {
+  TACTICAL_MAX_WIDTH = 40,
+  TACTICAL_MAX_HEIGHT = 24,
+  TACTICAL_TOP_LABEL = 3,
+  TACTICAL_LEFT_LABEL = 4,
+  TACTICAL_RIGHT_LABEL = 3,
+  MAP_SKETCH_CAPACITY =
+      ((TACTICAL_LEFT_LABEL + 1 + TACTICAL_MAX_WIDTH * 3 +
+        TACTICAL_RIGHT_LABEL + 1) *
+           (TACTICAL_TOP_LABEL + 1 + TACTICAL_MAX_HEIGHT * 2) +
+       2) *
+      5,
+};
+
+static char *tactical_canvas_at(char *canvas, int offset) {
+  if (offset < 0)
+    abort();
+  return checked_storage_at(canvas, MAP_SKETCH_CAPACITY, sizeof(char),
+                            (size_t)offset);
+}
+
+static int tactical_direction_component(int direction, int component) {
+  const TacticalDirection *offset = checked_storage_at_const(
+      TACTICAL_DIRECTIONS,
+      sizeof(TACTICAL_DIRECTIONS) / sizeof(*TACTICAL_DIRECTIONS),
+      sizeof(*TACTICAL_DIRECTIONS), (size_t)direction);
+  if (component == 0)
+    return offset->x;
+  if (component == 1)
+    return offset->y;
+  abort();
+}
+
+static bool ascii_is_alpha(char value) {
+  return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
+}
+
+static bool ascii_is_digit(char value) { return value >= '0' && value <= '9'; }
 
 static bool mech_seems_friendly(Mech *mech, Mech *other) {
   return mech_team(mech) == mech_team(other) &&
@@ -48,38 +98,38 @@ static int map_base_elevation(BattleMap *map, int x, int y) {
 /*
  * Draw one of the seven hexes that a Dropship takes up on a tac map.
  */
-static void sketch_tac_ds(char *base, int dispcols, char terr) {
+static void sketch_tac_ds(char *canvas, int base_offset, int dispcols,
+                          char terr) {
   /*
    * Becareful not to overlay a 'mech id or terrain elevation.
    */
-  if (!isalpha(base[0]) && base[0] != '*') {
-    base[0] = terr;
-    base[1] = terr;
+  char *first = tactical_canvas_at(canvas, base_offset);
+  if (!ascii_is_alpha(*first) && *first != '*') {
+    *first = terr;
+    *tactical_canvas_at(canvas, base_offset + 1) = terr;
   }
-  base[dispcols + 0] = terr;
-  if (!isdigit((unsigned char)base[dispcols + 1])) {
-    base[dispcols + 1] = terr;
+  *tactical_canvas_at(canvas, base_offset + dispcols) = terr;
+  char *lower_right = tactical_canvas_at(canvas, base_offset + dispcols + 1);
+  if (!ascii_is_digit(*lower_right)) {
+    *lower_right = terr;
   }
 }
-
-extern const int dirs[6][2];
 
 static void sketch_tac_ownmech(char *buf, BattleMap *map, Mech *mech, int sx,
                                int sy, int wx, int wy, int dispcols,
                                int top_offset, int left_offset) {
 
   int oddcol1 = tactical_column_is_odd(sx);
-  char *pos = buf + top_offset * dispcols + left_offset;
-  char *base;
+  const int origin_offset = top_offset * dispcols + left_offset;
   int x = mech_position_x(mech) - sx;
   int y = mech_position_y(mech) - sy;
 
   if (x < 0 || x >= wx || y < 0 || y >= wy) {
     return;
   }
-  base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
-  base[0] = '*';
-  base[0] = '*';
+  const int base_offset =
+      origin_offset + tactical_hex_offset(x, y, dispcols, oddcol1);
+  *tactical_canvas_at(buf, base_offset) = '*';
 }
 
 static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
@@ -87,22 +137,22 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
                              int top_offset, int left_offset, int docolour,
                              int labels) {
   int i;
-  char *pos = buf + top_offset * dispcols + left_offset;
+  const int origin_offset = top_offset * dispcols + left_offset;
   int oddcol1 = tactical_column_is_odd(sx);
 
   /*
    * Draw all the 'mechs on the map.
    */
-  for (i = 0; i < map->first_free; i++) {
+  for (i = 0; i < battle_map_unit_count(map); i++) {
     int x, y;
-    char *base;
     Mech *mech;
 
-    if (map->mechsOnMap[i] == -1) {
+    const DbRef unit_dbref = battle_map_unit_dbref(map, i);
+    if (unit_dbref == -1) {
       continue;
     }
 
-    mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
+    mech = btech_context_get_mech(map->xcode.context, unit_dbref);
     if (mech == nullptr) {
       continue;
     }
@@ -128,7 +178,8 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
       continue;
     }
 
-    base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
+    int base_offset =
+        origin_offset + tactical_hex_offset(x, y, dispcols, oddcol1);
     if (!(mech_technology_flags_secondary(mech) & CARRIER_TECH) &&
         mech_is_dropship(mech) &&
         ((mech_position_z(mech) >= ORBIT_Z && mech != player_mech) ||
@@ -143,57 +194,62 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
        */
 
       for (dir = 0; dir < 6; dir++) {
-        int tx = x + dirs[dir][0];
-        int ty = y + dirs[dir][1];
+        const int direction_x = tactical_direction_component(dir, 0);
+        int tx = x + direction_x;
+        int ty = y + tactical_direction_component(dir, 1);
 
-        if ((tx + oddcol1) % 2 == 0 && dirs[dir][0] != 0) {
+        if ((tx + oddcol1) % 2 == 0 && direction_x != 0) {
           ty--;
         }
         if (tx < 0 || tx >= wx || ty < 0 || ty >= wy) {
           continue;
         }
-        base = pos + tactical_hex_offset(tx, ty, dispcols, oddcol1);
+        base_offset =
+            origin_offset + tactical_hex_offset(tx, ty, dispcols, oddcol1);
         if (dropship_bay_number(mech, (dir - ts + 6) % 6) >= 0) {
-          sketch_tac_ds(base, dispcols, '@');
+          sketch_tac_ds(buf, base_offset, dispcols, '@');
         } else {
-          sketch_tac_ds(base, dispcols, '=');
+          sketch_tac_ds(buf, base_offset, dispcols, '=');
         }
       }
       if (x < 0 || x >= wx || y < 0 || y >= wy)
         continue;
 
-      base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
+      base_offset =
+          origin_offset + tactical_hex_offset(x, y, dispcols, oddcol1);
       if (docolour) {
         /*
          * Colour hack: 'X' would be confused with
          * any enemy contact by style_tac_map()
          */
-        sketch_tac_ds(base, dispcols, '$');
+        sketch_tac_ds(buf, base_offset, dispcols, '$');
       } else {
-        sketch_tac_ds(base, dispcols, 'X');
+        sketch_tac_ds(buf, base_offset, dispcols, 'X');
       }
 
-      if (isalpha(base[0]))
+      if (ascii_is_alpha(*tactical_canvas_at(buf, base_offset)))
         continue;
 
       if (mech == player_mech) {
-        base[0] = '*';
-        base[1] = '*';
+        *tactical_canvas_at(buf, base_offset) = '*';
+        *tactical_canvas_at(buf, base_offset + 1) = '*';
       } else {
         MechId id = mech_id(mech, mech_seems_friendly(player_mech, mech));
-        base[0] = id.text[0];
-        base[1] = id.text[1];
+        *tactical_canvas_at(buf, base_offset) = *id.text;
+        *tactical_canvas_at(buf, base_offset + 1) =
+            *checked_string_suffix(id.text, 1);
       }
 
     } else if (mech == player_mech) {
-      if (isalpha(base[0]))
+      if (ascii_is_alpha(*tactical_canvas_at(buf, base_offset)))
         continue;
-      base[0] = '*';
-      base[1] = '*';
+      *tactical_canvas_at(buf, base_offset) = '*';
+      *tactical_canvas_at(buf, base_offset + 1) = '*';
     } else {
       MechId id = mech_id(mech, mech_seems_friendly(player_mech, mech));
-      base[0] = id.text[0];
-      base[1] = id.text[1];
+      *tactical_canvas_at(buf, base_offset) = *id.text;
+      *tactical_canvas_at(buf, base_offset + 1) =
+          *checked_string_suffix(id.text, 1);
     }
   }
 }
@@ -201,7 +257,7 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
 static void sketch_tac_cliffs(char *buf, BattleMap *map, int sx, int sy, int wx,
                               int wy, int dispcols, int top_offset,
                               int left_offset, int cliff_size) {
-  char *pos = buf + top_offset * dispcols + left_offset;
+  const int origin_offset = top_offset * dispcols + left_offset;
   int y, x;
   int oddcol1 = tactical_column_is_odd(sx);
 
@@ -214,19 +270,20 @@ static void sketch_tac_cliffs(char *buf, BattleMap *map, int sx, int sy, int wx,
       int tx = sx + x;
       int oddcolx = tactical_column_is_odd(tx);
       int elev = map_base_elevation(map, tx, ty);
-      char *base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
+      const int base_offset =
+          origin_offset + tactical_hex_offset(x, y, dispcols, oddcol1);
       char c;
 
       /*
        * Copy the elevation up to the top of the hex
        * so we can draw a bottom hex edge on every hex.
        */
-      c = base[dispcols + 1];
-      if (base[0] == '*') {
-        base[0] = '*';
-        base[1] = '*';
-      } else if (isdigit((unsigned char)c)) {
-        base[1] = c;
+      c = *tactical_canvas_at(buf, base_offset + dispcols + 1);
+      if (*tactical_canvas_at(buf, base_offset) == '*') {
+        *tactical_canvas_at(buf, base_offset) = '*';
+        *tactical_canvas_at(buf, base_offset + 1) = '*';
+      } else if (ascii_is_digit(c)) {
+        *tactical_canvas_at(buf, base_offset + 1) = c;
       }
 
       /*
@@ -240,20 +297,20 @@ static void sketch_tac_cliffs(char *buf, BattleMap *map, int sx, int sy, int wx,
           abs(map_base_elevation(map, tx - 1, ty + 1 - oddcolx) - elev) >=
               cliff_size) {
 
-        base[dispcols - 1] = '|';
+        *tactical_canvas_at(buf, base_offset + dispcols - 1) = '|';
       }
       if (y < wy - 1 &&
           abs(map_base_elevation(map, tx, ty + 1) - elev) >= cliff_size) {
-        base[dispcols] = ',';
-        base[dispcols + 1] = ',';
+        *tactical_canvas_at(buf, base_offset + dispcols) = ',';
+        *tactical_canvas_at(buf, base_offset + dispcols + 1) = ',';
       } else {
-        base[dispcols] = '_';
-        base[dispcols + 1] = '_';
+        *tactical_canvas_at(buf, base_offset + dispcols) = '_';
+        *tactical_canvas_at(buf, base_offset + dispcols + 1) = '_';
       }
       if (x < wx - 1 && (y < wy - 1 || oddcolx) &&
           abs(map_base_elevation(map, tx + 1, ty + 1 - oddcolx) - elev) >=
               cliff_size) {
-        base[dispcols + 2] = '!';
+        *tactical_canvas_at(buf, base_offset + dispcols + 2) = '!';
       }
     }
   }
@@ -262,7 +319,7 @@ static void sketch_tac_dslz(char *buf, BattleMap *map, Mech *mech, int sx,
                             int sy, int wx, int wy, int dispcols,
                             int top_offset, int left_offset, int cliff_size,
                             int docolour) {
-  char *pos = buf + top_offset * dispcols + left_offset;
+  const int origin_offset = top_offset * dispcols + left_offset;
   int y, x;
   int oddcol1 = tactical_column_is_odd(sx);
 
@@ -273,12 +330,15 @@ static void sketch_tac_dslz(char *buf, BattleMap *map, Mech *mech, int sx,
 
     for (x = maximum_int(0, -sx); x < wx; x++) {
       int tx = sx + x;
-      char *base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
+      const int base_offset =
+          origin_offset + tactical_hex_offset(x, y, dispcols, oddcol1);
 
       if (aero_landing_zone_check(mech, tx, ty))
-        base[dispcols] = docolour ? '\241' : 'X';
+        *tactical_canvas_at(buf, base_offset + dispcols) =
+            docolour ? '\241' : 'X';
       else
-        base[dispcols] = docolour ? '\240' : 'O';
+        *tactical_canvas_at(buf, base_offset + dispcols) =
+            docolour ? '\240' : 'O';
     }
   }
 }
@@ -286,7 +346,7 @@ static void sketch_tac_dslz(char *buf, BattleMap *map, Mech *mech, int sx,
 static void sketch_tac_mines(char *buf, BattleMap *map, Mech *mech, int sx,
                              int sy, int wx, int wy, int dispcols,
                              int top_offset, int left_offset) {
-  char *pos = buf + top_offset * dispcols + left_offset;
+  const int origin_offset = top_offset * dispcols + left_offset;
   int y, x;
   int oddcol1 = tactical_column_is_odd(sx);
   float fx, fy, fz, hex_range;
@@ -298,19 +358,20 @@ static void sketch_tac_mines(char *buf, BattleMap *map, Mech *mech, int sx,
     int ty = sy + y;
     for (x = maximum_int(0, -sx); x < wx; x++) {
       int tx = sx + x;
-      char *base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
+      const int base_offset =
+          origin_offset + tactical_hex_offset(x, y, dispcols, oddcol1);
       char c;
 
       /*
        * Copy the elevation up to the top of the hex
        * so we can draw a bottom hex edge on every hex.
        */
-      c = base[dispcols + 1];
-      if (base[0] == '*') {
-        base[0] = '*';
-        base[1] = '*';
-      } else if (isdigit((unsigned char)c)) {
-        base[1] = c;
+      c = *tactical_canvas_at(buf, base_offset + dispcols + 1);
+      if (*tactical_canvas_at(buf, base_offset) == '*') {
+        *tactical_canvas_at(buf, base_offset) = '*';
+        *tactical_canvas_at(buf, base_offset + 1) = '*';
+      } else if (ascii_is_digit(c)) {
+        *tactical_canvas_at(buf, base_offset + 1) = c;
       }
 
       /*
@@ -321,11 +382,12 @@ static void sketch_tac_mines(char *buf, BattleMap *map, Mech *mech, int sx,
        * not type, is displayed in the bottom of the hex.
        * Hide triggers so they can be used unbeknownst to players
        */
-      for (o = map->MapObject[TYPE_MINE]; o; o = o->next)
-        if (o->x == tx && o->y == ty)
+      for (o = battle_map_object_first(map, BATTLE_MAP_OBJECT_MINE); o;
+           o = battle_map_object_next(o))
+        if (battle_map_object_x(o) == tx && battle_map_object_y(o) == ty)
           break;
-      base[dispcols] = ' ';
-      base[dispcols + 1] = ' ';
+      *tactical_canvas_at(buf, base_offset + dispcols) = ' ';
+      *tactical_canvas_at(buf, base_offset + dispcols + 1) = ' ';
       if (o) {
         int elevation;
 
@@ -339,8 +401,8 @@ static void sketch_tac_mines(char *buf, BattleMap *map, Mech *mech, int sx,
             mech_los_check_unblocked(mech, nullptr, tx, ty, hex_range)) {
           /*     base[dispcols]=(o->datas/10) + '0'; */
           /*     base[dispcols+1]=(o->datas%10) + '0'; */
-          base[dispcols] = '<';
-          base[dispcols + 1] = '>';
+          *tactical_canvas_at(buf, base_offset + dispcols) = '<';
+          *tactical_canvas_at(buf, base_offset + dispcols + 1) = '>';
         }
       }
     }
@@ -367,6 +429,19 @@ char *const *map_text_lines(const MapText *text) {
   return text != nullptr ? text->lines : nullptr;
 }
 
+size_t map_text_line_count(const MapText *text) {
+  return text != nullptr && text->line_capacity > 0 ? text->line_capacity - 1
+                                                    : 0;
+}
+
+const char *map_text_line(const MapText *text, size_t index) {
+  if (text == nullptr)
+    return nullptr;
+  char *const *slot = checked_storage_at_const(text->lines, text->line_capacity,
+                                               sizeof(*text->lines), index);
+  return *slot;
+}
+
 void map_text_destroy(MapText *text) {
   if (text == nullptr)
     return;
@@ -388,20 +463,8 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
   int navigate = 0;
   int sx, sy;
   int i;
-  char *base;
   char *sketch_buf;
   int oddcol1;
-  enum {
-    MAX_WIDTH = 40,
-    MAX_HEIGHT = 24,
-    TOP_LABEL = 3,
-    LEFT_LABEL = 4,
-    RIGHT_LABEL = 3,
-    MAP_SKETCH_CAPACITY = ((LEFT_LABEL + 1 + MAX_WIDTH * 3 + RIGHT_LABEL + 1) *
-                               (TOP_LABEL + 1 + MAX_HEIGHT * 2) +
-                           2) *
-                          5,
-  };
 
   map_color_scheme_load(&colors);
 
@@ -413,8 +476,8 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
   /*
    * Figure out the extent of the tac map to draw.
    */
-  wx = minimum_int(MAX_WIDTH, wx);
-  wy = minimum_int(MAX_HEIGHT, wy);
+  wx = minimum_int(TACTICAL_MAX_WIDTH, wx);
+  wy = minimum_int(TACTICAL_MAX_HEIGHT, wy);
   if (wx <= 0 || wy <= 0)
     return nullptr;
 
@@ -449,12 +512,12 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
      * Allow room for the labels.
      */
     if (labels & 1) {
-      left_offset = LEFT_LABEL;
-      dispcols += LEFT_LABEL + RIGHT_LABEL;
+      left_offset = TACTICAL_LEFT_LABEL;
+      dispcols += TACTICAL_LEFT_LABEL + TACTICAL_RIGHT_LABEL;
     }
     if (labels & 2) {
-      top_offset = TOP_LABEL;
-      disprows += TOP_LABEL;
+      top_offset = TACTICAL_TOP_LABEL;
+      disprows += TACTICAL_TOP_LABEL;
     }
   }
 
@@ -465,8 +528,8 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
   /*
    * Create a sketch tac map including terrain and elevation.
    */
-  tactical_map_sketch(sketch_buf, map, mech, sx, sy, wx, wy, dispcols,
-                      top_offset, left_offset, docolour, dohexlos,
+  tactical_map_sketch(sketch_buf, MAP_SKETCH_CAPACITY, map, mech, sx, sy, wx,
+                      wy, dispcols, top_offset, left_offset, docolour, dohexlos,
                       dounderlying);
 
   /*
@@ -483,10 +546,12 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
         continue;
       }
       snprintf(scratch, sizeof(scratch), "%3d", label);
-      base = sketch_buf + left_offset + 1 + x * 3;
-      base[0] = scratch[0];
-      base[1 * dispcols] = scratch[1];
-      base[2 * dispcols] = scratch[2];
+      const int label_offset = left_offset + 1 + x * 3;
+      *tactical_canvas_at(sketch_buf, label_offset) = scratch[0];
+      *tactical_canvas_at(sketch_buf, label_offset + dispcols) =
+          *checked_string_suffix(scratch, 1);
+      *tactical_canvas_at(sketch_buf, label_offset + 2 * dispcols) =
+          *checked_string_suffix(scratch, 2);
     }
   }
 
@@ -499,15 +564,20 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
       size_t right_label_offset;
 
       row_offset = (size_t)(top_offset + 1 + y * 2) * (size_t)dispcols;
-      right_label_offset = row_offset + (size_t)(dispcols - RIGHT_LABEL - 1);
-      base = sketch_buf + row_offset;
+      right_label_offset =
+          row_offset + (size_t)(dispcols - TACTICAL_RIGHT_LABEL - 1);
       if (label < 0 || label > 999) {
         continue;
       }
 
-      snprintf(base, MAP_SKETCH_CAPACITY - row_offset, "%3d", label);
-      base[3] = ' ';
-      snprintf(sketch_buf + right_label_offset,
+      snprintf(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
+                                      row_offset,
+                                      MAP_SKETCH_CAPACITY - row_offset),
+               MAP_SKETCH_CAPACITY - row_offset, "%3d", label);
+      *tactical_canvas_at(sketch_buf, (int)row_offset + 3) = ' ';
+      snprintf(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
+                                      right_label_offset,
+                                      MAP_SKETCH_CAPACITY - right_label_offset),
                MAP_SKETCH_CAPACITY - right_label_offset, "%3d", label);
     }
   }
@@ -564,26 +634,34 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
 
     for (i = 0; i < n; i++) {
       int len;
+      int base_offset;
 
-      base = sketch_buf + (i + 1) * dispcols + left_offset;
+      base_offset = (i + 1) * dispcols + left_offset;
       len = (n - i - 1) * 3 + 1;
-      memset(base, ' ', (size_t)len);
-      base[len] = '_';
-      base[len + 1] = '_';
-      base[mapcols - len - 2] = '_';
-      base[mapcols - len - 1] = '_';
-      base[mapcols - len] = '\0';
+      memset(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
+                                    (size_t)base_offset, (size_t)len),
+             ' ', (size_t)len);
+      *tactical_canvas_at(sketch_buf, base_offset + len) = '_';
+      *tactical_canvas_at(sketch_buf, base_offset + len + 1) = '_';
+      *tactical_canvas_at(sketch_buf, base_offset + mapcols - len - 2) = '_';
+      *tactical_canvas_at(sketch_buf, base_offset + mapcols - len - 1) = '_';
+      *tactical_canvas_at(sketch_buf, base_offset + mapcols - len) = '\0';
 
-      base = sketch_buf + (disprows - i - 1) * dispcols + left_offset;
+      base_offset = (disprows - i - 1) * dispcols + left_offset;
       len = (n - i) * 3;
-      memset(base, ' ', (size_t)len);
-      base[mapcols - len] = '\0';
+      memset(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
+                                    (size_t)base_offset, (size_t)len),
+             ' ', (size_t)len);
+      *tactical_canvas_at(sketch_buf, base_offset + mapcols - len) = '\0';
     }
 
-    memset(sketch_buf + left_offset, ' ', (size_t)(n * 3 + 1));
-    sketch_buf[left_offset + n * 3 + 1] = '_';
-    sketch_buf[left_offset + n * 3 + 2] = '_';
-    sketch_buf[left_offset + n * 3 + 3] = '\0';
+    const size_t top_blank_size = (size_t)(n * 3 + 1);
+    memset(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
+                                  (size_t)left_offset, top_blank_size),
+           ' ', top_blank_size);
+    *tactical_canvas_at(sketch_buf, left_offset + n * 3 + 1) = '_';
+    *tactical_canvas_at(sketch_buf, left_offset + n * 3 + 2) = '_';
+    *tactical_canvas_at(sketch_buf, left_offset + n * 3 + 3) = '\0';
   }
 
   size_t line_capacity = (size_t)disprows + 1;
@@ -608,9 +686,15 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
   memcpy(text->buffer, sketch_buf, MAP_SKETCH_CAPACITY);
   free(sketch_buf);
   for (i = 0; i < disprows; i++) {
-    text->lines[i] = text->buffer + dispcols * i;
+    char **line_slot = checked_storage_at(text->lines, text->line_capacity,
+                                          sizeof(*text->lines), (size_t)i);
+    *line_slot =
+        checked_storage_at(text->buffer, text->buffer_capacity,
+                           sizeof(*text->buffer), (size_t)(dispcols * i));
   }
-  text->lines[i] = nullptr;
+  char **last_line = checked_storage_at(text->lines, text->line_capacity,
+                                        sizeof(*text->lines), (size_t)i);
+  *last_line = nullptr;
   return text;
 }
 

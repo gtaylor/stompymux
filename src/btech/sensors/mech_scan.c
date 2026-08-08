@@ -28,7 +28,9 @@
 #include "mux/objects/attrs.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 #include <ctype.h>
@@ -80,8 +82,8 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   case 1:
     /* Scan Target */
     targetID[0] = args[0][0];
-    if (args[0][1]) {
-      targetID[1] = args[0][1];
+    if ((*checked_string_suffix(*args, 1))) {
+      targetID[1] = (*checked_string_suffix(*args, 1));
       target = FindTargetDBREFFromMapNumber(mech, targetID);
       tempMech = btech_context_get_mech(mech_context(mech), target);
       if (!tempMech) {
@@ -110,7 +112,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       }
       break;
     } else { /* Default target */
-      switch (toupper(args[0][0])) {
+      switch (ascii_to_upper(*checked_string_suffix(args[0], 0))) {
       case 'A':
         options = SHOW_ARMOR;
         break;
@@ -197,7 +199,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                    "Those coordinates are out of scanner range.");
       return;
     }
-    switch (toupper(args[2][0])) {
+    switch (ascii_to_upper(*checked_string_suffix(args[2], 0))) {
     case 'H':
       doh = 1;
       [[fallthrough]];
@@ -229,7 +231,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
     mapy = atoi(args[1]);
     if (!mapx && strcmp(args[0], "0")) {
       targetID[0] = args[0][0];
-      targetID[1] = args[0][1];
+      targetID[1] = (*checked_string_suffix(*args, 1));
       target = FindTargetDBREFFromMapNumber(mech, targetID);
       tempMech = btech_context_get_mech(mech_context(mech), target);
       if (!tempMech) {
@@ -249,7 +251,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                      "Target is out of scanner range.");
         return;
       }
-      switch (toupper(args[1][0])) {
+      switch (ascii_to_upper(*checked_string_suffix(args[1], 0))) {
       case 'A':
         options = SHOW_ARMOR;
         break;
@@ -356,7 +358,7 @@ void mech_report(DbRef player, void *data, char *buffer) {
   case 1:
     /* Scan Target */
     targetID[0] = args[0][0];
-    targetID[1] = args[0][1];
+    targetID[1] = (*checked_string_suffix(*args, 1));
     target = FindTargetDBREFFromMapNumber(mech, targetID);
     tempMech = btech_context_get_mech(mech_context(mech), target);
     if (!tempMech) {

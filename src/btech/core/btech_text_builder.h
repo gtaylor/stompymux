@@ -13,6 +13,8 @@ typedef struct BtechTextBuilder {
 void btech_text_builder_initialize(BtechTextBuilder *builder, char *text,
                                    size_t capacity);
 bool btech_text_builder_append(BtechTextBuilder *builder, const char *text);
+bool btech_text_builder_append_count(BtechTextBuilder *builder,
+                                     const char *text, size_t length);
 bool btech_text_builder_append_character(BtechTextBuilder *builder,
                                          char character);
 bool btech_text_builder_append_format(BtechTextBuilder *builder,

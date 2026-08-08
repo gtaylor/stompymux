@@ -1,3 +1,4 @@
+#include "command_catalogs.h"
 #include "command_invokers.h"
 
 const BtechCommandDefinition autopilotcommands[] = {
@@ -16,3 +17,7 @@ const BtechCommandDefinition autopilotcommands[] = {
     {0, "EVENTSTATS", "Lists current events for this AI",
      btech_command_invoke_auto_eventstats},
     {0, NULL, NULL, NULL}};
+
+size_t autopilot_command_count(void) {
+  return sizeof(autopilotcommands) / sizeof(*autopilotcommands) - 1;
+}
