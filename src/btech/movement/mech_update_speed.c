@@ -88,8 +88,8 @@ float mech_terrain_speed(Mech *mech, float tempspeed, float maxspeed,
   case BATTLE_TERRAIN_ICE:
     if (mech_position_z(mech) >= 0)
       break;
-    /* FALLTHRU */
     /* if he's under the ice/bridge, treat as water. */
+    [[fallthrough]];
   case BATTLE_TERRAIN_WATER:
     if (mech_movement_type(mech) == MOVE_BIPED ||
         mech_movement_type(mech) == MOVE_QUAD) {

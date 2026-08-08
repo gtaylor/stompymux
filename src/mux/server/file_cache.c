@@ -132,6 +132,7 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
         fp = fcache_fill(fp, '\r');
         fp = fcache_fill(fp, '\n');
         tchars += 2;
+        [[fallthrough]];
       case '\0':
       case '\r':
         break;

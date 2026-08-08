@@ -91,6 +91,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           case MOVE_FOIL:
             mech_notify(mech, MECHALL,
                         "Your engines cut out and you drift to a halt!");
+            [[fallthrough]];
           case MOVE_BIPED:
           case MOVE_VTOL:
           case MOVE_FLY:
@@ -223,6 +224,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           case MOVE_FOIL:
             mech_notify(mech, MECHALL,
                         "Your engines cut out and you drift to a halt!");
+            [[fallthrough]];
           case MOVE_BIPED:
           case MOVE_VTOL:
           case MOVE_FLY:
@@ -368,6 +370,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             case MOVE_FOIL:
               mech_notify(mech, MECHALL,
                           "Your engines cut out and you drift to a halt!");
+              [[fallthrough]];
             case MOVE_BIPED:
             case MOVE_VTOL:
             case MOVE_FLY:

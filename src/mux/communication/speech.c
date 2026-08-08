@@ -122,6 +122,7 @@ void do_say(CommandInvocation *invocation) {
     if (!sp_ok(&invocation->context->evaluation,
                invocation->context->world->configuration, player))
       return;
+    break;
   default:
     break;
   }

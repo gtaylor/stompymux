@@ -201,6 +201,7 @@ void do_destroy(CommandInvocation *invocation) {
         s_going(evaluation->world->database, thing);
       }
     }
+    break;
   default:
     break;
   }

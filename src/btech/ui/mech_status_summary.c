@@ -382,7 +382,7 @@ void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
     if (mech_movement_type(mech) == MOVE_FOIL)
       snprintf(typespecific, sizeof(typespecific), " VSPD: %3.1f ",
                (double)mech_vertical_speed(mech));
-    /* FALLTHROUGH */
+    [[fallthrough]];
   case CLASS_VEH_GROUND:
     /* XXX This won't work for subs with turrets.. are they possible ? */
     if (mech_section_original_internal(mech, TURRET)) {
@@ -391,7 +391,7 @@ void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
                                 mech_heading_degrees(mech)));
       break;
     }
-    /* FALLTHROUGH */
+    [[fallthrough]];
   case CLASS_MW:
   case CLASS_BSUIT:
   default:

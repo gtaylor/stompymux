@@ -416,7 +416,7 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
       switch (trace_terrain) {
       case HEAVY_FOREST:
         newwoods++;
-        /* FALLTHROUGH */
+        [[fallthrough]];
       case LIGHT_FOREST:
         newwoods++;
         /* Because we aren't in water, we stop tracing below water */

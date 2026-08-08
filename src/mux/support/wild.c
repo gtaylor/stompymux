@@ -388,6 +388,7 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
       args[i] = alloc_lbuf("wild.*");
       memset(args[i], 0, LBUF_SIZE);
       i++;
+      break;
     default:
       break;
     }

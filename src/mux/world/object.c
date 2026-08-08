@@ -138,6 +138,7 @@ int can_set_home(EvaluationContext *evaluation, DbRef player, DbRef thing,
       return 0;
     if (is_controls(evaluation->world->database, player, home))
       return 1;
+    break;
   default:
     break;
   }

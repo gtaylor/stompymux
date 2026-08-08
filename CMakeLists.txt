@@ -179,7 +179,7 @@ target_compile_options(btmux_options INTERFACE
   $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wformat=2 -Wshadow
   -Wstrict-prototypes -Wold-style-definition -Wvla -Wmissing-prototypes
   -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
-  -Wbad-function-cast -Wswitch-enum -Wunused-macros -Wfloat-equal -Wpedantic
+  -Wbad-function-cast -Wswitch-enum -Wimplicit-fallthrough -Wunused-macros -Wfloat-equal -Wpedantic
   -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings -Wconversion
   -Wsign-conversion>)
 if(BTECH_ENABLE_ASAN)
