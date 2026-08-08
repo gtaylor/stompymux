@@ -11,16 +11,18 @@
  *
  */
 
-enum { BOMB_GRAVITY = 1 };
+static const float BOMB_GRAVITY = 1.0F;
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
 
+#include "aero_bomb_api.h"
 #include "artillery_api.h"
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btech_event.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
 #include "econ_cmds_api.h"
@@ -129,8 +131,9 @@ static float bomb_calculate_destination(Mech *mech, short *x, short *y) {
   float zspd = mech_motion_vector_z(mech) / ZSCALE;
   float t, ot;
 
-  ot = t = (zspd + sqrt(zspd * zspd + 2 * BOMB_GRAVITY * fz)) / BOMB_GRAVITY;
-  t = (float)t / MOVE_TICK;
+  ot = t =
+      (zspd + sqrtf(zspd * zspd + 2.0F * BOMB_GRAVITY * fz)) / BOMB_GRAVITY;
+  t /= (float)MOVE_TICK;
   fx = fx + mech_motion_vector_x(mech) * t;
   fy = fy + mech_motion_vector_y(mech) * t;
   RealCoordToMapCoord(x, y, fx, fy);
@@ -143,16 +146,17 @@ static void bomb_aim(Mech *mech, DbRef player) {
   short x, y;
 
   t = bomb_calculate_destination(mech, &x, &y);
-  snprintf(toi, LBUF_SIZE, "%.1f second%s", t,
-           (t >= 2.0 || t < 1.0) ? "" : "s");
+  snprintf(toi, LBUF_SIZE, "%.1f second%s", (double)t,
+           (t >= 2.0F || t < 1.0F) ? "" : "s");
   mech_printf(mech, MECHALL,
               "Estimated bomb flight time %s, estimated landing hex %d,%d.",
               toi, x, y);
 }
 
 static void bomb_hit_hexes(BattleMap *map, int x, int y, int hitnb,
-                           bool iscluster, int aff_d, int aff_h, char *tomsg,
-                           char *otmsg, char *tomsg1, char *otmsg1) {
+                           bool iscluster, int aff_d, int aff_h,
+                           const char *tomsg, const char *otmsg,
+                           const char *tomsg1, const char *otmsg1) {
   blast_hit_hexes(map, aff_d, iscluster ? 2 : 10, aff_h, x, y, tomsg, otmsg,
                   tomsg1, otmsg1, 0, 4, 1, 1, hitnb);
 }
@@ -216,19 +220,22 @@ static void bomb_simulate_flight(Mech *mech, BattleMap *map, short *x, short *y,
   int i;
   short tx, ty;
 
-  if (t < 1.0)
+  if (t < 1.0F)
     return;
   MapCoordToRealCoord(*x, *y, &dx, &dy);
   delx = (dx - fx) / t;
   dely = (dy - fy) / t;
-  for (i = 1; i < t; i++) {
+  const float flight_ticks_float = ceilf(t);
+  const int flight_ticks = (int)flight_ticks_float;
+  for (i = 1; i < flight_ticks; i++) {
     fx = fx + delx;
-    fy = fx + dely;
-    fz = (float)fz - BOMB_GRAVITY;
+    fy = fy + dely;
+    fz -= BOMB_GRAVITY;
     RealCoordToMapCoord(&tx, &ty, fx, fy);
     if (!battle_map_coordinate_is_valid(map, tx, ty))
       continue;
-    if (battle_map_hex_elevation(map, tx, ty) > (fz / ZSCALE)) {
+    const int elevation = battle_map_hex_elevation(map, tx, ty);
+    if ((float)elevation > (fz / (float)ZSCALE)) {
       *x = tx;
       *y = ty;
     }
@@ -284,8 +291,9 @@ static void bomb_drop(Mech *mech, DbRef player, int bn) {
   k = bomb_from_equipment_index(mech_critical_part_type(mech, lloc, lpos));
   mech_notify(mech, MECHALL, "The ship trembles as you detach a bomb..");
   t = bomb_calculate_destination(mech, &x, &y);
-  ob = (int)t / 10;
-  if (MadePilotSkillRoll(mech, 4 + ob) || t < 2.0)
+  const float impact_time_truncated = truncf(t);
+  ob = (int)impact_time_truncated / 10;
+  if (MadePilotSkillRoll(mech, 4 + ob) || t < 2.0F)
     mech_notify(mech, MECHALL,
                 "Despite the slight problems, you keep the craft stable enough "
                 "to drop the bomb right on target..");
@@ -293,11 +301,17 @@ static void bomb_drop(Mech *mech, DbRef player, int bn) {
     mech_notify(mech, MECHALL,
                 "The ship's lurches slightly, dropping the bomb off target!");
     ob = 6 * (1 + ob); /* Max distance missed  */
-    ob = MAX(1, (btech_random_range(mech_context(mech), 1, ob)) / 2);
-    di = btech_random_range(mech_context(mech), 0, 359);
-    dir = di * TWOPIOVER360;
-    x = x + ob * cos(dir);
-    y = y + ob * sin(dir);
+    ob = MAX(1, btech_random_range_int(mech_context(mech), 1, ob) / 2);
+    di = btech_random_range_int(mech_context(mech), 0, 359);
+    dir = (float)di * TWOPIOVER360;
+    const float scattered_x = (float)x + (float)ob * cosf(dir);
+    const float scattered_y = (float)y + (float)ob * sinf(dir);
+    const float truncated_x = truncf(scattered_x);
+    const float truncated_y = truncf(scattered_y);
+    const int target_x = (int)truncated_x;
+    const int target_y = (int)truncated_y;
+    x = clamp_int_to_short(target_x);
+    y = clamp_int_to_short(target_y);
   }
   bomb_simulate_flight(mech, map, &x, &y, t);
   if (!battle_map_coordinate_is_valid(map, x, y))
@@ -309,8 +323,10 @@ static void bomb_drop(Mech *mech, DbRef player, int bn) {
   s->type = k;
   s->map = map;
   mech_cargo_weight_recalculate(mech);
+  const float delay_truncated = truncf(t);
+  const int delay = MAX(1, (int)delay_truncated);
   btech_context_event_schedule(mech_context(mech), s, EVENT_DHIT,
-                               bomb_hit_event, MAX(1, t), 0);
+                               bomb_hit_event, delay, 0);
 }
 
 void mech_bomb(DbRef player, void *data, char *buffer) {

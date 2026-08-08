@@ -23,6 +23,7 @@
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "btmux_build_config.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
@@ -63,8 +64,10 @@
 static int mech_adjusted_jump_speed_mp(const Mech *mech, const BattleMap *map) {
   float speed = mech_jump_speed(mech);
 
-  if (mech_is_under_gravity(mech) && map != nullptr)
-    speed = speed * 100 / MAX(50, battle_map_gravity(map));
+  if (mech_is_under_gravity(mech) && map != nullptr) {
+    const int gravity = MAX(50, battle_map_gravity(map));
+    speed = speed * 100.0F / (float)gravity;
+  }
   return (int)(speed * MP_PER_KPH);
 }
 
@@ -76,7 +79,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   MechConditionSummary condition;
   char *args[3];
   int argc;
-  int target;
+  DbRef target;
   char targetID[2];
   short mapx, mapy;
   int bearing;
@@ -148,7 +151,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                  "You haven't finished standing up yet.");
     return;
   }
-  if (fabs(mech_jump_speed(mech)) <= 0.0) {
+  if (fabsf(mech_jump_speed(mech)) <= 0.0F) {
     mecha_notify(btech_context_evaluation(context), player,
                  "This mech doesn't have jump jets!");
     return;
@@ -243,8 +246,8 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                    "Even you can't aim your jump well enough to squish that!");
       return;
     }
-    mapx = mech_position_x(tempMech);
-    mapy = mech_position_y(tempMech);
+    mapx = clamp_int_to_short(mech_position_x(tempMech));
+    mapy = clamp_int_to_short(mech_position_y(tempMech));
     mech_dfa_target_dbref_set(mech, mech_target_dbref(mech));
     break;
   case 1:
@@ -276,13 +279,13 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                    "Even you can't aim your jump well enough to squish that!");
       return;
     }
-    mapx = mech_position_x(tempMech);
-    mapy = mech_position_y(tempMech);
+    mapx = clamp_int_to_short(mech_position_x(tempMech));
+    mapy = clamp_int_to_short(mech_position_y(tempMech));
     mech_dfa_target_dbref_set(mech, mech_dbref(tempMech));
     break;
   case 2:
     bearing = atoi(args[0]);
-    range = atof(args[1]);
+    range = strtof(args[1], nullptr);
     FindXY(mech_position_real_x(mech), mech_position_real_y(mech), bearing,
            range, &realx, &realy);
 
@@ -307,7 +310,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   else
     tz = battle_map_hex_elevation(mech_map, mapx, mapy);
   jps = mech_adjusted_jump_speed_mp(mech, mech_map);
-  if (range > jps) {
+  if (range > (float)jps) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That target is out of range!");
     return;
@@ -323,7 +326,10 @@ void mech_jump(DbRef player, void *data, char *buffer) {
      Come to think of it, the last SDR figure was ridiculous. New
      value: 2 * 1 + 2 = 4
    */
-  mech_jump_apex_elevation_set(mech, MIN(jps + 1 - range / 3, 2 * range + 2));
+  const float apex_candidate =
+      fminf((float)jps + 1.0F - range / 3.0F, 2.0F * range + 2.0F);
+  const int apex_elevation = (int)apex_candidate;
+  mech_jump_apex_elevation_set(mech, apex_elevation);
   if ((tz - sz) > jps) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That target's high for you to reach with a single jump!");
@@ -343,15 +349,16 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                         realx, realy);
 
   /* TAKE OFF! */
-  const MechJumpLaunch launch = {
+  const double jump_distance =
+      length_hypotenuse((double)(realx - mech_position_real_x(mech)),
+                        (double)(realy - mech_position_real_y(mech)));
+  MechJumpLaunch launch = {
       .heading = bearing,
       .destination_x = mapx,
       .destination_y = mapy,
       .destination_elevation = tz,
-      .apex_elevation = MIN(jps + 1 - range / 3, 2 * range + 2),
-      .distance =
-          length_hypotenuse((double)(realx - mech_position_real_x(mech)),
-                            (double)(realy - mech_position_real_y(mech))),
+      .apex_elevation = apex_elevation,
+      .distance = (float)jump_distance,
   };
   mech_jump_launch(mech, &launch);
   if (dfa_attack)

@@ -47,7 +47,7 @@ void mech_update(DbRef key, void *data) {
     mech_heat_update(mech);
   if (mech_is_started(mech)) {
     int visibility = mech_sensor_visibility_modifier(mech) +
-                     btech_random_range(mech_context(mech), -40, 40);
+                     btech_random_range_int(mech_context(mech), -40, 40);
     mech_sensor_visibility_modifier_set(mech,
                                         mech_visibility_clamp(visibility));
   }

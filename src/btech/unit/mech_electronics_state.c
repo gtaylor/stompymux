@@ -1,40 +1,41 @@
 #include "mech_electronics_api.h"
 
 #include "btconfig.h"
+#include "checked_conversion.h"
 #include "mech_internal.h"
 
 int mech_computer_quality(const Mech *mech) { return mech->ud.computer; }
 
 void mech_computer_quality_set(Mech *mech, int quality) {
-  mech->ud.computer = quality;
+  mech->ud.computer = clamp_int_to_char(quality);
 }
 
 int mech_radio_quality(const Mech *mech) { return mech->ud.radio; }
 
 void mech_radio_quality_set(Mech *mech, int quality) {
-  mech->ud.radio = quality;
+  mech->ud.radio = clamp_int_to_char(quality);
 }
 
 int mech_radio_configuration(const Mech *mech) { return mech->ud.radioinfo; }
 
 void mech_radio_configuration_set(Mech *mech, int configuration) {
-  mech->ud.radioinfo = configuration;
+  mech->ud.radioinfo = clamp_int_to_unsigned_char(configuration);
 }
 
 int mech_radio_range(const Mech *mech) { return mech->ud.radio_range; }
 
 void mech_radio_range_set(Mech *mech, int range) {
-  mech->ud.radio_range = range;
+  mech->ud.radio_range = clamp_int_to_short(range);
 }
 
 void mech_radio_range_add(Mech *mech, int amount) {
-  mech->ud.radio_range += amount;
+  mech->ud.radio_range = clamp_int_to_short(mech->ud.radio_range + amount);
 }
 
 int mech_tactical_range(const Mech *mech) { return mech->ud.tac_range; }
 
 void mech_tactical_range_set(Mech *mech, int range) {
-  mech->ud.tac_range = range;
+  mech->ud.tac_range = clamp_int_to_char(range);
 }
 
 int mech_long_range_sensor_range(const Mech *mech) {
@@ -42,13 +43,13 @@ int mech_long_range_sensor_range(const Mech *mech) {
 }
 
 void mech_long_range_sensor_range_set(Mech *mech, int range) {
-  mech->ud.lrs_range = range;
+  mech->ud.lrs_range = clamp_int_to_char(range);
 }
 
 int mech_scanner_range(const Mech *mech) { return mech->ud.scan_range; }
 
 void mech_scanner_range_set(Mech *mech, int range) {
-  mech->ud.scan_range = range;
+  mech->ud.scan_range = clamp_int_to_char(range);
 }
 
 void mech_sensor_ranges_halve(Mech *mech) {

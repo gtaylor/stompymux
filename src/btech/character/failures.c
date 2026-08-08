@@ -12,6 +12,9 @@
  * Last modified: Sat Jun  6 21:43:52 1998 fingon
  */
 
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -256,7 +259,9 @@ static void FailureRadioStatic(Mech *mech, int weapnum, int weaptype,
 
 static void mech_rrec_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long val = (long)e->data2;
+  const intptr_t event_value = (intptr_t)e->data2;
+  assert(event_value >= INT_MIN && event_value <= INT_MAX);
+  const int val = (int)event_value;
 
   mech_radio_range_add(mech, val);
   if (!mech_is_destroyed(mech) && val == mech_radio_range(mech))
@@ -265,8 +270,10 @@ static void mech_rrec_event(MuxEvent *e) {
 
 static void mech_srec_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long val = (long)e->data2;
-  int vt = val / 256;
+  const intptr_t event_value = (intptr_t)e->data2;
+  assert(event_value >= INT_MIN && event_value <= INT_MAX);
+  const int val = (int)event_value;
+  const int vt = val / 256;
 
   switch (vt) {
   case 0:
@@ -292,11 +299,11 @@ static void mech_srec_event(MuxEvent *e) {
 static void FailureRadioShort(Mech *mech, int weapnum, int weaptype,
                               int section, int critical, int roll,
                               int *modifier, int *type) {
-  mech_event_schedule(
-      mech, EVENT_MRECOVERY, mech_rrec_event,
-      btech_random_range(mech_context(mech), 30,
-                         btech_random_range(mech_context(mech), 40, 200)),
-      (long)mech_radio_range(mech));
+  mech_event_schedule(mech, EVENT_MRECOVERY, mech_rrec_event,
+                      btech_random_range_int(
+                          mech_context(mech), 30,
+                          btech_random_range_int(mech_context(mech), 40, 200)),
+                      (long)mech_radio_range(mech));
   mech_radio_range_set(mech, 0);
 }
 
@@ -306,11 +313,11 @@ static void FailureRadioRange(Mech *mech, int weapnum, int weaptype,
   int mod = failures[part_brand_failure_index(-2) + roll - 1].data;
 
   mod = MIN(mech_radio_range(mech) - 1, mod);
-  mech_event_schedule(
-      mech, EVENT_MRECOVERY, mech_rrec_event,
-      btech_random_range(mech_context(mech), 30,
-                         btech_random_range(mech_context(mech), 40, 200)),
-      (long)mod);
+  mech_event_schedule(mech, EVENT_MRECOVERY, mech_rrec_event,
+                      btech_random_range_int(
+                          mech_context(mech), 30,
+                          btech_random_range_int(mech_context(mech), 40, 200)),
+                      (long)mod);
   mech_radio_range_add(mech, -mod);
 }
 
@@ -330,42 +337,48 @@ static void FailureComputerScanner(Mech *mech, int weapnum, int weaptype,
   case 1:
     mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
-        btech_random_range(mech_context(mech), 30,
-                           btech_random_range(mech_context(mech), 40, 200)),
+        btech_random_range_int(
+            mech_context(mech), 30,
+            btech_random_range_int(mech_context(mech), 40, 200)),
         (long)mech_tactical_range(mech));
     mech_tactical_range_set(mech, 0);
     break;
   case 2:
     mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
-        btech_random_range(mech_context(mech), 30,
-                           btech_random_range(mech_context(mech), 40, 200)),
+        btech_random_range_int(
+            mech_context(mech), 30,
+            btech_random_range_int(mech_context(mech), 40, 200)),
         (long)(mech_long_range_sensor_range(mech) + 256));
     mech_long_range_sensor_range_set(mech, 0);
     break;
   case 4:
     mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
-        btech_random_range(mech_context(mech), 30,
-                           btech_random_range(mech_context(mech), 40, 200)),
+        btech_random_range_int(
+            mech_context(mech), 30,
+            btech_random_range_int(mech_context(mech), 40, 200)),
         (long)(mech_scanner_range(mech) + 512));
     mech_scanner_range_set(mech, 0);
     break;
   case 7:
     mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
-        btech_random_range(mech_context(mech), 30,
-                           btech_random_range(mech_context(mech), 40, 200)),
+        btech_random_range_int(
+            mech_context(mech), 30,
+            btech_random_range_int(mech_context(mech), 40, 200)),
         (long)mech_tactical_range(mech));
     mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
-        btech_random_range(mech_context(mech), 30,
-                           btech_random_range(mech_context(mech), 40, 200)),
+        btech_random_range_int(
+            mech_context(mech), 30,
+            btech_random_range_int(mech_context(mech), 40, 200)),
         (long)(mech_long_range_sensor_range(mech) + 256));
     mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
-        btech_random_range(mech_context(mech), 30,
-                           btech_random_range(mech_context(mech), 40, 200)),
+        btech_random_range_int(
+            mech_context(mech), 30,
+            btech_random_range_int(mech_context(mech), 40, 200)),
         (long)(mech_scanner_range(mech) + 512));
     mech_tactical_range_set(mech, 0);
     mech_long_range_sensor_range_set(mech, 0);
@@ -411,7 +424,7 @@ static void FailureWeaponDud(Mech *mech, int weapnum, int weaptype, int section,
                                         FAIL_DESTROYED);
   }
   mech_set_recycle_part(mech, section, critical,
-                        30 + btech_random_range(mech_context(mech), 1, 60));
+                        30 + btech_random_range_int(mech_context(mech), 1, 60));
 }
 
 static void FailureWeaponJammed(Mech *mech, int weapnum, int weaptype,
@@ -423,29 +436,24 @@ static void FailureWeaponJammed(Mech *mech, int weapnum, int weaptype,
           .type);
   *type = WEAPON_JAMMED;
   mech_set_recycle_part(mech, section, critical,
-                        btech_random_range(mech_context(mech), 20, 40));
+                        btech_random_range_int(mech_context(mech), 20, 40));
 }
 
 static void FailureWeaponDamage(Mech *mech, int weapnum, int weaptype,
                                 int section, int critical, int roll,
                                 int *modifier, int *type) {
-  *modifier =
-      (int)(MechWeapons[weaptype].damage *
-            (failures[failure_index_for_critical(mech, section, critical) +
-                      roll]
-                 .data /
-             100.0));
+  const int percentage =
+      failures[failure_index_for_critical(mech, section, critical) + roll].data;
+  *modifier = (MechWeapons[weaptype].damage * percentage) / 100;
   *type = DAMAGE;
 }
 
 static void FailureWeaponHeat(Mech *mech, int weapnum, int weaptype,
                               int section, int critical, int roll,
                               int *modifier, int *type) {
-  *modifier =
-      (int)MechWeapons[weaptype].heat *
-      (failures[failure_index_for_critical(mech, section, critical) + roll]
-           .data /
-       100.0);
+  const int percentage =
+      failures[failure_index_for_critical(mech, section, critical) + roll].data;
+  *modifier = (MechWeapons[weaptype].heat * percentage) / 100;
   *type = HEAT;
 }
 
@@ -463,7 +471,7 @@ static void FailureWeaponSpike(Mech *mech, int weapnum, int weaptype,
     return;
   }
   mech_set_recycle_part(mech, section, critical,
-                        btech_random_range(mech_context(mech), 20, 40));
+                        btech_random_range_int(mech_context(mech), 20, 40));
 }
 
 void mech_generic_failure_check(Mech *mech, int type, int *result, int *mod) {
@@ -480,14 +488,14 @@ void mech_generic_failure_check(Mech *mech, int type, int *result, int *mod) {
       l = 5;
   } else
     return;
-  if (btech_random_range(mech_context(mech), 1, 5000) != 42)
+  if (btech_random_range_int(mech_context(mech), 1, 5000) != 42)
     return; /* ~1/5000 chance */
-  if (btech_random_range(mech_context(mech), 1, 100) <=
+  if (btech_random_range_int(mech_context(mech), 1, 100) <=
       brands[(i + l - 1) * 5 / 6].success)
     return;
-  roll = btech_random_range(mech_context(mech), 1, 6);
+  roll = btech_random_range_int(mech_context(mech), 1, 6);
   if (roll == 6)
-    roll = btech_random_range(mech_context(mech), 1, 6);
+    roll = btech_random_range_int(mech_context(mech), 1, 6);
   in = i + roll - 1;
   switch (failures[in].flag) {
   case REQ_TARGET:
@@ -524,7 +532,7 @@ void mech_generic_failure_check(Mech *mech, int type, int *result, int *mod) {
 void mech_weapon_failure_check(Mech *mech, int weapnum, int weaptype,
                                int section, int critical, int *modifier,
                                int *type) {
-  short roll;
+  int roll;
   int l = mech_critical_brand(mech, section, critical);
   int t = mech_critical_part_type(mech, section, critical);
   int i = part_brand_failure_index(t), in;
@@ -541,14 +549,14 @@ void mech_weapon_failure_check(Mech *mech, int weapnum, int weaptype,
       return;
   } else
     return;
-  if (btech_random_range(mech_context(mech), 1, 10) < 9)
+  if (btech_random_range_int(mech_context(mech), 1, 10) < 9)
     return;
-  if (btech_random_range(mech_context(mech), 1, 100) <=
+  if (btech_random_range_int(mech_context(mech), 1, 100) <=
       brands[(i + l - 1) * 5 / 6].success)
     return;
-  roll = btech_random_range(mech_context(mech), 1, 6);
+  roll = btech_random_range_int(mech_context(mech), 1, 6);
   if (roll == 6)
-    roll = btech_random_range(mech_context(mech), 1, 6);
+    roll = btech_random_range_int(mech_context(mech), 1, 6);
   in = i + roll - 1;
   if (failures[in].flag & REQ_HEAT)
     if (!MechWeapons[weaptype].heat)

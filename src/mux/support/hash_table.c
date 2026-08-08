@@ -12,7 +12,11 @@
 
 struct string_dict_entry {
   char *key;
-  void *data;
+  union {
+    void *mutable_data;
+    const void *const_data;
+  } data;
+  bool is_const;
 };
 
 static int nuke_hash_ent(void *key, void *data, int depth, void *arg);
@@ -65,9 +69,22 @@ void *hash_table_find(const char *str, HashTable *htab) {
   ent = red_black_tree_find(htab->tree, (void *)str);
 #pragma clang diagnostic pop
   if (ent) {
-    return ent->data;
+    return ent->data.mutable_data;
   } else
     return (void *)ent;
+}
+
+const void *hash_table_find_const(const char *str, HashTable *htab) {
+  struct string_dict_entry *ent;
+
+  htab->checks++;
+  /* red_black_tree's key parameter isn't const-correct; str is only used
+     as a lookup key here, never mutated. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+  ent = red_black_tree_find(htab->tree, (void *)str);
+#pragma clang diagnostic pop
+  return ent ? ent->data.const_data : nullptr;
 }
 
 /*
@@ -88,8 +105,29 @@ int hash_table_add(const char *str, void *hashdata, HashTable *htab) {
 
   ent = malloc(sizeof(struct string_dict_entry));
   ent->key = strdup(str);
-  ent->data = hashdata;
+  ent->data.mutable_data = hashdata;
+  ent->is_const = false;
 
+  red_black_tree_insert(htab->tree, ent->key, ent);
+  return 0;
+}
+
+int hash_table_add_const(const char *str, const void *hashdata,
+                         HashTable *htab) {
+  struct string_dict_entry *ent;
+
+  /* red_black_tree's key parameter isn't const-correct; str is only used
+     as a lookup key here, never mutated. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+  if (red_black_tree_exists(htab->tree, (void *)str))
+    return -1;
+#pragma clang diagnostic pop
+
+  ent = malloc(sizeof(struct string_dict_entry));
+  ent->key = strdup(str);
+  ent->data.const_data = hashdata;
+  ent->is_const = true;
   red_black_tree_insert(htab->tree, ent->key, ent);
   return 0;
 }
@@ -154,7 +192,8 @@ int hash_table_replace(char *str, void *hashdata, HashTable *htab) {
   if (!ent)
     return 0;
 
-  ent->data = hashdata;
+  ent->data.mutable_data = hashdata;
+  ent->is_const = false;
   return 1;
 }
 
@@ -167,8 +206,9 @@ static int hashreplall_cb(void *key, void *data, int depth, void *arg) {
   struct string_dict_entry *ent = (struct string_dict_entry *)data;
   struct hashreplstat *repl = (struct hashreplstat *)arg;
 
-  if (ent->data == repl->old) {
-    ent->data = repl->new;
+  if (ent->data.mutable_data == repl->old) {
+    ent->data.mutable_data = repl->new;
+    ent->is_const = false;
   }
   return 1;
 }
@@ -206,7 +246,7 @@ void *hash_table_first_entry(HashTable *htab) {
   ent = red_black_tree_search(htab->tree, SEARCH_FIRST, nullptr);
   if (ent) {
     htab->last = strdup(ent->key);
-    return ent->data;
+    return ent->data.mutable_data;
   }
   htab->last = nullptr;
 
@@ -225,7 +265,7 @@ void *hash_table_next_entry(HashTable *htab) {
 
   if (ent) {
     htab->last = strdup(ent->key);
-    return ent->data;
+    return ent->data.mutable_data;
   } else {
     htab->last = nullptr;
     return nullptr;

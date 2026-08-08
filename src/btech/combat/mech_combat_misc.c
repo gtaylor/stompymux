@@ -137,7 +137,8 @@ void mech_ammunition_decrement(Mech *mech, int weapindx, int section,
 
 void mech_ammunition_expenditure_check(Mech *mech, int weapindx, int ns) {
   int targ = ammunition_equipment_index(weapindx);
-  int cnt = 0, slots = 0;
+  int cnt = 0;
+  float slots = 0.0F;
   int t, t2;
   int i, j, cl;
   int sev = 0;
@@ -155,7 +156,8 @@ void mech_ammunition_expenditure_check(Mech *mech, int weapindx, int ns) {
         slots += mech_ammunition_slot_multiplier(mech, i, j);
       }
   }
-  t = BOUNDED(3, (slots * MechWeapons[weapindx].ammoperton) / 8, 30);
+  t = BOUNDED(3, (int)(slots * (float)MechWeapons[weapindx].ammoperton / 8.0F),
+              30);
   t2 = 2 * t;
   if ((cnt == (t + ns)) || (ns && cnt >= t && cnt < (t + ns)))
     sev = 1;
@@ -233,7 +235,8 @@ void mech_plasma_hit(Mech *mech, Mech *hitMech, bool LOS) {
   float heatadd = 0;
 
   if (mech_class(hitMech) == CLASS_MECH) {
-    heatadd = (float)btech_random_range(mech_context(hitMech), 1, 6);
+    const int heat_roll = btech_random_range_int(mech_context(hitMech), 1, 6);
+    heatadd = (float)heat_roll;
     mech_weapon_heat_add(hitMech, heatadd);
   }
 }
@@ -340,6 +343,13 @@ void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason) {
     case CLASS_BSUIT:
       mech_notify(target, MECHALL, "You have been killed!");
       break;
+    case CLASS_MECH:
+    case CLASS_VEH_GROUND:
+    case CLASS_VTOL:
+    case CLASS_VEH_NAVAL:
+    case CLASS_SPHEROID_DS:
+    case CLASS_AERO:
+    case CLASS_DS:
     default:
       mech_notify(target, MECHALL, "You have been destroyed!");
       break;
@@ -352,7 +362,7 @@ void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason) {
         mech_los_broadcast(target, "explodes in a ball of flames!");
         add_decoration(mech_map, mech_position_x(target),
                        mech_position_y(target), TYPE_FIRE, FIRE,
-                       btech_random_range(context, 60, 180));
+                       btech_random_range_int(context, 60, 180));
       }
     }
     if (mech_carried_dbref(target) > 0) {

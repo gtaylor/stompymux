@@ -67,20 +67,21 @@ typedef struct CoolMenu {
   struct CoolMenu *next;
 } CoolMenu;
 
-void CreateMenuEntry_Killer(CoolMenu **c, char *text, int flag, int id,
+void CreateMenuEntry_Killer(CoolMenu **c, const char *text, int flag, int id,
                             int value, int maxvalue);
 
-static inline void cool_menu_entry_normal(CoolMenu **menu, char *text,
+static inline void cool_menu_entry_normal(CoolMenu **menu, const char *text,
                                           int flags, int id, int max_value) {
   CreateMenuEntry_Killer(menu, text, flags, id, 0, max_value);
 }
 
-static inline void cool_menu_entry_simple(CoolMenu **menu, char *text,
+static inline void cool_menu_entry_simple(CoolMenu **menu, const char *text,
                                           int flags) {
   cool_menu_entry_normal(menu, text, flags, 0, 999);
 }
 
-static inline void cool_menu_entry_very_simple(CoolMenu **menu, char *text) {
+static inline void cool_menu_entry_very_simple(CoolMenu **menu,
+                                               const char *text) {
   cool_menu_entry_normal(menu, text, CM_ONE, 0, 999);
 }
 
@@ -92,11 +93,13 @@ int CoolMenu_FPWBit(int number, int maxlen);
 /* Automated 'nice' looking menus: */
 CoolMenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
                       int max);
+CoolMenu *SelCol_ConstMenu(int columns, const char *heading,
+                           const char *const strings[], int type, int max);
 
 /* last = how many entries we have */
 CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
                                 int last);
-CoolMenu *SelCol_FunStringMenuContextK(int columns, char *heading,
+CoolMenu *SelCol_FunStringMenuContextK(int columns, const char *heading,
                                        char *(*fun)(void *, int, char *buffer),
                                        void *context, int last);
 
@@ -110,6 +113,12 @@ static inline CoolMenu *auto_column_menu(char *heading, char **strings,
 
 static inline CoolMenu *auto_column_string_menu(char *heading, char **strings) {
   return auto_column_menu(heading, strings, 0);
+}
+
+static inline CoolMenu *
+auto_column_const_string_menu(const char *heading,
+                              const char *const strings[]) {
+  return SelCol_ConstMenu(-1, heading, strings, 0, 0);
 }
 
 static inline CoolMenu *selected_column_string_menu(int columns, char *heading,

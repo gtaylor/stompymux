@@ -34,6 +34,9 @@ static int btech_special_count_objects(void *key, void *data, int depth,
   case GTYPE_AUTO:
     counts->autopilots++;
     break;
+  case GTYPE_DEBUG:
+  case GTYPE_UNUSED1:
+    break;
   default:
     break;
   }
@@ -163,7 +166,7 @@ static int btech_special_load_context_stage(sqlite3 *sqlite,
 
 /* Load every BTech table only after the normal special-object allocators run.
  */
-int btech_special_load_all(sqlite3 *sqlite, BtechContext *context) {
+static int btech_special_load_all(sqlite3 *sqlite, BtechContext *context) {
   if (btech_special_load_stage(sqlite, context, "metadata",
                                btech_special_validate_metadata) < 0)
     return -1;
@@ -271,12 +274,12 @@ int btech_persistence_load_special_state_path(BtechContext *context,
   result = -1;
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
     log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
-              "Cannot open SQLite BTech state from %s: %s", (char *)path,
+              "Cannot open SQLite BTech state from %s: %s", path,
               sqlite ? sqlite3_errmsg(sqlite) : strerror(errno));
   } else if (btech_special_load_all(sqlite, context) < 0) {
     log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
-              "Invalid or incomplete SQLite BTech state in %s: %s",
-              (char *)path, sqlite3_errmsg(sqlite));
+              "Invalid or incomplete SQLite BTech state in %s: %s", path,
+              sqlite3_errmsg(sqlite));
   } else {
     result = 0;
   }

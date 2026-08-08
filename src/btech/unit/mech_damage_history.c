@@ -1,5 +1,6 @@
 #include "mech_damage_history_api.h"
 
+#include "checked_conversion.h"
 #include "mech_internal.h"
 
 MechDamageHistory mech_damage_history(const Mech *mech) {
@@ -25,5 +26,9 @@ void mech_damage_inflicted_add(Mech *mech, int damage) {
 }
 
 void mech_stagger_stamp_set(Mech *mech, int stamp) {
-  mech->rd.staggerstamp = stamp + 1;
+  if (stamp >= CHAR_MAX) {
+    mech->rd.staggerstamp = CHAR_MAX;
+    return;
+  }
+  mech->rd.staggerstamp = clamp_int_to_char(stamp + 1);
 }

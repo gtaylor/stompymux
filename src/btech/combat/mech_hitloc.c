@@ -19,7 +19,7 @@
 int mech_punch_hit_location(Mech *target, int hitGroup) {
   BtechContext *context = mech_context(target);
 
-  int roll = btech_random_range(context, 1, 6);
+  int roll = btech_random_range_int(context, 1, 6);
 
   /* New tables from Total Warfare - pg 147 (and back of book)
    * - Dany 01/2007 */
@@ -155,7 +155,7 @@ int mech_punch_hit_location(Mech *target, int hitGroup) {
 int mech_kick_hit_location(Mech *target, int hitGroup) {
   BtechContext *context = mech_context(target);
 
-  int roll = btech_random_range(context, 1, 6);
+  int roll = btech_random_range_int(context, 1, 6);
 
   /* New tables from Total Warfare for quads */
   if (mech_is_quad(target)) {
@@ -300,7 +300,7 @@ int mech_battle_suit_hit_location(Mech *mech) {
       table[last++] = i;
   if (!last)
     return -1;
-  return table[btech_random_range(context, 0, last - 1)];
+  return table[btech_random_range_int(context, 0, last - 1)];
 }
 
 int mech_hit_location_transfer(Mech *mech, int hitloc) {
@@ -324,6 +324,12 @@ int mech_hit_location_transfer(Mech *mech, int hitloc) {
       return CTORSO;
       break;
     }
+    break;
+  case CLASS_VEH_GROUND:
+  case CLASS_VTOL:
+  case CLASS_VEH_NAVAL:
+  case CLASS_SPHEROID_DS:
+  case CLASS_DS:
     break;
   default:
     break;

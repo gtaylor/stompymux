@@ -373,7 +373,7 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
       enemyZ = mech_position_real_z(tempMech);
       mapx = mech_position_x(tempMech);
       mapy = mech_position_y(tempMech);
-      range = 0.2;
+      range = 0.2F;
       LOS = 1;
 
     } else {
@@ -445,7 +445,8 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
           mapy = mech_target_hex_y(mech);
           mech_target_hex_z_set(mech,
                                 battle_map_hex_elevation(mech_map, mapx, mapy));
-          enemyZ = ZSCALE * mech_target_hex_z(mech);
+          const int target_hex_z = mech_target_hex_z(mech);
+          enemyZ = ZSCALE * (float)target_hex_z;
           MapCoordToRealCoord(mapx, mapy, &enemyX, &enemyY);
         }
 
@@ -574,7 +575,8 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
       MapCoordToRealCoord(mapx, mapy, &enemyX, &enemyY);
       mech_target_hex_z_set(mech,
                             battle_map_hex_elevation(mech_map, mapx, mapy));
-      enemyZ = ZSCALE * mech_target_hex_z(mech);
+      const int target_hex_z = mech_target_hex_z(mech);
+      enemyZ = ZSCALE * (float)target_hex_z;
     }
 
     if (mech_class(mech) != CLASS_BSUIT) {
@@ -680,7 +682,7 @@ int weapon_failure_stuff(Mech *mech, int *weapnum, int *weapindx, int *section,
             : weapon_catalogue_effective_range(
                   *weapindx, btech_context_uses_extended_weapon_ranges(
                                  mech_context(mech)));
-    if ((effective_range - *modifier) < range) {
+    if ((float)(effective_range - *modifier) < range) {
       mech_notify(
           mech, MECHALL,
           "Due to weapons failure your shot falls short of its target!");

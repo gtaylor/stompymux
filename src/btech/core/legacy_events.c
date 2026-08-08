@@ -10,6 +10,7 @@
 
 #include "btech/context.h"
 #include "btech_event.h"
+#include "events_api.h"
 #include "map_obj_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/server/game.h"

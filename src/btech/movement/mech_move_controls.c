@@ -355,7 +355,8 @@ void mech_speed(DbRef player, void *data, char *buffer) {
 
   if (mech_parseattributes(buffer, args, 1) != 1) {
     notify_printf(btech_context_evaluation(context), player,
-                  "Your current speed is %.2f.", mech_current_speed(mech));
+                  "Your current speed is %.2f.",
+                  (double)mech_current_speed(mech));
     return;
   }
   if (mech_control_is_flying(mech) && mech_fuel(mech) <= 0 &&
@@ -367,22 +368,22 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   maxspeed = mech_effective_maximum_speed(mech);
 
   if (mech_movement_type(mech) == MOVE_VTOL)
-    maxspeed = sqrt((float)maxspeed * maxspeed -
-                    mech_vertical_speed(mech) * mech_vertical_speed(mech));
+    maxspeed = sqrtf(maxspeed * maxspeed -
+                     mech_vertical_speed(mech) * mech_vertical_speed(mech));
 
-  maxspeed = maxspeed > 0.0 ? maxspeed : 0.0;
+  maxspeed = maxspeed > 0.0F ? maxspeed : 0.0F;
 
   walkspeed = mech_control_walking_speed(maxspeed);
-  newspeed = atof(args[0]);
+  newspeed = strtof(args[0], nullptr);
 
-  if (newspeed < 0.1) {
+  if (newspeed < 0.1F) {
 
     /* Possibly a string speed instead? */
     for (i = 0; speed_tables[i].name; i++)
       if (!strcasecmp(speed_tables[i].name, args[0])) {
         switch (speed_tables[i].flag) {
         case 0:
-          newspeed = 0.0;
+          newspeed = 0.0F;
           break;
         case -1:
           newspeed = -walkspeed;
@@ -461,7 +462,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   if (!is_wizard(btech_context_database(context), player) &&
       is_in_character(btech_context_database(context), mech_dbref(mech)) &&
       mech_pilot_dbref(mech) != player) {
-    if (newspeed < 0.0) {
+    if (newspeed < 0.0F) {
       mecha_notify(
           btech_context_evaluation(context), player,
           "Not being the Pilot of this beast, you cannot move it backwards.");
@@ -475,7 +476,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   }
   mech_desired_speed_set(mech, newspeed);
   mech_maybe_move(mech);
-  if (fabs(newspeed) > 0.1) {
+  if (fabsf(newspeed) > 0.1F) {
     if (condition.swarm_target > 0) {
       bsuit_swarm_stop(mech, 1);
       mech_hidden_set(mech, false);
@@ -519,13 +520,13 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
   if (mech_parseattributes(buffer, args, 1) != 1) {
     mecha_notify(btech_context_evaluation(context), player,
                  tprintf("Current vertical speed is %.2f KPH.",
-                         mech_vertical_speed(mech)));
+                         (double)mech_vertical_speed(mech)));
     return;
   }
-  newspeed = atof(args[0]);
+  newspeed = strtof(args[0], nullptr);
   maxspeed = mech_effective_maximum_speed(mech);
-  maxspeed = sqrt((float)maxspeed * maxspeed -
-                  mech_desired_speed(mech) * mech_desired_speed(mech));
+  maxspeed = sqrtf(maxspeed * maxspeed -
+                   mech_desired_speed(mech) * mech_desired_speed(mech));
   if ((newspeed > maxspeed) || (newspeed < -maxspeed)) {
     snprintf(buff, sizeof(buff), "Max vertical speed is + %d KPH and - %d KPH",
              (int)maxspeed, (int)maxspeed);

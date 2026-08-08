@@ -1,5 +1,6 @@
 #include "mech_progress_api.h"
 
+#include "checked_conversion.h"
 #include "mech_internal.h"
 
 bool mech_piloting_position_mark_changed(Mech *mech) {
@@ -16,7 +17,9 @@ void mech_battle_value_set(Mech *mech, int battle_value) {
   mech->ud.mechbv = battle_value;
 }
 
-float mech_experience_modifier(const Mech *mech) { return mech->rd.xpmod; }
+double mech_experience_modifier(const Mech *mech) {
+  return (double)mech->rd.xpmod;
+}
 
 void mech_shot_result_record(Mech *mech, bool hit) {
   if (hit)
@@ -27,4 +30,7 @@ void mech_shot_result_record(Mech *mech, bool hit) {
 
 void mech_shots_fired_increment(Mech *mech) { mech->rd.shots_fired++; }
 
-int mech_hexes_walked_advance(Mech *mech) { return ++mech->pd.hexes_walked; }
+int mech_hexes_walked_advance(Mech *mech) {
+  mech->pd.hexes_walked += 1.0F;
+  return clamp_float_to_int(mech->pd.hexes_walked);
+}

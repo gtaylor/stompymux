@@ -3,6 +3,7 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "map.h"
+#include "map_api.h"
 #include "map_obj_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
@@ -19,7 +20,7 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
   char valid[50];
   MechId id;
   char *args[2];
-  char *cmds[] = {"MECHS", "OBJS", NULL};
+  const char *const cmds[] = {"MECHS", "OBJS", nullptr};
   enum { MECHS, OBJS };
 
   map = (BattleMap *)data;

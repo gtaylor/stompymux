@@ -1,6 +1,7 @@
 
 #include "btech/context.h"
 #include "map.h"
+#include "mech_broadcast_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
@@ -8,7 +9,7 @@
 #include "registry_api.h"
 
 int MapLimitedBroadcast2d(BattleMap *map, float x, float y, float range,
-                          char *message) {
+                          const char *message) {
   int count = 0;
 
   for (int index = 0; index < map->first_free; index++) {
@@ -26,7 +27,7 @@ int MapLimitedBroadcast2d(BattleMap *map, float x, float y, float range,
 }
 
 int MapLimitedBroadcast3d(BattleMap *map, float x, float y, float z,
-                          float range, char *message) {
+                          float range, const char *message) {
   int count = 0;
 
   for (int index = 0; index < map->first_free; index++) {

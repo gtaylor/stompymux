@@ -55,11 +55,11 @@
 
 /* Stops everyone who's swarming this poor guy */
 
-#define RECYCLE_SWARM (PHYSICAL_RECYCLE_TIME / 3)
-#define RECYCLE_ATTACKLEG (PHYSICAL_RECYCLE_TIME / 2)
-#define RECYCLE_INT_STOPSWARM (PHYSICAL_RECYCLE_TIME / 3)
-#define RECYCLE_UNINT_STOPSWARM (PHYSICAL_RECYCLE_TIME / 2)
-#define RECYCLE_FALL_STOPSWARM ((PHYSICAL_RECYCLE_TIME / 4) * 3)
+constexpr int RECYCLE_SWARM = PHYSICAL_RECYCLE_TIME / 3;
+constexpr int RECYCLE_ATTACKLEG = PHYSICAL_RECYCLE_TIME / 2;
+constexpr int RECYCLE_INT_STOPSWARM = PHYSICAL_RECYCLE_TIME / 3;
+constexpr int RECYCLE_UNINT_STOPSWARM = PHYSICAL_RECYCLE_TIME / 2;
+constexpr int RECYCLE_FALL_STOPSWARM = (PHYSICAL_RECYCLE_TIME / 4) * 3;
 
 const char *bsuit_formation_name(const Mech *mech) {
   return (mech_technology_flags(mech) & CLAN_TECH) ? "Point" : "Squad";
@@ -116,8 +116,8 @@ void bsuit_swarm_stop(Mech *mech, int intentional) {
 
       DamageMech(
           mech, mech, 1, -1,
-          btech_random_range(mech_context(mech), 0, NUM_BSUIT_MEMBERS - 1), 0,
-          0, 11, 0, -1, 0, -1, 0, 1);
+          btech_random_range_int(mech_context(mech), 0, NUM_BSUIT_MEMBERS - 1),
+          0, 0, 11, 0, -1, 0, -1, 0, 1);
 
       bsuit_recycle_start(mech, RECYCLE_FALL_STOPSWARM);
     }
@@ -132,7 +132,8 @@ void bsuit_swarm_stop(Mech *mech, int intentional) {
 int bsuit_has_enemy_swarmers(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int count = 0, i, j;
+  int count = 0, i;
+  DbRef j;
   Mech *t;
 
   if (!map)
@@ -158,7 +159,8 @@ int bsuit_has_enemy_swarmers(Mech *mech) {
 int bsuit_has_friendly_riders(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int count = 0, i, j;
+  int count = 0, i;
+  DbRef j;
   Mech *t;
 
   if (!map)
@@ -184,7 +186,8 @@ int bsuit_has_friendly_riders(Mech *mech) {
 int bsuit_swarmer_count(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int count = 0, i, j;
+  int count = 0, i;
+  DbRef j;
   Mech *t;
 
   if (!map)
@@ -203,7 +206,8 @@ int bsuit_swarmer_count(Mech *mech) {
 Mech *bsuit_swarmer_find(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int i, j;
+  int i;
+  DbRef j;
   Mech *t;
 
   if (!map)
@@ -223,7 +227,8 @@ Mech *bsuit_swarmer_find(Mech *mech) {
 }
 
 void bsuit_swarmers_stop(BattleMap *map, Mech *mech, int intentional) {
-  int i, j;
+  int i;
+  DbRef j;
   Mech *t;
 
   if (!map || !mech)
@@ -239,7 +244,8 @@ void bsuit_swarmers_stop(BattleMap *map, Mech *mech, int intentional) {
 }
 
 void bsuit_swarmers_position_update(BattleMap *map, Mech *mech) {
-  int i, j;
+  int i;
+  DbRef j;
   Mech *t;
 
   for (i = 0; i < battle_map_unit_count(map); i++)
@@ -305,7 +311,7 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
   char *args[3];
   float range;
   char targetID[2];
-  int targetnum;
+  DbRef targetnum;
   Mech *t = NULL;
 
   if ((argc = mech_parseattributes(buffer, args, 3)) > 1) {
@@ -355,7 +361,7 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
                  "Target is not in line of sight!");
     return -1;
   }
-  if (range >= 1.0) {
+  if (range >= 1.0F) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Target out of range!");
     return -1;
@@ -412,8 +418,10 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
     return;
   while (buffer && *buffer && isspace((unsigned char)*buffer))
     buffer++;
-  if (!buffer)
-    buffer = "";
+  if (!buffer) {
+    static char empty_buffer[] = "";
+    buffer = empty_buffer;
+  }
 
   /* Stop swarming... */
   if (!strcmp(buffer, "-")) {

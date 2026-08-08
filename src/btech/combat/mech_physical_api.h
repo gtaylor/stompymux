@@ -32,7 +32,7 @@ void mech_trip(DbRef player, void *data, char *buffer);
 void mech_kickortrip(DbRef player, void *data, char *buffer,
                      PhysicalAttackType attack_type);
 void mech_charge(DbRef player, void *data, char *buffer);
-char *phys_form(PhysicalAttackType attack_type, int add_s);
+const char *phys_form(PhysicalAttackType attack_type, int add_s);
 void phys_succeed(Mech *mech, Mech *target, PhysicalAttackType attack_type);
 void phys_fail(Mech *mech, Mech *target, PhysicalAttackType attack_type);
 void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,

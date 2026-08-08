@@ -81,7 +81,10 @@ static int mech_movement_mode_delay(const Mech *mech) {
 #endif
 
 static int mech_hull_down_change_delay(const Mech *mech) {
-  return 30 / BOUNDED(1, mech_maximum_speed(mech) / MP2, 30);
+  const float speed_factor = mech_maximum_speed(mech) / MP2;
+  const float bounded_factor = fminf(fmaxf(1.0F, speed_factor), 30.0F);
+  const float delay = 30.0F / bounded_factor;
+  return (int)delay;
 }
 static void mech_hulldown_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;

@@ -16,10 +16,10 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
   int hitloc = 0;
   BtechContext *context = mech_context(mech);
 
-  switch ((int)mech_class(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_BSUIT:
     if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
-      return btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1);
+      return btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
@@ -120,6 +120,13 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return HEAD;
       }
     }
+    break;
+  case CLASS_VEH_GROUND:
+  case CLASS_VTOL:
+  case CLASS_VEH_NAVAL:
+  case CLASS_SPHEROID_DS:
+  case CLASS_AERO:
+  case CLASS_DS:
     break;
   }
   return hitloc;

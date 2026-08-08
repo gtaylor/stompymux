@@ -18,12 +18,12 @@ bool dropship_notification_is_due(Mech *mech) {
   return true;
 }
 
-void dropship_notification_broadcast(Mech *mech, char *message) {
+void dropship_notification_broadcast(Mech *mech, const char *message) {
   if (mech_is_dropship(mech))
     mech_los_broadcast(mech, message);
 }
 
-void dropship_notification_broadcast_if_due(Mech *mech, char *message) {
+void dropship_notification_broadcast_if_due(Mech *mech, const char *message) {
   if (mech_is_dropship(mech) && dropship_notification_is_due(mech))
     mech_los_broadcast(mech, message);
 }

@@ -14,6 +14,7 @@
 #include <strings.h>
 
 #include "btech/context.h"
+#include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_partnames.h"
 #include "mech_partnames_api.h"
@@ -25,6 +26,7 @@
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
+#include "script_functions_api.h"
 #include "special_object.h"
 #include "template_api.h"
 
@@ -151,7 +153,7 @@ static int create_brandname(PartNameRegistry *registry,
 void initialize_partname_tables(BtechContext *context) {
   const ServerConfiguration *configuration = context->configuration;
   PartNameRegistry *registry = calloc(1, sizeof(*registry));
-  long i;
+  int i;
   int j, c = 0, m, n;
   char tmpbuf[MBUF_SIZE];
   char *tmpc1, *tmpc2;
@@ -162,9 +164,9 @@ void initialize_partname_tables(BtechContext *context) {
   for (j = 0; j <= BRANDCOUNT; j++)
     for (i = 0; i < NUM_ITEMS; i++)
       c += create_brandname(registry, configuration, i, j);
-  Create(registry->short_sorted, PartNameEntry *, c);
-  Create(registry->long_sorted, PartNameEntry *, c);
-  Create(registry->vlong_sorted, PartNameEntry *, c);
+  Create(registry->short_sorted, PartNameEntry *, (size_t)c);
+  Create(registry->long_sorted, PartNameEntry *, (size_t)c);
+  Create(registry->vlong_sorted, PartNameEntry *, (size_t)c);
   /* bubble-sort 'em and insert to array */
   i = 0;
   for (m = 0; m <= BRANDCOUNT; m++)
@@ -178,19 +180,19 @@ void initialize_partname_tables(BtechContext *context) {
          tmpc1++, tmpc2++)
       *tmpc2 = ascii_to_lower(*tmpc1);
     *tmpc2 = 0;
-    hash_table_add(tmpbuf, (int *)(i + 1), &registry->short_hash);
+    hash_table_add(tmpbuf, (void *)(intptr_t)(i + 1), &registry->short_hash);
 
     for (tmpc1 = registry->short_sorted[i]->vlongy, tmpc2 = tmpbuf; *tmpc1;
          tmpc1++, tmpc2++)
       *tmpc2 = ascii_to_lower(*tmpc1);
     *tmpc2 = 0;
-    hash_table_add(tmpbuf, (int *)(i + 1), &registry->vlong_hash);
+    hash_table_add(tmpbuf, (void *)(intptr_t)(i + 1), &registry->vlong_hash);
   }
   registry->object_count = c;
 }
 
-static char *get_part_name(BtechContext *context, int id, int brand,
-                           PartNameField field) {
+static const char *get_part_name(BtechContext *context, int id, int brand,
+                                 PartNameField field) {
   PartNameRegistry *registry = context->part_names;
 
   if (id < 0 || id >= NUM_ITEMS || brand < 0 || brand > BRANDCOUNT)
@@ -198,18 +200,18 @@ static char *get_part_name(BtechContext *context, int id, int brand,
   PartNameEntry *entry = registry->index_sorted[brand][id];
   if (!entry && brand)
     entry = registry->index_sorted[0][id];
-  return entry ? (char *)part_name_field(entry, field) : nullptr;
+  return entry ? part_name_field(entry, field) : nullptr;
 }
 
-char *get_parts_short_name(BtechContext *context, int id, int brand) {
+const char *get_parts_short_name(BtechContext *context, int id, int brand) {
   return get_part_name(context, id, brand, PART_NAME_SHORT);
 }
 
-char *get_parts_long_name(BtechContext *context, int id, int brand) {
+const char *get_parts_long_name(BtechContext *context, int id, int brand) {
   return get_part_name(context, id, brand, PART_NAME_LONG);
 }
 
-char *get_parts_vlong_name(BtechContext *context, int id, int brand) {
+const char *get_parts_vlong_name(BtechContext *context, int id, int brand) {
   return get_part_name(context, id, brand, PART_NAME_VERY_LONG);
 }
 
@@ -232,9 +234,9 @@ int find_matching_vlong_part(BtechContext *context, const char *wc, int *ind,
   }
   *tmpc2 = 0;
   if ((i = hash_table_find(tmpbuf, &registry->vlong_hash))) {
-    if ((p = registry->short_sorted[((long)i) - 1])) {
+    if ((p = registry->short_sorted[(intptr_t)i - 1])) {
       if (ind)
-        *ind = ((long)i);
+        *ind = clamp_intptr_to_int((intptr_t)i);
       *id = packed_part_id(p->index);
       *brand = packed_part_brand(p->index);
       return 1;
@@ -273,8 +275,8 @@ int find_matching_short_part(BtechContext *context, const char *wc, int *ind,
   }
   *tmpc2 = 0;
   if ((i = hash_table_find(tmpbuf, &registry->short_hash))) {
-    if ((p = registry->short_sorted[((long)i) - 1])) {
-      *ind = ((long)i);
+    if ((p = registry->short_sorted[(intptr_t)i - 1])) {
+      *ind = clamp_intptr_to_int((intptr_t)i);
       *id = packed_part_id(p->index);
       *brand = packed_part_brand(p->index);
       return 1;
@@ -350,15 +352,14 @@ void fun_btpartmatch(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 /* Categories accepted by btpartslist(), based on the canonical part ID. */
-typedef enum bt_part_category BT_PART_CATEGORY;
-enum bt_part_category {
+typedef enum bt_part_category {
   BT_PART_CATEGORY_AMMO,
   BT_PART_CATEGORY_WEAPON,
   BT_PART_CATEGORY_BOMB,
   BT_PART_CATEGORY_SPECIAL,
   BT_PART_CATEGORY_CARGO,
   BT_PART_CATEGORY_INVALID
-};
+} BT_PART_CATEGORY;
 
 /* Convert a user-facing category name into the corresponding part category. */
 static BT_PART_CATEGORY btpartslist_category(const char *category) {
@@ -390,6 +391,8 @@ static int btpartslist_matches(BT_PART_CATEGORY category, int part) {
     return equipment_is_special(part);
   case BT_PART_CATEGORY_CARGO:
     return equipment_is_cargo(part);
+  case BT_PART_CATEGORY_INVALID:
+    return 0;
   default:
     return 0;
   }
@@ -482,7 +485,8 @@ void fun_btpartname(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 NEED PARTNAME");
     return;
   }
-  index = strtol(fargs[0], &cptr, 10);
+  long parsed_index = strtol(fargs[0], &cptr, 10);
+  index = clamp_intptr_to_int(parsed_index);
   if (cptr == fargs[0]) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID PART NUMBER");
     return;

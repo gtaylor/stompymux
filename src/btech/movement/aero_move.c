@@ -20,6 +20,7 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "econ_cmds_api.h"
 #include "map_conditions_api.h"
@@ -64,27 +65,27 @@
 
 struct land_data_type {
   UnitClass type;
-  int maxvertup;
-  int maxvertdown;
-  int minhoriz;
-  int maxhoriz;
-  int launchvert;
+  double maxvertup;
+  double maxvertdown;
+  double minhoriz;
+  double maxhoriz;
+  double launchvert;
   int launchtime; /* In secs */
-  char *landmsg;
-  char *landmsg_others;
-  char *takeoff;
-  char *takeoff_others;
-} /*            maxvertup / maxvertdown / minhoriz / maxhoriz / launchv /
+  const char *landmsg;
+  const char *landmsg_others;
+  const char *takeoff;
+  const char *takeoff_others;
+}; /*           maxvertup / maxvertdown / minhoriz / maxhoriz / launchv /
 
      launchtime */
-land_data[] = {
+static const struct land_data_type land_data[] = {
     {CLASS_VTOL, 10, -60, -15, 15, 5, 0,
      "You bring your VTOL to a safe landing.", "lands.",
      "The rotor whines overhead as you lift off into the sky.", "takes off!"},
-    {CLASS_AERO, 10, -30, MIN_TAKEOFF_SPEED * MP1, 999, 20, 10,
+    {CLASS_AERO, 10, -30, (double)MIN_TAKEOFF_SPEED * (double)MP1, 999, 20, 10,
      "You land your AeroFighter safely.", "lands safely.",
      "The Aerofighter launches into the air!", "launches into the air!"},
-    {CLASS_DS, 10, -25, MIN_TAKEOFF_SPEED * MP1, 999, 20, 300,
+    {CLASS_DS, 10, -25, (double)MIN_TAKEOFF_SPEED * (double)MP1, 999, 20, 300,
      "The DropShip lands safely.", "lands safely.",
      "The DropShip's nose lurches upward, and it starts climbing to the sky!",
      "starts climbing to the sky!"},
@@ -186,7 +187,7 @@ static void aero_takeoff_event(MuxEvent *e) {
   mech_maybe_move(mech);
 }
 
-void aero_takeoff(DbRef player, void *data, char *buffer) {
+void aero_takeoff(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -289,11 +290,10 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
                       (void *)j ? j : land_data[i].launchtime);
 }
 
-#define NUM_NEIGHBORS 7
-
-void DS_BlastNearbyMechsAndTrees(Mech *mech, char *hitmsg, char *hitmsg1,
-                                 char *nearhitmsg, char *nearhitmsg1,
-                                 char *treehitmsg, int damage) {
+void DS_BlastNearbyMechsAndTrees(Mech *mech, const char *hitmsg,
+                                 const char *hitmsg1, const char *nearhitmsg,
+                                 const char *nearhitmsg1,
+                                 const char *treehitmsg, int damage) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int x = mech_position_x(mech), y = mech_position_y(mech),
@@ -322,7 +322,7 @@ void DS_BlastNearbyMechsAndTrees(Mech *mech, char *hitmsg, char *hitmsg1,
           } else {
             add_decoration(
                 map, x1, y1, TYPE_FIRE, FIRE,
-                btech_random_range(battle_map_context(map), 60, 180));
+                btech_random_range_int(battle_map_context(map), 60, 180));
           }
         }
         break;
@@ -338,8 +338,8 @@ void DS_BlastNearbyMechsAndTrees(Mech *mech, char *hitmsg, char *hitmsg1,
 
 enum { NO_ERROR, INVALID_TERRAIN, UNEVEN_TERRAIN, BLOCKED_LZ };
 
-static char *const reasons[] = {"Improper terrain", "Uneven ground",
-                                "Blocked landing zone"};
+static const char *const reasons[] = {"Improper terrain", "Uneven ground",
+                                      "Blocked landing zone"};
 
 typedef struct LandingZoneCheck LandingZoneCheck;
 struct LandingZoneCheck {
@@ -383,13 +383,15 @@ int aero_landing_zone_check(Mech *mech, int x, int y) {
   return NO_ERROR;
 }
 
-void aero_land(DbRef player, void *data, char *buffer) {
+void aero_land(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i, t;
   double horiz = 0.0;
-  int vert, vertmin = 0, vertmax = 0;
+  double vert;
+  double vertmin = 0.0;
+  double vertmax = 0.0;
 
   if (mech_class(mech) != CLASS_VTOL && mech_class(mech) != CLASS_AERO &&
       !mech_is_dropship(mech)) {
@@ -457,14 +459,15 @@ void aero_land(DbRef player, void *data, char *buffer) {
                  "You're moving too slowly to land.");
     return;
   }
-  if (((vert = mech_vertical_speed(mech)) >
-       (vertmax = land_data[i].maxvertup)) ||
-      (mech_vertical_speed(mech) < (vertmin = land_data[i].maxvertdown))) {
+  const float vertical_speed = mech_vertical_speed(mech);
+  const float current_speed = mech_current_speed(mech);
+  if (((vert = (double)vertical_speed) > (vertmax = land_data[i].maxvertup)) ||
+      ((double)vertical_speed < (vertmin = land_data[i].maxvertdown))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You are moving too fast to land. ");
     return;
   }
-  if (mech_current_speed(mech) < land_data[i].minhoriz) {
+  if ((double)current_speed < land_data[i].minhoriz) {
     if (mech_motion_vector_z(mech) <= 0)
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
@@ -528,11 +531,17 @@ void dropship_bridge_hit(Mech *mech) {
   mech_contents_kill_if_in_character(mech);
 }
 
-static double degrees_sine(double angle) { return sin(angle * M_PI / 180.0); }
+static float degrees_sine(float angle) {
+  return sinf(angle * (float)M_PI / 180.0F);
+}
 
-static double degrees_cosine(double angle) { return cos(angle * M_PI / 180.0); }
+static float degrees_cosine(float angle) {
+  return cosf(angle * (float)M_PI / 180.0F);
+}
 
-#define AERO_BONUS 3
+static float length_hypotenuse_float(float x, float y) {
+  return sqrtf(x * x + y * y);
+}
 
 void aero_speed_update(Mech *mech) {
   float xypart;
@@ -541,36 +550,40 @@ void aero_speed_update(Mech *mech) {
   float nh;
   float dx, dy, dz;
   float vlen, mod;
-  float ab = 0.7;
-  float m = 1.0;
+  float ab = 0.7F;
+  float m = 1.0F;
 
   if (mech_condition_summary(mech).spinning) {
-    mech_desired_speed_set(
-        mech, BOUNDED(0,
-                      mech_desired_speed(mech) +
-                          btech_random_range(mech_context(mech), 1, 10),
-                      mech_effective_maximum_speed(mech)));
+    const int speed_adjustment =
+        btech_random_range_int(mech_context(mech), 1, 10);
+    const float randomized_speed =
+        mech_desired_speed(mech) + (float)speed_adjustment;
+    const float bounded_speed = fminf(fmaxf(0.0F, randomized_speed),
+                                      mech_effective_maximum_speed(mech));
+    mech_desired_speed_set(mech, bounded_speed);
     mech_desired_angle_set(
         mech, MAX(-90, mech_desired_angle(mech) -
-                           btech_random_range(mech_context(mech), 1, 15)));
+                           btech_random_range_int(mech_context(mech), 1, 15)));
     mech_desired_heading_set(
-        mech, AcceptableDegree(mech_desired_heading_degrees(mech) +
-                               btech_random_range(mech_context(mech), -3, 3)));
+        mech,
+        AcceptableDegree(mech_desired_heading_degrees(mech) +
+                         btech_random_range_int(mech_context(mech), -3, 3)));
   }
-  wz = mech_desired_speed(mech) * degrees_sine(mech_desired_angle(mech));
+  const int desired_angle = mech_desired_angle(mech);
+  wz = mech_desired_speed(mech) * degrees_sine((float)desired_angle);
   if (mech_class(mech) == CLASS_AERO)
-    ab = 2.5;
+    ab = 2.5F;
   if (mech_position_z(mech) < ATMO_Z)
-    ab = ab / 2;
+    ab /= 2.0F;
   /* First, we calculate the vector we want to be going */
-  xypart = mech_desired_speed(mech) * degrees_cosine(mech_desired_angle(mech));
+  xypart = mech_desired_speed(mech) * degrees_cosine((float)desired_angle);
   if (mech_fuel(mech) < 0) {
-    wz = wz / 5.0;
-    xypart = xypart / 5.0;
+    wz /= 5.0F;
+    xypart /= 5.0F;
   }
-  if (xypart < 0)
-    xypart = 0 - xypart;
-  m = ACCEL_MOD;
+  if (xypart < 0.0F)
+    xypart = -xypart;
+  m = (float)ACCEL_MOD;
   FindComponents(m * xypart, mech_desired_heading_degrees(mech), &wx, &wy);
   wz = wz * m;
 
@@ -584,12 +597,13 @@ void aero_speed_update(Mech *mech) {
   dx = wx - nx;
   dy = wy - ny;
   dz = wz - nz;
-  vlen = length_hypotenuse(length_hypotenuse(dx, dy), dz);
-  if (!(vlen > 0.0))
+  vlen = length_hypotenuse_float(length_hypotenuse_float(dx, dy), dz);
+  if (!(vlen > 0.0F))
     return;
-  if (vlen > (m * ab * mech_effective_maximum_speed(mech) / AERO_SECS_THRUST)) {
-    mod = (float)ab * m * mech_effective_maximum_speed(mech) /
-          AERO_SECS_THRUST / vlen;
+  if (vlen >
+      (m * ab * mech_effective_maximum_speed(mech) / (float)AERO_SECS_THRUST)) {
+    mod = ab * m * mech_effective_maximum_speed(mech) /
+          (float)AERO_SECS_THRUST / vlen;
 
     dx *= mod;
     dy *= mod;
@@ -600,14 +614,14 @@ void aero_speed_update(Mech *mech) {
   ny += dy;
   nz += dz;
   /* Then, we need to calculate present heading / speed / verticalspeed */
-  nh = (float)atan2(ny, nx) / TWOPIOVER360;
+  nh = atan2f(ny, nx) / (float)TWOPIOVER360;
   if (!(mech_class(mech) == CLASS_SPHEROID_DS))
     mech_heading_set(mech, AcceptableDegree((int)nh + 90));
-  xypart = length_hypotenuse(nx, ny);
+  xypart = length_hypotenuse_float(nx, ny);
   mech_current_speed_set(mech, xypart);
   mech_vertical_speed_set(mech, nz);
   if (!(mech_class(mech) == CLASS_SPHEROID_DS) &&
-      fabs(mech_current_speed(mech)) < MP1)
+      fabsf(mech_current_speed(mech)) < MP1)
     mech_heading_set(mech, mech_desired_heading_degrees(mech));
   mech_motion_vector_set(mech, nx, ny, nz);
 }
@@ -620,13 +634,15 @@ int aero_fuel_check(Mech *mech) {
     return 0;
   if (mech_aero_has_free_fuel(mech))
     return 0;
-  if (fabs(mech_current_speed(mech)) > mech_effective_maximum_speed(mech)) {
-    if (mech_position_z(mech) < ATMO_Z)
-      fuelcost = (int)fabs(mech_current_speed(mech) /
-                           mech_effective_maximum_speed(mech));
-  } else if (fabs(mech_current_speed(mech)) < MP1 &&
-             fabs(mech_vertical_speed(mech)) < MP2)
-    if (btech_random_range(mech_context(mech), 0, 1) == 0)
+  if (fabsf(mech_current_speed(mech)) > mech_effective_maximum_speed(mech)) {
+    if (mech_position_z(mech) < ATMO_Z) {
+      const float fuel_ratio =
+          fabsf(mech_current_speed(mech) / mech_effective_maximum_speed(mech));
+      fuelcost = (int)fuel_ratio;
+    }
+  } else if (fabsf(mech_current_speed(mech)) < MP1 &&
+             fabsf(mech_vertical_speed(mech)) < MP2)
+    if (btech_random_range_int(mech_context(mech), 0, 1) == 0)
       return 0; /* Approximately half of the time free */
   if (mech_fuel(mech) > 0) {
     if (mech_fuel(mech) <= fuelcost)
@@ -678,7 +694,7 @@ void aero_update(Mech *mech) {
   if (mech_is_started(mech) || mech_pilot_is_unconscious(mech)) {
     mech_piloting_update(mech);
   }
-  if (mech_is_started(mech) || mech_added_heat(mech) > 0.)
+  if (mech_is_started(mech) || mech_added_heat(mech) > 0.0F)
     mech_heat_update(mech);
   if (!(btech_context_now(mech_context(mech)) / 3 % 5)) {
     if (!mech_condition_summary(mech).spinning)
@@ -687,10 +703,10 @@ void aero_update(Mech *mech) {
       return;
     if (mech_is_landed(mech))
       return;
-    if (MadePilotSkillRoll(mech, (mech_spin_start_tick(mech) -
-                                  btech_context_now(mech_context(mech))) /
-                                         15 +
-                                     8)) {
+    time_t const spin_duration =
+        mech_spin_start_tick(mech) - btech_context_now(mech_context(mech));
+    int const spin_modifier = clamp_intptr_to_int((intptr_t)spin_duration);
+    if (MadePilotSkillRoll(mech, spin_modifier / 15 + 8)) {
       mech_notify(mech, MECHALL, "You recover control of your craft.");
       mech_spinning_set(mech, false);
     }
@@ -699,14 +715,14 @@ void aero_update(Mech *mech) {
     mech_sensor_visibility_modifier_set(
         mech, BOUNDED(0,
                       mech_sensor_visibility_modifier(mech) +
-                          btech_random_range(mech_context(mech), -40, 40),
+                          btech_random_range_int(mech_context(mech), -40, 40),
                       100));
   mech_ecm_check(mech);
   mech_tag_check(mech);
   end_lite_check(mech);
 }
 
-static char *colorstr(int serious) {
+static const char *colorstr(int serious) {
   if (serious == 1)
     return "[fg=red bold]";
   if (serious == 0)
@@ -742,9 +758,11 @@ void aero_checklz(DbRef player, Mech *mech, char *buffer) {
     y = atoi(args[1]);
     if (!mech_is_observer(mech)) {
       float fx, fy;
+      int const tactical_range = mech_tactical_range(mech);
+      float const tactical_range_float = (float)tactical_range;
       MapCoordToRealCoord(x, y, &fx, &fy);
       if (FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                       fx, fy) > mech_tactical_range(mech)) {
+                       fx, fy) > tactical_range_float) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Out of range!");
         return;

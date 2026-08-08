@@ -16,6 +16,7 @@
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
 #include "mech_utils_api.h"
+#include "pcombat_api.h"
 #include "section_types.h"
 
 typedef struct PersonalArmorDefinition {
@@ -54,7 +55,7 @@ int personal_combat_damage_to_unit(Mech *target, int weapindx, int dam) {
     return dam;
   i = dam / 100;
   dam = dam % 100;
-  if (btech_random_range(mech_context(target), 1, 100) <= dam)
+  if (btech_random_range_int(mech_context(target), 1, 100) <= dam)
     i++;
   return i;
 }
@@ -68,7 +69,7 @@ int unit_damage_to_personal_combat(Mech *target, int weapindx, int dam) {
     return dam;
   /* Target is MW _and_ we have yet to convert damage */
   for (j = 0; j < dam; j++)
-    i += btech_random_range(mech_context(target), 80, 130);
+    i += btech_random_range_int(mech_context(target), 80, 130);
   return i;
 }
 
@@ -93,7 +94,8 @@ int personal_armor_reduce_damage(Mech *wounded, int cause, int hitloc,
 
   if (id != -2)
     intDamage =
-        (intDamage * btech_random_range(mech_context(wounded), 75, 125)) / 100;
+        (intDamage * btech_random_range_int(mech_context(wounded), 75, 125)) /
+        100;
   if (mech_class(wounded) != CLASS_MW)
     return intDamage;
   hitloc = pcombat_hitloc(hitloc);
@@ -103,12 +105,12 @@ int personal_armor_reduce_damage(Mech *wounded, int cause, int hitloc,
     if (PERSONAL_ARMOR[i].loc == hitloc &&
         PERSONAL_ARMOR[i].loci == mech_section_armor(wounded, hitloc))
       break;
-  if (btech_random_range(mech_context(wounded), 1, 5) == 1) {
-    if (btech_random_range(mech_context(wounded), 1, 2) == 1)
+  if (btech_random_range_int(mech_context(wounded), 1, 5) == 1) {
+    if (btech_random_range_int(mech_context(wounded), 1, 2) == 1)
       intDamage = intDamage * 2;
     else
       noblock = 1;
-  } else if (btech_random_range(mech_context(wounded), 1, 10) == 2)
+  } else if (btech_random_range_int(mech_context(wounded), 1, 10) == 2)
     intDamage = intDamage / 2;
   if (!PERSONAL_ARMOR[i].name)
     return intDamage;
@@ -116,8 +118,8 @@ int personal_armor_reduce_damage(Mech *wounded, int cause, int hitloc,
       !((PERSONAL_ARMOR[i].deft) & (MechWeapons[cause].special & PCOMBAT)) &&
       (MechWeapons[cause].special & PCOMBAT))
     return intDamage;
-  block = BOUNDED(btech_random_range(mech_context(wounded), 1,
-                                     (PERSONAL_ARMOR[i].defmin / 2)),
+  block = BOUNDED(btech_random_range_int(mech_context(wounded), 1,
+                                         (PERSONAL_ARMOR[i].defmin / 2)),
                   abs(intDamage * PERSONAL_ARMOR[i].defpros / 100),
                   PERSONAL_ARMOR[i].defmax / 2);
   if (noblock)

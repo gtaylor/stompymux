@@ -116,7 +116,7 @@ const struct WeaponDefinition MechWeapons[] = {
     /* Rotary AC versions (UK) are L3 */
     {"CL.Anti-MissileSystem", VRT_CL_AMS, TMISSILE, 1, 2, 0, 1, 1, 1, 0, -1, -1, -1, 1, 24, 50, -1, CLAT | AMS, 63, 100000, 21, 2000},
     {"CL.GaussRifle", VRT_CL_GR, TAMMO, 1, 15, 2, 7, 15, 22, 0, -1, -1, -1, 6, 8, 1200, 20, GAUSS | CLAT, 321, 300000, 33, 20000},
-    {"CL.LB2-XAC", VRT_CL_LBX2, TAMMO, 1, 2, 4, 10, 20, 30, 0, -1, -1, -1, 3, 45, 500, -1, LBX | CLAT, 47i, 150000, 6, 2000},
+    {"CL.LB2-XAC", VRT_CL_LBX2, TAMMO, 1, 2, 4, 10, 20, 30, 0, -1, -1, -1, 3, 45, 500, -1, LBX | CLAT, 47, 150000, 6, 2000},
     {"CL.LB5-XAC", VRT_CL_LBX5, TAMMO, 1, 5, 3, 8, 15, 24, 0, -1, -1, -1, 4, 20, 700, -1, LBX | CLAT, 93, 250000, 12, 9000},
     {"CL.LB10-XAC", VRT_CL_LBX10, TAMMO, 2, 10, 0, 6, 12, 18, 0, -1, -1, -1, 5, 10, 1000, -1, LBX | CLAT, 148, 400000, 19, 12000},
     {"CL.LB20-XAC", VRT_CL_LBX20, TAMMO, 6, 20, 0, 4, 8, 12, 0, -1, -1, -1, 9, 5, 1200, -1, LBX | CLAT, 237, 600000, 33, 20000},

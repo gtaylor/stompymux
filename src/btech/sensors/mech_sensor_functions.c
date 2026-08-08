@@ -26,6 +26,8 @@ static bool mech_sensor_target_is_small(const Mech *target) {
          (mech_class(target) == CLASS_BSUIT || mech_class(target) == CLASS_MW);
 }
 
+static float sensor_range_limit(int range) { return (float)range; }
+
 static bool terrain_is_water(char terrain) {
   return terrain == BATTLE_TERRAIN_ICE || terrain == BATTLE_TERRAIN_WATER ||
          terrain == BATTLE_TERRAIN_BRIDGE;
@@ -91,7 +93,8 @@ int vislight_see(Mech *target, BattleMap *map, int sensor, float range,
   (void)sensor;
   int illuminated_multiplier =
       !light && target && mech_sensor_is_lit(target) ? 3 : 1;
-  if (range > condition_range * illuminated_multiplier)
+  const int maximum_range = condition_range * illuminated_multiplier;
+  if (range > sensor_range_limit(maximum_range))
     return 0;
   return (int)((100 - (range / 3)) /
                (mech_sensor_target_is_small(target) ? 3 : 1));
@@ -101,8 +104,8 @@ int liteamp_see(Mech *target, BattleMap *map, int sensor, float range,
                 int condition_range, int light) {
   (void)map;
   (void)sensor;
-  if ((!light && range > 2 * condition_range) ||
-      (light && range > condition_range))
+  const int maximum_range = light ? condition_range : 2 * condition_range;
+  if (range > sensor_range_limit(maximum_range))
     return 0;
   return (int)((70 - range) / (mech_sensor_target_is_small(target) ? 3 : 1));
 }
@@ -179,7 +182,7 @@ int vislight_csee(Mech *observer, Mech *target, BattleMap *map, float range,
               btech_context_get_map(mech_context(target),
                                     mech_map_dbref(target)),
               mech_position_x(target), mech_position_y(target),
-              target) >= 0.0 ||
+              target) >= 0.0F ||
           battle_map_los_water_count(flags) < 6);
 }
 
@@ -238,11 +241,13 @@ int seismic_csee(Mech *observer, Mech *target, BattleMap *map, float range,
 int radar_csee(Mech *observer, Mech *target, BattleMap *map, float range,
                int flags) {
   (void)observer;
-  return !battle_map_sensor_is_disabled(map, SENSOR_RA) && target &&
-         mech_position_z(target) > 2 && !(flags & BATTLE_MAP_LOS_BLOCKED) &&
-         (mech_position_z(target) >= 10 ||
-          range < mech_position_z(target) * mech_position_z(target)) &&
-         mech_sensor_elevation_above_surface(target) > 1;
+  if (battle_map_sensor_is_disabled(map, SENSOR_RA) || !target ||
+      mech_position_z(target) <= 2 || (flags & BATTLE_MAP_LOS_BLOCKED) ||
+      mech_sensor_elevation_above_surface(target) <= 1)
+    return 0;
+  const int target_z = mech_position_z(target);
+  const float target_z_squared = (float)target_z * (float)target_z;
+  return target_z >= 10 || range < target_z_squared;
 }
 
 int bap_csee(Mech *observer, Mech *target, BattleMap *map, float range,

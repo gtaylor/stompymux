@@ -245,7 +245,7 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
   Mech *otherMech;
   float realRange, c3Range;
   char buff[LBUF_SIZE];
-  char *mech_name;
+  const char *mech_name;
   char move_type[30];
   char cStatus1, cStatus2, cStatus3, cStatus4, cStatus5;
   char weaponarc;
@@ -365,8 +365,9 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
                                     !tShowStatusInfo)
                  .text,
              move_type[0], mech_name, mech_position_x(otherMech),
-             mech_position_y(otherMech), mech_position_z(otherMech), realRange,
-             c3Range, bearing, mech_current_speed(otherMech),
+             mech_position_y(otherMech), mech_position_z(otherMech),
+             (double)realRange, (double)c3Range, bearing,
+             (double)mech_current_speed(otherMech),
              mech_heading_degrees(otherMech), cStatus1, cStatus2, cStatus3,
              cStatus4, cStatus5,
              (mech_dbref(otherMech) == mech_target_dbref(mech) ||
@@ -405,7 +406,7 @@ void mech_network_show_status(DbRef player, Mech *mech, bool tIsC3) {
   Mech *otherMech;
   float range;
   char buff[LBUF_SIZE];
-  char *mech_name;
+  const char *mech_name;
   char move_type[30];
   int networkSize;
   DbRef myNetwork[C3_NETWORK_SIZE];
@@ -443,8 +444,9 @@ void mech_network_show_status(DbRef player, Mech *mech, bool tIsC3) {
              "h:%3d a: %3d i: %3d[reset]",
              mech_id(otherMech, true).text, move_type[0], mech_name,
              mech_position_x(otherMech), mech_position_y(otherMech),
-             mech_position_z(otherMech), range, bearing,
-             mech_current_speed(otherMech), mech_heading_degrees(otherMech),
+             mech_position_z(otherMech), (double)range, bearing,
+             (double)mech_current_speed(otherMech),
+             mech_heading_degrees(otherMech),
              getRemainingArmorPercent(otherMech),
              getRemainingInternalPercent(otherMech));
 
@@ -577,7 +579,8 @@ float mech_network_range_with_members(Mech *mech, Mech *mechTarget,
                   mech_dbref(mech), mapX, mapY));
 
       mech_target_hex_z_set(mech, battle_map_hex_elevation(map, mapX, mapY));
-      hexZ = ZSCALE * mech_target_hex_z(mech);
+      const int target_hex_z = mech_target_hex_z(mech);
+      hexZ = ZSCALE * (float)target_hex_z;
       MapCoordToRealCoord(mapX, mapY, &hexX, &hexY);
 
       c3Range = FindRange(mech_position_real_x(otherMech),

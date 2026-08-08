@@ -24,7 +24,7 @@ static int map_base_elevation(BattleMap *map, int x, int y) {
   return terrain == WATER || terrain == ICE ? -elevation : elevation;
 }
 
-void mech_los_broadcast(Mech *mech, char *message) {
+void mech_los_broadcast(Mech *mech, const char *message) {
   /* Sends msg to everyone except the mech */
   int i;
   Mech *tempMech;
@@ -51,11 +51,12 @@ void mech_los_broadcast(Mech *mech, char *message) {
 }
 
 int MechSeesHexF(Mech *mech, BattleMap *map, float x, float y, int ix, int iy) {
-  return mech_los_check(mech, nullptr, ix, iy,
-                        FindRange(mech_position_real_x(mech),
-                                  mech_position_real_y(mech),
-                                  mech_position_real_z(mech), x, y,
-                                  ZSCALE * map_base_elevation(map, ix, iy)));
+  int elevation = map_base_elevation(map, ix, iy);
+
+  return mech_los_check(
+      mech, nullptr, ix, iy,
+      FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
+                mech_position_real_z(mech), x, y, ZSCALE * (float)elevation));
 }
 
 int MechSeesHex(Mech *mech, BattleMap *map, int x, int y) {
@@ -65,7 +66,7 @@ int MechSeesHex(Mech *mech, BattleMap *map, int x, int y) {
   return MechSeesHexF(mech, map, fx, fy, x, y);
 }
 
-void HexLOSBroadcast(BattleMap *mech_map, int x, int y, char *message) {
+void HexLOSBroadcast(BattleMap *mech_map, int x, int y, const char *message) {
   int i;
   Mech *tempMech;
   float fx, fy;
@@ -83,7 +84,8 @@ void HexLOSBroadcast(BattleMap *mech_map, int x, int y, char *message) {
                                              mech_map->mechsOnMap[i])))
         if (MechSeesHexF(tempMech, mech_map, fx, fy, x, y)) {
           char tbuf[LBUF_SIZE];
-          char *c, *d = tbuf;
+          const char *c;
+          char *d = tbuf;
           int done;
 
           for (c = message; *c; c++) {
@@ -96,7 +98,8 @@ void HexLOSBroadcast(BattleMap *mech_map, int x, int y, char *message) {
                       y == mech_position_y(tempMech))
                     strcpy(d, "your hex");
                   else
-                    snprintf(d, sizeof(tbuf) - (tbuf - d), "%d,%d", x, y);
+                    snprintf(d, (size_t)(tbuf + sizeof(tbuf) - d), "%d,%d", x,
+                             y);
                   while (*d)
                     d++;
                 } else {
@@ -105,7 +108,7 @@ void HexLOSBroadcast(BattleMap *mech_map, int x, int y, char *message) {
                       y == mech_position_y(tempMech))
                     strcpy(d, "[fg=red bold]YOUR HEX[reset]");
                   else
-                    snprintf(d, sizeof(tbuf) - (tbuf - d),
+                    snprintf(d, (size_t)(tbuf + sizeof(tbuf) - d),
                              "[fg=yellow bold]%d,%d[reset]", x, y);
                   while (*d)
                     d++;
@@ -168,8 +171,7 @@ void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
           format_mech_los_message(
               oddbuff, sizeof(oddbuff), message,
               b ? mech_to_mech_display_id(tempMech, target).text : "someone");
-          safe_str((char *)(a ? mech_to_mech_display_id(tempMech, mech).text
-                              : "Someone"),
+          safe_str(a ? mech_to_mech_display_id(tempMech, mech).text : "Someone",
                    oddbuff2, &obp);
           if (*oddbuff != '\'')
             safe_chr(' ', oddbuff2, &obp);
@@ -193,7 +195,7 @@ void MapBroadcast(BattleMap *map, char *message) {
 }
 
 void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
-                       BattleMap *mech_map, char *weapname, int IsHit) {
+                       BattleMap *mech_map, const char *weapname, int IsHit) {
   int loop, attacker, defender;
   float fx, fy, fz;
   int mapx, mapy;
@@ -262,7 +264,8 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
     mapx = x;
     mapy = y;
     MapCoordToRealCoord(x, y, &fx, &fy);
-    fz = ZSCALE * map_base_elevation(mech_map, x, y);
+    int elevation = map_base_elevation(mech_map, x, y);
+    fz = ZSCALE * (float)elevation;
     snprintf(buff, sizeof(buff), "hex %d %d!", mapx, mapy);
     for (loop = 0; loop < mech_map->first_free; loop++)
       if (mech_map->mechsOnMap[loop] != mech_dbref(mech) &&

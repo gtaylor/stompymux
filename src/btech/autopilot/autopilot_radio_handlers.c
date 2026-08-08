@@ -104,7 +104,7 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech, char **args,
   else if (mech_current_speed(mech) >
            2.0f * mech_effective_maximum_speed(mech) / 3.0f + 0.1f)
     strcpy(buffer, "Running");
-  else if (mech_current_speed(mech) > 1.0)
+  else if (mech_current_speed(mech) > 1.0F)
     strcpy(buffer, "Walking");
   else
     strcpy(buffer, "Standing");
@@ -113,9 +113,9 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech, char **args,
            mech_position_y(mech));
 
   /* Which way is the AI going */
-  if (mech_current_speed(mech) > 1.0) {
+  if (mech_current_speed(mech) > 1.0F) {
     snprintf(buffer, MBUF_SIZE, ", headed %d speed %.2f",
-             mech_heading_degrees(mech), mech_current_speed(mech));
+             mech_heading_degrees(mech), (double)mech_current_speed(mech));
     strncat(mesg, buffer, LBUF_SIZE);
   } else {
     snprintf(buffer, MBUF_SIZE, ", headed %d", mech_heading_degrees(mech));
@@ -213,7 +213,7 @@ void auto_radio_command_speed(Autopilot *autopilot, Mech *mech, char **args,
     return;
   }
 
-  autopilot->speed = speed;
+  autopilot->speed = (unsigned short)speed;
   snprintf(mesg, LBUF_SIZE, "setting speed to %d %%", speed);
 }
 
@@ -223,7 +223,7 @@ void auto_radio_command_speed(Autopilot *autopilot, Mech *mech, char **args,
 void auto_radio_command_stand(Autopilot *autopilot, Mech *mech, char **args,
                               int argc, char *mesg) {
 
-  mech_stand(autopilot->mynum, mech, "");
+  mech_stand_empty(autopilot->mynum, mech);
   snprintf(mesg, LBUF_SIZE, "standing up");
 }
 

@@ -1,5 +1,7 @@
 #include "sqlite_internal.h"
 
+#include <limits.h>
+
 #ifdef BT_ADVANCED_ECON
 
 /* Execute a statement that does not return rows. */
@@ -65,13 +67,15 @@ static int btech_economy_table_has_item_name(sqlite3 *sqlite, int *has_name) {
 static int btech_parse_cost(const unsigned char *text,
                             unsigned long long *cost) {
   char *end;
+  const char *start;
   unsigned long long value;
 
   if (!text || text[0] == '-')
     return -1;
   errno = 0;
-  value = strtoull((const char *)text, &end, 10);
-  if (errno == ERANGE || end == (char *)text || *end)
+  start = (const char *)text;
+  value = strtoull(start, &end, 10);
+  if (errno == ERANGE || end == start || *end)
     return -1;
   *cost = value;
   return 0;
@@ -99,7 +103,10 @@ static int btech_part_from_name(BtechContext *btech, const char *item_name,
   for (index = 0; index < BTECH_PART_COST_SET_COUNT; index++) {
     cost_set = &cost_sets[index];
     for (item_index = 0; item_index < cost_set->count; item_index++) {
-      candidate_part = cost_set->first_part + item_index;
+      if (cost_set->first_part > INT_MAX ||
+          item_index > (size_t)(INT_MAX - cost_set->first_part))
+        continue;
+      candidate_part = cost_set->first_part + (int)item_index;
       candidate =
           btech_part_name(btech->configuration, candidate_part, candidate_name);
       if (candidate && !strcmp(item_name, candidate)) {
@@ -223,7 +230,12 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
     for (item_index = 0; item_index < cost_set->count; item_index++) {
       if (!cost_set->costs[item_index])
         continue;
-      part = cost_set->first_part + item_index;
+      if (cost_set->first_part > INT_MAX ||
+          item_index > (size_t)(INT_MAX - cost_set->first_part)) {
+        result = -1;
+        break;
+      }
+      part = cost_set->first_part + (int)item_index;
       part_name = btech_part_name(btech->configuration, part, generated_name);
       length =
           snprintf(cost, sizeof(cost), "%llu", cost_set->costs[item_index]);

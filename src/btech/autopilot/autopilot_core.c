@@ -131,7 +131,7 @@ static AutoCommandText auto_command_text(AutopilotCommand *node) {
 /*
  * Removes a command from the AI's command list
  */
-void auto_delcommand(DbRef player, void *data, char *buffer) {
+void auto_delcommand(DbRef player, void *data, const char *buffer) {
 
   int p;
   Autopilot *autopilot = (Autopilot *)data;
@@ -313,7 +313,7 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
       temp_command_node->args[j] = args[j];
   }
 
-  temp_command_node->argcount = acom[i].argcount;
+  temp_command_node->argcount = (unsigned char)acom[i].argcount;
   temp_command_node->command_enum = acom[i].command_enum;
   temp_command_node->ai_command_function = acom[i].ai_command_function;
 
@@ -353,7 +353,7 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
   cool_menu_add_line(&c);
 
   snprintf(buf, MBUF_SIZE,
-           "MyRef: #%ld  MechRef: #%ld  MapIndex: #%d  "
+           "MyRef: #%ld  MechRef: #%ld  MapIndex: #%ld  "
            "FSpeed: %d %% (Flag:%d)",
            autopilot->mynum, autopilot->mymechnum, autopilot->mapindex,
            autopilot->speed, autopilot->flags);
@@ -434,7 +434,7 @@ static int auto_pilot_on(Autopilot *autopilot) {
 /*
  * Stop whatever the autopilot is doing
  */
-extern void auto_stop_pilot(Autopilot *autopilot) {
+void auto_stop_pilot(Autopilot *autopilot) {
 
   int i;
 
@@ -490,7 +490,7 @@ void auto_init(Autopilot *autopilot, Mech *mech) {
  * Setup all the flags and variables to current, then
  * start the AI's first command.
  */
-void auto_engage(DbRef player, void *data, char *buffer) {
+void auto_engage(DbRef player, void *data, const char *buffer) {
 
   Autopilot *autopilot = (Autopilot *)data;
   Mech *mech;
@@ -536,7 +536,7 @@ void auto_engage(DbRef player, void *data, char *buffer) {
 /*
  * Turn off the autopilot
  */
-void auto_disengage(DbRef player, void *data, char *buffer) {
+void auto_disengage(DbRef player, void *data, const char *buffer) {
 
   Autopilot *autopilot = (Autopilot *)data;
 

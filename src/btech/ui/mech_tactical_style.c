@@ -8,17 +8,18 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
                    const char *sketch, int dispcols, int disprows) {
   size_t pos = 0;
   int line = 0;
-  unsigned char cur_colour = '\0';
+  char cur_colour = '\0';
   const char *line_start;
-  char const *src = sketch;
+  const char *src = sketch;
 
-  line_start = (char *)src;
+  line_start = src;
   text->lines[0] = text->buffer;
   while (line < disprows) {
-    unsigned char new_colour;
-    unsigned char c = *src++;
+    char new_colour;
+    const unsigned char input = (unsigned char)*src++;
+    char c = (char)input;
 
-    if (c == '\0') {
+    if (input == '\0') {
       /*
        * End of line.
        */
@@ -37,7 +38,7 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
       continue;
     }
 
-    switch (c) {
+    switch (input) {
     case (unsigned char)'\242': /* Colour Hack: Deep Water */
       c = '~';
       new_colour = colors->values[DWATER_IDX];
@@ -80,11 +81,11 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
       break;
 
     default:
-      if (islower(c)) { /* Friendly con */
+      if (islower(input)) { /* Friendly con */
         new_colour = colors->values[FRIEND_IDX];
-      } else if (isupper(c)) { /* Enemy con */
+      } else if (isupper(input)) { /* Enemy con */
         new_colour = colors->values[ENEMY_IDX];
-      } else if (isdigit(c)) { /* Elevation */
+      } else if (isdigit(input)) { /* Elevation */
         new_colour = cur_colour;
       } else {
         new_colour = map_terrain_color_char(colors, c, 0);

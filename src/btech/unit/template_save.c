@@ -47,7 +47,7 @@ static void save_nondefault_integer(FILE *fp, int expected, int current,
 int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
   FILE *fp;
   int x, x2, inf_x;
-  char **locs;
+  const char *const *locs;
   char *d, *c = ctime(&mech->xcode.context->clock->now);
 
   if (!mech_computer_quality(mech))
@@ -102,9 +102,9 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
   save_nondefault_integer(fp, DefaultFuelByType(mech), ((mech)->ud.fuel_orig),
                           "Fuel");
 
-  fprintf(fp, "Max_Speed        { %.2f }\n", ((mech)->ud.maxspeed));
-  if (((mech)->rd.jumpspeed) > 0.0)
-    fprintf(fp, "Jump_Speed       { %.2f }\n", ((mech)->rd.jumpspeed));
+  fprintf(fp, "Max_Speed        { %.2f }\n", (double)((mech)->ud.maxspeed));
+  if (((mech)->rd.jumpspeed) > 0.0F)
+    fprintf(fp, "Jump_Speed       { %.2f }\n", (double)((mech)->rd.jumpspeed));
   x = ((mech)->rd.specials);
   x2 = ((mech)->rd.specials2);
   /* Remove AMS'es, they're re-generated back on loadtime */
@@ -134,9 +134,9 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
             build_bit_string(infantry_specials, inf_x,
                              (char[BTECH_TEXT_CAPACITY]){0}));
 
-  if ((locs = (char **)ProperSectionStringFromType(((mech)->ud.type),
-                                                   ((mech)->ud.move)))) {
-    dump_locations(fp, mech, (const char **)locs);
+  if ((locs =
+           ProperSectionStringFromType(((mech)->ud.type), ((mech)->ud.move)))) {
+    dump_locations(fp, mech, locs);
     fclose(fp);
     return 0;
   }
@@ -196,18 +196,17 @@ char *read_desc(FILE *fp, char *data, char *buffer) {
 int find_section(char *cmd, int type, int mtype) {
   char section[20];
   char *ch;
-  char **locs;
+  const char *const *locs;
 
   strcpy(section, cmd);
   for (ch = section; *ch; ch++)
     if (*ch == '_')
       *ch = ' ';
-  locs = (char **)ProperSectionStringFromType(type, mtype);
-  return compare_array((char **)locs, section);
-  return -1; // Who's retarded? not me!
+  locs = ProperSectionStringFromType(type, mtype);
+  return compare_const_array(locs, section);
 }
 
-long BuildBitVector(char **list, char *line) {
+long BuildBitVector(const char *const list[], char *line) {
   long bv = 0;
   int temp;
   char buf[30];
@@ -217,14 +216,14 @@ long BuildBitVector(char **list, char *line) {
 
   while (*line) {
     line = one_arg(line, buf);
-    if ((temp = compare_array(list, buf)) == -1)
+    if ((temp = compare_const_array(list, buf)) == -1)
       return -1;
     bv |= 1U << temp;
   }
   return bv;
 }
 
-long BuildBitVectorWithDelim(char **list, char *line) {
+long BuildBitVectorWithDelim(const char *const list[], char *line) {
   long bv = 0;
   int temp;
   char buf[30];
@@ -235,7 +234,7 @@ long BuildBitVectorWithDelim(char **list, char *line) {
   while (*line) {
     line = one_arg_delim(line, buf);
 
-    if ((temp = compare_array(list, buf)) == -1)
+    if ((temp = compare_const_array(list, buf)) == -1)
       return -1;
 
     bv |= 1U << temp;
@@ -244,7 +243,7 @@ long BuildBitVectorWithDelim(char **list, char *line) {
   return bv;
 }
 
-long BuildBitVectorNoErr(char **list, char *line) {
+long BuildBitVectorNoErr(const char *const list[], char *line) {
   long bv = 0;
   int temp;
   char buf[30];
@@ -255,14 +254,15 @@ long BuildBitVectorNoErr(char **list, char *line) {
   while (*line) {
     line = one_arg(line, buf);
 
-    if ((temp = compare_array(list, buf)) != -1)
+    if ((temp = compare_const_array(list, buf)) != -1)
       bv |= 1U << temp;
   }
 
   return bv;
 }
 
-int CheckSpecialsList(char **special_list, char **special_list2, char *line) {
+int CheckSpecialsList(const char *const special_list[],
+                      const char *const special_list2[], char *line) {
   int wSpecCheck = -1, wSpec2Check = -1;
   char buf[30];
 
@@ -273,10 +273,10 @@ int CheckSpecialsList(char **special_list, char **special_list2, char *line) {
     line = one_arg(line, buf);
 
     if (special_list)
-      wSpecCheck = compare_array(special_list, buf);
+      wSpecCheck = compare_const_array(special_list, buf);
 
     if (special_list2)
-      wSpec2Check = compare_array(special_list2, buf);
+      wSpec2Check = compare_const_array(special_list2, buf);
 
     if ((wSpecCheck == -1) && (wSpec2Check == -1))
       return 0;

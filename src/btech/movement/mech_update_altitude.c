@@ -75,8 +75,9 @@ void mech_naval_altitude_check(Mech *mech, int previous_z) {
           tprintf("Oddity: #%ld managed to wind up on '%c' (%d elev.)",
                   mech_dbref(mech), mech_position_terrain(mech),
                   mech_position_elevation(mech)));
-    mech_position_real_z_set(
-        mech, ((5.0F * mech_position_z(mech) - 4.0F) * ZSCALE) / 5.0F);
+    const int mech_z = mech_position_z(mech);
+    mech_position_real_z_set(mech,
+                             ((5.0F * (float)mech_z - 4.0F) * ZSCALE) / 5.0F);
     if (mech_movement_type(mech) == MOVE_SUB && mech_vertical_speed(mech) < 0) {
       mech_vertical_speed_set(mech, 0.0F);
       mech_notify(mech, MECHALL,
@@ -113,7 +114,9 @@ void mech_vtol_altitude_check(Mech *mech) {
     return;
   mech_notify(mech, MECHALL, "CRASH! You smash your toy into the ground!");
   mech_los_broadcast(mech, "crashes into the ground!");
-  mech_fall(mech, 1 + fabs(mech_vertical_speed(mech) / MP1), 0);
+  const float fall_speed = fabsf(mech_vertical_speed(mech) / MP1);
+  const int fall_distance = 1 + (int)fall_speed;
+  mech_fall(mech, fall_distance, 0);
 
   mech_position_z_set(mech, mech_position_surface_elevation(mech));
   mech_current_speed_set(mech, 0.0F);

@@ -1,4 +1,5 @@
 #include "btech/context.h"
+#include "checked_conversion.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
@@ -132,8 +133,8 @@ int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
       temp = weapon_from_equipment_index(temp);
       if (weapcount == 0) {
         lastweap = temp;
-        weapdataarray[weapcount] = data;
-        weaparray[weapcount] = temp;
+        weapdataarray[weapcount] = clamp_int_to_unsigned_char(data);
+        weaparray[weapcount] = clamp_int_to_unsigned_char(temp);
         critical[weapcount] = loop;
         weapcount++;
         num_crits = 1;
@@ -142,8 +143,8 @@ int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
       if (!num_crits || temp != lastweap ||
           (num_crits == GetWeaponCrits(mech, temp))) {
         UGLYTEST;
-        weaparray[weapcount] = temp;
-        weapdataarray[weapcount] = data;
+        weaparray[weapcount] = clamp_int_to_unsigned_char(temp);
+        weapdataarray[weapcount] = clamp_int_to_unsigned_char(data);
         critical[weapcount] = loop;
         lastweap = temp;
         num_crits = 1;
@@ -178,21 +179,23 @@ int FindAmmunition(Mech *mech, unsigned char *weaparray,
         for (i = 0; i < weapcount; i++) {
           if (temp == weaparray[i] && mode == modearray[i]) {
             if (!(mech_critical_is_nonfunctional(mech, index, loop)))
-              ammoarray[i] += data;
-            ammomaxarray[i] += FullAmmo(mech, index, loop);
+              ammoarray[i] = clamp_int_to_unsigned_short(ammoarray[i] + data);
+            ammomaxarray[i] = clamp_int_to_unsigned_short(
+                ammomaxarray[i] + FullAmmo(mech, index, loop));
             duplicate = 1;
           }
         }
 
         if (!duplicate) {
-          weaparray[weapcount] = temp;
+          weaparray[weapcount] = clamp_int_to_unsigned_char(temp);
 
           if (!(mech_critical_is_nonfunctional(mech, index, loop)))
-            ammoarray[weapcount] = data;
+            ammoarray[weapcount] = clamp_int_to_unsigned_short(data);
           else
             ammoarray[weapcount] = 0;
 
-          ammomaxarray[weapcount] = FullAmmo(mech, index, loop);
+          ammomaxarray[weapcount] =
+              clamp_int_to_unsigned_short(FullAmmo(mech, index, loop));
           modearray[weapcount] = mode;
 
           weapcount++;
@@ -363,7 +366,7 @@ int FindWeaponIndex(Mech *mech, int number) {
   return -1;
 }
 
-int FullAmmo(Mech *mech, int loc, int pos) {
+int FullAmmo(const Mech *mech, int loc, int pos) {
   int baseammo;
   int overage;
 
@@ -706,44 +709,44 @@ int FindRoundsForWeapon(Mech *mech, int weapindx) {
   return found;
 }
 
-char *quad_locs[NUM_SECTIONS + 1] = {"Front Left Leg",
-                                     "Front Right Leg",
-                                     "Left Torso",
-                                     "Right Torso",
-                                     "Center Torso",
-                                     "Rear Left Leg",
-                                     "Rear Right Leg",
-                                     "Head",
-                                     NULL};
+const char *quad_locs[NUM_SECTIONS + 1] = {"Front Left Leg",
+                                           "Front Right Leg",
+                                           "Left Torso",
+                                           "Right Torso",
+                                           "Center Torso",
+                                           "Rear Left Leg",
+                                           "Rear Right Leg",
+                                           "Head",
+                                           NULL};
 
-char *mech_locs[NUM_SECTIONS + 1] = {
+const char *mech_locs[NUM_SECTIONS + 1] = {
     "Left Arm", "Right Arm", "Left Torso", "Right Torso", "Center Torso",
     "Left Leg", "Right Leg", "Head",       NULL};
 
-char *bsuit_locs[NUM_BSUIT_MEMBERS + 1] = {"Suit 1", "Suit 2", "Suit 3",
-                                           "Suit 4", "Suit 5", "Suit 6",
-                                           "Suit 7", "Suit 8", NULL};
+const char *bsuit_locs[NUM_BSUIT_MEMBERS + 1] = {"Suit 1", "Suit 2", "Suit 3",
+                                                 "Suit 4", "Suit 5", "Suit 6",
+                                                 "Suit 7", "Suit 8", NULL};
 
-char *veh_locs[NUM_VEH_SECTIONS + 1] = {"Left Side", "Right Side", "Front Side",
-                                        "Aft Side",  "Turret",     "Rotor",
-                                        NULL};
+const char *veh_locs[NUM_VEH_SECTIONS + 1] = {
+    "Left Side", "Right Side", "Front Side", "Aft Side",
+    "Turret",    "Rotor",      NULL};
 
-char *aero_locs[NUM_AERO_SECTIONS + 1] = {"Nose", "Left Wing", "Right Wing",
-                                          "Aft Side", NULL};
+const char *aero_locs[NUM_AERO_SECTIONS + 1] = {"Nose", "Left Wing",
+                                                "Right Wing", "Aft Side", NULL};
 
-char *ds_locs[NUM_DS_SECTIONS + 1] = {
+const char *ds_locs[NUM_DS_SECTIONS + 1] = {
     "Right Wing", "Left Wing", "Left Rear Wing", "Right Rear Wing", "Aft",
     "Nose",       NULL};
 
-char *ds_spher_locs[NUM_DS_SECTIONS + 1] = {"Front Right Side",
-                                            "Front Left Side",
-                                            "Rear Left Side",
-                                            "Rear Right Side",
-                                            "Aft",
-                                            "Nose",
-                                            NULL};
+const char *ds_spher_locs[NUM_DS_SECTIONS + 1] = {"Front Right Side",
+                                                  "Front Left Side",
+                                                  "Rear Left Side",
+                                                  "Rear Right Side",
+                                                  "Aft",
+                                                  "Nose",
+                                                  NULL};
 
-char **ProperSectionStringFromType(int type, int mtype) {
+const char *const *ProperSectionStringFromType(int type, int mtype) {
   switch (type) {
   case CLASS_BSUIT:
     return bsuit_locs;

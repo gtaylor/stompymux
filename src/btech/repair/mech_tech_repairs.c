@@ -32,6 +32,7 @@
 #include "mech_status_api.h"
 #include "mech_tech_api.h"
 #include "mech_tech_events_api.h"
+#include "mech_tech_repairs_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"

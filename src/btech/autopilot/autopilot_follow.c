@@ -37,7 +37,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
 
   float range;
   float fx, fy;
-  short x, y;
+  int x, y;
+  short generated_x, generated_y;
   int bearing;
   long destroy_path = (long)muxevent->data2;
 
@@ -78,7 +79,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
              " follow with AI #%ld but AI is not on a valid"
-             " Map (#%d).",
+             " Map (#%ld).",
              autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
@@ -106,7 +107,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
-      mech_stand(autopilot->mynum, mech, "");
+      mech_stand_empty(autopilot->mynum, mech);
 
     /* Ok lets run this command again */
     autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW,
@@ -185,10 +186,12 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
 
   /* Generate the target hex - since this can be altered by position command */
   FindXY(mech_position_real_x(target), mech_position_real_y(target),
-         mech_heading_degrees(target) + autopilot->ofsx, autopilot->ofsy, &fx,
-         &fy);
+         mech_heading_degrees(target) + autopilot->ofsx, (float)autopilot->ofsy,
+         &fx, &fy);
 
-  RealCoordToMapCoord(&x, &y, fx, fy);
+  RealCoordToMapCoord(&generated_x, &generated_y, fx, fy);
+  x = generated_x;
+  y = generated_y;
 
   /* Make sure the hex is sane - if not set the target hex to the target's
    * hex */
@@ -202,10 +205,10 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
 
   /* Are we in the target hex and the target isn't moving ? */
   if ((mech_position_x(mech) == x) && (mech_position_y(mech) == y) &&
-      (mech_current_speed(target) < 0.5)) {
+      (mech_current_speed(target) < 0.5F)) {
 
     /* Ok go into holding pattern */
-    ai_set_speed(mech, autopilot, 0.0);
+    ai_set_speed(mech, autopilot, 0.0F);
 
     /* Destroy the path so we can force the path to be generated if the
      * target moves */
@@ -440,7 +443,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
              " follow [dumbly] with AI #%ld but AI is not on a valid"
-             " Map (#%d).",
+             " Map (#%ld).",
              autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
@@ -467,7 +470,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
-      mech_stand(autopilot->mynum, mech, "");
+      mech_stand_empty(autopilot->mynum, mech);
 
     /* Ok lets run this command again */
     autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
@@ -530,8 +533,10 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   }
 
   h = mech_desired_heading_degrees(leader);
-  x = autopilot->ofsy * cos(TWOPIOVER360 * (270.0 + (h + autopilot->ofsx)));
-  y = autopilot->ofsy * sin(TWOPIOVER360 * (270.0 + (h + autopilot->ofsx)));
+  x = (int)((float)autopilot->ofsy *
+            cosf(TWOPIOVER360 * (270.0F + (float)(h + autopilot->ofsx))));
+  y = (int)((float)autopilot->ofsy *
+            sinf(TWOPIOVER360 * (270.0F + (float)(h + autopilot->ofsx))));
   tx = mech_position_x(leader) + x;
   ty = mech_position_y(leader) + y;
 
@@ -548,8 +553,9 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
         mech_heading(autopilot->mynum, mech, buffer);
       }
 
-      if (mech_current_speed(mech) != mech_current_speed(leader)) {
-        snprintf(buffer, SBUF_SIZE, "%.2f", mech_current_speed(leader));
+      if (fabsf(mech_current_speed(mech) - mech_current_speed(leader)) >
+          0.01F) {
+        snprintf(buffer, SBUF_SIZE, "%.2f", (double)mech_current_speed(leader));
         mech_speed(autopilot->mynum, mech, buffer);
       }
     }

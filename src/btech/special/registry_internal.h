@@ -88,8 +88,8 @@ bool btech_special_command_access(BtechContext *context, DbRef object,
                                   PowerId power);
 int btech_context_which_special_attribute(BtechContext *context, DbRef key);
 void btech_special_object_help(BtechContext *context, DbRef player,
-                               const char *type, int id, int location,
-                               PowerId power_needed, int object_id,
+                               const char *type, int id, DbRef location,
+                               PowerId power_needed, DbRef object_id,
                                char *argument);
 
 void send_channel(EvaluationContext *, const char *, const char *, ...);

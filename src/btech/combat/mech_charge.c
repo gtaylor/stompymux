@@ -22,6 +22,27 @@ static int charge_forward_arc(Mech *mech, const Mech *target) {
   return arc;
 }
 
+static int charge_damage_calculate(const Mech *moving, const Mech *opponent,
+                                   const Mech *mass_source, bool uses_new_rules,
+                                   int divisor, int bonus) {
+  constexpr float DEGREES_TO_RADIANS = 0.017453292519943295F;
+  const float charge_distance = mech_charge_distance(moving);
+  const float moving_speed =
+      uses_new_rules ? charge_distance * MP1 : mech_current_speed(moving);
+  const float opponent_speed = mech_current_speed(opponent);
+  const int heading_difference =
+      mech_heading_degrees(moving) - mech_heading_degrees(opponent);
+  const float collision_speed =
+      moving_speed -
+      opponent_speed * cosf((float)heading_difference * DEGREES_TO_RADIANS);
+  const int mass = mech_real_tonnage(mass_source);
+  const float damage =
+      collision_speed * MP_PER_KPH * ((float)mass + 5.0F) / (float)divisor +
+      (float)bonus;
+
+  return (int)damage;
+}
+
 void ChargeMech(Mech *mech, Mech *target) {
   int baseToHit = 5;
   int roll;
@@ -254,22 +275,9 @@ void ChargeMech(Mech *mech, Mech *target) {
     }
     mech_torso_twist_merge(mech, target);
     /* Now to calculate how much damage the first unit will do */
-    if (btech_context_uses_new_charge_rules(context))
-      target_damage =
-          (((((float)mech_charge_distance(mech)) * MP1) -
-            mech_current_speed(target) * cos((mech_heading_degrees(mech) -
-                                              mech_heading_degrees(target)) *
-                                             (M_PI / 180.))) *
-           MP_PER_KPH) *
-          (mech_real_tonnage(mech) + 5) / 10;
-    else
-      target_damage =
-          ((mech_current_speed(mech) -
-            mech_current_speed(target) * cos((mech_heading_degrees(mech) -
-                                              mech_heading_degrees(target)) *
-                                             (M_PI / 180.))) *
-           MP_PER_KPH) *
-          (mech_real_tonnage(mech) + 5) / 10;
+    target_damage = charge_damage_calculate(
+        mech, target, mech, btech_context_uses_new_charge_rules(context), 10,
+        0);
 
     if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "melee_specialist"))
       target_damage++;
@@ -396,12 +404,7 @@ void ChargeMech(Mech *mech, Mech *target) {
       if (btech_context_uses_new_charge_rules(context) &&
           btech_context_uses_technology_level_three_charge_rules(context))
         target_damage =
-            (((((float)mech_charge_distance(mech)) * MP1) -
-              mech_current_speed(target) * cos((mech_heading_degrees(mech) -
-                                                mech_heading_degrees(target)) *
-                                               (M_PI / 180.))) *
-             MP_PER_KPH) *
-            (mech_real_tonnage(mech) + 5) / 20;
+            charge_damage_calculate(mech, target, mech, true, 20, 0);
       else
         target_damage = (mech_real_tonnage(target) + 5) / 10; /* REUSED! */
 
@@ -431,7 +434,8 @@ void ChargeMech(Mech *mech, Mech *target) {
                "#%li charges #%li (%i/%i) Distance:"
                " %.2f DI: %i DR: %i",
                mech_dbref(mech), mech_dbref(target), mech_baseToHit, mech_roll,
-               mech_charge_distance(mech), inflicted_damage, received_damage);
+               (double)mech_charge_distance(mech), inflicted_damage,
+               received_damage);
       btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
 
       /* Make the first unit roll for doing the charge if it is a mech */
@@ -481,12 +485,7 @@ void ChargeMech(Mech *mech, Mech *target) {
       if (btech_context_uses_new_charge_rules(context) &&
           btech_context_uses_technology_level_three_charge_rules(context))
         target_damage =
-            (((((float)mech_charge_distance(target)) * MP1) -
-              mech_current_speed(mech) * cos((mech_heading_degrees(target) -
-                                              mech_heading_degrees(mech)) *
-                                             (M_PI / 180.))) *
-             MP_PER_KPH) *
-            (mech_real_tonnage(mech) + 5) / 20;
+            charge_damage_calculate(target, mech, mech, true, 20, 0);
       else
         target_damage = (mech_real_tonnage(mech) + 5) / 10; /* REUSED! */
 
@@ -516,7 +515,8 @@ void ChargeMech(Mech *mech, Mech *target) {
                "#%li charges #%li (%i/%i) Distance:"
                " %.2f DI: %i DR: %i",
                mech_dbref(target), mech_dbref(mech), targ_baseToHit, targ_roll,
-               mech_charge_distance(target), inflicted_damage, received_damage);
+               (double)mech_charge_distance(target), inflicted_damage,
+               received_damage);
       btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
 
       if (mech_class(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
@@ -636,24 +636,8 @@ void ChargeMech(Mech *mech, Mech *target) {
   }
 
   /* Damage inflicted by the charge */
-  if (btech_context_uses_new_charge_rules(context))
-    target_damage =
-        (((((float)mech_charge_distance(mech)) * MP1) -
-          mech_current_speed(target) *
-              cos((mech_heading_degrees(mech) - mech_heading_degrees(target)) *
-                  (M_PI / 180.))) *
-         MP_PER_KPH) *
-            (mech_real_tonnage(mech) + 5) / 10 +
-        1;
-  else
-    target_damage =
-        ((mech_current_speed(mech) -
-          mech_current_speed(target) *
-              cos((mech_heading_degrees(mech) - mech_heading_degrees(target)) *
-                  (M_PI / 180.))) *
-         MP_PER_KPH) *
-            (mech_real_tonnage(mech) + 5) / 10 +
-        1;
+  target_damage = charge_damage_calculate(
+      mech, target, mech, btech_context_uses_new_charge_rules(context), 10, 1);
 
   if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "melee_specialist"))
     target_damage++;
@@ -731,13 +715,7 @@ void ChargeMech(Mech *mech, Mech *target) {
     /* Damage done to the attacker for the charge */
     if (btech_context_uses_new_charge_rules(context) &&
         btech_context_uses_technology_level_three_charge_rules(context))
-      mech_damage =
-          (((((float)mech_charge_distance(mech)) * MP1) -
-            mech_current_speed(target) * cos((mech_heading_degrees(mech) -
-                                              mech_heading_degrees(target)) *
-                                             (M_PI / 180.))) *
-           MP_PER_KPH) *
-          (mech_real_tonnage(target) + 5) / 20;
+      mech_damage = charge_damage_calculate(mech, target, target, true, 20, 0);
     else
       mech_damage = (mech_real_tonnage(target) + 5) / 10;
 
@@ -780,7 +758,8 @@ void ChargeMech(Mech *mech, Mech *target) {
              "#%li charges #%li (%i/%i) Distance:"
              " %.2f DI: %i DR: %i",
              mech_dbref(mech), mech_dbref(target), baseToHit, roll,
-             mech_charge_distance(mech), inflicted_damage, received_damage);
+             (double)mech_charge_distance(mech), inflicted_damage,
+             received_damage);
     btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
   }
 

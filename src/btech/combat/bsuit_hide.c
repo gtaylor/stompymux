@@ -60,12 +60,6 @@ static int mech_hidden_turns(const Mech *mech) {
 
 /* Stops everyone who's swarming this poor guy */
 
-#define RECYCLE_SWARM (PHYSICAL_RECYCLE_TIME / 3)
-#define RECYCLE_ATTACKLEG (PHYSICAL_RECYCLE_TIME / 2)
-#define RECYCLE_INT_STOPSWARM (PHYSICAL_RECYCLE_TIME / 3)
-#define RECYCLE_UNINT_STOPSWARM (PHYSICAL_RECYCLE_TIME / 2)
-#define RECYCLE_FALL_STOPSWARM ((PHYSICAL_RECYCLE_TIME / 4) * 3)
-
 static void mech_hide_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   Mech *t;
@@ -113,7 +107,7 @@ static void mech_hide_event(MuxEvent *e) {
   return;
 }
 
-void bsuit_hide(DbRef player, void *data, char *buffer) {
+void bsuit_hide(DbRef player, void *data, const char *buffer) {
   Mech *mech = data;
   BtechContext *context = mech_context(mech);
   BattleMap *map = btech_context_find_object(context, mech_map_dbref(mech));
@@ -140,7 +134,7 @@ void bsuit_hide(DbRef player, void *data, char *buffer) {
                  "Hide where? Up here?");
     return;
   }
-  if (fabs(mech_current_speed(mech)) > MP1) {
+  if (fabsf(mech_current_speed(mech)) > MP1) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Come to a complete stop first.");
     return;

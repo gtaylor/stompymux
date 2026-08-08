@@ -1,6 +1,9 @@
 #include "mech_lifecycle.h"
 #include "mech_sensor_state_api.h"
 #include "mech_status_types.h"
+#include "mech_utils_api.h"
+
+#include "crit_api.h"
 
 #include "mech_internal.h"
 

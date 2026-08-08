@@ -60,7 +60,7 @@ int mech_attacker_movement_modifier(Mech *mech) {
   maxspeed = mech_template_maximum_speed(mech);
   if ((mech_excess_heat(mech) >= 9.0F) &&
       (mech_technology_flags(mech) & TRIPLE_MYOMER_TECH))
-    maxspeed += 1.5 * MP1;
+    maxspeed += 1.5F * MP1;
   if (mech_is_jumping(mech))
     return 3;
 
@@ -80,9 +80,9 @@ int mech_attacker_movement_modifier(Mech *mech) {
     if (mech_heading_degrees(mech) != mech_desired_heading_degrees(mech))
       base++;
 
-  if (!(fabs(speed) > 0.0))
+  if (!(fabsf(speed) > 0.0F))
     return base + 0;
-  if (speed > (float)2.0 * maxspeed / 3.0 + 0.1F)
+  if (speed > 2.0F * maxspeed / 3.0F + 0.1F)
     return 2;
   return base + 1;
 }
@@ -99,8 +99,7 @@ int mech_target_movement_modifier(Mech *mech, Mech *target, float range) {
     if (mech_is_aerospace_unit(mech))
       m = ACCEL_MOD;
     target_speed =
-        (float)length_hypotenuse((double)mech_current_speed(target) / m,
-                                 (double)mech_vertical_speed(target) / m);
+        hypotf(mech_current_speed(target) / m, mech_vertical_speed(target) / m);
   } else {
     if (mech_is_jumping(target)) {
       target_speed = mech_jump_speed_for_map(target, map);
@@ -110,15 +109,15 @@ int mech_target_movement_modifier(Mech *mech, Mech *target, float range) {
         if (mech_is_jumping(swarmTarget))
           target_speed = mech_jump_speed_for_map(swarmTarget, map);
         else
-          target_speed = fabs(mech_current_speed(swarmTarget));
+          target_speed = fabsf(mech_current_speed(swarmTarget));
       }
     } else {
-      target_speed = fabs(mech_current_speed(target));
+      target_speed = fabsf(mech_current_speed(target));
     }
   }
 
   if (mech_infantry_technology_flags(target) & CS_PURIFIER_STEALTH_TECH) {
-    if (target_speed == 0.0) {
+    if (target_speed <= 0.0F) {
       /* Mech moved 0-2 hexes */
       returnValue = 3;
     } else if (target_speed <= MP1) {
@@ -146,7 +145,7 @@ int mech_target_movement_modifier(Mech *mech, Mech *target, float range) {
     } else {
       /* Moving more than 9 hexes */
       if (btech_context_uses_extended_movement_modifiers(context))
-        returnValue = 4 + (target_speed - 10 * MP1) / MP4;
+        returnValue = 4 + (int)((target_speed - 10.0F * MP1) / MP4);
       else
         returnValue = 4;
     }
@@ -157,7 +156,7 @@ int mech_target_movement_modifier(Mech *mech, Mech *target, float range) {
 
   if (mech_condition_summary(target).fallen &&
       ((mech_class(target) == CLASS_MECH) || (mech_class(target) == CLASS_MW)))
-    returnValue += (range <= 1.0) ? -2 : 1;
+    returnValue += (range <= 1.0F) ? -2 : 1;
 
   if (mech_is_jumping(target))
     returnValue++;

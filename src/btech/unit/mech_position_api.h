@@ -55,7 +55,7 @@ void mech_position_real_xy_set(Mech *mech, float x, float y);
 void mech_position_real_xy_translate(Mech *mech, float delta_x, float delta_y);
 void mech_position_real_z_set(Mech *mech, float z);
 void mech_position_real_z_translate(Mech *mech, float delta_z);
-void mech_position_terrain_set(Mech *mech, char terrain);
+void mech_position_terrain_set(Mech *mech, int terrain);
 void mech_position_elevation_set(Mech *mech, int elevation);
 void mech_position_z_set(Mech *mech, int z);
 void mech_position_hex_z_set(Mech *mech, int z);
@@ -80,7 +80,7 @@ void mech_jump_apex_elevation_set(Mech *mech, int elevation);
 void mech_position_mirror(Mech *target, const Mech *source, int height_offset);
 void mech_position_land_if_flying(Mech *mech);
 void mech_position_rollback(Mech *mech, float delta_x, float delta_y,
-                            int previous_z, char previous_terrain,
+                            int previous_z, int previous_terrain,
                             int previous_elevation);
 void mech_jump_launch(Mech *mech, const MechJumpLaunch *launch);
 bool mech_jump_destination_was_overshot(const Mech *mech);

@@ -50,9 +50,9 @@ void mech_sensor_visibility_refresh(Mech *mech) {
 
     float range = mech_range_to(seer, mech);
     unsigned short los_flags = battle_map_los_flags(map, i, num);
-    los_flags =
-        mech_los_calculate_flags(seer, mech, map, mech_position_x(mech),
-                                 mech_position_y(mech), los_flags, range);
+    los_flags = (unsigned short)mech_los_calculate_flags(
+        seer, mech, map, mech_position_x(mech), mech_position_y(mech),
+        los_flags, range);
     battle_map_los_flags_set(map, i, num, los_flags);
 
     /* Then update the SEES flags. */
@@ -74,8 +74,9 @@ static void mech_unblind_event(MuxEvent *event) {
 }
 
 void mech_sensors_scramble_infrared_and_liteamp(Mech *mech, int time,
-                                                int chance, char *inframsg,
-                                                char *liteampmsg) {
+                                                int chance,
+                                                const char *inframsg,
+                                                const char *liteampmsg) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 

@@ -30,7 +30,8 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
   float range;
   float maxRange = 1;
   char targetID[2];
-  int targetnum, roll, swarmingUs;
+  DbRef targetnum;
+  int roll, swarmingUs;
   char location[20];
   int iwa;
   int RbaseToHit, glance = 0;

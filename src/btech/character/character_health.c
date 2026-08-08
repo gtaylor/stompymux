@@ -102,9 +102,9 @@ void initialize_pc(DbRef player, Mech *mech) {
   lethal = char_getstatvalue(s, "lethal");
   tot = playerBLD * 20;
   dam = bruise + lethal;
-  mech_maximum_speed_set(mech, (playerBLD + char_getstatvalue(s, "reflexes") +
-                                char_getstatvalue(s, "running")) *
-                                   MP1 / 9.0);
+  const int movement_score = playerBLD + char_getstatvalue(s, "reflexes") +
+                             char_getstatvalue(s, "running");
+  mech_maximum_speed_set(mech, (float)movement_score * MP1 / 9.0F);
 #define PC_LOCS 4
   for (i = 0; i < NUM_SECTIONS; i++) {
     mech_section_armor_set(mech, i, 0);

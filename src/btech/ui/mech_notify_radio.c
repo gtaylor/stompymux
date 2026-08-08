@@ -3,6 +3,7 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "map.h"
 #include "mech_classification_api.h"
@@ -61,7 +62,7 @@ static void do_scramble(BtechContext *context, char *buffo, int ch, int bth) {
       else
         buffo[i] += btech_random_range(context, 1, 10);
     }
-    buffo[i] = (unsigned char)BOUNDED(33, buffo[i], 255);
+    buffo[i] = (char)(unsigned char)BOUNDED(33, buffo[i], 255);
   }
 }
 
@@ -82,9 +83,9 @@ struct CommRelayContext {
 };
 
 static void scramble_message(const CommRelayContext *relay,
-                             BtechContext *context, char *buffo, int range,
-                             int sendrange, int recvrrange, char *handle,
-                             char *msg, int bth, int *isxp, int under_ecm,
+                             BtechContext *context, char *buffo, float range,
+                             int sendrange, int recvrrange, const char *handle,
+                             const char *msg, int bth, int *isxp, int under_ecm,
                              int digmode) {
 
   int mr, i;
@@ -119,24 +120,35 @@ static void scramble_message(const CommRelayContext *relay,
     append_lbuf(buffo, LBUF_SIZE, "<%s> ", handle);
   append_lbuf(buffo, LBUF_SIZE, "%s", msg);
 
-  if ((!digmode && (range >= sendrange || range >= recvrrange)) || under_ecm) {
+  const float send_range = (float)sendrange;
+  const float receive_range = (float)recvrrange;
+
+  if ((!digmode && (range >= send_range || range >= receive_range)) ||
+      under_ecm) {
     if (!digmode) {
 
       mr = MAX(recvrrange, (sendrange + recvrrange) / 2);
-      if (sendrange < range) {
-        do_scramble(context, buffo, (100 * sendrange) / MAX(1, range), bth);
+      if (send_range < range) {
+        const float signal = 100.0F * send_range / fmaxf(1.0F, range);
+
+        do_scramble(context, buffo, clamp_float_to_int(signal), bth);
         *isxp = 1;
       }
 
-      if (mr < range) {
+      if ((float)mr < range) {
+        const float signal = 100.0F * (float)mr / fmaxf(1.0F, range);
+
         do_scramble(context, buffo,
-                    relay_signal_improve((100 * mr) / MAX(1, range), 2), bth);
+                    relay_signal_improve(clamp_float_to_int(signal), 2), bth);
         *isxp = 1;
       }
     }
 
-    if (under_ecm && range >= 1) {
-      do_scramble(context, buffo, btech_random_range(context, 30, 50), bth);
+    if (under_ecm && range >= 1.0F) {
+      const long random_chance = btech_random_range(context, 30, 50);
+
+      do_scramble(context, buffo, clamp_intptr_to_int((intptr_t)random_chance),
+                  bth);
       *isxp = 1;
     }
   }
@@ -261,8 +273,11 @@ static bool find_comm_link(CommRelayContext *relay, BattleMap *map, Mech *from,
     for (j = i + 1; j < relay->node_count; j++) {
       float range = mech_range_to(relay->mechs[i], relay->mechs[j]);
 
-      relay->connected[i][j] = range <= mech_radio_range(relay->mechs[i]);
-      relay->connected[j][i] = range <= mech_radio_range(relay->mechs[j]);
+      const int source_range = mech_radio_range(relay->mechs[i]);
+      const int target_range = mech_radio_range(relay->mechs[j]);
+
+      relay->connected[i][j] = range <= (float)source_range;
+      relay->connected[j][i] = range <= (float)target_range;
     }
   }
   relay->best_depth = 9999;
@@ -279,7 +294,7 @@ static void build_observer_channel_message(
   char *bp = buf;
   char numbuf[32];
 
-  safe_str((char *)color, buf, &bp);
+  safe_str(color, buf, &bp);
   safe_chr(open_bracket, buf, &bp);
   safe_chr(channel, buf, &bp);
   safe_chr(':', buf, &bp);
@@ -287,16 +302,16 @@ static void build_observer_channel_message(
   safe_str(numbuf, buf, &bp);
   safe_chr(close_bracket, buf, &bp);
   safe_str(" <", buf, &bp);
-  safe_str((char *)faction, buf, &bp);
+  safe_str(faction, buf, &bp);
   safe_chr(':', buf, &bp);
-  safe_str((char *)id, buf, &bp);
+  safe_str(id, buf, &bp);
   safe_chr(':', buf, &bp);
   snprintf(numbuf, sizeof(numbuf), "%d", frequency);
   safe_str(numbuf, buf, &bp);
   safe_str("> <", buf, &bp);
-  safe_str((char *)title, buf, &bp);
+  safe_str(title, buf, &bp);
   safe_str("> ", buf, &bp);
-  safe_str((char *)message, buf, &bp);
+  safe_str(message, buf, &bp);
   safe_str("[reset]", buf, &bp);
   *bp = '\0';
 }
@@ -308,7 +323,7 @@ static void build_channel_message(char *buf, const char *color,
   char *bp = buf;
   char numbuf[32];
 
-  safe_str((char *)color, buf, &bp);
+  safe_str(color, buf, &bp);
   safe_chr(open_bracket, buf, &bp);
   safe_chr(channel, buf, &bp);
   safe_chr(':', buf, &bp);
@@ -316,14 +331,15 @@ static void build_channel_message(char *buf, const char *color,
   safe_str(numbuf, buf, &bp);
   safe_chr(close_bracket, buf, &bp);
   safe_chr(' ', buf, &bp);
-  safe_str((char *)message, buf, &bp);
+  safe_str(message, buf, &bp);
   safe_str("[reset]", buf, &bp);
   *bp = '\0';
 }
 
 void sendchannelstuff(Mech *mech, int freq, char *msg) {
   /* The _smart_ code :-) */
-  int loop, range, bearing, i, isxp;
+  int loop, bearing, i, isxp;
+  float range;
   Mech *tempMech;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -379,7 +395,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
             for (i = 0; i < mech_radio_channel_count(tempMech); i++)
               if (mech_radio_mode(tempMech, i) & FREQ_SCAN) {
-                int l = strlen(msg), t;
+                int l = clamp_size_to_int(strlen(msg)), t;
                 int mod, diff;
                 int pr;
 
@@ -404,9 +420,12 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
                   mod = -1;
                 }
 
-                t = MAX(1,
-                        btech_random_range(mech_context(mech), 1, MIN(99, l)) *
-                            diff / 100);
+                const long random_fraction =
+                    btech_random_range(mech_context(mech), 1, MIN(99, l));
+                const int64_t scaled_fraction =
+                    (int64_t)random_fraction * (int64_t)diff / 100;
+
+                t = MAX(1, clamp_intptr_to_int((intptr_t)scaled_fraction));
                 pr = t * 100 / diff;
                 mech_printf(tempMech, MECHALL,
                             "Your systems "
@@ -489,7 +508,8 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
       if (mech_radio_mode(mech, freq) & FREQ_DIGITAL) {
         if (relay != nullptr)
           relay->best_depth = 1;
-        if (range > mech_radio_range(mech)) {
+        const int source_range = mech_radio_range(mech);
+        if (range > (float)source_range) {
           if (relay == nullptr ||
               !find_comm_link(relay, mech_map, mech, tempMech,
                               mech_radio_frequency(mech, freq)))
@@ -505,7 +525,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
         scramble_message(relay, mech_context(mech), buf3, range,
                          mech_radio_range(mech), mech_radio_range(mech),
-                         (char *)mech_radio_title(mech, freq), buf2,
+                         mech_radio_title(mech, freq), buf2,
                          mech_communication_skill(tempMech), &isxp, 0,
                          (mech_radio_mode(tempMech, i) & FREQ_INFO) ? 2 : 1);
 
@@ -524,7 +544,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
         scramble_message(relay, mech_context(mech), buf3, range,
                          mech_radio_range(mech), mech_radio_range(tempMech),
-                         (char *)mech_radio_title(mech, freq), buf2,
+                         mech_radio_title(mech, freq), buf2,
                          mech_communication_skill(tempMech), &isxp,
                          (mech_is_any_ecm_disturbed(mech) ||
                           mech_is_any_ecm_disturbed(tempMech)

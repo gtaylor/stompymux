@@ -24,11 +24,11 @@
 #include "mux/server/platform.h"
 
 #ifdef BTECHSTATS_C
-char *btech_charvaluetype_names[] = {"Char_value", "Char_skill",
-                                     "Char_advantage", "Char_attribute"};
+const char *btech_charvaluetype_names[] = {"Char_value", "Char_skill",
+                                           "Char_advantage", "Char_attribute"};
 
-char *btech_charskillflag_names[] = {"Athletic", "Mental", "Physical",
-                                     "Social"};
+const char *btech_charskillflag_names[] = {"Athletic", "Mental", "Physical",
+                                           "Social"};
 
 #endif
 
@@ -39,7 +39,7 @@ char *btech_charskillflag_names[] = {"Athletic", "Mental", "Physical",
 /* *INDENT-OFF* */
 
 struct CharacterValue {
-  char *name;
+  const char *name;
   char type;
   int flag;
   int xpthreshold;
@@ -205,25 +205,27 @@ struct CharacterValue char_values[NUM_CHARVALUES] = {
 
 /* *INDENT-ON* */
 
-char *char_levels[] = {"Green", "Regular", "Veteran", "Elite", "Historical"};
+const char *char_levels[] = {"Green", "Regular", "Veteran", "Elite",
+                             "Historical"};
 
-char *char_types[] = {"Inner_Sphere",   "Clan_MechWarrior", "Clan_Aerospace",
-                      "Clan_Elemental", "Clan_Freebirth",   "Clan_Other"};
+const char *char_types[] = {"Inner_Sphere",   "Clan_MechWarrior",
+                            "Clan_Aerospace", "Clan_Elemental",
+                            "Clan_Freebirth", "Clan_Other"};
 
-char *char_packages[] = {"None",
-                         "Primary_Clan_Warrior",
-                         "Secondary_Clan_Warrior",
-                         "Secondar_Clan_Pilot",
-                         "Clan_Elemental",
-                         "Basic_Academy",
-                         "Advanced_Academy",
-                         "Basic_University",
-                         "Advanced_University"};
+const char *char_packages[] = {"None",
+                               "Primary_Clan_Warrior",
+                               "Secondary_Clan_Warrior",
+                               "Secondar_Clan_Pilot",
+                               "Clan_Elemental",
+                               "Basic_Academy",
+                               "Advanced_Academy",
+                               "Basic_University",
+                               "Advanced_University"};
 #else
 extern struct CharacterValue char_values[NUM_CHARVALUES];
-extern char *char_levels[5];
-extern char *char_types[6];
-extern char *char_packages[9];
+extern const char *char_levels[5];
+extern const char *char_types[6];
+extern const char *char_packages[9];
 #endif
 
 /*************************************************************************/

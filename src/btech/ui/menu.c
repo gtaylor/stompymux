@@ -41,9 +41,13 @@ static int maximum_int(int first, int second) {
   return first > second ? first : second;
 }
 
+static size_t menu_format_capacity(int length) {
+  return length > 0 ? (size_t)length : 0;
+}
+
 int BOUNDED(int, int, int);
 
-int number_of_entries(CoolMenu *c) {
+static int number_of_entries(CoolMenu *c) {
   if (c->flags & CM_ONE)
     return 1;
   if (c->flags & CM_TWO)
@@ -56,7 +60,7 @@ int number_of_entries(CoolMenu *c) {
   return 1;
 }
 
-int count_following_with(CoolMenu *c, int num) {
+static int count_following_with(CoolMenu *c, int num) {
   int count = 0;
 
   for (; c && number_of_entries(c) >= num && count < num; c = c->next)
@@ -64,17 +68,17 @@ int count_following_with(CoolMenu *c, int num) {
   return count;
 }
 
-void display_line(char **c, int *len, CoolMenu *m) {
+static void display_line(char **c, int *len, CoolMenu *m) {
   char *ch = *c;
   int i;
 
   (void)m;
 
-  snprintf(ch, *len, "[fg=blue]");
+  snprintf(ch, menu_format_capacity(*len), "[fg=blue]");
   ch += strlen(ch);
   for (i = 0; i < *len; i++)
     *(ch++) = '-';
-  snprintf(ch, *len, "[reset]");
+  snprintf(ch, menu_format_capacity(*len), "[reset]");
   ch += strlen(ch);
   *len = 0;
   *c = ch;
@@ -84,7 +88,7 @@ static int compute_length(const char *text) {
   return (int)styled_text_width(nullptr, text);
 }
 
-void display_string(char **c, int *len, CoolMenu *m) {
+static void display_string(char **c, int *len, CoolMenu *m) {
   char truncated[LBUF_SIZE];
   int visible = compute_length(m->text);
   int available = maximum_int(*len - 1, 0);
@@ -120,18 +124,19 @@ void display_string(char **c, int *len, CoolMenu *m) {
   }
 }
 
-void display_toggle_end(char **c, int maxlen, CoolMenu *m) {
+static void display_toggle_end(char **c, int maxlen, CoolMenu *m) {
   if (m->value)
-    snprintf(*c, maxlen, " %s<[fg=blue]X[reset][bold]>[reset]",
+    snprintf(*c, menu_format_capacity(maxlen),
+             " %s<[fg=blue]X[reset][bold]>[reset]",
              !(m->flags & CM_NO_HILITE) ? "[bold]" : "");
   else
-    snprintf(*c, maxlen, " < >");
+    snprintf(*c, menu_format_capacity(maxlen), " < >");
   *c += strlen(*c);
 }
 
 /* Turn value into equivalent with kilo, mega, giga, tera, peta, exa, zetta
    or yotta postfix. */
-StringifiedValue stringified_value(int v) {
+static StringifiedValue stringified_value(int v) {
   const char suffixes[] = "KMGTPEZY";
   int i = -1;
   StringifiedValue result = {0};
@@ -151,17 +156,17 @@ StringifiedValue stringified_value(int v) {
   return result;
 }
 
-void display_number_end(char **c, int maxlen, CoolMenu *m) {
+static void display_number_end(char **c, int maxlen, CoolMenu *m) {
   if (m->value >= 0) {
-    snprintf(*c, maxlen, " [fg=green]%s%4s[reset]",
+    snprintf(*c, menu_format_capacity(maxlen), " [fg=green]%s%4s[reset]",
              (m->value > 0 && !(m->flags & CM_NO_HILITE)) ? "[bold]" : "",
              stringified_value(m->value).text);
   } else
-    snprintf(*c, maxlen, " ____");
+    snprintf(*c, menu_format_capacity(maxlen), " ____");
   *c += strlen(*c);
 }
 
-char *display_entry(char *ch, int maxlen, CoolMenu *c) {
+static char *display_entry(char *ch, int maxlen, CoolMenu *c) {
   int i, j = 0, t = 0;
 
   /* returns: number of characters to forward the main pointer with.
@@ -172,7 +177,7 @@ char *display_entry(char *ch, int maxlen, CoolMenu *c) {
     else
       maxlen -= 4;
     t = ((c->flags & (CM_TOGGLE | CM_NUMBER)) && c->value);
-    snprintf(ch, maxlen, "%s[%c]%s ",
+    snprintf(ch, menu_format_capacity(maxlen), "%s[%c]%s ",
              (t && !(c->flags & CM_NO_HILITE)) ? "[fg=red bold]" : "[fg=red]",
              t ? (c->letter + 'A' - 'a') : c->letter, "[reset]");
     ch += strlen(ch);
@@ -185,7 +190,7 @@ char *display_entry(char *ch, int maxlen, CoolMenu *c) {
     j = 1;
   }
   if (t && !(c->flags & (CM_NO_HILITE))) {
-    snprintf(ch, maxlen, "[bold]");
+    snprintf(ch, menu_format_capacity(maxlen), "[bold]");
     ch += strlen(ch);
   }
   if (c->flags & CM_LINE)
@@ -193,7 +198,7 @@ char *display_entry(char *ch, int maxlen, CoolMenu *c) {
   else
     display_string(&ch, &maxlen, c);
   if (t && !(c->flags & (CM_NO_HILITE))) {
-    snprintf(ch, maxlen, "[reset]");
+    snprintf(ch, menu_format_capacity(maxlen), "[reset]");
     ch += strlen(ch);
   }
   if (maxlen > 0 && !(c->flags & CM_NOCUT)) {
@@ -211,7 +216,7 @@ char *display_entry(char *ch, int maxlen, CoolMenu *c) {
   return ch;
 }
 
-void display_entries(CoolMenu *c, int wnum, int num, char *text) {
+static void display_entries(CoolMenu *c, int wnum, int num, char *text) {
   int i;
   char *ch = text;
   int single_length = (MENU_CHAR_WIDTH / wnum);
@@ -245,7 +250,7 @@ char **MakeCoolMenuText(CoolMenu *c) {
   return m;
 }
 
-void CreateMenuEntry_Killer(CoolMenu **c, char *text, int flag, int id,
+void CreateMenuEntry_Killer(CoolMenu **c, const char *text, int flag, int id,
                             int value, int maxvalue) {
   CoolMenu *d, *e;
   char first = 'a';
@@ -311,7 +316,7 @@ CoolMenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
   char buf[LBUF_SIZE];
 
   strcpy(buf, heading);
-  buf[0] = toupper(buf[0]);
+  buf[0] = (char)toupper((unsigned char)buf[0]);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
@@ -325,6 +330,27 @@ CoolMenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
   return c;
 }
 
+CoolMenu *SelCol_ConstMenu(int columns, const char *heading,
+                           const char *const strings[], int type, int max) {
+  CoolMenu *c = nullptr;
+  int count = 0;
+  char heading_buffer[LBUF_SIZE];
+
+  strcpy(heading_buffer, heading);
+  heading_buffer[0] = (char)toupper((unsigned char)heading_buffer[0]);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, heading_buffer, CM_ONE | CM_CENTER);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
+  for (; strings[count]; count++)
+    ;
+  if (columns < 0)
+    columns = CoolMenu_FPWBit(count, 18);
+  for (int index = 0; index < count; index++)
+    cool_menu_entry_normal(&c, strings[index], columns | type, index + 1, max);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
+  return c;
+}
+
 CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
                                 int last) {
   CoolMenu *c = NULL;
@@ -333,7 +359,7 @@ CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
   int sick = 0;
 
   strcpy(buf, heading);
-  buf[0] = toupper(buf[0]);
+  buf[0] = (char)toupper((unsigned char)buf[0]);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
   if (fun(0)[0] == '[') {
@@ -349,7 +375,7 @@ CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
   return c;
 }
 
-CoolMenu *SelCol_FunStringMenuContextK(int columns, char *heading,
+CoolMenu *SelCol_FunStringMenuContextK(int columns, const char *heading,
                                        char *(*fun)(void *, int, char *buffer),
                                        void *context, int last) {
   CoolMenu *c = nullptr;
@@ -359,7 +385,7 @@ CoolMenu *SelCol_FunStringMenuContextK(int columns, char *heading,
   int sick = 0;
 
   strcpy(buf, heading);
-  buf[0] = toupper(buf[0]);
+  buf[0] = (char)toupper((unsigned char)buf[0]);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
   fun(context, 0, entry);

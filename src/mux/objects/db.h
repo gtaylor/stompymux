@@ -271,9 +271,9 @@ void attribute_copy(EvaluationContext *evaluation, DbRef player, DbRef source,
                     DbRef destination);
 void attribute_clear(GameDatabase *database, DbRef thing, int attribute_number);
 void attribute_add_raw(GameDatabase *database, DbRef thing,
-                       int attribute_number, char *value);
+                       int attribute_number, const char *value);
 void attribute_add(GameDatabase *database, DbRef thing, int attribute_number,
-                   char *value, long flags);
+                   const char *value, long flags);
 char *attribute_get_raw(GameDatabase *database, DbRef thing,
                         int attribute_number);
 char *attribute_get(GameDatabase *database, DbRef thing, int attribute_number,

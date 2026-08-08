@@ -1,5 +1,7 @@
 #include "registry_api.h"
 
+#include "checked_conversion.h"
+
 // The static value catalog guarantees source-kind/type pairings. Clang's
 // analyzer cannot infer that a field-only type always has a field offset.
 // NOLINTBEGIN(clang-analyzer-core.NonNullParamChecker,clang-analyzer-core.NullDereference)
@@ -23,11 +25,11 @@ static bool mech_value_write_text(Mech *mech, const GMV *descriptor,
     value.dbref = atoi(text);
     break;
   case TYPE_FLOAT:
-    value.floating = atof(text);
+    value.floating = strtof(text, nullptr);
     break;
   case TYPE_BV:
   case TYPE_CBV:
-    value.integer = text2bv((char *)text);
+    value.integer = text2bv(text);
     break;
   default:
     value.integer = atoi(text);
@@ -53,7 +55,7 @@ static char *mech_value_read_text(const Mech *mech, const GMV *descriptor,
     break;
   case TYPE_FLOAT:
   case TYPE_FLOAT_RO:
-    snprintf(buffer, LBUF_SIZE, "%.2f", value.floating);
+    snprintf(buffer, LBUF_SIZE, "%.2f", (double)value.floating);
     break;
   case TYPE_BV:
   case TYPE_CBV:
@@ -72,7 +74,7 @@ void fun_zmechs(char *buff, char **bufc, DbRef player, DbRef cause,
                 EvaluationContext *context) {
   DbRef it = match_thing(&context->command->match, player, fargs[0]);
   DbRef i;
-  int len = 0;
+  size_t len = 0;
   char reference[SBUF_SIZE];
 
   if (!is_controls(context->world->database, player, it) &&
@@ -151,30 +153,34 @@ void fun_btsetxcodevalue(char *buff, char **bufc, DbRef player, DbRef cause,
         xcode_data[i].source.buffered_bidirectional_callback(
             1, (Mech *)foo, (char *)fargs[2], (char[LBUF_SIZE]){0});
         break;
-      case TYPE_STRING:
-        strncpy((char *)bar, fargs[2], xcode_data[i].size - 1);
-        ((char *)bar)[xcode_data[i].size - 1] = '\0';
+      case TYPE_STRING: {
+        const size_t capacity = (size_t)xcode_data[i].size;
+        if (capacity == 0)
+          break;
+        strncpy(bar, fargs[2], capacity - 1);
+        ((char *)bar)[capacity - 1] = '\0';
         break;
+      }
       case TYPE_DBREF:
         *((DbRef *)bar) = atoi(fargs[2]);
         break;
       case TYPE_CHAR:
-        *((char *)bar) = atoi(fargs[2]);
+        *((char *)bar) = clamp_int_to_char(atoi(fargs[2]));
         break;
       case TYPE_SHORT:
-        *((short *)bar) = atoi(fargs[2]);
+        *((short *)bar) = clamp_int_to_short(atoi(fargs[2]));
         break;
       case TYPE_INT:
         *((int *)bar) = atoi(fargs[2]);
         break;
       case TYPE_FLOAT:
-        *((float *)bar) = atof(fargs[2]);
+        *((float *)bar) = strtof(fargs[2], nullptr);
         break;
       case TYPE_BV:
         *((int *)bar) = text2bv(fargs[2]);
         break;
       case TYPE_CBV:
-        *((byte *)bar) = (byte)text2bv(fargs[2]);
+        *((byte *)bar) = clamp_int_to_unsigned_char(text2bv(fargs[2]));
         break;
       }
       safe_tprintf_str(buff, bufc, "1");
@@ -230,7 +236,7 @@ static char *retrieve_value(void *data, int i, char *buffer) {
     break;
   case TYPE_FLOAT:
   case TYPE_FLOAT_RO:
-    snprintf(buffer, LBUF_SIZE, "%.2f", (float)*((float *)bar));
+    snprintf(buffer, LBUF_SIZE, "%.2f", (double)*((float *)bar));
     break;
   case TYPE_BV:
     snprintf(buffer, LBUF_SIZE, "%s",
@@ -375,30 +381,34 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
                                game_object_location(context->database, player)),
         (char *)args[1], (char[LBUF_SIZE]){0});
     break;
-  case TYPE_STRING:
-    strncpy((char *)bar, args[1], xcode_data[i].size - 1);
-    ((char *)bar)[xcode_data[i].size - 1] = '\0';
+  case TYPE_STRING: {
+    const size_t capacity = (size_t)xcode_data[i].size;
+    if (capacity == 0)
+      break;
+    strncpy(bar, args[1], capacity - 1);
+    ((char *)bar)[capacity - 1] = '\0';
     break;
+  }
   case TYPE_DBREF:
     *((DbRef *)bar) = atoi(args[1]);
     break;
   case TYPE_CHAR:
-    *((char *)bar) = atoi(args[1]);
+    *((char *)bar) = clamp_int_to_char(atoi(args[1]));
     break;
   case TYPE_SHORT:
-    *((short *)bar) = atoi(args[1]);
+    *((short *)bar) = clamp_int_to_short(atoi(args[1]));
     break;
   case TYPE_INT:
     *((int *)bar) = atoi(args[1]);
     break;
   case TYPE_FLOAT:
-    *((float *)bar) = atof(args[1]);
+    *((float *)bar) = strtof(args[1], nullptr);
     break;
   case TYPE_BV:
     *((int *)bar) = text2bv(args[1]);
     break;
   case TYPE_CBV:
-    *((byte *)bar) = (byte)text2bv(args[1]);
+    *((byte *)bar) = clamp_int_to_unsigned_char(text2bv(args[1]));
   }
 }
 

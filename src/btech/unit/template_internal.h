@@ -63,20 +63,20 @@ typedef enum TemplateMode : int {
   MODE_NORMAL = 1,
 } TemplateMode;
 
-extern char *load_cmds[];
-extern char *internals[];
-extern char *cargo[];
-extern char *section_configs[];
-extern char *move_types[];
-extern char *mech_types[];
-extern char *crit_fire_modes[];
-extern char *crit_ammo_modes[];
-extern char *specials[];
-extern char *specialsabrev[];
-extern char *specials2[];
-extern char *specialsabrev2[];
-extern char *infantry_specials[];
-extern char *infspecialsabrev[];
+extern const char *load_cmds[];
+extern const char *internals[];
+extern const char *cargo[];
+extern const char *section_configs[];
+extern const char *move_types[];
+extern const char *mech_types[];
+extern const char *crit_fire_modes[];
+extern const char *crit_ammo_modes[];
+extern const char *specials[];
+extern const char *specialsabrev[];
+extern const char *specials2[];
+extern const char *specialsabrev2[];
+extern const char *infantry_specials[];
+extern const char *infspecialsabrev[];
 extern const int num_def_weapons;
 extern const int template_internal_count;
 extern const int template_cargo_count;

@@ -35,9 +35,12 @@ BattleMap *mech_movement_map_validate(Mech *mech) {
               map ? "You are at an invalid map location! Map index reset!"
                   : "You are on an invalid map! Map index reset!");
   mech_cocoon_integrity_set(mech, 0);
-  if (mech_is_jumping(mech))
-    mech_land(pilot, mech, "");
-  mech_shutdown(pilot, mech, "");
+  if (mech_is_jumping(mech)) {
+    char empty_command[] = "";
+    mech_land(pilot, mech, empty_command);
+  }
+  char empty_command[] = "";
+  mech_shutdown(pilot, mech, empty_command);
   btech_channel_send(context, BTECH_CHANNEL_MECH_ERRORS,
                      "move_mech:invalid map:Mech: %ld Index: %ld",
                      mech_dbref(mech), map_dbref);

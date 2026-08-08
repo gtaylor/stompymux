@@ -1,8 +1,23 @@
 #include "values_internal.h"
 
+#include <errno.h>
+#include <limits.h>
+
+#include "mech_broadcast_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
+
+static bool parse_hex_coordinate(const char *text, int *coordinate) {
+  char *end = nullptr;
+  errno = 0;
+  const long value = strtol(text, &end, 10);
+  if (errno == ERANGE || end == text || *end != '\0' || value < INT_MIN ||
+      value > INT_MAX)
+    return false;
+  *coordinate = (int)value;
+  return true;
+}
 
 void fun_btweapstat(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs,
@@ -226,7 +241,8 @@ void fun_btmapunits(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   BattleMap *map;
-  float x, y, z, range, realX, realY;
+  int x, y;
+  float z, range, realX, realY;
   Mech *mech;
   int loop;
   DbRef mapnum;
@@ -268,9 +284,12 @@ void fun_btmapunits(char *buff, char **bufc, DbRef player, DbRef cause,
       safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
       return;
     }
-    x = atof(fargs[1]);
-    y = atof(fargs[2]);
-    range = atof(fargs[3]);
+    if (!parse_hex_coordinate(fargs[1], &x) ||
+        !parse_hex_coordinate(fargs[2], &y)) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
+      return;
+    }
+    range = strtof(fargs[3], nullptr);
     if (x < 0 || x > map->map_width) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID X COORD");
       return;
@@ -304,10 +323,13 @@ void fun_btmapunits(char *buff, char **bufc, DbRef player, DbRef cause,
       safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
       return;
     }
-    x = atof(fargs[1]);
-    y = atof(fargs[2]);
-    z = atof(fargs[3]);
-    range = atof(fargs[4]);
+    if (!parse_hex_coordinate(fargs[1], &x) ||
+        !parse_hex_coordinate(fargs[2], &y)) {
+      safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
+      return;
+    }
+    z = strtof(fargs[3], nullptr);
+    range = strtof(fargs[4], nullptr);
     if (x < 0 || x > map->map_width) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID X COORD");
       return;
@@ -341,11 +363,6 @@ void fun_btmapunits(char *buff, char **bufc, DbRef player, DbRef cause,
   return;
 }
 
-int MapLimitedBroadcast3d(BattleMap *map, float x, float y, float z,
-                          float range, char *message);
-int MapLimitedBroadcast2d(BattleMap *map, float x, float y, float range,
-                          char *message);
-
 void fun_btmapemit(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs,
                    EvaluationContext *context) {
@@ -373,7 +390,8 @@ void fun_btmapemit(char *buff, char **bufc, DbRef player, DbRef cause,
 
   BattleMap *map;
   DbRef mapnum;
-  float x, y, realX, realY, z, range;
+  int x, y;
+  float realX, realY, z, range;
 
   if (nfargs < 2) {
     safe_tprintf_str(buff, bufc, "#-1 TOO FEW ARGUMENTS");
@@ -404,9 +422,12 @@ void fun_btmapemit(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "1");
     break;
   case 5:
-    x = atof(fargs[1]);
-    y = atof(fargs[2]);
-    range = atof(fargs[3]);
+    if (!parse_hex_coordinate(fargs[1], &x) ||
+        !parse_hex_coordinate(fargs[2], &y)) {
+      safe_tprintf_str(buff, bufc, "#-1 ILLEGAL COORDINATES");
+      return;
+    }
+    range = strtof(fargs[3], nullptr);
     if (x < 0 || x > map->map_width) {
       safe_tprintf_str(buff, bufc, "#-1 ILLEGAL X COORD");
       return;
@@ -428,10 +449,13 @@ void fun_btmapemit(char *buff, char **bufc, DbRef player, DbRef cause,
                      MapLimitedBroadcast2d(map, realX, realY, range, fargs[4]));
     break;
   case 6:
-    x = atof(fargs[1]);
-    y = atof(fargs[2]);
-    z = atof(fargs[3]);
-    range = atof(fargs[4]);
+    if (!parse_hex_coordinate(fargs[1], &x) ||
+        !parse_hex_coordinate(fargs[2], &y)) {
+      safe_tprintf_str(buff, bufc, "#-1 ILLEGAL COORDINATES");
+      return;
+    }
+    z = strtof(fargs[3], nullptr);
+    range = strtof(fargs[4], nullptr);
     if (x < 0 || x > map->map_width) {
       safe_tprintf_str(buff, bufc, "#-1 ILLEGAL X COORD");
       return;
@@ -562,10 +586,10 @@ void fun_btsetpartcost(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   if (strstr(fargs[0], "Sword") && !strstr(fargs[0], "PC."))
     p = special_equipment_index(SWORD);
-  cost = atoll(fargs[1]);
-  /* since we're using an unsigned long long, lets check before we push it to
-   * unsigned status */
-  if (atoll(fargs[1]) < 0) {
+  char *cost_end = nullptr;
+  errno = 0;
+  cost = strtoull(fargs[1], &cost_end, 10);
+  if (errno == ERANGE || cost_end == fargs[1] || *cost_end != '\0') {
     safe_tprintf_str(buff, bufc, "#-1 COST ERROR");
     return;
   }
@@ -607,7 +631,8 @@ void fun_btlistblz(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef mapdb;
   BattleMap *map;
   MapObject *tmp;
-  int i = 0, count = 0, strcount = 0;
+  int i = 0, count = 0;
+  size_t strcount = 0;
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
@@ -626,12 +651,14 @@ void fun_btlistblz(char *buff, char **bufc, DbRef player, DbRef cause,
   for (tmp = first_mapobj(map, i); tmp; tmp = next_mapobj(tmp))
     if (i == TYPE_B_LZ) {
       count++;
-      if (count == 1)
-        strcount += snprintf(buf + strcount, MBUF_SIZE - strcount, "%d %d %ld",
-                             tmp->x, tmp->y, tmp->datai);
-      else
-        strcount += snprintf(buf + strcount, MBUF_SIZE - strcount, "|%d %d %ld",
-                             tmp->x, tmp->y, tmp->datai);
+      const int written =
+          count == 1 ? snprintf(buf + strcount, sizeof(buf) - strcount,
+                                "%d %d %ld", tmp->x, tmp->y, tmp->datai)
+                     : snprintf(buf + strcount, sizeof(buf) - strcount,
+                                "|%d %d %ld", tmp->x, tmp->y, tmp->datai);
+      if (written < 0 || (size_t)written >= sizeof(buf) - strcount)
+        break;
+      strcount += (size_t)written;
     }
   safe_tprintf_str(buff, bufc, "%s", buf);
 }
@@ -672,7 +699,8 @@ void fun_bthexinblz(char *buff, char **bufc, DbRef player, DbRef cause,
     //	if(abs(x - o->x) > o->datai || abs(y - o->y) > o->datai)
     //			continue;
     MapCoordToRealCoord(o->x, o->y, &tx, &ty);
-    if (FindHexRange(fx, fy, tx, ty) <= o->datai) {
+    const long radius = o->datai;
+    if (radius >= 0 && (double)FindHexRange(fx, fy, tx, ty) <= (double)radius) {
       bl = 1;
       break;
     }

@@ -67,12 +67,12 @@ void PrintHeatBar(EvaluationContext *evaluation, DbRef player, Mech *mech);
 void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                      int own);
 void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech);
-void mech_status(DbRef player, void *data, char *buffer);
+void mech_status(DbRef player, void *data, const char *buffer);
 void mech_critstatus(DbRef player, void *data, char *buffer);
 PartDisplayName part_name(BtechContext *context, int type, int brand);
 PartDisplayName part_name_long(BtechContext *context, int type, int brand);
 PartDisplayName pos_part_name(Mech *mech, int index, int loop);
-void mech_weaponspecs(DbRef player, void *data, char *buffer);
+void mech_weaponspecs(DbRef player, void *data, const char *buffer);
 char *critstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]);
 char *sectstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]);
 char *armorstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]);
@@ -81,7 +81,7 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
                     char *buf_flag, char buffer[static MBUF_SIZE]);
 void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                     int index);
-char *evaluate_ammo_amount(int now, int max);
+const char *evaluate_ammo_amount(int now, int max);
 void PrintWeaponStatus(EvaluationContext *evaluation, Mech *mech, DbRef player);
 ArmorLevel ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *opt);
 void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,

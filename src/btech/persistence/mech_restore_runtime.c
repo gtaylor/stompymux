@@ -150,11 +150,11 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
             0 ||
         btech_special_column_int(statement, 69, &snapshot.runtime.disabled_hs) <
             0 ||
-        btech_special_column_int(statement, 70,
-                                 &snapshot.runtime.autopilot_num) < 0 ||
+        btech_special_column_long(statement, 70,
+                                  &snapshot.runtime.autopilot_num) < 0 ||
         btech_special_column_int(statement, 71,
                                  &snapshot.runtime.heatboom_last) < 0 ||
-        btech_special_column_int(statement, 72, &snapshot.runtime.sspin) < 0 ||
+        btech_special_column_time(statement, 72, &snapshot.runtime.sspin) < 0 ||
         btech_special_column_int(statement, 73, &snapshot.runtime.can_see) <
             0 ||
         btech_special_column_int(statement, 74, &snapshot.runtime.row) < 0 ||

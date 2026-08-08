@@ -16,6 +16,7 @@
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "econ_api.h"
 #include "equipment_types.h"
 #include "mech_partnames_api.h"
 #include "mux/objects/economy_parts.h"

@@ -24,25 +24,29 @@ enum { BTECH_TEXT_CAPACITY = 8192 };
 /* template.c */
 int count_special_items(void);
 int compare_array(char *list[], char *command);
+int compare_const_array(const char *const list[], const char *command);
 char *one_arg(char *argument, char *first_arg);
 char *one_arg_delim(char *argument, char *first_arg);
-char *build_bit_string(char *bitdescs[], int data,
+char *build_bit_string(const char *const bitdescs[], int data,
                        char buffer[static BTECH_TEXT_CAPACITY]);
-char *build_bit_string2(char *bitdescs[], char *bitdescs2[], int data,
-                        int data2, char buffer[static BTECH_TEXT_CAPACITY]);
-char *build_bit_string_delimited2(char *bitdescs[], char *bitdescs2[], int data,
+char *build_bit_string2(const char *const bitdescs[],
+                        const char *const bitdescs2[], int data, int data2,
+                        char buffer[static BTECH_TEXT_CAPACITY]);
+char *build_bit_string_delimited2(const char *const bitdescs[],
+                                  const char *const bitdescs2[], int data,
                                   int data2,
                                   char buffer[static BTECH_TEXT_CAPACITY]);
-char *build_bit_string3(char *bitdescs[], char *bitdescs2[], char *bitdescs3[],
-                        int data, int data2, int data3,
-                        char buffer[static BTECH_TEXT_CAPACITY]);
+char *build_bit_string3(const char *const bitdescs[],
+                        const char *const bitdescs2[],
+                        const char *const bitdescs3[], int data, int data2,
+                        int data3, char buffer[static BTECH_TEXT_CAPACITY]);
 char *my_shortform(const char *source, char buffer[static BTECH_TEXT_CAPACITY]);
 char *part_figure_out_shname(int i, char buffer[static BTECH_TEXT_CAPACITY]);
 char *part_figure_out_name(const ServerConfiguration *configuration, int i,
                            int brand, char buffer[static BTECH_TEXT_CAPACITY]);
 char *part_figure_out_sname(const ServerConfiguration *configuration, int i,
                             int brand, char buffer[static BTECH_TEXT_CAPACITY]);
-void dump_locations(FILE *fp, Mech *mech, const char *locdesc[]);
+void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[]);
 float generic_computer_multiplier(Mech *mech);
 int generic_radio_type(int i, int isClan);
 float generic_radio_multiplier(Mech *mech);
@@ -52,10 +56,11 @@ int DefaultFuelByType(Mech *mech);
 int save_template(DbRef player, Mech *mech, char *reference, char *filename);
 char *read_desc(FILE *fp, char *data, char buffer[static BTECH_TEXT_CAPACITY]);
 int find_section(char *cmd, int type, int mtype);
-long BuildBitVector(char **list, char *line);
-long BuildBitVectorWithDelim(char **list, char *line);
-long BuildBitVectorNoErr(char **list, char *line);
-int CheckSpecialsList(char **specials, char **specials2, char *line);
+long BuildBitVector(const char *const list[], char *line);
+long BuildBitVectorWithDelim(const char *const list[], char *line);
+long BuildBitVectorNoErr(const char *const list[], char *line);
+int CheckSpecialsList(const char *const specials[],
+                      const char *const specials2[], char *line);
 int WeaponIFromString(char *data);
 int AmmoIFromString(char *data);
 void update_specials(Mech *mech);

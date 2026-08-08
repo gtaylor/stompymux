@@ -6,6 +6,8 @@
 #include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 
+bool is_good_obj(GameDatabase *database, DbRef object);
+
 bool is_good_obj(GameDatabase *database, DbRef object) {
   return object >= 0 && object < database->top &&
          game_object_type(database, object) != OBJECT_TYPE_GARBAGE;

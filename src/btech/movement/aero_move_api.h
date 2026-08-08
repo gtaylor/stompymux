@@ -14,11 +14,12 @@
 #include "mux/server/platform.h"
 
 /* aero.move.c */
-void aero_takeoff(DbRef player, void *data, char *buffer);
-void DS_BlastNearbyMechsAndTrees(Mech *mech, char *hitmsg, char *hitmsg1,
-                                 char *nearhitmsg, char *nearhitmsg1,
-                                 char *treehitmsg, int damage);
-void aero_land(DbRef player, void *data, char *buffer);
+void aero_takeoff(DbRef player, void *data, const char *buffer);
+void DS_BlastNearbyMechsAndTrees(Mech *mech, const char *hitmsg,
+                                 const char *hitmsg1, const char *nearhitmsg,
+                                 const char *nearhitmsg1,
+                                 const char *treehitmsg, int damage);
+void aero_land(DbRef player, void *data, const char *buffer);
 void aero_control_effect(Mech *mech);
 void dropship_bridge_hit(Mech *mech);
 void aero_heading_update(Mech *mech);

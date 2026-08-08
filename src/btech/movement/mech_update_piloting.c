@@ -16,6 +16,7 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "failures_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
@@ -64,8 +65,9 @@ void mech_piloting_update(Mech *mech) {
     if (mech_excess_heat(mech) >= 9.0F &&
         (mech_technology_flags(mech) & TRIPLE_MYOMER_TECH))
       maxspeed =
-          ceil((rint((mech_effective_maximum_speed(mech) / 1.5) / MP1) + 1) *
-               1.5) *
+          ceilf((rintf((mech_effective_maximum_speed(mech) / 1.5F) / MP1) +
+                 1.0F) *
+                1.5F) *
           MP1;
 #ifndef BT_MOVEMENT_MODES
     if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech))
@@ -87,7 +89,9 @@ void mech_piloting_update(Mech *mech) {
     if (makeroll && !MadePilotSkillRoll(mech, makeroll - 1)) {
       if (grav) {
         int dam =
-            (mech_current_speed(mech) - mech_maximum_speed(mech)) / MP1 + 1;
+            clamp_float_to_int(
+                (mech_current_speed(mech) - mech_maximum_speed(mech)) / MP1) +
+            1;
         mech_notify(mech, MECHALL, "Your legs take some damage!");
         if (mech_movement_type(mech) == MOVE_QUAD) {
           if (!mech_section_is_destroyed(mech, LARM))

@@ -32,7 +32,7 @@
 #include "registry_api.h"
 #include "repair_job.h"
 
-#define MECH_STAT_C /* want to use the POSIX stat() call. */
+#include "checked_conversion.h"
 
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
@@ -166,15 +166,16 @@ void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
                 "Number of freqs: %d  Extra stuff: %d",
                 mech_radio_configuration(mech) % 16,
                 (mech_radio_configuration(mech) / 16) * 16);
-  mech_radio_range_set(mech,
-                       DEFAULT_RADIORANGE * generic_radio_multiplier(mech));
+  mech_radio_range_set(
+      mech,
+      clamp_float_to_int(DEFAULT_RADIORANGE * generic_radio_multiplier(mech)));
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "Radio range set to %d.", mech_radio_range(mech));
 }
 
 void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
   char *args[2];
-  int newmech;
+  DbRef newmech;
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -199,7 +200,7 @@ void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
     }
     rep->current_target = newmech;
     notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                  "Mech to repair changed to #%d", newmech);
+                  "Mech to repair changed to #%ld", newmech);
     break;
   default:
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -296,7 +297,7 @@ static bool parse_repair_float(RepairFacility *rep, DbRef player, char *buffer,
                   "Invalid number of arguments to Set%s!", name);
     return false;
   }
-  *value = atof(args[0]);
+  *value = strtof(args[0], nullptr);
   return true;
 }
 
@@ -315,7 +316,7 @@ static bool parse_repair_int(RepairFacility *rep, DbRef player, char *buffer,
 static void notify_repair_float(RepairFacility *rep, DbRef player,
                                 const char *name, float value) {
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                "%s changed to %.2f.", name, value);
+                "%s changed to %.2f.", name, (double)value);
 }
 
 static void notify_repair_int(RepairFacility *rep, DbRef player,

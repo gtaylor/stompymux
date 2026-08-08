@@ -499,7 +499,8 @@ int btech_special_column_real(sqlite3_stmt *statement, int column,
   if (type != SQLITE_FLOAT && type != SQLITE_INTEGER)
     return -1;
   number = sqlite3_column_double(statement, column);
-  if (!isfinite(number) || number < -FLT_MAX || number > FLT_MAX)
+  if (!isfinite(number) || number < -(double)FLT_MAX ||
+      number > (double)FLT_MAX)
     return -1;
   *value = (float)number;
   return 0;

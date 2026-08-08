@@ -1,6 +1,8 @@
 /* State transitions for a BTech unit's lifecycle. */
 
 #include "mech_lifecycle.h"
+
+#include "checked_conversion.h"
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
@@ -77,7 +79,8 @@ void mech_power_down(Mech *mech) {
   bsuit_swarm_stop(mech, 0);
   ((mech)->rd.scharge_value) = 0;
   if (((mech)->rd.carrying) > 0) {
-    mech_dropoff(GOD, mech, "");
+    char empty_argument[] = "";
+    mech_dropoff(GOD, mech, empty_argument);
   }
 }
 
@@ -113,14 +116,14 @@ void mech_destroy_and_place(Mech *mech) {
     ((mech)->pd.z) = -((mech)->pd.elev);
   } else if (mech_real_terrain_get(mech) == BRIDGE) {
     if (((mech)->pd.z) >= mech_upper_surface_elevation(mech)) {
-      ((mech)->pd.z) = mech_upper_surface_elevation(mech);
+      ((mech)->pd.z) = clamp_int_to_short(mech_upper_surface_elevation(mech));
     } else {
-      ((mech)->pd.z) = mech_lower_surface_elevation(mech);
+      ((mech)->pd.z) = clamp_int_to_short(mech_lower_surface_elevation(mech));
     }
   } else {
     ((mech)->pd.z) = ((mech)->pd.elev);
   }
-  ((mech)->pd.fz) = ZSCALE * ((mech)->pd.z);
+  ((mech)->pd.fz) = (float)ZSCALE * ((mech)->pd.z);
 }
 
 bool mech_has_pilot(const Mech *mech) {
@@ -193,7 +196,7 @@ void mech_set_recycle_part(Mech *mech, int section, int critical, int value) {
 
 void mech_set_recycle_limb(Mech *mech, int section, int value) {
   mech_update_recycling(mech);
-  mech->ud.sections[section].recycle = value;
+  mech->ud.sections[section].recycle = clamp_int_to_char(value);
 }
 
 void mech_make_fall(Mech *mech) {
@@ -226,7 +229,7 @@ void mech_continue_flying(Mech *mech) {
   if (mech_is_aerospace_unit(mech) || ((mech)->ud.move) == MOVE_VTOL) {
     ((mech)->rd.status) &= ~LANDED;
     ((mech)->pd.z) += 1;
-    ((mech)->pd.fz) = ZSCALE * ((mech)->pd.z);
+    ((mech)->pd.fz) = (float)ZSCALE * ((mech)->pd.z);
     mech_event_cancel(mech, EVENT_MOVE);
   }
 }

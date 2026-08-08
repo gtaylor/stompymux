@@ -8,8 +8,11 @@
 
 #include "autopilot.h"
 #include "btech/context.h"
+#include "btech/lifecycle.h"
 #include "context_internal.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
+#include "mech_update_api.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/maintenance.h"
@@ -40,7 +43,6 @@ void btech_heartbeat_stop(BtechContext *context) {
   context->heartbeat_running = false;
 }
 
-void mech_heartbeat(Mech *);
 void auto_heartbeat(Autopilot *);
 
 static int heartbeat_dispatch(void *key, void *data, int depth, void *arg) {
@@ -48,12 +50,18 @@ static int heartbeat_dispatch(void *key, void *data, int depth, void *arg) {
 
   switch (xcode_obj->type) {
   case GTYPE_MECH:
-    mech_heartbeat((Mech *)xcode_obj);
+    mech_update(mech_dbref((Mech *)xcode_obj), xcode_obj);
     break;
 
   case GTYPE_AUTO:
     auto_heartbeat((Autopilot *)xcode_obj);
     break;
+
+  case GTYPE_DEBUG:
+  case GTYPE_MECHREP:
+  case GTYPE_MAP:
+  case GTYPE_TURRET:
+  case GTYPE_UNUSED1:
 
   default:
     break;

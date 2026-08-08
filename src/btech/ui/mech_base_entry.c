@@ -13,6 +13,7 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
+#include "mech_maps_api.h"
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
@@ -32,6 +33,7 @@
 
 #include "mux/support/formatting.h"
 #include <ctype.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -42,12 +44,16 @@ static void mech_enter_event(MuxEvent *e) {
   BattleMap *map =
                 btech_context_get_map(mech_context(mech), mech_map_dbref(mech)),
             *newmap;
-  long target = (long)e->data2;
+  const intptr_t target_value = (intptr_t)e->data2;
+  char target;
   int x, y;
   int obj_x, obj_y;
   LuaLockInvocation lock;
   LuaLockResult lock_result;
 
+  if (target_value < CHAR_MIN || target_value > CHAR_MAX)
+    return;
+  target = (char)target_value;
   if (!(mapo = find_entrance_by_xy(map, mech_position_x(mech),
                                    mech_position_y(mech))))
     return;
@@ -56,9 +62,10 @@ static void mech_enter_event(MuxEvent *e) {
       (mech_class(mech) == CLASS_MECH &&
        (mech_is_fallen(mech) || mech_event_count(mech, EVENT_STAND))) ||
       mech_is_out_of_control(mech) ||
-      (fabs(mech_current_speed(mech)) * 5 >=
+      (fabsf(mech_current_speed(mech)) * 5.0F >=
            mech_cargo_maximum_speed(mech, mech_maximum_speed(mech)) &&
-       fabs(mech_cargo_maximum_speed(mech, mech_maximum_speed(mech))) >= MP1) ||
+       fabsf(mech_cargo_maximum_speed(mech, mech_maximum_speed(mech))) >=
+           MP1) ||
       (mech_class(mech) == CLASS_VTOL && mech_fuel(mech) <= 0))
     return;
   if (!(newmap = btech_context_get_map(mech_context(mech), mapo->obj)))
@@ -71,8 +78,9 @@ static void mech_enter_event(MuxEvent *e) {
                  LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock,
                  &lock_result) &&
       (battle_map_build_is_safe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
-    char *msg = lock_result.has_enactor_message ? lock_result.enactor_message
-                                                : "The hangar is locked.";
+    const char *msg = lock_result.has_enactor_message
+                          ? lock_result.enactor_message
+                          : "The hangar is locked.";
     mech_notify(mech, MECHALL, msg);
     return;
   }
@@ -96,7 +104,7 @@ static void mech_enter_event(MuxEvent *e) {
     tmpm = btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
   obj_x = mech_position_x(mech);
   obj_y = mech_position_y(mech);
-  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%d", (int)mapo->obj));
+  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", mapo->obj));
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
   mech_los_broadcast(
       mech, tprintf("has entered %s at %d,%d.",
@@ -110,7 +118,7 @@ static void mech_enter_event(MuxEvent *e) {
   move_via_teleport(btech_context_evaluation(mech_context(mech)),
                     mech_dbref(mech), mapo->obj, 1, 0);
   if (tmpm) {
-    mech_Rsetmapindex(GOD, (void *)tmpm, tprintf("%d", (int)mapo->obj));
+    mech_Rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", mapo->obj));
     mech_Rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
     move_via_teleport(btech_context_evaluation(mech_context(mech)),
                       mech_dbref(tmpm), mapo->obj, 1, 0);
@@ -139,7 +147,7 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
   }
   tmpc = args[0];
   if (argc > 0 && *tmpc && !(*(tmpc + 1)))
-    target = tolower(*tmpc);
+    target = (char)tolower((unsigned char)*tmpc);
   else
     target = 0;
   if (!common_checks(player, mech, MECH_USUAL))
@@ -178,9 +186,9 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
         "Heh, you're trying to be funny, right, a DropShip entering hangar?");
     return;
   }
-  if (fabs(mech_current_speed(mech)) * 5 >=
+  if (fabsf(mech_current_speed(mech)) * 5.0F >=
           mech_cargo_maximum_speed(mech, mech_maximum_speed(mech)) &&
-      fabs(mech_cargo_maximum_speed(mech, mech_maximum_speed(mech))) >= MP1) {
+      fabsf(mech_cargo_maximum_speed(mech, mech_maximum_speed(mech))) >= MP1) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You are moving too fast to enter the hangar!");
     return;

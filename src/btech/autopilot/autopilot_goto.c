@@ -57,7 +57,7 @@ void auto_goto_event(MuxEvent *e) {
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
       CountDestroyedLegs(mech) <= 0) {
     if (!mech_event_count(mech, EVENT_STAND))
-      mech_stand(autopilot->mynum, mech, "");
+      mech_stand_empty(autopilot->mynum, mech);
     autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
                              AUTOPILOT_NC_DELAY, 0);
     return;
@@ -90,7 +90,7 @@ void auto_goto_event(MuxEvent *e) {
   free(argument);
 
   if (mech_position_x(mech) == tx && mech_position_y(mech) == ty &&
-      fabs(mech_current_speed(mech)) < 0.5) {
+      fabsf(mech_current_speed(mech)) < 0.5F) {
 
     /* We've reached this goal! Time for next one. */
     ai_set_speed(mech, autopilot, 0);
@@ -154,7 +154,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
              " goto [dumbly] with AI #%ld but AI is not on a valid"
-             " Map (#%d).",
+             " Map (#%ld).",
              autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
@@ -181,7 +181,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
-      mech_stand(autopilot->mynum, mech, "");
+      mech_stand_empty(autopilot->mynum, mech);
 
     /* Ok lets run this command again */
     autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event,
@@ -257,7 +257,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
 
   /* If we're at the target hex - stop */
   if (mech_position_x(mech) == tx && mech_position_y(mech) == ty &&
-      fabs(mech_current_speed(mech)) < 0.5) {
+      fabsf(mech_current_speed(mech)) < 0.5F) {
 
     /* We've reached this goal! Time for next one. */
     ai_set_speed(mech, autopilot, 0);
@@ -323,7 +323,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
              " goto with AI #%ld but AI is not on a valid"
-             " Map (#%d).",
+             " Map (#%ld).",
              autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
@@ -350,7 +350,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
-      mech_stand(autopilot->mynum, mech, "");
+      mech_stand_empty(autopilot->mynum, mech);
 
     /* Ok lets run this command again */
     autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,

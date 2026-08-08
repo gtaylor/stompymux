@@ -56,10 +56,6 @@
 #include "special_object.h"
 #include "weapon_settings.h"
 
-#define FAST_WHICHSPECIAL
-
-#define _GLUE_C
-
 /*** #include all the prototype here! ****/
 #include "autopilot.h"
 #include "btech/persistence.h"
@@ -129,7 +125,7 @@ static int remove_from_all_maps_except_func(void *key, void *data, int depth,
   return 1;
 }
 
-void mech_remove_from_all_maps_except(Mech *mech, int num) {
+void mech_remove_from_all_maps_except(Mech *mech, DbRef num) {
   RemoveFromAllMapsContext context = {
       .mech = mech,
       .except_map = num,
@@ -239,6 +235,7 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
 
 void btech_special_objects_load(BtechContext *context) {
   DbRef i;
+  int special_type;
   int type;
 
   btech_registry_tree_initialize(context);
@@ -267,8 +264,9 @@ void btech_special_objects_load(BtechContext *context) {
     } else
       c_xcode(context->database, i); /* Reset the flag */
   }
-  for (i = 0; i < (int)(BTECH_SPECIAL_OBJECT_COUNT); i++) {
-    InitSpecialHash(context, i);
+  for (special_type = 0; special_type < BTECH_SPECIAL_OBJECT_COUNT;
+       special_type++) {
+    InitSpecialHash(context, special_type);
   }
   init_btechstats(context);
   if (!character_state_validate_all(context)) {
@@ -318,19 +316,26 @@ static int UpdateSpecialObject_func(void *key, void *data, int depth,
 
 void btech_special_objects_update(BtechContext *context) {
   const char *cmdsave;
+  time_t elapsed;
   int i;
-  int times = context->last_special_update
-                  ? (context->clock->now - context->last_special_update)
-                  : 1;
+  int times;
 
-  if (times > 20)
+  elapsed = context->last_special_update
+                ? context->clock->now - context->last_special_update
+                : 1;
+
+  if (elapsed > 20)
     times = 20; /* Machine's hopelessly lagged,
                            we don't want to make it [much] worse */
+  else if (elapsed < 0)
+    times = 0;
+  else
+    times = (int)elapsed;
   cmdsave = btech_context_command(context)->debug_command;
   for (i = 0; i < times; i++) {
     mux_event_run(context->events);
     btech_context_command(context)->debug_command =
-        (char *)"< Generic hcode update handler>";
+        "< Generic hcode update handler>";
     red_black_tree_walk(context->special_objects, WALK_INORDER,
                         UpdateSpecialObject_func, context);
   }

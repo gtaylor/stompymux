@@ -8,6 +8,7 @@ typedef struct BtechContext BtechContext;
 
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "section_types.h"
 
 typedef struct Mech Mech;
 
@@ -88,18 +89,19 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
 int FindTargetXY(Mech *mech, float *x, float *y, float *z);
 
 /* Skill lookups */
-char *FindGunnerySkillName(Mech *mech, int weapindx);
-char *FindPilotingSkillName(Mech *mech);
+const char *FindGunnerySkillName(Mech *mech, int weapindx);
+const char *FindPilotingSkillName(Mech *mech);
 int FindPilotPiloting(Mech *mech);
 int FindSPilotPiloting(Mech *mech);
 int FindPilotSpotting(Mech *mech);
 int FindPilotArtyGun(Mech *mech);
 int FindPilotGunnery(Mech *mech, int weapindx);
-char *FindTechSkillName(Mech *mech);
+const char *FindTechSkillName(Mech *mech);
 int FindTechSkill(DbRef player, Mech *mech);
 
 /* Skill rolls */
 long btech_random_range(BtechContext *context, long low, long high);
+int btech_random_range_int(BtechContext *context, int low, int high);
 int MadePilotSkillRoll(Mech *mech, int mods);
 int mech_pilot_skill_roll_target(Mech *mech, int mods);
 int MadePilotSkillRoll_Advanced(Mech *mech, int mods, int succeedWhenFallen);
@@ -122,7 +124,7 @@ int FindWeaponNumberOnMech(Mech *mech, int number, int *section, int *crit);
 int FindWeaponFromIndex(Mech *mech, int weapindx, int *section, int *crit);
 int FindWeaponIndex(Mech *mech, int number);
 int findAmmoInSection(Mech *mech, int section, int type, int nogof, int gof);
-int FullAmmo(Mech *mech, int loc, int pos);
+int FullAmmo(const Mech *mech, int loc, int pos);
 int FindAmmoForWeapon_sub(Mech *mech, int weapSection, int weapCritical,
                           int weapindx, int start, int *section, int *critical,
                           int nogof, int gof);
@@ -139,10 +141,11 @@ int FindInfernoAmmo(Mech *mech, int *section, int *critical);
 int FindRoundsForWeapon(Mech *mech, int weapindx);
 int HeatFactor(Mech *mech);
 int WeaponIsNonfunctional(Mech *mech, int section, int crit, int numcrits);
-char **ProperSectionStringFromType(int type, int mtype);
-void ArmorStringFromIndex(int index, char *buffer, char type, char mtype);
+const char *const *ProperSectionStringFromType(int type, int mtype);
+void ArmorStringFromIndex(int index, char *buffer, UnitClass type,
+                          MechMovementType movement_type);
 int GetWeaponCrits(Mech *mech, int weapindx);
-int listmatch(char *const *foo, char *mat);
+int listmatch(const char *const *foo, const char *mat);
 typedef int (*MultiWeaponSelectionCallback)(Mech *mech, DbRef player, int low,
                                             int high, void *context);
 void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
@@ -176,9 +179,12 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
                      int *wGattlingShots);
 
 #ifdef BT_CALCULATE_BV
-void Calc_AddOffBV(const Mech *mech, float *offbv, char *desc, float value);
-void Calc_AddDefBV(const Mech *mech, float *defbv, char *desc, float value);
-void Calc_SubDefBV(const Mech *mech, float *defbv, char *desc, float value);
+void Calc_AddOffBV(const Mech *mech, float *offbv, const char *desc,
+                   float value);
+void Calc_AddDefBV(const Mech *mech, float *defbv, const char *desc,
+                   float value);
+void Calc_SubDefBV(const Mech *mech, float *defbv, const char *desc,
+                   float value);
 #endif
 int mech_armorpoints(Mech *mech);
 int mech_intpoints(Mech *mech);

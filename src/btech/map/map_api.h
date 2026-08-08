@@ -25,7 +25,7 @@ int map_checkmapfile(BattleMap *map, char *mapname);
 void map_loadmap(DbRef player, void *data, char *buffer);
 void map_savemap(DbRef player, void *data, char *buffer);
 void map_setmapsize(DbRef player, void *data, char *buffer);
-void map_clearmechs(DbRef player, void *data, char *buffer);
+void map_clearmechs(DbRef player, void *data, const char *buffer);
 void map_update(DbRef obj, void *data);
 void initialize_map_empty(BattleMap *new, DbRef key);
 void newfreemap(DbRef key, void **data,

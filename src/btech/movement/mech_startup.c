@@ -42,6 +42,7 @@
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
+#include "mech_startup_api.h"
 #include "mech_status_types.h"
 #include "mech_tech_api.h"
 #include "mech_utils_api.h"
@@ -264,7 +265,7 @@ static void mech_startup_event(MuxEvent *e) {
   autopilot_resume_for_mech(mech);
 }
 
-void mech_startup(DbRef player, void *data, char *buffer) {
+void mech_startup(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   int n;
   int unit_class = mech_class(mech);
@@ -367,7 +368,7 @@ void mech_startup(DbRef player, void *data, char *buffer) {
       (long)(unit_class == CLASS_MW ? BOOT_MESSAGE_COUNT - 1 : n));
 }
 
-void mech_shutdown(DbRef player, void *data, char *buffer) {
+void mech_shutdown(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   int unit_class = mech_class(mech);
   int movement_type = mech_movement_type(mech);

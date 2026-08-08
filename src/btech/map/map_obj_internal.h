@@ -36,6 +36,6 @@ static inline int map_fire_speed(const BattleMap *map) {
   return MAX(20, 60 - map->windspeed);
 }
 
-static char *const map_types[] = {"FIRE",     "SMOKE", "DECO",  "MINE",
-                                  "BUILDING", "LEAVE", "ENTRA", "LINKED",
-                                  "TBITS",    "BLZ",   nullptr};
+static const char *const map_types[] = {"FIRE",     "SMOKE", "DECO",  "MINE",
+                                        "BUILDING", "LEAVE", "ENTRA", "LINKED",
+                                        "TBITS",    "BLZ",   nullptr};

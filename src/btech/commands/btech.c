@@ -42,15 +42,16 @@ void do_show(CommandInvocation *invocation) {
   char *arg1 = invocation->first;
   int i;
   enum { CHAVA, CHVAL, CHSKI, CHADV, CHATT, MECHVALUES };
-  char *cmds[] = {"allvalues",  "values",      "skills", "advantages",
-                  "attributes", "xcodevalues", NULL};
-  char *cmds_help[] = {"[char_]allvalues",
-                       "[char_]values",
-                       "[char_]skills",
-                       "[char_]advantages",
-                       "[char_]attributes",
-                       "xcodevalues [scode]",
-                       NULL};
+  const char *const cmds[] = {"allvalues",  "values",     "skills",
+                              "advantages", "attributes", "xcodevalues",
+                              nullptr};
+  const char *const cmds_help[] = {"[char_]allvalues",
+                                   "[char_]values",
+                                   "[char_]skills",
+                                   "[char_]advantages",
+                                   "[char_]attributes",
+                                   "xcodevalues [scode]",
+                                   nullptr};
   char buf[MBUF_SIZE] = {0};
 
   if (!is_wizard(database, player)) {

@@ -1,4 +1,5 @@
 #include "command_handlers_api.h"
+#include "mech_notify_api.h"
 
 #include "btech/context.h"
 #include "mech_crew_api.h"

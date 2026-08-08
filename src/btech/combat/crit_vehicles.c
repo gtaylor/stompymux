@@ -209,7 +209,7 @@ void mech_vehicle_crew_killed_critical_apply(Mech *objMech, Mech *objAttacker) {
   mech_destroy(objMech, objAttacker, 0, KILL_TYPE_PILOT);
   mech_contents_kill_if_in_character(objMech);
 
-  if (mech_current_speed(objMech) != 0.0)
+  if (fabsf(mech_current_speed(objMech)) > 0.0F)
     mech_los_broadcast(objMech, "careens out of control and starts to slow!");
 
   mech_make_fall(objMech);
@@ -596,6 +596,13 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
       break;
     }
     break;
+  case CLASS_MECH:
+  case CLASS_VEH_NAVAL:
+  case CLASS_SPHEROID_DS:
+  case CLASS_AERO:
+  case CLASS_MW:
+  case CLASS_DS:
+  case CLASS_BSUIT:
   default:
     break;
   }

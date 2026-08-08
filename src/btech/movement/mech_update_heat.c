@@ -15,6 +15,7 @@
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "equipment_types.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
@@ -45,7 +46,7 @@ static int mech_heat_sinks_enable(Mech *mech, int numsinks) {
 
   mech_disabled_heat_sinks_set(mech, disabled - numsinks);
   /* We don't check for water after enabling them, only the next tic. */
-  mech_heat_dissipation_add(mech, numsinks);
+  mech_heat_dissipation_add(mech, (float)numsinks);
 #ifdef HEATCUTOFF_DEBUG
   mech_printf(mech, MECHALL,
               "[fg=green]%d heatsink%s kick%s into action.[reset]", numsinks,
@@ -60,7 +61,7 @@ static int mech_heat_sinks_disable(Mech *mech, int numsinks) {
   int maximum =
       (mech_technology_flags(mech) & (DOUBLE_HEAT_TECH | CLAN_TECH)) ? 4 : 2;
   numsinks = numsinks < maximum ? numsinks : maximum;
-  int active = (int)mech_active_heat_sinks(mech);
+  int active = clamp_float_to_int(mech_active_heat_sinks(mech));
   numsinks = numsinks < active ? numsinks : active;
 
   if (!numsinks)
@@ -69,7 +70,7 @@ static int mech_heat_sinks_disable(Mech *mech, int numsinks) {
   mech_disabled_heat_sinks_set(mech,
                                mech_disabled_heat_sink_count(mech) + numsinks);
   /* Submerged heatsinks silently still dissipate some heat. */
-  mech_heat_dissipation_add(mech, -numsinks);
+  mech_heat_dissipation_add(mech, (float)-numsinks);
 #ifdef HEATCUTOFF_DEBUG
   mech_printf(mech, MECHALL,
               "[fg=yellow]%d heatsink%s hum%s into silence.[reset]", numsinks,
@@ -108,14 +109,15 @@ void mech_heat_update(Mech *mech) {
    * if TSM is/was on.  If it is/was, we recalc what running and walk speeds are
    * to better set how much heat the unit is putting out */
   if (mech_technology_flags(mech) & TRIPLE_MYOMER_TECH) {
-    if (inheat >= 9.)
+    if (inheat >= 9.0F)
       maxspeed =
-          ceil((rint((mech_effective_maximum_speed(mech) / 1.5) / MP1) + 1) *
-               1.5) *
+          ceilf((rintf((mech_effective_maximum_speed(mech) / 1.5F) / MP1) +
+                 1.0F) *
+                1.5F) *
           MP1;
   }
 
-  if (fabs(mech_current_speed(mech)) > 0.0) {
+  if (fabsf(mech_current_speed(mech)) > 0.0F) {
 #ifndef BT_MOVEMENT_MODES
     if (mech_desired_speed(mech) > 2.0F * maxspeed / 3.0F + 0.1F)
       mech_heat_production_add(mech, 2.0F);
@@ -134,8 +136,10 @@ void mech_heat_update(Mech *mech) {
                                        ? mech_jump_speed(mech) * MP_PER_KPH
                                        : 3.0F);
 
-  if (mech_is_started(mech))
-    mech_heat_production_add(mech, (float)mech_engine_heat(mech));
+  if (mech_is_started(mech)) {
+    int const engine_heat = mech_engine_heat(mech);
+    mech_heat_production_add(mech, (float)engine_heat);
+  }
 
   if (condition.stealth_armor_active)
     mech_heat_production_add(mech, 10.0F);
@@ -154,12 +158,12 @@ void mech_heat_update(Mech *mech) {
     legsinks = (legsinks > 4) ? 4 : legsinks;
     float active_sinks = mech_active_heat_sinks(mech);
     if (mech_position_z(mech) == -1 && !mech_is_fallen(mech)) {
-      float immersed_sinks = legsinks + active_sinks;
+      float immersed_sinks = (float)legsinks + active_sinks;
       mech_heat_dissipation_set(mech, 2 * active_sinks < immersed_sinks
                                           ? 2 * active_sinks
                                           : immersed_sinks);
     } else {
-      float immersed_sinks = 6 + active_sinks;
+      float immersed_sinks = 6.0F + active_sinks;
       mech_heat_dissipation_set(mech, 2 * active_sinks < immersed_sinks
                                           ? 2 * active_sinks
                                           : immersed_sinks);
@@ -182,10 +186,10 @@ void mech_heat_update(Mech *mech) {
             battle_map_temperature(map) > 50) {
           if (battle_map_temperature(map) < -30)
             mech_heat_dissipation_add(
-                mech, (-30 - battle_map_temperature(map) + 9) / 10);
+                mech, (float)((-30 - battle_map_temperature(map) + 9) / 10));
           else
             mech_heat_dissipation_add(
-                mech, -(battle_map_temperature(map) - 50 + 9) / 10);
+                mech, (float)(-(battle_map_temperature(map) - 50 + 9) / 10));
         }
 
   /* Handle heat cutoff now */
@@ -194,10 +198,12 @@ void mech_heat_update(Mech *mech) {
   if (mech_heat_cutoff_is_enabled(mech)) {
     float overheat = mech_heat_production(mech) - mech_heat_dissipation(mech);
 
-    if (overheat >= 10.)
-      mech_heat_sinks_enable(mech, floor(overheat - 10.) + 1);
-    else if (overheat < 9.)
-      mech_heat_sinks_disable(mech, floor(9. - overheat) + 1);
+    if (overheat >= 10.0F)
+      mech_heat_sinks_enable(mech,
+                             clamp_float_to_int(floorf(overheat - 10.0F)) + 1);
+    else if (overheat < 9.0F)
+      mech_heat_sinks_disable(mech,
+                              clamp_float_to_int(floorf(9.0F - overheat)) + 1);
 
   } else if (mech_disabled_heat_sink_count(mech)) {
     mech_heat_sinks_enable(mech, 100);
@@ -210,10 +216,10 @@ void mech_heat_update(Mech *mech) {
   mech_weapon_heat_add(mech, -(mech_heat_dissipation(mech) - intheat) /
                                  WEAPON_RECYCLE_TIME);
 
-  if (mech_weapon_heat(mech) < 0.0)
+  if (mech_weapon_heat(mech) < 0.0F)
     mech_weapon_heat_set(mech, 0.0F);
 
-  if (mech_excess_heat(mech) < 0.0)
+  if (mech_excess_heat(mech) < 0.0F)
     mech_excess_heat_set(mech, 0.0F);
 
   /* Rule Reference: BMR Revised, Page 17 (Heat=>26 +2 Bruise, Heat=>15 +1
@@ -224,34 +230,34 @@ void mech_heat_update(Mech *mech) {
 
   if ((btech_context_event_tick(context) % TURN) == 0)
     if (mech_life_support_is_destroyed(mech) ||
-        (mech_excess_heat(mech) > 30. &&
+        (mech_excess_heat(mech) > 30.0F &&
          btech_random_range(context, 0, 1) == 0)) {
-      if (mech_excess_heat(mech) > 25.) {
+      if (mech_excess_heat(mech) > 25.0F) {
         mech_notify(mech, MECHPILOT, "You take personal injury from heat!");
         headhitmwdamage(mech, mech,
                         mech_life_support_is_destroyed(mech) ? 2 : 1);
-      } else if (mech_excess_heat(mech) >= 15.) {
+      } else if (mech_excess_heat(mech) >= 15.0F) {
         mech_notify(mech, MECHPILOT, "You take personal injury from heat!");
         headhitmwdamage(mech, mech, 1);
       }
     }
 
-  if (mech_excess_heat(mech) >= 19.) {
-    if (inheat < 19.) {
+  if (mech_excess_heat(mech) >= 19.0F) {
+    if (inheat < 19.0F) {
       mech_notify(mech, MECHALL,
                   "[fg=red bold]=====================================\n"
                   "Your Excess Heat indicator turns RED!\n"
                   "=====================================[reset]");
     }
-  } else if (mech_excess_heat(mech) >= 14.) {
-    if (inheat >= 19. || inheat < 14.) {
+  } else if (mech_excess_heat(mech) >= 14.0F) {
+    if (inheat >= 19.0F || inheat < 14.0F) {
       mech_notify(mech, MECHALL,
                   "[fg=yellow bold]=======================================\n"
                   "Your Excess Heat indicator turns YELLOW\n"
                   "=======================================[reset]");
     }
   } else {
-    if (inheat >= 14.) {
+    if (inheat >= 14.0F) {
       mech_notify(mech, MECHALL,
                   "[fg=green]======================================\n"
                   "Your Excess Heat indicator turns GREEN\n"

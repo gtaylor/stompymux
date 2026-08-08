@@ -157,7 +157,7 @@ int char_getvaluecode(BtechContext *context, const char *name) {
   if ((ip = hash_table_find(tmpbuf, &context->player_value_hashes[0])) == NULL)
     ip = hash_table_find(tmpbuf, &context->player_value_hashes[1]);
   free_sbuf(tmpbuf);
-  return ((long)ip) - 1;
+  return (int)(intptr_t)ip - 1;
 }
 
 /********************/
@@ -222,7 +222,7 @@ int char_rolld6(BtechContext *context, int num) {
   int i, total = 0;
 
   for (i = 0; i < num; i++)
-    total = total + btech_random_range(context, 1, 6);
+    total += btech_random_range_int(context, 1, 6);
   return (total);
 }
 
@@ -232,15 +232,15 @@ int char_rolld6(BtechContext *context, int num) {
 
 /*****************************/
 
-int char_getstatvalue(PSTATS *s, char *name) {
-  for (size_t i = 0; i < NUM_CHARVALUES; i++)
+int char_getstatvalue(PSTATS *s, const char *name) {
+  for (int i = 0; i < NUM_CHARVALUES; i++)
     if (!strcasecmp(char_values[i].name, name))
       return char_getstatvalue_by_code(s, i);
   return -1;
 }
 
-void char_setstatvalue(PSTATS *s, char *name, int value) {
-  for (size_t i = 0; i < NUM_CHARVALUES; i++)
+void char_setstatvalue(PSTATS *s, const char *name, int value) {
+  for (int i = 0; i < NUM_CHARVALUES; i++)
     if (!strcasecmp(char_values[i].name, name)) {
       char_setstatvalue_by_code(s, i, value);
       return;
@@ -263,12 +263,13 @@ void character_value_set_by_code(BtechContext *context, DbRef player, int code,
   character_stats_store(context, player, &stats, VALUES_ALL);
 }
 
-int char_getvalue(BtechContext *context, DbRef player, char *name) {
+int char_getvalue(BtechContext *context, DbRef player, const char *name) {
   return character_value_by_code(context, player,
                                  char_getvaluecode(context, name));
 }
 
-void char_setvalue(BtechContext *context, DbRef player, char *name, int value) {
+void char_setvalue(BtechContext *context, DbRef player, const char *name,
+                   int value) {
   character_value_set_by_code(context, player, char_getvaluecode(context, name),
                               value);
 }
@@ -330,7 +331,7 @@ static int char_getskilltargetbycode_noxp(BtechContext *context, DbRef player,
   return char_getskilltargetbycode_base(context, player, s, code, modifier, 0);
 }
 
-int char_getskilltarget(BtechContext *context, DbRef player, char *name,
+int char_getskilltarget(BtechContext *context, DbRef player, const char *name,
                         int modifier) {
   return char_getskilltargetbycode(context, player,
                                    char_getvaluecode(context, name), modifier);
@@ -368,12 +369,13 @@ int char_gainxpbycode(BtechContext *context, DbRef player, int code, int amount,
   return 1;
 }
 
-int char_gainxp(BtechContext *context, DbRef player, char *skill, int amount) {
+int char_gainxp(BtechContext *context, DbRef player, const char *skill,
+                int amount) {
   return char_gainxpbycode(context, player, char_getvaluecode(context, skill),
                            amount, 0);
 }
 
-int char_getskillsuccess(BtechContext *context, DbRef player, char *name,
+int char_getskillsuccess(BtechContext *context, DbRef player, const char *name,
                          int modifier, int loud) {
   int roll, val;
   int code;
@@ -399,7 +401,7 @@ int char_getskillsuccess(BtechContext *context, DbRef player, char *name,
     return (0); /* Failure */
 }
 
-int char_getskillmargsucc(BtechContext *context, DbRef player, char *name,
+int char_getskillmargsucc(BtechContext *context, DbRef player, const char *name,
                           int modifier) {
   int roll, val;
   int code;
@@ -416,8 +418,9 @@ int char_getskillmargsucc(BtechContext *context, DbRef player, char *name,
   return (roll - val);
 }
 
-int char_getopposedskill(BtechContext *context, DbRef first, char *skill1,
-                         DbRef second, char *skill2) {
+DbRef char_getopposedskill(BtechContext *context, DbRef first,
+                           const char *skill1, DbRef second,
+                           const char *skill2) {
   int per1, per2;
 
   per1 = char_getskillmargsucc(context, first, skill1, 0);
@@ -431,7 +434,7 @@ int char_getopposedskill(BtechContext *context, DbRef first, char *skill1,
     return (second);
 }
 
-int char_getattrsave(BtechContext *context, DbRef player, char *name) {
+int char_getattrsave(BtechContext *context, DbRef player, const char *name) {
   int val = char_getvalue(context, player, name);
 
   if (val == -1)
@@ -442,7 +445,8 @@ int char_getattrsave(BtechContext *context, DbRef player, char *name) {
     return (18 - 2 * val);
 }
 
-int char_getattrsavesucc(BtechContext *context, DbRef player, char *name) {
+int char_getattrsavesucc(BtechContext *context, DbRef player,
+                         const char *name) {
   int roll, val = char_getattrsave(context, player, name);
 
   if (val == -1)
@@ -463,7 +467,8 @@ int char_getattrsavesucc(BtechContext *context, DbRef player, char *name) {
 /************************/
 
 void init_btechstats(BtechContext *context) {
-  char *tmpbuf, *tmpc1, *tmpc2;
+  char *tmpbuf, *tmpc2, *write_cursor;
+  const char *name_cursor;
   long i;
   int j;
 
@@ -479,26 +484,27 @@ void init_btechstats(BtechContext *context) {
   hash_table_initialize(&context->player_value_hashes[1], 20 * HASH_FACTOR);
   tmpbuf = alloc_sbuf("getvaluecode");
   for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
-    for (tmpc1 = char_values[i].name, tmpc2 = tmpbuf; *tmpc1; tmpc1++, tmpc2++)
-      *tmpc2 = ascii_to_lower(*tmpc1);
+    for (name_cursor = char_values[i].name, tmpc2 = tmpbuf; *name_cursor;
+         name_cursor++, tmpc2++)
+      *tmpc2 = ascii_to_lower(*name_cursor);
     *tmpc2 = '\0';
     hash_table_add(tmpbuf, (int *)(i + 1), &context->player_value_hashes[0]);
     tmpbuf[0] = '\0';
-    tmpc1 = tmpbuf;
+    write_cursor = tmpbuf;
     for (j = 0; char_values[i].name[j]; j++) {
       if (!isupper(char_values[i].name[j]))
         continue;
-      strncpy(tmpc1, &char_values[i].name[j], 3);
-      tmpc1 += 3;
+      strncpy(write_cursor, &char_values[i].name[j], 3);
+      write_cursor += 3;
     }
-    *tmpc1 = '\0';
+    *write_cursor = '\0';
     if (strlen(tmpbuf) <= 3) {
       strncpy(tmpbuf, char_values[i].name, 5);
       tmpbuf[5] = '\0';
     }
     context->char_value_short_names[i] = strdup(tmpbuf);
-    for (tmpc1 = tmpbuf; *tmpc1; tmpc1++)
-      *tmpc1 = ascii_to_lower(*tmpc1);
+    for (write_cursor = tmpbuf; *write_cursor; write_cursor++)
+      *write_cursor = ascii_to_lower(*write_cursor);
     hash_table_add(tmpbuf, (int *)(i + 1), &context->player_value_hashes[1]);
   }
   free_sbuf(tmpbuf);

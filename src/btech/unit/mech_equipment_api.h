@@ -3,6 +3,7 @@
 #include "mech_api_types.h"
 
 #include <stdbool.h>
+#include <time.h>
 
 int mech_critical_part_type(const Mech *mech, int section, int critical);
 int mech_critical_brand(const Mech *mech, int section, int critical);
@@ -82,7 +83,7 @@ bool mech_has_attached_inarc_ecm(const Mech *mech);
 bool mech_has_attached_homing_beacon(const Mech *mech);
 bool mech_limbs_are_recycling(const Mech *mech);
 bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical);
-bool mech_section_has_recycling_weapon(const Mech *mech, int section);
+bool mech_section_has_recycling_weapon(Mech *mech, int section);
 bool mech_weapon_is_nonfunctional_at(Mech *mech, int section, int critical,
                                      int weapon_index);
 int mech_section_recycle_ticks(const Mech *mech, int section);
@@ -92,7 +93,7 @@ void mech_last_weapon_recycle_tick_set(Mech *mech, int tick);
 int mech_section_base_to_hit(const Mech *mech, int section);
 void mech_section_base_to_hit_set(Mech *mech, int section, int modifier);
 void mech_section_base_to_hit_add(Mech *mech, int section, int modifier);
-int mech_section_critical_count(const Mech *mech, int section);
+int mech_section_critical_count(Mech *mech, int section);
 bool mech_part_is_structural_placeholder(int part_type);
 void mech_section_armor_set(Mech *mech, int section, int armor);
 void mech_section_rear_armor_set(Mech *mech, int section, int armor);

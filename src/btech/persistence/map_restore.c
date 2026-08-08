@@ -1,5 +1,7 @@
 #include "sqlite_internal.h"
 
+#include "checked_conversion.h"
+
 static int btech_special_resize_map(BattleMap *map, int width, int height) {
   unsigned char **grid;
   int y;
@@ -24,26 +26,29 @@ static int btech_special_resize_map(BattleMap *map, int width, int height) {
     free(map->map);
   }
   map->map = grid;
-  map->map_width = width;
-  map->map_height = height;
+  map->map_width = clamp_int_to_short(width);
+  map->map_height = clamp_int_to_short(height);
   return 0;
 }
 
 /* Allocate the dynamic occupancy and LOS matrices after first_free is known. */
 static int btech_special_allocate_map_dynamic(BattleMap *map) {
   int index;
+  size_t allocation_count;
 
   if (!map->first_free) {
     map->dynamic_size = 0;
     return 0;
   }
-  map->mechsOnMap = calloc(map->first_free, sizeof(*map->mechsOnMap));
-  map->mechflags = calloc(map->first_free, sizeof(*map->mechflags));
-  map->LOSinfo = calloc(map->first_free, sizeof(*map->LOSinfo));
+  allocation_count = (size_t)map->first_free;
+  map->mechsOnMap = calloc(allocation_count, sizeof(*map->mechsOnMap));
+  map->mechflags = calloc(allocation_count, sizeof(*map->mechflags));
+  map->LOSinfo = calloc(allocation_count, sizeof(*map->LOSinfo));
   for (index = 0; map->mechsOnMap && map->mechflags && map->LOSinfo &&
                   index < map->first_free;
        index++) {
-    map->LOSinfo[index] = calloc(map->first_free, sizeof(*map->LOSinfo[index]));
+    map->LOSinfo[index] =
+        calloc(allocation_count, sizeof(*map->LOSinfo[index]));
   }
   if (map->mechsOnMap && map->mechflags && map->LOSinfo &&
       index == map->first_free) {

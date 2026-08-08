@@ -6,6 +6,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "failures.h"
+#include "mech_advanced_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
@@ -30,8 +31,8 @@
 
 static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
-                                 int tFireMode, char *onmsg, char *offmsg,
-                                 char *cant);
+                                 int tFireMode, const char *onmsg,
+                                 const char *offmsg, const char *cant);
 
 /* Toggles ECM on / off */
 void mech_ams(DbRef player, void *data, char *buffer) {
@@ -103,9 +104,9 @@ struct ToggleModeContext {
   int special;
   int mode;
   int fire_mode;
-  char *on_message;
-  char *off_message;
-  char *cannot_message;
+  const char *on_message;
+  const char *off_message;
+  const char *cannot_message;
 };
 
 /* The mode messages are string-literal arguments supplied by the callers
@@ -268,8 +269,8 @@ static int mech_toggle_mode_sub_func(Mech *mech, DbRef player, int index,
 
 static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
-                                 int tFireMode, char *onmsg, char *offmsg,
-                                 char *cant) {
+                                 int tFireMode, const char *onmsg,
+                                 const char *offmsg, const char *cant) {
   char *args[1];
   ToggleModeContext toggle = {
       .special_kind = nspecisspec,

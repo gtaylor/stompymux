@@ -147,9 +147,9 @@ typedef struct {
   int commconv_last; /* Evil magic related to commconv, p2 */
   int onumsinks;     /* Original HS (?) */
   int disabled_hs;   /* Disabled (on purpose, not destroyed) HS */
-  int autopilot_num;
+  DbRef autopilot_num;
   int heatboom_last;
-  int sspin; /* Start of aero spin */
+  time_t sspin; /* Start of aero spin */
   int can_see;
   int row; /* _Own_ weight */
   int rcw; /* _Carried_ weight */

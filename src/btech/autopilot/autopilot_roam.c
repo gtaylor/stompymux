@@ -154,7 +154,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
         snprintf(error_buf, MBUF_SIZE,
                  "Internal AI Error - Attempting to"
                  " roam with AI #%ld but AI is not on a valid"
-                 " Map (#%d).",
+                 " Map (#%ld).",
                  autopilot->mynum, autopilot->mapindex);
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
@@ -242,11 +242,11 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 /*
  * Generate a random hex to roam to
  */
-void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
-                                   BattleMap *map, int attempt) {
+static void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
+                                          BattleMap *map, int attempt) {
 
-  short start_hex_x = 0;
-  short start_hex_y = 0;
+  int start_hex_x = 0;
+  int start_hex_y = 0;
   short target_hex_x = 0;
   short target_hex_y = 0;
   float x1, y1, x2, y2;
@@ -290,13 +290,16 @@ void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
 
     /* Generate range */
     if (max_range < 1) {
-      range = 1.0;
+      range = 1.0F;
     } else {
-      range = (float)btech_random_range(mech_context(mech), 1, max_range);
+      const long random_range =
+          btech_random_range(mech_context(mech), 1, max_range);
+      range = (float)random_range;
     }
 
     /* Generate random bearing */
-    bearing = btech_random_range(mech_context(mech), 0, 359);
+    const long random_bearing = btech_random_range(mech_context(mech), 0, 359);
+    bearing = (int)random_bearing;
 
     /* Map coord to Real */
     MapCoordToRealCoord(start_hex_x, start_hex_y, &x1, &y1);
@@ -388,7 +391,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
              " roam with AI #%ld but AI is not on a valid"
-             " Map (#%d).",
+             " Map (#%ld).",
              autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
@@ -415,7 +418,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
-      mech_stand(autopilot->mynum, mech, "");
+      mech_stand_empty(autopilot->mynum, mech);
 
     /* Ok lets run this command again */
     autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,

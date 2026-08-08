@@ -53,14 +53,13 @@
 #include "mech_tag_api.h"
 #include "mech_utils_api.h"
 
-#define SEE_SENSOR_PRIMARY 1
-#define SEE_SENSOR_SECONDARY 2
-
 static int mech_sensor_maximum_range(const Mech *mech, int sensor) {
   int stationary_bonus =
       sensor >= 2 && mech_movement_type(mech) == MOVE_NONE ? 140 : 100;
   return sensors[sensor].maximum_visibility * stationary_bonus / 100;
 }
+
+static float mech_sensor_range_as_float(int range) { return (float)range; }
 
 static int mech_sensor_minimum_variable_range(const Mech *mech, int sensor) {
   return mech_sensor_maximum_range(mech, sensor) -
@@ -143,7 +142,8 @@ int mech_sensor_can_see(Mech *mech, Mech *target, int *flag, int arc,
       if (!sensors[sn].full_vision && !(arc & (FORWARDARC | TURRETARC)) &&
           !mech_sensor_sees_in_all_directions(mech))
         continue;
-      if (mech_sensor_maximum_range(mech, sn) < range)
+      if (mech_sensor_range_as_float(mech_sensor_maximum_range(mech, sn)) <
+          range)
         continue;
 
       /* Okay, so this is a horrible, horrible hack that'll break when new
@@ -168,18 +168,20 @@ int mech_sensor_can_see(Mech *mech, Mech *target, int *flag, int arc,
         continue;
 
       if (sensors[sn].maximum_variation &&
-          mech_sensor_minimum_variable_range(mech, sn) < range)
-        if ((mech_sensor_minimum_variable_range(mech, sn) +
-             (mech_sensor_visibility_modifier(mech) *
-              (sensors[sn].maximum_variation + 1)) /
-                 100) < range)
+          mech_sensor_range_as_float(
+              mech_sensor_minimum_variable_range(mech, sn)) < range)
+        if (mech_sensor_range_as_float(
+                mech_sensor_minimum_variable_range(mech, sn) +
+                (mech_sensor_visibility_modifier(mech) *
+                 (sensors[sn].maximum_variation + 1)) /
+                    100) < range)
           continue;
       j += (i + 1);
     }
     return j;
   }
   sn = mech_sensor_index(mech, 0);
-  if (mech_sensor_maximum_range(mech, sn) < range)
+  if (mech_sensor_range_as_float(mech_sensor_maximum_range(mech, sn)) < range)
     return 0;
   if (cloudbase && target && sn < 3 &&
       ((mech_position_z(mech) < cloudbase)
@@ -191,10 +193,12 @@ int mech_sensor_can_see(Mech *mech, Mech *target, int *flag, int arc,
   if (!sensors[sn].see_chance(target, map, sn, range, mapvis, maplight))
     return 0;
   if (sensors[sn].maximum_variation &&
-      mech_sensor_minimum_variable_range(mech, sn) < range)
-    if ((mech_sensor_minimum_variable_range(mech, sn) +
-         mech_sensor_visibility_modifier(mech) *
-             (sensors[sn].maximum_variation + 1) / 100) < range)
+      mech_sensor_range_as_float(mech_sensor_minimum_variable_range(mech, sn)) <
+          range)
+    if (mech_sensor_range_as_float(
+            mech_sensor_minimum_variable_range(mech, sn) +
+            mech_sensor_visibility_modifier(mech) *
+                (sensors[sn].maximum_variation + 1) / 100) < range)
       return 0;
   return 3;
 }
@@ -305,7 +309,8 @@ int mech_sensor_detects_now(Mech *mech, Mech *target, int f, int arc,
       if (!sensors[sn].full_vision && !(arc & (FORWARDARC | TURRETARC)) &&
           !mech_sensor_sees_in_all_directions(mech))
         continue;
-      if (mech_sensor_maximum_range(mech, sn) < range)
+      if (mech_sensor_range_as_float(mech_sensor_maximum_range(mech, sn)) <
+          range)
         continue;
       if (mech_sensor_detects(mech, target, f, arc, range, sn, i + 1, mapvis,
                               maplight))
@@ -314,7 +319,7 @@ int mech_sensor_detects_now(Mech *mech, Mech *target, int f, int arc,
     return 0;
   }
   sn = mech_sensor_index(mech, 0);
-  if (mech_sensor_maximum_range(mech, sn) < range)
+  if (mech_sensor_range_as_float(mech_sensor_maximum_range(mech, sn)) < range)
     return 0;
   return mech_sensor_detects(mech, target, f, arc, range, sn, 1, mapvis,
                              maplight);
@@ -441,14 +446,14 @@ void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
 #endif
       mech_possible_contact_count_increment(mech);
     }
-    *fl = f;
+    *fl = (unsigned short)f;
     return;
   }
   if ((sc = mech_sensor_can_see(mech, target, &f, arc, range, mapvis, maplight,
                                 cloudbase))) {
     if (!seeanew) {
       mech_possible_contact_count_increment(mech);
-      *fl = f;
+      *fl = (unsigned short)f;
       return;
     }
     if ((sl = mech_sensor_detects_now(mech, target, f, arc, range, mapvis,
@@ -464,7 +469,7 @@ void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
         autopilot_resume_for_mech(mech);
       }
       f |= BATTLE_MAP_LOS_SEEN;
-      *fl = f;
+      *fl = (unsigned short)f;
       if (!mech_is_observer(mech) &&
           (mech_is_started(target) || mech_autocon_when_shutdown(mech) ||
            mech_autocon_include_shutdown_targets(mech)) &&
@@ -500,7 +505,7 @@ void mech_sensor_visibility_update(Mech *mech, unsigned short *fl, float range,
     } else
       mech_possible_contact_count_increment(mech);
   }
-  *fl = f;
+  *fl = (unsigned short)f;
 }
 
 static void sensor_update_los_pair(BattleMap *map, int observer_index,
@@ -514,7 +519,8 @@ static void sensor_update_los_pair(BattleMap *map, int observer_index,
     mech_tag_check(observer);
   if (mech_searchlight_active(observer) && range < LITE_RANGE)
     cause_lite(observer, target);
-  if (range > battle_map_maximum_visibility(map) &&
+  const int maximum_visibility = battle_map_maximum_visibility(map);
+  if (range > mech_sensor_range_as_float(maximum_visibility) &&
       mech_position_z(target) < 11 && mech_position_z(observer) < 11) {
     battle_map_los_flags_set(map, observer_index, target_index,
                              BATTLE_MAP_LOS_BLOCKED);
@@ -526,9 +532,9 @@ static void sensor_update_los_pair(BattleMap *map, int observer_index,
   int was_visible =
       !(flags & BATTLE_MAP_LOS_BLOCKED) &&
       (flags & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY));
-  flags =
-      mech_los_calculate_flags(observer, target, map, mech_position_x(target),
-                               mech_position_y(target), flags, range);
+  flags = (unsigned short)mech_los_calculate_flags(
+      observer, target, map, mech_position_x(target), mech_position_y(target),
+      flags, range);
   battle_map_los_flags_set(map, observer_index, target_index, flags);
 
 #ifdef ADVANCED_LOS
@@ -581,15 +587,22 @@ void mech_sensor_map_los_update(DbRef obj, BattleMap *map) {
 
 void mech_sensor_description_append(char *buf, int size, Mech *mech, int sn,
                                     int verbose) {
+  if (size <= 0)
+    return;
+  const size_t capacity = (size_t)size;
+  size_t used = strlen(buf);
+  if (used >= capacity)
+    return;
   if (!verbose)
-    snprintf(buf + strlen(buf), size - strlen(buf), "(R:%s)",
+    snprintf(buf + used, capacity - used, "(R:%s)",
              sensors[sn].range_description);
   else {
-    snprintf(buf + strlen(buf), size - strlen(buf),
+    snprintf(buf + used, capacity - used,
              "\n\tRange:      %s\n\tBlocked by: %s",
              sensors[sn].range_description, sensors[sn].block_description);
-    if (sensors[sn].special_description)
-      snprintf(buf + strlen(buf), size - strlen(buf), "\n\tNotes:      %s",
+    used = strlen(buf);
+    if (sensors[sn].special_description && used < capacity)
+      snprintf(buf + used, capacity - used, "\n\tNotes:      %s",
                sensors[sn].special_description);
   }
 }

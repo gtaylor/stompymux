@@ -1,15 +1,26 @@
 #include "command_invokers.h"
 
+#include "aero_move_api.h"
+#include "bsuit_api.h"
+#include "eject_api.h"
+#include "mech_move_api.h"
+#include "mech_startup_api.h"
+
 #define DEFINE_BTECH_COMMAND_INVOKER(handler)                                  \
   void handler(DbRef actor, void *object, char *arguments);                    \
   void btech_command_invoke_##handler(                                         \
       const BtechCommandInvocation *invocation) {                              \
     handler(invocation->actor, invocation->object, invocation->arguments);     \
   }
-DEFINE_BTECH_COMMAND_INVOKER(aero_takeoff)
+void btech_command_invoke_aero_takeoff(
+    const BtechCommandInvocation *invocation) {
+  aero_takeoff(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(aero_thrust)
 DEFINE_BTECH_COMMAND_INVOKER(bsuit_attackleg)
-DEFINE_BTECH_COMMAND_INVOKER(bsuit_hide)
+void btech_command_invoke_bsuit_hide(const BtechCommandInvocation *invocation) {
+  bsuit_hide(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(bsuit_pack_jettison)
 DEFINE_BTECH_COMMAND_INVOKER(bsuit_swarm)
 DEFINE_BTECH_COMMAND_INVOKER(heat_cutoff)
@@ -50,7 +61,9 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_dig)
 DEFINE_BTECH_COMMAND_INVOKER(mech_disableweap)
 DEFINE_BTECH_COMMAND_INVOKER(mech_disembark)
 DEFINE_BTECH_COMMAND_INVOKER(mech_dodge)
-DEFINE_BTECH_COMMAND_INVOKER(mech_drop)
+void btech_command_invoke_mech_drop(const BtechCommandInvocation *invocation) {
+  mech_drop(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(mech_dropoff)
 DEFINE_BTECH_COMMAND_INVOKER(mech_dump)
 DEFINE_BTECH_COMMAND_INVOKER(mech_embark)
@@ -113,14 +126,20 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_set_channelmode)
 DEFINE_BTECH_COMMAND_INVOKER(mech_set_channeltitle)
 DEFINE_BTECH_COMMAND_INVOKER(mech_set_target)
 DEFINE_BTECH_COMMAND_INVOKER(mech_sguided)
-DEFINE_BTECH_COMMAND_INVOKER(mech_shutdown)
+void btech_command_invoke_mech_shutdown(
+    const BtechCommandInvocation *invocation) {
+  mech_shutdown(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(mech_sight)
 DEFINE_BTECH_COMMAND_INVOKER(mech_smoke)
 DEFINE_BTECH_COMMAND_INVOKER(mech_speed)
 DEFINE_BTECH_COMMAND_INVOKER(mech_spot)
 DEFINE_BTECH_COMMAND_INVOKER(mech_sprint)
 DEFINE_BTECH_COMMAND_INVOKER(mech_stand)
-DEFINE_BTECH_COMMAND_INVOKER(mech_startup)
+void btech_command_invoke_mech_startup(
+    const BtechCommandInvocation *invocation) {
+  mech_startup(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(mech_status)
 DEFINE_BTECH_COMMAND_INVOKER(mech_stores)
 DEFINE_BTECH_COMMAND_INVOKER(mech_swarm)
@@ -133,7 +152,10 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_thrash)
 DEFINE_BTECH_COMMAND_INVOKER(mech_trip)
 DEFINE_BTECH_COMMAND_INVOKER(mech_turnmode)
 DEFINE_BTECH_COMMAND_INVOKER(mech_turret)
-DEFINE_BTECH_COMMAND_INVOKER(mech_udisembark)
+void btech_command_invoke_mech_udisembark(
+    const BtechCommandInvocation *invocation) {
+  mech_udisembark(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(mech_ultra)
 DEFINE_BTECH_COMMAND_INVOKER(mech_unjamammo)
 DEFINE_BTECH_COMMAND_INVOKER(mech_unloadcargo)

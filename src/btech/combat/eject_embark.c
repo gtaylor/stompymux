@@ -166,7 +166,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
       }
     }
 
-    if (fabs(mech_current_speed(target)) > 15.) {
+    if (fabsf(mech_current_speed(target)) > 15.0F) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Are you suicidal ? That thing is moving too fast !");
       return;
@@ -317,7 +317,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     }
   }
 
-  if (fabs(mech_current_speed(target)) > 0) {
+  if (fabsf(mech_current_speed(target)) > 0.0F) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Are you suicidal ? That thing is moving too fast !");
     return;

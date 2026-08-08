@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <time.h>
+
 #include "btech_event.h"
 #include "mech_events.h"
 #include "mux/server/platform.h"
@@ -71,17 +73,16 @@ constexpr int AUTOPILOT_FOLLOW_TICK = 4;
 
 /* Defines for the autogun/autosensor stuff */
 constexpr int AUTO_GUN_TICK = 1;          /* Every second */
-constexpr double AUTO_GUN_MAX_HEAT = 6.0; /* Last heat we let heat go to */
+constexpr float AUTO_GUN_MAX_HEAT = 6.0F; /* Last heat we let heat go to */
 constexpr int AUTO_GUN_MAX_TARGETS = 100; /* Don't really use this one */
 constexpr int AUTO_GUN_MAX_RANGE = 30;    /* Max range to look for targets */
 constexpr int AUTO_GUN_UPDATE_TICK = 30;  /* When to look for a new target */
 #define AUTO_GUN_IDLE_TICK                                                     \
   10 /* How often to call autogun when in idle mode                            \
       */
-#define AUTO_GUN_PHYSICAL_RANGE_MIN                                            \
-  3.0 /* Min range at which to physically attack                               \
-         other targets if our main target is beyond                            \
-         this distance */
+constexpr float AUTO_GUN_PHYSICAL_RANGE_MIN =
+    3.0F; /* Min range at which to physically attack other targets if our main
+             target is beyond this distance */
 #define AUTO_PROFILE_TICK                                                      \
   180 /* How often to update the weapon profile                                \
          of the AI */
@@ -141,7 +142,7 @@ typedef struct Autopilot {
 
   DbRef mynum;          /* The AI's dbref number */
   Mech *mymech;         /* The AI's unit */
-  int mapindex;         /* The map the AI is currently on */
+  DbRef mapindex;       /* The map the AI is currently on */
   DbRef mymechnum;      /* the dbref of the AI's mech */
   unsigned short speed; /* % of speed (1-100) that the AI should drive at */
   int ofsx, ofsy;       /* ? */
@@ -178,13 +179,13 @@ typedef struct Autopilot {
   int mech_max_range;
 
   /* Roam Stuff */
-  unsigned char roam_type;    /* What type of ROAM are we doing */
-  int roam_update_tick;       /* When should we update roam info */
-  short roam_target_hex_x;    /* Target Hex - X Coord */
-  short roam_target_hex_y;    /* Target Hex - Y Coord */
-  short roam_anchor_hex_x;    /* Anchor Hex - X Coord */
-  short roam_anchor_hex_y;    /* Anchor Hex - Y Coord */
-  short roam_anchor_distance; /* Distance (in hexes) allowed from anchor hex */
+  unsigned char roam_type;  /* What type of ROAM are we doing */
+  int roam_update_tick;     /* When should we update roam info */
+  short roam_target_hex_x;  /* Target Hex - X Coord */
+  short roam_target_hex_y;  /* Target Hex - Y Coord */
+  int roam_anchor_hex_x;    /* Anchor Hex - X Coord */
+  int roam_anchor_hex_y;    /* Anchor Hex - Y Coord */
+  int roam_anchor_distance; /* Distance (in hexes) allowed from anchor hex */
 
   /*! \todo {Figure out if we need to keep these variables} */
   /* Temporary AI-pathfind data variables */
@@ -196,7 +197,8 @@ typedef struct Autopilot {
   int auto_fweight;
   int auto_nervous;
 
-  int b_msc, w_msc, b_bsc, w_bsc, b_dan, w_dan, last_upd;
+  int b_msc, w_msc, b_bsc, w_bsc, b_dan, w_dan;
+  time_t last_upd;
 
 } Autopilot;
 
@@ -282,7 +284,7 @@ typedef struct AutopilotCommand {
 
 /* A structure to store info about the various AI commands */
 typedef struct {
-  char *name;
+  const char *name;
   int argcount;
   int command_enum;
   int (*ai_command_function)(Autopilot *);
@@ -294,18 +296,18 @@ typedef struct AutopilotPathNode {
   short y;
   short x_parent;
   short y_parent;
-  long g_score;
-  long h_score;
-  long f_score;
-  long hexoffset;
+  int g_score;
+  int h_score;
+  int f_score;
+  int hexoffset;
 } AutopilotPathNode;
 
 /* Weaplist node for storing info about weapons on the mech */
 typedef struct AutopilotWeapon {
-  short weapon_number;
-  short weapon_db_number;
-  short section;
-  short critical;
+  int weapon_number;
+  int weapon_db_number;
+  int section;
+  int critical;
   int range_scores[AUTO_PROFILE_MAX_SIZE];
 } AutopilotWeapon;
 
@@ -357,14 +359,14 @@ enum {
 
 /* From autopilot_core.c */
 void auto_destroy_command_node(AutopilotCommand *node);
-void auto_delcommand(DbRef player, void *data, char *buffer);
+void auto_delcommand(DbRef player, void *data, const char *buffer);
 void auto_addcommand(DbRef player, void *data, char *buffer);
 void auto_listcommands(DbRef player, void *data, char *buffer);
 void auto_eventstats(DbRef player, void *data, char *buffer);
 void auto_set_comtitle(Autopilot *autopilot, Mech *mech);
 void auto_init(Autopilot *autopilot, Mech *mech);
-void auto_engage(DbRef player, void *data, char *buffer);
-void auto_disengage(DbRef player, void *data, char *buffer);
+void auto_engage(DbRef player, void *data, const char *buffer);
+void auto_disengage(DbRef player, void *data, const char *buffer);
 void auto_goto_next_command(Autopilot *autopilot, int time);
 char *auto_get_command_arg(Autopilot *autopilot, int command_number,
                            int arg_number);
@@ -401,9 +403,11 @@ int slow_down_if_neccessary(Autopilot *autopilot, Mech *mech, float range,
 void update_wanted_heading(Autopilot *autopilot, Mech *mech, int bearing);
 
 /* From autopilot_ai.c */
-int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
-                             short end_y);
+int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
+                             int end_y);
 void auto_destroy_astar_path(Autopilot *autopilot);
+void auto_stop_pilot(Autopilot *autopilot);
+void auto_heartbeat(Autopilot *autopilot);
 
 /* From autopilot_autogun.c */
 int SearchLightInRange(Mech *mech, BattleMap *map);
@@ -415,7 +419,7 @@ void auto_update_profile_event(Autopilot *autopilot);
 
 /* From autopilot_radio.c */
 void auto_reply_event(MuxEvent *muxevent);
-void auto_reply(Mech *mech, char *buf);
+void auto_reply(Mech *mech, const char *buf);
 void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
                         char *buffer);
 

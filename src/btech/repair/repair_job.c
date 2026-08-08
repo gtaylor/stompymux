@@ -4,6 +4,7 @@
 
 #include "btech_event.h"
 #include "btmux_build_config.h"
+#include "checked_conversion.h"
 #include "mech_classification_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
@@ -341,5 +342,7 @@ int repair_part_type_difficulty(int part_type) {
 
 int repair_weapon_type_difficulty(int part_type) {
   int weapon = weapon_from_equipment_index(part_type);
-  return (int)sqrt((MechWeapons[weapon].criticals * 1.5) - 1.1);
+  float const difficulty =
+      sqrtf((float)MechWeapons[weapon].criticals * 1.5F - 1.1F);
+  return clamp_float_to_int(difficulty);
 }

@@ -6,9 +6,11 @@
  */
 #include "btech/context.h"
 #include "btech_channel.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
 #include "mech_classification_api.h"
+#include "mech_consistency_api.h"
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
@@ -199,10 +201,8 @@ int crit_weight(Mech *mech, int t) {
     return 512;
   if (!(equipment_is_special(t)))
     return 1024;
-
   t = special_from_equipment_index(t);
   cl = ((mech)->rd.specials) & CLAN_TECH;
-
   switch (t) {
   case HEAT_SINK:
     return 1024 / mech_heat_sink_critical_size(mech);
@@ -231,8 +231,8 @@ int crit_weight(Mech *mech, int t) {
   case SWORD:
     /* A Sword weighs 1/20th of the 'mech tonnage, rounded up to the half
        ton, and is 1/15th (rounded up to int) number of crits. */
-    return (ceil(((mech)->ud.tons) / 10.) * 512) /
-           (ceil(((mech)->ud.tons) / 15.));
+    return clamp_float_to_int((ceilf((float)mech->ud.tons / 10.0F) * 512.0F) /
+                              ceilf((float)mech->ud.tons / 15.0F));
   case BEAGLE_PROBE:
     return 1024 * 3 / (((mech)->ud.type) == CLASS_MECH ? 4 : 2);
   case ECM:
@@ -252,39 +252,29 @@ int crit_weight(Mech *mech, int t) {
     return 0;
   }
 }
-
-static int engine_weight(Mech *mech) {
+int engine_weight(Mech *mech) {
   int s = mech_engine_rating(mech);
   int i;
-
   if (((mech)->ud.type) != CLASS_MECH)
     s -= susp_factor(mech);
-
   for (i = 0; engine_data[i][0] >= 0; i++)
     if (s == engine_data[i][0]) {
       int weight = engine_data[i][1] * 512;
-
       if (((mech)->rd.specials) & ICE_TECH)
         return weight * 2;
-
       if (((mech)->ud.type) == CLASS_VEH_GROUND ||
           ((mech)->ud.type) == CLASS_VTOL ||
           ((mech)->ud.type) == CLASS_VEH_NAVAL)
         /* Vehicles need extra shielding in case of a fusion engine */
         weight = round_to_halfton(weight + weight / 2);
-
       if (((mech)->rd.specials) & XL_TECH)
         return round_to_halfton(weight / 2);
-
       if (((mech)->rd.specials) & XXL_TECH)
         return round_to_halfton(weight / 3);
-
       if (((mech)->rd.specials) & LE_TECH)
         return round_to_halfton(weight * 3 / 4);
-
       if (((mech)->rd.specials) & CE_TECH)
         return round_to_halfton(weight + weight / 2);
-
       return weight;
     }
 
@@ -342,25 +332,35 @@ static int weight_heat_sink_count(const Mech *mech, int interactive) {
   return interactive >= 0 ? ((mech)->rd.onumsinks) : ((mech)->ud.numsinks);
 }
 
+static int gyro_weight(float gyro_weight_in_tons, float multiplier) {
+  return clamp_float_to_int(ceilf(gyro_weight_in_tons) * 1024.0F * multiplier);
+}
+
+static float engine_rating_in_tons(int rating) {
+  return (float)rating / 100.0F;
+}
+
 static void weight_entry_add(CoolMenu **menu, int interactive, int *total,
-                             char *text, int weight) {
+                             const char *text, int weight) {
   if (!weight)
     return;
   if (interactive > 0) {
     cool_menu_add(menu, text);
-    cool_menu_add(menu, tprintf("      %6.2f", (float)weight / 1024.0));
+    cool_menu_add(menu,
+                  tprintf("      %6.2f", (double)((float)weight / 1024.0F)));
   }
   *total += weight;
 }
 
 static void weight_counted_entry_add(CoolMenu **menu, int interactive,
-                                     int *total, char *text, int count,
+                                     int *total, const char *text, int count,
                                      int weight) {
   if (!weight)
     return;
   if (interactive > 0) {
     cool_menu_add(menu, text);
-    cool_menu_add(menu, tprintf("%5d %6.2f", count, (float)weight / 1024.0));
+    cool_menu_add(
+        menu, tprintf("%5d %6.2f", count, (double)((float)weight / 1024.0F)));
   }
   *total += weight;
 }
@@ -401,11 +401,12 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
             if (temp >= 0) {
               t = mech_critical_part_type(mech, temp,
                                           mech_critical_data(mech, i, j));
-              pile[t] += mech_ammunition_slot_multiplier(
-                  mech, temp, mech_critical_data(mech, i, j));
+              pile[t] += clamp_float_to_int(mech_ammunition_slot_multiplier(
+                  mech, temp, mech_critical_data(mech, i, j)));
             }
           } else
-            pile[t] += mech_ammunition_slot_multiplier(mech, i, j);
+            pile[t] +=
+                clamp_float_to_int(mech_ammunition_slot_multiplier(mech, i, j));
         }
       }
   }
@@ -430,25 +431,25 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   }
   if (interactive >= 0 || !mech_section_is_destroyed(mech, CTORSO))
     /* Store the base-line gyro weight */
-    gyro_calc = (mech_engine_rating(mech) / 100.0);
+    gyro_calc = engine_rating_in_tons(mech_engine_rating(mech));
 
   /* Figure out what kind of gyro we have and adjust weight accordingly */
   if (((mech)->rd.specials2) & XLGYRO_TECH) {
     /* XL Gyro is 1/2 normal gyro weight. */
     weight_entry_add(&c, interactive, &total, "Gyro (XL)",
-                     (int)(ceil(gyro_calc) * 1024) * 0.5);
+                     gyro_weight(gyro_calc, 0.5F));
   } else if (((mech)->rd.specials2) & HDGYRO_TECH) {
     /* Hardened Gyro is 2x normal gyro weight. */
     weight_entry_add(&c, interactive, &total, "Gyro (Hardened)",
-                     (int)(ceil(gyro_calc) * 1024) * 2);
+                     gyro_weight(gyro_calc, 2.0F));
   } else if (((mech)->rd.specials2) & CGYRO_TECH) {
     /* Compact Gyro is 1.5x normal gyro weight. */
     weight_entry_add(&c, interactive, &total, "Gyro (Compact)",
-                     (int)(ceil(gyro_calc) * 1024) * 1.5);
+                     gyro_weight(gyro_calc, 1.5F));
   } else {
     /* Standard Gyro. */
     weight_entry_add(&c, interactive, &total, "Gyro",
-                     (int)ceil(gyro_calc) * 1024);
+                     gyro_weight(gyro_calc, 1.0F));
   }
 
   weight_entry_add(
@@ -515,20 +516,21 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   if (((mech)->ud.cargospace))
     weight_entry_add(
         &c, interactive, &total,
-        tprintf("CargoSpace (%.2ft)", (float)((mech)->ud.cargospace) / 100),
-        (int)(((float)((mech)->ud.cargospace) /
-               (((mech)->rd.specials2) & CARRIER_TECH ? 1000
-                : ((mech)->rd.specials) & CARGO_TECH  ? 100
-                                                      : 500)) *
-              1024));
+        tprintf("CargoSpace (%.2ft)",
+                (double)((float)mech->ud.cargospace / 100.0F)),
+        clamp_float_to_int(((float)mech->ud.cargospace /
+                            (((mech)->rd.specials2) & CARRIER_TECH ? 1000.0F
+                             : ((mech)->rd.specials) & CARGO_TECH  ? 100.0F
+                                                                   : 500.0F)) *
+                           1024.0F));
 
   if (interactive > 0) {
     cool_menu_add_line(&c);
     cool_menu_add_text(
         &c, tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
                     (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
-                    (float)(total) / 1024.0,
-                    ((mech)->ud.tons) - (float)(total) / 1024.0));
+                    (double)((float)total / 1024.0F),
+                    (double)((float)mech->ud.tons - (float)total / 1024.0F)));
     cool_menu_add_line(&c);
     ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
   }
@@ -578,7 +580,8 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
         continue;
       if (interactive >= 0 || !mech_section_is_destroyed(mech, i)) {
         if (interactive >= 0 || !equipment_is_ammunition(t))
-          pile[t] += mech_ammunition_slot_multiplier(mech, i, j);
+          pile[t] +=
+              clamp_float_to_int(mech_ammunition_slot_multiplier(mech, i, j));
         if (i == TURRET && (((mech)->ud.type) == CLASS_VEH_GROUND ||
                             ((mech)->ud.type) == CLASS_VEH_NAVAL))
           if (equipment_is_weapon(t))
@@ -677,20 +680,21 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   if (((mech)->ud.cargospace))
     weight_entry_add(
         &c, interactive, &total,
-        tprintf("CargoSpace (%.2ft)", (float)((mech)->ud.cargospace) / 100),
-        (int)(((float)((mech)->ud.cargospace) /
-               (((mech)->rd.specials2) & CARRIER_TECH ? 1000
-                : ((mech)->rd.specials) & CARGO_TECH  ? 100
-                                                      : 500)) *
-              1024));
+        tprintf("CargoSpace (%.2ft)",
+                (double)((float)mech->ud.cargospace / 100.0F)),
+        clamp_float_to_int(((float)mech->ud.cargospace /
+                            (((mech)->rd.specials2) & CARRIER_TECH ? 1000.0F
+                             : ((mech)->rd.specials) & CARGO_TECH  ? 100.0F
+                                                                   : 500.0F)) *
+                           1024.0F));
 
   if (interactive > 0) {
     cool_menu_add_line(&c);
     cool_menu_add_text(
         &c, tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
                     (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
-                    (float)(total) / 1024.0,
-                    ((mech)->ud.tons) - (float)(total) / 1024.0));
+                    (double)((float)total / 1024.0F),
+                    (double)((float)mech->ud.tons - (float)total / 1024.0F)));
     cool_menu_add_line(&c);
     ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
   }

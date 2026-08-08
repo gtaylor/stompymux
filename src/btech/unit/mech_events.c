@@ -21,6 +21,7 @@
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "btmux_build_config.h"
+#include "checked_conversion.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
@@ -49,27 +50,6 @@
 #include "registry_api.h"
 
 #undef WEAPON_RECYCLE_DEBUG
-
-void mech_heartbeat(Mech *mech) {
-  mech_update_recycling(mech);
-  if (btech_context_stagger_mode(mech_context(mech)) >= 1 &&
-      ((mech)->ud.type) == CLASS_MECH) {
-    // no sense checking if a fallen mech will fall down again, and let's not
-    // let jumping mechs stagger.
-    if (!mech_is_fallen(mech) && !mech_is_jumping(mech)) {
-      mech_staggercheck_heartbeat(mech);
-    }
-    mech_stagger_damage_expire(mech, mech->xcode.context->clock->now);
-  }
-  // Aeros need to check fuel while sitting and hovering
-  if (((mech)->ud.type) == CLASS_AERO || ((mech)->ud.type) == CLASS_VTOL) {
-    if (!mech_is_landed(mech) && (fabs(((mech)->rd.speed)) == 0) &&
-        (fabs(((mech)->rd.verticalspeed)) == 0))
-      aero_fuel_check(mech);
-  }
-
-  return;
-}
 
 void mech_staggercheck_heartbeat(Mech *mech) {
   time_t now = mech->xcode.context->clock->now;
@@ -206,7 +186,8 @@ void mech_fall_event(MuxEvent *e) {
     return;
   }
   /* Time to hit da ground */
-  fallen_elev = factoral(labs(fallspeed));
+  long fall_distance = labs(fallspeed);
+  fallen_elev = factoral(clamp_intptr_to_int((intptr_t)fall_distance));
   mech_notify(mech, MECHALL, "You hit the ground!");
   mech_los_broadcast(mech, "hits the ground!");
   mech_fall(mech, fallen_elev, 0);
@@ -284,15 +265,8 @@ void mech_unconsciousness_extend(Mech *mech, int len) {
   mech_event_schedule(mech, EVENT_RECOVERY, mech_recovery_event, l, 0);
 }
 
-struct foo {
-  char *name;
-  char *full;
-  int ofs;
-};
-extern struct foo lateral_modes[];
-
 #ifdef BT_MOVEMENT_MODES
-void mech_sideslip_event(MuxEvent *e) {
+static void mech_sideslip_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   int roll;
 
@@ -307,10 +281,10 @@ void mech_sideslip_event(MuxEvent *e) {
     mech_notify(mech, MECHALL, "You fail and spin out!");
     mech_los_broadcast(mech, "spins out while sideslipping!");
     ((mech)->rd.speed) = 0.0;
-    roll = btech_random_range(mech->xcode.context, 0, 5);
+    roll = clamp_intptr_to_int(btech_random_range(mech->xcode.context, 0, 5));
     mech_fall_heading_apply(mech, roll * 60);
     ((mech)->rd.desired_speed) = 0.0;
-    ((mech)->rd.lateral) = 0;
+    mech_lateral_movement_set(mech, 0);
     return;
   }
   mech_event_schedule(mech, EVENT_SIDESLIP, mech_sideslip_event, TURN, 0);
@@ -319,14 +293,19 @@ void mech_sideslip_event(MuxEvent *e) {
 
 void mech_lateral_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long latmode = (long)e->data2;
+  intptr_t latmode = (intptr_t)e->data2;
+  const char *description;
+  int offset;
 
   if (!mech || !mech_is_started(mech))
     return;
+  if (!mech_lateral_mode_details(clamp_intptr_to_int(latmode), &description,
+                                 &offset))
+    return;
   mech_printf(mech, MECHALL,
               "Lateral movement mode change to %s (%d offset) completed.",
-              lateral_modes[latmode].full, lateral_modes[latmode].ofs);
-  ((mech)->rd.lateral) = lateral_modes[latmode].ofs;
+              description, offset);
+  mech_lateral_movement_set(mech, offset);
 #ifdef BT_MOVEMENT_MODES
   if (((mech)->ud.move) != MOVE_QUAD) {
     if (((mech)->rd.lateral) == 0)
@@ -362,10 +341,10 @@ void mech_move_event(MuxEvent *e) {
       mech_real_terrain_get(mech) != WATER)
     return;
 
-  if (((mech)->rd.speed) || ((mech)->rd.desired_speed) ||
+  if (mech->rd.speed != 0.0F || mech->rd.desired_speed != 0.0F ||
       ((mech)->rd.desiredfacing) != mech_heading_degrees(mech) ||
       ((((mech)->ud.type) == CLASS_VTOL || ((mech)->ud.move) == MOVE_SUB) &&
-       ((mech)->rd.verticalspeed)))
+       mech->rd.verticalspeed != 0.0F))
     mech_event_schedule(mech, EVENT_MOVE, mech_move_event, MOVE_TICK, 0);
 }
 
@@ -443,8 +422,7 @@ void aero_move_event(MuxEvent *e) {
     mech_heading_update(mech);
     mech_speed_update(mech);
     mech_movement_update(mech);
-    if (fabs(((mech)->rd.speed)) > 0.0 ||
-        fabs(((mech)->rd.desired_speed)) > 0.0 ||
+    if (fabsf(mech->rd.speed) > 0.0F || fabsf(mech->rd.desired_speed) > 0.0F ||
         ((mech)->rd.desiredfacing) != mech_heading_degrees(mech))
       if (!aero_fuel_check(mech))
         mech_event_schedule(mech, EVENT_MOVE, aero_move_event, MOVE_TICK, 0);
@@ -494,7 +472,8 @@ void unstun_crew_event(MuxEvent *e) {
 
 void mech_unjam_ammo_event(MuxEvent *objEvent) {
   Mech *objMech = (Mech *)objEvent->data; /* get the mech */
-  long wWeapNum = (long)objEvent->data2;  /* and now the weapon number */
+  int wWeapNum =
+      clamp_intptr_to_int((intptr_t)objEvent->data2); /* weapon number */
   int wSect, wSlot, wWeapStatus, wWeapIdx;
   int ammoLoc, ammoCrit, ammoLoc1, ammoCrit1;
   int wRoll = 0;

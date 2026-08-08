@@ -21,6 +21,9 @@
 
 #include "map_coding.h"
 
+#include <assert.h>
+#include <limits.h>
+
 #include "coding_registry.h"
 #include "map_coding_api.h"
 
@@ -30,12 +33,14 @@ int map_coding_get_index(MapCodingRegistry *registry, char terrain,
 
   if ((i = registry->data_to_id[(short)terrain][(short)elevation]))
     return i - 1;
+  assert(registry->next_id < UCHAR_MAX);
   registry->id_to_data[registry->next_id] = (MapCodingEntry){
       .terrain = terrain,
       .elevation = elevation,
   };
   registry->next_id++;
-  registry->data_to_id[(short)terrain][(short)elevation] = registry->next_id;
+  registry->data_to_id[(short)terrain][(short)elevation] =
+      (unsigned char)registry->next_id;
   return registry->next_id - 1;
 }
 

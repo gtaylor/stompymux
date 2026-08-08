@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "btech_text_builder.h"
+#include "checked_conversion.h"
 #include "mux/support/stringutil.h"
 
 static int test_parsing(void) {
@@ -45,4 +46,21 @@ static int test_text_builder(void) {
   return 0;
 }
 
-int main(void) { return test_parsing() || test_text_builder(); }
+static int test_checked_conversions(void) {
+  if (clamp_int_to_char(CHAR_MIN - 1) != CHAR_MIN ||
+      clamp_int_to_char(CHAR_MAX + 1) != CHAR_MAX ||
+      clamp_int_to_short(SHRT_MIN - 1) != SHRT_MIN ||
+      clamp_int_to_short(SHRT_MAX + 1) != SHRT_MAX ||
+      clamp_int_to_unsigned_char(-1) != 0 ||
+      clamp_int_to_unsigned_char(UCHAR_MAX + 1) != UCHAR_MAX ||
+      clamp_intptr_to_int((intptr_t)INT_MIN - 1) != INT_MIN ||
+      clamp_intptr_to_int((intptr_t)INT_MAX + 1) != INT_MAX ||
+      clamp_size_to_int((size_t)INT_MAX + 1) != INT_MAX) {
+    return 1;
+  }
+  return 0;
+}
+
+int main(void) {
+  return test_parsing() || test_text_builder() || test_checked_conversions();
+}

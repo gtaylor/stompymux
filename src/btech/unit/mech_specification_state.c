@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
 
@@ -26,7 +27,9 @@ int mech_engine_rating(const Mech *mech) {
 }
 
 int mech_calculated_engine_rating(const Mech *mech) {
-  return (int)rint((2 * mech->ud.maxspeed / KPH_PER_MP) / 3) * mech->ud.tons;
+  float rating = roundf((2.0F * mech->ud.maxspeed / KPH_PER_MP) / 3.0F);
+
+  return (int)rating * mech->ud.tons;
 }
 
 float mech_jump_speed(const Mech *mech) { return mech->rd.jumpspeed; }
@@ -44,15 +47,15 @@ void mech_jump_speed_lower(Mech *mech, float amount) {
 int mech_heat_sink_count(const Mech *mech) { return mech->ud.numsinks; }
 
 void mech_heat_sink_count_set(Mech *mech, int count) {
-  mech->ud.numsinks = count;
+  mech->ud.numsinks = clamp_int_to_char(count);
 }
 
 void mech_heat_sink_count_remove(Mech *mech, int count) {
-  mech->ud.numsinks -= count;
+  mech->ud.numsinks = clamp_int_to_char(mech->ud.numsinks - count);
 }
 
 void mech_heat_sink_count_add(Mech *mech, int count) {
-  mech->ud.numsinks += count;
+  mech->ud.numsinks = clamp_int_to_char(mech->ud.numsinks + count);
 }
 
 bool mech_has_double_heat_sinks(const Mech *mech) {
@@ -136,7 +139,7 @@ int mech_carrier_maximum_tonnage(const Mech *mech) {
 }
 
 void mech_carrier_maximum_tonnage_set(Mech *mech, int tonnage) {
-  mech->ud.carmaxton = tonnage;
+  mech->ud.carmaxton = clamp_int_to_char(tonnage);
 }
 
 int mech_maximum_battle_suits(const Mech *mech) { return mech->rd.maxsuits; }
@@ -164,7 +167,7 @@ void mech_current_speed_reduce_toward_zero(Mech *mech, float amount) {
 float mech_maximum_speed(const Mech *mech) { return mech->ud.maxspeed; }
 
 float mech_walking_speed(const Mech *mech) {
-  return (float)2.0 * mech->ud.maxspeed / 3.0;
+  return 2.0F * mech->ud.maxspeed / 3.0F;
 }
 
 float mech_template_maximum_speed(const Mech *mech) {
@@ -195,7 +198,7 @@ int mech_original_fuel(const Mech *mech) { return mech->ud.fuel_orig; }
 int mech_structural_integrity(const Mech *mech) { return mech->ud.si; }
 
 void mech_structural_integrity_set(Mech *mech, int integrity) {
-  mech->ud.si = integrity;
+  mech->ud.si = clamp_int_to_char(integrity);
 }
 
 int mech_original_structural_integrity(const Mech *mech) {

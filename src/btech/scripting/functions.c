@@ -24,15 +24,16 @@
 #include "mux/support/alloc.h"
 #include "registry_api.h"
 
-char *btech_attribute_read(GameDatabase *database, int id, int flag,
+char *btech_attribute_read(GameDatabase *database, DbRef id, int flag,
                            char buffer[static LBUF_SIZE]) {
   long flags;
 
   return attribute_get_string(database, buffer, id, flag, &flags);
 }
 
-void silly_atr_set_in(GameDatabase *database, int id, int flag, char *dat) {
-  attribute_add_raw(database, id, flag, dat);
+void silly_atr_set_in(GameDatabase *database, DbRef id, int flag,
+                      const char *data) {
+  attribute_add_raw(database, id, flag, data);
 }
 
 void KillText(char **mapt) {
@@ -83,8 +84,7 @@ int MIN(int v1, int v2) {
  * and returns it.
  */
 char *first_parseattribute(char *buffer) {
-
-  int length;
+  size_t length;
   char *start, *first;
 
   /* Look for the first parameter */
@@ -96,7 +96,7 @@ char *first_parseattribute(char *buffer) {
     length = SBUF_SIZE;
 
   /* Make it and return it */
-  first = (char *)strndup(start, length);
+  first = strndup(start, length);
 
   return first;
 }
@@ -131,10 +131,14 @@ char *first_parseattribute(char *buffer) {
  */
 
 int proper_parseattributes(char *buffer, char **args, int max) {
-  int count = 0, length;
+  int count = 0;
+  size_t length;
   char *start;
 
-  memset(args, 0, sizeof(char *) * max);
+  if (max <= 0)
+    return 0;
+  const size_t argument_capacity = (size_t)max;
+  memset(args, 0, sizeof(*args) * argument_capacity);
 
   start = buffer;
   while (count < (max - 1) && *start) {
@@ -163,7 +167,10 @@ int silly_parseattributes(char *buffer, char **args, int max) {
   char *parsed = buffer;
   int num_args = 0;
 
-  memset(args, 0, sizeof(char *) * max);
+  if (max <= 0)
+    return 0;
+  const size_t argument_capacity = (size_t)max;
+  memset(args, 0, sizeof(*args) * argument_capacity);
 
   b = bufferi;
   for (a = buffer; *a && a; a++)
@@ -193,7 +200,8 @@ int silly_parseattributes(char *buffer, char **args, int max) {
   if (args[max - 1] && args[max - 1][0]) {
     strcpy(foobuff, args[max - 1]);
     while ((parsed = strtok(NULL, " \t")))
-      snprintf(foobuff + strlen(foobuff), max, " %s", parsed);
+      snprintf(foobuff + strlen(foobuff), sizeof(foobuff) - strlen(foobuff),
+               " %s", parsed);
     args[max - 1] = foobuff;
   }
   return num_args;
@@ -229,10 +237,14 @@ int silly_parseattributes(char *buffer, char **args, int max) {
  */
 
 int proper_explodearguments(char *buffer, char **args, int max) {
-  int count = 0, length;
+  int count = 0;
+  size_t length;
   char *start;
 
-  memset(args, 0, sizeof(char *) * max);
+  if (max <= 0)
+    return 0;
+  const size_t argument_capacity = (size_t)max;
+  memset(args, 0, sizeof(*args) * argument_capacity);
 
   start = buffer;
   while (count < max - 1 && *start) {
@@ -254,7 +266,10 @@ int mech_parseattributes(char *buffer, char **args, int maxargs) {
   char *parsed = buffer;
   int num_args = 0;
 
-  memset(args, 0, sizeof(char *) * maxargs);
+  if (maxargs <= 0)
+    return 0;
+  const size_t argument_capacity = (size_t)maxargs;
+  memset(args, 0, sizeof(*args) * argument_capacity);
 
   while ((count < maxargs) && parsed) {
     parsed = strtok(!count ? buffer : NULL, " \t");

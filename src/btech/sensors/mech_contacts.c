@@ -68,7 +68,7 @@ static bool mech_contact_carries_club(const Mech *mech) {
          mech_section_carries_club(mech, LARM);
 }
 
-static char *const ac_desc[] = {
+static const char *const ac_desc[] = {
     "0 - See enemies and friends, long text, color",
     "1 - See enemies and friends, short text, color",
     "2 - See enemies only, long text, color",
@@ -78,7 +78,7 @@ static char *const ac_desc[] = {
 
     "6 - Disabled"};
 
-static char *const c_desc[] = {
+static const char *const c_desc[] = {
     "0 - Very verbose", "1 - Short form, the usual one",
     "2 - Short form, the usual one, but do not see buildings",
     "3 - Shorter form"};
@@ -208,7 +208,7 @@ MechStatusString mech_status_string(Mech *target, int who) {
   if (mech_is_out_of_control(target))
     statusstr[sptr++] = 'O';
 
-  if (mech_excess_heat(target))
+  if (mech_excess_heat(target) != 0.0F)
     statusstr[sptr++] = '+';
 
   if (mech_is_jellied(target))
@@ -303,7 +303,7 @@ char mech_contact_status_character(Mech *mech, Mech *mechTarget, int wCharNum) {
     break;
   case 4:
     cRet = mech_is_started(mechTarget)
-               ? (mech_excess_heat(mechTarget)                      ? '+'
+               ? (mech_excess_heat(mechTarget) != 0.0F              ? '+'
                   : mech_is_jellied(mechTarget)                     ? 'I'
                   : mech_event_count(mechTarget, EVENT_VEHICLEBURN) ? 'B'
                                                                     : ' ')
@@ -340,7 +340,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   int sbuff[BATTLE_MAP_UNIT_CAPACITY];
   float range, rangelist[BATTLE_MAP_UNIT_CAPACITY], fx, fy;
   char weaponarc;
-  char *mech_name;
+  const char *mech_name;
   unsigned char see_what;
   char *str;
   char move_type[30];
@@ -496,8 +496,8 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
                mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
                move_type[0], mech_name, mech_position_x(tempMech),
-               mech_position_y(tempMech), mech_position_z(tempMech), range,
-               bearing, mech_current_speed(tempMech),
+               mech_position_y(tempMech), mech_position_z(tempMech),
+               (double)range, bearing, (double)mech_current_speed(tempMech),
                mech_contact_heading(tempMech), cStatus1, cStatus2, cStatus3,
                cStatus4, cStatus5,
                (mech_dbref(tempMech) == mech_target_dbref(mech) ||
@@ -514,14 +514,15 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                mech_name, mech_tonnage(tempMech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      Range: %.1f hex\tBearing: %d degrees",
-               range, bearing);
+               (double)range, bearing);
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      Speed: %.1f KPH\tHeading: %d degrees",
-               mech_current_speed(tempMech), mech_contact_heading(tempMech));
+               (double)mech_current_speed(tempMech),
+               mech_contact_heading(tempMech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      X, Y: %3d, %3d \tHeat: %.0f deg C.",
                mech_position_x(tempMech), mech_position_y(tempMech),
-               mech_excess_heat(tempMech));
+               (double)mech_excess_heat(tempMech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      Movement Type: %s", move_type);
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
@@ -556,11 +557,12 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       const DbRef building_dbref = battle_map_object_dbref(building);
 
       MapCoordToRealCoord(building_x, building_y, &fx, &fy);
+      const int building_elevation =
+          battle_map_hex_elevation(mech_map, building_x, building_y);
+      i = building_elevation + 1;
+      const float building_real_z = ZSCALE * (float)i;
       range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                        mech_position_real_z(mech), fx, fy,
-                        ZSCALE * ((i = battle_map_hex_elevation(
-                                       mech_map, building_x, building_y)) +
-                                  1));
+                        mech_position_real_z(mech), fx, fy, building_real_z);
 
       losflag = mech_los_check(mech, nullptr, building_x, building_y, range);
       if (!losflag || (losflag & BATTLE_MAP_LOS_BLOCKED))
@@ -601,7 +603,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                j ? "[fg=yellow bold]" : "",
                (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
                (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
-               mech_name, building_x, building_y, i, range, bearing,
+               mech_name, building_x, building_y, i, (double)range, bearing,
                battle_map_building_integrity(tmp_map),
                battle_map_building_maximum_integrity(tmp_map),
                (battle_map_building_is_safe(tmp_map) ||

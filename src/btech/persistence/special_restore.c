@@ -1,5 +1,7 @@
 #include "sqlite_internal.h"
 
+#include "checked_conversion.h"
+
 static void *btech_special_object(BtechContext *context, DbRef object,
                                   BtechSpecialObjectType type) {
   if (!is_good_obj(context->database, object) ||
@@ -85,9 +87,9 @@ int btech_special_load_turrets(sqlite3 *sqlite, BtechContext *context) {
     turret->parent = parent;
     turret->gunner = gunner;
     turret->target = target;
-    turret->targx = target_x;
-    turret->targy = target_y;
-    turret->targz = target_z;
+    turret->targx = clamp_int_to_short(target_x);
+    turret->targy = clamp_int_to_short(target_y);
+    turret->targz = clamp_int_to_short(target_z);
     turret->lockmode = lock_mode;
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -144,7 +146,11 @@ int btech_special_load_turret_tics(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    turret->tic[tic_index] = value;
+    if (value < 0) {
+      result = -1;
+      break;
+    }
+    turret->tic[tic_index] = (unsigned long)value;
     expected_tic++;
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -208,12 +214,12 @@ int btech_special_load_autopilots(sqlite3 *sqlite, BtechContext *context) {
                                    &autopilot->roam_target_hex_x) < 0 ||
         btech_special_column_short(statement, 19,
                                    &autopilot->roam_target_hex_y) < 0 ||
-        btech_special_column_short(statement, 20,
-                                   &autopilot->roam_anchor_hex_x) < 0 ||
-        btech_special_column_short(statement, 21,
-                                   &autopilot->roam_anchor_hex_y) < 0 ||
-        btech_special_column_short(statement, 22,
-                                   &autopilot->roam_anchor_distance) < 0 ||
+        btech_special_column_int(statement, 20, &autopilot->roam_anchor_hex_x) <
+            0 ||
+        btech_special_column_int(statement, 21, &autopilot->roam_anchor_hex_y) <
+            0 ||
+        btech_special_column_int(statement, 22,
+                                 &autopilot->roam_anchor_distance) < 0 ||
         btech_special_column_int(statement, 23, &autopilot->ahead_ok) < 0 ||
         btech_special_column_int(statement, 24, &autopilot->auto_cmode) < 0 ||
         btech_special_column_int(statement, 25, &autopilot->auto_cdist) < 0 ||
@@ -227,7 +233,7 @@ int btech_special_load_autopilots(sqlite3 *sqlite, BtechContext *context) {
         btech_special_column_int(statement, 32, &autopilot->w_bsc) < 0 ||
         btech_special_column_int(statement, 33, &autopilot->b_dan) < 0 ||
         btech_special_column_int(statement, 34, &autopilot->w_dan) < 0 ||
-        btech_special_column_int(statement, 35, &autopilot->last_upd) < 0 ||
+        btech_special_column_long(statement, 35, &autopilot->last_upd) < 0 ||
         (mech_dbref != 0 && !btech_context_get_mech(context, mech_dbref)) ||
         (map_dbref != NOTHING && map_dbref != 0 &&
          !btech_context_get_map(context, map_dbref))) {
@@ -466,10 +472,10 @@ int btech_special_load_autopilot_path(sqlite3 *sqlite, BtechContext *context) {
     path_node->y = (short)y;
     path_node->x_parent = (short)parent_x;
     path_node->y_parent = (short)parent_y;
-    path_node->g_score = g_score;
-    path_node->h_score = h_score;
-    path_node->f_score = f_score;
-    path_node->hexoffset = hex_offset;
+    path_node->g_score = clamp_intptr_to_int((intptr_t)g_score);
+    path_node->h_score = clamp_intptr_to_int((intptr_t)h_score);
+    path_node->f_score = clamp_intptr_to_int((intptr_t)f_score);
+    path_node->hexoffset = clamp_intptr_to_int((intptr_t)hex_offset);
     list_node = doubly_linked_list_create_node(path_node);
     if (!list_node) {
       free(path_node);

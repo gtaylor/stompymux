@@ -66,7 +66,7 @@ static bool map_bits_is_set(unsigned char *const *bits, int x, int y,
 static unsigned char **grab_us_an_array(BattleMap *map) {
   unsigned char **foo;
   MapObject foob;
-  int ys = map->map_height;
+  const size_t ys = (size_t)map->map_height;
 
   if (!map->MapObject[TYPE_BITS]) {
     Create(foo, unsigned char *, ys);

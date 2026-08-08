@@ -19,9 +19,10 @@ typedef struct GameDatabase GameDatabase;
 typedef struct EvaluationContext EvaluationContext;
 
 /* functions.c */
-char *btech_attribute_read(GameDatabase *database, int id, int flag,
+char *btech_attribute_read(GameDatabase *database, DbRef id, int flag,
                            char buffer[static LBUF_SIZE]);
-void silly_atr_set_in(GameDatabase *database, int id, int flag, char *dat);
+void silly_atr_set_in(GameDatabase *database, DbRef id, int flag,
+                      const char *data);
 void KillText(char **mapt);
 void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player);
 float FBOUNDED(float min, float val, float max);

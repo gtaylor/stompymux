@@ -29,7 +29,7 @@ static int mech_jump_speed_mp(const Mech *mech, const BattleMap *map) {
   float speed = mech_jump_speed(mech);
   if (mech_is_under_gravity(mech) && map) {
     int gravity = battle_map_gravity(map);
-    speed = speed * 100 / (gravity > 50 ? gravity : 50);
+    speed = speed * 100.0F / (float)(gravity > 50 ? gravity : 50);
   }
   return (int)(speed * MP_PER_KPH);
 }
@@ -42,40 +42,40 @@ void mech_overheat_handle(Mech *mech) {
   float heat = mech_excess_heat(mech);
   int tick = btech_context_event_tick(context);
 
-  if (heat < 10.)
+  if (heat < 10.0F)
     return;
   if ((mech_last_overheat_check_tick(mech) + TURN) > tick)
     return;
   mech_last_overheat_check_tick_set(mech, tick);
 
-  if (heat >= 10.) {
+  if (heat >= 10.0F) {
     if (btech_context_inferno_penalty_enabled(context))
       hasinferno = FindInfernoAmmo(mech, &ammoloc, &ammocritnum);
-    if (heat >= 28.) {
+    if (heat >= 28.0F) {
       if (hasinferno) {
         if (btech_random_roll(context) >= 12)
           avoided = 1;
       } else if (btech_random_roll(context) >= 8)
         avoided = 1;
-    } else if (heat >= 23.) {
+    } else if (heat >= 23.0F) {
       if (hasinferno) {
         if (btech_random_roll(context) >= 10)
           avoided = 1;
       } else if (btech_random_roll(context) >= 6)
         avoided = 1;
-    } else if (heat >= 19.) {
+    } else if (heat >= 19.0F) {
       if (hasinferno) {
         if (btech_random_roll(context) >= 8)
           avoided = 1;
       } else if (btech_random_roll(context) >= 4)
         avoided = 1;
-    } else if ((heat >= 14.) && hasinferno) {
+    } else if ((heat >= 14.0F) && hasinferno) {
       if (btech_random_roll(context) >= 6)
         avoided = 1;
-    } else if ((heat >= 10.) && hasinferno) {
+    } else if ((heat >= 10.0F) && hasinferno) {
       if (btech_random_roll(context) >= 4)
         avoided = 1;
-    } else if ((heat < 19.) && !hasinferno)
+    } else if ((heat < 19.0F) && !hasinferno)
       avoided = 1;
 
     if (!avoided) {
@@ -94,33 +94,33 @@ void mech_overheat_handle(Mech *mech) {
 #ifdef BT_EXILE_MW3STATS
   if (!is_player(btech_context_database(context), mech_pilot_dbref(mech))) {
 #endif
-    if (heat >= 30.) {
-    } else if (heat >= 26.) {
+    if (heat >= 30.0F) {
+    } else if (heat >= 26.0F) {
       if (btech_random_roll(context) >= 10)
         avoided = 1;
-    } else if (heat >= 22.) {
+    } else if (heat >= 22.0F) {
       if (btech_random_roll(context) >= 8)
         avoided = 1;
-    } else if (heat >= 18.) {
+    } else if (heat >= 18.0F) {
       if (btech_random_roll(context) >= 6)
         avoided = 1;
-    } else if (heat >= 14.) {
+    } else if (heat >= 14.0F) {
       if (btech_random_roll(context) >= 4)
         avoided = 1;
     }
 #ifdef BT_EXILE_MW3STATS
   } else {
     avoided = 1;
-    if (heat >= 14.) {
+    if (heat >= 14.0F) {
       mech_notify(mech, MECHALL,
                   "You frantically attempt to override the shutdown process!");
       avoided =
           char_getskillsuccess(context, mech_pilot_dbref(mech), "computer",
-                               (heat >= 30.   ? 8
-                                : heat >= 26. ? 6
-                                : heat >= 22. ? 4
-                                : heat >= 18. ? 2
-                                              : 0),
+                               (heat >= 30.0F   ? 8
+                                : heat >= 26.0F ? 6
+                                : heat >= 22.0F ? 4
+                                : heat >= 18.0F ? 2
+                                                : 0),
                                1);
       if (avoided)
         AccumulateComputerXP(mech_pilot_dbref(mech), mech, 1);
@@ -144,7 +144,7 @@ void mech_overheat_handle(Mech *mech) {
       mech_domino_resolve(mech, MECH_DOMINO_FALL);
     } else {
       mech_los_broadcast(mech, "stops in mid-motion!");
-      if ((fabs(mech_current_speed(mech)) > MP1) && !mech_is_fallen(mech) &&
+      if ((fabsf(mech_current_speed(mech)) > MP1) && !mech_is_fallen(mech) &&
           !MadePilotSkillRoll(mech, 3))
         mech_fall(mech, 0, 1);
     }

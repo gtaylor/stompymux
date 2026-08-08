@@ -10,6 +10,9 @@
 #include "mux/objects/db.h"
 #include "mux/server/log.h"
 
+void notify_printf(EvaluationContext *evaluation, DbRef player,
+                   const char *format, ...);
+
 void log_error(ServerLog *log, int key, const char *primary,
                const char *secondary, const char *format, ...) {
   (void)log;

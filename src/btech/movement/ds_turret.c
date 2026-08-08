@@ -9,6 +9,8 @@
  */
 
 #include "btech/context.h"
+#include "checked_conversion.h"
+#include "ds_turret_api.h"
 #include "mech_api_types.h"
 #include "mech_combat_api.h"
 #include "mech_contacts_api.h"
@@ -79,9 +81,9 @@ static void turret_targeting_scope_leave(TurretTargetingScope *scope,
   btech_context_combat_pilot_override_set(tur->xcode.context, 0);
   mech_targeting_override_end(mech, &scope->targeting, &tur->target, &target_x,
                               &target_y, &target_z, &tur->lockmode);
-  tur->targx = target_x;
-  tur->targy = target_y;
-  tur->targz = target_z;
+  tur->targx = clamp_int_to_short(target_x);
+  tur->targy = clamp_int_to_short(target_y);
+  tur->targz = clamp_int_to_short(target_z);
   btech_context_combat_arcs_override_set(tur->xcode.context, 0);
 }
 

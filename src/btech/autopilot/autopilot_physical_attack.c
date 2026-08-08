@@ -53,7 +53,8 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
   int section_hasbusyweap[4];
   int rleg_bth, lleg_bth;
   int is_rarm_ready, is_larm_ready;
-  int i, j;
+  int i;
+  DbRef j;
   float range;
 
   /* Log It */
@@ -70,7 +71,7 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
   /*! \todo {Might need to add in here something incase the target is a bsuit}
    */
-  if (range < 1.0) {
+  if (range < 1.0F) {
 
     /* We're beating on our main target */
     physical_target = target;
@@ -106,7 +107,7 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
             mech_position_real_x(target), mech_position_real_y(target));
 
         /* Just go for first one , can always add scoring later */
-        if (range < 1.0) {
+        if (range < 1.0F) {
           physical_target = target;
           break;
         }

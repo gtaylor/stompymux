@@ -24,11 +24,12 @@
 #include "registry_api.h"
 #include "section_types.h"
 
+#include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 enum {
   SCORE_MOD = 100,
   SAFE_SCORE = SCORE_MOD * 1000,
@@ -39,6 +40,11 @@ enum {
   CFAST_COUNT = 9,
   MAGIC_NUM = -123456,
 };
+
+static short simulation_map_coordinate(int coordinate) {
+  assert(coordinate >= SHRT_MIN && coordinate <= SHRT_MAX);
+  return (short)coordinate;
+}
 
 enum { SP_OPT_NORM, SP_OPT_FASTER, SP_OPT_SLOWER, SP_OPT_C };
 static const int sp_opt[SP_OPT_C] = {
@@ -108,7 +114,7 @@ static void ai_score_range_relax(int *minimum, int *maximum, int divisor) {
   *maximum = (old_minimum + old_maximum * (divisor - 1)) / divisor;
 }
 
-static void ai_send_message(Autopilot *a, Mech *m, char *msg) {
+static void ai_send_message(Autopilot *a, Mech *m, const char *msg) {
   auto_reply(m, msg);
   btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI, "%s", msg);
 }
@@ -125,6 +131,7 @@ static AiInfo ai_info(Mech *m, Autopilot *a) {
 int ai_crash(BattleMap *map, Mech *m, LocationSimulation *l) {
   float newx = 0.0, newy = 0.0;
   float tempspeed, maxspeed, acc;
+  float offset_value;
   int offset;
   int normangle;
   int mw_mod = 1;
@@ -144,14 +151,15 @@ int ai_crash(BattleMap *map, Mech *m, LocationSimulation *l) {
     if (mech_class(m) == CLASS_MW || mech_class(m) == CLASS_BSUIT)
       mw_mod = 60;
     /* XXX Jumping */
-    if (fabs(l->s) < 1.0)
-      offset = 3 * maxspeed * MP_PER_KPH * mw_mod;
+    if (fabsf(l->s) < 1.0F)
+      offset_value = 3.0F * maxspeed * MP_PER_KPH * (float)mw_mod;
     else {
-      offset = 2 * maxspeed * MP_PER_KPH * mw_mod;
-      if ((abs(normangle) > offset) && (l->s > (maxspeed * 2 / 3)))
-        offset -= offset / 2 * (3.0 * l->s / maxspeed - 2.0);
+      offset_value = 2.0F * maxspeed * MP_PER_KPH * (float)mw_mod;
+      if ((abs(normangle) > (int)offset_value) &&
+          (l->s > (maxspeed * 2.0F / 3.0F)))
+        offset_value -= offset_value / 2.0F * (3.0F * l->s / maxspeed - 2.0F);
     }
-    offset = offset * MOVE_MOD;
+    offset = (int)(offset_value * (float)MOVE_MOD);
     if (normangle < 0)
       normangle += 360;
     if (mech_is_dropship(m) && offset >= 10)
@@ -172,9 +180,7 @@ int ai_crash(BattleMap *map, Mech *m, LocationSimulation *l) {
         l->h = l->dh;
     }
   }
-  /* Speed update */
-  /* XXX MASC */
-  /* XXX heat (_hard_ to track) */
+  /* Speed update. XXX MASC and heat (_hard_ to track). */
   tempspeed = l->ds;
   if (mech_class(m) != CLASS_MW && mech_movement_type(m) != MOVE_VTOL &&
       (mech_movement_type(m) != MOVE_FLY || mech_is_landed(m)))
@@ -189,27 +195,27 @@ int ai_crash(BattleMap *map, Mech *m, LocationSimulation *l) {
         dif = 360 - dif;
       if (dif) {
         dif = (dif - 1) / 30 + 2;
-        tempspeed = tempspeed * (10 - dif) / 10;
+        tempspeed = tempspeed * (float)(10 - dif) / 10.0F;
       }
     } else if (btech_context_movement_slowdown_mode(mech_context(m)) == 1) {
       if (l->h != l->dh)
-        tempspeed = tempspeed * 2.0 / 3.0;
+        tempspeed = tempspeed * 2.0F / 3.0F;
       else
-        tempspeed = tempspeed * 3.0 / 4.0;
+        tempspeed = tempspeed * 3.0F / 4.0F;
     }
   }
   if (mech_movement_type(m) == MOVE_QUAD && mech_lateral_movement(m))
     tempspeed -= MP1;
-  if (tempspeed <= 0.0) {
-    tempspeed = 0.0;
+  if (tempspeed <= 0.0F) {
+    tempspeed = 0.0F;
   }
-  if (l->ds < 0.)
+  if (l->ds < 0.0F)
     tempspeed = -tempspeed;
-  if (tempspeed != l->s) {
+  if (fabsf(tempspeed - l->s) > 0.0001F) {
     if (mech_movement_type(m) == MOVE_QUAD)
-      acc = maxspeed / 10.;
+      acc = maxspeed / 10.0F;
     else
-      acc = maxspeed / 20.;
+      acc = maxspeed / 20.0F;
     if (tempspeed < l->s) {
       /* Decelerating */
       l->s -= acc;
@@ -222,11 +228,8 @@ int ai_crash(BattleMap *map, Mech *m, LocationSimulation *l) {
         l->s = tempspeed;
     }
   }
-  /* move_mech + NewHexEntered */
-  /* XXX Jumping mechs [aeros,VTOLs] */
-  /* XXX Non-mechs */
-  /* XXX Quads */
-  FindComponents(l->s * MOVE_MOD, l->h, &newx, &newy);
+  /* move_mech + NewHexEntered. XXX jumping, non-mechs, and quads. */
+  FindComponents(l->s * (float)MOVE_MOD, l->h, &newx, &newy);
   l->fx += newx;
   l->fy += newy;
   l->lx = l->x;
@@ -313,10 +316,10 @@ void location_simulation_initialize(LocationSimulation *location, Mech *mech) {
   location->s = mech_current_speed(mech);
   location->t = mech_real_terrain_get(mech);
   location->ds = mech_desired_speed(mech);
-  location->x = mech_position_x(mech);
-  location->y = mech_position_y(mech);
-  location->lx = mech_position_x(mech);
-  location->ly = mech_position_y(mech);
+  location->x = simulation_map_coordinate(mech_position_x(mech));
+  location->y = simulation_map_coordinate(mech_position_y(mech));
+  location->lx = simulation_map_coordinate(mech_position_x(mech));
+  location->ly = simulation_map_coordinate(mech_position_y(mech));
 }
 
 static void ai_path_collect_enemies(AiPathContext *path, Mech *mech,
@@ -336,7 +339,7 @@ static void ai_path_collect_enemies(AiPathContext *path, Mech *mech,
       continue;
     if (mech_team(tempMech) == mech_team(mech))
       continue;
-    if (mech_range_to(mech, tempMech) > 50.0)
+    if (mech_range_to(mech, tempMech) > 50.0F)
       continue; /* Inconsequential */
     if (path->enemy_count >= BATTLE_MAP_UNIT_CAPACITY)
       break;
@@ -364,7 +367,7 @@ static void ai_path_collect_friends(AiPathContext *path, Mech *mech,
       continue;
     if (mech_class(tempMech) != CLASS_MECH)
       continue;
-    if (mech_range_to(mech, tempMech) > 50.0)
+    if (mech_range_to(mech, tempMech) > 50.0F)
       continue; /* Inconsequential */
     if (path->friend_count >= BATTLE_MAP_UNIT_CAPACITY)
       break;
@@ -375,11 +378,7 @@ static void ai_path_collect_friends(AiPathContext *path, Mech *mech,
   }
 }
 
-/* This has been made .. slightly more complicated.
-   Basic idea (now): Calculate all the [n] states _simultaneously_ ;
-   our movement isn't affecting enemy/friend movement after all, just
-   our own, therefore this is _almost_ [n] times faster than the old code
-   (approx. 1/30 P60 per 'sheep outside combat, perhaps 1/10 P60 inside) */
+/* Simulate all candidate states independently for efficient path scoring. */
 
 static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
                           Autopilot *a, const int opts[][2], int num_o,
@@ -405,11 +404,11 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
     sd = sp_opt[opts[i][1]];
     if (sd) {
       if (sd < 0) {
-        lo[i].ds = lo[i].ds * 2.0 / 3.0;
+        lo[i].ds = lo[i].ds * 2.0F / 3.0F;
       } else if (sd == 1) {
         float ms = mech_effective_maximum_speed(m);
 
-        lo[i].ds = (lo[i].ds < MP1 ? MP1 : lo[i].ds) * 4.0 / 3.0;
+        lo[i].ds = (lo[i].ds < MP1 ? MP1 : lo[i].ds) * 4.0F / 3.0F;
         if (lo[i].ds > ms)
           lo[i].ds = ms;
       } else {
@@ -430,7 +429,9 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
         continue;
       }
       /* Base target-acquisition stuff */
-      if ((l = FindXYRange(lo[k].fx, lo[k].fy, dx, dy)) < br[k])
+      const float target_range = FindXYRange(lo[k].fx, lo[k].fy, dx, dy);
+      l = (int)target_range;
+      if (l < br[k])
         br[k] = l;
 
       /* Generally speaking we're going to the point spesified */
@@ -448,8 +449,10 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
       }
       /* Punish for not utilizing full speed (this is .. hm, flaky) */
       if (opts[k][1] != SP_OPT_FASTER &&
-          mech_effective_maximum_speed(m) > 0.1) {
-        sc = BOUNDED(0, 100 * lo[k].ds / mech_effective_maximum_speed(m), 100);
+          mech_effective_maximum_speed(m) > 0.1F) {
+        const float speed_percent =
+            100.0F * lo[k].ds / mech_effective_maximum_speed(m);
+        sc = BOUNDED(0, (int)speed_percent, 100);
         msc[k] -= (100 - sc) / 30; /* Basically, unused speed is bad */
       }
     }
@@ -585,8 +588,9 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
           if (out[k])
             continue;
           /* Dangerous to be far from buddy in fight */
-          l = FindXYRange(lo[k].fx, lo[k].fy, dx, dy);
-          if (gotenemy && (delx != 0.0 || dely != 0.0))
+          const float target_range = FindXYRange(lo[k].fx, lo[k].fy, dx, dy);
+          l = (int)target_range;
+          if (gotenemy && (delx != 0.0F || dely != 0.0F))
             tdan[k] += MIN(100, l * l);
           if (path->enemy_count)
             tdan[k] = tdan[k] / path->enemy_count;
@@ -655,7 +659,7 @@ static int ai_opponents(Autopilot *a, Mech *m) {
 static void ai_stop(Mech *mech, Autopilot *a) {
   char buf[128] = {0};
 
-  if (mech_desired_speed(mech) > 0.1) {
+  if (mech_desired_speed(mech) > 0.1F) {
     strncpy(buf, "stop", 128);
     mech_speed(a->mynum, mech, buf);
   }
@@ -668,11 +672,12 @@ void ai_set_speed(Mech *mech, Autopilot *a, float spd) {
   if (!mech || !a)
     return;
 
-  newspeed = FBOUNDED(
-      0, spd, ((mech_effective_maximum_speed(mech) * a->speed) / 100.0));
+  newspeed =
+      FBOUNDED(0.0F, spd,
+               (mech_effective_maximum_speed(mech) * (float)a->speed) / 100.0F);
 
-  if (mech_desired_speed(mech) != newspeed) {
-    snprintf(buf, SBUF_SIZE, "%f", newspeed);
+  if (fabsf(mech_desired_speed(mech) - newspeed) > 0.0001F) {
+    snprintf(buf, SBUF_SIZE, "%f", (double)newspeed);
     mech_speed(a->mynum, mech, buf);
   }
 }
@@ -686,7 +691,7 @@ void ai_set_heading(Mech *mech, Autopilot *a, int dir) {
   mech_heading(a->mynum, mech, buf);
 }
 
-static void ai_adjust_move(Autopilot *a, Mech *m, char *text, int hmod,
+static void ai_adjust_move(Autopilot *a, Mech *m, const char *text, int hmod,
                            int smod, int b_score) {
   ai_set_heading(m, a, mech_desired_heading_degrees(m) + hmod);
   switch (smod) {
@@ -699,16 +704,15 @@ static void ai_adjust_move(Autopilot *a, Mech *m, char *text, int hmod,
     btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI,
                        "%s state: %s+accelerating (hmod:%d) sc:%d",
                        ai_info(m, a).text, text, hmod, b_score);
-    ai_set_speed(
-        m, a,
-        (float)((mech_desired_speed(m) < MP1 ? MP1 : mech_desired_speed(m)) *
-                4.0 / 3.0));
+    ai_set_speed(m, a,
+                 (mech_desired_speed(m) < MP1 ? MP1 : mech_desired_speed(m)) *
+                     4.0F / 3.0F);
     break;
   case SP_OPT_SLOWER:
     btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI,
                        "%s state: %s+decelerating (hmod:%d) sc:%d",
                        ai_info(m, a).text, text, hmod, b_score);
-    ai_set_speed(m, a, (int)(mech_desired_speed(m) * 2.0 / 3.0));
+    ai_set_speed(m, a, mech_desired_speed(m) * 2.0F / 3.0F);
     break;
   }
 }

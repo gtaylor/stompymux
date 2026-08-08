@@ -32,8 +32,6 @@
 #include "registry_api.h"
 #include "repair_job.h"
 
-#define MECH_STAT_C /* want to use the POSIX stat() call. */
-
 #include "mech_classification_api.h"
 #include "mech_consistency_api.h"
 #include "mech_electronics_api.h"
@@ -162,10 +160,12 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
                  "Unable to open/create mech file! Sorry.");
     return;
   }
+  float const maximum_speed = mech_maximum_speed(mech);
+  float const jump_speed = mech_jump_speed(mech);
   fprintf(fp, "%d %d %d %d %d %.2f %.2f %d\n", mech_tonnage(mech),
           mech_tactical_range(mech), mech_long_range_sensor_range(mech),
           mech_scanner_range(mech), mech_heat_sink_count(mech),
-          mech_maximum_speed(mech), mech_jump_speed(mech),
+          (double)maximum_speed, (double)jump_speed,
           mech_technology_flags(mech));
   for (i = 0; i < NUM_SECTIONS; i++) {
     fprintf(fp, "%d %d %d %d\n", mech_section_armor(mech, i),

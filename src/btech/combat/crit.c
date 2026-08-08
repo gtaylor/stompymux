@@ -59,20 +59,20 @@
 
 void mech_speed_correct(Mech *mech) {
   float maxspeed = mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
-  int neg = 1;
+  float direction = 1.0F;
 
   if (mech_maximum_speed(mech) < 0.0F)
     mech_maximum_speed_set(mech, 0.0F);
   mech_cargo_weight_recalculate(mech);
   if (mech_desired_speed(mech) < -0.1F) {
-    maxspeed = maxspeed * 2.0 / 3.0;
-    neg = -1;
+    maxspeed = maxspeed * 2.0F / 3.0F;
+    direction = -1.0F;
   }
-  if (fabs(mech_desired_speed(mech)) > maxspeed)
-    mech_desired_speed_set(mech, maxspeed * neg);
+  if (fabsf(mech_desired_speed(mech)) > maxspeed)
+    mech_desired_speed_set(mech, maxspeed * direction);
 
-  if (fabs(mech_current_speed(mech)) > maxspeed)
-    mech_current_speed_set(mech, maxspeed * neg);
+  if (fabsf(mech_current_speed(mech)) > maxspeed)
+    mech_current_speed_set(mech, maxspeed * direction);
 }
 
 void mech_explosion_apply(Mech *wounded, Mech *attacker) {

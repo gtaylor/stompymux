@@ -35,6 +35,7 @@
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
+#include "mech_spot_api.h"
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
@@ -51,6 +52,14 @@ typedef struct SpotLinkEventData {
   float target_x;
   float target_y;
 } SpotLinkEventData;
+
+static bool positions_differ(float first, float second) {
+  return fabsf(first - second) > 0.0001F;
+}
+
+static float scaled_hex_elevation(int elevation) {
+  return ZSCALE * (float)elevation;
+}
 
 static bool mech_is_in_water(Mech *mech) {
   const char terrain = mech_real_terrain_get(mech);
@@ -86,8 +95,8 @@ static void mech_check_range(MuxEvent *e) {
     return;
   }
   range = mech_range_to(mech, spotter);
-  if (range > 2 * mech_radio_range(spotter) ||
-      mech_spotter_dbref(spotter) == -1 ||
+  const int maximum_range = 2 * mech_radio_range(spotter);
+  if (range > (float)maximum_range || mech_spotter_dbref(spotter) == -1 ||
       mech_map_dbref(spotter) != mech_map_dbref(mech)) {
     mech_notify(mech, MECHALL, "You have lost link with your spotter!");
     mech_spotter_dbref_set(mech, -1);
@@ -103,10 +112,10 @@ static void mech_spot_event(MuxEvent *e) {
 
   target = sd->target;
 
-  if (mech_position_real_x(mech) != sd->observer_x &&
-      mech_position_real_y(mech) != sd->observer_y &&
-      mech_position_real_x(target) != sd->target_x &&
-      mech_position_real_y(target) != sd->target_y) {
+  if (positions_differ(mech_position_real_x(mech), sd->observer_x) &&
+      positions_differ(mech_position_real_y(mech), sd->observer_y) &&
+      positions_differ(mech_position_real_x(target), sd->target_x) &&
+      positions_differ(mech_position_real_y(target), sd->target_y)) {
     mech_notify(target, MECHALL,
                 "The data link was not established due to movement!");
     mech_notify(mech, MECHALL,
@@ -224,7 +233,8 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     mech_notify(mech, MECHALL,
                 "You attempt to establish a data link..... please stand by.");
     range = mech_range_to(mech, target);
-    if (range > 2 * mech_radio_range(target)) {
+    const int maximum_range = 2 * mech_radio_range(target);
+    if (range > (float)maximum_range) {
       mech_notify(mech, MECHALL, "That target is our of data link range!");
       return;
     }
@@ -355,7 +365,8 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
     target = nullptr;
     mapx = mech_target_hex_x(spotter);
     mapy = mech_target_hex_y(spotter);
-    enemyZ = ZSCALE * mech_target_hex_z(spotter);
+    const int target_hex_z = mech_target_hex_z(spotter);
+    enemyZ = scaled_hex_elevation(target_hex_z);
     MapCoordToRealCoord(mapx, mapy, &enemyX, &enemyY);
   }
   spot_range =

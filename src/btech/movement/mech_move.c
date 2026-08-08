@@ -23,6 +23,7 @@
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "btmux_build_config.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
@@ -66,14 +67,17 @@ static int mech_movement_maximum_int(int first, int second) {
 }
 
 static int mech_stand_time(const Mech *mech) {
-  return 30 / BOUNDED(1, mech_maximum_speed(mech) / MP2, 30);
+  const float speed_factor = mech_maximum_speed(mech) / MP2;
+  const float bounded_factor = fminf(fmaxf(1.0F, speed_factor), 30.0F);
+  const float delay = 30.0F / bounded_factor;
+  return (int)delay;
 }
 
 float mech_jump_speed_for_map(const Mech *mech, const BattleMap *map) {
   float speed = mech_jump_speed(mech);
   if (mech_is_under_gravity(mech) && map != nullptr) {
-    speed =
-        speed * 100 / mech_movement_maximum_int(50, battle_map_gravity(map));
+    const int gravity = mech_movement_maximum_int(50, battle_map_gravity(map));
+    speed = speed * 100.0F / (float)gravity;
   }
   return speed;
 }
@@ -82,15 +86,24 @@ int mech_jump_speed_mp_for_map(const Mech *mech, const BattleMap *map) {
   return (int)(mech_jump_speed_for_map(mech, map) * MP_PER_KPH);
 }
 
-struct {
-  char *name;
-  char *full;
+static const struct {
+  const char *name;
+  const char *full;
   int ofs;
 } lateral_modes[] = {{"nw", "Front/Left", 300}, {"fl", "Front/Left", 300},
                      {"ne", "Front/Right", 60}, {"fr", "Front/Right", 60},
                      {"sw", "Rear/Left", 240},  {"rl", "Rear/Left", 240},
                      {"se", "Rear/Right", 120}, {"rr", "Rear/Right", 120},
                      {"-", "None", 0},          {nullptr, nullptr, 0}};
+
+bool mech_lateral_mode_details(int mode, const char **description,
+                               int *offset) {
+  if (mode < 0 || lateral_modes[mode].name == nullptr)
+    return false;
+  *description = lateral_modes[mode].full;
+  *offset = lateral_modes[mode].ofs;
+  return true;
+}
 
 const char *mech_lateral_description(Mech *mech) {
   int i;
@@ -118,7 +131,7 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
   if (!(((mech_movement_type(mech) == MOVE_QUAD) &&
          (CountDestroyedLegs(mech) == 0)) ||
         ((mech_class(mech) == CLASS_VTOL) ||
-         ((int)mech_class(mech) == (int)MOVE_HOVER)) ||
+         (mech_movement_type(mech) == MOVE_HOVER)) ||
         ((HasBoolAdvantage(mech_context(mech), player, "maneuvering_ace") &&
           (mech_pilot_dbref(mech) == player))))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -126,13 +139,12 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer)
-    buffer = "";
+  const char *mode = buffer ? buffer : "";
+  while (*mode && isspace((unsigned char)*mode))
+    mode++;
 
   for (i = 0; lateral_modes[i].name; i++)
-    if (!strcasecmp(lateral_modes[i].name, buffer))
+    if (!strcasecmp(lateral_modes[i].name, mode))
       break;
   if (!lateral_modes[i].name) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -218,7 +230,7 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  tprintf("You are going too slow to perform a bootlegger! The "
                          "required minimum speed is %4.1f KPH.",
-                         fMinSpeed));
+                         (double)fMinSpeed));
     return;
   }
 
@@ -288,16 +300,11 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
 
   wBTHMod = mech_movement_maximum_int(wBTHMod, 1);
 
-  while (buffer && *buffer && isspace((unsigned char)*buffer))
-    buffer++;
-  if (!buffer)
-    buffer = "";
-
   btech_channel_send(
       mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
       tprintf("#%ld attempts to do a bootlegger (mech). Tonnage: %d, "
               "Speed: %4.1f, BTHMod: %d",
-              mech_dbref(mech), wMechTons, fMechSpeed, wBTHMod));
+              mech_dbref(mech), wMechTons, (double)fMechSpeed, wBTHMod));
 
   if (MadePilotSkillRoll(mech, wBTHMod)) {
     wNewHeading = AcceptableDegree(mech_heading_degrees(mech) + wHeadingChange);
@@ -372,16 +379,19 @@ void mech_eta(DbRef player, void *data, char *buffer) {
   MapCoordToRealCoord(eta_x, eta_y, &fx, &fy);
   range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech), 0,
                     fx, fy, 0);
-  if (fabs(mech_current_speed(mech)) < 0.1)
+  float const current_speed = mech_current_speed(mech);
+  if (fabsf(current_speed) < 0.1F)
     mech_printf(mech, MECHALL,
                 "Range to hex (%d,%d) is %.1f.  ETA: Never, mech not moving.",
-                eta_x, eta_y, range);
+                eta_x, eta_y, (double)range);
   else {
-    etamin = (int)fabs(range / (mech_current_speed(mech) / KPH_PER_MP));
+    float const eta_minutes =
+        fabsf(range / (current_speed / (float)KPH_PER_MP));
+    etamin = clamp_float_to_int(eta_minutes);
     etahr = etamin / 60;
     etamin = etamin % 60;
     mech_printf(mech, MECHALL, "Range to hex (%d,%d) is %.1f.  ETA: %.2d:%.2d.",
-                eta_x, eta_y, range, etahr, etamin);
+                eta_x, eta_y, (double)range, etahr, etamin);
   }
 }
 
@@ -410,18 +420,18 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
     if (conditions.masc_enabled || conditions.supercharger_enabled ||
         conditions.sprinting)
       mspeed = (2.0F * mspeed / 3.0F) *
-               (1.5 + (conditions.masc_enabled ? 0.5 : 0.0) +
-                (conditions.supercharger_enabled ? 0.5 : 0.0) +
-                (conditions.sprinting ? 0.5 : 0.0));
+               (1.5F + (conditions.masc_enabled ? 0.5F : 0.0F) +
+                (conditions.supercharger_enabled ? 0.5F : 0.0F) +
+                (conditions.sprinting ? 0.5F : 0.0F));
 
     if ((mech_technology_flags(mech) & TRIPLE_MYOMER_TECH) &&
-        (mech_excess_heat(mech) >= 9.)) {
+        (mech_excess_heat(mech) >= 9.0F)) {
       if (conditions.sprinting) {
         if (btech_context_uses_tsm_sprint_bonus(mech_context(mech)))
-          mspeed = ceil((rint((mspeed / 1.5) / MP1) + 1) * 1.5) * MP1;
+          mspeed = ceilf((rintf((mspeed / 1.5F) / MP1) + 1.0F) * 1.5F) * MP1;
 
       } else {
-        mspeed = ceil((rint((mspeed / 1.5) / MP1) + 1) * 1.5) * MP1;
+        mspeed = ceilf((rintf((mspeed / 1.5F) / MP1) + 1.0F) * 1.5F) * MP1;
       }
     }
 
@@ -434,7 +444,7 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
     if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech))
       if ((map = btech_context_find_object(mech_context(mech),
                                            mech_map_dbref(mech))))
-        mspeed = mspeed * 100.0 /
+        mspeed = mspeed * 100.0F /
                  (float)(battle_map_gravity(map) > 50 ? battle_map_gravity(map)
                                                       : 50);
 
@@ -451,7 +461,7 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
         if (mech_technology_flags(mech) & SALVAGE_TECH)
           lugged = lugged / 2;
         if ((mech_technology_flags(mech) & TRIPLE_MYOMER_TECH) &&
-            (mech_excess_heat(mech) >= 9.) &&
+            (mech_excess_heat(mech) >= 9.0F) &&
             btech_context_uses_tsm_tow_bonus(mech_context(mech)))
           lugged = lugged / 2;
 
@@ -469,7 +479,7 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
     mech_load_cache_record(mech, lugged);
   }
   if (mech_is_destroyed(mech))
-    mspeed = 0.0;
+    mspeed = 0.0F;
   else {
     int mv = mech_cached_calculated_weight(mech);
     int sv = mech_tonnage(mech) * 1024;
@@ -483,8 +493,8 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
         mv = mv + (sv - mv) / 3;
     }
     if (3 * sv < (mech_cached_lugged_weight(mech) + mv))
-      mspeed = 0.0;
-    else
+      mspeed = 0.0F;
+    else {
 #ifdef WEIGHT_OVERSPEEDING
       mspeed = mech_maximum_speed(mech) * mech_tonnage(mech) * 1024.0 /
                mech_movement_maximum_int(
@@ -493,16 +503,19 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
                    (mech_movement_maximum_int(
                        1024, mv + mech_cached_lugged_weight(mech))));
 #else
-      mspeed =
-          mech_maximum_speed(mech) * mech_tonnage(mech) * 1024.0 /
-          mech_movement_maximum_int(
-              1024 * mech_tonnage(mech) + mech_cached_lugged_weight(mech) / 3,
-              (mech_movement_maximum_int(
-                  1024, mv + mech_cached_lugged_weight(mech))));
+      int const tonnage = mech_tonnage(mech);
+      int const denominator = mech_movement_maximum_int(
+          1024 * tonnage + mech_cached_lugged_weight(mech) / 3,
+          mech_movement_maximum_int(1024,
+                                    mv + mech_cached_lugged_weight(mech)));
+      mspeed = mech_maximum_speed(mech) * (float)tonnage * 1024.0F /
+               (float)denominator;
 #endif /* WEIGHT_OVERSPEEDING */
+    }
   }
-  mech_speed_cache_record(mech, mspeed,
-                          mech_movement_maximum_int(1, (int)mspeed / MP1) * 2);
+  int const speed_in_movement_points = clamp_float_to_int(mspeed / MP1);
+  mech_speed_cache_record(
+      mech, mspeed, mech_movement_maximum_int(1, speed_in_movement_points) * 2);
   return mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 }
 
@@ -510,7 +523,7 @@ float mech_effective_maximum_speed(Mech *mech) {
   return mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 }
 
-void mech_drop(DbRef player, void *data, char *buffer) {
+void mech_drop(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   float s1;
   int wDropLevels = 0;
@@ -545,16 +558,17 @@ void mech_drop(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  s1 = mech_effective_maximum_speed(mech) / 3.0;
+  s1 = mech_effective_maximum_speed(mech) / 3.0F;
 
   if ((mech_class(mech) == CLASS_MECH) && bsuit_swarmer_count(mech))
     tHasSwarmers = 1;
 
-  if (mech_class(mech) != CLASS_MW && fabs(mech_current_speed(mech)) > s1 * 2) {
+  float const current_speed = mech_current_speed(mech);
+  if (mech_class(mech) != CLASS_MW && fabsf(current_speed) > s1 * 2.0F) {
     mech_notify(mech, MECHALL, "You attempt a controlled drop while running.");
     wDropLevels = 2;
     wDropBTH = 2;
-  } else if (fabs(mech_current_speed(mech)) > s1) {
+  } else if (fabsf(current_speed) > s1) {
     mech_notify(mech, MECHALL,
                 "You attempt a controlled drop from your fast walk.");
     wDropLevels = 1;
@@ -773,4 +787,10 @@ void mech_stand(DbRef player, void *data, char *buffer) {
     if (args[i])
       free(args[i]);
   }
+}
+
+void mech_stand_empty(DbRef player, void *data) {
+  char arguments[] = "";
+
+  mech_stand(player, data, arguments);
 }

@@ -167,7 +167,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
       if (mech_is_jumping(target) || mech_is_out_of_control(target))
         continue;
 
-      if (mech_range_to(mech, target) > 1.0)
+      if (mech_range_to(mech, target) > 1.0F)
         continue;
 
       mech_printf(mech, MECHALL, "You manage to hit %s!",
@@ -180,13 +180,13 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
       while (tempDamage > 0) {
         if (tempDamage > 5) {
           DamageMech(target, mech, 1, mech_pilot_dbref(mech),
-                     btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1), 0,
-                     0, 5, 0, -1, 0, -1, 0, 1);
+                     btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1),
+                     0, 0, 5, 0, -1, 0, -1, 0, 1);
           tempDamage -= 5;
         } else {
           DamageMech(target, mech, 1, mech_pilot_dbref(mech),
-                     btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1), 0,
-                     0, tempDamage, 0, -1, 0, -1, 0, 1);
+                     btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1),
+                     0, 0, tempDamage, 0, -1, 0, -1, 0, 1);
           tempDamage = 0;
         }
       }

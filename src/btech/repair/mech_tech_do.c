@@ -22,6 +22,7 @@
 #include "mech_lifecycle.h"
 #include "mech_specification_api.h"
 #include "mech_tech_api.h"
+#include "mech_tech_do_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
 #include "mux/support/formatting.h"
@@ -67,21 +68,21 @@ static bool parts_consume_four(DbRef player, Mech *mech, int first_part,
                             sizeof(requirements) / sizeof(requirements[0]));
 }
 
-static struct {
-  char name;   /* Letter identifying the ammo in 'reload' */
-  char *lname; /* Long name (for printing) */
-  int aflag;   /* Flag to set on the crittype */
-  int rtype;   /* required type flag: if non-negative, weapon has
-                          to be this type to allow this ammo */
-  int ntype;   /* disallowed type flag: if non-negative, weapon
-                          cannot be this type to allow this ammo */
-  int rspec;   /* required 'special' flags: if non-zero,
-                          weapon has to have at least one of these
-                          bits in the 'special' flag for it to allow
-                          this ammo */
-  int nspec;   /* disallowes 'special' flags: if non-zero,
-                          weapon cannot have any of these bits set,
-                          in the special flag, to allow this ammo */
+static const struct {
+  char name;         /* Letter identifying the ammo in 'reload' */
+  const char *lname; /* Long name (for printing) */
+  int aflag;         /* Flag to set on the crittype */
+  int rtype;         /* required type flag: if non-negative, weapon has
+                                to be this type to allow this ammo */
+  int ntype;         /* disallowed type flag: if non-negative, weapon
+                                cannot be this type to allow this ammo */
+  int rspec;         /* required 'special' flags: if non-zero,
+                                weapon has to have at least one of these
+                                bits in the 'special' flag for it to allow
+                                this ammo */
+  int nspec;         /* disallowes 'special' flags: if non-zero,
+                                weapon cannot have any of these bits set,
+                                in the special flag, to allow this ammo */
 } ammo_types[] = {
     {'-', "normal", 0, -1, -1, 0, 0},
     {'L', "cluster", LBX_MODE, -1, -1, LBX, 0},
@@ -542,7 +543,7 @@ int reattach_fail(DbRef player, Mech *mech, int loc) {
 
   if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
     return 0;
-  tot = btech_random_range(mech_context(mech), 5, 94);
+  tot = btech_random_range_int(mech_context(mech), 5, 94);
   notify_printf(
       btech_context_evaluation(mech_context(mech)), player,
       "Despite your disastrous failure, you recover %d%% of the materials.",
@@ -573,7 +574,7 @@ int replacesuit_fail(DbRef player, Mech *mech, int loc) {
   if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
     return 0;
 
-  wRand = btech_random_range(mech_context(mech), 5, 94);
+  wRand = btech_random_range_int(mech_context(mech), 5, 94);
   notify_printf(
       btech_context_evaluation(mech_context(mech)), player,
       "Despite your disastrous failure, you recover %d%% of the materials.",
@@ -614,7 +615,7 @@ int reseal_fail(DbRef player, Mech *mech, int loc) {
 
   if (tech_roll(player, mech, RESEAL_DIFFICULTY) >= 0)
     return 0;
-  tot = btech_random_range(mech_context(mech), 5, 94);
+  tot = btech_random_range_int(mech_context(mech), 5, 94);
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "You don't manage to get all the water out and seal the "
                 "section, though you recover %d%% of the materials.",

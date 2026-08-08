@@ -78,11 +78,11 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg,
       damage = (mech_tonnage(mech) + 5) / weightdmg + 1;
     } else {
       /* Round Down to nearest ton -- TW Page 145 */
-      damage = (int)floor((((float)mech_tonnage(mech)) / weightdmg));
+      damage = mech_tonnage(mech) / weightdmg;
     }
 
     /* Calc in affect by TSM */
-    if ((mech_excess_heat(mech) >= 9.) &&
+    if ((mech_excess_heat(mech) >= 9.0F) &&
         (mech_technology_flags(mech) & TRIPLE_MYOMER_TECH)) {
       damage = damage * 2;
     }
@@ -210,6 +210,9 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg,
       }
     }
     break;
+  case PA_TRIP:
+  case PA_SAW:
+  case PA_CLAW:
   default:
     break;
   }

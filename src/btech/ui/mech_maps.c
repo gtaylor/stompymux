@@ -1,4 +1,5 @@
 #include "btech/context.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_conditions_api.h"
@@ -38,8 +39,8 @@ void mech_findcenter(DbRef player, void *data, char *buffer) {
                 "Current hex: (%d,%d,%d)\tRange to center: %.2f\t"
                 "Bearing to center: %d",
                 x, y, mech_position_z(mech),
-                FindHexRange(fx, fy, mech_position_real_x(mech),
-                             mech_position_real_y(mech)),
+                (double)FindHexRange(fx, fy, mech_position_real_x(mech),
+                                     mech_position_real_y(mech)),
                 FindBearing(mech_position_real_x(mech),
                             mech_position_real_y(mech), fx, fy));
 }
@@ -89,12 +90,12 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
                    "Target is out of scanner range.");
       return 0;
     }
-    *x = mech_position_x(tempMech);
-    *y = mech_position_y(tempMech);
+    *x = clamp_int_to_short(mech_position_x(tempMech));
+    *y = clamp_int_to_short(mech_position_y(tempMech));
     return 1;
   case 0:
-    *x = mech_position_x(mech);
-    *y = mech_position_y(mech);
+    *x = clamp_int_to_short(mech_position_x(mech));
+    *y = clamp_int_to_short(mech_position_y(mech));
     return 1;
   default:
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -210,10 +211,10 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
            maptext[5]);
   snprintf(mybuff[6], MBUF_SIZE,
            "270 (                   )  90  Speed:           %6.1f   %.150s",
-           mech_current_speed(mech), maptext[6]);
+           (double)mech_current_speed(mech), maptext[6]);
   snprintf(mybuff[7], MBUF_SIZE,
            "     \\                 /       Vertical Speed:  %6.1f   %.150s",
-           mech_vertical_speed(mech), maptext[7]);
+           (double)mech_vertical_speed(mech), maptext[7]);
   snprintf(mybuff[8], MBUF_SIZE,
            "      \\               /        Heading:           %4d   %.150s",
            mech_heading_degrees(mech), maptext[8]);

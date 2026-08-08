@@ -1,3 +1,4 @@
+#include "checked_conversion.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
@@ -13,8 +14,9 @@
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
 
-void ArmorStringFromIndex(int index, char *buffer, char type, char mtype) {
-  char **locs = ProperSectionStringFromType(type, mtype);
+void ArmorStringFromIndex(int index, char *buffer, UnitClass type,
+                          MechMovementType movement_type) {
+  const char *const *locs = ProperSectionStringFromType(type, movement_type);
   int high = 0;
 
   switch (type) {
@@ -169,7 +171,7 @@ int GetWeaponCrits(Mech *mech, int weapindx) {
                                            : 1;
 }
 
-int listmatch(char *const *foo, char *mat) {
+int listmatch(const char *const *foo, const char *mat) {
   int i;
 
   for (i = 0; foo[i]; i++)
@@ -231,7 +233,7 @@ void do_sub_magic(Mech *mech, int loud) {
 
     jjs = maxjjs;
   }
-  ((mech)->rd.jumpspeed) = MP1 * jjs;
+  ((mech)->rd.jumpspeed) = MP1 * (float)jjs;
   wanths_f = (hses / shs_size) * hs_eff;
   wanths = wanths_f - (dest_hses * hs_eff / shs_size);
   if (loud)
@@ -247,7 +249,7 @@ void do_sub_magic(Mech *mech, int loud) {
                 wanths < ((mech)->ud.numsinks) ? "add the extra HS critical(s)"
                                                : "fix the template"));
   } else
-    ((mech)->ud.numsinks) = wanths;
+    ((mech)->ud.numsinks) = clamp_int_to_char(wanths);
   ((mech)->rd.onumsinks) = wanths_f;
 
   if ((((mech)->rd.onumsinks) * shs_size / hs_eff -
@@ -554,13 +556,14 @@ void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
    */
   /* Ugly recursive piece of code :> */
   char *c;
+  char empty_buffer[] = "";
   int i1, i2, i3;
   int section, critical;
 
   while (buffer && *buffer && isspace((unsigned char)*buffer))
     buffer++;
   if (!buffer)
-    buffer = "";
+    buffer = empty_buffer;
   if ((c = strstr(buffer, ","))) {
     *c = 0;
     c++;

@@ -181,7 +181,7 @@ void fun_btid2db(char *buff, char **bufc, DbRef player, DbRef cause,
       return;
     }
   }
-  safe_tprintf_str(buff, bufc, "#%d", (int)mechnum);
+  safe_tprintf_str(buff, bufc, "#%ld", mechnum);
 }
 
 void fun_bthexlos(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -194,7 +194,8 @@ void fun_bthexlos(char *buff, char **bufc, DbRef player, DbRef cause,
 
   Mech *mech;
   BattleMap *map;
-  int x = -1, y = -1, mechnum;
+  int x = -1, y = -1;
+  DbRef mechnum;
   float fx, fy;
 
   if (!is_wizard(context->world->database, player)) {
@@ -243,7 +244,7 @@ void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
      fargs[1] = target
    */
 
-  int mechnum;
+  DbRef mechnum;
   Mech *mech, *target;
 
   if (!is_wizard(context->world->database, player)) {
@@ -305,7 +306,7 @@ void fun_btaddstores(char *buff, char **bufc, DbRef player, DbRef cause,
      fargs[1] = partname
      fargs[2] = quantity
    */
-  int loc;
+  DbRef loc;
   int index = -1, id = 0, brand = 0, count;
 
   if (!is_wizard(context->world->database, player)) {
@@ -350,7 +351,7 @@ void fun_btaddstores(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   econ_change_items(context->btech, loc, id, brand, count);
   btech_channel_send(context->btech, BTECH_CHANNEL_MECH_ECON, "%s",
-                     tprintf("#%ld added %d %s to #%d", player, count,
+                     tprintf("#%ld added %d %s to #%ld", player, count,
                              get_parts_vlong_name(context->btech, id, brand),
                              loc));
   safe_tprintf_str(buff, bufc, "1");

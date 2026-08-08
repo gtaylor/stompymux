@@ -26,8 +26,10 @@ int tactical_hex_offset(int x, int y, int display_columns,
 
 static void tactical_row_sketch(char *position, int left_offset,
                                 const char *source, int length) {
-  memset(position, ' ', left_offset);
-  memcpy(position + left_offset, source, length);
+  if (left_offset < 0 || length < 0)
+    return;
+  memset(position, ' ', (size_t)left_offset);
+  memcpy(position + left_offset, source, (size_t)length);
   position[left_offset + length] = '\0';
 }
 
@@ -62,7 +64,7 @@ void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
   char *position = buffer;
 
   for (int y = 0; y < top_offset; y++) {
-    memset(position, ' ', display_columns - 1);
+    memset(position, ' ', (size_t)(display_columns - 1));
     position[display_columns - 1] = '\0';
     position += display_columns;
   }
@@ -114,11 +116,11 @@ void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
         break;
       case SMOKE:
       case FIRE:
-        top_character = terrain;
+        top_character = (char)terrain;
         bottom_character =
             show_underlying_terrain
-                ? map_real_terrain_get(map, start_x + x, start_y + y)
-                : terrain;
+                ? (char)map_real_terrain_get(map, start_x + x, start_y + y)
+                : (char)terrain;
         break;
       case HIGHWATER:
         top_character = '~';
@@ -136,7 +138,7 @@ void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
         top_character = bottom_character = '?';
         break;
       default:
-        top_character = bottom_character = terrain;
+        top_character = bottom_character = (char)terrain;
         break;
       }
 
@@ -146,7 +148,7 @@ void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
       base[1] = top_character;
       base[display_columns] = bottom_character;
       if (elevation > 0)
-        bottom_character = '0' + elevation;
+        bottom_character = (char)('0' + elevation);
       base[display_columns + 1] = bottom_character;
     }
   }

@@ -141,7 +141,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
           break;
         case JUMP_JET:
           mech_jump_speed_lower(wounded, MP1);
-          if (attacker && mech_jump_speed(wounded) == 0 &&
+          if (attacker && mech_jump_speed(wounded) <= 0.0F &&
               mech_is_jumping(wounded)) {
             mech_notify(wounded, MECHALL,
                         "Losing your last Jump Jet you fall from the sky!!!!!");

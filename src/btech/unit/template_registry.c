@@ -65,7 +65,7 @@ static int tmplcmp(void const *v1, void const *v2) {
 static int scan_template_dir(MechTemplateRegistry *registry,
                              char const *dirname, char const *parent) {
   char buf[1000] = {0};
-  int dirnamelen = strlen(dirname);
+  size_t dirnamelen = strlen(dirname);
   DIR *dir = opendir(dirname);
 
   if (dir == nullptr) {
@@ -183,7 +183,7 @@ static void template_registry_reset(MechTemplateRegistry *registry) {
   *registry = (MechTemplateRegistry){0};
 }
 
-static char *const subdirs[] = {
+static const char *const subdirs[] = {
     "3025",   "3050",    "3055",     "3058",         "3060",     "2750",
     "Aero",   "MISC",    "Clan",     "ClanVehicles", "Clan2nd",  "ClanAero",
     "Custom", "Solaris", "Vehicles", "MFNA",         "Infantry", nullptr};

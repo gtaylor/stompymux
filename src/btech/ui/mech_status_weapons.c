@@ -1,3 +1,4 @@
+#include "mech_status_api.h"
 #include "mech_status_render_internal.h"
 
 void PrintWeaponStatus(EvaluationContext *evaluation, Mech *mech,

@@ -207,7 +207,7 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
   return buffer;
 }
 
-void mech_weaponspecs(DbRef player, void *data, char *buffer) {
+void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
   EvaluationContext *evaluation = btech_context_evaluation(context);
@@ -287,7 +287,7 @@ char *sectstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
 }
 
 char *critstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
-  char *tmp;
+  const char *tmp;
   int index, i, max_crits;
   int type;
 
@@ -331,7 +331,7 @@ char *critstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
 }
 
 char *armorstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
-  char **locs;
+  const char *const *locs;
   int index;
   int iter, curarm, curint, totarm, totint;
 
@@ -494,12 +494,14 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
     if (!equipment_is_weapon(type))
       return status_text(buffer, "#-1 NOT AMMO OR WEAPON");
     else {
+      const int ammo_mode = mech_critical_ammo_mode(mech, index, crit);
       weapindex = weapon_from_equipment_index(type);
       snprintf(buffer, MBUF_SIZE, "%c%c",
                GetWeaponFireModeLetter_Model_Mode(
                    weapindex, mech_critical_fire_mode(mech, index, crit)),
-               GetWeaponAmmoModeLetter_Model_Mode(
-                   weapindex, mech_critical_ammo_mode(mech, index, crit)));
+               ammo_mode < 0 ? ' '
+                             : GetWeaponAmmoModeLetter_Model_Mode(
+                                   weapindex, (unsigned int)ammo_mode));
       return buffer;
     }
   } else if (flag == 6) {
@@ -600,7 +602,7 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   KillText(foo);
 }
 
-char *evaluate_ammo_amount(int now, int max) {
+const char *evaluate_ammo_amount(int now, int max) {
   int f = (now * 100) / max;
 
   if (f >= 50)

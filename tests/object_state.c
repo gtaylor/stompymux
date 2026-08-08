@@ -9,6 +9,8 @@
 #include "mux/objects/object_state.h"
 #include "mux/server/server_config.h"
 
+bool is_good_obj(GameDatabase *database, DbRef object);
+
 bool is_good_obj(GameDatabase *database, DbRef object) {
   return object >= 0 && object < database->top &&
          game_object_type(database, object) != OBJECT_TYPE_GARBAGE;
@@ -22,22 +24,19 @@ static ObjectStateValue string_value(const char *value) {
 }
 
 static int check_committed_values(GameDatabase *database) {
-  const ObjectStateValue *empty =
-      object_state_get(database, 0, "bank", "memo");
+  const ObjectStateValue *empty = object_state_get(database, 0, "bank", "memo");
   const ObjectStateValue *balance =
       object_state_get(database, 0, "bank", "balance");
   const ObjectStateValue *enabled =
       object_state_get(database, 0, "bank", "enabled");
-  const ObjectStateValue *rate =
-      object_state_get(database, 1, "bank", "rate");
+  const ObjectStateValue *rate = object_state_get(database, 1, "bank", "rate");
 
   return empty && empty->type == OBJECT_STATE_STRING &&
          empty->as.string.length == 0 && balance &&
-         balance->type == OBJECT_STATE_INTEGER &&
-         balance->as.integer == 1250 && enabled &&
-         enabled->type == OBJECT_STATE_BOOLEAN && enabled->as.boolean && rate &&
-         rate->type == OBJECT_STATE_NUMBER && fabs(rate->as.number - 1.25) <
-                                                   0.000001;
+         balance->type == OBJECT_STATE_INTEGER && balance->as.integer == 1250 &&
+         enabled && enabled->type == OBJECT_STATE_BOOLEAN &&
+         enabled->as.boolean && rate && rate->type == OBJECT_STATE_NUMBER &&
+         fabs(rate->as.number - 1.25) < 0.000001;
 }
 
 int main(void) {

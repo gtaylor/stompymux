@@ -31,24 +31,27 @@ int char_rollsaving(BtechContext *context);
 int char_rollunskilled(BtechContext *context);
 int char_rollskilled(BtechContext *context);
 int char_rolld6(BtechContext *context, int num);
-int char_getvalue(BtechContext *context, DbRef player, char *name);
-void char_setvalue(BtechContext *context, DbRef player, char *name, int value);
+int char_getvalue(BtechContext *context, DbRef player, const char *name);
+void char_setvalue(BtechContext *context, DbRef player, const char *name,
+                   int value);
 int char_getskilltargetbycode(BtechContext *context, DbRef player, int code,
                               int modifier);
-int char_getskilltarget(BtechContext *context, DbRef player, char *name,
+int char_getskilltarget(BtechContext *context, DbRef player, const char *name,
                         int modifier);
 int char_getxpbycode(BtechContext *context, DbRef player, int code);
 int char_gainxpbycode(BtechContext *context, DbRef player, int code, int amount,
                       int override);
-int char_gainxp(BtechContext *context, DbRef player, char *skill, int amount);
-int char_getskillsuccess(BtechContext *context, DbRef player, char *name,
+int char_gainxp(BtechContext *context, DbRef player, const char *skill,
+                int amount);
+int char_getskillsuccess(BtechContext *context, DbRef player, const char *name,
                          int modifier, int loud);
-int char_getskillmargsucc(BtechContext *context, DbRef player, char *name,
+int char_getskillmargsucc(BtechContext *context, DbRef player, const char *name,
                           int modifier);
-int char_getopposedskill(BtechContext *context, DbRef first, char *skill1,
-                         DbRef second, char *skill2);
-int char_getattrsave(BtechContext *context, DbRef player, char *name);
-int char_getattrsavesucc(BtechContext *context, DbRef player, char *name);
+DbRef char_getopposedskill(BtechContext *context, DbRef first,
+                           const char *skill1, DbRef second,
+                           const char *skill2);
+int char_getattrsave(BtechContext *context, DbRef player, const char *name);
+int char_getattrsavesucc(BtechContext *context, DbRef player, const char *name);
 void zap_unneccessary_stats(void);
 void init_btechstats(BtechContext *context);
 void btech_stats_destroy(BtechContext *context);
@@ -75,10 +78,10 @@ void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded);
 void AccumulateComputerXP(DbRef pilot, Mech *mech, int reason);
 int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name);
 void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded,
-                     int numOccurences, float multiplier, int weapindx,
+                     int numOccurences, double multiplier, int weapindx,
                      int bth);
 void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
-                        int numOccurences, float multiplier, int weapindx,
+                        int numOccurences, double multiplier, int weapindx,
                         int bth);
 void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs,

@@ -22,6 +22,7 @@
 #include "mech_condition_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
+#include "mech_lite_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_sensor_state_api.h"

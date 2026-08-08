@@ -63,7 +63,7 @@ static_assert(_Generic(&mine_field_trigger,
                   void (*)(Mech *, MineTriggerReason): 1,
                   default: 0));
 static_assert(_Generic(&phys_form,
-                  char *(*)(PhysicalAttackType, int): 1,
+                  const char *(*)(PhysicalAttackType, int): 1,
                   default: 0));
 static_assert(_Generic(&mech_event_cancel,
                   void (*)(Mech *, MechEventType): 1,

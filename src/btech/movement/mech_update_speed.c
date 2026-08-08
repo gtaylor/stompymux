@@ -33,7 +33,8 @@
 static float speed_heat_decrease(float speed, float maximum_speed,
                                  float penalty) {
   return speed *
-         (ceil((rint((maximum_speed / 1.5) / MP1) - (penalty / MP1)) * 1.5) *
+         (ceilf((rintf((maximum_speed / 1.5F) / MP1) - (penalty / MP1)) *
+                1.5F) *
           MP1) /
          maximum_speed;
 }
@@ -110,41 +111,42 @@ void mech_speed_update(Mech *mech) {
   int technology = mech_technology_flags(mech);
 
   if (mech_is_fallen(mech) || mech_is_jumping(mech) ||
-      mech_maximum_speed(mech) <= 0.0)
+      mech_maximum_speed(mech) <= 0.0F)
     return;
-  tempspeed = fabs(mech_desired_speed(mech));
+  tempspeed = fabsf(mech_desired_speed(mech));
   maxspeed = mech_effective_maximum_speed(mech);
-  if (maxspeed < 0.0)
-    maxspeed = 0.0;
+  if (maxspeed < 0.0F)
+    maxspeed = 0.0F;
 
   if (conditions.masc_enabled && conditions.supercharger_enabled)
-    maxspeed = ceil((rint(maxspeed / 1.5) / MP1) * 2.5) * MP1;
+    maxspeed = ceilf((rintf(maxspeed / 1.5F) / MP1) * 2.5F) * MP1;
   else if (conditions.masc_enabled)
-    maxspeed = (4. / 3.) * maxspeed;
+    maxspeed = (4.0F / 3.0F) * maxspeed;
   else if (conditions.supercharger_enabled)
-    maxspeed = (4. / 3.) * maxspeed;
+    maxspeed = (4.0F / 3.0F) * maxspeed;
 
   if (technology & TRIPLE_MYOMER_TECH) {
-    if (mech_excess_heat(mech) >= 9.)
+    if (mech_excess_heat(mech) >= 9.0F)
       maxspeed =
-          ceil((rint((mech_effective_maximum_speed(mech) / 1.5) / MP1) + 1) *
-               1.5) *
+          ceilf((rintf((mech_effective_maximum_speed(mech) / 1.5F) / MP1) +
+                 1.0F) *
+                1.5F) *
           MP1;
     if (mech_desired_speed(mech) >= maxspeed)
       mech_desired_speed_set(mech, maxspeed);
   }
 
-  if (mech_excess_heat(mech) >= 5.) {
-    if (mech_excess_heat(mech) >= 25.)
+  if (mech_excess_heat(mech) >= 5.0F) {
+    if (mech_excess_heat(mech) >= 25.0F)
       tempspeed = speed_heat_decrease(tempspeed, maxspeed, MP5);
-    else if (mech_excess_heat(mech) >= 20.)
+    else if (mech_excess_heat(mech) >= 20.0F)
       tempspeed = speed_heat_decrease(tempspeed, maxspeed, MP4);
-    else if (mech_excess_heat(mech) >= 15.)
+    else if (mech_excess_heat(mech) >= 15.0F)
       tempspeed = speed_heat_decrease(tempspeed, maxspeed, MP3);
-    else if (mech_excess_heat(mech) >= 10.)
+    else if (mech_excess_heat(mech) >= 10.0F)
       tempspeed = speed_heat_decrease(tempspeed, maxspeed, MP2);
     else if (!((technology & TRIPLE_MYOMER_TECH) &&
-               mech_excess_heat(mech) >= 9))
+               mech_excess_heat(mech) >= 9.0F))
       tempspeed = speed_heat_decrease(tempspeed, maxspeed, MP1);
   }
   if (mech_class(mech) != CLASS_MW && mech_movement_type(mech) != MOVE_VTOL &&
@@ -164,21 +166,21 @@ void mech_speed_update(Mech *mech) {
         dif = (dif - 1) / 30;
         dif = (dif + 2);
         if (conditions.tight_turn_mode)
-          tempspeed = (tempspeed * (10 - dif) / 10) - (MP1 * 0.4);
+          tempspeed = (tempspeed * (float)(10 - dif) / 10.0F) - (MP1 * 0.4F);
         else
-          tempspeed = tempspeed * (10 - dif) / 10;
+          tempspeed = tempspeed * (float)(10 - dif) / 10.0F;
       }
     } else if (btech_context_movement_slowdown_mode(context) == 1) {
       if (mech_heading_degrees(mech) != mech_desired_heading_degrees(mech))
-        tempspeed = tempspeed * 2.0 / 3.0;
+        tempspeed = tempspeed * 2.0F / 3.0F;
       else
-        tempspeed = tempspeed * 3.0 / 4.0;
+        tempspeed = tempspeed * 3.0F / 4.0F;
     }
 #ifdef BT_MOVEMENT_MODES
     if ((conditions.sprinting || conditions.evading) &&
         !(HasBoolAdvantage(context, mech_pilot_dbref(mech), "speed_demon") ||
           HasBoolAdvantage(context, mech_pilot_dbref(mech), "maneuvering_ace")))
-      tempspeed = (tempspeed * 2) / 3;
+      tempspeed = (tempspeed * 2.0F) / 3.0F;
 #endif
     mech_heading_change_clear(mech);
   }
@@ -192,19 +194,19 @@ void mech_speed_update(Mech *mech) {
       tempspeed = speed_old_decrease(tempspeed, maxspeed, MP3);
   }
 #endif
-  if (tempspeed <= 0.0)
-    tempspeed = 0.0;
-  if (mech_desired_speed(mech) < 0.)
+  if (tempspeed <= 0.0F)
+    tempspeed = 0.0F;
+  if (mech_desired_speed(mech) < 0.0F)
     tempspeed = -tempspeed;
 
   float current_speed = mech_current_speed(mech);
-  if (tempspeed != current_speed) {
+  if (fabsf(tempspeed - current_speed) > 0.0001F) {
     if (mech_movement_type(mech) == MOVE_QUAD)
-      acc = maxspeed / 10.;
+      acc = maxspeed / 10.0F;
     else
-      acc = maxspeed / 20.;
+      acc = maxspeed / 20.0F;
     if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "speed_demon"))
-      acc *= 1.25;
+      acc *= 1.25F;
 
     if (tempspeed < current_speed) {
       current_speed -= acc;

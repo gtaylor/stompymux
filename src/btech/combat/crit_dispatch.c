@@ -133,7 +133,7 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
         return;
     }
 
-    index = btech_random_range(context, 0, count - 1);
+    index = btech_random_range_int(context, 0, count - 1);
     critHit = critList[index]; /* This one should be linear */
 
     critType = mech_critical_part_type(wounded, hitloc, critHit);

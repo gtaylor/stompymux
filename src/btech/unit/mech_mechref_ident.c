@@ -14,6 +14,8 @@
  *
  */
 
+#include "mech_mechref_ident_api.h"
+
 #include <string.h>
 
 static const struct {

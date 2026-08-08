@@ -16,6 +16,7 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "equipment_types.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
@@ -53,7 +54,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
   bool skid_cliff = btech_context_uses_skid_cliff_rules(context);
   MechConditionSummary condition = mech_condition_summary(mech);
 
-  switch ((int)mech_movement_type(mech)) {
+  switch (mech_movement_type(mech)) {
   case MOVE_BIPED:
   case MOVE_QUAD:
 
@@ -75,7 +76,8 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                     "high![reset]");
         if (mech_has_active_pilot(mech) &&
             MadePilotSkillRoll(mech,
-                               (int)mech_position_real_z(mech) / ZSCALE / 3)) {
+                               clamp_float_to_int(mech_position_real_z(mech) /
+                                                  (float)ZSCALE / 3.0F))) {
 
           mech_notify(mech, MECHALL, "[bold]You land safely.[reset]");
           mech_jump_land(mech);
@@ -104,11 +106,13 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       if (mech_pilot_dbref(mech) == -1 ||
           (!skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3,
+               mech,
+               clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                   3,
                1)) ||
           (skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1),
+               mech, mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1),
                1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
@@ -134,8 +138,10 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       /* Walked off a cliff ... */
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
       avoidbth = skid_cliff
-                     ? mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1)
-                     : ((fabs((mech_current_speed(mech)) + MP1) / MP1) / 3);
+                     ? mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1)
+                     : clamp_float_to_int(
+                           fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                           3;
 
       if (mech_pilot_dbref(mech) == -1 ||
           (!condition.auto_fall &&
@@ -225,8 +231,9 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
 
         if (mech_pilot_dbref(mech) == -1 ||
             MadePilotSkillRoll(
-                mech,
-                (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3)) {
+                mech, clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) /
+                                         MP1) /
+                          3)) {
 
           mech_notify(mech, MECHALL, "You manage to stop before falling in.");
           mech_los_broadcast(mech, "stops suddenly to avoid going for a swim!");
@@ -296,6 +303,16 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         done = 1;
       }
     }
+    break;
+  case MOVE_TRACK:
+  case MOVE_WHEEL:
+  case MOVE_HOVER:
+  case MOVE_VTOL:
+  case MOVE_HULL:
+  case MOVE_FOIL:
+  case MOVE_FLY:
+  case MOVE_SUB:
+  case MOVE_NONE:
     break;
   }
   return (HexTransitionResult){.done = done};

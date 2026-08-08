@@ -77,7 +77,7 @@ const char *GetAmmoDesc_Model_Mode(int model, int mode) {
   return "";
 }
 
-char GetWeaponAmmoModeLetter_Model_Mode(int model, int mode) {
+char GetWeaponAmmoModeLetter_Model_Mode(int model, unsigned int mode) {
   if (!(mode & AMMO_MODES))
     return ' ';
   if (mode & CLUSTER_MODE)
@@ -152,9 +152,13 @@ char GetWeaponFireModeLetter_Model_Mode(int model, int mode) {
 }
 
 char GetWeaponAmmoModeLetter(Mech *mech, int loop, int crit) {
+  const int mode = mech_critical_ammo_mode(mech, loop, crit);
+
+  if (mode < 0)
+    return ' ';
   return GetWeaponAmmoModeLetter_Model_Mode(
       weapon_from_equipment_index(mech_critical_part_type(mech, loop, crit)),
-      mech_critical_ammo_mode(mech, loop, crit));
+      (unsigned int)mode);
 }
 
 char GetWeaponFireModeLetter(Mech *mech, int loop, int crit) {
@@ -429,7 +433,7 @@ const char *GetArcID(Mech *mech, int arc) {
 }
 
 MechDisplayId mech_to_mech_display_id_base(Mech *see, Mech *mech, int inlos) {
-  char *mname;
+  const char *mname;
   MechDisplayId id = {0};
 
   BtechContext *context = mech_context(mech);
@@ -449,7 +453,7 @@ MechDisplayId mech_to_mech_display_id_base(Mech *see, Mech *mech, int inlos) {
 }
 
 MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech) {
-  char *mname;
+  const char *mname;
   int team;
   MechDisplayId id = {0};
 

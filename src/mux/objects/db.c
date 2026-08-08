@@ -247,7 +247,7 @@ void attribute_clear(GameDatabase *database, DbRef thing, int atr) {
  */
 
 void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
-                       char *buff) {
+                       const char *buff) {
   char truncated[LBUF_SIZE];
   char *text;
   if (thing < 0 || atr < 0 || atr >= 256)
@@ -264,8 +264,8 @@ void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
   database->objects[thing].native.values[atr] = text;
 }
 
-void attribute_add(GameDatabase *database, DbRef thing, int atr, char *buff,
-                   long flags) {
+void attribute_add(GameDatabase *database, DbRef thing, int atr,
+                   const char *buff, long flags) {
   (void)flags;
   attribute_add_raw(database, thing, atr, buff);
 }

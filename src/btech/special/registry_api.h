@@ -24,10 +24,10 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
 bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
                                char *command);
 void mech_remove_from_all_maps(Mech *mech);
-void mech_remove_from_all_maps_except(Mech *mech, int num);
+void mech_remove_from_all_maps_except(Mech *mech, DbRef num);
 void btech_special_objects_load(BtechContext *context);
 void btech_special_objects_update(BtechContext *context);
-void *NewSpecialObject(BtechContext *context, long id, int type);
+void *NewSpecialObject(BtechContext *context, DbRef id, int type);
 void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key);
 void btech_special_object_dispose(BtechContext *context, DbRef player,
                                   DbRef key);

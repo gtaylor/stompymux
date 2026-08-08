@@ -44,7 +44,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer);
 void mechrep_Rreload(DbRef player, void *data, char *buffer);
 void mechrep_Rrepair(DbRef player, void *data, char *buffer);
 void mechrep_Raddspecial(DbRef player, void *data, char *buffer);
-char *techstatus_func(Mech *mech);
+const char *techstatus_func(Mech *mech);
 void mechrep_Rshowtech(DbRef player, void *data, char *buffer);
 void mechrep_gettechstring(Mech *mech, char *buffer);
 void mechrep_Rdeltech(DbRef player, void *data, char *buffer);

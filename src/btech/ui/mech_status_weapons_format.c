@@ -180,8 +180,8 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     if (technology & TRIPLE_MYOMER_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "TSM(%s)  ",
-               mech_excess_heat(mech) >= 9.0 ? "[fg=green bold]On[reset]"
-                                             : "[fg=green]Off[reset]");
+               mech_excess_heat(mech) >= 9.0F ? "[fg=green bold]On[reset]"
+                                              : "[fg=green]Off[reset]");
 
     if (has_tag) {
       DbRef tag_target_dbref = mech_tag_target_dbref(mech);

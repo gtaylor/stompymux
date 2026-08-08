@@ -208,6 +208,7 @@ void radio_color_code(char buffer[static 32], Mech *m, int i, int obs,
 
 void mech_set_channelmode(DbRef player, void *data, char *buffer) {
   int chn = -1, nm = 0, i;
+  size_t buf_length;
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   char buf[SBUF_SIZE] = {0};
@@ -313,24 +314,24 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
     return;
   }
   mech_radio_mode_set(mech, chn, nm);
-  i = 0;
+  buf_length = 0;
 
   if (nm & FREQ_INFO)
-    buf[i++] = 'I';
+    buf[buf_length++] = 'I';
   if (nm & FREQ_MUTE)
-    buf[i++] = 'U';
+    buf[buf_length++] = 'U';
   if (nm & FREQ_RELAY)
-    buf[i++] = 'E';
+    buf[buf_length++] = 'E';
   if (nm & FREQ_SCAN)
-    buf[i++] = 'S';
-  if (!i)
-    buf[i++] = '-';
+    buf[buf_length++] = 'S';
+  if (!buf_length)
+    buf[buf_length++] = '-';
   if (nm / FREQ_REST) {
-    snprintf(buf + i, sizeof(buf) - i, "/color:%c",
+    snprintf(buf + buf_length, sizeof(buf) - buf_length, "/color:%c",
              radio_colorstr[nm / FREQ_REST - 1]);
-    i = strlen(buf);
+    buf_length = strlen(buf);
   }
-  buf[i] = 0;
+  buf[buf_length] = 0;
   notify_printf(evaluation, player,
                 "Channel %c <send> mode set to %s (flags:%s).", 'A' + chn,
                 nm & FREQ_DIGITAL ? "digital" : "analog", buf);

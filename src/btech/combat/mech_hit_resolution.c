@@ -93,17 +93,17 @@ int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
 
   /* If we're a heavy gauss rifle, damage gets altered by range. */
   if (MechWeapons[weapindx].special & HVYGAUSS) {
-    if (fRange > MechWeapons[weapindx].medrange)
+    if (fRange > (float)MechWeapons[weapindx].medrange)
       wWeapDamage = 10;
-    else if (fRange > MechWeapons[weapindx].shortrange)
+    else if (fRange > (float)MechWeapons[weapindx].shortrange)
       wWeapDamage = 20;
   }
 
   /* If we're a snub ppc, damage gets altered by range. */
   if (MechWeapons[weapindx].special & SNUBPPC) {
-    if (fRange > MechWeapons[weapindx].medrange)
+    if (fRange > (float)MechWeapons[weapindx].medrange)
       wWeapDamage = 5;
-    else if (fRange > MechWeapons[weapindx].shortrange)
+    else if (fRange > (float)MechWeapons[weapindx].shortrange)
       wWeapDamage = 8;
   }
 
@@ -131,18 +131,18 @@ int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
    * on range */
   if (btech_context_range_modifies_damage(mech_context(mech)) &&
       weapon_catalogue_is_energy(weapindx)) {
-    if (fRange <= 1.0)
+    if (fRange <= 1.0F)
       wWeapDamage++;
     else {
       if (mech_section_is_underwater(mech, wSection)) {
-        if (fRange > MechWeapons[weapindx].longrange_water)
+        if (fRange > (float)MechWeapons[weapindx].longrange_water)
           wWeapDamage = (wWeapDamage / 2);
-        else if (fRange > MechWeapons[weapindx].medrange_water)
+        else if (fRange > (float)MechWeapons[weapindx].medrange_water)
           wWeapDamage--;
       } else {
-        if (fRange > MechWeapons[weapindx].longrange)
+        if (fRange > (float)MechWeapons[weapindx].longrange)
           wWeapDamage = (wWeapDamage / 2);
-        else if (fRange > MechWeapons[weapindx].medrange)
+        else if (fRange > (float)MechWeapons[weapindx].medrange)
           wWeapDamage--;
       }
     }

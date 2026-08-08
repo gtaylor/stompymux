@@ -1,13 +1,30 @@
 #include "sqlite_internal.h"
 
+#include <stdint.h>
+
 static int bind_runtime_int(sqlite3_stmt *statement, int *index,
                             sqlite3_int64 value) {
   return btech_special_bind_int(statement, (*index)++, value);
 }
 
-static int bind_runtime_real(sqlite3_stmt *statement, int *index,
-                             double value) {
-  return btech_special_bind_real(statement, (*index)++, value);
+static int bind_runtime_time(sqlite3_stmt *statement, int *index,
+                             time_t value) {
+  return btech_special_bind_int(statement, (*index)++, (sqlite3_int64)value);
+}
+
+static int bind_float(sqlite3_stmt *statement, int index, float value) {
+  return sqlite3_bind_double(statement, index, (double)value);
+}
+
+static int bind_unsigned_long(sqlite3_stmt *statement, int index,
+                              unsigned long value) {
+  if (value > INT64_MAX)
+    return -1;
+  return btech_special_bind_int(statement, index, (sqlite3_int64)value);
+}
+
+static int bind_runtime_real(sqlite3_stmt *statement, int *index, float value) {
+  return btech_special_bind_real(statement, (*index)++, (double)value);
 }
 
 void btech_finalize_object_statements(BTECH_OBJECT_STORE_CONTEXT *context) {
@@ -108,10 +125,9 @@ int btech_store_simple_object(void *key, void *data, int depth,
                                snapshot.definition.walkspeed) < 0 ||
         btech_special_bind_int(context->mech, 28,
                                snapshot.definition.runspeed) < 0 ||
-        sqlite3_bind_double(context->mech, 29, snapshot.definition.maxspeed) !=
+        bind_float(context->mech, 29, snapshot.definition.maxspeed) !=
             SQLITE_OK ||
-        sqlite3_bind_double(context->mech, 30,
-                            snapshot.definition.template_maxspeed) !=
+        bind_float(context->mech, 30, snapshot.definition.template_maxspeed) !=
             SQLITE_OK ||
         btech_special_bind_int(context->mech, 31, snapshot.definition.mechbv) <
             0 ||
@@ -171,8 +187,8 @@ int btech_store_simple_object(void *key, void *data, int depth,
                                 snapshot.position.terrain) < 0 ||
          btech_special_bind_int(context->position, 4, snapshot.position.elev) <
              0 ||
-         sqlite3_bind_double(context->position, 5,
-                             snapshot.position.hexes_walked) != SQLITE_OK ||
+         bind_float(context->position, 5, snapshot.position.hexes_walked) !=
+             SQLITE_OK ||
          btech_special_bind_int(context->position, 6,
                                 snapshot.position.facing) < 0 ||
          btech_special_bind_int(context->position, 7, snapshot.position.x) <
@@ -185,12 +201,9 @@ int btech_store_simple_object(void *key, void *data, int depth,
                                 snapshot.position.last_x) < 0 ||
          btech_special_bind_int(context->position, 11,
                                 snapshot.position.last_y) < 0 ||
-         sqlite3_bind_double(context->position, 12, snapshot.position.fx) !=
-             SQLITE_OK ||
-         sqlite3_bind_double(context->position, 13, snapshot.position.fy) !=
-             SQLITE_OK ||
-         sqlite3_bind_double(context->position, 14, snapshot.position.fz) !=
-             SQLITE_OK ||
+         bind_float(context->position, 12, snapshot.position.fx) != SQLITE_OK ||
+         bind_float(context->position, 13, snapshot.position.fy) != SQLITE_OK ||
+         bind_float(context->position, 14, snapshot.position.fz) != SQLITE_OK ||
          btech_special_bind_int(context->position, 15, snapshot.position.team) <
              0 ||
          btech_special_bind_int(context->position, 16,
@@ -258,8 +271,8 @@ int btech_store_simple_object(void *key, void *data, int depth,
         if (btech_special_bind_int(context->tic, 1, (DbRef)key) < 0 ||
             btech_special_bind_int(context->tic, 2, index) < 0 ||
             btech_special_bind_int(context->tic, 3, slot) < 0 ||
-            btech_special_bind_int(context->tic, 4,
-                                   snapshot.tics[index][slot]) < 0 ||
+            bind_unsigned_long(context->tic, 4, snapshot.tics[index][slot]) <
+                0 ||
             btech_special_step(context->tic) < 0)
           context->result = -1;
       }
@@ -422,8 +435,8 @@ int btech_store_simple_object(void *key, void *data, int depth,
                            snapshot.runtime.autopilot_num) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.heatboom_last) < 0 ||
-          bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.sspin) < 0 ||
+          bind_runtime_time(context->runtime, &runtime_index,
+                            snapshot.runtime.sspin) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.can_see) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
@@ -544,8 +557,7 @@ int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < NUM_TICS; index++) {
       if (btech_special_bind_int(context->turret_tic, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->turret_tic, 2, index) < 0 ||
-          btech_special_bind_int(context->turret_tic, 3, turret->tic[index]) <
-              0 ||
+          bind_unsigned_long(context->turret_tic, 3, turret->tic[index]) < 0 ||
           btech_special_step(context->turret_tic) < 0)
         context->result = -1;
     }

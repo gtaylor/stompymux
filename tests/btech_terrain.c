@@ -2,7 +2,11 @@
 
 #include "btech/context.h"
 #include "map.h"
+#include "map_api.h"
+#include "map_coding_api.h"
+#include "map_obj_api.h"
 #include "mech_internal.h"
+#include "mech_position_api.h"
 
 static char encoded_terrain[256];
 static char encoded_elevation[256];

@@ -1,3 +1,4 @@
+#include "checked_conversion.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
 #include "mech_specification_api.h"
@@ -97,7 +98,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     }
     if (!strncasecmp(cmd, "CRIT_", 5))
       selection = 9999;
-    else if ((selection = compare_array(load_cmds, cmd)) == -1) {
+    else if ((selection = compare_const_array(load_cmds, cmd)) == -1) {
       /* Initial premise: we will have a mech type before we get to this */
       section = find_section(cmd, ((mech)->ud.type), ((mech)->ud.move));
       if (template_load_error(
@@ -133,22 +134,24 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 1: /* Type */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      ((mech)->ud.type) = compare_array(mech_types, tmpc);
-      if (template_load_error(fp, mech, player, ((mech)->ud.type) == -1, true,
+      type = compare_const_array(mech_types, tmpc);
+      if (template_load_error(fp, mech, player, type == -1, true,
                               "Error while loading: Type %s not found.",
                               tmpc)) {
         return -1;
       }
+      ((mech)->ud.type) = clamp_int_to_char(type);
       ((mech)->ud.fuel) = ((mech)->ud.fuel_orig) = DefaultFuelByType(mech);
       break;
     case 2: /* Movement Type */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
-      ((mech)->ud.move) = compare_array(move_types, tmpc);
-      if (template_load_error(fp, mech, player, ((mech)->ud.move) == -1, true,
+      type = compare_const_array(move_types, tmpc);
+      if (template_load_error(fp, mech, player, type == -1, true,
                               "Error while loading: Type %s not found.",
                               tmpc)) {
         return -1;
       }
+      ((mech)->ud.move) = clamp_int_to_char(type);
       break;
     case 3: /* Tons */
       ((mech)->ud.tons) =
@@ -171,12 +174,13 @@ int load_template(DbRef player, Mech *mech, char *filename) {
           mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 8: /* Heat Sinks */
-      ((mech)->ud.numsinks) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      ((mech)->ud.numsinks) = clamp_int_to_char(
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 9: /* Max Speed */
       mech_max_speed_set(
-          mech, atof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+          mech,
+          strtof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}), nullptr));
       ((mech)->ud.template_maxspeed) = ((mech)->ud.maxspeed);
       break;
     case 10: /* Specials */
@@ -215,8 +219,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     case 14: /* Config */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       ((mech)->ud.sections)[section].config =
-          BuildBitVector(section_configs, tmpc) &
-          ~(CASE_TECH | SECTION_DESTROYED);
+          clamp_long_to_char(BuildBitVector(section_configs, tmpc) &
+                             ~(CASE_TECH | SECTION_DESTROYED));
       if (template_load_error(
               fp, mech, player, ((mech)->ud.sections)[section].config == -1,
               true, "Error while loading: Invalid location config: %s.",
@@ -268,8 +272,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
 
         /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
 
-        wFireModes = BuildBitVectorWithDelim(crit_fire_modes, buf);
-        wAmmoModes = BuildBitVectorWithDelim(crit_ammo_modes, buf);
+        wFireModes =
+            clamp_long_to_int(BuildBitVectorWithDelim(crit_fire_modes, buf));
+        wAmmoModes =
+            clamp_long_to_int(BuildBitVectorWithDelim(crit_ammo_modes, buf));
 
         if (template_load_error(
                 fp, mech, player, wFireModes < 0 && wAmmoModes < 0, true,
@@ -301,8 +307,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
 
         /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
 
-        wFireModes = BuildBitVectorWithDelim(crit_fire_modes, buf);
-        wAmmoModes = BuildBitVectorWithDelim(crit_ammo_modes, buf);
+        wFireModes =
+            clamp_long_to_int(BuildBitVectorWithDelim(crit_fire_modes, buf));
+        wAmmoModes =
+            clamp_long_to_int(BuildBitVectorWithDelim(crit_ammo_modes, buf));
 
         if (template_load_error(
                 fp, mech, player, wFireModes < 0 && wAmmoModes < 0, true,
@@ -379,15 +387,15 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 17: /* Jj's */
       ((mech)->rd.jumpspeed) =
-          atof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+          strtof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}), nullptr);
       break;
     case 18: /* Radio */
       mech_radio_quality_set(
           mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 19: /* SI */
-      ((mech)->ud.si) = ((mech)->ud.si_orig) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      ((mech)->ud.si) = ((mech)->ud.si_orig) = clamp_int_to_char(
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 20: /* Fuel */
       ((mech)->ud.fuel) = ((mech)->ud.fuel_orig) =
@@ -420,8 +428,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
 
       break;
     case 27: /* Carmaxton */
-      ((mech)->ud.carmaxton) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      ((mech)->ud.carmaxton) = clamp_int_to_char(
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       break;
     case 28:
       ((mech)->ud.hsengoverride) =
@@ -430,14 +438,16 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     case 29:
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       if (strlen(tmpc) == 1) /* just the \0 */
-        tmpc = "Undefined";
-      strcpy(((mech)->ud.unit_era), tmpc);
+        strcpy(((mech)->ud.unit_era), "Undefined");
+      else
+        strcpy(((mech)->ud.unit_era), tmpc);
       break;
     case 30:
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       if (strlen(tmpc) == 1) /* just the \0 */
-        tmpc = "Undefined";
-      strcpy(((mech)->ud.unit_tro), tmpc);
+        strcpy(((mech)->ud.unit_tro), "Undefined");
+      else
+        strcpy(((mech)->ud.unit_tro), tmpc);
       break;
     }
   }
@@ -446,12 +456,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   /* So we're not getting 'blank' ERA/TRO values, we'll default to 'Undefined'
    */
   if (strlen(((mech)->ud.unit_era)) == 0) {
-    tmpc = "Undefined";
-    strcpy(((mech)->ud.unit_era), tmpc);
+    strcpy(((mech)->ud.unit_era), "Undefined");
   }
   if (strlen(((mech)->ud.unit_tro)) == 0) {
-    tmpc = "Undefined";
-    strcpy(((mech)->ud.unit_tro), tmpc);
+    strcpy(((mech)->ud.unit_tro), "Undefined");
   }
   if (!(((mech)->rd.specials) & ICE_TECH) && !((mech)->ud.numsinks))
     ((mech)->ud.numsinks) = DEFAULT_HEATSINKS;

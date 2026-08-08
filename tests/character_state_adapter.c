@@ -6,6 +6,8 @@
 
 struct CharacterValue char_values[NUM_CHARVALUES];
 
+bool is_good_obj(GameDatabase *database, DbRef object);
+
 bool is_good_obj(GameDatabase *database, DbRef object) {
   return object >= 0 && object < database->top &&
          game_object_type(database, object) != OBJECT_TYPE_GARBAGE;
@@ -19,7 +21,7 @@ int char_getvaluecode(BtechContext *context, const char *name) {
   return -1;
 }
 
-void char_setstatvalue(PSTATS *stats, char *name, int value) {
+void char_setstatvalue(PSTATS *stats, const char *name, int value) {
   int code = char_getvaluecode(nullptr, name);
   if (code >= 0)
     stats->values[code] = (unsigned char)value;
@@ -64,9 +66,8 @@ int main(void) {
 
   character_stats_retrieve(&context, 0, VALUES_ALL, &stats);
   if (stats.values[LIVES_NUMBER] != 1 || stats.values[6] != 0 ||
-      stats.values[7] != 0 || stats.values[37] != 1 ||
-      stats.values[38] != 1 || stats.values[39] != 1 ||
-      stats.values[40] != 1 || stats.values[41] != 1)
+      stats.values[7] != 0 || stats.values[37] != 1 || stats.values[38] != 1 ||
+      stats.values[39] != 1 || stats.values[40] != 1 || stats.values[41] != 1)
     return 1;
 
   update.values[37] = 4;
@@ -93,13 +94,11 @@ int main(void) {
   character_stats_store(&context, 0, &update, VALUES_ADVS);
 
   character_stats_retrieve(&context, 0, VALUES_ALL, &stats);
-  if (stats.values[6] != 2 || stats.values[7] != 3 ||
-      stats.values[37] != 4 || stats.values[38] != 5 ||
-      stats.values[39] != 6 || stats.values[40] != 7 ||
-      stats.values[41] != 8 || stats.values[99] != 2 ||
-      stats.xp[99] != 300 || stats.last_use[99] != 123456789 ||
-      stats.values[LIVES_NUMBER] != 0 || stats.values[26] != 1 ||
-      context.cached_target_character != -1 ||
+  if (stats.values[6] != 2 || stats.values[7] != 3 || stats.values[37] != 4 ||
+      stats.values[38] != 5 || stats.values[39] != 6 || stats.values[40] != 7 ||
+      stats.values[41] != 8 || stats.values[99] != 2 || stats.xp[99] != 300 ||
+      stats.last_use[99] != 123456789 || stats.values[LIVES_NUMBER] != 0 ||
+      stats.values[26] != 1 || context.cached_target_character != -1 ||
       !character_state_validate_all(&context))
     return 1;
 
@@ -113,9 +112,8 @@ int main(void) {
   stats.xp[99] = 500;
   stats.last_use[99] = 987654321;
   character_stats_clear(&stats);
-  if (stats.values[99] != 0 || stats.xp[99] != 0 ||
-      stats.last_use[99] != 0 || stats.values[37] != 1 ||
-      stats.values[LIVES_NUMBER] != 1)
+  if (stats.values[99] != 0 || stats.xp[99] != 0 || stats.last_use[99] != 0 ||
+      stats.values[37] != 1 || stats.values[LIVES_NUMBER] != 1)
     return 1;
 
   character_stats_retrieve(&context, 1, VALUES_ALL, &stats);

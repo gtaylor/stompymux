@@ -21,5 +21,5 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer);
 int bsuit_jettison_validate(Mech *mech);
 void bsuit_swarm(DbRef player, void *data, char *buffer);
 void bsuit_attackleg(DbRef player, void *data, char *buffer);
-void bsuit_hide(DbRef player, void *data, char *buffer);
+void bsuit_hide(DbRef player, void *data, const char *buffer);
 void bsuit_pack_jettison(DbRef player, void *data, char *buffer);

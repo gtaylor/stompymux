@@ -47,5 +47,6 @@ void sensor_light_availability_check(Mech *mech);
 void mech_sensor(DbRef player, void *data, char *buffer);
 void mech_sensor_visibility_refresh(Mech *mech);
 void mech_sensors_scramble_infrared_and_liteamp(Mech *mech, int time,
-                                                int chance, char *inframsg,
-                                                char *liteampmsg);
+                                                int chance,
+                                                const char *inframsg,
+                                                const char *liteampmsg);

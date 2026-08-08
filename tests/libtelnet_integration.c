@@ -1,4 +1,6 @@
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <zlib.h>
@@ -222,6 +224,12 @@ static void test_event_handler(telnet_t *telnet, telnet_event_t *event,
       context->terminal_height = (buffer[2] << 8) | buffer[3];
     }
     break;
+  case TELNET_EV_IAC:
+  case TELNET_EV_WONT:
+  case TELNET_EV_ZMP:
+  case TELNET_EV_MSSP:
+  case TELNET_EV_WARNING:
+  case TELNET_EV_ERROR:
   default:
     break;
   }
@@ -242,6 +250,7 @@ static int expect_mccp_data(const char *actual, size_t actual_size,
   static const char marker[] = {TELNET_IAC, TELNET_SB, TELNET_TELOPT_COMPRESS2,
                                 TELNET_IAC, TELNET_SE};
   char output[128];
+  Bytef *compressed;
   z_stream stream = {0};
   int result;
 
@@ -250,17 +259,29 @@ static int expect_mccp_data(const char *actual, size_t actual_size,
     fprintf(stderr, "MCCP2 marker was not sent\n");
     return 0;
   }
-  stream.next_in = (Bytef *)(actual + sizeof(marker));
-  stream.avail_in = actual_size - sizeof(marker);
+  if (actual_size - sizeof(marker) > UINT_MAX) {
+    fprintf(stderr, "MCCP2 payload is too large\n");
+    return 0;
+  }
+  compressed = malloc(actual_size - sizeof(marker));
+  if (compressed == nullptr) {
+    fprintf(stderr, "Unable to allocate MCCP2 payload\n");
+    return 0;
+  }
+  memcpy(compressed, actual + sizeof(marker), actual_size - sizeof(marker));
+  stream.next_in = compressed;
+  stream.avail_in = (uInt)(actual_size - sizeof(marker));
   stream.next_out = (Bytef *)output;
   stream.avail_out = sizeof(output);
   result = inflateInit(&stream);
   if (result != Z_OK) {
     fprintf(stderr, "Unable to initialize MCCP2 decompression\n");
+    free(compressed);
     return 0;
   }
   result = inflate(&stream, Z_SYNC_FLUSH);
   inflateEnd(&stream);
+  free(compressed);
   if (result != Z_OK || stream.total_out != expected_size ||
       memcmp(output, expected, expected_size) != 0) {
     fprintf(stderr, "MCCP2 output did not decompress correctly\n");

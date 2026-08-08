@@ -44,7 +44,8 @@
 int have_punch(Mech *mech, int location);
 int phys_common_checks(Mech *mech);
 int get_arm_args(int *using, int *argument_count, char ***arguments, Mech *mech,
-                 int (*has_weapon)(Mech *mech, int location), char *weapon);
+                 int (*has_weapon)(Mech *mech, int location),
+                 const char *weapon);
 
 void physical_damage_apply(Mech *target, Mech *attacker, int cause_pilot,
                            DbRef pilot, int hit_location, int rear,

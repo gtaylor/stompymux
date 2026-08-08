@@ -1,3 +1,4 @@
+#include "checked_conversion.h"
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
@@ -6,8 +7,12 @@
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
 
+static float integer_as_float(int value) { return (float)value; }
+
 int btech_random_roll(BtechContext *context) {
-  int i = btech_random_range(context, 1, 6) + btech_random_range(context, 1, 6);
+  long first_roll = btech_random_range(context, 1, 6);
+  long second_roll = btech_random_range(context, 1, 6);
+  int i = clamp_intptr_to_int(first_roll + second_roll);
 
   context->random.statistics.rolls[i - 2]++;
   context->random.statistics.total_rolls++;
@@ -162,38 +167,38 @@ int checkSectionForSpecial(Mech *mech, int specialToFind, int wSec) {
 
 int getRemainingInternalPercent(Mech *mech) {
   int i;
-  float wMax = 0;
-  float wRemaining = 0;
+  float wMax = 0.0F;
+  float wRemaining = 0.0F;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    wMax += mech_section_original_internal(mech, i);
+    wMax += integer_as_float(mech_section_original_internal(mech, i));
 
-    wRemaining += mech_section_internal(mech, i);
+    wRemaining += integer_as_float(mech_section_internal(mech, i));
   }
 
-  if (wMax == 0)
+  if (wMax <= 0.0F)
     return 0;
 
-  return ((wRemaining / wMax) * 100);
+  return clamp_float_to_int((wRemaining / wMax) * 100.0F);
 }
 
 int getRemainingArmorPercent(Mech *mech) {
   int i;
-  float wMax = 0;
-  float wRemaining = 0;
+  float wMax = 0.0F;
+  float wRemaining = 0.0F;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    wMax += mech_section_original_armor(mech, i);
-    wMax += mech_section_original_rear_armor(mech, i);
+    wMax += integer_as_float(mech_section_original_armor(mech, i));
+    wMax += integer_as_float(mech_section_original_rear_armor(mech, i));
 
-    wRemaining += mech_section_armor(mech, i);
-    wRemaining += mech_section_rear_armor(mech, i);
+    wRemaining += integer_as_float(mech_section_armor(mech, i));
+    wRemaining += integer_as_float(mech_section_rear_armor(mech, i));
   }
 
-  if (wMax == 0)
+  if (wMax <= 0.0F)
     return 0;
 
-  return ((wRemaining / wMax) * 100);
+  return clamp_float_to_int((wRemaining / wMax) * 100.0F);
 }
 
 int FindObj(Mech *mech, int loc, int type) {

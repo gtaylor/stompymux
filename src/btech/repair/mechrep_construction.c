@@ -32,8 +32,6 @@
 #include "registry_api.h"
 #include "repair_job.h"
 
-#define MECH_STAT_C /* want to use the POSIX stat() call. */
-
 #include "equipment_types.h"
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
@@ -220,7 +218,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   int istc = 0;      /* Is the weap TC'd? */
   int isoneshot = 0; /* If 1, weapon is a One-Shot (OS) Weap */
   int argstoiter;    /* Holder for figuring out how many args to scan */
-  char flagholder;   /* Holder for flag comparisons */
+  int flagholder;    /* Holder for flag comparisons */
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =

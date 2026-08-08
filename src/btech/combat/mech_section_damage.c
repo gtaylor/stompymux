@@ -64,8 +64,8 @@
 void mech_weapon_destroy(Mech *wounded, int hitloc, int type, int startCrit,
                          int numcrits, int totalcrits) {
   int i;
-  char sum = totalcrits;
-  char destroyed = numcrits;
+  int sum = totalcrits;
+  int destroyed = numcrits;
   int checkloc;
   int newcrit;
   int split;
@@ -140,7 +140,7 @@ void mech_weapon_destroy_random(Mech *mech, int hitloc) {
 
   if (!i)
     return;
-  a = btech_random_range(mech_context(mech), 1, i);
+  a = btech_random_range_int(mech_context(mech), 1, i);
   b = mech_weapon_index_in_section(mech, hitloc, a);
   if (b < 0)
     return;
@@ -348,6 +348,13 @@ skip_nuke:
     } else
       tKillMech = 1;
     break;
+  case CLASS_MECH:
+  case CLASS_VEH_NAVAL:
+  case CLASS_SPHEROID_DS:
+  case CLASS_AERO:
+  case CLASS_MW:
+  case CLASS_DS:
+    break;
   default:
     break;
   }
@@ -358,8 +365,9 @@ skip_nuke:
   }
 }
 
-char *mech_armor_status_set_value(Mech *mech, char *sectstr, char *typestr,
-                                  char *valuestr) {
+const char *mech_armor_status_set_value(Mech *mech, const char *sectstr,
+                                        const char *typestr,
+                                        const char *valuestr) {
   int index, type, value;
 
   if (!sectstr || !*sectstr)

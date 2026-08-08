@@ -15,6 +15,7 @@
  */
 
 #include "btech/context.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_conditions_api.h"
@@ -177,8 +178,8 @@ void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
     fl |= MAPFLAG_SPEC;
   if (temp < -30 || temp > 50 || grav != 100)
     fl |= MAPFLAG_SPEC;
-  map->temp = temp;
-  map->grav = grav;
+  map->temp = clamp_int_to_char(temp);
+  map->grav = clamp_int_to_unsigned_char(grav);
   map->flags = fl;
   mecha_notify(btech_context_evaluation(map->xcode.context), player,
                "Conditions set!");

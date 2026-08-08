@@ -55,17 +55,22 @@ static int help_render_test_expect(const char *markdown, const char *expected) {
 }
 
 static int help_render_test_index_links(void) {
-  char *index_tags[] = {"index-entry"};
-  char *index_keywords[] = {"index"};
-  char *topic_tags[] = {"index-entry"};
-  char *topic_keywords[] = {"topic name"};
+  char index_tag[] = "index-entry";
+  char index_keyword[] = "index";
+  char topic_tag[] = "index-entry";
+  char topic_keyword[] = "topic name";
+  char *index_tags[] = {index_tag};
+  char *index_keywords[] = {index_keyword};
+  char *topic_tags[] = {topic_tag};
+  char *topic_keywords[] = {topic_keyword};
+  char description[] = "A linked help topic.";
   HelpArticle articles[] = {
       {
           .keywords = {.items = index_keywords, .count = 1},
           .show_index_for_article_tags = {.items = index_tags, .count = 1},
       },
       {
-          .description = "A linked help topic.",
+          .description = description,
           .keywords = {.items = topic_keywords, .count = 1},
           .article_tags = {.items = topic_tags, .count = 1},
       },
@@ -78,10 +83,9 @@ static int help_render_test_index_links(void) {
   help_text_buffer_init(&buffer);
   help_article_render_body(nullptr, &articles[0], false, &buffer);
   ok = buffer.data != nullptr &&
-       !strcmp(buffer.data,
-               "TOPIC                DESCRIPTION\n"
-               "[send=\"help topic name\"]topic name[/]           "
-               "A linked help topic.\n");
+       !strcmp(buffer.data, "TOPIC                DESCRIPTION\n"
+                            "[send=\"help topic name\"]topic name[/]           "
+                            "A linked help topic.\n");
   help_text_buffer_free(&buffer);
   articles[0].index_style = HELP_INDEX_STYLE_COLUMNAR;
   help_text_buffer_init(&buffer);

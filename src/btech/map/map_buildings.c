@@ -1,7 +1,10 @@
+#include "checked_conversion.h"
 #include "map_building_query_api.h"
 #include "map_conditions_api.h"
 #include "map_obj_internal.h"
 #include "weapon_catalogue_api.h"
+
+#include <math.h>
 
 #include "mech_condition_api.h"
 #include "mech_identity_api.h"
@@ -38,8 +41,8 @@ static int get_building_cf(BattleMap *map, int *i1, int *i2) {
 }
 
 static void set_building_cf(BattleMap *map, int i1, int i2) {
-  map->cf = i1;
-  map->cfmax = i2;
+  map->cf = clamp_int_to_short(i1);
+  map->cfmax = clamp_int_to_short(i2);
 }
 
 static void building_regen_event(MuxEvent *e) {
@@ -192,7 +195,7 @@ void fire_hex(Mech *mech, int x, int y, int meant) {
     mech_printf(mech, MECHALL, "You accidentally ignite %d,%d!", x, y);
   }
   add_decoration(map, x, y, TYPE_FIRE, FIRE,
-                 btech_random_range(map->xcode.context, 60, 180));
+                 btech_random_range_int(map->xcode.context, 60, 180));
 }
 
 void steppable_base_check(Mech *mech, int x, int y) {
@@ -238,12 +241,16 @@ void show_building_in_hex(Mech *mech, int x, int y) {
     mech_notify(mech, MECHALL, "The sensors detect no building in the hex!");
     return;
   }
+  const int mech_x = mech_position_x(mech);
+  const int mech_y = mech_position_y(mech);
+  const int mech_z = mech_position_z(mech);
+  const float building_range = FindRange(
+      (float)mech_x, (float)mech_y, (float)mech_z, (float)x, (float)y, 0.0F);
+  const float rounded_range = floorf(building_range + 0.95F);
+  const int perception_difficulty = (int)rounded_range;
   if (battle_map_build_is_invisible(nmap) ||
       (battle_map_build_is_hidden(nmap) &&
-       !MadePerceptionRoll(
-           mech, (int)(FindRange(mech_position_x(mech), mech_position_y(mech),
-                                 mech_position_z(mech), x, y, 0) +
-                       0.95)))) {
+       !MadePerceptionRoll(mech, perception_difficulty))) {
     mech_notify(mech, MECHALL, "The sensors detect no building in the hex!");
     return;
   }

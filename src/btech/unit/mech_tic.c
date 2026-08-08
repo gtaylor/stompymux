@@ -91,12 +91,13 @@ void cleartic_sub(DbRef player, Mech *mech, char *buffer) {
 
 int addtic_sub_func(Mech *mech, DbRef player, int low, int high,
                     void *context) {
-  int i, j;
+  int i;
   const TicSelectionContext *selection = context;
 
   for (i = low; i <= high; i++) {
-    j = i / SINGLE_TICLONG_SIZE;
-    mech->tic[selection->tic][j] |= 1 << (i % SINGLE_TICLONG_SIZE);
+    size_t word = (size_t)i / SINGLE_TICLONG_SIZE;
+    unsigned int bit = (unsigned int)i % SINGLE_TICLONG_SIZE;
+    mech->tic[selection->tic][word] |= 1UL << bit;
   }
   if (low != high)
     notify_printf(btech_context_evaluation(mech->xcode.context), player,
@@ -130,12 +131,13 @@ void addtic_sub(DbRef player, Mech *mech, char *buffer) {
 
 int deltic_sub_func(Mech *mech, DbRef player, int low, int high,
                     void *context) {
-  int i, j;
+  int i;
   const TicSelectionContext *selection = context;
 
   for (i = low; i <= high; i++) {
-    j = i / SINGLE_TICLONG_SIZE;
-    mech->tic[selection->tic][j] &= ~(1 << (i % SINGLE_TICLONG_SIZE));
+    size_t word = (size_t)i / SINGLE_TICLONG_SIZE;
+    unsigned int bit = (unsigned int)i % SINGLE_TICLONG_SIZE;
+    mech->tic[selection->tic][word] &= ~(1UL << bit);
   }
   if (low != high)
     notify_printf(btech_context_evaluation(mech->xcode.context), player,
@@ -248,12 +250,12 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
   }
   rtar = i / 2 + (i % 2 ? ((list->weapon_count + 1) / 2) : 0);
   for (j = 0; j < MAX_WEAPONS_PER_MECH; j++) {
-    k = j / SINGLE_TICLONG_SIZE;
-    l = j % SINGLE_TICLONG_SIZE;
-    if (mech->tic[list->tic][k] & (1 << l)) {
+    k = (int)((size_t)j / SINGLE_TICLONG_SIZE);
+    l = (int)((unsigned int)j % SINGLE_TICLONG_SIZE);
+    if (mech->tic[list->tic][(size_t)k] & (1UL << (unsigned int)l)) {
       if (count == rtar) {
         if ((FindWeaponNumberOnMech(mech, j, &section, &critical)) == -1) {
-          mech->tic[list->tic][k] &= ~(1 << l);
+          mech->tic[list->tic][(size_t)k] &= ~(1UL << (unsigned int)l);
           j = MAX_WEAPONS_PER_MECH;
           continue;
         }
@@ -357,7 +359,7 @@ void mech_listtic(DbRef player, void *data, char *buffer) {
   listtic_sub(player, mech, buffer);
 }
 
-void heat_cutoff_event(MuxEvent *e) {
+static void heat_cutoff_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
 
   if (e->data2) {

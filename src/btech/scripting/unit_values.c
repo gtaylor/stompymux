@@ -1,5 +1,7 @@
 #include "values_internal.h"
 
+#include "checked_conversion.h"
+
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
@@ -18,9 +20,12 @@ char *mechIDfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
 char *mech_getset_ref(int mode, Mech *mech, char *data) {
   if (mode) {
     mech_model_reference_set(mech, data);
-    return NULL;
-  } else
-    return (char *)mech_model_reference(mech);
+    return nullptr;
+  }
+
+  static char reference[LBUF_SIZE];
+  snprintf(reference, sizeof(reference), "%s", mech_model_reference(mech));
+  return reference;
 }
 
 extern char *mech_types[];
@@ -29,19 +34,23 @@ extern char *move_types[];
 char *mechTypefunc(int mode, Mech *mech, char *arg) {
   int i;
 
-  if (!mode)
-    return mech_types[(short)mech_class(mech)];
+  if (!mode) {
+    const UnitClass unit_class = mech_class(mech);
+    return mech_types[unit_class];
+  }
   /* Should _alter_ mechtype.. weeeel. */
   if ((i = compare_array(mech_types, arg)) >= 0)
     mech_class_set(mech, (UnitClass)i);
-  return NULL;
+  return nullptr;
 }
 
 char *mechMovefunc(int mode, Mech *mech, char *arg) {
   int i;
 
-  if (!mode)
-    return move_types[(short)mech_movement_type(mech)];
+  if (!mode) {
+    const MechMovementType movement_type = mech_movement_type(mech);
+    return move_types[movement_type];
+  }
   if ((i = compare_array(move_types, arg)) >= 0)
     mech_movement_type_set(mech, (MechMovementType)i);
   return NULL;
@@ -255,8 +264,8 @@ char *mechCentDistfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
 
   MapCoordToRealCoord(x, y, &fx, &fy);
   snprintf(buffer, LBUF_SIZE, "%.2f",
-           FindHexRange(fx, fy, mech_position_real_x(mech),
-                        mech_position_real_y(mech)));
+           (double)FindHexRange(fx, fy, mech_position_real_x(mech),
+                                mech_position_real_y(mech)));
   return buffer;
 }
 
@@ -284,8 +293,8 @@ static int bv_val(int in, int mode) {
   return 'a' + p;
 }
 
-int text2bv(char *text) {
-  char *c;
+int text2bv(const char *text) {
+  const char *c;
   int j = 0;
   int mode_not = 0;
 
@@ -319,7 +328,7 @@ char *bv2text(int i, char *buffer) {
 
   while (i > 0) {
     if (i & 1)
-      *(c++) = bv_val(p, 1);
+      *(c++) = clamp_int_to_char(bv_val(p, 1));
     i >>= 1;
     p <<= 1;
   }

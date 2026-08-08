@@ -5,6 +5,8 @@
  *       All rights reserved
  */
 
+#include <stdint.h>
+
 #include "btech_event.h"
 #include "map.h"
 #include "map_obj_api.h"
@@ -55,13 +57,13 @@ void mech_inferno_burn(Mech *mech, int time) {
 
 static void vehicle_burn_event(MuxEvent *objEvent) {
   Mech *objMech = (Mech *)objEvent->data; /* get the mech */
-  long wLoc = (long)objEvent->data2;      /* and now the loc to damage */
+  const int wLoc = (int)(intptr_t)objEvent->data2;
   int wDamRoll;
   char strLocName[30];
 
   if (!objMech)
     return;
-  wDamRoll = btech_random_range(mech_context(objMech), 1, 6);
+  wDamRoll = btech_random_range_int(mech_context(objMech), 1, 6);
 
   ArmorStringFromIndex(wLoc, strLocName, mech_class(objMech),
                        mech_movement_type(objMech));
@@ -90,8 +92,7 @@ static void vehicle_burn_event(MuxEvent *objEvent) {
 }
 
 void vehicle_fire_start(Mech *objMech, Mech *objAttacker) {
-  long wIter;
-  long wDamage = 0;
+  int wDamage = 0;
   char strLocName[30];
 
   if (!objAttacker)
@@ -100,10 +101,10 @@ void vehicle_fire_start(Mech *objMech, Mech *objAttacker) {
   mech_notify(objMech, MECHALL, "You catch on fire!");
   mech_los_broadcast(objMech, "catches on fire!");
 
-  for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
+  for (int wIter = 0; wIter < NUM_SECTIONS; wIter++) {
     if (mech_section_internal(objMech, wIter) &&
         !mech_event_count_data(objMech, EVENT_VEHICLEBURN, wIter)) {
-      wDamage = btech_random_range(mech_context(objMech), 1, 6);
+      wDamage = btech_random_range_int(mech_context(objMech), 1, 6);
       ArmorStringFromIndex(wIter, strLocName, mech_class(objMech),
                            mech_movement_type(objMech));
       mech_printf(objMech, MECHALL, "Your %s catches on fire!", strLocName);
@@ -198,6 +199,14 @@ void vehicle_fire_check(Mech *objMech, int fromHexFire) {
   case MOVE_HOVER:
     wRoll += 4;
     break;
+  case MOVE_BIPED:
+  case MOVE_TRACK:
+  case MOVE_HULL:
+  case MOVE_FOIL:
+  case MOVE_FLY:
+  case MOVE_QUAD:
+  case MOVE_SUB:
+  case MOVE_NONE:
   default:
     break;
   }
@@ -237,7 +246,7 @@ void vehicle_fire_check(Mech *objMech, int fromHexFire) {
         "[fg=red bold]The fire sweeps across your unit damaging it![reset]");
 
     for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
-      wDamage = btech_random_range(mech_context(objMech), 1, 6);
+      wDamage = btech_random_range_int(mech_context(objMech), 1, 6);
 
       if (mech_section_internal(objMech, wIter))
         DamageMech(objMech, objMech, 0, -1, wIter, 0, 0, wDamage, 0, 0, 0, -1,

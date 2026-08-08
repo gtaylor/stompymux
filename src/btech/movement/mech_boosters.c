@@ -7,6 +7,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_terrain.h"
+#include "mech_advanced_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
@@ -61,7 +62,7 @@ static void mech_masc_event(MuxEvent *e) {
   if (needed < 10 &&
       is_good_obj(btech_context_database(context), mech_pilot_dbref(mech)) &&
       is_wizard(btech_context_database(context), mech_pilot_dbref(mech)))
-    roll = btech_random_range(context, needed + 1, 12);
+    roll = btech_random_range_int(context, needed + 1, 12);
   mech_printf(mech, MECHALL, "MASC: BTH %d+, Roll: %d", needed + 1, roll);
   if (roll > needed) {
     mech_event_schedule(mech, EVENT_MASC_FAIL, mech_masc_event, MASC_TICK, 0);
@@ -69,14 +70,14 @@ static void mech_masc_event(MuxEvent *e) {
   }
   mech_masc_technology_destroy(mech);
   mech_masc_enabled_set(mech, false);
-  if (fabs(mech_current_speed(mech)) > MP1) {
+  if (fabsf(mech_current_speed(mech)) > MP1) {
     mech_notify(mech, MECHALL,
                 "Your leg actuators freeze suddenly, and you fall!");
     mech_los_broadcast(mech, "stops and falls in mid-step!");
     mech_fall(mech, 1, 0);
   } else {
     mech_notify(mech, MECHALL, "Your leg actuators freeze suddenly!");
-    if (mech_current_speed(mech) > 0.0)
+    if (mech_current_speed(mech) > 0.0F)
       mech_los_broadcast(mech, "stops suddenly!");
   }
 
@@ -112,7 +113,7 @@ void mech_masc(DbRef player, void *data, char *buffer) {
   if (mech_condition_summary(mech).masc_enabled) {
     mech_notify(mech, MECHALL, "MASC has been turned off.");
     mech_masc_enabled_set(mech, false);
-    mech_desired_speed_set(mech, mech_desired_speed(mech) * 3. / 4.);
+    mech_desired_speed_set(mech, mech_desired_speed(mech) * 3.0F / 4.0F);
     mech_event_cancel(mech, EVENT_MASC_FAIL);
     mech_event_schedule(mech, EVENT_MASC_REGEN, mech_mascr_event, MASC_TICK, 0);
     return;
@@ -125,7 +126,7 @@ void mech_masc(DbRef player, void *data, char *buffer) {
   mech_notify(mech, MECHALL, "MASC has been turned on.");
   mech_masc_enabled_set(mech, true);
   mech_event_cancel(mech, EVENT_MASC_REGEN);
-  mech_desired_speed_set(mech, mech_desired_speed(mech) * 4. / 3.);
+  mech_desired_speed_set(mech, mech_desired_speed(mech) * 4.0F / 3.0F);
   mech_event_schedule(mech, EVENT_MASC_FAIL, mech_masc_event, 1, 0);
 }
 
@@ -150,7 +151,7 @@ static void mech_scharge_event(MuxEvent *e) {
   BtechContext *context = mech_context(mech);
   int roll = btech_random_roll(context);
   int j, count = 0;
-  int maxspeed, newmaxspeed = 0;
+  float maxspeed, newmaxspeed = 0.0F;
   int critType;
   char msgbuf[MBUF_SIZE] = {0};
 
@@ -163,7 +164,7 @@ static void mech_scharge_event(MuxEvent *e) {
   if (needed < 10 &&
       is_good_obj(btech_context_database(context), mech_pilot_dbref(mech)) &&
       is_wizard(btech_context_database(context), mech_pilot_dbref(mech)))
-    roll = btech_random_range(context, needed + 1, 12);
+    roll = btech_random_range_int(context, needed + 1, 12);
   mech_printf(mech, MECHALL, "Supercharger: BTH %d, Roll: %d", needed + 1,
               roll);
   if (roll > needed) {
@@ -186,7 +187,7 @@ static void mech_scharge_event(MuxEvent *e) {
       }
     }
 
-    count = btech_random_range(context, 1, 4);
+    count = btech_random_range_int(context, 1, 4);
 
     for (j = 0; count && j < mech_section_critical_count(mech, CTORSO); j++) {
       critType = mech_critical_part_type(mech, CTORSO, j);
@@ -216,7 +217,7 @@ static void mech_scharge_event(MuxEvent *e) {
     snprintf(msgbuf, MBUF_SIZE, " coughs thick black smoke from its exhaust.");
     mech_los_broadcast(mech, msgbuf);
     maxspeed = mech_maximum_speed(mech);
-    newmaxspeed = (maxspeed * .5);
+    newmaxspeed = maxspeed * 0.5F;
     mech_max_speed_set(mech, newmaxspeed);
   }
 }
@@ -235,7 +236,7 @@ void mech_scharge(DbRef player, void *data, char *buffer) {
   if (mech_condition_summary(mech).supercharger_enabled) {
     mech_notify(mech, MECHALL, "Supercharger has been turned off.");
     mech_supercharger_enabled_set(mech, false);
-    mech_desired_speed_set(mech, mech_desired_speed(mech) * 3. / 4.);
+    mech_desired_speed_set(mech, mech_desired_speed(mech) * 3.0F / 4.0F);
     mech_event_cancel(mech, EVENT_SCHARGE_FAIL);
     mech_event_schedule(mech, EVENT_SCHARGE_REGEN, mech_scharger_event,
                         SCHARGE_TICK, 0);
@@ -249,7 +250,7 @@ void mech_scharge(DbRef player, void *data, char *buffer) {
   mech_notify(mech, MECHALL, "Supercharger has been turned on.");
   mech_supercharger_enabled_set(mech, true);
   mech_event_cancel(mech, EVENT_SCHARGE_REGEN);
-  mech_desired_speed_set(mech, mech_desired_speed(mech) * 4. / 3.);
+  mech_desired_speed_set(mech, mech_desired_speed(mech) * 4.0F / 3.0F);
   mech_event_schedule(mech, EVENT_SCHARGE_FAIL, mech_scharge_event, 1, 0);
 }
 
@@ -284,7 +285,7 @@ void mech_dig(DbRef player, void *data, char *buffer) {
                  "You are already fortified, there's no need to dig.");
     return;
   }
-  if (fabs(mech_current_speed(mech)) > 0.0) {
+  if (fabsf(mech_current_speed(mech)) > 0.0F) {
     mecha_notify(btech_context_evaluation(context), player, "You are moving!");
     return;
   }

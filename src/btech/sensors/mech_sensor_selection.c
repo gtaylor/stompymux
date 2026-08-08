@@ -73,7 +73,7 @@ static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
   }
   return mode;
 }
-static void sensor_mode(Mech *mech, char *msg, DbRef player, int p, int s,
+static void sensor_mode(Mech *mech, const char *msg, DbRef player, int p, int s,
                         int verbose) {
   char buf[MBUF_SIZE];
   size_t i;
@@ -102,10 +102,15 @@ struct SensorSelection {
 
 static void sensor_selection_read(MuxEvent *event, void *data) {
   SensorSelection *selection = data;
-  long encoded = (long)event->data2;
+  const long encoded = (long)event->data2;
+  const long primary = encoded / NUM_SENSORS;
+  const long secondary = encoded % NUM_SENSORS;
 
-  selection->primary = encoded / NUM_SENSORS;
-  selection->secondary = encoded % NUM_SENSORS;
+  if (primary < 0 || primary >= NUM_SENSORS || secondary < 0 ||
+      secondary >= NUM_SENSORS)
+    return;
+  selection->primary = (int)primary;
+  selection->secondary = (int)secondary;
   selection->found = true;
 }
 
@@ -143,10 +148,16 @@ static void show_sensor(DbRef player, Mech *mech, int verbose) {
 }
 
 static void mech_sensorchange_event(MuxEvent *e) {
-  long d = (long)e->data2;
+  const long d = (long)e->data2;
   Mech *mech = (Mech *)e->data;
-  int prim = d / NUM_SENSORS;
-  int sec = d % NUM_SENSORS;
+  const long primary = d / NUM_SENSORS;
+  const long secondary = d % NUM_SENSORS;
+
+  if (primary < 0 || primary >= NUM_SENSORS || secondary < 0 ||
+      secondary >= NUM_SENSORS)
+    return;
+  const int prim = (int)primary;
+  const int sec = (int)secondary;
 
   if (!mech_is_started(mech))
     return;
@@ -273,7 +284,9 @@ void mech_sensor(DbRef player, void *data, char *buffer) {
     show_sensor(player, mech, 1);
     break;
   case 2:
-    if (set_sensor(mech, toupper(args[0][0]), toupper(args[1][0])) < 0) {
+    const char primary = (char)toupper((unsigned char)args[0][0]);
+    const char secondary = (char)toupper((unsigned char)args[1][0]);
+    if (set_sensor(mech, primary, secondary) < 0) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Invalid arguments!");
       return;

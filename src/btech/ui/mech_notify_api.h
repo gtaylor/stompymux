@@ -30,7 +30,7 @@ typedef struct MechDisplayId {
 
 /* mech.notify.c */
 const char *GetAmmoDesc_Model_Mode(int model, int mode);
-char GetWeaponAmmoModeLetter_Model_Mode(int model, int mode);
+char GetWeaponAmmoModeLetter_Model_Mode(int model, unsigned int mode);
 char GetWeaponFireModeLetter_Model_Mode(int model, int mode);
 char GetWeaponAmmoModeLetter(Mech *mech, int loop, int crit);
 char GetWeaponFireModeLetter(Mech *mech, int loop, int crit);
@@ -50,14 +50,14 @@ int common_checks(DbRef player, Mech *mech, int flag);
 void sendchannelstuff(Mech *mech, int freq, char *msg);
 void mech_radio(DbRef player, void *data, char *buffer);
 void MechBroadcast(Mech *mech, Mech *target, BattleMap *mech_map, char *buffer);
-void mech_los_broadcast(Mech *mech, char *message);
+void mech_los_broadcast(Mech *mech, const char *message);
 int MechSeesHexF(Mech *mech, BattleMap *map, float x, float y, int ix, int iy);
 int MechSeesHex(Mech *mech, BattleMap *map, int x, int y);
-void HexLOSBroadcast(BattleMap *mech_map, int x, int y, char *message);
+void HexLOSBroadcast(BattleMap *mech_map, int x, int y, const char *message);
 void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message);
 void MapBroadcast(BattleMap *map, char *message);
 void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
-                       BattleMap *mech_map, char *weapname, int IsHit);
+                       BattleMap *mech_map, const char *weapname, int IsHit);
 void mech_notify(Mech *mech, MechNotifyAudience audience, const char *buffer);
 void mech_printf(Mech *mech, MechNotifyAudience audience, const char *format,
                  ...) __attribute__((format(printf, 3, 4)));

@@ -18,7 +18,7 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
   int side;
   BtechContext *context = mech_context(mech);
 
-  switch ((int)mech_class(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_AERO:
     switch (hitGroup) {
     case FRONT:
@@ -259,6 +259,13 @@ int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return hitloc;
       }
     }
+    break;
+  case CLASS_MECH:
+  case CLASS_VEH_GROUND:
+  case CLASS_VTOL:
+  case CLASS_VEH_NAVAL:
+  case CLASS_MW:
+  case CLASS_BSUIT:
     break;
   }
   return hitloc;

@@ -3,9 +3,12 @@
 
 #include "btech/context.h"
 #include "btech_channel.h"
+#include "mech_classification_api.h"
 #include "mech_internal.h"
 #include "mech_notify_api.h"
 #include "mech_radio_api.h"
+#include "mux/network/network_output.h"
+#include "mux/support/formatting.h"
 #include "registry_api.h"
 
 static int rejected_notifications;

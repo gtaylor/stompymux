@@ -79,8 +79,9 @@ void auto_gun_event(Autopilot *autopilot) {
   int relative_bearing;
 
   /* Stuff for Weapon Attacks */
-  int accumulate_heat; /* How much heat we're building up */
-  int i, j;
+  float accumulate_heat; /* How much heat we're building up */
+  int i;
+  DbRef j;
 
   float range;    /* General variable for range */
   float maxspeed; /* So we know how fast our guy is going */
@@ -290,8 +291,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
         /* Calc the threshold score to beat */
         threshold_score =
-            ((100.0 + (float)autopilot->target_threshold) / 100.0) *
-            autopilot->target_score;
+            (int)(((100.0F + (float)autopilot->target_threshold) / 100.0F) *
+                  (float)autopilot->target_score);
 
         if (temp_target_node->target_score > threshold_score) {
 
@@ -442,10 +443,10 @@ void auto_gun_event(Autopilot *autopilot) {
 
     /* If the unit is moving need to account for the heat of that as well */
     if ((mech_class(mech) == CLASS_MECH) &&
-        (fabs(mech_current_speed(mech)) > 0.0)) {
+        (fabsf(mech_current_speed(mech)) > 0.0F)) {
 
       maxspeed = mech_effective_maximum_speed(mech);
-      if (mech_desired_speed(mech) > ((float)2.0 * maxspeed / 3.0 + 0.1))
+      if (mech_desired_speed(mech) > (2.0F * maxspeed / 3.0F + 0.1F))
         accumulate_heat += 2;
       else
         accumulate_heat += 1;
@@ -512,7 +513,7 @@ void auto_gun_event(Autopilot *autopilot) {
        * we have to manage the heat ourselves */
       /*! \todo {Add a check also for aeros} */
       if ((mech_class(mech) == CLASS_MECH) &&
-          (((float)accumulate_heat +
+          ((accumulate_heat +
             (float)MechWeapons[temp_weapon_node->weapon_db_number].heat -
             mech_heat_dissipation(mech)) > AUTO_GUN_MAX_HEAT)) {
 

@@ -369,7 +369,7 @@ void fun_btarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
    * fargs[1] = location to show
    */
   DbRef it;
-  char *infostr;
+  const char *infostr;
   Mech *mech;
 
   if (!is_wizard(context->world->database, player)) {
@@ -431,7 +431,7 @@ void fun_btweaponstatus(char *buff, char **bufc, DbRef player, DbRef cause,
    * fargs[1] = location to show
    */
   DbRef it;
-  char *infostr;
+  const char *infostr;
   Mech *mech;
 
   if (nfargs < 1 || nfargs > 2) {
@@ -490,7 +490,7 @@ void fun_btarmorstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   /* fargs[0] = ref of the mech
    * fargs[1] = location to show
    */
-  char *infostr;
+  const char *infostr;
   Mech *mech;
 
   if (!is_wizard(context->world->database, player)) {
@@ -543,7 +543,7 @@ void fun_btsetarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
    * fargs[3] = value to change to.
    */
   DbRef it;
-  char *infostr;
+  const char *infostr;
   Mech *mech;
 
   if (!is_wizard(context->world->database, player)) {
@@ -651,7 +651,7 @@ void fun_bttechstatus(char *buff, char **bufc, DbRef player, DbRef cause,
 
   DbRef it;
   Mech *mech;
-  char *infostr;
+  const char *infostr;
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");

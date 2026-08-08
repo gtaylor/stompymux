@@ -190,6 +190,11 @@ void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
         case MOVE_FOIL:
           mech_notify(wounded, MECHALL, "Your craft suddenly slows!");
           break;
+        case MOVE_BIPED:
+        case MOVE_VTOL:
+        case MOVE_FLY:
+        case MOVE_QUAD:
+        case MOVE_NONE:
         default:
           break;
         }
@@ -221,6 +226,11 @@ void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
           mech_notify(wounded, MECHALL,
                       "Your engines cut out and you drift to a halt!");
           break;
+        case MOVE_BIPED:
+        case MOVE_VTOL:
+        case MOVE_FLY:
+        case MOVE_QUAD:
+        case MOVE_NONE:
         default:
           break;
         }

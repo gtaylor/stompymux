@@ -38,21 +38,21 @@ constexpr int STAND = 1;
 constexpr int FALL = 0;
 
 constexpr int TURN = 30; /* 30 sec turn */
-constexpr double KPH_PER_MP = 10.75;
-constexpr double MP_PER_KPH = 0.0930233;              /* 1/KPH_PER_MP  */
+constexpr float KPH_PER_MP = 10.75F;
+constexpr float MP_PER_KPH = 0.0930233F;              /* 1/KPH_PER_MP */
 constexpr double MP_PER_UPDATE_PER_KPH = 0.003100777; /* MP_PER_KPH/30 */
 constexpr double SCALEMAP = 322.5;                    /* 1/update      */
 constexpr int HEXLEVEL = 5;                           /* levels/hex    */
-constexpr double ZSCALE = 64.5;                       /* scalemap/hexlevel */
+constexpr float ZSCALE = 64.5F;                       /* scalemap/hexlevel */
 constexpr double XSCALE = 0.1547;                     /* hex constant  */
 constexpr double YSCALE2 = 9.61482e-6;                /* update**2     */
-constexpr double MP1 = 10.75;                         /* 2*MS_PER_MP   */
-constexpr double MP2 = 21.50;                         /* 2*MS_PER_MP   */
-constexpr double MP3 = 32.25;                         /* 3*MS_PER_MP   */
-constexpr double MP4 = 43.00;                         /* 4*MS_PER_MP   */
-constexpr double MP5 = 53.75;                         /* 5*MS_PER_MP   */
-constexpr double MP6 = 64.50;                         /* 6*MS_PER_MP   */
-constexpr double MP9 = 96.75;                         /* 9*MS_PER_MP   */
+constexpr float MP1 = 10.75F;                         /* 2*MS_PER_MP */
+constexpr float MP2 = 21.50F;                         /* 2*MS_PER_MP */
+constexpr float MP3 = 32.25F;                         /* 3*MS_PER_MP */
+constexpr float MP4 = 43.00F;                         /* 4*MS_PER_MP */
+constexpr float MP5 = 53.75F;                         /* 5*MS_PER_MP */
+constexpr float MP6 = 64.50F;                         /* 6*MS_PER_MP */
+constexpr float MP9 = 96.75F;                         /* 9*MS_PER_MP */
 constexpr double DELTAFACING = 1440.0;
 
 constexpr int DEFAULT_FREQS = 5;
@@ -494,7 +494,7 @@ constexpr int TIC_NUM_PHYSICAL = -5;
 constexpr int MAX_WEAPS_SECTION = 12;
 
 struct WeaponDefinition {
-  char *name;
+  const char *name;
   char vrt;
   char type;
   char heat;

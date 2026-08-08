@@ -30,6 +30,7 @@
 #include "coolmenu.h"
 #include "crit_api.h"
 #include "econ_api.h"
+#include "econ_cmds_api.h"
 #include "mech_api_types.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
@@ -460,7 +461,7 @@ void mech_loadcargo(DbRef player, void *data, char *buffer) {
                  "This unit cannot haul cargo!");
     return;
   }
-  if (fabs(mech_current_speed(mech)) > 0.0) {
+  if (fabsf(mech_current_speed(mech)) > 0.0F) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You're moving too fast!");
     return;

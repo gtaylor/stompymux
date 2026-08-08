@@ -72,7 +72,7 @@ static void mech_dump_event(MuxEvent *ev) {
     return;
   }
   if (arg < 256) {
-    loc = arg - 1;
+    loc = (int)arg - 1;
     l = mech_section_critical_count(mech, loc);
     for (i = 0; i < l; i++)
       if (equipment_is_ammunition(mech_critical_part_type(mech, loc, i)))
@@ -92,7 +92,7 @@ static void mech_dump_event(MuxEvent *ev) {
     return;
   }
   if (arg < 65536) {
-    weapindx = (arg / 256) - 1;
+    weapindx = (int)(arg / 256) - 1;
     for (; i >= 0; i--)
       for (l = mech_section_critical_count(mech, i) - 1; l >= 0; l--)
         if (equipment_is_ammunition(mech_critical_part_type(mech, i, l)))
@@ -434,7 +434,7 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int wHitLoc) {
   }
 
   if (wcAmmoItems > 0) {
-    wRndIdx = btech_random_range(mech_context(mech), 0, wcAmmoItems - 1);
+    wRndIdx = btech_random_range_int(mech_context(mech), 0, wcAmmoItems - 1);
     wBlowDamage = ammunition_items[wRndIdx].damage;
     wSecIter = ammunition_items[wRndIdx].location;
     wSlotIter = ammunition_items[wRndIdx].slot;

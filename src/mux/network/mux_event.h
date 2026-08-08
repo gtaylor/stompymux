@@ -97,15 +97,15 @@ void mux_event_remove_type_data2(MuxEventScheduler *scheduler, int type,
                                  void *data);
 void mux_event_remove_type_data_data(MuxEventScheduler *scheduler, int type,
                                      void *data, void *data2);
-void mux_event_get_type_data(MuxEventScheduler *scheduler, int type, void *data,
-                             long *data2);
+void mux_event_get_type_data(MuxEventScheduler *scheduler, int type,
+                             const void *data, long *data2);
 int mux_event_count_type(MuxEventScheduler *scheduler, int type);
 int mux_event_count_type_data(MuxEventScheduler *scheduler, int type,
-                              void *data);
+                              const void *data);
 int mux_event_count_type_data2(MuxEventScheduler *scheduler, int type,
                                void *data);
 int mux_event_count_type_data_data(MuxEventScheduler *scheduler, int type,
-                                   void *data, void *data2);
+                                   const void *data, const void *data2);
 int mux_event_count_data(MuxEventScheduler *scheduler, int type, void *data);
 void mux_event_gothru_type_data(MuxEventScheduler *scheduler, int type,
                                 void *data, MuxEventCallback func);
@@ -117,8 +117,8 @@ void mux_event_visit_type(MuxEventScheduler *scheduler, int type,
 void mux_event_gothru_type(MuxEventScheduler *scheduler, int type,
                            MuxEventCallback func);
 int mux_event_last_type_data(MuxEventScheduler *scheduler, int type,
-                             void *data);
+                             const void *data);
 long mux_event_count_type_data_firstev(MuxEventScheduler *scheduler, int type,
-                                       void *data);
+                                       const void *data);
 
 /* Did I mention cproto is braindead? */

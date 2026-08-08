@@ -16,7 +16,7 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
   int hitloc = 0;
   int side;
 
-  switch ((int)mech_class(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_VTOL:
     switch (hitGroup) {
     case LEFTSIDE:
@@ -246,6 +246,14 @@ int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
       }
       break;
     }
+    break;
+  case CLASS_MECH:
+  case CLASS_VEH_GROUND:
+  case CLASS_SPHEROID_DS:
+  case CLASS_AERO:
+  case CLASS_MW:
+  case CLASS_DS:
+  case CLASS_BSUIT:
     break;
   }
   return hitloc;

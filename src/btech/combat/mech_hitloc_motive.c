@@ -7,6 +7,7 @@
  *       All rights reserved
  */
 
+#include <math.h>
 #include <string.h>
 
 #include "btconfig.h"
@@ -15,6 +16,7 @@
 #include "mech_api_types.h"
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
+#include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify_api.h"
@@ -31,7 +33,7 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
 
   wRoll = btech_random_roll(mech_context(mech)) + wRollMod;
 
-  switch ((int)mech_movement_type(mech)) {
+  switch (mech_movement_type(mech)) {
   case MOVE_TRACK:
     strcpy(strVhlTypeName, "tank");
     break;
@@ -53,6 +55,11 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
   case MOVE_SUB:
     strncpy(strVhlTypeName, "submarine", MAX_LEN);
     break;
+  case MOVE_BIPED:
+  case MOVE_VTOL:
+  case MOVE_FLY:
+  case MOVE_QUAD:
+  case MOVE_NONE:
   default:
     strncpy(strVhlTypeName, "weird unidentifiable toy (warn a wizard!)",
             MAX_LEN);
@@ -78,7 +85,7 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
           "harder to control your %s![reset]",
           strVhlTypeName);
 
-    if (mech_current_speed(mech) != 0.0)
+    if (fabsf(mech_current_speed(mech)) > 0.0F)
       mech_los_broadcast(mech, "wobbles slightly.");
   } else if (wRoll < 12) { /* moderate effect */
     mech_pilot_skill_modifier_add(mech, 2);
@@ -94,7 +101,7 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
           "you down and making it harder to control your %s![reset]",
           strVhlTypeName);
 
-    if (mech_current_speed(mech) != 0.0)
+    if (fabsf(mech_current_speed(mech)) > 0.0F)
       mech_los_broadcast(mech, "wobbles violently.");
 
     mech_max_speed_lower(mech, MP1);

@@ -1,5 +1,6 @@
 #include "map_obj_internal.h"
 
+#include "checked_conversion.h"
 #include "mech_classification_api.h"
 #include "registry_api.h"
 
@@ -110,8 +111,8 @@ void map_add_block(DbRef player, void *data, char *buffer) {
   }
 
   bzero(&foo, sizeof(MapObject));
-  foo.x = x;
-  foo.y = y;
+  foo.x = clamp_int_to_short(x);
+  foo.y = clamp_int_to_short(y);
   foo.datai = str;
   foo.obj = player;
   foo.datac = team;
@@ -133,7 +134,7 @@ int is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
     if (o->datac && o->datac == mech_team(mech))
       continue;
     MapCoordToRealCoord(o->x, o->y, &tx, &ty);
-    if (FindHexRange(fx, fy, tx, ty) <= o->datai)
+    if (FindHexRange(fx, fy, tx, ty) <= (float)o->datai)
       return 1;
   }
   return 0;

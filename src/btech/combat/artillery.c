@@ -61,7 +61,7 @@ static const char *artillery_type(artillery_shot *s) {
 
 static struct {
   int dir;
-  char *desc;
+  const char *desc;
 } arty_dirs[] = {{0, "north"},       {60, "northeast"},  {90, "east"},
                  {120, "southeast"}, {180, "south"},     {240, "southwest"},
                  {270, "west"},      {300, "northwest"}, {0, NULL}};
@@ -86,8 +86,8 @@ static const char *artillery_direction(artillery_shot *s) {
 }
 
 int artillery_round_flight_time(float fx, float fy, float tx, float ty) {
-  int delay = MAX(ARTILLERY_MINIMUM_FLIGHT,
-                  (FindHexRange(fx, fy, tx, ty) / ARTY_SPEED));
+  const float flight_time = FindHexRange(fx, fy, tx, ty) / ARTY_SPEED;
+  const int delay = MAX(ARTILLERY_MINIMUM_FLIGHT, (int)flight_time);
 
   /* XXX Different weapons, diff. speed? */
   return delay;
@@ -144,8 +144,8 @@ static int blast_arcf(float fx, float fy, Mech *mech) {
 #define TABLE_KICK 2
 
 void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
-                    float fx, float fy, float tfx, float tfy, char *tomsg,
-                    char *otmsg, int table, int safeup, int safedown,
+                    float fx, float fy, float tfx, float tfy, const char *tomsg,
+                    const char *otmsg, int table, int safeup, int safedown,
                     int isunderwater) {
   Mech *tempMech;
   int loop;
@@ -226,8 +226,9 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
 }
 
 void blast_hit_hex(BattleMap *map, int dam, int singlehitsize, int heatdam,
-                   int fx, int fy, int tx, int ty, char *tomsg, char *otmsg,
-                   int table, int safeup, int safedown, int isunderwater) {
+                   int fx, int fy, int tx, int ty, const char *tomsg,
+                   const char *otmsg, int table, int safeup, int safedown,
+                   int isunderwater) {
   float ftx, fty;
   float ffx, ffy;
 
@@ -238,10 +239,10 @@ void blast_hit_hex(BattleMap *map, int dam, int singlehitsize, int heatdam,
 }
 
 void blast_hit_hexesf(BattleMap *map, int dam, int singlehitsize, int heatdam,
-                      float fx, float fy, float ftx, float fty, char *tomsg,
-                      char *otmsg, char *tomsg1, char *otmsg1, int table,
-                      int safeup, int safedown, int isunderwater,
-                      int doneighbors) {
+                      float fx, float fy, float ftx, float fty,
+                      const char *tomsg, const char *otmsg, const char *tomsg1,
+                      const char *otmsg1, int table, int safeup, int safedown,
+                      int isunderwater, int doneighbors) {
   int x1, y1, x2, y2;
   int dm;
   short tx, ty;
@@ -286,8 +287,9 @@ void blast_hit_hexesf(BattleMap *map, int dam, int singlehitsize, int heatdam,
       case LIGHT_FOREST:
       case HEAVY_FOREST:
         if (!find_decorations(map, x1, y1)) {
-          add_decoration(map, x1, y1, TYPE_FIRE, FIRE,
-                         btech_random_range(battle_map_context(map), 60, 180));
+          add_decoration(
+              map, x1, y1, TYPE_FIRE, FIRE,
+              btech_random_range_int(battle_map_context(map), 60, 180));
         }
 
         break;
@@ -296,9 +298,10 @@ void blast_hit_hexesf(BattleMap *map, int dam, int singlehitsize, int heatdam,
 }
 
 void blast_hit_hexes(BattleMap *map, int dam, int singlehitsize, int heatdam,
-                     int tx, int ty, char *tomsg, char *otmsg, char *tomsg1,
-                     char *otmsg1, int table, int safeup, int safedown,
-                     int isunderwater, int doneighbors) {
+                     int tx, int ty, const char *tomsg, const char *otmsg,
+                     const char *tomsg1, const char *otmsg1, int table,
+                     int safeup, int safedown, int isunderwater,
+                     int doneighbors) {
   float fx, fy;
 
   MapCoordToRealCoord(tx, ty, &fx, &fy);
@@ -319,7 +322,7 @@ static void artillery_hit_hex(BattleMap *map, artillery_shot *s, int type,
   if ((mode & SMOKE_MODE)) {
     /* Add smoke */
     add_decoration(map, tx, ty, TYPE_SMOKE, SMOKE,
-                   btech_random_range(battle_map_context(map), 90, 150));
+                   btech_random_range_int(battle_map_context(map), 90, 150));
     return;
   }
   if (mode & MINE_MODE) {
@@ -389,10 +392,10 @@ static void artillery_cluster_hit(BattleMap *map, artillery_shot *s, int type,
   bzero(targets, sizeof(targets));
   for (i = 0; i < dam; i++) {
     do {
-      xd = btech_random_range(battle_map_context(map), -2, 0) +
-           btech_random_range(battle_map_context(map), 0, 2);
-      yd = btech_random_range(battle_map_context(map), -2, 0) +
-           btech_random_range(battle_map_context(map), 0, 2);
+      xd = btech_random_range_int(battle_map_context(map), -2, 0) +
+           btech_random_range_int(battle_map_context(map), 0, 2);
+      yd = btech_random_range_int(battle_map_context(map), -2, 0) +
+           btech_random_range_int(battle_map_context(map), 0, 2);
       x = tx + xd;
       y = ty + yd;
     } while (x < 0 || x >= map->map_width || y < 0 || y >= map->map_height);
@@ -446,7 +449,7 @@ void artillery_friendly_adjustment(DbRef mechnum, BattleMap *map, int x,
 static void artillery_hit(artillery_shot *s) {
   /* First, we figure where it exactly hits. Our first-hand information
      is only whether it hits or not, not _where_ it hits */
-  double dir;
+  float dir;
   int di;
   int dist;
   int weight;
@@ -459,16 +462,16 @@ static void artillery_hit(artillery_shot *s) {
   if (!s->ishit) {
     /* Shit! We missed target ;-) */
     /* Time to calculate a new target hex */
-    di = btech_random_range(battle_map_context(map), 0, 359);
-    dir = di * TWOPIOVER360;
-    dist = btech_random_range(battle_map_context(map), 2, 7);
+    di = btech_random_range_int(battle_map_context(map), 0, 359);
+    dir = (float)di * TWOPIOVER360;
+    dist = btech_random_range_int(battle_map_context(map), 2, 7);
     weight = 100 * (dist * 6) / ((dist * 6 + map->windspeed));
     di = (di * weight + map->winddir * (100 - weight)) / 100;
     dist = (dist * weight + (map->windspeed / 6) * (100 - weight)) / 100;
     original_x = s->to_x;
     original_y = s->to_y;
-    s->to_x = s->to_x + dist * cos(dir);
-    s->to_y = s->to_y + dist * sin(dir);
+    s->to_x += (int)((float)dist * cosf(dir));
+    s->to_y += (int)((float)dist * sinf(dir));
     s->to_x = BOUNDED(0, s->to_x, map->map_width - 1);
     s->to_y = BOUNDED(0, s->to_y, map->map_height - 1);
     /* Time to calculate if any friendlies have LOS to hex,

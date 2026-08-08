@@ -152,12 +152,13 @@ void eliminate_empties(BattleMap *map) {
           map->mynum, oldcount - count, oldcount, count);
   if (i < 0)
     return;
+  const size_t allocation_count = (size_t)count;
   for (j = count; j < oldcount; j++)
     free((void *)map->LOSinfo[j]);
-  ReCreate(map->LOSinfo, unsigned short *, count);
+  ReCreate(map->LOSinfo, unsigned short *, allocation_count);
 
-  ReCreate(map->mechsOnMap, DbRef, count);
-  ReCreate(map->mechflags, char, count);
+  ReCreate(map->mechsOnMap, DbRef, allocation_count);
+  ReCreate(map->mechflags, char, allocation_count);
 
   map->first_free = count;
   map->dynamic_size = count;
@@ -229,13 +230,14 @@ void add_mech_to_map(BattleMap *newmap, Mech *mech) {
   if (loop == newmap->first_free) {
     newmap->first_free++;
     count = newmap->first_free;
-    ReCreate(newmap->mechsOnMap, DbRef, count);
-    ReCreate(newmap->mechflags, char, count);
-    ReCreate(newmap->LOSinfo, unsigned short *, count);
+    const size_t allocation_count = (size_t)count;
+    ReCreate(newmap->mechsOnMap, DbRef, allocation_count);
+    ReCreate(newmap->mechflags, char, allocation_count);
+    ReCreate(newmap->LOSinfo, unsigned short *, allocation_count);
 
     newmap->LOSinfo[count - 1] = nullptr;
     for (i = 0; i < count; i++) {
-      ReCreate(newmap->LOSinfo[i], unsigned short, count);
+      ReCreate(newmap->LOSinfo[i], unsigned short, allocation_count);
 
       newmap->LOSinfo[i][loop] = 0;
     }
@@ -281,8 +283,8 @@ void add_mech_to_map(BattleMap *newmap, Mech *mech) {
                                newmap->mynum));
 }
 
-int mech_size(BattleMap *map) {
-  return map->first_free *
-         (sizeof(DbRef) + sizeof(char) + sizeof(unsigned short *) +
-          map->first_free * sizeof(unsigned short));
+size_t mech_size(const BattleMap *map) {
+  const size_t unit_count = (size_t)map->first_free;
+  return unit_count * (sizeof(DbRef) + sizeof(char) + sizeof(unsigned short *) +
+                       unit_count * sizeof(unsigned short));
 }

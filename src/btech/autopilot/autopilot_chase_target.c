@@ -32,7 +32,8 @@
 bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
                           Mech *target) {
   char buffer[LBUF_SIZE];
-  short x, y;
+  int x, y;
+  short generated_x, generated_y;
   float fx, fy;
   char do_chasetarget;
 
@@ -138,9 +139,11 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
            * variables to the AI to remember it} */
           FindXY(mech_position_real_x(target), mech_position_real_y(target),
                  mech_heading_degrees(target) + autopilot->ofsx,
-                 autopilot->ofsy, &fx, &fy);
+                 (float)autopilot->ofsy, &fx, &fy);
 
-          RealCoordToMapCoord(&x, &y, fx, fy);
+          RealCoordToMapCoord(&generated_x, &generated_y, fx, fy);
+          x = generated_x;
+          y = generated_y;
 
           /* Make sure the hex is sane */
           if (x < 0 || y < 0 || x >= battle_map_width(map) ||
@@ -155,7 +158,7 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
           /* Are we in the target hex and is the target not moving */
           if ((mech_position_x(mech) == x) && (mech_position_y(mech) == y) &&
-              (mech_current_speed(target) < 0.5)) {
+              (mech_current_speed(target) < 0.5F)) {
 
             /* Get his bearing and face him */
             MapCoordToRealCoord(x, y, &fx, &fy);

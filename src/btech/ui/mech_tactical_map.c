@@ -327,8 +327,11 @@ static void sketch_tac_mines(char *buf, BattleMap *map, Mech *mech, int sx,
       base[dispcols] = ' ';
       base[dispcols + 1] = ' ';
       if (o) {
+        int elevation;
+
         MapCoordToRealCoord(tx, ty, &fx, &fy);
-        fz = ZSCALE * map_base_elevation(map, tx, ty);
+        elevation = map_base_elevation(map, tx, ty);
+        fz = ZSCALE * (float)elevation;
         hex_range =
             FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
                       mech_position_real_z(mech), fx, fy, fz);
@@ -412,6 +415,8 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
    */
   wx = minimum_int(MAX_WIDTH, wx);
   wy = minimum_int(MAX_HEIGHT, wy);
+  if (wx <= 0 || wy <= 0)
+    return nullptr;
 
   sx = cx - wx / 2;
   sy = cy - wy / 2;
@@ -562,7 +567,7 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
 
       base = sketch_buf + (i + 1) * dispcols + left_offset;
       len = (n - i - 1) * 3 + 1;
-      memset(base, ' ', len);
+      memset(base, ' ', (size_t)len);
       base[len] = '_';
       base[len + 1] = '_';
       base[mapcols - len - 2] = '_';
@@ -571,11 +576,11 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
 
       base = sketch_buf + (disprows - i - 1) * dispcols + left_offset;
       len = (n - i) * 3;
-      memset(base, ' ', len);
+      memset(base, ' ', (size_t)len);
       base[mapcols - len] = '\0';
     }
 
-    memset(sketch_buf + left_offset, ' ', n * 3 + 1);
+    memset(sketch_buf + left_offset, ' ', (size_t)(n * 3 + 1));
     sketch_buf[left_offset + n * 3 + 1] = '_';
     sketch_buf[left_offset + n * 3 + 2] = '_';
     sketch_buf[left_offset + n * 3 + 3] = '\0';

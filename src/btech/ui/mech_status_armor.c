@@ -123,7 +123,7 @@ typedef struct ArmorFieldText {
 } ArmorFieldText;
 
 static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
-                                         const int flag, const int width) {
+                                         const int flag, const size_t width) {
   ArmorDamageText result = {0};
   char *asp;
 
@@ -135,7 +135,7 @@ static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
   }
 
   if (flag & ARMOR_FLAG_OWNED) {
-    int armor_len;
+    size_t armor_len;
 
     /* TODO: snprintf() is a C99-ism, please autoconf-ize.  */
     /* XXX: Aeros 0-filled spaces.  That's silly.  */
@@ -162,7 +162,7 @@ static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
     }
   } else {
     /* Use adversarial (scan) fill characters.  */
-    memset(result.text, armordamltrstr[armor_level], width);
+    memset(result.text, armordamltrstr[(size_t)armor_level], width);
   }
 
   result.text[width] = '\0';
@@ -210,7 +210,9 @@ static ArmorFieldText armor_field_text(Mech *mech, const int loc,
   int armor_level, armor_value;
 
   /* Sanity check arguments.  */
-  if (width > 23)
+  if (width < 0)
+    width = 0;
+  else if (width > 23)
     width = 23;
 
   /* Get armor status.  */
@@ -219,15 +221,15 @@ static ArmorFieldText armor_field_text(Mech *mech, const int loc,
   /* Get strings.  */
   if (!(flag & ARMOR_FLAG_SHOW_DEST) && !mech_section_internal(mech, loc)) {
     /* Blank field. (Destroyed section.) */
-    memset(result.text, ' ', width);
+    memset(result.text, ' ', (size_t)width);
     result.text[width] = '\0';
     return result;
   }
 
   ArmorDamageText damage =
-      armor_damage_text(armor_level, armor_value, flag, width);
+      armor_damage_text(armor_level, armor_value, flag, (size_t)width);
   snprintf(result.text, sizeof(result.text), "%s%s[reset]",
-           armordamcolorstr[armor_level], damage.text);
+           armordamcolorstr[(size_t)armor_level], damage.text);
 
   return result;
 }
@@ -282,7 +284,7 @@ static void armor_template_append(char destination[static LBUF_SIZE],
     *(*position)++ = value;
 }
 
-static int ascii_digit_value(char value) { return value - '0'; }
+static int ascii_digit_value(int value) { return value - '0'; }
 
 void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                       int owner) {
@@ -298,6 +300,15 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
   /* Select status template.  */
   switch (mech_class(mech)) {
+  case CLASS_MECH:
+  case CLASS_VEH_GROUND:
+  case CLASS_VTOL:
+  case CLASS_VEH_NAVAL:
+  case CLASS_SPHEROID_DS:
+  case CLASS_BSUIT:
+    flag = 0;
+    break;
+
   case CLASS_MW:
     /* TODO: Should probably make this user-selectable by adding
      * some more formatting flags.  */

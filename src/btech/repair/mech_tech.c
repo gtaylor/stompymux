@@ -17,6 +17,7 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_obj_api.h"
@@ -28,6 +29,7 @@
 #include "mech_partnames_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
+#include "mech_tech_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/attrs.h"
@@ -72,9 +74,9 @@ int tech_proper_internal_part(const Mech *mech) {
 int game_lag(BtechContext *context) {
   if (!context->events->tick)
     return 0;
-  return 100 * (context->clock->now - context->process_start_time) /
-             context->events->tick -
-         100;
+  time_t const elapsed = context->clock->now - context->process_start_time;
+  return clamp_intptr_to_int(100 * (intptr_t)elapsed / context->events->tick -
+                             100);
 }
 
 int game_lag_time(BtechContext *context, int duration) {
@@ -99,7 +101,8 @@ int player_techtime(BtechContext *context, DbRef player) {
     techtime = context->clock->now;
   }
 
-  tused = (techtime - context->clock->now) / TECH_TICK;
+  tused = clamp_intptr_to_int(
+      (intptr_t)((techtime - context->clock->now) / TECH_TICK));
 
   return tused;
 }
@@ -178,7 +181,8 @@ void tech_status(BtechContext *context, DbRef player, time_t dat) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You have no jobs pending!");
   else {
-    un = (dat - context->clock->now) / TECH_TICK;
+    un = clamp_intptr_to_int(
+        (intptr_t)((dat - context->clock->now) / TECH_TICK));
     snprintf(buf, sizeof(buf), "You have %d %s%s of repairs pending", un,
              TECH_UNIT, un != 1 ? "s" : "");
     if (un >= context->configuration->btech_maxtechtime)
@@ -208,7 +212,7 @@ int tech_addtechtime(BtechContext *context, DbRef player, int time) {
   old += time * TECH_TICK;
   silly_atr_set_in(context->database, player, A_TECHTIME, tprintf("%ld", old));
   tech_status(context, player, old);
-  return (old - context->clock->now);
+  return clamp_intptr_to_int((intptr_t)(old - context->clock->now));
 }
 
 int tech_parsepart_advanced(Mech *mech, char *buffer, int *loc, int *pos,

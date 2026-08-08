@@ -1,3 +1,4 @@
+#include "checked_conversion.h"
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
@@ -10,7 +11,7 @@
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
 
-static char *const mechtypenames[CLASS_LAST + 1] = {
+static const char *const mechtypenames[CLASS_LAST + 1] = {
     "mech", "tank", "VTOL", "vessel", "aerofighter", "DropShip"};
 
 const char *mechtypename(Mech *foo) {
@@ -81,15 +82,15 @@ MechId mech_id(Mech *mech, bool lowercase) {
   id.text[2] = '\0';
 
   if (lowercase) {
-    id.text[0] = tolower((unsigned char)id.text[0]);
-    id.text[1] = tolower((unsigned char)id.text[1]);
+    id.text[0] = clamp_int_to_char(tolower((unsigned char)id.text[0]));
+    id.text[1] = clamp_int_to_char(tolower((unsigned char)id.text[1]));
   }
   return id;
 }
 
 char *MyToUpper(char *string) {
   if (*string)
-    *string = toupper(*string);
+    *string = clamp_int_to_char(toupper((unsigned char)*string));
   return string;
 }
 
@@ -182,15 +183,16 @@ DbRef FindTargetDBREFFromMapNumber(Mech *mech, char *mapnum) {
 }
 
 void FindComponents(float magnitude, int degrees, float *x, float *y) {
-  *x = magnitude * fcos((float)(TWOPIOVER360 * (degrees + 90)));
-  *y = magnitude * fsin((float)(TWOPIOVER360 * (degrees + 90)));
+  float angle = (float)degrees + 90.0F;
+  *x = magnitude * cosf((float)TWOPIOVER360 * angle);
+  *y = magnitude * sinf((float)TWOPIOVER360 * angle);
   *x = -(*x); /* because 90 is to the right */
   *y = -(*y); /* because y increases downwards */
 }
 
 static int Leave_Hangar(BattleMap *map, Mech *mech) {
   Mech *car = NULL;
-  int mapob;
+  DbRef mapob;
   MapObject *mapo;
 
   /* For now, leaving leads to finding yourself on the new map
@@ -204,10 +206,10 @@ static int Leave_Hangar(BattleMap *map, Mech *mech) {
   }
   mech_los_broadcast(mech, "has left the hangar.");
   mech_Rsetmapindex(GOD, (void *)mech,
-                    tprintf("%d", (int)map->MapObject[TYPE_LEAVE]->obj));
+                    tprintf("%ld", map->MapObject[TYPE_LEAVE]->obj));
   if (car)
     mech_Rsetmapindex(GOD, (void *)car,
-                      tprintf("%d", (int)map->MapObject[TYPE_LEAVE]->obj));
+                      tprintf("%ld", map->MapObject[TYPE_LEAVE]->obj));
   map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (mech->mapindex == mapob) {
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
@@ -355,10 +357,9 @@ int FindZBearing(float x0, float y0, float z0, float x1, float y1, float z1) {
    * XXX: Why can't opp be negative?  If z1 < z0, shouldn't Z-bearing
    * also be negative?  Also, why no range clamping on the value of deg?
    */
-  opp = (float)(1. / SCALEMAP) * fabsf(z1 - z0);
-  /* TODO: Use atan2f(), if we've got it.  */
-  deg = radians_to_degrees(atan2(opp, adj));
-  return ceilf(deg);
+  opp = fabsf(z1 - z0) / (float)SCALEMAP;
+  deg = radians_to_degrees(atan2f(opp, adj));
+  return clamp_float_to_int(ceilf(deg));
 }
 
 int FindBearing(float x0, float y0, float x1, float y1) {
@@ -376,11 +377,11 @@ int FindBearing(float x0, float y0, float x1, float y1) {
     return (dy < 0.f) ? 0 : 180;
   }
 
-  /* TODO: Use atan2f(), if we've got it.  */
-  rads = (float)atan2(-dx, dy);
+  rads = atan2f(-dx, dy);
 
   /* Round off degrees.  */
-  degrees = ((int)radians_to_degrees(10.f * rads) + 5) / 10;
+  float scaled_degrees = radians_to_degrees(10.0F * rads);
+  degrees = (clamp_float_to_int(scaled_degrees) + 5) / 10;
 
   return AcceptableDegree(degrees + 180);
 }
@@ -426,7 +427,7 @@ int InWeaponArc(Mech *mech, float x, float y) {
   return res;
 }
 
-char *FindGunnerySkillName(Mech *mech, int weapindx) {
+const char *FindGunnerySkillName(Mech *mech, int weapindx) {
   if (!mech->xcode.context->configuration->btech_extended_gunnery) {
     switch (((mech)->ud.type)) {
     case CLASS_BSUIT:
@@ -481,7 +482,7 @@ char *FindGunnerySkillName(Mech *mech, int weapindx) {
   return NULL;
 }
 
-char *FindPilotingSkillName(Mech *mech) {
+const char *FindPilotingSkillName(Mech *mech) {
   if (!mech->xcode.context->configuration->btech_extended_piloting) {
     switch (((mech)->ud.type)) {
     case CLASS_MW:
@@ -535,7 +536,7 @@ char *FindPilotingSkillName(Mech *mech) {
 }
 
 int FindPilotPiloting(Mech *mech) {
-  char *str;
+  const char *str;
 
   if (mech_has_active_pilot(mech))
     if ((str = FindPilotingSkillName(mech)))
@@ -563,7 +564,7 @@ int FindPilotArtyGun(Mech *mech) {
 }
 
 int FindPilotGunnery(Mech *mech, int weapindx) {
-  char *str;
+  const char *str;
 
   if (mech_has_active_gunner(mech))
     if ((str = FindGunnerySkillName(mech, weapindx)))
@@ -572,7 +573,7 @@ int FindPilotGunnery(Mech *mech, int weapindx) {
   return DEFAULT_GUNNERY;
 }
 
-char *FindTechSkillName(Mech *mech) {
+const char *FindTechSkillName(Mech *mech) {
   switch (((mech)->ud.type)) {
   case CLASS_MECH:
   case CLASS_BSUIT:
@@ -590,7 +591,7 @@ char *FindTechSkillName(Mech *mech) {
 }
 
 int FindTechSkill(DbRef player, Mech *mech) {
-  char *skname;
+  const char *skname;
 
   if ((skname = FindTechSkillName(mech)))
     return (char_getskilltarget(mech->xcode.context, player, skname, 0));
@@ -673,15 +674,15 @@ void FindXY(float x0, float y0, int bearing, float range, float *x1,
   float xscale, correction;
 
   /* XXX: Something to do with ranges with actual number of hexes? */
-  correction = (float)(bearing % 60) / 60.0;
-  if (correction > 0.5)
-    correction = 1.0 - correction;
-  correction = -correction * 2.0; /* 0 - 1 correction */
-  xscale = (1.0 + XSCALE * correction) * SCALEMAP;
+  correction = (float)(bearing % 60) / 60.0F;
+  if (correction > 0.5F)
+    correction = 1.0F - correction;
+  correction = -correction * 2.0F; /* 0 - 1 correction */
+  xscale = (1.0F + (float)XSCALE * correction) * (float)SCALEMAP;
 
-  /* TODO: Use sinf()/cosf(), if we've got them.  */
-  *x1 = x0 + range * (float)sin(degrees_to_radians(bearing)) * xscale;
-  *y1 = y0 - range * (float)cos(degrees_to_radians(bearing)) * SCALEMAP;
+  float radians = degrees_to_radians((float)bearing);
+  *x1 = x0 + range * sinf(radians) * xscale;
+  *y1 = y0 - range * cosf(radians) * (float)SCALEMAP;
 }
 
 /* Computes hex range between Cartesian (x0, y0, z0) and (x1, y1, z1).  */

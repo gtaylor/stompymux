@@ -6,7 +6,7 @@
 void DumpMechSpecialObjects(BtechContext *context, DbRef player) {
   CoolMenu *c;
 
-  c = auto_column_string_menu("MechSpecials available", internals);
+  c = auto_column_const_string_menu("MechSpecials available", internals);
   ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
@@ -133,7 +133,7 @@ char *payloadlist_func(Mech *mech, char *buffer) {
   int count, weap_count, ammo_count, section_loop, weap_loop, put_loop;
   char payloadbuff[120] = {0};
 
-  short payload_items[8 * MAX_WEAPS_SECTION];
+  int payload_items[8 * MAX_WEAPS_SECTION];
   short payload_items_count[8 * MAX_WEAPS_SECTION];
 
   /* Clear the buffer */
@@ -256,7 +256,7 @@ char *partlist_func(Mech *mech, char *buffer) {
   int count, part_count, section_loop, put_loop, act_count;
   char partlistbuff[120] = {0};
 
-  short partlist_items[8 * MAX_WEAPS_SECTION];
+  int partlist_items[8 * MAX_WEAPS_SECTION];
   short partlist_count[8 * MAX_WEAPS_SECTION];
 
   /* Clear the buffer */

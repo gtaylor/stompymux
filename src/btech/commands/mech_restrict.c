@@ -29,6 +29,7 @@
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
+#include "mech_restrict_api.h"
 #include "mech_runtime_api.h"
 #include "mech_stagger.h"
 #include "mech_status_types.h"
@@ -46,6 +47,16 @@
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
+
+static char random_mech_id_character(BtechContext *context) {
+  const int offset = btech_random_range_int(context, 0, 25);
+  return (char)('A' + offset);
+}
+
+static char normalized_mech_id_character(char value) {
+  const int uppercase = toupper((unsigned char)value);
+  return (char)BOUNDED('A', uppercase, 'Z');
+}
 
 void clear_mech_from_LOS(Mech *mech) {
   BattleMap *map;
@@ -193,11 +204,11 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     targ[0] = tempstr[0];
     targ[1] = tempstr[1];
   } else {
-    targ[0] = 65 + btech_random_range(mech_context(mech), 0, 25);
-    targ[1] = 65 + btech_random_range(mech_context(mech), 0, 25);
+    targ[0] = random_mech_id_character(mech_context(mech));
+    targ[1] = random_mech_id_character(mech_context(mech));
   }
-  targ[0] = BOUNDED('A', toupper(targ[0]), 'Z');
-  targ[1] = BOUNDED('A', toupper(targ[1]), 'Z');
+  targ[0] = normalized_mech_id_character(targ[0]);
+  targ[1] = normalized_mech_id_character(targ[1]);
   for (loop = 0; (loop < newmap->first_free && !notdone); loop++) {
     if ((tempMech = (Mech *)btech_context_find_object(
              mech_context(mech), newmap->mechsOnMap[loop]))) {
@@ -207,8 +218,8 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     }
   }
   while (notdone) {
-    targ[0] = 65 + btech_random_range(mech_context(mech), 0, 25);
-    targ[1] = 65 + btech_random_range(mech_context(mech), 0, 25);
+    targ[0] = random_mech_id_character(mech_context(mech));
+    targ[1] = random_mech_id_character(mech_context(mech));
     notdone = 0;
     for (loop = 0; (loop < newmap->first_free && !notdone); loop++) {
       if ((tempMech = (Mech *)btech_context_find_object(
@@ -281,7 +292,6 @@ void mech_Rsetteam(DbRef player, void *data, char *buffer) {
                 "Team set to %d", team);
 }
 
-extern void auto_stop_pilot(Autopilot *autopilot);
 /* Alloc/free routine */
 void newfreemech(DbRef key, void **data,
                  BtechSpecialLifecycleOperation selector) {

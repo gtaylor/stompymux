@@ -317,8 +317,8 @@ void mux_event_remove_type_data_data(MuxEventScheduler *scheduler, int type,
 }
 
 /* return the args of the event */
-void mux_event_get_type_data(MuxEventScheduler *scheduler, int type, void *data,
-                             long *data2) {
+void mux_event_get_type_data(MuxEventScheduler *scheduler, int type,
+                             const void *data, long *data2) {
   MuxEvent *e;
 
   LoopType(type, e) if (e->data == data) *data2 = (long)e->data2;
@@ -336,7 +336,7 @@ int mux_event_count_type(MuxEventScheduler *scheduler, int type) {
 }
 
 int mux_event_count_type_data(MuxEventScheduler *scheduler, int type,
-                              void *data) {
+                              const void *data) {
   MuxEvent *e;
   int count = 0;
 
@@ -358,7 +358,7 @@ int mux_event_count_type_data2(MuxEventScheduler *scheduler, int type,
 }
 
 int mux_event_count_type_data_data(MuxEventScheduler *scheduler, int type,
-                                   void *data, void *data2) {
+                                   const void *data, const void *data2) {
   MuxEvent *e;
   int count = 0;
 
@@ -414,7 +414,7 @@ void mux_event_gothru_type(MuxEventScheduler *scheduler, int type,
 }
 
 int mux_event_last_type_data(MuxEventScheduler *scheduler, int type,
-                             void *data) {
+                             const void *data) {
   MuxEvent *e;
   int last = 0, t;
 
@@ -426,7 +426,7 @@ int mux_event_last_type_data(MuxEventScheduler *scheduler, int type,
 }
 
 long mux_event_count_type_data_firstev(MuxEventScheduler *scheduler, int type,
-                                       void *data) {
+                                       const void *data) {
   MuxEvent *e;
 
   if (type > last_muxevent_type)

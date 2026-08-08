@@ -138,15 +138,18 @@ static void collision_apply_damage(Mech *att, Mech *mech, int dam,
 static int mech_adjusted_jump_speed_mp(const Mech *mech, const BattleMap *map) {
   float speed = mech_jump_speed(mech);
 
-  if (mech_is_under_gravity(mech) && map != nullptr)
-    speed = speed * 100 / MAX(50, battle_map_gravity(map));
+  if (mech_is_under_gravity(mech) && map != nullptr) {
+    const int gravity = MAX(50, battle_map_gravity(map));
+    speed = speed * 100.0F / (float)gravity;
+  }
   return (int)(speed * MP_PER_KPH);
 }
 
 static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
                                       int friendly, MechDominoMode mode,
                                       int cnt) {
-  int tar = btech_random_range(mech_context(me), 0, cnt - 1), i, head, td;
+  int tar = btech_random_range_int(mech_context(me), 0, cnt - 1);
+  int i, head, td;
   Mech *mech = nullptr;
   int team = mech_team(me);
 
@@ -195,13 +198,16 @@ static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
   case MECH_DOMINO_GROUND:
   default:
     head = mech_heading_degrees(me) + mech_lateral_movement(me);
-    td = fabs(((mech_current_speed(me) -
-                mech_current_speed(mech) *
-                    cos((head - (mech_heading_degrees(mech) +
-                                 mech_lateral_movement(mech))) *
-                        (M_PI / 180.0))) *
-               MP_PER_KPH) *
-              (mech_calculated_weight(me) / 1024 + 5) / 15);
+    const int heading_delta =
+        head - (mech_heading_degrees(mech) + mech_lateral_movement(mech));
+    const float relative_speed =
+        mech_current_speed(me) -
+        mech_current_speed(mech) *
+            cosf((float)heading_delta * (float)M_PI / 180.0F);
+    const int mech_weight = mech_calculated_weight(me);
+    const float damage = fabsf(relative_speed * MP_PER_KPH) *
+                         ((float)mech_weight / 1024.0F + 5.0F) / 15.0F;
+    td = (int)damage;
     break;
   }
   if (td > 10)

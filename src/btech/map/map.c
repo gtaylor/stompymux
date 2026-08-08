@@ -4,6 +4,7 @@
 
 #include "btech/context.h"
 #include "btech_channel.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "debug_api.h"
 #include "map.h"
@@ -51,7 +52,8 @@ static char *map_filename(const BattleMap *map, const char *mapname) {
 void debug_fixmap(DbRef player, void *data, char *buffer) {
   BattleMap *m = (BattleMap *)data;
   GameDatabase *database;
-  int i, k;
+  int i;
+  DbRef k;
   Mech *mek;
 
   if (!m)
@@ -80,19 +82,19 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
     if ((k = m->mechsOnMap[i]) >= 0) {
       if (btech_context_which_special(m->xcode.context, k) != GTYPE_MECH) {
         notify_printf(btech_context_evaluation(m->xcode.context), player,
-                      "Error: #%d isn't mech yet is in mapindex. Fixing..", k);
+                      "Error: #%ld isn't mech yet is in mapindex. Fixing..", k);
         m->mechsOnMap[i] = -1;
       } else if (!(mek = btech_context_get_mech(m->xcode.context, k))) {
         notify_printf(btech_context_evaluation(m->xcode.context), player,
-                      "Error: #%d has no mech data. Removing..", k);
+                      "Error: #%ld has no mech data. Removing..", k);
         m->mechsOnMap[i] = -1;
       } else if (mech_map_dbref(mek) != m->mynum) {
         notify_printf(btech_context_evaluation(m->xcode.context), player,
-                      "Error: #%d isn't really here! Removing..", k);
+                      "Error: #%ld isn't really here! Removing..", k);
         m->mechsOnMap[i] = -1;
       } else if (mech_map_slot(mek) != i) {
         notify_printf(btech_context_evaluation(m->xcode.context), player,
-                      "Error: #%d has invalid mapnumber (mn:%d <-> real:%d)..",
+                      "Error: #%ld has invalid mapnumber (mn:%d <-> real:%d)..",
                       k, mech_map_slot(mek), i);
       }
     }
@@ -186,7 +188,7 @@ void map_addhex(DbRef player, void *data, char *buffer) {
   }
   x = atoi(args[0]);
   y = atoi(args[1]);
-  elev = abs(atoi(args[3]));
+  elev = clamp_int_to_char(abs(atoi(args[3])));
   if (!((x >= 0) && (x < map->map_width) && (y >= 0) &&
         (y < map->map_height))) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
@@ -354,10 +356,10 @@ int map_load(BattleMap *map, char *mapname) {
   }
   // height is constrained to [1, MAPY] immediately above.
   // NOLINTNEXTLINE(clang-analyzer-optin.taint.TaintedAlloc)
-  Create(map->map, unsigned char *, height);
+  Create(map->map, unsigned char *, (size_t)height);
 
   for (i = 0; i < height; i++)
-    Create(map->map[i], unsigned char, width);
+    Create(map->map[i], unsigned char, (size_t)width);
 
   for (i = 0; i < height; i++) {
     if (feof(fp) || fgets(row, 2 * MAPX + 2, fp) == NULL ||
@@ -402,12 +404,12 @@ int map_load(BattleMap *map, char *mapname) {
   if (!feof(fp)) {
     if (fscanf(fp, "%d: %d %d\n", &i1, &i2, &i3) == 3) {
       map->flags = i1;
-      map->grav = i2;
-      map->temp = i3;
+      map->grav = clamp_int_to_unsigned_char(i2);
+      map->temp = clamp_int_to_char(i3);
     }
   }
-  map->map_height = height;
-  map->map_width = width;
+  map->map_height = clamp_int_to_short(height);
+  map->map_width = clamp_int_to_short(width);
   if (!battle_map_disables_bridgification(map))
     make_bridges(map);
   strncpy(map->mapname, mapname, MAP_NAME_SIZE);
@@ -568,9 +570,9 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
     return;
   }
   /* allocate new map space */
-  Create(map, unsigned char *, y);
+  Create(map, unsigned char *, (size_t)y);
   for (i = 0; i < y; i++)
-    Create(map[i], unsigned char, x);
+    Create(map[i], unsigned char, (size_t)x);
 
   if (failed)
     btech_channel_send(oldmap->xcode.context, BTECH_CHANNEL_MAP_ERRORS,
@@ -594,15 +596,16 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
       free((char *)(oldmap->map[i]));
     del_mapobjs(oldmap);
     /* set new map size and pointer to new map space */
-    oldmap->map_height = y;
-    oldmap->map_width = x;
+    oldmap->map_height = clamp_int_to_short(y);
+    oldmap->map_width = clamp_int_to_short(x);
     oldmap->map = map;
     mecha_notify(btech_context_evaluation(oldmap->xcode.context), player,
                  "Size set.");
   }
 }
 
-void map_clearmechs(DbRef player, void *data, char *buffer) {
+void map_clearmechs(DbRef player, void *data, const char *buffer) {
+  (void)buffer;
   BattleMap *map;
 
   map = (BattleMap *)data;
@@ -615,7 +618,7 @@ void map_update(DbRef obj, void *data) {
   Mech *mech;
   char *tmps, changemsg[LBUF_SIZE] = "";
   int ma, ml, wind, wspeed, cloudbase = 200;
-  int oldl, oldv, i, j;
+  int oldl, oldv, i;
 
   /* Changed from % 25 to % 60. %60 never hit when the event tick came here
      and was odd. %25 should hit when it is odd or even. */
@@ -633,17 +636,18 @@ void map_update(DbRef obj, void *data) {
       wspeed = 0;
       cloudbase = 200;
     }
-    map->winddir = wind;
-    map->windspeed = wspeed;
-    map->mapvis = BOUNDED(0, ma, 60);
-    map->maxvis = BOUNDED(24, ma * 3, 60);
-    map->maplight = BOUNDED(0, ml, 2);
-    map->cloudbase = cloudbase;
+    map->winddir = clamp_int_to_short(wind);
+    map->windspeed = clamp_int_to_short(wspeed);
+    map->mapvis = clamp_int_to_char(BOUNDED(0, ma, 60));
+    map->maxvis = clamp_int_to_short(BOUNDED(24, ma * 3, 60));
+    map->maplight = clamp_int_to_char(BOUNDED(0, ml, 2));
+    map->cloudbase = clamp_int_to_short(cloudbase);
     if (ml != oldl || ma != oldv)
       for (i = 0; i < map->first_free; i++) {
-        if ((j = map->mechsOnMap[i]) < 0)
+        const DbRef mech_dbref = map->mechsOnMap[i];
+        if (mech_dbref < 0)
           continue;
-        if (!(mech = btech_context_get_mech(map->xcode.context, j)))
+        if (!(mech = btech_context_get_mech(map->xcode.context, mech_dbref)))
           continue;
         if (ml != oldl)
           sensor_light_availability_check(mech);
@@ -662,10 +666,10 @@ void initialize_map_empty(BattleMap *new, DbRef key) {
   new->map_width = DEFAULT_MAP_WIDTH;
   new->map_height = DEFAULT_MAP_HEIGHT;
   new->regen_factor = 1; /* Default the building regen to 1 */
-  Create(new->map, unsigned char *, new->map_height);
+  Create(new->map, unsigned char *, (size_t)new->map_height);
 
   for (i = 0; i < new->map_height; i++)
-    Create(new->map[i], unsigned char, new->map_width);
+    Create(new->map[i], unsigned char, (size_t)new->map_width);
 
   for (i = 0; i < new->map_height; i++)
     for (j = 0; j < new->map_width; j++)
@@ -752,7 +756,7 @@ void UpdateMechsTerrain(BattleMap *map, int x, int y, int t) {
     if (mech_position_x(mech) != x || mech_position_y(mech) != y)
       continue;
     if (mech_position_terrain(mech) != t) {
-      mech_position_terrain_set(mech, t);
+      mech_position_terrain_set(mech, clamp_int_to_char(t));
       MarkForLOSUpdate(mech);
     }
   }

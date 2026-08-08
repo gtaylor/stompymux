@@ -25,3 +25,4 @@ void map_addice(DbRef player, BattleMap *map, char *buffer);
 void map_delice(DbRef player, BattleMap *map, char *buffer);
 void possibly_blow_ice(Mech *mech, int weapindx, int x, int y);
 void possibly_blow_bridge(Mech *mech, int weapindx, int x, int y);
+void possibly_blow_bridge(Mech *mech, int weapindx, int x, int y);

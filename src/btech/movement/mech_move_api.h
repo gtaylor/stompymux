@@ -15,6 +15,7 @@
 
 /* mech.move.c */
 const char *mech_lateral_description(Mech *mech);
+bool mech_lateral_mode_details(int mode, const char **description, int *offset);
 void mech_lateral(DbRef player, void *data, char *buffer);
 void mech_turnmode(DbRef player, void *data, char *buffer);
 void mech_bootlegger(DbRef player, void *data, char *buffer);
@@ -23,8 +24,9 @@ float mech_cargo_maximum_speed(Mech *mech, float maximum_speed);
 float mech_effective_maximum_speed(Mech *mech);
 int mech_jump_speed_mp_for_map(const Mech *mech, const BattleMap *map);
 float mech_jump_speed_for_map(const Mech *mech, const BattleMap *map);
-void mech_drop(DbRef player, void *data, char *buffer);
+void mech_drop(DbRef player, void *data, const char *buffer);
 void mech_stand(DbRef player, void *data, char *buffer);
+void mech_stand_empty(DbRef player, void *data);
 void mech_land(DbRef player, void *data, char *buffer);
 void mech_heading(DbRef player, void *data, char *buffer);
 void mech_turret(DbRef player, void *data, char *buffer);

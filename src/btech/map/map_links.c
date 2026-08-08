@@ -1,3 +1,4 @@
+#include "checked_conversion.h"
 #include "map_obj_internal.h"
 
 typedef struct MapLinkUpdateStats {
@@ -67,8 +68,8 @@ static void add_entrances(DbRef loc, BattleMap *map, char *data,
     for (i = 0; i < 4; i++)
       if ((parse_coord(map, i, args[i], &x, &y))) {
         foo.datac = DIRECTION_TABLE[i].dir;
-        foo.x = x;
-        foo.y = y;
+        foo.x = clamp_int_to_short(x);
+        foo.y = clamp_int_to_short(y);
         add_mapobj(map, &map->MapObject[TYPE_ENTRANCE], &foo, 1);
         if (stats != nullptr)
           stats->entrances++;
@@ -106,8 +107,8 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
       if (x < 0 || x >= map->map_width || y < 0 || y >= map->map_height)
         continue;
       set_hex_enterable(map, x, y);
-      foo.x = x;
-      foo.y = y;
+      foo.x = clamp_int_to_short(x);
+      foo.y = clamp_int_to_short(y);
       foo.obj = targ;
       add_mapobj(map, &map->MapObject[TYPE_BUILD], &foo, 1);
       if (stats != nullptr)

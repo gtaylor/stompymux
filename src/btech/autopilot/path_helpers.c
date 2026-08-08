@@ -5,3 +5,5 @@
  * Last modified: Fri Dec 11 00:54:43 1998 fingon
  *
  */
+
+static_assert(true, "reserved for pathfinding helpers");

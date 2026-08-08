@@ -1,11 +1,13 @@
 #include "mech_crew_api.h"
 #include "mech_electronics_api.h"
+#include "mech_identity_api.h"
 #include "mech_network_api.h"
 #include "mech_script_value_api.h"
 #include "mech_targeting_api.h"
 
 #include <string.h>
 
+#include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_stagger.h"
 
@@ -88,7 +90,7 @@ bool mech_script_value_read(const Mech *mech, MechScriptValueKey key,
     value->integer = ((mech)->ud.tons);
     return true;
   case MECH_SCRIPT_TOWING_DBREF:
-    value->integer = ((mech)->rd.carrying);
+    value->dbref = ((mech)->rd.carrying);
     return true;
   case MECH_SCRIPT_HEAT_PRODUCTION:
     value->floating = ((mech)->rd.plus_heat);
@@ -266,6 +268,9 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     return false;
 
   switch (key) {
+  case MECH_SCRIPT_MAP_DBREF:
+    mech_map_dbref_set(mech, value.dbref);
+    return true;
   case MECH_SCRIPT_NAME:
     strncpy(((mech)->ud.mech_name), value.string, 31 - 1);
     ((mech)->ud.mech_name)[31 - 1] = '\0';
@@ -294,10 +299,10 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     mech_pilot_status_set(mech, value.integer);
     return true;
   case MECH_SCRIPT_STRUCTURAL_INTEGRITY:
-    ((mech)->ud.si) = value.integer;
+    ((mech)->ud.si) = clamp_int_to_char(value.integer);
     return true;
   case MECH_SCRIPT_ORIGINAL_STRUCTURAL_INTEGRITY:
-    ((mech)->ud.si_orig) = value.integer;
+    ((mech)->ud.si_orig) = clamp_int_to_char(value.integer);
     return true;
   case MECH_SCRIPT_SPEED:
     ((mech)->rd.speed) = value.floating;
@@ -309,7 +314,7 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     ((mech)->ud.runspeed) = value.integer;
     return true;
   case MECH_SCRIPT_HEADING:
-    ((mech)->pd.facing) = value.integer;
+    ((mech)->pd.facing) = clamp_int_to_short(value.integer);
     return true;
   case MECH_SCRIPT_STALL:
     ((mech)->pd.stall) = value.integer;
@@ -331,6 +336,9 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     return true;
   case MECH_SCRIPT_TARGET_DBREF:
     mech_target_dbref_set(mech, value.dbref);
+    return true;
+  case MECH_SCRIPT_TOWING_DBREF:
+    mech->rd.carrying = value.dbref;
     return true;
   case MECH_SCRIPT_TEAM:
     ((mech)->pd.team) = value.integer;
@@ -375,7 +383,7 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     ((mech)->ud.fuel_orig) = value.integer;
     return true;
   case MECH_SCRIPT_SEEN_COUNT:
-    ((mech)->rd.num_seen) = value.integer;
+    ((mech)->rd.num_seen) = clamp_int_to_short(value.integer);
     return true;
   case MECH_SCRIPT_REAL_X:
     ((mech)->pd.fx) = value.floating;
@@ -387,16 +395,16 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     ((mech)->pd.fz) = value.floating;
     return true;
   case MECH_SCRIPT_X:
-    ((mech)->pd.x) = value.integer;
+    ((mech)->pd.x) = clamp_int_to_short(value.integer);
     return true;
   case MECH_SCRIPT_Y:
-    ((mech)->pd.y) = value.integer;
+    ((mech)->pd.y) = clamp_int_to_short(value.integer);
     return true;
   case MECH_SCRIPT_Z:
-    ((mech)->pd.z) = value.integer;
+    ((mech)->pd.z) = clamp_int_to_short(value.integer);
     return true;
   case MECH_SCRIPT_ELEVATION:
-    ((mech)->pd.elev) = value.integer;
+    ((mech)->pd.elev) = clamp_int_to_char(value.integer);
     return true;
   case MECH_SCRIPT_TARGETING_COMPUTER:
     mech_targeting_computer_type_set(mech,
@@ -448,10 +456,10 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     ((mech)->rd.jumpspeed) = value.floating;
     return true;
   case MECH_SCRIPT_JUMP_HEADING:
-    ((mech)->rd.jumpheading) = value.integer;
+    ((mech)->rd.jumpheading) = clamp_int_to_short(value.integer);
     return true;
   case MECH_SCRIPT_JUMP_LENGTH:
-    ((mech)->rd.jumplength) = value.integer;
+    ((mech)->rd.jumplength) = clamp_int_to_short(value.integer);
     return true;
   case MECH_SCRIPT_RADIO:
     mech_radio_quality_set(mech, value.integer);
@@ -483,6 +491,14 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
   case MECH_SCRIPT_HEXES_WALKED:
     ((mech)->pd.hexes_walked) = value.floating;
     return true;
+  case MECH_SCRIPT_DISABLED_HEAT_SINKS:
+  case MECH_SCRIPT_HEAT_SINKS:
+  case MECH_SCRIPT_C3I_NETWORK_SIZE:
+  case MECH_SCRIPT_STAGGER_DAMAGE:
+  case MECH_SCRIPT_COCOON:
+  case MECH_SCRIPT_CARRIER_MAXIMUM_TONNAGE:
+  case MECH_SCRIPT_UNUSABLE_ARCS:
+    return false;
   default:
     return false;
   }

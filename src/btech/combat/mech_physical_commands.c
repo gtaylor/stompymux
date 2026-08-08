@@ -118,7 +118,7 @@ void mech_charge(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *target;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int targetnum;
+  DbRef targetnum;
   char targetID[5];
   char *args[5];
   int argc;

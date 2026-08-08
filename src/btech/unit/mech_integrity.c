@@ -1,3 +1,4 @@
+#include "checked_conversion.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
@@ -196,8 +197,8 @@ int HeatFactor(Mech *mech) {
     factor = (((((mech)->rd.specials) & ICE_TECH)) ? -1 : 21);
     return factor;
   } else {
-    factor = (((mech)->rd.plus_heat) +
-              (2 * (((mech)->rd.plus_heat) - ((mech)->rd.minus_heat))));
+    factor = clamp_float_to_int(
+        mech->rd.plus_heat + 2.0F * (mech->rd.plus_heat - mech->rd.minus_heat));
     return ((mech_condition_summary(mech).null_signature_active ||
              mech_has_working_ecm_suite(mech) ||
              mech_condition_summary(mech).stealth_armor_active)

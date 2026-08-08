@@ -646,7 +646,7 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
   mech_speed_correct(towMech);
 }
 
-void mech_dropoff(DbRef player, void *data, char *buffer) {
+void mech_dropoff(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   Mech *target;
   BattleMap *newmap;

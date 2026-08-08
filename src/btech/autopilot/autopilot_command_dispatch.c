@@ -101,7 +101,7 @@ void auto_com_event(MuxEvent *muxevent) {
     if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
         CountDestroyedLegs(mech) <= 0) {
       if (!mech_event_count(mech, EVENT_STAND))
-        mech_stand(autopilot->mynum, mech, "");
+        mech_stand_empty(autopilot->mynum, mech);
       autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
                                AUTOPILOT_NC_DELAY, 0);
       return;
@@ -175,13 +175,13 @@ void speed_up_if_neccessary(Autopilot *a, Mech *mech, int tx, int ty,
   if (!map)
     return;
 
-  if (bearing < 0 || abs((int)mech_desired_speed(mech)) < 2)
+  if (bearing < 0 || fabsf(mech_desired_speed(mech)) < 2.0F)
     if (bearing < 0 || abs(bearing - mech_heading_degrees(mech)) <= 30)
       if (mech_position_x(mech) != tx || mech_position_y(mech) != ty) {
         if (map_real_terrain_get(map, mech_position_x(mech),
                                  mech_position_y(mech)) == BATTLE_TERRAIN_WATER)
           ai_set_speed(mech, a,
-                       (float)2.0 * mech_effective_maximum_speed(mech) / 3.0);
+                       2.0F * mech_effective_maximum_speed(mech) / 3.0F);
         else
           ai_set_speed(mech, a, mech_effective_maximum_speed(mech));
       }
@@ -206,7 +206,7 @@ int slow_down_if_neccessary(Autopilot *a, Mech *mech, float range, int bearing,
 
   if (range < 0)
     range = 0;
-  if (range > 2.0)
+  if (range > 2.0F)
     return 0;
   if (abs(bearing - mech_heading_degrees(mech)) > 30) {
     /* Fix the bearing as well */
@@ -216,8 +216,7 @@ int slow_down_if_neccessary(Autopilot *a, Mech *mech, float range, int bearing,
     ai_set_speed(mech, a, 0);
   } else { /* slowdown */
     ai_set_speed(mech, a,
-                 (float)(0.4 + range / 2.0) *
-                     mech_effective_maximum_speed(mech));
+                 (0.4F + range / 2.0F) * mech_effective_maximum_speed(mech));
   }
   return 1;
 }

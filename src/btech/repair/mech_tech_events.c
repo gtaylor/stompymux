@@ -8,6 +8,7 @@
  */
 
 #include "btech_event.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
@@ -25,8 +26,6 @@
 #include "repair_job.h"
 #include "section_types.h"
 
-#define VERBOSE_ENDS
-
 static int completely_intact_int(Mech *mech) {
   int i;
 
@@ -39,7 +38,7 @@ static int completely_intact_int(Mech *mech) {
 
 void mux_event_tickmech_removesection(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
+  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
   char buf[MBUF_SIZE];
   int loc, extra;
 
@@ -191,10 +190,10 @@ void mux_event_tickmech_removepart(MuxEvent *e) {
 
 void mux_event_tickmech_repairarmor(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
-  long loc = earg % 16;
-  long amount = (earg / 16) % 256;
-  long player = ((long)e->data2) / PLAYERPOS;
+  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
+  int loc = earg % 16;
+  int amount = (earg / 16) % 256;
+  DbRef player = (DbRef)((intptr_t)e->data2 / PLAYERPOS);
   char buf[MBUF_SIZE];
 
   if (loc >= 8) {
@@ -251,10 +250,10 @@ void mux_event_tickmech_repairarmor(MuxEvent *e) {
 
 void mux_event_tickmech_repairinternal(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
-  long loc = earg % 16;
-  long amount = (earg / 16) % 256;
-  long player = ((long)e->data2) / PLAYERPOS;
+  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
+  int loc = earg % 16;
+  int amount = (earg / 16) % 256;
+  DbRef player = (DbRef)((intptr_t)e->data2 / PLAYERPOS);
   char buf[MBUF_SIZE];
 
   mech_section_internal_set(mech, loc, mech_section_internal(mech, loc) + 1);
@@ -291,7 +290,7 @@ void mux_event_tickmech_repairinternal(MuxEvent *e) {
 
 void mux_event_tickmech_reattach(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
+  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
   char buf[MBUF_SIZE];
 
   /* Basically: Unset the limb destroyed, without doing a thing to
@@ -314,7 +313,7 @@ void mux_event_tickmech_reattach(MuxEvent *e) {
 
 void mux_event_tickmech_replacesuit(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
+  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
   char buf[MBUF_SIZE];
 
   ArmorStringFromIndex(earg, buf, mech_class(mech), mech_movement_type(mech));
@@ -331,7 +330,7 @@ void mux_event_tickmech_replacesuit(MuxEvent *e) {
 
 void mux_event_tickmech_reseal(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
+  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
   char buf[MBUF_SIZE];
 
   mech_ReSeal(mech, earg);
@@ -341,7 +340,7 @@ void mux_event_tickmech_reseal(MuxEvent *e) {
 
 void mux_event_tickmech_replacegun(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
+  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
   int loc, pos, i, brand;
   char buf[MBUF_SIZE];
   int count = 0, nloc, ncrit, stype;

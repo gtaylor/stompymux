@@ -66,7 +66,7 @@ void mech_movement_update(Mech *mech) {
   }
 #endif
 
-  int previous_map = mech_map_dbref(mech);
+  DbRef previous_map = mech_map_dbref(mech);
   CheckEdgeOfMap(mech);
   if (mech_map_dbref(mech) != previous_map)
     mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -88,9 +88,12 @@ void mech_movement_update(Mech *mech) {
         mech_notify(mech, MECHALL,
                     "You are on an invalid map! Map index reset!");
         mech_cocoon_integrity_set(mech, 0);
-        if (mech_is_jumping(mech))
-          mech_land(mech_pilot_dbref(mech), (void *)mech, "");
-        mech_shutdown(mech_pilot_dbref(mech), (void *)mech, "");
+        if (mech_is_jumping(mech)) {
+          char empty_command[] = "";
+          mech_land(mech_pilot_dbref(mech), mech, empty_command);
+        }
+        char empty_command[] = "";
+        mech_shutdown(mech_pilot_dbref(mech), mech, empty_command);
         snprintf(message_buffer, MBUF_SIZE,
                  "move_mech:invalid map:Mech: %ld Index: %ld", mech_dbref(mech),
                  mech_map_dbref(mech));

@@ -18,6 +18,7 @@
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
+#include "mech_ice_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
@@ -35,9 +36,10 @@
 
 #define TMP_TERR '1'
 
-static void swim_except(BattleMap *map, Mech *mech, int x, int y, char *msg,
-                        int isbridge) {
-  int i, j;
+static void swim_except(BattleMap *map, Mech *mech, int x, int y,
+                        const char *msg, int isbridge) {
+  int i;
+  DbRef j;
   Mech *t;
 
   if (!battle_map_hex_elevation(map, x, y))
@@ -68,7 +70,8 @@ static void swim_except(BattleMap *map, Mech *mech, int x, int y, char *msg,
   }
 }
 
-static void break_sub(BattleMap *map, Mech *mech, int x, int y, char *msg) {
+static void break_sub(BattleMap *map, Mech *mech, int x, int y,
+                      const char *msg) {
   int isbridge = map_real_terrain_get(map, x, y) == BATTLE_TERRAIN_BRIDGE;
 
   map_terrain_set(map, x, y, BATTLE_TERRAIN_WATER);
@@ -132,7 +135,7 @@ int possibly_drop_thru_ice(Mech *mech) {
 
 static void growable_callback(BattleMap *map, int x, int y, void *context) {
   int *water_count = context;
-  int terrain = map_real_terrain_get(map, x, y);
+  char terrain = map_real_terrain_get(map, x, y);
 
   if ((battle_terrain_is_water(terrain) && terrain != BATTLE_TERRAIN_ICE) ||
       map_real_terrain_get(map, x, y) == TMP_TERR)

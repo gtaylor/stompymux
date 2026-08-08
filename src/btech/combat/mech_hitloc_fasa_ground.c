@@ -22,7 +22,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);
 
-  switch ((int)mech_class(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_VEH_GROUND:
     switch (hitGroup) {
 
@@ -36,7 +36,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         if (btech_context_uses_tank_friendly_criticals(context)) {
           if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch ((int)mech_movement_type(mech)) {
+            switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
                           "One of your tracks is seriously damaged!");
@@ -56,6 +56,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
                   mech, MECHALL,
                   "Your craft lurches and suddenly loses a lot of speed!");
               break;
+            case MOVE_BIPED:
+            case MOVE_VTOL:
+            case MOVE_FLY:
+            case MOVE_QUAD:
+            case MOVE_NONE:
+              break;
             }
             mech_max_speed_lower(mech, MP2);
           }
@@ -64,7 +70,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* Cripple tank */
         if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch ((int)mech_movement_type(mech)) {
+          switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(
                 mech, MECHALL,
@@ -85,6 +91,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           case MOVE_FOIL:
             mech_notify(mech, MECHALL,
                         "Your engines cut out and you drift to a halt!");
+          case MOVE_BIPED:
+          case MOVE_VTOL:
+          case MOVE_FLY:
+          case MOVE_QUAD:
+          case MOVE_NONE:
+            break;
           }
           mech_max_speed_set(mech, 0.0);
 
@@ -96,7 +108,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* MP -1 */
         if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch ((int)mech_movement_type(mech)) {
+          switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(mech, MECHALL, "One of your tracks is damaged!");
             break;
@@ -110,6 +122,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           case MOVE_SUB:
           case MOVE_FOIL:
             mech_notify(mech, MECHALL, "Your craft suddenly slows!");
+            break;
+          case MOVE_BIPED:
+          case MOVE_VTOL:
+          case MOVE_FLY:
+          case MOVE_QUAD:
+          case MOVE_NONE:
             break;
           }
           mech_max_speed_lower(mech, MP1);
@@ -150,7 +168,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         if (btech_context_uses_tank_friendly_criticals(context)) {
           if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch ((int)mech_movement_type(mech)) {
+            switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
                           "One of your tracks is seriously damaged!");
@@ -170,6 +188,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
                   mech, MECHALL,
                   "Your craft lurches and suddenly loses a lot of speed!");
               break;
+            case MOVE_BIPED:
+            case MOVE_VTOL:
+            case MOVE_FLY:
+            case MOVE_QUAD:
+            case MOVE_NONE:
+              break;
             }
             mech_max_speed_lower(mech, MP2);
           }
@@ -178,7 +202,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* Cripple Tank */
         if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch ((int)mech_movement_type(mech)) {
+          switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(
                 mech, MECHALL,
@@ -199,6 +223,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           case MOVE_FOIL:
             mech_notify(mech, MECHALL,
                         "Your engines cut out and you drift to a halt!");
+          case MOVE_BIPED:
+          case MOVE_VTOL:
+          case MOVE_FLY:
+          case MOVE_QUAD:
+          case MOVE_NONE:
+            break;
           }
           mech_max_speed_set(mech, 0.0);
 
@@ -210,7 +240,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         /* MP -1 */
         if (!condition.fallen) {
           mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-          switch ((int)mech_movement_type(mech)) {
+          switch (mech_movement_type(mech)) {
           case MOVE_TRACK:
             mech_notify(mech, MECHALL, "One of your tracks is damaged!");
             break;
@@ -224,6 +254,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           case MOVE_SUB:
           case MOVE_FOIL:
             mech_notify(mech, MECHALL, "Your craft suddenly slows!");
+            break;
+          case MOVE_BIPED:
+          case MOVE_VTOL:
+          case MOVE_FLY:
+          case MOVE_QUAD:
+          case MOVE_NONE:
             break;
           }
           mech_max_speed_lower(mech, MP1);
@@ -277,7 +313,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             if (!condition.fallen) {
               mech_notify(mech, MECHALL,
                           "[fg=yellow bold]CRITICAL HIT![reset]");
-              switch ((int)mech_movement_type(mech)) {
+              switch (mech_movement_type(mech)) {
               case MOVE_TRACK:
                 mech_notify(mech, MECHALL,
                             "One of your tracks is seriously damaged!");
@@ -297,6 +333,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
                     mech, MECHALL,
                     "Your craft lurches and suddenly loses a lot of speed!");
                 break;
+              case MOVE_BIPED:
+              case MOVE_VTOL:
+              case MOVE_FLY:
+              case MOVE_QUAD:
+              case MOVE_NONE:
+                break;
               }
               mech_max_speed_lower(mech, MP2);
             }
@@ -305,7 +347,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           /* Cripple tank */
           if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch ((int)mech_movement_type(mech)) {
+            switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
                           "One of your tracks is destroyed, immobilizing your "
@@ -326,6 +368,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             case MOVE_FOIL:
               mech_notify(mech, MECHALL,
                           "Your engines cut out and you drift to a halt!");
+            case MOVE_BIPED:
+            case MOVE_VTOL:
+            case MOVE_FLY:
+            case MOVE_QUAD:
+            case MOVE_NONE:
+              break;
             }
             mech_max_speed_set(mech, 0.0);
 
@@ -338,7 +386,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         if (btech_context_uses_tank_critical_shielding(context)) {
           if (!condition.fallen) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
-            switch ((int)mech_movement_type(mech)) {
+            switch (mech_movement_type(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL, "One of your tracks is damaged!");
               break;
@@ -352,6 +400,12 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             case MOVE_SUB:
             case MOVE_FOIL:
               mech_notify(mech, MECHALL, "Your craft suddenly slows!");
+              break;
+            case MOVE_BIPED:
+            case MOVE_VTOL:
+            case MOVE_FLY:
+            case MOVE_QUAD:
+            case MOVE_NONE:
               break;
             }
             mech_max_speed_lower(mech, MP1);
@@ -397,6 +451,15 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
         return (mech_section_internal(mech, TURRET)) ? TURRET : side;
       }
     }
+    break;
+  case CLASS_MECH:
+  case CLASS_VTOL:
+  case CLASS_VEH_NAVAL:
+  case CLASS_SPHEROID_DS:
+  case CLASS_AERO:
+  case CLASS_MW:
+  case CLASS_DS:
+  case CLASS_BSUIT:
     break;
   }
   return hitloc;

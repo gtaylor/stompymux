@@ -28,9 +28,9 @@
 #include "mux/server/diagnostics.h"
 #include "registry_api.h"
 
-AutopilotWeapon *auto_create_weapon_node(short weapon_number,
-                                         short weapon_db_number, short section,
-                                         short critical) {
+static AutopilotWeapon *auto_create_weapon_node(int weapon_number,
+                                                int weapon_db_number,
+                                                int section, int critical) {
 
   AutopilotWeapon *temp;
 
@@ -53,7 +53,7 @@ AutopilotWeapon *auto_create_weapon_node(short weapon_number,
 /*
  * Destroy weapon node
  */
-void auto_destroy_weapon_node(AutopilotWeapon *victim) {
+static void auto_destroy_weapon_node(AutopilotWeapon *victim) {
 
   free(victim);
   return;
@@ -83,7 +83,7 @@ AutopilotTarget *auto_create_target_node(int target_score, DbRef target_dbref) {
 /*
  * Destroy a target node
  */
-void auto_destroy_target_node(AutopilotTarget *victim) {
+static void auto_destroy_target_node(AutopilotTarget *victim) {
 
   free(victim);
   return;
@@ -152,7 +152,7 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
   int range_score;
   int damage_score;
   int heat_score;
-  int minrange_score;
+  float minrange_score;
 
   int weapon_damage;
   int weapon_heat;
@@ -193,10 +193,10 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
    * 4 under its equiv to LR, so we want it to balance out the range score */
   /* score = -12.5(min - range)^2 - 25 * (min - range) */
   if (range < MechWeapons[weapon_db_number].min) {
+    const int minimum_range_delta = MechWeapons[weapon_db_number].min - range;
     minrange_score =
-        -12.5 * (float)((MechWeapons[weapon_db_number].min - range) *
-                        (MechWeapons[weapon_db_number].min - range)) -
-        25.0 * (float)(MechWeapons[weapon_db_number].min - range);
+        -12.5F * (float)(minimum_range_delta * minimum_range_delta) -
+        25.0F * (float)minimum_range_delta;
   }
 
   /* Get the damage for the weapon */
@@ -230,7 +230,7 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
   heat_score = -25 * weapon_heat + 250;
 
   /* Final calc */
-  weapon_score = range_score + damage_score + heat_score + minrange_score;
+  weapon_score = range_score + damage_score + heat_score + (int)minrange_score;
 
   return weapon_score;
 }

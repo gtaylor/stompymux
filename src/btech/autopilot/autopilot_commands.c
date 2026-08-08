@@ -38,7 +38,7 @@ static bool auto_command_prepare_unit(Autopilot *autopilot, Mech *mech) {
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
       CountDestroyedLegs(mech) <= 0) {
     if (!mech_event_count(mech, EVENT_STAND))
-      mech_stand(autopilot->mynum, mech, "");
+      mech_stand_empty(autopilot->mynum, mech);
     autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
                              AUTOPILOT_NC_DELAY, 0);
     return false;
@@ -478,12 +478,12 @@ void auto_command_dropoff(Mech *mech) { mech_dropoff(GOD, mech, nullptr); }
 void auto_command_speed(Autopilot *autopilot) {
 
   char *argument;
-  unsigned short speed;
+  int requested_speed;
   char error_buf[MBUF_SIZE];
 
   /* Read in the argument */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if ((!((speed) = atoi(argument)) && strcmp((argument), "0"))) {
+  if ((!((requested_speed) = atoi(argument)) && strcmp((argument), "0"))) {
 
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld given bad"
@@ -497,7 +497,7 @@ void auto_command_speed(Autopilot *autopilot) {
   free(argument);
 
   /* Make sure its a valid speed value */
-  if (speed < 1 || speed > 100) {
+  if (requested_speed < 1 || requested_speed > 100) {
 
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld given bad"
@@ -509,7 +509,7 @@ void auto_command_speed(Autopilot *autopilot) {
   }
 
   /* Now set it */
-  autopilot->speed = speed;
+  autopilot->speed = (unsigned short)requested_speed;
 }
 
 /*

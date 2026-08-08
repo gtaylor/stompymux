@@ -42,28 +42,28 @@ void btech_event_schedule(MuxEventScheduler *events, void *object, int type,
 }
 
 int btech_event_count(MuxEventScheduler *events, const void *object, int type) {
-  return mux_event_count_type_data(events, type, (void *)object);
+  return mux_event_count_type_data(events, type, object);
 }
 
 int btech_event_count_data(MuxEventScheduler *events, const void *object,
                            int type, intptr_t data) {
-  return mux_event_count_type_data_data(events, type, (void *)object,
+  return mux_event_count_type_data_data(events, type, object,
                                         event_payload(data));
 }
 
 long btech_event_first_delay(MuxEventScheduler *events, const void *object,
                              int type) {
-  return mux_event_count_type_data_firstev(events, type, (void *)object);
+  return mux_event_count_type_data_firstev(events, type, object);
 }
 
 int btech_event_last_delay(MuxEventScheduler *events, const void *object,
                            int type) {
-  return mux_event_last_type_data(events, type, (void *)object);
+  return mux_event_last_type_data(events, type, object);
 }
 
 long btech_event_data(MuxEventScheduler *events, const void *object, int type) {
   long data = 0;
-  mux_event_get_type_data(events, type, (void *)object, &data);
+  mux_event_get_type_data(events, type, object, &data);
   return data;
 }
 

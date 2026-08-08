@@ -11,6 +11,7 @@
 #include "btech/context.h"
 #include "btech_text_builder.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "map_conditions_api.h"
 #include "mech_build_api.h"
@@ -44,9 +45,18 @@
 
 static int effective_jump_speed_mp(Mech *mech, const BattleMap *map) {
   float speed = mech_jump_speed(mech);
-  if (mech_is_under_gravity(mech) && map)
-    speed = speed * 100 / MAX(50, battle_map_gravity(map));
-  return (int)(speed * MP_PER_KPH);
+  if (mech_is_under_gravity(mech) && map) {
+    const int gravity = MAX(50, battle_map_gravity(map));
+
+    speed = speed * 100.0F / (float)gravity;
+  }
+  return clamp_float_to_int(speed * MP_PER_KPH);
+}
+
+static int displayed_speed(float speed) { return clamp_float_to_int(speed); }
+
+static int displayed_heat(float heat) {
+  return clamp_float_to_int(heat * 10.0F);
 }
 
 void append_status(char *buffer, size_t size, const char *fmt, ...)
@@ -84,7 +94,7 @@ void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech) {
                          mech_position_y(tempMech), range)) {
         snprintf(buff, sizeof(buff),
                  "Target: %s\t   Range: %.1f hexes   Bearing: %d deg\n",
-                 mech_to_mech_display_id(mech, tempMech).text, range,
+                 mech_to_mech_display_id(mech, tempMech).text, (double)range,
                  FindBearing(mech_position_real_x(mech),
                              mech_position_real_y(mech),
                              mech_position_real_x(tempMech),
@@ -179,7 +189,7 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                   game_object_name(context->database, player),
                   mech_id(mech, false).text);
     notify_printf(evaluation, player, "MaxSpeed: %3d",
-                  (int)mech_effective_maximum_speed(mech));
+                  displayed_speed(mech_effective_maximum_speed(mech)));
     break;
   case CLASS_BSUIT:
     snprintf(buff, sizeof(buff),
@@ -189,7 +199,7 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     mecha_notify(evaluation, player, buff);
     notify_printf(evaluation, player,
                   "MaxSpeed: %3d                  JumpRange: %d",
-                  (int)mech_effective_maximum_speed(mech),
+                  displayed_speed(mech_effective_maximum_speed(mech)),
                   effective_jump_speed_mp(mech, map));
     show_miscbrands(mech, player);
     if (mech_pilot_dbref(mech) == -1)
@@ -229,7 +239,8 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     mecha_notify(evaluation, player, buff);
     notify_printf(evaluation, player,
                   "Tonnage:   %3d     MaxSpeed: %3d       JumpRange: %d",
-                  mech_tonnage(mech), (int)mech_effective_maximum_speed(mech),
+                  mech_tonnage(mech),
+                  displayed_speed(mech_effective_maximum_speed(mech)),
                   effective_jump_speed_mp(mech, map));
     show_miscbrands(mech, player);
     if (mech_pilot_dbref(mech) == -1)
@@ -295,6 +306,11 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     case MOVE_FOIL:
       strcpy(move_type, "Hydrofoil");
       break;
+    case MOVE_BIPED:
+    case MOVE_QUAD:
+    case MOVE_NONE:
+      strcpy(move_type, "Magic");
+      break;
     default:
       strcpy(move_type, "Magic");
       break;
@@ -308,7 +324,7 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                "Tonnage:   %3d      %s: %3d       Movement Type: %s",
                mech_tonnage(mech),
                mech_is_aerospace_unit(mech) ? "Max thrust" : "FlankSpeed",
-               (int)mech_effective_maximum_speed(mech), move_type);
+               displayed_speed(mech_effective_maximum_speed(mech)), move_type);
       mecha_notify(evaluation, player, buff);
       show_miscbrands(mech, player);
       if (mech_pilot_dbref(mech) == -1)
@@ -345,26 +361,27 @@ void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
   switch (mech_class(mech)) {
   case CLASS_VTOL:
     snprintf(typespecific, sizeof(typespecific), " VSPD: %3.1f ",
-             mech_vertical_speed(mech));
+             (double)mech_vertical_speed(mech));
     break;
   case CLASS_MECH:
     snprintf(typespecific, sizeof(typespecific), " HT: %3d/%3d/%-3d ",
-             (int)(10. * mech_heat_production(mech)),
-             (int)(10. * mech_active_heat_sinks(mech)),
-             (int)(10. * mech_heat_dissipation(mech)));
+             displayed_heat(mech_heat_production(mech)),
+             displayed_heat(mech_active_heat_sinks(mech)),
+             displayed_heat(mech_heat_dissipation(mech)));
     break;
   case CLASS_AERO:
   case CLASS_DS:
   case CLASS_SPHEROID_DS:
     snprintf(typespecific, sizeof(typespecific),
-             " VSPD: %3.1f  ANG: %2d  HT: %3d/%3d ", mech_vertical_speed(mech),
-             mech_desired_angle(mech), (int)(10 * mech_heat_production(mech)),
-             (int)(10 * mech_active_heat_sinks(mech)));
+             " VSPD: %3.1f  ANG: %2d  HT: %3d/%3d ",
+             (double)mech_vertical_speed(mech), mech_desired_angle(mech),
+             displayed_heat(mech_heat_production(mech)),
+             displayed_heat(mech_active_heat_sinks(mech)));
     break;
   case CLASS_VEH_NAVAL:
     if (mech_movement_type(mech) == MOVE_FOIL)
       snprintf(typespecific, sizeof(typespecific), " VSPD: %3.1f ",
-               mech_vertical_speed(mech));
+               (double)mech_vertical_speed(mech));
     /* FALLTHROUGH */
   case CLASS_VEH_GROUND:
     /* XXX This won't work for subs with turrets.. are they possible ? */
@@ -375,6 +392,8 @@ void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
       break;
     }
     /* FALLTHROUGH */
+  case CLASS_MW:
+  case CLASS_BSUIT:
   default:
     typespecific[0] = '\0';
     break;
@@ -384,13 +403,12 @@ void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
            "LOC: %3d,%3d,%3d  HD: %3d/%3d  SP: %3.1f/%3.1f %s ST:%s",
            mech_position_x(mech), mech_position_y(mech), mech_position_z(mech),
            mech_heading_degrees(mech), mech_desired_heading_degrees(mech),
-           mech_current_speed(mech), mech_desired_speed(mech), typespecific,
-           mech_status_string(mech, 2).text);
+           (double)mech_current_speed(mech), (double)mech_desired_speed(mech),
+           typespecific, mech_status_string(mech, 2).text);
   mecha_notify(evaluation, player, buff);
   DisplayTarget(evaluation, player, mech);
 }
 
-#define HEAT_LEVEL_LGREEN 0
 #define HEAT_LEVEL_BGREEN 7
 #define HEAT_LEVEL_LYELLOW 13
 #define HEAT_LEVEL_BYELLOW 16
@@ -402,8 +420,8 @@ void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
 
 static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
                                int length) {
-  int counter = 0, heat = mech_heat_production(mech),
-      minheat = mech_heat_dissipation(mech), start = 0;
+  int counter = 0, heat = displayed_speed(mech_heat_production(mech)),
+      minheat = displayed_speed(mech_heat_dissipation(mech)), start = 0;
   char state = 1;
 
   BtechTextBuilder text;
@@ -510,21 +528,23 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
              "X, Y, Z:%3d,%3d,%3d  Excess Heat:  %3d deg C.  Heat Production:  "
              "%3d deg C.",
              mech_position_x(mech), mech_position_y(mech),
-             mech_position_z(mech), (int)(10. * mech_excess_heat(mech)),
-             (int)(10. * mech_heat_production(mech)));
+             mech_position_z(mech), displayed_heat(mech_excess_heat(mech)),
+             displayed_heat(mech_heat_production(mech)));
     mecha_notify(evaluation, player, buff);
     snprintf(buff, 256,
              "Speed:      [fg=green bold]%3d[reset] KPH  Heading:      "
              "[fg=green bold]%3d[reset] "
              "deg     Heat Sinks:       %3d",
-             (int)mech_current_speed(mech), mech_heading_degrees(mech),
-             (int)mech_active_heat_sinks(mech));
+             displayed_speed(mech_current_speed(mech)),
+             mech_heading_degrees(mech),
+             displayed_speed(mech_active_heat_sinks(mech)));
     mecha_notify(evaluation, player, buff);
     snprintf(buff, sizeof(buff),
              "Des. Speed: %3d KPH  Des. Heading: %3d deg     Heat Dissipation: "
              "%3d deg C.",
-             (int)mech_desired_speed(mech), mech_desired_heading_degrees(mech),
-             (int)(10. * mech_heat_dissipation(mech)));
+             displayed_speed(mech_desired_speed(mech)),
+             mech_desired_heading_degrees(mech),
+             displayed_heat(mech_heat_dissipation(mech)));
     mecha_notify(evaluation, player, buff);
 
     if (mech_lateral_movement(mech))
@@ -540,7 +560,7 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     snprintf(
         buff, 256, "X, Y, Z:%3d,%3d,%3d  Heat Sinks:          %3d       %s",
         mech_position_x(mech), mech_position_y(mech), mech_position_z(mech),
-        (int)mech_active_heat_sinks(mech),
+        displayed_speed(mech_active_heat_sinks(mech)),
         mech_is_aerospace_unit(mech)
             ? tprintf("%s angle: [fg=green bold]%d[reset]",
                       mech_desired_angle(mech) >= 0 ? "Climbing" : "Diving",
@@ -552,8 +572,9 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
           buff, sizeof(buff),
           "Speed:      [fg=green bold]%3d[reset] KPH  Vertical Speed:      "
           "[fg=green bold]%3d[reset] KPH   Des. Speed %3d KPH",
-          (int)mech_current_speed(mech), (int)mech_vertical_speed(mech),
-          (int)mech_desired_speed(mech));
+          displayed_speed(mech_current_speed(mech)),
+          displayed_speed(mech_vertical_speed(mech)),
+          displayed_speed(mech_desired_speed(mech)));
       mecha_notify(evaluation, player, buff);
       f = MAX(0, mech_fuel(mech));
       if (mech_movement_type(mech) == MOVE_SUB) {
@@ -568,12 +589,14 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                  mech_heading_degrees(mech),
                  mech_desired_heading_degrees(mech));
       } else {
+        const int original_fuel = mech_original_fuel(mech);
+
         snprintf(buff, sizeof(buff),
                  "Heading:    [fg=green bold]%3d[reset] deg  Des. Heading:    "
                  "    %3d "
                  "deg   Fuel: %d (%.2f %%)",
                  mech_heading_degrees(mech), mech_desired_heading_degrees(mech),
-                 f, 100.0 * f / mech_original_fuel(mech));
+                 f, (double)(100.0F * (float)f / (float)original_fuel));
       }
 
       mecha_notify(evaluation, player, buff);
@@ -581,10 +604,11 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       snprintf(buff, sizeof(buff),
                "Speed:      [fg=green bold]%3d[reset] KPH  Heading:      "
                "[fg=green bold]%3d[reset] deg",
-               (int)mech_current_speed(mech), mech_heading_degrees(mech));
+               displayed_speed(mech_current_speed(mech)),
+               mech_heading_degrees(mech));
       mecha_notify(evaluation, player, buff);
       snprintf(buff, sizeof(buff), "Des. Speed: %3d KPH  Des. Heading: %3d deg",
-               (int)mech_desired_speed(mech),
+               displayed_speed(mech_desired_speed(mech)),
                mech_desired_heading_degrees(mech));
       mecha_notify(evaluation, player, buff);
     }
@@ -593,9 +617,9 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       notify_printf(evaluation, player,
                     "Excess Heat:%3d deg  Heat Production:     %3d deg   Heat "
                     "Dissipation: %3d deg",
-                    (int)(10. * mech_excess_heat(mech)),
-                    (int)(10. * mech_heat_production(mech)),
-                    (int)(10. * mech_heat_dissipation(mech)));
+                    displayed_heat(mech_excess_heat(mech)),
+                    displayed_heat(mech_heat_production(mech)),
+                    displayed_heat(mech_heat_dissipation(mech)));
     }
     break;
   case CLASS_MW:
@@ -605,12 +629,13 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
              "Heading:   "
              "   [fg=green bold]%3d[reset] deg",
              mech_position_x(mech), mech_position_y(mech),
-             mech_position_z(mech), (int)mech_current_speed(mech),
+             mech_position_z(mech), displayed_speed(mech_current_speed(mech)),
              mech_heading_degrees(mech));
     mecha_notify(evaluation, player, buff);
     snprintf(buff, sizeof(buff),
              "                     Des. Speed: %3d KPH  Des. Heading: %3d deg",
-             (int)mech_desired_speed(mech), mech_desired_heading_degrees(mech));
+             displayed_speed(mech_desired_speed(mech)),
+             mech_desired_heading_degrees(mech));
     mecha_notify(evaluation, player, buff);
     break;
   }
@@ -630,7 +655,7 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 }
 
 /* Status commands! */
-void mech_status(DbRef player, void *data, char *buffer) {
+void mech_status(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   int doweap = 0, doinfo = 0, doarmor = 0, doshort = 0, doheat = 0, loop;
@@ -699,10 +724,11 @@ void mech_status(DbRef player, void *data, char *buffer) {
   if (weird) {
     snprintf(buf, sizeof(buf), "%s %s %d %d/%d/%d %d ",
              mech_model_reference(mech), mech_model_name(mech),
-             mech_tonnage(mech), (int)(mech_maximum_speed(mech) / MP1) * 2 / 3,
-             (int)(mech_maximum_speed(mech) / MP1),
-             (int)(mech_jump_speed(mech) / MP1),
-             (int)mech_active_heat_sinks(mech));
+             mech_tonnage(mech),
+             displayed_speed(mech_maximum_speed(mech) / MP1) * 2 / 3,
+             displayed_speed(mech_maximum_speed(mech) / MP1),
+             displayed_speed(mech_jump_speed(mech) / MP1),
+             displayed_speed(mech_active_heat_sinks(mech)));
     memcpy(weird_buffer, buf, sizeof(weird_buffer));
 
   } else if (!doheat || (doarmor | doinfo | doweap))

@@ -16,6 +16,7 @@
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
+#include "mech_advanced_api.h"
 #include "mech_build_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_condition_api.h"
@@ -272,8 +273,8 @@ void mech_safety(DbRef player, void *data, char *buffer) {
 static struct mechpref_info {
   int bit;
   unsigned char flags;
-  char *name;
-  char *msg;
+  const char *name;
+  const char *msg;
 } mech_preferences[] = {
     {MECHPREF_PKILL, MECHPREF_FLAG_INVERTED, "MWSafety",
      "MechWarrior Safeties flipped"},
@@ -299,7 +300,7 @@ static char *display_mechpref(void *context, int i,
                               char buffer[static LBUF_SIZE]) {
   Mech *mech = context;
   struct mechpref_info info = mech_preferences[i];
-  char *state;
+  const char *state;
 
   if (((((mech)->rd.mech_prefs) & info.bit) &&
        (info.flags & MECHPREF_FLAG_INVERTED)) ||
@@ -344,7 +345,7 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
 
     size_t i;
     struct mechpref_info info;
-    char *newstate;
+    const char *newstate;
 
     /* Looking through the different mech preferences to find the
      * one the user wants to change */

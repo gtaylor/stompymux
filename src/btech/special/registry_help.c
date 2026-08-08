@@ -56,10 +56,6 @@
 #include "special_object.h"
 #include "weapon_settings.h"
 
-#define FAST_WHICHSPECIAL
-
-#define _GLUE_C
-
 /*** #include all the prototype here! ****/
 #include "autopilot.h"
 #include "btech/persistence.h"
@@ -91,13 +87,14 @@ void center_string(char *destination, size_t destination_size,
   size_t padding = 0;
   if (width > 0 && (size_t)width > source_length)
     padding = ((size_t)width - source_length) / 2;
-  padding = MIN(padding, destination_size - 1);
+  if (padding > destination_size - 1)
+    padding = destination_size - 1;
   memset(destination, ' ', padding);
   snprintf(destination + padding, destination_size - padding, "%s", source);
 }
 
 static void help_color_initialize(const char *from, char *to) {
-  int i;
+  size_t i;
   char buf[LBUF_SIZE];
   char *tp = to;
 
@@ -111,12 +108,12 @@ static void help_color_initialize(const char *from, char *to) {
     safe_str("[fg=blue bold]", to, &tp);
     safe_str(buf, to, &tp);
     safe_str("[reset] ", to, &tp);
-    safe_str((char *)&from[i + 1], to, &tp);
+    safe_str(&from[i + 1], to, &tp);
 
     /*      from[i]=' '; */
   } else {
     safe_str("[fg=cyan]", to, &tp);
-    safe_str((char *)from, to, &tp);
+    safe_str(from, to, &tp);
     safe_str("[reset]", to, &tp);
   }
   *tp = '\0';
@@ -136,6 +133,7 @@ static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
   size_t msg_len;
   const char *e;
   char buf[LBUF_SIZE];
+  size_t text_length;
 
   /* XXX: Not entirely sure what this is for.  */
 #ifndef ONE_LINE_TEXTS
@@ -172,13 +170,16 @@ static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
     help_color_initialize(msg, buf);
   } else if (initial < 0) {
     /* Write indented line.  */
-    memset(buf, ' ', -initial);
-    memcpy(buf - initial, msg, e - msg);
-    buf[(e - msg) - initial] = '\0';
+    const size_t indentation = (size_t)(-initial);
+    text_length = (size_t)(e - msg);
+    memset(buf, ' ', indentation);
+    memcpy(buf + indentation, msg, text_length);
+    buf[text_length + indentation] = '\0';
   } else {
     /* Write unindented line.  */
-    memcpy(buf, msg, e - msg);
-    buf[e - msg] = '\0';
+    text_length = (size_t)(e - msg);
+    memcpy(buf, msg, text_length);
+    buf[text_length] = '\0';
   }
 
   cool_menu_add_with_flags(&c, buf, MLen);
@@ -237,8 +238,8 @@ static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
 }
 
 void btech_special_object_help(BtechContext *context, DbRef player,
-                               const char *type, int id, int loc,
-                               PowerId powerneeded, int objid, char *arg) {
+                               const char *type, int id, DbRef loc,
+                               PowerId powerneeded, DbRef objid, char *arg) {
   int i, j;
   Mech *mech = NULL;
   int pos[100][2];

@@ -34,6 +34,7 @@
 #include "mech_status_types.h"
 #include "mech_tech_commands_api.h"
 #include "mech_tech_damages.h"
+#include "mech_tech_damages_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
@@ -45,7 +46,7 @@
 
 typedef struct RepairDamageTable {
   /* Each entry stores type, location, and position or amount. */
-  short entries[REPAIR_DAMAGE_CAPACITY][3];
+  int entries[REPAIR_DAMAGE_CAPACITY][3];
   int count;
 } RepairDamageTable;
 
@@ -89,14 +90,14 @@ static const char *const repair_need_msgs[] = {
     "Replace suit",
 };
 
-static void repair_damage_add(RepairDamageTable *damages, short type,
-                              short location) {
+static void repair_damage_add(RepairDamageTable *damages, int type,
+                              int location) {
   damages->entries[damages->count][0] = type;
   damages->entries[damages->count++][1] = location;
 }
 
-static void repair_damage_add_detail(RepairDamageTable *damages, short type,
-                                     short location, short detail) {
+static void repair_damage_add_detail(RepairDamageTable *damages, int type,
+                                     int location, int detail) {
   damages->entries[damages->count][0] = type;
   damages->entries[damages->count][1] = location;
   damages->entries[damages->count++][2] = detail;
@@ -733,8 +734,9 @@ void tech_fix(DbRef player, void *data, char *buffer) {
 
   while (buffer && *buffer && isspace((unsigned char)*buffer))
     buffer++;
+  char empty_buffer[] = "";
   if (!buffer)
-    buffer = "";
+    buffer = empty_buffer;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {

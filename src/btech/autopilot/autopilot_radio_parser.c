@@ -56,9 +56,9 @@ static void build_auto_reply(char *reply, const char *prefix,
                              const char *message, const char *suffix) {
   char *rp = reply;
 
-  safe_str((char *)prefix, reply, &rp);
-  safe_str((char *)message, reply, &rp);
-  safe_str((char *)suffix, reply, &rp);
+  safe_str(prefix, reply, &rp);
+  safe_str(message, reply, &rp);
+  safe_str(suffix, reply, &rp);
   *rp = '\0';
 }
 void auto_reply_event(MuxEvent *muxevent) {
@@ -84,7 +84,7 @@ void auto_reply_event(MuxEvent *muxevent) {
 /*
  * Force the AI to reply over radio
  */
-void auto_reply(Mech *mech, char *buf) {
+void auto_reply(Mech *mech, const char *buf) {
 
   char *reply;
 
@@ -112,7 +112,7 @@ void auto_reply(Mech *mech, char *buf) {
   if (reply) {
     // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
     mech_event_schedule(mech, EVENT_AUTO_REPLY, auto_reply_event,
-                        btech_random_range(mech_context(mech), 1, 2),
+                        (int)btech_random_range(mech_context(mech), 1, 2),
                         (intptr_t)reply);
   } else {
     btech_channel_send(

@@ -26,7 +26,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
    * config'd */
   /* The advanced FASA table already checks critical immunity; the others do
    * not, so dispatch to the crit-proof table after that check. */
-  switch ((int)mech_class(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_VTOL:
     if (btech_context_uses_advanced_vtol_criticals(context))
       return mech_advanced_vehicle_hit_location(mech, hitGroup, iscritical,
@@ -45,6 +45,13 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     else if (btech_context_uses_fasa_criticals(context))
       return mech_fasa_hit_location(mech, hitGroup, iscritical, isrear);
     break;
+  case CLASS_MECH:
+  case CLASS_VEH_NAVAL:
+  case CLASS_SPHEROID_DS:
+  case CLASS_AERO:
+  case CLASS_MW:
+  case CLASS_DS:
+  case CLASS_BSUIT:
   default:
     if (mech_technology_flags(mech) & CRITPROOF_TECH)
       return mech_critproof_hit_location(mech, hitGroup, iscritical, isrear);
@@ -59,10 +66,10 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       btech_random_range(context, 1, 100) >= 42)
     return TURRET;
   btech_context_hit_roll_record(context, roll);
-  switch ((int)mech_class(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_BSUIT:
     if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
-      return btech_random_range(context, 0, NUM_BSUIT_MEMBERS - 1);
+      return btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:

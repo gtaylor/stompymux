@@ -10,6 +10,7 @@
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
+#include "mech_update_api.h"
 #include "registry_api.h"
 
 static bool mech_moves_over_water(const Mech *mech) {

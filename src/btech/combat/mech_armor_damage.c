@@ -58,15 +58,15 @@
 #include "pcombat_api.h"
 #include "registry_api.h"
 
-static char *const MyColorStrings[] = {"", "[fg=green bold]",
-                                       "[fg=yellow bold]", "[fg=red]"};
-static char *const MyMessageStrings[] = {
+static const char *const MyColorStrings[] = {"", "[fg=green bold]",
+                                             "[fg=yellow bold]", "[fg=red]"};
+static const char *const MyMessageStrings[] = {
     "ERROR[reset]", "low.[reset]", "critical![reset]", "BREACHED![reset]"};
-static inline char *MySeriousColorStr(Mech *mech, int index) {
+static inline const char *MySeriousColorStr(Mech *mech, int index) {
   return MyColorStrings[index % 4];
 }
 
-static inline char *MySeriousStr(Mech *mech, int index) {
+static inline const char *MySeriousStr(Mech *mech, int index) {
   return MyMessageStrings[index % 4];
 }
 
@@ -98,9 +98,10 @@ static inline int MySeriousnessCheckR(Mech *mech, int hitloc) {
   return 0;
 }
 
-int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
-                      int isrear, int iscritical, int hitloc, int damage,
-                      int *crits, int wWeapIndx, int wAmmoMode) {
+int cause_armordamage(Mech *wounded, Mech *attacker, int LOS,
+                      DbRef attack_pilot, int isrear, int iscritical,
+                      int hitloc, int damage, int *crits, int wWeapIndx,
+                      int wAmmoMode) {
   int intDamage = 0, r;
   int seriousness = 0;
   int tAPCritical = 0;
@@ -255,8 +256,8 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
 }
 
 int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
-                         int attackPilot, int isrear, int hitloc, int intDamage,
-                         int weapindx, int *crits) {
+                         DbRef attack_pilot, int isrear, int hitloc,
+                         int intDamage, int weapindx, int *crits) {
   BtechContext *context = mech_context(wounded);
   int r = btech_random_roll(context);
   char locname[30];

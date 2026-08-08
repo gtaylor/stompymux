@@ -99,7 +99,9 @@ void mech_target(DbRef player, void *data, char *buffer) {
   char *args[5];
   int argc;
   char section[50];
-  char type, move, index;
+  UnitClass type;
+  MechMovementType movement_type;
+  int index;
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -123,14 +125,14 @@ void mech_target(DbRef player, void *data, char *buffer) {
     return;
   }
   type = mech_class(target);
-  move = mech_movement_type(target);
-  if ((index = ArmorSectionFromString(type, move, args[0])) < 0) {
+  movement_type = mech_movement_type(target);
+  if ((index = ArmorSectionFromString(type, movement_type, args[0])) < 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid location!");
     return;
   }
   mech_targeting_aim_set(mech, index, (UnitClass)type);
-  ArmorStringFromIndex(index, section, type, move);
+  ArmorStringFromIndex(index, section, type, movement_type);
   notify_printf(btech_context_evaluation(context), player, "%s targetted.",
                 section);
 }
@@ -143,7 +145,7 @@ void mech_target(DbRef player, void *data, char *buffer) {
 /*Distance: <9, <20, rest */
 
 /* Idea: Tonseverity + 3 * distseverity */
-static char *const ss_messages[] = {
+static const char *const ss_messages[] = {
     "You feel you'll have your hands full before too long..",
     "You have a bad feeling about this..",
     "You feel a homicidal maniac is about to pounce on you!",
@@ -166,7 +168,7 @@ static int sixth_sense_tonnage_severity(int difference) {
 
 static void mech_ss_event(MuxEvent *ev) {
   Mech *mech = (Mech *)ev->data;
-  long i = (long)ev->data2;
+  const int i = (int)(intptr_t)ev->data2;
 
   if (mech_pilot_is_unconscious(mech))
     return;
@@ -188,7 +190,7 @@ void mech_sixth_sense_check(Mech *mech, Mech *target) {
   r = mech_range_to(mech, target);
   d = (mech_real_tonnage(mech) - mech_real_tonnage(target)) / 1024;
   mech_event_schedule(target, EVENT_SS, mech_ss_event,
-                      btech_random_range(mech_context(mech), 1, 3),
+                      btech_random_range_int(mech_context(mech), 1, 3),
                       (long)((3 * sixth_sense_distance_severity(r)) +
                              sixth_sense_tonnage_severity(d)));
 }

@@ -6,6 +6,7 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
+#include "mech_advanced_api.h"
 #include "mech_api_types.h"
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
@@ -141,7 +142,7 @@ void mech_angeleccm(DbRef player, Mech *mech, char *buffer) {
   MarkForLOSUpdate(mech);
 }
 
-void mech_searchlight_change_event(MuxEvent *e) {
+static void mech_searchlight_change_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long wType = (long)e->data2;
 
@@ -208,7 +209,7 @@ void mech_slite(DbRef player, Mech *mech, char *buffer) {
   }
 }
 
-void mech_stealth_armor_change_event(MuxEvent *e) {
+static void mech_stealth_armor_change_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long wType = (long)e->data2;
 
@@ -273,7 +274,7 @@ void mech_stealtharmor(DbRef player, Mech *mech, char *buffer) {
   }
 }
 
-void mech_null_signature_change_event(MuxEvent *e) {
+static void mech_null_signature_change_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long wType = (long)e->data2;
 
@@ -391,7 +392,7 @@ void show_narc_pods(DbRef player, Mech *mech, char *buffer) {
   }
 }
 
-int mech_arm_base_to_hit_modifier(Mech *mech, int wSec) {
+static int mech_arm_base_to_hit_modifier(Mech *mech, int wSec) {
   int wRet = 0;
 
   if (mech_critical_is_nonfunctional(mech, wSec, 1) ||
@@ -617,7 +618,7 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
   mech_set_recycle_limb(mech, wArmToUse, PHYSICAL_RECYCLE_TIME);
 }
 
-void mech_inarc_pods_tank_remove_event(MuxEvent *e) {
+static void mech_inarc_pods_tank_remove_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   int i;
 

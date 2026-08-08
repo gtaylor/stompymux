@@ -202,7 +202,7 @@ void mech_jump_complete(Mech *mech) {
 
 void mech_jump_abort(Mech *mech) { mech->rd.status &= ~(JUMPING | DFA_ATTACK); }
 
-int mech_spin_start_tick(const Mech *mech) { return mech->rd.sspin; }
+time_t mech_spin_start_tick(const Mech *mech) { return mech->rd.sspin; }
 
 int mech_reactor_instability_start_tick(const Mech *mech) {
   return mech->rd.boom_start;
@@ -212,4 +212,6 @@ void mech_reactor_instability_start_tick_set(Mech *mech, int tick) {
   mech->rd.boom_start = tick;
 }
 
-void mech_spin_start_tick_set(Mech *mech, int tick) { mech->rd.sspin = tick; }
+void mech_spin_start_tick_set(Mech *mech, time_t tick) {
+  mech->rd.sspin = tick;
+}

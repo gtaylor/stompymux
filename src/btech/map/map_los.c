@@ -81,7 +81,7 @@ void battle_map_los_observer_clear(BattleMap *map, int observer_index) {
     map->LOSinfo[observer_index][target_index] = 0;
 }
 
-int los_map_hex_index(HexLosMap *map_info, int x, int y) {
+int los_map_hex_index(const HexLosMap *map_info, int x, int y) {
   if (x < map_info->startx || x > map_info->startx + map_info->xsize ||
       y < map_info->starty || y > map_info->starty + map_info->ysize) {
     btech_channel_send(
@@ -95,18 +95,23 @@ int los_map_hex_index(HexLosMap *map_info, int x, int y) {
 static float mech_los_height(Mech *mech) {
   switch (mech_class(mech)) {
   case CLASS_MECH:
-    return 0.2 + !mech_is_fallen(mech);
+    return 0.2F + (float)!mech_is_fallen(mech);
   case CLASS_SPHEROID_DS:
-    return 4.2;
+    return 4.2F;
   case CLASS_DS:
-    return 2.2;
+    return 2.2F;
   case CLASS_MW:
   case CLASS_VEH_NAVAL:
-    return 0.01;
+    return 0.01F;
+  case CLASS_VEH_GROUND:
+  case CLASS_VTOL:
+  case CLASS_AERO:
+  case CLASS_BSUIT:
+    break;
   default:
     break;
   }
-  return 0.2;
+  return 0.2F;
 }
 
 static void set_hexlosinfo(HexLosMap *los_map, int x, int y, int flag) {
@@ -141,7 +146,8 @@ static void set_sliteinfo(HexLosMap *los_map, int x, int y, int flag) {
  */
 
 static void set_hexlosall(HexLosMap *los_map, int flag) {
-  memset(los_map->map, flag | MAPLOSHEX_SEEN, los_map->xsize * los_map->ysize);
+  memset(los_map->map, flag | MAPLOSHEX_SEEN,
+         (size_t)los_map->xsize * (size_t)los_map->ysize);
 }
 
 /* The following functions are, effectively, STUBS. They should be
@@ -175,11 +181,12 @@ static int mech_los_sees_through_water(Mech *mech, BattleMap *map, int nwater,
 static int mech_los_sees_range(HexLosMap *los_map, Mech *mech, BattleMap *map,
                                int x, int y, int z, int sensor) {
   int sn = mech_sensor_index(mech, sensor);
-  float fx, fy, range, maxvis = sensors[sn].maximum_visibility;
+  float fx, fy, range;
+  float maxvis = (float)sensors[sn].maximum_visibility;
 
   MapCoordToRealCoord(x, y, &fx, &fy);
   range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                    mech_position_real_z(mech), fx, fy, ZSCALE * z);
+                    mech_position_real_z(mech), fx, fy, ZSCALE * (float)z);
 
   /* XXX HACK: code duplication. this should be replaced with sensor
    * functions
@@ -201,7 +208,7 @@ static int mech_los_sees_range(HexLosMap *los_map, Mech *mech, BattleMap *map,
     }
   }
 
-  if (sn == 0 && maxvis && range >= maxvis &&
+  if (sn == 0 && maxvis > 0.0F && range >= maxvis &&
       (los_map->flags & MAPLOS_FLAG_SLITE))
     return -1;
 
@@ -210,7 +217,8 @@ static int mech_los_sees_range(HexLosMap *los_map, Mech *mech, BattleMap *map,
 
 static int mech_searchlight_reaches(Mech *mech, int x, int y, int z) {
   float fx, fy, range;
-  int arc, maxvis = 60;
+  int arc;
+  const float maxvis = 60.0F;
 
   MapCoordToRealCoord(x, y, &fx, &fy);
   arc = InWeaponArc(mech, fx, fy);
@@ -219,7 +227,7 @@ static int mech_searchlight_reaches(Mech *mech, int x, int y, int z) {
   }
 
   range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                    mech_position_real_z(mech), fx, fy, ZSCALE * z);
+                    mech_position_real_z(mech), fx, fy, ZSCALE * (float)z);
   return range < maxvis;
 }
 
@@ -288,7 +296,7 @@ static void trace_slitelos(HexLosMap *los_map, BattleMap *map, Mech *mech,
     if (!mech_searchlight_reaches(mech, trace_x, trace_y, trace_height))
       return;
 
-    trace_a = (trace_height - start_height) / (trace_range + 1);
+    trace_a = ((float)trace_height - start_height) / (float)(trace_range + 1);
     switch (map_terrain_get(map, trace_x, trace_y)) {
     case HEAVY_FOREST:
     case LIGHT_FOREST:
@@ -338,8 +346,9 @@ static void litemark_map(HexLosMap *los_map, BattleMap *map, LosTrace *trace) {
       continue;
 
     for (index = 0; index < los_map->xsize * los_map->ysize; index++) {
-      trace_slitelos(los_map, map, mech, index,
-                     mech_position_z(mech) + mech_los_height(mech), trace);
+      const int mech_z = mech_position_z(mech);
+      const float light_height = (float)mech_z + mech_los_height(mech);
+      trace_slitelos(los_map, map, mech, index, light_height, trace);
     }
   }
 }
@@ -370,8 +379,10 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
     int trace_y = trace->points[trace_range].y;
     int trace_height = map_elevation_get(map, trace_x, trace_y);
 
-    float trace_a = (trace_height - start_height) / (trace_range + 1);
-    float trace_ba = ((trace_height + 2 - start_height)) / (trace_range + 1);
+    float trace_a =
+        ((float)trace_height - start_height) / (float)(trace_range + 1);
+    float trace_ba =
+        ((float)(trace_height + 2) - start_height) / (float)(trace_range + 1);
     int trace_terrain = map_real_terrain_get(map, trace_x, trace_y);
     int nsensor, newwoods;
 
@@ -514,7 +525,8 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
   } else
     bothworlds = 0;
 
-  start_height = mech_position_z(mech) + mech_los_height(mech);
+  const int mech_z = mech_position_z(mech);
+  start_height = (float)mech_z + mech_los_height(mech);
 
   if (mech_is_clairvoyant(mech)) {
     set_hexlosall(los_map, MAPLOSHEX_SEE);

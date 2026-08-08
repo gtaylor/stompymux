@@ -11,6 +11,7 @@
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
+#include "mech_scan_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
@@ -101,7 +102,7 @@ void mech_sight(DbRef player, void *data, char *buffer) {
 void mech_view(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *target;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
-  int targetnum;
+  DbRef targetnum;
   char targetID[5];
   char *args[5];
   int argc;

@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 
+#include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
 
@@ -10,8 +11,8 @@ int mech_sensor_index(const Mech *mech, int slot) {
 }
 
 void mech_sensors_set(Mech *mech, int primary, int secondary) {
-  mech->rd.sensor[0] = primary;
-  mech->rd.sensor[1] = secondary;
+  mech->rd.sensor[0] = clamp_int_to_char(primary);
+  mech->rd.sensor[1] = clamp_int_to_char(secondary);
 }
 
 bool mech_is_fallen(const Mech *mech) { return mech->rd.status & FALLEN; }
@@ -26,7 +27,7 @@ void mech_jellied_set(Mech *mech, bool jellied) {
 }
 
 void mech_sensor_visibility_modifier_set(Mech *mech, int modifier) {
-  mech->rd.vis_mod = modifier;
+  mech->rd.vis_mod = clamp_int_to_char(modifier);
 }
 
 bool mech_searchlight_active(const Mech *mech) {

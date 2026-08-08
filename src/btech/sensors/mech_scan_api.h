@@ -27,6 +27,7 @@ void mech_scan_print_enemy_status(EvaluationContext *evaluation, DbRef player,
                                   int options);
 void mech_bearing(DbRef player, void *data, char *buffer);
 void mech_range(DbRef player, void *data, char *buffer);
+void mech_vector(DbRef player, void *data, char *buffer);
 void PrintEnemyWeaponStatus(Mech *mech, DbRef player);
 void mech_sight(DbRef player, void *data, char *buffer);
 void mech_view(DbRef player, void *data, char *buffer);

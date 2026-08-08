@@ -33,6 +33,11 @@
 
 #include <ctype.h>
 #include <stdio.h>
+
+static float mech_scan_hex_real_z(BattleMap *map, int x, int y) {
+  const int elevation = battle_map_hex_elevation(map, x, y);
+  return ZSCALE * (float)elevation;
+}
 #include <stdlib.h>
 #include <string.h>
 
@@ -155,7 +160,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       mapx = mech_target_hex_x(mech);
       mapy = mech_target_hex_y(mech);
       MapCoordToRealCoord(mapx, mapy, &fx, &fy);
-      fz = ZSCALE * battle_map_hex_elevation(mech_map, mapx, mapy);
+      fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
       range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
                         mech_position_real_z(mech), fx, fy, fz);
       if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
@@ -204,7 +209,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       return;
     }
     MapCoordToRealCoord(mapx, mapy, &fx, &fy);
-    fz = ZSCALE * battle_map_hex_elevation(mech_map, mapx, mapy);
+    fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
     range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
                       mech_position_real_z(mech), fx, fy, fz);
     if ((int)range > mech_scanner_range(mech)) {
@@ -278,7 +283,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                    "Coordinates are not in line of sight!");
       return;
     }
-    fz = ZSCALE * battle_map_hex_elevation(mech_map, mapx, mapy);
+    fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
     /* look for enemies in that hex... */
     if (!(tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1)))
       tempMech = (Mech *)NULL;
@@ -402,7 +407,7 @@ void mech_report(DbRef player, void *data, char *buffer) {
           "That target isn't seen well enough by the scanners for a report!");
       return;
     }
-    fz = ZSCALE * battle_map_hex_elevation(mech_map, mapx, mapy);
+    fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
     /* look for enemies in that hex... */
     tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
     if (!tempMech) {
@@ -500,20 +505,20 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
                         mech_position_real_x(tempMech),
                         mech_position_real_y(tempMech));
   snprintf(buff, sizeof(buff), "      Range: %.1f hex\t\tBearing: %d degrees",
-           range, bearing);
+           (double)range, bearing);
   mecha_notify(evaluation, player, buff);
   snprintf(buff, sizeof(buff), "      Speed: %.1f KPH\t\tHeading: %d degrees",
-           mech_current_speed(tempMech),
+           (double)mech_current_speed(tempMech),
            AcceptableDegree(mech_heading_degrees(tempMech) +
                             mech_lateral_movement(tempMech)));
   mecha_notify(evaluation, player, buff);
   if (mech_is_flying_type(tempMech))
     notify_printf(evaluation, player, "      Vertical speed: %.1f KPH",
-                  mech_vertical_speed(tempMech));
-  snprintf(buff, sizeof(buff),
-           "      X, Y, Z: %3d, %3d, %3d\tHeat: %.0f deg C.",
-           mech_position_x(tempMech), mech_position_y(tempMech),
-           mech_position_z(tempMech), 10. * mech_excess_heat(tempMech));
+                  (double)mech_vertical_speed(tempMech));
+  snprintf(
+      buff, sizeof(buff), "      X, Y, Z: %3d, %3d, %3d\tHeat: %.0f deg C.",
+      mech_position_x(tempMech), mech_position_y(tempMech),
+      mech_position_z(tempMech), (double)(10.0F * mech_excess_heat(tempMech)));
   mecha_notify(evaluation, player, buff);
   if (mech_lateral_movement(tempMech))
     notify_printf(evaluation, player, "      Mech is moving laterally %s",
@@ -537,6 +542,13 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
     case CLASS_BSUIT:
       mecha_notify(evaluation, player,
                    "      Type: BATTLESUIT(S)       Movement: BIPED");
+      break;
+    case CLASS_VEH_GROUND:
+    case CLASS_VTOL:
+    case CLASS_VEH_NAVAL:
+    case CLASS_SPHEROID_DS:
+    case CLASS_AERO:
+    case CLASS_DS:
       break;
     default:
       break;

@@ -77,8 +77,8 @@ void character_stats_store(BtechContext *context, DbRef player, PSTATS *stats,
 bool character_state_validate_all(BtechContext *context);
 int character_xp_to_next_level(BtechContext *context, DbRef target, int code);
 PSTATS *character_stats_create(void);
-int char_getstatvalue(PSTATS *stats, char *name);
-void char_setstatvalue(PSTATS *stats, char *name, int value);
+int char_getstatvalue(PSTATS *stats, const char *name);
+void char_setstatvalue(PSTATS *stats, const char *name, int value);
 int figure_xp_bonus(BtechContext *context, DbRef player, PSTATS *stats,
                     int code);
 void character_value_set_by_code(BtechContext *context, DbRef player, int code,

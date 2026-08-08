@@ -1,6 +1,8 @@
 #include "map_obj_internal.h"
 #include "map_object_query_api.h"
 
+#include "checked_conversion.h"
+
 MapObject *next_mapobj(MapObject *object) { return object->next; }
 
 MapObject *first_mapobj(BattleMap *map, int type) {
@@ -83,7 +85,7 @@ char find_decorations(BattleMap *map, int x, int y) {
   for (i = 0; i <= TYPE_LAST_DEC; i++) {
     for (m = first_mapobj(map, i); m; m = next_mapobj(m))
       if (m->x == x && m->y == y)
-        return m->datac;
+        return clamp_int_to_char(m->datac);
   }
   return 0;
 }
@@ -108,7 +110,7 @@ void del_mapobj(BattleMap *map, MapObject *mapob, int type, int zap) {
   if (type <= TYPE_LAST_DEC) {
     /* Need to alter terrain back to 'usual' */
     if (!(zap & 2))
-      map_terrain_set(map, mapob->x, mapob->y, mapob->datac);
+      map_terrain_set(map, mapob->x, mapob->y, clamp_int_to_char(mapob->datac));
     if (zap)
       mux_event_remove_type_data2(map->xcode.context->events, EVENT_DECORATION,
                                   mapob);
@@ -350,7 +352,7 @@ void CheckForFire(BattleMap *map, int x[], int y[]) {
     char terrain = map_real_terrain_get(map, x[i], y[i]);
     if (terrain == LIGHT_FOREST || terrain == HEAVY_FOREST)
       add_decoration(map, x[i], y[i], TYPE_FIRE, FIRE,
-                     btech_random_range(map->xcode.context, 60, 180));
+                     btech_random_range_int(map->xcode.context, 60, 180));
   }
 }
 
@@ -371,7 +373,7 @@ void CheckForSmoke(BattleMap *map, int x[], int y[]) {
       break;
     }
     add_decoration(map, x[i], y[i], TYPE_SMOKE, SMOKE,
-                   btech_random_range(map->xcode.context, 90, 150));
+                   btech_random_range_int(map->xcode.context, 90, 150));
   }
 }
 
@@ -457,8 +459,8 @@ void add_decoration(BattleMap *map, int x, int y, int type, char data,
   MapObject *tmpo;
 
   bzero(&foo, sizeof(MapObject));
-  foo.x = x;
-  foo.y = y;
+  foo.x = clamp_int_to_short(x);
+  foo.y = clamp_int_to_short(y);
 
   if (foo.x < 0 || foo.y < 0 || foo.x >= map->map_width ||
       foo.y >= map->map_height)
@@ -479,15 +481,16 @@ void add_decoration(BattleMap *map, int x, int y, int type, char data,
     }
   }
   map_terrain_set(map, x, y, data);
-  foo.datas = (short)flaggo;
+  foo.datas = clamp_int_to_short(flaggo);
   tmpo = add_mapobj(map, &map->MapObject[type], &foo, 1);
   if (flaggo) {
     if (type == TYPE_SMOKE)
       map_event_schedule(map, EVENT_DECORATION, smoke_dissipation_event, flaggo,
                          (intptr_t)tmpo);
     if (type == TYPE_FIRE) {
-      foo.datas = foo.datas * map_fire_speed(map) * 4 / 3 / 60;
-      foo.datas = MAX(foo.datas, map_fire_speed(map) * 2);
+      const int fire_duration = foo.datas * map_fire_speed(map) * 4 / 3 / 60;
+      foo.datas = clamp_int_to_short(fire_duration);
+      foo.datas = clamp_int_to_short(MAX(foo.datas, map_fire_speed(map) * 2));
       map_event_schedule(map, EVENT_DECORATION, fire_spreading_event,
                          map_fire_speed(map), (intptr_t)tmpo);
     }

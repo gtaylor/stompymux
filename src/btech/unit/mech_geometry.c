@@ -1,13 +1,14 @@
 #include "mech_targeting_api.h"
 #include "mech_utils_internal.h"
 
+#include "checked_conversion.h"
+
 float FindRange(float x0, float y0, float z0, float x1, float y1, float z1) {
   const float dx = x0 - x1;
   const float dy = y0 - y1;
   const float dz = z0 - z1;
 
-  /* TODO: Use sqrtf(), if we've got it.  */
-  return (float)(1. / SCALEMAP) * (float)sqrt(dx * dx + dy * dy + dz * dz);
+  return sqrtf(dx * dx + dy * dy + dz * dz) / (float)SCALEMAP;
 }
 
 /* Computes hex range between Cartesian (x0, y0) and (x1, y1).  */
@@ -15,8 +16,7 @@ float FindXYRange(float x0, float y0, float x1, float y1) {
   const float dx = x0 - x1;
   const float dy = y0 - y1;
 
-  /* TODO: Use sqrtf(), if we've got it.  */
-  return (float)(1. / SCALEMAP) * (float)sqrt(dx * dx + dy * dy);
+  return sqrtf(dx * dx + dy * dy) / (float)SCALEMAP;
 }
 
 /* TODO: We could just make this a macro, right? Or substitute it away.  */
@@ -66,11 +66,11 @@ float FindHexRange(float x0, float y0, float x1, float y1) {
 /* Doubles for added accuracy; most calculations are doubles internally
    anyway, so we suffer little to no performance hit. */
 
-#define ROOT3 558.58638544096289        /* sqrt(3) * SCALEMAP */
-#define ALPHA 93.097730906827152        /* ROOT3 / 6 */
-#define ANGLE_ALPHA 0.28867513459481287 /* sqrt(3) / 6 */
-#define FULL_Y (1 * SCALEMAP)
-#define HALF_Y (0.5 * FULL_Y)
+#define ROOT3 558.5864F         /* sqrt(3) * SCALEMAP */
+#define ALPHA 93.09773F         /* ROOT3 / 6 */
+#define ANGLE_ALPHA 0.28867513F /* sqrt(3) / 6 */
+#define FULL_Y ((float)SCALEMAP)
+#define HALF_Y (0.5F * FULL_Y)
 
 void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
                          float cart_y) {
@@ -79,8 +79,8 @@ void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
 
   if (cart_x < ALPHA) {
     /* Special case: we are in section IV of x-column 0 or off the map */
-    *hex_x = cart_x < 0 ? -1 : 0;
-    *hex_y = floor(cart_y / SCALEMAP);
+    *hex_x = cart_x < 0.0F ? -1 : 0;
+    *hex_y = clamp_float_to_short(floorf(cart_y / (float)SCALEMAP));
     return;
   }
 
@@ -88,16 +88,16 @@ void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
   cart_x -= ALPHA;
 
   /* Figure out the x-coordinate of the 'repeatable box' we're in. */
-  x_count = cart_x / ROOT3;
+  x_count = clamp_float_to_int(cart_x / ROOT3);
   /* And the offset inside the box, from the left edge. */
-  x = cart_x - x_count * ROOT3;
+  x = cart_x - (float)x_count * ROOT3;
 
   /* The repbox holds two x-columns, we want the real X coordinate. */
   x_count *= 2;
 
   /* Do the same for the y-coordinate; this is easy */
-  y_count = floor(cart_y / FULL_Y);
-  y = cart_y - y_count * FULL_Y;
+  y_count = clamp_float_to_int(floorf(cart_y / FULL_Y));
+  y = cart_y - (float)y_count * FULL_Y;
 
   if (x < 2 * ALPHA) {
 
@@ -129,7 +129,7 @@ void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
   } else if (y >= HALF_Y) {
     /* Area II or IV. Up x at least one, maybe two, and y maybe one. */
     x_count++;
-    if (2 * ANGLE_ALPHA * (y - HALF_Y) > (x - 5.0 * ALPHA))
+    if (2.0F * ANGLE_ALPHA * (y - HALF_Y) > (x - 5.0F * ALPHA))
       /* Area II */
       y_count++;
     else
@@ -143,8 +143,8 @@ void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
       x_count++;
   }
 
-  *hex_x = x_count;
-  *hex_y = y_count;
+  *hex_x = clamp_int_to_short(x_count);
+  *hex_y = clamp_int_to_short(y_count);
 }
 
 /*
@@ -159,8 +159,8 @@ void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
 void MapCoordToRealCoord(int hex_x, int hex_y, float *cart_x, float *cart_y) {
   /* TODO: Can use some integer math if we're careful about overflow.  */
   /* Use % 2 for theoretical portability to non-2's-complement archs.  */
-  *cart_x = (2.f + 3.f * (float)hex_x) * ALPHA;
-  *cart_y = ((hex_x % 2) ? 0 : HALF_Y) + ((float)hex_y * FULL_Y);
+  *cart_x = (2.0F + 3.0F * (float)hex_x) * ALPHA;
+  *cart_y = ((hex_x % 2) ? 0.0F : HALF_Y) + ((float)hex_y * FULL_Y);
 }
 
 /*
@@ -179,8 +179,8 @@ void MapCoordToRealCoord(int hex_x, int hex_y, float *cart_x, float *cart_y) {
 
  */
 
-#define NAV_ROW_HEIGHT (FULL_Y / 9.0)
-#define NAV_COLUMN_WIDTH (4 * ALPHA / 21.0)
+#define NAV_ROW_HEIGHT (FULL_Y / 9.0F)
+#define NAV_COLUMN_WIDTH (4.0F * ALPHA / 21.0F)
 #define NAV_Y_OFFSET 2
 #define NAV_X_OFFSET 4
 #define NAV_MAX_HEIGHT 2 + 9 + 2
@@ -193,7 +193,7 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
   Mech *other;
 
   MapCoordToRealCoord(x, y, &corner_fx, &corner_fy);
-  corner_fx -= 2 * ALPHA;
+  corner_fx -= 2.0F * ALPHA;
   corner_fy -= HALF_Y;
 
   for (i = 0; i < map->first_free; i++) {
@@ -210,10 +210,10 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
       continue;
 
     fx = ((other)->pd.fx) - corner_fx;
-    column = fx / NAV_COLUMN_WIDTH + NAV_X_OFFSET;
+    column = clamp_float_to_int(fx / NAV_COLUMN_WIDTH + NAV_X_OFFSET);
 
     fy = ((other)->pd.fy) - corner_fy;
-    row = fy / NAV_ROW_HEIGHT + NAV_Y_OFFSET;
+    row = clamp_float_to_int(fy / NAV_ROW_HEIGHT + NAV_Y_OFFSET);
 
     if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
       continue;
@@ -227,10 +227,10 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
   /* Draw 'mech last so we always see it. */
 
   fx = ((mech)->pd.fx) - corner_fx;
-  column = fx / NAV_COLUMN_WIDTH + NAV_X_OFFSET;
+  column = clamp_float_to_int(fx / NAV_COLUMN_WIDTH + NAV_X_OFFSET);
 
   fy = ((mech)->pd.fy) - corner_fy;
-  row = fy / NAV_ROW_HEIGHT + NAV_Y_OFFSET;
+  row = clamp_float_to_int(fy / NAV_ROW_HEIGHT + NAV_Y_OFFSET);
 
   if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
     return;
@@ -252,7 +252,8 @@ int FindTargetXY(Mech *mech, float *x, float *y, float *z) {
     }
   } else if (mech_target_hex_x(mech) != -1 && mech_target_hex_y(mech) != -1) {
     MapCoordToRealCoord(mech_target_hex_x(mech), mech_target_hex_y(mech), x, y);
-    *z = (float)ZSCALE * (mech_target_hex_z(mech));
+    int target_hex_z = mech_target_hex_z(mech);
+    *z = (float)ZSCALE * (float)target_hex_z;
 
     return 1;
   }

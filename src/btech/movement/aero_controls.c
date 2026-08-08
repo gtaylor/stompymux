@@ -39,20 +39,22 @@ void aero_thrust(DbRef player, void *data, char *arg) {
   }
   if (mech_parseattributes(arg, args, 1) != 1) {
     notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                  "Your current thrust is %.2f.", mech_desired_speed(mech));
+                  "Your current thrust is %.2f.",
+                  (double)mech_desired_speed(mech));
     return;
   }
-  newspeed = atof(args[0]);
+  newspeed = strtof(args[0], nullptr);
   if ((mech_class(mech) == CLASS_AERO || mech_class(mech) == CLASS_DS))
-    if (newspeed < (MP1 * MIN_TAKEOFF_SPEED / ACCEL_MOD)) {
-      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                   tprintf("Minimum thrust you stay in air with is %.1f kph.",
-                           (float)MP1 * MIN_TAKEOFF_SPEED / ACCEL_MOD));
+    if (newspeed < (MP1 * (float)MIN_TAKEOFF_SPEED / (float)ACCEL_MOD)) {
+      mecha_notify(
+          btech_context_evaluation(mech_context(mech)), player,
+          tprintf("Minimum thrust you stay in air with is %.1f kph.",
+                  (double)(MP1 * (float)MIN_TAKEOFF_SPEED / (float)ACCEL_MOD)));
       return;
     }
   maxspeed = mech_effective_maximum_speed(mech);
-  if (!(maxspeed > 0.0))
-    maxspeed = 0.0;
+  if (!(maxspeed > 0.0F))
+    maxspeed = 0.0F;
   if (mech_condition_summary(mech).fallen) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Your engine's dead, no way to thrust!");
@@ -65,12 +67,12 @@ void aero_thrust(DbRef player, void *data, char *arg) {
   }
   if (newspeed > maxspeed) {
     notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                  "Maximum thrust: %.2f (%.2f kb/sec2)", maxspeed,
-                  maxspeed / 10);
+                  "Maximum thrust: %.2f (%.2f kb/sec2)", (double)maxspeed,
+                  (double)(maxspeed / 10.0F));
     return;
   }
   mech_desired_speed_set(mech, newspeed);
-  mech_printf(mech, MECHALL, "Thrust set to %.2f.", newspeed);
+  mech_printf(mech, MECHALL, "Thrust set to %.2f.", (double)newspeed);
   mech_maybe_move(mech);
 }
 

@@ -49,7 +49,7 @@ static int new_move_value(const Mech *mech) {
   return (int)(mech_maximum_speed(mech) / MP1);
 }
 
-float getPilotBVMod(Mech *mech, int weapindx) {
+static double getPilotBVMod(Mech *mech, int weapindx) {
   /*
    * What we do is we get the mod as if we had a 0+ piloting (baseline)
    * for the gun skill we want. Each '+' above zero subtracts .05 from
@@ -60,45 +60,49 @@ float getPilotBVMod(Mech *mech, int weapindx) {
    * (that's <gun skill>+ <pilot skill>+)
    */
 
-  float zeroPilotBaseSkills[] = {2.05, 1.85, 1.65, 1.45, 1.25, 1.15, 1.05, .95};
+  const double zeroPilotBaseSkills[] = {2.05, 1.85, 1.65, 1.45,
+                                        1.25, 1.15, 1.05, 0.95};
 
   int myGSkill = FindPilotGunnery(mech, weapindx);
   int myPSkill = FindPilotPiloting(mech);
-  float baseMod = 0.0;
+  double baseMod = 0.0;
 
   /* First we check if we have a totally off the wall GSkill, i.e., below
    * 0 or above 7.
    */
   if (myGSkill < 0) {
-    baseMod = zeroPilotBaseSkills[0] + (abs(myGSkill) * 0.20);
+    const int gunnery_penalty = abs(myGSkill);
+    baseMod = zeroPilotBaseSkills[0] + gunnery_penalty * 0.20;
   } else if (myGSkill > 7) {
-    baseMod = zeroPilotBaseSkills[7] - (myGSkill * 0.10);
+    baseMod = zeroPilotBaseSkills[7] - myGSkill * 0.10;
   } else {
     baseMod = zeroPilotBaseSkills[myGSkill];
   }
 
-  return (baseMod - ((0 + myPSkill) * 0.05));
+  return baseMod - myPSkill * 0.05;
 }
 
 /*
  * Routines and formula for XP gain.
  */
 void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
-                     float multiplier, int weapindx, int bth) {
+                     double multiplier, int weapindx, int bth) {
   BtechContext *context = mech_context(attacker);
-  int xp, my_BV, th_BV, my_speed, th_speed;
-  float myPilotBVMod = 1.0, theirPilotBVMod = 1.0;
-  float weapTypeMod;
-  char *skname;
+  int xp, my_speed, th_speed;
+  double my_battle_value;
+  double their_battle_value;
+  double myPilotBVMod = 1.0, theirPilotBVMod = 1.0;
+  double weapTypeMod;
+  const char *skname;
   char buf[MBUF_SIZE];
   int damagemod;
-  float vrtmod;
+  double vrtmod;
   int recycle_time;
   int weapon_battle_value;
   int i;
   int j = NUM_SECTIONS;
 
-  weapTypeMod = 1;
+  weapTypeMod = 1.0;
 
   if (mech_context(attacker)->configuration->btech_oldxpsystem) {
     AccumulateGunXPold(pilot, attacker, wounded, damage, multiplier, weapindx,
@@ -155,8 +159,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   if (!(bth <= 12))
     return;
 
-  multiplier =
-      multiplier * mech_context(attacker)->configuration->btech_xp_modifier;
+  multiplier *= mech_context(attacker)->configuration->btech_xp_modifier;
 
   if (mech_context(attacker)->configuration->btech_xp_bthmod) {
     if (!(bth >= 3 && bth <= 12)) {
@@ -166,19 +169,21 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
                                    mech_dbref(attacker), mech_dbref(wounded)));
       return; /* sure hits aren't interesting */
     }
-    multiplier = 2 * multiplier * bth_modifier[bth - 3] / 36;
+    multiplier = 2.0 * multiplier * bth_modifier[bth - 3] / 36.0;
   }
 
   /* Need to do a BV mod between the mechs */
-  my_BV = mech_battle_value(attacker);
-  th_BV = mech_battle_value(wounded);
+  const int attacker_battle_value = mech_battle_value(attacker);
+  const int wounded_battle_value = mech_battle_value(wounded);
+  my_battle_value = attacker_battle_value;
+  their_battle_value = wounded_battle_value;
 
   if (mech_context(attacker)->configuration->btech_xp_usePilotBVMod) {
     myPilotBVMod = getPilotBVMod(attacker, weapindx);
     theirPilotBVMod = getPilotBVMod(wounded, weapindx);
 
-    my_BV = my_BV * myPilotBVMod;
-    th_BV = th_BV * theirPilotBVMod;
+    my_battle_value *= myPilotBVMod;
+    their_battle_value *= theirPilotBVMod;
 
 #ifdef XP_DEBUG
     btech_channel_send(
@@ -208,25 +213,26 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   weapon_battle_value =
       btech_weapon_settings_battle_value(&context->weapon_settings, weapindx);
   if (mech_context(attacker)->configuration->btech_xp_vrtmod)
-    vrtmod = (recycle_time < 30 ? sqrt((double)recycle_time / 30.0) : 1);
+    vrtmod = (recycle_time < 30 ? sqrt((double)recycle_time / 30.0) : 1.0);
   else
     vrtmod = 1.0;
 
   multiplier =
       (vrtmod * weapTypeMod * multiplier *
-       sqrt((double)(th_BV + 1) * th_speed *
+       sqrt((their_battle_value + 1.0) * th_speed *
             mech_context(attacker)->configuration->btech_defaultweapbv /
             mech_context(attacker)->configuration->btech_defaultweapdam)) /
-      (sqrt((double)(my_BV + 1) * my_speed * weapon_battle_value / damagemod));
+      (sqrt((my_battle_value + 1.0) * my_speed * weapon_battle_value /
+            damagemod));
 
-  if (mech_context(attacker)->configuration->btech_perunit_xpmod)
-    multiplier =
-        multiplier * mech_experience_modifier(
-                         attacker); /* Per unit XP Mod. Defaults to 1 anyways */
+  if (mech_context(attacker)->configuration->btech_perunit_xpmod) {
+    const double experience_modifier = mech_experience_modifier(attacker);
+    multiplier *= experience_modifier;
+  }
 
   /* Change the Cap to be variable depending on what a mux wants */
 
-  xp = BOUNDED(1, (int)(multiplier * damage / 100),
+  xp = BOUNDED(1, (int)(multiplier * (double)damage / 100.0),
                mech_context(attacker)->configuration->btech_xpgain_cap);
 
   strcpy(buf, game_object_name(mech_context(attacker)->database,
@@ -250,11 +256,11 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
 } // end AccumulateGunXP()
 
 void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
-                        int numOccurences, float multiplier, int weapindx,
+                        int numOccurences, double multiplier, int weapindx,
                         int bth) {
   BtechContext *context = mech_context(attacker);
   int xp;
-  char *skname;
+  const char *skname;
   char buf[MBUF_SIZE];
 
   /* Is the attacker in character ie: in simulators */
@@ -319,12 +325,12 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
 
   multiplier = multiplier * bth_modifier[bth - 3] / 36;
   multiplier = multiplier * 2; /* For average shot */
-  if (mech_context(attacker)->configuration->btech_perunit_xpmod)
-    multiplier =
-        multiplier * mech_experience_modifier(
-                         attacker); /* Per unit XP Modifier. Defaults to 1 */
+  if (mech_context(attacker)->configuration->btech_perunit_xpmod) {
+    const double experience_modifier = mech_experience_modifier(attacker);
+    multiplier *= experience_modifier;
+  }
 
-  if (btech_random_range(mech_context(attacker), 1, 50) >
+  if (btech_random_range_int(mech_context(attacker), 1, 50) >
       (multiplier * numOccurences))
     return; /* Nothing for truly twinky stuff, occasionally */
 
@@ -525,7 +531,8 @@ void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
     CHADV,
     CHATT,
   };
-  static char *cmds[] = {"skills", "advantages", "attributes", NULL};
+  static const char *const cmds[] = {"skills", "advantages", "attributes",
+                                     nullptr};
 
   if (!argument_count_in_range("BTCHARLIST", nfargs, 1, 2, buff, bufc))
     return;

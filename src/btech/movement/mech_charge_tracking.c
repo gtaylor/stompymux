@@ -28,9 +28,9 @@ void mech_charge_distance_record(Mech *mech, float delta_x, float delta_y) {
       mech_charge_target_dbref(mech) <= 0)
     return;
 
-  float x_scale = 1.0F / SCALEMAP;
-  float distance =
-      sqrt(x_scale * x_scale * delta_x * delta_x + YSCALE2 * delta_y * delta_y);
+  float x_scale = 1.0F / (float)SCALEMAP;
+  float distance = sqrtf(x_scale * x_scale * delta_x * delta_x +
+                         (float)YSCALE2 * delta_y * delta_y);
   mech_charge_distance_add(mech, distance);
 }
 
@@ -45,7 +45,7 @@ void mech_charge_impact_resolve(Mech *mech) {
     mech_charge_reset(mech);
     return;
   }
-  if (mech_range_to(mech, target) >= CHARGE_DIST_TRIGGER)
+  if (mech_range_to(mech, target) >= (float)CHARGE_DIST_TRIGGER)
     return;
 
   ChargeMech(mech, target);

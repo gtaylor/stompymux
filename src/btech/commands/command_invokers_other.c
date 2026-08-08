@@ -1,5 +1,7 @@
 #include "command_invokers.h"
 
+#include "autopilot.h"
+
 #define DEFINE_BTECH_COMMAND_INVOKER(handler)                                  \
   void handler(DbRef actor, void *object, char *arguments);                    \
   void btech_command_invoke_##handler(                                         \
@@ -8,9 +10,18 @@
   }
 DEFINE_BTECH_COMMAND_INVOKER(ListForms)
 DEFINE_BTECH_COMMAND_INVOKER(auto_addcommand)
-DEFINE_BTECH_COMMAND_INVOKER(auto_delcommand)
-DEFINE_BTECH_COMMAND_INVOKER(auto_disengage)
-DEFINE_BTECH_COMMAND_INVOKER(auto_engage)
+void btech_command_invoke_auto_delcommand(
+    const BtechCommandInvocation *invocation) {
+  auto_delcommand(invocation->actor, invocation->object, invocation->arguments);
+}
+void btech_command_invoke_auto_disengage(
+    const BtechCommandInvocation *invocation) {
+  auto_disengage(invocation->actor, invocation->object, invocation->arguments);
+}
+void btech_command_invoke_auto_engage(
+    const BtechCommandInvocation *invocation) {
+  auto_engage(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(auto_eventstats)
 DEFINE_BTECH_COMMAND_INVOKER(auto_jump)
 DEFINE_BTECH_COMMAND_INVOKER(auto_listcommands)

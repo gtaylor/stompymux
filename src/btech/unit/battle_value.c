@@ -1,3 +1,4 @@
+#include "checked_conversion.h"
 #include "mech_equipment_api.h"
 #include "mech_heat_api.h"
 #include "mech_status_types.h"
@@ -30,40 +31,43 @@ int FindAverageGunnery(Mech *mech) {
 
 #undef DEBUG_BV
 float skillmul[BTECH_BV_SKILL_LIMIT][BTECH_BV_SKILL_LIMIT] = {
-    {2.05, 2.00, 1.95, 1.90, 1.85, 1.80, 1.75, 1.70},
-    {1.85, 1.80, 1.75, 1.70, 1.65, 1.60, 1.55, 1.50},
-    {1.65, 1.60, 1.55, 1.50, 1.45, 1.40, 1.35, 1.30},
-    {1.45, 1.40, 1.35, 1.30, 1.25, 1.20, 1.15, 1.10},
-    {1.25, 1.20, 1.15, 1.10, 1.05, 1.00, 0.95, 0.90},
-    {1.15, 1.10, 1.05, 1.00, 0.95, 0.90, 0.85, 0.80},
-    {1.05, 1.00, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70},
-    {0.95, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60}};
+    {2.05F, 2.00F, 1.95F, 1.90F, 1.85F, 1.80F, 1.75F, 1.70F},
+    {1.85F, 1.80F, 1.75F, 1.70F, 1.65F, 1.60F, 1.55F, 1.50F},
+    {1.65F, 1.60F, 1.55F, 1.50F, 1.45F, 1.40F, 1.35F, 1.30F},
+    {1.45F, 1.40F, 1.35F, 1.30F, 1.25F, 1.20F, 1.15F, 1.10F},
+    {1.25F, 1.20F, 1.15F, 1.10F, 1.05F, 1.00F, 0.95F, 0.90F},
+    {1.15F, 1.10F, 1.05F, 1.00F, 0.95F, 0.90F, 0.85F, 0.80F},
+    {1.05F, 1.00F, 0.95F, 0.90F, 0.85F, 0.80F, 0.75F, 0.70F},
+    {0.95F, 0.90F, 0.85F, 0.80F, 0.75F, 0.70F, 0.65F, 0.60F}};
 
-void Calc_AddOffBV(const Mech *mech, float *offbv, char *desc, float value) {
+void Calc_AddOffBV(const Mech *mech, float *offbv, const char *desc,
+                   float value) {
   *offbv += value;
   if (mech->xcode.context->configuration->btech_cost_debug)
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("AddOffBV %25s %8.2f", desc, value));
+                       tprintf("AddOffBV %25s %8.2f", desc, (double)value));
 }
 
-void Calc_AddDefBV(const Mech *mech, float *defbv, char *desc, float value) {
+void Calc_AddDefBV(const Mech *mech, float *defbv, const char *desc,
+                   float value) {
   *defbv += value;
   if (mech->xcode.context->configuration->btech_cost_debug)
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("AddDefBV %25s %8.2f", desc, value));
+                       tprintf("AddDefBV %25s %8.2f", desc, (double)value));
 }
 
-void Calc_SubDefBV(const Mech *mech, float *defbv, char *desc, float value) {
+void Calc_SubDefBV(const Mech *mech, float *defbv, const char *desc,
+                   float value) {
   *defbv -= value;
   if (mech->xcode.context->configuration->btech_cost_debug)
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("SubDefBV %25s-%8.2f", desc, value));
+                       tprintf("SubDefBV %25s-%8.2f", desc, (double)value));
 }
 
 /* Calculate Defensive BV 2.0 per Total Warfare Rules */
 float Calculate_Defensive_BV(Mech *mech) {
-  float defbv = 0.0;
-  float engine_mod = 0.0;
+  float defbv = 0.0F;
+  float engine_mod = 0.0F;
   int i;
   int ii;
   int part;
@@ -73,7 +77,7 @@ float Calculate_Defensive_BV(Mech *mech) {
   int jump_mp = 0;
   int move_mod = 0;
   int run_mp = 0;
-  float def_factor = 0.0;
+  float def_factor = 0.0F;
   char buff[50];
 
   /* ARMOR
@@ -81,7 +85,8 @@ float Calculate_Defensive_BV(Mech *mech) {
    * Commercial Armor Modifier = 0.5 (Currently not implemented)
    * All Other Armor Modifier  = 1.0
    */
-  Calc_AddDefBV(mech, &defbv, "Armor", mech_armorpoints(mech) * 2.5 * 1.0);
+  const int armor_points = mech_armorpoints(mech);
+  Calc_AddDefBV(mech, &defbv, "Armor", (float)armor_points * 2.5F);
 
   /* INTERNAL/ENGINE
    * Total Internal Points * 1.5 * Internal Type Modifier * Engine Type Modifier
@@ -94,26 +99,27 @@ float Calculate_Defensive_BV(Mech *mech) {
    *
    * Vehicles Engine Modifier = 1.00
    */
-  engine_mod = 1.00;
+  engine_mod = 1.00F;
 
   if (((mech)->rd.specials) & LE_TECH)
-    engine_mod = 0.75;
+    engine_mod = 0.75F;
 
   if (((mech)->rd.specials) & XL_TECH) {
     if (((mech)->rd.specials) & CLAN_TECH)
-      engine_mod = 0.75;
+      engine_mod = 0.75F;
     else
-      engine_mod = 0.50;
+      engine_mod = 0.50F;
   }
 
   if (((mech)->rd.specials) & XXL_TECH)
-    engine_mod = 0.50;
+    engine_mod = 0.50F;
 
   if (((mech)->ud.type) != CLASS_MECH)
-    engine_mod = 1.00;
+    engine_mod = 1.00F;
 
+  const int internal_points = mech_intpoints(mech);
   Calc_AddDefBV(mech, &defbv, "Internal/Engine",
-                mech_intpoints(mech) * 1.5 * 1.0 * engine_mod);
+                (float)internal_points * 1.5F * engine_mod);
 
   /* GYRO
    * Mechs Only
@@ -123,8 +129,8 @@ float Calculate_Defensive_BV(Mech *mech) {
    */
   if (((mech)->ud.type) == CLASS_MECH)
     Calc_AddDefBV(mech, &defbv, "Gyro (Mech Only)",
-                  ((mech)->ud.tons) *
-                      (((mech)->rd.specials2) & HDGYRO_TECH ? 1.0 : 0.5));
+                  (float)((mech)->ud.tons) *
+                      (((mech)->rd.specials2) & HDGYRO_TECH ? 1.0F : 0.5F));
 
   /* DEFENSIVE ITEMS/WEAPONS
    * All Defensive items at their BV value (ECM, A-Pod, B-Pod, BAP, AMS, etc)
@@ -151,23 +157,24 @@ float Calculate_Defensive_BV(Mech *mech) {
       if (equipment_is_ammunition(part)) {
         weapindx = ammunition_to_weapon_index(part);
         if (MechWeapons[weapindx].special & AMS) {
-          Calc_AddDefBV(mech, &defbv, "AMS Ammo",
-                        MechWeapons[weapindx].ammo_bv);
+          const int ammo_bv = MechWeapons[weapindx].ammo_bv;
+
+          Calc_AddDefBV(mech, &defbv, "AMS Ammo", (float)ammo_bv);
         }
         if (((mech)->ud.type) == CLASS_MECH) {
           if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) &&
               (((mech)->rd.specials) & CLAN_TECH)) {
 
-            Calc_SubDefBV(mech, &defbv, "Explosive Ammo", 15.0);
+            Calc_SubDefBV(mech, &defbv, "Explosive Ammo", 15.0F);
 
           } else if ((((mech)->rd.specials) & (XL_TECH | XXL_TECH))) {
 
-            Calc_SubDefBV(mech, &defbv, "Exp Ammo in XL/XXL", 15.0);
+            Calc_SubDefBV(mech, &defbv, "Exp Ammo in XL/XXL", 15.0F);
 
           } else if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) ||
                      !(((mech)->ud.sections)[i].config & CASE_TECH)) {
 
-            Calc_SubDefBV(mech, &defbv, "Exp Ammo Fusion/!CASE", 15.0);
+            Calc_SubDefBV(mech, &defbv, "Exp Ammo Fusion/!CASE", 15.0F);
           }
         }
       } /* End IsAmmo */
@@ -175,12 +182,14 @@ float Calculate_Defensive_BV(Mech *mech) {
       if (equipment_is_weapon(part)) {
         weapindx = weapon_from_equipment_index(part);
         if (MechWeapons[weapindx].special & A_POD) {
-          Calc_AddDefBV(mech, &defbv, "A POD",
-                        mech_weapon_battle_value(mech, weapindx));
+          const int weapon_bv = mech_weapon_battle_value(mech, weapindx);
+
+          Calc_AddDefBV(mech, &defbv, "A POD", (float)weapon_bv);
         }
         if (MechWeapons[weapindx].special & AMS) {
-          Calc_AddDefBV(mech, &defbv, "AMS",
-                        mech_weapon_battle_value(mech, weapindx));
+          const int weapon_bv = mech_weapon_battle_value(mech, weapindx);
+
+          Calc_AddDefBV(mech, &defbv, "AMS", (float)weapon_bv);
         }
         /*                      if(MechWeapons[weapindx].special & B_POD) {
                                         Calc_AddDefBV(mech, &defbv,"B POD",
@@ -190,16 +199,16 @@ float Calculate_Defensive_BV(Mech *mech) {
         if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) &&
             (((mech)->rd.specials) & CLAN_TECH)) {
           if (MechWeapons[weapindx].special & GAUSS) {
-            Calc_SubDefBV(mech, &defbv, "Gauss Crit", 1.0);
+            Calc_SubDefBV(mech, &defbv, "Gauss Crit", 1.0F);
           }
         } else if ((((mech)->rd.specials) & (XL_TECH | XXL_TECH))) {
           if (MechWeapons[weapindx].special & GAUSS) {
-            Calc_SubDefBV(mech, &defbv, "Gauss Crit XL/XXL", 1.0);
+            Calc_SubDefBV(mech, &defbv, "Gauss Crit XL/XXL", 1.0F);
           }
         } else if ((i == CTORSO || i == LLEG || i == RLEG || i == HEAD) &&
                    !(((mech)->ud.sections)[i].config & CASE_TECH)) {
           if (MechWeapons[weapindx].special & GAUSS) {
-            Calc_SubDefBV(mech, &defbv, "Gauss Crit !Case", 1.0);
+            Calc_SubDefBV(mech, &defbv, "Gauss Crit !Case", 1.0F);
           }
         } else if ((((i == RARM) &&
                      !(((mech)->ud.sections)[RTORSO].config & CASE_TECH)) ||
@@ -207,7 +216,7 @@ float Calculate_Defensive_BV(Mech *mech) {
                      !(((mech)->ud.sections)[LTORSO].config & CASE_TECH))) &&
                    !(((mech)->rd.specials) & (XL_TECH | XXL_TECH))) {
           if (MechWeapons[weapindx].special & GAUSS) {
-            Calc_SubDefBV(mech, &defbv, "Gauss Crit Fusion/!Case", 1.0);
+            Calc_SubDefBV(mech, &defbv, "Gauss Crit Fusion/!Case", 1.0F);
           }
         }
       } /* End IsWeapon */
@@ -225,7 +234,7 @@ float Calculate_Defensive_BV(Mech *mech) {
         CLAN_TECH))) { /* ECM is 2 crits for mechas, one Crit for Clan Mechas.
                           One System = 61 BV */
 
-    Calc_AddDefBV(mech, &defbv, "ECM", 61.0);
+    Calc_AddDefBV(mech, &defbv, "ECM", 61.0F);
   }
 
   if ((((bap_count / 2) > 0) && (((mech)->ud.type) == CLASS_MECH)) ||
@@ -235,7 +244,7 @@ float Calculate_Defensive_BV(Mech *mech) {
         CLAN_TECH))) { /* BAP is 2 crits for mechas, one Crit for Clan Mechas.
                           One System = 10 BV */
 
-    Calc_AddDefBV(mech, &defbv, "BAP", 10.0);
+    Calc_AddDefBV(mech, &defbv, "BAP", 10.0F);
   }
 
   /* UNIT TYPE MODIFIER */
@@ -243,21 +252,21 @@ float Calculate_Defensive_BV(Mech *mech) {
   /* We're doing a reverse on the values to make the addtion easy */
 
   if (((mech)->ud.move) == MOVE_TRACK)
-    Calc_SubDefBV(mech, &defbv, "UnitType Tracked", defbv * 0.1);
+    Calc_SubDefBV(mech, &defbv, "UnitType Tracked", defbv * 0.1F);
 
   if (((mech)->ud.move) == MOVE_WHEEL)
-    Calc_SubDefBV(mech, &defbv, "UnitType Wheeled", defbv * 0.2);
+    Calc_SubDefBV(mech, &defbv, "UnitType Wheeled", defbv * 0.2F);
 
   if (((mech)->ud.move) == MOVE_HOVER)
-    Calc_SubDefBV(mech, &defbv, "UnitType Hover", defbv * 0.3);
+    Calc_SubDefBV(mech, &defbv, "UnitType Hover", defbv * 0.3F);
 
   if ((((mech)->ud.move) == MOVE_SUB || ((mech)->ud.move) == MOVE_FOIL ||
        ((mech)->ud.move) == MOVE_HULL))
     if (((mech)->ud.move) != MOVE_HOVER)
-      Calc_SubDefBV(mech, &defbv, "UnitType Naval", defbv * 0.4);
+      Calc_SubDefBV(mech, &defbv, "UnitType Naval", defbv * 0.4F);
 
   if (((mech)->ud.move) == MOVE_VTOL)
-    Calc_SubDefBV(mech, &defbv, "UnitType VTOL", defbv * 0.3);
+    Calc_SubDefBV(mech, &defbv, "UnitType VTOL", defbv * 0.3F);
 
   /* TODO: Airship, Aero (DS is 1.0, no need) */
 
@@ -269,16 +278,18 @@ float Calculate_Defensive_BV(Mech *mech) {
    */
 
   /* Determine base mp */
-  jump_mp = (int)(((mech)->rd.jumpspeed) / MP1);
-  run_mp = (int)(mech_effective_maximum_speed(mech) / MP1);
+  jump_mp = clamp_float_to_int(((mech)->rd.jumpspeed) / MP1);
+  const float maximum_speed = mech_effective_maximum_speed(mech);
+  run_mp = clamp_float_to_int(maximum_speed / MP1);
 
   if (((mech)->rd.specials) & TRIPLE_MYOMER_TECH)
-    run_mp = ceil((rint((mech_effective_maximum_speed(mech) / 1.5) / MP1) + 1) *
-                  1.5);
+    run_mp =
+        clamp_float_to_int((rintf((maximum_speed / 1.5F) / MP1) + 1.0F) * 1.5F);
 
   if (((mech)->rd.specials) & MASC_TECH) {
     if (((mech)->rd.specials2) & SUPERCHARGER_TECH) {
-      run_mp = ((run_mp * 2) / 3) * 2.5; /* walk mp * 2.5, round down */
+      run_mp = clamp_float_to_int((float)((run_mp * 2) / 3) *
+                                  2.5F); /* walk mp * 2.5, round down */
     }
     run_mp = ((run_mp * 2) / 3) * 2; /* 2x walk mp */
   } else if (((mech)->rd.specials2) & SUPERCHARGER_TECH) {
@@ -315,20 +326,20 @@ float Calculate_Defensive_BV(Mech *mech) {
   if (((mech)->rd.specials) & STEALTH_ARMOR_TECH)
     move_mod = move_mod + 2;
 
-  def_factor = (move_mod * .1);
+  def_factor = (float)move_mod * 0.1F;
 
   snprintf(buff, 50, "MoveMod (MP: %d MM: %d)", run_mp, move_mod);
 
   Calc_AddDefBV(mech, &defbv, buff, defbv * def_factor);
 
-  defbv = roundf((defbv * 100.0)) / 100.0;
+  defbv = roundf(defbv * 100.0F) / 100.0F;
   /* END DEFENSIVE BV */
   return defbv;
 }
 
 /* Calculate Offensive BV 2.0 per Total Warfare Rules */
 float Calculate_Offensive_BV(Mech *mech) {
-  float offbv = 0.0;
+  float offbv = 0.0F;
   int heat_efficiency;
   int heat_sinks;
   int jump_mp;
@@ -347,8 +358,8 @@ float Calculate_Offensive_BV(Mech *mech) {
 
   /* First Find Heat Efficiency */
 
-  jump_mp = (int)(((mech)->rd.jumpspeed) / MP1);
-  heat_sinks = mech_active_heat_sinks(mech);
+  jump_mp = clamp_float_to_int(((mech)->rd.jumpspeed) / MP1);
+  heat_sinks = clamp_float_to_int(mech_active_heat_sinks(mech));
   heat_efficiency = 6 + heat_sinks - (jump_mp > 2 ? jump_mp : 2);
 
   /* Let's Gather Weapons First*/
@@ -393,11 +404,17 @@ float Calculate_Offensive_BV(Mech *mech) {
 
   /* Go through temp tables, adding BV. Half BV if > heat efficiency */
   for (i = (tablecount - 1); i >= 0; i--) {
-    if (heatcount + heattable[i] > heat_efficiency)
+    if (heatcount + heattable[i] > heat_efficiency) {
+      const int reduced_bv = bvtable[i] / 2;
+
       Calc_AddOffBV(mech, &offbv, MechWeapons[weaptable[i]].name,
-                    (bvtable[i]) / 2);
-    else
-      Calc_AddOffBV(mech, &offbv, MechWeapons[weaptable[i]].name, bvtable[i]);
+                    (float)reduced_bv);
+    } else {
+      const int weapon_bv = bvtable[i];
+
+      Calc_AddOffBV(mech, &offbv, MechWeapons[weaptable[i]].name,
+                    (float)weapon_bv);
+    }
     heatcount = heatcount + heattable[i];
   }
 
@@ -407,7 +424,7 @@ float Calculate_Offensive_BV(Mech *mech) {
 
   /* TODO: Add Tonnage */
 
-  Calc_AddOffBV(mech, &offbv, "MechTonnage", ((mech)->ud.tons));
+  Calc_AddOffBV(mech, &offbv, "MechTonnage", (float)((mech)->ud.tons));
 
   /* TODO: Speed Factor */
 

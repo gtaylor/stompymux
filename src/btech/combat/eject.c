@@ -33,6 +33,7 @@
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "econ_cmds_api.h"
+#include "eject_api.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
@@ -386,7 +387,9 @@ static void char_disembark(DbRef player, Mech *mech) {
     mech_los_broadcast(m, tprintf("jumps out of %s... in mid air !",
                                   mech_display_id(mech).text));
     initial_speed =
-        ((mech_current_speed(mech) + mech_vertical_speed(mech)) / MP1) / 2 + 4;
+        (long)(((mech_current_speed(mech) + mech_vertical_speed(mech)) / MP1) /
+                   2.0F +
+               4.0F);
     mech_event_schedule(m, EVENT_FALL, mech_fall_event, FALL_TICK,
                         -initial_speed);
   } else {
@@ -443,7 +446,7 @@ void mech_disembark(DbRef player, void *data, char *buffer) {
                  "While it's running!? Don't be daft.");
     return;
   }
-  if (fabs(mech_current_speed(mech)) > 25.) {
+  if (fabsf(mech_current_speed(mech)) > 25.0F) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Are you suicidal ? That thing is moving too fast !");
     return;
@@ -455,13 +458,13 @@ void mech_disembark(DbRef player, void *data, char *buffer) {
 /**
  * Handle the disembarking of units from within carriers.
  */
-void mech_udisembark(DbRef player, void *data, char *buffer) {
+void mech_udisembark(DbRef player, void *data, const char *buffer) {
 
   Mech *mech = (Mech *)data; /* The disembarking unit */
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   GameDatabase *database = btech_context_database(mech_context(mech));
   Mech *target;
-  int newmech;       /* The carrier. */
+  DbRef newmech;     /* The carrier. */
   BattleMap *mymap;  /* The map to disembark to */
   int under_repairs; /* Is the unit still under repairs? */
   int i;             /* Used in section recycle for loop. */
@@ -508,7 +511,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (fabs(mech_current_speed(target)) > mech_walking_speed(target)) {
+  if (fabsf(mech_current_speed(target)) > mech_walking_speed(target)) {
     mecha_notify(
         btech_context_evaluation(mech_context(mech)), player,
         "You cannot leave while the carrier is moving faster than walk speed!");
@@ -522,7 +525,8 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
       GOD, (void *)mech,
       tprintf("%d %d", mech_position_x(target), mech_position_y(target)));
   mech_position_z_set(mech, mech_position_z(target));
-  mech_position_real_z_set(mech, ZSCALE * mech_position_z(mech));
+  const int elevation = mech_position_z(mech);
+  mech_position_real_z_set(mech, ZSCALE * (float)elevation);
   mymap = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!mymap) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

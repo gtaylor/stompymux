@@ -1,5 +1,7 @@
 #include "repair_job.h"
 
+#include <stdint.h>
+
 int main(void) {
   RepairEventPayload payload = {
       .location = 3,
@@ -26,6 +28,11 @@ int main(void) {
       }));
   if (decoded.location != LOCMAX - 1 || decoded.position != POSMAX - 1 ||
       decoded.extra != EXTMAX - 1 || decoded.player != 1073741824)
+    return 1;
+
+  decoded = repair_event_payload_unpack(INTPTR_MAX);
+  if (decoded.location < 0 || decoded.location >= LOCMAX ||
+      decoded.position < 0 || decoded.position >= POSMAX || decoded.extra < 0)
     return 1;
   return 0;
 }

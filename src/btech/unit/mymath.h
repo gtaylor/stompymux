@@ -34,5 +34,5 @@
 #ifdef MIN
 #undef MIN
 #endif
-constexpr double TWOPIOVER360 = 0.0174533;
+constexpr float TWOPIOVER360 = 0.0174533F;
 constexpr double PI = 3.141592654;

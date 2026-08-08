@@ -160,7 +160,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
    * and using 3 * damage in ammo.
    */
   if (mech_critical_fire_mode(mech, section, critical) & GATTLING_MODE)
-    wGattlingShots = btech_random_range(mech_context(mech), 1, 6);
+    wGattlingShots = btech_random_range_int(mech_context(mech), 1, 6);
 
   /* Find and check Ammunition */
   if (!sight)
@@ -197,9 +197,9 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   if ((MechWeapons[weapindx].special & DFM) ||
       ((MechWeapons[weapindx].special & ELRM) &&
        range < MechWeapons[weapindx].min)) {
-    r1 = btech_random_range(mech_context(mech), 1, 6);
-    r2 = btech_random_range(mech_context(mech), 1, 6);
-    r3 = btech_random_range(mech_context(mech), 1, 6);
+    r1 = btech_random_range_int(mech_context(mech), 1, 6);
+    r2 = btech_random_range_int(mech_context(mech), 1, 6);
+    r3 = btech_random_range_int(mech_context(mech), 1, 6);
     /* Sort 'em to ascending order */
     if (r1 > r2)
       swap_ints(&r1, &r2);
@@ -710,9 +710,11 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   } else {
     mech_weapon_heat_add(mech, (float)MechWeapons[weapindx].heat);
 
-    if (weapon_catalogue_is_energy(weapindx))
-      mech_weapon_heat_add(mech, (float)mech_weapon_critical_heat_modifier(
-                                     mech, section, critical));
+    if (weapon_catalogue_is_energy(weapindx)) {
+      const int critical_heat_modifier =
+          mech_weapon_critical_heat_modifier(mech, section, critical);
+      mech_weapon_heat_add(mech, (float)critical_heat_modifier);
+    }
 
     if ((mech_critical_fire_mode(mech, section, critical) & ULTRA_MODE) ||
         (mech_critical_fire_mode(mech, section, critical) & RFAC_MODE)) {
@@ -735,7 +737,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
   /* Special for Heavy Gauss Rifles */
   if ((MechWeapons[weapindx].special & HVYGAUSS) &&
       (mech_class(mech) == CLASS_MECH)) {
-    if (fabs(mech_current_speed(mech)) > 0.0) {
+    if (fabsf(mech_current_speed(mech)) > 0.0F) {
       mech_notify(mech, MECHALL,
                   "You realize that moving while firing this weapon may not be "
                   "a good idea after all.");

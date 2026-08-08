@@ -40,11 +40,11 @@ typedef struct HexLosMap {
   unsigned char map[MAPLOS_MAXX * MAPLOS_MAXY];
 } HexLosMap;
 
-int los_map_hex_index(HexLosMap *los_map, int x, int y);
+int los_map_hex_index(const HexLosMap *los_map, int x, int y);
 
 static inline unsigned char los_map_flag(const HexLosMap *los_map, int x,
                                          int y) {
-  return los_map->map[los_map_hex_index((HexLosMap *)los_map, x, y)];
+  return los_map->map[los_map_hex_index(los_map, x, y)];
 }
 
 bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech,

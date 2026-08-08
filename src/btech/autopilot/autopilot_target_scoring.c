@@ -57,11 +57,11 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
   total_internal_current = 0;
   total_internal_original = 0;
 
-  damage_score = 0.0;
-  bv_score = 0.0;
-  speed_score = 0.0;
-  range_score = 0.0;
-  status_score = 0.0;
+  damage_score = 0.0F;
+  bv_score = 0.0F;
+  speed_score = 0.0F;
+  range_score = 0.0F;
+  status_score = 0.0F;
 
   /* Here is the meat of the function, basicly I gave each
    * part a maximum score, then fit a linear plot from the
@@ -91,13 +91,13 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
                    mech_position_real_x(target), mech_position_real_y(target));
 
   /* Our we outside the range of the AI's System */
-  if ((range >= (float)AUTO_GUN_MAX_RANGE)) {
+  if (range >= (float)AUTO_GUN_MAX_RANGE) {
     return target_score;
   }
 
   /* Range score calc */
   /* Min range is 0, max range is 30, so score goes from 300 to 0 */
-  range_score = -10.0 * range + 300.0;
+  range_score = -10.0F * range + 300.0F;
 
   /* Get the Speed of the target */
   target_speed = mech_current_speed(target);
@@ -106,7 +106,7 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
   /* Min speed is 0, max is 150 (can go higher tho), and score goes from
    * 300 to 0 (can go negative if the target is faster then 150) */
   /*! \todo {Check to see what happens when the target is backing} */
-  speed_score = -2.0 * target_speed + 300.0;
+  speed_score = -2.0F * target_speed + 300.0F;
 
   /* Get the BV of the target */
   target_bv = mech_battle_value(target);
@@ -114,7 +114,7 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
   /* BV score calc */
   /* Min bv is 0, max is around 2000 (can go higher), and score goes from
    * 0 to 100 (can go higher but we don't care much about bv) */
-  bv_score = 0.05 * ((float)target_bv);
+  bv_score = 0.05F * (float)target_bv;
 
   /* Get the damage of the target by cycling through all the sections
    * and adding up the current and original values */
@@ -146,41 +146,44 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
 
     /* Just use armor part of the calc */
     damage_score =
-        -3.0 * ((float)total_armor_current / (float)total_armor_original) +
-        300.0;
+        -3.0F * ((float)total_armor_current / (float)total_armor_original) +
+        300.0F;
 
   } else if (total_armor_original == 0) {
 
     /* Just use internal part of the calc */
-    damage_score = -2.0 * ((float)total_internal_current /
-                           (float)total_internal_original) +
-                   200.0;
+    damage_score = -2.0F * ((float)total_internal_current /
+                            (float)total_internal_original) +
+                   200.0F;
 
   } else {
 
     /* Use the whole thing */
     damage_score =
-        -3.0 * ((float)total_armor_current / (float)total_armor_original) +
-        300.0 -
-        2.0 * ((float)total_internal_current / (float)total_internal_original) +
-        200.0;
+        -3.0F * ((float)total_armor_current / (float)total_armor_original) +
+        300.0F -
+        2.0F *
+            ((float)total_internal_current / (float)total_internal_original) +
+        200.0F;
   }
 
   /* Get the 'state' ie: shutdown, prone whatever */
   if (!mech_is_started(target))
-    status_score += 100.0;
+    status_score += 100.0F;
 
   if (mech_pilot_is_unconscious(target))
-    status_score += 100.0;
+    status_score += 100.0F;
 
   /* Since the max bv is somewhat around 2000, lets put mechs in LOS on an even
    * scale */
   if (battle_map_unit_is_seen(map, mech, target))
-    status_score += 2000.0;
+    status_score += 2000.0F;
 
   /* Add the individual scores and return the value */
-  target_score = (int)floor(range_score + speed_score + bv_score +
-                            damage_score + status_score);
+  const float combined_score =
+      range_score + speed_score + bv_score + damage_score + status_score;
+  const float rounded_score = floorf(combined_score);
+  target_score = (int)rounded_score;
 
   return target_score;
 }

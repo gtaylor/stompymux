@@ -61,7 +61,7 @@ void auto_leave_event(MuxEvent *muxevent) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
              " leavebase with AI #%ld but AI is not on a valid"
-             " Map (#%d).",
+             " Map (#%ld).",
              autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
@@ -88,7 +88,7 @@ void auto_leave_event(MuxEvent *muxevent) {
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
-      mech_stand(autopilot->mynum, mech, "");
+      mech_stand_empty(autopilot->mynum, mech);
 
     /* Ok lets run this command again */
     autopilot_event_schedule(autopilot, EVENT_AUTOLEAVE, auto_leave_event,
@@ -189,7 +189,7 @@ void auto_enter_event(MuxEvent *muxevent) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
              " enterbase with AI #%ld but AI is not on a valid"
-             " Map (#%d).",
+             " Map (#%ld).",
              autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
@@ -244,7 +244,7 @@ void auto_enter_event(MuxEvent *muxevent) {
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
-      mech_stand(autopilot->mynum, mech, "");
+      mech_stand_empty(autopilot->mynum, mech);
 
     /* Ok lets run this command again */
     autopilot_event_schedule(autopilot, EVENT_AUTOENTERBASE, auto_enter_event,
@@ -293,10 +293,10 @@ void auto_enter_event(MuxEvent *muxevent) {
   }
   free(argument);
 
-  if (mech_desired_speed(mech) != 0.0)
+  if (mech_desired_speed(mech) != 0.0F)
     ai_set_speed(mech, autopilot, 0);
 
-  if ((mech_current_speed(mech) == 0.0) &&
+  if ((mech_current_speed(mech) == 0.0F) &&
       !mech_event_count(mech, EVENT_ENTER_HANGAR)) {
     mech_enterbase(GOD, mech, dir);
   }

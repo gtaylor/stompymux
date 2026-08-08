@@ -146,11 +146,12 @@ OK, enough of this.  Let's get on to the code.
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_api_types.h"
+#include "mech_lostracer_api.h"
 
 static constexpr float DEG60 = 1.0471976F;
 static constexpr float DEG30 = 0.5235988F;
 static constexpr float ROOT3 = 1.7320508F;
-static constexpr int TRACESCALEMAP = 1;
+static constexpr float TRACESCALEMAP = 1.0F;
 
 typedef enum HexDirection {
   HEX_NORTH,
@@ -192,11 +193,12 @@ static void los_trace_store_best(BattleMap *map, LosTrace *trace, int *count,
 }
 
 static void los_map_coord_to_real(int x, int y, float *real_x, float *real_y) {
-  *real_x = (float)x * ROOT3 / 2 * TRACESCALEMAP;
-  *real_y = ((float)y - 0.5 * (x % 2)) * TRACESCALEMAP;
+  *real_x = (float)x * ROOT3 / 2.0F * TRACESCALEMAP;
+  *real_y = ((float)y - 0.5F * (float)(x % 2)) * TRACESCALEMAP;
 }
 
-static void GetAdjHex(int currx, int curry, int nexthex, int *x, int *y) {
+static void GetAdjHex(int currx, int curry, HexDirection nexthex, int *x,
+                      int *y) {
   switch (nexthex) {
   case HEX_NORTH:
     *x = currx;
@@ -359,20 +361,20 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
 
   slope = (float)(acy - bcy) / (float)(acx - bcx);
 
-  uangle = -atan(slope);
+  uangle = -atanf(slope);
 
-  sinu = sin(uangle);
-  cosu = cos(uangle);
+  sinu = sinf(uangle);
+  cosu = cosf(uangle);
 
   liney = acx * sinu + acy * cosu; /* we could just as */
   /* correctly use bx, by */
 
   enddist = bcx * cosu - bcy * sinu;
 
-  tempangle = fabs(uangle);
+  tempangle = fabsf(uangle);
   while (tempangle > DEG60)
     tempangle -= DEG60;
-  effrad = cos(tempangle - DEG30) * TRACESCALEMAP / ROOT3;
+  effrad = cosf(tempangle - DEG30) * TRACESCALEMAP / ROOT3;
 
   /*****************************************************************/
 
@@ -395,18 +397,18 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
       los_map_coord_to_real(nextx, nexty, &nextcx, &nextcy);
 
       /* Is it on the line? */
-      if (fabs((nextcx * sinu + nextcy * cosu) - liney) > effrad)
+      if (fabsf((nextcx * sinu + nextcy * cosu) - liney) > effrad)
         continue;
 
       /* Where is it?  Find the transformed x coord */
       nextdist = nextcx * cosu - nextcy * sinu;
 
       /* is it forward of the current hex? */
-      if (fabs(enddist - nextdist) > fabs(enddist - currdist))
+      if (fabsf(enddist - nextdist) > fabsf(enddist - currdist))
         continue;
 
       /* Is it better than what we have? */
-      if (fabs(enddist - nextdist) >= fabs(enddist - bestdist)) {
+      if (fabsf(enddist - nextdist) >= fabsf(enddist - bestdist)) {
         bestdist = nextdist;
         bestx = nextx;
         besty = nexty;

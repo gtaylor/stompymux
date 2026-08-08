@@ -297,23 +297,25 @@ void mech_random_weapon_select(Mech *objMech, int wLoc, int *critNum,
    * Now randomly pick one
    */
 
-  *critNum = awCrits[btech_random_range(mech_context(objMech), 0, wcWeaps - 1)];
+  *critNum =
+      awCrits[btech_random_range_int(mech_context(objMech), 0, wcWeaps - 1)];
 }
 
 /*
  * Make sure we're not set to go over our walking/cruise speed
  */
 void mech_speed_limit_to_cruise(Mech *objMech) {
-  int wMaxSpeed = 0;
+  float maximum_speed;
 
-  wMaxSpeed = mech_cargo_maximum_speed(objMech, mech_maximum_speed(objMech));
+  maximum_speed =
+      mech_cargo_maximum_speed(objMech, mech_maximum_speed(objMech));
 
   if (mech_movement_type(objMech) == MOVE_VTOL)
-    wMaxSpeed =
-        sqrt((float)wMaxSpeed * wMaxSpeed -
-             mech_vertical_speed(objMech) * mech_vertical_speed(objMech));
+    maximum_speed =
+        sqrtf(maximum_speed * maximum_speed -
+              mech_vertical_speed(objMech) * mech_vertical_speed(objMech));
 
-  float walking_speed = 2.0F * wMaxSpeed / 3.0F;
+  const float walking_speed = 2.0F * maximum_speed / 3.0F;
   if (walking_speed < mech_desired_speed(objMech))
     mech_desired_speed_set(objMech, walking_speed - 0.1F);
 }
@@ -448,8 +450,9 @@ void mech_weapon_jam_critical_apply(Mech *objMech, int wLoc) {
     }
 
     mech_critical_temporary_failure_set(objMech, wLoc, wCritNum, wCritType);
-    mech_set_recycle_part(objMech, wLoc, wCritNum,
-                          btech_random_range(mech_context(objMech), 60, 120));
+    mech_set_recycle_part(
+        objMech, wLoc, wCritNum,
+        btech_random_range_int(mech_context(objMech), 60, 120));
   }
 }
 

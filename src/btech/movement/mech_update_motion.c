@@ -16,6 +16,7 @@
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "equipment_types.h"
 #include "floatsim.h"
 #include "map_conditions_api.h"
@@ -36,6 +37,8 @@ void mech_heading_update(Mech *mech) {
   int offset;
   int normangle;
   int mw_mod = 1;
+  int const turn_unit = short_to_float_simulation(1);
+  float const turn_unit_float = (float)turn_unit;
   float maxspeed, omaxspeed;
   BattleMap *mech_map;
   BtechContext *context = mech_context(mech);
@@ -45,9 +48,9 @@ void mech_heading_update(Mech *mech) {
   maxspeed = mech_effective_maximum_speed(mech);
   if (mech_is_aerospace_unit(mech))
     maxspeed = maxspeed * ACCEL_MOD;
-  if ((mech_excess_heat(mech) >= 9.) &&
+  if ((mech_excess_heat(mech) >= 9.0F) &&
       (mech_technology_flags(mech) & TRIPLE_MYOMER_TECH))
-    maxspeed += 1.5 * MP1;
+    maxspeed += 1.5F * MP1;
   omaxspeed = maxspeed;
   normangle = mech_heading_fixed_difference(mech);
   if (mech_class(mech) == CLASS_MW || mech_class(mech) == CLASS_BSUIT)
@@ -55,22 +58,25 @@ void mech_heading_update(Mech *mech) {
   else if (mech_movement_type(mech) == MOVE_QUAD)
     mw_mod = 2;
   if (btech_context_uses_fasa_turning(context)) {
-    constexpr int FASA_TURN_MOD = 3 / 2;
+    constexpr float FASA_TURN_MOD = 1.5F;
     if (mech_is_jumping(mech))
-      offset = 2 * short_to_float_simulation(1) * 2 * 360 * FASA_TURN_MOD / 60;
+      offset = clamp_float_to_int(2.0F * turn_unit_float * 2.0F * 360.0F *
+                                  FASA_TURN_MOD / 60.0F);
     else {
       float ts = mech_current_speed(mech);
 
       if (ts < 0) {
-        maxspeed = maxspeed * 2.0 / 3.0;
+        maxspeed = maxspeed * 2.0F / 3.0F;
         ts = -ts;
       }
-      if (ts > maxspeed || maxspeed < 0.1) /* kludge */
+      if (ts > maxspeed || maxspeed < 0.1F) /* kludge */
         offset = 0;
       else {
-        offset = short_to_float_simulation(1) * 2 * 360 * FASA_TURN_MOD / 60 *
-                 (maxspeed - ts) * (omaxspeed / maxspeed) * mw_mod *
-                 MP_PER_KPH / 6; /* hmm. */
+        float const offset_float = turn_unit_float * 2.0F * 360.0F *
+                                   FASA_TURN_MOD / 60.0F * (maxspeed - ts) *
+                                   (omaxspeed / maxspeed) * (float)mw_mod *
+                                   MP_PER_KPH / 6.0F;
+        offset = clamp_float_to_int(offset_float); /* hmm. */
       }
     }
   } else {
@@ -79,28 +85,35 @@ void mech_heading_update(Mech *mech) {
       float jump_speed = mech_jump_speed(mech);
       if (mech_is_under_gravity(mech) && mech_map) {
         int gravity = battle_map_gravity(mech_map);
-        jump_speed = jump_speed * 100 / (gravity > 50 ? gravity : 50);
+        int const effective_gravity = gravity > 50 ? gravity : 50;
+        jump_speed = jump_speed * 100.0F / (float)effective_gravity;
       }
       offset = short_to_float_simulation(1) * 6 *
-               (int)(jump_speed * MP_PER_KPH) * mw_mod;
-    } else if (fabs(mech_current_speed(mech)) < 1.0)
-      offset =
-          short_to_float_simulation(1) * 3 * maxspeed * MP_PER_KPH * mw_mod;
-    else {
-      offset =
-          short_to_float_simulation(1) * 2 * maxspeed * MP_PER_KPH * mw_mod;
+               clamp_float_to_int(jump_speed * MP_PER_KPH) * mw_mod;
+    } else if (fabsf(mech_current_speed(mech)) < 1.0F) {
+      float const offset_float =
+          turn_unit_float * 3.0F * maxspeed * MP_PER_KPH * (float)mw_mod;
+      offset = clamp_float_to_int(offset_float);
+    } else {
+      float const offset_float =
+          turn_unit_float * 2.0F * maxspeed * MP_PER_KPH * (float)mw_mod;
+      offset = clamp_float_to_int(offset_float);
       if ((short_to_float_simulation(abs(normangle)) > offset) &&
-          mech_current_speed(mech) > 2.0 * maxspeed / 3.0 + 0.1) {
+          mech_current_speed(mech) > 2.0F * maxspeed / 3.0F + 0.1F) {
         if (mech_current_speed(mech) > maxspeed)
-          offset -= offset / 2 * maxspeed / mech_current_speed(mech);
+          offset = clamp_float_to_int((float)offset -
+                                      (float)(offset / 2) * maxspeed /
+                                          mech_current_speed(mech));
         else
-          offset -=
-              offset / 2 * (3.0 * mech_current_speed(mech) / maxspeed - 2.0);
+          offset = clamp_float_to_int(
+              (float)offset -
+              (float)(offset / 2) *
+                  (3.0F * mech_current_speed(mech) / maxspeed - 2.0F));
       }
     }
   }
   /*   offset = offset * 2 * MOVE_MOD; - Twice as fast as this;dunno why - */
-  offset = offset * MOVE_MOD;
+  offset = clamp_float_to_int((float)offset * (float)MOVE_MOD);
 #ifdef BT_MOVEMENT_MODES
   MechConditionSummary conditions = mech_condition_summary(mech);
   if (conditions.tight_turn_mode &&

@@ -176,7 +176,12 @@ configure_file(src/cmake/version.h.in "${CMAKE_BINARY_DIR}/mux/server/version.h"
 
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
-  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wformat=2 -Wshadow>)
+  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wformat=2 -Wshadow
+  -Wstrict-prototypes -Wold-style-definition -Wvla -Wmissing-prototypes
+  -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
+  -Wbad-function-cast -Wswitch-enum -Wunused-macros -Wfloat-equal -Wpedantic
+  -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings -Wconversion
+  -Wsign-conversion>)
 if(BTECH_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
   target_link_options(btmux_options INTERFACE -fsanitize=address)
@@ -216,11 +221,7 @@ if(BTECH_ENABLE_ASAN)
   set(STOMPYMUX_MAX_FRAME_SIZE 98304)
 endif()
 target_compile_options(stompymux PRIVATE
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes
-  -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
-  -Wbad-function-cast -Wvla -Wswitch-enum -Wunused-macros -Wfloat-equal
-  -Wpedantic -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings
-  -Wconversion -Wsign-conversion -Wframe-larger-than=${STOMPYMUX_MAX_FRAME_SIZE}>)
+  $<$<COMPILE_LANGUAGE:C>:-Wframe-larger-than=${STOMPYMUX_MAX_FRAME_SIZE}>)
 target_link_libraries(stompymux PRIVATE btmux_options btech luajit libtelnet uv_a SQLite3::SQLite3 libsodium tomlc17 cmark m)
 target_include_directories(stompymux PRIVATE
   "${CMAKE_BINARY_DIR}"

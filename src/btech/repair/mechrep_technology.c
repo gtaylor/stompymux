@@ -6,7 +6,9 @@
 
 #include <ctype.h>
 #include <dirent.h>
+#include <limits.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,8 +34,6 @@
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "repair_job.h"
-
-#define MECH_STAT_C /* want to use the POSIX stat() call. */
 
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
@@ -214,11 +214,11 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
                 "Critical slot %s (%d) filled.", location, subsect + 1);
 }
 
-extern char *specials[];
-extern char *specials2[];
-extern char *infantry_specials[];
+extern const char *specials[];
+extern const char *specials2[];
+extern const char *infantry_specials[];
 
-char *techstatus_func(Mech *mech) {
+const char *techstatus_func(Mech *mech) {
   int flags = mech_technology_flags(mech);
   int secondary_flags = mech_technology_flags_secondary(mech);
   return (flags || secondary_flags)
@@ -226,6 +226,13 @@ char *techstatus_func(Mech *mech) {
                                            secondary_flags,
                                            (char[BTECH_TEXT_CAPACITY]){0})
              : "";
+}
+
+static bool bit_vector_to_flags(long value, int *flags) {
+  if (value < INT_MIN || value > INT_MAX)
+    return false;
+  *flags = (int)value;
+  return true;
 }
 
 void mechrep_Rshowtech(DbRef player, void *data, char *buffer) {
@@ -386,6 +393,8 @@ static void remove_case_technology(Mech *mech) {
 
 void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   int nv, nv2;
+  const long parsed_nv = BuildBitVector(specials, buffer);
+  const long parsed_nv2 = BuildBitVector(specials2, buffer);
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -400,8 +409,12 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
   /* Compare what the user gave to our specials lists */
-  nv = BuildBitVector(specials, buffer);
-  nv2 = BuildBitVector(specials2, buffer);
+  if (!bit_vector_to_flags(parsed_nv, &nv) ||
+      !bit_vector_to_flags(parsed_nv2, &nv2)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Technology flags are out of range.");
+    return;
+  }
 
   /* Make sure what they gave was valid */
   if (((nv < 0) && (nv2 < 0)) && (strcasecmp(buffer, "all") != 0) &&
@@ -477,6 +490,8 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
 
 void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
   int nv, nv2;
+  const long parsed_nv = BuildBitVector(specials, buffer);
+  const long parsed_nv2 = BuildBitVector(specials2, buffer);
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -490,8 +505,12 @@ void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
   }
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
-  nv = BuildBitVector(specials, buffer);
-  nv2 = BuildBitVector(specials2, buffer);
+  if (!bit_vector_to_flags(parsed_nv, &nv) ||
+      !bit_vector_to_flags(parsed_nv2, &nv2)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Technology flags are out of range.");
+    return;
+  }
 
   if ((nv < 0) && (nv2 < 0)) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -537,6 +556,7 @@ void mechrep_Rdelinftech(DbRef player, void *data, char *buffer) {
 
 void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
   int nv;
+  const long parsed_nv = BuildBitVector(infantry_specials, buffer);
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -550,7 +570,11 @@ void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
   }
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
-  nv = BuildBitVector(infantry_specials, buffer);
+  if (!bit_vector_to_flags(parsed_nv, &nv)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Technology flags are out of range.");
+    return;
+  }
 
   if (mech_class(mech) != CLASS_BSUIT) {
     mecha_notify(
@@ -623,7 +647,7 @@ void mechrep_setcargospace(DbRef player, void *data, char *buffer) {
 
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "%3.2f cargospace and %d tons of maxton space set.",
-                (float)((float)cargo / 100), (int)max);
+                (double)cargo / 100.0, max);
 }
 
 struct MechReferenceCache {
@@ -648,7 +672,7 @@ Mech *load_refmech(BtechContext *context, const char *reference) {
 
   if (!strcmp(cache->reference, reference))
     return cache->mech;
-  if (mech_template_load(GOD, cache->mech, (char *)reference) < 1) {
+  if (mech_template_load(GOD, cache->mech, reference) < 1) {
     cache->reference[0] = '\0';
     return nullptr;
   }

@@ -1,3 +1,4 @@
+#include "checked_conversion.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
 #include "template_internal.h"
@@ -13,6 +14,21 @@ int compare_array(char *list[], char *command) {
       return x;
 
   return -1;
+}
+
+int compare_const_array(const char *const list[], const char *command) {
+  if (!list)
+    return -1;
+  for (int index = 0; list[index]; index++)
+    if (!strcasecmp(list[index], command))
+      return index;
+  return -1;
+}
+
+static int bit_is_set(int data, size_t index) {
+  if (index >= sizeof(unsigned int) * CHAR_BIT)
+    return 0;
+  return (((unsigned int)data & (1U << index)) != 0U);
 }
 
 char *one_arg(char *argument, char *first_arg) {
@@ -36,116 +52,112 @@ char *one_arg_delim(char *argument, char *first_arg) {
   return argument;
 }
 
-char *build_bit_string(char *bitdescs[], int data, char *buffer) {
-  int bv;
-  int x;
+char *build_bit_string(const char *const bitdescs[], int data, char *buffer) {
+  size_t length;
 
   buffer[0] = 0;
-  for (x = 0; bitdescs[x]; x++) {
-    bv = 1U << x;
-    if (data & bv) {
-      strcat(buffer, bitdescs[x]);
+  for (size_t index = 0; bitdescs[index]; index++) {
+    if (bit_is_set(data, index)) {
+      strcat(buffer, bitdescs[index]);
       strcat(buffer, " ");
     }
   }
-  if ((x = strlen(buffer)) > 0 && buffer[x - 1] == ' ')
-    buffer[x - 1] = '\0';
+  length = strlen(buffer);
+  if (length > 0 && buffer[length - 1] == ' ')
+    buffer[length - 1] = '\0';
   return buffer;
 }
 
-char *build_bit_string2(char *bitdescs[], char *bitdescs2[], int data,
-                        int data2, char *buffer) {
-  int bv;
-  int x;
+char *build_bit_string2(const char *const bitdescs[],
+                        const char *const bitdescs2[], int data, int data2,
+                        char *buffer) {
+  size_t length;
 
   buffer[0] = 0;
 
-  for (x = 0; bitdescs[x]; x++) {
-    bv = 1U << x;
-    if (data & bv) {
-      strcat(buffer, bitdescs[x]);
+  for (size_t index = 0; bitdescs[index]; index++) {
+    if (bit_is_set(data, index)) {
+      strcat(buffer, bitdescs[index]);
       strcat(buffer, " ");
     }
   }
 
-  for (x = 0; bitdescs2[x]; x++) {
-    bv = 1U << x;
-    if (data2 & bv) {
-      strcat(buffer, bitdescs2[x]);
+  for (size_t index = 0; bitdescs2[index]; index++) {
+    if (bit_is_set(data2, index)) {
+      strcat(buffer, bitdescs2[index]);
       strcat(buffer, " ");
     }
   }
 
-  if ((x = strlen(buffer)) > 0 && buffer[x - 1] == ' ') {
-    buffer[x - 1] = '\0';
+  length = strlen(buffer);
+  if (length > 0 && buffer[length - 1] == ' ') {
+    buffer[length - 1] = '\0';
   }
 
   return buffer;
 }
 
-char *build_bit_string_delimited2(char *bitdescs[], char *bitdescs2[], int data,
+char *build_bit_string_delimited2(const char *const bitdescs[],
+                                  const char *const bitdescs2[], int data,
                                   int data2, char *buffer) {
-  int bv;
-  int x;
+  size_t length;
 
   buffer[0] = 0;
 
-  for (x = 0; bitdescs[x]; x++) {
-    bv = 1U << x;
-    if (data & bv) {
-      strcat(buffer, bitdescs[x]);
+  for (size_t index = 0; bitdescs[index]; index++) {
+    if (bit_is_set(data, index)) {
+      strcat(buffer, bitdescs[index]);
       strcat(buffer, "|");
     }
   }
 
-  for (x = 0; bitdescs2[x]; x++) {
-    bv = 1U << x;
-    if (data2 & bv) {
-      strcat(buffer, bitdescs2[x]);
+  for (size_t index = 0; bitdescs2[index]; index++) {
+    if (bit_is_set(data2, index)) {
+      strcat(buffer, bitdescs2[index]);
       strcat(buffer, "|");
     }
   }
 
-  if ((x = strlen(buffer)) > 0 && buffer[x - 1] == '|') {
-    buffer[x - 1] = '\0';
+  length = strlen(buffer);
+  if (length > 0 && buffer[length - 1] == '|') {
+    buffer[length - 1] = '\0';
   }
 
   return buffer;
 }
 
-char *build_bit_string3(char *bitdescs[], char *bitdescs2[], char *bitdescs3[],
-                        int data, int data2, int data3, char *buffer) {
-  int bv;
-  int x;
+char *build_bit_string3(const char *const bitdescs[],
+                        const char *const bitdescs2[],
+                        const char *const bitdescs3[], int data, int data2,
+                        int data3, char *buffer) {
+  size_t length;
 
   buffer[0] = 0;
 
-  for (x = 0; bitdescs[x]; x++) {
-    bv = 1U << x;
-    if (data & bv) {
-      strcat(buffer, bitdescs[x]);
+  for (size_t index = 0; bitdescs[index]; index++) {
+    if (bit_is_set(data, index)) {
+      strcat(buffer, bitdescs[index]);
       strcat(buffer, " ");
     }
   }
 
-  for (x = 0; bitdescs2[x]; x++) {
-    bv = 1U << x;
-    if (data2 & bv) {
-      strcat(buffer, bitdescs2[x]);
+  for (size_t index = 0; bitdescs2[index]; index++) {
+    if (bit_is_set(data2, index)) {
+      strcat(buffer, bitdescs2[index]);
       strcat(buffer, " ");
     }
   }
 
-  for (x = 0; bitdescs3[x]; x++) {
-    bv = 1U << x;
-    if (data3 & bv) {
-      strcat(buffer, bitdescs3[x]);
+  for (size_t index = 0; bitdescs3[index]; index++) {
+    if (bit_is_set(data3, index)) {
+      strcat(buffer, bitdescs3[index]);
       strcat(buffer, " ");
     }
   }
 
-  if ((x = strlen(buffer)) > 0 && buffer[x - 1] == ' ')
-    buffer[x - 1] = '\0';
+  length = strlen(buffer);
+  if (length > 0 && buffer[length - 1] == ' ')
+    buffer[length - 1] = '\0';
 
   return buffer;
 }
@@ -375,8 +387,10 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
              ((mech)->ud.sections)[x].criticals[y].ammomode)
                 ? build_bit_string_delimited2(
                       crit_fire_modes, crit_ammo_modes,
-                      ((mech)->ud.sections)[x].criticals[y].firemode,
-                      ((mech)->ud.sections)[x].criticals[y].ammomode,
+                      clamp_unsigned_int_to_int(
+                          ((mech)->ud.sections)[x].criticals[y].firemode),
+                      clamp_unsigned_int_to_int(
+                          ((mech)->ud.sections)[x].criticals[y].ammomode),
                       (char[BTECH_TEXT_CAPACITY]){0})
                 : "-");
   else if (equipment_is_bomb(((mech)->ud.sections)[x].criticals[y].type))
@@ -397,7 +411,7 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
   return (y1 - y + 1);
 }
 
-void dump_locations(FILE *fp, Mech *mech, const char *locdesc[]) {
+void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[]) {
   int x, y, l;
   char buf[512];
   char *ch;
@@ -434,17 +448,17 @@ void dump_locations(FILE *fp, Mech *mech, const char *locdesc[]) {
 float generic_computer_multiplier(Mech *mech) {
   switch (mech_computer_quality(mech)) {
   case 1:
-    return 0.8;
+    return 0.8F;
   case 2:
-    return 1;
+    return 1.0F;
   case 3:
-    return 1.25;
+    return 1.25F;
   case 4:
-    return 1.5;
+    return 1.5F;
   case 5:
-    return 1.75;
+    return 1.75F;
   }
-  return 0;
+  return 0.0F;
 }
 
 int generic_radio_type(int i, int isClan) {
@@ -462,17 +476,17 @@ int generic_radio_type(int i, int isClan) {
 float generic_radio_multiplier(Mech *mech) {
   switch (mech_radio_quality(mech)) {
   case 1:
-    return 0.8;
+    return 0.8F;
   case 2:
-    return 1;
+    return 1.0F;
   case 3:
-    return 1.25;
+    return 1.25F;
   case 4:
-    return 1.5;
+    return 1.5F;
   case 5:
-    return 1.75;
+    return 1.75F;
   }
-  return 0.0;
+  return 0.0F;
 }
 
 void computer_conversion(Mech *mech) {

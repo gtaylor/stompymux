@@ -1,7 +1,9 @@
 /* economy_parts.c -- Normalized BattleTech parts inventory tests. */
 
-#include "mux/objects/db.h"
 #include "mux/objects/economy_parts.h"
+#include "mux/objects/db.h"
+
+bool is_good_obj(GameDatabase *database, DbRef object);
 
 bool is_good_obj(GameDatabase *database, DbRef object) {
   return object >= 0 && object < database->top &&
@@ -33,7 +35,6 @@ int main(void) {
   if (objects[1].economy_parts.entries || objects[1].economy_parts.count != 0)
     return 1;
   economy_parts_clear(&database, 0);
-  return objects[0].economy_parts.entries || objects[0].economy_parts.count
-             ? 1
-             : 0;
+  return objects[0].economy_parts.entries || objects[0].economy_parts.count ? 1
+                                                                            : 0;
 }

@@ -17,6 +17,7 @@
 
 #include "btech/context.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "equipment_types.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
@@ -116,11 +117,13 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       if (mech_pilot_dbref(mech) == -1 ||
           (!skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3,
+               mech,
+               clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                   3,
                1)) ||
           (skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1),
+               mech, mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1),
                1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
@@ -146,8 +149,10 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
       avoidbth = skid_cliff
-                     ? mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1)
-                     : ((fabs((mech_current_speed(mech)) + MP1) / MP1) / 3);
+                     ? mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1)
+                     : clamp_float_to_int(
+                           fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                           3;
       if (mech_pilot_dbref(mech) == -1 ||
           (!mech_condition_summary(mech).auto_fall &&
            MadePilotSkillRoll_NoXP(mech, avoidbth, 1))) {
@@ -217,7 +222,9 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       mech_notify(mech, MECHALL, "You notice a body of water in front of you");
       if (mech_pilot_dbref(mech) == -1 ||
           MadePilotSkillRoll(
-              mech, (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3)) {
+              mech,
+              clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                  3)) {
         mech_notify(mech, MECHALL, "You manage to stop before falling in.");
         mech_los_broadcast(mech,
                            "stops suddenly to avoid driving into the water!");
@@ -237,22 +244,26 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
     if (new_terrain) {
       tt = mech_real_terrain_get(mech);
       if ((tt == BATTLE_TERRAIN_HEAVY_FOREST) &&
-          fabs(mech_current_speed(mech)) > MP1) {
+          fabsf(mech_current_speed(mech)) > MP1) {
 
         mech_notify(mech, MECHALL, "You try to dodge the larger trees..");
 
         if (mech_pilot_dbref(mech) == -1 ||
             MadePilotSkillRoll(
-                mech, (int)(fabs(mech_current_speed(mech)) / MP1 / 6))) {
+                mech, clamp_float_to_int(fabsf(mech_current_speed(mech)) / MP1 /
+                                         6.0F))) {
 
           mech_notify(mech, MECHALL, "You manage to dodge 'em!");
         } else {
           mech_notify(mech, MECHALL,
                       "You swerve, but not enough! This'll hurt!");
           mech_los_broadcast(mech, "cruises headlong at a tree!");
-          f = fabs(mech_current_speed(mech));
+          f = fabsf(mech_current_speed(mech));
           mech_current_speed_scale(mech, 0.5F);
-          mech_fall(mech, mech_hex_maximum_int(1, (int)sqrt(f / MP1 / 2)), 0);
+          mech_fall(mech,
+                    mech_hex_maximum_int(
+                        1, clamp_float_to_int(sqrtf(f / MP1 / 2.0F))),
+                    0);
         }
       }
     }
@@ -277,11 +288,13 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       if (mech_pilot_dbref(mech) == -1 ||
           (!skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3,
+               mech,
+               clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                   3,
                1)) ||
           (skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1),
+               mech, mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1),
                1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
@@ -308,8 +321,10 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
       avoidbth = skid_cliff
-                     ? mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1)
-                     : ((fabs((mech_current_speed(mech)) + MP1) / MP1) / 3);
+                     ? mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1)
+                     : clamp_float_to_int(
+                           fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                           3;
 
       if (mech_pilot_dbref(mech) == -1 ||
           (!mech_condition_summary(mech).auto_fall &&
@@ -381,7 +396,9 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
 
       if (mech_pilot_dbref(mech) == -1 ||
           MadePilotSkillRoll(
-              mech, (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3)) {
+              mech,
+              clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                  3)) {
 
         mech_notify(mech, MECHALL, "You manage to stop before falling in.");
         mech_los_broadcast(mech, "stops suddenly to driving into the water!");
@@ -402,13 +419,14 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       tt = mech_real_terrain_get(mech);
       if ((tt == BATTLE_TERRAIN_HEAVY_FOREST ||
            tt == BATTLE_TERRAIN_LIGHT_FOREST) &&
-          fabs(mech_current_speed(mech)) > MP1) {
+          fabsf(mech_current_speed(mech)) > MP1) {
 
         mech_notify(mech, MECHALL, "You try to dodge the larger trees..");
         if (mech_pilot_dbref(mech) == -1 ||
             MadePilotSkillRoll(
                 mech, (tt == BATTLE_TERRAIN_HEAVY_FOREST ? 3 : 0) +
-                          (fabs(mech_current_speed(mech)) / MP1 / 6))) {
+                          clamp_float_to_int(fabsf(mech_current_speed(mech)) /
+                                             MP1 / 6.0F))) {
 
           mech_notify(mech, MECHALL, "You manage to dodge 'em!");
 
@@ -416,25 +434,32 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
           mech_notify(mech, MECHALL,
                       "You swerve, but not enough! This'll hurt!");
           mech_los_broadcast(mech, "cruises headlong at a tree!");
-          f = fabs(mech_current_speed(mech));
+          f = fabsf(mech_current_speed(mech));
           mech_current_speed_scale(mech, 0.5F);
-          mech_fall(mech, mech_hex_maximum_int(1, (int)sqrt(f / MP1 / 2)), 0);
+          mech_fall(mech,
+                    mech_hex_maximum_int(
+                        1, clamp_float_to_int(sqrtf(f / MP1 / 2.0F))),
+                    0);
         }
 
       } else if ((tt == BATTLE_TERRAIN_ROUGH) &&
-                 fabs(mech_current_speed(mech)) > MP1) {
+                 fabsf(mech_current_speed(mech)) > MP1) {
         mech_notify(mech, MECHALL, "You try to avoid the rocks..");
         if (mech_pilot_dbref(mech) == -1 ||
             MadePilotSkillRoll(
-                mech, (int)(fabs(mech_current_speed(mech)) / MP1 / 6))) {
+                mech, clamp_float_to_int(fabsf(mech_current_speed(mech)) / MP1 /
+                                         6.0F))) {
           mech_notify(mech, MECHALL, "You manage to dodge 'em!");
         } else {
           mech_notify(mech, MECHALL,
                       "You swerve, but not enough! This'll hurt!");
           mech_los_broadcast(mech, "cruises headlong at a rock!");
-          f = fabs(mech_current_speed(mech));
+          f = fabsf(mech_current_speed(mech));
           mech_current_speed_scale(mech, 0.5F);
-          mech_fall(mech, mech_hex_maximum_int(1, (int)sqrt(f / MP1 / 2)), 0);
+          mech_fall(mech,
+                    mech_hex_maximum_int(
+                        1, clamp_float_to_int(sqrtf(f / MP1 / 2.0F))),
+                    0);
         }
       }
     }
@@ -463,7 +488,9 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       mech_notify(mech, MECHALL, "You attempt to get too close with ground!");
       if (mech_pilot_dbref(mech) == -1 ||
           MadePilotSkillRoll(
-              mech, (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3)) {
+              mech,
+              clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                  3)) {
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
         mech_los_broadcast(mech, "stops suddenly to avoid running aground!");
         mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
@@ -490,11 +517,13 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       if (mech_pilot_dbref(mech) == -1 ||
           (!skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3,
+               mech,
+               clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                   3,
                1)) ||
           (skid_cliff &&
            MadePilotSkillRoll_NoXP(
-               mech, mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1),
+               mech, mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1),
                1))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
@@ -521,8 +550,10 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
 
       avoidbth = skid_cliff
-                     ? mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1)
-                     : ((fabs((mech_current_speed(mech)) + MP1) / MP1) / 3);
+                     ? mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1)
+                     : clamp_float_to_int(
+                           fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                           3;
 
       if (mech_pilot_dbref(mech) == -1 ||
           (!mech_condition_summary(mech).auto_fall &&
@@ -556,11 +587,12 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
           (!skid_cliff &&
            MadePilotSkillRoll(
                mech,
-               (int)(fabs((mech_current_speed(mech)) + MP1) / MP1) / 3)) ||
+               clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
+                   3)) ||
           (skid_cliff &&
            MadePilotSkillRoll(
                mech,
-               mech_skid_modifier(fabs(mech_current_speed(mech)) / MP1)))) {
+               mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1)))) {
 
         mech_notify(mech, MECHALL,
                     "You manage to stop before slamming into the bridge.");
@@ -614,22 +646,26 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
     tt = mech_real_terrain_get(mech);
     if ((tt == BATTLE_TERRAIN_HEAVY_FOREST ||
          tt == BATTLE_TERRAIN_LIGHT_FOREST) &&
-        fabs(mech_current_speed(mech)) > MP1) {
+        fabsf(mech_current_speed(mech)) > MP1) {
       mech_notify(mech, MECHALL, "You try to dodge the larger trees..");
 
       if (mech_pilot_dbref(mech) == -1 ||
-          MadePilotSkillRoll(mech,
-                             (tt == BATTLE_TERRAIN_HEAVY_FOREST ? 3 : 0) +
-                                 (fabs(mech_current_speed(mech)) / MP1 / 6))) {
+          MadePilotSkillRoll(
+              mech, (tt == BATTLE_TERRAIN_HEAVY_FOREST ? 3 : 0) +
+                        clamp_float_to_int(fabsf(mech_current_speed(mech)) /
+                                           MP1 / 6.0F))) {
 
         mech_notify(mech, MECHALL, "You manage to dodge 'em!");
 
       } else {
         mech_notify(mech, MECHALL, "You swerve, but not enough! This'll hurt!");
         mech_los_broadcast(mech, "cruises headlong at a tree!");
-        f = fabs(mech_current_speed(mech));
+        f = fabsf(mech_current_speed(mech));
         mech_current_speed_scale(mech, 0.5F);
-        mech_fall(mech, mech_hex_maximum_int(1, (int)sqrt(f / MP1 / 2)), 0);
+        mech_fall(
+            mech,
+            mech_hex_maximum_int(1, clamp_float_to_int(sqrtf(f / MP1 / 2.0F))),
+            0);
       }
     }
 

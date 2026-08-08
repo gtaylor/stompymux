@@ -10,6 +10,7 @@
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
+#include "mech_hitloc_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
 #include "mech_position_api.h"
@@ -145,7 +146,7 @@ int mech_hit_group(Mech *mech, Mech *target) {
       mech_heading_degrees(target));
 
   /* Determine hit group.  */
-  switch ((int)mech_class(target)) {
+  switch (mech_class(target)) {
   case CLASS_MECH:
     /* Mech rules.  */
     if (ad >= (360 - m_fs_hw) || ad <= (0 + m_fs_hw)) {
@@ -159,6 +160,11 @@ int mech_hit_group(Mech *mech, Mech *target) {
     }
     break;
 
+  case CLASS_SPHEROID_DS:
+  case CLASS_AERO:
+  case CLASS_MW:
+  case CLASS_DS:
+  case CLASS_BSUIT:
   default:
     /*
      * TODO: This function shouldn't really do anything at all for
@@ -247,9 +253,10 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
     *isrear = 1;
   if (mech_aim_unit_class(mech) == mech_class(target) &&
       btech_random_range(mech_context(mech), 1, 6) >= 3)
-    switch ((int)mech_class(target)) {
+    switch (mech_class(target)) {
     case CLASS_MECH:
     case CLASS_MW:
+    case CLASS_BSUIT:
       switch (mech_aim_section(mech)) {
       case RARM:
         if (hitGroup != LEFTSIDE)
@@ -286,6 +293,7 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
       break;
     case CLASS_AERO:
     case CLASS_DS:
+    case CLASS_SPHEROID_DS:
       switch (mech_aim_section(mech)) {
       case AERO_NOSE:
         if (hitGroup != BACK)

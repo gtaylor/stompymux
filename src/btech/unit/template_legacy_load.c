@@ -1,3 +1,4 @@
+#include "checked_conversion.h"
 #include "mech_crew_api.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
@@ -136,7 +137,7 @@ static int template_load_legacy(Mech *mech, const char *id) {
   mech_tactical_range_set(mech, i2);
   mech_long_range_sensor_range_set(mech, i3);
   mech_scanner_range_set(mech, i4);
-  ((mech)->ud.numsinks) = i5;
+  ((mech)->ud.numsinks) = clamp_int_to_char(i5);
   i6 &= ~32768; /* Quad */
   i6 &= ~16384; /* Salvagetech */
   i6 &= ~8192;  /* Cargotech */
@@ -173,14 +174,14 @@ static int template_load_legacy(Mech *mech, const char *id) {
        things differently here */
     if (i4 & 4)
       i4 &= ~4;
-    ((mech)->ud.sections)[i].config = i4;
+    ((mech)->ud.sections)[i].config = clamp_int_to_char(i4);
     for (j = 0; j < NUM_CRITICALS; j++) {
       if (template_load_error(
               fp, mech, fscanf(fp, "%d %d %d\n", &i1, &i2, &i3) < 3,
               "Insufficient data reading critical %d/%d!", i, j)) {
         return -1;
       }
-      ((mech)->ud.sections)[i].criticals[j].type = i1;
+      mech_critical_part_type_set(mech, i, j, i1);
       if (template_load_error(fp, mech,
                               template_part_type_is_invalid(
                                   mech_critical_part_type(mech, i, j)),
@@ -198,21 +199,20 @@ static int template_load_legacy(Mech *mech, const char *id) {
         else
           ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
       }
-      ((mech)->ud.sections)[i].criticals[j].data = i2;
-      ((mech)->ud.sections)[i].criticals[j].firemode = i3;
+      mech_critical_data_set(mech, i, j, i2);
+      mech_critical_fire_mode_set(mech, i, j, i3);
     }
   }
   if (fscanf(fp, "%d %d\n", &i1, &i2) == 2) {
-    ((mech)->ud.type) = i1;
-    if (template_load_error(fp, mech, ((mech)->ud.type) > CLASS_LAST,
-                            "Invalid 'mech type!")) {
+    if (template_load_error(fp, mech, i1 > CLASS_LAST, "Invalid 'mech type!")) {
       return -1;
     }
-    ((mech)->ud.move) = i2;
-    if (template_load_error(fp, mech, ((mech)->ud.move) > MOVENEMENT_LAST,
+    ((mech)->ud.type) = clamp_int_to_char(i1);
+    if (template_load_error(fp, mech, i2 > MOVENEMENT_LAST,
                             "Invalid movenement type!")) {
       return -1;
     }
+    ((mech)->ud.move) = clamp_int_to_char(i2);
   }
   if (fscanf(fp, "%d\n", &i1) != 1)
     mech_radio_range_set(mech, DEFAULT_RADIORANGE);

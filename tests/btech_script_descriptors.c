@@ -7,7 +7,9 @@ typedef struct DescriptorFixture {
 static char *read_string(int mode, Mech *mech) {
   (void)mode;
   (void)mech;
-  return "string";
+  static char value[] = "string";
+
+  return value;
 }
 
 static char *read_buffered(Mech *mech, char *buffer) {
@@ -30,10 +32,11 @@ int main(void) {
   };
   DescriptorFixture fixture = {.value = 42};
   char buffer[32];
-  int *field = (int *)((char *)&fixture + descriptors[1].source.field_offset);
 
   return descriptors[0].source.mech_key == MECH_SCRIPT_MAP_DBREF &&
-                 *field == 42 &&
+                 descriptors[1].source.field_offset ==
+                     offsetof(DescriptorFixture, value) &&
+                 fixture.value == 42 &&
                  !strcmp(descriptors[2].source.string_callback(0, nullptr),
                          "string") &&
                  !strcmp(

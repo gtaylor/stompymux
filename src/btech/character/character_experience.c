@@ -24,8 +24,8 @@ void lower_xp(BtechContext *context, DbRef player, int promillage) {
 void AccumulateTechXP(BtechContext *context, DbRef pilot, Mech *mech,
                       int reason) {
   int xp;
-  char *skname;
-  static char *techw = "technician-weapons";
+  const char *skname;
+  static const char *techw = "technician-weapons";
 
   if (mech) {
     if (!(skname = FindTechSkillName(mech)))
@@ -45,9 +45,9 @@ void AccumulateTechXP(BtechContext *context, DbRef pilot, Mech *mech,
 
 void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, Mech *mech,
                              int reason) {
-  char *skname;
+  const char *skname;
   int xp;
-  static char *techw = "technician-weapons";
+  static const char *techw = "technician-weapons";
 
   skname = techw;
   xp = MAX(1, reason);
@@ -81,7 +81,7 @@ void AccumulateCommXP(DbRef pilot, Mech *mech) {
 
 void AccumulatePilXP(DbRef pilot, Mech *mech, int reason, int addanyway) {
   BtechContext *context = mech_context(mech);
-  char *skname;
+  const char *skname;
   int xp;
 
   if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)))
@@ -143,7 +143,7 @@ void AccumulateSpotXP(DbRef pilot, Mech *attacker, Mech *wounded) {
 
 int MadePerceptionRoll(Mech *mech, int modifier) {
   BtechContext *context = mech_context(mech);
-  int pilot;
+  DbRef pilot;
 
   if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)))
     return 0;

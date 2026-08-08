@@ -31,6 +31,7 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_bits_api.h"
@@ -50,6 +51,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "template_api.h"
 
 /* Different types of mines
  *
@@ -57,10 +59,15 @@
  * know if a unit has moved to a certain spot
  *
  * The others are the explosive do damage kind */
-static char *mine_type_names[] = {"Standard", "Inferno", "Command",
-                                  "Vibra",    "Trigger", nullptr};
+static const char *mine_type_names[] = {"Standard", "Inferno", "Command",
+                                        "Vibra",    "Trigger", nullptr};
 
-extern int compare_array(char *[], char *);
+static int mine_type_index(const char *name) {
+  for (size_t index = 0; mine_type_names[index] != nullptr; index++)
+    if (!strcasecmp(mine_type_names[index], name))
+      return (int)index;
+  return -1;
+}
 
 void mine_field_add(BattleMap *map, int x, int y, int damage) {
   MapObject *o, foo;
@@ -73,16 +80,16 @@ void mine_field_add(BattleMap *map, int x, int y, int damage) {
       return;
   }
   bzero(&foo, sizeof(foo));
-  foo.x = x;
-  foo.y = y;
-  foo.datas = damage;
+  foo.x = clamp_int_to_short(x);
+  foo.y = clamp_int_to_short(y);
+  foo.datas = clamp_int_to_short(damage);
   foo.datac = MINE_STANDARD;
   add_mapobj(map, &map->MapObject[TYPE_MINE], &foo, 1);
 }
 
-static void mine_damage_mechs(BattleMap *map, int tx, int ty, char *tomsg,
-                              char *otmsg, char *tomsg1, char *otmsg1, int dam,
-                              int heat, int nb) {
+static void mine_damage_mechs(BattleMap *map, int tx, int ty, const char *tomsg,
+                              const char *otmsg, const char *tomsg1,
+                              const char *otmsg1, int dam, int heat, int nb) {
   blast_hit_hexes(map, dam, 5, heat, tx, ty, tomsg, otmsg, tomsg1, otmsg1,
                   MINE_TABLE, 2, 1, 1, 1);
 }
@@ -93,7 +100,7 @@ static void update_mine(BattleMap *map, MapObject *mine) {
   i = mine->datas;
   i = i * MINE_NEXT_MODIFIER;
   if (i >= MINE_MIN)
-    mine->datas = i;
+    mine->datas = clamp_int_to_short(i);
 }
 
 static void mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
@@ -239,8 +246,8 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
 
           /* Possible remote explosion */
           MapCoordToRealCoord(o->x, o->y, &x2, &y2);
-          if ((range = FindHexRange(x1, y1, x2, y2)) >
-              (mech_real_tonnage(mech) - o->datai) / 10)
+          const long range_limit = (mech_real_tonnage(mech) - o->datai) / 10;
+          if ((range = FindHexRange(x1, y1, x2, y2)) > (float)range_limit)
             continue;
 
           mine_explode(mech, map, o, x, y, reason);
@@ -330,7 +337,8 @@ void mine_fields_recalculate(BattleMap *map) {
 
   clear_hex_bits(map, 1);
   for (o = map->MapObject[TYPE_MINE]; o; o = o->next)
-    add_mine_on_map(map, o->x, o->y, o->datac, o->datai);
+    add_mine_on_map(map, o->x, o->y, clamp_int_to_char(o->datac),
+                    clamp_intptr_to_int(o->datai));
 }
 
 /* x y type strength <optvalue> */
@@ -374,7 +382,7 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
       return;
     }
 
-  if ((type = compare_array(mine_type_names, args[2])) < 0) {
+  if ((type = mine_type_index(args[2])) < 0) {
     mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
                  "Invalid mine type!");
     return;
@@ -387,10 +395,10 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
   }
 
   bzero(&foo, sizeof(foo));
-  foo.x = x;
-  foo.y = y;
+  foo.x = clamp_int_to_short(x);
+  foo.y = clamp_int_to_short(y);
   foo.datai = extra;
-  foo.datas = str;
+  foo.datas = clamp_int_to_short(str);
   foo.datac = type + 1;
   foo.obj = player;
   add_mapobj(map, &map->MapObject[TYPE_MINE], &foo, 1);

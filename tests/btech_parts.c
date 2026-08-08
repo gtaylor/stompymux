@@ -13,6 +13,11 @@ static int changed_part;
 static int changed_brand;
 static int changed_count;
 
+int alias_part(Mech *mech, int part, int location);
+int econ_find_items(BtechContext *context, DbRef store, int part, int brand);
+void econ_change_items(BtechContext *context, DbRef store, int part, int brand,
+                       int count);
+
 int alias_part(Mech *mech, int part, int location) {
   (void)mech;
   return part + location;

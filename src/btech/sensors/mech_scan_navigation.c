@@ -1,4 +1,5 @@
 #include "btech/context.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_conditions_api.h"
@@ -11,6 +12,7 @@
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_restrict_api.h"
+#include "mech_scan_api.h"
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
@@ -29,6 +31,14 @@ static int map_signed_elevation(BattleMap *map, int x, int y) {
              : elevation;
 }
 
+static float scaled_hex_elevation(int elevation) {
+  return ZSCALE * (float)elevation;
+}
+
+static float map_scaled_elevation(BattleMap *map, int x, int y) {
+  return scaled_hex_elevation(map_signed_elevation(map, x, y));
+}
+
 void mech_bearing(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *tempMech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
@@ -39,7 +49,6 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
   float x0, y0;
   int ix1, iy1;
   float x1, y1, z1;
-  float temp;
   char trash[20] = {0};
   char buff[100] = {0};
 
@@ -105,9 +114,9 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
       mecha_notify(evaluation, player,
                    "Invalid number of attributes to Bearing function!");
     }
-    if (x1 != -1) {
-      temp = FindBearing(x0, y0, x1, y1);
-      snprintf(trash, sizeof(trash), "%.0f degrees.", temp);
+    if (x1 >= 0.0F) {
+      const int bearing = FindBearing(x0, y0, x1, y1);
+      snprintf(trash, sizeof(trash), "%d degrees.", bearing);
       strcat(buff, trash);
       mecha_notify(evaluation, player, buff);
     }
@@ -162,7 +171,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
         return;
       }
       if (battle_map_is_dark(mech_map) && !tempMech)
-        z1 = ZSCALE * mech_position_z(mech);
+        z1 = scaled_hex_elevation(mech_position_z(mech));
       strcpy(buff, "Range to default target is: ");
     } else if (argc == 2) {
       /* Range to X, Y */
@@ -176,9 +185,9 @@ void mech_range(DbRef player, void *data, char *buffer) {
         snprintf(buff, sizeof(buff), "Range to  %d,%d is: ", ix1, iy1);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         if (battle_map_is_dark(mech_map))
-          z1 = ZSCALE * mech_position_z(mech);
+          z1 = scaled_hex_elevation(mech_position_z(mech));
         else
-          z1 = ZSCALE * map_signed_elevation(mech_map, ix1, iy1);
+          z1 = map_scaled_elevation(mech_map, ix1, iy1);
       }
     } else if (argc == 4) {
       /* Range to X, Y from given X, Y */
@@ -201,8 +210,8 @@ void mech_range(DbRef player, void *data, char *buffer) {
         if (battle_map_is_dark(mech_map))
           z1 = z0 = 0;
         else {
-          z1 = ZSCALE * map_signed_elevation(mech_map, ix1, iy1);
-          z0 = ZSCALE * map_signed_elevation(mech_map, ix0, iy0);
+          z1 = map_scaled_elevation(mech_map, ix1, iy1);
+          z0 = map_scaled_elevation(mech_map, ix0, iy0);
         }
       }
     } else {
@@ -210,11 +219,11 @@ void mech_range(DbRef player, void *data, char *buffer) {
                    "Invalid number of attributes to Range function!");
       x1 = y1 = -1;
     }
-    if (x1 != -1) {
+    if (x1 >= 0.0F) {
       temp = FindRange(x0, y0, z0, x1, y1, z1);
       hr = FindHexRange(x0, y0, x1, y1);
-      snprintf(buf1, sizeof(buf1), "%.1f", temp);
-      snprintf(buf2, sizeof(buf2), "%.1f", hr);
+      snprintf(buf1, sizeof(buf1), "%.1f", (double)temp);
+      snprintf(buf2, sizeof(buf2), "%.1f", (double)hr);
       if (strcmp(buf1, buf2))
         snprintf(trash, sizeof(trash), "%s hexes (%s ground hexes).", buf1,
                  buf2);
@@ -285,10 +294,10 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       } else {
         snprintf(buff, sizeof(buff), "Vector to  %d,%d is: ", ix1, iy1);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
-        z1 = ZSCALE * map_signed_elevation(mech_map, ix1, iy1);
+        z1 = map_scaled_elevation(mech_map, ix1, iy1);
       }
     } else if (argc == 3) {
-      iz0 = z0 / ZSCALE;
+      iz0 = clamp_float_to_int(z0 / ZSCALE);
       ix1 = atoi(args[0]);
       iy1 = atoi(args[1]);
       iz1 = atoi(args[2]);
@@ -299,7 +308,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       } else {
         snprintf(buff, sizeof(buff), "Vector to  %d,%d,%d is: ", ix1, iy1, iz1);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
-        z1 = ZSCALE * iz1;
+        z1 = scaled_hex_elevation(iz1);
       }
     } else if (argc == 4) {
       /* Range to X, Y from given X, Y */
@@ -319,8 +328,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                  iy1, ix0, iy0);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         MapCoordToRealCoord(ix0, iy0, &x0, &y0);
-        z1 = ZSCALE * map_signed_elevation(mech_map, ix1, iy1);
-        z0 = ZSCALE * map_signed_elevation(mech_map, ix0, iy0);
+        z1 = map_scaled_elevation(mech_map, ix1, iy1);
+        z0 = map_scaled_elevation(mech_map, ix0, iy0);
       }
     } else if (argc == 6) {
       ix0 = atoi(args[0]);
@@ -342,8 +351,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                  iy0, iz0);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         MapCoordToRealCoord(ix0, iy0, &x0, &y0);
-        z1 = ZSCALE * iz1;
-        z0 = ZSCALE * iz0;
+        z1 = scaled_hex_elevation(iz1);
+        z0 = scaled_hex_elevation(iz0);
       }
 
     } else {
@@ -351,12 +360,12 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                    "Invalid number of attributes to Vector function!");
       x1 = y1 = -1;
     }
-    if (x1 != -1) {
+    if (x1 >= 0.0F) {
       /* range */
       temp = FindRange(x0, y0, z0, x1, y1, z1);
       hr = FindHexRange(x0, y0, x1, y1);
-      snprintf(buf1, sizeof(buf1), "%.1f", temp);
-      snprintf(buf2, sizeof(buf2), "%.1f", hr);
+      snprintf(buf1, sizeof(buf1), "%.1f", (double)temp);
+      snprintf(buf2, sizeof(buf2), "%.1f", (double)hr);
       if (strcmp(buf1, buf2))
         snprintf(trash, sizeof(trash), "%s hexes (%s ground hexes) and ", buf1,
                  buf2);
@@ -365,11 +374,11 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       strcat(buff, trash);
 
       /* bearing */
-      temp = FindBearing(x0, y0, x1, y1);
+      const int bearing = FindBearing(x0, y0, x1, y1);
       if (argc != 0 && argc != 3 && argc != 6)
-        snprintf(trash, sizeof(trash), "%.0f degrees.", temp);
+        snprintf(trash, sizeof(trash), "%d degrees.", bearing);
       else
-        snprintf(trash, sizeof(trash), "%.0f degrees mark %c%d.", temp,
+        snprintf(trash, sizeof(trash), "%d degrees mark %c%d.", bearing,
                  (z1 > z0   ? '+'
                   : z1 < z0 ? '-'
                             : ' '),

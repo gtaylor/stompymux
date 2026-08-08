@@ -37,7 +37,7 @@ int mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
 
   btech_context_hit_roll_record(context, roll);
 
-  switch ((int)mech_class(mech)) {
+  switch (mech_class(mech)) {
   case CLASS_VEH_GROUND:
     switch (hitGroup) {
     case LEFTSIDE:
@@ -199,6 +199,14 @@ int mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
       }
       break;
     }
+    break;
+  case CLASS_MECH:
+  case CLASS_VEH_NAVAL:
+  case CLASS_SPHEROID_DS:
+  case CLASS_AERO:
+  case CLASS_MW:
+  case CLASS_DS:
+  case CLASS_BSUIT:
     break;
   }
 

@@ -179,9 +179,9 @@ int mech_missile_hit_index(Mech *mech, Mech *hitMech, int weapindx,
     wRollInc = 2;
 
   /* Roll 3 times... if we're hotloading, we'll use the 2 lowest */
-  r1 = btech_random_range(mech_context(mech), 1, 6);
-  r2 = btech_random_range(mech_context(mech), 1, 6);
-  r3 = btech_random_range(mech_context(mech), 1, 6);
+  r1 = btech_random_range_int(mech_context(mech), 1, 6);
+  r2 = btech_random_range_int(mech_context(mech), 1, 6);
+  r3 = btech_random_range_int(mech_context(mech), 1, 6);
 
   if (r1 > r2)
     swap_ints(&r1, &r2);
@@ -412,9 +412,10 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
   while (missiles > 0) {
     flrange = flrange + mech_range_to(source, hitMech);
     ran = mech_range_to(mech, hitMech);
-    if (flrange > weapon_catalogue_effective_range(
-                      weapindx, btech_context_uses_extended_weapon_ranges(
-                                    mech_context(mech)))) {
+    const int effective_range = weapon_catalogue_effective_range(
+        weapindx,
+        btech_context_uses_extended_weapon_ranges(mech_context(mech)));
+    if (flrange > (float)effective_range) {
       mech_notify(hitMech, MECHALL, "Luckily, the missiles fall short of you!");
       return;
     }
@@ -446,7 +447,7 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
             continue;
           if (j != present_target)
             continue;
-          if (!hitMech && (r = mech_range_to(source, tempMech)) < 1.9)
+          if (!hitMech && (r = mech_range_to(source, tempMech)) < 1.9F)
             if (mech_los_check_unblocked(source, tempMech,
                                          mech_position_x(source),
                                          mech_position_y(source), r)) {
@@ -489,7 +490,7 @@ int mech_ams_intercept(Mech *mech, Mech *hitMech, int incoming, int type,
   if (MechWeapons[type].special & CLAT)
     num_missiles_shotdown = btech_random_roll(mech_context(mech));
   else
-    num_missiles_shotdown = btech_random_range(mech_context(mech), 1, 6);
+    num_missiles_shotdown = btech_random_range_int(mech_context(mech), 1, 6);
 
   if (num_missiles_shotdown > incoming)
     num_missiles_shotdown = incoming;

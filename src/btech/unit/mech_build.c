@@ -18,6 +18,7 @@
 #include <strings.h>
 
 #include "mech_build_api.h"
+#include "mech_equipment_api.h"
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
 #include "mech_partnames_api.h"
@@ -152,50 +153,50 @@ void FillDefaultCriticals(Mech *mech, int index) {
     switch (index) {
     case AERO_AFT:
       for (loop = 0; loop < 12; loop++)
-        ((mech)->ud.sections)[index].criticals[loop].type =
-            special_equipment_index(HEAT_SINK);
-      ((mech)->ud.sections)[index].criticals[2].type =
-          special_equipment_index(ENGINE);
-      ((mech)->ud.sections)[index].criticals[10].type =
-          special_equipment_index(ENGINE);
+        mech_critical_part_type_set(mech, index, loop,
+                                    special_equipment_index(HEAT_SINK));
+      mech_critical_part_type_set(mech, index, 2,
+                                  special_equipment_index(ENGINE));
+      mech_critical_part_type_set(mech, index, 10,
+                                  special_equipment_index(ENGINE));
       break;
     }
   if (((mech)->ud.type) == CLASS_MECH)
     switch (index) {
     case HEAD:
-      ((mech)->ud.sections)[index].criticals[0].type =
-          special_equipment_index(LIFE_SUPPORT);
-      ((mech)->ud.sections)[index].criticals[1].type =
-          special_equipment_index(SENSORS);
-      ((mech)->ud.sections)[index].criticals[2].type =
-          special_equipment_index(COCKPIT);
-      ((mech)->ud.sections)[index].criticals[4].type =
-          special_equipment_index(SENSORS);
-      ((mech)->ud.sections)[index].criticals[5].type =
-          special_equipment_index(LIFE_SUPPORT);
+      mech_critical_part_type_set(mech, index, 0,
+                                  special_equipment_index(LIFE_SUPPORT));
+      mech_critical_part_type_set(mech, index, 1,
+                                  special_equipment_index(SENSORS));
+      mech_critical_part_type_set(mech, index, 2,
+                                  special_equipment_index(COCKPIT));
+      mech_critical_part_type_set(mech, index, 4,
+                                  special_equipment_index(SENSORS));
+      mech_critical_part_type_set(mech, index, 5,
+                                  special_equipment_index(LIFE_SUPPORT));
       break;
 
     case CTORSO:
-      ((mech)->ud.sections)[index].criticals[0].type =
-          special_equipment_index(ENGINE);
-      ((mech)->ud.sections)[index].criticals[1].type =
-          special_equipment_index(ENGINE);
-      ((mech)->ud.sections)[index].criticals[2].type =
-          special_equipment_index(ENGINE);
-      ((mech)->ud.sections)[index].criticals[3].type =
-          special_equipment_index(GYRO);
-      ((mech)->ud.sections)[index].criticals[4].type =
-          special_equipment_index(GYRO);
-      ((mech)->ud.sections)[index].criticals[5].type =
-          special_equipment_index(GYRO);
-      ((mech)->ud.sections)[index].criticals[6].type =
-          special_equipment_index(GYRO);
-      ((mech)->ud.sections)[index].criticals[7].type =
-          special_equipment_index(ENGINE);
-      ((mech)->ud.sections)[index].criticals[8].type =
-          special_equipment_index(ENGINE);
-      ((mech)->ud.sections)[index].criticals[9].type =
-          special_equipment_index(ENGINE);
+      mech_critical_part_type_set(mech, index, 0,
+                                  special_equipment_index(ENGINE));
+      mech_critical_part_type_set(mech, index, 1,
+                                  special_equipment_index(ENGINE));
+      mech_critical_part_type_set(mech, index, 2,
+                                  special_equipment_index(ENGINE));
+      mech_critical_part_type_set(mech, index, 3,
+                                  special_equipment_index(GYRO));
+      mech_critical_part_type_set(mech, index, 4,
+                                  special_equipment_index(GYRO));
+      mech_critical_part_type_set(mech, index, 5,
+                                  special_equipment_index(GYRO));
+      mech_critical_part_type_set(mech, index, 6,
+                                  special_equipment_index(GYRO));
+      mech_critical_part_type_set(mech, index, 7,
+                                  special_equipment_index(ENGINE));
+      mech_critical_part_type_set(mech, index, 8,
+                                  special_equipment_index(ENGINE));
+      mech_critical_part_type_set(mech, index, 9,
+                                  special_equipment_index(ENGINE));
       break;
 
     case RTORSO:
@@ -206,26 +207,27 @@ void FillDefaultCriticals(Mech *mech, int index) {
     case RARM:
     case LLEG:
     case RLEG:
-      ((mech)->ud.sections)[index].criticals[0].type =
-          special_equipment_index(SHOULDER_OR_HIP);
-      ((mech)->ud.sections)[index].criticals[1].type =
-          special_equipment_index(UPPER_ACTUATOR);
-      ((mech)->ud.sections)[index].criticals[2].type =
-          special_equipment_index(LOWER_ACTUATOR);
-      ((mech)->ud.sections)[index].criticals[3].type =
-          special_equipment_index(HAND_OR_FOOT_ACTUATOR);
+      mech_critical_part_type_set(mech, index, 0,
+                                  special_equipment_index(SHOULDER_OR_HIP));
+      mech_critical_part_type_set(mech, index, 1,
+                                  special_equipment_index(UPPER_ACTUATOR));
+      mech_critical_part_type_set(mech, index, 2,
+                                  special_equipment_index(LOWER_ACTUATOR));
+      mech_critical_part_type_set(
+          mech, index, 3, special_equipment_index(HAND_OR_FOOT_ACTUATOR));
       break;
     }
 }
 
-ArmorSectionAbbreviation armor_section_abbreviation(char type, char mtype,
-                                                    int loc) {
-  char **locs;
+ArmorSectionAbbreviation
+armor_section_abbreviation(UnitClass type, MechMovementType movement_type,
+                           int loc) {
+  const char *const *locs;
   ArmorSectionAbbreviation abbreviation = {0};
   char *cursor = abbreviation.text;
   int i;
 
-  locs = ProperSectionStringFromType(type, mtype);
+  locs = ProperSectionStringFromType(type, movement_type);
   for (i = 0; locs[loc][i]; i++)
     if (isupper(locs[loc][i]) || isdigit(locs[loc][i]))
       *(cursor++) = locs[loc][i];
@@ -233,14 +235,15 @@ ArmorSectionAbbreviation armor_section_abbreviation(char type, char mtype,
   return abbreviation;
 }
 
-int ArmorSectionFromString(char type, char mtype, char *string) {
-  char **locs;
+int ArmorSectionFromString(UnitClass type, MechMovementType movement_type,
+                           const char *string) {
+  const char *const *locs;
   int i, j;
   char *c, *d;
 
   if (!string[0])
     return -1;
-  locs = ProperSectionStringFromType(type, mtype);
+  locs = ProperSectionStringFromType(type, movement_type);
   if (!locs)
     return -1;
   /* Then, methodically compare against each other until a suitable

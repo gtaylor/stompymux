@@ -74,6 +74,7 @@
 #include "mycool.h"
 #include "part_cost_api.h"
 #include "registry_api.h"
+#include "script_functions_api.h"
 #include "section_types.h"
 #include "special_object.h"
 #include "template_api.h"
@@ -82,8 +83,9 @@
 #include "value_handlers_api.h"
 #include "weapon_settings.h"
 
-char *mech_armor_status_set_value(Mech *mech, char *section, char *armor_type,
-                                  char *value);
+const char *mech_armor_status_set_value(Mech *mech, const char *section,
+                                        const char *armor_type,
+                                        const char *value);
 
 typedef enum GmvSourceKind {
   GMV_SOURCE_MECH_KEY,
@@ -104,7 +106,7 @@ typedef union GmvSource {
 
 typedef struct {
   int gtype;
-  char *name;
+  const char *name;
   GmvSourceKind source_kind;
   GmvSource source;
   int type;
@@ -134,6 +136,6 @@ enum {
 extern const int scode_in_out[TYPE_LAST_TYPE];
 extern GMV xcode_data[];
 
-int text2bv(char *text);
+int text2bv(const char *text);
 char *bv2text(int value, char *buffer);
 char *mech_getset_ref(int mode, Mech *mech, char *data);

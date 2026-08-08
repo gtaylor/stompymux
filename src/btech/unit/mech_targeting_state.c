@@ -1,5 +1,6 @@
 #include "mech_targeting_api.h"
 
+#include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
 #include "section_types.h"
@@ -24,7 +25,7 @@ void mech_targeting_lock_modes_clear(Mech *mech) {
 void mech_targeting_aim_reset(Mech *mech) { mech->rd.aim = NUM_SECTIONS; }
 
 void mech_targeting_aim_set(Mech *mech, int section, UnitClass unit_class) {
-  mech->rd.aim = section;
+  mech->rd.aim = clamp_int_to_char(section);
   mech->rd.aim_type = (char)unit_class;
 }
 
@@ -41,8 +42,8 @@ void mech_targeting_unit_set(Mech *mech, DbRef target) {
 
 void mech_targeting_hex_xy_set(Mech *mech, int x, int y) {
   mech->rd.target = -1;
-  mech->rd.targx = x;
-  mech->rd.targy = y;
+  mech->rd.targx = clamp_int_to_short(x);
+  mech->rd.targy = clamp_int_to_short(y);
   mech->rd.fire_adjustment = 0;
 }
 
@@ -84,7 +85,9 @@ int mech_target_hex_y(const Mech *mech) { return mech->rd.targy; }
 
 int mech_target_hex_z(const Mech *mech) { return mech->rd.targz; }
 
-void mech_target_hex_z_set(Mech *mech, int z) { mech->rd.targz = z; }
+void mech_target_hex_z_set(Mech *mech, int z) {
+  mech->rd.targz = clamp_int_to_short(z);
+}
 
 DbRef mech_spotter_dbref(const Mech *mech) { return mech->rd.spotter; }
 
@@ -93,7 +96,7 @@ void mech_spotter_dbref_set(Mech *mech, DbRef spotter) {
 }
 
 void mech_fire_adjustment_set(Mech *mech, int adjustment) {
-  mech->rd.fire_adjustment = adjustment;
+  mech->rd.fire_adjustment = clamp_int_to_unsigned_char(adjustment);
 }
 
 void mech_fire_adjustment_increment(Mech *mech) { mech->rd.fire_adjustment++; }
@@ -169,9 +172,9 @@ void mech_targeting_override_begin(Mech *mech, MechTargetingOverride *override,
   memcpy(override, &storage, sizeof(storage));
   mech->rd.status = (mech->rd.status & ~LOCK_MODES) | lock_modes;
   mech->rd.target = target;
-  mech->rd.targx = target_x;
-  mech->rd.targy = target_y;
-  mech->rd.targz = target_z;
+  mech->rd.targx = clamp_int_to_short(target_x);
+  mech->rd.targy = clamp_int_to_short(target_y);
+  mech->rd.targz = clamp_int_to_short(target_z);
 }
 
 void mech_targeting_override_end(Mech *mech,
@@ -188,9 +191,9 @@ void mech_targeting_override_end(Mech *mech,
   *lock_modes = mech->rd.status & LOCK_MODES;
   mech->rd.status = storage.status;
   mech->rd.target = storage.target;
-  mech->rd.targx = storage.target_x;
-  mech->rd.targy = storage.target_y;
-  mech->rd.targz = storage.target_z;
+  mech->rd.targx = clamp_int_to_short(storage.target_x);
+  mech->rd.targy = clamp_int_to_short(storage.target_y);
+  mech->rd.targz = clamp_int_to_short(storage.target_z);
 }
 
 void mech_charge_reset(Mech *mech) {

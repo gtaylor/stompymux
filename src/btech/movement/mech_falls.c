@@ -139,7 +139,7 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
   mech_drop_surface_set(mech, true);
   mech_position_real_z_sync(mech);
 
-  roll = btech_random_range(context, 1, 6);
+  roll = btech_random_range_int(context, 1, 6);
   switch (roll) {
   case 1:
     hitGroup = FRONT;

@@ -15,7 +15,7 @@ void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
      fargs[1] = mapname
      fargs[2] = clear or not to clear
    */
-  int mapdbref;
+  DbRef mapdbref;
   BattleMap *map;
 
   if (nfargs < 2 || nfargs > 3) {
@@ -67,7 +67,7 @@ void fun_btloadmech(char *buff, char **bufc, DbRef player, DbRef cause,
   /* fargs[0] = mechobject
      fargs[1] = mechref
    */
-  int mechdbref;
+  DbRef mechdbref;
   Mech *mech;
 
   if (!is_wizard(context->world->database, player)) {
@@ -100,7 +100,7 @@ void fun_btmechfreqs(char *buff, char **bufc, DbRef player, DbRef cause,
                      EvaluationContext *context) {
   /* fargs[0] = mechobject
    */
-  int mechdbref;
+  DbRef mechdbref;
   Mech *mech;
   int i;
 
@@ -140,7 +140,7 @@ void fun_btgetweight(char *buff, char **bufc, DbRef player, DbRef cause,
   /*
      fargs[0] = stringname of part
    */
-  float sw = 0;
+  float sw = 0.0F;
   int i = -1, p, b;
 
   if (!is_wizard(context->world->database, player)) {
@@ -155,10 +155,11 @@ void fun_btgetweight(char *buff, char **bufc, DbRef player, DbRef cause,
       return;
     }
   }
-  sw = btech_part_weight(p);
+  const int part_weight = btech_part_weight(p);
+  sw = (float)part_weight;
   if (sw <= 0)
-    sw = (1024 * 100);
-  safe_tprintf_str(buff, bufc, "%s", tprintf("%.3f", (float)sw / 1024));
+    sw = 1024.0F * 100.0F;
+  safe_tprintf_str(buff, bufc, "%s", tprintf("%.3f", (double)(sw / 1024.0F)));
 }
 
 void fun_btremovestores(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -294,6 +295,15 @@ void fun_btcritslot_ref(char *buff, char **bufc, DbRef player, DbRef cause,
 
 #define NUMBERS ".0123456789"
 
+static float scaled_elevation(int elevation) {
+  return (float)elevation * ZSCALE;
+}
+
+static float map_hex_scaled_elevation(BattleMap *map, int x, int y) {
+  const int elevation = battle_map_hex_elevation(map, x, y);
+  return scaled_elevation(elevation);
+}
+
 void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs,
                     EvaluationContext *context) {
@@ -355,7 +365,7 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
       safe_tprintf_str(buff, bufc, "#-1 MECH NOT ON MAP");
       return;
     }
-    safe_tprintf_str(buff, bufc, "%f", mech_range_to(mechA, mechB));
+    safe_tprintf_str(buff, bufc, "%f", (double)mech_range_to(mechA, mechB));
     return;
   case 4:
     if (strspn(fargs[1], NUMBERS) < 1) {
@@ -406,10 +416,10 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
     }
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
     safe_tprintf_str(buff, bufc, "%f",
-                     FindRange(mech_position_real_x(mechA),
-                               mech_position_real_y(mechA),
-                               mech_position_real_z(mechA), fxA, fyA,
-                               battle_map_hex_elevation(map, xA, yA) * ZSCALE));
+                     (double)FindRange(mech_position_real_x(mechA),
+                                       mech_position_real_y(mechA),
+                                       mech_position_real_z(mechA), fxA, fyA,
+                                       map_hex_scaled_elevation(map, xA, yA)));
     return;
   case 5:
     if (strspn(fargs[1], NUMBERS) < 1 || strspn(fargs[4], NUMBERS) < 1) {
@@ -472,10 +482,11 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
         return;
       }
       MapCoordToRealCoord(xA, yA, &fxA, &fyA);
-      safe_tprintf_str(
-          buff, bufc, "%f",
-          FindRange(mech_position_real_x(mechA), mech_position_real_y(mechA),
-                    mech_position_real_z(mechA), fxA, fyA, zA * ZSCALE));
+      safe_tprintf_str(buff, bufc, "%f",
+                       (double)FindRange(mech_position_real_x(mechA),
+                                         mech_position_real_y(mechA),
+                                         mech_position_real_z(mechA), fxA, fyA,
+                                         scaled_elevation(zA)));
       return;
     }
     // tihs is the (map, x1, y1, x2, y2) condition
@@ -511,8 +522,8 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
     MapCoordToRealCoord(xB, yB, &fxB, &fyB);
     safe_tprintf_str(
         buff, bufc, "%f",
-        FindRange(fxA, fyA, battle_map_hex_elevation(map, xA, yA) * ZSCALE, fxB,
-                  fyB, battle_map_hex_elevation(map, xB, yB) * ZSCALE));
+        (double)FindRange(fxA, fyA, map_hex_scaled_elevation(map, xA, yA), fxB,
+                          fyB, map_hex_scaled_elevation(map, xB, yB)));
     return;
   case 7:
     if (strspn(fargs[1], NUMBERS) < 1) {
@@ -548,7 +559,8 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
     MapCoordToRealCoord(xB, yB, &fxB, &fyB);
     safe_tprintf_str(buff, bufc, "%f",
-                     FindRange(fxA, fyA, zA * ZSCALE, fxB, fyB, zB * ZSCALE));
+                     (double)FindRange(fxA, fyA, scaled_elevation(zA), fxB, fyB,
+                                       scaled_elevation(zB)));
     return;
   default:
     safe_tprintf_str(buff, bufc, "#-1 INVALID ARGUMENTS");
@@ -564,7 +576,7 @@ void fun_btsetmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
    */
   DbRef it;
   Mech *mech;
-  float newmaxspeed = atof(fargs[1]);
+  float newmaxspeed = strtof(fargs[1], nullptr);
 
   it = match_thing(&context->command->match, player, fargs[0]);
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
@@ -617,7 +629,7 @@ void fun_btgetrealmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
 
   speed = mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 
-  safe_tprintf_str(buff, bufc, "%s", tprintf("%f", speed));
+  safe_tprintf_str(buff, bufc, "%s", tprintf("%f", (double)speed));
 }
 
 void fun_btgetbv(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -689,7 +701,7 @@ void fun_btgetdbv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  safe_tprintf_str(buff, bufc, "%.2f", Calculate_Defensive_BV(mech));
+  safe_tprintf_str(buff, bufc, "%.2f", (double)Calculate_Defensive_BV(mech));
 #else
   safe_tprintf_str(buff, bufc, "#-1 BATTLE VALUE SUPPORT DISABLED");
 #endif
@@ -709,7 +721,7 @@ void fun_btgetobv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  safe_tprintf_str(buff, bufc, "%.2f", Calculate_Offensive_BV(mech));
+  safe_tprintf_str(buff, bufc, "%.2f", (double)Calculate_Offensive_BV(mech));
 #else
   safe_tprintf_str(buff, bufc, "#-1 BATTLE VALUE SUPPORT DISABLED");
 #endif
@@ -735,7 +747,7 @@ void fun_btgetbv2_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   dbv = Calculate_Defensive_BV(mech);
   obv = Calculate_Offensive_BV(mech);
 
-  safe_tprintf_str(buff, bufc, "%.2f", dbv + obv);
+  safe_tprintf_str(buff, bufc, "%.2f", (double)(dbv + obv));
 #else
   safe_tprintf_str(buff, bufc, "#-1 BATTLE VALUE SUPPORT DISABLED");
 #endif

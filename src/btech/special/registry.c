@@ -58,13 +58,10 @@
 #include "special_object.h"
 #include "weapon_settings.h"
 
-#define FAST_WHICHSPECIAL
-
-#define _GLUE_C
-
 /*** #include all the prototype here! ****/
 #include "autopilot.h"
 #include "btech/persistence.h"
+#include "btech/special_objects.h"
 #include "coolmenu.h"
 #include "mech_classification_api.h"
 #include "mech_events.h"
@@ -136,7 +133,11 @@ static int compare_dbrefs(void *key1, void *key2, void *token) {
   const DbRef key1_val = (DbRef)key1;
   const DbRef key2_val = (DbRef)key2;
 
-  return key1_val - key2_val;
+  if (key1_val < key2_val)
+    return -1;
+  if (key1_val > key2_val)
+    return 1;
+  return 0;
 }
 
 void btech_registry_tree_initialize(BtechContext *context) {
@@ -220,7 +221,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
     } else
       return 0;
   }
-#ifdef FAST_WHICHSPECIAL
+#if 1
   if (type > (int)(NUM_SPECIAL_OBJECTS))
     return 0;
 #endif
@@ -231,7 +232,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   ishelp = !strcmp(command, "HELP");
   for (tmpchar = command; *tmpchar; tmpchar++)
     *tmpchar = ascii_to_lower(*tmpchar);
-  cmd = hash_table_find(command, &context->special_commands[type]);
+  cmd = hash_table_find_const(command, &context->special_commands[type]);
   if (tmpc)
     *tmpc = ' ';
   if (cmd && (type != GTYPE_MECH ||
@@ -300,8 +301,10 @@ bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
 void InitSpecialHash(BtechContext *context, int which);
 const int global_specials = NUM_SPECIAL_OBJECTS;
 
-void *NewSpecialObject(BtechContext *context, long id, int type) {
+void *NewSpecialObject(BtechContext *context, DbRef id, int type) {
   BtechSpecialObject *xcode_obj = NULL;
+  if (type < 0 || type >= BTECH_SPECIAL_OBJECT_COUNT)
+    return nullptr;
   size_t data_size = btech_special_object_data_size(&SpecialObjects[type]);
 
   if (data_size) {
@@ -310,7 +313,7 @@ void *NewSpecialObject(BtechContext *context, long id, int type) {
       printf("Unable to calloc\n");
       exit(1);
     }
-    xcode_obj->type = type;
+    xcode_obj->type = (BtechSpecialObjectType)type;
     xcode_obj->size = data_size;
     xcode_obj->context = context;
 
@@ -452,7 +455,8 @@ void Dump_Mech(BtechContext *context, DbRef player, int type, char *typestr) {
 }
 
 void DumpMechs(BtechContext *context, DbRef player) {
-  Dump_Mech(context, player, GTYPE_MECH, "mech");
+  char type[] = "mech";
+  Dump_Mech(context, player, GTYPE_MECH, type);
 }
 
 void DumpMaps(BtechContext *context, DbRef player) {
@@ -471,7 +475,7 @@ int btech_context_which_special(BtechContext *context, DbRef key) {
     return -1;
   if (!(xcode_obj = red_black_tree_find(context->special_objects, (void *)key)))
     return -1;
-  return xcode_obj->type;
+  return (int)xcode_obj->type;
 }
 #else
 int btech_context_which_special(BtechContext *context, DbRef key) {
@@ -532,8 +536,8 @@ void InitSpecialHash(BtechContext *context, int which) {
     *tmpc = 0;
     if ((tmpc = strstr(buf, " ")))
       *tmpc = 0;
-    hash_table_add(buf, (int *)&SpecialObjects[which].commands[i],
-                   &context->special_commands[which]);
+    hash_table_add_const(buf, &SpecialObjects[which].commands[i],
+                         &context->special_commands[which]);
   }
 }
 

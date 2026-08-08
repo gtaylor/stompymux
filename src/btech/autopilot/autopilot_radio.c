@@ -418,7 +418,7 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech, char **args,
   char buffer[SBUF_SIZE];
   int bear, rng;
 
-  if (!(int)fabs(mech_jump_speed(mech))) {
+  if (fabsf(mech_jump_speed(mech)) < 0.01F) {
     snprintf(mesg, LBUF_SIZE, "!I don't do hiphop and jump around");
     return;
   }

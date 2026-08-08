@@ -75,7 +75,7 @@ char GetLRSMechChar(Mech *mech, Mech *other) {
     break;
   }
   if (!mech_seems_friendly(mech, other))
-    c = toupper(c);
+    c = (char)toupper((unsigned char)c);
   return c;
 }
 
@@ -203,8 +203,15 @@ static MapCellText lrs_elevation_text(const MapColorScheme *colors,
                                       BattleMap *map, int x, int y, int docolor,
                                       char *prevc) {
   int e = map_elevation_get(map, x, y);
-  char c = (e || docolor) ? '0' + e : ' ';
+  char c;
   char newc;
+
+  if (!e && !docolor)
+    c = ' ';
+  else if (e >= 0 && e <= 9)
+    c = (char)('0' + e);
+  else
+    c = '?';
 
   if (!docolor) {
     MapCellText result = {0};

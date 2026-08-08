@@ -20,6 +20,7 @@
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
+#include "mech_ecm_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
@@ -119,7 +120,7 @@ void mech_ecm_check(Mech *objMech) {
       if (other.angel_eccm_enabled)
         wFriendlyAngelECCM++;
 
-      if (range <= 0.5) {
+      if (range <= 0.5F) {
         if (other.personal_ecm_enabled)
           wFriendlyECM++;
 
@@ -139,7 +140,7 @@ void mech_ecm_check(Mech *objMech) {
       if (other.angel_eccm_enabled)
         wUnFriendlyAngelECCM++;
 
-      if (range <= 0.5) {
+      if (range <= 0.5F) {
         if (other.personal_ecm_enabled)
           wUnFriendlyECM++;
 

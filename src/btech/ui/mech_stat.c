@@ -19,6 +19,8 @@
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "mech_stat_api.h"
+#include "mech_utils_api.h"
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
 #include "mux/server/game.h"
@@ -54,17 +56,18 @@ void do_show_stat(CommandInvocation *invocation) {
                    "#    Rolls %Current  Optimal Rolls %Optimal  %Hit Chance "
                    " %Miss Chance");
     }
-    f1 = (float)chances[i] * 100.0 / 36.0;
-    f2 = (float)statistics->rolls[i] * 100.0 / statistics->total_rolls;
+    f1 = (float)chances[i] * 100.0F / 36.0F;
+    f2 = (float)statistics->rolls[i] * 100.0F / (float)statistics->total_rolls;
     chancetotal = 0;
     for (j = i; j < 11; j++) {
       chancetotal = chancetotal + chances[j];
     }
-    chanceperc = (float)chancetotal / 36.0 * 100;
-    optimalrolls = f1 / 100 * statistics->total_rolls;
+    chanceperc = (float)chancetotal / 36.0F * 100.0F;
+    optimalrolls = f1 / 100.0F * (float)statistics->total_rolls;
     notify_printf(evaluation, player, "%-3d %6d %8.3f %14d %8.3f %12.3f %13.3f",
-                  i + 2, statistics->rolls[i], f2, (int)optimalrolls, f1,
-                  chanceperc, 100.0 - chanceperc);
+                  i + 2, statistics->rolls[i], (double)f2, (int)optimalrolls,
+                  (double)f1, (double)chanceperc,
+                  (double)(100.0F - chanceperc));
   }
   notify_printf(evaluation, player, "Total rolls: %d", statistics->total_rolls);
 }
@@ -99,4 +102,8 @@ long btech_random_range(BtechContext *context, long low, long high) {
   } while (value >= limit);
 
   return (long)((uint64_t)low + value % width);
+}
+
+int btech_random_range_int(BtechContext *context, int low, int high) {
+  return (int)btech_random_range(context, low, high);
 }

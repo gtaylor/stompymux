@@ -125,7 +125,7 @@ static int dropship_hex_row_adjustment(int from_x, int to_x) {
   return (from_x % 2 && !(to_x % 2)) ? -1 : 0;
 }
 
-int dropship_bay_in_adjacent_hex(Mech *seer, Mech *ds, long *bayn) {
+int dropship_bay_in_adjacent_hex(Mech *seer, Mech *ds, int *bayn) {
   int i;
   int t = mech_dropship_bearing_sector(ds);
 
@@ -143,8 +143,8 @@ int dropship_bay_in_adjacent_hex(Mech *seer, Mech *ds, long *bayn) {
   return 0;
 }
 
-static int dropship_find_single_adjacent_bay(Mech *mech, long *ref,
-                                             long *bayn) {
+static int dropship_find_single_adjacent_bay(Mech *mech, DbRef *ref,
+                                             int *bayn) {
   BattleMap *map =
       btech_context_find_object(mech_context(mech), mech_map_dbref(mech));
   int loop;
@@ -176,8 +176,8 @@ static int dropship_find_single_adjacent_bay(Mech *mech, long *ref,
 
 static void mech_enterbay_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data, *ds, *tmpm = nullptr;
-  long ref = (long)e->data2;
-  long bayn;
+  DbRef ref = (DbRef)(intptr_t)e->data2;
+  int bayn;
   int x = 5, y = 5;
   BattleMap *tmpmap;
   BtechContext *context = mech_context(mech);
@@ -187,9 +187,9 @@ static void mech_enterbay_event(MuxEvent *e) {
       (mech_class(mech) == CLASS_MECH &&
        (mech_is_fallen(mech) || mech_event_count(mech, EVENT_STAND))) ||
       mech_is_out_of_control(mech) ||
-      (fabs(mech_current_speed(mech)) * 5 >=
+      (fabsf(mech_current_speed(mech)) * 5.0F >=
            mech_effective_maximum_speed(mech) &&
-       fabs(mech_effective_maximum_speed(mech)) >= MP1) ||
+       fabsf(mech_effective_maximum_speed(mech)) >= MP1) ||
       (mech_class(mech) == CLASS_VTOL && mech_fuel(mech) <= 0))
     return;
   tmpmap = btech_context_get_map(context, ref);
@@ -266,7 +266,8 @@ static int dropship_bay_is_enterable(Mech *mech, Mech *ds, DbRef bayref) {
 void mech_enterbay(DbRef player, void *data, char *buffer) {
   char *args[3];
   int argc;
-  DbRef ref = -1, bayn = -1;
+  DbRef ref = -1;
+  int bayn = -1;
   Mech *mech = data, *ds;
   BattleMap *map;
   LuaLockInvocation lock;
@@ -390,9 +391,9 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
   if (!lock_test(btech_context_evaluation(context), player, player,
                  mech_dbref(mech), ref, LUA_LOCK_ENTER,
                  LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result)) {
-    char *msg = lock_result.has_enactor_message
-                    ? lock_result.enactor_message
-                    : "You are unable to enter the bay!";
+    const char *msg = lock_result.has_enactor_message
+                          ? lock_result.enactor_message
+                          : "You are unable to enter the bay!";
     mecha_notify(btech_context_evaluation(context), player, msg);
     return;
   }
@@ -411,7 +412,7 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
   mech_event_schedule(mech, EVENT_ENTER_HANGAR, mech_enterbay_event, 12, ref);
 }
 
-static void dropship_place_departing_unit(Mech *ds, Mech *mech, int frombay) {
+static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
   int i;
   int nx, ny;
   BattleMap *mech_map;

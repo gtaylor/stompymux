@@ -34,7 +34,7 @@ static bool physical_quad_check(DbRef player, Mech *mech, const char *verb) {
   return false;
 }
 
-int all_limbs_recycled(Mech *mech) {
+static int all_limbs_recycled(Mech *mech) {
   if (mech_section_recycle_ticks(mech, LARM) ||
       mech_section_recycle_ticks(mech, RARM)) {
     mech_notify(mech, MECHALL,
@@ -51,8 +51,8 @@ int all_limbs_recycled(Mech *mech) {
   return 1;
 } // end all_limbs_recycled()
 
-char *phys_form(PhysicalAttackType AttackType, int add_s) {
-  char *verb;
+const char *phys_form(PhysicalAttackType AttackType, int add_s) {
+  const char *verb;
 
   if (add_s) {
     switch (AttackType) {
@@ -206,10 +206,10 @@ int phys_common_checks(Mech *mech) {
  * to be specified. eg. AXE [B|L|R] [ID]
  */
 int get_arm_args(int *using, int *argc, char ***args, Mech *mech,
-                 int (*have_fn)(Mech *mech, int loc), char *weapon) {
+                 int (*have_fn)(Mech *mech, int loc), const char *weapon) {
 
   if (*argc != 0 && args[0][0][0] != '\0' && args[0][0][1] == '\0') {
-    char arm = toupper(args[0][0][0]);
+    const int arm = toupper((unsigned char)args[0][0][0]);
 
     // Determine which flag we're dealing with (Both, Left, Right)
     switch (arm) {
@@ -264,8 +264,8 @@ int get_arm_args(int *using, int *argc, char ***args, Mech *mech,
 /**
  * Performs some generic checks for arms to punch with.
  */
-int punch_checkArm(Mech *mech, int arm) {
-  char *arm_used = (arm == LARM ? "left" : "right");
+static int punch_checkArm(Mech *mech, int arm) {
+  const char *arm_used = (arm == LARM ? "left" : "right");
 
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -433,8 +433,8 @@ void mech_club(DbRef player, void *data, char *buffer) {
 /**
  * Check to see if the specified arm can be used to axe with.
  */
-int axe_checkArm(Mech *mech, int arm) {
-  char *arm_used = (arm == RARM ? "right" : "left");
+static int axe_checkArm(Mech *mech, int arm) {
+  const char *arm_used = (arm == RARM ? "right" : "left");
 
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -511,8 +511,8 @@ void mech_axe(DbRef player, void *data, char *buffer) {
 /**
  * Check to see if the specified arm can be used to saw with.
  */
-int saw_checkArm(Mech *mech, int arm) {
-  char *arm_used = (arm == RARM ? "right" : "left");
+static int saw_checkArm(Mech *mech, int arm) {
+  const char *arm_used = (arm == RARM ? "right" : "left");
 
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -639,8 +639,8 @@ void mech_claw(DbRef player, void *data, char *buffer) {
 /**
  * Check our arms to see if they can mace.
  */
-int mace_checkArm(Mech *mech, int arm) {
-  char *arm_used = (arm == RARM ? "right" : "left");
+static int mace_checkArm(Mech *mech, int arm) {
+  const char *arm_used = (arm == RARM ? "right" : "left");
 
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -718,8 +718,8 @@ void mech_mace(DbRef player, void *data, char *buffer) {
 /**
  * Check our arms to see if they can chop.
  */
-int sword_checkArm(Mech *mech, int arm) {
-  char *arm_used = (arm == RARM ? "right" : "left");
+static int sword_checkArm(Mech *mech, int arm) {
+  const char *arm_used = (arm == RARM ? "right" : "left");
 
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
