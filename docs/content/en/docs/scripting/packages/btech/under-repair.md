@@ -1,11 +1,8 @@
 ---
 title: btech.under_repair
-linkTitle: btech.under_repair
 type: docs
-weight: 269
+toc_hide: true
 ---
-
-# `btech.under_repair`
 
 Tests whether a live unit has an active repair event.
 

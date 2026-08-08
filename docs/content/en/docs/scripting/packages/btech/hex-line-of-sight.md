@@ -1,11 +1,8 @@
 ---
 title: btech.hex_line_of_sight
-linkTitle: btech.hex_line_of_sight
 type: docs
-weight: 229
+toc_hide: true
 ---
-
-# `btech.hex_line_of_sight`
 
 Tests whether a live unit has unobstructed line of sight to a map hex.
 

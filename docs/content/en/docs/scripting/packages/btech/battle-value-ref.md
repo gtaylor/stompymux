@@ -1,11 +1,8 @@
 ---
 title: btech.battle_value_ref
-linkTitle: btech.battle_value_ref
 type: docs
-weight: 216
+toc_hide: true
 ---
-
-# `btech.battle_value_ref`
 
 Calculates the battle value of a unit template.
 

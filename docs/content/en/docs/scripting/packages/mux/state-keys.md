@@ -1,11 +1,8 @@
 ---
 title: State:keys
-linkTitle: State:keys
 type: docs
-weight: 227
+toc_hide: true
 ---
-
-# `State:keys`
 
 Lists the keys in this state namespace.
 

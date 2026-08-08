@@ -1,6 +1,7 @@
 ---
 title: Channel administration
 linkTitle: Channel administration
+description: How to administer in-game communication channels
 type: docs
 weight: 30
 ---

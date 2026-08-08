@@ -1,11 +1,8 @@
 ---
 title: btech.tech_status
-linkTitle: btech.tech_status
 type: docs
-weight: 265
+toc_hide: true
 ---
-
-# `btech.tech_status`
 
 Returns formatted repair status for a live unit.
 

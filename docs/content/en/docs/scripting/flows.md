@@ -1,11 +1,11 @@
 ---
 title: Interactive flows
-linkTitle: Flows
+description: How to write interactive player flows
 type: docs
 weight: 25
 ---
 
-Softcode has no interactive-input primitive; Lua does, through `mux.flow_start`
+Start an interactive flow for a user through the `mux.flow_start` Lua function
 and a module's `flows` table. A flow drives a connected player's own
 descriptor through a menu, a confirmation, or a multi-step form, one line of
 input at a time, without the player prefixing every line with a command.

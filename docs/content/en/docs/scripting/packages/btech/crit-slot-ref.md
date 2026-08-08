@@ -1,11 +1,8 @@
 ---
 title: btech.crit_slot_ref
-linkTitle: btech.crit_slot_ref
 type: docs
-weight: 205
+toc_hide: true
 ---
-
-# `btech.crit_slot_ref`
 
 Describes one critical slot in a unit template.
 

@@ -1,6 +1,7 @@
 ---
 title: Commands
 linkTitle: Commands
+description: How to define new global and object-level commands
 type: docs
 weight: 15
 ---

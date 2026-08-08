@@ -1,6 +1,7 @@
 ---
 title: Object Flags
 linkTitle: Flags
+description: A reference of in-game object flags
 type: docs
 weight: 12
 ---

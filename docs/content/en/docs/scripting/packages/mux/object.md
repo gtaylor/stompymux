@@ -1,11 +1,8 @@
 ---
 title: mux.object
-linkTitle: mux.object
 type: docs
-weight: 200
+toc_hide: true
 ---
-
-# `mux.object`
 
 Creates a validated handle for a native database object.
 

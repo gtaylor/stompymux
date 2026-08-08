@@ -1,11 +1,8 @@
 ---
 title: mux.is_printable_ascii
-linkTitle: mux.is_printable_ascii
 type: docs
-weight: 201
+toc_hide: true
 ---
-
-# `mux.is_printable_ascii`
 
 Tests whether every byte in a string is printable ASCII.
 

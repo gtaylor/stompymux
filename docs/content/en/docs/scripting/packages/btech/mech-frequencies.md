@@ -1,11 +1,8 @@
 ---
 title: btech.mech_frequencies
-linkTitle: btech.mech_frequencies
 type: docs
-weight: 241
+toc_hide: true
 ---
-
-# `btech.mech_frequencies`
 
 Lists the configured radio channels of a live unit.
 

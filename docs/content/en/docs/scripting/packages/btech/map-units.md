@@ -1,11 +1,8 @@
 ---
 title: btech.map_units
-linkTitle: btech.map_units
 type: docs
-weight: 240
+toc_hide: true
 ---
-
-# `btech.map_units`
 
 Lists all units on a map or those within a 2D or 3D range.
 

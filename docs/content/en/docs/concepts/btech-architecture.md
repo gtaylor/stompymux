@@ -1,9 +1,8 @@
 ---
-title: "BattleTech Architecture"
+title: BattleTech Architecture
 weight: 25
+description: An architectural overview of the codebase
 ---
-
-# BattleTech architecture
 
 BattleTech is a domain-oriented package rooted at `src/btech`. Its public
 boundary is `src/btech/include/btech`; MUX code must not include any other

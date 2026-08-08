@@ -1,11 +1,8 @@
 ---
 title: State:set_many
-linkTitle: State:set_many
 type: docs
-weight: 230
+toc_hide: true
 ---
-
-# `State:set_many`
 
 Applies several persistent state updates.
 

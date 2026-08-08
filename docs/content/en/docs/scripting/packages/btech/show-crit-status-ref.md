@@ -1,11 +1,8 @@
 ---
 title: btech.show_crit_status_ref
-linkTitle: btech.show_crit_status_ref
 type: docs
-weight: 258
+toc_hide: true
 ---
-
-# `btech.show_crit_status_ref`
 
 Sends a template's critical-status display to a player.
 

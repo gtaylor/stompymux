@@ -1,11 +1,8 @@
 ---
 title: btech.map_elevation
-linkTitle: btech.map_elevation
 type: docs
-weight: 237
+toc_hide: true
 ---
-
-# `btech.map_elevation`
 
 Returns the elevation of a map hex.
 

@@ -1,6 +1,7 @@
 ---
 title: Help system
 linkTitle: Help system
+description: How the in-game help system works
 type: docs
 weight: 20
 ---
@@ -24,12 +25,12 @@ starts with a TOML frontmatter block delimited by `+++` lines, followed by
 the markdown body:
 
 ```markdown
-+++
-title = "About this game"
-description = "All about this game"
-keywords = ["about"]
-article_tags = ["show_in_index"]
-+++
+---
+title: About this game
+description: All about this game
+keywords: [about]
+article_tags: [show_in_index]
+---
 
 # About this game
 

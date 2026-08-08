@@ -1,11 +1,8 @@
 ---
 title: btech.unit_fixable
-linkTitle: btech.unit_fixable
 type: docs
-weight: 270
+toc_hide: true
 ---
-
-# `btech.unit_fixable`
 
 Tests whether a live unit can be repaired.
 

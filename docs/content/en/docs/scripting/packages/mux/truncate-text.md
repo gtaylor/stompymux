@@ -1,11 +1,8 @@
 ---
 title: mux.truncate_text
-linkTitle: mux.truncate_text
 type: docs
-weight: 206
+toc_hide: true
 ---
-
-# `mux.truncate_text`
 
 Truncates styled text to a maximum visible width.
 

@@ -1,11 +1,8 @@
 ---
 title: State:entries
-linkTitle: State:entries
 type: docs
-weight: 228
+toc_hide: true
 ---
-
-# `State:entries`
 
 Lists the entries in this state namespace.
 

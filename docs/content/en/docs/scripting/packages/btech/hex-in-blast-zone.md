@@ -1,11 +1,8 @@
 ---
 title: btech.hex_in_blast_zone
-linkTitle: btech.hex_in_blast_zone
 type: docs
-weight: 228
+toc_hide: true
 ---
-
-# `btech.hex_in_blast_zone`
 
 Tests whether a map hex lies in a configured blast zone.
 

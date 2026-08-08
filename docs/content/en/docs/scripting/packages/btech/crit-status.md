@@ -1,11 +1,8 @@
 ---
 title: btech.crit_status
-linkTitle: btech.crit_status
 type: docs
-weight: 207
+toc_hide: true
 ---
-
-# `btech.crit_status`
 
 Returns serialized critical-slot status for one section of a live unit.
 

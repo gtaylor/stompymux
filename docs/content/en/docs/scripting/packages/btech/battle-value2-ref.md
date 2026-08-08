@@ -1,11 +1,8 @@
 ---
 title: btech.battle_value2_ref
-linkTitle: btech.battle_value2_ref
 type: docs
-weight: 217
+toc_hide: true
 ---
-
-# `btech.battle_value2_ref`
 
 Calculates the second-generation battle value of a unit template.
 

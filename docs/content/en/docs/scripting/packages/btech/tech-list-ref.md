@@ -1,11 +1,8 @@
 ---
 title: btech.tech_list_ref
-linkTitle: btech.tech_list_ref
 type: docs
-weight: 264
+toc_hide: true
 ---
-
-# `btech.tech_list_ref`
 
 Lists the parts needed to repair a unit template.
 

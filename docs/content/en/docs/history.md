@@ -1,5 +1,6 @@
 ---
 title: History
+description: A rough accounting of the history and lineage of StompyMUX
 type: docs
 weight: 100
 ---

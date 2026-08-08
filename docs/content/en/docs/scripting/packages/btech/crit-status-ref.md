@@ -1,11 +1,8 @@
 ---
 title: btech.crit_status_ref
-linkTitle: btech.crit_status_ref
 type: docs
-weight: 208
+toc_hide: true
 ---
-
-# `btech.crit_status_ref`
 
 Returns serialized critical-slot status for one section of a unit template.
 

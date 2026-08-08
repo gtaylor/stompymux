@@ -1,11 +1,8 @@
 ---
 title: State:set
-linkTitle: State:set
 type: docs
-weight: 225
+toc_hide: true
 ---
-
-# `State:set`
 
 Sets or deletes a persistent state value.
 

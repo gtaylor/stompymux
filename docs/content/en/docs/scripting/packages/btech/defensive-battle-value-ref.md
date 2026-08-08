@@ -1,11 +1,8 @@
 ---
 title: btech.defensive_battle_value_ref
-linkTitle: btech.defensive_battle_value_ref
 type: docs
-weight: 218
+toc_hide: true
 ---
-
-# `btech.defensive_battle_value_ref`
 
 Calculates the defensive battle-value component of a unit template.
 

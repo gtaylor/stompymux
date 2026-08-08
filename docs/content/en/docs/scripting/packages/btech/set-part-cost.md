@@ -1,11 +1,8 @@
 ---
 title: btech.set_part_cost
-linkTitle: btech.set_part_cost
 type: docs
-weight: 254
+toc_hide: true
 ---
-
-# `btech.set_part_cost`
 
 Sets the configured cost of a part.
 

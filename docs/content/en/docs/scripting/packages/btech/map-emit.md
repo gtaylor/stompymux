@@ -1,11 +1,8 @@
 ---
 title: btech.map_emit
-linkTitle: btech.map_emit
 type: docs
-weight: 238
+toc_hide: true
 ---
-
-# `btech.map_emit`
 
 Broadcasts a message to all or nearby units on a map.
 

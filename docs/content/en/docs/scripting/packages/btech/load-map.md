@@ -1,11 +1,8 @@
 ---
 title: btech.load_map
-linkTitle: btech.load_map
 type: docs
-weight: 233
+toc_hide: true
 ---
-
-# `btech.load_map`
 
 Loads a map file into a map object and clears its units and map objects.
 

@@ -1,11 +1,8 @@
 ---
 title: btech.offensive_battle_value_ref
-linkTitle: btech.offensive_battle_value_ref
 type: docs
-weight: 219
+toc_hide: true
 ---
-
-# `btech.offensive_battle_value_ref`
 
 Calculates the offensive battle-value component of a unit template.
 

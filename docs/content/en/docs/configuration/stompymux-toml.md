@@ -1,6 +1,7 @@
 ---
 title: stompymux.toml reference
 linkTitle: stompymux.toml
+description: Run-time configuration
 weight: 20
 ---
 

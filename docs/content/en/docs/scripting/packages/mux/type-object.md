@@ -1,11 +1,8 @@
 ---
 title: Object
-linkTitle: Object
 type: docs
-weight: 100
+toc_hide: true
 ---
-
-# `Object`
 
 An `Object` is a validated handle for a native database object. Create one with
 [`mux.object`](../object/). Handles become invalid if their object is destroyed

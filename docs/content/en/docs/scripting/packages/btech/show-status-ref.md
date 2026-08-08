@@ -1,11 +1,8 @@
 ---
 title: btech.show_status_ref
-linkTitle: btech.show_status_ref
 type: docs
-weight: 259
+toc_hide: true
 ---
-
-# `btech.show_status_ref`
 
 Sends a unit template's status display to a player.
 

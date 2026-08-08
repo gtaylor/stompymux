@@ -1,11 +1,8 @@
 ---
 title: btech.set_char_value
-linkTitle: btech.set_char_value
 type: docs
-weight: 252
+toc_hide: true
 ---
-
-# `btech.set_char_value`
 
 Sets a character value or adjusts skill experience.
 

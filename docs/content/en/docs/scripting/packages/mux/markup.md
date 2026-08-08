@@ -1,11 +1,8 @@
 ---
 title: mux.markup
-linkTitle: mux.markup
 type: docs
-weight: 202
+toc_hide: true
 ---
-
-# `mux.markup`
 
 Validates styled-text markup and returns it unchanged.
 

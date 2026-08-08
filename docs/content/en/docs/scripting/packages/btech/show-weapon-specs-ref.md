@@ -1,11 +1,8 @@
 ---
 title: btech.show_weapon_specs_ref
-linkTitle: btech.show_weapon_specs_ref
 type: docs
-weight: 260
+toc_hide: true
 ---
-
-# `btech.show_weapon_specs_ref`
 
 Sends a unit template's weapon-specification display to a player.
 

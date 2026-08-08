@@ -1,11 +1,8 @@
 ---
 title: mux.style
-linkTitle: mux.style
 type: docs
-weight: 203
+toc_hide: true
 ---
-
-# `mux.style`
 
 Applies styled-text markup described by an options table.
 

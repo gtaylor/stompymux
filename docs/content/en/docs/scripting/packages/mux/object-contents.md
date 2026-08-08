@@ -1,11 +1,8 @@
 ---
 title: Object:contents
-linkTitle: Object:contents
 type: docs
-weight: 213
+toc_hide: true
 ---
-
-# `Object:contents`
 
 Returns the objects directly contained by this object.
 

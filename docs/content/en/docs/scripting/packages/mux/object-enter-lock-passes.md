@@ -1,11 +1,8 @@
 ---
 title: Object:enter_lock_passes
-linkTitle: Object:enter_lock_passes
 type: docs
-weight: 217
+toc_hide: true
 ---
-
-# `Object:enter_lock_passes`
 
 Tests whether an enactor passes this exit's default traversal lock.
 

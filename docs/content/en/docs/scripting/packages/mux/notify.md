@@ -1,11 +1,8 @@
 ---
 title: mux.notify
-linkTitle: mux.notify
 type: docs
-weight: 207
+toc_hide: true
 ---
-
-# `mux.notify`
 
 Sends a message to an object.
 

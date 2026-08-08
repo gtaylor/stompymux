@@ -1,11 +1,8 @@
 ---
 title: State:get
-linkTitle: State:get
 type: docs
-weight: 223
+toc_hide: true
 ---
-
-# `State:get`
 
 Gets a persistent state value.
 

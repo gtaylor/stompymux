@@ -1,11 +1,8 @@
 ---
 title: State
-linkTitle: State
 type: docs
-weight: 120
+toc_hide: true
 ---
-
-# `State`
 
 A `State` handle accesses persistent values belonging to one named subsystem on
 one object. Create a handle with [`Object:state`](../object-state/).

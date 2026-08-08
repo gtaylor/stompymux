@@ -1,11 +1,8 @@
 ---
 title: btech.char_list
-linkTitle: btech.char_list
 type: docs
-weight: 203
+toc_hide: true
 ---
-
-# `btech.char_list`
 
 Lists character value names in a requested category.
 

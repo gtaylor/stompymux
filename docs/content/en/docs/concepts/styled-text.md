@@ -1,6 +1,7 @@
 ---
 title: Styled object text
 linkTitle: Styled text
+description: How to style in-game text
 type: docs
 weight: 30
 ---

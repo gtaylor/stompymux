@@ -1,11 +1,8 @@
 ---
 title: btech.range
-linkTitle: btech.range
 type: docs
-weight: 222
+toc_hide: true
 ---
-
-# `btech.range`
 
 Calculates distance between units or map coordinates.
 

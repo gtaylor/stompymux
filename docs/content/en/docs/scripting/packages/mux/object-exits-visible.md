@@ -1,11 +1,8 @@
 ---
 title: Object:exits_visible
-linkTitle: Object:exits_visible
 type: docs
-weight: 216
+toc_hide: true
 ---
-
-# `Object:exits_visible`
 
 Tests whether a directly attached exit is visible to a viewer.
 

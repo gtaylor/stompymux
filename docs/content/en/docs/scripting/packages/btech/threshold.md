@@ -1,11 +1,8 @@
 ---
 title: btech.threshold
-linkTitle: btech.threshold
 type: docs
-weight: 267
+toc_hide: true
 ---
-
-# `btech.threshold`
 
 Returns the configured experience threshold for a skill.
 

@@ -1,6 +1,7 @@
 ---
 title: Scripting
 linkTitle: Scripting
+description: All about extending StompyMUX through its Lua APIs
 type: docs
 weight: 50
 ---

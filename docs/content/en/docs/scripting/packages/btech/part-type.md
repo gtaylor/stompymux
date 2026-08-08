@@ -1,11 +1,8 @@
 ---
 title: btech.part_type
-linkTitle: btech.part_type
 type: docs
-weight: 243
+toc_hide: true
 ---
-
-# `btech.part_type`
 
 Returns the broad category of a part.
 

@@ -3,9 +3,8 @@ title: mux package
 linkTitle: mux
 type: docs
 weight: 10
+no_list: true
 ---
-
-# `mux`
 
 `mux` is the built-in server API available to every Lua module. It is supplied
 by the game server rather than loaded with `require`. Lua callbacks and commands

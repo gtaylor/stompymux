@@ -1,11 +1,8 @@
 ---
 title: State:get_many
-linkTitle: State:get_many
 type: docs
-weight: 229
+toc_hide: true
 ---
-
-# `State:get_many`
 
 Gets every present value from a requested set of keys.
 

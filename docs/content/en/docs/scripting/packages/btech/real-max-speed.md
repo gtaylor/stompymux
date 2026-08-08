@@ -1,11 +1,8 @@
 ---
 title: btech.real_max_speed
-linkTitle: btech.real_max_speed
 type: docs
-weight: 223
+toc_hide: true
 ---
-
-# `btech.real_max_speed`
 
 Returns a live unit's effective maximum speed.
 

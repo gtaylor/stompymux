@@ -1,11 +1,8 @@
 ---
 title: btech.xcode_value_ref
-linkTitle: btech.xcode_value_ref
 type: docs
-weight: 226
+toc_hide: true
 ---
-
-# `btech.xcode_value_ref`
 
 Reads a script-visible native field from a unit template.
 

@@ -1,11 +1,8 @@
 ---
 title: btech.design_exists
-linkTitle: btech.design_exists
 type: docs
-weight: 211
+toc_hide: true
 ---
-
-# `btech.design_exists`
 
 Tests whether a unit template exists.
 

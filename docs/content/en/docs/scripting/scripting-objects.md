@@ -1,6 +1,7 @@
 ---
 title: Object scripting
 linkTitle: Objects
+description: How to extend and manipulate in-game objects through Lua
 type: docs
 weight: 10
 ---

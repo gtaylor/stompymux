@@ -1,11 +1,8 @@
 ---
 title: btech.parts
-linkTitle: btech.parts
 type: docs
-weight: 247
+toc_hide: true
 ---
-
-# `btech.parts`
 
 Lists canonical long part names in one category.
 

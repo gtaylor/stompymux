@@ -1,11 +1,8 @@
 ---
 title: btech.armor_status
-linkTitle: btech.armor_status
 type: docs
-weight: 201
+toc_hide: true
 ---
-
-# `btech.armor_status`
 
 Returns serialized armor values for one section of a live unit.
 

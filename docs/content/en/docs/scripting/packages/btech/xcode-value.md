@@ -1,11 +1,8 @@
 ---
 title: btech.xcode_value
-linkTitle: btech.xcode_value
 type: docs
-weight: 225
+toc_hide: true
 ---
-
-# `btech.xcode_value`
 
 Reads a script-visible native field from a live special object.
 

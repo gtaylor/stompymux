@@ -1,11 +1,8 @@
 ---
 title: btech.weapon_stat
-linkTitle: btech.weapon_stat
 type: docs
-weight: 276
+toc_hide: true
 ---
-
-# `btech.weapon_stat`
 
 Returns one numeric weapon-catalog statistic as text.
 

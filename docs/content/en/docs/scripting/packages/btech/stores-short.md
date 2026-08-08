@@ -1,11 +1,8 @@
 ---
 title: btech.stores_short
-linkTitle: btech.stores_short
 type: docs
-weight: 262
+toc_hide: true
 ---
-
-# `btech.stores_short`
 
 Returns a part quantity or lists stored parts using short names.
 

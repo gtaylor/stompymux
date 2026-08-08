@@ -1,11 +1,8 @@
 ---
 title: State:delete
-linkTitle: State:delete
 type: docs
-weight: 226
+toc_hide: true
 ---
-
-# `State:delete`
 
 Deletes a persistent state value.
 

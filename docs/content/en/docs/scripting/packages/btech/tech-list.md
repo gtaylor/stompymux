@@ -1,11 +1,8 @@
 ---
 title: btech.tech_list
-linkTitle: btech.tech_list
 type: docs
-weight: 263
+toc_hide: true
 ---
-
-# `btech.tech_list`
 
 Lists the parts needed to repair a live unit.
 

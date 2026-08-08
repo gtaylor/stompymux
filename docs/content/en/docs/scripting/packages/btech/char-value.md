@@ -1,11 +1,8 @@
 ---
 title: btech.char_value
-linkTitle: btech.char_value
 type: docs
-weight: 220
+toc_hide: true
 ---
-
-# `btech.char_value`
 
 Gets a character attribute, skill level, target, experience, or experience threshold.
 

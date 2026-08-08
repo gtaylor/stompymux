@@ -1,11 +1,8 @@
 ---
 title: btech.mech_line_of_sight
-linkTitle: btech.mech_line_of_sight
 type: docs
-weight: 235
+toc_hide: true
 ---
-
-# `btech.mech_line_of_sight`
 
 Tests line of sight between two live units.
 

@@ -1,11 +1,8 @@
 ---
 title: Object:exits
-linkTitle: Object:exits
 type: docs
-weight: 215
+toc_hide: true
 ---
-
-# `Object:exits`
 
 Returns the exits directly attached to this object.
 

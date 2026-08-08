@@ -1,11 +1,8 @@
 ---
 title: btech.armor_status_ref
-linkTitle: btech.armor_status_ref
 type: docs
-weight: 202
+toc_hide: true
 ---
-
-# `btech.armor_status_ref`
 
 Returns serialized armor values for one section of a unit template.
 

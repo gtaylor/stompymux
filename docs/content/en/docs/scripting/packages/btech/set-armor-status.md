@@ -1,11 +1,8 @@
 ---
 title: btech.set_armor_status
-linkTitle: btech.set_armor_status
 type: docs
-weight: 251
+toc_hide: true
 ---
-
-# `btech.set_armor_status`
 
 Sets one armor-status field on a live unit section.
 

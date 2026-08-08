@@ -1,11 +1,8 @@
 ---
 title: mux.telnet_environment_has
-linkTitle: mux.telnet_environment_has
 type: docs
-weight: 210
+toc_hide: true
 ---
-
-# `mux.telnet_environment_has`
 
 Tests whether an RFC 1572 NEW-ENVIRON variable is defined on a live connection.
 

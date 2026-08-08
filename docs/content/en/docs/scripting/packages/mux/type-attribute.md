@@ -1,11 +1,8 @@
 ---
 title: Attribute
-linkTitle: Attribute
 type: docs
-weight: 110
+toc_hide: true
 ---
-
-# `Attribute`
 
 An `Attribute` handle exposes the same safe native-attribute set as the
 Wizard-only `@attribute` command. It is distinct from dynamic [`State`](../type-state/).

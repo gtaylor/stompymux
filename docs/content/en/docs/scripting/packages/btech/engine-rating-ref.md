@@ -1,11 +1,8 @@
 ---
 title: btech.engine_rating_ref
-linkTitle: btech.engine_rating_ref
 type: docs
-weight: 213
+toc_hide: true
 ---
-
-# `btech.engine_rating_ref`
 
 Returns the engine rating of a unit template.
 

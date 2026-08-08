@@ -1,11 +1,8 @@
 ---
 title: btech.part_weight
-linkTitle: btech.part_weight
 type: docs
-weight: 248
+toc_hide: true
 ---
-
-# `btech.part_weight`
 
 Returns a part's weight in tons.
 

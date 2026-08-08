@@ -1,6 +1,6 @@
 ---
 title: Validating and Reloading
-linkTitle: Validating and Reloading
+description: How to validate and reload your game's Lua sources
 type: docs
 weight: 30
 ---

@@ -1,6 +1,7 @@
 ---
 title: Overview
 linkTitle: Overview
+description: An overview of the Lua scripting system
 type: docs
 weight: 1
 ---

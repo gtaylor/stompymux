@@ -1,11 +1,8 @@
 ---
 title: btech.zone_mechs
-linkTitle: btech.zone_mechs
 type: docs
-weight: 277
+toc_hide: true
 ---
-
-# `btech.zone_mechs`
 
 Lists live unit objects assigned to a zone.
 

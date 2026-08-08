@@ -1,11 +1,8 @@
 ---
 title: Object:state
-linkTitle: Object:state
 type: docs
-weight: 219
+toc_hide: true
 ---
-
-# `Object:state`
 
 Creates a persistent-state handle for one namespace on this object.
 

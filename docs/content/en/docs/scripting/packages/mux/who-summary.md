@@ -1,11 +1,8 @@
 ---
 title: mux.who_summary
-linkTitle: mux.who_summary
 type: docs
-weight: 209
+toc_hide: true
 ---
-
-# `mux.who_summary`
 
 Returns the non-privileged WHO summary.
 

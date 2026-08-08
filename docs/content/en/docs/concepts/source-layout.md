@@ -1,6 +1,7 @@
 ---
 title: Source layout
 linkTitle: Source layout
+description: How the codebase is organized
 type: docs
 weight: 10
 ---

@@ -1,11 +1,8 @@
 ---
 title: btech.repair_job_count
-linkTitle: btech.repair_job_count
 type: docs
-weight: 242
+toc_hide: true
 ---
-
-# `btech.repair_job_count`
 
 Returns the number of pending repair jobs on a live unit.
 

@@ -1,11 +1,8 @@
 ---
 title: Attribute:get
-linkTitle: Attribute:get
 type: docs
-weight: 220
+toc_hide: true
 ---
-
-# `Attribute:get`
 
 Gets a supported native attribute.
 

@@ -1,6 +1,7 @@
 ---
 title: Global logic
 linkTitle: Global logic
+description: How to write global logic that is not attached to an in-game object
 type: docs
 weight: 20
 ---

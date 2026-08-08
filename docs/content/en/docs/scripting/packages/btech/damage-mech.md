@@ -1,11 +1,8 @@
 ---
 title: btech.damage_mech
-linkTitle: btech.damage_mech
 type: docs
-weight: 209
+toc_hide: true
 ---
-
-# `btech.damage_mech`
 
 Applies clustered damage to a live unit.
 

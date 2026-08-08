@@ -1,11 +1,8 @@
 ---
 title: btech.remove_stores
-linkTitle: btech.remove_stores
 type: docs
-weight: 250
+toc_hide: true
 ---
-
-# `btech.remove_stores`
 
 Removes a quantity of a part from an object's stores.
 

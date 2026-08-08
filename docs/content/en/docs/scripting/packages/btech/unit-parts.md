@@ -1,11 +1,8 @@
 ---
 title: btech.unit_parts
-linkTitle: btech.unit_parts
 type: docs
-weight: 271
+toc_hide: true
 ---
-
-# `btech.unit_parts`
 
 Lists the parts installed on a live unit.
 

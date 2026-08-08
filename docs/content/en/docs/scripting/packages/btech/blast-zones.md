@@ -1,11 +1,8 @@
 ---
 title: btech.blast_zones
-linkTitle: btech.blast_zones
 type: docs
-weight: 232
+toc_hide: true
 ---
-
-# `btech.blast_zones`
 
 Lists blast-zone coordinates and radii on a map.
 

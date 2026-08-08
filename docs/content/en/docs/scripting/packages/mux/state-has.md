@@ -1,11 +1,8 @@
 ---
 title: State:has
-linkTitle: State:has
 type: docs
-weight: 224
+toc_hide: true
 ---
-
-# `State:has`
 
 Tests whether a persistent state key exists.
 

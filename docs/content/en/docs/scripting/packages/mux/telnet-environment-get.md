@@ -1,11 +1,8 @@
 ---
 title: mux.telnet_environment_get
-linkTitle: mux.telnet_environment_get
 type: docs
-weight: 211
+toc_hide: true
 ---
-
-# `mux.telnet_environment_get`
 
 Gets an RFC 1572 NEW-ENVIRON variable from a live connection.
 

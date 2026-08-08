@@ -1,5 +1,6 @@
 ---
 title: Telnet negotiation
+description: Details on supported telnet sub-negotiations
 type: docs
 weight: 37
 ---

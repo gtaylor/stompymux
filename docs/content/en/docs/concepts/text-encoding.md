@@ -1,5 +1,6 @@
 ---
 title: Text encoding
+description: An overview of how telnet text encoding is handled
 type: docs
 weight: 35
 ---

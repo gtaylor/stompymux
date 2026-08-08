@@ -1,11 +1,8 @@
 ---
 title: btech.section_status
-linkTitle: btech.section_status
 type: docs
-weight: 206
+toc_hide: true
 ---
-
-# `btech.section_status`
 
 Returns serialized status for one section of a live unit.
 

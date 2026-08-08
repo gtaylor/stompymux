@@ -1,11 +1,8 @@
 ---
 title: mux.connected_players
-linkTitle: mux.connected_players
 type: docs
-weight: 208
+toc_hide: true
 ---
-
-# `mux.connected_players`
 
 Lists player connections visible to the normal `who` command.
 

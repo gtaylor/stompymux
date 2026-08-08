@@ -1,11 +1,8 @@
 ---
 title: btech.set_xy
-linkTitle: btech.set_xy
 type: docs
-weight: 257
+toc_hide: true
 ---
-
-# `btech.set_xy`
 
 Places a live unit on a map at specified coordinates.
 

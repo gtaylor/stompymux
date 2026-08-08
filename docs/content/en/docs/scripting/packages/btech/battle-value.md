@@ -1,11 +1,8 @@
 ---
 title: btech.battle_value
-linkTitle: btech.battle_value
 type: docs
-weight: 215
+toc_hide: true
 ---
-
-# `btech.battle_value`
 
 Calculates the battle value of a live unit.
 

@@ -1,11 +1,8 @@
 ---
 title: btech.crit_slot
-linkTitle: btech.crit_slot
 type: docs
-weight: 204
+toc_hide: true
 ---
-
-# `btech.crit_slot`
 
 Describes one critical slot on a live unit.
 

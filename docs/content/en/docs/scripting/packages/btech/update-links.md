@@ -1,11 +1,8 @@
 ---
 title: btech.update_links
-linkTitle: btech.update_links
 type: docs
-weight: 273
+toc_hide: true
 ---
-
-# `btech.update_links`
 
 Recursively updates links associated with a map.
 

@@ -1,11 +1,8 @@
 ---
 title: btech.set_xcode_value
-linkTitle: btech.set_xcode_value
 type: docs
-weight: 256
+toc_hide: true
 ---
-
-# `btech.set_xcode_value`
 
 Writes a script-writable native field on a live special object.
 

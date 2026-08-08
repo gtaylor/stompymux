@@ -1,11 +1,8 @@
 ---
 title: btech.engine_rating
-linkTitle: btech.engine_rating
 type: docs
-weight: 212
+toc_hide: true
 ---
-
-# `btech.engine_rating`
 
 Returns the engine rating of a live unit.
 

@@ -1,11 +1,8 @@
 ---
 title: btech.set_max_speed
-linkTitle: btech.set_max_speed
 type: docs
-weight: 253
+toc_hide: true
 ---
-
-# `btech.set_max_speed`
 
 Sets a live unit's maximum speed and corrects its current speed.
 

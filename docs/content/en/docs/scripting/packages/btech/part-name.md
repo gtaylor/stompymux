@@ -1,11 +1,8 @@
 ---
 title: btech.part_name
-linkTitle: btech.part_name
 type: docs
-weight: 245
+toc_hide: true
 ---
-
-# `btech.part_name`
 
 Returns a name for a packed part ID.
 

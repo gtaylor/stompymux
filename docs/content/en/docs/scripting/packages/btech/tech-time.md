@@ -1,11 +1,8 @@
 ---
 title: btech.tech_time
-linkTitle: btech.tech_time
 type: docs
-weight: 266
+toc_hide: true
 ---
-
-# `btech.tech_time`
 
 Runs the legacy technician-time query.
 

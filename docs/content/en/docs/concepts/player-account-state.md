@@ -1,9 +1,7 @@
-+++
-title = "Player account state"
-description = "How authentication, login history, and page memory are stored"
-+++
-
-# Player account state
+---
+title: Player account state
+description: How authentication, login history, and page memory are stored
+---
 
 Player authentication and activity metadata are typed server state rather than
 object attributes. The SQLite `player_state` table stores password hashes,

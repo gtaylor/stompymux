@@ -1,11 +1,8 @@
 ---
 title: btech.load_mech
-linkTitle: btech.load_mech
 type: docs
-weight: 234
+toc_hide: true
 ---
-
-# `btech.load_mech`
 
 Loads a unit template into a live unit object.
 

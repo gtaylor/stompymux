@@ -1,11 +1,8 @@
 ---
 title: mux.flow_start
-linkTitle: mux.flow_start
 type: docs
-weight: 212
+toc_hide: true
 ---
-
-# `mux.flow_start`
 
 Attaches an [interactive flow](../../../flows/) to a descriptor and shows its
 first prompt.

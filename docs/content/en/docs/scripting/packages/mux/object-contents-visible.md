@@ -1,11 +1,8 @@
 ---
 title: Object:contents_visible
-linkTitle: Object:contents_visible
 type: docs
-weight: 214
+toc_hide: true
 ---
-
-# `Object:contents_visible`
 
 Tests whether a directly contained object is visible to a viewer.
 

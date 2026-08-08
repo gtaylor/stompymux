@@ -1,6 +1,7 @@
 ---
 title: Object Powers
 linkTitle: Powers
+description: A reference of in-game object powers
 type: docs
 weight: 13
 ---

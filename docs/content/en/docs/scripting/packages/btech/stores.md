@@ -1,11 +1,8 @@
 ---
 title: btech.stores
-linkTitle: btech.stores
 type: docs
-weight: 261
+toc_hide: true
 ---
-
-# `btech.stores`
 
 Returns a part quantity or lists an object's stored parts.
 

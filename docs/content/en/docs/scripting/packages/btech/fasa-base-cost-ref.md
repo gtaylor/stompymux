@@ -1,11 +1,8 @@
 ---
 title: btech.fasa_base_cost_ref
-linkTitle: btech.fasa_base_cost_ref
 type: docs
-weight: 214
+toc_hide: true
 ---
-
-# `btech.fasa_base_cost_ref`
 
 Calculates the FASA base cost of a unit template.
 

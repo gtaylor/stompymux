@@ -1,11 +1,8 @@
 ---
 title: btech.add_stores
-linkTitle: btech.add_stores
 type: docs
-weight: 200
+toc_hide: true
 ---
-
-# `btech.add_stores`
 
 Adds a quantity of a part to an object's stores.
 

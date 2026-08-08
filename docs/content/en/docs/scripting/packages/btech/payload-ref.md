@@ -1,11 +1,8 @@
 ---
 title: btech.payload_ref
-linkTitle: btech.payload_ref
 type: docs
-weight: 249
+toc_hide: true
 ---
-
-# `btech.payload_ref`
 
 Returns the weapon and ammunition payload of a unit template.
 

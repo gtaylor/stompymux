@@ -1,11 +1,8 @@
 ---
 title: Object:attribute
-linkTitle: Object:attribute
 type: docs
-weight: 218
+toc_hide: true
 ---
-
-# `Object:attribute`
 
 Creates an attribute handle for this object.
 

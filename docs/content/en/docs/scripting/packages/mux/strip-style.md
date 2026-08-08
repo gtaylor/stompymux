@@ -1,11 +1,8 @@
 ---
 title: mux.strip_style
-linkTitle: mux.strip_style
 type: docs
-weight: 204
+toc_hide: true
 ---
-
-# `mux.strip_style`
 
 Removes styled-text markup and ANSI styling from a string.
 

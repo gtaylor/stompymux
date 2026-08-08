@@ -1,11 +1,8 @@
 ---
 title: btech.part_categories
-linkTitle: btech.part_categories
 type: docs
-weight: 246
+toc_hide: true
 ---
-
-# `btech.part_categories`
 
 Lists the canonical categories accepted by `btech.parts`.
 

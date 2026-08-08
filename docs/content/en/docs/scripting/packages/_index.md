@@ -1,11 +1,10 @@
 ---
 title: Package Reference
-linkTitle: Package Reference
+description: A reference for the Lua scripting APIs
 type: docs
 weight: 1000
+no_list: true
 ---
-
-Reference material for the Lua scripting environment.
 
 | Package | Description |
 | --- | --- |

@@ -1,11 +1,8 @@
 ---
 title: Attribute:entries
-linkTitle: Attribute:entries
 type: docs
-weight: 222
+toc_hide: true
 ---
-
-# `Attribute:entries`
 
 Returns every supported native attribute and its current value.
 

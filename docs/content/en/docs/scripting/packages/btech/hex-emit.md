@@ -1,11 +1,8 @@
 ---
 title: btech.hex_emit
-linkTitle: btech.hex_emit
 type: docs
-weight: 227
+toc_hide: true
 ---
-
-# `btech.hex_emit`
 
 Broadcasts a message from one map hex.
 

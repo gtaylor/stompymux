@@ -3,9 +3,8 @@ title: btech package
 linkTitle: btech
 type: docs
 weight: 20
+no_list: true
 ---
-
-# `btech`
 
 `require("btech")` returns the built-in BattleTech API. It is available to
 running Lua callbacks, but not during `@lua/check`. The package adapts the
@@ -20,7 +19,9 @@ return `true`. List operations split the legacy result on whitespace and
 `|`, convert numeric tokens (including `#123`) to Lua numbers, and return a
 flat array.
 
-## Unit data
+## Functions
+
+### Unit data
 
 | Function | Description |
 | --- | --- |
@@ -47,7 +48,7 @@ flat array.
 | [`btech.weapon_status_ref`](weapon-status-ref/) | Returns serialized weapon status for a unit template or one section. |
 | [`btech.weapon_stat`](weapon-stat/) | Returns one numeric weapon-catalog statistic as text. |
 
-## Unit mutation and loading
+### Unit mutation and loading
 
 | Function | Description |
 | --- | --- |
@@ -62,7 +63,7 @@ flat array.
 | [`btech.set_xy`](set-xy/) | Places a live unit on a map at specified coordinates. |
 | [`btech.update_links`](update-links/) | Recursively updates links associated with a map. |
 
-## Maps and geometry
+### Maps and geometry
 
 | Function | Description |
 | --- | --- |
@@ -77,7 +78,7 @@ flat array.
 | [`btech.map_terrain`](map-terrain/) | Returns the terrain code of a map hex. |
 | [`btech.map_units`](map-units/) | Lists all units on a map or those within a 2D or 3D range. |
 
-## Parts, stores, and economy
+### Parts, stores, and economy
 
 | Function | Description |
 | --- | --- |
@@ -103,7 +104,7 @@ flat array.
 | [`btech.unit_parts`](unit-parts/) | Lists the parts installed on a live unit. |
 | [`btech.unit_parts_ref`](unit-parts-ref/) | Lists the parts installed in a unit template. |
 
-## Characters and repair
+### Characters and repair
 
 | Function | Description |
 | --- | --- |
@@ -118,7 +119,7 @@ flat array.
 | [`btech.tech_time`](tech-time/) | Runs the legacy technician-time query. |
 | [`btech.under_repair`](under-repair/) | Tests whether a live unit has an active repair event. |
 
-## Utilities
+### Utilities
 
 | Function | Description |
 | --- | --- |

@@ -1,11 +1,8 @@
 ---
 title: btech.tic_weapons
-linkTitle: btech.tic_weapons
 type: docs
-weight: 268
+toc_hide: true
 ---
-
-# `btech.tic_weapons`
 
 Lists the weapons assigned to a unit's target-interlock circuit.
 

@@ -1,11 +1,8 @@
 ---
 title: btech.part_cost
-linkTitle: btech.part_cost
 type: docs
-weight: 221
+toc_hide: true
 ---
-
-# `btech.part_cost`
 
 Returns the configured cost of a part.
 

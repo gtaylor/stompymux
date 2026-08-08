@@ -1,11 +1,8 @@
 ---
 title: btech.map_terrain
-linkTitle: btech.map_terrain
 type: docs
-weight: 239
+toc_hide: true
 ---
-
-# `btech.map_terrain`
 
 Returns the terrain code of a map hex.
 
