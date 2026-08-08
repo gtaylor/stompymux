@@ -9,6 +9,7 @@
 
 #include "bsuit_api.h"
 #include "btech/context.h"
+#include "btech_text_builder.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "map_conditions_api.h"
@@ -404,9 +405,9 @@ static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
       minheat = mech_heat_dissipation(mech), start = 0;
   char state = 1;
 
-  memset(heatstr, 0, sizeof(char) * length);
-
-  strcat(heatstr, "[fg=black bold]");
+  BtechTextBuilder text;
+  btech_text_builder_initialize(&text, heatstr, (size_t)length);
+  btech_text_builder_append(&text, "[fg=black bold]");
 
   if (minheat > HEAT_LEVEL_NONE)
     start = minheat - HEAT_LEVEL_NONE;
@@ -418,70 +419,71 @@ static char *MakeHeatScaleInfo(Mech *mech, char *fillchar, char *heatstr,
     heat -= start;
 
   if (start)
-    strcat(heatstr, "<[fg=black bold]");
+    btech_text_builder_append(&text, "<[fg=black bold]");
   else
-    strcat(heatstr, " [fg=black bold]");
+    btech_text_builder_append(&text, " [fg=black bold]");
 
   for (counter = start; counter < minheat; counter++) {
-    strncat(heatstr, &fillchar[(short)state], 1);
+    btech_text_builder_append_character(&text, fillchar[(short)state]);
     if (heat && !--heat)
       state = 0;
   }
   if (state)
     state++;
 
-  strcat(heatstr, "[fg=green bold]|[reset][fg=green]");
+  btech_text_builder_append(&text, "[fg=green bold]|[reset][fg=green]");
   for (; counter < minheat + HEAT_LEVEL_BGREEN; counter++) {
-    strncat(heatstr, &fillchar[(short)state], 1);
+    btech_text_builder_append_character(&text, fillchar[(short)state]);
     if (heat && !--heat)
       state = 0;
   }
   if (state)
     state++;
 
-  strcat(heatstr, "[bold]");
+  btech_text_builder_append(&text, "[bold]");
   for (; counter < minheat + HEAT_LEVEL_LYELLOW; counter++) {
-    strncat(heatstr, &fillchar[(short)state], 1);
+    btech_text_builder_append_character(&text, fillchar[(short)state]);
     if (heat && !--heat)
       state = 0;
   }
   if (state)
     state++;
 
-  strcat(heatstr, "[reset][fg=yellow bold]|[reset][fg=yellow]");
+  btech_text_builder_append(&text,
+                            "[reset][fg=yellow bold]|[reset][fg=yellow]");
   for (; counter < minheat + HEAT_LEVEL_BYELLOW; counter++) {
-    strncat(heatstr, &fillchar[(short)state], 1);
+    btech_text_builder_append_character(&text, fillchar[(short)state]);
     if (heat && !--heat)
       state = 0;
   }
   if (state)
     state++;
 
-  strcat(heatstr, "[bold]");
+  btech_text_builder_append(&text, "[bold]");
   for (; counter < minheat + HEAT_LEVEL_LRED; counter++) {
-    strncat(heatstr, &fillchar[(short)state], 1);
+    btech_text_builder_append_character(&text, fillchar[(short)state]);
     if (heat && !--heat)
       state = 0;
   }
   if (state)
     state++;
 
-  strcat(heatstr, "[reset][fg=red bold]|[reset][fg=red]");
+  btech_text_builder_append(&text, "[reset][fg=red bold]|[reset][fg=red]");
   for (; counter < minheat + HEAT_LEVEL_BRED; counter++) {
-    strncat(heatstr, &fillchar[(short)state], 1);
+    btech_text_builder_append_character(&text, fillchar[(short)state]);
     if (heat && !--heat)
       state = 0;
   }
   if (state)
     state++;
 
-  strcat(heatstr, "[bold]");
+  btech_text_builder_append(&text, "[bold]");
   for (; counter < minheat + HEAT_LEVEL_TOP; counter++) {
-    strncat(heatstr, &fillchar[(short)state], 1);
+    btech_text_builder_append_character(&text, fillchar[(short)state]);
     if (heat && !--heat)
       state = 0;
   }
-  strcat(heatstr, "[fg=white bold]|[reset]");
+  btech_text_builder_append(&text, "[fg=white bold]|[reset]");
   return heatstr;
 }
 

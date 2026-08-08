@@ -127,7 +127,8 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
                         mech, weapon_from_equipment_index(
                                   mech_critical_part_type(mech, loc, part))));
       repair_event_schedule_with_techtime(
-          &repair_command, time, mod, EVENT_REPAIR_SCRG, very_fake_func,
+          &repair_command, time, mod, EVENT_REPAIR_SCRG,
+          mech_event_failure_marker,
           (RepairEventPayload){.location = loc,
                                .position = part,
                                .extra = mod,
@@ -242,7 +243,8 @@ void tech_removepart(DbRef player, void *data, char *buffer) {
       mecha_notify(evaluation, player, "No good. Consider the part gone.");
       mod = 3;
       repair_event_schedule_with_techtime(
-          &repair_command, REMOVEP_TIME, mod, EVENT_REPAIR_SCRP, very_fake_func,
+          &repair_command, REMOVEP_TIME, mod, EVENT_REPAIR_SCRP,
+          mech_event_failure_marker,
           (RepairEventPayload){.location = loc,
                                .position = part,
                                .extra = mod,

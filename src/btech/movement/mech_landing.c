@@ -212,7 +212,7 @@ void mech_jump_land(Mech *mech) {
       mech_notify(mech, MECHALL,
                   "The damage you've taken makes the landing a bit harder...");
 
-      if (!MadePilotSkillRoll(mech, calcStaggerBTHMod(mech))) {
+      if (!MadePilotSkillRoll(mech, mech_stagger_modifier(mech))) {
         mech_notify(mech, MECHALL,
                     "... something you apparently can't handle!");
         mech_los_broadcast(mech, "lands, staggers, and falls down!");

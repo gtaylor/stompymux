@@ -242,6 +242,7 @@ set(BTECH_SOURCES
   ui/mech_status_weapons_format.c
   ui/menu.c
   core/btech_event_core.c
+  core/btech_text_builder.c
   unit/mech_advanced.c
   unit/battle_value.c
   unit/battle_value_legacy.c
@@ -274,7 +275,6 @@ set(BTECH_SOURCES
   unit/template_commands.c
   unit/template_flags.c
   unit/template_format.c
-  unit/template_file.c
   unit/template_internals.c
   unit/template_inventory.c
   unit/template_load.c

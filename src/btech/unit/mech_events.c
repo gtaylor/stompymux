@@ -129,7 +129,8 @@ void mech_staggercheck_heartbeat(Mech *mech) {
       // do the actual staggering here
       mech_notify(mech, MECHALL, "You stagger from the damage!");
 
-      if (!MadePilotSkillRoll(mech, calcNewStaggerBTHMod(mech, staggerLevel))) {
+      if (!MadePilotSkillRoll(
+              mech, mech_stagger_modifier_at_level(mech, staggerLevel))) {
         mech_notify(mech, MECHALL,
                     "You loose the battle with gravity and tumble over!!");
         mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
@@ -139,7 +140,7 @@ void mech_staggercheck_heartbeat(Mech *mech) {
   }
 }
 
-int calcNewStaggerBTHMod(Mech *mech, int staggerLevel) {
+int mech_stagger_modifier_at_level(Mech *mech, int staggerLevel) {
   int bthMod = 0;
   int tonnageMod = 0;
 
@@ -450,7 +451,7 @@ void aero_move_event(MuxEvent *e) {
   }
 }
 
-void very_fake_func(MuxEvent *e) {}
+void mech_event_failure_marker(MuxEvent *event) {}
 
 /*
  * Exile Stun Code Event
@@ -572,7 +573,7 @@ void check_stagger_event(MuxEvent *event) {
   }
 
   mech_notify(mech, MECHALL, "You stagger from the damage!");
-  if (!MadePilotSkillRoll(mech, calcStaggerBTHMod(mech))) {
+  if (!MadePilotSkillRoll(mech, mech_stagger_modifier(mech))) {
     mech_notify(mech, MECHALL,
                 "You loose the battle with gravity and tumble over!!");
     mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
@@ -670,7 +671,7 @@ void mech_movemode_event(MuxEvent *e) {
 }
 #endif
 
-int calcStaggerBTHMod(Mech *mech) {
+int mech_stagger_modifier(Mech *mech) {
   int bthMod = 0;
   int tonnageMod = 0;
 

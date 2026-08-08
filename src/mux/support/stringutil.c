@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,12 +19,75 @@ char *___strtok;
 
 #endif
 
+/** Returns whether a parser stopped at only trailing whitespace. */
+static bool parse_finished(const char *end) {
+  while (isspace((unsigned char)*end))
+    end++;
+  return *end == '\0';
+}
+
+/**
+ * Parses a complete base-10 long, allowing surrounding whitespace.
+ * Returns false for missing, malformed, trailing, or overflowing input and
+ * leaves value unchanged on failure.
+ */
+bool parse_long_checked(const char *text, long *value) {
+  if (text == nullptr || value == nullptr)
+    return false;
+
+  errno = 0;
+  char *end;
+  long parsed = strtol(text, &end, 10);
+  if (text == end || errno == ERANGE || !parse_finished(end))
+    return false;
+
+  *value = parsed;
+  return true;
+}
+
+/**
+ * Parses a complete base-10 int, allowing surrounding whitespace.
+ * Returns false when checked long parsing fails or the result exceeds int.
+ */
+bool parse_int_checked(const char *text, int *value) {
+  long parsed;
+  if (value == nullptr || !parse_long_checked(text, &parsed) ||
+      parsed < INT_MIN || parsed > INT_MAX) {
+    return false;
+  }
+
+  *value = (int)parsed;
+  return true;
+}
+
+/**
+ * Parses a complete finite float, allowing surrounding whitespace.
+ * Returns false for malformed, trailing, out-of-range, or non-finite input.
+ */
+bool parse_float_checked(const char *text, float *value) {
+  if (text == nullptr || value == nullptr)
+    return false;
+
+  errno = 0;
+  char *end;
+  float parsed = strtof(text, &end);
+  if (text == end || errno == ERANGE || !isfinite(parsed) ||
+      !parse_finished(end)) {
+    return false;
+  }
+
+  *value = parsed;
+  return true;
+}
+
+/** Converts one ASCII lowercase letter to uppercase, leaving others intact. */
 char ascii_to_upper(char character) {
   if (character >= 'a' && character <= 'z')
     return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[character - 'a'];
   return character;
 }
 
+/** Converts one ASCII uppercase letter to lowercase, leaving others intact. */
 char ascii_to_lower(char character) {
   if (character >= 'A' && character <= 'Z')
     return "abcdefghijklmnopqrstuvwxyz"[character - 'A'];
@@ -31,8 +95,8 @@ char ascii_to_lower(char character) {
 }
 
 /**
- * Parses str as a base-10 long, clamping out-of-range values to
- * LONG_MIN/LONG_MAX and treating non-numeric input as 0.
+ * Parses a base-10 long prefix, clamping overflow to LONG_MIN or LONG_MAX.
+ * A null or non-numeric input produces zero; trailing text is ignored.
  */
 long clamped_atol(const char *str) {
   char *end;
@@ -49,8 +113,8 @@ long clamped_atol(const char *str) {
 }
 
 /**
- * Parses str as a base-10 int, clamping out-of-range values to
- * INT_MIN/INT_MAX and treating non-numeric input as 0.
+ * Parses a base-10 int prefix, clamping overflow to INT_MIN or INT_MAX.
+ * A null or non-numeric input produces zero; trailing text is ignored.
  */
 int clamped_atoi(const char *str) {
   long value = clamped_atol(str);
@@ -62,10 +126,7 @@ int clamped_atoi(const char *str) {
   return (int)value;
 }
 
-/*
- * capitalizes an entire string
- */
-
+/** Converts a mutable string to ASCII uppercase in place; accepts nullptr. */
 char *upcasestr(char *s) {
   char *p;
 
@@ -75,8 +136,8 @@ char *upcasestr(char *s) {
 }
 
 /**
- * Compress multiple spaces to one space, also remove leading and
- * trailing spaces.
+ * Allocates an lbuf with whitespace runs compressed to single spaces and
+ * leading and trailing whitespace removed. The caller must free the lbuf.
  */
 char *munge_space(char *string) {
   char *buffer, *p, *q;
@@ -105,7 +166,8 @@ char *munge_space(char *string) {
 }
 
 /**
- * Remove leading and trailing spaces.
+ * Allocates an lbuf with leading and trailing whitespace removed and internal
+ * whitespace runs compressed. The caller must free the lbuf.
  */
 char *trim_spaces(char *string) {
   char *buffer, *p, *q;
@@ -138,8 +200,8 @@ char *trim_spaces(char *string) {
 }
 
 /**
- * Return portion of a string up to the indicated character. Also
- * returns a modified pointer to the string ready for another call.
+ * Replaces the next targ in a mutable string with a terminator, returns the
+ * current field, and advances the caller's pointer to the following field.
  */
 char *grabto(char **str, char targ) {
   char *savec, *cp;
@@ -156,6 +218,10 @@ char *grabto(char **str, char targ) {
   return savec;
 }
 
+/**
+ * Compares two strings case-insensitively. When space compression is enabled,
+ * leading whitespace and the lengths of whitespace runs are ignored.
+ */
 int string_compare(const ServerConfiguration *configuration, const char *s1,
                    const char *s2) {
   if (!configuration->space_compress) {
@@ -204,6 +270,10 @@ int string_compare(const ServerConfiguration *configuration, const char *s1,
   }
 }
 
+/**
+ * Performs a case-insensitive prefix comparison and returns the number of
+ * matched characters, or zero if the complete nonempty prefix does not match.
+ */
 int string_prefix(const char *string, const char *prefix) {
   int count = 0;
 
@@ -219,7 +289,8 @@ int string_prefix(const char *string, const char *prefix) {
 }
 
 /**
- * Accepts only nonempty matches starting at the beginning of a word
+ * Finds a nonempty, case-insensitive substring only at the start of a word.
+ * Returns a pointer into src, or nullptr when no word matches.
  */
 const char *string_match(const char *src, const char *sub) {
   if ((*sub != '\0') && (src)) {
@@ -239,8 +310,8 @@ const char *string_match(const char *src, const char *sub) {
 }
 
 /**
- * Returns an lbuf containing string STRING with all occurances
- * of OLD replaced by NEW. OLD and NEW may be different lengths.
+ * Allocates an lbuf containing string with every occurrence of old replaced
+ * by new. The caller must free the returned lbuf.
  */
 char *replace_string(const char *old, const char *new, const char *string) {
   char *result, *r;
@@ -284,6 +355,10 @@ char *replace_string(const char *old, const char *new, const char *string) {
   return result;
 }
 
+/**
+ * Tests whether str is a case-insensitive abbreviation of target containing
+ * at least min characters, unless str exactly consumes target.
+ */
 int minmatch(const char *str, const char *target, int min) {
   while (*str && *target && (ascii_to_lower(*str) == ascii_to_lower(*target))) {
     str++;
@@ -297,6 +372,7 @@ int minmatch(const char *str, const char *target, int min) {
   return ((min <= 0) ? 1 : 0);
 }
 
+/** Duplicates s with malloc; returns nullptr on failure and must be freed. */
 char *strsave(const char *s) {
   char *p;
   p = (char *)malloc(sizeof(char) * (strlen(s) + 1));
@@ -307,7 +383,8 @@ char *strsave(const char *s) {
 }
 
 /**
- * Copy buffers, watching for overflows.
+ * Copies as much of src as fits before max, advances bufp, and returns the
+ * number of source bytes not copied. This function does not add a terminator.
  */
 int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
   char *tp;
@@ -322,7 +399,8 @@ int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
 }
 
 /**
- * Copy buffers, watching for overflows.
+ * Copies src and advances bufp when its offset is below max. Returns zero on
+ * success or one when no space remains; it does not add a terminator.
  */
 int safe_copy_chr(char src, char *buff, char **bufp, int max) {
   char *tp;
@@ -337,48 +415,4 @@ int safe_copy_chr(char src, char *buff, char **bufp, int max) {
   }
   *bufp = tp;
   return retval;
-}
-
-int matches_exit_from_list(char *str, char *pattern) {
-  char *s;
-
-  while (*pattern) {
-    for (s = str; /*
-                   * check out this one
-                   */
-         (*s && (ascii_to_lower(*s) == ascii_to_lower(*pattern)) && *pattern &&
-          (*pattern != EXIT_DELIMITER));
-         s++, pattern++)
-      ;
-
-    /*
-     * Did we match it all?
-     */
-
-    if (*s == '\0') {
-
-      /*
-       * Make sure nothing afterwards
-       */
-
-      while (*pattern && isspace((unsigned char)*pattern))
-        pattern++;
-
-      /*
-       * Did we get it?
-       */
-
-      if (!*pattern || (*pattern == EXIT_DELIMITER))
-        return 1;
-    }
-    /*
-     * We didn't get it, find next string to test
-     */
-
-    while (*pattern && *pattern++ != EXIT_DELIMITER)
-      ;
-    while (isspace((unsigned char)*pattern))
-      pattern++;
-  }
-  return 0;
 }

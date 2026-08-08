@@ -49,7 +49,7 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
   int loc, pos, extra;
   char buf[MBUF_SIZE] = {0};
   char buf2[LBUF_SIZE] = {0};
-  int fail = (e->function == very_fake_func);
+  int fail = (e->function == mech_event_failure_marker);
   BtechContext *context = mech_context(mech);
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);

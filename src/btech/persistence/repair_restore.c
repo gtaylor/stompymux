@@ -73,8 +73,8 @@ int btech_special_load_repair_events(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    function =
-        fake ? very_fake_func : btech_special_repair_function(event_type);
+    function = fake ? mech_event_failure_marker
+                    : btech_special_repair_function(event_type);
     if (!function) {
       result = -1;
       break;

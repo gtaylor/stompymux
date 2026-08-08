@@ -190,7 +190,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   if (condition.staggering) {
     mech_notify(mech, MECHALL, "The damage inhibits your coordination...");
 
-    if (!MadePilotSkillRoll(mech, calcStaggerBTHMod(mech))) {
+    if (!MadePilotSkillRoll(mech, mech_stagger_modifier(mech))) {
       mech_notify(mech, MECHALL, "... something you apparently can't handle!");
       mech_los_broadcast(
           mech,

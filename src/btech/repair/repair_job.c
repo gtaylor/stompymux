@@ -225,9 +225,9 @@ static RepairJobResult repair_job_schedule(RepairCommandContext *command,
                                            intptr_t event_data, bool failure) {
   RepairEventPayload payload = repair_event_payload_unpack(event_data);
   payload.player = command->player;
-  repair_event_schedule_with_techtime(command, time, multiplier, event_type,
-                                      failure ? very_fake_func : callback,
-                                      payload);
+  repair_event_schedule_with_techtime(
+      command, time, multiplier, event_type,
+      failure ? mech_event_failure_marker : callback, payload);
   return failure ? REPAIR_JOB_SCHEDULED_FAILURE : REPAIR_JOB_SCHEDULED_SUCCESS;
 }
 
@@ -266,7 +266,7 @@ RepairJobResult repair_part_amount_job_execute(RepairCommandContext *command,
     if (job->failure(command->player, command->mech, location, part, amount) <
         0) {
       repair_event_schedule_with_techtime(
-          command, job->time, 3, job->event_type, very_fake_func,
+          command, job->time, 3, job->event_type, mech_event_failure_marker,
           (RepairEventPayload){.location = location,
                                .position = part,
                                .extra = *amount,
@@ -319,7 +319,7 @@ repair_section_amount_job_execute(RepairCommandContext *command, int location,
                                     .player = command->player};
       repair_event_schedule_with_techtime(command, job->failure_time, 3,
                                           job->failure_event_type,
-                                          very_fake_func, payload);
+                                          mech_event_failure_marker, payload);
       return REPAIR_JOB_SCHEDULED_FAILURE;
     }
   } else if (job->success(command->player, command->mech, location, amount) <

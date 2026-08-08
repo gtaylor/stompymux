@@ -66,10 +66,9 @@ exposed.
 
 The `mux` table is the server interface exposed to Lua modules. Use
 `mux.object(dbref)` for object properties, containment, locks, and typed
-persistent state. Styled text, notifications, queued commands, connection
-summaries, and interactive flows remain top-level `mux` operations. Queued
-commands execute as `#1` after the current handler completes. See the
-[`mux` package reference](packages/mux/) for the full API.
+persistent state. Styled text, notifications, connection summaries, and
+interactive flows remain top-level `mux` operations. See the [`mux` package
+reference](packages/mux/) for the full API.
 
 Lua has no filesystem, process, debug, FFI, coroutine, or dynamic-loading
 APIs. The configured memory cap applies to the complete Lua state. Persistent
@@ -78,8 +77,7 @@ object state has separate per-value and per-object limits.
 Native control is role-only: God controls everything; Wizards control themselves
 and every non-Wizard object and player but cannot control God or another Wizard;
 mortals control nothing, including themselves. Zones do not affect control. Lua
-is trusted and uses the `mux` API, including commands queued as
-`#1`, to manipulate any object.
+is trusted and uses the `mux` API to manipulate objects.
 
 ## Validating and reloading
 

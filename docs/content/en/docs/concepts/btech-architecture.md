@@ -34,6 +34,15 @@ Each domain owns both its state and the operations that change that state:
 The context-owned gameplay generator is xoshiro256**, seeded once from Linux
 OS entropy during BTech startup. Its runtime state is not persisted.
 
+Internal command boundaries use the shared MUX `parse_*_checked` helpers for
+numeric input. They reject empty values, overflow, non-finite floating-point
+values, and trailing non-whitespace input. Presentation code that incrementally
+builds text uses `BtechTextBuilder`, which always terminates a non-empty
+destination and records truncation instead of writing past its capacity.
+
+Map files are read and written as plain text. Compressed map files are not
+supported, and BTech file handling never invokes a shell command.
+
 Concrete `Mech`, `BattleMap`, `Autopilot`, and runtime-context layouts are
 private. Cross-domain interfaces use forward declarations, database object
 references, or domain operations rather than copying another domain's state.
@@ -111,7 +120,8 @@ types use PascalCase, and functions use subject-prefixed snake_case.
   `special`, exposing only typed lookup and dispatch operations to callers.
 
 The architecture check rejects files over 800 lines, dotted or generated-style
-filenames, private unit or registry headers outside their owner, complete
-`Mech` values outside `unit`, mutable or centralized command catalogues,
-untyped command callbacks, disabled legacy code, and known legacy exported
-names.
+filenames and prototype banners, private unit or registry headers outside their
+owner, complete `Mech` values outside `unit`, mutable or centralized command
+catalogues, untyped command callbacks, disabled legacy code, shell-based BTech
+file handling, weak numeric parsing at converted command boundaries, and known
+legacy exported names.

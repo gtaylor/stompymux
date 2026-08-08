@@ -20,7 +20,6 @@
 #include "mech_position_api.h"
 #include "mech_sensor_api.h"
 #include "mech_utils_api.h"
-#include "mechfile_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/objects/attrs.h"
@@ -32,6 +31,7 @@
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "special_object.h"
 
@@ -274,14 +274,14 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
   char *openfile;
   FILE *fp;
   char row[MAPX * 2 + 3];
-  int i = 0, height, width, filemode;
+  int i = 0, height, width;
 
   if (strlen(mapname) >= MAP_NAME_SIZE)
     mapname[MAP_NAME_SIZE] = 0;
   openfile = map_filename(map, mapname);
   if (!openfile)
     return -1;
-  fp = my_open_file(openfile, "r", &filemode);
+  fp = fopen(openfile, "r");
   free(openfile);
 
   if (!fp) {
@@ -293,7 +293,7 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
     btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
                        tprintf("Map #%ld: Invalid height and or/width on %s",
                                map->mynum, mapname));
-    my_close_file(fp, &filemode);
+    fclose(fp);
     return -2; // Bad Height/Width
   }
 
@@ -310,13 +310,13 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
         tprintf("Map #%ld: Mapfile possibly corrupt and/or "
                 "height/width flipped. Height != what was read in %s",
                 map->mynum, mapname));
-    my_close_file(fp, &filemode);
+    fclose(fp);
     return -3;
   }
 
   // Everything is good if we get past the above
 
-  my_close_file(fp, &filemode);
+  fclose(fp);
   return 1;
 }
 
@@ -326,14 +326,14 @@ int map_load(BattleMap *map, char *mapname) {
   int i1, i2, i3;
   FILE *fp;
   char row[MAPX * 2 + 3];
-  int i, j = 0, height, width, filemode;
+  int i, j = 0, height, width;
 
   if (strlen(mapname) >= MAP_NAME_SIZE)
     mapname[MAP_NAME_SIZE] = 0;
   openfile = map_filename(map, mapname);
   if (!openfile)
     return -1;
-  fp = my_open_file(openfile, "r", &filemode);
+  fp = fopen(openfile, "r");
   free(openfile);
   if (!fp) {
     return -1; // Bad map file
@@ -392,7 +392,7 @@ int map_load(BattleMap *map, char *mapname) {
                        tprintf("Error: EOF reached prematurely. "
                                "(x%d != %d || y%d != %d)",
                                j, width, i, height));
-    my_close_file(fp, &filemode);
+    fclose(fp);
     return -2;
   }
   map->grav = 100;
@@ -409,7 +409,7 @@ int map_load(BattleMap *map, char *mapname) {
   if (!battle_map_disables_bridgification(map))
     make_bridges(map);
   strncpy(map->mapname, mapname, MAP_NAME_SIZE);
-  my_close_file(fp, &filemode);
+  fclose(fp);
   return 0;
 }
 
@@ -466,7 +466,6 @@ void map_savemap(DbRef player, void *data, char *buffer) {
   int i, j;
   char row[MAPX * 2 + 1];
   char terrain;
-  int filemode;
 
   map = (BattleMap *)data;
 
@@ -485,7 +484,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
                  "Unable to open the map file!");
     return;
   }
-  fp = my_open_file(openfile, "w", &filemode);
+  fp = fopen(openfile, "w");
   free(openfile);
   if (!fp) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
@@ -540,7 +539,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
     fprintf(fp, "%d: %d %d\n", i, map->grav, map->temp);
   mecha_notify(btech_context_evaluation(map->xcode.context), player,
                "Saving complete!");
-  my_close_file(fp, &filemode);
+  fclose(fp);
 }
 
 void map_setmapsize(DbRef player, void *data, char *buffer) {
@@ -560,9 +559,8 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments (X/Y expected)");
     return;
   }
-  x = atoi(args[0]);
-  y = atoi(args[1]);
-  if (!((x >= 0) && (x <= MAPX) && (y >= 0) && (y <= MAPY))) {
+  if (!parse_int_checked(args[0], &x) || !parse_int_checked(args[1], &y) ||
+      x < 0 || x > MAPX || y < 0 || y > MAPY) {
     mecha_notify(btech_context_evaluation(oldmap->xcode.context), player,
                  "X,Y out of range!");
     return;

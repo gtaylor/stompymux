@@ -175,13 +175,13 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
                      int *ammoLoc, int *ammoCrit, int *ammoLoc1, int *ammoCrit1,
                      int *wGattlingShots);
 
-#ifdef BT_ADVANCED_ECON
+#ifdef BT_CALCULATE_BV
 void Calc_AddOffBV(const Mech *mech, float *offbv, char *desc, float value);
 void Calc_AddDefBV(const Mech *mech, float *defbv, char *desc, float value);
 void Calc_SubDefBV(const Mech *mech, float *defbv, char *desc, float value);
+#endif
 int mech_armorpoints(Mech *mech);
 int mech_intpoints(Mech *mech);
-#endif
 #ifdef BT_CALCULATE_BV
 int FindAverageGunnery(Mech *mech);
 int CalculateBV(Mech *mech, int gunstat, int pilstat);

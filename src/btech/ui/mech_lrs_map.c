@@ -19,6 +19,7 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 #include "mux/support/formatting.h"
@@ -479,8 +480,8 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   str = btech_attribute_read(mech_context(mech)->database, player, A_LRSHEIGHT,
                              (char[LBUF_SIZE]){0});
   if (*str) {
-    displayHeight = atoi(str);
-    if (displayHeight < 10 || displayHeight > 40) {
+    if (!parse_int_checked(str, &displayHeight) || displayHeight < 10 ||
+        displayHeight > 40) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Illegal LRSHeight attribute.  Must be between 10 and 40");
       displayHeight = LRS_DISPLAY_HEIGHT;

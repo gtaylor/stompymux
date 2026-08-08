@@ -19,8 +19,7 @@ administrator should use the full flag name when issuing a command because
 ```
 
 The `mux` Lua package does not currently expose direct flag getter or setter
-functions. Lua logic can invoke an appropriate native command with
-`mux.command`; queued commands run as God after the current callback finishes.
+functions.
 
 ## Flag summary
 

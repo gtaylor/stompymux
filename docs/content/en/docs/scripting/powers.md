@@ -63,5 +63,4 @@ stored `IDLE` power; the power name in this search form must currently be
 lowercase.
 
 The `mux` Lua package does not currently expose direct power getter or setter
-functions. Privileged Lua logic can queue the native `@power` command with
-`mux.command`; queued commands run as God after the current callback finishes.
+functions.
