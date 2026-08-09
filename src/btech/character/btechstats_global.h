@@ -23,15 +23,12 @@ constexpr int VALUES_ADVS = 8;   /* Advantages and lives */
 constexpr int VALUES_ALL = 15;
 constexpr int VALUES_CO = 6; /* Attr + Skill */
 
-/* hmm. */
-
 constexpr int CHAR_VALUE = 0;
 constexpr int CHAR_SKILL = 1;
 constexpr int CHAR_ADVANTAGE = 2;
 constexpr int CHAR_ATTRIBUTE = 3;
 
 /* 4 diff. skill types */
-
 constexpr int CHAR_ATHLETIC = 0x0001;
 constexpr int CHAR_MENTAL = 0x0002;
 constexpr int CHAR_PHYSICAL = 0x0004;
@@ -53,7 +50,6 @@ constexpr int SK_XP = 0x4000;           /* Always raise xp (not spammable) */
 constexpr int XP_MAX = 256 * 256 * 256; /* Then we wrap ; tough beans */
 
 /* 3 diff. adv types */
-
 constexpr int CHAR_ADV_VALUE = 0;
 constexpr int CHAR_ADV_BOOL = 1;
 constexpr int CHAR_ADV_EXCEPT = 2;
@@ -63,15 +59,6 @@ constexpr int CHAR_REF = 2;
 constexpr int CHAR_INT = 4;
 constexpr int CHAR_LRN = 8;
 constexpr int CHAR_CHA = 16;
-
-constexpr int GREEN = 0;
-constexpr int REGULAR = 1;
-constexpr int VETEREN = 2;
-constexpr int ELITE = 3;
-constexpr int HISTORICAL = 4;
-
-#include "btech_api.h"
-#include "btechstats_api.h"
 
 constexpr int EE_NUMBER = 11;
 constexpr int LIVES_NUMBER = 5;

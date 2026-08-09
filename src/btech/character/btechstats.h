@@ -1,18 +1,3 @@
-/*
- * $Id: btechstats.h,v 1.1.1.1 2005/01/11 21:18:03 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- * Last modified: Mon Jul 13 11:10:38 1998 fingon
- *
- */
-
 /* Function declarations / skill list for btechstats.c */
 
 #pragma once

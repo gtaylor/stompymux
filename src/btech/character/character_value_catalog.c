@@ -1,3 +1,8 @@
+#include <stddef.h>
+#include <stdlib.h>
+
+#include "btechstats.h"
+#include "btechstats_global.h"
 #include "btechstats_internal.h"
 #include "mux/support/checked_storage.h"
 

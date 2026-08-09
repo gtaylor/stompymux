@@ -1,4 +1,16 @@
+#include <stddef.h>
+#include <string.h>
+#include <strings.h>
+
+#include "btech/context.h"
+#include "btechstats.h"
+#include "btechstats_api.h"
+#include "btechstats_global.h"
 #include "btechstats_internal.h"
+#include "mux/objects/character_state.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 
 static CharacterFixedState fixed_state_from_stats(BtechContext *context,
                                                   PSTATS *stats) {

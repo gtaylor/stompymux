@@ -1,10 +1,35 @@
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btechstats.h"
+#include "btechstats_api.h"
+#include "btechstats_global.h"
 #include "btechstats_internal.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
+#include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
+#include "mech_identity_api.h"
+#include "mech_lifecycle.h"
 #include "mech_move_api.h"
+#include "mech_progress_api.h"
 #include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_utils_api.h"
+#include "mux/commands/command_helpers.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
+#include "weapon_settings.h"
 
 static const char *function_argument(char *const *arguments, int count,
                                      size_t index) {

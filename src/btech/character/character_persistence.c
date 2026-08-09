@@ -1,6 +1,24 @@
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+#include "btech/context.h"
+#include "btechstats.h"
+#include "btechstats_api.h"
+#include "btechstats_global.h"
 #include "btechstats_internal.h"
+#include "command_handlers_api.h"
+#include "coolmenu.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/log.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
+#include "mycool.h"
 #include "registry_api.h"
+#include "special_object.h"
 
 typedef struct CharacterXpRanking {
   DbRef player;

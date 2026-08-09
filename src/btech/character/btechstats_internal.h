@@ -1,72 +1,12 @@
 #pragma once
-#include "btech_api.h"   // IWYU pragma: keep
-#include "btech_event.h" // IWYU pragma: keep
-#include "map_terrain.h" // IWYU pragma: keep
-#include "mech_lifecycle.h"
-#include "mux/objects/powers.h"       // IWYU pragma: keep
-#include "mux/server/runtime_clock.h" // IWYU pragma: keep
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- */
 
-#include <ctype.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
+#include <stdbool.h>
+#include <time.h>
 
-#include "btconfig.h"
 #include "btech/context.h"
-#include "btech_channel.h"
-#include "btechstats_api.h"
-#include "command_handlers_api.h"
-#include "map_obj_api.h"
-#include "mech_equipment_api.h"
-#include "mech_events_api.h"
-#include "mech_notify_api.h"
-#include "mux/commands/command_handlers.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/character_state.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
-#include "mux/server/game.h"
-#include "mux/server/log.h"
-#include "mux/server/platform.h"
-#include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
-#include "mux/world/player.h"
-#include "special_object.h"
-#include "weapon_settings.h"
-
-#include "coolmenu.h"
-#include "mech_crew_api.h"
-#include "mech_identity_api.h"
-#include "mech_progress_api.h"
-#include "mycool.h"
-
 #include "btechstats.h"
-#include "mech_api_types.h"
-#include "mech_classification_api.h"
-#include "mech_combat_misc_api.h"
-#include "mech_partnames_api.h"
-#include "mech_runtime_api.h"
-#include "mech_specification_api.h"
-#include "mech_status_types.h"
-#include "mech_utils_api.h"
-#include "mux/commands/command_helpers.h"
-#include "mux/network/mux_event_alloc.h"
-#include "mux/support/hash_table.h"
-#include "mux/support/stringutil.h"
-#include "section_types.h"
+#include "mux/server/platform.h"
+
 int character_value_by_code(BtechContext *context, DbRef player, int code);
 void character_stats_clear(PSTATS *stats);
 void character_stats_retrieve(BtechContext *context, DbRef player, int modes,

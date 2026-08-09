@@ -1,6 +1,22 @@
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btechstats.h"
+#include "btechstats_api.h"
+#include "btechstats_global.h"
 #include "btechstats_internal.h"
+#include "command_handlers_api.h"
+#include "mech_classification_api.h"
 #include "mech_crew_api.h"
+#include "mech_identity_api.h"
+#include "mech_lifecycle.h"
+#include "mech_progress_api.h"
 #include "mech_runtime_api.h"
+#include "mech_utils_api.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "special_object.h"
 
 void lower_xp(BtechContext *context, DbRef player, int promillage) {
   PSTATS stats, *s = &stats;

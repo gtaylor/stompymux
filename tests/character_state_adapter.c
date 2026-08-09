@@ -1,8 +1,19 @@
 /* character_state_adapter.c -- PSTATS/typed character-state adapter tests. */
 
+#include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#include <time.h>
 
+#include "btech/context.h"
+#include "btechstats.h"
+#include "btechstats_api.h"
+#include "btechstats_global.h"
 #include "btechstats_internal.h"
+#include "mux/objects/character_state.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 
 struct CharacterValue char_values[NUM_CHARVALUES];

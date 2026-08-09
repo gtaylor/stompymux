@@ -1,7 +1,29 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <time.h>
+
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btechstats.h"
+#include "btechstats_api.h"
+#include "btechstats_global.h"
 #include "btechstats_internal.h"
 #include "checked_conversion.h"
+#include "command_handlers_api.h"
+#include "mech_utils_api.h"
+#include "mux/commands/command_helpers.h"
+#include "mux/network/mux_event_alloc.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/hash_table.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
+#include "special_object.h"
 
 static size_t character_value_index(int code) {
   if (code < 0 || code >= NUM_CHARVALUES)
