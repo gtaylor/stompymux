@@ -197,7 +197,7 @@ int mech_los_calculate_flags(Mech *mech, Mech *target, BattleMap *map, int x,
         continue;
       /* Should be possible to see into water.. perhaps. But not
          on vislight */
-      terrain = map_real_terrain_get(map, point->x, point->y);
+      terrain = (unsigned char)map_real_terrain_get(map, point->x, point->y);
       /* get the current height */
       height = battle_map_hex_elevation(map, point->x, point->y);
       const float height_as_float = (float)height;

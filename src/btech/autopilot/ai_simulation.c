@@ -37,7 +37,7 @@ static bool ai_section_is_floodable(Mech *mech, int section) {
 }
 
 static int ai_map_elevation(BattleMap *map, int x, int y) {
-  const int elevation = map_elevation_get(map, x, y);
+  const int elevation = (unsigned char)map_elevation_get(map, x, y);
   const char terrain = map_real_terrain_get(map, x, y);
   return terrain == BATTLE_TERRAIN_WATER || terrain == BATTLE_TERRAIN_ICE
              ? -elevation
@@ -184,7 +184,8 @@ int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
   location->e = ai_map_elevation(map, location->x, location->y);
   if (mech_movement_type(mech) == MOVE_HOVER)
     location->e = MAX(0, location->e);
-  location->t = map_real_terrain_get(map, location->x, location->y);
+  location->t =
+      (unsigned char)map_real_terrain_get(map, location->x, location->y);
   if (mech_class(mech) == CLASS_MECH && (abs(location->e - old_elevation) > 2))
     return 1;
   if (mech_class(mech) == CLASS_VEH_GROUND &&
@@ -204,7 +205,7 @@ void location_simulation_initialize(LocationSimulation *location, Mech *mech) {
   location->h = mech_heading_degrees(mech);
   location->dh = mech_desired_heading_degrees(mech);
   location->s = mech_current_speed(mech);
-  location->t = terrain;
+  location->t = (unsigned char)terrain;
   location->ds = mech_desired_speed(mech);
   location->x = simulation_map_coordinate(mech_position_x(mech));
   location->y = simulation_map_coordinate(mech_position_y(mech));

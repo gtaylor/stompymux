@@ -143,8 +143,8 @@ void bsuit_hide(DbRef player, void *data, const char *buffer) {
     return;
   }
 
-  terrain =
-      map_real_terrain_get(map, mech_position_x(mech), mech_position_y(mech));
+  terrain = (unsigned char)map_real_terrain_get(map, mech_position_x(mech),
+                                                mech_position_y(mech));
 
   if (terrain == BATTLE_TERRAIN_LIGHT_FOREST ||
       terrain == BATTLE_TERRAIN_HEAVY_FOREST) {

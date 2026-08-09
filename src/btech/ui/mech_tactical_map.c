@@ -90,7 +90,7 @@ static int maximum_int(int left, int right) {
 }
 
 static int map_base_elevation(BattleMap *map, int x, int y) {
-  int elevation = map_elevation_get(map, x, y);
+  int elevation = (unsigned char)map_elevation_get(map, x, y);
   char terrain = map_real_terrain_get(map, x, y);
   return terrain == WATER || terrain == ICE ? -elevation : elevation;
 }

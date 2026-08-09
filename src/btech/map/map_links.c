@@ -112,7 +112,7 @@ static void add_entrances(DbRef loc, BattleMap *map, char *data,
   if (mech_parseattributes(buf, args, 4) == 4) {
     for (i = 0; i < 4; i++)
       if ((parse_coord(map, i, link_argument(args, 4, i), &x, &y))) {
-        foo.datac = direction_entry(i)->dir;
+        foo.datac = (unsigned char)direction_entry(i)->dir;
         foo.x = clamp_int_to_short(x);
         foo.y = clamp_int_to_short(y);
         add_mapobj_to_type(map, TYPE_ENTRANCE, &foo, 1);

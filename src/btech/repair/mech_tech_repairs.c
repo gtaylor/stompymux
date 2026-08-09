@@ -50,7 +50,7 @@ static void repair_append(char *buffer, size_t capacity, const char *format,
 
 static void describe_repairs(MuxEvent *e, void *menu_context) {
   CoolMenu **menu = menu_context;
-  int type = e->type;
+  int type = (unsigned char)e->type;
   Mech *mech = (Mech *)e->data;
   long earg = ((long)e->data2) % PLAYERPOS;
   DbRef player = ((long)e->data2) / PLAYERPOS;

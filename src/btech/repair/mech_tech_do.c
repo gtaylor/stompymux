@@ -116,7 +116,7 @@ int valid_ammo_mode(Mech *mech, int loc, int part, int let) {
   if (!equipment_is_ammunition(mech_critical_part_type(mech, loc, part)) ||
       !let)
     return -1;
-  let = ascii_to_upper(clamp_int_to_char(let));
+  let = (unsigned char)ascii_to_upper(clamp_int_to_char(let));
   w = ammunition_to_weapon_index(mech_critical_part_type(mech, loc, part));
 
   if (weapon_catalogue_has_special(w, NOSPA))

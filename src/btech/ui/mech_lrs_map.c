@@ -239,7 +239,7 @@ static MapCellText lrs_terrain_text(const MapColorScheme *colors,
 static MapCellText lrs_elevation_text(const MapColorScheme *colors,
                                       BattleMap *map, int x, int y, int docolor,
                                       char *prevc) {
-  int e = map_elevation_get(map, x, y);
+  int e = (unsigned char)map_elevation_get(map, x, y);
   char c;
   char newc;
 

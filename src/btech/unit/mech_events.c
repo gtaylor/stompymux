@@ -370,8 +370,8 @@ void mech_plos_event(MuxEvent *e) {
   mech_event_schedule(mech, EVENT_PLOS, mech_plos_event, PLOS_TICK, 0);
   if (!((mech)->rd.can_see) && !(((mech)->rd.specials) & AA_TECH))
     return;
-  mapvis = map->mapvis;
-  maplight = map->maplight;
+  mapvis = (unsigned char)map->mapvis;
+  maplight = (unsigned char)map->maplight;
   ((mech)->rd.can_see) = 0;
   for (int i = 0; i < battle_map_unit_count(map); i++) {
     DbRef target_dbref = battle_map_unit_dbref(map, i);

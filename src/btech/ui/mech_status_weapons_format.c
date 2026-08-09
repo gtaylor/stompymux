@@ -115,7 +115,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
   char location[80] = {0};
   char astrAmmoSpacer[MBUF_SIZE] = {0}; /* mem is cheap. over allocate */
   int running_sum = 0;
-  short ammo_mode;
+  char ammo_mode;
   int technology = mech_technology_flags(mech);
   int technology_secondary = mech_technology_flags_secondary(mech);
   int infantry_technology = mech_infantry_technology_flags(mech);

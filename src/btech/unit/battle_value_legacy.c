@@ -48,8 +48,8 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
       ((mech)->ud.mechbv_last) = mech->xcode.context->events->tick;
   }
 
-  type = ((mech)->ud.type);
-  move = ((mech)->ud.move);
+  type = (unsigned char)((mech)->ud.type);
+  move = (unsigned char)((mech)->ud.move);
   mechspec = ((mech)->rd.specials);
   mechspec2 = ((mech)->rd.specials2);
   if (gunstat == 100)
@@ -70,7 +70,7 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
                            : mechspec & REINFI_TECH ? 200
                                                     : 100));
     else
-      intern = (debug3 = ((mech)->ud.si));
+      intern = (debug3 = (unsigned char)((mech)->ud.si));
 #ifdef DEBUG_BV
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("Armoradd : %d ArmorRadd : %d Internadd : %d",

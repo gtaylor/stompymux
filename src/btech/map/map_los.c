@@ -452,13 +452,14 @@ static void trace_maphexlos(HexLosMap *los_map, BattleMap *map, Mech *mech,
     const LosTracePoint *point = los_trace_point(trace, trace_range);
     int trace_x = point->x;
     int trace_y = point->y;
-    int trace_height = map_elevation_get(map, trace_x, trace_y);
+    int trace_height = (unsigned char)map_elevation_get(map, trace_x, trace_y);
 
     float trace_a =
         ((float)trace_height - start_height) / (float)(trace_range + 1);
     float trace_ba =
         ((float)(trace_height + 2) - start_height) / (float)(trace_range + 1);
-    int trace_terrain = map_real_terrain_get(map, trace_x, trace_y);
+    int trace_terrain =
+        (unsigned char)map_real_terrain_get(map, trace_x, trace_y);
     int nsensor, newwoods;
 
     for (nsensor = 0; nsensor < MAX_SENSORS; nsensor++) {
@@ -590,7 +591,7 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
   };
 
   underterrain = mech_position_z(mech) <= -1;
-  int terrain = mech_real_terrain_get(mech);
+  int terrain = (unsigned char)mech_real_terrain_get(mech);
   int movement = mech_movement_type(mech);
   if ((terrain == ICE || terrain == WATER || terrain == BRIDGE) &&
       ((mech_class(mech) == CLASS_MECH && mech_position_z(mech) == -1) ||

@@ -256,7 +256,7 @@ int mech_section_original_internal(const Mech *mech, int section) {
 }
 
 bool mech_section_is_destroyed(const Mech *mech, int section) {
-  int unit_class = mech->ud.type;
+  int unit_class = (unsigned char)mech->ud.type;
   bool is_dropship = unit_class == CLASS_DS || unit_class == CLASS_SPHEROID_DS;
   bool is_aerospace = unit_class == CLASS_AERO || is_dropship;
   const struct MechSection *section_storage = section_at(mech, section);

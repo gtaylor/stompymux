@@ -51,7 +51,7 @@ static char random_mech_id_character(BtechContext *context) {
 }
 
 static char normalized_mech_id_character(char value) {
-  const int uppercase = ascii_to_upper(value);
+  const int uppercase = (unsigned char)ascii_to_upper(value);
   return (char)BOUNDED('A', uppercase, 'Z');
 }
 
@@ -127,7 +127,7 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
   mech_position_real_xy_set(mech, fx, fy);
   MarkForLOSUpdate(mech);
   if (argc == 2) {
-    elevation = map_elevation_get(mech_map, x, y);
+    elevation = (unsigned char)map_elevation_get(mech_map, x, y);
     mech_position_z_set(mech, elevation - 1);
     mech_drop_surface_set(mech, false);
     z = mech_position_z(mech);

@@ -251,7 +251,7 @@ int tech_parsepart_advanced(Mech *mech, char *buffer, int *loc, int *pos,
   }
   if (extra) {
     if (argc > 2)
-      *extra = args[2][0];
+      *extra = (unsigned char)args[2][0];
     else
       *extra = 0;
   }

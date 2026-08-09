@@ -513,7 +513,7 @@ void add_decoration(BattleMap *map, int x, int y, int type, char data,
       foo.y >= map->map_height)
     return;
 
-  foo.datac = map_real_terrain_get(map, x, y);
+  foo.datac = (unsigned char)map_real_terrain_get(map, x, y);
   /* if (foo.datac) */
   {
     MapObject *m, *m2;

@@ -262,7 +262,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
    */
   for (loop = 0; loop < argstoiter; loop++) {
     char *flag_argument = construction_argument(args, 20, (size_t)(3 + loop));
-    flagholder = ascii_to_upper(*flag_argument);
+    flagholder = (unsigned char)ascii_to_upper(*flag_argument);
 
     if (flagholder == 'T') {
       /* Targeting Computer */

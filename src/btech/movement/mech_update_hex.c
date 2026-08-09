@@ -53,8 +53,8 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
 
   /* Recording the old elevation and terrain */
   /*! \todo {Wasn't lastelevation passed as an argument 'last_z' ?} */
-  ot = oldterrain = map_terrain_get(mech_map, mech_position_previous_x(mech),
-                                    mech_position_previous_y(mech));
+  ot = oldterrain = (unsigned char)map_terrain_get(
+      mech_map, mech_position_previous_x(mech), mech_position_previous_y(mech));
 
   if ((mech_movement_type(mech) == MOVE_HOVER) &&
       (oldterrain == BATTLE_TERRAIN_WATER || oldterrain == BATTLE_TERRAIN_ICE ||
@@ -233,7 +233,7 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
 
     /* New terrain restrictions */
     if (new_terrain) {
-      tt = mech_real_terrain_get(mech);
+      tt = (unsigned char)mech_real_terrain_get(mech);
       if ((tt == BATTLE_TERRAIN_HEAVY_FOREST) &&
           fabsf(mech_current_speed(mech)) > MP1) {
 
@@ -407,7 +407,7 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
 
     /* New terrain restrictions */
     if (new_terrain) {
-      tt = mech_real_terrain_get(mech);
+      tt = (unsigned char)mech_real_terrain_get(mech);
       if ((tt == BATTLE_TERRAIN_HEAVY_FOREST ||
            tt == BATTLE_TERRAIN_LIGHT_FOREST) &&
           fabsf(mech_current_speed(mech)) > MP1) {
@@ -628,7 +628,7 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       return;
     }
 
-    tt = mech_real_terrain_get(mech);
+    tt = (unsigned char)mech_real_terrain_get(mech);
     if ((tt == BATTLE_TERRAIN_HEAVY_FOREST ||
          tt == BATTLE_TERRAIN_LIGHT_FOREST) &&
         fabsf(mech_current_speed(mech)) > MP1) {

@@ -45,10 +45,10 @@ bool mech_script_value_read(const Mech *mech, MechScriptValueKey key,
     value->integer = mech_pilot_status(mech);
     return true;
   case MECH_SCRIPT_STRUCTURAL_INTEGRITY:
-    value->integer = ((mech)->ud.si);
+    value->integer = (unsigned char)((mech)->ud.si);
     return true;
   case MECH_SCRIPT_ORIGINAL_STRUCTURAL_INTEGRITY:
-    value->integer = ((mech)->ud.si_orig);
+    value->integer = (unsigned char)((mech)->ud.si_orig);
     return true;
   case MECH_SCRIPT_SPEED:
     value->floating = ((mech)->rd.speed);
@@ -108,7 +108,7 @@ bool mech_script_value_read(const Mech *mech, MechScriptValueKey key,
     value->integer = ((mech)->ud.hsengoverride);
     return true;
   case MECH_SCRIPT_HEAT_SINKS:
-    value->integer = ((mech)->ud.numsinks);
+    value->integer = (unsigned char)((mech)->ud.numsinks);
     return true;
   case MECH_SCRIPT_LAST_STARTUP:
     value->integer = ((mech)->rd.last_startup);
@@ -189,7 +189,7 @@ bool mech_script_value_read(const Mech *mech, MechScriptValueKey key,
     value->integer = ((mech)->ud.cargospace);
     return true;
   case MECH_SCRIPT_CARRIER_MAXIMUM_TONNAGE:
-    value->integer = ((mech)->ud.carmaxton);
+    value->integer = (unsigned char)((mech)->ud.carmaxton);
     return true;
   case MECH_SCRIPT_BAY_0:
     value->dbref = ((mech)->pd.bay[0]);

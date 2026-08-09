@@ -476,12 +476,12 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         case '+':
         case ':':
         case '-':
-          tmp_value1 = source_character;
+          tmp_value1 = (unsigned char)source_character;
           break;
 
         default:
           if (ascii_is_digit(source_character)) {
-            tmp_value1 = source_character;
+            tmp_value1 = (unsigned char)source_character;
           } else {
             next_state = BTS_NORMAL;
           }
@@ -496,7 +496,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
           case '+':
           case '-':
           case ':':
-            tmp_value2 = source_character;
+            tmp_value2 = (unsigned char)source_character;
             break;
 
           default:

@@ -224,7 +224,7 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
   buf[0] = 0;
   for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     ok = 0;
-    type = character_value_definition(i)->type;
+    type = (unsigned char)character_value_definition(i)->type;
     if (flag < 0)
       ok = 1;
     else if (type == flag)

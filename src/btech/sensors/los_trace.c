@@ -173,7 +173,7 @@ static void los_trace_store(LosTrace *trace, int *count, int x, int y) {
 }
 
 static int los_trace_elevation(BattleMap *map, int x, int y) {
-  const int elevation = map_elevation_get(map, x, y);
+  const int elevation = (unsigned char)map_elevation_get(map, x, y);
   const char terrain = map_real_terrain_get(map, x, y);
   return terrain == BATTLE_TERRAIN_WATER || terrain == BATTLE_TERRAIN_ICE
              ? -elevation

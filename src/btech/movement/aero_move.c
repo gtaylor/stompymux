@@ -497,7 +497,7 @@ void aero_land(DbRef player, void *data, const char *buffer) {
                  "You can't land without a valid map hex.");
     return;
   }
-  t = hex.real_terrain;
+  t = (unsigned char)hex.real_terrain;
   if (!(t == BATTLE_TERRAIN_GRASSLAND || t == BATTLE_TERRAIN_ROAD ||
         (mech_class(mech) == CLASS_VTOL && t == BATTLE_TERRAIN_BUILDING))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

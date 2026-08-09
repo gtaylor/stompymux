@@ -88,8 +88,8 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  terrain =
-      map_real_terrain_get(map, mech_position_x(mech), mech_position_y(mech));
+  terrain = (unsigned char)map_real_terrain_get(map, mech_position_x(mech),
+                                                mech_position_y(mech));
 
   if (!((terrain == GRASSLAND) || (terrain == ROAD) || (terrain == BRIDGE))) {
     mecha_notify(

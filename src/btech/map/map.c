@@ -679,8 +679,8 @@ void map_update(DbRef obj, void *data) {
      and was odd. %25 should hit when it is odd or even. */
 
   if (!(map->xcode.context->events->tick % 25)) {
-    oldl = map->maplight;
-    oldv = map->mapvis;
+    oldl = (unsigned char)map->maplight;
+    oldv = (unsigned char)map->mapvis;
     bool valid_map_visibility =
         (tmps = btech_attribute_read(map->xcode.context->database, obj,
                                      A_MAPVIS, (char[LBUF_SIZE]){0})) !=
