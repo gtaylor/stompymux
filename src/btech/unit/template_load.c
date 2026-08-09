@@ -72,7 +72,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   strncpy(((mech)->ud.mech_type), ptr, 25);
   ((mech)->ud.mech_type)[24] = '\0';
 
-  silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHREF,
+  silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHTYPE,
                    ((mech)->ud.mech_type));
   mech_radio_configuration_set(mech, 0);
   while (fgets(line, 512, fp)) {
@@ -134,7 +134,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                     filename, tmpc, ((mech)->ud.mech_type)));
         tmpc = ((mech)->ud.mech_type);
       }
-      silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHREF,
+      silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHTYPE,
                        tmpc);
       strlcpy(((mech)->ud.mech_type), tmpc, sizeof(((mech)->ud.mech_type)));
       break;

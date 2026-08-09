@@ -148,8 +148,6 @@ size_t btech_special_object_storage_size(int type) {
   return btech_special_object_data_size(btech_special_object_definition(type));
 }
 
-#define NUM_SPECIAL_OBJECTS BTECH_SPECIAL_OBJECT_COUNT
-
 /* Prototypes */
 
 /*************CALLABLE PROTOS*****************/
@@ -266,7 +264,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
       return 0;
   }
 #if 1
-  if (type > (int)(NUM_SPECIAL_OBJECTS))
+  if (type > (int)BTECH_SPECIAL_OBJECT_COUNT)
     return 0;
 #endif
   typeOfObject = btech_special_object_definition(type);
@@ -346,7 +344,7 @@ bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
 }
 
 void InitSpecialHash(BtechContext *context, int which);
-const int global_specials = NUM_SPECIAL_OBJECTS;
+const int global_specials = BTECH_SPECIAL_OBJECT_COUNT;
 
 void *NewSpecialObject(BtechContext *context, DbRef id, int type) {
   BtechSpecialObject *xcode_obj = NULL;
@@ -543,7 +541,7 @@ int btech_context_which_special_attribute(BtechContext *context, DbRef key) {
   str = btech_attribute_read(context->database, key, A_XTYPE,
                              (char[LBUF_SIZE]){0});
   if (str && *str) {
-    for (i = 0; i < (int)(NUM_SPECIAL_OBJECTS); i++) {
+    for (i = 0; i < (int)BTECH_SPECIAL_OBJECT_COUNT; i++) {
       if (!strcmp(btech_special_object_definition(i)->type, str)) {
         returnValue = i;
         break;
@@ -618,7 +616,7 @@ bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
     }
     return true;
   }
-  for (int index = 0; index < (int)NUM_SPECIAL_OBJECTS; index++) {
+  for (int index = 0; index < (int)BTECH_SPECIAL_OBJECT_COUNT; index++) {
     if (!strcmp(btech_special_object_definition(index)->type, type)) {
       requested = index;
       break;

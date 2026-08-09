@@ -185,7 +185,7 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   strlcpy(mech_ref,
           usex ? mech_model_reference(mech)
                : btech_attribute_read(context->database, mech_dbref(mech),
-                                      A_MECHREF, (char[LBUF_SIZE]){0}),
+                                      A_MECHTYPE, (char[LBUF_SIZE]){0}),
           sizeof(mech_ref));
 
   switch (mech_class(mech)) {

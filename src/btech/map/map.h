@@ -1,31 +1,12 @@
-
-/*
- * $Id: map.h,v 1.2 2005/06/22 15:08:04 av1-op Exp $
- *
- * Last modified: Sat Jun  6 20:30:40 1998 fingon
- *
- * Original authors:
- *   4.8.93- rdm created
- *   6.16.93- jb modified, added hex_struct
- * Since that modified by:
- *   '95 - '97: Markus Stenberg <fingon@iki.fi>
- *   '98 - '02: Thomas Woutes <thomas@xs4all.net>
- */
-
+/* Structure definitions and what not for the maps for the mechs. */
 #pragma once
 
 #include "mux/server/platform.h"
 #include "special_object.h"
 
-/*
-   map.h
-   Structure definitions and what not for the maps for the mechs.
-
- */
-
 constexpr int MAX_MECHS_PER_MAP = 250;
 
-/* map links */
+/* Map links */
 constexpr int MAP_UP = 0;
 constexpr int MAP_DOWN = 1;
 constexpr int MAP_RIGHT = 2;
@@ -41,6 +22,8 @@ constexpr int DEFAULT_MAP_HEIGHT = 11;
 constexpr int MAP_DISPLAY_WIDTH = 21;
 constexpr int MAP_DISPLAY_HEIGHT = 14;
 constexpr int MAX_ELEV = 9;
+
+/* Terrain constants */
 #define GRASSLAND ' '
 #define HEAVY_FOREST '"'
 #define LIGHT_FOREST '`'
@@ -55,11 +38,9 @@ constexpr int MAX_ELEV = 9;
 #define SMOKE ':'
 #define WALL '='
 #define DESERT '}'
-
 #define BRIDGE '/'
 #define SNOW '+'
 #define ICE '-'
-
 #define UNKNOWN_TERRAIN '$'
 
 /*

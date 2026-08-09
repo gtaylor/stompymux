@@ -35,7 +35,6 @@ typedef enum MineTriggerReason : int {
 
 static_assert(MINE_STEP == 1 && MINE_DROP == 4);
 
-#define A_MECHREF A_MECHTYPE
 #define WSDUMP_MASK_ER                                                         \
   "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %3d %2d"
 #define WSDUMP_MASK_NOER                                                       \

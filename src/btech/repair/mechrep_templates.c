@@ -104,7 +104,7 @@ void mechrep_Rrestore(DbRef player, void *data, char *buffer) {
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
   c = btech_attribute_read(btech_context_database(mech_context(mech)),
-                           mech_dbref(mech), A_MECHREF, (char[LBUF_SIZE]){0});
+                           mech_dbref(mech), A_MECHTYPE, (char[LBUF_SIZE]){0});
   if (!c || !*c) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Sorry, I don't know what type of mech this is");

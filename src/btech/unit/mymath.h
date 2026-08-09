@@ -16,18 +16,6 @@
 
 #include <math.h>
 
-#ifdef fcos
-#undef fcos
-#endif
-#define fcos cos
-#ifdef fsin
-#undef fsin
-#endif
-#define fsin sin
-#ifdef fatan
-#undef fatan
-#endif
-#define fatan atan
 #ifdef MAX
 #undef MAX
 #endif

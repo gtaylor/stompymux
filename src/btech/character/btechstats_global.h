@@ -23,8 +23,6 @@ constexpr int VALUES_ADVS = 8;   /* Advantages and lives */
 constexpr int VALUES_ALL = 15;
 constexpr int VALUES_CO = 6; /* Attr + Skill */
 
-#define CHAR_LASTSKILLTYPE CHAR_SOCIAL
-
 /* hmm. */
 
 constexpr int CHAR_VALUE = 0;

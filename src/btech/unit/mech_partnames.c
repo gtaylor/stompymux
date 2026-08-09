@@ -26,6 +26,7 @@
 #include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
+#include "mux/support/wild.h"
 #include "registry_api.h"
 #include "script_functions_api.h"
 #include "special_object.h"
@@ -260,9 +261,6 @@ const char *get_parts_vlong_name(BtechContext *context, int id, int brand) {
   return get_part_name(context, id, brand, PART_NAME_VERY_LONG);
 }
 
-#define wildcard_match quick_wild
-extern int wildcard_match(const char *, const char *);
-
 int find_matching_vlong_part(BtechContext *context, const char *wc, int *ind,
                              int *id, int *brand) {
   PartNameRegistry *registry = context->part_names;
@@ -296,7 +294,7 @@ int find_matching_long_part(BtechContext *context, const char *wc, int *i,
   for ((*i)++; *i < registry->object_count; (*i)++) {
     p = sorted_entry(registry->long_sorted, (size_t)registry->object_count,
                      (size_t)*i);
-    if (wildcard_match(wc, p->longy)) {
+    if (quick_wild(wc, p->longy)) {
       *id = packed_part_id(p->index);
       *brand = packed_part_brand(p->index);
       return 1;
