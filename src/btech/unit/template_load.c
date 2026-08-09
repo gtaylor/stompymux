@@ -1,11 +1,14 @@
+#include "btech_channel.h"
 #include "checked_conversion.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
+#include "mech_internal.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
 #include "registry_api.h"
-#include "template_internal.h"
+#include "template_implementation.h"
 #include "weapon_catalogue_api.h"
 
 static bool template_load_error(FILE *fp, Mech *mech, DbRef player,

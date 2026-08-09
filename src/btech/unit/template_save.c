@@ -1,11 +1,12 @@
 #include "btech_text_builder.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
+#include "mech_internal.h"
 #include "mech_network_api.h"
 #include "mech_runtime_api.h"
 #include "mech_status_types.h"
 #include "mux/support/checked_storage.h"
-#include "template_internal.h"
+#include "template_implementation.h"
 #include "weapon_catalogue_api.h"
 
 static int *template_integer_slot(int *values, size_t count, int index) {

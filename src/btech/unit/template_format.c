@@ -2,8 +2,11 @@
 #include "checked_conversion.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
+#include "mech_internal.h"
+#include "mech_partnames_api.h"
 #include "mux/support/checked_storage.h"
-#include "template_internal.h"
+#include "mux/support/formatting.h"
+#include "template_implementation.h"
 #include "weapon_catalogue_api.h"
 
 int compare_array(char *const list[], size_t count, const char *command) {

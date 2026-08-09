@@ -1,3 +1,5 @@
+#include "template_api.h"
+#include "btconfig.h"
 #include "template_internal.h"
 
 #include "mux/support/checked_storage.h"

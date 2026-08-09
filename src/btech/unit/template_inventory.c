@@ -1,7 +1,9 @@
+#include "coolmenu.h"
 #include "mech_equipment_api.h"
+#include "mech_internal.h"
 #include "mech_status_types.h"
 #include "mux/support/checked_storage.h"
-#include "template_internal.h"
+#include "template_implementation.h"
 #include "weapon_catalogue_api.h"
 
 enum { INVENTORY_ITEM_CAPACITY = 8 * MAX_WEAPS_SECTION };

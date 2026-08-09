@@ -1,3 +1,4 @@
+#include "btconfig.h"
 #include "template_internal.h"
 
 #ifdef BT_PART_WEIGHTS
