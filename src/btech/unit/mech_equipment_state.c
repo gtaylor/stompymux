@@ -1,3 +1,4 @@
+#include "equipment_types.h"
 #include "mech_equipment_api.h"
 
 #include "checked_conversion.h"
@@ -5,6 +6,8 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
+#include "section_types.h"
+#include <stddef.h>
 
 static const struct MechSection *section_at(const Mech *mech, int section) {
   return checked_storage_at_const(mech->ud.sections, NUM_SECTIONS,

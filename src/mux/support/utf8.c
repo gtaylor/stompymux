@@ -2,6 +2,7 @@
 
 #include "mux/support/utf8.h"
 
+#include <stdint.h>
 #include <string.h>
 
 #include "mux/support/checked_storage.h"

@@ -1,9 +1,21 @@
+#include "btech/context.h"
+#include "command_handlers_api.h"
+#include "map.h"
+#include "map_obj_api.h"
 #include "map_obj_internal.h"
 
 #include "checked_conversion.h"
 #include "mech_classification_api.h"
+#include "mech_utils_api.h"
+#include "mine_api.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 static const char *map_type_name(int type) {
   if (type < 0)

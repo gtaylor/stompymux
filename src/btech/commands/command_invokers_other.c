@@ -1,6 +1,8 @@
 #include "command_invokers.h"
 
 #include "autopilot.h"
+#include "command_registry.h"
+#include "mux/server/platform.h"
 
 #define DEFINE_BTECH_COMMAND_INVOKER(handler)                                  \
   void handler(DbRef actor, void *object, char *arguments);                    \

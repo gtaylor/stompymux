@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"

@@ -1,8 +1,7 @@
+#include "equipment_types.h"
 #include "mech_move_api.h"
 
-#include "btconfig.h"
 #include "map_conditions_api.h"
-#include "mech_condition_api.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 

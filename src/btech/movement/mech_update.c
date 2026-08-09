@@ -1,5 +1,6 @@
 /* Implements BattleTech movement mechanics for unit update. */
 
+#include "btconfig.h"
 #include "mech_update_api.h"
 
 #include <stdio.h>
@@ -9,7 +10,6 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
-#include "command_handlers_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "mech_charge_tracking_api.h"
@@ -30,11 +30,13 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_startup_api.h"
-#include "mech_status_types.h"
 #include "mech_towing_sync_api.h"
 #include "mech_utils_api.h"
+#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 void mech_movement_update(Mech *mech) {
   BattleMap *mech_map = mech_movement_map_validate(mech);

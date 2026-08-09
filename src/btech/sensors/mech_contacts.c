@@ -1,7 +1,7 @@
 /* Implements BattleTech sensor mechanics for unit contacts. */
 
-#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "btconfig.h"
@@ -9,6 +9,7 @@
 #include "btech_event.h"
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map_building_query_api.h"
 #include "map_los_types.h"
 #include "map_object_query_api.h"
@@ -39,12 +40,10 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "registry_api.h"
-#include "section_types.h"
 
 static const char default_contactoptions[] = "!db";
 

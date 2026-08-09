@@ -1,6 +1,7 @@
 /* Implements BattleTech movement mechanics for unit ood. */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "btconfig.h"
 #include "btech/context.h"

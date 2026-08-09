@@ -2,9 +2,11 @@
 
 #include "aero_move_api.h"
 #include "bsuit_api.h"
+#include "command_registry.h"
 #include "eject_api.h"
 #include "mech_move_api.h"
 #include "mech_startup_api.h"
+#include "mux/server/platform.h"
 
 #define DEFINE_BTECH_COMMAND_INVOKER(handler)                                  \
   void handler(DbRef actor, void *object, char *arguments);                    \

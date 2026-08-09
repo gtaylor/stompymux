@@ -7,7 +7,6 @@
    - stores
  */
 
-#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +21,7 @@
 #include "crit_api.h"
 #include "econ_api.h"
 #include "econ_cmds_api.h"
+#include "equipment_types.h"
 #include "mech_api_types.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
@@ -30,7 +30,6 @@
 #include "mech_partnames.h"
 #include "mech_partnames_api.h"
 #include "mech_position_api.h"
-#include "mech_restrict_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_api.h"
 #include "mech_status_types.h"

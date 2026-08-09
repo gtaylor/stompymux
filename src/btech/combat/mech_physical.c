@@ -1,13 +1,29 @@
+#include "mech_physical.h"
+#include "btech/context.h"
+#include "btech_event.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
+#include "map.h"
+#include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
+#include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
+#include "mech_physical_api.h"
 #include "mech_physical_internal.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
+#include <stddef.h>
+#include <string.h>
 
 bool physical_arm_check(DbRef player, Mech *mech, const char *verb) {
   BtechContext *context = mech_context(mech);

@@ -6,8 +6,8 @@
 #include <bits/types/struct_rusage.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/resource.h>
-#include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 

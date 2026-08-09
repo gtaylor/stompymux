@@ -9,6 +9,7 @@
 #include <strings.h>
 
 #include "mux/lua/lua_runtime.h"
+#include "mux/network/descriptor.h"
 #include "mux/network/network_output.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"

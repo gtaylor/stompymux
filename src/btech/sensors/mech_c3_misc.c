@@ -6,6 +6,7 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map_los_api.h"
 #include "map_los_types.h"
 #include "map_terrain.h"

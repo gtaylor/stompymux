@@ -1,5 +1,7 @@
 #include "command_catalogs.h"
 #include "command_invokers.h"
+#include "command_registry.h"
+#include <stddef.h>
 
 const BtechCommandDefinition autopilotcommands[] = {
     {0, "ENGAGE", "Engages the autopilot", btech_command_invoke_auto_engage},

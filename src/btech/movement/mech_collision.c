@@ -9,9 +9,9 @@
 #include "mech_move_api.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
-#include "mech_status_types.h"
 #include "mech_update_api.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 static bool mech_moves_over_water(const Mech *mech) {
   int movement_type = mech_movement_type(mech);

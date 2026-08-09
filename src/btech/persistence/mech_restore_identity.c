@@ -1,5 +1,17 @@
+#include "ai_api.h"
+#include "equipment_types.h"
+#include "mech_persistence.h"
+#include "missile_hit_registry.h"
+#include "mux/objects/db.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "registry_api.h"
+#include "section_types.h"
 #include "sqlite_internal.h"
+#include <limits.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 static struct MechSection *snapshot_section(MechPersistenceSnapshot *snapshot,
                                             int index) {

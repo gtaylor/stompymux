@@ -1,12 +1,25 @@
+#include "btconfig.h"
+#include "btech_event.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
+#include "map.h"
+#include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
+#include "mech_events.h"
+#include "mech_lifecycle.h"
 #include "mech_notify_api.h"
-#include "mech_physical_internal.h"
-#include "mech_position_api.h"
+#include "mech_physical_api.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
+#include "section_types.h"
+#include <stdio.h>
 int checkGrabClubLocation(Mech *mech, int section, int emit) {
   int tCanGrab = 1;
   char buf[100] = {0};

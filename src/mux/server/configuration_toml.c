@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "mux/support/checked_storage.h"
+#include "tomlc17.h"
 
 /*
  * ---------------------------------------------------------------------------

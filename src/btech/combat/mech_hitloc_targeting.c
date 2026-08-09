@@ -1,5 +1,8 @@
 /* Implements BattleTech combat mechanics for unit hitloc targeting. */
 
+#include "btech/context.h"
+#include "btech_event.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
@@ -9,6 +12,8 @@
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_targeting_api.h"
+#include "mech_utils_api.h"
+#include "section_types.h"
 
 static bool mech_has_partial_cover(const Mech *mech) {
   return mech_condition_summary(mech).partial_cover;

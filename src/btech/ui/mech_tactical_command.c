@@ -10,9 +10,12 @@
 #include "mech_notify_api.h"
 #include "mech_status_types.h"
 #include "mux/objects/attrs.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 #include <stdio.h>
 

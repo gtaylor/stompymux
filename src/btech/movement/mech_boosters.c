@@ -4,7 +4,6 @@
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btech_event.h"
-#include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_terrain.h"
 #include "mech_advanced_api.h"
@@ -28,7 +27,7 @@
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "random.h"
+#include "mux/support/alloc.h"
 #include "registry_api.h"
 #include "section_types.h"
 

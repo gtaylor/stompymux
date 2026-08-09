@@ -1,6 +1,7 @@
 /* command_parser.c - Literal native-command argument parsing. */
 
 #include "mux/commands/command_parser.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h" // IWYU pragma: keep
 
 #include <ctype.h>

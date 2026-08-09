@@ -22,8 +22,8 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 
 static const char *weapon_display_name(int weapon_index) {

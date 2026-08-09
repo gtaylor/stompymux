@@ -3,6 +3,7 @@
 #include "btech/context.h"
 #include "checked_conversion.h"
 #include "mech_internal.h"
+#include "mux/server/platform.h"
 
 DbRef mech_pilot_dbref(const Mech *mech) { return mech->pd.pilot; }
 

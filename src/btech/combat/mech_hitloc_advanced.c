@@ -1,10 +1,15 @@
 /* Implements BattleTech combat mechanics for unit hitloc advanced. */
 
+#include "btech/context.h"
+#include "btech_event.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
+#include "mech_utils_api.h"
+#include "section_types.h"
 
 static int hit_location_or_fallback(const Mech *mech, int preferred,
                                     int fallback) {

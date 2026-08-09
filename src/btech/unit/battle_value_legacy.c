@@ -1,11 +1,18 @@
 #include "checked_conversion.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_heat_api.h"
+#include "mech_move_api.h"
 #include "mech_status_types.h"
+#include "mech_utils_api.h"
 #include "mech_utils_internal.h"
 #include "mux/support/checked_storage.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
+#include <math.h>
+#include <stddef.h>
 
 static float walking_speed(float maximum_speed) {
   return 2.0F * maximum_speed / 3.0F;

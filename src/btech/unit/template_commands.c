@@ -1,4 +1,5 @@
 #include "template_internal.h"
+#include <stddef.h>
 
 const char *load_cmds[] = {"Reference",
                            "Type",

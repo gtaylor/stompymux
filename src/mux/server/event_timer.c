@@ -1,5 +1,6 @@
 /* Heap-owned libuv timer used by server subsystems. */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <uv.h>
 

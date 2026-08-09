@@ -1,5 +1,6 @@
 /* Implements BattleTech movement mechanics for unit update altitude. */
 
+#include "equipment_types.h"
 #include "mech_update_api.h"
 
 #include <math.h>
@@ -7,7 +8,6 @@
 #include "aero_move_api.h"
 #include "btconfig.h"
 #include "btech_channel.h"
-#include "floatsim.h"
 #include "map_terrain.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"

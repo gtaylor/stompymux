@@ -1,8 +1,12 @@
+#include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_identity_api.h"
 
 #include <string.h>
 
 #include "mech_internal.h"
+#include "mux/objects/db.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 
 BtechContext *mech_context(const Mech *mech) { return mech->xcode.context; }

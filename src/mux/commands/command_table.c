@@ -16,7 +16,6 @@
 #include "mux/communication/comsys.h"
 #include "mux/communication/speech.h"
 #include "mux/help/help_command.h"
-#include "mux/objects/attrs.h"
 #include "mux/server/configuration_context.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"

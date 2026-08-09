@@ -1,3 +1,5 @@
+#include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_status_api.h"
 #include "mech_status_render_internal.h"
 
@@ -7,18 +9,17 @@
 #include "btech/context.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
-#include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_heat_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
-#include "mech_position_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
+#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
-#include "section_types.h"
 
 static int displayed_speed(float speed) { return clamp_float_to_int(speed); }
 

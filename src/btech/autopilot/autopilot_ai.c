@@ -1,7 +1,6 @@
 #include "ai_api.h"
 #include "ai_simulation_api.h"
 #include "autopilot.h"
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
@@ -9,18 +8,15 @@
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
-#include "mech_combat_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_move_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
-#include "mech_sensor_state_api.h"
-#include "mech_specification_api.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -29,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 enum {
   SCORE_MOD = 100,
   SAFE_SCORE = SCORE_MOD * 1000,

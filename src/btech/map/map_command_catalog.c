@@ -1,5 +1,7 @@
 #include "command_catalogs.h"
 #include "command_invokers.h"
+#include "command_registry.h"
+#include <stddef.h>
 
 const BtechCommandDefinition mapcommands[] = {
     {0, "@VIEWXCODE", "@Views xcode values on object",

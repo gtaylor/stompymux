@@ -1,5 +1,4 @@
 
-#include "btech/context.h"
 #include "map.h"
 #include "map_units_api.h"
 #include "mech_broadcast_api.h"
@@ -7,6 +6,7 @@
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
 #include "registry_api.h"
 
 int MapLimitedBroadcast2d(BattleMap *map, float x, float y, float range,

@@ -1,14 +1,26 @@
 /* Implements BattleTech combat mechanics for unit hitloc. */
 
+#include "btconfig.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
+#include "mech_events.h"
+#include "mech_events_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
+#include "section_types.h"
+#include <stddef.h>
 
 int mech_punch_hit_location(Mech *target, int hitGroup) {
   BtechContext *context = mech_context(target);

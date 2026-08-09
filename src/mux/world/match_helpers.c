@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_parser.h"

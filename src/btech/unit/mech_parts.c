@@ -1,8 +1,8 @@
 /* Parts inventory operations used by BTech repairs. */
 
 #include "mech_parts.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
-#include "mech_equipment_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 
@@ -14,9 +14,11 @@
 #include "mech_tech_commands_api.h"
 #include "mech_utils_api.h" // IWYU pragma: keep
 #include "mux/objects/db.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include <stddef.h>
 
 DbRef mech_parts_store_dbref(const Mech *mech) {
   if (mech_is_dropship(mech)) {

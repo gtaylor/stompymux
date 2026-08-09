@@ -1,15 +1,37 @@
+#include "bsuit_api.h"
+#include "btconfig.h"
+#include "btech/context.h"
 #include "btech_channel.h"
 #include "checked_conversion.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
+#include "map_conditions_api.h"
+#include "mech_consistency_api.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
+#include "mech_lifecycle.h"
+#include "mech_partnames_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
+#include "template_api.h"
 #include "template_implementation.h"
 #include "weapon_catalogue_api.h"
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 static bool template_load_error(FILE *fp, Mech *mech, DbRef player,
                                 bool condition, bool global, const char *format,

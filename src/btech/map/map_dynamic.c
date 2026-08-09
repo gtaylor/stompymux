@@ -19,7 +19,6 @@
 #include "mech_restrict_api.h"
 #include "mech_runtime_api.h"
 #include "mech_utils_api.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"

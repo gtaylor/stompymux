@@ -7,7 +7,6 @@
 #include "mux/network/mux_event.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "special_object.h"
 

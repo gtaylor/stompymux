@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"

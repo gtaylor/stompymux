@@ -14,7 +14,10 @@
 #include "missile_hit_registry.h"
 #include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/doubly_linked_list.h"
+#include "mux/support/red_black_tree.h"
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
 

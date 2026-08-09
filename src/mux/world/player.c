@@ -5,6 +5,7 @@
 
 #include "mux/server/server_registries.h"
 #include <crypto_pwhash.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -1,50 +1,37 @@
 /* Implements BattleTech combat mechanics for unit fire command. */
 
-#include <ctype.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "artillery_api.h"
 #include "bsuit_api.h"
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "failures.h"
 #include "failures_api.h"
 #include "map.h"
-#include "map_api.h"
 #include "map_conditions_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
-#include "mech_bth_api.h"
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
 #include "mech_combat.h"
 #include "mech_combat_api.h"
 #include "mech_combat_misc_api.h"
-#include "mech_combat_missile_api.h"
 #include "mech_condition_api.h"
-#include "mech_damage_api.h"
-#include "mech_enhanced_criticals_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
-#include "mech_hitloc_api.h"
-#include "mech_ice_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_move_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
-#include "mech_runtime_api.h"
-#include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
 #include "mech_spot_api.h"
 #include "mech_status_types.h"
@@ -58,7 +45,6 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
-#include "pcombat_api.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -68,7 +54,6 @@ static const char *fire_argument(char *const *arguments, size_t index) {
       checked_storage_at_const(arguments, 5, sizeof(*arguments), index);
   return *argument;
 }
-#include "weapon_settings.h"
 
 void mech_fireweapon(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;

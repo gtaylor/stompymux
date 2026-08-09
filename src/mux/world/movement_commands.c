@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "mux/commands/action_messages.h"
+#include "mux/commands/command_context.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"

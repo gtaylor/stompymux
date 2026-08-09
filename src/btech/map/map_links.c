@@ -1,6 +1,23 @@
+#include "btech/context.h"
+#include "btechstats_api.h"
 #include "checked_conversion.h"
-#include "map_obj_internal.h"
+#include "command_handlers_api.h"
+#include "map.h"
+#include "map_bits_api.h"
+#include "map_obj_api.h"
+#include "mine_api.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "registry_api.h"
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 typedef struct MapLinkUpdateStats {
   int builds;

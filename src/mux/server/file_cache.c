@@ -12,7 +12,6 @@
 
 #include "mux/network/network_output.h"
 #include "mux/objects/db.h"
-#include "mux/objects/flags.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"

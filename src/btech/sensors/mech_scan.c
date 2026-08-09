@@ -1,10 +1,10 @@
 #include "autopilot.h"
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
-#include "mech_combat_api.h"
 #include "mech_condition_api.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
@@ -21,19 +21,19 @@
 #include "mech_status_api.h"
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "mux/network/network_output.h"
 #include "mux/objects/attrs.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
+#include "section_types.h"
 
-#include <ctype.h>
 #include <stdio.h>
 
 static float mech_scan_hex_real_z(BattleMap *map, int x, int y) {

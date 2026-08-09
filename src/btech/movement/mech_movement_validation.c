@@ -11,6 +11,7 @@
 #include "mech_runtime_api.h"
 #include "mech_startup_api.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
 #include "registry_api.h"
 
 BattleMap *mech_movement_map_validate(Mech *mech) {

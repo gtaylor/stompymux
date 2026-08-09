@@ -1,13 +1,30 @@
+#include "btech/context.h"
+#include "btech_channel.h"
 #include "checked_conversion.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
+#include "mech_los_api.h"
+#include "mech_notify_api.h"
 #include "mech_position_api.h"
+#include "mech_utils_api.h"
 #include "mech_utils_internal.h"
+#include "mux/commands/action_messages.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 static float integer_as_float(int value) { return (float)value; }
 

@@ -1,10 +1,24 @@
+#include "btech/context.h"
 #include "coolmenu.h"
+#include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
+#include "mech_partnames_api.h"
 #include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "missile_hit_registry.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "section_types.h"
+#include "template_api.h"
 #include "template_implementation.h"
 #include "weapon_catalogue_api.h"
+#include "weapon_settings.h"
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 enum { INVENTORY_ITEM_CAPACITY = 8 * MAX_WEAPS_SECTION };
 

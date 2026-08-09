@@ -2,6 +2,7 @@
 /* Implements line-of-sight calculations on maps. */
 
 #include "map_los.h"
+#include "equipment_types.h"
 #include "map_los_api.h"
 
 #include <stdlib.h>
@@ -15,6 +16,7 @@
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_identity_api.h"
 #include "mech_lostracer_api.h"
@@ -22,11 +24,12 @@
 #include "mech_sensor.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
-#include "mech_status_types.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 static unsigned short *battle_map_los_cell(BattleMap *map, int observer,
                                            int target) {

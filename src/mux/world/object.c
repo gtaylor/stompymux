@@ -5,7 +5,6 @@
 #include "mux/world/object.h"
 
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 #include "mux/commands/command_queue.h"

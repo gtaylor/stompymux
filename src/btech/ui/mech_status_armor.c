@@ -16,8 +16,9 @@
 #include "mech_utils_api.h"
 #include "mux/commands/command_context.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 

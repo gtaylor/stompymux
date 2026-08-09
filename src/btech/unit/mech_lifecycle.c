@@ -3,6 +3,7 @@
 #include "mech_lifecycle.h"
 
 #include "checked_conversion.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
@@ -37,6 +38,8 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "registry_api.h"
+#include "section_types.h"
+#include "special_object.h"
 
 void mech_power_up(Mech *mech) {
   ((mech)->rd.status) |= STARTED;

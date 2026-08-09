@@ -25,10 +25,9 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/doubly_linked_list.h"
-#include "mux/support/formatting.h"
-#include "mux/support/red_black_tree.h"
 #include "mycool.h"
 #include "registry_api.h"
+#include "special_object.h"
 
 /*
  * Creates a new command_node for the AI's

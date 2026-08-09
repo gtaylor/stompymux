@@ -3,7 +3,9 @@
 
 #include <string.h>
 
+#include "btech/context.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "mech_c3_misc_api.h"
 #include "mech_c3i_api.h"
 #include "mech_classification_api.h"
@@ -17,7 +19,6 @@
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
-#include "mech_state_types.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"

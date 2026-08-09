@@ -16,7 +16,6 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "random.h"
 #include "registry_api.h"
 

@@ -1,10 +1,10 @@
 /* Implements BattleTech movement mechanics for unit update piloting. */
 
+#include "equipment_types.h"
 #include "mech_update_api.h"
 
 #include <math.h>
 
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
@@ -12,7 +12,6 @@
 #include "failures_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
-#include "mech_combat_misc_api.h"
 #include "mech_condition_api.h"
 #include "mech_damage_api.h"
 #include "mech_damage_history_api.h"

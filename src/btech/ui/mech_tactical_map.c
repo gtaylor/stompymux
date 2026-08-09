@@ -2,6 +2,7 @@
 #include "btconfig.h"
 #include "btech/context.h"
 #include "ds_bay_api.h"
+#include "equipment_types.h"
 #include "map.h"
 #include "map_los.h"
 #include "map_obj_api.h"
@@ -19,12 +20,11 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mine.h"
-#include "mux/server/game.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
 
-#include <ctype.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

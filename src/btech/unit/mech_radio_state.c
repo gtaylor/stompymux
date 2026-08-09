@@ -1,8 +1,8 @@
+#include "equipment_types.h"
 #include "mech_radio_api.h"
 
 #include <stdio.h>
 
-#include "btconfig.h"
 #include "mech_internal.h"
 #include "mux/support/checked_storage.h"
 

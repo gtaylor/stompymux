@@ -1,8 +1,11 @@
 #include "mech_stagger.h"
 
 #include <stdlib.h>
+#include <time.h>
 
 #include "mech_internal.h"
+#include "mech_state_types.h"
+#include "mux/server/platform.h"
 
 static constexpr int STAGGER_WINDOW_SECONDS = 60;
 

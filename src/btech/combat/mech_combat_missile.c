@@ -1,5 +1,6 @@
 /* Implements BattleTech combat mechanics for unit combat missile. */
 
+#include "btech/context.h"
 #include "map_terrain.h"
 #include "mech_lifecycle.h"
 #include "weapon_catalogue_api.h"
@@ -11,7 +12,6 @@
 #include "map.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
-#include "mech_combat.h"
 #include "mech_combat_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_combat_missile_api.h"

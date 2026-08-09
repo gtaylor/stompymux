@@ -1,7 +1,33 @@
+#include "btech/context.h"
+#include "equipment_types.h"
+#include "map.h"
+#include "map_obj_api.h"
+#include "mech_notify_api.h"
+#include "mech_partnames_api.h"
+#include "mech_restrict_api.h"
+#include "mech_tech_api.h"
+#include "mech_tech_commands_api.h"
+#include "mech_tech_damages_api.h"
+#include "mech_utils_api.h"
+#include "mux/commands/command_helpers.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
+#include "part_cost_api.h"
+#include "registry_api.h"
+#include "template_api.h"
 #include "values_internal.h"
 
 #include <errno.h>
 #include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 #include "map_units_api.h"
 #include "mech_broadcast_api.h"
@@ -9,6 +35,7 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "weapon_catalogue_api.h"
+#include "weapon_settings.h"
 
 static bool parse_hex_coordinate(const char *text, int *coordinate) {
   char *end = nullptr;

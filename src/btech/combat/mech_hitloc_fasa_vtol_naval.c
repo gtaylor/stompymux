@@ -1,8 +1,12 @@
 /* Implements BattleTech combat mechanics for unit hitloc fasa vtol naval. */
 
+#include "btech_event.h"
+#include "crit_api.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_hitloc_internal.h"
+#include "section_types.h"
 
 int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
                                  int *isrear, int roll) {

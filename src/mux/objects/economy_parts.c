@@ -7,6 +7,7 @@
 
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 
 static EconomyPartEntry *economy_part(EconomyPartsState *parts, size_t count,

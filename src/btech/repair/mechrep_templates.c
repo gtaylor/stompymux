@@ -1,30 +1,20 @@
 /* Implements BattleTech repair mechanics for mechrep templates. */
 
-#include <ctype.h>
-#include <dirent.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <strings.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
-#include "btconfig.h"
 #include "btech/context.h"
-#include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "map_terrain.h" // IWYU pragma: keep
-#include "mech_events.h"
+#include "equipment_types.h"
+#include "map_terrain.h"    // IWYU pragma: keep
 #include "mech_lifecycle.h" // IWYU pragma: keep
-#include "mux/network/mux_event.h"
+#include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "repair_job.h"
 
@@ -35,13 +25,10 @@
 #include "mech_identity_api.h"
 #include "mech_restrict_api.h"
 #include "mech_specification_api.h"
-#include "mech_status_api.h"
 #include "mech_template_api.h"
 #include "mech_utils_api.h"
 #include "mechrep.h"
 #include "mechrep_api.h"
-#include "mux/commands/command_helpers.h"
-#include "mux/network/mux_event_alloc.h"
 #include "template_api.h"
 
 /* Selectors */

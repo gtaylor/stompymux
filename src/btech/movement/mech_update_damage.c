@@ -1,6 +1,6 @@
+#include "equipment_types.h"
 #include "mech_update_api.h"
 
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
 #include "mech_api_types.h"

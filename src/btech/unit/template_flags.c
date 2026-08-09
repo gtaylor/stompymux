@@ -2,6 +2,7 @@
 
 #include "checked_conversion.h"
 #include "mux/support/checked_storage.h"
+#include <stddef.h>
 
 int count_special_items() {
   return clamp_size_to_int(template_internal_name_count());

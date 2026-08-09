@@ -1,6 +1,7 @@
 /* lua.c - Lua runtime initialization and MUX integration. */
 
 #include <limits.h>
+#include <linux/limits.h>
 #include <lua.h>
 #include <stdio.h>
 #include <stdlib.h>

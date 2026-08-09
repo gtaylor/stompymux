@@ -1,5 +1,6 @@
 #include "mux/commands/command_context.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
+#include "mux/support/alloc.h"
 #include "mux/world/world_context.h"
 /* Descriptor lifecycle, traversal, and shutdown implementations. */
 

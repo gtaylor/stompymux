@@ -1,6 +1,5 @@
 /* Implements BattleTech commands for unit restrict. */
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +9,7 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map.h"
 #include "map_dynamic_api.h"
 #include "map_los_api.h"
@@ -32,19 +32,18 @@
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_template_api.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mechrep_api.h"
 #include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
-#include "mux/support/formatting.h"
-#include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
+#include "special_object.h"
 
 static char random_mech_id_character(BtechContext *context) {
   const int offset = btech_random_range_int(context, 0, 25);

@@ -2,13 +2,16 @@
 
 #include <string.h>
 
+#include "btech/context.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "eject_api.h"
+#include "equipment_types.h"
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_equipment_api.h"

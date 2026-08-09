@@ -1,3 +1,4 @@
+// NOLINTBEGIN(misc-include-cleaner): Direct dependencies exceed file-size cap.
 #include "mech_template_api.h"
 #include "values_internal.h"
 
@@ -702,7 +703,6 @@ void fun_btgetbv(char *buff, char **bufc, DbRef player, DbRef cause,
   safe_tprintf_str(buff, bufc, "#-1 BATTLE VALUE SUPPORT DISABLED");
 #endif
 }
-
 void fun_btgetbv_ref(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs,
                      EvaluationContext *context) {
@@ -793,3 +793,4 @@ void fun_btgetbv2_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   safe_tprintf_str(buff, bufc, "#-1 BATTLE VALUE SUPPORT DISABLED");
 #endif
 }
+// NOLINTEND(misc-include-cleaner)

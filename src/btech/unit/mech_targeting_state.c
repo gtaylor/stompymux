@@ -1,8 +1,10 @@
+#include "equipment_types.h"
 #include "mech_targeting_api.h"
 
 #include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
+#include "mux/server/platform.h"
 #include "section_types.h"
 
 #include <string.h>

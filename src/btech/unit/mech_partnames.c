@@ -1,6 +1,9 @@
+#include "context_internal.h"
+#include "equipment_types.h"
 #include "mux/objects/flags.h"
 /* Implements BattleTech unit mechanics for unit partnames. */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,7 +11,6 @@
 
 #include "btech/context.h"
 #include "checked_conversion.h"
-#include "mech_internal.h"
 #include "mech_partnames.h"
 #include "mech_partnames_api.h"
 #include "mux/network/mux_event_alloc.h"

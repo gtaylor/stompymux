@@ -1,14 +1,15 @@
+#include "equipment_types.h"
 #include "mech_consistency_api.h"
 
-#include "btech/context.h"
 #include "btech_channel.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
-#include "mech_status_types.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "section_types.h"
+#include <stddef.h>
+#include <stdlib.h>
 
 static const char mech_location_table[][2] = {
     {CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2}, {LARM, 3},

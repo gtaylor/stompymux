@@ -1,5 +1,7 @@
 #include "command_catalogs.h"
 #include "command_invokers.h"
+#include "command_registry.h"
+#include <stddef.h>
 
 const BtechCommandDefinition mechcommands[] = {
     /* Movement */

@@ -2,6 +2,7 @@
 
 #include "btech/context.h"
 #include "btechstats_api.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_crew_api.h"

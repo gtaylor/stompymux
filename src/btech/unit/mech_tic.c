@@ -7,6 +7,7 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
+#include "equipment_types.h"
 #include "map.h" // IWYU pragma: keep
 #include "map_terrain.h"
 #include "mech_build_api.h"

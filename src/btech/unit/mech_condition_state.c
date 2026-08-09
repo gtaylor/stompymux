@@ -1,8 +1,10 @@
+#include "equipment_types.h"
 #include "mech_condition_api.h"
-#include "mech_equipment_api.h"
 
 #include "mech_internal.h"
 #include "mech_status_types.h"
+#include "mux/server/platform.h"
+#include "section_types.h"
 
 MechConditionSummary mech_condition_summary(const Mech *mech) {
   const int status = mech->rd.status;

@@ -1,6 +1,7 @@
 /* mux_package.c - Built-in Lua mux package bindings. */
 
 #include <lauxlib.h>
+#include <lua.h>
 
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"

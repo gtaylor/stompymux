@@ -1,6 +1,7 @@
 #include "mech_template_api.h"
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -11,7 +11,6 @@
 #include "mech_los_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
-#include "mech_restrict_api.h"
 #include "mech_scan_api.h"
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"

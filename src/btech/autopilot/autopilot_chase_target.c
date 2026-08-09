@@ -5,7 +5,6 @@
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
 #include "autopilot_commands_api.h"
-#include "btech/context.h"
 #include "map_units_api.h"
 #include "mech_identity_api.h"
 #include "mech_move_api.h"
@@ -14,6 +13,7 @@
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "registry_api.h"
 
 bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,

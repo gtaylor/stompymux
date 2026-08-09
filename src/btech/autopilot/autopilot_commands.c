@@ -26,11 +26,11 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "section_types.h"
-
-#include "mymath.h"
 
 static bool auto_command_prepare_unit(Autopilot *autopilot, Mech *mech) {
   if (!mech_is_started(mech)) {

@@ -9,7 +9,6 @@
 #include "equipment_types.h"
 #include "map_conditions_api.h"
 #include "mech_classification_api.h"
-#include "mech_combat_misc_api.h"
 #include "mech_crew_api.h"
 #include "mech_events.h"
 #include "mech_heat_api.h"
@@ -17,12 +16,11 @@
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
-#include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
-#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "registry_api.h"
 
 static int mech_jump_speed_mp(const Mech *mech, const BattleMap *map) {

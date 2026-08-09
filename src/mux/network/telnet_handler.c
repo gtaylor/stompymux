@@ -1,6 +1,5 @@
 /* telnet_handler.c - Telnet protocol negotiation and client data handling. */
 
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>

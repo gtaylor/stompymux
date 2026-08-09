@@ -1,11 +1,11 @@
 /* Calculates unit combat base-to-hit values. */
-#include "aero_move_api.h"
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_bth_api.h"
@@ -30,11 +30,13 @@
 #include "mech_targeting_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
+#include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 
 #include <math.h>

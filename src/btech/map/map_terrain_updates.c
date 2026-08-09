@@ -1,6 +1,5 @@
 #include "map_api.h"
 
-#include "btech/context.h"
 #include "map.h"
 #include "map_units_api.h"
 #include "mech_position_api.h"

@@ -5,10 +5,10 @@
 
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
-#include "btech/context.h"
 #include "equipment_types.h"
 #include "map_los_api.h"
 #include "map_units_api.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
@@ -20,7 +20,9 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 static void format_physical_command(char buffer[static LBUF_SIZE], char side,
                                     const Mech *target) {

@@ -1,11 +1,19 @@
+#include "ai_api.h"
+#include "btech_channel.h"
 #include "checked_conversion.h"
-#include "mech_classification_api.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_sensor_state_api.h"
-#include "mech_specification_api.h"
 #include "mech_status_types.h"
+#include "mech_utils_api.h"
 #include "mech_utils_internal.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "section_types.h"
+#include "template_api.h"
+#include <stdio.h>
 
 int mech_recycling_state(Mech *mech, int num) {
   int i;

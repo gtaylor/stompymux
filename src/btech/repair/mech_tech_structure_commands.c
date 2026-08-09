@@ -10,6 +10,7 @@
 #include "mech_tech_do_api.h"
 #include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
 #include "registry_api.h"
 #include "repair_job.h"
 

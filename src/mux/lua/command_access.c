@@ -5,7 +5,9 @@
 #include <lua.h>
 #include <string.h>
 
+#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 
 bool lua_command_access_read(lua_State *state, int entry,
                              LuaCommandAccess *access) {

@@ -1,8 +1,21 @@
+#include "btech/context.h"
+#include "missile_hit_registry.h"
+#include "mux/persistence/gamedb.h"
+#include "mux/server/log.h"
+#include "mux/server/server_config.h"
+#include "mux/support/utf8.h"
+#include "part_cost_api.h"
 #include "sqlite_internal.h"
 
+#include <errno.h>
 #include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "mux/support/checked_storage.h"
+#include "template_api.h"
 
 #ifdef BT_ADVANCED_ECON
 

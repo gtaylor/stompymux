@@ -2,6 +2,7 @@
 #include "ai_simulation_api.h"
 #include "autopilot.h"
 #include "btech/context.h"
+#include "btech_event.h"
 #include "command_handlers_api.h"
 #include "mech_combat_api.h"
 #include "mech_identity_api.h"
@@ -9,6 +10,7 @@
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 

@@ -3,8 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "equipment_types.h"
 #include "mech_internal.h"
+#include "mech_state_types.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "section_types.h"
 
 static struct MechSection *persistence_section(Mech *mech, int index) {
   if (index < 0)

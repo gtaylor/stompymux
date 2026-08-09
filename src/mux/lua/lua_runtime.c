@@ -1,9 +1,11 @@
 /* lua.c - Lua runtime initialization and MUX integration. */
 
+#include <asm-generic/errno-base.h>
 #include <ctype.h>
 #include <errno.h>
 #include <lauxlib.h>
 #include <limits.h>
+#include <linux/limits.h>
 #include <lua.h>
 #include <luajit.h>
 #include <lualib.h>

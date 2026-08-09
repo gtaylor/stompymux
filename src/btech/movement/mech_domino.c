@@ -1,54 +1,38 @@
 /* Implements BattleTech movement mechanics for unit domino. */
 
-#include <ctype.h>
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
 
-#include "aero_move_api.h"
 #include "bsuit_api.h"
-#include "btconfig.h"
 #include "btech/context.h"
-#include "btech_channel.h"
 #include "btech_event.h"
-#include "btechstats_api.h"
-#include "btmux_build_config.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
-#include "mech_combat_misc_api.h"
 #include "mech_crew_api.h"
 #include "mech_damage_api.h"
-#include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_fire_api.h"
 #include "mech_hitloc_api.h"
-#include "mech_ice_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
-#include "mech_physical_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
-#include "mux/objects/flags.h"
-#include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "template_api.h"
 int battle_map_mech_count_in_hex(BattleMap *map, int x, int y, int friendly,
                                  int team) {

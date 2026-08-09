@@ -1,6 +1,6 @@
 /* Implements BattleTech repair mechanics for unit tech section commands. */
 
-#include <string.h>
+#include <stdint.h>
 
 #include "bsuit_api.h"
 #include "btech/context.h"
@@ -8,6 +8,7 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "econ_api.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_consistency_api.h"
 #include "mech_equipment_api.h"
@@ -24,7 +25,6 @@
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
-#include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"

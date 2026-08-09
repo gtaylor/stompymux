@@ -1,9 +1,23 @@
+#include "autopilot.h"
+#include "btech/context.h"
+#include "btech_event.h"
+#include "map.h"
+#include "map_obj_api.h"
+#include "map_terrain.h"
+#include "mech_events.h"
+#include "mux/network/mux_event.h"
+#include "mux/server/platform.h"
+#include "mux/support/red_black_tree.h"
+#include "special_object.h"
 #include "sqlite_internal.h"
 
 #include "map_los_api.h"
 #include "map_units_api.h"
 #include "mech_identity_api.h"
 #include "mux/support/checked_storage.h"
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 static unsigned char *const *stored_bits_row(unsigned char **bits, int height,
                                              int row) {

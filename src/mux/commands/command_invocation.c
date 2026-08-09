@@ -3,6 +3,7 @@
 #include "mux/commands/command_invocation.h"
 
 #include "mux/support/checked_storage.h"
+#include <stddef.h>
 
 char *command_invocation_vector_at(const CommandInvocation *invocation,
                                    size_t index) {

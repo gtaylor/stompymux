@@ -8,11 +8,11 @@
 #include "btconfig.h"
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
-#include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_move_api.h"
@@ -22,7 +22,6 @@
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
-#include "registry_api.h"
 #include "section_types.h"
 
 static short simulation_map_coordinate(int coordinate) {

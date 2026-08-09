@@ -1,3 +1,4 @@
+#include "equipment_types.h"
 #include "mech_sensor.h"
 
 #include "btech/context.h"
@@ -13,13 +14,12 @@
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
-#include "mech_status_types.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 #include <math.h>
-#include <stdlib.h>
 
 static bool mech_sensor_target_is_small(const Mech *target) {
   return target &&

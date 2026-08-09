@@ -3,7 +3,6 @@
  */
 
 #include <stdio.h>
-#include <string.h>
 
 #include "mux/commands/action_messages.h"
 #include "mux/commands/command_handlers.h"

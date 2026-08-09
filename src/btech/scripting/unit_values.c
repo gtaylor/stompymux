@@ -1,3 +1,11 @@
+#include "equipment_types.h"
+#include "mech_api_types.h"
+#include "mech_tech_api.h"
+#include "mech_utils_api.h"
+#include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
+#include "section_types.h"
+#include "template_api.h"
 #include "values_internal.h"
 
 #include "checked_conversion.h"
@@ -8,6 +16,11 @@
 #include "mech_lifecycle.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 char *mechIDfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   const MechUnitId id = mech_unit_id(mech);

@@ -1,3 +1,16 @@
+#include "btech/context.h"
+#include "btech/persistence/schema.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/utf8.h"
+#include <float.h>
+#include <limits.h>
+#include <math.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #define BTECH_PERSISTENCE_PREPARE_IMPLEMENTATION
 #include "sqlite_internal.h"
 

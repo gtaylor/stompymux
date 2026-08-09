@@ -3,7 +3,6 @@
 
 /* Most of the BattleSheep(tm) code is here.. */
 
-#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,16 +19,15 @@
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_terrain.h"
+#include "mech_api_types.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
-#include "mech_move_api.h"
 #include "mech_notify_api.h"
 #include "mech_radio_api.h"
 #include "mech_runtime_api.h"
 #include "mech_sensor_api.h"
-#include "mech_startup_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"

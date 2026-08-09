@@ -9,6 +9,7 @@
 
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/red_black_tree.h"
 
 struct string_dict_entry {
   char *key;

@@ -19,6 +19,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "special_object.h"
 #include "turret.h"
 
 typedef struct TurretTargetingScope {

@@ -10,6 +10,7 @@
 #include "mech_physical_api.h"
 #include "mech_position_api.h"
 #include "mech_targeting_api.h"
+#include "mux/server/platform.h"
 #include "registry_api.h"
 
 void mech_charge_timeout_update(Mech *mech) {

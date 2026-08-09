@@ -1,11 +1,19 @@
+#include "btech_channel.h"
 #include "checked_conversion.h"
+#include "equipment_types.h"
 #include "mech_equipment_api.h"
 #include "mech_heat_api.h"
+#include "mech_move_api.h"
 #include "mech_status_types.h"
+#include "mech_utils_api.h"
 #include "mech_utils_internal.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 
+#include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #ifdef BT_CALCULATE_BV

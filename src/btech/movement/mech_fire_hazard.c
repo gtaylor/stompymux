@@ -3,14 +3,13 @@
 #include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
-#include "mech_damage_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
-#include "mech_status_types.h"
 #include "mech_utils_api.h"
+#include "section_types.h"
 
 bool mech_fire_hazard_resolve(Mech *mech) {
   if (mech_position_terrain(mech) != BATTLE_TERRAIN_FIRE)

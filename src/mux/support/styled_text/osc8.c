@@ -6,6 +6,7 @@
 #include <string.h>
 #include <strings.h>
 
+#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/internal.h"
 #include "mux/support/styled_text/render.h"
 #include "mux/support/utf8.h"

@@ -1,6 +1,8 @@
 /* Implements BattleTech movement mechanics for unit ice. */
 
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "btech/context.h"
 #include "btech_event.h" // IWYU pragma: keep
@@ -23,8 +25,8 @@
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 
 #define TMP_TERR '1'

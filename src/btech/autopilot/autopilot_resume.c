@@ -1,9 +1,11 @@
 #include "autopilot.h"
 #include "autopilot_resume_api.h"
 
-#include "btech/context.h"
+#include "btech_event.h"
+#include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_runtime_api.h"
+#include "mux/server/platform.h"
 #include "registry_api.h"
 
 void autopilot_resume(Autopilot *autopilot) {

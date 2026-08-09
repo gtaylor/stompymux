@@ -3,6 +3,7 @@
 #include "btech_event.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
@@ -15,9 +16,11 @@
 #include "mech_tech_do_api.h"
 #include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "repair_job.h"
 #include "section_types.h"
+#include <stdint.h>
 
 static int completely_intact_int(Mech *mech) {
   int i;

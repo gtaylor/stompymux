@@ -1,4 +1,4 @@
-Checks: 'clang-analyzer-*,-clang-analyzer-security.insecureAPI.*,-clang-analyzer-deadcode.DeadStores,-clang-analyzer-optin.performance.Padding,-clang-analyzer-cplusplus.NewDelete,bugprone-narrowing-conversions,bugprone-suspicious-string-compare,bugprone-switch-missing-default-case,bugprone-branch-clone,clang-analyzer-security.insecureAPI.strcpy,clang-analyzer-security.insecureAPI.strcat,cert-err33-c'
+Checks: 'clang-analyzer-*,-clang-analyzer-security.insecureAPI.*,-clang-analyzer-deadcode.DeadStores,-clang-analyzer-optin.performance.Padding,-clang-analyzer-cplusplus.NewDelete,bugprone-narrowing-conversions,bugprone-suspicious-string-compare,bugprone-switch-missing-default-case,bugprone-branch-clone,clang-analyzer-security.insecureAPI.strcpy,clang-analyzer-security.insecureAPI.strcat,cert-err33-c,misc-include-cleaner'
 HeaderFilterRegex: '^.*/src/(mux|btech)/.*'
 CheckOptions:
   - key: bugprone-suspicious-string-compare.WarnOnImplicitComparison

@@ -11,6 +11,8 @@
 #include "mech_runtime_api.h"
 #include "mux/server/platform.h"
 #include "registry_api.h"
+#include <stdlib.h>
+#include <string.h>
 
 void alter_conditions(BattleMap *map) {
   int i;

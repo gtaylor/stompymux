@@ -1,19 +1,21 @@
 #include "repair_job.h"
 
 #include <math.h>
+#include <stdint.h>
 
+#include "btech/context.h"
 #include "btech_event.h"
-#include "btmux_build_config.h"
 #include "checked_conversion.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_tech_api.h"
-#include "mech_tech_events_api.h"
 #include "mechrep.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
 

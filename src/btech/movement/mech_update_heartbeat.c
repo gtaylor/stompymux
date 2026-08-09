@@ -14,6 +14,7 @@
 #include "mech_sensor_state_api.h"
 #include "mech_tag_api.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
 
 static int mech_visibility_clamp(int visibility) {
   if (visibility < 0)

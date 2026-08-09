@@ -2,6 +2,7 @@
 
 #include "mux/world/object_list.h"
 
+#include "mux/objects/db.h"
 #include "mux/server/platform.h"
 
 DbRef insert_first(GameDatabase *database, DbRef head, DbRef thing) {

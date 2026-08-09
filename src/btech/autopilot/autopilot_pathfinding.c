@@ -1,17 +1,15 @@
 #include <assert.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "autopilot.h"
-#include "btech/context.h"
-#include "equipment_types.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
-#include "mech_identity_api.h"
 #include "mech_move_api.h"
 #include "mech_position_api.h"
 #include "mech_specification_api.h"

@@ -1,3 +1,4 @@
+#include "equipment_types.h"
 #include "mech_specification_api.h"
 
 #include <math.h>
@@ -6,7 +7,9 @@
 #include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "section_types.h"
 
 MechMovementType mech_movement_type(const Mech *mech) {
   return (MechMovementType)mech->ud.move;

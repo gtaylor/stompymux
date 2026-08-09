@@ -2,6 +2,8 @@
 
 #include <math.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include "bsuit_api.h"
 #include "btech/context.h"

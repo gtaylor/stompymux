@@ -1,3 +1,12 @@
+#include "ai_api.h"
+#include "autopilot.h"
+#include "btech_event.h"
+#include "mech_events.h"
+#include "mech_tech_events_api.h"
+#include "missile_hit_registry.h"
+#include "mux/network/mux_event.h"
+#include "mux/server/platform.h"
+#include "registry_api.h"
 #include "sqlite_internal.h"
 
 static void (*btech_special_repair_function(int type))(MuxEvent *) {

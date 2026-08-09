@@ -1,3 +1,6 @@
+#include "btconfig.h"
+#include "equipment_types.h"
+#include "mech_lifecycle.h"
 #include "mech_status_api.h"
 #include "mech_status_render_internal.h"
 
@@ -22,8 +25,9 @@
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_tag_api.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 
 static void recycle_status_append(char *buffer, size_t capacity,
@@ -38,7 +42,6 @@ static void recycle_status_append(char *buffer, size_t capacity,
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
-#include "weapon_settings.h"
 
 enum { AMMO_STATUS_CAPACITY = 8 * MAX_WEAPS_SECTION };
 

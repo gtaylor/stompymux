@@ -1,6 +1,8 @@
 /* signals.c - Process signal registration and server shutdown handlers. */
 
 #include "mux/objects/db.h"
+#include <bits/types/siginfo_t.h>
+#include <bits/types/stack_t.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>

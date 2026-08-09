@@ -1,4 +1,5 @@
 #include "btech/context.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
@@ -6,15 +7,16 @@
 #include "mech_notify_api.h"
 #include "mech_parts.h"
 #include "mech_status_api.h"
-#include "mech_status_types.h"
 #include "mech_tech_api.h"
 #include "mech_tech_commands_api.h"
 #include "mech_tech_do_api.h"
 #include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "registry_api.h"
 #include "repair_job.h"
+#include "section_types.h"
 
 void tech_toggletype(DbRef player, void *data, char *buffer) {
   int atype;

@@ -1,3 +1,4 @@
+#include "equipment_types.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 
 /* Implements unit startup and shutdown procedures. */

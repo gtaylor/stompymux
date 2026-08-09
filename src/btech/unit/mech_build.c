@@ -6,6 +6,7 @@
 #include <string.h>
 #include <strings.h>
 
+#include "equipment_types.h"
 #include "mech_build_api.h"
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
@@ -15,6 +16,7 @@
 #include "missile_hit_registry.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 #include "weapons.h"

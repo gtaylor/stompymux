@@ -4,7 +4,7 @@
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
-#include "mech_classification_api.h"
+#include "equipment_types.h"
 #include "mech_consistency_api.h"
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
@@ -21,9 +21,11 @@
 #include "mux/support/formatting.h"
 #include "mycool.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <strings.h>
 static const short engine_data[][2] = {{0, 0},
                                        {10, 1},

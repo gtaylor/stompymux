@@ -9,7 +9,6 @@
 #include "mux/commands/command_keys.h"
 #include "mux/commands/state_commands.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
@@ -24,6 +23,9 @@
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 #include "mux/world/object_set.h"
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
 

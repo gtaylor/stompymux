@@ -1,5 +1,6 @@
 /* diagnostics.c - Timestamped stderr tracing and always-on assertions. */
 
+#include <bits/types/struct_timeval.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

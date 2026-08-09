@@ -6,12 +6,11 @@
 #include "map_api.h"
 #include "map_obj_api.h"
 #include "map_units_api.h"
-#include "mech_identity_api.h"
 #include "mech_notify_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 
 void map_listmechs(DbRef player, void *data, char *buffer) {

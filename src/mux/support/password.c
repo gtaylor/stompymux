@@ -2,6 +2,7 @@
 
 #include "mux/server/server_config.h" // IWYU pragma: keep
 #include <core.h>
+#include <crypto_pwhash.h>
 #include <string.h>
 
 #include "mux/support/alloc.h"

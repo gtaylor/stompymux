@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <linux/limits.h>
 #include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>

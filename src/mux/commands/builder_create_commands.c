@@ -9,6 +9,7 @@
 #include "mux/commands/builder_commands_internal.h"
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
+#include "mux/commands/command_invocation.h"
 #include "mux/commands/command_keys.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"

@@ -1,9 +1,32 @@
+#include "btconfig.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "econ_api.h"
+#include "equipment_types.h"
+#include "map_obj_api.h"
+#include "mech_identity_api.h"
+#include "mech_los_api.h"
+#include "mech_move_api.h"
+#include "mech_notify_api.h"
+#include "mech_partnames_api.h"
+#include "mech_utils_api.h"
+#include "mux/commands/command_helpers.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
 #include "values_internal.h"
 #include "weapon_catalogue_api.h"
 
 #include "mech_equipment_api.h"
 #include "mech_position_api.h"
 #include "mech_tic_api.h"
+#include <stdlib.h>
+#include <string.h>
 
 void fun_btupdatelinks(char *buff, char **bufc, DbRef player, DbRef cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs,

@@ -2,6 +2,7 @@
 
 #include "checked_conversion.h"
 #include "mech_internal.h"
+#include <limits.h>
 
 MechDamageHistory mech_damage_history(const Mech *mech) {
   return (MechDamageHistory){

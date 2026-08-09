@@ -1,3 +1,18 @@
+#include "btconfig.h"
+#include "btech/context.h"
+#include "btech_event.h"
+#include "command_handlers_api.h"
+#include "coolmenu.h"
+#include "mech_script_value_api.h"
+#include "mechrep_api.h"
+#include "mux/commands/command_helpers.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
+#include "mycool.h"
 #include "registry_api.h"
 
 #include "checked_conversion.h"
@@ -5,7 +20,13 @@
 // The static value catalog guarantees source-kind/type pairings. Clang's
 // analyzer cannot infer that a field-only type always has a field offset.
 // NOLINTBEGIN(clang-analyzer-core.NonNullParamChecker,clang-analyzer-core.NullDereference)
+#include "special_object.h"
 #include "values_internal.h"
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 /* INDENT OFF */
 const int scode_in_out[TYPE_LAST_TYPE] =

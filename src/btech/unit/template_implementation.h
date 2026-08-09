@@ -1,0 +1,34 @@
+#pragma once
+
+#include "aero_bomb_api.h"
+#include "bsuit_api.h"
+#include "btconfig.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "command_handlers_api.h"
+#include "coolmenu.h"
+#include "map_conditions_api.h"
+#include "map_terrain.h"
+#include "mech_c3_api.h"
+#include "mech_consistency_api.h"
+#include "mech_internal.h"
+#include "mech_lifecycle.h"
+#include "mech_mechref_ident_api.h"
+#include "mech_partnames_api.h"
+#include "mech_utils_api.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/runtime_clock.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
+#include "template_internal.h"
+#include "weapon_settings.h"
+
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <time.h>

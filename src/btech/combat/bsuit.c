@@ -1,6 +1,5 @@
 /* Implements BattleTech combat mechanics for battle armor. */
 
-#include <math.h>
 #include <string.h>
 
 #include "bsuit_api.h"
@@ -10,6 +9,7 @@
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "crit_api.h"
+#include "equipment_types.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_bth_api.h"
@@ -30,7 +30,6 @@
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
-#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"

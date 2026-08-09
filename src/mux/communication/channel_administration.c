@@ -1,6 +1,7 @@
 /* comsys.c - Player channel creation, membership, and message delivery. */
 
 #include <stdio.h>
+#include <string.h>
 #include <strings.h>
 
 #include "mux/commands/command_context.h" // IWYU pragma: keep

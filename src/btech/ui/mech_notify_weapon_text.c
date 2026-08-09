@@ -1,7 +1,6 @@
 #include "mech_notify_api.h"
 
 #include <stdio.h>
-#include <string.h>
 
 #include "bsuit_api.h"
 #include "btech/context.h"
@@ -20,14 +19,14 @@
 #include "mech_utils_api.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
-#include "weapon_settings.h"
 
 static void mech_show_flag(EvaluationContext *evaluation, DbRef player,
                            int spaces, const char *text) {

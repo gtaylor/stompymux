@@ -1,9 +1,11 @@
 /* gamedb_sqlite.c -- SQLite game-database persistence */
 
 #include <limits.h>
+#include <linux/limits.h>
 #include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "mux/objects/character_state.h"

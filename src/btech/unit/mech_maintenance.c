@@ -1,10 +1,18 @@
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
 #include "checked_conversion.h"
+#include "command_handlers_api.h"
+#include "crit_api.h"
+#include "equipment_types.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
+#include "mech_damage_api.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
+#include "mech_events.h"
 #include "mech_heat_api.h"
 #include "mech_identity_api.h"
 #include "mech_runtime_api.h"
@@ -12,10 +20,21 @@
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_template_api.h"
+#include "mech_utils_api.h"
 #include "mech_utils_internal.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
+#include "template_api.h"
 #include "weapon_catalogue_api.h"
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 void ArmorStringFromIndex(int index, char *buffer, UnitClass type,
                           MechMovementType movement_type) {

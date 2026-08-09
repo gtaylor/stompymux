@@ -17,11 +17,14 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 
-#include "mux/support/formatting.h"
+#include "section_types.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

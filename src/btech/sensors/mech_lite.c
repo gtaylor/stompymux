@@ -2,6 +2,7 @@
 /* Implements searchlight and illumination effects. */
 
 #include "btconfig.h"
+#include "equipment_types.h"
 #include "map_los_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -13,7 +14,6 @@
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_sensor_state_api.h"
-#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "registry_api.h"
 

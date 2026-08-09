@@ -1,13 +1,33 @@
+#include "bsuit_api.h"
+#include "btconfig.h"
+#include "btech_channel.h"
 #include "btech_text_builder.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
+#include "mech_c3_api.h"
+#include "mech_consistency_api.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
+#include "mech_mechref_ident_api.h"
 #include "mech_network_api.h"
 #include "mech_runtime_api.h"
 #include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
+#include "section_types.h"
+#include "template_api.h"
 #include "template_implementation.h"
 #include "weapon_catalogue_api.h"
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include <time.h>
 
 static int *template_integer_slot(int *values, size_t count, int index) {
   return checked_storage_at(values, count, sizeof(*values), (size_t)index);

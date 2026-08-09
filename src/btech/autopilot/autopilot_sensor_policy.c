@@ -1,11 +1,12 @@
 /* Selects sensors and scan policies for autopilots. */
 
 #include "autopilot.h"
+#include "btconfig.h"
 #include "btech/context.h"
+#include "equipment_types.h"
 #include "map_conditions_api.h"
 #include "map_los_api.h"
 #include "map_units_api.h"
-#include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"

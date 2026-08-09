@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_update_api.h"
 #include "section_types.h"

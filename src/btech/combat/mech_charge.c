@@ -1,3 +1,4 @@
+// NOLINTBEGIN(misc-include-cleaner): Direct dependencies exceed file-size cap.
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
@@ -782,3 +783,4 @@ void ChargeMech(Mech *mech, Mech *target) {
 /*
  * Checks to see if we can grab a club with our arms.
  */
+// NOLINTEND(misc-include-cleaner)

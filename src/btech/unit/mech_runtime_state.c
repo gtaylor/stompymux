@@ -2,6 +2,9 @@
 
 #include "mech_internal.h"
 #include "mech_status_types.h"
+#include "mux/server/platform.h"
+#include "section_types.h"
+#include <time.h>
 
 bool mech_is_started(const Mech *mech) { return mech->rd.status & STARTED; }
 

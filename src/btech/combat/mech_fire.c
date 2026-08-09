@@ -2,7 +2,9 @@
 
 #include <stdint.h>
 
+#include "btech/context.h"
 #include "btech_event.h"
+#include "equipment_types.h"
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"

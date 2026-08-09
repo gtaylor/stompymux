@@ -1,6 +1,6 @@
 #include "btech_event.h" // IWYU pragma: keep
-#include "map.h"         // IWYU pragma: keep
-#include "map_api.h"
+#include "command_registry.h"
+#include "map.h" // IWYU pragma: keep
 #include "map_terrain.h"
 #include "mech_parts.h"               // IWYU pragma: keep
 #include "mech_scan_api.h"            // IWYU pragma: keep
@@ -14,51 +14,29 @@
 #include <string.h>
 #include <strings.h>
 
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
-#include "btmux_build_config.h"
-#include "command_handlers_api.h"
-#include "ds_turret_api.h"
-#include "map_dynamic_api.h"
 #include "mech_lifecycle.h"
-#include "mech_restrict_api.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "missile_hit_registry.h"
-#include "mux/network/mux_event.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
-#include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/doubly_linked_list.h"
 #include "mux/support/formatting.h"
-#include "mux/support/hash_table.h"
 #include "registry_api.h"
 #include "special_object.h"
-#include "weapon_settings.h"
 
 /*** #include all the prototype here! ****/
-#include "autopilot.h"
 #include "btech/persistence.h"
 #include "coolmenu.h"
 #include "mech_api_types.h"
-#include "mech_events.h"
 #include "mech_partnames_api.h"
 #include "mech_stat_api.h"
-#include "mechrep.h"
 #include "mechrep_api.h"
 #include "mux/objects/powers.h"
-#include "mux/support/red_black_tree.h"
-#include "mux/support/stringutil.h"
 #include "mycool.h"
 #include "registry_internal.h"
-#include "turret.h"
 
 static const char *command_help_message(int special_type, int command) {
   const BtechCommandDefinition *definition =

@@ -1,9 +1,11 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "ai_api.h"
 #include "autopilot.h"
+#include "autopilot_api.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
@@ -18,11 +20,13 @@
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
-#include "mech_startup_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/doubly_linked_list.h"
+#include "mymath.h"
 #include "registry_api.h"
 #include "section_types.h"
 

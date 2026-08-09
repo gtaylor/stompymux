@@ -1,5 +1,17 @@
+#include "ai_api.h"
+#include "mech_persistence.h"
+#include "mech_stagger.h"
+#include "missile_hit_registry.h"
+#include "mux/objects/db.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "registry_api.h"
 #include "sqlite_internal.h"
+#include <limits.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 static int *runtime_restore_int_slot(int *values, size_t count, int index) {
   if (index < 0)

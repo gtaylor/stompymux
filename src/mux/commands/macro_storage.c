@@ -1,3 +1,4 @@
+#include "mux/commands/command_context.h"
 #include "mux/commands/macro.h"
 
 #include <limits.h>
@@ -7,8 +8,8 @@
 #include "mux/communication/commac.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/stringutil.h"
 
 static int macro_player_storage_value(DbRef player) {
   if (player < INT_MIN)

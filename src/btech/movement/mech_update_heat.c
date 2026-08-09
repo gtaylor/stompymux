@@ -24,6 +24,7 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 static int mech_heat_sinks_enable(Mech *mech, int numsinks) {
 

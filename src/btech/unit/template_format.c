@@ -1,13 +1,23 @@
+#include "aero_bomb_api.h"
 #include "btech_text_builder.h"
 #include "checked_conversion.h"
+#include "equipment_types.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
 #include "mech_partnames_api.h"
+#include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "section_types.h"
+#include "template_api.h"
 #include "template_implementation.h"
 #include "weapon_catalogue_api.h"
+#include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
 
 int compare_array(char *const list[], size_t count, const char *command) {
   if (!list)

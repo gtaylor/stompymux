@@ -13,16 +13,19 @@
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "btech_event.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "failures.h"
 #include "failures_api.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
+#include "mech_lifecycle.h"
 #include "mech_notify_api.h"
 #include "mech_runtime_api.h"
 #include "mech_startup_api.h"

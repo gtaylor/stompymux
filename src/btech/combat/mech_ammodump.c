@@ -5,6 +5,7 @@
 #include <strings.h>
 
 #include "btconfig.h"
+#include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"

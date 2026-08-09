@@ -1,5 +1,6 @@
 /* Implements BattleTech movement mechanics for unit update recycle. */
 
+#include "equipment_types.h"
 #include "mech_update_api.h"
 #include "weapon_catalogue_api.h"
 

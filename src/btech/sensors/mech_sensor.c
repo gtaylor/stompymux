@@ -1,8 +1,6 @@
 /* Implements BattleTech sensor mechanics for unit sensor. */
 
-#include "btech_channel.h"
 #include "btech_event.h"
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +8,7 @@
 #include "btconfig.h"
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map_conditions_api.h"
 #include "map_los_api.h"
 #include "map_los_types.h"
@@ -24,16 +23,13 @@
 #include "mech_runtime_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
-#include "mech_status_types.h"
 #include "mech_targeting_api.h"
-#include "mux/network/mux_event.h"
 #include "mux/objects/flags.h"
-#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 #define _MECH_SENSOR_C
 #include "autopilot.h"

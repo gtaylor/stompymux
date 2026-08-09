@@ -1,3 +1,8 @@
+#include "mux/communication/comsys_context.h"
+#include "mux/network/mux_event.h"
+#include "mux/persistence/gamedb.h"
+#include "mux/server/configuration_context.h"
+#include "mux/server/maintenance.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* mux_server.c - Construction and teardown for the MUX composition root. */
 
@@ -6,6 +11,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <time.h>
 
 #include "btech/context.h"
 #include "btmux_build_config.h"
@@ -24,6 +30,7 @@
 #include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/log_cache.h"
+#include "mux/server/server_control.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/server_registries.h"
 #include "mux/support/styled_text/palette.h"

@@ -1,9 +1,23 @@
+#include "ai_api.h"
+#include "autopilot.h"
+#include "equipment_types.h"
+#include "mech_persistence.h"
+#include "mech_stagger.h"
+#include "mechrep.h"
+#include "mux/server/platform.h"
+#include "mux/support/doubly_linked_list.h"
+#include "section_types.h"
+#include "special_object.h"
 #include "sqlite_internal.h"
 
+#include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "autopilot_argument_list_api.h"
 #include "mux/support/checked_storage.h"
+#include "turret.h"
 
 static const struct MechSection *
 stored_section(const MechPersistenceSnapshot *snapshot, int index) {

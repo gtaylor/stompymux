@@ -1,15 +1,12 @@
 /* Implements BattleTech repair mechanics for unit tech scrap commands. */
 
-#include <string.h>
-
-#include "bsuit_api.h"
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "econ_api.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
-#include "mech_consistency_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_notify_api.h"
@@ -19,15 +16,11 @@
 #include "mech_status_types.h"
 #include "mech_tech_api.h"
 #include "mech_tech_commands_api.h"
-#include "mech_tech_do_api.h"
 #include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
-#include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
-#include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "repair_job.h"
 #include "section_types.h"

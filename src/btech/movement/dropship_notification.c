@@ -1,3 +1,4 @@
+#include "mech_api_types.h"
 #include "mech_update_api.h"
 
 #include "btech/context.h"

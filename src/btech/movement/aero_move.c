@@ -1,4 +1,8 @@
+#include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
+#include <stdint.h>
+#include <time.h>
 /* Implements BattleTech movement mechanics for aerospace move. */
 
 #define MIN_TAKEOFF_SPEED 3
@@ -22,9 +26,7 @@
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
 #include "mech_condition_api.h"
-#include "mech_crew_api.h"
 #include "mech_ecm_api.h"
-#include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
@@ -48,7 +50,6 @@
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
@@ -321,7 +322,8 @@ void DS_BlastNearbyMechsAndTrees(Mech *mech, const char *hitmsg,
             map_terrain_set(map, x1, y1, BATTLE_TERRAIN_ROUGH);
           } else {
             add_decoration(
-                map, x1, y1, TYPE_FIRE, FIRE,
+                map, x1, y1, MAP_DECORATION_TYPE_FIRE,
+                MAP_DECORATION_FIRE_MARKER,
                 btech_random_range_int(battle_map_context(map), 60, 180));
           }
         }

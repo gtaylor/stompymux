@@ -1,5 +1,6 @@
 #include "mux/commands/macro.h"
 
+#include "mux/commands/command_context.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/commac.h"
@@ -10,7 +11,6 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h" // IWYU pragma: keep
-#include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"

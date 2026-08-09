@@ -1,20 +1,13 @@
 /* Resolves critical hits for vehicles. */
 
 #include <math.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "btconfig.h"
-#include "btech_channel.h"
 #include "btech_event.h"
-#include "btechstats_api.h"
 #include "crit_api.h"
-#include "econ_cmds_api.h"
-#include "eject_api.h"
-#include "failures.h"
+#include "equipment_types.h"
 #include "map.h"
 #include "map_terrain.h"
-#include "mech_ammodump_api.h"
 #include "mech_c3_api.h"
 #include "mech_c3i_api.h"
 #include "mech_classification_api.h"
@@ -22,7 +15,6 @@
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
 #include "mech_damage_api.h"
-#include "mech_enhanced_criticals_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
@@ -30,24 +22,13 @@
 #include "mech_lifecycle.h"
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
-#include "mech_pickup_api.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
-#include "mech_sensor.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
-#include "mech_tag_api.h"
-#include "mech_tech_commands_api.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
-#include "missile_hit_registry.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
-#include "random.h"
-#include "registry_api.h"
+#include "section_types.h"
 
 void mech_cargo_infantry_critical_apply(Mech *objMech, int wLoc) {
   /*

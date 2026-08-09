@@ -2,10 +2,12 @@
  * match.c -- Routines for parsing arguments
  */
 
+#include "mux/commands/command_context.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/support/stringutil.h"
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"

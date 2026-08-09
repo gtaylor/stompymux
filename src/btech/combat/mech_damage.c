@@ -1,33 +1,26 @@
+#include "equipment_types.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* Implements BattleTech combat mechanics for unit damage. */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "bsuit_api.h"
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "btmux_build_config.h"
-#include "command_handlers_api.h"
-#include "crit_api.h"
-#include "eject_api.h"
 #include "environment_damage_api.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_ammodump_api.h"
-#include "mech_build_api.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
-#include "mech_combat_missile_api.h"
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
 #include "mech_damage_api.h"
 #include "mech_damage_history_api.h"
-#include "mech_ecm_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
@@ -44,12 +37,9 @@
 #include "mech_stagger.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
-#include "mechrep_api.h"
-#include "mux/network/mux_event.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"

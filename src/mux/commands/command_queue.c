@@ -1,3 +1,4 @@
+#include "mux/commands/command_context.h"
 #include "mux/persistence/gamedb.h"           // IWYU pragma: keep
 #include "mux/server/configuration_context.h" // IWYU pragma: keep
 #include "mux/server/runtime_clock.h"         // IWYU pragma: keep

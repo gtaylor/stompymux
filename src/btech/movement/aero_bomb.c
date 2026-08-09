@@ -1,5 +1,8 @@
 /* Implements BattleTech movement mechanics for aerospace bomb. */
 
+#include "equipment_types.h"
+#include "mux/server/platform.h"
+#include <string.h>
 static const float BOMB_GRAVITY = 1.0F;
 
 #include <stdio.h>

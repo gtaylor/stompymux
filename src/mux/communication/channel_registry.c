@@ -3,6 +3,8 @@
 #include "mux/communication/channel_registry.h"
 
 #include "mux/support/checked_storage.h"
+#include "mux/support/hash_table.h"
+#include <stddef.h>
 
 Commac *channel_registry_bucket_at(const ChannelRegistry *registry,
                                    size_t bucket) {

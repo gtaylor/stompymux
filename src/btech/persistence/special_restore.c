@@ -1,9 +1,27 @@
+#include "autopilot.h"
+#include "equipment_types.h"
+#include "mechrep.h"
+#include "missile_hit_registry.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/doubly_linked_list.h"
+#include "mux/support/utf8.h"
+#include "registry_api.h"
+#include "special_object.h"
 #include "sqlite_internal.h"
 
 #include "autopilot_argument_list_api.h"
 #include "autopilot_commands_api.h"
 #include "checked_conversion.h"
+#include "turret.h"
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 static void *btech_special_object(BtechContext *context, DbRef object,
                                   BtechSpecialObjectType type) {

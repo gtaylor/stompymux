@@ -1,4 +1,6 @@
+#include "btconfig.h"
 #include "checked_conversion.h"
+#include "equipment_types.h"
 #include "mech_crew_api.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"
@@ -17,6 +19,9 @@
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
 #include "mech_status_types.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "section_types.h"
 #include "template_api.h"
 #include "weapon_catalogue_api.h"
 

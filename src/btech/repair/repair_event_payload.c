@@ -1,6 +1,7 @@
 #include "repair_job.h"
 
 #include "checked_conversion.h"
+#include <stdint.h>
 
 intptr_t repair_event_payload_pack(RepairEventPayload payload) {
   return payload.location + payload.position * LOCMAX +

@@ -10,6 +10,7 @@
 #include "mux/commands/command.h"
 #include "mux/objects/flags.h"
 #include "mux/server/server_config.h"
+#include "mux/support/hash_table.h"
 
 void command_registry_initialize(CommandRegistry *registry) {
   assert(registry != nullptr);

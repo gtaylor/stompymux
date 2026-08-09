@@ -6,6 +6,7 @@
 
 #include "mux/commands/command_queue.h"
 #include "mux/objects/db.h"
+#include "mux/server/platform.h"
 
 bool command_context_initialize(CommandContext *context,
                                 CommandRuntime *runtime, BtechContext *btech,

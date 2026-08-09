@@ -3,6 +3,7 @@
 #include "btech_event.h"
 
 #include <stddef.h> // IWYU pragma: keep
+#include <stdint.h>
 
 #include "autopilot.h"
 #include "btech/context.h"

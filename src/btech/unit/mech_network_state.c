@@ -1,7 +1,10 @@
+#include "equipment_types.h"
 #include "mech_network_api.h"
 
 #include "mech_internal.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include <stddef.h>
 
 static const DbRef *network_node(const DbRef *nodes, size_t count, int index) {
   return checked_storage_at_const(nodes, count, sizeof(*nodes), (size_t)index);

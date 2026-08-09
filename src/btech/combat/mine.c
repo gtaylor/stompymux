@@ -17,6 +17,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 
 #include "artillery_api.h"
@@ -31,6 +32,7 @@
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
+#include "mech_api_types.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify_api.h"

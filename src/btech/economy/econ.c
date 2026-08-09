@@ -9,8 +9,6 @@
 #include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 
 void econ_change_items(BtechContext *context, DbRef d, int id, int brand,
                        int num) {

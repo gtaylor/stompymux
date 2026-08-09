@@ -1,3 +1,4 @@
+#include "btconfig.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
@@ -20,12 +21,14 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 #include "mux/support/formatting.h"
-#include <ctype.h>
+#include "section_types.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

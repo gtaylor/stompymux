@@ -1,11 +1,20 @@
-#include "btech/context.h"
+#include "btconfig.h"
+#include "btech_channel.h"
 #include "checked_conversion.h"
+#include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
+#include "mech_utils_api.h"
 #include "mech_utils_internal.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/formatting.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 extern const int num_def_weapons;
 

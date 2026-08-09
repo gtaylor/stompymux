@@ -1,8 +1,6 @@
 
 /* Implements unit line-of-sight calculations. */
 
-#include <stdio.h>
-
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btech_channel.h"
@@ -21,12 +19,12 @@
 #include "mech_lostracer_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
-#include "mech_runtime_api.h"
 #include "mech_sensor_api.h"
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
+#include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"

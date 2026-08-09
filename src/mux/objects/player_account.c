@@ -3,11 +3,14 @@
 #include "mux/objects/player_account.h"
 
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 
 typedef struct PlayerLoginRecord PlayerLoginRecord;

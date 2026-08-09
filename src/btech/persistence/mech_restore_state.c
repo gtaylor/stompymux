@@ -1,4 +1,14 @@
+#include "ai_api.h"
+#include "equipment_types.h"
+#include "mech_persistence.h"
+#include "missile_hit_registry.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "registry_api.h"
 #include "sqlite_internal.h"
+#include <limits.h>
+#include <string.h>
 
 int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;

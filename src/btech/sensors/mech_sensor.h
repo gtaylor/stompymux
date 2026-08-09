@@ -3,7 +3,9 @@
 
 #pragma once
 
+#include "btconfig.h"
 #include "mech_api_types.h"
+#include "mech_status_types.h"
 
 typedef struct BattleMap BattleMap;
 /*

@@ -1,9 +1,13 @@
+#include "btech/context.h"
+#include "equipment_types.h"
 #include "mech_crew_api.h"
 #include "mech_targeting_api.h"
+#include "mux/server/platform.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* Implements BattleTech unit mechanics for unit events. */
 
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -44,6 +48,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 
 #undef WEAPON_RECYCLE_DEBUG

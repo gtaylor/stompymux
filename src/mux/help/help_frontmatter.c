@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/help/help_types.h"
 #include "mux/support/checked_storage.h"
 #include "tomlc17.h"
 

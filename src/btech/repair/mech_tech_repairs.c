@@ -22,6 +22,7 @@
 #include "mech_tech_events_api.h"
 #include "mech_tech_repairs_api.h"
 #include "mux/network/mux_event.h"
+#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"

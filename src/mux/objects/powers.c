@@ -3,11 +3,14 @@
  */
 
 #include <ctype.h>
+#include <stddef.h>
+#include <string.h>
 
 #include "btech/context.h" // IWYU pragma: keep
 #include "mux/commands/command.h"
 #include "mux/commands/command_keys.h"
 #include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
 #include "mux/persistence/gamedb.h" // IWYU pragma: keep
 #include "mux/server/configuration_context.h"

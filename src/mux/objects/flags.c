@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "btech/context.h" // IWYU pragma: keep
 #include "btech/special_objects.h"

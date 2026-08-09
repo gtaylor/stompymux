@@ -1,4 +1,13 @@
+#include "equipment_types.h"
+#include "missile_hit_registry.h"
+#include "mux/server/log.h"
+#include "mux/server/server_config.h"
+#include "mux/support/red_black_tree.h"
+#include "special_object.h"
 #include "sqlite_internal.h"
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
 
 typedef struct btech_special_object_counts BTECH_SPECIAL_OBJECT_COUNTS;
 struct btech_special_object_counts {

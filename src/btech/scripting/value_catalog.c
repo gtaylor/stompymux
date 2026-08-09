@@ -1,4 +1,12 @@
+#include "btech_event.h"
+#include "mech_script_value_api.h"
+#include "mech_sensor_api.h"
+#include "mux/support/checked_storage.h"
+#include "special_object.h"
+#include "turret.h"
+#include "value_handlers_api.h"
 #include "values_internal.h"
+#include <stddef.h>
 GMV xcode_data[] = {
     {.gtype = GTYPE_MECH,
      .name = "mapindex",

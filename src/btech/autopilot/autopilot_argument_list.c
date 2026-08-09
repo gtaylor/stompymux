@@ -1,5 +1,6 @@
 /* Owning, bounds-checked autopilot command arguments. */
 
+#include "autopilot.h"
 #include "autopilot_argument_list_api.h"
 
 #include <stdlib.h>

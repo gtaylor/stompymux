@@ -1,8 +1,15 @@
+#include "ai_api.h"
+#include "equipment_types.h"
+#include "mech_los_api.h"
 #include "mech_targeting_api.h"
+#include "mech_utils_api.h"
 #include "mech_utils_internal.h"
 
 #include "checked_conversion.h"
 #include "map_units_api.h"
+#include "mux/server/platform.h"
+#include "registry_api.h"
+#include <math.h>
 
 float FindRange(float x0, float y0, float z0, float x1, float y1, float z1) {
   const float dx = x0 - x1;

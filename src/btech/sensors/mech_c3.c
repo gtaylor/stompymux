@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#include "btech/context.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "mech_c3_api.h"
@@ -26,6 +27,7 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+#include "section_types.h"
 
 static DbRef *c3_network_slot(DbRef *network, int index) {
   return checked_storage_at(network, C3_NETWORK_SIZE, sizeof(*network),

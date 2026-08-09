@@ -1,9 +1,7 @@
 /* Implements BattleTech combat mechanics for unit fire resolution. */
 
-#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "artillery_api.h"
@@ -12,22 +10,16 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
-#include "btmux_build_config.h"
-#include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "failures.h"
-#include "failures_api.h"
 #include "map.h"
-#include "map_api.h"
-#include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_bth_api.h"
-#include "mech_build_api.h"
 #include "mech_classification_api.h"
 #include "mech_combat.h"
 #include "mech_combat_api.h"
 #include "mech_combat_misc_api.h"
-#include "mech_combat_missile_api.h"
 #include "mech_condition_api.h"
 #include "mech_damage_api.h"
 #include "mech_enhanced_criticals_api.h"
@@ -35,8 +27,6 @@
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_heat_api.h"
-#include "mech_hitloc_api.h"
-#include "mech_ice_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
@@ -50,14 +40,10 @@
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
-#include "missile_hit_registry.h"
-#include "mux/objects/attrs.h"
-#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
-#include "pcombat_api.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"

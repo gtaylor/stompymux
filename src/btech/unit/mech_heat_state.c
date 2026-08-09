@@ -3,6 +3,7 @@
 #include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
+#include "section_types.h"
 
 float mech_excess_heat(const Mech *mech) { return mech->rd.heat; }
 

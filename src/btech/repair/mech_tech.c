@@ -1,7 +1,8 @@
+#include "mux/server/platform.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* Implements BattleTech repair mechanics for unit tech. */
 
-#include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

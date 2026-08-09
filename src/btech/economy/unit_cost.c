@@ -1,3 +1,4 @@
+#include "context_internal.h"
 #include "part_cost_api.h"
 #include "unit_cost_api.h"
 #include "weapon_catalogue_api.h"
@@ -25,7 +26,6 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "section_types.h"
-#include "weapon_settings.h"
 
 #ifdef BT_PART_WEIGHTS
 extern const int internalsweight[];

@@ -5,6 +5,7 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "eject_api.h"
+#include "equipment_types.h"
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_obj_api.h"
@@ -26,7 +27,8 @@
 #include "mux/commands/action_messages.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/flags.h"
-#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/access.h"
@@ -34,8 +36,10 @@
 #include "registry_api.h"
 
 #include "mux/support/formatting.h"
+#include "section_types.h"
 #include <limits.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 

@@ -1,7 +1,9 @@
 /* Implements BattleTech movement mechanics for unit pickup. */
 
+#include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
+#include "equipment_types.h"
 #include "map_terrain.h"
 #include "mech_lifecycle.h"
 #include <math.h>

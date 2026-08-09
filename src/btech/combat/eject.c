@@ -1,12 +1,13 @@
 /* Implements BattleTech combat mechanics for eject. */
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "btech_channel.h"
 #include "btech_event.h"
+#include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_lifecycle.h"
 #include "mech_template_api.h"
 #include "mux/commands/action_messages.h"
@@ -45,7 +46,6 @@
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_tech_api.h"
-#include "mech_tech_commands_api.h"
 #include "mech_utils_api.h"
 #include "mechrep_api.h"
 #include "mux/lua/lua_runtime.h"

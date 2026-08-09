@@ -1,5 +1,8 @@
+#include "mech_api_types.h"
 #include "mech_status_api.h"
 #include "mech_status_render_internal.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "weapon_catalogue_api.h"
 
 #include <stdio.h>
@@ -13,7 +16,6 @@
 #include "command_handlers_api.h"
 #include "coolmenu.h"
 #include "equipment_types.h"
-#include "failures.h"
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"

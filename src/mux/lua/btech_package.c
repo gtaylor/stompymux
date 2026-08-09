@@ -1,6 +1,7 @@
 /* btech_package.c - Lua bindings for the BattleTech host API. */
 
 #include <lauxlib.h>
+#include <lua.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

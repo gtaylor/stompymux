@@ -2,26 +2,20 @@
 /* Calculates movement modifiers for combat base-to-hit values. */
 
 #include <math.h>
-#include <stdio.h>
-#include <string.h>
 
-#include "aero_move_api.h"
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
-#include "btmux_build_config.h"
-#include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_bth_api.h"
 #include "mech_c3_misc_api.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
-#include "mech_enhanced_criticals_api.h"
 #include "mech_events.h"
 #include "mech_heat_api.h"
-#include "mech_hitloc_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
@@ -31,12 +25,10 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
-#include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "registry_api.h"
+#include "section_types.h"
 int mech_attacker_movement_modifier(Mech *mech) {
   float maxspeed;
   float speed;

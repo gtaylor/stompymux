@@ -7,10 +7,10 @@
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
 #include "autopilot_weapon_profile_api.h"
-#include "btech/context.h"
 #include "equipment_types.h"
 #include "map_los_api.h"
 #include "map_units_api.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_combat_api.h"
 #include "mech_condition_api.h"
@@ -25,8 +25,10 @@
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/red_black_tree.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 
 static void format_target_id(char buffer[static LBUF_SIZE],

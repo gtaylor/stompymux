@@ -1,5 +1,4 @@
 #include "mech_motion_integration_api.h"
-#include "mech_targeting_api.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -7,18 +6,14 @@
 
 #include "aero_move_api.h"
 #include "btconfig.h"
-#include "btech/context.h"
-#include "btech_channel.h"
 #include "checked_conversion.h"
 #include "equipment_types.h"
-#include "floatsim.h"
 #include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "mech_charge_tracking_api.h"
 #include "mech_classification_api.h"
 #include "mech_hex_transition_api.h"
 #include "mech_ice.h"
-#include "mech_identity_api.h"
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
@@ -27,6 +22,7 @@
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "section_types.h"
 
 static float mech_motion_jump_speed(const Mech *mech, const BattleMap *map) {

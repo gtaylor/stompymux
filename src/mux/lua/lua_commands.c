@@ -2,11 +2,11 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <linux/limits.h>
 #include <lua.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_context.h"

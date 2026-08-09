@@ -2,6 +2,7 @@
 
 #include "btech/context.h"
 #include "crit_api.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
@@ -11,6 +12,7 @@
 #include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
 #include "section_types.h"
+#include <stddef.h>
 
 void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
                           int num) {

@@ -1,4 +1,5 @@
 #include "command_invokers.h"
+#include "command_registry.h"
 
 const BtechCommandDefinition sscommands[] = {
     {0, "@SETXCODE <NAME> <VALUE|DATA>", "@Sets xcode value on object",

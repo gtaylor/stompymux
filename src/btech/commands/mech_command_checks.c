@@ -1,4 +1,5 @@
 #include "command_handlers_api.h"
+#include "mech_api_types.h"
 #include "mech_notify_api.h"
 
 #include "btech/context.h"
@@ -8,6 +9,7 @@
 #include "mech_startup_api.h"
 #include "mech_status_types.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "registry_api.h"
 
 int common_checks(DbRef player, Mech *mech, int flags) {

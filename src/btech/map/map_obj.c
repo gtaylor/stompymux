@@ -1,8 +1,26 @@
+#include "btech/context.h"
+#include "btech_event.h"
+#include "command_handlers_api.h"
+#include "map.h"
+#include "map_obj_api.h"
 #include "map_obj_internal.h"
 #include "map_object_query_api.h"
 
 #include "checked_conversion.h"
+#include "map_terrain.h"
+#include "mech_events.h"
+#include "mech_utils_api.h"
+#include "mux/network/mux_event.h"
+#include "mux/network/mux_event_alloc.h"
+#include "mux/objects/db.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "registry_api.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
 
 static MapObject **map_object_slot(BattleMap *map, int type) {
   if (type < 0)

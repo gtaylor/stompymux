@@ -3,23 +3,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "equipment_types.h"
 #include "mech_parts.h"
 #include "mux/server/platform.h"
 /* All the *_{succ|fail|econ} functions belong here */
 #include "btech/context.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
-#include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_specification_api.h"
 #include "mech_tech_api.h"
 #include "mech_tech_do_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "repair_job.h"

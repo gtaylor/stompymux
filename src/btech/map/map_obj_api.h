@@ -2,6 +2,12 @@
 
 #pragma once
 
+enum {
+  MAP_DECORATION_TYPE_FIRE,
+};
+
+constexpr char MAP_DECORATION_FIRE_MARKER = '&';
+
 #include "map.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"

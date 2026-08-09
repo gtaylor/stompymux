@@ -1,8 +1,15 @@
 /* Implements BattleTech combat mechanics for unit hitloc fasa mech. */
 
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
+#include "mech_utils_api.h"
+#include "mux/support/formatting.h"
+#include "section_types.h"
 
 int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
                            int *isrear, int roll) {

@@ -6,7 +6,7 @@
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
 #include "mux/objects/db.h"
-#include "mux/server/platform.h"
+#include "mux/objects/flags.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/world/object_set.h"

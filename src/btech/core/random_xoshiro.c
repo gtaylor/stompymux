@@ -1,9 +1,12 @@
 #include "random.h"
 
+#include <asm-generic/errno-base.h>
 #include <assert.h>
 #include <errno.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <sys/random.h>
+#include <sys/types.h>
 
 #include "mux/support/checked_storage.h"
 

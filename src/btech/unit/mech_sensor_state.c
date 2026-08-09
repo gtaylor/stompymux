@@ -6,6 +6,7 @@
 #include "mech_internal.h"
 #include "mech_status_types.h"
 #include "mux/support/checked_storage.h"
+#include "section_types.h"
 
 int mech_sensor_index(const Mech *mech, int slot) {
   if (slot < 0)

@@ -1,8 +1,7 @@
+#include "equipment_types.h"
 #include "mech_position_api.h"
 
 #include "map_terrain.h"
-
-#include <stdlib.h>
 
 #include "checked_conversion.h"
 #include "floatsim.h"
@@ -11,6 +10,8 @@
 #include "mech_runtime_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
+#include "section_types.h"
 
 void mech_position_reset_origin(Mech *mech) {
   mech->pd.last_x = 0;

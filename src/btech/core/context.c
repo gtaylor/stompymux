@@ -3,13 +3,20 @@
 #include "btech/context.h"
 
 #include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 
+#include "btech/ids.h"
+#include "context_internal.h"
+#include "missile_hit_registry.h"
 #include "mux/commands/command_context.h"
 #include "mux/network/mux_event.h"
 #include "mux/server/runtime_clock.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
+#include "random.h"
+#include "weapon_settings.h"
 
 static int *integer_slot(int *values, size_t count, size_t index) {
   return checked_storage_at(values, count, sizeof(*values), index);

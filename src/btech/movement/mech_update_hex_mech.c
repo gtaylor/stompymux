@@ -27,6 +27,7 @@
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mux/support/formatting.h"
+#include "section_types.h"
 
 HexTransitionResult
 mech_hex_transition_resolve(const HexMechTransitionInput *input) {

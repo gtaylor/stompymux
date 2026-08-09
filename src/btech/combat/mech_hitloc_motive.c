@@ -3,9 +3,8 @@
 #include <math.h>
 #include <string.h>
 
-#include "btconfig.h"
-#include "btechstats_api.h"
 #include "crit_api.h"
+#include "equipment_types.h"
 #include "mech_api_types.h"
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
@@ -14,9 +13,8 @@
 #include "mech_lifecycle.h"
 #include "mech_notify_api.h"
 #include "mech_specification_api.h"
-#include "mech_status_types.h"
 #include "mech_utils_api.h"
-#include "random.h"
+#include "section_types.h"
 
 /* Do L3 FASA motive system crits */
 void mech_motive_system_hit(Mech *mech, int wRollMod) {

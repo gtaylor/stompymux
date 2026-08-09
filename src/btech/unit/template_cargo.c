@@ -1,6 +1,7 @@
 #include "template_internal.h"
 
 #include "mux/support/checked_storage.h"
+#include <stddef.h>
 
 const char *cargo[] = {"Ammo_LBX2",
                        "Ammo_LBX5_LBX",

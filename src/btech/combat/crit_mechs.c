@@ -1,17 +1,16 @@
 /* Resolves critical hits for BattleMechs. */
 
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "btconfig.h"
+#include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "crit_api.h"
 #include "econ_cmds_api.h"
 #include "eject_api.h"
-#include "failures.h"
+#include "equipment_types.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_ammodump_api.h"
@@ -26,7 +25,6 @@
 #include "mech_electronics_api.h"
 #include "mech_enhanced_criticals_api.h"
 #include "mech_equipment_api.h"
-#include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_heat_api.h"
 #include "mech_identity_api.h"
@@ -38,12 +36,10 @@
 #include "mech_runtime_api.h"
 #include "mech_sensor.h"
 #include "mech_sensor_api.h"
-#include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_tag_api.h"
 #include "mech_tech_commands_api.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "missile_hit_registry.h"
 #include "mux/objects/db.h"
@@ -52,8 +48,8 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
-#include "random.h"
 #include "registry_api.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 
 int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,

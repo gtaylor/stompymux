@@ -7,6 +7,7 @@
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "environment_damage_api.h"
+#include "equipment_types.h"
 #include "mech_advanced_api.h"
 #include "mech_ammunition_explosion_api.h"
 #include "mech_api_types.h"

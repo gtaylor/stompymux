@@ -1,11 +1,10 @@
 /* Implements BattleTech movement mechanics for unit update hex. */
 
+#include "mech_api_types.h"
 #include "mech_update_api.h"
 
 #include <math.h>
 #include <stdlib.h>
-
-#include "mux/network/mux_event.h"
 
 #include "btech/context.h"
 #include "btechstats_api.h"

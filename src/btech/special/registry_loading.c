@@ -1,42 +1,33 @@
 #include "btech_event.h" // IWYU pragma: keep
 #include "map.h"         // IWYU pragma: keep
-#include "map_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
-#include "mech_parts.h"               // IWYU pragma: keep
-#include "mech_scan_api.h"            // IWYU pragma: keep
-#include "mech_status_api.h"          // IWYU pragma: keep
+#include "mech_parts.h"      // IWYU pragma: keep
+#include "mech_scan_api.h"   // IWYU pragma: keep
+#include "mech_status_api.h" // IWYU pragma: keep
+#include "mux/server/log.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 
 /* Implements loading for BattleTech special objects. */
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <strings.h>
+#include <time.h>
 
 #include "autopilot_weapon_profile_api.h"
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
-#include "btmux_build_config.h"
-#include "command_handlers_api.h"
-#include "ds_turret_api.h"
 #include "map_dynamic_api.h"
 #include "mech_lifecycle.h"
 #include "mech_restrict_api.h"
-#include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "missile_hit_registry.h"
 #include "mux/network/mux_event.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
@@ -47,22 +38,16 @@
 /*** #include all the prototype here! ****/
 #include "autopilot.h"
 #include "btech/persistence.h"
-#include "coolmenu.h"
 #include "mech_api_types.h"
-#include "mech_classification_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_partnames_api.h"
 #include "mech_runtime_api.h"
 #include "mech_stat_api.h"
-#include "mechrep.h"
 #include "mechrep_api.h"
-#include "mux/objects/powers.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
-#include "mycool.h"
 #include "registry_internal.h"
-#include "turret.h"
 static int remove_from_all_maps_func(void *key, void *data, int depth,
                                      void *arg) {
   BtechSpecialObject *const xcode_obj = data;

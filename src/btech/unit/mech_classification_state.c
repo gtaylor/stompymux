@@ -1,6 +1,7 @@
 #include "mech_classification_api.h"
 
 #include "mech_internal.h"
+#include "section_types.h"
 
 UnitClass mech_class(const Mech *mech) { return (UnitClass)mech->ud.type; }
 
