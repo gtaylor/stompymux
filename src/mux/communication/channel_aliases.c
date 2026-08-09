@@ -46,9 +46,17 @@ void do_joinchannel(EvaluationContext *evaluation, DbRef player,
   if (!user) {
     ch->num_users++;
     if (ch->num_users >= ch->max_users) {
-      ch->max_users += 10;
-      ch->users =
-          realloc(ch->users, sizeof(struct comuser *) * (size_t)ch->max_users);
+      const int capacity = ch->max_users + 10;
+      struct comuser **users =
+          realloc(ch->users, sizeof(*ch->users) * (size_t)capacity);
+
+      if (users == nullptr) {
+        ch->num_users--;
+        raw_notify(evaluation, player, "Unable to add you to that channel.");
+        return;
+      }
+      ch->users = users;
+      ch->max_users = capacity;
       memset(checked_storage_at(ch->users, (size_t)ch->max_users,
                                 sizeof(*ch->users), (size_t)ch->num_users - 1),
              0,
@@ -268,9 +276,23 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
     return;
   }
   if (c->numchannels >= c->maxchannels) {
-    c->maxchannels += 10;
-    c->alias = realloc(c->alias, sizeof(char) * 6 * (size_t)c->maxchannels);
-    c->channels = realloc(c->channels, sizeof(char *) * (size_t)c->maxchannels);
+    const int capacity = c->maxchannels + 10;
+    char *aliases = realloc(c->alias, sizeof(*c->alias) * 6 * (size_t)capacity);
+    char **channels = nullptr;
+
+    if (aliases == nullptr) {
+      raw_notify(evaluation, player, "Unable to add that channel alias.");
+      return;
+    }
+    channels = realloc(c->channels, sizeof(*c->channels) * (size_t)capacity);
+    if (channels == nullptr) {
+      c->alias = aliases;
+      raw_notify(evaluation, player, "Unable to add that channel alias.");
+      return;
+    }
+    c->alias = aliases;
+    c->channels = channels;
+    c->maxchannels = capacity;
   }
   if (where < c->numchannels) {
     memmove(commac_alias_at(c, (size_t)where + 1),

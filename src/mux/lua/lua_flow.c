@@ -178,14 +178,14 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
   }
   lua_getfield(state, result_index, "action");
   field = lua_tostring(state, -1);
-  if (!field || !strcmp(field, "repeat"))
+  if (!field || strcmp(field, "repeat") == 0)
     outcome.action = FLOW_ACTION_WAIT;
-  else if (!strcmp(field, "goto"))
+  else if (strcmp(field, "goto") == 0)
     outcome.action = FLOW_ACTION_GOTO;
-  else if (!strcmp(field, "done"))
+  else if (strcmp(field, "done") == 0)
     outcome.action = FLOW_ACTION_DONE;
   else {
-    if (strcmp(field, "cancel"))
+    if (strcmp(field, "cancel") != 0)
       log_error(runtime->services->log, LOG_BUGS, "LUA", "FLOW",
                 "Unknown flow action '%s' from step '%s' in %s; cancelling.",
                 field, step, data->path);

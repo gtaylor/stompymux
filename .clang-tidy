@@ -1,7 +1,37 @@
-Checks: 'clang-analyzer-*,-clang-analyzer-security.insecureAPI.*,-clang-analyzer-deadcode.DeadStores,-clang-analyzer-optin.performance.Padding,-clang-analyzer-cplusplus.NewDelete,bugprone-narrowing-conversions,bugprone-suspicious-string-compare,bugprone-switch-missing-default-case,bugprone-branch-clone,clang-analyzer-security.insecureAPI.strcpy,clang-analyzer-security.insecureAPI.strcat,cert-err33-c,misc-include-cleaner'
+Checks: >
+  clang-analyzer-core.*,
+  clang-analyzer-nullability.*,
+  clang-analyzer-optin.taint.*,
+  clang-analyzer-security.*,
+  -clang-analyzer-security.insecureAPI.bcopy,
+  -clang-analyzer-security.insecureAPI.bzero,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  clang-analyzer-unix.*,
+  clang-analyzer-valist.*,
+  cert-arr39-c,
+  cert-con36-c,
+  cert-dcl03-c,
+  cert-dcl16-c,
+  cert-env33-c,
+  cert-err33-c,
+  cert-exp42-c,
+  cert-fio38-c,
+  cert-flp30-c,
+  cert-flp37-c,
+  cert-msc32-c,
+  cert-pos44-c,
+  cert-pos47-c,
+  cert-sig30-c,
+  bugprone-narrowing-conversions,
+  bugprone-branch-clone,
+  bugprone-suspicious-memory-comparison,
+  bugprone-suspicious-realloc-usage,
+  bugprone-suspicious-string-compare,
+  bugprone-switch-missing-default-case,
+  bugprone-undefined-memory-manipulation,
+  bugprone-unused-return-value,
+  misc-include-cleaner
 HeaderFilterRegex: '^.*/src/(mux|btech)/.*'
 CheckOptions:
-  - key: bugprone-suspicious-string-compare.WarnOnImplicitComparison
-    value: false
   - key: cert-err33-c.CheckedFunctions
     value: '^::fclose$;^::fread$;^::fwrite$;^::remove$;^::rename$'

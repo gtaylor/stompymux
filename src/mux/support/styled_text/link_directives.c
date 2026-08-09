@@ -283,7 +283,7 @@ static bool parse_menu_property(const char *property, size_t *index,
   size_t cursor = 5;
   size_t value = 0;
 
-  if (strncasecmp(property, "menu.", 5))
+  if (strncasecmp(property, "menu.", 5) != 0)
     return false;
   if (cursor >= length ||
       !(isdigit)((unsigned char)directive_character(property, length, cursor)))

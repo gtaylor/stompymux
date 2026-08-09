@@ -148,7 +148,8 @@ bool terminal_mtts_parse(const char *name, TerminalColorDepth *depth,
   char *end;
   long capabilities;
 
-  if (!name || !depth || !is_screen_reader || strncasecmp(name, "MTTS ", 5))
+  if (!name || !depth || !is_screen_reader ||
+      strncasecmp(name, "MTTS ", 5) != 0)
     return false;
   errno = 0;
   capabilities = strtol(checked_string_suffix(name, 5), &end, 10);

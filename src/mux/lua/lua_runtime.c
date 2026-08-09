@@ -126,7 +126,7 @@ int lua_valid_relative_path(const char *path) {
     return 0;
   path_length = strlen(path);
   if (lua_text_at(path, path_length, 0) == '/' || path_length < 5 ||
-      strcmp(checked_string_suffix(path, path_length - 4), ".lua"))
+      strcmp(checked_string_suffix(path, path_length - 4), ".lua") != 0)
     return 0;
   for (part_offset = 0; part_offset < path_length;) {
     size_t length = 0;
@@ -210,7 +210,7 @@ int lua_resolve_path(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     return 0;
   }
   root_length = strlen(root_path);
-  if (strncmp(resolved, root_path, root_length) ||
+  if (strncmp(resolved, root_path, root_length) != 0 ||
       (lua_text_at(resolved, strlen(resolved) + 1, root_length) &&
        lua_text_at(resolved, strlen(resolved) + 1, root_length) != '/')) {
     lua_set_error(error, error_size, "Lua path escapes %s",

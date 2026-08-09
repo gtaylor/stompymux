@@ -148,7 +148,7 @@ static void lua_schedule_run_job(LuaRuntime *runtime, LUA_SCHEDULE_JOB *job) {
     lua_getfield(state, -1, "name");
     name = lua_tostring(state, -1);
     lua_pop(state, 1);
-    if (!name || strcmp(name, job->name)) {
+    if (!name || strcmp(name, job->name) != 0) {
       lua_pop(state, 1);
       continue;
     }

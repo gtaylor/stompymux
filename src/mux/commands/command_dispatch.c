@@ -441,7 +441,7 @@ void process_command(CommandContext *context, char *command, char *args[],
   /*
    * Can we fix the @npemit thing?
    */
-  if (configuration->space_compress && strncmp(command, "@npemit", 7)) {
+  if (configuration->space_compress && strncmp(command, "@npemit", 7) != 0) {
     size_t read_offset = 0;
     size_t write_offset = 0;
 

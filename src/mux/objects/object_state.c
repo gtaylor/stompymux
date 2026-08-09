@@ -628,7 +628,7 @@ bool object_state_transaction_entry(ObjectStateTransaction *transaction,
     return false;
   for (size_t position = 0; position < collection->count; position++) {
     ObjectStateEntry *candidate = object_state_entry_slot(collection, position);
-    if (strcmp(candidate->name_space, name_space))
+    if (strcmp(candidate->name_space, name_space) != 0)
       continue;
     if (current++ != index)
       continue;

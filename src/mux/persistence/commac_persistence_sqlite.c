@@ -331,11 +331,19 @@ static int commac_load_alias(struct commac *commac, const char *alias,
     return -1;
   if (commac->numchannels == commac->maxchannels) {
     capacity = commac->maxchannels + 10;
-    commac->alias = realloc(commac->alias, (size_t)capacity * 6);
-    commac->channels =
-        realloc(commac->channels, sizeof(char *) * (size_t)capacity);
-    if (!commac->alias || !commac->channels)
+    char *aliases = realloc(commac->alias, (size_t)capacity * 6);
+    char **channels = nullptr;
+
+    if (aliases == nullptr)
       return -1;
+    channels =
+        realloc(commac->channels, sizeof(*commac->channels) * (size_t)capacity);
+    if (channels == nullptr) {
+      commac->alias = aliases;
+      return -1;
+    }
+    commac->alias = aliases;
+    commac->channels = channels;
     commac->maxchannels = capacity;
   }
   StringCopy(commac_alias_at(commac, (size_t)commac->numchannels), alias);
@@ -518,15 +526,17 @@ static int commac_load_users(sqlite3 *sqlite,
         break;
       }
       if (channel->num_users == channel->max_users) {
-        channel->max_users += 10;
-        channel->users =
-            realloc(channel->users,
-                    sizeof(*channel->users) * (size_t)channel->max_users);
-        if (!channel->users) {
+        const int capacity = channel->max_users + 10;
+        struct comuser **users =
+            realloc(channel->users, sizeof(*channel->users) * (size_t)capacity);
+
+        if (users == nullptr) {
           free(user);
           result = -1;
           break;
         }
+        channel->users = users;
+        channel->max_users = capacity;
       }
       user->who = who;
       user->on = (int)is_on;
@@ -622,13 +632,14 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      context->macros->sets = realloc(context->macros->sets,
+      MacroSet **grown_sets = realloc(context->macros->sets,
                                       sizeof(*context->macros->sets) *
                                           (size_t)(context->macros->count + 1));
-      if (!context->macros->sets) {
+      if (grown_sets == nullptr) {
         result = -1;
         break;
       }
+      context->macros->sets = grown_sets;
       macro = calloc(1, sizeof(*macro));
       if (!macro) {
         result = -1;
@@ -673,15 +684,23 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      macro->alias =
+      char *aliases =
           realloc(macro->alias, (size_t)(macro->macro_count + 1) * 5);
-      macro->string =
-          realloc(macro->string,
-                  sizeof(*macro->string) * (size_t)(macro->macro_count + 1));
-      if (!macro->alias || !macro->string) {
+      char **strings = nullptr;
+
+      if (aliases == nullptr) {
         result = -1;
         break;
       }
+      strings = realloc(macro->string, sizeof(*macro->string) *
+                                           (size_t)(macro->macro_count + 1));
+      if (strings == nullptr) {
+        macro->alias = aliases;
+        result = -1;
+        break;
+      }
+      macro->alias = aliases;
+      macro->string = strings;
       macro->macro_capacity = macro->macro_count + 1;
       StringCopy(macro_alias_at(macro, (size_t)macro->macro_count), alias);
       *macro_string_slot(macro, (size_t)macro->macro_count) = strdup(expansion);

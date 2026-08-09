@@ -322,7 +322,7 @@ static bool parse_rgb_function(const char *value, StyledColor *color) {
   const size_t length = strlen(value);
   size_t offset = 4;
 
-  if (strncasecmp(value, "rgb(", 4))
+  if (strncasecmp(value, "rgb(", 4) != 0)
     return false;
   if (!parse_rgb_channel(value, length, &offset, &color->red, ',') ||
       !parse_rgb_channel(value, length, &offset, &color->green, ',') ||

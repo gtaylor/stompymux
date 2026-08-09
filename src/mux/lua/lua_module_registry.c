@@ -171,7 +171,8 @@ int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     }
     name_length = strlen(entry->d_name);
     if (!S_ISREG(status.st_mode) || name_length < 5 ||
-        strcmp(checked_string_suffix(entry->d_name, name_length - 4), ".lua"))
+        strcmp(checked_string_suffix(entry->d_name, name_length - 4), ".lua") !=
+            0)
       continue;
     if (!lua_add_module(modules, module_count, child_relative, error,
                         error_size)) {

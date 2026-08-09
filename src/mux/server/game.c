@@ -552,8 +552,8 @@ int main(int argc, char *argv[]) {
           ? *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 1)
           : nullptr;
 
-  if (argc > 3 || (argc > 2 && strcmp(argument_one, "-s")) ||
-      (argc > 1 && !strcmp(argument_one, "--restart"))) {
+  if (argc > 3 || (argc > 2 && strcmp(argument_one, "-s") != 0) ||
+      (argc > 1 && strcmp(argument_one, "--restart") == 0)) {
     fprintf(stderr, "Usage: %s [-s] [config-file]\n",
             *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 0));
     exit(1);

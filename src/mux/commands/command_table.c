@@ -449,7 +449,7 @@ void command_aliases_destroy(HashTable *commands) {
         break;
       }
     }
-    if (built_in || strcasecmp(key, command->cmdname))
+    if (built_in || strcasecmp(key, command->cmdname) != 0)
       continue;
     CMDENT **grown = realloc(aliases, (alias_count + 1) * sizeof(*aliases));
     if (grown == nullptr)

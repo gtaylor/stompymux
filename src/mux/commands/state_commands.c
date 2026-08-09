@@ -43,7 +43,7 @@ void state_examine_namespaces(EvaluationContext *evaluation, DbRef player,
 
     if (!object_state_entry(database, thing, index, &entry))
       continue;
-    if (name_space && strcmp(name_space, entry.name_space)) {
+    if (name_space && strcmp(name_space, entry.name_space) != 0) {
       notify_printf(evaluation, player, "  %s: %zu value%s", name_space,
                     namespace_count, namespace_count == 1 ? "" : "s");
       namespace_count = 0;
@@ -133,7 +133,7 @@ static void examine_state_namespace(EvaluationContext *evaluation, DbRef player,
     ObjectStateEntryView entry;
 
     if (!object_state_entry(database, thing, index, &entry) ||
-        strcmp(entry.name_space, name_space))
+        strcmp(entry.name_space, name_space) != 0)
       continue;
     if (!found)
       notify_printf(evaluation, player, "State namespace %s:", name_space);
@@ -533,7 +533,7 @@ static void do_state_wipe(CommandInvocation *invocation) {
 
       if (!object_state_entry(database, object, index, &entry))
         break;
-      if (strcmp(entry.name_space, name_space)) {
+      if (strcmp(entry.name_space, name_space) != 0) {
         index++;
         continue;
       }
@@ -580,8 +580,8 @@ static void do_state_copy_or_move(CommandInvocation *invocation, bool move) {
       &transaction, source.object, destination_namespace, destination_key,
       value, error, sizeof(error));
   if (changed && move &&
-      (strcmp(source.name_space, destination_namespace) ||
-       strcmp(source.key, destination_key)))
+      (strcmp(source.name_space, destination_namespace) != 0 ||
+       strcmp(source.key, destination_key) != 0))
     changed = object_state_transaction_delete(&transaction, source.object,
                                               source.name_space, source.key);
   object_state_transaction_finish(&transaction, changed);
