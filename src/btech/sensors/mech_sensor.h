@@ -82,14 +82,14 @@ int bap_tohit(Mech *, Mech *, BattleMap *, int, int);
 int blood_tohit(Mech *, Mech *, BattleMap *, int, int);
 
 typedef enum SensorType {
-  SENSOR_VIS,
-  SENSOR_LA,
-  SENSOR_IR,
-  SENSOR_EM,
-  SENSOR_SE,
-  SENSOR_RA,
-  SENSOR_BAP,
-  SENSOR_BHAP,
+  SENSOR_VIS = 0,
+  SENSOR_LA = 1,
+  SENSOR_IR = 2,
+  SENSOR_EM = 3,
+  SENSOR_SE = 4,
+  SENSOR_RA = 5,
+  SENSOR_BAP = 6,
+  SENSOR_BHAP = 7,
   NUM_SENSORS = 9,
 } SensorType;
 

@@ -77,12 +77,12 @@ constexpr DbRef HOME = -3;      /* virtual room, represents mover's home */
 constexpr DbRef NOPERM = -4;    /* Error status, no permission */
 
 typedef enum ObjectType {
-  OBJECT_TYPE_ROOM,
-  OBJECT_TYPE_THING,
-  OBJECT_TYPE_EXIT,
-  OBJECT_TYPE_PLAYER,
+  OBJECT_TYPE_ROOM = 0,
+  OBJECT_TYPE_THING = 1,
+  OBJECT_TYPE_EXIT = 2,
+  OBJECT_TYPE_PLAYER = 3,
   OBJECT_TYPE_INVALID = 4,
-  OBJECT_TYPE_GARBAGE,
+  OBJECT_TYPE_GARBAGE = 5,
   OBJECT_TYPE_NOTYPE = 7,
 } ObjectType;
 

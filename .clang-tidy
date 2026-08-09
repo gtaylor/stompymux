@@ -21,6 +21,7 @@ Checks: >
   cert-pos47-c,
   cert-sig30-c,
   cert-err34-c,
+  cert-int09-c,
   -cert-dcl37-c,
   bugprone-narrowing-conversions,
   bugprone-branch-clone,
