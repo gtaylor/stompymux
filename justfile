@@ -65,3 +65,12 @@ docsite:
 
 docsite-serve:
     npm --prefix docs run serve
+
+# Shortcut for letting gdb attach to processes that it didn't start
+# This is dangerous to leave on!
+ptrace-on:
+    sudo sysctl -w kernel.yama.ptrace_scope=0
+
+# Shortcut for disabling cross-process tracing.
+ptrace-off:
+    sudo sysctl -w kernel.yama.ptrace_scope=1
