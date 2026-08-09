@@ -75,6 +75,18 @@ static char *radio_cursor_remaining(const RadioCommandCursor *cursor) {
              : nullptr;
 }
 
+static bool radio_frequency_is_valid(const char *text) {
+  const size_t length = strlen(text);
+  if (length == 0)
+    return false;
+  for (size_t index = 0; index < length; index++) {
+    const char value = *checked_string_suffix(text, index);
+    if (value < '0' || value > '9')
+      return false;
+  }
+  return true;
+}
+
 static char *radio_command_argument(const RadioCommandArguments *arguments,
                                     int index) {
   if (index < 0)
@@ -133,7 +145,8 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
     return;
   }
   char *frequency_text = radio_cursor_remaining(&input);
-  if (!parse_int_checked(frequency_text, &freq)) {
+  if (!radio_frequency_is_valid(frequency_text) ||
+      !parse_int_checked(frequency_text, &freq)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid frequency!");
     return;

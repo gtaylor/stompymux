@@ -106,9 +106,9 @@ int main(void) {
   mech_radio_frequency_set(&mech, 0, 77);
   if (!frequency_is(&mech, "A=+0", 77, 4, 1) ||
       !frequency_is(&mech, "A=-0", 77, 5, 1) ||
-      !frequency_is(&mech, "A=12suffix", 12, 5, 2) ||
-      !frequency_is(&mech, " A = 42", 42, 5, 3) ||
-      !frequency_is(&mech, "A=-2", 42, 6, 3))
+      !frequency_is(&mech, "A=12suffix", 77, 6, 1) ||
+      !frequency_is(&mech, " A = 42", 42, 6, 2) ||
+      !frequency_is(&mech, "A=-2", 42, 7, 2))
     return 2;
 
   return 0;
