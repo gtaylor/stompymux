@@ -45,6 +45,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -77,7 +78,11 @@ void mech_fireweapon(DbRef player, void *data, char *buffer) {
                  "Not enough arguments to the function");
     return;
   }
-  weapnum = atoi(args[0]);
+  if (!parse_int_checked(args[0], &weapnum)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid weapon number!");
+    return;
+  }
   FireWeaponNumber(player, mech, mech_map, weapnum, argc, args, 0);
 }
 
@@ -537,8 +542,12 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
   case 3:
 
     /* Fire at the Map X Y */
-    mapx = atoi(fire_argument(args, 1));
-    mapy = atoi(fire_argument(args, 2));
+    if (!parse_int_checked(fire_argument(args, 1), &mapx) ||
+        !parse_int_checked(fire_argument(args, 2), &mapy)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Invalid map coordinates!");
+      return 0;
+    }
     ishex = 1;
     if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
       mecha_notify(btech_context_evaluation(context), player,

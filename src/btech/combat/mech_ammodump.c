@@ -31,6 +31,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -167,7 +168,11 @@ void mech_dump(DbRef player, void *data, char *buffer) {
                  "Not enough arguments to the function");
     return;
   }
-  weapnum = atoi(args[0]);
+  if (!parse_int_checked(args[0], &weapnum)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid weapon number!");
+    return;
+  }
 
   if (mech_is_jumping(mech)) {
     mech_notify(mech, MECHALL, "You can't dump ammo while jumping!");
@@ -224,7 +229,11 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     }
     ArmorStringFromIndex(loc, buf, mech_class(mech), mech_movement_type(mech));
     if (args[1]) {
-      i = atoi(args[1]);
+      if (!parse_int_checked(args[1], &i)) {
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "Invalid ammunition slot!");
+        return;
+      }
       i--;
       if (i >= 0 && i < 12) {
         if (equipment_is_ammunition(mech_critical_part_type(mech, loc, i)))

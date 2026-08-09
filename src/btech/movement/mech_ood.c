@@ -37,6 +37,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
@@ -282,22 +283,21 @@ void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
                  "Invalid attributes!");
     return;
   }
-  if ((!((x) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+  if (!parse_int_checked(args[0], &x)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid number! (x)");
     return;
   }
-  if ((!((y) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if (!parse_int_checked(args[1], &y)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid number! (y)");
     return;
   }
-  if (argc == 3)
-    if ((!((z) = atoi(args[2])) && strcmp((args[2]), "0"))) {
-      mecha_notify(btech_context_evaluation(context), player,
-                   "Invalid number! (z)");
-      return;
-    }
+  if (argc == 3 && !parse_int_checked(args[2], &z)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Invalid number! (z)");
+    return;
+  }
   if (mech_is_out_of_control(mech)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "OOD already in progress!");

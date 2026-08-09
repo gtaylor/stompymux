@@ -299,6 +299,7 @@ if(BUILD_TESTING)
 
   add_executable(btech_caller_control_test tests/btech_caller_control.c
     ${BTECH_SOURCE_DIR}/ui/mech_notify_radio_config.c
+    ${MUX_SOURCE_DIR}/support/stringutil.c
     ${BTECH_SOURCE_DIR}/unit/mech_identity_state.c
     ${BTECH_SOURCE_DIR}/unit/mech_radio_state.c)
   target_compile_definitions(btech_caller_control_test PRIVATE BTECH_INTERNAL=1)

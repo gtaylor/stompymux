@@ -38,6 +38,7 @@
 #include "mine_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
@@ -266,8 +267,12 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     mech_dfa_target_dbref_set(mech, mech_dbref(tempMech));
     break;
   case 2:
-    bearing = atoi(args[0]);
-    range = strtof(args[1], nullptr);
+    if (!parse_int_checked(args[0], &bearing) ||
+        !parse_float_checked(args[1], &range)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid jump coordinates!");
+      return;
+    }
     FindXY(mech_position_real_x(mech), mech_position_real_y(mech), bearing,
            range, &realx, &realy);
 

@@ -42,6 +42,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -360,9 +361,11 @@ const char *mech_armor_status_set_value(Mech *mech, const char *sectstr,
                                  sectstr);
   if (index == -1 || !mech_section_original_internal(mech, index))
     return "#-1 INVALID SECTION";
-  if ((value = atoi(valuestr)) < 0 || value > 255)
+  if (!parse_int_checked(valuestr, &value) || value < 0 || value > 255)
     return "#-1 INVALID ARMORVALUE";
-  switch (type = atoi(typestr)) {
+  if (!parse_int_checked(typestr, &type))
+    return "#-1 INVALID TYPE";
+  switch (type) {
   case 0:
     mech_section_armor_set(mech, index, value);
     break;
@@ -422,22 +425,22 @@ void mech_damage(DbRef player, Mech *mech, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if ((!((damage) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+  if (!parse_int_checked(args[0], &damage)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid damage!");
     return;
   }
-  if ((!((clustersize) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if (!parse_int_checked(args[1], &clustersize)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid cluster size!");
     return;
   }
-  if ((!((isrear) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+  if (!parse_int_checked(args[2], &isrear)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid isrear flag!");
     return;
   }
-  if ((!((iscritical) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+  if (!parse_int_checked(args[3], &iscritical)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid iscritical flag!");
     return;
@@ -487,17 +490,17 @@ void mech_damage_section(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  if ((!((damage) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if (!parse_int_checked(args[1], &damage)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid damage (Arg 2) amount! (Must be a number!)");
     return;
   }
-  if ((!((isrear) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+  if (!parse_int_checked(args[2], &isrear)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Isrear value (Arg 3) Invalid! (1 or 0)");
     return;
   }
-  if ((!((iscritical) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+  if (!parse_int_checked(args[3], &iscritical)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Iscritical value (Arg 4) Invalid! (1 or 0)");
     return;

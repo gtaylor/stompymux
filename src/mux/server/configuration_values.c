@@ -17,6 +17,7 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/styled_text/palette.h"
 #include "mux/world/player.h"
 
@@ -26,8 +27,10 @@ int cf_int(int *vp, char *str, long extra, DbRef player, char *cmd,
    * Copy the numeric value to the parameter
    */
 
-  sscanf(str, "%d", vp);
-  return 0;
+  if (parse_int_checked(str, vp))
+    return 0;
+  configuration_log_syntax(context, player, cmd, "Expected integer: ", str);
+  return -1;
 }
 /* *INDENT-OFF* */
 
@@ -317,8 +320,10 @@ int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
 
 int cf_named_color(void *vp, char *str, long extra, DbRef player, char *cmd,
                    ConfigurationContext *context) {
-  char name[61];
-  char trailing;
+  char *name;
+  char *red_text;
+  char *green_text;
+  char *blue_text;
   char error[128];
   int red;
   int green;
@@ -326,8 +331,15 @@ int cf_named_color(void *vp, char *str, long extra, DbRef player, char *cmd,
 
   (void)vp;
   (void)extra;
-  if (sscanf(str, "%60s %d %d %d %c", name, &red, &green, &blue, &trailing) !=
-      4) {
+  name = strtok(str, " \t");
+  red_text = strtok(nullptr, " \t");
+  green_text = strtok(nullptr, " \t");
+  blue_text = strtok(nullptr, " \t");
+  if (name == nullptr || strlen(name) > 60 || red_text == nullptr ||
+      blue_text == nullptr || strtok(nullptr, " \t") != nullptr ||
+      !parse_int_checked(red_text, &red) ||
+      !parse_int_checked(green_text, &green) ||
+      !parse_int_checked(blue_text, &blue)) {
     configuration_log_syntax(context, player, cmd,
                              "Expected NAME RED GREEN BLUE: ", str);
     return -1;

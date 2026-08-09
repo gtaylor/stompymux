@@ -13,6 +13,7 @@
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 void aero_checklz(DbRef player, Mech *mech, char *buffer) {
@@ -25,8 +26,12 @@ void aero_checklz(DbRef player, Mech *mech, char *buffer) {
 
   const int argument_count = mech_parseattributes(buffer, arguments, 3);
   if (argument_count == 2) {
-    x = atoi(arguments[0]);
-    y = atoi(arguments[1]);
+    if (!parse_int_checked(arguments[0], &x) ||
+        !parse_int_checked(arguments[1], &y)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid coordinates!");
+      return;
+    }
     if (!mech_is_observer(mech)) {
       float real_x;
       float real_y;

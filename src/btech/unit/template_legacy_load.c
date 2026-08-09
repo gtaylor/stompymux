@@ -21,6 +21,8 @@
 #include "mech_status_types.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "section_types.h"
 #include "template_api.h"
 #include "weapon_catalogue_api.h"
@@ -107,6 +109,66 @@ static bool template_load_error(FILE *fp, Mech *mech, bool condition,
   return true;
 }
 
+typedef enum TemplateLineResult {
+  TEMPLATE_LINE_OK,
+  TEMPLATE_LINE_EOF,
+  TEMPLATE_LINE_INVALID,
+} TemplateLineResult;
+
+static TemplateLineResult template_read_ints(FILE *fp, int *values,
+                                             size_t value_count) {
+  char line[LBUF_SIZE];
+  if (!fgets(line, sizeof(line), fp))
+    return feof(fp) ? TEMPLATE_LINE_EOF : TEMPLATE_LINE_INVALID;
+
+  char *token = strtok(line, " \t\r\n");
+  for (size_t index = 0; index < value_count; index++) {
+    int *value = checked_storage_at(values, value_count * sizeof(*values),
+                                    sizeof(*values), index);
+    if (!token || !parse_int_checked(token, value))
+      return TEMPLATE_LINE_INVALID;
+    token = strtok(nullptr, " \t\r\n");
+  }
+  return token ? TEMPLATE_LINE_INVALID : TEMPLATE_LINE_OK;
+}
+
+static TemplateLineResult
+template_read_header(FILE *fp, int *tons, int *tactical_range,
+                     int *long_range_sensor_range, int *scanner_range,
+                     int *sinks, float *maximum_speed, float *jump_speed,
+                     int *specials) {
+  char line[LBUF_SIZE];
+  if (!fgets(line, sizeof(line), fp))
+    return feof(fp) ? TEMPLATE_LINE_EOF : TEMPLATE_LINE_INVALID;
+
+  char *token = strtok(line, " \t\r\n");
+  if (!token || !parse_int_checked(token, tons))
+    return TEMPLATE_LINE_INVALID;
+  token = strtok(nullptr, " \t\r\n");
+  if (!token || !parse_int_checked(token, tactical_range))
+    return TEMPLATE_LINE_INVALID;
+  token = strtok(nullptr, " \t\r\n");
+  if (!token || !parse_int_checked(token, long_range_sensor_range))
+    return TEMPLATE_LINE_INVALID;
+  token = strtok(nullptr, " \t\r\n");
+  if (!token || !parse_int_checked(token, scanner_range))
+    return TEMPLATE_LINE_INVALID;
+  token = strtok(nullptr, " \t\r\n");
+  if (!token || !parse_int_checked(token, sinks))
+    return TEMPLATE_LINE_INVALID;
+  token = strtok(nullptr, " \t\r\n");
+  if (!token || !parse_float_checked(token, maximum_speed))
+    return TEMPLATE_LINE_INVALID;
+  token = strtok(nullptr, " \t\r\n");
+  if (!token || !parse_float_checked(token, jump_speed))
+    return TEMPLATE_LINE_INVALID;
+  token = strtok(nullptr, " \t\r\n");
+  if (!token || !parse_int_checked(token, specials) ||
+      strtok(nullptr, " \t\r\n"))
+    return TEMPLATE_LINE_INVALID;
+  return TEMPLATE_LINE_OK;
+}
+
 static int template_load_legacy(Mech *mech, const char *id) {
   FILE *fp = nullptr;
   int i, j, k, t;
@@ -135,8 +197,9 @@ static int template_load_legacy(Mech *mech, const char *id) {
   ((mech)->ud.mech_type)[24] = '\0';
   if (template_load_error(
           fp, mech,
-          fscanf(fp, "%d %d %d %d %d %f %f %d\n", &i1, &i2, &i3, &i4, &i5,
-                 &((mech)->ud.maxspeed), &((mech)->rd.jumpspeed), &i6) < 8,
+          template_read_header(fp, &i1, &i2, &i3, &i4, &i5,
+                               &((mech)->ud.maxspeed), &((mech)->rd.jumpspeed),
+                               &i6) != TEMPLATE_LINE_OK,
           "Old template loading system: %s is invalid template file.", id)) {
     return -1;
   }
@@ -165,11 +228,19 @@ static int template_load_legacy(Mech *mech, const char *id) {
         break;
       }
     }
+    int section_values[4];
     if (template_load_error(fp, mech,
-                            fscanf(fp, "%d %d %d %d\n", &i1, &i2, &i3, &i4) < 4,
+                            template_read_ints(fp, section_values,
+                                               sizeof(section_values) /
+                                                   sizeof(*section_values)) !=
+                                TEMPLATE_LINE_OK,
                             "Insufficient data reading section %d!", i)) {
       return -1;
     }
+    i1 = section_values[0];
+    i2 = section_values[1];
+    i3 = section_values[2];
+    i4 = section_values[3];
     mech_section_recycle_ticks_set(mech, i, 0);
     mech_section_armor_set(mech, i, i1);
     mech_section_original_armor_set(mech, i, i1);
@@ -183,11 +254,19 @@ static int template_load_legacy(Mech *mech, const char *id) {
       i4 &= ~4;
     mech_section_configuration_set(mech, i, i4);
     for (j = 0; j < NUM_CRITICALS; j++) {
+      int critical_values[3];
       if (template_load_error(
-              fp, mech, fscanf(fp, "%d %d %d\n", &i1, &i2, &i3) < 3,
+              fp, mech,
+              template_read_ints(fp, critical_values,
+                                 sizeof(critical_values) /
+                                     sizeof(*critical_values)) !=
+                  TEMPLATE_LINE_OK,
               "Insufficient data reading critical %d/%d!", i, j)) {
         return -1;
       }
+      i1 = critical_values[0];
+      i2 = critical_values[1];
+      i3 = critical_values[2];
       mech_critical_part_type_set(mech, i, j, i1);
       if (template_load_error(fp, mech,
                               template_part_type_is_invalid(
@@ -210,7 +289,18 @@ static int template_load_legacy(Mech *mech, const char *id) {
       mech_critical_fire_mode_set(mech, i, j, i3);
     }
   }
-  if (fscanf(fp, "%d %d\n", &i1, &i2) == 2) {
+  int type_values[2];
+  TemplateLineResult type_result = template_read_ints(
+      fp, type_values, sizeof(type_values) / sizeof(*type_values));
+  if (type_result == TEMPLATE_LINE_INVALID) {
+    if (template_load_error(fp, mech, true,
+                            "Invalid 'mech or movement type!")) {
+      return -1;
+    }
+  }
+  if (type_result == TEMPLATE_LINE_OK) {
+    i1 = type_values[0];
+    i2 = type_values[1];
     if (template_load_error(fp, mech, i1 > CLASS_LAST, "Invalid 'mech type!")) {
       return -1;
     }
@@ -221,10 +311,17 @@ static int template_load_legacy(Mech *mech, const char *id) {
     }
     ((mech)->ud.move) = clamp_int_to_char(i2);
   }
-  if (fscanf(fp, "%d\n", &i1) != 1)
+  int radio_values[1];
+  TemplateLineResult radio_result = template_read_ints(
+      fp, radio_values, sizeof(radio_values) / sizeof(*radio_values));
+  if (radio_result == TEMPLATE_LINE_INVALID) {
+    if (template_load_error(fp, mech, true, "Invalid radio range!"))
+      return -1;
+  }
+  if (radio_result == TEMPLATE_LINE_EOF)
     mech_radio_range_set(mech, DEFAULT_RADIORANGE);
   else
-    mech_radio_range_set(mech, i1);
+    mech_radio_range_set(mech, radio_values[0]);
   if (fclose(fp) != 0)
     return -1;
   return 1;

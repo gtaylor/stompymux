@@ -493,8 +493,10 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
   /*
    * Bye bye...
    */
-  player = (DbRef)atoi(
-      attribute_get_raw(evaluation->world->database, victim, A_DESTROYER));
+  const char *destroyer =
+      attribute_get_raw(evaluation->world->database, victim, A_DESTROYER);
+  if (!parse_long_checked(destroyer, &player))
+    player = NOTHING;
   toast_player(evaluation, victim);
   boot_off(evaluation->world->descriptors, victim, "You have been destroyed!");
   halt_que(evaluation->runtime->commands, victim, NOTHING);

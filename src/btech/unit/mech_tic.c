@@ -28,6 +28,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "weapon_catalogue_api.h"
 
 static const unsigned long *tic_word(const Mech *mech, int tic, int word) {
@@ -141,8 +142,8 @@ void addtic_sub(DbRef player, Mech *mech, char *buffer) {
                  "Invalid number of arguments to function!");
     return;
   }
-  ticnum = atoi(args[0]);
-  if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
+  if (!parse_int_checked(args[0], &ticnum) ||
+      !(ticnum >= 0 && ticnum < NUM_TICS)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Invalid tic number!");
     return;
@@ -184,8 +185,8 @@ void deltic_sub(DbRef player, Mech *mech, char *buffer) {
     cleartic_sub(player, mech, buffer);
     return;
   }
-  ticnum = atoi(args[0]);
-  if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
+  if (!parse_int_checked(args[0], &ticnum) ||
+      !(ticnum >= 0 && ticnum < NUM_TICS)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Invalid tic number!");
     return;
@@ -240,8 +241,8 @@ void firetic_sub(DbRef player, Mech *mech, char *buffer) {
                  "Not enough arguments to function");
     return;
   }
-  ticnum = atoi(args[0]);
-  if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
+  if (!parse_int_checked(args[0], &ticnum) ||
+      !(ticnum >= 0 && ticnum < NUM_TICS)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "TIC out of range!");
     return;
@@ -308,8 +309,8 @@ void listtic_sub(DbRef player, Mech *mech, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  ticnum = atoi(args[0]);
-  if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
+  if (!parse_int_checked(args[0], &ticnum) ||
+      !(ticnum >= 0 && ticnum < NUM_TICS)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "TIC out of range!");
     return;

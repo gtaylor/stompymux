@@ -3,6 +3,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <time.h>
 
 typedef struct ServerConfiguration ServerConfiguration;
 
@@ -47,3 +48,5 @@ bool parse_int_checked(const char *text, int *value);
 bool parse_long_checked(const char *text, long *value);
 /** Parses a complete finite float without modifying value on failure. */
 bool parse_float_checked(const char *text, float *value);
+/** Parses a complete decimal time_t without modifying value on failure. */
+bool parse_time_checked(const char *text, time_t *value);

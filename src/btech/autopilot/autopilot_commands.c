@@ -29,6 +29,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -346,8 +347,7 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
 
       /* Read in the 2nd argument - the target */
       const char *target_argument = autopilot_argument_list_get(&args, 1);
-      if ((!((target_dbref) = atoi(target_argument)) &&
-           strcmp(target_argument, "0"))) {
+      if (!parse_long_checked(target_argument, &target_dbref)) {
 
         /* Invalid command */
         snprintf(error_buf, MBUF_SIZE,
@@ -442,7 +442,7 @@ void auto_command_pickup(Autopilot *autopilot, Mech *mech) {
 
   /* Read in the argument */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if ((!((target) = atoi(argument)) && strcmp((argument), "0"))) {
+  if (!parse_int_checked(argument, &target)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld given bad"
@@ -490,7 +490,7 @@ void auto_command_speed(Autopilot *autopilot) {
 
   /* Read in the argument */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if ((!((requested_speed) = atoi(argument)) && strcmp((argument), "0"))) {
+  if (!parse_int_checked(argument, &requested_speed)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld given bad"
@@ -536,7 +536,7 @@ void auto_command_embark(Autopilot *autopilot, Mech *mech) {
 
   /* Read in the argument */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if ((!((target) = atoi(argument)) && strcmp((argument), "0"))) {
+  if (!parse_int_checked(argument, &target)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld given bad"
@@ -575,7 +575,8 @@ void auto_command_udisembark(Mech *mech) {
   buf =
       btech_attribute_read(btech_context_database(mech_context(mech)),
                            mech_dbref(mech), A_PILOTNUM, (char[LBUF_SIZE]){0});
-  sscanf(buf, "#%ld", &pil);
+  if (*buf == '#')
+    parse_long_checked(checked_string_suffix(buf, 1), &pil);
   mech_udisembark(pil, mech, "");
 }
 

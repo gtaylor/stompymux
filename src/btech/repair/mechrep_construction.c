@@ -144,8 +144,7 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
 
   if (argc) {
     // One Argument Given.
-    temp = atoi(args[1]);
-    if (temp < 0)
+    if (!parse_int_checked(args[1], &temp) || temp < 0)
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "Invalid armor value!");
     else {
@@ -158,8 +157,7 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
   }
   if (argc) {
     // Two Arguments Given.
-    temp = atoi(args[2]);
-    if (temp < 0)
+    if (!parse_int_checked(args[2], &temp) || temp < 0)
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "Invalid Internal armor value!");
     else {
@@ -172,7 +170,11 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
   }
   if (argc) {
     // Three Arguments Given.
-    temp = atoi(args[3]);
+    if (!parse_int_checked(args[3], &temp)) {
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Invalid Rear armor value!");
+      return;
+    }
     if (index == CTORSO || index == RTORSO || index == LTORSO) {
       if (temp < 0)
         mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -306,7 +308,12 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
                     "Weapon will be split! %d additional crits needed.",
                     weapnumcrits - argc);
     for (loop = 0; loop < argc; loop++) {
-      temp = atoi(construction_argument(args, 20, (size_t)(2 + loop)));
+      if (!parse_int_checked(
+              construction_argument(args, 20, (size_t)(2 + loop)), &temp)) {
+        mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                     "Bad critical location!");
+        return;
+      }
       temp--; /* From 1 based to 0 based */
       if (temp < 0 || temp > NUM_CRITICALS) {
         mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -344,7 +351,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
 void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
-  int section, critical, weaptype;
+  int section, critical, weaptype, weapon_number;
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -365,7 +372,12 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  weaptype = FindWeaponNumberOnMech_Advanced(mech, atoi(args[0]), &section,
+  if (!parse_int_checked(args[0], &weapon_number)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid Weapon #!");
+    return;
+  }
+  weaptype = FindWeaponNumberOnMech_Advanced(mech, weapon_number, &section,
                                              &critical, 0);
 
   if (weaptype < 0) {
@@ -515,7 +527,11 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  subsect = atoi(args[2]);
+  if (!parse_int_checked(args[2], &subsect)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Critslot out of range!");
+    return;
+  }
   subsect--; /* from 1 based to 0 based */
   if (subsect < 0 || subsect >= CritsInLoc(mech, index)) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -656,7 +672,11 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  subsect = atoi(args[1]);
+  if (!parse_int_checked(args[1], &subsect)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Critslot out of range!");
+    return;
+  }
   subsect--; /* from 1 based to 0 based */
   if (subsect < 0 || subsect >= CritsInLoc(mech, index)) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -711,8 +731,7 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
     return;
   }
   if (argc > 2) {
-    temp = atoi(args[2]);
-    if (temp < 0) {
+    if (!parse_int_checked(args[2], &temp) || temp < 0) {
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "Illegal value for armor!");
       return;

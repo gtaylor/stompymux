@@ -14,6 +14,7 @@
 #include "mux/server/server_control.h" // IWYU pragma: keep
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 
 static DbRef promote_dflt(DbRef old, DbRef new) {
@@ -183,7 +184,8 @@ void parse_range(GameDatabase *database,
       buff1 = checked_mutable_string_suffix(buff1, offset);
       if (*buff1 == NUMBER_TOKEN)
         buff1 = checked_mutable_string_suffix(buff1, 1);
-      *high_bound = atoi(buff1);
+      if (!parse_long_checked(buff1, high_bound))
+        *high_bound = database->top - 1;
       if (*high_bound >= database->top)
         *high_bound = database->top - 1;
     } else {
@@ -198,7 +200,8 @@ void parse_range(GameDatabase *database,
     buff2 = checked_mutable_string_suffix(buff2, offset);
     if (*buff2 == NUMBER_TOKEN)
       buff2 = checked_mutable_string_suffix(buff2, 1);
-    *low_bound = atoi(buff2);
+    if (!parse_long_checked(buff2, low_bound))
+      *low_bound = 0;
     if (*low_bound < 0)
       *low_bound = 0;
   } else {

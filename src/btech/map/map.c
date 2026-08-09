@@ -158,25 +158,27 @@ void map_view(DbRef player, void *data, char *buffer) {
   int displayHeight = MAP_DISPLAY_HEIGHT, displayWidth = MAP_DISPLAY_WIDTH;
   char *str;
   MapText *map_text;
-
   /* Check if its a valid map */
   if (!mech_map)
     return;
   EvaluationContext *evaluation =
       btech_context_evaluation(mech_map->xcode.context);
-
   /* Make sure the proper number of arguments '<X> <Y>' were passed */
   argc = mech_parseattributes(buffer, args, 2);
   switch (argc) {
   case 2:
-    x = BOUNDED(0, atoi(map_argument(args, 2, 0)), mech_map->map_width - 1);
-    y = BOUNDED(0, atoi(map_argument(args, 2, 1)), mech_map->map_height - 1);
+    if (!parse_int_checked(map_argument(args, 2, 0), &x) ||
+        !parse_int_checked(map_argument(args, 2, 1), &y)) {
+      mecha_notify(evaluation, player, "Invalid map coordinates!");
+      return;
+    }
+    x = BOUNDED(0, x, mech_map->map_width - 1);
+    y = BOUNDED(0, y, mech_map->map_height - 1);
     break;
   default:
     mecha_notify(evaluation, player, "Invalid number of parameters!");
     return;
   }
-
   /* Get the Tacsize attribute from
    * the player, if doesn't exist set the height and width to
    * default params. If it does exist, check the values and
@@ -186,9 +188,10 @@ void map_view(DbRef player, void *data, char *buffer) {
   if (!*str) {
     displayHeight = MAP_DISPLAY_HEIGHT;
     displayWidth = MAP_DISPLAY_WIDTH;
-  } else if (sscanf(str, "%d %d", &displayHeight, &displayWidth) != 2 ||
-             displayHeight > 24 || displayHeight < 5 || displayWidth < 5 ||
-             displayWidth > 40) {
+  } else if (!parse_int_checked(strtok(str, " \t"), &displayHeight) ||
+             !parse_int_checked(strtok(nullptr, " \t"), &displayWidth) ||
+             strtok(nullptr, " \t") != nullptr || displayHeight > 24 ||
+             displayHeight < 5 || displayWidth < 5 || displayWidth > 40) {
 
     mecha_notify(evaluation, player,
                  "Illegal Tacsize attribute. Must be in format "
@@ -196,14 +199,12 @@ void map_view(DbRef player, void *data, char *buffer) {
     displayHeight = MAP_DISPLAY_HEIGHT;
     displayWidth = MAP_DISPLAY_WIDTH;
   }
-
   /* Everything worked but lets check the map size */
   displayHeight = (displayHeight <= mech_map->map_height)
                       ? displayHeight
                       : mech_map->map_height;
   displayWidth = (displayWidth <= mech_map->map_width) ? displayWidth
                                                        : mech_map->map_width;
-
   /* Get the map data */
   map_text = map_text_create(player, nullptr, mech_map, x, y, displayWidth,
                              displayHeight, 3, 0);
@@ -229,9 +230,15 @@ void map_addhex(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  x = atoi(map_argument(args, 4, 0));
-  y = atoi(map_argument(args, 4, 1));
-  elev = clamp_int_to_char(abs(atoi(map_argument(args, 4, 3))));
+  int elevation;
+  if (!parse_int_checked(map_argument(args, 4, 0), &x) ||
+      !parse_int_checked(map_argument(args, 4, 1), &y) ||
+      !parse_int_checked(map_argument(args, 4, 3), &elevation)) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Invalid numeric argument!");
+    return;
+  }
+  elev = clamp_int_to_char(abs(elevation));
   if (!((x >= 0) && (x < map->map_width) && (y >= 0) &&
         (y < map->map_height))) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
@@ -292,7 +299,6 @@ int water_distance(BattleMap *map, int x, int y, int dir, int max) {
 
 static int eligible_bridge_hex(BattleMap *map, int x, int y) {
   int i, j, k;
-
   for (k = 0; k < 3; k++)
     if ((i = water_distance(map, x, y, k, 4)) < 4)
       if ((j = water_distance(map, x, y, k + 3, 4)) < 4) {
@@ -302,25 +308,20 @@ static int eligible_bridge_hex(BattleMap *map, int x, int y) {
       }
   return 0;
 }
-
 /* Convert some of the roads to bridges */
-
 static void make_bridges(BattleMap *map) {
   int x, y;
-
   for (x = 0; x < map->map_width; x++)
     for (y = 0; y < map->map_height; y++)
       if (map_terrain_get(map, x, y) == ROAD)
         if (eligible_bridge_hex(map, x, y))
           map_terrain_set_base(map, x, y, BRIDGE);
 }
-
 int map_checkmapfile(BattleMap *map, char *mapname) {
   char *openfile;
   FILE *fp;
   char row[MAPX * 2 + 3];
   int i = 0, height, width;
-
   if (strlen(mapname) >= MAP_NAME_SIZE)
     *map_character(mapname, strlen(mapname) + 1, MAP_NAME_SIZE) = 0;
   openfile = map_filename(map, mapname);
@@ -328,12 +329,10 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
     return -1;
   fp = fopen(openfile, "r");
   free(openfile);
-
   if (!fp) {
     return -1; // Bad map file
   }
-
-  if (fscanf(fp, "%d %d\n", &width, &height) != 2 || height < 1 ||
+  if (!map_read_dimensions(fp, &width, &height) || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
     btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
                        tprintf("Map #%ld: Invalid height and or/width on %s",
@@ -342,14 +341,12 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
       return -2;
     return -2; // Bad Height/Width
   }
-
   // Scan through the mapfile
   for (i = 0; i < height; i++) {
     if (feof(fp) || fgets(row, 2 * MAPX + 2, fp) == NULL ||
         strlen(row) < 2U * (size_t)width)
       break;
   }
-
   if (i != height) {
     btech_channel_send(
         map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
@@ -360,9 +357,7 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
       return -3;
     return -3;
   }
-
   // Everything is good if we get past the above
-
   return fclose(fp) == 0 ? 1 : -1;
 }
 
@@ -389,7 +384,7 @@ int map_load(BattleMap *map, char *mapname) {
     battle_map_grid_destroy(map->map, map->map_height);
     map->map = nullptr;
   }
-  if (fscanf(fp, "%d %d\n", &width, &height) != 2 || height < 1 ||
+  if (!map_read_dimensions(fp, &width, &height) || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
     btech_channel_send(
         map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
@@ -445,11 +440,21 @@ int map_load(BattleMap *map, char *mapname) {
   }
   map->grav = 100;
   map->temp = 20;
-  if (!feof(fp)) {
-    if (fscanf(fp, "%d: %d %d\n", &i1, &i2, &i3) == 3) {
-      map->flags = i1;
-      map->grav = clamp_int_to_unsigned_char(i2);
-      map->temp = clamp_int_to_char(i3);
+  if (!feof(fp) && fgets(row, sizeof(row), fp) != nullptr) {
+    char *separator = strchr(row, ':');
+    if (separator != nullptr) {
+      *separator = '\0';
+      char *grav_text =
+          strtok(checked_mutable_string_suffix(separator, 1), " \t\r\n");
+      char *temp_text = strtok(nullptr, " \t\r\n");
+      if (grav_text != nullptr && temp_text != nullptr &&
+          strtok(nullptr, " \t\r\n") == nullptr &&
+          parse_int_checked(row, &i1) && parse_int_checked(grav_text, &i2) &&
+          parse_int_checked(temp_text, &i3)) {
+        map->flags = i1;
+        map->grav = clamp_int_to_unsigned_char(i2);
+        map->temp = clamp_int_to_char(i3);
+      }
     }
   }
   map->map_height = clamp_int_to_short(height);
@@ -677,10 +682,14 @@ void map_update(DbRef obj, void *data) {
   if (!(map->xcode.context->events->tick % 25)) {
     oldl = map->maplight;
     oldv = map->mapvis;
-    if (!(tmps = btech_attribute_read(map->xcode.context->database, obj,
-                                      A_MAPVIS, (char[LBUF_SIZE]){0})) ||
-        sscanf(tmps, "%d %d %d %d %d %[^\n]", &ma, &ml, &wind, &wspeed,
-               &cloudbase, changemsg) < 4) {
+    bool valid_map_visibility =
+        (tmps = btech_attribute_read(map->xcode.context->database, obj,
+                                     A_MAPVIS, (char[LBUF_SIZE]){0})) !=
+            nullptr &&
+        map_parse_visibility_attribute(tmps, &ma, &ml, &wind, &wspeed,
+                                       &cloudbase, changemsg,
+                                       sizeof(changemsg));
+    if (!valid_map_visibility) {
       ma = 30;
       ml = 2;
       wind = 0;

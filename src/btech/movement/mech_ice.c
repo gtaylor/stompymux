@@ -25,6 +25,7 @@
 #include "mech_utils_api.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -221,7 +222,7 @@ void map_addice(DbRef player, BattleMap *map, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if ((!((num) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+  if (!parse_int_checked(args[0], &num)) {
     mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
                  "Invalid number!");
     return;
@@ -238,7 +239,7 @@ void map_delice(DbRef player, BattleMap *map, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if ((!((num) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+  if (!parse_int_checked(args[0], &num)) {
     mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
                  "Invalid number!");
     return;

@@ -18,6 +18,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "values_internal.h"
 #include "weapon_catalogue_api.h"
@@ -96,8 +97,11 @@ void fun_bthexemit(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  x = atoi(script_function_argument(fargs, nfargs, 1));
-  y = atoi(script_function_argument(fargs, nfargs, 2));
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &x) ||
+      !parse_int_checked(script_function_argument(fargs, nfargs, 2), &y)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
+    return;
+  }
   if (x < 0 || x > map->map_width || y < 0 || y > map->map_height) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
     return;
@@ -139,9 +143,12 @@ void fun_btmakepilotroll(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  /* No checking on rollmod/dammod, they're assumed to be 0 if invalid. */
-  rollmod = atoi(script_function_argument(fargs, nfargs, 1));
-  dammod = atoi(script_function_argument(fargs, nfargs, 2));
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 1),
+                         &rollmod) ||
+      !parse_int_checked(script_function_argument(fargs, nfargs, 2), &dammod)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID MODIFIER");
+    return;
+  }
 
   if (MadePilotSkillRoll(mech, rollmod)) {
     safe_tprintf_str(buff, bufc, "1");
@@ -250,8 +257,11 @@ void fun_bthexlos(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  x = atoi(script_function_argument(fargs, nfargs, 1));
-  y = atoi(script_function_argument(fargs, nfargs, 2));
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &x) ||
+      !parse_int_checked(script_function_argument(fargs, nfargs, 2), &y)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
+    return;
+  }
   if (x < 0 || x > map->map_width || y < 0 || y > map->map_height) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
     return;
@@ -365,7 +375,10 @@ void fun_btaddstores(char *buff, char **bufc, DbRef player, DbRef cause,
 
   /* Add a limit to the number of parts you can add at once to prevent reaching
    * the integer limits. */
-  count = atoi(script_function_argument(fargs, nfargs, 2));
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &count)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID COUNT");
+    return;
+  }
   if (count > ADDSTORES_MAX) {
     count = ADDSTORES_MAX;
   }
@@ -423,7 +436,10 @@ void fun_btticweaps(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  ticnum = atoi(script_function_argument(fargs, nfargs, 1));
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &ticnum)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TIC NUMBER");
+    return;
+  }
   if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TIC NUMBER");
     return;

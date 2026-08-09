@@ -120,9 +120,10 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   if (!*str) {
     displayHeight = MAP_DISPLAY_HEIGHT;
     displayWidth = MAP_DISPLAY_WIDTH;
-  } else if (sscanf(str, "%d %d", &displayHeight, &displayWidth) != 2 ||
-             displayHeight > 24 || displayHeight < 5 || displayWidth > 40 ||
-             displayWidth < 5) {
+  } else if (!parse_int_checked(strtok(str, " \t"), &displayHeight) ||
+             !parse_int_checked(strtok(nullptr, " \t"), &displayWidth) ||
+             strtok(nullptr, " \t") != nullptr || displayHeight > 24 ||
+             displayHeight < 5 || displayWidth > 40 || displayWidth < 5) {
 
     mecha_notify(evaluation, player,
                  "Illegal Tacsize attribute. Must be in format "

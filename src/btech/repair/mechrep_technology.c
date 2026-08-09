@@ -20,6 +20,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "repair_job.h"
 
@@ -94,7 +95,11 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
     invalid_section(player, mech);
     return;
   }
-  subsect = atoi(args[2]);
+  if (!parse_int_checked(args[2], &subsect)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Critslot out of range!");
+    return;
+  }
   subsect--;
   max = CritsInLoc(mech, index);
   if (subsect < 0 || subsect >= max) {
@@ -102,9 +107,13 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
                  "Critslot out of range!");
     return;
   }
-  if (argc == 4)
-    newdata = atoi(args[3]);
-  else
+  if (argc == 4) {
+    if (!parse_int_checked(args[3], &newdata)) {
+      mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                   "Invalid critical data!");
+      return;
+    }
+  } else
     newdata = 0;
   mech_critical_part_type_set(mech, index, subsect,
                               itemcode < 0 ? 0
@@ -627,15 +636,24 @@ void mechrep_setcargospace(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  cargo = (atoi(args[0]) * 50);
-  if (cargo < 0 || cargo > 250000) {
+  if (!parse_int_checked(args[0], &cargo)) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Doesn't that seem excessive?");
     return;
   }
+  if (cargo < 0 || cargo > 5000) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Doesn't that seem excessive?");
+    return;
+  }
+  cargo *= 50;
   mech_cargo_space_set(mech, cargo);
 
-  max = (atoi(args[1]));
+  if (!parse_int_checked(args[1], &max)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid maximum tonnage!");
+    return;
+  }
   max = (BOUNDED(1, max, 100));
   mech_carrier_maximum_tonnage_set(mech, max);
 

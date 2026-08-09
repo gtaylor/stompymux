@@ -139,7 +139,7 @@ void mech_brief(DbRef player, void *data, char *buffer) {
                  "Argument missing!");
     return;
   }
-  if ((!((v) = atoi(buffer)) && strcmp((buffer), "0"))) {
+  if (!parse_int_checked(buffer, &v)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid number!");
     return;

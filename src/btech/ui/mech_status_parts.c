@@ -3,6 +3,7 @@
 #include "mech_status_render_internal.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "weapon_catalogue_api.h"
 
 #include <stdio.h>
@@ -487,8 +488,8 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
     return status_text(buffer, "#-1 INVALID SECTION");
   if (!mech_section_original_internal(mech, index))
     return status_text(buffer, "#-1 INVALID SECTION");
-  crit = atoi(buf_critnum);
-  if (crit < 1 || crit > CritsInLoc(mech, index))
+  if (!parse_int_checked(buf_critnum, &crit) || crit < 1 ||
+      crit > CritsInLoc(mech, index))
     return status_text(buffer, "#-1 INVALID CRITICAL");
   crit--;
   if (!buf_flag)

@@ -315,8 +315,7 @@ void do_boot(CommandInvocation *invocation) {
     return;
   }
   if (key & BOOT_PORT) {
-    if (is_number(name)) {
-      victim = atoi(name);
+    if (parse_long_checked(name, &victim)) {
     } else {
       notify_checked(evaluation, player, player, "That's not a number!",
                      MSG_ME);

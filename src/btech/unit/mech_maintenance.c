@@ -571,7 +571,15 @@ void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
     *c = 0;
     c = checked_mutable_string_suffix(c, 1);
   }
-  if (sscanf(buffer, "%d-%d", &i1, &i2) == 2) {
+  char *range_separator = strchr(buffer, '-');
+  if (range_separator != nullptr) {
+    *range_separator = '\0';
+    if (!parse_int_checked(buffer, &i1) ||
+        !parse_int_checked(checked_string_suffix(range_separator, 1), &i2)) {
+      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+                   tprintf("Invalid value: %s", buffer));
+      return;
+    }
     if (i1 < 0 || i1 >= MAX_WEAPONS_PER_MECH) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    tprintf("Invalid first number in range (%d)", i1));
@@ -588,7 +596,7 @@ void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
       i2 = i3;
     }
   } else {
-    if ((!((i1) = atoi(buffer)) && strcmp((buffer), "0"))) {
+    if (!parse_int_checked(buffer, &i1)) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    tprintf("Invalid value: %s", buffer));
       return;

@@ -20,6 +20,7 @@
 // The static value catalog guarantees source-kind/type pairings. Clang's
 // analyzer cannot infer that a field-only type always has a field offset.
 // NOLINTBEGIN(clang-analyzer-core.NonNullParamChecker,clang-analyzer-core.NullDereference)
+#include "mux/support/stringutil.h"
 #include "special_object.h"
 #include "values_internal.h"
 #include <stddef.h>
@@ -75,17 +76,20 @@ static bool mech_value_write_text(Mech *mech, const GMV *descriptor,
     value.string = text;
     break;
   case TYPE_DBREF:
-    value.dbref = atoi(text);
+    if (!parse_long_checked(text, &value.dbref))
+      return false;
     break;
   case TYPE_FLOAT:
-    value.floating = strtof(text, nullptr);
+    if (!parse_float_checked(text, &value.floating))
+      return false;
     break;
   case TYPE_BV:
   case TYPE_CBV:
     value.integer = text2bv(text);
     break;
   default:
-    value.integer = atoi(text);
+    if (!parse_int_checked(text, &value.integer))
+      return false;
     break;
   }
 
@@ -145,32 +149,46 @@ static bool descriptor_write_text(void *data, const GMV *descriptor,
     return true;
   }
   case TYPE_DBREF: {
-    DbRef value = atoi(text);
+    DbRef value;
+    if (!parse_long_checked(text, &value))
+      return false;
     memcpy(descriptor_field(data, descriptor, sizeof(value)), &value,
            sizeof(value));
     return true;
   }
   case TYPE_CHAR: {
-    char value = clamp_int_to_char(atoi(text));
+    int parsed;
+    if (!parse_int_checked(text, &parsed))
+      return false;
+    char value = clamp_int_to_char(parsed);
     memcpy(descriptor_field(data, descriptor, sizeof(value)), &value,
            sizeof(value));
     return true;
   }
   case TYPE_SHORT: {
-    short value = clamp_int_to_short(atoi(text));
+    int parsed;
+    if (!parse_int_checked(text, &parsed))
+      return false;
+    short value = clamp_int_to_short(parsed);
     memcpy(descriptor_field(data, descriptor, sizeof(value)), &value,
            sizeof(value));
     return true;
   }
   case TYPE_INT:
   case TYPE_BV: {
-    int value = descriptor->type == TYPE_BV ? text2bv(text) : atoi(text);
+    int value;
+    if (descriptor->type == TYPE_BV)
+      value = text2bv(text);
+    else if (!parse_int_checked(text, &value))
+      return false;
     memcpy(descriptor_field(data, descriptor, sizeof(value)), &value,
            sizeof(value));
     return true;
   }
   case TYPE_FLOAT: {
-    float value = strtof(text, nullptr);
+    float value;
+    if (!parse_float_checked(text, &value))
+      return false;
     memcpy(descriptor_field(data, descriptor, sizeof(value)), &value,
            sizeof(value));
     return true;

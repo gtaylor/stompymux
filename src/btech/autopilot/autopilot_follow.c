@@ -26,6 +26,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/doubly_linked_list.h"
+#include "mux/support/stringutil.h"
 #include "mymath.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -139,7 +140,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* See if its a valid number */
-  if ((!((target_dbref) = atoi(argument)) && strcmp((argument), "0"))) {
+  if (!parse_long_checked(argument, &target_dbref)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - AI #%ld attempting"
@@ -502,7 +503,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   }
 
   /* Try and read the value */
-  if ((!((target) = atoi(argument)) && strcmp((argument), "0"))) {
+  if (!parse_int_checked(argument, &target)) {
 
     /* Not proper number so skip command goto next */
     snprintf(error_buf, MBUF_SIZE,

@@ -42,6 +42,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "special_object.h"
 #include "unit_cost_api.h"
@@ -129,8 +130,15 @@ int loading_bay_whine(DbRef player, DbRef cargobay, Mech *mech) {
 
   c = btech_attribute_read(mech_context(mech)->database, cargobay, A_MECHSKILLS,
                            (char[LBUF_SIZE]){0});
-  if (c && *c)
-    if (sscanf(c, "%d %d %d", &i1, &i2, &i3) >= 2)
+  if (c && *c) {
+    char values[LBUF_SIZE];
+    snprintf(values, sizeof(values), "%s", c);
+    char *first = strtok(values, " \t\r\n");
+    char *second = strtok(nullptr, " \t\r\n");
+    char *third = strtok(nullptr, " \t\r\n");
+    if (first && second && parse_int_checked(first, &i1) &&
+        parse_int_checked(second, &i2) &&
+        (!third || parse_int_checked(third, &i3)))
       if (mech_position_x(mech) != i1 || mech_position_y(mech) != i2) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "You're not where the cargo is!");
@@ -139,6 +147,7 @@ int loading_bay_whine(DbRef player, DbRef cargobay, Mech *mech) {
                         "Try looking around %d,%d instead.", i1, i2);
         return 1;
       }
+  }
   return 0;
 }
 
@@ -367,7 +376,10 @@ static void stuff_change_sub(BtechContext *context, DbRef player, char *buffer,
    * If we hit the max amount of parts addable at once, set quantity
    * to add to max.
    */
-  num = atoi(args[1]);
+  if (!parse_int_checked(args[1], &num)) {
+    mecha_notify(btech_context_evaluation(context), player, "Invalid amount!");
+    return;
+  }
   if (num > ADDSTORES_MAX) {
     num = ADDSTORES_MAX;
   }

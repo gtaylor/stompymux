@@ -498,19 +498,20 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
  * This routine will cause crashes if fed NULLs instead of strings.
  */
 int wild_match(const char *tstr, const char *dstr) {
+  int target;
+  int data;
+
   switch (*tstr) {
   case '>':
     tstr = checked_string_suffix(tstr, 1);
-    if ((isdigit)((unsigned char)*tstr) || (*tstr == '-'))
-      return (atoi(tstr) < atoi(dstr));
-    else
-      return (strcmp(tstr, dstr) < 0);
+    if (parse_int_checked(tstr, &target) && parse_int_checked(dstr, &data))
+      return target < data;
+    return strcmp(tstr, dstr) < 0;
   case '<':
     tstr = checked_string_suffix(tstr, 1);
-    if ((isdigit)((unsigned char)*tstr) || (*tstr == '-'))
-      return (atoi(tstr) > atoi(dstr));
-    else
-      return (strcmp(tstr, dstr) > 0);
+    if (parse_int_checked(tstr, &target) && parse_int_checked(dstr, &data))
+      return target > data;
+    return strcmp(tstr, dstr) > 0;
   default:
     break;
   }

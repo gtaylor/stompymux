@@ -29,6 +29,7 @@
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -96,8 +97,7 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
      * between 0 and 100 - basicly how much percentage wise over
      * the current value does the new target have to be to switch */
     if (argc == 3 &&
-        !(!((threshold) = atoi(autopilot_argument_list_get(args, 2))) &&
-          strcmp((autopilot_argument_list_get(args, 2)), "0")) &&
+        parse_int_checked(autopilot_argument_list_get(args, 2), &threshold) &&
         threshold >= 0 && threshold <= 100) {
 
       /* Set the new threshold value */
@@ -180,13 +180,11 @@ void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech,
   int x, y;
   char buffer[SBUF_SIZE];
 
-  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
-       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
     snprintf(mesg, LBUF_SIZE, "!First number not an integer");
     return;
   }
-  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
-       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 2), &y)) {
     snprintf(mesg, LBUF_SIZE, "!First number not an integer");
     return;
   }
@@ -304,13 +302,11 @@ void auto_radio_command_goto(Autopilot *autopilot, Mech *mech,
   char buffer[SBUF_SIZE];
   BattleMap *map;
 
-  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
-       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
     snprintf(mesg, LBUF_SIZE, "!First number not integer");
     return;
   }
-  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
-       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 2), &y)) {
     snprintf(mesg, LBUF_SIZE, "!Second number not integer");
     return;
   }
@@ -345,8 +341,7 @@ void auto_radio_command_heading(Autopilot *autopilot, Mech *mech,
   int heading;
   char buffer[SBUF_SIZE];
 
-  if ((!((heading) = atoi(autopilot_argument_list_get(args, 1))) &&
-       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 1), &heading)) {
     snprintf(mesg, LBUF_SIZE, "!Number not integer");
     return;
   }
@@ -446,13 +441,11 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
              autopilot_argument_list_get(args, 1));
     return;
   } else {
-    if ((!((bear) = atoi(autopilot_argument_list_get(args, 1))) &&
-         strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
+    if (!parse_int_checked(autopilot_argument_list_get(args, 1), &bear)) {
       snprintf(mesg, LBUF_SIZE, "!Invalid bearing");
       return;
     }
-    if ((!((rng) = atoi(autopilot_argument_list_get(args, 2))) &&
-         strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
+    if (!parse_int_checked(autopilot_argument_list_get(args, 2), &rng)) {
       snprintf(mesg, LBUF_SIZE, "!Invalid range");
       return;
     }
@@ -476,8 +469,7 @@ void auto_radio_command_leavebase(Autopilot *autopilot, Mech *mech,
   char buffer[SBUF_SIZE];
   int direction;
 
-  if ((!((direction) = atoi(autopilot_argument_list_get(args, 1))) &&
-       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 1), &direction)) {
     snprintf(mesg, LBUF_SIZE, "!Invalid value for direction");
     return;
   }
@@ -505,13 +497,11 @@ void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech,
   int x, y;
   char buffer[SBUF_SIZE];
 
-  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
-       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
     snprintf(mesg, LBUF_SIZE, "!First number not integer");
     return;
   }
-  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
-       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 2), &y)) {
     snprintf(mesg, LBUF_SIZE, "!Second number not integer");
     return;
   }

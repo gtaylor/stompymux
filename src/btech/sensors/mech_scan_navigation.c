@@ -16,6 +16,8 @@
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 #include <stdio.h>
@@ -38,6 +40,19 @@ static float map_scaled_elevation(BattleMap *map, int x, int y) {
   return scaled_hex_elevation(map_signed_elevation(map, x, y));
 }
 
+static bool parse_navigation_arguments(char *arguments[], size_t count,
+                                       int values[]) {
+  for (size_t index = 0; index < count; index++) {
+    char *argument = *(char **)checked_storage_at(arguments, count,
+                                                  sizeof(*arguments), index);
+    int *value =
+        (int *)checked_storage_at(values, count, sizeof(*values), index);
+    if (!parse_int_checked(argument, value))
+      return false;
+  }
+  return true;
+}
+
 void mech_bearing(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *tempMech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
@@ -47,6 +62,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
   int ix0, iy0;
   float x0, y0;
   int ix1, iy1;
+  int values[4];
   float x1, y1, z1;
   char trash[20] = {0};
   char buff[100] = {0};
@@ -81,8 +97,12 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
       }
     } else if (argc == 2) {
       /* Bearing to X, Y */
-      ix1 = atoi(args[0]);
-      iy1 = atoi(args[1]);
+      if (!parse_navigation_arguments(args, 2, values)) {
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
+        return;
+      }
+      ix1 = values[0];
+      iy1 = values[1];
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map))) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
@@ -92,10 +112,14 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
       }
     } else if (argc == 4) {
-      ix0 = atoi(args[0]);
-      iy0 = atoi(args[1]);
-      ix1 = atoi(args[2]);
-      iy1 = atoi(args[3]);
+      if (!parse_navigation_arguments(args, 4, values)) {
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
+        return;
+      }
+      ix0 = values[0];
+      iy0 = values[1];
+      ix1 = values[2];
+      iy1 = values[3];
 
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
@@ -133,6 +157,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
   int ix0, iy0;
   float x0, y0, z0;
   int ix1, iy1;
+  int values[4];
   float x1, y1, z1 = 0, hr;
   float temp;
   char trash[80];
@@ -174,8 +199,12 @@ void mech_range(DbRef player, void *data, char *buffer) {
       strcpy(buff, "Range to default target is: ");
     } else if (argc == 2) {
       /* Range to X, Y */
-      ix1 = atoi(args[0]);
-      iy1 = atoi(args[1]);
+      if (!parse_navigation_arguments(args, 2, values)) {
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
+        return;
+      }
+      ix1 = values[0];
+      iy1 = values[1];
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map))) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
@@ -190,10 +219,14 @@ void mech_range(DbRef player, void *data, char *buffer) {
       }
     } else if (argc == 4) {
       /* Range to X, Y from given X, Y */
-      ix0 = atoi(args[0]);
-      iy0 = atoi(args[1]);
-      ix1 = atoi(args[2]);
-      iy1 = atoi(args[3]);
+      if (!parse_navigation_arguments(args, 4, values)) {
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
+        return;
+      }
+      ix0 = values[0];
+      iy0 = values[1];
+      ix1 = values[2];
+      iy1 = values[3];
 
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
@@ -245,6 +278,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
   int ix0, iy0, iz0;
   float x0, y0, z0;
   int ix1, iy1, iz1;
+  int values[6];
   float x1, y1, z1 = 0, hr;
   float temp;
   char trash[80];
@@ -284,8 +318,12 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       strcpy(buff, "Vector to default target is: ");
     } else if (argc == 2) {
       /* Range to X, Y */
-      ix1 = atoi(args[0]);
-      iy1 = atoi(args[1]);
+      if (!parse_navigation_arguments(args, 2, values)) {
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
+        return;
+      }
+      ix1 = values[0];
+      iy1 = values[1];
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map))) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
@@ -297,9 +335,13 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       }
     } else if (argc == 3) {
       iz0 = clamp_float_to_int(z0 / ZSCALE);
-      ix1 = atoi(args[0]);
-      iy1 = atoi(args[1]);
-      iz1 = atoi(args[2]);
+      if (!parse_navigation_arguments(args, 3, values)) {
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
+        return;
+      }
+      ix1 = values[0];
+      iy1 = values[1];
+      iz1 = values[2];
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map))) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
@@ -311,10 +353,14 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       }
     } else if (argc == 4) {
       /* Range to X, Y from given X, Y */
-      ix0 = atoi(args[0]);
-      iy0 = atoi(args[1]);
-      ix1 = atoi(args[2]);
-      iy1 = atoi(args[3]);
+      if (!parse_navigation_arguments(args, 4, values)) {
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
+        return;
+      }
+      ix0 = values[0];
+      iy0 = values[1];
+      ix1 = values[2];
+      iy1 = values[3];
 
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
@@ -331,12 +377,16 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         z0 = map_scaled_elevation(mech_map, ix0, iy0);
       }
     } else if (argc == 6) {
-      ix0 = atoi(args[0]);
-      iy0 = atoi(args[1]);
-      iz0 = atoi(args[2]);
-      ix1 = atoi(args[3]);
-      iy1 = atoi(args[4]);
-      iz1 = atoi(args[5]);
+      if (!parse_navigation_arguments(args, 6, values)) {
+        mecha_notify(evaluation, player, "Invalid map coordinates!");
+        return;
+      }
+      ix0 = values[0];
+      iy0 = values[1];
+      iz0 = values[2];
+      ix1 = values[3];
+      iy1 = values[4];
+      iz1 = values[5];
 
       if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
             iy1 < battle_map_height(mech_map) && ix0 >= 0 &&

@@ -20,6 +20,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -106,7 +107,11 @@ void mech_sight(DbRef player, void *data, char *buffer) {
     return;
   argc = mech_parseattributes(buffer, args, 5);
   if (argc >= 1) {
-    weapnum = atoi(args[0]);
+    if (!parse_int_checked(args[0], &weapnum)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid weapon number!");
+      return;
+    }
     FireWeaponNumber(player, mech, mech_map, weapnum, argc, args, 1);
   } else {
     mecha_notify(evaluation, player, "Not enough arguments to the function");

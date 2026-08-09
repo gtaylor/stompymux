@@ -4,6 +4,7 @@
 #include "mech_utils_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "section_types.h"
 #include "template_api.h"
 #include "values_internal.h"
@@ -28,6 +29,43 @@ char *mechIDfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 1) = id.second;
   *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 2) = '\0';
   return buffer;
+}
+
+static bool parse_damage_numbers(const char *token, const char *prefix,
+                                 bool has_third, int *first, int *second,
+                                 int *third) {
+  const size_t token_length = strcspn(token, " ,");
+  const size_t prefix_length = strlen(prefix);
+  if (token_length >= 64 || token_length <= prefix_length ||
+      strncmp(token, prefix, prefix_length) != 0) {
+    return false;
+  }
+
+  char text[64];
+  memcpy(text, token, token_length);
+  *(char *)checked_storage_at(text, sizeof(text), sizeof(*text), token_length) =
+      '\0';
+  char *second_text =
+      strchr(checked_mutable_string_suffix(text, prefix_length), '/');
+  if (second_text == nullptr)
+    return false;
+  *second_text = '\0';
+  second_text = checked_mutable_string_suffix(second_text, 1);
+  if (!has_third)
+    return parse_int_checked(checked_string_suffix(text, prefix_length),
+                             first) &&
+           parse_int_checked(second_text, second);
+
+  char *third_text = strchr(second_text, '(');
+  char *last = (char *)checked_storage_at(text, sizeof(text), sizeof(*text),
+                                          token_length - 1);
+  if (third_text == nullptr || *last != ')')
+    return false;
+  *third_text = '\0';
+  *last = '\0';
+  return parse_int_checked(checked_string_suffix(text, prefix_length), first) &&
+         parse_int_checked(second_text, second) &&
+         parse_int_checked(checked_string_suffix(third_text, 1), third);
 }
 
 char *mech_getset_ref(int mode, Mech *mech, char *data) {
@@ -109,31 +147,31 @@ void apply_mechDamage(Mech *omech, char *buf) {
       break;
     const char *token = checked_string_suffix(buf, offset);
     /* Parse the keyword ; it's one of the many known types */
-    if (sscanf(token, "A:%d/%d", &i1, &i2) == 2) {
+    if (parse_damage_numbers(token, "A:", false, &i1, &i2, &i3)) {
       /* Ordinary armor damage */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         mech_section_armor_set(mech, i1,
                                mech_section_original_armor(mech, i1) - i2);
-    } else if (sscanf(token, "A(R):%d/%d", &i1, &i2) == 2) {
+    } else if (parse_damage_numbers(token, "A(R):", false, &i1, &i2, &i3)) {
       /* Ordinary rear armor damage */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         mech_section_rear_armor_set(
             mech, i1, mech_section_original_rear_armor(mech, i1) - i2);
-    } else if (sscanf(token, "I:%d/%d", &i1, &i2) == 2) {
+    } else if (parse_damage_numbers(token, "I:", false, &i1, &i2, &i3)) {
       /* Ordinary int damage */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         mech_section_internal_set(
             mech, i1, mech_section_original_internal(mech, i1) - i2);
-    } else if (sscanf(token, "C:%d/%d", &i1, &i2) == 2) {
+    } else if (parse_damage_numbers(token, "C:", false, &i1, &i2, &i3)) {
       /* Dest'ed crit */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         mech_critical_destroyed_set(mech, i1, i2, true);
-    } else if (sscanf(token, "G:%d/%d(%d)", &i1, &i2, &i3) == 3) {
+    } else if (parse_damage_numbers(token, "G:", true, &i1, &i2, &i3)) {
       /* Glitch */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         if (i2 >= 0 && i2 < NUM_CRITICALS)
           mech_critical_temporary_failure_set(mech, i1, i2, i3);
-    } else if (sscanf(token, "R:%d/%d(%d)", &i1, &i2, &i3) == 3) {
+    } else if (parse_damage_numbers(token, "R:", true, &i1, &i2, &i3)) {
       /* Reload */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         if (i2 >= 0 && i2 < NUM_CRITICALS)
@@ -313,7 +351,7 @@ int text2bv(const char *text) {
   int j = 0;
   int mode_not = 0;
 
-  if (!(!((j) = atoi(text)) && strcmp((text), "0")))
+  if (parse_int_checked(text, &j))
     return j; /* Allow 'old style' as well */
 
   /* Valid bitvector letters are: a-z (=27), A-Z (=27 more) */

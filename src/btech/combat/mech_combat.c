@@ -247,8 +247,12 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
     }
 
     mech_map = btech_context_get_map(context, mech_map_dbref(mech));
-    newx = atoi(args[0]);
-    newy = atoi(args[1]);
+    if (!parse_int_checked(args[0], &newx) ||
+        !parse_int_checked(args[1], &newy)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid coordinates!");
+      return;
+    }
     if (!battle_map_coordinate_is_valid(mech_map, newx, newy)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Illegal coordinates!");
@@ -300,8 +304,12 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
       return;
     }
     mech_map = btech_context_get_map(context, mech_map_dbref(mech));
-    newx = atoi(args[0]);
-    newy = atoi(args[1]);
+    if (!parse_int_checked(args[0], &newx) ||
+        !parse_int_checked(args[1], &newy)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid coordinates!");
+      return;
+    }
     if (!battle_map_coordinate_is_valid(mech_map, newx, newy)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Illegal coordinates!");

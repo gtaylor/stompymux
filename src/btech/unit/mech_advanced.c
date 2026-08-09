@@ -26,6 +26,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "random.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -160,7 +161,7 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  if ((!((wWeapNum) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+  if (!parse_int_checked(args[0], &wWeapNum)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  tprintf("Invalid value: %s", args[0]));
     return;

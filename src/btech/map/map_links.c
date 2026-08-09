@@ -12,6 +12,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -50,17 +51,25 @@ static char *link_argument(char **arguments, size_t count, int index) {
 static void recursively_update_links(BtechContext *context, DbRef from,
                                      DbRef loc, MapLinkUpdateStats *stats);
 
+static bool parse_coordinate_pair(char *text, int *x, int *y) {
+  char *separator = strchr(text, ',');
+  if (separator == nullptr)
+    return false;
+  *separator = '\0';
+  const bool parsed = parse_int_checked(text, x) &&
+                      parse_int_checked(checked_string_suffix(separator, 1), y);
+  *separator = ',';
+  return parsed;
+}
+
 int parse_coord(BattleMap *map, int dir, char *data, int *x, int *y) {
   int tx, ty, tox, toy;
   int doh;
 
   if (strchr(data, ',')) {
-    if (sscanf(data, "%d,%d", x, y) == 2)
-      return 1;
-    return 0;
+    return parse_coordinate_pair(data, x, y);
   }
-  doh = atoi(data);
-  if (doh < 0)
+  if (!parse_int_checked(data, &doh) || doh < 0)
     return 0;
   const MapDirection *direction = direction_entry(dir);
   tox = direction->x;
@@ -130,7 +139,8 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
   strlcpy(buf, data, LBUF_SIZE);
   if ((found = mech_parseattributes(buf, args, 500)) > 0)
     for (i = 0; i < found; i++) {
-      targ = atoi(link_argument(args, 500, i));
+      if (!parse_int_checked(link_argument(args, 500, i), &targ))
+        continue;
       if (targ < 0 || !btech_context_find_object(map->xcode.context, targ) ||
           targ == loc)
         continue;
@@ -138,7 +148,7 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
                                   A_BUILDCOORD, (char[LBUF_SIZE]){0});
       if (!tmps)
         continue;
-      if (sscanf(tmps, "%d,%d", &x, &y) != 2)
+      if (!parse_coordinate_pair(tmps, &x, &y))
         continue;
       if (x < 0 || x >= map->map_width || y < 0 || y >= map->map_height)
         continue;

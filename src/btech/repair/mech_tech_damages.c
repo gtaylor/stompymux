@@ -1,9 +1,5 @@
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include "mech_tech_damages.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
@@ -19,36 +15,36 @@
 #include "mech_status_api.h"
 #include "mech_status_types.h"
 #include "mech_tech_commands_api.h"
-#include "mech_tech_damages.h"
 #include "mech_tech_damages_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "mycool.h"
 #include "registry_api.h"
 #include "repair_job.h"
 #include "section_types.h"
-
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 typedef struct RepairDamage {
   int type;
   int location;
   int detail;
 } RepairDamage;
-
 typedef struct RepairDamageTable {
   RepairDamage entries[REPAIR_DAMAGE_CAPACITY];
   int count;
 } RepairDamageTable;
-
 static RepairDamage *repair_damage(RepairDamageTable *damages, int index) {
   if (index < 0)
     abort();
   return checked_storage_at(damages->entries, REPAIR_DAMAGE_CAPACITY,
                             sizeof(*damages->entries), (size_t)index);
 }
-
 static const RepairDamage *repair_damage_const(const RepairDamageTable *damages,
                                                int index) {
   if (index < 0)
@@ -56,24 +52,19 @@ static const RepairDamage *repair_damage_const(const RepairDamageTable *damages,
   return checked_storage_at_const(damages->entries, REPAIR_DAMAGE_CAPACITY,
                                   sizeof(*damages->entries), (size_t)index);
 }
-
 static void append_damage(char *buffer, size_t size, const char *fmt, ...)
     __attribute__((format(printf, 3, 4)));
-
 static void append_damage(char *buffer, size_t size, const char *fmt, ...) {
   size_t len = strlen(buffer);
   va_list ap;
-
   if (len >= size)
     return;
-
   va_start(ap, fmt);
   char *destination = checked_storage_at(buffer, size, sizeof(*buffer), len);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   vsnprintf(destination, size - len, fmt, ap);
   va_end(ap);
 }
-
 static const char *const repair_need_msgs[] = {
     "Reattachment",
     "Repairs on %s",
@@ -97,7 +88,6 @@ static const char *const repair_need_msgs[] = {
     "Reseal",
     "Replace suit",
 };
-
 static const char *repair_need_message(int type) {
   if (type < 0)
     abort();
@@ -106,26 +96,21 @@ static const char *repair_need_message(int type) {
       sizeof(*repair_need_msgs), (size_t)type);
   return *message;
 }
-
 static void repair_damage_add(RepairDamageTable *damages, int type,
                               int location) {
   *repair_damage(damages, damages->count++) =
       (RepairDamage){.type = type, .location = location};
 }
-
 static void repair_damage_add_detail(RepairDamageTable *damages, int type,
                                      int location, int detail) {
   *repair_damage(damages, damages->count++) =
       (RepairDamage){.type = type, .location = location, .detail = detail};
 }
-
 static int clan_modified_time(const Mech *mech, int time) {
   return MAX(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
 }
-
 static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
   int a, b, c, d;
-
   if (mech_section_is_destroyed(mech, loc)) {
     if (mech_class(mech) != CLASS_BSUIT)
       repair_damage_add(damages, REATTACH, loc);
@@ -133,12 +118,10 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
       repair_damage_add(damages, REPLACESUIT, loc);
     return 0;
   }
-
   /*
    * Added by Kipsta
    * 8/4/99
    */
-
   if (mech_section_is_flooded(mech, loc)) {
     repair_damage_add(damages, RESEAL, loc);
     return 0;
@@ -740,7 +723,7 @@ void tech_fix(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   RepairDamageTable damages_storage = {0};
   RepairDamageTable *damages = &damages_storage;
-  int n = atoi(buffer);
+  int n;
   int low, high;
   RepairCommandContext repair_command;
 
@@ -773,7 +756,22 @@ void tech_fix(DbRef player, void *data, char *buffer) {
                  "It's in pristine condition!");
     return;
   }
-  if (sscanf(buffer, "%d-%d", &low, &high) == 2) {
+  size_t range_offset = strcspn(buffer, "-");
+  size_t buffer_length = strlen(buffer);
+  if (range_offset < buffer_length) {
+    char *range_separator = checked_storage_at(buffer, buffer_length + 1,
+                                               sizeof(*buffer), range_offset);
+    char *range_end = checked_storage_at(buffer, buffer_length + 1,
+                                         sizeof(*buffer), range_offset + 1);
+    *range_separator = '\0';
+    bool valid_range =
+        parse_int_checked(buffer, &low) && parse_int_checked(range_end, &high);
+    *range_separator = '-';
+    if (!valid_range) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid #!");
+      return;
+    }
     if (low < 1 || low > damages->count) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Invalid low #!");
@@ -786,6 +784,11 @@ void tech_fix(DbRef player, void *data, char *buffer) {
     }
     for (n = low; n <= high; n++)
       fix_entry(damages, player, mech, n);
+    return;
+  }
+  if (!parse_int_checked(buffer, &n)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid #!");
     return;
   }
   if (n < 1 || n > damages->count) {

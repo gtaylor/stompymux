@@ -24,6 +24,7 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -120,7 +121,7 @@ void auto_leave_event(MuxEvent *muxevent) {
 
     dir = 0;
 
-  } else if ((!((dir) = atoi(argument)) && strcmp((argument), "0"))) {
+  } else if (!parse_int_checked(argument, &dir)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"

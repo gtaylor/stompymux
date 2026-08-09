@@ -16,6 +16,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "part_cost_api.h"
 #include "registry_api.h"
 #include "template_api.h"
@@ -149,15 +150,16 @@ void fun_btsettons(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
   }
-
   mech = btech_context_get_mech(context->btech, it);
   if (!mech) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
   }
-  x = atoi(script_function_argument(fargs, nfargs, 1));
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &x)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID TONNAGE");
+    return;
+  }
   mech_tonnage_set(mech, x);
-
   update_oweight(mech, x * 1024);
   safe_tprintf_str(buff, bufc, "%d", x);
 }
@@ -199,7 +201,6 @@ void fun_btsetxy(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return;
   }
-
   mapdb = match_thing(&context->command->match, player,
                       script_function_argument(fargs, nfargs, 1));
   if (mapdb == NOTHING ||
@@ -215,9 +216,14 @@ void fun_btsetxy(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
     return;
   }
-
-  x = atoi(script_function_argument(fargs, nfargs, 2));
-  y = atoi(script_function_argument(fargs, nfargs, 3));
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &x)) {
+    safe_tprintf_str(buff, bufc, "#-1 X COORD");
+    return;
+  }
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 3), &y)) {
+    safe_tprintf_str(buff, bufc, "#-1 Y COORD");
+    return;
+  }
   if (x < 0 || x > map->map_width) {
     safe_tprintf_str(buff, bufc, "#-1 X COORD");
     return;
@@ -226,15 +232,16 @@ void fun_btsetxy(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 Y COORD");
     return;
   }
-
   if (nfargs == 5) {
-    z = atoi(script_function_argument(fargs, nfargs, 4));
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 4), &z)) {
+      safe_tprintf_str(buff, bufc, "#-1 Z COORD");
+      return;
+    }
     if (z < 0 || z > 10000) {
       safe_tprintf_str(buff, bufc, "#-1 Z COORD");
       return;
     }
   }
-
   if (mech_carried_dbref(mech) > 0)
     towee = btech_context_get_mech(context->btech, mech_carried_dbref(mech));
 
@@ -709,7 +716,6 @@ void fun_btlistblz(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-
   mapdb = match_thing(&context->command->match, player,
                       script_function_argument(fargs, nfargs, 0));
   if (!is_good_obj(context->btech->database, mapdb)) {
@@ -750,7 +756,6 @@ void fun_bthexinblz(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-
   mapdb = match_thing(&context->command->match, player,
                       script_function_argument(fargs, nfargs, 0));
   if (!is_good_obj(context->btech->database, mapdb)) {
@@ -761,14 +766,16 @@ void fun_bthexinblz(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
     return;
   }
-  x = atoi(script_function_argument(fargs, nfargs, 1));
-  y = atoi(script_function_argument(fargs, nfargs, 2));
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &x) ||
+      !parse_int_checked(script_function_argument(fargs, nfargs, 2), &y)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
+    return;
+  }
   if (x < 0 || y < 0 || x > map->map_width || y > map->map_height) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
     return;
   }
   MapCoordToRealCoord(x, y, &fx, &fy);
-
   for (o = first_mapobj(map, TYPE_B_LZ); o; o = next_mapobj(o)) {
     // comment this out...That makes it a square BLZ, not round
     //	if(abs(x - o->x) > o->datai || abs(y - o->y) > o->datai)

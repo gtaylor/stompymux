@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -99,6 +100,23 @@ bool parse_float_checked(const char *text, float *value) {
   }
 
   *value = parsed;
+  return true;
+}
+
+/**
+ * Parses a complete base-10 time_t, accepting surrounding whitespace.
+ * Returns false for malformed, trailing, overflowing, or unrepresentable input.
+ */
+bool parse_time_checked(const char *text, time_t *value) {
+  long parsed;
+  if (value == nullptr || !parse_long_checked(text, &parsed))
+    return false;
+
+  const time_t converted = (time_t)parsed;
+  if ((long)converted != parsed)
+    return false;
+
+  *value = converted;
   return true;
 }
 

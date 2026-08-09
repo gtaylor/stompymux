@@ -12,6 +12,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/validation.h"
 #include "mux/world/match.h"
 
@@ -141,15 +142,17 @@ char *get_uptime_to_string(int uptime) {
 }
 
 int xlate(char *argument) {
+  int value;
+
   if (*argument == '#') {
     argument = checked_mutable_string_suffix(argument, 1);
     if (*argument == '-')
       return 0;
-    return is_integer(argument) ? atoi(argument) : 0;
+    return parse_int_checked(argument, &value) ? value : 0;
   }
 
   argument = trim_space_sep(argument, ' ');
   if (!*argument)
     return 0;
-  return is_integer(argument) ? atoi(argument) : 1;
+  return parse_int_checked(argument, &value) ? value : 1;
 }

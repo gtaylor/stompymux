@@ -7,6 +7,7 @@
 #include "mech_progress_api.h"
 #include "mech_radio_api.h"
 #include "mech_specification_api.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -199,8 +200,7 @@ void fun_btremovestores(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return;
   }
-  if ((!((num) = atoi(script_function_argument(fargs, nfargs, 2))) &&
-       strcmp((script_function_argument(fargs, nfargs, 2)), "0"))) {
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &num)) {
     safe_tprintf_str(buff, bufc, "#-2 Illegal Value");
     return;
   }
@@ -228,7 +228,8 @@ void fun_bttechtime(char *buff, char **bufc, DbRef player, DbRef cause,
   char buf[MBUF_SIZE];
 
   if (olds) {
-    old = (time_t)atoi(olds);
+    if (!parse_time_checked(olds, &old))
+      old = context->btech->clock->now;
     if (old < context->btech->clock->now) {
       strcpy(buf, "00:00.00");
     } else {
@@ -396,30 +397,26 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "%f", (double)mech_range_to(mechA, mechB));
     return;
   case 4:
-    if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &xA)) {
       mechAdb = match_thing(&context->command->match, player,
                             script_function_argument(fargs, nfargs, 1));
-      if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
+      if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &xA)) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
         return;
       }
-      xA = atoi(script_function_argument(fargs, nfargs, 2));
-      if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
+      if (!parse_int_checked(script_function_argument(fargs, nfargs, 3), &yA)) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
         return;
       }
-      yA = atoi(script_function_argument(fargs, nfargs, 3));
     } else {
-      if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
+      if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &xA)) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
         return;
       }
-      xA = atoi(script_function_argument(fargs, nfargs, 1));
-      if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
+      if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &yA)) {
         safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
         return;
       }
-      yA = atoi(script_function_argument(fargs, nfargs, 2));
       mechAdb = match_thing(&context->command->match, player,
                             script_function_argument(fargs, nfargs, 3));
     }
@@ -459,37 +456,37 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
         // mech first
         mechAdb = match_thing(&context->command->match, player,
                               script_function_argument(fargs, nfargs, 1));
-        if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
+        if (!parse_int_checked(script_function_argument(fargs, nfargs, 2),
+                               &xA)) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        xA = atoi(script_function_argument(fargs, nfargs, 2));
-        if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
+        if (!parse_int_checked(script_function_argument(fargs, nfargs, 3),
+                               &yA)) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        yA = atoi(script_function_argument(fargs, nfargs, 3));
-        if (strspn(script_function_argument(fargs, nfargs, 4), NUMBERS) < 1) {
+        if (!parse_int_checked(script_function_argument(fargs, nfargs, 4),
+                               &zA)) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        zA = atoi(script_function_argument(fargs, nfargs, 4));
       } else {
-        if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
+        if (!parse_int_checked(script_function_argument(fargs, nfargs, 1),
+                               &xA)) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        xA = atoi(script_function_argument(fargs, nfargs, 1));
-        if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
+        if (!parse_int_checked(script_function_argument(fargs, nfargs, 2),
+                               &yA)) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        yA = atoi(script_function_argument(fargs, nfargs, 2));
-        if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
+        if (!parse_int_checked(script_function_argument(fargs, nfargs, 3),
+                               &zA)) {
           safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
           return;
         }
-        zA = atoi(script_function_argument(fargs, nfargs, 3));
         mechAdb = match_thing(&context->command->match, player,
                               script_function_argument(fargs, nfargs, 4));
       }
@@ -523,30 +520,26 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
       return;
     }
     // tihs is the (map, x1, y1, x2, y2) condition
-    if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &xA)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    xA = atoi(script_function_argument(fargs, nfargs, 1));
-    if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &yA)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    yA = atoi(script_function_argument(fargs, nfargs, 2));
     if (xA < 0 || yA < 0 || xA >= map->map_width || yA >= map->map_height) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 3), &xB)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    xB = atoi(script_function_argument(fargs, nfargs, 3));
-    if (strspn(script_function_argument(fargs, nfargs, 4), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 4), &yB)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    yB = atoi(script_function_argument(fargs, nfargs, 4));
     if (xB < 0 || yB < 0 || xB >= map->map_width || yB >= map->map_height) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
@@ -559,36 +552,30 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
                           fyB, map_hex_scaled_elevation(map, xB, yB)));
     return;
   case 7:
-    if (strspn(script_function_argument(fargs, nfargs, 1), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &xA)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    xA = atoi(script_function_argument(fargs, nfargs, 1));
-    if (strspn(script_function_argument(fargs, nfargs, 2), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &yA)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    yA = atoi(script_function_argument(fargs, nfargs, 2));
-    if (strspn(script_function_argument(fargs, nfargs, 3), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 3), &zA)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    zA = atoi(script_function_argument(fargs, nfargs, 3));
-    if (strspn(script_function_argument(fargs, nfargs, 4), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 4), &xB)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    xB = atoi(script_function_argument(fargs, nfargs, 4));
-    if (strspn(script_function_argument(fargs, nfargs, 5), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 5), &yB)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    yB = atoi(script_function_argument(fargs, nfargs, 5));
-    if (strspn(script_function_argument(fargs, nfargs, 6), NUMBERS) < 1) {
+    if (!parse_int_checked(script_function_argument(fargs, nfargs, 6), &zB)) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID COORDS");
       return;
     }
-    zB = atoi(script_function_argument(fargs, nfargs, 6));
     MapCoordToRealCoord(xA, yA, &fxA, &fyA);
     MapCoordToRealCoord(xB, yB, &fxB, &fyB);
     safe_tprintf_str(buff, bufc, "%f",

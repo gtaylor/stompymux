@@ -192,8 +192,12 @@ void mech_scan(DbRef player, void *data, char *buffer) {
     break;
   case 3:
     /* scan x, y b */
-    mapx = atoi(args[0]);
-    mapy = atoi(args[1]);
+    if (!parse_int_checked(args[0], &mapx) ||
+        !parse_int_checked(args[1], &mapy)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid coordinates!");
+      return;
+    }
     if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Those coordinates are out of scanner range.");
@@ -227,9 +231,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
     break;
   case 2:
     /* scan x, y */
-    mapx = atoi(args[0]);
-    mapy = atoi(args[1]);
-    if (!mapx && strcmp(args[0], "0")) {
+    if (!parse_int_checked(args[0], &mapx)) {
       targetID[0] = args[0][0];
       targetID[1] = (*checked_string_suffix(*args, 1));
       target = FindTargetDBREFFromMapNumber(mech, targetID);
@@ -383,8 +385,12 @@ void mech_report(DbRef player, void *data, char *buffer) {
     break;
   case 2:
     /* report x, y */
-    mapx = atoi(args[0]);
-    mapy = atoi(args[1]);
+    if (!parse_int_checked(args[0], &mapx) ||
+        !parse_int_checked(args[1], &mapy)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid coordinates!");
+      return;
+    }
     MapCoordToRealCoord(mapx, mapy, &fx, &fy);
     range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
                       mech_position_real_z(mech), fx, fy, fz);

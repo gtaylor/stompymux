@@ -34,6 +34,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 
 void sendchannelstuff(Mech *mech, int freq, char *msg);
@@ -46,13 +47,11 @@ void auto_radio_command_position(Autopilot *autopilot, Mech *mech,
 
   /*! \todo {Add in some checks for validity of the arguments} */
 
-  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
-       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
     snprintf(mesg, LBUF_SIZE, "!Invalid first int");
     return;
   }
-  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
-       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 2), &y)) {
     snprintf(mesg, LBUF_SIZE, "!Invalide second int");
     return;
   }
@@ -196,8 +195,7 @@ void auto_radio_command_speed(Autopilot *autopilot, Mech *mech,
 
   int speed = 100;
 
-  if ((!((speed) = atoi(autopilot_argument_list_get(args, 1))) &&
-       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 1), &speed)) {
     snprintf(mesg, LBUF_SIZE, "!Invalid value - not a number");
     return;
   }
@@ -272,13 +270,11 @@ void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech,
 
   int x, y;
 
-  if ((!((x) = atoi(autopilot_argument_list_get(args, 1))) &&
-       strcmp((autopilot_argument_list_get(args, 1)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
     snprintf(mesg, LBUF_SIZE, "!Invalid first int");
     return;
   }
-  if ((!((y) = atoi(autopilot_argument_list_get(args, 2))) &&
-       strcmp((autopilot_argument_list_get(args, 2)), "0"))) {
+  if (!parse_int_checked(autopilot_argument_list_get(args, 2), &y)) {
     snprintf(mesg, LBUF_SIZE, "!Invalide second int");
     return;
   }

@@ -15,6 +15,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "mycool.h"
 #include "registry_api.h"
 #include "special_object.h"
@@ -118,7 +119,7 @@ void debug_setxplevel(DbRef player, void *data, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if ((!((xpt) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if (!parse_int_checked(args[1], &xpt)) {
     mecha_notify(btech_context_evaluation(context), player, "Invalid value!");
     return;
   }

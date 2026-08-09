@@ -53,6 +53,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "mymath.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -199,7 +200,13 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
     if (mech_class(mech) == land_data_entry(i)->type)
       break;
 
-  if ((j = atoi(buffer)))
+  j = 0;
+  if (*buffer != '\0' && !parse_long_checked(buffer, &j)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid takeoff argument!");
+    return;
+  }
+  if (j != 0)
     if (!is_wizard(btech_context_database(mech_context(mech)), player)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Insufficient access!");

@@ -32,6 +32,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/player.h"
 #include "registry_api.h"
 #include "special_object.h"
@@ -160,7 +161,42 @@ void initialize_pc(DbRef player, Mech *mech) {
   }
   c = btech_attribute_read(context->database, player, A_PCEQUIP,
                            (char[LBUF_SIZE]){0});
-  cnt = sscanf(c, "%s %s %s %d %d", buf1, buf2, buf3, &ammo1, &ammo2);
+  char equipment[LBUF_SIZE];
+  snprintf(equipment, sizeof(equipment), "%s", c);
+  char *armor = strtok(equipment, " \t\r\n");
+  char *weapon_one = strtok(nullptr, " \t\r\n");
+  char *weapon_two = strtok(nullptr, " \t\r\n");
+  char *first_ammunition = strtok(nullptr, " \t\r\n");
+  char *second_ammunition = strtok(nullptr, " \t\r\n");
+  cnt = 0;
+  if (armor) {
+    if (strlen(armor) >= sizeof(buf1))
+      return;
+    snprintf(buf1, sizeof(buf1), "%s", armor);
+    cnt = 1;
+  }
+  if (weapon_one) {
+    if (strlen(weapon_one) >= sizeof(buf2))
+      return;
+    snprintf(buf2, sizeof(buf2), "%s", weapon_one);
+    cnt = 2;
+  }
+  if (weapon_two) {
+    if (strlen(weapon_two) >= sizeof(buf3))
+      return;
+    snprintf(buf3, sizeof(buf3), "%s", weapon_two);
+    cnt = 3;
+  }
+  if (first_ammunition) {
+    if (!parse_int_checked(first_ammunition, &ammo1))
+      return;
+    cnt = 4;
+  }
+  if (second_ammunition) {
+    if (!parse_int_checked(second_ammunition, &ammo2))
+      return;
+    cnt = 5;
+  }
 
   switch (cnt) {
   case 5:
@@ -233,8 +269,8 @@ void initialize_pc(DbRef player, Mech *mech) {
     for (size_t index = 0; index < strlen(buf1); index++) {
       const char *armor_character =
           checked_storage_at_const(buf1, sizeof(buf1), sizeof(char), index);
-      buf4[0] = *armor_character;
-      mech_section_armor_set(mech, player_character_section(index), atoi(buf4));
+      mech_section_armor_set(mech, player_character_section(index),
+                             *armor_character - '0');
     }
   }
 }

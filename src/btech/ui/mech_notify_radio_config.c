@@ -133,8 +133,7 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
     return;
   }
   char *frequency_text = radio_cursor_remaining(&input);
-  freq = atoi(frequency_text);
-  if (!freq && strcmp(frequency_text, "0")) {
+  if (!parse_int_checked(frequency_text, &freq)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid frequency!");
     return;

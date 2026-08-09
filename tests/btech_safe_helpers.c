@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
+#include <time.h>
 
 #include "btech_text_builder.h"
 #include "checked_conversion.h"
@@ -10,13 +11,15 @@
 static int test_parsing(void) {
   int integer = 0;
   long long_value = 0;
+  time_t timestamp = 0;
   float float_value = 0.0F;
 
   if (!parse_int_checked(" -42 \t", &integer) || integer != -42 ||
       parse_int_checked("42x", &integer) || parse_int_checked("", &integer) ||
       parse_int_checked("999999999999999999999", &integer) ||
       !parse_long_checked("2147483648", &long_value) ||
-      long_value != 2147483648L ||
+      long_value != 2147483648L || !parse_time_checked("12345", &timestamp) ||
+      timestamp != (time_t)12345 || parse_time_checked("12345x", &timestamp) ||
       !parse_float_checked(" 1.25 ", &float_value) ||
       fabsf(float_value - 1.25F) > 0.0001F ||
       parse_float_checked("nan", &float_value) ||

@@ -26,6 +26,7 @@
 #include "mux/objects/db.h"
 #include "mux/support/alloc.h"
 #include "mux/support/doubly_linked_list.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -86,8 +87,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
       /* Need to grab distance and start hex */
       const char *anchor_x_argument = autopilot_argument_list_get(&args, 1);
-      if ((!((anchor_hex_x) = atoi(anchor_x_argument)) &&
-           strcmp(anchor_x_argument, "0"))) {
+      if (!parse_int_checked(anchor_x_argument, &anchor_hex_x)) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"
@@ -104,8 +104,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
       }
 
       const char *anchor_y_argument = autopilot_argument_list_get(&args, 2);
-      if ((!((anchor_hex_y) = atoi(anchor_y_argument)) &&
-           strcmp(anchor_y_argument, "0"))) {
+      if (!parse_int_checked(anchor_y_argument, &anchor_hex_y)) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"
@@ -123,8 +122,7 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
       /* Need to grab distance and start hex */
       const char *distance_argument = autopilot_argument_list_get(&args, 3);
-      if ((!((anchor_distance) = atoi(distance_argument)) &&
-           strcmp(distance_argument, "0"))) {
+      if (!parse_int_checked(distance_argument, &anchor_distance)) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"

@@ -142,7 +142,12 @@ void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
                  "Too many args, unable to cope().");
     return;
   }
-  i = BOUNDED(1, atoi(args[0]), 5);
+  if (!parse_int_checked(args[0], &i)) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Invalid radio level!");
+    return;
+  }
+  i = BOUNDED(1, i, 5);
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "Radio level set to %d.", i);
   mech_radio_quality_set(mech, i);
@@ -295,8 +300,7 @@ static bool parse_repair_int(RepairFacility *rep, DbRef player, char *buffer,
                   "Invalid number of arguments to Set%s!", name);
     return false;
   }
-  *value = atoi(args[0]);
-  return true;
+  return parse_int_checked(args[0], value);
 }
 
 static void notify_repair_float(RepairFacility *rep, DbRef player,

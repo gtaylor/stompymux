@@ -27,6 +27,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
@@ -453,13 +454,16 @@ void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   const char *value_name = function_argument(fargs, nfargs, 1);
-  if ((!((targetcode) = atoi(value_name)) && strcmp(value_name, "0")))
+  if (!parse_int_checked(value_name, &targetcode))
     targetcode = char_getvaluecode(context, value_name);
   if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
     return;
   }
-  flaggo = atoi(function_argument(fargs, nfargs, 2));
+  if (!parse_int_checked(function_argument(fargs, nfargs, 2), &flaggo)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID FLAG");
+    return;
+  }
   if (character_value_definition(targetcode)->type == CHAR_SKILL &&
       flaggo == 4) {
     safe_tprintf_str(buff, bufc, "%d",
@@ -511,14 +515,17 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   const char *value_name = function_argument(fargs, nfargs, 1);
-  if ((!((targetcode) = atoi(value_name)) && strcmp(value_name, "0")))
+  if (!parse_int_checked(value_name, &targetcode))
     targetcode = char_getvaluecode(context, value_name);
   if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
     return;
   }
-  targetvalue = atoi(function_argument(fargs, nfargs, 2));
-  flaggo = atoi(function_argument(fargs, nfargs, 3));
+  if (!parse_int_checked(function_argument(fargs, nfargs, 2), &targetvalue) ||
+      !parse_int_checked(function_argument(fargs, nfargs, 3), &flaggo)) {
+    safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
+    return;
+  }
 
   /* We supposedly have everything at hand.. */
   if (flaggo) {

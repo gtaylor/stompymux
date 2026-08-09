@@ -40,6 +40,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
@@ -135,7 +136,12 @@ void mech_heading(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL, "You cease your attempts at digging in.");
       mech_stop_digging(mech);
     }
-    newheading = AcceptableDegree(atoi(args[0]));
+    if (!parse_int_checked(args[0], &newheading)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Invalid heading!");
+      return;
+    }
+    newheading = AcceptableDegree(newheading);
     mech_desired_heading_set(mech, newheading);
     mech_printf(mech, MECHALL, "Heading changed to %d.", newheading);
     mech_maybe_move(mech);
@@ -172,7 +178,12 @@ void mech_turret(DbRef player, void *data, char *buffer) {
     return;
   }
   if (mech_parseattributes(buffer, args, 1) == 1) {
-    newheading = AcceptableDegree(atoi(args[0]));
+    if (!parse_int_checked(args[0], &newheading)) {
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Invalid turret heading!");
+      return;
+    }
+    newheading = AcceptableDegree(newheading);
     mech_turret_heading_absolute_set(mech, newheading);
     mech_printf(mech, MECHALL, "Turret facing changed to %d.",
                 mech_turret_heading_absolute(mech));

@@ -17,6 +17,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -87,7 +88,12 @@ void aero_vheading(DbRef player, void *data, char *arg, int flag) {
                   "Present angle: %d degrees.", mech_desired_angle(mech));
     return;
   }
-  i = flag * atoi(args[0]);
+  if (!parse_int_checked(args[0], &i)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Invalid angle!");
+    return;
+  }
+  i *= flag;
   if (abs(i) > 90)
     i = 90 * flag;
   if (abs(i) != 90 && mech_position_z(mech) < ATMO_Z &&

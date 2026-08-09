@@ -65,12 +65,6 @@ int mech_team(const Mech *mech) {
   return 0;
 }
 
-char ascii_to_upper(char character) {
-  if (character >= 'a' && character <= 'z')
-    return (char)(character - ('a' - 'A'));
-  return character;
-}
-
 int battle_map_unit_count(const BattleMap *map) {
   (void)map;
   return 0;

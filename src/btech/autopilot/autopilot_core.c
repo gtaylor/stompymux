@@ -25,6 +25,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/doubly_linked_list.h"
+#include "mux/support/stringutil.h"
 #include "mycool.h"
 #include "registry_api.h"
 #include "special_object.h"
@@ -140,7 +141,7 @@ void auto_delcommand(DbRef player, void *data, const char *buffer) {
   }
 
   /* Make sure its a number */
-  if ((!((p) = atoi(buffer)) && strcmp((buffer), "0"))) {
+  if (!parse_int_checked(buffer, &p)) {
     notify_printf(btech_context_evaluation(autopilot->xcode.context), player,
                   "Invalid Argument : Must be within the range"
                   " 1 to %d or -1 for all\n",

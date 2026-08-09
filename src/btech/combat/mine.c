@@ -45,6 +45,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "template_api.h"
 
@@ -368,28 +369,27 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if ((!((x) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+  if (!parse_int_checked(args[0], &x)) {
     mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
                  "Invalid number!");
     return;
   }
-  if ((!((y) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if (!parse_int_checked(args[1], &y)) {
     mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
                  "Invalid number!");
     return;
   }
-  if ((!((str) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+  if (!parse_int_checked(args[3], &str)) {
     mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
                  "Invalid number!");
     return;
   }
 
-  if (argc == 5)
-    if ((!((extra) = atoi(args[4])) && strcmp((args[4]), "0"))) {
-      mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
-                   "Invalid number!");
-      return;
-    }
+  if (argc == 5 && !parse_int_checked(args[4], &extra)) {
+    mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
+                 "Invalid number!");
+    return;
+  }
 
   if ((type = mine_type_index(args[2])) < 0) {
     mecha_notify(btech_context_evaluation(battle_map_context(map)), player,

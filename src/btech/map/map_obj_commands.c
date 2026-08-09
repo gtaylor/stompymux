@@ -11,6 +11,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include <stddef.h>
 #include <stdlib.h>
@@ -58,9 +59,12 @@ void map_addfire(DbRef player, void *data, char *buffer) {
                  "Error: Invalid number of attributes to addfire command.");
     return;
   }
-  x = atoi(args[0]);
-  y = atoi(args[1]);
-  d = atoi(args[2]);
+  if (!parse_int_checked(args[0], &x) || !parse_int_checked(args[1], &y) ||
+      !parse_int_checked(args[2], &d)) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Error: Invalid numeric addfire argument.");
+    return;
+  }
   add_decoration(map, x, y, TYPE_FIRE, FIRE, d);
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "Added: Fire at (%d,%d) with duration of %ds.", x, y, d);
@@ -76,9 +80,12 @@ void map_addsmoke(DbRef player, void *data, char *buffer) {
                  "Error: Invalid number of attributes to addsmoke command.");
     return;
   }
-  x = atoi(args[0]);
-  y = atoi(args[1]);
-  d = atoi(args[2]);
+  if (!parse_int_checked(args[0], &x) || !parse_int_checked(args[1], &y) ||
+      !parse_int_checked(args[2], &d)) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Error: Invalid numeric addsmoke argument.");
+    return;
+  }
   add_decoration(map, x, y, TYPE_SMOKE, SMOKE, d);
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "Added: Smoke at (%d,%d) with duration of %ds.", x, y, d);
@@ -101,27 +108,26 @@ void map_add_block(DbRef player, void *data, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  if ((!((x) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+  if (!parse_int_checked(args[0], &x)) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
                  "Invalid number!");
     return;
   }
-  if ((!((y) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if (!parse_int_checked(args[1], &y)) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
                  "Invalid number!");
     return;
   }
-  if ((!((str) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+  if (!parse_int_checked(args[2], &str)) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
                  "Invalid number!");
     return;
   }
-  if (argc == 4)
-    if ((!((team) = atoi(args[3])) && strcmp((args[3]), "0"))) {
-      mecha_notify(btech_context_evaluation(map->xcode.context), player,
-                   "Invalid number!");
-      return;
-    }
+  if (argc == 4 && !parse_int_checked(args[3], &team)) {
+    mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                 "Invalid number!");
+    return;
+  }
 
   if (!((x >= 0) && (x < map->map_width) && (y >= 0) &&
         (y < map->map_height))) {
@@ -214,8 +220,11 @@ void map_delobj(DbRef player, void *data, char *buffer) {
       mdel = 1;
     break;
   case 2:
-    x = atoi(args[0]);
-    y = atoi(args[1]);
+    if (!parse_int_checked(args[0], &x) || !parse_int_checked(args[1], &y)) {
+      mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                   "Invalid coordinates!");
+      return;
+    }
     for (tt = 0; tt < NUM_MAPOBJTYPES; tt++)
       for (foo = first_mapobj(map, tt); foo; foo = foo2) {
         foo2 = next_mapobj(foo);
@@ -235,8 +244,11 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                    "Invalid type!");
       return;
     }
-    x = atoi(args[1]);
-    y = atoi(args[2]);
+    if (!parse_int_checked(args[1], &x) || !parse_int_checked(args[2], &y)) {
+      mecha_notify(btech_context_evaluation(map->xcode.context), player,
+                   "Invalid coordinates!");
+      return;
+    }
     for (foo = first_mapobj(map, tt); foo; foo = foo2) {
       foo2 = next_mapobj(foo);
       if (foo->x == x && foo->y == y) {

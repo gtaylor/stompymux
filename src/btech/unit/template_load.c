@@ -21,6 +21,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
@@ -70,9 +71,47 @@ static bool template_load_error(FILE *fp, Mech *mech, DbRef player,
   return true;
 }
 
+static bool template_read_int(FILE *fp, Mech *mech, DbRef player, char *text,
+                              int *value) {
+  if (parse_int_checked(text, value))
+    return true;
+  template_load_error(fp, mech, player, true, true,
+                      "Error while loading: Invalid integer value '%s'.", text);
+  return false;
+}
+
+static bool template_read_float(FILE *fp, Mech *mech, DbRef player, char *text,
+                                float *value) {
+  if (parse_float_checked(text, value))
+    return true;
+  template_load_error(fp, mech, player, true, true,
+                      "Error while loading: Invalid decimal value '%s'.", text);
+  return false;
+}
+
+static bool template_parse_critical_range(char *command, int *first,
+                                          int *last) {
+  char *range = checked_mutable_string_suffix(command, 5);
+  char *separator = strchr(range, '-');
+  if (separator != nullptr) {
+    *separator = '\0';
+    if (!parse_int_checked(range, first) ||
+        !parse_int_checked(checked_string_suffix(separator, 1), last)) {
+      return false;
+    }
+  } else if (!parse_int_checked(range, first)) {
+    return false;
+  } else {
+    *last = *first;
+  }
+
+  return *first > 0 && *last >= *first;
+}
+
 int load_template(DbRef player, Mech *mech, char *filename) {
   char line[MAX_STRING_LENGTH], buf[MAX_STRING_LENGTH];
   int x, y, value, i;
+  float decimal_value;
   char cmd[MAX_STRING_LENGTH];
   char *ptr, *line2;
   int section = 0, critical, selection, type, brand;
@@ -186,33 +225,54 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       ((mech)->ud.move) = clamp_int_to_char(type);
       break;
     case 3: /* Tons */
-      ((mech)->ud.tons) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      ((mech)->ud.tons) = value;
       break;
     case 4: /* Tac_Range */
-      mech_tactical_range_set(
-          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_tactical_range_set(mech, value);
       break;
     case 5: /* LRS_Range */
-      mech_long_range_sensor_range_set(
-          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_long_range_sensor_range_set(mech, value);
       break;
     case 6: /* Radio Range */
-      mech_radio_range_set(
-          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_radio_range_set(mech, value);
       break;
     case 7: /* Scan Range */
-      mech_scanner_range_set(
-          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_scanner_range_set(mech, value);
       break;
     case 8: /* Heat Sinks */
-      ((mech)->ud.numsinks) = clamp_int_to_char(
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      ((mech)->ud.numsinks) = clamp_int_to_char(value);
       break;
     case 9: /* Max Speed */
-      mech_max_speed_set(
-          mech,
-          strtof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}), nullptr));
+      if (!template_read_float(
+              fp, mech, player,
+              read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+              &decimal_value))
+        return -1;
+      mech_max_speed_set(mech, decimal_value);
       ((mech)->ud.template_maxspeed) = ((mech)->ud.maxspeed);
       break;
     case 10: /* Specials */
@@ -232,23 +292,29 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       }
       break;
     case 11: /* Armor */
-      mech_section_original_armor_set(
-          mech, section,
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_section_original_armor_set(mech, section, value);
       mech_section_armor_set(mech, section,
                              mech_section_original_armor(mech, section));
       break;
     case 12: /* Internals */
-      mech_section_original_internal_set(
-          mech, section,
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_section_original_internal_set(mech, section, value);
       mech_section_internal_set(mech, section,
                                 mech_section_original_internal(mech, section));
       break;
     case 13: /* Rear */
-      mech_section_original_rear_armor_set(
-          mech, section,
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_section_original_rear_armor_set(mech, section, value);
       mech_section_rear_armor_set(
           mech, section, mech_section_original_rear_armor(mech, section));
       break;
@@ -268,14 +334,14 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       }
       break;
     case 9999:
-      if ((sscanf(cmd, "CRIT_%d-%d", &x, &y)) == 2) {
-        lpos = x - 1;
-        hpos = y - 1;
-      } else if ((sscanf(cmd, "CRIT_%d", &x)) == 1) {
-        lpos = x - 1;
-        hpos = x - 1;
-      } else
-        break;
+      if (!template_parse_critical_range(cmd, &x, &y) || x > NUM_CRITICALS ||
+          y > NUM_CRITICALS) {
+        template_load_error(fp, mech, player, true, true,
+                            "Error while loading: Invalid critical '%s'.", cmd);
+        return -1;
+      }
+      lpos = x - 1;
+      hpos = y - 1;
       critical = lpos;
       line2 = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       line2 = one_arg(line2, buf, sizeof(buf));
@@ -334,13 +400,16 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         mech_critical_ammo_mode_set(mech, section, critical, wAmmoModes);
 
         line2 = one_arg(line2, buf, sizeof(buf));
-        if (mech->xcode.context->configuration->btech_parts)
-          if (atoi(buf)) {
-            mech_critical_brand_set(mech, section, critical, atoi(buf));
-          }
+        if (mech->xcode.context->configuration->btech_parts &&
+            !template_read_int(fp, mech, player, buf, &value))
+          return -1;
+        if (mech->xcode.context->configuration->btech_parts && value != 0)
+          mech_critical_brand_set(mech, section, critical, value);
       } else if (equipment_is_ammunition(type)) {
         line2 = one_arg(line2, buf, sizeof(buf));
-        mech_critical_data_set(mech, section, critical, atoi(buf));
+        if (!template_read_int(fp, mech, player, buf, &value))
+          return -1;
+        mech_critical_data_set(mech, section, critical, value);
         line2 = one_arg(line2, buf, sizeof(buf));
 
         /*              wFireModes = BuildBitVector(crit_fire_modes, buf); */
@@ -390,18 +459,22 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                                  FullAmmo(mech, section, critical));
         }
       } else {
-        if ((line2 = one_arg(line2, buf, sizeof(buf))))
-          mech_critical_data_set(mech, section, critical, atoi(buf));
-        else
+        if ((line2 = one_arg(line2, buf, sizeof(buf)))) {
+          if (!template_read_int(fp, mech, player, buf, &value))
+            return -1;
+          mech_critical_data_set(mech, section, critical, value);
+        } else
           mech_critical_data_set(mech, section, critical, 0);
         mech_critical_fire_mode_set(mech, section, critical, 0);
         mech_critical_ammo_mode_set(mech, section, critical, 0);
         if ((line2 = one_arg(line2, buf, sizeof(buf))))
           if ((line2 = one_arg(line2, buf, sizeof(buf)))) {
-            if (mech->xcode.context->configuration->btech_parts)
-              if (atoi(buf)) {
-                mech_critical_brand_set(mech, section, critical, atoi(buf));
-              }
+            if (mech->xcode.context->configuration->btech_parts) {
+              if (!template_read_int(fp, mech, player, buf, &value))
+                return -1;
+              if (value != 0)
+                mech_critical_brand_set(mech, section, critical, value);
+            }
           }
       }
       for (x = (lpos + 1); x <= hpos; x++) {
@@ -418,8 +491,11 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       }
       break;
     case 15: /* Mech's Computer level */
-      mech_computer_quality_set(
-          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_computer_quality_set(mech, value);
       break;
     case 16: /* Name of the mech */
       strlcpy(((mech)->ud.mech_name),
@@ -427,38 +503,63 @@ int load_template(DbRef player, Mech *mech, char *filename) {
               sizeof(((mech)->ud.mech_name)));
       break;
     case 17: /* Jj's */
-      ((mech)->rd.jumpspeed) =
-          strtof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}), nullptr);
+      if (!template_read_float(
+              fp, mech, player,
+              read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+              &decimal_value))
+        return -1;
+      ((mech)->rd.jumpspeed) = decimal_value;
       break;
     case 18: /* Radio */
-      mech_radio_quality_set(
-          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_radio_quality_set(mech, value);
       break;
     case 19: /* SI */
-      ((mech)->ud.si) = ((mech)->ud.si_orig) = clamp_int_to_char(
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      ((mech)->ud.si) = ((mech)->ud.si_orig) = clamp_int_to_char(value);
       break;
     case 20: /* Fuel */
-      ((mech)->ud.fuel) = ((mech)->ud.fuel_orig) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      ((mech)->ud.fuel) = ((mech)->ud.fuel_orig) = value;
       break;
     case 21: /* Comment */
       break;
     case 22: /* Radio_freqs */
-      mech_radio_configuration_set(
-          mech, atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      mech_radio_configuration_set(mech, value);
       break;
     case 23: /* Mech battle value */
-      ((mech)->ud.mechbv) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      ((mech)->ud.mechbv) = value;
       break;
     case 24: /* Cargospace */
-      ((mech)->ud.cargospace) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      ((mech)->ud.cargospace) = value;
       break;
     case 25: /* Maxsuits */
-      ((mech)->rd.maxsuits) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      ((mech)->rd.maxsuits) = value;
       break;
     case 26: /* Specials */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
@@ -470,12 +571,18 @@ int load_template(DbRef player, Mech *mech, char *filename) {
 
       break;
     case 27: /* Carmaxton */
-      ((mech)->ud.carmaxton) = clamp_int_to_char(
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      ((mech)->ud.carmaxton) = clamp_int_to_char(value);
       break;
     case 28:
-      ((mech)->ud.hsengoverride) =
-          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
+      if (!template_read_int(fp, mech, player,
+                             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}),
+                             &value))
+        return -1;
+      ((mech)->ud.hsengoverride) = value;
       break;
     case 29:
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});

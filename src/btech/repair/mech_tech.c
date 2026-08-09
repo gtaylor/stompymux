@@ -90,7 +90,8 @@ int player_techtime(BtechContext *context, DbRef player) {
                                  (char[LBUF_SIZE]){0});
 
   if (tt_attr) {
-    techtime = (time_t)atoi(tt_attr);
+    if (!parse_time_checked(tt_attr, &techtime))
+      techtime = context->clock->now;
     if (techtime < context->clock->now)
       techtime = context->clock->now;
   } else {
@@ -167,7 +168,8 @@ void tech_status(BtechContext *context, DbRef player, time_t dat) {
     olds = btech_attribute_read(context->database, player, A_TECHTIME,
                                 (char[LBUF_SIZE]){0});
     if (olds) {
-      dat = (time_t)atoi(olds);
+      if (!parse_time_checked(olds, &dat))
+        dat = context->clock->now;
       if (dat < context->clock->now)
         dat = context->clock->now;
     } else
@@ -202,7 +204,8 @@ int tech_addtechtime(BtechContext *context, DbRef player, int time) {
                                     (char[LBUF_SIZE]){0});
 
   if (olds) {
-    old = (time_t)atoi(olds);
+    if (!parse_time_checked(olds, &old))
+      old = context->clock->now;
     if (old < context->clock->now)
       old = context->clock->now;
   } else
@@ -239,7 +242,9 @@ int tech_parsepart_advanced(Mech *mech, char *buffer, int *loc, int *pos,
   if (allowrear)
     *loc += isrear;
   if (pos) {
-    l = atoi(args[1]) - 1;
+    if (!parse_int_checked(args[1], &l))
+      return -1;
+    l--;
     if (l < 0 || l >= mech_section_critical_count(mech, *loc))
       return -2;
     *pos = l;
@@ -260,23 +265,26 @@ int tech_parsepart(Mech *mech, char *buffer, int *loc, int *pos, int *extra) {
 int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
   char *args[3];
   int l, argc, t, c = 0, pi, pb;
+  int position;
 
   argc = mech_parseattributes(buffer, args, 3);
   if (argc < 1 || argc > (2 + (brand != NULL)))
     return -1;
-  if (argc == (2 + (brand != NULL)) || (brand && argc == 2 && atoi(args[1]))) {
+  if (argc == (2 + (brand != NULL)) ||
+      (brand && argc == 2 && parse_int_checked(args[1], &position) &&
+       position != 0)) {
     if ((*loc = ArmorSectionFromString(mech_class(mech),
                                        mech_movement_type(mech), args[0])) < 0)
       return -1;
-    l = atoi(args[1]);
+    if (!parse_int_checked(args[1], &l))
+      return -1;
     if (l <= 0 || l > mech_section_critical_count(mech, *loc))
       return -4;
     *pos = l - 1;
   } else {
     /* Check if it's a number */
-    if (args[0][0] < '0' || args[0][0] > '9')
+    if (!parse_int_checked(args[0], &l))
       return -1;
-    l = atoi(args[0]);
     if (l < 0)
       return -1;
     if ((t = FindWeaponNumberOnMech(mech, l, loc, pos)) == -1)
@@ -285,7 +293,8 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
   t = mech_critical_part_type(mech, *loc, *pos);
   char **last_argument_slot =
       checked_storage_at(args, (size_t)argc, sizeof(*args), (size_t)(argc - 1));
-  if (brand != NULL && argc > 1 && !atoi(*last_argument_slot)) {
+  if (brand != NULL && argc > 1 &&
+      (!parse_int_checked(*last_argument_slot, &position) || position == 0)) {
     if (!find_matching_long_part(mech_context(mech), *last_argument_slot, &c,
                                  &pi, &pb))
       return -2;

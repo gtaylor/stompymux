@@ -2,6 +2,7 @@
 
 #include "equipment_types.h"
 #include "mux/server/platform.h"
+#include "mux/support/stringutil.h"
 #include <string.h>
 static const float BOMB_GRAVITY = 1.0F;
 
@@ -378,8 +379,7 @@ void mech_bomb(DbRef player, void *data, char *buffer) {
                  "The BOMB commands needs to know WHICH bomb to drop!");
     return;
   }
-  if ((!((bn) = atoi(bomb_argument(args, 3, 1))) &&
-       strcmp(bomb_argument(args, 3, 1), "0"))) {
+  if (!parse_int_checked(bomb_argument(args, 3, 1), &bn)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid bomb number!");
     return;

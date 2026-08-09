@@ -21,6 +21,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "special_object.h"
 #include "values_internal.h"
@@ -230,13 +231,11 @@ void fun_btmapterr(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
-  if ((!((x) = atoi(script_function_argument(fargs, nfargs, 1))) &&
-       strcmp((script_function_argument(fargs, nfargs, 1)), "0"))) {
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &x)) {
     safe_tprintf_str(buff, bufc, "#-2");
     return;
   }
-  if ((!((y) = atoi(script_function_argument(fargs, nfargs, 2))) &&
-       strcmp((script_function_argument(fargs, nfargs, 2)), "0"))) {
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &y)) {
     safe_tprintf_str(buff, bufc, "#-2");
     return;
   }
@@ -279,13 +278,11 @@ void fun_btmapelev(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
-  if ((!((x) = atoi(script_function_argument(fargs, nfargs, 1))) &&
-       strcmp((script_function_argument(fargs, nfargs, 1)), "0"))) {
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &x)) {
     safe_tprintf_str(buff, bufc, "#-2");
     return;
   }
-  if ((!((y) = atoi(script_function_argument(fargs, nfargs, 2))) &&
-       strcmp((script_function_argument(fargs, nfargs, 2)), "0"))) {
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &y)) {
     safe_tprintf_str(buff, bufc, "#-2");
     return;
   }
@@ -704,25 +701,24 @@ void fun_btdamagemech(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 UNABLE TO GET MECHDATA");
     return;
   }
-  if ((!((totaldam) = atoi(script_function_argument(fargs, nfargs, 1))) &&
-       strcmp((script_function_argument(fargs, nfargs, 1)), "0")) ||
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 1),
+                         &totaldam) ||
       totaldam < 1 || totaldam > 1000) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID 2ND ARG");
     return;
   }
-  if ((!((clustersize) = atoi(script_function_argument(fargs, nfargs, 2))) &&
-       strcmp((script_function_argument(fargs, nfargs, 2)), "0")) ||
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 2),
+                         &clustersize) ||
       clustersize < 1) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID 3RD ARG");
     return;
   }
-  if ((!((direction) = atoi(script_function_argument(fargs, nfargs, 3))) &&
-       strcmp((script_function_argument(fargs, nfargs, 3)), "0"))) {
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 3),
+                         &direction)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID 4TH ARG");
     return;
   }
-  if ((!((iscrit) = atoi(script_function_argument(fargs, nfargs, 4))) &&
-       strcmp((script_function_argument(fargs, nfargs, 4)), "0"))) {
+  if (!parse_int_checked(script_function_argument(fargs, nfargs, 4), &iscrit)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID 5TH ARG");
     return;
   }

@@ -28,6 +28,7 @@
 #include "mux/server/server_control.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/red_black_tree.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/validation.h"
 #include "mux/world/object_set.h"
 #include "mux/world/player_cache.h"
@@ -478,13 +479,14 @@ void do_wait(CommandInvocation *invocation) {
   char *cmd = invocation->second;
   CommandQueue *queue = invocation->context->runtime->commands;
 
-  if (!is_number(event)) {
+  int delay;
+  if (!parse_int_checked(event, &delay)) {
     notify_checked(evaluation, player, player, "Wait time must be a number.",
                    MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
 
-  wait_que(queue, player, cause, atoi(event), cmd);
+  wait_que(queue, player, cause, delay, cmd);
 }
 
 /*

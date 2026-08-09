@@ -18,6 +18,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/match.h"
 #include "mux/world/player.h"
@@ -67,10 +68,12 @@ static char *dbrefs_to_names(WorldContext *world, DbRef player, char *list,
   bp = namelist;
   for (p = (char *)strtok(oldlist, " "); p != nullptr;
        p = (char *)strtok(nullptr, " ")) {
-    if (ismessage)
-      safe_str(tprintf("%s, ", game_object_name(world->database, atoi(p))),
-               namelist, &bp);
-    else {
+    if (ismessage) {
+      DbRef target;
+      if (parse_long_checked(p, &target))
+        safe_str(tprintf("%s, ", game_object_name(world->database, target)),
+                 namelist, &bp);
+    } else {
       if (lookup_player(world, player, p, 1) != NOTHING) {
         safe_str(tprintf("%s, ",
                          game_object_name(world->database,
@@ -137,9 +140,10 @@ void do_page(CommandInvocation *invocation) {
       else
         for (p = (char *)strtok(targetname, " "); p != nullptr;
              p = (char *)strtok(nullptr, " ")) {
-          target = atoi(p);
-          notify_printf(evaluation, player, "You last paged %s.",
-                        game_object_name(evaluation->world->database, target));
+          if (parse_long_checked(p, &target))
+            notify_printf(
+                evaluation, player, "You last paged %s.",
+                game_object_name(evaluation->world->database, target));
         }
 
       free_lbuf(buf1);
@@ -186,7 +190,8 @@ void do_page(CommandInvocation *invocation) {
        * * * list
        */
       if (ismessage) {
-        target = atoi(p);
+        if (!parse_long_checked(p, &target))
+          continue;
       } else
         target = lookup_player(evaluation->world, player, p, 1);
 
@@ -231,8 +236,8 @@ void do_page(CommandInvocation *invocation) {
       }
     }
   } else {
-    if (ismessage)
-      target = atoi(tname);
+    if (ismessage && !parse_long_checked(tname, &target))
+      target = NOTHING;
     if (target == NOTHING) {
       notify_printf(evaluation, player, "I don't recognize \"%s\".", tname);
     } else if (!page_check(evaluation, configuration, player, target)) {

@@ -372,8 +372,12 @@ void mech_eta(DbRef player, void *data, char *buffer) {
     eta_y = mech_target_hex_y(mech);
     break;
   case 2:
-    eta_x = atoi(move_argument(args, 3, 0));
-    eta_y = atoi(move_argument(args, 3, 1));
+    if (!parse_int_checked(move_argument(args, 3, 0), &eta_x) ||
+        !parse_int_checked(move_argument(args, 3, 1), &eta_y)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                   "Invalid coordinates!");
+      return;
+    }
     break;
   default:
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

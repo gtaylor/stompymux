@@ -10,9 +10,55 @@
 #include "mech_api_types.h"
 #include "mech_runtime_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+bool map_read_dimensions(FILE *file, int *width, int *height) {
+  char line[64];
+  if (fgets(line, sizeof(line), file) == nullptr)
+    return false;
+
+  char *width_text = strtok(line, " \t\r\n");
+  char *height_text = strtok(nullptr, " \t\r\n");
+  return width_text != nullptr && height_text != nullptr &&
+         strtok(nullptr, " \t\r\n") == nullptr &&
+         parse_int_checked(width_text, width) &&
+         parse_int_checked(height_text, height);
+}
+
+bool map_parse_visibility_attribute(const char *attribute, int *visibility,
+                                    int *light, int *wind_direction,
+                                    int *wind_speed, int *cloud_base,
+                                    char *message, size_t message_size) {
+  char values[LBUF_SIZE];
+  snprintf(values, sizeof(values), "%s", attribute);
+  char *first = strtok(values, " \t\r\n");
+  char *second = strtok(nullptr, " \t\r\n");
+  char *third = strtok(nullptr, " \t\r\n");
+  char *fourth = strtok(nullptr, " \t\r\n");
+  char *fifth = strtok(nullptr, " \t\r\n");
+  if (!first || !second || !third || !fourth ||
+      !parse_int_checked(first, visibility) ||
+      !parse_int_checked(second, light) ||
+      !parse_int_checked(third, wind_direction) ||
+      !parse_int_checked(fourth, wind_speed))
+    return false;
+  if (!fifth)
+    return true;
+  if (!parse_int_checked(fifth, cloud_base)) {
+    char *message_rest = strtok(nullptr, "\r\n");
+    snprintf(message, message_size, "%s%s%s", fifth, message_rest ? " " : "",
+             message_rest ? message_rest : "");
+    return true;
+  }
+  char *message_text = strtok(nullptr, "\r\n");
+  if (message_text)
+    snprintf(message, message_size, "%s", message_text);
+  return true;
+}
 
 void alter_conditions(BattleMap *map) {
   int i;
@@ -113,7 +159,7 @@ void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
                  "+ temperature + vacuum-flag + underground-flag)");
     return;
   }
-  if ((!((grav) = atoi(args[0])) && strcmp((args[0]), "0"))) {
+  if (!parse_int_checked(args[0], &grav)) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
                  "Invalid gravity (must be integer in range of 0 to 255)");
     return;
@@ -123,7 +169,7 @@ void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
                  "Invalid gravity (must be integer in range of 0 to 255)");
     return;
   }
-  if ((!((temp) = atoi(args[1])) && strcmp((args[1]), "0"))) {
+  if (!parse_int_checked(args[1], &temp)) {
     mecha_notify(
         btech_context_evaluation(map->xcode.context), player,
         "Invalid temperature (must be integer in range of -128 to 127");
@@ -136,7 +182,7 @@ void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
     return;
   }
   if (argc > 2) {
-    if ((!((vacuum) = atoi(args[2])) && strcmp((args[2]), "0"))) {
+    if (!parse_int_checked(args[2], &vacuum)) {
       mecha_notify(btech_context_evaluation(map->xcode.context), player,
                    "Invalid vacuum flag (must be integer, 0 or 1)");
       return;
@@ -148,7 +194,7 @@ void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
     }
   }
   if (argc > 3) {
-    if ((!((underground) = atoi(args[3])) && strcmp((args[3]), "0"))) {
+    if (!parse_int_checked(args[3], &underground)) {
       mecha_notify(btech_context_evaluation(map->xcode.context), player,
                    "Invalid underground flag (must be integer, 0 or 1)");
       return;
