@@ -1,12 +1,4 @@
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- */
+/* Shared types and constants for BattleTech unit APIs. */
 
 #pragma once
 
@@ -34,25 +26,25 @@ typedef enum MineTriggerReason : int {
 
 static_assert(MINE_STEP == 1 && MINE_DROP == 4);
 
-#define WSDUMP_MASK_ER                                                         \
-  "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %3d %2d"
-#define WSDUMP_MASK_NOER                                                       \
-  "%-24s %2d     %2d           %2d    %2d     %2d  %3d   %2d"
-#define WSDUMP_MASKS_ER                                                        \
-  "[fg=green]Weapon Name             Heat  Damage  Range: Min Short Med Long " \
-  "Ext "                                                                       \
-  "VRT"
-#define WSDUMP_MASKS_NOER                                                      \
-  "[fg=green]Weapon Name             Heat  Damage  Range: Min  Short  Med  "   \
-  "Long  "                                                                     \
-  "VRT"
+constexpr char WSDUMP_MASK_ER[] =
+    "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %3d %2d";
+constexpr char WSDUMP_MASK_NOER[] =
+    "%-24s %2d     %2d           %2d    %2d     %2d  %3d   %2d";
+constexpr char WSDUMP_MASKS_ER[] =
+    "[fg=green]Weapon Name             Heat  Damage  Range: Min Short Med Long "
+    "Ext "
+    "VRT";
+constexpr char WSDUMP_MASKS_NOER[] =
+    "[fg=green]Weapon Name             Heat  Damage  Range: Min  Short  Med  "
+    "Long  "
+    "VRT";
 
-#define WDUMP_MASK                                                             \
-  "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %2d  %2d %d"
-#define WDUMP_MASKS                                                            \
-  "[fg=green]Weapon Name             Heat  Damage  Range: Min Short Med Long " \
-  "VRT C "                                                                     \
-  " ApT"
+constexpr char WDUMP_MASK[] =
+    "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %2d  %2d %d";
+constexpr char WDUMP_MASKS[] =
+    "[fg=green]Weapon Name             Heat  Damage  Range: Min Short Med Long "
+    "VRT C "
+    " ApT";
 enum { LOS_TRACE_CAPACITY = 4000 };
 
 typedef struct LosTracePoint {
