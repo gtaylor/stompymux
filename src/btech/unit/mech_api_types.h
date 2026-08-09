@@ -11,7 +11,6 @@
 #pragma once
 
 #include "equipment_types.h"
-#include "mux/objects/db.h"
 
 typedef struct Mech Mech;
 
