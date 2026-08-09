@@ -406,9 +406,6 @@ void aero_land(DbRef player, void *data, const char *buffer) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i, t;
   double horiz = 0.0;
-  double vert;
-  double vertmin = 0.0;
-  double vertmax = 0.0;
 
   if (mech_class(mech) != CLASS_VTOL && mech_class(mech) != CLASS_AERO &&
       !mech_is_dropship(mech)) {
@@ -478,9 +475,8 @@ void aero_land(DbRef player, void *data, const char *buffer) {
   }
   const float vertical_speed = mech_vertical_speed(mech);
   const float current_speed = mech_current_speed(mech);
-  if (((vert = (double)vertical_speed) >
-       (vertmax = land_data_entry(i)->maxvertup)) ||
-      ((double)vertical_speed < (vertmin = land_data_entry(i)->maxvertdown))) {
+  if ((double)vertical_speed > land_data_entry(i)->maxvertup ||
+      (double)vertical_speed < land_data_entry(i)->maxvertdown) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You are moving too fast to land. ");
     return;

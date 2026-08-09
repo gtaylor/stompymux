@@ -154,7 +154,7 @@ static void lua_schedule_run_job(LuaRuntime *runtime, LUA_SCHEDULE_JOB *job) {
     }
     lua_getfield(state, -1, "handler");
     if (lua_isfunction(state, -1)) {
-      LUA_MODULE_ROOT previous_root = runtime->current_root;
+      LUA_MODULE_ROOT previous_root;
       int status;
 
       lua_push_context(runtime->services->database, nullptr, state, job->object,

@@ -468,8 +468,8 @@ unsigned short mech_sensor_visibility_update(Mech *mech, unsigned short flags,
       mech_possible_contact_count_increment(mech);
       return (unsigned short)f;
     }
-    if ((sl = mech_sensor_detects_now(mech, target, f, arc, range, mapvis,
-                                      maplight))) {
+    if (mech_sensor_detects_now(mech, target, f, arc, range, mapvis,
+                                maplight)) {
       if (sc & 1)
         f |= BATTLE_MAP_LOS_SEEN_PRIMARY;
       if (sc & 2)

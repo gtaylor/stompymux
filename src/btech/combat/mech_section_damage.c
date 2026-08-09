@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "bsuit_api.h"
 #include "btech/context.h"

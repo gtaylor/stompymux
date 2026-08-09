@@ -492,8 +492,6 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
       mech_vertical_speed_set(mech, 0.0F);
       return;
     }
-    if (elevation > 0)
-      elevation = 0;
     break;
 
   case MOVE_HOVER:
@@ -725,12 +723,6 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
 
     if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_WATER)
       return;
-
-    if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_LIGHT_FOREST ||
-        mech_real_terrain_get(mech) == BATTLE_TERRAIN_HEAVY_FOREST)
-      elevation = mech_position_surface_elevation(mech) + 2;
-    else
-      elevation = mech_position_surface_elevation(mech);
 
     if (collision_check(mech, JUMP, 0, 0)) {
       mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);

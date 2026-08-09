@@ -126,7 +126,6 @@ void do_examine(CommandInvocation *invocation) {
   if (!is_hearer(evaluation, player))
     return;
 
-  thing = NOTHING;
   if (!name || !*name) {
     if ((thing = game_object_location(evaluation->world->database, player)) ==
         NOTHING)

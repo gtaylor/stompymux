@@ -62,7 +62,6 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   Mech *target;
   DbRef target_num;
-  BattleMap *newmap;
   int argc, through_ice;
   char *args[4];
   BtechContext *context = mech_context(mech);
@@ -279,7 +278,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
               mech_to_mech_display_id(mech, target).text);
   if (mech_carried_dbref(target) > 0)
     mech_dropoff(GOD, target, "");
-  if ((newmap = btech_context_get_map(context, mech_map_dbref(target))))
+  if (btech_context_get_map(context, mech_map_dbref(target)))
     mech_los_broadcast_unit(mech, target, "picks up %s!");
   mech_carried_dbref_set(mech, mech_dbref(target));
   mech_towing_target_prepare(target);
@@ -644,7 +643,6 @@ void mech_dropoff(DbRef player, void *data, const char *buffer) {
   Mech *target;
   BattleMap *newmap;
   DbRef aRef;
-  int x, y;
   BtechContext *context = mech_context(mech);
 
   if (player != GOD)
@@ -673,10 +671,10 @@ void mech_dropoff(DbRef player, void *data, const char *buffer) {
 
   if ((newmap = btech_context_get_map(context, mech_map_dbref(target)))) {
     mech_los_broadcast_unit(mech, target, "drops %s!");
-    if ((x = mech_position_z(target)) >
-        ((y = battle_map_hex_elevation(newmap, mech_position_x(target),
-                                       mech_position_y(target))) +
-         2)) {
+    if (mech_position_z(target) >
+        battle_map_hex_elevation(newmap, mech_position_x(target),
+                                 mech_position_y(target)) +
+            2) {
       mech_notify(mech, MECHALL,
                   "Maybe you should have done this closer to the ground.");
       mech_notify(

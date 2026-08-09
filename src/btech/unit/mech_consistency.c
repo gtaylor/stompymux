@@ -331,12 +331,12 @@ static void calc_ints(Mech *mech, int *n, int *tot) {
 }
 
 static int ammo_weight(Mech *mech) {
-  int i, j, t, w = 0;
+  int i, j, w = 0;
 
   for (i = 0; i < NUM_SECTIONS; i++)
     if (!mech_section_is_destroyed(mech, i))
       for (j = 0; j < CritsInLoc(mech, i); j++)
-        if (equipment_is_ammunition((t = mech_critical_part_type(mech, i, j))))
+        if (equipment_is_ammunition(mech_critical_part_type(mech, i, j)))
           w += mech_critical_data(mech, i, j) * 1024 /
                weapon_catalogue_ammunition_per_ton(ammunition_to_weapon_index(
                    mech_critical_part_type(mech, i, j)));

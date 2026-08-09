@@ -223,8 +223,6 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
   weapon_score = 0;
   weapon_damage = 0;
   range_score = 500; /* Since by default we assume its SR */
-  damage_score = 0;
-  heat_score = 0;
   minrange_score = 0;
 
   /* Don't bother trying to set a value if its outside its range */

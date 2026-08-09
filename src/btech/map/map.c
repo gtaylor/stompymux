@@ -548,7 +548,6 @@ void map_savemap(DbRef player, void *data, char *buffer) {
   }
   fprintf(fp, "%d %d\n", map->map_width, map->map_height);
   for (i = 0; i < map->map_height; i++) {
-    MapObject *mo;
 
     *map_character(row, sizeof(row), 0) = 0;
     for (j = 0; j < map->map_width; j++) {
@@ -559,7 +558,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         break;
       case FIRE:
         /* check if we're burnin', if so, alter terrain type */
-        if ((mo = find_mapobj(map, j, i, TYPE_FIRE)))
+        if (find_mapobj(map, j, i, TYPE_FIRE))
           terrain = TFIRE;
         else if (!(map->flags & MAPFLAG_FIRES)) {
           map_terrain_set(map, j, i, ' ');
@@ -605,7 +604,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
 void map_setmapsize(DbRef player, void *data, char *buffer) {
   BattleMap *oldmap;
   unsigned char **map;
-  int x, y, i, j, failed = 0, argc, x1, y1;
+  int x, y, i, j, failed = 0, x1, y1;
   char *args[4];
 
   oldmap = (BattleMap *)data;
@@ -614,7 +613,7 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
                  "Invalid map for size change, sorry.");
     return;
   }
-  if ((argc = mech_parseattributes(buffer, args, 4)) != 2) {
+  if (mech_parseattributes(buffer, args, 4) != 2) {
     mecha_notify(btech_context_evaluation(oldmap->xcode.context), player,
                  "Invalid number of arguments (X/Y expected)");
     return;

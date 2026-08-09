@@ -57,8 +57,8 @@ void auto_leave_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = btech_context_get_map(autopilot->xcode.context,
-                                    autopilot->mapindex))) {
+  map = btech_context_get_map(autopilot->xcode.context, autopilot->mapindex);
+  if (!map) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,
@@ -209,8 +209,9 @@ void auto_enter_event(MuxEvent *muxevent) {
   }
 
   /* Is there anything even to enter here */
-  if (!(map_object = find_entrance_by_xy(map, mech_position_x(mech),
-                                         mech_position_y(mech)))) {
+  map_object =
+      find_entrance_by_xy(map, mech_position_x(mech), mech_position_y(mech));
+  if (!map_object) {
 
     /* Nothing in this hex */
     snprintf(error_buf, MBUF_SIZE,

@@ -6,6 +6,7 @@ Checks: >
   -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
   clang-analyzer-unix.*,
   clang-analyzer-valist.*,
+  clang-analyzer-deadcode.*,
   cert-arr39-c,
   cert-con36-c,
   cert-dcl03-c,
@@ -32,6 +33,7 @@ Checks: >
   bugprone-undefined-memory-manipulation,
   bugprone-unused-return-value,
   misc-include-cleaner
+WarningsAsErrors: '*'
 HeaderFilterRegex: '^.*/src/(mux|btech)/.*'
 CheckOptions:
   - key: cert-err33-c.CheckedFunctions

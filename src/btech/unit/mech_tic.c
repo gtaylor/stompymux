@@ -103,10 +103,9 @@ int cleartic_sub_func(Mech *mech, DbRef player, int low, int high,
 }
 
 void cleartic_sub(DbRef player, Mech *mech, char *buffer) {
-  int argc;
   char *args[3];
 
-  if ((argc = mech_parseattributes(buffer, args, 3)) != 1) {
+  if (mech_parseattributes(buffer, args, 3) != 1) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Invalid number of arguments to function");
     return;
@@ -133,11 +132,11 @@ int addtic_sub_func(Mech *mech, DbRef player, int low, int high,
 }
 
 void addtic_sub(DbRef player, Mech *mech, char *buffer) {
-  int ticnum, argc;
+  int ticnum;
   char *args[3];
   TicSelectionContext selection;
 
-  if ((argc = mech_parseattributes(buffer, args, 3)) != 2) {
+  if (mech_parseattributes(buffer, args, 3) != 2) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Invalid number of arguments to function!");
     return;
@@ -298,13 +297,13 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
 }
 
 void listtic_sub(DbRef player, Mech *mech, char *buffer) {
-  int ticnum, argc;
+  int ticnum;
   char *args[2];
   int i, count = 0;
   CoolMenu *c;
   ListTicContext list;
 
-  if ((argc = mech_parseattributes(buffer, args, 2)) != 1) {
+  if (mech_parseattributes(buffer, args, 2) != 1) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Invalid number of arguments!");
     return;

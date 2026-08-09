@@ -435,7 +435,6 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
     bruise = playerBLD * 10;
 
     if (lethaldam >= playerBLD * 10) {
-      lethaldam = playerBLD * 10;
       char_setstatvalue(s, "lethal", playerBLD * 10 - 1);
       char_setstatvalue(s, "bruise", playerBLD * 10);
       character_stats_store(context, player, s, VALUES_HEALTH);

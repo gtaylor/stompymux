@@ -387,8 +387,6 @@ void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
   else {
     while (num_missiles_hit) {
       if (hitMech) {
-        if (aim_hit)
-          hitloc = mech_aimed_hit_location(mech, hitMech, &isrear, &iscritical);
         if (tUsingTC)
           hitloc = mech_targeting_computer_hit_location(mech, hitMech, &isrear,
                                                         &iscritical);

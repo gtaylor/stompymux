@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "map.h"

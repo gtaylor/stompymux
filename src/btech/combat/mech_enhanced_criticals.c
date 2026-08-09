@@ -618,8 +618,6 @@ static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
   }
 
   if (tHasDamagedPart) {
-    tPrintSpace = 1;
-
     if (damage.general > 0) {
       notify_printf(
           evaluation, player, "      General damage (%d hit%s): +%d to hit.",

@@ -1,5 +1,4 @@
 #include "btech/context.h"
-#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_conditions_api.h"
@@ -334,7 +333,6 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         z1 = map_scaled_elevation(mech_map, ix1, iy1);
       }
     } else if (argc == 3) {
-      iz0 = clamp_float_to_int(z0 / ZSCALE);
       if (!parse_navigation_arguments(args, 3, values)) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
         return;

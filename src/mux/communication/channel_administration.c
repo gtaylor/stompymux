@@ -271,9 +271,7 @@ void do_chboot(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *channel = invocation->first;
   char *victim = invocation->second;
-  struct comuser *user;
   struct channel *ch;
-  struct comuser *vu;
   DbRef thing;
 
   /*
@@ -285,7 +283,7 @@ void do_chboot(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "@chan/boot: Unknown channel.");
     return;
   }
-  if (!(user = select_user(ch, player))) {
+  if (!select_user(ch, player)) {
     raw_notify(evaluation, player, "@chan/boot: You are not on that channel.");
     return;
   }
@@ -298,7 +296,7 @@ void do_chboot(CommandInvocation *invocation) {
   if (thing == NOTHING) {
     return;
   }
-  if (!(vu = select_user(ch, thing))) {
+  if (!select_user(ch, thing)) {
     notify_printf(evaluation, player, "@chan/boot: %s is not on the channel.",
                   game_object_name(evaluation->world->database, thing));
     return;

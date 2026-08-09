@@ -44,10 +44,6 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
   total_internal_current = 0;
   total_internal_original = 0;
 
-  damage_score = 0.0F;
-  bv_score = 0.0F;
-  speed_score = 0.0F;
-  range_score = 0.0F;
   status_score = 0.0F;
 
   /* Here is the meat of the function, basicly I gave each

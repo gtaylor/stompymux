@@ -39,7 +39,7 @@ typedef struct TechCheckContext {
 void tech_replacegun(DbRef player, void *data, char *buffer) {
   int brand = 0, ob = 0;
 
-  int roll, rollmod, fixtime, base_fixtime, parttype, oparttype, fail_fixtime;
+  int roll, rollmod, fixtime, base_fixtime, parttype, fail_fixtime;
 
   RepairCommandContext repair_command;
   Mech *mech;
@@ -109,7 +109,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
     mech_critical_brand_set(mech, loc, part, brand);
   }
 
-  parttype = oparttype = mech_critical_part_type(mech, loc, part);
+  parttype = mech_critical_part_type(mech, loc, part);
 
   if (equipment_is_ammunition(mech_critical_part_type(mech, loc, part))
           ? 0

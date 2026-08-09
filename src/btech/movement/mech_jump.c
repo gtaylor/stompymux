@@ -1,7 +1,6 @@
 /* Implements BattleTech movement mechanics for unit jump. */
 
 #include <math.h>
-#include <stdlib.h>
 
 #include "aero_move_api.h"
 #include "bsuit_api.h"

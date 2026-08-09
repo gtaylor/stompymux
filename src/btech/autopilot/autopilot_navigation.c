@@ -33,16 +33,15 @@ static int mech_snipe_func(Mech *mech, DbRef player, int index, int high,
                            void *context) {
   /* Simulate mech movements until flight_time <= now */
   int now = 0, crashed = 0;
-  int flt_time;
   LocationSimulation t;
   Mech *target_mech = context;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   location_simulation_initialize(&t, target_mech);
-  while ((flt_time = artillery_round_flight_time(mech_position_real_x(mech),
-                                                 mech_position_real_y(mech),
-                                                 t.fx, t.fy)) > now) {
+  while (artillery_round_flight_time(mech_position_real_x(mech),
+                                     mech_position_real_y(mech), t.fx,
+                                     t.fy) > now) {
     if (!crashed)
       if (ai_crash(map, target_mech, &t))
         crashed = 1;

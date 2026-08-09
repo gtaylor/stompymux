@@ -149,8 +149,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = btech_context_get_map(autopilot->xcode.context,
-                                    autopilot->mapindex))) {
+  map = btech_context_get_map(autopilot->xcode.context, autopilot->mapindex);
+  if (!map) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,

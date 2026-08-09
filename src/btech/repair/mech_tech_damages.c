@@ -110,7 +110,7 @@ static int clan_modified_time(const Mech *mech, int time) {
   return MAX(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
 }
 static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
-  int a, b, c, d;
+  int a, b;
   if (mech_section_is_destroyed(mech, loc)) {
     if (mech_class(mech) != CLASS_BSUIT)
       repair_damage_add(damages, REATTACH, loc);
@@ -142,8 +142,8 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
       continue;
     if (equipment_is_ammunition(b) &&
         !mech_critical_is_destroyed(mech, loc, a) &&
-        (c = mech_critical_data(mech, loc, a)) !=
-            (d = mech_critical_full_ammunition(mech, loc, a)))
+        mech_critical_data(mech, loc, a) !=
+            mech_critical_full_ammunition(mech, loc, a))
       repair_damage_add_detail(damages, RELOAD, loc, a);
     if (!mech_critical_is_nonfunctional(mech, loc, a) &&
         !mech_critical_temporary_failure(mech, loc, a) &&

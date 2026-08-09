@@ -6,7 +6,6 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "autopilot.h"
@@ -420,7 +419,6 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
                                 AutopilotArgumentList *args, int argc,
                                 char *mesg) {
 
-  DbRef target;
   char buffer[SBUF_SIZE];
   int bear, rng;
 
@@ -430,8 +428,8 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
   }
 
   if ((argc - 1) == 1) {
-    if ((target = FindTargetDBREFFromMapNumber(
-             mech, autopilot_argument_list_get(args, 1))) <= 0) {
+    if (FindTargetDBREFFromMapNumber(
+            mech, autopilot_argument_list_get(args, 1)) <= 0) {
       snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");
       return;
     }

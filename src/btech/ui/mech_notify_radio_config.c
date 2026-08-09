@@ -456,7 +456,6 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   int fail = 0;
-  int argc;
   int chn = 0;
   RadioCommandArguments arguments = {0};
 
@@ -472,7 +471,7 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
                  "You are too stunned to use the radio!");
     return;
   }
-  if ((argc = proper_parseattributes(buffer, arguments.items, 3)) != 3)
+  if ((proper_parseattributes(buffer, arguments.items, 3)) != 3)
     fail = 1;
   char *channel_text = radio_command_argument(&arguments, 0);
   char *message = radio_command_argument(&arguments, 2);

@@ -477,7 +477,6 @@ static void artillery_hit(artillery_shot *s) {
     dir = (float)di * (float)M_PI / 180.0F;
     dist = btech_random_range_int(battle_map_context(map), 2, 7);
     weight = 100 * (dist * 6) / ((dist * 6 + map->windspeed));
-    di = (di * weight + map->winddir * (100 - weight)) / 100;
     dist = (dist * weight + (map->windspeed / 6) * (100 - weight)) / 100;
     original_x = s->to_x;
     original_y = s->to_y;

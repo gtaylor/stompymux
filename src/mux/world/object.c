@@ -226,15 +226,12 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   switch (objtype) {
   case OBJECT_TYPE_ROOM:
     default_flags = &evaluation->world->configuration->default_room_flags;
-    okname = ok_name(evaluation->world->configuration, pure_name);
     break;
   case OBJECT_TYPE_THING:
     default_flags = &evaluation->world->configuration->default_thing_flags;
-    okname = ok_name(evaluation->world->configuration, pure_name);
     break;
   case OBJECT_TYPE_EXIT:
     default_flags = &evaluation->world->configuration->default_exit_flags;
-    okname = ok_name(evaluation->world->configuration, pure_name);
     break;
   case OBJECT_TYPE_PLAYER:
     default_flags = &evaluation->world->configuration->default_player_flags;

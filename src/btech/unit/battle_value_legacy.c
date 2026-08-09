@@ -28,6 +28,8 @@ static float battle_value_skill_multiplier(int gunnery, int piloting) {
       *row, BTECH_BV_SKILL_LIMIT, sizeof(**row), (size_t)pilot_index);
 }
 
+// NOLINTBEGIN(clang-analyzer-deadcode.DeadStores): values support DEBUG_BV
+// output.
 int CalculateBV(Mech *mech, int gunstat, int pilstat) {
   int defbv = 0, offbv = 0, i, ii, temp, temp2, deduct = 0, offweapbv = 0,
       defweapbv = 0, armor = 0, intern = 0, weapindx, mostheat = 0,
@@ -472,4 +474,5 @@ int CalculateBV(Mech *mech, int gunstat, int pilstat) {
 #endif
   return clamp_float_to_int((float)((offbv + defbv) / 100) * mul);
 }
+// NOLINTEND(clang-analyzer-deadcode.DeadStores)
 #endif

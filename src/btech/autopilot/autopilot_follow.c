@@ -1,7 +1,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "ai_api.h"
 #include "autopilot.h"
@@ -76,8 +75,10 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* Get the Map */
-  if (!(map = btech_context_get_map(autopilot->xcode.context,
-                                    autopilot->mapindex))) {
+  if (!(map = btech_context_get_map(
+            autopilot->xcode.context,
+            autopilot
+                ->mapindex))) { // NOLINT(clang-analyzer-deadcode.DeadStores)
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,
@@ -440,8 +441,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = btech_context_get_map(autopilot->xcode.context,
-                                    autopilot->mapindex))) {
+  map = btech_context_get_map(autopilot->xcode.context, autopilot->mapindex);
+  if (!map) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,

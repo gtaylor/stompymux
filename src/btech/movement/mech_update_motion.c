@@ -119,8 +119,6 @@ void mech_heading_update(Mech *mech) {
       offset = (offset / 2);
   }
 #endif
-  if (normangle < 0)
-    normangle += short_to_float_simulation(360);
   if (mech_is_dropship(mech) && offset >= short_to_float_simulation(10))
     offset = short_to_float_simulation(10);
   mech_heading_rotate_toward_desired(mech, offset);

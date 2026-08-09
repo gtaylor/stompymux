@@ -120,8 +120,7 @@ void announce_connect(DbRef player, Descriptor *d) {
   int count = 0;
   DescriptorIterator iterator =
       descriptor_iterator_connected(runtime->descriptors);
-  Descriptor *dtemp;
-  while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
+  while (descriptor_iterator_next(&iterator) != nullptr)
     count++;
 
   if (*runtime->record_players < count)
@@ -138,7 +137,7 @@ void announce_connect(DbRef player, Descriptor *d) {
   char *buf = alloc_lbuf("announce_connect");
   int num = 0;
   iterator = descriptor_iterator_player(runtime->descriptors, player);
-  while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
+  while (descriptor_iterator_next(&iterator) != nullptr)
     num++;
 
   if (num < 2) {
@@ -196,7 +195,6 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   CommandContext *command = runtime->background_command;
   DbRef loc, temp;
   int num, key;
-  Descriptor *dtemp;
   DescriptorIterator iterator =
       descriptor_iterator_player(runtime->descriptors, player);
 
@@ -211,7 +209,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   }
   loc = game_object_location(runtime->world->database, player);
   num = 0;
-  while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
+  while (descriptor_iterator_next(&iterator) != nullptr)
     num++;
 
   temp = command->enactor;

@@ -35,7 +35,7 @@ fmt-check-lua:
 fmt-check: fmt-check-c fmt-check-lua
 
 tidy:
-    {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
+    {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
 
 build:
     cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON

@@ -26,7 +26,6 @@
 #include "mech_equipment_api.h"
 #include "mech_position_api.h"
 #include "mech_tic_api.h"
-#include <stdlib.h>
 #include <string.h>
 
 void fun_btupdatelinks(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -37,7 +36,6 @@ void fun_btupdatelinks(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   DbRef it;
-  BattleMap *map;
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
@@ -53,7 +51,7 @@ void fun_btupdatelinks(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 NOT A MAP");
     return;
   }
-  if (!(map = btech_context_find_object(context->btech, it))) {
+  if (!btech_context_find_object(context->btech, it)) {
     safe_tprintf_str(buff, bufc, "#-1 UNABLE TO GET MAPDATA");
     return;
   }

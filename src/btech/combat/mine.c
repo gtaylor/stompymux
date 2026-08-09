@@ -200,7 +200,7 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
                                     int reason) {
   MapObject *o, *o2;
   int mdis = (mech_real_tonnage(mech) - 20) / 10;
-  float x1, y1, x2, y2, range;
+  float x1, y1, x2, y2;
 
   MapCoordToRealCoord(x, y, &x1, &y1);
   for (o = map->MapObject[TYPE_MINE]; o; o = o2) {
@@ -223,7 +223,6 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
       case MINE_COMMAND:
         mech_notify(mech, MECHALL,
                     "You spot small bomblets lying on the ground here..");
-        real = 0;
         continue;
       }
 
@@ -257,7 +256,7 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
           /* Possible remote explosion */
           MapCoordToRealCoord(o->x, o->y, &x2, &y2);
           const long range_limit = (mech_real_tonnage(mech) - o->datai) / 10;
-          if ((range = FindHexRange(x1, y1, x2, y2)) > (float)range_limit)
+          if (FindHexRange(x1, y1, x2, y2) > (float)range_limit)
             continue;
 
           mine_explode(mech, map, o, x, y, reason);

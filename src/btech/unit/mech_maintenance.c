@@ -26,6 +26,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
@@ -512,14 +513,13 @@ void mech_Detach(Mech *mech, int loc) {
 /* Figures out how much ammo there is when we're 'fully loaded', and
    fills it */
 void mech_FillPartAmmo(Mech *mech, int loc, int pos) {
-  int t, to;
+  int t;
 
   t = mech_critical_part_type(mech, loc, pos);
 
   if (!equipment_is_ammunition(t))
     return;
-  if (!(to =
-            weapon_catalogue_ammunition_per_ton(ammunition_to_weapon_index(t))))
+  if (!weapon_catalogue_ammunition_per_ton(ammunition_to_weapon_index(t)))
     return;
   mech_critical_data_set(mech, loc, pos, FullAmmo(mech, loc, pos));
 }

@@ -450,7 +450,6 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
                                          mech_position_x(source),
                                          mech_position_y(source), r)) {
               hitMech = tempMech;
-              ran = r;
             }
         }
     if (!hitMech)

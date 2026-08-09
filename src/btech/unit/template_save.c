@@ -594,8 +594,6 @@ void update_specials(Mech *mech) {
   /*
    * Check our NSS. Need 1 crit in each loc except H
    */
-  tTechOK = 0;
-
   if (wcNSS > 0) {
     tTechOK = 1;
 
@@ -620,8 +618,6 @@ void update_specials(Mech *mech) {
   /*
    * Check our Stealth armor. Need 2 crits in each loc except H and CT
    */
-  tTechOK = 0;
-
   if (wcSthArmor > 0) {
     tTechOK = 1;
 

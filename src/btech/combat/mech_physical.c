@@ -400,8 +400,6 @@ void mech_club(DbRef player, void *data, char *buffer) {
                   "You can not seem to find any trees around to club with.");
       return;
     }
-    // Since we have trees nearby, assume the club goes to right hand.
-    clubLoc = RARM;
   }
 
   argc = mech_parseattributes(buffer, args, 5);

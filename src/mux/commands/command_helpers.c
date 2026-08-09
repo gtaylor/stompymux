@@ -13,7 +13,6 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
-#include "mux/support/validation.h"
 #include "mux/world/match.h"
 
 char *trim_space_sep(char *string, char separator) {

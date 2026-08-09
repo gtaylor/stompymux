@@ -287,7 +287,7 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
       return -1;
     if (l < 0)
       return -1;
-    if ((t = FindWeaponNumberOnMech(mech, l, loc, pos)) == -1)
+    if (FindWeaponNumberOnMech(mech, l, loc, pos) == -1)
       return -1;
   }
   t = mech_critical_part_type(mech, *loc, *pos);

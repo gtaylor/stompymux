@@ -398,7 +398,7 @@ int mech_normal_to_hit_calculate(Mech *mech, BattleMap *mech_map, int section,
     }
 
     if (wAmmoMode & AC_PRECISION_MODE)
-      wTargMoveMod = MAX(wTargMoveMod -= 2, 0);
+      wTargMoveMod = MAX(wTargMoveMod - 2, 0);
 
     /* We ignore Movemod if the weapon is in sguided AND its tagged by a
      * friendly TAG AND movemod > 0 */

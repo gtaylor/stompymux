@@ -1,7 +1,5 @@
 #include "aero_move_api.h"
 
-#include <stdlib.h>
-
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "mech_electronics_api.h"

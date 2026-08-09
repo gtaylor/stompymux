@@ -12,12 +12,10 @@
 #include "autopilot.h"
 #include "autopilot_argument_list_api.h"
 #include "autopilot_radio_internal.h"
-#include "bsuit_api.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
-#include "map.h"
 #include "map_terrain.h"
 #include "mech_api_types.h"
 #include "mech_events.h"
@@ -52,7 +50,6 @@ void auto_reply_event(MuxEvent *muxevent) {
 
   Mech *mech = (Mech *)muxevent->data;
   char *buf = (char *)muxevent->data2;
-  BattleMap *map;
 
   /* Make sure its a mech */
   if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech))) {
@@ -62,7 +59,7 @@ void auto_reply_event(MuxEvent *muxevent) {
 
   /* If valid object */
   if (mech)
-    if ((map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech))))
+    if (btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))
       sendchannelstuff(mech, 0, buf);
 
   free(buf);

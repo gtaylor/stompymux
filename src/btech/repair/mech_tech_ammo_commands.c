@@ -45,8 +45,7 @@ void tech_toggletype(DbRef player, void *data, char *buffer) {
   loc = selection.location;
   part = selection.part;
   atype = selection.brand;
-  if (!equipment_is_ammunition(
-          (t = mech_critical_part_type(mech, loc, part)))) {
+  if (!equipment_is_ammunition(mech_critical_part_type(mech, loc, part))) {
     mecha_notify(btech_context_evaluation(context), player, "That's no ammo!");
     return;
   }
@@ -79,7 +78,7 @@ void tech_reload(DbRef player, void *data, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
-  int loc, part, t, full, now, change;
+  int loc, part, t, change;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_CONFIGURED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
@@ -97,8 +96,7 @@ void tech_reload(DbRef player, void *data, char *buffer) {
   loc = selection.location;
   part = selection.part;
   atype = selection.brand;
-  if (!equipment_is_ammunition(
-          (t = mech_critical_part_type(mech, loc, part)))) {
+  if (!equipment_is_ammunition(mech_critical_part_type(mech, loc, part))) {
     mecha_notify(btech_context_evaluation(context), player, "That's no ammo!");
     return;
   }
@@ -114,8 +112,7 @@ void tech_reload(DbRef player, void *data, char *buffer) {
         "The ammo compartment is disabled ; repair/replacepart it first.");
     return;
   }
-  if ((now = mech_critical_data(mech, loc, part)) ==
-      (full = FullAmmo(mech, loc, part))) {
+  if (mech_critical_data(mech, loc, part) == FullAmmo(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That particular ammo compartment doesn't need reloading.");
     return;
@@ -179,7 +176,7 @@ void tech_unload(DbRef player, void *data, char *buffer) {
   Mech *mech;
   BtechContext *context;
   EvaluationContext *evaluation;
-  int loc, part, t, full, now, change, mod = 2;
+  int loc, part, now, change, mod = 2;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_CONFIGURED, &repair_command);
@@ -198,8 +195,7 @@ void tech_unload(DbRef player, void *data, char *buffer) {
     return;
   loc = selection.location;
   part = selection.part;
-  if (!equipment_is_ammunition(
-          (t = mech_critical_part_type(mech, loc, part)))) {
+  if (!equipment_is_ammunition(mech_critical_part_type(mech, loc, part))) {
     mecha_notify(btech_context_evaluation(context), player, "That's no ammo!");
     return;
   }
@@ -215,7 +211,7 @@ void tech_unload(DbRef player, void *data, char *buffer) {
         "The ammo compartment is disabled ; repair/replacepart it first.");
     return;
   }
-  if (!(now = mech_critical_data(mech, loc, part))) {
+  if (!mech_critical_data(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That particular ammo compartment is empty already.");
     return;
@@ -240,7 +236,8 @@ void tech_unload(DbRef player, void *data, char *buffer) {
                  "Someone's scrapping that section - no repairs are possible!");
     return;
   }
-  if ((full = FullAmmo(mech, loc, part)) == now)
+  now = mech_critical_data(mech, loc, part);
+  if (FullAmmo(mech, loc, part) == now)
     change = 2;
   else
     change = 1;

@@ -701,10 +701,6 @@ void auto_gun_event(Autopilot *autopilot) {
       } else if ((mech_class(mech) == CLASS_VEH_GROUND) ||
                  (mech_class(mech) == CLASS_VEH_NAVAL)) {
 
-        /* Get Target Arc */
-        what_arc = InWeaponArc(mech, mech_position_real_x(target),
-                               mech_position_real_y(target));
-
         /* Check if turret exists and weapon is there */
         if (mech_section_internal(mech, TURRET) &&
             temp_weapon_node->section == TURRET) {

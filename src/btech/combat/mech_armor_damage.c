@@ -206,13 +206,11 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS,
     default:
       break;
     }
-    iscritical = 0;
   }
 
   if (mech_class(wounded) == CLASS_AERO && intDamage >= 0) {
     mech_section_destroy(wounded, attacker, LOS, hitloc);
     if (mech_is_destroyed(wounded)) {
-      intDamage = 0;
       return 0;
     }
     switch (hitloc) {

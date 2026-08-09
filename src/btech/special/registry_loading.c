@@ -124,16 +124,18 @@ static int load_update4(void *key, void *data, int depth, void *arg) {
     Mech *const mech = (Mech *)xcode_obj;
     BattleMap *map;
 
-    if (!(map = btech_context_get_map(context, mech_map_dbref(mech)))) {
+    map = btech_context_get_map(context, mech_map_dbref(mech));
+    if (!map) {
       /* Ugly kludge */
-      if ((map = btech_context_get_map(
-               context,
-               game_object_location(context->database, mech_dbref(mech)))))
+      map = btech_context_get_map(
+          context, game_object_location(context->database, mech_dbref(mech)));
+      if (map)
         mech_Rsetmapindex(
             GOD, mech,
             tprintf("%ld",
                     game_object_location(context->database, mech_dbref(mech))));
-      if (!(map = btech_context_get_map(context, mech_map_dbref(mech))))
+      map = btech_context_get_map(context, mech_map_dbref(mech));
+      if (!map)
         return 1;
     }
 

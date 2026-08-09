@@ -363,8 +363,8 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
       }
 
       /* Now see if its a mech */
-      if (!(target = btech_context_get_mech(autopilot->xcode.context,
-                                            target_dbref))) {
+      target = btech_context_get_mech(autopilot->xcode.context, target_dbref);
+      if (!target) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"

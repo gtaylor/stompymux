@@ -270,7 +270,7 @@ static void bomb_drop(Mech *mech, DbRef player, int bn) {
   bn--;
   for (i = 0; i < NUM_SECTIONS; i++)
     for (j = 0; j < NUM_CRITICALS; j++)
-      if (equipment_is_bomb((k = mech_critical_part_type(mech, i, j))) &&
+      if (equipment_is_bomb(mech_critical_part_type(mech, i, j)) &&
           !mech_critical_is_destroyed(mech, i, j)) {
         if (bc == bn) {
           lloc = i;

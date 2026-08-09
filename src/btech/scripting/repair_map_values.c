@@ -346,7 +346,9 @@ void fun_btsectstatus(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
   }
-  if (!(mech = btech_context_find_object(context->btech, it))) {
+  if (!(mech = btech_context_find_object(
+            context->btech,
+            it))) { // NOLINT(clang-analyzer-deadcode.DeadStores)
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
@@ -465,7 +467,6 @@ void fun_btweapons(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   DbRef it;
-  Mech *mech;
   it = match_thing(&context->command->match, player,
                    script_function_argument(fargs, nfargs, 0));
 
@@ -479,7 +480,7 @@ void fun_btweapons(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return;
   }
-  if (!(mech = btech_context_find_object(context->btech, it))) {
+  if (!btech_context_find_object(context->btech, it)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }

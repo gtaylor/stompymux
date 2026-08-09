@@ -296,7 +296,6 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
     if (!is_good_obj(mech_context(otherMech)->database, mech_dbref(otherMech)))
       continue;
 
-    tShowStatusInfo = 0;
     realRange = mech_range_to(mech, otherMech);
     losFlag = mech_los_check(mech, otherMech, mech_position_x(otherMech),
                              mech_position_y(otherMech), realRange);

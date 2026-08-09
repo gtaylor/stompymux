@@ -183,7 +183,6 @@ void fun_btremovestores(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
   int i = -1;
   int num = 0;
-  void *foo;
   int p, b;
 
   it = match_thing(&context->command->match, player,
@@ -192,7 +191,7 @@ void fun_btremovestores(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }
-  if (!(foo = btech_context_find_object(context->btech, it))) {
+  if (!btech_context_find_object(context->btech, it)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return;
   }

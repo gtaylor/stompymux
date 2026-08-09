@@ -32,11 +32,10 @@ static int gamedb_load_metadata(PersistenceContext *context, sqlite3 *sqlite,
   sqlite3_stmt *statement;
   int min_size;
   int record_players;
+  int result = -1;
   int schema_version;
-  int result;
 
   statement = nullptr;
-  result = -1;
   if (gamedb_prepare(sqlite, &statement,
                      "SELECT schema_version, db_top, min_size, "
                      "record_players FROM snapshot WHERE id = 1;") == 0 &&
@@ -76,7 +75,6 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   DbRef zone;
 
   statement = nullptr;
-  result = -1;
   const char *query =
       "SELECT dbref, name, location, zone, contents, exits, link, next, "
       "type, lua_parent, has_ansi_flag, has_audible_flag, "

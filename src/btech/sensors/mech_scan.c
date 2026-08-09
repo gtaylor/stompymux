@@ -40,8 +40,6 @@ static float mech_scan_hex_real_z(BattleMap *map, int x, int y) {
   const int elevation = battle_map_hex_elevation(map, x, y);
   return ZSCALE * (float)elevation;
 }
-#include <stdlib.h>
-#include <string.h>
 
 enum {
   SHOW_INFO = 1,
@@ -287,7 +285,6 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                    "Coordinates are not in line of sight!");
       return;
     }
-    fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
     /* look for enemies in that hex... */
     if (!(tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1)))
       tempMech = (Mech *)NULL;
@@ -415,7 +412,6 @@ void mech_report(DbRef player, void *data, char *buffer) {
           "That target isn't seen well enough by the scanners for a report!");
       return;
     }
-    fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
     /* look for enemies in that hex... */
     tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
     if (!tempMech) {

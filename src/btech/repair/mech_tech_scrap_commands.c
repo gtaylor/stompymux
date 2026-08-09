@@ -119,7 +119,6 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
                                .position = part,
                                .extra = mod,
                                .player = player});
-      mod = 3;
       return;
     }
   }

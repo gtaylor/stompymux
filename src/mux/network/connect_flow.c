@@ -176,11 +176,10 @@ static void connect_flow_terminate(Descriptor *d, const char *logcode,
 }
 
 static int connect_flow_count_connected(DescriptorRegistry *registry) {
-  Descriptor *d;
   DescriptorIterator iterator = descriptor_iterator_connected(registry);
   int count = 0;
 
-  while ((d = descriptor_iterator_next(&iterator)) != nullptr)
+  while (descriptor_iterator_next(&iterator) != nullptr)
     count++;
   return count;
 }

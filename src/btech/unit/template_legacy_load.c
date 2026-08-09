@@ -172,7 +172,7 @@ template_read_header(FILE *fp, int *tons, int *tactical_range,
 static int template_load_legacy(Mech *mech, const char *id) {
   FILE *fp = nullptr;
   int i, j, k, t;
-  int i1, i2, i3, i4, i5, i6;
+  int i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0;
   char *filename;
 
   filename = mech_template_resolve_path(
@@ -228,7 +228,7 @@ static int template_load_legacy(Mech *mech, const char *id) {
         break;
       }
     }
-    int section_values[4];
+    int section_values[4] = {0};
     if (template_load_error(fp, mech,
                             template_read_ints(fp, section_values,
                                                sizeof(section_values) /
@@ -254,7 +254,7 @@ static int template_load_legacy(Mech *mech, const char *id) {
       i4 &= ~4;
     mech_section_configuration_set(mech, i, i4);
     for (j = 0; j < NUM_CRITICALS; j++) {
-      int critical_values[3];
+      int critical_values[3] = {0};
       if (template_load_error(
               fp, mech,
               template_read_ints(fp, critical_values,

@@ -399,18 +399,18 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         mech_critical_fire_mode_set(mech, section, critical, wFireModes);
         mech_critical_ammo_mode_set(mech, section, critical, wAmmoModes);
 
-        line2 = one_arg(line2, buf, sizeof(buf));
+        one_arg(line2, buf, sizeof(buf));
         if (mech->xcode.context->configuration->btech_parts &&
             !template_read_int(fp, mech, player, buf, &value))
           return -1;
         if (mech->xcode.context->configuration->btech_parts && value != 0)
           mech_critical_brand_set(mech, section, critical, value);
       } else if (equipment_is_ammunition(type)) {
-        line2 = one_arg(line2, buf, sizeof(buf));
+        one_arg(line2, buf, sizeof(buf));
         if (!template_read_int(fp, mech, player, buf, &value))
           return -1;
         mech_critical_data_set(mech, section, critical, value);
-        line2 = one_arg(line2, buf, sizeof(buf));
+        one_arg(line2, buf, sizeof(buf));
 
         /*              wFireModes = BuildBitVector(crit_fire_modes, buf); */
 
@@ -459,7 +459,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                                  FullAmmo(mech, section, critical));
         }
       } else {
-        if ((line2 = one_arg(line2, buf, sizeof(buf)))) {
+        if (one_arg(line2, buf, sizeof(buf))) {
           if (!template_read_int(fp, mech, player, buf, &value))
             return -1;
           mech_critical_data_set(mech, section, critical, value);
@@ -467,8 +467,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
           mech_critical_data_set(mech, section, critical, 0);
         mech_critical_fire_mode_set(mech, section, critical, 0);
         mech_critical_ammo_mode_set(mech, section, critical, 0);
-        if ((line2 = one_arg(line2, buf, sizeof(buf))))
-          if ((line2 = one_arg(line2, buf, sizeof(buf)))) {
+        if (one_arg(line2, buf, sizeof(buf)))
+          if (one_arg(line2, buf, sizeof(buf))) {
             if (mech->xcode.context->configuration->btech_parts) {
               if (!template_read_int(fp, mech, player, buf, &value))
                 return -1;

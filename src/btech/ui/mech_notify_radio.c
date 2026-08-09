@@ -652,7 +652,6 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 }
 
 void mech_radio(DbRef player, void *data, char *buffer) {
-  int argc;
   int fail = 0;
   char *args[3] = {0};
   int i;
@@ -671,7 +670,7 @@ void mech_radio(DbRef player, void *data, char *buffer) {
                  "You can't radio anyone.");
     return;
   }
-  if ((argc = proper_parseattributes(buffer, args, 3)) != 3)
+  if (proper_parseattributes(buffer, args, 3) != 3)
     fail = 1;
   char *separator = radio_argument(args, 1);
   char *target_id = radio_argument(args, 0);

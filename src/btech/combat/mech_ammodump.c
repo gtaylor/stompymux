@@ -60,7 +60,7 @@ static void mech_dump_event(MuxEvent *ev) {
   long arg = (long)ev->data2;
   int loc;
   int i, l;
-  int d, e = 0;
+  int e = 0;
   char buf[SBUF_SIZE];
   int weapindx;
 
@@ -90,7 +90,7 @@ static void mech_dump_event(MuxEvent *ev) {
     for (i = 0; i < l; i++)
       if (equipment_is_ammunition(mech_critical_part_type(mech, loc, i)))
         if (!mech_critical_is_nonfunctional(mech, loc, i))
-          if ((d = mech_critical_data(mech, loc, i)))
+          if (mech_critical_data(mech, loc, i))
             mech_ammunition_dump_decrease(mech, loc, i, &e);
     if (e > 1)
       mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
@@ -156,7 +156,7 @@ void mech_dump(DbRef player, void *data, char *buffer) {
   int ammoLoc;
   int ammoCrit;
   int loc;
-  int i, l, count = 0, d;
+  int i, l, count = 0;
   char buf[MBUF_SIZE];
   long type = 0;
 
@@ -238,7 +238,7 @@ void mech_dump(DbRef player, void *data, char *buffer) {
       if (i >= 0 && i < 12) {
         if (equipment_is_ammunition(mech_critical_part_type(mech, loc, i)))
           if (!mech_critical_is_nonfunctional(mech, loc, i))
-            if ((d = mech_critical_data(mech, loc, i)))
+            if (mech_critical_data(mech, loc, i))
               count++;
         if (!count) {
           mech_notify(
@@ -266,7 +266,7 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     for (i = 0; i < l; i++)
       if (equipment_is_ammunition(mech_critical_part_type(mech, loc, i)))
         if (!mech_critical_is_nonfunctional(mech, loc, i))
-          if ((d = mech_critical_data(mech, loc, i)))
+          if (mech_critical_data(mech, loc, i))
             count++;
     if (!count) {
       mech_notify(mech, MECHALL, tprintf("There is no ammunition in %s!", buf));

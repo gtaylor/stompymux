@@ -10,6 +10,7 @@
 #include "mech_api_types.h"
 #include "mech_runtime_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include <stdio.h>

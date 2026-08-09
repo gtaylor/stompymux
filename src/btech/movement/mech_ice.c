@@ -1,8 +1,6 @@
 /* Implements BattleTech movement mechanics for unit ice. */
 
 #include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "btech/context.h"
 #include "btech_event.h" // IWYU pragma: keep

@@ -425,7 +425,6 @@ void btech_special_object_dispose(BtechContext *context, DbRef player,
                  "Semi-critical error has occured. For some reason the "
                  "object's data differs\nfrom the data on the object. Please "
                  "contact a wizard about this.");
-    i = btech_context_which_special(context, key);
   }
   if (xcode_obj) {
     if (typeOfObject->lifecycle)

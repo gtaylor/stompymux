@@ -167,7 +167,6 @@ static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
   switch (mode) {
   case MECH_DOMINO_JUMP:
   case MECH_DOMINO_FALL:
-    head = mech_jump_heading_degrees(me);
     td = mech_adjusted_jump_speed_mp(me, map) *
          (mech_calculated_weight(me) / 1024 + 5) / 10;
     break;

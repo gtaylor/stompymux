@@ -124,12 +124,11 @@ void descriptor_telnet_set_echo(Descriptor *d, int echo) {
 }
 
 static int telnet_connected_count(CommandRuntime *runtime) {
-  Descriptor *d;
   DescriptorIterator iterator =
       descriptor_iterator_connected(runtime->descriptors);
   int count = 0;
 
-  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
+  while (descriptor_iterator_next(&iterator) != nullptr) {
     count++;
   }
   return count;
