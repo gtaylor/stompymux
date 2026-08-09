@@ -9,9 +9,11 @@
  * portions of the descriptor data structure are not used.
  */
 
+#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+
+#include <sodium/randombytes.h>
 
 #include "mux/commands/command_context.h"
 #include "mux/commands/look.h"
@@ -40,7 +42,8 @@ void descriptor_welcome(Descriptor *d) {
   int connection_count = file_cache_connection_count(files);
 
   if (connection_count) {
-    fcache_dump_conn(files, d, rand() % connection_count);
+    fcache_dump_conn(files, d,
+                     (int)randombytes_uniform((uint32_t)connection_count));
     return;
   }
   fcache_dump(files, d, FC_CONN);
