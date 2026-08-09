@@ -111,11 +111,8 @@ void mech_movement_update(Mech *mech) {
     }
     mech_event_cancel(mech, EVENT_HIDE);
 
-    int x = mech_position_x(mech);
-    int y = mech_position_y(mech);
-    mech_position_terrain_set(mech, map_terrain_get(mech_map, x, y));
-    mech_position_elevation_set(mech, map_elevation_get(mech_map, x, y));
-
+    const int x = mech_position_x(mech);
+    const int y = mech_position_y(mech);
     int iced = 0;
     if (step.update_surface) {
       if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE) {

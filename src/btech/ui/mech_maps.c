@@ -138,7 +138,6 @@ int parse_tacargs(DbRef player, Mech *mech, char *const *args,
 const char *GetTerrainName_base(int t) {
   switch (t) {
   case GRASSLAND:
-  case '_':
     return "Grassland";
   case HEAVY_FOREST:
     return "Heavy Forest";

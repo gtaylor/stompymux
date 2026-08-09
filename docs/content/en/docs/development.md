@@ -20,6 +20,13 @@ To make changes to the game server sources, a typical development loop looks lik
 1. To short-circuit the checks and just build and launch, run `just build-and-run`
 1. You'll need to CTRL+C the server and start over on the first step to make additional game server changes. Hot reloading the game server is not supported
 
+### BTech persistence migrations
+
+BTech SQLite schema migrations are checked in under `game/data/migrations/`.
+Stop `stompymux`, back up `game/data/stompymux.db`, and apply the required SQL
+script with `sqlite3` before starting a build with a newer schema. Migrations
+are deliberately not applied by the running server.
+
 ## Lua development workflow
 
 The Lua sources in `game/lua` are where most of the player-visible logic lives. These are typically developed like this:

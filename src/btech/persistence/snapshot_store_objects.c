@@ -255,34 +255,30 @@ int btech_store_simple_object(void *key, void *data, int depth,
         (btech_special_bind_int(context->position, 1, (DbRef)key) < 0 ||
          btech_special_bind_int(context->position, 2,
                                 snapshot.position.pilotstatus) < 0 ||
-         btech_special_bind_int(context->position, 3,
-                                snapshot.position.terrain) < 0 ||
-         btech_special_bind_int(context->position, 4, snapshot.position.elev) <
-             0 ||
-         bind_float(context->position, 5, snapshot.position.hexes_walked) !=
+         bind_float(context->position, 3, snapshot.position.hexes_walked) !=
              SQLITE_OK ||
-         btech_special_bind_int(context->position, 6,
+         btech_special_bind_int(context->position, 4,
                                 snapshot.position.facing) < 0 ||
-         btech_special_bind_int(context->position, 7, snapshot.position.x) <
+         btech_special_bind_int(context->position, 5, snapshot.position.x) <
              0 ||
-         btech_special_bind_int(context->position, 8, snapshot.position.y) <
+         btech_special_bind_int(context->position, 6, snapshot.position.y) <
              0 ||
-         btech_special_bind_int(context->position, 9, snapshot.position.z) <
+         btech_special_bind_int(context->position, 7, snapshot.position.z) <
              0 ||
-         btech_special_bind_int(context->position, 10,
+         btech_special_bind_int(context->position, 8,
                                 snapshot.position.last_x) < 0 ||
-         btech_special_bind_int(context->position, 11,
+         btech_special_bind_int(context->position, 9,
                                 snapshot.position.last_y) < 0 ||
-         bind_float(context->position, 12, snapshot.position.fx) != SQLITE_OK ||
-         bind_float(context->position, 13, snapshot.position.fy) != SQLITE_OK ||
-         bind_float(context->position, 14, snapshot.position.fz) != SQLITE_OK ||
-         btech_special_bind_int(context->position, 15, snapshot.position.team) <
+         bind_float(context->position, 10, snapshot.position.fx) != SQLITE_OK ||
+         bind_float(context->position, 11, snapshot.position.fy) != SQLITE_OK ||
+         bind_float(context->position, 12, snapshot.position.fz) != SQLITE_OK ||
+         btech_special_bind_int(context->position, 13, snapshot.position.team) <
              0 ||
-         btech_special_bind_int(context->position, 16,
+         btech_special_bind_int(context->position, 14,
                                 snapshot.position.unusable_arcs) < 0 ||
-         btech_special_bind_int(context->position, 17,
+         btech_special_bind_int(context->position, 15,
                                 snapshot.position.stall) < 0 ||
-         btech_special_bind_int(context->position, 18,
+         btech_special_bind_int(context->position, 16,
                                 snapshot.position.pilot) < 0 ||
          btech_special_step(context->position) < 0))
       context->result = -1;

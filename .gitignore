@@ -31,6 +31,10 @@
 /Makefile
 /config.cache
 /game*/data/
+!/game/data/
+/game/data/*
+!/game/data/migrations/
+!/game/data/migrations/btech_v2_to_v3.sql
 /game*/lib/
 /game*/stompymux
 /game*/text/*.indx

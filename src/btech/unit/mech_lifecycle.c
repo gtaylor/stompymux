@@ -28,6 +28,7 @@
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
+#include "mech_position_api.h"
 #include "mech_stagger.h"
 #include "mech_tag_api.h"
 #include "mech_update_api.h"
@@ -113,7 +114,7 @@ void mech_destroy_and_place(Mech *mech) {
   ((mech)->rd.verticalspeed) = 0.0;
   if (mech_real_terrain_get(mech) == WATER ||
       mech_real_terrain_get(mech) == ICE) {
-    ((mech)->pd.z) = -((mech)->pd.elev);
+    ((mech)->pd.z) = clamp_int_to_short(mech_position_surface_elevation(mech));
   } else if (mech_real_terrain_get(mech) == BRIDGE) {
     if (((mech)->pd.z) >= mech_upper_surface_elevation(mech)) {
       ((mech)->pd.z) = clamp_int_to_short(mech_upper_surface_elevation(mech));
@@ -121,7 +122,7 @@ void mech_destroy_and_place(Mech *mech) {
       ((mech)->pd.z) = clamp_int_to_short(mech_lower_surface_elevation(mech));
     }
   } else {
-    ((mech)->pd.z) = ((mech)->pd.elev);
+    ((mech)->pd.z) = clamp_int_to_short(mech_position_surface_elevation(mech));
   }
   ((mech)->pd.fz) = (float)ZSCALE * ((mech)->pd.z);
 }

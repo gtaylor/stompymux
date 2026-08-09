@@ -10,7 +10,6 @@ int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
   float fy;
   float fz;
   float hexes_walked;
-  int elevation;
   int facing;
   int last_x;
   int last_y;
@@ -19,7 +18,6 @@ int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
   int stall;
   int step;
   int team;
-  int terrain;
   int unusable_arcs;
   int x;
   int y;
@@ -29,9 +27,9 @@ int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
   result =
       sqlite3_prepare_v2(
           sqlite,
-          "SELECT mech_dbref, pilot_status, terrain, elevation, hexes_walked, "
-          "facing, x, y, z, last_x, last_y, fx, fy, fz, team, unusable_arcs, "
-          "stall, pilot FROM btech_mech_positions ORDER BY mech_dbref;",
+          "SELECT mech_dbref, pilot_status, hexes_walked, facing, x, y, z, "
+          "last_x, last_y, fx, fy, fz, team, unusable_arcs, stall, pilot "
+          "FROM btech_mech_positions ORDER BY mech_dbref;",
           -1, &statement, NULL) == SQLITE_OK
           ? 0
           : -1;
@@ -39,36 +37,31 @@ int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         !(mech = btech_context_get_mech(context, mech_dbref)) ||
         btech_special_column_int(statement, 1, &pilot_status) < 0 ||
-        btech_special_column_int(statement, 2, &terrain) < 0 ||
-        btech_special_column_int(statement, 3, &elevation) < 0 ||
-        btech_special_column_real(statement, 4, &hexes_walked) < 0 ||
-        btech_special_column_int(statement, 5, &facing) < 0 ||
-        btech_special_column_int(statement, 6, &x) < 0 ||
-        btech_special_column_int(statement, 7, &y) < 0 ||
-        btech_special_column_int(statement, 8, &z) < 0 ||
-        btech_special_column_int(statement, 9, &last_x) < 0 ||
-        btech_special_column_int(statement, 10, &last_y) < 0 ||
-        btech_special_column_real(statement, 11, &fx) < 0 ||
-        btech_special_column_real(statement, 12, &fy) < 0 ||
-        btech_special_column_real(statement, 13, &fz) < 0 ||
-        btech_special_column_int(statement, 14, &team) < 0 ||
-        btech_special_column_int(statement, 15, &unusable_arcs) < 0 ||
-        btech_special_column_int(statement, 16, &stall) < 0 ||
-        btech_special_column_long(statement, 17, &pilot) < 0 ||
+        btech_special_column_real(statement, 2, &hexes_walked) < 0 ||
+        btech_special_column_int(statement, 3, &facing) < 0 ||
+        btech_special_column_int(statement, 4, &x) < 0 ||
+        btech_special_column_int(statement, 5, &y) < 0 ||
+        btech_special_column_int(statement, 6, &z) < 0 ||
+        btech_special_column_int(statement, 7, &last_x) < 0 ||
+        btech_special_column_int(statement, 8, &last_y) < 0 ||
+        btech_special_column_real(statement, 9, &fx) < 0 ||
+        btech_special_column_real(statement, 10, &fy) < 0 ||
+        btech_special_column_real(statement, 11, &fz) < 0 ||
+        btech_special_column_int(statement, 12, &team) < 0 ||
+        btech_special_column_int(statement, 13, &unusable_arcs) < 0 ||
+        btech_special_column_int(statement, 14, &stall) < 0 ||
+        btech_special_column_long(statement, 15, &pilot) < 0 ||
         pilot_status < CHAR_MIN || pilot_status > CHAR_MAX ||
-        terrain < CHAR_MIN || terrain > CHAR_MAX || elevation < CHAR_MIN ||
-        elevation > CHAR_MAX || facing < SHRT_MIN || facing > SHRT_MAX ||
-        x < SHRT_MIN || x > SHRT_MAX || y < SHRT_MIN || y > SHRT_MAX ||
-        z < SHRT_MIN || z > SHRT_MAX || last_x < SHRT_MIN ||
-        last_x > SHRT_MAX || last_y < SHRT_MIN || last_y > SHRT_MAX ||
+        facing < SHRT_MIN || facing > SHRT_MAX || x < SHRT_MIN ||
+        x > SHRT_MAX || y < SHRT_MIN || y > SHRT_MAX || z < SHRT_MIN ||
+        z > SHRT_MAX || last_x < SHRT_MIN || last_x > SHRT_MAX ||
+        last_y < SHRT_MIN || last_y > SHRT_MAX ||
         (pilot != NOTHING && !is_good_obj(context->database, pilot))) {
       result = -1;
       break;
     }
     mech_persistence_snapshot_export(mech, &snapshot);
     snapshot.position.pilotstatus = (char)pilot_status;
-    snapshot.position.terrain = (char)terrain;
-    snapshot.position.elev = (char)elevation;
     snapshot.position.hexes_walked = hexes_walked;
     snapshot.position.facing = (short)facing;
     snapshot.position.x = (short)x;

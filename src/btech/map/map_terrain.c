@@ -10,9 +10,11 @@
 #include "map_coding_api.h"
 #include "map_obj_api.h"
 #include "mech_api_types.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_position_api.h"
 #include "mux/support/checked_storage.h"
+#include "registry_api.h"
 
 static unsigned char **map_grid_row_slot(unsigned char **grid, int height,
                                          int y) {
@@ -47,12 +49,59 @@ char map_real_terrain_get(BattleMap *map, int x, int y) {
   return terrain;
 }
 
+bool mech_hex_get(const Mech *mech, MechHex *hex) {
+  if (mech == nullptr || hex == nullptr)
+    return false;
+
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
+  const int x = mech_position_x(mech);
+  const int y = mech_position_y(mech);
+  if (map == nullptr || !battle_map_coordinate_is_valid(map, x, y))
+    return false;
+
+  *hex = (MechHex){
+      .map = map,
+      .terrain = map_terrain_get(map, x, y),
+      .real_terrain = map_real_terrain_get(map, x, y),
+      .elevation = map_elevation_get(map, x, y),
+  };
+  return true;
+}
+
+char mech_hex_terrain_get(const Mech *mech) {
+  MechHex hex;
+  return mech_hex_get(mech, &hex) ? hex.terrain : UNKNOWN_TERRAIN;
+}
+
+char mech_hex_real_terrain_get(const Mech *mech) {
+  MechHex hex;
+  return mech_hex_get(mech, &hex) ? hex.real_terrain : UNKNOWN_TERRAIN;
+}
+
 char mech_real_terrain_get(Mech *mech) {
-  if (mech_position_terrain(mech) == FIRE ||
-      mech_position_terrain(mech) == SMOKE) {
-    return (char)mech_underlying_terrain(mech);
-  }
-  return mech_position_terrain(mech);
+  return mech_hex_real_terrain_get(mech);
+}
+
+int mech_hex_elevation_get(const Mech *mech) {
+  MechHex hex;
+  return mech_hex_get(mech, &hex) ? hex.elevation : 0;
+}
+
+int mech_hex_elevation_magnitude_get(const Mech *mech) {
+  return abs(mech_hex_elevation_get(mech));
+}
+
+int mech_hex_surface_elevation_get(const Mech *mech) {
+  MechHex hex;
+  if (!mech_hex_get(mech, &hex))
+    return 0;
+
+  const int elevation = abs(hex.elevation);
+  return hex.real_terrain == BATTLE_TERRAIN_WATER ||
+                 hex.real_terrain == BATTLE_TERRAIN_ICE
+             ? -elevation
+             : elevation;
 }
 
 char map_elevation_get(const BattleMap *map, int x, int y) {
@@ -135,4 +184,5 @@ void map_terrain_set_base(BattleMap *map, int x, int y, char terrain) {
 
 void map_elevation_set(BattleMap *map, int x, int y, char elevation) {
   map_hex_set(map, x, y, map_terrain_get(map, x, y), elevation);
+  UpdateMechsTerrain(map, x, y, map_terrain_get(map, x, y));
 }

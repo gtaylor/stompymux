@@ -498,7 +498,7 @@ static int check_snapshot(const char *path) {
   ok = ok && query_int(sqlite,
                        "SELECT schema_version FROM btech_persistence_metadata "
                        "WHERE id = 1;",
-                       2) == 0;
+                       3) == 0;
 #ifdef BTMUX_TEST_ADVANCED_ECON
   ok =
       ok && query_int(sqlite,

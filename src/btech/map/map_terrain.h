@@ -28,9 +28,24 @@ typedef enum BattleTerrain {
 } BattleTerrain;
 typedef struct Mech Mech;
 typedef struct MapCodingRegistry MapCodingRegistry;
+typedef struct MechHex MechHex;
+
+struct MechHex {
+  BattleMap *map;
+  char terrain;
+  char real_terrain;
+  int elevation;
+};
 
 char map_terrain_get(const BattleMap *map, int x, int y);
 char map_real_terrain_get(BattleMap *map, int x, int y);
+/* Returns false when the unit is mapless or its position is outside the map. */
+bool mech_hex_get(const Mech *mech, MechHex *hex);
+char mech_hex_terrain_get(const Mech *mech);
+char mech_hex_real_terrain_get(const Mech *mech);
+int mech_hex_elevation_get(const Mech *mech);
+int mech_hex_elevation_magnitude_get(const Mech *mech);
+int mech_hex_surface_elevation_get(const Mech *mech);
 char mech_real_terrain_get(Mech *mech);
 char map_elevation_get(const BattleMap *map, int x, int y);
 unsigned char battle_map_encoded_hex(const BattleMap *map, int x, int y);

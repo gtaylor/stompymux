@@ -725,7 +725,7 @@ void initialize_map_empty(BattleMap *new, DbRef key) {
 
   for (i = 0; i < new->map_height; i++)
     for (j = 0; j < new->map_width; j++)
-      map_hex_set(new, j, i, ' ', 0);
+      map_hex_set(new, j, i, BATTLE_TERRAIN_GRASSLAND, 0);
 }
 
 /* Mem alloc/free routines */

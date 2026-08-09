@@ -352,13 +352,6 @@ GMV xcode_data[] = {
      .type = TYPE_SHORT,
      .size = 0},
     {.gtype = GTYPE_MECH,
-     .name = "elevation",
-     .source_kind = GMV_SOURCE_MECH_KEY,
-     .source.mech_key = MECH_SCRIPT_ELEVATION,
-     .type = TYPE_CHAR,
-     .size = 0},
-
-    {.gtype = GTYPE_MECH,
      .name = "targcomp",
      .source_kind = GMV_SOURCE_MECH_KEY,
      .source.mech_key = MECH_SCRIPT_TARGETING_COMPUTER,

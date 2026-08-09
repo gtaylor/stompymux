@@ -53,7 +53,6 @@ static void swim_except(BattleMap *map, Mech *mech, int x, int y,
       continue;
     if (mech_position_x(t) != x || mech_position_y(t) != y)
       continue;
-    mech_position_terrain_set(t, BATTLE_TERRAIN_WATER);
     if ((!isbridge && (mech_position_z(t) == 0) &&
          (mech_movement_type(t) != MOVE_HOVER)) ||
         (isbridge &&
@@ -93,7 +92,6 @@ void drop_thru_ice(Mech *mech) {
   }
   break_sub(map, mech, mech_position_x(mech), mech_position_y(mech),
             "goes swimming!");
-  mech_position_terrain_set(mech, BATTLE_TERRAIN_WATER);
   if (mech_movement_type(mech) != MOVE_FOIL) {
     if (mech_position_elevation_magnitude(mech) > 0)
       mech_fall(mech, mech_position_elevation_magnitude(mech), 0);
@@ -118,7 +116,6 @@ void break_thru_ice(Mech *mech) {
   mech_los_broadcast(mech, "breaks through the ice!");
   break_sub(map, mech, mech_position_x(mech), mech_position_y(mech),
             "goes swimming!");
-  mech_position_terrain_set(mech, BATTLE_TERRAIN_WATER);
 }
 
 /* CHANCE of dropping thru the ice based on 'mech weight */

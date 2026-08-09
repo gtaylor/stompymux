@@ -263,7 +263,7 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
                          -1, &objects.critical, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
                          "INSERT INTO btech_mech_positions VALUES (?, ?, ?, ?, "
-                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
                          -1, &objects.position, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
                          "INSERT INTO btech_mech_bays VALUES (?, ?, ?);", -1,

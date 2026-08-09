@@ -493,11 +493,9 @@ static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
   /* snippage from mech_Rsetxy */
   mech_position_xy_set(mech, nx, ny);
   mech_position_hex_z_set(mech, mech_position_z(ds));
-  mech_position_elevation_set(mech, mech_position_elevation(ds));
   float real_x, real_y;
   MapCoordToRealCoord(nx, ny, &real_x, &real_y);
   mech_position_real_xy_set(mech, real_x, real_y);
-  mech_position_terrain_set(mech, map_terrain_get(mech_map, nx, ny));
 }
 
 static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,

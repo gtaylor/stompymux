@@ -132,11 +132,9 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
   mech_position_xy_set(mech, x, y);
   MapCoordToRealCoord(x, y, &fx, &fy);
   mech_position_real_xy_set(mech, fx, fy);
-  mech_position_terrain_set(mech, map_terrain_get(mech_map, x, y));
   MarkForLOSUpdate(mech);
   if (argc == 2) {
     elevation = map_elevation_get(mech_map, x, y);
-    mech_position_elevation_set(mech, elevation);
     mech_position_z_set(mech, elevation - 1);
     mech_drop_surface_set(mech, false);
     z = mech_position_z(mech);
@@ -148,7 +146,6 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
       return;
     }
     mech_position_z_set(mech, z);
-    mech_position_elevation_set(mech, map_elevation_get(mech_map, x, y));
   }
   clear_mech_from_LOS(mech);
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
@@ -254,8 +251,6 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     mech_position_reset_origin(mech);
     MapCoordToRealCoord(0, 0, &fx, &fy);
     mech_position_real_xy_set(mech, fx, fy);
-    mech_position_terrain_set(mech, map_terrain_get(newmap, 0, 0));
-    mech_position_elevation_set(mech, map_elevation_get(newmap, 0, 0));
     mecha_notify(
         btech_context_evaluation(mech_context(mech)), player,
         "You're current position is out of bounds, Pos changed to 0,0");

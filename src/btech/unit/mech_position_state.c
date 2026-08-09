@@ -1,5 +1,7 @@
 #include "mech_position_api.h"
 
+#include "map_terrain.h"
+
 #include <stdlib.h>
 
 #include "checked_conversion.h"
@@ -36,19 +38,16 @@ int mech_position_previous_y(const Mech *mech) { return mech->pd.last_y; }
 
 int mech_position_z(const Mech *mech) { return mech->pd.z; }
 
-int mech_position_elevation(const Mech *mech) { return mech->pd.elev; }
+int mech_position_elevation(const Mech *mech) {
+  return mech_hex_elevation_get(mech);
+}
 
 int mech_position_elevation_magnitude(const Mech *mech) {
-  return abs(mech->pd.elev);
+  return mech_hex_elevation_magnitude_get(mech);
 }
 
 int mech_position_surface_elevation(Mech *mech) {
-  int elevation = abs(mech->pd.elev);
-  char terrain = mech_real_terrain_get(mech);
-
-  return terrain == BATTLE_TERRAIN_WATER || terrain == BATTLE_TERRAIN_ICE
-             ? -elevation
-             : elevation;
+  return mech_hex_surface_elevation_get(mech);
 }
 
 DbRef mech_repair_stall_dbref(const Mech *mech) { return mech->pd.stall; }
@@ -124,7 +123,9 @@ int mech_unusable_weapon_arcs(const Mech *mech) {
 
 float mech_desired_speed(const Mech *mech) { return mech->rd.desired_speed; }
 
-char mech_position_terrain(const Mech *mech) { return mech->pd.terrain; }
+char mech_position_terrain(const Mech *mech) {
+  return mech_hex_terrain_get(mech);
+}
 
 void mech_position_xy_set(Mech *mech, int x, int y) {
   mech->pd.x = clamp_int_to_short(x);
@@ -147,14 +148,6 @@ void mech_position_real_z_set(Mech *mech, float z) { mech->pd.fz = z; }
 
 void mech_position_real_z_translate(Mech *mech, float delta_z) {
   mech->pd.fz += delta_z;
-}
-
-void mech_position_terrain_set(Mech *mech, int terrain) {
-  mech->pd.terrain = clamp_int_to_char(terrain);
-}
-
-void mech_position_elevation_set(Mech *mech, int elevation) {
-  mech->pd.elev = clamp_int_to_char(elevation);
 }
 
 void mech_position_z_set(Mech *mech, int z) {
@@ -311,8 +304,6 @@ void mech_position_mirror(Mech *target, const Mech *source, int height_offset) {
   target->pd.z = clamp_int_to_short(source->pd.z + height_offset);
   target->pd.last_x = source->pd.last_x;
   target->pd.last_y = source->pd.last_y;
-  target->pd.terrain = source->pd.terrain;
-  target->pd.elev = clamp_int_to_char(source->pd.elev + height_offset);
 }
 
 void mech_position_land_if_flying(Mech *mech) {
@@ -333,6 +324,6 @@ void mech_position_rollback(Mech *mech, float delta_x, float delta_y,
   mech->pd.y = mech->pd.last_y;
   mech->pd.z = clamp_int_to_short(previous_z);
   mech->pd.fz = (float)previous_z * (float)ZSCALE;
-  mech->pd.terrain = clamp_int_to_char(previous_terrain);
-  mech->pd.elev = clamp_int_to_char(previous_elevation);
+  (void)previous_terrain;
+  (void)previous_elevation;
 }

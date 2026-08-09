@@ -483,8 +483,6 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
             (abs(mech_position_z(mech)) +
              (mech_movement_type(mech) == MOVE_FOIL ? -1 : 0))) {
       /* Run aground */
-      mech_position_elevation_set(mech, le);
-      mech_position_terrain_set(mech, ot);
       mech_notify(mech, MECHALL, "You attempt to get too close with ground!");
       if (mech_pilot_dbref(mech) == -1 ||
           MadePilotSkillRoll(
@@ -510,8 +508,6 @@ void mech_hex_entry_resolve(Mech *mech, BattleMap *mech_map, float deltax,
   case MOVE_HOVER:
 
     if (collision_check(mech, WALK_WALL, lastelevation, oldterrain)) {
-      mech_position_elevation_set(mech, le);
-      mech_position_terrain_set(mech, ot);
       mech_notify(mech, MECHALL,
                   "You attempt to climb a hill too steep for you.");
       if (mech_pilot_dbref(mech) == -1 ||

@@ -165,7 +165,6 @@ int mech_height_above_surface(Mech *mech) {
 void mech_jump_land(Mech *mech) {
   Mech *target;
   BtechContext *context = mech_context(mech);
-  BattleMap *mech_map = btech_context_get_map(context, mech_map_dbref(mech));
   MechConditionSummary condition = mech_condition_summary(mech);
   int dfa = 0;
   int done = 0;
@@ -201,10 +200,7 @@ void mech_jump_land(Mech *mech) {
     if (!dfa)
       mech_notify(mech, MECHALL, "You finish your jump.");
 
-    /* Better reset the FZ */
-    mech_position_elevation_set(mech, map_elevation_get(mech_map,
-                                                        mech_position_x(mech),
-                                                        mech_position_y(mech)));
+    /* Start at the current map hex's ground elevation. */
     mech_position_z_set(mech, mech_position_elevation(mech) - 1);
     mech_drop_surface_set(mech, true);
 

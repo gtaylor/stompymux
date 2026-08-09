@@ -164,9 +164,6 @@ bool mech_script_value_read(const Mech *mech, MechScriptValueKey key,
   case MECH_SCRIPT_Z:
     value->integer = ((mech)->pd.z);
     return true;
-  case MECH_SCRIPT_ELEVATION:
-    value->integer = ((mech)->pd.elev);
-    return true;
   case MECH_SCRIPT_TARGETING_COMPUTER:
     value->integer = mech_targeting_computer_type(mech);
     return true;
@@ -402,9 +399,6 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     return true;
   case MECH_SCRIPT_Z:
     ((mech)->pd.z) = clamp_int_to_short(value.integer);
-    return true;
-  case MECH_SCRIPT_ELEVATION:
-    ((mech)->pd.elev) = clamp_int_to_char(value.integer);
     return true;
   case MECH_SCRIPT_TARGETING_COMPUTER:
     mech_targeting_computer_type_set(mech,
