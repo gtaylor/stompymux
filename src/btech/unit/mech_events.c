@@ -25,6 +25,7 @@
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_los_api.h"
+#include "map_los_types.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
@@ -380,7 +381,7 @@ void mech_plos_event(MuxEvent *e) {
     unsigned short los_flags =
         battle_map_los_flags(map, mech_map_slot(mech), i);
     if (target_dbref > 0 && target_dbref != mech_dbref(mech))
-      if (!(los_flags & MECHLOSFLAG_SEEN)) {
+      if (!(los_flags & BATTLE_MAP_LOS_SEEN)) {
         target = btech_context_find_object(mech->xcode.context, target_dbref);
         if (!target)
           continue;

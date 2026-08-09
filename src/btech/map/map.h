@@ -14,8 +14,6 @@
 
 #pragma once
 
-#include "map_los_types.h"
-
 #include "mux/server/platform.h"
 #include "special_object.h"
 
@@ -124,30 +122,6 @@ typedef struct MapObject {
 } MapObject;
 
 constexpr int MECHMAPFLAG_MOVED = 1; /* mech has moved since last LOS update */
-
-#define MECHLOSFLAG_SEEN BATTLE_MAP_LOS_SEEN
-#define MECHLOSFLAG_SEESP BATTLE_MAP_LOS_SEEN_PRIMARY
-#define MECHLOSFLAG_SEESS BATTLE_MAP_LOS_SEEN_SECONDARY
-#define MECHLOSFLAG_SEEC2 BATTLE_MAP_LOS_TERRAIN_CALCULATED
-#define MECHLOSFLAG_MNTN BATTLE_MAP_LOS_MOUNTAIN
-
-#define MECHLOSFLAG_WOOD BATTLE_MAP_LOS_WOOD
-constexpr int MECHLOSFLAG_WOOD2 = 0x0040; /* Heavywood = 2, Light = 1 */
-constexpr int MECHLOSFLAG_WOOD3 = 0x0080;
-constexpr int MECHLOSFLAG_WOOD4 = 0x0100;
-constexpr int MECHLOSBYTES_WOOD = 4;
-#define MECHLOSMAX_WOOD BATTLE_MAP_LOS_MAX_WOOD
-
-#define MECHLOSFLAG_WATER BATTLE_MAP_LOS_WATER
-constexpr int MECHLOSFLAG_WATER2 = 0x0400;
-constexpr int MECHLOSFLAG_WATER3 = 0x0800;
-constexpr int MECHLOSBYTES_WATER = 3;
-#define MECHLOSMAX_WATER BATTLE_MAP_LOS_MAX_WATER
-
-#define MECHLOSFLAG_PARTIAL BATTLE_MAP_LOS_PARTIAL_COVER
-#define MECHLOSFLAG_FIRE BATTLE_MAP_LOS_FIRE
-#define MECHLOSFLAG_SMOKE BATTLE_MAP_LOS_SMOKE
-#define MECHLOSFLAG_BLOCK BATTLE_MAP_LOS_BLOCKED
 
 typedef struct BattleMap {
   BtechSpecialObject xcode; /* XCODE base class field */

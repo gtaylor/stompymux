@@ -19,6 +19,7 @@
 #include "btech_event.h" // IWYU pragma: keep
 #include "command_handlers_api.h"
 #include "map.h"
+#include "map_los_types.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -91,28 +92,28 @@ bool battle_map_unit_is_seen(const BattleMap *map, const Mech *observer,
                              const Mech *target) {
   return *battle_map_los_cell_const(map, mech_map_slot(observer),
                                     mech_map_slot(target)) &
-         MECHLOSFLAG_SEEN;
+         BATTLE_MAP_LOS_SEEN;
 }
 
 bool battle_map_unit_los_is_blocked(const BattleMap *map, const Mech *observer,
                                     const Mech *target) {
   return *battle_map_los_cell_const(map, mech_map_slot(observer),
                                     mech_map_slot(target)) &
-         MECHLOSFLAG_BLOCK;
+         BATTLE_MAP_LOS_BLOCKED;
 }
 
 int battle_map_unit_los_wood_count(const BattleMap *map, const Mech *observer,
                                    const Mech *target) {
   const int flags = *battle_map_los_cell_const(map, mech_map_slot(observer),
                                                mech_map_slot(target));
-  return (flags / MECHLOSFLAG_WOOD) % MECHLOSMAX_WOOD;
+  return battle_map_los_wood_count(flags);
 }
 
 int battle_map_unit_los_water_count(const BattleMap *map, const Mech *observer,
                                     const Mech *target) {
   const int flags = *battle_map_los_cell_const(map, mech_map_slot(observer),
                                                mech_map_slot(target));
-  return (flags / MECHLOSFLAG_WATER) % MECHLOSMAX_WATER;
+  return battle_map_los_water_count(flags);
 }
 
 unsigned short battle_map_los_flags(const BattleMap *map, int observer_index,
@@ -212,7 +213,7 @@ static void set_hexlosall(HexLosMap *los_map, int flag) {
 static int mech_los_sees_through_woods(Mech *mech, BattleMap *map, int nwoods,
                                        int sensor) {
   int sn = mech_sensor_index(mech, sensor);
-  int fake_losflag = nwoods * MECHLOSFLAG_WOOD;
+  int fake_losflag = nwoods * BATTLE_MAP_LOS_WOOD;
   int res =
       mech_sensor_definition(sn)->can_see(mech, nullptr, map, 1, fake_losflag);
 
@@ -221,7 +222,7 @@ static int mech_los_sees_through_woods(Mech *mech, BattleMap *map, int nwoods,
 
 static int mech_los_sees_over_mountain(Mech *mech, BattleMap *map, int sensor) {
   int sn = mech_sensor_index(mech, sensor);
-  int fake_losflag = MECHLOSFLAG_MNTN;
+  int fake_losflag = BATTLE_MAP_LOS_MOUNTAIN;
 
   return mech_sensor_definition(sn)->can_see(mech, nullptr, map, 1,
                                              fake_losflag);
@@ -230,7 +231,7 @@ static int mech_los_sees_over_mountain(Mech *mech, BattleMap *map, int sensor) {
 static int mech_los_sees_through_water(Mech *mech, BattleMap *map, int nwater,
                                        int sensor) {
   int sn = mech_sensor_index(mech, sensor);
-  int fake_losflag = nwater * MECHLOSFLAG_WATER;
+  int fake_losflag = nwater * BATTLE_MAP_LOS_WATER;
 
   return mech_sensor_definition(sn)->can_see(mech, nullptr, map, 1,
                                              fake_losflag);

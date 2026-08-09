@@ -20,6 +20,7 @@
 #include "map.h"
 #include "map_dynamic_api.h"
 #include "map_los_api.h"
+#include "map_los_types.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_api_types.h"
@@ -91,7 +92,7 @@ void clear_mech_from_LOS(Mech *mech) {
         mech_lose_lock(mek);
       }
       if ((battle_map_los_flags(map, i, mech_map_slot(mech)) &
-           MECHLOSFLAG_SEEN) &&
+           BATTLE_MAP_LOS_SEEN) &&
           mech_team(mek) != mech_team(mech))
         mech_seen_count_decrement(mek);
     }
