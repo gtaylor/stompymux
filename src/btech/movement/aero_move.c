@@ -54,7 +54,6 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
-#include "mymath.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -639,7 +638,7 @@ void aero_speed_update(Mech *mech) {
   ny += dy;
   nz += dz;
   /* Then, we need to calculate present heading / speed / verticalspeed */
-  nh = atan2f(ny, nx) / (float)TWOPIOVER360;
+  nh = atan2f(ny, nx) * 180.0F / (float)M_PI;
   if (!(mech_class(mech) == CLASS_SPHEROID_DS))
     mech_heading_set(mech, AcceptableDegree((int)nh + 90));
   xypart = length_hypotenuse_float(nx, ny);

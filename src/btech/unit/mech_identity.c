@@ -35,7 +35,6 @@
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/move.h"
-#include "mymath.h"
 #include "random.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -225,8 +224,8 @@ DbRef FindTargetDBREFFromMapNumber(Mech *mech, const char *mapnum) {
 
 void FindComponents(float magnitude, int degrees, float *x, float *y) {
   float angle = (float)degrees + 90.0F;
-  *x = magnitude * cosf((float)TWOPIOVER360 * angle);
-  *y = magnitude * sinf((float)TWOPIOVER360 * angle);
+  *x = magnitude * cosf((float)M_PI / 180.0F * angle);
+  *y = magnitude * sinf((float)M_PI / 180.0F * angle);
   *x = -(*x); /* because 90 is to the right */
   *y = -(*y); /* because y increases downwards */
 }

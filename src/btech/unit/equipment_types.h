@@ -11,7 +11,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
-#include "mymath.h"
 constexpr int NUM_ITEMS = 1024;
 constexpr int NUM_ITEMS_M = 512;
 constexpr int NUM_BAYS = 4;

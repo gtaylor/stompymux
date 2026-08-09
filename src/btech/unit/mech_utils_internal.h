@@ -45,7 +45,6 @@
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/world/move.h"
-#include "mymath.h"
 #include "random.h"
 #include "registry_api.h"
 #include "template_api.h"
@@ -80,9 +79,8 @@ static inline int battle_value_skill_index(int skill) {
                                              : skill;
 }
 
-/* TODO: We can use M_PI if exists, otherwise define something reasonable.  */
 static inline float degrees_to_radians(float degrees) {
-  return degrees * (3.14159265F / 180.0F);
+  return degrees * ((float)M_PI / 180.0F);
 }
 
 static inline float radians_to_degrees(float radians) {

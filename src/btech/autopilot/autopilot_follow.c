@@ -27,7 +27,6 @@
 #include "mux/support/alloc.h"
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/stringutil.h"
-#include "mymath.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -539,9 +538,11 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
 
   h = mech_desired_heading_degrees(leader);
   x = (int)((float)autopilot->ofsy *
-            cosf(TWOPIOVER360 * (270.0F + (float)(h + autopilot->ofsx))));
+            cosf((float)M_PI / 180.0F *
+                 (270.0F + (float)(h + autopilot->ofsx))));
   y = (int)((float)autopilot->ofsy *
-            sinf(TWOPIOVER360 * (270.0F + (float)(h + autopilot->ofsx))));
+            sinf((float)M_PI / 180.0F *
+                 (270.0F + (float)(h + autopilot->ofsx))));
   tx = mech_position_x(leader) + x;
   ty = mech_position_y(leader) + y;
 

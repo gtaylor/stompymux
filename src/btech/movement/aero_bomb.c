@@ -21,7 +21,6 @@ static const float BOMB_GRAVITY = 1.0F;
 #include "econ_cmds_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
-#include "math.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
@@ -40,8 +39,8 @@ static const float BOMB_GRAVITY = 1.0F;
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mycool.h"
-#include "mymath.h"
 #include "registry_api.h"
+#include <math.h>
 
 typedef enum BombKind {
   BOMB_KIND_STANDARD,
@@ -312,7 +311,7 @@ static void bomb_drop(Mech *mech, DbRef player, int bn) {
     ob = 6 * (1 + ob); /* Max distance missed  */
     ob = MAX(1, btech_random_range_int(mech_context(mech), 1, ob) / 2);
     di = btech_random_range_int(mech_context(mech), 0, 359);
-    dir = (float)di * TWOPIOVER360;
+    dir = (float)di * (float)M_PI / 180.0F;
     const float scattered_x = (float)x + (float)ob * cosf(dir);
     const float scattered_y = (float)y + (float)ob * sinf(dir);
     const float truncated_x = truncf(scattered_x);

@@ -41,7 +41,6 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
-#include "mymath.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -475,7 +474,7 @@ static void artillery_hit(artillery_shot *s) {
     /* Shit! We missed target ;-) */
     /* Time to calculate a new target hex */
     di = btech_random_range_int(battle_map_context(map), 0, 359);
-    dir = (float)di * TWOPIOVER360;
+    dir = (float)di * (float)M_PI / 180.0F;
     dist = btech_random_range_int(battle_map_context(map), 2, 7);
     weight = 100 * (dist * 6) / ((dist * 6 + map->windspeed));
     di = (di * weight + map->winddir * (100 - weight)) / 100;
