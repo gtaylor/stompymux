@@ -1,10 +1,5 @@
 /* renderer.c - Terminal capability and ANSI rendering. */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#include "mux/support/checked_storage.h"
-#endif
-
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -14,6 +9,7 @@
 #include <strings.h>
 
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/internal.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/styled_text/palette.h"

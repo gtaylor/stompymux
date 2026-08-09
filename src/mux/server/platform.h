@@ -4,10 +4,6 @@
 
 #include "btmux_build_config.h"
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
