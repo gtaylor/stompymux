@@ -4,7 +4,6 @@
 
 #include <time.h>
 
-#include "btechstats_global.h"
 #include "mux/server/platform.h"
 
 typedef struct CharacterValue {
