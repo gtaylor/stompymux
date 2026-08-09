@@ -2,13 +2,13 @@
 
 ## General hygeine
 
+* Eliminate conditional compilation
 * Doxygen comment all public functions in headers with @param[in] and @param[out]
 * Doxygen comment all static and private functions?
 * Look into clang-tidy/clangd readability-identifier-naming and VariableCase + FunctionCase
 
 ## MUX Todos in the /src/ dir
 
-* Can we get rid of mymath.h in favor of standards?
 * Edit attributes from @examine via OSC8 and prepare:?
 * Consolidate the various logging files in server
 * Remove arbitrary logs compile directive and keep it on
