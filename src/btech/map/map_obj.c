@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 
 static MapObject **map_object_slot(BattleMap *map, int type) {
   if (type < 0)
@@ -185,7 +185,7 @@ MapObject *add_mapobj(BattleMap *map, MapObject **to, MapObject *from,
   map->flags |= MAPFLAG_MAPO;
   from->next = *to;
   Create(realto, MapObject, 1);
-  bcopy(from, realto, sizeof(MapObject));
+  memmove(realto, from, sizeof(MapObject));
   *to = realto;
   return realto;
 }
@@ -505,7 +505,7 @@ void add_decoration(BattleMap *map, int x, int y, int type, char data,
   MapObject foo;
   MapObject *tmpo;
 
-  bzero(&foo, sizeof(MapObject));
+  memset(&foo, 0, sizeof(MapObject));
   foo.x = clamp_int_to_short(x);
   foo.y = clamp_int_to_short(y);
 

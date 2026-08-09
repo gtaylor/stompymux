@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 #include "btconfig.h"
 #include "btech/context.h"
@@ -86,7 +85,7 @@ void mech_cargo_weight_recalculate(Mech *mech) {
   int i, j, k;
   EconomyPartEntryView entry;
 
-  bzero(&pile, sizeof(pile));
+  memset(&pile, 0, sizeof(pile));
   for (size_t index = 0;
        index < economy_parts_entry_count(mech_context(mech)->database,
                                          mech_dbref(mech));
@@ -150,7 +149,7 @@ void econ_fix_stuff(BtechContext *context, DbRef player, DbRef loc) {
   int id, brand;
   EconomyPartEntryView entry;
 
-  bzero(&pile, sizeof(pile));
+  memset(&pile, 0, sizeof(pile));
   old_entries = economy_parts_entry_count(context->database, loc);
   for (size_t index = 0; index < old_entries; index++)
     if (economy_parts_entry(context->database, loc, index, &entry) &&
@@ -202,8 +201,8 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   CoolMenu *c = NULL;
   int found = 0;
 
-  bzero(&pile, sizeof(pile));
-  bzero(&matching_pile, sizeof(matching_pile));
+  memset(&pile, 0, sizeof(pile));
+  memset(&matching_pile, 0, sizeof(matching_pile));
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, header, CM_ONE | CM_CENTER);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);

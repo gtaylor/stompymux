@@ -1,6 +1,5 @@
 #include <stddef.h>
 #include <string.h>
-#include <strings.h>
 
 #include "btech/context.h"
 #include "btechstats.h"
@@ -132,7 +131,7 @@ void character_stats_store(BtechContext *context, DbRef player, PSTATS *stats,
 
 void character_stats_retrieve(BtechContext *context, DbRef player, int modes,
                               PSTATS *stats) {
-  bzero(stats, sizeof(*stats));
+  memset(stats, 0, sizeof(*stats));
   if (!is_player(context->database, player))
     return;
   CharacterFixedState fixed;

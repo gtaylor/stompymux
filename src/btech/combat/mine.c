@@ -88,7 +88,7 @@ void mine_field_add(BattleMap *map, int x, int y, int damage) {
     if (o)
       return;
   }
-  bzero(&foo, sizeof(foo));
+  memset(&foo, 0, sizeof(foo));
   foo.x = clamp_int_to_short(x);
   foo.y = clamp_int_to_short(y);
   foo.datas = clamp_int_to_short(damage);
@@ -403,7 +403,7 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  bzero(&foo, sizeof(foo));
+  memset(&foo, 0, sizeof(foo));
   foo.x = clamp_int_to_short(x);
   foo.y = clamp_int_to_short(y);
   foo.datai = extra;

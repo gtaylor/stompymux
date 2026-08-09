@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 #include "btech/context.h"
 #include "btechstats.h"
@@ -39,7 +38,7 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
   CoolMenu *c = NULL;
   PSTATS stats, *s = &stats;
 
-  bzero(rankings, sizeof(rankings));
+  memset(rankings, 0, sizeof(rankings));
   const char *skill_name = buffer;
   if (skill_name != nullptr)
     skill_name =

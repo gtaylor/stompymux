@@ -26,7 +26,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 static const short engine_data[][2] = {{0, 0},
                                        {10, 1},
                                        {15, 1},
@@ -404,7 +404,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   float gyro_calc = -1;
   int t, temp;
 
-  bzero(&pile, sizeof(pile));
+  memset(&pile, 0, sizeof(pile));
   if (interactive > 0) {
     cool_menu_add_line(&c);
     cool_menu_add_centered(
@@ -594,7 +594,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   int turr_stuff = 0;
   int ints_c, ints_tot;
 
-  bzero(&pile, sizeof(pile));
+  memset(&pile, 0, sizeof(pile));
   calc_ints(mech, &ints_c, &ints_tot);
   if (interactive > 0) {
     cool_menu_add_line(&c);

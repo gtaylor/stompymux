@@ -495,7 +495,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
           tprintf("Could not allocate space for %d item name cache.", newsize));
       abort();
     }
-    bzero((char *)newpurenames, (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
+    memset(newpurenames, 0, (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
     if (database->pure_name_storage) {
 
@@ -503,8 +503,8 @@ void db_grow(GameDatabase *database, DbRef newtop) {
        * An old name cache exists.  Copy it.
        */
 
-      bcopy((char *)database->pure_name_storage, (char *)newpurenames,
-            (size_t)(newtop + SIZE_HACK) * sizeof(NAME));
+      memmove(newpurenames, database->pure_name_storage,
+              (size_t)(newtop + SIZE_HACK) * sizeof(NAME));
       cp = (char *)database->pure_name_storage;
       free(cp);
     } else {
@@ -542,8 +542,8 @@ void db_grow(GameDatabase *database, DbRef newtop) {
      * An old struct database exists.  Copy it to the new buffer
      */
 
-    bcopy((char *)database->object_storage, (char *)newdb,
-          (size_t)(database->top + SIZE_HACK) * sizeof(GameObject));
+    memmove(newdb, database->object_storage,
+            (size_t)(database->top + SIZE_HACK) * sizeof(GameObject));
     cp = (char *)database->object_storage;
     free(cp);
   } else {
@@ -588,10 +588,10 @@ void db_grow(GameDatabase *database, DbRef newtop) {
 
   marksize = (newsize + 7) >> 3;
   newmarkbuf = (DatabaseMarkBuffer *)malloc((size_t)marksize);
-  bzero((char *)newmarkbuf, (size_t)marksize);
+  memset(newmarkbuf, 0, (size_t)marksize);
   if (database->markbits) {
     marksize = (int)((newtop + 7) >> 3);
-    bcopy((char *)database->markbits, (char *)newmarkbuf, (size_t)marksize);
+    memmove(newmarkbuf, database->markbits, (size_t)marksize);
     cp = (char *)database->markbits;
     free(cp);
   }

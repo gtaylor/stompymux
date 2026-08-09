@@ -15,7 +15,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 static const char *map_type_name(int type) {
   if (type < 0)
@@ -131,7 +130,7 @@ void map_add_block(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  bzero(&foo, sizeof(MapObject));
+  memset(&foo, 0, sizeof(MapObject));
   foo.x = clamp_int_to_short(x);
   foo.y = clamp_int_to_short(y);
   foo.datai = str;
@@ -165,7 +164,7 @@ void map_setlinked(DbRef player, void *data, char *buffer) {
   BattleMap *map = (BattleMap *)data;
   MapObject foo;
 
-  bzero(&foo, sizeof(MapObject));
+  memset(&foo, 0, sizeof(MapObject));
   foo.datac = 1;
   add_mapobj_to_type(map, TYPE_LINKED, &foo, 1);
   notify_printf(btech_context_evaluation(map->xcode.context), player,

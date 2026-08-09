@@ -17,7 +17,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 typedef struct MapLinkUpdateStats {
   int builds;
@@ -96,7 +95,7 @@ static void add_entrances(DbRef loc, BattleMap *map, char *data,
   int x, y, i;
   MapObject foo;
 
-  bzero(&foo, sizeof(MapObject));
+  memset(&foo, 0, sizeof(MapObject));
 
   buf = alloc_mbuf("add_entrances");
 
@@ -124,7 +123,7 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
   int x, y;
   MapObject foo;
 
-  bzero(&foo, sizeof(MapObject));
+  memset(&foo, 0, sizeof(MapObject));
 
   buf = alloc_lbuf("add_links");
 
@@ -161,7 +160,7 @@ static void recursively_update_links(BtechContext *context, DbRef from,
   MapObject foo;
   char *tmps;
 
-  bzero(&foo, sizeof(MapObject));
+  memset(&foo, 0, sizeof(MapObject));
   if (!(map = btech_context_get_map(context, loc)))
     return;
   clear_hex_bits(map, 2);

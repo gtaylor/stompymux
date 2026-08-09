@@ -229,7 +229,7 @@ void btech_special_object_help(BtechContext *context, DbRef player,
 
   if (id == GTYPE_MECH)
     mech = btech_context_get_mech(context, loc);
-  bzero(sections, sizeof(sections));
+  memset(sections, 0, sizeof(sections));
   const int command_count = (int)btech_special_command_count(id);
   for (i = 0; i < command_count; i++) {
     const BtechCommandDefinition *command =

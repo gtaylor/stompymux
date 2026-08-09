@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 #include "artillery.h"
 #include "artillery_api.h"
@@ -398,7 +397,7 @@ static void artillery_cluster_hit(BattleMap *map, artillery_shot *s, int type,
   ArtilleryTargetGrid targets;
   int d;
 
-  bzero(&targets, sizeof(targets));
+  memset(&targets, 0, sizeof(targets));
   for (i = 0; i < dam; i++) {
     do {
       xd = btech_random_range_int(battle_map_context(map), -2, 0) +
