@@ -47,7 +47,6 @@
 #include "special_object.h"
 #include "weapon_settings.h"
 
-#define BTECHSTATS
 #include "coolmenu.h"
 #include "mech_crew_api.h"
 #include "mech_identity_api.h"

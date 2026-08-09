@@ -25,6 +25,7 @@ set(BTECH_SOURCES
   autopilot/autopilot_radio_parser.c
   autopilot/path_helpers.c
   character/btechstats.c
+  character/character_value_catalog.c
   character/character_health.c
   character/character_experience.c
   character/character_battle_value.c

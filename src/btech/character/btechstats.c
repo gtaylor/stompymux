@@ -1,4 +1,3 @@
-#define BTECHSTATS_C
 #include "btechstats_internal.h"
 #include "checked_conversion.h"
 #include "mux/support/checked_storage.h"
@@ -8,29 +7,6 @@ static size_t character_value_index(int code) {
   if (code < 0 || code >= NUM_CHARVALUES)
     abort();
   return (size_t)code;
-}
-
-const CharacterValue *character_value_definition(int code) {
-  return checked_storage_at_const(char_values, NUM_CHARVALUES,
-                                  sizeof(*char_values),
-                                  character_value_index(code));
-}
-
-const char *character_value_type_name(int type) {
-  if (type < CHAR_VALUE || type > CHAR_ATTRIBUTE)
-    return "Unknown";
-  const char *const *name = checked_storage_at_const(
-      btech_charvaluetype_names,
-      sizeof(btech_charvaluetype_names) / sizeof(*btech_charvaluetype_names),
-      sizeof(*btech_charvaluetype_names), (size_t)type);
-  return *name;
-}
-
-void character_value_xp_threshold_set(int code, int threshold) {
-  CharacterValue *definition =
-      checked_storage_at(char_values, NUM_CHARVALUES, sizeof(*char_values),
-                         character_value_index(code));
-  definition->xpthreshold = threshold;
 }
 
 unsigned char character_stats_value_get(const PSTATS *stats, int code) {

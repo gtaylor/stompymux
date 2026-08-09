@@ -45,13 +45,12 @@ constexpr int CAREER_ARTILLERY = 0x0080; /* Artillery-Gun */
 constexpr int CAREER_DROPSHIP = 0x0100;  /* Dropship Pilot/Gun */
 constexpr int CAREER_TECHMECH = 0x0200;
 constexpr int CAREER_TECHVEH = 0x0400;
-#define CAREER_TECH (CAREER_TECHMECH | CAREER_TECHVEH)
+constexpr int CAREER_TECH = CAREER_TECHMECH | CAREER_TECHVEH;
 constexpr int CAREER_MISC = 0x0800;
 constexpr int CAREER_ACADMISC = 0x1000;
 constexpr int CAREER_RECON = 0x2000;
-constexpr int SK_XP = 0x4000; /* Always raise xp (not spammable) */
-
-#define XP_MAX (256 * 256 * 256) /* Then we wrap ; tough beans */
+constexpr int SK_XP = 0x4000;           /* Always raise xp (not spammable) */
+constexpr int XP_MAX = 256 * 256 * 256; /* Then we wrap ; tough beans */
 
 /* 3 diff. adv types */
 
