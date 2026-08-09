@@ -514,14 +514,6 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
     if (3 * sv < (mech_cached_lugged_weight(mech) + mv))
       mspeed = 0.0F;
     else {
-#ifdef WEIGHT_OVERSPEEDING
-      mspeed = mech_maximum_speed(mech) * mech_tonnage(mech) * 1024.0 /
-               mech_movement_maximum_int(
-                   1024 * mech_real_tonnage(mech) +
-                       mech_cached_lugged_weight(mech) / 3,
-                   (mech_movement_maximum_int(
-                       1024, mv + mech_cached_lugged_weight(mech))));
-#else
       int const tonnage = mech_tonnage(mech);
       int const denominator = mech_movement_maximum_int(
           1024 * tonnage + mech_cached_lugged_weight(mech) / 3,
@@ -529,7 +521,6 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
                                     mv + mech_cached_lugged_weight(mech)));
       mspeed = mech_maximum_speed(mech) * (float)tonnage * 1024.0F /
                (float)denominator;
-#endif /* WEIGHT_OVERSPEEDING */
     }
   }
   int const speed_in_movement_points = clamp_float_to_int(mspeed / MP1);

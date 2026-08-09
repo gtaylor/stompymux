@@ -2,6 +2,7 @@
 
 ## MUX Todos in the /src/ dir
 
+* Can we get rid of mymath.h in favor of standards?
 * Edit attributes from @examine via OSC8 and prepare:?
 * Consolidate the various logging files in server
 * Remove arbitrary logs compile directive and keep it on
@@ -31,3 +32,6 @@
 
 * Break commodities out of hcode?
 * What is CharacterXpRanking?
+* Add `-fhardened` to CMake for mux and btech. May require disabling debug builds.
+* remove MechRuntimeState.unused
+* Replace CVS headers

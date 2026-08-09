@@ -43,7 +43,6 @@ option(BTECH_CARGO_COMMANDS "Enable hardcoded cargo commands" ON)
 option(BTECH_MW3STATS "Enable MW3-like stats and skills" ON)
 option(BTECH_MOVEMENT_MODES "Enable advanced movement modes" ON)
 option(BTECH_SCALED_INFRARED "Scale infrared BTH with increasing heat" ON)
-option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 
 option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
 option(BTECH_ENABLE_UBSAN "Build with UndefinedBehaviorSanitizer instrumentation" ON)
@@ -166,7 +165,6 @@ set(BT_CARGO_COMMANDS ${BTECH_CARGO_COMMANDS})
 set(BT_EXILE_MW3STATS ${BTECH_MW3STATS})
 set(BT_MOVEMENT_MODES ${BTECH_MOVEMENT_MODES})
 set(BT_SCALED_INFRARED ${BTECH_SCALED_INFRARED})
-set(WEIGHT_OVERSPEEDING ${BTECH_OVERSPEEDING})
 
 configure_file(src/cmake/btmux_build_config.h.in
                "${BTECH_SOURCE_DIR}/btmux_build_config.h")
