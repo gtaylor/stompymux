@@ -335,13 +335,13 @@ static void artillery_hit_hex(BattleMap *map, artillery_shot *s, int type,
   }
   if (!(mode & CLUSTER_MODE)) {
     if (isdirect)
-      snprintf(buf1, LBUF_SIZE, "receives a direct hit!");
+      (void)snprintf(buf1, LBUF_SIZE, "receives a direct hit!");
     else
-      snprintf(buf1, LBUF_SIZE, "is hit by fragments!");
+      (void)snprintf(buf1, LBUF_SIZE, "is hit by fragments!");
     if (isdirect)
-      snprintf(buf2, LBUF_SIZE, "You receive a direct hit!");
+      (void)snprintf(buf2, LBUF_SIZE, "You receive a direct hit!");
     else
-      snprintf(buf2, LBUF_SIZE, "You are hit by fragments!");
+      (void)snprintf(buf2, LBUF_SIZE, "You are hit by fragments!");
   } else {
     if (dam > 2) {
       strcpy(buf1, "is hit by bomblets!");

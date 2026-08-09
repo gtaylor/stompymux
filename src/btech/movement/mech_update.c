@@ -70,11 +70,11 @@ void mech_movement_update(Mech *mech) {
       mech_position_previous_y(mech) != mech_position_y(mech)) {
     if (!mech || !mech_map) {
       char message_buffer[MBUF_SIZE];
-      snprintf(message_buffer, MBUF_SIZE,
-               "Invalide pointer (%s) in move_mech()",
-               (!mech       ? "mech"
-                : !mech_map ? "mech_map"
-                            : "weird...."));
+      (void)snprintf(message_buffer, MBUF_SIZE,
+                     "Invalide pointer (%s) in move_mech()",
+                     (!mech       ? "mech"
+                      : !mech_map ? "mech_map"
+                                  : "weird...."));
       btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
                          message_buffer);
 
@@ -88,9 +88,9 @@ void mech_movement_update(Mech *mech) {
         }
         char empty_command[] = "";
         mech_shutdown(mech_pilot_dbref(mech), mech, empty_command);
-        snprintf(message_buffer, MBUF_SIZE,
-                 "move_mech:invalid map:Mech: %ld Index: %ld", mech_dbref(mech),
-                 mech_map_dbref(mech));
+        (void)snprintf(message_buffer, MBUF_SIZE,
+                       "move_mech:invalid map:Mech: %ld Index: %ld",
+                       mech_dbref(mech), mech_map_dbref(mech));
         btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
                            message_buffer);
         mech_map_dbref_set(mech, -1);

@@ -332,7 +332,7 @@ static void do_luaviewparent(CommandInvocation *invocation) {
       notify_printf(evaluation, player, "Lua parent unavailable: %s", error);
       return;
     }
-    snprintf(path, sizeof(path), "%s", argument);
+    (void)snprintf(path, sizeof(path), "%s", argument);
   }
   lua_view_parent_source(evaluation, player, runtime, path, source);
 }

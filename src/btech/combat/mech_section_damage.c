@@ -164,8 +164,8 @@ void mech_section_destroy(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
 
   /* Prevent the rare occurance of a section getting destroyed twice */
   if (mech_section_is_destroyed(wounded, hitloc)) {
-    fprintf(stderr, "Double-desting section %d on mech #%ld\n", hitloc,
-            mech_dbref(wounded));
+    (void)fprintf(stderr, "Double-desting section %d on mech #%ld\n", hitloc,
+                  mech_dbref(wounded));
     if (mech_is_dropship(wounded))
       return;
     for (i = 0; i < NUM_SECTIONS; i++)
@@ -174,7 +174,7 @@ void mech_section_destroy(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
         return;
     if (btech_context_event_data_count(mech_context(wounded), EVENT_NUKEMECH,
                                        (intptr_t)wounded)) {
-      fprintf(stderr, "And nuke event already existed.\n");
+      (void)fprintf(stderr, "And nuke event already existed.\n");
       return;
     }
     discard_mw(wounded);
@@ -208,7 +208,8 @@ void mech_section_destroy(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
                          mech_movement_type(wounded));
     if (LOS >= 0)
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!", locname);
-    snprintf(msgbuf, sizeof(msgbuf), "'s %s has been destroyed!", locname);
+    (void)snprintf(msgbuf, sizeof(msgbuf), "'s %s has been destroyed!",
+                   locname);
     mech_los_broadcast(wounded, msgbuf);
   }
 

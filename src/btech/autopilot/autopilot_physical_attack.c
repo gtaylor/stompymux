@@ -27,7 +27,7 @@
 static void format_physical_command(char buffer[static LBUF_SIZE], char side,
                                     const Mech *target) {
   MechUnitId id = mech_unit_id(target);
-  snprintf(buffer, LBUF_SIZE, "%c %c%c", side, id.first, id.second);
+  (void)snprintf(buffer, LBUF_SIZE, "%c %c%c", side, id.first, id.second);
 }
 
 void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,

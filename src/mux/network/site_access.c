@@ -86,7 +86,7 @@ static void list_sites(EvaluationContext *evaluation, DbRef player,
   const char *str;
   SiteData *this;
 
-  snprintf(buff, MBUF_SIZE, "----- %s -----", header_txt);
+  (void)snprintf(buff, MBUF_SIZE, "----- %s -----", header_txt);
   notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   notify_checked(evaluation, player, player,
                  "Address              Mask                 Status",
@@ -94,8 +94,8 @@ static void list_sites(EvaluationContext *evaluation, DbRef player,
   for (this = site_list; this; this = this->next) {
     str = stat_string(stat_type, this->flag);
     StringCopy(buff1, inet_ntoa(this->mask));
-    snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", inet_ntoa(this->address), buff1,
-             str);
+    (void)snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", inet_ntoa(this->address),
+                   buff1, str);
     notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   }
 }

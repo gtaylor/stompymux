@@ -132,7 +132,7 @@ bool styled_text_palette_set_preset(StyledTextPalette *palette,
     styled_set_error(error, error_size, "OSC 8 preset must not be empty");
     goto fail;
   }
-  snprintf(candidate_name, sizeof(candidate_name), "%s", name);
+  (void)snprintf(candidate_name, sizeof(candidate_name), "%s", name);
   StyledTextPreset candidate = {.name = candidate_name, .config = config};
   if (!styled_text_preset_uri(&candidate, &all_options, uri, sizeof(uri))) {
     styled_set_error(error, error_size, "OSC 8 preset URI is too long");

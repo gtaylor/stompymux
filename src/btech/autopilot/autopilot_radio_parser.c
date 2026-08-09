@@ -176,7 +176,7 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
   /* Did we find a command */
   if (cmd < 0) {
 
-    snprintf(message, LBUF_SIZE, "Unable to comprehend the command.");
+    (void)snprintf(message, LBUF_SIZE, "Unable to comprehend the command.");
     auto_reply(mech, message);
 
     autopilot_argument_list_destroy(&args);
@@ -256,7 +256,7 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
   } else if (!radio_command->silent) {
 
     /* Command isn't silent but it didn't return a message */
-    snprintf(reply, LBUF_SIZE, "Ok.");
+    (void)snprintf(reply, LBUF_SIZE, "Ok.");
     auto_reply(mech, reply);
   }
 

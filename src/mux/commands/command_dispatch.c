@@ -398,7 +398,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     STARTLOG(context->log, LOG_SUSPECTCMDS | LOG_ALLCOMMANDS, "CMD", "SUS") {
       log_name_and_loc(context->log, player);
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
-      snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
+      (void)snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
       free_lbuf(lcbuf);
       ENDLOG(context->log);
@@ -411,7 +411,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     STARTLOG(context->log, LOG_ALLCOMMANDS, "CMD", "ALL") {
       log_name_and_loc(context->log, player);
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
-      snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
+      (void)snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
       free_lbuf(lcbuf);
       ENDLOG(context->log);
@@ -700,7 +700,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     STARTLOG(context->log, LOG_BADCOMMANDS, "CMD", "BAD") {
       log_name_and_loc(context->log, player);
       lcbuf = alloc_lbuf("process_commands.LOG.badcmd");
-      snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
+      (void)snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
       free_lbuf(lcbuf);
       ENDLOG(context->log);

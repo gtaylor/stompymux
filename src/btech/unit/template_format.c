@@ -208,7 +208,7 @@ static char *part_figure_out_name_sub(const ServerConfiguration *configuration,
     source = checked_string_suffix(
         weapon_catalogue_name(weapon_from_equipment_index(i)),
         (j && !isclan) ? 3 : 0);
-    snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
+    (void)snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
     return buffer;
   } else if (equipment_is_ammunition(i) &&
              i < ammunition_equipment_index(num_def_weapons)) {
@@ -219,25 +219,25 @@ static char *part_figure_out_name_sub(const ServerConfiguration *configuration,
     if (weapon_catalogue_type(weapon) != TBEAM &&
         weapon_catalogue_type(weapon) != THAND &&
         !weapon_catalogue_has_special(weapon, PCOMBAT)) {
-      snprintf(buffer, BTECH_TEXT_CAPACITY, "Ammo_%s",
-               checked_string_suffix(weapon_catalogue_name(weapon),
-                                     (j && !isclan) ? 3 : 0));
+      (void)snprintf(buffer, BTECH_TEXT_CAPACITY, "Ammo_%s",
+                     checked_string_suffix(weapon_catalogue_name(weapon),
+                                           (j && !isclan) ? 3 : 0));
       return buffer;
     }
   } else if (!brand) {
     if (equipment_is_bomb(i)) {
-      snprintf(buffer, BTECH_TEXT_CAPACITY, "Bomb_%s",
-               bomb_name(bomb_from_equipment_index(i)));
+      (void)snprintf(buffer, BTECH_TEXT_CAPACITY, "Bomb_%s",
+                     bomb_name(bomb_from_equipment_index(i)));
       return buffer;
     } else if (equipment_is_special(i) &&
                i < special_equipment_index(template_internal_count)) {
-      snprintf(buffer, BTECH_TEXT_CAPACITY, "%s",
-               template_internal_name(special_from_equipment_index(i)));
+      (void)snprintf(buffer, BTECH_TEXT_CAPACITY, "%s",
+                     template_internal_name(special_from_equipment_index(i)));
       return buffer;
     } else if (equipment_is_cargo(i) &&
                i < cargo_equipment_index(template_cargo_count)) {
-      snprintf(buffer, BTECH_TEXT_CAPACITY, "%s",
-               template_cargo_name(cargo_from_equipment_index(i)));
+      (void)snprintf(buffer, BTECH_TEXT_CAPACITY, "%s",
+                     template_cargo_name(cargo_from_equipment_index(i)));
       return buffer;
     }
   }
@@ -249,7 +249,7 @@ char *my_shortform(const char *source,
   if (!source)
     return nullptr;
   if (strlen(source) <= 4 && !strchr(source, '/'))
-    snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
+    (void)snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
   else {
     size_t source_length = strlen(source);
     size_t output_length = 0;
@@ -286,27 +286,28 @@ char *part_figure_out_shname(int i, char buffer[static BTECH_TEXT_CAPACITY]) {
   if (!i)
     return nullptr;
   if (equipment_is_weapon(i) && i < weapon_equipment_index(num_def_weapons)) {
-    snprintf(
+    (void)snprintf(
         name, sizeof(name), "%s",
         checked_string_suffix(
             weapon_catalogue_name(weapon_from_equipment_index(i)),
             part_weapon_short_name_offset(weapon_from_equipment_index(i))));
   } else if (equipment_is_ammunition(i) &&
              i < ammunition_equipment_index(num_def_weapons)) {
-    snprintf(name, sizeof(name), "Ammo_%s",
-             checked_string_suffix(
-                 weapon_catalogue_name(ammunition_to_weapon_index(i)),
-                 part_weapon_short_name_offset(ammunition_to_weapon_index(i))));
+    (void)snprintf(
+        name, sizeof(name), "Ammo_%s",
+        checked_string_suffix(
+            weapon_catalogue_name(ammunition_to_weapon_index(i)),
+            part_weapon_short_name_offset(ammunition_to_weapon_index(i))));
   } else if (equipment_is_bomb(i))
-    snprintf(name, sizeof(name), "Bomb_%s",
-             bomb_name(bomb_from_equipment_index(i)));
+    (void)snprintf(name, sizeof(name), "Bomb_%s",
+                   bomb_name(bomb_from_equipment_index(i)));
   else if (equipment_is_special(i) &&
            i < special_equipment_index(template_internal_count))
-    snprintf(name, sizeof(name), "%s",
-             template_internal_name(special_from_equipment_index(i)));
+    (void)snprintf(name, sizeof(name), "%s",
+                   template_internal_name(special_from_equipment_index(i)));
   if (equipment_is_cargo(i) && i < cargo_equipment_index(template_cargo_count))
-    snprintf(name, sizeof(name), "%s",
-             template_cargo_name(cargo_from_equipment_index(i)));
+    (void)snprintf(name, sizeof(name), "%s",
+                   template_cargo_name(cargo_from_equipment_index(i)));
   if (!name[0])
     return nullptr;
   return my_shortform(name, buffer);
@@ -362,55 +363,57 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
       y1 = y + z - 1;
   }
   if (y != y1)
-    snprintf(crit, 32, "CRIT_%d-%d", y + 1, y1 + 1);
+    (void)snprintf(crit, 32, "CRIT_%d-%d", y + 1, y1 + 1);
   else
-    snprintf(crit, 32, "CRIT_%d", y + 1);
+    (void)snprintf(crit, 32, "CRIT_%d", y + 1);
 
   wFireModes = mech_critical_fire_mode(mech, x, y);
   wFireModes &= ~flaggo;
   wAmmoModes = mech_critical_ammo_mode(mech, x, y);
 
   if (equipment_is_weapon(mech_critical_part_type(mech, x, y)))
-    fprintf(fp, "    %s		  { %s - %s %s}\n", crit,
-            get_parts_vlong_name(mech->xcode.context,
-                                 mech_critical_part_type(mech, x, y), 0),
-            (wFireModes || wAmmoModes)
-                ? build_bit_string_delimited2(
-                      crit_fire_modes, template_critical_fire_mode_count(),
-                      crit_ammo_modes, template_critical_ammo_mode_count(),
-                      wFireModes, wAmmoModes, (char[BTECH_TEXT_CAPACITY]){0})
-                : "-",
-            !mech->xcode.context->configuration->btech_parts
-                ? ""
-                : tprintf("%d ", mech_critical_brand(mech, x, y)));
+    (void)fprintf(
+        fp, "    %s		  { %s - %s %s}\n", crit,
+        get_parts_vlong_name(mech->xcode.context,
+                             mech_critical_part_type(mech, x, y), 0),
+        (wFireModes || wAmmoModes)
+            ? build_bit_string_delimited2(
+                  crit_fire_modes, template_critical_fire_mode_count(),
+                  crit_ammo_modes, template_critical_ammo_mode_count(),
+                  wFireModes, wAmmoModes, (char[BTECH_TEXT_CAPACITY]){0})
+            : "-",
+        !mech->xcode.context->configuration->btech_parts
+            ? ""
+            : tprintf("%d ", mech_critical_brand(mech, x, y)));
   else if (equipment_is_ammunition(mech_critical_part_type(mech, x, y)))
-    fprintf(fp, "    %s		  { %s %d %s - }\n", crit,
-            get_parts_vlong_name(mech->xcode.context,
-                                 mech_critical_part_type(mech, x, y), 0),
-            FullAmmo(mech, x, y),
-            (mech_critical_fire_mode(mech, x, y) ||
-             mech_critical_ammo_mode(mech, x, y))
-                ? build_bit_string_delimited2(
-                      crit_fire_modes, template_critical_fire_mode_count(),
-                      crit_ammo_modes, template_critical_ammo_mode_count(),
-                      mech_critical_fire_mode(mech, x, y),
-                      mech_critical_ammo_mode(mech, x, y),
-                      (char[BTECH_TEXT_CAPACITY]){0})
-                : "-");
+    (void)fprintf(
+        fp, "    %s		  { %s %d %s - }\n", crit,
+        get_parts_vlong_name(mech->xcode.context,
+                             mech_critical_part_type(mech, x, y), 0),
+        FullAmmo(mech, x, y),
+        (mech_critical_fire_mode(mech, x, y) ||
+         mech_critical_ammo_mode(mech, x, y))
+            ? build_bit_string_delimited2(
+                  crit_fire_modes, template_critical_fire_mode_count(),
+                  crit_ammo_modes, template_critical_ammo_mode_count(),
+                  mech_critical_fire_mode(mech, x, y),
+                  mech_critical_ammo_mode(mech, x, y),
+                  (char[BTECH_TEXT_CAPACITY]){0})
+            : "-");
   else if (equipment_is_bomb(mech_critical_part_type(mech, x, y)))
-    fprintf(fp, "    %s		  { %s - - - }\n", crit,
-            get_parts_vlong_name(mech->xcode.context,
-                                 mech_critical_part_type(mech, x, y), 0));
+    (void)fprintf(fp, "    %s		  { %s - - - }\n", crit,
+                  get_parts_vlong_name(mech->xcode.context,
+                                       mech_critical_part_type(mech, x, y), 0));
   else {
-    fprintf(fp, "    %s		  { %s %s - %s}\n", crit,
-            get_parts_vlong_name(mech->xcode.context,
-                                 mech_critical_part_type(mech, x, y), 0),
-            mech_critical_data(mech, x, y)
-                ? tprintf("%d", mech_critical_data(mech, x, y))
-                : "-",
-            !mech->xcode.context->configuration->btech_parts
-                ? ""
-                : tprintf("%d ", mech_critical_brand(mech, x, y)));
+    (void)fprintf(fp, "    %s		  { %s %s - %s}\n", crit,
+                  get_parts_vlong_name(mech->xcode.context,
+                                       mech_critical_part_type(mech, x, y), 0),
+                  mech_critical_data(mech, x, y)
+                      ? tprintf("%d", mech_critical_data(mech, x, y))
+                      : "-",
+                  !mech->xcode.context->configuration->btech_parts
+                      ? ""
+                      : tprintf("%d ", mech_critical_brand(mech, x, y)));
   }
   return (y1 - y + 1);
 }
@@ -433,23 +436,23 @@ void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
       if (*character == ' ')
         *character = '_';
     }
-    fprintf(fp, "%s\n", buf);
+    (void)fprintf(fp, "%s\n", buf);
     if (mech_section_original_armor(mech, x))
-      fprintf(fp, "  Armor            { %d }\n",
-              mech_section_original_armor(mech, x));
+      (void)fprintf(fp, "  Armor            { %d }\n",
+                    mech_section_original_armor(mech, x));
     if (mech_section_original_internal(mech, x))
-      fprintf(fp, "  Internals        { %d }\n",
-              mech_section_original_internal(mech, x));
+      (void)fprintf(fp, "  Internals        { %d }\n",
+                    mech_section_original_internal(mech, x));
     if (mech_section_original_rear_armor(mech, x))
-      fprintf(fp, "  Rear             { %d }\n",
-              mech_section_original_rear_armor(mech, x));
+      (void)fprintf(fp, "  Rear             { %d }\n",
+                    mech_section_original_rear_armor(mech, x));
     y = mech_section_configuration(mech, x);
     y &= ~CASE_TECH;
     if (y)
-      fprintf(fp, "  Config           { %s }\n",
-              build_bit_string(section_configs,
-                               template_section_configuration_count(), y,
-                               (char[BTECH_TEXT_CAPACITY]){0}));
+      (void)fprintf(fp, "  Config           { %s }\n",
+                    build_bit_string(section_configs,
+                                     template_section_configuration_count(), y,
+                                     (char[BTECH_TEXT_CAPACITY]){0}));
     l = CritsInLoc(mech, x);
     for (y = 0; y < l;)
       y += dump_item(fp, mech, x, y);

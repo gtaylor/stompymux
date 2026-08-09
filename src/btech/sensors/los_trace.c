@@ -229,7 +229,7 @@ static void GetAdjHex(int currx, int curry, HexDirection nexthex, int *x,
     *y = curry - (currx % 2);
     break;
   default: /* Mostly there to satisfy gcc */
-    fprintf(stderr, "XXX ARGH: TraceLos doesn't know where to go!\n");
+    (void)fprintf(stderr, "XXX ARGH: TraceLos doesn't know where to go!\n");
     *x = currx + 1; /* Just grab some values that aren't x/y */
     *y = curry + 1; /* so we can break out of the loop */
   }

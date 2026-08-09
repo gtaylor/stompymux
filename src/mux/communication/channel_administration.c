@@ -374,14 +374,14 @@ void do_chanlist(CommandInvocation *invocation) {
       atrstr = attribute_get(evaluation->world->database, ch->chan_obj, A_DESC,
                              &flags);
       if ((ch->chan_obj == NOTHING) || !*atrstr)
-        snprintf(buf, MBUF_SIZE, "%s", "No description.");
+        (void)snprintf(buf, MBUF_SIZE, "%s", "No description.");
       else
-        snprintf(buf, MBUF_SIZE, "%-54.54s", atrstr);
+        (void)snprintf(buf, MBUF_SIZE, "%-54.54s", atrstr);
 
       free_lbuf(atrstr);
-      snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-60.60s",
-               (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
-               (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name, buf);
+      (void)snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-60.60s",
+                     (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
+                     (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name, buf);
 
       raw_notify(evaluation, player, temp);
     }
@@ -441,14 +441,14 @@ void do_chanstatus(CommandInvocation *invocation) {
   atrstr =
       attribute_get(evaluation->world->database, ch->chan_obj, A_DESC, &flags);
   if ((ch->chan_obj == NOTHING) || !*atrstr)
-    snprintf(buf, MBUF_SIZE, "%s", "No description.");
+    (void)snprintf(buf, MBUF_SIZE, "%s", "No description.");
   else
-    snprintf(buf, MBUF_SIZE, "%-54.54s", atrstr);
+    (void)snprintf(buf, MBUF_SIZE, "%-54.54s", atrstr);
 
   free_lbuf(atrstr);
-  snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-60.60s",
-           (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
-           (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name, buf);
+  (void)snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-60.60s",
+                 (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
+                 (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name, buf);
 
   raw_notify(evaluation, player, temp);
   raw_notify(evaluation, player, "-- End of list of Channels --");

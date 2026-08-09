@@ -49,9 +49,9 @@ void mech_los_broadcast(Mech *mech, const char *message) {
         if (mech_los_check(tempMech, mech, mech_position_x(mech),
                            mech_position_y(mech),
                            mech_range_to(tempMech, mech))) {
-          snprintf(buf, sizeof(buf), "%s%s%s",
-                   mech_to_mech_display_id(tempMech, mech).text,
-                   *message != '\'' ? " " : "", message);
+          (void)snprintf(buf, sizeof(buf), "%s%s%s",
+                         mech_to_mech_display_id(tempMech, mech).text,
+                         *message != '\'' ? " " : "", message);
           mech_notify(tempMech, MECHSTARTED, buf);
         }
   }
@@ -136,7 +136,7 @@ static void format_mech_los_message(char *buffer, size_t buffer_size,
   const char *placeholder = strstr(message, "%s");
 
   if (!placeholder) {
-    snprintf(buffer, buffer_size, "%s", message);
+    (void)snprintf(buffer, buffer_size, "%s", message);
     return;
   }
   const size_t prefix_length = (size_t)(placeholder - message);
@@ -256,8 +256,8 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
         if (!attacker && !defender)
           continue;
         if (defender)
-          snprintf(buff, sizeof(buff), "%s",
-                   mech_to_mech_display_id(tempMech, target).text);
+          (void)snprintf(buff, sizeof(buff), "%s",
+                         mech_to_mech_display_id(tempMech, target).text);
         if (attacker) {
           if (defender)
             mech_printf(tempMech, MECHSTARTED, "%s %s %s with a %s",
@@ -277,7 +277,7 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
     MapCoordToRealCoord(x, y, &fx, &fy);
     int elevation = map_base_elevation(mech_map, x, y);
     fz = ZSCALE * (float)elevation;
-    snprintf(buff, sizeof(buff), "hex %d %d!", mapx, mapy);
+    (void)snprintf(buff, sizeof(buff), "hex %d %d!", mapx, mapy);
     for (loop = 0; loop < battle_map_unit_count(mech_map); loop++) {
       const DbRef candidate = battle_map_unit_dbref(mech_map, loop);
       if (candidate != mech_dbref(mech) && candidate != -1) {
@@ -365,7 +365,7 @@ void mech_printf(Mech *mech, MechNotifyAudience audience, const char *format,
 
   va_start(ap, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(buffer, LBUF_SIZE, format, ap);
+  (void)vsnprintf(buffer, LBUF_SIZE, format, ap);
   va_end(ap);
 
   if (audience == MECHPILOT) {

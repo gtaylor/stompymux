@@ -39,9 +39,10 @@ void autopilot_radio_clear_commands(Autopilot *autopilot, char *buffer) {
   auto_delcommand(autopilot->mynum, autopilot, "-1");
   if (autopilot->target >= -1) {
     if (autopilot_has_assigned_target(autopilot) && autopilot->target != -1)
-      snprintf(buffer, SBUF_SIZE, "autogun target %ld", autopilot->target);
+      (void)snprintf(buffer, SBUF_SIZE, "autogun target %ld",
+                     autopilot->target);
     else
-      snprintf(buffer, SBUF_SIZE, "autogun on");
+      (void)snprintf(buffer, SBUF_SIZE, "autogun on");
     auto_addcommand(autopilot->mynum, autopilot, buffer);
   }
 }
@@ -68,7 +69,7 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
     }
     autopilot_gunning_start(autopilot);
 
-    snprintf(mesg, LBUF_SIZE, "shooting at whatever I want");
+    (void)snprintf(mesg, LBUF_SIZE, "shooting at whatever I want");
     return;
 
   } else if (strcmp(autopilot_argument_list_get(args, 1), "off") == 0) {
@@ -86,7 +87,7 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
     if (autopilot_is_gunning(autopilot))
       autopilot_gunning_stop(autopilot);
 
-    snprintf(mesg, LBUF_SIZE, "powering down weapons");
+    (void)snprintf(mesg, LBUF_SIZE, "powering down weapons");
     return;
 
   } else if (strcmp(autopilot_argument_list_get(args, 1), "threshold") == 0) {
@@ -102,22 +103,22 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
       /* Set the new threshold value */
       autopilot->target_threshold = threshold;
 
-      snprintf(mesg, LBUF_SIZE, "new threshold set to %d%%", threshold);
+      (void)snprintf(mesg, LBUF_SIZE, "new threshold set to %d%%", threshold);
       return;
 
     } else {
 
       /* Bad value for threshold */
-      snprintf(mesg, LBUF_SIZE,
-               "!Invalid value used with threshold: "
-               "Usage autogun threshold [0-100]");
+      (void)snprintf(mesg, LBUF_SIZE,
+                     "!Invalid value used with threshold: "
+                     "Usage autogun threshold [0-100]");
       return;
     }
   }
 
-  snprintf(mesg, LBUF_SIZE,
-           "!Invalid Input for autogun:"
-           " use 'on' or 'off'");
+  (void)snprintf(mesg, LBUF_SIZE,
+                 "!Invalid Input for autogun:"
+                 " use 'on' or 'off'");
 }
 
 /*
@@ -130,16 +131,17 @@ void auto_radio_command_chasetarg(Autopilot *autopilot, Mech *mech,
   if (strcmp(autopilot_argument_list_get(args, 1), "on") == 0) {
 
     auto_set_chasetarget_mode(autopilot, AUTO_CHASETARGET_ON);
-    snprintf(mesg, LBUF_SIZE, "Chase Target Mode is Activated");
+    (void)snprintf(mesg, LBUF_SIZE, "Chase Target Mode is Activated");
     return;
 
   } else if (strcmp(autopilot_argument_list_get(args, 1), "off") == 0) {
 
     auto_set_chasetarget_mode(autopilot, AUTO_CHASETARGET_OFF);
-    snprintf(mesg, LBUF_SIZE, "Chase Target Mode is Deactivated");
+    (void)snprintf(mesg, LBUF_SIZE, "Chase Target Mode is Deactivated");
     return;
   }
-  snprintf(mesg, LBUF_SIZE, "!Invalid Input for chasetarg: use 'on' or 'off'");
+  (void)snprintf(mesg, LBUF_SIZE,
+                 "!Invalid Input for chasetarg: use 'on' or 'off'");
 }
 
 /*
@@ -155,18 +157,18 @@ void auto_radio_command_dfollow(Autopilot *autopilot, Mech *mech,
   targetref =
       FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
-    snprintf(mesg, LBUF_SIZE, "!Invalid target to follow");
+    (void)snprintf(mesg, LBUF_SIZE, "!Invalid target to follow");
     return;
   }
 
   autopilot_radio_clear_commands(autopilot, buffer);
 
-  snprintf(buffer, SBUF_SIZE, "dumbfollow %ld", targetref);
+  (void)snprintf(buffer, SBUF_SIZE, "dumbfollow %ld", targetref);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "following %s [dumbly] (%d degrees, %d away)",
-           autopilot_argument_list_get(args, 1), autopilot->ofsx,
-           autopilot->ofsy);
+  (void)snprintf(mesg, LBUF_SIZE, "following %s [dumbly] (%d degrees, %d away)",
+                 autopilot_argument_list_get(args, 1), autopilot->ofsx,
+                 autopilot->ofsy);
 }
 
 /*
@@ -180,20 +182,20 @@ void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech,
   char buffer[SBUF_SIZE];
 
   if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
-    snprintf(mesg, LBUF_SIZE, "!First number not an integer");
+    (void)snprintf(mesg, LBUF_SIZE, "!First number not an integer");
     return;
   }
   if (!parse_int_checked(autopilot_argument_list_get(args, 2), &y)) {
-    snprintf(mesg, LBUF_SIZE, "!First number not an integer");
+    (void)snprintf(mesg, LBUF_SIZE, "!First number not an integer");
     return;
   }
 
   autopilot_radio_clear_commands(autopilot, buffer);
 
-  snprintf(buffer, SBUF_SIZE, "dumbgoto %d %d", x, y);
+  (void)snprintf(buffer, SBUF_SIZE, "dumbgoto %d %d", x, y);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "going [dumbly] to %d,%d", x, y);
+  (void)snprintf(mesg, LBUF_SIZE, "going [dumbly] to %d,%d", x, y);
 }
 
 /*
@@ -207,10 +209,10 @@ void auto_radio_command_dropoff(Autopilot *autopilot, Mech *mech,
 
   autopilot_radio_clear_commands(autopilot, buffer);
 
-  snprintf(buffer, SBUF_SIZE, "dropoff");
+  (void)snprintf(buffer, SBUF_SIZE, "dropoff");
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "dropping off");
+  (void)snprintf(mesg, LBUF_SIZE, "dropping off");
 }
 
 /*
@@ -226,16 +228,16 @@ void auto_radio_command_embark(Autopilot *autopilot, Mech *mech,
   targetref =
       FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
-    snprintf(mesg, LBUF_SIZE, "!Invalid target to embark");
+    (void)snprintf(mesg, LBUF_SIZE, "!Invalid target to embark");
     return;
   }
 
   autopilot_radio_clear_commands(autopilot, buffer);
-  snprintf(buffer, SBUF_SIZE, "embark %ld", targetref);
+  (void)snprintf(buffer, SBUF_SIZE, "embark %ld", targetref);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "embarking %s",
-           autopilot_argument_list_get(args, 1));
+  (void)snprintf(mesg, LBUF_SIZE, "embarking %s",
+                 autopilot_argument_list_get(args, 1));
   return;
 }
 
@@ -250,13 +252,13 @@ void auto_radio_command_enterbase(Autopilot *autopilot, Mech *mech,
 
   autopilot_radio_clear_commands(autopilot, buffer);
   if (argc - 1) {
-    snprintf(buffer, SBUF_SIZE, "enterbase %s",
-             autopilot_argument_list_get(args, 1));
-    snprintf(mesg, LBUF_SIZE, "entering base (%s side)",
-             autopilot_argument_list_get(args, 1));
+    (void)snprintf(buffer, SBUF_SIZE, "enterbase %s",
+                   autopilot_argument_list_get(args, 1));
+    (void)snprintf(mesg, LBUF_SIZE, "entering base (%s side)",
+                   autopilot_argument_list_get(args, 1));
   } else {
     strncpy(buffer, "enterbase n", SBUF_SIZE);
-    snprintf(mesg, LBUF_SIZE, "entering base");
+    (void)snprintf(mesg, LBUF_SIZE, "entering base");
   }
 
   auto_addcommand(autopilot->mynum, autopilot, buffer);
@@ -276,18 +278,18 @@ void auto_radio_command_follow(Autopilot *autopilot, Mech *mech,
   targetref =
       FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
-    snprintf(mesg, LBUF_SIZE, "!Invalid target to follow");
+    (void)snprintf(mesg, LBUF_SIZE, "!Invalid target to follow");
     return;
   }
 
   autopilot_radio_clear_commands(autopilot, buffer);
 
-  snprintf(buffer, SBUF_SIZE, "follow %ld", targetref);
+  (void)snprintf(buffer, SBUF_SIZE, "follow %ld", targetref);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "following %s (%d degrees, %d away)",
-           autopilot_argument_list_get(args, 1), autopilot->ofsx,
-           autopilot->ofsy);
+  (void)snprintf(mesg, LBUF_SIZE, "following %s (%d degrees, %d away)",
+                 autopilot_argument_list_get(args, 1), autopilot->ofsx,
+                 autopilot->ofsy);
 }
 
 /*
@@ -302,32 +304,32 @@ void auto_radio_command_goto(Autopilot *autopilot, Mech *mech,
   BattleMap *map;
 
   if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
-    snprintf(mesg, LBUF_SIZE, "!First number not integer");
+    (void)snprintf(mesg, LBUF_SIZE, "!First number not integer");
     return;
   }
   if (!parse_int_checked(autopilot_argument_list_get(args, 2), &y)) {
-    snprintf(mesg, LBUF_SIZE, "!Second number not integer");
+    (void)snprintf(mesg, LBUF_SIZE, "!Second number not integer");
     return;
   }
 
   if (mech_position_x(mech) == x && mech_position_y(mech) == y) {
-    snprintf(mesg, LBUF_SIZE, "!Already in that hex");
+    (void)snprintf(mesg, LBUF_SIZE, "!Already in that hex");
     return;
   }
 
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   if (x < 0 || y < 0 || x >= map->map_width || y >= map->map_height) {
-    snprintf(mesg, LBUF_SIZE, "!Bad hex to travel to");
+    (void)snprintf(mesg, LBUF_SIZE, "!Bad hex to travel to");
     return;
   }
 
   autopilot_radio_clear_commands(autopilot, buffer);
 
-  snprintf(buffer, SBUF_SIZE, "goto %d %d", x, y);
+  (void)snprintf(buffer, SBUF_SIZE, "goto %d %d", x, y);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "going to %d,%d", x, y);
+  (void)snprintf(mesg, LBUF_SIZE, "going to %d,%d", x, y);
 }
 
 /*
@@ -341,17 +343,18 @@ void auto_radio_command_heading(Autopilot *autopilot, Mech *mech,
   char buffer[SBUF_SIZE];
 
   if (!parse_int_checked(autopilot_argument_list_get(args, 1), &heading)) {
-    snprintf(mesg, LBUF_SIZE, "!Number not integer");
+    (void)snprintf(mesg, LBUF_SIZE, "!Number not integer");
     return;
   }
 
   autopilot_radio_clear_commands(autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(buffer, SBUF_SIZE, "%d", heading);
+  (void)snprintf(buffer, SBUF_SIZE, "%d", heading);
   mech_heading(autopilot->mynum, mech, buffer);
   strcpy(buffer, "0");
   mech_speed(autopilot->mynum, mech, buffer);
-  snprintf(buffer, SBUF_SIZE, "stopped and heading changed to %d", heading);
+  (void)snprintf(buffer, SBUF_SIZE, "stopped and heading changed to %d",
+                 heading);
 }
 
 /*
@@ -365,7 +368,7 @@ void auto_radio_command_help(Autopilot *autopilot, Mech *mech,
 
   /*! \todo {Add a short form of this command} */
 
-  snprintf(mesg, LBUF_SIZE, "The following commands are possible:");
+  (void)snprintf(mesg, LBUF_SIZE, "The following commands are possible:");
 
   const char *previous_name = nullptr;
   for (i = 0;; i++) {
@@ -392,7 +395,8 @@ void auto_radio_command_hide(Autopilot *autopilot, Mech *mech,
   if ((mech_technology_flags_secondary(mech) & CAMO_TECH)
           ? 0
           : mech_class(mech) != CLASS_BSUIT && mech_class(mech) != CLASS_MW) {
-    snprintf(mesg, LBUF_SIZE, "!Last I checked I was kind of big for that");
+    (void)snprintf(mesg, LBUF_SIZE,
+                   "!Last I checked I was kind of big for that");
     return;
   }
 
@@ -403,12 +407,12 @@ void auto_radio_command_hide(Autopilot *autopilot, Mech *mech,
         (mech_class(mech) == CLASS_BSUIT
              ? mech_real_terrain_get(mech) == BUILDING
              : 0))) {
-    snprintf(mesg, LBUF_SIZE, "!Invalid Terrain");
+    (void)snprintf(mesg, LBUF_SIZE, "!Invalid Terrain");
     return;
   }
 
   bsuit_hide(autopilot->mynum, mech, "");
-  snprintf(mesg, LBUF_SIZE, "Begining to hide");
+  (void)snprintf(mesg, LBUF_SIZE, "Begining to hide");
 }
 
 /*
@@ -423,36 +427,37 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
   int bear, rng;
 
   if (fabsf(mech_jump_speed(mech)) < 0.01F) {
-    snprintf(mesg, LBUF_SIZE, "!I don't do hiphop and jump around");
+    (void)snprintf(mesg, LBUF_SIZE, "!I don't do hiphop and jump around");
     return;
   }
 
   if ((argc - 1) == 1) {
     if (FindTargetDBREFFromMapNumber(
             mech, autopilot_argument_list_get(args, 1)) <= 0) {
-      snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");
+      (void)snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");
       return;
     }
     strlcpy(buffer, autopilot_argument_list_get(args, 1), sizeof(buffer));
     mech_jump(autopilot->mynum, mech, buffer);
-    snprintf(mesg, LBUF_SIZE, "jumping on [%s]",
-             autopilot_argument_list_get(args, 1));
+    (void)snprintf(mesg, LBUF_SIZE, "jumping on [%s]",
+                   autopilot_argument_list_get(args, 1));
     return;
   } else {
     if (!parse_int_checked(autopilot_argument_list_get(args, 1), &bear)) {
-      snprintf(mesg, LBUF_SIZE, "!Invalid bearing");
+      (void)snprintf(mesg, LBUF_SIZE, "!Invalid bearing");
       return;
     }
     if (!parse_int_checked(autopilot_argument_list_get(args, 2), &rng)) {
-      snprintf(mesg, LBUF_SIZE, "!Invalid range");
+      (void)snprintf(mesg, LBUF_SIZE, "!Invalid range");
       return;
     }
-    snprintf(buffer, SBUF_SIZE, "%s %s", autopilot_argument_list_get(args, 1),
-             autopilot_argument_list_get(args, 2));
+    (void)snprintf(buffer, SBUF_SIZE, "%s %s",
+                   autopilot_argument_list_get(args, 1),
+                   autopilot_argument_list_get(args, 2));
     mech_jump(autopilot->mynum, mech, buffer);
-    snprintf(mesg, LBUF_SIZE, "jump %s degrees %s hexes",
-             autopilot_argument_list_get(args, 1),
-             autopilot_argument_list_get(args, 2));
+    (void)snprintf(mesg, LBUF_SIZE, "jump %s degrees %s hexes",
+                   autopilot_argument_list_get(args, 1),
+                   autopilot_argument_list_get(args, 2));
     return;
   }
 }
@@ -468,7 +473,7 @@ void auto_radio_command_leavebase(Autopilot *autopilot, Mech *mech,
   int direction;
 
   if (!parse_int_checked(autopilot_argument_list_get(args, 1), &direction)) {
-    snprintf(mesg, LBUF_SIZE, "!Invalid value for direction");
+    (void)snprintf(mesg, LBUF_SIZE, "!Invalid value for direction");
     return;
   }
 
@@ -479,10 +484,10 @@ void auto_radio_command_leavebase(Autopilot *autopilot, Mech *mech,
 
   autopilot_radio_clear_commands(autopilot, buffer);
 
-  snprintf(buffer, SBUF_SIZE, "leavebase %d", direction);
+  (void)snprintf(buffer, SBUF_SIZE, "leavebase %d", direction);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "leaving base at %d heading", direction);
+  (void)snprintf(mesg, LBUF_SIZE, "leaving base at %d heading", direction);
 }
 
 /*
@@ -496,20 +501,20 @@ void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech,
   char buffer[SBUF_SIZE];
 
   if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
-    snprintf(mesg, LBUF_SIZE, "!First number not integer");
+    (void)snprintf(mesg, LBUF_SIZE, "!First number not integer");
     return;
   }
   if (!parse_int_checked(autopilot_argument_list_get(args, 2), &y)) {
-    snprintf(mesg, LBUF_SIZE, "!Second number not integer");
+    (void)snprintf(mesg, LBUF_SIZE, "!Second number not integer");
     return;
   }
 
   autopilot_radio_clear_commands(autopilot, buffer);
 
-  snprintf(buffer, SBUF_SIZE, "oldgoto %d %d", x, y);
+  (void)snprintf(buffer, SBUF_SIZE, "oldgoto %d %d", x, y);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "going [old version] to %d,%d", x, y);
+  (void)snprintf(mesg, LBUF_SIZE, "going [old version] to %d,%d", x, y);
 }
 
 /*
@@ -525,7 +530,7 @@ void auto_radio_command_pickup(Autopilot *autopilot, Mech *mech,
   targetref =
       FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
-    snprintf(mesg, LBUF_SIZE, "!Invalid target to pickup");
+    (void)snprintf(mesg, LBUF_SIZE, "!Invalid target to pickup");
     return;
   }
 
@@ -536,11 +541,11 @@ void auto_radio_command_pickup(Autopilot *autopilot, Mech *mech,
 
   autopilot_radio_clear_commands(autopilot, buffer);
 
-  snprintf(buffer, SBUF_SIZE, "pickup %ld", targetref);
+  (void)snprintf(buffer, SBUF_SIZE, "pickup %ld", targetref);
   auto_addcommand(autopilot->mynum, autopilot, buffer);
   auto_engage(autopilot->mynum, autopilot, "");
-  snprintf(mesg, LBUF_SIZE, "picking up %s",
-           autopilot_argument_list_get(args, 1));
+  (void)snprintf(mesg, LBUF_SIZE, "picking up %s",
+                 autopilot_argument_list_get(args, 1));
 }
 
 /*

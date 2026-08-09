@@ -513,48 +513,52 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         cStatus5 = mech_contact_status_character(mech, tempMech, 5);
       }
 
-      snprintf(buff, sizeof(buff),
-               "%s%c%c%c[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d "
-               "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-               mech_dbref(tempMech) == mech_target_dbref(mech) ? "[fg=red bold]"
-               : !mech_contact_is_friend(mech, tempMech) ? "[fg=yellow bold]"
-                                                         : "",
-               (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
-               (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
-               mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
-               *move_type, mech_name, mech_position_x(tempMech),
-               mech_position_y(tempMech), mech_position_z(tempMech),
-               (double)range, bearing, (double)mech_current_speed(tempMech),
-               mech_contact_heading(tempMech), cStatus1, cStatus2, cStatus3,
-               cStatus4, cStatus5,
-               (mech_dbref(tempMech) == mech_target_dbref(mech) ||
-                !mech_contact_is_friend(mech, tempMech))
-                   ? "[reset]"
-                   : "");
+      (void)snprintf(
+          buff, sizeof(buff),
+          "%s%c%c%c[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d "
+          "s:%5.1f h:%3d S:%c%c%c%c%c%s",
+          mech_dbref(tempMech) == mech_target_dbref(mech) ? "[fg=red bold]"
+          : !mech_contact_is_friend(mech, tempMech)       ? "[fg=yellow bold]"
+                                                          : "",
+          (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
+          (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
+          mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
+          *move_type, mech_name, mech_position_x(tempMech),
+          mech_position_y(tempMech), mech_position_z(tempMech), (double)range,
+          bearing, (double)mech_current_speed(tempMech),
+          mech_contact_heading(tempMech), cStatus1, cStatus2, cStatus3,
+          cStatus4, cStatus5,
+          (mech_dbref(tempMech) == mech_target_dbref(mech) ||
+           !mech_contact_is_friend(mech, tempMech))
+              ? "[reset]"
+              : "");
 
       if (buffindex < BATTLE_MAP_UNIT_CAPACITY) {
         ContactLine *contact = contact_line(contacts, buffindex++);
         contact->sort_range =
             range + (mech_is_destroyed(tempMech) ? 10000.0F : 0.0F);
-        snprintf(contact->text, sizeof(contact->text), "%s", buff);
+        (void)snprintf(contact->text, sizeof(contact->text), "%s", buff);
       }
     } else {
-      snprintf(buff, sizeof(buff), "[%s] %-17s  Tonnage: %d",
-               mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
-               mech_name, mech_tonnage(tempMech));
+      (void)snprintf(
+          buff, sizeof(buff), "[%s] %-17s  Tonnage: %d",
+          mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
+          mech_name, mech_tonnage(tempMech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
-      snprintf(buff, sizeof(buff), "      Range: %.1f hex\tBearing: %d degrees",
-               (double)range, bearing);
+      (void)snprintf(buff, sizeof(buff),
+                     "      Range: %.1f hex\tBearing: %d degrees",
+                     (double)range, bearing);
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
-      snprintf(buff, sizeof(buff), "      Speed: %.1f KPH\tHeading: %d degrees",
-               (double)mech_current_speed(tempMech),
-               mech_contact_heading(tempMech));
+      (void)snprintf(
+          buff, sizeof(buff), "      Speed: %.1f KPH\tHeading: %d degrees",
+          (double)mech_current_speed(tempMech), mech_contact_heading(tempMech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
-      snprintf(buff, sizeof(buff), "      X, Y: %3d, %3d \tHeat: %.0f deg C.",
-               mech_position_x(tempMech), mech_position_y(tempMech),
-               (double)mech_excess_heat(tempMech));
+      (void)snprintf(buff, sizeof(buff),
+                     "      X, Y: %3d, %3d \tHeat: %.0f deg C.",
+                     mech_position_x(tempMech), mech_position_y(tempMech),
+                     (double)mech_excess_heat(tempMech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
-      snprintf(buff, sizeof(buff), "      Movement Type: %s", move_type);
+      (void)snprintf(buff, sizeof(buff), "      Movement Type: %s", move_type);
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       notify_printf(
           btech_context_evaluation(mech_context(mech)), player,
@@ -627,27 +631,28 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         mech_name = new;
       }
 
-      snprintf(buff, sizeof(buff),
-               "%s%c%c%c %-23.23s x:%3d y:%3d z:%2d r:%4.1f b:%3d CF:%4d /%4d "
-               "S:%c%c%s",
-               j ? "[fg=yellow bold]" : "",
-               (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
-               (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
-               mech_name, building_x, building_y, i, (double)range, bearing,
-               battle_map_building_integrity(tmp_map),
-               battle_map_building_maximum_integrity(tmp_map),
-               (battle_map_building_is_safe(tmp_map) ||
-                (j && battle_map_building_is_command_center(tmp_map)))
-                   ? 'X'
-               : j                                              ? 'x'
-               : battle_map_building_is_command_center(tmp_map) ? 'C'
-                                                                : ' ',
-               battle_map_building_is_hidden(tmp_map) ? 'H' : ' ',
-               j ? "[reset]" : "");
+      (void)snprintf(
+          buff, sizeof(buff),
+          "%s%c%c%c %-23.23s x:%3d y:%3d z:%2d r:%4.1f b:%3d CF:%4d /%4d "
+          "S:%c%c%s",
+          j ? "[fg=yellow bold]" : "",
+          (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
+          (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
+          mech_name, building_x, building_y, i, (double)range, bearing,
+          battle_map_building_integrity(tmp_map),
+          battle_map_building_maximum_integrity(tmp_map),
+          (battle_map_building_is_safe(tmp_map) ||
+           (j && battle_map_building_is_command_center(tmp_map)))
+              ? 'X'
+          : j                                              ? 'x'
+          : battle_map_building_is_command_center(tmp_map) ? 'C'
+                                                           : ' ',
+          battle_map_building_is_hidden(tmp_map) ? 'H' : ' ',
+          j ? "[reset]" : "");
       if (buffindex < BATTLE_MAP_UNIT_CAPACITY) {
         ContactLine *contact = contact_line(contacts, buffindex++);
         contact->sort_range = range + 20000.0F;
-        snprintf(contact->text, sizeof(contact->text), "%s", buff);
+        (void)snprintf(contact->text, sizeof(contact->text), "%s", buff);
       }
     }
   }

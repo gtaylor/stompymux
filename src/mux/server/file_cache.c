@@ -212,7 +212,7 @@ static void fcache_read_dir(EvaluationContext *evaluation, const char *dir,
       continue;
     if (!strstr(de->d_name, ".txt"))
       continue;
-    snprintf(buf, sizeof(buf), "%s/%s", dir, de->d_name);
+    (void)snprintf(buf, sizeof(buf), "%s/%s", dir, de->d_name);
     fcache_read(evaluation,
                 &fcache_entry_at(foo, (size_t)max, (size_t)*cnt)->fileblock,
                 buf);
@@ -292,7 +292,7 @@ void fcache_load(EvaluationContext *evaluation, FileCache *cache,
     FCACHE *fp = fcache_entry_at(cache->entries, FC_LAST + 1, (size_t)index);
     i = fcache_read(evaluation, &fp->fileblock, fp->filename);
     if (player != NOTHING) {
-      snprintf(sbuf, SBUF_SIZE, "%d", i);
+      (void)snprintf(sbuf, SBUF_SIZE, "%d", i);
       if (index == 0)
         safe_str("File sizes: ", buff, &bufc);
       else

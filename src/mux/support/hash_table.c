@@ -229,8 +229,8 @@ char *hash_table_info(const char *tab_name, HashTable *htab) {
   char *buff;
 
   buff = alloc_mbuf("hash_table_info");
-  snprintf(buff, MBUF_SIZE, "%-15s %8d", tab_name,
-           red_black_tree_size(htab->tree));
+  (void)snprintf(buff, MBUF_SIZE, "%-15s %8d", tab_name,
+                 red_black_tree_size(htab->tree));
   return buff;
 }
 

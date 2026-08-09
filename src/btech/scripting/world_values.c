@@ -245,16 +245,16 @@ void fun_btsetxy(char *buff, char **bufc, DbRef player, DbRef cause,
   if (mech_carried_dbref(mech) > 0)
     towee = btech_context_get_mech(context->btech, mech_carried_dbref(mech));
 
-  snprintf(buffer, MBUF_SIZE, "%ld", mapdb);
+  (void)snprintf(buffer, MBUF_SIZE, "%ld", mapdb);
   mech_Rsetmapindex(GOD, (void *)mech, buffer);
 
   if (towee)
     mech_Rsetmapindex(GOD, (void *)towee, buffer);
 
   if (nfargs == 5) {
-    snprintf(buffer, MBUF_SIZE, "%d %d %d", x, y, z);
+    (void)snprintf(buffer, MBUF_SIZE, "%d %d %d", x, y, z);
   } else {
-    snprintf(buffer, MBUF_SIZE, "%d %d", x, y);
+    (void)snprintf(buffer, MBUF_SIZE, "%d %d", x, y);
   }
   mech_Rsetxy(GOD, (void *)mech, buffer);
 
@@ -795,6 +795,6 @@ void fun_btlag(char *buff, char **bufc, DbRef player, DbRef cause,
                EvaluationContext *context) {
   char buf[256];
 
-  snprintf(buf, 256, "%d", game_lag(context->btech));
+  (void)snprintf(buf, 256, "%d", game_lag(context->btech));
   safe_str(buf, buff, bufc);
 }

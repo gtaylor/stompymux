@@ -688,7 +688,7 @@ Mech *load_refmech(BtechContext *context, const char *reference) {
     cache->reference[0] = '\0';
     return nullptr;
   }
-  snprintf(cache->reference, sizeof(cache->reference), "%s", reference);
+  (void)snprintf(cache->reference, sizeof(cache->reference), "%s", reference);
   return cache->mech;
 }
 

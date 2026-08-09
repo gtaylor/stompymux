@@ -213,9 +213,9 @@ int HeatFactor(Mech *mech) {
                 ? -1
                 : factor);
   }
-  snprintf(buf, LBUF_SIZE,
-           "HeatFactor : Invalid heat factor calculation on #%ld.",
-           mech->mynum);
+  (void)snprintf(buf, LBUF_SIZE,
+                 "HeatFactor : Invalid heat factor calculation on #%ld.",
+                 mech->mynum);
   btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s", buf);
 }
 

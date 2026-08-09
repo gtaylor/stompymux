@@ -93,13 +93,14 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
         /* Add in autogun and follow and engage */
         if (autopilot_has_assigned_target(autopilot) &&
             autopilot->target != -1) {
-          snprintf(buffer, LBUF_SIZE, "autogun target %ld", autopilot->target);
+          (void)snprintf(buffer, LBUF_SIZE, "autogun target %ld",
+                         autopilot->target);
         } else {
-          snprintf(buffer, LBUF_SIZE, "autogun on");
+          (void)snprintf(buffer, LBUF_SIZE, "autogun on");
         }
 
         auto_addcommand(autopilot->mynum, autopilot, buffer);
-        snprintf(buffer, LBUF_SIZE, "chasetarget %ld", autopilot->target);
+        (void)snprintf(buffer, LBUF_SIZE, "chasetarget %ld", autopilot->target);
         auto_addcommand(autopilot->mynum, autopilot, buffer);
         auto_engage(autopilot->mynum, autopilot, "");
 
@@ -155,9 +156,9 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
                 FindBearing(mech_position_real_x(mech),
                             mech_position_real_y(mech), fx, fy)) {
 
-              snprintf(buffer, LBUF_SIZE, "%d",
-                       FindBearing(mech_position_real_x(mech),
-                                   mech_position_real_y(mech), fx, fy));
+              (void)snprintf(buffer, LBUF_SIZE, "%d",
+                             FindBearing(mech_position_real_x(mech),
+                                         mech_position_real_y(mech), fx, fy));
               mech_heading(autopilot->mynum, mech, buffer);
             }
             /* Turn towards him */

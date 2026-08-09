@@ -433,12 +433,12 @@ void ChargeMech(Mech *mech, Mech *target) {
       mech_desired_speed_set(mech, 0);
 
       /* Emit the damage for debugging purposes */
-      snprintf(emit_buff, LBUF_SIZE,
-               "#%li charges #%li (%i/%i) Distance:"
-               " %.2f DI: %i DR: %i",
-               mech_dbref(mech), mech_dbref(target), mech_baseToHit, mech_roll,
-               (double)mech_charge_distance(mech), inflicted_damage,
-               received_damage);
+      (void)snprintf(emit_buff, LBUF_SIZE,
+                     "#%li charges #%li (%i/%i) Distance:"
+                     " %.2f DI: %i DR: %i",
+                     mech_dbref(mech), mech_dbref(target), mech_baseToHit,
+                     mech_roll, (double)mech_charge_distance(mech),
+                     inflicted_damage, received_damage);
       btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
 
       /* Make the first unit roll for doing the charge if it is a mech */
@@ -514,12 +514,12 @@ void ChargeMech(Mech *mech, Mech *target) {
       mech_desired_speed_set(target, 0);
 
       /* Emit the damage for debugging purposes */
-      snprintf(emit_buff, LBUF_SIZE,
-               "#%li charges #%li (%i/%i) Distance:"
-               " %.2f DI: %i DR: %i",
-               mech_dbref(target), mech_dbref(mech), targ_baseToHit, targ_roll,
-               (double)mech_charge_distance(target), inflicted_damage,
-               received_damage);
+      (void)snprintf(emit_buff, LBUF_SIZE,
+                     "#%li charges #%li (%i/%i) Distance:"
+                     " %.2f DI: %i DR: %i",
+                     mech_dbref(target), mech_dbref(mech), targ_baseToHit,
+                     targ_roll, (double)mech_charge_distance(target),
+                     inflicted_damage, received_damage);
       btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
 
       if (mech_class(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
@@ -759,12 +759,12 @@ void ChargeMech(Mech *mech, Mech *target) {
     mech_desired_speed_set(mech, 0);
 
     /* Emit the damage for debugging purposes */
-    snprintf(emit_buff, LBUF_SIZE,
-             "#%li charges #%li (%i/%i) Distance:"
-             " %.2f DI: %i DR: %i",
-             mech_dbref(mech), mech_dbref(target), baseToHit, roll,
-             (double)mech_charge_distance(mech), inflicted_damage,
-             received_damage);
+    (void)snprintf(emit_buff, LBUF_SIZE,
+                   "#%li charges #%li (%i/%i) Distance:"
+                   " %.2f DI: %i DR: %i",
+                   mech_dbref(mech), mech_dbref(target), baseToHit, roll,
+                   (double)mech_charge_distance(mech), inflicted_damage,
+                   received_damage);
     btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
   }
 

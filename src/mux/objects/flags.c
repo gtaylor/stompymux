@@ -532,10 +532,10 @@ char *unparse_object_numonly(GameDatabase *database, DbRef target) {
   else if (target == HOME)
     StringCopy(buffer, "*HOME*");
   else if (!is_good_obj(database, target))
-    snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
+    (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   else
-    snprintf(buffer, LBUF_SIZE, "%s(#%ld)", game_object_name(database, target),
-             target);
+    (void)snprintf(buffer, LBUF_SIZE, "%s(#%ld)",
+                   game_object_name(database, target), target);
   return buffer;
 }
 char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
@@ -547,12 +547,12 @@ char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
   else if (target == HOME)
     StringCopy(buffer, "*HOME*");
   else if (!is_good_obj(database, target))
-    snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
+    (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   else if (is_examinable(database, player, target)) {
     char *flags = unparse_flags(database, player, target);
-    snprintf(buffer, LBUF_SIZE, "%s(#%ld%s%s)",
-             game_object_name(database, target), target, *flags ? ":" : "",
-             flags);
+    (void)snprintf(buffer, LBUF_SIZE, "%s(#%ld%s%s)",
+                   game_object_name(database, target), target,
+                   *flags ? ":" : "", flags);
     free_sbuf(flags);
   } else
     StringCopy(buffer, game_object_name(database, target));

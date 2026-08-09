@@ -129,9 +129,9 @@ char *get_uptime_to_string(int uptime) {
     populated--;
     size_t used = strlen(result);
 
-    snprintf(checked_storage_region(result, SBUF_SIZE, used, SBUF_SIZE - used),
-             SBUF_SIZE - used, "%d %s%s", value, unit->name,
-             value == 1 ? "" : "s");
+    (void)snprintf(
+        checked_storage_region(result, SBUF_SIZE, used, SBUF_SIZE - used),
+        SBUF_SIZE - used, "%d %s%s", value, unit->name, value == 1 ? "" : "s");
     if (populated > 1)
       strlcat(result, ", ", SBUF_SIZE);
     else if (populated == 1)

@@ -294,8 +294,9 @@ void do_newpassword(CommandInvocation *invocation) {
   }
   buf = alloc_lbuf("do_newpassword");
   notify_checked(evaluation, player, player, "Password changed.", MSG_ME);
-  snprintf(buf, LBUF_SIZE, "Your password has been changed by %s.",
-           game_object_name(invocation->context->world->database, player));
+  (void)snprintf(
+      buf, LBUF_SIZE, "Your password has been changed by %s.",
+      game_object_name(invocation->context->world->database, player));
   notify_checked(evaluation, victim, victim, buf, MSG_ME);
   free_lbuf(buf);
 }
@@ -323,7 +324,7 @@ void do_boot(CommandInvocation *invocation) {
     }
     STARTLOG(evaluation->log, LOG_WIZARD, "WIZ", "BOOT") {
       char port[SBUF_SIZE];
-      snprintf(port, sizeof(port), "Port %ld", victim);
+      (void)snprintf(port, sizeof(port), "Port %ld", victim);
       log_text(port);
       log_text(" was @booted by ");
       log_name(evaluation->log, player);

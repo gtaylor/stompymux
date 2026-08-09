@@ -317,7 +317,7 @@ static char *display_mechpref(void *context, int i,
       state = "[fg=green bold]ON[reset]";
   }
 
-  snprintf(buffer, LBUF_SIZE, "        %-40s%s", info.name, state);
+  (void)snprintf(buffer, LBUF_SIZE, "        %-40s%s", info.name, state);
   return buffer;
 }
 
@@ -354,7 +354,7 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
         break;
     }
     if (i == NUM_MECHPREFERENCES) {
-      snprintf(buf, LBUF_SIZE, "Unknown MechPreference: %s", args[0]);
+      (void)snprintf(buf, LBUF_SIZE, "Unknown MechPreference: %s", args[0]);
       mecha_notify(btech_context_evaluation(mech->xcode.context), player, buf);
       return;
     }
@@ -427,7 +427,7 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
     }
 
     /* Tell them the preference has been changed */
-    snprintf(buf, LBUF_SIZE, "%s %s", info.msg, newstate);
+    (void)snprintf(buf, LBUF_SIZE, "%s %s", info.msg, newstate);
     mecha_notify(btech_context_evaluation(mech->xcode.context), player, buf);
   }
 }

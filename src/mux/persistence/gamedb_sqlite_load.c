@@ -175,9 +175,10 @@ static int gamedb_load_native_state(PersistenceContext *context,
     sqlite3_stmt *statement = nullptr;
     int step;
 
-    snprintf(query, sizeof(query),
-             "SELECT %s, CAST(%s AS TEXT) FROM %s WHERE %s IS NOT NULL;",
-             column->key_column, column->column, column->table, column->column);
+    (void)snprintf(query, sizeof(query),
+                   "SELECT %s, CAST(%s AS TEXT) FROM %s WHERE %s IS NOT NULL;",
+                   column->key_column, column->column, column->table,
+                   column->column);
     if (gamedb_prepare(sqlite, &statement, query) < 0)
       return -1;
     while ((step = sqlite3_step(statement)) == SQLITE_ROW) {

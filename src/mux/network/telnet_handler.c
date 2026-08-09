@@ -85,7 +85,7 @@ int descriptor_telnet_initialize(Descriptor *d) {
     return 0;
   }
 
-  snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", "vt100");
+  (void)snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", "vt100");
   d->terminal_client[0] = '\0';
   d->terminal_type_responses = 0;
   d->terminal_color_depth = TERMINAL_COLOR_ANSI_16;
@@ -146,8 +146,8 @@ static void telnet_handle_terminal_type(Descriptor *d, const char *name) {
     return;
 
   if (d->terminal_type_responses == 0)
-    snprintf(d->terminal_client, sizeof(d->terminal_client), "%s", name);
-  snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", name);
+    (void)snprintf(d->terminal_client, sizeof(d->terminal_client), "%s", name);
+  (void)snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", name);
   d->terminal_color_depth = terminal_color_depth_from_type(name);
 }
 
@@ -321,9 +321,11 @@ static void telnet_send_mssp(Descriptor *descriptor) {
   char uptime[32];
   char port[32];
 
-  snprintf(players, sizeof(players), "%d", telnet_connected_count(runtime));
-  snprintf(uptime, sizeof(uptime), "%lld", (long long)*runtime->start_time);
-  snprintf(port, sizeof(port), "%d", runtime->world->configuration->port);
+  (void)snprintf(players, sizeof(players), "%d",
+                 telnet_connected_count(runtime));
+  (void)snprintf(uptime, sizeof(uptime), "%lld",
+                 (long long)*runtime->start_time);
+  (void)snprintf(port, sizeof(port), "%d", runtime->world->configuration->port);
 
   telnet_begin_sb(telnet, TELNET_TELOPT_MSSP);
   telnet_send_mssp_pair(telnet, "NAME",
@@ -392,7 +394,7 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
   case TELNET_EV_WONT:
     if (event->neg.telopt == TELNET_TELOPT_TTYPE) {
       d->is_ttype_enabled = false;
-      snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", "vt100");
+      (void)snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", "vt100");
     } else if (event->neg.telopt == TELNET_TELOPT_NAWS) {
       d->is_naws_enabled = false;
       d->terminal_width = 80;

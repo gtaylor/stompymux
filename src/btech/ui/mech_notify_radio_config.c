@@ -291,14 +291,14 @@ void radio_color_code(char buffer[static 32], Mech *m, int i, int obs,
   if (!obs) {
     if (!t)
       return;
-    snprintf(buffer, 32, "%s", radio_color_style(t - 1));
+    (void)snprintf(buffer, 32, "%s", radio_color_style(t - 1));
   } else {
     if (team > 15)
       team = team % 15;
     for (ii = 0; ii < 15; ii++) {
       const typeof(*OBSERVER_TEAM_COLORS) *color = observer_team_color(ii);
       if (team == color->team)
-        snprintf(buffer, 32, "%s", color->color_code);
+        (void)snprintf(buffer, 32, "%s", color->color_code);
     }
   }
 }

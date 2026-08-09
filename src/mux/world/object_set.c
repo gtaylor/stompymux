@@ -415,10 +415,10 @@ void do_use(CommandInvocation *invocation) {
   if (doit) {
     df_use = alloc_lbuf("do_use.use");
     df_ouse = alloc_lbuf("do_use.ouse");
-    snprintf(df_use, LBUF_SIZE, "You use %s",
-             game_object_name(evaluation->world->database, thing));
-    snprintf(df_ouse, LBUF_SIZE, "uses %s",
-             game_object_name(evaluation->world->database, thing));
+    (void)snprintf(df_use, LBUF_SIZE, "You use %s",
+                   game_object_name(evaluation->world->database, thing));
+    (void)snprintf(df_ouse, LBUF_SIZE, "uses %s",
+                   game_object_name(evaluation->world->database, thing));
     notify_action(&invocation->context->evaluation,
                   &(ActionMessageInvocation){
                       .message = {.type = LUA_MESSAGE_USE,

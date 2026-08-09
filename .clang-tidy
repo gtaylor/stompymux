@@ -20,6 +20,3 @@ Checks: >
   misc-include-cleaner
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^.*/src/(mux|btech)/.*'
-CheckOptions:
-  - key: cert-err33-c.CheckedFunctions
-    value: '^::fclose$;^::fread$;^::fwrite$;^::remove$;^::rename$'

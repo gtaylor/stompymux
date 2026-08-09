@@ -496,10 +496,11 @@ void do_search(CommandInvocation *invocation) {
     notify_checked(evaluation, player, player, "Nothing found.",
                    MSG_ME_ALL | MSG_F_DOWN);
   } else {
-    snprintf(outbuf, LBUF_SIZE,
-             "\nFound:  Rooms...%d  Exits...%d  Objects...%d  Players...%d  "
-             "Garbage...%d",
-             rcount, ecount, tcount, pcount, gcount);
+    (void)snprintf(
+        outbuf, LBUF_SIZE,
+        "\nFound:  Rooms...%d  Exits...%d  Objects...%d  Players...%d  "
+        "Garbage...%d",
+        rcount, ecount, tcount, pcount, gcount);
     notify_checked(evaluation, player, player, outbuf, MSG_ME_ALL | MSG_F_DOWN);
   }
   free_lbuf(outbuf);

@@ -42,7 +42,7 @@ bool styled_append_utf8_codepoint(char *output, size_t output_size,
 
 void styled_set_error(char *error, size_t error_size, const char *message) {
   if (error && error_size > 0)
-    snprintf(error, error_size, "%s", message);
+    (void)snprintf(error, error_size, "%s", message);
 }
 
 bool styled_emit_state(const StyledState *state, char *output,
@@ -73,16 +73,16 @@ bool styled_emit_state(const StyledState *state, char *output,
       !styled_append_string(output, output_size, used, "\033[7m"))
     return false;
   if (state->foreground.kind == STYLED_COLOR_RGB) {
-    snprintf(sequence, sizeof(sequence), "\033[38;2;%d;%d;%dm",
-             state->foreground.red, state->foreground.green,
-             state->foreground.blue);
+    (void)snprintf(sequence, sizeof(sequence), "\033[38;2;%d;%d;%dm",
+                   state->foreground.red, state->foreground.green,
+                   state->foreground.blue);
     if (!styled_append_string(output, output_size, used, sequence))
       return false;
   }
   if (state->background.kind == STYLED_COLOR_RGB) {
-    snprintf(sequence, sizeof(sequence), "\033[48;2;%d;%d;%dm",
-             state->background.red, state->background.green,
-             state->background.blue);
+    (void)snprintf(sequence, sizeof(sequence), "\033[48;2;%d;%d;%dm",
+                   state->background.red, state->background.green,
+                   state->background.blue);
     if (!styled_append_string(output, output_size, used, sequence))
       return false;
   }

@@ -159,9 +159,9 @@ static int create_brandname(PartNameRegistry *registry,
     return 0;
   }
   if (b)
-    snprintf(buf, sizeof(buf), "%s.%s", brn, c);
+    (void)snprintf(buf, sizeof(buf), "%s.%s", brn, c);
   else
-    snprintf(buf, sizeof(buf), "%s", c);
+    (void)snprintf(buf, sizeof(buf), "%s", c);
   p->vlongy = strdup(buf);
 
   c = part_figure_out_sname(configuration, id, b,
@@ -172,9 +172,9 @@ static int create_brandname(PartNameRegistry *registry,
     return 0;
   }
   if (b)
-    snprintf(buf, sizeof(buf), "%s.%s", brn, c);
+    (void)snprintf(buf, sizeof(buf), "%s.%s", brn, c);
   else
-    snprintf(buf, sizeof(buf), "%s", c);
+    (void)snprintf(buf, sizeof(buf), "%s", c);
   p->longy = strdup(buf);
   if (!(c = part_figure_out_shname(id, (char[BTECH_TEXT_CAPACITY]){0}))) {
     free(p->longy);
@@ -186,7 +186,7 @@ static int create_brandname(PartNameRegistry *registry,
     strlcpy(buf2, c, sizeof(buf2));
     strlcpy(buf3, my_shortform(brn, (char[BTECH_TEXT_CAPACITY]){0}),
             sizeof(buf3));
-    snprintf(buf, sizeof(buf), "%s.%s", buf3, buf2);
+    (void)snprintf(buf, sizeof(buf), "%s.%s", buf3, buf2);
   } else
     strlcpy(buf, c, sizeof(buf));
   p->shorty = strdup(buf);

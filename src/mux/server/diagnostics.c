@@ -17,11 +17,14 @@ static void diagnostics_print_prefix(const char *file, int line,
   struct tm tm;
   time_t now;
 
-  time(&now);
+  now = time(nullptr);
+  if (now == (time_t)-1)
+    now = 0;
   localtime_r(&now, &tm);
   gettimeofday(&tv, nullptr);
-  fprintf(stderr, "%02d%02d%02d.%08d:%5d %s (%s:%d)] ", tm.tm_hour, tm.tm_min,
-          tm.tm_sec, (int)tv.tv_usec, getpid(), func, file, line);
+  (void)fprintf(stderr, "%02d%02d%02d.%08d:%5d %s (%s:%d)] ", tm.tm_hour,
+                tm.tm_min, tm.tm_sec, (int)tv.tv_usec, getpid(), func, file,
+                line);
 }
 
 void diagnostics_log(const char *file, int line, const char *func,
@@ -31,21 +34,21 @@ void diagnostics_log(const char *file, int line, const char *func,
   diagnostics_print_prefix(file, line, func);
   va_start(args, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vfprintf(stderr, format, args);
+  (void)vfprintf(stderr, format, args);
   va_end(args);
-  fprintf(stderr, "\n");
+  (void)fprintf(stderr, "\n");
 }
 
 [[noreturn]] void diagnostics_assert_failed(const char *file, int line,
                                             const char *func,
                                             const char *expr) {
   diagnostics_print_prefix(file, line, func);
-  fprintf(stderr, "failed assertion '%s'\n", expr);
+  (void)fprintf(stderr, "failed assertion '%s'\n", expr);
   abort();
 }
 
 void diagnostics_perror(const char *file, int line, const char *func,
                         const char *expr, int saved_errno) {
   diagnostics_print_prefix(file, line, func);
-  fprintf(stderr, "'%s' failed with '%s'\n", expr, strerror(saved_errno));
+  (void)fprintf(stderr, "'%s' failed with '%s'\n", expr, strerror(saved_errno));
 }

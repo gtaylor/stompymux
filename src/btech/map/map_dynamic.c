@@ -163,8 +163,8 @@ void mech_map_consistency_check(Mech *mech) {
   if (!map) {
     if (mech_map_dbref(mech) > 0) {
       mech_map_dbref_set(mech, -1);
-      fprintf(stderr, "#%ld on nonexistent map - removing..\n",
-              mech_dbref(mech));
+      (void)fprintf(stderr, "#%ld on nonexistent map - removing..\n",
+                    mech_dbref(mech));
     }
     return;
   }
@@ -172,16 +172,16 @@ void mech_map_consistency_check(Mech *mech) {
     /* Invalid: possible corruption of data, therefore un-hosing it */
     mech_map_dbref_set(mech, -1);
     mech_remove_from_all_maps(mech);
-    fprintf(stderr, "#%ld on invalid map - removing.. (#1)\n",
-            mech_dbref(mech));
+    (void)fprintf(stderr, "#%ld on invalid map - removing.. (#1)\n",
+                  mech_dbref(mech));
     return;
   }
   if (battle_map_unit_dbref(map, mech_map_slot(mech)) != mech_dbref(mech)) {
-    fprintf(stderr,
-            "#%ld on invalid map - removing .. (#2) -- mapindex: %ld "
-            "mapnumber: %d mechsOnMap: %ld\n",
-            mech_dbref(mech), mech_map_dbref(mech), mech_map_slot(mech),
-            battle_map_unit_dbref(map, mech_map_slot(mech)));
+    (void)fprintf(stderr,
+                  "#%ld on invalid map - removing .. (#2) -- mapindex: %ld "
+                  "mapnumber: %d mechsOnMap: %ld\n",
+                  mech_dbref(mech), mech_map_dbref(mech), mech_map_slot(mech),
+                  battle_map_unit_dbref(map, mech_map_slot(mech)));
     mech_map_dbref_set(mech, -1);
     mech_remove_from_all_maps(mech);
     return;
@@ -201,8 +201,9 @@ void eliminate_empties(BattleMap *map) {
   count = i + 1;
   if (count == (oldcount = map->first_free))
     return;
-  fprintf(stderr, "Map #%ld contains empty entries ; removing %d (%d->%d)\n",
-          map->mynum, oldcount - count, oldcount, count);
+  (void)fprintf(stderr,
+                "Map #%ld contains empty entries ; removing %d (%d->%d)\n",
+                map->mynum, oldcount - count, oldcount, count);
   if (i < 0)
     return;
   const size_t allocation_count = (size_t)count;

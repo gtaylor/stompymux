@@ -75,6 +75,6 @@ void mech_radio_mode_set(Mech *mech, int channel, int mode) {
 void mech_radio_title_set(Mech *mech, int channel, const char *title) {
   if (!mech_radio_channel_valid(channel))
     return;
-  snprintf(mech_radio_title_slot(mech, channel), CHTITLELEN + 1, "%.*s",
-           CHTITLELEN, title);
+  (void)snprintf(mech_radio_title_slot(mech, channel), CHTITLELEN + 1, "%.*s",
+                 CHTITLELEN, title);
 }

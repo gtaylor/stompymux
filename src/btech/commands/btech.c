@@ -55,7 +55,8 @@ void do_show(CommandInvocation *invocation) {
       const char *const *help = checked_storage_at_const(
           cmds_help, help_count, sizeof(*cmds_help), index);
       char entry[80];
-      snprintf(entry, sizeof(entry), "%c %s", index > 0 ? ',' : ' ', *help);
+      (void)snprintf(entry, sizeof(entry), "%c %s", index > 0 ? ',' : ' ',
+                     *help);
       strncat(buf, entry, sizeof(buf) - strlen(buf) - 1);
     }
     mecha_notify(&command->evaluation, player, buf);

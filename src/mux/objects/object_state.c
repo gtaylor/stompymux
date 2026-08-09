@@ -72,7 +72,7 @@ static void object_state_error(char *error, size_t error_size,
     return;
   va_start(arguments, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(error, error_size, format, arguments);
+  (void)vsnprintf(error, error_size, format, arguments);
   va_end(arguments);
 }
 

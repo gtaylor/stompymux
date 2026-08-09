@@ -242,13 +242,13 @@ void mech_network_send_message(DbRef player, Mech *mech, const char *msg,
     if (!is_good_obj(mech_context(otherMech)->database, mech_dbref(otherMech)))
       continue;
 
-    snprintf(buf, LBUF_SIZE, "[bold]%s/%s: %s[reset]", (tIsC3 ? "C3" : "C3i"),
-             c, msg);
+    (void)snprintf(buf, LBUF_SIZE, "[bold]%s/%s: %s[reset]",
+                   (tIsC3 ? "C3" : "C3i"), c, msg);
     mech_notify(otherMech, MECHALL, buf);
   }
 
-  snprintf(buf, LBUF_SIZE, "[bold]%s/You: %s[reset]", (tIsC3 ? "C3" : "C3i"),
-           msg);
+  (void)snprintf(buf, LBUF_SIZE, "[bold]%s/You: %s[reset]",
+                 (tIsC3 ? "C3" : "C3i"), msg);
   mech_notify(mech, MECHALL, buf);
 }
 
@@ -364,33 +364,33 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
     }
 
     /* Now, build the string */
-    snprintf(buff, sizeof(buff),
-             "%s%c%c%c[%s]%c %-11.11s x:%3d y:%3d z:%3d r:%4.1f c:%4.1f b:%3d "
-             "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-             mech_dbref(otherMech) == mech_target_dbref(mech) ? "[fg=red bold]"
-             : (tShowStatusInfo && mech_team(mech) != mech_team(otherMech))
-                 ? "[fg=yellow bold]"
-                 : "",
-             (losFlag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
-             (losFlag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
-             mech_id(otherMech, mech_team(mech) == mech_team(otherMech) ||
-                                    !tShowStatusInfo)
-                 .text,
-             move_type[0], mech_name, mech_position_x(otherMech),
-             mech_position_y(otherMech), mech_position_z(otherMech),
-             (double)realRange, (double)c3Range, bearing,
-             (double)mech_current_speed(otherMech),
-             mech_heading_degrees(otherMech), cStatus1, cStatus2, cStatus3,
-             cStatus4, cStatus5,
-             (mech_dbref(otherMech) == mech_target_dbref(mech) ||
-              mech_team(mech) != mech_team(otherMech))
-                 ? "[reset]"
-                 : "");
+    (void)snprintf(
+        buff, sizeof(buff),
+        "%s%c%c%c[%s]%c %-11.11s x:%3d y:%3d z:%3d r:%4.1f c:%4.1f b:%3d "
+        "s:%5.1f h:%3d S:%c%c%c%c%c%s",
+        mech_dbref(otherMech) == mech_target_dbref(mech) ? "[fg=red bold]"
+        : (tShowStatusInfo && mech_team(mech) != mech_team(otherMech))
+            ? "[fg=yellow bold]"
+            : "",
+        (losFlag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
+        (losFlag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
+        mech_id(otherMech,
+                mech_team(mech) == mech_team(otherMech) || !tShowStatusInfo)
+            .text,
+        move_type[0], mech_name, mech_position_x(otherMech),
+        mech_position_y(otherMech), mech_position_z(otherMech),
+        (double)realRange, (double)c3Range, bearing,
+        (double)mech_current_speed(otherMech), mech_heading_degrees(otherMech),
+        cStatus1, cStatus2, cStatus3, cStatus4, cStatus5,
+        (mech_dbref(otherMech) == mech_target_dbref(mech) ||
+         mech_team(mech) != mech_team(otherMech))
+            ? "[reset]"
+            : "");
 
     C3ContactLine *contact = c3_contact_line(contacts, buffindex++);
     contact->sort_range =
         realRange + (mech_is_destroyed(otherMech) ? 10000.0F : 0.0F);
-    snprintf(contact->text, sizeof(contact->text), "%s", buff);
+    (void)snprintf(contact->text, sizeof(contact->text), "%s", buff);
   }
 
   /* print a sorted list of detected mechs */
@@ -449,18 +449,18 @@ void mech_network_show_status(DbRef player, Mech *mech, bool tIsC3) {
                                      mech_dbref(otherMech), A_MECHNAME,
                                      (char[LBUF_SIZE]){0});
 
-    snprintf(buff, sizeof(buff),
-             "[fg=yellow bold][%s][reset]%c %-12.12s x:%3d y:%3d z:%3d "
-             "r:%4.1f "
-             "b:%3d s:%5.1f "
-             "h:%3d a: %3d i: %3d[reset]",
-             mech_id(otherMech, true).text, move_type[0], mech_name,
-             mech_position_x(otherMech), mech_position_y(otherMech),
-             mech_position_z(otherMech), (double)range, bearing,
-             (double)mech_current_speed(otherMech),
-             mech_heading_degrees(otherMech),
-             getRemainingArmorPercent(otherMech),
-             getRemainingInternalPercent(otherMech));
+    (void)snprintf(buff, sizeof(buff),
+                   "[fg=yellow bold][%s][reset]%c %-12.12s x:%3d y:%3d z:%3d "
+                   "r:%4.1f "
+                   "b:%3d s:%5.1f "
+                   "h:%3d a: %3d i: %3d[reset]",
+                   mech_id(otherMech, true).text, move_type[0], mech_name,
+                   mech_position_x(otherMech), mech_position_y(otherMech),
+                   mech_position_z(otherMech), (double)range, bearing,
+                   (double)mech_current_speed(otherMech),
+                   mech_heading_degrees(otherMech),
+                   getRemainingArmorPercent(otherMech),
+                   getRemainingInternalPercent(otherMech));
 
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
   }

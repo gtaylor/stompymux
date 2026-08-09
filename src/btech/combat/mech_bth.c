@@ -55,13 +55,13 @@ static void bth_trace_begin(BthTrace *trace, Mech *attacker, Mech *target,
                             int initial) {
   trace->total = initial;
 #ifdef BTH_DEBUG
-  snprintf(trace->summary, sizeof(trace->summary), "Base %d", initial);
+  (void)snprintf(trace->summary, sizeof(trace->summary), "Base %d", initial);
   if (target)
-    snprintf(trace->debug, sizeof(trace->debug), "#%ld -> #%ld: Base %d",
-             mech_dbref(attacker), mech_dbref(target), initial);
+    (void)snprintf(trace->debug, sizeof(trace->debug), "#%ld -> #%ld: Base %d",
+                   mech_dbref(attacker), mech_dbref(target), initial);
   else
-    snprintf(trace->debug, sizeof(trace->debug), "#%ld -> (hex): Base %d",
-             mech_dbref(attacker), initial);
+    (void)snprintf(trace->debug, sizeof(trace->debug), "#%ld -> (hex): Base %d",
+                   mech_dbref(attacker), initial);
 #else
   (void)attacker;
   (void)target;
@@ -74,8 +74,8 @@ static void bth_trace_add(BthTrace *trace, const char *description,
     return;
 #ifdef BTH_DEBUG
   char fragment[LBUF_SIZE];
-  snprintf(fragment, sizeof(fragment), ", %s: %s%d", description,
-           modifier > 0 ? "+" : "", modifier);
+  (void)snprintf(fragment, sizeof(fragment), ", %s: %s%d", description,
+                 modifier > 0 ? "+" : "", modifier);
   strncat(trace->debug, fragment,
           sizeof(trace->debug) - strlen(trace->debug) - 1);
   strncat(trace->summary, fragment,

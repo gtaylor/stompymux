@@ -181,18 +181,18 @@ void tech_status(BtechContext *context, DbRef player, time_t dat) {
   else {
     un = clamp_intptr_to_int(
         (intptr_t)((dat - context->clock->now) / TECH_TICK));
-    snprintf(buf, sizeof(buf), "You have %d %s%s of repairs pending", un,
-             TECH_UNIT, un != 1 ? "s" : "");
+    (void)snprintf(buf, sizeof(buf), "You have %d %s%s of repairs pending", un,
+                   TECH_UNIT, un != 1 ? "s" : "");
     size_t used = strlen(buf);
     char *append_at = checked_storage_at(buf, sizeof(buf), sizeof(*buf), used);
     if (un >= context->configuration->btech_maxtechtime)
-      snprintf(append_at, sizeof(buf) - used,
-               " and you're too tired to do more efficiently.");
+      (void)snprintf(append_at, sizeof(buf) - used,
+                     " and you're too tired to do more efficiently.");
     else {
       un = context->configuration->btech_maxtechtime - un;
-      snprintf(append_at, sizeof(buf) - used,
-               " and you're ready to do at least %d more %s%s of work.", un,
-               TECH_UNIT, un == 1 ? "" : "s");
+      (void)snprintf(append_at, sizeof(buf) - used,
+                     " and you're ready to do at least %d more %s%s of work.",
+                     un, TECH_UNIT, un == 1 ? "" : "s");
     }
     mecha_notify(btech_context_evaluation(context), player, buf);
   }

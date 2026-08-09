@@ -278,7 +278,7 @@ void configuration_log_not_found(ConfigurationContext *context, DbRef player,
               cmd, thingname, thing);
   } else {
     buff = alloc_lbuf("configuration_log_not_found");
-    snprintf(buff, LBUF_SIZE, "%s %s not found", thingname, thing);
+    (void)snprintf(buff, LBUF_SIZE, "%s %s not found", thingname, thing);
     notify_checked(&context->command->evaluation, player, player, buff,
                    MSG_ME_ALL | MSG_F_DOWN);
     free_lbuf(buff);
@@ -432,9 +432,9 @@ int configuration_read(ConfigurationContext *context, char *fn) {
                                errbuf, sizeof(errbuf));
   context->configuration->is_initializing = false;
   if (context->fatal_error && errbuf[0] == '\0')
-    snprintf(errbuf, sizeof(errbuf), "invalid styled-text configuration");
+    (void)snprintf(errbuf, sizeof(errbuf), "invalid styled-text configuration");
   if (!ok || context->fatal_error) {
-    fprintf(stderr, "Error reading config file '%s': %s\n", fn, errbuf);
+    (void)fprintf(stderr, "Error reading config file '%s': %s\n", fn, errbuf);
     return -1;
   }
   return 0;
@@ -452,7 +452,7 @@ void configuration_list_access(EvaluationContext *evaluation, DbRef player) {
     if (is_god(evaluation->world->database, player) ||
         check_access(evaluation->world->database,
                      evaluation->world->configuration, player, tp->flags)) {
-      snprintf(buff, MBUF_SIZE, "%s:", tp->pname);
+      (void)snprintf(buff, MBUF_SIZE, "%s:", tp->pname);
       name_table_list_set(evaluation, evaluation->world->configuration, player,
                           access_nametab, tp->flags, buff, 1);
     }

@@ -90,8 +90,9 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
                 weapon_catalogue_explosion_damage(weapon_index));
 
     if (!mech_is_destroyed(wounded)) {
-      snprintf(msgbuf, MBUF_SIZE,
-               "'s %s is covered in a large electrical discharge!", locname);
+      (void)snprintf(msgbuf, MBUF_SIZE,
+                     "'s %s is covered in a large electrical discharge!",
+                     locname);
       mech_los_broadcast(wounded, msgbuf);
     }
 
@@ -157,8 +158,8 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
           damage);
 
       if (!mech_is_destroyed(wounded)) {
-        snprintf(msgbuf, MBUF_SIZE,
-                 " loses a launcher in a brilliant explosion!");
+        (void)snprintf(msgbuf, MBUF_SIZE,
+                       " loses a launcher in a brilliant explosion!");
         mech_los_broadcast(wounded, msgbuf);
       }
 
@@ -193,8 +194,8 @@ int mech_weapon_critical_handle(Mech *attacker, Mech *wounded, int hitloc,
           weapon_catalogue_damage(weapon_index));
 
       if (!mech_is_destroyed(wounded)) {
-        snprintf(msgbuf, MBUF_SIZE,
-                 "'s %s is engulfed in a brilliant blue flame!", locname);
+        (void)snprintf(msgbuf, MBUF_SIZE,
+                       "'s %s is engulfed in a brilliant blue flame!", locname);
         mech_los_broadcast(wounded, msgbuf);
       }
 

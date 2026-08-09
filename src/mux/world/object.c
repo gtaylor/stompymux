@@ -331,7 +331,9 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   free_lbuf(buff);
 
   if (objtype == OBJECT_TYPE_PLAYER) {
-    time(&tt);
+    tt = time(nullptr);
+    if (tt == (time_t)-1)
+      tt = 0;
     player_account_last_login_set(evaluation->world->database, obj, tt);
 
     add_player_name(evaluation->world, obj,

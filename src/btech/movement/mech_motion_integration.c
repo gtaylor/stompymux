@@ -240,9 +240,9 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
               mech_notify(mech, MECHALL,
                           "As the craft enters the lower atmosphere, its nose "
                           "rises up for a clean landing..");
-              snprintf(message_buffer, MBUF_SIZE,
-                       "starts descending towards %d, %d..",
-                       mech_position_x(mech), mech_position_y(mech));
+              (void)snprintf(message_buffer, MBUF_SIZE,
+                             "starts descending towards %d, %d..",
+                             mech_position_x(mech), mech_position_y(mech));
               mech_los_broadcast(mech, message_buffer);
             } else {
               mech_notify(mech, MECHALL,

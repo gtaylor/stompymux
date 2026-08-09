@@ -114,15 +114,16 @@ static PartDisplayName part_display_name(const char *source) {
     return name;
 
   name.valid = true;
-  snprintf(name.text, sizeof(name.text), "%s", source);
+  (void)snprintf(name.text, sizeof(name.text), "%s", source);
   if (!strcmp(source, "LifeSupport"))
-    snprintf(name.text, sizeof(name.text), "Life Support");
+    (void)snprintf(name.text, sizeof(name.text), "Life Support");
   else if (!strcmp(source, "TripleStrengthMyomer"))
-    snprintf(name.text, sizeof(name.text), "Triple Strength Myomer");
+    (void)snprintf(name.text, sizeof(name.text), "Triple Strength Myomer");
   if ((separator = strstr(name.text, "Actuator")))
     if (separator != name.text)
-      snprintf(separator, sizeof(name.text) - (size_t)(separator - name.text),
-               " Actuator");
+      (void)snprintf(separator,
+                     sizeof(name.text) - (size_t)(separator - name.text),
+                     " Actuator");
   while ((separator = strchr(name.text, '_')))
     *separator = ' ';
   while ((separator = strchr(name.text, '.')))
@@ -219,27 +220,29 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
   buffer[0] = '\0';
   if (!i)
     if (menu->configuration->btech_erange)
-      snprintf(buffer, LBUF_SIZE, WSDUMP_MASKS_ER);
+      (void)snprintf(buffer, LBUF_SIZE, WSDUMP_MASKS_ER);
     else
-      snprintf(buffer, LBUF_SIZE, WSDUMP_MASKS_NOER);
+      (void)snprintf(buffer, LBUF_SIZE, WSDUMP_MASKS_NOER);
   else {
     i--;
     j = weapon_menu_get(menu, i);
     const WeaponRangeProfile ranges = weapon_catalogue_ranges(j);
     if (menu->configuration->btech_erange)
-      snprintf(buffer, LBUF_SIZE, WSDUMP_MASK_ER, weapon_catalogue_name(j),
-               weapon_catalogue_heat(j), weapon_catalogue_damage(j),
-               ranges.minimum, ranges.short_range, ranges.medium_range,
-               weapon_catalogue_effective_range(j, false),
-               weapon_catalogue_effective_range(
-                   j, menu->configuration->btech_erange),
-               btech_weapon_settings_recycle_time(menu->weapon_settings, j));
+      (void)snprintf(
+          buffer, LBUF_SIZE, WSDUMP_MASK_ER, weapon_catalogue_name(j),
+          weapon_catalogue_heat(j), weapon_catalogue_damage(j), ranges.minimum,
+          ranges.short_range, ranges.medium_range,
+          weapon_catalogue_effective_range(j, false),
+          weapon_catalogue_effective_range(j,
+                                           menu->configuration->btech_erange),
+          btech_weapon_settings_recycle_time(menu->weapon_settings, j));
     else
-      snprintf(buffer, LBUF_SIZE, WSDUMP_MASK_NOER, weapon_catalogue_name(j),
-               weapon_catalogue_heat(j), weapon_catalogue_damage(j),
-               ranges.minimum, ranges.short_range, ranges.medium_range,
-               weapon_catalogue_effective_range(j, false),
-               btech_weapon_settings_recycle_time(menu->weapon_settings, j));
+      (void)snprintf(
+          buffer, LBUF_SIZE, WSDUMP_MASK_NOER, weapon_catalogue_name(j),
+          weapon_catalogue_heat(j), weapon_catalogue_damage(j), ranges.minimum,
+          ranges.short_range, ranges.medium_range,
+          weapon_catalogue_effective_range(j, false),
+          btech_weapon_settings_recycle_time(menu->weapon_settings, j));
   }
   return buffer;
 }
@@ -296,7 +299,7 @@ void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
 }
 
 static char *status_text(char buffer[static MBUF_SIZE], const char *text) {
-  snprintf(buffer, MBUF_SIZE, "%s", text);
+  (void)snprintf(buffer, MBUF_SIZE, "%s", text);
   return buffer;
 }
 
@@ -316,10 +319,10 @@ char *sectstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
   if (index == -1)
     return status_text(buffer, "#-1 INVALID SECTION");
 
-  snprintf(buffer, MBUF_SIZE, "%d",
-           mech_section_is_flooded(mech, index)
-               ? -1
-               : !mech_section_is_destroyed(mech, index));
+  (void)snprintf(buffer, MBUF_SIZE, "%d",
+                 mech_section_is_flooded(mech, index)
+                     ? -1
+                     : !mech_section_is_destroyed(mech, index));
 
   return buffer;
 }
@@ -393,7 +396,8 @@ char *armorstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
       totint += mech_section_original_internal(mech, iter);
     }
     buffer[0] = '\0';
-    snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d", curarm, totarm, curint, totint);
+    (void)snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d", curarm, totarm, curint,
+                   totint);
     return buffer;
   }
 
@@ -403,13 +407,13 @@ char *armorstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
     return status_text(buffer, "#-1 INVALID SECTION");
 
   buffer[0] = '\0';
-  snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d|%d/%d",
-           mech_section_armor(mech, index),
-           mech_section_original_armor(mech, index),
-           mech_section_internal(mech, index),
-           mech_section_original_internal(mech, index),
-           mech_section_rear_armor(mech, index),
-           mech_section_original_rear_armor(mech, index));
+  (void)snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d|%d/%d",
+                 mech_section_armor(mech, index),
+                 mech_section_original_armor(mech, index),
+                 mech_section_internal(mech, index),
+                 mech_section_original_internal(mech, index),
+                 mech_section_rear_armor(mech, index),
+                 mech_section_original_rear_armor(mech, index));
   return buffer;
 }
 
@@ -520,12 +524,13 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
       return status_text(buffer, "Destroyed");
     return status_text(buffer, "Operational");
   } else if (flag == 2) {
-    snprintf(buffer, MBUF_SIZE, "%d", mech_critical_data(mech, index, crit));
+    (void)snprintf(buffer, MBUF_SIZE, "%d",
+                   mech_critical_data(mech, index, crit));
     return buffer;
   } else if (flag == 3) {
     if (!equipment_is_ammunition(type))
       return status_text(buffer, "#-1 NOT AMMO");
-    snprintf(buffer, MBUF_SIZE, "%d", FullAmmo(mech, index, crit));
+    (void)snprintf(buffer, MBUF_SIZE, "%d", FullAmmo(mech, index, crit));
     return buffer;
   } else if (flag == 4) {
     if (!equipment_is_ammunition(type))
@@ -538,19 +543,20 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
     else {
       const int ammo_mode = mech_critical_ammo_mode(mech, index, crit);
       weapindex = weapon_from_equipment_index(type);
-      snprintf(buffer, MBUF_SIZE, "%c%c",
-               GetWeaponFireModeLetter_Model_Mode(
-                   weapindex, mech_critical_fire_mode(mech, index, crit)),
-               ammo_mode < 0 ? ' '
-                             : GetWeaponAmmoModeLetter_Model_Mode(
-                                   weapindex, (unsigned int)ammo_mode));
+      (void)snprintf(buffer, MBUF_SIZE, "%c%c",
+                     GetWeaponFireModeLetter_Model_Mode(
+                         weapindex, mech_critical_fire_mode(mech, index, crit)),
+                     ammo_mode < 0 ? ' '
+                                   : GetWeaponAmmoModeLetter_Model_Mode(
+                                         weapindex, (unsigned int)ammo_mode));
       return buffer;
     }
   } else if (flag == 6) {
     if (!equipment_is_ammunition(type))
       return status_text(buffer, "#-1 NOT AMMO");
-    snprintf(buffer, MBUF_SIZE, "%d",
-             mech_critical_fire_mode(mech, index, crit) & HALFTON_MODE ? 1 : 0);
+    (void)snprintf(
+        buffer, MBUF_SIZE, "%d",
+        mech_critical_fire_mode(mech, index, crit) & HALFTON_MODE ? 1 : 0);
     return buffer;
   }
 
@@ -559,9 +565,9 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
   if (flag == 0) {
     type = mech_parts_alias(mech, index, type);
   }
-  snprintf(buffer, MBUF_SIZE, "%s",
-           get_parts_vlong_name(mech_context(mech), type,
-                                mech_critical_brand(mech, index, crit)));
+  (void)snprintf(buffer, MBUF_SIZE, "%s",
+                 get_parts_vlong_name(mech_context(mech), type,
+                                      mech_critical_brand(mech, index, crit)));
   return buffer;
 }
 

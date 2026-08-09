@@ -54,8 +54,8 @@ static void append_lbuf(char *buffer, size_t size, const char *fmt, ...) {
 
   va_start(ap, fmt);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(checked_storage_region(buffer, size, len, size - len), size - len,
-            fmt, ap);
+  (void)vsnprintf(checked_storage_region(buffer, size, len, size - len),
+                  size - len, fmt, ap);
   va_end(ap);
 }
 
@@ -516,7 +516,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
         continue;
       }
 
-      snprintf(buf2, LBUF_SIZE, "%s", msg);
+      (void)snprintf(buf2, LBUF_SIZE, "%s", msg);
       radio_color_code(color_code, tempMech, i, obs, mech_team(mech));
 
       /* Let's just do the OBSERVERIC Stuff here. No sense checking
@@ -559,18 +559,19 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
                             btech_context_database(mech_context(mech)),
                             a->mynum) != mech_dbref(tempMech)) {
           /* Check to see if the AI is still in the same mech */
-          snprintf(ai_buf, LBUF_SIZE,
-                   "Autopilot #%ld (Location: #%ld) "
-                   "reported on Mech #%ld but not in the proper location",
-                   a->mynum,
-                   game_object_location(
-                       btech_context_database(mech_context(mech)), a->mynum),
-                   mech_dbref(tempMech));
+          (void)snprintf(
+              ai_buf, LBUF_SIZE,
+              "Autopilot #%ld (Location: #%ld) "
+              "reported on Mech #%ld but not in the proper location",
+              a->mynum,
+              game_object_location(btech_context_database(mech_context(mech)),
+                                   a->mynum),
+              mech_dbref(tempMech));
           btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_AI, "%s",
                              ai_buf);
         } else if (a && !mech_is_ecm_disturbed(tempMech)) {
           /* Ok send the command to the AI provided its not ECM'd */
-          snprintf(buf3, LBUF_SIZE, "%s", msg);
+          (void)snprintf(buf3, LBUF_SIZE, "%s", msg);
           auto_parse_command(a, tempMech, i, buf3);
         }
       }

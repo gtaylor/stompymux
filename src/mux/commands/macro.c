@@ -340,8 +340,9 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     notify_printf(match->evaluation, player, "Macro Definitions for %s",
                   m->desc);
     for (i = 0; i < m->macro_count; i++) {
-      snprintf(buffer, sizeof(buffer), "  %-5.5s: %s",
-               macro_alias_at(m, (size_t)i), macro_string_item(m, (size_t)i));
+      (void)snprintf(buffer, sizeof(buffer), "  %-5.5s: %s",
+                     macro_alias_at(m, (size_t)i),
+                     macro_string_item(m, (size_t)i));
       macro_notify(match, player, buffer);
     }
   } else
@@ -420,8 +421,9 @@ void do_ex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     notify_printf(match->evaluation, player, "Macro Definitions for %s",
                   m->desc);
     for (i = 0; i < m->macro_count; i++) {
-      snprintf(buffer, sizeof(buffer), "  %-5.5s: %s",
-               macro_alias_at(m, (size_t)i), macro_string_item(m, (size_t)i));
+      (void)snprintf(buffer, sizeof(buffer), "  %-5.5s: %s",
+                     macro_alias_at(m, (size_t)i),
+                     macro_string_item(m, (size_t)i));
       macro_notify(match, player, buffer);
     }
   } else
@@ -623,8 +625,9 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   if (j < m->macro_count && !strcasecmp(alias, macro_alias_at(m, (size_t)j))) {
     macro_notify(match, player,
                  "MACRO: That alias is already defined in this set.");
-    snprintf(buffer, sizeof(buffer), "%-4.4s:%s", macro_alias_at(m, (size_t)j),
-             macro_string_item(m, (size_t)j));
+    (void)snprintf(buffer, sizeof(buffer), "%-4.4s:%s",
+                   macro_alias_at(m, (size_t)j),
+                   macro_string_item(m, (size_t)j));
     macro_notify(match, player, buffer);
     return;
   }
@@ -655,7 +658,8 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   StringCopy(macro_alias_at(m, (size_t)where), alias);
   *macro_string_slot(m, (size_t)where) = malloc(strlen(s) + 1);
   StringCopy(macro_string_item(m, (size_t)where), s);
-  snprintf(buffer, sizeof(buffer), "MACRO: Macro %s:%s defined.", alias, s);
+  (void)snprintf(buffer, sizeof(buffer), "MACRO: Macro %s:%s defined.", alias,
+                 s);
   macro_notify(match, player, buffer);
 }
 

@@ -98,14 +98,15 @@ static int log_cache_open(LogCache *cache, char *filename) {
   struct logfile_t *newlog;
 
   if (red_black_tree_exists(cache->files, filename)) {
-    fprintf(stderr, "Serious braindamage, logcache_open() called for already "
-                    "open logfile.\n");
+    (void)fprintf(stderr,
+                  "Serious braindamage, logcache_open() called for already "
+                  "open logfile.\n");
     return 0;
   }
 
   fd = open(filename, O_RDWR | O_APPEND | O_CREAT, 0644);
   if (fd < 0) {
-    fprintf(
+    (void)fprintf(
         stderr,
         "Failed to open logfile %s because open() failed with code: %d -  %s\n",
         filename, errno, strerror(errno));
@@ -183,10 +184,11 @@ int log_cache_write(LogCache *cache, char *fname, const char *fdata) {
   mux_timer_start(log->timer, LOGFILE_TIMEOUT * 1000, 0);
 
   if (write(log->fd, fdata, (size_t)len) < 0) {
-    fprintf(stderr,
-            "System failed to write data to file with error '%s' on logfile "
-            "'%s'. Closing.\n",
-            strerror(errno), log->filename);
+    (void)fprintf(
+        stderr,
+        "System failed to write data to file with error '%s' on logfile "
+        "'%s'. Closing.\n",
+        strerror(errno), log->filename);
     log_cache_close(cache, log, true);
   }
   return 1;

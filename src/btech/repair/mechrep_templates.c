@@ -135,8 +135,8 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
   }
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "Saving %s...", args[0]);
-  snprintf(openfile, sizeof(openfile), "%s/",
-           btech_context_mech_template_path(mech_context(mech)));
+  (void)snprintf(openfile, sizeof(openfile), "%s/",
+                 btech_context_mech_template_path(mech_context(mech)));
   strlcat(openfile, args[0], sizeof(openfile));
   if (!(fp = fopen(openfile, "w"))) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -145,23 +145,24 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
   }
   float const maximum_speed = mech_maximum_speed(mech);
   float const jump_speed = mech_jump_speed(mech);
-  fprintf(fp, "%d %d %d %d %d %.2f %.2f %d\n", mech_tonnage(mech),
-          mech_tactical_range(mech), mech_long_range_sensor_range(mech),
-          mech_scanner_range(mech), mech_heat_sink_count(mech),
-          (double)maximum_speed, (double)jump_speed,
-          mech_technology_flags(mech));
+  (void)fprintf(fp, "%d %d %d %d %d %.2f %.2f %d\n", mech_tonnage(mech),
+                mech_tactical_range(mech), mech_long_range_sensor_range(mech),
+                mech_scanner_range(mech), mech_heat_sink_count(mech),
+                (double)maximum_speed, (double)jump_speed,
+                mech_technology_flags(mech));
   for (i = 0; i < NUM_SECTIONS; i++) {
-    fprintf(fp, "%d %d %d %d\n", mech_section_armor(mech, i),
-            mech_section_internal(mech, i), mech_section_rear_armor(mech, i),
-            mech_section_configuration(mech, i));
+    (void)fprintf(fp, "%d %d %d %d\n", mech_section_armor(mech, i),
+                  mech_section_internal(mech, i),
+                  mech_section_rear_armor(mech, i),
+                  mech_section_configuration(mech, i));
     for (j = 0; j < NUM_CRITICALS; j++) {
-      fprintf(fp, "%d %d %d\n", mech_critical_part_type(mech, i, j),
-              mech_critical_data(mech, i, j),
-              mech_critical_fire_mode(mech, i, j));
+      (void)fprintf(fp, "%d %d %d\n", mech_critical_part_type(mech, i, j),
+                    mech_critical_data(mech, i, j),
+                    mech_critical_fire_mode(mech, i, j));
     }
   }
-  fprintf(fp, "%d %d\n", mech_class(mech), mech_movement_type(mech));
-  fprintf(fp, "%d\n", mech_radio_range(mech));
+  (void)fprintf(fp, "%d %d\n", mech_class(mech), mech_movement_type(mech));
+  (void)fprintf(fp, "%d\n", mech_radio_range(mech));
   if (fclose(fp) != 0) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Unable to finish saving the mech file.");
@@ -209,8 +210,8 @@ void mechrep_Rsavetemp2(DbRef player, void *data, char *buffer) {
 
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "Saving %s", args[0]);
-  snprintf(openfile, sizeof(openfile), "%s/",
-           btech_context_mech_template_path(mech_context(mech)));
+  (void)snprintf(openfile, sizeof(openfile), "%s/",
+                 btech_context_mech_template_path(mech_context(mech)));
   strlcat(openfile, args[0], sizeof(openfile));
 
   // Just warn on overweight.

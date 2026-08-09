@@ -61,11 +61,11 @@ void auto_leave_event(MuxEvent *muxevent) {
   if (!map) {
 
     /* Bad Map */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " leavebase with AI #%ld but AI is not on a valid"
-             " Map (#%ld).",
-             autopilot->mynum, autopilot->mapindex);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " leavebase with AI #%ld but AI is not on a valid"
+                   " Map (#%ld).",
+                   autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -111,11 +111,11 @@ void auto_leave_event(MuxEvent *muxevent) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " leavebase with AI #%ld but was given bad argument"
-             " defaulting to direction = 0",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " leavebase with AI #%ld but was given bad argument"
+                   " defaulting to direction = 0",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -123,11 +123,11 @@ void auto_leave_event(MuxEvent *muxevent) {
 
   } else if (!parse_int_checked(argument, &dir)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " leavebase with AI #%ld but was given bad argument '%s'"
-             " defaulting to direction = 0",
-             autopilot->mynum, argument);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " leavebase with AI #%ld but was given bad argument '%s'"
+                   " defaulting to direction = 0",
+                   autopilot->mynum, argument);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -189,11 +189,11 @@ void auto_enter_event(MuxEvent *muxevent) {
                                     autopilot->mapindex))) {
 
     /* Bad Map */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " enterbase with AI #%ld but AI is not on a valid"
-             " Map (#%ld).",
-             autopilot->mynum, autopilot->mapindex);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " enterbase with AI #%ld but AI is not on a valid"
+                   " Map (#%ld).",
+                   autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -214,11 +214,12 @@ void auto_enter_event(MuxEvent *muxevent) {
   if (!map_object) {
 
     /* Nothing in this hex */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " enterbase with AI #%ld but there is nothing at %d, %d"
-             " to enter",
-             autopilot->mynum, mech_position_x(mech), mech_position_y(mech));
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " enterbase with AI #%ld but there is nothing at %d, %d"
+                   " to enter",
+                   autopilot->mynum, mech_position_x(mech),
+                   mech_position_y(mech));
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -261,11 +262,11 @@ void auto_enter_event(MuxEvent *muxevent) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " enterbase with AI #%ld but was given bad argument -"
-             " going to next command",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " enterbase with AI #%ld but was given bad argument -"
+                   " going to next command",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);

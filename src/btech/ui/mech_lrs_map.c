@@ -59,8 +59,9 @@ static void lrs_text_append(char *buffer, size_t capacity, const char *format,
   va_list arguments;
   va_start(arguments, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(checked_storage_region(buffer, capacity, used, capacity - used),
-            capacity - used, format, arguments);
+  (void)vsnprintf(
+      checked_storage_region(buffer, capacity, used, capacity - used),
+      capacity - used, format, arguments);
   va_end(arguments);
 }
 
@@ -193,8 +194,8 @@ static MapCellText map_cell_text(char newc, char *prevc, char c) {
     return result;
   }
 
-  snprintf(result.text, sizeof(result.text), "[reset]%s%c",
-           map_color_markup(newc), c);
+  (void)snprintf(result.text, sizeof(result.text), "[reset]%s%c",
+                 map_color_markup(newc), c);
   *prevc = newc;
   return result;
 }
@@ -356,7 +357,7 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
 
   /* Display the top labels */
   for (i = b_width; i <= e_width; i++) {
-    snprintf(trash1, sizeof(trash1), "%3d", i);
+    (void)snprintf(trash1, sizeof(trash1), "%3d", i);
     lrs_text_append(topbuff, sizeof(topbuff), "%c", *trash1);
     lrs_text_append(midbuff, sizeof(midbuff), "%c",
                     *checked_string_suffix(trash1, 1));
@@ -409,7 +410,7 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
     losmap = &los_map_storage;
 
   for (loop = b_height; loop < e_height; loop++) {
-    snprintf(topbuff, sizeof(topbuff), "%3d ", loop);
+    (void)snprintf(topbuff, sizeof(topbuff), "%3d ", loop);
     strcpy(botbuff, "    ");
     if (mode & LRS_MECHMODE)
       while (lrs_mech_at(&mechs, last_mech) &&

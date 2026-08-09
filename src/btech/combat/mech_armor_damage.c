@@ -280,9 +280,9 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
           mech_notify(wounded, MECHALL,
                       "[fg=yellow bold]CRITICAL HIT!![reset]");
           if (!mech_is_destroyed(wounded)) {
-            snprintf(msgbuf, sizeof(msgbuf),
-                     "'s %s is blown off in a shower of sparks and smoke!",
-                     locname);
+            (void)snprintf(
+                msgbuf, sizeof(msgbuf),
+                "'s %s is blown off in a shower of sparks and smoke!", locname);
             mech_los_broadcast(wounded, msgbuf);
           }
           mech_section_destroy(wounded, attacker, LOS, hitloc);

@@ -29,21 +29,24 @@ int checkGrabClubLocation(Mech *mech, int section, int emit) {
                        mech_movement_type(mech));
 
   if (mech_section_is_destroyed(mech, section)) {
-    snprintf(buf, sizeof(buf), "Your %s is destroyed.", location);
+    (void)snprintf(buf, sizeof(buf), "Your %s is destroyed.", location);
     tCanGrab = 0;
   } else if (!mech_critical_is_operational_special(mech, section, 3,
                                                    HAND_OR_FOOT_ACTUATOR)) {
-    snprintf(buf, sizeof(buf),
-             "Your %s's hand actuator is destroyed or missing.", location);
+    (void)snprintf(buf, sizeof(buf),
+                   "Your %s's hand actuator is destroyed or missing.",
+                   location);
     tCanGrab = 0;
   } else if (!mech_critical_is_operational_special(mech, section, 0,
                                                    SHOULDER_OR_HIP)) {
-    snprintf(buf, sizeof(buf),
-             "Your %s's shoulder actuator is destroyed or missing.", location);
+    (void)snprintf(buf, sizeof(buf),
+                   "Your %s's shoulder actuator is destroyed or missing.",
+                   location);
     tCanGrab = 0;
   } else if (mech_section_has_recycling_weapon(mech, section)) {
-    snprintf(buf, sizeof(buf),
-             "Your %s is still recovering from it's last attack.", location);
+    (void)snprintf(buf, sizeof(buf),
+                   "Your %s is still recovering from it's last attack.",
+                   location);
     tCanGrab = 0;
   }
 

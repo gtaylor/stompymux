@@ -233,8 +233,8 @@ void fun_bttechtime(char *buff, char **bufc, DbRef player, DbRef cause,
       strcpy(buf, "00:00.00");
     } else {
       old -= context->btech->clock->now;
-      snprintf(buf, MBUF_SIZE, "%02ld:%02d.%02d", (long)(old / 3600),
-               (int)((old / 60) % 60), (int)(old % 60));
+      (void)snprintf(buf, MBUF_SIZE, "%02ld:%02d.%02d", (long)(old / 3600),
+                     (int)((old / 60) % 60), (int)(old % 60));
     }
   } else {
     strcpy(buf, "00:00.00");

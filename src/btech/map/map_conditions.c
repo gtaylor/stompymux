@@ -35,7 +35,7 @@ bool map_parse_visibility_attribute(const char *attribute, int *visibility,
                                     int *wind_speed, int *cloud_base,
                                     char *message, size_t message_size) {
   char values[LBUF_SIZE];
-  snprintf(values, sizeof(values), "%s", attribute);
+  (void)snprintf(values, sizeof(values), "%s", attribute);
   char *first = strtok(values, " \t\r\n");
   char *second = strtok(nullptr, " \t\r\n");
   char *third = strtok(nullptr, " \t\r\n");
@@ -51,13 +51,13 @@ bool map_parse_visibility_attribute(const char *attribute, int *visibility,
     return true;
   if (!parse_int_checked(fifth, cloud_base)) {
     char *message_rest = strtok(nullptr, "\r\n");
-    snprintf(message, message_size, "%s%s%s", fifth, message_rest ? " " : "",
-             message_rest ? message_rest : "");
+    (void)snprintf(message, message_size, "%s%s%s", fifth,
+                   message_rest ? " " : "", message_rest ? message_rest : "");
     return true;
   }
   char *message_text = strtok(nullptr, "\r\n");
   if (message_text)
-    snprintf(message, message_size, "%s", message_text);
+    (void)snprintf(message, message_size, "%s", message_text);
   return true;
 }
 

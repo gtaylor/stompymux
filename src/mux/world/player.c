@@ -97,7 +97,9 @@ DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
                      char *name, char *password, char *host, char *username) {
   DbRef player;
   time_t tt;
-  time(&tt);
+  tt = time(nullptr);
+  if (tt == (time_t)-1)
+    tt = 0;
 
   if ((player = lookup_player(world, NOTHING, name, 0)) == NOTHING)
     return NOTHING;
@@ -105,7 +107,9 @@ DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
     record_login(evaluation, player, false, tt, host, username);
     return NOTHING;
   }
-  time(&tt);
+  tt = time(nullptr);
+  if (tt == (time_t)-1)
+    tt = 0;
   player_account_last_login_set(world->database, player, tt);
   return player;
 }

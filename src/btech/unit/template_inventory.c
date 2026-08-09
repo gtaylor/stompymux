@@ -56,17 +56,17 @@ static char *dumpweapon_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
 
   buffer[0] = 0;
   if (!i)
-    snprintf(buffer, LBUF_SIZE, WDUMP_MASKS);
+    (void)snprintf(buffer, LBUF_SIZE, WDUMP_MASKS);
   else {
     i--;
     WeaponRangeProfile ranges = weapon_catalogue_ranges(i);
-    snprintf(buffer, LBUF_SIZE, WDUMP_MASK, weapon_catalogue_name(i),
-             weapon_catalogue_heat(i), weapon_catalogue_damage(i),
-             ranges.minimum, ranges.short_range, ranges.medium_range,
-             weapon_catalogue_effective_range(i, false),
-             btech_weapon_settings_recycle_time(weapon_settings, i),
-             weapon_catalogue_critical_slots(i),
-             weapon_catalogue_ammunition_per_ton(i));
+    (void)snprintf(buffer, LBUF_SIZE, WDUMP_MASK, weapon_catalogue_name(i),
+                   weapon_catalogue_heat(i), weapon_catalogue_damage(i),
+                   ranges.minimum, ranges.short_range, ranges.medium_range,
+                   weapon_catalogue_effective_range(i, false),
+                   btech_weapon_settings_recycle_time(weapon_settings, i),
+                   weapon_catalogue_critical_slots(i),
+                   weapon_catalogue_ammunition_per_ton(i));
   }
   return buffer;
 }
@@ -86,25 +86,25 @@ char *techlist_func(Mech *mech, char *buffer) {
   int i, ii, part = 0, axe = 0, mace = 0, sword = 0, saw = 0, claw = 0,
              hascase = 0;
 
-  snprintf(bufa, SBUF_SIZE, "%s",
-           build_bit_string(specialsabrev, primary_technology_name_count(),
-                            ((mech)->rd.specials),
-                            (char[BTECH_TEXT_CAPACITY]){0}));
-  snprintf(bufb, SBUF_SIZE, "%s",
-           build_bit_string(specialsabrev2, secondary_technology_name_count(),
-                            ((mech)->rd.specials2),
-                            (char[BTECH_TEXT_CAPACITY]){0}));
-  snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
+  (void)snprintf(
+      bufa, SBUF_SIZE, "%s",
+      build_bit_string(specialsabrev, primary_technology_name_count(),
+                       ((mech)->rd.specials), (char[BTECH_TEXT_CAPACITY]){0}));
+  (void)snprintf(
+      bufb, SBUF_SIZE, "%s",
+      build_bit_string(specialsabrev2, secondary_technology_name_count(),
+                       ((mech)->rd.specials2), (char[BTECH_TEXT_CAPACITY]){0}));
+  (void)snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
 
   if (((mech)->ud.type) == CLASS_BSUIT) {
-    snprintf(bufc, SBUF_SIZE, "%s",
-             build_bit_string(infspecialsabrev,
-                              infantry_technology_name_count(),
-                              ((mech)->rd.infantry_specials),
-                              (char[BTECH_TEXT_CAPACITY]){0}));
-    snprintf(buffer, MBUF_SIZE, "%s %s %s", bufa, bufb, bufc);
+    (void)snprintf(bufc, SBUF_SIZE, "%s",
+                   build_bit_string(infspecialsabrev,
+                                    infantry_technology_name_count(),
+                                    ((mech)->rd.infantry_specials),
+                                    (char[BTECH_TEXT_CAPACITY]){0}));
+    (void)snprintf(buffer, MBUF_SIZE, "%s %s %s", bufa, bufb, bufc);
   } else
-    snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
+    (void)snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
 
   if (!(strstr(buffer, "XL") || strstr(buffer, "XXL") ||
         strstr(buffer, "LENG") || strstr(buffer, "ICE") ||
@@ -183,7 +183,7 @@ char *payloadlist_func(Mech *mech, char *buffer) {
   short payload_items_count[INVENTORY_ITEM_CAPACITY];
 
   /* Clear the buffer */
-  snprintf(buffer, MBUF_SIZE, "%s", "");
+  (void)snprintf(buffer, MBUF_SIZE, "%s", "");
 
   /* Count each 'unique' item */
   weap_count = 0;
@@ -274,16 +274,16 @@ char *payloadlist_func(Mech *mech, char *buffer) {
     /* If its a weapon use this method of printing it out
      * Else use the part method */
     if (put_loop < weap_count) {
-      snprintf(
+      (void)snprintf(
           payloadbuff, sizeof(payloadbuff), "%s:%d",
           weapon_catalogue_name(*inventory_item_slot(payload_items, put_loop)),
           *inventory_count_slot(payload_items_count, put_loop));
     } else {
-      snprintf(payloadbuff, sizeof(payloadbuff), "%s:%d",
-               partname_func(mech->xcode.context,
-                             *inventory_item_slot(payload_items, put_loop),
-                             'V'),
-               *inventory_count_slot(payload_items_count, put_loop));
+      (void)snprintf(
+          payloadbuff, sizeof(payloadbuff), "%s:%d",
+          partname_func(mech->xcode.context,
+                        *inventory_item_slot(payload_items, put_loop), 'V'),
+          *inventory_count_slot(payload_items_count, put_loop));
     }
 
     /* If we are not at the end, then put a | as a spacer */
@@ -311,7 +311,7 @@ char *partlist_func(Mech *mech, char *buffer) {
   short partlist_count[INVENTORY_ITEM_CAPACITY];
 
   /* Clear the buffer */
-  snprintf(buffer, LBUF_SIZE, "%s", "");
+  (void)snprintf(buffer, LBUF_SIZE, "%s", "");
 
   /* Count each 'unique' item */
   part_count = 0;
@@ -385,14 +385,14 @@ char *partlist_func(Mech *mech, char *buffer) {
       act_count = act_count + count_for_part;
       break;
     case ENGINE:
-      snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-               ((mech)->rd.specials) & LE_TECH    ? "Light_Engine"
-               : ((mech)->rd.specials) & CE_TECH  ? "Compact_Engine"
-               : ((mech)->rd.specials) & XXL_TECH ? "XXL_Engine"
-               : ((mech)->rd.specials) & XL_TECH  ? "XL_Engine"
-               : ((mech)->rd.specials) & ICE_TECH ? "ICE_Engine"
-                                                  : "Engine",
-               count_for_part);
+      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
+                     ((mech)->rd.specials) & LE_TECH    ? "Light_Engine"
+                     : ((mech)->rd.specials) & CE_TECH  ? "Compact_Engine"
+                     : ((mech)->rd.specials) & XXL_TECH ? "XXL_Engine"
+                     : ((mech)->rd.specials) & XL_TECH  ? "XL_Engine"
+                     : ((mech)->rd.specials) & ICE_TECH ? "ICE_Engine"
+                                                        : "Engine",
+                     count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
@@ -403,11 +403,11 @@ char *partlist_func(Mech *mech, char *buffer) {
       strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
       break;
     case GYRO:
-      snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-               ((mech)->rd.specials2) & XLGYRO_TECH   ? "XL_Gyro"
-               : ((mech)->rd.specials2) & HDGYRO_TECH ? "HeavyDuty_Gyro"
-                                                      : "Gyro",
-               count_for_part);
+      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
+                     ((mech)->rd.specials2) & XLGYRO_TECH   ? "XL_Gyro"
+                     : ((mech)->rd.specials2) & HDGYRO_TECH ? "HeavyDuty_Gyro"
+                                                            : "Gyro",
+                     count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
@@ -418,12 +418,13 @@ char *partlist_func(Mech *mech, char *buffer) {
       strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
       break;
     case HEAT_SINK:
-      snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-               ((mech)->rd.specials2) & COMPACT_HS_TECH ? "Compact_HeatSink"
-               : ((mech)->rd.specials) & (DOUBLE_HEAT_TECH | CLAN_TECH)
-                   ? "Double_HeatSink"
-                   : "HeatSink",
-               count_for_part);
+      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
+                     ((mech)->rd.specials2) & COMPACT_HS_TECH
+                         ? "Compact_HeatSink"
+                     : ((mech)->rd.specials) & (DOUBLE_HEAT_TECH | CLAN_TECH)
+                         ? "Double_HeatSink"
+                         : "HeatSink",
+                     count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
@@ -434,8 +435,9 @@ char *partlist_func(Mech *mech, char *buffer) {
       strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
       break;
     default:
-      snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-               partname_func(mech->xcode.context, part, 'V'), count_for_part);
+      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
+                     partname_func(mech->xcode.context, part, 'V'),
+                     count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
@@ -450,7 +452,8 @@ char *partlist_func(Mech *mech, char *buffer) {
 
   } /* end printing loop */
   if (act_count) {
-    snprintf(partlistbuff, sizeof(partlistbuff), "|Actuator:%d", act_count);
+    (void)snprintf(partlistbuff, sizeof(partlistbuff), "|Actuator:%d",
+                   act_count);
     strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
   }
 

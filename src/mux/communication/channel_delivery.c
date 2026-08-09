@@ -51,7 +51,7 @@ void send_channel_v(EvaluationContext *evaluation, const char *chan,
   if (!(ch = select_channel(evaluation->runtime->channels, chan)))
     return;
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(data, LBUF_SIZE, format, arguments);
+  (void)vsnprintf(data, LBUF_SIZE, format, arguments);
 
   safe_chr('[', buf, &bp);
   safe_str(chan, buf, &bp);
@@ -114,10 +114,11 @@ static void do_show_com(void *data, void *context) {
   day = t->tm_mday;
   t = localtime(&d->time);
   if (day == t->tm_mday) {
-    snprintf(buf, sizeof(buf), "[%02d:%02d] %s", t->tm_hour, t->tm_min, d->msg);
+    (void)snprintf(buf, sizeof(buf), "[%02d:%02d] %s", t->tm_hour, t->tm_min,
+                   d->msg);
   } else
-    snprintf(buf, sizeof(buf), "[%02d.%02d / %02d:%02d] %s", t->tm_mon + 1,
-             t->tm_mday, t->tm_hour, t->tm_min, d->msg);
+    (void)snprintf(buf, sizeof(buf), "[%02d.%02d / %02d:%02d] %s",
+                   t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, d->msg);
   notify_checked(view->evaluation, player, player, buf,
                  MSG_ME_ALL | MSG_F_DOWN);
 }
@@ -255,7 +256,7 @@ void comsys_channel_printf(EvaluationContext *evaluation, struct channel *ch,
   memset(buffer, 0, LBUF_SIZE);
   va_start(ap, messfmt);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(buffer, LBUF_SIZE - 1, messfmt, ap);
+  (void)vsnprintf(buffer, LBUF_SIZE - 1, messfmt, ap);
   va_end(ap);
 
   ch->num_messages++;

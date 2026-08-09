@@ -480,10 +480,10 @@ void mech_scan_show_turret_facing(EvaluationContext *evaluation, DbRef player,
     j = AcceptableDegree(mech_turret_heading_degrees(mech) +
                          mech_heading_degrees(mech));
     if (mech_movement_type(mech) != MOVE_NONE)
-      snprintf(buff, sizeof(buff), "      Turret Facing: %d degrees%s", j,
-               i ? tprintf(" (%d offset from heading)", i) : "");
+      (void)snprintf(buff, sizeof(buff), "      Turret Facing: %d degrees%s", j,
+                     i ? tprintf(" (%d offset from heading)", i) : "");
     else
-      snprintf(buff, sizeof(buff), "      Turret Facing: %d degrees", j);
+      (void)snprintf(buff, sizeof(buff), "      Turret Facing: %d degrees", j);
     mecha_notify(evaluation, player, buff);
   }
 }
@@ -498,7 +498,7 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   mech_name = btech_attribute_read(
       btech_context_database(mech_context(tempMech)), mech_dbref(tempMech),
       A_MECHNAME, (char[LBUF_SIZE]){0});
-  snprintf(
+  (void)snprintf(
       buff, sizeof(buff), "[%s]  %-25.25s Tonnage: %d",
       mech_id(tempMech, mech_team(mech) == mech_team(tempMech) &&
                             mech_los_check_unblocked(mech, tempMech, 0, 0, 0))
@@ -508,18 +508,20 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   bearing = FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
                         mech_position_real_x(tempMech),
                         mech_position_real_y(tempMech));
-  snprintf(buff, sizeof(buff), "      Range: %.1f hex\t\tBearing: %d degrees",
-           (double)range, bearing);
+  (void)snprintf(buff, sizeof(buff),
+                 "      Range: %.1f hex\t\tBearing: %d degrees", (double)range,
+                 bearing);
   mecha_notify(evaluation, player, buff);
-  snprintf(buff, sizeof(buff), "      Speed: %.1f KPH\t\tHeading: %d degrees",
-           (double)mech_current_speed(tempMech),
-           AcceptableDegree(mech_heading_degrees(tempMech) +
-                            mech_lateral_movement(tempMech)));
+  (void)snprintf(buff, sizeof(buff),
+                 "      Speed: %.1f KPH\t\tHeading: %d degrees",
+                 (double)mech_current_speed(tempMech),
+                 AcceptableDegree(mech_heading_degrees(tempMech) +
+                                  mech_lateral_movement(tempMech)));
   mecha_notify(evaluation, player, buff);
   if (mech_is_flying_type(tempMech))
     notify_printf(evaluation, player, "      Vertical speed: %.1f KPH",
                   (double)mech_vertical_speed(tempMech));
-  snprintf(
+  (void)snprintf(
       buff, sizeof(buff), "      X, Y, Z: %3d, %3d, %3d\tHeat: %.0f deg C.",
       mech_position_x(tempMech), mech_position_y(tempMech),
       mech_position_z(tempMech), (double)(10.0F * mech_excess_heat(tempMech)));

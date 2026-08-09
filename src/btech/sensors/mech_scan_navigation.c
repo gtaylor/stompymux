@@ -107,7 +107,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
-        snprintf(buff, sizeof(buff), "Bearing to  %d,%d is: ", ix1, iy1);
+        (void)snprintf(buff, sizeof(buff), "Bearing to  %d,%d is: ", ix1, iy1);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
       }
     } else if (argc == 4) {
@@ -127,8 +127,8 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
-        snprintf(buff, sizeof(buff), "Bearing to %d,%d from %d,%d is: ", ix1,
-                 iy1, ix0, iy0);
+        (void)snprintf(buff, sizeof(buff),
+                       "Bearing to %d,%d from %d,%d is: ", ix1, iy1, ix0, iy0);
         MapCoordToRealCoord(ix0, iy0, &x0, &y0);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
       }
@@ -138,7 +138,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
     }
     if (x1 >= 0.0F) {
       const int bearing = FindBearing(x0, y0, x1, y1);
-      snprintf(trash, sizeof(trash), "%d degrees.", bearing);
+      (void)snprintf(trash, sizeof(trash), "%d degrees.", bearing);
       strlcat(buff, trash, sizeof(buff));
       mecha_notify(evaluation, player, buff);
     }
@@ -209,7 +209,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
-        snprintf(buff, sizeof(buff), "Range to  %d,%d is: ", ix1, iy1);
+        (void)snprintf(buff, sizeof(buff), "Range to  %d,%d is: ", ix1, iy1);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         if (battle_map_is_dark(mech_map))
           z1 = scaled_hex_elevation(mech_position_z(mech));
@@ -234,8 +234,8 @@ void mech_range(DbRef player, void *data, char *buffer) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
-        snprintf(buff, sizeof(buff), "Range to %d,%d from %d,%d is: ", ix1, iy1,
-                 ix0, iy0);
+        (void)snprintf(buff, sizeof(buff),
+                       "Range to %d,%d from %d,%d is: ", ix1, iy1, ix0, iy0);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         MapCoordToRealCoord(ix0, iy0, &x0, &y0);
         if (battle_map_is_dark(mech_map))
@@ -253,13 +253,13 @@ void mech_range(DbRef player, void *data, char *buffer) {
     if (x1 >= 0.0F) {
       temp = FindRange(x0, y0, z0, x1, y1, z1);
       hr = FindHexRange(x0, y0, x1, y1);
-      snprintf(buf1, sizeof(buf1), "%.1f", (double)temp);
-      snprintf(buf2, sizeof(buf2), "%.1f", (double)hr);
+      (void)snprintf(buf1, sizeof(buf1), "%.1f", (double)temp);
+      (void)snprintf(buf2, sizeof(buf2), "%.1f", (double)hr);
       if (strcmp(buf1, buf2))
-        snprintf(trash, sizeof(trash), "%s hexes (%s ground hexes).", buf1,
-                 buf2);
+        (void)snprintf(trash, sizeof(trash), "%s hexes (%s ground hexes).",
+                       buf1, buf2);
       else
-        snprintf(trash, sizeof(trash), "%s hexes.", buf1);
+        (void)snprintf(trash, sizeof(trash), "%s hexes.", buf1);
       strlcat(buff, trash, sizeof(buff));
       mecha_notify(evaluation, player, buff);
     }
@@ -328,7 +328,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
-        snprintf(buff, sizeof(buff), "Vector to  %d,%d is: ", ix1, iy1);
+        (void)snprintf(buff, sizeof(buff), "Vector to  %d,%d is: ", ix1, iy1);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         z1 = map_scaled_elevation(mech_map, ix1, iy1);
       }
@@ -345,7 +345,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
-        snprintf(buff, sizeof(buff), "Vector to  %d,%d,%d is: ", ix1, iy1, iz1);
+        (void)snprintf(buff, sizeof(buff), "Vector to  %d,%d,%d is: ", ix1, iy1,
+                       iz1);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         z1 = scaled_hex_elevation(iz1);
       }
@@ -367,8 +368,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
-        snprintf(buff, sizeof(buff), "Vector to %d,%d from %d,%d is: ", ix1,
-                 iy1, ix0, iy0);
+        (void)snprintf(buff, sizeof(buff),
+                       "Vector to %d,%d from %d,%d is: ", ix1, iy1, ix0, iy0);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         MapCoordToRealCoord(ix0, iy0, &x0, &y0);
         z1 = map_scaled_elevation(mech_map, ix1, iy1);
@@ -393,9 +394,9 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         mecha_notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
-        snprintf(buff, sizeof(buff),
-                 "Vector to %d,%d,%d from %d,%d,%d is: ", ix1, iy1, iz1, ix0,
-                 iy0, iz0);
+        (void)snprintf(buff, sizeof(buff),
+                       "Vector to %d,%d,%d from %d,%d,%d is: ", ix1, iy1, iz1,
+                       ix0, iy0, iz0);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         MapCoordToRealCoord(ix0, iy0, &x0, &y0);
         z1 = scaled_hex_elevation(iz1);
@@ -411,25 +412,25 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       /* range */
       temp = FindRange(x0, y0, z0, x1, y1, z1);
       hr = FindHexRange(x0, y0, x1, y1);
-      snprintf(buf1, sizeof(buf1), "%.1f", (double)temp);
-      snprintf(buf2, sizeof(buf2), "%.1f", (double)hr);
+      (void)snprintf(buf1, sizeof(buf1), "%.1f", (double)temp);
+      (void)snprintf(buf2, sizeof(buf2), "%.1f", (double)hr);
       if (strcmp(buf1, buf2))
-        snprintf(trash, sizeof(trash), "%s hexes (%s ground hexes) and ", buf1,
-                 buf2);
+        (void)snprintf(trash, sizeof(trash), "%s hexes (%s ground hexes) and ",
+                       buf1, buf2);
       else
-        snprintf(trash, sizeof(trash), "%s hexes and ", buf1);
+        (void)snprintf(trash, sizeof(trash), "%s hexes and ", buf1);
       strlcat(buff, trash, sizeof(buff));
 
       /* bearing */
       const int bearing = FindBearing(x0, y0, x1, y1);
       if (argc != 0 && argc != 3 && argc != 6)
-        snprintf(trash, sizeof(trash), "%d degrees.", bearing);
+        (void)snprintf(trash, sizeof(trash), "%d degrees.", bearing);
       else
-        snprintf(trash, sizeof(trash), "%d degrees mark %c%d.", bearing,
-                 (z1 > z0   ? '+'
-                  : z1 < z0 ? '-'
-                            : ' '),
-                 FindZBearing(x0, y0, z0, x1, y1, z1));
+        (void)snprintf(trash, sizeof(trash), "%d degrees mark %c%d.", bearing,
+                       (z1 > z0   ? '+'
+                        : z1 < z0 ? '-'
+                                  : ' '),
+                       FindZBearing(x0, y0, z0, x1, y1, z1));
       strlcat(buff, trash, sizeof(buff));
 
       mecha_notify(evaluation, player, buff);

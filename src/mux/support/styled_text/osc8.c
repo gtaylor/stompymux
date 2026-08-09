@@ -148,8 +148,8 @@ bool styled_command_uri_encode(StyledLinkKind kind, const char *command,
     } else {
       if (used + 3 >= uri_size)
         goto too_long;
-      snprintf(checked_storage_at(uri, uri_size, sizeof(char), used),
-               uri_size - used, "%%%02X", byte);
+      (void)snprintf(checked_storage_at(uri, uri_size, sizeof(char), used),
+                     uri_size - used, "%%%02X", byte);
       used += 3;
     }
   }
@@ -653,7 +653,7 @@ static bool append_percent_encoded(const char *value, char *output,
         return false;
     } else {
       char encoded[4];
-      snprintf(encoded, sizeof(encoded), "%%%02X", byte);
+      (void)snprintf(encoded, sizeof(encoded), "%%%02X", byte);
       if (!styled_append_bytes(output, output_size, used, encoded, 3))
         return false;
     }

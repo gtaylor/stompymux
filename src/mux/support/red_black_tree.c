@@ -8,7 +8,7 @@
 #include "mux/support/red_black_tree_internal.h"
 
 [[noreturn]] static void red_black_tree_fail(const char *message) {
-  fprintf(stderr, "Red-black tree invariant failure: %s\n", message);
+  (void)fprintf(stderr, "Red-black tree invariant failure: %s\n", message);
   abort();
 }
 
@@ -111,7 +111,7 @@ void red_black_tree_release(RedBlackTree bt,
         else if (parent && parent->right == node)
           parent->right = nullptr;
         else if (parent) {
-          fprintf(stderr, "serious braindamage.\n");
+          (void)fprintf(stderr, "serious braindamage.\n");
           exit(1);
         }
         release(node->key, node->data, arg);
@@ -143,7 +143,7 @@ void red_black_tree_destroy(RedBlackTree bt) {
         else if (parent && parent->right == node)
           parent->right = nullptr;
         else if (parent) {
-          fprintf(stderr, "serious braindamage.\n");
+          (void)fprintf(stderr, "serious braindamage.\n");
           exit(1);
         }
         free(node);
@@ -183,7 +183,8 @@ void *red_black_tree_find(RedBlackTree bt, void *key) {
     }
   }
   /* Shouldn't happen. */
-  fprintf(stderr, "Serious fault in RedBlackTree.c:red_black_tree_find!\n");
+  (void)fprintf(stderr,
+                "Serious fault in RedBlackTree.c:red_black_tree_find!\n");
   exit(1);
 }
 
@@ -214,7 +215,8 @@ bool red_black_tree_exists(RedBlackTree bt, void *key) {
     }
   }
   /* Shouldn't happen. */
-  fprintf(stderr, "Serious fault in RedBlackTree.c:red_black_tree_exists!\n");
+  (void)fprintf(stderr,
+                "Serious fault in RedBlackTree.c:red_black_tree_exists!\n");
   exit(1);
 }
 

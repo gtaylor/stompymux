@@ -68,13 +68,14 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
     if (count > 0) {
       ArmorStringFromIndex(loop, tempbuff, mech_class(mech),
                            mech_movement_type(mech));
-      snprintf(location, sizeof(location), "%-14.14s", tempbuff);
+      (void)snprintf(location, sizeof(location), "%-14.14s", tempbuff);
 
       for (ii = 0; ii < count; ii++) {
         const int weapon_index = scan_weapon_byte(weaparray, ii);
-        snprintf(weapbuff, sizeof(weapbuff), " %-18.18s [%2d]  ",
-                 checked_string_suffix(weapon_catalogue_name(weapon_index), 3),
-                 running_sum + ii);
+        (void)snprintf(
+            weapbuff, sizeof(weapbuff), " %-18.18s [%2d]  ",
+            checked_string_suffix(weapon_catalogue_name(weapon_index), 3),
+            running_sum + ii);
         strlcat(weapbuff, location, sizeof(weapbuff));
 
         if (mech_critical_is_nonfunctional(mech, loop,

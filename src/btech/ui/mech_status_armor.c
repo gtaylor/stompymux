@@ -154,7 +154,7 @@ static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
 
     /* TODO: snprintf() is a C99-ism, please autoconf-ize.  */
     /* XXX: Aeros 0-filled spaces.  That's silly.  */
-    snprintf(armor_buf, sizeof(armor_buf), "%d", armor_value);
+    (void)snprintf(armor_buf, sizeof(armor_buf), "%d", armor_value);
 
     /* XXX: Return values aren't standardized until C99.  */
     armor_len = strlen(armor_buf);
@@ -208,8 +208,8 @@ static ArmorKeyText armor_key_text(int line_key, int owner) {
     /* XXX: Probably safe from buffer overflows.  */
     const int armor_level = 6 - line_key;
     const char letter = armor_damage_letter(armor_level);
-    snprintf(result.text, sizeof(result.text), "%s%c%c [reset]",
-             armor_damage_color(armor_level), letter, letter);
+    (void)snprintf(result.text, sizeof(result.text), "%s%c%c [reset]",
+                   armor_damage_color(armor_level), letter, letter);
   }
 
   return result;
@@ -246,8 +246,8 @@ static ArmorFieldText armor_field_text(Mech *mech, const int loc,
 
   ArmorDamageText damage =
       armor_damage_text(armor_level, armor_value, flag, (size_t)width);
-  snprintf(result.text, sizeof(result.text), "%s%s[reset]",
-           armor_damage_color(armor_level), damage.text);
+  (void)snprintf(result.text, sizeof(result.text), "%s%s[reset]",
+                 armor_damage_color(armor_level), damage.text);
 
   return result;
 }

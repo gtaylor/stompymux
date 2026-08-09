@@ -75,7 +75,8 @@ char *mech_getset_ref(int mode, Mech *mech, char *data) {
   }
 
   static char reference[LBUF_SIZE];
-  snprintf(reference, sizeof(reference), "%s", mech_model_reference(mech));
+  (void)snprintf(reference, sizeof(reference), "%s",
+                 mech_model_reference(mech));
   return reference;
 }
 
@@ -110,7 +111,7 @@ char *mechMovefunc(int mode, Mech *mech, char *arg) {
 char *mechTechTimefunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   int n = figure_latest_tech_event(mech);
 
-  snprintf(buffer, LBUF_SIZE, "%d", n);
+  (void)snprintf(buffer, LBUF_SIZE, "%d", n);
   return buffer;
 }
 
@@ -237,7 +238,7 @@ static void damage_list_append(char buffer[static LBUF_SIZE], int *count,
   va_list arguments;
   va_start(arguments, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(
+  (void)vsnprintf(
       checked_storage_region(buffer, LBUF_SIZE, length, LBUF_SIZE - length),
       LBUF_SIZE - length, format, arguments);
   va_end(arguments);
@@ -253,7 +254,7 @@ char *mechDamagefunc(int mode, Mech *mech, char *arg,
 
   if (mode) {
     apply_mechDamage(mech, arg);
-    snprintf(buffer, LBUF_SIZE, "?");
+    (void)snprintf(buffer, LBUF_SIZE, "?");
     return buffer;
   };
   buffer[0] = '\0';
@@ -305,9 +306,9 @@ char *mechCentBearingfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   float fx, fy;
 
   MapCoordToRealCoord(x, y, &fx, &fy);
-  snprintf(buffer, LBUF_SIZE, "%d",
-           FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
-                       fx, fy));
+  (void)snprintf(buffer, LBUF_SIZE, "%d",
+                 FindBearing(mech_position_real_x(mech),
+                             mech_position_real_y(mech), fx, fy));
   return buffer;
 }
 
@@ -317,9 +318,9 @@ char *mechCentDistfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   float fx, fy;
 
   MapCoordToRealCoord(x, y, &fx, &fy);
-  snprintf(buffer, LBUF_SIZE, "%.2f",
-           (double)FindHexRange(fx, fy, mech_position_real_x(mech),
-                                mech_position_real_y(mech)));
+  (void)snprintf(buffer, LBUF_SIZE, "%.2f",
+                 (double)FindHexRange(fx, fy, mech_position_real_x(mech),
+                                      mech_position_real_y(mech)));
   return buffer;
 }
 

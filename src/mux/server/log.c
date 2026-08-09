@@ -78,11 +78,14 @@ int start_log(ServerLog *log, const char *primary, const char *secondary) {
      */
 
     if ((log->configuration->log_info & LOGOPT_TIMESTAMP) != 0) {
-      time((time_t *)(&now));
-      tp = localtime((time_t *)(&now));
-      snprintf(log->timestamp, sizeof(log->timestamp),
-               "%d%02d%02d.%02d%02d%02d ", tp->tm_year + 1900, tp->tm_mon + 1,
-               tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec);
+      now = time(nullptr);
+      if (now == (time_t)-1)
+        now = 0;
+      tp = localtime(&now);
+      (void)snprintf(log->timestamp, sizeof(log->timestamp),
+                     "%d%02d%02d.%02d%02d%02d ", tp->tm_year + 1900,
+                     tp->tm_mon + 1, tp->tm_mday, tp->tm_hour, tp->tm_min,
+                     tp->tm_sec);
     } else {
       log->timestamp[0] = '\0';
     }
@@ -92,18 +95,18 @@ int start_log(ServerLog *log, const char *primary, const char *secondary) {
      */
 
     if (secondary && *secondary)
-      fprintf(stderr, "%s%s %3s/%-5s: ", log->timestamp,
-              log->configuration->mud_name, primary, secondary);
+      (void)fprintf(stderr, "%s%s %3s/%-5s: ", log->timestamp,
+                    log->configuration->mud_name, primary, secondary);
     else
-      fprintf(stderr, "%s%s %-9s: ", log->timestamp,
-              log->configuration->mud_name, primary);
+      (void)fprintf(stderr, "%s%s %-9s: ", log->timestamp,
+                    log->configuration->mud_name, primary);
     /*
      * If a recursive call, log it and return indicating no log
      */
 
     if (log->nesting == 1)
       return 1;
-    fprintf(stderr, "Recursive logging request.\r\n");
+    (void)fprintf(stderr, "Recursive logging request.\r\n");
     [[fallthrough]];
   default:
     log->nesting--;
@@ -115,8 +118,8 @@ int start_log(ServerLog *log, const char *primary, const char *secondary) {
  * Finish up writing a log entry
  */
 void end_log(ServerLog *log) {
-  fprintf(stderr, "\n");
-  fflush(stderr);
+  (void)fprintf(stderr, "\n");
+  (void)fflush(stderr);
   log->nesting--;
 }
 
@@ -132,7 +135,7 @@ void log_perror(ServerLog *log, const char *primary, const char *secondary,
     log_text(") ");
   }
   perror(failing_object);
-  fflush(stderr);
+  (void)fflush(stderr);
   log->nesting--;
 }
 
@@ -142,7 +145,7 @@ void log_perror(ServerLog *log, const char *primary, const char *secondary,
 void log_text(const char *text) {
   char new[LBUF_SIZE];
   styled_text_strip(nullptr, text, new, sizeof(new));
-  fprintf(stderr, "%s", new);
+  (void)fprintf(stderr, "%s", new);
 }
 
 void log_simple(ServerLog *log, int key, const char *primary,
@@ -166,34 +169,36 @@ void log_error(ServerLog *log, int key, const char *primary,
   if (log->configuration->log_info & LOGOPT_TIMESTAMP) {
     time_t now;
     struct tm tm;
-    time(&now);
+    now = time(nullptr);
+    if (now == (time_t)-1)
+      now = 0;
     localtime_r(&now, &tm);
-    fprintf(stderr, "%d%02d%02d.%02d%02d%02d ", tm.tm_year + 1900,
-            tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    (void)fprintf(stderr, "%d%02d%02d.%02d%02d%02d ", tm.tm_year + 1900,
+                  tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
 
   if (secondary) {
-    fprintf(stderr, "%s%s %3s/%-5s: ", log->timestamp,
-            log->configuration->mud_name, primary, secondary);
+    (void)fprintf(stderr, "%s%s %3s/%-5s: ", log->timestamp,
+                  log->configuration->mud_name, primary, secondary);
   } else {
-    fprintf(stderr, "%s%s %-9s: ", log->timestamp, log->configuration->mud_name,
-            primary);
+    (void)fprintf(stderr, "%s%s %-9s: ", log->timestamp,
+                  log->configuration->mud_name, primary);
   }
 
   va_start(ap, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(buffer, LBUF_SIZE, format, ap);
+  (void)vsnprintf(buffer, LBUF_SIZE, format, ap);
   va_end(ap);
 
   styled_text_strip(log->database->styled_text_palette, buffer, stripped_buffer,
                     sizeof(stripped_buffer));
-  fprintf(stderr, "%s\n", stripped_buffer);
+  (void)fprintf(stderr, "%s\n", stripped_buffer);
 }
 
 /*
  * Write a number to log file.
  */
-void log_number(int num) { fprintf(stderr, "%d", num); }
+void log_number(int num) { (void)fprintf(stderr, "%d", num); }
 
 /**
  * Writes the name, db number, and flags of an object to the log.
@@ -207,7 +212,7 @@ void log_name(ServerLog *log, DbRef target) {
   else
     tp = unparse_object_numonly(log->database, target);
   styled_text_strip(log->database->styled_text_palette, tp, new, sizeof(new));
-  fprintf(stderr, "%s", new);
+  (void)fprintf(stderr, "%s", new);
   free_lbuf(tp);
   return;
 }
@@ -252,7 +257,7 @@ void log_type_and_name(ServerLog *log, DbRef thing) {
   char nbuf[16];
 
   log_text(object_type_name(log->database, thing));
-  snprintf(nbuf, sizeof(nbuf), " #%ld(", thing);
+  (void)snprintf(nbuf, sizeof(nbuf), " #%ld(", thing);
   log_text(nbuf);
   if (is_good_obj(log->database, thing))
     log_text(game_object_name(log->database, thing));
@@ -276,14 +281,14 @@ int log_to_file(EvaluationContext *evaluation, DbRef thing, const char *logfile,
     return 0;
   if (strstr(logfile, "/") != nullptr)
     return 0;
-  snprintf(pathname, 210, "logs/%s", logfile);
+  (void)snprintf(pathname, 210, "logs/%s", logfile);
 
   /* Hacking checks. */
 
   if (access(pathname, R_OK | W_OK) != 0)
     return 0;
 
-  snprintf(message_buffer, 4096, "%s\n", message);
+  (void)snprintf(message_buffer, 4096, "%s\n", message);
 
   if (!log_cache_write(evaluation->log->cache, pathname, message_buffer)) {
     notify_checked(evaluation, thing, thing,

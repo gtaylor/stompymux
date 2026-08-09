@@ -265,7 +265,7 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
   int rtar;
 
   if (!list->weapon_count) {
-    snprintf(buffer, LBUF_SIZE, "No weapons in tic.");
+    (void)snprintf(buffer, LBUF_SIZE, "No weapons in tic.");
     return buffer;
   }
   rtar = i / 2 + (i % 2 ? ((list->weapon_count + 1) / 2) : 0);
@@ -277,22 +277,23 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
           j = MAX_WEAPONS_PER_MECH;
           continue;
         }
-        snprintf(buffer, LBUF_SIZE, "#%2d %3s %-16s %s", j,
-                 armor_section_abbreviation(((mech)->ud.type),
-                                            ((mech)->ud.move), section)
-                     .text,
-                 checked_string_suffix(
-                     weapon_catalogue_name(weapon_from_equipment_index(
-                         mech_critical_part_type(mech, section, critical))),
-                     3),
-                 mech_critical_is_nonfunctional(mech, section, critical) ? "(*)"
-                                                                         : "");
+        (void)snprintf(
+            buffer, LBUF_SIZE, "#%2d %3s %-16s %s", j,
+            armor_section_abbreviation(((mech)->ud.type), ((mech)->ud.move),
+                                       section)
+                .text,
+            checked_string_suffix(
+                weapon_catalogue_name(weapon_from_equipment_index(
+                    mech_critical_part_type(mech, section, critical))),
+                3),
+            mech_critical_is_nonfunctional(mech, section, critical) ? "(*)"
+                                                                    : "");
         return buffer;
       }
       count++;
     }
   }
-  snprintf(buffer, LBUF_SIZE, "Unknown - error of some sort occured");
+  (void)snprintf(buffer, LBUF_SIZE, "Unknown - error of some sort occured");
   return buffer;
 }
 

@@ -162,7 +162,7 @@ void initialize_pc(DbRef player, Mech *mech) {
   c = btech_attribute_read(context->database, player, A_PCEQUIP,
                            (char[LBUF_SIZE]){0});
   char equipment[LBUF_SIZE];
-  snprintf(equipment, sizeof(equipment), "%s", c);
+  (void)snprintf(equipment, sizeof(equipment), "%s", c);
   char *armor = strtok(equipment, " \t\r\n");
   char *weapon_one = strtok(nullptr, " \t\r\n");
   char *weapon_two = strtok(nullptr, " \t\r\n");
@@ -172,19 +172,19 @@ void initialize_pc(DbRef player, Mech *mech) {
   if (armor) {
     if (strlen(armor) >= sizeof(buf1))
       return;
-    snprintf(buf1, sizeof(buf1), "%s", armor);
+    (void)snprintf(buf1, sizeof(buf1), "%s", armor);
     cnt = 1;
   }
   if (weapon_one) {
     if (strlen(weapon_one) >= sizeof(buf2))
       return;
-    snprintf(buf2, sizeof(buf2), "%s", weapon_one);
+    (void)snprintf(buf2, sizeof(buf2), "%s", weapon_one);
     cnt = 2;
   }
   if (weapon_two) {
     if (strlen(weapon_two) >= sizeof(buf3))
       return;
-    snprintf(buf3, sizeof(buf3), "%s", weapon_two);
+    (void)snprintf(buf3, sizeof(buf3), "%s", weapon_two);
     cnt = 3;
   }
   if (first_ammunition) {

@@ -44,7 +44,7 @@ static void repair_append(char *buffer, size_t capacity, const char *format,
   va_list arguments;
   va_start(arguments, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(destination, capacity - used, format, arguments);
+  (void)vsnprintf(destination, capacity - used, format, arguments);
   va_end(arguments);
 }
 
@@ -64,12 +64,12 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
   loc = payload.location;
   pos = payload.position;
   extra = payload.extra;
-  snprintf(buf, sizeof(buf), "%s%s",
-           armor_section_abbreviation(mech_class(mech),
-                                      mech_movement_type(mech), loc % 8)
-               .text,
-           loc >= 8 ? "(R)" : "");
-  snprintf(buf2, sizeof(buf2), "%-5ld ", player);
+  (void)snprintf(buf, sizeof(buf), "%s%s",
+                 armor_section_abbreviation(mech_class(mech),
+                                            mech_movement_type(mech), loc % 8)
+                     .text,
+                 loc >= 8 ? "(R)" : "");
+  (void)snprintf(buf2, sizeof(buf2), "%-5ld ", player);
   repair_append(buf2, sizeof(buf2), "%-4d ",
                 game_lag_time(context, (e->tick - e->scheduler->tick) / 60));
   switch (type) {

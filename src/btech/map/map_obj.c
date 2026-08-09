@@ -64,8 +64,8 @@ int find_entrance(BattleMap *map, char dir, int *x, int *y) {
 StructureName structure_name(GameDatabase *database, MapObject *mapo) {
   StructureName result = {0};
 
-  snprintf(result.text, sizeof(result.text), "the %s",
-           game_object_name(database, mapo->obj));
+  (void)snprintf(result.text, sizeof(result.text), "the %s",
+                 game_object_name(database, mapo->obj));
   return result;
 }
 

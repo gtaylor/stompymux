@@ -169,9 +169,9 @@ static void ai_send_message(Autopilot *a, Mech *m, const char *msg) {
 static AiInfo ai_info(Mech *m, Autopilot *a) {
   AiInfo info;
 
-  snprintf(info.text, sizeof(info.text),
-           "Unit#%ld on #%ld [A#%ld]:", mech_dbref(m), mech_map_dbref(m),
-           a->mynum);
+  (void)snprintf(info.text, sizeof(info.text),
+                 "Unit#%ld on #%ld [A#%ld]:", mech_dbref(m), mech_map_dbref(m),
+                 a->mynum);
   return info;
 }
 
@@ -558,7 +558,7 @@ void ai_set_speed(Mech *mech, Autopilot *a, float spd) {
                (mech_effective_maximum_speed(mech) * (float)a->speed) / 100.0F);
 
   if (fabsf(mech_desired_speed(mech) - newspeed) > 0.0001F) {
-    snprintf(buf, SBUF_SIZE, "%f", (double)newspeed);
+    (void)snprintf(buf, SBUF_SIZE, "%f", (double)newspeed);
     mech_speed(a->mynum, mech, buf);
   }
 }
@@ -568,7 +568,7 @@ void ai_set_heading(Mech *mech, Autopilot *a, int dir) {
 
   if (dir == mech_desired_heading_degrees(mech))
     return;
-  snprintf(buf, 128, "%d", dir);
+  (void)snprintf(buf, 128, "%d", dir);
   mech_heading(a->mynum, mech, buf);
 }
 

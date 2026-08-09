@@ -133,7 +133,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
 
       /* Trigger FAIL & AFAIL */
       memset(fail_mesg, 0, sizeof(fail_mesg));
-      snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
+      (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
 
       notify_lock_failure(evaluation, &lock, &lock_result, fail_mesg, nullptr,
                           LUA_EVENT_FAIL);
@@ -284,7 +284,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
 
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));
-    snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
+    (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
 
     notify_lock_failure(evaluation, &lock, &lock_result, fail_mesg, nullptr,
                         LUA_EVENT_FAIL);

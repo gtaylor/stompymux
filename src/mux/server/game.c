@@ -554,8 +554,9 @@ int main(int argc, char *argv[]) {
 
   if (argc > 3 || (argc > 2 && strcmp(argument_one, "-s") != 0) ||
       (argc > 1 && strcmp(argument_one, "--restart") == 0)) {
-    fprintf(stderr, "Usage: %s [-s] [config-file]\n",
-            *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 0));
+    (void)fprintf(
+        stderr, "Usage: %s [-s] [config-file]\n",
+        *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 0));
     exit(1);
   }
 
@@ -577,10 +578,12 @@ int main(int argc, char *argv[]) {
     }
   }
   if (!mux_server_create(&server)) {
-    fprintf(stderr, "Unable to create MUX server resources.\n");
+    (void)fprintf(stderr, "Unable to create MUX server resources.\n");
     return 2;
   }
-  time(&server.start_time);
+  server.start_time = time(nullptr);
+  if (server.start_time == (time_t)-1)
+    server.start_time = 0;
   server.process_start_time = server.start_time;
   btech_context_set_process_start_time(server.btech, server.process_start_time);
   server.database.top = -1;
@@ -598,28 +601,28 @@ int main(int argc, char *argv[]) {
     goto fail;
 
   if (!password_initialize()) {
-    fprintf(stderr, "Unable to initialize password hashing.\n");
+    (void)fprintf(stderr, "Unable to initialize password hashing.\n");
     goto fail;
   }
 
   if (!*server.configuration->database.gamedb) {
-    fprintf(stderr,
-            "Required configuration directive game_database is missing.\n");
+    (void)fprintf(
+        stderr, "Required configuration directive game_database is missing.\n");
     goto fail;
   }
 
   if (btech_persistence_register(&server.persistence, server.btech) < 0) {
-    fprintf(stderr, "Unable to register BTech SQLite persistence.\n");
+    (void)fprintf(stderr, "Unable to register BTech SQLite persistence.\n");
     goto fail;
   }
 
   if (commac_persistence_register(&server.persistence) < 0) {
-    fprintf(stderr, "Unable to register commac SQLite persistence.\n");
+    (void)fprintf(stderr, "Unable to register commac SQLite persistence.\n");
     goto fail;
   }
 
   if (!mux_server_load_content(&server)) {
-    fprintf(stderr, "Unable to load MUX server content.\n");
+    (void)fprintf(stderr, "Unable to load MUX server content.\n");
     goto fail;
   }
   db_free(&server.database);

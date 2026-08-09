@@ -47,8 +47,8 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
        */
       char buffer[MBUF_SIZE];
       memset(buffer, 0, MBUF_SIZE);
-      snprintf(buffer, MBUF_SIZE - 1, "%s goes home.",
-               game_object_name(evaluation->world->database, player));
+      (void)snprintf(buffer, MBUF_SIZE - 1, "%s goes home.",
+                     game_object_name(evaluation->world->database, player));
       notify_except(evaluation, loc, player, player, buffer);
     }
     /*

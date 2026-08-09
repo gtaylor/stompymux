@@ -104,23 +104,23 @@ static char *mech_value_read_text(const Mech *mech, const GMV *descriptor,
 
   switch (descriptor->type) {
   case TYPE_STRING:
-    snprintf(buffer, LBUF_SIZE, "%s", value.string);
+    (void)snprintf(buffer, LBUF_SIZE, "%s", value.string);
     break;
   case TYPE_DBREF:
   case TYPE_DBREF_RO:
-    snprintf(buffer, LBUF_SIZE, "%ld", value.dbref);
+    (void)snprintf(buffer, LBUF_SIZE, "%ld", value.dbref);
     break;
   case TYPE_FLOAT:
   case TYPE_FLOAT_RO:
-    snprintf(buffer, LBUF_SIZE, "%.2f", (double)value.floating);
+    (void)snprintf(buffer, LBUF_SIZE, "%.2f", (double)value.floating);
     break;
   case TYPE_BV:
   case TYPE_CBV:
-    snprintf(buffer, LBUF_SIZE, "%s",
-             bv2text(value.integer, (char[SBUF_SIZE]){0}));
+    (void)snprintf(buffer, LBUF_SIZE, "%s",
+                   bv2text(value.integer, (char[SBUF_SIZE]){0}));
     break;
   default:
-    snprintf(buffer, LBUF_SIZE, "%d", value.integer);
+    (void)snprintf(buffer, LBUF_SIZE, "%d", value.integer);
     break;
   }
   return buffer;
@@ -145,7 +145,7 @@ static bool descriptor_write_text(void *data, const GMV *descriptor,
     if (capacity == 0)
       return true;
     char *field = descriptor_field(data, descriptor, capacity);
-    snprintf(field, capacity, "%s", text);
+    (void)snprintf(field, capacity, "%s", text);
     return true;
   }
   case TYPE_DBREF: {
@@ -224,7 +224,7 @@ void fun_zmechs(char *buff, char **bufc, DbRef player, DbRef cause,
         if ((btech_context_which_special(context->btech, i) == GTYPE_MECH) &&
             is_good_obj(context->btech->database, i)) {
           if (len) {
-            snprintf(reference, sizeof(reference), " #%ld", i);
+            (void)snprintf(reference, sizeof(reference), " #%ld", i);
             if ((strlen(reference) + len) > (LBUF_SIZE - SBUF_SIZE)) {
               safe_str(" #-1", buff, bufc);
               return;
@@ -283,11 +283,11 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
 
   switch (descriptor->type) {
   case TYPE_STRFUNC:
-    snprintf(buffer, LBUF_SIZE, "%s",
-             descriptor->source.string_callback(0, (Mech *)data));
+    (void)snprintf(buffer, LBUF_SIZE, "%s",
+                   descriptor->source.string_callback(0, (Mech *)data));
     break;
   case TYPE_STRFUNC_BD:
-    snprintf(
+    (void)snprintf(
         buffer, LBUF_SIZE, "%s",
         descriptor->source.bidirectional_callback(0, (Mech *)data, nullptr));
     break;
@@ -301,7 +301,7 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
   case TYPE_STRING: {
     const char *field =
         descriptor_field_const(data, descriptor, (size_t)descriptor->size);
-    snprintf(buffer, LBUF_SIZE, "%s", field);
+    (void)snprintf(buffer, LBUF_SIZE, "%s", field);
     break;
   }
   case TYPE_DBREF:
@@ -309,7 +309,7 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
     DbRef value;
     memcpy(&value, descriptor_field_const(data, descriptor, sizeof(value)),
            sizeof(value));
-    snprintf(buffer, LBUF_SIZE, "%ld", value);
+    (void)snprintf(buffer, LBUF_SIZE, "%ld", value);
     break;
   }
   case TYPE_CHAR:
@@ -317,7 +317,7 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
     char value;
     memcpy(&value, descriptor_field_const(data, descriptor, sizeof(value)),
            sizeof(value));
-    snprintf(buffer, LBUF_SIZE, "%d", value);
+    (void)snprintf(buffer, LBUF_SIZE, "%d", value);
     break;
   }
   case TYPE_SHORT:
@@ -325,7 +325,7 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
     short value;
     memcpy(&value, descriptor_field_const(data, descriptor, sizeof(value)),
            sizeof(value));
-    snprintf(buffer, LBUF_SIZE, "%d", value);
+    (void)snprintf(buffer, LBUF_SIZE, "%d", value);
     break;
   }
   case TYPE_INT:
@@ -335,9 +335,10 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
     memcpy(&value, descriptor_field_const(data, descriptor, sizeof(value)),
            sizeof(value));
     if (descriptor->type == TYPE_BV)
-      snprintf(buffer, LBUF_SIZE, "%s", bv2text(value, (char[SBUF_SIZE]){0}));
+      (void)snprintf(buffer, LBUF_SIZE, "%s",
+                     bv2text(value, (char[SBUF_SIZE]){0}));
     else
-      snprintf(buffer, LBUF_SIZE, "%d", value);
+      (void)snprintf(buffer, LBUF_SIZE, "%d", value);
     break;
   }
   case TYPE_FLOAT:
@@ -345,15 +346,15 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
     float value;
     memcpy(&value, descriptor_field_const(data, descriptor, sizeof(value)),
            sizeof(value));
-    snprintf(buffer, LBUF_SIZE, "%.2f", (double)value);
+    (void)snprintf(buffer, LBUF_SIZE, "%.2f", (double)value);
     break;
   }
   case TYPE_CBV: {
     byte value;
     memcpy(&value, descriptor_field_const(data, descriptor, sizeof(value)),
            sizeof(value));
-    snprintf(buffer, LBUF_SIZE, "%s",
-             bv2text((int)value, (char[SBUF_SIZE]){0}));
+    (void)snprintf(buffer, LBUF_SIZE, "%s",
+                   bv2text((int)value, (char[SBUF_SIZE]){0}));
     break;
   }
   }
@@ -503,7 +504,7 @@ void list_xcodestuff(DbRef player, void *data, char *buffer) {
       if (*filter)
         if (strncasecmp(descriptor->name, filter, strlen(filter)))
           continue;
-      snprintf(lab, sizeof(lab), "%s", descriptor->name);
+      (void)snprintf(lab, sizeof(lab), "%s", descriptor->name);
       const size_t label_limit = (size_t)(se_len / 3);
       *(char *)checked_storage_at(lab, sizeof(lab), sizeof(char), label_limit) =
           '\0';

@@ -279,14 +279,14 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
   if (hitloc != -1) {
     ArmorStringFromIndex(hitloc, locationBuff, mech_class(wounded),
                          mech_movement_type(wounded));
-    snprintf(notificationBuff, sizeof(notificationBuff),
-             "for %d points of damage in the %s %s",
-             damage + (intDamage < 0 ? 0 : intDamage), locationBuff,
-             rearMessage);
+    (void)snprintf(notificationBuff, sizeof(notificationBuff),
+                   "for %d points of damage in the %s %s",
+                   damage + (intDamage < 0 ? 0 : intDamage), locationBuff,
+                   rearMessage);
   } else
-    snprintf(notificationBuff, sizeof(notificationBuff),
-             "for %d points of damage in the structure.",
-             damage + (intDamage < 0 ? 0 : intDamage));
+    (void)snprintf(notificationBuff, sizeof(notificationBuff),
+                   "for %d points of damage in the structure.",
+                   damage + (intDamage < 0 ? 0 : intDamage));
 
   /* Only count initial damage. Transfer is just gonna do that, transfer, not
    * damage again */

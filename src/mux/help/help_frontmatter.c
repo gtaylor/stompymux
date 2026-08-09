@@ -64,14 +64,15 @@ bool help_frontmatter_parse(const char *text, size_t length, HelpArticle *out,
   result = toml_parse(nul_terminated, (int)length);
   free(nul_terminated);
   if (!result.ok) {
-    snprintf(error, error_size, "%s", result.errmsg);
+    (void)snprintf(error, error_size, "%s", result.errmsg);
     toml_free(result);
     return false;
   }
 
   datum = toml_get(result.toptab, "title");
   if (datum.type != TOML_STRING) {
-    snprintf(error, error_size, "missing required frontmatter field 'title'");
+    (void)snprintf(error, error_size,
+                   "missing required frontmatter field 'title'");
     ok = false;
     goto done;
   }
@@ -79,8 +80,8 @@ bool help_frontmatter_parse(const char *text, size_t length, HelpArticle *out,
 
   datum = toml_get(result.toptab, "description");
   if (datum.type != TOML_STRING) {
-    snprintf(error, error_size,
-             "missing required frontmatter field 'description'");
+    (void)snprintf(error, error_size,
+                   "missing required frontmatter field 'description'");
     ok = false;
     goto done;
   }
@@ -88,8 +89,8 @@ bool help_frontmatter_parse(const char *text, size_t length, HelpArticle *out,
 
   datum = toml_get(result.toptab, "keywords");
   if (!help_frontmatter_copy_string_list(datum, &out->keywords)) {
-    snprintf(error, error_size,
-             "missing required frontmatter field 'keywords'");
+    (void)snprintf(error, error_size,
+                   "missing required frontmatter field 'keywords'");
     ok = false;
     goto done;
   }
@@ -108,10 +109,10 @@ bool help_frontmatter_parse(const char *text, size_t length, HelpArticle *out,
     else if (!strcmp(datum.u.s, "list_with_description"))
       out->index_style = HELP_INDEX_STYLE_LIST_WITH_DESCRIPTION;
     else
-      snprintf(error, error_size,
-               "unrecognized index_style '%s'; defaulting to "
-               "list_with_description",
-               datum.u.s);
+      (void)snprintf(error, error_size,
+                     "unrecognized index_style '%s'; defaulting to "
+                     "list_with_description",
+                     datum.u.s);
   }
 
   datum = toml_get(result.toptab, "weight");

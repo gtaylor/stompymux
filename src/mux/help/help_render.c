@@ -269,7 +269,8 @@ static void help_render_index_section(const HelpIndex *index,
     if (count > 0) {
       char header[256];
 
-      snprintf(header, sizeof(header), "%-20s %s\n", "TOPIC", "DESCRIPTION");
+      (void)snprintf(header, sizeof(header), "%-20s %s\n", "TOPIC",
+                     "DESCRIPTION");
       help_text_buffer_append_str(out, header);
     }
     for (i = 0; i < count; i++) {

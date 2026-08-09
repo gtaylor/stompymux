@@ -58,8 +58,9 @@ void set_lastsite(Descriptor *d, char *lastsite) {
       strncpy(buf, lastsite, LBUF_SIZE - 1);
       buf[LBUF_SIZE - 1] = '\0';
     } else {
-      snprintf(buf, sizeof(buf), "%s",
-               player_account_last_site(runtime->world->database, d->player));
+      (void)snprintf(
+          buf, sizeof(buf), "%s",
+          player_account_last_site(runtime->world->database, d->player));
     }
     player_account_last_site_set(runtime->world->database, d->player, buf);
   }
@@ -144,8 +145,8 @@ void announce_connect(DbRef player, Descriptor *d) {
     num++;
 
   if (num < 2) {
-    snprintf(buf, LBUF_SIZE, "%s has connected.",
-             game_object_name(runtime->world->database, player));
+    (void)snprintf(buf, LBUF_SIZE, "%s has connected.",
+                   game_object_name(runtime->world->database, player));
 
     do_comconnect(&command->evaluation, player, d);
 
@@ -159,8 +160,8 @@ void announce_connect(DbRef player, Descriptor *d) {
                     game_object_name(runtime->world->database, player));
     }
   } else {
-    snprintf(buf, LBUF_SIZE, "%s has reconnected.",
-             game_object_name(runtime->world->database, player));
+    (void)snprintf(buf, LBUF_SIZE, "%s has reconnected.",
+                   game_object_name(runtime->world->database, player));
     raw_broadcast(runtime->descriptors, OBJECT_FLAG_MONITOR,
                   "GAME: %s has reconnected.",
                   game_object_name(runtime->world->database, player));
@@ -221,8 +222,8 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   if (num == 0) {
     char buf[MBUF_SIZE];
 
-    snprintf(buf, MBUF_SIZE, "%s has disconnected.",
-             game_object_name(runtime->world->database, player));
+    (void)snprintf(buf, MBUF_SIZE, "%s has disconnected.",
+                   game_object_name(runtime->world->database, player));
     key = MSG_INV;
     if ((loc != NOTHING) && !(is_dark(runtime->world->database, player) &&
                               is_wizard(runtime->world->database, player)))
@@ -246,8 +247,8 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
 
   } else {
     char buf[MBUF_SIZE];
-    snprintf(buf, MBUF_SIZE, "%s has partially disconnected.",
-             game_object_name(runtime->world->database, player));
+    (void)snprintf(buf, MBUF_SIZE, "%s has partially disconnected.",
+                   game_object_name(runtime->world->database, player));
     key = MSG_INV;
     if ((loc != NOTHING) && !(is_dark(runtime->world->database, player) &&
                               is_wizard(runtime->world->database, player)))

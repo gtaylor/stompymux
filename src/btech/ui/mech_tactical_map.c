@@ -545,7 +545,7 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
       if (label < 0 || label > 999) {
         continue;
       }
-      snprintf(scratch, sizeof(scratch), "%3d", label);
+      (void)snprintf(scratch, sizeof(scratch), "%3d", label);
       const int label_offset = left_offset + 1 + x * 3;
       *tactical_canvas_at(sketch_buf, label_offset) = scratch[0];
       *tactical_canvas_at(sketch_buf, label_offset + dispcols) =
@@ -570,15 +570,15 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
         continue;
       }
 
-      snprintf(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
-                                      row_offset,
-                                      MAP_SKETCH_CAPACITY - row_offset),
-               MAP_SKETCH_CAPACITY - row_offset, "%3d", label);
+      (void)snprintf(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
+                                            row_offset,
+                                            MAP_SKETCH_CAPACITY - row_offset),
+                     MAP_SKETCH_CAPACITY - row_offset, "%3d", label);
       *tactical_canvas_at(sketch_buf, (int)row_offset + 3) = ' ';
-      snprintf(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
-                                      right_label_offset,
-                                      MAP_SKETCH_CAPACITY - right_label_offset),
-               MAP_SKETCH_CAPACITY - right_label_offset, "%3d", label);
+      (void)snprintf(checked_storage_region(
+                         sketch_buf, MAP_SKETCH_CAPACITY, right_label_offset,
+                         MAP_SKETCH_CAPACITY - right_label_offset),
+                     MAP_SKETCH_CAPACITY - right_label_offset, "%3d", label);
     }
   }
 

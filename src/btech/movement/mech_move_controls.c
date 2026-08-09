@@ -536,8 +536,9 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
   maxspeed = sqrtf(maxspeed * maxspeed -
                    mech_desired_speed(mech) * mech_desired_speed(mech));
   if ((newspeed > maxspeed) || (newspeed < -maxspeed)) {
-    snprintf(buff, sizeof(buff), "Max vertical speed is + %d KPH and - %d KPH",
-             (int)maxspeed, (int)maxspeed);
+    (void)snprintf(buff, sizeof(buff),
+                   "Max vertical speed is + %d KPH and - %d KPH", (int)maxspeed,
+                   (int)maxspeed);
     mecha_notify(btech_context_evaluation(context), player, buff);
   } else {
     if (mech_is_fallen(mech)) {

@@ -214,7 +214,7 @@ int lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
   const char *value =
       game_object_lua_parent(runtime->services->database, object);
   if (*value) {
-    snprintf(path, path_size, "%s", value);
+    (void)snprintf(path, path_size, "%s", value);
     if (source)
       *source = object;
     return 1;

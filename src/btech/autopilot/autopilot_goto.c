@@ -153,11 +153,11 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   if (!map) {
 
     /* Bad Map */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " goto [dumbly] with AI #%ld but AI is not on a valid"
-             " Map (#%ld).",
-             autopilot->mynum, autopilot->mapindex);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " goto [dumbly] with AI #%ld but AI is not on a valid"
+                   " Map (#%ld).",
+                   autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -198,11 +198,11 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " goto [dumbly] with AI #%ld but was unable to - bad"
-             " first argument - going to next command",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " goto [dumbly] with AI #%ld but was unable to - bad"
+                   " first argument - going to next command",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -212,11 +212,11 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   /* Read in the argument */
   if (!parse_int_checked(argument, &tx)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " goto [dumbly] with AI #%ld but was unable to - bad"
-             " first argument '%s' - going to next command",
-             autopilot->mynum, argument);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " goto [dumbly] with AI #%ld but was unable to - bad"
+                   " first argument '%s' - going to next command",
+                   autopilot->mynum, argument);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     free(argument);
@@ -230,11 +230,11 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " goto [dumbly] with AI #%ld but was unable to - bad"
-             " second argument - going to next command",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " goto [dumbly] with AI #%ld but was unable to - bad"
+                   " second argument - going to next command",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -244,11 +244,11 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   /* Read in the argument */
   if (!parse_int_checked(argument, &ty)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " goto [dumbly] with AI #%ld but was unable to - bad"
-             " second argument '%s' - going to next command",
-             autopilot->mynum, argument);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " goto [dumbly] with AI #%ld but was unable to - bad"
+                   " second argument '%s' - going to next command",
+                   autopilot->mynum, argument);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     free(argument);
@@ -322,11 +322,11 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                                     autopilot->mapindex))) {
 
     /* Bad Map */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " goto with AI #%ld but AI is not on a valid"
-             " Map (#%ld).",
-             autopilot->mynum, autopilot->mapindex);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " goto with AI #%ld but AI is not on a valid"
+                   " Map (#%ld).",
+                   autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -370,11 +370,12 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
 
       /* Ok bad argument - means the command is messed up
        * so should go to next one */
-      snprintf(error_buf, MBUF_SIZE,
-               "Internal AI Error - Attempting to"
-               " generate an astar path for AI #%ld but was unable to - bad"
-               " first argument - going to next command",
-               autopilot->mynum);
+      (void)snprintf(
+          error_buf, MBUF_SIZE,
+          "Internal AI Error - Attempting to"
+          " generate an astar path for AI #%ld but was unable to - bad"
+          " first argument - going to next command",
+          autopilot->mynum);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -384,11 +385,12 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     /* Now change it into a number and make sure its valid */
     if (!parse_int_checked(argument, &tx)) {
 
-      snprintf(error_buf, MBUF_SIZE,
-               "Internal AI Error - Attempting to"
-               " generate an astar path for AI #%ld but was unable to - bad"
-               " first argument '%s' - going to next command",
-               autopilot->mynum, argument);
+      (void)snprintf(
+          error_buf, MBUF_SIZE,
+          "Internal AI Error - Attempting to"
+          " generate an astar path for AI #%ld but was unable to - bad"
+          " first argument '%s' - going to next command",
+          autopilot->mynum, argument);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
 
@@ -403,11 +405,12 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
 
       /* Ok bad argument - either means the command is messed up
        * so should go to next one */
-      snprintf(error_buf, MBUF_SIZE,
-               "Internal AI Error - Attempting to"
-               " generate an astar path for AI #%ld but was unable to - bad"
-               " second argument - going to next command",
-               autopilot->mynum);
+      (void)snprintf(
+          error_buf, MBUF_SIZE,
+          "Internal AI Error - Attempting to"
+          " generate an astar path for AI #%ld but was unable to - bad"
+          " second argument - going to next command",
+          autopilot->mynum);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -417,11 +420,12 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     /* Read second argument into a number and make sure its ok */
     if (!parse_int_checked(argument, &ty)) {
 
-      snprintf(error_buf, MBUF_SIZE,
-               "Internal AI Error - Attempting to"
-               " generate an astar path for AI #%ld to hex %d,%d but was"
-               " unable to - bad second argument '%s' - going to next command",
-               autopilot->mynum, tx, ty, argument);
+      (void)snprintf(
+          error_buf, MBUF_SIZE,
+          "Internal AI Error - Attempting to"
+          " generate an astar path for AI #%ld to hex %d,%d but was"
+          " unable to - bad second argument '%s' - going to next command",
+          autopilot->mynum, tx, ty, argument);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
 
@@ -436,11 +440,11 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
         ty >= battle_map_width(map)) {
 
       /* Bad location to go to */
-      snprintf(error_buf, MBUF_SIZE,
-               "Internal AI Error - Attempting to"
-               " generate an astar path for AI #%ld to bad hex"
-               " (%d, %d)",
-               autopilot->mynum, tx, ty);
+      (void)snprintf(error_buf, MBUF_SIZE,
+                     "Internal AI Error - Attempting to"
+                     " generate an astar path for AI #%ld to bad hex"
+                     " (%d, %d)",
+                     autopilot->mynum, tx, ty);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -451,11 +455,11 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     if (!(auto_astar_generate_path(autopilot, mech, tx, ty))) {
 
       /* Couldn't find a path for some reason */
-      snprintf(error_buf, MBUF_SIZE,
-               "Internal AI Error - Attempting to"
-               " generate an astar path for AI #%ld to hex %d,%d but was"
-               " unable to",
-               autopilot->mynum, tx, ty);
+      (void)snprintf(error_buf, MBUF_SIZE,
+                     "Internal AI Error - Attempting to"
+                     " generate an astar path for AI #%ld to hex %d,%d but was"
+                     " unable to",
+                     autopilot->mynum, tx, ty);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
 
@@ -470,10 +474,10 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   if (!(autopilot->astar_path) ||
       (doubly_linked_list_size(autopilot->astar_path) <= 0)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to follow"
-             " Astar path for AI #%ld - but the path is not there",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to follow"
+                   " Astar path for AI #%ld - but the path is not there",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -488,11 +492,12 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
 
   if (!(temp_astar_node)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attemping to follow"
-             " Astar path for AI #%ld - but the current astar node does not"
-             " exist",
-             autopilot->mynum);
+    (void)snprintf(
+        error_buf, MBUF_SIZE,
+        "Internal AI Error - Attemping to follow"
+        " Astar path for AI #%ld - but the current astar node does not"
+        " exist",
+        autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 

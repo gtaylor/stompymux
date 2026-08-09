@@ -123,10 +123,10 @@ static StringifiedValue stringified_value(int v) {
 
     if (!*checked_string_suffix(suffixes, (size_t)i))
       i--;
-    snprintf(result.text, sizeof(result.text), "%d%c", BOUNDED(0, v, 999),
-             *checked_string_suffix(suffixes, (size_t)i));
+    (void)snprintf(result.text, sizeof(result.text), "%d%c", BOUNDED(0, v, 999),
+                   *checked_string_suffix(suffixes, (size_t)i));
   } else
-    snprintf(result.text, sizeof(result.text), "%d", BOUNDED(0, v, 999));
+    (void)snprintf(result.text, sizeof(result.text), "%d", BOUNDED(0, v, 999));
   return result;
 }
 

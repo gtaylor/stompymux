@@ -70,10 +70,10 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
     } else {
 
       /* Invalid command */
-      snprintf(error_buf, MBUF_SIZE,
-               "AI Error - AI #%ld given bad"
-               " argument for roam command",
-               autopilot->mynum);
+      (void)snprintf(error_buf, MBUF_SIZE,
+                     "AI Error - AI #%ld given bad"
+                     " argument for roam command",
+                     autopilot->mynum);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
 
@@ -89,10 +89,10 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
       const char *anchor_x_argument = autopilot_argument_list_get(&args, 1);
       if (!parse_int_checked(anchor_x_argument, &anchor_hex_x)) {
 
-        snprintf(error_buf, MBUF_SIZE,
-                 "AI Error - AI #%ld given bad"
-                 " argument (anchor_hex_x) for roam command",
-                 autopilot->mynum);
+        (void)snprintf(error_buf, MBUF_SIZE,
+                       "AI Error - AI #%ld given bad"
+                       " argument (anchor_hex_x) for roam command",
+                       autopilot->mynum);
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
@@ -106,10 +106,10 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
       const char *anchor_y_argument = autopilot_argument_list_get(&args, 2);
       if (!parse_int_checked(anchor_y_argument, &anchor_hex_y)) {
 
-        snprintf(error_buf, MBUF_SIZE,
-                 "AI Error - AI #%ld given bad"
-                 " argument (anchor_hex_y) for roam command",
-                 autopilot->mynum);
+        (void)snprintf(error_buf, MBUF_SIZE,
+                       "AI Error - AI #%ld given bad"
+                       " argument (anchor_hex_y) for roam command",
+                       autopilot->mynum);
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
@@ -124,10 +124,10 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
       const char *distance_argument = autopilot_argument_list_get(&args, 3);
       if (!parse_int_checked(distance_argument, &anchor_distance)) {
 
-        snprintf(error_buf, MBUF_SIZE,
-                 "AI Error - AI #%ld given bad"
-                 " argument (anchor_distance) for roam command",
-                 autopilot->mynum);
+        (void)snprintf(error_buf, MBUF_SIZE,
+                       "AI Error - AI #%ld given bad"
+                       " argument (anchor_distance) for roam command",
+                       autopilot->mynum);
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
@@ -145,11 +145,11 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
                                         autopilot->mapindex))) {
 
         /* Bad Map */
-        snprintf(error_buf, MBUF_SIZE,
-                 "Internal AI Error - Attempting to"
-                 " roam with AI #%ld but AI is not on a valid"
-                 " Map (#%ld).",
-                 autopilot->mynum, autopilot->mapindex);
+        (void)snprintf(error_buf, MBUF_SIZE,
+                       "Internal AI Error - Attempting to"
+                       " roam with AI #%ld but AI is not on a valid"
+                       " Map (#%ld).",
+                       autopilot->mynum, autopilot->mapindex);
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
@@ -167,11 +167,12 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
           anchor_hex_y >= battle_map_height(map) ||
           anchor_distance > AUTO_ROAM_MAX_RADIUS) {
 
-        snprintf(error_buf, MBUF_SIZE,
-                 "AI Error - AI #%ld given bad"
-                 " argument (bad anchor hex or bad anchor distance)"
-                 " %d,%d : %d hexes for roam command",
-                 autopilot->mynum, anchor_hex_x, anchor_hex_y, anchor_distance);
+        (void)snprintf(error_buf, MBUF_SIZE,
+                       "AI Error - AI #%ld given bad"
+                       " argument (bad anchor hex or bad anchor distance)"
+                       " %d,%d : %d hexes for roam command",
+                       autopilot->mynum, anchor_hex_x, anchor_hex_y,
+                       anchor_distance);
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
@@ -195,10 +196,10 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
     } else {
 
       /* Invalid command */
-      snprintf(error_buf, MBUF_SIZE,
-               "AI Error - AI #%ld given bad"
-               " argument for roam command",
-               autopilot->mynum);
+      (void)snprintf(error_buf, MBUF_SIZE,
+                     "AI Error - AI #%ld given bad"
+                     " argument for roam command",
+                     autopilot->mynum);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
 
@@ -208,10 +209,10 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
   } else {
 
     /* Invalid command */
-    snprintf(error_buf, MBUF_SIZE,
-             "AI Error - AI #%ld given bad"
-             " argument for roam command",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "AI Error - AI #%ld given bad"
+                   " argument for roam command",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -370,11 +371,11 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
                                     autopilot->mapindex))) {
 
     /* Bad Map */
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to"
-             " roam with AI #%ld but AI is not on a valid"
-             " Map (#%ld).",
-             autopilot->mynum, autopilot->mapindex);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to"
+                   " roam with AI #%ld but AI is not on a valid"
+                   " Map (#%ld).",
+                   autopilot->mynum, autopilot->mapindex);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -456,10 +457,10 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   if (!(autopilot->astar_path) ||
       (doubly_linked_list_size(autopilot->astar_path) <= 0)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attempting to roam"
-             " Astar path for AI #%ld - but the path is not there",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error - Attempting to roam"
+                   " Astar path for AI #%ld - but the path is not there",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 
@@ -476,11 +477,12 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
 
   if (!(temp_astar_node)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error - Attemping to roam"
-             " Astar path for AI #%ld - but the current astar node does not"
-             " exist",
-             autopilot->mynum);
+    (void)snprintf(
+        error_buf, MBUF_SIZE,
+        "Internal AI Error - Attemping to roam"
+        " Astar path for AI #%ld - but the current astar node does not"
+        " exist",
+        autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
 

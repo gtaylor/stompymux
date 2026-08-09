@@ -222,9 +222,10 @@ static void list_df_flags(EvaluationContext *evaluation,
   thingb = decode_flags(evaluation->world->database, player, OBJECT_TYPE_THING,
                         &configuration->default_thing_flags);
   buff = alloc_lbuf("list_df_flags");
-  snprintf(buff, LBUF_SIZE,
-           "Default flags: Players...%s Rooms...%s Exits...%s Things...%s",
-           playerb, roomb, exitb, thingb);
+  (void)snprintf(
+      buff, LBUF_SIZE,
+      "Default flags: Players...%s Rooms...%s Exits...%s Things...%s", playerb,
+      roomb, exitb, thingb);
   raw_notify(evaluation, player, buff);
   free_lbuf(buff);
   free_sbuf(playerb);
@@ -293,42 +294,45 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
              tprintf("The head of the object freelist is #%ld.",
                      runtime->world->database->freelist));
 
-  snprintf(buff, MBUF_SIZE, "Intervals: Dump...%d  Clean...%d  Idlecheck...%d",
-           configuration->database.dump_interval, configuration->check_interval,
-           configuration->idle_interval);
+  (void)snprintf(buff, MBUF_SIZE,
+                 "Intervals: Dump...%d  Clean...%d  Idlecheck...%d",
+                 configuration->database.dump_interval,
+                 configuration->check_interval, configuration->idle_interval);
   raw_notify(evaluation, player, buff);
 
-  snprintf(buff, MBUF_SIZE, "Timers: Dump...%ld  Clean...%ld  Idlecheck...%ld",
-           (long)runtime->clock->dump_deadline - now,
-           (long)runtime->clock->check_deadline - now,
-           (long)runtime->clock->idle_deadline - now);
+  (void)snprintf(buff, MBUF_SIZE,
+                 "Timers: Dump...%ld  Clean...%ld  Idlecheck...%ld",
+                 (long)runtime->clock->dump_deadline - now,
+                 (long)runtime->clock->check_deadline - now,
+                 (long)runtime->clock->idle_deadline - now);
   raw_notify(evaluation, player, buff);
 
-  snprintf(buff, MBUF_SIZE, "Timeouts: Idle...%d  Connect...%d  Tries...%d",
-           configuration->idle_timeout, configuration->conn_timeout,
-           configuration->retry_limit);
+  (void)snprintf(buff, MBUF_SIZE,
+                 "Timeouts: Idle...%d  Connect...%d  Tries...%d",
+                 configuration->idle_timeout, configuration->conn_timeout,
+                 configuration->retry_limit);
   raw_notify(evaluation, player, buff);
 
-  snprintf(buff, MBUF_SIZE,
-           "Scheduling: Timeslice...%d  Max_Quota...%d  Increment...%d",
-           configuration->command_quota_interval,
-           configuration->command_quota_max,
-           configuration->command_quota_increment);
+  (void)snprintf(buff, MBUF_SIZE,
+                 "Scheduling: Timeslice...%d  Max_Quota...%d  Increment...%d",
+                 configuration->command_quota_interval,
+                 configuration->command_quota_max,
+                 configuration->command_quota_increment);
   raw_notify(evaluation, player, buff);
 
-  snprintf(buff, MBUF_SIZE, "Spaces...%s",
-           configuration->space_compress ? "Enabled" : "Disabled");
+  (void)snprintf(buff, MBUF_SIZE, "Spaces...%s",
+                 configuration->space_compress ? "Enabled" : "Disabled");
   raw_notify(evaluation, player, buff);
 
-  snprintf(buff, MBUF_SIZE,
-           "New characters: Room...#%d  Home...#%d  DefaultHome...#%d",
-           configuration->start_room, configuration->start_home,
-           configuration->default_home);
+  (void)snprintf(buff, MBUF_SIZE,
+                 "New characters: Room...#%d  Home...#%d  DefaultHome...#%d",
+                 configuration->start_room, configuration->start_home,
+                 configuration->default_home);
   raw_notify(evaluation, player, buff);
 
-  snprintf(buff, MBUF_SIZE, "Queue: IdleChunk...%d  ActiveChunk...%d",
-           configuration->command_queue_idle_chunk,
-           configuration->command_queue_active_chunk);
+  (void)snprintf(buff, MBUF_SIZE, "Queue: IdleChunk...%d  ActiveChunk...%d",
+                 configuration->command_queue_idle_chunk,
+                 configuration->command_queue_active_chunk);
   raw_notify(evaluation, player, buff);
 }
 

@@ -98,8 +98,8 @@ static AutoCommandText auto_command_text(AutopilotCommand *node) {
   int i;
   size_t len;
 
-  snprintf(buf, sizeof(command.text), "%-10s",
-           autopilot_argument_list_get(&node->arguments, 0));
+  (void)snprintf(buf, sizeof(command.text), "%-10s",
+                 autopilot_argument_list_get(&node->arguments, 0));
 
   /* Loop through the args and print the commands */
   for (i = 1; i < AUTOPILOT_MAX_ARGS; i++) {
@@ -173,10 +173,11 @@ void auto_delcommand(DbRef player, void *data, const char *buffer) {
             autopilot->commands, p);
 
     if (!temp_command_node) {
-      snprintf(error_buf, MBUF_SIZE,
-               "Internal AI Error: Trying to remove"
-               " Command #%d from AI #%ld but the command node doesn't exist\n",
-               p, autopilot->mynum);
+      (void)snprintf(
+          error_buf, MBUF_SIZE,
+          "Internal AI Error: Trying to remove"
+          " Command #%d from AI #%ld but the command node doesn't exist\n",
+          p, autopilot->mynum);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
     }
@@ -200,11 +201,12 @@ void auto_delcommand(DbRef player, void *data, const char *buffer) {
       /* Make sure the command node exists */
       if (!temp_command_node) {
 
-        snprintf(error_buf, MBUF_SIZE,
-                 "Internal AI Error: Trying to remove"
-                 " the first command from AI #%ld but the command node doesn't "
-                 "exist\n",
-                 autopilot->mynum);
+        (void)snprintf(
+            error_buf, MBUF_SIZE,
+            "Internal AI Error: Trying to remove"
+            " the first command from AI #%ld but the command node doesn't "
+            "exist\n",
+            autopilot->mynum);
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
@@ -330,12 +332,12 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
 
   cool_menu_add_line(&c);
 
-  snprintf(
+  (void)snprintf(
       buf, MBUF_SIZE, "Autopilot data for %s",
       game_object_name(autopilot->xcode.context->database, autopilot->mynum));
   cool_menu_add_text(&c, buf);
 
-  snprintf(
+  (void)snprintf(
       buf, MBUF_SIZE, "Controling unit %s",
       game_object_name(autopilot->xcode.context->database,
                        game_object_location(autopilot->xcode.context->database,
@@ -344,11 +346,11 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
 
   cool_menu_add_line(&c);
 
-  snprintf(buf, MBUF_SIZE,
-           "MyRef: #%ld  MechRef: #%ld  MapIndex: #%ld  "
-           "FSpeed: %d %% (Flag:%d)",
-           autopilot->mynum, autopilot->mymechnum, autopilot->mapindex,
-           autopilot->speed, autopilot->flags);
+  (void)snprintf(buf, MBUF_SIZE,
+                 "MyRef: #%ld  MechRef: #%ld  MapIndex: #%ld  "
+                 "FSpeed: %d %% (Flag:%d)",
+                 autopilot->mynum, autopilot->mymechnum, autopilot->mapindex,
+                 autopilot->speed, autopilot->flags);
   cool_menu_add_text(&c, buf);
 
   cool_menu_add_line(&c);
@@ -356,7 +358,7 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
   if (doubly_linked_list_size(autopilot->commands)) {
 
     for (i = 1; i <= doubly_linked_list_size(autopilot->commands); i++) {
-      snprintf(
+      (void)snprintf(
           buf, MBUF_SIZE, "#%-3d %s", i,
           auto_command_text((AutopilotCommand *)doubly_linked_list_get_node(
                                 autopilot->commands, i))
@@ -445,8 +447,8 @@ void auto_set_comtitle(Autopilot *autopilot, Mech *mech) {
 
   char buf[LBUF_SIZE];
 
-  snprintf(buf, LBUF_SIZE, "a=%s/%s", mech_model_reference(mech),
-           mech_id(mech, true).text);
+  (void)snprintf(buf, LBUF_SIZE, "a=%s/%s", mech_model_reference(mech),
+                 mech_id(mech, true).text);
   mech_set_channeltitle(autopilot->mynum, mech, buf);
 }
 
@@ -555,10 +557,11 @@ void auto_goto_next_command(Autopilot *autopilot, int time) {
   char error_buf[MBUF_SIZE];
 
   if (doubly_linked_list_size(autopilot->commands) < 0) {
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error: Trying to remove"
-             " the first command from AI #%ld but the command list is empty\n",
-             autopilot->mynum);
+    (void)snprintf(
+        error_buf, MBUF_SIZE,
+        "Internal AI Error: Trying to remove"
+        " the first command from AI #%ld but the command list is empty\n",
+        autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return;
@@ -568,7 +571,7 @@ void auto_goto_next_command(Autopilot *autopilot, int time) {
       autopilot->commands, doubly_linked_list_head(autopilot->commands));
 
   if (!temp_command_node) {
-    snprintf(
+    (void)snprintf(
         error_buf, MBUF_SIZE,
         "Internal AI Error: Trying to remove"
         " the first command from AI #%ld but the command node doesn't exist\n",
@@ -596,21 +599,22 @@ char *auto_get_command_arg(Autopilot *autopilot, int command_number,
   char error_buf[MBUF_SIZE];
 
   if (command_number > doubly_linked_list_size(autopilot->commands)) {
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error: Trying to "
-             "access Command #%d for AI #%ld but it doesn't exist",
-             command_number, autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error: Trying to "
+                   "access Command #%d for AI #%ld but it doesn't exist",
+                   command_number, autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return NULL;
   }
 
   if (arg_number >= AUTOPILOT_MAX_ARGS) {
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error: Trying to "
-             "access Arg #%d for AI #%ld Command #%d but its greater"
-             " then AUTOPILOT_MAX_ARGS (%d)",
-             arg_number, autopilot->mynum, command_number, AUTOPILOT_MAX_ARGS);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error: Trying to "
+                   "access Arg #%d for AI #%ld Command #%d but its greater"
+                   " then AUTOPILOT_MAX_ARGS (%d)",
+                   arg_number, autopilot->mynum, command_number,
+                   AUTOPILOT_MAX_ARGS);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return NULL;
@@ -624,10 +628,11 @@ char *auto_get_command_arg(Autopilot *autopilot, int command_number,
   const char *stored_argument = autopilot_argument_list_get(
       &temp_command_node->arguments, (size_t)arg_number);
   if (!stored_argument) {
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error: Trying to "
-             "access Arg #%d for AI #%ld Command #%d but it doesn't exist",
-             arg_number, autopilot->mynum, command_number);
+    (void)snprintf(
+        error_buf, MBUF_SIZE,
+        "Internal AI Error: Trying to "
+        "access Arg #%d for AI #%ld Command #%d but it doesn't exist",
+        arg_number, autopilot->mynum, command_number);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return NULL;
@@ -654,10 +659,10 @@ int auto_get_command_enum(Autopilot *autopilot, int command_number) {
   }
 
   if (command_number <= 0) {
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error: Trying to "
-             "access a command (%d) for AI #%ld that can't be on a list",
-             command_number, autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error: Trying to "
+                   "access a command (%d) for AI #%ld that can't be on a list",
+                   command_number, autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return -1;
@@ -665,10 +670,10 @@ int auto_get_command_enum(Autopilot *autopilot, int command_number) {
 
   /* Make sure the command is on the list */
   if (command_number > doubly_linked_list_size(autopilot->commands)) {
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error: Trying to "
-             "access Command #%d for AI #%ld but it doesn't exist",
-             command_number, autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error: Trying to "
+                   "access Command #%d for AI #%ld but it doesn't exist",
+                   command_number, autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return -1;
@@ -683,10 +688,10 @@ int auto_get_command_enum(Autopilot *autopilot, int command_number) {
 
   /* If its a bad enum value we have a problem */
   if ((command_enum >= AUTO_NUM_COMMANDS) || (command_enum < 0)) {
-    snprintf(error_buf, MBUF_SIZE,
-             "Internal AI Error: Command ENUM for"
-             " AI #%ld Command Number #%d doesn't exist\n",
-             autopilot->mynum, command_number);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "Internal AI Error: Command ENUM for"
+                   " AI #%ld Command Number #%d doesn't exist\n",
+                   autopilot->mynum, command_number);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return -1;

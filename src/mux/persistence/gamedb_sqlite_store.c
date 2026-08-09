@@ -42,8 +42,8 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
   for (size_t index = 0; index < table_count; index++) {
     const char *table = *(const char *const *)checked_storage_at_const(
         tables, table_count, sizeof(*tables), index);
-    snprintf(query, sizeof(query), "INSERT INTO %s (object_dbref) VALUES (?);",
-             table);
+    (void)snprintf(query, sizeof(query),
+                   "INSERT INTO %s (object_dbref) VALUES (?);", table);
     if (gamedb_prepare(sqlite, &statement, query) < 0 ||
         gamedb_bind_int(statement, 1, object) < 0 ||
         gamedb_step(statement) < 0) {
@@ -59,8 +59,8 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
 
     if (!value)
       continue;
-    snprintf(query, sizeof(query), "UPDATE %s SET %s = ? WHERE %s = ?;",
-             column->table, column->column, column->key_column);
+    (void)snprintf(query, sizeof(query), "UPDATE %s SET %s = ? WHERE %s = ?;",
+                   column->table, column->column, column->key_column);
     if (gamedb_prepare(sqlite, &statement, query) < 0 ||
         sqlite3_bind_text(statement, 1, value, -1, SQLITE_TRANSIENT) !=
             SQLITE_OK ||

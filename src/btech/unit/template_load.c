@@ -49,7 +49,7 @@ static bool template_load_error(FILE *fp, Mech *mech, DbRef player,
   va_list args;
   va_start(args, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(message, sizeof(message), format, args);
+  (void)vsnprintf(message, sizeof(message), format, args);
   va_end(args);
   if (global) {
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",

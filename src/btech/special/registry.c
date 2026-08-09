@@ -592,7 +592,8 @@ bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
 
   if (!*type) {
     if (is_xcode(context->database, object)) {
-      snprintf(error, error_size, "cannot clear XTYPE while XCODE is set");
+      (void)snprintf(error, error_size,
+                     "cannot clear XTYPE while XCODE is set");
       return false;
     }
     return true;
@@ -604,7 +605,7 @@ bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
     }
   }
   if (requested < 0) {
-    snprintf(error, error_size, "invalid XTYPE %s", type);
+    (void)snprintf(error, error_size, "invalid XTYPE %s", type);
     return false;
   }
   if (!is_xcode(context->database, object))
@@ -612,8 +613,8 @@ bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
 
   registered = btech_context_find_object(context, object);
   if (registered && (int)registered->type != requested) {
-    snprintf(error, error_size,
-             "cannot change XTYPE while the XCODE object is registered");
+    (void)snprintf(error, error_size,
+                   "cannot change XTYPE while the XCODE object is registered");
     return false;
   }
   return true;

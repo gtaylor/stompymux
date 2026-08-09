@@ -161,8 +161,8 @@ static void bomb_aim(Mech *mech, DbRef player) {
   short x, y;
 
   t = bomb_calculate_destination(mech, &x, &y);
-  snprintf(toi, LBUF_SIZE, "%.1f second%s", (double)t,
-           (t >= 2.0F || t < 1.0F) ? "" : "s");
+  (void)snprintf(toi, LBUF_SIZE, "%.1f second%s", (double)t,
+                 (t >= 2.0F || t < 1.0F) ? "" : "s");
   mech_printf(mech, MECHALL,
               "Estimated bomb flight time %s, estimated landing hex %d,%d.",
               toi, x, y);

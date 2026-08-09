@@ -91,7 +91,7 @@ static char *map_filename(const BattleMap *map, const char *mapname) {
   path = malloc(pathlen);
   if (!path)
     return NULL;
-  snprintf(path, pathlen, "%s/%s", map_path, mapname);
+  (void)snprintf(path, pathlen, "%s/%s", map_path, mapname);
   return path;
 }
 
@@ -546,7 +546,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
                  "Unable to open the map file!");
     return;
   }
-  fprintf(fp, "%d %d\n", map->map_width, map->map_height);
+  (void)fprintf(fp, "%d %d\n", map->map_width, map->map_height);
   for (i = 0; i < map->map_height; i++) {
 
     *map_character(row, sizeof(row), 0) = 0;
@@ -588,10 +588,10 @@ void map_savemap(DbRef player, void *data, char *buffer) {
           map_elevation_get(map, j, i) + '0';
     }
     *map_character(row, sizeof(row), (size_t)(j * 2)) = 0;
-    fprintf(fp, "%s\n", row);
+    (void)fprintf(fp, "%s\n", row);
   }
   if ((i = (map->flags & ~(MAPFLAG_MAPO))))
-    fprintf(fp, "%d: %d %d\n", i, map->grav, map->temp);
+    (void)fprintf(fp, "%d: %d %d\n", i, map->grav, map->temp);
   if (fclose(fp) != 0) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
                  "Unable to finish saving the map file.");
@@ -744,7 +744,7 @@ void newfreemap(DbRef key, void **data,
     initialize_map_empty(new, key);
     /* allocate default map space */
     memset(new->MapObject, 0, sizeof(new->MapObject));
-    snprintf(new->mapname, MAP_NAME_SIZE, "%s", "Default Map");
+    (void)snprintf(new->mapname, MAP_NAME_SIZE, "%s", "Default Map");
     break;
   case SPECIAL_FREE:
     /* Seriously. We weren't clearing the map of mechas. Bad bad accounting!!!

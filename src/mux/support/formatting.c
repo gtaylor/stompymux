@@ -13,7 +13,7 @@ char *tprintf(const char *format, ...) {
 
   va_start(ap, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(buff, LBUF_SIZE, format, ap);
+  (void)vsnprintf(buff, LBUF_SIZE, format, ap);
   va_end(ap);
   buff[LBUF_SIZE - 1] = '\0';
   return buff;
@@ -30,7 +30,7 @@ void safe_tprintf_str(char *str, char **bp, const char *format, ...) {
    */
 
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(buff, LBUF_SIZE, format, ap);
+  (void)vsnprintf(buff, LBUF_SIZE, format, ap);
   va_end(ap);
   buff[LBUF_SIZE - 1] = '\0';
   safe_str(buff, str, bp);

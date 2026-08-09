@@ -428,8 +428,9 @@ MechDisplayId mech_to_mech_display_id_base(Mech *see, Mech *mech, int inlos) {
     mname = btech_attribute_read(context->database, object, A_MECHNAME,
                                  (char[LBUF_SIZE]){0});
 
-  snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
-           mech_id(mech, inlos && mech_team(see) == mech_team(mech)).text);
+  (void)snprintf(
+      id.text, sizeof(id.text), "%s [%s]", mname,
+      mech_id(mech, inlos && mech_team(see) == mech_team(mech)).text);
   return id;
 }
 
@@ -460,8 +461,8 @@ MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech) {
     team = mech_team(see) == mech_team(mech);
   }
 
-  snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
-           mech_id(mech, team).text);
+  (void)snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
+                 mech_id(mech, team).text);
   return id;
 }
 
@@ -476,7 +477,7 @@ MechDisplayId mech_display_id(Mech *mech) {
 
   mname = btech_attribute_read(context->database, object, A_MECHNAME,
                                (char[LBUF_SIZE]){0});
-  snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
-           mech_id(mech, false).text);
+  (void)snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
+                 mech_id(mech, false).text);
   return id;
 }

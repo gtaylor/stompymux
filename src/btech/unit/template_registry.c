@@ -92,7 +92,7 @@ static int scan_template_dir(MechTemplateRegistry *registry,
       continue;
     }
 
-    snprintf(buf, sizeof(buf), "%s/%s", dirname, ent->d_name);
+    (void)snprintf(buf, sizeof(buf), "%s/%s", dirname, ent->d_name);
     if (stat(buf, &sb) == -1) {
       continue;
     }
@@ -131,7 +131,7 @@ static int scan_template_dir(MechTemplateRegistry *registry,
 
     TemplateDirectoryEntry *entry =
         template_entry_at(registry, registry->template_count);
-    snprintf(entry->name, sizeof(entry->name), "%s", ent->d_name);
+    (void)snprintf(entry->name, sizeof(entry->name), "%s", ent->d_name);
     entry->dir = parent;
     registry->template_count++;
   }
@@ -156,7 +156,7 @@ static int scan_templates(MechTemplateRegistry *registry, char const *dir) {
 
   p = registry->directories;
   while (p != nullptr) {
-    snprintf(buf, sizeof(buf), "%s/%s", dir, p->name);
+    (void)snprintf(buf, sizeof(buf), "%s/%s", dir, p->name);
     scan_template_dir(registry, buf, p->name);
     p = p->next;
   }
@@ -233,11 +233,11 @@ redo:
       return nullptr;
     }
     if (ent->dir == nullptr) {
-      snprintf(registry->resolved_path, sizeof(registry->resolved_path),
-               "%s/%s", mech_path, ent->name);
+      (void)snprintf(registry->resolved_path, sizeof(registry->resolved_path),
+                     "%s/%s", mech_path, ent->name);
     } else {
-      snprintf(registry->resolved_path, sizeof(registry->resolved_path),
-               "%s/%s/%s", mech_path, ent->dir, ent->name);
+      (void)snprintf(registry->resolved_path, sizeof(registry->resolved_path),
+                     "%s/%s/%s", mech_path, ent->dir, ent->name);
     }
     if (access(registry->resolved_path, R_OK) != 0) {
       /* The file is missing (or unreadable)
@@ -264,8 +264,8 @@ oldstyle:
        subdir_index++) {
     const char *const *subdir = checked_storage_at_const(
         subdirs, subdir_count, sizeof(*subdirs), subdir_index);
-    snprintf(registry->resolved_path, sizeof(registry->resolved_path),
-             "%s/%s/%s", mech_path, *subdir, id);
+    (void)snprintf(registry->resolved_path, sizeof(registry->resolved_path),
+                   "%s/%s/%s", mech_path, *subdir, id);
     fp = fopen(registry->resolved_path, "r");
   }
   if (fp) {

@@ -106,7 +106,7 @@ UptimeText uptime_text(int seconds) {
   char *allocated;
 
   allocated = get_uptime_to_string(seconds);
-  snprintf(uptime.text, sizeof(uptime.text), "%s", allocated);
+  (void)snprintf(uptime.text, sizeof(uptime.text), "%s", allocated);
   free_sbuf(allocated);
   return uptime;
 }
@@ -231,8 +231,8 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
       ok = 1;
     if (ok) {
       char entry[25];
-      snprintf(entry, sizeof(entry), "%-23s ",
-               character_value_definition(i)->name);
+      (void)snprintf(entry, sizeof(entry), "%-23s ",
+                     character_value_definition(i)->name);
       strncat(buf, entry, sizeof(buf) - strlen(buf) - 1);
       if (!((++found) % 3)) {
         mecha_notify(evaluation, player, buf);
@@ -602,11 +602,11 @@ void init_btechstats(BtechContext *context) {
       if (*character < 'A' || *character > 'Z')
         continue;
       char fragment[4];
-      snprintf(fragment, sizeof(fragment), "%.3s", character);
+      (void)snprintf(fragment, sizeof(fragment), "%.3s", character);
       strncat(tmpbuf, fragment, SBUF_SIZE - strlen(tmpbuf) - 1);
     }
     if (strlen(tmpbuf) <= 3) {
-      snprintf(tmpbuf, SBUF_SIZE, "%.5s", name);
+      (void)snprintf(tmpbuf, SBUF_SIZE, "%.5s", name);
     }
     *character_short_name_slot(context, i) = strdup(tmpbuf);
     lowercase_copy(tmpbuf, SBUF_SIZE, tmpbuf);

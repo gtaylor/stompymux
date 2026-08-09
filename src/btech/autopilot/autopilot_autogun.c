@@ -34,7 +34,7 @@
 static void format_target_id(char buffer[static LBUF_SIZE],
                              const Mech *target) {
   MechUnitId id = mech_unit_id(target);
-  snprintf(buffer, LBUF_SIZE, "%c%c", id.first, id.second);
+  (void)snprintf(buffer, LBUF_SIZE, "%c%c", id.first, id.second);
 }
 
 static AutopilotWeapon *
@@ -715,11 +715,11 @@ void auto_gun_event(Autopilot *autopilot) {
                            mech_position_real_x(target),
                            mech_position_real_y(target)))) {
 
-            snprintf(buffer, LBUF_SIZE, "%d",
-                     FindBearing(mech_position_real_x(mech),
-                                 mech_position_real_y(mech),
-                                 mech_position_real_x(target),
-                                 mech_position_real_y(target)));
+            (void)snprintf(buffer, LBUF_SIZE, "%d",
+                           FindBearing(mech_position_real_x(mech),
+                                       mech_position_real_y(mech),
+                                       mech_position_real_x(target),
+                                       mech_position_real_y(target)));
             mech_turret(autopilot->mynum, mech, buffer);
           }
 
@@ -747,7 +747,7 @@ void auto_gun_event(Autopilot *autopilot) {
       }
 
       /* Done moving around, fire the weapon */
-      snprintf(buffer, LBUF_SIZE, "%d", temp_weapon_node->weapon_number);
+      (void)snprintf(buffer, LBUF_SIZE, "%d", temp_weapon_node->weapon_number);
       mech_fireweapon(autopilot->mynum, mech, buffer);
 
       /* Log It */

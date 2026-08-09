@@ -363,7 +363,7 @@ float Calculate_Defensive_BV(Mech *mech) {
 
   def_factor = (float)move_mod * 0.1F;
 
-  snprintf(buff, 50, "MoveMod (MP: %d MM: %d)", run_mp, move_mod);
+  (void)snprintf(buff, 50, "MoveMod (MP: %d MM: %d)", run_mp, move_mod);
 
   Calc_AddDefBV(mech, &defbv, buff, defbv * def_factor);
 

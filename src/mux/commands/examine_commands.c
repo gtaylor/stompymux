@@ -47,7 +47,7 @@ static void examine_notify_indented(EvaluationContext *evaluation, DbRef player,
                                     const char *text) {
   char *buffer = alloc_lbuf("examine_notify_indented");
 
-  snprintf(buffer, LBUF_SIZE, "  %s", text);
+  (void)snprintf(buffer, LBUF_SIZE, "  %s", text);
   notify_checked(evaluation, player, player, buffer, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buffer);
 }
@@ -106,7 +106,7 @@ static void examine_native_attributes(EvaluationContext *evaluation,
     }
     char label[MBUF_SIZE];
 
-    snprintf(label, sizeof label, "  %s", entry->name);
+    (void)snprintf(label, sizeof label, "  %s", entry->name);
     examine_notify_markup(evaluation, player, label, value);
   }
 }

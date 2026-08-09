@@ -272,7 +272,7 @@ static int btech_lua_invoke(lua_State *state) {
         arguments, MAX_ARG, sizeof(*arguments), (size_t)index));
   if (!strncmp(buffer, "#-", 2) || !strcmp(buffer, "?")) {
     char error[LBUF_SIZE];
-    snprintf(error, sizeof(error), "%s", buffer);
+    (void)snprintf(error, sizeof(error), "%s", buffer);
     free_lbuf(buffer);
     return luaL_error(state, "%s", error);
   }

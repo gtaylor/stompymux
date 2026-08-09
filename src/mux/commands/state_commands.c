@@ -86,7 +86,7 @@ static char *examine_state_string(const ObjectStateString *string) {
       if (byte >= 0x20 && byte <= 0x7e) {
         safe_chr((char)byte, rendered, &cursor);
       } else {
-        snprintf(escaped, sizeof(escaped), "\\x%02X", byte);
+        (void)snprintf(escaped, sizeof(escaped), "\\x%02X", byte);
         safe_str(escaped, rendered, &cursor);
       }
       break;
@@ -334,12 +334,12 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
 
   if (length < 2 || *(const char *)checked_storage_at_const(
                         text, length + 1, sizeof(char), length - 1) != '"') {
-    snprintf(error, error_size, "unterminated quoted string");
+    (void)snprintf(error, error_size, "unterminated quoted string");
     return false;
   }
   decoded = malloc(length);
   if (!decoded) {
-    snprintf(error, error_size, "out of memory");
+    (void)snprintf(error, error_size, "out of memory");
     return false;
   }
   for (size_t index = 1; index < length - 1; index++) {
@@ -353,7 +353,7 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
     }
     if (++index >= length - 1) {
       free(decoded);
-      snprintf(error, error_size, "incomplete string escape");
+      (void)snprintf(error, error_size, "incomplete string escape");
       return false;
     }
     byte = (unsigned char)*(const char *)checked_storage_at_const(
@@ -388,7 +388,7 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
                (unsigned char)*(const char *)checked_storage_at_const(
                    text, length + 1, sizeof(char), index + 2))) < 0) {
         free(decoded);
-        snprintf(error, error_size, "invalid hexadecimal string escape");
+        (void)snprintf(error, error_size, "invalid hexadecimal string escape");
         return false;
       }
       *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
@@ -398,7 +398,7 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
     }
     default:
       free(decoded);
-      snprintf(error, error_size, "unknown string escape");
+      (void)snprintf(error, error_size, "unknown string escape");
       return false;
     }
   }

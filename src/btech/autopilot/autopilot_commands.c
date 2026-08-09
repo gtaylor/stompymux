@@ -159,10 +159,10 @@ void auto_cal_mapindex(BtechContext *context, Mech *mech) {
                      autopilot_dbref) ||
         game_object_location(btech_context_database(mech_context(mech)),
                              autopilot_dbref) != mech_dbref(mech)) {
-      snprintf(error_buf, MBUF_SIZE,
-               "Mech #%ld thinks it has the Autopilot #%ld on it"
-               " but FindObj breaks",
-               mech_dbref(mech), autopilot_dbref);
+      (void)snprintf(error_buf, MBUF_SIZE,
+                     "Mech #%ld thinks it has the Autopilot #%ld on it"
+                     " but FindObj breaks",
+                     mech_dbref(mech), autopilot_dbref);
       btech_channel_send(context, BTECH_CHANNEL_MECH_ERRORS, "%s", error_buf);
       mech_autopilot_dbref_set(mech, -1);
     } else {
@@ -332,10 +332,10 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
     } else {
 
       /* Invalid command */
-      snprintf(error_buf, MBUF_SIZE,
-               "AI Error - AI #%ld given bad"
-               " argument for autogun command",
-               autopilot->mynum);
+      (void)snprintf(error_buf, MBUF_SIZE,
+                     "AI Error - AI #%ld given bad"
+                     " argument for autogun command",
+                     autopilot->mynum);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
     }
@@ -350,10 +350,10 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
       if (!parse_long_checked(target_argument, &target_dbref)) {
 
         /* Invalid command */
-        snprintf(error_buf, MBUF_SIZE,
-                 "AI Error - AI #%ld given bad"
-                 " argument for autogun command",
-                 autopilot->mynum);
+        (void)snprintf(error_buf, MBUF_SIZE,
+                       "AI Error - AI #%ld given bad"
+                       " argument for autogun command",
+                       autopilot->mynum);
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
@@ -366,10 +366,10 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
       target = btech_context_get_mech(autopilot->xcode.context, target_dbref);
       if (!target) {
 
-        snprintf(error_buf, MBUF_SIZE,
-                 "AI Error - AI #%ld given bad"
-                 " target for autogun command",
-                 autopilot->mynum);
+        (void)snprintf(error_buf, MBUF_SIZE,
+                       "AI Error - AI #%ld given bad"
+                       " target for autogun command",
+                       autopilot->mynum);
         btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
                            "%s", error_buf);
 
@@ -403,10 +403,10 @@ void auto_command_autogun(Autopilot *autopilot, Mech *mech) {
     } else {
 
       /* Invalid command */
-      snprintf(error_buf, MBUF_SIZE,
-               "AI Error - AI #%ld given bad"
-               " argument for autogun command",
-               autopilot->mynum);
+      (void)snprintf(error_buf, MBUF_SIZE,
+                     "AI Error - AI #%ld given bad"
+                     " argument for autogun command",
+                     autopilot->mynum);
       btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                          error_buf);
     }
@@ -444,10 +444,10 @@ void auto_command_pickup(Autopilot *autopilot, Mech *mech) {
   argument = auto_get_command_arg(autopilot, 1, 1);
   if (!parse_int_checked(argument, &target)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "AI Error - AI #%ld given bad"
-             " argument for pickup command",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "AI Error - AI #%ld given bad"
+                   " argument for pickup command",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     free(argument);
@@ -457,10 +457,10 @@ void auto_command_pickup(Autopilot *autopilot, Mech *mech) {
 
   /* Check the target */
   if (!(tempmech = btech_context_get_mech(autopilot->xcode.context, target))) {
-    snprintf(error_buf, MBUF_SIZE,
-             "AI Error - AI #%ld unable to pickup"
-             " unit #%d",
-             autopilot->mynum, target);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "AI Error - AI #%ld unable to pickup"
+                   " unit #%d",
+                   autopilot->mynum, target);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return;
@@ -492,10 +492,10 @@ void auto_command_speed(Autopilot *autopilot) {
   argument = auto_get_command_arg(autopilot, 1, 1);
   if (!parse_int_checked(argument, &requested_speed)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "AI Error - AI #%ld given bad"
-             " argument for speed command",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "AI Error - AI #%ld given bad"
+                   " argument for speed command",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     free(argument);
@@ -506,10 +506,10 @@ void auto_command_speed(Autopilot *autopilot) {
   /* Make sure its a valid speed value */
   if (requested_speed < 1 || requested_speed > 100) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "AI Error - AI #%ld given bad"
-             " argument for speed command - out side of the range",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "AI Error - AI #%ld given bad"
+                   " argument for speed command - out side of the range",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return;
@@ -538,10 +538,10 @@ void auto_command_embark(Autopilot *autopilot, Mech *mech) {
   argument = auto_get_command_arg(autopilot, 1, 1);
   if (!parse_int_checked(argument, &target)) {
 
-    snprintf(error_buf, MBUF_SIZE,
-             "AI Error - AI #%ld given bad"
-             " argument for embark command",
-             autopilot->mynum);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "AI Error - AI #%ld given bad"
+                   " argument for embark command",
+                   autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     free(argument);
@@ -551,10 +551,10 @@ void auto_command_embark(Autopilot *autopilot, Mech *mech) {
 
   /* Check the target */
   if (!(tempmech = btech_context_get_mech(autopilot->xcode.context, target))) {
-    snprintf(error_buf, MBUF_SIZE,
-             "AI Error - AI #%ld unable to embark"
-             " unit #%d",
-             autopilot->mynum, target);
+    (void)snprintf(error_buf, MBUF_SIZE,
+                   "AI Error - AI #%ld unable to embark"
+                   " unit #%d",
+                   autopilot->mynum, target);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
     return;

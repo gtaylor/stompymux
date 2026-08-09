@@ -192,12 +192,12 @@ int silly_parseattributes(char *buffer, char **args, int max) {
   while (parsed != nullptr && count < argument_capacity) {
     if (count == argument_capacity - 1) {
       char remainder[LBUF_SIZE];
-      snprintf(remainder, sizeof(remainder), "%s", parsed);
+      (void)snprintf(remainder, sizeof(remainder), "%s", parsed);
       while ((parsed = strtok_r(nullptr, " \t", &save_pointer)) != nullptr) {
         const size_t used = strlen(remainder);
-        snprintf(checked_storage_at(remainder, sizeof(remainder), sizeof(char),
-                                    used),
-                 sizeof(remainder) - used, " %s", parsed);
+        (void)snprintf(checked_storage_at(remainder, sizeof(remainder),
+                                          sizeof(char), used),
+                       sizeof(remainder) - used, " %s", parsed);
       }
       *text_slot(args, argument_capacity, count) = strdup(remainder);
     } else {

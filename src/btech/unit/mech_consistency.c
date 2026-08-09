@@ -442,13 +442,13 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   shs_size = mech_heat_sink_critical_size(mech);
   hs_eff = mech_has_double_heat_sinks(mech) ? 2 : 1;
   cl = ((mech)->rd.specials) & CLAN_TECH;
-  snprintf(buf, sizeof(buf), "%-12s(%d rating)",
-           ((mech)->rd.specials) & XL_TECH    ? "Engine (XL)"
-           : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
-           : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
-           : ((mech)->rd.specials) & LE_TECH  ? "Engine (Light)"
-                                              : "Engine",
-           mech_engine_rating(mech));
+  (void)snprintf(buf, sizeof(buf), "%-12s(%d rating)",
+                 ((mech)->rd.specials) & XL_TECH    ? "Engine (XL)"
+                 : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
+                 : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
+                 : ((mech)->rd.specials) & LE_TECH  ? "Engine (Light)"
+                                                    : "Engine",
+                 mech_engine_rating(mech));
   if (interactive >= 0 || !mech_section_is_destroyed(mech, CTORSO))
     weight_entry_add(&c, interactive, &total, buf, engine_weight(mech));
   if (interactive >= 0 || !mech_section_is_destroyed(mech, HEAD)) {
@@ -627,24 +627,24 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   cl = ((mech)->rd.specials) & CLAN_TECH;
   es = susp_factor(mech);
   if (es)
-    snprintf(buf, sizeof(buf), "%-12s(%d->%d eff/wt rat)",
-             ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
-             : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
-             : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
-             : ((mech)->rd.specials) & XL_TECH  ? "Engine (XL)"
-             : ((mech)->rd.specials) & ICE_TECH ? "Engine (ICE)"
-                                                : "Engine",
-             mech_engine_rating(mech),
-             mech_engine_rating(mech) - susp_factor(mech));
+    (void)snprintf(buf, sizeof(buf), "%-12s(%d->%d eff/wt rat)",
+                   ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
+                   : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
+                   : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
+                   : ((mech)->rd.specials) & XL_TECH  ? "Engine (XL)"
+                   : ((mech)->rd.specials) & ICE_TECH ? "Engine (ICE)"
+                                                      : "Engine",
+                   mech_engine_rating(mech),
+                   mech_engine_rating(mech) - susp_factor(mech));
   else
-    snprintf(buf, sizeof(buf), "%-12s(%d rating)",
-             ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
-             : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
-             : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
-             : ((mech)->rd.specials) & XL_TECH  ? "Engine (XL)"
-             : ((mech)->rd.specials) & ICE_TECH ? "Engine (ICE)"
-                                                : "Engine",
-             mech_engine_rating(mech));
+    (void)snprintf(buf, sizeof(buf), "%-12s(%d rating)",
+                   ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
+                   : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
+                   : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
+                   : ((mech)->rd.specials) & XL_TECH  ? "Engine (XL)"
+                   : ((mech)->rd.specials) & ICE_TECH ? "Engine (ICE)"
+                                                      : "Engine",
+                   mech_engine_rating(mech));
   if (!tank_in_pieces(mech)) {
     weight_entry_add(&c, interactive, &total, buf, (es = engine_weight(mech)));
     if (((mech)->ud.move) == MOVE_HOVER && es < (((mech)->ud.tons) * 1024 / 5))

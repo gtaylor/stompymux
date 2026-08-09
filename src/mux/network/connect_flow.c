@@ -93,7 +93,7 @@ login_throttle_entry(LoginThrottle *throttle,
     if (entry->last_refill < oldest->last_refill)
       oldest = entry;
   }
-  snprintf(oldest->address, sizeof(oldest->address), "%s", address);
+  (void)snprintf(oldest->address, sizeof(oldest->address), "%s", address);
   oldest->last_refill = now;
   oldest->tokens = (unsigned int)configuration->login_attempt_burst;
   return oldest;
@@ -155,8 +155,8 @@ static void connect_flow_terminate(Descriptor *d, const char *logcode,
                                    int filecache, const char *message) {
   STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_SECURITY, logcode, "RJCT") {
     char buff[MBUF_SIZE];
-    snprintf(buff, MBUF_SIZE, "[%d/%s] %s rejected to ", d->descriptor, d->addr,
-             logtype);
+    (void)snprintf(buff, MBUF_SIZE, "[%d/%s] %s rejected to ", d->descriptor,
+                   d->addr, logtype);
     log_text(buff);
     if (player != NOTHING)
       log_name(descriptor_log(d), player);
@@ -209,9 +209,9 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
     descriptor_queue_string(d, connect_fail);
     STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_SECURITY, "CON", "BAD") {
       buff = alloc_lbuf("connect_flow_attempt_login.LOG.bad");
-      snprintf(buff, LBUF_SIZE,
-               "[%d/%s] Failed login attempt to player '%.3800s'",
-               d->descriptor, d->addr, name);
+      (void)snprintf(buff, LBUF_SIZE,
+                     "[%d/%s] Failed login attempt to player '%.3800s'",
+                     d->descriptor, d->addr, name);
       log_text(buff);
       free_lbuf(buff);
       ENDLOG(descriptor_log(d));
@@ -229,8 +229,8 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
       is_god(descriptor_runtime(d)->world->database, player)) {
     STARTLOG(descriptor_log(d), LOG_LOGIN, "CON", "LOGIN") {
       char log_buffer[MBUF_SIZE];
-      snprintf(log_buffer, sizeof(log_buffer), "[%d/%s] Connected to ",
-               d->descriptor, d->addr);
+      (void)snprintf(log_buffer, sizeof(log_buffer), "[%d/%s] Connected to ",
+                     d->descriptor, d->addr);
       log_text(log_buffer);
       log_name_and_loc(descriptor_log(d), player);
       ENDLOG(descriptor_log(d));
@@ -293,8 +293,9 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
     descriptor_queue_string(d, create_fail);
     STARTLOG(descriptor_log(d), LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {
       char log_buffer[MBUF_SIZE];
-      snprintf(log_buffer, sizeof(log_buffer), "[%d/%s] Create of '%s' failed",
-               d->descriptor, d->addr, name);
+      (void)snprintf(log_buffer, sizeof(log_buffer),
+                     "[%d/%s] Create of '%s' failed", d->descriptor, d->addr,
+                     name);
       log_text(log_buffer);
       ENDLOG(descriptor_log(d));
     }
@@ -303,8 +304,8 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
 
   STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_PCREATES, "CON", "CREA") {
     char log_buffer[MBUF_SIZE];
-    snprintf(log_buffer, sizeof(log_buffer), "[%d/%s] Created ", d->descriptor,
-             d->addr);
+    (void)snprintf(log_buffer, sizeof(log_buffer), "[%d/%s] Created ",
+                   d->descriptor, d->addr);
     log_text(log_buffer);
     log_name(descriptor_log(d), player);
     ENDLOG(descriptor_log(d));
@@ -415,9 +416,9 @@ static FlowOutcome connect_flow_step_confirm_create(Descriptor *d,
   static char prompt[SBUF_SIZE];
 
   if (input == nullptr) {
-    snprintf(prompt, sizeof(prompt),
-             "No character named '%s' exists. Create a new one? (Y/n) ",
-             data->name);
+    (void)snprintf(prompt, sizeof(prompt),
+                   "No character named '%s' exists. Create a new one? (Y/n) ",
+                   data->name);
     outcome.action = FLOW_ACTION_WAIT;
     outcome.prompt = prompt;
     return outcome;

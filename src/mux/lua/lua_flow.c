@@ -205,8 +205,8 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
     lua_getfield(state, result_index, "message");
   }
   if (lua_isstring(state, -1)) {
-    snprintf(prompt_buffer, sizeof(prompt_buffer), "%s",
-             lua_tostring(state, -1));
+    (void)snprintf(prompt_buffer, sizeof(prompt_buffer), "%s",
+                   lua_tostring(state, -1));
     outcome.prompt = prompt_buffer;
   }
   lua_pop(state, 1);
@@ -265,7 +265,7 @@ int lua_runtime_flow_start(void *context, lua_State *state, int descriptor_id,
   data = malloc(sizeof(LuaFlowData));
   data->runtime_owner = runtime->owner;
   data->root = root;
-  snprintf(data->path, sizeof(data->path), "%s", module);
+  (void)snprintf(data->path, sizeof(data->path), "%s", module);
   data->field_count = 0;
 
   descriptor_flow_start(d, first_step, lua_flow_step, data, lua_flow_data_free);

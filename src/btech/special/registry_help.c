@@ -57,9 +57,9 @@ void center_string(char *destination, size_t destination_size,
   if (padding > destination_size - 1)
     padding = destination_size - 1;
   memset(destination, ' ', padding);
-  snprintf(checked_storage_region(destination, destination_size, padding,
-                                  destination_size - padding),
-           destination_size - padding, "%s", source);
+  (void)snprintf(checked_storage_region(destination, destination_size, padding,
+                                        destination_size - padding),
+                 destination_size - padding, "%s", source);
 }
 
 static void help_color_initialize(const char *from, char *to) {

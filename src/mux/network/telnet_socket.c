@@ -320,7 +320,8 @@ static void accept_new_connection(uv_stream_t *server, int status) {
       site_data_check(&address, address_size,
                       runtime->access_control->suspect_sites);
   descriptor->quota = runtime->configuration->command_quota_max;
-  snprintf(descriptor->addr, sizeof(descriptor->addr), "%s", address_name);
+  (void)snprintf(descriptor->addr, sizeof(descriptor->addr), "%s",
+                 address_name);
   uv_tcp_nodelay(descriptor->socket, 1);
   if (!descriptor_telnet_initialize(descriptor)) {
     discard_connection(descriptor);

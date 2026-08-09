@@ -312,15 +312,16 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
         mech_heat_sink_count_remove(wounded, 1);
       mech_notify(wounded, MECHALL, "You lost a heat sink!");
       if (!mech_is_destroyed(wounded)) {
-        snprintf(msgbuf, MBUF_SIZE, "'s %s is covered in a green mist!",
-                 locname);
+        (void)snprintf(msgbuf, MBUF_SIZE, "'s %s is covered in a green mist!",
+                       locname);
         mech_los_broadcast(wounded, msgbuf);
       }
       break;
     case JUMP_JET:
       if (!mech_is_destroyed(wounded) && mech_is_started(wounded)) {
-        snprintf(msgbuf, MBUF_SIZE,
-                 "'s %s flares as superheated plasma spews out!", locname);
+        (void)snprintf(msgbuf, MBUF_SIZE,
+                       "'s %s flares as superheated plasma spews out!",
+                       locname);
         mech_los_broadcast(wounded, msgbuf);
       }
       /* IMPROVED JJ CHECK HERE. SIMILIAR TO DHS */
@@ -344,7 +345,7 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       break;
     case ENGINE:
       if (!mech_is_destroyed(wounded) && mech_is_started(wounded)) {
-        snprintf(msgbuf, MBUF_SIZE, "'s %s spews black smoke!", locname);
+        (void)snprintf(msgbuf, MBUF_SIZE, "'s %s spews black smoke!", locname);
         mech_los_broadcast(wounded, msgbuf);
       }
       if (mech_engine_heat(wounded) < 10) {
@@ -373,9 +374,9 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       /* Hardened Gyro's take one extra hit before damaged */
       if (mech_technology_flags_secondary(wounded) & HDGYRO_TECH)
         if (!mech_condition_summary(wounded).hardened_gyro_damaged) {
-          snprintf(msgbuf, MBUF_SIZE,
-                   "emits a screech as its "
-                   "hardened gyro buckles slightly!");
+          (void)snprintf(msgbuf, MBUF_SIZE,
+                         "emits a screech as its "
+                         "hardened gyro buckles slightly!");
           mech_los_broadcast(wounded, msgbuf);
           mech_hardened_gyro_damaged_set(wounded, true);
           mech_notify(wounded, MECHALL, "Your hardened gyro takes a hit!");
@@ -384,9 +385,9 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
 
       if (!mech_condition_summary(wounded).gyro_damaged) {
         if (!mech_is_destroyed(wounded) && mech_is_started(wounded)) {
-          snprintf(msgbuf, MBUF_SIZE,
-                   "emits a loud screech as "
-                   "its gyro buckles under the impact!");
+          (void)snprintf(msgbuf, MBUF_SIZE,
+                         "emits a loud screech as "
+                         "its gyro buckles under the impact!");
           mech_los_broadcast(wounded, msgbuf);
         }
         mech_gyro_damage_set(wounded, true, false);
@@ -440,7 +441,7 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
         mech_section_actuator_criticals_normalize(wounded, hitloc);
       } else if (tLocIsLeg) {
         if (!mech_is_destroyed(wounded) && mech_is_started(wounded)) {
-          snprintf(msgbuf, MBUF_SIZE, "'s hip locks into place!");
+          (void)snprintf(msgbuf, MBUF_SIZE, "'s hip locks into place!");
           mech_los_broadcast(wounded, msgbuf);
         }
 
@@ -501,7 +502,8 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
                 SHOULDER_OR_HIP)) { /* don't need to bother with crits if we
                                        already have a hip crit here */
           if (!mech_is_destroyed(wounded) && mech_is_started(wounded)) {
-            snprintf(msgbuf, MBUF_SIZE, "'s %s twists in an odd way!", locname);
+            (void)snprintf(msgbuf, MBUF_SIZE, "'s %s twists in an odd way!",
+                           locname);
             mech_los_broadcast(wounded, msgbuf);
           }
 

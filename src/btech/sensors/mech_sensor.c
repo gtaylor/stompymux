@@ -341,12 +341,12 @@ SensorFlagText sensor_flag_text(int flags) {
   for (j = 0; j < 32; j++)
     if (flags & (1 << j)) {
       if (buffer[0] == '\0')
-        snprintf(buffer, sizeof(text.text), "%d", j);
+        (void)snprintf(buffer, sizeof(text.text), "%d", j);
       else {
         const size_t used = strlen(buffer);
-        snprintf(checked_storage_region(buffer, sizeof(text.text), used,
-                                        sizeof(text.text) - used),
-                 sizeof(text.text) - used, ",%d", j);
+        (void)snprintf(checked_storage_region(buffer, sizeof(text.text), used,
+                                              sizeof(text.text) - used),
+                       sizeof(text.text) - used, ",%d", j);
       }
     }
   return text;
@@ -429,17 +429,18 @@ unsigned short mech_sensor_visibility_update(Mech *mech, unsigned short flags,
           buf[0] = 0;
         if (st & AUTOCON_SHORT) {
           const size_t used = strlen(buf);
-          snprintf(checked_storage_region(buf, sizeof(buf), used,
-                                          sizeof(buf) - used),
-                   sizeof(buf) - used, "Lost: %s, %s arc.",
-                   mech_to_mech_display_id_base(mech, target, wlf).text,
-                   GetArcID(mech, arc));
+          (void)snprintf(checked_storage_region(buf, sizeof(buf), used,
+                                                sizeof(buf) - used),
+                         sizeof(buf) - used, "Lost: %s, %s arc.",
+                         mech_to_mech_display_id_base(mech, target, wlf).text,
+                         GetArcID(mech, arc));
         } else
-          snprintf(buf, sizeof(buf),
-                   "You have lost %s from your scanners. It was last in your "
-                   "%s arc.",
-                   mech_to_mech_display_id_base(mech, target, wlf).text,
-                   GetArcID(mech, arc));
+          (void)snprintf(
+              buf, sizeof(buf),
+              "You have lost %s from your scanners. It was last in your "
+              "%s arc.",
+              mech_to_mech_display_id_base(mech, target, wlf).text,
+              GetArcID(mech, arc));
         if (st & AUTOCON_WARN)
           strlcat(buf, "[reset]", sizeof(buf));
         mech_notify(mech, MECHALL, buf);
@@ -491,18 +492,18 @@ unsigned short mech_sensor_visibility_update(Mech *mech, unsigned short flags,
           buf[0] = 0;
         if (st & AUTOCON_SHORT) {
           const size_t used = strlen(buf);
-          snprintf(checked_storage_region(buf, sizeof(buf), used,
-                                          sizeof(buf) - used),
-                   sizeof(buf) - used, "Seen: %s, %s arc.",
-                   mech_to_mech_display_id(mech, target).text,
-                   GetArcID(mech, arc));
+          (void)snprintf(checked_storage_region(buf, sizeof(buf), used,
+                                                sizeof(buf) - used),
+                         sizeof(buf) - used, "Seen: %s, %s arc.",
+                         mech_to_mech_display_id(mech, target).text,
+                         GetArcID(mech, arc));
         } else {
           const size_t used = strlen(buf);
-          snprintf(checked_storage_region(buf, sizeof(buf), used,
-                                          sizeof(buf) - used),
-                   sizeof(buf) - used, "You notice %s in your %s arc.",
-                   mech_to_mech_display_id(mech, target).text,
-                   GetArcID(mech, arc));
+          (void)snprintf(checked_storage_region(buf, sizeof(buf), used,
+                                                sizeof(buf) - used),
+                         sizeof(buf) - used, "You notice %s in your %s arc.",
+                         mech_to_mech_display_id(mech, target).text,
+                         GetArcID(mech, arc));
         }
         if (st & AUTOCON_WARN)
           strlcat(buf, "[reset]", sizeof(buf));
@@ -611,18 +612,19 @@ void mech_sensor_description_append(char *buf, int size, Mech *mech, int sn,
   if (used >= capacity)
     return;
   if (!verbose)
-    snprintf(checked_storage_region(buf, capacity, used, capacity - used),
-             capacity - used, "(R:%s)",
-             mech_sensor_definition(sn)->range_description);
+    (void)snprintf(checked_storage_region(buf, capacity, used, capacity - used),
+                   capacity - used, "(R:%s)",
+                   mech_sensor_definition(sn)->range_description);
   else {
-    snprintf(checked_storage_region(buf, capacity, used, capacity - used),
-             capacity - used, "\n\tRange:      %s\n\tBlocked by: %s",
-             mech_sensor_definition(sn)->range_description,
-             mech_sensor_definition(sn)->block_description);
+    (void)snprintf(checked_storage_region(buf, capacity, used, capacity - used),
+                   capacity - used, "\n\tRange:      %s\n\tBlocked by: %s",
+                   mech_sensor_definition(sn)->range_description,
+                   mech_sensor_definition(sn)->block_description);
     used = strlen(buf);
     if (mech_sensor_definition(sn)->special_description && used < capacity)
-      snprintf(checked_storage_region(buf, capacity, used, capacity - used),
-               capacity - used, "\n\tNotes:      %s",
-               mech_sensor_definition(sn)->special_description);
+      (void)snprintf(
+          checked_storage_region(buf, capacity, used, capacity - used),
+          capacity - used, "\n\tNotes:      %s",
+          mech_sensor_definition(sn)->special_description);
   }
 }

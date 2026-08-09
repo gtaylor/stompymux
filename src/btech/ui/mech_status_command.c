@@ -110,13 +110,13 @@ void mech_status(DbRef player, void *data, const char *buffer) {
 
   // Really weird status display.
   if (weird) {
-    snprintf(buf, sizeof(buf), "%s %s %d %d/%d/%d %d ",
-             mech_model_reference(mech), mech_model_name(mech),
-             mech_tonnage(mech),
-             displayed_speed(mech_maximum_speed(mech) / MP1) * 2 / 3,
-             displayed_speed(mech_maximum_speed(mech) / MP1),
-             displayed_speed(mech_jump_speed(mech) / MP1),
-             displayed_speed(mech_active_heat_sinks(mech)));
+    (void)snprintf(buf, sizeof(buf), "%s %s %d %d/%d/%d %d ",
+                   mech_model_reference(mech), mech_model_name(mech),
+                   mech_tonnage(mech),
+                   displayed_speed(mech_maximum_speed(mech) / MP1) * 2 / 3,
+                   displayed_speed(mech_maximum_speed(mech) / MP1),
+                   displayed_speed(mech_jump_speed(mech) / MP1),
+                   displayed_speed(mech_active_heat_sinks(mech)));
     memcpy(weird_buffer, buf, sizeof(weird_buffer));
 
   } else if (!doheat || (doarmor | doinfo | doweap))

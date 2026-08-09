@@ -54,23 +54,23 @@ static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
   char *buf = mode.text;
 
   if (sn < 0 || (size_t)sn >= NUM_SENSORS) {
-    snprintf(buf, sizeof(mode.text), "None");
+    (void)snprintf(buf, sizeof(mode.text), "None");
     return mode;
   }
 
   if (mech_sensor_definition(sn)->full_vision) {
-    snprintf(buf, sizeof(mode.text), "%s ",
-             mech_sensor_definition(sn)->sensor_name);
+    (void)snprintf(buf, sizeof(mode.text), "%s ",
+                   mech_sensor_definition(sn)->sensor_name);
     mech_sensor_description_append(buf, sizeof(mode.text), mech, sn, verbose);
   } else {
     if (full || mech_movement_type(mech) == MOVE_NONE ||
         mech_class(mech) == CLASS_BSUIT)
-      snprintf(buf, sizeof(mode.text), "%s in 360 degree scanning mode ",
-               mech_sensor_definition(sn)->sensor_name);
+      (void)snprintf(buf, sizeof(mode.text), "%s in 360 degree scanning mode ",
+                     mech_sensor_definition(sn)->sensor_name);
     else
-      snprintf(buf, sizeof(mode.text),
-               "%s in 120 degree scanning mode (Forward arc) ",
-               mech_sensor_definition(sn)->sensor_name);
+      (void)snprintf(buf, sizeof(mode.text),
+                     "%s in 120 degree scanning mode (Forward arc) ",
+                     mech_sensor_definition(sn)->sensor_name);
     mech_sensor_description_append(buf, sizeof(mode.text), mech, sn, verbose);
   }
   return mode;

@@ -106,8 +106,8 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
   handlers->initialized = true;
   sigaction(SIGSEGV, &handlers->segv_action, nullptr);
   sigaction(SIGBUS, &handlers->bus_action, nullptr);
-  signal(SIGCHLD, SIG_IGN);
-  signal(SIGPIPE, SIG_IGN);
+  dperror(signal(SIGCHLD, SIG_IGN) == SIG_ERR);
+  dperror(signal(SIGPIPE, SIG_IGN) == SIG_ERR);
   dprintk("done.");
   return handlers;
 }
@@ -115,13 +115,13 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
 void signal_handlers_unbind(SignalHandlers *handlers) {
   if (handlers == nullptr)
     return;
-  signal(SIGINT, SIG_DFL);
-  signal(SIGTERM, SIG_DFL);
-  signal(SIGPIPE, SIG_DFL);
-  signal(SIGUSR2, SIG_DFL);
-  signal(SIGSEGV, SIG_DFL);
-  signal(SIGBUS, SIG_DFL);
-  signal(SIGCHLD, SIG_DFL);
+  dperror(signal(SIGINT, SIG_DFL) == SIG_ERR);
+  dperror(signal(SIGTERM, SIG_DFL) == SIG_ERR);
+  dperror(signal(SIGPIPE, SIG_DFL) == SIG_ERR);
+  dperror(signal(SIGUSR2, SIG_DFL) == SIG_ERR);
+  dperror(signal(SIGSEGV, SIG_DFL) == SIG_ERR);
+  dperror(signal(SIGBUS, SIG_DFL) == SIG_ERR);
+  dperror(signal(SIGCHLD, SIG_DFL) == SIG_ERR);
   if (active_signal_handlers == handlers)
     active_signal_handlers = nullptr;
   if (handlers->alternate_stack.ss_sp != nullptr) {

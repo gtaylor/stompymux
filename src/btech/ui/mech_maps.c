@@ -219,44 +219,55 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
     mecha_notify(evaluation, player, "Unable to render the tactical map.");
     return;
   }
-  snprintf(navigate_line(mybuff, 0), MBUF_SIZE,
-           "              0                                          %.150s",
-           map_text_line(map_text, 0));
-  snprintf(navigate_line(mybuff, 1), MBUF_SIZE,
-           "         ___________                                     %.150s",
-           map_text_line(map_text, 1));
-  snprintf(navigate_line(mybuff, 2), MBUF_SIZE,
-           "        /           \\          Location:%4d,%4d, %3d   %.150s",
-           mech_position_x(mech), mech_position_y(mech), mech_position_z(mech),
-           map_text_line(map_text, 2));
-  snprintf(
+  (void)snprintf(
+      navigate_line(mybuff, 0), MBUF_SIZE,
+      "              0                                          %.150s",
+      map_text_line(map_text, 0));
+  (void)snprintf(
+      navigate_line(mybuff, 1), MBUF_SIZE,
+      "         ___________                                     %.150s",
+      map_text_line(map_text, 1));
+  (void)snprintf(
+      navigate_line(mybuff, 2), MBUF_SIZE,
+      "        /           \\          Location:%4d,%4d, %3d   %.150s",
+      mech_position_x(mech), mech_position_y(mech), mech_position_z(mech),
+      map_text_line(map_text, 2));
+  (void)snprintf(
       navigate_line(mybuff, 3), MBUF_SIZE,
       "  300  /             \\  60     Terrain: %14s   %.150s",
       GetTerrainName(mech_map, mech_position_x(mech), mech_position_y(mech)),
       map_text_line(map_text, 3));
-  snprintf(navigate_line(mybuff, 4), MBUF_SIZE,
-           "      /               \\                                  %.150s",
-           map_text_line(map_text, 4));
-  snprintf(navigate_line(mybuff, 5), MBUF_SIZE,
-           "     /                 \\                                 %.150s",
-           map_text_line(map_text, 5));
-  snprintf(navigate_line(mybuff, 6), MBUF_SIZE,
-           "270 (                   )  90  Speed:           %6.1f   %.150s",
-           (double)mech_current_speed(mech), map_text_line(map_text, 6));
-  snprintf(navigate_line(mybuff, 7), MBUF_SIZE,
-           "     \\                 /       Vertical Speed:  %6.1f   %.150s",
-           (double)mech_vertical_speed(mech), map_text_line(map_text, 7));
-  snprintf(navigate_line(mybuff, 8), MBUF_SIZE,
-           "      \\               /        Heading:           %4d   %.150s",
-           mech_heading_degrees(mech), map_text_line(map_text, 8));
-  snprintf(navigate_line(mybuff, 9), MBUF_SIZE,
-           "  240  \\             /  120                              %.150s",
-           map_text_line(map_text, 9));
-  snprintf(navigate_line(mybuff, 10), MBUF_SIZE,
-           "        \\___________/                                    %.150s",
-           map_text_line(map_text, 10));
-  snprintf(navigate_line(mybuff, 11), MBUF_SIZE, "                      ");
-  snprintf(navigate_line(mybuff, 12), MBUF_SIZE, "             180");
+  (void)snprintf(
+      navigate_line(mybuff, 4), MBUF_SIZE,
+      "      /               \\                                  %.150s",
+      map_text_line(map_text, 4));
+  (void)snprintf(
+      navigate_line(mybuff, 5), MBUF_SIZE,
+      "     /                 \\                                 %.150s",
+      map_text_line(map_text, 5));
+  (void)snprintf(
+      navigate_line(mybuff, 6), MBUF_SIZE,
+      "270 (                   )  90  Speed:           %6.1f   %.150s",
+      (double)mech_current_speed(mech), map_text_line(map_text, 6));
+  (void)snprintf(
+      navigate_line(mybuff, 7), MBUF_SIZE,
+      "     \\                 /       Vertical Speed:  %6.1f   %.150s",
+      (double)mech_vertical_speed(mech), map_text_line(map_text, 7));
+  (void)snprintf(
+      navigate_line(mybuff, 8), MBUF_SIZE,
+      "      \\               /        Heading:           %4d   %.150s",
+      mech_heading_degrees(mech), map_text_line(map_text, 8));
+  (void)snprintf(
+      navigate_line(mybuff, 9), MBUF_SIZE,
+      "  240  \\             /  120                              %.150s",
+      map_text_line(map_text, 9));
+  (void)snprintf(
+      navigate_line(mybuff, 10), MBUF_SIZE,
+      "        \\___________/                                    %.150s",
+      map_text_line(map_text, 10));
+  (void)snprintf(navigate_line(mybuff, 11), MBUF_SIZE,
+                 "                      ");
+  (void)snprintf(navigate_line(mybuff, 12), MBUF_SIZE, "             180");
   map_text_destroy(map_text);
 
   navigate_sketch_mechs(mech, mech_map, x, y, navigate_plot, &canvas);

@@ -8,7 +8,7 @@
 #include "mux/support/red_black_tree_internal.h"
 
 [[noreturn]] static void red_black_tree_fail(const char *message) {
-  fprintf(stderr, "Red-black tree invariant failure: %s\n", message);
+  (void)fprintf(stderr, "Red-black tree invariant failure: %s\n", message);
   abort();
 }
 

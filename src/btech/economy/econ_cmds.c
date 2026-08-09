@@ -132,7 +132,7 @@ int loading_bay_whine(DbRef player, DbRef cargobay, Mech *mech) {
                            (char[LBUF_SIZE]){0});
   if (c && *c) {
     char values[LBUF_SIZE];
-    snprintf(values, sizeof(values), "%s", c);
+    (void)snprintf(values, sizeof(values), "%s", c);
     char *first = strtok(values, " \t\r\n");
     char *second = strtok(nullptr, " \t\r\n");
     char *third = strtok(nullptr, " \t\r\n");
@@ -251,8 +251,8 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
       ch = tmpstr;
 #else
       sw = btech_part_weight(id);
-      snprintf(tmpstr, LBUF_SIZE, "%s x%d (%.1ft)", display_name.text, x,
-               (sw * x) / 1024.0);
+      (void)snprintf(tmpstr, LBUF_SIZE, "%s x%d (%.1ft)", display_name.text, x,
+                     (sw * x) / 1024.0);
       ch = tmpstr;
 #endif /* BT_PART_WEIGHTS */
       cool_menu_entry_simple(&c, ch, CM_TWO);

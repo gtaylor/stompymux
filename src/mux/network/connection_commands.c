@@ -71,10 +71,11 @@ static const char *time_format_1(time_t dt) {
 
   delta = gmtime(&dt);
   if (delta->tm_yday > 0) {
-    snprintf(buf, sizeof(buf), "%dd %02d:%02d", delta->tm_yday, delta->tm_hour,
-             delta->tm_min);
+    (void)snprintf(buf, sizeof(buf), "%dd %02d:%02d", delta->tm_yday,
+                   delta->tm_hour, delta->tm_min);
   } else {
-    snprintf(buf, sizeof(buf), "%02d:%02d", delta->tm_hour, delta->tm_min);
+    (void)snprintf(buf, sizeof(buf), "%02d:%02d", delta->tm_hour,
+                   delta->tm_min);
   }
   return buf;
 }
@@ -88,13 +89,13 @@ static const char *time_format_2(time_t dt) {
 
   delta = gmtime(&dt);
   if (delta->tm_yday > 0) {
-    snprintf(buf, sizeof(buf), "%dd", delta->tm_yday);
+    (void)snprintf(buf, sizeof(buf), "%dd", delta->tm_yday);
   } else if (delta->tm_hour > 0) {
-    snprintf(buf, sizeof(buf), "%dh", delta->tm_hour);
+    (void)snprintf(buf, sizeof(buf), "%dh", delta->tm_hour);
   } else if (delta->tm_min > 0) {
-    snprintf(buf, sizeof(buf), "%dm", delta->tm_min);
+    (void)snprintf(buf, sizeof(buf), "%dm", delta->tm_min);
   } else {
-    snprintf(buf, sizeof(buf), "%ds", delta->tm_sec);
+    (void)snprintf(buf, sizeof(buf), "%ds", delta->tm_sec);
   }
   return buf;
 }
@@ -198,22 +199,23 @@ static void dump_users(Descriptor *e, const char *match) {
     *(char *)checked_storage_at(slist, sizeof(slist), sizeof(char),
                                 slist_length) = '\0';
 
-    snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
-             trimmed_name(runtime->world->database, d->player),
-             time_format_1(runtime->clock->now - d->connected_at),
-             time_format_2(runtime->clock->now - d->last_time), flist,
-             game_object_location(runtime->world->database, d->player),
-             d->command_count,
-             (d->username[0] != '\0') ? tprintf("%s@%s", d->username, d->addr)
-                                      : d->addr);
+    (void)snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
+                   trimmed_name(runtime->world->database, d->player),
+                   time_format_1(runtime->clock->now - d->connected_at),
+                   time_format_2(runtime->clock->now - d->last_time), flist,
+                   game_object_location(runtime->world->database, d->player),
+                   d->command_count,
+                   (d->username[0] != '\0')
+                       ? tprintf("%s@%s", d->username, d->addr)
+                       : d->addr);
     descriptor_queue_string(e, buf);
   }
-  snprintf(buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n",
-           count, (count == 1) ? " " : "s ",
-           *descriptor_runtime(e)->record_players,
-           (runtime->world->configuration->max_players == -1)
-               ? "no"
-               : tprintf("%d", runtime->world->configuration->max_players));
+  (void)snprintf(
+      buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n", count,
+      (count == 1) ? " " : "s ", *descriptor_runtime(e)->record_players,
+      (runtime->world->configuration->max_players == -1)
+          ? "no"
+          : tprintf("%d", runtime->world->configuration->max_players));
 
   descriptor_queue_string(e, buf);
 
@@ -257,7 +259,7 @@ static void dump_sessions(Descriptor *e, const char *match) {
       continue;
     count++;
 
-    snprintf(
+    (void)snprintf(
         buf, LBUF_SIZE, "%-16s%10s %5s%5d%5d%6d%10d%6d%6d%10d\r\n",
         trimmed_name(runtime->world->database, d->player),
         time_format_1(runtime->clock->now - d->connected_at),
@@ -269,12 +271,12 @@ static void dump_sessions(Descriptor *e, const char *match) {
     descriptor_queue_string(e, buf);
   }
 
-  snprintf(buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n",
-           count, (count == 1) ? " " : "s ",
-           *descriptor_runtime(e)->record_players,
-           (runtime->world->configuration->max_players == -1)
-               ? "no"
-               : tprintf("%d", runtime->world->configuration->max_players));
+  (void)snprintf(
+      buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n", count,
+      (count == 1) ? " " : "s ", *descriptor_runtime(e)->record_players,
+      (runtime->world->configuration->max_players == -1)
+          ? "no"
+          : tprintf("%d", runtime->world->configuration->max_players));
   descriptor_queue_string(e, buf);
   free_lbuf(buf);
 }

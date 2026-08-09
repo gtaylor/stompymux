@@ -194,7 +194,8 @@ static void mech_scharge_event(MuxEvent *e) {
           !mech_critical_is_destroyed(mech, CTORSO, j)) {
         mech_critical_destroy(mech, CTORSO, j);
         if (!mech_is_destroyed(mech) && mech_is_started(mech)) {
-          snprintf(msgbuf, MBUF_SIZE, "'s center torso spews black smoke!");
+          (void)snprintf(msgbuf, MBUF_SIZE,
+                         "'s center torso spews black smoke!");
           mech_los_broadcast(mech, msgbuf);
         }
         if (mech_engine_heat(mech) < 10) {
@@ -213,7 +214,8 @@ static void mech_scharge_event(MuxEvent *e) {
   }
 
   if (mech_class(mech) == CLASS_VTOL || mech_class(mech) == CLASS_VEH_GROUND) {
-    snprintf(msgbuf, MBUF_SIZE, " coughs thick black smoke from its exhaust.");
+    (void)snprintf(msgbuf, MBUF_SIZE,
+                   " coughs thick black smoke from its exhaust.");
     mech_los_broadcast(mech, msgbuf);
     maxspeed = mech_maximum_speed(mech);
     newmaxspeed = maxspeed * 0.5F;

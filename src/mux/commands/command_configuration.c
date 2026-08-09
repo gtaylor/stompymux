@@ -47,7 +47,7 @@ void command_list_access(EvaluationContext *evaluation,
     if (check_access(evaluation->world->database, configuration, player,
                      cmdp->perms)) {
       if (!(cmdp->perms & CF_DARK)) {
-        snprintf(buff, SBUF_SIZE, "%s:", cmdp->cmdname);
+        (void)snprintf(buff, SBUF_SIZE, "%s:", cmdp->cmdname);
         name_table_list_set(evaluation, configuration, player, access_nametab,
                             cmdp->perms, buff, 1);
       }
@@ -71,7 +71,7 @@ void command_list_switches(EvaluationContext *evaluation,
       if (check_access(evaluation->world->database, configuration, player,
                        cmdp->perms)) {
         if (!(cmdp->perms & CF_DARK)) {
-          snprintf(buff, SBUF_SIZE, "%s:", cmdp->cmdname);
+          (void)snprintf(buff, SBUF_SIZE, "%s:", cmdp->cmdname);
           name_table_display(evaluation, configuration, player, cmdp->switches,
                              buff, 0);
         }

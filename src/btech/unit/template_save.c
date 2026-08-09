@@ -16,6 +16,7 @@
 #include "mech_utils_api.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/server/diagnostics.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
@@ -62,13 +63,13 @@ static void save_nondefault_range(FILE *fp, const Mech *mech, int current,
       mech_computer_quality(mech) ? computer_default : legacy_default;
 
   if (current != expected)
-    fprintf(fp, "%-16s { %d }\n", name, current);
+    (void)fprintf(fp, "%-16s { %d }\n", name, current);
 }
 
 static void save_nondefault_integer(FILE *fp, int expected, int current,
                                     const char *name) {
   if (expected != current)
-    fprintf(fp, "%-16s { %d }\n", name, current);
+    (void)fprintf(fp, "%-16s { %d }\n", name, current);
 }
 
 int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
@@ -84,19 +85,20 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
   if (!(fp = fopen(filename, "w")))
     return -1;
   if (((mech)->ud.mech_name)[0])
-    fprintf(fp, "Name             { %s }\n", ((mech)->ud.mech_name));
-  fprintf(fp, "Reference        { %s }\n", reference);
-  fprintf(fp, "Type             { %s }\n",
-          template_unit_class_name((size_t)mech->ud.type));
+    (void)fprintf(fp, "Name             { %s }\n", ((mech)->ud.mech_name));
+  (void)fprintf(fp, "Reference        { %s }\n", reference);
+  (void)fprintf(fp, "Type             { %s }\n",
+                template_unit_class_name((size_t)mech->ud.type));
   fprintf(fp, "Unit_Era         { %s }\n", ((mech)->ud.unit_era)),
       fprintf(fp, "Unit_TRO         { %s }\n", ((mech)->ud.unit_tro)),
       fprintf(fp, "Move_Type        { %s }\n",
               template_movement_type_name((size_t)mech->ud.move));
-  fprintf(fp, "Tons             { %d }\n", ((mech)->ud.tons));
+  (void)fprintf(fp, "Tons             { %d }\n", ((mech)->ud.tons));
   if ((d = strrchr(c, '\n')))
     *d = 0;
-  fprintf(fp, "Comment          { Saved by: %s(#%ld) at %s }\n",
-          game_object_name(mech->xcode.context->database, player), player, c);
+  (void)fprintf(fp, "Comment          { Saved by: %s(#%ld) at %s }\n",
+                game_object_name(mech->xcode.context->database, player), player,
+                c);
   save_nondefault_range(fp, mech, mech_tactical_range(mech),
                         mech_default_tactical_range(mech), DEFAULT_TACRANGE,
                         "Tac_Range");
@@ -129,9 +131,11 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
   save_nondefault_integer(fp, DefaultFuelByType(mech), ((mech)->ud.fuel_orig),
                           "Fuel");
 
-  fprintf(fp, "Max_Speed        { %.2f }\n", (double)((mech)->ud.maxspeed));
+  (void)fprintf(fp, "Max_Speed        { %.2f }\n",
+                (double)((mech)->ud.maxspeed));
   if (((mech)->rd.jumpspeed) > 0.0F)
-    fprintf(fp, "Jump_Speed       { %.2f }\n", (double)((mech)->rd.jumpspeed));
+    (void)fprintf(fp, "Jump_Speed       { %.2f }\n",
+                  (double)((mech)->rd.jumpspeed));
   x = ((mech)->rd.specials);
   x2 = ((mech)->rd.specials2);
   /* Remove AMS'es, they're re-generated back on loadtime */
@@ -150,18 +154,19 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
           BLOODHOUND_PROBE_TECH | TCOMP_TECH);
 
   if (x || x2)
-    fprintf(fp, "Specials         { %s }\n",
-            build_bit_string2(specials, primary_technology_name_count(),
-                              specials2, secondary_technology_name_count(), x,
-                              x2, (char[BTECH_TEXT_CAPACITY]){0}));
+    (void)fprintf(fp, "Specials         { %s }\n",
+                  build_bit_string2(specials, primary_technology_name_count(),
+                                    specials2,
+                                    secondary_technology_name_count(), x, x2,
+                                    (char[BTECH_TEXT_CAPACITY]){0}));
 
   inf_x = ((mech)->rd.infantry_specials);
 
   if (inf_x)
-    fprintf(fp, "InfantrySpecials { %s }\n",
-            build_bit_string(infantry_specials,
-                             infantry_technology_name_count(), inf_x,
-                             (char[BTECH_TEXT_CAPACITY]){0}));
+    (void)fprintf(fp, "InfantrySpecials { %s }\n",
+                  build_bit_string(infantry_specials,
+                                   infantry_technology_name_count(), inf_x,
+                                   (char[BTECH_TEXT_CAPACITY]){0}));
 
   int result = -1;
   if ((locs =
@@ -182,7 +187,7 @@ static void skip_template_whitespace(FILE *fp) {
                                     c == '\v' || c == '\f' || c == '\r'))
     ;
   if (c != EOF)
-    ungetc(c, fp);
+    dassert(ungetc(c, fp) != EOF);
 }
 
 char *read_desc(FILE *fp, char *data, char *buffer) {

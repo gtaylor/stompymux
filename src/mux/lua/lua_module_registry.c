@@ -126,8 +126,8 @@ int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
       return 0;
     }
   } else {
-    snprintf(directory, sizeof(directory), "%s",
-             lua_runtime_root(runtime, root));
+    (void)snprintf(directory, sizeof(directory), "%s",
+                   lua_runtime_root(runtime, root));
   }
   stream = opendir(directory);
   if (!stream) {
@@ -151,7 +151,8 @@ int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
         return 0;
       }
     } else {
-      snprintf(child_relative, sizeof(child_relative), "%s", entry->d_name);
+      (void)snprintf(child_relative, sizeof(child_relative), "%s",
+                     entry->d_name);
     }
     if (!lua_join_path(child_path, sizeof(child_path),
                        lua_runtime_root(runtime, root), child_relative)) {
@@ -214,7 +215,7 @@ static int lua_cron_field_matches(const char *field, int value, int minimum,
 
   if (strlen(field) >= sizeof(copy))
     return -1;
-  snprintf(copy, sizeof(copy), "%s", field);
+  (void)snprintf(copy, sizeof(copy), "%s", field);
   *is_wildcard = !strcmp(field, "*");
   part = copy;
   while (part) {
@@ -272,7 +273,7 @@ int lua_cron_matches(const char *cron, time_t when, char *error,
 
   if (strlen(cron) >= sizeof(copy))
     goto invalid;
-  snprintf(copy, sizeof(copy), "%s", cron);
+  (void)snprintf(copy, sizeof(copy), "%s", cron);
   field = strtok(copy, " \t");
   for (index = 0; index < 5; index++) {
     if (!field)

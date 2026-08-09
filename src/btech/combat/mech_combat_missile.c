@@ -91,17 +91,17 @@ void mech_missile_apply_hits(Mech *mech, Mech *target, int hitX, int hitY,
     strcpy(buf, "");
 
     if (weapon_catalogue_is_missile(weapindx))
-      snprintf(buf, SBUF_SIZE, "%s%s", "missile",
-               orig_num_missiles > 1 ? "s" : "");
+      (void)snprintf(buf, SBUF_SIZE, "%s%s", "missile",
+                     orig_num_missiles > 1 ? "s" : "");
     else if (ammoMode & LBX_MODE)
-      snprintf(buf, SBUF_SIZE, "%s%s", "pellet",
-               orig_num_missiles > 1 ? "s" : "");
+      (void)snprintf(buf, SBUF_SIZE, "%s%s", "pellet",
+                     orig_num_missiles > 1 ? "s" : "");
     else if ((fireMode & ULTRA_MODE) || (fireMode & RFAC_MODE) ||
              (fireMode & RAC_MODES))
-      snprintf(buf, SBUF_SIZE, "%s%s", "slug",
-               orig_num_missiles > 1 ? "s" : "");
+      (void)snprintf(buf, SBUF_SIZE, "%s%s", "slug",
+                     orig_num_missiles > 1 ? "s" : "");
     else
-      snprintf(buf, SBUF_SIZE, "%s", "damage");
+      (void)snprintf(buf, SBUF_SIZE, "%s", "damage");
 
     mech_printf(mech, MECHALL, "%s %s %s absorbed by the trees!",
                 (orig_num_missiles == 1  ? "The"

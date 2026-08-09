@@ -403,14 +403,14 @@ void do_dig(CommandInvocation *invocation) {
       nargs >= 2 ? command_invocation_vector_at(invocation, 1) : nullptr;
 
   if (forward_exit != nullptr && *forward_exit) {
-    snprintf(buff, SBUF_SIZE, "%ld", room);
+    (void)snprintf(buff, SBUF_SIZE, "%ld", room);
     open_exit(evaluation, player,
               game_object_location(evaluation->world->database, player),
               forward_exit, buff);
   }
   if (back_exit != nullptr && *back_exit) {
-    snprintf(buff, SBUF_SIZE, "%ld",
-             game_object_location(evaluation->world->database, player));
+    (void)snprintf(buff, SBUF_SIZE, "%ld",
+                   game_object_location(evaluation->world->database, player));
     open_exit(evaluation, player, room, back_exit, buff);
   }
   if (key == DIG_TELEPORT)

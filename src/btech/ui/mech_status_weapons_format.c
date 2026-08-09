@@ -35,8 +35,9 @@ static void recycle_status_append(char *buffer, size_t capacity,
   size_t length = strlen(buffer);
   if (length >= capacity)
     return;
-  snprintf(checked_storage_region(buffer, capacity, length, capacity - length),
-           capacity - length, "%s: %s ", part, status);
+  (void)snprintf(
+      checked_storage_region(buffer, capacity, length, capacity - length),
+      capacity - length, "%s: %s ", part, status);
 }
 #include "mux/support/formatting.h"
 #include "registry_api.h"
@@ -407,8 +408,9 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       if (mech_section_internal(mech, i))
         break;
     if (i < NUM_BSUIT_MEMBERS) {
-      snprintf(tempbuff, sizeof(tempbuff), "Team status (special attacks): %s",
-               section_recycle_status(mech, i));
+      (void)snprintf(tempbuff, sizeof(tempbuff),
+                     "Team status (special attacks): %s",
+                     section_recycle_status(mech, i));
       mecha_notify(evaluation, player, tempbuff);
     }
 
@@ -447,7 +449,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       continue;
     ArmorStringFromIndex(loop, tempbuff, mech_class(mech),
                          mech_movement_type(mech));
-    snprintf(location, sizeof(location), "%-14.14s", tempbuff);
+    (void)snprintf(location, sizeof(location), "%-14.14s", tempbuff);
     if (compact) {
       strlcpy(location, tempbuff, sizeof(location));
       if ((tmpc = strchr(location, ' ')))
@@ -469,8 +471,8 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
             conditions.ams_enabled ? 'O' : 'F',
             conditions.ams_enabled ? 'N' : 'F', ' ', running_sum + ii);
       else {
-        snprintf(tmpbuf, sizeof(tmpbuf), "%s%s",
-                 fire_mode & OS_MODE ? "OS " : "", weapon_name);
+        (void)snprintf(tmpbuf, sizeof(tmpbuf), "%s%s",
+                       fire_mode & OS_MODE ? "OS " : "", weapon_name);
         btech_text_builder_append_format(
             &weapon_text, " %-16.16s %c%c%c%c%c [%2d] ", tmpbuf,
             (fire_mode & REAR_MOUNT) ? 'R' : ' ',
@@ -541,10 +543,10 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
             checked_string_suffix(weapon_catalogue_name(ammunition_weapon), 3);
         ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(
             ammunition_weapon, weapon_status_mode(modearray, ammunition_index));
-        snprintf(weapname, sizeof(weapname), "%-16.16s %c  %s%3d%s",
-                 ammunition_name, ammo_mode,
-                 evaluate_ammo_amount(ammunition, maximum_ammunition),
-                 ammunition, "[reset]");
+        (void)snprintf(weapname, sizeof(weapname), "%-16.16s %c  %s%3d%s",
+                       ammunition_name, ammo_mode,
+                       evaluate_ammo_amount(ammunition, maximum_ammunition),
+                       ammunition, "[reset]");
         if (compact) {
           if (ammo_mode && ammo_mode != ' ')
             append_status(compact_buffer, compact_buffer_size, "|%s|%d|%c ",
@@ -556,7 +558,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       } else {
         if (compact)
           append_status(compact_buffer, compact_buffer_size, " ");
-        snprintf(weapname, sizeof(weapname), "   ");
+        (void)snprintf(weapname, sizeof(weapname), "   ");
       }
       btech_text_builder_append(&weapon_text, weapname);
       if (!compact)
@@ -573,7 +575,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       const int maximum_ammunition = weapon_status_short(ammomax, running_sum);
       ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(
           ammunition_weapon, weapon_status_mode(modearray, running_sum));
-      snprintf(
+      (void)snprintf(
           astrAmmoSpacer, sizeof(astrAmmoSpacer),
           "                                                  || "
           "%-16.16s %c  %s%3d%s",

@@ -73,7 +73,7 @@ void lua_set_error(char *error, size_t error_size, const char *format, ...) {
     return;
   va_start(arguments, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  vsnprintf(error, error_size, format, arguments);
+  (void)vsnprintf(error, error_size, format, arguments);
   va_end(arguments);
 }
 
@@ -284,7 +284,7 @@ int lua_load_module(LuaRuntime *runtime, LUA_MODULE_ROOT root, const char *path,
     return 1;
   }
   lua_pop(state, 1);
-  snprintf(runtime->module, sizeof(runtime->module), "%s", key);
+  (void)snprintf(runtime->module, sizeof(runtime->module), "%s", key);
   previous_root = runtime->current_root;
   runtime->current_root = root;
   status = luaL_loadfile(state, resolved);
@@ -366,8 +366,9 @@ static int lua_require_module(lua_State *state) {
     if (*character == '.')
       *character = '/';
   }
-  snprintf(checked_storage_region(path, sizeof(path), strlen(path) - 4, 5), 5,
-           ".lua");
+  (void)snprintf(
+      checked_storage_region(path, sizeof(path), strlen(path) - 4, 5), 5,
+      ".lua");
   if (lua_resolve_path(runtime, root, path, resolved, sizeof(resolved), error,
                        sizeof(error))) {
     if (!lua_load_module(runtime, root, path, error, sizeof(error)))

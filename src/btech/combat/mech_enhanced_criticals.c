@@ -487,15 +487,15 @@ void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
 
     ArmorStringFromIndex(secIter, tempbuff, mech_class(mech),
                          mech_movement_type(mech));
-    snprintf(strLocation, sizeof(strLocation), "%-18.18s", tempbuff);
+    (void)snprintf(strLocation, sizeof(strLocation), "%-18.18s", tempbuff);
 
     for (weapIter = 0; weapIter < wWeapsInSec; weapIter++) {
       const unsigned char weapon_index =
           weapon_status_index(weaparray, (size_t)weapIter);
       const int weapon_critical =
           weapon_status_critical(critical, (size_t)weapIter);
-      snprintf(weapbuff, sizeof(weapbuff), "[%2d] %-29.29s || ", wcWeaps++,
-               weapon_display_name(weapon_index));
+      (void)snprintf(weapbuff, sizeof(weapbuff), "[%2d] %-29.29s || ",
+                     wcWeaps++, weapon_display_name(weapon_index));
 
       strlcat(weapbuff, strLocation, sizeof(weapbuff));
       wDamagedSlots = 0;

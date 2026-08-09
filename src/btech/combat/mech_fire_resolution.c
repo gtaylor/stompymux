@@ -197,7 +197,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
       roll = btech_random_roll(mech_context(mech));
   }
   if (LOS)
-    snprintf(buf, sizeof(buf), "Roll: %d ", roll);
+    (void)snprintf(buf, sizeof(buf), "Roll: %d ", roll);
 
   /****************************************
    * END: Calc BTH and Roll
@@ -214,7 +214,7 @@ void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
         !weapon_catalogue_is_missile(weapindx)) {
       ArmorStringFromIndex(mech_aim_section(mech), buf3, mech_class(target),
                            mech_movement_type(target));
-      snprintf(buf2, sizeof(buf2), "'s %s", buf3);
+      (void)snprintf(buf2, sizeof(buf2), "'s %s", buf3);
     }
 
     if (sight) {
