@@ -1,18 +1,5 @@
 
-/*
- * $Id: mech.ecm.c,v 1.2 2005/06/23 18:31:42 av1-op Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Fri Mar 21 15:13:06 1997 fingon
- * Last modified: Sat Oct 25 18:03:03 1997 fingon
- *
- */
+/* Implements electronic countermeasure effects. */
 
 #include "mech_ecm.h"
 #include "btconfig.h"

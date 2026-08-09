@@ -1,10 +1,4 @@
-/*
- *
- * Copyright (c) 2005 Martin Murray
- *
- * This is much better than what we had.
- *
- */
+/* Coordinates the BattleTech simulation heartbeat. */
 
 #include "autopilot.h"
 #include "btech/context.h"

@@ -1,13 +1,4 @@
-
-/*
-   p.mech.move.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Mon Mar 22 08:51:15 CET 1999 from mech.move.c */
+/* Declares the BattleTech unit move API. */
 
 #pragma once
 

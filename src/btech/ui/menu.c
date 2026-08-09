@@ -1,16 +1,5 @@
 
-/*
- * $Id: menu.c,v 1.1 2005/06/13 20:50:49 murrayma Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *       All rights reserved
- *
- * Created: Mon Sep 16 20:38:36 1996 fingon
- * Last modified: Wed Jun 24 22:41:40 1998 fingon
- *
- */
+/* Implements terminal menu rendering and interaction. */
 
 #include "mux/commands/command_context.h"
 #include <stdio.h>

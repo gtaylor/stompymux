@@ -1,16 +1,5 @@
 
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *       All rights reserved
- *
- * Created: Tue Aug 27 19:02:00 1996 fingon
- * Last modified: Sat Jun  6 22:20:36 1998 fingon
- *
- */
-
-/* mux_event.h - Timed event data structures and scheduler interfaces. */
+/* Defines timed MUX event data structures and scheduler interfaces. */
 
 #pragma once
 

@@ -1,13 +1,5 @@
 
-/*
- *
- * Original author: unknown
- *
- * Copyright (c) 1996-2002 Markus Stenberg
- * Copyright (c) 1998-2002 Thomas Wouters
- * Copyright (c) 2000-2002 Cord Awtry
- *
- */
+/* Traces line of sight through map hexes. */
 
 /*************************************************************
 ****  LOS code  **********************************************

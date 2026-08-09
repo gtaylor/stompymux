@@ -1,13 +1,4 @@
-
-/*
-   p.btechstats.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Mon Mar 22 10:40:18 CET 1999 from btechstats.c */
+/* Declares the BattleTech btechstats API. */
 
 #include <stdbool.h>
 

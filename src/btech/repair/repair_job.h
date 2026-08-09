@@ -1,18 +1,5 @@
 
-/*
- * $Id: mech.tech.h,v 1.5 2005/06/24 04:39:08 av1-op Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Fri Aug 30 15:22:08 1996 fingon
- * Last modified: Sat Jun  6 20:49:50 1998 fingon
- *
- */
+/* Defines unit repair job types and operations. */
 
 #include <stdbool.h>
 #include <stdint.h>

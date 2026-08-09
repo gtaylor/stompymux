@@ -1,10 +1,5 @@
 
-/*
- * $Id: object_spatial.h,v 1.1 2005/06/13 20:50:53 murrayma Exp $
- *
- * Last modified: Sat Jun  6 20:57:26 1998 fingon
- *
- */
+/* Declares spatial-object and pathfinding constants. */
 
 #pragma once
 

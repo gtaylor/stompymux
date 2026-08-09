@@ -1,10 +1,4 @@
-/*
- * $Id: weapons.h,v 1.1.1.1 2005/01/11 21:18:33 kstevens Exp $
- *
- * Last modified: $Date: 2005/01/11 21:18:33 $
- *
- * Header file for weapons, includes specific featured lists.
- */
+/* Declares weapon catalogs and interfaces. */
 
 #pragma once
 

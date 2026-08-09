@@ -1,9 +1,4 @@
-/*
- * Author: Cord Awtry <kipsta@mediaone.net>
- *
- *  Copyright (c) 2001 Cord Awtry
- *       All rights reserved
- */
+/* Implements BattleTech sensor mechanics for unit tag. */
 
 #include <string.h>
 

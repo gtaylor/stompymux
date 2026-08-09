@@ -1,13 +1,4 @@
-
-/*
-   p.aero.move.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Mon Mar 22 08:51:10 CET 1999 from aero.move.c */
+/* Declares the BattleTech aerospace move API. */
 
 #pragma once
 

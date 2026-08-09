@@ -7,10 +7,7 @@
 
  */
 
-/*
- * $Id: failures.c,v 1.1.1.1 2005/01/11 21:18:07 kstevens Exp $
- * Last modified: Sat Jun  6 21:43:52 1998 fingon
- */
+/* Implements BattleTech unit part failures. */
 
 #include <assert.h>
 #include <limits.h>

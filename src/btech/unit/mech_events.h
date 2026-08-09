@@ -1,19 +1,5 @@
 
-/*
- * $Id: mech.events.h,v 1.2 2005/08/03 21:40:54 av1-op Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- * Created: Fri Aug 30 15:32:12 1996 fingon
- * Last modified: Sat Jun  6 20:14:55 1998 fingon
- *
- */
+/* Declares scheduled event interfaces for units. */
 
 #pragma once
 

@@ -1,13 +1,4 @@
-/*
- * Author: Cord Awtry <kipsta@mediaone.net>
- *  Copyright (c) 2001-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- * Based on work that was:
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2001 Thomas Wouters
- */
+/* Implements BattleTech sensor mechanics for unit spot. */
 
 #include <stdint.h>
 #include <stdio.h>

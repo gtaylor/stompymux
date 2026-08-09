@@ -1,15 +1,4 @@
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Mon Jan  6 15:57:35 1997 fingon
- * Last modified: Mon Jun  8 19:49:25 1998 fingon
- *
- */
+/* Implements BattleTech movement mechanics for aerospace bomb. */
 
 static const float BOMB_GRAVITY = 1.0F;
 

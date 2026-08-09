@@ -1,10 +1,5 @@
 
-/*
- * $Id: debug.h,v 1.1 2005/06/13 20:50:52 murrayma Exp $
- *
- * Last modified: Sun Nov  3 19:47:34 1996 fingon
- *
- */
+/* Declares debug special-object callbacks. */
 
 #pragma once
 

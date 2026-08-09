@@ -1,18 +1,5 @@
 
-/*
- * $Id: mech.partnames.h,v 1.1.1.1 2005/01/11 21:18:21 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Sun Mar  9 14:02:41 1997 fingon
- * Last modified: Sat Jun  6 21:51:41 1998 fingon
- *
- */
+/* Declares names for unit parts and locations. */
 
 #pragma once
 

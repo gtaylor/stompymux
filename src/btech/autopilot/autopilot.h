@@ -1,18 +1,5 @@
 
-/*
- * $Id: autopilot.h,v 1.4 2005/08/03 21:40:54 av1-op Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Wed Oct 30 20:43:42 1996 fingon
- * Last modified: Sat Jun  6 19:56:42 1998 fingon
- *
- */
+/* Defines the BattleTech unit autopilot interface. */
 
 #pragma once
 

@@ -1,18 +1,5 @@
 
-/*
- * $Id: mine.h,v 1.1.1.1 2005/01/11 21:18:29 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Tue Oct 22 18:32:22 1996 fingon
- * Last modified: Tue Oct 21 18:35:36 1997 fingon
- *
- */
+/* Declares minefield combat interfaces. */
 
 #pragma once
 

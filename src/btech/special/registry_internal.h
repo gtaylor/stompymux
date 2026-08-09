@@ -1,17 +1,5 @@
 
-/*
- * $Id: glue.h,v 1.4 2005/08/08 09:43:10 murrayma Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- * Created: Thu Sep 19 22:02:48 1996 fingon
- * Last modified: Thu Dec 10 21:45:10 1998 fingon
- *
- */
+/* Declares internal support for BattleTech special objects. */
 
 /*
   Header for special command rooms...

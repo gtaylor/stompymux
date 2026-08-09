@@ -1,18 +1,5 @@
 
-/*
- * $Id: mech.mechref_ident.c,v 1.1.1.1 2005/01/11 21:18:18 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Tue Sep 17 18:08:13 1996 fingon
- * Last modified: Sun Jan 12 13:30:10 1997 fingon
- *
- */
+/* Implements unit reference identification. */
 
 #include "mech_mechref_ident_api.h"
 

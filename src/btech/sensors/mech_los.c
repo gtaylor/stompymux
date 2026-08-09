@@ -1,17 +1,5 @@
 
-/*
- * $Id: mech.los.c,v 1.1.1.1 2005/01/11 21:18:17 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Last modified: Sat Jul 18 13:47:27 1998 fingon
- *
- */
+/* Implements unit line-of-sight calculations. */
 
 #include <stdio.h>
 

@@ -1,13 +1,5 @@
 
-/*
- * $Id: map.los.c,v 1.1.1.1 2005/01/11 21:18:08 kstevens Exp $
- *
- * Author: Thomas Wouters <thomas@xs4all.net>
- *
- * Copyright (c) 2002 Thomas Wouters
- *     All rights reserved
- *
- */
+/* Implements line-of-sight calculations on maps. */
 
 #include "map_los.h"
 #include "map_los_api.h"

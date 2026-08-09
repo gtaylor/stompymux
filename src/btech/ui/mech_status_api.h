@@ -1,13 +1,4 @@
-
-/*
-   p.mech.status.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Mon Mar 22 08:51:16 CET 1999 from mech.status.c */
+/* Declares the BattleTech unit status API. */
 
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"

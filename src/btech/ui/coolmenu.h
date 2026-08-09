@@ -1,16 +1,5 @@
 
-/*
- * $Id: coolmenu_h,v 1.1 2005/06/13 20:50:52 murrayma Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *       All rights reserved
- *
- * Created: Mon Sep 16 20:38:54 1996 fingon
- * Last modified: Wed Jun 24 22:37:38 1998 fingon
- *
- */
+/* Declares the reusable terminal menu interface. */
 
 #pragma once
 

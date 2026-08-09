@@ -1,16 +1,5 @@
 
-/*
- * $Id: mech.c3i.c,v 1.1.1.1 2005/01/11 21:18:12 kstevens Exp $
- *
- * Author: Cord Awtry <kipsta@mediaone.net>
- * Author: Cord Awtry <kipsta@mediaone.net>
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Based on work that was:
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2000 Thomas Wouters
- */
+/* Implements C3i targeting-network support. */
 
 #include <string.h>
 

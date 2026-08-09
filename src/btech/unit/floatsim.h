@@ -1,16 +1,5 @@
 
-/*
- * $Id: floatsim.h,v 1.1.1.1 2005/01/11 21:18:07 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1998 Markus Stenberg
- *       All rights reserved
- *
- * Created: Mon Jul 20 00:26:46 1998 fingon
- * Last modified: Mon Jul 20 00:46:33 1998 fingon
- *
- */
+/* Provides fixed-point helpers that simulate floating-point values. */
 
 #pragma once
 

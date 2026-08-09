@@ -1,16 +1,5 @@
 
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *       All rights reserved
- *
- * Created: Sun Dec  1 11:46:18 1996 fingon
- * Last modified: Sun Dec  1 12:43:01 1996 fingon
- *
- */
-
-/* fifo.c - Generic first-in, first-out queue implementation. */
+/* Implements a generic first-in, first-out queue. */
 
 #include "mux/support/fifo.h"
 

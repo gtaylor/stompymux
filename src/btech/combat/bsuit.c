@@ -1,14 +1,4 @@
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1999-2000 Marco Peter Hoogeveen
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- */
+/* Implements BattleTech combat mechanics for battle armor. */
 
 #include <math.h>
 #include <string.h>

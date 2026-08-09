@@ -1,14 +1,5 @@
 
-/*
- * $Id: mech.physical.h,v 1.1.1.1 2005/01/11 21:18:21 kstevens Exp $
- *
- * Author: Cord Awtry <kipsta@mediaone.net>
- *
- *  Copyright (c) 2001 Cord Awtry
- *       All rights reserved
- *
- * Created: Mon Apr 2 8:00:00 2001 spectre
- */
+/* Declares unit physical attack types and interfaces. */
 
 #pragma once
 

@@ -1,18 +1,6 @@
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 
-/*
- * $Id: mech.startup.c,v 1.2 2005/06/23 18:31:42 av1-op Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Last modified: Thu Jul  9 06:59:34 1998 fingon
- *
- */
+/* Implements unit startup and shutdown procedures. */
 
 #include <stdlib.h>
 #include <string.h>

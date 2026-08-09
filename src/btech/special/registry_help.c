@@ -7,21 +7,7 @@
 #include "mech_status_api.h"          // IWYU pragma: keep
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 
-/*
- * $Id: registry.c,v 1.4 2005/08/08 09:43:09 murrayma Exp $
- *
- * Original author: unknown
- *
- * Copyright (c) 1996-2002 Markus Stenberg
- * Copyright (c) 1998-2002 Thomas Wouters
- * Copyright (c) 2000-2002 Cord Awtry
- *
- * Last modified: Thu Jul  9 02:40:16 1998 fingon
- *
- * This includes the basic code to allow objects to have hardcoded
- * commands / properties.
- *
- */
+/* Implements help output for BattleTech special objects. */
 
 #include <stdio.h>
 #include <stdlib.h>

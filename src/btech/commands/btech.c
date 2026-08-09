@@ -1,18 +1,5 @@
 
-/*
- * $Id: btech.c,v 1.1.1.1 2005/01/11 21:18:02 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Thu Sep 19 21:59:09 1996 fingon
- * Last modified: Tue Aug 12 19:39:55 1997 fingon
- *
- */
+/* Registers and implements BattleTech MUX commands. */
 
 /*
    Local btech alike stuff for MUX.

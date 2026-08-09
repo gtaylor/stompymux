@@ -1,13 +1,4 @@
-
-/*
-   p.mech.maps.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Mon Mar 22 08:51:14 CET 1999 from mech.maps.c */
+/* Declares the BattleTech unit maps API. */
 
 #pragma once
 

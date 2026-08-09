@@ -1,15 +1,5 @@
 
-/*
- * $Id: mech.combat.h,v 1.1.1.1 2005/01/11 21:18:13 kstevens Exp $
- *
- * Author: Cord Awtry <kipsta@mediaone.net>
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Based on work that was:
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2000 Thomas Wouters
- */
+/* Declares core unit combat interfaces. */
 
 #pragma once
 

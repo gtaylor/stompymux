@@ -1,9 +1,4 @@
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *       All rights reserved
- */
+/* Implements BattleTech unit mechanics for unit consistency. */
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "checked_conversion.h"

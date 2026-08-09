@@ -1,17 +1,5 @@
 
-/*
- * $Id: mech.bth.c,v 1.2 2005/06/23 15:27:04 av1-op Exp $
- *
- * Author: Cord Awtry <kipsta@mediaone.net>
- * Author: Cord Awtry <kipsta@mediaone.net>
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- * Based on work that was:
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2000 Thomas Wouters
- */
+/* Calculates movement modifiers for combat base-to-hit values. */
 
 #include <math.h>
 #include <stdio.h>

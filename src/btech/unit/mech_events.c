@@ -1,15 +1,7 @@
 #include "mech_crew_api.h"
 #include "mech_targeting_api.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- */
+/* Implements BattleTech unit mechanics for unit events. */
 
 #include <math.h>
 #include <stdlib.h>

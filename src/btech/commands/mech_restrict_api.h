@@ -1,13 +1,4 @@
-
-/*
-   p.mech.restrict.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Mon Mar 22 10:40:20 CET 1999 from mech.restrict.c */
+/* Declares the BattleTech unit restrict API. */
 
 #pragma once
 

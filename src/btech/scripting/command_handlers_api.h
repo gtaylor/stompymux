@@ -1,13 +1,4 @@
-
-/*
-   p.glue.hcode.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Mon Feb 22 14:59:37 CET 1999 from functions.c */
+/* Declares the BattleTech command handlers API. */
 
 #pragma once
 

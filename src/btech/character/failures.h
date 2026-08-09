@@ -1,14 +1,5 @@
 
-/* Brand level modifiers and failure resultant data here after included.
-   Failure.h
-   Created By: Nim
-   Dated:      9 - 21 - 96
-
-   Parts copyright (c) 2002 Thomas Wouters
-
-   $Id: failures.h,v 1.1.1.1 2005/01/11 21:18:07 kstevens Exp $
-   Last modified: Sat Jun  6 20:27:26 1998 fingon
- */
+/* Defines failure types and modifiers for BattleTech units. */
 
 #pragma once
 

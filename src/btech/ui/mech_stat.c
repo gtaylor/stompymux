@@ -1,14 +1,4 @@
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Tue Aug 12 19:06:48 1997 fingon
- * Last modified: Tue Aug 12 20:04:59 1997 fingon
- */
+/* Implements BattleTech user-interface support for unit stat. */
 
 /* Make statistics 'bout what we do.. whatever it is we _do_ */
 

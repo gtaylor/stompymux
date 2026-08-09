@@ -1,9 +1,4 @@
-/*
- * Author: Cord Awtry <kipsta@mediaone.net>
- *
- *  Copyright (c) 2001-2002 Cord Awtry
- *       All rights reserved
- */
+/* Implements BattleTech combat mechanics for unit fire. */
 
 #include <stdint.h>
 

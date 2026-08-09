@@ -1,12 +1,4 @@
-/*
- * Author: Cord Awtry <kipsta@mediaone.net>
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Based on work that was:
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2000 Thomas Wouters
- */
+/* Implements BattleTech sensor mechanics for unit c3 misc. */
 
 #include <stdio.h>
 #include <string.h>

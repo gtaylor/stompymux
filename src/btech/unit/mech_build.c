@@ -1,15 +1,5 @@
 
-/*
- * $Id: mech.build.c,v 1.1.1.1 2005/01/11 21:18:11 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *       All rights reserved
- *
- * Last modified: Wed Apr 29 21:04:14 1998 fingon
- *
- */
+/* Implements unit construction and initialization. */
 
 #include <assert.h>
 #include <stdlib.h>

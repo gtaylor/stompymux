@@ -1,8 +1,4 @@
-/*
- * Last modified: Thu Aug 13 23:41:12 1998 fingon
- * Copyright (c) 1999-2005 Kevin Stevens
- *   All right reserved
- */
+/* Implements BattleTech repair mechanics for mechrep. */
 
 #include <ctype.h>
 #include <dirent.h>

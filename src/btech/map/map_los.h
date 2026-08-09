@@ -1,13 +1,5 @@
 
-/*
- * $Id: map.los.h,v 1.1.1.1 2005/01/11 21:18:08 kstevens Exp $
- *
- * Author: Thomas Wouters <thomas@xs4all.net>
- *
- *  Copyright (c) 2002 Thomas Wouters
- *      All rights reserved
- *
- */
+/* Declares map line-of-sight interfaces. */
 
 #pragma once
 

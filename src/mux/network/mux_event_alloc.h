@@ -1,16 +1,5 @@
 
-/*
- * Author: Markus "iDLari" Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *       All rights reserved
- *
- * Created: Thu Aug 29 09:51:22 1996 fingon
- * Last modified: Fri Nov 27 20:15:14 1998 fingon
- *
- */
-
-/* mux_event_alloc.h - Allocation convenience macros for event clients. */
+/* Defines allocation convenience macros for timed-event clients. */
 
 #pragma once
 

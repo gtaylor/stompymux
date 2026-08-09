@@ -1,18 +1,5 @@
 
-/*
- * $Id: map.dynamic.c,v 1.1.1.1 2005/01/11 21:18:08 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Sun Oct 13 19:38:31 1996 fingon
- * Last modified: Sun Jun 14 14:54:11 1998 fingon
- *
- */
+/* Implements dynamic map state and updates. */
 
 #include <stdio.h>
 #include <stdlib.h>

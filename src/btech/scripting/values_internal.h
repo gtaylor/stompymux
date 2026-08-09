@@ -2,21 +2,7 @@
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/server/runtime_clock.h"     // IWYU pragma: keep
 
-/*
- * $Id: values.c,v 1.5 2005/08/08 09:43:09 murrayma Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- * Created: Wed Oct  9 19:13:52 1996 fingon
- * Last modified: Tue Sep  8 10:00:29 1998 fingon
- *
- */
+/* Declares internal BattleTech scripting value support. */
 
 #include <ctype.h>
 #include <stdbool.h>

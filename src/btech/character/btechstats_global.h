@@ -1,18 +1,4 @@
-
-/*
- * $Id: btechstats_global.h,v 1.1.1.1 2005/01/11 21:18:03 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Thu Sep 19 22:40:49 1996 fingon
- * Last modified: Sat Jun  6 20:20:38 1998 fingon
- *
- */
+/* Declares global BattleTech character statistics. */
 
 #pragma once
 

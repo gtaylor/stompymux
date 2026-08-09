@@ -1,13 +1,4 @@
-
-/*
-   p.mechrep.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Tue Feb  9 14:31:38 CET 1999 from mechrep.c */
+/* Declares the BattleTech mechrep API. */
 
 #include "mux/server/platform.h"
 #include "special_object.h"

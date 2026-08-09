@@ -1,17 +1,5 @@
 
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- * Created: Tue Aug 27 19:01:55 1996 fingon
- * Last modified: Tue Nov 10 16:21:43 1998 fingon
- *
- */
-
-/* mux_event.c - Timed event scheduling and execution. */
+/* Schedules and executes timed MUX events. */
 
 /* Interface for creating pretty damn nasty timed events, with
    additional load balancing in the works.

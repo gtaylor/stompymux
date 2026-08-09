@@ -1,12 +1,4 @@
-/*
- * Author: Cord Awtry <kipsta@mediaone.net>
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Based on work that was:
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2000 Thomas Wouters
- */
+/* Implements BattleTech combat mechanics for unit combat misc. */
 
 #include <string.h>
 

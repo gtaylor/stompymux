@@ -1,14 +1,5 @@
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
-/*
- * Author: Cord Awtry <kipsta@mediaone.net>
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *       All rights reserved
- *
- * Based on work that was:
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2000 Thomas Wouters
- */
+/* Implements BattleTech combat mechanics for unit section damage. */
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,11 +1,4 @@
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- */
+/* Implements BattleTech commands for unit restrict. */
 
 #include <ctype.h>
 #include <stdio.h>

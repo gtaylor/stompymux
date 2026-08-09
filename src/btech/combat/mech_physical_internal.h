@@ -1,14 +1,5 @@
 #pragma once
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *  Copyright (c) 1999-2005 Kevin Stevens
- *  Copyright (c) 2005-2006 Gregory Taylor
- *       All rights reserved
- */
+/* Declares internal physical-attack support. */
 
 #include <ctype.h>
 #include <math.h>

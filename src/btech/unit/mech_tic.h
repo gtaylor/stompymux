@@ -1,18 +1,5 @@
 
-/*
- * $Id: mech.tic.h,v 1.1.1.1 2005/01/11 21:18:26 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Fri Nov 22 20:42:02 1996 fingon
- * Last modified: Mon May 26 14:26:03 1997 fingon
- *
- */
+/* Declares unit tick-processing interfaces. */
 
 #pragma once
 

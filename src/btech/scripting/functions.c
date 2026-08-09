@@ -1,18 +1,5 @@
 
-/*
- * $Id: functions.c,v 1.1 2005/06/13 20:50:49 murrayma Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Mon Oct 20 18:53:30 1997 fingon
- * Last modified: Sat Jun  6 18:43:51 1998 fingon
- *
- */
+/* Implements BattleTech scripting functions. */
 
 #include <stdio.h>
 #include <stdlib.h>

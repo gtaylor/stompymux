@@ -1,10 +1,4 @@
-/*
- * Debug.c
- *
- *  File for debug of the hardcode routines.
- *
- * Serious knifing / new functions by Markus Stenberg <fingon@iki.fi>
- */
+/* Implements debug support for BattleTech hardcode routines. */
 
 #include "debug_api.h"
 

@@ -1,18 +1,5 @@
 
-/*
- * $Id: mech.tech.repairs.c,v 1.1.1.1 2005/01/11 21:18:26 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Sat Aug 23 19:12:32 1997 fingon
- * Last modified: Sat Jun  6 20:45:48 1998 fingon
- *
- */
+/* Implements unit repair procedures. */
 
 #include <stdarg.h>
 #include <stdio.h>

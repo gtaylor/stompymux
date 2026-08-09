@@ -1,17 +1,4 @@
-/*
- * $Id: autogun.c,v 1.5 2005/08/03 21:40:54 av1-op Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Sun Nov 17 13:23:20 1996 fingon
- * Last modified: Sun Jun 14 16:29:44 1998 fingon
- *
- */
+/* Builds weapon profiles for autonomous combat decisions. */
 
 #include <stdlib.h>
 #include <string.h>

@@ -1,16 +1,5 @@
 
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *       All rights reserved
- *
- * Created: Sun Dec  1 11:46:22 1996 fingon
- * Last modified: Sun Dec  1 12:43:04 1996 fingon
- *
- */
-
-/* fifo.h - Generic first-in, first-out queue interface. */
+/* Declares a generic first-in, first-out queue interface. */
 
 #pragma once
 

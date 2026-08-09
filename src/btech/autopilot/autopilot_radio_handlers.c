@@ -1,18 +1,5 @@
 
-/*
- * $Id: autopilot_command.c,v 1.4 2005/08/10 14:09:34 av1-op Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Tue Sep 23 20:33:33 1997 fingon
- * Last modified: Sat Jun  6 21:47:38 1998 fingon
- *
- */
+/* Implements radio-command handlers for autopilots. */
 
 /* Most of the BattleSheep(tm) code is here.. */
 

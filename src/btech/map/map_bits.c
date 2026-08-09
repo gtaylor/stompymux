@@ -1,16 +1,5 @@
 
-/*
- * $Id: map.bits.c,v 1.1.1.1 2005/01/11 21:18:07 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *       All rights reserved
- *
- * Created: Tue Oct 22 16:32:09 1996 fingon
- * Last modified: Fri Jun 12 23:10:43 1998 fingon
- *
- */
+/* Implements map bitfield storage and operations. */
 
 #include "map.h"
 #include "map_bits_api.h"

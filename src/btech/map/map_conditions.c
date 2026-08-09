@@ -1,18 +1,5 @@
 
-/*
- * $Id: map.conditions.c,v 1.2 2005/01/15 16:57:14 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1997 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Wed Apr 23 15:18:01 1997 fingon
- * Last modified: Thu Sep 10 07:35:26 1998 fingon
- *
- */
+/* Implements dynamic environmental conditions for maps. */
 
 #include "btech/context.h"
 #include "checked_conversion.h"

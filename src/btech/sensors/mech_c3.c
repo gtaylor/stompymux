@@ -1,12 +1,5 @@
 
-/*
- * $Id: mech.c3.c,v 1.1.1.1 2005/01/11 21:18:11 kstevens Exp $
- *
- * Author: Cord Awtry <kipsta@mediaone.net>
- *
- *  Copyright (c) 2001 Cord Awtry
- *       All rights reserved
- */
+/* Implements C3 targeting-network support. */
 
 #include <string.h>
 

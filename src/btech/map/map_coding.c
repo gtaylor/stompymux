@@ -1,18 +1,5 @@
 
-/*
- * $Id: map.coding.c,v 1.1.1.1 2005/01/11 21:18:07 kstevens Exp $
- *
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- *  Copyright (c) 1996 Markus Stenberg
- *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry
- *       All rights reserved
- *
- * Created: Tue Oct  8 16:46:12 1996 fingon
- * Last modified: Sat Jun  6 21:44:08 1998 fingon
- *
- */
+/* Implements compact encoding for map hexes. */
 
 /* Simple coding scheme to reduce space used by map hexes to 1 byte/hex */
 

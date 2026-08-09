@@ -1,13 +1,4 @@
-
-/*
-   p.map.h
-
-   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
-   Protomaker is actually only a wrapper script for cproto, but well.. I like
-   fancy headers and stuff :)
-   */
-
-/* Generated at Fri Jan 22 09:50:26 CET 1999 from map.c */
+/* Declares the BattleTech map API. */
 
 #pragma once
 

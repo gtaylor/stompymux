@@ -2,25 +2,6 @@
 #include "map.h"         // IWYU pragma: keep
 #include "map_terrain.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
-/*
- *  Copyright (c) 1999-2005 Kevin Stevens
- *	All rights reserved
- */
-
-/*
-   Code to read and write mech and vehicle templates
-   Created by Nim 9/16/96
-
-   $Id: template.c,v 1.9 2005/08/10 14:09:34 av1-op Exp $
-   Last modified: Fri Sep 18 13:02:31 1998 fingon
- */
-
-/* 01/21/02 Added many commods <KM> */
-
-/* 09/16/96 Some touches by Markus Stenberg <fingon@iki.fi> */
-
-/* 09/16/96 Some?? ... ya right ;-) (nim)                  */
-
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btech_channel.h"
@@ -32,12 +13,8 @@
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "weapon_settings.h"
-
-/* 09/17/96 Ok, ton of touches then :-P (Mark) */
-
 #include "mux/server/platform.h"
 
-constexpr int MAX_STRING_LENGTH = 8192;
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -57,6 +34,8 @@ constexpr int MAX_STRING_LENGTH = 8192;
 #include "mech_partnames_api.h"
 #include "mech_utils_api.h"
 #include "template_api.h"
+
+constexpr int MAX_STRING_LENGTH = 8192;
 
 typedef enum TemplateMode : int {
   MODE_UNKNOWN = 0,
