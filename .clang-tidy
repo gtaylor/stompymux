@@ -22,6 +22,7 @@ Checks: >
   cert-pos44-c,
   cert-pos47-c,
   cert-sig30-c,
+  -cert-dcl37-c,
   bugprone-narrowing-conversions,
   bugprone-branch-clone,
   bugprone-suspicious-memory-comparison,
