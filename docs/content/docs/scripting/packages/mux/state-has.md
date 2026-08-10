@@ -1,7 +1,7 @@
 ---
 title: State:has
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether a persistent state key exists.

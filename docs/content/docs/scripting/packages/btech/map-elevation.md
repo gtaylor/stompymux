@@ -1,7 +1,7 @@
 ---
 title: btech.map_elevation
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the elevation of a map hex.

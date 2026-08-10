@@ -1,7 +1,7 @@
 ---
 title: btech.stores
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns a part quantity or lists an object's stored parts.

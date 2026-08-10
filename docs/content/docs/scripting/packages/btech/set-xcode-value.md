@@ -1,7 +1,7 @@
 ---
 title: btech.set_xcode_value
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Writes a script-writable native field on a live special object.

@@ -1,7 +1,7 @@
 ---
 title: Object:exits
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the exits directly attached to this object.

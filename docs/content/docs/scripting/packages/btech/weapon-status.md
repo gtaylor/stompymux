@@ -1,7 +1,7 @@
 ---
 title: btech.weapon_status
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns serialized weapon status for a live unit or one section.

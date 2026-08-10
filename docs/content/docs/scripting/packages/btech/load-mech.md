@@ -1,7 +1,7 @@
 ---
 title: btech.load_mech
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Loads a unit template into a live unit object.

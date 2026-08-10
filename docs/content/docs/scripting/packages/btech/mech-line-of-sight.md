@@ -1,7 +1,7 @@
 ---
 title: btech.mech_line_of_sight
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests line of sight between two live units.

@@ -1,7 +1,7 @@
 ---
 title: State:keys
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists the keys in this state namespace.

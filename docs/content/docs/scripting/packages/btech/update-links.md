@@ -1,7 +1,7 @@
 ---
 title: btech.update_links
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Recursively updates links associated with a map.

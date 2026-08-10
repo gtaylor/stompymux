@@ -1,7 +1,7 @@
 ---
 title: btech.show_crit_status_ref
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sends a template's critical-status display to a player.

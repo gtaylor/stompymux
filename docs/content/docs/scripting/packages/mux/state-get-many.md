@@ -1,7 +1,7 @@
 ---
 title: State:get_many
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Gets every present value from a requested set of keys.

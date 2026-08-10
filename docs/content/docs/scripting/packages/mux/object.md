@@ -1,7 +1,7 @@
 ---
 title: mux.object
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Creates a validated handle for a native database object.

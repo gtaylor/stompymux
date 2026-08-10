@@ -1,7 +1,7 @@
 ---
 title: btech.char_value
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Gets a character attribute, skill level, target, experience, or experience threshold.

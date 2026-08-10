@@ -1,7 +1,7 @@
 ---
 title: btech.set_part_cost
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sets the configured cost of a part.

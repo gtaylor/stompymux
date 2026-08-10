@@ -1,7 +1,7 @@
 ---
 title: btech.part_match
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Finds packed part IDs whose names match a string.

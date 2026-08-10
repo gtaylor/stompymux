@@ -1,7 +1,7 @@
 ---
 title: btech.unit_parts_ref
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists the parts installed in a unit template.

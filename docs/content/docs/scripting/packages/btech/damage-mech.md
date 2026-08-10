@@ -1,7 +1,7 @@
 ---
 title: btech.damage_mech
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Applies clustered damage to a live unit.

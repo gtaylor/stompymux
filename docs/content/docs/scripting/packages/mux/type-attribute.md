@@ -1,7 +1,7 @@
 ---
 title: Attribute
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 An `Attribute` handle exposes the same safe native-attribute set as the

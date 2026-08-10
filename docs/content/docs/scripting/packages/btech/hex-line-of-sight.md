@@ -1,7 +1,7 @@
 ---
 title: btech.hex_line_of_sight
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether a live unit has unobstructed line of sight to a map hex.

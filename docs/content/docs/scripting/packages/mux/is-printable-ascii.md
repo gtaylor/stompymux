@@ -1,7 +1,7 @@
 ---
 title: mux.is_printable_ascii
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether every byte in a string is printable ASCII.

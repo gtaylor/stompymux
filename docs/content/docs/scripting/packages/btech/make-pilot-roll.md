@@ -1,7 +1,7 @@
 ---
 title: btech.make_pilot_roll
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Makes a piloting roll and causes a fall when it fails.

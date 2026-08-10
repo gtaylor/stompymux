@@ -1,7 +1,7 @@
 ---
 title: btech.id_to_dbref
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Resolves a two-character tactical ID on a unit's map.

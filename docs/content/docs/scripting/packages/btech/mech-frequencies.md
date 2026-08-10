@@ -1,7 +1,7 @@
 ---
 title: btech.mech_frequencies
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists the configured radio channels of a live unit.

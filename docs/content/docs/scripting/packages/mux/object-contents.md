@@ -1,7 +1,7 @@
 ---
 title: Object:contents
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the objects directly contained by this object.

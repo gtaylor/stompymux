@@ -1,7 +1,7 @@
 ---
 title: btech.map_emit
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Broadcasts a message to all or nearby units on a map.

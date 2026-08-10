@@ -1,7 +1,7 @@
 ---
 title: btech.weapon_stat
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns one numeric weapon-catalog statistic as text.

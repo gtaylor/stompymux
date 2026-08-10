@@ -1,7 +1,7 @@
 ---
 title: btech.tech_time
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Runs the legacy technician-time query.

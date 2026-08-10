@@ -1,7 +1,7 @@
 ---
 title: btech.crit_status
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns serialized critical-slot status for one section of a live unit.

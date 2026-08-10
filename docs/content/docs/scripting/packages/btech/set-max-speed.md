@@ -1,7 +1,7 @@
 ---
 title: btech.set_max_speed
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sets a live unit's maximum speed and corrects its current speed.

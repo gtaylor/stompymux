@@ -1,7 +1,7 @@
 ---
 title: Attribute:set
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sets or clears a supported native attribute.

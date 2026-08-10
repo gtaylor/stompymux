@@ -1,7 +1,7 @@
 ---
 title: mux.style
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Applies styled-text markup described by an options table.

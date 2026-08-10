@@ -1,7 +1,7 @@
 ---
 title: btech.armor_status
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns serialized armor values for one section of a live unit.

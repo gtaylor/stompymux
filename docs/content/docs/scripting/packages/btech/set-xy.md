@@ -1,7 +1,7 @@
 ---
 title: btech.set_xy
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Places a live unit on a map at specified coordinates.

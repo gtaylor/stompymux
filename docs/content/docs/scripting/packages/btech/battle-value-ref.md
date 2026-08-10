@@ -1,7 +1,7 @@
 ---
 title: btech.battle_value_ref
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Calculates the battle value of a unit template.

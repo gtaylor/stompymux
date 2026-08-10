@@ -1,7 +1,7 @@
 ---
 title: State:set_many
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Applies several persistent state updates.

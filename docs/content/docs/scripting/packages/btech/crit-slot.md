@@ -1,7 +1,7 @@
 ---
 title: btech.crit_slot
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Describes one critical slot on a live unit.

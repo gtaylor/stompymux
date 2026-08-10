@@ -1,7 +1,7 @@
 ---
 title: State
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 A `State` handle accesses persistent values belonging to one named subsystem on

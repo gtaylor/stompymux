@@ -1,7 +1,7 @@
 ---
 title: btech.xcode_value_ref
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Reads a script-visible native field from a unit template.

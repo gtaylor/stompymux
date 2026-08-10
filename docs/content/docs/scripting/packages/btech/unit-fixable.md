@@ -1,7 +1,7 @@
 ---
 title: btech.unit_fixable
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether a live unit can be repaired.

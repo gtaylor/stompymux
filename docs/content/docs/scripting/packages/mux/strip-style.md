@@ -1,7 +1,7 @@
 ---
 title: mux.strip_style
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Removes styled-text markup and ANSI styling from a string.

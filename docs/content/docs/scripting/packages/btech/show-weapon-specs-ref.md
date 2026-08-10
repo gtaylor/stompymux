@@ -1,7 +1,7 @@
 ---
 title: btech.show_weapon_specs_ref
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sends a unit template's weapon-specification display to a player.

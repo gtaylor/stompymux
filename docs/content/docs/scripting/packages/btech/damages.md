@@ -1,7 +1,7 @@
 ---
 title: btech.damages
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the formatted repair-job description for a live unit.

@@ -1,7 +1,7 @@
 ---
 title: Object:attribute
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Creates an attribute handle for this object.

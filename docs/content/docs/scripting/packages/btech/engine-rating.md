@@ -1,7 +1,7 @@
 ---
 title: btech.engine_rating
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the engine rating of a live unit.

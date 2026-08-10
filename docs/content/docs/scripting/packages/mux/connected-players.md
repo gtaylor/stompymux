@@ -1,7 +1,7 @@
 ---
 title: mux.connected_players
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists player connections visible to the normal `who` command.

@@ -1,7 +1,7 @@
 ---
 title: btech.set_armor_status
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sets one armor-status field on a live unit section.

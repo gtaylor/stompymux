@@ -1,7 +1,7 @@
 ---
 title: btech.stores_short
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns a part quantity or lists stored parts using short names.

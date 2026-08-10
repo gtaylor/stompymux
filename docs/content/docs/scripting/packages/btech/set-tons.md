@@ -1,7 +1,7 @@
 ---
 title: btech.set_tons
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sets a live unit's tonnage and original weight.

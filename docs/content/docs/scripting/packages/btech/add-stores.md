@@ -1,7 +1,7 @@
 ---
 title: btech.add_stores
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Adds a quantity of a part to an object's stores.

@@ -1,7 +1,7 @@
 ---
 title: btech.design_exists
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether a unit template exists.

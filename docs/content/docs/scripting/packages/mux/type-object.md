@@ -1,7 +1,7 @@
 ---
 title: Object
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 An `Object` is a validated handle for a native database object. Create one with

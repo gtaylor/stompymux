@@ -1,7 +1,7 @@
 ---
 title: btech.part_name
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns a name for a packed part ID.

@@ -3,6 +3,7 @@ title: mux package
 linkTitle: mux
 type: docs
 weight: 10
+sidebar_root_for: self
 no_list: true
 ---
 

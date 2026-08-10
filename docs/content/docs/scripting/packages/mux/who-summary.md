@@ -1,7 +1,7 @@
 ---
 title: mux.who_summary
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the non-privileged WHO summary.

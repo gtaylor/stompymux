@@ -1,7 +1,7 @@
 ---
 title: Attribute:entries
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns every supported native attribute and its current value.

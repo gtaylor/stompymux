@@ -1,7 +1,7 @@
 ---
 title: btech.hex_in_blast_zone
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether a map hex lies in a configured blast zone.

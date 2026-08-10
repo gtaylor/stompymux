@@ -1,7 +1,7 @@
 ---
 title: Object:state
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Creates a persistent-state handle for one namespace on this object.

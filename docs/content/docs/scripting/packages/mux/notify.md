@@ -1,7 +1,7 @@
 ---
 title: mux.notify
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sends a message to an object.

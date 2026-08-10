@@ -1,7 +1,7 @@
 ---
 title: btech.map_terrain
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the terrain code of a map hex.

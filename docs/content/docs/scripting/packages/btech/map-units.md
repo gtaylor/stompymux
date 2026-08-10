@@ -1,7 +1,7 @@
 ---
 title: btech.map_units
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists all units on a map or those within a 2D or 3D range.

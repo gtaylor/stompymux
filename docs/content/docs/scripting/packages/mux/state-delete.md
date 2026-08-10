@@ -1,7 +1,7 @@
 ---
 title: State:delete
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Deletes a persistent state value.

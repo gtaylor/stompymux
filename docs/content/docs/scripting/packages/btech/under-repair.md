@@ -1,7 +1,7 @@
 ---
 title: btech.under_repair
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether a live unit has an active repair event.

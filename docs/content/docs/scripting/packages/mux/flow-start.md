@@ -1,7 +1,7 @@
 ---
 title: mux.flow_start
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Attaches an [interactive flow](../../../flows/) to a descriptor and shows its

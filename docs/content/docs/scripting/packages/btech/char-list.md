@@ -1,7 +1,7 @@
 ---
 title: btech.char_list
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists character value names in a requested category.

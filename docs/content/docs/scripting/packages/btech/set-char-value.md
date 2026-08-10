@@ -1,7 +1,7 @@
 ---
 title: btech.set_char_value
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sets a character value or adjusts skill experience.

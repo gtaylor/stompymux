@@ -1,7 +1,7 @@
 ---
 title: Object:contents_visible
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether a directly contained object is visible to a viewer.

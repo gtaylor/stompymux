@@ -1,7 +1,7 @@
 ---
 title: btech.part_weight
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns a part's weight in tons.

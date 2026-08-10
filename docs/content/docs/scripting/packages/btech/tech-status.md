@@ -1,7 +1,7 @@
 ---
 title: btech.tech_status
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns formatted repair status for a live unit.

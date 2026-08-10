@@ -26,3 +26,5 @@ defaultContentLanguageInSubdir = false
   sidebar_menu_compact = true
   sidebar_search_disable = false
   showLightDarkModeMenu = true
+  sidebar_menu_foldable = true
+  sidebar_root_enabled = true

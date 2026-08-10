@@ -1,7 +1,7 @@
 ---
 title: btech.part_cost
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the configured cost of a part.

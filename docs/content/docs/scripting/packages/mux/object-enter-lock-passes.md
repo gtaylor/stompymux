@@ -1,7 +1,7 @@
 ---
 title: Object:enter_lock_passes
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether an enactor passes this exit's default traversal lock.

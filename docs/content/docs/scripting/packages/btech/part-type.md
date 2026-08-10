@@ -1,7 +1,7 @@
 ---
 title: btech.part_type
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the broad category of a part.

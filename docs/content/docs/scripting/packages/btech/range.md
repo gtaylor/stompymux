@@ -1,7 +1,7 @@
 ---
 title: btech.range
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Calculates distance between units or map coordinates.

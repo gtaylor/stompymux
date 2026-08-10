@@ -3,6 +3,7 @@ title: btech package
 linkTitle: btech
 type: docs
 weight: 20
+sidebar_root_for: self
 no_list: true
 ---
 

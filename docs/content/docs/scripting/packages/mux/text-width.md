@@ -1,7 +1,7 @@
 ---
 title: mux.text_width
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Measures the visible byte width of styled text.

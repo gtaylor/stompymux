@@ -1,7 +1,7 @@
 ---
 title: btech.unit_parts
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists the parts installed on a live unit.

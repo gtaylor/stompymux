@@ -1,7 +1,7 @@
 ---
 title: Object:exits_visible
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Tests whether a directly attached exit is visible to a viewer.

@@ -1,7 +1,7 @@
 ---
 title: btech.load_map
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Loads a map file into a map object and clears its units and map objects.

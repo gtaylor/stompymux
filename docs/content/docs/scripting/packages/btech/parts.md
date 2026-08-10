@@ -1,7 +1,7 @@
 ---
 title: btech.parts
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists canonical long part names in one category.

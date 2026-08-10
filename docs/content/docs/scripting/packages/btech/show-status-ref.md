@@ -1,7 +1,7 @@
 ---
 title: btech.show_status_ref
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sends a unit template's status display to a player.

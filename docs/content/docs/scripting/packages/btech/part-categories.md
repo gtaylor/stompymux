@@ -1,7 +1,7 @@
 ---
 title: btech.part_categories
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists the canonical categories accepted by `btech.parts`.

@@ -1,7 +1,7 @@
 ---
 title: btech.lag
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the current BattleTech event lag.

@@ -1,7 +1,7 @@
 ---
 title: btech.tech_list
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Lists the parts needed to repair a live unit.

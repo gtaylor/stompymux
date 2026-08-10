@@ -1,7 +1,7 @@
 ---
 title: btech.weapon_status_ref
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns serialized weapon status for a unit template or one section.

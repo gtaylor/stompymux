@@ -1,7 +1,7 @@
 ---
 title: mux.truncate_text
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Truncates styled text to a maximum visible width.

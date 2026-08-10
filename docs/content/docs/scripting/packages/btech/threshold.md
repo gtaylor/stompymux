@@ -1,7 +1,7 @@
 ---
 title: btech.threshold
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Returns the configured experience threshold for a skill.

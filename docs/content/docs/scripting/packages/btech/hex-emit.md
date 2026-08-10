@@ -1,7 +1,7 @@
 ---
 title: btech.hex_emit
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Broadcasts a message from one map hex.

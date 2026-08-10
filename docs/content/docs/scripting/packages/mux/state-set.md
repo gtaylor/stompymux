@@ -1,7 +1,7 @@
 ---
 title: State:set
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Sets or deletes a persistent state value.

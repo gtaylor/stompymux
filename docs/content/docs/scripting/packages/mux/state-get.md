@@ -1,7 +1,7 @@
 ---
 title: State:get
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Gets a persistent state value.

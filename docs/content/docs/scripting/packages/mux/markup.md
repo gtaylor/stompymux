@@ -1,7 +1,7 @@
 ---
 title: mux.markup
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Validates styled-text markup and returns it unchanged.

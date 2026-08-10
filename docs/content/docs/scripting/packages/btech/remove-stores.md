@@ -1,7 +1,7 @@
 ---
 title: btech.remove_stores
 type: docs
-toc_hide: true
+toc_hide: false
 ---
 
 Removes a quantity of a part from an object's stores.
