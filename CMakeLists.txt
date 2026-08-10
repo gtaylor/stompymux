@@ -239,6 +239,56 @@ if(BTECH_ENABLE_IWYU)
 endif()
 
 if(BUILD_TESTING)
+  set(AUTOPILOT_TEST_INCLUDE_DIRECTORIES
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+
+  add_executable(autopilot_pathfinding_policy_test
+    tests/autopilot_pathfinding_policy.c
+    ${BTECH_SOURCE_DIR}/autopilot/autopilot_path_policy.c
+    ${MUX_SOURCE_DIR}/support/checked_storage.c)
+  target_compile_definitions(autopilot_pathfinding_policy_test
+    PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(autopilot_pathfinding_policy_test PRIVATE btmux_options)
+  target_include_directories(autopilot_pathfinding_policy_test PRIVATE
+    ${AUTOPILOT_TEST_INCLUDE_DIRECTORIES})
+  add_test(NAME autopilot_pathfinding_policy
+    COMMAND autopilot_pathfinding_policy_test)
+
+  add_executable(autopilot_combat_policy_test
+    tests/autopilot_combat_policy.c
+    ${BTECH_SOURCE_DIR}/autopilot/autopilot_combat_policy.c)
+  target_link_libraries(autopilot_combat_policy_test PRIVATE btmux_options)
+  target_include_directories(autopilot_combat_policy_test PRIVATE
+    ${AUTOPILOT_TEST_INCLUDE_DIRECTORIES})
+  add_test(NAME autopilot_combat_policy COMMAND autopilot_combat_policy_test)
+
+  add_executable(autopilot_sensor_policy_test
+    tests/autopilot_sensor_policy.c
+    ${BTECH_SOURCE_DIR}/autopilot/autopilot_sensor_policy.c)
+  target_compile_definitions(autopilot_sensor_policy_test
+    PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(autopilot_sensor_policy_test PRIVATE -ffunction-sections)
+  target_link_options(autopilot_sensor_policy_test PRIVATE -Wl,--gc-sections)
+  target_link_libraries(autopilot_sensor_policy_test PRIVATE btmux_options)
+  target_include_directories(autopilot_sensor_policy_test PRIVATE
+    ${AUTOPILOT_TEST_INCLUDE_DIRECTORIES})
+  add_test(NAME autopilot_sensor_policy COMMAND autopilot_sensor_policy_test)
+
+  add_executable(autopilot_order_queue_test
+    tests/autopilot_order_queue.c
+    ${BTECH_SOURCE_DIR}/autopilot/autopilot_argument_list.c
+    ${BTECH_SOURCE_DIR}/autopilot/autopilot_order_queue.c
+    ${MUX_SOURCE_DIR}/support/doubly_linked_list.c
+    ${MUX_SOURCE_DIR}/support/checked_storage.c)
+  target_compile_definitions(autopilot_order_queue_test PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(autopilot_order_queue_test PRIVATE btmux_options)
+  target_include_directories(autopilot_order_queue_test PRIVATE
+    ${AUTOPILOT_TEST_INCLUDE_DIRECTORIES})
+  add_test(NAME autopilot_order_queue COMMAND autopilot_order_queue_test)
+
   add_executable(btech_channel_test tests/btech_channel.c
     ${BTECH_SOURCE_DIR}/core/btech_channel.c)
   target_compile_definitions(btech_channel_test PRIVATE BTECH_INTERNAL=1)

@@ -5,6 +5,7 @@
 
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
+#include "autopilot_combat_policy_api.h"
 #include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
 #include "equipment_types.h"
@@ -220,14 +221,7 @@ static int auto_calc_weapon_score(const AutopilotWeaponScoreRequest *request) {
   const int weapon_db_number = request->weapon_index;
   const int range = request->range;
 
-  int weapon_score;
-  int range_score;
-  int damage_score;
-  int heat_score;
-  float minrange_score;
-
   int weapon_damage;
-  int weapon_heat;
   const WeaponRangeProfile weapon_ranges =
       weapon_catalogue_ranges(weapon_db_number);
 
@@ -239,37 +233,7 @@ static int auto_calc_weapon_score(const AutopilotWeaponScoreRequest *request) {
    * For MR, its 72%, so 390 and LR its 41% its 225 */
 
   /* Assume default values */
-  weapon_score = 0;
   weapon_damage = 0;
-  range_score = 500; /* Since by default we assume its SR */
-  minrange_score = 0;
-
-  /* Don't bother trying to set a value if its outside its range */
-  if (range >= weapon_ranges.long_range) {
-    return weapon_score;
-  }
-
-  /* Are we at LR ? */
-  if (range >= weapon_ranges.medium_range) {
-    range_score = 215;
-  }
-
-  /* Are we at MR ? */
-  if (range >= weapon_ranges.short_range &&
-      range < weapon_ranges.medium_range) {
-    range_score = 390;
-  }
-
-  /* Check min range */
-  /* Use a polynomial equation here because at 2 under min its equiv to MR, at
-   * 4 under its equiv to LR, so we want it to balance out the range score */
-  /* score = -12.5(min - range)^2 - 25 * (min - range) */
-  if (range < weapon_ranges.minimum) {
-    const int minimum_range_delta = weapon_ranges.minimum - range;
-    minrange_score =
-        -12.5F * (float)(minimum_range_delta * minimum_range_delta) -
-        25.0F * (float)minimum_range_delta;
-  }
 
   /* Get the damage for the weapon */
   if (weapon_catalogue_is_missile(weapon_db_number)) {
@@ -290,21 +254,14 @@ static int auto_calc_weapon_score(const AutopilotWeaponScoreRequest *request) {
     weapon_damage = weapon_catalogue_damage(weapon_db_number);
   }
 
-  /* Get the damage score */
-  /* Straight linear plot */
-  damage_score = 50 * weapon_damage;
-
-  /* Get the heat */
-  weapon_heat = weapon_catalogue_heat(weapon_db_number);
-
-  /* Get the heat score */
-  /* Straight inverse linear plot - more heat bad... */
-  heat_score = -25 * weapon_heat + 250;
-
-  /* Final calc */
-  weapon_score = range_score + damage_score + heat_score + (int)minrange_score;
-
-  return weapon_score;
+  return autopilot_weapon_score(&(AutopilotWeaponScoreSituation){
+      .range = range,
+      .minimum_range = weapon_ranges.minimum,
+      .short_range = weapon_ranges.short_range,
+      .medium_range = weapon_ranges.medium_range,
+      .long_range = weapon_ranges.long_range,
+      .damage = weapon_damage,
+      .heat = weapon_catalogue_heat(weapon_db_number)});
 }
 
 /*

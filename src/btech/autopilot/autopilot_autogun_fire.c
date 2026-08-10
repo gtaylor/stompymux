@@ -2,6 +2,7 @@
 
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
+#include "autopilot_combat_policy_api.h"
 #include "autopilot_weapon_profile_api.h"
 #include "equipment_types.h"
 #include "map_coordinates.h"
@@ -100,63 +101,38 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
     while (weapon) {
 
-      /* Check to see if the weapon even works */
-      if (mech_weapon_is_nonfunctional_at(
-              mech, weapon->section, weapon->critical,
-              weapon_from_equipment_index(weapon->weapon_db_number))) {
-
-        /* Weapon Doesn't work so go to next one */
-        weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                   profile_range);
-
-        continue;
-      }
-
-      /* Check to see if its cycling */
-      if (mech_weapon_is_recycling_at(mech, weapon->section,
-                                      weapon->critical)) {
-
-        /* Go to the next one */
-        weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                   profile_range);
-
-        continue;
-      }
-
-      if (weapon_catalogue_is_anti_missile(weapon->weapon_db_number)) {
-
-        /* Ok its an AMS so go to next weapon */
-        weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                   profile_range);
-        continue;
-      }
-
-      /* No sense trying to fire Stinger missiles if the target isn't
-       * airborne/jumping */
-
-      if ((mech_critical_ammo_mode(mech, weapon->section, weapon->critical) &
-           STINGER_MODE) &&
-          target &&
-          !(mech_is_jumping(target) || mech_is_out_of_control(target) ||
-            (mech_is_flying_type(target) && !mech_is_landed(target)))) {
-
-        weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                   profile_range);
-        continue;
-      }
-
-      /* Check heat levels, since the heat isn't updated untill we're done
-       * we have to manage the heat ourselves */
-      /*! \todo {Add a check also for aeros} */
       const int weapon_heat = weapon_catalogue_heat(weapon->weapon_db_number);
-      if ((mech_class(mech) == CLASS_MECH) &&
-          ((accumulate_heat + (float)weapon_heat -
-            mech_heat_dissipation(mech)) > AUTO_GUN_MAX_HEAT)) {
-
-        /* Would make ourselves to hot to fire this gun */
+      const bool stinger_compatible =
+          !(mech_critical_ammo_mode(mech, weapon->section, weapon->critical) &
+            STINGER_MODE) ||
+          target == nullptr || mech_is_jumping(target) ||
+          mech_is_out_of_control(target) ||
+          (mech_is_flying_type(target) && !mech_is_landed(target));
+      const bool ammunition_required =
+          weapon_catalogue_ammunition_per_ton(weapon->weapon_db_number) > 0;
+      const AutopilotWeaponDecision eligibility = autopilot_weapon_evaluate(&(
+          AutopilotWeaponSituation){
+          .functional = !mech_weapon_is_nonfunctional_at(
+              mech, weapon->section, weapon->critical,
+              weapon_from_equipment_index(weapon->weapon_db_number)),
+          .recycling = mech_weapon_is_recycling_at(mech, weapon->section,
+                                                   weapon->critical),
+          .defensive =
+              weapon_catalogue_is_anti_missile(weapon->weapon_db_number),
+          .ammunition_required = ammunition_required,
+          .ammunition = ammunition_required
+                            ? CountAmmoForWeapon(mech, weapon->weapon_db_number)
+                            : 0,
+          .ammunition_compatible = stinger_compatible,
+          .in_arc = true,
+          .heat_limited = mech_class(mech) == CLASS_MECH,
+          .projected_heat = accumulate_heat,
+          .heat_dissipation = mech_heat_dissipation(mech),
+          .weapon_heat = weapon_heat,
+          .maximum_heat = AUTO_GUN_MAX_HEAT});
+      if (!eligibility.fire) {
         weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
                                                    profile_range);
-
         continue;
       }
 

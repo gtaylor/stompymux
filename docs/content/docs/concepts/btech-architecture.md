@@ -42,6 +42,15 @@ destination and records truncation instead of writing past its capacity.
 Map files are read and written as plain text. Compressed map files are not
 supported, and BTech file handling never invokes a shell command.
 
+Autopilot runtime events are adapters around deterministic policy operations.
+Path transitions and route construction, weapon eligibility and heat budgets,
+physical-side selection, sensor selection, and queued-order ownership can be
+tested without a live event scheduler. The adapters gather `Mech` and
+`BattleMap` state, apply the policy result through the normal domain APIs, and
+retain responsibility for notifications and event scheduling. Queued orders
+are bounded, owning values; unsupported definitions and malformed argument
+lists are rejected before the queue changes.
+
 Concrete `Mech`, `BattleMap`, `Autopilot`, and runtime-context layouts are
 private. Cross-domain interfaces use forward declarations, database object
 references, or domain operations rather than copying another domain's state.

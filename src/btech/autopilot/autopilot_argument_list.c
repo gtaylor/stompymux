@@ -14,6 +14,14 @@ static char **autopilot_argument_list_slot(AutopilotArgumentList *arguments,
       (void *)arguments->values, arguments->capacity, sizeof(char *), index);
 }
 
+static char *const *
+autopilot_argument_list_slot_const(const AutopilotArgumentList *arguments,
+                                   size_t index) {
+  return (char *const *)checked_storage_at_const(
+      (const void *)arguments->values, arguments->capacity, sizeof(char *),
+      index);
+}
+
 void autopilot_argument_list_initialize(AutopilotArgumentList *arguments,
                                         size_t capacity) {
   if (capacity == 0 || capacity > AUTOPILOT_MAX_ARGS)
@@ -27,9 +35,9 @@ autopilot_argument_list_parser_storage(AutopilotArgumentList *arguments) {
   return arguments->values;
 }
 
-const char *autopilot_argument_list_get(AutopilotArgumentList *arguments,
+const char *autopilot_argument_list_get(const AutopilotArgumentList *arguments,
                                         size_t index) {
-  return *autopilot_argument_list_slot(arguments, index);
+  return *autopilot_argument_list_slot_const(arguments, index);
 }
 
 void autopilot_argument_list_set(AutopilotArgumentList *arguments, size_t index,
