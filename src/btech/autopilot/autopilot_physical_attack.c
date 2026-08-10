@@ -5,6 +5,7 @@
 
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
+#include "autopilot_combat_policy_api.h"
 #include "equipment_types.h"
 #include "map_coordinates.h"
 #include "map_los_api.h"
@@ -212,7 +213,7 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
           ((new_arc & FORWARDARC) || (new_arc & RSIDEARC)) &&
           (elevation_diff == 0 || elevation_diff == -1)) {
 
-        format_physical_command(buffer, 'r', target);
+        format_physical_command(buffer, 'r', physical_target);
 
         if (have_axe(mech, RARM))
           mech_axe(autopilot->mynum, mech, buffer);
@@ -228,7 +229,7 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
           ((new_arc & FORWARDARC) || (new_arc & LSIDEARC)) &&
           (elevation_diff == 0 || elevation_diff == -1)) {
 
-        format_physical_command(buffer, 'l', target);
+        format_physical_command(buffer, 'l', physical_target);
 
         if (have_axe(mech, LARM))
           mech_axe(autopilot->mynum, mech, buffer);
@@ -298,12 +299,14 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
                   .special = HAND_OR_FOOT_ACTUATOR}))
             lleg_bth++;
         } else {
-          rleg_bth = 99;
+          lleg_bth = 99;
         }
 
         /* Now kick depending on which one would be better
          * to kick with */
-        if (rleg_bth <= lleg_bth) {
+        if (autopilot_physical_choose_leg(!section_hasbusyweap[2], rleg_bth,
+                                          !section_hasbusyweap[3], lleg_bth) ==
+            AUTOPILOT_PHYSICAL_RIGHT) {
           format_physical_command(buffer, 'r', physical_target);
         } else {
           format_physical_command(buffer, 'l', physical_target);
@@ -335,11 +338,11 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
         }
 
         if (is_rarm_ready == 1 && is_larm_ready == 1) {
-          format_physical_command(buffer, 'b', target);
+          format_physical_command(buffer, 'b', physical_target);
         } else if (is_rarm_ready == 1) {
-          format_physical_command(buffer, 'r', target);
+          format_physical_command(buffer, 'r', physical_target);
         } else {
-          format_physical_command(buffer, 'l', target);
+          format_physical_command(buffer, 'l', physical_target);
         }
 
         /* Now punch */
@@ -374,7 +377,7 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
       /* Try and kick but only if we got two legs, one of them
        * doesn't have a cycling weapon and the target is in the
        * front arc */
-      if ((!section_hasbusyweap[0] || !section_hasbusyweap[0]) &&
+      if ((!section_hasbusyweap[0] || !section_hasbusyweap[1]) &&
           !is_section_destroyed[0] && !is_section_destroyed[1] &&
           !is_section_destroyed[2] && !is_section_destroyed[3] &&
           (what_arc & FORWARDARC) && !mech_limbs_are_recycling(mech) &&
@@ -432,12 +435,14 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
                   .special = HAND_OR_FOOT_ACTUATOR}))
             lleg_bth++;
         } else {
-          rleg_bth = 99;
+          lleg_bth = 99;
         }
 
         /* Now kick depending on which one would be better
          * to kick with */
-        if (rleg_bth <= lleg_bth) {
+        if (autopilot_physical_choose_leg(!section_hasbusyweap[0], rleg_bth,
+                                          !section_hasbusyweap[1], lleg_bth) ==
+            AUTOPILOT_PHYSICAL_RIGHT) {
           format_physical_command(buffer, 'r', physical_target);
         } else {
           format_physical_command(buffer, 'l', physical_target);

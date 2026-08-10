@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "autopilot.h"
+#include "autopilot_path_policy_api.h"
 #include "map.h"
 #include "map_coordinates.h"
 #include "map_terrain.h"
@@ -121,6 +122,18 @@ static void astar_release(const RedBlackTreeReleaseCall *call) {
   (void)key;
   (void)arg;
   free(data);
+}
+
+static AutopilotPathMobility autopilot_path_mobility(const Mech *mech) {
+  if (mech_class(mech) == CLASS_MECH)
+    return AUTOPILOT_PATH_MECH;
+  if (mech_class(mech) != CLASS_VEH_GROUND)
+    return AUTOPILOT_PATH_OTHER;
+  if (mech_movement_type(mech) == MOVE_TRACK)
+    return AUTOPILOT_PATH_TRACKED;
+  if (mech_movement_type(mech) == MOVE_HOVER)
+    return AUTOPILOT_PATH_HOVER;
+  return AUTOPILOT_PATH_WHEELED;
 }
 
 int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
@@ -309,22 +322,25 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       if (autopilot_hex_bit_is_set(&closed_list_bitfield, hexoffset))
         continue;
 
-      /* Check to see if we can enter it */
-      if ((mech_class(mech) == CLASS_MECH) &&
-          (abs(map_elevation_get(map, map_x1, map_y1) -
-               map_elevation_get(map, map_x2, map_y2)) > 2))
+      const int friendly_units =
+          battle_map_mech_count_in_hex(&(BattleMapHexOccupancyRequest){
+              .map = map,
+              .position = {.x = map_x2, .y = map_y2},
+              .relationship = TEAM_RELATIONSHIP_FRIENDLY,
+              .team = mech_team(mech)});
+      const AutopilotPathStepResult step =
+          autopilot_path_step_evaluate(&(AutopilotPathStepRequest){
+              .mobility = autopilot_path_mobility(mech),
+              .waterproof = (mech_technology_flags_secondary(mech) &
+                             WATERPROOF_TECH) != 0,
+              .from = {.terrain = map_terrain_get(map, map_x1, map_y1),
+                       .elevation = map_elevation_get(map, map_x1, map_y1)},
+              .to = {.terrain = map_terrain_get(map, map_x2, map_y2),
+                     .elevation = map_elevation_get(map, map_x2, map_y2),
+                     .friendly_units = friendly_units}});
+      if (!step.traversable)
         continue;
-
-      if ((mech_class(mech) == CLASS_VEH_GROUND) &&
-          (abs(map_elevation_get(map, map_x1, map_y1) -
-               map_elevation_get(map, map_x2, map_y2)) > 1))
-        continue;
-
-      /* Score the hex */
-      /* Right now just assume movement cost from parent to child hex is
-       * the same (so 100) no matter which dir we go*/
-      /*! \todo {Possibly add in code to make turning less desirable} */
-      child_g_score = 100;
+      child_g_score = step.cost;
 
       /* Now add the g score from the parent */
       child_g_score += parent_astar_node->g_score;
@@ -348,70 +364,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                                                 .end = {.x = x1, .y = y1},
                                             });
       child_h_score = (int)estimated_cost;
-
-      /* Lets attempt to avoid hexes that already have our friendlies in it
-       * (Stack Check) */
-      if (battle_map_mech_count_in_hex(&(BattleMapHexOccupancyRequest){
-              .map = map,
-              .position = {.x = map_x2, .y = map_y2},
-              .relationship = TEAM_RELATIONSHIP_FRIENDLY,
-              .team = mech_team(mech)}) > 2)
-        child_g_score += 150;
-
-      /* Now add in some modifiers for terrain */
-      switch (map_terrain_get(map, map_x2, map_y2)) {
-      case BATTLE_TERRAIN_LIGHT_FOREST:
-
-        /* Don't bother trying to enter a light forest
-         * hex unless we can */
-        if ((mech_class(mech) == CLASS_VEH_GROUND) &&
-            (mech_movement_type(mech) != MOVE_TRACK))
-          continue;
-
-        child_g_score += 50;
-        break;
-      case BATTLE_TERRAIN_ROUGH:
-        child_g_score += 50;
-        break;
-      case BATTLE_TERRAIN_HEAVY_FOREST:
-
-        /* Don't bother trying to enter a heavy forest
-         * hex unless we can */
-        if (mech_class(mech) == CLASS_VEH_GROUND)
-          continue;
-
-        child_g_score += 100;
-        break;
-      case BATTLE_TERRAIN_MOUNTAINS:
-        child_g_score += 100;
-        break;
-      case BATTLE_TERRAIN_WATER:
-
-        /* Don't bother trying to enter a water hex
-         * unless we can */
-        if ((mech_class(mech) == CLASS_VEH_GROUND) &&
-            (mech_movement_type(mech) != MOVE_HOVER) &&
-            !(mech_technology_flags_secondary(mech) & WATERPROOF_TECH))
-          continue;
-
-        /* We really don't want them trying to enter water */
-        child_g_score += 200;
-        break;
-      case BATTLE_TERRAIN_HIGH_WATER:
-
-        /* Don't bother trying to enter a water hex
-         * unless we can */
-        if ((mech_class(mech) == CLASS_VEH_GROUND) &&
-            (mech_movement_type(mech) != MOVE_HOVER) &&
-            !(mech_technology_flags_secondary(mech) & WATERPROOF_TECH))
-          continue;
-
-        /* We really don't want them trying to enter water */
-        child_g_score += 200;
-        break;
-      default:
-        break;
-      }
 
       /* Is it already on the openlist */
       if (autopilot_hex_bit_is_set(&open_list_bitfield, hexoffset)) {

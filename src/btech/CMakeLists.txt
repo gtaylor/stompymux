@@ -1,5 +1,8 @@
 set(BTECH_SOURCES
   autopilot/autopilot_argument_list.c
+  autopilot/autopilot_order_queue.c
+  autopilot/autopilot_path_policy.c
+  autopilot/autopilot_combat_policy.c
   autopilot/autopilot_ai.c
   autopilot/ai_simulation.c
   autopilot/autopilot_navigation.c

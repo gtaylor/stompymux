@@ -1,6 +1,7 @@
 /* Selects sensors and scan policies for autopilots. */
 
 #include "autopilot.h"
+#include "autopilot_sensor_policy_api.h"
 #include "btconfig.h"
 #include "btech/context.h"
 #include "equipment_types.h"
@@ -29,6 +30,55 @@ static int sensor_index_clamp(int sensor) {
   return sensor;
 }
 
+int autopilot_searchlight_classify(bool active, bool in_arc,
+                                   bool line_of_sight_blocked) {
+  if (!in_arc)
+    return active ? 1 : 2;
+  if (active)
+    return line_of_sight_blocked ? 4 : 3;
+  return line_of_sight_blocked ? 6 : 5;
+}
+
+int autopilot_visual_sensor_select(bool observer_lit, bool target_lit,
+                                   int map_light,
+                                   int searchlight_classification) {
+  if (observer_lit || target_lit)
+    return SENSOR_VIS;
+  if (map_light <= 1 && searchlight_classification != 3 &&
+      searchlight_classification != 5)
+    return SENSOR_LA;
+  return SENSOR_VIS;
+}
+
+AutopilotSensorSelection
+autopilot_sensor_select(const AutopilotSensorSituation *situation) {
+  if (!situation->has_target) {
+    if (situation->effective_visibility <= 15)
+      return (AutopilotSensorSelection){.primary = SENSOR_EM,
+                                        .secondary = SENSOR_IR};
+    return (AutopilotSensorSelection){
+        .primary = situation->preferred_visual_sensor,
+        .secondary = situation->preferred_visual_sensor};
+  }
+  if (situation->target_tonnage >= 60 && situation->target_range <= 20)
+    return (AutopilotSensorSelection){.primary = SENSOR_EM,
+                                      .secondary = SENSOR_IR};
+  if (situation->target_flying && !situation->target_landed)
+    return (AutopilotSensorSelection){
+        .primary = SENSOR_RA, .secondary = situation->preferred_visual_sensor};
+  if (situation->target_range <= 4 && situation->has_beagle_probe)
+    return (AutopilotSensorSelection){.primary = SENSOR_BAP,
+                                      .secondary = SENSOR_BAP};
+  if (situation->target_range <= 8 && situation->has_bloodhound_probe)
+    return (AutopilotSensorSelection){.primary = SENSOR_BHAP,
+                                      .secondary = SENSOR_BHAP};
+  return (AutopilotSensorSelection){
+      .primary = situation->preferred_visual_sensor,
+      .secondary = situation->effective_visibility <= 15
+                       ? SENSOR_EM
+                       : situation->preferred_visual_sensor};
+}
+
 /* Function to determine if there are any slites affecting the AI */
 int SearchLightInRange(Mech *mech, BattleMap *map) {
 
@@ -50,45 +100,19 @@ int SearchLightInRange(Mech *mech, BattleMap *map) {
 
     /* The unit doesn't have slite on */
     if (!mech_has_searchlight(target) ||
-        mech_condition_summary(mech).searchlight_destroyed)
+        mech_condition_summary(target).searchlight_destroyed)
       continue;
 
     /* Is the mech close enough to be affected by the slite */
     if (mech_range_to(target, mech) < LITE_RANGE) {
 
       /* Returning true, but let's differentiate also between being in-arc. */
-      if (mech_searchlight_active(target) &&
-          InWeaponArc(target, mech_position_real_x(mech),
-                      mech_position_real_y(mech)) &
-              FORWARDARC) {
-
-        /* Make sure its in los */
-        if (!battle_map_unit_los_is_blocked(map, target, mech))
-
-          /* Slite on and, arced, and LoS to you */
-          return 3;
-        else
-          /* Slite on, arced, but LoS blocked */
-          return 4;
-
-      } else if (!mech_searchlight_active(target) &&
-                 InWeaponArc(target, mech_position_real_x(mech),
-                             mech_position_real_y(mech)) &
-                     FORWARDARC) {
-
-        if (!battle_map_unit_los_is_blocked(map, target, mech))
-
-          /* Slite off, arced, and LoS to you */
-          return 5;
-
-        else
-          /* Slite off, arced, and LoS blocked */
-          return 6;
-      }
-
-      /* Slite is in range of you, but apparently not arced on you.
-       * Return tells wether on or off */
-      return (mech_searchlight_active(target) ? 1 : 2);
+      const bool in_arc = (InWeaponArc(target, mech_position_real_x(mech),
+                                       mech_position_real_y(mech)) &
+                           FORWARDARC) != 0;
+      return autopilot_searchlight_classify(
+          mech_searchlight_active(target), in_arc,
+          in_arc && battle_map_unit_los_is_blocked(map, target, mech));
     }
   }
   return 0;
@@ -101,20 +125,10 @@ int PrefVisSens(Mech *mech, BattleMap *map, int slite, Mech *target) {
   if (!mech || !map)
     return SENSOR_VIS;
 
-  /* Ok the AI is lit or using slite so use V */
-  if (mech_searchlight_active(mech) || mech_condition_summary(mech).illuminated)
-    return SENSOR_VIS;
-
-  /* The target is lit so use V */
-  if (target && mech_condition_summary(target).illuminated)
-    return SENSOR_VIS;
-
-  /* Ok if its night/dawn/dusk and theres no slite use L */
-  if (battle_map_light(map) <= 1 && slite != 3 && slite != 5)
-    return SENSOR_LA;
-
-  /* Default sensor */
-  return SENSOR_VIS;
+  return autopilot_visual_sensor_select(
+      mech_searchlight_active(mech) || mech_condition_summary(mech).illuminated,
+      target != nullptr && mech_condition_summary(target).illuminated,
+      battle_map_light(map), slite);
 }
 
 /*
@@ -129,7 +143,6 @@ void auto_sensor_event(Autopilot *autopilot) {
   int rvis;
   int slite, prefvis;
   float trng;
-  int set = 0;
 
   if (!is_good_obj(autopilot->xcode.context->database, autopilot->mymechnum)) {
     dprintk("mymechnum is bad!");
@@ -196,68 +209,20 @@ void auto_sensor_event(Autopilot *autopilot) {
   rvis = (battle_map_light(map) ? visibility : (visibility * (slite ? 1 : 3)));
   prefvis = PrefVisSens(mech, map, slite, target);
 
-  /* Is there a target */
-  if (target) {
-
-    /* Range to target */
-    trng = mech_range_to(mech, target);
-
-    /* Actually not gonna bother with this */
-    /* If the target is running hot and is close switch to IR */
-    if (!set && HeatFactor(target) > 35 && (int)trng < 15) {
-      // wanted_s[0] = SENSOR_IR;
-      // wanted_s[1] = ((mech_tonnage(target) >= 60) ? SENSOR_EM : prefvis);
-      // set++;
-    }
-
-    /* If the target is BIG and close enough, use EM */
-    if (!set && mech_tonnage(target) >= 60 && (int)trng <= 20) {
-      wanted_s[0] = SENSOR_EM;
-      wanted_s[1] = SENSOR_IR;
-      set++;
-    }
-
-    /* If the target is flying switch to Radar */
-    if (!set && !mech_is_landed(target) && mech_is_flying_type(target)) {
-      wanted_s[0] = SENSOR_RA;
-      wanted_s[1] = prefvis;
-      set++;
-    }
-
-    /* If the target is really close and the unit has BAP, use it */
-    if (!set && (int)trng <= 4 && mech_has_operational_beagle_probe(mech)) {
-      wanted_s[0] = SENSOR_BAP;
-      wanted_s[1] = SENSOR_BAP;
-      set++;
-    }
-
-    /* If the target is really close and the unit has Bloodhound, use it */
-    if (!set && (int)trng <= 8 && mech_has_operational_bloodhound_probe(mech)) {
-      wanted_s[0] = SENSOR_BHAP;
-      wanted_s[1] = SENSOR_BHAP;
-      set++;
-    }
-
-    /* Didn't stop at any of the others so use selected visual sensors */
-    if (!set) {
-      wanted_s[0] = prefvis;
-      wanted_s[1] = (rvis <= 15 ? SENSOR_EM : prefvis);
-      set++;
-    }
-  }
-
-  /* Ok no target and no sensors set yet so lets go for defaults */
-  if (!set) {
-    if (rvis <= 15) {
-      /* Vis is less then or equal to 15 so go to E I for longer range */
-      wanted_s[0] = SENSOR_EM;
-      wanted_s[1] = SENSOR_IR;
-    } else {
-      /* Ok lets go with default visual sensors */
-      wanted_s[0] = prefvis;
-      wanted_s[1] = prefvis;
-    }
-  }
+  trng = target != nullptr ? mech_range_to(mech, target) : 0.0F;
+  const AutopilotSensorSelection selection =
+      autopilot_sensor_select(&(AutopilotSensorSituation){
+          .has_target = target != nullptr,
+          .target_range = (int)trng,
+          .target_tonnage = target != nullptr ? mech_tonnage(target) : 0,
+          .target_flying = target != nullptr && mech_is_flying_type(target),
+          .target_landed = target == nullptr || mech_is_landed(target),
+          .has_beagle_probe = mech_has_operational_beagle_probe(mech),
+          .has_bloodhound_probe = mech_has_operational_bloodhound_probe(mech),
+          .preferred_visual_sensor = prefvis,
+          .effective_visibility = rvis});
+  wanted_s[0] = selection.primary;
+  wanted_s[1] = selection.secondary;
 
   /* Check to make sure valid sensors are selected and then set them */
   if (wanted_s[0] >= SENSOR_VIS && wanted_s[0] <= SENSOR_BHAP &&

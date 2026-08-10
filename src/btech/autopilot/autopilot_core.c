@@ -7,6 +7,7 @@
 #include "autopilot.h"
 #include "autopilot_argument_list_api.h"
 #include "autopilot_commands_api.h"
+#include "autopilot_order_queue_api.h"
 #include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
 #include "btech_channel.h"
@@ -29,38 +30,6 @@
 #include "mycool.h"
 #include "registry_api.h"
 #include "special_object.h"
-
-/*
- * Creates a new command_node for the AI's
- * command list
- */
-static AutopilotCommand *auto_create_command_node() {
-
-  AutopilotCommand *temp;
-
-  temp = malloc(sizeof(AutopilotCommand));
-  if (temp == NULL)
-    return NULL;
-
-  memset(temp, 0, sizeof(AutopilotCommand));
-  autopilot_argument_list_initialize(&temp->arguments, AUTOPILOT_MAX_ARGS);
-  temp->ai_command_function = NULL;
-
-  return temp;
-}
-
-/*
- * Destroys a command_node
- */
-void auto_destroy_command_node(AutopilotCommand *node) {
-
-  autopilot_argument_list_destroy(&node->arguments);
-
-  /* Free the node */
-  free(node);
-
-  return;
-}
 
 /*
    The Autopilot command interface
@@ -92,7 +61,7 @@ typedef struct AutoCommandText {
   char text[MBUF_SIZE];
 } AutoCommandText;
 
-static AutoCommandText auto_command_text(AutopilotCommand *node) {
+static AutoCommandText auto_command_text(const AutopilotCommand *node) {
   AutoCommandText command = {0};
   char *buf = command.text;
   int i;
@@ -125,9 +94,7 @@ void auto_delcommand(DbRef player, void *data, const char *buffer) {
 
   int p;
   Autopilot *autopilot = (Autopilot *)data;
-  int remove_all_commands = 0;
-  AutopilotCommand *temp_command_node;
-  char error_buf[MBUF_SIZE];
+  bool remove_all_commands = false;
 
   /* Make sure they specified an argument */
   if (!*buffer) {
@@ -152,7 +119,7 @@ void auto_delcommand(DbRef player, void *data, const char *buffer) {
   /* Check if its a valid command position
    * If its -1 means remove all */
   if (p == -1) {
-    remove_all_commands = 1;
+    remove_all_commands = true;
   } else if ((p > doubly_linked_list_size(autopilot->commands)) || (p < 1)) {
     notify_printf(btech_context_evaluation(autopilot->xcode.context), player,
                   "Invalid Argument : Must be within the range"
@@ -168,54 +135,14 @@ void auto_delcommand(DbRef player, void *data, const char *buffer) {
   if (!remove_all_commands) {
 
     /* Remove the node at pos */
-    temp_command_node =
-        (AutopilotCommand *)doubly_linked_list_remove_node_at_pos(
-            autopilot->commands, p);
-
-    if (!temp_command_node) {
-      (void)snprintf(
-          error_buf, MBUF_SIZE,
-          "Internal AI Error: Trying to remove"
-          " Command #%d from AI #%ld but the command node doesn't exist\n",
-          p, autopilot->mynum);
-      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
-                         error_buf);
-    }
-
-    /* Destroy the command_node */
-    auto_destroy_command_node(temp_command_node);
+    (void)autopilot_order_remove(autopilot, (size_t)p - 1);
 
     notify_printf(btech_context_evaluation(autopilot->xcode.context), player,
                   "Command #%d Successfully Removed\n", p);
 
   } else {
 
-    /* Remove ALL the commands */
-    while (doubly_linked_list_size(autopilot->commands)) {
-
-      /* Remove the first node on the list and get the data
-       * from it */
-      temp_command_node = (AutopilotCommand *)doubly_linked_list_remove(
-          autopilot->commands, doubly_linked_list_head(autopilot->commands));
-
-      /* Make sure the command node exists */
-      if (!temp_command_node) {
-
-        (void)snprintf(
-            error_buf, MBUF_SIZE,
-            "Internal AI Error: Trying to remove"
-            " the first command from AI #%ld but the command node doesn't "
-            "exist\n",
-            autopilot->mynum);
-        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
-                           "%s", error_buf);
-
-      } else {
-
-        /* Destroy the command node */
-        auto_destroy_command_node(temp_command_node);
-      }
-    }
+    autopilot_order_clear(autopilot);
 
     mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
                  "All the commands have been removed.\n");
@@ -244,9 +171,6 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
   int argc;
   int i;
 
-  AutopilotCommand *temp_command_node;
-  DoublyLinkedListNode *temp_dllist_node;
-
   autopilot_argument_list_initialize(&args, AUTOPILOT_MAX_ARGS);
 
   command = first_parseattribute(buffer);
@@ -269,6 +193,13 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
     autopilot_argument_list_destroy(&args);
     mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
                  "Invalid Command!");
+    return;
+  }
+
+  if (!autopilot_order_is_supported(definition->command_enum)) {
+    autopilot_argument_list_destroy(&args);
+    mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+                 "That autopilot command is not implemented.");
     return;
   }
 
@@ -296,26 +227,20 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
     autopilot_argument_list_set(&args, 0, strdup(definition->name));
   }
 
-  /* Build the command node */
-  temp_command_node = auto_create_command_node();
-
-  for (size_t index = 0; index < AUTOPILOT_MAX_ARGS; index++) {
-    char *argument = autopilot_argument_list_take(&args, index);
-    if (argument != nullptr)
-      autopilot_argument_list_set(&temp_command_node->arguments, index,
-                                  argument);
-  }
+  const AutopilotOrderResult result =
+      autopilot_order_enqueue(autopilot, definition, &args);
   autopilot_argument_list_destroy(&args);
-
-  temp_command_node->argcount = (unsigned char)definition->argcount;
-  temp_command_node->command_enum = definition->command_enum;
-  temp_command_node->ai_command_function = definition->ai_command_function;
-
-  /* Add the command to the list */
-  temp_dllist_node = doubly_linked_list_create_node(temp_command_node);
-  doubly_linked_list_insert_end(autopilot->commands, temp_dllist_node);
+  if (result != AUTOPILOT_ORDER_OK) {
+    mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
+                 result == AUTOPILOT_ORDER_FULL
+                     ? "The autopilot command queue is full."
+                     : "Unable to add the autopilot command.");
+    return;
+  }
 
   /* Let the player know it worked */
+  const AutopilotCommand *temp_command_node =
+      autopilot_order_at(autopilot, autopilot_order_count(autopilot) - 1);
   notify_printf(btech_context_evaluation(autopilot->xcode.context), player,
                 "Command Added: %s", auto_command_text(temp_command_node).text);
 }
@@ -556,35 +481,8 @@ void auto_disengage(DbRef player, void *data, const char *buffer) {
  */
 void auto_goto_next_command(Autopilot *autopilot, int time) {
 
-  AutopilotCommand *temp_command_node;
-  char error_buf[MBUF_SIZE];
-
-  if (doubly_linked_list_size(autopilot->commands) < 0) {
-    (void)snprintf(
-        error_buf, MBUF_SIZE,
-        "Internal AI Error: Trying to remove"
-        " the first command from AI #%ld but the command list is empty\n",
-        autopilot->mynum);
-    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
-                       error_buf);
+  if (autopilot_order_pop(autopilot) != AUTOPILOT_ORDER_OK)
     return;
-  }
-
-  temp_command_node = (AutopilotCommand *)doubly_linked_list_remove(
-      autopilot->commands, doubly_linked_list_head(autopilot->commands));
-
-  if (!temp_command_node) {
-    (void)snprintf(
-        error_buf, MBUF_SIZE,
-        "Internal AI Error: Trying to remove"
-        " the first command from AI #%ld but the command node doesn't exist\n",
-        autopilot->mynum);
-    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
-                       error_buf);
-    return;
-  }
-
-  auto_destroy_command_node(temp_command_node);
 
   /* Fire off the AUTO_COM event */
   autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event, time, 0);
@@ -712,7 +610,6 @@ void auto_newautopilot(DbRef key, void **data,
 
   Autopilot *autopilot = *data;
   Mech *mech;
-  AutopilotCommand *temp;
   switch (selector) {
   case SPECIAL_ALLOC:
     autopilot->mynum = key;
@@ -737,16 +634,7 @@ void auto_newautopilot(DbRef key, void **data,
     auto_stop_pilot(autopilot);
 
     /* Go through the list and remove any leftover nodes */
-    while (doubly_linked_list_size(autopilot->commands)) {
-
-      /* Remove the first node on the list and get the data
-       * from it */
-      temp = (AutopilotCommand *)doubly_linked_list_remove(
-          autopilot->commands, doubly_linked_list_head(autopilot->commands));
-
-      /* Destroy the command node */
-      auto_destroy_command_node(temp);
-    }
+    autopilot_order_clear(autopilot);
 
     /* Destroy the list */
     doubly_linked_list_destroy_list(autopilot->commands);
