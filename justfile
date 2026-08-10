@@ -7,7 +7,7 @@ run_clang_tidy := env("RUN_CLANG_TIDY", "run-clang-tidy-22")
 clang_format := env("CLANG_FORMAT", "clang-format-22")
 stylua := env("STYLUA", "stylua")
 
-default: fmt build test install
+default: checks install
 
 ci: check-mux-source-size fmt-check build test
 
