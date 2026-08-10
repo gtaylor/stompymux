@@ -323,6 +323,81 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_terrain COMMAND btech_terrain_test)
 
+  add_executable(btech_los_trace_test tests/btech_los_trace.c
+    ${BTECH_SOURCE_DIR}/sensors/los_trace.c)
+  target_compile_definitions(btech_los_trace_test PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(btech_los_trace_test PRIVATE btmux_options m)
+  target_include_directories(btech_los_trace_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/tests")
+  add_test(NAME btech_los_trace COMMAND btech_los_trace_test)
+  set_tests_properties(btech_los_trace PROPERTIES LABELS los)
+
+  add_executable(btech_los_geometry_test tests/btech_los_geometry.c
+    ${BTECH_SOURCE_DIR}/sensors/los_trace.c
+    ${BTECH_SOURCE_DIR}/sensors/mech_los.c)
+  target_compile_definitions(btech_los_geometry_test PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_los_geometry_test PRIVATE -ffunction-sections)
+  target_link_options(btech_los_geometry_test PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_los_geometry_test PRIVATE btmux_options m)
+  target_include_directories(btech_los_geometry_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/tests")
+  add_test(NAME btech_los_geometry COMMAND btech_los_geometry_test)
+  set_tests_properties(btech_los_geometry PROPERTIES LABELS los)
+
+  add_executable(btech_los_sensors_test tests/btech_los_sensors.c
+    ${BTECH_SOURCE_DIR}/sensors/mech_sensor_functions.c)
+  target_compile_definitions(btech_los_sensors_test PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_los_sensors_test PRIVATE -ffunction-sections)
+  target_link_options(btech_los_sensors_test PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_los_sensors_test PRIVATE btmux_options m)
+  target_include_directories(btech_los_sensors_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/tests")
+  add_test(NAME btech_los_sensors COMMAND btech_los_sensors_test)
+  set_tests_properties(btech_los_sensors PROPERTIES LABELS los)
+
+  add_executable(btech_los_maps_test tests/btech_los_maps.c
+    ${BTECH_SOURCE_DIR}/sensors/los_trace.c)
+  target_compile_definitions(btech_los_maps_test PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(btech_los_maps_test PRIVATE btmux_options m)
+  target_include_directories(btech_los_maps_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/tests")
+  add_test(NAME btech_los_maps COMMAND btech_los_maps_test
+    "${CMAKE_SOURCE_DIR}/game/maps/test.map"
+    "${CMAKE_SOURCE_DIR}/game/maps/gb.mountaincenter.map"
+    "${CMAKE_SOURCE_DIR}/game/maps/drowned.map")
+  set_tests_properties(btech_los_maps PROPERTIES LABELS los)
+
+  add_executable(btech_los_cache_test tests/btech_los_cache.c
+    ${BTECH_SOURCE_DIR}/map/map_los.c)
+  target_compile_definitions(btech_los_cache_test PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_los_cache_test PRIVATE -ffunction-sections)
+  target_link_options(btech_los_cache_test PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_los_cache_test PRIVATE btmux_options m)
+  target_include_directories(btech_los_cache_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/tests")
+  add_test(NAME btech_los_cache COMMAND btech_los_cache_test)
+  set_tests_properties(btech_los_cache PROPERTIES LABELS los)
+
   add_executable(btech_value_helpers_test tests/btech_value_helpers.c)
   target_compile_definitions(btech_value_helpers_test PRIVATE BTECH_INTERNAL=1)
   target_link_libraries(btech_value_helpers_test PRIVATE btmux_options)
