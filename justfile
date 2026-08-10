@@ -1,11 +1,11 @@
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
 build_dir := ".build"
-build_type := env_var_or_default("CMAKE_BUILD_TYPE", "RelWithDebInfo")
-clang_tidy := env_var_or_default("CLANG_TIDY", "clang-tidy-22")
-run_clang_tidy := env_var_or_default("RUN_CLANG_TIDY", "run-clang-tidy-22")
-clang_format := env_var_or_default("CLANG_FORMAT", "clang-format-22")
-stylua := env_var_or_default("STYLUA", "stylua")
+build_type := env("CMAKE_BUILD_TYPE", "RelWithDebInfo")
+clang_tidy := env("CLANG_TIDY", "clang-tidy-22")
+run_clang_tidy := env("RUN_CLANG_TIDY", "run-clang-tidy-22")
+clang_format := env("CLANG_FORMAT", "clang-format-22")
+stylua := env("STYLUA", "stylua")
 
 default: fmt build test install
 
@@ -35,7 +35,7 @@ fmt-check-lua:
 fmt-check: fmt-check-c fmt-check-lua
 
 tidy:
-    {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
+    {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -fix -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
 
 build:
     cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
