@@ -4,6 +4,12 @@
 
 #include <stdbool.h>
 
+typedef struct SensorCapabilityRequest {
+  const Mech *mech;
+  int capability_set;
+  int signed_capability;
+} SensorCapabilityRequest;
+
 int mech_sensor_index(const Mech *mech, int slot);
 void mech_sensors_set(Mech *mech, int primary, int secondary);
 bool mech_is_fallen(const Mech *mech);
@@ -24,8 +30,7 @@ void mech_sensor_visibility_modifier_set(Mech *mech, int modifier);
 bool mech_has_tag_system(const Mech *mech);
 bool mech_tag_system_is_destroyed(const Mech *mech);
 bool mech_has_working_ecm_suite(const Mech *mech);
-bool mech_supports_sensor_requirement(const Mech *mech, int capability_set,
-                                      int signed_capability);
+bool mech_supports_sensor_requirement(const SensorCapabilityRequest *request);
 bool mech_searchlight_warning_enabled(const Mech *mech);
 void mech_illumination_set(Mech *mech, bool illuminated);
 void mech_searchlight_active_set(Mech *mech, bool active);

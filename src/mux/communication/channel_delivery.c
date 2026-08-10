@@ -13,7 +13,6 @@
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
 #include "mux/communication/comsys_internal.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/network/network_output.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -36,19 +35,24 @@ void send_channel(EvaluationContext *evaluation, const char *chan,
   va_list arguments;
 
   va_start(arguments, format);
-  send_channel_v(evaluation, chan, format, arguments);
+  send_channel_v(
+      &(ChannelMessageTarget){.evaluation = evaluation, .channel = chan},
+      format, arguments);
   va_end(arguments);
 }
 
-void send_channel_v(EvaluationContext *evaluation, const char *chan,
-                    const char *format, va_list arguments) {
+void send_channel_v(const ChannelMessageTarget *target, const char *format,
+                    va_list arguments) {
+  EvaluationContext *evaluation = target->evaluation;
+  const char *chan = target->channel;
   struct channel *ch;
   char buf[LBUF_SIZE];
   char data[LBUF_SIZE];
   char *bp = buf;
   char *newline;
 
-  if (!(ch = select_channel(evaluation->runtime->channels, chan)))
+  ch = select_channel(evaluation->runtime->channels, chan);
+  if (!ch)
     return;
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   (void)vsnprintf(data, LBUF_SIZE, format, arguments);
@@ -102,9 +106,9 @@ struct ComHistoryView {
   DbRef player;
 };
 
-static void do_show_com(void *data, void *context) {
-  chmsg *d = data;
-  ComHistoryView *view = context;
+static void do_show_com(const FifoVisit *visit) {
+  chmsg *d = visit->item;
+  ComHistoryView *view = visit->context;
   DbRef player = view->player;
   struct tm *t;
   int day;
@@ -158,11 +162,13 @@ void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
     return;
   }
 
-  if (!(ch = select_channel(evaluation->runtime->channels, arg1))) {
+  ch = select_channel(evaluation->runtime->channels, arg1);
+  if (!ch) {
     notify_printf(evaluation, player, "Unknown channel %s.", arg1);
     return;
   }
-  if (!(user = select_user(ch, player))) {
+  user = select_user(ch, player);
+  if (!user) {
     raw_notify(evaluation, player,
                "You are not listed as on that channel.  Delete this "
                "alias and re-add.");
@@ -187,7 +193,11 @@ void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
   } else if (!user->on) {
     notify_printf(evaluation, player, "You must be on %s to do that.", arg1);
     return;
-  } else if (!comsys_test_access(evaluation, player, CHANNEL_TRANSMIT, ch)) {
+  } else if (!comsys_test_access(
+                 &(ChannelAccessRequest){.evaluation = evaluation,
+                                         .player = player,
+                                         .access = CHANNEL_TRANSMIT,
+                                         .channel = ch})) {
     raw_notify(evaluation, player,
                "That channel type cannot be transmitted on.");
     return;
@@ -222,7 +232,10 @@ void comsys_send_channel_message(EvaluationContext *evaluation,
   ch->num_messages++;
   for (user = ch->on_users; user; user = user->on_next) {
     if (user->on &&
-        comsys_test_access(evaluation, user->who, CHANNEL_RECIEVE, ch) &&
+        comsys_test_access(&(ChannelAccessRequest){.evaluation = evaluation,
+                                                   .player = user->who,
+                                                   .access = CHANNEL_RECIEVE,
+                                                   .channel = ch}) &&
         (is_wizard(evaluation->world->database, user->who) ||
          !is_in_character_location(evaluation->world->database,
                                    evaluation->world->configuration,
@@ -241,7 +254,7 @@ void comsys_send_channel_message(EvaluationContext *evaluation,
     c = fifo_pop(&ch->last_messages);
     free((void *)c->msg);
   } else
-    Create(c, chmsg, 1);
+    c = checked_storage_allocate(sizeof(*c));
   c->msg = strdup(mess);
   c->time = evaluation->runtime->clock->now;
   fifo_push(&ch->last_messages, c);
@@ -262,7 +275,10 @@ void comsys_channel_printf(EvaluationContext *evaluation, struct channel *ch,
   ch->num_messages++;
   for (user = ch->on_users; user; user = user->on_next) {
     if (user->on &&
-        comsys_test_access(evaluation, user->who, CHANNEL_RECIEVE, ch) &&
+        comsys_test_access(&(ChannelAccessRequest){.evaluation = evaluation,
+                                                   .player = user->who,
+                                                   .access = CHANNEL_RECIEVE,
+                                                   .channel = ch}) &&
         (is_wizard(evaluation->world->database, user->who) ||
          !is_in_character_location(evaluation->world->database,
                                    evaluation->world->configuration,
@@ -281,7 +297,7 @@ void comsys_channel_printf(EvaluationContext *evaluation, struct channel *ch,
     c = fifo_pop(&ch->last_messages);
     free((void *)c->msg);
   } else
-    Create(c, chmsg, 1);
+    c = checked_storage_allocate(sizeof(*c));
   c->msg = strdup(buffer);
   c->time = evaluation->runtime->clock->now;
   fifo_push(&ch->last_messages, c);

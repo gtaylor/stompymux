@@ -31,12 +31,12 @@ const char LUA_MODULES_KEY[] = "btmux.lua.modules";
 
 const char *lua_global_module_at(const LuaRuntime *runtime, size_t index) {
   return *(char *const *)checked_storage_at_const(
-      runtime->global_modules, runtime->global_module_count,
+      (const void *)runtime->global_modules, runtime->global_module_count,
       sizeof(*runtime->global_modules), index);
 }
 
 char *lua_global_module_slot(LuaRuntime *runtime, size_t index) {
-  return *(char **)checked_storage_at(runtime->global_modules,
+  return *(char **)checked_storage_at((void *)runtime->global_modules,
                                       runtime->global_module_count,
                                       sizeof(*runtime->global_modules), index);
 }
@@ -105,7 +105,10 @@ int lua_callback_pcall_checked(LuaRuntime *runtime, int arguments,
 
 void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
                    const char *error) {
-  log_error(runtime->services->log, LOG_PROBLEMS, "LUA", kind,
+  log_error((LogEntry){.log = runtime->services->log,
+                       .key = LOG_PROBLEMS,
+                       .primary = "LUA",
+                       .secondary = kind},
             "object #%ld module %s: %s", object,
             runtime->module[0] ? runtime->module : "<unknown>",
             error ? error : "unknown Lua error");
@@ -113,7 +116,10 @@ void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
 
 void lua_log_load_error(LuaRuntime *runtime, DbRef object, const char *path,
                         const char *error) {
-  log_error(runtime->services->log, LOG_PROBLEMS, "LUA", "LOAD",
+  log_error((LogEntry){.log = runtime->services->log,
+                       .key = LOG_PROBLEMS,
+                       .primary = "LUA",
+                       .secondary = "LOAD"},
             "object #%ld module %s: %s", object, path ? path : "<unknown>",
             error ? error : "unknown Lua error");
 }
@@ -177,7 +183,7 @@ int lua_join_path(char *destination, size_t destination_size, const char *first,
   if (!destination_size || first_length >= destination_size ||
       second_length >= destination_size - first_length - 1)
     return 0;
-  memcpy(destination, first, first_length);
+  memcpy(destination, first, first_length + 1);
   *lua_text_slot(destination, destination_size, first_length) = '/';
   memcpy(checked_storage_region(destination, destination_size, first_length + 1,
                                 second_length + 1),
@@ -238,7 +244,7 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
     return false;
   for (index = 0; index < blocked_count; index++) {
     const char *name = *(const char *const *)checked_storage_at_const(
-        blocked, blocked_count, sizeof(*blocked), index);
+        (const void *)blocked, blocked_count, sizeof(*blocked), index);
 
     lua_pushnil(runtime->state);
     lua_setglobal(runtime->state, name);
@@ -465,7 +471,7 @@ void lua_runtime_destroy(LuaRuntime *runtime) {
   if (runtime->global_modules) {
     for (index = 0; index < runtime->global_module_count; index++)
       free(lua_global_module_slot(runtime, index));
-    free(runtime->global_modules);
+    free((void *)runtime->global_modules);
   }
   for (index = 0; index < runtime->schedule_job_count; index++) {
     LUA_SCHEDULE_JOB *job = lua_schedule_job_at(runtime, index);

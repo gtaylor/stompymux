@@ -29,15 +29,23 @@
 
 extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
 
-static void examine_notify_markup(EvaluationContext *evaluation, DbRef player,
-                                  const char *label, const char *styled) {
+typedef struct ExamineMarkupRequest {
+  EvaluationContext *evaluation;
+  DbRef viewer;
+  const char *label;
+  const char *styled;
+} ExamineMarkupRequest;
+
+static void examine_notify_markup(const ExamineMarkupRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->viewer;
   char *markup = alloc_lbuf("examine_notify_markup");
 
-  if (!styled_text_escape(styled, markup, LBUF_SIZE))
-    styled_text_strip(evaluation->world->styled_text_palette, styled, markup,
-                      LBUF_SIZE);
-  if (label)
-    notify_printf(evaluation, player, "%s: %s", label, markup);
+  if (!styled_text_escape(request->styled, markup, LBUF_SIZE))
+    styled_text_strip(evaluation->world->styled_text_palette, request->styled,
+                      markup, LBUF_SIZE);
+  if (request->label)
+    notify_printf(evaluation, player, "%s: %s", request->label, markup);
   else
     notify_checked(evaluation, player, player, markup, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(markup);
@@ -74,18 +82,29 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
                 game_object_next(evaluation->world->database, thing));
   notify_printf(evaluation, player, "Zone    = %ld",
                 game_object_zone(evaluation->world->database, thing));
-  buf = flag_description(evaluation->world->database, player, thing);
+  buf = flag_description(evaluation->world->database, thing);
   notify_printf(evaluation, player, "Flags   = %s", buf);
   free_mbuf(buf);
-  buf = power_description(evaluation->world->database, player, thing);
+  buf = power_description(
+      &(PowerDescriptionRequest){.database = evaluation->world->database,
+                                 .viewer = player,
+                                 .target = thing});
   notify_printf(evaluation, player, "Powers  = %s", buf);
   free_mbuf(buf);
   notify_printf(evaluation, player, "Lua state entries: %zu",
                 object_state_count(evaluation->world->database, thing));
 }
 
-static void examine_native_attributes(EvaluationContext *evaluation,
-                                      DbRef player, DbRef thing) {
+typedef struct ExamineObjectRequest {
+  EvaluationContext *evaluation;
+  DbRef viewer;
+  DbRef object;
+} ExamineObjectRequest;
+
+static void examine_native_attributes(const ExamineObjectRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->viewer;
+  DbRef thing = request->object;
   GameDatabase *database = evaluation->world->database;
   bool has_attributes = false;
 
@@ -107,7 +126,10 @@ static void examine_native_attributes(EvaluationContext *evaluation,
     char label[MBUF_SIZE];
 
     (void)snprintf(label, sizeof label, "  %s", entry->name);
-    examine_notify_markup(evaluation, player, label, value);
+    examine_notify_markup(&(ExamineMarkupRequest){.evaluation = evaluation,
+                                                  .viewer = player,
+                                                  .label = label,
+                                                  .styled = value});
   }
 }
 
@@ -127,8 +149,8 @@ void do_examine(CommandInvocation *invocation) {
     return;
 
   if (!name || !*name) {
-    if ((thing = game_object_location(evaluation->world->database, player)) ==
-        NOTHING)
+    thing = game_object_location(evaluation->world->database, player);
+    if (thing == NOTHING)
       return;
   } else {
     /* Look it up */
@@ -150,27 +172,36 @@ void do_examine(CommandInvocation *invocation) {
   }
 
   buf2 = unparse_object(evaluation->world->database, evaluation, player, thing);
-  examine_notify_markup(evaluation, player, nullptr, buf2);
+  examine_notify_markup(&(ExamineMarkupRequest){
+      .evaluation = evaluation, .viewer = player, .styled = buf2});
   free_lbuf(buf2);
   notify_printf(
       evaluation, player, "Type: %s",
       object_type_entry(typeof_obj(evaluation->world->database, thing))->name);
-  buf2 = flags_description(evaluation->world->database, player, thing);
+  buf2 = flags_description(evaluation->world->database, thing);
   notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
   free_mbuf(buf2);
 
-  buf2 = power_description(evaluation->world->database, player, thing);
+  buf2 = power_description(
+      &(PowerDescriptionRequest){.database = evaluation->world->database,
+                                 .viewer = player,
+                                 .target = thing});
   notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
   free_mbuf(buf2);
-  examine_native_attributes(evaluation, player, thing);
+  examine_native_attributes(&(ExamineObjectRequest){
+      .evaluation = evaluation, .viewer = player, .object = thing});
   buf2 = unparse_object(evaluation->world->database, evaluation, player,
                         game_object_zone(evaluation->world->database, thing));
   notify_printf(evaluation, player, "Zone: %s", buf2);
   free_lbuf(buf2);
-  lua_examine_object(invocation->context->runtime->lua_owner->runtime,
-                     evaluation, player, thing);
+  lua_examine_object(&(LuaExamineObjectRequest){
+      .runtime = invocation->context->runtime->lua_owner->runtime,
+      .evaluation = evaluation,
+      .viewer = player,
+      .object = thing});
   if (!(key & EXAM_BRIEF))
-    state_examine_namespaces(evaluation, player, thing);
+    state_examine_namespaces(&(ObjectStateExamineRequest){
+        .evaluation = evaluation, .viewer = player, .object = thing});
   /*
    * show him interesting stuff
    */

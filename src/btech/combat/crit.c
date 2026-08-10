@@ -65,7 +65,8 @@ void mech_explosion_apply(Mech *wounded, Mech *attacker) {
 
   SAFE_DOLIST(database, i, tmpnext, game_object_contents(database, from)) {
     if (is_good_obj(database, i) && is_xcode(database, i)) {
-      if ((target = btech_context_get_mech(context, i))) {
+      target = btech_context_get_mech(context, i);
+      if (target) {
         if (mech_class(target) == CLASS_BSUIT) {
           mech_contents_kill_if_in_character(target);
           discard_mw(target);
@@ -78,12 +79,25 @@ void mech_explosion_apply(Mech *wounded, Mech *attacker) {
   for (j = 0; j < NUM_SECTIONS; j++) {
     if (mech_section_original_internal(wounded, j) &&
         !mech_section_is_destroyed(wounded, j))
-      mech_section_destroy(wounded, attacker, wounded == attacker ? 0 : 1, j);
+      mech_section_destroy(&(SectionDestructionRequest){
+          .wounded = wounded,
+          .attacker = attacker,
+          .line_of_sight = wounded == attacker ? 0 : 1,
+          .section = j});
   }
 }
 
-void mech_arm_actuator_criticals_normalize(Mech *objMech, int wLoc,
-                                           int wCritType) {
+typedef struct ActuatorCritical {
+  Mech *mech;
+  int section;
+  int equipment_type;
+} ActuatorCritical;
+
+static void
+mech_arm_actuator_criticals_normalize(const ActuatorCritical *critical) {
+  Mech *objMech = critical->mech;
+  const int wLoc = critical->section;
+  const int wCritType = critical->equipment_type;
   switch (special_from_equipment_index(wCritType)) {
   case SHOULDER_OR_HIP:
     /* +4 to BTH with weapons in arm */
@@ -98,8 +112,11 @@ void mech_arm_actuator_criticals_normalize(Mech *objMech, int wLoc,
   }
 }
 
-void mech_leg_actuator_criticals_normalize(Mech *objMech, int wLoc,
-                                           int wCritType) {
+static void
+mech_leg_actuator_criticals_normalize(const ActuatorCritical *critical) {
+  Mech *objMech = critical->mech;
+  const int wLoc = critical->section;
+  const int wCritType = critical->equipment_type;
   switch (special_from_equipment_index(wCritType)) {
   case SHOULDER_OR_HIP:
     /*
@@ -151,9 +168,17 @@ void mech_section_actuator_criticals_normalize(Mech *objMech, int wLoc) {
           tHasShoulderOrHipCrit = 1;
 
           if (tIsArm)
-            mech_arm_actuator_criticals_normalize(objMech, wLoc, wCritType);
+            mech_arm_actuator_criticals_normalize(&(ActuatorCritical){
+                .mech = objMech,
+                .section = wLoc,
+                .equipment_type = wCritType,
+            });
           else
-            mech_leg_actuator_criticals_normalize(objMech, wLoc, wCritType);
+            mech_leg_actuator_criticals_normalize(&(ActuatorCritical){
+                .mech = objMech,
+                .section = wLoc,
+                .equipment_type = wCritType,
+            });
 
           break;
         }
@@ -179,9 +204,17 @@ void mech_section_actuator_criticals_normalize(Mech *objMech, int wLoc) {
           case LOWER_ACTUATOR:
           case HAND_OR_FOOT_ACTUATOR:
             if (tIsArm)
-              mech_arm_actuator_criticals_normalize(objMech, wLoc, wCritType);
+              mech_arm_actuator_criticals_normalize(&(ActuatorCritical){
+                  .mech = objMech,
+                  .section = wLoc,
+                  .equipment_type = wCritType,
+              });
             else
-              mech_leg_actuator_criticals_normalize(objMech, wLoc, wCritType);
+              mech_leg_actuator_criticals_normalize(&(ActuatorCritical){
+                  .mech = objMech,
+                  .section = wLoc,
+                  .equipment_type = wCritType,
+              });
 
             break;
           }

@@ -18,13 +18,18 @@ typedef struct ActionMessageInvocation {
   int argument_count;
 } ActionMessageInvocation;
 
+typedef struct LockFailureNotification {
+  EvaluationContext *evaluation;
+  const LuaLockInvocation *invocation;
+  const LuaLockResult *result;
+  const char *enactor_default;
+  const char *other_default;
+  LuaEventType event;
+} LockFailureNotification;
+
 void notify_action(EvaluationContext *evaluation,
                    const ActionMessageInvocation *invocation);
 void notify_event(EvaluationContext *evaluation, Descriptor *descriptor,
                   DbRef enactor, DbRef cause, DbRef object, LuaEventType event,
                   char **arguments, int argument_count);
-void notify_lock_failure(EvaluationContext *evaluation,
-                         const LuaLockInvocation *invocation,
-                         const LuaLockResult *result,
-                         const char *enactor_default, const char *other_default,
-                         LuaEventType event);
+void notify_lock_failure(const LockFailureNotification *notification);

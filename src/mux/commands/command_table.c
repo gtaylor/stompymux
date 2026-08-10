@@ -397,17 +397,17 @@ CMDENT *command_table_entry_at(size_t index) {
 
 CMDENT *command_prefix_entry_at(const CommandRegistry *registry, size_t index) {
   return *(CMDENT *const *)checked_storage_at_const(
-      registry->prefix_commands,
+      (const void *)registry->prefix_commands,
       sizeof(registry->prefix_commands) / sizeof(*registry->prefix_commands),
       sizeof(*registry->prefix_commands), index);
 }
 
 void command_prefix_entry_set(CommandRegistry *registry, size_t index,
                               CMDENT *entry) {
-  void **slot = checked_storage_at(registry->prefix_commands,
-                                   sizeof(registry->prefix_commands) /
-                                       sizeof(*registry->prefix_commands),
-                                   sizeof(*registry->prefix_commands), index);
+  void **slot = (void **)checked_storage_at(
+      (void *)registry->prefix_commands,
+      sizeof(registry->prefix_commands) / sizeof(*registry->prefix_commands),
+      sizeof(*registry->prefix_commands), index);
 
   *slot = entry;
 }
@@ -451,17 +451,18 @@ void command_aliases_destroy(HashTable *commands) {
     }
     if (built_in || strcasecmp(key, command->cmdname) != 0)
       continue;
-    CMDENT **grown = realloc(aliases, (alias_count + 1) * sizeof(*aliases));
+    CMDENT **grown = (CMDENT **)realloc((void *)aliases,
+                                        (alias_count + 1) * sizeof(*aliases));
     if (grown == nullptr)
       break;
     aliases = grown;
-    *(CMDENT **)checked_storage_at(aliases, alias_count + 1, sizeof(*aliases),
-                                   alias_count) = command;
+    *(CMDENT **)checked_storage_at((void *)aliases, alias_count + 1,
+                                   sizeof(*aliases), alias_count) = command;
     alias_count++;
   }
   for (size_t index = 0; index < alias_count; index++) {
     CMDENT *alias = *(CMDENT *const *)checked_storage_at_const(
-        aliases, alias_count, sizeof(*aliases), index);
+        (const void *)aliases, alias_count, sizeof(*aliases), index);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
@@ -469,7 +470,7 @@ void command_aliases_destroy(HashTable *commands) {
 #pragma clang diagnostic pop
     free(alias);
   }
-  free(aliases);
+  free((void *)aliases);
 }
 
 void set_prefix_cmds(CommandRegistry *registry) {

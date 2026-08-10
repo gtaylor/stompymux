@@ -13,7 +13,6 @@
 #include "mux/persistence/gamedb.h" // IWYU pragma: keep
 #include "mux/server/configuration_context.h"
 #include "mux/server/game.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
@@ -32,8 +31,10 @@ static const bool *object_flag_value_at_const(const ObjectFlagSet *flags,
                                   sizeof(*flags->values), (size_t)flag);
 }
 
-bool game_object_has_flag(GameDatabase *database, DbRef object,
-                          ObjectFlag flag) {
+bool game_object_has_flag(const ObjectFlagRequest *request) {
+  GameDatabase *database = request->database;
+  DbRef object = request->object;
+  ObjectFlag flag = request->flag;
   const GameObject *game_object = game_database_object(database, object);
 
   switch (flag) {
@@ -84,8 +85,11 @@ bool game_object_has_flag(GameDatabase *database, DbRef object,
   return false;
 }
 
-void game_object_set_flag(GameDatabase *database, DbRef object, ObjectFlag flag,
-                          bool value) {
+void game_object_set_flag(const ObjectFlagChangeRequest *request) {
+  GameDatabase *database = request->database;
+  DbRef object = request->object;
+  ObjectFlag flag = request->flag;
+  bool value = request->value;
   GameObject *game_object = game_database_object(database, object);
 
   switch (flag) {
@@ -157,14 +161,16 @@ void game_object_set_flag(GameDatabase *database, DbRef object, ObjectFlag flag,
 
 void game_object_clear_flags(GameDatabase *database, DbRef object) {
   for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
-    game_object_set_flag(database, object, flag, false);
+    game_object_set_flag(&(ObjectFlagChangeRequest){
+        .database = database, .object = object, .flag = flag});
 }
 
 void game_object_flags_copy(GameDatabase *database, DbRef object,
                             ObjectFlagSet *flags) {
   for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
     *object_flag_value_at(flags, flag) =
-        game_object_has_flag(database, object, flag);
+        game_object_has_flag(&(ObjectFlagRequest){
+            .database = database, .object = object, .flag = flag});
 }
 
 bool object_flag_set_has(const ObjectFlagSet *flags, ObjectFlag flag) {
@@ -183,12 +189,10 @@ bool is_good_obj(GameDatabase *database, DbRef x) {
          typeof_obj(database, x) != OBJECT_TYPE_NOTYPE;
 }
 
-bool is_safe(GameDatabase *database, const ServerConfiguration *configuration,
-             DbRef x, DbRef p) {
-  (void)configuration;
-  (void)p;
-  return is_player(database, x) ||
-         game_object_has_flag(database, x, OBJECT_FLAG_SAFE);
+bool is_safe(GameDatabase *database, DbRef object) {
+  return is_player(database, object) ||
+         game_object_has_flag(&(ObjectFlagRequest){
+             .database = database, .object = object, .flag = OBJECT_FLAG_SAFE});
 }
 
 bool can_link_exit(GameDatabase *database, DbRef player, DbRef target) {
@@ -229,82 +233,57 @@ void unmark_all(GameDatabase *database) {
                                 (size_t)index) = 0;
 }
 
-bool see_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
-              long f) {
-  (void)x;
-  (void)a;
-  (void)f;
-  return is_wizard(evaluation->world->database, p);
-}
-bool see_attr_explicit(GameDatabase *database, DbRef p, DbRef x, Attribute *a,
-                       long f) {
-  (void)x;
-  (void)a;
-  (void)f;
-  return is_wizard(database, p);
-}
-bool set_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
-              long f) {
-  return see_attr(evaluation, p, x, a, f);
-}
-bool read_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
-               long f) {
-  return see_attr(evaluation, p, x, a, f);
-}
-bool write_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
-                long f) {
-  return see_attr(evaluation, p, x, a, f);
-}
-
-static bool flag_any(EvaluationContext *evaluation, DbRef target, DbRef player,
-                     ObjectFlag flag, bool clear) {
-  (void)player;
-  game_object_set_flag(evaluation->world->database, target, flag, !clear);
+static bool flag_any(const FlagChangeRequest *request) {
+  game_object_set_flag(&(ObjectFlagChangeRequest){
+      .database = request->evaluation->world->database,
+      .object = request->target,
+      .flag = request->flag,
+      .value = !request->clear});
   return true;
 }
-static bool flag_god(EvaluationContext *evaluation, DbRef target, DbRef player,
-                     ObjectFlag flag, bool clear) {
-  return is_god(evaluation->world->database, player) &&
-         flag_any(evaluation, target, player, flag, clear);
+static bool flag_god(const FlagChangeRequest *request) {
+  return is_god(request->evaluation->world->database, request->player) &&
+         flag_any(request);
 }
-static bool flag_wizard(EvaluationContext *evaluation, DbRef target,
-                        DbRef player, ObjectFlag flag, bool clear) {
-  return (is_wizard(evaluation->world->database, player) ||
-          is_god(evaluation->world->database, player)) &&
-         flag_any(evaluation, target, player, flag, clear);
+static bool flag_wizard(const FlagChangeRequest *request) {
+  return (is_wizard(request->evaluation->world->database, request->player) ||
+          is_god(request->evaluation->world->database, request->player)) &&
+         flag_any(request);
 }
-static bool flag_wizard_bit(EvaluationContext *evaluation, DbRef target,
-                            DbRef player, ObjectFlag flag, bool clear) {
-  if (!is_god(evaluation->world->database, player))
+static bool flag_wizard_bit(const FlagChangeRequest *request) {
+  if (!is_god(request->evaluation->world->database, request->player))
     return false;
-  if (is_god(evaluation->world->database, target) && clear) {
-    notify_checked(evaluation, player, player,
+  if (is_god(request->evaluation->world->database, request->target) &&
+      request->clear) {
+    notify_checked(request->evaluation, request->player, request->player,
                    "You cannot make yourself mortal.", MSG_ME_ALL | MSG_F_DOWN);
     return false;
   }
-  return flag_any(evaluation, target, player, flag, clear);
+  return flag_any(request);
 }
-static bool flag_going(EvaluationContext *evaluation, DbRef target,
-                       DbRef player, ObjectFlag flag, bool clear) {
-  if (is_going(evaluation->world->database, target) && clear &&
-      !is_player(evaluation->world->database, target))
-    return flag_any(evaluation, target, player, flag, clear);
-  return is_god(evaluation->world->database, player) &&
-         flag_any(evaluation, target, player, flag, clear);
+static bool flag_going(const FlagChangeRequest *request) {
+  if (is_going(request->evaluation->world->database, request->target) &&
+      request->clear &&
+      !is_player(request->evaluation->world->database, request->target))
+    return flag_any(request);
+  return is_god(request->evaluation->world->database, request->player) &&
+         flag_any(request);
 }
 
-static bool flag_xcode(EvaluationContext *evaluation, DbRef target,
-                       DbRef player, ObjectFlag flag, bool clear) {
-  bool previously_enabled = is_xcode(evaluation->world->database, target);
+static bool flag_xcode(const FlagChangeRequest *request) {
+  bool previously_enabled =
+      is_xcode(request->evaluation->world->database, request->target);
   bool changed;
 
-  if (!flag_wizard(evaluation, target, player, flag, clear))
+  if (!flag_wizard(request))
     return false;
-  changed = previously_enabled != is_xcode(evaluation->world->database, target);
+  changed = previously_enabled !=
+            is_xcode(request->evaluation->world->database, request->target);
   if (changed)
     btech_special_object_flag_changed(
-        evaluation->btech, player, target, previously_enabled,
-        is_xcode(evaluation->world->database, target));
+        request->evaluation->btech, request->player, request->target,
+        previously_enabled,
+        is_xcode(request->evaluation->world->database, request->target));
   return true;
 }
 
@@ -453,7 +432,11 @@ void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
                    MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
-  if (!flag->handler(evaluation, target, player, flag->id, clear)) {
+  if (!flag->handler(&(FlagChangeRequest){.evaluation = evaluation,
+                                          .target = target,
+                                          .player = player,
+                                          .flag = flag->id,
+                                          .clear = clear})) {
     notify_checked(evaluation, player, player, "Permission denied.",
                    MSG_ME_ALL | MSG_F_DOWN);
     return;
@@ -463,43 +446,37 @@ void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
                   game_object_name(evaluation->world->database, target),
                   flag->flagname, clear ? "cleared." : "set.");
 }
-char *decode_flags(GameDatabase *database, DbRef player, int type,
-                   const ObjectFlagSet *flags) {
+char *decode_flags(const DecodeFlagsRequest *request) {
   char *buffer = alloc_sbuf("decode_flags");
   char *out = buffer;
   *out = '\0';
-  if (!is_good_obj(database, player)) {
+  if (!is_good_obj(request->database, request->player)) {
     StringCopy(buffer, "#-2 ERROR");
     return buffer;
   }
-  const ObjectEntry *object_type = object_type_entry(type);
+  const ObjectEntry *object_type = object_type_entry(request->object_type);
   if (object_type->lett != ' ')
     safe_sb_chr(object_type->lett, buffer, &out);
   for (size_t index = 0; index < flag_entry_count(); index++) {
     FlagEntry *flag = flag_entry_at(index);
-    if (!object_flag_set_has(flags, flag->id))
+    if (!object_flag_set_has(request->flags, flag->id))
       continue;
     safe_sb_chr(flag->flaglett, buffer, &out);
   }
   *out = '\0';
   return buffer;
 }
-bool has_flag(WorldContext *world, DbRef player, DbRef target, char *name) {
-  FlagEntry *flag = find_flag(world->indexes, target, name);
-  (void)player;
-  return flag && game_object_has_flag(world->database, target, flag->id);
-}
-char *flag_description(GameDatabase *database, DbRef player, DbRef target) {
+char *flag_description(GameDatabase *database, DbRef target) {
   char *buffer = alloc_mbuf("flag_description");
   char *out = buffer;
   safe_mb_str("Type: ", buffer, &out);
   safe_mb_str(object_type_entry(typeof_obj(database, target))->name, buffer,
               &out);
   safe_mb_str(" Flags:", buffer, &out);
-  (void)player;
   for (size_t index = 0; index < flag_entry_count(); index++) {
     FlagEntry *flag = flag_entry_at(index);
-    if (game_object_has_flag(database, target, flag->id)) {
+    if (game_object_has_flag(&(ObjectFlagRequest){
+            .database = database, .object = target, .flag = flag->id})) {
       safe_mb_chr(' ', buffer, &out);
       safe_mb_str(flag->flagname, buffer, &out);
     }
@@ -508,15 +485,15 @@ char *flag_description(GameDatabase *database, DbRef player, DbRef target) {
   return buffer;
 }
 
-char *flags_description(GameDatabase *database, DbRef player, DbRef target) {
+char *flags_description(GameDatabase *database, DbRef target) {
   char *buffer = alloc_mbuf("flags_description");
   char *out = buffer;
 
   safe_mb_str("Flags:", buffer, &out);
-  (void)player;
   for (size_t index = 0; index < flag_entry_count(); index++) {
     FlagEntry *flag = flag_entry_at(index);
-    if (game_object_has_flag(database, target, flag->id)) {
+    if (game_object_has_flag(&(ObjectFlagRequest){
+            .database = database, .object = target, .flag = flag->id})) {
       safe_mb_chr(' ', buffer, &out);
       safe_mb_str(flag->flagname, buffer, &out);
     }

@@ -3,7 +3,7 @@
 # From within this file, you can change much about the way your game behaves.
 # Some directives are clearly labeled and described, others are not. Others
 # aren't even listed in this file. For a complete list with descriptions,
-# please see docs/content/en/docs/configuration/stompymux-toml.md.
+# please see docs/content/docs/configuration/stompymux-toml.md.
 # ----------------------------------------------------------------------------
 
 # Include the stock command and flag aliases. Add local

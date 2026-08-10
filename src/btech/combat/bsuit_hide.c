@@ -1,6 +1,7 @@
 /* Implements BattleTech combat mechanics for battle armor hide. */
 
 #include <math.h>
+#include <stddef.h>
 
 #include "bsuit_api.h"
 #include "btconfig.h"
@@ -61,7 +62,8 @@ static void mech_hide_event(MuxEvent *e) {
     const DbRef unit = battle_map_unit_dbref(map, i);
     if (unit <= 0)
       continue;
-    if (!(t = btech_context_get_mech(context, unit)))
+    t = btech_context_get_mech(context, unit);
+    if (!t)
       continue;
     if (mech_is_clairvoyant(t) || mech_is_observer(t) || mech_is_invisible(t))
       continue;
@@ -84,7 +86,7 @@ static void mech_hide_event(MuxEvent *e) {
                 "Your spidey sense tingles, telling you this isn't going to "
                 "work......");
     return;
-  } else if (tic < (mech_hidden_turns(mech) * HIDE_TICK)) {
+  } else if (tic < ((long)(mech_hidden_turns(mech) * HIDE_TICK))) {
     tic++;
     mech_event_schedule(mech, EVENT_HIDE, mech_hide_event, 1, tic);
   } else if (!fail) {

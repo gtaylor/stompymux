@@ -263,8 +263,14 @@ int lua_check(EvaluationContext *evaluation, LuaRuntime *source, DbRef player,
               char *error, size_t error_size);
 int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
                       size_t error_size);
-void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
-                        DbRef player, DbRef object);
+typedef struct LuaExamineObjectRequest {
+  LuaRuntime *runtime;
+  EvaluationContext *evaluation;
+  DbRef viewer;
+  DbRef object;
+} LuaExamineObjectRequest;
+
+void lua_examine_object(const LuaExamineObjectRequest *request);
 int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
                       DbRef player, DbRef cause, const char *command);
 void lua_appearance_evaluate(LuaRuntime *runtime,

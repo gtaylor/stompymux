@@ -150,7 +150,8 @@ size_t primary_technology_name_count(void) {
 
 const char *primary_technology_name(size_t index) {
   return *(const char *const *)checked_storage_at_const(
-      specials, primary_technology_name_count(), sizeof(*specials), index);
+      (const void *)specials, primary_technology_name_count(),
+      sizeof(*specials), index);
 }
 
 size_t secondary_technology_name_count(void) {
@@ -159,7 +160,8 @@ size_t secondary_technology_name_count(void) {
 
 const char *secondary_technology_name(size_t index) {
   return *(const char *const *)checked_storage_at_const(
-      specials2, secondary_technology_name_count(), sizeof(*specials2), index);
+      (const void *)specials2, secondary_technology_name_count(),
+      sizeof(*specials2), index);
 }
 
 size_t infantry_technology_name_count(void) {
@@ -168,18 +170,18 @@ size_t infantry_technology_name_count(void) {
 
 const char *infantry_technology_name(size_t index) {
   return *(const char *const *)checked_storage_at_const(
-      infantry_specials, infantry_technology_name_count(),
+      (const void *)infantry_specials, infantry_technology_name_count(),
       sizeof(*infantry_specials), index);
 }
 
 char *template_unit_class_name(size_t index) {
   return *(char *const *)checked_storage_at_const(
-      mech_types, sizeof(mech_types) / sizeof(*mech_types) - 1,
+      (const void *)mech_types, sizeof(mech_types) / sizeof(*mech_types) - 1,
       sizeof(*mech_types), index);
 }
 
 char *template_movement_type_name(size_t index) {
   return *(char *const *)checked_storage_at_const(
-      move_types, sizeof(move_types) / sizeof(*move_types) - 1,
+      (const void *)move_types, sizeof(move_types) / sizeof(*move_types) - 1,
       sizeof(*move_types), index);
 }

@@ -22,8 +22,10 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-ArmorLevel ArmorEvaluateSerious(Mech *mech, int loc, int flag,
-                                int *ret_armor_value) {
+ArmorEvaluation armor_evaluate(const ArmorEvaluationRequest *request) {
+  Mech *mech = request->mech;
+  const int loc = request->section;
+  const int flag = request->flags;
   int armor_value;
   int armor_percent, armor_denom;
   int repair_flag = 0;
@@ -74,28 +76,27 @@ ArmorLevel ArmorEvaluateSerious(Mech *mech, int loc, int flag,
     break;
   }
 
-  if (ret_armor_value) {
-    *ret_armor_value = armor_value;
-  }
-
   if (repair_flag) {
     /* Under repair.  */
-    return ARMOR_LEVEL_REPAIRING;
+    return (ArmorEvaluation){.level = ARMOR_LEVEL_REPAIRING,
+                             .value = armor_value};
   } else if (!armor_value) {
     /* Breached.  */
-    return ARMOR_LEVEL_OPEN;
+    return (ArmorEvaluation){.level = ARMOR_LEVEL_OPEN, .value = armor_value};
   } else {
     /* Armor condition level.  */
     armor_percent = (armor_value + 1) * 100 / (armor_denom + 1);
 
     if (armor_percent <= 45) {
-      return ARMOR_LEVEL_CRITICAL;
+      return (ArmorEvaluation){.level = ARMOR_LEVEL_CRITICAL,
+                               .value = armor_value};
     } else if (armor_percent <= 70) {
-      return ARMOR_LEVEL_LOW;
+      return (ArmorEvaluation){.level = ARMOR_LEVEL_LOW, .value = armor_value};
     } else if (armor_percent <= 90) {
-      return ARMOR_LEVEL_GOOD;
+      return (ArmorEvaluation){.level = ARMOR_LEVEL_GOOD, .value = armor_value};
     } else {
-      return ARMOR_LEVEL_GREAT;
+      return (ArmorEvaluation){.level = ARMOR_LEVEL_GREAT,
+                               .value = armor_value};
     }
   }
 }
@@ -112,7 +113,8 @@ static const char *armor_damage_color(int level) {
   if (level < 0)
     abort();
   return *(const char *const *)checked_storage_at_const(
-      armordamcolorstr, sizeof(armordamcolorstr) / sizeof(*armordamcolorstr),
+      (const void *)armordamcolorstr,
+      sizeof(armordamcolorstr) / sizeof(*armordamcolorstr),
       sizeof(*armordamcolorstr), (size_t)level);
 }
 
@@ -139,17 +141,25 @@ typedef struct ArmorFieldText {
   char text[64];
 } ArmorFieldText;
 
-static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
-                                         const int flag, const size_t width) {
+typedef struct ArmorDamageTextRequest {
+  int level;
+  int value;
+  int flags;
+  size_t width;
+} ArmorDamageTextRequest;
+
+static ArmorDamageText
+armor_damage_text(const ArmorDamageTextRequest *request) {
   ArmorDamageText result = {0};
   char armor_buf[23 + 1];
+  int armor_value = request->value;
 
-  if (flag & ARMOR_FLAG_DIVIDE_10) {
+  if (request->flags & ARMOR_FLAG_DIVIDE_10) {
     /* Divide by 10 (rounded up).  Used for mechwarriors.  */
     armor_value = (armor_value + 9) / 10;
   }
 
-  if (flag & ARMOR_FLAG_OWNED) {
+  if (request->flags & ARMOR_FLAG_OWNED) {
     size_t armor_len;
 
     /* TODO: snprintf() is a C99-ism, please autoconf-ize.  */
@@ -161,9 +171,9 @@ static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
 
     /* Fixed width.  Some snprintf()s have a $*d extension that we
      * aren't going to use.  */
-    if (armor_len < width) {
+    if (armor_len < request->width) {
       /* Right justify.  */
-      const size_t padding = width - armor_len;
+      const size_t padding = request->width - armor_len;
       memset(
           checked_storage_region(result.text, sizeof(result.text), 0, padding),
           ' ', padding);
@@ -172,16 +182,18 @@ static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
              armor_buf, armor_len);
     } else {
       /* Right truncate.  */
-      memcpy(checked_storage_region(result.text, sizeof(result.text), 0, width),
-             checked_string_suffix(armor_buf, armor_len - width), width);
+      memcpy(checked_storage_region(result.text, sizeof(result.text), 0,
+                                    request->width),
+             checked_string_suffix(armor_buf, armor_len - request->width),
+             request->width);
     }
   } else {
     /* Use adversarial (scan) fill characters.  */
-    memset(result.text, armor_damage_letter(armor_level), width);
+    memset(result.text, armor_damage_letter(request->level), request->width);
   }
 
   *(char *)checked_storage_at(result.text, sizeof(result.text), sizeof(char),
-                              width) = '\0';
+                              request->width) = '\0';
 
   return result;
 }
@@ -191,7 +203,7 @@ static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
  * width to match the actual width on the status display, too; right now, it's
  * always two characters, regardless of width.
  */
-static ArmorKeyText armor_key_text(int line_key, int owner) {
+static ArmorKeyText armor_key_text(int line_key, bool owner) {
   ArmorKeyText result = {0};
 
   if (owner) {
@@ -233,7 +245,13 @@ static ArmorFieldText armor_field_text(Mech *mech, const int loc,
     width = 23;
 
   /* Get armor status.  */
-  armor_level = ArmorEvaluateSerious(mech, loc, flag, &armor_value);
+  const ArmorEvaluation evaluation = armor_evaluate(&(ArmorEvaluationRequest){
+      .mech = mech,
+      .section = loc,
+      .flags = flag,
+  });
+  armor_level = evaluation.level;
+  armor_value = evaluation.value;
 
   /* Get strings.  */
   if (!(flag & ARMOR_FLAG_SHOW_DEST) && !mech_section_internal(mech, loc)) {
@@ -245,7 +263,10 @@ static ArmorFieldText armor_field_text(Mech *mech, const int loc,
   }
 
   ArmorDamageText damage =
-      armor_damage_text(armor_level, armor_value, flag, (size_t)width);
+      armor_damage_text(&(ArmorDamageTextRequest){.level = armor_level,
+                                                  .value = armor_value,
+                                                  .flags = flag,
+                                                  .width = (size_t)width});
   (void)snprintf(result.text, sizeof(result.text), "%s%s[reset]",
                  armor_damage_color(armor_level), damage.text);
 
@@ -648,7 +669,10 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 /*
  * Figure out if we have a certain kind of physical weapon.
  */
-int hasPhysical(Mech *objMech, int wLoc, int wPhysType) {
+bool hasPhysical(const PhysicalWeaponRequest *request) {
+  Mech *objMech = request->mech;
+  const int wLoc = request->section;
+  const MechPhysicalWeaponType wPhysType = request->type;
   int wType;
   int wSize;
 
@@ -679,55 +703,68 @@ int hasPhysical(Mech *objMech, int wLoc, int wPhysType) {
     break;
 
   default:
-    return 0;
+    return false;
   } // end switch()
 
   return FindObjWithDest(objMech, wLoc, special_equipment_index(wType)) >=
          wSize;
 } // end hasPhysical()
 
-int canUsePhysical(Mech *objMech, int wLoc, int wPhysType) {
-  int tRet = 1;
+bool canUsePhysical(const PhysicalWeaponRequest *request) {
+  Mech *objMech = request->mech;
+  const int wLoc = request->section;
+  const MechPhysicalWeaponType wPhysType = request->type;
+  bool tRet = true;
 
   switch (wPhysType) {
   case PHY_AXE:
   case PHY_SWORD:
     if (mech_section_is_destroyed(objMech, wLoc))
-      tRet = 0;
-    else if (!mech_critical_is_operational_special(objMech, wLoc, 0,
-                                                   SHOULDER_OR_HIP))
-      tRet = 0;
-    else if (!mech_critical_is_operational_special(objMech, wLoc, 3,
-                                                   HAND_OR_FOOT_ACTUATOR))
-      tRet = 0;
+      tRet = false;
+    else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                 .mech = objMech,
+                 .slot = {.section = wLoc, .critical = 0},
+                 .special = SHOULDER_OR_HIP}))
+      tRet = false;
+    else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                 .mech = objMech,
+                 .slot = {.section = wLoc, .critical = 3},
+                 .special = HAND_OR_FOOT_ACTUATOR}))
+      tRet = false;
     break;
 
   case PHY_CLAW:
     if (mech_section_is_destroyed(objMech, wLoc))
-      tRet = 0;
+      tRet = false;
     break;
 
   case PHY_MACE:
     if (mech_section_is_destroyed(objMech, wLoc))
-      tRet = 0;
-    else if (!mech_critical_is_operational_special(objMech, wLoc, 0,
-                                                   SHOULDER_OR_HIP))
-      tRet = 0;
-    else if (!mech_critical_is_operational_special(objMech, wLoc, 3,
-                                                   HAND_OR_FOOT_ACTUATOR))
-      tRet = 0;
+      tRet = false;
+    else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                 .mech = objMech,
+                 .slot = {.section = wLoc, .critical = 0},
+                 .special = SHOULDER_OR_HIP}))
+      tRet = false;
+    else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                 .mech = objMech,
+                 .slot = {.section = wLoc, .critical = 3},
+                 .special = HAND_OR_FOOT_ACTUATOR}))
+      tRet = false;
     break;
 
   case PHY_SAW:
     if (mech_section_is_destroyed(objMech, wLoc))
-      tRet = 0;
-    else if (!mech_critical_is_operational_special(objMech, wLoc, 0,
-                                                   SHOULDER_OR_HIP))
-      tRet = 0;
+      tRet = false;
+    else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                 .mech = objMech,
+                 .slot = {.section = wLoc, .critical = 0},
+                 .special = SHOULDER_OR_HIP}))
+      tRet = false;
     break;
 
   default:
-    tRet = 0;
+    tRet = false;
   } // end switch()
 
   return tRet;

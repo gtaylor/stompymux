@@ -1,12 +1,11 @@
 #include "ai_api.h"
-#include "autopilot.h"
 #include "equipment_types.h"
 #include "mech_persistence.h"
 #include "mech_stagger.h"
-#include "mechrep.h"
 #include "mux/server/platform.h"
-#include "mux/support/doubly_linked_list.h"
+#include "mux/support/red_black_tree.h"
 #include "section_types.h"
+#include "snapshot_store_objects_internal.h"
 #include "special_object.h"
 #include "sqlite_internal.h"
 
@@ -15,9 +14,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "autopilot_argument_list_api.h"
 #include "mux/support/checked_storage.h"
-#include "turret.h"
 
 static const struct MechSection *
 stored_section(const MechPersistenceSnapshot *snapshot, int index) {
@@ -139,21 +136,18 @@ void btech_finalize_object_statements(BTECH_OBJECT_STORE_CONTEXT *context) {
 
 /* Replace the default map grid with a validated grid owned by this MAP. */
 
-int btech_store_simple_object(void *key, void *data, int depth,
-                              void *argument) {
+int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  int depth = call->depth;
+  void *argument = call->context;
   BTECH_OBJECT_STORE_CONTEXT *context = argument;
   BtechSpecialObject *xcode = data;
-  RepairFacility *mechrep;
-  Turret *turret;
-  Autopilot *autopilot;
   Mech *mech;
   MechPersistenceSnapshot snapshot;
   int index;
   int slot;
-  int argument_index;
   int runtime_index;
-  AutopilotCommand *command;
-  AutopilotPathNode *path_node;
   MechStaggerDamageSnapshot damage;
 
   (void)depth;
@@ -625,165 +619,8 @@ int btech_store_simple_object(void *key, void *data, int depth,
           btech_special_step(context->stagger_damage) < 0)
         context->result = -1;
     }
-  } else if (xcode->type == GTYPE_MECHREP) {
-    mechrep = (RepairFacility *)xcode;
-    if (btech_special_bind_int(context->mechrep, 1, (DbRef)key) < 0 ||
-        btech_special_bind_int(context->mechrep, 2, mechrep->current_target) <
-            0 ||
-        btech_special_step(context->mechrep) < 0)
-      context->result = -1;
-  } else if (xcode->type == GTYPE_TURRET) {
-    turret = (Turret *)xcode;
-    if (btech_special_bind_int(context->turret, 1, (DbRef)key) < 0 ||
-        btech_special_bind_int(context->turret, 2, turret->arcs) < 0 ||
-        btech_special_bind_int(context->turret, 3, turret->parent) < 0 ||
-        btech_special_bind_int(context->turret, 4, turret->gunner) < 0 ||
-        btech_special_bind_int(context->turret, 5, turret->target) < 0 ||
-        btech_special_bind_int(context->turret, 6, turret->targx) < 0 ||
-        btech_special_bind_int(context->turret, 7, turret->targy) < 0 ||
-        btech_special_bind_int(context->turret, 8, turret->targz) < 0 ||
-        btech_special_bind_int(context->turret, 9, turret->lockmode) < 0 ||
-        btech_special_step(context->turret) < 0)
-      context->result = -1;
-    for (index = 0; context->result == 0 && index < NUM_TICS; index++) {
-      if (btech_special_bind_int(context->turret_tic, 1, (DbRef)key) < 0 ||
-          btech_special_bind_int(context->turret_tic, 2, index) < 0 ||
-          bind_unsigned_long(
-              context->turret_tic, 3,
-              stored_unsigned_long(turret->tic, NUM_TICS, index)) < 0 ||
-          btech_special_step(context->turret_tic) < 0)
-        context->result = -1;
-    }
-  } else if (xcode->type == GTYPE_AUTO) {
-    autopilot = (Autopilot *)xcode;
-    if (btech_special_bind_int(context->autopilot, 1, (DbRef)key) < 0 ||
-        btech_special_bind_int(context->autopilot, 2, autopilot->mymechnum) <
-            0 ||
-        btech_special_bind_int(context->autopilot, 3, autopilot->mapindex) <
-            0 ||
-        btech_special_bind_int(context->autopilot, 4, autopilot->speed) < 0 ||
-        btech_special_bind_int(context->autopilot, 5, autopilot->ofsx) < 0 ||
-        btech_special_bind_int(context->autopilot, 6, autopilot->ofsy) < 0 ||
-        btech_special_bind_int(context->autopilot, 7,
-                               autopilot->verbose_level) < 0 ||
-        btech_special_bind_int(context->autopilot, 8, autopilot->target) < 0 ||
-        btech_special_bind_int(context->autopilot, 9, autopilot->target_score) <
-            0 ||
-        btech_special_bind_int(context->autopilot, 10,
-                               autopilot->target_threshold) < 0 ||
-        btech_special_bind_int(context->autopilot, 11,
-                               autopilot->target_update_tick) < 0 ||
-        btech_special_bind_int(context->autopilot, 12,
-                               autopilot->chase_target) < 0 ||
-        btech_special_bind_int(context->autopilot, 13,
-                               autopilot->chasetarg_update_tick) < 0 ||
-        btech_special_bind_int(context->autopilot, 14,
-                               autopilot->follow_update_tick) < 0 ||
-        btech_special_bind_int(context->autopilot, 15, autopilot->flags) < 0 ||
-        btech_special_bind_int(context->autopilot, 16,
-                               autopilot->mech_max_range) < 0 ||
-        btech_special_bind_int(context->autopilot, 17, autopilot->roam_type) <
-            0 ||
-        btech_special_bind_int(context->autopilot, 18,
-                               autopilot->roam_update_tick) < 0 ||
-        btech_special_bind_int(context->autopilot, 19,
-                               autopilot->roam_target_hex_x) < 0 ||
-        btech_special_bind_int(context->autopilot, 20,
-                               autopilot->roam_target_hex_y) < 0 ||
-        btech_special_bind_int(context->autopilot, 21,
-                               autopilot->roam_anchor_hex_x) < 0 ||
-        btech_special_bind_int(context->autopilot, 22,
-                               autopilot->roam_anchor_hex_y) < 0 ||
-        btech_special_bind_int(context->autopilot, 23,
-                               autopilot->roam_anchor_distance) < 0 ||
-        btech_special_bind_int(context->autopilot, 24, autopilot->ahead_ok) <
-            0 ||
-        btech_special_bind_int(context->autopilot, 25, autopilot->auto_cmode) <
-            0 ||
-        btech_special_bind_int(context->autopilot, 26, autopilot->auto_cdist) <
-            0 ||
-        btech_special_bind_int(context->autopilot, 27,
-                               autopilot->auto_goweight) < 0 ||
-        btech_special_bind_int(context->autopilot, 28,
-                               autopilot->auto_fweight) < 0 ||
-        btech_special_bind_int(context->autopilot, 29,
-                               autopilot->auto_nervous) < 0 ||
-        btech_special_bind_int(context->autopilot, 30, autopilot->b_msc) < 0 ||
-        btech_special_bind_int(context->autopilot, 31, autopilot->w_msc) < 0 ||
-        btech_special_bind_int(context->autopilot, 32, autopilot->b_bsc) < 0 ||
-        btech_special_bind_int(context->autopilot, 33, autopilot->w_bsc) < 0 ||
-        btech_special_bind_int(context->autopilot, 34, autopilot->b_dan) < 0 ||
-        btech_special_bind_int(context->autopilot, 35, autopilot->w_dan) < 0 ||
-        btech_special_bind_int(context->autopilot, 36, autopilot->last_upd) <
-            0 ||
-        btech_special_step(context->autopilot) < 0)
-      context->result = -1;
-    for (index = 1; context->result == 0 && autopilot->commands &&
-                    index <= doubly_linked_list_size(autopilot->commands);
-         index++) {
-      command = (AutopilotCommand *)doubly_linked_list_get_node(
-          autopilot->commands, index);
-      if (!command || command->argcount >= AUTOPILOT_MAX_ARGS ||
-          btech_special_bind_int(context->autopilot_command, 1, (DbRef)key) <
-              0 ||
-          btech_special_bind_int(context->autopilot_command, 2, index - 1) <
-              0 ||
-          btech_special_bind_int(context->autopilot_command, 3,
-                                 command->command_enum) < 0 ||
-          btech_special_bind_int(context->autopilot_command, 4,
-                                 command->argcount + 1) < 0 ||
-          btech_special_step(context->autopilot_command) < 0) {
-        context->result = -1;
-        break;
-      }
-      for (argument_index = 0;
-           context->result == 0 && argument_index <= command->argcount;
-           argument_index++) {
-        const char *command_argument = autopilot_argument_list_get(
-            &command->arguments, (size_t)argument_index);
-        if (!command_argument ||
-            btech_special_bind_int(context->autopilot_command_arg, 1,
-                                   (DbRef)key) < 0 ||
-            btech_special_bind_int(context->autopilot_command_arg, 2,
-                                   index - 1) < 0 ||
-            btech_special_bind_int(context->autopilot_command_arg, 3,
-                                   argument_index) < 0 ||
-            sqlite3_bind_text(context->autopilot_command_arg, 4,
-                              command_argument, -1,
-                              SQLITE_TRANSIENT) != SQLITE_OK ||
-            btech_special_step(context->autopilot_command_arg) < 0)
-          context->result = -1;
-      }
-    }
-    for (index = 1; context->result == 0 && autopilot->astar_path &&
-                    index <= doubly_linked_list_size(autopilot->astar_path);
-         index++) {
-      path_node = (AutopilotPathNode *)doubly_linked_list_get_node(
-          autopilot->astar_path, index);
-      if (!path_node ||
-          btech_special_bind_int(context->autopilot_path, 1, (DbRef)key) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 2, index - 1) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 3, path_node->x) <
-              0 ||
-          btech_special_bind_int(context->autopilot_path, 4, path_node->y) <
-              0 ||
-          btech_special_bind_int(context->autopilot_path, 5,
-                                 path_node->x_parent) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 6,
-                                 path_node->y_parent) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 7,
-                                 path_node->g_score) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 8,
-                                 path_node->h_score) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 9,
-                                 path_node->f_score) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 10,
-                                 path_node->hexoffset) < 0 ||
-          btech_special_step(context->autopilot_path) < 0) {
-        context->result = -1;
-        break;
-      }
-    }
+  } else {
+    btech_store_auxiliary_object(context, (DbRef)key, xcode);
   }
   return context->result == 0;
 }

@@ -230,7 +230,10 @@ void mech_vtol_rotor_destroyed_critical_apply(Mech *objMech, Mech *objAttacker,
       objMech, MECHALL,
       "[fg=red bold]The shot hits your fragile rotor mechanism![reset]");
   mech_los_broadcast(objMech, "'s rotor snaps into several parts!");
-  mech_section_destroy(objMech, objAttacker, LOS, ROTOR);
+  mech_section_destroy(&(SectionDestructionRequest){.wounded = objMech,
+                                                    .attacker = objAttacker,
+                                                    .line_of_sight = LOS,
+                                                    .section = ROTOR});
 
   if (!objAttacker) {
     mech_notify(objMech, MECHALL, "Your rotor has been destroyed!");
@@ -303,8 +306,12 @@ void mech_vtol_crash_start(Mech *objMech) {
   }
 }
 
-void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
-                                           int LOS, int hitloc, int num) {
+void mech_advanced_vehicle_critical_handle(
+    const VehicleCriticalRequest *request) {
+  Mech *wounded = request->wounded;
+  Mech *attacker = request->attacker;
+  const int LOS = request->line_of_sight;
+  const int hitloc = request->section;
   int wRoll = btech_random_roll(mech_context(wounded));
 
   if (mech_movement_type(wounded) == MOVE_NONE)
@@ -341,7 +348,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 11:
-        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(&(RandomWeaponDestructionRequest){
+            .attacker = attacker, .mech = wounded, .section = hitloc});
         break;
 
       case 12:
@@ -370,7 +378,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 10:
-        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(&(RandomWeaponDestructionRequest){
+            .attacker = attacker, .mech = wounded, .section = hitloc});
         break;
 
       case 11:
@@ -398,7 +407,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 9:
-        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(&(RandomWeaponDestructionRequest){
+            .attacker = attacker, .mech = wounded, .section = hitloc});
         break;
 
       case 10:
@@ -406,7 +416,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 11:
-        mech_ammunition_critical_apply(wounded, attacker, hitloc, LOS);
+        mech_ammunition_critical_apply(&(AmmunitionCriticalRequest){
+            .mech = wounded, .attacker = attacker, .section = hitloc});
         break;
 
       case 12:
@@ -434,7 +445,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 10:
-        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(&(RandomWeaponDestructionRequest){
+            .attacker = attacker, .mech = wounded, .section = hitloc});
         break;
 
       case 11:
@@ -442,7 +454,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 12:
-        mech_ammunition_critical_apply(wounded, attacker, hitloc, LOS);
+        mech_ammunition_critical_apply(&(AmmunitionCriticalRequest){
+            .mech = wounded, .attacker = attacker, .section = hitloc});
         break;
       }
       break;
@@ -474,7 +487,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 11:
-        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(&(RandomWeaponDestructionRequest){
+            .attacker = attacker, .mech = wounded, .section = hitloc});
         break;
 
       case 12:
@@ -499,7 +513,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 9:
-        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(&(RandomWeaponDestructionRequest){
+            .attacker = attacker, .mech = wounded, .section = hitloc});
         break;
 
       case 10:
@@ -507,7 +522,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 11:
-        mech_ammunition_critical_apply(wounded, attacker, hitloc, LOS);
+        mech_ammunition_critical_apply(&(AmmunitionCriticalRequest){
+            .mech = wounded, .attacker = attacker, .section = hitloc});
         break;
 
       case 12:
@@ -531,7 +547,8 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
         break;
 
       case 9:
-        mech_weapon_destroyed_critical_apply(attacker, wounded, hitloc, LOS);
+        mech_weapon_destroyed_critical_apply(&(RandomWeaponDestructionRequest){
+            .attacker = attacker, .mech = wounded, .section = hitloc});
         break;
 
       case 10:
@@ -581,8 +598,10 @@ void mech_advanced_vehicle_critical_handle(Mech *wounded, Mech *attacker,
   }
 }
 
-void mech_vtol_critical_handle(Mech *wounded, Mech *attacker, int LOS,
-                               int hitloc, int num) {
+void mech_vtol_critical_handle(const VehicleCriticalRequest *request) {
+  Mech *wounded = request->wounded;
+  Mech *attacker = request->attacker;
+  const int LOS = request->line_of_sight;
   mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
   switch (btech_random_range(mech_context(wounded), 0, 5)) {
   case 0:
@@ -661,6 +680,9 @@ void mech_vtol_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     if (!mech_section_configuration_has(wounded, BSIDE, CASE_TECH))
       mech_explosion_apply(wounded, attacker);
     else
-      mech_section_destroy(wounded, attacker, LOS, BSIDE);
+      mech_section_destroy(&(SectionDestructionRequest){.wounded = wounded,
+                                                        .attacker = attacker,
+                                                        .line_of_sight = LOS,
+                                                        .section = BSIDE});
   }
 }

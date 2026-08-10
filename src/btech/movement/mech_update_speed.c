@@ -46,9 +46,11 @@ static float speed_new_decrease(float speed, float penalty) {
 
 /* If you want to simulate _OLDs, you have to add 1MP in some cases (eww) */
 
-float mech_terrain_speed(Mech *mech, float tempspeed, float maxspeed,
-                         int terrain, int elev) {
-  switch (terrain) {
+float mech_terrain_speed(const MechTerrainSpeedRequest *request) {
+  Mech *mech = request->mech;
+  float tempspeed = request->current_speed;
+  const float maxspeed = request->maximum_speed;
+  switch (request->terrain) {
   case BATTLE_TERRAIN_SNOW:
   case BATTLE_TERRAIN_ROUGH:
     tempspeed = speed_new_decrease(tempspeed, MP1);
@@ -85,9 +87,9 @@ float mech_terrain_speed(Mech *mech, float tempspeed, float maxspeed,
   case BATTLE_TERRAIN_WATER:
     if (mech_movement_type(mech) == MOVE_BIPED ||
         mech_movement_type(mech) == MOVE_QUAD) {
-      if (elev <= -2)
+      if (request->elevation <= -2)
         tempspeed = speed_new_decrease(tempspeed, MP3);
-      else if (elev == -1)
+      else if (request->elevation == -1)
         tempspeed = speed_new_decrease(tempspeed, MP1);
     }
     break;
@@ -143,9 +145,13 @@ void mech_speed_update(Mech *mech) {
   }
   if (mech_class(mech) != CLASS_MW && mech_movement_type(mech) != MOVE_VTOL &&
       (mech_movement_type(mech) != MOVE_FLY || mech_is_landed(mech)))
-    tempspeed = mech_terrain_speed(mech, tempspeed, maxspeed,
-                                   mech_real_terrain_get(mech),
-                                   mech_position_elevation(mech));
+    tempspeed = mech_terrain_speed(&(MechTerrainSpeedRequest){
+        .mech = mech,
+        .current_speed = tempspeed,
+        .maximum_speed = maxspeed,
+        .terrain = mech_real_terrain_get(mech),
+        .elevation = mech_position_elevation(mech),
+    });
   if (mech_heading_changed(mech)) {
     if (btech_context_movement_slowdown_mode(context) == 2) {
       int dif = mech_heading_degrees(mech) - mech_desired_heading_degrees(mech);

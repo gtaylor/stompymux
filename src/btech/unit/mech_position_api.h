@@ -1,5 +1,6 @@
 #pragma once
 
+#include "map_coordinates.h"
 #include "mech_api_types.h"
 
 typedef struct MechJumpLaunch {
@@ -52,7 +53,7 @@ int mech_unusable_weapon_arcs(const Mech *mech);
 float mech_desired_speed(const Mech *mech);
 char mech_position_terrain(const Mech *mech);
 void mech_position_xy_set(Mech *mech, int x, int y);
-void mech_position_real_xy_set(Mech *mech, float x, float y);
+void mech_position_real_xy_set(Mech *mech, MapRealPosition position);
 void mech_position_real_xy_translate(Mech *mech, float delta_x, float delta_y);
 void mech_position_real_z_set(Mech *mech, float z);
 void mech_position_real_z_translate(Mech *mech, float delta_z);
@@ -71,16 +72,20 @@ int mech_turret_heading_absolute(const Mech *mech);
 void mech_desired_angle_set(Mech *mech, int angle);
 void mech_vertical_speed_set(Mech *mech, float speed);
 void mech_motion_vector_reset(Mech *mech);
-void mech_motion_vector_xy_set(Mech *mech, float x, float y);
-void mech_motion_vector_set(Mech *mech, float x, float y, float z);
+void mech_motion_vector_xy_set(Mech *mech, MapRealPosition vector);
+void mech_motion_vector_set(Mech *mech, MapSpatialPosition vector);
 void mech_jump_destination_y_set(Mech *mech, int destination_y);
 void mech_fall_heading_apply(Mech *mech, int offset);
 void mech_jump_apex_elevation_set(Mech *mech, int elevation);
 void mech_position_mirror(Mech *target, const Mech *source, int height_offset);
 void mech_position_land_if_flying(Mech *mech);
-void mech_position_rollback(Mech *mech, float delta_x, float delta_y,
-                            int previous_z, int previous_terrain,
-                            int previous_elevation);
+typedef struct MechPositionRollback {
+  Mech *mech;
+  MapRealPosition delta;
+  int previous_z;
+} MechPositionRollback;
+
+void mech_position_rollback(const MechPositionRollback *rollback);
 void mech_jump_launch(Mech *mech, const MechJumpLaunch *launch);
 bool mech_jump_destination_was_overshot(const Mech *mech);
 void mech_jump_overshoot_restore(Mech *mech, float delta_x, float delta_y);

@@ -3,6 +3,7 @@
 ## General hygeine
 
 * Eliminate conditional compilation
+* .clang-format: Langauge=C instead of Cpp
 * Doxygen comment all public functions in headers with @param[in] and @param[out]
 * Doxygen comment all static and private functions?
 * Look into clang-tidy/clangd readability-identifier-naming and VariableCase + FunctionCase
@@ -40,3 +41,7 @@
 * Add `-fhardened` to CMake for mux and btech. May require disabling debug builds.
 * remove MechRuntimeState.unused
 * Replace CVS headers
+* Unused terrain types?
+* Autopilot bug fixing and testing
+* Complete Autopilot placeholders
+* LOS bug fixing and testing

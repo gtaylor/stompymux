@@ -16,7 +16,12 @@ typedef enum LuaCommandAccess {
 
 bool lua_command_access_read(lua_State *state, int entry,
                              LuaCommandAccess *access);
-bool lua_command_access_allows(GameDatabase *database, DbRef player,
-                               LuaCommandAccess access);
+typedef struct LuaCommandAccessRequest {
+  GameDatabase *database;
+  DbRef player;
+  LuaCommandAccess access;
+} LuaCommandAccessRequest;
+
+bool lua_command_access_allows(const LuaCommandAccessRequest *request);
 bool lua_command_entry_read(lua_State *state, int entry, GameDatabase *database,
                             DbRef player, const char **pattern);

@@ -13,16 +13,19 @@ bool is_good_obj(GameDatabase *database, DbRef object) {
 int main(void) {
   GameObject objects[3] = {0};
   GameDatabase database = {.object_storage = objects, .top = 2, .size = 2};
-  EconomyPartEntryView entry;
 
   game_object_set_type(&database, 0, OBJECT_TYPE_THING);
   game_object_set_type(&database, 1, OBJECT_TYPE_THING);
   if (!economy_parts_set_quantity(&database, 0, 10, 2, 3) ||
-      !economy_parts_set_quantity(&database, 0, 4, 1, 7) ||
-      economy_parts_quantity(&database, 0, 10, 2) != 3 ||
-      economy_parts_entry_count(&database, 0) != 2 ||
-      !economy_parts_entry(&database, 0, 1, &entry) || entry.part_id != 4 ||
-      entry.brand_id != 1 || entry.quantity != 7 ||
+      !economy_parts_set_quantity(&database, 0, 4, 1, 7))
+    return 1;
+  EconomyPartsEntryResult entry_result =
+      economy_parts_entry(&(EconomyPartsEntryRequest){
+          .database = &database, .object = 0, .index = 1});
+  EconomyPartEntryView entry = entry_result.entry;
+  if (economy_parts_quantity(&database, 0, 10, 2) != 3 ||
+      economy_parts_entry_count(&database, 0) != 2 || !entry_result.found ||
+      entry.part_id != 4 || entry.brand_id != 1 || entry.quantity != 7 ||
       !economy_parts_set_quantity(&database, 0, 10, 2, 0) ||
       economy_parts_quantity(&database, 0, 10, 2) != 0 ||
       economy_parts_entry_count(&database, 0) != 1)

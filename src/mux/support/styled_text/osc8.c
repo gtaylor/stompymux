@@ -137,7 +137,9 @@ bool styled_command_uri_encode(StyledLinkKind kind, const char *command,
   const char *scheme = kind == STYLED_LINK_SEND ? "send:" : "prompt:";
   size_t used = strlen(scheme);
 
-  memcpy(uri, scheme, used);
+  if (used + 1 > uri_size)
+    goto too_long;
+  memcpy(uri, scheme, used + 1);
   const size_t command_length = strlen(command);
   for (size_t index = 0; index < command_length; index++) {
     const unsigned char byte = osc8_byte(command, command_length, index);
@@ -372,10 +374,10 @@ static bool append_json_style(char *json, size_t json_size, size_t *used,
         return false;
       char name[48];
       const char *compact_name = *(const char *const *)checked_storage_at_const(
-          compact_states, STYLED_LINK_STATE_COUNT, sizeof(*compact_states),
-          index);
+          (const void *)compact_states, STYLED_LINK_STATE_COUNT,
+          sizeof(*compact_states), index);
       const char *state_name = *(const char *const *)checked_storage_at_const(
-          styled_link_state_names, STYLED_LINK_STATE_COUNT,
+          (const void *)styled_link_state_names, STYLED_LINK_STATE_COUNT,
           sizeof(*styled_link_state_names), index);
       int length = snprintf(name, sizeof(name),
                             "\"%s\":", compact ? compact_name : state_name);

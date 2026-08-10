@@ -13,6 +13,33 @@ typedef struct CharacterValue {
   int xpthreshold;
 } CharacterValue;
 
+typedef struct BtechContext BtechContext;
+
+typedef struct CharacterValueRequest {
+  BtechContext *context;
+  DbRef player;
+  int code;
+} CharacterValueRequest;
+
+typedef struct CharacterValueChange {
+  CharacterValueRequest target;
+  int value;
+} CharacterValueChange;
+
+typedef struct CharacterExperienceChange {
+  CharacterValueRequest target;
+  int amount;
+  bool override_interval;
+} CharacterExperienceChange;
+
+typedef struct CharacterSkillCheck {
+  BtechContext *context;
+  DbRef player;
+  const char *name;
+  int modifier;
+  bool loud;
+} CharacterSkillCheck;
+
 enum { NUM_CHARVALUES = 119 };
 
 constexpr int NUM_CHARLEVELS = 5;

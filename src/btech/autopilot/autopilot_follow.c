@@ -9,6 +9,7 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_events.h"
@@ -75,10 +76,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* Get the Map */
-  if (!(map = btech_context_get_map(
-            autopilot->xcode.context,
-            autopilot
-                ->mapindex))) { // NOLINT(clang-analyzer-deadcode.DeadStores)
+  map = btech_context_get_map(autopilot->xcode.context, autopilot->mapindex);
+  if (!map) {
 
     /* Bad Map */
     (void)snprintf(error_buf, MBUF_SIZE,
@@ -124,7 +123,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   /*! \todo {Add in stuff for other units if need be} */
 
   /* Get the only argument - dbref of target */
-  if (!(argument = auto_get_command_arg(autopilot, 1, 1))) {
+  argument = auto_get_command_arg(autopilot, 1, 1);
+  if (!argument) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */
@@ -157,8 +157,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   free(argument);
 
   /* Get the target */
-  if (!(target =
-            btech_context_get_mech(autopilot->xcode.context, target_dbref))) {
+  target = btech_context_get_mech(autopilot->xcode.context, target_dbref);
+  if (!target) {
 
     /* Bad Target */
     (void)snprintf(error_buf, MBUF_SIZE,
@@ -191,9 +191,13 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* Generate the target hex - since this can be altered by position command */
-  FindXY(mech_position_real_x(target), mech_position_real_y(target),
-         mech_heading_degrees(target) + autopilot->ofsx, (float)autopilot->ofsy,
-         &fx, &fy);
+  MapRealPosition projected = map_project_position(&(MapProjection){
+      .origin = {.x = mech_position_real_x(target),
+                 .y = mech_position_real_y(target)},
+      .bearing = mech_heading_degrees(target) + autopilot->ofsx,
+      .range = (float)autopilot->ofsy});
+  fx = projected.x;
+  fy = projected.y;
 
   RealCoordToMapCoord(&generated_x, &generated_y, fx, fy);
   x = generated_x;
@@ -395,8 +399,13 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
 
   /* Move towards our next hex */
   figure_out_range_and_bearing(mech, x, y, &range, &bearing);
-  speed_up_if_neccessary(autopilot, mech, x, y, bearing);
-  slow_down_if_neccessary(autopilot, mech, range, bearing, x, y);
+  AutopilotApproachRequest approach = {.autopilot = autopilot,
+                                       .mech = mech,
+                                       .target = {.x = x, .y = y},
+                                       .bearing = bearing,
+                                       .range = range};
+  autopilot_speed_up_for_target(&approach);
+  (void)autopilot_slow_down_for_target(&approach);
   update_wanted_heading(autopilot, mech, bearing);
 
   /* Increase Tick */
@@ -490,7 +499,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   /*! \todo {Add in stuff for other units if need be} */
 
   /* Get the target */
-  if (!(argument = auto_get_command_arg(autopilot, 1, 1))) {
+  argument = auto_get_command_arg(autopilot, 1, 1);
+  if (!argument) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */
@@ -526,8 +536,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   free(argument);
 
   /* Make sure its a valid target */
-  if (!(leader = btech_context_get_mech(autopilot->xcode.context, target)) ||
-      mech_is_destroyed(leader)) {
+  leader = btech_context_get_mech(autopilot->xcode.context, target);
+  if (!leader || mech_is_destroyed(leader)) {
 
     /* For some reason, leader is missing(?) */
     (void)snprintf(
@@ -579,10 +589,19 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   }
 
   figure_out_range_and_bearing(mech, tx, ty, &range, &bearing);
-  speed_up_if_neccessary(autopilot, mech, tx, ty, -1);
+  autopilot_speed_up_for_target(
+      &(AutopilotApproachRequest){.autopilot = autopilot,
+                                  .mech = mech,
+                                  .target = {.x = tx, .y = ty},
+                                  .bearing = -1});
 
   if (mech_current_speed(leader) < MP1)
-    slow_down_if_neccessary(autopilot, mech, range + 1, bearing, tx, ty);
+    (void)autopilot_slow_down_for_target(
+        &(AutopilotApproachRequest){.autopilot = autopilot,
+                                    .mech = mech,
+                                    .target = {.x = tx, .y = ty},
+                                    .bearing = bearing,
+                                    .range = range + 1});
 
   update_wanted_heading(autopilot, mech, bearing);
 

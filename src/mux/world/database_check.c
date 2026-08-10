@@ -73,8 +73,14 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
 
       targ = game_object_location(evaluation->world->database, i);
       if (!is_good_obj(evaluation->world->database, targ)) {
-        object_log_pointer_error(evaluation, NOTHING, i, NOTHING, targ,
-                                 "Location", "is invalid.  Moved to home.");
+        object_log_pointer_error(
+            &(ObjectPointerError){.evaluation = evaluation,
+                                  .prior = NOTHING,
+                                  .object = i,
+                                  .location = NOTHING,
+                                  .reference = targ,
+                                  .reference_type = "Location",
+                                  .error_type = "is invalid.  Moved to home."});
         ZAP_LOC(evaluation->world->database, i);
         move_object(evaluation, i, HOME);
       }
@@ -206,7 +212,8 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
 
       object_log_simple_error(evaluation, i, NOTHING,
                               "Funny object type.  Destroyed.");
-      destroy_obj(evaluation, NOTHING, i);
+      destroy_obj(&(ObjectDestructionRequest){
+          .evaluation = evaluation, .player = NOTHING, .object = i});
     }
 
     if (full_check) {
@@ -284,8 +291,14 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
        * A bad pointer - terminate chain
        */
 
-      object_log_pointer_error(evaluation, back, loc, NOTHING, exit,
-                               "Exit list", "is invalid.  List nulled.");
+      object_log_pointer_error(
+          &(ObjectPointerError){.evaluation = evaluation,
+                                .prior = back,
+                                .object = loc,
+                                .location = NOTHING,
+                                .reference = exit,
+                                .reference_type = "Exit list",
+                                .error_type = "is invalid.  List nulled."});
       if (back != NOTHING) {
         game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
@@ -298,9 +311,14 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
        * Not an exit - terminate chain
        */
 
-      object_log_pointer_error(evaluation, back, loc, NOTHING, exit,
-                               "Exitlist member",
-                               "is not an exit.  List terminated.");
+      object_log_pointer_error(&(ObjectPointerError){
+          .evaluation = evaluation,
+          .prior = back,
+          .object = loc,
+          .location = NOTHING,
+          .reference = exit,
+          .reference_type = "Exitlist member",
+          .error_type = "is not an exit.  List terminated."});
       if (back != NOTHING) {
         game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
@@ -319,7 +337,8 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
       } else {
         game_object_set_exits(evaluation->world->database, loc, temp);
       }
-      destroy_obj(evaluation, NOTHING, exit);
+      destroy_obj(&(ObjectDestructionRequest){
+          .evaluation = evaluation, .player = NOTHING, .object = exit});
       exit = temp;
       continue;
     } else if (is_marked(evaluation->world->database, exit)) {
@@ -328,9 +347,14 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
        * Already in another list - terminate chain
        */
 
-      object_log_pointer_error(evaluation, back, loc, NOTHING, exit,
-                               "Exitlist member",
-                               "is in another exitlist.  Cleared.");
+      object_log_pointer_error(&(ObjectPointerError){
+          .evaluation = evaluation,
+          .prior = back,
+          .object = loc,
+          .location = NOTHING,
+          .reference = exit,
+          .reference_type = "Exitlist member",
+          .error_type = "is in another exitlist.  Cleared."});
       if (back != NOTHING) {
         game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
@@ -344,8 +368,14 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
        * Destination is not in the db.  Null it.
        */
 
-      object_log_pointer_error(evaluation, back, loc, NOTHING, exit,
-                               "Destination", "is invalid.  Cleared.");
+      object_log_pointer_error(
+          &(ObjectPointerError){.evaluation = evaluation,
+                                .prior = back,
+                                .object = loc,
+                                .location = NOTHING,
+                                .reference = exit,
+                                .reference_type = "Destination",
+                                .error_type = "is invalid.  Cleared."});
       game_object_set_location(evaluation->world->database, exit, NOTHING);
 
     } else if (exitloc != loc) {
@@ -365,8 +395,14 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
          * It's in the other list, give it up
          */
 
-        object_log_pointer_error(evaluation, back, loc, NOTHING, exit, "",
-                                 "is in another exitlist.  List terminated.");
+        object_log_pointer_error(&(ObjectPointerError){
+            .evaluation = evaluation,
+            .prior = back,
+            .object = loc,
+            .location = NOTHING,
+            .reference = exit,
+            .reference_type = "",
+            .error_type = "is in another exitlist.  List terminated."});
         if (back != NOTHING) {
           game_object_set_next(evaluation->world->database, back, NOTHING);
         } else {
@@ -409,7 +445,8 @@ static void check_exit_chains(EvaluationContext *evaluation, bool full_check) {
         !is_marked(evaluation->world->database, i)) {
       object_log_simple_error(evaluation, i, NOTHING,
                               "Disconnected exit.  Destroyed.");
-      destroy_obj(evaluation, NOTHING, i);
+      destroy_obj(&(ObjectDestructionRequest){
+          .evaluation = evaluation, .player = NOTHING, .object = i});
     }
   }
 }
@@ -456,8 +493,14 @@ static void check_misplaced_obj(EvaluationContext *evaluation, DbRef *obj,
      * It's in the other list, give it up
      */
 
-    object_log_pointer_error(evaluation, back, loc, NOTHING, *obj, "",
-                             "is in another contents list.  Cleared.");
+    object_log_pointer_error(&(ObjectPointerError){
+        .evaluation = evaluation,
+        .prior = back,
+        .object = loc,
+        .location = NOTHING,
+        .reference = *obj,
+        .reference_type = "",
+        .error_type = "is in another contents list.  Cleared."});
     if (back != NOTHING) {
       game_object_set_next(evaluation->world->database, back, NOTHING);
     } else {
@@ -506,8 +549,14 @@ static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
        * A bad pointer - terminate chain
        */
 
-      object_log_pointer_error(evaluation, back, loc, NOTHING, obj,
-                               "Contents list", "is invalid.  Cleared.");
+      object_log_pointer_error(
+          &(ObjectPointerError){.evaluation = evaluation,
+                                .prior = back,
+                                .object = loc,
+                                .location = NOTHING,
+                                .reference = obj,
+                                .reference_type = "Contents list",
+                                .error_type = "is invalid.  Cleared."});
       if (back != NOTHING) {
         game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
@@ -520,8 +569,14 @@ static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
        * Not a player or thing - terminate chain
        */
 
-      object_log_pointer_error(evaluation, back, loc, NOTHING, obj, "",
-                               "is not a player or thing.  Cleared.");
+      object_log_pointer_error(&(ObjectPointerError){
+          .evaluation = evaluation,
+          .prior = back,
+          .object = loc,
+          .location = NOTHING,
+          .reference = obj,
+          .reference_type = "",
+          .error_type = "is not a player or thing.  Cleared."});
       if (back != NOTHING) {
         game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
@@ -542,7 +597,8 @@ static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
       } else {
         game_object_set_contents(evaluation->world->database, loc, temp);
       }
-      destroy_obj(evaluation, NOTHING, obj);
+      destroy_obj(&(ObjectDestructionRequest){
+          .evaluation = evaluation, .player = NOTHING, .object = obj});
       obj = temp;
       continue;
     } else if (is_marked(evaluation->world->database, obj)) {
@@ -614,7 +670,10 @@ static void check_contents_chains(EvaluationContext *evaluation,
         evaluation, i, game_object_location(evaluation->world->database, i),
         "Orphaned object, moved home.");
     ZAP_LOC(evaluation->world->database, i);
-    move_via_generic(evaluation, i, HOME, NOTHING, 0);
+    move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                              .object = i,
+                                              .destination = HOME,
+                                              .cause = NOTHING});
   }
 }
 
@@ -673,8 +732,10 @@ static void check_floating(EvaluationContext *evaluation) {
 /**
  * Perform a database consistency check and clean up damage.
  */
-void database_check(EvaluationContext *evaluation, DbRef player, int key) {
-  const bool full_check = (key & DBCK_FULL) != 0;
+void database_check(const DatabaseCheckRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->player;
+  const bool full_check = (request->options & DBCK_FULL) != 0;
 
   object_make_freelist(evaluation->world->database);
   check_dead_refs(evaluation, full_check);
@@ -689,6 +750,8 @@ void database_check(EvaluationContext *evaluation, DbRef player, int key) {
 }
 
 void do_dbck(CommandInvocation *invocation) {
-  database_check(&invocation->context->evaluation, invocation->player,
-                 invocation->key);
+  database_check(
+      &(DatabaseCheckRequest){.evaluation = &invocation->context->evaluation,
+                              .player = invocation->player,
+                              .options = invocation->key});
 }

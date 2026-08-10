@@ -11,8 +11,8 @@
 #include "tomlc17.h"
 
 static char **help_string_slot(HelpStringList *list, size_t index) {
-  return checked_storage_at(list->items, list->count, sizeof(*list->items),
-                            index);
+  return (char **)checked_storage_at((void *)list->items, list->count,
+                                     sizeof(*list->items), index);
 }
 
 static char *help_frontmatter_dup(const char *s) {
@@ -32,7 +32,7 @@ static bool help_frontmatter_copy_string_list(toml_datum_t array,
   if (array.type != TOML_ARRAY || array.u.arr.size <= 0)
     return false;
   out->count = (size_t)array.u.arr.size;
-  out->items = malloc(out->count * sizeof(char *));
+  out->items = (char **)malloc(out->count * sizeof(char *));
   for (i = 0; i < out->count; i++) {
     toml_datum_t element = *(const toml_datum_t *)checked_storage_at_const(
         array.u.arr.elem, out->count, sizeof(*array.u.arr.elem), i);
@@ -137,12 +137,12 @@ void help_frontmatter_free(HelpArticle *article) {
   free(article->description);
   for (i = 0; i < article->keywords.count; i++)
     free(*help_string_slot(&article->keywords, i));
-  free(article->keywords.items);
+  free((void *)article->keywords.items);
   for (i = 0; i < article->article_tags.count; i++)
     free(*help_string_slot(&article->article_tags, i));
-  free(article->article_tags.items);
+  free((void *)article->article_tags.items);
   for (i = 0; i < article->show_index_for_article_tags.count; i++)
     free(*help_string_slot(&article->show_index_for_article_tags, i));
-  free(article->show_index_for_article_tags.items);
+  free((void *)article->show_index_for_article_tags.items);
   free(article->relative_path);
 }

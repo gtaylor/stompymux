@@ -4,6 +4,12 @@
 
 #include "mux/server/platform.h"
 
+typedef struct RepairCriticalSelection {
+  Mech *mech;
+  int location;
+  int position;
+} RepairCriticalSelection;
+
 /* mech.tech.commands.c */
 int SomeoneRepairing_s(Mech *mech, int loc, int part, int t);
 int SomeoneRepairing(Mech *mech, int loc, int part);
@@ -17,7 +23,7 @@ int SomeoneScrappingLoc(Mech *mech, int loc);
 int SomeoneScrappingPart(Mech *mech, int loc, int part);
 int CanScrapLoc(Mech *mech, int loc);
 int CanScrapPart(Mech *mech, int loc, int part);
-int ValidGunPos(Mech *mech, int loc, int pos);
+bool ValidGunPos(const RepairCriticalSelection *selection);
 void tech_checkstatus(DbRef player, void *data, char *buffer);
 void tech_removegun(DbRef player, void *data, char *buffer);
 void tech_removepart(DbRef player, void *data, char *buffer);

@@ -12,16 +12,22 @@
   abort();
 }
 
-static rbtree_node *red_black_tree_allocate(rbtree_node *parent, void *key,
-                                            void *data) {
+typedef struct RedBlackTreeNodeAllocation {
+  rbtree_node *parent;
+  void *key;
+  void *data;
+} RedBlackTreeNodeAllocation;
+
+static rbtree_node *
+red_black_tree_allocate(const RedBlackTreeNodeAllocation *allocation) {
   rbtree_node *temp;
   temp = malloc(sizeof(struct RedBlackTreeNode));
   if (temp == nullptr)
     red_black_tree_fail("unable to allocate a node");
   memset(temp, 0, sizeof(struct RedBlackTreeNode));
-  temp->parent = parent;
-  temp->key = key;
-  temp->data = data;
+  temp->parent = allocation->parent;
+  temp->key = allocation->key;
+  temp->data = allocation->data;
   temp->count = 1;
   return temp;
 }
@@ -92,7 +98,8 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
   int compare_result;
 
   if (!bt->head) {
-    bt->head = red_black_tree_allocate(nullptr, key, data);
+    bt->head = red_black_tree_allocate(
+        &(RedBlackTreeNodeAllocation){.key = key, .data = data});
     bt->size++;
     bt->head->color = RED_BLACK_TREE_BLACK;
     return;
@@ -100,7 +107,11 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
 
   node = bt->head;
   while (node != nullptr) {
-    compare_result = (*bt->compare_function)(key, node->key, bt->token);
+    compare_result = bt->compare(&(RedBlackTreeCompareCall){
+        .lhs = key,
+        .rhs = node->key,
+        .context = bt->context,
+    });
     if (compare_result == 0) {
       // Key already exists, replace data.
       node->key = key;
@@ -111,7 +122,8 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
       if (node->left != nullptr) {
         node = node->left;
       } else {
-        node->left = red_black_tree_allocate(node, key, data);
+        node->left = red_black_tree_allocate(&(RedBlackTreeNodeAllocation){
+            .parent = node, .key = key, .data = data});
         bt->size++;
         node = node->left;
         break;
@@ -120,7 +132,8 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
       if (node->right != nullptr) {
         node = node->right;
       } else {
-        node->right = red_black_tree_allocate(node, key, data);
+        node->right = red_black_tree_allocate(&(RedBlackTreeNodeAllocation){
+            .parent = node, .key = key, .data = data});
         bt->size++;
         node = node->right;
         break;
@@ -417,7 +430,11 @@ void *red_black_tree_delete(RedBlackTree bt, void *key) {
 
   node = bt->head;
   while (node != nullptr) {
-    compare_result = (*bt->compare_function)(key, node->key, bt->token);
+    compare_result = bt->compare(&(RedBlackTreeCompareCall){
+        .lhs = key,
+        .rhs = node->key,
+        .context = bt->context,
+    });
     if (compare_result == 0) {
       break;
     } else if (compare_result < 0) {

@@ -40,10 +40,26 @@ typedef struct PartBrand {
   int modifier;
 } PartBrand;
 
+typedef struct PartFailureCall {
+  Mech *mech;
+  int weapon_number;
+  int weapon_type;
+  int section;
+  int critical;
+  int roll;
+} PartFailureCall;
+
+typedef struct PartFailureResult {
+  int type;
+  int modifier;
+} PartFailureResult;
+
+typedef PartFailureResult (*PartFailureHandler)(const PartFailureCall *call);
+
 typedef struct PartFailure {
   const char *message;
   int data; /* things like percent to alter */
-  void (*func)(Mech *, int, int, int, int, int, int *, int *);
+  PartFailureHandler handler;
   int type;
   int flag;
 } PartFailure;

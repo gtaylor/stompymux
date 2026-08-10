@@ -34,16 +34,33 @@ extern void init_powertab(WorldIndexes *indexes);
 extern void display_powertab(EvaluationContext *, DbRef);
 extern void power_set(EvaluationContext *, WorldIndexes *, DbRef, DbRef, char *,
                       int);
-extern char *power_description(GameDatabase *, DbRef, DbRef);
+typedef struct PowerDescriptionRequest {
+  GameDatabase *database;
+  DbRef viewer;
+  DbRef target;
+} PowerDescriptionRequest;
+
+extern char *power_description(const PowerDescriptionRequest *request);
 extern POWERENT *find_power(WorldIndexes *, DbRef, char *);
-extern bool has_power(WorldContext *, DbRef, DbRef, char *);
 extern bool decode_power(EvaluationContext *, WorldIndexes *, DbRef, char *,
                          PowerId *);
-extern bool game_object_has_power(GameDatabase *, DbRef, PowerId);
-extern void game_object_set_power(GameDatabase *, DbRef, PowerId, bool);
+typedef struct ObjectPowerRequest {
+  GameDatabase *database;
+  DbRef object;
+  PowerId power;
+} ObjectPowerRequest;
+
+typedef struct ObjectPowerChange {
+  ObjectPowerRequest target;
+  bool value;
+} ObjectPowerChange;
+
+extern bool game_object_has_power(const ObjectPowerRequest *request);
+extern void game_object_set_power(const ObjectPowerChange *change);
 extern void game_object_clear_powers(GameDatabase *, DbRef);
 
 static inline bool can_idle(GameDatabase *database, DbRef c) {
-  return game_object_has_power(database, c, POWER_IDLE) ||
+  return game_object_has_power(&(ObjectPowerRequest){
+             .database = database, .object = c, .power = POWER_IDLE}) ||
          is_wizard(database, c);
 }

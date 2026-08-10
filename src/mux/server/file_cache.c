@@ -102,13 +102,17 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
    * Read the text file into a new chain
    */
 
-  if ((fd = open(filename, O_RDONLY)) == -1) {
+  fd = open(filename, O_RDONLY);
+  if (fd == -1) {
 
     /*
      * Failure: log the event
      */
 
-    log_error(evaluation->log, LOG_PROBLEMS, "FIL", "OPEN",
+    log_error((LogEntry){.log = evaluation->log,
+                         .key = LOG_PROBLEMS,
+                         .primary = "FIL",
+                         .secondary = "OPEN"},
               "Couldn't open file '%s'.", filename);
 
     return -1;
@@ -166,7 +170,10 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
       fp = tfp;
     }
     *cp = nullptr;
-    log_error(evaluation->log, LOG_PROBLEMS, "FIL", "UTF8",
+    log_error((LogEntry){.log = evaluation->log,
+                         .key = LOG_PROBLEMS,
+                         .primary = "FIL",
+                         .secondary = "UTF8"},
               "File '%s' is not valid UTF-8.", filename);
     return -1;
   }
@@ -203,10 +210,12 @@ static void fcache_read_dir(EvaluationContext *evaluation, const char *dir,
   for (int index = 0; index < *cnt; index++)
     fcache_clear_entry(fcache_entry_at(foo, (size_t)max, (size_t)index));
   memset(foo, 0, sizeof(FCACHE) * (size_t)max);
-  if (!(d = opendir(dir)))
+  d = opendir(dir);
+  if (!d)
     return;
   for (*cnt = 0; *cnt < max;) {
-    if (!(de = readdir(d)))
+    de = readdir(d);
+    if (!de)
       break;
     if (de->d_name[0] == '.')
       continue;
@@ -221,7 +230,10 @@ static void fcache_read_dir(EvaluationContext *evaluation, const char *dir,
   closedir(d);
 }
 
-void fcache_rawdump(const FileCache *cache, int fd, int num) {
+void fcache_rawdump(const FileCacheRawDumpRequest *request) {
+  const FileCache *cache = request->cache;
+  int fd = request->descriptor;
+  int num = request->entry;
   int cnt, remaining;
   FBLOCK *fp;
 
@@ -270,15 +282,6 @@ void fcache_dump_conn(const FileCache *cache, Descriptor *d, int num) {
   if (num < 0 || num >= cache->connection_count)
     return;
   fcache_dumpbase(d, cache->connection_entries, MAX_CONN, num);
-}
-
-void fcache_send(FileCache *cache, DbRef player, int num) {
-  Descriptor *d;
-  DescriptorIterator iterator =
-      descriptor_iterator_player(cache->descriptors, player);
-
-  while ((d = descriptor_iterator_next(&iterator)) != nullptr)
-    fcache_dump(cache, d, num);
 }
 
 void fcache_load(EvaluationContext *evaluation, FileCache *cache,

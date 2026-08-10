@@ -37,7 +37,8 @@ void do_chzone(CommandInvocation *invocation) {
 
   init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
   match_everything(&invocation->context->match, 0);
-  if ((thing = noisy_match_result(&invocation->context->match)) == NOTHING)
+  thing = noisy_match_result(&invocation->context->match);
+  if (thing == NOTHING)
     return;
 
   if (!strcasecmp(newobj, "none"))
@@ -45,7 +46,8 @@ void do_chzone(CommandInvocation *invocation) {
   else {
     init_match(&invocation->context->match, player, newobj, OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, 0);
-    if ((zone = noisy_match_result(&invocation->context->match)) == NOTHING)
+    zone = noisy_match_result(&invocation->context->match);
+    if (zone == NOTHING)
       return;
 
     if ((typeof_obj(evaluation->world->database, zone) != OBJECT_TYPE_THING) &&
@@ -91,8 +93,10 @@ void do_chzone(CommandInvocation *invocation) {
      * * * * * inconvenient -- although this may pose a bit of a *
      * *  * security * risk. Be careful when @chzone'ing wizard players.
      */
-    game_object_set_flag(evaluation->world->database, thing, OBJECT_FLAG_WIZARD,
-                         false);
+    game_object_set_flag(
+        &(ObjectFlagChangeRequest){.database = evaluation->world->database,
+                                   .object = thing,
+                                   .flag = OBJECT_FLAG_WIZARD});
     game_object_clear_powers(evaluation->world->database, thing);
   }
   notify_checked(evaluation, player, player, "Zone changed.",
@@ -108,8 +112,8 @@ void do_name(CommandInvocation *invocation) {
   char new[LBUF_SIZE];
   char *compiled_name;
 
-  if ((thing = match_controlled(&invocation->context->match, player, name)) ==
-      NOTHING)
+  thing = match_controlled(&invocation->context->match, player, name);
+  if (thing == NOTHING)
     return;
   compiled_name = builder_compile_object_name(evaluation, player, newname);
   if (!compiled_name)

@@ -65,11 +65,13 @@ void alter_conditions(BattleMap *map) {
   int i;
   Mech *mech;
 
-  for (i = 0; i < battle_map_unit_count(map); i++)
-    if ((mech = btech_context_get_mech(map->xcode.context,
-                                       battle_map_unit_dbref(map, i)))) {
+  for (i = 0; i < battle_map_unit_count(map); i++) {
+    mech = btech_context_get_mech(map->xcode.context,
+                                  battle_map_unit_dbref(map, i));
+    if (mech) {
       map_conditions_apply(mech, map);
     }
+  }
 }
 
 int battle_map_gravity(const BattleMap *map) { return map->grav; }
@@ -149,7 +151,8 @@ void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
   int vacuum = -1, underground = -1, grav, temp, argc;
   int fl;
 
-  if ((argc = mech_parseattributes(buffer, args, 4)) < 2) {
+  argc = mech_parseattributes(buffer, args, 4);
+  if (argc < 2) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
                  "(At least) 2 options required (gravity + temperature)");
     return;

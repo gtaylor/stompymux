@@ -4,6 +4,7 @@
 #include "btech_event.h"
 #include "econ_api.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "map_obj_api.h"
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
@@ -20,6 +21,7 @@
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
+#include "script_functions_api.h"
 #include "values_internal.h"
 #include "weapon_catalogue_api.h"
 
@@ -28,9 +30,15 @@
 #include "mech_tic_api.h"
 #include <string.h>
 
-void fun_btupdatelinks(char *buff, char **bufc, DbRef player, DbRef cause,
-                       char *fargs[], int nfargs, char *cargs[], int ncargs,
-                       EvaluationContext *context) {
+BtechScriptResult fun_btupdatelinks(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /*
    * script_function_argument(fargs, nfargs, 0) = dbref of MAP object
    */
@@ -39,28 +47,36 @@ void fun_btupdatelinks(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   it = match_thing(&context->command->match, player,
                    script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 CANT FIND");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   if (!btech_context_is_map(context->btech, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MAP");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   if (!btech_context_find_object(context->btech, it)) {
     safe_tprintf_str(buff, bufc, "#-1 UNABLE TO GET MAPDATA");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   recursively_updatelinks(context->btech, NOTHING, it);
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 
-void fun_bthexemit(char *buff, char **bufc, DbRef player, DbRef cause,
-                   char *fargs[], int nfargs, char *cargs[], int ncargs,
-                   EvaluationContext *context) {
+BtechScriptResult fun_bthexemit(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /* script_function_argument(fargs, nfargs, 0) = mapref
      script_function_argument(fargs, nfargs, 1) = x coordinate
      script_function_argument(fargs, nfargs, 2) = y coordinate
@@ -73,44 +89,52 @@ void fun_bthexemit(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
 
   if (msg != nullptr)
     msg = checked_string_suffix(msg, strspn(msg, " \t\r\n\f\v"));
   if (msg == nullptr || *msg == '\0') {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MESSAGE");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
 
   mapnum = match_thing(&context->command->match, player,
                        script_function_argument(fargs, nfargs, 0));
   if (mapnum < 0) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   map = btech_context_get_map(context->btech, mapnum);
   if (!map) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
 
   if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &x) ||
       !parse_int_checked(script_function_argument(fargs, nfargs, 2), &y)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   if (x < 0 || x > map->map_width || y < 0 || y > map->map_height) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   HexLOSBroadcast(map, x, y, msg);
   safe_tprintf_str(buff, bufc, "1");
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 
-void fun_btmakepilotroll(char *buff, char **bufc, DbRef player, DbRef cause,
-                         char *fargs[], int nfargs, char *cargs[], int ncargs,
-                         EvaluationContext *context) {
+BtechScriptResult fun_btmakepilotroll(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /* script_function_argument(fargs, nfargs, 0) = mechref
      script_function_argument(fargs, nfargs, 1) = roll modifier
      script_function_argument(fargs, nfargs, 2) = damage modifier
@@ -122,7 +146,7 @@ void fun_btmakepilotroll(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
 
   mechnum = match_thing(&context->command->match, player,
@@ -130,22 +154,23 @@ void fun_btmakepilotroll(char *buff, char **bufc, DbRef player, DbRef cause,
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, player, mechnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
   if (!btech_context_is_mech(context->btech, mechnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
-  if (!(mech = btech_context_find_object(context->btech, mechnum))) {
+  mech = btech_context_find_object(context->btech, mechnum);
+  if (!mech) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
 
   if (!parse_int_checked(script_function_argument(fargs, nfargs, 1),
                          &rollmod) ||
       !parse_int_checked(script_function_argument(fargs, nfargs, 2), &dammod)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MODIFIER");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
 
   if (MadePilotSkillRoll(mech, rollmod)) {
@@ -154,11 +179,19 @@ void fun_btmakepilotroll(char *buff, char **bufc, DbRef player, DbRef cause,
     mech_fall(mech, dammod, 1);
     safe_tprintf_str(buff, bufc, "0");
   }
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }
 
-void fun_btid2db(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs,
-                 EvaluationContext *context) {
+BtechScriptResult fun_btid2db(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /* script_function_argument(fargs, nfargs, 0) = mech
      script_function_argument(fargs, nfargs, 1) = target ID */
   Mech *target;
@@ -167,59 +200,70 @@ void fun_btid2db(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
   mechnum = match_thing(&context->command->match, player,
                         script_function_argument(fargs, nfargs, 0));
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, player, mechnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH/MAP");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
   if (strlen(script_function_argument(fargs, nfargs, 1)) != 2) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGETID");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
   if (btech_context_is_mech(context->btech, mechnum)) {
-    if (!(mech = btech_context_get_mech(context->btech, mechnum))) {
+    mech = btech_context_get_mech(context->btech, mechnum);
+    if (!mech) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-      return;
+      return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
     }
     mechnum = FindTargetDBREFFromMapNumber(
         mech, script_function_argument(fargs, nfargs, 1));
   } else if (btech_context_is_map(context->btech, mechnum)) {
     BattleMap *map;
-    if (!(map = btech_context_get_map(context->btech, mechnum))) {
+    map = btech_context_get_map(context->btech, mechnum);
+    if (!map) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
-      return;
+      return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
     }
     mechnum = FindMechOnMap(map, script_function_argument(fargs, nfargs, 1));
   } else {
     safe_str("#-1 INVALID MECH/MAP", buff, bufc);
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
   if (mechnum < 0) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGETID");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
   if (mech) {
-    if (!(target = btech_context_get_mech(context->btech, mechnum))) {
+    target = btech_context_get_mech(context->btech, mechnum);
+    if (!target) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID TARGETID");
-      return;
+      return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
     }
     if (!mech_los_check_unblocked(mech, target, mech_position_x(target),
                                   mech_position_y(target),
                                   mech_range_to(mech, target))) {
       safe_tprintf_str(buff, bufc, "#-1 INVALID TARGETID");
-      return;
+      return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
     }
   }
   safe_tprintf_str(buff, bufc, "#%ld", mechnum);
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
-void fun_bthexlos(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs,
-                  EvaluationContext *context) {
+BtechScriptResult fun_bthexlos(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /* script_function_argument(fargs, nfargs, 0) = mech
      script_function_argument(fargs, nfargs, 1) = x
      script_function_argument(fargs, nfargs, 2) = y
@@ -233,50 +277,62 @@ void fun_bthexlos(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
   mechnum = match_thing(&context->command->match, player,
                         script_function_argument(fargs, nfargs, 0));
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, player, mechnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
   if (!btech_context_is_mech(context->btech, mechnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
-  if (!(mech = btech_context_get_mech(context->btech, mechnum))) {
+  mech = btech_context_get_mech(context->btech, mechnum);
+  if (!mech) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
-  if (!(map = btech_context_get_map(context->btech, mech_map_dbref(mech)))) {
+  map = btech_context_get_map(context->btech, mech_map_dbref(mech));
+  if (!map) {
     safe_tprintf_str(buff, bufc, "#-1 INTERNAL ERROR");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
 
   if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &x) ||
       !parse_int_checked(script_function_argument(fargs, nfargs, 2), &y)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
   if (x < 0 || x > map->map_width || y < 0 || y > map->map_height) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
   MapCoordToRealCoord(x, y, &fx, &fy);
   if (mech_los_check_unblocked(mech, nullptr, x, y,
-                               FindHexRange(mech_position_real_x(mech),
-                                            mech_position_real_y(mech), fx,
-                                            fy)))
+                               map_real_range(&(MapRealSegment){
+                                   .start = {.x = mech_position_real_x(mech),
+                                             .y = mech_position_real_y(mech)},
+                                   .end = {.x = fx, .y = fy},
+                               })))
     safe_tprintf_str(buff, bufc, "1");
   else
     safe_tprintf_str(buff, bufc, "0");
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }
 
-void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs,
-                  EvaluationContext *context) {
+BtechScriptResult fun_btlosm2m(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /* script_function_argument(fargs, nfargs, 0) = mech
      script_function_argument(fargs, nfargs, 1) = target
    */
@@ -286,22 +342,23 @@ void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
   mechnum = match_thing(&context->command->match, player,
                         script_function_argument(fargs, nfargs, 0));
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, player, mechnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
   if (!btech_context_is_mech(context->btech, mechnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
-  if (!(mech = btech_context_get_mech(context->btech, mechnum))) {
+  mech = btech_context_get_mech(context->btech, mechnum);
+  if (!mech) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
 
   mechnum = match_thing(&context->command->match, player,
@@ -309,15 +366,16 @@ void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, player, mechnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
   if (!btech_context_is_mech(context->btech, mechnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
-  if (!(target = btech_context_get_mech(context->btech, mechnum))) {
+  target = btech_context_get_mech(context->btech, mechnum);
+  if (!target) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
 
   if (mech_los_check(mech, target, mech_position_x(mech), mech_position_y(mech),
@@ -330,6 +388,8 @@ void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
       safe_tprintf_str(buff, bufc, "2");
   else
     safe_tprintf_str(buff, bufc, "0");
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }
 
 /*
@@ -338,44 +398,50 @@ void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
  * Adds the specified parts/commodities to a map. The maximum value for
  * <PartName> is the define, ADDSTORES_MAX.
  */
-void fun_btaddstores(char *buff, char **bufc, DbRef player, DbRef cause,
-                     char *fargs[], int nfargs, char *cargs[], int ncargs,
-                     EvaluationContext *context) {
+BtechScriptResult fun_btaddstores(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /* script_function_argument(fargs, nfargs, 0) = mech/map
      script_function_argument(fargs, nfargs, 1) = partname
      script_function_argument(fargs, nfargs, 2) = quantity
    */
   DbRef loc;
-  int index = -1, id = 0, brand = 0, count;
+  int id = 0, brand = 0, count;
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
 
   loc = match_thing(&context->command->match, player,
                     script_function_argument(fargs, nfargs, 0));
   if (!is_good_obj(context->btech->database, loc)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
 
   char *part_name = script_function_argument(fargs, nfargs, 1);
   if (part_name == nullptr) {
     safe_tprintf_str(buff, bufc, "#-1 NEED PARTNAME");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
 
   if (strlen(part_name) >= MBUF_SIZE) {
     safe_tprintf_str(buff, bufc, "#-1 PARTNAME TOO LONG");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
 
   /* Add a limit to the number of parts you can add at once to prevent reaching
    * the integer limits. */
   if (!parse_int_checked(script_function_argument(fargs, nfargs, 2), &count)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID COUNT");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   if (count > ADDSTORES_MAX) {
     count = ADDSTORES_MAX;
@@ -383,28 +449,53 @@ void fun_btaddstores(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!count) {
     safe_tprintf_str(buff, bufc, "1");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  if (!find_matching_short_part(context->btech, part_name, &index, &id,
-                                &brand) &&
-      !find_matching_vlong_part(context->btech, part_name, &index, &id,
-                                &brand) &&
-      !find_matching_long_part(context->btech, part_name, &index, &id,
-                               &brand)) {
+  PartMatchResult match =
+      part_match_next(&(PartMatchRequest){.context = context->btech,
+                                          .pattern = part_name,
+                                          .kind = PART_MATCH_SHORT,
+                                          .cursor = -1});
+  if (!match.found)
+    match = part_match_next(&(PartMatchRequest){.context = context->btech,
+                                                .pattern = part_name,
+                                                .kind = PART_MATCH_VERY_LONG,
+                                                .cursor = -1});
+  if (!match.found)
+    match = part_match_next(&(PartMatchRequest){.context = context->btech,
+                                                .pattern = part_name,
+                                                .kind = PART_MATCH_LONG,
+                                                .cursor = -1});
+  if (!match.found) {
     safe_tprintf_str(buff, bufc, "0");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  econ_change_items(context->btech, loc, id, brand, count);
+  id = match.part.id;
+  brand = match.part.brand;
+  economy_inventory_change(&(EconomyInventoryChange){
+      .context = context->btech,
+      .store = loc,
+      .part = {.id = id, .brand = brand},
+      .quantity_delta = count,
+  });
   btech_channel_send(context->btech, BTECH_CHANNEL_MECH_ECON, "%s",
                      tprintf("#%ld added %d %s to #%ld", player, count,
                              get_parts_vlong_name(context->btech, id, brand),
                              loc));
   safe_tprintf_str(buff, bufc, "1");
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 } /* end btaddstores() */
 
-void fun_btticweaps(char *buff, char **bufc, DbRef player, DbRef cause,
-                    char *fargs[], int nfargs, char *cargs[], int ncargs,
-                    EvaluationContext *context) {
+BtechScriptResult fun_btticweaps(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /* script_function_argument(fargs, nfargs, 0) = dbref of mech
    * script_function_argument(fargs, nfargs, 1) = tic #
    */
@@ -418,34 +509,40 @@ void fun_btticweaps(char *buff, char **bufc, DbRef player, DbRef cause,
                    script_function_argument(fargs, nfargs, 0));
   if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
   if (!btech_context_is_mech(context->btech, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
-  if (!(mech = btech_context_find_object(context->btech, it))) {
+  mech = btech_context_find_object(context->btech, it);
+  if (!mech) {
     safe_tprintf_str(buff, bufc, "#-1");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
   const char first_character = *script_function_argument(fargs, nfargs, 1);
   if (first_character < '0' || first_character > '9') {
     safe_tprintf_str(buff, bufc, "#-1 TIC MUST BE NUMERIC");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
 
   if (!parse_int_checked(script_function_argument(fargs, nfargs, 1), &ticnum)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TIC NUMBER");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
   if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TIC NUMBER");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
 
   for (j = 0; j < MAX_WEAPONS_PER_MECH; j++) {
-    if (mech_tic_contains_weapon(mech, ticnum, j)) {
-      if (FindWeaponNumberOnMech(mech, j, &section, &critical) == -1) {
+    if (mech_tic_contains_weapon(
+            mech, (TicWeaponReference){.tic = ticnum, .weapon = j})) {
+      WeaponNumberLookupResult lookup = weapon_number_find(
+          &(WeaponNumberLookupRequest){.mech = mech, .number = j});
+      section = lookup.slot.section;
+      critical = lookup.slot.critical;
+      if (!lookup.found) {
         j = MAX_WEAPONS_PER_MECH;
         continue;
       }
@@ -458,4 +555,6 @@ void fun_btticweaps(char *buff, char **bufc, DbRef player, DbRef cause,
                       3)));
     }
   }
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }

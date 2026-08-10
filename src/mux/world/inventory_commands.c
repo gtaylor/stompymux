@@ -93,7 +93,10 @@ void do_get(CommandInvocation *invocation) {
         notify_printf(evaluation, thingloc, "%s was taken from you.",
                       game_object_name(evaluation->world->database, thing));
       }
-      move_via_generic(evaluation, thing, player, player, 0);
+      move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                                .object = thing,
+                                                .destination = player,
+                                                .cause = player});
       notify_checked(evaluation, thing, thing, "Taken.",
                      MSG_ME_ALL | MSG_F_DOWN);
       notify_action(
@@ -115,8 +118,11 @@ void do_get(CommandInvocation *invocation) {
         failmsg = "You can't take that from there.";
       else
         failmsg = "You can't pick that up.";
-      notify_lock_failure(evaluation, &lock, &result, failmsg, nullptr,
-                          LUA_EVENT_FAIL);
+      notify_lock_failure(&(LockFailureNotification){.evaluation = evaluation,
+                                                     .invocation = &lock,
+                                                     .result = &result,
+                                                     .enactor_default = failmsg,
+                                                     .event = LUA_EVENT_FAIL});
     }
     break;
   case OBJECT_TYPE_EXIT:
@@ -221,17 +227,24 @@ void do_drop(CommandInvocation *invocation) {
     if (!lock_test(evaluation, player, invocation->cause, player, thing,
                    LUA_LOCK_DROP, LUA_LOCK_OPERATION_DROP, false, &lock,
                    &result)) {
-      notify_lock_failure(evaluation, &lock, &result, "You can't drop that.",
-                          nullptr, LUA_EVENT_DROP_FAIL);
+      notify_lock_failure(
+          &(LockFailureNotification){.evaluation = evaluation,
+                                     .invocation = &lock,
+                                     .result = &result,
+                                     .enactor_default = "You can't drop that.",
+                                     .event = LUA_EVENT_DROP_FAIL});
       return;
     }
     /*
      * Move it
      */
 
-    move_via_generic(evaluation, thing,
-                     game_object_location(evaluation->world->database, player),
-                     player, 0);
+    move_via_generic(&(ObjectMovementRequest){
+        .evaluation = evaluation,
+        .object = thing,
+        .destination =
+            game_object_location(evaluation->world->database, player),
+        .cause = player});
     notify_checked(evaluation, thing, thing, "Dropped.",
                    MSG_ME_ALL | MSG_F_DOWN);
     quiet = 0;

@@ -34,7 +34,6 @@ static const float BOMB_GRAVITY = 1.0F;
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
@@ -92,7 +91,8 @@ static const char *bomb_kind_name(BombKind kind) {
 }
 
 static char *bomb_argument(char **arguments, size_t count, size_t index) {
-  char **slot = checked_storage_at(arguments, count, sizeof(*arguments), index);
+  char **slot = (char **)checked_storage_at((void *)arguments, count,
+                                            sizeof(*arguments), index);
   return *slot;
 }
 
@@ -112,8 +112,9 @@ static void bomb_list(Mech *mech, DbRef player) {
   cool_menu_add_line(&c);
   for (i = 0; i < NUM_SECTIONS; i++) {
     fb = 1;
-    for (j = 0; j < NUM_CRITICALS; j++)
-      if (equipment_is_bomb((k = mech_critical_part_type(mech, i, j)))) {
+    for (j = 0; j < NUM_CRITICALS; j++) {
+      k = mech_critical_part_type(mech, i, j);
+      if (equipment_is_bomb(k)) {
         k = bomb_from_equipment_index(k);
         if (fb) {
           ArmorStringFromIndex(i, location, mech_class(mech),
@@ -130,6 +131,7 @@ static void bomb_list(Mech *mech, DbRef player) {
                                        bomb_kind_name(bomb->type)));
         bc++;
       }
+    }
   }
   if (!bc)
     cool_menu_add_centered(&c, "No bombs installed.");
@@ -172,8 +174,21 @@ static void bomb_hit_hexes(BattleMap *map, int x, int y, int hitnb,
                            bool iscluster, int aff_d, int aff_h,
                            const char *tomsg, const char *otmsg,
                            const char *tomsg1, const char *otmsg1) {
-  blast_hit_hexes(map, aff_d, iscluster ? 2 : 10, aff_h, x, y, tomsg, otmsg,
-                  tomsg1, otmsg1, 0, 4, 1, 1, hitnb);
+  BlastAreaRequest request = {
+      .center =
+          {
+              .map = map,
+              .damage = {.total = aff_d,
+                         .hit_size = iscluster ? 2 : 10,
+                         .heat = aff_h},
+              .impact = {.x = x, .y = y},
+              .messages = {.target = tomsg, .observers = otmsg},
+              .safety = {.above = 4, .below = 1, .underwater = true},
+          },
+      .neighbor_messages = {.target = tomsg1, .observers = otmsg1},
+      .neighbor_radius = hitnb,
+  };
+  blast_hit_area(&request);
 }
 
 static void bomb_hit(BombShot *s) {
@@ -250,7 +265,16 @@ static void bomb_simulate_flight(Mech *mech, BattleMap *map, short *x, short *y,
   }
 }
 
-static void bomb_drop(Mech *mech, DbRef player, int bn) {
+typedef struct BombDropRequest {
+  Mech *mech;
+  DbRef player;
+  int bomb_number;
+} BombDropRequest;
+
+static void bomb_drop(const BombDropRequest *request) {
+  Mech *mech = request->mech;
+  const DbRef player = request->player;
+  int bn = request->bomb_number;
   int bc = 0;
   int i, j, k;
   int lloc = 0, lpos = 0;
@@ -283,8 +307,8 @@ static void bomb_drop(Mech *mech, DbRef player, int bn) {
                  "No bombs installed.");
     return;
   }
-  if (!(map =
-            btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))) {
+  map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
+  if (!map) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You're on invalid map!");
     return;
@@ -325,7 +349,7 @@ static void bomb_drop(Mech *mech, DbRef player, int bn) {
   if (!battle_map_coordinate_is_valid(map, x, y))
     return;
   mech_critical_part_type_set(mech, lloc, lpos, 0);
-  Create(s, BombShot, 1);
+  s = checked_storage_allocate(sizeof(*s));
   s->x = x;
   s->y = y;
   s->type = k;
@@ -345,7 +369,8 @@ void mech_bomb(DbRef player, void *data, char *buffer) {
 
   if (!common_checks(player, mech, MECH_USUALSO))
     return;
-  if (!(argc = mech_parseattributes(buffer, args, 3))) {
+  argc = mech_parseattributes(buffer, args, 3);
+  if (!argc) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "(At least) one option required.");
     return;
@@ -383,5 +408,9 @@ void mech_bomb(DbRef player, void *data, char *buffer) {
                  "Invalid bomb number!");
     return;
   }
-  bomb_drop(mech, player, bn);
+  bomb_drop(&(BombDropRequest){
+      .mech = mech,
+      .player = player,
+      .bomb_number = bn,
+  });
 }

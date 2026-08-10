@@ -135,8 +135,12 @@ void mech_embark(DbRef player, void *data, char *buffer) {
       memset(fail_mesg, 0, sizeof(fail_mesg));
       (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
 
-      notify_lock_failure(evaluation, &lock, &lock_result, fail_mesg, nullptr,
-                          LUA_EVENT_FAIL);
+      notify_lock_failure(
+          &(LockFailureNotification){.evaluation = evaluation,
+                                     .invocation = &lock,
+                                     .result = &lock_result,
+                                     .enactor_default = fail_mesg,
+                                     .event = LUA_EVENT_FAIL});
 
       return;
     }
@@ -181,8 +185,12 @@ void mech_embark(DbRef player, void *data, char *buffer) {
                 tprintf("You climb into %s.", mech_display_id(target).text));
     mech_los_broadcast(
         mech, tprintf("climbs into %s.", mech_display_id(target).text));
-    tele_contents(mech_context(mech), mech_dbref(mech), mech_dbref(target),
-                  TELE_ALL);
+    contents_teleport(&(ContentsTeleportRequest){
+        .context = mech_context(mech),
+        .source = mech_dbref(mech),
+        .destination = mech_dbref(target),
+        .options = TELE_ALL,
+    });
     discard_mw(mech);
     return;
   }
@@ -286,8 +294,11 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     memset(fail_mesg, 0, sizeof(fail_mesg));
     (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
 
-    notify_lock_failure(evaluation, &lock, &lock_result, fail_mesg, nullptr,
-                        LUA_EVENT_FAIL);
+    notify_lock_failure(&(LockFailureNotification){.evaluation = evaluation,
+                                                   .invocation = &lock,
+                                                   .result = &lock_result,
+                                                   .enactor_default = fail_mesg,
+                                                   .event = LUA_EVENT_FAIL});
 
     return;
   }
@@ -318,7 +329,8 @@ void mech_embark(DbRef player, void *data, char *buffer) {
 
   /* New message system for when someone tries to embark
    * but their sections are still cycling (or weapons) */
-  if ((tmp = mech_recycling_state(mech, CHECK_BOTH))) {
+  tmp = mech_recycling_state(mech, CHECK_BOTH);
+  if (tmp) {
 
     if (tmp == 1) {
       mecha_notify(evaluation, player, "You have weapons recycling!");
@@ -337,8 +349,9 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     return;
   }
   if (mech_carried_dbref(mech) > 0) {
-    if (!(towee = btech_context_get_mech(mech_context(mech),
-                                         mech_carried_dbref(mech)))) {
+    towee =
+        btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
+    if (!towee) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Internal error caused by towed unit! Contact a wizard!");
       return;
@@ -389,7 +402,11 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     MarkForLOSUpdate(towee);
     mech_Rsetmapindex(GOD, (void *)towee, tprintf("%d", (int)-1));
     mech_Rsetxy(GOD, (void *)towee, tprintf("%d %d", 0, 0));
-    move_via_teleport(evaluation, mech_dbref(towee), mech_dbref(target), 1, 0);
+    move_via_teleport(
+        &(ObjectMovementRequest){.evaluation = evaluation,
+                                 .object = mech_dbref(towee),
+                                 .destination = mech_dbref(target),
+                                 .cause = 1});
     mech_cargo_space_remove(target, mech_tonnage(towee) * 100);
     mech_power_down(towee);
     mech_carried_dbref_set(mech, -1);
@@ -399,7 +416,10 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   /* Now handle the unit itself */
   mech_Rsetmapindex(GOD, (void *)mech, tprintf("%d", (int)-1));
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", 0, 0));
-  move_via_teleport(evaluation, mech_dbref(mech), mech_dbref(target), 1, 0);
+  move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
+                                             .object = mech_dbref(mech),
+                                             .destination = mech_dbref(target),
+                                             .cause = 1});
   mech_cargo_space_remove(target, mech_tonnage(mech) * 100);
   mech_power_down(mech);
 
@@ -429,7 +449,8 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
   btech_special_object_flag_changed(mech_context(mech), GOD, suit, 0, 1);
   d = btech_attribute_read(database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
-  if (!(m = btech_context_get_mech(mech_context(mech), suit))) {
+  m = btech_context_get_mech(mech_context(mech), suit);
+  if (!m) {
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to create special obj for #%ld's ejection.", player));
@@ -459,8 +480,17 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
   mech_Rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
 
   /* Tele the MW to the map and player to the MW */
-  move_via_teleport(evaluation, suit, mech_map_dbref(mech), 1, 7);
-  move_via_teleport(evaluation, player, suit, 1, 7);
+  move_via_teleport(
+      &(ObjectMovementRequest){.evaluation = evaluation,
+                               .object = suit,
+                               .destination = mech_map_dbref(mech),
+                               .cause = 1,
+                               .hush = 7});
+  move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
+                                             .object = player,
+                                             .destination = suit,
+                                             .cause = 1,
+                                             .hush = 7});
 
   /* Init the sucker */
   s_in_character(database, suit);

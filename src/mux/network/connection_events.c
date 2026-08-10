@@ -83,17 +83,32 @@ static void dispatch_connection_event(CommandRuntime *runtime, Descriptor *d,
   lua_event_dispatch(runtime->lua_owner->runtime, &invocation);
 }
 
-static void dispatch_connection_event_scope(CommandRuntime *runtime,
-                                            Descriptor *d, DbRef player,
-                                            DbRef location, LuaEventType type,
-                                            bool reconnect,
-                                            const char *reason) {
+typedef struct ConnectionEventScopeRequest {
+  CommandRuntime *runtime;
+  Descriptor *descriptor;
+  DbRef player;
+  DbRef location;
+  LuaEventType type;
+  bool reconnect;
+  const char *reason;
+} ConnectionEventScopeRequest;
+
+static void
+dispatch_connection_event_scope(const ConnectionEventScopeRequest *request) {
+  CommandRuntime *runtime = request->runtime;
+  Descriptor *d = request->descriptor;
+  DbRef player = request->player;
+  DbRef location = request->location;
+  LuaEventType type = request->type;
+  bool reconnect = request->reconnect;
+  const char *reason = request->reason;
   DbRef object;
   DbRef zone;
 
   dispatch_connection_event(runtime, d, player, player, type, reconnect,
                             reason);
-  if ((zone = game_object_zone(runtime->world->database, location)) == NOTHING)
+  zone = game_object_zone(runtime->world->database, location);
+  if (zone == NOTHING)
     return;
   switch (typeof_obj(runtime->world->database, zone)) {
   case OBJECT_TYPE_THING:
@@ -184,12 +199,20 @@ void announce_connect(DbRef player, Descriptor *d) {
     send_channel(&command->evaluation, "Suspect",
                  "[Suspect site: %s] %s has connected.", d->addr,
                  game_object_name(runtime->world->database, player));
-  dispatch_connection_event_scope(runtime, d, player, loc, LUA_EVENT_CONNECT,
-                                  num >= 2, nullptr);
+  dispatch_connection_event_scope(
+      &(ConnectionEventScopeRequest){.runtime = runtime,
+                                     .descriptor = d,
+                                     .player = player,
+                                     .location = loc,
+                                     .type = LUA_EVENT_CONNECT,
+                                     .reconnect = num >= 2});
   record_login(&command->evaluation, player, true, runtime->clock->now, d->addr,
                d->username);
-  look_in(&descriptor_runtime(d)->background_command->evaluation, player,
-          game_object_location(runtime->world->database, player), LK_SHOWEXIT);
+  look_in(&(LookRequest){
+      .evaluation = &descriptor_runtime(d)->background_command->evaluation,
+      .viewer = player,
+      .location = game_object_location(runtime->world->database, player),
+      .key = LK_SHOWEXIT});
   command->enactor = temp;
 }
 
@@ -237,11 +260,18 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
                   game_object_name(runtime->world->database, player));
 
     c_connected(runtime->world->database, player);
-    dispatch_connection_event_scope(runtime, d, player, loc,
-                                    LUA_EVENT_DISCONNECT, false, reason);
+    dispatch_connection_event_scope(
+        &(ConnectionEventScopeRequest){.runtime = runtime,
+                                       .descriptor = d,
+                                       .player = player,
+                                       .location = loc,
+                                       .type = LUA_EVENT_DISCONNECT,
+                                       .reason = reason});
     if (d->is_autodark) {
-      game_object_set_flag(runtime->world->database, d->player,
-                           OBJECT_FLAG_DARK, false);
+      game_object_set_flag(
+          &(ObjectFlagChangeRequest){.database = runtime->world->database,
+                                     .object = d->player,
+                                     .flag = OBJECT_FLAG_DARK});
       d->is_autodark = false;
     }
 

@@ -47,8 +47,11 @@ static char *parse_cleanup(const ServerConfiguration *configuration, int flags,
   return checked_mutable_string_suffix(text, result_offset);
 }
 
-char *parse_to(const ServerConfiguration *configuration, char **source,
-               char delimiter, int flags) {
+char *parse_to(const CommandParseRequest *request) {
+  const ServerConfiguration *configuration = request->configuration;
+  char **source = request->source;
+  char delimiter = request->delimiter;
+  int flags = request->options;
   if (source == nullptr || *source == nullptr)
     return nullptr;
   if (**source == '\0') {
@@ -155,22 +158,29 @@ char *parse_to(const ServerConfiguration *configuration, char **source,
   return result;
 }
 
-char *parse_arglist(const ServerConfiguration *configuration, char *string,
-                    char delimiter, int flags, char *arguments[],
-                    DbRef max_arguments) {
-  for (DbRef i = 0; i < max_arguments; i++)
-    *(char **)checked_storage_at(arguments, (size_t)max_arguments,
-                                 sizeof(*arguments), (size_t)i) = nullptr;
-  if (string == nullptr)
+char *parse_arglist(const CommandArgumentListRequest *request) {
+  char **arguments = request->arguments;
+  size_t max_arguments = request->maximum_arguments;
+  for (size_t i = 0; i < max_arguments; i++)
+    *(char **)checked_storage_at((void *)arguments, max_arguments,
+                                 sizeof(*arguments), i) = nullptr;
+  if (request->source == nullptr)
     return nullptr;
 
-  char *remainder = string;
-  char *list = parse_to(configuration, &remainder, delimiter, 0);
-  for (DbRef i = 0; i < max_arguments && list != nullptr; i++) {
+  char *remainder = request->source;
+  char *list =
+      parse_to(&(CommandParseRequest){.configuration = request->configuration,
+                                      .source = &remainder,
+                                      .delimiter = request->delimiter});
+  for (size_t i = 0; i < max_arguments && list != nullptr; i++) {
     char separator = i < max_arguments - 1 ? ',' : '\0';
-    char *argument = parse_to(configuration, &list, separator, flags);
-    char **slot = checked_storage_at(arguments, (size_t)max_arguments,
-                                     sizeof(*arguments), (size_t)i);
+    char *argument =
+        parse_to(&(CommandParseRequest){.configuration = request->configuration,
+                                        .source = &list,
+                                        .delimiter = separator,
+                                        .options = request->options});
+    char **slot = (char **)checked_storage_at((void *)arguments, max_arguments,
+                                              sizeof(*arguments), i);
 
     *slot = alloc_lbuf("parse_arglist");
     StringCopy(*slot, argument);

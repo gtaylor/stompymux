@@ -8,6 +8,7 @@
 #include "mux/commands/command_keys.h"
 
 #include "mux/objects/db.h"
+#include "mux/server/configuration_interpreter.h"
 #include "mux/support/name_table.h"
 
 typedef struct CommandContext CommandContext;
@@ -57,10 +58,8 @@ struct cmdentry {
 void init_cmdtab(CommandRegistry *registry);
 void command_aliases_destroy(HashTable *commands);
 extern NameTable access_nametab[];
-int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-              ConfigurationContext *context);
-int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
-                 ConfigurationContext *context);
+int cf_access(const ConfigurationCall *call);
+int cf_cmd_alias(const ConfigurationCall *call);
 
 /* Command handler call conventions */
 

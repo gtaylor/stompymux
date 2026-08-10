@@ -6,7 +6,52 @@ root=${1:?repository root is required}
 build_root=${2:-$root/.build}
 cd "$root"
 
+if ! command -v rg >/dev/null 2>&1; then
+  echo "btech architecture check requires ripgrep (rg)" >&2
+  exit 1
+fi
+
 status=0
+
+nested_positional_initializer_pattern='\.[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*\{(?![[:space:]]*(?:\.|\[|0[[:space:]]*\}))'
+
+ratchet_expect_match() {
+  local fixture=$1
+  if ! printf '%s\n' "$fixture" |
+    rg --pcre2 -q -U "$nested_positional_initializer_pattern"; then
+    echo "designated-initializer ratchet failed to reject: $fixture"
+    return 1
+  fi
+}
+
+ratchet_expect_no_match() {
+  local fixture=$1
+  if printf '%s\n' "$fixture" |
+    rg --pcre2 -q -U "$nested_positional_initializer_pattern"; then
+    echo "designated-initializer ratchet incorrectly rejected: $fixture"
+    return 1
+  fi
+}
+
+ratchet_expect_match '.pair = {left, right}' || status=1
+ratchet_expect_match $'.future_value = {\n  left,\n  right\n}' || status=1
+ratchet_expect_match '.state = {0, 1}' || status=1
+ratchet_expect_no_match '.pair = {.x = left, .y = right}' || status=1
+ratchet_expect_no_match '.items = {[0] = left}' || status=1
+ratchet_expect_no_match '.state = {0}' || status=1
+
+while IFS= read -r path; do
+  if tail -n 1 "$path" | rg -q '^#include[[:space:]]'; then
+    echo "$path: source file ends with an include directive"
+    status=1
+  fi
+done < <(find src/btech -type f -name '*.c' -print | sort)
+
+if rg --pcre2 -n -U "$nested_positional_initializer_pattern" \
+  src/btech -g '*.[ch]'; then
+  echo "src/btech: nested aggregate values require designated initializers"
+  status=1
+fi
 
 # Function-like macros are limited to the five command invoker generators.
 # Additions and stale allowlist entries both fail this check.

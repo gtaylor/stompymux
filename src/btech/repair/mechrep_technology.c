@@ -215,10 +215,18 @@ const char *techstatus_func(Mech *mech) {
   int flags = mech_technology_flags(mech);
   int secondary_flags = mech_technology_flags_secondary(mech);
   return (flags || secondary_flags)
-             ? build_bit_string_delimited2(
-                   specials, primary_technology_name_count(), specials2,
-                   secondary_technology_name_count(), flags, secondary_flags,
-                   (char[BTECH_TEXT_CAPACITY]){0})
+             ? template_bit_string_build(&(TemplateBitStringRequest){
+                   .sets =
+                       (TemplateBitSet[]){
+                           {.descriptions = specials,
+                            .count = primary_technology_name_count(),
+                            .bits = flags},
+                           {.descriptions = specials2,
+                            .count = secondary_technology_name_count(),
+                            .bits = secondary_flags}},
+                   .set_count = 2,
+                   .delimiter = '|',
+                   .buffer = (char[BTECH_TEXT_CAPACITY]){0}})
              : "";
 }
 
@@ -366,12 +374,20 @@ void mechrep_Rshowtech(DbRef player, void *data, char *buffer) {
 }
 
 void mechrep_gettechstring(Mech *mech, char *buffer) {
-  build_bit_string3(specials, primary_technology_name_count(), specials2,
-                    secondary_technology_name_count(), infantry_specials,
-                    infantry_technology_name_count(),
-                    mech_technology_flags(mech),
-                    mech_technology_flags_secondary(mech),
-                    mech_infantry_technology_flags(mech), buffer);
+  template_bit_string_build(&(TemplateBitStringRequest){
+      .sets =
+          (TemplateBitSet[]){{.descriptions = specials,
+                              .count = primary_technology_name_count(),
+                              .bits = mech_technology_flags(mech)},
+                             {.descriptions = specials2,
+                              .count = secondary_technology_name_count(),
+                              .bits = mech_technology_flags_secondary(mech)},
+                             {.descriptions = infantry_specials,
+                              .count = infantry_technology_name_count(),
+                              .bits = mech_infantry_technology_flags(mech)}},
+      .set_count = 3,
+      .delimiter = ' ',
+      .buffer = buffer});
 }
 
 static void remove_critical_type(Mech *mech, int part_type) {
@@ -535,16 +551,27 @@ void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
 
   if (nv > 0) {
     mech_technology_flags_add(mech, nv);
-    notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                  "Set: %s",
-                  build_bit_string(specials, primary_technology_name_count(),
-                                   nv, (char[BTECH_TEXT_CAPACITY]){0}));
+    notify_printf(
+        btech_context_evaluation(rep->xcode.context), player, "Set: %s",
+        template_bit_string_build(&(TemplateBitStringRequest){
+            .sets = &(TemplateBitSet){.descriptions = specials,
+                                      .count = primary_technology_name_count(),
+                                      .bits = nv},
+            .set_count = 1,
+            .delimiter = ' ',
+            .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
   } else {
     mech_technology_flags_secondary_add(mech, nv2);
-    notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                  "Set: %s",
-                  build_bit_string(specials2, secondary_technology_name_count(),
-                                   nv2, (char[BTECH_TEXT_CAPACITY]){0}));
+    notify_printf(
+        btech_context_evaluation(rep->xcode.context), player, "Set: %s",
+        template_bit_string_build(&(TemplateBitStringRequest){
+            .sets =
+                &(TemplateBitSet){.descriptions = specials2,
+                                  .count = secondary_technology_name_count(),
+                                  .bits = nv2},
+            .set_count = 1,
+            .delimiter = ' ',
+            .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
   }
 }
 
@@ -606,8 +633,13 @@ void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
     mech_infantry_technology_flags_add(mech, nv);
     notify_printf(
         btech_context_evaluation(rep->xcode.context), player, "Set: %s",
-        build_bit_string(infantry_specials, infantry_technology_name_count(),
-                         nv, (char[BTECH_TEXT_CAPACITY]){0}));
+        template_bit_string_build(&(TemplateBitStringRequest){
+            .sets = &(TemplateBitSet){.descriptions = infantry_specials,
+                                      .count = infantry_technology_name_count(),
+                                      .bits = nv},
+            .set_count = 1,
+            .delimiter = ' ',
+            .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
   }
 }
 

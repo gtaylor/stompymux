@@ -7,6 +7,7 @@
 
 typedef bool (*CheckedStorageSentinel)(const void *element);
 
+[[nodiscard]] void *checked_storage_allocate(size_t bytes);
 void *checked_storage_at(void *storage, size_t count, size_t element_size,
                          size_t index);
 const void *checked_storage_at_const(const void *storage, size_t count,

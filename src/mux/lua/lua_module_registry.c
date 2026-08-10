@@ -20,14 +20,16 @@
 #include "mux/server/maintenance.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/array_sort.h"
 #include "mux/support/checked_storage.h"
 
 static char **lua_module_slot(char **modules, size_t capacity, size_t index) {
-  return checked_storage_at(modules, capacity, sizeof(*modules), index);
+  return (char **)checked_storage_at((void *)modules, capacity,
+                                     sizeof(*modules), index);
 }
 
 static char *lua_module_item(char *const *modules, size_t count, size_t index) {
-  return *(char *const *)checked_storage_at_const(modules, count,
+  return *(char *const *)checked_storage_at_const((const void *)modules, count,
                                                   sizeof(*modules), index);
 }
 
@@ -52,18 +54,19 @@ static char *lua_split_at(char *text, char delimiter) {
 }
 
 static char **lua_string_slot(char **items, size_t count, size_t index) {
-  return checked_storage_at(items, count, sizeof(*items), index);
+  return (char **)checked_storage_at((void *)items, count, sizeof(*items),
+                                     index);
 }
 
 static char *lua_string_item(char *const *items, size_t count, size_t index) {
-  return *(char *const *)checked_storage_at_const(items, count, sizeof(*items),
-                                                  index);
+  return *(char *const *)checked_storage_at_const((const void *)items, count,
+                                                  sizeof(*items), index);
 }
 
 static const char *lua_const_string_item(const char *const *items, size_t count,
                                          size_t index) {
-  return *(const char *const *)checked_storage_at_const(items, count,
-                                                        sizeof(*items), index);
+  return *(const char *const *)checked_storage_at_const(
+      (const void *)items, count, sizeof(*items), index);
 }
 
 static int *lua_int_slot(int *items, size_t count, size_t index) {
@@ -75,9 +78,9 @@ static int lua_int_item(const int *items, size_t count, size_t index) {
                                                 index);
 }
 
-int lua_compare_module_paths(const void *left, const void *right) {
-  const char *const *left_path = left;
-  const char *const *right_path = right;
+int lua_compare_module_paths(const ArraySortComparison *comparison) {
+  const char *const *left_path = (const char *const *)comparison->left;
+  const char *const *right_path = (const char *const *)comparison->right;
 
   return strcmp(*left_path, *right_path);
 }
@@ -87,7 +90,7 @@ void lua_free_modules(char **modules, size_t module_count) {
 
   for (index = 0; index < module_count; index++)
     free(lua_module_item(modules, module_count, index));
-  free(modules);
+  free((void *)modules);
 }
 
 static int lua_add_module(char ***modules, size_t *module_count,
@@ -100,7 +103,8 @@ static int lua_add_module(char ***modules, size_t *module_count,
     lua_set_error(error, error_size, "out of memory");
     return 0;
   }
-  replacement = realloc(*modules, (*module_count + 1) * sizeof(*replacement));
+  replacement = (char **)realloc((void *)*modules,
+                                 (*module_count + 1) * sizeof(*replacement));
   if (!replacement) {
     free(copy);
     lua_set_error(error, error_size, "out of memory");
@@ -208,15 +212,31 @@ static int lua_cron_parse_number(const char *text, long *value) {
   return errno != ERANGE && !*end;
 }
 
-static int lua_cron_field_matches(const char *field, int value, int minimum,
-                                  int maximum, int *is_wildcard) {
+typedef struct LuaCronFieldRequest {
+  const char *field;
+  int value;
+  int minimum;
+  int maximum;
+} LuaCronFieldRequest;
+
+typedef struct LuaCronFieldResult {
+  int match;
+  bool wildcard;
+} LuaCronFieldResult;
+
+static LuaCronFieldResult
+lua_cron_field_matches(const LuaCronFieldRequest *request) {
+  const char *field = request->field;
+  int value = request->value;
+  int minimum = request->minimum;
+  int maximum = request->maximum;
   char copy[SBUF_SIZE];
   char *part;
 
   if (strlen(field) >= sizeof(copy))
-    return -1;
+    return (LuaCronFieldResult){.match = -1};
   (void)snprintf(copy, sizeof(copy), "%s", field);
-  *is_wildcard = !strcmp(field, "*");
+  bool wildcard = !strcmp(field, "*");
   part = copy;
   while (part) {
     char *next = lua_split_at(part, ',');
@@ -226,12 +246,12 @@ static int lua_cron_field_matches(const char *field, int value, int minimum,
     long last;
 
     if (!*part)
-      return -1;
+      return (LuaCronFieldResult){.match = -1};
     step_text = lua_split_at(part, '/');
     if (step_text) {
       if (strchr(step_text, '/') || !lua_cron_parse_number(step_text, &step) ||
           step < 1)
-        return -1;
+        return (LuaCronFieldResult){.match = -1};
     }
     if (!strcmp(part, "*")) {
       first = minimum;
@@ -242,20 +262,20 @@ static int lua_cron_field_matches(const char *field, int value, int minimum,
       if (dash) {
         if (strchr(dash, '-') || !lua_cron_parse_number(part, &first) ||
             !lua_cron_parse_number(dash, &last))
-          return -1;
+          return (LuaCronFieldResult){.match = -1};
       } else if (!lua_cron_parse_number(part, &first)) {
-        return -1;
+        return (LuaCronFieldResult){.match = -1};
       } else {
         last = first;
       }
     }
     if (first < minimum || last > maximum || first > last)
-      return -1;
+      return (LuaCronFieldResult){.match = -1};
     if (value >= first && value <= last && ((value - first) % step) == 0)
-      return 1;
+      return (LuaCronFieldResult){.match = 1, .wildcard = wildcard};
     part = next;
   }
-  return 0;
+  return (LuaCronFieldResult){.wildcard = wildcard};
 }
 
 int lua_cron_matches(const char *cron, time_t when, char *error,
@@ -292,11 +312,13 @@ int lua_cron_matches(const char *cron, time_t when, char *error,
     int *wildcard = lua_int_slot(wildcards, 5, (size_t)index);
     int *match = lua_int_slot(matches, 5, (size_t)index);
 
-    *match = lua_cron_field_matches(lua_string_item(fields, 5, (size_t)index),
-                                    lua_int_item(values, 5, (size_t)index),
-                                    lua_int_item(minimums, 5, (size_t)index),
-                                    lua_int_item(maximums, 5, (size_t)index),
-                                    wildcard);
+    LuaCronFieldResult result = lua_cron_field_matches(&(LuaCronFieldRequest){
+        .field = lua_string_item(fields, 5, (size_t)index),
+        .value = lua_int_item(values, 5, (size_t)index),
+        .minimum = lua_int_item(minimums, 5, (size_t)index),
+        .maximum = lua_int_item(maximums, 5, (size_t)index)});
+    *match = result.match;
+    *wildcard = result.wildcard;
     if (*match < 0)
       goto invalid;
   }
@@ -605,8 +627,11 @@ static int lua_load_global_modules(LuaRuntime *runtime, char *error,
   if (!lua_collect_global_modules(runtime, "", error, error_size))
     return 0;
   if (runtime->global_module_count > 1)
-    qsort(runtime->global_modules, runtime->global_module_count,
-          sizeof(*runtime->global_modules), lua_compare_module_paths);
+    array_sort(
+        &(ArraySortRequest){.items = (void *)runtime->global_modules,
+                            .count = runtime->global_module_count,
+                            .item_size = sizeof(*runtime->global_modules),
+                            .compare = lua_compare_module_paths});
   for (index = 0; index < runtime->global_module_count; index++) {
     if (!lua_verify_module(runtime, LUA_ROOT_GLOBAL_LOGIC,
                            lua_global_module_at(runtime, index), error,
@@ -616,8 +641,16 @@ static int lua_load_global_modules(LuaRuntime *runtime, char *error,
   return 1;
 }
 
-static int lua_load_attached_modules(LuaRuntime *runtime, char *error,
-                                     size_t error_size, int ignore_errors) {
+typedef struct LuaAttachedModuleLoadRequest {
+  LuaRuntime *runtime;
+  char *error;
+  size_t error_size;
+  bool ignore_errors;
+} LuaAttachedModuleLoadRequest;
+
+static int
+lua_load_attached_modules(const LuaAttachedModuleLoadRequest *request) {
+  LuaRuntime *runtime = request->runtime;
   DbRef object;
 
   for (object = 0; object < runtime->services->database->top; object++) {
@@ -626,10 +659,10 @@ static int lua_load_attached_modules(LuaRuntime *runtime, char *error,
     if (!is_good_obj(runtime->services->database, object))
       continue;
     path = game_object_lua_parent(runtime->services->database, object);
-    if (*path && !lua_verify_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
-                                    error_size)) {
-      if (ignore_errors) {
-        lua_log_load_error(runtime, object, path, error);
+    if (*path && !lua_verify_module(runtime, LUA_ROOT_OBJECT_LOGIC, path,
+                                    request->error, request->error_size)) {
+      if (request->ignore_errors) {
+        lua_log_load_error(runtime, object, path, request->error);
         continue;
       }
       return 0;
@@ -644,7 +677,11 @@ int lua_initialize(LuaOwner *owner, const LuaServices *services, char *error,
 
   if (!runtime)
     return 0;
-  if (!lua_load_attached_modules(runtime, error, error_size, 1) ||
+  if (!lua_load_attached_modules(
+          &(LuaAttachedModuleLoadRequest){.runtime = runtime,
+                                          .error = error,
+                                          .error_size = error_size,
+                                          .ignore_errors = true}) ||
       !lua_load_global_modules(runtime, error, error_size)) {
     lua_runtime_destroy(runtime);
     return 0;
@@ -665,7 +702,8 @@ int lua_reload(LuaOwner *owner, char *error, size_t error_size) {
 
   if (!replacement)
     return 0;
-  if (!lua_load_attached_modules(replacement, error, error_size, 0) ||
+  if (!lua_load_attached_modules(&(LuaAttachedModuleLoadRequest){
+          .runtime = replacement, .error = error, .error_size = error_size}) ||
       !lua_load_global_modules(replacement, error, error_size)) {
     lua_runtime_destroy(replacement);
     return 0;

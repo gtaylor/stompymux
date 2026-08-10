@@ -147,15 +147,20 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
         result = -1;
       game_object_clear_flags(context->database, object);
       for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
-        game_object_set_flag(context->database, object, flag,
-                             *(const bool *)checked_storage_at_const(
-                                 object_flags, OBJECT_FLAG_COUNT,
-                                 sizeof(*object_flags), (size_t)flag));
+        game_object_set_flag(&(ObjectFlagChangeRequest){
+            .database = context->database,
+            .object = object,
+            .flag = flag,
+            .value = *(const bool *)checked_storage_at_const(
+                object_flags, OBJECT_FLAG_COUNT, sizeof(*object_flags),
+                (size_t)flag)});
       for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++)
-        game_object_set_power(
-            context->database, object, power,
-            *(const bool *)checked_storage_at_const(
-                powers, POWER_COUNT, sizeof(*powers), (size_t)power));
+        game_object_set_power(&(ObjectPowerChange){
+            .target = {.database = context->database,
+                       .object = object,
+                       .power = power},
+            .value = *(const bool *)checked_storage_at_const(
+                powers, POWER_COUNT, sizeof(*powers), (size_t)power)});
       if (typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER)
         c_connected(context->database, object);
     }
@@ -247,15 +252,19 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
         sqlite3_column_type(statement, 4) != SQLITE_INTEGER ||
         sqlite3_column_type(statement, 5) != SQLITE_INTEGER ||
         sqlite3_column_type(statement, 6) != SQLITE_INTEGER ||
-        !player_account_login_counts_set(context->database, player, successful,
-                                         failed, unreported) ||
+        !player_account_login_counts_set(&(PlayerLoginCountsChange){
+            .account = {.database = context->database, .player = player},
+            .successful = successful,
+            .failed = failed,
+            .unreported_failed = unreported}) ||
         (password_hash && !player_account_password_hash_set(
                               context->database, player, password_hash)) ||
         (last_site &&
          !player_account_last_site_set(context->database, player, last_site)) ||
         (sqlite3_column_type(statement, 2) != SQLITE_NULL &&
-         !player_account_last_login_set(context->database, player,
-                                        (time_t)last_login))) {
+         !player_account_last_login_set(&(PlayerLastLoginChange){
+             .account = {.database = context->database, .player = player},
+             .occurred_at = (time_t)last_login}))) {
       sqlite3_finalize(statement);
       free(seen);
       return -1;
@@ -301,9 +310,13 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
         gamedb_column_int(statement, 2, &position) < 0 || position < 0 ||
         gamedb_column_long(statement, 3, &occurred_at) < 0 ||
         gamedb_column_text(statement, 4, &host, LBUF_SIZE) < 0 ||
-        !player_account_login_history_set(
-            context->database, player, (PlayerLoginOutcome)outcome,
-            (size_t)position, (time_t)occurred_at, host)) {
+        !player_account_login_history_set(&(PlayerLoginHistoryChange){
+            .target = {.account = {.database = context->database,
+                                   .player = player},
+                       .outcome = (PlayerLoginOutcome)outcome,
+                       .position = (size_t)position},
+            .occurred_at = (time_t)occurred_at,
+            .host = host})) {
       sqlite3_finalize(statement);
       return -1;
     }
@@ -472,8 +485,13 @@ static int gamedb_load_character_state(PersistenceContext *context,
         gamedb_column_int(statement, 2, &value) < 0 ||
         gamedb_column_int(statement, 3, &xp) < 0 ||
         gamedb_column_long(statement, 4, &last_used) < 0 ||
-        !character_state_value_set(context->database, player, name, value, xp,
-                                   (time_t)last_used))
+        !character_state_value_set(
+            &(CharacterStateValueChange){.database = context->database,
+                                         .player = player,
+                                         .name = name,
+                                         .value = value,
+                                         .experience = xp,
+                                         .last_used = (time_t)last_used}))
       goto invalid;
   }
   sqlite3_finalize(statement);

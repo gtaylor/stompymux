@@ -14,7 +14,11 @@ bool lock_test(EvaluationContext *context, DbRef enactor, DbRef cause,
                DbRef subject, DbRef object, LuaLockType type,
                LuaLockOperation operation, bool silent,
                LuaLockInvocation *invocation, LuaLockResult *result);
-int can_see(EvaluationContext *evaluation, DbRef player, DbRef thing,
-            int can_see_location);
-void handle_ears(EvaluationContext *evaluation, DbRef thing, int could_hear,
-                 int can_hear);
+typedef struct ObjectVisibilityRequest {
+  EvaluationContext *evaluation;
+  DbRef viewer;
+  DbRef object;
+  bool location_visible;
+} ObjectVisibilityRequest;
+
+bool can_see(const ObjectVisibilityRequest *request);

@@ -33,38 +33,61 @@ int count_special_items(void);
 int compare_array(char *const list[], size_t count, const char *command);
 int compare_const_array(const char *const list[], size_t count,
                         const char *command);
-char *one_arg(char *argument, char *first_arg, size_t first_arg_capacity);
-char *one_arg_delim(char *argument, char *first_arg, size_t first_arg_capacity);
-char *build_bit_string(const char *const bitdescs[], size_t count, int data,
-                       char buffer[static BTECH_TEXT_CAPACITY]);
-char *build_bit_string2(const char *const bitdescs[], size_t count,
-                        const char *const bitdescs2[], size_t count2, int data,
-                        int data2, char buffer[static BTECH_TEXT_CAPACITY]);
-char *build_bit_string_delimited2(const char *const bitdescs[], size_t count,
-                                  const char *const bitdescs2[], size_t count2,
-                                  int data, int data2,
-                                  char buffer[static BTECH_TEXT_CAPACITY]);
-char *build_bit_string3(const char *const bitdescs[], size_t count,
-                        const char *const bitdescs2[], size_t count2,
-                        const char *const bitdescs3[], size_t count3, int data,
-                        int data2, int data3,
-                        char buffer[static BTECH_TEXT_CAPACITY]);
+typedef struct TemplateTokenRequest {
+  char *input;
+  char *output;
+  size_t output_capacity;
+  bool pipe_delimited;
+} TemplateTokenRequest;
+
+typedef struct TemplateBitSet {
+  const char *const *descriptions;
+  size_t count;
+  int bits;
+} TemplateBitSet;
+
+typedef struct TemplateBitStringRequest {
+  const TemplateBitSet *sets;
+  size_t set_count;
+  char delimiter;
+  char *buffer;
+} TemplateBitStringRequest;
+
+typedef struct PartNameRequest {
+  const ServerConfiguration *configuration;
+  int part;
+  int brand;
+  bool short_name;
+  char *buffer;
+} PartNameRequest;
+
+char *template_token_parse(const TemplateTokenRequest *request);
+char *template_bit_string_build(const TemplateBitStringRequest *request);
 char *my_shortform(const char *source, char buffer[static BTECH_TEXT_CAPACITY]);
 char *part_figure_out_shname(int i, char buffer[static BTECH_TEXT_CAPACITY]);
-char *part_figure_out_name(const ServerConfiguration *configuration, int i,
-                           int brand, char buffer[static BTECH_TEXT_CAPACITY]);
-char *part_figure_out_sname(const ServerConfiguration *configuration, int i,
-                            int brand, char buffer[static BTECH_TEXT_CAPACITY]);
+char *part_name_format(const PartNameRequest *request);
 void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
                     size_t location_count);
 float generic_computer_multiplier(Mech *mech);
 int generic_radio_type(int i, int isClan);
 float generic_radio_multiplier(Mech *mech);
 void computer_conversion(Mech *mech);
-void try_to_find_name(char *mechref, Mech *mech);
+void try_to_find_name(const char *mechref, Mech *mech);
 int DefaultFuelByType(Mech *mech);
-int save_template(DbRef player, Mech *mech, char *reference, char *filename);
-char *read_desc(FILE *fp, char *data, char buffer[static BTECH_TEXT_CAPACITY]);
+typedef struct TemplateSaveRequest {
+  DbRef player;
+  Mech *mech;
+  const char *reference;
+  const char *filename;
+} TemplateSaveRequest;
+int template_save(const TemplateSaveRequest *request);
+typedef struct TemplateDescriptionRead {
+  FILE *file;
+  char *line;
+  char *buffer;
+} TemplateDescriptionRead;
+
+char *template_description_read(const TemplateDescriptionRead *request);
 int find_section(char *cmd, int type, int mtype);
 long BuildBitVector(const char *const list[], size_t count, char *line);
 long BuildBitVectorWithDelim(const char *const list[], size_t count,

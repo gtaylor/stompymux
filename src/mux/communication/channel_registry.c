@@ -9,13 +9,13 @@
 Commac *channel_registry_bucket_at(const ChannelRegistry *registry,
                                    size_t bucket) {
   return *(Commac *const *)checked_storage_at_const(
-      registry->commacs, COMMAC_BUCKET_COUNT, sizeof(*registry->commacs),
-      bucket);
+      (const void *)registry->commacs, COMMAC_BUCKET_COUNT,
+      sizeof(*registry->commacs), bucket);
 }
 
 void channel_registry_bucket_set(ChannelRegistry *registry, size_t bucket,
                                  Commac *entry) {
-  *(Commac **)checked_storage_at(registry->commacs, COMMAC_BUCKET_COUNT,
+  *(Commac **)checked_storage_at((void *)registry->commacs, COMMAC_BUCKET_COUNT,
                                  sizeof(*registry->commacs), bucket) = entry;
 }
 

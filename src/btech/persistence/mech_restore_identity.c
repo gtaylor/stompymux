@@ -1,5 +1,6 @@
 #include "ai_api.h"
 #include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_persistence.h"
 #include "missile_hit_registry.h"
 #include "mux/objects/db.h"
@@ -23,12 +24,14 @@ static struct MechSection *snapshot_section(MechPersistenceSnapshot *snapshot,
 }
 
 static struct CriticalSlot *snapshot_critical(MechPersistenceSnapshot *snapshot,
-                                              int section, int slot) {
-  if (slot < 0)
+                                              CriticalSlotReference reference) {
+  if (reference.critical < 0)
     abort();
-  struct MechSection *section_data = snapshot_section(snapshot, section);
+  struct MechSection *section_data =
+      snapshot_section(snapshot, reference.section);
   return checked_storage_at(section_data->criticals, NUM_CRITICALS,
-                            sizeof(*section_data->criticals), (size_t)slot);
+                            sizeof(*section_data->criticals),
+                            (size_t)reference.critical);
 }
 
 int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
@@ -88,9 +91,12 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = btech_context_get_mech(context, mech_dbref)) ||
-        btech_special_column_int(statement, 1, &id_0) < 0 ||
+    if (btech_special_column_long(statement, 0, &mech_dbref) < 0) {
+      result = -1;
+      break;
+    }
+    mech = btech_context_get_mech(context, mech_dbref);
+    if (!mech || btech_special_column_int(statement, 1, &id_0) < 0 ||
         btech_special_column_int(statement, 2, &id_1) < 0 ||
         btech_special_column_int(statement, 3, &brief) < 0 ||
         btech_special_column_int(statement, 4, &map_number) < 0 ||
@@ -375,7 +381,9 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    critical = snapshot_critical(&snapshot, section_index, slot);
+    critical = snapshot_critical(
+        &snapshot,
+        (CriticalSlotReference){.section = section_index, .critical = slot});
     critical->brand = (unsigned char)brand;
     critical->data = (unsigned char)data;
     critical->type = (unsigned short)item_type;

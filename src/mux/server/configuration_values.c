@@ -10,6 +10,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_internal.h"
+#include "mux/server/configuration_interpreter.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
@@ -21,15 +22,16 @@
 #include "mux/support/styled_text/palette.h"
 #include "mux/world/player.h"
 
-int cf_int(int *vp, char *str, long extra, DbRef player, char *cmd,
-           ConfigurationContext *context) {
+int cf_int(const ConfigurationCall *call) {
+  int *vp = call->value;
   /*
    * Copy the numeric value to the parameter
    */
 
-  if (parse_int_checked(str, vp))
+  if (parse_int_checked(call->text, vp))
     return 0;
-  configuration_log_syntax(context, player, cmd, "Expected integer: ", str);
+  configuration_log_syntax(call->context, call->player, call->command,
+                           "Expected integer: ", call->text);
   return -1;
 }
 /* *INDENT-OFF* */
@@ -44,10 +46,11 @@ NameTable bool_names[] = {
 
 /* *INDENT-ON* */
 
-int cf_bool(int *vp, char *str, long extra, DbRef player, char *cmd,
-            ConfigurationContext *context) {
-  *vp = (int)name_table_search(context->database, context->configuration, GOD,
-                               bool_names, str);
+int cf_bool(const ConfigurationCall *call) {
+  int *vp = call->value;
+  *vp = (int)name_table_search(call->context->database,
+                               call->context->configuration, GOD, bool_names,
+                               call->text);
   if (*vp < 0)
     *vp = (long)0;
   return 0;
@@ -59,16 +62,17 @@ int cf_bool(int *vp, char *str, long extra, DbRef player, char *cmd,
  * parameter.
  */
 
-int cf_bool_bit(int *vp, char *str, long extra, DbRef player, char *cmd,
-                ConfigurationContext *context) {
+int cf_bool_bit(const ConfigurationCall *call) {
+  int *vp = call->value;
   int value;
 
-  value = (int)name_table_search(context->database, context->configuration, GOD,
-                                 bool_names, str);
+  value = (int)name_table_search(call->context->database,
+                                 call->context->configuration, GOD, bool_names,
+                                 call->text);
   if (value > 0)
-    *vp |= (int)extra;
+    *vp |= (int)call->extra;
   else
-    *vp &= ~(int)extra;
+    *vp &= ~(int)call->extra;
   return 0;
 }
 
@@ -77,8 +81,9 @@ int cf_bool_bit(int *vp, char *str, long extra, DbRef player, char *cmd,
  * * cf_string: Set string parameter.
  */
 
-int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd,
-              ConfigurationContext *context) {
+int cf_string(const ConfigurationCall *call) {
+  char *destination = call->value;
+  char *str = call->text;
   int retval;
 
   /*
@@ -86,21 +91,24 @@ int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd,
    */
 
   retval = 0;
-  if (extra <= 0)
+  if (call->extra <= 0)
     return -1;
-  if (strlen(str) >= (size_t)extra) {
+  if (strlen(str) >= (size_t)call->extra) {
     *(char *)checked_storage_at(str, strlen(str) + 1, sizeof(char),
-                                (size_t)extra - 1) = '\0';
-    if (context->configuration->is_initializing) {
-      log_error(context->log, LOG_STARTUP, "CNF", "NFND",
-                "%s: String truncated", cmd);
+                                (size_t)call->extra - 1) = '\0';
+    if (call->context->configuration->is_initializing) {
+      log_error((LogEntry){.log = call->context->log,
+                           .key = LOG_STARTUP,
+                           .primary = "CNF",
+                           .secondary = "NFND"},
+                "%s: String truncated", call->command);
     } else {
-      notify_checked(&context->command->evaluation, player, player,
-                     "String truncated", MSG_ME_ALL | MSG_F_DOWN);
+      notify_checked(&call->context->command->evaluation, call->player,
+                     call->player, "String truncated", MSG_ME_ALL | MSG_F_DOWN);
     }
     retval = 1;
   }
-  StringCopy((char *)vp, str);
+  StringCopy(destination, str);
   return retval;
 }
 
@@ -109,8 +117,9 @@ int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd,
  * * cf_flagalias: define a flag alias.
  */
 
-int cf_flagalias(int *vp, char *str, long extra, DbRef player, char *cmd,
-                 ConfigurationContext *context) {
+int cf_flagalias(const ConfigurationCall *call) {
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   char *alias, *orig;
   int *cp, success;
 
@@ -124,7 +133,8 @@ int cf_flagalias(int *vp, char *str, long extra, DbRef player, char *cmd,
     success++;
   }
   if (!success)
-    configuration_log_not_found(context, player, cmd, "Flag", orig);
+    configuration_log_not_found(context, call->player, call->command, "Flag",
+                                orig);
   return ((success > 0) ? 0 : -1);
 }
 
@@ -133,8 +143,10 @@ int cf_flagalias(int *vp, char *str, long extra, DbRef player, char *cmd,
  * * configuration_modify_bits: set or clear bits in a flag word from a
  * namelist.
  */
-int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
-                              char *cmd, ConfigurationContext *context) {
+int configuration_modify_bits(const ConfigurationCall *call) {
+  int *vp = call->value;
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   char *sp;
   int f, negate, success, failure;
 
@@ -160,7 +172,7 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
      */
 
     f = name_table_search(context->database, context->configuration, GOD,
-                          (NameTable *)extra, sp);
+                          (NameTable *)call->extra, sp);
     if (f > 0) {
       if (negate)
         *vp &= ~f;
@@ -168,7 +180,8 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
         *vp |= f;
       success++;
     } else {
-      configuration_log_not_found(context, player, cmd, "Entry", sp);
+      configuration_log_not_found(context, call->player, call->command, "Entry",
+                                  sp);
       failure++;
     }
 
@@ -178,8 +191,8 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
 
     sp = strtok(nullptr, " \t");
   }
-  return configuration_status_from_succfail(player, cmd, success, failure,
-                                            context);
+  return configuration_status_from_counts(
+      call, (ConfigurationParseCounts){.success = success, .failure = failure});
 }
 
 /*
@@ -187,8 +200,9 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
  * * cf_set_flags: Clear flag word and then set from a flags htab.
  */
 
-int cf_set_flags(void *vp, char *str, long extra, DbRef player, char *cmd,
-                 ConfigurationContext *context) {
+int cf_set_flags(const ConfigurationCall *call) {
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   char *sp;
   FlagEntry *fp;
   ObjectFlagSet *fset;
@@ -201,7 +215,7 @@ int cf_set_flags(void *vp, char *str, long extra, DbRef player, char *cmd,
 
   success = failure = 0;
   sp = strtok(str, " \t");
-  fset = (ObjectFlagSet *)vp;
+  fset = call->value;
 
   while (sp != nullptr) {
 
@@ -216,7 +230,8 @@ int cf_set_flags(void *vp, char *str, long extra, DbRef player, char *cmd,
       object_flag_set_set(fset, fp->id, true);
       success++;
     } else {
-      configuration_log_not_found(context, player, cmd, "Entry", sp);
+      configuration_log_not_found(context, call->player, call->command, "Entry",
+                                  sp);
       failure++;
     }
 
@@ -240,12 +255,11 @@ int cf_set_flags(void *vp, char *str, long extra, DbRef player, char *cmd,
  * * cf_badname: Disallow use of player name/alias.
  */
 
-int cf_badname(int *vp, char *str, long extra, DbRef player, char *cmd,
-               ConfigurationContext *context) {
-  if (extra)
-    badname_remove(context->world, str);
+int cf_badname(const ConfigurationCall *call) {
+  if (call->extra)
+    badname_remove(call->context->world, call->text);
   else
-    badname_add(context->world, str);
+    badname_add(call->context->world, call->text);
   return 0;
 }
 
@@ -254,8 +268,10 @@ int cf_badname(int *vp, char *str, long extra, DbRef player, char *cmd,
  * * cf_site: Update site information
  */
 
-int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
-            ConfigurationContext *context) {
+int cf_site(const ConfigurationCall *call) {
+  long **vp = (long **)call->value;
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   SiteData *site, *last, *head;
   char *addr_txt, *mask_txt;
   struct in_addr addr_num, mask_num;
@@ -265,7 +281,7 @@ int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
   if (addr_txt)
     mask_txt = strtok(nullptr, " \t=,");
   if (!addr_txt || !*addr_txt || !mask_txt || !*mask_txt) {
-    configuration_log_syntax(context, player, cmd,
+    configuration_log_syntax(context, call->player, call->command,
                              "Missing host address or mask.", "");
     return -1;
   }
@@ -274,7 +290,7 @@ int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
   mask_num.s_addr = inet_addr(mask_txt);
 
   if (addr_num.s_addr == INADDR_NONE) {
-    configuration_log_syntax(context, player, cmd,
+    configuration_log_syntax(context, call->player, call->command,
                              "Bad host address: ", addr_txt);
     return -1;
   }
@@ -291,7 +307,7 @@ int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
 
   site->address.s_addr = addr_num.s_addr;
   site->mask.s_addr = mask_num.s_addr;
-  site->flag = (int)extra;
+  site->flag = (int)call->extra;
   site->next = nullptr;
 
   /*
@@ -318,8 +334,9 @@ int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
   return 0;
 }
 
-int cf_named_color(void *vp, char *str, long extra, DbRef player, char *cmd,
-                   ConfigurationContext *context) {
+int cf_named_color(const ConfigurationCall *call) {
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   char *name;
   char *red_text;
   char *green_text;
@@ -329,8 +346,6 @@ int cf_named_color(void *vp, char *str, long extra, DbRef player, char *cmd,
   int green;
   int blue;
 
-  (void)vp;
-  (void)extra;
   name = strtok(str, " \t");
   red_text = strtok(nullptr, " \t");
   green_text = strtok(nullptr, " \t");
@@ -340,13 +355,13 @@ int cf_named_color(void *vp, char *str, long extra, DbRef player, char *cmd,
       !parse_int_checked(red_text, &red) ||
       !parse_int_checked(green_text, &green) ||
       !parse_int_checked(blue_text, &blue)) {
-    configuration_log_syntax(context, player, cmd,
+    configuration_log_syntax(context, call->player, call->command,
                              "Expected NAME RED GREEN BLUE: ", str);
     return -1;
   }
   if (!styled_text_palette_set_rgb(context->world->styled_text_palette, name,
                                    red, green, blue, error, sizeof(error))) {
-    configuration_log_syntax(context, player, cmd, error, "");
+    configuration_log_syntax(context, call->player, call->command, error, "");
     if (context->configuration->is_initializing)
       context->fatal_error = true;
     return -1;
@@ -354,21 +369,20 @@ int cf_named_color(void *vp, char *str, long extra, DbRef player, char *cmd,
   return 0;
 }
 
-int cf_osc8_preset(void *vp, char *str, long extra, DbRef player, char *cmd,
-                   ConfigurationContext *context) {
+int cf_osc8_preset(const ConfigurationCall *call) {
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   char *directives;
   char error[256];
   size_t length = strlen(str);
   size_t offset = 0;
 
-  (void)vp;
-  (void)extra;
   while (offset < length &&
          !(isspace)(*(const unsigned char *)checked_storage_at_const(
              str, length, sizeof(char), offset)))
     offset++;
   if (offset == length) {
-    configuration_log_syntax(context, player, cmd,
+    configuration_log_syntax(context, call->player, call->command,
                              "Expected NAME DIRECTIVES: ", str);
     if (context->configuration->is_initializing)
       context->fatal_error = true;
@@ -381,9 +395,13 @@ int cf_osc8_preset(void *vp, char *str, long extra, DbRef player, char *cmd,
              str, length, sizeof(char), offset)))
     offset++;
   directives = checked_storage_at(str, length + 1, sizeof(char), offset);
-  if (!styled_text_palette_set_preset(context->world->styled_text_palette, str,
-                                      directives, error, sizeof(error))) {
-    configuration_log_syntax(context, player, cmd, error, "");
+  if (!styled_text_palette_set_preset(
+          context->world->styled_text_palette,
+          &(StyledPresetDefinition){.name = str,
+                                    .directives = directives,
+                                    .error = error,
+                                    .error_size = sizeof(error)})) {
+    configuration_log_syntax(context, call->player, call->command, error, "");
     if (context->configuration->is_initializing)
       context->fatal_error = true;
     return -1;
@@ -396,8 +414,9 @@ int cf_osc8_preset(void *vp, char *str, long extra, DbRef player, char *cmd,
  * * cf_cf_access: Set access on config directives
  */
 
-int cf_cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                 ConfigurationContext *context) {
+int cf_cf_access(const ConfigurationCall *call) {
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   char *ap;
   size_t length = strlen(str);
   size_t offset = 0;
@@ -415,11 +434,14 @@ int cf_cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
   for (size_t index = 0; index < configuration_entry_count(); index++) {
     CONF *tp = configuration_entry_at(index);
     if (!strcmp(tp->pname, str)) {
-      return configuration_modify_bits(&tp->flags, ap, extra, player, cmd,
-                                       context);
+      ConfigurationCall modify_call = *call;
+      modify_call.value = &tp->flags;
+      modify_call.text = ap;
+      return configuration_modify_bits(&modify_call);
     }
   }
-  configuration_log_not_found(context, player, cmd, "Config directive", str);
+  configuration_log_not_found(context, call->player, call->command,
+                              "Config directive", str);
   return -1;
 }
 

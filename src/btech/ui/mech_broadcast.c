@@ -1,5 +1,6 @@
 
 #include "map.h"
+#include "map_coordinates.h"
 #include "map_units_api.h"
 #include "mech_broadcast_api.h"
 #include "mech_identity_api.h"
@@ -18,8 +19,11 @@ int MapLimitedBroadcast2d(BattleMap *map, float x, float y, float range,
     if (candidate < 0)
       continue;
     Mech *mech = btech_context_get_mech(battle_map_context(map), candidate);
-    if (mech && FindXYRange(x, y, mech_position_real_x(mech),
-                            mech_position_real_y(mech)) <= range) {
+    if (mech && map_real_range(&(MapRealSegment){
+                    .start = {.x = x, .y = y},
+                    .end = {.x = mech_position_real_x(mech),
+                            .y = mech_position_real_y(mech)},
+                }) <= range) {
       mech_notify(mech, MECHSTARTED, message);
       count++;
     }
@@ -36,9 +40,12 @@ int MapLimitedBroadcast3d(BattleMap *map, float x, float y, float z,
     if (candidate == -1)
       continue;
     Mech *mech = btech_context_get_mech(battle_map_context(map), candidate);
-    if (mech && FindRange(x, y, z, mech_position_real_x(mech),
-                          mech_position_real_y(mech),
-                          mech_position_real_z(mech)) <= range) {
+    if (mech && map_spatial_range(&(MapSpatialSegment){
+                    .start = {.x = x, .y = y, .z = z},
+                    .end = {.x = mech_position_real_x(mech),
+                            .y = mech_position_real_y(mech),
+                            .z = mech_position_real_z(mech)},
+                }) <= range) {
       count++;
       mech_notify(mech, MECHSTARTED, message);
     }

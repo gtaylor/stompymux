@@ -44,9 +44,12 @@ int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = btech_context_get_mech(context, mech_dbref)) ||
-        btech_special_column_int(statement, 1, &pilot_status) < 0 ||
+    if (btech_special_column_long(statement, 0, &mech_dbref) < 0) {
+      result = -1;
+      break;
+    }
+    mech = btech_context_get_mech(context, mech_dbref);
+    if (!mech || btech_special_column_int(statement, 1, &pilot_status) < 0 ||
         btech_special_column_real(statement, 2, &hexes_walked) < 0 ||
         btech_special_column_int(statement, 3, &facing) < 0 ||
         btech_special_column_int(statement, 4, &x) < 0 ||
@@ -244,8 +247,12 @@ int btech_special_load_mech_c3(sqlite3 *sqlite, BtechContext *context) {
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = btech_context_get_mech(context, mech_dbref)) ||
+    if (btech_special_column_long(statement, 0, &mech_dbref) < 0) {
+      result = -1;
+      break;
+    }
+    mech = btech_context_get_mech(context, mech_dbref);
+    if (!mech ||
         btech_special_column_text(statement, 1, channel_title,
                                   sizeof(channel_title)) < 0 ||
         btech_special_column_int(statement, 2, &c3i_size) < 0 ||
@@ -340,8 +347,11 @@ int btech_special_load_mech_c3_nodes(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    mech_persistence_network_node_restore(mech, network_type, node_index,
-                                          node_dbref);
+    mech_persistence_network_node_restore(
+        &(MechNetworkNodeRestore){.mech = mech,
+                                  .network_type = network_type,
+                                  .node_index = node_index,
+                                  .node_dbref = node_dbref});
     expected_node++;
     if ((expected_network == 0 && expected_node == C3I_NETWORK_SIZE) ||
         (expected_network == 1 && expected_node == C3_NETWORK_SIZE)) {
@@ -411,7 +421,10 @@ int btech_special_load_mech_tics(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    mech_persistence_tic_restore(mech, tic_index, word_index, value);
+    mech_persistence_tic_restore(&(MechTicWordRestore){.mech = mech,
+                                                       .tic_index = tic_index,
+                                                       .word_index = word_index,
+                                                       .value = value});
     if (++expected_word == TICLONGS) {
       expected_word = 0;
       expected_tic++;
@@ -479,8 +492,12 @@ int btech_special_load_mech_frequencies(sqlite3 *sqlite,
       result = -1;
       break;
     }
-    mech_persistence_frequency_restore(mech, frequency_index, frequency, mode,
-                                       title);
+    mech_persistence_frequency_restore(
+        &(MechFrequencyRestore){.mech = mech,
+                                .index = frequency_index,
+                                .frequency = frequency,
+                                .mode = mode,
+                                .title = title});
     expected_frequency++;
   }
   if (result == 0 && step != SQLITE_DONE)

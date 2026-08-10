@@ -111,7 +111,8 @@ static int btech_parse_cost(const unsigned char *text,
 static const char *btech_part_name(const ServerConfiguration *configuration,
                                    int part,
                                    char buffer[static BTECH_TEXT_CAPACITY]) {
-  return part_figure_out_name(configuration, part, 0, buffer);
+  return part_name_format(&(PartNameRequest){
+      .configuration = configuration, .part = part, .buffer = buffer});
 }
 
 /* Resolve an unbranded canonical name without needing runtime name hashes. */
@@ -180,7 +181,10 @@ static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
   }
   sqlite3_finalize(statement);
   if (skipped)
-    log_error(btech->log, LOG_ALWAYS, "ECO", "INFO",
+    log_error((LogEntry){.log = btech->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "ECO",
+                         .secondary = "INFO"},
               "Ignored %d SQLite economy rows for parts unavailable in this "
               "build.",
               skipped);
@@ -202,7 +206,10 @@ int btech_persistence_load_economy(sqlite3 *sqlite,
   if (btech_economy_table_exists(sqlite, &exists) < 0)
     return -1;
   if (!exists) {
-    log_error(btech->log, LOG_ALWAYS, "ECO", "FAIL",
+    log_error((LogEntry){.log = btech->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "ECO",
+                         .secondary = "FAIL"},
               "SQLite game database lacks required btech_economy_costs data.");
     return -1;
   }
@@ -211,7 +218,10 @@ int btech_persistence_load_economy(sqlite3 *sqlite,
   if (btech_economy_table_has_item_name(sqlite, &has_item_name) < 0)
     return -1;
   if (!has_item_name) {
-    log_error(btech->log, LOG_ALWAYS, "ECO", "FAIL",
+    log_error((LogEntry){.log = btech->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "ECO",
+                         .secondary = "FAIL"},
               "SQLite economy data lacks required item_name schema.");
     return -1;
   }

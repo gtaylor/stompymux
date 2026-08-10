@@ -1,9 +1,9 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "checked_conversion.h"
-#include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_units_api.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_equipment_api.h"
@@ -37,7 +37,12 @@ int btech_random_roll(BtechContext *context) {
   return i;
 }
 
-int MyHexDist(int x1, int y1, int x2, int y2, int tc) {
+int map_hex_distance(const HexDistanceRequest *request) {
+  const int x1 = request->start.x;
+  const int y1 = request->start.y;
+  const int x2 = request->end.x;
+  const int y2 = request->end.y;
+  const int tc = request->correction;
   int xd = abs(x2 - x1);
   int yd = abs(y2 - y1);
   int hm;
@@ -51,7 +56,8 @@ int MyHexDist(int x1, int y1, int x2, int y2, int tc) {
      +
      +
    */
-  if ((hm = (xd / 2)) <= yd)
+  hm = xd / 2;
+  if (hm <= yd)
     return (yd - hm) + tc + xd;
 
   /*
@@ -119,8 +125,13 @@ int IsMechLegLess(Mech *objMech) {
   return 0;
 }
 
-int FindFirstWeaponCrit(Mech *objMech, int wLoc, int wSlot, int wStartSlot,
-                        int wCritType, int wMaxCrits) {
+int mech_weapon_first_critical(const WeaponCriticalSearch *search) {
+  Mech *objMech = search->mech;
+  const int wLoc = search->weapon.section;
+  const int wSlot = search->weapon.critical;
+  const int wStartSlot = search->start_critical;
+  const int wCritType = search->part_type;
+  const int wMaxCrits = search->maximum_criticals;
   int wCritsInLoc = 0;
   int wCritIter, wFirstCrit;
 
@@ -155,8 +166,13 @@ int FindFirstWeaponCrit(Mech *objMech, int wLoc, int wSlot, int wStartSlot,
      * we need to figure out what range it actually falls into.
      */
     if ((wFirstCrit + wMaxCrits) <= wSlot)
-      wFirstCrit = FindFirstWeaponCrit(
-          objMech, wLoc, wSlot, (wFirstCrit + wMaxCrits), wCritType, wMaxCrits);
+      wFirstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+          .mech = objMech,
+          .weapon = {.section = wLoc, .critical = wSlot},
+          .start_critical = wFirstCrit + wMaxCrits,
+          .part_type = wCritType,
+          .maximum_criticals = wMaxCrits,
+      });
   }
 
   return wFirstCrit;
@@ -278,9 +294,12 @@ Mech *find_mech_in_hex(Mech *mech, BattleMap *mech_map, int x, int y,
   return nullptr;
 }
 
-int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
-                     int *ammoLoc, int *ammoCrit, int *ammoLoc1, int *ammoCrit1,
-                     int *wGattlingShots) {
+AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
+  Mech *mech = request->mech;
+  int weapindx = request->weapon_index;
+  int section = request->weapon.section;
+  int critical = request->weapon.critical;
+  AmmunitionCheckResult result = {.gatling_shots = request->gatling_shots};
   int mod, nmod = 0;
   int wMaxShots = 0;
   int wRoundsToCheck = 1;
@@ -291,16 +310,18 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
   /* Return if it's an energy or PC weapon */
   if (weapon_catalogue_type(weapindx) == TBEAM ||
       weapon_catalogue_type(weapindx) == THAND)
-    return 1;
+    return (AmmunitionCheckResult){.available = true,
+                                   .gatling_shots = result.gatling_shots};
 
   /* Check for rocket launchers */
   if (weapon_catalogue_specials(weapindx) == ROCKET) {
     if (wWeapMode & ROCKET_FIRED) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    "That weapon has already been used!");
-      return 0;
+      return result;
     }
-    return 1;
+    result.available = true;
+    return result;
   }
 
   /* Check for One-Shots */
@@ -308,9 +329,10 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
     if (mech_critical_fire_mode(mech, section, critical) & OS_USED) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    "That weapon has already been used!");
-      return 0;
+      return result;
     }
-    return 1;
+    result.available = true;
+    return result;
   }
   /* Check RACs - No special ammo type possible */
   if (weapon_catalogue_has_special(weapindx, RAC)) {
@@ -319,19 +341,22 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
     if ((wWeapMode & RAC_TWOSHOT_MODE) && (wMaxShots < 2)) {
       mech_critical_fire_mode_clear(mech, section, critical, RAC_TWOSHOT_MODE);
 
-      return 1;
+      result.available = true;
+      return result;
     }
 
     if ((wWeapMode & RAC_FOURSHOT_MODE) && (wMaxShots < 4)) {
       mech_critical_fire_mode_clear(mech, section, critical, RAC_FOURSHOT_MODE);
 
-      return 1;
+      result.available = true;
+      return result;
     }
 
     if ((wWeapMode & RAC_SIXSHOT_MODE) && (wMaxShots < 6)) {
       mech_critical_fire_mode_clear(mech, section, critical, RAC_SIXSHOT_MODE);
 
-      return 1;
+      result.available = true;
+      return result;
     }
   }
   /* Check GMGs */
@@ -342,37 +367,54 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
      * Gattling MGs suck up damage * 3 in ammo
      */
 
-    if ((wMaxShots / 3) < *wGattlingShots)
-      *wGattlingShots = MAX((wMaxShots / 3), 1);
+    if ((wMaxShots / 3) < result.gatling_shots) {
+      const int available_shots = wMaxShots / 3;
+      result.gatling_shots = available_shots > 1 ? available_shots : 1;
+    }
   }
   /* If we're an ULTRA or RFAC, we need to check for multiple rounds */
   if ((wWeapMode & ULTRA_MODE) || (wWeapMode & RFAC_MODE))
     wRoundsToCheck = 2;
 
   mod = mech_critical_ammo_mode(mech, section, critical) & AMMO_MODES;
+  AmmunitionLookupRequest lookup_request = {
+      .mech = mech,
+      .weapon = {.section = section, .critical = critical},
+      .use_weapon_preference = true,
+      .weapon_index = weapindx,
+      .start_section = section,
+  };
 
   if (!mod) {
-    if (!FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
-                               ammoLoc, ammoCrit, AMMO_MODES, 0)) {
+    lookup_request.forbidden_modes = AMMO_MODES;
+    CriticalSlotLookupResult primary = ammunition_find(&lookup_request);
+    if (!primary.found) {
       mecha_notify(
           btech_context_evaluation(mech->xcode.context), player,
           "You don't have any ammo for that weapon stored on this mech!");
-      return 0;
+      return result;
     }
+    result.primary = primary;
 
-    if (!mech_critical_data(mech, *ammoLoc, *ammoCrit)) {
+    if (!mech_critical_data(mech, result.primary.slot.section,
+                            result.primary.slot.critical)) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    "You are out of ammo for that weapon!");
-      return 0;
+      return result;
     }
 
     if (wRoundsToCheck > 1) {
-      mech_critical_data_set(mech, *ammoLoc, *ammoCrit,
-                             mech_critical_data(mech, *ammoLoc, *ammoCrit) - 1);
+      mech_critical_data_set(
+          mech, result.primary.slot.section, result.primary.slot.critical,
+          mech_critical_data(mech, result.primary.slot.section,
+                             result.primary.slot.critical) -
+              1);
 
-      if (FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
-                                ammoLoc1, ammoCrit1, AMMO_MODES, 0)) {
-        if (!mech_critical_data(mech, *ammoLoc1, *ammoCrit1))
+      CriticalSlotLookupResult secondary = ammunition_find(&lookup_request);
+      if (secondary.found) {
+        result.secondary = secondary;
+        if (!mech_critical_data(mech, result.secondary.slot.section,
+                                result.secondary.slot.critical))
           tResetMode = 1;
       } else
         tResetMode = 1;
@@ -380,8 +422,11 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
       if (tResetMode)
         mech_critical_fire_mode_clear(mech, section, critical, wWeapMode);
 
-      mech_critical_data_set(mech, *ammoLoc, *ammoCrit,
-                             mech_critical_data(mech, *ammoLoc, *ammoCrit) + 1);
+      mech_critical_data_set(
+          mech, result.primary.slot.section, result.primary.slot.critical,
+          mech_critical_data(mech, result.primary.slot.section,
+                             result.primary.slot.critical) +
+              1);
     }
   } else {
     if (weapon_catalogue_is_artillery(weapindx))
@@ -389,28 +434,37 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
     else
       nmod = (~mod) & AMMO_MODES;
     mod = (mod & AMMO_MODES);
+    lookup_request.forbidden_modes = nmod;
+    lookup_request.required_modes = mod;
 
-    if (!FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
-                               ammoLoc, ammoCrit, nmod, mod)) {
+    CriticalSlotLookupResult primary = ammunition_find(&lookup_request);
+    if (!primary.found) {
       mecha_notify(
           btech_context_evaluation(mech->xcode.context), player,
           "You don't have any ammo for that weapon stored on this mech!");
-      return 0;
+      return result;
     }
+    result.primary = primary;
 
-    if (!mech_critical_data(mech, *ammoLoc, *ammoCrit)) {
+    if (!mech_critical_data(mech, result.primary.slot.section,
+                            result.primary.slot.critical)) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    "You are out of the special ammo type for that weapon!");
-      return 0;
+      return result;
     }
 
     if (wRoundsToCheck > 1) {
-      mech_critical_data_set(mech, *ammoLoc, *ammoCrit,
-                             mech_critical_data(mech, *ammoLoc, *ammoCrit) - 1);
+      mech_critical_data_set(
+          mech, result.primary.slot.section, result.primary.slot.critical,
+          mech_critical_data(mech, result.primary.slot.section,
+                             result.primary.slot.critical) -
+              1);
 
-      if (FindAmmoForWeapon_sub(mech, section, critical, weapindx, section,
-                                ammoLoc1, ammoCrit1, nmod, mod)) {
-        if (!mech_critical_data(mech, *ammoLoc1, *ammoCrit1))
+      CriticalSlotLookupResult secondary = ammunition_find(&lookup_request);
+      if (secondary.found) {
+        result.secondary = secondary;
+        if (!mech_critical_data(mech, result.secondary.slot.section,
+                                result.secondary.slot.critical))
           tResetMode = 1;
       } else
         tResetMode = 1;
@@ -418,12 +472,16 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
       if (tResetMode)
         mech_critical_fire_mode_clear(mech, section, critical, wWeapMode);
 
-      mech_critical_data_set(mech, *ammoLoc, *ammoCrit,
-                             mech_critical_data(mech, *ammoLoc, *ammoCrit) + 1);
+      mech_critical_data_set(
+          mech, result.primary.slot.section, result.primary.slot.critical,
+          mech_critical_data(mech, result.primary.slot.section,
+                             result.primary.slot.critical) +
+              1);
     }
   }
 
-  return 1;
+  result.available = true;
+  return result;
 }
 
 void ChannelEmitKill(Mech *mech, Mech *attacker, const char *reason) {

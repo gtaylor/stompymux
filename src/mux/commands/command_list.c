@@ -212,15 +212,26 @@ static void list_df_flags(EvaluationContext *evaluation,
                           DbRef player) {
   char *playerb, *roomb, *thingb, *exitb, *buff;
 
-  playerb =
-      decode_flags(evaluation->world->database, player, OBJECT_TYPE_PLAYER,
-                   &configuration->default_player_flags);
-  roomb = decode_flags(evaluation->world->database, player, OBJECT_TYPE_ROOM,
-                       &configuration->default_room_flags);
-  exitb = decode_flags(evaluation->world->database, player, OBJECT_TYPE_EXIT,
-                       &configuration->default_exit_flags);
-  thingb = decode_flags(evaluation->world->database, player, OBJECT_TYPE_THING,
-                        &configuration->default_thing_flags);
+  playerb = decode_flags(
+      &(DecodeFlagsRequest){.database = evaluation->world->database,
+                            .player = player,
+                            .object_type = OBJECT_TYPE_PLAYER,
+                            .flags = &configuration->default_player_flags});
+  roomb = decode_flags(
+      &(DecodeFlagsRequest){.database = evaluation->world->database,
+                            .player = player,
+                            .object_type = OBJECT_TYPE_ROOM,
+                            .flags = &configuration->default_room_flags});
+  exitb = decode_flags(
+      &(DecodeFlagsRequest){.database = evaluation->world->database,
+                            .player = player,
+                            .object_type = OBJECT_TYPE_EXIT,
+                            .flags = &configuration->default_exit_flags});
+  thingb = decode_flags(
+      &(DecodeFlagsRequest){.database = evaluation->world->database,
+                            .player = player,
+                            .object_type = OBJECT_TYPE_THING,
+                            .flags = &configuration->default_thing_flags});
   buff = alloc_lbuf("list_df_flags");
   (void)snprintf(
       buff, LBUF_SIZE,
@@ -495,12 +506,26 @@ void do_list(CommandInvocation *invocation) {
     display_powertab(&invocation->context->evaluation, player);
     break;
   case LIST_LOGGING:
-    name_table_interpret(&invocation->context->evaluation, configuration,
-                         player, logoptions_nametab, configuration->log_options,
-                         "Events Logged:", "enabled", "disabled");
-    name_table_interpret(&invocation->context->evaluation, configuration,
-                         player, logdata_nametab, configuration->log_info,
-                         "Information Logged:", "yes", "no");
+    name_table_interpret(&(NameTableInterpretRequest){
+        .evaluation = &invocation->context->evaluation,
+        .configuration = configuration,
+        .player = player,
+        .table = logoptions_nametab,
+        .flags = configuration->log_options,
+        .prefix = "Events Logged:",
+        .true_text = "enabled",
+        .false_text = "disabled",
+    });
+    name_table_interpret(&(NameTableInterpretRequest){
+        .evaluation = &invocation->context->evaluation,
+        .configuration = configuration,
+        .player = player,
+        .table = logdata_nametab,
+        .flags = configuration->log_info,
+        .prefix = "Information Logged:",
+        .true_text = "yes",
+        .false_text = "no",
+    });
     break;
   case LIST_PROCESS:
     list_process(&invocation->context->evaluation, runtime->clock, player);

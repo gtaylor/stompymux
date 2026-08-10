@@ -17,9 +17,23 @@ typedef struct WorldContext WorldContext;
 void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
                   time_t occurred_at, const char *host, const char *username);
 int check_pass(WorldContext *world, DbRef player, const char *password);
-DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
-                     char *name, char *password, char *host, char *username);
-DbRef create_player(EvaluationContext *evaluation, char *name, char *password);
+typedef struct PlayerConnectionRequest {
+  EvaluationContext *evaluation;
+  WorldContext *world;
+  const char *name;
+  const char *password;
+  const char *host;
+  const char *username;
+} PlayerConnectionRequest;
+
+typedef struct PlayerCreationRequest {
+  EvaluationContext *evaluation;
+  const char *name;
+  const char *password;
+} PlayerCreationRequest;
+
+DbRef connect_player(const PlayerConnectionRequest *request);
+DbRef create_player(const PlayerCreationRequest *request);
 int add_player_name(WorldContext *world, DbRef player, char *name);
 int delete_player_name(WorldContext *world, DbRef player, char *name);
 DbRef lookup_player(WorldContext *world, DbRef player, const char *name,

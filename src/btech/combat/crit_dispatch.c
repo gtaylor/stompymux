@@ -14,8 +14,12 @@
 #include "section_types.h"
 #include <stddef.h>
 
-void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
-                          int num) {
+void mech_critical_handle(const CriticalHitDispatch *dispatch) {
+  Mech *wounded = dispatch->wounded;
+  Mech *attacker = dispatch->attacker;
+  const int LOS = dispatch->line_of_sight;
+  const int hitloc = dispatch->section;
+  int num = dispatch->count;
   int i;
   int critHit;
   int critType, critData;
@@ -37,17 +41,28 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       mech_class(wounded) == CLASS_VEH_NAVAL) {
     if (btech_context_uses_advanced_vehicle_criticals(context)) {
       for (i = 0; i < num; i++)
-        mech_advanced_vehicle_critical_handle(wounded, attacker, LOS, hitloc,
-                                              num);
+        mech_advanced_vehicle_critical_handle(
+            &(VehicleCriticalRequest){.wounded = wounded,
+                                      .attacker = attacker,
+                                      .line_of_sight = LOS,
+                                      .section = hitloc});
 
       return;
     } else if (!btech_context_uses_fasa_criticals(context)) {
       for (i = 0; i < num; i++)
-        mech_vehicle_critical_handle(wounded, attacker, LOS, hitloc, num);
+        mech_vehicle_critical_handle(
+            &(VehicleCriticalRequest){.wounded = wounded,
+                                      .attacker = attacker,
+                                      .line_of_sight = LOS,
+                                      .section = hitloc});
       return;
     } else if (btech_context_uses_fasa_criticals(context)) {
       for (i = 0; i < num; i++)
-        mech_fasa_vehicle_critical_handle(wounded, attacker, LOS, hitloc, num);
+        mech_fasa_vehicle_critical_handle(
+            &(VehicleCriticalRequest){.wounded = wounded,
+                                      .attacker = attacker,
+                                      .line_of_sight = LOS,
+                                      .section = hitloc});
       return;
     }
   }
@@ -56,13 +71,20 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
   if (mech_class(wounded) == CLASS_VTOL) {
     if (btech_context_uses_advanced_vtol_criticals(context)) {
       for (i = 0; i < num; i++)
-        mech_advanced_vehicle_critical_handle(wounded, attacker, LOS, hitloc,
-                                              num);
+        mech_advanced_vehicle_critical_handle(
+            &(VehicleCriticalRequest){.wounded = wounded,
+                                      .attacker = attacker,
+                                      .line_of_sight = LOS,
+                                      .section = hitloc});
 
       return;
     } else {
       for (i = 0; i < num; i++)
-        mech_vtol_critical_handle(wounded, attacker, LOS, hitloc, num);
+        mech_vtol_critical_handle(
+            &(VehicleCriticalRequest){.wounded = wounded,
+                                      .attacker = attacker,
+                                      .line_of_sight = LOS,
+                                      .section = hitloc});
 
       return;
     }
@@ -101,8 +123,13 @@ void mech_critical_handle(Mech *wounded, Mech *attacker, int LOS, int hitloc,
     critType = mech_critical_part_type(wounded, hitloc, critHit);
     critData = mech_critical_data(wounded, hitloc, critHit);
 
-    if (mech_critical_effect_apply(wounded, attacker, LOS, hitloc, critHit,
-                                   critType, critData))
+    if (mech_critical_effect_apply(&(CriticalEffectRequest){
+            .wounded = wounded,
+            .attacker = attacker,
+            .line_of_sight = LOS,
+            .slot = {.section = hitloc, .critical = critHit},
+            .part_type = critType,
+            .part_data = critData}))
       num--;
   }
 }

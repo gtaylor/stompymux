@@ -52,9 +52,14 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
-int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
-                               int hitloc, int critHit, int critType,
-                               int critData) {
+int mech_critical_effect_apply(const CriticalEffectRequest *request) {
+  Mech *wounded = request->wounded;
+  Mech *attacker = request->attacker;
+  const int LOS = request->line_of_sight;
+  const int hitloc = request->slot.section;
+  int critHit = request->slot.critical;
+  const int critType = request->part_type;
+  const int critData = request->part_data;
   Mech *mech = wounded;
   int weapindx, damage, destroycrit, weapon_slot, wFirstCrit;
   int temp;
@@ -82,8 +87,8 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
     damage = critData * weapon_catalogue_damage(weapindx);
     if (weapon_catalogue_is_missile(weapindx) ||
         weapon_catalogue_is_artillery(weapindx)) {
-      int missile_count =
-          btech_context_missile_hit_count(context, weapindx, 10);
+      int missile_count = btech_context_missile_hit_count(&(MissileHitLookup){
+          .context = context, .weapon = weapindx, .roll = 10});
       if (missile_count > 0)
         damage *= missile_count;
     }
@@ -94,7 +99,11 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
                     "One of your Gauss Rifle ammo feeds is destroyed");
       mech_critical_destroy(wounded, hitloc, critHit);
     } else if (damage) {
-      mech_ammunition_explode(attacker, wounded, hitloc, critHit, damage);
+      mech_ammunition_explode(&(AmmunitionExplosionRequest){
+          .attacker = attacker,
+          .target = wounded,
+          .ammunition = {.section = hitloc, .critical = critHit},
+          .damage = damage});
     } else {
       mech_notify(wounded, MECHALL,
                   "You have no ammunition left in that location, lucky you!");
@@ -106,10 +115,14 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
   if (mech_critical_is_broken(wounded, hitloc, critHit) &&
       equipment_is_weapon(critType) &&
       !mech_critical_is_disabled(wounded, hitloc, critHit)) {
-    while (--critHit &&
-           mech_critical_part_type(wounded, hitloc, critHit) == critType)
+    for (;;) {
+      --critHit;
+      if (!critHit ||
+          mech_critical_part_type(wounded, hitloc, critHit) != critType)
+        break;
       if (mech_critical_is_destroyed(wounded, hitloc, critHit))
         break;
+    }
     mech_printf(
         wounded, MECHALL, "Your destroyed %s is damaged some more!",
         checked_string_suffix(
@@ -234,12 +247,16 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
   }
 
   if (equipment_is_weapon(critType)) {
-    if (mech_weapon_critical_handle(attacker, wounded, hitloc, critHit,
-                                    critType, LOS)) {
+    if (mech_weapon_critical_handle(&(WeaponCriticalRequest){
+            .attacker = attacker,
+            .wounded = wounded,
+            .slot = {.section = hitloc, .critical = critHit},
+            .part_type = critType})) {
       return 1;
     }
 
-    mech_weapon_critical_apply(mech, attacker, LOS, hitloc, critHit);
+    mech_weapon_critical_apply(&(WeaponCriticalApplication){
+        .mech = mech, .slot = {.section = hitloc, .critical = critHit}});
 
     return 1;
   }
@@ -293,20 +310,32 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
         break; // sanity check
       }
       destroycrit = 0;
-      if (mech_weapon_critical_handle(
-              attacker, wounded, temp, fCrit,
-              mech_critical_part_type(wounded, temp, fCrit), LOS))
+      if (mech_weapon_critical_handle(&(WeaponCriticalRequest){
+              .attacker = attacker,
+              .wounded = wounded,
+              .slot = {.section = temp, .critical = fCrit},
+              .part_type = mech_critical_part_type(wounded, temp, fCrit)}))
         break;
-      mech_weapon_critical_apply(wounded, attacker, LOS, temp, fCrit);
+      mech_weapon_critical_apply(&(WeaponCriticalApplication){
+          .mech = wounded, .slot = {.section = temp, .critical = fCrit}});
       break;
     case HEAT_SINK:
       if (mech_has_double_heat_sinks(mech)) {
         int heat_sink_critical_size = mech_heat_sink_critical_size(mech);
-        wFirstCrit = FindFirstWeaponCrit(wounded, hitloc, critHit, 0, critType,
-                                         heat_sink_critical_size);
+        wFirstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+            .mech = wounded,
+            .weapon = {.section = hitloc, .critical = critHit},
+            .start_critical = 0,
+            .part_type = critType,
+            .maximum_criticals = heat_sink_critical_size,
+        });
         mech_heat_sink_count_remove(wounded, 2);
-        mech_weapon_destroy(wounded, hitloc, critType, wFirstCrit, 1,
-                            heat_sink_critical_size);
+        mech_weapon_destroy(&(WeaponDestructionRequest){
+            .mech = wounded,
+            .first = {.section = hitloc, .critical = wFirstCrit},
+            .part_type = critType,
+            .criticals_to_destroy = 1,
+            .total_criticals = heat_sink_critical_size});
         destroycrit = 0;
       } else
         mech_heat_sink_count_remove(wounded, 1);
@@ -326,9 +355,19 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
       }
       /* IMPROVED JJ CHECK HERE. SIMILIAR TO DHS */
       if (mech_technology_flags_secondary(mech) & IMPROVED_JJ_TECH) {
-        wFirstCrit =
-            FindFirstWeaponCrit(wounded, hitloc, critHit, 0, critType, 2);
-        mech_weapon_destroy(wounded, hitloc, critType, wFirstCrit, 1, 2);
+        wFirstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+            .mech = wounded,
+            .weapon = {.section = hitloc, .critical = critHit},
+            .start_critical = 0,
+            .part_type = critType,
+            .maximum_criticals = 2,
+        });
+        mech_weapon_destroy(&(WeaponDestructionRequest){
+            .mech = wounded,
+            .first = {.section = hitloc, .critical = wFirstCrit},
+            .part_type = critType,
+            .criticals_to_destroy = 1,
+            .total_criticals = 2});
         destroycrit = 0;
       }
       mech_jump_speed_lower(wounded, MP1);
@@ -497,10 +536,11 @@ int mech_critical_effect_apply(Mech *wounded, Mech *attacker, int LOS,
         mech_notify(wounded, MECHALL,
                     "One of your leg actuators is destroyed!");
 
-        if (mech_critical_is_operational_special(
-                wounded, hitloc, 0,
-                SHOULDER_OR_HIP)) { /* don't need to bother with crits if we
-                                       already have a hip crit here */
+        if (mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                .mech = wounded,
+                .slot = {.section = hitloc, .critical = 0},
+                .special = SHOULDER_OR_HIP})) { /* don't
+need to bother with crits if we already have a hip crit here */
           if (!mech_is_destroyed(wounded) && mech_is_started(wounded)) {
             (void)snprintf(msgbuf, MBUF_SIZE, "'s %s twists in an odd way!",
                            locname);

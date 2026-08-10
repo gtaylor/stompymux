@@ -29,8 +29,8 @@ static bool map_text_builder_append_char(MapTextBuilder *builder, char value) {
 static bool map_text_set_line(MapText *text, size_t line, size_t offset) {
   if (line >= text->line_capacity || offset >= text->buffer_capacity)
     return false;
-  char **line_slot = checked_storage_at(text->lines, text->line_capacity,
-                                        sizeof(*text->lines), line);
+  char **line_slot = (char **)checked_storage_at(
+      (void *)text->lines, text->line_capacity, sizeof(*text->lines), line);
   *line_slot = checked_storage_at(text->buffer, text->buffer_capacity,
                                   sizeof(*text->buffer), offset);
   return true;
@@ -39,8 +39,8 @@ static bool map_text_set_line(MapText *text, size_t line, size_t offset) {
 static bool map_text_end_lines(MapText *text, size_t line) {
   if (line >= text->line_capacity)
     return false;
-  char **line_slot = checked_storage_at(text->lines, text->line_capacity,
-                                        sizeof(*text->lines), line);
+  char **line_slot = (char **)checked_storage_at(
+      (void *)text->lines, text->line_capacity, sizeof(*text->lines), line);
   *line_slot = nullptr;
   return true;
 }
@@ -149,7 +149,8 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
       } else if (ascii_is_digit(input)) { /* Elevation */
         new_colour = cur_colour;
       } else {
-        new_colour = map_terrain_color_char(colors, c, 0);
+        new_colour = map_terrain_color_char(&(TerrainColorRequest){
+            .colors = colors, .terrain = c, .elevation = 0});
       }
       break;
     }

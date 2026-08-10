@@ -96,7 +96,10 @@ int mech_weapon_recycle_update(Mech *mech) {
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
-        mech_critical_temporary_failure_set(mech, section, critical, 0);
+        mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+            .mech = mech,
+            .slot = {.section = section, .critical = critical},
+            .failure = 0});
       } else if (mech_critical_temporary_failure(mech, section, critical) !=
                  FAIL_DESTROYED) {
         int remaining = mech_critical_data(mech, section, critical) - diff;

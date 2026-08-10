@@ -99,10 +99,18 @@ static void take_section_materials(BtechContext *context, Mech *mech,
                                    int location) {
   int amount = mech_section_original_internal(mech, location);
   DbRef store = mech_parts_store_dbref(mech);
-  econ_change_items(context, store, tech_proper_internal_part(mech), 0,
-                    -amount);
-  econ_change_items(context, store, cargo_equipment_index(S_ELECTRONIC), 0,
-                    -amount);
+  economy_inventory_change(&(EconomyInventoryChange){
+      .context = context,
+      .store = store,
+      .part = {.id = tech_proper_internal_part(mech), .brand = 0},
+      .quantity_delta = -amount,
+  });
+  economy_inventory_change(&(EconomyInventoryChange){
+      .context = context,
+      .store = store,
+      .part = {.id = cargo_equipment_index(S_ELECTRONIC), .brand = 0},
+      .quantity_delta = -amount,
+  });
 }
 
 void tech_reattach(DbRef player, void *data, char *buffer) {
@@ -204,7 +212,8 @@ void tech_reattach(DbRef player, void *data, char *buffer) {
                     "You muck around, wasting the section for good...");
       /* TODO: maybe save X% of materials like before? */
       take_section_materials(context, mech, loc);
-      tech_addtechtime(context, player, fixtime);
+      tech_addtechtime(&(TechTimeAddition){
+          .context = context, .player = player, .units = fixtime});
       schedule_section_repair(context, mech, player, loc, EVENT_REPAIR_REAT,
                               mech_event_failure_marker);
 
@@ -220,7 +229,8 @@ void tech_reattach(DbRef player, void *data, char *buffer) {
             evaluation, player, "Your skill manages to save %d minute%s",
             fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
       take_section_materials(context, mech, loc);
-      tech_addtechtime(context, player, fixtime);
+      tech_addtechtime(&(TechTimeAddition){
+          .context = context, .player = player, .units = fixtime});
       schedule_section_repair(context, mech, player, loc, EVENT_REPAIR_REAT,
                               mux_event_tickmech_reattach);
     }
@@ -234,7 +244,8 @@ void tech_reattach(DbRef player, void *data, char *buffer) {
           evaluation, player, "Your skill manages to save %d minute%s",
           base_fixtime - fixtime, base_fixtime - fixtime == 1 ? "!" : "s!");
     take_section_materials(context, mech, loc);
-    tech_addtechtime(context, player, fixtime);
+    tech_addtechtime(&(TechTimeAddition){
+        .context = context, .player = player, .units = fixtime});
     schedule_section_repair(context, mech, player, loc, EVENT_REPAIR_REAT,
                             mux_event_tickmech_reattach);
   }

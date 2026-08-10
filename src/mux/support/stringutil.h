@@ -12,9 +12,9 @@ char ascii_to_upper(char character);
 /** Converts one ASCII uppercase letter to lowercase. */
 char ascii_to_lower(char character);
 /** Allocates an lbuf containing the text with whitespace normalized. */
-char *munge_space(char *string);
+char *munge_space(const char *string);
 /** Allocates an lbuf containing trimmed, normalized text. */
-char *trim_spaces(char *string);
+char *trim_spaces(const char *string);
 /** Splits a mutable string at targ and advances the caller's cursor. */
 char *grabto(char **str, char targ);
 /** Compares strings case-insensitively using the configured space policy. */

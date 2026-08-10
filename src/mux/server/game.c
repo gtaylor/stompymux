@@ -42,7 +42,7 @@
 
 extern void init_cmdtab(CommandRegistry *registry);
 
-void do_dump_optimize(EvaluationContext *, DbRef, DbRef, int);
+static void do_dump_optimize(EvaluationContext *evaluation, DbRef player);
 static void init_rlimit(MuxServer *server);
 
 /*
@@ -64,13 +64,12 @@ void do_dump(CommandInvocation *invocation) {
    */
 
   if (key & DUMP_OPTIMIZE)
-    do_dump_optimize(evaluation, player, invocation->cause, key);
+    do_dump_optimize(evaluation, player);
   else
     fork_and_dump(invocation->context->runtime->server_control, key);
 }
 
-void do_dump_optimize(EvaluationContext *evaluation, DbRef player, DbRef cause,
-                      int key) {
+static void do_dump_optimize(EvaluationContext *evaluation, DbRef player) {
   raw_notify(evaluation, player, "Database is memory based.");
 }
 
@@ -330,44 +329,47 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   evaluation->notification_nesting--;
 }
 
-void notify_except(EvaluationContext *evaluation, DbRef loc, DbRef player,
-                   DbRef exception, const char *msg) {
+void notify_excluding(const ExcludingNotification *notification) {
+  EvaluationContext *evaluation = notification->evaluation;
+  DbRef loc = notification->location;
+  DbRef player = notification->sender;
+  const char *msg = notification->message;
   DbRef first;
 
-  if (loc != exception)
+  bool location_excluded = false;
+  for (size_t index = 0; index < notification->exception_count; index++)
+    if (loc == *(const DbRef *)checked_storage_at_const(
+                   notification->exceptions, 2, sizeof(DbRef), index))
+      location_excluded = true;
+  if (!location_excluded)
     notify_checked(evaluation, loc, player, msg,
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A));
   DOLIST(evaluation->world->database, first,
          game_object_contents(evaluation->world->database, loc)) {
-    if (first != exception)
+    bool excluded = false;
+    for (size_t index = 0; index < notification->exception_count; index++)
+      if (first == *(const DbRef *)checked_storage_at_const(
+                       notification->exceptions, 2, sizeof(DbRef), index))
+        excluded = true;
+    if (!excluded)
       notify_checked(evaluation, first, player, msg,
                      (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
-  }
-}
-
-void notify_except2(EvaluationContext *evaluation, DbRef loc, DbRef player,
-                    DbRef exc1, DbRef exc2, const char *msg) {
-  DbRef first;
-
-  if ((loc != exc1) && (loc != exc2))
-    notify_checked(evaluation, loc, player, msg,
-                   (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A));
-  DOLIST(evaluation->world->database, first,
-         game_object_contents(evaluation->world->database, loc)) {
-    if (first != exc1 && first != exc2) {
-      notify_checked(evaluation, first, player, msg,
-                     (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
-    }
   }
 }
 
 void do_shutdown(CommandInvocation *invocation) {
-  server_shutdown(invocation->context->runtime->server_control,
-                  invocation->player, invocation->key, invocation->first);
+  server_shutdown(&(ServerShutdownRequest){
+      .control = invocation->context->runtime->server_control,
+      .player = invocation->player,
+      .options = invocation->key,
+      .message = invocation->first});
 }
 
-void server_shutdown(ServerControl *control, DbRef player, int key,
-                     const char *message) {
+void server_shutdown(const ServerShutdownRequest *request) {
+  ServerControl *control = request->control;
+  DbRef player = request->player;
+  int key = request->options;
+  const char *message = request->message;
   btech_special_objects_reset(control->btech);
   if (player != NOTHING) {
     raw_broadcast(control->descriptors, 0, "Game: Shutdown by %s",
@@ -469,8 +471,11 @@ void fork_and_dump(ServerControl *control, int key) {
     raw_broadcast(control->descriptors, 0, "%s",
                   control->configuration->database.dump_msg);
 
-  log_error(control->log, LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
-            control->configuration->database.gamedb);
+  log_error((LogEntry){.log = control->log,
+                       .key = LOG_DBSAVES,
+                       .primary = "DMP",
+                       .secondary = "CHKPT"},
+            "Saving database: %s", control->configuration->database.gamedb);
 
   if (!key || (key & DUMP_STRUCT)) {
     if (control->configuration->database.fork_dump) {
@@ -478,7 +483,10 @@ void fork_and_dump(ServerControl *control, int key) {
       switch (fork()) {
       case -1: /* fork() failed */
         /* FIXME: Make this error message conform.  */
-        log_perror(control->log, "DMP", "FAIL", nullptr, "fork()");
+        log_perror(&(LogSystemError){.log = control->log,
+                                     .primary = "DMP",
+                                     .secondary = "FAIL",
+                                     .failing_object = "fork()"});
         return;
 
       case 0: /* child */
@@ -548,15 +556,15 @@ int main(int argc, char *argv[]) {
   char *config_file;
   int mindb;
   char *argument_one =
-      argc > 1
-          ? *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 1)
-          : nullptr;
+      argc > 1 ? *(char **)checked_storage_at((void *)argv, (size_t)argc,
+                                              sizeof(*argv), 1)
+               : nullptr;
 
   if (argc > 3 || (argc > 2 && strcmp(argument_one, "-s") != 0) ||
       (argc > 1 && strcmp(argument_one, "--restart") == 0)) {
-    (void)fprintf(
-        stderr, "Usage: %s [-s] [config-file]\n",
-        *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 0));
+    (void)fprintf(stderr, "Usage: %s [-s] [config-file]\n",
+                  *(char **)checked_storage_at((void *)argv, (size_t)argc,
+                                               sizeof(*argv), 0));
     exit(1);
   }
 
@@ -571,8 +579,8 @@ int main(int argc, char *argv[]) {
     if (!strcmp(argument_one, "-s")) {
       mindb = 1;
       if (argc == 3)
-        config_file =
-            *(char **)checked_storage_at(argv, (size_t)argc, sizeof(*argv), 2);
+        config_file = *(char **)checked_storage_at((void *)argv, (size_t)argc,
+                                                   sizeof(*argv), 2);
     } else {
       config_file = argument_one;
     }
@@ -645,7 +653,8 @@ int main(int argc, char *argv[]) {
    * Do a consistency check and set up the freelist
    */
 
-  database_check(&server.background_command.evaluation, NOTHING, 0);
+  database_check(&(DatabaseCheckRequest){
+      .evaluation = &server.background_command.evaluation, .player = NOTHING});
 
   /*
    * Reset all the hash stats
@@ -683,10 +692,16 @@ static void init_rlimit(MuxServer *server) {
   struct rlimit rlimit;
 
   if (getrlimit(RLIMIT_NOFILE, &rlimit)) {
-    log_perror(&server->log, "RLM", "FAIL", nullptr, "getrlimit()");
+    log_perror(&(LogSystemError){.log = &server->log,
+                                 .primary = "RLM",
+                                 .secondary = "FAIL",
+                                 .failing_object = "getrlimit()"});
     return;
   }
   rlimit.rlim_cur = rlimit.rlim_max;
   if (setrlimit(RLIMIT_NOFILE, &rlimit))
-    log_perror(&server->log, "RLM", "FAIL", nullptr, "setrlimit()");
+    log_perror(&(LogSystemError){.log = &server->log,
+                                 .primary = "RLM",
+                                 .secondary = "FAIL",
+                                 .failing_object = "setrlimit()"});
 }

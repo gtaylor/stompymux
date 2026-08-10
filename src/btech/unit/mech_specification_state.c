@@ -236,12 +236,13 @@ void mech_sixth_sense_set(Mech *mech, bool enabled) {
     mech->rd.specials &= ~SS_ABILITY;
 }
 
-void mech_bay_dbref_set(Mech *mech, int bay, DbRef bay_dbref) {
-  if (bay < 0)
+void mech_bay_dbref_set(const MechBayAssignment *assignment) {
+  if (assignment->bay < 0)
     abort();
-  DbRef *slot = checked_storage_at(mech->pd.bay, NUM_BAYS,
-                                   sizeof(*mech->pd.bay), (size_t)bay);
-  *slot = bay_dbref;
+  DbRef *slot = checked_storage_at(assignment->mech->pd.bay, NUM_BAYS,
+                                   sizeof(*assignment->mech->pd.bay),
+                                   (size_t)assignment->bay);
+  *slot = assignment->bay_dbref;
 }
 
 int mech_carried_cargo_weight(const Mech *mech) {
@@ -281,8 +282,8 @@ void mech_load_cache_record(Mech *mech, int lugged_weight) {
 
 float mech_cached_maximum_speed(const Mech *mech) { return mech->rd.rspd; }
 
-void mech_speed_cache_record(Mech *mech, float speed, int walk_xp_factor) {
-  mech->rd.rspd = speed;
-  mech->rd.wxf = walk_xp_factor;
-  mech->rd.critstatus |= SPEED_OK;
+void mech_speed_cache_record(const MechSpeedCacheRecord *record) {
+  record->mech->rd.rspd = record->maximum_speed;
+  record->mech->rd.wxf = record->walking_xp_factor;
+  record->mech->rd.critstatus |= SPEED_OK;
 }

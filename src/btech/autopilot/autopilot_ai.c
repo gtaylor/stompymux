@@ -5,6 +5,7 @@
 #include "btech_channel.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
@@ -20,7 +21,6 @@
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "section_types.h"
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,18 +36,15 @@ enum {
   CFAST_COUNT = 9,
   MAGIC_NUM = -123456,
 };
-
 typedef enum AiSpeedOption {
   AI_SPEED_NORMAL,
   AI_SPEED_FASTER,
   AI_SPEED_SLOWER,
 } AiSpeedOption;
-
 typedef struct AiPathOption {
   int heading_delta;
   AiSpeedOption speed;
 } AiPathOption;
-
 static int ai_speed_option_delta(AiSpeedOption option) {
   switch (option) {
   case AI_SPEED_NORMAL:
@@ -59,7 +56,6 @@ static int ai_speed_option_delta(AiSpeedOption option) {
   }
   return 0;
 }
-
 static const AiPathOption *ai_path_option_at(const AiPathOption *options,
                                              size_t count, int index) {
   if (index < 0)
@@ -67,7 +63,6 @@ static const AiPathOption *ai_path_option_at(const AiPathOption *options,
   return checked_storage_at_const(options, count, sizeof(*options),
                                   (size_t)index);
 }
-
 static const AiPathOption move_norm_opt[MNORM_COUNT] = {
     {0, AI_SPEED_FASTER},    {0, AI_SPEED_NORMAL},    {0, AI_SPEED_SLOWER},
     {-1, AI_SPEED_NORMAL},   {1, AI_SPEED_NORMAL},    {-2, AI_SPEED_NORMAL},
@@ -82,26 +77,22 @@ static const AiPathOption move_norm_opt[MNORM_COUNT] = {
     {120, AI_SPEED_NORMAL},  {-160, AI_SPEED_NORMAL}, {160, AI_SPEED_NORMAL},
     {-160, AI_SPEED_SLOWER}, {160, AI_SPEED_SLOWER},  {-160, AI_SPEED_FASTER},
     {160, AI_SPEED_FASTER}};
-
 /* Update: Just do subset if we're in silly mood */
 static const AiPathOption combat_fast_opt[CFAST_COUNT] = {
     {0, AI_SPEED_FASTER},   {0, AI_SPEED_NORMAL},   {0, AI_SPEED_SLOWER},
     {-10, AI_SPEED_NORMAL}, {10, AI_SPEED_NORMAL},  {-30, AI_SPEED_NORMAL},
     {30, AI_SPEED_NORMAL},  {-60, AI_SPEED_NORMAL}, {60, AI_SPEED_NORMAL}};
-
 typedef struct AiPathUnitSimulation {
   LocationSimulation location;
   Mech *mech;
   bool out;
 } AiPathUnitSimulation;
-
 typedef struct AiPathContext {
   AiPathUnitSimulation enemies[BATTLE_MAP_UNIT_CAPACITY];
   int enemy_count;
   AiPathUnitSimulation friends[BATTLE_MAP_UNIT_CAPACITY];
   int friend_count;
 } AiPathContext;
-
 typedef struct AiPathCandidate {
   LocationSimulation location;
   int danger;
@@ -112,11 +103,9 @@ typedef struct AiPathCandidate {
   int stack_step;
   int best_range;
 } AiPathCandidate;
-
 typedef struct AiPathWorkspace {
   AiPathCandidate candidates[MAX_SIM_PATHS];
 } AiPathWorkspace;
-
 static AiPathUnitSimulation *ai_path_unit_at(AiPathUnitSimulation *units,
                                              int index) {
   if (index < 0)
@@ -124,7 +113,6 @@ static AiPathUnitSimulation *ai_path_unit_at(AiPathUnitSimulation *units,
   return checked_storage_at(units, BATTLE_MAP_UNIT_CAPACITY, sizeof(*units),
                             (size_t)index);
 }
-
 static AiPathCandidate *ai_path_candidate_at(AiPathWorkspace *workspace,
                                              int index) {
   if (index < 0)
@@ -132,26 +120,21 @@ static AiPathCandidate *ai_path_candidate_at(AiPathWorkspace *workspace,
   return checked_storage_at(workspace->candidates, MAX_SIM_PATHS,
                             sizeof(AiPathCandidate), (size_t)index);
 }
-
 typedef struct AiInfo {
   char text[MBUF_SIZE];
 } AiInfo;
-
 static void ai_score_min_update(int *current, int candidate) {
   if (*current > candidate || *current == MAGIC_NUM)
     *current = candidate;
 }
-
 static void ai_score_max_update(int *current, int candidate) {
   if (*current < candidate || *current == MAGIC_NUM)
     *current = candidate;
 }
-
 static int ai_score_normalize(int score, int minimum, int maximum, int scale) {
   return minimum == maximum ? 0
                             : scale * (score - minimum) / (maximum - minimum);
 }
-
 static void ai_score_range_relax(int *minimum, int *maximum, int divisor) {
   if (*minimum == MAGIC_NUM || *maximum == MAGIC_NUM)
     return;
@@ -160,26 +143,21 @@ static void ai_score_range_relax(int *minimum, int *maximum, int divisor) {
   *minimum = (old_minimum * (divisor - 1) + old_maximum) / divisor;
   *maximum = (old_minimum + old_maximum * (divisor - 1)) / divisor;
 }
-
 static void ai_send_message(Autopilot *a, Mech *m, const char *msg) {
   auto_reply(m, msg);
   btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI, "%s", msg);
 }
-
 static AiInfo ai_info(Mech *m, Autopilot *a) {
   AiInfo info;
-
   (void)snprintf(info.text, sizeof(info.text),
                  "Unit#%ld on #%ld [A#%ld]:", mech_dbref(m), mech_map_dbref(m),
                  a->mynum);
   return info;
 }
-
 static void ai_path_collect_enemies(AiPathContext *path, Mech *mech,
                                     BattleMap *map) {
   Mech *tempMech;
   int i;
-
   path->enemy_count = 0;
   for (i = 0; i < battle_map_unit_count(map); i++) {
     tempMech = btech_context_get_mech(mech_context(mech),
@@ -203,12 +181,10 @@ static void ai_path_collect_enemies(AiPathContext *path, Mech *mech,
     enemy->out = false;
   }
 }
-
 static void ai_path_collect_friends(AiPathContext *path, Mech *mech,
                                     BattleMap *map) {
   Mech *tempMech;
   int i;
-
   path->friend_count = 0;
   for (i = 0; i < battle_map_unit_count(map); i++) {
     tempMech = btech_context_get_mech(mech_context(mech),
@@ -232,18 +208,38 @@ static void ai_path_collect_friends(AiPathContext *path, Mech *mech,
     friend->out = false;
   }
 }
-
 /* Simulate all candidate states independently for efficient path scoring. */
-
-static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
-                          Autopilot *a, const AiPathOption *options,
-                          int option_count, bool gotenemy, float dx, float dy,
-                          float delx, float dely, int *rl, int *bd,
-                          int *bscore) {
+typedef struct AiPathScoreRequest {
+  AiPathContext *path;
+  Mech *mech;
+  BattleMap *map;
+  Autopilot *autopilot;
+  const AiPathOption *options;
+  int option_count;
+  bool has_enemy;
+  MapRealPosition target;
+  MapRealPosition target_delta;
+} AiPathScoreRequest;
+typedef struct AiPathScoreResult {
+  int selected_option;
+  int score;
+} AiPathScoreResult;
+static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
+  AiPathContext *path = request->path;
+  Mech *m = request->mech;
+  BattleMap *map = request->map;
+  Autopilot *a = request->autopilot;
+  const AiPathOption *options = request->options;
+  const int option_count = request->option_count;
+  const bool gotenemy = request->has_enemy;
+  float dx = request->target.x;
+  float dy = request->target.y;
+  const float delx = request->target_delta.x;
+  const float dely = request->target_delta.y;
+  AiPathScoreResult result = {.selected_option = -1};
   int i, j, k, l, bearing;
   int sd, sc;
   AiPathWorkspace workspace = {0};
-
   for (i = 0; i < option_count; i++) {
     AiPathCandidate *candidate = ai_path_candidate_at(&workspace, i);
     const AiPathOption *option =
@@ -258,7 +254,6 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
         candidate->location.ds = candidate->location.ds * 2.0F / 3.0F;
       } else if (sd == 1) {
         float ms = mech_effective_maximum_speed(m);
-
         candidate->location.ds =
             (candidate->location.ds < MP1 ? MP1 : candidate->location.ds) *
             4.0F / 3.0F;
@@ -266,7 +261,6 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
           candidate->location.ds = ms;
       } else {
         float ms = mech_effective_maximum_speed(m);
-
         candidate->location.ds = ms;
       }
     }
@@ -283,20 +277,19 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
         continue;
       }
       /* Base target-acquisition stuff */
-      const float target_range =
-          FindXYRange(candidate->location.fx, candidate->location.fy, dx, dy);
+      const float target_range = map_real_range(&(MapRealSegment){
+          .start = {.x = candidate->location.fx, .y = candidate->location.fy},
+          .end = {.x = dx, .y = dy},
+      });
       l = (int)target_range;
       if (l < candidate->best_range)
         candidate->best_range = l;
-
       /* Generally speaking we're going to the point spesified */
       candidate->movement_score +=
           4 * (2 * (50 - candidate->best_range) + (100 - l));
-
       /* Heading change's inherently [slightly] evil */
       if (candidate->location.h != candidate->location.dh)
         candidate->movement_score -= 1;
-
       /* Moving is a good thing */
       if (candidate->location.x != candidate->location.lx ||
           candidate->location.y != candidate->location.ly) {
@@ -328,7 +321,6 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
       for (k = 0; k < option_count; k++) {
         int stack_count = 0;
         AiPathCandidate *candidate = ai_path_candidate_at(&workspace, k);
-
         if (candidate->out_step || candidate->stack_step)
           continue;
         /* Meaning of stack: Someone moves _into_ the hex */
@@ -341,7 +333,6 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
         }
         if (stack_count > 1) { /* Possible stackage */
           int osc = stack_count;
-
           for (j = 0; j < path->friend_count; j++) {
             AiPathUnitSimulation *friend = ai_path_unit_at(path->friends, j);
             if (!friend->out)
@@ -372,8 +363,12 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
           AiPathCandidate *candidate = ai_path_candidate_at(&workspace, k);
           if (candidate->out_step)
             continue;
-          if ((l = MyHexDist(candidate->location.x, candidate->location.y,
-                             enemy->location.x, enemy->location.y, 0)) >= 100)
+          l = map_hex_distance(&(HexDistanceRequest){
+              .start = {.x = candidate->location.x, .y = candidate->location.y},
+              .end = {.x = enemy->location.x, .y = enemy->location.y},
+              .correction = 0,
+          });
+          if (l >= 100)
             continue;
           switch (a->auto_cmode) {
           case 0: /* Withdraw */
@@ -401,9 +396,10 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
           candidate->tick_danger += (40 - MIN(40, l));
           /* Arcs can be .. dangerous */
           if (mech_class(m) == CLASS_MECH) {
-            bearing =
-                FindBearing(candidate->location.fx, candidate->location.fy,
-                            enemy->location.fx, enemy->location.fy);
+            bearing = map_bearing(&(MapRealSegment){
+                .start = {.x = candidate->location.fx,
+                          .y = candidate->location.fy},
+                .end = {.x = enemy->location.fx, .y = enemy->location.fy}});
             bearing = candidate->location.h - bearing;
             if (bearing < 0)
               bearing += 360;
@@ -416,9 +412,10 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
               }
             }
           } else if (mech_class(m) == CLASS_VEH_GROUND) {
-            bearing =
-                FindBearing(candidate->location.fx, candidate->location.fy,
-                            enemy->location.fx, enemy->location.fy);
+            bearing = map_bearing(&(MapRealSegment){
+                .start = {.x = candidate->location.fx,
+                          .y = candidate->location.fy},
+                .end = {.x = enemy->location.fx, .y = enemy->location.fy}});
             bearing = candidate->location.h - bearing;
             if (bearing < 0)
               bearing += 360;
@@ -457,10 +454,13 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
           if (candidate->out_step)
             continue;
           /* Dangerous to be far from buddy in fight */
-          const float target_range = FindXYRange(
-              candidate->location.fx, candidate->location.fy, dx, dy);
+          const float target_range = map_real_range(&(MapRealSegment){
+              .start = {.x = candidate->location.fx,
+                        .y = candidate->location.fy},
+              .end = {.x = dx, .y = dy},
+          });
           l = (int)target_range;
-          if (gotenemy && (delx != 0.0F || dely != 0.0F))
+          if ((delx != 0.0F || dely != 0.0F))
             candidate->tick_danger += MIN(100, l * l);
           if (path->enemy_count)
             candidate->tick_danger /= path->enemy_count;
@@ -491,8 +491,6 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
     }
   }
   /* Now we have been.. calibrated */
-  *bscore = 0;
-  *bd = -1;
   /* Find best overall score */
   for (i = 0; i < option_count; i++) {
     AiPathCandidate *candidate = ai_path_candidate_at(&workspace, i);
@@ -514,18 +512,19 @@ static void ai_path_score(AiPathContext *path, Mech *m, BattleMap *map,
           ai_score_normalize(candidate->danger, a->w_dan, a->b_dan,
                              SCORE_MOD * (a->auto_fweight + a->auto_goweight));
     const AiPathOption *best_option =
-        *bd >= 0 ? ai_path_option_at(options, (size_t)option_count, *bd)
-                 : nullptr;
-    if (sc > *bscore || (best_option != nullptr && sc == *bscore &&
-                         ai_speed_option_delta(option->speed) >
-                             ai_speed_option_delta(best_option->speed))) {
-      *bscore = sc;
-      *bd = i;
-      *rl = candidate->out_step - 1;
+        result.selected_option >= 0
+            ? ai_path_option_at(options, (size_t)option_count,
+                                result.selected_option)
+            : nullptr;
+    if (sc > result.score || (best_option != nullptr && sc == result.score &&
+                              ai_speed_option_delta(option->speed) >
+                                  ai_speed_option_delta(best_option->speed))) {
+      result.score = sc;
+      result.selected_option = i;
     }
   }
+  return result;
 }
-
 static int ai_opponents(Autopilot *a, Mech *m) {
   if (a->auto_nervous) {
     a->auto_nervous--;
@@ -536,44 +535,48 @@ static int ai_opponents(Autopilot *a, Mech *m) {
                              for one reason or another */
   return mech_seen_count(m);
 }
-
 static void ai_stop(Mech *mech, Autopilot *a) {
   char buf[128] = {0};
-
   if (mech_desired_speed(mech) > 0.1F) {
     strncpy(buf, "stop", 128);
     mech_speed(a->mynum, mech, buf);
   }
 }
-
 void ai_set_speed(Mech *mech, Autopilot *a, float spd) {
   char buf[SBUF_SIZE] = {0};
   float newspeed;
-
   if (!mech || !a)
     return;
-
   newspeed =
       FBOUNDED(0.0F, spd,
                (mech_effective_maximum_speed(mech) * (float)a->speed) / 100.0F);
-
   if (fabsf(mech_desired_speed(mech) - newspeed) > 0.0001F) {
     (void)snprintf(buf, SBUF_SIZE, "%f", (double)newspeed);
     mech_speed(a->mynum, mech, buf);
   }
 }
-
 void ai_set_heading(Mech *mech, Autopilot *a, int dir) {
   char buf[128] = {0};
-
   if (dir == mech_desired_heading_degrees(mech))
     return;
   (void)snprintf(buf, 128, "%d", dir);
   mech_heading(a->mynum, mech, buf);
 }
-
-static void ai_adjust_move(Autopilot *a, Mech *m, const char *text, int hmod,
-                           AiSpeedOption speed_option, int b_score) {
+typedef struct AiMovementAdjustment {
+  Autopilot *autopilot;
+  Mech *mech;
+  const char *description;
+  int heading_delta;
+  AiSpeedOption speed;
+  int score;
+} AiMovementAdjustment;
+static void ai_adjust_move(const AiMovementAdjustment *adjustment) {
+  Autopilot *a = adjustment->autopilot;
+  Mech *m = adjustment->mech;
+  const char *text = adjustment->description;
+  const int hmod = adjustment->heading_delta;
+  const AiSpeedOption speed_option = adjustment->speed;
+  const int b_score = adjustment->score;
   ai_set_heading(m, a, mech_desired_heading_degrees(m) + hmod);
   switch (speed_option) {
   case AI_SPEED_NORMAL:
@@ -597,28 +600,34 @@ static void ai_adjust_move(Autopilot *a, Mech *m, const char *text, int hmod,
     break;
   }
 }
-
-static void ai_adjust_path_option(Autopilot *autopilot, Mech *mech,
-                                  const char *description,
-                                  const AiPathOption *options,
-                                  size_t option_count, int selected,
-                                  int score) {
-  const AiPathOption *option =
-      ai_path_option_at(options, option_count, selected);
-  ai_adjust_move(autopilot, mech, description, option->heading_delta,
-                 option->speed, score);
+typedef struct AiPathAdjustment {
+  Autopilot *autopilot;
+  Mech *mech;
+  const char *description;
+  const AiPathOption *options;
+  size_t option_count;
+  int selected;
+  int score;
+} AiPathAdjustment;
+static void ai_adjust_path_option(const AiPathAdjustment *adjustment) {
+  const AiPathOption *option = ai_path_option_at(
+      adjustment->options, adjustment->option_count, adjustment->selected);
+  ai_adjust_move(&(AiMovementAdjustment){.autopilot = adjustment->autopilot,
+                                         .mech = adjustment->mech,
+                                         .description = adjustment->description,
+                                         .heading_delta = option->heading_delta,
+                                         .speed = option->speed,
+                                         .score = adjustment->score});
 }
-
 int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
                   float dely) {
   int o;
-  int b_len, bl, b, b_score;
+  int b_len, b, b_score;
   AiPathContext path = {0};
   BtechContext *context = mech_context(m);
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(m));
   const time_t now = btech_context_now(context);
   const int event_tick = btech_context_event_tick(context);
-
   o = ai_opponents(a, m);
   if (a->last_upd > now || (now - a->last_upd) > AUTO_GOET) {
     if ((event_tick - a->last_upd) > AUTO_GOTT) {
@@ -646,43 +655,101 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
     if (!((event_tick / AUTOPILOT_GOTO_TICK) %
           4)) { /* Just every fourth tick, i.e. 12sec */
       /* Thorough check */
-      ai_path_score(&path, m, map, a, move_norm_opt, MNORM_COUNT, true, dx, dy,
-                    delx, dely, &bl, &b, &b_score);
+      AiPathScoreResult result = ai_path_score(
+          &(AiPathScoreRequest){.path = &path,
+                                .mech = m,
+                                .map = map,
+                                .autopilot = a,
+                                .options = move_norm_opt,
+                                .option_count = MNORM_COUNT,
+                                .has_enemy = true,
+                                .target = {.x = dx, .y = dy},
+                                .target_delta = {.x = delx, .y = dely}});
+      b = result.selected_option;
+      b_score = result.score;
       b_len = b_score / SAFE_SCORE;
       if (b_len >= MIN_SAFE)
-        ai_adjust_path_option(a, m, "combat(/twitchy)", move_norm_opt,
-                              MNORM_COUNT, b, b_score);
+        ai_adjust_path_option(
+            &(AiPathAdjustment){.autopilot = a,
+                                .mech = m,
+                                .description = "combat(/twitchy)",
+                                .options = move_norm_opt,
+                                .option_count = MNORM_COUNT,
+                                .selected = b,
+                                .score = b_score});
     } else {
-      ai_path_score(&path, m, map, a, combat_fast_opt, CFAST_COUNT, true, dx,
-                    dy, delx, dely, &bl, &b, &b_score);
+      AiPathScoreResult result = ai_path_score(
+          &(AiPathScoreRequest){.path = &path,
+                                .mech = m,
+                                .map = map,
+                                .autopilot = a,
+                                .options = combat_fast_opt,
+                                .option_count = CFAST_COUNT,
+                                .has_enemy = true,
+                                .target = {.x = dx, .y = dy},
+                                .target_delta = {.x = delx, .y = dely}});
+      b = result.selected_option;
+      b_score = result.score;
       b_len = b_score / SAFE_SCORE;
       if (b_len >= MIN_SAFE)
-        ai_adjust_path_option(a, m, "[f]combat(/twitchy)", combat_fast_opt,
-                              CFAST_COUNT, b, b_score);
+        ai_adjust_path_option(
+            &(AiPathAdjustment){.autopilot = a,
+                                .mech = m,
+                                .description = "[f]combat(/twitchy)",
+                                .options = combat_fast_opt,
+                                .option_count = CFAST_COUNT,
+                                .selected = b,
+                                .score = b_score});
     }
     return 1; /* We want to keep fighting near foes */
   }
   if (!((event_tick / AUTOPILOT_GOTO_TICK) %
         4)) { /* Just every fourth tick, i.e. 12sec */
     /* Thorough check */
-    ai_path_score(&path, m, map, a, move_norm_opt, MNORM_COUNT, false, dx, dy,
-                  delx, dely, &bl, &b, &b_score);
+    AiPathScoreResult result = ai_path_score(
+        &(AiPathScoreRequest){.path = &path,
+                              .mech = m,
+                              .map = map,
+                              .autopilot = a,
+                              .options = move_norm_opt,
+                              .option_count = MNORM_COUNT,
+                              .target = {.x = dx, .y = dy},
+                              .target_delta = {.x = delx, .y = dely}});
+    b = result.selected_option;
+    b_score = result.score;
     b_len = b_score / SAFE_SCORE;
     if (b_len >= MIN_SAFE)
-      ai_adjust_path_option(a, m, "moving", move_norm_opt, MNORM_COUNT, b,
-                            b_score);
+      ai_adjust_path_option(&(AiPathAdjustment){.autopilot = a,
+                                                .mech = m,
+                                                .description = "moving",
+                                                .options = move_norm_opt,
+                                                .option_count = MNORM_COUNT,
+                                                .selected = b,
+                                                .score = b_score});
   } else {
-    ai_path_score(&path, m, map, a, combat_fast_opt, CFAST_COUNT, false, dx, dy,
-                  delx, dely, &bl, &b, &b_score);
+    AiPathScoreResult result = ai_path_score(
+        &(AiPathScoreRequest){.path = &path,
+                              .mech = m,
+                              .map = map,
+                              .autopilot = a,
+                              .options = combat_fast_opt,
+                              .option_count = CFAST_COUNT,
+                              .target = {.x = dx, .y = dy},
+                              .target_delta = {.x = delx, .y = dely}});
+    b = result.selected_option;
+    b_score = result.score;
     b_len = b_score / SAFE_SCORE;
     if (b_len >= MIN_SAFE)
-      ai_adjust_path_option(a, m, "[f]moving", combat_fast_opt, CFAST_COUNT, b,
-                            b_score);
+      ai_adjust_path_option(&(AiPathAdjustment){.autopilot = a,
+                                                .mech = m,
+                                                .description = "[f]moving",
+                                                .options = combat_fast_opt,
+                                                .option_count = CFAST_COUNT,
+                                                .selected = b,
+                                                .score = b_score});
   }
-
   if (b_len >= MIN_SAFE)
     return 1;
-
   /* Slow down + stop - no sense in dying needlessly */
   ai_stop(m, a);
   btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI, "%s state: panic",

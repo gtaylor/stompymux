@@ -29,6 +29,15 @@
 #include "mux/support/formatting.h"
 #include "section_types.h"
 
+static bool mech_passes_cliff_check(Mech *mech, bool skid_cliff) {
+  int modifier =
+      skid_cliff
+          ? mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1)
+          : clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) / 3;
+  return mech_pilot_skill_roll_without_experience(&(PilotSkillRollRequest){
+      .mech = mech, .modifier = modifier, .succeed_when_fallen = true});
+}
+
 HexTransitionResult
 mech_hex_transition_resolve(const HexMechTransitionInput *input) {
   Mech *mech = input->mech;
@@ -38,8 +47,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
   int elevation = input->elevation;
   int lastelevation = input->last_elevation;
   int oldterrain = input->old_terrain;
-  int ot = input->old_terrain_code;
-  int le = input->old_elevation_code;
+  int le;
   int ed;
   int avoidbth;
   int done = 0;
@@ -57,13 +65,19 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         return (HexTransitionResult){.stop = true, .done = done};
 
       /* Did we hit something while jumping */
-      if (collision_check(mech, JUMP, 0, 0)) {
+      if (collision_check(&(MovementCollisionCheck){.mech = mech,
+                                                    .mode = JUMP,
+                                                    .previous_elevation = 0,
+                                                    .previous_terrain = 0})) {
 
         ed = 1 + mech_position_z(mech) -
              battle_map_hex_elevation(mech_map, mech_position_x(mech),
                                       mech_position_y(mech));
         ed = ed > 1 ? ed : 1;
-        mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
+        mech_position_rollback(
+            &(MechPositionRollback){.mech = mech,
+                                    .delta = {.x = deltax, .y = deltay},
+                                    .previous_z = lastelevation});
         mech_notify(mech, MECHALL,
                     "[bold]You attempt to jump over elevation that is too "
                     "high![reset]");
@@ -90,23 +104,21 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
     }
 
     /* Walked into a wall silly */
-    if (collision_check(mech, WALK_WALL, lastelevation, oldterrain)) {
+    if (collision_check(
+            &(MovementCollisionCheck){.mech = mech,
+                                      .mode = WALK_WALL,
+                                      .previous_elevation = lastelevation,
+                                      .previous_terrain = oldterrain})) {
 
-      mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
+      mech_position_rollback(
+          &(MechPositionRollback){.mech = mech,
+                                  .delta = {.x = deltax, .y = deltay},
+                                  .previous_z = lastelevation});
       mech_notify(mech, MECHALL,
                   "You attempt to climb a hill too steep for you.");
 
       if (mech_pilot_dbref(mech) == -1 ||
-          (!skid_cliff &&
-           MadePilotSkillRoll_NoXP(
-               mech,
-               clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
-                   3,
-               1)) ||
-          (skid_cliff &&
-           MadePilotSkillRoll_NoXP(
-               mech, mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1),
-               1))) {
+          mech_passes_cliff_check(mech, skid_cliff)) {
 
         mech_notify(mech, MECHALL, "You manage to stop before crashing.");
         mech_los_broadcast(mech, "stops suddenly to avoid a cliff!");
@@ -126,7 +138,11 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       mech_position_z_set(mech, lastelevation);
       return (HexTransitionResult){.stop = true, .done = done};
 
-    } else if (collision_check(mech, WALK_DROP, lastelevation, oldterrain)) {
+    } else if (collision_check(&(MovementCollisionCheck){
+                   .mech = mech,
+                   .mode = WALK_DROP,
+                   .previous_elevation = lastelevation,
+                   .previous_terrain = oldterrain})) {
 
       /* Walked off a cliff ... */
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
@@ -138,12 +154,18 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
 
       if (mech_pilot_dbref(mech) == -1 ||
           (!condition.auto_fall &&
-           MadePilotSkillRoll_NoXP(mech, avoidbth, 1))) {
+           mech_pilot_skill_roll_without_experience(
+               &(PilotSkillRollRequest){.mech = mech,
+                                        .modifier = avoidbth,
+                                        .succeed_when_fallen = true}))) {
 
         mech_notify(mech, MECHALL, "You manage to stop before falling off.");
         mech_los_broadcast(mech,
                            "stops suddenly to avoid falling off a cliff!");
-        mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
+        mech_position_rollback(
+            &(MechPositionRollback){.mech = mech,
+                                    .delta = {.x = deltax, .y = deltay},
+                                    .previous_z = lastelevation});
 
       } else {
 
@@ -159,14 +181,21 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
 
     } else if (btech_context_requires_backwalk_rolls(context) &&
                (mech_current_speed(mech) < 0) &&
-               (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
+               (collision_check(&(MovementCollisionCheck){
+                   .mech = mech,
+                   .mode = WALK_BACK,
+                   .previous_elevation = lastelevation,
+                   .previous_terrain = oldterrain}))) {
 
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
                   (elevation > lastelevation ? "small incline" : "small drop"));
 
       if (mech_pilot_dbref(mech) == -1 ||
-          (MadePilotSkillRoll(mech, collision_check(mech, WALK_BACK,
-                                                    lastelevation, oldterrain) -
+          (MadePilotSkillRoll(mech, collision_check(&(MovementCollisionCheck){
+                                        .mech = mech,
+                                        .mode = WALK_BACK,
+                                        .previous_elevation = lastelevation,
+                                        .previous_terrain = oldterrain}) -
                                         1))) {
 
         mech_notify(mech, MECHALL, "You manage to overcome the obstacle.");
@@ -187,7 +216,10 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         mech_fall(mech, abs(lastelevation - elevation), 1);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {
-          mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
+          mech_position_rollback(
+              &(MechPositionRollback){.mech = mech,
+                                      .delta = {.x = deltax, .y = deltay},
+                                      .previous_z = lastelevation});
         }
       }
       return (HexTransitionResult){.stop = true, .done = done};
@@ -237,7 +269,10 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
           mech_flood(mech);
           return (HexTransitionResult){.stop = true, .done = done};
         }
-        mech_position_rollback(mech, deltax, deltay, lastelevation, ot, le);
+        mech_position_rollback(
+            &(MechPositionRollback){.mech = mech,
+                                    .delta = {.x = deltax, .y = deltay},
+                                    .previous_z = lastelevation});
         mech_movement_stop(mech);
         return (HexTransitionResult){.stop = true, .done = done};
       }
@@ -289,7 +324,8 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                        : (mech_position_elevation(mech) - 2));
       //
       // Stupid Frontiers cheaters. No XP gains here.
-      if (!MadePilotSkillRoll_NoXP(mech, skillmod, 0)) {
+      if (!mech_pilot_skill_roll_without_experience(
+              &(PilotSkillRollRequest){.mech = mech, .modifier = skillmod})) {
         mech_notify(mech, MECHALL, "You slip in the water and fall down");
         mech_los_broadcast(mech, "slips in the water and falls down!");
         mech_fall(mech, 1, dammod);

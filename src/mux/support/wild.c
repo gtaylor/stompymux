@@ -67,13 +67,20 @@ static const char *wild_cursor_suffix(const WildCursor *cursor,
 
 static char *wild_argument_at(const WildcardContext *context, int argument) {
   return *(char *const *)checked_storage_at_const(
-      context->arguments, (size_t)context->argument_count,
+      (const void *)context->arguments, (size_t)context->argument_count,
       sizeof(*context->arguments), (size_t)argument);
 }
 
-static void wild_capture_character(const WildcardContext *context, int argument,
-                                   char character) {
-  char *capture = wild_argument_at(context, argument);
+typedef struct WildCharacterCapture {
+  const WildcardContext *context;
+  int argument;
+  char character;
+} WildCharacterCapture;
+
+static void wild_capture_character(const WildCharacterCapture *capture_call) {
+  char *capture =
+      wild_argument_at(capture_call->context, capture_call->argument);
+  char character = capture_call->character;
   *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char), 0) = character;
   *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char), 1) = '\0';
 }
@@ -200,7 +207,10 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
        */
       if (!wild_cursor_current(&data))
         return 0;
-      wild_capture_character(context, arg, wild_cursor_current(&data));
+      wild_capture_character(
+          &(WildCharacterCapture){.context = context,
+                                  .argument = arg,
+                                  .character = wild_cursor_current(&data)});
       arg++;
 
       /*
@@ -284,7 +294,8 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
       while (argpos < arg) {
         char character = *(const char *)checked_storage_at_const(
             data.text, data.length, sizeof(char), data_capture_offset);
-        wild_capture_character(context, argpos, character);
+        wild_capture_character(&(WildCharacterCapture){
+            .context = context, .argument = argpos, .character = character});
         data_capture_offset++;
         argpos++;
 
@@ -384,7 +395,8 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
           return 1;
         char character = *(const char *)checked_storage_at_const(
             data.text, data.length, sizeof(char), data_capture_offset);
-        wild_capture_character(context, argpos, character);
+        wild_capture_character(&(WildCharacterCapture){
+            .context = context, .argument = argpos, .character = character});
         data_capture_offset++;
         argpos++;
         numextra--;
@@ -421,7 +433,7 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
    */
 
   for (i = 0; i < nargs; i++)
-    *(char **)checked_storage_at(args, (size_t)nargs, sizeof(*args),
+    *(char **)checked_storage_at((void *)args, (size_t)nargs, sizeof(*args),
                                  (size_t)i) = nullptr;
 
   /*
@@ -449,13 +461,13 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
   while (wild_cursor_current(&scan) && i < nargs) {
     switch (wild_cursor_current(&scan)) {
     case '?':
-      *(char **)checked_storage_at(args, (size_t)nargs, sizeof(*args),
+      *(char **)checked_storage_at((void *)args, (size_t)nargs, sizeof(*args),
                                    (size_t)i) = alloc_lbuf("wild.?");
       memset(wild_argument_at(&context, i), 0, LBUF_SIZE);
       i++;
       break;
     case '*':
-      *(char **)checked_storage_at(args, (size_t)nargs, sizeof(*args),
+      *(char **)checked_storage_at((void *)args, (size_t)nargs, sizeof(*args),
                                    (size_t)i) = alloc_lbuf("wild.*");
       memset(wild_argument_at(&context, i), 0, LBUF_SIZE);
       i++;
@@ -480,8 +492,8 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
    */
 
   for (i = 0; i < nargs; i++) {
-    char **argument =
-        checked_storage_at(args, (size_t)nargs, sizeof(*args), (size_t)i);
+    char **argument = (char **)checked_storage_at((void *)args, (size_t)nargs,
+                                                  sizeof(*args), (size_t)i);
     if ((*argument != nullptr) && (!**argument || !value)) {
       free_lbuf(*argument);
       *argument = nullptr;

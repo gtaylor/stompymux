@@ -5,21 +5,24 @@
 #include "btech_event.h"
 #include "equipment_types.h"
 #include "mech_classification_api.h"
+#include "mech_hitloc_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
 #include "mech_utils_api.h"
 #include "mux/support/formatting.h"
 #include "section_types.h"
 
-int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
-                           int *isrear, int roll) {
+HitLocationResult fasa_mech_hit_location(Mech *mech, int hitGroup,
+                                         HitLocationResult result, int roll) {
   int hitloc = 0;
   BtechContext *context = mech_context(mech);
 
   switch (mech_class(mech)) {
   case CLASS_BSUIT:
-    if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
-      return btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1);
+    hitloc = mech_battle_suit_hit_location(mech);
+    if (hitloc < 0)
+      return hit_location_result_at(
+          result, btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1));
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
@@ -31,29 +34,30 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
                            tprintf("%ld's luck sucks. It got TACed. "
                                    "We're in mech_fasa_hit_location()",
                                    mech_dbref(mech)));
-        *iscritical = 1;
-        return LTORSO;
+        result.critical = 1;
+        return hit_location_result_at(result, LTORSO);
       case 3:
-        return LLEG;
+        return hit_location_result_at(result, LLEG);
       case 4:
       case 5:
-        return LARM;
+        return hit_location_result_at(result, LARM);
       case 6:
-        return LLEG;
+        return hit_location_result_at(result, LLEG);
       case 7:
-        return LTORSO;
+        return hit_location_result_at(result, LTORSO);
       case 8:
-        return CTORSO;
+        return hit_location_result_at(result, CTORSO);
       case 9:
-        return RTORSO;
+        return hit_location_result_at(result, RTORSO);
       case 10:
-        return RARM;
+        return hit_location_result_at(result, RARM);
       case 11:
-        return RLEG;
+        return hit_location_result_at(result, RLEG);
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return mech_head_hit_modify(hitGroup, mech);
-        return HEAD;
+          return hit_location_result_at(result,
+                                        mech_head_hit_modify(hitGroup, mech));
+        return hit_location_result_at(result, HEAD);
       }
       break;
     case RIGHTSIDE:
@@ -63,29 +67,30 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
                            tprintf("%ld's luck sucks. It got TACed. "
                                    "We're in mech_fasa_hit_location()",
                                    mech_dbref(mech)));
-        *iscritical = 1;
-        return RTORSO;
+        result.critical = 1;
+        return hit_location_result_at(result, RTORSO);
       case 3:
-        return RLEG;
+        return hit_location_result_at(result, RLEG);
       case 4:
       case 5:
-        return RARM;
+        return hit_location_result_at(result, RARM);
       case 6:
-        return RLEG;
+        return hit_location_result_at(result, RLEG);
       case 7:
-        return RTORSO;
+        return hit_location_result_at(result, RTORSO);
       case 8:
-        return CTORSO;
+        return hit_location_result_at(result, CTORSO);
       case 9:
-        return LTORSO;
+        return hit_location_result_at(result, LTORSO);
       case 10:
-        return LARM;
+        return hit_location_result_at(result, LARM);
       case 11:
-        return LLEG;
+        return hit_location_result_at(result, LLEG);
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return mech_head_hit_modify(hitGroup, mech);
-        return HEAD;
+          return hit_location_result_at(result,
+                                        mech_head_hit_modify(hitGroup, mech));
+        return hit_location_result_at(result, HEAD);
       }
       break;
     case FRONT:
@@ -96,28 +101,29 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
                            tprintf("%ld's luck sucks. It got TACed. "
                                    "We're in mech_fasa_hit_location()",
                                    mech_dbref(mech)));
-        *iscritical = 1;
-        return CTORSO;
+        result.critical = 1;
+        return hit_location_result_at(result, CTORSO);
       case 3:
       case 4:
-        return RARM;
+        return hit_location_result_at(result, RARM);
       case 5:
-        return RLEG;
+        return hit_location_result_at(result, RLEG);
       case 6:
-        return RTORSO;
+        return hit_location_result_at(result, RTORSO);
       case 7:
-        return CTORSO;
+        return hit_location_result_at(result, CTORSO);
       case 8:
-        return LTORSO;
+        return hit_location_result_at(result, LTORSO);
       case 9:
-        return LLEG;
+        return hit_location_result_at(result, LLEG);
       case 10:
       case 11:
-        return LARM;
+        return hit_location_result_at(result, LARM);
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return mech_head_hit_modify(hitGroup, mech);
-        return HEAD;
+          return hit_location_result_at(result,
+                                        mech_head_hit_modify(hitGroup, mech));
+        return hit_location_result_at(result, HEAD);
       }
     }
     break;
@@ -129,5 +135,5 @@ int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
   case CLASS_DS:
     break;
   }
-  return hitloc;
+  return hit_location_result_at(result, hitloc);
 }

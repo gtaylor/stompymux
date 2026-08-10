@@ -11,8 +11,8 @@
 typedef struct GameDatabase GameDatabase;
 typedef struct RuntimeClock RuntimeClock;
 
-void make_portlist(DescriptorRegistry *descriptors, DbRef player, DbRef target,
-                   char *buffer, char **cursor);
+void make_portlist(DescriptorRegistry *descriptors, DbRef target, char *buffer,
+                   char **cursor);
 int fetch_idle(DescriptorRegistry *descriptors, RuntimeClock *clock,
                DbRef target);
 int fetch_connect(DescriptorRegistry *descriptors, RuntimeClock *clock,

@@ -2,7 +2,14 @@
 
 #pragma once
 
+#include "map_coordinates.h"
 #include "mux/server/platform.h"
+
+typedef struct TerrainStructureWeaponImpact {
+  Mech *attacker;
+  int weapon_index;
+  MapHexPosition position;
+} TerrainStructureWeaponImpact;
 
 /* mech.ice.c */
 void drop_thru_ice(Mech *mech);
@@ -14,6 +21,5 @@ void ice_growth(DbRef player, BattleMap *map, int num);
 void ice_melt(DbRef player, BattleMap *map, int num);
 void map_addice(DbRef player, BattleMap *map, char *buffer);
 void map_delice(DbRef player, BattleMap *map, char *buffer);
-void possibly_blow_ice(Mech *mech, int weapindx, int x, int y);
-void possibly_blow_bridge(Mech *mech, int weapindx, int x, int y);
-void possibly_blow_bridge(Mech *mech, int weapindx, int x, int y);
+void ice_weapon_impact_resolve(const TerrainStructureWeaponImpact *impact);
+void bridge_weapon_impact_resolve(const TerrainStructureWeaponImpact *impact);

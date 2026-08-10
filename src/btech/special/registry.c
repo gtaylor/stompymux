@@ -138,10 +138,6 @@ size_t btech_special_object_storage_size(int type) {
 bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
                                char *command);
 
-/* Called when a user creates or removes the XCODE flag. */
-void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key);
-void btech_special_object_dispose(BtechContext *context, DbRef player,
-                                  DbRef key);
 void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
 void raw_notify(EvaluationContext *evaluation, DbRef player, const char *msg);
 
@@ -151,7 +147,9 @@ void *btech_context_find_object(BtechContext *context, DbRef key);
 int btech_context_which_special(BtechContext *context, DbRef key);
 int btech_context_which_special_attribute(BtechContext *context, DbRef key);
 
-static int compare_dbrefs(void *key1, void *key2, void *token) {
+static int compare_dbrefs(const RedBlackTreeCompareCall *call) {
+  void *key1 = call->lhs;
+  void *key2 = call->rhs;
   const DbRef key1_val = (DbRef)key1;
   const DbRef key2_val = (DbRef)key2;
 
@@ -201,7 +199,10 @@ int btech_command_allowed_for_mech(Mech *mech, int cmdflag) {
 
   if (!cmdflag)
     return 1;
-  if (!mech || !(i = mech_class_command_flag(mech_class(mech))))
+  if (!mech)
+    return 0;
+  i = mech_class_command_flag(mech_class(mech));
+  if (!i)
     return 0;
   if (cmdflag > 0) {
     if (cmdflag & i)
@@ -215,8 +216,10 @@ bool btech_special_command_access(BtechContext *context, DbRef object,
                                   PowerId power) {
   return is_god(context->database, object) ||
          is_wizard(context->database, object) ||
-         (power != POWER_NONE &&
-          game_object_has_power(context->database, object, power));
+         (power != POWER_NONE && game_object_has_power(&(ObjectPowerRequest){
+                                     .database = context->database,
+                                     .object = object,
+                                     .power = power}));
 }
 
 int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
@@ -230,15 +233,18 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   int ishelp;
 
   type = btech_context_which_special(context, location);
-  if (type < 0 || (btech_special_object_data_size(
-                       btech_special_object_definition(type)) > 0 &&
-                   !(xcode_obj = red_black_tree_find(context->special_objects,
-                                                     (void *)location)))) {
+  bool special_data_missing = false;
+  if (type >= 0 && btech_special_object_data_size(
+                       btech_special_object_definition(type)) > 0) {
+    xcode_obj = red_black_tree_find(context->special_objects, (void *)location);
+    special_data_missing = xcode_obj == nullptr;
+  }
+  if (type < 0 || special_data_missing) {
     if (type >= 0 || !is_xcode(context->database, location) ||
         is_zombie(context->database, location))
       return 0;
-    if ((type = btech_context_which_special_attribute(context, location)) >=
-        0) {
+    type = btech_context_which_special_attribute(context, location);
+    if (type >= 0) {
       if (btech_special_object_data_size(
               btech_special_object_definition(type)) > 0)
         return 0;
@@ -290,9 +296,14 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
                    "Sorry, that command is restricted!");
     return 1;
   } else if (ishelp) {
-    btech_special_object_help(context, player, typeOfObject->type, type,
-                              location, typeOfObject->power_needed, location,
-                              arguments);
+    btech_special_object_help(
+        &(SpecialObjectHelpRequest){.context = context,
+                                    .player = player,
+                                    .type = typeOfObject->type,
+                                    .special_type = type,
+                                    .location = location,
+                                    .power_needed = typeOfObject->power_needed,
+                                    .argument = arguments});
     return 1;
   }
   return 0;
@@ -355,7 +366,10 @@ void *NewSpecialObject(BtechContext *context, DbRef id, int type) {
   return xcode_obj;
 }
 
-void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
+static void create_special_object(const BtechSpecialObjectAction *action) {
+  BtechContext *context = action->context;
+  const DbRef player = action->actor;
+  const DbRef key = action->object;
   void *new;
   const BtechSpecialObjectDefinition *typeOfObject;
   int type;
@@ -399,8 +413,10 @@ void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
   }
 }
 
-void btech_special_object_dispose(BtechContext *context, DbRef player,
-                                  DbRef key) {
+void btech_special_object_dispose(const BtechSpecialObjectAction *action) {
+  BtechContext *context = action->context;
+  const DbRef player = action->actor;
+  const DbRef key = action->object;
   BtechSpecialObject *xcode_obj;
 
   int i;
@@ -440,7 +456,10 @@ void btech_special_object_dispose(BtechContext *context, DbRef player,
   }
 }
 
-static void destroy_special_object(void *key, void *data, void *arg) {
+static void destroy_special_object(const RedBlackTreeReleaseCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  void *arg = call->context;
   BtechContext *context = arg;
   BtechSpecialObject *xcode_obj = data;
   const BtechSpecialObjectDefinition *type =
@@ -478,14 +497,9 @@ void btech_context_release_owned_state(BtechContext *context) {
   *context = (BtechContext){0};
 }
 
-void Dump_Mech(BtechContext *context, DbRef player, int type, char *typestr) {
+void DumpMechs(BtechContext *context, DbRef player) {
   mecha_notify(btech_context_evaluation(context), player,
                "Support discontinued. Bother a wiz if this bothers you.");
-}
-
-void DumpMechs(BtechContext *context, DbRef player) {
-  char type[] = "mech";
-  Dump_Mech(context, player, GTYPE_MECH, type);
 }
 
 void DumpMaps(BtechContext *context, DbRef player) {
@@ -578,10 +592,12 @@ void btech_special_object_flag_changed(BtechContext *context, DbRef player,
     return;
   if (!to) {
     s_xcode(context->database, obj);
-    btech_special_object_dispose(context, player, obj);
+    btech_special_object_dispose(&(BtechSpecialObjectAction){
+        .context = context, .actor = player, .object = obj});
     c_xcode(context->database, obj);
   } else
-    CreateNewSpecialObject(context, player, obj);
+    create_special_object(&(BtechSpecialObjectAction){
+        .context = context, .actor = player, .object = obj});
 }
 
 bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
@@ -620,8 +636,11 @@ bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
   return true;
 }
 
-void btech_special_object_type_register(BtechContext *context, DbRef player,
-                                        DbRef object) {
+void btech_special_object_type_register(
+    const BtechSpecialObjectAction *action) {
+  BtechContext *context = action->context;
+  const DbRef player = action->actor;
+  const DbRef object = action->object;
   int type;
 
   if (!is_xcode(context->database, object) ||
@@ -640,8 +659,12 @@ void mecha_notify(EvaluationContext *evaluation, DbRef player,
   raw_notify(evaluation, player, msg);
 }
 
-void mecha_notify_except(EvaluationContext *evaluation, DbRef loc, DbRef player,
-                         DbRef exception, const char *msg) {
+void mecha_notify_except(const MechaNotificationExclusion *notification) {
+  EvaluationContext *evaluation = notification->evaluation;
+  const DbRef loc = notification->location;
+  const DbRef player = notification->actor;
+  const DbRef exception = notification->exception;
+  const char *msg = notification->message;
   DbRef first;
 
   if (loc != exception)
@@ -664,7 +687,8 @@ void btech_special_objects_reset(BtechContext *context) {
 BattleMap *btech_context_get_map(BtechContext *context, DbRef d) {
   BtechSpecialObject *xcode_obj;
 
-  if (!(xcode_obj = red_black_tree_find(context->special_objects, (void *)d)))
+  xcode_obj = red_black_tree_find(context->special_objects, (void *)d);
+  if (!xcode_obj)
     return NULL;
   if (xcode_obj->type != GTYPE_MAP)
     return NULL;
@@ -678,7 +702,8 @@ Mech *btech_context_get_mech(BtechContext *context, DbRef d) {
     return NULL;
   if (!(is_xcode(context->database, d)))
     return NULL;
-  if (!(xcode_obj = red_black_tree_find(context->special_objects, (void *)d)))
+  xcode_obj = red_black_tree_find(context->special_objects, (void *)d);
+  if (!xcode_obj)
     return NULL;
   if (xcode_obj->type != GTYPE_MECH)
     return NULL;

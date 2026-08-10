@@ -318,16 +318,21 @@ int engine_weight(Mech *mech) {
   return 0;
 }
 
-static void calc_ints(Mech *mech, int *n, int *tot) {
-  int i;
+typedef struct InternalStructureTotals {
+  int current;
+  int original;
+} InternalStructureTotals;
 
-  *n = 0;
-  *tot = 0;
+static InternalStructureTotals internal_structure_totals(Mech *mech) {
+  int i;
+  InternalStructureTotals totals = {0};
+
   for (i = 0; i < NUM_SECTIONS; i++) {
-    *n += mech_section_internal(mech, i);
-    *tot += mech_section_original_internal(mech, i);
+    totals.current += mech_section_internal(mech, i);
+    totals.original += mech_section_original_internal(mech, i);
   }
-  *tot = MAX(1, *tot);
+  totals.original = MAX(1, totals.original);
+  return totals;
 }
 
 static int ammo_weight(Mech *mech) {
@@ -411,7 +416,9 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
         &c, tprintf("Weight totals for %s", mech_display_id(mech).text));
     cool_menu_add_line(&c);
   }
-  calc_ints(mech, &ints_c, &ints_tot);
+  const InternalStructureTotals internals = internal_structure_totals(mech);
+  ints_c = internals.current;
+  ints_tot = internals.original;
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (!mech_section_original_internal(mech, i))
       continue;
@@ -538,7 +545,8 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
                                  part_count / GetWeaponCrits(mech, id),
                                  crit_weight(mech, i) * part_count);
       } else {
-        if ((w = crit_weight(mech, i)))
+        w = crit_weight(mech, i);
+        if (w)
           weight_counted_entry_add(
               &c, interactive, &total,
               get_parts_long_name(mech->xcode.context, i, 0), part_count,
@@ -595,7 +603,9 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   int ints_c, ints_tot;
 
   memset(&pile, 0, sizeof(pile));
-  calc_ints(mech, &ints_c, &ints_tot);
+  const InternalStructureTotals internals = internal_structure_totals(mech);
+  ints_c = internals.current;
+  ints_tot = internals.original;
   if (interactive > 0) {
     cool_menu_add_line(&c);
     cool_menu_add_centered(
@@ -608,7 +618,8 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
     armor += section_weight_armor(mech, i, interactive);
     armor += section_weight_rear_armor(mech, i, interactive);
     for (j = 0; j < CritsInLoc(mech, i); j++) {
-      if (!(t = mech_critical_part_type(mech, i, j)))
+      t = mech_critical_part_type(mech, i, j);
+      if (!t)
         continue;
       if (interactive >= 0 || !mech_section_is_destroyed(mech, i)) {
         if (interactive >= 0 || !equipment_is_ammunition(t))
@@ -708,10 +719,14 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
                                  weapon_catalogue_name(id),
                                  part_count / GetWeaponCrits(mech, id),
                                  crit_weight(mech, i) * part_count);
-      } else if ((w = crit_weight(mech, i)))
-        weight_counted_entry_add(&c, interactive, &total,
-                                 get_parts_long_name(mech->xcode.context, i, 0),
-                                 part_count, w * part_count);
+      } else {
+        w = crit_weight(mech, i);
+        if (w)
+          weight_counted_entry_add(
+              &c, interactive, &total,
+              get_parts_long_name(mech->xcode.context, i, 0), part_count,
+              w * part_count);
+      }
     }
   if (((mech)->ud.cargospace))
     weight_entry_add(

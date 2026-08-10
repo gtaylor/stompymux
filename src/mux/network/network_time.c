@@ -10,6 +10,9 @@
 
 #include "mux/network/network_time.h"
 
+#include <bits/types.h>
+#include <stddef.h>
+
 #include "mux/network/descriptor.h"
 #include "mux/server/server_config.h" // IWYU pragma: keep
 
@@ -40,7 +43,7 @@ int msec_diff(struct timeval now, struct timeval then) {
 
 struct timeval msec_add(struct timeval t, int x) {
   t.tv_sec += x / 1000;
-  t.tv_usec += (x % 1000) * 1000;
+  t.tv_usec += (__suseconds_t)((x % 1000) * 1000);
   if (t.tv_usec >= 1000000) {
     t.tv_sec += t.tv_usec / 1000000;
     t.tv_usec = t.tv_usec % 1000000;

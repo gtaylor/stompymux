@@ -43,8 +43,9 @@ int SearchLightInRange(Mech *mech, BattleMap *map) {
   for (i = 0; i < battle_map_unit_count(map); i++) {
 
     /* No units on the map */
-    if (!(target = btech_context_find_object(mech_context(mech),
-                                             battle_map_unit_dbref(map, i))))
+    target = btech_context_find_object(mech_context(mech),
+                                       battle_map_unit_dbref(map, i));
+    if (!target)
       continue;
 
     /* The unit doesn't have slite on */
@@ -175,8 +176,8 @@ void auto_sensor_event(Autopilot *autopilot) {
     return;
 
   /* Get the map */
-  if (!(map =
-            btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))) {
+  map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
+  if (!map) {
 
     /* Bad Map */
     autopilot_gunning_suspend(autopilot);

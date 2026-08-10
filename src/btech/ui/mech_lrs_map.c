@@ -4,6 +4,7 @@
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_conditions_api.h"
+#include "map_coordinates.h"
 #include "map_los.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -39,13 +40,14 @@ typedef struct LrsMechList {
 } LrsMechList;
 
 static Mech **lrs_mech_slot(LrsMechList *list, int index) {
-  return checked_storage_at(list->items, MAX_MECHS_PER_MAP + 1,
-                            sizeof(*list->items), (size_t)index);
+  return (Mech **)checked_storage_at((void *)list->items, MAX_MECHS_PER_MAP + 1,
+                                     sizeof(*list->items), (size_t)index);
 }
 
 static Mech *lrs_mech_at(const LrsMechList *list, int index) {
   return *(Mech *const *)checked_storage_at_const(
-      list->items, MAX_MECHS_PER_MAP + 1, sizeof(*list->items), (size_t)index);
+      (const void *)list->items, MAX_MECHS_PER_MAP + 1, sizeof(*list->items),
+      (size_t)index);
 }
 
 static void lrs_text_append(char *buffer, size_t capacity, const char *format,
@@ -116,13 +118,15 @@ char GetLRSMechChar(Mech *mech, Mech *other) {
   return c;
 }
 
-char map_terrain_color_char(const MapColorScheme *colors, char terrain,
-                            int elev) {
-  switch (terrain) {
+char map_terrain_color_char(const TerrainColorRequest *request) {
+  const MapColorScheme *colors = request->colors;
+
+  switch (request->terrain) {
   case HIGHWATER:
     return colors->values[DWATER_IDX];
   case WATER:
-    if (elev < 2 || elev == '0' || elev == '1' || elev == '~')
+    if (request->elevation < 2 || request->elevation == '0' ||
+        request->elevation == '1' || request->elevation == '~')
       return colors->values[SWATER_IDX];
     return colors->values[DWATER_IDX];
   case BUILDING:
@@ -221,44 +225,58 @@ static MapCellText lrs_mech_text(const MapColorScheme *colors, Mech *mech,
   return map_cell_text(newc, prevc, c);
 }
 
-static MapCellText lrs_terrain_text(const MapColorScheme *colors,
-                                    BattleMap *map, int x, int y, int docolor,
-                                    char *prevc) {
-  char c = map_terrain_get(map, x, y);
+typedef struct LrsCellRequest {
+  const MapColorScheme *colors;
+  BattleMap *map;
+  MapHexPosition position;
+  bool use_color;
+  char *previous_color;
+} LrsCellRequest;
+
+static MapCellText lrs_terrain_text(const LrsCellRequest *request) {
+  char c =
+      map_terrain_get(request->map, request->position.x, request->position.y);
   char newc;
 
-  if (!c || !docolor || c == ' ') {
+  if (!c || !request->use_color || c == ' ') {
     MapCellText result = {0};
     result.text[0] = c;
     return result;
   } else
-    newc = map_terrain_color_char(colors, c, map_elevation_get(map, x, y));
+    newc = map_terrain_color_char(&(TerrainColorRequest){
+        .colors = request->colors,
+        .terrain = c,
+        .elevation = map_elevation_get(request->map, request->position.x,
+                                       request->position.y)});
 
-  return map_cell_text(newc, prevc, c);
+  return map_cell_text(newc, request->previous_color, c);
 }
 
-static MapCellText lrs_elevation_text(const MapColorScheme *colors,
-                                      BattleMap *map, int x, int y, int docolor,
-                                      char *prevc) {
-  int e = (unsigned char)map_elevation_get(map, x, y);
+static MapCellText lrs_elevation_text(const LrsCellRequest *request) {
+  int e = (unsigned char)map_elevation_get(request->map, request->position.x,
+                                           request->position.y);
   char c;
   char newc;
 
-  if (!e && !docolor)
+  if (!e && !request->use_color)
     c = ' ';
   else if (e >= 0 && e <= 9)
     c = (char)('0' + e);
   else
     c = '?';
 
-  if (!docolor) {
+  if (!request->use_color) {
     MapCellText result = {0};
     result.text[0] = c;
     return result;
   } else
-    newc = map_terrain_color_char(colors, map_terrain_get(map, x, y), e);
+    newc = map_terrain_color_char(&(TerrainColorRequest){
+        .colors = request->colors,
+        .terrain = map_terrain_get(request->map, request->position.x,
+                                   request->position.y),
+        .elevation = e});
 
-  return map_cell_text(newc, prevc, c);
+  return map_cell_text(newc, request->previous_color, c);
 }
 
 #define LRS_TERRAINMODE 1
@@ -300,14 +318,25 @@ static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
 
   if (((mode & LRS_TERRAINMODE) && !(losflag & MAPLOSHEX_SEETERRAIN)) ||
       ((mode & LRS_ELEVMODE) && !(losflag & MAPLOSHEX_SEEELEV)))
-    return map_cell_text(map_terrain_color_char(colors, UNKNOWN_TERRAIN, 0),
-                         prevc, '?');
+    return map_cell_text(
+        map_terrain_color_char(&(TerrainColorRequest){
+            .colors = colors, .terrain = UNKNOWN_TERRAIN, .elevation = 0}),
+        prevc, '?');
 
   if (mode & LRS_ELEVMODE)
-    return lrs_elevation_text(colors, map, x, y, mode & LRS_ELEVCOLORMODE,
-                              prevc);
+    return lrs_elevation_text(
+        &(LrsCellRequest){.colors = colors,
+                          .map = map,
+                          .position = {.x = x, .y = y},
+                          .use_color = (mode & LRS_ELEVCOLORMODE) != 0,
+                          .previous_color = prevc});
   if (mode & LRS_TERRAINMODE)
-    return lrs_terrain_text(colors, map, x, y, mode & LRS_COLORMODE, prevc);
+    return lrs_terrain_text(
+        &(LrsCellRequest){.colors = colors,
+                          .map = map,
+                          .position = {.x = x, .y = y},
+                          .use_color = (mode & LRS_COLORMODE) != 0,
+                          .previous_color = prevc});
 
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
                      tprintf("Unknown LRS mode, mech #%ld mode 0x%x.",
@@ -315,9 +344,25 @@ static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
   return map_cell_text('R', prevc, 'Y');
 }
 
-static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
-                         BattleMap *map, int x, int y, int displayHeight,
-                         int mode) {
+typedef struct LrsMapRequest {
+  const MapColorScheme *colors;
+  DbRef player;
+  Mech *mech;
+  BattleMap *map;
+  MapHexPosition center;
+  int display_height;
+  int mode;
+} LrsMapRequest;
+
+static void show_lrs_map(const LrsMapRequest *request) {
+  const MapColorScheme *colors = request->colors;
+  const DbRef player = request->player;
+  Mech *mech = request->mech;
+  BattleMap *map = request->map;
+  const int x = request->center.x;
+  const int y = request->center.y;
+  const int displayHeight = request->display_height;
+  const int mode = request->mode;
   int loop, b_width, e_width, b_height, e_height, i;
   Mech *oMech;
 
@@ -370,8 +415,9 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
 
   if (mode & LRS_MECHMODE) {
     for (i = 0; i < battle_map_unit_count(map); i++) {
-      if ((oMech = btech_context_get_mech(mech_context(mech),
-                                          battle_map_unit_dbref(map, i)))) {
+      oMech = btech_context_get_mech(mech_context(mech),
+                                     battle_map_unit_dbref(map, i));
+      if (oMech) {
         if ((mech == oMech) ||
             (mech_position_y(oMech) >= b_height &&
              mech_position_y(oMech) <= e_height &&
@@ -462,7 +508,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   MapColorScheme colors;
   BattleMap *map;
   int argc, mode = 0;
-  short x, y;
+  int x, y;
   char *args[5], *str;
   int displayHeight = LRS_DISPLAY_HEIGHT;
 
@@ -480,9 +526,20 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
                  "Your system seems to be inoperational.");
     return;
   }
-  if (!parse_tacargs(player, mech, args, 5, 1, argc - 1,
-                     mech_long_range_sensor_range(mech), &x, &y))
+  const TacticalArgumentParseResult parsed =
+      tactical_arguments_parse(&(TacticalArgumentParseRequest){
+          .player = player,
+          .mech = mech,
+          .arguments = args,
+          .argument_capacity = 5,
+          .first_argument = 1,
+          .argument_count = argc - 1,
+          .maximum_range = mech_long_range_sensor_range(mech),
+      });
+  if (!parsed.valid)
     return;
+  x = parsed.position.x;
+  y = parsed.position.y;
   switch (args[0][0]) {
   case 'M':
   case 'm':
@@ -542,5 +599,11 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
 
   map_color_scheme_load(&colors);
 
-  show_lrs_map(&colors, player, mech, map, x, y, displayHeight, mode);
+  show_lrs_map(&(LrsMapRequest){.colors = &colors,
+                                .player = player,
+                                .mech = mech,
+                                .map = map,
+                                .center = {.x = x, .y = y},
+                                .display_height = displayHeight,
+                                .mode = mode});
 }

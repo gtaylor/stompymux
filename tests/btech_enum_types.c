@@ -52,18 +52,18 @@ static_assert(_Generic(mech_movement_type((const Mech *)nullptr),
 static_assert(_Generic(mech_targeting_computer_type((const Mech *)nullptr),
                   TargetingComputerType: 1,
                   default: 0));
-static_assert(_Generic(ArmorEvaluateSerious(nullptr, 0, 0, nullptr),
-                  ArmorLevel: 1,
+static_assert(_Generic(armor_evaluate(&(ArmorEvaluationRequest){0}),
+                  ArmorEvaluation: 1,
                   default: 0));
-static_assert(_Generic(mech_range_to_hit_calculate(nullptr, nullptr, 0, 0, 0.0F,
-                                                   0, 0, nullptr),
-                  WeaponRangeBracket: 1,
+static_assert(_Generic(mech_range_to_hit_calculate(&(WeaponRangeToHitRequest){
+                           0}),
+                  WeaponRangeToHitResult: 1,
                   default: 0));
 static_assert(_Generic(&mine_field_trigger,
                   void (*)(Mech *, MineTriggerReason): 1,
                   default: 0));
-static_assert(_Generic(&phys_form,
-                  const char *(*)(PhysicalAttackType, int): 1,
+static_assert(_Generic(&physical_attack_verb,
+                  const char *(*)(const PhysicalVerbRequest *): 1,
                   default: 0));
 static_assert(_Generic(&mech_event_cancel,
                   void (*)(Mech *, MechEventType): 1,

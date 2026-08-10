@@ -48,7 +48,7 @@ static int mech_fall_movement_mode_delay(const Mech *mech) {
 }
 #endif
 
-void mech_fall(Mech *mech, int levels, int seemsg) {
+void mech_fall(Mech *mech, int levels, bool show_message) {
   int roll, spread, i, hitloc, hitGroup = 0;
   int isrear = 0, damage, iscritical = 0;
   int heading_offset = 0;
@@ -74,14 +74,14 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
 
   if (!mech_condition_summary(mech).combat_safe) {
     if (mech_class(mech) == CLASS_MECH || mech_class(mech) == CLASS_MW ||
-        seemsg)
+        show_message)
       mech_notify(mech, MECHPILOT,
                   "You try to avoid taking personal damage in the fall.");
     else
       mech_notify(mech, MECHPILOT, "You try to avoid taking personal damage.");
     if (!MadePilotSkillRoll(mech, levels)) {
       if (mech_class(mech) == CLASS_MECH || mech_class(mech) == CLASS_MW ||
-          seemsg)
+          show_message)
         mech_notify(mech, MECHPILOT, "You take personal injury from the fall!");
       else
         mech_notify(mech, MECHPILOT, "You take personal injury!");
@@ -125,7 +125,7 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
   if (mech_class(mech) == CLASS_MECH || mech_class(mech) == CLASS_MW)
     mech_make_fall(mech);
 
-  if (seemsg)
+  if (show_message)
     mech_los_broadcast(mech, "falls down!");
   mech_drop_surface_set(mech, true);
   mech_position_real_z_sync(mech);
@@ -172,13 +172,13 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
 #else
     damage = (levels * (mech_real_tonnage(mech) + 5)) / 20;
 #endif /* REALWEIGHT_DAMAGE */
-  if (mech_is_under_special_conditions(mech))
-    if ((map = btech_context_find_object(context, mech_map_dbref(mech))))
-      if (battle_map_uses_special_rules(map))
-        damage =
-            damage *
-            (battle_map_gravity(map) < 100 ? battle_map_gravity(map) : 100) /
-            100;
+  if (mech_is_under_special_conditions(mech)) {
+    map = btech_context_find_object(context, mech_map_dbref(mech));
+    if (map && battle_map_uses_special_rules(map))
+      damage = damage *
+               (battle_map_gravity(map) < 100 ? battle_map_gravity(map) : 100) /
+               100;
+  }
 
   if (mech_class(mech) == CLASS_MW)
     damage *= 40;
@@ -188,15 +188,43 @@ void mech_fall(Mech *mech, int levels, int seemsg) {
   if (!mech_condition_summary(mech).combat_safe) {
     for (i = 0; i < spread; i++) {
       hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
-      DamageMech(mech, mech, 0, -1, hitloc, isrear, iscritical, 5, -1, -1, 0,
-                 -1, 0, 0);
+      mech_damage_apply(
+          &(MechDamageRequest){.target = mech,
+                               .attacker = mech,
+                               .line_of_sight = 0,
+                               .attack_pilot = -1,
+                               .hit_location = hitloc,
+                               .rear = isrear,
+                               .critical = iscritical,
+                               .armor_damage = 5,
+                               .internal_damage = 0,
+                               .transfer = MECH_DAMAGE_FORCE_TRANSFER,
+                               .cause = -1,
+                               .base_to_hit = 0,
+                               .weapon_index = -1,
+                               .ammunition_mode = 0,
+                               .ignore_swarmers = 0});
       mech_flood(mech);
       mech_inferno_extinguish_in_water(mech);
     }
     if (damage % 5) {
       hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
-      DamageMech(mech, mech, 0, -1, hitloc, isrear, iscritical, (damage % 5),
-                 -1, -1, 0, -1, 0, 0);
+      mech_damage_apply(
+          &(MechDamageRequest){.target = mech,
+                               .attacker = mech,
+                               .line_of_sight = 0,
+                               .attack_pilot = -1,
+                               .hit_location = hitloc,
+                               .rear = isrear,
+                               .critical = iscritical,
+                               .armor_damage = (damage % 5),
+                               .internal_damage = 0,
+                               .transfer = MECH_DAMAGE_FORCE_TRANSFER,
+                               .cause = -1,
+                               .base_to_hit = 0,
+                               .weapon_index = -1,
+                               .ammunition_mode = 0,
+                               .ignore_swarmers = 0});
       mech_flood(mech);
       mech_inferno_extinguish_in_water(mech);
     }

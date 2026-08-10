@@ -151,9 +151,9 @@ struct CommacMessageStoreContext {
   int result;
 };
 
-static void commac_store_message(void *data, void *context_pointer) {
-  chmsg *message = data;
-  CommacMessageStoreContext *context = context_pointer;
+static void commac_store_message(const FifoVisit *visit) {
+  chmsg *message = visit->item;
+  CommacMessageStoreContext *context = visit->context;
 
   if (context->result < 0 ||
       commac_sqlite_bind_text(context->statement, 1, context->channel) < 0 ||
@@ -322,8 +322,16 @@ static int commac_column_text(sqlite3_stmt *statement, int column,
 }
 
 /* Add one persisted alias while retaining commac's sorted runtime layout. */
-static int commac_load_alias(struct commac *commac, const char *alias,
-                             const char *channel) {
+typedef struct CommacAliasLoadRequest {
+  struct commac *commac;
+  const char *alias;
+  const char *channel;
+} CommacAliasLoadRequest;
+
+static int commac_load_alias(const CommacAliasLoadRequest *request) {
+  struct commac *commac = request->commac;
+  const char *alias = request->alias;
+  const char *channel = request->channel;
   int capacity;
 
   if (!*alias || strlen(alias) > 5 ||
@@ -336,8 +344,8 @@ static int commac_load_alias(struct commac *commac, const char *alias,
 
     if (aliases == nullptr)
       return -1;
-    channels =
-        realloc(commac->channels, sizeof(*commac->channels) * (size_t)capacity);
+    channels = (char **)realloc((void *)commac->channels,
+                                sizeof(*commac->channels) * (size_t)capacity);
     if (channels == nullptr) {
       commac->alias = aliases;
       return -1;
@@ -420,11 +428,15 @@ static int commac_load_entries(sqlite3 *sqlite,
                          "ORDER BY who, position;",
                          -1, &aliases, nullptr) == SQLITE_OK) {
     while (result == 0 && (step = sqlite3_step(aliases)) == SQLITE_ROW) {
-      if (commac_column_int(aliases, 0, &who) < 0 ||
-          !(commac = commac_find_loaded(context->channels, who)) ||
-          commac_column_text(aliases, 1, &alias, 5) < 0 ||
+      if (commac_column_int(aliases, 0, &who) < 0) {
+        result = -1;
+        continue;
+      }
+      commac = commac_find_loaded(context->channels, who);
+      if (!commac || commac_column_text(aliases, 1, &alias, 5) < 0 ||
           commac_column_text(aliases, 2, &channel, LBUF_SIZE - 1) < 0 ||
-          commac_load_alias(commac, alias, channel) < 0)
+          commac_load_alias(&(CommacAliasLoadRequest){
+              .commac = commac, .alias = alias, .channel = channel}) < 0)
         result = -1;
     }
     if (result == 0 && step != SQLITE_DONE)
@@ -512,9 +524,12 @@ static int commac_load_users(sqlite3 *sqlite,
           -1, &statement, nullptr) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-      if (commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0 ||
-          !(channel = channel_registry_find(context->channels, name)) ||
-          commac_column_int(statement, 1, &who) < 0 || who < 0 ||
+      if (commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0) {
+        result = -1;
+        break;
+      }
+      channel = channel_registry_find(context->channels, name);
+      if (!channel || commac_column_int(statement, 1, &who) < 0 || who < 0 ||
           who >= context->database->top ||
           commac_column_int(statement, 2, &is_on) < 0) {
         result = -1;
@@ -527,8 +542,8 @@ static int commac_load_users(sqlite3 *sqlite,
       }
       if (channel->num_users == channel->max_users) {
         const int capacity = channel->max_users + 10;
-        struct comuser **users =
-            realloc(channel->users, sizeof(*channel->users) * (size_t)capacity);
+        struct comuser **users = (struct comuser **)realloc(
+            (void *)channel->users, sizeof(*channel->users) * (size_t)capacity);
 
         if (users == nullptr) {
           free(user);
@@ -573,9 +588,12 @@ static int commac_load_messages(sqlite3 *sqlite,
           -1, &statement, nullptr) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-      if (commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0 ||
-          !(channel = channel_registry_find(context->channels, name)) ||
-          commac_column_int(statement, 1, &sent_at) < 0 ||
+      if (commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0) {
+        result = -1;
+        break;
+      }
+      channel = channel_registry_find(context->channels, name);
+      if (!channel || commac_column_int(statement, 1, &sent_at) < 0 ||
           commac_column_text(statement, 2, &text, LBUF_SIZE - 1) < 0) {
         result = -1;
         break;
@@ -632,9 +650,10 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      MacroSet **grown_sets = realloc(context->macros->sets,
-                                      sizeof(*context->macros->sets) *
-                                          (size_t)(context->macros->count + 1));
+      MacroSet **grown_sets =
+          (MacroSet **)realloc((void *)context->macros->sets,
+                               sizeof(*context->macros->sets) *
+                                   (size_t)(context->macros->count + 1));
       if (grown_sets == nullptr) {
         result = -1;
         break;
@@ -692,8 +711,9 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      strings = realloc(macro->string, sizeof(*macro->string) *
-                                           (size_t)(macro->macro_count + 1));
+      strings = (char **)realloc((void *)macro->string,
+                                 sizeof(*macro->string) *
+                                     (size_t)(macro->macro_count + 1));
       if (strings == nullptr) {
         macro->alias = aliases;
         result = -1;

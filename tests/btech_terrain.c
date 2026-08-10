@@ -5,11 +5,11 @@
 #include "map_api.h"
 #include "map_coding_api.h"
 #include "map_obj_api.h"
-#include "mech_internal.h"
 #include "mech_identity_api.h"
+#include "mech_internal.h"
 #include "mech_position_api.h"
-#include "registry_api.h"
 #include "mux/support/checked_storage.h"
+#include "registry_api.h"
 
 static char encoded_terrain[256];
 static char encoded_elevation[256];
@@ -40,7 +40,11 @@ char map_coding_get_terrain(const MapCodingRegistry *registry, int index) {
   return *encoded_value(encoded_terrain, index);
 }
 
-void UpdateMechsTerrain(BattleMap *map, int x, int y, int terrain) {
+void UpdateMechsTerrain(const MapTerrainChange *change) {
+  BattleMap *map = change->map;
+  const int x = change->position.x;
+  const int y = change->position.y;
+  const int terrain = change->terrain;
   (void)map;
   (void)x;
   (void)y;

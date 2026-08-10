@@ -48,10 +48,13 @@ int btech_special_load_mechrep(sqlite3 *sqlite, BtechContext *context) {
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &object) < 0 ||
-        !(mechrep = btech_special_object(context, object, GTYPE_MECHREP)) ||
-        btech_special_column_dbref(context->database, statement, 1, &target) <
-            0)
+    if (btech_special_column_long(statement, 0, &object) < 0) {
+      result = -1;
+      continue;
+    }
+    mechrep = btech_special_object(context, object, GTYPE_MECHREP);
+    if (!mechrep || btech_special_column_dbref(context->database, statement, 1,
+                                               &target) < 0)
       result = -1;
     else
       mechrep->current_target = target;
@@ -88,9 +91,12 @@ int btech_special_load_turrets(sqlite3 *sqlite, BtechContext *context) {
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &object) < 0 ||
-        !(turret = btech_special_object(context, object, GTYPE_TURRET)) ||
-        btech_special_column_int(statement, 1, &arcs) < 0 ||
+    if (btech_special_column_long(statement, 0, &object) < 0) {
+      result = -1;
+      break;
+    }
+    turret = btech_special_object(context, object, GTYPE_TURRET);
+    if (!turret || btech_special_column_int(statement, 1, &arcs) < 0 ||
         btech_special_column_dbref(context->database, statement, 2, &parent) <
             0 ||
         btech_special_column_dbref(context->database, statement, 3, &gunner) <
@@ -203,8 +209,12 @@ int btech_special_load_autopilots(sqlite3 *sqlite, BtechContext *context) {
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &object) < 0 ||
-        !(autopilot = btech_special_object(context, object, GTYPE_AUTO)) ||
+    if (btech_special_column_long(statement, 0, &object) < 0) {
+      result = -1;
+      break;
+    }
+    autopilot = btech_special_object(context, object, GTYPE_AUTO);
+    if (!autopilot ||
         btech_special_column_dbref(context->database, statement, 1,
                                    &mech_dbref) < 0 ||
         btech_special_column_dbref(context->database, statement, 2,
@@ -286,9 +296,23 @@ btech_special_autopilot_command(int command_enum) {
 }
 
 /* Load one command's ordered text arguments and derive its callback locally. */
+typedef struct AutopilotCommandRestoreRequest {
+  sqlite3 *sqlite;
+  Autopilot *autopilot;
+  DbRef autopilot_dbref;
+  int position;
+  int command;
+  int argument_count;
+} AutopilotCommandRestoreRequest;
+
 static int btech_special_load_autopilot_command_args(
-    sqlite3 *sqlite, Autopilot *autopilot, DbRef autopilot_dbref, int position,
-    int command_enum, int argument_count) {
+    const AutopilotCommandRestoreRequest *request) {
+  sqlite3 *sqlite = request->sqlite;
+  Autopilot *autopilot = request->autopilot;
+  const DbRef autopilot_dbref = request->autopilot_dbref;
+  const int position = request->position;
+  const int command_enum = request->command;
+  const int argument_count = request->argument_count;
   sqlite3_stmt *statement;
   const AutopilotCommandDefinition *definition;
   AutopilotCommand *command;
@@ -406,8 +430,14 @@ int btech_special_load_autopilot_commands(sqlite3 *sqlite,
     }
     if (position != expected_position ||
         btech_special_load_autopilot_command_args(
-            sqlite, autopilot, autopilot_dbref, position, command_enum,
-            argument_count) < 0) {
+            &(AutopilotCommandRestoreRequest){
+                .sqlite = sqlite,
+                .autopilot = autopilot,
+                .autopilot_dbref = autopilot_dbref,
+                .position = position,
+                .command = command_enum,
+                .argument_count = argument_count,
+            }) < 0) {
       result = -1;
       break;
     }

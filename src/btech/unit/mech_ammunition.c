@@ -1,5 +1,6 @@
 #include "btech/context.h"
 #include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_equipment_api.h"
 #include "mech_utils_api.h"
 #include "mech_utils_internal.h"
@@ -97,54 +98,78 @@ int FindSplitCrits(Mech *mech, int sect, int type, int crit) {
 
   return -1;
 }
-int GetSplitData(Mech *mech, int sect, int data, int *ssect, int *scrit,
-                 int *stype) {
+SplitCriticalLookup split_critical_find(Mech *mech,
+                                        CriticalSlotReference source) {
+  int sect = source.section;
+  int data = source.critical;
+  SplitCriticalLookup result = {0};
   switch (sect) {
   case RARM: // right arm goes to right torso
-    *stype = special_equipment_index(SPLIT_CRIT_RIGHT);
-    if ((*scrit = FindSplitCrits(mech, RTORSO, *stype, data)) >= 0) {
-      *ssect = RTORSO;
-      return 1;
+    result.part_type = special_equipment_index(SPLIT_CRIT_RIGHT);
+    result.slot.critical = FindSplitCrits(mech, RTORSO, result.part_type, data);
+    if (result.slot.critical >= 0) {
+      result.found = true;
+      result.slot.section = RTORSO;
+      return result;
     }
     break;
   case LARM: // left arm goes to left torso
-    *stype = special_equipment_index(SPLIT_CRIT_LEFT);
-    if ((*scrit = FindSplitCrits(mech, LTORSO, *stype, data)) >= 0) {
-      *ssect = LTORSO;
-      return 1;
+    result.part_type = special_equipment_index(SPLIT_CRIT_LEFT);
+    result.slot.critical = FindSplitCrits(mech, LTORSO, result.part_type, data);
+    if (result.slot.critical >= 0) {
+      result.found = true;
+      result.slot.section = LTORSO;
+      return result;
     }
     break;
   case RTORSO: // torso more complex, need to go thru arm, leg, torso
-    *stype = special_equipment_index(SPLIT_CRIT_RIGHT);
-    if ((*scrit = FindSplitCrits(mech, CTORSO, *stype, data)) >= 0) {
-      *ssect = CTORSO;
-      return 1;
-    } else if ((*scrit = FindSplitCrits(mech, RARM, *stype, data)) >= 0) {
-      *ssect = RARM;
-      return 1;
-    } else if ((*scrit = FindSplitCrits(mech, RLEG, *stype, data)) >= 0) {
-      *ssect = RLEG;
-      return 1;
+    result.part_type = special_equipment_index(SPLIT_CRIT_RIGHT);
+    result.slot.critical = FindSplitCrits(mech, CTORSO, result.part_type, data);
+    if (result.slot.critical >= 0) {
+      result.found = true;
+      result.slot.section = CTORSO;
+      return result;
+    }
+    result.slot.critical = FindSplitCrits(mech, RARM, result.part_type, data);
+    if (result.slot.critical >= 0) {
+      result.found = true;
+      result.slot.section = RARM;
+      return result;
+    }
+    result.slot.critical = FindSplitCrits(mech, RLEG, result.part_type, data);
+    if (result.slot.critical >= 0) {
+      result.found = true;
+      result.slot.section = RLEG;
+      return result;
     }
     break;
   case LTORSO: // same for left torso
-    *stype = special_equipment_index(SPLIT_CRIT_LEFT);
-    if ((*scrit = FindSplitCrits(mech, CTORSO, *stype, data)) >= 0) {
-      *ssect = CTORSO;
-      return 1;
-    } else if ((*scrit = FindSplitCrits(mech, LARM, *stype, data)) >= 0) {
-      *ssect = LARM;
-      return 1;
-    } else if ((*scrit = FindSplitCrits(mech, LLEG, *stype, data)) >= 0) {
-      *ssect = LLEG;
-      return 1;
+    result.part_type = special_equipment_index(SPLIT_CRIT_LEFT);
+    result.slot.critical = FindSplitCrits(mech, CTORSO, result.part_type, data);
+    if (result.slot.critical >= 0) {
+      result.found = true;
+      result.slot.section = CTORSO;
+      return result;
+    }
+    result.slot.critical = FindSplitCrits(mech, LARM, result.part_type, data);
+    if (result.slot.critical >= 0) {
+      result.found = true;
+      result.slot.section = LARM;
+      return result;
+    }
+    result.slot.critical = FindSplitCrits(mech, LLEG, result.part_type, data);
+    if (result.slot.critical >= 0) {
+      result.found = true;
+      result.slot.section = LLEG;
+      return result;
     }
     break;
   }
-  return 0;
+  return result;
 }
 
-int FindDestructiveAmmo(Mech *mech, int *section, int *critical) {
+AmmunitionHazardResult destructive_ammunition_find(Mech *mech) {
+  AmmunitionHazardResult result = {0};
   int loop;
   int critloop;
   int maxdamage = 0;
@@ -167,19 +192,22 @@ int FindDestructiveAmmo(Mech *mech, int *section, int *critical) {
             weapon_catalogue_is_artillery(weapindx)) {
           if (btech_context_has_missile_hit_table(mech->xcode.context,
                                                   weapindx))
-            damage *= btech_context_missile_hit_count(mech->xcode.context,
-                                                      weapindx, 10);
+            damage *= btech_context_missile_hit_count(
+                &(MissileHitLookup){.context = mech->xcode.context,
+                                    .weapon = weapindx,
+                                    .roll = 10});
         }
         if (damage > maxdamage) {
-          *section = loop;
-          *critical = critloop;
+          result.slot = (CriticalSlotReference){loop, critloop};
           maxdamage = damage;
         }
       }
-  return (maxdamage);
+  result.damage = maxdamage;
+  return result;
 }
 
-int FindInfernoAmmo(Mech *mech, int *section, int *critical) {
+AmmunitionHazardResult inferno_ammunition_find(Mech *mech) {
+  AmmunitionHazardResult result = {0};
   int loop;
   int critloop;
   int maxdamage = 0;
@@ -206,16 +234,18 @@ int FindInfernoAmmo(Mech *mech, int *section, int *critical) {
             weapon_catalogue_is_artillery(weapindx)) {
           if (btech_context_has_missile_hit_table(mech->xcode.context,
                                                   weapindx))
-            damage *= btech_context_missile_hit_count(mech->xcode.context,
-                                                      weapindx, 10);
+            damage *= btech_context_missile_hit_count(
+                &(MissileHitLookup){.context = mech->xcode.context,
+                                    .weapon = weapindx,
+                                    .roll = 10});
         }
         if (damage > maxdamage) {
-          *section = loop;
-          *critical = critloop;
+          result.slot = (CriticalSlotReference){loop, critloop};
           maxdamage = damage;
         }
       }
-  return (maxdamage);
+  result.damage = maxdamage;
+  return result;
 }
 
 int FindRoundsForWeapon(Mech *mech, int weapindx) {
@@ -293,8 +323,8 @@ const char *const *ProperSectionStringFromType(int type, int mtype) {
   return NULL;
 }
 
-size_t mech_section_name_count(int type, int movement_type) {
-  switch (type) {
+size_t unit_section_name_count(const UnitSectionCatalog *catalog) {
+  switch (catalog->unit_type) {
   case CLASS_BSUIT:
     return NUM_BSUIT_MEMBERS;
   case CLASS_MECH:
@@ -314,11 +344,12 @@ size_t mech_section_name_count(int type, int movement_type) {
   return 0;
 }
 
-const char *mech_section_name(int type, int movement_type, size_t index) {
-  const char *const *names = ProperSectionStringFromType(type, movement_type);
-  const size_t count = mech_section_name_count(type, movement_type);
+const char *unit_section_name(const UnitSectionCatalog *catalog, size_t index) {
+  const char *const *names =
+      ProperSectionStringFromType(catalog->unit_type, catalog->movement_type);
+  const size_t count = unit_section_name_count(catalog);
   if (names == nullptr || index >= count)
     return nullptr;
-  return *(const char *const *)checked_storage_at_const(names, count + 1,
-                                                        sizeof(*names), index);
+  return *(const char *const *)checked_storage_at_const(
+      (const void *)names, count + 1, sizeof(*names), index);
 }

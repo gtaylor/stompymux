@@ -36,9 +36,25 @@ int have_punch(Mech *mech, int location);
 bool physical_arm_check(DbRef player, Mech *mech, const char *verb);
 bool physical_quad_check(DbRef player, Mech *mech, const char *verb);
 int phys_common_checks(Mech *mech);
-int get_arm_args(int *using, int *argument_count, char ***arguments, Mech *mech,
-                 int (*has_weapon)(Mech *mech, int location),
-                 const char *weapon);
+typedef int (*PhysicalEquipmentCheck)(Mech *mech, int location);
+
+typedef struct ArmSelectionRequest {
+  int using;
+  int argument_count;
+  char **arguments;
+  Mech *mech;
+  PhysicalEquipmentCheck has_weapon;
+  const char *weapon;
+} ArmSelectionRequest;
+
+typedef struct ArmSelectionResult {
+  bool failed;
+  int using;
+  int argument_count;
+  char **arguments;
+} ArmSelectionResult;
+
+ArmSelectionResult physical_arm_select(const ArmSelectionRequest *request);
 
 void physical_damage_apply(Mech *target, Mech *attacker, int cause_pilot,
                            DbRef pilot, int hit_location, int rear,

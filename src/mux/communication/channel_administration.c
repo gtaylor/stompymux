@@ -33,7 +33,8 @@ void do_channel_membership_flags(CommandInvocation *invocation) {
   struct channel *ch;
   int add_remove = 1;
 
-  if (!(ch = select_channel(evaluation->runtime->channels, arg1))) {
+  ch = select_channel(evaluation->runtime->channels, arg1);
+  if (!ch) {
     switch (flag) {
     case 3:
       raw_notify(evaluation, player, "@chan/pflags: Unknown channel.");
@@ -117,9 +118,11 @@ void do_channel_membership_flags(CommandInvocation *invocation) {
   return;
 }
 
-int comsys_test_access(EvaluationContext *evaluation, DbRef player, long access,
-                       struct channel *chan) {
-  long flag_value = access;
+int comsys_test_access(const ChannelAccessRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->player;
+  struct channel *chan = request->channel;
+  long flag_value = request->access;
   LuaLockInvocation lock;
   LuaLockResult result;
 
@@ -211,7 +214,8 @@ void do_cemit(CommandInvocation *invocation) {
   char *text = invocation->second;
   struct channel *ch;
 
-  if (!(ch = select_channel(evaluation->runtime->channels, chan))) {
+  ch = select_channel(evaluation->runtime->channels, chan);
+  if (!ch) {
     raw_notify(evaluation, player, "@chan/emit: Unknown channel.");
     return;
   }
@@ -234,7 +238,8 @@ void do_channel_flags(CommandInvocation *invocation) {
   int flag_value;
   bool enable = true;
 
-  if (!(ch = select_channel(evaluation->runtime->channels, channel))) {
+  ch = select_channel(evaluation->runtime->channels, channel);
+  if (!ch) {
     raw_notify(evaluation, player, "@chan/flags: Unknown channel.");
     return;
   }
@@ -279,7 +284,8 @@ void do_chboot(CommandInvocation *invocation) {
    * *  * *  * *  * * long.
    */
 
-  if (!(ch = select_channel(evaluation->runtime->channels, channel))) {
+  ch = select_channel(evaluation->runtime->channels, channel);
+  if (!ch) {
     raw_notify(evaluation, player, "@chan/boot: Unknown channel.");
     return;
   }
@@ -324,7 +330,8 @@ void do_channel_object(CommandInvocation *invocation) {
   match_everything(&evaluation->command->match, 0);
   thing = match_result(&evaluation->command->match);
 
-  if (!(ch = select_channel(evaluation->runtime->channels, channel))) {
+  ch = select_channel(evaluation->runtime->channels, channel);
+  if (!ch) {
     raw_notify(evaluation, player, "@chan/object: Unknown channel.");
     return;
   }
@@ -369,7 +376,10 @@ void do_chanlist(CommandInvocation *invocation) {
                &evaluation->runtime->channels->channels)) {
     if (is_wizard(evaluation->world->database, player) ||
         (ch->type & CHANNEL_PUBLIC) ||
-        (comsys_test_access(evaluation, player, CHANNEL_JOIN, ch))) {
+        (comsys_test_access(&(ChannelAccessRequest){.evaluation = evaluation,
+                                                    .player = player,
+                                                    .access = CHANNEL_JOIN,
+                                                    .channel = ch}))) {
 
       atrstr = attribute_get(evaluation->world->database, ch->chan_obj, A_DESC,
                              &flags);
@@ -403,8 +413,8 @@ void do_chanstatus(CommandInvocation *invocation) {
     raw_notify(evaluation, player,
                "** Channel             --Flags--  Obj  Users   Messages");
 
-    if (!(selected_channel =
-              select_channel(evaluation->runtime->channels, chan))) {
+    selected_channel = select_channel(evaluation->runtime->channels, chan);
+    if (!selected_channel) {
       raw_notify(evaluation, player, "@chan/status: Unknown channel.");
       return;
     }
@@ -434,7 +444,8 @@ void do_chanstatus(CommandInvocation *invocation) {
   char buf[MBUF_SIZE];
 
   raw_notify(evaluation, player, "** Channel       Description");
-  if (!(ch = select_channel(evaluation->runtime->channels, chan))) {
+  ch = select_channel(evaluation->runtime->channels, chan);
+  if (!ch) {
     raw_notify(evaluation, player, "@chan/status: Unknown channel.");
     return;
   }

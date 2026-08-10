@@ -7,6 +7,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map.h"
+#include "map_coordinates.h"
 #include "map_units_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
@@ -95,13 +96,11 @@ typedef struct RelaySearchStack {
   int items[MAX_MECHS_PER_MAP];
 } RelaySearchStack;
 
-static void relay_index_set(int values[MAX_MECHS_PER_MAP], int index,
-                            int value) {
+static int *relay_index_slot(int values[MAX_MECHS_PER_MAP], int index) {
   if (index < 0)
     abort();
-  int *slot = checked_storage_at(values, MAX_MECHS_PER_MAP, sizeof(*values),
-                                 (size_t)index);
-  *slot = value;
+  return checked_storage_at(values, MAX_MECHS_PER_MAP, sizeof(*values),
+                            (size_t)index);
 }
 
 static int relay_index_get(const int values[MAX_MECHS_PER_MAP], int index) {
@@ -114,8 +113,9 @@ static int relay_index_get(const int values[MAX_MECHS_PER_MAP], int index) {
 static void relay_mech_set(CommRelayContext *relay, int index, Mech *mech) {
   if (index < 0)
     abort();
-  Mech **slot = checked_storage_at(relay->mechs, MAX_MECHS_PER_MAP,
-                                   sizeof(*relay->mechs), (size_t)index);
+  Mech **slot =
+      (Mech **)checked_storage_at((void *)relay->mechs, MAX_MECHS_PER_MAP,
+                                  sizeof(*relay->mechs), (size_t)index);
   *slot = mech;
 }
 
@@ -123,7 +123,8 @@ static Mech *relay_mech_get(const CommRelayContext *relay, int index) {
   if (index < 0)
     abort();
   return *(Mech *const *)checked_storage_at_const(
-      relay->mechs, MAX_MECHS_PER_MAP, sizeof(*relay->mechs), (size_t)index);
+      (const void *)relay->mechs, MAX_MECHS_PER_MAP, sizeof(*relay->mechs),
+      (size_t)index);
 }
 
 static void relay_visited_set(CommRelayContext *relay, int index, bool value) {
@@ -169,14 +170,37 @@ static char *radio_argument(char *const arguments[3], int index) {
   if (index < 0)
     abort();
   return *(char *const *)checked_storage_at_const(
-      arguments, 3, sizeof(*arguments), (size_t)index);
+      (const void *)arguments, 3, sizeof(*arguments), (size_t)index);
 }
 
-static void scramble_message(const CommRelayContext *relay,
-                             BtechContext *context, char *buffo, float range,
-                             int sendrange, int recvrrange, const char *handle,
-                             const char *msg, int bth, int *isxp, int under_ecm,
-                             int digmode) {
+typedef struct RadioScrambleRequest {
+  const CommRelayContext *relay;
+  BtechContext *context;
+  char *output;
+  float range;
+  int send_range;
+  int receive_range;
+  const char *handle;
+  const char *message;
+  int base_to_hit;
+  int *awarded_experience;
+  bool under_ecm;
+  int digital_mode;
+} RadioScrambleRequest;
+
+static void scramble_message(const RadioScrambleRequest *request) {
+  const CommRelayContext *relay = request->relay;
+  BtechContext *context = request->context;
+  char *buffo = request->output;
+  const float range = request->range;
+  const int sendrange = request->send_range;
+  const int recvrrange = request->receive_range;
+  const char *handle = request->handle;
+  const char *msg = request->message;
+  const int bth = request->base_to_hit;
+  int *isxp = request->awarded_experience;
+  const bool under_ecm = request->under_ecm;
+  const int digmode = request->digital_mode;
 
   int mr, i;
   char *header = nullptr;
@@ -197,9 +221,11 @@ static void scramble_message(const CommRelayContext *relay,
           relay_mech_get(relay, relay_index_get(relay->best_path, i));
       Mech *previous =
           relay_mech_get(relay, relay_index_get(relay->best_path, i - 1));
-      bearing = FindBearing(
-          mech_position_real_x(current), mech_position_real_y(current),
-          mech_position_real_x(previous), mech_position_real_y(previous));
+      bearing = map_bearing(
+          &(MapRealSegment){.start = {.x = mech_position_real_x(current),
+                                      .y = mech_position_real_y(current)},
+                            .end = {.x = mech_position_real_x(previous),
+                                    .y = mech_position_real_y(previous)}});
       MechUnitId id = mech_unit_id(current);
       btech_text_builder_append_format(&path, "[%c%c]-h:%.3d", id.first,
                                        id.second, bearing);
@@ -255,7 +281,7 @@ static void recursive_commlink(CommRelayContext *relay, int i, int dep) {
     return;
   if (dep >= relay->best_depth)
     return;
-  relay_index_set(relay->path, dep, i);
+  *relay_index_slot(relay->path, dep) = i;
   for (j = 1; j < relay->node_count; j++)
     if (relay_connected_get(relay, i, j) && !relay_visited_get(relay, j)) {
       if (j == (relay->node_count - 1)) {
@@ -263,7 +289,8 @@ static void recursive_commlink(CommRelayContext *relay, int i, int dep) {
 
         relay->best_depth = dep;
         for (k = 0; k < relay->best_depth; k++)
-          relay_index_set(relay->best_path, k, relay_index_get(relay->path, k));
+          *relay_index_slot(relay->best_path, k) =
+              relay_index_get(relay->path, k);
       } else {
         relay_visited_set(relay, j, true);
         recursive_commlink(relay, j, dep + 1);
@@ -279,8 +306,8 @@ static void nonrecursive_commlink(CommRelayContext *relay, int i) {
   int maxdepth = 0;
 
   /* May _still_ contain fatal bug ; Ghod knows (I don't) */
-  relay_index_set(comm_loop.items, 0, 1);
-  relay_index_set(relay->path, 0, i);
+  *relay_index_slot(comm_loop.items, 0) = 1;
+  *relay_index_slot(relay->path, 0) = i;
 
   while (dep >= 0) {
     i = relay_index_get(relay->path, dep);
@@ -291,15 +318,15 @@ static void nonrecursive_commlink(CommRelayContext *relay, int i) {
 
           relay->best_depth = dep + 1;
           for (k = 0; k < relay->best_depth; k++)
-            relay_index_set(relay->best_path, k,
-                            relay_index_get(relay->path, k));
+            *relay_index_slot(relay->best_path, k) =
+                relay_index_get(relay->path, k);
           j = relay->node_count;
           break;
         } else if ((dep + 1) < relay->best_depth) {
           relay_visited_set(relay, j, true);
-          relay_index_set(comm_loop.items, dep++, j + 1);
-          relay_index_set(comm_loop.items, dep, 1);
-          relay_index_set(relay->path, dep, j);
+          *relay_index_slot(comm_loop.items, dep++) = j + 1;
+          *relay_index_slot(comm_loop.items, dep) = 1;
+          *relay_index_slot(relay->path, dep) = j;
           if (dep > maxdepth)
             maxdepth = dep;
           break;
@@ -341,7 +368,8 @@ static bool find_comm_link(CommRelayContext *relay, BattleMap *map, Mech *from,
   relay_mech_set(relay, relay->node_count++, from);
   for (i = 0; i < battle_map_unit_count(map); i++) {
     const DbRef candidate = battle_map_unit_dbref(map, i);
-    if (!(t = btech_context_find_object(mech_context(from), candidate)))
+    t = btech_context_find_object(mech_context(from), candidate);
+    if (!t)
       continue;
     if (t == from || t == to)
       continue;
@@ -425,9 +453,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
   char ai_buf[LBUF_SIZE];
 
-  /* Removed the Radio Failing stuff cause it annoys me - Dany
-     mech_generic_failure_check(mech, -2, &sfail_type, &sfail_mod);
-   */
+  /* Radio failure checks were intentionally removed from message delivery. */
   if (!mech_radio_range(mech))
     return;
   relay = calloc(1, sizeof(*relay));
@@ -439,16 +465,19 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
       // XXX: The test below is indicative of very bad bookkeeping. Suggesting
       // that a dbref may be indicated as "on the map" without being on the
       // map. I believe this to be a serious problem.
-      if (!(tempMech = (Mech *)btech_context_find_object(mech_context(mech),
-                                                         candidate)))
+      tempMech =
+          (Mech *)btech_context_find_object(mech_context(mech), candidate);
+      if (!tempMech)
         continue;
       if (mech_is_destroyed(tempMech))
         continue;
       obs = mech_is_observer(tempMech);
       range = mech_range_to(mech, tempMech);
-      bearing = FindBearing(
-          mech_position_real_x(tempMech), mech_position_real_y(tempMech),
-          mech_position_real_x(mech), mech_position_real_y(mech));
+      bearing = map_bearing(
+          &(MapRealSegment){.start = {.x = mech_position_real_x(tempMech),
+                                      .y = mech_position_real_y(tempMech)},
+                            .end = {.x = mech_position_real_x(mech),
+                                    .y = mech_position_real_y(mech)}});
       for (i = 0; i < mech_radio_channel_count(tempMech); i++) {
         if (mech_radio_frequency(tempMech, i) ==
                 mech_radio_frequency(mech, freq) ||
@@ -517,7 +546,11 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
       }
 
       (void)snprintf(buf2, LBUF_SIZE, "%s", msg);
-      radio_color_code(color_code, tempMech, i, obs, mech_team(mech));
+      radio_color_code(&(RadioColorRequest){.buffer = color_code,
+                                            .mech = tempMech,
+                                            .channel = i,
+                                            .observer = obs != 0,
+                                            .team = mech_team(mech)});
 
       /* Let's just do the OBSERVERIC Stuff here. No sense checking
        * elsewhere. We'll compose the message and send it now since
@@ -575,9 +608,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
           auto_parse_command(a, tempMech, i, buf3);
         }
       }
-      /* Removed the Radio fail stuff because it annoys me - Dany
-         mech_generic_failure_check(tempMech, -2, &rfail_type, &rfail_mod);
-       */
+      /* Radio failure checks were intentionally removed from delivery. */
       if (!mech_radio_range(tempMech))
         continue;
       if (mech_radio_mode(mech, freq) & FREQ_DIGITAL) {
@@ -598,20 +629,29 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
             continue;
         }
 
-        scramble_message(relay, mech_context(mech), buf3, range,
-                         mech_radio_range(mech), mech_radio_range(mech),
-                         mech_radio_title(mech, freq), buf2,
-                         mech_communication_skill(tempMech), &isxp, 0,
-                         (mech_radio_mode(tempMech, i) & FREQ_INFO) ? 2 : 1);
+        scramble_message(&(RadioScrambleRequest){
+            .relay = relay,
+            .context = mech_context(mech),
+            .output = buf3,
+            .range = range,
+            .send_range = mech_radio_range(mech),
+            .receive_range = mech_radio_range(mech),
+            .handle = mech_radio_title(mech, freq),
+            .message = buf2,
+            .base_to_hit = mech_communication_skill(tempMech),
+            .awarded_experience = &isxp,
+            .digital_mode =
+                (mech_radio_mode(tempMech, i) & FREQ_INFO) ? 2 : 1});
 
         if (relay != nullptr && relay->best_depth >= 2) {
           const int relay_index =
               relay_index_get(relay->best_path, relay->best_depth - 1);
           Mech *last_relay = relay_mech_get(relay, relay_index);
-          bearing = FindBearing(mech_position_real_x(tempMech),
-                                mech_position_real_y(tempMech),
-                                mech_position_real_x(last_relay),
-                                mech_position_real_y(last_relay));
+          bearing = map_bearing(&(MapRealSegment){
+              .start = {.x = mech_position_real_x(tempMech),
+                        .y = mech_position_real_y(tempMech)},
+              .end = {.x = mech_position_real_x(last_relay),
+                      .y = mech_position_real_y(last_relay)}});
         }
         if (!obs)
           build_channel_message(buf, color_code, '[', ']', (char)('A' + i),
@@ -619,19 +659,25 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
       } else {
 
-        scramble_message(relay, mech_context(mech), buf3, range,
-                         mech_radio_range(mech), mech_radio_range(tempMech),
-                         mech_radio_title(mech, freq), buf2,
-                         mech_communication_skill(tempMech), &isxp,
-                         (mech_is_any_ecm_disturbed(mech) ||
+        scramble_message(&(RadioScrambleRequest){
+            .relay = relay,
+            .context = mech_context(mech),
+            .output = buf3,
+            .range = range,
+            .send_range = mech_radio_range(mech),
+            .receive_range = mech_radio_range(tempMech),
+            .handle = mech_radio_title(mech, freq),
+            .message = buf2,
+            .base_to_hit = mech_communication_skill(tempMech),
+            .awarded_experience = &isxp,
+            .under_ecm = (mech_is_any_ecm_disturbed(mech) ||
                           mech_is_any_ecm_disturbed(tempMech)
                           /*
                              || sfail_type == FAIL_STATIC ||
                              rfail_type == FAIL_STATIC
                            */
                           ) &&
-                             mech != tempMech,
-                         0);
+                         mech != tempMech});
         if (!obs)
           build_channel_message(buf, color_code, '(', ')', (char)('A' + i),
                                 bearing, buf3);

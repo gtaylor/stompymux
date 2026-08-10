@@ -34,12 +34,17 @@ const char *btech_event_name(int type) {
   const size_t index =
       type < 0 || (size_t)type >= event_name_count ? 0 : (size_t)type;
   return *(const char *const *)checked_storage_at_const(
-      event_names, event_name_count, sizeof(*event_names), index);
+      (const void *)event_names, event_name_count, sizeof(*event_names), index);
 }
 
 void btech_event_schedule(MuxEventScheduler *events, void *object, int type,
                           MuxEventCallback callback, int delay, intptr_t data) {
-  mux_event_add(events, delay, 0, type, callback, object, event_payload(data));
+  mux_event_add(&(MuxEventRequest){.scheduler = events,
+                                   .delay = delay,
+                                   .type = type,
+                                   .callback = callback,
+                                   .data = object,
+                                   .secondary_data = event_payload(data)});
 }
 
 int btech_event_count(MuxEventScheduler *events, const void *object, int type) {

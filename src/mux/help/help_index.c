@@ -19,6 +19,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_control.h"
+#include "mux/support/array_sort.h"
 #include "mux/support/checked_storage.h"
 
 struct HelpIndex {
@@ -61,17 +62,18 @@ static const HelpKeywordEntry *help_keyword_item(const HelpIndex *index,
 }
 
 static const char *help_string_item(const HelpStringList *list, size_t index) {
-  return *(char *const *)checked_storage_at_const(list->items, list->count,
-                                                  sizeof(*list->items), index);
+  return *(char *const *)checked_storage_at_const(
+      (const void *)list->items, list->count, sizeof(*list->items), index);
 }
 
 static char **help_name_slot(char **names, size_t capacity, size_t index) {
-  return checked_storage_at(names, capacity, sizeof(*names), index);
+  return (char **)checked_storage_at((void *)names, capacity, sizeof(*names),
+                                     index);
 }
 
 static char *help_name_item(char *const *names, size_t count, size_t index) {
-  return *(char *const *)checked_storage_at_const(names, count, sizeof(*names),
-                                                  index);
+  return *(char *const *)checked_storage_at_const((const void *)names, count,
+                                                  sizeof(*names), index);
 }
 
 static char help_character_at(const char *text, size_t length, size_t index) {
@@ -101,21 +103,21 @@ static char *help_join_path(const char *base, const char *name) {
   return joined;
 }
 
-static int help_index_name_compare(const void *a, const void *b) {
+static int help_index_name_compare(const ArraySortComparison *comparison) {
   const char *left;
   const char *right;
 
-  memcpy(&left, a, sizeof(left));
-  memcpy(&right, b, sizeof(right));
+  memcpy((void *)&left, comparison->left, sizeof(left));
+  memcpy((void *)&right, comparison->right, sizeof(right));
   return strcmp(left, right);
 }
 
-static int help_index_keyword_compare(const void *a, const void *b) {
+static int help_index_keyword_compare(const ArraySortComparison *comparison) {
   HelpKeywordEntry left;
   HelpKeywordEntry right;
 
-  memcpy(&left, a, sizeof(left));
-  memcpy(&right, b, sizeof(right));
+  memcpy(&left, comparison->left, sizeof(left));
+  memcpy(&right, comparison->right, sizeof(right));
   return strcmp(left.keyword, right.keyword);
 }
 
@@ -144,8 +146,14 @@ static char *help_slurp_file(const char *path, size_t *out_length) {
   fp = fopen(path, "rb");
   if (!fp)
     return nullptr;
-  if (fseek(fp, 0, SEEK_END) != 0 || (size = ftell(fp)) < 0 ||
-      fseek(fp, 0, SEEK_SET) != 0) {
+  bool read_failed = fseek(fp, 0, SEEK_END) != 0;
+  if (!read_failed) {
+    size = ftell(fp);
+    read_failed = size < 0;
+  }
+  if (!read_failed)
+    read_failed = fseek(fp, 0, SEEK_SET) != 0;
+  if (read_failed) {
     if (fclose(fp) != 0)
       return nullptr;
     return nullptr;
@@ -232,10 +240,22 @@ static bool help_locate_frontmatter(const char *content,
   }
 }
 
-static void help_index_process_file(EvaluationContext *evaluation,
-                                    HelpIndex *index, const char *absolute_path,
-                                    const char *relative_path, DbRef player,
-                                    int *error_count) {
+typedef struct HelpFileProcessRequest {
+  EvaluationContext *evaluation;
+  HelpIndex *index;
+  const char *absolute_path;
+  const char *relative_path;
+  DbRef player;
+  int *error_count;
+} HelpFileProcessRequest;
+
+static void help_index_process_file(const HelpFileProcessRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  HelpIndex *index = request->index;
+  const char *absolute_path = request->absolute_path;
+  const char *relative_path = request->relative_path;
+  DbRef player = request->player;
+  int *error_count = request->error_count;
   char *content;
   const char *toml_start;
   size_t toml_length;
@@ -246,7 +266,10 @@ static void help_index_process_file(EvaluationContext *evaluation,
   content = help_slurp_file(absolute_path, nullptr);
   if (!content) {
     if (index->log != nullptr)
-      log_error(index->log, LOG_PROBLEMS, "HLP", "READ",
+      log_error((LogEntry){.log = index->log,
+                           .key = LOG_PROBLEMS,
+                           .primary = "HLP",
+                           .secondary = "READ"},
                 "%s: unable to read file", relative_path);
     if (player != NOTHING)
       notify_printf(evaluation, player,
@@ -257,7 +280,10 @@ static void help_index_process_file(EvaluationContext *evaluation,
   if (!help_locate_frontmatter(content, &toml_start, &toml_length,
                                &body_start)) {
     if (index->log != nullptr)
-      log_error(index->log, LOG_PROBLEMS, "HLP", "PARSE",
+      log_error((LogEntry){.log = index->log,
+                           .key = LOG_PROBLEMS,
+                           .primary = "HLP",
+                           .secondary = "PARSE"},
                 "%s: missing +++ frontmatter delimiters", relative_path);
     if (player != NOTHING)
       notify_printf(evaluation, player,
@@ -273,8 +299,11 @@ static void help_index_process_file(EvaluationContext *evaluation,
   if (!help_frontmatter_parse(toml_start, toml_length, &article, error,
                               sizeof(error))) {
     if (index->log != nullptr)
-      log_error(index->log, LOG_PROBLEMS, "HLP", "PARSE", "%s: %s",
-                relative_path, error);
+      log_error((LogEntry){.log = index->log,
+                           .key = LOG_PROBLEMS,
+                           .primary = "HLP",
+                           .secondary = "PARSE"},
+                "%s: %s", relative_path, error);
     if (player != NOTHING)
       notify_printf(evaluation, player, "Help index error: %s: %s",
                     relative_path, error);
@@ -285,14 +314,23 @@ static void help_index_process_file(EvaluationContext *evaluation,
   }
   if (error[0]) {
     if (index->log != nullptr)
-      log_error(index->log, LOG_STARTUP, "HLP", "WARN", "%s: %s", relative_path,
-                error);
+      log_error((LogEntry){.log = index->log,
+                           .key = LOG_STARTUP,
+                           .primary = "HLP",
+                           .secondary = "WARN"},
+                "%s: %s", relative_path, error);
     if (player != NOTHING)
       notify_printf(evaluation, player, "Help index warning: %s: %s",
                     relative_path, error);
   }
 
   article.relative_path = strdup(relative_path);
+  if (article.relative_path == nullptr) {
+    (*error_count)++;
+    help_frontmatter_free(&article);
+    free(content);
+    return;
+  }
   help_article_vector_push(&index->articles, &article);
   free(content);
 }
@@ -312,7 +350,10 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
   stream = opendir(absolute_dir);
   if (!stream) {
     if (index->log != nullptr)
-      log_error(index->log, LOG_PROBLEMS, "HLP", "OPENDIR",
+      log_error((LogEntry){.log = index->log,
+                           .key = LOG_PROBLEMS,
+                           .primary = "HLP",
+                           .secondary = "OPENDIR"},
                 "unable to open help directory '%s'", absolute_dir);
     if (player != NOTHING)
       notify_printf(evaluation, player,
@@ -330,18 +371,23 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
 
       if (capacity < name_capacity || capacity > SIZE_MAX / sizeof(*names))
         abort();
-      names = realloc(entry_names, capacity * sizeof(*names));
+      names = (char **)realloc((void *)entry_names, capacity * sizeof(*names));
       if (names == nullptr)
         abort();
       entry_names = names;
       name_capacity = capacity;
     }
-    *help_name_slot(entry_names, name_capacity, name_count++) =
-        strdup(entry->d_name);
+    char *entry_name = strdup(entry->d_name);
+    if (entry_name == nullptr)
+      abort();
+    *help_name_slot(entry_names, name_capacity, name_count++) = entry_name;
   }
   closedir(stream);
   if (name_count > 0)
-    qsort(entry_names, name_count, sizeof(char *), help_index_name_compare);
+    array_sort(&(ArraySortRequest){.items = (void *)entry_names,
+                                   .count = name_count,
+                                   .item_size = sizeof(*entry_names),
+                                   .compare = help_index_name_compare});
 
   for (i = 0; i < name_count; i++) {
     char *entry_name = help_name_item(entry_names, name_count, i);
@@ -351,6 +397,13 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
                                : strdup(entry_name);
     struct stat status;
 
+    if (absolute_child == nullptr || relative_child == nullptr) {
+      free(absolute_child);
+      free(relative_child);
+      free(entry_name);
+      (*error_count)++;
+      continue;
+    }
     if (stat(absolute_child, &status) == 0) {
       if (S_ISDIR(status.st_mode)) {
         help_index_walk_directory(evaluation, index, absolute_child,
@@ -360,15 +413,20 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
 
         if (name_length > 3 &&
             !strcmp(checked_string_suffix(entry_name, name_length - 3), ".md"))
-          help_index_process_file(evaluation, index, absolute_child,
-                                  relative_child, player, error_count);
+          help_index_process_file(
+              &(HelpFileProcessRequest){.evaluation = evaluation,
+                                        .index = index,
+                                        .absolute_path = absolute_child,
+                                        .relative_path = relative_child,
+                                        .player = player,
+                                        .error_count = error_count});
       }
     }
     free(absolute_child);
     free(relative_child);
     free(entry_name);
   }
-  free(entry_names);
+  free((void *)entry_names);
 }
 
 static void help_index_build_keywords(EvaluationContext *evaluation,
@@ -412,7 +470,10 @@ static void help_index_build_keywords(EvaluationContext *evaluation,
             help_keyword_item(index, existing)->article_index);
 
         if (index->log != nullptr)
-          log_error(index->log, LOG_STARTUP, "HLP", "DUPKW",
+          log_error((LogEntry){.log = index->log,
+                               .key = LOG_STARTUP,
+                               .primary = "HLP",
+                               .secondary = "DUPKW"},
                     "keyword '%s' declared by both '%s' and '%s'; '%s' wins",
                     keyword_lower, owner->relative_path, article->relative_path,
                     owner->relative_path);
@@ -434,8 +495,10 @@ static void help_index_build_keywords(EvaluationContext *evaluation,
       index->keyword_count++;
     }
   }
-  qsort(index->keywords, index->keyword_count, sizeof(HelpKeywordEntry),
-        help_index_keyword_compare);
+  array_sort(&(ArraySortRequest){.items = index->keywords,
+                                 .count = index->keyword_count,
+                                 .item_size = sizeof(*index->keywords),
+                                 .compare = help_index_keyword_compare});
 }
 
 static void help_index_reset(HelpIndex *index) {
@@ -478,7 +541,10 @@ static void help_index_rebuild(EvaluationContext *evaluation, HelpIndex *index,
   index->last_warning_count = (size_t)warning_count;
 
   if (index->log != nullptr)
-    log_error(index->log, LOG_STARTUP, "HLP", "IDX",
+    log_error((LogEntry){.log = index->log,
+                         .key = LOG_STARTUP,
+                         .primary = "HLP",
+                         .secondary = "IDX"},
               "Indexed %zu article(s), %zu keyword(s), %d error(s), %d "
               "warning(s)",
               index->articles.count, index->keyword_count, error_count,

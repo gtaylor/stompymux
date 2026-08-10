@@ -6,10 +6,11 @@
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 
-bool game_object_has_power(GameDatabase *database, DbRef object, PowerId id) {
-  const GameObject *game_object = game_database_object(database, object);
+bool game_object_has_power(const ObjectPowerRequest *request) {
+  const GameObject *game_object =
+      game_database_object(request->database, request->object);
 
-  switch (id) {
+  switch (request->power) {
   case POWER_IDLE:
     return game_object->has_idle_power;
   case POWER_NONE:
@@ -19,13 +20,13 @@ bool game_object_has_power(GameDatabase *database, DbRef object, PowerId id) {
   return false;
 }
 
-void game_object_set_power(GameDatabase *database, DbRef object, PowerId id,
-                           bool value) {
-  GameObject *game_object = game_database_object(database, object);
+void game_object_set_power(const ObjectPowerChange *change) {
+  GameObject *game_object =
+      game_database_object(change->target.database, change->target.object);
 
-  switch (id) {
+  switch (change->target.power) {
   case POWER_IDLE:
-    game_object->has_idle_power = value;
+    game_object->has_idle_power = change->value;
     break;
   case POWER_NONE:
   case POWER_COUNT:

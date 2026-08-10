@@ -8,6 +8,7 @@
 #include "map.h"
 #include "map_api.h"
 #include "map_coding_api.h"
+#include "map_coordinates.h"
 #include "map_obj_api.h"
 #include "mech_api_types.h"
 #include "mech_identity_api.h"
@@ -20,19 +21,31 @@ static unsigned char **map_grid_row_slot(unsigned char **grid, int height,
                                          int y) {
   if (height < 0 || y < 0)
     abort();
-  return checked_storage_at(grid, (size_t)height, sizeof(*grid), (size_t)y);
+  return (unsigned char **)checked_storage_at((void *)grid, (size_t)height,
+                                              sizeof(*grid), (size_t)y);
 }
 
-static unsigned char *map_grid_cell(unsigned char **grid, int width, int height,
-                                    int x, int y) {
-  if (width < 0 || x < 0)
+typedef struct MapGridCellRequest {
+  unsigned char **grid;
+  int width;
+  int height;
+  MapHexPosition position;
+} MapGridCellRequest;
+
+static unsigned char *map_grid_cell(const MapGridCellRequest *request) {
+  if (request->width < 0 || request->position.x < 0)
     abort();
-  unsigned char *row = *map_grid_row_slot(grid, height, y);
-  return checked_storage_at(row, (size_t)width, sizeof(*row), (size_t)x);
+  unsigned char *row =
+      *map_grid_row_slot(request->grid, request->height, request->position.y);
+  return checked_storage_at(row, (size_t)request->width, sizeof(*row),
+                            (size_t)request->position.x);
 }
 
 static const unsigned char *map_cell(const BattleMap *map, int x, int y) {
-  return map_grid_cell(map->map, map->map_width, map->map_height, x, y);
+  return map_grid_cell(&(MapGridCellRequest){.grid = map->map,
+                                             .width = map->map_width,
+                                             .height = map->map_height,
+                                             .position = {.x = x, .y = y}});
 }
 
 char map_terrain_get(const BattleMap *map, int x, int y) {
@@ -136,7 +149,10 @@ bool battle_terrain_is_forest(char terrain) {
 }
 
 void map_hex_set(BattleMap *map, int x, int y, char terrain, char elevation) {
-  *map_grid_cell(map->map, map->map_width, map->map_height, x, y) =
+  *map_grid_cell(&(MapGridCellRequest){.grid = map->map,
+                                       .width = map->map_width,
+                                       .height = map->map_height,
+                                       .position = {.x = x, .y = y}}) =
       (unsigned char)map_coding_get_index(&map->xcode.context->map_coding,
                                           terrain, elevation);
 }
@@ -144,7 +160,8 @@ void map_hex_set(BattleMap *map, int x, int y, char terrain, char elevation) {
 unsigned char **battle_map_grid_create(int width, int height) {
   if (width < 0 || height < 0)
     return nullptr;
-  unsigned char **grid = calloc((size_t)height, sizeof(*grid));
+  unsigned char **grid =
+      (unsigned char **)calloc((size_t)height, sizeof(*grid));
   if (grid == nullptr && height > 0)
     return nullptr;
   for (int y = 0; y < height; y++) {
@@ -163,19 +180,23 @@ void battle_map_grid_destroy(unsigned char **grid, int height) {
     return;
   for (int y = 0; y < height; y++)
     free(*map_grid_row_slot(grid, height, y));
-  free(grid);
+  free((void *)grid);
 }
 
 void map_hex_buffer_set(MapCodingRegistry *registry, unsigned char **BattleMap,
                         int width, int height, int x, int y, char terrain,
                         char elevation) {
-  *map_grid_cell(BattleMap, width, height, x, y) =
+  *map_grid_cell(&(MapGridCellRequest){.grid = BattleMap,
+                                       .width = width,
+                                       .height = height,
+                                       .position = {.x = x, .y = y}}) =
       (unsigned char)map_coding_get_index(registry, terrain, elevation);
 }
 
 void map_terrain_set(BattleMap *map, int x, int y, char terrain) {
   map_hex_set(map, x, y, terrain, map_elevation_get(map, x, y));
-  UpdateMechsTerrain(map, x, y, terrain);
+  UpdateMechsTerrain(&(MapTerrainChange){
+      .map = map, .position = {.x = x, .y = y}, .terrain = terrain});
 }
 
 void map_terrain_set_base(BattleMap *map, int x, int y, char terrain) {
@@ -184,5 +205,8 @@ void map_terrain_set_base(BattleMap *map, int x, int y, char terrain) {
 
 void map_elevation_set(BattleMap *map, int x, int y, char elevation) {
   map_hex_set(map, x, y, map_terrain_get(map, x, y), elevation);
-  UpdateMechsTerrain(map, x, y, map_terrain_get(map, x, y));
+  UpdateMechsTerrain(
+      &(MapTerrainChange){.map = map,
+                          .position = {.x = x, .y = y},
+                          .terrain = map_terrain_get(map, x, y)});
 }

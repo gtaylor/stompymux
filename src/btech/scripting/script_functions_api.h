@@ -1,12 +1,78 @@
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/commands/command_context.h"
 #include "mux/server/platform.h"
 
-typedef void BtechScriptFunction(char *buff, char **bufc, DbRef player,
-                                 DbRef cause, char *fargs[], int nfargs,
-                                 char *cargs[], int ncargs,
-                                 EvaluationContext *context);
+typedef struct BtechScriptArguments {
+  char **values;
+  size_t count;
+} BtechScriptArguments;
+
+typedef struct BtechScriptOutput {
+  char *buffer;
+  char *cursor;
+  size_t capacity;
+} BtechScriptOutput;
+
+typedef struct BtechScriptCall {
+  EvaluationContext *evaluation;
+  DbRef player;
+  DbRef cause;
+  BtechScriptOutput output;
+  BtechScriptArguments arguments;
+  BtechScriptArguments command_arguments;
+} BtechScriptCall;
+
+typedef enum BtechScriptStatus {
+  BTECH_SCRIPT_OK,
+  BTECH_SCRIPT_ERROR,
+} BtechScriptStatus;
+
+typedef enum BtechScriptValueKind {
+  BTECH_SCRIPT_TEXT,
+  BTECH_SCRIPT_LIST,
+  BTECH_SCRIPT_NUMBER,
+  BTECH_SCRIPT_BOOLEAN,
+  BTECH_SCRIPT_MUTATION,
+} BtechScriptValueKind;
+
+typedef enum BtechScriptListItemKind {
+  BTECH_SCRIPT_LIST_TEXT,
+  BTECH_SCRIPT_LIST_NUMBER,
+} BtechScriptListItemKind;
+
+typedef struct BtechScriptListItem {
+  BtechScriptListItemKind kind;
+  union {
+    const char *text;
+    long number;
+  } value;
+} BtechScriptListItem;
+
+typedef struct BtechScriptList {
+  BtechScriptListItem *items;
+  size_t count;
+} BtechScriptList;
+
+typedef struct BtechScriptResult {
+  BtechScriptStatus status;
+  BtechScriptValueKind kind;
+  union {
+    const char *text;
+    BtechScriptList list;
+    double number;
+    bool boolean;
+    bool mutation;
+  } value;
+} BtechScriptResult;
+
+BtechScriptResult btech_script_result_finish(BtechScriptCall *call,
+                                             BtechScriptValueKind kind);
+void btech_script_result_destroy(BtechScriptResult *result);
+
+typedef BtechScriptResult BtechScriptFunction(BtechScriptCall *call);
 
 extern BtechScriptFunction fun_btaddstores;
 extern BtechScriptFunction fun_btarmorstatus;
@@ -81,7 +147,6 @@ extern BtechScriptFunction fun_btunitfixable;
 extern BtechScriptFunction fun_btunitpartslist;
 extern BtechScriptFunction fun_btunitpartslist_ref;
 extern BtechScriptFunction fun_btupdatelinks;
-extern BtechScriptFunction fun_btweapons;
 extern BtechScriptFunction fun_btweaponstatus;
 extern BtechScriptFunction fun_btweaponstatus_ref;
 extern BtechScriptFunction fun_btweapstat;

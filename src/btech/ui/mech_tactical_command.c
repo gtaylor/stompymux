@@ -22,7 +22,7 @@
 #include <stdio.h>
 
 static char *tactical_command_argument(char *const *arguments, size_t index) {
-  return *(char *const *)checked_storage_at_const(arguments, 4,
+  return *(char *const *)checked_storage_at_const((const void *)arguments, 4,
                                                   sizeof(*arguments), index);
 }
 
@@ -33,7 +33,7 @@ static bool ascii_is_alpha(char value) {
 void mech_tacmap(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   int argc;
-  short x, y;
+  int x, y;
   char *args_vec[4];
   BattleMap *mech_map;
   int displayHeight = MAP_DISPLAY_HEIGHT, displayWidth = MAP_DISPLAY_WIDTH;
@@ -109,9 +109,20 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (!parse_tacargs(player, mech, args_vec, 4, first_argument, argc,
-                     mech_tactical_range(mech), &x, &y))
+  const TacticalArgumentParseResult parsed =
+      tactical_arguments_parse(&(TacticalArgumentParseRequest){
+          .player = player,
+          .mech = mech,
+          .arguments = args_vec,
+          .argument_capacity = 4,
+          .first_argument = first_argument,
+          .argument_count = argc,
+          .maximum_range = mech_tactical_range(mech),
+      });
+  if (!parsed.valid)
     return;
+  x = parsed.position.x;
+  y = parsed.position.y;
 
   /* Get the Tacsize attribute from
    * the player, if doesn't exist set the height and width to
@@ -150,8 +161,18 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
                                                        : mech_map->map_width;
 
   /* Get the data to draw the map */
-  map_text = map_text_create(player, mech, mech_map, x, y, displayWidth,
-                             displayHeight, flags, dohexlos);
+  MapTextRequest request = {
+      .player = player,
+      .mech = mech,
+      .map = mech_map,
+      .center_x = x,
+      .center_y = y,
+      .width = displayWidth,
+      .height = displayHeight,
+      .labels = flags,
+      .calculate_los = dohexlos,
+  };
+  map_text = map_text_create(&request);
   if (map_text == nullptr) {
     mecha_notify(evaluation, player, "Unable to render the tactical map.");
     return;

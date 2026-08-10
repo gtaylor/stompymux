@@ -23,8 +23,8 @@ static unsigned char *const *stored_bits_row(unsigned char **bits, int height,
                                              int row) {
   if (row < 0)
     abort();
-  return checked_storage_at_const(bits, (size_t)height, sizeof(*bits),
-                                  (size_t)row);
+  return (unsigned char *const *)checked_storage_at_const(
+      (const void *)bits, (size_t)height, sizeof(*bits), (size_t)row);
 }
 
 static unsigned char stored_bits_byte(const unsigned char *row, int count,
@@ -36,7 +36,11 @@ static unsigned char stored_bits_byte(const unsigned char *row, int count,
   return *value;
 }
 
-int btech_store_map(void *key, void *data, int depth, void *argument) {
+int btech_store_map(const RedBlackTreeVisitCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  int depth = call->depth;
+  void *argument = call->context;
   BTECH_MAP_STORE_CONTEXT *context = argument;
   BtechSpecialObject *xcode = data;
   BattleMap *map;
@@ -135,14 +139,15 @@ int btech_store_map(void *key, void *data, int depth, void *argument) {
           btech_special_bind_int(context->object, 6, object->obj) < 0 ||
           btech_special_bind_int(context->object, 7, object->datac) < 0 ||
           btech_special_bind_int(context->object, 8, object->datas) < 0 ||
-          btech_special_bind_int(context->object, 9, object->datai) < 0 ||
+          btech_special_bind_int(context->object, 9, object->payload.scalar) <
+              0 ||
           btech_special_step(context->object) < 0)
         context->result = -1;
     }
   }
   MapObject *bits_object = first_mapobj(map, TYPE_BITS);
   if (context->result == 0 && bits_object) {
-    bits = (unsigned char **)(void *)bits_object->datai;
+    bits = bits_object->payload.bits;
     bytes_per_row = map->map_width / 4 + (map->map_width % 4 ? 1 : 0);
     for (index = 0; context->result == 0 && index < map->map_height; index++) {
       unsigned char *const *row = stored_bits_row(bits, map->map_height, index);

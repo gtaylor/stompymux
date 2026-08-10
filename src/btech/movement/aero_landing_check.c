@@ -2,6 +2,7 @@
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "map_coordinates.h"
 #include "mech_electronics_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
@@ -35,8 +36,11 @@ void aero_checklz(DbRef player, Mech *mech, char *buffer) {
       float real_y;
       const int tactical_range = mech_tactical_range(mech);
       MapCoordToRealCoord(x, y, &real_x, &real_y);
-      if (FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                       real_x, real_y) > (float)tactical_range) {
+      if (map_real_range(&(MapRealSegment){
+              .start = {.x = mech_position_real_x(mech),
+                        .y = mech_position_real_y(mech)},
+              .end = {.x = real_x, .y = real_y},
+          }) > (float)tactical_range) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Out of range!");
         return;

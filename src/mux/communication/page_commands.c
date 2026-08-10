@@ -59,8 +59,20 @@ static int page_check(EvaluationContext *evaluation,
 /*
  * Used in do_page
  */
-static char *dbrefs_to_names(WorldContext *world, DbRef player, char *list,
-                             char *namelist, int ismessage) {
+typedef struct PageNameListRequest {
+  WorldContext *world;
+  DbRef player;
+  char *list;
+  char *names;
+  bool dbrefs;
+} PageNameListRequest;
+
+static char *dbrefs_to_names(const PageNameListRequest *request) {
+  WorldContext *world = request->world;
+  DbRef player = request->player;
+  char *list = request->list;
+  char *namelist = request->names;
+  bool ismessage = request->dbrefs;
   char *bp, *p;
   char oldlist[LBUF_SIZE];
 
@@ -126,11 +138,16 @@ void do_page(CommandInvocation *invocation) {
     for (size_t index = 0; index < player_account_last_page_count(
                                        evaluation->world->database, player);
          index++) {
+      PlayerPageRecipientResult recipient =
+          player_account_last_page_recipient(&(PlayerPageRecipientRequest){
+              .account = {.database = evaluation->world->database,
+                          .player = player},
+              .position = index});
+      if (!recipient.found)
+        continue;
       if (index > 0)
         safe_chr(' ', targetname, &target_cursor);
-      safe_str(tprintf("%ld", player_account_last_page_recipient(
-                                  evaluation->world->database, player, index)),
-               targetname, &target_cursor);
+      safe_str(tprintf("%ld", recipient.recipient), targetname, &target_cursor);
     }
     *target_cursor = '\0';
     if (!*tname) {
@@ -178,10 +195,13 @@ void do_page(CommandInvocation *invocation) {
   for (n = 0, str = tname; str; str = (char *)next_token(str, ' '), n++)
     ;
 
-  if (((target = lookup_player(evaluation->world, player, tname, 1)) ==
-       NOTHING) &&
-      n > 1) {
-    bp = dbrefs_to_names(evaluation->world, player, tname, buf1, ismessage);
+  target = lookup_player(evaluation->world, player, tname, 1);
+  if (target == NOTHING && n > 1) {
+    bp = dbrefs_to_names(&(PageNameListRequest){.world = evaluation->world,
+                                                .player = player,
+                                                .list = tname,
+                                                .names = buf1,
+                                                .dbrefs = ismessage});
     for (p = (char *)strtok(tname, " "); p != nullptr;
          p = (char *)strtok(nullptr, " ")) {
 

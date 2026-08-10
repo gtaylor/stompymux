@@ -95,7 +95,10 @@ bool character_state_fixed_set(GameDatabase *database, DbRef player,
                                const CharacterFixedState *state) {
   CharacterState *stored;
 
-  if (!state || !(stored = state_create(database, player)))
+  if (!state)
+    return false;
+  stored = state_create(database, player);
+  if (!stored)
     return false;
   stored->fixed = *state;
   return true;
@@ -116,23 +119,25 @@ size_t character_state_value_count(GameDatabase *database, DbRef player) {
   return game_database_object(database, player)->character->value_count;
 }
 
-bool character_state_value_entry(GameDatabase *database, DbRef player,
-                                 size_t index, CharacterValueStateView *entry) {
+CharacterStateEntryResult
+character_state_value_entry(const CharacterStateEntryRequest *request) {
+  GameDatabase *database = request->database;
+  DbRef player = request->player;
+  size_t index = request->index;
   CharacterState *state;
 
-  if (!valid_player(database, player) || !entry ||
-      !(state = game_database_object(database, player)->character) ||
-      index >= state->value_count)
-    return false;
+  if (!valid_player(database, player))
+    return (CharacterStateEntryResult){0};
+  state = game_database_object(database, player)->character;
+  if (!state || index >= state->value_count)
+    return (CharacterStateEntryResult){0};
   const CharacterValueState *stored =
       character_value(state->values, state->value_count, index);
-  *entry = (CharacterValueStateView){
-      .name = stored->name,
-      .value = stored->value,
-      .xp = stored->xp,
-      .last_used = stored->last_used,
-  };
-  return true;
+  return (CharacterStateEntryResult){.found = true,
+                                     .entry = {.name = stored->name,
+                                               .value = stored->value,
+                                               .xp = stored->xp,
+                                               .last_used = stored->last_used}};
 }
 
 bool character_state_value_get(GameDatabase *database, DbRef player,
@@ -141,23 +146,37 @@ bool character_state_value_get(GameDatabase *database, DbRef player,
   CharacterState *state;
   size_t index;
 
-  if (!valid_player(database, player) || !name || !entry ||
-      !(state = game_database_object(database, player)->character))
+  if (!valid_player(database, player) || !name || !entry)
+    return false;
+  state = game_database_object(database, player)->character;
+  if (!state)
     return false;
   index = value_find(state, name);
-  return index < state->value_count
-             ? character_state_value_entry(database, player, index, entry)
-             : false;
+  if (index >= state->value_count)
+    return false;
+  CharacterStateEntryResult result =
+      character_state_value_entry(&(CharacterStateEntryRequest){
+          .database = database, .player = player, .index = index});
+  if (result.found)
+    *entry = result.entry;
+  return result.found;
 }
 
-bool character_state_value_set(GameDatabase *database, DbRef player,
-                               const char *name, int value, int xp,
-                               time_t last_used) {
+bool character_state_value_set(const CharacterStateValueChange *change) {
+  GameDatabase *database = change->database;
+  DbRef player = change->player;
+  const char *name = change->name;
+  int value = change->value;
+  int xp = change->experience;
+  time_t last_used = change->last_used;
   CharacterState *state;
   size_t index;
 
   if (!name || !*name || strlen(name) > 255 || value < 0 || value > UINT8_MAX ||
-      xp < 0 || !(state = state_create(database, player)))
+      xp < 0)
+    return false;
+  state = state_create(database, player);
+  if (!state)
     return false;
   index = value_find(state, name);
   if (index == state->value_count) {
@@ -192,8 +211,10 @@ bool character_state_value_remove(GameDatabase *database, DbRef player,
   CharacterState *state;
   size_t index;
 
-  if (!valid_player(database, player) || !name ||
-      !(state = game_database_object(database, player)->character))
+  if (!valid_player(database, player) || !name)
+    return true;
+  state = game_database_object(database, player)->character;
+  if (!state)
     return true;
   index = value_find(state, name);
   if (index == state->value_count)

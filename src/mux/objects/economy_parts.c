@@ -24,13 +24,22 @@ void economy_parts_clear(GameDatabase *database, DbRef object) {
   game_database_object(database, object)->economy_parts.count = 0;
 }
 
-static size_t economy_parts_find(GameDatabase *database, DbRef object,
-                                 int part_id, int brand_id) {
+typedef struct EconomyPartReference {
+  GameDatabase *database;
+  DbRef object;
+  int part_id;
+  int brand_id;
+} EconomyPartReference;
+
+static size_t economy_parts_find(const EconomyPartReference *reference) {
   EconomyPartsState *parts =
-      &game_database_object(database, object)->economy_parts;
+      &game_database_object(reference->database, reference->object)
+           ->economy_parts;
   for (size_t index = 0; index < parts->count; index++)
-    if (economy_part(parts, parts->count, index)->part_id == part_id &&
-        economy_part(parts, parts->count, index)->brand_id == brand_id)
+    if (economy_part(parts, parts->count, index)->part_id ==
+            reference->part_id &&
+        economy_part(parts, parts->count, index)->brand_id ==
+            reference->brand_id)
       return index;
   return parts->count;
 }
@@ -41,22 +50,22 @@ size_t economy_parts_entry_count(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->economy_parts.count;
 }
 
-bool economy_parts_entry(GameDatabase *database, DbRef object, size_t index,
-                         EconomyPartEntryView *entry) {
+EconomyPartsEntryResult
+economy_parts_entry(const EconomyPartsEntryRequest *request) {
   EconomyPartsState *parts;
 
-  if (!is_good_obj(database, object) || !entry)
-    return false;
-  parts = &game_database_object(database, object)->economy_parts;
-  if (index >= parts->count)
-    return false;
-  const EconomyPartEntry *stored = economy_part(parts, parts->count, index);
-  *entry = (EconomyPartEntryView){
-      .part_id = stored->part_id,
-      .brand_id = stored->brand_id,
-      .quantity = stored->quantity,
-  };
-  return true;
+  if (!is_good_obj(request->database, request->object))
+    return (EconomyPartsEntryResult){0};
+  parts =
+      &game_database_object(request->database, request->object)->economy_parts;
+  if (request->index >= parts->count)
+    return (EconomyPartsEntryResult){0};
+  const EconomyPartEntry *stored =
+      economy_part(parts, parts->count, request->index);
+  return (EconomyPartsEntryResult){.found = true,
+                                   .entry = {.part_id = stored->part_id,
+                                             .brand_id = stored->brand_id,
+                                             .quantity = stored->quantity}};
 }
 
 int economy_parts_quantity(GameDatabase *database, DbRef object, int part_id,
@@ -67,7 +76,10 @@ int economy_parts_quantity(GameDatabase *database, DbRef object, int part_id,
   if (!is_good_obj(database, object))
     return 0;
   parts = &game_database_object(database, object)->economy_parts;
-  index = economy_parts_find(database, object, part_id, brand_id);
+  index = economy_parts_find(&(EconomyPartReference){.database = database,
+                                                     .object = object,
+                                                     .part_id = part_id,
+                                                     .brand_id = brand_id});
   return index < parts->count
              ? economy_part(parts, parts->count, index)->quantity
              : 0;
@@ -81,7 +93,10 @@ bool economy_parts_set_quantity(GameDatabase *database, DbRef object,
   if (!is_good_obj(database, object))
     return false;
   parts = &game_database_object(database, object)->economy_parts;
-  index = economy_parts_find(database, object, part_id, brand_id);
+  index = economy_parts_find(&(EconomyPartReference){.database = database,
+                                                     .object = object,
+                                                     .part_id = part_id,
+                                                     .brand_id = brand_id});
   if (quantity <= 0) {
     if (index == parts->count)
       return true;

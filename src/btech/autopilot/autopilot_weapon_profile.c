@@ -8,6 +8,7 @@
 #include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
 #include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_identity_api.h"
 #include "mech_runtime_api.h"
 #include "mech_utils_api.h"
@@ -25,12 +26,13 @@ static RedBlackTree *autopilot_weapon_profile_slot(Autopilot *autopilot,
                                                    int range) {
   if (range < 0)
     abort();
-  return checked_storage_at(autopilot->profile, AUTO_PROFILE_MAX_SIZE,
-                            sizeof(RedBlackTree), (size_t)range);
+  return (RedBlackTree *)checked_storage_at(
+      (void *)autopilot->profile, AUTO_PROFILE_MAX_SIZE, sizeof(RedBlackTree),
+      (size_t)range);
 }
 
 void autopilot_weapon_profiles_initialize(Autopilot *autopilot) {
-  memset(autopilot->profile, 0, sizeof(autopilot->profile));
+  memset((void *)autopilot->profile, 0, sizeof(autopilot->profile));
 }
 
 void autopilot_weapon_profiles_clear(Autopilot *autopilot) {
@@ -46,9 +48,9 @@ RedBlackTree autopilot_weapon_profile_get(const Autopilot *autopilot,
                                           int range) {
   if (range < 0)
     abort();
-  const RedBlackTree *profile =
-      checked_storage_at_const(autopilot->profile, AUTO_PROFILE_MAX_SIZE,
-                               sizeof(RedBlackTree), (size_t)range);
+  const RedBlackTree *profile = (const RedBlackTree *)checked_storage_at_const(
+      (const void *)autopilot->profile, AUTO_PROFILE_MAX_SIZE,
+      sizeof(RedBlackTree), (size_t)range);
   return *profile;
 }
 
@@ -81,9 +83,14 @@ static int autopilot_weapon_critical_at(const int *criticals, int index) {
   return *critical;
 }
 
-static AutopilotWeapon *auto_create_weapon_node(int weapon_number,
-                                                int weapon_db_number,
-                                                int section, int critical) {
+typedef struct AutopilotWeaponRequest {
+  int weapon_number;
+  int catalogue_index;
+  CriticalSlotReference slot;
+} AutopilotWeaponRequest;
+
+static AutopilotWeapon *
+auto_create_weapon_node(const AutopilotWeaponRequest *request) {
 
   AutopilotWeapon *temp;
 
@@ -95,10 +102,10 @@ static AutopilotWeapon *auto_create_weapon_node(int weapon_number,
 
   memset(temp, 0, sizeof(AutopilotWeapon));
 
-  temp->weapon_number = weapon_number;
-  temp->weapon_db_number = weapon_db_number;
-  temp->section = section;
-  temp->critical = critical;
+  temp->weapon_number = request->weapon_number;
+  temp->weapon_db_number = request->catalogue_index;
+  temp->section = request->slot.section;
+  temp->critical = request->slot.critical;
 
   return temp;
 }
@@ -115,7 +122,8 @@ static void auto_destroy_weapon_node(AutopilotWeapon *victim) {
 /*
  * Create a target node for the target list
  */
-AutopilotTarget *auto_create_target_node(int target_score, DbRef target_dbref) {
+AutopilotTarget *
+auto_create_target_node(const AutopilotTargetRequest *request) {
 
   AutopilotTarget *temp;
 
@@ -127,8 +135,8 @@ AutopilotTarget *auto_create_target_node(int target_score, DbRef target_dbref) {
 
   memset(temp, 0, sizeof(AutopilotTarget));
 
-  temp->target_score = target_score;
-  temp->target_dbref = target_dbref;
+  temp->target_score = request->score;
+  temp->target_dbref = request->target;
 
   return temp;
 }
@@ -172,7 +180,8 @@ void auto_destroy_weaplist(Autopilot *autopilot) {
 /*
  * Callback function to destroy target list
  */
-int auto_targets_callback(void *key, void *data, int depth, void *arg) {
+int auto_targets_callback(const RedBlackTreeVisitCall *call) {
+  void *data = call->data;
 
   AutopilotTarget *temp;
 
@@ -185,7 +194,9 @@ int auto_targets_callback(void *key, void *data, int depth, void *arg) {
 /*
  * RedBlackTree generic compare function
  */
-int auto_generic_compare(void *a, void *b, void *token) {
+int auto_generic_compare(const RedBlackTreeCompareCall *call) {
+  void *a = call->lhs;
+  void *b = call->rhs;
 
   int *one, *two;
 
@@ -198,8 +209,16 @@ int auto_generic_compare(void *a, void *b, void *token) {
 /*
  * How we score a given weapon based on range, heat and damage
  */
-static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
-                                  int range) {
+typedef struct AutopilotWeaponScoreRequest {
+  BtechContext *context;
+  int weapon_index;
+  int range;
+} AutopilotWeaponScoreRequest;
+
+static int auto_calc_weapon_score(const AutopilotWeaponScoreRequest *request) {
+  BtechContext *context = request->context;
+  const int weapon_db_number = request->weapon_index;
+  const int range = request->range;
 
   int weapon_score;
   int range_score;
@@ -400,8 +419,10 @@ void auto_update_profile_event(Autopilot *autopilot) {
         continue;
 
       /* Ok made it this far, lets add it to our list */
-      temp_weapon_node = auto_create_weapon_node(weapon_count, weapon_index,
-                                                 section, critical_index);
+      temp_weapon_node = auto_create_weapon_node(&(AutopilotWeaponRequest){
+          .weapon_number = weapon_count,
+          .catalogue_index = weapon_index,
+          .slot = {.section = section, .critical = critical_index}});
 
       temp_dllist_node = doubly_linked_list_create_node(temp_weapon_node);
       doubly_linked_list_insert_end(autopilot->weaplist, temp_dllist_node);
@@ -440,8 +461,10 @@ void auto_update_profile_event(Autopilot *autopilot) {
       /* Score the weapon */
       int *range_score =
           autopilot_weapon_range_score_key(temp_weapon_node, range);
-      *range_score = auto_calc_weapon_score(
-          autopilot->xcode.context, temp_weapon_node->weapon_db_number, range);
+      *range_score = auto_calc_weapon_score(&(AutopilotWeaponScoreRequest){
+          .context = autopilot->xcode.context,
+          .weapon_index = temp_weapon_node->weapon_db_number,
+          .range = range});
 
       /* If RedBlackTree for this range doesn't exist, create it */
       RedBlackTree profile = autopilot_weapon_profile_get(autopilot, range);

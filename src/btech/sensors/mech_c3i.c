@@ -6,6 +6,7 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_c3_misc_api.h"
 #include "mech_c3i_api.h"
 #include "mech_classification_api.h"
@@ -27,8 +28,8 @@
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 
-#define C3_POS_IN_NETWORK -1
-#define C3_POS_NO_ROOM -2
+#define C3_POS_IN_NETWORK (-1)
+#define C3_POS_NO_ROOM (-2)
 
 static DbRef *c3i_network_slot(DbRef *network, int index) {
   return checked_storage_at(network, C3I_NETWORK_SIZE, sizeof(*network),
@@ -44,7 +45,8 @@ static bool mech_has_c3i(const Mech *mech) {
   return mech_technology_flags_secondary(mech) & C3I_TECH;
 }
 
-int mech_c3i_free_network_position(Mech *mech, Mech *mechToAdd) {
+int mech_c3i_free_network_position(const MechNetworkLink *link) {
+  Mech *mech = link->owner;
   int i;
   DbRef otherRef;
 
@@ -54,7 +56,7 @@ int mech_c3i_free_network_position(Mech *mech, Mech *mechToAdd) {
     otherRef = mech_c3i_network_node(mech, i);
 
     if (otherRef > 0) {
-      if (otherRef == mech_dbref(mechToAdd))
+      if (otherRef == mech_dbref(link->member))
         return C3_POS_IN_NETWORK;
     } else
       return i;
@@ -101,7 +103,8 @@ void mech_c3i_network_add(Mech *mech, Mech *mechToAdd) {
                              mech_dbref(mechToAdd), mech_dbref(mech)));
 
   /* Find a position to add the new mech into my network */
-  wPos = mech_c3i_free_network_position(mech, mechToAdd);
+  wPos = mech_c3i_free_network_position(
+      &(MechNetworkLink){.owner = mech, .member = mechToAdd});
 
   /* If we have a number that's less than 0, then we have an invalid position.
    * Either we're already in the network or there's not enough room */

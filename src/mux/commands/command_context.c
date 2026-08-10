@@ -6,12 +6,13 @@
 
 #include "mux/commands/command_queue.h"
 #include "mux/objects/db.h"
-#include "mux/server/platform.h"
 
-bool command_context_initialize(CommandContext *context,
-                                CommandRuntime *runtime, BtechContext *btech,
-                                ServerLog *log, DbRef player, DbRef enactor,
-                                Descriptor *descriptor, bool interactive) {
+bool command_context_initialize(
+    const CommandContextInitialization *initialization) {
+  CommandContext *context = initialization->context;
+  CommandRuntime *runtime = initialization->runtime;
+  BtechContext *btech = initialization->btech;
+  ServerLog *log = initialization->log;
   memset(context, 0, sizeof(*context));
   context->runtime = runtime;
   context->btech = btech;
@@ -23,10 +24,10 @@ bool command_context_initialize(CommandContext *context,
   context->match.evaluation = &context->evaluation;
   context->evaluation.runtime = runtime;
   context->evaluation.btech = btech;
-  context->player = player;
-  context->enactor = enactor;
-  context->descriptor = descriptor;
-  context->interactive = interactive;
+  context->player = initialization->player;
+  context->enactor = initialization->enactor;
+  context->descriptor = initialization->descriptor;
+  context->interactive = initialization->interactive;
   context->debug_command = "< init >";
   return true;
 }

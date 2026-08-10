@@ -297,7 +297,7 @@ static size_t configuration_toml_table_count(toml_datum_t table) {
 static const char *configuration_toml_table_key(toml_datum_t table,
                                                 size_t index) {
   return *(const char *const *)checked_storage_at_const(
-      table.u.tab.key, configuration_toml_table_count(table),
+      (const void *)table.u.tab.key, configuration_toml_table_count(table),
       sizeof(*table.u.tab.key), index);
 }
 

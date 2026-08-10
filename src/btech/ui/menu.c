@@ -23,7 +23,6 @@ void ShowText(EvaluationContext *evaluation, char **lines, size_t count,
    Simple menu system for cool menus ;-)
    */
 #include "coolmenu.h"
-#include "mux/network/mux_event_alloc.h"
 
 static int minimum_int(int first, int second) {
   return first < second ? first : second;
@@ -203,42 +202,50 @@ char **MakeCoolMenuText(CoolMenu *c, size_t *line_count) {
   int pos = 0;
   int n, rn;
 
-  Create(m, char *, MAX_MENU_LENGTH + 1);
+  m = (char **)checked_storage_allocate(sizeof(*m) * (MAX_MENU_LENGTH + 1));
 
   /* Whole whopping menu is ready to be written at.. */
-  while (c)
-    if ((n = number_of_entries(c)))
-      if ((rn = count_following_with(c, n))) {
-        char *line;
-        Create(line, char, MAX_MENU_WIDTH);
-        char **line_slot =
-            checked_storage_at(m, MAX_MENU_LENGTH + 1, sizeof(*m), (size_t)pos);
-        *line_slot = line;
+  while (c) {
+    n = number_of_entries(c);
+    if (!n) {
+      c = c->next;
+      continue;
+    }
+    rn = count_following_with(c, n);
+    if (!rn) {
+      c = c->next;
+      continue;
+    }
+    char *line = checked_storage_allocate(sizeof(*line) * MAX_MENU_WIDTH);
+    char **line_slot = (char **)checked_storage_at(
+        (void *)m, MAX_MENU_LENGTH + 1, sizeof(*m), (size_t)pos);
+    *line_slot = line;
 
-        /* 	  display_entries(c,rn,m[pos++]); */
-        display_entries(c, n, rn, line);
-        pos++;
-        while (rn > 0 && c) {
-          rn--;
-          c = c->next;
-        }
-      }
+    display_entries(c, n, rn, line);
+    pos++;
+    while (rn > 0 && c) {
+      rn--;
+      c = c->next;
+    }
+  }
   *line_count = (size_t)pos;
   return m;
 }
 
-void CreateMenuEntry_Killer(CoolMenu **c, const char *text, int flag, int id,
-                            int value, int maxvalue) {
+void cool_menu_entry_add(const CoolMenuEntryRequest *request) {
+  CoolMenu **c = request->menu;
+  const char *text = request->text;
+  const int flag = request->flags;
   CoolMenu *d, *e;
   char first = 'a';
 
   if (!*c) {
-    Create(*c, CoolMenu, 1);
+    *c = checked_storage_allocate(sizeof(**c));
     d = *c;
   } else {
     for (d = *c; d->next; d = d->next)
       ;
-    Create(d->next, CoolMenu, 1);
+    d->next = checked_storage_allocate(sizeof(*d->next));
     d = d->next;
   }
   if (text)
@@ -252,9 +259,9 @@ void CreateMenuEntry_Killer(CoolMenu **c, const char *text, int flag, int id,
           first = e->letter + 1;
     d->letter = first;
   }
-  d->id = id;
-  d->value = value;
-  d->maxvalue = maxvalue;
+  d->id = request->id;
+  d->value = request->value;
+  d->maxvalue = request->maximum_value;
 }
 
 void KillCoolMenu(CoolMenu *c) {
@@ -285,48 +292,26 @@ int CoolMenu_FPWBit(int number, int maxlen) {
   return CM_FOUR;
 }
 
-CoolMenu *SelCol_Menu(int columns, char *heading, char *const *strings,
-                      size_t string_count, int type, int max) {
-  CoolMenu *c = NULL;
-  int i, co = 0;
-  char buf[LBUF_SIZE];
-
-  strlcpy(buf, heading, sizeof(buf));
-  buf[0] = ascii_to_upper(buf[0]);
-  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
-  cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
-  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
-  co = (int)string_count;
-  if (columns < 0)
-    columns = CoolMenu_FPWBit(co, 18);
-  for (i = 0; i < co; i++) {
-    const char *entry = *(char *const *)checked_storage_at_const(
-        strings, string_count, sizeof(*strings), (size_t)i);
-    cool_menu_entry_normal(&c, entry, columns | type, i + 1, max);
-  }
-  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
-  return c;
-}
-
-CoolMenu *SelCol_ConstMenu(int columns, const char *heading,
-                           const char *const strings[], size_t string_count,
-                           int type, int max) {
+CoolMenu *cool_menu_selection_create(const CoolMenuSelectionRequest *request) {
   CoolMenu *c = nullptr;
   int count = 0;
+  int columns = request->columns;
   char heading_buffer[LBUF_SIZE];
 
-  strlcpy(heading_buffer, heading, sizeof(heading_buffer));
+  strlcpy(heading_buffer, request->heading, sizeof(heading_buffer));
   heading_buffer[0] = ascii_to_upper(heading_buffer[0]);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, heading_buffer, CM_ONE | CM_CENTER);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
-  count = (int)string_count;
+  count = (int)request->string_count;
   if (columns < 0)
     columns = CoolMenu_FPWBit(count, 18);
   for (int index = 0; index < count; index++) {
     const char *entry = *(const char *const *)checked_storage_at_const(
-        strings, string_count, sizeof(*strings), (size_t)index);
-    cool_menu_entry_normal(&c, entry, columns | type, index + 1, max);
+        (const void *)request->strings, request->string_count,
+        sizeof(*request->strings), (size_t)index);
+    cool_menu_entry_normal(&c, entry, columns | request->entry_type, index + 1,
+                           request->maximum_value);
   }
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   return c;

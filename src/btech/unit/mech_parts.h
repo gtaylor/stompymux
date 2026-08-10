@@ -18,7 +18,13 @@ typedef struct MechPartRequirement {
   int count;
 } MechPartRequirement;
 
-int mech_parts_alias(Mech *mech, int location, int part);
+typedef struct MechPartLocation {
+  Mech *mech;
+  int section;
+  int part;
+} MechPartLocation;
+
+int mech_parts_alias(const MechPartLocation *location);
 DbRef mech_parts_store_dbref(const Mech *mech);
 bool mech_parts_available(Mech *mech, int part, int brand, int count);
 void mech_parts_take(Mech *mech, int part, int brand, int count);

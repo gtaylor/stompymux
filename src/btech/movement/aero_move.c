@@ -4,12 +4,7 @@
 #include <stdint.h>
 #include <time.h>
 /* Implements BattleTech movement mechanics for aerospace move. */
-
 #define MIN_TAKEOFF_SPEED 3
-
-#include <math.h>
-#include <stdlib.h>
-
 #include "aero_move_api.h"
 #include "artillery_api.h"
 #include "btconfig.h"
@@ -20,6 +15,7 @@
 #include "command_handlers_api.h"
 #include "econ_cmds_api.h"
 #include "map_conditions_api.h"
+#include "map_coordinates.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -56,7 +52,8 @@
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
-
+#include <math.h>
+#include <stdlib.h>
 struct land_data_type {
   UnitClass type;
   double maxvertup;
@@ -70,7 +67,6 @@ struct land_data_type {
   const char *takeoff;
   const char *takeoff_others;
 }; /*           maxvertup / maxvertdown / minhoriz / maxhoriz / launchv /
-
      launchtime */
 static const struct land_data_type land_data[] = {
     {CLASS_VTOL, 10, -60, -15, 15, 5, 0,
@@ -87,23 +83,19 @@ static const struct land_data_type land_data[] = {
      "The DropShip touches down safely.", "touches down, and settles.",
      "The DropShip slowly lurches upwards as engines battle the gravity..",
      "starts climbing up to the sky!"}};
-
 #define NUM_LAND_TYPES (sizeof(land_data) / sizeof(struct land_data_type))
-
 static const struct land_data_type *land_data_entry(int index) {
   if (index < 0)
     abort();
   return checked_storage_at_const(land_data, NUM_LAND_TYPES, sizeof(*land_data),
                                   (size_t)index);
 }
-
 static void aero_takeoff_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i = -1;
   long count = (long)e->data2;
-
   if (mech_is_dropship(mech))
     for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
       if (mech_class(mech) == land_data_entry(i)->type)
@@ -126,9 +118,13 @@ static void aero_takeoff_event(MuxEvent *e) {
       case 6:
         dropship_notification_broadcast(
             mech, "'s engines generate a tremendous heat wave!");
-        mech_sensors_scramble_infrared_and_liteamp(
-            mech, 2, 0, "The blinding flash of light momentarily blinds you!",
-            "The blinding flash of light momentarily blinds you!");
+        mech_sensors_scramble_infrared_and_liteamp(&(SensorScrambleRequest){
+            .source = mech,
+            .duration = 2,
+            .infrared_message =
+                "The blinding flash of light momentarily blinds you!",
+            .light_amplification_message =
+                "The blinding flash of light momentarily blinds you!"});
         break;
       case 2:
         mech_notify(mech, MECHALL,
@@ -136,16 +132,24 @@ static void aero_takeoff_event(MuxEvent *e) {
         dropship_notification_broadcast(
             mech,
             "'s engines send forth a tremendous stream of superheated plasma!");
-        mech_sensors_scramble_infrared_and_liteamp(
-            mech, 4, 0, "The blinding flash of light blinds you!",
-            "The blinding flash of light blinds you!");
+        mech_sensors_scramble_infrared_and_liteamp(&(SensorScrambleRequest){
+            .source = mech,
+            .duration = 4,
+            .infrared_message = "The blinding flash of light blinds you!",
+            .light_amplification_message =
+                "The blinding flash of light blinds you!"});
         break;
       case 1:
-        DS_BlastNearbyMechsAndTrees(mech, "You receive a direct hit!",
-                                    "is caught in the middle of the inferno!",
-                                    "You are hit by the wave!",
-                                    "gets hit by the wave!",
-                                    "are instantly burned to ash!", 400);
+        dropship_exhaust_blast(&(DropshipExhaustBlastRequest){
+            .dropship = mech,
+            .direct_message = "You receive a direct hit!",
+            .direct_observer_message =
+                "is caught in the middle of the inferno!",
+            .nearby_message = "You are hit by the wave!",
+            .nearby_observer_message = "gets hit by the wave!",
+            .tree_message = "are instantly burned to ash!",
+            .damage = 400,
+        });
         break;
       }
     }
@@ -187,18 +191,15 @@ static void aero_takeoff_event(MuxEvent *e) {
   mech_continue_flying(mech);
   mech_maybe_move(mech);
 }
-
 void aero_takeoff(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i;
   long j;
-
   for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
     if (mech_class(mech) == land_data_entry(i)->type)
       break;
-
   j = 0;
   if (*buffer != '\0' && !parse_long_checked(buffer, &j)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -211,7 +212,6 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
                    "Insufficient access!");
       return;
     }
-
   if (mech_event_count(mech, EVENT_TAKEOFF)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "The launch sequence has already been initiated!");
@@ -296,25 +296,32 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
   mech_event_schedule(mech, EVENT_TAKEOFF, aero_takeoff_event, 1,
                       (void *)j ? j : land_data_entry(i)->launchtime);
 }
-
-void DS_BlastNearbyMechsAndTrees(Mech *mech, const char *hitmsg,
-                                 const char *hitmsg1, const char *nearhitmsg,
-                                 const char *nearhitmsg1,
-                                 const char *treehitmsg, int damage) {
+void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
+  Mech *mech = request->dropship;
+  const char *hitmsg = request->direct_message;
+  const char *hitmsg1 = request->direct_observer_message;
+  const char *nearhitmsg = request->nearby_message;
+  const char *nearhitmsg1 = request->nearby_observer_message;
+  const char *treehitmsg = request->tree_message;
+  const int damage = request->damage;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int x = mech_position_x(mech), y = mech_position_y(mech),
       z = mech_position_z(mech);
   int x1, y1, x2, y2, d;
   int rng = (damage > 100 ? 5 : 3);
-
   for (x1 = x - rng; x1 <= (x + rng); x1++)
     for (y1 = y - rng; y1 <= (y + rng); y1++) {
       x2 = BOUNDED(0, x1, battle_map_width(map) - 1);
       y2 = BOUNDED(0, y1, battle_map_height(map) - 1);
       if (x1 != x2 || y1 != y2)
         continue;
-      if ((d = MyHexDist(x, y, x1, y1, 0)) > rng)
+      d = map_hex_distance(&(HexDistanceRequest){
+          .start = {.x = x, .y = y},
+          .end = {.x = x1, .y = y1},
+          .correction = 0,
+      });
+      if (d > rng)
         continue;
       d = MAX(1, d);
       switch (map_real_terrain_get(map, x1, y1)) {
@@ -327,71 +334,76 @@ void DS_BlastNearbyMechsAndTrees(Mech *mech, const char *hitmsg,
           if ((damage / d) > 100) {
             map_terrain_set(map, x1, y1, BATTLE_TERRAIN_ROUGH);
           } else {
-            add_decoration(
-                map, x1, y1, MAP_DECORATION_TYPE_FIRE,
-                MAP_DECORATION_FIRE_MARKER,
-                btech_random_range_int(battle_map_context(map), 60, 180));
+            add_decoration(&(MapDecorationRequest){
+                .map = map,
+                .position = {.x = x1, .y = y1},
+                .type = MAP_DECORATION_TYPE_FIRE,
+                .terrain_marker = MAP_DECORATION_FIRE_MARKER,
+                .duration =
+                    btech_random_range_int(battle_map_context(map), 60, 180),
+            });
           }
         }
         break;
       }
     }
   mech_position_hex_z_set(mech, z + 6);
-  blast_hit_hexesf(map, damage, 5, damage / 2, mech_position_real_x(mech),
-                   mech_position_real_y(mech), mech_position_real_x(mech),
-                   mech_position_real_y(mech), hitmsg, hitmsg1, nearhitmsg,
-                   nearhitmsg1, 0, 4, 4, 1, rng);
+  BlastRealAreaRequest blast = {
+      .center =
+          {
+              .map = map,
+              .damage = {.total = damage, .hit_size = 5, .heat = damage / 2},
+              .impact = {.x = mech_position_real_x(mech),
+                         .y = mech_position_real_y(mech)},
+              .source = {.x = mech_position_real_x(mech),
+                         .y = mech_position_real_y(mech)},
+              .messages = {.target = hitmsg, .observers = hitmsg1},
+              .safety = {.above = 4, .below = 4, .underwater = true},
+          },
+      .neighbor_messages = {.target = nearhitmsg, .observers = nearhitmsg1},
+      .neighbor_radius = rng,
+  };
+  blast_hit_real_area(&blast);
   mech_position_hex_z_set(mech, z);
 }
-
 enum { NO_ERROR, INVALID_TERRAIN, UNEVEN_TERRAIN, BLOCKED_LZ };
-
 static const char *const reasons[] = {"Improper terrain", "Uneven ground",
                                       "Blocked landing zone"};
-
 const char *aero_landing_reason(int index) {
   if (index < 0)
     abort();
-  const char *const *reason =
-      checked_storage_at_const(reasons, sizeof(reasons) / sizeof(*reasons),
-                               sizeof(*reasons), (size_t)index);
+  const char *const *reason = (const char *const *)checked_storage_at_const(
+      (const void *)reasons, sizeof(reasons) / sizeof(*reasons),
+      sizeof(*reasons), (size_t)index);
   return *reason;
 }
-
 typedef struct LandingZoneCheck LandingZoneCheck;
 struct LandingZoneCheck {
   int height;
   int matching_neighbors;
 };
-
 static void improper_lz_callback(BattleMap *map, int x, int y, void *context) {
   LandingZoneCheck *check = context;
-
   if (battle_map_hex_elevation(map, x, y) != check->height)
     check->matching_neighbors = 0;
   else
     check->matching_neighbors++;
 }
-
 static int aero_current_landing_zone_check(Mech *mech) {
   return aero_landing_zone_check(mech, mech_position_x(mech),
                                  mech_position_y(mech));
 }
-
 int aero_landing_zone_check(Mech *mech, int x, int y) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   LandingZoneCheck check = {
       .height = battle_map_hex_elevation(map, x, y),
   };
-
   if (map_real_terrain_get(map, x, y) != BATTLE_TERRAIN_GRASSLAND &&
       map_real_terrain_get(map, x, y) != BATTLE_TERRAIN_ROAD)
     if (btech_context_landing_zone_mode(mech_context(mech)) == 0)
       return INVALID_TERRAIN;
-
   visit_neighbor_hexes(map, x, y, improper_lz_callback, &check);
-
   if (check.matching_neighbors != 6)
     if (btech_context_landing_zone_mode(mech_context(mech)) == 0)
       return UNEVEN_TERRAIN;
@@ -399,14 +411,12 @@ int aero_landing_zone_check(Mech *mech, int x, int y) {
     return BLOCKED_LZ;
   return NO_ERROR;
 }
-
 void aero_land(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i, t;
   double horiz = 0.0;
-
   if (mech_class(mech) != CLASS_VTOL && mech_class(mech) != CLASS_AERO &&
       !mech_is_dropship(mech)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -419,7 +429,6 @@ void aero_land(DbRef player, void *data, const char *buffer) {
                  "You lack fuel to maneuver for landing!");
     return;
   }
-
   for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
     if (mech_class(mech) == land_data_entry(i)->type)
       break;
@@ -461,9 +470,9 @@ void aero_land(DbRef player, void *data, const char *buffer) {
                  "You are too high to land here.");
     return;
   }
-  if (((horiz = my_sqrtm((double)mech_desired_speed(mech),
-                         (double)mech_vertical_speed(mech))) >=
-       ((double)1.0 + land_data_entry(i)->maxhoriz))) {
+  horiz = my_sqrtm((double)mech_desired_speed(mech),
+                   (double)mech_vertical_speed(mech));
+  if (horiz >= ((double)1.0 + land_data_entry(i)->maxhoriz)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You're moving too fast to land.");
     return;
@@ -513,7 +522,6 @@ void aero_land(DbRef player, void *data, const char *buffer) {
                        tprintf("DS #%ld has landed at %d %d on map #%ld",
                                mech_dbref(mech), mech_position_x(mech),
                                mech_position_y(mech), battle_map_dbref(map)));
-
   mech_notify(mech, MECHALL, land_data_entry(i)->landmsg);
   mech_los_broadcast(mech, land_data_entry(i)->landmsg_others);
   mech_position_z_set(mech, mech_position_surface_elevation(mech));
@@ -526,7 +534,6 @@ void aero_land(DbRef player, void *data, const char *buffer) {
                LUA_EVENT_AERO_LAND, (char **)NULL, 0);
   mine_field_trigger(mech, MINE_LAND);
 }
-
 void aero_control_effect(Mech *mech) {
   if (mech_condition_summary(mech).spinning)
     return;
@@ -539,7 +546,6 @@ void aero_control_effect(Mech *mech) {
   mech_spinning_set(mech, true);
   mech_spin_start_tick_set(mech, btech_context_now(mech_context(mech)));
 }
-
 void dropship_bridge_hit(Mech *mech) {
   /* Implementation: Kill all players on bridge :-) */
   if (mech_is_destroyed(mech))
@@ -550,19 +556,15 @@ void dropship_bridge_hit(Mech *mech) {
                 "DUCK! The shot seems to be coming straight for the bridge!");
   mech_contents_kill_if_in_character(mech);
 }
-
 static float degrees_sine(float angle) {
   return sinf(angle * (float)M_PI / 180.0F);
 }
-
 static float degrees_cosine(float angle) {
   return cosf(angle * (float)M_PI / 180.0F);
 }
-
 static float length_hypotenuse_float(float x, float y) {
   return sqrtf(x * x + y * y);
 }
-
 void aero_speed_update(Mech *mech) {
   float xypart;
   float wx, wy, wz;
@@ -572,7 +574,6 @@ void aero_speed_update(Mech *mech) {
   float vlen, mod;
   float ab = 0.7F;
   float m = 1.0F;
-
   if (mech_condition_summary(mech).spinning) {
     const int speed_adjustment =
         btech_random_range_int(mech_context(mech), 1, 10);
@@ -604,14 +605,15 @@ void aero_speed_update(Mech *mech) {
   if (xypart < 0.0F)
     xypart = -xypart;
   m = (float)ACCEL_MOD;
-  FindComponents(m * xypart, mech_desired_heading_degrees(mech), &wx, &wy);
+  MapRealPosition wind = map_vector_components(&(MapPolarVector){
+      .magnitude = m * xypart, .bearing = mech_desired_heading_degrees(mech)});
+  wx = wind.x;
+  wy = wind.y;
   wz = wz * m;
-
   /* Then, we calculate the present heading / speed */
   nx = mech_motion_vector_x(mech);
   ny = mech_motion_vector_y(mech);
   nz = mech_motion_vector_z(mech);
-
   /* Ok, we've present heading / speed */
   /* Next, we make vector from n[xyz] -> w[xyz] */
   dx = wx - nx;
@@ -624,7 +626,6 @@ void aero_speed_update(Mech *mech) {
       (m * ab * mech_effective_maximum_speed(mech) / (float)AERO_SECS_THRUST)) {
     mod = ab * m * mech_effective_maximum_speed(mech) /
           (float)AERO_SECS_THRUST / vlen;
-
     dx *= mod;
     dy *= mod;
     dz *= mod;
@@ -643,12 +644,10 @@ void aero_speed_update(Mech *mech) {
   if (!(mech_class(mech) == CLASS_SPHEROID_DS) &&
       fabsf(mech_current_speed(mech)) < MP1)
     mech_heading_set(mech, mech_desired_heading_degrees(mech));
-  mech_motion_vector_set(mech, nx, ny, nz);
+  mech_motion_vector_set(mech, (MapSpatialPosition){.x = nx, .y = ny, .z = nz});
 }
-
 int aero_fuel_check(Mech *mech) {
   int fuelcost = 1;
-
   /* We don't do anything particularly nasty to shutdown things */
   if (!mech_is_started(mech))
     return 0;
@@ -707,7 +706,6 @@ int aero_fuel_check(Mech *mech) {
   }
   return 1;
 }
-
 void aero_update(Mech *mech) {
   if (mech_is_destroyed(mech))
     return;
@@ -741,7 +739,6 @@ void aero_update(Mech *mech) {
   mech_tag_check(mech);
   end_lite_check(mech);
 }
-
 static const char *colorstr(int serious) {
   if (serious == 1)
     return "[fg=red bold]";
@@ -749,10 +746,8 @@ static const char *colorstr(int serious) {
     return "[fg=yellow bold]";
   return "";
 }
-
 void dropship_land_warning(Mech *mech, int serious) {
   int ilz = aero_current_landing_zone_check(mech);
-
   if (!ilz)
     return;
   ilz--;

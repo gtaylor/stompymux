@@ -65,9 +65,9 @@ size_t template_internal_name_count(void) {
 const char *template_internal_name(int index) {
   if (index < 0)
     return nullptr;
-  const char *const *name =
-      checked_storage_at_const(internals, template_internal_name_count(),
-                               sizeof(*internals), (size_t)index);
+  const char *const *name = (const char *const *)checked_storage_at_const(
+      (const void *)internals, template_internal_name_count(),
+      sizeof(*internals), (size_t)index);
   return *name;
 }
 

@@ -28,7 +28,6 @@
 #include "mech_status_types.h"
 #include "mech_tech_do_api.h"
 #include "mech_utils_api.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
@@ -83,13 +82,19 @@ static int weapon_menu_get(const WeaponSpecsMenuContext *menu, int index) {
       (size_t)index);
 }
 
-static void weapon_menu_set(WeaponSpecsMenuContext *menu, int index,
-                            int weapon) {
-  if (index < 0)
+typedef struct WeaponMenuAssignment {
+  WeaponSpecsMenuContext *menu;
+  int index;
+  int weapon;
+} WeaponMenuAssignment;
+
+static void weapon_menu_set(const WeaponMenuAssignment *assignment) {
+  if (assignment->index < 0)
     abort();
-  int *slot = checked_storage_at(menu->weapons, MAX_WEAPONS_PER_MECH,
-                                 sizeof(*menu->weapons), (size_t)index);
-  *slot = weapon;
+  int *slot = checked_storage_at(
+      assignment->menu->weapons, MAX_WEAPONS_PER_MECH,
+      sizeof(*assignment->menu->weapons), (size_t)assignment->index);
+  *slot = assignment->weapon;
 }
 
 static unsigned char weapon_array_get(const unsigned char *weapons, int index) {
@@ -119,7 +124,8 @@ static PartDisplayName part_display_name(const char *source) {
     (void)snprintf(name.text, sizeof(name.text), "Life Support");
   else if (!strcmp(source, "TripleStrengthMyomer"))
     (void)snprintf(name.text, sizeof(name.text), "Triple Strength Myomer");
-  if ((separator = strstr(name.text, "Actuator")))
+  separator = strstr(name.text, "Actuator");
+  if (separator)
     if (separator != name.text)
       (void)snprintf(separator,
                      sizeof(name.text) - (size_t)(separator - name.text),
@@ -276,7 +282,8 @@ void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
         if (weapon == weapon_menu_get(&menu, ii))
           duplicate = 1;
       if (!duplicate && menu.weapon_count < MAX_WEAPONS_PER_MECH)
-        weapon_menu_set(&menu, menu.weapon_count++, weapon);
+        weapon_menu_set(&(WeaponMenuAssignment){
+            .menu = &menu, .index = menu.weapon_count++, .weapon = weapon});
     }
   }
   if (!menu.weapon_count) {
@@ -303,7 +310,10 @@ static char *status_text(char buffer[static MBUF_SIZE], const char *text) {
   return buffer;
 }
 
-char *sectstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
+char *sectstatus_func(const MechStatusTextRequest *request) {
+  Mech *mech = request->mech;
+  const char *arg = request->argument;
+  char *buffer = request->buffer;
   /* Show if Section is destroyed or not
    * -1 = Section Flooded
    * 1 = Section Exists
@@ -327,7 +337,10 @@ char *sectstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
   return buffer;
 }
 
-char *critstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
+char *critstatus_func(const MechStatusTextRequest *request) {
+  Mech *mech = request->mech;
+  const char *arg = request->argument;
+  char *buffer = request->buffer;
   const char *tmp;
   int index, i, max_crits;
   int type;
@@ -371,7 +384,10 @@ char *critstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
   return buffer;
 }
 
-char *armorstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
+char *armorstatus_func(const MechStatusTextRequest *request) {
+  Mech *mech = request->mech;
+  const char *arg = request->argument;
+  char *buffer = request->buffer;
   const char *const *locs;
   int index;
   int iter, curarm, curint, totarm, totint;
@@ -385,7 +401,7 @@ char *armorstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
     curarm = totarm = curint = totint = 0;
     for (iter = 0; iter < NUM_SECTIONS; iter++) {
       const char *location = *(const char *const *)checked_storage_at_const(
-          locs, NUM_SECTIONS + 1, sizeof(*locs), (size_t)iter);
+          (const void *)locs, NUM_SECTIONS + 1, sizeof(*locs), (size_t)iter);
       if (location == nullptr)
         break;
       curarm +=
@@ -438,7 +454,10 @@ char *armorstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
         2 - weapon destroyed/flooded
 */
 
-char *weaponstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
+char *weaponstatus_func(const MechStatusTextRequest *request) {
+  Mech *mech = request->mech;
+  const char *arg = request->argument;
+  char *buffer = request->buffer;
   int count, sect, loopsect, i, type, totalcount = 0;
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
@@ -448,10 +467,12 @@ char *weaponstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
     sect = -1;
   else if (!*arg)
     return status_text(buffer, "#-1 INVALID SECTION");
-  else if ((sect = ArmorSectionFromString(
-                mech_class(mech), mech_movement_type(mech), arg)) == -1 ||
-           !mech_section_original_internal(mech, sect))
-    return status_text(buffer, "#-1 INVALID SECTION");
+  else {
+    sect =
+        ArmorSectionFromString(mech_class(mech), mech_movement_type(mech), arg);
+    if (sect == -1 || !mech_section_original_internal(mech, sect))
+      return status_text(buffer, "#-1 INVALID SECTION");
+  }
 
   buffer[0] = '\0';
   for ((sect == -1) ? (loopsect = 0) : (loopsect = sect);
@@ -482,8 +503,12 @@ char *weaponstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]) {
   return buffer;
 }
 
-char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
-                    char *buf_flag, char buffer[static MBUF_SIZE]) {
+char *critslot_func(const CriticalSlotTextRequest *request) {
+  Mech *mech = request->mech;
+  const char *buf_section = request->section;
+  const char *buf_critnum = request->critical;
+  const char *buf_flag = request->field;
+  char *buffer = request->buffer;
   int index, crit, flag, type;
 
   index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
@@ -563,7 +588,8 @@ char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
   if (type == EMPTY || mech_part_is_structural_placeholder(type))
     return status_text(buffer, "Empty");
   if (flag == 0) {
-    type = mech_parts_alias(mech, index, type);
+    type = mech_parts_alias(
+        &(MechPartLocation){.mech = mech, .section = index, .part = type});
   }
   (void)snprintf(buffer, MBUF_SIZE, "%s",
                  get_parts_vlong_name(mech_context(mech), type,
@@ -581,7 +607,7 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   int count = 0;
   CoolMenu *cm;
 
-  Create(foo, char *, NUM_CRITICALS + 1);
+  foo = (char **)checked_storage_allocate(sizeof(*foo) * (NUM_CRITICALS + 1));
 
   for (i = 0; i < max_crits; i++) {
     loop = ((i % 2) ? (max_crits / 2) : 0) + i / 2;
@@ -639,8 +665,8 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     else if (mech_critical_is_damaged(mech, index, loop) && type != EMPTY)
       btech_text_builder_append(&line, " (Damaged)");
 
-    char **entry = checked_storage_at(foo, NUM_CRITICALS + 1, sizeof(*foo),
-                                      (size_t)count++);
+    char **entry = (char **)checked_storage_at((void *)foo, NUM_CRITICALS + 1,
+                                               sizeof(*foo), (size_t)count++);
     *entry = strdup(buffer);
   }
 
@@ -652,7 +678,11 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   title.length = strlen(buffer);
   title.truncated = false;
   btech_text_builder_append(&title, " Criticals");
-  cm = selected_column_string_menu(2, buffer, foo, (size_t)count);
+  cm = cool_menu_selection_create(
+      &(CoolMenuSelectionRequest){.columns = 2,
+                                  .heading = buffer,
+                                  .strings = (const char *const *)foo,
+                                  .string_count = (size_t)count});
   ShowCoolMenu(evaluation, player, cm);
   KillCoolMenu(cm);
   KillText(foo, (size_t)count);

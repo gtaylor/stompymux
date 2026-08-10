@@ -5,6 +5,18 @@
 
 #include <stdbool.h>
 
+typedef struct MechBayAssignment {
+  Mech *mech;
+  int bay;
+  DbRef bay_dbref;
+} MechBayAssignment;
+
+typedef struct MechSpeedCacheRecord {
+  Mech *mech;
+  float maximum_speed;
+  int walking_xp_factor;
+} MechSpeedCacheRecord;
+
 MechMovementType mech_movement_type(const Mech *mech);
 void mech_movement_type_set(Mech *mech, MechMovementType movement_type);
 int mech_tonnage(const Mech *mech);
@@ -63,7 +75,7 @@ void mech_maximum_fuel_set(Mech *mech, int fuel);
 void mech_cargo_weight_set(Mech *mech, int weight);
 bool mech_has_sixth_sense(const Mech *mech);
 void mech_sixth_sense_set(Mech *mech, bool enabled);
-void mech_bay_dbref_set(Mech *mech, int bay, DbRef bay_dbref);
+void mech_bay_dbref_set(const MechBayAssignment *assignment);
 int mech_carried_cargo_weight(const Mech *mech);
 bool mech_load_cache_is_valid(const Mech *mech);
 bool mech_weight_cache_is_valid(const Mech *mech);
@@ -75,4 +87,4 @@ void mech_cached_calculated_weight_set(Mech *mech, int weight);
 int mech_cached_lugged_weight(const Mech *mech);
 void mech_load_cache_record(Mech *mech, int lugged_weight);
 float mech_cached_maximum_speed(const Mech *mech);
-void mech_speed_cache_record(Mech *mech, float speed, int walk_xp_factor);
+void mech_speed_cache_record(const MechSpeedCacheRecord *record);

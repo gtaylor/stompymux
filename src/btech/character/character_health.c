@@ -55,10 +55,15 @@ static int player_character_section(size_t index) {
 
 void character_stats_clear(PSTATS *s) {
   for (int i = 0; i < NUM_CHARVALUES; i++) {
-    character_stats_value_set(
-        s, i, character_value_definition(i)->type == CHAR_ATTRIBUTE ? 1 : 0);
-    character_stats_xp_set(s, i, 0);
-    character_stats_last_use_set(s, i, 0);
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = s,
+        .code = i,
+        .value =
+            character_value_definition(i)->type == CHAR_ATTRIBUTE ? 1 : 0});
+    character_stats_xp_set(
+        &(CharacterStatsExperienceChange){.stats = s, .code = i});
+    character_stats_last_use_set(
+        &(CharacterStatsLastUseChange){.stats = s, .code = i});
   }
   char_setstatvalue(s, "lives", 1);
 }
@@ -93,15 +98,14 @@ void do_charclear(CommandInvocation *invocation) {
                 thing);
 }
 
-DbRef char_lookupplayer(BtechContext *context, DbRef player, DbRef cause,
-                        int key, const char *arg1) {
+DbRef character_lookup(const CharacterLookupRequest *request) {
   WorldContext world = {
-      .database = context->database,
-      .configuration = context->configuration,
-      .indexes = context->world_indexes,
-      .access_control = context->access_control,
+      .database = request->context->database,
+      .configuration = request->context->configuration,
+      .indexes = request->context->world_indexes,
+      .access_control = request->context->access_control,
   };
-  return lookup_player(&world, player, arg1, 0);
+  return lookup_player(&world, request->viewer, request->name, 0);
 }
 
 static int loc_mod(int loc) {
@@ -136,7 +140,7 @@ void initialize_pc(DbRef player, Mech *mech) {
   char buf4[2];
   int ammo1;
   int ammo2;
-  int i, id, brand;
+  int i, id;
 
   if (!mech_player_character_initialization_begin(mech))
     return;
@@ -203,7 +207,12 @@ void initialize_pc(DbRef player, Mech *mech) {
   case 4:
   case 3:
     if (strcmp(buf3, "-")) {
-      if (!find_matching_vlong_part(context, buf3, nullptr, &id, &brand)) {
+      PartMatchResult match =
+          part_match_next(&(PartMatchRequest){.context = context,
+                                              .pattern = buf3,
+                                              .kind = PART_MATCH_VERY_LONG,
+                                              .cursor = -1});
+      if (!match.found) {
         btech_channel_send(
             context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
@@ -211,21 +220,33 @@ void initialize_pc(DbRef player, Mech *mech) {
                     player, buf3));
         return;
       }
+      id = match.part.id;
       if (equipment_is_weapon(id)) {
-        mech_critical_configure(mech, LARM, 0, id, 0, 0, 0);
-        if ((i = weapon_catalogue_ammunition_per_ton(
-                 weapon_from_equipment_index(id)))) {
-          mech_critical_configure(
-              mech, LARM, 1,
-              ammunition_equipment_index(weapon_from_equipment_index(id)),
-              cnt >= 5 ? ammo2 : i, 0, 0);
+        mech_critical_configure(&(CriticalSlotConfiguration){
+            .mech = mech,
+            .slot = {.section = LARM, .critical = 0},
+            .part_type = id});
+        i = weapon_catalogue_ammunition_per_ton(
+            weapon_from_equipment_index(id));
+        if (i) {
+          mech_critical_configure(&(CriticalSlotConfiguration){
+              .mech = mech,
+              .slot = {.section = LARM, .critical = 1},
+              .part_type =
+                  ammunition_equipment_index(weapon_from_equipment_index(id)),
+              .data = cnt >= 5 ? ammo2 : i});
         }
       }
     }
     [[fallthrough]];
   case 2:
     if (strcmp(buf2, "-")) {
-      if (!find_matching_vlong_part(context, buf2, nullptr, &id, &brand)) {
+      PartMatchResult match =
+          part_match_next(&(PartMatchRequest){.context = context,
+                                              .pattern = buf2,
+                                              .kind = PART_MATCH_VERY_LONG,
+                                              .cursor = -1});
+      if (!match.found) {
         btech_channel_send(
             context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
@@ -233,14 +254,21 @@ void initialize_pc(DbRef player, Mech *mech) {
                     player, buf2));
         return;
       }
+      id = match.part.id;
       if (equipment_is_weapon(id)) {
-        mech_critical_configure(mech, RARM, 0, id, 0, 0, 0);
-        if ((i = weapon_catalogue_ammunition_per_ton(
-                 weapon_from_equipment_index(id)))) {
-          mech_critical_configure(
-              mech, RARM, 1,
-              ammunition_equipment_index(weapon_from_equipment_index(id)),
-              cnt >= 4 ? ammo1 : i, 0, 0);
+        mech_critical_configure(&(CriticalSlotConfiguration){
+            .mech = mech,
+            .slot = {.section = RARM, .critical = 0},
+            .part_type = id});
+        i = weapon_catalogue_ammunition_per_ton(
+            weapon_from_equipment_index(id));
+        if (i) {
+          mech_critical_configure(&(CriticalSlotConfiguration){
+              .mech = mech,
+              .slot = {.section = RARM, .critical = 1},
+              .part_type =
+                  ammunition_equipment_index(weapon_from_equipment_index(id)),
+              .data = cnt >= 4 ? ammo1 : i});
         }
       }
     }

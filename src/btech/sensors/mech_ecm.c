@@ -81,16 +81,19 @@ void mech_ecm_check(Mech *objMech) {
   int wIter = 0;
   int tMark = 0;
 
-  if (!(objMapmap = btech_context_find_object(
-            mech_context(objMech), mech_map_dbref(objMech)))) /* get our map */
+  objMapmap =
+      btech_context_find_object(mech_context(objMech), mech_map_dbref(objMech));
+  if (!objMapmap) /* get our map */
     return;
 
   for (wIter = 0; wIter < battle_map_unit_count(objMapmap); wIter++) {
-    if (!(objOtherMech = btech_context_find_object(
-              mech_context(objMech), battle_map_unit_dbref(objMapmap, wIter))))
+    objOtherMech = btech_context_find_object(
+        mech_context(objMech), battle_map_unit_dbref(objMapmap, wIter));
+    if (!objOtherMech)
       continue;
 
-    if ((range = mech_range_to(objOtherMech, objMech)) > ECM_RANGE)
+    range = mech_range_to(objOtherMech, objMech);
+    if (range > ECM_RANGE)
       continue;
 
     const MechConditionSummary other = mech_condition_summary(objOtherMech);

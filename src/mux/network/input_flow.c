@@ -78,7 +78,10 @@ static void flow_apply_outcome(Descriptor *d, FlowOutcome outcome) {
       if (outcome.prompt != nullptr)
         descriptor_queue_string(d, outcome.prompt);
       if (++iterations > FLOW_MAX_GOTO_CHAIN) {
-        log_error(descriptor_log(d), LOG_BUGS, "FLOW", "LOOP",
+        log_error((LogEntry){.log = descriptor_log(d),
+                             .key = LOG_BUGS,
+                             .primary = "FLOW",
+                             .secondary = "LOOP"},
                   "Interactive flow on descriptor %d exceeded %d GOTO steps "
                   "without input; cancelling.",
                   d->descriptor, FLOW_MAX_GOTO_CHAIN);
@@ -86,7 +89,8 @@ static void flow_apply_outcome(Descriptor *d, FlowOutcome outcome) {
         return;
       }
       StringCopyTrunc(flow->step, outcome.next_step, FLOW_STEP_NAME_SIZE - 1);
-      outcome = flow->step_fn(d, flow->flow_data, flow->step, nullptr);
+      outcome = flow->step_fn(&(FlowStepCall){
+          .descriptor = d, .flow_data = flow->flow_data, .step = flow->step});
       continue;
     case FLOW_ACTION_DONE:
     case FLOW_ACTION_CANCEL:
@@ -99,9 +103,8 @@ static void flow_apply_outcome(Descriptor *d, FlowOutcome outcome) {
   }
 }
 
-int descriptor_flow_start(Descriptor *d, const char *initial_step,
-                          FlowStepFn step_fn, void *flow_data,
-                          void (*destroy)(void *flow_data)) {
+int descriptor_flow_start(const FlowStartRequest *request) {
+  Descriptor *d = request->descriptor;
   InputFlow *flow;
   FlowOutcome outcome;
 
@@ -109,14 +112,15 @@ int descriptor_flow_start(Descriptor *d, const char *initial_step,
     return 0;
 
   flow = malloc(sizeof(InputFlow));
-  flow->step_fn = step_fn;
-  flow->flow_data = flow_data;
-  flow->destroy = destroy;
+  flow->step_fn = request->step;
+  flow->flow_data = request->flow_data;
+  flow->destroy = request->destroy;
   flow->last_prompt = nullptr;
-  StringCopyTrunc(flow->step, initial_step, FLOW_STEP_NAME_SIZE - 1);
+  StringCopyTrunc(flow->step, request->initial_step, FLOW_STEP_NAME_SIZE - 1);
   d->flow = flow;
 
-  outcome = step_fn(d, flow_data, flow->step, nullptr);
+  outcome = request->step(&(FlowStepCall){
+      .descriptor = d, .flow_data = request->flow_data, .step = flow->step});
   flow_apply_outcome(d, outcome);
   return 1;
 }
@@ -125,7 +129,10 @@ void descriptor_flow_handle(Descriptor *d, char *input) {
   InputFlow *flow = d->flow;
   FlowOutcome outcome;
 
-  outcome = flow->step_fn(d, flow->flow_data, flow->step, input);
+  outcome = flow->step_fn(&(FlowStepCall){.descriptor = d,
+                                          .flow_data = flow->flow_data,
+                                          .step = flow->step,
+                                          .input = input});
   flow_apply_outcome(d, outcome);
 }
 

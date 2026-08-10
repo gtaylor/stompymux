@@ -13,7 +13,10 @@ static int *int_slot(int *values, size_t count, size_t index) {
   return checked_storage_at(values, count, sizeof(*values), index);
 }
 
-static int compare_ints(void *left, void *right, void *context) {
+static int compare_ints(const RedBlackTreeCompareCall *call) {
+  void *left = call->lhs;
+  void *right = call->rhs;
+  [[maybe_unused]] void *context = call->context;
   const int a = *(int *)left;
   const int b = *(int *)right;
 
@@ -21,7 +24,11 @@ static int compare_ints(void *left, void *right, void *context) {
   return (a > b) - (a < b);
 }
 
-static int collect_walk(void *key, void *data, int depth, void *context) {
+static int collect_walk(const RedBlackTreeVisitCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  int depth = call->depth;
+  void *context = call->context;
   WalkResult *result = context;
 
   (void)key;
@@ -30,7 +37,10 @@ static int collect_walk(void *key, void *data, int depth, void *context) {
   return 1;
 }
 
-static void count_release(void *key, void *data, void *context) {
+static void count_release(const RedBlackTreeReleaseCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  void *context = call->context;
   size_t *count = context;
 
   (void)key;

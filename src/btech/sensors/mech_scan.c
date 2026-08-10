@@ -2,6 +2,7 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
@@ -58,7 +59,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   int numargs;
   Mech *tempMech = NULL;
   float fx, fy, fz = 0.0;
-  float range = 0.0, enemyX, enemyY, enemyZ;
+  float range = 0.0;
   int dob = 0, doh = 0;
   int options = SHOW_INFO | SHOW_ARMOR | SHOW_WEAPONS;
 
@@ -151,18 +152,25 @@ void mech_scan(DbRef player, void *data, char *buffer) {
         return;
       }
     } else {
-      if (!mech_targets_building(mech))
-        if (!FindTargetXY(mech, &enemyX, &enemyY, &enemyZ)) {
+      if (!mech_targets_building(mech)) {
+        const MechTargetPositionResult target_position =
+            mech_target_position(mech);
+        if (!target_position.found) {
           mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                        "No default target set!");
           return;
         }
+      }
       mapx = mech_target_hex_x(mech);
       mapy = mech_target_hex_y(mech);
       MapCoordToRealCoord(mapx, mapy, &fx, &fy);
       fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
-      range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                        mech_position_real_z(mech), fx, fy, fz);
+      range = map_spatial_range(&(MapSpatialSegment){
+          .start = {.x = mech_position_real_x(mech),
+                    .y = mech_position_real_y(mech),
+                    .z = mech_position_real_z(mech)},
+          .end = {.x = fx, .y = fy, .z = fz},
+      });
       if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Those coordinates are out of scanner range.");
@@ -184,8 +192,9 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       else if (mech_targets_hex(mech)) {
         dob = 1;
         doh = 1;
-      } else if (!(tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1)))
-        tempMech = (Mech *)NULL;
+      } else {
+        tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
+      }
     }
     break;
   case 3:
@@ -214,8 +223,12 @@ void mech_scan(DbRef player, void *data, char *buffer) {
     }
     MapCoordToRealCoord(mapx, mapy, &fx, &fy);
     fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
-    range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                      mech_position_real_z(mech), fx, fy, fz);
+    range = map_spatial_range(&(MapSpatialSegment){
+        .start = {.x = mech_position_real_x(mech),
+                  .y = mech_position_real_y(mech),
+                  .z = mech_position_real_z(mech)},
+        .end = {.x = fx, .y = fy, .z = fz},
+    });
     if ((int)range > mech_scanner_range(mech)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Those coordinates are out of scanner range.");
@@ -273,8 +286,12 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       return;
     }
     MapCoordToRealCoord(mapx, mapy, &fx, &fy);
-    range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                      mech_position_real_z(mech), fx, fy, fz);
+    range = map_spatial_range(&(MapSpatialSegment){
+        .start = {.x = mech_position_real_x(mech),
+                  .y = mech_position_real_y(mech),
+                  .z = mech_position_real_z(mech)},
+        .end = {.x = fx, .y = fy, .z = fz},
+    });
     if (!mech_is_observer(mech) && (int)range > mech_scanner_range(mech)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Those coordinates are out of scanner range.");
@@ -286,8 +303,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       return;
     }
     /* look for enemies in that hex... */
-    if (!(tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1)))
-      tempMech = (Mech *)NULL;
+    tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
     break;
   }
   if (tempMech) {
@@ -305,8 +321,14 @@ void mech_scan(DbRef player, void *data, char *buffer) {
           "small!");
       return;
     }
-    mech_scan_print_enemy_status(evaluation, player, mech, tempMech, range,
-                                 options);
+    mech_scan_print_enemy_status(&(ScanEnemyStatusRequest){
+        .evaluation = evaluation,
+        .player = player,
+        .observer = mech,
+        .target = tempMech,
+        .range = range,
+        .options = options,
+    });
     if (!mech_is_observer(mech)) {
       mech_printf(tempMech, MECHSTARTED, "You are being scanned by %s",
                   mech_to_mech_display_id(tempMech, mech).text);
@@ -323,7 +345,11 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   if (dob)
     show_building_in_hex(mech, mapx, mapy);
   if (doh)
-    mine_field_scan(player, mech, range, mapx, mapy);
+    mine_field_scan(
+        &(MineFieldScanRequest){.player = player,
+                                .mech = mech,
+                                .range = range,
+                                .position = {.x = mapx, .y = mapy}});
 }
 
 void mech_report(DbRef player, void *data, char *buffer) {
@@ -337,7 +363,7 @@ void mech_report(DbRef player, void *data, char *buffer) {
   int numargs;
   Mech *tempMech = NULL;
   float fx, fy, fz = 0.0;
-  float range = 0.0, enemyX, enemyY, enemyZ;
+  float range = 0.0;
 
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!common_checks(player, mech, MECH_USUAL))
@@ -389,8 +415,12 @@ void mech_report(DbRef player, void *data, char *buffer) {
       return;
     }
     MapCoordToRealCoord(mapx, mapy, &fx, &fy);
-    range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                      mech_position_real_z(mech), fx, fy, fz);
+    range = map_spatial_range(&(MapSpatialSegment){
+        .start = {.x = mech_position_real_x(mech),
+                  .y = mech_position_real_y(mech),
+                  .z = mech_position_real_z(mech)},
+        .end = {.x = fx, .y = fy, .z = fz},
+    });
     if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Those coordinates are out of scanner range.");
@@ -440,7 +470,9 @@ void mech_report(DbRef player, void *data, char *buffer) {
         return;
       }
     } else {
-      if (!FindTargetXY(mech, &enemyX, &enemyY, &enemyZ)) {
+      const MechTargetPositionResult target_position =
+          mech_target_position(mech);
+      if (!target_position.found) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "No default target set!");
         return;
@@ -465,7 +497,7 @@ void mech_report(DbRef player, void *data, char *buffer) {
 }
 
 void mech_scan_show_turret_facing(EvaluationContext *evaluation, DbRef player,
-                                  int spaces, Mech *mech) {
+                                  Mech *mech) {
   int i;
   int j;
   char buff[MBUF_SIZE] = {0};
@@ -505,9 +537,11 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
           .text,
       mech_name, mech_tonnage(tempMech));
   mecha_notify(evaluation, player, buff);
-  bearing = FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
-                        mech_position_real_x(tempMech),
-                        mech_position_real_y(tempMech));
+  bearing = map_bearing(
+      &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                  .y = mech_position_real_y(mech)},
+                        .end = {.x = mech_position_real_x(tempMech),
+                                .y = mech_position_real_y(tempMech)}});
   (void)snprintf(buff, sizeof(buff),
                  "      Range: %.1f hex\t\tBearing: %d degrees", (double)range,
                  bearing);
@@ -529,7 +563,7 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   if (mech_lateral_movement(tempMech))
     notify_printf(evaluation, player, "      Mech is moving laterally %s",
                   mech_lateral_description(tempMech));
-  mech_scan_show_turret_facing(evaluation, player, 6, tempMech);
+  mech_scan_show_turret_facing(evaluation, player, tempMech);
 
   switch (mech_movement_type(tempMech)) {
   case MOVE_NONE:
@@ -607,7 +641,11 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   }
   notify_printf(evaluation, player, "      In %s Weapons Arc",
                 GetArcID(mech, weaponarc));
-  Mech_ShowFlags(evaluation, player, tempMech, 6, 1);
+  Mech_ShowFlags(&(MechFlagDisplayRequest){.evaluation = evaluation,
+                                           .player = player,
+                                           .mech = tempMech,
+                                           .indentation = 6,
+                                           .detail_level = 1});
   if (mech_is_jumping(tempMech))
     notify_printf(evaluation, player,
                   "      Mech is Jumping!\tJump Heading: %d",
@@ -615,9 +653,13 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   mecha_notify(evaluation, player, " ");
 }
 
-void mech_scan_print_enemy_status(EvaluationContext *evaluation, DbRef player,
-                                  Mech *mymech, Mech *mech, float range,
-                                  int opt) {
+void mech_scan_print_enemy_status(const ScanEnemyStatusRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  const DbRef player = request->player;
+  Mech *mymech = request->observer;
+  Mech *mech = request->target;
+  const float range = request->range;
+  const int opt = request->options;
   Mech *tempMech;
   int owner = 0;
 
@@ -631,11 +673,13 @@ void mech_scan_print_enemy_status(EvaluationContext *evaluation, DbRef player,
       mecha_notify(evaluation, player, "Torso is 60 degrees right");
     if (mech_condition_summary(mech).torso_left)
       mecha_notify(evaluation, player, "Torso is 60 degrees left");
-    if (mech_carried_dbref(mech) > 0)
-      if ((tempMech = btech_context_get_mech(mech_context(mech),
-                                             mech_carried_dbref(mech))))
+    if (mech_carried_dbref(mech) > 0) {
+      tempMech =
+          btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
+      if (tempMech)
         notify_printf(evaluation, player, "Towing %s.",
                       mech_to_mech_display_id(mech, tempMech).text);
+    }
     mecha_notify(evaluation, player, " ");
   }
   if (opt & SHOW_WEAPONS) {

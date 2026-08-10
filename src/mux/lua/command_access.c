@@ -34,9 +34,10 @@ bool lua_command_access_read(lua_State *state, int entry,
   return valid;
 }
 
-bool lua_command_access_allows(GameDatabase *database, DbRef player,
-                               LuaCommandAccess access) {
-  switch (access) {
+bool lua_command_access_allows(const LuaCommandAccessRequest *request) {
+  GameDatabase *database = request->database;
+  DbRef player = request->player;
+  switch (request->access) {
   case LUA_COMMAND_ACCESS_PUBLIC:
     return true;
   case LUA_COMMAND_ACCESS_WIZARD:
@@ -57,7 +58,8 @@ bool lua_command_entry_read(lua_State *state, int entry, GameDatabase *database,
 
   if (!lua_istable(state, entry) ||
       !lua_command_access_read(state, entry, &access) ||
-      !lua_command_access_allows(database, player, access))
+      !lua_command_access_allows(&(LuaCommandAccessRequest){
+          .database = database, .player = player, .access = access}))
     return false;
   lua_getfield(state, entry, "pattern");
   *pattern = lua_tostring(state, -1);

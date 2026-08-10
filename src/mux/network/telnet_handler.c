@@ -69,7 +69,10 @@ static const telnet_telopt_t telnet_options[] = {
 int descriptor_telnet_initialize(Descriptor *d) {
   d->telnet_environment = telnet_environment_create();
   if (d->telnet_environment == nullptr) {
-    log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ERROR",
+    log_error((LogEntry){.log = descriptor_log(d),
+                         .key = LOG_PROBLEMS,
+                         .primary = "TELNET",
+                         .secondary = "ERROR"},
               "Unable to allocate Telnet environment for descriptor %d.",
               d->descriptor);
     return 0;
@@ -77,7 +80,10 @@ int descriptor_telnet_initialize(Descriptor *d) {
   d->telnet =
       telnet_init(telnet_options, telnet_event_handler, TELNET_FLAG_NVT_EOL, d);
   if (d->telnet == nullptr) {
-    log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ERROR",
+    log_error((LogEntry){.log = descriptor_log(d),
+                         .key = LOG_PROBLEMS,
+                         .primary = "TELNET",
+                         .secondary = "ERROR"},
               "Unable to allocate Telnet state for descriptor %d.",
               d->descriptor);
     telnet_environment_destroy(d->telnet_environment);
@@ -238,7 +244,7 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
                                   size_t size) {
   size_t current;
   size_t start;
-  char separator;
+  unsigned char separator;
 
   if (size == 0)
     return;
@@ -248,7 +254,10 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
     d->is_charset_utf8 = telnet_charset_is_utf8(
         checked_storage_region_const(buffer, size, 1, size - 1), size - 1);
     if (!d->is_charset_utf8) {
-      log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "CHARSET",
+      log_error((LogEntry){.log = descriptor_log(d),
+                           .key = LOG_PROBLEMS,
+                           .primary = "TELNET",
+                           .secondary = "CHARSET"},
                 "Descriptor %d accepted unsupported charset.", d->descriptor);
     }
     return;
@@ -266,7 +275,7 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
     return;
   }
 
-  separator = (char)telnet_byte_at(buffer, size, 1);
+  separator = telnet_byte_at(buffer, size, 1);
   start = 2;
   for (current = start; current <= size; current++) {
     if (current != size && telnet_byte_at(buffer, size, current) != separator)
@@ -432,19 +441,28 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
                     TELNET_ENVIRON_INFO)) {
       if (!telnet_environment_receive(d->telnet_environment, event->sub.buffer,
                                       event->sub.size))
-        log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ENVIRON",
+        log_error((LogEntry){.log = descriptor_log(d),
+                             .key = LOG_PROBLEMS,
+                             .primary = "TELNET",
+                             .secondary = "ENVIRON"},
                   "Descriptor %d sent an invalid or oversized NEW-ENVIRON "
                   "update.",
                   d->descriptor);
     }
     break;
   case TELNET_EV_WARNING:
-    log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "WARN", "%s",
-              event->error.msg);
+    log_error((LogEntry){.log = descriptor_log(d),
+                         .key = LOG_PROBLEMS,
+                         .primary = "TELNET",
+                         .secondary = "WARN"},
+              "%s", event->error.msg);
     break;
   case TELNET_EV_ERROR:
-    log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ERROR", "%s",
-              event->error.msg);
+    log_error((LogEntry){.log = descriptor_log(d),
+                         .key = LOG_PROBLEMS,
+                         .primary = "TELNET",
+                         .secondary = "ERROR"},
+              "%s", event->error.msg);
     descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_SOCKDIED);
     break;
   case TELNET_EV_IAC:

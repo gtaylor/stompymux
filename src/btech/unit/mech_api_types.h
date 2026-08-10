@@ -11,6 +11,21 @@ typedef struct MechUnitId {
   char second;
 } MechUnitId;
 
+typedef struct CriticalSlotReference {
+  int section;
+  int critical;
+} CriticalSlotReference;
+
+typedef struct CriticalSlotLookupResult {
+  bool found;
+  CriticalSlotReference slot;
+} CriticalSlotLookupResult;
+
+typedef struct MechNetworkLink {
+  Mech *owner;
+  Mech *member;
+} MechNetworkLink;
+
 extern const struct WeaponDefinition MechWeapons[];
 
 constexpr int TELE_ALL = 1;  /* Tele all, not just mortals */
@@ -18,6 +33,7 @@ constexpr int TELE_LOUD = 4; /* Loudly teleport */
 constexpr int TELE_XP = 8;   /* Lose 1/3 XP */
 
 typedef enum MineTriggerReason : int {
+  MINE_COMMAND_DETONATION = 0,
   MINE_STEP = 1, /* Someone steps to a hex */
   MINE_LAND = 2, /* Someone lands in a hex */
   MINE_FALL = 3, /* Someone falls in the hex */

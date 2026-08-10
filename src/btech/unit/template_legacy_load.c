@@ -54,7 +54,8 @@ static int template_load_modern(DbRef player, Mech *mech, const char *id) {
 
   if (!filename)
     return 0;
-  if (!(fp = fopen(filename, "r")))
+  fp = fopen(filename, "r");
+  if (!fp)
     return 0;
   if (fclose(fp) != 0)
     return 0;
@@ -276,14 +277,14 @@ static int template_load_legacy(Mech *mech, const char *id) {
       }
       if (equipment_is_special(i1))
         i1 += SPECIAL_BASE_INDEX - OSPECIAL_BASE_INDEX;
-      if (equipment_is_weapon(mech_critical_part_type(mech, i, j)) &&
-          weapon_catalogue_is_anti_missile(
-              (t = weapon_from_equipment_index(
-                   mech_critical_part_type(mech, i, j))))) {
-        if (weapon_catalogue_has_special(t, CLAT))
-          ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
-        else
-          ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
+      if (equipment_is_weapon(mech_critical_part_type(mech, i, j))) {
+        t = weapon_from_equipment_index(mech_critical_part_type(mech, i, j));
+        if (weapon_catalogue_is_anti_missile(t)) {
+          if (weapon_catalogue_has_special(t, CLAT))
+            ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
+          else
+            ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
+        }
       }
       mech_critical_data_set(mech, i, j, i2);
       mech_critical_fire_mode_set(mech, i, j, i3);

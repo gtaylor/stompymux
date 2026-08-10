@@ -48,7 +48,10 @@ void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
     int64_t unreported =
         player_account_unreported_failed_login_count(database, player);
     if (unreported > 0) {
-      PlayerLoginRecordView latest_failure;
+      PlayerLoginHistoryResult latest_failure =
+          player_account_login_history(&(PlayerLoginHistoryRequest){
+              .account = {.database = database, .player = player},
+              .outcome = PLAYER_LOGIN_FAILURE});
       char timestamp[32];
 
       notify_checked(evaluation, player, player, "", MSG_ME_ALL | MSG_F_DOWN);
@@ -57,25 +60,30 @@ void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
           "**** %lld failed connect%s since your last successful connect. "
           "****",
           (long long)unreported, unreported == 1 ? "" : "s");
-      if (player_account_login_history(database, player, PLAYER_LOGIN_FAILURE,
-                                       0, &latest_failure) &&
-          player_account_format_timestamp_utc(latest_failure.occurred_at,
+      if (latest_failure.found &&
+          player_account_format_timestamp_utc(latest_failure.record.occurred_at,
                                               timestamp, sizeof(timestamp)))
         notify_printf(evaluation, player,
                       "Most recent attempt was from %s on %s.",
-                      latest_failure.host, timestamp);
+                      latest_failure.record.host, timestamp);
       notify_checked(evaluation, player, player, "", MSG_ME_ALL | MSG_F_DOWN);
     }
-    player_account_login_record(database, player, PLAYER_LOGIN_SUCCESS,
-                                occurred_at, host);
+    player_account_login_record(&(PlayerLoginRecordChange){
+        .account = {.database = database, .player = player},
+        .outcome = PLAYER_LOGIN_SUCCESS,
+        .occurred_at = occurred_at,
+        .host = host});
     if (username && *username)
       player_account_last_site_set(database, player,
                                    tprintf("%s@%s", username, host));
     else
       player_account_last_site_set(database, player, host);
   } else {
-    player_account_login_record(database, player, PLAYER_LOGIN_FAILURE,
-                                occurred_at, host);
+    player_account_login_record(&(PlayerLoginRecordChange){
+        .account = {.database = database, .player = player},
+        .outcome = PLAYER_LOGIN_FAILURE,
+        .occurred_at = occurred_at,
+        .host = host});
   }
 }
 
@@ -93,31 +101,39 @@ int check_pass(WorldContext *world, DbRef player, const char *password) {
 /**
  * Try to connect to an existing player.
  */
-DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
-                     char *name, char *password, char *host, char *username) {
+DbRef connect_player(const PlayerConnectionRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  WorldContext *world = request->world;
   DbRef player;
   time_t tt;
   tt = time(nullptr);
   if (tt == (time_t)-1)
     tt = 0;
 
-  if ((player = lookup_player(world, NOTHING, name, 0)) == NOTHING)
+  player = lookup_player(world, NOTHING, request->name, 0);
+  if (player == NOTHING)
     return NOTHING;
-  if (!check_pass(world, player, password)) {
-    record_login(evaluation, player, false, tt, host, username);
+  if (!check_pass(world, player, request->password)) {
+    record_login(evaluation, player, false, tt, request->host,
+                 request->username);
     return NOTHING;
   }
   tt = time(nullptr);
   if (tt == (time_t)-1)
     tt = 0;
-  player_account_last_login_set(world->database, player, tt);
+  player_account_last_login_set(&(PlayerLastLoginChange){
+      .account = {.database = world->database, .player = player},
+      .occurred_at = tt});
   return player;
 }
 
 /**
  * Create a new player.
  */
-DbRef create_player(EvaluationContext *evaluation, char *name, char *password) {
+DbRef create_player(const PlayerCreationRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  const char *name = request->name;
+  const char *password = request->password;
   WorldContext *world = evaluation->world;
   DbRef player;
   char hashed_password[crypto_pwhash_STRBYTES];
@@ -205,25 +221,35 @@ void do_last(CommandInvocation *invocation) {
                   (long long)player_account_successful_login_count(
                       world->database, target));
     for (size_t index = 0;
-         index < player_account_login_history_count(world->database, target,
-                                                    PLAYER_LOGIN_SUCCESS);
+         index < player_account_login_history_count((PlayerLoginHistoryRequest){
+                     .account = {.database = world->database, .player = target},
+                     .outcome = PLAYER_LOGIN_SUCCESS});
          index++) {
-      PlayerLoginRecordView record;
-      if (player_account_login_history(world->database, target,
-                                       PLAYER_LOGIN_SUCCESS, index, &record))
-        display_login_record(&invocation->context->evaluation, player, &record);
+      PlayerLoginHistoryResult result =
+          player_account_login_history(&(PlayerLoginHistoryRequest){
+              .account = {.database = world->database, .player = target},
+              .outcome = PLAYER_LOGIN_SUCCESS,
+              .position = index});
+      if (result.found)
+        display_login_record(&invocation->context->evaluation, player,
+                             &result.record);
     }
     notify_printf(
         &invocation->context->evaluation, player, "Total failed connects: %lld",
         (long long)player_account_failed_login_count(world->database, target));
     for (size_t index = 0;
-         index < player_account_login_history_count(world->database, target,
-                                                    PLAYER_LOGIN_FAILURE);
+         index < player_account_login_history_count((PlayerLoginHistoryRequest){
+                     .account = {.database = world->database, .player = target},
+                     .outcome = PLAYER_LOGIN_FAILURE});
          index++) {
-      PlayerLoginRecordView record;
-      if (player_account_login_history(world->database, target,
-                                       PLAYER_LOGIN_FAILURE, index, &record))
-        display_login_record(&invocation->context->evaluation, player, &record);
+      PlayerLoginHistoryResult result =
+          player_account_login_history(&(PlayerLoginHistoryRequest){
+              .account = {.database = world->database, .player = target},
+              .outcome = PLAYER_LOGIN_FAILURE,
+              .position = index});
+      if (result.found)
+        display_login_record(&invocation->context->evaluation, player,
+                             &result.record);
     }
   }
 }

@@ -22,8 +22,6 @@ typedef struct HexMechTransitionInput {
   int elevation;
   int last_elevation;
   int old_terrain;
-  int old_terrain_code;
-  int old_elevation_code;
 } HexMechTransitionInput;
 
 typedef struct HexTransitionResult {
@@ -31,7 +29,13 @@ typedef struct HexTransitionResult {
   int done;
 } HexTransitionResult;
 
-int collision_check(Mech *mech, MovementCollisionMode mode, int last_elevation,
-                    int last_terrain);
+typedef struct MovementCollisionCheck {
+  Mech *mech;
+  MovementCollisionMode mode;
+  int previous_elevation;
+  int previous_terrain;
+} MovementCollisionCheck;
+
+int collision_check(const MovementCollisionCheck *check);
 HexTransitionResult
 mech_hex_transition_resolve(const HexMechTransitionInput *input);

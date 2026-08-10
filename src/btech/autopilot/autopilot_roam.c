@@ -10,6 +10,7 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
@@ -141,8 +142,9 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
       /* Make sure values are sane */
 
       /* Get the Map */
-      if (!(map = btech_context_get_map(autopilot->xcode.context,
-                                        autopilot->mapindex))) {
+      map =
+          btech_context_get_map(autopilot->xcode.context, autopilot->mapindex);
+      if (!map) {
 
         /* Bad Map */
         (void)snprintf(error_buf, MBUF_SIZE,
@@ -288,7 +290,10 @@ static void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
     MapCoordToRealCoord(start_hex_x, start_hex_y, &x1, &y1);
 
     /* Calc new hex */
-    FindXY(x1, y1, bearing, range, &x2, &y2);
+    MapRealPosition projected = map_project_position(&(MapProjection){
+        .origin = {.x = x1, .y = y1}, .bearing = bearing, .range = range});
+    x2 = projected.x;
+    y2 = projected.y;
 
     /* Real coord to Map */
     RealCoordToMapCoord(&target_hex_x, &target_hex_y, x2, y2);
@@ -367,8 +372,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = btech_context_get_map(autopilot->xcode.context,
-                                    autopilot->mapindex))) {
+  map = btech_context_get_map(autopilot->xcode.context, autopilot->mapindex);
+  if (!map) {
 
     /* Bad Map */
     (void)snprintf(error_buf, MBUF_SIZE,
@@ -532,8 +537,13 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
 
   /* Move towards our next hex */
   figure_out_range_and_bearing(mech, tx, ty, &range, &bearing);
-  speed_up_if_neccessary(autopilot, mech, tx, ty, bearing);
-  slow_down_if_neccessary(autopilot, mech, range, bearing, tx, ty);
+  AutopilotApproachRequest approach = {.autopilot = autopilot,
+                                       .mech = mech,
+                                       .target = {.x = tx, .y = ty},
+                                       .bearing = bearing,
+                                       .range = range};
+  autopilot_speed_up_for_target(&approach);
+  (void)autopilot_slow_down_for_target(&approach);
   update_wanted_heading(autopilot, mech, bearing);
 
   /* Update the tick counter */

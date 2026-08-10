@@ -92,7 +92,8 @@ static char *radio_command_argument(const RadioCommandArguments *arguments,
   if (index < 0)
     abort();
   return *(char *const *)checked_storage_at_const(
-      arguments->items, 3, sizeof(*arguments->items), (size_t)index);
+      (const void *)arguments->items, 3, sizeof(*arguments->items),
+      (size_t)index);
 }
 
 static void radio_command_arguments_destroy(RadioCommandArguments *arguments) {
@@ -172,7 +173,8 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
   if (freq > 0 && map) {
     for (i = 0; i < battle_map_unit_count(map); i++) {
       const DbRef candidate = battle_map_unit_dbref(map, i);
-      if (!(t = btech_context_find_object(mech_context(mech), candidate)))
+      t = btech_context_find_object(mech_context(mech), candidate);
+      if (!t)
         continue;
       if (t == mech)
         continue;
@@ -262,7 +264,7 @@ static const char *radio_color_style(int index) {
   if (index < 0)
     abort();
   return *(const char *const *)checked_storage_at_const(
-      radio_color_styles,
+      (const void *)radio_color_styles,
       sizeof(radio_color_styles) / sizeof(*radio_color_styles),
       sizeof(*radio_color_styles), (size_t)index);
 }
@@ -282,19 +284,20 @@ static char radio_color_character(int index) {
   return *checked_string_suffix(radio_colorstr, (size_t)index);
 }
 
-void radio_color_code(char buffer[static 32], Mech *m, int i, int obs,
-                      int team) {
-  int t = mech_radio_mode(m, i) / FREQ_REST;
+void radio_color_code(const RadioColorRequest *request) {
+  char *buffer = request->buffer;
+  int t = mech_radio_mode(request->mech, request->channel) / FREQ_REST;
   int ii;
 
   *(char *)checked_storage_at(buffer, 32, sizeof(char), 0) = '\0';
-  if (!obs) {
+  if (!request->observer) {
     if (!t)
       return;
     (void)snprintf(buffer, 32, "%s", radio_color_style(t - 1));
   } else {
+    int team = request->team;
     if (team > 15)
-      team = team % 15;
+      team %= 15;
     for (ii = 0; ii < 15; ii++) {
       const typeof(*OBSERVER_TEAM_COLORS) *color = observer_team_color(ii);
       if (team == color->team)

@@ -405,6 +405,90 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_random COMMAND btech_random_test)
 
+  add_executable(btech_weapon_failure_test
+    tests/btech_weapon_failure.c
+    ${BTECH_SOURCE_DIR}/combat/mech_weapon_failure.c)
+  target_compile_definitions(btech_weapon_failure_test PRIVATE BTECH_INTERNAL=1)
+  target_link_libraries(btech_weapon_failure_test PRIVATE btmux_options)
+  target_include_directories(btech_weapon_failure_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_weapon_failure COMMAND btech_weapon_failure_test)
+
+  add_executable(btech_ammunition_decrement_test
+    tests/btech_ammunition_decrement.c
+    ${BTECH_SOURCE_DIR}/combat/mech_ammunition_decrement.c)
+  target_compile_definitions(btech_ammunition_decrement_test
+    PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_ammunition_decrement_test
+    PRIVATE -ffunction-sections)
+  target_link_options(btech_ammunition_decrement_test
+    PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_ammunition_decrement_test PRIVATE btmux_options)
+  target_include_directories(btech_ammunition_decrement_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_ammunition_decrement
+    COMMAND btech_ammunition_decrement_test)
+
+  add_executable(btech_ammunition_check_test
+    tests/btech_ammunition_check.c
+    ${BTECH_SOURCE_DIR}/unit/mech_systems.c)
+  target_compile_definitions(btech_ammunition_check_test
+    PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_ammunition_check_test
+    PRIVATE -ffunction-sections)
+  target_link_options(btech_ammunition_check_test
+    PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_ammunition_check_test PRIVATE btmux_options)
+  target_include_directories(btech_ammunition_check_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_ammunition_check COMMAND btech_ammunition_check_test)
+
+  add_executable(btech_normal_to_hit_test
+    tests/btech_normal_to_hit.c
+    ${BTECH_SOURCE_DIR}/combat/mech_bth.c)
+  target_compile_definitions(btech_normal_to_hit_test PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_normal_to_hit_test PRIVATE -ffunction-sections)
+  target_link_options(btech_normal_to_hit_test PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_normal_to_hit_test PRIVATE btmux_options m)
+  target_include_directories(btech_normal_to_hit_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_normal_to_hit COMMAND btech_normal_to_hit_test)
+
+  add_executable(btech_damage_apply_test
+    tests/btech_damage_apply.c
+    ${BTECH_SOURCE_DIR}/combat/mech_damage.c)
+  target_compile_definitions(btech_damage_apply_test PRIVATE BTECH_INTERNAL=1)
+  target_compile_options(btech_damage_apply_test PRIVATE -ffunction-sections)
+  target_compile_options(btech_damage_apply_test PRIVATE
+    -Wno-missing-prototypes -Wno-strict-prototypes)
+  target_link_options(btech_damage_apply_test PRIVATE -Wl,--gc-sections)
+  target_link_libraries(btech_damage_apply_test PRIVATE btmux_options)
+  target_include_directories(btech_damage_apply_test PRIVATE
+    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+    "${CMAKE_BINARY_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_damage_apply COMMAND btech_damage_apply_test)
+
+  add_executable(checked_storage_test tests/checked_storage.c)
+  target_link_libraries(checked_storage_test
+    PRIVATE btmux_options btmux_checked_storage)
+  target_include_directories(checked_storage_test PRIVATE
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME checked_storage COMMAND checked_storage_test)
+
   add_executable(btech_persistence_schema_test
     tests/btech_persistence_schema.c
     ${BTECH_SOURCE_DIR}/persistence/schema.c)
@@ -640,7 +724,8 @@ if(BUILD_TESTING)
   add_test(NAME help_frontmatter_parse COMMAND help_frontmatter_parse_test)
 
   add_executable(help_render_test tests/help_render.c
-    ${MUX_SOURCE_DIR}/help/help_render.c)
+    ${MUX_SOURCE_DIR}/help/help_render.c
+    ${MUX_SOURCE_DIR}/support/array_sort.c)
   target_link_libraries(help_render_test PRIVATE btmux_options cmark)
   target_include_directories(help_render_test PRIVATE
     "${CMAKE_BINARY_DIR}"
@@ -649,7 +734,8 @@ if(BUILD_TESTING)
 
   add_executable(help_index_integration_test tests/help_index_integration.c
     ${MUX_SOURCE_DIR}/help/help_frontmatter.c
-    ${MUX_SOURCE_DIR}/help/help_index.c)
+    ${MUX_SOURCE_DIR}/help/help_index.c
+    ${MUX_SOURCE_DIR}/support/array_sort.c)
   target_link_libraries(help_index_integration_test PRIVATE btmux_options tomlc17)
   target_include_directories(help_index_integration_test PRIVATE
     "${CMAKE_BINARY_DIR}"

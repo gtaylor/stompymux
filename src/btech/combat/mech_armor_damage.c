@@ -43,15 +43,17 @@ static const char *const MyColorStrings[] = {"", "[fg=green bold]",
 static const char *const MyMessageStrings[] = {
     "ERROR[reset]", "low.[reset]", "critical![reset]", "BREACHED![reset]"};
 static inline const char *MySeriousColorStr(Mech *mech, int index) {
-  const char *const *value = checked_storage_at_const(
-      MyColorStrings, sizeof(MyColorStrings) / sizeof(*MyColorStrings),
-      sizeof(*MyColorStrings), (size_t)(index % 4));
+  const char *const *value = (const char *const *)checked_storage_at_const(
+      (const void *)MyColorStrings,
+      sizeof(MyColorStrings) / sizeof(*MyColorStrings), sizeof(*MyColorStrings),
+      (size_t)(index % 4));
   return *value;
 }
 
 static inline const char *MySeriousStr(Mech *mech, int index) {
-  const char *const *value = checked_storage_at_const(
-      MyMessageStrings, sizeof(MyMessageStrings) / sizeof(*MyMessageStrings),
+  const char *const *value = (const char *const *)checked_storage_at_const(
+      (const void *)MyMessageStrings,
+      sizeof(MyMessageStrings) / sizeof(*MyMessageStrings),
       sizeof(*MyMessageStrings), (size_t)(index % 4));
   return *value;
 }
@@ -59,9 +61,11 @@ static inline const char *MySeriousStr(Mech *mech, int index) {
 static inline int MySeriousnessCheck(Mech *mech, int hitloc) {
   int orig, new;
 
-  if (!(orig = mech_section_original_armor(mech, hitloc)))
+  orig = mech_section_original_armor(mech, hitloc);
+  if (!orig)
     return 0;
-  if (!(new = mech_section_armor(mech, hitloc)))
+  new = mech_section_armor(mech, hitloc);
+  if (!new)
     return 3;
   if (new < orig / 4)
     return 2;
@@ -73,9 +77,11 @@ static inline int MySeriousnessCheck(Mech *mech, int hitloc) {
 static inline int MySeriousnessCheckR(Mech *mech, int hitloc) {
   int orig, new;
 
-  if (!(orig = mech_section_original_rear_armor(mech, hitloc)))
+  orig = mech_section_original_rear_armor(mech, hitloc);
+  if (!orig)
     return 0;
-  if (!(new = mech_section_rear_armor(mech, hitloc)))
+  new = mech_section_rear_armor(mech, hitloc);
+  if (!new)
     return 3;
   if (new < orig / 4)
     return 2;
@@ -84,10 +90,17 @@ static inline int MySeriousnessCheckR(Mech *mech, int hitloc) {
   return 0;
 }
 
-int cause_armordamage(Mech *wounded, Mech *attacker, int LOS,
-                      DbRef attack_pilot, int isrear, int iscritical,
-                      int hitloc, int damage, int *crits, int wWeapIndx,
-                      int wAmmoMode) {
+int cause_armordamage(const ArmorDamageRequest *request) {
+  Mech *wounded = request->wounded;
+  Mech *attacker = request->attacker;
+  const int LOS = request->line_of_sight;
+  const bool isrear = request->rear;
+  const bool iscritical = request->critical;
+  const int hitloc = request->section;
+  int damage = request->damage;
+  int *crits = request->critical_hits;
+  const int wWeapIndx = request->weapon_index;
+  const int wAmmoMode = request->ammunition_mode;
   int intDamage = 0, r;
   int seriousness = 0;
   int tAPCritical = 0;
@@ -191,16 +204,28 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS,
     switch (r) {
     case 8:
     case 9:
-      mech_critical_handle(wounded, attacker, LOS, hitloc, 1);
+      mech_critical_handle(&(CriticalHitDispatch){.wounded = wounded,
+                                                  .attacker = attacker,
+                                                  .line_of_sight = LOS,
+                                                  .section = hitloc,
+                                                  .count = 1});
       (*crits) += 1;
       break;
     case 10:
     case 11:
-      mech_critical_handle(wounded, attacker, LOS, hitloc, 2);
+      mech_critical_handle(&(CriticalHitDispatch){.wounded = wounded,
+                                                  .attacker = attacker,
+                                                  .line_of_sight = LOS,
+                                                  .section = hitloc,
+                                                  .count = 2});
       (*crits) += 2;
       break;
     case 12:
-      mech_critical_handle(wounded, attacker, LOS, hitloc, 3);
+      mech_critical_handle(&(CriticalHitDispatch){.wounded = wounded,
+                                                  .attacker = attacker,
+                                                  .line_of_sight = LOS,
+                                                  .section = hitloc,
+                                                  .count = 3});
       (*crits) += 3;
       break;
     default:
@@ -209,7 +234,10 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS,
   }
 
   if (mech_class(wounded) == CLASS_AERO && intDamage >= 0) {
-    mech_section_destroy(wounded, attacker, LOS, hitloc);
+    mech_section_destroy(&(SectionDestructionRequest){.wounded = wounded,
+                                                      .attacker = attacker,
+                                                      .line_of_sight = LOS,
+                                                      .section = hitloc});
     if (mech_is_destroyed(wounded)) {
       return 0;
     }
@@ -233,17 +261,24 @@ int cause_armordamage(Mech *wounded, Mech *attacker, int LOS,
   if (seriousness > 0 && mech_armor_warning_enabled(wounded))
     mech_printf(wounded, MECHALL, "%sWARNING: %s%s Armor %s",
                 MySeriousColorStr(wounded, seriousness),
-                armor_section_abbreviation(mech_class(wounded),
-                                           mech_movement_type(wounded), hitloc)
+                armor_section_abbreviation(
+                    &(ArmorSectionReference){.unit_class = mech_class(wounded),
+                                             .movement_type =
+                                                 mech_movement_type(wounded),
+                                             .location = hitloc})
                     .text,
                 isrear ? " (Rear)" : "", MySeriousStr(wounded, seriousness));
 
   return intDamage > 0 ? intDamage : 0;
 }
 
-int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
-                         DbRef attack_pilot, int isrear, int hitloc,
-                         int intDamage, int weapindx, int *crits) {
+int cause_internaldamage(const InternalDamageRequest *request) {
+  Mech *wounded = request->wounded;
+  Mech *attacker = request->attacker;
+  const int LOS = request->line_of_sight;
+  const int hitloc = request->section;
+  int intDamage = request->damage;
+  int *crits = request->critical_hits;
   BtechContext *context = mech_context(wounded);
   int r = btech_random_roll(context);
   char locname[30];
@@ -261,11 +296,19 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
     switch (r) {
     case 8:
     case 9:
-      mech_critical_handle(wounded, attacker, LOS, hitloc, 1);
+      mech_critical_handle(&(CriticalHitDispatch){.wounded = wounded,
+                                                  .attacker = attacker,
+                                                  .line_of_sight = LOS,
+                                                  .section = hitloc,
+                                                  .count = 1});
       break;
     case 10:
     case 11:
-      mech_critical_handle(wounded, attacker, LOS, hitloc, 2);
+      mech_critical_handle(&(CriticalHitDispatch){.wounded = wounded,
+                                                  .attacker = attacker,
+                                                  .line_of_sight = LOS,
+                                                  .section = hitloc,
+                                                  .count = 2});
       break;
     case 12:
       if (mech_class(wounded) == CLASS_MECH ||
@@ -285,17 +328,29 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
                 "'s %s is blown off in a shower of sparks and smoke!", locname);
             mech_los_broadcast(wounded, msgbuf);
           }
-          mech_section_destroy(wounded, attacker, LOS, hitloc);
+          mech_section_destroy(
+              &(SectionDestructionRequest){.wounded = wounded,
+                                           .attacker = attacker,
+                                           .line_of_sight = LOS,
+                                           .section = hitloc});
           if (mech_class(wounded) != CLASS_MW)
             intDamage = 0;
           break;
         default:
           /* Ouch */
-          mech_critical_handle(wounded, attacker, LOS, hitloc, 3);
+          mech_critical_handle(&(CriticalHitDispatch){.wounded = wounded,
+                                                      .attacker = attacker,
+                                                      .line_of_sight = LOS,
+                                                      .section = hitloc,
+                                                      .count = 3});
           break;
         }
       } else {
-        mech_critical_handle(wounded, attacker, LOS, hitloc, 3);
+        mech_critical_handle(&(CriticalHitDispatch){.wounded = wounded,
+                                                    .attacker = attacker,
+                                                    .line_of_sight = LOS,
+                                                    .section = hitloc,
+                                                    .count = 3});
       }
 
       break;
@@ -312,7 +367,10 @@ int cause_internaldamage(Mech *wounded, Mech *attacker, int LOS,
 
   if (mech_section_internal(wounded, hitloc) <= intDamage) {
     intDamage -= mech_section_internal(wounded, hitloc);
-    mech_section_destroy(wounded, attacker, LOS, hitloc);
+    mech_section_destroy(&(SectionDestructionRequest){.wounded = wounded,
+                                                      .attacker = attacker,
+                                                      .line_of_sight = LOS,
+                                                      .section = hitloc});
 
   } else {
     mech_section_internal_set(

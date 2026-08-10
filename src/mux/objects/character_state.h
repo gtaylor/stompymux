@@ -36,13 +36,31 @@ bool character_state_fixed_get(GameDatabase *database, DbRef player,
 bool character_state_fixed_set(GameDatabase *database, DbRef player,
                                const CharacterFixedState *state);
 size_t character_state_value_count(GameDatabase *database, DbRef player);
-bool character_state_value_entry(GameDatabase *database, DbRef player,
-                                 size_t index, CharacterValueStateView *entry);
+typedef struct CharacterStateEntryRequest {
+  GameDatabase *database;
+  DbRef player;
+  size_t index;
+} CharacterStateEntryRequest;
+
+typedef struct CharacterStateEntryResult {
+  bool found;
+  CharacterValueStateView entry;
+} CharacterStateEntryResult;
+
+CharacterStateEntryResult
+character_state_value_entry(const CharacterStateEntryRequest *request);
 bool character_state_value_get(GameDatabase *database, DbRef player,
                                const char *name,
                                CharacterValueStateView *entry);
-bool character_state_value_set(GameDatabase *database, DbRef player,
-                               const char *name, int value, int xp,
-                               time_t last_used);
+typedef struct CharacterStateValueChange {
+  GameDatabase *database;
+  DbRef player;
+  const char *name;
+  int value;
+  int experience;
+  time_t last_used;
+} CharacterStateValueChange;
+
+bool character_state_value_set(const CharacterStateValueChange *change);
 bool character_state_value_remove(GameDatabase *database, DbRef player,
                                   const char *name);

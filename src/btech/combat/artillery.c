@@ -19,6 +19,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map.h"
+#include "map_coordinates.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -36,7 +37,6 @@
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "mux/network/mux_event.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
@@ -75,7 +75,8 @@ static const char *artillery_direction(artillery_shot *s) {
 
   MapCoordToRealCoord(s->from_x, s->from_y, &fx, &fy);
   MapCoordToRealCoord(s->to_x, s->to_y, &tx, &ty);
-  b = FindBearing(fx, fy, tx, ty);
+  b = map_bearing(&(MapRealSegment){.start = {.x = fx, .y = fy},
+                                    .end = {.x = tx, .y = ty}});
   for (i = 0; artillery_direction_at((size_t)i)->desc; i++) {
     d = abs(b - artillery_direction_at((size_t)i)->dir);
     if (best < 0 || d < bestd) {
@@ -89,7 +90,11 @@ static const char *artillery_direction(artillery_shot *s) {
 }
 
 int artillery_round_flight_time(float fx, float fy, float tx, float ty) {
-  const float flight_time = FindHexRange(fx, fy, tx, ty) / ARTY_SPEED;
+  const float flight_time = map_real_range(&(MapRealSegment){
+                                .start = {.x = fx, .y = fy},
+                                .end = {.x = tx, .y = ty},
+                            }) /
+                            ARTY_SPEED;
   const int delay = MAX(ARTILLERY_MINIMUM_FLIGHT, (int)flight_time);
 
   /* XXX Different weapons, diff. speed? */
@@ -102,19 +107,19 @@ static void artillery_hit_event(MuxEvent *e) {
   artillery_hit(s);
 }
 
-void artillery_shoot(Mech *mech, int targx, int targy, int windex, int wmode,
-                     int ishit) {
+void artillery_shoot(const ArtilleryShotRequest *request) {
+  Mech *mech = request->mech;
   struct ArtilleryShot *s;
   float fx, fy, tx, ty;
 
-  Create(s, artillery_shot, 1);
+  s = checked_storage_allocate(sizeof(*s));
   s->from_x = mech_position_x(mech);
   s->from_y = mech_position_y(mech);
-  s->to_x = targx;
-  s->to_y = targy;
-  s->type = windex;
-  s->mode = wmode;
-  s->ishit = ishit;
+  s->to_x = request->target.x;
+  s->to_y = request->target.y;
+  s->type = request->weapon_index;
+  s->mode = request->weapon_mode;
+  s->ishit = request->hit;
   s->shooter = mech_dbref(mech);
   s->map = mech_map_dbref(mech);
   s->context = mech_context(mech);
@@ -130,8 +135,9 @@ void artillery_shoot(Mech *mech, int targx, int targy, int windex, int wmode,
 static int blast_arcf(float fx, float fy, Mech *mech) {
   int b, dir;
 
-  b = FindBearing(mech_position_real_x(mech), mech_position_real_y(mech), fx,
-                  fy);
+  b = map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                              .y = mech_position_real_y(mech)},
+                                    .end = {.x = fx, .y = fy}});
   dir = AcceptableDegree(b - mech_heading_degrees(mech));
   if (dir > 120 && dir < 240)
     return BACK;
@@ -146,10 +152,8 @@ static int blast_arcf(float fx, float fy, Mech *mech) {
 #define TABLE_PUNCH 1
 #define TABLE_KICK 2
 
-void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
-                    float fx, float fy, float tfx, float tfy, const char *tomsg,
-                    const char *otmsg, int table, int safeup, int safedown,
-                    int isunderwater) {
+void blast_hit_real_hex(const BlastRealHexRequest *request) {
+  BattleMap *map = request->map;
   Mech *tempMech;
   int loop;
   int isrear = 0, iscritical = 0, hitloc;
@@ -161,12 +165,12 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
   if (!map)
     return;
 
-  RealCoordToMapCoord(&tx, &ty, fx, fy);
+  RealCoordToMapCoord(&tx, &ty, request->impact.x, request->impact.y);
   if (tx < 0 || ty < 0 || tx >= map->map_width || ty >= map->map_height)
     return;
-  if (!tomsg || !otmsg)
+  if (!request->messages.target || !request->messages.observers)
     return;
-  if (isunderwater)
+  if (request->safety.underwater)
     ground_zero = battle_map_hex_elevation(map, tx, ty);
   else
     ground_zero = MAX(0, battle_map_hex_elevation(map, tx, ty));
@@ -180,29 +184,29 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
       if (mech_position_x(tempMech) != tx || mech_position_y(tempMech) != ty)
         continue;
       /* Far too high.. */
-      if (mech_position_z(tempMech) >= (safeup + ground_zero))
+      if (mech_position_z(tempMech) >= (request->safety.above + ground_zero))
         continue;
       /* Far too below (underwater, mostly) */
       if (/* MechTerrain(tempMech) == WATER &&  */
-          mech_position_z(tempMech) <= (ground_zero - safedown))
+          mech_position_z(tempMech) <= (ground_zero - request->safety.below))
         continue;
-      mech_los_broadcast(tempMech, otmsg);
-      mech_notify(tempMech, MECHALL, tomsg);
-      arc = blast_arcf(tfx, tfy, tempMech);
+      mech_los_broadcast(tempMech, request->messages.observers);
+      mech_notify(tempMech, MECHALL, request->messages.target);
+      arc = blast_arcf(request->source.x, request->source.y, tempMech);
 
       if (arc == BACK)
         isrear = 1;
-      damleft = dam;
+      damleft = request->damage.total;
 
       while (damleft > 0) {
-        if (singlehitsize <= damleft)
-          ndam = singlehitsize;
+        if (request->damage.hit_size <= damleft)
+          ndam = request->damage.hit_size;
         else
           ndam = damleft;
 
         damleft -= ndam;
 
-        switch (table) {
+        switch (request->hit_table) {
         case TABLE_PUNCH:
           if (mech_class(tempMech) != CLASS_MECH) {
             hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
@@ -221,49 +225,77 @@ void blast_hit_hexf(BattleMap *map, int dam, int singlehitsize, int heatdam,
           hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
         }
 
-        DamageMech(tempMech, tempMech, 0, -1, hitloc, isrear, iscritical, ndam,
-                   0, -1, 0, -1, 0, 0);
+        mech_damage_apply(&(MechDamageRequest){.target = tempMech,
+                                               .attacker = tempMech,
+                                               .line_of_sight = 0,
+                                               .attack_pilot = -1,
+                                               .hit_location = hitloc,
+                                               .rear = isrear,
+                                               .critical = iscritical,
+                                               .armor_damage = ndam,
+                                               .internal_damage = 0,
+                                               .transfer = MECH_DAMAGE_NORMAL,
+                                               .cause = -1,
+                                               .base_to_hit = 0,
+                                               .weapon_index = -1,
+                                               .ammunition_mode = 0,
+                                               .ignore_swarmers = 0});
       }
-      mech_heat_effect_apply(nullptr, tempMech, heatdam, false);
+      mech_heat_effect_apply(nullptr, tempMech, request->damage.heat, false);
     }
   }
 }
 
-void blast_hit_hex(BattleMap *map, int dam, int singlehitsize, int heatdam,
-                   int fx, int fy, int tx, int ty, const char *tomsg,
-                   const char *otmsg, int table, int safeup, int safedown,
-                   int isunderwater) {
+void blast_hit_hex(const BlastHexRequest *request) {
   float ftx, fty;
   float ffx, ffy;
 
-  MapCoordToRealCoord(tx, ty, &ftx, &fty);
-  MapCoordToRealCoord(fx, fy, &ffx, &ffy);
-  blast_hit_hexf(map, dam, singlehitsize, heatdam, ffx, ffy, ftx, fty, tomsg,
-                 otmsg, table, safeup, safedown, isunderwater);
+  MapCoordToRealCoord(request->impact.x, request->impact.y, &ftx, &fty);
+  MapCoordToRealCoord(request->source.x, request->source.y, &ffx, &ffy);
+  BlastRealHexRequest real_request = {
+      .map = request->map,
+      .damage = request->damage,
+      .impact = {.x = ftx, .y = fty},
+      .source = {.x = ffx, .y = ffy},
+      .messages = request->messages,
+      .hit_table = request->hit_table,
+      .safety = request->safety,
+  };
+  blast_hit_real_hex(&real_request);
 }
 
-void blast_hit_hexesf(BattleMap *map, int dam, int singlehitsize, int heatdam,
-                      float fx, float fy, float ftx, float fty,
-                      const char *tomsg, const char *otmsg, const char *tomsg1,
-                      const char *otmsg1, int table, int safeup, int safedown,
-                      int isunderwater, int doneighbors) {
+void blast_hit_real_area(const BlastRealAreaRequest *request) {
+  BattleMap *map = request->center.map;
   int x1, y1, x2, y2;
   int dm;
   short tx, ty;
   float hx, hy;
-  float t = FindXYRange(fx, fy, ftx, fty);
+  float t = map_real_range(&(MapRealSegment){
+      .start = request->center.impact,
+      .end = request->center.source,
+  });
 
   dm = MAX(1, (int)t + 1);
-  blast_hit_hexf(map, dam / dm, singlehitsize, heatdam / dm, fx, fy, ftx, fty,
-                 tomsg, otmsg, table, safeup, safedown, isunderwater);
-  if (!doneighbors)
+  BlastRealHexRequest hit = request->center;
+  hit.damage.total /= dm;
+  hit.damage.heat /= dm;
+  blast_hit_real_hex(&hit);
+  if (!request->neighbor_radius)
     return;
-  RealCoordToMapCoord(&tx, &ty, fx, fy);
-  for (x1 = (tx - doneighbors); x1 <= (tx + doneighbors); x1++)
-    for (y1 = (ty - doneighbors); y1 <= (ty + doneighbors); y1++) {
+  RealCoordToMapCoord(&tx, &ty, request->center.impact.x,
+                      request->center.impact.y);
+  for (x1 = (tx - request->neighbor_radius);
+       x1 <= (tx + request->neighbor_radius); x1++)
+    for (y1 = (ty - request->neighbor_radius);
+         y1 <= (ty + request->neighbor_radius); y1++) {
       int spot;
 
-      if ((dm = MyHexDist(tx, ty, x1, y1, 0)) > doneighbors)
+      dm = map_hex_distance(&(HexDistanceRequest){
+          .start = {.x = tx, .y = ty},
+          .end = {.x = x1, .y = y1},
+          .correction = 0,
+      });
+      if (dm > request->neighbor_radius)
         continue;
       if ((tx == x1) && (ty == y1))
         continue;
@@ -274,11 +306,15 @@ void blast_hit_hexesf(BattleMap *map, int dam, int singlehitsize, int heatdam,
       spot = (x1 == tx && y1 == ty);
       MapCoordToRealCoord(x1, y1, &hx, &hy);
       dm++;
-      if (!(dam / dm))
+      if (!(request->center.damage.total / dm))
         continue;
-      blast_hit_hexf(map, dam / dm, singlehitsize, heatdam / dm, hx, hy, ftx,
-                     fty, spot ? tomsg : tomsg1, spot ? otmsg : otmsg1, table,
-                     safeup, safedown, isunderwater);
+      hit = request->center;
+      hit.damage.total /= dm;
+      hit.damage.heat /= dm;
+      hit.impact = (MapRealPosition){.x = hx, .y = hy};
+      if (!spot)
+        hit.messages = request->neighbor_messages;
+      blast_hit_real_hex(&hit);
 
       /*
        * Added in burning woods when a mech's engine goes nova
@@ -291,9 +327,14 @@ void blast_hit_hexesf(BattleMap *map, int dam, int singlehitsize, int heatdam,
       case LIGHT_FOREST:
       case HEAVY_FOREST:
         if (!find_decorations(map, x1, y1)) {
-          add_decoration(
-              map, x1, y1, TYPE_FIRE, FIRE,
-              btech_random_range_int(battle_map_context(map), 60, 180));
+          add_decoration(&(MapDecorationRequest){
+              .map = map,
+              .position = {.x = x1, .y = y1},
+              .type = TYPE_FIRE,
+              .terrain_marker = FIRE,
+              .duration =
+                  btech_random_range_int(battle_map_context(map), 60, 180),
+          });
         }
 
         break;
@@ -301,21 +342,43 @@ void blast_hit_hexesf(BattleMap *map, int dam, int singlehitsize, int heatdam,
     }
 }
 
-void blast_hit_hexes(BattleMap *map, int dam, int singlehitsize, int heatdam,
-                     int tx, int ty, const char *tomsg, const char *otmsg,
-                     const char *tomsg1, const char *otmsg1, int table,
-                     int safeup, int safedown, int isunderwater,
-                     int doneighbors) {
+void blast_hit_area(const BlastAreaRequest *request) {
   float fx, fy;
 
-  MapCoordToRealCoord(tx, ty, &fx, &fy);
-  blast_hit_hexesf(map, dam, singlehitsize, heatdam, fx, fy, fx, fy, tomsg,
-                   otmsg, tomsg1, otmsg1, table, safeup, safedown, isunderwater,
-                   doneighbors);
+  MapCoordToRealCoord(request->center.impact.x, request->center.impact.y, &fx,
+                      &fy);
+  BlastRealAreaRequest real_request = {
+      .center =
+          {
+              .map = request->center.map,
+              .damage = request->center.damage,
+              .impact = {.x = fx, .y = fy},
+              .source = {.x = fx, .y = fy},
+              .messages = request->center.messages,
+              .hit_table = request->center.hit_table,
+              .safety = request->center.safety,
+          },
+      .neighbor_messages = request->neighbor_messages,
+      .neighbor_radius = request->neighbor_radius,
+  };
+  blast_hit_real_area(&real_request);
 }
 
-static void artillery_hit_hex(BattleMap *map, artillery_shot *s, int type,
-                              int mode, int dam, int tx, int ty, int isdirect) {
+typedef struct ArtilleryImpact {
+  BattleMap *map;
+  artillery_shot *shot;
+  int damage;
+  MapHexPosition position;
+  bool direct;
+} ArtilleryImpact;
+
+static void artillery_hit_hex(const ArtilleryImpact *impact) {
+  BattleMap *map = impact->map;
+  artillery_shot *s = impact->shot;
+  int mode = s->mode;
+  int dam = impact->damage;
+  int tx = impact->position.x;
+  int ty = impact->position.y;
   char buf1[LBUF_SIZE];
   char buf2[LBUF_SIZE];
 
@@ -325,8 +388,13 @@ static void artillery_hit_hex(BattleMap *map, artillery_shot *s, int type,
 
   if ((mode & SMOKE_MODE)) {
     /* Add smoke */
-    add_decoration(map, tx, ty, TYPE_SMOKE, SMOKE,
-                   btech_random_range_int(battle_map_context(map), 90, 150));
+    add_decoration(&(MapDecorationRequest){
+        .map = map,
+        .position = {.x = tx, .y = ty},
+        .type = TYPE_SMOKE,
+        .terrain_marker = SMOKE,
+        .duration = btech_random_range_int(battle_map_context(map), 90, 150),
+    });
     return;
   }
   if (mode & MINE_MODE) {
@@ -334,11 +402,11 @@ static void artillery_hit_hex(BattleMap *map, artillery_shot *s, int type,
     return;
   }
   if (!(mode & CLUSTER_MODE)) {
-    if (isdirect)
+    if (impact->direct)
       (void)snprintf(buf1, LBUF_SIZE, "receives a direct hit!");
     else
       (void)snprintf(buf1, LBUF_SIZE, "is hit by fragments!");
-    if (isdirect)
+    if (impact->direct)
       (void)snprintf(buf2, LBUF_SIZE, "You receive a direct hit!");
     else
       (void)snprintf(buf2, LBUF_SIZE, "You are hit by fragments!");
@@ -351,16 +419,22 @@ static void artillery_hit_hex(BattleMap *map, artillery_shot *s, int type,
       strcpy(buf2, "You are hit by a bomblet!");
     }
   }
-  blast_hit_hex(map, dam, (mode & CLUSTER_MODE) ? 2 : 5, 0, tx, ty, tx, ty,
-                buf2, buf1, (mode & CLUSTER_MODE) ? TABLE_PUNCH : TABLE_GEN, 10,
-                4, 0);
+  BlastHexRequest request = {
+      .map = map,
+      .damage = {.total = dam, .hit_size = (mode & CLUSTER_MODE) ? 2 : 5},
+      .impact = {.x = tx, .y = ty},
+      .source = {.x = tx, .y = ty},
+      .messages = {.target = buf2, .observers = buf1},
+      .hit_table = (mode & CLUSTER_MODE) ? TABLE_PUNCH : TABLE_GEN,
+      .safety = {.above = 10, .below = 4},
+  };
+  blast_hit_hex(&request);
 }
 
 typedef struct ArtilleryNeighborHit ArtilleryNeighborHit;
 struct ArtilleryNeighborHit {
+  BattleMap *map;
   artillery_shot *shot;
-  int type;
-  int mode;
   int damage;
 };
 
@@ -368,23 +442,30 @@ static void artillery_hit_neighbors_callback(BattleMap *map, int x, int y,
                                              void *context) {
   const ArtilleryNeighborHit *hit = context;
 
-  artillery_hit_hex(map, hit->shot, hit->type, hit->mode, hit->damage, x, y, 0);
+  artillery_hit_hex(&(ArtilleryImpact){
+      .map = map,
+      .shot = hit->shot,
+      .damage = hit->damage,
+      .position = {.x = x, .y = y},
+  });
 }
 
-static void artillery_hit_neighbors(BattleMap *map, artillery_shot *s, int type,
-                                    int mode, int dam, int tx, int ty) {
+static void artillery_hit_neighbors(const ArtilleryImpact *impact) {
   ArtilleryNeighborHit hit = {
-      .shot = s,
-      .type = type,
-      .mode = mode,
-      .damage = dam,
+      .map = impact->map,
+      .shot = impact->shot,
+      .damage = impact->damage,
   };
 
-  visit_neighbor_hexes(map, tx, ty, artillery_hit_neighbors_callback, &hit);
+  visit_neighbor_hexes(impact->map, impact->position.x, impact->position.y,
+                       artillery_hit_neighbors_callback, &hit);
 }
 
-static void artillery_cluster_hit(BattleMap *map, artillery_shot *s, int type,
-                                  int mode, int dam, int tx, int ty) {
+static void artillery_cluster_hit(const ArtilleryImpact *impact) {
+  BattleMap *map = impact->map;
+  int dam = impact->damage;
+  int tx = impact->position.x;
+  int ty = impact->position.y;
   /* Main idea: Pick <dam/2> bombs of 2pts each, and scatter 'em
      over 5x5 area with weighted numbers */
   int xd, yd, x, y;
@@ -407,17 +488,26 @@ static void artillery_cluster_hit(BattleMap *map, artillery_shot *s, int type,
       y = ty + yd;
     } while (x < 0 || x >= map->map_width || y < 0 || y >= map->map_height);
     /* Whee.. it's time to drop a bomb to the hex */
+    const int target_index = (xd + 2) * 5 + yd + 2;
     int *target = checked_storage_at(targets.cells, 25, sizeof(*targets.cells),
-                                     (size_t)((xd + 2) * 5 + yd + 2));
+                                     (size_t)target_index);
     (*target)++;
   }
-  for (xd = 0; xd < 5; xd++)
-    for (yd = 0; yd < 5; yd++)
-      if ((d = *(const int *)checked_storage_at_const(targets.cells, 25,
-                                                      sizeof(*targets.cells),
-                                                      (size_t)(xd * 5 + yd))))
-        artillery_hit_hex(map, s, type, mode, d * 2, xd + tx - 2, yd + ty - 2,
-                          1);
+  for (xd = 0; xd < 5; xd++) {
+    for (yd = 0; yd < 5; yd++) {
+      d = *(const int *)checked_storage_at_const(targets.cells, 25,
+                                                 sizeof(*targets.cells),
+                                                 (size_t)xd * 5U + (size_t)yd);
+      if (d)
+        artillery_hit_hex(&(ArtilleryImpact){
+            .map = map,
+            .shot = impact->shot,
+            .damage = d * 2,
+            .position = {.x = xd + tx - 2, .y = yd + ty - 2},
+            .direct = true,
+        });
+    }
+  }
 }
 
 void artillery_friendly_adjustment(DbRef mechnum, BattleMap *map, int x,
@@ -426,7 +516,8 @@ void artillery_friendly_adjustment(DbRef mechnum, BattleMap *map, int x,
   Mech *spotter;
   Mech *tempMech = nullptr;
 
-  if (!(mech = btech_context_get_mech(battle_map_context(map), mechnum)))
+  mech = btech_context_get_mech(battle_map_context(map), mechnum);
+  if (!mech)
     return;
   /* Ok.. we've a valid guy */
   spotter =
@@ -513,12 +604,29 @@ static void artillery_hit(artillery_shot *s) {
    */
   if (!(s->mode & CLUSTER_MODE)) {
     /* Enjoy ourselves in all neighbor hexes, too */
-    artillery_hit_hex(map, s, s->type, s->mode, dam, s->to_x, s->to_y, 1);
-    if (!(s->mode & MINE_MODE))
-      artillery_hit_neighbors(map, s, s->type, s->mode, dam / 2, s->to_x,
-                              s->to_y);
-  } else
-    artillery_cluster_hit(map, s, s->type, s->mode, dam, s->to_x, s->to_y);
+    ArtilleryImpact impact = {
+        .map = map,
+        .shot = s,
+        .damage = dam,
+        .position = {.x = s->to_x, .y = s->to_y},
+        .direct = true,
+    };
+    artillery_hit_hex(&impact);
+    if (!(s->mode & MINE_MODE)) {
+      impact.damage /= 2;
+      impact.direct = false;
+      artillery_hit_neighbors(&impact);
+    }
+  } else {
+    ArtilleryImpact impact = {
+        .map = map,
+        .shot = s,
+        .damage = dam,
+        .position = {.x = s->to_x, .y = s->to_y},
+        .direct = true,
+    };
+    artillery_cluster_hit(&impact);
+  }
   if (!s->ishit)
     artillery_friendly_adjustment(s->shooter, map, original_x, original_y);
 }

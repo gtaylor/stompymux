@@ -5,6 +5,7 @@ set(BTECH_SOURCES
   autopilot/autopilot_navigation.c
   autopilot/autopilot_pathfinding.c
   autopilot/autopilot_autogun.c
+  autopilot/autopilot_autogun_fire.c
   autopilot/autopilot_sensor_policy.c
   autopilot/autopilot_weapon_profile.c
   autopilot/autopilot_target_scoring.c
@@ -35,6 +36,7 @@ set(BTECH_SOURCES
   character/pcombat.c
   combat/artillery.c
   combat/bsuit.c
+  combat/bsuit_swarm.c
   combat/bsuit_hide.c
   combat/crit.c
   combat/crit_weapons.c
@@ -51,7 +53,10 @@ set(BTECH_SOURCES
   combat/mech_bth_movement.c
   combat/mech_combat.c
   combat/mech_fire_command.c
+  combat/mech_weapon_failure.c
+  combat/mech_ammunition_decrement.c
   combat/mech_fire_resolution.c
+  combat/mech_fire_preparation.c
   combat/mech_hit_resolution.c
   combat/mech_terrain_effects.c
   combat/mech_combat_misc.c
@@ -176,6 +181,7 @@ set(BTECH_SOURCES
   persistence/schema_v2.c
   persistence/snapshot_store.c
   persistence/snapshot_store_objects.c
+  persistence/snapshot_store_auxiliary.c
   persistence/special_restore.c
   persistence/validation.c
   repair/mech_tech.c
@@ -202,10 +208,14 @@ set(BTECH_SOURCES
   scripting/registry_values.c
   scripting/value_catalog.c
   scripting/repair_map_values.c
+  scripting/repair_damage_values.c
   scripting/unit_query_values.c
+  scripting/unit_battle_value_values.c
   scripting/unit_query_reports.c
   scripting/unit_values.c
   scripting/world_values.c
+  scripting/world_map_values.c
+  scripting/world_part_cost_values.c
   sensors/los_trace.c
   sensors/mech_c3.c
   sensors/mech_c3_misc.c
@@ -230,6 +240,7 @@ set(BTECH_SOURCES
   ui/mech_maps.c
   ui/mech_lrs_map.c
   ui/mech_tactical_map.c
+  ui/mech_tactical_overlays.c
   ui/mech_tactical_layout.c
   ui/mech_tactical_style.c
   ui/mech_tactical_command.c
@@ -287,6 +298,7 @@ set(BTECH_SOURCES
   unit/template_internals.c
   unit/template_inventory.c
   unit/template_load.c
+  unit/template_load_helpers.c
   unit/template_legacy_load.c
   unit/template_registry.c
   unit/template_save.c)

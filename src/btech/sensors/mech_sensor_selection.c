@@ -48,8 +48,16 @@ void mech_sensors_disable_requiring(Mech *mech, int technology) {
   MarkForLOSUpdate(mech);
 }
 
-static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
-                                       int verbose) {
+typedef struct SensorModeTextRequest {
+  Mech *mech;
+  int sensor;
+  bool full_arc;
+  bool verbose;
+} SensorModeTextRequest;
+
+static SensorModeText sensor_mode_text(const SensorModeTextRequest *request) {
+  Mech *mech = request->mech;
+  const int sn = request->sensor;
   SensorModeText mode = {0};
   char *buf = mode.text;
 
@@ -61,9 +69,16 @@ static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
   if (mech_sensor_definition(sn)->full_vision) {
     (void)snprintf(buf, sizeof(mode.text), "%s ",
                    mech_sensor_definition(sn)->sensor_name);
-    mech_sensor_description_append(buf, sizeof(mode.text), mech, sn, verbose);
+    MechSensorDescriptionRequest description = {
+        .buffer = buf,
+        .capacity = sizeof(mode.text),
+        .mech = mech,
+        .sensor = sn,
+        .verbose = request->verbose,
+    };
+    mech_sensor_description_append(&description);
   } else {
-    if (full || mech_movement_type(mech) == MOVE_NONE ||
+    if (request->full_arc || mech_movement_type(mech) == MOVE_NONE ||
         mech_class(mech) == CLASS_BSUIT)
       (void)snprintf(buf, sizeof(mode.text), "%s in 360 degree scanning mode ",
                      mech_sensor_definition(sn)->sensor_name);
@@ -71,7 +86,14 @@ static SensorModeText sensor_mode_text(Mech *mech, int sn, int full,
       (void)snprintf(buf, sizeof(mode.text),
                      "%s in 120 degree scanning mode (Forward arc) ",
                      mech_sensor_definition(sn)->sensor_name);
-    mech_sensor_description_append(buf, sizeof(mode.text), mech, sn, verbose);
+    MechSensorDescriptionRequest description = {
+        .buffer = buf,
+        .capacity = sizeof(mode.text),
+        .mech = mech,
+        .sensor = sn,
+        .verbose = request->verbose,
+    };
+    mech_sensor_description_append(&description);
   }
   return mode;
 }
@@ -88,13 +110,24 @@ static void sensor_mode(Mech *mech, const char *msg, DbRef player, int p, int s,
         '\0';
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, msg);
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, buf);
-    notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                  "Primary:   %s", sensor_mode_text(mech, p, 0, verbose).text);
-    notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                  "Secondary: %s", sensor_mode_text(mech, s, 0, verbose).text);
+    notify_printf(
+        btech_context_evaluation(mech_context(mech)), player, "Primary:   %s",
+        sensor_mode_text(&(SensorModeTextRequest){
+                             .mech = mech, .sensor = p, .verbose = verbose})
+            .text);
+    notify_printf(
+        btech_context_evaluation(mech_context(mech)), player, "Secondary: %s",
+        sensor_mode_text(&(SensorModeTextRequest){
+                             .mech = mech, .sensor = s, .verbose = verbose})
+            .text);
   } else
     notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                  "%s: %s", msg, sensor_mode_text(mech, p, 1, verbose).text);
+                  "%s: %s", msg,
+                  sensor_mode_text(&(SensorModeTextRequest){.mech = mech,
+                                                            .sensor = p,
+                                                            .full_arc = true,
+                                                            .verbose = verbose})
+                      .text);
 }
 
 typedef struct SensorSelection SensorSelection;
@@ -131,11 +164,11 @@ char *mech_sensor_info(Mech *mech, char buffer[static LBUF_SIZE]) {
     mech_event_visit(mech, EVENT_SCHANGE, sensor_selection_read, &selection);
     if (selection.found) {
       *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 2) =
-          *checked_string_suffix(SensorInf,
-                                 (size_t)(selection.primary + NUM_SENSORS));
+          *checked_string_suffix(SensorInf, (size_t)selection.primary +
+                                                (size_t)NUM_SENSORS);
       *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 3) =
-          *checked_string_suffix(SensorInf,
-                                 (size_t)(selection.secondary + NUM_SENSORS));
+          *checked_string_suffix(SensorInf, (size_t)selection.secondary +
+                                                (size_t)NUM_SENSORS);
       *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 4) = '\0';
       return buffer;
     }
@@ -181,16 +214,19 @@ int mech_sensor_can_change_to(Mech *mech, int s) {
   BattleMap *map;
   int i;
 
-  if (!(map =
-            btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))) {
+  map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
+  if (!map) {
     mech_notify(mech, MECHALL, "Where are you? ;-)");
     return 0;
   }
   /* < 0, means you you don't have the sensors if you _do_ have the bit
      > 0, means you have the sensors if you have the bit */
-  if ((i = mech_sensor_definition(s)->required_special)) {
-    if (!mech_supports_sensor_requirement(
-            mech, mech_sensor_definition(s)->specials_set, i)) {
+  i = mech_sensor_definition(s)->required_special;
+  if (i) {
+    if (!mech_supports_sensor_requirement(&(SensorCapabilityRequest){
+            .mech = mech,
+            .capability_set = mech_sensor_definition(s)->specials_set,
+            .signed_capability = i})) {
       mech_printf(mech, MECHALL, "You lack the %s sensors!",
                   mech_sensor_definition(s)->sensor_name);
       return 0;

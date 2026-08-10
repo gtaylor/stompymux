@@ -82,7 +82,8 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(context), player, "That's no gun!");
     return;
   }
-  if (!ValidGunPos(mech, loc, part)) {
+  if (!ValidGunPos(&(RepairCriticalSelection){
+          .mech = mech, .location = loc, .position = part})) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You can't replace middle of a gun!");
     return;
@@ -106,7 +107,10 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
 
   if (brand) {
     ob = mech_critical_brand(mech, loc, part);
-    mech_critical_brand_set(mech, loc, part, brand);
+    mech_critical_brand_set(
+        &(CriticalSlotBrandSet){.mech = mech,
+                                .slot = {.section = loc, .critical = part},
+                                .brand = brand});
   }
 
   parttype = mech_critical_part_type(mech, loc, part);
@@ -152,14 +156,18 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
                     "You muck around, wasting the gun for good...");
       /* part goes , 1.5 * techtime*/
       if (!(equipment_is_ammunition(mech_critical_part_type(mech, loc, part))))
-        econ_change_items(
-            context,
-            mech_is_dropship(mech)
-                ? mech_bay_dbref(mech, 0)
-                : game_object_location(btech_context_database(context),
-                                       mech_dbref(mech)),
-            parttype, mech_critical_brand(mech, loc, part), -1);
-      tech_addtechtime(context, player, fixtime);
+        economy_inventory_change(&(EconomyInventoryChange){
+            .context = context,
+            .store = mech_is_dropship(mech)
+                         ? mech_bay_dbref(mech, 0)
+                         : game_object_location(btech_context_database(context),
+                                                mech_dbref(mech)),
+            .part = {.id = parttype,
+                     .brand = mech_critical_brand(mech, loc, part)},
+            .quantity_delta = -1,
+        });
+      tech_addtechtime(&(TechTimeAddition){
+          .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
           context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker,
           MAX(1, player_techtime(context, player) * TECH_TICK),
@@ -189,7 +197,8 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
         notify_printf(
             evaluation, player, "Your skill manages to save %d minute%s",
             fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
-      tech_addtechtime(context, player, fixtime);
+      tech_addtechtime(&(TechTimeAddition){
+          .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
           context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker,
           MAX(1, player_techtime(context, player) * TECH_TICK),
@@ -216,14 +225,18 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
           evaluation, player, "Your skill manages to save %d minute%s",
           base_fixtime - fixtime, base_fixtime - fixtime == 1 ? "!" : "s!");
     if (!(equipment_is_ammunition(mech_critical_part_type(mech, loc, part))))
-      econ_change_items(
-          context,
-          mech_is_dropship(mech)
-              ? mech_bay_dbref(mech, 0)
-              : game_object_location(btech_context_database(context),
-                                     mech_dbref(mech)),
-          parttype, mech_critical_brand(mech, loc, part), -1);
-    tech_addtechtime(context, player, fixtime);
+      economy_inventory_change(&(EconomyInventoryChange){
+          .context = context,
+          .store = mech_is_dropship(mech)
+                       ? mech_bay_dbref(mech, 0)
+                       : game_object_location(btech_context_database(context),
+                                              mech_dbref(mech)),
+          .part = {.id = parttype,
+                   .brand = mech_critical_brand(mech, loc, part)},
+          .quantity_delta = -1,
+      });
+    tech_addtechtime(&(TechTimeAddition){
+        .context = context, .player = player, .units = fixtime});
     btech_context_event_schedule(
         context, mech, EVENT_REPAIR_REPLG, mux_event_tickmech_replacegun,
         MAX(1, player_techtime(context, player) * TECH_TICK),
@@ -233,7 +246,8 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
   }
 
   if (brand)
-    mech_critical_brand_set(mech, loc, part, ob);
+    mech_critical_brand_set(&(CriticalSlotBrandSet){
+        .mech = mech, .slot = {.section = loc, .critical = part}, .brand = ob});
 }
 
 void tech_repairgun(DbRef player, void *data, char *buffer) {
@@ -280,7 +294,8 @@ void tech_repairgun(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(context), player, "That's no gun!");
     return;
   }
-  if (!ValidGunPos(mech, loc, part)) {
+  if (!ValidGunPos(&(RepairCriticalSelection){
+          .mech = mech, .location = loc, .position = part})) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You can't repair middle of a gun!");
     return;
@@ -454,7 +469,8 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
     return;
   loc = selection.location;
   part = selection.part;
-  if ((t = mech_critical_part_type(mech, loc, part)) == EMPTY) {
+  t = mech_critical_part_type(mech, loc, part);
+  if (t == EMPTY) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That location is empty!");
     return;
@@ -559,14 +575,18 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
       notify_printf(evaluation, player,
                     "You muck around, wasting the part for good...");
       /* part goes , 1.5 * techtime*/
-      econ_change_items(
-          context,
-          mech_is_dropship(mech)
-              ? mech_bay_dbref(mech, 0)
-              : game_object_location(btech_context_database(context),
-                                     mech_dbref(mech)),
-          parttype, mech_critical_brand(mech, loc, part), -1);
-      tech_addtechtime(context, player, fixtime);
+      economy_inventory_change(&(EconomyInventoryChange){
+          .context = context,
+          .store = mech_is_dropship(mech)
+                       ? mech_bay_dbref(mech, 0)
+                       : game_object_location(btech_context_database(context),
+                                              mech_dbref(mech)),
+          .part = {.id = parttype,
+                   .brand = mech_critical_brand(mech, loc, part)},
+          .quantity_delta = -1,
+      });
+      tech_addtechtime(&(TechTimeAddition){
+          .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
           context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker,
           MAX(1, player_techtime(context, player) * TECH_TICK),
@@ -596,7 +616,8 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
         notify_printf(
             evaluation, player, "Your skill manages to save %d minute%s",
             fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
-      tech_addtechtime(context, player, fixtime);
+      tech_addtechtime(&(TechTimeAddition){
+          .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
           context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker,
           MAX(1, player_techtime(context, player) * TECH_TICK),
@@ -623,14 +644,17 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
           evaluation, player, "Your skill manages to save %d minute%s",
           base_fixtime - fixtime, base_fixtime - fixtime == 1 ? "!" : "s!");
 
-    econ_change_items(
-        context,
-        mech_is_dropship(mech)
-            ? mech_bay_dbref(mech, 0)
-            : game_object_location(btech_context_database(context),
-                                   mech_dbref(mech)),
-        parttype, mech_critical_brand(mech, loc, part), -1);
-    tech_addtechtime(context, player, fixtime);
+    economy_inventory_change(&(EconomyInventoryChange){
+        .context = context,
+        .store = mech_is_dropship(mech)
+                     ? mech_bay_dbref(mech, 0)
+                     : game_object_location(btech_context_database(context),
+                                            mech_dbref(mech)),
+        .part = {.id = parttype, .brand = mech_critical_brand(mech, loc, part)},
+        .quantity_delta = -1,
+    });
+    tech_addtechtime(&(TechTimeAddition){
+        .context = context, .player = player, .units = fixtime});
     btech_context_event_schedule(
         context, mech, EVENT_REPAIR_REPL, mux_event_tickmech_repairpart,
         MAX(1, player_techtime(context, player) * TECH_TICK),
@@ -662,7 +686,8 @@ void tech_repairpart(DbRef player, void *data, char *buffer) {
     return;
   loc = selection.location;
   part = selection.part;
-  if ((t = mech_critical_part_type(mech, loc, part)) == EMPTY) {
+  t = mech_critical_part_type(mech, loc, part);
+  if (t == EMPTY) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That location is empty!");
     return;

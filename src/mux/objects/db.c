@@ -126,18 +126,25 @@ static NAME *pure_name_slot(GameDatabase *database, DbRef object) {
       object >= database->size) {
     abort();
   }
-  return checked_storage_at(database->pure_name_storage,
-                            (size_t)database->size + 1, sizeof(NAME),
-                            (size_t)(object + 1));
+  return (NAME *)checked_storage_at((void *)database->pure_name_storage,
+                                    (size_t)database->size + 1, sizeof(NAME),
+                                    (size_t)(object + 1));
 }
 
-static char **native_attribute_slot(GameDatabase *database, DbRef object,
-                                    int attribute) {
-  if (attribute < 0 || attribute >= 256)
+typedef struct NativeAttributeReference {
+  GameDatabase *database;
+  DbRef object;
+  int attribute;
+} NativeAttributeReference;
+
+static char **native_attribute_slot(const NativeAttributeReference *reference) {
+  if (reference->attribute < 0 || reference->attribute >= 256)
     return nullptr;
-  GameObject *game_object = game_database_object(database, object);
-  return checked_storage_at(game_object->native.values, 256, sizeof(char *),
-                            (size_t)attribute);
+  GameObject *game_object =
+      game_database_object(reference->database, reference->object);
+  return (char **)checked_storage_at((void *)game_object->native.values, 256,
+                                     sizeof(char *),
+                                     (size_t)reference->attribute);
 }
 
 /*
@@ -270,7 +277,8 @@ Attribute *attribute_by_number(GameDatabase *database, int anum) {
 void attribute_clear(GameDatabase *database, DbRef thing, int atr) {
   if (thing < 0 || atr < 0 || atr >= 256)
     return;
-  char **slot = native_attribute_slot(database, thing, atr);
+  char **slot = native_attribute_slot(&(NativeAttributeReference){
+      .database = database, .object = thing, .attribute = atr});
   free(*slot);
   *slot = nullptr;
 }
@@ -291,10 +299,12 @@ void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
     return;
   }
   utf8_copy_truncated(truncated, sizeof(truncated), buff);
-  if ((text = strdup(truncated)) == nullptr) {
+  text = strdup(truncated);
+  if (!text) {
     return;
   }
-  char **slot = native_attribute_slot(database, thing, atr);
+  char **slot = native_attribute_slot(&(NativeAttributeReference){
+      .database = database, .object = thing, .attribute = atr});
   free(*slot);
   *slot = text;
 }
@@ -314,7 +324,8 @@ void attribute_add(GameDatabase *database, DbRef thing, int atr,
 char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr) {
   if (thing < 0 || atr < 0 || atr >= 256)
     return nullptr;
-  return *native_attribute_slot(database, thing, atr);
+  return *native_attribute_slot(&(NativeAttributeReference){
+      .database = database, .object = thing, .attribute = atr});
 }
 
 char *attribute_get_string(GameDatabase *database, char *s, DbRef thing,
@@ -362,7 +373,8 @@ void attribute_free(GameDatabase *database, DbRef thing) {
   character_state_clear(database, thing);
   economy_parts_clear(database, thing);
   for (int index = 0; index < 256; index++) {
-    char **slot = native_attribute_slot(database, thing, index);
+    char **slot = native_attribute_slot(&(NativeAttributeReference){
+        .database = database, .object = thing, .attribute = index});
     free(*slot);
     *slot = nullptr;
   }
@@ -375,14 +387,17 @@ void attribute_free(GameDatabase *database, DbRef thing) {
  * * the player are copied.
  */
 
-void attribute_copy(EvaluationContext *evaluation, DbRef player, DbRef dest,
-                    DbRef source) {
-  (void)player;
+void attribute_copy(const AttributeCopyRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef dest = request->destination;
+  DbRef source = request->source;
   GameObject *source_object =
       game_database_object(evaluation->world->database, source);
   for (int field = 1; field < 256; field++) {
-    const char *value =
-        *native_attribute_slot(evaluation->world->database, source, field);
+    const char *value = *native_attribute_slot(
+        &(NativeAttributeReference){.database = evaluation->world->database,
+                                    .object = source,
+                                    .attribute = field});
     if (value)
       attribute_add_raw(evaluation->world->database, dest, field, value);
   }
@@ -491,11 +506,15 @@ void db_grow(GameDatabase *database, DbRef newtop) {
 
     if (!newpurenames) {
       log_simple(
-          database->log, LOG_ALWAYS, "ALC", "DB",
+          (LogEntry){.log = database->log,
+                     .key = LOG_ALWAYS,
+                     .primary = "ALC",
+                     .secondary = "DB"},
           tprintf("Could not allocate space for %d item name cache.", newsize));
       abort();
     }
-    memset(newpurenames, 0, (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
+    memset((void *)newpurenames, 0,
+           (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
     if (database->pure_name_storage) {
 
@@ -503,7 +522,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
        * An old name cache exists.  Copy it.
        */
 
-      memmove(newpurenames, database->pure_name_storage,
+      memmove((void *)newpurenames, (const void *)database->pure_name_storage,
               (size_t)(newtop + SIZE_HACK) * sizeof(NAME));
       cp = (char *)database->pure_name_storage;
       free(cp);
@@ -530,7 +549,10 @@ void db_grow(GameDatabase *database, DbRef newtop) {
       (GameObject *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(GameObject));
   if (!newdb) {
 
-    log_simple(database->log, LOG_ALWAYS, "ALC", "DB",
+    log_simple((LogEntry){.log = database->log,
+                          .key = LOG_ALWAYS,
+                          .primary = "ALC",
+                          .secondary = "DB"},
                tprintf("Could not allocate space for %d item struct database.",
                        newsize));
     abort();
@@ -611,7 +633,7 @@ void db_free(GameDatabase *database) {
   if (database->pure_name_storage != nullptr) {
     for (DbRef object = 0; object < database->top; object++)
       free(*pure_name_slot(database, object));
-    free(database->pure_name_storage);
+    free((void *)database->pure_name_storage);
     database->pure_name_storage = nullptr;
   }
   free(database->markbits);
@@ -639,18 +661,18 @@ void db_make_minimal(EvaluationContext *evaluation) {
   game_object_set_link(database, 0, NOTHING);
   game_object_set_zone(database, 0, NOTHING);
   game_database_object(database, 0)->state = nullptr;
-  object_apply_default_lua_parent(evaluation, 0, OBJECT_TYPE_ROOM);
+  object_apply_default_lua_parent(&(ObjectCreationIdentity){
+      .evaluation = evaluation, .object = 0, .type = OBJECT_TYPE_ROOM});
   /*
    * should be #1
    */
   load_player_names(evaluation->world);
-  /* create_player()'s parameters aren't const-correct; these literals are
-     only read here. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  obj = create_player(evaluation, (char *)"Wizard", (char *)"potrzebie");
-#pragma clang diagnostic pop
-  game_object_set_flag(database, obj, OBJECT_FLAG_WIZARD, true);
+  obj = create_player(&(PlayerCreationRequest){
+      .evaluation = evaluation, .name = "Wizard", .password = "potrzebie"});
+  game_object_set_flag(&(ObjectFlagChangeRequest){.database = database,
+                                                  .object = obj,
+                                                  .flag = OBJECT_FLAG_WIZARD,
+                                                  .value = true});
   game_object_clear_powers(database, obj);
 
   /*

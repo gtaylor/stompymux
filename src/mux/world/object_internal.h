@@ -8,10 +8,17 @@
 
 typedef struct EvaluationContext EvaluationContext;
 
-void object_log_pointer_error(EvaluationContext *evaluation, DbRef prior,
-                              DbRef object, DbRef location, DbRef reference,
-                              const char *reference_type,
-                              const char *error_type);
+typedef struct ObjectPointerError {
+  EvaluationContext *evaluation;
+  DbRef prior;
+  DbRef object;
+  DbRef location;
+  DbRef reference;
+  const char *reference_type;
+  const char *error_type;
+} ObjectPointerError;
+
+void object_log_pointer_error(const ObjectPointerError *error);
 void object_log_header_error(EvaluationContext *evaluation, DbRef object,
                              DbRef location, DbRef value, bool value_is_object,
                              const char *value_type, const char *error_type);

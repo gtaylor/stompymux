@@ -73,10 +73,14 @@ typedef enum RepairJobResult {
   REPAIR_JOB_SCHEDULED_FAILURE,
 } RepairJobResult;
 
-typedef int (*RepairPartOperation)(DbRef, Mech *, int, int);
-typedef int (*RepairPartAmountOperation)(DbRef, Mech *, int, int, int *);
-typedef int (*RepairSectionOperation)(DbRef, Mech *, int);
-typedef int (*RepairSectionAmountOperation)(DbRef, Mech *, int, int *);
+typedef struct RepairOperationCall {
+  DbRef player;
+  Mech *mech;
+  RepairSelection selection;
+  int *amount;
+} RepairOperationCall;
+
+typedef int (*RepairOperation)(const RepairOperationCall *call);
 
 typedef struct RepairPartJob {
   int difficulty;
@@ -86,9 +90,9 @@ typedef struct RepairPartJob {
   MuxEventCallback event_callback;
   const char *message;
   bool weapon_roll;
-  RepairPartOperation resource;
-  RepairPartOperation failure;
-  RepairPartOperation success;
+  RepairOperation resource;
+  RepairOperation failure;
+  RepairOperation success;
 } RepairPartJob;
 
 typedef struct RepairPartAmountJob {
@@ -97,9 +101,9 @@ typedef struct RepairPartAmountJob {
   int event_type;
   MuxEventCallback event_callback;
   const char *message;
-  RepairPartAmountOperation resource;
-  RepairPartAmountOperation failure;
-  RepairPartAmountOperation success;
+  RepairOperation resource;
+  RepairOperation failure;
+  RepairOperation success;
 } RepairPartAmountJob;
 
 typedef struct RepairSectionJob {
@@ -109,9 +113,9 @@ typedef struct RepairSectionJob {
   int event_type;
   MuxEventCallback event_callback;
   const char *message;
-  RepairSectionOperation resource;
-  RepairSectionOperation failure;
-  RepairSectionOperation success;
+  RepairOperation resource;
+  RepairOperation failure;
+  RepairOperation success;
 } RepairSectionJob;
 
 typedef struct RepairSectionAmountJob {
@@ -122,9 +126,9 @@ typedef struct RepairSectionAmountJob {
   int event_type;
   MuxEventCallback event_callback;
   const char *message;
-  RepairSectionAmountOperation resource;
-  RepairSectionAmountOperation failure;
-  RepairSectionAmountOperation success;
+  RepairOperation resource;
+  RepairOperation failure;
+  RepairOperation success;
 } RepairSectionAmountJob;
 
 RepairCommandStatus
@@ -151,21 +155,27 @@ bool repair_command_parse_gun(RepairCommandContext *command, char *buffer,
 
 intptr_t repair_event_payload_pack(RepairEventPayload payload);
 RepairEventPayload repair_event_payload_unpack(intptr_t encoded);
-void repair_event_schedule(Mech *mech, int delay, int event_type,
-                           MuxEventCallback callback,
-                           RepairEventPayload payload);
-void repair_event_schedule_minutes(Mech *mech, int minutes, int event_type,
-                                   MuxEventCallback callback,
-                                   RepairEventPayload payload);
-void repair_event_schedule_with_techtime(RepairCommandContext *command,
-                                         int work_time, int multiplier,
-                                         int event_type,
-                                         MuxEventCallback callback,
-                                         RepairEventPayload payload);
-void repair_event_schedule_amount(RepairCommandContext *command, int work_time,
-                                  int multiplier, int amount, int event_type,
-                                  MuxEventCallback callback,
-                                  RepairEventPayload payload);
+typedef struct RepairEventSchedule {
+  Mech *mech;
+  int delay;
+  int event_type;
+  MuxEventCallback callback;
+  RepairEventPayload payload;
+} RepairEventSchedule;
+
+typedef struct RepairWorkSchedule {
+  RepairCommandContext *command;
+  int work_time;
+  int multiplier;
+  int amount;
+  int event_type;
+  MuxEventCallback callback;
+  RepairEventPayload payload;
+} RepairWorkSchedule;
+
+void repair_event_schedule(const RepairEventSchedule *schedule);
+void repair_event_schedule_minutes(const RepairEventSchedule *schedule);
+void repair_event_schedule_with_techtime(const RepairWorkSchedule *schedule);
 
 RepairJobResult repair_part_job_execute(RepairCommandContext *command,
                                         int location, int part,

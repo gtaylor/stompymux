@@ -111,7 +111,8 @@ static void dispatch(MaintenanceContext *maintenance) {
     maintenance->clock->check_deadline =
         maintenance->configuration->check_interval + maintenance->clock->now;
     maintenance->command->debug_command = "< dbck >";
-    database_check(&maintenance->command->evaluation, NOTHING, 0);
+    database_check(&(DatabaseCheckRequest){
+        .evaluation = &maintenance->command->evaluation, .player = NOTHING});
     pcache_trim(maintenance->players);
   }
   /*

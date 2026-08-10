@@ -16,13 +16,14 @@ char *commac_alias_at(const struct commac *commac, size_t index) {
 
 char *commac_channel_at(const struct commac *commac, size_t index) {
   return *(char *const *)checked_storage_at_const(
-      commac->channels, (size_t)commac->numchannels, sizeof(*commac->channels),
-      index);
+      (const void *)commac->channels, (size_t)commac->numchannels,
+      sizeof(*commac->channels), index);
 }
 
 char **commac_channel_slot(struct commac *commac, size_t index) {
-  return checked_storage_at(commac->channels, (size_t)commac->maxchannels,
-                            sizeof(*commac->channels), index);
+  return (char **)checked_storage_at((void *)commac->channels,
+                                     (size_t)commac->maxchannels,
+                                     sizeof(*commac->channels), index);
 }
 
 int commac_macro_at(const struct commac *commac, size_t index) {
@@ -161,7 +162,7 @@ void destroy_commac(struct commac *c) {
   free(c->alias);
   for (i = 0; i < c->numchannels; i++)
     free(commac_channel_at(c, (size_t)i));
-  free(c->channels);
+  free((void *)c->channels);
   free(c);
 }
 

@@ -86,8 +86,11 @@ static bool styled_text_preset_uri(const StyledTextPreset *preset,
 }
 
 bool styled_text_palette_set_preset(StyledTextPalette *palette,
-                                    const char *name, const char *directives,
-                                    char *error, size_t error_size) {
+                                    const StyledPresetDefinition *definition) {
+  const char *name = definition->name;
+  const char *directives = definition->directives;
+  char *error = definition->error;
+  size_t error_size = definition->error_size;
   static const StyledTextRenderOptions all_options = {
       .osc_hyperlinks = true,
       .osc_hyperlinks_send = true,

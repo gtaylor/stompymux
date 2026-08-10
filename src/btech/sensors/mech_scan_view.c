@@ -113,7 +113,14 @@ void mech_sight(DbRef player, void *data, char *buffer) {
                    "Invalid weapon number!");
       return;
     }
-    FireWeaponNumber(player, mech, mech_map, weapnum, argc, args, 1);
+    mech_weapon_fire_command(
+        &(WeaponFireCommandRequest){.actor = player,
+                                    .mech = mech,
+                                    .map = mech_map,
+                                    .weapon_number = weapnum,
+                                    .argument_count = argc,
+                                    .arguments = args,
+                                    .sight = true});
   } else {
     mecha_notify(evaluation, player, "Not enough arguments to the function");
   }
@@ -151,9 +158,10 @@ void mech_view(DbRef player, void *data, char *buffer) {
           "That target isn't seen well enough by the scannfers for viewing!");
       return;
     }
-    if (*(target_desc = btech_attribute_read(mech_context(target)->database,
-                                             mech_dbref(target), A_MECHDESC,
-                                             (char[LBUF_SIZE]){0})))
+    target_desc =
+        btech_attribute_read(mech_context(target)->database, mech_dbref(target),
+                             A_MECHDESC, (char[LBUF_SIZE]){0});
+    if (*target_desc)
       mecha_notify(evaluation, player, target_desc);
     else
       mecha_notify(evaluation, player, "That target has no markings.");
@@ -183,9 +191,10 @@ void mech_view(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    if (*(target_desc = btech_attribute_read(mech_context(target)->database,
-                                             mech_dbref(target), A_MECHDESC,
-                                             (char[LBUF_SIZE]){0})))
+    target_desc =
+        btech_attribute_read(mech_context(target)->database, mech_dbref(target),
+                             A_MECHDESC, (char[LBUF_SIZE]){0});
+    if (*target_desc)
       mecha_notify(evaluation, player, target_desc);
     else
       mecha_notify(evaluation, player, "That target has no markings.");

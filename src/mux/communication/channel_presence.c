@@ -101,7 +101,8 @@ void do_channelwho(CommandInvocation *invocation) {
       flag = 1;
   }
 
-  if (!(ch = select_channel(evaluation->runtime->channels, channel))) {
+  ch = select_channel(evaluation->runtime->channels, channel);
+  if (!ch) {
     raw_notify(evaluation, player, "@chan/who: Unknown channel.");
     return;
   }
@@ -140,9 +141,11 @@ static void do_comdisconnectraw_notify(EvaluationContext *evaluation,
   struct channel *ch;
   struct comuser *cu;
 
-  if (!(ch = select_channel(evaluation->runtime->channels, chan)))
+  ch = select_channel(evaluation->runtime->channels, chan);
+  if (!ch)
     return;
-  if (!(cu = select_user(ch, player)))
+  cu = select_user(ch, player);
+  if (!cu)
     return;
 
   if ((ch->type & CHANNEL_LOUD) && (cu->on) &&
@@ -158,9 +161,11 @@ static void do_comconnectraw_notify(EvaluationContext *evaluation, DbRef player,
   struct channel *ch;
   struct comuser *cu;
 
-  if (!(ch = select_channel(evaluation->runtime->channels, chan)))
+  ch = select_channel(evaluation->runtime->channels, chan);
+  if (!ch)
     return;
-  if (!(cu = select_user(ch, player)))
+  cu = select_user(ch, player);
+  if (!cu)
     return;
 
   if ((ch->type & CHANNEL_LOUD) && (cu->on) &&
@@ -176,12 +181,14 @@ static void do_comconnectchannel(EvaluationContext *evaluation, DbRef player,
   struct channel *ch;
   struct comuser *user;
 
-  if ((ch = select_channel(evaluation->runtime->channels, channel))) {
+  ch = select_channel(evaluation->runtime->channels, channel);
+  if (ch) {
     for (user = ch->on_users; user && user->who != player; user = user->on_next)
       ;
 
     if (!user) {
-      if ((user = select_user(ch, player))) {
+      user = select_user(ch, player);
+      if (user) {
         user->on_next = ch->on_users;
         ch->on_users = user;
       } else
@@ -238,7 +245,8 @@ void comsys_disconnect_channel(EvaluationContext *evaluation, DbRef player,
   struct comuser *user, *prevuser = nullptr;
   struct channel *ch;
 
-  if (!(ch = select_channel(evaluation->runtime->channels, channel)))
+  ch = select_channel(evaluation->runtime->channels, channel);
+  if (!ch)
     return;
   for (user = ch->on_users; user;) {
     if (user->who == player) {

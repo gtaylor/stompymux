@@ -11,6 +11,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map.h"
+#include "map_coordinates.h"
 #include "map_dynamic_api.h"
 #include "map_los_api.h"
 #include "map_los_types.h"
@@ -63,8 +64,8 @@ void clear_mech_from_LOS(Mech *mech) {
   /* if (mech_map_dbref(mech) < 0)
      return;
    */
-  if (!(map = btech_context_find_object(mech_context(mech),
-                                        mech_map_dbref(mech))))
+  map = btech_context_find_object(mech_context(mech), mech_map_dbref(mech));
+  if (!map)
     return;
 #ifdef SENSOR_DEBUG
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
@@ -76,7 +77,8 @@ void clear_mech_from_LOS(Mech *mech) {
 
     const DbRef unit = battle_map_unit_dbref(map, i);
     if (unit >= 0 && i != mech_map_slot(mech)) {
-      if (!(mek = btech_context_get_mech(mech_context(mech), unit)))
+      mek = btech_context_get_mech(mech_context(mech), unit);
+      if (!mek)
         continue;
       if (mech_targeting_has_lock_on(mek, mech_dbref(mech))) {
         mech_notify(mek, MECHALL,
@@ -124,7 +126,7 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
   }
   mech_position_xy_set(mech, x, y);
   MapCoordToRealCoord(x, y, &fx, &fy);
-  mech_position_real_xy_set(mech, fx, fy);
+  mech_position_real_xy_set(mech, (MapRealPosition){.x = fx, .y = fy});
   MarkForLOSUpdate(mech);
   if (argc == 2) {
     elevation = (unsigned char)map_elevation_get(mech_map, x, y);
@@ -168,12 +170,17 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     return;
   }
   if (newindex != -1) {
-    if (!(newmap = ValidMap(mech_context(mech), player, newindex)))
+    newmap = valid_map(&(MapValidationRequest){
+        .context = mech_context(mech), .player = player, .map = newindex});
+    if (!newmap)
       return;
   }
   /* Remove the mech from it's old map */
   if (mech_map_dbref(mech) != -1) {
-    if (!(oldmap = ValidMap(mech_context(mech), player, mech_map_dbref(mech))))
+    oldmap = valid_map(&(MapValidationRequest){.context = mech_context(mech),
+                                               .player = player,
+                                               .map = mech_map_dbref(mech)});
+    if (!oldmap)
       return;
     mech_targeting_tag_clear(mech);
     mech_c3i_network_clear(mech, 1);
@@ -190,28 +197,30 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   /* Just make it random */
   /* Find a clear spot for this mech */
   const char *preferred_id =
-      nargs > 1
-          ? *(char **)checked_storage_at(args, (size_t)nargs, sizeof(*args), 1)
-          : nullptr;
+      nargs > 1 ? *(char **)checked_storage_at((void *)args, (size_t)nargs,
+                                               sizeof(*args), 1)
+                : nullptr;
   if (preferred_id != nullptr && strlen(preferred_id) > 1) {
     targ[0] = *checked_string_suffix(preferred_id, 0);
     targ[1] = *checked_string_suffix(preferred_id, 1);
-  } else if ((tempstr = btech_attribute_read(mech_context(mech)->database,
-                                             mech_dbref(mech), A_MECHPREFID,
-                                             (char[LBUF_SIZE]){0})) &&
-             strlen(tempstr) > 1) {
-    targ[0] = *checked_string_suffix(tempstr, 0);
-    targ[1] = *checked_string_suffix(tempstr, 1);
   } else {
-    targ[0] = random_mech_id_character(mech_context(mech));
-    targ[1] = random_mech_id_character(mech_context(mech));
+    tempstr =
+        btech_attribute_read(mech_context(mech)->database, mech_dbref(mech),
+                             A_MECHPREFID, (char[LBUF_SIZE]){0});
+    if (tempstr && strlen(tempstr) > 1) {
+      targ[0] = *checked_string_suffix(tempstr, 0);
+      targ[1] = *checked_string_suffix(tempstr, 1);
+    } else {
+      targ[0] = random_mech_id_character(mech_context(mech));
+      targ[1] = random_mech_id_character(mech_context(mech));
+    }
   }
   targ[0] = normalized_mech_id_character(targ[0]);
   targ[1] = normalized_mech_id_character(targ[1]);
   for (loop = 0; (loop < battle_map_unit_count(newmap) && !notdone); loop++) {
     const DbRef unit = battle_map_unit_dbref(newmap, loop);
-    if ((tempMech =
-             (Mech *)btech_context_find_object(mech_context(mech), unit))) {
+    tempMech = (Mech *)btech_context_find_object(mech_context(mech), unit);
+    if (tempMech) {
       MechUnitId const id = mech_unit_id(tempMech);
       if (id.first == targ[0] && id.second == targ[1])
         notdone = 1;
@@ -223,8 +232,8 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     notdone = 0;
     for (loop = 0; (loop < battle_map_unit_count(newmap) && !notdone); loop++) {
       const DbRef unit = battle_map_unit_dbref(newmap, loop);
-      if ((tempMech =
-               (Mech *)btech_context_find_object(mech_context(mech), unit))) {
+      tempMech = (Mech *)btech_context_find_object(mech_context(mech), unit);
+      if (tempMech) {
         MechUnitId const id = mech_unit_id(tempMech);
         if (id.first == targ[0] && id.second == targ[1])
           notdone = 1;
@@ -243,7 +252,7 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     float fx, fy;
     mech_position_reset_origin(mech);
     MapCoordToRealCoord(0, 0, &fx, &fy);
-    mech_position_real_xy_set(mech, fx, fy);
+    mech_position_real_xy_set(mech, (MapRealPosition){.x = fx, .y = fy});
     mecha_notify(
         btech_context_evaluation(mech_context(mech)), player,
         "You're current position is out of bounds, Pos changed to 0,0");
@@ -267,7 +276,9 @@ void mech_Rsetteam(DbRef player, void *data, char *buffer) {
                  "Mech is not on a map:  Can't set team");
     return;
   }
-  newmap = ValidMap(mech_context(mech), player, mech_map_dbref(mech));
+  newmap = valid_map(&(MapValidationRequest){.context = mech_context(mech),
+                                             .player = player,
+                                             .map = mech_map_dbref(mech)});
   if (!newmap) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Map index reset!");
@@ -308,9 +319,11 @@ void newfreemech(DbRef key, void **data,
     break;
   case SPECIAL_FREE:
     mech_stagger_damage_clear(new);
-    if (mech_map_dbref(new) != -1 &&
-        (map = btech_context_get_map(mech_context(new), mech_map_dbref(new))))
-      remove_mech_from_map(map, new);
+    if (mech_map_dbref(new) != -1) {
+      map = btech_context_get_map(mech_context(new), mech_map_dbref(new));
+      if (map)
+        remove_mech_from_map(map, new);
+    }
     if (mech_autopilot_dbref(new) > 0) {
       Autopilot *autopilot = btech_context_find_object(
           mech_context(new), mech_autopilot_dbref(new));

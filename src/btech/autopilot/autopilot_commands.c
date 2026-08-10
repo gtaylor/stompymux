@@ -153,8 +153,8 @@ void auto_cal_mapindex(BtechContext *context, Mech *mech) {
 
   if (mech_autopilot_dbref(mech) > 0) {
     DbRef autopilot_dbref = mech_autopilot_dbref(mech);
-    if (!(autopilot =
-              btech_context_find_object(mech_context(mech), autopilot_dbref)) ||
+    autopilot = btech_context_find_object(mech_context(mech), autopilot_dbref);
+    if (!autopilot ||
         !is_good_obj(btech_context_database(mech_context(mech)),
                      autopilot_dbref) ||
         game_object_location(btech_context_database(mech_context(mech)),
@@ -456,7 +456,8 @@ void auto_command_pickup(Autopilot *autopilot, Mech *mech) {
   free(argument);
 
   /* Check the target */
-  if (!(tempmech = btech_context_get_mech(autopilot->xcode.context, target))) {
+  tempmech = btech_context_get_mech(autopilot->xcode.context, target);
+  if (!tempmech) {
     (void)snprintf(error_buf, MBUF_SIZE,
                    "AI Error - AI #%ld unable to pickup"
                    " unit #%d",
@@ -550,7 +551,8 @@ void auto_command_embark(Autopilot *autopilot, Mech *mech) {
   free(argument);
 
   /* Check the target */
-  if (!(tempmech = btech_context_get_mech(autopilot->xcode.context, target))) {
+  tempmech = btech_context_get_mech(autopilot->xcode.context, target);
+  if (!tempmech) {
     (void)snprintf(error_buf, MBUF_SIZE,
                    "AI Error - AI #%ld unable to embark"
                    " unit #%d",

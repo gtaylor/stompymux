@@ -13,8 +13,8 @@ bool mech_stagger_damage_history_is_empty(const Mech *mech) {
   return mech->rd.staggerDamageList == nullptr;
 }
 
-bool mech_stagger_damage_append(Mech *mech, int amount, time_t occurred_at,
-                                DbRef attacker, bool counted) {
+bool mech_stagger_damage_append(const StaggerDamageApplication *application) {
+  Mech *mech = application->mech;
   MechDamageRecord **link = &mech->rd.staggerDamageList;
   MechDamageRecord *record;
 
@@ -23,10 +23,10 @@ bool mech_stagger_damage_append(Mech *mech, int amount, time_t occurred_at,
   record = calloc(1, sizeof(*record));
   if (!record)
     return false;
-  record->amount = amount;
-  record->occuredAt = occurred_at;
-  record->attackerNum = attacker;
-  record->counted = counted;
+  record->amount = application->amount;
+  record->occuredAt = application->occurred_at;
+  record->attackerNum = application->attacker;
+  record->counted = application->counted;
   *link = record;
   return true;
 }

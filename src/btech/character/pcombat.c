@@ -48,7 +48,11 @@ static const PersonalArmorDefinition *personal_armor_at(size_t index) {
       sizeof(*PERSONAL_ARMOR), index);
 }
 
-int personal_combat_damage_to_unit(Mech *target, int weapindx, int dam) {
+int personal_combat_damage_to_unit(
+    const PersonalCombatDamageConversion *conversion) {
+  Mech *target = conversion->target;
+  const int weapindx = conversion->weapon_index;
+  int dam = conversion->damage;
   int i = 0;
 
   if (mech_class(target) == CLASS_MW)
@@ -62,7 +66,11 @@ int personal_combat_damage_to_unit(Mech *target, int weapindx, int dam) {
   return i;
 }
 
-int unit_damage_to_personal_combat(Mech *target, int weapindx, int dam) {
+int unit_damage_to_personal_combat(
+    const PersonalCombatDamageConversion *conversion) {
+  Mech *target = conversion->target;
+  const int weapindx = conversion->weapon_index;
+  const int dam = conversion->damage;
   int i = 0, j;
 
   if (weapindx >= 0 && weapon_catalogue_is_personal_combat(weapindx))
@@ -88,8 +96,12 @@ static int pcombat_hitloc(int loc) {
   return loc;
 }
 
-int personal_armor_reduce_damage(Mech *wounded, int cause, int hitloc,
-                                 int intDamage, int id) {
+int personal_armor_reduce_damage(const PersonalArmorDamageRequest *request) {
+  Mech *wounded = request->wounded;
+  const int cause = request->cause;
+  int hitloc = request->hit_location;
+  int intDamage = request->damage;
+  const int id = request->damage_identifier;
   size_t armor_index;
   int block;
   int noblock = 0;

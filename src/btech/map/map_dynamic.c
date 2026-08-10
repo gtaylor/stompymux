@@ -63,17 +63,24 @@ static const char *battle_map_flag_slot_const(const BattleMap *map, int index) {
 static unsigned short **battle_map_los_row_slot(BattleMap *map, int index) {
   if (index < 0)
     abort();
-  return checked_storage_at(map->LOSinfo, battle_map_slot_capacity(map),
-                            sizeof(*map->LOSinfo), (size_t)index);
+  return (unsigned short **)checked_storage_at(
+      (void *)map->LOSinfo, battle_map_slot_capacity(map),
+      sizeof(*map->LOSinfo), (size_t)index);
 }
 
-static unsigned short *battle_map_los_cell(BattleMap *map, int row,
-                                           int column) {
-  if (column < 0)
+typedef struct BattleMapLosCellRequest {
+  BattleMap *map;
+  int row;
+  int column;
+} BattleMapLosCellRequest;
+
+static unsigned short *
+battle_map_los_cell(const BattleMapLosCellRequest *request) {
+  if (request->column < 0)
     abort();
-  unsigned short *values = *battle_map_los_row_slot(map, row);
-  return checked_storage_at(values, battle_map_slot_capacity(map),
-                            sizeof(*values), (size_t)column);
+  unsigned short *values = *battle_map_los_row_slot(request->map, request->row);
+  return checked_storage_at(values, battle_map_slot_capacity(request->map),
+                            sizeof(*values), (size_t)request->column);
 }
 
 static void *resize_storage(void *storage, size_t count, size_t item_size) {
@@ -96,7 +103,7 @@ void battle_map_dynamic_destroy(BattleMap *map) {
   if (map->LOSinfo)
     for (int index = 0; index < allocated_slots; index++)
       free(*battle_map_los_row_slot(map, index));
-  free(map->LOSinfo);
+  free((void *)map->LOSinfo);
   free(map->mechflags);
   free(map->mechsOnMap);
   map->LOSinfo = nullptr;
@@ -199,7 +206,8 @@ void eliminate_empties(BattleMap *map) {
     if (battle_map_unit_dbref(map, i) > 0)
       break;
   count = i + 1;
-  if (count == (oldcount = map->first_free))
+  oldcount = map->first_free;
+  if (count == oldcount)
     return;
   (void)fprintf(stderr,
                 "Map #%ld contains empty entries ; removing %d (%d->%d)\n",
@@ -209,8 +217,8 @@ void eliminate_empties(BattleMap *map) {
   const size_t allocation_count = (size_t)count;
   for (j = count; j < oldcount; j++)
     free(*battle_map_los_row_slot(map, j));
-  map->LOSinfo =
-      resize_storage(map->LOSinfo, allocation_count, sizeof(*map->LOSinfo));
+  map->LOSinfo = (unsigned short **)resize_storage(
+      (void *)map->LOSinfo, allocation_count, sizeof(*map->LOSinfo));
   map->mechsOnMap = resize_storage(map->mechsOnMap, allocation_count,
                                    sizeof(*map->mechsOnMap));
   map->mechflags =
@@ -218,7 +226,8 @@ void eliminate_empties(BattleMap *map) {
 
   map->first_free = count;
   map->dynamic_size = count;
-  econ_fix_stuff(map->xcode.context, GOD, map->mynum);
+  economy_manifest_repair(&(EconomyRepairRequest){
+      .context = map->xcode.context, .actor = GOD, .location = map->mynum});
 }
 
 void remove_mech_from_map(BattleMap *map, Mech *mech) {
@@ -260,15 +269,17 @@ void remove_mech_from_map(BattleMap *map, Mech *mech) {
     int i;
     Mech *t;
 
-    for (i = 0; map->mechsOnMap != nullptr && i < map->first_free; i++)
+    for (i = 0; map->mechsOnMap != nullptr && i < map->first_free; i++) {
       /* Release from towing if tow-guy ain't on same map already */
-      if ((t = btech_context_get_mech(map->xcode.context,
-                                      battle_map_unit_dbref(map, i))))
+      t = btech_context_get_mech(map->xcode.context,
+                                 battle_map_unit_dbref(map, i));
+      if (t)
         if (mech_carried_dbref(t) == mech_dbref(mech)) {
           mech_carried_dbref_set(t, -1);
           mech_towed_clear(mech);
           break;
         }
+    }
   }
   mech_seen_count_reset(mech);
   if (mech_is_dropship(mech))
@@ -296,8 +307,8 @@ void add_mech_to_map(BattleMap *newmap, Mech *mech) {
                                         sizeof(*newmap->mechsOnMap));
     newmap->mechflags = resize_storage(newmap->mechflags, allocation_count,
                                        sizeof(*newmap->mechflags));
-    newmap->LOSinfo = resize_storage(newmap->LOSinfo, allocation_count,
-                                     sizeof(*newmap->LOSinfo));
+    newmap->LOSinfo = (unsigned short **)resize_storage(
+        (void *)newmap->LOSinfo, allocation_count, sizeof(*newmap->LOSinfo));
     newmap->dynamic_size = count;
 
     *battle_map_los_row_slot(newmap, count - 1) = nullptr;
@@ -306,10 +317,12 @@ void add_mech_to_map(BattleMap *newmap, Mech *mech) {
       *row_slot =
           resize_storage(*row_slot, allocation_count, sizeof(**row_slot));
 
-      *battle_map_los_cell(newmap, i, loop) = 0;
+      *battle_map_los_cell(&(BattleMapLosCellRequest){
+          .map = newmap, .row = i, .column = loop}) = 0;
     }
     for (i = 0; i < count; i++)
-      *battle_map_los_cell(newmap, loop, i) = 0;
+      *battle_map_los_cell(&(BattleMapLosCellRequest){
+          .map = newmap, .row = loop, .column = i}) = 0;
   }
   mech_map_dbref_set(mech, newmap->mynum);
   mech_map_slot_set(mech, loop);
@@ -331,13 +344,14 @@ void add_mech_to_map(BattleMap *newmap, Mech *mech) {
     int tow_index;
     Mech *t;
 
-    for (tow_index = 0; tow_index < newmap->first_free; tow_index++)
+    for (tow_index = 0; tow_index < newmap->first_free; tow_index++) {
       /* Release from towing if tow-guy ain't on same map already */
-      if ((t = btech_context_get_mech(
-               newmap->xcode.context,
-               battle_map_unit_dbref(newmap, tow_index))))
+      t = btech_context_get_mech(newmap->xcode.context,
+                                 battle_map_unit_dbref(newmap, tow_index));
+      if (t)
         if (mech_carried_dbref(t) == mech_dbref(mech))
           break;
+    }
     if (tow_index == newmap->first_free)
       mech_towed_clear(mech);
   }

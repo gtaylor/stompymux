@@ -60,7 +60,7 @@ constexpr int AERO_SECS_THRUST = 30;
 
 constexpr int PIL_XP_EVERY_N_STEPS = 10;
 
-#define MINE_NEXT_MODIFIER 2 / 3
+#define MINE_NEXT_MODIFIER (2 / 3)
 constexpr int MINE_MIN = 5;
 constexpr int MINE_TABLE = 2; /* 0 = General, 2 = KICK */
 
@@ -140,7 +140,7 @@ constexpr int PLOS_TICK = 1;     /* How many seconds interval between checks */
 constexpr int SCHANGE_TICK = 10; /* Sensor change */
 constexpr int SPOT_TICK = 10; /* How oft is the range for spotting checked? */
 
-#define PHYSICAL_RECYCLE_TIME 30 * WEAPON_TICK
+#define PHYSICAL_RECYCLE_TIME (30 * WEAPON_TICK)
 constexpr int STARTUP_TIME = 30;
 constexpr int UNCONSCIOUS_TIME =
     30; /* ORIGINAL authors thought it was UNCONCIOUS */

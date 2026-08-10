@@ -26,7 +26,13 @@ int main(void) {
       fixed.intuition != 1 || fixed.learn != 1 || fixed.charisma != 1 ||
       character_state_exists(&database, 0) ||
       character_state_fixed_get(&database, 1, &fixed) ||
-      character_state_value_set(&database, 1, "Running", 2, 3, 4))
+      character_state_value_set(
+          &(CharacterStateValueChange){.database = &database,
+                                       .player = 1,
+                                       .name = "Running",
+                                       .value = 2,
+                                       .experience = 3,
+                                       .last_used = 4}))
     return 1;
 
   fixed = (CharacterFixedState){
@@ -39,13 +45,26 @@ int main(void) {
       .charisma = 8,
   };
   if (!character_state_fixed_set(&database, 0, &fixed) ||
-      !character_state_value_set(&database, 0, "Running", 2, 300, 123456789) ||
-      !character_state_value_set(&database, 0, "Lives", 0, 0, 0) ||
+      !character_state_value_set(
+          &(CharacterStateValueChange){.database = &database,
+                                       .player = 0,
+                                       .name = "Running",
+                                       .value = 2,
+                                       .experience = 300,
+                                       .last_used = 123456789}) ||
+      !character_state_value_set(&(CharacterStateValueChange){
+          .database = &database, .player = 0, .name = "Lives"}) ||
       character_state_value_count(&database, 0) != 2 ||
       !character_state_value_get(&database, 0, "Running", &value) ||
       value.value != 2 || value.xp != 300 || value.last_used != 123456789 ||
-      character_state_value_set(&database, 0, "Bad", 256, 0, 0) ||
-      character_state_value_set(&database, 0, "Bad", 1, -1, 0) ||
+      character_state_value_set(&(CharacterStateValueChange){
+          .database = &database, .player = 0, .name = "Bad", .value = 256}) ||
+      character_state_value_set(
+          &(CharacterStateValueChange){.database = &database,
+                                       .player = 0,
+                                       .name = "Bad",
+                                       .value = 1,
+                                       .experience = -1}) ||
       !character_state_value_remove(&database, 0, "Lives") ||
       character_state_value_count(&database, 0) != 1)
     return 1;

@@ -14,6 +14,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_conditions_api.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_api_types.h"
@@ -239,7 +240,8 @@ void mech_jump(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    char **target_argument_slot = checked_storage_at(args, 3, sizeof(*args), 0);
+    char **target_argument_slot =
+        (char **)checked_storage_at((void *)args, 3, sizeof(*args), 0);
     targetID[0] = *checked_string_suffix(*target_argument_slot, 0);
     targetID[1] = *checked_string_suffix(*target_argument_slot, 1);
     target = FindTargetDBREFFromMapNumber(mech, targetID);
@@ -272,8 +274,13 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                    "Invalid jump coordinates!");
       return;
     }
-    FindXY(mech_position_real_x(mech), mech_position_real_y(mech), bearing,
-           range, &realx, &realy);
+    MapRealPosition projected = map_project_position(
+        &(MapProjection){.origin = {.x = mech_position_real_x(mech),
+                                    .y = mech_position_real_y(mech)},
+                         .bearing = bearing,
+                         .range = range});
+    realx = projected.x;
+    realy = projected.y;
 
     /* This is so we are jumping to the center of a hex */
     /* and the bearing jives with the target hex */
@@ -331,8 +338,10 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     return;
   }
   MapCoordToRealCoord(mapx, mapy, &realx, &realy);
-  bearing = FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
-                        realx, realy);
+  bearing =
+      map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                              .y = mech_position_real_y(mech)},
+                                    .end = {.x = realx, .y = realy}});
 
   /* TAKE OFF! */
   const double jump_distance =

@@ -19,6 +19,7 @@
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
 #include "mech_physical.h"
+#include "mech_physical_api.h"
 #include "mech_physical_internal.h"
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
@@ -36,8 +37,21 @@ void physical_damage_apply(Mech *target, Mech *attacker, int cause_pilot,
                            int critical, int damage, int glancing) {
   BtechContext *context = mech_context(target);
   btech_context_damage_experience_mode_set(context, BTECH_DAMAGE_XP_PILOTING);
-  DamageMech(target, attacker, cause_pilot, pilot, hit_location, rear, critical,
-             damage, glancing, -1, 0, -1, 0, 0);
+  mech_damage_apply(&(MechDamageRequest){.target = target,
+                                         .attacker = attacker,
+                                         .line_of_sight = cause_pilot,
+                                         .attack_pilot = pilot,
+                                         .hit_location = hit_location,
+                                         .rear = rear,
+                                         .critical = critical,
+                                         .armor_damage = damage,
+                                         .internal_damage = glancing,
+                                         .transfer = MECH_DAMAGE_NORMAL,
+                                         .cause = -1,
+                                         .base_to_hit = 0,
+                                         .weapon_index = -1,
+                                         .ammunition_mode = 0,
+                                         .ignore_swarmers = 0});
   btech_context_damage_experience_mode_set(context, BTECH_DAMAGE_XP_GUNNERY);
 }
 
@@ -48,8 +62,21 @@ void physical_damage_apply_without_experience(Mech *target, Mech *attacker,
                                               int glancing) {
   BtechContext *context = mech_context(target);
   btech_context_damage_experience_mode_set(context, BTECH_DAMAGE_XP_NONE);
-  DamageMech(target, attacker, cause_pilot, pilot, hit_location, rear, critical,
-             damage, glancing, -1, 0, -1, 0, 0);
+  mech_damage_apply(&(MechDamageRequest){.target = target,
+                                         .attacker = attacker,
+                                         .line_of_sight = cause_pilot,
+                                         .attack_pilot = pilot,
+                                         .hit_location = hit_location,
+                                         .rear = rear,
+                                         .critical = critical,
+                                         .armor_damage = damage,
+                                         .internal_damage = glancing,
+                                         .transfer = MECH_DAMAGE_NORMAL,
+                                         .cause = -1,
+                                         .base_to_hit = 0,
+                                         .weapon_index = -1,
+                                         .ammunition_mode = 0,
+                                         .ignore_swarmers = 0});
   btech_context_damage_experience_mode_set(context, BTECH_DAMAGE_XP_GUNNERY);
 }
 
@@ -75,8 +102,13 @@ void PhysicalTrip(Mech *mech, Mech *target) {
 /*
  * Damage the victim.
  */
-void PhysicalDamage(Mech *mech, Mech *target, int weightdmg,
-                    PhysicalAttackType AttackType, int sect, int glance) {
+void physical_damage_resolve(const PhysicalDamageRequest *request) {
+  Mech *mech = request->attacker;
+  Mech *target = request->target;
+  const int weightdmg = request->weight_divisor;
+  const PhysicalAttackType AttackType = request->attack_type;
+  const int sect = request->section;
+  const int glance = request->glancing_damage;
 
   int hitloc = 0, damage, hitgroup = 0, isrear, iscritical;
 
@@ -117,11 +149,17 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg,
   switch (AttackType) {
   case PA_PUNCH:
 
-    if (!mech_critical_is_operational_special(mech, sect, 2, LOWER_ACTUATOR)) {
+    if (!mech_critical_is_operational_special(
+            &(CriticalSpecialCheck){.mech = mech,
+                                    .slot = {.section = sect, .critical = 2},
+                                    .special = LOWER_ACTUATOR})) {
       damage = damage / 2;
     }
 
-    if (!mech_critical_is_operational_special(mech, sect, 1, UPPER_ACTUATOR)) {
+    if (!mech_critical_is_operational_special(
+            &(CriticalSpecialCheck){.mech = mech,
+                                    .slot = {.section = sect, .critical = 1},
+                                    .special = UPPER_ACTUATOR})) {
       damage = damage / 2;
     }
 
@@ -207,10 +245,16 @@ void PhysicalDamage(Mech *mech, Mech *target, int weightdmg,
 
   case PA_KICK:
 
-    if (!mech_critical_is_operational_special(mech, sect, 2, LOWER_ACTUATOR))
+    if (!mech_critical_is_operational_special(
+            &(CriticalSpecialCheck){.mech = mech,
+                                    .slot = {.section = sect, .critical = 2},
+                                    .special = LOWER_ACTUATOR}))
       damage = damage / 2;
 
-    if (!mech_critical_is_operational_special(mech, sect, 1, UPPER_ACTUATOR))
+    if (!mech_critical_is_operational_special(
+            &(CriticalSpecialCheck){.mech = mech,
+                                    .slot = {.section = sect, .critical = 1},
+                                    .special = UPPER_ACTUATOR}))
       damage = damage / 2;
 
     if (mech_condition_summary(target).fallen ||

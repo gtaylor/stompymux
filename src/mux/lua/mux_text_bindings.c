@@ -7,6 +7,7 @@
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
 
@@ -36,58 +37,66 @@ static int lua_mux_is_printable_ascii(lua_State *state) {
   return 1;
 }
 
-static bool lua_mux_style_open_string(lua_State *state, int table,
-                                      const char *field, const char *tag,
-                                      char *markup, char **cursor,
-                                      size_t *open_count) {
+typedef enum LuaStylePropertyKind {
+  LUA_STYLE_PROPERTY_STRING,
+  LUA_STYLE_PROPERTY_BOOLEAN,
+} LuaStylePropertyKind;
+
+typedef struct LuaStylePropertyRequest {
+  lua_State *state;
+  int table;
+  const char *field;
+  const char *tag;
+  LuaStylePropertyKind kind;
+  char *markup;
+  char **cursor;
+  size_t *open_count;
+} LuaStylePropertyRequest;
+
+typedef struct LuaStyleProperty {
+  const char *field;
+  const char *tag;
+  LuaStylePropertyKind kind;
+} LuaStyleProperty;
+
+static bool lua_mux_style_open(const LuaStylePropertyRequest *request) {
+  lua_State *state = request->state;
   const char *value;
-
-  lua_getfield(state, table, field);
-  if (lua_isnil(state, -1)) {
-    lua_pop(state, 1);
-    return true;
-  }
-  if (!lua_isstring(state, -1)) {
-    lua_pop(state, 1);
-    return false;
-  }
-  value = lua_tostring(state, -1);
-  if (strchr(value, '[') || strchr(value, ']')) {
-    lua_pop(state, 1);
-    return false;
-  }
-  safe_str("[", markup, cursor);
-  safe_str(tag, markup, cursor);
-  safe_str(value, markup, cursor);
-  safe_str("]", markup, cursor);
-  (*open_count)++;
-  lua_pop(state, 1);
-  return true;
-}
-
-static bool lua_mux_style_open_bool(lua_State *state, int table,
-                                    const char *field, const char *tag,
-                                    char *markup, char **cursor,
-                                    size_t *open_count) {
   bool enabled;
 
-  lua_getfield(state, table, field);
+  lua_getfield(state, request->table, request->field);
   if (lua_isnil(state, -1)) {
     lua_pop(state, 1);
     return true;
   }
-  if (!lua_isboolean(state, -1)) {
+  if (request->kind == LUA_STYLE_PROPERTY_BOOLEAN) {
+    if (!lua_isboolean(state, -1)) {
+      lua_pop(state, 1);
+      return false;
+    }
+    enabled = lua_toboolean(state, -1);
     lua_pop(state, 1);
-    return false;
+    if (!enabled)
+      return true;
+  } else {
+    if (!lua_isstring(state, -1)) {
+      lua_pop(state, 1);
+      return false;
+    }
+    value = lua_tostring(state, -1);
+    if (strchr(value, '[') || strchr(value, ']')) {
+      lua_pop(state, 1);
+      return false;
+    }
   }
-  enabled = lua_toboolean(state, -1);
-  lua_pop(state, 1);
-  if (!enabled)
-    return true;
-  safe_str("[", markup, cursor);
-  safe_str(tag, markup, cursor);
-  safe_str("]", markup, cursor);
-  (*open_count)++;
+  safe_str("[", request->markup, request->cursor);
+  safe_str(request->tag, request->markup, request->cursor);
+  if (request->kind == LUA_STYLE_PROPERTY_STRING) {
+    safe_str(value, request->markup, request->cursor);
+    lua_pop(state, 1);
+  }
+  safe_str("]", request->markup, request->cursor);
+  (*request->open_count)++;
   return true;
 }
 
@@ -107,18 +116,29 @@ static int lua_mux_style(lua_State *state) {
   markup = alloc_lbuf("lua_mux_style.markup");
   cursor = markup;
   *cursor = '\0';
-  if (!lua_mux_style_open_string(state, 2, "foreground", "fg=", markup, &cursor,
-                                 &open_count) ||
-      !lua_mux_style_open_string(state, 2, "background", "bg=", markup, &cursor,
-                                 &open_count) ||
-      !lua_mux_style_open_bool(state, 2, "bold", "bold", markup, &cursor,
-                               &open_count) ||
-      !lua_mux_style_open_bool(state, 2, "underline", "underline", markup,
-                               &cursor, &open_count) ||
-      !lua_mux_style_open_bool(state, 2, "inverse", "inverse", markup, &cursor,
-                               &open_count)) {
-    free_lbuf(markup);
-    return luaL_error(state, "style fields have invalid types");
+  static const LuaStyleProperty properties[] = {
+      {"foreground", "fg=", LUA_STYLE_PROPERTY_STRING},
+      {"background", "bg=", LUA_STYLE_PROPERTY_STRING},
+      {"bold", "bold", LUA_STYLE_PROPERTY_BOOLEAN},
+      {"underline", "underline", LUA_STYLE_PROPERTY_BOOLEAN},
+      {"inverse", "inverse", LUA_STYLE_PROPERTY_BOOLEAN}};
+  for (size_t index = 0; index < sizeof(properties) / sizeof(properties[0]);
+       index++) {
+    const LuaStyleProperty *property = checked_storage_at_const(
+        properties, sizeof(properties) / sizeof(properties[0]),
+        sizeof(*properties), index);
+    if (!lua_mux_style_open(
+            &(LuaStylePropertyRequest){.state = state,
+                                       .table = 2,
+                                       .field = property->field,
+                                       .tag = property->tag,
+                                       .kind = property->kind,
+                                       .markup = markup,
+                                       .cursor = &cursor,
+                                       .open_count = &open_count})) {
+      free_lbuf(markup);
+      return luaL_error(state, "style fields have invalid types");
+    }
   }
   safe_str(value, markup, &cursor);
   for (size_t index = 0; index < open_count; index++)

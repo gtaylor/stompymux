@@ -245,7 +245,11 @@ void map_delice(DbRef player, BattleMap *map, char *buffer) {
   ice_melt(player, map, num);
 }
 
-void possibly_blow_ice(Mech *mech, int weapindx, int x, int y) {
+void ice_weapon_impact_resolve(const TerrainStructureWeaponImpact *impact) {
+  Mech *mech = impact->attacker;
+  const int weapindx = impact->weapon_index;
+  const int x = impact->position.x;
+  const int y = impact->position.y;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
@@ -258,7 +262,11 @@ void possibly_blow_ice(Mech *mech, int weapindx, int x, int y) {
   break_sub(map, nullptr, x, y, "goes swimming as ice breaks!");
 }
 
-void possibly_blow_bridge(Mech *mech, int weapindx, int x, int y) {
+void bridge_weapon_impact_resolve(const TerrainStructureWeaponImpact *impact) {
+  Mech *mech = impact->attacker;
+  const int weapindx = impact->weapon_index;
+  const int x = impact->position.x;
+  const int y = impact->position.y;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
@@ -267,7 +275,7 @@ void possibly_blow_bridge(Mech *mech, int weapindx, int x, int y) {
   if (battle_map_bridges_have_capacity(map))
     return;
   if (btech_random_range(mech_context(mech), 1,
-                         10 * (1 + map_elevation_get(map, x, y))) >
+                         (long)(10 * (1 + map_elevation_get(map, x, y)))) >
       weapon_catalogue_damage(weapindx)) {
     HexLOSBroadcast(map, x, y, "The bridge at $H shudders from direct hit!");
     return;

@@ -75,7 +75,7 @@ constexpr int TYPE_SMOKE = 1;
    datac = char it replaced */
 constexpr int TYPE_DEC = 2;
 constexpr int TYPE_LAST_DEC = 2;
-/* datac = type, datas = damage it causes, datai = extra */
+/* datac = type, datas = damage it causes, payload.scalar = extra */
 constexpr int TYPE_MINE = 3;
 /* Building obj=# of the internal map */
 constexpr int TYPE_BUILD = 4;
@@ -85,7 +85,7 @@ constexpr int TYPE_LEAVE = 5;
 constexpr int TYPE_ENTRANCE = 6;
 /* If this exists, we got a maplink propably */
 constexpr int TYPE_LINKED = 7;
-/* hangar / mine bit array, if any (in datai) */
+/* hangar / mine bit array, if any (in payload.bits) */
 constexpr int TYPE_BITS = 8;
 /* Land-block */
 constexpr int TYPE_B_LZ = 9;
@@ -123,8 +123,11 @@ typedef struct MapObject {
   int datac;
   /* Type-specific short data, such as a duration or mine damage. */
   short datas;
-  /* Type-specific long data, such as map bits or a landing-zone radius. */
-  long datai;
+  /* TYPE_BITS owns bits; every persisted map-object type uses scalar. */
+  union {
+    long scalar;
+    unsigned char **bits;
+  } payload;
 } MapObject;
 
 /* mech has moved since last LOS update */

@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "btech_event.h"
+#include "map_coordinates.h"
 #include "mech_events.h"
 #include "mux/server/platform.h"
 #include "mux/support/doubly_linked_list.h"
@@ -56,7 +57,7 @@ constexpr int AUTOPILOT_FOLLOW_TICK = 4;
       */
 
 #define AUTOPILOT_STARTUP_TICK                                                 \
-  STARTUP_TIME + AUTOPILOT_NC_DELAY /* Delay for startup */
+  (STARTUP_TIME + AUTOPILOT_NC_DELAY) /* Delay for startup */
 
 /* Defines for the autogun/autosensor stuff */
 constexpr int AUTO_GUN_TICK = 1;          /* Every second */
@@ -387,10 +388,15 @@ void auto_leave_event(MuxEvent *muxevent);
 void auto_enter_event(MuxEvent *muxevent);
 void auto_command_roam(Autopilot *autopilot, Mech *mech);
 void auto_astar_roam_event(MuxEvent *muxevent);
-void speed_up_if_neccessary(Autopilot *autopilot, Mech *mech, int target_x,
-                            int target_y, int bearing);
-int slow_down_if_neccessary(Autopilot *autopilot, Mech *mech, float range,
-                            int bearing, int target_x, int target_y);
+typedef struct AutopilotApproachRequest {
+  Autopilot *autopilot;
+  Mech *mech;
+  MapHexPosition target;
+  int bearing;
+  float range;
+} AutopilotApproachRequest;
+void autopilot_speed_up_for_target(const AutopilotApproachRequest *request);
+bool autopilot_slow_down_for_target(const AutopilotApproachRequest *request);
 void update_wanted_heading(Autopilot *autopilot, Mech *mech, int bearing);
 
 /* From autopilot_ai.c */

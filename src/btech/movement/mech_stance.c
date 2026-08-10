@@ -186,7 +186,8 @@ void mech_sprint(DbRef player, void *data, char *buffer) {
 
   d |= MODE_SPRINT | (condition.sprinting ? MODE_OFF : MODE_ON);
   if (d & MODE_ON) {
-    if ((i = mech_recycling_state(mech, CHECK_BOTH)) > 0) {
+    i = mech_recycling_state(mech, CHECK_BOTH);
+    if (i > 0) {
       mech_printf(mech, MECHALL, "You have %s recycling!",
                   (i == 1   ? "weapons"
                    : i == 2 ? "limbs"
@@ -304,7 +305,8 @@ void mech_evade(DbRef player, void *data, char *buffer) {
 
   d |= MODE_EVADE | (condition.evading ? MODE_OFF : MODE_ON);
   if (d & MODE_ON) {
-    if ((i = mech_recycling_state(mech, CHECK_BOTH)) > 0) {
+    i = mech_recycling_state(mech, CHECK_BOTH);
+    if (i > 0) {
       mech_printf(mech, MECHALL, "You have %s recycling!",
                   (i == 1   ? "weapons"
                    : i == 2 ? "limbs"
@@ -396,7 +398,8 @@ void mech_dodge(DbRef player, void *data, char *buffer) {
 
   d |= MODE_DODGE | (condition.dodging ? MODE_OFF : MODE_ON);
   if (d & MODE_ON) {
-    if ((i = mech_recycling_state(mech, CHECK_PHYS)) > 0) {
+    i = mech_recycling_state(mech, CHECK_PHYS);
+    if (i > 0) {
       mech_printf(mech, MECHALL, "You have %s recycling!",
                   (i == 1   ? "weapons"
                    : i == 2 ? "limbs"

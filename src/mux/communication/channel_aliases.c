@@ -27,13 +27,14 @@
 
 struct comuser *channel_user_at(const struct channel *channel, size_t index) {
   return *(struct comuser *const *)checked_storage_at_const(
-      channel->users, (size_t)channel->num_users, sizeof(*channel->users),
-      index);
+      (const void *)channel->users, (size_t)channel->num_users,
+      sizeof(*channel->users), index);
 }
 
 struct comuser **channel_user_slot(struct channel *channel, size_t index) {
-  return checked_storage_at(channel->users, (size_t)channel->max_users,
-                            sizeof(*channel->users), index);
+  return (struct comuser **)checked_storage_at((void *)channel->users,
+                                               (size_t)channel->max_users,
+                                               sizeof(*channel->users), index);
 }
 
 void do_joinchannel(EvaluationContext *evaluation, DbRef player,
@@ -47,8 +48,8 @@ void do_joinchannel(EvaluationContext *evaluation, DbRef player,
     ch->num_users++;
     if (ch->num_users >= ch->max_users) {
       const int capacity = ch->max_users + 10;
-      struct comuser **users =
-          realloc(ch->users, sizeof(*ch->users) * (size_t)capacity);
+      struct comuser **users = (struct comuser **)realloc(
+          (void *)ch->users, sizeof(*ch->users) * (size_t)capacity);
 
       if (users == nullptr) {
         ch->num_users--;
@@ -57,7 +58,7 @@ void do_joinchannel(EvaluationContext *evaluation, DbRef player,
       }
       ch->users = users;
       ch->max_users = capacity;
-      memset(checked_storage_at(ch->users, (size_t)ch->max_users,
+      memset(checked_storage_at((void *)ch->users, (size_t)ch->max_users,
                                 sizeof(*ch->users), (size_t)ch->num_users - 1),
              0,
              sizeof(struct comuser *) *
@@ -249,12 +250,16 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
     return;
   }
 
-  if (!(ch = select_channel(evaluation->runtime->channels, channel))) {
+  ch = select_channel(evaluation->runtime->channels, channel);
+  if (!ch) {
     notify_printf(evaluation, player, "Channel %s does not exist yet.",
                   channel);
     return;
   }
-  if (!comsys_test_access(evaluation, player, CHANNEL_JOIN, ch)) {
+  if (!comsys_test_access(&(ChannelAccessRequest){.evaluation = evaluation,
+                                                  .player = player,
+                                                  .access = CHANNEL_JOIN,
+                                                  .channel = ch})) {
     raw_notify(evaluation, player,
                "Sorry, this channel type does not allow you to join.");
     return;
@@ -284,7 +289,8 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
       raw_notify(evaluation, player, "Unable to add that channel alias.");
       return;
     }
-    channels = realloc(c->channels, sizeof(*c->channels) * (size_t)capacity);
+    channels = (char **)realloc((void *)c->channels,
+                                sizeof(*c->channels) * (size_t)capacity);
     if (channels == nullptr) {
       c->alias = aliases;
       raw_notify(evaluation, player, "Unable to add that channel alias.");
@@ -297,9 +303,9 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
   if (where < c->numchannels) {
     memmove(commac_alias_at(c, (size_t)where + 1),
             commac_alias_at(c, (size_t)where),
-            (size_t)(6 * (c->numchannels - where)));
-    memmove(commac_channel_slot(c, (size_t)where + 1),
-            commac_channel_slot(c, (size_t)where),
+            6U * (size_t)(c->numchannels - where));
+    memmove((void *)commac_channel_slot(c, (size_t)where + 1),
+            (const void *)commac_channel_slot(c, (size_t)where),
             sizeof(c->channels) * (size_t)(c->numchannels - where));
   }
 
@@ -347,9 +353,9 @@ void do_delcom(CommandInvocation *invocation) {
       if (i < c->numchannels) {
         memmove(commac_alias_at(c, (size_t)i),
                 commac_alias_at(c, (size_t)i + 1),
-                (size_t)(6 * (c->numchannels - i)));
-        memmove(commac_channel_slot(c, (size_t)i),
-                commac_channel_slot(c, (size_t)i + 1),
+                6U * (size_t)(c->numchannels - i));
+        memmove((void *)commac_channel_slot(c, (size_t)i),
+                (const void *)commac_channel_slot(c, (size_t)i + 1),
                 sizeof(c->channels) * (size_t)(c->numchannels - i));
       }
       return;
@@ -364,7 +370,8 @@ void comsys_delete_channel_alias(EvaluationContext *evaluation, DbRef player,
   struct comuser *user;
   int i;
 
-  if (!(ch = select_channel(evaluation->runtime->channels, channel))) {
+  ch = select_channel(evaluation->runtime->channels, channel);
+  if (!ch) {
     notify_printf(evaluation, player, "Unknown channel %s.", channel);
   } else {
 
@@ -394,8 +401,8 @@ void comsys_delete_channel_alias(EvaluationContext *evaluation, DbRef player,
         free(user);
         ch->num_users--;
         if (i < ch->num_users)
-          memmove(channel_user_slot(ch, (size_t)i),
-                  channel_user_slot(ch, (size_t)i + 1),
+          memmove((void *)channel_user_slot(ch, (size_t)i),
+                  (const void *)channel_user_slot(ch, (size_t)i + 1),
                   sizeof(*ch->users) * (size_t)(ch->num_users - i));
       }
     }

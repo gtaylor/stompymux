@@ -4,11 +4,8 @@
 
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h"
+#include "mux/server/configuration_interpreter.h"
 #include "mux/support/name_table.h"
-
-typedef int (*ConfigurationInterpreter)(void *value, char *text, long extra,
-                                        DbRef player, char *command,
-                                        ConfigurationContext *context);
 
 typedef struct ConfigurationEntry ConfigurationEntry;
 struct ConfigurationEntry {
@@ -29,29 +26,22 @@ extern NameTable logoptions_nametab[];
 extern NameTable access_nametab[];
 extern NameTable list_names[];
 
-int configuration_status_from_succfail(DbRef player, char *command, int success,
-                                       int failure,
-                                       ConfigurationContext *context);
+typedef struct ConfigurationParseCounts {
+  int success;
+  int failure;
+} ConfigurationParseCounts;
 
-int cf_int(int *value, char *text, long extra, DbRef player, char *command,
-           ConfigurationContext *context);
-int cf_bool(int *value, char *text, long extra, DbRef player, char *command,
-            ConfigurationContext *context);
-int cf_bool_bit(int *value, char *text, long extra, DbRef player, char *command,
-                ConfigurationContext *context);
-int cf_string(int *value, char *text, long extra, DbRef player, char *command,
-              ConfigurationContext *context);
-int cf_flagalias(int *value, char *text, long extra, DbRef player,
-                 char *command, ConfigurationContext *context);
-int cf_set_flags(void *value, char *text, long extra, DbRef player,
-                 char *command, ConfigurationContext *context);
-int cf_badname(int *value, char *text, long extra, DbRef player, char *command,
-               ConfigurationContext *context);
-int cf_site(long **value, char *text, long extra, DbRef player, char *command,
-            ConfigurationContext *context);
-int cf_named_color(void *value, char *text, long extra, DbRef player,
-                   char *command, ConfigurationContext *context);
-int cf_osc8_preset(void *value, char *text, long extra, DbRef player,
-                   char *command, ConfigurationContext *context);
-int cf_cf_access(int *value, char *text, long extra, DbRef player,
-                 char *command, ConfigurationContext *context);
+int configuration_status_from_counts(const ConfigurationCall *call,
+                                     ConfigurationParseCounts counts);
+
+int cf_int(const ConfigurationCall *call);
+int cf_bool(const ConfigurationCall *call);
+int cf_bool_bit(const ConfigurationCall *call);
+int cf_string(const ConfigurationCall *call);
+int cf_flagalias(const ConfigurationCall *call);
+int cf_set_flags(const ConfigurationCall *call);
+int cf_badname(const ConfigurationCall *call);
+int cf_site(const ConfigurationCall *call);
+int cf_named_color(const ConfigurationCall *call);
+int cf_osc8_preset(const ConfigurationCall *call);
+int cf_cf_access(const ConfigurationCall *call);

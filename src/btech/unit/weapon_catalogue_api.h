@@ -67,5 +67,3 @@ WeaponRangeProfile weapon_catalogue_ranges(int weapon_index);
 int weapon_catalogue_cluster_size(int weapon_index);
 int weapon_catalogue_effective_range(int weapon_index, bool extended);
 int weapon_catalogue_effective_water_range(int weapon_index, bool extended);
-int weapon_catalogue_range_for_section(const Mech *mech, int section,
-                                       int weapon_index, bool extended);

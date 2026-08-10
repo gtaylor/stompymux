@@ -47,13 +47,30 @@ typedef enum ArmorLevel : int {
   ARMOR_LEVEL_REPAIRING = 5,
 } ArmorLevel;
 
+typedef struct ArmorEvaluation {
+  ArmorLevel level;
+  int value;
+} ArmorEvaluation;
+
+typedef struct ArmorEvaluationRequest {
+  Mech *mech;
+  int section;
+  int flags;
+} ArmorEvaluationRequest;
+
+typedef struct PhysicalWeaponRequest {
+  Mech *mech;
+  int section;
+  MechPhysicalWeaponType type;
+} PhysicalWeaponRequest;
+
 static_assert(ARMOR_LEVEL_GREAT == 0 && ARMOR_LEVEL_REPAIRING == 5);
 
 /* mech.status.c */
 void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech);
 void show_miscbrands(Mech *mech, DbRef player);
 void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                        int own, int usex);
+                        bool use_model_reference);
 void PrintHeatBar(EvaluationContext *evaluation, DbRef player, Mech *mech);
 void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                      int own);
@@ -64,18 +81,31 @@ PartDisplayName part_name(BtechContext *context, int type, int brand);
 PartDisplayName part_name_long(BtechContext *context, int type, int brand);
 PartDisplayName pos_part_name(Mech *mech, int index, int loop);
 void mech_weaponspecs(DbRef player, void *data, const char *buffer);
-char *critstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]);
-char *sectstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]);
-char *armorstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]);
-char *weaponstatus_func(Mech *mech, char *arg, char buffer[static MBUF_SIZE]);
-char *critslot_func(Mech *mech, char *buf_section, char *buf_critnum,
-                    char *buf_flag, char buffer[static MBUF_SIZE]);
+typedef struct MechStatusTextRequest {
+  Mech *mech;
+  const char *argument;
+  char *buffer;
+} MechStatusTextRequest;
+
+typedef struct CriticalSlotTextRequest {
+  Mech *mech;
+  const char *section;
+  const char *critical;
+  const char *field;
+  char *buffer;
+} CriticalSlotTextRequest;
+
+char *critstatus_func(const MechStatusTextRequest *request);
+char *sectstatus_func(const MechStatusTextRequest *request);
+char *armorstatus_func(const MechStatusTextRequest *request);
+char *weaponstatus_func(const MechStatusTextRequest *request);
+char *critslot_func(const CriticalSlotTextRequest *request);
 void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                     int index);
 const char *evaluate_ammo_amount(int now, int max);
 void PrintWeaponStatus(EvaluationContext *evaluation, Mech *mech, DbRef player);
-ArmorLevel ArmorEvaluateSerious(Mech *mech, int loc, int flag, int *opt);
+ArmorEvaluation armor_evaluate(const ArmorEvaluationRequest *request);
 void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                       int owner);
-int hasPhysical(Mech *objMech, int wLoc, int wPhysType);
-int canUsePhysical(Mech *objMech, int wLoc, int wPhysType);
+bool hasPhysical(const PhysicalWeaponRequest *request);
+bool canUsePhysical(const PhysicalWeaponRequest *request);

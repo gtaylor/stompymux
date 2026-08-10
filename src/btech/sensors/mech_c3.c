@@ -6,6 +6,7 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_c3_api.h"
 #include "mech_c3_misc_api.h"
 #include "mech_classification_api.h"
@@ -39,8 +40,8 @@ static DbRef c3_network_value(const DbRef *network, int index) {
       network, C3_NETWORK_SIZE, sizeof(*network), (size_t)index);
 }
 
-#define C3_POS_IN_NETWORK -1
-#define C3_POS_NO_ROOM -2
+#define C3_POS_IN_NETWORK (-1)
+#define C3_POS_NO_ROOM (-2)
 
 #define C3_MASTER_MECH_SIZE 5
 #define C3_MASTER_OTHER_SIZE 1
@@ -56,7 +57,10 @@ int mech_c3_master_slot_count(const Mech *mech) {
     return C3_MASTER_OTHER_SIZE;
 }
 
-bool mech_c3_master_slot_is_working(Mech *mech, int section, int slot) {
+bool mech_c3_master_slot_is_working(Mech *mech,
+                                    CriticalSlotReference reference) {
+  const int section = reference.section;
+  const int slot = reference.critical;
   int x = 0;
   int y, t;
   int wcWorkingSlots = 0;
@@ -68,7 +72,8 @@ bool mech_c3_master_slot_is_working(Mech *mech, int section, int slot) {
   while (x < CritsInLoc(mech, section)) {
     tDoBump = 0;
 
-    if ((t = mech_critical_part_type(mech, section, x))) {
+    t = mech_critical_part_type(mech, section, x);
+    if (t) {
       if (special_from_equipment_index(t) == C3_MASTER) {
         if (x < wStartCheck) {
           tDoBump = 1;
@@ -108,7 +113,8 @@ int mech_c3_working_master_count(Mech *mech) {
     wcWorkingSlots = 0;
 
     for (y = 0; y < CritsInLoc(mech, x); y++) {
-      if ((t = mech_critical_part_type(mech, x, y))) {
+      t = mech_critical_part_type(mech, x, y);
+      if (t) {
         if (special_from_equipment_index(t) == C3_MASTER) {
           mech_network_debug(
               mech_context(mech),
@@ -164,7 +170,8 @@ int mech_c3_total_master_count(Mech *mech) {
     wcSlots = 0;
 
     for (y = 0; y < CritsInLoc(mech, x); y++) {
-      if ((t = mech_critical_part_type(mech, x, y))) {
+      t = mech_critical_part_type(mech, x, y);
+      if (t) {
         if (special_from_equipment_index(t) == C3_MASTER) {
           mech_network_debug(
               mech_context(mech),
@@ -330,7 +337,8 @@ int mech_c3_network_trim(Mech *mech, DbRef *myTempNetwork,
   return newNetworkSize;
 }
 
-int mech_c3_free_network_position(Mech *mech, Mech *mechToAdd) {
+int mech_c3_free_network_position(const MechNetworkLink *link) {
+  Mech *mech = link->owner;
   int i;
   DbRef otherRef;
 
@@ -340,7 +348,7 @@ int mech_c3_free_network_position(Mech *mech, Mech *mechToAdd) {
     otherRef = mech_c3_network_node(mech, i);
 
     if (otherRef > 0) {
-      if (otherRef == mech_dbref(mechToAdd))
+      if (otherRef == mech_dbref(link->member))
         return C3_POS_IN_NETWORK;
     } else
       return i;
@@ -387,7 +395,8 @@ void mech_c3_network_add(Mech *mech, Mech *mechToAdd) {
                              mech_dbref(mechToAdd), mech_dbref(mech)));
 
   /* Find a position to add the new mech into my network */
-  wPos = mech_c3_free_network_position(mech, mechToAdd);
+  wPos = mech_c3_free_network_position(
+      &(MechNetworkLink){.owner = mech, .member = mechToAdd});
 
   /* If we have a number that's less than 0, then we have an invalid position.
    * Either we're already in the network or there's not enough room */

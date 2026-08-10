@@ -33,15 +33,20 @@ static int sword_check_arm(Mech *mech, int arm) {
                 arm_used);
     return 0;
   }
-  if (!mech_critical_is_operational_special(mech, arm, 0, SHOULDER_OR_HIP)) {
+  if (!mech_critical_is_operational_special(
+          &(CriticalSpecialCheck){.mech = mech,
+                                  .slot = {.section = arm, .critical = 0},
+                                  .special = SHOULDER_OR_HIP})) {
     mech_printf(
         mech, MECHALL,
         "Your %s shoulder is destroyed, you can't use a sword with that arm.",
         arm_used);
     return 0;
   }
-  if (!mech_critical_is_operational_special(mech, arm, 3,
-                                            HAND_OR_FOOT_ACTUATOR)) {
+  if (!mech_critical_is_operational_special(
+          &(CriticalSpecialCheck){.mech = mech,
+                                  .slot = {.section = arm, .critical = 3},
+                                  .special = HAND_OR_FOOT_ACTUATOR})) {
     mech_printf(
         mech, MECHALL,
         "Your %s hand is destroyed, you can't use a sword with that arm.",
@@ -70,16 +75,40 @@ void mech_sword(DbRef player, void *data, char *buffer) {
   argument_count = mech_parseattributes(buffer, arguments, 5);
   if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
     left_to_hit = right_to_hit = FindPilotPiloting(mech) - 2;
-  if (get_arm_args(&using, &argument_count, &arguments, mech, have_sword,
-                   "a sword"))
+  ArmSelectionResult selection = physical_arm_select(&(ArmSelectionRequest){
+      .using = using,
+      .argument_count = argument_count,
+      .arguments = arguments,
+      .mech = mech,
+      .has_weapon = have_sword,
+      .weapon = "a sword",
+  });
+  if (selection.failed)
     return;
+  using = selection.using;
+  argument_count = selection.argument_count;
+  arguments = selection.arguments;
 
   if ((using & P_LEFT) && sword_check_arm(mech, LARM))
-    PhysicalAttack(mech, 10, left_to_hit, PA_SWORD, argument_count, arguments,
-                   map, LARM);
+    physical_attack_resolve(
+        &(PhysicalAttackRequest){.mech = mech,
+                                 .damage_weight = 10,
+                                 .base_to_hit = left_to_hit,
+                                 .attack_type = PA_SWORD,
+                                 .argument_count = argument_count,
+                                 .arguments = arguments,
+                                 .map = map,
+                                 .section = LARM});
   if ((using & P_RIGHT) && sword_check_arm(mech, RARM))
-    PhysicalAttack(mech, 10, right_to_hit, PA_SWORD, argument_count, arguments,
-                   map, RARM);
+    physical_attack_resolve(
+        &(PhysicalAttackRequest){.mech = mech,
+                                 .damage_weight = 10,
+                                 .base_to_hit = right_to_hit,
+                                 .attack_type = PA_SWORD,
+                                 .argument_count = argument_count,
+                                 .arguments = arguments,
+                                 .map = map,
+                                 .section = RARM});
   if (!using)
     mech_notify(mech, MECHALL, "You have no sword to chop people with!");
 }
@@ -154,9 +183,20 @@ void mech_kickortrip(DbRef player, void *data, char *buffer,
   argc = mech_parseattributes(buffer, args, 5);
 
   // Figure out which leg we're using.
-  if (get_arm_args(&using, &argc, &args, mech, have_punch, "")) {
+  ArmSelectionResult selection = physical_arm_select(&(ArmSelectionRequest){
+      .using = using,
+      .argument_count = argc,
+      .arguments = args,
+      .mech = mech,
+      .has_weapon = have_punch,
+      .weapon = "",
+  });
+  if (selection.failed) {
     return;
   }
+  using = selection.using;
+  argc = selection.argument_count;
+  args = selection.arguments;
 
   switch (using) {
   case P_LEFT:
@@ -175,16 +215,23 @@ void mech_kickortrip(DbRef player, void *data, char *buffer,
 
   if (mech_condition_summary(mech).hip_damaged) {
     mech_printf(mech, MECHALL, "You can't %s with a destroyed hip.",
-                phys_form(AttackType, 0));
+                physical_attack_verb(
+                    &(PhysicalVerbRequest){.attack_type = AttackType}));
     return;
   }
 
-  PhysicalAttack(
-      mech, 5,
-      (btech_context_physical_attacks_use_pilot_skill(mech_context(mech))
-           ? FindPilotPiloting(mech) - 2
-           : 3),
-      AttackType, argc, args, mech_map, leg);
+  physical_attack_resolve(&(PhysicalAttackRequest){
+      .mech = mech,
+      .damage_weight = 5,
+      .base_to_hit =
+          btech_context_physical_attacks_use_pilot_skill(mech_context(mech))
+              ? FindPilotPiloting(mech) - 2
+              : 3,
+      .attack_type = AttackType,
+      .argument_count = argc,
+      .arguments = args,
+      .map = mech_map,
+      .section = leg});
 } // end mech_kickortrip()
 
 /**
@@ -303,8 +350,8 @@ void mech_charge(DbRef player, void *data, char *buffer) {
 
     // We've supplied an argument, either a '-' or an ID.
   case 1:
-    char **first_slot =
-        checked_storage_at(args, (size_t)argc, sizeof(*args), 0);
+    char **first_slot = (char **)checked_storage_at((void *)args, (size_t)argc,
+                                                    sizeof(*args), 0);
     const char *first = *first_slot;
     if (*first == '-') {
       mech_charge_reset(mech);

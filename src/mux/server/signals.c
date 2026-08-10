@@ -85,10 +85,16 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
   } else {
     dprintk("posix_memalign failed with %s", strerror(error_code));
     log_error(
-        handlers->log, LOG_PROBLEMS, "SIG", "ERR",
+        (LogEntry){.log = handlers->log,
+                   .key = LOG_PROBLEMS,
+                   .primary = "SIG",
+                   .secondary = "ERR"},
         "posix_memalign() failed with error %s, alternate stack not used.",
         strerror(error_code));
-    log_error(handlers->log, LOG_PROBLEMS, "SIG", "ERR",
+    log_error((LogEntry){.log = handlers->log,
+                         .key = LOG_PROBLEMS,
+                         .primary = "SIG",
+                         .secondary = "ERR"},
               "running signal_handlers without sigaltstack() will corrupt your "
               "coredumps!");
     handlers->alternate_stack.ss_sp = nullptr;
@@ -164,15 +170,24 @@ static void signal_shutdown(uv_signal_t *handle, int signo) {
   SignalHandlers *handlers = uv_handle_get_data((uv_handle_t *)handle);
   if (signo == SIGINT) {
     dprintk("caught SIGINT");
-    server_shutdown(handlers->control, NOTHING, SHUTDN_EXIT,
-                    "received SIGINT from kernel.");
+    server_shutdown(
+        &(ServerShutdownRequest){.control = handlers->control,
+                                 .player = NOTHING,
+                                 .options = SHUTDN_EXIT,
+                                 .message = "received SIGINT from kernel."});
   } else if (signo == SIGTERM) {
     dprintk("caught SIGTERM");
-    server_shutdown(handlers->control, NOTHING, SHUTDN_EXIT,
-                    "received SIGTERM from kernel.");
+    server_shutdown(
+        &(ServerShutdownRequest){.control = handlers->control,
+                                 .player = NOTHING,
+                                 .options = SHUTDN_EXIT,
+                                 .message = "received SIGTERM from kernel."});
   } else
-    server_shutdown(handlers->control, NOTHING, SHUTDN_EXIT | SHUTDN_KILLED,
-                    "received SIGUSR2 from kernel.");
+    server_shutdown(
+        &(ServerShutdownRequest){.control = handlers->control,
+                                 .player = NOTHING,
+                                 .options = SHUTDN_EXIT | SHUTDN_KILLED,
+                                 .message = "received SIGUSR2 from kernel."});
 }
 
 static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext) {

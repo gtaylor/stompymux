@@ -13,8 +13,12 @@
 #include "mech_notify_api.h"
 #include "section_types.h"
 
-void mech_ammunition_explode(Mech *attacker, Mech *mech, int ammunition_section,
-                             int ammunition_critical, int damage) {
+void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
+  Mech *attacker = request->attacker;
+  Mech *mech = request->target;
+  const int ammunition_section = request->ammunition.section;
+  const int ammunition_critical = request->ammunition.critical;
+  int damage = request->damage;
   BtechContext *context = mech_context(mech);
   int ammunition_mode =
       mech_critical_ammo_mode(mech, ammunition_section, ammunition_critical);
@@ -40,11 +44,38 @@ void mech_ammunition_explode(Mech *attacker, Mech *mech, int ammunition_section,
     damage = damage / 2;
   }
   if (mech_class(mech) == CLASS_BSUIT)
-    DamageMech(mech, attacker, 0, -1, ammunition_section, 0, 0, damage, 0, -1,
-               0, -1, 0, 0);
+    mech_damage_apply(&(MechDamageRequest){.target = mech,
+                                           .attacker = attacker,
+                                           .line_of_sight = 0,
+                                           .attack_pilot = -1,
+                                           .hit_location = ammunition_section,
+                                           .rear = 0,
+                                           .critical = 0,
+                                           .armor_damage = damage,
+                                           .internal_damage = 0,
+                                           .transfer = MECH_DAMAGE_NORMAL,
+                                           .cause = -1,
+                                           .base_to_hit = 0,
+                                           .weapon_index = -1,
+                                           .ammunition_mode = 0,
+                                           .ignore_swarmers = 0});
   else
-    DamageMech(mech, attacker, 0, -1, ammunition_section, 0, 0, -1, damage, -1,
-               0, -1, 0, 0);
+    mech_damage_apply(
+        &(MechDamageRequest){.target = mech,
+                             .attacker = attacker,
+                             .line_of_sight = 0,
+                             .attack_pilot = -1,
+                             .hit_location = ammunition_section,
+                             .rear = 0,
+                             .critical = 0,
+                             .armor_damage = 0,
+                             .internal_damage = damage,
+                             .transfer = MECH_DAMAGE_FORCE_TRANSFER,
+                             .cause = -1,
+                             .base_to_hit = 0,
+                             .weapon_index = -1,
+                             .ammunition_mode = 0,
+                             .ignore_swarmers = 0});
 
   if (mech_class(mech) != CLASS_BSUIT) {
     mech_notify(mech, MECHPILOT,

@@ -14,5 +14,11 @@ constexpr int LOOK_OUTSIDE = 8;   /* Look outside a container. */
 constexpr int LK_SHOWATTR = 0x0004;
 constexpr int LK_SHOWEXIT = 0x0008;
 
-void look_in(EvaluationContext *evaluation, DbRef player, DbRef location,
-             int key);
+typedef struct LookRequest {
+  EvaluationContext *evaluation;
+  DbRef viewer;
+  DbRef location;
+  int key;
+} LookRequest;
+
+void look_in(const LookRequest *request);

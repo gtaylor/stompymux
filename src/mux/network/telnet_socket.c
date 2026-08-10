@@ -67,7 +67,10 @@ static void descriptor_write_complete(uv_write_t *request, int status) {
   descriptor->output_size -= (int)write->size;
   free(write);
   if (status < 0 && !descriptor->is_dead) {
-    log_error(descriptor_log(descriptor), LOG_PROBLEMS, "NET", "WRITE",
+    log_error((LogEntry){.log = descriptor_log(descriptor),
+                         .key = LOG_PROBLEMS,
+                         .primary = "NET",
+                         .secondary = "WRITE"},
               "Write failed on fd %d: %s", descriptor->descriptor,
               uv_strerror(status));
     descriptor_shutdown(descriptor, DESCRIPTOR_SHUTDOWN_SOCKDIED);
@@ -196,7 +199,10 @@ static bool listener_start(TelnetListener *listener, int port, bool ipv6) {
 fail_close:
   uv_close((uv_handle_t *)&listener->handle, listener_closed);
 fail:
-  log_error(listener->owner->runtime->log, LOG_ALWAYS, "NET", "LISTEN",
+  log_error((LogEntry){.log = listener->owner->runtime->log,
+                       .key = LOG_ALWAYS,
+                       .primary = "NET",
+                       .secondary = "LISTEN"},
             "Unable to listen on port %d: %s", port, uv_strerror(status));
   return false;
 }
@@ -246,8 +252,10 @@ static void descriptor_read(uv_stream_t *stream, ssize_t read_size,
   }
   if (descriptor->is_autodark) {
     descriptor->is_autodark = false;
-    game_object_set_flag(descriptor_runtime(descriptor)->world->database,
-                         descriptor->player, OBJECT_FLAG_DARK, false);
+    game_object_set_flag(&(ObjectFlagChangeRequest){
+        .database = descriptor_runtime(descriptor)->world->database,
+        .object = descriptor->player,
+        .flag = OBJECT_FLAG_DARK});
   }
   descriptor->input_tot += (int)read_size;
   descriptor_retain(descriptor);
@@ -304,9 +312,15 @@ static void accept_new_connection(uv_stream_t *server, int status) {
 
   if (site_data_check(&address, address_size,
                       runtime->access_control->access_sites) == H_FORBIDDEN) {
-    log_error(runtime->log, LOG_NET | LOG_SECURITY, "NET", "SiteData",
+    log_error((LogEntry){.log = runtime->log,
+                         .key = LOG_NET | LOG_SECURITY,
+                         .primary = "NET",
+                         .secondary = "SiteData"},
               "Connection refused from %s %s.", address_name, address_port);
-    fcache_rawdump(*runtime->files_owner, descriptor->descriptor, FC_CONN_SITE);
+    fcache_rawdump(
+        &(FileCacheRawDumpRequest){.cache = *runtime->files_owner,
+                                   .descriptor = descriptor->descriptor,
+                                   .entry = FC_CONN_SITE});
     discard_connection(descriptor);
     return;
   }
@@ -333,7 +347,10 @@ static void accept_new_connection(uv_stream_t *server, int status) {
     discard_connection(descriptor);
     return;
   }
-  log_error(runtime->log, LOG_NET, "NET", "CONN",
+  log_error((LogEntry){.log = runtime->log,
+                       .key = LOG_NET,
+                       .primary = "NET",
+                       .secondary = "CONN"},
             "Connection opened from %s %s.", address_name, address_port);
   if (uv_read_start((uv_stream_t *)descriptor->socket, descriptor_read_alloc,
                     descriptor_read) < 0) {

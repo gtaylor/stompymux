@@ -14,19 +14,20 @@ typedef struct BtechTableNames {
 } BtechTableNames;
 
 static char **btech_table_name_slot(char **items, size_t count, size_t index) {
-  return checked_storage_at(items, count, sizeof(*items), index);
+  return (char **)checked_storage_at((void *)items, count, sizeof(*items),
+                                     index);
 }
 
 static char *btech_table_name(const BtechTableNames *names, size_t index) {
-  char *const *slot = checked_storage_at_const(names->items, names->count,
-                                               sizeof(*names->items), index);
+  char *const *slot = (char *const *)checked_storage_at_const(
+      (const void *)names->items, names->count, sizeof(*names->items), index);
   return *slot;
 }
 
 static void btech_table_names_destroy(BtechTableNames *names) {
   for (size_t index = 0; index < names->count; index++)
     free(btech_table_name(names, index));
-  free(names->items);
+  free((void *)names->items);
   *names = (BtechTableNames){0};
 }
 
@@ -48,7 +49,8 @@ static int btech_table_names_load(sqlite3 *database, BtechTableNames *names) {
       result = -1;
       break;
     }
-    char **items = realloc(names->items, (names->count + 1) * sizeof(*items));
+    char **items = (char **)realloc((void *)names->items,
+                                    (names->count + 1) * sizeof(*items));
     if (items == nullptr) {
       result = -1;
       break;

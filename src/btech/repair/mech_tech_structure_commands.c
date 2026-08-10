@@ -32,10 +32,13 @@ void tech_fixarmor(DbRef player, void *data, char *buffer) {
   }
   mech = repair_command.mech;
   context = repair_command.context;
-  if (tech_parsepart_advanced(mech, buffer, &loc, nullptr, nullptr, 1) < 0) {
+  const TechPartParseResult parsed = tech_part_parse(&(TechPartParseRequest){
+      .mech = mech, .text = buffer, .allow_rear = true});
+  if (parsed.status != TECH_PART_PARSE_OK) {
     mecha_notify(btech_context_evaluation(context), player, "Invalid section!");
     return;
   }
+  loc = parsed.location;
   if (loc >= 8) {
     from = mech_section_rear_armor(mech, loc % 8);
     to = mech_section_original_rear_armor(mech, loc % 8);

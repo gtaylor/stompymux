@@ -15,6 +15,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/array_sort.h"
 #include "mux/support/checked_storage.h"
 
 typedef struct LuaParentCheck LuaParentCheck;
@@ -33,14 +34,14 @@ static LUA_PARENT_CHECK *lua_parent_check_at(LUA_PARENT_CHECK *checks,
 
 static char *lua_module_at(char *const *modules, size_t module_count,
                            size_t index) {
-  return *(char *const *)checked_storage_at_const(modules, module_count,
-                                                  sizeof(*modules), index);
+  return *(char *const *)checked_storage_at_const(
+      (const void *)modules, module_count, sizeof(*modules), index);
 }
 
 static const char *lua_name_at(const char *const *names, size_t count,
                                size_t index) {
-  return *(const char *const *)checked_storage_at_const(names, count,
-                                                        sizeof(*names), index);
+  return *(const char *const *)checked_storage_at_const(
+      (const void *)names, count, sizeof(*names), index);
 }
 
 static void lua_free_parent_checks(LUA_PARENT_CHECK *checks,
@@ -174,7 +175,10 @@ int lua_check(EvaluationContext *evaluation, LuaRuntime *source, DbRef player,
       goto done;
     }
     if (module_count > 1)
-      qsort(modules, module_count, sizeof(*modules), lua_compare_module_paths);
+      array_sort(&(ArraySortRequest){.items = (void *)modules,
+                                     .count = module_count,
+                                     .item_size = sizeof(*modules),
+                                     .compare = lua_compare_module_paths});
     for (index = 0; index < module_count; index++) {
       if (!lua_check_one_module(runtime, root,
                                 lua_module_at(modules, module_count, index),
@@ -222,21 +226,36 @@ int lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
   return 0;
 }
 
-static void lua_examine_array(LuaRuntime *runtime,
-                              EvaluationContext *evaluation, DbRef player,
-                              int module, const char *table_name,
-                              const char *label, const char *name_field) {
+typedef struct LuaExamineContext {
+  LuaRuntime *runtime;
+  EvaluationContext *evaluation;
+  DbRef viewer;
+  int module;
+} LuaExamineContext;
+
+typedef struct LuaExamineArrayRequest {
+  const LuaExamineContext *context;
+  const char *table_name;
+  const char *label;
+  const char *name_field;
+} LuaExamineArrayRequest;
+
+static void lua_examine_array(const LuaExamineArrayRequest *request) {
+  LuaRuntime *runtime = request->context->runtime;
+  EvaluationContext *evaluation = request->context->evaluation;
+  DbRef player = request->context->viewer;
+  int module = request->context->module;
   lua_State *state = runtime->state;
   int index;
   int count;
 
-  lua_getfield(state, module, table_name);
+  lua_getfield(state, module, request->table_name);
   count = lua_istable(state, -1) ? (int)lua_objlen(state, -1) : 0;
   if (!count) {
     lua_pop(state, 1);
     return;
   }
-  notify_printf(evaluation, player, "%s:", label);
+  notify_printf(evaluation, player, "%s:", request->label);
   for (index = 1; index <= count; index++) {
     const char *name;
 
@@ -246,7 +265,7 @@ static void lua_examine_array(LuaRuntime *runtime,
       lua_pop(state, 1);
       continue;
     }
-    lua_getfield(state, -1, name_field);
+    lua_getfield(state, -1, request->name_field);
     name = lua_tostring(state, -1);
     notify_printf(evaluation, player, "  %s", name ? name : "<invalid>");
     lua_pop(state, 2);
@@ -254,11 +273,24 @@ static void lua_examine_array(LuaRuntime *runtime,
   lua_pop(state, 1);
 }
 
+typedef struct LuaExamineFunctionsRequest {
+  const LuaExamineContext *context;
+  const char *table_name;
+  const char *label;
+  const char *const *names;
+  int first;
+  int count;
+} LuaExamineFunctionsRequest;
+
 static void
-lua_examine_named_functions(LuaRuntime *runtime, EvaluationContext *evaluation,
-                            DbRef player, int module, const char *table_name,
-                            const char *label, const char *const names[],
-                            int first, int count) {
+lua_examine_named_functions(const LuaExamineFunctionsRequest *request) {
+  EvaluationContext *evaluation = request->context->evaluation;
+  DbRef player = request->context->viewer;
+  int module = request->context->module;
+  int first = request->first;
+  int count = request->count;
+  const char *const *names = request->names;
+  LuaRuntime *runtime = request->context->runtime;
   lua_State *state = runtime->state;
   bool found = false;
   int index;
@@ -266,7 +298,7 @@ lua_examine_named_functions(LuaRuntime *runtime, EvaluationContext *evaluation,
   if (first < 0 || count < first)
     return;
 
-  lua_getfield(state, module, table_name);
+  lua_getfield(state, module, request->table_name);
   if (lua_istable(state, -1)) {
     for (index = first; index < count; index++) {
       const char *name = lua_name_at(names, (size_t)count, (size_t)index);
@@ -274,7 +306,7 @@ lua_examine_named_functions(LuaRuntime *runtime, EvaluationContext *evaluation,
       lua_getfield(state, -1, name);
       if (lua_isfunction(state, -1)) {
         if (!found)
-          notify_printf(evaluation, player, "%s:", label);
+          notify_printf(evaluation, player, "%s:", request->label);
         notify_printf(evaluation, player, "  %s", name);
         found = true;
       }
@@ -284,8 +316,11 @@ lua_examine_named_functions(LuaRuntime *runtime, EvaluationContext *evaluation,
   lua_pop(state, 1);
 }
 
-void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
-                        DbRef player, DbRef object) {
+void lua_examine_object(const LuaExamineObjectRequest *request) {
+  LuaRuntime *runtime = request->runtime;
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->viewer;
+  DbRef object = request->object;
   lua_State *state;
   char path[PATH_MAX];
   char error[LBUF_SIZE];
@@ -325,18 +360,38 @@ void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
       lua_pop(state, 1);
     }
   }
-  lua_examine_array(runtime, evaluation, player, module, "commands",
-                    "Lua commands", "pattern");
-  lua_examine_named_functions(runtime, evaluation, player, module, "events",
-                              "Lua events", LUA_EVENT_NAMES, LUA_EVENT_SUCCESS,
-                              LUA_EVENT_COUNT);
-  lua_examine_array(runtime, evaluation, player, module, "schedules",
-                    "Lua schedules", "name");
-  lua_examine_named_functions(runtime, evaluation, player, module, "messages",
-                              "Lua messages", LUA_MESSAGE_NAMES,
-                              LUA_MESSAGE_SUCCESS, LUA_MESSAGE_COUNT);
-  lua_examine_named_functions(runtime, evaluation, player, module, "locks",
-                              "Lua locks", LUA_LOCK_NAMES, LUA_LOCK_DEFAULT,
-                              LUA_LOCK_COUNT);
+  LuaExamineContext examine = {.runtime = runtime,
+                               .evaluation = evaluation,
+                               .viewer = player,
+                               .module = module};
+  lua_examine_array(&(LuaExamineArrayRequest){.context = &examine,
+                                              .table_name = "commands",
+                                              .label = "Lua commands",
+                                              .name_field = "pattern"});
+  lua_examine_named_functions(
+      &(LuaExamineFunctionsRequest){.context = &examine,
+                                    .table_name = "events",
+                                    .label = "Lua events",
+                                    .names = LUA_EVENT_NAMES,
+                                    .first = LUA_EVENT_SUCCESS,
+                                    .count = LUA_EVENT_COUNT});
+  lua_examine_array(&(LuaExamineArrayRequest){.context = &examine,
+                                              .table_name = "schedules",
+                                              .label = "Lua schedules",
+                                              .name_field = "name"});
+  lua_examine_named_functions(
+      &(LuaExamineFunctionsRequest){.context = &examine,
+                                    .table_name = "messages",
+                                    .label = "Lua messages",
+                                    .names = LUA_MESSAGE_NAMES,
+                                    .first = LUA_MESSAGE_SUCCESS,
+                                    .count = LUA_MESSAGE_COUNT});
+  lua_examine_named_functions(
+      &(LuaExamineFunctionsRequest){.context = &examine,
+                                    .table_name = "locks",
+                                    .label = "Lua locks",
+                                    .names = LUA_LOCK_NAMES,
+                                    .first = LUA_LOCK_DEFAULT,
+                                    .count = LUA_LOCK_COUNT});
   lua_settop(state, top);
 }

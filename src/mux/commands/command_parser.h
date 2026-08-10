@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 
@@ -15,8 +17,21 @@ enum CommandParseFlags {
   COMMAND_PARSE_NO_COMPRESS = 1 << 4,
 };
 
-char *parse_to(const ServerConfiguration *configuration, char **string,
-               char delimiter, int flags);
-char *parse_arglist(const ServerConfiguration *configuration, char *string,
-                    char delimiter, int flags, char *arguments[],
-                    DbRef max_arguments);
+typedef struct CommandParseRequest {
+  const ServerConfiguration *configuration;
+  char **source;
+  char delimiter;
+  int options;
+} CommandParseRequest;
+
+typedef struct CommandArgumentListRequest {
+  const ServerConfiguration *configuration;
+  char *source;
+  char delimiter;
+  int options;
+  char **arguments;
+  size_t maximum_arguments;
+} CommandArgumentListRequest;
+
+char *parse_to(const CommandParseRequest *request);
+char *parse_arglist(const CommandArgumentListRequest *request);

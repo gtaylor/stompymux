@@ -1,6 +1,7 @@
 #include "repair_job.h"
 
 #include "checked_conversion.h"
+#include <stddef.h>
 #include <stdint.h>
 
 intptr_t repair_event_payload_pack(RepairEventPayload payload) {
@@ -13,7 +14,7 @@ RepairEventPayload repair_event_payload_unpack(intptr_t encoded) {
   return (RepairEventPayload){
       .location = clamp_intptr_to_int(value % LOCMAX),
       .position = clamp_intptr_to_int((value / LOCMAX) % POSMAX),
-      .extra = clamp_intptr_to_int(value / (LOCMAX * POSMAX)),
+      .extra = clamp_intptr_to_int(value / ((intptr_t)(LOCMAX * POSMAX))),
       .player = encoded / PLAYERPOS,
   };
 }

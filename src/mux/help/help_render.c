@@ -15,6 +15,7 @@
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/array_sort.h"
 #include "mux/support/checked_storage.h"
 
 static char *help_buffer_slot(HelpTextBuffer *buffer, size_t index) {
@@ -39,19 +40,20 @@ static const char *help_text_suffix(const char *text, size_t length,
 
 static const char *help_string_list_item(const HelpStringList *list,
                                          size_t index) {
-  return *(char *const *)checked_storage_at_const(list->items, list->count,
-                                                  sizeof(*list->items), index);
+  return *(char *const *)checked_storage_at_const(
+      (const void *)list->items, list->count, sizeof(*list->items), index);
 }
 
 static const HelpArticle **help_article_slot(const HelpArticle **articles,
                                              size_t capacity, size_t index) {
-  return checked_storage_at(articles, capacity, sizeof(*articles), index);
+  return (const HelpArticle **)checked_storage_at((void *)articles, capacity,
+                                                  sizeof(*articles), index);
 }
 
 static const HelpArticle *help_article_item(const HelpArticle *const *articles,
                                             size_t count, size_t index) {
   return *(const HelpArticle *const *)checked_storage_at_const(
-      articles, count, sizeof(*articles), index);
+      (const void *)articles, count, sizeof(*articles), index);
 }
 
 void help_text_buffer_init(HelpTextBuffer *buffer) {
@@ -205,12 +207,9 @@ static bool help_article_matches_tags(const HelpArticle *article,
   return false;
 }
 
-static int help_index_entry_compare(const void *a, const void *b) {
-  const HelpArticle *left;
-  const HelpArticle *right;
-
-  memcpy(&left, a, sizeof(left));
-  memcpy(&right, b, sizeof(right));
+static int help_index_entry_compare(const ArraySortComparison *comparison) {
+  const HelpArticle *left = *(const HelpArticle *const *)comparison->left;
+  const HelpArticle *right = *(const HelpArticle *const *)comparison->right;
 
   if (left->has_weight && right->has_weight) {
     if (left->weight != right->weight)
@@ -235,7 +234,7 @@ static void help_render_index_section(const HelpIndex *index,
 
   if (total == 0)
     return;
-  entries = malloc(total * sizeof(const HelpArticle *));
+  entries = (const HelpArticle **)malloc(total * sizeof(const HelpArticle *));
   for (i = 0; i < total; i++) {
     const HelpArticle *candidate = help_index_article_at(index, i);
 
@@ -248,7 +247,10 @@ static void help_render_index_section(const HelpIndex *index,
       continue;
     *help_article_slot(entries, total, count++) = candidate;
   }
-  qsort(entries, count, sizeof(const HelpArticle *), help_index_entry_compare);
+  array_sort(&(ArraySortRequest){.items = (void *)entries,
+                                 .count = count,
+                                 .item_size = sizeof(*entries),
+                                 .compare = help_index_entry_compare});
 
   help_render_ensure_blank_line(out);
   if (index_article->index_style == HELP_INDEX_STYLE_COLUMNAR) {
@@ -286,7 +288,7 @@ static void help_render_index_section(const HelpIndex *index,
       help_text_buffer_append_str(out, "\n");
     }
   }
-  free(entries);
+  free((void *)entries);
 }
 
 void help_render_markdown(const char *markdown, size_t length,

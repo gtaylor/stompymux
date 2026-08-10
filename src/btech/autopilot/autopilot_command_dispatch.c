@@ -8,6 +8,7 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
@@ -166,8 +167,12 @@ void auto_com_event(MuxEvent *muxevent) {
 /*
  * Function to force the AI to move if its not near its target
  */
-void speed_up_if_neccessary(Autopilot *a, Mech *mech, int tx, int ty,
-                            int bearing) {
+void autopilot_speed_up_for_target(const AutopilotApproachRequest *request) {
+  Autopilot *a = request->autopilot;
+  Mech *mech = request->mech;
+  const int tx = request->target.x;
+  const int ty = request->target.y;
+  const int bearing = request->bearing;
   BattleMap *map;
 
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -201,13 +206,18 @@ void update_wanted_heading(Autopilot *a, Mech *mech, int bearing) {
  * Slow down the AI if its close to its target hex
  */
 /*! \todo {Make this more variable perhaps so it wont always slow down?} */
-int slow_down_if_neccessary(Autopilot *a, Mech *mech, float range, int bearing,
-                            int tx, int ty) {
+bool autopilot_slow_down_for_target(const AutopilotApproachRequest *request) {
+  Autopilot *a = request->autopilot;
+  Mech *mech = request->mech;
+  float range = request->range;
+  const int bearing = request->bearing;
+  const int tx = request->target.x;
+  const int ty = request->target.y;
 
   if (range < 0)
     range = 0;
   if (range > 2.0F)
-    return 0;
+    return false;
   if (abs(bearing - mech_heading_degrees(mech)) > 30) {
     /* Fix the bearing as well */
     ai_set_speed(mech, a, 0);
@@ -218,7 +228,7 @@ int slow_down_if_neccessary(Autopilot *a, Mech *mech, float range, int bearing,
     ai_set_speed(mech, a,
                  (0.4F + range / 2.0F) * mech_effective_maximum_speed(mech));
   }
-  return 1;
+  return true;
 }
 
 /*
@@ -232,9 +242,14 @@ void figure_out_range_and_bearing(Mech *mech, int tx, int ty, float *range,
 
   MapCoordToRealCoord(tx, ty, &x, &y);
   *bearing =
-      FindBearing(mech_position_real_x(mech), mech_position_real_y(mech), x, y);
-  *range = FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                        x, y);
+      map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                              .y = mech_position_real_y(mech)},
+                                    .end = {.x = x, .y = y}});
+  *range = map_real_range(&(MapRealSegment){
+      .start = {.x = mech_position_real_x(mech),
+                .y = mech_position_real_y(mech)},
+      .end = {.x = x, .y = y},
+  });
 }
 
 /* Basically, all we need to do is course correction now and then.

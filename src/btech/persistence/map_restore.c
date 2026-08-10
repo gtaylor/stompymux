@@ -20,8 +20,8 @@ static unsigned short **restore_los_row(BattleMap *map, size_t count,
                                         int index) {
   if (index < 0)
     abort();
-  return checked_storage_at(map->LOSinfo, count, sizeof(*map->LOSinfo),
-                            (size_t)index);
+  return (unsigned short **)checked_storage_at(
+      (void *)map->LOSinfo, count, sizeof(*map->LOSinfo), (size_t)index);
 }
 
 static DbRef *restore_unit_slot(BattleMap *map, int index) {
@@ -41,8 +41,8 @@ static char *restore_unit_flag(BattleMap *map, int index) {
 static unsigned char *restore_map_cell(BattleMap *map, int x, int y) {
   if (x < 0 || y < 0)
     abort();
-  unsigned char **row = checked_storage_at(map->map, (size_t)map->map_height,
-                                           sizeof(*map->map), (size_t)y);
+  unsigned char **row = (unsigned char **)checked_storage_at(
+      (void *)map->map, (size_t)map->map_height, sizeof(*map->map), (size_t)y);
   return checked_storage_at(*row, (size_t)map->map_width, sizeof(**row),
                             (size_t)x);
 }
@@ -50,15 +50,17 @@ static unsigned char *restore_map_cell(BattleMap *map, int x, int y) {
 static MapObject **restore_object_slot(BattleMap *map, int type) {
   if (type < 0)
     abort();
-  return checked_storage_at(map->MapObject, NUM_MAPOBJTYPES,
-                            sizeof(*map->MapObject), (size_t)type);
+  return (MapObject **)checked_storage_at(
+      (void *)map->MapObject, NUM_MAPOBJTYPES, sizeof(*map->MapObject),
+      (size_t)type);
 }
 
 static unsigned char **restore_bits_row(unsigned char **bits, int height,
                                         int y) {
   if (y < 0)
     abort();
-  return checked_storage_at(bits, (size_t)height, sizeof(*bits), (size_t)y);
+  return (unsigned char **)checked_storage_at((void *)bits, (size_t)height,
+                                              sizeof(*bits), (size_t)y);
 }
 
 static int btech_special_resize_map(BattleMap *map, int width, int height) {
@@ -86,7 +88,8 @@ static int btech_special_allocate_map_dynamic(BattleMap *map) {
   allocation_count = (size_t)map->first_free;
   map->mechsOnMap = calloc(allocation_count, sizeof(*map->mechsOnMap));
   map->mechflags = calloc(allocation_count, sizeof(*map->mechflags));
-  map->LOSinfo = calloc(allocation_count, sizeof(*map->LOSinfo));
+  map->LOSinfo =
+      (unsigned short **)calloc(allocation_count, sizeof(*map->LOSinfo));
   for (index = 0; map->mechsOnMap && map->mechflags && map->LOSinfo &&
                   index < map->first_free;
        index++) {
@@ -101,7 +104,7 @@ static int btech_special_allocate_map_dynamic(BattleMap *map) {
   if (map->LOSinfo)
     for (index = 0; index < map->first_free; index++)
       free(*restore_los_row(map, allocation_count, index));
-  free(map->LOSinfo);
+  free((void *)map->LOSinfo);
   free(map->mechflags);
   free(map->mechsOnMap);
   map->LOSinfo = NULL;
@@ -153,8 +156,12 @@ int btech_special_load_map_parents(sqlite3 *sqlite, BtechContext *context) {
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
-        !(map = btech_context_get_map(context, map_dbref)) ||
+    if (btech_special_column_long(statement, 0, &map_dbref) < 0) {
+      result = -1;
+      break;
+    }
+    map = btech_context_get_map(context, map_dbref);
+    if (!map ||
         btech_special_column_text(statement, 1, map_name, sizeof(map_name)) <
             0 ||
         btech_special_column_int(statement, 2, &width) < 0 ||
@@ -537,7 +544,7 @@ int btech_special_load_map_objects(sqlite3 *sqlite, BtechContext *context) {
     source.obj = object_dbref;
     source.datac = data_char;
     source.datas = (short)data_short;
-    source.datai = data_int;
+    source.payload.scalar = data_int;
     stored = add_mapobj(map, tail, &source, 0);
     if (!stored) {
       result = -1;
@@ -604,16 +611,16 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
         result = -1;
         break;
       }
-      bits = calloc((size_t)map->map_height, sizeof(*bits));
+      bits = (unsigned char **)calloc((size_t)map->map_height, sizeof(*bits));
       if (!bits) {
         result = -1;
         break;
       }
       memset(&source, 0, sizeof(source));
       source.type = TYPE_BITS;
-      source.datai = (long)(void *)bits;
+      source.payload.bits = bits;
       if (!add_mapobj_to_type(map, TYPE_BITS, &source, 0)) {
-        free(bits);
+        free((void *)bits);
         result = -1;
         break;
       }

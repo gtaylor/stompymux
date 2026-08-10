@@ -3,6 +3,7 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
@@ -138,10 +139,12 @@ int mech_hit_group(Mech *mech, Mech *target) {
   }
 
   /* Compute attack direction.  */
-  ad = AcceptableDegree(
-      FindBearing(mech_position_real_x(target), mech_position_real_y(target),
-                  mech_position_real_x(mech), mech_position_real_y(mech)) -
-      mech_heading_degrees(target));
+  ad = AcceptableDegree(map_bearing(&(MapRealSegment){
+                            .start = {.x = mech_position_real_x(target),
+                                      .y = mech_position_real_y(target)},
+                            .end = {.x = mech_position_real_x(mech),
+                                    .y = mech_position_real_y(mech)}}) -
+                        mech_heading_degrees(target));
 
   /* Determine hit group.  */
   switch (mech_class(target)) {
@@ -212,7 +215,10 @@ int mech_target_hit_location(Mech *mech, Mech *target, int *isrear,
   if (mech_class(target) == CLASS_MECH &&
       ((mech_class(mech) == CLASS_BSUIT &&
         mech_condition_summary(mech).swarm_target == mech_dbref(target)))) {
-    return find_swarm_hit_location(mech_context(mech), iscritical, isrear);
+    HitLocationResult swarm = find_swarm_hit_location(mech_context(mech));
+    *iscritical = swarm.critical;
+    *isrear = swarm.rear;
+    return swarm.location;
   }
 
   return mech_hit_location(target, hitGroup, iscritical, isrear);

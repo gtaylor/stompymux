@@ -5,6 +5,7 @@
 
 #include "checked_conversion.h"
 #include "floatsim.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "mech_internal.h"
 #include "mech_runtime_api.h"
@@ -72,8 +73,10 @@ float mech_jump_end_real_z(const Mech *mech) { return mech->rd.endfz; }
 int mech_jump_apex_elevation(const Mech *mech) { return mech->rd.jumptop; }
 
 float mech_range_to(const Mech *mech, const Mech *target) {
-  return FindRange(mech->pd.fx, mech->pd.fy, mech->pd.fz, target->pd.fx,
-                   target->pd.fy, target->pd.fz);
+  return map_spatial_range(&(MapSpatialSegment){
+      .start = {.x = mech->pd.fx, .y = mech->pd.fy, .z = mech->pd.fz},
+      .end = {.x = target->pd.fx, .y = target->pd.fy, .z = target->pd.fz},
+  });
 }
 
 float mech_vertical_speed(const Mech *mech) { return mech->rd.verticalspeed; }
@@ -135,9 +138,9 @@ void mech_position_xy_set(Mech *mech, int x, int y) {
   mech->pd.last_y = clamp_int_to_short(y);
 }
 
-void mech_position_real_xy_set(Mech *mech, float x, float y) {
-  mech->pd.fx = x;
-  mech->pd.fy = y;
+void mech_position_real_xy_set(Mech *mech, MapRealPosition position) {
+  mech->pd.fx = position.x;
+  mech->pd.fy = position.y;
 }
 
 void mech_position_real_xy_translate(Mech *mech, float delta_x, float delta_y) {
@@ -237,15 +240,15 @@ void mech_motion_vector_reset(Mech *mech) {
   mech->rd.startfz = 0.0F;
 }
 
-void mech_motion_vector_xy_set(Mech *mech, float x, float y) {
-  mech->rd.startfx = x;
-  mech->rd.startfy = y;
+void mech_motion_vector_xy_set(Mech *mech, MapRealPosition vector) {
+  mech->rd.startfx = vector.x;
+  mech->rd.startfy = vector.y;
 }
 
-void mech_motion_vector_set(Mech *mech, float x, float y, float z) {
-  mech->rd.startfx = x;
-  mech->rd.startfy = y;
-  mech->rd.startfz = z;
+void mech_motion_vector_set(Mech *mech, MapSpatialPosition vector) {
+  mech->rd.startfx = vector.x;
+  mech->rd.startfy = vector.y;
+  mech->rd.startfz = vector.z;
 }
 
 void mech_jump_destination_y_set(Mech *mech, int destination_y) {
@@ -316,15 +319,12 @@ void mech_position_land_if_flying(Mech *mech) {
     mech->rd.status |= LANDED;
 }
 
-void mech_position_rollback(Mech *mech, float delta_x, float delta_y,
-                            int previous_z, int previous_terrain,
-                            int previous_elevation) {
-  mech->pd.fx -= delta_x;
-  mech->pd.fy -= delta_y;
+void mech_position_rollback(const MechPositionRollback *rollback) {
+  Mech *mech = rollback->mech;
+  mech->pd.fx -= rollback->delta.x;
+  mech->pd.fy -= rollback->delta.y;
   mech->pd.x = mech->pd.last_x;
   mech->pd.y = mech->pd.last_y;
-  mech->pd.z = clamp_int_to_short(previous_z);
-  mech->pd.fz = (float)previous_z * (float)ZSCALE;
-  (void)previous_terrain;
-  (void)previous_elevation;
+  mech->pd.z = clamp_int_to_short(rollback->previous_z);
+  mech->pd.fz = (float)rollback->previous_z * (float)ZSCALE;
 }

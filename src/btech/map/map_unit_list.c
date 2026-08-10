@@ -31,7 +31,8 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
                  "Supply target type too!");
     return;
   }
-  char **argument_slot = checked_storage_at(args, 2, sizeof(*args), 0);
+  char **argument_slot =
+      (char **)checked_storage_at((void *)args, 2, sizeof(*args), 0);
   switch (listmatch(cmds, 2, *argument_slot)) {
   case MECHS:
     mecha_notify(btech_context_evaluation(map->xcode.context), player,

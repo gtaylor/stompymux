@@ -5,6 +5,7 @@
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
 #include "autopilot_commands_api.h"
+#include "map_coordinates.h"
 #include "map_units_api.h"
 #include "mech_identity_api.h"
 #include "mech_move_api.h"
@@ -117,17 +118,20 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
         /* Check to see if we need to turn to face the guy by
          * generating our target hex and seeing if we are in that
          * hex then face the bad guy */
-        if ((target = btech_context_get_mech(mech_context(mech),
-                                             autopilot->target)) &&
-            (!mech_is_destroyed(target) &&
-             mech_map_dbref(target) == mech_map_dbref(mech))) {
+        target = btech_context_get_mech(mech_context(mech), autopilot->target);
+        if (target && (!mech_is_destroyed(target) &&
+                       mech_map_dbref(target) == mech_map_dbref(mech))) {
 
           /* Generate the target hex */
           /*! \todo {Instead of calcing this all the time, possibly add
            * variables to the AI to remember it} */
-          FindXY(mech_position_real_x(target), mech_position_real_y(target),
-                 mech_heading_degrees(target) + autopilot->ofsx,
-                 (float)autopilot->ofsy, &fx, &fy);
+          MapRealPosition projected = map_project_position(&(MapProjection){
+              .origin = {.x = mech_position_real_x(target),
+                         .y = mech_position_real_y(target)},
+              .bearing = mech_heading_degrees(target) + autopilot->ofsx,
+              .range = (float)autopilot->ofsy});
+          fx = projected.x;
+          fy = projected.y;
 
           RealCoordToMapCoord(&generated_x, &generated_y, fx, fy);
           x = generated_x;
@@ -153,12 +157,16 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
             /* If we're not facing him, turn towards him */
             if (mech_desired_heading_degrees(mech) !=
-                FindBearing(mech_position_real_x(mech),
-                            mech_position_real_y(mech), fx, fy)) {
+                map_bearing(&(MapRealSegment){
+                    .start = {.x = mech_position_real_x(mech),
+                              .y = mech_position_real_y(mech)},
+                    .end = {.x = fx, .y = fy}})) {
 
               (void)snprintf(buffer, LBUF_SIZE, "%d",
-                             FindBearing(mech_position_real_x(mech),
-                                         mech_position_real_y(mech), fx, fy));
+                             map_bearing(&(MapRealSegment){
+                                 .start = {.x = mech_position_real_x(mech),
+                                           .y = mech_position_real_y(mech)},
+                                 .end = {.x = fx, .y = fy}}));
               mech_heading(autopilot->mynum, mech, buffer);
             }
             /* Turn towards him */

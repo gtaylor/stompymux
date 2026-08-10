@@ -79,17 +79,28 @@ void mech_main_weapon_destroy(Mech *mech) {
     }
   }
   if (critfound) {
-    firstCrit = FindFirstWeaponCrit(mech, maxloc, -1, 0,
-                                    weapon_equipment_index(maxtype), 1);
-    mech_weapon_destroy(mech, maxloc, weapon_equipment_index(maxtype), 1,
-                        firstCrit, GetWeaponCrits(mech, maxtype));
+    firstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+        .mech = mech,
+        .weapon = {.section = maxloc, .critical = -1},
+        .start_critical = 0,
+        .part_type = weapon_equipment_index(maxtype),
+        .maximum_criticals = 1,
+    });
+    mech_weapon_destroy(&(WeaponDestructionRequest){
+        .mech = mech,
+        .first = {.section = maxloc, .critical = 1},
+        .part_type = weapon_equipment_index(maxtype),
+        .criticals_to_destroy = firstCrit,
+        .total_criticals = GetWeaponCrits(mech, maxtype)});
     mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
                 checked_string_suffix(weapon_catalogue_name(maxtype), 3));
   }
 }
 
-void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
-                                       int hitloc, int num) {
+void mech_fasa_vehicle_critical_handle(const VehicleCriticalRequest *request) {
+  Mech *wounded = request->wounded;
+  Mech *attacker = request->attacker;
+  const int LOS = request->line_of_sight;
   BtechContext *context = mech_context(wounded);
 
   if (mech_movement_type(wounded) == MOVE_NONE)
@@ -136,13 +147,18 @@ void mech_fasa_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
     if (!mech_section_configuration_has(wounded, BSIDE, CASE_TECH))
       mech_explosion_apply(wounded, attacker);
     else
-      mech_section_destroy(wounded, attacker, LOS, BSIDE);
+      mech_section_destroy(&(SectionDestructionRequest){.wounded = wounded,
+                                                        .attacker = attacker,
+                                                        .line_of_sight = LOS,
+                                                        .section = BSIDE});
     break;
   }
 }
 
-void mech_vehicle_critical_handle(Mech *wounded, Mech *attacker, int LOS,
-                                  int hitloc, int num) {
+void mech_vehicle_critical_handle(const VehicleCriticalRequest *request) {
+  Mech *wounded = request->wounded;
+  Mech *attacker = request->attacker;
+  const int hitloc = request->section;
   BtechContext *context = mech_context(wounded);
   MechConditionSummary condition = mech_condition_summary(wounded);
 

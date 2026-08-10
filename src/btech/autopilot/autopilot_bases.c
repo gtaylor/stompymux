@@ -107,7 +107,8 @@ void auto_leave_event(MuxEvent *muxevent) {
   }
 
   /* Get the argument - direction */
-  if (!(argument = auto_get_command_arg(autopilot, 1, 1))) {
+  argument = auto_get_command_arg(autopilot, 1, 1);
+  if (!argument) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */
@@ -145,7 +146,11 @@ void auto_leave_event(MuxEvent *muxevent) {
   }
 
   /* Still not out yet so keep trying */
-  speed_up_if_neccessary(autopilot, mech, -1, -1, dir);
+  autopilot_speed_up_for_target(
+      &(AutopilotApproachRequest){.autopilot = autopilot,
+                                  .mech = mech,
+                                  .target = {.x = -1, .y = -1},
+                                  .bearing = dir});
   update_wanted_heading(autopilot, mech, dir);
   autopilot_event_schedule(autopilot, EVENT_AUTOLEAVE, auto_leave_event,
                            AUTOPILOT_LEAVE_TICK, 0);
@@ -185,8 +190,8 @@ void auto_enter_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = btech_context_get_map(autopilot->xcode.context,
-                                    autopilot->mapindex))) {
+  map = btech_context_get_map(autopilot->xcode.context, autopilot->mapindex);
+  if (!map) {
 
     /* Bad Map */
     (void)snprintf(error_buf, MBUF_SIZE,
@@ -258,7 +263,8 @@ void auto_enter_event(MuxEvent *muxevent) {
   }
 
   /* Get enter direction */
-  if (!(argument = auto_get_command_arg(autopilot, 1, 1))) {
+  argument = auto_get_command_arg(autopilot, 1, 1);
+  if (!argument) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */

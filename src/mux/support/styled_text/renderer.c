@@ -187,11 +187,21 @@ static void ansi_256_rgb(int index, int *red, int *green, int *blue) {
   }
 }
 
-static int distance_squared(int red, int green, int blue, int other_red,
-                            int other_green, int other_blue) {
-  int red_delta = red - other_red;
-  int green_delta = green - other_green;
-  int blue_delta = blue - other_blue;
+typedef struct RgbColor {
+  int red;
+  int green;
+  int blue;
+} RgbColor;
+
+typedef struct ColorDistanceRequest {
+  RgbColor first;
+  RgbColor second;
+} ColorDistanceRequest;
+
+static int distance_squared(const ColorDistanceRequest *request) {
+  int red_delta = request->first.red - request->second.red;
+  int green_delta = request->first.green - request->second.green;
+  int blue_delta = request->first.blue - request->second.blue;
   return red_delta * red_delta + green_delta * green_delta +
          blue_delta * blue_delta;
 }
@@ -201,11 +211,13 @@ static int nearest_ansi(int red, int green, int blue) {
   int best_distance = INT_MAX;
 
   for (int index = 0; index < 16; index++) {
-    int distance = distance_squared(
-        red, green, blue,
-        color_channel(terminal_ansi_colors, 16, (size_t)index, 0),
-        color_channel(terminal_ansi_colors, 16, (size_t)index, 1),
-        color_channel(terminal_ansi_colors, 16, (size_t)index, 2));
+    int distance = distance_squared(&(ColorDistanceRequest){
+        .first = {.red = red, .green = green, .blue = blue},
+        .second = {
+            .red = color_channel(terminal_ansi_colors, 16, (size_t)index, 0),
+            .green = color_channel(terminal_ansi_colors, 16, (size_t)index, 1),
+            .blue =
+                color_channel(terminal_ansi_colors, 16, (size_t)index, 2)}});
     if (distance < best_distance) {
       best = index;
       best_distance = distance;
@@ -224,8 +236,10 @@ static int nearest_ansi_256(int red, int green, int blue) {
     int palette_blue;
     int distance;
     ansi_256_rgb(index, &palette_red, &palette_green, &palette_blue);
-    distance = distance_squared(red, green, blue, palette_red, palette_green,
-                                palette_blue);
+    distance = distance_squared(&(ColorDistanceRequest){
+        .first = {.red = red, .green = green, .blue = blue},
+        .second = {
+            .red = palette_red, .green = palette_green, .blue = palette_blue}});
     if (distance < best_distance) {
       best = index;
       best_distance = distance;
@@ -242,9 +256,22 @@ static bool append_sgr(char *output, size_t output_size, size_t *used,
                                            (size_t)length);
 }
 
-static void render_sgr(const int *parameters, size_t parameter_count,
-                       TerminalColorDepth depth, char *output,
-                       size_t output_size, size_t *used) {
+typedef struct SgrRenderRequest {
+  const int *parameters;
+  size_t parameter_count;
+  TerminalColorDepth depth;
+  char *output;
+  size_t output_size;
+  size_t *used;
+} SgrRenderRequest;
+
+static void render_sgr(const SgrRenderRequest *request) {
+  const int *parameters = request->parameters;
+  size_t parameter_count = request->parameter_count;
+  TerminalColorDepth depth = request->depth;
+  char *output = request->output;
+  size_t output_size = request->output_size;
+  size_t *used = request->used;
   for (size_t index = 0; index < parameter_count; index++) {
     int parameter =
         renderer_parameter_value(parameters, parameter_count, index);
@@ -351,7 +378,12 @@ static void styled_text_render_ansi(const char *styled,
       size_t available = link_open && output_size > OSC8_CLOSE_SIZE
                              ? output_size - OSC8_CLOSE_SIZE
                              : output_size;
-      render_sgr(parameters, parameter_count, depth, output, available, &used);
+      render_sgr(&(SgrRenderRequest){.parameters = parameters,
+                                     .parameter_count = parameter_count,
+                                     .depth = depth,
+                                     .output = output,
+                                     .output_size = available,
+                                     .used = &used});
       saw_sgr = true;
       cursor_offset += strlen(cursor) - strlen(end);
     } else {

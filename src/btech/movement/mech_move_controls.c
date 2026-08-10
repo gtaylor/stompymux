@@ -381,7 +381,8 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   maxspeed = maxspeed > 0.0F ? maxspeed : 0.0F;
 
   walkspeed = mech_control_walking_speed(maxspeed);
-  char **speed_argument_slot = checked_storage_at(args, 1, sizeof(*args), 0);
+  char **speed_argument_slot =
+      (char **)checked_storage_at((void *)args, 1, sizeof(*args), 0);
   newspeed = strtof(*speed_argument_slot, nullptr);
 
   if (newspeed < 0.1F) {

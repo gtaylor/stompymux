@@ -11,6 +11,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_building_query_api.h"
+#include "map_coordinates.h"
 #include "map_los_types.h"
 #include "map_object_query_api.h"
 #include "map_terrain.h"
@@ -85,7 +86,7 @@ typedef struct ContactLine {
 static const char *contact_description(const char *const *descriptions,
                                        size_t count, int index) {
   return *(const char *const *)checked_storage_at_const(
-      descriptions, count, sizeof(*descriptions), (size_t)index);
+      (const void *)descriptions, count, sizeof(*descriptions), (size_t)index);
 }
 
 static ContactLine *contact_line(ContactLine *lines, int index) {
@@ -383,7 +384,8 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
 
   isvb = (mech_brief_mode(mech) % 4);
   if (argc > 0) {
-    char *argument = *(char **)checked_storage_at(args, 1, sizeof(*args), 0);
+    char *argument =
+        *(char **)checked_storage_at((void *)args, 1, sizeof(*args), 0);
     if (*argument == '+') {
       str = btech_attribute_read(mech_context(mech)->database, player,
                                  A_CONTACTOPT, (char[LBUF_SIZE]){0});
@@ -473,8 +475,9 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         continue;
     }
     range = mech_range_to(mech, tempMech);
-    if (!(losflag = mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                                   mech_position_y(tempMech), range)))
+    losflag = mech_los_check(mech, tempMech, mech_position_x(tempMech),
+                             mech_position_y(tempMech), range);
+    if (!losflag)
       continue;
     if (is_good_obj(mech_context(mech)->database, mech_dbref(tempMech))) {
       if (!mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
@@ -489,9 +492,11 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       }
     } else
       continue;
-    bearing = FindBearing(
-        mech_position_real_x(mech), mech_position_real_y(mech),
-        mech_position_real_x(tempMech), mech_position_real_y(tempMech));
+    bearing = map_bearing(
+        &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                    .y = mech_position_real_y(mech)},
+                          .end = {.x = mech_position_real_x(tempMech),
+                                  .y = mech_position_real_y(tempMech)}});
     weaponarc = mech_contact_weapon_arc(InWeaponArc(
         mech, mech_position_real_x(tempMech), mech_position_real_y(tempMech)));
 
@@ -595,26 +600,34 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           battle_map_hex_elevation(mech_map, building_x, building_y);
       i = building_elevation + 1;
       const float building_real_z = ZSCALE * (float)i;
-      range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                        mech_position_real_z(mech), fx, fy, building_real_z);
+      range = map_spatial_range(&(MapSpatialSegment){
+          .start = {.x = mech_position_real_x(mech),
+                    .y = mech_position_real_y(mech),
+                    .z = mech_position_real_z(mech)},
+          .end = {.x = fx, .y = fy, .z = building_real_z},
+      });
 
       losflag = mech_los_check(mech, nullptr, building_x, building_y, range);
       if (!losflag || (losflag & BATTLE_MAP_LOS_BLOCKED))
         continue;
 
-      if (!(building_dbref && (tmp_map = btech_context_get_map(
-                                   mech_context(mech), building_dbref))))
+      if (!building_dbref)
+        continue;
+      tmp_map = btech_context_get_map(mech_context(mech), building_dbref);
+      if (!tmp_map)
         continue;
       if (battle_map_building_is_invisible(tmp_map))
         continue;
-      if ((j = !lock_test(btech_context_evaluation(mech_context(mech)), player,
-                          player, mech_dbref(mech), battle_map_dbref(tmp_map),
-                          LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_CONTACT,
-                          true, &lock, &lock_result)) &&
-          battle_map_building_is_hidden(tmp_map))
+      j = !lock_test(btech_context_evaluation(mech_context(mech)), player,
+                     player, mech_dbref(mech), battle_map_dbref(tmp_map),
+                     LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_CONTACT, true,
+                     &lock, &lock_result);
+      if (j && battle_map_building_is_hidden(tmp_map))
         continue;
-      bearing = FindBearing(mech_position_real_x(mech),
-                            mech_position_real_y(mech), fx, fy);
+      bearing = map_bearing(
+          &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                      .y = mech_position_real_y(mech)},
+                            .end = {.x = fx, .y = fy}});
       weaponarc = mech_contact_weapon_arc(InWeaponArc(mech, fx, fy));
 
       mech_name =

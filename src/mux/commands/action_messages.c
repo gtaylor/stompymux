@@ -52,16 +52,24 @@ void notify_action(EvaluationContext *evaluation,
    * message to neighbors
    */
 
+  bool notify_location = false;
   if (!message.silent && other_message && *other_message &&
-      has_location(evaluation->world->database, message.enactor) &&
-      is_good_obj(evaluation->world->database,
-                  location = game_object_location(evaluation->world->database,
-                                                  message.enactor))) {
-    notify_except2(
-        evaluation, location, message.enactor, message.enactor, message.object,
-        tprintf("%s %s",
-                game_object_name(evaluation->world->database, message.enactor),
-                other_message));
+      has_location(evaluation->world->database, message.enactor)) {
+    location =
+        game_object_location(evaluation->world->database, message.enactor);
+    notify_location = is_good_obj(evaluation->world->database, location);
+  }
+  if (notify_location) {
+    notify_excluding(&(ExcludingNotification){
+        .evaluation = evaluation,
+        .location = location,
+        .sender = message.enactor,
+        .exceptions = {message.enactor, message.object},
+        .exception_count = 2,
+        .message = tprintf(
+            "%s %s",
+            game_object_name(evaluation->world->database, message.enactor),
+            other_message)});
   }
   if (invocation->event != LUA_EVENT_NONE) {
     LuaEventInvocation event_invocation = {
@@ -95,15 +103,16 @@ void notify_event(EvaluationContext *evaluation, Descriptor *descriptor,
   lua_event_dispatch(evaluation->runtime->lua_owner->runtime, &invocation);
 }
 
-void notify_lock_failure(EvaluationContext *evaluation,
-                         const LuaLockInvocation *invocation,
-                         const LuaLockResult *result,
-                         const char *enactor_default, const char *other_default,
-                         LuaEventType event) {
-  const char *enactor_message =
-      result->has_enactor_message ? result->enactor_message : enactor_default;
-  const char *other_message =
-      result->has_other_message ? result->other_message : other_default;
+void notify_lock_failure(const LockFailureNotification *notification) {
+  EvaluationContext *evaluation = notification->evaluation;
+  const LuaLockInvocation *invocation = notification->invocation;
+  const LuaLockResult *result = notification->result;
+  const char *enactor_message = result->has_enactor_message
+                                    ? result->enactor_message
+                                    : notification->enactor_default;
+  const char *other_message = result->has_other_message
+                                  ? result->other_message
+                                  : notification->other_default;
   DbRef location;
 
   if (invocation->silent)
@@ -111,21 +120,28 @@ void notify_lock_failure(EvaluationContext *evaluation,
   if (enactor_message && *enactor_message)
     notify_checked(evaluation, invocation->enactor, invocation->enactor,
                    enactor_message, MSG_ME_ALL | MSG_F_DOWN);
+  bool notify_location = false;
   if (other_message && *other_message &&
-      has_location(evaluation->world->database, invocation->enactor) &&
-      is_good_obj(evaluation->world->database,
-                  location = game_object_location(evaluation->world->database,
-                                                  invocation->enactor))) {
-    notify_except2(evaluation, location, invocation->enactor,
-                   invocation->enactor, invocation->object,
-                   tprintf("%s %s",
-                           game_object_name(evaluation->world->database,
-                                            invocation->enactor),
-                           other_message));
+      has_location(evaluation->world->database, invocation->enactor)) {
+    location =
+        game_object_location(evaluation->world->database, invocation->enactor);
+    notify_location = is_good_obj(evaluation->world->database, location);
   }
-  if (event != LUA_EVENT_NONE) {
+  if (notify_location) {
+    notify_excluding(&(ExcludingNotification){
+        .evaluation = evaluation,
+        .location = location,
+        .sender = invocation->enactor,
+        .exceptions = {invocation->enactor, invocation->object},
+        .exception_count = 2,
+        .message = tprintf(
+            "%s %s",
+            game_object_name(evaluation->world->database, invocation->enactor),
+            other_message)});
+  }
+  if (notification->event != LUA_EVENT_NONE) {
     LuaEventInvocation event_invocation = {
-        .type = event,
+        .type = notification->event,
         .descriptor = invocation->descriptor,
         .object = invocation->object,
         .enactor = invocation->enactor,

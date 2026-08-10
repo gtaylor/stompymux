@@ -103,7 +103,12 @@ void auto_goto_event(MuxEvent *e) {
 
   MapCoordToRealCoord(tx, ty, &dx, &dy);
   figure_out_range_and_bearing(mech, tx, ty, &range, &bearing);
-  if (!slow_down_if_neccessary(autopilot, mech, range, bearing, tx, ty)) {
+  if (!autopilot_slow_down_for_target(
+          &(AutopilotApproachRequest){.autopilot = autopilot,
+                                      .mech = mech,
+                                      .target = {.x = tx, .y = ty},
+                                      .bearing = bearing,
+                                      .range = range})) {
 
     /* Use the AI */
     if (ai_check_path(mech, autopilot, dx, dy, 0.0, 0.0))
@@ -194,7 +199,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   /*! \todo {Add something in here for other units} */
 
   /* Get the first argument - x coord */
-  if (!(argument = auto_get_command_arg(autopilot, 1, 1))) {
+  argument = auto_get_command_arg(autopilot, 1, 1);
+  if (!argument) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */
@@ -226,7 +232,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   free(argument);
 
   /* Get the first argument - y coord */
-  if (!(argument = auto_get_command_arg(autopilot, 1, 2))) {
+  argument = auto_get_command_arg(autopilot, 1, 2);
+  if (!argument) {
 
     /* Ok bad argument - means the command is messed up
      * so should go to next one */
@@ -270,8 +277,13 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
 
   /* Make our way to the goal */
   figure_out_range_and_bearing(mech, tx, ty, &range, &bearing);
-  speed_up_if_neccessary(autopilot, mech, tx, ty, bearing);
-  slow_down_if_neccessary(autopilot, mech, range, bearing, tx, ty);
+  AutopilotApproachRequest approach = {.autopilot = autopilot,
+                                       .mech = mech,
+                                       .target = {.x = tx, .y = ty},
+                                       .bearing = bearing,
+                                       .range = range};
+  autopilot_speed_up_for_target(&approach);
+  (void)autopilot_slow_down_for_target(&approach);
   update_wanted_heading(autopilot, mech, bearing);
   autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event,
                            AUTOPILOT_GOTO_TICK, 0);
@@ -318,8 +330,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = btech_context_get_map(autopilot->xcode.context,
-                                    autopilot->mapindex))) {
+  map = btech_context_get_map(autopilot->xcode.context, autopilot->mapindex);
+  if (!map) {
 
     /* Bad Map */
     (void)snprintf(error_buf, MBUF_SIZE,
@@ -366,7 +378,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   if (generate_path) {
 
     /* Get the first argument - x coord */
-    if (!(argument = auto_get_command_arg(autopilot, 1, 1))) {
+    argument = auto_get_command_arg(autopilot, 1, 1);
+    if (!argument) {
 
       /* Ok bad argument - means the command is messed up
        * so should go to next one */
@@ -401,7 +414,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     free(argument);
 
     /* Get the second argument - y coord */
-    if (!(argument = auto_get_command_arg(autopilot, 1, 2))) {
+    argument = auto_get_command_arg(autopilot, 1, 2);
+    if (!argument) {
 
       /* Ok bad argument - either means the command is messed up
        * so should go to next one */
@@ -543,8 +557,13 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
 
   /* Move towards our next hex */
   figure_out_range_and_bearing(mech, tx, ty, &range, &bearing);
-  speed_up_if_neccessary(autopilot, mech, tx, ty, bearing);
-  slow_down_if_neccessary(autopilot, mech, range, bearing, tx, ty);
+  AutopilotApproachRequest approach = {.autopilot = autopilot,
+                                       .mech = mech,
+                                       .target = {.x = tx, .y = ty},
+                                       .bearing = bearing,
+                                       .range = range};
+  autopilot_speed_up_for_target(&approach);
+  (void)autopilot_slow_down_for_target(&approach);
   update_wanted_heading(autopilot, mech, bearing);
 
   autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,

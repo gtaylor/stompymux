@@ -172,18 +172,19 @@ void mech_heat_update(Mech *mech) {
       mech_heat_dissipation_set(mech, 0.0F);
   }
 
-  if (mech_is_under_special_conditions(mech))
-    if ((map = btech_context_find_object(context, mech_map_dbref(mech))))
-      if (battle_map_uses_special_rules(map))
-        if (battle_map_temperature(map) < -30 ||
-            battle_map_temperature(map) > 50) {
-          if (battle_map_temperature(map) < -30)
-            mech_heat_dissipation_add(
-                mech, (float)((-30 - battle_map_temperature(map) + 9) / 10));
-          else
-            mech_heat_dissipation_add(
-                mech, (float)(-(battle_map_temperature(map) - 50 + 9) / 10));
-        }
+  if (mech_is_under_special_conditions(mech)) {
+    map = btech_context_find_object(context, mech_map_dbref(mech));
+    if (map && battle_map_uses_special_rules(map))
+      if (battle_map_temperature(map) < -30 ||
+          battle_map_temperature(map) > 50) {
+        int dissipation_adjustment;
+        if (battle_map_temperature(map) < -30)
+          dissipation_adjustment = (-30 - battle_map_temperature(map) + 9) / 10;
+        else
+          dissipation_adjustment = -(battle_map_temperature(map) - 50 + 9) / 10;
+        mech_heat_dissipation_add(mech, (float)dissipation_adjustment);
+      }
+  }
 
   /* Handle heat cutoff now */
   /* Sink enable/disable helpers also adjust heat dissipation. */

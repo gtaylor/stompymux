@@ -40,10 +40,11 @@ unsigned char character_stats_value_get(const PSTATS *stats, int code) {
       stats_index(code));
 }
 
-void character_stats_value_set(PSTATS *stats, int code, int value) {
+void character_stats_value_set(const CharacterStatsValueChange *change) {
   *(unsigned char *)checked_storage_at(
-      stats->value_storage, NUM_CHARVALUES, sizeof(*stats->value_storage),
-      stats_index(code)) = (unsigned char)value;
+      change->stats->value_storage, NUM_CHARVALUES,
+      sizeof(*change->stats->value_storage), stats_index(change->code)) =
+      (unsigned char)change->value;
 }
 
 int character_stats_xp_get(const PSTATS *stats, int code) {
@@ -52,10 +53,10 @@ int character_stats_xp_get(const PSTATS *stats, int code) {
       stats_index(code));
 }
 
-void character_stats_xp_set(PSTATS *stats, int code, int value) {
-  *(int *)checked_storage_at(stats->xp_storage, NUM_CHARVALUES,
-                             sizeof(*stats->xp_storage), stats_index(code)) =
-      value;
+void character_stats_xp_set(const CharacterStatsExperienceChange *change) {
+  *(int *)checked_storage_at(change->stats->xp_storage, NUM_CHARVALUES,
+                             sizeof(*change->stats->xp_storage),
+                             stats_index(change->code)) = change->value;
 }
 
 time_t character_stats_last_use_get(const PSTATS *stats, int code) {
@@ -64,10 +65,10 @@ time_t character_stats_last_use_get(const PSTATS *stats, int code) {
       stats_index(code));
 }
 
-void character_stats_last_use_set(PSTATS *stats, int code, time_t value) {
-  *(time_t *)checked_storage_at(stats->last_use_storage, NUM_CHARVALUES,
-                                sizeof(*stats->last_use_storage),
-                                stats_index(code)) = value;
+void character_stats_last_use_set(const CharacterStatsLastUseChange *change) {
+  *(time_t *)checked_storage_at(change->stats->last_use_storage, NUM_CHARVALUES,
+                                sizeof(*change->stats->last_use_storage),
+                                stats_index(change->code)) = change->value;
 }
 
 bool is_good_obj(GameDatabase *database, DbRef object);
@@ -89,7 +90,8 @@ int char_getvaluecode(BtechContext *context, const char *name) {
 void char_setstatvalue(PSTATS *stats, const char *name, int value) {
   int code = char_getvaluecode(nullptr, name);
   if (code >= 0)
-    character_stats_value_set(stats, code, value);
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats, .code = code, .value = value});
 }
 
 static void initialize_catalog(void) {
@@ -140,27 +142,39 @@ int main(void) {
       character_stats_value_get(&stats, 41) != 1)
     return 1;
 
-  character_stats_value_set(&update, 37, 4);
-  character_stats_value_set(&update, 38, 5);
-  character_stats_value_set(&update, 39, 6);
-  character_stats_value_set(&update, 40, 7);
-  character_stats_value_set(&update, 41, 8);
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = 37, .value = 4});
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = 38, .value = 5});
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = 39, .value = 6});
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = 40, .value = 7});
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = 41, .value = 8});
   character_stats_store(&context, 0, &update, VALUES_ATTRS);
 
   memset(&update, 0, sizeof(update));
-  character_stats_value_set(&update, 6, 2);
-  character_stats_value_set(&update, 7, 3);
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = 6, .value = 2});
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = 7, .value = 3});
   character_stats_store(&context, 0, &update, VALUES_HEALTH);
 
   memset(&update, 0, sizeof(update));
-  character_stats_value_set(&update, 99, 2);
-  character_stats_xp_set(&update, 99, 300);
-  character_stats_last_use_set(&update, 99, 123456789);
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = 99, .value = 2});
+  character_stats_xp_set(&(CharacterStatsExperienceChange){
+      .stats = &update, .code = 99, .value = 300});
+  character_stats_last_use_set(&(CharacterStatsLastUseChange){
+      .stats = &update, .code = 99, .value = 123456789});
   character_stats_store(&context, 0, &update, VALUES_SKILLS);
 
   memset(&update, 0, sizeof(update));
-  character_stats_value_set(&update, LIVES_NUMBER, 0);
-  character_stats_value_set(&update, 26, 1);
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = LIVES_NUMBER});
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &update, .code = 26, .value = 1});
   character_stats_store(&context, 0, &update, VALUES_ADVS);
 
   character_stats_retrieve(&context, 0, VALUES_ALL, &stats);
@@ -180,15 +194,19 @@ int main(void) {
       !character_state_validate_all(&context))
     return 1;
 
-  if (!character_state_value_set(&database, 0, "running", 1, 0, 0) ||
+  if (!character_state_value_set(&(CharacterStateValueChange){
+          .database = &database, .player = 0, .name = "running", .value = 1}) ||
       character_state_validate_all(&context) ||
       !character_state_value_remove(&database, 0, "running") ||
       !character_state_validate_all(&context))
     return 1;
 
-  character_stats_value_set(&stats, 99, 4);
-  character_stats_xp_set(&stats, 99, 500);
-  character_stats_last_use_set(&stats, 99, 987654321);
+  character_stats_value_set(
+      &(CharacterStatsValueChange){.stats = &stats, .code = 99, .value = 4});
+  character_stats_xp_set(&(CharacterStatsExperienceChange){
+      .stats = &stats, .code = 99, .value = 500});
+  character_stats_last_use_set(&(CharacterStatsLastUseChange){
+      .stats = &stats, .code = 99, .value = 987654321});
   character_stats_clear(&stats);
   if (character_stats_value_get(&stats, 99) != 0 ||
       character_stats_xp_get(&stats, 99) != 0 ||

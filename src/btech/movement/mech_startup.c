@@ -126,8 +126,8 @@ startup_message(const char *const messages[static BOOT_MESSAGE_COUNT],
   if (timer < 0)
     abort();
   const size_t index = (size_t)timer;
-  const char *const *message = checked_storage_at_const(
-      messages, BOOT_MESSAGE_COUNT, sizeof(*messages), index);
+  const char *const *message = (const char *const *)checked_storage_at_const(
+      (const void *)messages, BOOT_MESSAGE_COUNT, sizeof(*messages), index);
   return *message;
 }
 
@@ -219,7 +219,8 @@ static void mech_startup_event(MuxEvent *e) {
                         mech_startup_step_delay(mech), timer);
     return;
   }
-  if ((mech_map = btech_context_get_map(context, mech_map_dbref(mech))))
+  mech_map = btech_context_get_map(context, mech_map_dbref(mech));
+  if (mech_map)
     battle_map_los_observer_clear(mech_map, mech_map_slot(mech));
   initialize_pc(mech_pilot_dbref(mech), mech);
   mech_power_up(mech);
@@ -338,10 +339,12 @@ void mech_startup(DbRef player, void *data, const char *buffer) {
   }
   if (is_in_character(database, mech_dbref(mech)) &&
       !is_wizard(database, player) &&
-      (char_lookupplayer(
-           context, GOD, GOD, 0,
-           btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
-                                (char[LBUF_SIZE]){0})) != player)) {
+      (character_lookup(&(CharacterLookupRequest){
+           .context = context,
+           .viewer = GOD,
+           .name = btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
+                                        (char[LBUF_SIZE]){0}),
+       }) != player)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "This isn't your mech!");
     return;

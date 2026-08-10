@@ -26,7 +26,7 @@
 #include "section_types.h"
 #include "template_api.h"
 /* Flooding code. Once we're in water, this is checked
-   now and then (basically when DamageMech'ed and/or
+   now and then (basically when damage is applied and/or
    depth changes and/or we fall) */
 
 static bool mech_is_in_water(Mech *mech) {
@@ -73,7 +73,7 @@ void mech_flood_section(Mech *mech, int loc, int lev) {
       mech, tprintf("has a gaping hole in %s, and water pours in!", locbuff));
 
   mech_section_flooded_set(mech, loc, true);
-  mech_parts_destroy(mech, mech, loc, 1, 1);
+  mech_parts_destroy(mech, mech, loc, true, true);
 }
 
 void mech_flood(Mech *mech) {

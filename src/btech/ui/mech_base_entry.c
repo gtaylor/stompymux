@@ -59,8 +59,8 @@ static void mech_enter_event(MuxEvent *e) {
   if (target_value < CHAR_MIN || target_value > CHAR_MAX)
     return;
   target = (char)target_value;
-  if (!(mapo = find_entrance_by_xy(map, mech_position_x(mech),
-                                   mech_position_y(mech))))
+  mapo = find_entrance_by_xy(map, mech_position_x(mech), mech_position_y(mech));
+  if (!mapo)
     return;
   if (!mech_is_started(mech) || mech_pilot_is_unconscious(mech) ||
       mech_is_jumping(mech) ||
@@ -73,10 +73,14 @@ static void mech_enter_event(MuxEvent *e) {
            MP1) ||
       (mech_class(mech) == CLASS_VTOL && mech_fuel(mech) <= 0))
     return;
-  if (!(newmap = btech_context_get_map(mech_context(mech), mapo->obj)))
+  newmap = btech_context_get_map(mech_context(mech), mapo->obj);
+  if (!newmap)
     return;
-  if (!find_entrance(newmap, target, &x, &y))
+  MapEntranceResult entrance = find_entrance(newmap, target);
+  if (!entrance.found)
     return;
+  x = entrance.position.x;
+  y = entrance.position.y;
 
   if (!lock_test(btech_context_evaluation(mech_context(mech)), mech_dbref(mech),
                  mech_dbref(mech), mech_dbref(mech), newmap->mynum,
@@ -120,13 +124,19 @@ static void mech_enter_event(MuxEvent *e) {
         tmpm, tprintf("has entered %s at %d,%d.",
                       structure_name(mech_context(mech)->database, mapo).text,
                       obj_x, obj_y));
-  move_via_teleport(btech_context_evaluation(mech_context(mech)),
-                    mech_dbref(mech), mapo->obj, 1, 0);
+  move_via_teleport(&(ObjectMovementRequest){
+      .evaluation = btech_context_evaluation(mech_context(mech)),
+      .object = mech_dbref(mech),
+      .destination = mapo->obj,
+      .cause = 1});
   if (tmpm) {
     mech_Rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", mapo->obj));
     mech_Rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
-    move_via_teleport(btech_context_evaluation(mech_context(mech)),
-                      mech_dbref(tmpm), mapo->obj, 1, 0);
+    move_via_teleport(&(ObjectMovementRequest){
+        .evaluation = btech_context_evaluation(mech_context(mech)),
+        .object = mech_dbref(tmpm),
+        .destination = mapo->obj,
+        .cause = 1});
   }
   auto_cal_mapindex(mech_context(mech), mech);
 }
@@ -134,7 +144,6 @@ static void mech_enter_event(MuxEvent *e) {
 void mech_enterbase(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *map, *newmap;
-  int x, y;
   MapObject *mapo;
   char target, *tmpc;
   char *args[2];
@@ -198,14 +207,15 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
                  "You are moving too fast to enter the hangar!");
     return;
   }
-  if (!(mapo = find_entrance_by_xy(map, mech_position_x(mech),
-                                   mech_position_y(mech)))) {
+  mapo = find_entrance_by_xy(map, mech_position_x(mech), mech_position_y(mech));
+  if (!mapo) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You see nothing to enter here!");
     return;
   }
   /* Wow, *gasp*, we got something to enter */
-  if (!(newmap = btech_context_find_object(mech_context(mech), mapo->obj))) {
+  newmap = btech_context_find_object(mech_context(mech), mapo->obj);
+  if (!newmap) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
@@ -213,7 +223,8 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
                 (int)mapo->obj, mapo->x, mapo->y, mech_map_dbref(mech)));
     return;
   }
-  if (!find_entrance(newmap, target, &x, &y)) {
+  MapEntranceResult entrance = find_entrance(newmap, target);
+  if (!entrance.found) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
@@ -222,7 +233,6 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
             (int)mapo->obj, mapo->x, mapo->y, mech_map_dbref(mech)));
     return;
   }
-
   if (!lock_test(btech_context_evaluation(mech_context(mech)), player, player,
                  mech_dbref(mech), newmap->mynum, LUA_LOCK_ENTER,
                  LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result) &&
@@ -232,8 +242,12 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
     memset(fail_mesg, 0, sizeof(fail_mesg));
     (void)snprintf(fail_mesg, SBUF_SIZE, "The hangar is locked.");
 
-    notify_lock_failure(btech_context_evaluation(mech_context(mech)), &lock,
-                        &lock_result, fail_mesg, nullptr, LUA_EVENT_FAIL);
+    notify_lock_failure(&(LockFailureNotification){
+        .evaluation = btech_context_evaluation(mech_context(mech)),
+        .invocation = &lock,
+        .result = &lock_result,
+        .enactor_default = fail_mesg,
+        .event = LUA_EVENT_FAIL});
 
     return;
   }

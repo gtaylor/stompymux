@@ -48,7 +48,8 @@ int map_coding_get_index(MapCodingRegistry *registry, char terrain,
   int i;
 
   unsigned char *id_slot = map_coding_id_slot(registry, terrain, elevation);
-  if ((i = *id_slot))
+  i = *id_slot;
+  if (i)
     return i - 1;
   assert(registry->next_id < UCHAR_MAX);
   *map_coding_entry(registry, registry->next_id) = (MapCodingEntry){

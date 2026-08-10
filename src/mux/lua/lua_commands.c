@@ -107,11 +107,25 @@ static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
   return handled;
 }
 
-static size_t lua_visit_module_commands(LuaRuntime *runtime,
-                                        LUA_MODULE_ROOT root, const char *path,
-                                        DbRef object, DbRef player,
-                                        LuaCommandVisitor visitor,
-                                        void *context) {
+typedef struct LuaModuleCommandVisitRequest {
+  LuaRuntime *runtime;
+  LUA_MODULE_ROOT root;
+  const char *path;
+  DbRef object;
+  DbRef player;
+  LuaCommandVisitor visitor;
+  void *context;
+} LuaModuleCommandVisitRequest;
+
+static size_t
+lua_visit_module_commands(const LuaModuleCommandVisitRequest *request) {
+  LuaRuntime *runtime = request->runtime;
+  LUA_MODULE_ROOT root = request->root;
+  const char *path = request->path;
+  DbRef object = request->object;
+  DbRef player = request->player;
+  LuaCommandVisitor visitor = request->visitor;
+  void *context = request->context;
   lua_State *state = runtime->state;
   char error[LBUF_SIZE];
   int top = lua_gettop(state);
@@ -179,9 +193,14 @@ size_t lua_visit_global_commands(LuaRuntime *runtime, DbRef player,
   if (!runtime || !visitor)
     return 0;
   for (size_t index = 0; index < runtime->global_module_count; index++)
-    count += lua_visit_module_commands(runtime, LUA_ROOT_GLOBAL_LOGIC,
-                                       lua_global_module_at(runtime, index),
-                                       NOTHING, player, visitor, context);
+    count += lua_visit_module_commands(&(LuaModuleCommandVisitRequest){
+        .runtime = runtime,
+        .root = LUA_ROOT_GLOBAL_LOGIC,
+        .path = lua_global_module_at(runtime, index),
+        .object = NOTHING,
+        .player = player,
+        .visitor = visitor,
+        .context = context});
   return count;
 }
 
@@ -193,8 +212,14 @@ size_t lua_visit_object_commands(LuaRuntime *runtime, DbRef object,
   if (!runtime || !visitor || is_halted(runtime->services->database, object) ||
       !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
     return 0;
-  return lua_visit_module_commands(runtime, LUA_ROOT_OBJECT_LOGIC, path, object,
-                                   player, visitor, context);
+  return lua_visit_module_commands(
+      &(LuaModuleCommandVisitRequest){.runtime = runtime,
+                                      .root = LUA_ROOT_OBJECT_LOGIC,
+                                      .path = path,
+                                      .object = object,
+                                      .player = player,
+                                      .visitor = visitor,
+                                      .context = context});
 }
 
 int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
@@ -358,10 +383,16 @@ static void do_luareload(CommandInvocation *invocation) {
 
   if (!lua_reload(invocation->context->runtime->lua_owner, error,
                   sizeof(error))) {
-    log_error(invocation->context->runtime->lua_owner->runtime->services->log,
-              LOG_PROBLEMS, "LUA", "RELOAD", "%s", error);
-    raw_notify_raw(&invocation->context->evaluation, player,
-                   "Lua reload failed: ", nullptr);
+    log_error((LogEntry){.log = invocation->context->runtime->lua_owner->runtime
+                                    ->services->log,
+                         .key = LOG_PROBLEMS,
+                         .primary = "LUA",
+                         .secondary = "RELOAD"},
+              "%s", error);
+    raw_notify_raw(
+        &(RawNotification){.evaluation = &invocation->context->evaluation,
+                           .player = player,
+                           .message = "Lua reload failed: "});
     raw_notify(&invocation->context->evaluation, player, error);
     return;
   }

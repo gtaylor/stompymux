@@ -19,7 +19,8 @@ bool is_in_character_location(GameDatabase *database,
   while (is_player(database, d)) {
     DbRef od = d;
 
-    if ((d = game_object_location(database, d)) == od)
+    d = game_object_location(database, d);
+    if (d == od)
       break;
     if (z++ >= 100)
       break;

@@ -41,12 +41,24 @@ styled_link_state_properties(const StyledLinkStyle *style, size_t index) {
                                   sizeof(*style->states), index);
 }
 
-static bool styled_tag_close_offset(const char *text, size_t length,
-                                    size_t start, size_t *close) {
+typedef struct StyledTagCloseRequest {
+  const char *text;
+  size_t length;
+  size_t start;
+} StyledTagCloseRequest;
+
+typedef struct StyledTagCloseResult {
+  bool found;
+  size_t offset;
+} StyledTagCloseResult;
+
+static StyledTagCloseResult
+styled_tag_close_offset(const StyledTagCloseRequest *request) {
   bool quoted = false;
   bool escaped = false;
-  for (size_t index = start; index < length; index++) {
-    const char character = compiler_character(text, length, index);
+  for (size_t index = request->start; index < request->length; index++) {
+    const char character =
+        compiler_character(request->text, request->length, index);
     if (escaped) {
       escaped = false;
     } else if (quoted && character == '\\') {
@@ -54,18 +66,18 @@ static bool styled_tag_close_offset(const char *text, size_t length,
     } else if (character == '"') {
       quoted = !quoted;
     } else if (!quoted && character == ']') {
-      *close = index;
-      return true;
+      return (StyledTagCloseResult){.found = true, .offset = index};
     }
   }
-  return false;
+  return (StyledTagCloseResult){0};
 }
 
 const char *styled_find_tag_close(const char *start) {
   const size_t length = strlen(start);
-  size_t close;
-  if (styled_tag_close_offset(start, length, 0, &close))
-    return compiler_suffix(start, length, close);
+  StyledTagCloseResult close = styled_tag_close_offset(
+      &(StyledTagCloseRequest){.text = start, .length = length});
+  if (close.found)
+    return compiler_suffix(start, length, close.offset);
   return nullptr;
 }
 
@@ -201,8 +213,13 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
     }
 
     if (config.preset) {
-      if (!styled_text_preset_name_valid(config.preset) ||
-          !(preset = styled_text_palette_find_preset(palette, config.preset))) {
+      if (!styled_text_preset_name_valid(config.preset)) {
+        styled_link_config_destroy(&config);
+        styled_set_error(error, error_size, "unknown OSC 8 preset");
+        return false;
+      }
+      preset = styled_text_palette_find_preset(palette, config.preset);
+      if (!preset) {
         styled_link_config_destroy(&config);
         styled_set_error(error, error_size, "unknown OSC 8 preset");
         return false;
@@ -430,15 +447,16 @@ bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
       continue;
     }
 
-    size_t close_offset;
+    StyledTagCloseResult close;
     char tag[OSC8_URI_LIMIT + 32];
     size_t tag_length;
-    if (!styled_tag_close_offset(markup, markup_length, cursor_offset + 1,
-                                 &close_offset)) {
+    close = styled_tag_close_offset(&(StyledTagCloseRequest){
+        .text = markup, .length = markup_length, .start = cursor_offset + 1});
+    if (!close.found) {
       styled_set_error(error, error_size, "unterminated style tag");
       return false;
     }
-    tag_length = close_offset - cursor_offset - 1;
+    tag_length = close.offset - cursor_offset - 1;
     if (tag_length == 0 || tag_length >= sizeof(tag)) {
       styled_set_error(error, error_size, "invalid style tag");
       return false;
@@ -453,7 +471,7 @@ bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
         goto too_long;
       return false;
     }
-    cursor_offset = close_offset + 1;
+    cursor_offset = close.offset + 1;
   }
   if (stack_size != 0) {
     styled_set_error(error, error_size, "style tag is not closed");
@@ -543,11 +561,11 @@ void styled_text_compile_permissive(const StyledTextPalette *palette,
       continue;
     }
 
-    size_t close_offset = 0;
-    const bool has_close = styled_tag_close_offset(
-        input, input_length, cursor_offset + 1, &close_offset);
-    size_t tag_length = has_close ? close_offset - cursor_offset - 1 : 0;
-    if (has_close && tag_length > 0 && tag_length < OSC8_URI_LIMIT + 32) {
+    StyledTagCloseResult close =
+        styled_tag_close_offset(&(StyledTagCloseRequest){
+            .text = input, .length = input_length, .start = cursor_offset + 1});
+    size_t tag_length = close.found ? close.offset - cursor_offset - 1 : 0;
+    if (close.found && tag_length > 0 && tag_length < OSC8_URI_LIMIT + 32) {
       StyledState candidate_state = state;
       StyledState candidate_stack[STYLE_STACK_LIMIT];
       size_t candidate_stack_size = stack_size;
@@ -571,7 +589,7 @@ void styled_text_compile_permissive(const StyledTextPalette *palette,
         state = candidate_state;
         memcpy(stack, candidate_stack, sizeof(stack));
         stack_size = candidate_stack_size;
-        cursor_offset = close_offset + 1;
+        cursor_offset = close.offset + 1;
         continue;
       }
     }
@@ -626,13 +644,13 @@ void styled_text_truncate(const StyledTextPalette *palette, const char *styled,
       cursor_offset += 2;
       visible++;
     } else if (character == '[') {
-      size_t close_offset = 0;
-      const bool has_close = styled_tag_close_offset(
-          styled, styled_length, cursor_offset + 1, &close_offset);
-      size_t tag_length = has_close ? close_offset - cursor_offset - 1 : 0;
+      StyledTagCloseResult close = styled_tag_close_offset(&(
+          StyledTagCloseRequest){
+          .text = styled, .length = styled_length, .start = cursor_offset + 1});
+      size_t tag_length = close.found ? close.offset - cursor_offset - 1 : 0;
       bool applied = false;
 
-      if (has_close && tag_length > 0 && tag_length < OSC8_URI_LIMIT + 32) {
+      if (close.found && tag_length > 0 && tag_length < OSC8_URI_LIMIT + 32) {
         StyledState candidate_state = state;
         StyledState candidate_stack[STYLE_STACK_LIMIT];
         size_t candidate_stack_size = stack_size;
@@ -650,11 +668,11 @@ void styled_text_truncate(const StyledTextPalette *palette, const char *styled,
                       &candidate_stack_size, rendered, sizeof(rendered),
                       &rendered_size, &options, error, sizeof(error)) &&
             styled_append_bytes(output, output_size, &used, cursor,
-                                close_offset - cursor_offset + 1)) {
+                                close.offset - cursor_offset + 1)) {
           state = candidate_state;
           memcpy(stack, candidate_stack, sizeof(stack));
           stack_size = candidate_stack_size;
-          cursor_offset = close_offset + 1;
+          cursor_offset = close.offset + 1;
           applied = true;
         }
       }

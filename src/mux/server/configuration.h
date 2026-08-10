@@ -4,6 +4,7 @@
 
 #include "mux/commands/command_context.h"
 #include "mux/server/configuration_context.h"
+#include "mux/server/configuration_interpreter.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 
@@ -26,6 +27,4 @@ void configuration_list_access(EvaluationContext *evaluation, DbRef player);
 int configuration_read(ConfigurationContext *context, char *filename);
 int configuration_set(ConfigurationContext *context, char *name, char *value,
                       DbRef player);
-int configuration_modify_bits(int *value, char *string, long extra,
-                              DbRef player, char *command,
-                              ConfigurationContext *context);
+int configuration_modify_bits(const ConfigurationCall *call);

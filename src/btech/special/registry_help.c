@@ -94,8 +94,18 @@ static void help_color_initialize(const char *from, char *to) {
 #define MLen CM_TWO
 #endif
 
-static const char *do_ugly_things(CoolMenu **d, const char *msg, int len,
-                                  int initial) {
+typedef struct HelpLineRequest {
+  CoolMenu **menu;
+  const char *message;
+  int width;
+  int indentation;
+} HelpLineRequest;
+
+static const char *help_line_add(const HelpLineRequest *request) {
+  CoolMenu **d = request->menu;
+  const char *msg = request->message;
+  const int len = request->width;
+  const int initial = request->indentation;
   CoolMenu *c = *d;
   size_t msg_len;
   char buf[LBUF_SIZE];
@@ -168,28 +178,51 @@ static int help_text_length(const char *text) {
 
 static constexpr int TAB = 3;
 
-static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
-                               int len, int initial) {
+typedef struct HelpTextRequest {
+  CoolMenu **menu;
+  const char *command;
+  const char *description;
+  int width;
+  int initial_indentation;
+} HelpTextRequest;
+
+static void help_text_add(const HelpTextRequest *request) {
+  CoolMenu **d = request->menu;
+  const char *msg1 = request->command;
+  const char *msg2 = request->description;
+  const int len = request->width;
+  [[maybe_unused]] const int initial = request->initial_indentation;
   int l1 = help_text_length(msg1);
   int l2 = help_text_length(msg2);
   int nl1, nl2;
 
 #ifndef ONE_LINE_TEXTS
 
-  msg1 = do_ugly_things(d, msg1, len, initial);
+  msg1 = help_line_add(&(HelpLineRequest){
+      .menu = d, .message = msg1, .width = len, .indentation = initial});
   msg2 =
-      do_ugly_things(d, msg2, initial ? len : len - TAB, initial ? 0 : 0 - TAB);
+      help_line_add(&(HelpLineRequest){.menu = d,
+                                       .message = msg2,
+                                       .width = initial ? len : len - TAB,
+                                       .indentation = initial ? 0 : 0 - TAB});
   if (!msg1 && !msg2)
     return;
   nl1 = help_text_length(msg1);
   nl2 = help_text_length(msg2);
   if (nl1 != l1 || nl2 != l2) /* To prevent infinite loops */
-    cut_apart_helpmsgs(d, msg1, msg2, len, 0);
+    help_text_add(&(HelpTextRequest){.menu = d,
+                                     .command = msg1,
+                                     .description = msg2,
+                                     .width = len,
+                                     .initial_indentation = 0});
 #else
   int first = 1;
 
   while (msg1 && *msg1) {
-    msg1 = do_ugly_things(d, msg1, len * 2 - 1, first);
+    msg1 = help_line_add(&(HelpLineRequest){.menu = d,
+                                            .message = msg1,
+                                            .width = len * 2 - 1,
+                                            .indentation = first});
     nl1 = help_text_length(msg1);
     if (nl1 == l1)
       break;
@@ -197,7 +230,10 @@ static void cut_apart_helpmsgs(CoolMenu **d, const char *msg1, const char *msg2,
     first = 0;
   }
   while (msg2 && *msg2) {
-    msg2 = do_ugly_things(d, msg2, len * 2 - TAB, 0 - TAB);
+    msg2 = help_line_add(&(HelpLineRequest){.menu = d,
+                                            .message = msg2,
+                                            .width = len * 2 - TAB,
+                                            .indentation = 0 - TAB});
     nl2 = help_text_length(msg2);
     if (nl2 == l2)
       break;
@@ -216,9 +252,14 @@ static HelpSection *help_section(HelpSection *sections, int index) {
   return checked_storage_at(sections, 100, sizeof(*sections), (size_t)index);
 }
 
-void btech_special_object_help(BtechContext *context, DbRef player,
-                               const char *type, int id, DbRef loc,
-                               PowerId powerneeded, DbRef objid, char *arg) {
+void btech_special_object_help(const SpecialObjectHelpRequest *request) {
+  BtechContext *context = request->context;
+  const DbRef player = request->player;
+  const char *type = request->type;
+  const int id = request->special_type;
+  const DbRef loc = request->location;
+  const PowerId powerneeded = request->power_needed;
+  char *arg = request->argument;
   int i, j;
   Mech *mech = NULL;
   HelpSection sections[100];
@@ -341,8 +382,12 @@ void btech_special_object_help(BtechContext *context, DbRef player,
                 btech_special_command_access(context, player, powerneeded))
               if (id != GTYPE_MECH ||
                   btech_command_allowed_for_mech(mech, command->flag))
-                cut_apart_helpmsgs(&c, command->name,
-                                   command_help_message(id, j), 37, 1);
+                help_text_add(&(HelpTextRequest){
+                    .menu = &c,
+                    .command = command->name,
+                    .description = command_help_message(id, j),
+                    .width = 37,
+                    .initial_indentation = 1});
           }
         }
     }

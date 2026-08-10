@@ -37,22 +37,18 @@
 
 extern const int num_def_weapons;
 
-static void FailureRadioStatic(Mech *, int, int, int, int, int, int *, int *);
-static void FailureRadioShort(Mech *, int, int, int, int, int, int *, int *);
-static void FailureRadioRange(Mech *, int, int, int, int, int, int *, int *);
-static void FailureComputerShutdown(Mech *, int, int, int, int, int, int *,
-                                    int *);
-static void FailureComputerScanner(Mech *, int, int, int, int, int, int *,
-                                   int *);
-static void FailureComputerTarget(Mech *, int, int, int, int, int, int *,
-                                  int *);
-static void FailureWeaponMissiles(Mech *, int, int, int, int, int, int *,
-                                  int *);
-static void FailureWeaponDud(Mech *, int, int, int, int, int, int *, int *);
-static void FailureWeaponJammed(Mech *, int, int, int, int, int, int *, int *);
-static void FailureWeaponDamage(Mech *, int, int, int, int, int, int *, int *);
-static void FailureWeaponHeat(Mech *, int, int, int, int, int, int *, int *);
-static void FailureWeaponSpike(Mech *, int, int, int, int, int, int *, int *);
+static PartFailureResult FailureRadioStatic(const PartFailureCall *call);
+static PartFailureResult FailureRadioShort(const PartFailureCall *call);
+static PartFailureResult FailureRadioRange(const PartFailureCall *call);
+static PartFailureResult FailureComputerShutdown(const PartFailureCall *call);
+static PartFailureResult FailureComputerScanner(const PartFailureCall *call);
+static PartFailureResult FailureComputerTarget(const PartFailureCall *call);
+static PartFailureResult FailureWeaponMissiles(const PartFailureCall *call);
+static PartFailureResult FailureWeaponDud(const PartFailureCall *call);
+static PartFailureResult FailureWeaponJammed(const PartFailureCall *call);
+static PartFailureResult FailureWeaponDamage(const PartFailureCall *call);
+static PartFailureResult FailureWeaponHeat(const PartFailureCall *call);
+static PartFailureResult FailureWeaponSpike(const PartFailureCall *call);
 
 static const PartBrand brands[] = {
     {"Lords", 1, 80, -40}, /* Energy weapons */
@@ -246,15 +242,15 @@ static int part_brand_failure_index(int type) {
   return -1;
 }
 
-const char *mech_part_brand_name(int type, int level) {
+const char *mech_part_brand_name(const PartBrandRequest *request) {
   int i;
 
-  if (!level)
+  if (!request->quality_level)
     return NULL;
-  i = part_brand_failure_index(type);
+  i = part_brand_failure_index(request->equipment_type);
   if (i < 0)
     return NULL;
-  return part_brand_at(i * 5 / 6 + level - 1)->name;
+  return part_brand_at(i * 5 / 6 + request->quality_level - 1)->name;
 }
 
 static int failure_index_for_critical(const Mech *mech, int section,
@@ -264,13 +260,10 @@ static int failure_index_for_critical(const Mech *mech, int section,
          1;
 }
 
-static void FailureRadioStatic(Mech *mech, int weapnum, int weaptype,
-                               int section, int critical, int roll,
-                               int *modifier, int *type) {
-  int mod = part_failure_at(part_brand_failure_index(-2) + roll - 1)->data;
-
-  *modifier = mod;
-  *type = FAIL_STATIC;
+static PartFailureResult FailureRadioStatic(const PartFailureCall *call) {
+  int modifier =
+      part_failure_at(part_brand_failure_index(-2) + call->roll - 1)->data;
+  return (PartFailureResult){.type = FAIL_STATIC, .modifier = modifier};
 }
 
 static void mech_rrec_event(MuxEvent *e) {
@@ -312,21 +305,21 @@ static void mech_srec_event(MuxEvent *e) {
   }
 }
 
-static void FailureRadioShort(Mech *mech, int weapnum, int weaptype,
-                              int section, int critical, int roll,
-                              int *modifier, int *type) {
+static PartFailureResult FailureRadioShort(const PartFailureCall *call) {
+  Mech *mech = call->mech;
   mech_event_schedule(mech, EVENT_MRECOVERY, mech_rrec_event,
                       btech_random_range_int(
                           mech_context(mech), 30,
                           btech_random_range_int(mech_context(mech), 40, 200)),
                       (long)mech_radio_range(mech));
   mech_radio_range_set(mech, 0);
+  return (PartFailureResult){0};
 }
 
-static void FailureRadioRange(Mech *mech, int weapnum, int weaptype,
-                              int section, int critical, int roll,
-                              int *modifier, int *type) {
-  int mod = part_failure_at(part_brand_failure_index(-2) + roll - 1)->data;
+static PartFailureResult FailureRadioRange(const PartFailureCall *call) {
+  Mech *mech = call->mech;
+  int mod =
+      part_failure_at(part_brand_failure_index(-2) + call->roll - 1)->data;
 
   mod = MIN(mech_radio_range(mech) - 1, mod);
   mech_event_schedule(mech, EVENT_MRECOVERY, mech_rrec_event,
@@ -335,19 +328,19 @@ static void FailureRadioRange(Mech *mech, int weapnum, int weaptype,
                           btech_random_range_int(mech_context(mech), 40, 200)),
                       (long)mod);
   mech_radio_range_add(mech, -mod);
+  return (PartFailureResult){0};
 }
 
-static void FailureComputerShutdown(Mech *mech, int weapnum, int weaptype,
-                                    int section, int critical, int roll,
-                                    int *modifier, int *type) {
-  if (mech_is_started(mech))
-    mech_shutdown(mech_dbref(mech), mech, "");
+static PartFailureResult FailureComputerShutdown(const PartFailureCall *call) {
+  if (mech_is_started(call->mech))
+    mech_shutdown(mech_dbref(call->mech), call->mech, "");
+  return (PartFailureResult){0};
 }
 
-static void FailureComputerScanner(Mech *mech, int weapnum, int weaptype,
-                                   int section, int critical, int roll,
-                                   int *modifier, int *type) {
-  int tmp = part_failure_at(part_brand_failure_index(-1) + roll - 1)->data;
+static PartFailureResult FailureComputerScanner(const PartFailureCall *call) {
+  Mech *mech = call->mech;
+  int tmp =
+      part_failure_at(part_brand_failure_index(-1) + call->roll - 1)->data;
 
   switch (tmp) {
   case 1:
@@ -365,7 +358,7 @@ static void FailureComputerScanner(Mech *mech, int weapnum, int weaptype,
         btech_random_range_int(
             mech_context(mech), 30,
             btech_random_range_int(mech_context(mech), 40, 200)),
-        (long)(mech_long_range_sensor_range(mech) + 256));
+        (long)mech_long_range_sensor_range(mech) + 256L);
     mech_long_range_sensor_range_set(mech, 0);
     break;
   case 4:
@@ -374,7 +367,7 @@ static void FailureComputerScanner(Mech *mech, int weapnum, int weaptype,
         btech_random_range_int(
             mech_context(mech), 30,
             btech_random_range_int(mech_context(mech), 40, 200)),
-        (long)(mech_scanner_range(mech) + 512));
+        (long)mech_scanner_range(mech) + 512L);
     mech_scanner_range_set(mech, 0);
     break;
   case 7:
@@ -389,124 +382,146 @@ static void FailureComputerScanner(Mech *mech, int weapnum, int weaptype,
         btech_random_range_int(
             mech_context(mech), 30,
             btech_random_range_int(mech_context(mech), 40, 200)),
-        (long)(mech_long_range_sensor_range(mech) + 256));
+        (long)mech_long_range_sensor_range(mech) + 256L);
     mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
         btech_random_range_int(
             mech_context(mech), 30,
             btech_random_range_int(mech_context(mech), 40, 200)),
-        (long)(mech_scanner_range(mech) + 512));
+        (long)mech_scanner_range(mech) + 512L);
     mech_tactical_range_set(mech, 0);
     mech_long_range_sensor_range_set(mech, 0);
     mech_scanner_range_set(mech, 0);
     break;
   }
+  return (PartFailureResult){0};
 }
 
-static void FailureComputerTarget(Mech *mech, int weapnum, int weaptype,
-                                  int section, int critical, int roll,
-                                  int *modifier, int *type) {
-  mech_targeting_target_clear(mech);
+static PartFailureResult FailureComputerTarget(const PartFailureCall *call) {
+  mech_targeting_target_clear(call->mech);
+  return (PartFailureResult){0};
 }
 
-static void FailureWeaponMissiles(Mech *mech, int weapnum, int weaptype,
-                                  int section, int critical, int roll,
-                                  int *modifier, int *type) {
+static PartFailureResult FailureWeaponMissiles(const PartFailureCall *call) {
   const PartFailure *failure = part_failure_at(
-      failure_index_for_critical(mech, section, critical) + roll);
-  mech_critical_temporary_failure_set(mech, section, critical, failure->type);
-  *type = CRAZY_MISSILES;
-  *modifier = failure->data;
+      failure_index_for_critical(call->mech, call->section, call->critical) +
+      call->roll);
+  mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+      .mech = call->mech,
+      .slot = {.section = call->section, .critical = call->critical},
+      .failure = failure->type});
+  return (PartFailureResult){
+      .type = CRAZY_MISSILES,
+      .modifier = failure->data,
+  };
 }
 
-static void FailureWeaponDud(Mech *mech, int weapnum, int weaptype, int section,
-                             int critical, int roll, int *modifier, int *type) {
+static PartFailureResult FailureWeaponDud(const PartFailureCall *call) {
+  Mech *mech = call->mech;
   const PartFailure *failure = part_failure_at(
-      failure_index_for_critical(mech, section, critical) + roll);
+      failure_index_for_critical(mech, call->section, call->critical) +
+      call->roll);
   if (failure->type == FAIL_NONE) {
-    mech_set_recycle_part(mech, section, critical,
-                          btech_weapon_settings_recycle_time(
-                              &mech_context(mech)->weapon_settings, weaptype));
-    return;
+    mech_set_recycle_part(
+        mech, call->section, call->critical,
+        btech_weapon_settings_recycle_time(&mech_context(mech)->weapon_settings,
+                                           call->weapon_type));
+    return (PartFailureResult){0};
   }
-  mech_critical_temporary_failure_set(mech, section, critical, failure->type);
-  *type = WEAPON_DUD;
-  if (roll == 6) {
-    mech_critical_temporary_failure_set(mech, section, critical,
-                                        FAIL_DESTROYED);
+  mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+      .mech = mech,
+      .slot = {.section = call->section, .critical = call->critical},
+      .failure = failure->type});
+  if (call->roll == 6) {
+    mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+        .mech = mech,
+        .slot = {.section = call->section, .critical = call->critical},
+        .failure = FAIL_DESTROYED});
   }
-  mech_set_recycle_part(mech, section, critical,
+  mech_set_recycle_part(mech, call->section, call->critical,
                         30 + btech_random_range_int(mech_context(mech), 1, 60));
+  return (PartFailureResult){.type = WEAPON_DUD};
 }
 
-static void FailureWeaponJammed(Mech *mech, int weapnum, int weaptype,
-                                int section, int critical, int roll,
-                                int *modifier, int *type) {
+static PartFailureResult FailureWeaponJammed(const PartFailureCall *call) {
+  Mech *mech = call->mech;
   const PartFailure *failure = part_failure_at(
-      failure_index_for_critical(mech, section, critical) + roll);
-  mech_critical_temporary_failure_set(mech, section, critical, failure->type);
-  *type = WEAPON_JAMMED;
-  mech_set_recycle_part(mech, section, critical,
+      failure_index_for_critical(mech, call->section, call->critical) +
+      call->roll);
+  mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+      .mech = mech,
+      .slot = {.section = call->section, .critical = call->critical},
+      .failure = failure->type});
+  mech_set_recycle_part(mech, call->section, call->critical,
                         btech_random_range_int(mech_context(mech), 20, 40));
+  return (PartFailureResult){.type = WEAPON_JAMMED};
 }
 
-static void FailureWeaponDamage(Mech *mech, int weapnum, int weaptype,
-                                int section, int critical, int roll,
-                                int *modifier, int *type) {
+static PartFailureResult FailureWeaponDamage(const PartFailureCall *call) {
   const int percentage =
-      part_failure_at(failure_index_for_critical(mech, section, critical) +
-                      roll)
+      part_failure_at(failure_index_for_critical(call->mech, call->section,
+                                                 call->critical) +
+                      call->roll)
           ->data;
-  *modifier = (weapon_catalogue_damage(weaptype) * percentage) / 100;
-  *type = DAMAGE;
+  return (PartFailureResult){
+      .type = DAMAGE,
+      .modifier =
+          (weapon_catalogue_damage(call->weapon_type) * percentage) / 100,
+  };
 }
 
-static void FailureWeaponHeat(Mech *mech, int weapnum, int weaptype,
-                              int section, int critical, int roll,
-                              int *modifier, int *type) {
+static PartFailureResult FailureWeaponHeat(const PartFailureCall *call) {
   const int percentage =
-      part_failure_at(failure_index_for_critical(mech, section, critical) +
-                      roll)
+      part_failure_at(failure_index_for_critical(call->mech, call->section,
+                                                 call->critical) +
+                      call->roll)
           ->data;
-  *modifier = (weapon_catalogue_heat(weaptype) * percentage) / 100;
-  *type = HEAT;
+  return (PartFailureResult){
+      .type = HEAT,
+      .modifier = (weapon_catalogue_heat(call->weapon_type) * percentage) / 100,
+  };
 }
 
-static void FailureWeaponSpike(Mech *mech, int weapnum, int weaptype,
-                               int section, int critical, int roll,
-                               int *modifier, int *type) {
+static PartFailureResult FailureWeaponSpike(const PartFailureCall *call) {
+  Mech *mech = call->mech;
   const PartFailure *failure = part_failure_at(
-      failure_index_for_critical(mech, section, critical) + roll);
-  mech_critical_temporary_failure_set(mech, section, critical, failure->type);
-  *type = POWER_SPIKE;
-  if (roll == 6) {
-    mech_critical_temporary_failure_set(mech, section, critical,
-                                        FAIL_DESTROYED);
-    return;
+      failure_index_for_critical(mech, call->section, call->critical) +
+      call->roll);
+  mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+      .mech = mech,
+      .slot = {.section = call->section, .critical = call->critical},
+      .failure = failure->type});
+  if (call->roll == 6) {
+    mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+        .mech = mech,
+        .slot = {.section = call->section, .critical = call->critical},
+        .failure = FAIL_DESTROYED});
+    return (PartFailureResult){.type = POWER_SPIKE};
   }
-  mech_set_recycle_part(mech, section, critical,
+  mech_set_recycle_part(mech, call->section, call->critical,
                         btech_random_range_int(mech_context(mech), 20, 40));
+  return (PartFailureResult){.type = POWER_SPIKE};
 }
 
-void mech_generic_failure_check(Mech *mech, int type, int *result, int *mod) {
+PartFailureResult mech_generic_failure_check(Mech *mech, FailureSystem system) {
+  const PartFailureResult no_failure = {0};
+  int type = system == FAILURE_SYSTEM_COMPUTER ? -1 : -2;
   int i = part_brand_failure_index(type);
   int l = type == -1 ? mech_computer_quality(mech) : mech_radio_quality(mech);
   int roll, in;
 
-  if (result)
-    *result = FAIL_NONE;
   if (i < 0)
-    return;
+    return no_failure;
   if (mech_context(mech)->configuration->btech_parts) {
     if (!l)
       l = 5;
   } else
-    return;
+    return no_failure;
   if (btech_random_range_int(mech_context(mech), 1, 5000) != 42)
-    return; /* ~1/5000 chance */
+    return no_failure; /* ~1/5000 chance */
   if (btech_random_range_int(mech_context(mech), 1, 100) <=
       part_brand_at((i + l - 1) * 5 / 6)->success)
-    return;
+    return no_failure;
   roll = btech_random_range_int(mech_context(mech), 1, 6);
   if (roll == 6)
     roll = btech_random_range_int(mech_context(mech), 1, 6);
@@ -515,70 +530,85 @@ void mech_generic_failure_check(Mech *mech, int type, int *result, int *mod) {
   switch (failure->flag) {
   case REQ_TARGET:
     if (mech_target_dbref(mech) <= 0)
-      return;
+      return no_failure;
     break;
   case REQ_TAC:
     if (mech_tactical_range(mech) == 0)
-      return;
+      return no_failure;
     break;
   case REQ_LRS:
     if (mech_long_range_sensor_range(mech) == 0)
-      return;
+      return no_failure;
     break;
   case REQ_SCANNERS:
     if (mech_tactical_range(mech) == 0 ||
         mech_long_range_sensor_range(mech) == 0 ||
         mech_scanner_range(mech) == 0)
-      return;
+      return no_failure;
     break;
   case REQ_COMPUTER:
     /* */
     break;
   case REQ_RADIO:
     if (mech_radio_range(mech) == 0)
-      return;
+      return no_failure;
     break;
   }
   if (failure->message && strcmp(failure->message, "none"))
     mech_notify(mech, MECHALL, failure->message);
-  failure->func(mech, -1, -1, -1, -1, roll, mod, result);
+  PartFailureCall call = {
+      .mech = mech,
+      .weapon_number = -1,
+      .weapon_type = -1,
+      .section = -1,
+      .critical = -1,
+      .roll = roll,
+  };
+  return failure->handler(&call);
 }
 
-void mech_weapon_failure_check(Mech *mech, int weapnum, int weaptype,
-                               int section, int critical, int *modifier,
-                               int *type) {
+PartFailureResult
+mech_weapon_failure_check(const MechWeaponFailureRequest *request) {
+  const PartFailureResult no_failure = {0};
+  Mech *mech = request->mech;
   int roll;
-  int l = mech_critical_brand(mech, section, critical);
-  int t = mech_critical_part_type(mech, section, critical);
+  int l = mech_critical_brand(mech, request->section, request->critical);
+  int t = mech_critical_part_type(mech, request->section, request->critical);
   int i = part_brand_failure_index(t), in;
 
-  *type = FAIL_NONE;
   if (i < 0)
-    return;
+    return no_failure;
   if (mech_context(mech)->configuration->btech_parts) {
     if (!l)
       l = 5;
     if (!equipment_is_weapon(t))
-      return;
+      return no_failure;
     if (weapon_catalogue_is_personal_combat(weapon_from_equipment_index(t)))
-      return;
+      return no_failure;
   } else
-    return;
+    return no_failure;
   if (btech_random_range_int(mech_context(mech), 1, 10) < 9)
-    return;
+    return no_failure;
   if (btech_random_range_int(mech_context(mech), 1, 100) <=
       part_brand_at((i + l - 1) * 5 / 6)->success)
-    return;
+    return no_failure;
   roll = btech_random_range_int(mech_context(mech), 1, 6);
   if (roll == 6)
     roll = btech_random_range_int(mech_context(mech), 1, 6);
   in = i + roll - 1;
   const PartFailure *failure = part_failure_at(in);
   if (failure->flag & REQ_HEAT)
-    if (!weapon_catalogue_heat(weaptype))
-      return;
+    if (!weapon_catalogue_heat(request->weapon_type))
+      return no_failure;
   if (failure->message && strcmp(failure->message, "none"))
     mech_notify(mech, MECHALL, failure->message);
-  failure->func(mech, weapnum, weaptype, section, critical, roll, modifier,
-                type);
+  PartFailureCall call = {
+      .mech = mech,
+      .weapon_number = request->weapon_number,
+      .weapon_type = request->weapon_type,
+      .section = request->section,
+      .critical = request->critical,
+      .roll = roll,
+  };
+  return failure->handler(&call);
 }

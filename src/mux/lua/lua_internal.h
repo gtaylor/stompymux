@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "mux/support/array_sort.h"
+
 #include <limits.h>
 #include <stddef.h>
 #include <time.h>
@@ -88,7 +90,7 @@ LuaRuntime *lua_runtime_create(LuaOwner *owner, const LuaServices *services,
 void lua_runtime_destroy(LuaRuntime *runtime);
 
 void lua_free_modules(char **modules, size_t module_count);
-int lua_compare_module_paths(const void *left, const void *right);
+int lua_compare_module_paths(const ArraySortComparison *comparison);
 int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                         const char *relative, char ***modules,
                         size_t *module_count, char *error, size_t error_size);

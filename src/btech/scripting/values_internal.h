@@ -74,18 +74,18 @@ static inline char *script_function_argument(char *const arguments[],
                                              int argument_count, size_t index) {
   if (argument_count <= 0)
     return nullptr;
-  return *(char *const *)checked_storage_at_const(
-      arguments, (size_t)argument_count, sizeof(*arguments), index);
+  return *(char *const *)checked_storage_at_const((const void *)arguments,
+                                                  (size_t)argument_count,
+                                                  sizeof(*arguments), index);
 }
-
-const char *mech_armor_status_set_value(Mech *mech, const char *section,
-                                        const char *armor_type,
-                                        const char *value);
 
 typedef enum GmvSourceKind {
   GMV_SOURCE_MECH_KEY,
   GMV_SOURCE_FIELD_OFFSET,
-  GMV_SOURCE_CALLBACK,
+  GMV_SOURCE_STRING_CALLBACK,
+  GMV_SOURCE_BIDIRECTIONAL_CALLBACK,
+  GMV_SOURCE_BUFFERED_CALLBACK,
+  GMV_SOURCE_BUFFERED_BIDIRECTIONAL_CALLBACK,
   GMV_SOURCE_SENTINEL,
 } GmvSourceKind;
 
@@ -95,8 +95,8 @@ typedef union GmvSource {
   char *(*string_callback)(int mode, Mech *mech);
   char *(*bidirectional_callback)(int mode, Mech *mech, char *value);
   char *(*buffered_callback)(Mech *mech, char *buffer);
-  char *(*buffered_bidirectional_callback)(int mode, Mech *mech, char *value,
-                                           char *buffer);
+  char *(*buffered_bidirectional_callback)(
+      const GmvBufferedBidirectionalCall *call);
 } GmvSource;
 
 typedef struct {

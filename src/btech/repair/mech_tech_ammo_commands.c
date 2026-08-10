@@ -60,7 +60,8 @@ void tech_toggletype(DbRef player, void *data, char *buffer) {
                  "You need to give a type to toggle to (use - for normal)");
     return;
   }
-  if ((t = valid_ammo_mode(mech, loc, part, atype)) < 0) {
+  t = valid_ammo_mode(mech, loc, part, atype);
+  if (t < 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That is invalid ammo type for this weapon!");
     return;
@@ -138,7 +139,8 @@ void tech_reload(DbRef player, void *data, char *buffer) {
     return;
   }
   if (atype) {
-    if ((t = (valid_ammo_mode(mech, loc, part, atype))) < 0) {
+    t = valid_ammo_mode(mech, loc, part, atype);
+    if (t < 0) {
       mecha_notify(btech_context_evaluation(context), player,
                    "That is invalid ammo type for this weapon!");
       return;
@@ -252,11 +254,14 @@ void tech_unload(DbRef player, void *data, char *buffer) {
     mod = 3;
   mecha_notify(evaluation, player,
                "You start unloading the ammo compartment..");
-  repair_event_schedule_with_techtime(&repair_command, RELOAD_TIME, mod,
-                                      EVENT_REPAIR_RELO,
-                                      mux_event_tickmech_reload,
-                                      (RepairEventPayload){.location = loc,
-                                                           .position = part,
-                                                           .extra = change,
-                                                           .player = player});
+  repair_event_schedule_with_techtime(
+      &(RepairWorkSchedule){.command = &repair_command,
+                            .work_time = RELOAD_TIME,
+                            .multiplier = mod,
+                            .event_type = EVENT_REPAIR_RELO,
+                            .callback = mux_event_tickmech_reload,
+                            .payload = {.location = loc,
+                                        .position = part,
+                                        .extra = change,
+                                        .player = player}});
 }

@@ -58,9 +58,18 @@ struct CommandContext {
   EvaluationContext evaluation;
 };
 
-bool command_context_initialize(CommandContext *context,
-                                CommandRuntime *runtime, BtechContext *btech,
-                                ServerLog *log, DbRef player, DbRef enactor,
-                                Descriptor *descriptor, bool interactive);
+typedef struct CommandContextInitialization {
+  CommandContext *context;
+  CommandRuntime *runtime;
+  BtechContext *btech;
+  ServerLog *log;
+  DbRef player;
+  DbRef enactor;
+  Descriptor *descriptor;
+  bool interactive;
+} CommandContextInitialization;
+
+bool command_context_initialize(
+    const CommandContextInitialization *initialization);
 void command_context_destroy(CommandContext *context);
 void command_context_reset_limits(CommandContext *context);

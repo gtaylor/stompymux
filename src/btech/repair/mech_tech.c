@@ -2,6 +2,7 @@
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* Implements BattleTech repair mechanics for unit tech. */
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -159,7 +160,16 @@ int tech_weapon_roll(DbRef player, Mech *mech, int diff) {
 /* Basic idea: Check for attribute, if not set, set it, and do interesting
    stuff */
 
-void tech_status(BtechContext *context, DbRef player, time_t dat) {
+typedef struct TechStatusRequest {
+  BtechContext *context;
+  DbRef player;
+  time_t completion;
+} TechStatusRequest;
+
+static void tech_status(const TechStatusRequest *request) {
+  BtechContext *context = request->context;
+  const DbRef player = request->player;
+  time_t dat = request->completion;
   char buf[MBUF_SIZE] = {0};
   char *olds;
   int un;
@@ -198,7 +208,9 @@ void tech_status(BtechContext *context, DbRef player, time_t dat) {
   }
 }
 
-int tech_addtechtime(BtechContext *context, DbRef player, int time) {
+int tech_addtechtime(const TechTimeAddition *addition) {
+  BtechContext *context = addition->context;
+  const DbRef player = addition->player;
   time_t old;
   char *olds = btech_attribute_read(context->database, player, A_TECHTIME,
                                     (char[LBUF_SIZE]){0});
@@ -210,56 +222,55 @@ int tech_addtechtime(BtechContext *context, DbRef player, int time) {
       old = context->clock->now;
   } else
     old = context->clock->now;
-  old += time * TECH_TICK;
+  old += (time_t)(addition->units * TECH_TICK);
   silly_atr_set_in(context->database, player, A_TECHTIME, tprintf("%ld", old));
-  tech_status(context, player, old);
+  tech_status(&(TechStatusRequest){
+      .context = context, .player = player, .completion = old});
   return clamp_intptr_to_int((intptr_t)(old - context->clock->now));
 }
 
-int tech_parsepart_advanced(Mech *mech, char *buffer, int *loc, int *pos,
-                            int *extra, int allowrear) {
+TechPartParseResult tech_part_parse(const TechPartParseRequest *request) {
+  TechPartParseResult result = {0};
+  Mech *mech = request->mech;
   char *args[5];
   int l, argc, isrear = 0;
 
-  if (!(argc = mech_parseattributes(buffer, args, 4)))
-    return -1;
-  if (argc > (2 + (extra != NULL)))
-    return -1;
-  if (!allowrear) {
-    if ((!extra && argc != (1 + (pos != NULL))) ||
-        (extra && (argc < (1 + (pos != NULL)) || argc > (2 + (pos != NULL)))))
-      return -1;
+  argc = mech_parseattributes(request->text, args, 4);
+  if (!argc)
+    return (TechPartParseResult){.status = TECH_PART_PARSE_INVALID};
+  if (argc > (2 + request->parse_extra))
+    return (TechPartParseResult){.status = TECH_PART_PARSE_INVALID};
+  if (!request->allow_rear) {
+    if ((!request->parse_extra && argc != (1 + request->parse_position)) ||
+        (request->parse_extra && (argc < (1 + request->parse_position) ||
+                                  argc > (2 + request->parse_position))))
+      return (TechPartParseResult){.status = TECH_PART_PARSE_INVALID};
   } else {
     if (argc == 2) {
       if (ascii_to_upper(*checked_string_suffix(args[1], 0)) != 'R')
-        return -1;
+        return (TechPartParseResult){.status = TECH_PART_PARSE_INVALID};
       isrear = 8;
     }
   }
-  if ((*loc = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                     args[0])) < 0)
-    return -1;
-  if (allowrear)
-    *loc += isrear;
-  if (pos) {
+  result.location = ArmorSectionFromString(mech_class(mech),
+                                           mech_movement_type(mech), args[0]);
+  if (result.location < 0)
+    return (TechPartParseResult){.status = TECH_PART_PARSE_INVALID};
+  if (request->allow_rear)
+    result.location += isrear;
+  if (request->parse_position) {
     if (!parse_int_checked(args[1], &l))
-      return -1;
+      return (TechPartParseResult){.status = TECH_PART_PARSE_INVALID};
     l--;
-    if (l < 0 || l >= mech_section_critical_count(mech, *loc))
-      return -2;
-    *pos = l;
+    if (l < 0 || l >= mech_section_critical_count(mech, result.location))
+      return (TechPartParseResult){.status = TECH_PART_PARSE_INVALID_POSITION};
+    result.position = l;
   }
-  if (extra) {
+  if (request->parse_extra) {
     if (argc > 2)
-      *extra = (unsigned char)args[2][0];
-    else
-      *extra = 0;
+      result.extra = (unsigned char)args[2][0];
   }
-  return 0;
-}
-
-int tech_parsepart(Mech *mech, char *buffer, int *loc, int *pos, int *extra) {
-  return tech_parsepart_advanced(mech, buffer, loc, pos, extra, 0);
+  return result;
 }
 
 int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
@@ -273,8 +284,9 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
   if (argc == (2 + (brand != NULL)) ||
       (brand && argc == 2 && parse_int_checked(args[1], &position) &&
        position != 0)) {
-    if ((*loc = ArmorSectionFromString(mech_class(mech),
-                                       mech_movement_type(mech), args[0])) < 0)
+    *loc = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
+                                  args[0]);
+    if (*loc < 0)
       return -1;
     if (!parse_int_checked(args[1], &l))
       return -1;
@@ -287,17 +299,27 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
       return -1;
     if (l < 0)
       return -1;
-    if (FindWeaponNumberOnMech(mech, l, loc, pos) == -1)
+    WeaponNumberLookupResult lookup = weapon_number_find(
+        &(WeaponNumberLookupRequest){.mech = mech, .number = l});
+    if (!lookup.found)
       return -1;
+    *loc = lookup.slot.section;
+    *pos = lookup.slot.critical;
   }
   t = mech_critical_part_type(mech, *loc, *pos);
-  char **last_argument_slot =
-      checked_storage_at(args, (size_t)argc, sizeof(*args), (size_t)(argc - 1));
+  char **last_argument_slot = (char **)checked_storage_at(
+      (void *)args, (size_t)argc, sizeof(*args), (size_t)(argc - 1));
   if (brand != NULL && argc > 1 &&
       (!parse_int_checked(*last_argument_slot, &position) || position == 0)) {
-    if (!find_matching_long_part(mech_context(mech), *last_argument_slot, &c,
-                                 &pi, &pb))
+    PartMatchResult match =
+        part_match_next(&(PartMatchRequest){.context = mech_context(mech),
+                                            .pattern = *last_argument_slot,
+                                            .kind = PART_MATCH_LONG,
+                                            .cursor = c});
+    if (!match.found)
       return -2;
+    pi = match.part.id;
+    pb = match.part.brand;
     if (pi != t)
       return -3;
     *brand = pb;

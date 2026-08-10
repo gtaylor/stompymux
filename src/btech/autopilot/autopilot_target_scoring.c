@@ -5,6 +5,7 @@
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "map_los_api.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
@@ -69,9 +70,12 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
    * it be all seeing */
 
   /* Range to target */
-  range =
-      FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                   mech_position_real_x(target), mech_position_real_y(target));
+  range = map_real_range(&(MapRealSegment){
+      .start = {.x = mech_position_real_x(mech),
+                .y = mech_position_real_y(mech)},
+      .end = {.x = mech_position_real_x(target),
+              .y = mech_position_real_y(target)},
+  });
 
   /* Our we outside the range of the AI's System */
   if (range >= (float)AUTO_GUN_MAX_RANGE) {

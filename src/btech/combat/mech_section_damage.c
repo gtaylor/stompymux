@@ -44,14 +44,17 @@
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
-void mech_weapon_destroy(Mech *wounded, int hitloc, int type, int startCrit,
-                         int numcrits, int totalcrits) {
+
+void mech_weapon_destroy(const WeaponDestructionRequest *request) {
+  Mech *wounded = request->mech;
+  int hitloc = request->first.section;
+  int startCrit = request->first.critical;
+  int type = request->part_type;
+  int numcrits = request->criticals_to_destroy;
+  int totalcrits = request->total_criticals;
   int i;
   int sum = totalcrits;
   int destroyed = numcrits;
-  int checkloc;
-  int newcrit;
-  int split;
   int disable = 0; // Hax for later destroying all crits or disabling
 
   for (i = startCrit; i < NUM_CRITICALS; i++) {
@@ -80,37 +83,59 @@ void mech_weapon_destroy(Mech *wounded, int hitloc, int type, int startCrit,
   // this location, so it must be a split crit.
   if (mech_class(wounded) != CLASS_MECH)
     return; // sanity check
-  if (GetSplitData(wounded, hitloc, startCrit, &checkloc, &newcrit, &split))
-    mech_weapon_destroy(wounded, checkloc, split, newcrit, destroyed, sum);
+  SplitCriticalLookup split =
+      split_critical_find(wounded, (CriticalSlotReference){hitloc, startCrit});
+  if (split.found)
+    mech_weapon_destroy(
+        &(WeaponDestructionRequest){.mech = wounded,
+                                    .first = split.slot,
+                                    .part_type = split.part_type,
+                                    .criticals_to_destroy = destroyed,
+                                    .total_criticals = sum});
 }
 
 int mech_weapon_count_in_section(Mech *mech, int loc) {
   int i;
-  int j, sec, cri;
+  int j, sec;
   int count = 0;
 
-  j = FindWeaponNumberOnMech(mech, 1, &sec, &cri);
+  WeaponNumberLookupResult lookup = weapon_number_find(
+      &(WeaponNumberLookupRequest){.mech = mech, .number = 1});
+  j = lookup.value;
+  sec = lookup.slot.section;
   for (i = 2; j != -1; i++) {
     if (sec == loc)
       count++;
-    j = FindWeaponNumberOnMech(mech, i, &sec, &cri);
+    lookup = weapon_number_find(
+        &(WeaponNumberLookupRequest){.mech = mech, .number = i});
+    j = lookup.value;
+    sec = lookup.slot.section;
   }
   return count;
 }
 
-int mech_weapon_index_in_section(Mech *mech, int loc, int num) {
+int mech_weapon_index_in_section(const WeaponSectionLookup *section_lookup) {
+  Mech *mech = section_lookup->mech;
+  const int loc = section_lookup->section;
+  const int num = section_lookup->ordinal;
   int i;
-  int j, sec, cri;
+  int j, sec;
   int count = 0;
 
-  j = FindWeaponNumberOnMech(mech, 1, &sec, &cri);
+  WeaponNumberLookupResult lookup = weapon_number_find(
+      &(WeaponNumberLookupRequest){.mech = mech, .number = 1});
+  j = lookup.value;
+  sec = lookup.slot.section;
   for (i = 2; j != -1; i++) {
     if (sec == loc) {
       count++;
       if (count == num)
         return j;
     }
-    j = FindWeaponNumberOnMech(mech, i, &sec, &cri);
+    lookup = weapon_number_find(
+        &(WeaponNumberLookupRequest){.mech = mech, .number = i});
+    j = lookup.value;
+    sec = lookup.slot.section;
   }
   return -1;
 }
@@ -124,15 +149,25 @@ void mech_weapon_destroy_random(Mech *mech, int hitloc) {
   if (!i)
     return;
   a = btech_random_range_int(mech_context(mech), 1, i);
-  b = mech_weapon_index_in_section(mech, hitloc, a);
+  b = mech_weapon_index_in_section(
+      &(WeaponSectionLookup){.mech = mech, .section = hitloc, .ordinal = a});
   if (b < 0)
     return;
 
-  firstCrit = FindFirstWeaponCrit(
-      mech, hitloc, -1, 0, weapon_equipment_index(b), GetWeaponCrits(mech, b));
+  firstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+      .mech = mech,
+      .weapon = {.section = hitloc, .critical = -1},
+      .start_critical = 0,
+      .part_type = weapon_equipment_index(b),
+      .maximum_criticals = GetWeaponCrits(mech, b),
+  });
 
-  mech_weapon_destroy(mech, hitloc, weapon_equipment_index(b), firstCrit, 1,
-                      GetWeaponCrits(mech, b));
+  mech_weapon_destroy(&(WeaponDestructionRequest){
+      .mech = mech,
+      .first = {.section = hitloc, .critical = firstCrit},
+      .part_type = weapon_equipment_index(b),
+      .criticals_to_destroy = 1,
+      .total_criticals = GetWeaponCrits(mech, b)});
   mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
               checked_string_suffix(weapon_catalogue_name(b), 3));
 }
@@ -145,14 +180,23 @@ void mech_heat_sink_destroy(Mech *mech, int hitloc) {
 
   if (FindObj(mech, hitloc, i)) {
     num = mech_heat_sink_critical_size(mech);
-    mech_weapon_destroy(mech, hitloc, i, 0, 1, num);
+    mech_weapon_destroy(
+        &(WeaponDestructionRequest){.mech = mech,
+                                    .first = {.section = hitloc, .critical = 0},
+                                    .part_type = i,
+                                    .criticals_to_destroy = 1,
+                                    .total_criticals = num});
     mech_heat_sink_count_remove(mech, MAX(num, 2));
     mech_notify(mech, MECHALL,
                 "The computer shows a heatsink died due to the impact.");
   }
 }
 
-void mech_section_destroy(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
+void mech_section_destroy(const SectionDestructionRequest *request) {
+  Mech *wounded = request->wounded;
+  Mech *attacker = request->attacker;
+  const int LOS = request->line_of_sight;
+  const int hitloc = request->section;
   char locname[30] = {0};
   char msgbuf[MBUF_SIZE] = {0};
   int i;
@@ -194,8 +238,9 @@ void mech_section_destroy(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
    * arm */
   if ((hitloc == RARM || hitloc == LARM)) {
     if (mech_carried_dbref(wounded) > 0) {
-      if ((ttarget = btech_context_get_mech(mech_context(wounded),
-                                            mech_carried_dbref(wounded)))) {
+      ttarget = btech_context_get_mech(mech_context(wounded),
+                                       mech_carried_dbref(wounded));
+      if (ttarget) {
         mech_notify(ttarget, MECHALL, "Your tow lines go suddenly slack!");
         mech_dropoff(GOD, wounded, "");
       }
@@ -214,7 +259,7 @@ void mech_section_destroy(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
   }
 
   /* Destroy everything in the loc */
-  mech_parts_destroy(attacker, wounded, hitloc, 0, 0);
+  mech_parts_destroy(attacker, wounded, hitloc, false, false);
   mech_ecm_check(wounded);
   /* Stop lateral if we're a quad */
   if (mech_class(wounded) == CLASS_MECH && mech_is_quad(wounded))
@@ -263,9 +308,19 @@ skip_nuke:
    */
   if (mech_class(wounded) == CLASS_MW || mech_class(wounded) == CLASS_MECH) {
     if (hitloc == LTORSO)
-      mech_section_destroy(wounded, attacker, LOS, LARM);
+      mech_section_destroy(&(SectionDestructionRequest){
+          .wounded = wounded,
+          .attacker = attacker,
+          .line_of_sight = LOS,
+          .section = LARM,
+      });
     else if (hitloc == RTORSO)
-      mech_section_destroy(wounded, attacker, LOS, RARM);
+      mech_section_destroy(&(SectionDestructionRequest){
+          .wounded = wounded,
+          .attacker = attacker,
+          .line_of_sight = LOS,
+          .section = RARM,
+      });
     else if (hitloc == CTORSO || hitloc == HEAD) {
       if (!mech_is_destroyed(wounded)) {
         if (hitloc == HEAD) {
@@ -349,9 +404,11 @@ skip_nuke:
   }
 }
 
-const char *mech_armor_status_set_value(Mech *mech, const char *sectstr,
-                                        const char *typestr,
-                                        const char *valuestr) {
+const char *mech_armor_status_set_value(const ArmorStatusSetRequest *request) {
+  Mech *mech = request->mech;
+  const char *sectstr = request->section;
+  const char *typestr = request->armor_type;
+  const char *valuestr = request->value;
   int index, type, value;
 
   if (!sectstr || !*sectstr)
@@ -380,9 +437,14 @@ const char *mech_armor_status_set_value(Mech *mech, const char *sectstr,
   return "1";
 }
 
-int mech_damage_apply_clusters(DbRef player, Mech *mech, int totaldam,
-                               int clustersize, int direction, int iscritical,
-                               char *mechmsg, char *mechbroadcast) {
+bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
+  Mech *mech = request->mech;
+  int totaldam = request->total_damage;
+  const int clustersize = request->cluster_size;
+  const int direction = request->direction;
+  const bool iscritical = request->critical;
+  const char *mechmsg = request->mech_message;
+  const char *mechbroadcast = request->broadcast_message;
 
   int hitloc = 1, this_time, isrear = 0, dummy = 0;
   int *dummy1 = &dummy, *dummy2 = &dummy;
@@ -393,7 +455,7 @@ int mech_damage_apply_clusters(DbRef player, Mech *mech, int totaldam,
     hitloc = direction - 8;
     isrear = 1;
   } else if (direction > 21) {
-    return 0;
+    return false;
   }
 
   if (mechmsg && *mechmsg)
@@ -407,11 +469,24 @@ int mech_damage_apply_clusters(DbRef player, Mech *mech, int totaldam,
       hitloc =
           mech_hit_location(mech, ((direction - 1) & 3) + 1, dummy1, dummy2);
     this_time = MIN(clustersize, totaldam);
-    DamageMech(mech, mech, 0, -1, hitloc, isrear, iscritical, this_time, 0, 0,
-               0, -1, 0, 1);
+    mech_damage_apply(&(MechDamageRequest){.target = mech,
+                                           .attacker = mech,
+                                           .line_of_sight = 0,
+                                           .attack_pilot = -1,
+                                           .hit_location = hitloc,
+                                           .rear = isrear,
+                                           .critical = iscritical,
+                                           .armor_damage = this_time,
+                                           .internal_damage = 0,
+                                           .transfer = MECH_DAMAGE_NORMAL,
+                                           .cause = 0,
+                                           .base_to_hit = 0,
+                                           .weapon_index = -1,
+                                           .ammunition_mode = 0,
+                                           .ignore_swarmers = 1});
     totaldam -= this_time;
   }
-  return 1;
+  return true;
 }
 
 void mech_damage(DbRef player, Mech *mech, char *buffer) {
@@ -465,8 +540,20 @@ void mech_damage(DbRef player, Mech *mech, char *buffer) {
                  "No MW killings!");
     return;
   }
-  mech_missile_apply_hits(mech, mech, -1, -1, isrear, iscritical, 0, -1, -1,
-                          clustersize, damage / clustersize, 1, 0, 0, 0);
+  MissileHitsRequest request = {
+      .attacker = mech,
+      .target = mech,
+      .target_hex = {.x = -1, .y = -1},
+      .rear = isrear,
+      .critical = iscritical,
+      .weapon = {.weapon_index = 0},
+      .fire_mode = -1,
+      .ammunition_mode = -1,
+      .missile_count = clustersize,
+      .damage_per_missile = damage / clustersize,
+      .salvo_size = 1,
+  };
+  mech_missile_apply_hits(&request);
 }
 
 void mech_damage_section(DbRef player, Mech *mech, char *buffer) {
@@ -509,6 +596,19 @@ void mech_damage_section(DbRef player, Mech *mech, char *buffer) {
                  "Invalid damage (Arg 2 amount! (Must be >0 or <1000)");
     return;
   }
-  DamageMech(mech, mech, 0, -1, section, isrear, iscritical, damage, 0, 0, 0,
-             -1, 0, 1);
+  mech_damage_apply(&(MechDamageRequest){.target = mech,
+                                         .attacker = mech,
+                                         .line_of_sight = 0,
+                                         .attack_pilot = -1,
+                                         .hit_location = section,
+                                         .rear = isrear,
+                                         .critical = iscritical,
+                                         .armor_damage = damage,
+                                         .internal_damage = 0,
+                                         .transfer = MECH_DAMAGE_NORMAL,
+                                         .cause = 0,
+                                         .base_to_hit = 0,
+                                         .weapon_index = -1,
+                                         .ammunition_mode = 0,
+                                         .ignore_swarmers = 1});
 }

@@ -71,9 +71,12 @@ int btech_special_load_repair_events(sqlite3 *sqlite, BtechContext *context) {
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = btech_context_get_mech(context, mech_dbref)) ||
-        btech_special_column_int(statement, 1, &event_type) < 0 ||
+    if (btech_special_column_long(statement, 0, &mech_dbref) < 0) {
+      result = -1;
+      break;
+    }
+    mech = btech_context_get_mech(context, mech_dbref);
+    if (!mech || btech_special_column_int(statement, 1, &event_type) < 0 ||
         btech_special_column_int(statement, 2, &remaining_ticks) < 0 ||
         btech_special_column_long(statement, 3, &event_data) < 0 ||
         btech_special_column_int(statement, 4, &fake) < 0 ||
@@ -88,8 +91,12 @@ int btech_special_load_repair_events(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    mux_event_add(context->events, remaining_ticks, 0, event_type, function,
-                  mech, (void *)event_data);
+    mux_event_add(&(MuxEventRequest){.scheduler = context->events,
+                                     .delay = remaining_ticks,
+                                     .type = event_type,
+                                     .callback = function,
+                                     .data = mech,
+                                     .secondary_data = (void *)event_data});
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;

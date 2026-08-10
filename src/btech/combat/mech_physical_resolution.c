@@ -46,9 +46,15 @@ static int physical_forward_arc(Mech *mech, const Mech *target) {
   return arc;
 }
 
-void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
-                    PhysicalAttackType AttackType, int argc, char **args,
-                    BattleMap *mech_map, int sect) {
+void physical_attack_resolve(const PhysicalAttackRequest *request) {
+  Mech *mech = request->mech;
+  const int damageweight = request->damage_weight;
+  int baseToHit = request->base_to_hit;
+  const PhysicalAttackType AttackType = request->attack_type;
+  const int argc = request->argument_count;
+  char **args = request->arguments;
+  BattleMap *mech_map = request->map;
+  const int sect = request->section;
   Mech *target;
   float range;
   float maxRange = 1;
@@ -161,8 +167,8 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
     // with the physical attack.
 
     // Populate target variable from user input.
-    char **first_slot =
-        checked_storage_at(args, (size_t)argc, sizeof(*args), 0);
+    char **first_slot = (char **)checked_storage_at((void *)args, (size_t)argc,
+                                                    sizeof(*args), 0);
     targetID[0] = *checked_string_suffix(*first_slot, 0);
     targetID[1] = *checked_string_suffix(*first_slot, 1);
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
@@ -190,7 +196,8 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
   if (mech_condition_summary(mech).fallen &&
       (AttackType == PA_KICK || AttackType == PA_TRIP)) {
     mech_printf(mech, MECHALL, "You can't %s from a prone position.",
-                phys_form(AttackType, 0));
+                physical_attack_verb(
+                    &(PhysicalVerbRequest){.attack_type = AttackType}));
 
     return;
     // If we are fallen AND
@@ -199,7 +206,8 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
              (mech_class(target) != CLASS_VEH_GROUND &&
               mech_class(target) != CLASS_BSUIT)) {
     mech_printf(mech, MECHALL, "You can't %s from a prone position.",
-                phys_form(AttackType, 0));
+                physical_attack_verb(
+                    &(PhysicalVerbRequest){.attack_type = AttackType}));
 
     return;
   } else if (mech_condition_summary(mech).fallen &&
@@ -334,7 +342,8 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
       if (isTooLow == 1) {
         mech_printf(mech, MECHALL,
                     "The target is too low in elevation for you to %s.",
-                    phys_form(AttackType, 0));
+                    physical_attack_verb(
+                        &(PhysicalVerbRequest){.attack_type = AttackType}));
         return;
       } // end if() - Check isTooLow
     } // end if() - Target is too low checks.
@@ -370,13 +379,15 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
     if ((AttackType != PA_KICK) &&
         mech_position_z(target) - mech_position_z(mech) > 3) {
       mech_printf(mech, MECHALL, "The target is too far away for you to %s.",
-                  phys_form(AttackType, 0));
+                  physical_attack_verb(
+                      &(PhysicalVerbRequest){.attack_type = AttackType}));
     }
 
     if ((AttackType == PA_KICK || AttackType == PA_TRIP) &&
         mech_position_z(mech) != mech_position_z(target)) {
       mech_printf(mech, MECHALL, "The target is too far away for you to %s.",
-                  phys_form(AttackType, 0));
+                  physical_attack_verb(
+                      &(PhysicalVerbRequest){.attack_type = AttackType}));
       return;
     }
 
@@ -510,18 +521,22 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
   roll = btech_random_roll(mech_context(mech));
 
   // Carry out the attack.
-  mech_printf(mech, MECHALL, "You try to %s %s.  BTH:  %d,\tRoll:  %d",
-              phys_form(AttackType, 0),
-              mech_to_mech_display_id(mech, target).text, baseToHit, roll);
+  mech_printf(
+      mech, MECHALL, "You try to %s %s.  BTH:  %d,\tRoll:  %d",
+      physical_attack_verb(&(PhysicalVerbRequest){.attack_type = AttackType}),
+      mech_to_mech_display_id(mech, target).text, baseToHit, roll);
 
-  mech_printf(target, MECHSTARTED, "%s tries to %s you!",
-              mech_to_mech_display_id(target, mech).text,
-              phys_form(AttackType, 0));
+  mech_printf(
+      target, MECHSTARTED, "%s tries to %s you!",
+      mech_to_mech_display_id(target, mech).text,
+      physical_attack_verb(&(PhysicalVerbRequest){.attack_type = AttackType}));
 
   // We send to MechAttacks channel
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ATTACKS, "%s",
                      tprintf("#%li attacks #%li (%s) (%i/%i)", mech_dbref(mech),
-                             mech_dbref(target), phys_form(AttackType, 0),
+                             mech_dbref(target),
+                             physical_attack_verb(&(PhysicalVerbRequest){
+                                 .attack_type = AttackType}),
                              baseToHit, roll));
 
   // Set the appropriate section(s) to recycle.
@@ -572,7 +587,13 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
     // Do the deed - Damage the victim. If we're tripping, we don't do
     // damage but try to make a skill roll.
     if (AttackType != PA_TRIP)
-      PhysicalDamage(mech, target, damageweight, AttackType, sect, glance);
+      physical_damage_resolve(
+          &(PhysicalDamageRequest){.attacker = mech,
+                                   .target = target,
+                                   .weight_divisor = damageweight,
+                                   .attack_type = AttackType,
+                                   .section = sect,
+                                   .glancing_damage = glance});
     else
       PhysicalTrip(mech, target);
 
@@ -587,7 +608,13 @@ void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
                     "Uh oh. You miss the little buggers, but hit yourself!");
         mech_los_broadcast(mech, "misses, and hits itself!");
 
-        PhysicalDamage(mech, mech, damageweight, AttackType, sect, glance);
+        physical_damage_resolve(
+            &(PhysicalDamageRequest){.attacker = mech,
+                                     .target = mech,
+                                     .weight_divisor = damageweight,
+                                     .attack_type = AttackType,
+                                     .section = sect,
+                                     .glancing_damage = glance});
       } // If we really screw up against suits swarmed on ourselves,
       // nail us for damage.
     } // end if() - Suit + Swarmed + Physical + Self Damage checks

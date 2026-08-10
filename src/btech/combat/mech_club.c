@@ -20,7 +20,7 @@
 #include "mux/support/stringutil.h"
 #include "section_types.h"
 #include <stdio.h>
-int checkGrabClubLocation(Mech *mech, int section, int emit) {
+bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure) {
   int tCanGrab = 1;
   char buf[100] = {0};
   char location[20] = {0};
@@ -31,14 +31,18 @@ int checkGrabClubLocation(Mech *mech, int section, int emit) {
   if (mech_section_is_destroyed(mech, section)) {
     (void)snprintf(buf, sizeof(buf), "Your %s is destroyed.", location);
     tCanGrab = 0;
-  } else if (!mech_critical_is_operational_special(mech, section, 3,
-                                                   HAND_OR_FOOT_ACTUATOR)) {
+  } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                 .mech = mech,
+                 .slot = {.section = section, .critical = 3},
+                 .special = HAND_OR_FOOT_ACTUATOR})) {
     (void)snprintf(buf, sizeof(buf),
                    "Your %s's hand actuator is destroyed or missing.",
                    location);
     tCanGrab = 0;
-  } else if (!mech_critical_is_operational_special(mech, section, 0,
-                                                   SHOULDER_OR_HIP)) {
+  } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                 .mech = mech,
+                 .slot = {.section = section, .critical = 0},
+                 .special = SHOULDER_OR_HIP})) {
     (void)snprintf(buf, sizeof(buf),
                    "Your %s's shoulder actuator is destroyed or missing.",
                    location);
@@ -50,11 +54,11 @@ int checkGrabClubLocation(Mech *mech, int section, int emit) {
     tCanGrab = 0;
   }
 
-  if (!tCanGrab && emit)
+  if (!tCanGrab && emit_failure)
     mech_notify(mech, MECHALL, buf);
 
   return tCanGrab;
-} // end checkGrabClubLocation()
+}
 
 /*
  * Handles the grabbing of a club.
@@ -124,9 +128,9 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
   }
 
   if (wcArgs == 0) {
-    if (checkGrabClubLocation(mech, LARM, 0))
+    if (mech_club_location_is_usable(mech, LARM, false))
       location = LARM;
-    else if (checkGrabClubLocation(mech, RARM, 0))
+    else if (mech_club_location_is_usable(mech, RARM, false))
       location = RARM;
     else {
       mech_notify(mech, MECHALL,
@@ -149,7 +153,7 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
     } // end switch() - Determine location.
 
     // see if we have actuators and a working arm.
-    if (!checkGrabClubLocation(mech, location, 1))
+    if (!mech_club_location_is_usable(mech, location, true))
       return;
   }
 

@@ -92,8 +92,20 @@ static DbRef parse_linkable_room(EvaluationContext *evaluation,
  * * open_exit, do_open: Open a new exit and optionally link it somewhere.
  */
 
-static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
-                      char *direction, char *linkto) {
+typedef struct ExitCreationRequest {
+  EvaluationContext *evaluation;
+  DbRef player;
+  DbRef location;
+  char *direction;
+  char *destination;
+} ExitCreationRequest;
+
+static void open_exit(const ExitCreationRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->player;
+  DbRef loc = request->location;
+  char *direction = request->direction;
+  char *linkto = request->destination;
   DbRef exit;
   LuaLockInvocation lock;
   LuaLockResult result;
@@ -150,8 +162,11 @@ static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
 
     if (!lock_test(evaluation, player, player, player, loc, LUA_LOCK_LINK,
                    LUA_LOCK_OPERATION_LINK, false, &lock, &result)) {
-      notify_lock_failure(evaluation, &lock, &result,
-                          "You can't link to there.", nullptr, LUA_EVENT_NONE);
+      notify_lock_failure(&(LockFailureNotification){
+          .evaluation = evaluation,
+          .invocation = &lock,
+          .result = &result,
+          .enactor_default = "You can't link to there."});
       return;
     }
     game_object_set_location(evaluation->world->database, exit, loc);
@@ -182,7 +197,11 @@ void do_open(CommandInvocation *invocation) {
   else
     loc = game_object_location(evaluation->world->database, player);
 
-  open_exit(evaluation, player, loc, direction, dest);
+  open_exit(&(ExitCreationRequest){.evaluation = evaluation,
+                                   .player = player,
+                                   .location = loc,
+                                   .direction = direction,
+                                   .destination = dest});
 
   /*
    * Open the back link if we can
@@ -192,9 +211,12 @@ void do_open(CommandInvocation *invocation) {
     destnum = parse_linkable_room(evaluation, &invocation->context->match,
                                   player, dest);
     if (destnum != NOTHING) {
-      open_exit(evaluation, player, destnum,
-                command_invocation_vector_at(invocation, 1),
-                tprintf("%ld", loc));
+      open_exit(&(ExitCreationRequest){
+          .evaluation = evaluation,
+          .player = player,
+          .location = destnum,
+          .direction = command_invocation_vector_at(invocation, 1),
+          .destination = tprintf("%ld", loc)});
     }
   }
 }
@@ -221,8 +243,11 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
     }
     if (!lock_test(evaluation, player, player, player, dest, LUA_LOCK_LINK,
                    LUA_LOCK_OPERATION_LINK, false, &lock, &result)) {
-      notify_lock_failure(evaluation, &lock, &result, "Permission denied.",
-                          nullptr, LUA_EVENT_NONE);
+      notify_lock_failure(
+          &(LockFailureNotification){.evaluation = evaluation,
+                                     .invocation = &lock,
+                                     .result = &result,
+                                     .enactor_default = "Permission denied."});
       return;
     }
   }
@@ -311,8 +336,11 @@ void do_link(CommandInvocation *invocation) {
     } else if (!lock_test(evaluation, player, invocation->cause, player, room,
                           LUA_LOCK_LINK, LUA_LOCK_OPERATION_SET_HOME, false,
                           &lock, &result)) {
-      notify_lock_failure(evaluation, &lock, &result, "Permission denied.",
-                          nullptr, LUA_EVENT_NONE);
+      notify_lock_failure(
+          &(LockFailureNotification){.evaluation = evaluation,
+                                     .invocation = &lock,
+                                     .result = &result,
+                                     .enactor_default = "Permission denied."});
     } else if (room == HOME) {
       notify_checked(evaluation, player, player, "Can't set home to home.",
                      MSG_ME);
@@ -345,8 +373,11 @@ void do_link(CommandInvocation *invocation) {
                !lock_test(evaluation, player, invocation->cause, player, room,
                           LUA_LOCK_LINK, LUA_LOCK_OPERATION_LINK, false, &lock,
                           &result)) {
-      notify_lock_failure(evaluation, &lock, &result, "Permission denied.",
-                          nullptr, LUA_EVENT_NONE);
+      notify_lock_failure(
+          &(LockFailureNotification){.evaluation = evaluation,
+                                     .invocation = &lock,
+                                     .result = &result,
+                                     .enactor_default = "Permission denied."});
     } else {
       game_object_set_location(evaluation->world->database, thing, room);
       notify_checked(evaluation, player, player, "Dropto set.", MSG_ME);
@@ -356,7 +387,10 @@ void do_link(CommandInvocation *invocation) {
     notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     break;
   default:
-    log_error(evaluation->log, LOG_BUGS, "BUG", "OTYPE",
+    log_error((LogEntry){.log = evaluation->log,
+                         .key = LOG_BUGS,
+                         .primary = "BUG",
+                         .secondary = "OTYPE"},
               "Strange object type: object #%ld = %d", thing,
               typeof_obj(evaluation->world->database, thing));
   }
@@ -404,17 +438,27 @@ void do_dig(CommandInvocation *invocation) {
 
   if (forward_exit != nullptr && *forward_exit) {
     (void)snprintf(buff, SBUF_SIZE, "%ld", room);
-    open_exit(evaluation, player,
-              game_object_location(evaluation->world->database, player),
-              forward_exit, buff);
+    open_exit(&(ExitCreationRequest){
+        .evaluation = evaluation,
+        .player = player,
+        .location = game_object_location(evaluation->world->database, player),
+        .direction = forward_exit,
+        .destination = buff});
   }
   if (back_exit != nullptr && *back_exit) {
     (void)snprintf(buff, SBUF_SIZE, "%ld",
                    game_object_location(evaluation->world->database, player));
-    open_exit(evaluation, player, room, back_exit, buff);
+    open_exit(&(ExitCreationRequest){.evaluation = evaluation,
+                                     .player = player,
+                                     .location = room,
+                                     .direction = back_exit,
+                                     .destination = buff});
   }
   if (key == DIG_TELEPORT)
-    (void)move_via_teleport(evaluation, player, room, cause, 0);
+    (void)move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
+                                                     .object = player,
+                                                     .destination = room,
+                                                     .cause = cause});
 }
 
 /*
@@ -447,7 +491,10 @@ void do_create(CommandInvocation *invocation) {
   if (thing == NOTHING)
     return;
 
-  move_via_generic(evaluation, thing, player, NOTHING, 0);
+  move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                            .object = thing,
+                                            .destination = player,
+                                            .cause = NOTHING});
   game_object_set_link(evaluation->world->database, thing,
                        new_home(evaluation, player));
   notify_printf(evaluation, player, "%s created as object #%ld",
@@ -538,7 +585,8 @@ void do_clone(CommandInvocation *invocation) {
    */
 
   attribute_free(evaluation->world->database, clone);
-  attribute_copy(evaluation, player, clone, thing);
+  attribute_copy(&(AttributeCopyRequest){
+      .evaluation = evaluation, .source = thing, .destination = clone});
 
   /*
    * Reset the name, since we cleared the attributes
@@ -557,8 +605,10 @@ void do_clone(CommandInvocation *invocation) {
    */
 
   (void)rmv_flags;
-  game_object_set_flag(evaluation->world->database, clone, OBJECT_FLAG_WIZARD,
-                       false);
+  game_object_set_flag(
+      &(ObjectFlagChangeRequest){.database = evaluation->world->database,
+                                 .object = clone,
+                                 .flag = OBJECT_FLAG_WIZARD});
 
   /*
    * Tell creator about it
@@ -580,9 +630,14 @@ void do_clone(CommandInvocation *invocation) {
 
   switch (typeof_obj(evaluation->world->database, thing)) {
   case OBJECT_TYPE_THING:
-    game_object_set_link(evaluation->world->database, clone,
-                         clone_home(evaluation, player, thing));
-    move_via_generic(evaluation, clone, loc, player, 0);
+    game_object_set_link(
+        evaluation->world->database, clone,
+        clone_home(&(CloneHomeRequest){
+            .evaluation = evaluation, .player = player, .source = thing}));
+    move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                              .object = clone,
+                                              .destination = loc,
+                                              .cause = player});
     break;
   case OBJECT_TYPE_ROOM:
     game_object_set_location(evaluation->world->database, clone, NOTHING);
@@ -622,7 +677,8 @@ void do_pcreate(CommandInvocation *invocation) {
   char *pass = invocation->second;
   DbRef newplayer;
 
-  newplayer = create_player(evaluation, name, pass);
+  newplayer = create_player(&(PlayerCreationRequest){
+      .evaluation = evaluation, .name = name, .password = pass});
   if (newplayer == NOTHING) {
     notify_checked(evaluation, player, player,
                    tprintf("Failure creating '%s'", name), MSG_ME);

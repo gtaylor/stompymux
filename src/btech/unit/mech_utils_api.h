@@ -6,6 +6,8 @@ typedef struct BtechContext BtechContext;
 
 #include <stdbool.h>
 
+#include "map_coordinates.h"
+#include "mech_api_types.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "section_types.h"
@@ -15,6 +17,13 @@ typedef struct Mech Mech;
 typedef struct MechId {
   char text[3];
 } MechId;
+
+typedef struct WeaponArcRequest {
+  Mech *mech;
+  MapRealPosition target;
+  int section;
+  int critical;
+} WeaponArcRequest;
 
 /* mech.utils.c */
 /* Misc Functions */
@@ -58,7 +67,19 @@ constexpr char KILL_TYPE_ENGINE[] =
 
 void ChannelEmitKill(Mech *mech, Mech *attacker, const char *reason);
 
-BattleMap *ValidMap(BtechContext *context, DbRef player, DbRef map);
+typedef struct MapValidationRequest {
+  BtechContext *context;
+  DbRef player;
+  DbRef map;
+} MapValidationRequest;
+
+typedef struct PilotSkillRollRequest {
+  Mech *mech;
+  int modifier;
+  bool succeed_when_fallen;
+} PilotSkillRollRequest;
+
+BattleMap *valid_map(const MapValidationRequest *request);
 DbRef FindMechOnMap(BattleMap *map, const char *mechid);
 Mech *find_mech_in_hex(Mech *mech, BattleMap *mech_map, int x, int y,
                        int needlos);
@@ -66,11 +87,15 @@ DbRef FindTargetDBREFFromMapNumber(Mech *mech, const char *mapnum);
 
 /* Map Math */
 int AcceptableDegree(int d);
-void FindXY(float x0, float y0, int bearing, float range, float *x1, float *y1);
-float FindRange(float x0, float y0, float z0, float x1, float y1, float z1);
-int MyHexDist(int x1, int y1, int x2, int y2, int tc);
-float FindXYRange(float x0, float y0, float x1, float y1);
-float FindHexRange(float x0, float y0, float x1, float y1);
+MapRealPosition map_project_position(const MapProjection *projection);
+float map_spatial_range(const MapSpatialSegment *segment);
+typedef struct HexDistanceRequest {
+  MapHexPosition start;
+  MapHexPosition end;
+  int correction;
+} HexDistanceRequest;
+int map_hex_distance(const HexDistanceRequest *request);
+float map_real_range(const MapRealSegment *segment);
 void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
                          float cart_y);
 void MapCoordToRealCoord(int hex_x, int hex_y, float *cart_x, float *cart_y);
@@ -78,17 +103,32 @@ typedef void (*NeighborHexCallback)(BattleMap *map, int x, int y,
                                     void *context);
 void visit_neighbor_hexes(BattleMap *map, int x, int y,
                           NeighborHexCallback callback, void *context);
-void FindComponents(float magnitude, int degrees, float *x, float *y);
+MapRealPosition map_vector_components(const MapPolarVector *vector);
 void CheckEdgeOfMap(Mech *mech);
-int FindZBearing(float x0, float y0, float z0, float x1, float y1, float z1);
-int FindBearing(float x0, float y0, float x1, float y1);
+int map_vertical_bearing(const MapSpatialSegment *segment);
+int map_bearing(const MapRealSegment *segment);
 int InWeaponArc(Mech *mech, float x, float y);
-int IsInWeaponArc(Mech *mech, float x, float y, int section, int critical);
-typedef void (*NavigatePlotCallback)(int row, int column, char marker,
-                                     void *context);
-void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
-                           NavigatePlotCallback plot, void *context);
-int FindTargetXY(Mech *mech, float *x, float *y, float *z);
+bool IsInWeaponArc(const WeaponArcRequest *request);
+typedef struct NavigatePlotCall {
+  int row;
+  int column;
+  char marker;
+  void *context;
+} NavigatePlotCall;
+typedef void (*NavigatePlotCallback)(const NavigatePlotCall *call);
+typedef struct NavigateSketchRequest {
+  Mech *mech;
+  BattleMap *map;
+  MapHexPosition center;
+  NavigatePlotCallback plot;
+  void *context;
+} NavigateSketchRequest;
+void navigate_sketch_mechs(const NavigateSketchRequest *request);
+typedef struct MechTargetPositionResult {
+  bool found;
+  MapSpatialPosition position;
+} MechTargetPositionResult;
+MechTargetPositionResult mech_target_position(const Mech *mech);
 
 /* Skill lookups */
 const char *FindGunnerySkillName(Mech *mech, int weapindx);
@@ -106,8 +146,9 @@ long btech_random_range(BtechContext *context, long low, long high);
 int btech_random_range_int(BtechContext *context, int low, int high);
 int MadePilotSkillRoll(Mech *mech, int mods);
 int mech_pilot_skill_roll_target(Mech *mech, int mods);
-int MadePilotSkillRoll_Advanced(Mech *mech, int mods, int succeedWhenFallen);
-int MadePilotSkillRoll_NoXP(Mech *mech, int mods, int succeedWhenFallen);
+int mech_pilot_skill_roll(const PilotSkillRollRequest *request);
+int mech_pilot_skill_roll_without_experience(
+    const PilotSkillRollRequest *request);
 int btech_random_roll(BtechContext *context);
 
 /* Section/Crit Functions */
@@ -120,40 +161,88 @@ int FindAmmunition(Mech *mech, unsigned char *weaparray,
                    unsigned short *ammoarray, unsigned short *ammomaxarray,
                    unsigned int *modearray, int returnall);
 int FindLegHeatSinks(Mech *mech);
-int FindWeaponNumberOnMech_Advanced(Mech *mech, int number, int *section,
-                                    int *crit, int sight);
-int FindWeaponNumberOnMech(Mech *mech, int number, int *section, int *crit);
-int FindWeaponFromIndex(Mech *mech, int weapindx, int *section, int *crit);
+typedef struct WeaponNumberLookupRequest {
+  Mech *mech;
+  int number;
+  bool sight;
+} WeaponNumberLookupRequest;
+
+typedef struct WeaponNumberLookupResult {
+  bool found;
+  int value;
+  CriticalSlotReference slot;
+} WeaponNumberLookupResult;
+
+WeaponNumberLookupResult
+weapon_number_find(const WeaponNumberLookupRequest *request);
 int FindWeaponIndex(Mech *mech, int number);
 int findAmmoInSection(Mech *mech, int section, int type, int nogof, int gof);
 int FullAmmo(const Mech *mech, int loc, int pos);
-int FindAmmoForWeapon_sub(Mech *mech, int weapSection, int weapCritical,
-                          int weapindx, int start, int *section, int *critical,
-                          int nogof, int gof);
-int FindAmmoForWeapon(Mech *mech, int weapindx, int start, int *section,
-                      int *critical);
+typedef struct AmmunitionLookupRequest {
+  Mech *mech;
+  CriticalSlotReference weapon;
+  bool use_weapon_preference;
+  int weapon_index;
+  int start_section;
+  int forbidden_modes;
+  int required_modes;
+} AmmunitionLookupRequest;
+
+CriticalSlotLookupResult
+ammunition_find(const AmmunitionLookupRequest *request);
 int CountAmmoForWeapon(Mech *mech, int weapindx);
 int FindArtemisForWeapon(Mech *mech, int section, int critical);
 int ReverseSplitCritLoc(Mech *mech, int sect, int crit);
 int FindSplitCrits(Mech *mech, int sect, int type, int crit);
-int GetSplitData(Mech *mech, int sect, int data, int *ssect, int *scrit,
-                 int *stype);
-int FindDestructiveAmmo(Mech *mech, int *section, int *critical);
-int FindInfernoAmmo(Mech *mech, int *section, int *critical);
+typedef struct SplitCriticalLookup {
+  bool found;
+  CriticalSlotReference slot;
+  int part_type;
+} SplitCriticalLookup;
+
+SplitCriticalLookup split_critical_find(Mech *mech,
+                                        CriticalSlotReference source);
+
+typedef struct AmmunitionHazardResult {
+  int damage;
+  CriticalSlotReference slot;
+} AmmunitionHazardResult;
+
+AmmunitionHazardResult destructive_ammunition_find(Mech *mech);
+AmmunitionHazardResult inferno_ammunition_find(Mech *mech);
 int FindRoundsForWeapon(Mech *mech, int weapindx);
 int HeatFactor(Mech *mech);
 int WeaponIsNonfunctional(Mech *mech, int section, int crit, int numcrits);
 const char *const *ProperSectionStringFromType(int type, int mtype);
-size_t mech_section_name_count(int type, int movement_type);
-const char *mech_section_name(int type, int movement_type, size_t index);
+typedef struct UnitSectionCatalog {
+  int unit_type;
+  int movement_type;
+} UnitSectionCatalog;
+
+size_t unit_section_name_count(const UnitSectionCatalog *catalog);
+const char *unit_section_name(const UnitSectionCatalog *catalog, size_t index);
 void ArmorStringFromIndex(int index, char *buffer, UnitClass type,
                           MechMovementType movement_type);
 int GetWeaponCrits(Mech *mech, int weapindx);
 int listmatch(const char *const *values, size_t value_count, const char *match);
-typedef int (*MultiWeaponSelectionCallback)(Mech *mech, DbRef player, int low,
-                                            int high, void *context);
-void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
-                    MultiWeaponSelectionCallback callback, void *context);
+typedef struct MultiWeaponSelectionCall {
+  Mech *mech;
+  DbRef actor;
+  int first;
+  int last;
+  void *context;
+} MultiWeaponSelectionCall;
+typedef int (*MultiWeaponSelectionCallback)(
+    const MultiWeaponSelectionCall *call);
+typedef struct MultiWeaponSelectionRequest {
+  Mech *mech;
+  DbRef actor;
+  char *selection;
+  int mode;
+  MultiWeaponSelectionCallback callback;
+  void *context;
+} MultiWeaponSelectionRequest;
+void multi_weapon_select(const MultiWeaponSelectionRequest *request);
 
 /* Tech/Repair functions */
 void do_sub_magic(Mech *mech, int loud);
@@ -170,17 +259,35 @@ void mech_FillPartAmmo(Mech *mech, int loc, int pos);
 int CountDestroyedLegs(Mech *objMech);
 int IsLegDestroyed(Mech *objMech, int wLoc);
 int IsMechLegLess(Mech *objMech);
-int FindFirstWeaponCrit(Mech *objMech, int wLoc, int wSlot, int wStartSlot,
-                        int wCritType, int wMaxCrits);
+typedef struct WeaponCriticalSearch {
+  Mech *mech;
+  CriticalSlotReference weapon;
+  int start_critical;
+  int part_type;
+  int maximum_criticals;
+} WeaponCriticalSearch;
+int mech_weapon_first_critical(const WeaponCriticalSearch *search);
 int checkAllSections(Mech *mech, int specialToFind);
 int checkSectionForSpecial(Mech *mech, int specialToFind, int wSec);
 int getRemainingInternalPercent(Mech *mech);
 int getRemainingArmorPercent(Mech *mech);
 int FindObj(Mech *mech, int loc, int type);
 int FindObjWithDest(Mech *mech, int loc, int type);
-int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
-                     int *ammoLoc, int *ammoCrit, int *ammoLoc1, int *ammoCrit1,
-                     int *wGattlingShots);
+typedef struct AmmunitionCheckRequest {
+  Mech *mech;
+  int weapon_index;
+  CriticalSlotReference weapon;
+  int gatling_shots;
+} AmmunitionCheckRequest;
+
+typedef struct AmmunitionCheckResult {
+  bool available;
+  CriticalSlotLookupResult primary;
+  CriticalSlotLookupResult secondary;
+  int gatling_shots;
+} AmmunitionCheckResult;
+
+AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request);
 
 #ifdef BT_CALCULATE_BV
 void Calc_AddOffBV(const Mech *mech, float *offbv, const char *desc,

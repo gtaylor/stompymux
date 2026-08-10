@@ -4,6 +4,7 @@
 #include "mux/network/connect_flow.h"
 
 #include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -133,7 +134,7 @@ static int login_throttle_allow(LoginThrottle *throttle,
       entry->tokens += refills;
     }
     entry->last_refill +=
-        refills * (unsigned int)configuration->login_attempt_refill;
+        (time_t)(refills * (unsigned int)configuration->login_attempt_refill);
   }
   if (entry->tokens == 0)
     return 0;
@@ -148,31 +149,41 @@ static void connect_flow_hide_input_length(Descriptor *d, const char *input) {
   d->input_tot -= (int)(strlen(input) + 1);
 }
 
-static void connect_flow_terminate(Descriptor *d, const char *logcode,
-                                   const char *logtype, const char *logreason,
-                                   DescriptorShutdownReason disconnect_reason,
-                                   DbRef player, const char *user,
-                                   int filecache, const char *message) {
-  STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_SECURITY, logcode, "RJCT") {
+typedef struct ConnectTerminationRequest {
+  Descriptor *descriptor;
+  const char *log_code;
+  const char *log_type;
+  const char *log_reason;
+  DescriptorShutdownReason disconnect_reason;
+  DbRef player;
+  const char *user;
+  int file_cache;
+  const char *message;
+} ConnectTerminationRequest;
+
+static void connect_flow_terminate(const ConnectTerminationRequest *request) {
+  Descriptor *d = request->descriptor;
+  STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_SECURITY, request->log_code,
+           "RJCT") {
     char buff[MBUF_SIZE];
     (void)snprintf(buff, MBUF_SIZE, "[%d/%s] %s rejected to ", d->descriptor,
-                   d->addr, logtype);
+                   d->addr, request->log_type);
     log_text(buff);
-    if (player != NOTHING)
-      log_name(descriptor_log(d), player);
+    if (request->player != NOTHING)
+      log_name(descriptor_log(d), request->player);
     else
-      log_text(user);
+      log_text(request->user);
     log_text(" (");
-    log_text(logreason);
+    log_text(request->log_reason);
     log_text(")");
     ENDLOG(descriptor_log(d));
   }
-  fcache_dump(descriptor_runtime(d)->files, d, filecache);
-  if (message && *message) {
-    descriptor_queue_string(d, message);
+  fcache_dump(descriptor_runtime(d)->files, d, request->file_cache);
+  if (request->message && *request->message) {
+    descriptor_queue_string(d, request->message);
     descriptor_queue_write(d, "\r\n", 2);
   }
-  descriptor_shutdown(d, disconnect_reason);
+  descriptor_shutdown(d, request->disconnect_reason);
 }
 
 static int connect_flow_count_connected(DescriptorRegistry *registry) {
@@ -197,14 +208,26 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
                  : connect_flow_count_connected(runtime->descriptors);
 
   if (!login_throttle_allow(runtime->login_throttle, configuration, d->addr)) {
-    connect_flow_terminate(d, "CON", "Connect", "Login throttled",
-                           DESCRIPTOR_SHUTDOWN_BADLOGIN, NOTHING, name, FC_CONN,
-                           connect_fail);
+    connect_flow_terminate(&(ConnectTerminationRequest){
+        .descriptor = d,
+        .log_code = "CON",
+        .log_type = "Connect",
+        .log_reason = "Login throttled",
+        .disconnect_reason = DESCRIPTOR_SHUTDOWN_BADLOGIN,
+        .player = NOTHING,
+        .user = name,
+        .file_cache = FC_CONN,
+        .message = connect_fail});
     return CONNECT_RESULT_TERMINATED;
   }
 
-  player = connect_player(&runtime->background_command->evaluation,
-                          runtime->world, name, password, d->addr, d->username);
+  player = connect_player(&(PlayerConnectionRequest){
+      .evaluation = &runtime->background_command->evaluation,
+      .world = runtime->world,
+      .name = name,
+      .password = password,
+      .host = d->addr,
+      .username = d->username});
   if (player == NOTHING) {
     descriptor_queue_string(d, connect_fail);
     STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_SECURITY, "CON", "BAD") {
@@ -244,15 +267,29 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
   }
 
   if (!configuration->is_login_enabled) {
-    connect_flow_terminate(d, "CON", "Connect", "Logins Disabled",
-                           DESCRIPTOR_SHUTDOWN_GAMEDOWN, player, name,
-                           FC_CONN_DOWN, configuration->down_msg);
+    connect_flow_terminate(&(ConnectTerminationRequest){
+        .descriptor = d,
+        .log_code = "CON",
+        .log_type = "Connect",
+        .log_reason = "Logins Disabled",
+        .disconnect_reason = DESCRIPTOR_SHUTDOWN_GAMEDOWN,
+        .player = player,
+        .user = name,
+        .file_cache = FC_CONN_DOWN,
+        .message = configuration->down_msg});
     return CONNECT_RESULT_TERMINATED;
   }
 
-  connect_flow_terminate(d, "CON", "Connect", "Game Full",
-                         DESCRIPTOR_SHUTDOWN_GAMEFULL, player, name,
-                         FC_CONN_FULL, configuration->full_msg);
+  connect_flow_terminate(&(ConnectTerminationRequest){
+      .descriptor = d,
+      .log_code = "CON",
+      .log_type = "Connect",
+      .log_reason = "Game Full",
+      .disconnect_reason = DESCRIPTOR_SHUTDOWN_GAMEFULL,
+      .player = player,
+      .user = name,
+      .file_cache = FC_CONN_FULL,
+      .message = configuration->full_msg});
   return CONNECT_RESULT_TERMINATED;
 }
 
@@ -264,9 +301,16 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
   DbRef player;
 
   if (!configuration->is_login_enabled) {
-    connect_flow_terminate(d, "CRE", "Create", "Logins Disabled",
-                           DESCRIPTOR_SHUTDOWN_GAMEDOWN, NOTHING, name,
-                           FC_CONN_DOWN, configuration->down_msg);
+    connect_flow_terminate(&(ConnectTerminationRequest){
+        .descriptor = d,
+        .log_code = "CRE",
+        .log_type = "Create",
+        .log_reason = "Logins Disabled",
+        .disconnect_reason = DESCRIPTOR_SHUTDOWN_GAMEDOWN,
+        .player = NOTHING,
+        .user = name,
+        .file_cache = FC_CONN_DOWN,
+        .message = configuration->down_msg});
     return CONNECT_RESULT_TERMINATED;
   }
 
@@ -274,21 +318,37 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
                  ? configuration->max_players
                  : connect_flow_count_connected(runtime->descriptors);
   if (nplayers > configuration->max_players) {
-    connect_flow_terminate(d, "CRE", "Create", "Game Full",
-                           DESCRIPTOR_SHUTDOWN_GAMEFULL, NOTHING, name,
-                           FC_CONN_FULL, configuration->full_msg);
+    connect_flow_terminate(&(ConnectTerminationRequest){
+        .descriptor = d,
+        .log_code = "CRE",
+        .log_type = "Create",
+        .log_reason = "Game Full",
+        .disconnect_reason = DESCRIPTOR_SHUTDOWN_GAMEFULL,
+        .player = NOTHING,
+        .user = name,
+        .file_cache = FC_CONN_FULL,
+        .message = configuration->full_msg});
     return CONNECT_RESULT_TERMINATED;
   }
 
   if (!login_throttle_allow(runtime->login_throttle, configuration, d->addr)) {
-    connect_flow_terminate(d, "CRE", "Create", "Login throttled",
-                           DESCRIPTOR_SHUTDOWN_BADLOGIN, NOTHING, name, FC_CONN,
-                           create_fail);
+    connect_flow_terminate(&(ConnectTerminationRequest){
+        .descriptor = d,
+        .log_code = "CRE",
+        .log_type = "Create",
+        .log_reason = "Login throttled",
+        .disconnect_reason = DESCRIPTOR_SHUTDOWN_BADLOGIN,
+        .player = NOTHING,
+        .user = name,
+        .file_cache = FC_CONN,
+        .message = create_fail});
     return CONNECT_RESULT_TERMINATED;
   }
 
-  player =
-      create_player(&runtime->background_command->evaluation, name, password);
+  player = create_player(&(PlayerCreationRequest){
+      .evaluation = &runtime->background_command->evaluation,
+      .name = name,
+      .password = password});
   if (player == NOTHING) {
     descriptor_queue_string(d, create_fail);
     STARTLOG(descriptor_log(d), LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {
@@ -343,10 +403,10 @@ static int connect_flow_blank(const char *input) {
   return offset == length;
 }
 
-static FlowOutcome connect_flow_step_username(Descriptor *d, void *flow_data,
-                                              const char *step,
-                                              const char *input) {
-  ConnectFlowData *data = flow_data;
+static FlowOutcome connect_flow_step_username(const FlowStepCall *call) {
+  Descriptor *d = call->descriptor;
+  ConnectFlowData *data = call->flow_data;
+  const char *input = call->input;
   FlowOutcome outcome = {0};
 
   if (input == nullptr) {
@@ -376,10 +436,10 @@ static FlowOutcome connect_flow_step_username(Descriptor *d, void *flow_data,
   return outcome;
 }
 
-static FlowOutcome connect_flow_step_password(Descriptor *d, void *flow_data,
-                                              const char *step,
-                                              const char *input) {
-  ConnectFlowData *data = flow_data;
+static FlowOutcome connect_flow_step_password(const FlowStepCall *call) {
+  Descriptor *d = call->descriptor;
+  ConnectFlowData *data = call->flow_data;
+  const char *input = call->input;
   FlowOutcome outcome = {0};
 
   if (input == nullptr) {
@@ -407,11 +467,9 @@ static FlowOutcome connect_flow_step_password(Descriptor *d, void *flow_data,
   }
 }
 
-static FlowOutcome connect_flow_step_confirm_create(Descriptor *d,
-                                                    void *flow_data,
-                                                    const char *step,
-                                                    const char *input) {
-  ConnectFlowData *data = flow_data;
+static FlowOutcome connect_flow_step_confirm_create(const FlowStepCall *call) {
+  ConnectFlowData *data = call->flow_data;
+  const char *input = call->input;
   FlowOutcome outcome = {0};
   static char prompt[SBUF_SIZE];
 
@@ -439,11 +497,10 @@ static FlowOutcome connect_flow_step_confirm_create(Descriptor *d,
   return outcome;
 }
 
-static FlowOutcome connect_flow_step_create_password(Descriptor *d,
-                                                     void *flow_data,
-                                                     const char *step,
-                                                     const char *input) {
-  ConnectFlowData *data = flow_data;
+static FlowOutcome connect_flow_step_create_password(const FlowStepCall *call) {
+  Descriptor *d = call->descriptor;
+  ConnectFlowData *data = call->flow_data;
+  const char *input = call->input;
   FlowOutcome outcome = {0};
 
   if (input == nullptr) {
@@ -466,9 +523,10 @@ static FlowOutcome connect_flow_step_create_password(Descriptor *d,
 }
 
 static FlowOutcome
-connect_flow_step_create_confirm_password(Descriptor *d, void *flow_data,
-                                          const char *step, const char *input) {
-  ConnectFlowData *data = flow_data;
+connect_flow_step_create_confirm_password(const FlowStepCall *call) {
+  Descriptor *d = call->descriptor;
+  ConnectFlowData *data = call->flow_data;
+  const char *input = call->input;
   FlowOutcome outcome = {0};
 
   if (input == nullptr) {
@@ -507,20 +565,24 @@ connect_flow_step_create_confirm_password(Descriptor *d, void *flow_data,
   }
 }
 
-static FlowOutcome connect_flow_dispatch(Descriptor *d, void *flow_data,
-                                         const char *step, const char *input) {
-  if (!strcmp(step, "username"))
-    return connect_flow_step_username(d, flow_data, step, input);
-  if (!strcmp(step, "password"))
-    return connect_flow_step_password(d, flow_data, step, input);
-  if (!strcmp(step, "confirm_create"))
-    return connect_flow_step_confirm_create(d, flow_data, step, input);
-  if (!strcmp(step, "create_password"))
-    return connect_flow_step_create_password(d, flow_data, step, input);
-  if (!strcmp(step, "create_confirm_password"))
-    return connect_flow_step_create_confirm_password(d, flow_data, step, input);
+static FlowOutcome connect_flow_dispatch(const FlowStepCall *call) {
+  const char *step = call->step;
 
-  log_error(descriptor_log(d), LOG_BUGS, "FLOW", "STEP",
+  if (!strcmp(step, "username"))
+    return connect_flow_step_username(call);
+  if (!strcmp(step, "password"))
+    return connect_flow_step_password(call);
+  if (!strcmp(step, "confirm_create"))
+    return connect_flow_step_confirm_create(call);
+  if (!strcmp(step, "create_password"))
+    return connect_flow_step_create_password(call);
+  if (!strcmp(step, "create_confirm_password"))
+    return connect_flow_step_create_confirm_password(call);
+
+  log_error((LogEntry){.log = descriptor_log(call->descriptor),
+                       .key = LOG_BUGS,
+                       .primary = "FLOW",
+                       .secondary = "STEP"},
             "Unknown connect flow step '%s'.", step);
   return (FlowOutcome){.action = FLOW_ACTION_CANCEL};
 }
@@ -530,6 +592,9 @@ void descriptor_start_connect_flow(Descriptor *d) {
 
   data->name[0] = '\0';
   data->password[0] = '\0';
-  descriptor_flow_start(d, "username", connect_flow_dispatch, data,
-                        connect_flow_data_free);
+  descriptor_flow_start(&(FlowStartRequest){.descriptor = d,
+                                            .initial_step = "username",
+                                            .step = connect_flow_dispatch,
+                                            .flow_data = data,
+                                            .destroy = connect_flow_data_free});
 }

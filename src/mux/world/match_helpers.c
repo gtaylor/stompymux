@@ -171,9 +171,17 @@ void parse_range(GameDatabase *database,
 
   buff1 = *name;
   if (buff1 && *buff1)
-    *name = parse_to(configuration, &buff1, ',', COMMAND_PARSE_STRIP_TRAILING);
+    *name = parse_to(
+        &(CommandParseRequest){.configuration = configuration,
+                               .source = &buff1,
+                               .delimiter = ',',
+                               .options = COMMAND_PARSE_STRIP_TRAILING});
   if (buff1 && *buff1) {
-    buff2 = parse_to(configuration, &buff1, ',', COMMAND_PARSE_STRIP_TRAILING);
+    buff2 = parse_to(
+        &(CommandParseRequest){.configuration = configuration,
+                               .source = &buff1,
+                               .delimiter = ',',
+                               .options = COMMAND_PARSE_STRIP_TRAILING});
     if (buff1 && *buff1) {
       size_t offset = 0;
       size_t length = strlen(buff1);

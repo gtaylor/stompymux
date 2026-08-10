@@ -63,8 +63,19 @@ bool object_state_set(GameDatabase *database, DbRef object,
 bool object_state_delete(GameDatabase *database, DbRef object,
                          const char *name_space, const char *key);
 size_t object_state_count(GameDatabase *database, DbRef object);
-bool object_state_entry(GameDatabase *database, DbRef object, size_t index,
-                        ObjectStateEntryView *entry);
+typedef struct ObjectStateEntryRequest {
+  GameDatabase *database;
+  DbRef object;
+  size_t index;
+} ObjectStateEntryRequest;
+
+typedef struct ObjectStateEntryResult {
+  bool found;
+  ObjectStateEntryView entry;
+} ObjectStateEntryResult;
+
+ObjectStateEntryResult
+object_state_entry(const ObjectStateEntryRequest *request);
 void object_state_clear(GameDatabase *database, DbRef object);
 bool object_state_copy(GameDatabase *database, DbRef destination, DbRef source);
 

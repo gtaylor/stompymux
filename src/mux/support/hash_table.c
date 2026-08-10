@@ -20,9 +20,11 @@ struct string_dict_entry {
   bool is_const;
 };
 
-static int nuke_hash_ent(void *key, void *data, int depth, void *arg);
+static int nuke_hash_ent(const RedBlackTreeVisitCall *call);
 
-static int hrbtab_compare(void *left, void *right, void *arg) {
+static int hrbtab_compare(const RedBlackTreeCompareCall *call) {
+  void *left = call->lhs;
+  void *right = call->rhs;
   return strcasecmp(left, right);
 }
 
@@ -165,7 +167,8 @@ void hash_table_delete(const char *str, HashTable *htab) {
  * * hash_table_flush: free all the entries in a hashtable.
  */
 
-static int nuke_hash_ent(void *key, void *data, int depth, void *arg) {
+static int nuke_hash_ent(const RedBlackTreeVisitCall *call) {
+  void *data = call->data;
   struct string_dict_entry *ent = (struct string_dict_entry *)data;
   free(ent->key);
   free(ent);
@@ -203,7 +206,9 @@ struct hashreplstat {
   void *new;
 };
 
-static int hashreplall_cb(void *key, void *data, int depth, void *arg) {
+static int hashreplall_cb(const RedBlackTreeVisitCall *call) {
+  void *data = call->data;
+  void *arg = call->context;
   struct string_dict_entry *ent = (struct string_dict_entry *)data;
   struct hashreplstat *repl = (struct hashreplstat *)arg;
 

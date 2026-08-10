@@ -4,6 +4,7 @@
 #include "btech_event.h"
 #include "map.h"
 #include "map_api.h"
+#include "map_effect_types.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "mech_combat_api.h"
@@ -68,8 +69,14 @@ static bool weapon_can_clear(int weapindx) {
   return weapon_catalogue_can_clear_terrain(weapindx);
 }
 
-void mech_terrain_possibly_ignite(Mech *mech, BattleMap *map, int weapindx,
-                                  int ammoMode, int x, int y, int intentional) {
+static void
+mech_terrain_possibly_ignite(const TerrainWeaponEffectRequest *request) {
+  Mech *mech = request->mech;
+  BattleMap *map = request->map;
+  const int weapindx = request->weapon_index;
+  const int ammoMode = request->ammunition_mode;
+  const int x = request->position.x;
+  const int y = request->position.y;
   char terrain = map_terrain_get(map, x, y);
   int roll = btech_random_roll(mech_context(mech));
   int bth = 13;
@@ -95,12 +102,18 @@ void mech_terrain_possibly_ignite(Mech *mech, BattleMap *map, int weapindx,
     bth = 9;
 
   if (roll >= bth)
-    fire_hex(mech, x, y, intentional);
+    fire_hex(&(TerrainHexEffectRequest){.mech = mech,
+                                        .position = {.x = x, .y = y},
+                                        .intentional = request->intentional});
 }
 
-void mech_terrain_possibly_clear(Mech *mech, BattleMap *map, int weapindx,
-                                 int ammoMode, int damage, int x, int y,
-                                 int intentional) {
+static void
+mech_terrain_possibly_clear(const TerrainWeaponEffectRequest *request) {
+  Mech *mech = request->mech;
+  const int weapindx = request->weapon_index;
+  const int damage = request->damage;
+  const int x = request->position.x;
+  const int y = request->position.y;
   int igniteBTH = 5; /* This is for intentional clearing */
   int igniteRoll = btech_random_roll(mech_context(mech));
   int clearRoll = btech_random_roll(mech_context(mech));
@@ -108,12 +121,11 @@ void mech_terrain_possibly_clear(Mech *mech, BattleMap *map, int weapindx,
   if (weapon_catalogue_is_personal_combat(weapindx))
     return;
 
-  if (!intentional)
+  if (!request->intentional)
     igniteBTH = 3;
 
   if (igniteRoll <= igniteBTH) {
-    mech_terrain_possibly_ignite(mech, map, weapindx, ammoMode, x, y,
-                                 intentional);
+    mech_terrain_possibly_ignite(request);
     return;
   }
 
@@ -123,13 +135,15 @@ void mech_terrain_possibly_clear(Mech *mech, BattleMap *map, int weapindx,
   if (clearRoll > damage)
     return;
 
-  clear_hex(mech, x, y, intentional);
+  clear_hex(&(TerrainHexEffectRequest){.mech = mech,
+                                       .position = {.x = x, .y = y},
+                                       .intentional = request->intentional});
   mine_field_possibly_remove(mech, x, y);
 }
 
-void mech_terrain_possibly_ignite_or_clear(Mech *mech, int weapindx,
-                                           int ammoMode, int damage, int x,
-                                           int y, int intentional) {
+void mech_terrain_possibly_ignite_or_clear(
+    const TerrainWeaponEffectRequest *request) {
+  Mech *mech = request->mech;
   BattleMap *map;
 
   map = btech_context_find_object(mech_context(mech), mech_map_dbref(mech));
@@ -138,36 +152,59 @@ void mech_terrain_possibly_ignite_or_clear(Mech *mech, int weapindx,
     return;
 
   if (mech_targets_hex_for_ignition(mech)) {
-    mech_terrain_possibly_ignite(mech, map, weapindx, ammoMode, x, y, 1);
+    TerrainWeaponEffectRequest effect = *request;
+    effect.map = map;
+    effect.intentional = true;
+    mech_terrain_possibly_ignite(&effect);
     return;
   }
 
   if (mech_targets_hex_for_clearing(mech)) {
-    mech_terrain_possibly_clear(mech, map, weapindx, ammoMode, damage, x, y, 1);
+    TerrainWeaponEffectRequest effect = *request;
+    effect.map = map;
+    effect.intentional = true;
+    mech_terrain_possibly_clear(&effect);
     return;
   }
 
-  mech_terrain_possibly_clear(mech, map, weapindx, ammoMode, damage, x, y,
-                              intentional);
+  TerrainWeaponEffectRequest effect = *request;
+  effect.map = map;
+  mech_terrain_possibly_clear(&effect);
 }
 
-void mech_terrain_hex_hit(Mech *mech, int x, int y, int weapindx, int ammoMode,
-                          int damage, int ishit) {
+void mech_terrain_hex_hit(const TerrainWeaponHitRequest *request) {
+  Mech *mech = request->attacker;
+  const int weapindx = request->weapon_index;
+  const int x = request->position.x;
+  const int y = request->position.y;
   if (!mech_targets_hex_or_building(mech))
     return;
 
   /* Ok.. we either try to clear/ignite the hex, or alternatively we try to hit
    * building in it */
   if (mech_targets_building(mech)) {
-    if (ishit > 0)
-      hit_building(mech, x, y, weapindx, damage);
+    if (request->hit)
+      hit_building(&(BuildingHitRequest){.mech = mech,
+                                         .position = {.x = x, .y = y},
+                                         .weapon_index = weapindx,
+                                         .damage = request->damage});
   } else {
-    mech_terrain_possibly_ignite_or_clear(mech, weapindx, ammoMode, damage, x,
-                                          y, 1);
+    mech_terrain_possibly_ignite_or_clear(&(TerrainWeaponEffectRequest){
+        .mech = mech,
+        .position = request->position,
+        .weapon_index = weapindx,
+        .ammunition_mode = request->ammunition_mode,
+        .damage = request->damage,
+        .intentional = true});
 
     if (mech_targets_hex(mech)) {
-      possibly_blow_ice(mech, weapindx, x, y);
-      possibly_blow_bridge(mech, weapindx, x, y);
+      const TerrainStructureWeaponImpact impact = {
+          .attacker = mech,
+          .weapon_index = weapindx,
+          .position = {.x = x, .y = y},
+      };
+      ice_weapon_impact_resolve(&impact);
+      bridge_weapon_impact_resolve(&impact);
     }
   }
 }

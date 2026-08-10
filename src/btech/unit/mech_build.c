@@ -117,15 +117,17 @@ bool missile_hit_registry_initialize(MissileHitRegistry *registry,
   registry->count = definition_count;
 
   for (size_t index = 0; index < definition_count; index++) {
-    int id;
-    int brand;
-
     MissileHitEntry *entry = missile_hit_entry(registry, index);
     *entry = *(const MissileHitEntry *)checked_storage_at_const(
         MISSILE_HIT_DEFINITIONS, definition_count + 1,
         sizeof(*MISSILE_HIT_DEFINITIONS), index);
-    if (find_matching_vlong_part(context, entry->name, nullptr, &id, &brand))
-      entry->weapon_index = weapon_from_equipment_index(id);
+    PartMatchResult match =
+        part_match_next(&(PartMatchRequest){.context = context,
+                                            .pattern = entry->name,
+                                            .kind = PART_MATCH_VERY_LONG,
+                                            .cursor = -1});
+    if (match.found)
+      entry->weapon_index = weapon_from_equipment_index(match.part.id);
     else
       entry->weapon_index = -1;
   }
@@ -165,7 +167,10 @@ void FillDefaultCriticals(Mech *mech, int index) {
   int loop;
 
   for (loop = 0; loop < NUM_CRITICALS; loop++) {
-    mech_critical_configure(mech, index, loop, EMPTY, 0, 0, 0);
+    mech_critical_configure(&(CriticalSlotConfiguration){
+        .mech = mech,
+        .slot = {.section = index, .critical = loop},
+        .part_type = EMPTY});
   }
 
   if (((mech)->ud.type) == CLASS_AERO)
@@ -239,12 +244,16 @@ void FillDefaultCriticals(Mech *mech, int index) {
 }
 
 ArmorSectionAbbreviation
-armor_section_abbreviation(UnitClass type, MechMovementType movement_type,
-                           int loc) {
+armor_section_abbreviation(const ArmorSectionReference *section) {
   ArmorSectionAbbreviation abbreviation = {0};
+  UnitClass type = section->unit_class;
+  MechMovementType movement_type = section->movement_type;
+  int loc = section->location;
   if (loc < 0)
     return abbreviation;
-  const char *name = mech_section_name(type, movement_type, (size_t)loc);
+  const UnitSectionCatalog catalog = {.unit_type = type,
+                                      .movement_type = movement_type};
+  const char *name = unit_section_name(&catalog, (size_t)loc);
   if (name == nullptr)
     return abbreviation;
   const size_t length = strlen(name);
@@ -270,27 +279,29 @@ int ArmorSectionFromString(UnitClass type, MechMovementType movement_type,
 
   if (string == nullptr || !*string)
     return -1;
-  const size_t location_count = mech_section_name_count(type, movement_type);
+  const UnitSectionCatalog catalog = {.unit_type = type,
+                                      .movement_type = movement_type};
+  const size_t location_count = unit_section_name_count(&catalog);
   if (location_count == 0)
     return -1;
   /* Then, methodically compare against each other until a suitable
      match is found */
   for (i = 0; (size_t)i < location_count; i++)
-    if (!strcasecmp(string, mech_section_name(type, movement_type, (size_t)i)))
+    if (!strcasecmp(string, unit_section_name(&catalog, (size_t)i)))
       return i;
   for (i = 0; (size_t)i < location_count; i++) {
     const char first = ascii_to_upper(*string);
-    const char *left = mech_section_name(type, movement_type, (size_t)i);
+    const char *left = unit_section_name(&catalog, (size_t)i);
     if (first != *left)
       continue;
     for (j = i + 1; (size_t)j < location_count; j++)
-      if (first == *mech_section_name(type, movement_type, (size_t)j))
+      if (first == *unit_section_name(&catalog, (size_t)j))
         break;
     if ((size_t)j == location_count)
       return i;
     /* Ok, comparison between these two, then */
     c = strstr(left, " ");
-    d = strstr(mech_section_name(type, movement_type, (size_t)j), " ");
+    d = strstr(unit_section_name(&catalog, (size_t)j), " ");
     const char second = *checked_string_suffix(string, 1);
     if (!c && !second && d)
       return i;
@@ -307,19 +318,23 @@ int ArmorSectionFromString(UnitClass type, MechMovementType movement_type,
 }
 
 int WeaponIndexFromString(BtechContext *context, char *string) {
-  int id, brand;
-
-  if (find_matching_vlong_part(context, string, nullptr, &id, &brand))
-    if (equipment_is_weapon(id))
-      return weapon_from_equipment_index(id);
+  PartMatchResult match =
+      part_match_next(&(PartMatchRequest){.context = context,
+                                          .pattern = string,
+                                          .kind = PART_MATCH_VERY_LONG,
+                                          .cursor = -1});
+  if (match.found && equipment_is_weapon(match.part.id))
+    return weapon_from_equipment_index(match.part.id);
   return -1;
 }
 
 int FindSpecialItemCodeFromString(BtechContext *context, char *buffer) {
-  int id, brand;
-
-  if (find_matching_vlong_part(context, buffer, nullptr, &id, &brand))
-    if (equipment_is_special(id))
-      return special_from_equipment_index(id);
+  PartMatchResult match =
+      part_match_next(&(PartMatchRequest){.context = context,
+                                          .pattern = buffer,
+                                          .kind = PART_MATCH_VERY_LONG,
+                                          .cursor = -1});
+  if (match.found && equipment_is_special(match.part.id))
+    return special_from_equipment_index(match.part.id);
   return -1;
 }

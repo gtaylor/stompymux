@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +19,7 @@ constexpr size_t OBJECT_STATE_NAMESPACE_LIMIT = 127;
 constexpr size_t OBJECT_STATE_KEY_LIMIT = 255;
 constexpr size_t OBJECT_STATE_DEFAULT_VALUE_LIMIT = 65536;
 constexpr size_t OBJECT_STATE_DEFAULT_ENTRY_LIMIT = 1024;
-constexpr size_t OBJECT_STATE_DEFAULT_OBJECT_LIMIT = 1024 * 1024;
+constexpr size_t OBJECT_STATE_DEFAULT_OBJECT_LIMIT = (size_t)(1024 * 1024);
 
 typedef struct ObjectStateEntry ObjectStateEntry;
 struct ObjectStateEntry {
@@ -443,22 +444,23 @@ size_t object_state_count(GameDatabase *database, DbRef object) {
   return collection ? collection->count : 0;
 }
 
-bool object_state_entry(GameDatabase *database, DbRef object, size_t index,
-                        ObjectStateEntryView *entry) {
+ObjectStateEntryResult
+object_state_entry(const ObjectStateEntryRequest *request) {
+  GameDatabase *database = request->database;
+  DbRef object = request->object;
+  size_t index = request->index;
   ObjectStateCollection *collection;
 
-  if (!entry || !is_good_obj(database, object))
-    return false;
+  if (!is_good_obj(database, object))
+    return (ObjectStateEntryResult){0};
   collection = game_database_object(database, object)->state;
   if (!collection || index >= collection->count)
-    return false;
+    return (ObjectStateEntryResult){0};
   const ObjectStateEntry *stored = object_state_entry_const(collection, index);
-  *entry = (ObjectStateEntryView){
-      .name_space = stored->name_space,
-      .key = stored->key,
-      .value = &stored->value,
-  };
-  return true;
+  return (ObjectStateEntryResult){.found = true,
+                                  .entry = {.name_space = stored->name_space,
+                                            .key = stored->key,
+                                            .value = &stored->value}};
 }
 
 void object_state_clear(GameDatabase *database, DbRef object) {

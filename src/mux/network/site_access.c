@@ -50,18 +50,23 @@ int site_data_check(struct sockaddr_storage *saddr, int saddr_len,
 #define S_SUSPECT 1
 #define S_ACCESS 2
 
-static const char *stat_string(int strtype, int flag) {
+typedef struct SiteStatusRequest {
+  int type;
+  int flag;
+} SiteStatusRequest;
+
+static const char *stat_string(const SiteStatusRequest *request) {
   const char *str;
 
-  switch (strtype) {
+  switch (request->type) {
   case S_SUSPECT:
-    if (flag)
+    if (request->flag)
       str = "Suspected";
     else
       str = "Trusted";
     break;
   case S_ACCESS:
-    switch (flag) {
+    switch (request->flag) {
     case H_FORBIDDEN:
       str = "Forbidden";
       break;
@@ -92,7 +97,8 @@ static void list_sites(EvaluationContext *evaluation, DbRef player,
                  "Address              Mask                 Status",
                  MSG_ME_ALL | MSG_F_DOWN);
   for (this = site_list; this; this = this->next) {
-    str = stat_string(stat_type, this->flag);
+    str = stat_string(
+        &(SiteStatusRequest){.type = stat_type, .flag = this->flag});
     StringCopy(buff1, inet_ntoa(this->mask));
     (void)snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", inet_ntoa(this->address),
                    buff1, str);

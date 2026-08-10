@@ -41,10 +41,11 @@ int tactical_column_is_odd(int column) { return (unsigned)column & 1; }
 
 int tactical_display_columns(int hex_columns) { return hex_columns * 3 + 1; }
 
-int tactical_hex_offset(int x, int y, int display_columns,
-                        int first_column_is_odd) {
-  int column_is_odd = tactical_column_is_odd(x + first_column_is_odd);
-  return (y * 2 + 1 - column_is_odd) * display_columns + x * 3 + 1;
+int tactical_hex_offset(const TacticalHexOffsetRequest *request) {
+  const int x = request->position.x;
+  const int y = request->position.y;
+  int column_is_odd = tactical_column_is_odd(x + request->first_column_is_odd);
+  return (y * 2 + 1 - column_is_odd) * request->display_columns + x * 3 + 1;
 }
 
 static void tactical_row_sketch(TacticalCanvas *canvas, int row_offset,
@@ -180,8 +181,10 @@ void tactical_map_sketch(char *buffer, size_t buffer_capacity, BattleMap *map,
       }
 
       const int base_offset =
-          map_origin_offset +
-          tactical_hex_offset(x, y, display_columns, first_column_is_odd);
+          map_origin_offset + tactical_hex_offset(&(TacticalHexOffsetRequest){
+                                  .position = {.x = x, .y = y},
+                                  .display_columns = display_columns,
+                                  .first_column_is_odd = first_column_is_odd});
       *tactical_canvas_at(&canvas, base_offset) = top_character;
       *tactical_canvas_at(&canvas, base_offset + 1) = top_character;
       *tactical_canvas_at(&canvas, base_offset + display_columns) =

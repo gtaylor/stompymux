@@ -516,14 +516,15 @@ long btech_context_random_i31(BtechContext *context) {
   return btech_random_i31(&context->random);
 }
 
-int btech_context_missile_hit_count(const BtechContext *context,
-                                    int weapon_index, int roll_index) {
+int btech_context_missile_hit_count(const MissileHitLookup *lookup) {
+  const BtechContext *context = lookup->context;
   assert(context != nullptr);
   const MissileHitEntry *entry =
-      missile_hit_registry_find_weapon(&context->missile_hits, weapon_index);
-  return entry ? integer_value(entry->num_missiles,
-                               BTECH_MISSILE_HIT_ROLL_COUNT, (size_t)roll_index)
-               : 0;
+      missile_hit_registry_find_weapon(&context->missile_hits, lookup->weapon);
+  return entry
+             ? integer_value(entry->num_missiles, BTECH_MISSILE_HIT_ROLL_COUNT,
+                             (size_t)lookup->roll)
+             : 0;
 }
 
 bool btech_context_has_missile_hit_table(const BtechContext *context,

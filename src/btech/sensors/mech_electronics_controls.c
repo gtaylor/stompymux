@@ -35,19 +35,28 @@
 
 typedef bool (*MechElectronicToggle)(Mech *mech, bool eccm);
 
-static void mech_electronic_mode_toggle(DbRef player, Mech *mech,
-                                        bool has_technology, bool eccm,
-                                        MechElectronicToggle toggle,
-                                        const char *online_message,
-                                        const char *offline_message,
-                                        const char *missing_message) {
-  if (!has_technology) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 missing_message);
+typedef struct MechElectronicModeRequest {
+  DbRef player;
+  Mech *mech;
+  bool has_technology;
+  bool eccm;
+  MechElectronicToggle toggle;
+  const char *online_message;
+  const char *offline_message;
+  const char *missing_message;
+} MechElectronicModeRequest;
+
+static void
+mech_electronic_mode_toggle(const MechElectronicModeRequest *request) {
+  if (!request->has_technology) {
+    mecha_notify(btech_context_evaluation(mech_context(request->mech)),
+                 request->player, request->missing_message);
     return;
   }
-  mech_notify(mech, MECHALL,
-              toggle(mech, eccm) ? online_message : offline_message);
+  mech_notify(request->mech, MECHALL,
+              request->toggle(request->mech, request->eccm)
+                  ? request->online_message
+                  : request->offline_message);
 }
 
 void mech_ecm(DbRef player, Mech *mech, char *buffer) {
@@ -58,11 +67,14 @@ void mech_ecm(DbRef player, Mech *mech, char *buffer) {
                  "Your Guardian ECM has been destroyed already!");
     return;
   }
-  mech_electronic_mode_toggle(
-      player, mech, mech_technology_flags(mech) & ECM_TECH, false,
-      mech_ecm_mode_toggle, "You turn your ECM suite online (ECM mode).",
-      "You turn your ECM suite offline.",
-      "This unit isn't equipped with an ECM suite!");
+  mech_electronic_mode_toggle(&(MechElectronicModeRequest){
+      .player = player,
+      .mech = mech,
+      .has_technology = (mech_technology_flags(mech) & ECM_TECH) != 0,
+      .toggle = mech_ecm_mode_toggle,
+      .online_message = "You turn your ECM suite online (ECM mode).",
+      .offline_message = "You turn your ECM suite offline.",
+      .missing_message = "This unit isn't equipped with an ECM suite!"});
   MarkForLOSUpdate(mech);
 }
 
@@ -74,37 +86,48 @@ void mech_eccm(DbRef player, Mech *mech, char *buffer) {
                  "Your Guardian ECM has been destroyed already!");
     return;
   }
-  mech_electronic_mode_toggle(
-      player, mech, mech_technology_flags(mech) & ECM_TECH, true,
-      mech_ecm_mode_toggle, "You turn your ECM suite online (ECCM mode).",
-      "You turn your ECM suite offline.",
-      "This unit isn't equipped with an ECM suite!");
+  mech_electronic_mode_toggle(&(MechElectronicModeRequest){
+      .player = player,
+      .mech = mech,
+      .has_technology = (mech_technology_flags(mech) & ECM_TECH) != 0,
+      .eccm = true,
+      .toggle = mech_ecm_mode_toggle,
+      .online_message = "You turn your ECM suite online (ECCM mode).",
+      .offline_message = "You turn your ECM suite offline.",
+      .missing_message = "This unit isn't equipped with an ECM suite!"});
   MarkForLOSUpdate(mech);
 }
 
 void mech_perecm(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
-  mech_electronic_mode_toggle(
-      player, mech,
-      mech_infantry_technology_flags(mech) & FC_INFILTRATORII_STEALTH_TECH,
-      false, mech_personal_ecm_mode_toggle,
-      "You turn your Personal ECM suite online (ECM mode).",
-      "You turn your Personal ECM suite offline.",
-      "This unit isn't equipped with a Personal ECM suite!");
+  mech_electronic_mode_toggle(&(MechElectronicModeRequest){
+      .player = player,
+      .mech = mech,
+      .has_technology = (mech_infantry_technology_flags(mech) &
+                         FC_INFILTRATORII_STEALTH_TECH) != 0,
+      .toggle = mech_personal_ecm_mode_toggle,
+      .online_message = "You turn your Personal ECM suite online (ECM mode).",
+      .offline_message = "You turn your Personal ECM suite offline.",
+      .missing_message =
+          "This unit isn't equipped with a Personal ECM suite!"});
   MarkForLOSUpdate(mech);
 }
 
 void mech_pereccm(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
-  mech_electronic_mode_toggle(
-      player, mech,
-      mech_infantry_technology_flags(mech) & FC_INFILTRATORII_STEALTH_TECH,
-      true, mech_personal_ecm_mode_toggle,
-      "You turn your Personal ECM suite online (ECCM mode).",
-      "You turn your Personal ECM suite offline.",
-      "This unit isn't equipped with a Personal ECM suite!");
+  mech_electronic_mode_toggle(&(MechElectronicModeRequest){
+      .player = player,
+      .mech = mech,
+      .has_technology = (mech_infantry_technology_flags(mech) &
+                         FC_INFILTRATORII_STEALTH_TECH) != 0,
+      .eccm = true,
+      .toggle = mech_personal_ecm_mode_toggle,
+      .online_message = "You turn your Personal ECM suite online (ECCM mode).",
+      .offline_message = "You turn your Personal ECM suite offline.",
+      .missing_message =
+          "This unit isn't equipped with a Personal ECM suite!"});
   MarkForLOSUpdate(mech);
 }
 
@@ -116,12 +139,15 @@ void mech_angelecm(DbRef player, Mech *mech, char *buffer) {
                  "Your Angel ECM has been destroyed already!");
     return;
   }
-  mech_electronic_mode_toggle(
-      player, mech, mech_technology_flags_secondary(mech) & ANGEL_ECM_TECH,
-      false, mech_angel_ecm_mode_toggle,
-      "You turn your Angel ECM suite online (ECM mode).",
-      "You turn your Angel ECM suite offline.",
-      "This unit isn't equipped with an Angel ECM suite!");
+  mech_electronic_mode_toggle(&(MechElectronicModeRequest){
+      .player = player,
+      .mech = mech,
+      .has_technology =
+          (mech_technology_flags_secondary(mech) & ANGEL_ECM_TECH) != 0,
+      .toggle = mech_angel_ecm_mode_toggle,
+      .online_message = "You turn your Angel ECM suite online (ECM mode).",
+      .offline_message = "You turn your Angel ECM suite offline.",
+      .missing_message = "This unit isn't equipped with an Angel ECM suite!"});
   MarkForLOSUpdate(mech);
 }
 
@@ -133,12 +159,16 @@ void mech_angeleccm(DbRef player, Mech *mech, char *buffer) {
                  "Your Angel ECM has been destroyed already!");
     return;
   }
-  mech_electronic_mode_toggle(
-      player, mech, mech_technology_flags_secondary(mech) & ANGEL_ECM_TECH,
-      true, mech_angel_ecm_mode_toggle,
-      "You turn your Angel ECM suite online (ECCM mode).",
-      "You turn your Angel ECM suite offline.",
-      "This unit isn't equipped with an Angel ECM suite!");
+  mech_electronic_mode_toggle(&(MechElectronicModeRequest){
+      .player = player,
+      .mech = mech,
+      .has_technology =
+          (mech_technology_flags_secondary(mech) & ANGEL_ECM_TECH) != 0,
+      .eccm = true,
+      .toggle = mech_angel_ecm_mode_toggle,
+      .online_message = "You turn your Angel ECM suite online (ECCM mode).",
+      .offline_message = "You turn your Angel ECM suite offline.",
+      .missing_message = "This unit isn't equipped with an Angel ECM suite!"});
   MarkForLOSUpdate(mech);
 }
 
@@ -605,8 +635,22 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
         mech_critical_is_nonfunctional(mech, wArmToUse, 1))
       wSelfDamage = wSelfDamage / 2;
 
-    DamageMech(mech, mech, 1, mech_pilot_dbref(mech), wLoc, 0, 0, wSelfDamage,
-               0, -1, 0, -1, 0, 0);
+    mech_damage_apply(
+        &(MechDamageRequest){.target = mech,
+                             .attacker = mech,
+                             .line_of_sight = 1,
+                             .attack_pilot = mech_pilot_dbref(mech),
+                             .hit_location = wLoc,
+                             .rear = 0,
+                             .critical = 0,
+                             .armor_damage = wSelfDamage,
+                             .internal_damage = 0,
+                             .transfer = MECH_DAMAGE_NORMAL,
+                             .cause = -1,
+                             .base_to_hit = 0,
+                             .weapon_index = -1,
+                             .ammunition_mode = 0,
+                             .ignore_swarmers = 0});
   } else {
     mech_section_special_remove(mech, wLoc, wPodType);
 

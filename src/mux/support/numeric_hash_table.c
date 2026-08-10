@@ -6,7 +6,9 @@
 #include "mux/support/hash_table.h"
 #include "mux/support/red_black_tree.h"
 
-static int nhrbtab_compare(void *left_key, void *right_key, void *arg) {
+static int nhrbtab_compare(const RedBlackTreeCompareCall *call) {
+  void *left_key = call->lhs;
+  void *right_key = call->rhs;
   const DbRef left = (DbRef)left_key;
   const DbRef right = (DbRef)right_key;
 

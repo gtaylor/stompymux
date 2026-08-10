@@ -2,6 +2,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_conditions_api.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_api_types.h"
@@ -42,7 +43,7 @@ static float map_scaled_elevation(BattleMap *map, int x, int y) {
 static bool parse_navigation_arguments(char *arguments[], size_t count,
                                        int values[]) {
   for (size_t index = 0; index < count; index++) {
-    char *argument = *(char **)checked_storage_at(arguments, count,
+    char *argument = *(char **)checked_storage_at((void *)arguments, count,
                                                   sizeof(*arguments), index);
     int *value =
         (int *)checked_storage_at(values, count, sizeof(*values), index);
@@ -62,7 +63,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
   float x0, y0;
   int ix1, iy1;
   int values[4];
-  float x1, y1, z1;
+  float x1, y1;
   char trash[20] = {0};
   char buff[100] = {0};
 
@@ -89,9 +90,13 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
           }
         }
       }
-      if (!FindTargetXY(mech, &x1, &y1, &z1)) {
+      const MechTargetPositionResult target_position =
+          mech_target_position(mech);
+      if (!target_position.found) {
         mecha_notify(evaluation, player, "There is no default target!");
       } else {
+        x1 = target_position.position.x;
+        y1 = target_position.position.y;
         strcpy(buff, "Bearing to default target is: ");
       }
     } else if (argc == 2) {
@@ -137,7 +142,8 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
                    "Invalid number of attributes to Bearing function!");
     }
     if (x1 >= 0.0F) {
-      const int bearing = FindBearing(x0, y0, x1, y1);
+      const int bearing = map_bearing(&(MapRealSegment){
+          .start = {.x = x0, .y = y0}, .end = {.x = x1, .y = y1}});
       (void)snprintf(trash, sizeof(trash), "%d degrees.", bearing);
       strlcat(buff, trash, sizeof(buff));
       mecha_notify(evaluation, player, buff);
@@ -188,11 +194,16 @@ void mech_range(DbRef player, void *data, char *buffer) {
           }
         }
       }
-      if (!FindTargetXY(mech, &x1, &y1, &z1)) {
+      const MechTargetPositionResult target_position =
+          mech_target_position(mech);
+      if (!target_position.found) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "There is no default target!");
         return;
       }
+      x1 = target_position.position.x;
+      y1 = target_position.position.y;
+      z1 = target_position.position.z;
       if (battle_map_is_dark(mech_map) && !tempMech)
         z1 = scaled_hex_elevation(mech_position_z(mech));
       strcpy(buff, "Range to default target is: ");
@@ -251,8 +262,14 @@ void mech_range(DbRef player, void *data, char *buffer) {
       x1 = y1 = -1;
     }
     if (x1 >= 0.0F) {
-      temp = FindRange(x0, y0, z0, x1, y1, z1);
-      hr = FindHexRange(x0, y0, x1, y1);
+      temp = map_spatial_range(&(MapSpatialSegment){
+          .start = {.x = x0, .y = y0, .z = z0},
+          .end = {.x = x1, .y = y1, .z = z1},
+      });
+      hr = map_real_range(&(MapRealSegment){
+          .start = {.x = x0, .y = y0},
+          .end = {.x = x1, .y = y1},
+      });
       (void)snprintf(buf1, sizeof(buf1), "%.1f", (double)temp);
       (void)snprintf(buf2, sizeof(buf2), "%.1f", (double)hr);
       if (strcmp(buf1, buf2))
@@ -309,11 +326,16 @@ void mech_vector(DbRef player, void *data, char *buffer) {
           }
         }
       }
-      if (!FindTargetXY(mech, &x1, &y1, &z1)) {
+      const MechTargetPositionResult target_position =
+          mech_target_position(mech);
+      if (!target_position.found) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "There is no default target!");
         return;
       }
+      x1 = target_position.position.x;
+      y1 = target_position.position.y;
+      z1 = target_position.position.z;
       strcpy(buff, "Vector to default target is: ");
     } else if (argc == 2) {
       /* Range to X, Y */
@@ -410,8 +432,14 @@ void mech_vector(DbRef player, void *data, char *buffer) {
     }
     if (x1 >= 0.0F) {
       /* range */
-      temp = FindRange(x0, y0, z0, x1, y1, z1);
-      hr = FindHexRange(x0, y0, x1, y1);
+      temp = map_spatial_range(&(MapSpatialSegment){
+          .start = {.x = x0, .y = y0, .z = z0},
+          .end = {.x = x1, .y = y1, .z = z1},
+      });
+      hr = map_real_range(&(MapRealSegment){
+          .start = {.x = x0, .y = y0},
+          .end = {.x = x1, .y = y1},
+      });
       (void)snprintf(buf1, sizeof(buf1), "%.1f", (double)temp);
       (void)snprintf(buf2, sizeof(buf2), "%.1f", (double)hr);
       if (strcmp(buf1, buf2))
@@ -422,7 +450,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       strlcat(buff, trash, sizeof(buff));
 
       /* bearing */
-      const int bearing = FindBearing(x0, y0, x1, y1);
+      const int bearing = map_bearing(&(MapRealSegment){
+          .start = {.x = x0, .y = y0}, .end = {.x = x1, .y = y1}});
       if (argc != 0 && argc != 3 && argc != 6)
         (void)snprintf(trash, sizeof(trash), "%d degrees.", bearing);
       else
@@ -430,7 +459,9 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                        (z1 > z0   ? '+'
                         : z1 < z0 ? '-'
                                   : ' '),
-                       FindZBearing(x0, y0, z0, x1, y1, z1));
+                       map_vertical_bearing(&(MapSpatialSegment){
+                           .start = {.x = x0, .y = y0, .z = z0},
+                           .end = {.x = x1, .y = y1, .z = z1}}));
       strlcat(buff, trash, sizeof(buff));
 
       mecha_notify(evaluation, player, buff);

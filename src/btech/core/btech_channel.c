@@ -71,8 +71,10 @@ void btech_channel_send(BtechContext *context, BtechChannel channel,
   }
 
   va_start(arguments, format);
-  send_channel_v(btech_context_evaluation(context), channel_name, format,
-                 arguments);
+  send_channel_v(
+      &(ChannelMessageTarget){.evaluation = btech_context_evaluation(context),
+                              .channel = channel_name},
+      format, arguments);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   va_end(arguments);
 }

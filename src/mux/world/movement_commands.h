@@ -11,8 +11,14 @@ typedef struct EvaluationContext EvaluationContext;
 
 constexpr int MOVE_QUIET = 1; /* Suppress other text and Lua events. */
 
-void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
-                  int key, char *direction);
+typedef struct MoveCommandRequest {
+  EvaluationContext *evaluation;
+  DbRef player;
+  int key;
+  char *direction;
+} MoveCommandRequest;
+
+void move_command(const MoveCommandRequest *request);
 void do_move(CommandInvocation *invocation);
 void do_enter_internal(EvaluationContext *evaluation, DbRef player,
                        DbRef target, int key);

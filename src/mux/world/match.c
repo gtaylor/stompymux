@@ -47,8 +47,15 @@
 
 #define md (*match_context)
 
-static void promote_match(MatchContext *match_context, DbRef what,
-                          int confidence) {
+typedef struct MatchCandidate {
+  DbRef object;
+  int confidence;
+} MatchCandidate;
+
+static void promote_match(MatchContext *match_context,
+                          MatchCandidate candidate) {
+  DbRef what = candidate.object;
+  int confidence = candidate.confidence;
   LuaLockInvocation lock;
   LuaLockResult result;
   /*
@@ -161,7 +168,7 @@ void match_player(MatchContext *match_context) {
   }
   if (is_good_obj(md.evaluation->world->database, md.absolute_form) &&
       is_player(md.evaluation->world->database, md.absolute_form)) {
-    promote_match(match_context, md.absolute_form, CON_DBREF);
+    promote_match(match_context, (MatchCandidate){md.absolute_form, CON_DBREF});
     return;
   }
   if (*md.string == LOOKUP_TOKEN) {
@@ -174,7 +181,7 @@ void match_player(MatchContext *match_context) {
     match = lookup_player(md.evaluation->world, NOTHING,
                           checked_mutable_string_suffix(md.string, offset), 1);
     if (is_good_obj(md.evaluation->world->database, match)) {
-      promote_match(match_context, match, CON_TOKEN);
+      promote_match(match_context, (MatchCandidate){match, CON_TOKEN});
     }
   }
 }
@@ -206,7 +213,7 @@ void match_absolute(MatchContext *match_context) {
   if (md.confidence >= CON_DBREF)
     return;
   if (is_good_obj(md.evaluation->world->database, md.absolute_form))
-    promote_match(match_context, md.absolute_form, CON_DBREF);
+    promote_match(match_context, (MatchCandidate){md.absolute_form, CON_DBREF});
 }
 
 void match_numeric(MatchContext *match_context) {
@@ -216,7 +223,7 @@ void match_numeric(MatchContext *match_context) {
     return;
   match = absolute_name(match_context, 0);
   if (is_good_obj(md.evaluation->world->database, match))
-    promote_match(match_context, match, CON_DBREF);
+    promote_match(match_context, (MatchCandidate){match, CON_DBREF});
 }
 
 void match_me(MatchContext *match_context) {
@@ -224,11 +231,13 @@ void match_me(MatchContext *match_context) {
     return;
   if (is_good_obj(md.evaluation->world->database, md.absolute_form) &&
       (md.absolute_form == md.player)) {
-    promote_match(match_context, md.player, CON_DBREF | CON_LOCAL);
+    promote_match(match_context,
+                  (MatchCandidate){md.player, CON_DBREF | CON_LOCAL});
     return;
   }
   if (!string_compare(md.evaluation->world->configuration, md.string, "me"))
-    promote_match(match_context, md.player, CON_TOKEN | CON_LOCAL);
+    promote_match(match_context,
+                  (MatchCandidate){md.player, CON_TOKEN | CON_LOCAL});
   return;
 }
 
@@ -236,7 +245,7 @@ void match_home(MatchContext *match_context) {
   if (md.confidence >= CON_DBREF)
     return;
   if (!string_compare(md.evaluation->world->configuration, md.string, "home"))
-    promote_match(match_context, HOME, CON_TOKEN);
+    promote_match(match_context, (MatchCandidate){HOME, CON_TOKEN});
   return;
 }
 
@@ -250,14 +259,17 @@ void match_here(MatchContext *match_context) {
     loc = game_object_location(md.evaluation->world->database, md.player);
     if (is_good_obj(md.evaluation->world->database, loc)) {
       if (loc == md.absolute_form) {
-        promote_match(match_context, loc, CON_DBREF | CON_LOCAL);
+        promote_match(match_context,
+                      (MatchCandidate){loc, CON_DBREF | CON_LOCAL});
       } else if (!string_compare(md.evaluation->world->configuration, md.string,
                                  "here")) {
-        promote_match(match_context, loc, CON_TOKEN | CON_LOCAL);
+        promote_match(match_context,
+                      (MatchCandidate){loc, CON_TOKEN | CON_LOCAL});
       } else if (!string_compare(md.evaluation->world->configuration, md.string,
                                  (char *)game_object_pure_name(
                                      md.evaluation->world->database, loc))) {
-        promote_match(match_context, loc, CON_COMPLETE | CON_LOCAL);
+        promote_match(match_context,
+                      (MatchCandidate){loc, CON_COMPLETE | CON_LOCAL});
       }
     }
   }
@@ -270,7 +282,7 @@ static void match_list(MatchContext *match_context, DbRef first, int local) {
     return;
   DOLIST(md.evaluation->world->database, first, first) {
     if (first == md.absolute_form) {
-      promote_match(match_context, first, CON_DBREF | local);
+      promote_match(match_context, (MatchCandidate){first, CON_DBREF | local});
       return;
     }
     /*
@@ -284,9 +296,10 @@ static void match_list(MatchContext *match_context, DbRef first, int local) {
 
     if (!string_compare(md.evaluation->world->configuration, namebuf,
                         md.string)) {
-      promote_match(match_context, first, CON_COMPLETE | local);
+      promote_match(match_context,
+                    (MatchCandidate){first, CON_COMPLETE | local});
     } else if (string_match(namebuf, md.string)) {
-      promote_match(match_context, first, local);
+      promote_match(match_context, (MatchCandidate){first, local});
     }
   }
 }
@@ -363,8 +376,18 @@ bool matches_exit_from_list(const char *string, const char *pattern) {
   return false;
 }
 
-static int match_exit_internal(MatchContext *match_context, DbRef loc,
-                               DbRef baseloc, int local) {
+typedef struct ExitMatchRequest {
+  MatchContext *context;
+  DbRef location;
+  DbRef base_location;
+  int confidence;
+} ExitMatchRequest;
+
+static int match_exit_internal(const ExitMatchRequest *request) {
+  MatchContext *match_context = request->context;
+  DbRef loc = request->location;
+  DbRef baseloc = request->base_location;
+  int local = request->confidence;
   DbRef exit;
   int result, key;
 
@@ -384,15 +407,20 @@ static int match_exit_internal(MatchContext *match_context, DbRef loc,
         key |= VE_LOC_DARK;
       if (is_dark(md.evaluation->world->database, baseloc))
         key |= VE_LOC_DARK;
-      if (exit_visible(match_context->evaluation, exit, md.player, key)) {
-        promote_match(match_context, exit, CON_DBREF | local);
+      if (exit_visible(
+              &(ExitVisibilityRequest){.evaluation = match_context->evaluation,
+                                       .exit = exit,
+                                       .viewer = md.player,
+                                       .options = key})) {
+        promote_match(match_context, (MatchCandidate){exit, CON_DBREF | local});
         return 1;
       }
     }
     if (matches_exit_from_list(
             md.string,
             game_object_pure_name(md.evaluation->world->database, exit))) {
-      promote_match(match_context, exit, CON_COMPLETE | local);
+      promote_match(match_context,
+                    (MatchCandidate){exit, CON_COMPLETE | local});
       result = 1;
     }
   }
@@ -407,7 +435,10 @@ void match_exit(MatchContext *match_context) {
   loc = game_object_location(md.evaluation->world->database, md.player);
   if (is_good_obj(md.evaluation->world->database, md.player) &&
       has_location(md.evaluation->world->database, md.player))
-    (void)match_exit_internal(match_context, loc, loc, CON_LOCAL);
+    (void)match_exit_internal(&(ExitMatchRequest){.context = match_context,
+                                                  .location = loc,
+                                                  .base_location = loc,
+                                                  .confidence = CON_LOCAL});
 }
 
 void match_carried_exit(MatchContext *match_context) {
@@ -415,7 +446,10 @@ void match_carried_exit(MatchContext *match_context) {
     return;
   if (is_good_obj(md.evaluation->world->database, md.player) &&
       has_exits(md.evaluation->world->database, md.player))
-    (void)match_exit_internal(match_context, md.player, md.player, CON_LOCAL);
+    (void)match_exit_internal(&(ExitMatchRequest){.context = match_context,
+                                                  .location = md.player,
+                                                  .base_location = md.player,
+                                                  .confidence = CON_LOCAL});
 }
 
 void match_zone_exit(MatchContext *match_context) {
@@ -423,10 +457,11 @@ void match_zone_exit(MatchContext *match_context) {
     return;
   if (is_good_obj(md.evaluation->world->database, md.player) &&
       has_exits(md.evaluation->world->database, md.player))
-    (void)match_exit_internal(
-        match_context,
-        game_object_zone(md.evaluation->world->database, md.player),
-        game_object_zone(md.evaluation->world->database, md.player), 0);
+    (void)match_exit_internal(&(ExitMatchRequest){
+        .context = match_context,
+        .location = game_object_zone(md.evaluation->world->database, md.player),
+        .base_location =
+            game_object_zone(md.evaluation->world->database, md.player)});
 }
 
 void match_everything(MatchContext *match_context, int key) {

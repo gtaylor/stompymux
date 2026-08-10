@@ -2,11 +2,13 @@
 
 #include <stdbool.h>
 
+#include "btechstats.h"
 #include "mux/commands/command_context.h"
 #include "mux/server/platform.h"
 
 #pragma once
 
+#include "script_functions_api.h"
 typedef struct BtechContext BtechContext;
 typedef struct CommandInvocation CommandInvocation;
 
@@ -29,13 +31,11 @@ int char_getskilltargetbycode(BtechContext *context, DbRef player, int code,
                               int modifier);
 int char_getskilltarget(BtechContext *context, DbRef player, const char *name,
                         int modifier);
-int char_getxpbycode(BtechContext *context, DbRef player, int code);
-int char_gainxpbycode(BtechContext *context, DbRef player, int code, int amount,
-                      int override);
+int char_getxpbycode(const CharacterValueRequest *request);
+int char_gainxpbycode(const CharacterExperienceChange *change);
 int char_gainxp(BtechContext *context, DbRef player, const char *skill,
                 int amount);
-int char_getskillsuccess(BtechContext *context, DbRef player, const char *name,
-                         int modifier, int loud);
+int char_getskillsuccess(const CharacterSkillCheck *check);
 int char_getskillmargsucc(BtechContext *context, DbRef player, const char *name,
                           int modifier);
 DbRef char_getopposedskill(BtechContext *context, DbRef first,
@@ -48,41 +48,52 @@ void init_btechstats(BtechContext *context);
 void btech_stats_destroy(BtechContext *context);
 bool character_state_validate_all(BtechContext *context);
 void do_charclear(CommandInvocation *invocation);
-DbRef char_lookupplayer(BtechContext *context, DbRef player, DbRef cause,
-                        int key, const char *arg1);
+typedef struct CharacterLookupRequest {
+  BtechContext *context;
+  DbRef viewer;
+  const char *name;
+} CharacterLookupRequest;
+DbRef character_lookup(const CharacterLookupRequest *request);
 void initialize_pc(DbRef player, Mech *mech);
 void fix_pilotdamage(Mech *mech, DbRef player);
 int mw_ic_bth(Mech *mech);
 int handlemwconc(Mech *mech, int initial);
 void headhitmwdamage(Mech *mech, Mech *attacker, int dam);
 void mwlethaldam(Mech *mech, Mech *attacker, int dam);
-void lower_xp(BtechContext *context, DbRef player, int promillage);
+typedef struct CharacterExperienceReduction {
+  BtechContext *context;
+  DbRef character;
+  int per_mille;
+} CharacterExperienceReduction;
+void character_experience_reduce(const CharacterExperienceReduction *change);
 void AccumulateTechXP(BtechContext *context, DbRef pilot, Mech *mech,
                       int reason);
 void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, Mech *mech,
                              int reason);
 void AccumulateCommXP(DbRef pilot, Mech *mech);
-void AccumulatePilXP(DbRef pilot, Mech *mech, int reason, int addanyway);
+typedef struct PilotingExperienceAward {
+  DbRef pilot;
+  Mech *mech;
+  int reason;
+  bool unconditional;
+} PilotingExperienceAward;
+void piloting_experience_award(const PilotingExperienceAward *award);
 void AccumulateSpotXP(DbRef pilot, Mech *attacker, Mech *wounded);
 int MadePerceptionRoll(Mech *mech, int modifier);
 void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded);
 void AccumulateComputerXP(DbRef pilot, Mech *mech, int reason);
 int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name);
-void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded,
-                     int numOccurences, double multiplier, int weapindx,
-                     int bth);
-void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
-                        int numOccurences, double multiplier, int weapindx,
-                        int bth);
-void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
-                        char *fargs[], int nfargs, char *cargs[], int ncargs,
-                        EvaluationContext *context);
-void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
-                        char *fargs[], int nfargs, char *cargs[], int ncargs,
-                        EvaluationContext *context);
-void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
-                    char *fargs[], int nfargs, char *cargs[], int ncargs,
-                    EvaluationContext *context);
+typedef struct GunneryExperienceAward {
+  DbRef pilot;
+  Mech *attacker;
+  Mech *target;
+  int damage;
+  double multiplier;
+  int weapon_index;
+  int base_to_hit;
+} GunneryExperienceAward;
+
+void gunnery_experience_award(const GunneryExperienceAward *award);
 void debug_xptop(DbRef player, void *data, char *buffer);
 void debug_setxplevel(DbRef player, void *data, char *buffer);
 int btthreshold_func(BtechContext *context, char *skillname);

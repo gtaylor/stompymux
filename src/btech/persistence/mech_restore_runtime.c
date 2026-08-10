@@ -40,8 +40,12 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = btech_context_get_mech(context, mech_dbref))) {
+    if (btech_special_column_long(statement, 0, &mech_dbref) < 0) {
+      result = -1;
+      break;
+    }
+    mech = btech_context_get_mech(context, mech_dbref);
+    if (!mech) {
       result = -1;
       break;
     }
@@ -453,8 +457,12 @@ int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
       result = -1;
       break;
     }
-    if (!mech_stagger_damage_append(mech, amount, occurred_at, attacker,
-                                    counted != 0)) {
+    if (!mech_stagger_damage_append(
+            &(StaggerDamageApplication){.mech = mech,
+                                        .amount = amount,
+                                        .occurred_at = occurred_at,
+                                        .attacker = attacker,
+                                        .counted = counted != 0})) {
       result = -1;
       break;
     }

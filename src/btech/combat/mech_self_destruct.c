@@ -34,15 +34,11 @@
 static void mech_self_destruct_event(MuxEvent *event) {
   Mech *mech = event->data;
   long extra = (long)event->data2;
-  int ammunition_section;
-  int ammunition_critical;
-  int damage;
 
   if (mech_is_destroyed(mech) || !mech_is_started(mech))
     return;
 
-  if (extra > 256 &&
-      !FindDestructiveAmmo(mech, &ammunition_section, &ammunition_critical))
+  if (extra > 256 && !destructive_ammunition_find(mech).damage)
     return;
 
   if ((--extra) % 256) {
@@ -63,24 +59,34 @@ static void mech_self_destruct_event(MuxEvent *event) {
     mech_los_broadcast(mech, "suddenly explodes!");
     headhitmwdamage(mech, mech, 4);
     for (int section = 0; section < NUM_BSUIT_MEMBERS; section++)
-      mech_section_destroy(mech, mech, -1, section);
+      mech_section_destroy(&(SectionDestructionRequest){.wounded = mech,
+                                                        .attacker = mech,
+                                                        .line_of_sight = -1,
+                                                        .section = section});
     mech_position_z_set(mech, mech_position_z(mech) + 6);
   } else if (mech_class(mech) != CLASS_MECH) {
     mech_notify(mech, MECHALL,
                 "Your life flashes before your eyes as your vehicle "
                 "immolates itself... you faint.. (and die)");
     mech_los_broadcast(mech, "suddenly explodes!");
-    mech_section_destroy(mech, mech, -1, 3);
+    mech_section_destroy(&(SectionDestructionRequest){
+        .wounded = mech, .attacker = mech, .line_of_sight = -1, .section = 3});
     headhitmwdamage(mech, mech, 4);
     mech_position_z_set(mech, mech_position_z(mech) + 6);
   } else if (extra >= 256) {
     btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("#%ld explodes [ammo]", mech_dbref(mech)));
     mech_notify(mech, MECHALL, "All your ammo explodes!");
-    while ((damage = FindDestructiveAmmo(mech, &ammunition_section,
-                                         &ammunition_critical)))
-      mech_ammunition_explode(mech, mech, ammunition_section,
-                              ammunition_critical, damage);
+    for (;;) {
+      AmmunitionHazardResult ammunition = destructive_ammunition_find(mech);
+      if (!ammunition.damage)
+        break;
+      mech_ammunition_explode(
+          &(AmmunitionExplosionRequest){.attacker = mech,
+                                        .target = mech,
+                                        .ammunition = ammunition.slot,
+                                        .damage = ammunition.damage});
+    }
   } else {
     btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("#%ld explodes [reactor]", mech_dbref(mech)));
@@ -96,8 +102,6 @@ void mech_explode(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   BtechContext *context = mech_context(mech);
   char *args[3];
-  int ammunition_section;
-  int ammunition_critical;
   long time = btech_context_self_destruct_time(context);
   bool ammunition = true;
   bool override;
@@ -170,9 +174,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
         return;
       }
     }
-    int damage =
-        FindDestructiveAmmo(mech, &ammunition_section, &ammunition_critical);
-    if (!damage) {
+    if (!destructive_ammunition_find(mech).damage) {
       mecha_notify(btech_context_evaluation(context), player,
                    "There is no 'damaging' ammo on your 'mech!");
       return;

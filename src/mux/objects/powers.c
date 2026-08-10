@@ -177,7 +177,11 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
     return;
   }
 
-  game_object_set_power(evaluation->world->database, target, fp->id, !negate);
+  game_object_set_power(
+      &(ObjectPowerChange){.target = {.database = evaluation->world->database,
+                                      .object = target,
+                                      .power = fp->id},
+                           .value = !negate});
   if (!(key & SET_QUIET))
     notify_printf(evaluation, player, "%s - %s %s",
                   game_object_name(evaluation->world->database, target),
@@ -186,29 +190,12 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
 }
 
 /**
- * Does object have power visible to player?
- */
-bool has_power(WorldContext *world, DbRef player, DbRef it, char *powername) {
-  POWERENT *fp;
-
-  fp = find_power(world->indexes, it, powername);
-  if (fp == nullptr)
-    return false;
-
-  if (game_object_has_power(world->database, it, fp->id)) {
-    if ((fp->listperm & CA_WIZARD) && !is_wizard(world->database, player))
-      return false;
-    if ((fp->listperm & CA_GOD) && !is_god(world->database, player))
-      return false;
-    return true;
-  }
-  return false;
-}
-
-/**
  * Return an mbuf containing the type and powers on thing.
  */
-char *power_description(GameDatabase *database, DbRef player, DbRef target) {
+char *power_description(const PowerDescriptionRequest *request) {
+  GameDatabase *database = request->database;
+  DbRef player = request->viewer;
+  DbRef target = request->target;
   char *buff, *bp;
   POWERENT *fp;
 
@@ -226,7 +213,8 @@ char *power_description(GameDatabase *database, DbRef player, DbRef target) {
 
   for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
     fp = power_entry_at(index);
-    if (game_object_has_power(database, target, fp->id)) {
+    if (game_object_has_power(&(ObjectPowerRequest){
+            .database = database, .object = target, .power = fp->id})) {
       if ((fp->listperm & CA_WIZARD) && !is_wizard(database, player))
         continue;
       if ((fp->listperm & CA_GOD) && !is_god(database, player))

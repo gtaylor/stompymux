@@ -4,6 +4,7 @@
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
@@ -79,7 +80,7 @@ void mux_event_tickmech_removegun(MuxEvent *e) {
   long earg = (long)(e->data2) % PLAYERPOS;
   int loc, pos, i, extra;
   char buf[MBUF_SIZE];
-  int count = 0, nloc, ncrit, stype;
+  int count = 0, nloc, ncrit;
   int size;
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);
@@ -94,7 +95,11 @@ void mux_event_tickmech_removegun(MuxEvent *e) {
     count++;
   }
   if (count < size && mech_class(mech) == CLASS_MECH) { // got split crits
-    if (GetSplitData(mech, loc, pos, &nloc, &ncrit, &stype)) {
+    SplitCriticalLookup split_lookup =
+        split_critical_find(mech, (CriticalSlotReference){loc, pos});
+    if (split_lookup.found) {
+      nloc = split_lookup.slot.section;
+      ncrit = split_lookup.slot.critical;
       for (i = ncrit; i < (size - count); i++) {
         mech_critical_destroy(mech, nloc, i);
       }
@@ -240,10 +245,12 @@ void mux_event_tickmech_repairarmor(MuxEvent *e) {
       do_magic(mech);
     return;
   }
-  repair_event_schedule_minutes(
-      mech, FIXARMOR_TIME, EVENT_REPAIR_FIX, mux_event_tickmech_repairarmor,
-      (RepairEventPayload){
-          .location = loc, .position = amount, .player = player});
+  repair_event_schedule_minutes(&(RepairEventSchedule){
+      .mech = mech,
+      .delay = FIXARMOR_TIME,
+      .event_type = EVENT_REPAIR_FIX,
+      .callback = mux_event_tickmech_repairarmor,
+      .payload = {.location = loc, .position = amount, .player = player}});
 }
 
 void mux_event_tickmech_repairinternal(MuxEvent *e) {
@@ -279,11 +286,12 @@ void mux_event_tickmech_repairinternal(MuxEvent *e) {
       do_magic(mech);
     return;
   }
-  repair_event_schedule_minutes(mech, FIXINTERNAL_TIME, EVENT_REPAIR_FIXI,
-                                mux_event_tickmech_repairinternal,
-                                (RepairEventPayload){.location = loc,
-                                                     .position = amount,
-                                                     .player = player});
+  repair_event_schedule_minutes(&(RepairEventSchedule){
+      .mech = mech,
+      .delay = FIXINTERNAL_TIME,
+      .event_type = EVENT_REPAIR_FIXI,
+      .callback = mux_event_tickmech_repairinternal,
+      .payload = {.location = loc, .position = amount, .player = player}});
 }
 
 void mux_event_tickmech_reattach(MuxEvent *e) {
@@ -341,7 +349,7 @@ void mux_event_tickmech_replacegun(MuxEvent *e) {
   int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
   int loc, pos, i, brand;
   char buf[MBUF_SIZE];
-  int count = 0, nloc, ncrit, stype;
+  int count = 0, nloc, ncrit;
   int size;
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);
@@ -353,19 +361,33 @@ void mux_event_tickmech_replacegun(MuxEvent *e) {
                                   mech_critical_part_type(mech, loc, pos)));
   for (i = pos; i < MIN(NUM_CRITICALS, pos + size); i++) {
     mech_RepairPart(mech, loc, i);
-    mech_critical_temporary_failure_set(mech, loc, i, 0);
+    mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+        .mech = mech, .slot = {.section = loc, .critical = i}, .failure = 0});
     if (brand) {
-      mech_critical_brand_set(mech, loc, i, brand);
+      mech_critical_brand_set(
+          &(CriticalSlotBrandSet){.mech = mech,
+                                  .slot = {.section = loc, .critical = i},
+                                  .brand = brand});
     }
     count++;
   }
   if (count < size && mech_class(mech) == CLASS_MECH) { // got split crits
-    if (GetSplitData(mech, loc, pos, &nloc, &ncrit, &stype)) {
+    SplitCriticalLookup split_lookup =
+        split_critical_find(mech, (CriticalSlotReference){loc, pos});
+    if (split_lookup.found) {
+      nloc = split_lookup.slot.section;
+      ncrit = split_lookup.slot.critical;
       for (i = ncrit; i < (size - count); i++) {
         mech_RepairPart(mech, nloc, i);
-        mech_critical_temporary_failure_set(mech, nloc, i, 0);
+        mech_critical_temporary_failure_set(
+            &(CriticalSlotFailureSet){.mech = mech,
+                                      .slot = {.section = nloc, .critical = i},
+                                      .failure = 0});
         if (brand) {
-          mech_critical_brand_set(mech, nloc, i, brand);
+          mech_critical_brand_set(
+              &(CriticalSlotBrandSet){.mech = mech,
+                                      .slot = {.section = nloc, .critical = i},
+                                      .brand = brand});
         }
       }
     }
@@ -390,7 +412,7 @@ void mux_event_tickmech_repairgun(MuxEvent *e) {
   long earg = (long)(e->data2) % PLAYERPOS;
   int loc, pos, i;
   char buf[MBUF_SIZE];
-  int count = 0, nloc, ncrit, stype;
+  int count = 0, nloc, ncrit;
   int size;
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);
@@ -401,14 +423,22 @@ void mux_event_tickmech_repairgun(MuxEvent *e) {
                                   mech_critical_part_type(mech, loc, pos)));
   for (i = pos; i < MIN(NUM_CRITICALS, pos + size); i++) {
     mech_RepairPart(mech, loc, i);
-    mech_critical_temporary_failure_set(mech, loc, i, 0);
+    mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+        .mech = mech, .slot = {.section = loc, .critical = i}, .failure = 0});
     count++;
   }
   if (count < size && mech_class(mech) == CLASS_MECH) { // got split crits
-    if (GetSplitData(mech, loc, pos, &nloc, &ncrit, &stype)) {
+    SplitCriticalLookup split_lookup =
+        split_critical_find(mech, (CriticalSlotReference){loc, pos});
+    if (split_lookup.found) {
+      nloc = split_lookup.slot.section;
+      ncrit = split_lookup.slot.critical;
       for (i = ncrit; i < (size - count); i++) {
         mech_RepairPart(mech, nloc, i);
-        mech_critical_temporary_failure_set(mech, nloc, i, 0);
+        mech_critical_temporary_failure_set(
+            &(CriticalSlotFailureSet){.mech = mech,
+                                      .slot = {.section = nloc, .critical = i},
+                                      .failure = 0});
       }
     }
   }
@@ -449,9 +479,18 @@ void mux_event_tickmech_repairenhcrit(MuxEvent *e) {
   wWeapSize = GetWeaponCrits(mech, weapon_from_equipment_index(wCritType));
 
   /* Find the first crit */
-  wFirstCrit = FindFirstWeaponCrit(mech, loc, pos, 0, wCritType, wWeapSize);
+  wFirstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+      .mech = mech,
+      .weapon = {.section = loc, .critical = pos},
+      .start_critical = 0,
+      .part_type = wCritType,
+      .maximum_criticals = wWeapSize,
+  });
 
-  mech_critical_temporary_failure_set(mech, loc, wFirstCrit, 0);
+  mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+      .mech = mech,
+      .slot = {.section = loc, .critical = wFirstCrit},
+      .failure = 0});
 }
 
 void mux_event_tickmech_repairpart(MuxEvent *e) {

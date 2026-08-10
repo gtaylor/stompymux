@@ -15,7 +15,6 @@
 #include "command_handlers_api.h"
 #include "mech_utils_api.h"
 #include "mux/commands/command_helpers.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
@@ -38,11 +37,12 @@ unsigned char character_stats_value_get(const PSTATS *stats, int code) {
   return *value;
 }
 
-void character_stats_value_set(PSTATS *stats, int code, int value) {
-  unsigned char *destination = checked_storage_at(
-      stats->value_storage, NUM_CHARVALUES, sizeof(*stats->value_storage),
-      character_value_index(code));
-  *destination = clamp_int_to_unsigned_char(value);
+void character_stats_value_set(const CharacterStatsValueChange *change) {
+  unsigned char *destination =
+      checked_storage_at(change->stats->value_storage, NUM_CHARVALUES,
+                         sizeof(*change->stats->value_storage),
+                         character_value_index(change->code));
+  *destination = clamp_int_to_unsigned_char(change->value);
 }
 
 int character_stats_xp_get(const PSTATS *stats, int code) {
@@ -52,11 +52,11 @@ int character_stats_xp_get(const PSTATS *stats, int code) {
   return *value;
 }
 
-void character_stats_xp_set(PSTATS *stats, int code, int value) {
-  int *destination = checked_storage_at(stats->xp_storage, NUM_CHARVALUES,
-                                        sizeof(*stats->xp_storage),
-                                        character_value_index(code));
-  *destination = value;
+void character_stats_xp_set(const CharacterStatsExperienceChange *change) {
+  int *destination = checked_storage_at(
+      change->stats->xp_storage, NUM_CHARVALUES,
+      sizeof(*change->stats->xp_storage), character_value_index(change->code));
+  *destination = change->value;
 }
 
 time_t character_stats_last_use_get(const PSTATS *stats, int code) {
@@ -66,11 +66,12 @@ time_t character_stats_last_use_get(const PSTATS *stats, int code) {
   return *value;
 }
 
-void character_stats_last_use_set(PSTATS *stats, int code, time_t value) {
-  time_t *destination = checked_storage_at(
-      stats->last_use_storage, NUM_CHARVALUES, sizeof(*stats->last_use_storage),
-      character_value_index(code));
-  *destination = value;
+void character_stats_last_use_set(const CharacterStatsLastUseChange *change) {
+  time_t *destination =
+      checked_storage_at(change->stats->last_use_storage, NUM_CHARVALUES,
+                         sizeof(*change->stats->last_use_storage),
+                         character_value_index(change->code));
+  *destination = change->value;
 }
 
 static HashTable *character_value_hash(BtechContext *context, size_t index) {
@@ -79,8 +80,8 @@ static HashTable *character_value_hash(BtechContext *context, size_t index) {
 }
 
 static char **character_short_name_slot(BtechContext *context, int code) {
-  return checked_storage_at(
-      context->char_value_short_names, context->char_value_count,
+  return (char **)checked_storage_at(
+      (void *)context->char_value_short_names, context->char_value_count,
       sizeof(*context->char_value_short_names), character_value_index(code));
 }
 
@@ -111,9 +112,16 @@ UptimeText uptime_text(int seconds) {
   return uptime;
 }
 
-static int char_getskilltargetbycode_base(BtechContext *context, DbRef player,
-                                          PSTATS *s, int code, int modifier,
-                                          int use_xp);
+typedef struct CharacterSkillTargetCall {
+  BtechContext *context;
+  DbRef player;
+  PSTATS *stats;
+  int code;
+  int modifier;
+  bool use_experience;
+} CharacterSkillTargetCall;
+
+static int char_getskilltargetbycode_base(const CharacterSkillTargetCall *call);
 
 static int char_getskilltargetbycode_noxp(BtechContext *context, DbRef player,
                                           int code, int modifier);
@@ -125,11 +133,12 @@ int figure_xp_bonus(BtechContext *context, DbRef player, PSTATS *s, int code) {
   if (t <= 0)
     return 0;
   /* KLUDGE */
-  character_stats_xp_set(
-      s, code,
-      character_stats_xp_get(s, code) %
-          XP_MAX); /* reset exp modifier - this probably _was_ cached */
-  btar = char_getskilltargetbycode_base(context, player, s, code, 0, 0);
+  character_stats_xp_set(&(CharacterStatsExperienceChange){
+      .stats = s,
+      .code = code,
+      .value = character_stats_xp_get(s, code) % XP_MAX});
+  btar = char_getskilltargetbycode_base(&(CharacterSkillTargetCall){
+      .context = context, .player = player, .stats = s, .code = code});
   while (btar > 4) {
     btar--;
     t = t / 3;
@@ -196,11 +205,13 @@ static void char_setstatvalue_by_code(PSTATS *stats, int code, int value) {
   if (code < 0)
     return;
   if (code == EE_NUMBER)
-    character_stats_value_set(stats, LIVES_NUMBER,
-                              character_stats_value_get(stats, LIVES_NUMBER) +
-                                  value -
-                                  character_stats_value_get(stats, code));
-  character_stats_value_set(stats, code, value);
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats,
+        .code = LIVES_NUMBER,
+        .value = character_stats_value_get(stats, LIVES_NUMBER) + value -
+                 character_stats_value_get(stats, code)});
+  character_stats_value_set(&(CharacterStatsValueChange){
+      .stats = stats, .code = code, .value = value});
 }
 
 /*****************************/
@@ -259,7 +270,8 @@ int char_getvaluecode(BtechContext *context, const char *name) {
 
   tmpbuf = alloc_sbuf("getvaluecodefind");
   lowercase_copy(tmpbuf, SBUF_SIZE, name);
-  if ((ip = hash_table_find(tmpbuf, character_value_hash(context, 0))) == NULL)
+  ip = hash_table_find(tmpbuf, character_value_hash(context, 0));
+  if (!ip)
     ip = hash_table_find(tmpbuf, character_value_hash(context, 1));
   free_sbuf(tmpbuf);
   return (int)(intptr_t)ip - 1;
@@ -352,36 +364,48 @@ void char_setstatvalue(PSTATS *s, const char *name, int value) {
     }
 }
 
-int character_value_by_code(BtechContext *context, DbRef player, int code) {
+int character_value_by_code(const CharacterValueRequest *request) {
   PSTATS stats;
 
-  character_stats_retrieve(context, player, VALUES_ALL, &stats);
-  return char_getstatvalue_by_code((&stats), code);
+  character_stats_retrieve(request->context, request->player, VALUES_ALL,
+                           &stats);
+  return char_getstatvalue_by_code((&stats), request->code);
 }
 
-void character_value_set_by_code(BtechContext *context, DbRef player, int code,
-                                 int value) {
+void character_value_set_by_code(const CharacterValueChange *change) {
   PSTATS stats;
 
-  character_stats_retrieve(context, player, VALUES_ALL, &stats);
-  char_setstatvalue_by_code((&stats), code, value);
-  character_stats_store(context, player, &stats, VALUES_ALL);
+  character_stats_retrieve(change->target.context, change->target.player,
+                           VALUES_ALL, &stats);
+  char_setstatvalue_by_code((&stats), change->target.code, change->value);
+  character_stats_store(change->target.context, change->target.player, &stats,
+                        VALUES_ALL);
 }
 
 int char_getvalue(BtechContext *context, DbRef player, const char *name) {
-  return character_value_by_code(context, player,
-                                 char_getvaluecode(context, name));
+  return character_value_by_code(
+      &(CharacterValueRequest){.context = context,
+                               .player = player,
+                               .code = char_getvaluecode(context, name)});
 }
 
 void char_setvalue(BtechContext *context, DbRef player, const char *name,
                    int value) {
-  character_value_set_by_code(context, player, char_getvaluecode(context, name),
-                              value);
+  character_value_set_by_code(&(CharacterValueChange){
+      .target = {.context = context,
+                 .player = player,
+                 .code = char_getvaluecode(context, name)},
+      .value = value});
 }
 
-static int char_getskilltargetbycode_base(BtechContext *context, DbRef player,
-                                          PSTATS *s, int code, int modifier,
-                                          int use_xp) {
+static int
+char_getskilltargetbycode_base(const CharacterSkillTargetCall *call) {
+  BtechContext *context = call->context;
+  DbRef player = call->player;
+  PSTATS *s = call->stats;
+  int code = call->code;
+  int modifier = call->modifier;
+  bool use_xp = call->use_experience;
   int val, skill;
 
   if (code == -1)
@@ -426,7 +450,13 @@ int char_getskilltargetbycode(BtechContext *context, DbRef player, int code,
   PSTATS stats, *s = &stats;
 
   character_stats_retrieve(context, player, VALUES_CO, s);
-  return char_getskilltargetbycode_base(context, player, s, code, modifier, 1);
+  return char_getskilltargetbycode_base(
+      &(CharacterSkillTargetCall){.context = context,
+                                  .player = player,
+                                  .stats = s,
+                                  .code = code,
+                                  .modifier = modifier,
+                                  .use_experience = true});
 }
 
 static int char_getskilltargetbycode_noxp(BtechContext *context, DbRef player,
@@ -434,7 +464,12 @@ static int char_getskilltargetbycode_noxp(BtechContext *context, DbRef player,
   PSTATS stats, *s = &stats;
 
   character_stats_retrieve(context, player, VALUES_CO, s);
-  return char_getskilltargetbycode_base(context, player, s, code, modifier, 0);
+  return char_getskilltargetbycode_base(
+      &(CharacterSkillTargetCall){.context = context,
+                                  .player = player,
+                                  .stats = s,
+                                  .code = code,
+                                  .modifier = modifier});
 }
 
 int char_getskilltarget(BtechContext *context, DbRef player, const char *name,
@@ -443,17 +478,19 @@ int char_getskilltarget(BtechContext *context, DbRef player, const char *name,
                                    char_getvaluecode(context, name), modifier);
 }
 
-int char_getxpbycode(BtechContext *context, DbRef player, int code) {
+int char_getxpbycode(const CharacterValueRequest *request) {
   PSTATS stats, *s = &stats;
 
-  if (code < 0)
+  if (request->code < 0)
     return 0;
-  character_stats_retrieve(context, player, VALUES_SKILLS, s);
-  return character_stats_xp_get(s, code) % XP_MAX;
+  character_stats_retrieve(request->context, request->player, VALUES_SKILLS, s);
+  return character_stats_xp_get(s, request->code) % XP_MAX;
 }
 
-int char_gainxpbycode(BtechContext *context, DbRef player, int code, int amount,
-                      int override) {
+int char_gainxpbycode(const CharacterExperienceChange *change) {
+  BtechContext *context = change->target.context;
+  DbRef player = change->target.player;
+  int code = change->target.code;
   PSTATS stats, *s = &stats;
 
   if (code < 0)
@@ -463,41 +500,52 @@ int char_gainxpbycode(BtechContext *context, DbRef player, int code, int amount,
    * settable via that Regular skill gains still check SK_XP and last used
    * within 30s to keep from spamming
    */
-  if (override == 0)
+  if (!change->override_interval)
     if (!((context->clock->now >
            (character_stats_last_use_get(s, code) + 30)) ||
           (character_value_definition(code)->flag & SK_XP)))
       return 0;
-  character_stats_last_use_set(s, code, context->clock->now);
-  character_stats_xp_set(s, code, character_stats_xp_get(s, code) + amount);
-  character_stats_xp_set(s, code,
-                         character_stats_xp_get(s, code) % XP_MAX +
-                             XP_MAX *
-                                 figure_xp_bonus(context, player, s, code));
+  character_stats_last_use_set(&(CharacterStatsLastUseChange){
+      .stats = s, .code = code, .value = context->clock->now});
+  character_stats_xp_set(&(CharacterStatsExperienceChange){
+      .stats = s,
+      .code = code,
+      .value = character_stats_xp_get(s, code) + change->amount});
+  character_stats_xp_set(&(CharacterStatsExperienceChange){
+      .stats = s,
+      .code = code,
+      .value = character_stats_xp_get(s, code) % XP_MAX +
+               XP_MAX * figure_xp_bonus(context, player, s, code)});
   character_stats_store(context, player, s, VALUES_SKILLS);
   return 1;
 }
 
 int char_gainxp(BtechContext *context, DbRef player, const char *skill,
                 int amount) {
-  return char_gainxpbycode(context, player, char_getvaluecode(context, skill),
-                           amount, 0);
+  return char_gainxpbycode(&(CharacterExperienceChange){
+      .target = {.context = context,
+                 .player = player,
+                 .code = char_getvaluecode(context, skill)},
+      .amount = amount});
 }
 
-int char_getskillsuccess(BtechContext *context, DbRef player, const char *name,
-                         int modifier, int loud) {
+int char_getskillsuccess(const CharacterSkillCheck *check) {
+  BtechContext *context = check->context;
+  DbRef player = check->player;
+  const char *name = check->name;
   int roll, val;
   int code;
 
   code = char_getvaluecode(context, name);
 
-  val = char_getskilltargetbycode(context, player, code, modifier);
+  val = char_getskilltargetbycode(context, player, code, check->modifier);
 
-  if (character_value_by_code(context, player, code) == 0)
+  if (character_value_by_code(&(CharacterValueRequest){
+          .context = context, .player = player, .code = code}) == 0)
     roll = char_rollunskilled(context);
   else
     roll = char_rollskilled(context);
-  if (loud) {
+  if (check->loud) {
     notify_printf(btech_context_evaluation(context), player,
                   "You make a %s skill roll!", name);
     notify_printf(btech_context_evaluation(context), player,
@@ -519,7 +567,8 @@ int char_getskillmargsucc(BtechContext *context, DbRef player, const char *name,
 
   val = char_getskilltargetbycode(context, player, code, modifier);
 
-  if (character_value_by_code(context, player, code) == 0)
+  if (character_value_by_code(&(CharacterValueRequest){
+          .context = context, .player = player, .code = code}) == 0)
     roll = char_rollunskilled(context);
   else
     roll = char_rollskilled(context);
@@ -581,7 +630,7 @@ void init_btechstats(BtechContext *context) {
   context->player_value_hashes =
       calloc(2, sizeof(*context->player_value_hashes));
   context->char_value_short_names =
-      calloc(NUM_CHARVALUES, sizeof(*context->char_value_short_names));
+      (char **)calloc(NUM_CHARVALUES, sizeof(*context->char_value_short_names));
   if (context->player_value_hashes == nullptr ||
       context->char_value_short_names == nullptr)
     exit(EXIT_FAILURE);
@@ -628,7 +677,7 @@ void btech_stats_destroy(BtechContext *context) {
   }
   for (size_t i = 0; i < context->char_value_count; i++)
     free(*character_short_name_slot(context, (int)i));
-  free(context->char_value_short_names);
+  free((void *)context->char_value_short_names);
   context->char_value_short_names = nullptr;
   context->char_value_count = 0;
   context->cached_target_character = -1;
@@ -637,7 +686,7 @@ void btech_stats_destroy(BtechContext *context) {
 PSTATS *character_stats_create(void) {
   PSTATS *s;
 
-  Create(s, PSTATS, 1);
+  s = checked_storage_allocate(sizeof(*s));
   s->DbRef = -1;
   character_stats_clear(s);
   return s;

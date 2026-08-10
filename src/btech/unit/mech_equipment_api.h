@@ -7,7 +7,13 @@
 
 int mech_critical_part_type(const Mech *mech, int section, int critical);
 int mech_critical_brand(const Mech *mech, int section, int critical);
-void mech_critical_brand_set(Mech *mech, int section, int critical, int brand);
+typedef struct CriticalSlotBrandSet {
+  Mech *mech;
+  CriticalSlotReference slot;
+  int brand;
+} CriticalSlotBrandSet;
+
+void mech_critical_brand_set(const CriticalSlotBrandSet *request);
 int mech_critical_data(const Mech *mech, int section, int critical);
 int mech_critical_fire_mode(const Mech *mech, int section, int critical);
 int mech_critical_ammo_mode(const Mech *mech, int section, int critical);
@@ -33,8 +39,13 @@ bool mech_critical_is_disabled(const Mech *mech, int section, int critical);
 bool mech_critical_is_destroyed(const Mech *mech, int section, int critical);
 bool mech_critical_is_broken(const Mech *mech, int section, int critical);
 bool mech_critical_is_damaged(const Mech *mech, int section, int critical);
-void mech_critical_temporary_failure_set(Mech *mech, int section, int critical,
-                                         int failure);
+typedef struct CriticalSlotFailureSet {
+  Mech *mech;
+  CriticalSlotReference slot;
+  int failure;
+} CriticalSlotFailureSet;
+
+void mech_critical_temporary_failure_set(const CriticalSlotFailureSet *request);
 void mech_critical_data_set(Mech *mech, int section, int critical, int data);
 void mech_critical_fire_mode_clear(Mech *mech, int section, int critical,
                                    int modes);
@@ -65,8 +76,13 @@ bool mech_section_is_flooded(const Mech *mech, int section);
 bool mech_section_is_breached(const Mech *mech, int section);
 void mech_section_flooded_set(Mech *mech, int section, bool flooded);
 void mech_section_breached_set(Mech *mech, int section, bool breached);
-bool mech_critical_is_operational_special(const Mech *mech, int section,
-                                          int critical, int special);
+typedef struct CriticalSpecialCheck {
+  const Mech *mech;
+  CriticalSlotReference slot;
+  int special;
+} CriticalSpecialCheck;
+
+bool mech_critical_is_operational_special(const CriticalSpecialCheck *check);
 bool mech_section_carries_club(const Mech *mech, int section);
 bool mech_section_has_special(const Mech *mech, int section, int special);
 int mech_section_specials(const Mech *mech, int section);
@@ -104,6 +120,13 @@ void mech_section_original_armor_set(Mech *mech, int section, int armor);
 void mech_section_original_rear_armor_set(Mech *mech, int section, int armor);
 void mech_section_internal_set(Mech *mech, int section, int internal);
 void mech_section_original_internal_set(Mech *mech, int section, int internal);
-void mech_critical_configure(Mech *mech, int section, int critical,
-                             int part_type, int data, int fire_mode,
-                             int ammo_mode);
+typedef struct CriticalSlotConfiguration {
+  Mech *mech;
+  CriticalSlotReference slot;
+  int part_type;
+  int data;
+  int fire_mode;
+  int ammo_mode;
+} CriticalSlotConfiguration;
+
+void mech_critical_configure(const CriticalSlotConfiguration *configuration);

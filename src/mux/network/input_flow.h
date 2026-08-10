@@ -33,12 +33,24 @@ typedef struct FlowOutcome {
  * after a FLOW_ACTION_GOTO into it) -- return the prompt to display. input !=
  * nullptr means one submitted line while this step was current.
  */
-typedef FlowOutcome (*FlowStepFn)(Descriptor *descriptor, void *flow_data,
-                                  const char *step, const char *input);
+typedef struct FlowStepCall {
+  Descriptor *descriptor;
+  void *flow_data;
+  const char *step;
+  const char *input;
+} FlowStepCall;
 
-int descriptor_flow_start(Descriptor *descriptor, const char *initial_step,
-                          FlowStepFn step_fn, void *flow_data,
-                          void (*destroy)(void *flow_data));
+typedef FlowOutcome (*FlowStepFn)(const FlowStepCall *call);
+
+typedef struct FlowStartRequest {
+  Descriptor *descriptor;
+  const char *initial_step;
+  FlowStepFn step;
+  void *flow_data;
+  void (*destroy)(void *flow_data);
+} FlowStartRequest;
+
+int descriptor_flow_start(const FlowStartRequest *request);
 void descriptor_flow_cancel(Descriptor *descriptor);
 void descriptor_flow_destroy(Descriptor *descriptor);
 void descriptor_flow_handle(Descriptor *descriptor, char *input);

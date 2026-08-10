@@ -10,5 +10,10 @@ typedef struct CommandInvocation CommandInvocation;
 typedef struct EvaluationContext EvaluationContext;
 
 void do_state(CommandInvocation *invocation);
-void state_examine_namespaces(EvaluationContext *evaluation, DbRef player,
-                              DbRef object);
+typedef struct ObjectStateExamineRequest {
+  EvaluationContext *evaluation;
+  DbRef viewer;
+  DbRef object;
+} ObjectStateExamineRequest;
+
+void state_examine_namespaces(const ObjectStateExamineRequest *request);

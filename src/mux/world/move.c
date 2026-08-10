@@ -23,8 +23,22 @@
  * * a place.
  */
 
-static void process_leave_loc(EvaluationContext *evaluation, DbRef thing,
-                              DbRef dest, DbRef cause, int canhear, int hush) {
+typedef struct LocationTransition {
+  EvaluationContext *evaluation;
+  DbRef object;
+  DbRef other_location;
+  DbRef cause;
+  bool can_hear;
+  int hush;
+} LocationTransition;
+
+static void process_leave_loc(const LocationTransition *transition) {
+  EvaluationContext *evaluation = transition->evaluation;
+  DbRef thing = transition->object;
+  DbRef dest = transition->other_location;
+  DbRef cause = transition->cause;
+  bool canhear = transition->can_hear;
+  int hush = transition->hush;
   DbRef loc;
   int quiet;
 
@@ -90,10 +104,15 @@ static void process_leave_loc(EvaluationContext *evaluation, DbRef thing,
          !is_dark(evaluation->world->database, loc)) ||
         (canhear && !(is_wizard(evaluation->world->database, thing) &&
                       is_dark(evaluation->world->database, thing)))) {
-      notify_except2(
-          evaluation, loc, thing, thing, cause,
-          tprintf("%s has left.",
-                  game_object_name(evaluation->world->database, thing)));
+      notify_excluding(&(ExcludingNotification){
+          .evaluation = evaluation,
+          .location = loc,
+          .sender = thing,
+          .exceptions = {thing, cause},
+          .exception_count = 2,
+          .message =
+              tprintf("%s has left.",
+                      game_object_name(evaluation->world->database, thing))});
     }
 }
 
@@ -102,8 +121,13 @@ static void process_leave_loc(EvaluationContext *evaluation, DbRef thing,
  * * process_enter_loc: Generate messages and actions resulting from entering
  * * a place.
  */
-static void process_enter_loc(EvaluationContext *evaluation, DbRef thing,
-                              DbRef src, DbRef cause, int canhear, int hush) {
+static void process_enter_loc(const LocationTransition *transition) {
+  EvaluationContext *evaluation = transition->evaluation;
+  DbRef thing = transition->object;
+  DbRef src = transition->other_location;
+  DbRef cause = transition->cause;
+  bool canhear = transition->can_hear;
+  int hush = transition->hush;
   DbRef loc;
   int quiet;
 
@@ -162,10 +186,15 @@ static void process_enter_loc(EvaluationContext *evaluation, DbRef thing,
   if (!quiet && canhear &&
       !(is_dark(evaluation->world->database, thing) &&
         is_wizard(evaluation->world->database, thing))) {
-    notify_except2(
-        evaluation, loc, thing, thing, cause,
-        tprintf("%s has arrived.",
-                game_object_name(evaluation->world->database, thing)));
+    notify_excluding(&(ExcludingNotification){
+        .evaluation = evaluation,
+        .location = loc,
+        .sender = thing,
+        .exceptions = {thing, cause},
+        .exception_count = 2,
+        .message =
+            tprintf("%s has arrived.",
+                    game_object_name(evaluation->world->database, thing))});
   }
 }
 
@@ -211,7 +240,10 @@ void move_object(EvaluationContext *evaluation, DbRef thing, DbRef dest) {
     game_object_set_next(evaluation->world->database, thing, NOTHING);
   game_object_set_location(evaluation->world->database, thing, dest);
 
-  look_in(evaluation, thing, dest, LK_SHOWEXIT);
+  look_in(&(LookRequest){.evaluation = evaluation,
+                         .viewer = thing,
+                         .location = dest,
+                         .key = LK_SHOWEXIT});
 }
 
 /*
@@ -226,12 +258,13 @@ void move_object(EvaluationContext *evaluation, DbRef thing, DbRef dest) {
 
 static void send_dropto(EvaluationContext *evaluation, DbRef thing,
                         DbRef player) {
-  move_via_generic(
-      evaluation, thing,
-      game_object_location(
+  move_via_generic(&(ObjectMovementRequest){
+      .evaluation = evaluation,
+      .object = thing,
+      .destination = game_object_location(
           evaluation->world->database,
           game_object_location(evaluation->world->database, thing)),
-      player, 0);
+      .cause = player});
 }
 
 /*
@@ -256,8 +289,12 @@ void process_dropped_dropto(EvaluationContext *evaluation, DbRef thing,
  * * actions.
  */
 
-void move_via_generic(EvaluationContext *evaluation, DbRef thing, DbRef dest,
-                      DbRef cause, int hush) {
+void move_via_generic(const ObjectMovementRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef thing = request->object;
+  DbRef dest = request->destination;
+  DbRef cause = request->cause;
+  int hush = request->hush;
   DbRef src;
   int canhear;
 
@@ -265,7 +302,12 @@ void move_via_generic(EvaluationContext *evaluation, DbRef thing, DbRef dest,
     dest = game_object_link(evaluation->world->database, thing);
   src = game_object_location(evaluation->world->database, thing);
   canhear = is_hearer(evaluation, thing);
-  process_leave_loc(evaluation, thing, dest, cause, canhear, hush);
+  process_leave_loc(&(LocationTransition){.evaluation = evaluation,
+                                          .object = thing,
+                                          .other_location = dest,
+                                          .cause = cause,
+                                          .can_hear = canhear,
+                                          .hush = hush});
   move_object(evaluation, thing, dest);
   notify_action(evaluation,
                 &(ActionMessageInvocation){
@@ -277,7 +319,12 @@ void move_via_generic(EvaluationContext *evaluation, DbRef thing, DbRef dest,
                                 .source = src,
                                 .destination = dest},
                     .event = LUA_EVENT_MOVE});
-  process_enter_loc(evaluation, thing, src, cause, canhear, hush);
+  process_enter_loc(&(LocationTransition){.evaluation = evaluation,
+                                          .object = thing,
+                                          .other_location = src,
+                                          .cause = cause,
+                                          .can_hear = canhear,
+                                          .hush = hush});
 }
 
 /*
@@ -285,8 +332,13 @@ void move_via_generic(EvaluationContext *evaluation, DbRef thing, DbRef dest,
  * * move_via_exit: Exit move routine, generic + exit messages + dropto check.
  */
 
-void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
-                   DbRef cause, DbRef exit, int hush) {
+void move_via_exit(const ExitMovementRequest *request) {
+  EvaluationContext *evaluation = request->movement.evaluation;
+  DbRef thing = request->movement.object;
+  DbRef dest = request->movement.destination;
+  DbRef cause = request->movement.cause;
+  DbRef exit = request->exit;
+  int hush = request->movement.hush;
   DbRef src;
   int canhear, darkwiz, quiet;
 
@@ -314,7 +366,12 @@ void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
                                 .destination = dest,
                                 .silent = quiet},
                     .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS});
-  process_leave_loc(evaluation, thing, dest, cause, canhear, hush);
+  process_leave_loc(&(LocationTransition){.evaluation = evaluation,
+                                          .object = thing,
+                                          .other_location = dest,
+                                          .cause = cause,
+                                          .can_hear = canhear,
+                                          .hush = hush});
   move_object(evaluation, thing, dest);
 
   /*
@@ -343,7 +400,12 @@ void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
                                 .source = src,
                                 .destination = dest},
                     .event = LUA_EVENT_MOVE});
-  process_enter_loc(evaluation, thing, src, cause, canhear, hush);
+  process_enter_loc(&(LocationTransition){.evaluation = evaluation,
+                                          .object = thing,
+                                          .other_location = src,
+                                          .cause = cause,
+                                          .can_hear = canhear,
+                                          .hush = hush});
 }
 
 /*
@@ -352,8 +414,12 @@ void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
  * * divestiture + dropto check.
  */
 
-int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
-                      DbRef cause, int hush) {
+int move_via_teleport(const ObjectMovementRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef thing = request->object;
+  DbRef dest = request->destination;
+  DbRef cause = request->cause;
+  int hush = request->hush;
   DbRef src, curr;
   int canhear, count;
   const char *failmsg;
@@ -375,8 +441,12 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
           notify_checked(evaluation, cause, cause,
                          "You can't teleport that out!", MSG_ME);
         }
-        notify_lock_failure(evaluation, &lock, &result, failmsg, nullptr,
-                            LUA_EVENT_TELEPORT_OUT_FAIL);
+        notify_lock_failure(
+            &(LockFailureNotification){.evaluation = evaluation,
+                                       .invocation = &lock,
+                                       .result = &result,
+                                       .enactor_default = failmsg,
+                                       .event = LUA_EVENT_TELEPORT_OUT_FAIL});
         return 0;
       }
       if (is_room(evaluation->world->database, curr))
@@ -397,7 +467,12 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
                                   .cause = cause,
                                   .source = src,
                                   .destination = dest}});
-  process_leave_loc(evaluation, thing, dest, NOTHING, canhear, hush);
+  process_leave_loc(&(LocationTransition){.evaluation = evaluation,
+                                          .object = thing,
+                                          .other_location = dest,
+                                          .cause = NOTHING,
+                                          .can_hear = canhear,
+                                          .hush = hush});
   move_object(evaluation, thing, dest);
   if (!(hush & HUSH_ENTER))
     notify_action(evaluation,
@@ -420,7 +495,12 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
                                 .source = src,
                                 .destination = dest},
                     .event = LUA_EVENT_MOVE});
-  process_enter_loc(evaluation, thing, src, NOTHING, canhear, hush);
+  process_enter_loc(&(LocationTransition){.evaluation = evaluation,
+                                          .object = thing,
+                                          .other_location = src,
+                                          .cause = NOTHING,
+                                          .can_hear = canhear,
+                                          .hush = hush});
   return 1;
 }
 
@@ -458,7 +538,13 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
                 LUA_LOCK_OPERATION_TRAVERSE, silent, &lock, &result)) {
     switch (typeof_obj(evaluation->world->database, loc)) {
     case OBJECT_TYPE_ROOM:
-      move_via_exit(evaluation, player, loc, NOTHING, exit, hush);
+      move_via_exit(
+          &(ExitMovementRequest){.movement = {.evaluation = evaluation,
+                                              .object = player,
+                                              .destination = loc,
+                                              .cause = NOTHING,
+                                              .hush = hush},
+                                 .exit = exit});
       break;
     case OBJECT_TYPE_PLAYER:
     case OBJECT_TYPE_THING:
@@ -467,7 +553,13 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
                        MSG_ME_ALL | MSG_F_DOWN);
         return;
       }
-      move_via_exit(evaluation, player, loc, NOTHING, exit, hush);
+      move_via_exit(
+          &(ExitMovementRequest){.movement = {.evaluation = evaluation,
+                                              .object = player,
+                                              .destination = loc,
+                                              .cause = NOTHING,
+                                              .hush = hush},
+                                 .exit = exit});
       break;
     case OBJECT_TYPE_EXIT:
       notify_checked(evaluation, player, player, "You can't go that way.",
@@ -477,8 +569,11 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
       break;
     }
   } else {
-    notify_lock_failure(evaluation, &lock, &result, failmsg, nullptr,
-                        LUA_EVENT_FAIL);
+    notify_lock_failure(&(LockFailureNotification){.evaluation = evaluation,
+                                                   .invocation = &lock,
+                                                   .result = &result,
+                                                   .enactor_default = failmsg,
+                                                   .event = LUA_EVENT_FAIL});
   }
 }
 

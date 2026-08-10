@@ -7,6 +7,7 @@
 
 #include "autopilot.h"
 #include "map.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
@@ -66,9 +67,20 @@ static void autopilot_hex_bit_set(AutopilotHexBitSet *bits, int offset,
 /*
  * Create an astar node and return a pointer to it
  */
-static AutopilotPathNode *auto_create_astar_node(short x, short y,
-                                                 short x_parent, short y_parent,
-                                                 int g_score, int h_score) {
+typedef struct AutopilotPathCoordinate {
+  short x;
+  short y;
+} AutopilotPathCoordinate;
+
+typedef struct AutopilotPathNodeRequest {
+  AutopilotPathCoordinate position;
+  AutopilotPathCoordinate parent;
+  int path_score;
+  int heuristic_score;
+} AutopilotPathNodeRequest;
+
+static AutopilotPathNode *
+auto_create_astar_node(const AutopilotPathNodeRequest *request) {
 
   AutopilotPathNode *temp;
   temp = malloc(sizeof(AutopilotPathNode));
@@ -77,14 +89,14 @@ static AutopilotPathNode *auto_create_astar_node(short x, short y,
 
   memset(temp, 0, sizeof(AutopilotPathNode));
 
-  temp->x = x;
-  temp->y = y;
-  temp->x_parent = x_parent;
-  temp->y_parent = y_parent;
-  temp->g_score = g_score;
-  temp->h_score = h_score;
-  temp->f_score = g_score + h_score;
-  temp->hexoffset = x * MAPY + y;
+  temp->x = request->position.x;
+  temp->y = request->position.y;
+  temp->x_parent = request->parent.x;
+  temp->y_parent = request->parent.y;
+  temp->g_score = request->path_score;
+  temp->h_score = request->heuristic_score;
+  temp->f_score = request->path_score + request->heuristic_score;
+  temp->hexoffset = request->position.x * MAPY + request->position.y;
 
   return temp;
 }
@@ -94,13 +106,18 @@ static AutopilotPathNode *auto_create_astar_node(short x, short y,
  *
  * Returns 1 if it found a path and 0 if it doesn't
  */
-static int astar_compare(void *left_key, void *right_key, void *arg) {
+static int astar_compare(const RedBlackTreeCompareCall *call) {
+  void *left_key = call->lhs;
+  void *right_key = call->rhs;
   const intptr_t left = (intptr_t)left_key;
   const intptr_t right = (intptr_t)right_key;
 
   return (left > right) - (left < right);
 }
-static void astar_release(void *key, void *data, void *arg) {
+static void astar_release(const RedBlackTreeReleaseCall *call) {
+  [[maybe_unused]] void *key = call->key;
+  void *data = call->data;
+  [[maybe_unused]] void *arg = call->context;
   (void)key;
   (void)arg;
   free(data);
@@ -164,9 +181,10 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   autopilot->astar_path = doubly_linked_list_create_list();
 
   /* Setup the start hex */
-  temp_astar_node = auto_create_astar_node(
-      autopilot_map_coordinate(mech_position_x(mech)),
-      autopilot_map_coordinate(mech_position_y(mech)), -1, -1, 0, 0);
+  temp_astar_node = auto_create_astar_node(&(AutopilotPathNodeRequest){
+      .position = {.x = autopilot_map_coordinate(mech_position_x(mech)),
+                   .y = autopilot_map_coordinate(mech_position_y(mech))},
+      .parent = {.x = -1, .y = -1}});
 
   if (temp_astar_node == nullptr) {
     /*! \todo {Add code here to break if we can't alloc memory} */
@@ -270,7 +288,10 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       MapCoordToRealCoord(map_x1, map_y1, &x1, &y1);
 
       /* Calc new hex */
-      FindXY(x1, y1, i, 1.0, &x2, &y2);
+      MapRealPosition projected = map_project_position(&(MapProjection){
+          .origin = {.x = x1, .y = y1}, .bearing = i, .range = 1.0F});
+      x2 = projected.x;
+      y2 = projected.y;
 
       /* Real coord to Map */
       RealCoordToMapCoord(&map_x2, &map_y2, x2, y2);
@@ -322,13 +343,19 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
       /* Re-using the x2 and y2 values we calc'd for the child hex
        * to find the range between the child hex and end hex */
-      const float estimated_cost = 100.0F * FindHexRange(x2, y2, x1, y1);
+      const float estimated_cost = 100.0F * map_real_range(&(MapRealSegment){
+                                                .start = {.x = x2, .y = y2},
+                                                .end = {.x = x1, .y = y1},
+                                            });
       child_h_score = (int)estimated_cost;
 
       /* Lets attempt to avoid hexes that already have our friendlies in it
        * (Stack Check) */
-      if (battle_map_mech_count_in_hex(map, map_x2, map_y2, 1,
-                                       mech_team(mech)) > 2)
+      if (battle_map_mech_count_in_hex(&(BattleMapHexOccupancyRequest){
+              .map = map,
+              .position = {.x = map_x2, .y = map_y2},
+              .relationship = TEAM_RELATIONSHIP_FRIENDLY,
+              .team = mech_team(mech)}) > 2)
         child_g_score += 150;
 
       /* Now add in some modifiers for terrain */
@@ -441,8 +468,11 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       } else {
 
         /* Node isn't on the open list so we have to create it */
-        temp_astar_node = auto_create_astar_node(map_x2, map_y2, map_x1, map_y1,
-                                                 child_g_score, child_h_score);
+        temp_astar_node = auto_create_astar_node(
+            &(AutopilotPathNodeRequest){.position = {.x = map_x2, .y = map_y2},
+                                        .parent = {.x = map_x1, .y = map_y1},
+                                        .path_score = child_g_score,
+                                        .heuristic_score = child_h_score});
 
         if (temp_astar_node == nullptr) {
           /*! \todo {Add code here to break if we can't alloc memory} */

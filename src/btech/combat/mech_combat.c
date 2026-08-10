@@ -92,8 +92,14 @@ void mech_target(DbRef player, void *data, char *buffer) {
                  "Targetting disabled.");
     return;
   }
-  if (mech_target_dbref(mech) < 0 ||
-      !(target = btech_context_find_object(context, mech_target_dbref(mech)))) {
+  if (mech_target_dbref(mech) < 0) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "Error: You need to be locked onto something to target its part!");
+    return;
+  }
+  target = btech_context_find_object(context, mech_target_dbref(mech));
+  if (!target) {
     mecha_notify(
         btech_context_evaluation(context), player,
         "Error: You need to be locked onto something to target its part!");
@@ -101,12 +107,15 @@ void mech_target(DbRef player, void *data, char *buffer) {
   }
   type = mech_class(target);
   movement_type = mech_movement_type(target);
-  if ((index = ArmorSectionFromString(type, movement_type, args[0])) < 0) {
+  index = ArmorSectionFromString(type, movement_type, args[0]);
+  if (index < 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid location!");
     return;
   }
-  mech_targeting_aim_set(mech, index, (UnitClass)type);
+  mech_targeting_aim_set(
+      mech,
+      (MechAimSelection){.section = index, .unit_class = (UnitClass)type});
   ArmorStringFromIndex(index, section, type, movement_type);
   notify_printf(btech_context_evaluation(context), player, "%s targetted.",
                 section);
@@ -149,8 +158,8 @@ static void mech_ss_event(MuxEvent *ev) {
     return;
   if (!mech_has_active_pilot(mech))
     return;
-  const char *const *message = checked_storage_at_const(
-      ss_messages, sizeof(ss_messages) / sizeof(*ss_messages),
+  const char *const *message = (const char *const *)checked_storage_at_const(
+      (const void *)ss_messages, sizeof(ss_messages) / sizeof(*ss_messages),
       sizeof(*ss_messages), (size_t)BOUNDED(0, i, 8));
   mech_notify(mech, MECHPILOT, *message);
 }
@@ -169,8 +178,8 @@ void mech_sixth_sense_check(Mech *mech, Mech *target) {
   d = (mech_real_tonnage(mech) - mech_real_tonnage(target)) / 1024;
   mech_event_schedule(target, EVENT_SS, mech_ss_event,
                       btech_random_range_int(mech_context(mech), 1, 3),
-                      (long)((3 * sixth_sense_distance_severity(r)) +
-                             sixth_sense_tonnage_severity(d)));
+                      3L * (long)sixth_sense_distance_severity(r) +
+                          (long)sixth_sense_tonnage_severity(d));
 }
 
 void mech_set_target(DbRef player, void *data, char *buffer) {
@@ -191,8 +200,8 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
   argc = mech_parseattributes(buffer, args, 5);
   switch (argc) {
   case 1:
-    char *const *first_argument = checked_storage_at_const(
-        args, sizeof(args) / sizeof(*args), sizeof(*args), 0);
+    char *const *first_argument = (char *const *)checked_storage_at_const(
+        (const void *)args, sizeof(args) / sizeof(*args), sizeof(*args), 0);
     mech_map = btech_context_get_map(context, mech_map_dbref(mech));
     if (**first_argument == '-') {
       mech_targeting_target_clear(mech);

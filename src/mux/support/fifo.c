@@ -66,11 +66,10 @@ void fifo_push(Fifo **foo, void *data) {
   PFOO->first = tmp;
 }
 
-void fifo_traverse_reverse(Fifo **foo, void (*func)(void *, void *),
-                           void *context) {
+void fifo_traverse_reverse(Fifo **foo, FifoVisitor visitor, void *context) {
   FifoEntry *tmp;
 
   check_fifo(foo);
   for (tmp = PFOO->last; tmp != nullptr; tmp = tmp->prev)
-    func(tmp->data, context);
+    visitor(&(FifoVisit){.item = tmp->data, .context = context});
 }

@@ -60,8 +60,9 @@ struct DescriptorRegistry {
 
 static Descriptor **descriptor_registry_slot(DescriptorRegistry *registry,
                                              size_t index) {
-  return checked_storage_at(registry->slots, registry->capacity,
-                            sizeof(*registry->slots), index);
+  return (Descriptor **)checked_storage_at((void *)registry->slots,
+                                           registry->capacity,
+                                           sizeof(*registry->slots), index);
 }
 
 static const char *
@@ -70,7 +71,7 @@ descriptor_shutdown_reason_at(DescriptorShutdownReason reason) {
                        sizeof(*descriptor_disconnect_reasons);
 
   return *(const char *const *)checked_storage_at_const(
-      descriptor_disconnect_reasons, count,
+      (const void *)descriptor_disconnect_reasons, count,
       sizeof(*descriptor_disconnect_reasons), (size_t)reason);
 }
 
@@ -80,7 +81,7 @@ descriptor_shutdown_message_at(DescriptorShutdownReason reason) {
                        sizeof(*descriptor_disconnect_messages);
 
   return *(const char *const *)checked_storage_at_const(
-      descriptor_disconnect_messages, count,
+      (const void *)descriptor_disconnect_messages, count,
       sizeof(*descriptor_disconnect_messages), (size_t)reason);
 }
 
@@ -100,10 +101,11 @@ static bool descriptor_registry_grow(DescriptorRegistry *registry) {
   if (new_capacity < old_capacity ||
       new_capacity > SIZE_MAX / sizeof(*registry->slots))
     return false;
-  slots = realloc(registry->slots, new_capacity * sizeof(*registry->slots));
+  slots = (Descriptor **)realloc((void *)registry->slots,
+                                 new_capacity * sizeof(*registry->slots));
   if (slots == nullptr)
     return false;
-  memset(checked_storage_region(slots, new_capacity * sizeof(*slots),
+  memset(checked_storage_region((void *)slots, new_capacity * sizeof(*slots),
                                 old_capacity * sizeof(*slots),
                                 (new_capacity - old_capacity) * sizeof(*slots)),
          0, (new_capacity - old_capacity) * sizeof(*slots));
@@ -140,7 +142,7 @@ void descriptor_registry_destroy(DescriptorRegistry *registry) {
   if (registry == nullptr)
     return;
   dassert(registry->count == 0);
-  free(registry->slots);
+  free((void *)registry->slots);
   free(registry);
 }
 
@@ -306,7 +308,10 @@ void descriptor_shutdown(Descriptor *descriptor,
     char *flags;
 
     fcache_dump(runtime->files, descriptor, FC_QUIT);
-    log_error(descriptor_log(descriptor), LOG_NET | LOG_LOGIN, "NET", "DISC",
+    log_error((LogEntry){.log = descriptor_log(descriptor),
+                         .key = LOG_NET | LOG_LOGIN,
+                         .primary = "NET",
+                         .secondary = "DISC"},
               "[%d/%s] Logout by %s(#%ld), <Reason: %s>",
               descriptor->descriptor, descriptor->addr,
               game_object_name(runtime->world->database, descriptor->player),
@@ -315,7 +320,10 @@ void descriptor_shutdown(Descriptor *descriptor,
     flags = unparse_flags(descriptor_runtime(descriptor)->world->database, GOD,
                           descriptor->player);
     log_error(
-        descriptor_log(descriptor), LOG_ACCOUNTING, "DIS", "ACCT",
+        (LogEntry){.log = descriptor_log(descriptor),
+                   .key = LOG_ACCOUNTING,
+                   .primary = "DIS",
+                   .secondary = "ACCT"},
         "%ld %s %d %ld %ld [%s] <%s> %s", descriptor->player, flags,
         descriptor->command_count,
         runtime->clock->now - descriptor->connected_at,

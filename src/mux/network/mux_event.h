@@ -71,10 +71,19 @@ void mux_event_scheduler_destroy(MuxEventScheduler *scheduler);
    macro rather than being tied to one struct's field names. */
 #define ADD_TO_LIST_HEAD(a, c, b)                                              \
   b->c = a;                                                                    \
-  a = b
+  (a) = b
 
-void mux_event_add(MuxEventScheduler *scheduler, int time, int flags, int type,
-                   MuxEventCallback func, void *data, void *data2);
+typedef struct MuxEventRequest {
+  MuxEventScheduler *scheduler;
+  int delay;
+  int flags;
+  int type;
+  MuxEventCallback callback;
+  void *data;
+  void *secondary_data;
+} MuxEventRequest;
+
+void mux_event_add(const MuxEventRequest *request);
 void mux_event_run(MuxEventScheduler *scheduler);
 int mux_event_run_by_type(MuxEventScheduler *scheduler, int type);
 int mux_event_last_type(const MuxEventScheduler *scheduler);

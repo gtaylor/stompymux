@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "btech/context.h"
+#include "mux/support/array_sort.h"
 #include "mux/support/checked_storage.h"
 
 /*
@@ -60,9 +61,9 @@ static TemplateDirectoryEntry *template_entry_at(MechTemplateRegistry *registry,
  * The ordering function for the template name cache.  Used to sort and
  * search the cache.
  */
-static int tmplcmp(void const *v1, void const *v2) {
-  TemplateDirectoryEntry const *p1 = v1;
-  TemplateDirectoryEntry const *p2 = v2;
+static int tmplcmp(const ArraySortComparison *comparison) {
+  const TemplateDirectoryEntry *p1 = comparison->left;
+  const TemplateDirectoryEntry *p2 = comparison->right;
 
   return strncasecmp(p1->name, p2->name, MECH_MAXREF);
 }
@@ -70,8 +71,16 @@ static int tmplcmp(void const *v1, void const *v2) {
 /*
  * Add all the template names in a directory to the template cache.
  */
-static int scan_template_dir(MechTemplateRegistry *registry,
-                             char const *dirname, char const *parent) {
+typedef struct TemplateDirectoryScanRequest {
+  MechTemplateRegistry *registry;
+  const char *directory_name;
+  const char *parent_name;
+} TemplateDirectoryScanRequest;
+
+static int scan_template_dir(const TemplateDirectoryScanRequest *request) {
+  MechTemplateRegistry *registry = request->registry;
+  const char *dirname = request->directory_name;
+  const char *parent = request->parent_name;
   char buf[1000] = {0};
   size_t dirnamelen = strlen(dirname);
   DIR *dir = opendir(dirname);
@@ -150,20 +159,24 @@ static int scan_templates(MechTemplateRegistry *registry, char const *dir) {
   char buf[1000] = {0};
   TemplateDirectory *p;
 
-  if (scan_template_dir(registry, dir, nullptr) == -1) {
+  if (scan_template_dir(&(TemplateDirectoryScanRequest){
+          .registry = registry, .directory_name = dir}) == -1) {
     return -1;
   }
 
   p = registry->directories;
   while (p != nullptr) {
     (void)snprintf(buf, sizeof(buf), "%s/%s", dir, p->name);
-    scan_template_dir(registry, buf, p->name);
+    scan_template_dir(&(TemplateDirectoryScanRequest){
+        .registry = registry, .directory_name = buf, .parent_name = p->name});
     p = p->next;
   }
 
   if (registry->templates != nullptr && registry->template_count > 1) {
-    qsort(registry->templates, registry->template_count,
-          sizeof(registry->templates[0]), tmplcmp);
+    array_sort(&(ArraySortRequest){.items = registry->templates,
+                                   .count = registry->template_count,
+                                   .item_size = sizeof(registry->templates[0]),
+                                   .compare = tmplcmp});
   }
 
   return 0;
@@ -218,7 +231,6 @@ redo:
   if (strchr(id, '/') == nullptr &&
       (registry->templates != nullptr ||
        scan_templates(registry, mech_path) != -1)) {
-    TemplateDirectoryEntry *ent;
     TemplateDirectoryEntry key;
 
     if (registry->templates == nullptr || registry->template_count == 0) {
@@ -227,11 +239,16 @@ redo:
     strncpy(key.name, id, CACHE_MAXNAME);
     key.name[CACHE_MAXNAME] = '\0';
 
-    ent = bsearch(&key, registry->templates, registry->template_count,
-                  sizeof(registry->templates[0]), tmplcmp);
-    if (ent == nullptr) {
+    ArraySearchResult search = array_search(
+        &(ArraySearchRequest){.key = &key,
+                              .items = registry->templates,
+                              .count = registry->template_count,
+                              .item_size = sizeof(registry->templates[0]),
+                              .compare = tmplcmp});
+    if (!search.found) {
       return nullptr;
     }
+    TemplateDirectoryEntry *ent = template_entry_at(registry, search.index);
     if (ent->dir == nullptr) {
       (void)snprintf(registry->resolved_path, sizeof(registry->resolved_path),
                      "%s/%s", mech_path, ent->name);
@@ -262,8 +279,8 @@ oldstyle:
   const size_t subdir_count = sizeof(subdirs) / sizeof(*subdirs) - 1;
   for (size_t subdir_index = 0; !fp && subdir_index < subdir_count;
        subdir_index++) {
-    const char *const *subdir = checked_storage_at_const(
-        subdirs, subdir_count, sizeof(*subdirs), subdir_index);
+    const char *const *subdir = (const char *const *)checked_storage_at_const(
+        (const void *)subdirs, subdir_count, sizeof(*subdirs), subdir_index);
     (void)snprintf(registry->resolved_path, sizeof(registry->resolved_path),
                    "%s/%s/%s", mech_path, *subdir, id);
     fp = fopen(registry->resolved_path, "r");

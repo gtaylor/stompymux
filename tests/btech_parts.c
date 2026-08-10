@@ -2,6 +2,7 @@
 
 #include "btech/context.h"
 #include "btmux_build_config.h"
+#include "econ_api.h"
 #include "mech_classification_api.h"
 #include "mech_internal.h"
 #include "mech_specification_api.h"
@@ -15,8 +16,6 @@ static int changed_count;
 
 int alias_part(Mech *mech, int part, int location);
 int econ_find_items(BtechContext *context, DbRef store, int part, int brand);
-void econ_change_items(BtechContext *context, DbRef store, int part, int brand,
-                       int count);
 
 int alias_part(Mech *mech, int part, int location) {
   (void)mech;
@@ -31,13 +30,12 @@ int econ_find_items(BtechContext *context, DbRef store, int part, int brand) {
   return inventory_count;
 }
 
-void econ_change_items(BtechContext *context, DbRef store, int part, int brand,
-                       int count) {
-  (void)context;
-  changed_store = store;
-  changed_part = part;
-  changed_brand = brand;
-  changed_count = count;
+void economy_inventory_change(const EconomyInventoryChange *change) {
+  (void)change->context;
+  changed_store = change->store;
+  changed_part = change->part.id;
+  changed_brand = change->part.brand;
+  changed_count = change->quantity_delta;
 }
 
 int main(void) {

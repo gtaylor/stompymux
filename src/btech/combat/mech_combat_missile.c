@@ -2,6 +2,7 @@
 
 #include "btech/context.h"
 #include "map_terrain.h"
+#include "mech_api_types.h"
 #include "mech_lifecycle.h"
 #include "weapon_catalogue_api.h"
 #include <stdio.h>
@@ -10,6 +11,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map.h"
+#include "map_coordinates.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
 #include "mech_combat_api.h"
@@ -43,14 +45,20 @@ static void swap_ints(int *left, int *right) {
 }
 
 static Mech **swarm_target_slot(Mech **targets, size_t count, size_t index) {
-  return checked_storage_at(targets, count, sizeof(*targets), index);
+  return (Mech **)checked_storage_at((void *)targets, count, sizeof(*targets),
+                                     index);
 }
 
-void mech_missile_apply_hits(Mech *mech, Mech *target, int hitX, int hitY,
-                             int isrear, int iscritical, int weapindx,
-                             int fireMode, int ammoMode, int num_missiles_hit,
-                             int damage, int salvo_size, int LOS, int bth,
-                             int tIsSwarmAttack) {
+void mech_missile_apply_hits(const MissileHitsRequest *request) {
+  Mech *mech = request->attacker;
+  Mech *target = request->target;
+  int isrear = request->rear;
+  int iscritical = request->critical;
+  int weapindx = request->weapon.weapon_index;
+  int fireMode = request->fire_mode;
+  int ammoMode = request->ammunition_mode;
+  int num_missiles_hit = request->missile_count;
+  int damage = request->damage_per_missile;
   int orig_num_missiles = num_missiles_hit;
   int this_time;
   int this_damage;
@@ -84,9 +92,14 @@ void mech_missile_apply_hits(Mech *mech, Mech *target, int hitX, int hitY,
     else
       num_missiles_hit = total_damage / damage;
 
-    mech_terrain_possibly_ignite_or_clear(mech, weapindx, ammoMode,
-                                          clear_damage, mech_position_x(target),
-                                          mech_position_y(target), 1);
+    mech_terrain_possibly_ignite_or_clear(&(TerrainWeaponEffectRequest){
+        .mech = mech,
+        .position = {.x = mech_position_x(target),
+                     .y = mech_position_y(target)},
+        .weapon_index = weapindx,
+        .ammunition_mode = ammoMode,
+        .damage = clear_damage,
+        .intentional = true});
 
     strcpy(buf, "");
 
@@ -116,27 +129,53 @@ void mech_missile_apply_hits(Mech *mech, Mech *target, int hitX, int hitY,
   }
 
   while (num_missiles_hit) {
-    this_time = MIN(salvo_size, num_missiles_hit);
+    this_time = MIN(request->salvo_size, num_missiles_hit);
     this_damage = this_time * damage;
 
     if (target) {
       hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
 
-      DamageMech(target, mech, LOS, mech_gunner_dbref(mech), hitloc, isrear,
-                 iscritical,
-                 personal_combat_damage_to_unit(target, weapindx, this_damage),
-                 0, weapindx, bth, weapindx, ammoMode, tIsSwarmAttack);
+      mech_damage_apply(&(MechDamageRequest){
+          .target = target,
+          .attacker = mech,
+          .line_of_sight = request->los,
+          .attack_pilot = mech_gunner_dbref(mech),
+          .hit_location = hitloc,
+          .rear = isrear,
+          .critical = iscritical,
+          .armor_damage =
+              personal_combat_damage_to_unit(&(PersonalCombatDamageConversion){
+                  .target = target,
+                  .weapon_index = weapindx,
+                  .damage = this_damage,
+              }),
+          .internal_damage = 0,
+          .transfer = MECH_DAMAGE_NORMAL,
+          .cause = weapindx,
+          .base_to_hit = request->base_to_hit,
+          .weapon_index = weapindx,
+          .ammunition_mode = ammoMode,
+          .ignore_swarmers = request->swarm_attack});
     } else {
-      mech_terrain_hex_hit(mech, hitX, hitY, weapindx, ammoMode, this_damage,
-                           1);
+      mech_terrain_hex_hit(
+          &(TerrainWeaponHitRequest){.attacker = mech,
+                                     .position = request->target_hex,
+                                     .weapon_index = weapindx,
+                                     .ammunition_mode = ammoMode,
+                                     .damage = this_damage,
+                                     .hit = true});
     }
 
     num_missiles_hit -= this_time;
   }
 }
 
-int mech_missile_hit_index(Mech *mech, Mech *hitMech, int weapindx,
-                           int wSection, int wCritSlot, int glance) {
+int mech_missile_hit_index(const MissileHitIndexRequest *request) {
+  Mech *mech = request->attacker;
+  Mech *hitMech = request->target;
+  int weapindx = request->weapon.weapon_index;
+  int wSection = request->weapon.section;
+  int wCritSlot = request->weapon.critical;
   int hit_roll;
   int r1, r2, r3;
   int tHotloading =
@@ -197,14 +236,14 @@ int mech_missile_hit_index(Mech *mech, Mech *hitMech, int weapindx,
   }
 
   /* Glancing, per max tech, is -4 off the missile hit table */
-  if (glance)
+  if (request->glancing)
     wRollInc += -4;
   if (wRollInc)
     hit_roll = hit_roll + wRollInc;
   /* Glancing, per max tech, if its lower than 2 on the hit table, we hit with
    * one missile. return -1 so we can test for this elsewhere
    */
-  if (glance && (hit_roll < 0))
+  if (request->glancing && (hit_roll < 0))
     return -1;
 
   wFinalRoll = MAX(MIN(hit_roll, 10), 0);
@@ -212,12 +251,17 @@ int mech_missile_hit_index(Mech *mech, Mech *hitMech, int weapindx,
   return wFinalRoll;
 }
 
-int mech_missile_hit_target(Mech *mech, int weapindx, int wSection,
-                            int wCritSlot, Mech *hitMech, int hitX, int hitY,
-                            int LOS, int baseToHit, int roll, int incoming,
-                            int tIsSwarmAttack, int player_roll) {
+int mech_missile_hit_target(const MissileAttackRequest *request) {
+  Mech *mech = request->attacker;
+  Mech *hitMech = request->target;
+  int weapindx = request->weapon.weapon_index;
+  int wSection = request->weapon.section;
+  int wCritSlot = request->weapon.critical;
+  int LOS = request->los;
+  int baseToHit = request->base_to_hit;
+  int roll = request->roll;
+  int incoming = request->incoming;
   int isrear = 0, iscritical = 0;
-  int AMStype, ammoLoc, ammoCrit;
   int AMSShotdown = 0;
   int hit;
   int wNARCType = 0;
@@ -249,10 +293,18 @@ int mech_missile_hit_target(Mech *mech, int weapindx, int wSection,
     /* Prefill our AMS data */
     if (hitMech && (!((ammoMode & SWARM_MODE) || (ammoMode & SWARM1_MODE) ||
                       (ammoMode & MINE_MODE)))) {
-      if (mech_ams_locate_defenses(hitMech, &AMStype, &ammoLoc, &ammoCrit))
-        AMSShotdown =
-            mech_ams_intercept(mech, hitMech, wNARCType ? 1 : incoming, AMStype,
-                               ammoLoc, ammoCrit, LOS, roll >= baseToHit);
+      AmsDefenseResult defense = mech_ams_locate_defenses(hitMech);
+      if (defense.found) {
+        AmsInterceptRequest intercept = {
+            .attacker = mech,
+            .target = hitMech,
+            .incoming = wNARCType ? 1 : incoming,
+            .defense = defense,
+            .los = LOS,
+            .missiles_hit = roll >= baseToHit,
+        };
+        AMSShotdown = mech_ams_intercept(&intercept);
+      }
     }
 
     if (wNARCType) {
@@ -319,17 +371,22 @@ int mech_missile_hit_target(Mech *mech, int weapindx, int wSection,
   if (!btech_context_has_missile_hit_table(mech_context(mech), weapindx))
     return 0;
 
-  missileindex = mech_missile_hit_index(
-      mech, hitMech, weapindx, wSection, wCritSlot,
-      btech_context_glancing_blows_enabled(mech_context(mech)) &&
-              (player_roll == baseToHit)
-          ? 1
-          : 0);
+  MissileHitIndexRequest index_request = {
+      .attacker = mech,
+      .target = hitMech,
+      .weapon = request->weapon,
+      .glancing = btech_context_glancing_blows_enabled(mech_context(mech)) &&
+                  request->player_roll == baseToHit,
+  };
+  missileindex = mech_missile_hit_index(&index_request);
   if (missileindex < 0)
     hit = MIN(incoming, 1);
   else
-    hit = MIN(incoming, btech_context_missile_hit_count(
-                            mech_context(mech), weapindx, missileindex));
+    hit = MIN(incoming, btech_context_missile_hit_count(&(MissileHitLookup){
+                            .context = mech_context(mech),
+                            .weapon = weapindx,
+                            .roll = missileindex,
+                        }));
 
   if (LOS) {
     mech_printf(mech, MECHALL, "[fg=green]%s with %d missile%s![reset]",
@@ -366,34 +423,47 @@ int mech_missile_hit_target(Mech *mech, int weapindx, int wSection,
     if (hitMech)
       mech_inferno_hit(mech, hitMech, hit, LOS);
     else
-      mech_terrain_hex_hit(mech, hitX, hitY, weapindx,
-                           mech_critical_ammo_mode(mech, wSection, wCritSlot),
-                           0, 0);
+      mech_terrain_hex_hit(&(TerrainWeaponHitRequest){
+          .attacker = mech,
+          .position = request->target_hex,
+          .weapon_index = weapindx,
+          .ammunition_mode =
+              mech_critical_ammo_mode(mech, wSection, wCritSlot)});
   } else {
     if (btech_context_glancing_blows_enabled(mech_context(mech)) &&
-        (player_roll == baseToHit) && hitMech) {
+        (request->player_roll == baseToHit) && hitMech) {
       if (!weapon_catalogue_is_streak(weapindx)) {
         mech_los_broadcast(hitMech, "is nicked by a glancing blow!");
         mech_notify(hitMech, MECHALL, "You are nicked by a glancing blow!");
       }
     }
-    mech_missile_apply_hits(mech, hitMech, hitX, hitY, isrear, iscritical,
-                            weapindx,
-                            mech_critical_fire_mode(mech, wSection, wCritSlot),
-                            mech_critical_ammo_mode(mech, wSection, wCritSlot),
-                            hit, weapon_catalogue_damage(weapindx),
-                            weapon_catalogue_cluster_size(weapindx), LOS,
-                            baseToHit, tIsSwarmAttack);
+    MissileHitsRequest hits = {
+        .attacker = mech,
+        .target = hitMech,
+        .target_hex = request->target_hex,
+        .rear = isrear,
+        .critical = iscritical,
+        .weapon = request->weapon,
+        .fire_mode = mech_critical_fire_mode(mech, wSection, wCritSlot),
+        .ammunition_mode = mech_critical_ammo_mode(mech, wSection, wCritSlot),
+        .missile_count = hit,
+        .damage_per_missile = weapon_catalogue_damage(weapindx),
+        .salvo_size = weapon_catalogue_cluster_size(weapindx),
+        .los = LOS,
+        .base_to_hit = baseToHit,
+        .swarm_attack = request->swarm_attack,
+    };
+    mech_missile_apply_hits(&hits);
   }
 
   return incoming - hit;
 }
 
-void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
-                                   int wCritSlot, Mech *hitMech, int LOS,
-                                   int baseToHit, int roll, int incoming,
-                                   int fof, int tIsSwarmAttack,
-                                   int player_roll) {
+void mech_swarm_missile_hit_target(const MissileAttackRequest *request) {
+  Mech *mech = request->attacker;
+  Mech *hitMech = request->target;
+  int weapindx = request->weapon.weapon_index;
+  int roll = request->roll;
   enum { MAX_STAR = 10 };
   /* Max # of targets we'll try to hit: 10 */
   Mech *star[MAX_STAR];
@@ -406,7 +476,8 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
   int i, j;
   if (!btech_context_has_missile_hit_table(mech_context(mech), weapindx))
     return;
-  missiles = btech_context_missile_hit_count(mech_context(mech), weapindx, 10);
+  missiles = btech_context_missile_hit_count(&(MissileHitLookup){
+      .context = mech_context(mech), .weapon = weapindx, .roll = 10});
   while (missiles > 0) {
     flrange = flrange + mech_range_to(source, hitMech);
     ran = mech_range_to(mech, hitMech);
@@ -417,16 +488,18 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
       mech_notify(hitMech, MECHALL, "Luckily, the missiles fall short of you!");
       return;
     }
-    if (!(missiles = mech_missile_hit_target(
-              mech, weapindx, wSection, wCritSlot, hitMech, -1, -1,
-              mech_los_check_unblocked(mech, hitMech, mech_position_x(mech),
-                                       mech_position_y(mech), ran)
-                  ? present_target == 0 ? 1 : 2
-                  : 0,
-              baseToHit,
-              present_target == 0 ? roll
-                                  : btech_random_roll(mech_context(mech)),
-              missiles, tIsSwarmAttack, player_roll)))
+    MissileAttackRequest attack = *request;
+    attack.target = hitMech;
+    attack.target_hex = (MapHexPosition){.x = -1, .y = -1};
+    attack.los = mech_los_check_unblocked(mech, hitMech, mech_position_x(mech),
+                                          mech_position_y(mech), ran)
+                     ? present_target == 0 ? 1 : 2
+                     : 0;
+    attack.roll =
+        present_target == 0 ? roll : btech_random_roll(mech_context(mech));
+    attack.incoming = missiles;
+    missiles = mech_missile_hit_target(&attack);
+    if (!missiles)
       return;
     /* Try to acquire a new target NOT in the star */
     if (present_target == MAX_STAR)
@@ -434,10 +507,12 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
     *swarm_target_slot(star, MAX_STAR, (size_t)present_target++) = hitMech;
     source = hitMech;
     hitMech = nullptr;
-    for (i = 0; i < battle_map_unit_count(map); i++)
-      if ((tempMech = btech_context_find_object(mech_context(mech),
-                                                battle_map_unit_dbref(map, i))))
-        if (!fof || (mech_team(tempMech) != mech_team(mech))) {
+    for (i = 0; i < battle_map_unit_count(map); i++) {
+      tempMech = btech_context_find_object(mech_context(mech),
+                                           battle_map_unit_dbref(map, i));
+      if (tempMech) {
+        if (!request->friend_or_foe ||
+            (mech_team(tempMech) != mech_team(mech))) {
           for (j = 0; j < present_target; j++)
             if (tempMech == *swarm_target_slot(star, MAX_STAR, (size_t)j))
               break;
@@ -445,13 +520,18 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
             continue;
           if (j != present_target)
             continue;
-          if (!hitMech && (r = mech_range_to(source, tempMech)) < 1.9F)
-            if (mech_los_check_unblocked(source, tempMech,
-                                         mech_position_x(source),
-                                         mech_position_y(source), r)) {
-              hitMech = tempMech;
-            }
+          if (!hitMech) {
+            r = mech_range_to(source, tempMech);
+            if (r < 1.9F)
+              if (mech_los_check_unblocked(source, tempMech,
+                                           mech_position_x(source),
+                                           mech_position_y(source), r)) {
+                hitMech = tempMech;
+              }
+          }
         }
+      }
+    }
     if (!hitMech)
       return;
     if (mech != hitMech)
@@ -480,8 +560,13 @@ void mech_swarm_missile_hit_target(Mech *mech, int weapindx, int wSection,
 /****************************************
  * START: AMS related functions
  ****************************************/
-int mech_ams_intercept(Mech *mech, Mech *hitMech, int incoming, int type,
-                       int ammoLoc, int ammoCrit, int LOS, int missilesDidHit) {
+int mech_ams_intercept(const AmsInterceptRequest *request) {
+  Mech *mech = request->attacker;
+  Mech *hitMech = request->target;
+  int incoming = request->incoming;
+  int type = request->defense.weapon_type;
+  int ammoLoc = request->defense.ammunition_section;
+  int ammoCrit = request->defense.ammunition_critical;
   int num_missiles_shotdown;
 
   if (weapon_catalogue_is_clan_anti_missile(type))
@@ -499,7 +584,7 @@ int mech_ams_intercept(Mech *mech, Mech *hitMech, int incoming, int type,
                            mech_critical_data(hitMech, ammoLoc, ammoCrit) -
                                num_missiles_shotdown);
 
-  if (!missilesDidHit) {
+  if (!request->missiles_hit) {
     mech_notify(hitMech, MECHALL,
                 "Your Anti-Missile System activates and shoots at the incoming "
                 "missiles!");
@@ -509,47 +594,58 @@ int mech_ams_intercept(Mech *mech, Mech *hitMech, int incoming, int type,
   return num_missiles_shotdown;
 }
 
-int mech_ams_locate_defenses(Mech *target, int *AMStype, int *ammoLoc,
-                             int *ammoCrit) {
+AmsDefenseResult mech_ams_locate_defenses(Mech *target) {
+  AmsDefenseResult result = {0};
   int AMSsect, AMScrit;
   int i, j = 0, w, t = 0;
 
   if (!(mech_technology_flags(target) &
         (IS_ANTI_MISSILE_TECH | CL_ANTI_MISSILE_TECH)) ||
       !mech_is_started(target) || !mech_condition_summary(target).ams_enabled)
-    return 0;
+    return result;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    for (j = 0; j < NUM_CRITICALS; j++)
-      if (equipment_is_weapon((t = mech_critical_part_type(target, i, j))))
+    for (j = 0; j < NUM_CRITICALS; j++) {
+      t = mech_critical_part_type(target, i, j);
+      if (equipment_is_weapon(t))
         if (weapon_catalogue_is_anti_missile(weapon_from_equipment_index(t)))
           if (!(mech_critical_is_nonfunctional(target, i, j) ||
                 mech_weapon_is_recycling_at(target, i, j)))
             break;
+    }
     if (j < NUM_CRITICALS)
       break;
   }
 
   if (i == NUM_SECTIONS)
-    return 0;
+    return result;
 
   w = weapon_from_equipment_index(t);
   AMSsect = i;
   AMScrit = j;
-  *AMStype = w;
+  result.weapon_type = w;
 
-  if (!(FindAmmoForWeapon(target, w, AMSsect, ammoLoc, ammoCrit)))
-    return 0;
+  CriticalSlotLookupResult ammunition = ammunition_find(
+      &(AmmunitionLookupRequest){.mech = target,
+                                 .weapon_index = w,
+                                 .start_section = AMSsect,
+                                 .forbidden_modes = AMMO_MODES});
+  if (!ammunition.found)
+    return result;
+  result.ammunition_section = ammunition.slot.section;
+  result.ammunition_critical = ammunition.slot.critical;
 
-  if (!(mech_critical_data(target, *ammoLoc, *ammoCrit)))
-    return 0;
+  if (!(mech_critical_data(target, result.ammunition_section,
+                           result.ammunition_critical)))
+    return result;
 
   mech_set_recycle_part(
       target, AMSsect, AMScrit,
       btech_context_weapon_recycle_time(mech_context(target), w));
   const int weapon_heat = weapon_catalogue_heat(w);
   mech_weapon_heat_add(target, (float)weapon_heat);
-  return 1;
+  result.found = true;
+  return result;
 }
 
 /****************************************

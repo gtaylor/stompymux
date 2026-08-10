@@ -103,13 +103,12 @@ bool mech_has_working_ecm_suite(const Mech *mech) {
          (mech->rd.infantry_specials & FC_INFILTRATORII_STEALTH_TECH);
 }
 
-bool mech_supports_sensor_requirement(const Mech *mech, int capability_set,
-                                      int signed_capability) {
-  const int capability = abs(signed_capability);
-  const bool equipped = capability_set == 1
-                            ? (mech->rd.specials & capability) != 0
-                            : (mech->rd.specials2 & capability) != 0;
-  return signed_capability > 0 ? equipped : !equipped;
+bool mech_supports_sensor_requirement(const SensorCapabilityRequest *request) {
+  const int capability = abs(request->signed_capability);
+  const bool equipped = request->capability_set == 1
+                            ? (request->mech->rd.specials & capability) != 0
+                            : (request->mech->rd.specials2 & capability) != 0;
+  return request->signed_capability > 0 ? equipped : !equipped;
 }
 
 bool mech_searchlight_warning_enabled(const Mech *mech) {

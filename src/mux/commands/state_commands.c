@@ -27,8 +27,10 @@
 
 extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
 
-void state_examine_namespaces(EvaluationContext *evaluation, DbRef player,
-                              DbRef thing) {
+void state_examine_namespaces(const ObjectStateExamineRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->viewer;
+  DbRef thing = request->object;
   GameDatabase *database = evaluation->world->database;
   const size_t entry_count = object_state_count(database, thing);
   const char *name_space = nullptr;
@@ -39,10 +41,12 @@ void state_examine_namespaces(EvaluationContext *evaluation, DbRef player,
 
   notify_checked(evaluation, player, player, "State namespaces:", MSG_ME);
   for (size_t index = 0; index < entry_count; index++) {
-    ObjectStateEntryView entry;
-
-    if (!object_state_entry(database, thing, index, &entry))
+    ObjectStateEntryResult result =
+        object_state_entry(&(ObjectStateEntryRequest){
+            .database = database, .object = thing, .index = index});
+    if (!result.found)
       continue;
+    ObjectStateEntryView entry = result.entry;
     if (name_space && strcmp(name_space, entry.name_space) != 0) {
       notify_printf(evaluation, player, "  %s: %zu value%s", name_space,
                     namespace_count, namespace_count == 1 ? "" : "s");
@@ -123,17 +127,27 @@ static void examine_state_value(EvaluationContext *evaluation, DbRef player,
   }
 }
 
-static void examine_state_namespace(EvaluationContext *evaluation, DbRef player,
-                                    DbRef thing, const char *name_space) {
+typedef struct StateNamespaceExamineRequest {
+  ObjectStateExamineRequest object;
+  const char *name_space;
+} StateNamespaceExamineRequest;
+
+static void
+examine_state_namespace(const StateNamespaceExamineRequest *request) {
+  EvaluationContext *evaluation = request->object.evaluation;
+  DbRef player = request->object.viewer;
+  DbRef thing = request->object.object;
+  const char *name_space = request->name_space;
   GameDatabase *database = evaluation->world->database;
   const size_t entry_count = object_state_count(database, thing);
   bool found = false;
 
   for (size_t index = 0; index < entry_count; index++) {
-    ObjectStateEntryView entry;
-
-    if (!object_state_entry(database, thing, index, &entry) ||
-        strcmp(entry.name_space, name_space) != 0)
+    ObjectStateEntryResult result =
+        object_state_entry(&(ObjectStateEntryRequest){
+            .database = database, .object = thing, .index = index});
+    ObjectStateEntryView entry = result.entry;
+    if (!result.found || strcmp(entry.name_space, name_space) != 0)
       continue;
     if (!found)
       notify_printf(evaluation, player, "State namespace %s:", name_space);
@@ -147,7 +161,8 @@ static void examine_state_namespace(EvaluationContext *evaluation, DbRef player,
 
 static void examine_state_summary(EvaluationContext *evaluation, DbRef player,
                                   DbRef thing) {
-  state_examine_namespaces(evaluation, player, thing);
+  state_examine_namespaces(&(ObjectStateExamineRequest){
+      .evaluation = evaluation, .viewer = player, .object = thing});
   notify_checked(evaluation, player, player,
                  "Type @state/examine <object>/<namespace> to list the values "
                  "in a namespace.",
@@ -197,7 +212,9 @@ static void do_state_examine(CommandInvocation *invocation) {
     notify_checked(evaluation, player, player, "Invalid state namespace.",
                    MSG_ME);
   } else {
-    examine_state_namespace(evaluation, player, thing, name_space);
+    examine_state_namespace(&(StateNamespaceExamineRequest){
+        .object = {.evaluation = evaluation, .viewer = player, .object = thing},
+        .name_space = name_space});
   }
 }
 
@@ -208,9 +225,15 @@ struct StateAddress {
   char *key;
 };
 
-static bool state_split_last_word(char *text, char **prefix, char **word) {
+typedef struct StateWordSplitResult {
+  bool found;
+  char *prefix;
+  char *word;
+} StateWordSplitResult;
+
+static StateWordSplitResult state_split_last_word(char *text) {
   if (!text || !*text)
-    return false;
+    return (StateWordSplitResult){0};
   const size_t length = strlen(text);
   size_t end = length;
   size_t start;
@@ -227,7 +250,7 @@ static bool state_split_last_word(char *text, char **prefix, char **word) {
              text, length + 1, sizeof(char), start - 1)))
     start--;
   if (start == 0)
-    return false;
+    return (StateWordSplitResult){0};
   separator = start;
   while (separator > 0 &&
          (isspace)((unsigned char)*(const char *)checked_storage_at_const(
@@ -237,10 +260,9 @@ static bool state_split_last_word(char *text, char **prefix, char **word) {
   char *word_start = checked_storage_at(text, length + 1, sizeof(char), start);
 
   if (!*text || !*word_start)
-    return false;
-  *prefix = text;
-  *word = word_start;
-  return true;
+    return (StateWordSplitResult){0};
+  return (StateWordSplitResult){
+      .found = true, .prefix = text, .word = word_start};
 }
 
 static bool state_match_object(CommandInvocation *invocation, char *name,
@@ -265,11 +287,14 @@ static bool state_parse_address(CommandInvocation *invocation, char *text,
   char *target;
   char *slash;
 
-  if (!state_split_last_word(text, &target, &address->key)) {
+  StateWordSplitResult split = state_split_last_word(text);
+  if (!split.found) {
     notify_checked(evaluation, invocation->player, invocation->player,
                    "Expected <object>/<namespace> <attribute_name>.", MSG_ME);
     return false;
   }
+  target = split.prefix;
+  address->key = split.word;
   const size_t target_length = strlen(target);
   size_t slash_offset = 0;
 
@@ -301,11 +326,14 @@ static bool state_parse_destination(CommandInvocation *invocation, char *text,
                                     char **name_space, char **key) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
 
-  if (!state_split_last_word(text, name_space, key)) {
+  StateWordSplitResult split = state_split_last_word(text);
+  if (!split.found) {
     notify_checked(evaluation, invocation->player, invocation->player,
                    "Expected <namespace> <attribute_name>.", MSG_ME);
     return false;
   }
+  *name_space = split.prefix;
+  *key = split.word;
   if (!object_state_name_is_valid(*name_space) ||
       !object_state_name_is_valid(*key)) {
     notify_checked(evaluation, invocation->player, invocation->player,
@@ -380,13 +408,20 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
       int high;
       int low;
 
-      if (index + 2 >= length - 1 ||
-          (high = state_hex_digit(
-               (unsigned char)*(const char *)checked_storage_at_const(
-                   text, length + 1, sizeof(char), index + 1))) < 0 ||
-          (low = state_hex_digit(
-               (unsigned char)*(const char *)checked_storage_at_const(
-                   text, length + 1, sizeof(char), index + 2))) < 0) {
+      bool invalid_escape = index + 2 >= length - 1;
+      if (!invalid_escape) {
+        high = state_hex_digit(
+            (unsigned char)*(const char *)checked_storage_at_const(
+                text, length + 1, sizeof(char), index + 1));
+        invalid_escape = high < 0;
+      }
+      if (!invalid_escape) {
+        low = state_hex_digit(
+            (unsigned char)*(const char *)checked_storage_at_const(
+                text, length + 1, sizeof(char), index + 2));
+        invalid_escape = low < 0;
+      }
+      if (invalid_escape) {
         free(decoded);
         (void)snprintf(error, error_size, "invalid hexadecimal string escape");
         return false;
@@ -529,10 +564,12 @@ static void do_state_wipe(CommandInvocation *invocation) {
       return;
     }
     for (size_t index = 0; index < object_state_count(database, object);) {
-      ObjectStateEntryView entry;
-
-      if (!object_state_entry(database, object, index, &entry))
+      ObjectStateEntryResult result =
+          object_state_entry(&(ObjectStateEntryRequest){
+              .database = database, .object = object, .index = index});
+      if (!result.found)
         break;
+      ObjectStateEntryView entry = result.entry;
       if (strcmp(entry.name_space, name_space) != 0) {
         index++;
         continue;

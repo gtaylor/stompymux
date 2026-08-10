@@ -1,4 +1,3 @@
-
 #include "mech_tech_damages.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
@@ -91,8 +90,9 @@ static const char *const repair_need_msgs[] = {
 static const char *repair_need_message(int type) {
   if (type < 0)
     abort();
-  const char *const *message = checked_storage_at_const(
-      repair_need_msgs, sizeof(repair_need_msgs) / sizeof(*repair_need_msgs),
+  const char *const *message = (const char *const *)checked_storage_at_const(
+      (const void *)repair_need_msgs,
+      sizeof(repair_need_msgs) / sizeof(*repair_need_msgs),
       sizeof(*repair_need_msgs), (size_t)type);
   return *message;
 }
@@ -126,19 +126,23 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
     repair_damage_add(damages, RESEAL, loc);
     return 0;
   }
-  if ((a = mech_section_internal(mech, loc)) !=
-      (b = mech_section_original_internal(mech, loc)))
+  a = mech_section_internal(mech, loc);
+  b = mech_section_original_internal(mech, loc);
+  if (a != b)
     repair_damage_add_detail(damages, FIXINTERNAL, loc, (b - a));
   else {
-    if ((a = mech_section_armor(mech, loc)) !=
-        (b = mech_section_original_armor(mech, loc)))
+    a = mech_section_armor(mech, loc);
+    b = mech_section_original_armor(mech, loc);
+    if (a != b)
       repair_damage_add_detail(damages, FIXARMOR, loc, (b - a));
-    if ((a = mech_section_rear_armor(mech, loc)) !=
-        (b = mech_section_original_rear_armor(mech, loc)))
+    a = mech_section_rear_armor(mech, loc);
+    b = mech_section_original_rear_armor(mech, loc);
+    if (a != b)
       repair_damage_add_detail(damages, FIXARMOR_R, loc, (b - a));
   }
   for (a = 0; a < NUM_CRITICALS; a++) {
-    if (!(b = mech_critical_part_type(mech, loc, a)))
+    b = mech_critical_part_type(mech, loc, a);
+    if (!b)
       continue;
     if (equipment_is_ammunition(b) &&
         !mech_critical_is_destroyed(mech, loc, a) &&
@@ -167,34 +171,30 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
         repair_damage_add_detail(damages, ENHCRIT_AMMOM, loc, a);
       else
         repair_damage_add_detail(damages, ENHCRIT_MISC, loc, a);
-
     } else if (equipment_is_weapon(b) &&
                !mech_critical_is_destroyed(mech, loc, a))
       repair_damage_add_detail(damages, REPAIRP_T, loc, a);
     else
       repair_damage_add_detail(
           damages, equipment_is_weapon(b) ? REPAIRG : REPAIRP, loc, a);
-
     if (equipment_is_weapon(b))
       a += GetWeaponCrits(mech, weapon_from_equipment_index(b)) - 1;
   }
   return 1;
 }
-
 static int check_for_scrappage(RepairDamageTable *damages, Mech *mech,
                                int loc) {
   int a, b;
   int ret = 1;
-
   if (mech_section_is_destroyed(mech, loc))
     return 1;
-
   if (SomeoneScrappingLoc(mech, loc)) {
     repair_damage_add(damages, DETACH, loc);
     return 1;
   }
   for (a = 0; a < NUM_CRITICALS; a++) {
-    if (!(b = mech_critical_part_type(mech, loc, a)))
+    b = mech_critical_part_type(mech, loc, a);
+    if (!b)
       continue;
     if (mech_critical_is_broken(mech, loc, a))
       continue;
@@ -213,16 +213,12 @@ static int check_for_scrappage(RepairDamageTable *damages, Mech *mech,
     if (equipment_is_weapon(b))
       a += GetWeaponCrits(mech, weapon_from_equipment_index(b)) - 1;
   }
-
   if (ret && !Invalid_Scrap_Path(mech, loc))
     repair_damage_add(damages, DETACH, loc);
-
   return 0;
 }
-
 static void make_scrap_table(RepairDamageTable *damages, Mech *mech) {
   int i = 4;
-
   damages->count = 0;
   if (mech_class(mech) == CLASS_MECH) {
     if (check_for_scrappage(damages, mech, RARM))
@@ -231,20 +227,16 @@ static void make_scrap_table(RepairDamageTable *damages, Mech *mech) {
       i -= check_for_scrappage(damages, mech, LTORSO);
     i -= check_for_scrappage(damages, mech, RLEG);
     i -= check_for_scrappage(damages, mech, LLEG);
-
     if (!i)
       check_for_scrappage(damages, mech, CTORSO);
-
     check_for_scrappage(damages, mech, HEAD);
   } else
     for (i = 0; i < NUM_SECTIONS; i++)
       if (mech_section_original_internal(mech, i))
         check_for_scrappage(damages, mech, i);
 }
-
 static void make_damage_table(RepairDamageTable *damages, Mech *mech) {
   int i;
-
   damages->count = 0;
   if (mech_class(mech) == CLASS_MECH) {
     if (check_for_damage(damages, mech, CTORSO)) {
@@ -263,13 +255,11 @@ static void make_damage_table(RepairDamageTable *damages, Mech *mech) {
       if (mech_section_original_internal(mech, i))
         check_for_damage(damages, mech, i);
 }
-
 static int is_under_repair(const RepairDamageTable *damages, Mech *mech,
                            int i) {
   const RepairDamage *damage = repair_damage_const(damages, i);
   int v1 = damage->location;
   int v2 = damage->detail;
-
   switch (damage->type) {
   case RELOAD:
   case REPAIRP:
@@ -303,17 +293,14 @@ static int is_under_repair(const RepairDamageTable *damages, Mech *mech,
   }
   return 0;
 }
-
 void mech_repair_jobs_format(Mech *mech, char *buffer, size_t buffer_size) {
   RepairDamageTable damages_storage = {0};
   RepairDamageTable *damages = &damages_storage;
   int i;
-
   if (unit_is_fixable(mech))
     make_damage_table(damages, mech);
   else
     make_scrap_table(damages, mech);
-
   if (buffer_size == 0)
     return;
   buffer[0] = '\0';
@@ -325,12 +312,14 @@ void mech_repair_jobs_format(Mech *mech, char *buffer, size_t buffer_size) {
     /* repairnum|location|typenum|data|fixing? */
     if (i)
       append_damage(buffer, buffer_size, ",");
-    append_damage(buffer, buffer_size, "%d|%s|%d|", i + 1,
-                  armor_section_abbreviation(mech_class(mech),
-                                             mech_movement_type(mech),
-                                             damage->location)
-                      .text,
-                  damage->type);
+    append_damage(
+        buffer, buffer_size, "%d|%s|%d|", i + 1,
+        armor_section_abbreviation(
+            &(ArmorSectionReference){.unit_class = mech_class(mech),
+                                     .movement_type = mech_movement_type(mech),
+                                     .location = damage->location})
+            .text,
+        damage->type);
     switch (damage->type) {
     case REPAIRP:
     case REPAIRP_T:
@@ -371,17 +360,14 @@ void mech_repair_jobs_format(Mech *mech, char *buffer, size_t buffer_size) {
                   is_under_repair(damages, mech, i));
   }
 }
-
 size_t mech_repair_job_count(Mech *mech) {
   RepairDamageTable damages = {0};
-
   if (unit_is_fixable(mech))
     make_damage_table(&damages, mech);
   else
     make_scrap_table(&damages, mech);
   return (size_t)damages.count;
 }
-
 void show_mechs_damage(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   RepairDamageTable damages_storage = {0};
@@ -395,7 +381,6 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
   int fix_bth = 0;
   int extra_hard = 1;
   RepairCommandContext repair_command;
-
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_CONFIGURED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
@@ -617,13 +602,15 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     } else {
       (void)snprintf(buf3, sizeof(buf3), "%4d %4d", fix_time, fix_bth);
     }
-    (void)snprintf(buf2, sizeof(buf2), "[bold]%s%3s %3d %9s %3s %s[reset]%s",
-                   j ? "[fg=green]" : "[fg=yellow]", j ? "(*)" : "", i + 1,
-                   buf3,
-                   armor_section_abbreviation(mech_class(mech),
-                                              mech_movement_type(mech), v1)
-                       .text,
-                   buf, j ? " (*)" : "");
+    (void)snprintf(
+        buf2, sizeof(buf2), "[bold]%s%3s %3d %9s %3s %s[reset]%s",
+        j ? "[fg=green]" : "[fg=yellow]", j ? "(*)" : "", i + 1, buf3,
+        armor_section_abbreviation(
+            &(ArmorSectionReference){.unit_class = mech_class(mech),
+                                     .movement_type = mech_movement_type(mech),
+                                     .location = v1})
+            .text,
+        buf, j ? " (*)" : "");
     cool_menu_add_text(&c, buf2);
   }
   cool_menu_add_line(&c);
@@ -637,17 +624,17 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
   ShowCoolMenu(btech_context_evaluation(mech_context(mech)), player, c);
   KillCoolMenu(c);
 }
-
 static void fix_entry(const RepairDamageTable *damages, DbRef player,
                       Mech *mech, int n) {
   char buf[MBUF_SIZE] = {0};
   char *c;
-
   /* whee */
   n--;
   const RepairDamage *damage = repair_damage_const(damages, n);
   ArmorSectionAbbreviation abbreviation = armor_section_abbreviation(
-      mech_class(mech), mech_movement_type(mech), damage->location);
+      &(ArmorSectionReference){.unit_class = mech_class(mech),
+                               .movement_type = mech_movement_type(mech),
+                               .location = damage->location});
   c = abbreviation.text;
   switch (damage->type) {
   case REPAIRP_T:
@@ -718,7 +705,6 @@ static void fix_entry(const RepairDamageTable *damages, DbRef player,
     break;
   }
 }
-
 void tech_fix(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   RepairDamageTable damages_storage = {0};
@@ -726,7 +712,6 @@ void tech_fix(DbRef player, void *data, char *buffer) {
   int n;
   int low, high;
   RepairCommandContext repair_command;
-
   if (buffer != nullptr)
     buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(*buffer),
                                 strspn(buffer, " \t\r\n\f\v"));

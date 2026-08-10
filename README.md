@@ -4,13 +4,13 @@ It comes with a real-time combat system with AI, a unit repair system, economic 
 ## Status
 
 StompyMUX is an occasionally developed modernization fork of [BattletechMUX](https://sourceforge.net/projects/btonline-btech/).
-Our foundations are built from more than [three decades of contributions](./docs/content/en/docs/history.md).
+Our foundations are built from more than [three decades of contributions](./docs/content/docs/history.md).
 While the features in this codebase are very well fleshed out, we may occasionally break things, including backwards compatibility!
 
 ## Getting involved
 
 Contributions are welcomed.
-See the [Contributing](./docs/content/en/docs/contributing.md) guide.
+See the [Contributing](./docs/content/docs/contributing.md) guide.
 Visit our [Discord server](https://discord.gg/TJzQByY2nC) to reach the rest of the developer community.
 
 ## Support

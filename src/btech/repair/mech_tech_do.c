@@ -27,7 +27,8 @@
 static bool parts_consume_one(DbRef player, Mech *mech, int location, int part,
                               int brand, int count) {
   const MechPartRequirement requirement = {
-      .part = mech_parts_alias(mech, location, part),
+      .part = mech_parts_alias(
+          &(MechPartLocation){.mech = mech, .section = location, .part = part}),
       .brand = brand,
       .count = count,
   };
@@ -294,7 +295,11 @@ int FindAmmoType(Mech *mech, int loc, int part) {
   return cargo_equipment_index(base);
 }
 
-int replace_econ(DbRef player, Mech *mech, int loc, int part) {
+int replace_econ(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
+  int part = call->selection.part;
   if (equipment_is_ammunition(mech_critical_part_type(mech, loc, part)))
     return 0;
   if (!parts_consume_one(player, mech, loc,
@@ -304,7 +309,11 @@ int replace_econ(DbRef player, Mech *mech, int loc, int part) {
   return 0;
 }
 
-int reload_econ(DbRef player, Mech *mech, int loc, int part, int *val) {
+int reload_econ(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
+  int part = call->selection.part;
   int ammotype = FindAmmoType(mech, loc, part);
 
   if (!parts_consume_one(player, mech, loc, ammotype,
@@ -313,21 +322,33 @@ int reload_econ(DbRef player, Mech *mech, int loc, int part, int *val) {
   return 0;
 }
 
-int fixarmor_econ(DbRef player, Mech *mech, int loc, int *val) {
+int fixarmor_econ(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
+  int *val = call->amount;
   if (!parts_consume_one(player, mech, loc, tech_proper_armor_part(mech), 0,
                          *val))
     return -1;
   return 0;
 }
 
-int fixinternal_econ(DbRef player, Mech *mech, int loc, int *val) {
+int fixinternal_econ(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
+  int *val = call->amount;
   if (!parts_consume_one(player, mech, loc, tech_proper_internal_part(mech), 0,
                          *val))
     return -1;
   return 0;
 }
 
-int repair_econ(DbRef player, Mech *mech, int loc, int part) {
+int repair_econ(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
+  int part = call->selection.part;
   if (equipment_is_ammunition(mech_critical_part_type(mech, loc, part)))
     return 0;
   int destroyed = mech_critical_is_destroyed(mech, loc, part) ? 3 : 1;
@@ -338,14 +359,20 @@ int repair_econ(DbRef player, Mech *mech, int loc, int part) {
   return 0;
 }
 
-int repairenhcrit_econ(DbRef player, Mech *mech, int loc, int part) {
+int repairenhcrit_econ(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
   if (!parts_consume_one(player, mech, loc, cargo_equipment_index(S_ELECTRONIC),
                          0, 1))
     return -1;
   return 0;
 }
 
-int reattach_econ(DbRef player, Mech *mech, int loc) {
+int reattach_econ(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
 #ifndef BT_COMPLEXREPAIRS
   if (!parts_consume_two(player, mech, tech_proper_internal_part(mech), 0,
                          mech_section_original_internal(mech, loc),
@@ -380,7 +407,9 @@ int reattach_econ(DbRef player, Mech *mech, int loc) {
 #define BSUIT_REPAIR_LIFESUPPORT_NEEDED 2
 #define BSUIT_REPAIR_ELECTRONICS_NEEDED 10
 
-int replacesuit_econ(DbRef player, Mech *mech, int loc) {
+int replacesuit_econ(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
   if (!parts_consume_four(
           player, mech, tech_proper_internal_part(mech), 0,
           BSUIT_REPAIR_INTERNAL_NEEDED, cargo_equipment_index(BSUIT_SENSOR), 0,
@@ -397,7 +426,10 @@ int replacesuit_econ(DbRef player, Mech *mech, int loc) {
  * 8/4/99
  */
 
-int reseal_econ(DbRef player, Mech *mech, int loc) {
+int reseal_econ(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
   if (!parts_consume_two(player, mech, tech_proper_internal_part(mech), 0,
                          mech_section_original_internal(mech, loc),
                          cargo_equipment_index(S_ELECTRONIC), 0,
@@ -410,29 +442,62 @@ int reseal_econ(DbRef player, Mech *mech, int loc) {
 
 /* Replace success is just that ; success, therefore the fake
    functions here */
-int replacep_succ(DbRef player, Mech *mech, int loc, int part) { return 0; }
-int replaceg_succ(DbRef player, Mech *mech, int loc, int part) { return 0; }
-int reload_succ(DbRef player, Mech *mech, int loc, int part, int *val) {
+int replacep_succ(const RepairOperationCall *call) {
+  (void)call;
   return 0;
 }
-int fixinternal_succ(DbRef player, Mech *mech, int loc, int *val) { return 0; }
-int fixarmor_succ(DbRef player, Mech *mech, int loc, int *val) { return 0; }
-int reattach_succ(DbRef player, Mech *mech, int loc) { return 0; }
-int reseal_succ(DbRef player, Mech *mech, int loc) { return 0; }
-int replacesuit_succ(DbRef player, Mech *mech, int loc) { return 0; }
+int replaceg_succ(const RepairOperationCall *call) {
+  (void)call;
+  return 0;
+}
+int reload_succ(const RepairOperationCall *call) {
+  (void)call;
+  return 0;
+}
+int fixinternal_succ(const RepairOperationCall *call) {
+  (void)call;
+  return 0;
+}
+int fixarmor_succ(const RepairOperationCall *call) {
+  (void)call;
+  return 0;
+}
+int reattach_succ(const RepairOperationCall *call) {
+  (void)call;
+  return 0;
+}
+int reseal_succ(const RepairOperationCall *call) {
+  (void)call;
+  return 0;
+}
+int replacesuit_succ(const RepairOperationCall *call) {
+  (void)call;
+  return 0;
+}
 
 /* Repairs _Should_ have some averse effects */
-int repairg_succ(DbRef player, Mech *mech, int loc, int part) { return 0; }
-int repairenhcrit_succ(DbRef player, Mech *mech, int loc, int part) {
+int repairg_succ(const RepairOperationCall *call) {
+  (void)call;
   return 0;
 }
-int repairp_succ(DbRef player, Mech *mech, int loc, int part) { return 0; }
+int repairenhcrit_succ(const RepairOperationCall *call) {
+  (void)call;
+  return 0;
+}
+int repairp_succ(const RepairOperationCall *call) {
+  (void)call;
+  return 0;
+}
 
 /* -------------------------------------------- Failures */
 
 /* Replace failures give you one chance to roll for object recovery,
    otherwise it's irretrieavbly lost */
-int replaceg_fail(DbRef player, Mech *mech, int loc, int part) {
+int replaceg_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
+  int part = call->selection.part;
   int w = equipment_is_weapon(mech_critical_part_type(mech, loc, part));
 
   if (tech_roll(player, mech, REPLACE_DIFFICULTY) < 0) {
@@ -454,7 +519,11 @@ int replaceg_fail(DbRef player, Mech *mech, int loc, int part) {
   return -1;
 }
 
-int repairg_fail(DbRef player, Mech *mech, int loc, int part) {
+int repairg_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
+  int part = call->selection.part;
   if (mech_critical_is_destroyed(mech, loc, part))
     /* If we are calling repairgun on a thing that is actually destroyed
      * the following check *should not* be necessary. Nevertheless... */
@@ -471,26 +540,30 @@ int repairg_fail(DbRef player, Mech *mech, int loc, int part) {
   return -1;
 }
 
-int repairenhcrit_fail(DbRef player, Mech *mech, int loc, int part) {
+int repairenhcrit_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
   mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                "You don't manage to repair the damage.");
   return -1;
 }
 
 /* Replacepart = Replacegun, for now */
-int replacep_fail(DbRef player, Mech *mech, int loc, int part) {
+int replacep_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
   mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                "Your repair fails.. all the parts are wasted for good.");
   return -1;
 }
 
 /* Repairpart = Repairgun, for now */
-int repairp_fail(DbRef player, Mech *mech, int loc, int part) {
-  return repairg_fail(player, mech, loc, part);
-}
+int repairp_fail(const RepairOperationCall *call) { return repairg_fail(call); }
 
 /* Reload fail = ammo is wasted and some time, but no averse effects (yet) */
-int reload_fail(DbRef player, Mech *mech, int loc, int part, int *val) {
+int reload_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
   mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                "You fumble around, wasting the ammo in the progress.");
   return -1;
@@ -498,7 +571,10 @@ int reload_fail(DbRef player, Mech *mech, int loc, int part, int *val) {
 
 /* Fixarmor/fixinternal failure means that at least 1, or at worst
    _all_, points are wasted */
-int fixarmor_fail(DbRef player, Mech *mech, int loc, int *val) {
+int fixarmor_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int *val = call->amount;
   int tot = 0;
   int should = *val;
 
@@ -518,7 +594,10 @@ int fixarmor_fail(DbRef player, Mech *mech, int loc, int *val) {
   return 0;
 }
 
-int fixinternal_fail(DbRef player, Mech *mech, int loc, int *val) {
+int fixinternal_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int *val = call->amount;
   int tot = 0;
   int should = *val;
 
@@ -542,7 +621,10 @@ int fixinternal_fail(DbRef player, Mech *mech, int loc, int *val) {
    - if you succeed in second roll, it takes just 1.5x time
    - if you don't, some (random %) of stuff is wasted and nothing is
    done (yet some techtime goes nonetheless */
-int reattach_fail(DbRef player, Mech *mech, int loc) {
+int reattach_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
   int tot;
 
   if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
@@ -572,7 +654,9 @@ int reattach_fail(DbRef player, Mech *mech, int loc) {
   return -1;
 }
 
-int replacesuit_fail(DbRef player, Mech *mech, int loc) {
+int replacesuit_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
   int wRand = 0;
 
   if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
@@ -597,6 +681,7 @@ int replacesuit_fail(DbRef player, Mech *mech, int loc) {
                  tech_proper_internal_part(mech), 0,
                  MAX(((BSUIT_REPAIR_INTERNAL_NEEDED * wRand) / 100), 1));
 #else
+  int loc = call->selection.location;
   mech_parts_add(mech, loc, cargo_equipment_index(BSUIT_SENSOR), 0,
                  MAX(((BSUIT_REPAIR_SENSORS_NEEDED * wRand) / 100), 1));
   mech_parts_add(mech, loc, cargo_equipment_index(BSUIT_LIFESUPPORT), 0,
@@ -614,7 +699,10 @@ int replacesuit_fail(DbRef player, Mech *mech, int loc) {
  * 8/4/99
  */
 
-int reseal_fail(DbRef player, Mech *mech, int loc) {
+int reseal_fail(const RepairOperationCall *call) {
+  DbRef player = call->player;
+  Mech *mech = call->mech;
+  int loc = call->selection.location;
   int tot;
 
   if (tech_roll(player, mech, RESEAL_DIFFICULTY) >= 0)

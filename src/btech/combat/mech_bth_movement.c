@@ -84,8 +84,9 @@ int mech_target_movement_modifier(Mech *mech, Mech *target, float range) {
     if (mech_is_jumping(target)) {
       target_speed = mech_jump_speed_for_map(target, map);
     } else if (mech_condition_summary(target).swarm_target > 0) {
-      if ((swarmTarget = btech_context_get_mech(
-               context, mech_condition_summary(target).swarm_target))) {
+      swarmTarget = btech_context_get_mech(
+          context, mech_condition_summary(target).swarm_target);
+      if (swarmTarget) {
         if (mech_is_jumping(swarmTarget))
           target_speed = mech_jump_speed_for_map(swarmTarget, map);
         else

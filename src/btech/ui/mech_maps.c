@@ -1,8 +1,8 @@
 #include "btech/context.h"
-#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_conditions_api.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_electronics_api.h"
@@ -37,12 +37,12 @@ typedef struct NavigateCanvas {
   char (*lines)[MBUF_SIZE];
 } NavigateCanvas;
 
-static void navigate_plot(int row, int column, char marker, void *context) {
-  NavigateCanvas *canvas = context;
-  char *line = navigate_line(canvas->lines, row);
+static void navigate_plot(const NavigatePlotCall *call) {
+  NavigateCanvas *canvas = call->context;
+  char *line = navigate_line(canvas->lines, call->row);
   char *cell =
-      checked_storage_at(line, MBUF_SIZE, sizeof(*line), (size_t)column);
-  *cell = marker;
+      checked_storage_at(line, MBUF_SIZE, sizeof(*line), (size_t)call->column);
+  *cell = call->marker;
 }
 
 void mech_findcenter(DbRef player, void *data, char *buffer) {
@@ -56,25 +56,37 @@ void mech_findcenter(DbRef player, void *data, char *buffer) {
   x = mech_position_x(mech);
   y = mech_position_y(mech);
   MapCoordToRealCoord(x, y, &fx, &fy);
-  notify_printf(evaluation, player,
-                "Current hex: (%d,%d,%d)\tRange to center: %.2f\t"
-                "Bearing to center: %d",
-                x, y, mech_position_z(mech),
-                (double)FindHexRange(fx, fy, mech_position_real_x(mech),
-                                     mech_position_real_y(mech)),
-                FindBearing(mech_position_real_x(mech),
-                            mech_position_real_y(mech), fx, fy));
+  notify_printf(
+      evaluation, player,
+      "Current hex: (%d,%d,%d)\tRange to center: %.2f\t"
+      "Bearing to center: %d",
+      x, y, mech_position_z(mech),
+      (double)map_real_range(&(MapRealSegment){
+          .start = {.x = fx, .y = fy},
+          .end = {.x = mech_position_real_x(mech),
+                  .y = mech_position_real_y(mech)},
+      }),
+      map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                              .y = mech_position_real_y(mech)},
+                                    .end = {.x = fx, .y = fy}}));
 }
 
 static char *tactical_argument(char *const *args, size_t argument_capacity,
                                size_t index) {
-  return *(char *const *)checked_storage_at_const(args, argument_capacity,
-                                                  sizeof(*args), index);
+  return *(char *const *)checked_storage_at_const(
+      (const void *)args, argument_capacity, sizeof(*args), index);
 }
 
-int parse_tacargs(DbRef player, Mech *mech, char *const *args,
-                  size_t argument_capacity, size_t first_argument, int argc,
-                  int maxrange, short *x, short *y) {
+TacticalArgumentParseResult
+tactical_arguments_parse(const TacticalArgumentParseRequest *request) {
+  const DbRef player = request->player;
+  Mech *mech = request->mech;
+  char *const *args = request->arguments;
+  const size_t argument_capacity = request->argument_capacity;
+  const size_t first_argument = request->first_argument;
+  const int argc = request->argument_count;
+  const int maxrange = request->maximum_range;
+  TacticalArgumentParseResult result = {0};
   int bearing;
   float range, fx, fy;
   Mech *tempMech;
@@ -90,17 +102,26 @@ int parse_tacargs(DbRef player, Mech *mech, char *const *args,
             &range)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Invalid bearing or range.");
-      return 0;
+      return result;
     }
     if (!mech_is_observer(mech) && abs((int)range) > maxrange) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Those coordinates are out of sensor range!");
-      return 0;
+      return result;
     }
-    FindXY(mech_position_real_x(mech), mech_position_real_y(mech), bearing,
-           range, &fx, &fy);
-    RealCoordToMapCoord(x, y, fx, fy);
-    return 1;
+    MapRealPosition projected = map_project_position(
+        &(MapProjection){.origin = {.x = mech_position_real_x(mech),
+                                    .y = mech_position_real_y(mech)},
+                         .bearing = bearing,
+                         .range = range});
+    fx = projected.x;
+    fy = projected.y;
+    short x;
+    short y;
+    RealCoordToMapCoord(&x, &y, fx, fy);
+    result.valid = true;
+    result.position = (MapHexPosition){.x = x, .y = y};
+    return result;
   case 1:
     map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
     tempMech = btech_context_get_mech(
@@ -110,31 +131,33 @@ int parse_tacargs(DbRef player, Mech *mech, char *const *args,
     if (!tempMech) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "No such target.");
-      return 0;
+      return result;
     }
     range = mech_range_to(mech, tempMech);
     if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
                         mech_position_y(tempMech), range)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "No such target.");
-      return 0;
+      return result;
     }
     if (abs((int)range) > maxrange) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Target is out of scanner range.");
-      return 0;
+      return result;
     }
-    *x = clamp_int_to_short(mech_position_x(tempMech));
-    *y = clamp_int_to_short(mech_position_y(tempMech));
-    return 1;
+    result.valid = true;
+    result.position = (MapHexPosition){.x = mech_position_x(tempMech),
+                                       .y = mech_position_y(tempMech)};
+    return result;
   case 0:
-    *x = clamp_int_to_short(mech_position_x(mech));
-    *y = clamp_int_to_short(mech_position_y(mech));
-    return 1;
+    result.valid = true;
+    result.position = (MapHexPosition){.x = mech_position_x(mech),
+                                       .y = mech_position_y(mech)};
+    return result;
   default:
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid number of parameters!");
-    return 0;
+    return result;
   }
 }
 
@@ -191,7 +214,7 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   MapText *map_text;
   char *args[3];
   int i, dolos, argc;
-  short x, y;
+  int x, y;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;
@@ -210,11 +233,33 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   }
 
   argc = mech_parseattributes(buffer, args, 3);
-  if (!parse_tacargs(player, mech, args, 3, 0, argc, mech_tactical_range(mech),
-                     &x, &y))
+  const TacticalArgumentParseResult parsed =
+      tactical_arguments_parse(&(TacticalArgumentParseRequest){
+          .player = player,
+          .mech = mech,
+          .arguments = args,
+          .argument_capacity = 3,
+          .first_argument = 0,
+          .argument_count = argc,
+          .maximum_range = mech_tactical_range(mech),
+      });
+  if (!parsed.valid)
     return;
+  x = parsed.position.x;
+  y = parsed.position.y;
 
-  map_text = map_text_create(player, mech, mech_map, x, y, 5, 5, 4, dolos);
+  MapTextRequest request = {
+      .player = player,
+      .mech = mech,
+      .map = mech_map,
+      .center_x = x,
+      .center_y = y,
+      .width = 5,
+      .height = 5,
+      .labels = 4,
+      .calculate_los = dolos,
+  };
+  map_text = map_text_create(&request);
   if (map_text == nullptr) {
     mecha_notify(evaluation, player, "Unable to render the tactical map.");
     return;
@@ -270,7 +315,13 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   (void)snprintf(navigate_line(mybuff, 12), MBUF_SIZE, "             180");
   map_text_destroy(map_text);
 
-  navigate_sketch_mechs(mech, mech_map, x, y, navigate_plot, &canvas);
+  navigate_sketch_mechs(&(NavigateSketchRequest){
+      .mech = mech,
+      .map = mech_map,
+      .center = {.x = x, .y = y},
+      .plot = navigate_plot,
+      .context = &canvas,
+  });
   for (i = 0; i < NAVIGATE_LINES; i++)
     mecha_notify(evaluation, player, navigate_line(mybuff, i));
 }

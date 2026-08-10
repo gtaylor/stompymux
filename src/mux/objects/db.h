@@ -277,8 +277,13 @@ void init_min_db(void);
 void attribute_stack_push(void);
 void attribute_stack_pop(void);
 int init_gdbm_db(char *path);
-void attribute_copy(EvaluationContext *evaluation, DbRef player, DbRef source,
-                    DbRef destination);
+typedef struct AttributeCopyRequest {
+  EvaluationContext *evaluation;
+  DbRef source;
+  DbRef destination;
+} AttributeCopyRequest;
+
+void attribute_copy(const AttributeCopyRequest *request);
 void attribute_clear(GameDatabase *database, DbRef thing, int attribute_number);
 void attribute_add_raw(GameDatabase *database, DbRef thing,
                        int attribute_number, const char *value);

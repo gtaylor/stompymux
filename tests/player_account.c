@@ -16,28 +16,41 @@ bool is_good_obj(GameDatabase *database, DbRef object) {
 }
 
 static int check_history(GameDatabase *database) {
-  PlayerLoginRecordView record;
+  PlayerAccountRef account = {.database = database, .player = 0};
 
   for (int index = 0; index < 6; index++)
-    if (!player_account_login_record(database, 0, PLAYER_LOGIN_SUCCESS,
-                                     1000 + index, "good.example"))
+    if (!player_account_login_record(
+            &(PlayerLoginRecordChange){.account = account,
+                                       .outcome = PLAYER_LOGIN_SUCCESS,
+                                       .occurred_at = 1000 + index,
+                                       .host = "good.example"}))
       return -1;
   for (int index = 0; index < 5; index++)
-    if (!player_account_login_record(database, 0, PLAYER_LOGIN_FAILURE,
-                                     2000 + index, "bad.example"))
+    if (!player_account_login_record(
+            &(PlayerLoginRecordChange){.account = account,
+                                       .outcome = PLAYER_LOGIN_FAILURE,
+                                       .occurred_at = 2000 + index,
+                                       .host = "bad.example"}))
       return -1;
+  PlayerLoginHistoryResult record =
+      player_account_login_history(&(PlayerLoginHistoryRequest){
+          .account = account, .outcome = PLAYER_LOGIN_SUCCESS});
   if (player_account_successful_login_count(database, 0) != 6 ||
       player_account_failed_login_count(database, 0) != 5 ||
       player_account_unreported_failed_login_count(database, 0) != 5 ||
-      player_account_login_history_count(database, 0, PLAYER_LOGIN_SUCCESS) !=
+      player_account_login_history_count((PlayerLoginHistoryRequest){
+          .account = account, .outcome = PLAYER_LOGIN_SUCCESS}) !=
           PLAYER_SUCCESS_HISTORY_LIMIT ||
-      player_account_login_history_count(database, 0, PLAYER_LOGIN_FAILURE) !=
+      player_account_login_history_count((PlayerLoginHistoryRequest){
+          .account = account, .outcome = PLAYER_LOGIN_FAILURE}) !=
           PLAYER_FAILURE_HISTORY_LIMIT ||
-      !player_account_login_history(database, 0, PLAYER_LOGIN_SUCCESS, 0,
-                                    &record) ||
-      record.occurred_at != 1005 || strcmp(record.host, "good.example") != 0 ||
-      !player_account_login_record(database, 0, PLAYER_LOGIN_SUCCESS, 3000,
-                                   "latest.example") ||
+      !record.found || record.record.occurred_at != 1005 ||
+      strcmp(record.record.host, "good.example") != 0 ||
+      !player_account_login_record(
+          &(PlayerLoginRecordChange){.account = account,
+                                     .outcome = PLAYER_LOGIN_SUCCESS,
+                                     .occurred_at = 3000,
+                                     .host = "latest.example"}) ||
       player_account_unreported_failed_login_count(database, 0) != 0)
     return -1;
   return 0;
@@ -68,28 +81,36 @@ int main(void) {
   GameObject objects[3] = {0};
   GameDatabase database = {.object_storage = objects, .top = 2, .size = 2};
   DbRef recipients[] = {42, 7, 999};
-  time_t last_login;
 
   game_object_set_type(&database, 0, OBJECT_TYPE_PLAYER);
   game_object_set_type(&database, 1, OBJECT_TYPE_THING);
   if (!player_account_password_hash_set(&database, 0, "hash") ||
       strcmp(player_account_password_hash(&database, 0), "hash") != 0 ||
       player_account_password_hash_set(&database, 1, "invalid") ||
-      player_account_login_record(&database, 0, (PlayerLoginOutcome)99, 0,
-                                  "invalid") ||
-      !player_account_last_login_set(&database, 0, 123456789) ||
-      !player_account_last_login(&database, 0, &last_login) ||
-      last_login != 123456789 ||
+      player_account_login_record(&(PlayerLoginRecordChange){
+          .account = {.database = &database, .player = 0},
+          .outcome = (PlayerLoginOutcome)99,
+          .host = "invalid"}) ||
+      !player_account_last_login_set(&(PlayerLastLoginChange){
+          .account = {.database = &database, .player = 0},
+          .occurred_at = 123456789}) ||
       !player_account_last_site_set(&database, 0, "user@example") ||
       strcmp(player_account_last_site(&database, 0), "user@example") != 0 ||
       check_history(&database) < 0 ||
       !player_account_last_page_set(&database, 0, recipients, 3) ||
       player_account_last_page_count(&database, 0) != 3 ||
-      player_account_last_page_recipient(&database, 0, 1) != 7 ||
+      player_account_last_page_recipient(
+          &(PlayerPageRecipientRequest){
+              .account = {.database = &database, .player = 0}, .position = 1})
+              .recipient != 7 ||
       check_utc_format() < 0) {
     player_account_clear(&database, 0);
     return 1;
   }
+  PlayerLastLoginResult last_login = player_account_last_login(
+      (PlayerAccountRef){.database = &database, .player = 0});
+  if (!last_login.found || last_login.occurred_at != 123456789)
+    return 1;
   player_account_clear(&database, 0);
   if (game_database_object(&database, 0)->account ||
       *player_account_password_hash(&database, 0))

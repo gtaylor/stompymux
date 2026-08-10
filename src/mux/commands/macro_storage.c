@@ -21,22 +21,26 @@ static int macro_player_storage_value(DbRef player) {
 
 MacroSet *macro_registry_item(const MacroRegistry *registry, size_t index) {
   return *(MacroSet *const *)checked_storage_at_const(
-      registry->sets, (size_t)registry->count, sizeof(*registry->sets), index);
+      (const void *)registry->sets, (size_t)registry->count,
+      sizeof(*registry->sets), index);
 }
 
 MacroSet **macro_registry_slot(MacroRegistry *registry, size_t index) {
-  return checked_storage_at(registry->sets, (size_t)registry->capacity,
-                            sizeof(*registry->sets), index);
+  return (MacroSet **)checked_storage_at((void *)registry->sets,
+                                         (size_t)registry->capacity,
+                                         sizeof(*registry->sets), index);
 }
 
 char *macro_string_item(const MacroSet *set, size_t index) {
-  return *(char *const *)checked_storage_at_const(
-      set->string, (size_t)set->macro_count, sizeof(*set->string), index);
+  return *(char *const *)checked_storage_at_const((const void *)set->string,
+                                                  (size_t)set->macro_count,
+                                                  sizeof(*set->string), index);
 }
 
 char **macro_string_slot(MacroSet *set, size_t index) {
-  return checked_storage_at(set->string, (size_t)set->macro_capacity,
-                            sizeof(*set->string), index);
+  return (char **)checked_storage_at((void *)set->string,
+                                     (size_t)set->macro_capacity,
+                                     sizeof(*set->string), index);
 }
 
 char *macro_alias_at(const MacroSet *set, size_t index) {
@@ -62,14 +66,17 @@ void macro_registry_destroy(MacroRegistry *registry) {
       free(macro_string_item(set, (size_t)macro));
     free(set->desc);
     free(set->alias);
-    free(set->string);
+    free((void *)set->string);
     free(set);
   }
-  free(registry->sets);
+  free((void *)registry->sets);
   macro_registry_initialize(registry, channels);
 }
 
-MacroSet *get_macro_set(MacroRegistry *registry, DbRef player, int which) {
+MacroSet *get_macro_set(const MacroSetRequest *request) {
+  MacroRegistry *registry = request->registry;
+  DbRef player = request->player;
+  int which = request->slot;
   struct commac *commac = get_commac(registry->channels, player);
   if (commac == nullptr)
     return nullptr;
@@ -100,12 +107,13 @@ void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 
   if (registry->count >= registry->capacity) {
     registry->capacity += 10;
-    MacroSet **sets = malloc(sizeof(*sets) * (size_t)registry->capacity);
+    MacroSet **sets =
+        (MacroSet **)malloc(sizeof(*sets) * (size_t)registry->capacity);
     for (int index = 0; index < registry->count; index++)
-      *(MacroSet **)checked_storage_at(sets, (size_t)registry->capacity,
+      *(MacroSet **)checked_storage_at((void *)sets, (size_t)registry->capacity,
                                        sizeof(*sets), (size_t)index) =
           macro_registry_item(registry, (size_t)index);
-    free(registry->sets);
+    free((void *)registry->sets);
     registry->sets = sets;
   }
 

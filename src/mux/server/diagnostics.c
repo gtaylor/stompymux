@@ -11,8 +11,7 @@
 
 #include "mux/server/diagnostics.h"
 
-static void diagnostics_print_prefix(const char *file, int line,
-                                     const char *func) {
+static void diagnostics_print_prefix(DiagnosticLocation location) {
   struct timeval tv;
   struct tm tm;
   time_t now;
@@ -23,15 +22,14 @@ static void diagnostics_print_prefix(const char *file, int line,
   localtime_r(&now, &tm);
   gettimeofday(&tv, nullptr);
   (void)fprintf(stderr, "%02d%02d%02d.%08d:%5d %s (%s:%d)] ", tm.tm_hour,
-                tm.tm_min, tm.tm_sec, (int)tv.tv_usec, getpid(), func, file,
-                line);
+                tm.tm_min, tm.tm_sec, (int)tv.tv_usec, getpid(),
+                location.function, location.file, location.line);
 }
 
-void diagnostics_log(const char *file, int line, const char *func,
-                     const char *format, ...) {
+void diagnostics_log(DiagnosticLocation location, const char *format, ...) {
   va_list args;
 
-  diagnostics_print_prefix(file, line, func);
+  diagnostics_print_prefix(location);
   va_start(args, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   (void)vfprintf(stderr, format, args);
@@ -39,16 +37,16 @@ void diagnostics_log(const char *file, int line, const char *func,
   (void)fprintf(stderr, "\n");
 }
 
-[[noreturn]] void diagnostics_assert_failed(const char *file, int line,
-                                            const char *func,
-                                            const char *expr) {
-  diagnostics_print_prefix(file, line, func);
-  (void)fprintf(stderr, "failed assertion '%s'\n", expr);
+[[noreturn]] void diagnostics_assert_failed(DiagnosticLocation location,
+                                            const char *expression) {
+  diagnostics_print_prefix(location);
+  (void)fprintf(stderr, "failed assertion '%s'\n", expression);
   abort();
 }
 
-void diagnostics_perror(const char *file, int line, const char *func,
-                        const char *expr, int saved_errno) {
-  diagnostics_print_prefix(file, line, func);
-  (void)fprintf(stderr, "'%s' failed with '%s'\n", expr, strerror(saved_errno));
+void diagnostics_perror(DiagnosticLocation location, const char *expression,
+                        int saved_errno) {
+  diagnostics_print_prefix(location);
+  (void)fprintf(stderr, "'%s' failed with '%s'\n", expression,
+                strerror(saved_errno));
 }

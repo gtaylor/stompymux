@@ -27,8 +27,10 @@ void gamedb_log_failure(ServerLog *log, const char *stage, const char *path,
   const char *detail;
 
   detail = sqlite ? sqlite3_errmsg(sqlite) : strerror(errno);
-  log_error(log, LOG_ALWAYS, "GDB", "FAIL", "SQLite %s for %s: %s", stage, path,
-            detail);
+  log_error(
+      (LogEntry){
+          .log = log, .key = LOG_ALWAYS, .primary = "GDB", .secondary = "FAIL"},
+      "SQLite %s for %s: %s", stage, path, detail);
 }
 
 const NativeColumn *gamedb_native_column_at(size_t index) {
@@ -43,9 +45,11 @@ static void gamedb_log_extension_failure(ServerLog *log, const char *operation,
   const char *detail;
 
   detail = sqlite ? sqlite3_errmsg(sqlite) : "extension callback failed";
-  log_error(log, LOG_ALWAYS, "GDB", "FAIL",
-            "SQLite persistence extension %s failed while %s %s: %s", name,
-            operation, path, detail);
+  log_error(
+      (LogEntry){
+          .log = log, .key = LOG_ALWAYS, .primary = "GDB", .secondary = "FAIL"},
+      "SQLite persistence extension %s failed while %s %s: %s", name, operation,
+      path, detail);
 }
 
 /* Restore every registered subsystem while its snapshot connection is open. */
@@ -114,8 +118,11 @@ int gamedb_bind_int(sqlite3_stmt *statement, int index, long value) {
 }
 
 /* Select the configured SQLite file for a normal or exceptional dump. */
-int gamedb_target_path(const PersistenceContext *context, char *target,
-                       size_t target_size, int dump_type) {
+int gamedb_target_path(const GamedbTargetPathRequest *request) {
+  const PersistenceContext *context = request->context;
+  char *target = request->target;
+  size_t target_size = request->target_size;
+  int dump_type = request->dump_type;
   int length;
 
   switch (dump_type) {

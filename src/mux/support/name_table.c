@@ -8,6 +8,7 @@
 #include "mux/commands/command.h"
 #include "mux/objects/flags.h"
 #include "mux/server/configuration.h"
+#include "mux/server/configuration_interpreter.h"
 #include "mux/server/game.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
@@ -119,19 +120,18 @@ void name_table_display(EvaluationContext *evaluation,
  * * name_table_interpret: Print values for flags defined in name table.
  */
 
-void name_table_interpret(EvaluationContext *evaluation,
-                          const ServerConfiguration *configuration,
-                          DbRef player, NameTable *ntab, int flagword,
-                          const char *prefix, const char *true_text,
-                          const char *false_text) {
+void name_table_interpret(const NameTableInterpretRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  const ServerConfiguration *configuration = request->configuration;
+  DbRef player = request->player;
   char *buf, *bp;
 
   buf = alloc_lbuf("name_table_interpret");
   bp = buf;
-  safe_str(prefix, buf, &bp);
-  size_t count = name_table_count(ntab);
+  safe_str(request->prefix, buf, &bp);
+  size_t count = name_table_count(request->table);
   for (size_t index = 0; index < count; index++) {
-    NameTable *nt = name_table_entry_at(ntab, count, index);
+    NameTable *nt = name_table_entry_at(request->table, count, index);
     if (is_god(evaluation->world->database, player) ||
         check_access(evaluation->world->database, configuration, player,
                      nt->perm)) {
@@ -139,10 +139,10 @@ void name_table_interpret(EvaluationContext *evaluation,
       safe_str(nt->name, buf, &bp);
       safe_str("...", buf, &bp);
       const char *text;
-      if ((flagword & nt->flag) != 0)
-        text = true_text;
+      if ((request->flags & nt->flag) != 0)
+        text = request->true_text;
       else
-        text = false_text;
+        text = request->false_text;
       safe_str(text, buf, &bp);
       if (index + 1 < count)
         safe_chr(';', buf, &bp);
@@ -186,8 +186,9 @@ void name_table_list_set(EvaluationContext *evaluation,
   free_lbuf(buf);
 }
 
-int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd,
-                   ConfigurationContext *context) {
+int cf_ntab_access(const ConfigurationCall *call) {
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   char *ap;
   size_t length = strlen(str);
   size_t offset = 0;
@@ -205,15 +206,18 @@ int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd,
              str, length, sizeof(char), offset)))
     offset++;
   ap = checked_storage_at(str, length + 1, sizeof(char), offset);
-  NameTable *table = vp;
+  NameTable *table = call->value;
   size_t count = name_table_count(table);
   for (size_t index = 0; index < count; index++) {
     NameTable *np = name_table_entry_at(table, count, index);
     if (minmatch(str, np->name, np->minlen)) {
-      return configuration_modify_bits(&(np->perm), ap, extra, player, cmd,
-                                       context);
+      ConfigurationCall modify_call = *call;
+      modify_call.value = &np->perm;
+      modify_call.text = ap;
+      return configuration_modify_bits(&modify_call);
     }
   }
-  configuration_log_not_found(context, player, cmd, "Entry", str);
+  configuration_log_not_found(context, call->player, call->command, "Entry",
+                              str);
   return -1;
 }

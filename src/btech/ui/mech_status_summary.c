@@ -14,6 +14,7 @@
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "map_conditions_api.h"
+#include "map_coordinates.h"
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
@@ -94,13 +95,15 @@ void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech) {
       float range = mech_range_to(mech, tempMech);
       if (mech_los_check(mech, tempMech, mech_position_x(tempMech),
                          mech_position_y(tempMech), range)) {
-        (void)snprintf(
-            buff, sizeof(buff),
-            "Target: %s\t   Range: %.1f hexes   Bearing: %d deg\n",
-            mech_to_mech_display_id(mech, tempMech).text, (double)range,
-            FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
-                        mech_position_real_x(tempMech),
-                        mech_position_real_y(tempMech)));
+        (void)snprintf(buff, sizeof(buff),
+                       "Target: %s\t   Range: %.1f hexes   Bearing: %d deg\n",
+                       mech_to_mech_display_id(mech, tempMech).text,
+                       (double)range,
+                       map_bearing(&(MapRealSegment){
+                           .start = {.x = mech_position_real_x(mech),
+                                     .y = mech_position_real_y(mech)},
+                           .end = {.x = mech_position_real_x(tempMech),
+                                   .y = mech_position_real_y(tempMech)}}));
         mecha_notify(evaluation, player, buff);
         arc = InWeaponArc(mech, mech_position_real_x(tempMech),
                           mech_position_real_y(tempMech));
@@ -168,7 +171,7 @@ void show_miscbrands(Mech *mech, DbRef player) {
 }
 
 void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                        int own, int usex) {
+                        bool use_model_reference) {
   Mech *tempMech = nullptr;
   BtechContext *context = mech_context(mech);
   BattleMap *map = btech_context_find_object(context, mech_map_dbref(mech));
@@ -178,14 +181,16 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   char move_type[50] = {0};
 
   strlcpy(mech_name,
-          usex ? mech_model_name(mech)
-               : btech_attribute_read(context->database, mech_dbref(mech),
-                                      A_MECHNAME, (char[LBUF_SIZE]){0}),
+          use_model_reference
+              ? mech_model_name(mech)
+              : btech_attribute_read(context->database, mech_dbref(mech),
+                                     A_MECHNAME, (char[LBUF_SIZE]){0}),
           sizeof(mech_name));
   strlcpy(mech_ref,
-          usex ? mech_model_reference(mech)
-               : btech_attribute_read(context->database, mech_dbref(mech),
-                                      A_MECHTYPE, (char[LBUF_SIZE]){0}),
+          use_model_reference
+              ? mech_model_reference(mech)
+              : btech_attribute_read(context->database, mech_dbref(mech),
+                                     A_MECHTYPE, (char[LBUF_SIZE]){0}),
           sizeof(mech_ref));
 
   switch (mech_class(mech)) {
@@ -222,7 +227,8 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                    mech_maximum_battle_suits(mech));
     mecha_notify(evaluation, player, buff);
 
-    Mech_ShowFlags(evaluation, player, mech, 0, 0);
+    Mech_ShowFlags(&(MechFlagDisplayRequest){
+        .evaluation = evaluation, .player = player, .mech = mech});
 
     if (mech_is_jumping(mech)) {
       (void)snprintf(buff, sizeof(buff), "JUMPING --> %3d,%3d",
@@ -257,7 +263,8 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
           mech_pilot_status(mech));
       mecha_notify(evaluation, player, buff);
     }
-    Mech_ShowFlags(evaluation, player, mech, 0, 0);
+    Mech_ShowFlags(&(MechFlagDisplayRequest){
+        .evaluation = evaluation, .player = player, .mech = mech});
     if (!mech_is_jumping(mech) && !mech_is_fallen(mech) &&
         mech_is_started(mech) && mech_charge_target_dbref(mech) != -1) {
       tempMech =
@@ -359,7 +366,8 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       }
     if (mech_is_flying_type(mech) && mech_is_landed(mech))
       mecha_notify(evaluation, player, "LANDED");
-    Mech_ShowFlags(evaluation, player, mech, 0, 0);
+    Mech_ShowFlags(&(MechFlagDisplayRequest){
+        .evaluation = evaluation, .player = player, .mech = mech});
   }
 }
 
@@ -461,8 +469,11 @@ static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
   for (counter = start; counter < minheat; counter++) {
     btech_text_builder_append_character(&text,
                                         heat_fill_character(fillchar, state));
-    if (heat && !--heat)
-      state = 0;
+    if (heat) {
+      --heat;
+      if (!heat)
+        state = 0;
+    }
   }
   if (state)
     state++;
@@ -471,8 +482,11 @@ static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
   for (; counter < minheat + HEAT_LEVEL_BGREEN; counter++) {
     btech_text_builder_append_character(&text,
                                         heat_fill_character(fillchar, state));
-    if (heat && !--heat)
-      state = 0;
+    if (heat) {
+      --heat;
+      if (!heat)
+        state = 0;
+    }
   }
   if (state)
     state++;
@@ -481,8 +495,11 @@ static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
   for (; counter < minheat + HEAT_LEVEL_LYELLOW; counter++) {
     btech_text_builder_append_character(&text,
                                         heat_fill_character(fillchar, state));
-    if (heat && !--heat)
-      state = 0;
+    if (heat) {
+      --heat;
+      if (!heat)
+        state = 0;
+    }
   }
   if (state)
     state++;
@@ -492,8 +509,11 @@ static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
   for (; counter < minheat + HEAT_LEVEL_BYELLOW; counter++) {
     btech_text_builder_append_character(&text,
                                         heat_fill_character(fillchar, state));
-    if (heat && !--heat)
-      state = 0;
+    if (heat) {
+      --heat;
+      if (!heat)
+        state = 0;
+    }
   }
   if (state)
     state++;
@@ -502,8 +522,11 @@ static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
   for (; counter < minheat + HEAT_LEVEL_LRED; counter++) {
     btech_text_builder_append_character(&text,
                                         heat_fill_character(fillchar, state));
-    if (heat && !--heat)
-      state = 0;
+    if (heat) {
+      --heat;
+      if (!heat)
+        state = 0;
+    }
   }
   if (state)
     state++;
@@ -512,8 +535,11 @@ static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
   for (; counter < minheat + HEAT_LEVEL_BRED; counter++) {
     btech_text_builder_append_character(&text,
                                         heat_fill_character(fillchar, state));
-    if (heat && !--heat)
-      state = 0;
+    if (heat) {
+      --heat;
+      if (!heat)
+        state = 0;
+    }
   }
   if (state)
     state++;
@@ -522,8 +548,11 @@ static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
   for (; counter < minheat + HEAT_LEVEL_TOP; counter++) {
     btech_text_builder_append_character(&text,
                                         heat_fill_character(fillchar, state));
-    if (heat && !--heat)
-      state = 0;
+    if (heat) {
+      --heat;
+      if (!heat)
+        state = 0;
+    }
   }
   btech_text_builder_append(&text, "[fg=white bold]|[reset]");
   return heatstr;
@@ -639,7 +668,7 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                      mech_desired_heading_degrees(mech));
       mecha_notify(evaluation, player, buff);
     }
-    mech_scan_show_turret_facing(evaluation, player, 0, mech);
+    mech_scan_show_turret_facing(evaluation, player, mech);
     if (mech_uses_heat(mech)) {
       notify_printf(evaluation, player,
                     "Excess Heat:%3d deg  Heat Production:     %3d deg   Heat "
@@ -675,9 +704,11 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   // Show our locked target info (hex or unit).
   DisplayTarget(evaluation, player, mech);
 
-  if (mech_carried_dbref(mech) > 0)
-    if ((tempMech = btech_context_get_mech(mech_context(mech),
-                                           mech_carried_dbref(mech))))
+  if (mech_carried_dbref(mech) > 0) {
+    tempMech =
+        btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
+    if (tempMech)
       notify_printf(evaluation, player, "Towing %s.",
                     mech_to_mech_display_id(mech, tempMech).text);
+  }
 }

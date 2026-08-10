@@ -147,8 +147,12 @@ bool mux_server_create(MuxServer *server) {
       .record_players = &server->record_players,
   };
   bool command_context_ready = command_context_initialize(
-      &server->background_command, &server->command_runtime, server->btech,
-      &server->log, NOTHING, NOTHING, nullptr, false);
+      &(CommandContextInitialization){.context = &server->background_command,
+                                      .runtime = &server->command_runtime,
+                                      .btech = server->btech,
+                                      .log = &server->log,
+                                      .player = NOTHING,
+                                      .enactor = NOTHING});
   if (!command_context_ready)
     goto fail;
   persistence_context_initialize(

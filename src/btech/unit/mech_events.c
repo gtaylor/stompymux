@@ -365,7 +365,8 @@ void mech_plos_event(MuxEvent *e) {
 
   if (!mech_is_started(mech))
     return;
-  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
+  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  if (!map)
     return;
   mech_event_schedule(mech, EVENT_PLOS, mech_plos_event, PLOS_TICK, 0);
   if (!((mech)->rd.can_see) && !(((mech)->rd.specials) & AA_TECH))
@@ -384,9 +385,19 @@ void mech_plos_event(MuxEvent *e) {
           continue;
         range = mech_range_to(mech, target);
         ((mech)->rd.can_see)++;
-        los_flags = mech_sensor_visibility_update(
-            mech, los_flags, range, -1, -1, target, mapvis, maplight,
-            battle_map_cloud_base(map), 1, 0);
+        MechSensorVisibilityRequest request = {
+            .observer = mech,
+            .los_flags = los_flags,
+            .range = range,
+            .x = -1,
+            .y = -1,
+            .target = target,
+            .map_visibility = mapvis,
+            .map_light = maplight,
+            .cloud_base = battle_map_cloud_base(map),
+            .notification_level = 1,
+        };
+        los_flags = mech_sensor_visibility_update(&request);
         battle_map_los_flags_set(map, mech_map_slot(mech), i, los_flags);
       }
   }
@@ -414,11 +425,15 @@ void aero_move_event(MuxEvent *e) {
     if (mech_is_dropship(mech) &&
         ((mech)->pd.z) <= (mech_position_surface_elevation(mech) + 5) &&
         ((mech->xcode.context->events->tick / WEAPON_TICK) % 10) == 0)
-      DS_BlastNearbyMechsAndTrees(
-          mech, "You are hit by the DropShip's plasma exhaust!",
-          "is hit directly by DropShip's exhaust!",
-          "You are hit by the DropShip's plasma exhaust!",
-          "is hit by DropShip's exhaust!", "light up and burn.", 8);
+      dropship_exhaust_blast(&(DropshipExhaustBlastRequest){
+          .dropship = mech,
+          .direct_message = "You are hit by the DropShip's plasma exhaust!",
+          .direct_observer_message = "is hit directly by DropShip's exhaust!",
+          .nearby_message = "You are hit by the DropShip's plasma exhaust!",
+          .nearby_observer_message = "is hit by DropShip's exhaust!",
+          .tree_message = "light up and burn.",
+          .damage = 8,
+      });
     mech_event_schedule(mech, EVENT_MOVE, aero_move_event, MOVE_TICK, 0);
   } else if (mech_is_landed(mech) && !mech_is_fallen(mech) &&
              mech_is_rolling_aerospace_unit(mech)) {
@@ -478,14 +493,17 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
   int wWeapNum =
       clamp_intptr_to_int((intptr_t)objEvent->data2); /* weapon number */
   int wSect, wSlot, wWeapStatus, wWeapIdx;
-  int ammoLoc, ammoCrit, ammoLoc1, ammoCrit1;
   int wRoll = 0;
   int wRollNeeded = 0;
 
   if (mech_pilot_is_unconscious(objMech) || !mech_is_started(objMech))
     return;
 
-  wWeapStatus = FindWeaponNumberOnMech(objMech, wWeapNum, &wSect, &wSlot);
+  WeaponNumberLookupResult lookup = weapon_number_find(
+      &(WeaponNumberLookupRequest){.mech = objMech, .number = wWeapNum});
+  wWeapStatus = lookup.value;
+  wSect = lookup.slot.section;
+  wSlot = lookup.slot.critical;
 
   if (wWeapStatus ==
       TIC_NUM_DESTROYED) /* return if the weapon has been destroyed */
@@ -493,9 +511,15 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
 
   wWeapIdx = FindWeaponIndex(objMech, wWeapNum);
 
-  if (!FindAndCheckAmmo(objMech, wWeapIdx, wSect, wSlot, &ammoLoc, &ammoCrit,
-                        &ammoLoc1, &ammoCrit1, 0)) {
-    mech_critical_temporary_failure_set(objMech, wSect, wSlot, 0);
+  AmmunitionCheckResult ammunition = ammunition_check(&(AmmunitionCheckRequest){
+      .mech = objMech,
+      .weapon_index = wWeapIdx,
+      .weapon = {.section = wSect, .critical = wSlot}});
+  if (!ammunition.available) {
+    mech_critical_temporary_failure_set(
+        &(CriticalSlotFailureSet){.mech = objMech,
+                                  .slot = {.section = wSect, .critical = wSlot},
+                                  .failure = 0});
 
     mech_printf(objMech, MECHALL,
                 "You finish bouncing around and realize you no longer have "
@@ -528,14 +552,23 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
     }
   }
 
-  mech_critical_temporary_failure_set(objMech, wSect, wSlot, 0);
+  mech_critical_temporary_failure_set(
+      &(CriticalSlotFailureSet){.mech = objMech,
+                                .slot = {.section = wSect, .critical = wSlot},
+                                .failure = 0});
   mech_printf(objMech, MECHALL, "You manage to clear the jam on your %s!",
               get_parts_long_name(objMech->xcode.context,
                                   weapon_equipment_index(wWeapIdx), 0));
   mech_los_broadcast(objMech, "ejects a mangled shell!");
 
-  mech_ammunition_decrement(objMech, wWeapNum, wSect, wSlot, ammoLoc, ammoCrit,
-                            ammoLoc1, ammoCrit1, 0);
+  mech_ammunition_decrement(&(AmmunitionDecrementRequest){
+      .mech = objMech,
+      .weapon_index = wWeapNum,
+      .weapon = {.section = wSect, .critical = wSlot},
+      .primary_ammunition = ammunition.primary,
+      .secondary_ammunition = ammunition.secondary,
+      .gatling_shots = 0,
+  });
 }
 
 void check_stagger_event(MuxEvent *event) {

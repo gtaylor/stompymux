@@ -79,7 +79,7 @@ void mux_event_scheduler_destroy(MuxEventScheduler *scheduler) {
     next = event->next;
     free(event);
   }
-  free(scheduler->first_by_type);
+  free((void *)scheduler->first_by_type);
   mux_event_scheduler_initialize(scheduler);
 }
 
@@ -97,9 +97,9 @@ static void mux_event_delete(MuxEvent *);
 static MuxEvent **mux_event_type_slot(MuxEventScheduler *scheduler, int type) {
   if (type < 0 || type > scheduler->last_type)
     abort();
-  return checked_storage_at(scheduler->first_by_type,
-                            (size_t)scheduler->last_type + 1,
-                            sizeof(*scheduler->first_by_type), (size_t)type);
+  return (MuxEvent **)checked_storage_at(
+      (void *)scheduler->first_by_type, (size_t)scheduler->last_type + 1,
+      sizeof(*scheduler->first_by_type), (size_t)type);
 }
 
 static MuxEvent *mux_event_type_head(MuxEventScheduler *scheduler, int type) {
@@ -157,14 +157,14 @@ static void mux_event_type_list_remove(MuxEvent *e) {
   }
 }
 
-#define is_zombie(e) (e->flags & FLAG_ZOMBIE)
+#define is_zombie(e) ((e)->flags & FLAG_ZOMBIE)
 #define LoopType(type, var)                                                    \
-  for (var = mux_event_type_head(scheduler, type); var;                        \
-       var = var->next_in_type)                                                \
+  for ((var) = mux_event_type_head(scheduler, type); var;                      \
+       (var) = (var)->next_in_type)                                            \
     if (!is_zombie(var))
 
 #define LoopEvent(var)                                                         \
-  for (var = mux_event_list; var; var = var->next_in_main)                     \
+  for ((var) = mux_event_list; var; (var) = (var)->next_in_main)               \
     if (!is_zombie(var))
 
 static void mux_event_wakeup(MuxTimer *timer, void *arg) {
@@ -178,8 +178,14 @@ static void mux_event_wakeup(MuxTimer *timer, void *arg) {
   mux_event_delete(e);
 }
 
-void mux_event_add(MuxEventScheduler *scheduler, int time, int flags, int type,
-                   void (*func)(MuxEvent *), void *data, void *data2) {
+void mux_event_add(const MuxEventRequest *request) {
+  MuxEventScheduler *scheduler = request->scheduler;
+  int time = request->delay;
+  int flags = request->flags;
+  int type = request->type;
+  MuxEventCallback func = request->callback;
+  void *data = request->data;
+  void *data2 = request->secondary_data;
   MuxEvent *e = (MuxEvent *)0xDEADBEEF;
   int i;
 
@@ -190,8 +196,8 @@ void mux_event_add(MuxEventScheduler *scheduler, int time, int flags, int type,
   /* Event type heads grow with the highest registered type. */
   if (type > last_muxevent_type) {
     int previous_last_type = last_muxevent_type;
-    MuxEvent **heads =
-        realloc(scheduler->first_by_type, sizeof(*heads) * (size_t)(type + 1));
+    MuxEvent **heads = (MuxEvent **)realloc(
+        (void *)scheduler->first_by_type, sizeof(*heads) * (size_t)(type + 1));
     if (heads == nullptr)
       return;
     scheduler->first_by_type = heads;
@@ -428,8 +434,13 @@ int mux_event_last_type_data(MuxEventScheduler *scheduler, int type,
 
   if (type > last_muxevent_type)
     return last;
-  LoopType(type, e) if (e->data == data) if ((t = (e->tick - scheduler->tick)) >
-                                             last) last = t;
+  for (e = mux_event_type_head(scheduler, type); e; e = e->next_in_type) {
+    if (is_zombie(e) || e->data != data)
+      continue;
+    t = e->tick - scheduler->tick;
+    if (t > last)
+      last = t;
+  }
   return last;
 }
 

@@ -71,7 +71,21 @@ static void vehicle_burn_event(MuxEvent *objEvent) {
   mech_printf(objMech, MECHALL,
               "[fg=red bold]Your %s takes damage from the fire![reset]",
               strLocName);
-  DamageMech(objMech, objMech, 0, -1, wLoc, 0, 0, wDamRoll, 0, 0, 0, -1, 0, 1);
+  mech_damage_apply(&(MechDamageRequest){.target = objMech,
+                                         .attacker = objMech,
+                                         .line_of_sight = 0,
+                                         .attack_pilot = -1,
+                                         .hit_location = wLoc,
+                                         .rear = 0,
+                                         .critical = 0,
+                                         .armor_damage = wDamRoll,
+                                         .internal_damage = 0,
+                                         .transfer = MECH_DAMAGE_NORMAL,
+                                         .cause = 0,
+                                         .base_to_hit = 0,
+                                         .weapon_index = -1,
+                                         .ammunition_mode = 0,
+                                         .ignore_swarmers = 1});
 
   /*
    * Only continue the event if the damage was greater than one
@@ -106,8 +120,21 @@ void vehicle_fire_start(Mech *objMech, Mech *objAttacker) {
                            mech_movement_type(objMech));
       mech_printf(objMech, MECHALL, "Your %s catches on fire!", strLocName);
 
-      DamageMech(objMech, objAttacker, 0, -1, wIter, 0, 0, wDamage, 0, 0, 0, -1,
-                 0, 1);
+      mech_damage_apply(&(MechDamageRequest){.target = objMech,
+                                             .attacker = objAttacker,
+                                             .line_of_sight = 0,
+                                             .attack_pilot = -1,
+                                             .hit_location = wIter,
+                                             .rear = 0,
+                                             .critical = 0,
+                                             .armor_damage = wDamage,
+                                             .internal_damage = 0,
+                                             .transfer = MECH_DAMAGE_NORMAL,
+                                             .cause = 0,
+                                             .base_to_hit = 0,
+                                             .weapon_index = -1,
+                                             .ammunition_mode = 0,
+                                             .ignore_swarmers = 1});
       mech_event_schedule(objMech, EVENT_VEHICLEBURN, vehicle_burn_event,
                           VEHICLEBURN_TICK, wIter);
     }
@@ -179,8 +206,13 @@ void mech_inferno_extinguish_in_water(Mech *mech) {
 
   /* According to FASA, the inferno jelly should keep on burning on the
    * water hex. We'll just add some steam (smoke) instead. */
-  add_decoration(map, mech_position_x(mech), mech_position_y(mech), TYPE_SMOKE,
-                 SMOKE, 120);
+  add_decoration(&(MapDecorationRequest){
+      .map = map,
+      .position = {.x = mech_position_x(mech), .y = mech_position_y(mech)},
+      .type = TYPE_SMOKE,
+      .terrain_marker = SMOKE,
+      .duration = 120,
+  });
 }
 
 void vehicle_fire_check(Mech *objMech, int fromHexFire) {
@@ -246,8 +278,21 @@ void vehicle_fire_check(Mech *objMech, int fromHexFire) {
       wDamage = btech_random_range_int(mech_context(objMech), 1, 6);
 
       if (mech_section_internal(objMech, wIter))
-        DamageMech(objMech, objMech, 0, -1, wIter, 0, 0, wDamage, 0, 0, 0, -1,
-                   0, 1);
+        mech_damage_apply(&(MechDamageRequest){.target = objMech,
+                                               .attacker = objMech,
+                                               .line_of_sight = 0,
+                                               .attack_pilot = -1,
+                                               .hit_location = wIter,
+                                               .rear = 0,
+                                               .critical = 0,
+                                               .armor_damage = wDamage,
+                                               .internal_damage = 0,
+                                               .transfer = MECH_DAMAGE_NORMAL,
+                                               .cause = 0,
+                                               .base_to_hit = 0,
+                                               .weapon_index = -1,
+                                               .ammunition_mode = 0,
+                                               .ignore_swarmers = 1});
     }
     break;
 

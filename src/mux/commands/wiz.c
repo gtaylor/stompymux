@@ -98,7 +98,10 @@ void do_teleport(CommandInvocation *invocation) {
 
   if (!string_compare(configuration, to, "home") &&
       typeof_obj(evaluation->world->database, victim) != OBJECT_TYPE_EXIT) {
-    (void)move_via_teleport(evaluation, victim, HOME, cause, 0);
+    (void)move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
+                                                     .object = victim,
+                                                     .destination = HOME,
+                                                     .cause = cause});
     return;
   }
   /*
@@ -159,9 +162,12 @@ void do_teleport(CommandInvocation *invocation) {
       if (player != victim)
         notify_checked(evaluation, player, player, "Permission denied.",
                        MSG_ME);
-      notify_lock_failure(evaluation, &lock, &result,
-                          "You can't teleport there!", nullptr,
-                          LUA_EVENT_TELEPORT_DESTINATION_FAIL);
+      notify_lock_failure(&(LockFailureNotification){
+          .evaluation = evaluation,
+          .invocation = &lock,
+          .result = &result,
+          .enactor_default = "You can't teleport there!",
+          .event = LUA_EVENT_TELEPORT_DESTINATION_FAIL});
       return;
     }
     /*
@@ -187,8 +193,12 @@ void do_teleport(CommandInvocation *invocation) {
       game_object_set_exits(evaluation->world->database, victim, destination);
 
       notify_checked(evaluation, player, player, "Exit teleported.", MSG_ME);
-    } else if (move_via_teleport(evaluation, victim, destination, cause,
-                                 hush)) {
+    } else if (move_via_teleport(
+                   &(ObjectMovementRequest){.evaluation = evaluation,
+                                            .object = victim,
+                                            .destination = destination,
+                                            .cause = cause,
+                                            .hush = hush})) {
       if (player != victim)
         notify_checked(evaluation, player, player, "Teleported.", MSG_ME);
     }
@@ -210,7 +220,10 @@ void do_force_prefixed(CommandInvocation *invocation) {
   char *command = invocation->first;
   char *cp;
 
-  cp = parse_to(invocation->context->world->configuration, &command, ' ', 0);
+  cp = parse_to(&(CommandParseRequest){
+      .configuration = invocation->context->world->configuration,
+      .source = &command,
+      .delimiter = ' '});
   if (!command)
     return;
   const size_t command_length = strlen(command);
@@ -239,15 +252,19 @@ void do_force(CommandInvocation *invocation) {
   char *command = invocation->second;
   DbRef victim;
 
-  if ((victim = match_controlled(&invocation->context->match, player, what)) ==
-      NOTHING)
+  victim = match_controlled(&invocation->context->match, player, what);
+  if (victim == NOTHING)
     return;
 
   /*
    * force victim to do command
    */
 
-  wait_que(invocation->context->runtime->commands, victim, player, 0, command);
+  wait_que(
+      &(QueuedCommandRequest){.queue = invocation->context->runtime->commands,
+                              .player = victim,
+                              .cause = player,
+                              .command = command});
 }
 
 void do_newpassword(CommandInvocation *invocation) {
@@ -261,8 +278,8 @@ void do_newpassword(CommandInvocation *invocation) {
   char hashed_password[crypto_pwhash_STRBYTES];
   char *buf;
 
-  if ((victim = lookup_player(invocation->context->world, player, name, 0)) ==
-      NOTHING) {
+  victim = lookup_player(invocation->context->world, player, name, 0);
+  if (victim == NOTHING) {
     notify_checked(evaluation, player, player, "No such player.", MSG_ME);
     return;
   }
@@ -335,7 +352,8 @@ void do_boot(CommandInvocation *invocation) {
     match_neighbor(&invocation->context->match);
     match_absolute(&invocation->context->match);
     match_player(&invocation->context->match);
-    if ((victim = noisy_match_result(&invocation->context->match)) == NOTHING)
+    victim = noisy_match_result(&invocation->context->match);
+    if (victim == NOTHING)
       return;
 
     if (is_god(evaluation->world->database, victim)) {

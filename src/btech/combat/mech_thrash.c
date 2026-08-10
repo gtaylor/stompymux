@@ -171,14 +171,42 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
 
       while (tempDamage > 0) {
         if (tempDamage > 5) {
-          DamageMech(target, mech, 1, mech_pilot_dbref(mech),
-                     btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1),
-                     0, 0, 5, 0, -1, 0, -1, 0, 1);
+          mech_damage_apply(&(MechDamageRequest){
+              .target = target,
+              .attacker = mech,
+              .line_of_sight = 1,
+              .attack_pilot = mech_pilot_dbref(mech),
+              .hit_location =
+                  btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1),
+              .rear = 0,
+              .critical = 0,
+              .armor_damage = 5,
+              .internal_damage = 0,
+              .transfer = MECH_DAMAGE_NORMAL,
+              .cause = -1,
+              .base_to_hit = 0,
+              .weapon_index = -1,
+              .ammunition_mode = 0,
+              .ignore_swarmers = 1});
           tempDamage -= 5;
         } else {
-          DamageMech(target, mech, 1, mech_pilot_dbref(mech),
-                     btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1),
-                     0, 0, tempDamage, 0, -1, 0, -1, 0, 1);
+          mech_damage_apply(&(MechDamageRequest){
+              .target = target,
+              .attacker = mech,
+              .line_of_sight = 1,
+              .attack_pilot = mech_pilot_dbref(mech),
+              .hit_location =
+                  btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1),
+              .rear = 0,
+              .critical = 0,
+              .armor_damage = tempDamage,
+              .internal_damage = 0,
+              .transfer = MECH_DAMAGE_NORMAL,
+              .cause = -1,
+              .base_to_hit = 0,
+              .weapon_index = -1,
+              .ammunition_mode = 0,
+              .ignore_swarmers = 1});
           tempDamage = 0;
         }
       }
@@ -191,7 +219,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
    * roll. if you miss, you take 1 level falling damage to emulate hitting
    * yourself */
 
-  if (!MadePilotSkillRoll_Advanced(mech, 0, 0)) {
+  if (!mech_pilot_skill_roll(&(PilotSkillRollRequest){.mech = mech})) {
     mech_fall(mech, 1, 1);
   }
 

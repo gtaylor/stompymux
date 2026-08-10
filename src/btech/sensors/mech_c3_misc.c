@@ -7,6 +7,7 @@
 #include "btech_channel.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "map_los_api.h"
 #include "map_los_types.h"
 #include "map_terrain.h"
@@ -316,7 +317,8 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
      * If I don't see it, let's see if someone else in the network does
      */
     if (wSeeTarget != TARG_LOS_CLEAR)
-      wC3SeeTarget = mech_network_visibility(mech, otherMech, tIsC3);
+      wC3SeeTarget = mech_network_visibility(&(MechNetworkVisibilityRequest){
+          .observer = mech, .target = otherMech, .is_c3 = tIsC3});
 
     /* If noone sees it, we continue */
     if (!wSeeTarget && !wC3SeeTarget)
@@ -337,9 +339,11 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
                                        (char[LBUF_SIZE]){0});
     }
 
-    bearing = FindBearing(
-        mech_position_real_x(mech), mech_position_real_y(mech),
-        mech_position_real_x(otherMech), mech_position_real_y(otherMech));
+    bearing = map_bearing(
+        &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                    .y = mech_position_real_y(mech)},
+                          .end = {.x = mech_position_real_x(otherMech),
+                                  .y = mech_position_real_y(otherMech)}});
     strlcpy(move_type, GetMoveTypeID(mech_movement_type(otherMech)),
             sizeof(move_type));
 
@@ -438,9 +442,11 @@ void mech_network_show_status(DbRef player, Mech *mech, bool tIsC3) {
       continue;
 
     range = mech_range_to(mech, otherMech);
-    bearing = FindBearing(
-        mech_position_real_x(mech), mech_position_real_y(mech),
-        mech_position_real_x(otherMech), mech_position_real_y(otherMech));
+    bearing = map_bearing(
+        &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                    .y = mech_position_real_y(mech)},
+                          .end = {.x = mech_position_real_x(otherMech),
+                                  .y = mech_position_real_y(otherMech)}});
 
     strlcpy(move_type, GetMoveTypeID(mech_movement_type(otherMech)),
             sizeof(move_type));
@@ -469,7 +475,10 @@ void mech_network_show_status(DbRef player, Mech *mech, bool tIsC3) {
                 "End %s Network Status", tIsC3 ? "C3" : "C3i");
 }
 
-int mech_network_visibility(Mech *mech, Mech *mechTarget, bool tIsC3) {
+int mech_network_visibility(const MechNetworkVisibilityRequest *request) {
+  Mech *mech = request->observer;
+  Mech *mechTarget = request->target;
+  const bool tIsC3 = request->is_c3;
   int los = TARG_LOS_NONE;
   float range = 0.0;
   int i;
@@ -595,9 +604,12 @@ float mech_network_range_with_members(Mech *mech, Mech *mechTarget,
       hexZ = ZSCALE * (float)target_hex_z;
       MapCoordToRealCoord(mapX, mapY, &hexX, &hexY);
 
-      c3Range = FindRange(mech_position_real_x(otherMech),
-                          mech_position_real_y(otherMech),
-                          mech_position_real_z(otherMech), hexX, hexY, hexZ);
+      c3Range = map_spatial_range(&(MapSpatialSegment){
+          .start = {.x = mech_position_real_x(otherMech),
+                    .y = mech_position_real_y(otherMech),
+                    .z = mech_position_real_z(otherMech)},
+          .end = {.x = hexX, .y = hexY, .z = hexZ},
+      });
       inLOS = mech_los_check_unblocked(otherMech, nullptr, mapX, mapY, c3Range);
     } else {
       continue;

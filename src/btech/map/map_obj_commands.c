@@ -1,6 +1,7 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "map.h"
+#include "map_coordinates.h"
 #include "map_obj_api.h"
 #include "map_obj_internal.h"
 
@@ -20,8 +21,9 @@
 static const char *map_type_name(int type) {
   if (type < 0)
     abort();
-  const char *const *name = checked_storage_at_const(
-      map_types, NUM_MAPOBJTYPES + 1, sizeof(*map_types), (size_t)type);
+  const char *const *name = (const char *const *)checked_storage_at_const(
+      (const void *)map_types, NUM_MAPOBJTYPES + 1, sizeof(*map_types),
+      (size_t)type);
   return *name;
 }
 
@@ -42,7 +44,7 @@ void list_mapobjs(DbRef player, BattleMap *map) {
         notify_printf(btech_context_evaluation(map->xcode.context), player,
                       "%-3d %-3d %-5s %-5d %-4d %-6d %ld", tmp->x, tmp->y,
                       map_type_name(i), (int)tmp->obj, tmp->datac, tmp->datas,
-                      tmp->datai);
+                      tmp->payload.scalar);
     }
   mecha_notify(btech_context_evaluation(map->xcode.context), player,
                "--------------------------------------------");
@@ -65,7 +67,13 @@ void map_addfire(DbRef player, void *data, char *buffer) {
                  "Error: Invalid numeric addfire argument.");
     return;
   }
-  add_decoration(map, x, y, TYPE_FIRE, FIRE, d);
+  add_decoration(&(MapDecorationRequest){
+      .map = map,
+      .position = {.x = x, .y = y},
+      .type = TYPE_FIRE,
+      .terrain_marker = FIRE,
+      .duration = d,
+  });
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "Added: Fire at (%d,%d) with duration of %ds.", x, y, d);
 }
@@ -86,7 +94,13 @@ void map_addsmoke(DbRef player, void *data, char *buffer) {
                  "Error: Invalid numeric addsmoke argument.");
     return;
   }
-  add_decoration(map, x, y, TYPE_SMOKE, SMOKE, d);
+  add_decoration(&(MapDecorationRequest){
+      .map = map,
+      .position = {.x = x, .y = y},
+      .type = TYPE_SMOKE,
+      .terrain_marker = SMOKE,
+      .duration = d,
+  });
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "Added: Smoke at (%d,%d) with duration of %ds.", x, y, d);
 }
@@ -139,7 +153,7 @@ void map_add_block(DbRef player, void *data, char *buffer) {
   memset(&foo, 0, sizeof(MapObject));
   foo.x = clamp_int_to_short(x);
   foo.y = clamp_int_to_short(y);
-  foo.datai = str;
+  foo.payload.scalar = str;
   foo.obj = player;
   foo.datac = team;
   add_mapobj_to_type(map, TYPE_B_LZ, &foo, 1);
@@ -155,12 +169,16 @@ int is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
   MapCoordToRealCoord(x, y, &fx, &fy);
   for (o = first_mapobj(map, TYPE_B_LZ); o; o = next_mapobj(o)) {
     // comment this out...That makes it a square BLZ, not round
-    //		if(abs(x - o->x) > o->datai || abs(y - o->y) > o->datai)
+    //		if(abs(x - o->x) > o->payload.scalar ||
+    //		   abs(y - o->y) > o->payload.scalar)
     //			continue;
     if (o->datac && o->datac == mech_team(mech))
       continue;
     MapCoordToRealCoord(o->x, o->y, &tx, &ty);
-    if (FindHexRange(fx, fy, tx, ty) <= (float)o->datai)
+    if (map_real_range(&(MapRealSegment){
+            .start = {.x = fx, .y = fy},
+            .end = {.x = tx, .y = ty},
+        }) <= (float)o->payload.scalar)
       return 1;
   }
   return 0;
@@ -177,14 +195,20 @@ void map_setlinked(DbRef player, void *data, char *buffer) {
                 "Map set to linked.");
 }
 
-int mapobj_del(BattleMap *map, int x, int y, int tt) {
+int map_objects_delete(const MapObjectLookupRequest *request) {
+  BattleMap *map = request->map;
   int count = 0;
   MapObject *foo, *foo2;
 
-  for (foo = first_mapobj(map, tt); foo; foo = foo2) {
+  for (foo = first_mapobj(map, request->type); foo; foo = foo2) {
     foo2 = next_mapobj(foo);
-    if (foo->x == x && foo->y == y) {
-      del_mapobj(map, foo, tt, 1);
+    if (foo->x == request->position.x && foo->y == request->position.y) {
+      del_mapobj(&(MapObjectDeleteRequest){
+          .map = map,
+          .object = foo,
+          .type = request->type,
+          .cancel_event = true,
+      });
       count++;
     }
   }
@@ -204,14 +228,20 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                  "Error: Invalid number of attributes to delobj command.");
     return;
   case 1:
-    if ((tt = listmatch(map_types, NUM_MAPOBJTYPES, args[0])) < 0) {
+    tt = listmatch(map_types, NUM_MAPOBJTYPES, args[0]);
+    if (tt < 0) {
       mecha_notify(btech_context_evaluation(map->xcode.context), player,
                    "Invalid type!");
       return;
     }
     for (foo = first_mapobj(map, tt); foo; foo = foo2) {
       foo2 = next_mapobj(foo);
-      del_mapobj(map, foo, tt, 1);
+      del_mapobj(&(MapObjectDeleteRequest){
+          .map = map,
+          .object = foo,
+          .type = tt,
+          .cancel_event = true,
+      });
       count++;
     }
     notify_printf(btech_context_evaluation(map->xcode.context), player,
@@ -231,7 +261,12 @@ void map_delobj(DbRef player, void *data, char *buffer) {
         if (foo->x == x && foo->y == y) {
           if (tt == TYPE_MINE)
             mdel = 1;
-          del_mapobj(map, foo, tt, 1);
+          del_mapobj(&(MapObjectDeleteRequest){
+              .map = map,
+              .object = foo,
+              .type = tt,
+              .cancel_event = true,
+          });
           count++;
         }
       }
@@ -239,7 +274,8 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                   "%d objects at (%d,%d) deleted.", count, x, y);
     break;
   case 3:
-    if ((tt = listmatch(map_types, NUM_MAPOBJTYPES, args[0])) < 0) {
+    tt = listmatch(map_types, NUM_MAPOBJTYPES, args[0]);
+    if (tt < 0) {
       mecha_notify(btech_context_evaluation(map->xcode.context), player,
                    "Invalid type!");
       return;
@@ -254,7 +290,12 @@ void map_delobj(DbRef player, void *data, char *buffer) {
       if (foo->x == x && foo->y == y) {
         if (tt == TYPE_MINE)
           mdel = 1;
-        del_mapobj(map, foo, tt, 1);
+        del_mapobj(&(MapObjectDeleteRequest){
+            .map = map,
+            .object = foo,
+            .type = tt,
+            .cancel_event = true,
+        });
         count++;
       }
     }

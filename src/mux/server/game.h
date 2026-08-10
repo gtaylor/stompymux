@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/server/mux_server.h"
@@ -44,24 +46,27 @@ constexpr int SHUTDN_COREDUMP = 4; /* Produce a coredump. */
 constexpr int SHUTDN_KILLED = 8;   /* Preserve a killed snapshot. */
 
 void do_shutdown(CommandInvocation *invocation);
-void server_shutdown(ServerControl *control, DbRef player, int key,
-                     const char *message);
+typedef struct ServerShutdownRequest {
+  ServerControl *control;
+  DbRef player;
+  int options;
+  const char *message;
+} ServerShutdownRequest;
+
+void server_shutdown(const ServerShutdownRequest *request);
 int dump_database_internal(ServerControl *control, int dump_type);
 void dump_database(ServerControl *control);
 void fork_and_dump(ServerControl *control, int key);
-#ifdef notify_except
-#pragma push_macro("notify_except")
-#undef notify_except
-#define RESTORE_NOTIFY_EXCEPT_MACRO
-#endif
-void notify_except(EvaluationContext *evaluation, DbRef location, DbRef player,
-                   DbRef exception, const char *message);
-#ifdef RESTORE_NOTIFY_EXCEPT_MACRO
-#pragma pop_macro("notify_except")
-#undef RESTORE_NOTIFY_EXCEPT_MACRO
-#endif
-void notify_except2(EvaluationContext *evaluation, DbRef location, DbRef player,
-                    DbRef exception1, DbRef exception2, const char *message);
+typedef struct ExcludingNotification {
+  EvaluationContext *evaluation;
+  DbRef location;
+  DbRef sender;
+  DbRef exceptions[2];
+  size_t exception_count;
+  const char *message;
+} ExcludingNotification;
+
+void notify_excluding(const ExcludingNotification *notification);
 void notify_printf(EvaluationContext *evaluation, DbRef player,
                    const char *format, ...)
     __attribute__((format(printf, 3, 4)));

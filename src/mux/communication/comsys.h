@@ -75,9 +75,13 @@ void channel_destroy(struct channel *channel);
 void send_channel(EvaluationContext *evaluation, const char *chan,
                   const char *format, ...)
     __attribute__((format(printf, 3, 4)));
-void send_channel_v(EvaluationContext *evaluation, const char *chan,
-                    const char *format, va_list arguments)
-    __attribute__((format(printf, 3, 0)));
+typedef struct ChannelMessageTarget {
+  EvaluationContext *evaluation;
+  const char *channel;
+} ChannelMessageTarget;
+
+void send_channel_v(const ChannelMessageTarget *target, const char *format,
+                    va_list arguments) __attribute__((format(printf, 2, 0)));
 struct channel *select_channel(ChannelRegistry *channels, const char *channel);
 struct comuser *select_user(struct channel *ch, DbRef player);
 struct comuser *channel_user_at(const struct channel *channel, size_t index);

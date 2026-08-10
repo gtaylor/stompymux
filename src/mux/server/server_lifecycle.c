@@ -188,7 +188,10 @@ int server_lifecycle_boot(ServerLifecycle *lifecycle, int mindb) {
   if (!lua_initialize(lifecycle->maintenance->lua,
                       lifecycle->maintenance->lua_services, lua_error,
                       sizeof(lua_error))) {
-    log_error(lifecycle->maintenance->log, LOG_ALWAYS, "INI", "LUA",
+    log_error((LogEntry){.log = lifecycle->maintenance->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "INI",
+                         .secondary = "LUA"},
               "Unable to initialize Lua: %s", lua_error);
     return 0;
   }
@@ -212,7 +215,10 @@ void server_lifecycle_run(ServerLifecycle *lifecycle, int port) {
               lifecycle->maintenance->configuration->command_quota_interval,
           (uint64_t)
               lifecycle->maintenance->configuration->command_quota_interval)) {
-    log_error(lifecycle->maintenance->log, LOG_ALWAYS, "INI", "EVENT",
+    log_error((LogEntry){.log = lifecycle->maintenance->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "INI",
+                         .secondary = "EVENT"},
               "Unable to create queue timer.");
     return;
   }
@@ -278,7 +284,10 @@ void server_lifecycle_shutdown(ServerLifecycle *lifecycle) {
     if (status == 0)
       lifecycle->event_loop_initialized = false;
     else
-      log_error(lifecycle->maintenance->log, LOG_ALWAYS, "INI", "EVENT",
+      log_error((LogEntry){.log = lifecycle->maintenance->log,
+                           .key = LOG_ALWAYS,
+                           .primary = "INI",
+                           .secondary = "EVENT"},
                 "Unable to close libuv event loop: %s", uv_strerror(status));
   }
 }

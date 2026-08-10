@@ -207,14 +207,22 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
                     "Your right arm is destroyed, you can't pick up anything.");
         return;
       }
-      if (!(mech_critical_is_operational_special(mech, RARM, 3,
-                                                 HAND_OR_FOOT_ACTUATOR) &&
-            mech_critical_is_operational_special(mech, RARM, 0,
-                                                 SHOULDER_OR_HIP)) &&
-          !(mech_critical_is_operational_special(mech, LARM, 3,
-                                                 HAND_OR_FOOT_ACTUATOR) &&
-            mech_critical_is_operational_special(mech, LARM, 0,
-                                                 SHOULDER_OR_HIP))) {
+      if (!(mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                .mech = mech,
+                .slot = {.section = RARM, .critical = 3},
+                .special = HAND_OR_FOOT_ACTUATOR}) &&
+            mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                .mech = mech,
+                .slot = {.section = RARM, .critical = 0},
+                .special = SHOULDER_OR_HIP})) &&
+          !(mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                .mech = mech,
+                .slot = {.section = LARM, .critical = 3},
+                .special = HAND_OR_FOOT_ACTUATOR}) &&
+            mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                .mech = mech,
+                .slot = {.section = LARM, .critical = 0},
+                .special = SHOULDER_OR_HIP}))) {
         mech_notify(mech, MECHALL,
                     "You need functioning arm to pick things up!");
         return;
@@ -629,7 +637,8 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
   mech_los_broadcast(mech, tprintf("detaches %s's tow cables from %s!",
                                    towMechName, targetName));
 
-  if ((newmap = btech_context_get_map(context, mech_map_dbref(target)))) {
+  newmap = btech_context_get_map(context, mech_map_dbref(target));
+  if (newmap) {
     mech_position_hex_z_set(
         target, battle_map_hex_elevation(newmap, mech_position_x(towMech),
                                          mech_position_y(towMech)));
@@ -669,7 +678,8 @@ void mech_dropoff(DbRef player, void *data, const char *buffer) {
   mech_event_cancel(target, EVENT_MOVE);
   mech_movement_stop(target);
 
-  if ((newmap = btech_context_get_map(context, mech_map_dbref(target)))) {
+  newmap = btech_context_get_map(context, mech_map_dbref(target));
+  if (newmap) {
     mech_los_broadcast_unit(mech, target, "drops %s!");
     if (mech_position_z(target) >
         battle_map_hex_elevation(newmap, mech_position_x(target),

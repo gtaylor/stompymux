@@ -30,8 +30,14 @@ int gamedb_store_extensions(PersistenceContext *context, sqlite3 *sqlite);
 int gamedb_exec(sqlite3 *sqlite, const char *sql);
 int gamedb_step(sqlite3_stmt *statement);
 int gamedb_bind_int(sqlite3_stmt *statement, int index, long value);
-int gamedb_target_path(const PersistenceContext *context, char *target,
-                       size_t target_size, int dump_type);
+typedef struct GamedbTargetPathRequest {
+  const PersistenceContext *context;
+  char *target;
+  size_t target_size;
+  int dump_type;
+} GamedbTargetPathRequest;
+
+int gamedb_target_path(const GamedbTargetPathRequest *request);
 int gamedb_fsync_file(const char *path);
 int gamedb_fsync_directory(const char *path);
 int gamedb_prepare(sqlite3 *sqlite, sqlite3_stmt **statement, const char *sql);

@@ -24,6 +24,18 @@ PlayerCache *player_cache_create(const ServerConfiguration *configuration,
 void player_cache_destroy(PlayerCache *cache);
 PCACHE *pcache_find(PlayerCache *cache, DbRef player);
 void pcache_trim(PlayerCache *cache);
-int queue_adjust(PlayerCache *cache, DbRef player, int adj);
-void queue_set(PlayerCache *cache, DbRef player, int val);
+typedef struct PlayerQueueAdjustment {
+  PlayerCache *cache;
+  DbRef player;
+  int delta;
+} PlayerQueueAdjustment;
+
+typedef struct PlayerQueueAssignment {
+  PlayerCache *cache;
+  DbRef player;
+  int value;
+} PlayerQueueAssignment;
+
+int queue_adjust(const PlayerQueueAdjustment *adjustment);
+void queue_set(const PlayerQueueAssignment *assignment);
 int queue_maximum(PlayerCache *cache, DbRef player);

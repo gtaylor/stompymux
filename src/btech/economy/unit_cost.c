@@ -4,6 +4,7 @@
 #include "weapon_catalogue_api.h"
 
 #include <math.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -341,7 +342,8 @@ unsigned long long mech_fasa_cost(Mech *mech) {
 
     for (i = 0; i < NUM_SECTIONS; i++)
       for (ii = 0; ii < NUM_CRITICALS; ii++) {
-        if (!(part = mech_critical_part_type(mech, i, ii)))
+        part = mech_critical_part_type(mech, i, ii);
+        if (!part)
           continue;
         if (!equipment_is_weapon(part))
           continue;
@@ -544,28 +546,32 @@ unsigned long long mech_fasa_cost(Mech *mech) {
                          "Ammo Costs");
     for (i = 0; i < ammoweapcount; i++) {
       const int weapon_index =
-          *weapon_index_at(ammoweap, 8 * MAX_WEAPS_SECTION, (size_t)i);
-      const int maximum_ammunition =
-          *unsigned_short_at(ammomax, 8 * MAX_WEAPS_SECTION, (size_t)i);
+          *weapon_index_at(ammoweap, 8U * (size_t)MAX_WEAPS_SECTION, (size_t)i);
+      const int maximum_ammunition = *unsigned_short_at(
+          ammomax, 8U * (size_t)MAX_WEAPS_SECTION, (size_t)i);
       const int ammunition_per_ton =
           weapon_catalogue_ammunition_per_ton(weapon_index);
       const int ammunition_cost =
           weapon_catalogue_ammunition_cost(weapon_index);
       /* ArtemisIV ammo is X2 */
       /* Interesting way to handle half_tons */
-      if (maximum_ammunition < ammunition_per_ton)
+      if (maximum_ammunition < ammunition_per_ton) {
+        const int half_ton_divisor = ammunition_per_ton / maximum_ammunition;
+        const int adjusted_ammunition_cost = ammunition_cost / half_ton_divisor;
         mech_cost_add(mech, &total, weapon_catalogue_name(weapon_index),
-                      ammunition_cost /
-                          (ammunition_per_ton / maximum_ammunition));
-      else
+                      (double)adjusted_ammunition_cost);
+      } else {
+        const int ammunition_tons = maximum_ammunition / ammunition_per_ton;
+        const int adjusted_ammunition_cost =
+            ammunition_cost * ammunition_tons *
+            ((*unsigned_int_at(modearray, 8U * (size_t)MAX_WEAPS_SECTION,
+                               (size_t)i) &
+              ARTEMIS_MODE)
+                 ? 2
+                 : 1);
         mech_cost_add(mech, &total, weapon_catalogue_name(weapon_index),
-                      ammunition_cost *
-                          (maximum_ammunition / ammunition_per_ton) *
-                          ((*unsigned_int_at(modearray, 8 * MAX_WEAPS_SECTION,
-                                             (size_t)i) &
-                            ARTEMIS_MODE)
-                               ? 2
-                               : 1));
+                      (double)adjusted_ammunition_cost);
+      }
     }
   }
 
@@ -680,8 +686,10 @@ unsigned long long mech_fasa_cost(Mech *mech) {
                     (double)indiv_part_cost);
     }
   /* We have to account for some other stuff that doesn't divide equally here */
-  if (bloodhound_count / 3)
-    mech_cost_add(mech, &total, "Bloodhound", 500000 * (bloodhound_count / 3));
+  const int bloodhound_packages = bloodhound_count / 3;
+  if (bloodhound_packages)
+    mech_cost_add(mech, &total, "Bloodhound",
+                  (double)(500000 * bloodhound_packages));
   if (masc_count)
     mech_cost_add(mech, &total, "MASC", masc_count * engine_size * 1000);
   if (has_sword) {

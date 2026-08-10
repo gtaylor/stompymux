@@ -126,17 +126,16 @@ void end_log(ServerLog *log) {
 /**
  * Write perror message to the log
  */
-void log_perror(ServerLog *log, const char *primary, const char *secondary,
-                const char *extra, const char *failing_object) {
-  start_log(log, primary, secondary);
-  if (extra && *extra) {
+void log_perror(const LogSystemError *error) {
+  start_log(error->log, error->primary, error->secondary);
+  if (error->extra && *error->extra) {
     log_text("(");
-    log_text(extra);
+    log_text(error->extra);
     log_text(") ");
   }
-  perror(failing_object);
+  perror(error->failing_object);
   (void)fflush(stderr);
-  log->nesting--;
+  error->log->nesting--;
 }
 
 /**
@@ -148,22 +147,21 @@ void log_text(const char *text) {
   (void)fprintf(stderr, "%s", new);
 }
 
-void log_simple(ServerLog *log, int key, const char *primary,
-                const char *secondary, const char *message) {
-  if ((key & log->configuration->log_options) != 0 &&
-      start_log(log, primary, secondary)) {
+void log_simple(LogEntry entry, const char *message) {
+  if ((entry.key & entry.log->configuration->log_options) != 0 &&
+      start_log(entry.log, entry.primary, entry.secondary)) {
     log_text(message);
-    end_log(log);
+    end_log(entry.log);
   }
 }
 
-void log_error(ServerLog *log, int key, const char *primary,
-               const char *secondary, const char *format, ...) {
+void log_error(LogEntry entry, const char *format, ...) {
   char buffer[LBUF_SIZE];
   char stripped_buffer[LBUF_SIZE];
   va_list ap;
+  ServerLog *log = entry.log;
 
-  if (!(key & log->configuration->log_options))
+  if (!(entry.key & log->configuration->log_options))
     return;
 
   if (log->configuration->log_info & LOGOPT_TIMESTAMP) {
@@ -177,12 +175,12 @@ void log_error(ServerLog *log, int key, const char *primary,
                   tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
   }
 
-  if (secondary) {
+  if (entry.secondary) {
     (void)fprintf(stderr, "%s%s %3s/%-5s: ", log->timestamp,
-                  log->configuration->mud_name, primary, secondary);
+                  log->configuration->mud_name, entry.primary, entry.secondary);
   } else {
     (void)fprintf(stderr, "%s%s %-9s: ", log->timestamp,
-                  log->configuration->mud_name, primary);
+                  log->configuration->mud_name, entry.primary);
   }
 
   va_start(ap, format);
@@ -266,37 +264,38 @@ void log_type_and_name(ServerLog *log, DbRef thing) {
 }
 
 #ifdef ARBITRARY_LOGFILES
-int log_to_file(EvaluationContext *evaluation, DbRef thing, const char *logfile,
-                const char *message) {
+bool log_to_file(const ArbitraryLogRequest *request) {
   char pathname[210]; /* Arbitrary limit in logfile length */
   char message_buffer[4096];
 
-  if (!message || !*message)
-    return 1; /* Nothing to do */
+  if (!request->message || !*request->message)
+    return true; /* Nothing to do */
 
-  if (!logfile || !*logfile || strlen(logfile) > 200)
-    return 0; /* invalid logfile name */
+  if (!request->filename || !*request->filename ||
+      strlen(request->filename) > 200)
+    return false; /* invalid logfile name */
 
-  if (strstr(logfile, "..") != nullptr)
-    return 0;
-  if (strstr(logfile, "/") != nullptr)
-    return 0;
-  (void)snprintf(pathname, 210, "logs/%s", logfile);
+  if (strstr(request->filename, "..") != nullptr)
+    return false;
+  if (strstr(request->filename, "/") != nullptr)
+    return false;
+  (void)snprintf(pathname, 210, "logs/%s", request->filename);
 
   /* Hacking checks. */
 
   if (access(pathname, R_OK | W_OK) != 0)
-    return 0;
+    return false;
 
-  (void)snprintf(message_buffer, 4096, "%s\n", message);
+  (void)snprintf(message_buffer, 4096, "%s\n", request->message);
 
-  if (!log_cache_write(evaluation->log->cache, pathname, message_buffer)) {
-    notify_checked(evaluation, thing, thing,
+  if (!log_cache_write(request->evaluation->log->cache, pathname,
+                       message_buffer)) {
+    notify_checked(request->evaluation, request->actor, request->actor,
                    "Serious failure while trying to write to log.",
                    MSG_ME_ALL | MSG_F_DOWN);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 }
 
 void do_log(CommandInvocation *invocation) {
@@ -316,7 +315,10 @@ void do_log(CommandInvocation *invocation) {
     return;
   }
 
-  if (!log_to_file(evaluation, player, logfile, message)) {
+  if (!log_to_file(&(ArbitraryLogRequest){.evaluation = evaluation,
+                                          .actor = player,
+                                          .filename = logfile,
+                                          .message = message})) {
     notify_checked(evaluation, player, player, "Request failed.",
                    MSG_ME_ALL | MSG_F_DOWN);
     return;

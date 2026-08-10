@@ -92,14 +92,15 @@ void mech_heading_update(Mech *mech) {
       offset = clamp_float_to_int(offset_float);
       if ((short_to_float_simulation(abs(normangle)) > offset) &&
           mech_current_speed(mech) > 2.0F * maxspeed / 3.0F + 0.1F) {
+        const int half_offset = offset / 2;
         if (mech_current_speed(mech) > maxspeed)
-          offset = clamp_float_to_int((float)offset -
-                                      (float)(offset / 2) * maxspeed /
-                                          mech_current_speed(mech));
+          offset =
+              clamp_float_to_int((float)offset - (float)half_offset * maxspeed /
+                                                     mech_current_speed(mech));
         else
           offset = clamp_float_to_int(
               (float)offset -
-              (float)(offset / 2) *
+              (float)half_offset *
                   (3.0F * mech_current_speed(mech) / maxspeed - 2.0F));
       }
     }

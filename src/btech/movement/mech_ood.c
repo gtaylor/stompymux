@@ -164,8 +164,12 @@ void mech_ood_event(MuxEvent *e) {
 
     if (roll_needed > 2)
 
-      AccumulatePilXP(mech_pilot_dbref(mech), mech,
-                      BOUNDED(1, (abs(mof) + 1) * 2, 20), 1);
+      piloting_experience_award(&(PilotingExperienceAward){
+          .pilot = mech_pilot_dbref(mech),
+          .mech = mech,
+          .reason = BOUNDED(1, (abs(mof) + 1) * 2, 20),
+          .unconditional = true,
+      });
   }
 
   mof += (roll - roll_needed);
@@ -205,7 +209,22 @@ void mech_ood_event(MuxEvent *e) {
 
             dam += btech_random_range(context, 1, 4);
 
-          DamageMech(mech, mech, 0, -1, i, 0, 0, dam, -1, -1, 0, 0, 0, 0);
+          mech_damage_apply(
+              &(MechDamageRequest){.target = mech,
+                                   .attacker = mech,
+                                   .line_of_sight = 0,
+                                   .attack_pilot = -1,
+                                   .hit_location = i,
+                                   .rear = 0,
+                                   .critical = 0,
+                                   .armor_damage = dam,
+                                   .internal_damage = 0,
+                                   .transfer = MECH_DAMAGE_FORCE_TRANSFER,
+                                   .cause = -1,
+                                   .base_to_hit = 0,
+                                   .weapon_index = 0,
+                                   .ammunition_mode = 0,
+                                   .ignore_swarmers = 0});
 
           mech_flood(mech);
         }
@@ -277,7 +296,8 @@ void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
   int x, y, z = ORBIT_Z, argc;
   BtechContext *context = mech_context(mech);
 
-  if ((argc = mech_parseattributes(buffer, args, 3)) < 2) {
+  argc = mech_parseattributes(buffer, args, 3);
+  if (argc < 2) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid attributes!");
     return;

@@ -49,7 +49,7 @@ static void repair_append(char *buffer, size_t capacity, const char *format,
 }
 
 static void describe_repairs(MuxEvent *e, void *menu_context) {
-  CoolMenu **menu = menu_context;
+  CoolMenu **menu = (CoolMenu **)menu_context;
   int type = (unsigned char)e->type;
   Mech *mech = (Mech *)e->data;
   long earg = ((long)e->data2) % PLAYERPOS;
@@ -64,11 +64,14 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
   loc = payload.location;
   pos = payload.position;
   extra = payload.extra;
-  (void)snprintf(buf, sizeof(buf), "%s%s",
-                 armor_section_abbreviation(mech_class(mech),
-                                            mech_movement_type(mech), loc % 8)
-                     .text,
-                 loc >= 8 ? "(R)" : "");
+  (void)snprintf(
+      buf, sizeof(buf), "%s%s",
+      armor_section_abbreviation(
+          &(ArmorSectionReference){.unit_class = mech_class(mech),
+                                   .movement_type = mech_movement_type(mech),
+                                   .location = loc % 8})
+          .text,
+      loc >= 8 ? "(R)" : "");
   (void)snprintf(buf2, sizeof(buf2), "%-5ld ", player);
   repair_append(buf2, sizeof(buf2), "%-4d ",
                 game_lag_time(context, (e->tick - e->scheduler->tick) / 60));
@@ -205,7 +208,7 @@ void tech_repairs(DbRef player, Mech *mech, char *buffer) {
       &c, tprintf("%-5s %-4s %s", "Plr", "Time", "Location + Description"));
   cool_menu_add_line(&c);
   for (i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
-    mech_event_visit(mech, i, describe_repairs, &c);
+    mech_event_visit(mech, i, describe_repairs, (void *)&c);
   cool_menu_add_line(&c);
   cool_menu_add_text(
       &c, "Note: Time = Time remaining in minutes. Plr = Tech's dbref");

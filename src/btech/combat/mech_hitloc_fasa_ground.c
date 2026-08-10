@@ -6,6 +6,7 @@
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
+#include "mech_hitloc_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
@@ -13,8 +14,8 @@
 #include "mech_specification_api.h"
 #include "section_types.h"
 
-int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
-                             int *isrear, int roll) {
+HitLocationResult fasa_ground_hit_location(Mech *mech, int hitGroup,
+                                           HitLocationResult result, int roll) {
   int hitloc = 0;
   int side;
   BtechContext *context = mech_context(mech);
@@ -28,8 +29,8 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
       switch (roll) {
       case 2:
         /* A Roll on Determining Critical Hits Table */
-        *iscritical = 1;
-        return LSIDE;
+        result.critical = 1;
+        return hit_location_result_at(result, LSIDE);
       case 3:
         if (btech_context_uses_tank_friendly_criticals(context)) {
           if (!condition.fallen) {
@@ -63,7 +64,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             }
             mech_max_speed_lower(mech, MP2);
           }
-          return LSIDE;
+          return hit_location_result_at(result, LSIDE);
         }
         /* Cripple tank */
         if (!condition.fallen) {
@@ -101,7 +102,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
 
           mech_make_fall(mech);
         }
-        return LSIDE;
+        return hit_location_result_at(result, LSIDE);
       case 4:
       case 5:
         /* MP -1 */
@@ -131,16 +132,17 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           }
           mech_max_speed_lower(mech, MP1);
         }
-        return LSIDE;
+        return hit_location_result_at(result, LSIDE);
         break;
       case 6:
       case 7:
       case 8:
       case 9:
         /* MP -1 if hover */
-        return LSIDE;
+        return hit_location_result_at(result, LSIDE);
       case 10:
-        return (mech_section_internal(mech, TURRET)) ? TURRET : LSIDE;
+        return hit_location_result_at(
+            result, (mech_section_internal(mech, TURRET)) ? TURRET : LSIDE);
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           if (!condition.turret_locked) {
@@ -149,20 +151,20 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             mech_notify(mech, MECHALL,
                         "Your turret takes a direct hit and locks up!");
           }
-          return TURRET;
+          return hit_location_result_at(result, TURRET);
         } else
-          return LSIDE;
+          return hit_location_result_at(result, LSIDE);
       case 12:
         /* A Roll on Determining Critical Hits Table */
-        *iscritical = 1;
-        return LSIDE;
+        result.critical = 1;
+        return hit_location_result_at(result, LSIDE);
       }
       break;
     case RIGHTSIDE:
       switch (roll) {
       case 2:
-        *iscritical = 1;
-        return RSIDE;
+        result.critical = 1;
+        return hit_location_result_at(result, RSIDE);
       case 3:
         if (btech_context_uses_tank_friendly_criticals(context)) {
           if (!condition.fallen) {
@@ -196,7 +198,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             }
             mech_max_speed_lower(mech, MP2);
           }
-          return RSIDE;
+          return hit_location_result_at(result, RSIDE);
         }
         /* Cripple Tank */
         if (!condition.fallen) {
@@ -234,7 +236,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
 
           mech_make_fall(mech);
         }
-        return RSIDE;
+        return hit_location_result_at(result, RSIDE);
       case 4:
       case 5:
         /* MP -1 */
@@ -264,11 +266,11 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
           }
           mech_max_speed_lower(mech, MP1);
         }
-        return RSIDE;
+        return hit_location_result_at(result, RSIDE);
       case 6:
       case 7:
       case 8:
-        return RSIDE;
+        return hit_location_result_at(result, RSIDE);
       case 9:
         /* MP -1 if hover */
         if (!condition.fallen) {
@@ -278,9 +280,10 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             mech_max_speed_lower(mech, MP1);
           }
         }
-        return RSIDE;
+        return hit_location_result_at(result, RSIDE);
       case 10:
-        return (mech_section_internal(mech, TURRET)) ? TURRET : RSIDE;
+        return hit_location_result_at(
+            result, (mech_section_internal(mech, TURRET)) ? TURRET : RSIDE);
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           if (!condition.turret_locked) {
@@ -289,13 +292,13 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             mech_notify(mech, MECHALL,
                         "Your turret takes a direct hit and locks up!");
           }
-          return TURRET;
+          return hit_location_result_at(result, TURRET);
         } else
-          return RSIDE;
+          return hit_location_result_at(result, RSIDE);
       case 12:
         /* A Roll on Determining Critical Hits Table */
-        *iscritical = 1;
-        return RSIDE;
+        result.critical = 1;
+        return hit_location_result_at(result, RSIDE);
       }
       break;
 
@@ -305,8 +308,8 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
       switch (roll) {
       case 2:
         /* A Roll on Determining Critical Hits Table */
-        *iscritical = 1;
-        return side;
+        result.critical = 1;
+        return hit_location_result_at(result, side);
       case 3:
         if (btech_context_uses_tank_critical_shielding(context)) {
           if (btech_context_uses_tank_friendly_criticals(context)) {
@@ -342,7 +345,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
               }
               mech_max_speed_lower(mech, MP2);
             }
-            return side;
+            return hit_location_result_at(result, side);
           }
           /* Cripple tank */
           if (!condition.fallen) {
@@ -381,7 +384,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             mech_make_fall(mech);
           }
         }
-        return side;
+        return hit_location_result_at(result, side);
       case 4:
         /* MP -1 */
         if (btech_context_uses_tank_critical_shielding(context)) {
@@ -412,7 +415,7 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             mech_max_speed_lower(mech, MP1);
           }
         }
-        return side;
+        return hit_location_result_at(result, side);
       case 5:
         /* MP -1 if Hovercraft */
         if (!condition.fallen) {
@@ -422,16 +425,17 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             mech_max_speed_lower(mech, MP1);
           }
         }
-        return side;
+        return hit_location_result_at(result, side);
       case 6:
       case 7:
       case 8:
       case 9:
-        return side;
+        return hit_location_result_at(result, side);
       case 10:
-        return (mech_section_internal(mech, TURRET)) ? TURRET : side;
+        return hit_location_result_at(
+            result, (mech_section_internal(mech, TURRET)) ? TURRET : side);
       case 11:
-        *iscritical = 1;
+        result.critical = 1;
         /* Lock turret into place */
         if (mech_section_internal(mech, TURRET)) {
           if (!condition.turret_locked) {
@@ -440,16 +444,17 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
             mech_notify(mech, MECHALL,
                         "Your turret takes a direct hit and locks up!");
           }
-          return TURRET;
+          return hit_location_result_at(result, TURRET);
         } else
-          return side;
+          return hit_location_result_at(result, side);
       case 12:
         /* A Roll on Determining Critical Hits Table */
         if (mech_section_is_crittable(
                 mech, (mech_section_internal(mech, TURRET)) ? TURRET : side,
-                btech_context_critical_level(context)))
-          *iscritical = 1;
-        return (mech_section_internal(mech, TURRET)) ? TURRET : side;
+                (CriticalThreshold){btech_context_critical_level(context)}))
+          result.critical = 1;
+        return hit_location_result_at(
+            result, (mech_section_internal(mech, TURRET)) ? TURRET : side);
       }
     }
     break;
@@ -463,5 +468,5 @@ int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
   case CLASS_BSUIT:
     break;
   }
-  return hitloc;
+  return hit_location_result_at(result, hitloc);
 }

@@ -10,6 +10,7 @@
 #include "mech_condition_api.h"
 #include "mech_damage_api.h"
 #include "mech_equipment_api.h"
+#include "mech_hitloc_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
 #include "mech_specification_api.h"
@@ -17,6 +18,18 @@
 #include "mech_utils_api.h"
 #include "mux/support/formatting.h"
 #include "section_types.h"
+
+typedef struct HitLocationOutput {
+  int *critical;
+  int *rear;
+} HitLocationOutput;
+
+static int hit_location_export(HitLocationResult result,
+                               HitLocationOutput output) {
+  *output.critical = result.critical;
+  *output.rear = result.rear;
+  return result.location;
+}
 
 int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
   int roll, hitloc = 0;
@@ -33,21 +46,35 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
   switch (mech_class(mech)) {
   case CLASS_VTOL:
     if (btech_context_uses_advanced_vtol_criticals(context))
-      return mech_advanced_vehicle_hit_location(mech, hitGroup, iscritical,
-                                                isrear);
+      return hit_location_export(
+          mech_advanced_vehicle_hit_location(
+              mech, hitGroup,
+              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+          (HitLocationOutput){iscritical, isrear});
     else if (mech_technology_flags(mech) & CRITPROOF_TECH)
-      return mech_critproof_hit_location(mech, hitGroup, iscritical, isrear);
+      return mech_critproof_hit_location(mech, hitGroup, iscritical);
     else if (btech_context_uses_fasa_criticals(context))
-      return mech_fasa_hit_location(mech, hitGroup, iscritical, isrear);
+      return hit_location_export(
+          mech_fasa_hit_location(
+              mech, hitGroup,
+              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+          (HitLocationOutput){iscritical, isrear});
     break;
   case CLASS_VEH_GROUND:
     if (btech_context_uses_advanced_vehicle_criticals(context))
-      return mech_advanced_vehicle_hit_location(mech, hitGroup, iscritical,
-                                                isrear);
+      return hit_location_export(
+          mech_advanced_vehicle_hit_location(
+              mech, hitGroup,
+              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+          (HitLocationOutput){iscritical, isrear});
     else if (mech_technology_flags(mech) & CRITPROOF_TECH)
-      return mech_critproof_hit_location(mech, hitGroup, iscritical, isrear);
+      return mech_critproof_hit_location(mech, hitGroup, iscritical);
     else if (btech_context_uses_fasa_criticals(context))
-      return mech_fasa_hit_location(mech, hitGroup, iscritical, isrear);
+      return hit_location_export(
+          mech_fasa_hit_location(
+              mech, hitGroup,
+              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+          (HitLocationOutput){iscritical, isrear});
     break;
   case CLASS_MECH:
   case CLASS_VEH_NAVAL:
@@ -58,9 +85,13 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
   case CLASS_BSUIT:
   default:
     if (mech_technology_flags(mech) & CRITPROOF_TECH)
-      return mech_critproof_hit_location(mech, hitGroup, iscritical, isrear);
+      return mech_critproof_hit_location(mech, hitGroup, iscritical);
     else if (btech_context_uses_fasa_criticals(context))
-      return mech_fasa_hit_location(mech, hitGroup, iscritical, isrear);
+      return hit_location_export(
+          mech_fasa_hit_location(
+              mech, hitGroup,
+              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+          (HitLocationOutput){iscritical, isrear});
     break;
   }
 
@@ -72,7 +103,8 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
   btech_context_hit_roll_record(context, roll);
   switch (mech_class(mech)) {
   case CLASS_BSUIT:
-    if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
+    hitloc = mech_battle_suit_hit_location(mech);
+    if (hitloc < 0)
       return btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
@@ -81,7 +113,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
-        if (mech_section_is_crittable(mech, LTORSO, 60)) {
+        if (mech_section_is_crittable(mech, LTORSO, (CriticalThreshold){60})) {
           btech_channel_send(
               context, BTECH_CHANNEL_TAC_INFO, "%s",
               tprintf(
@@ -116,7 +148,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     case RIGHTSIDE:
       switch (roll) {
       case 2:
-        if (mech_section_is_crittable(mech, RTORSO, 60)) {
+        if (mech_section_is_crittable(mech, RTORSO, (CriticalThreshold){60})) {
           btech_channel_send(
               context, BTECH_CHANNEL_TAC_INFO, "%s",
               tprintf(
@@ -152,7 +184,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     case BACK:
       switch (roll) {
       case 2:
-        if (mech_section_is_crittable(mech, CTORSO, 60)) {
+        if (mech_section_is_crittable(mech, CTORSO, (CriticalThreshold){60})) {
           btech_channel_send(
               context, BTECH_CHANNEL_TAC_INFO, "%s",
               tprintf(
@@ -190,7 +222,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (mech_section_is_crittable(mech, LSIDE, 40))
+        if (mech_section_is_crittable(mech, LSIDE, (CriticalThreshold){40}))
           *iscritical = 1;
         return LSIDE;
       case 3:
@@ -205,7 +237,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return (mech_section_internal(mech, TURRET)) ? TURRET : LSIDE;
       case 11:
         if (mech_section_internal(mech, TURRET)) {
-          if (mech_section_is_crittable(mech, TURRET, 50))
+          if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
             *iscritical = 1;
           return TURRET;
         } else
@@ -216,7 +248,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (mech_section_is_crittable(mech, RSIDE, 40))
+        if (mech_section_is_crittable(mech, RSIDE, (CriticalThreshold){40}))
           *iscritical = 1;
         return RSIDE;
       case 3:
@@ -231,7 +263,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return (mech_section_internal(mech, TURRET)) ? TURRET : RSIDE;
       case 11:
         if (mech_section_internal(mech, TURRET)) {
-          if (mech_section_is_crittable(mech, TURRET, 50))
+          if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
             *iscritical = 1;
           return TURRET;
         } else
@@ -246,7 +278,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (mech_section_is_crittable(mech, FSIDE, 40))
+        if (mech_section_is_crittable(mech, FSIDE, (CriticalThreshold){40}))
           *iscritical = 1;
         return side;
       case 3:
@@ -261,7 +293,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return (mech_section_internal(mech, TURRET)) ? TURRET : side;
       case 11:
         if (mech_section_internal(mech, TURRET)) {
-          if (mech_section_is_crittable(mech, TURRET, 50))
+          if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
             *iscritical = 1;
           return TURRET;
         } else
@@ -277,7 +309,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 12:
       case 3:
       case 11:
-        if (mech_section_is_crittable(mech, AERO_NOSE, 90))
+        if (mech_section_is_crittable(mech, AERO_NOSE, (CriticalThreshold){90}))
           mech_weapon_destroy_random(mech, AERO_NOSE);
         return AERO_NOSE;
       case 4:
@@ -298,17 +330,17 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (mech_section_is_crittable(mech, AERO_AFT, 99))
+        if (mech_section_is_crittable(mech, AERO_AFT, (CriticalThreshold){99}))
           *iscritical = 1;
         return AERO_AFT;
       case 3:
       case 11:
-        if (mech_section_is_crittable(mech, side, 99))
+        if (mech_section_is_crittable(mech, side, (CriticalThreshold){99}))
           mech_weapon_destroy_random(mech, side);
         return side;
       case 4:
       case 10:
-        if (mech_section_is_crittable(mech, AERO_AFT, 90))
+        if (mech_section_is_crittable(mech, AERO_AFT, (CriticalThreshold){90}))
           mech_heat_sink_destroy(mech, AERO_AFT);
         return AERO_AFT;
       case 5:
@@ -325,7 +357,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (mech_section_is_crittable(mech, AERO_AFT, 90))
+        if (mech_section_is_crittable(mech, AERO_AFT, (CriticalThreshold){90}))
           *iscritical = 1;
         return AERO_AFT;
       case 3:
@@ -350,12 +382,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (mech_section_is_crittable(mech, DS_NOSE, 30))
+        if (mech_section_is_crittable(mech, DS_NOSE, (CriticalThreshold){30}))
           dropship_bridge_hit(mech);
         return DS_NOSE;
       case 3:
       case 11:
-        if (mech_section_is_crittable(mech, DS_NOSE, 50))
+        if (mech_section_is_crittable(mech, DS_NOSE, (CriticalThreshold){50}))
           mech_weapon_destroy_random(mech, DS_NOSE);
         return DS_NOSE;
       case 5:
@@ -378,12 +410,12 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         side = mech_spheroid_rear_section(mech, side);
       switch (roll) {
       case 2:
-        if (mech_section_is_crittable(mech, DS_NOSE, 30))
+        if (mech_section_is_crittable(mech, DS_NOSE, (CriticalThreshold){30}))
           dropship_bridge_hit(mech);
         return DS_NOSE;
       case 3:
       case 11:
-        if (mech_section_is_crittable(mech, side, 60))
+        if (mech_section_is_crittable(mech, side, (CriticalThreshold){60}))
           mech_weapon_destroy_random(mech, side);
         return side;
       case 4:
@@ -396,7 +428,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 9:
         return DS_NOSE;
       case 12:
-        if (mech_section_is_crittable(mech, side, 60))
+        if (mech_section_is_crittable(mech, side, (CriticalThreshold){60}))
           *iscritical = 1;
         return side;
       }
@@ -405,7 +437,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
       case 12:
-        if (mech_section_is_crittable(mech, DS_AFT, 60))
+        if (mech_section_is_crittable(mech, DS_AFT, (CriticalThreshold){60}))
           *iscritical = 1;
         return DS_AFT;
       case 3:
@@ -414,7 +446,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 4:
       case 7:
       case 10:
-        if (mech_section_is_crittable(mech, DS_AFT, 60))
+        if (mech_section_is_crittable(mech, DS_AFT, (CriticalThreshold){60}))
           mech_heat_sink_destroy(mech, DS_AFT);
         return DS_AFT;
       case 5:
@@ -538,7 +570,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         hitloc = LSIDE;
-        if (mech_section_is_crittable(mech, hitloc, 40))
+        if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
           *iscritical = 1;
         break;
       case 3:
@@ -558,7 +590,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-          if (mech_section_is_crittable(mech, hitloc, 40))
+          if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
             *iscritical = 1;
         } else
           hitloc = LSIDE;
@@ -575,7 +607,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 2:
       case 12:
         hitloc = RSIDE;
-        if (mech_section_is_crittable(mech, hitloc, 40))
+        if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
           *iscritical = 1;
         break;
       case 3:
@@ -595,7 +627,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-          if (mech_section_is_crittable(mech, hitloc, 40))
+          if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
             *iscritical = 1;
         } else
           hitloc = RSIDE;
@@ -609,7 +641,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       case 2:
       case 12:
         hitloc = FSIDE;
-        if (mech_section_is_crittable(mech, hitloc, 40))
+        if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
           *iscritical = 1;
         break;
       case 3:

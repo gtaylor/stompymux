@@ -110,22 +110,21 @@ bool player_account_password_hash_set(GameDatabase *database, DbRef player,
   return account && account_replace_string(&account->password_hash, hash);
 }
 
-bool player_account_last_login(GameDatabase *database, DbRef player,
-                               time_t *when) {
-  PlayerAccountState *account = player_account(database, player);
+PlayerLastLoginResult player_account_last_login(PlayerAccountRef reference) {
+  PlayerAccountState *account =
+      player_account(reference.database, reference.player);
   if (!account || !account->has_last_login)
-    return false;
-  if (when)
-    *when = account->last_login;
-  return true;
+    return (PlayerLastLoginResult){0};
+  return (PlayerLastLoginResult){.found = true,
+                                 .occurred_at = account->last_login};
 }
 
-bool player_account_last_login_set(GameDatabase *database, DbRef player,
-                                   time_t when) {
-  PlayerAccountState *account = player_account_require(database, player);
+bool player_account_last_login_set(const PlayerLastLoginChange *change) {
+  PlayerAccountState *account =
+      player_account_require(change->account.database, change->account.player);
   if (!account)
     return false;
-  account->last_login = when;
+  account->last_login = change->occurred_at;
   account->has_last_login = true;
   return true;
 }
@@ -159,20 +158,20 @@ int64_t player_account_unreported_failed_login_count(GameDatabase *database,
   return account ? account->unreported_failed_logins : 0;
 }
 
-bool player_account_login_counts_set(GameDatabase *database, DbRef player,
-                                     int64_t successful, int64_t failed,
-                                     int64_t unreported_failed) {
+bool player_account_login_counts_set(const PlayerLoginCountsChange *change) {
   PlayerAccountState *account;
 
-  if (successful < 0 || failed < 0 || unreported_failed < 0 ||
-      unreported_failed > failed)
+  if (change->successful < 0 || change->failed < 0 ||
+      change->unreported_failed < 0 ||
+      change->unreported_failed > change->failed)
     return false;
-  account = player_account_require(database, player);
+  account =
+      player_account_require(change->account.database, change->account.player);
   if (!account)
     return false;
-  account->successful_logins = successful;
-  account->failed_logins = failed;
-  account->unreported_failed_logins = unreported_failed;
+  account->successful_logins = change->successful;
+  account->failed_logins = change->failed;
+  account->unreported_failed_logins = change->unreported_failed;
   return true;
 }
 
@@ -189,18 +188,22 @@ static PlayerLoginRecord *history(PlayerAccountState *account,
   return account->failed_history;
 }
 
-bool player_account_login_record(GameDatabase *database, DbRef player,
-                                 PlayerLoginOutcome outcome, time_t occurred_at,
-                                 const char *host) {
+bool player_account_login_record(const PlayerLoginRecordChange *change) {
+  PlayerLoginOutcome outcome = change->outcome;
   PlayerAccountState *account;
   PlayerLoginRecord *records;
   char *copy;
   size_t *count;
   size_t limit;
 
-  if ((outcome != PLAYER_LOGIN_SUCCESS && outcome != PLAYER_LOGIN_FAILURE) ||
-      !(account = player_account_require(database, player)) || !host ||
-      !(copy = strdup(host)))
+  if (outcome != PLAYER_LOGIN_SUCCESS && outcome != PLAYER_LOGIN_FAILURE)
+    return false;
+  account =
+      player_account_require(change->account.database, change->account.player);
+  if (!account || !change->host)
+    return false;
+  copy = strdup(change->host);
+  if (!copy)
     return false;
   records = history(account, outcome, &count, &limit);
   if (*count == limit)
@@ -211,7 +214,7 @@ bool player_account_login_record(GameDatabase *database, DbRef player,
     memmove(login_record(records, limit, 1), login_record(records, limit, 0),
             (*count - 1) * sizeof(*records));
   *login_record(records, limit, 0) =
-      (PlayerLoginRecord){.occurred_at = occurred_at, .host = copy};
+      (PlayerLoginRecord){.occurred_at = change->occurred_at, .host = copy};
   if (outcome == PLAYER_LOGIN_SUCCESS) {
     if (account->successful_logins < INT64_MAX)
       account->successful_logins++;
@@ -225,49 +228,55 @@ bool player_account_login_record(GameDatabase *database, DbRef player,
   return true;
 }
 
-size_t player_account_login_history_count(GameDatabase *database, DbRef player,
-                                          PlayerLoginOutcome outcome) {
-  PlayerAccountState *account = player_account(database, player);
-  if (!account ||
-      (outcome != PLAYER_LOGIN_SUCCESS && outcome != PLAYER_LOGIN_FAILURE))
+size_t player_account_login_history_count(PlayerLoginHistoryRequest request) {
+  PlayerAccountState *account =
+      player_account(request.account.database, request.account.player);
+  if (!account || (request.outcome != PLAYER_LOGIN_SUCCESS &&
+                   request.outcome != PLAYER_LOGIN_FAILURE))
     return 0;
-  return outcome == PLAYER_LOGIN_SUCCESS ? account->successful_history_count
-                                         : account->failed_history_count;
+  return request.outcome == PLAYER_LOGIN_SUCCESS
+             ? account->successful_history_count
+             : account->failed_history_count;
 }
 
-bool player_account_login_history(GameDatabase *database, DbRef player,
-                                  PlayerLoginOutcome outcome, size_t position,
-                                  PlayerLoginRecordView *record) {
-  PlayerAccountState *account = player_account(database, player);
+PlayerLoginHistoryResult
+player_account_login_history(const PlayerLoginHistoryRequest *request) {
+  PlayerAccountState *account =
+      player_account(request->account.database, request->account.player);
   PlayerLoginRecord *records;
   size_t *count;
   size_t limit;
 
-  if (!account || !record ||
-      (outcome != PLAYER_LOGIN_SUCCESS && outcome != PLAYER_LOGIN_FAILURE))
-    return false;
-  records = history(account, outcome, &count, &limit);
-  if (position >= *count)
-    return false;
-  const PlayerLoginRecord *stored = login_record(records, limit, position);
-  *record = (PlayerLoginRecordView){.occurred_at = stored->occurred_at,
-                                    .host = stored->host};
-  return true;
+  if (!account || (request->outcome != PLAYER_LOGIN_SUCCESS &&
+                   request->outcome != PLAYER_LOGIN_FAILURE))
+    return (PlayerLoginHistoryResult){0};
+  records = history(account, request->outcome, &count, &limit);
+  if (request->position >= *count)
+    return (PlayerLoginHistoryResult){0};
+  const PlayerLoginRecord *stored =
+      login_record(records, limit, request->position);
+  return (PlayerLoginHistoryResult){
+      .found = true,
+      .record = {.occurred_at = stored->occurred_at, .host = stored->host}};
 }
 
-bool player_account_login_history_set(GameDatabase *database, DbRef player,
-                                      PlayerLoginOutcome outcome,
-                                      size_t position, time_t occurred_at,
-                                      const char *host) {
+bool player_account_login_history_set(const PlayerLoginHistoryChange *change) {
+  PlayerLoginOutcome outcome = change->target.outcome;
+  size_t position = change->target.position;
   PlayerAccountState *account;
   PlayerLoginRecord *records;
   char *copy;
   size_t *count;
   size_t limit;
 
-  if ((outcome != PLAYER_LOGIN_SUCCESS && outcome != PLAYER_LOGIN_FAILURE) ||
-      !(account = player_account_require(database, player)) || !host ||
-      !(copy = strdup(host)))
+  if (outcome != PLAYER_LOGIN_SUCCESS && outcome != PLAYER_LOGIN_FAILURE)
+    return false;
+  account = player_account_require(change->target.account.database,
+                                   change->target.account.player);
+  if (!account || !change->host)
+    return false;
+  copy = strdup(change->host);
+  if (!copy)
     return false;
   records = history(account, outcome, &count, &limit);
   if (position >= limit || position > *count) {
@@ -279,7 +288,7 @@ bool player_account_login_history_set(GameDatabase *database, DbRef player,
   else
     (*count)++;
   *login_record(records, limit, position) =
-      (PlayerLoginRecord){.occurred_at = occurred_at, .host = copy};
+      (PlayerLoginRecord){.occurred_at = change->occurred_at, .host = copy};
   return true;
 }
 
@@ -288,14 +297,17 @@ size_t player_account_last_page_count(GameDatabase *database, DbRef player) {
   return account ? account->last_page_count : 0;
 }
 
-DbRef player_account_last_page_recipient(GameDatabase *database, DbRef player,
-                                         size_t position) {
-  PlayerAccountState *account = player_account(database, player);
-  if (!account || position >= account->last_page_count)
-    return NOTHING;
-  return *(const DbRef *)checked_storage_at_const(account->last_page_recipients,
-                                                  account->last_page_count,
-                                                  sizeof(DbRef), position);
+PlayerPageRecipientResult
+player_account_last_page_recipient(const PlayerPageRecipientRequest *request) {
+  PlayerAccountState *account =
+      player_account(request->account.database, request->account.player);
+  if (!account || request->position >= account->last_page_count)
+    return (PlayerPageRecipientResult){0};
+  return (PlayerPageRecipientResult){
+      .found = true,
+      .recipient = *(const DbRef *)checked_storage_at_const(
+          account->last_page_recipients, account->last_page_count,
+          sizeof(DbRef), request->position)};
 }
 
 bool player_account_last_page_set(GameDatabase *database, DbRef player,
@@ -306,8 +318,10 @@ bool player_account_last_page_set(GameDatabase *database, DbRef player,
   if (!account || (count > 0 && !recipients))
     return false;
   if (count > 0) {
-    if (count > SIZE_MAX / sizeof(*copy) ||
-        !(copy = malloc(count * sizeof(*copy))))
+    if (count > SIZE_MAX / sizeof(*copy))
+      return false;
+    copy = malloc(count * sizeof(*copy));
+    if (!copy)
       return false;
     memcpy(copy, recipients, count * sizeof(*copy));
   }

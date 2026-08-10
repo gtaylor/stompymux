@@ -47,7 +47,6 @@
 #include "mech_status_types.h"
 #include "mech_tech_api.h"
 #include "mech_utils_api.h"
-#include "mechrep_api.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
@@ -57,17 +56,27 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-int tele_contents(BtechContext *context, DbRef from, DbRef to, int flag) {
+int contents_teleport(const ContentsTeleportRequest *request) {
   DbRef i, tmpnext;
   int count = 0;
-  EvaluationContext *evaluation = btech_context_evaluation(context);
-  GameDatabase *database = btech_context_database(context);
+  EvaluationContext *evaluation = btech_context_evaluation(request->context);
+  GameDatabase *database = btech_context_database(request->context);
 
-  SAFE_DOLIST(database, i, tmpnext, game_object_contents(database, from))
-  if ((flag & TELE_ALL) || !is_wizard(database, i)) {
-    if (flag & TELE_XP && !is_wizard(database, i))
-      lower_xp(context, i, btech_context_experience_loss(context));
-    move_via_teleport(evaluation, i, to, 1, flag & TELE_LOUD ? 0 : 7);
+  SAFE_DOLIST(database, i, tmpnext,
+              game_object_contents(database, request->source))
+  if ((request->options & TELE_ALL) || !is_wizard(database, i)) {
+    if (request->options & TELE_XP && !is_wizard(database, i))
+      character_experience_reduce(&(CharacterExperienceReduction){
+          .context = request->context,
+          .character = i,
+          .per_mille = btech_context_experience_loss(request->context),
+      });
+    move_via_teleport(
+        &(ObjectMovementRequest){.evaluation = evaluation,
+                                 .object = i,
+                                 .destination = request->destination,
+                                 .cause = 1,
+                                 .hush = request->options & TELE_LOUD ? 0 : 7});
     count++;
   }
   return count;
@@ -97,9 +106,12 @@ static void mech_discard_event(MuxEvent *e) {
   s_going(database, i);
   s_dark(database, i);
   s_zombie(database, i);
-  move_via_teleport(evaluation, i,
-                    btech_context_used_mech_store_dbref(mech_context(mech)), 1,
-                    7);
+  move_via_teleport(&(ObjectMovementRequest){
+      .evaluation = evaluation,
+      .object = i,
+      .destination = btech_context_used_mech_store_dbref(mech_context(mech)),
+      .cause = 1,
+      .hush = 7});
 }
 
 void discard_mw(Mech *mech) {
@@ -109,8 +121,12 @@ void discard_mw(Mech *mech) {
 }
 
 void enter_mw_bay(Mech *mech, DbRef bay) {
-  tele_contents(mech_context(mech), mech_dbref(mech), bay,
-                TELE_ALL); /* Even immortals must get going */
+  contents_teleport(&(ContentsTeleportRequest){
+      .context = mech_context(mech),
+      .source = mech_dbref(mech),
+      .destination = bay,
+      .options = TELE_ALL,
+  }); /* Even immortals must get going */
   discard_mw(mech);
 }
 
@@ -138,18 +154,34 @@ void pickup_mw(Mech *mech, Mech *target) {
               "You pick up the stray mechwarrior from the field.");
   if (mech_team(target) != mech_team(mech))
     if (btech_context_mechwarrior_pickup_triggers_actions(mech_context(mech)))
-      tele_contents(mech_context(mech), mech_dbref(target), mech_dbref(mech),
-                    TELE_ALL | TELE_LOUD);
+      contents_teleport(&(ContentsTeleportRequest){
+          .context = mech_context(mech),
+          .source = mech_dbref(target),
+          .destination = mech_dbref(mech),
+          .options = TELE_ALL | TELE_LOUD,
+      });
     else
-      tele_contents(mech_context(mech), mech_dbref(target), mech_dbref(mech),
-                    TELE_ALL);
+      contents_teleport(&(ContentsTeleportRequest){
+          .context = mech_context(mech),
+          .source = mech_dbref(target),
+          .destination = mech_dbref(mech),
+          .options = TELE_ALL,
+      });
   else if (btech_context_mechwarrior_pickup_triggers_actions(
                mech_context(mech)))
-    tele_contents(mech_context(mech), mech_dbref(target), mech_dbref(mech),
-                  TELE_ALL | TELE_LOUD);
+    contents_teleport(&(ContentsTeleportRequest){
+        .context = mech_context(mech),
+        .source = mech_dbref(target),
+        .destination = mech_dbref(mech),
+        .options = TELE_ALL | TELE_LOUD,
+    });
   else
-    tele_contents(mech_context(mech), mech_dbref(target), mech_dbref(mech),
-                  TELE_ALL);
+    contents_teleport(&(ContentsTeleportRequest){
+        .context = mech_context(mech),
+        .source = mech_dbref(target),
+        .destination = mech_dbref(mech),
+        .options = TELE_ALL,
+    });
   discard_mw(target);
 }
 
@@ -168,7 +200,8 @@ static void char_eject(DbRef player, Mech *mech) {
   btech_special_object_flag_changed(mech_context(mech), GOD, suit, 0, 1);
   d = btech_attribute_read(database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
-  if (!(m = btech_context_get_mech(mech_context(mech), suit))) {
+  m = btech_context_get_mech(mech_context(mech), suit);
+  if (!m) {
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to create special obj for #%ld's ejection.", player));
@@ -196,8 +229,17 @@ static void char_eject(DbRef player, Mech *mech) {
   mech_Rsetxy(GOD, (void *)m,
               tprintf("%d %d", mech_position_x(mech), mech_position_y(mech)));
   mech_Rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
-  move_via_teleport(evaluation, suit, mech_map_dbref(mech), 1, 7);
-  move_via_teleport(evaluation, player, suit, 1, 7);
+  move_via_teleport(
+      &(ObjectMovementRequest){.evaluation = evaluation,
+                               .object = suit,
+                               .destination = mech_map_dbref(mech),
+                               .cause = 1,
+                               .hush = 7});
+  move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
+                                             .object = player,
+                                             .destination = suit,
+                                             .cause = 1,
+                                             .hush = 7});
   mech_los_broadcast(m,
                      tprintf("ejected from %s!", mech_display_id(mech).text));
   s_in_character(database, suit);
@@ -276,11 +318,13 @@ void mech_eject(DbRef player, void *data, char *buffer) {
     return;
   }
   if (!mech_is_started(mech)) {
-    if ((char_lookupplayer(
-            mech_context(mech), GOD, GOD, 0,
-            btech_attribute_read(btech_context_database(mech_context(mech)),
-                                 mech_dbref(mech), A_PILOTNUM,
-                                 (char[LBUF_SIZE]){0}))) != player) {
+    if ((character_lookup(&(CharacterLookupRequest){
+            .context = mech_context(mech),
+            .viewer = GOD,
+            .name = btech_attribute_read(
+                btech_context_database(mech_context(mech)), mech_dbref(mech),
+                A_PILOTNUM, (char[LBUF_SIZE]){0}),
+        })) != player) {
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
           "You aren't the official pilot of this thing. Try 'disembark'");
@@ -316,7 +360,8 @@ static void char_disembark(DbRef player, Mech *mech) {
   btech_special_object_flag_changed(mech_context(mech), GOD, suit, 0, 1);
   d = btech_attribute_read(database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
-  if (!(m = btech_context_get_mech(mech_context(mech), suit))) {
+  m = btech_context_get_mech(mech_context(mech), suit);
+  if (!m) {
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to create special obj for #%ld's disembarkation.",
@@ -346,8 +391,17 @@ static void char_disembark(DbRef player, Mech *mech) {
               tprintf("%d %d", mech_position_x(mech), mech_position_y(mech)));
   mech_position_hex_z_set(m, mech_position_z(mech));
   mech_Rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
-  move_via_teleport(evaluation, suit, mech_map_dbref(mech), 1, 7);
-  move_via_teleport(evaluation, player, suit, 1, 7);
+  move_via_teleport(
+      &(ObjectMovementRequest){.evaluation = evaluation,
+                               .object = suit,
+                               .destination = mech_map_dbref(mech),
+                               .cause = 1,
+                               .hush = 7});
+  move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
+                                             .object = player,
+                                             .destination = suit,
+                                             .cause = 1,
+                                             .hush = 7});
   s_in_character(database, suit);
   initialize_pc(player, m);
   mech_pilot_dbref_set(m, player);
@@ -465,10 +519,12 @@ void mech_udisembark(DbRef player, void *data, const char *buffer) {
    */
   if (is_in_character(database, mech_dbref(mech)) &&
       !is_wizard(database, player) &&
-      (char_lookupplayer(
-           mech_context(mech), GOD, GOD, 0,
-           btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
-                                (char[LBUF_SIZE]){0})) != player)) {
+      (character_lookup(&(CharacterLookupRequest){
+           .context = mech_context(mech),
+           .viewer = GOD,
+           .name = btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
+                                        (char[LBUF_SIZE]){0}),
+       }) != player)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "This isn't your mech!");
     return;
@@ -482,7 +538,8 @@ void mech_udisembark(DbRef player, void *data, const char *buffer) {
                  "You're not being carried!");
     return;
   }
-  if (!(target = btech_context_get_mech(mech_context(mech), newmech))) {
+  target = btech_context_get_mech(mech_context(mech), newmech);
+  if (!target) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Not being carried!");
     return;
@@ -526,7 +583,11 @@ void mech_udisembark(DbRef player, void *data, const char *buffer) {
   }
 
   /* Teleport loudly so native enter events and other messages run. */
-  move_via_teleport(evaluation, mech_dbref(mech), mech_map_dbref(mech), 1, 0);
+  move_via_teleport(
+      &(ObjectMovementRequest){.evaluation = evaluation,
+                               .object = mech_dbref(mech),
+                               .destination = mech_map_dbref(mech),
+                               .cause = 1});
 
   /* If we make it safely, start the invoker's unit up once it's on the map. */
   if (!mech_is_destroyed(mech) &&

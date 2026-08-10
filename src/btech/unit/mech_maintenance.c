@@ -39,17 +39,24 @@
 
 void ArmorStringFromIndex(int index, char *buffer, UnitClass type,
                           MechMovementType movement_type) {
-  size_t location_count = mech_section_name_count(type, movement_type);
+  const UnitSectionCatalog catalog = {.unit_type = type,
+                                      .movement_type = movement_type};
+  size_t location_count = unit_section_name_count(&catalog);
   if (index >= 0 && (size_t)index < location_count) {
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
-    strcpy(buffer, mech_section_name(type, movement_type, (size_t)index));
+    strcpy(buffer, unit_section_name(&catalog, (size_t)index));
     return;
   }
   // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
   strcpy(buffer, "Invalid!!");
 }
 
-int IsInWeaponArc(Mech *mech, float x, float y, int section, int critical) {
+bool IsInWeaponArc(const WeaponArcRequest *request) {
+  Mech *mech = request->mech;
+  const float x = request->target.x;
+  const float y = request->target.y;
+  const int section = request->section;
+  const int critical = request->critical;
   int weaponarc, isrear;
   int wantarc = NOARC;
 
@@ -160,7 +167,7 @@ int IsInWeaponArc(Mech *mech, float x, float y, int section, int critical) {
     }
     break;
   }
-  return wantarc ? (wantarc & weaponarc) : 0;
+  return wantarc && (wantarc & weaponarc);
 }
 
 int GetWeaponCrits(Mech *mech, int weapindx) {
@@ -172,8 +179,8 @@ int GetWeaponCrits(Mech *mech, int weapindx) {
 int listmatch(const char *const *values, size_t value_count,
               const char *match) {
   for (size_t i = 0; i < value_count; i++) {
-    const char *const *value =
-        checked_storage_at_const(values, value_count, sizeof(*values), i);
+    const char *const *value = (const char *const *)checked_storage_at_const(
+        (const void *)values, value_count, sizeof(*values), i);
     if (!strcasecmp(*value, match))
       return clamp_size_to_int(i);
   }
@@ -326,7 +333,10 @@ void do_magic(Mech *mech) {
     for (j = 0; j < CritsInLoc(mech, i); j++) {
       mech_critical_part_type_set(&opp, i, j,
                                   mech_critical_part_type(mech, i, j));
-      mech_critical_brand_set(&opp, i, j, mech_critical_brand(mech, i, j));
+      mech_critical_brand_set(
+          &(CriticalSlotBrandSet){.mech = &opp,
+                                  .slot = {.section = i, .critical = j},
+                                  .brand = mech_critical_brand(mech, i, j)});
       mech_critical_data_set(&opp, i, j, 0);
       mech_critical_fire_mode_set(&opp, i, j, 0);
       mech_critical_ammo_mode_set(&opp, i, j, 0);
@@ -339,12 +349,16 @@ void do_magic(Mech *mech) {
     for (j = 0; j < CritsInLoc(mech, i); j++) {
       if (mech_critical_is_destroyed(mech, i, j)) {
         if (!mech_critical_is_destroyed(&opp, i, j)) {
-          if (!equipment_is_ammunition(
-                  (t = mech_critical_part_type(mech, i, j)))) {
+          t = mech_critical_part_type(mech, i, j);
+          if (!equipment_is_ammunition(t)) {
             if (!equipment_is_weapon(t))
               if (((mech)->ud.type) == CLASS_MECH)
-                mech_critical_effect_apply(&opp, nullptr, 0, i, j, t,
-                                           mech_critical_data(mech, i, j));
+                mech_critical_effect_apply(&(CriticalEffectRequest){
+                    .wounded = &opp,
+                    .attacker = nullptr,
+                    .slot = {.section = i, .critical = j},
+                    .part_type = t,
+                    .part_data = mech_critical_data(mech, i, j)});
           }
         }
       } else {
@@ -364,7 +378,8 @@ void do_magic(Mech *mech) {
     mech_section_configuration_remove(mech, i, STABILIZERS_DESTROYED);
 
     if (mech_section_is_destroyed(mech, i))
-      mech_section_destroy(&opp, nullptr, 0, i);
+      mech_section_destroy(&(SectionDestructionRequest){
+          .wounded = &opp, .attacker = nullptr, .section = i});
     if (((mech)->pd.stall) > 0)
       mech_section_breached_set(
           mech, i, false); /* Just in case ; this leads to 'unbreachable'
@@ -507,7 +522,8 @@ void mech_ReSeal(Mech *mech, int loc) {
 void mech_Detach(Mech *mech, int loc) {
   if (mech_section_is_destroyed(mech, loc))
     return;
-  mech_section_destroy(mech, nullptr, 0, loc);
+  mech_section_destroy(&(SectionDestructionRequest){
+      .wounded = mech, .attacker = nullptr, .section = loc});
 }
 
 /* Figures out how much ammo there is when we're 'fully loaded', and
@@ -542,14 +558,17 @@ int AcceptableDegree(int d) {
 void MarkForLOSUpdate(Mech *mech) {
   BattleMap *mech_map;
 
-  if (!(mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
+  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  if (!mech_map)
     return;
   mech_map->moves++;
   battle_map_unit_moved_set(mech_map, mech_map_slot(mech));
 }
 
-void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
-                    MultiWeaponSelectionCallback callback, void *context) {
+void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
+  Mech *mech = request->mech;
+  const DbRef player = request->actor;
+  char *buffer = request->selection;
   /* Insight: buffer contains stuff in form:
      <num>
      <num>-<num>
@@ -560,14 +579,14 @@ void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
   char *c;
   char empty_buffer[] = "";
   int i1, i2, i3;
-  int section, critical;
 
   if (buffer)
     buffer =
         checked_mutable_string_suffix(buffer, strspn(buffer, " \t\n\v\f\r"));
   if (!buffer)
     buffer = empty_buffer;
-  if ((c = strstr(buffer, ","))) {
+  c = strstr(buffer, ",");
+  if (c) {
     *c = 0;
     c = checked_mutable_string_suffix(c, 1);
   }
@@ -608,25 +627,46 @@ void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
     }
     i2 = i1;
   }
-  if (bitbybit / 2) {
+  if (request->mode / 2) {
     if (i2 >= NUM_TICS) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    tprintf("There are only %d tics!", i2));
       return;
     }
   } else {
-    if (!(FindWeaponNumberOnMech(mech, i2, &section, &critical) != -1)) {
+    WeaponNumberLookupResult lookup = weapon_number_find(
+        &(WeaponNumberLookupRequest){.mech = mech, .number = i2});
+    if (!lookup.found) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    tprintf("Error: the mech doesn't HAVE %d weapons!", i2 + 1));
       return;
     }
   }
-  if (bitbybit % 2) {
+  if (request->mode % 2) {
     for (i3 = i1; i3 <= i2; i3++)
-      if (callback(mech, player, i3, i3, context))
+      if (request->callback(&(MultiWeaponSelectionCall){
+              .mech = mech,
+              .actor = player,
+              .first = i3,
+              .last = i3,
+              .context = request->context,
+          }))
         return;
-  } else if (callback(mech, player, i1, i2, context))
+  } else if (request->callback(&(MultiWeaponSelectionCall){
+                 .mech = mech,
+                 .actor = player,
+                 .first = i1,
+                 .last = i2,
+                 .context = request->context,
+             }))
     return;
   if (c)
-    multi_weap_sel(mech, player, c, bitbybit, callback, context);
+    multi_weapon_select(&(MultiWeaponSelectionRequest){
+        .mech = mech,
+        .actor = player,
+        .selection = c,
+        .mode = request->mode,
+        .callback = request->callback,
+        .context = request->context,
+    });
 }

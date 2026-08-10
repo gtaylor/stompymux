@@ -9,8 +9,14 @@
 
 typedef struct EvaluationContext EvaluationContext;
 
-void raw_notify_raw(EvaluationContext *evaluation, DbRef player,
-                    const char *message, const char *append);
+typedef struct RawNotification {
+  EvaluationContext *evaluation;
+  DbRef player;
+  const char *message;
+  const char *suffix;
+} RawNotification;
+
+void raw_notify_raw(const RawNotification *notification);
 void raw_notify(EvaluationContext *evaluation, DbRef player,
                 const char *message);
 void notify_printf(EvaluationContext *evaluation, DbRef player,

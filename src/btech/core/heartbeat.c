@@ -39,7 +39,8 @@ void btech_heartbeat_stop(BtechContext *context) {
 
 void auto_heartbeat(Autopilot *);
 
-static int heartbeat_dispatch(void *key, void *data, int depth, void *arg) {
+static int heartbeat_dispatch(const RedBlackTreeVisitCall *call) {
+  void *data = call->data;
   BtechSpecialObject *const xcode_obj = data;
 
   switch (xcode_obj->type) {

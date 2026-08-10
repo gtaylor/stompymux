@@ -27,7 +27,8 @@ int main(void) {
   if (mech.rd.status != LOCK_HEX || mech.rd.targx != 8)
     return 2;
 
-  mech_targeting_aim_set(&mech, HEAD, CLASS_MECH);
+  mech_targeting_aim_set(
+      &mech, (MechAimSelection){.section = HEAD, .unit_class = CLASS_MECH});
   mech_targeting_aim_reset(&mech);
   mech_charge_target_dbref_set(&mech, 10);
   mech_dfa_target_dbref_set(&mech, 11);
@@ -45,7 +46,14 @@ int main(void) {
   mech.rd.targy = 13;
   mech.rd.targz = 14;
 
-  mech_targeting_override_begin(&mech, &override, 21, 22, 23, 24, LOCK_HEX);
+  mech_targeting_override_begin(
+      &(MechTargetingOverrideBegin){.mech = &mech,
+                                    .override = &override,
+                                    .state = {.target = 21,
+                                              .target_x = 22,
+                                              .target_y = 23,
+                                              .target_z = 24,
+                                              .lock_modes = LOCK_HEX}});
   if (mech.rd.status != (STARTED | LOCK_HEX) || mech.rd.target != 21 ||
       mech.rd.targx != 22 || mech.rd.targy != 23 || mech.rd.targz != 24)
     return 4;
@@ -55,8 +63,12 @@ int main(void) {
   mech.rd.targx = 32;
   mech.rd.targy = 33;
   mech.rd.targz = 34;
-  mech_targeting_override_end(&mech, &override, &target, &target_x, &target_y,
-                              &target_z, &lock_modes);
+  MechTargetingState state = mech_targeting_override_end(&mech, &override);
+  target = state.target;
+  target_x = state.target_x;
+  target_y = state.target_y;
+  target_z = state.target_z;
+  lock_modes = state.lock_modes;
 
   if (target != 31 || target_x != 32 || target_y != 33 || target_z != 34 ||
       lock_modes != LOCK_BUILDING)

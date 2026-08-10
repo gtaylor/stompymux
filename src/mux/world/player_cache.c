@@ -18,7 +18,9 @@ struct PlayerCache {
   GameDatabase *database;
 };
 
-static int compare_pcache(void *left_key, void *right_key, void *arg) {
+static int compare_pcache(const RedBlackTreeCompareCall *call) {
+  void *left_key = call->lhs;
+  void *right_key = call->rhs;
   const DbRef left = (DbRef)left_key;
   const DbRef right = (DbRef)right_key;
 
@@ -101,25 +103,29 @@ void pcache_trim(PlayerCache *cache) {
   }
 }
 
-int queue_adjust(PlayerCache *cache, DbRef player, int adj) {
+int queue_adjust(const PlayerQueueAdjustment *adjustment) {
+  PlayerCache *cache = adjustment->cache;
+  DbRef player = adjustment->player;
   PCACHE *pp;
 
   if (is_player(cache->database, player)) {
     pp = pcache_find(cache, player);
     if (pp)
-      pp->queue += adj;
+      pp->queue += adjustment->delta;
     return pp->queue;
   }
   return 0;
 }
 
-void queue_set(PlayerCache *cache, DbRef player, int val) {
+void queue_set(const PlayerQueueAssignment *assignment) {
+  PlayerCache *cache = assignment->cache;
+  DbRef player = assignment->player;
   PCACHE *pp;
 
   if (is_player(cache->database, player)) {
     pp = pcache_find(cache, player);
     if (pp)
-      pp->queue = val;
+      pp->queue = assignment->value;
   }
 }
 

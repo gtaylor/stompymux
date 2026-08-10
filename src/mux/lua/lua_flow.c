@@ -96,7 +96,10 @@ static void lua_flow_encode(LuaRuntime *runtime, lua_State *state,
       StringCopyTrunc(field->value, lua_tostring(state, -1), LBUF_SIZE - 1);
       data->field_count++;
     } else if (lua_type(state, -2) == LUA_TSTRING) {
-      log_error(runtime->services->log, LOG_BUGS, "LUA", "FLOW",
+      log_error((LogEntry){.log = runtime->services->log,
+                           .key = LOG_BUGS,
+                           .primary = "LUA",
+                           .secondary = "FLOW"},
                 "Dropping unsupported ctx.flow.%s (must be a string or "
                 "number).",
                 lua_tostring(state, -2));
@@ -105,10 +108,12 @@ static void lua_flow_encode(LuaRuntime *runtime, lua_State *state,
   }
 }
 
-static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
-                                 const char *step, const char *input) {
+static FlowOutcome lua_flow_step(const FlowStepCall *call) {
   static char prompt_buffer[LBUF_SIZE];
-  LuaFlowData *data = flow_data;
+  Descriptor *d = call->descriptor;
+  LuaFlowData *data = call->flow_data;
+  const char *step = call->step;
+  const char *input = call->input;
   LuaRuntime *runtime =
       data->runtime_owner != nullptr ? data->runtime_owner->runtime : nullptr;
   lua_State *state;
@@ -139,7 +144,10 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
   }
   lua_getfield(state, -1, step);
   if (!lua_isfunction(state, -1)) {
-    log_error(runtime->services->log, LOG_BUGS, "LUA", "FLOW",
+    log_error((LogEntry){.log = runtime->services->log,
+                         .key = LOG_BUGS,
+                         .primary = "LUA",
+                         .secondary = "FLOW"},
               "Unknown flow step '%s' in %s.", step, data->path);
     lua_settop(state, top);
     return outcome;
@@ -186,7 +194,10 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
     outcome.action = FLOW_ACTION_DONE;
   else {
     if (strcmp(field, "cancel") != 0)
-      log_error(runtime->services->log, LOG_BUGS, "LUA", "FLOW",
+      log_error((LogEntry){.log = runtime->services->log,
+                           .key = LOG_BUGS,
+                           .primary = "LUA",
+                           .secondary = "FLOW"},
                 "Unknown flow action '%s' from step '%s' in %s; cancelling.",
                 field, step, data->path);
     outcome.action = FLOW_ACTION_CANCEL;
@@ -268,7 +279,11 @@ int lua_runtime_flow_start(void *context, lua_State *state, int descriptor_id,
   (void)snprintf(data->path, sizeof(data->path), "%s", module);
   data->field_count = 0;
 
-  descriptor_flow_start(d, first_step, lua_flow_step, data, lua_flow_data_free);
+  descriptor_flow_start(&(FlowStartRequest){.descriptor = d,
+                                            .initial_step = first_step,
+                                            .step = lua_flow_step,
+                                            .flow_data = data,
+                                            .destroy = lua_flow_data_free});
   return 0;
 }
 

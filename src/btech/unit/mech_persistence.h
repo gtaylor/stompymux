@@ -18,6 +18,28 @@ typedef struct {
   MechNetworkState network;
 } MechPersistenceSnapshot;
 
+typedef struct MechNetworkNodeRestore {
+  Mech *mech;
+  int network_type;
+  int node_index;
+  DbRef node_dbref;
+} MechNetworkNodeRestore;
+
+typedef struct MechTicWordRestore {
+  Mech *mech;
+  int tic_index;
+  int word_index;
+  unsigned long value;
+} MechTicWordRestore;
+
+typedef struct MechFrequencyRestore {
+  Mech *mech;
+  int index;
+  int frequency;
+  int mode;
+  const char *title;
+} MechFrequencyRestore;
+
 void mech_persistence_snapshot_export(const Mech *mech,
                                       MechPersistenceSnapshot *snapshot);
 void mech_persistence_identity_restore(Mech *mech,
@@ -33,12 +55,9 @@ void mech_persistence_turret_restore(Mech *mech, int turret_index,
                                      DbRef turret_dbref);
 void mech_persistence_network_restore(Mech *mech,
                                       const MechPersistenceSnapshot *snapshot);
-void mech_persistence_network_node_restore(Mech *mech, int network_type,
-                                           int node_index, DbRef node_dbref);
-void mech_persistence_tic_restore(Mech *mech, int tic_index, int word_index,
-                                  unsigned long value);
-void mech_persistence_frequency_restore(Mech *mech, int frequency_index,
-                                        int frequency, int mode,
-                                        const char *title);
+void mech_persistence_network_node_restore(
+    const MechNetworkNodeRestore *request);
+void mech_persistence_tic_restore(const MechTicWordRestore *request);
+void mech_persistence_frequency_restore(const MechFrequencyRestore *request);
 void mech_persistence_runtime_restore(Mech *mech,
                                       const MechPersistenceSnapshot *snapshot);

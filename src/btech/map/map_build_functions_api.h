@@ -6,7 +6,6 @@
 
 /* map.build.functions.c */
 
-int water_distance(BattleMap *map, int x, int y, int dir, int max);
 void loadMap(DbRef player, void *data, char *buffer);
 void saveMap(DbRef player, void *data, char *buffer);
 void freeOldMap(BattleMap *map);

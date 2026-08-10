@@ -24,11 +24,10 @@ static int battle_value_table_get(const int values[64], int index) {
                                                 (size_t)index);
 }
 
-static void battle_value_table_set(int values[64], int index, int value) {
+static int *battle_value_table_slot(int values[64], int index) {
   if (index < 0)
     abort();
-  int *slot = checked_storage_at(values, 64, sizeof(*values), (size_t)index);
-  *slot = value;
+  return checked_storage_at(values, 64, sizeof(*values), (size_t)index);
 }
 
 static unsigned char battle_value_weapon_get(const unsigned char *values,
@@ -323,7 +322,8 @@ float Calculate_Defensive_BV(Mech *mech) {
 
   if (((mech)->rd.specials) & MASC_TECH) {
     if (((mech)->rd.specials2) & SUPERCHARGER_TECH) {
-      run_mp = clamp_float_to_int((float)((run_mp * 2) / 3) *
+      const int walk_mp = (run_mp * 2) / 3;
+      run_mp = clamp_float_to_int((float)walk_mp *
                                   2.5F); /* walk mp * 2.5, round down */
     }
     run_mp = ((run_mp * 2) / 3) * 2; /* 2x walk mp */
@@ -411,13 +411,13 @@ float Calculate_Offensive_BV(Mech *mech) {
       if (weapon_catalogue_has_special(weapon, AMS))
         continue;
 
-      battle_value_table_set(weaptable, tablecount, weapon);
+      *battle_value_table_slot(weaptable, tablecount) = weapon;
       /* TODO: Modify Ultra/RAC/Streak/Oneshot HEAT values.
        * TC/Oneshot/Rear/Artemis BV Values */
-      battle_value_table_set(heattable, tablecount,
-                             weapon_catalogue_heat(weapon));
-      battle_value_table_set(bvtable, tablecount,
-                             weapon_catalogue_battle_value(weapon));
+      *battle_value_table_slot(heattable, tablecount) =
+          weapon_catalogue_heat(weapon);
+      *battle_value_table_slot(bvtable, tablecount) =
+          weapon_catalogue_battle_value(weapon);
       tablecount++;
     }
   }
@@ -431,15 +431,15 @@ float Calculate_Offensive_BV(Mech *mech) {
         wt = battle_value_table_get(weaptable, j);
         ht = battle_value_table_get(heattable, j);
         bt = battle_value_table_get(bvtable, j);
-        battle_value_table_set(weaptable, j,
-                               battle_value_table_get(weaptable, j + 1));
-        battle_value_table_set(heattable, j,
-                               battle_value_table_get(heattable, j + 1));
-        battle_value_table_set(bvtable, j,
-                               battle_value_table_get(bvtable, j + 1));
-        battle_value_table_set(weaptable, j + 1, wt);
-        battle_value_table_set(heattable, j + 1, ht);
-        battle_value_table_set(bvtable, j + 1, bt);
+        *battle_value_table_slot(weaptable, j) =
+            battle_value_table_get(weaptable, j + 1);
+        *battle_value_table_slot(heattable, j) =
+            battle_value_table_get(heattable, j + 1);
+        *battle_value_table_slot(bvtable, j) =
+            battle_value_table_get(bvtable, j + 1);
+        *battle_value_table_slot(weaptable, j + 1) = wt;
+        *battle_value_table_slot(heattable, j + 1) = ht;
+        *battle_value_table_slot(bvtable, j + 1) = bt;
       }
     }
   }

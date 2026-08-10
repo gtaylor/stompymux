@@ -80,7 +80,8 @@ static inline bool is_protected(CMDENT *cmdp, int x) { return cmdp->perms & x; }
 
 static char **command_argument_slot(char **arguments, size_t capacity,
                                     size_t index) {
-  return checked_storage_at(arguments, capacity, sizeof(*arguments), index);
+  return (char **)checked_storage_at((void *)arguments, capacity,
+                                     sizeof(*arguments), index);
 }
 
 static char *command_split_slash(char *text) {
@@ -122,19 +123,29 @@ static void command_invoke(CMDENT *command, CommandContext *context,
  * ---------------------------------------------------------------------------
  * * process_cmdent: Perform indicated command with passed args.
  */
-static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
-                           DbRef player, DbRef cause, int interactive,
-                           char *arg, char *unp_command, char *cargs[],
-                           int ncargs) {
+typedef struct CommandEntryDispatch {
+  CommandContext *context;
+  CMDENT *command;
+  char *switches;
+  DbRef player;
+  DbRef cause;
+  char *arguments;
+  char *unparsed_command;
+} CommandEntryDispatch;
+
+static void process_cmdent(const CommandEntryDispatch *dispatch) {
+  CommandContext *context = dispatch->context;
+  CMDENT *cmdp = dispatch->command;
+  char *switchp = dispatch->switches;
+  DbRef player = dispatch->player;
+  DbRef cause = dispatch->cause;
+  char *arg = dispatch->arguments;
+  char *unp_command = dispatch->unparsed_command;
   char *buf1 = nullptr, *buf2 = nullptr, tchar = '\x00';
   char *args[MAX_ARG];
   int nargs = 0, i = 0, fail = 0, parse_flags = 0, key = 0, xkey = 0;
 
-  (void)interactive;
-  (void)cargs;
-  (void)ncargs;
-
-  memset(args, 0, sizeof(char *) * MAX_ARG);
+  memset((void *)args, 0, sizeof(char *) * MAX_ARG);
 
   /*
    * Perform object type checks.
@@ -260,7 +271,10 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
                      nullptr, nullptr, 0, nullptr, 0);
       break;
     }
-    buf1 = parse_to(context->world->configuration, &arg, '\0', parse_flags);
+    buf1 = parse_to(
+        &(CommandParseRequest){.configuration = context->world->configuration,
+                               .source = &arg,
+                               .options = parse_flags});
 
     /*
      * Call the correct handler
@@ -278,8 +292,11 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
      * Interpret ARG1
      */
 
-    buf1 = parse_to(context->world->configuration, &arg, '=',
-                    COMMAND_PARSE_STRIP | COMMAND_PARSE_STRIP_TRAILING);
+    buf1 = parse_to(&(CommandParseRequest){
+        .configuration = context->world->configuration,
+        .source = &arg,
+        .delimiter = '=',
+        .options = COMMAND_PARSE_STRIP | COMMAND_PARSE_STRIP_TRAILING});
 
     /*
      * Handle when no '=' was specified
@@ -295,8 +312,12 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
        * Arg2 is ARGV style.  Go get the args
        */
 
-      parse_arglist(context->world->configuration, arg, '\0', parse_flags, args,
-                    MAX_ARG);
+      parse_arglist(&(CommandArgumentListRequest){
+          .configuration = context->world->configuration,
+          .source = arg,
+          .options = parse_flags,
+          .arguments = args,
+          .maximum_arguments = MAX_ARG});
       for (nargs = 0;
            nargs < MAX_ARG &&
            *command_argument_slot(args, MAX_ARG, (size_t)nargs) != nullptr;
@@ -321,10 +342,15 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
     } else {
 
       if (cmdp->callseq & CS_UNPARSE) {
-        buf2 = parse_to(context->world->configuration, &arg, '\0',
-                        COMMAND_PARSE_NO_COMPRESS);
+        buf2 = parse_to(&(CommandParseRequest){
+            .configuration = context->world->configuration,
+            .source = &arg,
+            .options = COMMAND_PARSE_NO_COMPRESS});
       } else {
-        buf2 = parse_to(context->world->configuration, &arg, '\0', parse_flags);
+        buf2 = parse_to(&(CommandParseRequest){
+            .configuration = context->world->configuration,
+            .source = &arg,
+            .options = parse_flags});
       }
 
       /*
@@ -374,7 +400,10 @@ void process_command(CommandContext *context, char *command, char *args[],
   }
 
   if (!is_good_obj(context->world->database, player)) {
-    log_error(context->log, LOG_BUGS, "CMD", "PLYR",
+    log_error((LogEntry){.log = context->log,
+                         .key = LOG_BUGS,
+                         .primary = "CMD",
+                         .secondary = "PLYR"},
               "Bad player in process_command: %ld", player);
     context->debug_command = cmdsave;
     goto exit;
@@ -479,8 +508,12 @@ void process_command(CommandContext *context, char *command, char *args[],
   i = (unsigned char)*command;
   CMDENT *prefix_command = command_prefix_entry_at(registry, (size_t)i);
   if (prefix_command != nullptr && *command) {
-    process_cmdent(context, prefix_command, nullptr, player, cause, interactive,
-                   command, command, args, nargs);
+    process_cmdent(&(CommandEntryDispatch){.context = context,
+                                           .command = prefix_command,
+                                           .player = player,
+                                           .cause = cause,
+                                           .arguments = command,
+                                           .unparsed_command = command});
     context->debug_command = cmdsave;
     goto exit;
   }
@@ -511,7 +544,9 @@ void process_command(CommandContext *context, char *command, char *args[],
     /* do_move()'s parameter isn't const-correct; "home" is only read. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-    move_command(&context->evaluation, player, cause, 0, (char *)"home");
+    move_command(&(MoveCommandRequest){.evaluation = &context->evaluation,
+                                       .player = player,
+                                       .direction = (char *)"home"});
 #pragma clang diagnostic pop
     context->debug_command = cmdsave;
     goto exit;
@@ -588,8 +623,13 @@ void process_command(CommandContext *context, char *command, char *args[],
                      "attribute instead.",
                      MSG_ME_ALL | MSG_F_DOWN);
     else
-      process_cmdent(context, cmdp, slashp, player, cause, interactive, arg,
-                     command, args, nargs);
+      process_cmdent(&(CommandEntryDispatch){.context = context,
+                                             .command = cmdp,
+                                             .switches = slashp,
+                                             .player = player,
+                                             .cause = cause,
+                                             .arguments = arg,
+                                             .unparsed_command = command});
     free_lbuf(lcbuf);
     context->debug_command = cmdsave;
     goto exit;

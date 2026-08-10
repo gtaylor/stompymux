@@ -51,16 +51,31 @@ void mech_sensor_visibility_refresh(Mech *mech) {
 
     float range = mech_range_to(seer, mech);
     unsigned short los_flags = battle_map_los_flags(map, i, num);
-    los_flags = (unsigned short)mech_los_calculate_flags(
-        seer, mech, map, mech_position_x(mech), mech_position_y(mech),
-        los_flags, range);
+    los_flags = (unsigned short)mech_los_calculate_flags(&(MechLosCalculation){
+        .observer = seer,
+        .target = mech,
+        .map = map,
+        .target_hex = {.x = mech_position_x(mech), .y = mech_position_y(mech)},
+        .previous_flags = los_flags,
+        .hex_range = range,
+    });
     battle_map_los_flags_set(map, i, num, los_flags);
 
     /* Then update the SEES flags. */
 #ifdef ADVANCED_LOS
-    los_flags = mech_sensor_visibility_update(
-        seer, los_flags, range, -1, -1, mech, battle_map_visibility(map),
-        battle_map_light(map), battle_map_cloud_base(map), 2, 0);
+    MechSensorVisibilityRequest request = {
+        .observer = seer,
+        .los_flags = los_flags,
+        .range = range,
+        .x = -1,
+        .y = -1,
+        .target = mech,
+        .map_visibility = battle_map_visibility(map),
+        .map_light = battle_map_light(map),
+        .cloud_base = battle_map_cloud_base(map),
+        .notification_level = 2,
+    };
+    los_flags = mech_sensor_visibility_update(&request);
     battle_map_los_flags_set(map, i, num, los_flags);
 #endif
   }
@@ -74,10 +89,13 @@ static void mech_unblind_event(MuxEvent *event) {
     mech_notify(mech, MECHALL, "Your sight recovers.");
 }
 
-void mech_sensors_scramble_infrared_and_liteamp(Mech *mech, int time,
-                                                int chance,
-                                                const char *inframsg,
-                                                const char *liteampmsg) {
+void mech_sensors_scramble_infrared_and_liteamp(
+    const SensorScrambleRequest *request) {
+  Mech *mech = request->source;
+  const int time = request->duration;
+  const int chance = request->chance;
+  const char *inframsg = request->infrared_message;
+  const char *liteampmsg = request->light_amplification_message;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 

@@ -135,6 +135,7 @@ OK, enough of this.  Let's get on to the code.
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_api_types.h"
@@ -162,13 +163,14 @@ const LosTracePoint *los_trace_point_at(const LosTrace *trace, int index) {
                                   sizeof(*trace->points), (size_t)index);
 }
 
-static void los_trace_store(LosTrace *trace, int *count, int x, int y) {
+static void los_trace_store(LosTrace *trace, int *count,
+                            MapHexPosition position) {
   assert(*count < LOS_TRACE_CAPACITY);
   LosTracePoint *point =
       checked_storage_at(trace->points, LOS_TRACE_CAPACITY,
                          sizeof(*trace->points), (size_t)*count);
-  point->x = x;
-  point->y = y;
+  point->x = position.x;
+  point->y = position.y;
   ++*count;
 }
 
@@ -184,15 +186,15 @@ static void los_trace_store_best(BattleMap *map, LosTrace *trace, int *count,
                                  int x1, int y1, int x2, int y2) {
   if (x1 < 0 || x1 >= battle_map_width(map) || y1 < 0 ||
       y1 >= battle_map_height(map)) {
-    los_trace_store(trace, count, x2, y2);
+    los_trace_store(trace, count, (MapHexPosition){.x = x2, .y = y2});
   } else if (x2 < 0 || x2 >= battle_map_width(map) || y2 < 0 ||
              y2 >= battle_map_height(map)) {
-    los_trace_store(trace, count, x1, y1);
+    los_trace_store(trace, count, (MapHexPosition){.x = x1, .y = y1});
   } else if (los_trace_elevation(map, x1, y1) >
              los_trace_elevation(map, x2, y2)) {
-    los_trace_store(trace, count, x1, y1);
+    los_trace_store(trace, count, (MapHexPosition){.x = x1, .y = y1});
   } else {
-    los_trace_store(trace, count, x2, y2);
+    los_trace_store(trace, count, (MapHexPosition){.x = x2, .y = y2});
   }
 }
 
@@ -201,38 +203,37 @@ static void los_map_coord_to_real(int x, int y, float *real_x, float *real_y) {
   *real_y = ((float)y - 0.5F * (float)(x % 2)) * TRACESCALEMAP;
 }
 
-static void GetAdjHex(int currx, int curry, HexDirection nexthex, int *x,
-                      int *y) {
-  switch (nexthex) {
+static MapHexPosition adjacent_hex(MapHexPosition current,
+                                   HexDirection direction) {
+  MapHexPosition next;
+  switch (direction) {
   case HEX_NORTH:
-    *x = currx;
-    *y = curry - 1;
+    next = (MapHexPosition){.x = current.x, .y = current.y - 1};
     break;
   case HEX_NORTHEAST:
-    *x = currx + 1;
-    *y = curry - (currx % 2);
+    next =
+        (MapHexPosition){.x = current.x + 1, .y = current.y - (current.x % 2)};
     break;
   case HEX_SOUTHEAST:
-    *x = currx + 1;
-    *y = curry - (currx % 2) + 1;
+    next = (MapHexPosition){.x = current.x + 1,
+                            .y = current.y - (current.x % 2) + 1};
     break;
   case HEX_SOUTH:
-    *x = currx;
-    *y = curry + 1;
+    next = (MapHexPosition){.x = current.x, .y = current.y + 1};
     break;
   case HEX_SOUTHWEST:
-    *x = currx - 1;
-    *y = curry - (currx % 2) + 1;
+    next = (MapHexPosition){.x = current.x - 1,
+                            .y = current.y - (current.x % 2) + 1};
     break;
   case HEX_NORTHWEST:
-    *x = currx - 1;
-    *y = curry - (currx % 2);
+    next =
+        (MapHexPosition){.x = current.x - 1, .y = current.y - (current.x % 2)};
     break;
   default: /* Mostly there to satisfy gcc */
     (void)fprintf(stderr, "XXX ARGH: TraceLos doesn't know where to go!\n");
-    *x = currx + 1; /* Just grab some values that aren't x/y */
-    *y = curry + 1; /* so we can break out of the loop */
+    next = (MapHexPosition){.x = current.x + 1, .y = current.y + 1};
   }
+  return next;
 }
 
 int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
@@ -269,18 +270,18 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
 
   /* THE base case */
   if ((ax == bx) && (ay == by)) {
-    los_trace_store(trace, &found_count, bx, by);
+    los_trace_store(trace, &found_count, (MapHexPosition){.x = bx, .y = by});
     return found_count;
   }
   /* Is it vertical? */
   if (ax == bx) {
     if (ay > by)
       for (i = ay - 1; i > by; i--)
-        los_trace_store(trace, &found_count, ax, i);
+        los_trace_store(trace, &found_count, (MapHexPosition){.x = ax, .y = i});
     else
       for (i = ay + 1; i < by; i++)
-        los_trace_store(trace, &found_count, ax, i);
-    los_trace_store(trace, &found_count, bx, by);
+        los_trace_store(trace, &found_count, (MapHexPosition){.x = ax, .y = i});
+    los_trace_store(trace, &found_count, (MapHexPosition){.x = bx, .y = by});
     return found_count;
   }
 
@@ -296,7 +297,8 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
                            by - currx % 2, currx + 1 * i, by - currx % 2 + 1);
 
       if (currx != bx)
-        los_trace_store(trace, &found_count, currx + 2 * i, by);
+        los_trace_store(trace, &found_count,
+                        (MapHexPosition){.x = currx + 2 * i, .y = by});
 
       currx += 2 * i;
     }
@@ -346,9 +348,11 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
       if (currx == bx && curry == by)
         continue;
 
-      los_trace_store(trace, &found_count, currx, curry);
+      los_trace_store(trace, &found_count,
+                      (MapHexPosition){.x = currx, .y = curry});
     }
-    los_trace_store(trace, &found_count, currx, curry);
+    los_trace_store(trace, &found_count,
+                    (MapHexPosition){.x = currx, .y = curry});
     return found_count;
   }
 
@@ -397,7 +401,10 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
 
     for (nexthex = HEX_NORTH; nexthex <= HEX_NORTHWEST; nexthex++) {
 
-      GetAdjHex(currx, curry, nexthex, &nextx, &nexty);
+      const MapHexPosition next =
+          adjacent_hex((MapHexPosition){.x = currx, .y = curry}, nexthex);
+      nextx = next.x;
+      nexty = next.y;
       los_map_coord_to_real(nextx, nexty, &nextcx, &nextcy);
 
       /* Is it on the line? */
@@ -428,7 +435,8 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
     /* ********************************************************* */
     /* HERE is where you put the test code for intervening hexes */
     /* ********************************************************* */
-    los_trace_store(trace, &found_count, bestx, besty);
+    los_trace_store(trace, &found_count,
+                    (MapHexPosition){.x = bestx, .y = besty});
     /* ********************************************************* */
 
     currx = bestx; /* Reset the curr hex for the next iteration */
@@ -440,7 +448,8 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
   /* **************************************************** */
   /* HERE is where you put the test code for the LAST hex */
   /* **************************************************** */
-  los_trace_store(trace, &found_count, currx, curry);
+  los_trace_store(trace, &found_count,
+                  (MapHexPosition){.x = currx, .y = curry});
   /* ********************************************************* */
   return found_count;
 }

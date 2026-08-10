@@ -41,7 +41,7 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
   const size_t table_count = sizeof(tables) / sizeof(*tables);
   for (size_t index = 0; index < table_count; index++) {
     const char *table = *(const char *const *)checked_storage_at_const(
-        tables, table_count, sizeof(*tables), index);
+        (const void *)tables, table_count, sizeof(*tables), index);
     (void)snprintf(query, sizeof(query),
                    "INSERT INTO %s (object_dbref) VALUES (?);", table);
     if (gamedb_prepare(sqlite, &statement, query) < 0 ||
@@ -82,9 +82,8 @@ static int gamedb_store_player_account(GameDatabase *database, sqlite3 *sqlite,
   sqlite3_stmt *last_page = nullptr;
   const char *password_hash = player_account_password_hash(database, player);
   const char *last_site = player_account_last_site(database, player);
-  time_t last_login;
-  bool has_last_login =
-      player_account_last_login(database, player, &last_login);
+  PlayerLastLoginResult last_login = player_account_last_login(
+      (PlayerAccountRef){.database = database, .player = player});
   int result = -1;
 
   if (gamedb_prepare(
@@ -97,8 +96,8 @@ static int gamedb_store_player_account(GameDatabase *database, sqlite3 *sqlite,
       (*password_hash
            ? sqlite3_bind_text(state, 2, password_hash, -1, SQLITE_TRANSIENT)
            : sqlite3_bind_null(state, 2)) != SQLITE_OK ||
-      (has_last_login ? sqlite3_bind_int64(state, 3, last_login)
-                      : sqlite3_bind_null(state, 3)) != SQLITE_OK ||
+      (last_login.found ? sqlite3_bind_int64(state, 3, last_login.occurred_at)
+                        : sqlite3_bind_null(state, 3)) != SQLITE_OK ||
       (*last_site ? sqlite3_bind_text(state, 4, last_site, -1, SQLITE_TRANSIENT)
                   : sqlite3_bind_null(state, 4)) != SQLITE_OK ||
       sqlite3_bind_int64(
@@ -121,17 +120,22 @@ static int gamedb_store_player_account(GameDatabase *database, sqlite3 *sqlite,
   for (PlayerLoginOutcome outcome = PLAYER_LOGIN_SUCCESS;
        outcome <= PLAYER_LOGIN_FAILURE; outcome++) {
     size_t count =
-        player_account_login_history_count(database, player, outcome);
+        player_account_login_history_count((PlayerLoginHistoryRequest){
+            .account = {.database = database, .player = player},
+            .outcome = outcome});
     for (size_t position = 0; position < count; position++) {
-      PlayerLoginRecordView record;
-      if (!player_account_login_history(database, player, outcome, position,
-                                        &record) ||
-          gamedb_bind_int(history, 1, player) < 0 ||
+      PlayerLoginHistoryResult record =
+          player_account_login_history(&(PlayerLoginHistoryRequest){
+              .account = {.database = database, .player = player},
+              .outcome = outcome,
+              .position = position});
+      if (!record.found || gamedb_bind_int(history, 1, player) < 0 ||
           gamedb_bind_int(history, 2, outcome) < 0 ||
           gamedb_bind_int(history, 3, (long)position) < 0 ||
-          sqlite3_bind_int64(history, 4, record.occurred_at) != SQLITE_OK ||
-          sqlite3_bind_text(history, 5, record.host, -1, SQLITE_TRANSIENT) !=
+          sqlite3_bind_int64(history, 4, record.record.occurred_at) !=
               SQLITE_OK ||
+          sqlite3_bind_text(history, 5, record.record.host, -1,
+                            SQLITE_TRANSIENT) != SQLITE_OK ||
           gamedb_step(history) < 0)
         goto done;
     }
@@ -143,14 +147,18 @@ static int gamedb_store_player_account(GameDatabase *database, sqlite3 *sqlite,
                      "VALUES (?, ?, ?);") < 0)
     goto done;
   for (size_t position = 0;
-       position < player_account_last_page_count(database, player); position++)
-    if (gamedb_bind_int(last_page, 1, player) < 0 ||
+       position < player_account_last_page_count(database, player);
+       position++) {
+    PlayerPageRecipientResult recipient =
+        player_account_last_page_recipient(&(PlayerPageRecipientRequest){
+            .account = {.database = database, .player = player},
+            .position = position});
+    if (!recipient.found || gamedb_bind_int(last_page, 1, player) < 0 ||
         gamedb_bind_int(last_page, 2, (long)position) < 0 ||
-        gamedb_bind_int(last_page, 3,
-                        player_account_last_page_recipient(database, player,
-                                                           position)) < 0 ||
+        gamedb_bind_int(last_page, 3, recipient.recipient) < 0 ||
         gamedb_step(last_page) < 0)
       goto done;
+  }
   result = 0;
 
 done:
@@ -172,10 +180,12 @@ static int gamedb_store_economy_parts(GameDatabase *database, sqlite3 *sqlite,
     return -1;
   for (size_t index = 0; index < economy_parts_entry_count(database, object);
        index++) {
-    EconomyPartEntryView entry;
+    EconomyPartsEntryResult entry_result =
+        economy_parts_entry(&(EconomyPartsEntryRequest){
+            .database = database, .object = object, .index = index});
+    EconomyPartEntryView entry = entry_result.entry;
 
-    if (!economy_parts_entry(database, object, index, &entry) ||
-        gamedb_bind_int(statement, 1, object) < 0 ||
+    if (!entry_result.found || gamedb_bind_int(statement, 1, object) < 0 ||
         gamedb_bind_int(statement, 2, entry.part_id) < 0 ||
         gamedb_bind_int(statement, 3, entry.brand_id) < 0 ||
         gamedb_bind_int(statement, 4, entry.quantity) < 0 ||
@@ -220,9 +230,11 @@ static int gamedb_store_character_state(GameDatabase *database, sqlite3 *sqlite,
 
   for (size_t index = 0; index < character_state_value_count(database, player);
        index++) {
-    CharacterValueStateView entry;
-    if (!character_state_value_entry(database, player, index, &entry) ||
-        gamedb_bind_int(value, 1, player) < 0 ||
+    CharacterStateEntryResult entry_result =
+        character_state_value_entry(&(CharacterStateEntryRequest){
+            .database = database, .player = player, .index = index});
+    CharacterValueStateView entry = entry_result.entry;
+    if (!entry_result.found || gamedb_bind_int(value, 1, player) < 0 ||
         sqlite3_bind_text(value, 2, entry.name, -1, SQLITE_TRANSIENT) !=
             SQLITE_OK ||
         gamedb_bind_int(value, 3, entry.value) < 0 ||
@@ -330,16 +342,20 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
     }
     for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++) {
-      if (gamedb_bind_int(
-              objects, 10 + (int)flag,
-              game_object_has_flag(context->database, object, flag)) < 0)
+      if (gamedb_bind_int(objects, 10 + (int)flag,
+                          game_object_has_flag(&(ObjectFlagRequest){
+                              .database = context->database,
+                              .object = object,
+                              .flag = flag})) < 0)
         return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state,
                                       0);
     }
     for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++) {
-      if (gamedb_bind_int(
-              objects, 30 + (int)power,
-              game_object_has_power(context->database, object, power)) < 0)
+      if (gamedb_bind_int(objects, 30 + (int)power,
+                          game_object_has_power(&(ObjectPowerRequest){
+                              .database = context->database,
+                              .object = object,
+                              .power = power})) < 0)
         return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state,
                                       0);
     }
@@ -355,11 +371,13 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
     for (size_t index = 0;
          index < object_state_count(context->database, object); index++) {
-      ObjectStateEntryView entry;
+      ObjectStateEntryResult entry_result =
+          object_state_entry(&(ObjectStateEntryRequest){
+              .database = context->database, .object = object, .index = index});
+      ObjectStateEntryView entry = entry_result.entry;
       int bind_result = SQLITE_ERROR;
 
-      if (!object_state_entry(context->database, object, index, &entry) ||
-          gamedb_bind_int(object_state, 1, object) < 0 ||
+      if (!entry_result.found || gamedb_bind_int(object_state, 1, object) < 0 ||
           sqlite3_bind_text(object_state, 2, entry.name_space, -1,
                             SQLITE_TRANSIENT) != SQLITE_OK ||
           sqlite3_bind_text(object_state, 3, entry.key, -1, SQLITE_TRANSIENT) !=
@@ -413,7 +431,11 @@ int gamedb_dump(PersistenceContext *context, int dump_type) {
   int length;
   int rc;
 
-  if (gamedb_target_path(context, target, sizeof(target), dump_type) < 0) {
+  if (gamedb_target_path(
+          &(GamedbTargetPathRequest){.context = context,
+                                     .target = target,
+                                     .target_size = sizeof(target),
+                                     .dump_type = dump_type}) < 0) {
     gamedb_log_failure(context->log, "building path",
                        context->configuration->database.gamedb, nullptr);
     return -1;

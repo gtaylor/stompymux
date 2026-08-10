@@ -10,7 +10,115 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "registry_api.h"
+#include "script_functions_api.h"
+
+static bool btech_script_output_is_error(const char *output) {
+  return !strncmp(output, "#-", 2) || !strcmp(output, "?");
+}
+
+static bool btech_script_list_separator(char character) {
+  return character == ' ' || character == '|';
+}
+
+static size_t btech_script_list_item_count(const char *output) {
+  size_t count = 0;
+  bool in_item = false;
+  const size_t length = strlen(output);
+
+  for (size_t offset = 0; offset < length; offset++) {
+    const char character = *checked_string_suffix(output, offset);
+    if (btech_script_list_separator(character)) {
+      in_item = false;
+    } else if (!in_item) {
+      count++;
+      in_item = true;
+    }
+  }
+  return count;
+}
+
+static BtechScriptList btech_script_list_parse(char *output) {
+  BtechScriptList list = {0};
+  list.count = btech_script_list_item_count(output);
+  if (list.count == 0)
+    return list;
+  list.items = calloc(list.count, sizeof(*list.items));
+  if (list.items == nullptr) {
+    list.count = 0;
+    return list;
+  }
+
+  const size_t length = strlen(output);
+  size_t offset = 0;
+  for (size_t index = 0; index < list.count; index++) {
+    while (offset < length &&
+           btech_script_list_separator(*checked_string_suffix(output, offset)))
+      offset++;
+    char *token =
+        checked_storage_at(output, length + 1, sizeof(*output), offset);
+    while (offset < length &&
+           !btech_script_list_separator(*checked_string_suffix(output, offset)))
+      offset++;
+    if (offset < length) {
+      *(char *)checked_storage_at(output, length + 1, sizeof(*output), offset) =
+          '\0';
+      offset++;
+    }
+
+    const char *number_text =
+        *token == '#' ? checked_string_suffix(token, 1) : token;
+    long number = 0;
+    BtechScriptListItem *item =
+        checked_storage_at(list.items, list.count, sizeof(*list.items), index);
+    if (parse_long_checked(number_text, &number)) {
+      item->kind = BTECH_SCRIPT_LIST_NUMBER;
+      item->value.number = number;
+    } else {
+      item->kind = BTECH_SCRIPT_LIST_TEXT;
+      item->value.text = token;
+    }
+  }
+  return list;
+}
+
+BtechScriptResult btech_script_result_finish(BtechScriptCall *call,
+                                             BtechScriptValueKind kind) {
+  *call->output.cursor = '\0';
+  BtechScriptResult result = {.status = BTECH_SCRIPT_OK, .kind = kind};
+  if (btech_script_output_is_error(call->output.buffer)) {
+    result.status = BTECH_SCRIPT_ERROR;
+    result.kind = BTECH_SCRIPT_TEXT;
+    result.value.text = call->output.buffer;
+    return result;
+  }
+
+  switch (kind) {
+  case BTECH_SCRIPT_TEXT:
+    result.value.text = call->output.buffer;
+    break;
+  case BTECH_SCRIPT_LIST:
+    result.value.list = btech_script_list_parse(call->output.buffer);
+    break;
+  case BTECH_SCRIPT_NUMBER:
+    result.value.number = strtod(call->output.buffer, nullptr);
+    break;
+  case BTECH_SCRIPT_BOOLEAN:
+    result.value.boolean = strcmp(call->output.buffer, "0") != 0;
+    break;
+  case BTECH_SCRIPT_MUTATION:
+    result.value.mutation = true;
+    break;
+  }
+  return result;
+}
+
+void btech_script_result_destroy(BtechScriptResult *result) {
+  if (result->status == BTECH_SCRIPT_OK && result->kind == BTECH_SCRIPT_LIST)
+    free(result->value.list.items);
+  *result = (BtechScriptResult){0};
+}
 
 char *btech_attribute_read(GameDatabase *database, DbRef id, int flag,
                            char buffer[static LBUF_SIZE]) {
@@ -25,7 +133,8 @@ void silly_atr_set_in(GameDatabase *database, DbRef id, int flag,
 }
 
 static char **text_slot(char **lines, size_t count, size_t index) {
-  return checked_storage_at(lines, count, sizeof(*lines), index);
+  return (char **)checked_storage_at((void *)lines, count, sizeof(*lines),
+                                     index);
 }
 
 void FreeTextItems(char **lines, size_t count) {
@@ -35,7 +144,7 @@ void FreeTextItems(char **lines, size_t count) {
 
 void KillText(char **lines, size_t count) {
   FreeTextItems(lines, count);
-  free(lines);
+  free((void *)lines);
 }
 
 void ShowText(EvaluationContext *evaluation, char **lines, size_t count,
@@ -127,7 +236,7 @@ int proper_parseattributes(char *buffer, char **args, int max) {
   if (max <= 0)
     return 0;
   const size_t argument_capacity = (size_t)max;
-  memset(args, 0, sizeof(*args) * argument_capacity);
+  memset((void *)args, 0, sizeof(*args) * argument_capacity);
 
   size_t count = 0;
   size_t offset = 0;
@@ -161,7 +270,7 @@ int silly_parseattributes(char *buffer, char **args, int max) {
   if (max <= 0)
     return 0;
   const size_t argument_capacity = (size_t)max;
-  memset(args, 0, sizeof(*args) * argument_capacity);
+  memset((void *)args, 0, sizeof(*args) * argument_capacity);
 
   char expanded[LBUF_SIZE];
   size_t output = 0;
@@ -244,7 +353,7 @@ int proper_explodearguments(const char *buffer, char **args, int max) {
   if (max <= 0)
     return 0;
   const size_t argument_capacity = (size_t)max;
-  memset(args, 0, sizeof(*args) * argument_capacity);
+  memset((void *)args, 0, sizeof(*args) * argument_capacity);
 
   char *storage = strdup(buffer);
   if (storage == nullptr)
@@ -252,14 +361,14 @@ int proper_explodearguments(const char *buffer, char **args, int max) {
   char *remaining = storage;
   while (count < max - 1 && remaining != nullptr && *remaining) {
     char *field = strsep(&remaining, " \t");
-    char **slot = checked_storage_at(args, argument_capacity, sizeof(char *),
-                                     (size_t)count);
+    char **slot = (char **)checked_storage_at((void *)args, argument_capacity,
+                                              sizeof(char *), (size_t)count);
     *slot = strdup(field);
     count++;
   }
   if (remaining != nullptr && *remaining) {
-    char **slot = checked_storage_at(args, argument_capacity, sizeof(char *),
-                                     argument_capacity - 1);
+    char **slot = (char **)checked_storage_at(
+        (void *)args, argument_capacity, sizeof(char *), argument_capacity - 1);
     *slot = strdup(remaining);
     count++;
   }
@@ -275,7 +384,7 @@ int mech_parseattributes(char *buffer, char **args, int maxargs) {
   if (maxargs <= 0)
     return 0;
   const size_t argument_capacity = (size_t)maxargs;
-  memset(args, 0, sizeof(*args) * argument_capacity);
+  memset((void *)args, 0, sizeof(*args) * argument_capacity);
 
   while ((count < maxargs) && parsed) {
     parsed = strtok(!count ? buffer : NULL, " \t");

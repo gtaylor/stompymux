@@ -46,40 +46,65 @@ void mech_reactor_explode(Mech *wounded, Mech *attacker) {
   DbRef wounded_pilot = mech_pilot_dbref(wounded);
   int dam;
 
-  mech_section_destroy(wounded, attacker, 0, CTORSO);
-  mech_section_destroy(wounded, attacker, 0, LTORSO);
-  mech_section_destroy(wounded, attacker, 0, RTORSO);
-  mech_section_destroy(wounded, attacker, 0, LLEG);
-  mech_section_destroy(wounded, attacker, 0, RLEG);
+  mech_section_destroy(&(SectionDestructionRequest){
+      .wounded = wounded, .attacker = attacker, .section = CTORSO});
+  mech_section_destroy(&(SectionDestructionRequest){
+      .wounded = wounded, .attacker = attacker, .section = LTORSO});
+  mech_section_destroy(&(SectionDestructionRequest){
+      .wounded = wounded, .attacker = attacker, .section = RTORSO});
+  mech_section_destroy(&(SectionDestructionRequest){
+      .wounded = wounded, .attacker = attacker, .section = LLEG});
+  mech_section_destroy(&(SectionDestructionRequest){
+      .wounded = wounded, .attacker = attacker, .section = RLEG});
 
   /* Need to autoeject before the explosion reaches the head */
   if (!battle_map_is_underground(map))
     autoeject(wounded_pilot, wounded, 0);
 
-  mech_section_destroy(wounded, attacker, 0, HEAD);
+  mech_section_destroy(&(SectionDestructionRequest){
+      .wounded = wounded, .attacker = attacker, .section = HEAD});
   mech_position_z_set(wounded, z + 6);
   dam = MAX(mech_tonnage(wounded) / 5, mech_engine_rating(wounded) / 10);
 
-  mech_sensors_scramble_infrared_and_liteamp(
-      wounded, 4, 0, "The searing blast of heat burns out your sensors!",
-      "The blinding flash of light overloads your sensors!");
+  mech_sensors_scramble_infrared_and_liteamp(&(SensorScrambleRequest){
+      .source = wounded,
+      .duration = 4,
+      .infrared_message = "The searing blast of heat burns out your sensors!",
+      .light_amplification_message =
+          "The blinding flash of light overloads your sensors!"});
 
-  blast_hit_hexesf(
-      map, dam, 3,
-      MAX(mech_tonnage(wounded) / 10, mech_engine_rating(wounded) / 25),
-      mech_position_real_x(wounded), mech_position_real_y(wounded),
-      mech_position_real_x(wounded), mech_position_real_y(wounded),
-      "[fg=red bold]You bear full brunt of the blast![reset]",
-      "is hit badly by the blast!",
-      "[fg=yellow bold]You receive some damage from the blast![reset]",
-      "is hit by the blast!", btech_context_reactor_explosion_mode(context) > 1,
-      3, 5, 1, 2);
+  BlastRealAreaRequest request = {
+      .center =
+          {
+              .map = map,
+              .damage = {.total = dam,
+                         .hit_size = 3,
+                         .heat = MAX(mech_tonnage(wounded) / 10,
+                                     mech_engine_rating(wounded) / 25)},
+              .impact = {.x = mech_position_real_x(wounded),
+                         .y = mech_position_real_y(wounded)},
+              .source = {.x = mech_position_real_x(wounded),
+                         .y = mech_position_real_y(wounded)},
+              .messages =
+                  {.target =
+                       "[fg=red bold]You bear full brunt of the blast![reset]",
+                   .observers = "is hit badly by the blast!"},
+              .hit_table = btech_context_reactor_explosion_mode(context) > 1,
+              .safety = {.above = 3, .below = 5, .underwater = true},
+          },
+      .neighbor_messages =
+          {.target = "[fg=yellow bold]You receive some damage from the "
+                     "blast![reset]",
+           .observers = "is hit by the blast!"},
+      .neighbor_radius = 2,
+  };
+  blast_hit_real_area(&request);
   mech_position_z_set(wounded, z);
   headhitmwdamage(wounded, attacker, 4);
 }
 
-void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
-                        int is_disable) {
+void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
+                        bool disable) {
   float oldjs;
   int i;
   int critType;
@@ -93,7 +118,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
     for (i = 0; i < mech_section_critical_count(wounded, hitloc); i++)
       if (mech_critical_part_type(wounded, hitloc, i) &&
           !mech_critical_is_destroyed(wounded, hitloc, i)) {
-        if (is_disable == 1)
+        if (disable)
           mech_critical_fire_mode_add(wounded, hitloc, i, DISABLED_MODE);
         else
           mech_critical_destroy(wounded, hitloc, i);
@@ -103,7 +128,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
   oldjs = mech_jump_speed(wounded);
   for (i = 0; i < mech_section_critical_count(wounded, hitloc); i++)
     if (!mech_critical_is_destroyed(wounded, hitloc, i)) {
-      if (is_disable == 1)
+      if (disable)
         mech_critical_fire_mode_add(wounded, hitloc, i, DISABLED_MODE);
       else if (mech_critical_is_disabled(wounded, hitloc, i)) {
         mech_critical_destroy(wounded, hitloc, i);
@@ -264,7 +289,7 @@ int mech_location_breach(Mech *attacker, Mech *mech, int hitloc) {
   ArmorStringFromIndex(hitloc, buf, mech_class(mech), mech_movement_type(mech));
   mech_notify(mech, MECHALL, tprintf("Your %s has been breached!", buf));
   mech_section_breached_set(mech, hitloc, true);
-  mech_parts_destroy(attacker, mech, hitloc, 1, 1);
+  mech_parts_destroy(attacker, mech, hitloc, true, true);
   return 1;
 }
 

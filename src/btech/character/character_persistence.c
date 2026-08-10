@@ -49,7 +49,8 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
                  "Invalid argument!");
     return;
   }
-  if ((hm = char_getvaluecode(context, skill_name)) < 0) {
+  hm = char_getvaluecode(context, skill_name);
+  if (hm < 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid value name!");
     return;
@@ -128,7 +129,8 @@ void debug_setxplevel(DbRef player, void *data, char *buffer) {
                  "Threshold needs to be >=0 (0 = no gains possible)");
     return;
   }
-  if ((code = char_getvaluecode(context, args[0])) < 0) {
+  code = char_getvaluecode(context, args[0]);
+  if (code < 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That isn't any charvalue!");
     return;
@@ -139,8 +141,12 @@ void debug_setxplevel(DbRef player, void *data, char *buffer) {
                  "That isn't any skill!");
     return;
   }
-  character_value_xp_threshold_set(code, xpt);
-  log_error(context->log, LOG_WIZARD, "WIZ", "CHANGE",
+  character_value_xp_threshold_set(
+      &(CharacterValueThreshold){.code = code, .threshold = xpt});
+  log_error((LogEntry){.log = context->log,
+                       .key = LOG_WIZARD,
+                       .primary = "WIZ",
+                       .secondary = "CHANGE"},
             "Exp threshold for %s changed to %d by #%ld", definition->name, xpt,
             player);
 }

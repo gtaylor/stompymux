@@ -15,11 +15,11 @@ EvaluationContext *btech_context_evaluation(BtechContext *context) {
   return (EvaluationContext *)context;
 }
 
-void send_channel_v(EvaluationContext *evaluation, const char *channel,
-                    const char *format, va_list arguments) {
-  (void)evaluation;
+void send_channel_v(const ChannelMessageTarget *target, const char *format,
+                    va_list arguments) {
+  (void)target->evaluation;
   send_count++;
-  snprintf(sent_channel, sizeof(sent_channel), "%s", channel);
+  snprintf(sent_channel, sizeof(sent_channel), "%s", target->channel);
   vsnprintf(sent_message, sizeof(sent_message), format, arguments);
 }
 

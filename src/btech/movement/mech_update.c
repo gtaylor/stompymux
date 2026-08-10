@@ -18,7 +18,7 @@
 #include "mech_crew_api.h"
 #include "mech_events.h"
 #include "mech_fire_api.h"
-#include "mech_ice.h"
+#include "mech_ice_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_motion_integration_api.h"
@@ -125,8 +125,12 @@ void mech_movement_update(Mech *mech) {
     }
 
     if (!iced)
-      mech_hex_entry_resolve(mech, mech_map, step.delta_x, step.delta_y,
-                             last_z);
+      mech_hex_entry_resolve(&(MechHexEntryRequest){
+          .mech = mech,
+          .map = mech_map,
+          .delta = {.x = step.delta_x, .y = step.delta_y},
+          .previous_z = last_z,
+      });
 
     if (mech_position_x(mech) == x && mech_position_y(mech) == y) {
       mech_flood(mech);
@@ -138,7 +142,12 @@ void mech_movement_update(Mech *mech) {
         int hexes_walked = mech_hexes_walked_advance(mech);
         if (!(hexes_walked % PIL_XP_EVERY_N_STEPS) &&
             mech_has_active_pilot(mech))
-          AccumulatePilXP(mech_pilot_dbref(mech), mech, 1, 0);
+          piloting_experience_award(&(PilotingExperienceAward){
+              .pilot = mech_pilot_dbref(mech),
+              .mech = mech,
+              .reason = 1,
+              .unconditional = false,
+          });
       }
 
       mech_domino_resolve(mech, MECH_DOMINO_GROUND);

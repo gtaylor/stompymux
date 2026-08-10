@@ -13,8 +13,7 @@
 
 /* Use this when the unit is CRITPROOF because the other
  * hitlocation functions are screwy */
-int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
-                                int *isrear) {
+int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
   int roll, hitloc = 0;
   int side;
   BtechContext *context = mech_context(mech);
@@ -35,7 +34,8 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
   btech_context_hit_roll_record(context, roll);
   switch (mech_class(mech)) {
   case CLASS_BSUIT:
-    if ((hitloc = mech_battle_suit_hit_location(mech)) < 0)
+    hitloc = mech_battle_suit_hit_location(mech);
+    if (hitloc < 0)
       return btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:

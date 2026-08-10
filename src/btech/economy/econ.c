@@ -10,8 +10,12 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 
-void econ_change_items(BtechContext *context, DbRef d, int id, int brand,
-                       int num) {
+void economy_inventory_change(const EconomyInventoryChange *change) {
+  BtechContext *context = change->context;
+  const DbRef d = change->store;
+  const int id = change->part.id;
+  int brand = change->part.brand;
+  const int num = change->quantity_delta;
   GameDatabase *database = context->database;
   int base;
 
@@ -30,8 +34,12 @@ void econ_change_items(BtechContext *context, DbRef d, int id, int brand,
   if (!(equipment_is_actuator(id)))
     economy_parts_set_quantity(database, d, id, brand, base);
   if (equipment_is_actuator(id))
-    econ_change_items(context, d, cargo_equipment_index(S_ACTUATOR), brand,
-                      base);
+    economy_inventory_change(&(EconomyInventoryChange){
+        .context = context,
+        .store = d,
+        .part = {.id = cargo_equipment_index(S_ACTUATOR), .brand = brand},
+        .quantity_delta = base,
+    });
   /* Successfully changed */
 }
 
@@ -54,5 +62,10 @@ void econ_set_items(BtechContext *context, DbRef d, int id, int brand,
     return;
   i = econ_find_items(context, d, id, brand);
   if (i != num)
-    econ_change_items(context, d, id, brand, num - i);
+    economy_inventory_change(&(EconomyInventoryChange){
+        .context = context,
+        .store = d,
+        .part = {.id = id, .brand = brand},
+        .quantity_delta = num - i,
+    });
 }

@@ -21,8 +21,16 @@
 
 extern NameTable indiv_attraccess_nametab[];
 
-static int can_destroy_exit(EvaluationContext *evaluation, DbRef player,
-                            DbRef exit) {
+typedef struct DestroyExitCheck {
+  EvaluationContext *evaluation;
+  DbRef player;
+  DbRef exit;
+} DestroyExitCheck;
+
+static bool can_destroy_exit(const DestroyExitCheck *check) {
+  EvaluationContext *evaluation = check->evaluation;
+  DbRef player = check->player;
+  DbRef exit = check->exit;
   DbRef loc;
 
   loc = game_object_exits(evaluation->world->database, exit);
@@ -97,9 +105,7 @@ void do_destroy(CommandInvocation *invocation) {
   if (match_status(evaluation, player, thing) == NOTHING) {
     return;
   }
-  if (is_safe(evaluation->world->database,
-              invocation->context->world->configuration, thing, player) &&
-      !(key & DEST_OVERRIDE)) {
+  if (is_safe(evaluation->world->database, thing) && !(key & DEST_OVERRIDE)) {
     notify_checked(evaluation, player, player,
                    "Sorry, that object is protected. Use "
                    "@destroy/override to destroy it.",
@@ -122,13 +128,15 @@ void do_destroy(CommandInvocation *invocation) {
 
   switch (typeof_obj(evaluation->world->database, thing)) {
   case OBJECT_TYPE_EXIT:
-    if (can_destroy_exit(evaluation, player, thing)) {
+    if (can_destroy_exit(&(DestroyExitCheck){
+            .evaluation = evaluation, .player = player, .exit = thing})) {
       if (is_going(evaluation->world->database, thing)) {
         notify_checked(evaluation, player, player,
                        "No sense beating a dead exit.", MSG_ME);
       } else {
         if (is_xcode(evaluation->world->database, thing)) {
-          btech_special_object_dispose(evaluation->btech, player, thing);
+          btech_special_object_dispose(&(BtechSpecialObjectAction){
+              .context = evaluation->btech, .actor = player, .object = thing});
           c_xcode(evaluation->world->database, thing);
         }
         if (0) {
@@ -148,7 +156,8 @@ void do_destroy(CommandInvocation *invocation) {
                      "No sense beating a dead object.", MSG_ME);
     } else {
       if (is_xcode(evaluation->world->database, thing)) {
-        btech_special_object_dispose(evaluation->btech, player, thing);
+        btech_special_object_dispose(&(BtechSpecialObjectAction){
+            .context = evaluation->btech, .actor = player, .object = thing});
         c_xcode(evaluation->world->database, thing);
       }
       if (0) {
@@ -168,7 +177,8 @@ void do_destroy(CommandInvocation *invocation) {
                        "No sense beating a dead player.", MSG_ME);
       } else {
         if (is_xcode(evaluation->world->database, thing)) {
-          btech_special_object_dispose(evaluation->btech, player, thing);
+          btech_special_object_dispose(&(BtechSpecialObjectAction){
+              .context = evaluation->btech, .actor = player, .object = thing});
           c_xcode(evaluation->world->database, thing);
         }
         if (0) {
@@ -193,7 +203,8 @@ void do_destroy(CommandInvocation *invocation) {
     } else {
       if (0) {
         empty_obj(evaluation, thing);
-        destroy_obj(evaluation, NOTHING, thing);
+        destroy_obj(&(ObjectDestructionRequest){
+            .evaluation = evaluation, .player = NOTHING, .object = thing});
       } else {
         notify_checked(evaluation, thing, player,
                        "The room shakes and begins to crumble.",

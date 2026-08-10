@@ -39,9 +39,18 @@ static void look_append_quoted_target(const char *target, char *buffer,
   }
 }
 
-static void look_exit_parts(const StyledTextPalette *palette,
-                            const char *stored_name, char *display,
-                            char *command) {
+typedef struct LookExitPartsRequest {
+  const StyledTextPalette *palette;
+  const char *stored_name;
+  char *display;
+  char *command;
+} LookExitPartsRequest;
+
+static void look_exit_parts(const LookExitPartsRequest *request) {
+  const StyledTextPalette *palette = request->palette;
+  const char *stored_name = request->stored_name;
+  char *display = request->display;
+  char *command = request->command;
   const size_t stored_length = strlen(stored_name);
   size_t primary_end = 0;
   size_t command_start = 0;
@@ -83,17 +92,31 @@ static void look_exit_parts(const StyledTextPalette *palette,
   styled_text_strip(palette, raw_command, command, LBUF_SIZE);
 }
 
-static void look_append_exit_link(const char *display, const char *command,
-                                  char *buffer, char **cursor) {
-  safe_str("[send=\"", buffer, cursor);
-  look_append_quoted_target(command, buffer, cursor);
-  safe_str("\"]", buffer, cursor);
-  safe_str(display, buffer, cursor);
-  safe_str("[/]", buffer, cursor);
+typedef struct LookExitLinkRequest {
+  const char *display;
+  const char *command;
+  char *buffer;
+  char **cursor;
+} LookExitLinkRequest;
+
+static void look_append_exit_link(const LookExitLinkRequest *request) {
+  safe_str("[send=\"", request->buffer, request->cursor);
+  look_append_quoted_target(request->command, request->buffer, request->cursor);
+  safe_str("\"]", request->buffer, request->cursor);
+  safe_str(request->display, request->buffer, request->cursor);
+  safe_str("[/]", request->buffer, request->cursor);
 }
 
-static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
-                       const char *exit_name) {
+typedef struct LookContext {
+  EvaluationContext *evaluation;
+  DbRef viewer;
+  DbRef location;
+} LookContext;
+
+static void look_exits(const LookContext *look, const char *exit_name) {
+  EvaluationContext *evaluation = look->evaluation;
+  DbRef player = look->viewer;
+  DbRef loc = look->location;
   WorldContext *world = evaluation->world;
   DbRef thing;
   char *buff, *e, *buff1, *command;
@@ -117,7 +140,10 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
     key |= VE_LOC_DARK;
   DOLIST(evaluation->world->database, thing,
          game_object_exits(evaluation->world->database, loc)) {
-    if (exit_displayable(world->database, thing, player, key)) {
+    if (exit_displayable(&(ExitVisibilityRequest){.database = world->database,
+                                                  .exit = thing,
+                                                  .viewer = player,
+                                                  .options = key})) {
       foundany = 1;
       break;
     }
@@ -137,12 +163,20 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
   if (is_transparent(evaluation->world->database, loc)) {
     DOLIST(evaluation->world->database, thing,
            game_object_exits(evaluation->world->database, loc)) {
-      if (exit_displayable(world->database, thing, player, key)) {
+      if (exit_displayable(&(ExitVisibilityRequest){.database = world->database,
+                                                    .exit = thing,
+                                                    .viewer = player,
+                                                    .options = key})) {
         e = buff;
-        look_exit_parts(evaluation->world->styled_text_palette,
-                        game_object_name(evaluation->world->database, thing),
-                        buff1, command);
-        look_append_exit_link(buff1, command, buff, &e);
+        look_exit_parts(&(LookExitPartsRequest){
+            .palette = evaluation->world->styled_text_palette,
+            .stored_name = game_object_name(evaluation->world->database, thing),
+            .display = buff1,
+            .command = command});
+        look_append_exit_link(&(LookExitLinkRequest){.display = buff1,
+                                                     .command = command,
+                                                     .buffer = buff,
+                                                     .cursor = &e});
         *e = '\0';
         notify_printf(
             evaluation, player, "%s leads to %s.", buff,
@@ -154,13 +188,21 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
   } else {
     DOLIST(evaluation->world->database, thing,
            game_object_exits(evaluation->world->database, loc)) {
-      if (exit_displayable(world->database, thing, player, key)) {
+      if (exit_displayable(&(ExitVisibilityRequest){.database = world->database,
+                                                    .exit = thing,
+                                                    .viewer = player,
+                                                    .options = key})) {
         if (buff != e)
           safe_str("  ", buff, &e);
-        look_exit_parts(evaluation->world->styled_text_palette,
-                        game_object_name(evaluation->world->database, thing),
-                        buff1, command);
-        look_append_exit_link(buff1, command, buff, &e);
+        look_exit_parts(&(LookExitPartsRequest){
+            .palette = evaluation->world->styled_text_palette,
+            .stored_name = game_object_name(evaluation->world->database, thing),
+            .display = buff1,
+            .command = command});
+        look_append_exit_link(&(LookExitLinkRequest){.display = buff1,
+                                                     .command = command,
+                                                     .buffer = buff,
+                                                     .cursor = &e});
       }
     }
   }
@@ -178,8 +220,11 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
 #define CONTENTS_LOCAL 0
 #define CONTENTS_NESTED 1
 
-static void look_contents(EvaluationContext *evaluation, DbRef player,
-                          DbRef loc, const char *contents_name, int style) {
+static void look_contents(const LookContext *look, const char *contents_name,
+                          int style) {
+  EvaluationContext *evaluation = look->evaluation;
+  DbRef player = look->viewer;
+  DbRef loc = look->location;
   DbRef thing;
   int can_see_loc;
   char *buff;
@@ -196,7 +241,10 @@ static void look_contents(EvaluationContext *evaluation, DbRef player,
 
   DOLIST(evaluation->world->database, thing,
          game_object_contents(evaluation->world->database, loc)) {
-    if (can_see(evaluation, player, thing, can_see_loc)) {
+    if (can_see(&(ObjectVisibilityRequest){.evaluation = evaluation,
+                                           .viewer = player,
+                                           .object = thing,
+                                           .location_visible = can_see_loc})) {
 
       /*
        * something exists!  show him everything
@@ -206,7 +254,11 @@ static void look_contents(EvaluationContext *evaluation, DbRef player,
                      MSG_ME_ALL | MSG_F_DOWN);
       DOLIST(evaluation->world->database, thing,
              game_object_contents(evaluation->world->database, loc)) {
-        if (can_see(evaluation, player, thing, can_see_loc)) {
+        if (can_see(
+                &(ObjectVisibilityRequest){.evaluation = evaluation,
+                                           .viewer = player,
+                                           .object = thing,
+                                           .location_visible = can_see_loc})) {
           buff = unparse_object(evaluation->world->database, evaluation, player,
                                 thing);
           notify_checked(evaluation, player, player, buff,
@@ -315,8 +367,8 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
 
   if ((typeof_obj(evaluation->world->database, loc) != OBJECT_TYPE_ROOM) &&
       use_idesc) {
-    if (*(got = attribute_get(evaluation->world->database, loc, A_IDESC,
-                              &aflags)))
+    got = attribute_get(evaluation->world->database, loc, A_IDESC, &aflags);
+    if (*got)
       notify_action(
           evaluation,
           &(ActionMessageInvocation){
@@ -337,7 +389,11 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
   }
 }
 
-void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
+void look_in(const LookRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->viewer;
+  DbRef loc = request->location;
+  int key = request->key;
   char *buff;
   bool custom;
   LuaLockInvocation lock;
@@ -381,8 +437,10 @@ void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
                                     .destination = NOTHING},
                         .event = LUA_EVENT_SUCCESS});
     else
-      notify_lock_failure(evaluation, &lock, &result, nullptr, nullptr,
-                          LUA_EVENT_FAIL);
+      notify_lock_failure(&(LockFailureNotification){.evaluation = evaluation,
+                                                     .invocation = &lock,
+                                                     .result = &result,
+                                                     .event = LUA_EVENT_FAIL});
   }
   if (custom)
     return;
@@ -390,9 +448,11 @@ void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
    * tell him the attributes, contents and exits
    */
 
-  look_contents(evaluation, player, loc, "Contents:", CONTENTS_LOCAL);
+  LookContext look = {
+      .evaluation = evaluation, .viewer = player, .location = loc};
+  look_contents(&look, "Contents:", CONTENTS_LOCAL);
   if (key & LK_SHOWEXIT)
-    look_exits(evaluation, player, loc, "Obvious exits:");
+    look_exits(&look, "Obvious exits:");
 }
 
 void do_look(CommandInvocation *invocation) {
@@ -418,7 +478,10 @@ void do_look(CommandInvocation *invocation) {
         }
         thing = game_object_location(evaluation->world->database, thing);
       }
-      look_in(evaluation, player, thing, look_key);
+      look_in(&(LookRequest){.evaluation = evaluation,
+                             .viewer = player,
+                             .location = thing,
+                             .key = look_key});
     }
     return;
   }
@@ -452,12 +515,17 @@ void do_look(CommandInvocation *invocation) {
   if (is_good_obj(evaluation->world->database, thing)) {
     switch (typeof_obj(evaluation->world->database, thing)) {
     case OBJECT_TYPE_ROOM:
-      look_in(evaluation, player, thing, look_key);
+      look_in(&(LookRequest){.evaluation = evaluation,
+                             .viewer = player,
+                             .location = thing,
+                             .key = look_key});
       break;
     case OBJECT_TYPE_THING:
     case OBJECT_TYPE_PLAYER:
       if (!look_simple(evaluation, player, thing)) {
-        look_contents(evaluation, player, thing, "Carrying:", CONTENTS_NESTED);
+        LookContext look = {
+            .evaluation = evaluation, .viewer = player, .location = thing};
+        look_contents(&look, "Carrying:", CONTENTS_NESTED);
       }
       break;
     case OBJECT_TYPE_EXIT:
@@ -466,9 +534,11 @@ void do_look(CommandInvocation *invocation) {
           (game_object_location(evaluation->world->database, thing) !=
            NOTHING)) {
         look_key &= ~LK_SHOWATTR;
-        look_in(evaluation, player,
-                game_object_location(evaluation->world->database, thing),
-                look_key);
+        look_in(&(LookRequest){.evaluation = evaluation,
+                               .viewer = player,
+                               .location = game_object_location(
+                                   evaluation->world->database, thing),
+                               .key = look_key});
       }
       break;
     default:

@@ -59,24 +59,27 @@ static void turret_targeting_scope_enter(TurretTargetingScope *scope,
                                          Turret *tur, Mech *mech) {
   if (tur->gunner > 0)
     btech_context_combat_pilot_override_set(tur->xcode.context, tur->gunner);
-  mech_targeting_override_begin(mech, &scope->targeting, tur->target,
-                                tur->targx, tur->targy, tur->targz,
-                                tur->lockmode);
+  mech_targeting_override_begin(
+      &(MechTargetingOverrideBegin){.mech = mech,
+                                    .override = &scope->targeting,
+                                    .state = {.target = tur->target,
+                                              .target_x = tur->targx,
+                                              .target_y = tur->targy,
+                                              .target_z = tur->targz,
+                                              .lock_modes = tur->lockmode}});
   btech_context_combat_arcs_override_set(tur->xcode.context, tur->arcs);
 }
 
 static void turret_targeting_scope_leave(TurretTargetingScope *scope,
                                          Turret *tur, Mech *mech) {
-  int target_x;
-  int target_y;
-  int target_z;
-
   btech_context_combat_pilot_override_set(tur->xcode.context, 0);
-  mech_targeting_override_end(mech, &scope->targeting, &tur->target, &target_x,
-                              &target_y, &target_z, &tur->lockmode);
-  tur->targx = clamp_int_to_short(target_x);
-  tur->targy = clamp_int_to_short(target_y);
-  tur->targz = clamp_int_to_short(target_z);
+  MechTargetingState state =
+      mech_targeting_override_end(mech, &scope->targeting);
+  tur->target = state.target;
+  tur->lockmode = state.lock_modes;
+  tur->targx = clamp_int_to_short(state.target_x);
+  tur->targy = clamp_int_to_short(state.target_y);
+  tur->targz = clamp_int_to_short(state.target_z);
   btech_context_combat_arcs_override_set(tur->xcode.context, 0);
 }
 
@@ -319,11 +322,14 @@ void turret_initialize(DbRef player, void *data, char *buffer) {
                  "You grap firmer hold on the joystick..");
     return;
   }
-  mecha_notify_except(
-      btech_context_evaluation(tur->xcode.context), tur->mynum, NOTHING,
-      tur->mynum,
-      tprintf("%s initialized as gunner.",
-              game_object_name(tur->xcode.context->database, player)));
+  mecha_notify_except(&(MechaNotificationExclusion){
+      .evaluation = btech_context_evaluation(tur->xcode.context),
+      .location = tur->mynum,
+      .actor = NOTHING,
+      .exception = tur->mynum,
+      .message =
+          tprintf("%s initialized as gunner.",
+                  game_object_name(tur->xcode.context->database, player))});
   tur->gunner = player;
 }
 
@@ -336,10 +342,13 @@ void turret_deinitialize(DbRef player, void *data, char *buffer) {
                  "You aren't gunner!");
     return;
   }
-  mecha_notify_except(
-      btech_context_evaluation(tur->xcode.context), tur->mynum, NOTHING,
-      tur->mynum,
-      tprintf("%s deinitialized as gunner.",
-              game_object_name(tur->xcode.context->database, player)));
+  mecha_notify_except(&(MechaNotificationExclusion){
+      .evaluation = btech_context_evaluation(tur->xcode.context),
+      .location = tur->mynum,
+      .actor = NOTHING,
+      .exception = tur->mynum,
+      .message =
+          tprintf("%s deinitialized as gunner.",
+                  game_object_name(tur->xcode.context->database, player))});
   tur->gunner = -1;
 }

@@ -28,8 +28,13 @@ void btech_context_event_schedule(BtechContext *context, void *object, int type,
 void btech_context_owned_event_schedule(BtechContext *context, void *object,
                                         int type, MuxEventCallback callback,
                                         int delay, intptr_t data) {
-  mux_event_add(context->events, delay, FLAG_FREE_DATA, type, callback, object,
-                (void *)data);
+  mux_event_add(&(MuxEventRequest){.scheduler = context->events,
+                                   .delay = delay,
+                                   .flags = FLAG_FREE_DATA,
+                                   .type = type,
+                                   .callback = callback,
+                                   .data = object,
+                                   .secondary_data = (void *)data});
 }
 
 void mech_event_schedule(Mech *mech, MechEventType type,

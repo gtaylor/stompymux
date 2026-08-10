@@ -35,7 +35,8 @@
 #include "weapon_settings.h"
 
 static char *debug_argument(char **arguments, size_t count, size_t index) {
-  char **slot = checked_storage_at(arguments, count, sizeof(*arguments), index);
+  char **slot = (char **)checked_storage_at((void *)arguments, count,
+                                            sizeof(*arguments), index);
   return *slot;
 }
 
@@ -93,7 +94,10 @@ static DebugMemoryStat *debug_memory_stat(DebugMemoryContext *memory,
   return checked_storage_at(memory->stats, memory->stat_count,
                             sizeof(*memory->stats), (size_t)type);
 }
-static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
+static int debug_check_stuff(const RedBlackTreeVisitCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  void *arg = call->context;
   const DbRef key_val = (DbRef)key;
   BtechSpecialObject *const xcode_obj = data;
   DebugMemoryContext *memory = arg;
@@ -187,14 +191,16 @@ void debug_memory(DbRef player, void *data, char *buffer) {
   free(memory.stats);
 }
 
-void ShutDownMap(BtechContext *context, DbRef player, DbRef mapnumber) {
+void map_shutdown_units(const MapShutdownRequest *request) {
+  BtechContext *context = request->context;
   BtechSpecialObject *xcode_obj;
 
   BattleMap *map;
   Mech *mech;
   int j;
 
-  xcode_obj = red_black_tree_find(context->special_objects, (void *)mapnumber);
+  xcode_obj =
+      red_black_tree_find(context->special_objects, (void *)request->map);
   if (xcode_obj) {
     map = (BattleMap *)xcode_obj;
     for (j = 0; j < battle_map_unit_count(map); j++) {
@@ -203,7 +209,7 @@ void ShutDownMap(BtechContext *context, DbRef player, DbRef mapnumber) {
         mech = btech_context_get_mech(context, unit_dbref);
         if (mech) {
           notify_printf(
-              btech_context_evaluation(context), player,
+              btech_context_evaluation(context), request->actor,
               "Shutting down Mech #%ld and resetting map index to -1....",
               unit_dbref);
           mech_shutdown(GOD, (void *)mech, "");
@@ -214,7 +220,8 @@ void ShutDownMap(BtechContext *context, DbRef player, DbRef mapnumber) {
     }
     battle_map_dynamic_destroy(map);
     map->first_free = 0;
-    mecha_notify(btech_context_evaluation(context), player, "Map Cleared");
+    mecha_notify(btech_context_evaluation(context), request->actor,
+                 "Map Cleared");
     return;
   }
 }
@@ -227,7 +234,8 @@ void debug_shutdown(DbRef player, void *data, char *buffer) {
   argc = mech_parseattributes(buffer, args, 3);
   long map_number;
   if (argc > 0 && parse_long_checked(debug_argument(args, 3, 0), &map_number)) {
-    ShutDownMap(debug->context, player, map_number);
+    map_shutdown_units(&(MapShutdownRequest){
+        .context = debug->context, .actor = player, .map = map_number});
   } else {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "Invalid map number!");
@@ -238,7 +246,7 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
   char *args[3];
   int vrt;
-  int id, brand;
+  int id;
 
   if (mech_parseattributes(buffer, args, 3) != 2) {
     mecha_notify(btech_context_evaluation(debug->context), player,
@@ -260,12 +268,17 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
                  "VRT can be at max 127");
     return;
   }
-  if (!find_matching_vlong_part(debug->context, debug_argument(args, 3, 0),
-                                nullptr, &id, &brand)) {
+  PartMatchResult match =
+      part_match_next(&(PartMatchRequest){.context = debug->context,
+                                          .pattern = debug_argument(args, 3, 0),
+                                          .kind = PART_MATCH_VERY_LONG,
+                                          .cursor = -1});
+  if (!match.found) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "That is no weapon!");
     return;
   }
+  id = match.part.id;
   if (!equipment_is_weapon(id)) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "That is no weapon!");
@@ -277,7 +290,10 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
   notify_printf(btech_context_evaluation(debug->context), player,
                 "VRT for %s set to %d.", weapon_catalogue_name(weapon_index),
                 vrt);
-  log_error(debug->context->log, LOG_WIZARD, "WIZ", "CHANGE",
+  log_error((LogEntry){.log = debug->context->log,
+                       .key = LOG_WIZARD,
+                       .primary = "WIZ",
+                       .secondary = "CHANGE"},
             "VRT for %s set to %d by #%ld", weapon_catalogue_name(weapon_index),
             vrt, player);
 }
@@ -286,7 +302,7 @@ void debug_setwbv(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
   char *args[3];
   int bv;
-  int id, brand;
+  int id;
 
   if (mech_parseattributes(buffer, args, 3) != 2) {
     mecha_notify(btech_context_evaluation(debug->context), player,
@@ -303,12 +319,17 @@ void debug_setwbv(DbRef player, void *data, char *buffer) {
                  "BV needs to be >=0");
     return;
   }
-  if (!find_matching_vlong_part(debug->context, debug_argument(args, 3, 0),
-                                nullptr, &id, &brand)) {
+  PartMatchResult match =
+      part_match_next(&(PartMatchRequest){.context = debug->context,
+                                          .pattern = debug_argument(args, 3, 0),
+                                          .kind = PART_MATCH_VERY_LONG,
+                                          .cursor = -1});
+  if (!match.found) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "That is no weapon!");
     return;
   }
+  id = match.part.id;
   if (!equipment_is_weapon(id)) {
     mecha_notify(btech_context_evaluation(debug->context), player,
                  "That is no weapon!");

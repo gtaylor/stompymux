@@ -24,9 +24,9 @@ int main(void) {
        .source.mech_key = MECH_SCRIPT_MAP_DBREF},
       {.source_kind = GMV_SOURCE_FIELD_OFFSET,
        .source.field_offset = offsetof(DescriptorFixture, value)},
-      {.source_kind = GMV_SOURCE_CALLBACK,
+      {.source_kind = GMV_SOURCE_STRING_CALLBACK,
        .source.string_callback = read_string},
-      {.source_kind = GMV_SOURCE_CALLBACK,
+      {.source_kind = GMV_SOURCE_BUFFERED_CALLBACK,
        .source.buffered_callback = read_buffered},
       {.source_kind = GMV_SOURCE_SENTINEL},
   };

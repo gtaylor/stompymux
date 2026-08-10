@@ -15,8 +15,14 @@ void comsys_show_channel_who(EvaluationContext *evaluation, DbRef player,
                              struct channel *channel);
 void comsys_delete_channel_alias(EvaluationContext *evaluation, DbRef player,
                                  char *channel);
-int comsys_test_access(EvaluationContext *evaluation, DbRef player, long access,
-                       struct channel *channel);
+typedef struct ChannelAccessRequest {
+  EvaluationContext *evaluation;
+  DbRef player;
+  long access;
+  struct channel *channel;
+} ChannelAccessRequest;
+
+int comsys_test_access(const ChannelAccessRequest *request);
 void comsys_disconnect_channel(EvaluationContext *evaluation, DbRef player,
                                char *channel);
 char *comsys_channel_from_alias(EvaluationContext *evaluation, DbRef player,

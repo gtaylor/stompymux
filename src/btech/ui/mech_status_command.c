@@ -120,7 +120,7 @@ void mech_status(DbRef player, void *data, const char *buffer) {
     memcpy(weird_buffer, buf, sizeof(weird_buffer));
 
   } else if (!doheat || (doarmor | doinfo | doweap))
-    PrintGenericStatus(evaluation, player, mech, 1, usex);
+    PrintGenericStatus(evaluation, player, mech, usex != 0);
 
   // Show our armor diagram.
   if (doarmor) {

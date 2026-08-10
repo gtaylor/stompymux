@@ -35,22 +35,36 @@ static void fixed_state_to_stats(BtechContext *context,
                                  const CharacterFixedState *fixed, int modes,
                                  PSTATS *stats) {
   if (modes & VALUES_HEALTH) {
-    character_stats_value_set(stats, char_getvaluecode(context, "Bruise"),
-                              fixed->bruise);
-    character_stats_value_set(stats, char_getvaluecode(context, "Lethal"),
-                              fixed->lethal);
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats,
+        .code = char_getvaluecode(context, "Bruise"),
+        .value = fixed->bruise});
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats,
+        .code = char_getvaluecode(context, "Lethal"),
+        .value = fixed->lethal});
   }
   if (modes & VALUES_ATTRS) {
-    character_stats_value_set(stats, char_getvaluecode(context, "Build"),
-                              fixed->build);
-    character_stats_value_set(stats, char_getvaluecode(context, "Reflexes"),
-                              fixed->reflexes);
-    character_stats_value_set(stats, char_getvaluecode(context, "Intuition"),
-                              fixed->intuition);
-    character_stats_value_set(stats, char_getvaluecode(context, "Learn"),
-                              fixed->learn);
-    character_stats_value_set(stats, char_getvaluecode(context, "Charisma"),
-                              fixed->charisma);
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats,
+        .code = char_getvaluecode(context, "Build"),
+        .value = fixed->build});
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats,
+        .code = char_getvaluecode(context, "Reflexes"),
+        .value = fixed->reflexes});
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats,
+        .code = char_getvaluecode(context, "Intuition"),
+        .value = fixed->intuition});
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats,
+        .code = char_getvaluecode(context, "Learn"),
+        .value = fixed->learn});
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats,
+        .code = char_getvaluecode(context, "Charisma"),
+        .value = fixed->charisma});
   }
 }
 
@@ -75,29 +89,50 @@ static void store_variable_values(BtechContext *context, DbRef player,
       character_state_value_remove(context->database, player, definition->name);
       continue;
     }
-    character_state_value_set(context->database, player, definition->name,
-                              character_stats_value_get(stats, code),
-                              character_stats_xp_get(stats, code),
-                              character_stats_last_use_get(stats, code));
+    character_state_value_set(&(CharacterStateValueChange){
+        .database = context->database,
+        .player = player,
+        .name = definition->name,
+        .value = character_stats_value_get(stats, code),
+        .experience = character_stats_xp_get(stats, code),
+        .last_used = character_stats_last_use_get(stats, code)});
   }
 }
 
-static void retrieve_variable_values(BtechContext *context, DbRef player,
-                                     int modes, PSTATS *stats) {
+typedef struct CharacterVariableRetrieval {
+  BtechContext *context;
+  DbRef player;
+  int modes;
+  PSTATS *stats;
+} CharacterVariableRetrieval;
+
+static void
+retrieve_variable_values(const CharacterVariableRetrieval *request) {
+  BtechContext *context = request->context;
+  const DbRef player = request->player;
+  const int modes = request->modes;
+  PSTATS *stats = request->stats;
   if (modes & VALUES_ADVS)
-    character_stats_value_set(stats, LIVES_NUMBER, 1);
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats, .code = LIVES_NUMBER, .value = 1});
   for (size_t index = 0;
        index < character_state_value_count(context->database, player);
        index++) {
-    CharacterValueStateView entry;
-    if (!character_state_value_entry(context->database, player, index, &entry))
+    CharacterStateEntryResult result =
+        character_state_value_entry(&(CharacterStateEntryRequest){
+            .database = context->database, .player = player, .index = index});
+    if (!result.found)
       continue;
+    CharacterValueStateView entry = result.entry;
     int code = char_getvaluecode(context, entry.name);
     if (code < 0 || !selected_variable_value(code, modes))
       continue;
-    character_stats_value_set(stats, code, entry.value);
-    character_stats_xp_set(stats, code, entry.xp);
-    character_stats_last_use_set(stats, code, entry.last_used);
+    character_stats_value_set(&(CharacterStatsValueChange){
+        .stats = stats, .code = code, .value = entry.value});
+    character_stats_xp_set(&(CharacterStatsExperienceChange){
+        .stats = stats, .code = code, .value = entry.xp});
+    character_stats_last_use_set(&(CharacterStatsLastUseChange){
+        .stats = stats, .code = code, .value = entry.last_used});
   }
 }
 
@@ -138,7 +173,8 @@ void character_stats_retrieve(BtechContext *context, DbRef player, int modes,
   if (!character_state_fixed_get(context->database, player, &fixed))
     return;
   fixed_state_to_stats(context, &fixed, modes, stats);
-  retrieve_variable_values(context, player, modes, stats);
+  retrieve_variable_values(&(CharacterVariableRetrieval){
+      .context = context, .player = player, .modes = modes, .stats = stats});
 }
 
 bool character_state_validate_all(BtechContext *context) {
@@ -148,10 +184,12 @@ bool character_state_validate_all(BtechContext *context) {
     for (size_t index = 0;
          index < character_state_value_count(context->database, player);
          index++) {
-      CharacterValueStateView entry;
-      if (!character_state_value_entry(context->database, player, index,
-                                       &entry))
+      CharacterStateEntryResult result =
+          character_state_value_entry(&(CharacterStateEntryRequest){
+              .database = context->database, .player = player, .index = index});
+      if (!result.found)
         return false;
+      CharacterValueStateView entry = result.entry;
       int code = char_getvaluecode(context, entry.name);
       if (code < 0)
         return false;

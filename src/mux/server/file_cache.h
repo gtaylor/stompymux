@@ -28,9 +28,14 @@ FileCache *file_cache_create(EvaluationContext *evaluation,
                              const ServerConfiguration *configuration,
                              DescriptorRegistry *descriptors);
 void file_cache_destroy(FileCache *cache);
-void fcache_rawdump(const FileCache *cache, int fd, int num);
+typedef struct FileCacheRawDumpRequest {
+  const FileCache *cache;
+  int descriptor;
+  int entry;
+} FileCacheRawDumpRequest;
+
+void fcache_rawdump(const FileCacheRawDumpRequest *request);
 void fcache_dump(const FileCache *cache, Descriptor *descriptor, int num);
 void fcache_dump_conn(const FileCache *cache, Descriptor *descriptor, int num);
-void fcache_send(FileCache *cache, DbRef player, int num);
 void fcache_load(EvaluationContext *evaluation, FileCache *cache, DbRef player);
 int file_cache_connection_count(const FileCache *cache);

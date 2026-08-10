@@ -10,6 +10,7 @@
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
+#include "mech_hitloc_api.h"
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
@@ -353,40 +354,38 @@ int mech_spheroid_rear_section(const Mech *mech, int section) {
   return section == DS_LWING ? DS_LRWING : DS_RRWING;
 }
 
-int find_swarm_hit_location(BtechContext *context, int *iscritical,
-                            int *isrear) {
-  *isrear = 0;
-  *iscritical = 1;
+HitLocationResult find_swarm_hit_location(BtechContext *context) {
+  HitLocationResult result = {.critical = true};
 
   switch (btech_random_roll(context)) {
   case 2:
-    return HEAD;
+    return hit_location_result_at(result, HEAD);
   case 3:
-    *isrear = 1;
-    return CTORSO;
+    result.rear = true;
+    return hit_location_result_at(result, CTORSO);
   case 4:
-    *isrear = 1;
-    return RTORSO;
+    result.rear = true;
+    return hit_location_result_at(result, RTORSO);
   case 5:
-    return RTORSO;
+    return hit_location_result_at(result, RTORSO);
   case 6:
-    return RARM;
+    return hit_location_result_at(result, RARM);
   case 7:
-    return CTORSO;
+    return hit_location_result_at(result, CTORSO);
   case 8:
-    return LARM;
+    return hit_location_result_at(result, LARM);
   case 9:
-    return LTORSO;
+    return hit_location_result_at(result, LTORSO);
   case 10:
-    *isrear = 1;
-    return LTORSO;
+    result.rear = true;
+    return hit_location_result_at(result, LTORSO);
   case 11:
-    *isrear = 1;
-    return CTORSO;
+    result.rear = true;
+    return hit_location_result_at(result, CTORSO);
   case 12:
-    return HEAD;
+    return hit_location_result_at(result, HEAD);
   default:
-    return CTORSO;
+    return hit_location_result_at(result, CTORSO);
   }
 }
 
@@ -394,8 +393,10 @@ int find_swarm_hit_location(BtechContext *context, int *iscritical,
  * Determines whether a section can receive a critical hit.
  * tres = armor percentage threshhold
  */
-int mech_section_is_crittable(Mech *mech, int loc, int tres) {
+int mech_section_is_crittable(Mech *mech, int loc,
+                              CriticalThreshold threshold) {
   int d;
+  int tres = threshold.armor_percent;
   BtechContext *context = mech_context(mech);
 
   if (mech_technology_flags(mech) & CRITPROOF_TECH)

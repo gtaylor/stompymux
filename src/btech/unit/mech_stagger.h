@@ -12,9 +12,16 @@ typedef struct {
   bool counted;
 } MechStaggerDamageSnapshot;
 
+typedef struct StaggerDamageApplication {
+  Mech *mech;
+  int amount;
+  time_t occurred_at;
+  DbRef attacker;
+  bool counted;
+} StaggerDamageApplication;
+
 bool mech_stagger_damage_history_is_empty(const Mech *mech);
-bool mech_stagger_damage_append(Mech *mech, int amount, time_t occurred_at,
-                                DbRef attacker, bool counted);
+bool mech_stagger_damage_append(const StaggerDamageApplication *application);
 void mech_stagger_damage_mark(Mech *mech, int stagger_level);
 void mech_stagger_damage_remove(Mech *mech, int stagger_level);
 void mech_stagger_damage_clear(Mech *mech);

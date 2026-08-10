@@ -3,6 +3,7 @@
 #include "mux/objects/flags.h"
 /* Implements BattleTech unit mechanics for unit partnames. */
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,9 +12,9 @@
 
 #include "btech/context.h"
 #include "checked_conversion.h"
+#include "failures_api.h"
 #include "mech_partnames.h"
 #include "mech_partnames_api.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
@@ -61,9 +62,9 @@ static PartNameEntry **part_index_slot(PartNameRegistry *registry, int brand,
   if (brand < 0 || brand > BRANDCOUNT || id < 0 || id >= NUM_ITEMS)
     abort();
   size_t index = (size_t)brand * NUM_ITEMS + (size_t)id;
-  return checked_storage_at(registry->index_sorted,
-                            (BRANDCOUNT + 1) * NUM_ITEMS,
-                            sizeof(PartNameEntry *), index);
+  return (PartNameEntry **)checked_storage_at(
+      registry->index_sorted, ((size_t)BRANDCOUNT + 1U) * (size_t)NUM_ITEMS,
+      sizeof(PartNameEntry *), index);
 }
 
 static PartNameEntry *part_index_entry(PartNameRegistry *registry, int brand,
@@ -73,7 +74,8 @@ static PartNameEntry *part_index_entry(PartNameRegistry *registry, int brand,
 
 static PartNameEntry **sorted_slot(PartNameEntry **entries, size_t count,
                                    size_t index) {
-  return checked_storage_at(entries, count, sizeof(*entries), index);
+  return (PartNameEntry **)checked_storage_at((void *)entries, count,
+                                              sizeof(*entries), index);
 }
 
 static PartNameEntry *sorted_entry(PartNameEntry **entries, size_t count,
@@ -136,8 +138,6 @@ static void insert_sorted_brandname(PartNameRegistry *registry, int count,
                      PART_NAME_VERY_LONG);
 }
 
-extern const char *mech_part_brand_name(int, int);
-
 static int create_brandname(PartNameRegistry *registry,
                             const ServerConfiguration *configuration, int id,
                             int b) {
@@ -148,12 +148,21 @@ static int create_brandname(PartNameRegistry *registry,
   const char *brn = nullptr;
   PartNameEntry *p;
 
-  if (b)
-    if (!(brn = mech_part_brand_name(id, b)))
-      return 0;
-  Create(p, PartNameEntry, 1);
-  c = part_figure_out_name(configuration, id, b,
-                           (char[BTECH_TEXT_CAPACITY]){0});
+  if (b) {
+    PartBrandRequest request = {
+        .equipment_type = id,
+        .quality_level = b,
+    };
+    brn = mech_part_brand_name(&request);
+  }
+  if (!brn)
+    return 0;
+  p = checked_storage_allocate(sizeof(*p));
+  c = part_name_format(
+      &(PartNameRequest){.configuration = configuration,
+                         .part = id,
+                         .brand = b,
+                         .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
   if (!c) {
     free(p);
     return 0;
@@ -164,8 +173,12 @@ static int create_brandname(PartNameRegistry *registry,
     (void)snprintf(buf, sizeof(buf), "%s", c);
   p->vlongy = strdup(buf);
 
-  c = part_figure_out_sname(configuration, id, b,
-                            (char[BTECH_TEXT_CAPACITY]){0});
+  c = part_name_format(
+      &(PartNameRequest){.configuration = configuration,
+                         .part = id,
+                         .brand = b,
+                         .short_name = true,
+                         .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
   if (!c) {
     free(p->vlongy);
     free(p);
@@ -176,7 +189,8 @@ static int create_brandname(PartNameRegistry *registry,
   else
     (void)snprintf(buf, sizeof(buf), "%s", c);
   p->longy = strdup(buf);
-  if (!(c = part_figure_out_shname(id, (char[BTECH_TEXT_CAPACITY]){0}))) {
+  c = part_figure_out_shname(id, (char[BTECH_TEXT_CAPACITY]){0});
+  if (!c) {
     free(p->longy);
     free(p->vlongy);
     free(p);
@@ -208,9 +222,12 @@ void initialize_partname_tables(BtechContext *context) {
   for (j = 0; j <= BRANDCOUNT; j++)
     for (i = 0; i < NUM_ITEMS; i++)
       c += create_brandname(registry, configuration, i, j);
-  Create(registry->short_sorted, PartNameEntry *, (size_t)c);
-  Create(registry->long_sorted, PartNameEntry *, (size_t)c);
-  Create(registry->vlong_sorted, PartNameEntry *, (size_t)c);
+  registry->short_sorted = (PartNameEntry **)checked_storage_allocate(
+      sizeof(*registry->short_sorted) * (size_t)c);
+  registry->long_sorted = (PartNameEntry **)checked_storage_allocate(
+      sizeof(*registry->long_sorted) * (size_t)c);
+  registry->vlong_sorted = (PartNameEntry **)checked_storage_allocate(
+      sizeof(*registry->vlong_sorted) * (size_t)c);
   registry->object_count = c;
   /* bubble-sort 'em and insert to array */
   i = 0;
@@ -232,94 +249,116 @@ void initialize_partname_tables(BtechContext *context) {
   }
 }
 
-static const char *get_part_name(BtechContext *context, int id, int brand,
-                                 PartNameField field) {
-  PartNameRegistry *registry = context->part_names;
+typedef struct PartNameLookup {
+  BtechContext *context;
+  PartReference part;
+  PartNameField field;
+} PartNameLookup;
+
+static const char *get_part_name(const PartNameLookup *lookup) {
+  PartNameRegistry *registry = lookup->context->part_names;
+  const int id = lookup->part.id;
+  const int brand = lookup->part.brand;
 
   if (id < 0 || id >= NUM_ITEMS || brand < 0 || brand > BRANDCOUNT)
     return nullptr;
   PartNameEntry *entry = part_index_entry(registry, brand, id);
   if (!entry && brand)
     entry = part_index_entry(registry, 0, id);
-  return entry ? part_name_field(entry, field) : nullptr;
+  return entry ? part_name_field(entry, lookup->field) : nullptr;
 }
 
 const char *get_parts_short_name(BtechContext *context, int id, int brand) {
-  return get_part_name(context, id, brand, PART_NAME_SHORT);
+  return get_part_name(&(PartNameLookup){.context = context,
+                                         .part = {.id = id, .brand = brand},
+                                         .field = PART_NAME_SHORT});
 }
 
 const char *get_parts_long_name(BtechContext *context, int id, int brand) {
-  return get_part_name(context, id, brand, PART_NAME_LONG);
+  return get_part_name(&(PartNameLookup){.context = context,
+                                         .part = {.id = id, .brand = brand},
+                                         .field = PART_NAME_LONG});
 }
 
 const char *get_parts_vlong_name(BtechContext *context, int id, int brand) {
-  return get_part_name(context, id, brand, PART_NAME_VERY_LONG);
+  return get_part_name(&(PartNameLookup){.context = context,
+                                         .part = {.id = id, .brand = brand},
+                                         .field = PART_NAME_VERY_LONG});
 }
 
-int find_matching_vlong_part(BtechContext *context, const char *wc, int *ind,
-                             int *id, int *brand) {
-  PartNameRegistry *registry = context->part_names;
+static PartMatchResult part_match_exact(const PartMatchRequest *request,
+                                        HashTable *table,
+                                        PartNameEntry **entries) {
+  PartNameRegistry *registry = request->context->part_names;
   PartNameEntry *p;
   char tmpbuf[MBUF_SIZE];
   void *match;
 
-  if (ind && *ind >= 0)
-    return 0;
-  lowercase_name(tmpbuf, wc);
-  if ((match = hash_table_find(tmpbuf, &registry->vlong_hash))) {
+  if (request->cursor >= 0)
+    return (PartMatchResult){0};
+  lowercase_name(tmpbuf, request->pattern);
+  match = hash_table_find(tmpbuf, table);
+  if (match) {
     intptr_t match_index = (intptr_t)match;
-    if ((p = sorted_entry(registry->short_sorted,
-                          (size_t)registry->object_count,
-                          (size_t)(match_index - 1)))) {
-      if (ind)
-        *ind = clamp_intptr_to_int(match_index);
-      *id = packed_part_id(p->index);
-      *brand = packed_part_brand(p->index);
-      return 1;
-    }
+    p = sorted_entry(entries, (size_t)registry->object_count,
+                     (size_t)(match_index - 1));
+    if (p)
+      return (PartMatchResult){.found = true,
+                               .cursor = clamp_intptr_to_int(match_index),
+                               .part = {.id = packed_part_id(p->index),
+                                        .brand = packed_part_brand(p->index)}};
   }
-  return 0;
+  return (PartMatchResult){0};
 }
 
-int find_matching_long_part(BtechContext *context, const char *wc, int *i,
-                            int *id, int *brand) {
-  PartNameRegistry *registry = context->part_names;
+static PartMatchResult part_match_long(const PartMatchRequest *request) {
+  PartNameRegistry *registry = request->context->part_names;
   PartNameEntry *p;
 
-  for ((*i)++; *i < registry->object_count; (*i)++) {
+  for (int cursor = request->cursor + 1; cursor < registry->object_count;
+       cursor++) {
     p = sorted_entry(registry->long_sorted, (size_t)registry->object_count,
-                     (size_t)*i);
-    if (quick_wild(wc, p->longy)) {
-      *id = packed_part_id(p->index);
-      *brand = packed_part_brand(p->index);
-      return 1;
-    }
+                     (size_t)cursor);
+    if (quick_wild(request->pattern, p->longy))
+      return (PartMatchResult){.found = true,
+                               .cursor = cursor,
+                               .part = {.id = packed_part_id(p->index),
+                                        .brand = packed_part_brand(p->index)}};
   }
-  return 0;
+  return (PartMatchResult){0};
 }
 
-int find_matching_short_part(BtechContext *context, const char *wc, int *ind,
-                             int *id, int *brand) {
-  PartNameRegistry *registry = context->part_names;
-  PartNameEntry *p;
-  char tmpbuf[MBUF_SIZE];
-  void *match;
-
-  if (*ind >= 0)
-    return 0;
-  lowercase_name(tmpbuf, wc);
-  if ((match = hash_table_find(tmpbuf, &registry->short_hash))) {
-    intptr_t match_index = (intptr_t)match;
-    if ((p = sorted_entry(registry->short_sorted,
-                          (size_t)registry->object_count,
-                          (size_t)(match_index - 1)))) {
-      *ind = clamp_intptr_to_int(match_index);
-      *id = packed_part_id(p->index);
-      *brand = packed_part_brand(p->index);
-      return 1;
-    }
+PartMatchResult part_match_next(const PartMatchRequest *request) {
+  PartNameRegistry *registry = request->context->part_names;
+  switch (request->kind) {
+  case PART_MATCH_SHORT:
+    return part_match_exact(request, &registry->short_hash,
+                            registry->short_sorted);
+  case PART_MATCH_LONG:
+    return part_match_long(request);
+  case PART_MATCH_VERY_LONG:
+    return part_match_exact(request, &registry->vlong_hash,
+                            registry->short_sorted);
   }
-  return 0;
+  return (PartMatchResult){0};
+}
+
+PartMatchResult part_name_lookup(const PartNameLookupRequest *request) {
+  PartMatchResult match = part_match_next(&(PartMatchRequest){
+      .context = request->context,
+      .pattern = request->name,
+      .kind = PART_MATCH_LONG,
+      .cursor = -1,
+  });
+
+  if (match.found)
+    return match;
+  return part_match_next(&(PartMatchRequest){
+      .context = request->context,
+      .pattern = request->name,
+      .kind = PART_MATCH_VERY_LONG,
+      .cursor = -1,
+  });
 }
 
 void ListForms(DbRef player, void *data, char *buffer) {
@@ -338,9 +377,15 @@ void ListForms(DbRef player, void *data, char *buffer) {
   }
 }
 
-void fun_btpartmatch(char *buff, char **bufc, DbRef player, DbRef cause,
-                     char *fargs[], int nfargs, char *cargs[], int ncargs,
-                     EvaluationContext *context) {
+BtechScriptResult fun_btpartmatch(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /* fargs[0] = name to match on
    */
 
@@ -349,45 +394,65 @@ void fun_btpartmatch(char *buff, char **bufc, DbRef player, DbRef cause,
    * Dany - 06/2005
    */
 
-  int partindex = 0, id = 0, brand = 0;
   int part_count = 0;
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
-  }
-  if (strlen(fargs[0]) >= MBUF_SIZE) {
-    safe_tprintf_str(buff, bufc, "#-1 PARTNAME TOO LONG");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
   if (!fargs[0]) {
     safe_tprintf_str(buff, bufc, "#-1 NEED PARTNAME");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+  }
+  if (strlen(fargs[0]) >= MBUF_SIZE) {
+    safe_tprintf_str(buff, bufc, "#-1 PARTNAME TOO LONG");
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
 
-  partindex = -1;
-  while (find_matching_short_part(context->btech, fargs[0], &partindex, &id,
-                                  &brand)) {
-    safe_tprintf_str(buff, bufc, "%d ", packed_part(id, brand));
+  PartMatchRequest request = {
+      .context = context->btech,
+      .pattern = fargs[0],
+      .kind = PART_MATCH_SHORT,
+      .cursor = -1,
+  };
+  for (;;) {
+    PartMatchResult match = part_match_next(&request);
+    if (!match.found)
+      break;
+    request.cursor = match.cursor;
+    safe_tprintf_str(buff, bufc, "%d ",
+                     packed_part(match.part.id, match.part.brand));
     part_count++;
   }
 
-  partindex = 0;
-  while (find_matching_long_part(context->btech, fargs[0], &partindex, &id,
-                                 &brand)) {
-    safe_tprintf_str(buff, bufc, "%d ", packed_part(id, brand));
+  request.kind = PART_MATCH_LONG;
+  request.cursor = 0;
+  for (;;) {
+    PartMatchResult match = part_match_next(&request);
+    if (!match.found)
+      break;
+    request.cursor = match.cursor;
+    safe_tprintf_str(buff, bufc, "%d ",
+                     packed_part(match.part.id, match.part.brand));
     part_count++;
   }
 
-  partindex = -1;
-  while (find_matching_vlong_part(context->btech, fargs[0], &partindex, &id,
-                                  &brand)) {
-    safe_tprintf_str(buff, bufc, "%d ", packed_part(id, brand));
+  request.kind = PART_MATCH_VERY_LONG;
+  request.cursor = -1;
+  for (;;) {
+    PartMatchResult match = part_match_next(&request);
+    if (!match.found)
+      break;
+    request.cursor = match.cursor;
+    safe_tprintf_str(buff, bufc, "%d ",
+                     packed_part(match.part.id, match.part.brand));
     part_count++;
   }
 
   if (part_count == 0)
     safe_tprintf_str(buff, bufc, "#-1 INVALID PARTNAME");
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
 
 /* Categories accepted by btpartslist(), based on the canonical part ID. */
@@ -418,18 +483,23 @@ static BT_PART_CATEGORY btpartslist_category(const char *category) {
 }
 
 /* Return whether a canonical part ID belongs in the requested category. */
-static int btpartslist_matches(BT_PART_CATEGORY category, int part) {
-  switch (category) {
+typedef struct PartCategoryRequest {
+  BT_PART_CATEGORY category;
+  int part;
+} PartCategoryRequest;
+
+static bool btpartslist_matches(const PartCategoryRequest *request) {
+  switch (request->category) {
   case BT_PART_CATEGORY_AMMO:
-    return equipment_is_ammunition(part);
+    return equipment_is_ammunition(request->part);
   case BT_PART_CATEGORY_WEAPON:
-    return equipment_is_weapon(part);
+    return equipment_is_weapon(request->part);
   case BT_PART_CATEGORY_BOMB:
-    return equipment_is_bomb(part);
+    return equipment_is_bomb(request->part);
   case BT_PART_CATEGORY_SPECIAL:
-    return equipment_is_special(part);
+    return equipment_is_special(request->part);
   case BT_PART_CATEGORY_CARGO:
-    return equipment_is_cargo(part);
+    return equipment_is_cargo(request->part);
   case BT_PART_CATEGORY_INVALID:
     return 0;
   default:
@@ -438,23 +508,37 @@ static int btpartslist_matches(BT_PART_CATEGORY category, int part) {
 }
 
 /* List the canonical category names accepted by btpartslist(). */
-void fun_btpartscategorylist(char *buff, char **bufc, DbRef player, DbRef cause,
-                             char *fargs[], int nfargs, char *cargs[],
-                             int ncargs, EvaluationContext *context) {
+BtechScriptResult fun_btpartscategorylist(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
   safe_str("ammo|weapon|bomb|special|cargo", buff, bufc);
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
 
 /*
  * Return canonical long part names from one category, separated by pipes.
  * Requiring the category keeps the result within one LBUF.
  */
-void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
-                     char *fargs[], int nfargs, char *cargs[], int ncargs,
-                     EvaluationContext *context) {
+BtechScriptResult fun_btpartslist(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   BT_PART_CATEGORY category;
   PartNameEntry *part_name;
   size_t used;
@@ -466,11 +550,11 @@ void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
   if (nfargs != 1) {
     safe_tprintf_str(buff, bufc, "#-1 EXPECTS ONE CATEGORY ARGUMENT");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
 
   category = btpartslist_category(fargs[0]);
@@ -478,7 +562,7 @@ void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(
         buff, bufc,
         "#-1 CATEGORY MUST BE AMMO, WEAPON, BOMB, SPECIAL, OR CARGO");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
 
   listed = 0;
@@ -486,7 +570,8 @@ void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
     part_name = sorted_entry(registry->long_sorted,
                              (size_t)registry->object_count, (size_t)index);
     part = part_name->index % NUM_ITEMS;
-    if (!btpartslist_matches(category, part))
+    if (!btpartslist_matches(
+            &(PartCategoryRequest){.category = category, .part = part}))
       continue;
 
     used = (size_t)(*bufc - buff);
@@ -494,7 +579,7 @@ void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
     if (used + needed >= LBUF_SIZE) {
       *bufc = buff;
       safe_str("#-1 LIST TOO LONG FOR THIS CATEGORY", buff, bufc);
-      return;
+      return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
     }
     if (listed)
       safe_str("|", buff, bufc);
@@ -504,11 +589,19 @@ void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!listed)
     safe_str("#-1 NO PARTS IN CATEGORY", buff, bufc);
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
 
-void fun_btpartname(char *buff, char **bufc, DbRef player, DbRef cause,
-                    char *fargs[], int nfargs, char *cargs[], int ncargs,
-                    EvaluationContext *context) {
+BtechScriptResult fun_btpartname(BtechScriptCall *call) {
+  [[maybe_unused]] char *buff = call->output.buffer;
+  [[maybe_unused]] char **bufc = &call->output.cursor;
+  [[maybe_unused]] char **fargs = call->arguments.values;
+  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] char **cargs = call->command_arguments.values;
+  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] EvaluationContext *context = call->evaluation;
+  [[maybe_unused]] const DbRef player = call->player;
   /* fargs[0] = partnumer to find name for
    * fargs[1] = 'short', 'long' or 'vlong'
    */
@@ -519,26 +612,50 @@ void fun_btpartname(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (!is_wizard(context->world->database, player)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   if (!fargs[0]) {
     safe_tprintf_str(buff, bufc, "#-1 NEED PARTNAME");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   long parsed_index = strtol(fargs[0], &cptr, 10);
   index = clamp_intptr_to_int(parsed_index);
   if (cptr == fargs[0]) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID PART NUMBER");
-    return;
+    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
 
-  char *const *name_type_slot =
-      checked_storage_at_const(fargs, (size_t)nfargs, sizeof(*fargs), 1);
-  infostr = partname_func(context->btech, index, **name_type_slot);
+  char *const *name_type_slot = (char *const *)checked_storage_at_const(
+      (const void *)fargs, (size_t)nfargs, sizeof(*fargs), 1);
+  const char name_type = **name_type_slot;
+  PartNameDescriptionFormat format;
+  switch (name_type) {
+  case 's':
+  case 'S':
+    format = PART_NAME_DESCRIPTION_SHORT;
+    break;
+  case 'l':
+  case 'L':
+    format = PART_NAME_DESCRIPTION_LONG;
+    break;
+  case 'v':
+  case 'V':
+    format = PART_NAME_DESCRIPTION_VERY_LONG;
+    break;
+  default:
+    safe_tprintf_str(buff, bufc, "#-1 INVALID NAME TYPE");
+    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+  }
+  infostr = partname_func(&(PartNameDescriptionRequest){
+      .context = context->btech, .packed_part = index, .format = format});
   safe_tprintf_str(buff, bufc, "%s", infostr);
+
+  return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
 
-const char *partname_func(BtechContext *context, int index, int size) {
+const char *partname_func(const PartNameDescriptionRequest *request) {
+  BtechContext *context = request->context;
+  const int index = request->packed_part;
   PartNameRegistry *registry = context->part_names;
   int id, brand;
   PartNameEntry *p;
@@ -552,19 +669,15 @@ const char *partname_func(BtechContext *context, int index, int size) {
   if (!p)
     return "#-1 INVALID PART NUMBER";
 
-  switch (size) {
-  case 's':
-  case 'S':
+  switch (request->format) {
+  case PART_NAME_DESCRIPTION_SHORT:
     return p->shorty;
-  case 'l':
-  case 'L':
+  case PART_NAME_DESCRIPTION_LONG:
     return p->longy;
-  case 'v':
-  case 'V':
+  case PART_NAME_DESCRIPTION_VERY_LONG:
     return p->vlongy;
-  default:
-    return "#-1 INVALID NAME TYPE";
   }
+  return "#-1 INVALID NAME TYPE";
 }
 
 size_t part_name_count(const BtechContext *context) {
@@ -596,9 +709,9 @@ void destroy_partname_tables(BtechContext *context) {
       free(part_name->vlongy);
       free(part_name);
     }
-  free(registry->short_sorted);
-  free(registry->long_sorted);
-  free(registry->vlong_sorted);
+  free((void *)registry->short_sorted);
+  free((void *)registry->long_sorted);
+  free((void *)registry->vlong_sorted);
   free(registry);
   context->part_names = nullptr;
 }

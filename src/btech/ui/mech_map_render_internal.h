@@ -1,5 +1,6 @@
 #pragma once
 
+#include "map_coordinates.h"
 #include "mech_api_types.h"
 
 #include <stdbool.h>
@@ -40,6 +41,12 @@ typedef struct MapCellText {
   char text[32];
 } MapCellText;
 
+typedef struct TerrainColorRequest {
+  const MapColorScheme *colors;
+  char terrain;
+  int elevation;
+} TerrainColorRequest;
+
 typedef struct MapText {
   char *buffer;
   char **lines;
@@ -48,20 +55,37 @@ typedef struct MapText {
 } MapText;
 
 void map_color_scheme_load(MapColorScheme *colors);
-char map_terrain_color_char(const MapColorScheme *colors, char terrain,
-                            int elevation);
+char map_terrain_color_char(const TerrainColorRequest *request);
 const char *map_color_markup(char color);
 bool style_tac_map(MapText *text, const MapColorScheme *colors,
                    const char *sketch, int display_columns, int display_rows);
 int tactical_column_is_odd(int column);
 int tactical_display_columns(int hex_columns);
-int tactical_hex_offset(int x, int y, int display_columns,
-                        int first_column_is_odd);
+typedef struct TacticalHexOffsetRequest {
+  MapHexPosition position;
+  int display_columns;
+  bool first_column_is_odd;
+} TacticalHexOffsetRequest;
+int tactical_hex_offset(const TacticalHexOffsetRequest *request);
 void tactical_map_sketch(char *buffer, size_t buffer_capacity, BattleMap *map,
                          Mech *mech, int start_x, int start_y, int width,
                          int height, int display_columns, int top_offset,
                          int left_offset, bool use_color, bool use_hex_los,
                          bool show_underlying_terrain);
-int parse_tacargs(DbRef player, Mech *mech, char *const *args,
-                  size_t argument_capacity, size_t first_argument, int argc,
-                  int maxrange, short *x, short *y);
+typedef struct TacticalArgumentParseRequest {
+  DbRef player;
+  Mech *mech;
+  char *const *arguments;
+  size_t argument_capacity;
+  size_t first_argument;
+  int argument_count;
+  int maximum_range;
+} TacticalArgumentParseRequest;
+
+typedef struct TacticalArgumentParseResult {
+  bool valid;
+  MapHexPosition position;
+} TacticalArgumentParseResult;
+
+TacticalArgumentParseResult
+tactical_arguments_parse(const TacticalArgumentParseRequest *request);

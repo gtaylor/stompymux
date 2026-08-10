@@ -26,6 +26,30 @@ struct ServerLog {
   char timestamp[256];
 };
 
+typedef struct LogEntry {
+  ServerLog *log;
+  int key;
+  const char *primary;
+  const char *secondary;
+} LogEntry;
+
+typedef struct LogSystemError {
+  ServerLog *log;
+  const char *primary;
+  const char *secondary;
+  const char *extra;
+  const char *failing_object;
+} LogSystemError;
+
+#ifdef ARBITRARY_LOGFILES
+typedef struct ArbitraryLogRequest {
+  EvaluationContext *evaluation;
+  DbRef actor;
+  const char *filename;
+  const char *message;
+} ArbitraryLogRequest;
+#endif
+
 void server_log_initialize(ServerLog *log, GameDatabase *database,
                            const ServerConfiguration *configuration);
 bool server_log_is_enabled(const ServerLog *log, int key);
@@ -36,20 +60,16 @@ bool server_log_is_enabled(const ServerLog *log, int key);
 
 int start_log(ServerLog *log, const char *primary, const char *secondary);
 void end_log(ServerLog *log);
-void log_perror(ServerLog *log, const char *primary, const char *secondary,
-                const char *name, const char *error);
-void log_error(ServerLog *log, int key, const char *primary,
-               const char *secondary, const char *format, ...)
-    __attribute__((format(printf, 5, 6)));
+void log_perror(const LogSystemError *error);
+void log_error(LogEntry entry, const char *format, ...)
+    __attribute__((format(printf, 2, 3)));
 void log_text(const char *text);
-void log_simple(ServerLog *log, int key, const char *primary,
-                const char *secondary, const char *message);
+void log_simple(LogEntry entry, const char *message);
 void log_number(int number);
 void log_name(ServerLog *log, DbRef thing);
 void log_name_and_loc(ServerLog *log, DbRef thing);
 const char *object_type_name(GameDatabase *database, DbRef thing);
 void log_type_and_name(ServerLog *log, DbRef thing);
 #ifdef ARBITRARY_LOGFILES
-int log_to_file(EvaluationContext *evaluation, DbRef thing, const char *logfile,
-                const char *message);
+bool log_to_file(const ArbitraryLogRequest *request);
 #endif

@@ -46,9 +46,14 @@
  * object_log_pointer_error, object_log_header_error, Log_simple_damage: Write
  * errors to the log file.
  */
-void object_log_pointer_error(EvaluationContext *evaluation, DbRef prior,
-                              DbRef obj, DbRef loc, DbRef ref,
-                              const char *reftype, const char *errtype) {
+void object_log_pointer_error(const ObjectPointerError *error) {
+  EvaluationContext *evaluation = error->evaluation;
+  DbRef prior = error->prior;
+  DbRef obj = error->object;
+  DbRef loc = error->location;
+  DbRef ref = error->reference;
+  const char *reftype = error->reference_type;
+  const char *errtype = error->error_type;
   STARTLOG(evaluation->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
     log_type_and_name(evaluation->log, obj);
     if (loc != NOTHING) {
@@ -157,7 +162,10 @@ DbRef new_home(EvaluationContext *evaluation, DbRef player) {
   return default_home(world);
 }
 
-DbRef clone_home(EvaluationContext *evaluation, DbRef player, DbRef thing) {
+DbRef clone_home(const CloneHomeRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->player;
+  DbRef thing = request->source;
   DbRef loc;
 
   loc = game_object_link(evaluation->world->database, thing);
@@ -182,8 +190,10 @@ void object_make_freelist(GameDatabase *database) {
 }
 
 /** Apply the configured Lua parent for a newly created object. */
-void object_apply_default_lua_parent(EvaluationContext *evaluation,
-                                     DbRef object, int object_type) {
+void object_apply_default_lua_parent(const ObjectCreationIdentity *identity) {
+  EvaluationContext *evaluation = identity->evaluation;
+  DbRef object = identity->object;
+  int object_type = identity->type;
   ServerConfiguration *configuration = evaluation->world->configuration;
   char *path;
 
@@ -212,7 +222,7 @@ void object_apply_default_lua_parent(EvaluationContext *evaluation,
  * Create an object of the indicated type.
  */
 DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
-                 char *name) {
+                 const char *name) {
   DbRef obj;
   int okname = 0;
   const ObjectFlagSet *default_flags;
@@ -264,7 +274,10 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     free_lbuf(buff);
     break;
   default:
-    log_simple(evaluation->log, LOG_BUGS, "BUG", "OTYPE",
+    log_simple((LogEntry){.log = evaluation->log,
+                          .key = LOG_BUGS,
+                          .primary = "BUG",
+                          .secondary = "OTYPE"},
                tprintf("Bad object type in create_obj: %d.", objtype));
     return NOTHING;
   }
@@ -287,7 +300,10 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
       evaluation->world->database->freelist =
           game_object_link(evaluation->world->database, obj);
     } else {
-      log_simple(evaluation->log, LOG_PROBLEMS, "FRL", "DAMAG",
+      log_simple((LogEntry){.log = evaluation->log,
+                            .key = LOG_PROBLEMS,
+                            .primary = "FRL",
+                            .secondary = "DAMAG"},
                  tprintf("Freelist damaged, bad object #%ld.", obj));
       obj = NOTHING;
       evaluation->world->database->freelist = NOTHING;
@@ -323,10 +339,13 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   game_object_set_type(evaluation->world->database, obj, (ObjectType)objtype);
   game_object_clear_flags(evaluation->world->database, obj);
   for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
-    game_object_set_flag(evaluation->world->database, obj, flag,
-                         object_flag_set_has(default_flags, flag));
+    game_object_set_flag(&(ObjectFlagChangeRequest){
+        .database = evaluation->world->database,
+        .object = obj,
+        .flag = flag,
+        .value = object_flag_set_has(default_flags, flag)});
   unmark(evaluation->world->database, obj);
-  buff = munge_space((char *)name);
+  buff = munge_space(name);
   object_name_set(evaluation->world->database, obj, buff);
   free_lbuf(buff);
 
@@ -334,12 +353,15 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     tt = time(nullptr);
     if (tt == (time_t)-1)
       tt = 0;
-    player_account_last_login_set(evaluation->world->database, obj, tt);
+    player_account_last_login_set(&(PlayerLastLoginChange){
+        .account = {.database = evaluation->world->database, .player = obj},
+        .occurred_at = tt});
 
     add_player_name(evaluation->world, obj,
                     game_object_pure_name(evaluation->world->database, obj));
   }
-  object_apply_default_lua_parent(evaluation, obj, objtype);
+  object_apply_default_lua_parent(&(ObjectCreationIdentity){
+      .evaluation = evaluation, .object = obj, .type = objtype});
   object_make_freelist(evaluation->world->database);
   return obj;
 }
@@ -348,7 +370,10 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
  * Destroy an object. Assumes it has already been removed from
  * all lists and has no contents or exits.
  */
-void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
+void destroy_obj(const ObjectDestructionRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->player;
+  DbRef obj = request->object;
   AttributeStack *sp, *next;
 
   if (!is_good_obj(evaluation->world->database, obj))
@@ -429,7 +454,10 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
         game_object_set_link(evaluation->world->database, targ,
                              new_home(evaluation, targ));
       }
-      move_via_generic(evaluation, targ, HOME, NOTHING, 0);
+      move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                                .object = targ,
+                                                .destination = HOME,
+                                                .cause = NOTHING});
     }
   }
 
@@ -453,7 +481,8 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
           "of GOING location.  Flush terminated.");
       break;
     } else {
-      destroy_obj(evaluation, NOTHING, targ);
+      destroy_obj(&(ObjectDestructionRequest){
+          .evaluation = evaluation, .player = NOTHING, .object = targ});
     }
   }
 }
@@ -469,16 +498,21 @@ void destroy_exit(EvaluationContext *evaluation, DbRef exit) {
       evaluation->world->database, loc,
       remove_first(evaluation->world->database,
                    game_object_exits(evaluation->world->database, loc), exit));
-  destroy_obj(evaluation, NOTHING, exit);
+  destroy_obj(&(ObjectDestructionRequest){
+      .evaluation = evaluation, .player = NOTHING, .object = exit});
 }
 
 /**
  * Destroys a thing.
  */
 void destroy_thing(EvaluationContext *evaluation, DbRef thing) {
-  move_via_generic(evaluation, thing, NOTHING, NOTHING, 0);
+  move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                            .object = thing,
+                                            .destination = NOTHING,
+                                            .cause = NOTHING});
   empty_obj(evaluation, thing);
-  destroy_obj(evaluation, NOTHING, thing);
+  destroy_obj(&(ObjectDestructionRequest){
+      .evaluation = evaluation, .player = NOTHING, .object = thing});
 }
 
 /**
@@ -510,8 +544,12 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
   delete_player_name(evaluation->world, victim, buf);
   free_lbuf(buf);
 
-  move_via_generic(evaluation, victim, NOTHING, player, 0);
-  destroy_obj(evaluation, NOTHING, victim);
+  move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                            .object = victim,
+                                            .destination = NOTHING,
+                                            .cause = player});
+  destroy_obj(&(ObjectDestructionRequest){
+      .evaluation = evaluation, .player = NOTHING, .object = victim});
 }
 
 /**
@@ -535,7 +573,8 @@ void object_purge_going(EvaluationContext *evaluation, bool full_check) {
        */
 
       empty_obj(evaluation, i);
-      destroy_obj(evaluation, NOTHING, i);
+      destroy_obj(&(ObjectDestructionRequest){
+          .evaluation = evaluation, .player = NOTHING, .object = i});
       break;
     case OBJECT_TYPE_THING:
       destroy_thing(evaluation, i);
@@ -553,7 +592,8 @@ void object_purge_going(EvaluationContext *evaluation, bool full_check) {
 
       object_log_simple_error(evaluation, i, NOTHING,
                               "GOING object with unexpected type.  Destroyed.");
-      destroy_obj(evaluation, NOTHING, i);
+      destroy_obj(&(ObjectDestructionRequest){
+          .evaluation = evaluation, .player = NOTHING, .object = i});
     }
   }
 }

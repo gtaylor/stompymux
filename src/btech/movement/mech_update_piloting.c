@@ -10,6 +10,7 @@
 #include "btechstats_api.h"
 #include "checked_conversion.h"
 #include "failures_api.h"
+#include "map_coordinates.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
@@ -86,14 +87,72 @@ void mech_piloting_update(Mech *mech) {
         mech_notify(mech, MECHALL, "Your legs take some damage!");
         if (mech_movement_type(mech) == MOVE_QUAD) {
           if (!mech_section_is_destroyed(mech, LARM))
-            DamageMech(mech, mech, 0, -1, LARM, 0, 0, 0, dam, 0, 0, -1, 0, 1);
+            mech_damage_apply(
+                &(MechDamageRequest){.target = mech,
+                                     .attacker = mech,
+                                     .line_of_sight = 0,
+                                     .attack_pilot = -1,
+                                     .hit_location = LARM,
+                                     .rear = 0,
+                                     .critical = 0,
+                                     .armor_damage = 0,
+                                     .internal_damage = dam,
+                                     .transfer = MECH_DAMAGE_NORMAL,
+                                     .cause = 0,
+                                     .base_to_hit = 0,
+                                     .weapon_index = -1,
+                                     .ammunition_mode = 0,
+                                     .ignore_swarmers = 1});
           if (!mech_section_is_destroyed(mech, RARM))
-            DamageMech(mech, mech, 0, -1, RARM, 0, 0, 0, dam, 0, 0, -1, 0, 1);
+            mech_damage_apply(
+                &(MechDamageRequest){.target = mech,
+                                     .attacker = mech,
+                                     .line_of_sight = 0,
+                                     .attack_pilot = -1,
+                                     .hit_location = RARM,
+                                     .rear = 0,
+                                     .critical = 0,
+                                     .armor_damage = 0,
+                                     .internal_damage = dam,
+                                     .transfer = MECH_DAMAGE_NORMAL,
+                                     .cause = 0,
+                                     .base_to_hit = 0,
+                                     .weapon_index = -1,
+                                     .ammunition_mode = 0,
+                                     .ignore_swarmers = 1});
         }
         if (!mech_section_is_destroyed(mech, LLEG))
-          DamageMech(mech, mech, 0, -1, LLEG, 0, 0, 0, dam, 0, 0, -1, 0, 1);
+          mech_damage_apply(&(MechDamageRequest){.target = mech,
+                                                 .attacker = mech,
+                                                 .line_of_sight = 0,
+                                                 .attack_pilot = -1,
+                                                 .hit_location = LLEG,
+                                                 .rear = 0,
+                                                 .critical = 0,
+                                                 .armor_damage = 0,
+                                                 .internal_damage = dam,
+                                                 .transfer = MECH_DAMAGE_NORMAL,
+                                                 .cause = 0,
+                                                 .base_to_hit = 0,
+                                                 .weapon_index = -1,
+                                                 .ammunition_mode = 0,
+                                                 .ignore_swarmers = 1});
         if (!mech_section_is_destroyed(mech, RLEG))
-          DamageMech(mech, mech, 0, -1, RLEG, 0, 0, 0, dam, 0, 0, -1, 0, 1);
+          mech_damage_apply(&(MechDamageRequest){.target = mech,
+                                                 .attacker = mech,
+                                                 .line_of_sight = 0,
+                                                 .attack_pilot = -1,
+                                                 .hit_location = RLEG,
+                                                 .rear = 0,
+                                                 .critical = 0,
+                                                 .armor_damage = 0,
+                                                 .internal_damage = dam,
+                                                 .transfer = MECH_DAMAGE_NORMAL,
+                                                 .cause = 0,
+                                                 .base_to_hit = 0,
+                                                 .weapon_index = -1,
+                                                 .ammunition_mode = 0,
+                                                 .ignore_swarmers = 1});
       } else {
         mech_notify(mech, MECHALL,
                     "Your damaged mech falls as you try to run!");
@@ -108,7 +167,7 @@ void mech_piloting_update(Mech *mech) {
     mech_turn_damage_clear(mech);
   if (temp_tick % TURN == 0 && mech_is_started(mech) &&
       mech_movement_type(mech) != MOVE_NONE)
-    mech_generic_failure_check(mech, -1, nullptr, nullptr);
+    (void)mech_generic_failure_check(mech, FAILURE_SYSTEM_COMPUTER);
 }
 
 void mech_turret_autoturn_update(Mech *mech) {
@@ -141,9 +200,11 @@ void mech_turret_autoturn_update(Mech *mech) {
                         &fy);
   }
 
-  bearing = AcceptableDegree(FindBearing(mech_position_real_x(mech),
-                                         mech_position_real_y(mech), fx, fy) -
-                             mech_heading_degrees(mech));
+  bearing = AcceptableDegree(
+      map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                              .y = mech_position_real_y(mech)},
+                                    .end = {.x = fx, .y = fy}}) -
+      mech_heading_degrees(mech));
   mech_turret_heading_relative_set(mech, bearing);
   MarkForLOSUpdate(mech);
 }

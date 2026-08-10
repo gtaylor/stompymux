@@ -10,8 +10,8 @@
 
 static char **autopilot_argument_list_slot(AutopilotArgumentList *arguments,
                                            size_t index) {
-  return checked_storage_at(arguments->values, arguments->capacity,
-                            sizeof(char *), index);
+  return (char **)checked_storage_at(
+      (void *)arguments->values, arguments->capacity, sizeof(char *), index);
 }
 
 void autopilot_argument_list_initialize(AutopilotArgumentList *arguments,

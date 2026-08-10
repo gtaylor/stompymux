@@ -183,7 +183,7 @@ void channel_destroy(struct channel *channel) {
     return;
   for (int index = 0; index < channel->num_users; index++)
     free(channel_user_at(channel, (size_t)index));
-  free(channel->users);
+  free((void *)channel->users);
   while (channel->last_messages != nullptr &&
          fifo_length(&channel->last_messages) > 0) {
     chmsg *message = fifo_pop(&channel->last_messages);
@@ -271,7 +271,8 @@ void do_comlist(CommandInvocation *invocation) {
     char *channel_name = commac_channel_at(c, (size_t)i);
 
     ch = select_channel(evaluation->runtime->channels, channel_name);
-    if ((user = select_user(ch, player))) {
+    user = select_user(ch, player);
+    if (user) {
       comlist_description(evaluation->world->database, ch, description,
                           (size_t)description_width + 1);
       notify_printf(evaluation, player, "%-9.9s %-19.19s %-6.6s %.*s",

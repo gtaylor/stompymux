@@ -63,8 +63,9 @@ void end_lite_check(Mech *mech) {
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i == mech_map_slot(mech))
       continue;
-    if (!(t = btech_context_find_object(mech_context(mech),
-                                        battle_map_unit_dbref(map, i))))
+    t = btech_context_find_object(mech_context(mech),
+                                  battle_map_unit_dbref(map, i));
+    if (!t)
       continue;
     if (mech_lites_target(t, mech))
       return;

@@ -20,7 +20,12 @@ typedef enum TargetingComputerType : int {
 
 void mech_targeting_lock_modes_clear(Mech *mech);
 void mech_targeting_aim_reset(Mech *mech);
-void mech_targeting_aim_set(Mech *mech, int section, UnitClass unit_class);
+typedef struct MechAimSelection {
+  int section;
+  UnitClass unit_class;
+} MechAimSelection;
+
+void mech_targeting_aim_set(Mech *mech, MechAimSelection selection);
 void mech_targeting_target_clear(Mech *mech);
 void mech_targeting_unit_set(Mech *mech, DbRef target);
 void mech_targeting_hex_xy_set(Mech *mech, int x, int y);
@@ -60,11 +65,21 @@ bool mech_targeting_has_specific_aim(const Mech *mech);
 bool mech_movement_modes_locked(const Mech *mech);
 bool mech_is_dodging(const Mech *mech);
 void mech_digging_clear(Mech *mech);
-void mech_targeting_override_begin(Mech *mech, MechTargetingOverride *override,
-                                   DbRef target, int target_x, int target_y,
-                                   int target_z, int lock_modes);
-void mech_targeting_override_end(Mech *mech,
-                                 const MechTargetingOverride *override,
-                                 DbRef *target, int *target_x, int *target_y,
-                                 int *target_z, int *lock_modes);
+typedef struct MechTargetingState {
+  DbRef target;
+  int target_x;
+  int target_y;
+  int target_z;
+  int lock_modes;
+} MechTargetingState;
+
+typedef struct MechTargetingOverrideBegin {
+  Mech *mech;
+  MechTargetingOverride *override;
+  MechTargetingState state;
+} MechTargetingOverrideBegin;
+
+void mech_targeting_override_begin(const MechTargetingOverrideBegin *request);
+MechTargetingState
+mech_targeting_override_end(Mech *mech, const MechTargetingOverride *override);
 void mech_charge_reset(Mech *mech);

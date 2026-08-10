@@ -18,8 +18,19 @@ typedef struct GameDatabase GameDatabase;
 
 void economy_parts_clear(GameDatabase *database, DbRef object);
 size_t economy_parts_entry_count(GameDatabase *database, DbRef object);
-bool economy_parts_entry(GameDatabase *database, DbRef object, size_t index,
-                         EconomyPartEntryView *entry);
+typedef struct EconomyPartsEntryRequest {
+  GameDatabase *database;
+  DbRef object;
+  size_t index;
+} EconomyPartsEntryRequest;
+
+typedef struct EconomyPartsEntryResult {
+  bool found;
+  EconomyPartEntryView entry;
+} EconomyPartsEntryResult;
+
+EconomyPartsEntryResult
+economy_parts_entry(const EconomyPartsEntryRequest *request);
 int economy_parts_quantity(GameDatabase *database, DbRef object, int part_id,
                            int brand_id);
 bool economy_parts_set_quantity(GameDatabase *database, DbRef object,

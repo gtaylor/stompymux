@@ -188,16 +188,16 @@ const CharacterValue *character_value_definition(int code) {
 const char *character_value_type_name(int type) {
   if (type < CHAR_VALUE || type > CHAR_ATTRIBUTE)
     return "Unknown";
-  const char *const *name = checked_storage_at_const(
-      btech_charvaluetype_names,
+  const char *const *name = (const char *const *)checked_storage_at_const(
+      (const void *)btech_charvaluetype_names,
       sizeof(btech_charvaluetype_names) / sizeof(*btech_charvaluetype_names),
       sizeof(*btech_charvaluetype_names), (size_t)type);
   return *name;
 }
 
-void character_value_xp_threshold_set(int code, int threshold) {
+void character_value_xp_threshold_set(const CharacterValueThreshold *value) {
   CharacterValue *definition =
       checked_storage_at(char_values, NUM_CHARVALUES, sizeof(*char_values),
-                         character_value_index(code));
-  definition->xpthreshold = threshold;
+                         character_value_index(value->code));
+  definition->xpthreshold = value->threshold;
 }

@@ -389,8 +389,9 @@ void auto_eventstats(DbRef player, void *data, char *buffer) {
 
   for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++) {
 
-    if ((j = mux_event_count_type_data(autopilot->xcode.context->events, i,
-                                       (void *)autopilot))) {
+    j = mux_event_count_type_data(autopilot->xcode.context->events, i,
+                                  (void *)autopilot);
+    if (j) {
       notify_printf(btech_context_evaluation(autopilot->xcode.context), player,
                     "%-20s%d", btech_event_name(i), j);
       total += j;
@@ -412,10 +413,12 @@ static int auto_pilot_on(Autopilot *autopilot) {
 
   int i, j, count = 0;
 
-  for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++)
-    if ((j = mux_event_count_type_data(autopilot->xcode.context->events, i,
-                                       (void *)autopilot)))
+  for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++) {
+    j = mux_event_count_type_data(autopilot->xcode.context->events, i,
+                                  (void *)autopilot);
+    if (j)
       count += j;
+  }
 
   if (!count) {
     return autopilot->flags &
@@ -760,8 +763,9 @@ void auto_newautopilot(DbRef key, void **data,
 
     /* Finally reset the AI value on its unit if
      * it needs to */
-    if ((mech = btech_context_get_mech(autopilot->xcode.context,
-                                       autopilot->mymechnum))) {
+    mech =
+        btech_context_get_mech(autopilot->xcode.context, autopilot->mymechnum);
+    if (mech) {
 
       /* Just incase another AI has taken over */
       if (mech_autopilot_dbref(mech) == autopilot->mynum) {

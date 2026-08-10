@@ -26,9 +26,9 @@ void mech_targeting_lock_modes_clear(Mech *mech) {
 
 void mech_targeting_aim_reset(Mech *mech) { mech->rd.aim = NUM_SECTIONS; }
 
-void mech_targeting_aim_set(Mech *mech, int section, UnitClass unit_class) {
-  mech->rd.aim = clamp_int_to_char(section);
-  mech->rd.aim_type = (char)unit_class;
+void mech_targeting_aim_set(Mech *mech, MechAimSelection selection) {
+  mech->rd.aim = clamp_int_to_char(selection.section);
+  mech->rd.aim_type = (char)selection.unit_class;
 }
 
 void mech_targeting_target_clear(Mech *mech) {
@@ -160,9 +160,8 @@ bool mech_is_dodging(const Mech *mech) { return mech->rd.status2 & DODGING; }
 
 void mech_digging_clear(Mech *mech) { mech->rd.tankcritstatus &= ~DIGGING_IN; }
 
-void mech_targeting_override_begin(Mech *mech, MechTargetingOverride *override,
-                                   DbRef target, int target_x, int target_y,
-                                   int target_z, int lock_modes) {
+void mech_targeting_override_begin(const MechTargetingOverrideBegin *request) {
+  Mech *mech = request->mech;
   const MechTargetingOverrideStorage storage = {
       .target = mech->rd.target,
       .target_x = mech->rd.targx,
@@ -170,32 +169,31 @@ void mech_targeting_override_begin(Mech *mech, MechTargetingOverride *override,
       .target_z = mech->rd.targz,
       .status = mech->rd.status,
   };
-  *override = (MechTargetingOverride){0};
-  memcpy(override, &storage, sizeof(storage));
-  mech->rd.status = (mech->rd.status & ~LOCK_MODES) | lock_modes;
-  mech->rd.target = target;
-  mech->rd.targx = clamp_int_to_short(target_x);
-  mech->rd.targy = clamp_int_to_short(target_y);
-  mech->rd.targz = clamp_int_to_short(target_z);
+  *request->override = (MechTargetingOverride){0};
+  memcpy(request->override, &storage, sizeof(storage));
+  mech->rd.status = (mech->rd.status & ~LOCK_MODES) | request->state.lock_modes;
+  mech->rd.target = request->state.target;
+  mech->rd.targx = clamp_int_to_short(request->state.target_x);
+  mech->rd.targy = clamp_int_to_short(request->state.target_y);
+  mech->rd.targz = clamp_int_to_short(request->state.target_z);
 }
 
-void mech_targeting_override_end(Mech *mech,
-                                 const MechTargetingOverride *override,
-                                 DbRef *target, int *target_x, int *target_y,
-                                 int *target_z, int *lock_modes) {
+MechTargetingState
+mech_targeting_override_end(Mech *mech, const MechTargetingOverride *override) {
   MechTargetingOverrideStorage storage;
 
   memcpy(&storage, override, sizeof(storage));
-  *target = mech->rd.target;
-  *target_x = mech->rd.targx;
-  *target_y = mech->rd.targy;
-  *target_z = mech->rd.targz;
-  *lock_modes = mech->rd.status & LOCK_MODES;
+  MechTargetingState result = {.target = mech->rd.target,
+                               .target_x = mech->rd.targx,
+                               .target_y = mech->rd.targy,
+                               .target_z = mech->rd.targz,
+                               .lock_modes = mech->rd.status & LOCK_MODES};
   mech->rd.status = storage.status;
   mech->rd.target = storage.target;
   mech->rd.targx = clamp_int_to_short(storage.target_x);
   mech->rd.targy = clamp_int_to_short(storage.target_y);
   mech->rd.targz = clamp_int_to_short(storage.target_z);
+  return result;
 }
 
 void mech_charge_reset(Mech *mech) {

@@ -138,7 +138,8 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
   (void)snprintf(openfile, sizeof(openfile), "%s/",
                  btech_context_mech_template_path(mech_context(mech)));
   strlcat(openfile, args[0], sizeof(openfile));
-  if (!(fp = fopen(openfile, "w"))) {
+  fp = fopen(openfile, "w");
+  if (!fp) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Unable to open/create mech file! Sorry.");
     return;
@@ -220,7 +221,12 @@ void mechrep_Rsavetemp2(DbRef player, void *data, char *buffer) {
                  "Warning: Template Overweight, see @weight.");
 
   // I/O or Permissions error.
-  if (save_template(player, mech, args[0], openfile) < 0) {
+  if (template_save(&(TemplateSaveRequest){
+          .player = player,
+          .mech = mech,
+          .reference = args[0],
+          .filename = openfile,
+      }) < 0) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Error saving the template file!");
     return;

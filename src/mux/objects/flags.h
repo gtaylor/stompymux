@@ -38,6 +38,34 @@ struct ObjectFlagSet {
   bool values[OBJECT_FLAG_COUNT];
 };
 
+typedef struct ObjectFlagRequest {
+  GameDatabase *database;
+  DbRef object;
+  ObjectFlag flag;
+} ObjectFlagRequest;
+
+typedef struct ObjectFlagChangeRequest {
+  GameDatabase *database;
+  DbRef object;
+  ObjectFlag flag;
+  bool value;
+} ObjectFlagChangeRequest;
+
+typedef struct FlagChangeRequest {
+  EvaluationContext *evaluation;
+  DbRef target;
+  DbRef player;
+  ObjectFlag flag;
+  bool clear;
+} FlagChangeRequest;
+
+typedef struct DecodeFlagsRequest {
+  GameDatabase *database;
+  DbRef player;
+  int object_type;
+  const ObjectFlagSet *flags;
+} DecodeFlagsRequest;
+
 typedef struct FlagEntry {
   /** Player-facing name used for matching, display, and configuration. */
   const char *flagname;
@@ -46,7 +74,7 @@ typedef struct FlagEntry {
   /** Single-character abbreviation shown in compact flag displays. */
   char flaglett;
   /** Validates and applies a requested change to this flag. */
-  bool (*handler)(EvaluationContext *, DbRef, DbRef, ObjectFlag, bool);
+  bool (*handler)(const FlagChangeRequest *request);
 } FlagEntry;
 
 typedef struct ObjectEntry {
@@ -76,18 +104,17 @@ void init_flagtab(WorldIndexes *indexes);
 void display_flagtab(EvaluationContext *, DbRef);
 void flag_set(EvaluationContext *, WorldIndexes *indexes, DbRef, DbRef, char *,
               int);
-char *flag_description(GameDatabase *, DbRef, DbRef);
-char *flags_description(GameDatabase *, DbRef, DbRef);
+char *flag_description(GameDatabase *, DbRef target);
+char *flags_description(GameDatabase *, DbRef target);
 FlagEntry *find_flag(WorldIndexes *, DbRef, char *);
-char *decode_flags(GameDatabase *, DbRef, int, const ObjectFlagSet *);
-bool has_flag(WorldContext *world, DbRef, DbRef, char *);
+char *decode_flags(const DecodeFlagsRequest *request);
 char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
                      DbRef player, DbRef target);
 char *unparse_object_numonly(GameDatabase *database, DbRef object);
 bool convert_flags(EvaluationContext *, DbRef, char *, ObjectFlagSet *, long *);
 
-bool game_object_has_flag(GameDatabase *, DbRef, ObjectFlag);
-void game_object_set_flag(GameDatabase *, DbRef, ObjectFlag, bool);
+bool game_object_has_flag(const ObjectFlagRequest *request);
+void game_object_set_flag(const ObjectFlagChangeRequest *request);
 void game_object_clear_flags(GameDatabase *, DbRef);
 void game_object_flags_copy(GameDatabase *, DbRef, ObjectFlagSet *);
 bool object_flag_set_has(const ObjectFlagSet *, ObjectFlag);
@@ -131,45 +158,81 @@ static inline bool has_dropto(GameDatabase *database, DbRef x) {
 }
 
 bool is_good_obj(GameDatabase *database, DbRef x);
-#define OBJECT_FLAG_PREDICATE(name, id)                                        \
-  static inline bool is_##name(GameDatabase *database, DbRef x) {              \
-    return game_object_has_flag(database, x, id);                              \
-  }
-OBJECT_FLAG_PREDICATE(ansi, OBJECT_FLAG_ANSI)
-OBJECT_FLAG_PREDICATE(no_command, OBJECT_FLAG_NO_COMMAND)
-OBJECT_FLAG_PREDICATE(transparent, OBJECT_FLAG_TRANSPARENT)
-OBJECT_FLAG_PREDICATE(halted, OBJECT_FLAG_HALTED)
-OBJECT_FLAG_PREDICATE(going, OBJECT_FLAG_GOING)
-OBJECT_FLAG_PREDICATE(monitor, OBJECT_FLAG_MONITOR)
-OBJECT_FLAG_PREDICATE(audible, OBJECT_FLAG_AUDIBLE)
-OBJECT_FLAG_PREDICATE(gagged, OBJECT_FLAG_GAGGED)
-OBJECT_FLAG_PREDICATE(auditorium, OBJECT_FLAG_AUDITORIUM)
-OBJECT_FLAG_PREDICATE(floating, OBJECT_FLAG_FLOATING)
-OBJECT_FLAG_PREDICATE(light, OBJECT_FLAG_LIGHT)
-OBJECT_FLAG_PREDICATE(xcode, OBJECT_FLAG_XCODE)
-OBJECT_FLAG_PREDICATE(zombie, OBJECT_FLAG_ZOMBIE)
-OBJECT_FLAG_PREDICATE(in_character, OBJECT_FLAG_IN_CHARACTER)
-OBJECT_FLAG_PREDICATE(suspect, OBJECT_FLAG_SUSPECT)
-OBJECT_FLAG_PREDICATE(hidden, OBJECT_FLAG_DARK)
-#undef OBJECT_FLAG_PREDICATE
+static inline bool object_has_flag(DbRef object, GameDatabase *database,
+                                   ObjectFlag flag) {
+  return game_object_has_flag(&(ObjectFlagRequest){
+      .database = database, .object = object, .flag = flag});
+}
+static inline bool is_ansi(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_ANSI);
+}
+static inline bool is_no_command(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_NO_COMMAND);
+}
+static inline bool is_transparent(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_TRANSPARENT);
+}
+static inline bool is_halted(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_HALTED);
+}
+static inline bool is_going(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_GOING);
+}
+static inline bool is_monitor(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_MONITOR);
+}
+static inline bool is_audible(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_AUDIBLE);
+}
+static inline bool is_gagged(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_GAGGED);
+}
+static inline bool is_auditorium(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_AUDITORIUM);
+}
+static inline bool is_floating(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_FLOATING);
+}
+static inline bool is_light(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_LIGHT);
+}
+static inline bool is_xcode(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_XCODE);
+}
+static inline bool is_zombie(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_ZOMBIE);
+}
+static inline bool is_in_character(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_IN_CHARACTER);
+}
+static inline bool is_suspect(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_SUSPECT);
+}
+static inline bool is_hidden(GameDatabase *database, DbRef object) {
+  return object_has_flag(object, database, OBJECT_FLAG_DARK);
+}
 
 static inline bool is_wizard(GameDatabase *database, DbRef x) {
   return game_database_object(database, x)->has_wizard_flag;
 }
 
 static inline bool is_connected(GameDatabase *database, DbRef x) {
-  return game_object_has_flag(database, x, OBJECT_FLAG_CONNECTED) &&
+  return game_object_has_flag(
+             &(ObjectFlagRequest){.database = database,
+                                  .object = x,
+                                  .flag = OBJECT_FLAG_CONNECTED}) &&
          is_player(database, x);
 }
 static inline bool is_alive(GameDatabase *database, DbRef x) {
   return is_player(database, x);
 }
 static inline bool is_dark(GameDatabase *database, DbRef x) {
-  return game_object_has_flag(database, x, OBJECT_FLAG_DARK) &&
+  return game_object_has_flag(&(ObjectFlagRequest){
+             .database = database, .object = x, .flag = OBJECT_FLAG_DARK}) &&
          (is_wizard(database, x) || !is_alive(database, x));
 }
 
-bool is_safe(GameDatabase *, const ServerConfiguration *, DbRef, DbRef);
+bool is_safe(GameDatabase *, DbRef object);
 static inline bool is_examinable(GameDatabase *database, DbRef player,
                                  DbRef target) {
   return target >= 0 && target < database->top &&
@@ -195,32 +258,47 @@ bool is_marked(GameDatabase *, DbRef);
 void unmark_all(GameDatabase *);
 bool can_link_exit(GameDatabase *, DbRef, DbRef);
 bool is_linkable(GameDatabase *, DbRef, DbRef);
-bool see_attr(EvaluationContext *, DbRef, DbRef, Attribute *, long);
-bool see_attr_explicit(GameDatabase *, DbRef, DbRef, Attribute *, long);
-bool set_attr(EvaluationContext *, DbRef, DbRef, Attribute *, long);
-bool read_attr(EvaluationContext *, DbRef, DbRef, Attribute *, long);
-bool write_attr(EvaluationContext *, DbRef, DbRef, Attribute *, long);
 
-#define OBJECT_FLAG_MUTATOR(name, id)                                          \
-  static inline void s_##name(GameDatabase *database, DbRef x) {               \
-    game_object_set_flag(database, x, id, true);                               \
-  }
-OBJECT_FLAG_MUTATOR(halted, OBJECT_FLAG_HALTED)
-OBJECT_FLAG_MUTATOR(going, OBJECT_FLAG_GOING)
-OBJECT_FLAG_MUTATOR(connected, OBJECT_FLAG_CONNECTED)
-OBJECT_FLAG_MUTATOR(xcode, OBJECT_FLAG_XCODE)
-OBJECT_FLAG_MUTATOR(zombie, OBJECT_FLAG_ZOMBIE)
-OBJECT_FLAG_MUTATOR(in_character, OBJECT_FLAG_IN_CHARACTER)
-OBJECT_FLAG_MUTATOR(dark, OBJECT_FLAG_DARK)
-#undef OBJECT_FLAG_MUTATOR
+static inline void object_flag_enable(DbRef object, GameDatabase *database,
+                                      ObjectFlag flag) {
+  game_object_set_flag(&(ObjectFlagChangeRequest){
+      .database = database, .object = object, .flag = flag, .value = true});
+}
+static inline void s_halted(GameDatabase *database, DbRef object) {
+  object_flag_enable(object, database, OBJECT_FLAG_HALTED);
+}
+static inline void s_going(GameDatabase *database, DbRef object) {
+  object_flag_enable(object, database, OBJECT_FLAG_GOING);
+}
+static inline void s_connected(GameDatabase *database, DbRef object) {
+  object_flag_enable(object, database, OBJECT_FLAG_CONNECTED);
+}
+static inline void s_xcode(GameDatabase *database, DbRef object) {
+  object_flag_enable(object, database, OBJECT_FLAG_XCODE);
+}
+static inline void s_zombie(GameDatabase *database, DbRef object) {
+  object_flag_enable(object, database, OBJECT_FLAG_ZOMBIE);
+}
+static inline void s_in_character(GameDatabase *database, DbRef object) {
+  object_flag_enable(object, database, OBJECT_FLAG_IN_CHARACTER);
+}
+static inline void s_dark(GameDatabase *database, DbRef object) {
+  object_flag_enable(object, database, OBJECT_FLAG_DARK);
+}
 static inline void c_xcode(GameDatabase *database, DbRef x) {
-  game_object_set_flag(database, x, OBJECT_FLAG_XCODE, false);
+  game_object_set_flag(&(ObjectFlagChangeRequest){
+      .database = database, .object = x, .flag = OBJECT_FLAG_XCODE});
 }
 static inline void c_connected(GameDatabase *database, DbRef x) {
-  game_object_set_flag(database, x, OBJECT_FLAG_CONNECTED, false);
+  game_object_set_flag(&(ObjectFlagChangeRequest){
+      .database = database, .object = x, .flag = OBJECT_FLAG_CONNECTED});
 }
 static inline char *unparse_flags(GameDatabase *database, DbRef p, DbRef t) {
   ObjectFlagSet flags = {0};
   game_object_flags_copy(database, t, &flags);
-  return decode_flags(database, p, typeof_obj(database, t), &flags);
+  return decode_flags(
+      &(DecodeFlagsRequest){.database = database,
+                            .player = p,
+                            .object_type = typeof_obj(database, t),
+                            .flags = &flags});
 }

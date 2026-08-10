@@ -45,8 +45,11 @@ static int *section_critical_slot(int *criticals, int index) {
 void DumpMechSpecialObjects(BtechContext *context, DbRef player) {
   CoolMenu *c;
 
-  c = auto_column_const_string_menu("MechSpecials available", internals,
-                                    (size_t)template_internal_count);
+  c = cool_menu_selection_create(&(CoolMenuSelectionRequest){
+      .columns = -1,
+      .heading = "MechSpecials available",
+      .strings = internals,
+      .string_count = (size_t)template_internal_count});
   ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
@@ -88,20 +91,34 @@ char *techlist_func(Mech *mech, char *buffer) {
 
   (void)snprintf(
       bufa, SBUF_SIZE, "%s",
-      build_bit_string(specialsabrev, primary_technology_name_count(),
-                       ((mech)->rd.specials), (char[BTECH_TEXT_CAPACITY]){0}));
+      template_bit_string_build(&(TemplateBitStringRequest){
+          .sets = &(TemplateBitSet){.descriptions = specialsabrev,
+                                    .count = primary_technology_name_count(),
+                                    .bits = ((mech)->rd.specials)},
+          .set_count = 1,
+          .delimiter = ' ',
+          .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
   (void)snprintf(
       bufb, SBUF_SIZE, "%s",
-      build_bit_string(specialsabrev2, secondary_technology_name_count(),
-                       ((mech)->rd.specials2), (char[BTECH_TEXT_CAPACITY]){0}));
+      template_bit_string_build(&(TemplateBitStringRequest){
+          .sets = &(TemplateBitSet){.descriptions = specialsabrev2,
+                                    .count = secondary_technology_name_count(),
+                                    .bits = ((mech)->rd.specials2)},
+          .set_count = 1,
+          .delimiter = ' ',
+          .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
   (void)snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
 
   if (((mech)->ud.type) == CLASS_BSUIT) {
-    (void)snprintf(bufc, SBUF_SIZE, "%s",
-                   build_bit_string(infspecialsabrev,
-                                    infantry_technology_name_count(),
-                                    ((mech)->rd.infantry_specials),
-                                    (char[BTECH_TEXT_CAPACITY]){0}));
+    (void)snprintf(
+        bufc, SBUF_SIZE, "%s",
+        template_bit_string_build(&(TemplateBitStringRequest){
+            .sets = &(TemplateBitSet){.descriptions = infspecialsabrev,
+                                      .count = infantry_technology_name_count(),
+                                      .bits = ((mech)->rd.infantry_specials)},
+            .set_count = 1,
+            .delimiter = ' ',
+            .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
     (void)snprintf(buffer, MBUF_SIZE, "%s %s %s", bufa, bufb, bufc);
   } else
     (void)snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
@@ -148,14 +165,22 @@ char *techlist_func(Mech *mech, char *buffer) {
     strlcat(buffer, " VTOL", sizeof(buffer));
 
   if (((mech)->ud.type) == CLASS_MECH && ((mech)->ud.move) != MOVE_QUAD) {
-    if ((mech_critical_is_operational_special(mech, RARM, 3,
-                                              HAND_OR_FOOT_ACTUATOR) &&
-         mech_critical_is_operational_special(mech, RARM, 0,
-                                              SHOULDER_OR_HIP)) ||
-        (mech_critical_is_operational_special(mech, LARM, 3,
-                                              HAND_OR_FOOT_ACTUATOR) &&
-         mech_critical_is_operational_special(mech, LARM, 0,
-                                              SHOULDER_OR_HIP)) ||
+    if ((mech_critical_is_operational_special(
+             &(CriticalSpecialCheck){.mech = mech,
+                                     .slot = {.section = RARM, .critical = 3},
+                                     .special = HAND_OR_FOOT_ACTUATOR}) &&
+         mech_critical_is_operational_special(
+             &(CriticalSpecialCheck){.mech = mech,
+                                     .slot = {.section = RARM, .critical = 0},
+                                     .special = SHOULDER_OR_HIP})) ||
+        (mech_critical_is_operational_special(
+             &(CriticalSpecialCheck){.mech = mech,
+                                     .slot = {.section = LARM, .critical = 3},
+                                     .special = HAND_OR_FOOT_ACTUATOR}) &&
+         mech_critical_is_operational_special(
+             &(CriticalSpecialCheck){.mech = mech,
+                                     .slot = {.section = LARM, .critical = 0},
+                                     .special = SHOULDER_OR_HIP})) ||
         ((mech)->rd.specials) & SALVAGE_TECH)
       strlcat(buffer, " MTOW", sizeof(buffer));
   } else {
@@ -281,8 +306,11 @@ char *payloadlist_func(Mech *mech, char *buffer) {
     } else {
       (void)snprintf(
           payloadbuff, sizeof(payloadbuff), "%s:%d",
-          partname_func(mech->xcode.context,
-                        *inventory_item_slot(payload_items, put_loop), 'V'),
+          partname_func(&(PartNameDescriptionRequest){
+              .context = mech->xcode.context,
+              .packed_part = *inventory_item_slot(payload_items, put_loop),
+              .format = PART_NAME_DESCRIPTION_VERY_LONG,
+          }),
           *inventory_count_slot(payload_items_count, put_loop));
     }
 
@@ -436,7 +464,11 @@ char *partlist_func(Mech *mech, char *buffer) {
       break;
     default:
       (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-                     partname_func(mech->xcode.context, part, 'V'),
+                     partname_func(&(PartNameDescriptionRequest){
+                         .context = mech->xcode.context,
+                         .packed_part = part,
+                         .format = PART_NAME_DESCRIPTION_VERY_LONG,
+                     }),
                      count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */

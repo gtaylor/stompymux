@@ -8,8 +8,19 @@ typedef struct BtechContext BtechContext;
 
 /* econ_cmds.c */
 void mech_cargo_weight_recalculate(Mech *mech);
-int loading_bay_whine(DbRef player, DbRef cargobay, Mech *mech);
-void econ_fix_stuff(BtechContext *context, DbRef player, DbRef loc);
+typedef struct LoadingBayCheck {
+  DbRef actor;
+  DbRef cargo_bay;
+  Mech *mech;
+} LoadingBayCheck;
+bool loading_bay_blocks_transfer(const LoadingBayCheck *check);
+
+typedef struct EconomyRepairRequest {
+  BtechContext *context;
+  DbRef actor;
+  DbRef location;
+} EconomyRepairRequest;
+void economy_manifest_repair(const EconomyRepairRequest *request);
 void mech_Rfixstuff(DbRef player, void *data, char *buffer);
 void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
                    char *buf);

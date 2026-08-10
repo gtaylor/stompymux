@@ -1,5 +1,6 @@
 #include "ai_api.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "mech_los_api.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
@@ -11,25 +12,20 @@
 #include "registry_api.h"
 #include <math.h>
 
-float FindRange(float x0, float y0, float z0, float x1, float y1, float z1) {
-  const float dx = x0 - x1;
-  const float dy = y0 - y1;
-  const float dz = z0 - z1;
+float map_spatial_range(const MapSpatialSegment *segment) {
+  const float dx = segment->start.x - segment->end.x;
+  const float dy = segment->start.y - segment->end.y;
+  const float dz = segment->start.z - segment->end.z;
 
   return sqrtf(dx * dx + dy * dy + dz * dz) / (float)SCALEMAP;
 }
 
 /* Computes hex range between Cartesian (x0, y0) and (x1, y1).  */
-float FindXYRange(float x0, float y0, float x1, float y1) {
-  const float dx = x0 - x1;
-  const float dy = y0 - y1;
+float map_real_range(const MapRealSegment *segment) {
+  const float dx = segment->start.x - segment->end.x;
+  const float dy = segment->start.y - segment->end.y;
 
   return sqrtf(dx * dx + dy * dy) / (float)SCALEMAP;
-}
-
-/* TODO: We could just make this a macro, right? Or substitute it away.  */
-float FindHexRange(float x0, float y0, float x1, float y1) {
-  return FindXYRange(x0, y0, x1, y1);
 }
 
 /* CONVERSION ROUTINES courtesy Mike :) (Whoever that may be -focus) */
@@ -191,11 +187,14 @@ void MapCoordToRealCoord(int hex_x, int hex_y, float *cart_x, float *cart_y) {
 #define NAV_COLUMN_WIDTH (4.0F * ALPHA / 21.0F)
 #define NAV_Y_OFFSET 2
 #define NAV_X_OFFSET 4
-#define NAV_MAX_HEIGHT 2 + 9 + 2
-#define NAV_MAX_WIDTH 4 + 21 + 2
+#define NAV_MAX_HEIGHT (2 + 9 + 2)
+#define NAV_MAX_WIDTH (4 + 21 + 2)
 
-void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
-                           NavigatePlotCallback plot, void *context) {
+void navigate_sketch_mechs(const NavigateSketchRequest *request) {
+  Mech *mech = request->mech;
+  BattleMap *map = request->map;
+  const int x = request->center.x;
+  const int y = request->center.y;
   float corner_fx, corner_fy, fx, fy;
   int row, column;
   Mech *other;
@@ -208,7 +207,8 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
     DbRef other_dbref = battle_map_unit_dbref(map, i);
     if (other_dbref < 0)
       continue;
-    if (!(other = btech_context_find_object(mech->xcode.context, other_dbref)))
+    other = btech_context_find_object(mech->xcode.context, other_dbref);
+    if (!other)
       continue;
     if (other == mech)
       continue;
@@ -226,12 +226,15 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
     if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
       continue;
 
-    plot(row, column,
-         mech->pd.team == other->pd.team &&
-                 mech_los_check_unblocked(mech, other, 0, 0, 0)
-             ? 'x'
-             : 'X',
-         context);
+    request->plot(&(NavigatePlotCall){
+        .row = row,
+        .column = column,
+        .marker = mech->pd.team == other->pd.team &&
+                          mech_los_check_unblocked(mech, other, 0, 0, 0)
+                      ? 'x'
+                      : 'X',
+        .context = request->context,
+    });
   }
 
   /* Draw 'mech last so we always see it. */
@@ -245,27 +248,38 @@ void navigate_sketch_mechs(Mech *mech, BattleMap *map, int x, int y,
   if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
     return;
 
-  plot(row, column, '*', context);
+  request->plot(&(NavigatePlotCall){
+      .row = row,
+      .column = column,
+      .marker = '*',
+      .context = request->context,
+  });
 }
 
-int FindTargetXY(Mech *mech, float *x, float *y, float *z) {
+MechTargetPositionResult mech_target_position(const Mech *mech) {
+  MechTargetPositionResult result = {0};
   Mech *tempMech;
 
   if (mech_target_dbref(mech) != -1) {
     tempMech =
         btech_context_get_mech(mech->xcode.context, mech_target_dbref(mech));
     if (tempMech) {
-      *x = ((tempMech)->pd.fx);
-      *y = ((tempMech)->pd.fy);
-      *z = ((tempMech)->pd.fz);
-      return 1;
+      result.found = true;
+      result.position = (MapSpatialPosition){
+          .x = tempMech->pd.fx,
+          .y = tempMech->pd.fy,
+          .z = tempMech->pd.fz,
+      };
+      return result;
     }
   } else if (mech_target_hex_x(mech) != -1 && mech_target_hex_y(mech) != -1) {
-    MapCoordToRealCoord(mech_target_hex_x(mech), mech_target_hex_y(mech), x, y);
+    MapCoordToRealCoord(mech_target_hex_x(mech), mech_target_hex_y(mech),
+                        &result.position.x, &result.position.y);
     int target_hex_z = mech_target_hex_z(mech);
-    *z = (float)ZSCALE * (float)target_hex_z;
+    result.position.z = (float)ZSCALE * (float)target_hex_z;
 
-    return 1;
+    result.found = true;
+    return result;
   }
-  return 0;
+  return result;
 }

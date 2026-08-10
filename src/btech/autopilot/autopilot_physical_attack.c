@@ -6,6 +6,7 @@
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "map_los_api.h"
 #include "map_units_api.h"
 #include "mech_api_types.h"
@@ -50,9 +51,12 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
   autopilot_autogun_log(autopilot, "Autogun - Start Physical Attack Stage");
 
   /* Get range from mech to current target */
-  range =
-      FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                   mech_position_real_x(target), mech_position_real_y(target));
+  range = map_real_range(&(MapRealSegment){
+      .start = {.x = mech_position_real_x(mech),
+                .y = mech_position_real_y(mech)},
+      .end = {.x = mech_position_real_x(target),
+              .y = mech_position_real_y(target)},
+  });
 
   /* First check our range to our target, if within range attack it, else
    * check to see if its outside our range threshold and if so pick a target
@@ -75,10 +79,14 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
     for (i = 0; i < battle_map_unit_count(map); i++) {
 
       /* Make sure its on the right map */
-      if (i != mech_map_slot(mech) && (j = battle_map_unit_dbref(map, i)) > 0) {
+      if (i != mech_map_slot(mech)) {
+        j = battle_map_unit_dbref(map, i);
+        if (j <= 0)
+          continue;
 
         /* Is it a valid unit ? */
-        if (!(target = btech_context_get_mech(mech_context(mech), j)))
+        target = btech_context_get_mech(mech_context(mech), j);
+        if (!target)
           continue;
 
         if (mech_is_destroyed(target))
@@ -91,9 +99,12 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
           continue;
 
         /* Check its range */
-        range = FindHexRange(
-            mech_position_real_x(mech), mech_position_real_y(mech),
-            mech_position_real_x(target), mech_position_real_y(target));
+        range = map_real_range(&(MapRealSegment){
+            .start = {.x = mech_position_real_x(mech),
+                      .y = mech_position_real_y(mech)},
+            .end = {.x = mech_position_real_x(target),
+                    .y = mech_position_real_y(target)},
+        });
 
         /* Just go for first one , can always add scoring later */
         if (range < 1.0F) {
@@ -155,9 +166,11 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
          * rotate left or right */
         relative_bearing =
             mech_heading_degrees(mech) -
-            FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
-                        mech_position_real_x(physical_target),
-                        mech_position_real_y(physical_target));
+            map_bearing(&(MapRealSegment){
+                .start = {.x = mech_position_real_x(mech),
+                          .y = mech_position_real_y(mech)},
+                .end = {.x = mech_position_real_x(physical_target),
+                        .y = mech_position_real_y(physical_target)}});
 
         if (relative_bearing > 120 && relative_bearing < 180) {
 
@@ -238,17 +251,25 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Check the RLEG for any crits or weaps cycling */
         if (!section_hasbusyweap[2]) {
-          if (!mech_critical_is_operational_special(mech, RLEG, 0,
-                                                    SHOULDER_OR_HIP))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = RLEG, .critical = 0},
+                  .special = SHOULDER_OR_HIP}))
             rleg_bth += 3;
-          if (!mech_critical_is_operational_special(mech, RLEG, 1,
-                                                    UPPER_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = RLEG, .critical = 1},
+                  .special = UPPER_ACTUATOR}))
             rleg_bth++;
-          if (!mech_critical_is_operational_special(mech, RLEG, 2,
-                                                    LOWER_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = RLEG, .critical = 2},
+                  .special = LOWER_ACTUATOR}))
             rleg_bth++;
-          if (!mech_critical_is_operational_special(mech, RLEG, 3,
-                                                    HAND_OR_FOOT_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = RLEG, .critical = 3},
+                  .special = HAND_OR_FOOT_ACTUATOR}))
             rleg_bth++;
         } else {
           rleg_bth = 99;
@@ -256,17 +277,25 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Check the LLEG for any crits or weaps cycling */
         if (!section_hasbusyweap[3]) {
-          if (!mech_critical_is_operational_special(mech, LLEG, 0,
-                                                    SHOULDER_OR_HIP))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = LLEG, .critical = 0},
+                  .special = SHOULDER_OR_HIP}))
             lleg_bth += 3;
-          if (!mech_critical_is_operational_special(mech, LLEG, 1,
-                                                    UPPER_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = LLEG, .critical = 1},
+                  .special = UPPER_ACTUATOR}))
             lleg_bth++;
-          if (!mech_critical_is_operational_special(mech, LLEG, 2,
-                                                    LOWER_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = LLEG, .critical = 2},
+                  .special = LOWER_ACTUATOR}))
             lleg_bth++;
-          if (!mech_critical_is_operational_special(mech, LLEG, 3,
-                                                    HAND_OR_FOOT_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = LLEG, .critical = 3},
+                  .special = HAND_OR_FOOT_ACTUATOR}))
             lleg_bth++;
         } else {
           rleg_bth = 99;
@@ -356,17 +385,25 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Check the Front Right Leg for any crits or weaps cycling */
         if (!section_hasbusyweap[0]) {
-          if (!mech_critical_is_operational_special(mech, RARM, 0,
-                                                    SHOULDER_OR_HIP))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = RARM, .critical = 0},
+                  .special = SHOULDER_OR_HIP}))
             rleg_bth += 3;
-          if (!mech_critical_is_operational_special(mech, RARM, 1,
-                                                    UPPER_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = RARM, .critical = 1},
+                  .special = UPPER_ACTUATOR}))
             rleg_bth++;
-          if (!mech_critical_is_operational_special(mech, RARM, 2,
-                                                    LOWER_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = RARM, .critical = 2},
+                  .special = LOWER_ACTUATOR}))
             rleg_bth++;
-          if (!mech_critical_is_operational_special(mech, RARM, 3,
-                                                    HAND_OR_FOOT_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = RARM, .critical = 3},
+                  .special = HAND_OR_FOOT_ACTUATOR}))
             rleg_bth++;
         } else {
           rleg_bth = 99;
@@ -374,17 +411,25 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Check the Front Left Leg for any crits or weaps cycling */
         if (!section_hasbusyweap[1]) {
-          if (!mech_critical_is_operational_special(mech, LARM, 0,
-                                                    SHOULDER_OR_HIP))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = LARM, .critical = 0},
+                  .special = SHOULDER_OR_HIP}))
             lleg_bth += 3;
-          if (!mech_critical_is_operational_special(mech, LARM, 1,
-                                                    UPPER_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = LARM, .critical = 1},
+                  .special = UPPER_ACTUATOR}))
             lleg_bth++;
-          if (!mech_critical_is_operational_special(mech, LARM, 2,
-                                                    LOWER_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = LARM, .critical = 2},
+                  .special = LOWER_ACTUATOR}))
             lleg_bth++;
-          if (!mech_critical_is_operational_special(mech, LARM, 3,
-                                                    HAND_OR_FOOT_ACTUATOR))
+          if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
+                  .mech = mech,
+                  .slot = {.section = LARM, .critical = 3},
+                  .special = HAND_OR_FOOT_ACTUATOR}))
             lleg_bth++;
         } else {
           rleg_bth = 99;

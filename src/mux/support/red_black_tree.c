@@ -12,17 +12,15 @@
   abort();
 }
 
-RedBlackTree red_black_tree_init(int (*compare_function)(void *, void *,
-                                                         void *),
-                                 void *token) {
+RedBlackTree red_black_tree_init(RedBlackTreeCompare compare, void *context) {
   RedBlackTree temp;
 
   temp = malloc(sizeof(struct RedBlackTreeHead));
   if (temp == nullptr)
     return nullptr;
   memset(temp, 0, sizeof(struct RedBlackTreeHead));
-  temp->compare_function = compare_function;
-  temp->token = token;
+  temp->compare = compare;
+  temp->context = context;
   temp->size = 0;
   return temp;
 }
@@ -90,9 +88,8 @@ static rbtree_node *red_black_tree_find_predecessor_node(rbtree_node *node) {
   return nullptr;
 }
 
-void red_black_tree_release(RedBlackTree bt,
-                            void (*release)(void *, void *, void *),
-                            void *arg) {
+void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,
+                            void *context) {
   rbtree_node *node, *parent;
   node = bt->head;
 
@@ -114,7 +111,11 @@ void red_black_tree_release(RedBlackTree bt,
           (void)fprintf(stderr, "serious braindamage.\n");
           exit(1);
         }
-        release(node->key, node->data, arg);
+        release(&(RedBlackTreeReleaseCall){
+            .key = node->key,
+            .data = node->data,
+            .context = context,
+        });
         free(node);
         node = parent;
       }
@@ -164,7 +165,11 @@ void *red_black_tree_find(RedBlackTree bt, void *key) {
   }
   node = bt->head;
   while (node != nullptr) {
-    compare_result = (*bt->compare_function)(key, node->key, bt->token);
+    compare_result = bt->compare(&(RedBlackTreeCompareCall){
+        .lhs = key,
+        .rhs = node->key,
+        .context = bt->context,
+    });
     if (compare_result == 0) {
       return node->data;
     } else if (compare_result < 0) {
@@ -196,7 +201,11 @@ bool red_black_tree_exists(RedBlackTree bt, void *key) {
   }
   node = bt->head;
   while (node != nullptr) {
-    compare_result = (*bt->compare_function)(key, node->key, bt->token);
+    compare_result = bt->compare(&(RedBlackTreeCompareCall){
+        .lhs = key,
+        .rhs = node->key,
+        .context = bt->context,
+    });
     if (compare_result == 0) {
       return 1;
     } else if (compare_result < 0) {
@@ -220,9 +229,8 @@ bool red_black_tree_exists(RedBlackTree bt, void *key) {
   exit(1);
 }
 
-int red_black_tree_walk(RedBlackTree bt, int how,
-                        int (*callback)(void *, void *, int, void *),
-                        void *arg) {
+int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
+                        void *context) {
   rbtree_node *last, *node;
   int depth = 0;
   if (!bt || !bt->head)
@@ -232,7 +240,10 @@ int red_black_tree_walk(RedBlackTree bt, int how,
   while (node != nullptr) {
     if (last == node->parent) {
       if (how == WALK_PREORDER)
-        if (!(*callback)(node->key, node->data, depth, arg))
+        if (!visitor(&(RedBlackTreeVisitCall){.key = node->key,
+                                              .data = node->data,
+                                              .depth = depth,
+                                              .context = context}))
           return 0;
       if (node->left != nullptr) {
         depth++;
@@ -243,7 +254,10 @@ int red_black_tree_walk(RedBlackTree bt, int how,
     }
     if (last == node->left || (last == node->parent && node->left == nullptr)) {
       if (how == WALK_INORDER)
-        if (!(*callback)(node->key, node->data, depth, arg))
+        if (!visitor(&(RedBlackTreeVisitCall){.key = node->key,
+                                              .data = node->data,
+                                              .depth = depth,
+                                              .context = context}))
           return 0;
       if (node->right != nullptr) {
         depth++;
@@ -253,7 +267,10 @@ int red_black_tree_walk(RedBlackTree bt, int how,
       }
     }
     if (how == WALK_POSTORDER)
-      if (!(*callback)(node->key, node->data, depth, arg))
+      if (!visitor(&(RedBlackTreeVisitCall){.key = node->key,
+                                            .data = node->data,
+                                            .depth = depth,
+                                            .context = context}))
         return 0;
     depth--;
     last = node;
@@ -285,7 +302,11 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
   node = bt->head;
   while (node != nullptr) {
     last = node;
-    compare_result = (*bt->compare_function)(key, node->key, bt->token);
+    compare_result = bt->compare(&(RedBlackTreeCompareCall){
+        .lhs = key,
+        .rhs = node->key,
+        .context = bt->context,
+    });
     if (compare_result == 0) {
       found = 1;
       break;

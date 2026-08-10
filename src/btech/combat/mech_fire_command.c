@@ -12,9 +12,9 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "failures.h"
-#include "failures_api.h"
 #include "map.h"
 #include "map_conditions_api.h"
+#include "map_coordinates.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -22,7 +22,6 @@
 #include "mech_classification_api.h"
 #include "mech_combat.h"
 #include "mech_combat_api.h"
-#include "mech_combat_misc_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
@@ -51,8 +50,8 @@
 #include "weapon_catalogue_api.h"
 
 static const char *fire_argument(char *const *arguments, size_t index) {
-  char *const *argument =
-      checked_storage_at_const(arguments, 5, sizeof(*arguments), index);
+  char *const *argument = (char *const *)checked_storage_at_const(
+      (const void *)arguments, 5, sizeof(*arguments), index);
   return *argument;
 }
 
@@ -83,7 +82,12 @@ void mech_fireweapon(DbRef player, void *data, char *buffer) {
                  "Invalid weapon number!");
     return;
   }
-  FireWeaponNumber(player, mech, mech_map, weapnum, argc, args, 0);
+  mech_weapon_fire_command(&(WeaponFireCommandRequest){.actor = player,
+                                                       .mech = mech,
+                                                       .map = mech_map,
+                                                       .weapon_number = weapnum,
+                                                       .argument_count = argc,
+                                                       .arguments = args});
 }
 
 typedef enum MechWeaponArcCheck {
@@ -101,7 +105,10 @@ static MechWeaponArcCheck mech_weapon_arc_check(Mech *mech, float x, float y,
     if ((!override && (unavailable & arc)) || (override && !(override & arc)))
       return MECH_WEAPON_ARC_NOT_CONTROLLED;
   }
-  return IsInWeaponArc(mech, x, y, section, critical)
+  return IsInWeaponArc(&(WeaponArcRequest){.mech = mech,
+                                           .target = {.x = x, .y = y},
+                                           .section = section,
+                                           .critical = critical})
              ? MECH_WEAPON_ARC_AVAILABLE
              : MECH_WEAPON_ARC_OUTSIDE;
 }
@@ -109,8 +116,14 @@ static MechWeaponArcCheck mech_weapon_arc_check(Mech *mech, float x, float y,
 /*
  * Main weapon firing routine
  */
-int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
-                     int argc, char **args, int sight) {
+int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
+  const DbRef player = request->actor;
+  Mech *mech = request->mech;
+  BattleMap *mech_map = request->map;
+  const int weapnum = request->weapon_number;
+  const int argc = request->argument_count;
+  char **args = request->arguments;
+  const bool sight = request->sight;
   int weaptype;
   DbRef target;
   char targetID[2];
@@ -171,8 +184,12 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     return 0;
   }
 
-  weaptype = FindWeaponNumberOnMech_Advanced(mech, weapnum, &section, &critical,
-                                             sight);
+  WeaponNumberLookupResult lookup =
+      weapon_number_find(&(WeaponNumberLookupRequest){
+          .mech = mech, .number = weapnum, .sight = sight});
+  weaptype = lookup.value;
+  section = lookup.slot.section;
+  critical = lookup.slot.critical;
 
   if (weaptype == -1) {
     mecha_notify(btech_context_evaluation(context), player,
@@ -359,7 +376,6 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
       }
       enemyX = mech_position_real_x(tempMech);
       enemyY = mech_position_real_y(tempMech);
-      enemyZ = mech_position_real_z(tempMech);
       mapx = mech_position_x(tempMech);
       mapy = mech_position_y(tempMech);
       range = 0.2F;
@@ -367,11 +383,16 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
 
     } else {
 
-      if (!FindTargetXY(mech, &enemyX, &enemyY, &enemyZ)) {
+      const MechTargetPositionResult target_position =
+          mech_target_position(mech);
+      if (!target_position.found) {
         mecha_notify(btech_context_evaluation(context), player,
                      "You do not have a default target set!");
         return 0;
       }
+      enemyX = target_position.position.x;
+      enemyY = target_position.position.y;
+      enemyZ = target_position.position.z;
 
       if (mech_target_dbref(mech) != -1) {
 
@@ -417,9 +438,9 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
             conditions.unit_target_lock) {
 
           /* look for enemies in the default hex cause they may have moved */
-          if ((tempMech =
-                   find_mech_in_hex(mech, mech_map, mech_target_hex_x(mech),
-                                    mech_target_hex_y(mech), 0))) {
+          tempMech = find_mech_in_hex(mech, mech_map, mech_target_hex_x(mech),
+                                      mech_target_hex_y(mech), 0);
+          if (tempMech) {
 
             enemyX = mech_position_real_x(tempMech);
             enemyY = mech_position_real_y(tempMech);
@@ -440,9 +461,12 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
         }
 
         /* don't check LOS for missile weapons firing at hex number */
-        range =
-            FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                      mech_position_real_z(mech), enemyX, enemyY, enemyZ);
+        range = map_spatial_range(&(MapSpatialSegment){
+            .start = {.x = mech_position_real_x(mech),
+                      .y = mech_position_real_y(mech),
+                      .z = mech_position_real_z(mech)},
+            .end = {.x = enemyX, .y = enemyY, .z = enemyZ},
+        });
         LOS = mech_los_check_unblocked(mech, tempMech, mapx, mapy, range);
 
         /* Check for Spotter here */
@@ -512,8 +536,12 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     mapx = mech_position_x(tempMech);
     mapy = mech_position_y(tempMech);
 
-    range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                      mech_position_real_z(mech), enemyX, enemyY, enemyZ);
+    range = map_spatial_range(&(MapSpatialSegment){
+        .start = {.x = mech_position_real_x(mech),
+                  .y = mech_position_real_y(mech),
+                  .z = mech_position_real_z(mech)},
+        .end = {.x = enemyX, .y = enemyY, .z = enemyZ},
+    });
     LOS = mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
                                    mech_position_y(tempMech), range);
 
@@ -558,11 +586,12 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     if (!sight && !weapon_catalogue_is_artillery(weaptype))
 
       /* look for enemies in that hex... */
-      if ((tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 0))) {
-        enemyX = mech_position_real_x(tempMech);
-        enemyY = mech_position_real_y(tempMech);
-        enemyZ = mech_position_real_z(tempMech);
-      }
+      tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 0);
+    if (tempMech) {
+      enemyX = mech_position_real_x(tempMech);
+      enemyY = mech_position_real_y(tempMech);
+      enemyZ = mech_position_real_z(tempMech);
+    }
 
     if (!tempMech) {
       MapCoordToRealCoord(mapx, mapy, &enemyX, &enemyY);
@@ -588,8 +617,12 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     }
 
     /* Don't check LOS for missile weapons */
-    range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                      mech_position_real_z(mech), enemyX, enemyY, enemyZ);
+    range = map_spatial_range(&(MapSpatialSegment){
+        .start = {.x = mech_position_real_x(mech),
+                  .y = mech_position_real_y(mech),
+                  .z = mech_position_real_z(mech)},
+        .end = {.x = enemyX, .y = enemyY, .z = enemyZ},
+    });
     LOS = mech_los_check_unblocked(mech, tempMech, mapx, mapy, range);
 
     if (!weapon_catalogue_is_artillery(weaptype))
@@ -646,43 +679,20 @@ int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
     }
   }
 
-  FireWeapon(mech, mech_map, tempMech, LOS, weaptype, weapnum, section,
-             critical, enemyX, enemyY, mapx, mapy, range, 1000, sight, ishex);
+  mech_weapon_fire(
+      &(WeaponFireRequest){.mech = mech,
+                           .map = mech_map,
+                           .target = tempMech,
+                           .line_of_sight = LOS,
+                           .weapon_index = weaptype,
+                           .weapon_number = weapnum,
+                           .weapon = {.section = section, .critical = critical},
+                           .target_hex = {.x = mapx, .y = mapy},
+                           .range = range,
+                           .indirect_fire = 1000,
+                           .sight = sight,
+                           .target_kind = ishex});
   return (1);
-}
-
-int weapon_failure_stuff(Mech *mech, int *weapnum, int *weapindx, int *section,
-                         int *critical, int *ammoLoc, int *ammoCrit,
-                         int *ammoLoc1, int *ammoCrit1, int *modifier,
-                         int *type, float range, int *range_ok,
-                         int wGattlingShots) {
-  mech_weapon_failure_check(mech, *weapnum, *weapindx, *section, *critical,
-                            modifier, type);
-  if (*type == POWER_SPIKE)
-    return 1;
-  if (*type == WEAPON_JAMMED || *type == WEAPON_DUD) {
-    /* Just decrement ammunition */
-    mech_ammunition_decrement(mech, *weapindx, *section, *critical, *ammoLoc,
-                              *ammoCrit, *ammoLoc1, *ammoCrit1, wGattlingShots);
-    return 1;
-  }
-  if (*type == RANGE) {
-    int effective_range =
-        mech_section_is_underwater(mech, *section)
-            ? weapon_catalogue_effective_water_range(
-                  *weapindx,
-                  btech_context_uses_extended_weapon_ranges(mech_context(mech)))
-            : weapon_catalogue_effective_range(
-                  *weapindx, btech_context_uses_extended_weapon_ranges(
-                                 mech_context(mech)));
-    if ((float)(effective_range - *modifier) < range) {
-      mech_notify(
-          mech, MECHALL,
-          "Due to weapons failure your shot falls short of its target!");
-      *range_ok = 0;
-    }
-  }
-  return 0;
 }
 
 void mech_c3_track_emit(Mech *mech, DbRef c3Ref, Mech *c3Mech) {

@@ -48,8 +48,10 @@
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 #include "registry_internal.h"
-static int remove_from_all_maps_func(void *key, void *data, int depth,
-                                     void *arg) {
+static int remove_from_all_maps_func(const RedBlackTreeVisitCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  void *arg = call->context;
   BtechSpecialObject *const xcode_obj = data;
   Mech *const mech = arg;
 
@@ -57,7 +59,8 @@ static int remove_from_all_maps_func(void *key, void *data, int depth,
     BattleMap *map;
     int i;
 
-    if (!(map = btech_context_get_map(mech_context(mech), (DbRef)key)))
+    map = btech_context_get_map(mech_context(mech), (DbRef)key);
+    if (!map)
       return 1;
     for (i = 0; i < battle_map_unit_count(map); i++)
       if (battle_map_unit_dbref(map, i) == mech_dbref(mech))
@@ -76,8 +79,10 @@ typedef struct RemoveFromAllMapsContext {
   DbRef except_map;
 } RemoveFromAllMapsContext;
 
-static int remove_from_all_maps_except_func(void *key, void *data, int depth,
-                                            void *arg) {
+static int remove_from_all_maps_except_func(const RedBlackTreeVisitCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  void *arg = call->context;
   DbRef key_val = (DbRef)key;
   BtechSpecialObject *const xcode_obj = data;
   RemoveFromAllMapsContext *context = arg;
@@ -89,7 +94,8 @@ static int remove_from_all_maps_except_func(void *key, void *data, int depth,
 
     if (key_val == context->except_map)
       return 1;
-    if (!(map = btech_context_get_map(mech_context(mech), key_val)))
+    map = btech_context_get_map(mech_context(mech), key_val);
+    if (!map)
       return 1;
     for (i = 0; i < battle_map_unit_count(map); i++)
       if (battle_map_unit_dbref(map, i) == mech_dbref(mech))
@@ -108,7 +114,8 @@ void mech_remove_from_all_maps_except(Mech *mech, DbRef num) {
                       remove_from_all_maps_except_func, &context);
 }
 
-static int load_update2(void *key, void *data, int depth, void *arg) {
+static int load_update2(const RedBlackTreeVisitCall *call) {
+  void *data = call->data;
   BtechSpecialObject *const xcode_obj = data;
 
   if (xcode_obj->type == GTYPE_MECH)
@@ -116,7 +123,9 @@ static int load_update2(void *key, void *data, int depth, void *arg) {
   return 1;
 }
 
-static int load_update4(void *key, void *data, int depth, void *arg) {
+static int load_update4(const RedBlackTreeVisitCall *call) {
+  void *data = call->data;
+  void *arg = call->context;
   BtechSpecialObject *const xcode_obj = data;
   BtechContext *const context = arg;
 
@@ -148,7 +157,8 @@ static int load_update4(void *key, void *data, int depth, void *arg) {
   return 1;
 }
 
-static int load_update3(void *key, void *data, int depth, void *arg) {
+static int load_update3(const RedBlackTreeVisitCall *call) {
+  void *data = call->data;
   BtechSpecialObject *const xcode_obj = data;
 
   if (xcode_obj->type == GTYPE_MAP) {
@@ -161,7 +171,9 @@ static int load_update3(void *key, void *data, int depth, void *arg) {
 /*
  * Read in autopilot data
  */
-static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
+static int load_autopilot_data(const RedBlackTreeVisitCall *call) {
+  void *data = call->data;
+  void *arg = call->context;
   BtechSpecialObject *const xcode_obj = data;
   BtechContext *const context = arg;
 
@@ -172,8 +184,9 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
     autopilot->weaplist = NULL;
     autopilot_weapon_profiles_initialize(autopilot);
 
-    if (!autopilot->mymechnum || !(autopilot->mymech = btech_context_get_mech(
-                                       context, autopilot->mymechnum))) {
+    if (autopilot->mymechnum)
+      autopilot->mymech = btech_context_get_mech(context, autopilot->mymechnum);
+    if (!autopilot->mymechnum || !autopilot->mymech) {
       autopilot_gunning_stop(autopilot);
     } else {
       /*
@@ -242,7 +255,10 @@ void btech_special_objects_load(BtechContext *context) {
   }
   init_btechstats(context);
   if (!character_state_validate_all(context)) {
-    log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
+    log_error((LogEntry){.log = context->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "BTP",
+                         .secondary = "FAIL"},
               "Invalid BTech character state in the game database");
     exit(EXIT_FAILURE);
   }
@@ -268,8 +284,10 @@ void btech_special_objects_load(BtechContext *context) {
   btech_heartbeat_start(context);
 }
 
-static int UpdateSpecialObject_func(void *key, void *data, int depth,
-                                    void *arg) {
+static int UpdateSpecialObject_func(const RedBlackTreeVisitCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  void *arg = call->context;
   BtechSpecialObject *const xcode_obj = data;
   BtechContext *const context = arg;
 

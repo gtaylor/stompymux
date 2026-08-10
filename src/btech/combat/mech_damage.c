@@ -45,15 +45,26 @@
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
-void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
-                int hitloc, int isrear, int iscritical, int damage,
-                int intDamage, int cause, int bth, int wWeapIndx, int wAmmoMode,
-                int tIgnoreSwarmers) {
+void mech_damage_apply(const MechDamageRequest *request) {
+  Mech *wounded = request->target;
+  Mech *attacker = request->attacker;
+  const bool LOS = request->line_of_sight;
+  const DbRef attack_pilot = request->attack_pilot;
+  int hitloc = request->hit_location;
+  int isrear = request->rear;
+  int iscritical = request->critical;
+  int damage = request->armor_damage;
+  int intDamage = request->internal_damage;
+  const int cause = request->cause;
+  const int bth = request->base_to_hit;
+  const int wWeapIndx = request->weapon_index;
+  const int wAmmoMode = request->ammunition_mode;
+  const bool tIgnoreSwarmers = request->ignore_swarmers;
   char locationBuff[20];
   char notificationBuff[80];
   char rearMessage[10];
-  int transfer = 0;
-  int was_transfer = 0;
+  int transfer = request->transfer != MECH_DAMAGE_NORMAL;
+  int was_transfer = request->transfer == MECH_DAMAGE_TRANSFER_CONTINUATION;
   int kill = 0;
   BattleMap *map;
   int crits = 0;
@@ -96,7 +107,8 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
    * the suits will eat up the damage.
    */
   if ((bsuit_swarmer_count(wounded) > 0) && (!tIgnoreSwarmers)) {
-    if ((mechSwarmer = bsuit_swarmer_find(wounded))) {
+    mechSwarmer = bsuit_swarmer_find(wounded);
+    if (mechSwarmer) {
       if (!attacker || (mech_dbref(attacker) != mech_dbref(mechSwarmer))) {
         wSwarmerHitChance = 20 * bsuit_member_count(mechSwarmer);
         if (isrear) {
@@ -120,8 +132,18 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
               "The battlesuits crawling all over you absorb the damage!");
           mech_notify(mechSwarmer, MECHALL, "You absorb the damage!");
           hitloc = mech_hit_location(mechSwarmer, 0, &iscritical, &isrear);
-          DamageMech(mechSwarmer, attacker, LOS, attack_pilot, hitloc, 0, 0,
-                     damage, 0, cause, bth, wWeapIndx, wAmmoMode, 0);
+          mech_damage_apply(&(MechDamageRequest){
+              .target = mechSwarmer,
+              .attacker = attacker,
+              .line_of_sight = LOS,
+              .attack_pilot = attack_pilot,
+              .hit_location = hitloc,
+              .armor_damage = damage,
+              .cause = cause,
+              .base_to_hit = bth,
+              .weapon_index = wWeapIndx,
+              .ammunition_mode = wAmmoMode,
+          });
           return;
         }
       }
@@ -178,7 +200,15 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
 
     if (btech_context_damage_experience_mode(mech_context(wounded)) ==
         BTECH_DAMAGE_XP_GUNNERY)
-      AccumulateGunXP(attack_pilot, attacker, wounded, damage, 1.0, cause, bth);
+      gunnery_experience_award(&(GunneryExperienceAward){
+          .pilot = attack_pilot,
+          .attacker = attacker,
+          .target = wounded,
+          .damage = damage,
+          .multiplier = 1.0,
+          .weapon_index = cause,
+          .base_to_hit = bth,
+      });
     else if (btech_context_damage_experience_mode(mech_context(wounded)) ==
              BTECH_DAMAGE_XP_PILOTING)
       if (!mech_is_destroyed(wounded) &&
@@ -186,8 +216,17 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
                           mech_dbref(wounded)) &&
           mech_team(wounded) != mech_team(attacker))
         if (mech_class(wounded) != CLASS_MW || mech_class(attacker) == CLASS_MW)
-          AccumulatePilXP(attack_pilot, attacker, damage / 3, 1.0F);
-    damage = unit_damage_to_personal_combat(wounded, cause, damage);
+          piloting_experience_award(&(PilotingExperienceAward){
+              .pilot = attack_pilot,
+              .mech = attacker,
+              .reason = damage / 3,
+              .unconditional = true,
+          });
+    damage = unit_damage_to_personal_combat(&(PersonalCombatDamageConversion){
+        .target = wounded,
+        .weapon_index = cause,
+        .damage = damage,
+    });
   }
   if (isrear) {
     if (!(mech_technology_flags(wounded) & SALVAGE_TECH) &&
@@ -209,51 +248,48 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
     }
   } else
     *rearMessage = '\0';
-  /* Damage something else, ok? */
-  if (damage < 0) {
-    switch (damage) {
-    case -2:
-      was_transfer = 1;
-      [[fallthrough]];
-    case -1:
-      transfer = 1;
-      break;
-    }
-    damage = 0;
-  } else if (intDamage < 0) {
-    switch (intDamage) {
-    case -2:
-      was_transfer = 1;
-      [[fallthrough]];
-    case -1:
-      transfer = 1;
-      break;
-    }
-    intDamage = 0;
-  }
-
   /*   while (mech_section_is_destroyed(wounded, hitloc) && !kill) */
   while (((!mech_is_aerospace_unit(wounded) &&
            !mech_section_internal(wounded, hitloc)) ||
           (mech_is_aerospace_unit(wounded) &&
            !mech_section_armor(wounded, hitloc))) &&
          !kill) {
-    if (transfer &&
-        (hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0 &&
-        (mech_class(wounded) == CLASS_MECH || mech_class(wounded) == CLASS_MW ||
-         mech_class(wounded) == CLASS_BSUIT ||
-         mech_is_aerospace_unit(wounded))) {
-      DamageMech(wounded, attacker, LOS, attack_pilot, hitloc, isrear,
-                 iscritical, damage == -1 ? -2 : damage,
-                 transfer == 1 ? -2 : damage, cause, bth, wWeapIndx, wAmmoMode,
-                 tIgnoreSwarmers);
+    bool transfer_succeeded = false;
+    if (transfer) {
+      hitloc = mech_hit_location_transfer(wounded, hitloc);
+      transfer_succeeded = hitloc >= 0 && (mech_class(wounded) == CLASS_MECH ||
+                                           mech_class(wounded) == CLASS_MW ||
+                                           mech_class(wounded) == CLASS_BSUIT ||
+                                           mech_is_aerospace_unit(wounded));
+    }
+    if (transfer_succeeded) {
+      mech_damage_apply(&(MechDamageRequest){
+          .target = wounded,
+          .attacker = attacker,
+          .line_of_sight = LOS,
+          .attack_pilot = attack_pilot,
+          .hit_location = hitloc,
+          .rear = isrear != 0,
+          .critical = iscritical != 0,
+          .armor_damage = damage,
+          .transfer = MECH_DAMAGE_TRANSFER_CONTINUATION,
+          .cause = cause,
+          .base_to_hit = bth,
+          .weapon_index = wWeapIndx,
+          .ammunition_mode = wAmmoMode,
+          .ignore_swarmers = tIgnoreSwarmers,
+      });
       return;
     } else {
-      if (!((mech_class(wounded) == CLASS_MECH ||
-             mech_class(wounded) == CLASS_MW ||
-             mech_class(wounded) == CLASS_BSUIT ||
-             mech_is_aerospace_unit(wounded)) &&
-            (hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0)) {
+      bool secondary_transfer_succeeded = false;
+      if (mech_class(wounded) == CLASS_MECH ||
+          mech_class(wounded) == CLASS_MW ||
+          mech_class(wounded) == CLASS_BSUIT ||
+          mech_is_aerospace_unit(wounded)) {
+        hitloc = mech_hit_location_transfer(wounded, hitloc);
+        secondary_transfer_succeeded = hitloc >= 0;
+      }
+      if (!secondary_transfer_succeeded) {
         if (mech_is_aerospace_unit(wounded) && !mech_is_destroyed(wounded)) {
           /* Hurt SI instead. */
           if (mech_structural_integrity(wounded) <= damage)
@@ -271,8 +307,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
   }
   if (mech_cocoon_integrity(wounded) > 0 &&
       btech_random_roll(mech_context(wounded)) > 8) {
-    mech_ood_damage(wounded, attacker,
-                    damage + (intDamage < 0 ? 0 : intDamage));
+    mech_ood_damage(wounded, attacker, damage + intDamage);
     return;
   }
 
@@ -280,21 +315,19 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
     ArmorStringFromIndex(hitloc, locationBuff, mech_class(wounded),
                          mech_movement_type(wounded));
     (void)snprintf(notificationBuff, sizeof(notificationBuff),
-                   "for %d points of damage in the %s %s",
-                   damage + (intDamage < 0 ? 0 : intDamage), locationBuff,
-                   rearMessage);
+                   "for %d points of damage in the %s %s", damage + intDamage,
+                   locationBuff, rearMessage);
   } else
     (void)snprintf(notificationBuff, sizeof(notificationBuff),
                    "for %d points of damage in the structure.",
-                   damage + (intDamage < 0 ? 0 : intDamage));
+                   damage + intDamage);
 
   /* Only count initial damage. Transfer is just gonna do that, transfer, not
    * damage again */
   if (!was_transfer) {
     if (attacker != wounded)
-      mech_damage_inflicted_add(attacker,
-                                damage + (intDamage < 0 ? 0 : intDamage));
-    mech_damage_taken_add(wounded, damage + (intDamage < 0 ? 0 : intDamage));
+      mech_damage_inflicted_add(attacker, damage + intDamage);
+    mech_damage_taken_add(wounded, damage + intDamage);
   }
 
   /*  if (LOS && attack_pilot != -1) */
@@ -306,11 +339,19 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
       mech_printf(attacker, MECHALL, "[fg=green]Damage transfer.. %s[reset]",
                   notificationBuff);
   }
-  if (mech_class(wounded) == CLASS_MW && !was_transfer)
-    if (damage > 0)
-      if (!(damage = personal_armor_reduce_damage(wounded, cause, hitloc,
-                                                  damage, intDamage)))
+  if (mech_class(wounded) == CLASS_MW && !was_transfer) {
+    if (damage > 0) {
+      damage = personal_armor_reduce_damage(&(PersonalArmorDamageRequest){
+          .wounded = wounded,
+          .cause = cause,
+          .hit_location = hitloc,
+          .damage = damage,
+          .damage_identifier = intDamage,
+      });
+      if (!damage)
         return;
+    }
+  }
   mech_printf(wounded, MECHALL, "[fg=yellow bold]You have been hit %s%s[reset]",
               notificationBuff, was_transfer ? "(transfer)" : "");
   /* Always a good policy :-> */
@@ -319,9 +360,11 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
     if (btech_context_stagger_mode(mech_context(wounded)) &&
         mech_class(wounded) == CLASS_MECH) {
 
-      mech_stagger_damage_append(wounded, damage,
-                                 btech_context_now(mech_context(wounded)),
-                                 mech_dbref(attacker), false);
+      mech_stagger_damage_append(&(StaggerDamageApplication){
+          .mech = wounded,
+          .amount = damage,
+          .occurred_at = btech_context_now(mech_context(wounded)),
+          .attacker = mech_dbref(attacker)});
     } else {
       mech_turn_damage_add(wounded, damage);
     }
@@ -388,9 +431,17 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
         }
       }
     }
-    intDamage += cause_armordamage(wounded, attacker, LOS, attack_pilot, isrear,
-                                   iscritical, hitloc, damage, &crits,
-                                   wWeapIndx, wAmmoMode);
+    intDamage +=
+        cause_armordamage(&(ArmorDamageRequest){.wounded = wounded,
+                                                .attacker = attacker,
+                                                .line_of_sight = LOS,
+                                                .rear = isrear != 0,
+                                                .critical = iscritical != 0,
+                                                .section = hitloc,
+                                                .damage = damage,
+                                                .critical_hits = &crits,
+                                                .weapon_index = wWeapIndx,
+                                                .ammunition_mode = wAmmoMode});
     /* for Stat Engine */
     /* STATHIT|MAP|ATTACKER PILOT DBREF|WOUNDED PILOT DBREF|ATTACKER
      * MECHREF|WOUNDED MECHREF|ATTACKER MECH DBREF|WOUNDED MECH DBREF|BTH OF
@@ -399,7 +450,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
      * We're going to check how much internal is left, do some math, and only
      * count the applied damage */
     /* As the transfer damage will come back and send to another section via
-     * DamageMech calls */
+     * mech_damage_apply calls */
     /* We're going to skip wWeapindx = -1 for now as well. Those are physicals
      * (currently) and self inflicted */
     /* May make physicals -2, -3, -4, etc, but I'd rather not do all that logic.
@@ -431,18 +482,36 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
     if (intDamage >= 0)
       mech_flood_section(wounded, hitloc, mech_position_z(wounded));
     if (intDamage > 0 && !mech_is_aerospace_unit(wounded)) {
-      intDamage =
-          cause_internaldamage(wounded, attacker, LOS, attack_pilot, isrear,
-                               hitloc, intDamage, cause, &crits);
+      intDamage = cause_internaldamage(
+          &(InternalDamageRequest){.wounded = wounded,
+                                   .attacker = attacker,
+                                   .line_of_sight = LOS,
+                                   .section = hitloc,
+                                   .damage = intDamage,
+                                   .critical_hits = &crits});
       if (!intDamage && !mech_section_is_destroyed(wounded, hitloc))
         mech_location_breach(attacker, wounded, hitloc);
     } else
       mech_location_maybe_breach(attacker, wounded, hitloc);
     if (intDamage > 0 && transfer && (mech_class(wounded) != CLASS_BSUIT)) {
-      if ((hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0)
-        DamageMech(wounded, attacker, LOS, attack_pilot, hitloc, isrear,
-                   iscritical, intDamage, -2, cause, bth, wWeapIndx, wAmmoMode,
-                   tIgnoreSwarmers);
+      hitloc = mech_hit_location_transfer(wounded, hitloc);
+      if (hitloc >= 0)
+        mech_damage_apply(&(MechDamageRequest){
+            .target = wounded,
+            .attacker = attacker,
+            .line_of_sight = LOS,
+            .attack_pilot = attack_pilot,
+            .hit_location = hitloc,
+            .rear = isrear != 0,
+            .critical = iscritical != 0,
+            .armor_damage = intDamage,
+            .transfer = MECH_DAMAGE_TRANSFER_CONTINUATION,
+            .cause = cause,
+            .base_to_hit = bth,
+            .weapon_index = wWeapIndx,
+            .ammunition_mode = wAmmoMode,
+            .ignore_swarmers = tIgnoreSwarmers,
+        });
       else {
         mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
         return;
@@ -454,27 +523,66 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
   {
     if (intDamage > 0) {
       if (mech_is_aerospace_unit(wounded))
-        intDamage = cause_armordamage(wounded, attacker, LOS, attack_pilot,
-                                      isrear, iscritical, hitloc, intDamage,
-                                      &crits, wWeapIndx, wAmmoMode);
+        intDamage = cause_armordamage(
+            &(ArmorDamageRequest){.wounded = wounded,
+                                  .attacker = attacker,
+                                  .line_of_sight = LOS,
+                                  .rear = isrear != 0,
+                                  .critical = iscritical != 0,
+                                  .section = hitloc,
+                                  .damage = intDamage,
+                                  .critical_hits = &crits,
+                                  .weapon_index = wWeapIndx,
+                                  .ammunition_mode = wAmmoMode});
       else
-        intDamage =
-            cause_internaldamage(wounded, attacker, LOS, attack_pilot, isrear,
-                                 hitloc, intDamage, cause, &crits);
+        intDamage = cause_internaldamage(
+            &(InternalDamageRequest){.wounded = wounded,
+                                     .attacker = attacker,
+                                     .line_of_sight = LOS,
+                                     .section = hitloc,
+                                     .damage = intDamage,
+                                     .critical_hits = &crits});
       if (!mech_section_is_destroyed(wounded, hitloc))
         mech_location_maybe_breach(attacker, wounded, hitloc);
       if (intDamage > 0 && transfer &&
           !(mech_section_configuration_has(wounded, hitloc, CASE_TECH) ||
             (mech_technology_flags(wounded) & CLAN_TECH))) {
-        if ((hitloc = mech_hit_location_transfer(wounded, hitloc)) >= 0) {
+        hitloc = mech_hit_location_transfer(wounded, hitloc);
+        if (hitloc >= 0) {
           if (!mech_is_aerospace_unit(wounded))
-            DamageMech(wounded, attacker, LOS, attack_pilot, hitloc, isrear,
-                       iscritical, -2, intDamage, cause, bth, wWeapIndx,
-                       wAmmoMode, tIgnoreSwarmers);
+            mech_damage_apply(&(MechDamageRequest){
+                .target = wounded,
+                .attacker = attacker,
+                .line_of_sight = LOS,
+                .attack_pilot = attack_pilot,
+                .hit_location = hitloc,
+                .rear = isrear != 0,
+                .critical = iscritical != 0,
+                .internal_damage = intDamage,
+                .transfer = MECH_DAMAGE_TRANSFER_CONTINUATION,
+                .cause = cause,
+                .base_to_hit = bth,
+                .weapon_index = wWeapIndx,
+                .ammunition_mode = wAmmoMode,
+                .ignore_swarmers = tIgnoreSwarmers,
+            });
           else
-            DamageMech(wounded, attacker, LOS, attack_pilot, hitloc, isrear,
-                       iscritical, intDamage, -2, cause, bth, wWeapIndx,
-                       wAmmoMode, tIgnoreSwarmers);
+            mech_damage_apply(&(MechDamageRequest){
+                .target = wounded,
+                .attacker = attacker,
+                .line_of_sight = LOS,
+                .attack_pilot = attack_pilot,
+                .hit_location = hitloc,
+                .rear = isrear != 0,
+                .critical = iscritical != 0,
+                .armor_damage = intDamage,
+                .transfer = MECH_DAMAGE_TRANSFER_CONTINUATION,
+                .cause = cause,
+                .base_to_hit = bth,
+                .weapon_index = wWeapIndx,
+                .ammunition_mode = wAmmoMode,
+                .ignore_swarmers = tIgnoreSwarmers,
+            });
         } else {
           mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
           return;
@@ -485,8 +593,9 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
 
   /* Check to see if the tow lines should snap */
   if (tSnapTowLines && (mech_carried_dbref(wounded) > 0)) {
-    if ((towTarget = btech_context_get_mech(mech_context(wounded),
-                                            mech_carried_dbref(wounded)))) {
+    towTarget = btech_context_get_mech(mech_context(wounded),
+                                       mech_carried_dbref(wounded));
+    if (towTarget) {
       mech_notify(wounded, MECHALL, "The hit causes your tow line to let go!");
       mech_notify(towTarget, MECHALL, "Your tow lines go suddenly slack!");
       mech_los_broadcast(wounded,
@@ -501,7 +610,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, DbRef attack_pilot,
   if (wWeapIndx > 0) {
     if (strstr(weapon_catalogue_name(wWeapIndx), "IS.PlasmaRifle")) {
       if (mech_class(wounded) == CLASS_MECH)
-        mech_plasma_hit(attacker, wounded, LOS);
+        mech_plasma_hit(wounded);
     }
   }
   /* Check to see if we blow up ammo that's dumping. */

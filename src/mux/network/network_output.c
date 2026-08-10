@@ -27,8 +27,11 @@
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
-void raw_notify_raw(EvaluationContext *evaluation, DbRef player,
-                    const char *msg, const char *append) {
+void raw_notify_raw(const RawNotification *notification) {
+  EvaluationContext *evaluation = notification->evaluation;
+  DbRef player = notification->player;
+  const char *msg = notification->message;
+  const char *append = notification->suffix;
   Descriptor *d;
   DescriptorIterator iterator =
       descriptor_iterator_player(evaluation->runtime->descriptors, player);
@@ -48,7 +51,10 @@ void raw_notify_raw(EvaluationContext *evaluation, DbRef player,
 
 /* raw_notify: write a message to a player */
 void raw_notify(EvaluationContext *evaluation, DbRef player, const char *msg) {
-  raw_notify_raw(evaluation, player, msg, "\r\n");
+  raw_notify_raw(&(RawNotification){.evaluation = evaluation,
+                                    .player = player,
+                                    .message = msg,
+                                    .suffix = "\r\n"});
 }
 
 void notify_printf(EvaluationContext *evaluation, DbRef player,
@@ -109,8 +115,10 @@ void raw_broadcast(DescriptorRegistry *descriptors, int inflags,
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (inflags == OBJECT_FLAG_NONE ||
-        game_object_has_flag(descriptor_runtime(d)->world->database, d->player,
-                             (ObjectFlag)inflags)) {
+        game_object_has_flag(&(ObjectFlagRequest){
+            .database = descriptor_runtime(d)->world->database,
+            .object = d->player,
+            .flag = (ObjectFlag)inflags})) {
       descriptor_queue_string(d, buff);
       descriptor_queue_write(d, "\r\n", 2);
     }

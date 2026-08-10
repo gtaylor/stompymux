@@ -50,15 +50,6 @@ DbRef where_room(GameDatabase *database,
   return NOTHING;
 }
 
-int locatable(EvaluationContext *evaluation,
-              const ServerConfiguration *configuration, DbRef player, DbRef it,
-              DbRef cause) {
-  (void)configuration;
-  (void)player;
-  (void)cause;
-  return is_good_obj(evaluation->world->database, it);
-}
-
 /**
  * Check if thing is nearby player (in inventory, in same room, or
  * IS the room.
@@ -80,8 +71,11 @@ int nearby(GameDatabase *database, DbRef player, DbRef thing) {
 /**
  * Checks to see if the exit is visible. Used in lexits().
  */
-int exit_visible(EvaluationContext *evaluation, DbRef exit, DbRef player,
-                 int key) {
+bool exit_visible(const ExitVisibilityRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef exit = request->exit;
+  DbRef player = request->viewer;
+  int key = request->options;
   if (key & VE_LOC_XAM) // Exam exit's loc
     return 1;
   if (is_examinable(evaluation->world->database, player, exit)) // Exam exit
@@ -98,8 +92,10 @@ int exit_visible(EvaluationContext *evaluation, DbRef exit, DbRef player,
 /**
  * Checks to see if the exit is visible to look.
  */
-int exit_displayable(GameDatabase *database, DbRef exit, DbRef player,
-                     int key) {
+bool exit_displayable(const ExitVisibilityRequest *request) {
+  GameDatabase *database = request->database;
+  DbRef exit = request->exit;
+  int key = request->options;
   if (is_dark(database, exit)) // Dark exit
     return 0;
   if (is_light(database, exit)) // Light exit

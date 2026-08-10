@@ -3,6 +3,7 @@
 
 #include "map.h"
 #include "map_bits_api.h"
+#include "map_coordinates.h"
 #include "map_obj_api.h"
 #include "mux/support/checked_storage.h"
 
@@ -12,7 +13,10 @@ constexpr unsigned char BIT_MINE = 1;
 constexpr unsigned char BIT_HANGAR = 2;
 
 static size_t map_bits_byte_count(int hex_count) {
-  return (size_t)(hex_count / 4 + (hex_count % 4 ? 1 : 0));
+  if (hex_count < 0)
+    abort();
+  const size_t count = (size_t)hex_count;
+  return count / 4U + (count % 4U ? 1U : 0U);
 }
 
 static size_t map_bits_byte_index(int x) { return (size_t)x / 4; }
@@ -25,23 +29,32 @@ static unsigned char **map_bits_row_slot(unsigned char **bits, int height,
                                          int y) {
   if (height < 0 || y < 0)
     abort();
-  return checked_storage_at(bits, (size_t)height, sizeof(*bits), (size_t)y);
+  return (unsigned char **)checked_storage_at((void *)bits, (size_t)height,
+                                              sizeof(*bits), (size_t)y);
 }
 
-static unsigned char *map_bits_byte(unsigned char **bits, const BattleMap *map,
-                                    int x, int y) {
-  if (x < 0)
+typedef struct MapBitsByteRequest {
+  unsigned char **bits;
+  const BattleMap *map;
+  MapHexPosition position;
+} MapBitsByteRequest;
+
+static unsigned char *map_bits_byte(const MapBitsByteRequest *request) {
+  if (request->position.x < 0)
     abort();
-  unsigned char *row = *map_bits_row_slot(bits, map->map_height, y);
-  return checked_storage_at(row, map_bits_byte_count(map->map_width),
-                            sizeof(*row), map_bits_byte_index(x));
+  unsigned char *row = *map_bits_row_slot(
+      request->bits, request->map->map_height, request->position.y);
+  return checked_storage_at(row, map_bits_byte_count(request->map->map_width),
+                            sizeof(*row),
+                            map_bits_byte_index(request->position.x));
 }
 
 static MapObject **map_object_slot(BattleMap *map, int type) {
   if (type < 0)
     abort();
-  return checked_storage_at(map->MapObject, NUM_MAPOBJTYPES,
-                            sizeof(*map->MapObject), (size_t)type);
+  return (MapObject **)checked_storage_at(
+      (void *)map->MapObject, NUM_MAPOBJTYPES, sizeof(*map->MapObject),
+      (size_t)type);
 }
 
 /* Main idea: By using 2 bits / hex in external array, we can _fast_
@@ -62,18 +75,24 @@ static void create_if_neccessary(unsigned char **foo, BattleMap *map, int y) {
 static void map_bits_set(unsigned char **bits, BattleMap *map, int x, int y,
                          unsigned char value) {
   create_if_neccessary(bits, map, y);
-  *map_bits_byte(bits, map, x, y) |= map_bits_mask(x, value);
+  *map_bits_byte(&(MapBitsByteRequest){
+      .bits = bits, .map = map, .position = {.x = x, .y = y}}) |=
+      map_bits_mask(x, value);
 }
 
 static void map_bits_unset(unsigned char **bits, BattleMap *map, int x, int y,
                            unsigned char value) {
   if (*map_bits_row_slot(bits, map->map_height, y))
-    *map_bits_byte(bits, map, x, y) &= (unsigned char)~map_bits_mask(x, value);
+    *map_bits_byte(&(MapBitsByteRequest){
+        .bits = bits, .map = map, .position = {.x = x, .y = y}}) &=
+        (unsigned char)~map_bits_mask(x, value);
 }
 
 static bool map_bits_is_set(unsigned char **bits, BattleMap *map, int x, int y,
                             unsigned char value) {
-  return *map_bits_byte(bits, map, x, y) & map_bits_mask(x, value);
+  return *map_bits_byte(&(MapBitsByteRequest){
+             .bits = bits, .map = map, .position = {.x = x, .y = y}}) &
+         map_bits_mask(x, value);
 }
 
 /* Okay, now we got code to load / save the bits.. but what will we do with
@@ -88,14 +107,14 @@ static unsigned char **grab_us_an_array(BattleMap *map) {
 
   MapObject **bits_object = map_object_slot(map, TYPE_BITS);
   if (!*bits_object) {
-    foo = calloc(ys, sizeof(*foo));
+    foo = (unsigned char **)calloc(ys, sizeof(*foo));
     if (foo == nullptr && ys > 0)
       abort();
 
-    foob.datai = (long)((void *)foo);
+    foob.payload.bits = foo;
     add_mapobj(map, bits_object, &foob, 0);
   } else
-    foo = (unsigned char **)((void *)(*bits_object)->datai);
+    foo = (*bits_object)->payload.bits;
   return foo;
 }
 

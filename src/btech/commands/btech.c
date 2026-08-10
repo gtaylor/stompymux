@@ -52,8 +52,8 @@ void do_show(CommandInvocation *invocation) {
     strcpy(buf, "Valid arguments:");
     const size_t help_count = sizeof(cmds_help) / sizeof(*cmds_help) - 1;
     for (size_t index = 0; index < help_count; index++) {
-      const char *const *help = checked_storage_at_const(
-          cmds_help, help_count, sizeof(*cmds_help), index);
+      const char *const *help = (const char *const *)checked_storage_at_const(
+          (const void *)cmds_help, help_count, sizeof(*cmds_help), index);
       char entry[80];
       (void)snprintf(entry, sizeof(entry), "%c %s", index > 0 ? ',' : ' ',
                      *help);

@@ -103,13 +103,18 @@ RepairParseStatus repair_selection_parse_part(Mech *mech, char *buffer,
                                               bool parse_brand,
                                               RepairSelection *selection) {
   *selection = (RepairSelection){0};
-  int result = tech_parsepart(mech, buffer, &selection->location,
-                              parse_position ? &selection->part : nullptr,
-                              parse_brand ? &selection->brand : nullptr);
-  if (result == -1)
+  const TechPartParseResult result =
+      tech_part_parse(&(TechPartParseRequest){.mech = mech,
+                                              .text = buffer,
+                                              .parse_position = parse_position,
+                                              .parse_extra = parse_brand});
+  if (result.status == TECH_PART_PARSE_INVALID)
     return REPAIR_PARSE_INVALID_SECTION;
-  if (result == -2)
+  if (result.status == TECH_PART_PARSE_INVALID_POSITION)
     return REPAIR_PARSE_INVALID_PART;
+  selection->location = result.location;
+  selection->part = result.position;
+  selection->brand = result.extra;
   return REPAIR_PARSE_OK;
 }
 
@@ -177,48 +182,41 @@ const char *repair_parse_status_message(RepairParseStatus status) {
   return "";
 }
 
-void repair_event_schedule(Mech *mech, int delay, int event_type,
-                           MuxEventCallback callback,
-                           RepairEventPayload payload) {
+void repair_event_schedule(const RepairEventSchedule *schedule) {
 #ifndef BT_FREETECHTIME
-  int scheduled_delay = delay > 1 ? delay : 1;
+  int scheduled_delay = schedule->delay > 1 ? schedule->delay : 1;
 #else
   int scheduled_delay =
-      btech_context_uses_free_technology_time(mech_context(mech))
+      btech_context_uses_free_technology_time(mech_context(schedule->mech))
           ? 2
-          : (delay > 2 ? delay : 2);
+          : (schedule->delay > 2 ? schedule->delay : 2);
 #endif
-  btech_context_event_schedule(mech_context(mech), mech, event_type, callback,
+  btech_context_event_schedule(mech_context(schedule->mech), schedule->mech,
+                               schedule->event_type, schedule->callback,
                                scheduled_delay,
-                               repair_event_payload_pack(payload));
+                               repair_event_payload_pack(schedule->payload));
 }
 
-void repair_event_schedule_minutes(Mech *mech, int minutes, int event_type,
-                                   MuxEventCallback callback,
-                                   RepairEventPayload payload) {
-  repair_event_schedule(mech, minutes * TECH_TICK, event_type, callback,
-                        payload);
+void repair_event_schedule_minutes(const RepairEventSchedule *schedule) {
+  RepairEventSchedule ticks = *schedule;
+  ticks.delay *= TECH_TICK;
+  repair_event_schedule(&ticks);
 }
 
-void repair_event_schedule_with_techtime(RepairCommandContext *command,
-                                         int work_time, int multiplier,
-                                         int event_type,
-                                         MuxEventCallback callback,
-                                         RepairEventPayload payload) {
-  int delay = tech_addtechtime(command->context, command->player,
-                               (work_time * multiplier) / 2);
-  repair_event_schedule(command->mech, delay, event_type, callback, payload);
-}
-
-void repair_event_schedule_amount(RepairCommandContext *command, int work_time,
-                                  int multiplier, int amount, int event_type,
-                                  MuxEventCallback callback,
-                                  RepairEventPayload payload) {
-  int delay = tech_addtechtime(command->context, command->player,
-                               (work_time * multiplier) / 2);
-  if (amount > 0)
-    delay -= TECH_TICK * (work_time * (amount - 1) / amount);
-  repair_event_schedule(command->mech, delay, event_type, callback, payload);
+void repair_event_schedule_with_techtime(const RepairWorkSchedule *schedule) {
+  int delay = tech_addtechtime(&(TechTimeAddition){
+      .context = schedule->command->context,
+      .player = schedule->command->player,
+      .units = (schedule->work_time * schedule->multiplier) / 2});
+  if (schedule->amount > 0)
+    delay -= TECH_TICK *
+             (schedule->work_time * (schedule->amount - 1) / schedule->amount);
+  repair_event_schedule(
+      &(RepairEventSchedule){.mech = schedule->command->mech,
+                             .delay = delay,
+                             .event_type = schedule->event_type,
+                             .callback = schedule->callback,
+                             .payload = schedule->payload});
 }
 
 static RepairJobResult repair_job_schedule(RepairCommandContext *command,
@@ -228,16 +226,25 @@ static RepairJobResult repair_job_schedule(RepairCommandContext *command,
                                            intptr_t event_data, bool failure) {
   RepairEventPayload payload = repair_event_payload_unpack(event_data);
   payload.player = command->player;
-  repair_event_schedule_with_techtime(
-      command, time, multiplier, event_type,
-      failure ? mech_event_failure_marker : callback, payload);
+  repair_event_schedule_with_techtime(&(RepairWorkSchedule){
+      .command = command,
+      .work_time = time,
+      .multiplier = multiplier,
+      .event_type = event_type,
+      .callback = failure ? mech_event_failure_marker : callback,
+      .payload = payload});
   return failure ? REPAIR_JOB_SCHEDULED_FAILURE : REPAIR_JOB_SCHEDULED_SUCCESS;
 }
 
 RepairJobResult repair_part_job_execute(RepairCommandContext *command,
                                         int location, int part,
                                         const RepairPartJob *job) {
-  if (job->resource(command->player, command->mech, location, part) < 0)
+  const RepairOperationCall call = {
+      .player = command->player,
+      .mech = command->mech,
+      .selection = {.location = location, .part = part},
+  };
+  if (job->resource(&call) < 0)
     return REPAIR_JOB_REJECTED;
   mecha_notify(command->evaluation, command->player, job->message);
   bool failed =
@@ -246,10 +253,10 @@ RepairJobResult repair_part_job_execute(RepairCommandContext *command,
                 0
           : tech_roll(command->player, command->mech, job->difficulty) < 0;
   if (failed) {
-    if (job->failure(command->player, command->mech, location, part) < 0)
+    if (job->failure(&call) < 0)
       return repair_job_schedule(command, job->time, 3, job->event_type,
                                  job->event_callback, job->event_data, true);
-  } else if (job->success(command->player, command->mech, location, part) < 0) {
+  } else if (job->success(&call) < 0) {
     return REPAIR_JOB_CALLBACK_ABORTED;
   }
   return repair_job_schedule(command, job->time, failed ? 3 : 2,
@@ -261,46 +268,63 @@ RepairJobResult repair_part_amount_job_execute(RepairCommandContext *command,
                                                int location, int part,
                                                int *amount,
                                                const RepairPartAmountJob *job) {
-  if (job->resource(command->player, command->mech, location, part, amount) < 0)
+  const RepairOperationCall call = {
+      .player = command->player,
+      .mech = command->mech,
+      .selection = {.location = location, .part = part},
+      .amount = amount,
+  };
+  if (job->resource(&call) < 0)
     return REPAIR_JOB_REJECTED;
   mecha_notify(command->evaluation, command->player, job->message);
   bool failed = tech_roll(command->player, command->mech, job->difficulty) < 0;
   if (failed) {
-    if (job->failure(command->player, command->mech, location, part, amount) <
-        0) {
+    if (job->failure(&call) < 0) {
       repair_event_schedule_with_techtime(
-          command, job->time, 3, job->event_type, mech_event_failure_marker,
-          (RepairEventPayload){.location = location,
-                               .position = part,
-                               .extra = *amount,
-                               .player = command->player});
+          &(RepairWorkSchedule){.command = command,
+                                .work_time = job->time,
+                                .multiplier = 3,
+                                .event_type = job->event_type,
+                                .callback = mech_event_failure_marker,
+                                .payload = {.location = location,
+                                            .position = part,
+                                            .extra = *amount,
+                                            .player = command->player}});
       return REPAIR_JOB_SCHEDULED_FAILURE;
     }
-  } else if (job->success(command->player, command->mech, location, part,
-                          amount) < 0) {
+  } else if (job->success(&call) < 0) {
     return REPAIR_JOB_CALLBACK_ABORTED;
   }
   repair_event_schedule_with_techtime(
-      command, job->time, failed ? 3 : 2, job->event_type, job->event_callback,
-      (RepairEventPayload){.location = location,
-                           .position = part,
-                           .extra = *amount,
-                           .player = command->player});
+      &(RepairWorkSchedule){.command = command,
+                            .work_time = job->time,
+                            .multiplier = failed ? 3 : 2,
+                            .event_type = job->event_type,
+                            .callback = job->event_callback,
+                            .payload = {.location = location,
+                                        .position = part,
+                                        .extra = *amount,
+                                        .player = command->player}});
   return REPAIR_JOB_SCHEDULED_SUCCESS;
 }
 
 RepairJobResult repair_section_job_execute(RepairCommandContext *command,
                                            int location,
                                            const RepairSectionJob *job) {
-  if (job->resource(command->player, command->mech, location) < 0)
+  const RepairOperationCall call = {
+      .player = command->player,
+      .mech = command->mech,
+      .selection = {.location = location},
+  };
+  if (job->resource(&call) < 0)
     return REPAIR_JOB_REJECTED;
   mecha_notify(command->evaluation, command->player, job->message);
   bool failed = tech_roll(command->player, command->mech, job->difficulty) < 0;
   if (failed) {
-    if (job->failure(command->player, command->mech, location) < 0)
+    if (job->failure(&call) < 0)
       return repair_job_schedule(command, job->time, 3, job->event_type,
                                  job->event_callback, job->event_data, true);
-  } else if (job->success(command->player, command->mech, location) < 0) {
+  } else if (job->success(&call) < 0) {
     return REPAIR_JOB_CALLBACK_ABORTED;
   }
   return repair_job_schedule(command, job->time, failed ? 3 : 2,
@@ -312,28 +336,42 @@ RepairJobResult
 repair_section_amount_job_execute(RepairCommandContext *command, int location,
                                   int *amount,
                                   const RepairSectionAmountJob *job) {
-  if (job->resource(command->player, command->mech, location, amount) < 0)
+  const RepairOperationCall call = {
+      .player = command->player,
+      .mech = command->mech,
+      .selection = {.location = location},
+      .amount = amount,
+  };
+  if (job->resource(&call) < 0)
     return REPAIR_JOB_REJECTED;
   mecha_notify(command->evaluation, command->player, job->message);
   bool failed = tech_roll(command->player, command->mech, job->difficulty) < 0;
   if (failed) {
-    if (job->failure(command->player, command->mech, location, amount) < 0) {
+    if (job->failure(&call) < 0) {
       RepairEventPayload payload = {.location = location,
                                     .player = command->player};
-      repair_event_schedule_with_techtime(command, job->failure_time, 3,
-                                          job->failure_event_type,
-                                          mech_event_failure_marker, payload);
+      repair_event_schedule_with_techtime(
+          &(RepairWorkSchedule){.command = command,
+                                .work_time = job->failure_time,
+                                .multiplier = 3,
+                                .event_type = job->failure_event_type,
+                                .callback = mech_event_failure_marker,
+                                .payload = payload});
       return REPAIR_JOB_SCHEDULED_FAILURE;
     }
-  } else if (job->success(command->player, command->mech, location, amount) <
-             0) {
+  } else if (job->success(&call) < 0) {
     return REPAIR_JOB_CALLBACK_ABORTED;
   }
   RepairEventPayload payload = {
       .location = location, .position = *amount, .player = command->player};
-  repair_event_schedule_amount(command, job->unit_time * *amount,
-                               failed ? 3 : 2, *amount, job->event_type,
-                               job->event_callback, payload);
+  repair_event_schedule_with_techtime(
+      &(RepairWorkSchedule){.command = command,
+                            .work_time = job->unit_time * *amount,
+                            .multiplier = failed ? 3 : 2,
+                            .amount = *amount,
+                            .event_type = job->event_type,
+                            .callback = job->event_callback,
+                            .payload = payload});
   return REPAIR_JOB_SCHEDULED_SUCCESS;
 }
 

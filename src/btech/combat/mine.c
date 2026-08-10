@@ -29,6 +29,7 @@
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_bits_api.h"
+#include "map_coordinates.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -97,11 +98,33 @@ void mine_field_add(BattleMap *map, int x, int y, int damage) {
   add_mapobj(map, &map->MapObject[TYPE_MINE], &foo, 1);
 }
 
-static void mine_damage_mechs(BattleMap *map, int tx, int ty, const char *tomsg,
-                              const char *otmsg, const char *tomsg1,
-                              const char *otmsg1, int dam, int heat, int nb) {
-  blast_hit_hexes(map, dam, 5, heat, tx, ty, tomsg, otmsg, tomsg1, otmsg1,
-                  MINE_TABLE, 2, 1, 1, 1);
+typedef struct MineDamageRequest {
+  BattleMap *map;
+  MapHexPosition position;
+  BlastMessages messages;
+  BlastMessages neighbor_messages;
+  int damage;
+  int heat;
+  bool affect_neighbors;
+} MineDamageRequest;
+
+static void mine_damage_mechs(const MineDamageRequest *mine) {
+  BlastAreaRequest request = {
+      .center =
+          {
+              .map = mine->map,
+              .damage = {.total = mine->damage,
+                         .hit_size = 5,
+                         .heat = mine->heat},
+              .impact = mine->position,
+              .messages = mine->messages,
+              .hit_table = MINE_TABLE,
+              .safety = {.above = 2, .below = 1, .underwater = true},
+          },
+      .neighbor_messages = mine->neighbor_messages,
+      .neighbor_radius = mine->affect_neighbors ? 1 : 0,
+  };
+  blast_hit_area(&request);
 }
 
 static void update_mine(BattleMap *map, MapObject *mine) {
@@ -113,8 +136,21 @@ static void update_mine(BattleMap *map, MapObject *mine) {
     mine->datas = clamp_int_to_short(i);
 }
 
-static void mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
-                         int reason) {
+typedef struct MineExplosion {
+  Mech *mech;
+  BattleMap *map;
+  MapObject *mine;
+  MapHexPosition triggering_position;
+  MineTriggerReason reason;
+} MineExplosion;
+
+static void mine_explode(const MineExplosion *explosion) {
+  Mech *mech = explosion->mech;
+  BattleMap *map = explosion->map;
+  MapObject *o = explosion->mine;
+  int x = explosion->triggering_position.x;
+  int y = explosion->triggering_position.y;
+  MineTriggerReason reason = explosion->reason;
   int cool = (o->datas >= MINE_MIN);
 
   if ((o->datac == MINE_TRIGGER) && reason != MINE_STEP && reason != MINE_LAND)
@@ -122,6 +158,8 @@ static void mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
   if (o->datac != MINE_TRIGGER) {
     if (o->datac != MINE_COMMAND) {
       switch (reason) {
+      case MINE_COMMAND_DETONATION:
+        break;
       case MINE_STEP:
         mech_los_broadcast(
             mech, tprintf("moves to %d,%d, and triggers a mine!", x, y));
@@ -145,26 +183,51 @@ static void mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
   switch (o->datac) {
   case MINE_STANDARD:
     update_mine(map, o);
-    mine_damage_mechs(map, o->x, o->y, "A blast of shrapnel hits you!",
-                      "is hit by shrapnel!", NULL, NULL, o->datas, 0, 0);
+    mine_damage_mechs(&(MineDamageRequest){
+        .map = map,
+        .position = {.x = o->x, .y = o->y},
+        .messages = {.target = "A blast of shrapnel hits you!",
+                     .observers = "is hit by shrapnel!"},
+        .damage = o->datas});
     if (!cool)
-      mapobj_del(map, o->x, o->y, TYPE_MINE);
+      map_objects_delete(&(MapObjectLookupRequest){
+          .map = map,
+          .position = {.x = o->x, .y = o->y},
+          .type = TYPE_MINE,
+      });
     break;
   case MINE_INFERNO:
     update_mine(map, o);
-    mine_damage_mechs(map, o->x, o->y, "Globs of flaming gel hit you!",
-                      "is hit by globs of flaming gel!", NULL, NULL,
-                      o->datas / 3, o->datas, 0);
+    mine_damage_mechs(&(MineDamageRequest){
+        .map = map,
+        .position = {.x = o->x, .y = o->y},
+        .messages = {.target = "Globs of flaming gel hit you!",
+                     .observers = "is hit by globs of flaming gel!"},
+        .damage = o->datas / 3,
+        .heat = o->datas});
     if (!cool)
-      mapobj_del(map, o->x, o->y, TYPE_MINE);
+      map_objects_delete(&(MapObjectLookupRequest){
+          .map = map,
+          .position = {.x = o->x, .y = o->y},
+          .type = TYPE_MINE,
+      });
     break;
   case MINE_COMMAND:
     unset_hex_mine(map, o->x, o->y);
-    mine_damage_mechs(map, o->x, o->y, "A blast of shrapnel hits you!",
-                      "is hit by shrapnel!",
-                      "A little blast of shrapnel hits you!",
-                      "is hit by some of the shrapnel!", o->datas, 0, 1);
-    mapobj_del(map, o->x, o->y, TYPE_MINE);
+    mine_damage_mechs(&(MineDamageRequest){
+        .map = map,
+        .position = {.x = o->x, .y = o->y},
+        .messages = {.target = "A blast of shrapnel hits you!",
+                     .observers = "is hit by shrapnel!"},
+        .neighbor_messages = {.target = "A little blast of shrapnel hits you!",
+                              .observers = "is hit by some of the shrapnel!"},
+        .damage = o->datas,
+        .affect_neighbors = true});
+    map_objects_delete(&(MapObjectLookupRequest){
+        .map = map,
+        .position = {.x = o->x, .y = o->y},
+        .type = TYPE_MINE,
+    });
     break;
   case MINE_TRIGGER:
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MINE_TRIGGERS, "%s",
@@ -183,11 +246,20 @@ static void mine_explode(Mech *mech, BattleMap *map, MapObject *o, int x, int y,
     unset_hex_mine(map, o->x, o->y);
     if (o->x != x || o->y != y)
       HexLOSBroadcast(map, o->x, o->y, "A mine explodes in $H!");
-    mine_damage_mechs(map, o->x, o->y, "A blast of shrapnel hits you!",
-                      "is hit by shrapnel!",
-                      "A little blast of shrapnel hits you!",
-                      "is hit by some of the shrapnel!", o->datas, 0, 1);
-    mapobj_del(map, o->x, o->y, TYPE_MINE);
+    mine_damage_mechs(&(MineDamageRequest){
+        .map = map,
+        .position = {.x = o->x, .y = o->y},
+        .messages = {.target = "A blast of shrapnel hits you!",
+                     .observers = "is hit by shrapnel!"},
+        .neighbor_messages = {.target = "A little blast of shrapnel hits you!",
+                              .observers = "is hit by some of the shrapnel!"},
+        .damage = o->datas,
+        .affect_neighbors = true});
+    map_objects_delete(&(MapObjectLookupRequest){
+        .map = map,
+        .position = {.x = o->x, .y = o->y},
+        .type = TYPE_MINE,
+    });
     break;
   }
   mine_fields_recalculate(map);
@@ -217,7 +289,7 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
           continue;
         break;
       case MINE_VIBRA:
-        if (o->datai > mech_real_tonnage(mech))
+        if (o->payload.scalar > mech_real_tonnage(mech))
           continue; /* No message, just boom */
         break;
       case MINE_COMMAND:
@@ -229,7 +301,11 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
       if (!real)
         return;
 
-      mine_explode(mech, map, o, x, y, reason);
+      mine_explode(&(MineExplosion){.mech = mech,
+                                    .map = map,
+                                    .mine = o,
+                                    .triggering_position = {.x = x, .y = y},
+                                    .reason = reason});
 
     } else if (mine_type_is_vibrating(o->datac)) {
 
@@ -244,22 +320,37 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
         /* Out side of range */
         /* Using round here because we get some funky ranges like
          * 0.999987 and 1.00000072 */
-        if (nearbyintf(FindHexRange(x1, y1, x2, y2)) > ((float)o->datai))
+        if (nearbyintf(map_real_range(&(MapRealSegment){
+                .start = {.x = x1, .y = y1},
+                .end = {.x = x2, .y = y2},
+            })) > (float)o->payload.scalar)
           continue;
 
-        mine_explode(mech, map, o, x, y, reason);
+        mine_explode(&(MineExplosion){.mech = mech,
+                                      .map = map,
+                                      .mine = o,
+                                      .triggering_position = {.x = x, .y = y},
+                                      .reason = reason});
 
-      } else if (o->datai < mech_real_tonnage(mech)) {
+      } else if (o->payload.scalar < mech_real_tonnage(mech)) {
 
         if (abs(o->x - x) <= mdis && abs(o->y - y) <= mdis) {
 
           /* Possible remote explosion */
           MapCoordToRealCoord(o->x, o->y, &x2, &y2);
-          const long range_limit = (mech_real_tonnage(mech) - o->datai) / 10;
-          if (FindHexRange(x1, y1, x2, y2) > (float)range_limit)
+          const long range_limit =
+              (mech_real_tonnage(mech) - o->payload.scalar) / 10;
+          if (map_real_range(&(MapRealSegment){
+                  .start = {.x = x1, .y = y1},
+                  .end = {.x = x2, .y = y2},
+              }) > (float)range_limit)
             continue;
 
-          mine_explode(mech, map, o, x, y, reason);
+          mine_explode(&(MineExplosion){.mech = mech,
+                                        .map = map,
+                                        .mine = o,
+                                        .triggering_position = {.x = x, .y = y},
+                                        .reason = reason});
         }
       }
     }
@@ -299,7 +390,19 @@ void mine_field_possibly_remove(Mech *mech, int x, int y) {
 /* for now, just put the hexes themselves ; vibras should have larger radius */
 /* Added Exile's MINE_TRIGGER changes.  Can set a distance for the
    mine and it will add mines to the hexes within that range - Dany */
-static void add_mine_on_map(BattleMap *map, int x, int y, char type, int data) {
+typedef struct MineFieldDefinition {
+  BattleMap *map;
+  MapHexPosition position;
+  char type;
+  int data;
+} MineFieldDefinition;
+
+static void add_mine_on_map(const MineFieldDefinition *definition) {
+  BattleMap *map = definition->map;
+  int x = definition->position.x;
+  int y = definition->position.y;
+  char type = definition->type;
+  int data = definition->data;
   int x1, y1;
   int mdis = (100 - data) / 10;
   int t = mdis * 3 / 2;
@@ -321,7 +424,10 @@ static void add_mine_on_map(BattleMap *map, int x, int y, char type, int data) {
         /* We round because of weirdness with FindHexRange returning
          * values like 1.00215 */
         MapCoordToRealCoord(x1, y1, &fx1, &fy1);
-        if (nearbyintf(FindHexRange(fx, fy, fx1, fy1)) <= ((float)data))
+        if (nearbyintf(map_real_range(&(MapRealSegment){
+                .start = {.x = fx, .y = fy},
+                .end = {.x = fx1, .y = fy1},
+            })) <= ((float)data))
           set_hex_mine(map, x1, y1);
       }
 
@@ -346,8 +452,11 @@ void mine_fields_recalculate(BattleMap *map) {
 
   clear_hex_bits(map, 1);
   for (o = map->MapObject[TYPE_MINE]; o; o = o->next)
-    add_mine_on_map(map, o->x, o->y, clamp_int_to_char(o->datac),
-                    clamp_intptr_to_int(o->datai));
+    add_mine_on_map(
+        &(MineFieldDefinition){.map = map,
+                               .position = {.x = o->x, .y = o->y},
+                               .type = clamp_int_to_char(o->datac),
+                               .data = clamp_intptr_to_int(o->payload.scalar)});
 }
 
 /* x y type strength <optvalue> */
@@ -390,7 +499,8 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if ((type = mine_type_index(args[2])) < 0) {
+  type = mine_type_index(args[2]);
+  if (type < 0) {
     mecha_notify(btech_context_evaluation(battle_map_context(map)), player,
                  "Invalid mine type!");
     return;
@@ -405,7 +515,7 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
   memset(&foo, 0, sizeof(foo));
   foo.x = clamp_int_to_short(x);
   foo.y = clamp_int_to_short(y);
-  foo.datai = extra;
+  foo.payload.scalar = extra;
   foo.datas = clamp_int_to_short(str);
   foo.datac = type + 1;
   foo.obj = player;
@@ -428,8 +538,11 @@ void mine_command_detonate(Mech *mech, int channel) {
   for (o = map->MapObject[TYPE_MINE]; o; o = o2) {
     o2 = o->next;
     if (o->datac == MINE_COMMAND)
-      if (o->datai == channel) {
-        mine_explode(mech, map, o, 0, 0, 0);
+      if (o->payload.scalar == channel) {
+        mine_explode(&(MineExplosion){.mech = mech,
+                                      .map = map,
+                                      .mine = o,
+                                      .reason = MINE_COMMAND_DETONATION});
         count++;
       }
   }
@@ -437,7 +550,12 @@ void mine_command_detonate(Mech *mech, int channel) {
     mine_fields_recalculate(map);
 }
 
-void mine_field_scan(DbRef player, Mech *mech, float range, int x, int y) {
+void mine_field_scan(const MineFieldScanRequest *request) {
+  DbRef player = request->player;
+  Mech *mech = request->mech;
+  float range = request->range;
+  int x = request->position.x;
+  int y = request->position.y;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   MapObject *o;

@@ -20,8 +20,11 @@ struct btech_special_object_counts {
 
 /* Count normal BTech instances, excluding DEBUG and other non-persisted types.
  */
-static int btech_special_count_objects(void *key, void *data, int depth,
-                                       void *argument) {
+static int btech_special_count_objects(const RedBlackTreeVisitCall *call) {
+  void *key = call->key;
+  void *data = call->data;
+  int depth = call->depth;
+  void *argument = call->context;
   BTECH_SPECIAL_OBJECT_COUNTS *counts = argument;
   BtechSpecialObject *xcode = data;
 
@@ -157,7 +160,10 @@ static int btech_special_load_stage(sqlite3 *sqlite, BtechContext *context,
                                     BtechSqliteLoader loader) {
   if (loader(sqlite) >= 0)
     return 0;
-  log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
+  log_error((LogEntry){.log = context->log,
+                       .key = LOG_ALWAYS,
+                       .primary = "BTP",
+                       .secondary = "FAIL"},
             "SQLite BTech validation failed at %s.", stage);
   return -1;
 }
@@ -168,7 +174,10 @@ static int btech_special_load_context_stage(sqlite3 *sqlite,
                                             BtechSqliteContextLoader loader) {
   if (loader(sqlite, context) >= 0)
     return 0;
-  log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
+  log_error((LogEntry){.log = context->log,
+                       .key = LOG_ALWAYS,
+                       .primary = "BTP",
+                       .secondary = "FAIL"},
             "SQLite BTech validation failed at %s.", stage);
   return -1;
 }
@@ -282,11 +291,17 @@ int btech_persistence_load_special_state_path(BtechContext *context,
   sqlite = NULL;
   result = -1;
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
-    log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
+    log_error((LogEntry){.log = context->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "BTP",
+                         .secondary = "FAIL"},
               "Cannot open SQLite BTech state from %s: %s", path,
               sqlite ? sqlite3_errmsg(sqlite) : strerror(errno));
   } else if (btech_special_load_all(sqlite, context) < 0) {
-    log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
+    log_error((LogEntry){.log = context->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "BTP",
+                         .secondary = "FAIL"},
               "Invalid or incomplete SQLite BTech state in %s: %s", path,
               sqlite3_errmsg(sqlite));
   } else {

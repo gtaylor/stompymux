@@ -42,26 +42,39 @@ static int sp_ok(EvaluationContext *evaluation,
                    game_object_location(evaluation->world->database, player),
                    LUA_LOCK_SPEECH, LUA_LOCK_OPERATION_SPEAK, false, &lock,
                    &result)) {
-      notify_lock_failure(evaluation, &lock, &result,
-                          "Sorry, you may not speak in this place.", nullptr,
-                          LUA_EVENT_NONE);
+      notify_lock_failure(&(LockFailureNotification){
+          .evaluation = evaluation,
+          .invocation = &lock,
+          .result = &result,
+          .enactor_default = "Sorry, you may not speak in this place."});
       return 0;
     }
   }
   return 1;
 }
 
-static void say_shout(EvaluationContext *evaluation, int target,
-                      const char *prefix, int flags, DbRef player,
-                      char *message) {
-  if (flags & SAY_NOTAG)
-    raw_broadcast(evaluation->runtime->descriptors, target, "%s%s",
-                  game_object_name(evaluation->world->database, player),
-                  message);
+typedef struct ShoutRequest {
+  EvaluationContext *evaluation;
+  int target;
+  const char *prefix;
+  int flags;
+  DbRef player;
+  char *message;
+} ShoutRequest;
+
+static void say_shout(const ShoutRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  if (request->flags & SAY_NOTAG)
+    raw_broadcast(
+        evaluation->runtime->descriptors, request->target, "%s%s",
+        game_object_name(evaluation->world->database, request->player),
+        request->message);
   else
-    raw_broadcast(evaluation->runtime->descriptors, target, "%s%s%s", prefix,
-                  game_object_name(evaluation->world->database, player),
-                  message);
+    raw_broadcast(
+        evaluation->runtime->descriptors, request->target, "%s%s%s",
+        request->prefix,
+        game_object_name(evaluation->world->database, request->player),
+        request->message);
 }
 
 static const char *announce_msg = "Announcement: ";
@@ -142,10 +155,15 @@ void do_say(CommandInvocation *invocation) {
   switch (key) {
   case SAY_SAY:
     notify_printf(evaluation, player, "You say \"%s\"", message);
-    notify_except(evaluation, loc, player, player,
-                  tprintf("%s says \"%s\"",
-                          game_object_name(evaluation->world->database, player),
-                          message));
+    notify_excluding(&(ExcludingNotification){
+        .evaluation = evaluation,
+        .location = loc,
+        .sender = player,
+        .exceptions = {player},
+        .exception_count = 1,
+        .message = tprintf(
+            "%s says \"%s\"",
+            game_object_name(evaluation->world->database, player), message)});
     break;
   case SAY_POSE:
     notify_checked(
@@ -194,13 +212,19 @@ void do_say(CommandInvocation *invocation) {
     switch (*message) {
     case ':':
       message[0] = ' ';
-      say_shout(&invocation->context->evaluation, 0, announce_msg, say_flags,
-                player, message);
+      say_shout(&(ShoutRequest){.evaluation = evaluation,
+                                .prefix = announce_msg,
+                                .flags = say_flags,
+                                .player = player,
+                                .message = message});
       break;
     case ';':
       message = checked_mutable_string_suffix(message, 1);
-      say_shout(&invocation->context->evaluation, 0, announce_msg, say_flags,
-                player, message);
+      say_shout(&(ShoutRequest){.evaluation = evaluation,
+                                .prefix = announce_msg,
+                                .flags = say_flags,
+                                .player = player,
+                                .message = message});
       break;
     case '"':
       message = checked_mutable_string_suffix(message, 1);
@@ -212,8 +236,11 @@ void do_say(CommandInvocation *invocation) {
       safe_str(message, buf2, &bp);
       safe_chr('"', buf2, &bp);
       *bp = '\0';
-      say_shout(&invocation->context->evaluation, 0, announce_msg, say_flags,
-                player, buf2);
+      say_shout(&(ShoutRequest){.evaluation = evaluation,
+                                .prefix = announce_msg,
+                                .flags = say_flags,
+                                .player = player,
+                                .message = buf2});
       free_lbuf(buf2);
     }
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "SHOUT") {
@@ -230,13 +257,21 @@ void do_say(CommandInvocation *invocation) {
     switch (*message) {
     case ':':
       message[0] = ' ';
-      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD,
-                broadcast_msg, say_flags, player, message);
+      say_shout(&(ShoutRequest){.evaluation = evaluation,
+                                .target = OBJECT_FLAG_WIZARD,
+                                .prefix = broadcast_msg,
+                                .flags = say_flags,
+                                .player = player,
+                                .message = message});
       break;
     case ';':
       message = checked_mutable_string_suffix(message, 1);
-      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD,
-                broadcast_msg, say_flags, player, message);
+      say_shout(&(ShoutRequest){.evaluation = evaluation,
+                                .target = OBJECT_FLAG_WIZARD,
+                                .prefix = broadcast_msg,
+                                .flags = say_flags,
+                                .player = player,
+                                .message = message});
       break;
     case '"':
       message = checked_mutable_string_suffix(message, 1);
@@ -248,8 +283,12 @@ void do_say(CommandInvocation *invocation) {
       safe_str(message, buf2, &bp);
       safe_chr('"', buf2, &bp);
       *bp = '\0';
-      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD,
-                broadcast_msg, say_flags, player, buf2);
+      say_shout(&(ShoutRequest){.evaluation = evaluation,
+                                .target = OBJECT_FLAG_WIZARD,
+                                .prefix = broadcast_msg,
+                                .flags = say_flags,
+                                .player = player,
+                                .message = buf2});
       free_lbuf(buf2);
     }
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "BCAST") {
@@ -266,13 +305,21 @@ void do_say(CommandInvocation *invocation) {
     switch (*message) {
     case ':':
       message[0] = ' ';
-      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD, admin_msg,
-                say_flags, player, message);
+      say_shout(&(ShoutRequest){.evaluation = evaluation,
+                                .target = OBJECT_FLAG_WIZARD,
+                                .prefix = admin_msg,
+                                .flags = say_flags,
+                                .player = player,
+                                .message = message});
       break;
     case ';':
       message = checked_mutable_string_suffix(message, 1);
-      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD, admin_msg,
-                say_flags, player, message);
+      say_shout(&(ShoutRequest){.evaluation = evaluation,
+                                .target = OBJECT_FLAG_WIZARD,
+                                .prefix = admin_msg,
+                                .flags = say_flags,
+                                .player = player,
+                                .message = message});
       break;
     case '"':
       message = checked_mutable_string_suffix(message, 1);
@@ -284,8 +331,12 @@ void do_say(CommandInvocation *invocation) {
       safe_str(message, buf2, &bp);
       safe_chr('"', buf2, &bp);
       *bp = '\0';
-      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD, admin_msg,
-                say_flags, player, buf2);
+      say_shout(&(ShoutRequest){.evaluation = evaluation,
+                                .target = OBJECT_FLAG_WIZARD,
+                                .prefix = admin_msg,
+                                .flags = say_flags,
+                                .player = player,
+                                .message = buf2});
       free_lbuf(buf2);
     }
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "ASHOUT") {

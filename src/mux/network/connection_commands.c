@@ -30,6 +30,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/array_sort.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
@@ -37,8 +38,8 @@
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
-void make_portlist(DescriptorRegistry *descriptors, DbRef player, DbRef target,
-                   char *buff, char **bufc) {
+void make_portlist(DescriptorRegistry *descriptors, DbRef target, char *buff,
+                   char **bufc) {
   Descriptor *d;
   DescriptorIterator iterator = descriptor_iterator_connected(descriptors);
   int i = 0;
@@ -309,21 +310,21 @@ static const char *terminal_color_depth_name(TerminalColorDepth depth) {
   return "unknown";
 }
 
-static int telnet_environment_view_compare(const void *left,
-                                           const void *right) {
-  const TelnetEnvironmentEntryView *left_entry = left;
-  const TelnetEnvironmentEntryView *right_entry = right;
+static int
+telnet_environment_view_compare(const ArraySortComparison *comparison) {
+  const TelnetEnvironmentEntryView *left_entry = comparison->left;
+  const TelnetEnvironmentEntryView *right_entry = comparison->right;
   size_t shared_size;
-  int comparison;
+  int ordering;
 
   if (left_entry->kind != right_entry->kind)
     return left_entry->kind < right_entry->kind ? -1 : 1;
   shared_size = left_entry->name_size < right_entry->name_size
                     ? left_entry->name_size
                     : right_entry->name_size;
-  comparison = memcmp(left_entry->name, right_entry->name, shared_size);
-  if (comparison != 0)
-    return comparison;
+  ordering = memcmp(left_entry->name, right_entry->name, shared_size);
+  if (ordering != 0)
+    return ordering;
   if (left_entry->name_size == right_entry->name_size)
     return 0;
   return left_entry->name_size < right_entry->name_size ? -1 : 1;
@@ -374,7 +375,10 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
   for (size_t index = 0; index < count; index++)
     descriptor_telnet_environment_entry(
         descriptor, index, telnet_environment_view_at(entries, count, index));
-  qsort(entries, count, sizeof(entries[0]), telnet_environment_view_compare);
+  array_sort(&(ArraySortRequest){.items = entries,
+                                 .count = count,
+                                 .item_size = sizeof(entries[0]),
+                                 .compare = telnet_environment_view_compare});
   notify_checked(evaluation, viewer, viewer,
                  "    Variables:", MSG_ME_ALL | MSG_F_DOWN);
   for (size_t index = 0; index < count; index++) {
@@ -592,9 +596,15 @@ int descriptor_command(Descriptor *d, char *command) {
   CommandRuntime *runtime = descriptor_runtime(d);
   CommandContext context;
 
-  if (!command_context_initialize(&context, runtime, descriptor_btech(d),
-                                  descriptor_log(d), d->player, d->player, d,
-                                  true))
+  if (!command_context_initialize(
+          &(CommandContextInitialization){.context = &context,
+                                          .runtime = runtime,
+                                          .btech = descriptor_btech(d),
+                                          .log = descriptor_log(d),
+                                          .player = d->player,
+                                          .enactor = d->player,
+                                          .descriptor = d,
+                                          .interactive = true}))
     return 0;
   context.debug_command = "< descriptor_command >";
 

@@ -200,8 +200,12 @@ const char *GetMoveTypeID(int movetype) {
   }
 }
 
-void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                    int spaces, int level) {
+void Mech_ShowFlags(const MechFlagDisplayRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  const DbRef player = request->player;
+  Mech *mech = request->mech;
+  const int spaces = request->indentation;
+  const int level = request->detail_level;
   MechConditionSummary conditions = mech_condition_summary(mech);
 
   if (conditions.combat_safe) {

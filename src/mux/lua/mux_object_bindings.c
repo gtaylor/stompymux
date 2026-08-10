@@ -144,7 +144,11 @@ static int lua_mux_contents_visible(lua_State *state) {
     return luaL_argerror(state, 3, "object is not directly contained");
   evaluation = &package->services->background_command->evaluation;
   can_see_location = !is_dark(package->services->database, container);
-  lua_pushboolean(state, can_see(evaluation, viewer, member, can_see_location));
+  lua_pushboolean(state, can_see(&(ObjectVisibilityRequest){
+                             .evaluation = evaluation,
+                             .viewer = viewer,
+                             .object = member,
+                             .location_visible = can_see_location}));
   return 1;
 }
 
@@ -188,8 +192,11 @@ static int lua_mux_exits_visible(lua_State *state) {
     return luaL_argerror(state, 3, "exit is not directly attached");
   if (is_dark(package->services->database, location))
     key |= VE_LOC_DARK;
-  lua_pushboolean(
-      state, exit_displayable(package->services->database, exit, viewer, key));
+  lua_pushboolean(state, exit_displayable(&(ExitVisibilityRequest){
+                             .database = package->services->database,
+                             .exit = exit,
+                             .viewer = viewer,
+                             .options = key}));
   return 1;
 }
 

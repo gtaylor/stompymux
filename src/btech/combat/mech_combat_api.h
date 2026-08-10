@@ -2,43 +2,117 @@
 
 #pragma once
 
+#include "map_coordinates.h"
+#include "mech_api_types.h"
 #include "mux/server/platform.h"
+
+typedef struct TerrainWeaponHitRequest {
+  Mech *attacker;
+  MapHexPosition position;
+  int weapon_index;
+  int ammunition_mode;
+  int damage;
+  bool hit;
+} TerrainWeaponHitRequest;
+
+typedef struct TerrainWeaponEffectRequest {
+  Mech *mech;
+  BattleMap *map;
+  MapHexPosition position;
+  int weapon_index;
+  int ammunition_mode;
+  int damage;
+  bool intentional;
+} TerrainWeaponEffectRequest;
 
 /* mech.combat.c */
 void mech_target(DbRef player, void *data, char *buffer);
 void mech_sixth_sense_check(Mech *mech, Mech *target);
 void mech_set_target(DbRef player, void *data, char *buffer);
 void mech_fireweapon(DbRef player, void *data, char *buffer);
-int FireWeaponNumber(DbRef player, Mech *mech, BattleMap *mech_map, int weapnum,
-                     int argc, char **args, int sight);
+typedef struct WeaponFireCommandRequest {
+  DbRef actor;
+  Mech *mech;
+  BattleMap *map;
+  int weapon_number;
+  int argument_count;
+  char **arguments;
+  bool sight;
+} WeaponFireCommandRequest;
+
+int mech_weapon_fire_command(const WeaponFireCommandRequest *request);
 const char *mech_hex_target_description(const Mech *mech);
 int canClearOrIgnite(int weapindx);
-void mech_terrain_possibly_ignite(Mech *mech, BattleMap *map, int weapon_index,
-                                  int ammunition_mode, int x, int y,
-                                  int intentional);
-void mech_terrain_possibly_clear(Mech *mech, BattleMap *map, int weapon_index,
-                                 int ammunition_mode, int damage, int x, int y,
-                                 int intentional);
-void mech_terrain_possibly_ignite_or_clear(Mech *mech, int weapon_index,
-                                           int ammunition_mode, int damage,
-                                           int x, int y, int intentional);
-void mech_terrain_hex_hit(Mech *mech, int x, int y, int weapon_index,
-                          int ammunition_mode, int damage, int hit);
-int weapon_failure_stuff(Mech *mech, int *weapnum, int *weapindx, int *section,
-                         int *critical, int *ammoLoc, int *ammoCrit,
-                         int *ammoLoc1, int *ammoCrit1, int *modifier,
-                         int *type, float range, int *range_ok,
-                         int wGattlingShots);
-void FireWeapon(Mech *mech, BattleMap *mech_map, Mech *target, int LOS,
-                int weapindx, int weapnum, int section, int critical,
-                float enemyX, float enemyY, int mapx, int mapy, float range,
-                int indirectFire, int sight, int ishex);
-int mech_hit_damage_determine(Mech *mech, int wSection, int wCritSlot,
-                              Mech *hitMech, int hitX, int hitY, int weapindx,
-                              int wGattlingShots, int wBaseWeapDamage,
-                              int wAmmoMode, int type, int modifier,
-                              int isTempCalc);
-void mech_hit_resolve(Mech *mech, int weapindx, int wSection, int wCritSlot,
-                      Mech *hitMech, int hitX, int hitY, int LOS, int type,
-                      int modifier, int reallyhit, int bth, int wGattlingShots,
-                      int tIsSwarmAttack, int player_roll);
+void mech_terrain_hex_hit(const TerrainWeaponHitRequest *request);
+void mech_terrain_possibly_ignite_or_clear(
+    const TerrainWeaponEffectRequest *request);
+typedef struct WeaponFailureResolutionRequest {
+  Mech *mech;
+  int weapon_number;
+  int weapon_index;
+  CriticalSlotReference weapon;
+  CriticalSlotLookupResult primary_ammunition;
+  CriticalSlotLookupResult secondary_ammunition;
+  float range;
+  int gatling_shots;
+} WeaponFailureResolutionRequest;
+
+typedef struct WeaponFailureResolution {
+  bool handled;
+  bool range_ok;
+  int modifier;
+  int type;
+} WeaponFailureResolution;
+
+WeaponFailureResolution
+weapon_failure_resolve(const WeaponFailureResolutionRequest *request);
+
+typedef struct WeaponFireRequest {
+  Mech *mech;
+  BattleMap *map;
+  Mech *target;
+  int line_of_sight;
+  int weapon_index;
+  int weapon_number;
+  CriticalSlotReference weapon;
+  MapHexPosition target_hex;
+  float range;
+  int indirect_fire;
+  bool sight;
+  int target_kind;
+} WeaponFireRequest;
+
+void mech_weapon_fire(const WeaponFireRequest *request);
+typedef struct HitDamageRequest {
+  Mech *attacker;
+  CriticalSlotReference weapon;
+  Mech *target;
+  MapHexPosition target_hex;
+  int weapon_index;
+  int gatling_shots;
+  int base_damage;
+  int ammunition_mode;
+  int failure_type;
+  int failure_modifier;
+  bool temporary_calculation;
+} HitDamageRequest;
+
+int mech_hit_damage_determine(const HitDamageRequest *request);
+
+typedef struct HitResolutionRequest {
+  Mech *attacker;
+  int weapon_index;
+  CriticalSlotReference weapon;
+  Mech *target;
+  MapHexPosition target_hex;
+  int line_of_sight;
+  int failure_type;
+  int failure_modifier;
+  bool hit;
+  int base_to_hit;
+  int gatling_shots;
+  bool swarm_attack;
+  int player_roll;
+} HitResolutionRequest;
+
+void mech_hit_resolve(const HitResolutionRequest *request);

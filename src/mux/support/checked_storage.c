@@ -3,15 +3,47 @@
 #include "mux/support/checked_storage.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+[[noreturn]] static void
+checked_storage_fail(const char *operation, const char *reason,
+                     const void *storage, size_t count, size_t element_size,
+                     size_t offset, size_t region_size) {
+  (void)fprintf(stderr,
+                "checked_storage: %s failed: %s "
+                "(storage=%p count=%zu element_size=%zu offset=%zu "
+                "region_size=%zu)\n",
+                operation, reason, storage, count, element_size, offset,
+                region_size);
+  (void)fflush(stderr);
+  abort();
+}
+
+void *checked_storage_allocate(size_t bytes) {
+  void *storage = calloc(1, bytes);
+  if (storage == nullptr) {
+    (void)fputs("Unable to allocate storage\n", stderr);
+    exit(EXIT_FAILURE);
+  }
+  return storage;
+}
+
 static size_t checked_storage_offset(const void *storage, size_t count,
                                      size_t element_size, size_t index) {
-  if (storage == nullptr || element_size == 0 || index >= count ||
-      index > SIZE_MAX / element_size) {
-    abort();
-  }
+  if (storage == nullptr)
+    checked_storage_fail("element access", "null storage", storage, count,
+                         element_size, index, 0);
+  if (element_size == 0)
+    checked_storage_fail("element access", "zero element size", storage, count,
+                         element_size, index, 0);
+  if (index >= count)
+    checked_storage_fail("element access", "index out of bounds", storage,
+                         count, element_size, index, 0);
+  if (index > SIZE_MAX / element_size)
+    checked_storage_fail("element access", "offset multiplication overflow",
+                         storage, count, element_size, index, 0);
   return index * element_size;
 }
 
@@ -40,7 +72,9 @@ const void *checked_storage_at_const(const void *storage, size_t count,
 void *checked_storage_region(void *storage, size_t storage_size, size_t offset,
                              size_t region_size) {
   if (region_size > storage_size || offset > storage_size - region_size)
-    abort();
+    checked_storage_fail("region access", "region out of bounds", storage,
+                         storage_size, sizeof(unsigned char), offset,
+                         region_size);
   if (region_size == 0)
     return storage;
   return checked_storage_at(storage, storage_size, sizeof(unsigned char),
@@ -51,7 +85,9 @@ const void *checked_storage_region_const(const void *storage,
                                          size_t storage_size, size_t offset,
                                          size_t region_size) {
   if (region_size > storage_size || offset > storage_size - region_size)
-    abort();
+    checked_storage_fail("const region access", "region out of bounds", storage,
+                         storage_size, sizeof(unsigned char), offset,
+                         region_size);
   if (region_size == 0)
     return storage;
   return checked_storage_at_const(storage, storage_size, sizeof(unsigned char),
@@ -69,13 +105,21 @@ char *checked_mutable_string_suffix(char *text, size_t offset) {
 size_t checked_storage_sentinel_count(const void *storage, size_t element_size,
                                       size_t maximum_count,
                                       CheckedStorageSentinel is_sentinel) {
-  if (!storage || !element_size || !is_sentinel)
-    abort();
+  if (!storage)
+    checked_storage_fail("sentinel scan", "null storage", storage,
+                         maximum_count, element_size, 0, 0);
+  if (!element_size)
+    checked_storage_fail("sentinel scan", "zero element size", storage,
+                         maximum_count, element_size, 0, 0);
+  if (!is_sentinel)
+    checked_storage_fail("sentinel scan", "null sentinel callback", storage,
+                         maximum_count, element_size, 0, 0);
   for (size_t index = 0; index < maximum_count; index++) {
     const void *element =
         checked_storage_at_const(storage, maximum_count, element_size, index);
     if (is_sentinel(element))
       return index;
   }
-  abort();
+  checked_storage_fail("sentinel scan", "sentinel not found", storage,
+                       maximum_count, element_size, maximum_count, 0);
 }

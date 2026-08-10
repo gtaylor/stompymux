@@ -9,14 +9,7 @@ Checks: >
   clang-analyzer-deadcode.*,
   cert-*-c,
   -cert-dcl37-c,
-  bugprone-narrowing-conversions,
-  bugprone-branch-clone,
-  bugprone-suspicious-memory-comparison,
-  bugprone-suspicious-realloc-usage,
-  bugprone-suspicious-string-compare,
-  bugprone-switch-missing-default-case,
-  bugprone-undefined-memory-manipulation,
-  bugprone-unused-return-value,
+  bugprone-*,
   misc-include-cleaner
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^.*/src/(mux|btech)/.*'

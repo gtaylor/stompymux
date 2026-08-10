@@ -32,39 +32,45 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
-static int mech_disableweap_func(Mech *mech, DbRef player, int index, int high,
-                                 void *context) {
-  (void)context;
+static int mech_disableweap_func(const MultiWeaponSelectionCall *call) {
+  Mech *mech = call->mech;
+  const int index = call->first;
   int section, critical, weaptype;
 
-  weaptype =
-      FindWeaponNumberOnMech_Advanced(mech, index, &section, &critical, 1);
+  WeaponNumberLookupResult lookup = weapon_number_find(&(
+      WeaponNumberLookupRequest){.mech = mech, .number = index, .sight = true});
+  weaptype = lookup.value;
+  section = lookup.slot.section;
+  critical = lookup.slot.critical;
   if (weaptype == -1) {
-    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+    mecha_notify(btech_context_evaluation(mech->xcode.context), call->actor,
                  "The weapons system chirps: 'Illegal Weapon Number!'");
     return 0;
   }
   if (weaptype == -2) {
     mecha_notify(
-        btech_context_evaluation(mech->xcode.context), player,
+        btech_context_evaluation(mech->xcode.context), call->actor,
         "The weapons system chirps: 'That Weapon has been destroyed!'");
     return 0;
   }
   weaptype = weapon_from_equipment_index(
       mech_critical_part_type(mech, section, critical));
   if (!weapon_catalogue_has_special(weaptype, GAUSS)) {
-    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+    mecha_notify(btech_context_evaluation(mech->xcode.context), call->actor,
                  "You can only disable Gauss weapons.");
     return 0;
   }
   if (mech_weapon_is_recycling_at(mech, section, critical)) {
     mecha_notify(
-        btech_context_evaluation(mech->xcode.context), player,
+        btech_context_evaluation(mech->xcode.context), call->actor,
         "The weapon system chirps: 'That weapon is still recharging!'");
     return 0;
   }
 
-  mech_critical_temporary_failure_set(mech, section, critical, FAIL_DESTROYED);
+  mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+      .mech = mech,
+      .slot = {.section = section, .critical = critical},
+      .failure = FAIL_DESTROYED});
   mech_printf(mech, MECHALL, "You power down weapon %d.", index);
   return 0;
 }
@@ -81,7 +87,13 @@ void mech_disableweap(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  multi_weap_sel(mech, player, args[0], 1, mech_disableweap_func, nullptr);
+  multi_weapon_select(&(MultiWeaponSelectionRequest){
+      .mech = mech,
+      .actor = player,
+      .selection = args[0],
+      .mode = 1,
+      .callback = mech_disableweap_func,
+  });
 }
 
 int FindMainWeapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
@@ -166,7 +178,11 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
                  tprintf("Invalid value: %s", args[0]));
     return;
   }
-  wWeapType = FindWeaponNumberOnMech(mech, wWeapNum, &wSection, &wCritSlot);
+  WeaponNumberLookupResult lookup = weapon_number_find(
+      &(WeaponNumberLookupRequest){.mech = mech, .number = wWeapNum});
+  wWeapType = lookup.value;
+  wSection = lookup.slot.section;
+  wCritSlot = lookup.slot.critical;
 
   if (wWeapType == -1) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,

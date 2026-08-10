@@ -21,7 +21,8 @@ BattleMap *mech_movement_map_validate(Mech *mech) {
   BattleMap *map = btech_context_get_map(context, map_dbref);
 
   if (!map && pilot >= 0)
-    map = ValidMap(context, pilot, map_dbref);
+    map = valid_map(&(MapValidationRequest){
+        .context = context, .player = pilot, .map = map_dbref});
 
   bool position_is_valid =
       map &&

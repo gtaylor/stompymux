@@ -72,8 +72,8 @@ void do_alias(CommandInvocation *invocation) {
   long aflags;
   char *oldalias, *trimalias;
 
-  if ((thing = match_controlled(&invocation->context->match, player, name)) ==
-      NOTHING)
+  thing = match_controlled(&invocation->context->match, player, name);
+  if (thing == NOTHING)
     return;
 
   /*
@@ -283,7 +283,7 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
 
   attr = attribute_by_number(evaluation->world->database, attrnum);
   attribute_get_info(evaluation->world->database, thing, attrnum, &aflags);
-  if (attr && set_attr(evaluation, player, thing, attr, aflags)) {
+  if (attr && is_wizard(evaluation->world->database, player)) {
     if (attrnum == A_ALIAS &&
         (!is_player(evaluation->world->database, thing) ||
          (*attrtext &&
@@ -317,7 +317,8 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
         evaluation->btech, player, thing, have_xcode,
         is_xcode(evaluation->world->database, thing));
     if (attrnum == A_XTYPE)
-      btech_special_object_type_register(evaluation->btech, player, thing);
+      btech_special_object_type_register(&(BtechSpecialObjectAction){
+          .context = evaluation->btech, .actor = player, .object = thing});
     if (!(key & SET_QUIET))
       notify_printf(evaluation, player, "%s/%s - %s",
                     game_object_name(evaluation->world->database, thing),
@@ -346,8 +347,8 @@ void do_power(CommandInvocation *invocation) {
    * find thing
    */
 
-  if ((thing = match_controlled(&invocation->context->match, player, name)) ==
-      NOTHING)
+  thing = match_controlled(&invocation->context->match, player, name);
+  if (thing == NOTHING)
     return;
 
   power_set(&invocation->context->evaluation,
@@ -401,9 +402,12 @@ void do_use(CommandInvocation *invocation) {
 
   if (!lock_test(evaluation, player, invocation->cause, player, thing,
                  LUA_LOCK_USE, LUA_LOCK_OPERATION_USE, false, &lock, &result)) {
-    notify_lock_failure(evaluation, &lock, &result,
-                        "You can't figure out how to use that.", nullptr,
-                        LUA_EVENT_USE_FAIL);
+    notify_lock_failure(&(LockFailureNotification){
+        .evaluation = evaluation,
+        .invocation = &lock,
+        .result = &result,
+        .enactor_default = "You can't figure out how to use that.",
+        .event = LUA_EVENT_USE_FAIL});
     return;
   }
   doit = 0;

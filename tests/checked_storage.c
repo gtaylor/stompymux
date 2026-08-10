@@ -1,0 +1,114 @@
+#include "mux/support/checked_storage.h"
+
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+typedef enum FailureCase {
+  FAILURE_NULL_STORAGE,
+  FAILURE_ZERO_ELEMENT_SIZE,
+  FAILURE_INDEX_OUT_OF_RANGE,
+  FAILURE_OFFSET_OVERFLOW,
+  FAILURE_REGION_OUT_OF_RANGE,
+  FAILURE_NULL_SENTINEL,
+  FAILURE_MISSING_SENTINEL,
+} FailureCase;
+
+static bool never_sentinel(const void *element) {
+  (void)element;
+  return false;
+}
+
+[[noreturn]] static void trigger_failure(FailureCase failure) {
+  unsigned char storage[2] = {1, 2};
+  switch (failure) {
+  case FAILURE_NULL_STORAGE:
+    (void)checked_storage_at(nullptr, 1, 1, 0);
+    break;
+  case FAILURE_ZERO_ELEMENT_SIZE:
+    (void)checked_storage_at(storage, 1, 0, 0);
+    break;
+  case FAILURE_INDEX_OUT_OF_RANGE:
+    (void)checked_storage_at(storage, 2, 1, 2);
+    break;
+  case FAILURE_OFFSET_OVERFLOW:
+    (void)checked_storage_at(storage, SIZE_MAX, SIZE_MAX, 2);
+    break;
+  case FAILURE_REGION_OUT_OF_RANGE:
+    (void)checked_storage_region(storage, sizeof(storage), 1, 2);
+    break;
+  case FAILURE_NULL_SENTINEL:
+    (void)checked_storage_sentinel_count(storage, 1, sizeof(storage), nullptr);
+    break;
+  case FAILURE_MISSING_SENTINEL:
+    (void)checked_storage_sentinel_count(storage, 1, sizeof(storage),
+                                         never_sentinel);
+    break;
+  }
+  _exit(2);
+}
+
+static int expect_failure(FailureCase failure, const char *message) {
+  int descriptors[2];
+  if (pipe(descriptors) != 0)
+    return 1;
+  pid_t child = fork();
+  if (child < 0)
+    return 1;
+  if (child == 0) {
+    (void)close(descriptors[0]);
+    if (dup2(descriptors[1], STDERR_FILENO) < 0)
+      _exit(3);
+    (void)close(descriptors[1]);
+    trigger_failure(failure);
+  }
+  (void)close(descriptors[1]);
+  char output[512] = {0};
+  const ssize_t length = read(descriptors[0], output, sizeof(output) - 1);
+  (void)close(descriptors[0]);
+  int status = 0;
+  if (waitpid(child, &status, 0) != child || length <= 0 ||
+      !WIFSIGNALED(status) || WTERMSIG(status) != SIGABRT ||
+      strstr(output, "checked_storage:") == nullptr ||
+      strstr(output, message) == nullptr) {
+    return 1;
+  }
+  return 0;
+}
+
+int main(void) {
+  int failures = 0;
+  if (expect_failure(FAILURE_NULL_STORAGE, "null storage")) {
+    fprintf(stderr, "null-storage failure case failed\n");
+    ++failures;
+  }
+  if (expect_failure(FAILURE_ZERO_ELEMENT_SIZE, "zero element size")) {
+    fprintf(stderr, "zero-element-size failure case failed\n");
+    ++failures;
+  }
+  if (expect_failure(FAILURE_INDEX_OUT_OF_RANGE, "index out of bounds")) {
+    fprintf(stderr, "out-of-range index failure case failed\n");
+    ++failures;
+  }
+  if (expect_failure(FAILURE_OFFSET_OVERFLOW,
+                     "offset multiplication overflow")) {
+    fprintf(stderr, "offset-overflow failure case failed\n");
+    ++failures;
+  }
+  if (expect_failure(FAILURE_REGION_OUT_OF_RANGE, "region out of bounds")) {
+    fprintf(stderr, "invalid-region failure case failed\n");
+    ++failures;
+  }
+  if (expect_failure(FAILURE_NULL_SENTINEL, "null sentinel callback")) {
+    fprintf(stderr, "null-sentinel failure case failed\n");
+    ++failures;
+  }
+  if (expect_failure(FAILURE_MISSING_SENTINEL, "sentinel not found")) {
+    fprintf(stderr, "missing-sentinel failure case failed\n");
+    ++failures;
+  }
+  return failures != 0;
+}

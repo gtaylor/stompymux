@@ -16,6 +16,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_conditions_api.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
@@ -83,15 +84,15 @@ static const LateralMode *lateral_mode(int index) {
 static char *move_argument(char **arguments, size_t count, int index) {
   if (index < 0)
     abort();
-  char **slot =
-      checked_storage_at(arguments, count, sizeof(*arguments), (size_t)index);
+  char **slot = (char **)checked_storage_at((void *)arguments, count,
+                                            sizeof(*arguments), (size_t)index);
   return *slot;
 }
 
 static void move_arguments_destroy(char **arguments, size_t count) {
   for (size_t index = 0; index < count; index++) {
-    char **slot =
-        checked_storage_at(arguments, count, sizeof(*arguments), index);
+    char **slot = (char **)checked_storage_at((void *)arguments, count,
+                                              sizeof(*arguments), index);
     free(*slot);
     *slot = nullptr;
   }
@@ -385,8 +386,12 @@ void mech_eta(DbRef player, void *data, char *buffer) {
     return;
   }
   MapCoordToRealCoord(eta_x, eta_y, &fx, &fy);
-  range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech), 0,
-                    fx, fy, 0);
+  range = map_spatial_range(&(MapSpatialSegment){
+      .start = {.x = mech_position_real_x(mech),
+                .y = mech_position_real_y(mech),
+                .z = 0.0F},
+      .end = {.x = fx, .y = fy, .z = 0.0F},
+  });
   float const current_speed = mech_current_speed(mech);
   if (fabsf(current_speed) < 0.1F)
     mech_printf(mech, MECHALL,
@@ -412,8 +417,8 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
   if (mech_carried_dbref(mech) > 0) { /* Ug-lee! */
     Mech *t;
 
-    if ((t = btech_context_get_mech(mech_context(mech),
-                                    mech_carried_dbref(mech))))
+    t = btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
+    if (t)
       if (!mech_weight_cache_is_valid(t))
         mech_load_cache_invalidate(mech);
   }
@@ -449,12 +454,13 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
                          "speed_demon"))
       mspeed += MP1;
 
-    if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech))
-      if ((map = btech_context_find_object(mech_context(mech),
-                                           mech_map_dbref(mech))))
+    if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech)) {
+      map = btech_context_find_object(mech_context(mech), mech_map_dbref(mech));
+      if (map)
         mspeed = mspeed * 100.0F /
                  (float)(battle_map_gravity(map) > 50 ? battle_map_gravity(map)
                                                       : 50);
+    }
 
     return mspeed;
   }
@@ -462,9 +468,9 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
 
   /*! \todo {Check some of this math better} */
   if (!mech_load_cache_is_valid(mech)) {
-    if (mech_carried_dbref(mech) > 0)
-      if ((c = btech_context_get_mech(mech_context(mech),
-                                      mech_carried_dbref(mech)))) {
+    if (mech_carried_dbref(mech) > 0) {
+      c = btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
+      if (c) {
         lugged = mech_calculated_weight(c) * 2;
         if (mech_technology_flags(mech) & SALVAGE_TECH)
           lugged = lugged / 2;
@@ -476,6 +482,7 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
         if (mech_technology_flags_secondary(mech) & CARRIER_TECH)
           lugged = lugged / 2;
       }
+    }
 
     if (mech_technology_flags(mech) & CARGO_TECH)
       mod = 1;
@@ -513,8 +520,11 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
     }
   }
   int const speed_in_movement_points = clamp_float_to_int(mspeed / MP1);
-  mech_speed_cache_record(
-      mech, mspeed, mech_movement_maximum_int(1, speed_in_movement_points) * 2);
+  mech_speed_cache_record(&(MechSpeedCacheRecord){
+      .mech = mech,
+      .maximum_speed = mspeed,
+      .walking_xp_factor =
+          mech_movement_maximum_int(1, speed_in_movement_points) * 2});
   return mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 }
 
@@ -745,7 +755,8 @@ void mech_stand(DbRef player, void *data, char *buffer) {
 
   if (tNeedsPSkill) {
     /* Changed to NoXP. Keeps people from doing pushups to gain Pilot XP */
-    if (!MadePilotSkillRoll_NoXP(mech, standcarefulmod, 0)) {
+    if (!mech_pilot_skill_roll_without_experience(&(PilotSkillRollRequest){
+            .mech = mech, .modifier = standcarefulmod})) {
       mech_notify(mech, MECHALL,
                   "You fail your attempt to stand and fall back on the ground");
       mech_fall(mech, 1, 1);

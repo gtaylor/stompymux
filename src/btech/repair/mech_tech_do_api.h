@@ -3,38 +3,39 @@
 #pragma once
 
 #include "mux/server/platform.h"
+#include "repair_job.h"
 
 /* mech.tech.do.c */
 int valid_ammo_mode(Mech *mech, int loc, int part, int let);
 int FindAmmoType(Mech *mech, int loc, int part);
-int replace_econ(DbRef player, Mech *mech, int loc, int part);
-int reload_econ(DbRef player, Mech *mech, int loc, int part, int *val);
-int fixarmor_econ(DbRef player, Mech *mech, int loc, int *val);
-int fixinternal_econ(DbRef player, Mech *mech, int loc, int *val);
-int repair_econ(DbRef player, Mech *mech, int loc, int part);
-int repairenhcrit_econ(DbRef player, Mech *mech, int loc, int part);
-int reattach_econ(DbRef player, Mech *mech, int loc);
-int replacesuit_econ(DbRef player, Mech *mech, int loc);
-int reseal_econ(DbRef player, Mech *mech, int loc);
-int replacep_succ(DbRef player, Mech *mech, int loc, int part);
-int replaceg_succ(DbRef player, Mech *mech, int loc, int part);
-int reload_succ(DbRef player, Mech *mech, int loc, int part, int *val);
-int fixinternal_succ(DbRef player, Mech *mech, int loc, int *val);
-int fixarmor_succ(DbRef player, Mech *mech, int loc, int *val);
-int reattach_succ(DbRef player, Mech *mech, int loc);
-int replacesuit_succ(DbRef player, Mech *mech, int loc);
-int reseal_succ(DbRef player, Mech *mech, int loc);
-int repairg_succ(DbRef player, Mech *mech, int loc, int part);
-int repairenhcrit_succ(DbRef player, Mech *mech, int loc, int part);
-int repairp_succ(DbRef player, Mech *mech, int loc, int part);
-int replacep_fail(DbRef player, Mech *mech, int loc, int part);
-int repairp_fail(DbRef player, Mech *mech, int loc, int part);
-int replaceg_fail(DbRef player, Mech *mech, int loc, int part);
-int repairg_fail(DbRef player, Mech *mech, int loc, int part);
-int repairenhcrit_fail(DbRef player, Mech *mech, int loc, int part);
-int reload_fail(DbRef player, Mech *mech, int loc, int part, int *val);
-int fixarmor_fail(DbRef player, Mech *mech, int loc, int *val);
-int fixinternal_fail(DbRef player, Mech *mech, int loc, int *val);
-int reattach_fail(DbRef player, Mech *mech, int loc);
-int replacesuit_fail(DbRef player, Mech *mech, int loc);
-int reseal_fail(DbRef player, Mech *mech, int loc);
+int replace_econ(const RepairOperationCall *call);
+int reload_econ(const RepairOperationCall *call);
+int fixarmor_econ(const RepairOperationCall *call);
+int fixinternal_econ(const RepairOperationCall *call);
+int repair_econ(const RepairOperationCall *call);
+int repairenhcrit_econ(const RepairOperationCall *call);
+int reattach_econ(const RepairOperationCall *call);
+int replacesuit_econ(const RepairOperationCall *call);
+int reseal_econ(const RepairOperationCall *call);
+int replacep_succ(const RepairOperationCall *call);
+int replaceg_succ(const RepairOperationCall *call);
+int reload_succ(const RepairOperationCall *call);
+int fixinternal_succ(const RepairOperationCall *call);
+int fixarmor_succ(const RepairOperationCall *call);
+int reattach_succ(const RepairOperationCall *call);
+int replacesuit_succ(const RepairOperationCall *call);
+int reseal_succ(const RepairOperationCall *call);
+int repairg_succ(const RepairOperationCall *call);
+int repairenhcrit_succ(const RepairOperationCall *call);
+int repairp_succ(const RepairOperationCall *call);
+int replacep_fail(const RepairOperationCall *call);
+int repairp_fail(const RepairOperationCall *call);
+int replaceg_fail(const RepairOperationCall *call);
+int repairg_fail(const RepairOperationCall *call);
+int repairenhcrit_fail(const RepairOperationCall *call);
+int reload_fail(const RepairOperationCall *call);
+int fixarmor_fail(const RepairOperationCall *call);
+int fixinternal_fail(const RepairOperationCall *call);
+int reattach_fail(const RepairOperationCall *call);
+int replacesuit_fail(const RepairOperationCall *call);
+int reseal_fail(const RepairOperationCall *call);

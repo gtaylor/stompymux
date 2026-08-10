@@ -1,4 +1,5 @@
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "mech_api_types.h"
 #include "mech_tech_api.h"
 #include "mech_utils_api.h"
@@ -7,6 +8,7 @@
 #include "mux/support/stringutil.h"
 #include "section_types.h"
 #include "template_api.h"
+#include "value_handlers_api.h"
 #include "values_internal.h"
 
 #include "checked_conversion.h"
@@ -91,7 +93,8 @@ char *mechTypefunc(int mode, Mech *mech, char *arg) {
     return template_unit_class_name((size_t)unit_class);
   }
   /* Should _alter_ mechtype.. weeeel. */
-  if ((i = compare_array(mech_types, template_unit_class_count(), arg)) >= 0)
+  i = compare_array(mech_types, template_unit_class_count(), arg);
+  if (i >= 0)
     mech_class_set(mech, (UnitClass)i);
   return nullptr;
 }
@@ -103,7 +106,8 @@ char *mechMovefunc(int mode, Mech *mech, char *arg) {
     const MechMovementType movement_type = mech_movement_type(mech);
     return template_movement_type_name((size_t)movement_type);
   }
-  if ((i = compare_array(move_types, template_movement_type_count(), arg)) >= 0)
+  i = compare_array(move_types, template_movement_type_count(), arg);
+  if (i >= 0)
     mech_movement_type_set(mech, (MechMovementType)i);
   return NULL;
 }
@@ -137,7 +141,10 @@ void apply_mechDamage(Mech *omech, char *buf) {
           mech_critical_data_set(mech, i, j,
                                  mech_critical_full_ammunition(mech, i, j));
         else
-          mech_critical_temporary_failure_set(mech, i, j, 0);
+          mech_critical_temporary_failure_set(
+              &(CriticalSlotFailureSet){.mech = mech,
+                                        .slot = {.section = i, .critical = j},
+                                        .failure = 0});
       }
   }
   size_t offset = 0;
@@ -171,7 +178,10 @@ void apply_mechDamage(Mech *omech, char *buf) {
       /* Glitch */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
         if (i2 >= 0 && i2 < NUM_CRITICALS)
-          mech_critical_temporary_failure_set(mech, i1, i2, i3);
+          mech_critical_temporary_failure_set(
+              &(CriticalSlotFailureSet){.mech = mech,
+                                        .slot = {.section = i1, .critical = i2},
+                                        .failure = i3});
     } else if (parse_damage_numbers(token, "R:", true, &i1, &i2, &i3)) {
       /* Reload */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
@@ -200,7 +210,10 @@ void apply_mechDamage(Mech *omech, char *buf) {
         } else if (!mech_critical_is_destroyed(mech, i, j) &&
                    mech_critical_is_destroyed(omech, i, j)) {
           mech_RepairPart(omech, i, j);
-          mech_critical_temporary_failure_set(omech, i, j, 0);
+          mech_critical_temporary_failure_set(
+              &(CriticalSlotFailureSet){.mech = omech,
+                                        .slot = {.section = i, .critical = j},
+                                        .failure = 0});
           do_mag = 1;
         }
         if (equipment_is_ammunition(mech_critical_part_type(mech, i, j))) {
@@ -209,8 +222,10 @@ void apply_mechDamage(Mech *omech, char *buf) {
         } else {
           if (mech_critical_temporary_failure(mech, i, j) !=
               mech_critical_temporary_failure(omech, i, j))
-            mech_critical_temporary_failure_set(
-                omech, i, j, mech_critical_temporary_failure(mech, i, j));
+            mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+                .mech = omech,
+                .slot = {.section = i, .critical = j},
+                .failure = mech_critical_temporary_failure(mech, i, j)});
         }
       }
   }
@@ -244,8 +259,11 @@ static void damage_list_append(char buffer[static LBUF_SIZE], int *count,
   va_end(arguments);
 }
 
-char *mechDamagefunc(int mode, Mech *mech, char *arg,
-                     char buffer[static LBUF_SIZE]) {
+char *mechDamagefunc(const GmvBufferedBidirectionalCall *call) {
+  const int mode = call->mode;
+  Mech *mech = call->mech;
+  char *arg = call->value;
+  char *buffer = call->buffer;
   /* Lists damage in form:
      A:LOC/num[,LOC/num[,LOC(R)/num]],I:LOC/num
      C:LOC/num,R:LOC/num(num),G:LOC/num(num) */
@@ -306,9 +324,11 @@ char *mechCentBearingfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   float fx, fy;
 
   MapCoordToRealCoord(x, y, &fx, &fy);
-  (void)snprintf(buffer, LBUF_SIZE, "%d",
-                 FindBearing(mech_position_real_x(mech),
-                             mech_position_real_y(mech), fx, fy));
+  (void)snprintf(
+      buffer, LBUF_SIZE, "%d",
+      map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                              .y = mech_position_real_y(mech)},
+                                    .end = {.x = fx, .y = fy}}));
   return buffer;
 }
 
@@ -319,8 +339,11 @@ char *mechCentDistfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
 
   MapCoordToRealCoord(x, y, &fx, &fy);
   (void)snprintf(buffer, LBUF_SIZE, "%.2f",
-                 (double)FindHexRange(fx, fy, mech_position_real_x(mech),
-                                      mech_position_real_y(mech)));
+                 (double)map_real_range(&(MapRealSegment){
+                     .start = {.x = fx, .y = fy},
+                     .end = {.x = mech_position_real_x(mech),
+                             .y = mech_position_real_y(mech)},
+                 }));
   return buffer;
 }
 
@@ -329,17 +352,18 @@ char *mechCentDistfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
    1 = bit field -> char
    */
 
-static int bv_val(int in, int mode) {
+static int bitvector_character_bit(int character) {
+  if (character >= 'a' && character <= 'z')
+    return 1 << (character - 'a');
+  return 1 << ('z' - 'a' + 1 + (character - 'A'));
+}
+
+static int bitvector_bit_character(int value) {
   int p = 0;
 
-  if (mode == 0) {
-    if (in >= 'a' && in <= 'z')
-      return 1 << (in - 'a');
-    return 1 << ('z' - 'a' + 1 + (in - 'A'));
-  }
-  while (in > 0) {
+  while (value > 0) {
     p++;
-    in >>= 1;
+    value >>= 1;
   }
   /* Hmm. */
   p--;
@@ -368,7 +392,7 @@ int text2bv(const char *text) {
     };
     if ((current >= 'a' && current <= 'z') ||
         (current >= 'A' && current <= 'Z')) {
-      int k = bv_val(current, 0);
+      int k = bitvector_character_bit(current);
 
       if (k) {
         if (mode_not)
@@ -389,7 +413,7 @@ char *bv2text(int i, char *buffer) {
   while (i > 0) {
     if (i & 1) {
       *(char *)checked_storage_at(buffer, SBUF_SIZE, sizeof(char), output) =
-          clamp_int_to_char(bv_val(p, 1));
+          clamp_int_to_char(bitvector_bit_character(p));
       ++output;
     }
     i >>= 1;

@@ -25,6 +25,13 @@ typedef struct MapLinkUpdateStats {
   int entrances;
 } MapLinkUpdateStats;
 
+typedef struct MapLinkUpdateRequest {
+  BtechContext *context;
+  DbRef source;
+  DbRef location;
+  MapLinkUpdateStats *stats;
+} MapLinkUpdateRequest;
+
 typedef struct MapDirection {
   int x, y;
   char dir;
@@ -43,13 +50,12 @@ static const MapDirection *direction_entry(int direction) {
 static char *link_argument(char **arguments, size_t count, int index) {
   if (index < 0)
     abort();
-  char **slot =
-      checked_storage_at(arguments, count, sizeof(*arguments), (size_t)index);
+  char **slot = (char **)checked_storage_at((void *)arguments, count,
+                                            sizeof(*arguments), (size_t)index);
   return *slot;
 }
 
-static void recursively_update_links(BtechContext *context, DbRef from,
-                                     DbRef loc, MapLinkUpdateStats *stats);
+static void recursively_update_links(const MapLinkUpdateRequest *request);
 
 static bool parse_coordinate_pair(char *text, int *x, int *y) {
   char *separator = strchr(text, ',');
@@ -137,7 +143,8 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
   buf = alloc_lbuf("add_links");
 
   strlcpy(buf, data, LBUF_SIZE);
-  if ((found = mech_parseattributes(buf, args, 500)) > 0)
+  found = mech_parseattributes(buf, args, 500);
+  if (found > 0)
     for (i = 0; i < found; i++) {
       if (!parse_int_checked(link_argument(args, 500, i), &targ))
         continue;
@@ -159,19 +166,27 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
       add_mapobj_to_type(map, TYPE_BUILD, &foo, 1);
       if (stats != nullptr)
         stats->builds++;
-      recursively_update_links(map->xcode.context, loc, targ, stats);
+      recursively_update_links(
+          &(MapLinkUpdateRequest){.context = map->xcode.context,
+                                  .source = loc,
+                                  .location = targ,
+                                  .stats = stats});
     }
   free_lbuf(buf);
 }
 
-static void recursively_update_links(BtechContext *context, DbRef from,
-                                     DbRef loc, MapLinkUpdateStats *stats) {
+static void recursively_update_links(const MapLinkUpdateRequest *request) {
+  BtechContext *context = request->context;
+  const DbRef from = request->source;
+  const DbRef loc = request->location;
+  MapLinkUpdateStats *stats = request->stats;
   BattleMap *map;
   MapObject foo;
   char *tmps;
 
   memset(&foo, 0, sizeof(MapObject));
-  if (!(map = btech_context_get_map(context, loc)))
+  map = btech_context_get_map(context, loc);
+  if (!map)
     return;
   clear_hex_bits(map, 2);
   if (from >= 0) {
@@ -203,7 +218,8 @@ static void recursively_update_links(BtechContext *context, DbRef from,
 }
 
 void recursively_updatelinks(BtechContext *context, DbRef from, DbRef loc) {
-  recursively_update_links(context, from, loc, nullptr);
+  recursively_update_links(&(MapLinkUpdateRequest){
+      .context = context, .source = from, .location = loc});
 }
 
 void map_updatelinks(DbRef player, void *data, char *buffer) {
@@ -212,7 +228,11 @@ void map_updatelinks(DbRef player, void *data, char *buffer) {
   DbRef ourloc;
 
   ourloc = game_object_location(map->xcode.context->database, player);
-  recursively_update_links(map->xcode.context, NOTHING, ourloc, &stats);
+  recursively_update_links(
+      &(MapLinkUpdateRequest){.context = map->xcode.context,
+                              .source = NOTHING,
+                              .location = ourloc,
+                              .stats = &stats});
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "Updated %d BUILD objs, %d LEAVE objs, %d ENTRANCE objs.",
                 stats.builds, stats.leaves, stats.entrances);

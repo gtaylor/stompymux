@@ -218,7 +218,8 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  char *movement = *(char **)checked_storage_at(args, 1, sizeof(*args), 0);
+  char *movement =
+      *(char **)checked_storage_at((void *)args, 1, sizeof(*args), 0);
   switch (ascii_to_upper(*movement)) {
   case 'M':
     mech_class_set(mech, CLASS_MECH);
@@ -498,7 +499,8 @@ void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  char *movement = *(char **)checked_storage_at(args, 1, sizeof(*args), 0);
+  char *movement =
+      *(char **)checked_storage_at((void *)args, 1, sizeof(*args), 0);
   switch (ascii_to_upper(*movement)) {
   case 'T':
     mech_movement_type_set(mech, MOVE_TRACK);

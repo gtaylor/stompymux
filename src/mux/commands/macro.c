@@ -1,5 +1,4 @@
 #include "mux/commands/macro.h"
-
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/communication/channel_registry.h"
@@ -21,25 +20,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-
 static MacroSet *macro_registry_storage_item(const MacroRegistry *registry,
                                              size_t index) {
   return *(MacroSet *const *)checked_storage_at_const(
-      registry->sets, (size_t)registry->capacity, sizeof(*registry->sets),
-      index);
+      (const void *)registry->sets, (size_t)registry->capacity,
+      sizeof(*registry->sets), index);
 }
-
 static char *macro_string_storage_item(const MacroSet *set, size_t index) {
-  return *(char *const *)checked_storage_at_const(
-      set->string, (size_t)set->macro_capacity, sizeof(*set->string), index);
+  return *(char *const *)checked_storage_at_const((const void *)set->string,
+                                                  (size_t)set->macro_capacity,
+                                                  sizeof(*set->string), index);
 }
-
 static int *commac_macro_slot(struct commac *commac, size_t index) {
   return checked_storage_at(commac->macros,
                             sizeof(commac->macros) / sizeof(commac->macros[0]),
                             sizeof(*commac->macros), index);
 }
-
 static int commac_macro_item(const struct commac *commac, size_t index) {
   return *(const int *)checked_storage_at_const(
       commac->macros, sizeof(commac->macros) / sizeof(commac->macros[0]),
@@ -62,17 +58,14 @@ MACENT macro_table[] = {{"add", do_add_macro},       {"clear", do_clear_macro},
 static size_t macro_command_count(void) {
   return sizeof(macro_table) / sizeof(macro_table[0]) - 1;
 }
-
 static MACENT *macro_command_at(size_t index) {
   return checked_storage_at(macro_table, macro_command_count(),
                             sizeof(*macro_table), index);
 }
 void init_mactab(CommandRegistry *commands) {
   hash_table_initialize(&commands->macros, 5 * HASH_FACTOR);
-
   for (size_t index = 0; index < macro_command_count(); index++) {
     MACENT *mp = macro_command_at(index);
-
     hash_table_add(mp->cmdname, (int *)mp, &commands->macros);
   }
 }
@@ -82,20 +75,15 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
   char *cmd;
   MACENT *mp;
   char *old;
-
   cmd = checked_mutable_string_suffix(in, 1);
-
   if (!is_player(match->evaluation->world->database, player)) {
     macro_notify(match, player, "MACRO: Only players may use macro_sets.");
     return 0;
   }
   old = alloc_lbuf("do_macro");
-
   StringCopy(old, in);
-
   const size_t command_length = strlen(cmd);
   size_t command_end = 0;
-
   while (command_end < command_length &&
          *(const char *)checked_storage_at_const(
              cmd, command_length + 1, sizeof(char), command_end) != ' ')
@@ -106,14 +94,15 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
     s = checked_storage_at(cmd, command_length + 1, sizeof(char),
                            command_end + 1);
   }
-
   mp = (MACENT *)hash_table_find(cmd, &commands->macros);
   if (mp != nullptr) {
     (mp->handler)(match, registry, player, s);
     free_lbuf(old);
     return 0;
   }
-  if ((*out = do_process_macro(registry, player, in, s)) != nullptr) {
+  *out = do_process_macro(&(MacroExpansionRequest){
+      .registry = registry, .player = player, .input = in, .arguments = s});
+  if (*out) {
     free_lbuf(old);
     return 1;
   } else {
@@ -127,17 +116,14 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
      * continue
      */
 }
-
 void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s) {
   int i;
   int notified = 0;
   MacroSet *m;
   char *unparse;
-
   for (i = 0; i < registry->count; i++) {
     m = macro_registry_item(registry, (size_t)i);
-
     if (can_read_macros(match->evaluation->world->database, player, m)) {
       if (!notified) {
         macro_notify(match, player,
@@ -154,11 +140,9 @@ void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       free_lbuf(unparse);
     }
   }
-
   if (!notified)
     macro_notify(match, player, "MACRO: There are no macro sets you can read.");
 }
-
 void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s) {
   int first;
@@ -166,14 +150,11 @@ void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   MacroSet *m;
   struct commac *c;
   int i;
-
   c = get_commac(registry->channels, player);
-
   first = -1;
   for (i = 0; i < 5 && first < 0; i++)
     if (commac_macro_item(c, (size_t)i) == -1)
       first = i;
-
   if (first < 0) {
     macro_notify(match, player,
                  "MACRO: Sorry, you already have 5 sets defined on you.");
@@ -197,15 +178,12 @@ void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                  "MACRO: What set do you want to add to your macro system?");
   }
 }
-
 void do_del_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s) {
   (void)registry;
   struct commac *c;
   int set;
-
   c = get_commac(registry->channels, player);
-
   if (is_number(s)) {
     set = clamped_atoi(s);
     if (set >= 0 && set < 5 && commac_macro_item(c, (size_t)set) >= 0) {
@@ -225,12 +203,11 @@ void do_del_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
         "MACRO: What set did you want to delete from your macro system?",
         MSG_ME_ALL | MSG_F_DOWN);
 }
-
 void do_desc_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s) {
   MacroSet *m;
-
-  m = get_macro_set(registry, player, -1);
+  m = get_macro_set(
+      &(MacroSetRequest){.registry = registry, .player = player, .slot = -1});
   if (m) {
     free(m->desc);
     m->desc = malloc(strlen(s) + 1);
@@ -240,14 +217,12 @@ void do_desc_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   } else
     macro_notify(match, player, "MACRO: You have no current slot set.");
 }
-
 void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *s) {
   MacroSet *m;
   int sign;
-
-  m = get_macro_set(registry, player, -1);
-
+  m = get_macro_set(
+      &(MacroSetRequest){.registry = registry, .player = player, .slot = -1});
   if (m) {
     if ((m->player != player) &&
         !is_wizard(match->evaluation->world->database, player)) {
@@ -259,7 +234,6 @@ void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       s = checked_mutable_string_suffix(s, 1);
     } else
       sign = 1;
-
     switch (*s) {
     case 'L':
     case 'l':
@@ -310,14 +284,12 @@ void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   } else
     macro_notify(match, player, "MACRO: You have no current slot set.");
 }
-
 void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s) {
   MacroSet *m;
   int which;
   int i;
   char buffer[LBUF_SIZE];
-
   if (!s || !*s) {
     macro_notify(match, player, "MACRO: You need to specify a macro set.");
     return;
@@ -335,7 +307,6 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     macro_notify(match, player, "MACRO: I do not see that set here.");
     return;
   }
-
   if (m && can_read_macros(match->evaluation->world->database, player, m)) {
     notify_printf(match->evaluation, player, "Macro Definitions for %s",
                   m->desc);
@@ -348,14 +319,11 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   } else
     macro_notify(match, player, "MACRO: Permission denied.");
 }
-
 void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s) {
   struct commac *c;
   int set;
-
   c = get_commac(registry->channels, player);
-
   if (is_number(s)) {
     set = clamped_atoi(s);
     if (set >= 0 && set < 5 &&
@@ -369,22 +337,18 @@ void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     macro_notify(match, player,
                  "MACRO: What slot did you want to make current?");
 }
-
 void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                      char *s) {
   int i;
   struct commac *c;
   MacroSet *m;
   char *unparse;
-
   c = get_commac(registry->channels, player);
-
   macro_notify(match, player,
                "#: Num  Description                         Owner            "
                "         LRW");
   for (i = 0; i < 5; i++) {
     const int macro_index = commac_macro_item(c, (size_t)i);
-
     if (macro_index >= 0)
       if (!(is_valid_macro_index(registry, macro_index)))
         notify_printf(match->evaluation, player, "%d: INVALID MACRO SET!", i);
@@ -403,20 +367,19 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
   notify_printf(match->evaluation, player, "Current Macro Slot: %d", c->curmac);
 }
-
 void do_ex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                  char *s) {
   MacroSet *m;
   int which;
   int i;
   char buffer[LBUF_SIZE];
-
   if (is_number(s)) {
     which = clamped_atoi(s);
-    m = get_macro_set(registry, player, which);
+    m = get_macro_set(&(MacroSetRequest){
+        .registry = registry, .player = player, .slot = which});
   } else
-    m = get_macro_set(registry, player, -1);
-
+    m = get_macro_set(
+        &(MacroSetRequest){.registry = registry, .player = player, .slot = -1});
   if (m) {
     notify_printf(match->evaluation, player, "Macro Definitions for %s",
                   m->desc);
@@ -429,16 +392,14 @@ void do_ex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   } else
     macro_notify(match, player, "MACRO: Illegal macro set to examine.");
 }
-
 void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *cmd) {
   MacroSet *m;
   DbRef thing;
   char *unparse;
-
-  m = get_macro_set(registry, player, -1);
+  m = get_macro_set(
+      &(MacroSetRequest){.registry = registry, .player = player, .slot = -1});
   thing = match_thing(match, player, cmd);
-
   if (thing == NOTHING) {
     macro_notify(match, player, "MACRO: I do not see that here.");
     return;
@@ -458,21 +419,18 @@ void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                 m->desc, unparse);
   free_lbuf(unparse);
 }
-
 void clear_macro_set(MacroRegistry *registry, int set) {
   MacroSet *m;
   struct commac *c;
   int i, j;
-
   if (is_valid_macro_index(registry, set)) {
     m = macro_registry_item(registry, (size_t)set);
     for (i = 0; i < m->macro_count; i++) {
       free(macro_string_item(m, (size_t)i));
     }
     free(m->alias);
-    free(m->string);
+    free((void *)m->string);
     free(m);
-
     registry->count--;
     for (i = set; i < registry->count; i++)
       *macro_registry_slot(registry, (size_t)i) =
@@ -484,7 +442,6 @@ void clear_macro_set(MacroRegistry *registry, int set) {
     while (c) {
       for (j = 0; j < 5; j++) {
         int *macro = commac_macro_slot(c, (size_t)j);
-
         if (*macro == set) {
           *macro = -1;
           if (c->curmac == j)
@@ -497,15 +454,12 @@ void clear_macro_set(MacroRegistry *registry, int set) {
     }
   }
 }
-
 void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *s) {
   int set;
   MacroSet *m;
   struct commac *c;
-
   c = get_commac(registry->channels, player);
-
   if (c->curmac == -1) {
     macro_notify(match, player,
                  "MACRO: You are not currently editing a macro set.");
@@ -518,7 +472,6 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   m = is_valid_macro_index(registry, set)
           ? macro_registry_item(registry, (size_t)set)
           : nullptr;
-
   if (is_valid_macro_index(registry, set)) {
     if ((player != m->player) &&
         !is_wizard(match->evaluation->world->database, player)) {
@@ -535,7 +488,6 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                 is_valid_macro_index(registry, set) ? m->desc : "Nonexistent");
   clear_macro_set(registry, set);
 }
-
 void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *cmd) {
   int i, j, where;
@@ -545,9 +497,8 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   char buffer[LBUF_SIZE];
   char **ns;
   char *na;
-
-  m = get_macro_set(registry, player, -1);
-
+  m = get_macro_set(
+      &(MacroSetRequest){.registry = registry, .player = player, .slot = -1});
   if (!m) {
     macro_notify(match, player, "MACRO: No current set.");
     return;
@@ -559,7 +510,6 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   char *input = cmd;
   const size_t input_length = strlen(input);
   size_t offset = 0;
-
   while (offset < input_length &&
          *(const char *)checked_storage_at_const(input, input_length + 1,
                                                  sizeof(char), offset) == ' ') {
@@ -571,7 +521,6 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   while (offset < input_length) {
     const char character = *(const char *)checked_storage_at_const(
         input, input_length + 1, sizeof(char), offset);
-
     if (character == ' ' || character == '=')
       break;
     offset++;
@@ -600,9 +549,7 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     offset++;
   }
   cmd = checked_storage_at(input, input_length + 1, sizeof(char), offset);
-
   s = cmd;
-
   if (!*s) {
     macro_notify(match, player,
                  "MACRO: You must specify a string to substitute for.");
@@ -634,17 +581,17 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   if (m->macro_count >= m->macro_capacity) {
     m->macro_capacity += 10;
     na = malloc(5 * (size_t)m->macro_capacity);
-    ns = malloc(sizeof(char *) * (size_t)m->macro_capacity);
-
+    ns = (char **)malloc(sizeof(char *) * (size_t)m->macro_capacity);
     for (i = 0; i < m->macro_count; i++) {
       StringCopy(checked_storage_at(na, (size_t)m->macro_capacity * 5,
                                     sizeof(char), (size_t)i * 5),
                  macro_alias_at(m, (size_t)i));
-      *(char **)checked_storage_at(ns, (size_t)m->macro_capacity, sizeof(*ns),
-                                   (size_t)i) = macro_string_item(m, (size_t)i);
+      *(char **)checked_storage_at((void *)ns, (size_t)m->macro_capacity,
+                                   sizeof(*ns), (size_t)i) =
+          macro_string_item(m, (size_t)i);
     }
     free(m->alias);
-    free(m->string);
+    free((void *)m->string);
     m->alias = na;
     m->string = ns;
   }
@@ -653,7 +600,6 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     StringCopy(macro_alias_at(m, (size_t)i), macro_alias_at(m, (size_t)i - 1));
     *macro_string_slot(m, (size_t)i) = macro_string_item(m, (size_t)i - 1);
   }
-
   where = j;
   StringCopy(macro_alias_at(m, (size_t)where), alias);
   *macro_string_slot(m, (size_t)where) = malloc(strlen(s) + 1);
@@ -662,14 +608,12 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                  s);
   macro_notify(match, player, buffer);
 }
-
 void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *cmd) {
   int i;
   MacroSet *m;
-
-  m = get_macro_set(registry, player, -1);
-
+  m = get_macro_set(
+      &(MacroSetRequest){.registry = registry, .player = player, .slot = -1});
   if (!m || !can_write_macros(player, m)) {
     macro_notify(match, player, "MACRO: Permission denied.");
     return;
@@ -690,9 +634,11 @@ void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
   macro_notify(match, player, "MACRO: That macro is not in this set.");
 }
-
-char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
-                       char *s) {
+char *do_process_macro(const MacroExpansionRequest *request) {
+  MacroRegistry *registry = request->registry;
+  DbRef player = request->player;
+  char *in = request->input;
+  char *s = request->arguments;
   char *tar;
   char *next;
   MacroSet *m;
@@ -701,7 +647,6 @@ char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
   int i;
   struct commac *c;
   char *buff;
-
   c = get_commac(registry->channels, player);
   buff = alloc_lbuf("do_process_macro");
   buff[0] = '\0'; /*
@@ -709,7 +654,6 @@ char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
                    */
   for (i = 0; i < 5; i++) {
     const int macro_index = commac_macro_item(c, (size_t)i);
-
     if (is_valid_macro_index(registry, macro_index)) {
       m = macro_registry_item(registry, (size_t)macro_index);
       if (m->macro_count > 0) {
@@ -725,19 +669,16 @@ char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
           else
             first = current + 1;
         }
-
         if (!dir) {
           tar = macro_string_item(m, (size_t)current);
 #if 1 /* Original MUSE code */
           const size_t replacement_length = strlen(tar);
           size_t replacement_offset = 0;
           size_t output_offset = 0;
-
           while (replacement_offset < replacement_length &&
                  output_offset < LBUF_SIZE - 1) {
             const char character = *(const char *)checked_storage_at_const(
                 tar, replacement_length + 1, sizeof(char), replacement_offset);
-
             if (character == '%' &&
                 replacement_offset + 1 < replacement_length &&
                 *(const char *)checked_storage_at_const(
@@ -750,7 +691,6 @@ char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
               char *destination = checked_storage_at(
                   buff, LBUF_SIZE, sizeof(char), output_offset);
               const size_t remaining = LBUF_SIZE - output_offset;
-
               strlcpy(destination, s, remaining);
               output_offset += strlen(destination);
               replacement_offset++;

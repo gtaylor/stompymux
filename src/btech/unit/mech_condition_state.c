@@ -102,32 +102,41 @@ bool mech_supercharger_movement_mode_is_enabled(const Mech *mech) {
   return mech->rd.status2 & SCHARGE_ENABLED;
 }
 
-static bool mech_condition_mode_toggle(int *status, int mode, int opposite) {
-  if (*status & mode) {
-    *status &= ~mode;
+typedef struct MechConditionModeToggle {
+  int *status;
+  int mode;
+  int opposite_mode;
+} MechConditionModeToggle;
+
+static bool mech_condition_mode_toggle(const MechConditionModeToggle *request) {
+  if (*request->status & request->mode) {
+    *request->status &= ~request->mode;
     return false;
   }
-  *status |= mode;
-  *status &= ~opposite;
+  *request->status |= request->mode;
+  *request->status &= ~request->opposite_mode;
   return true;
 }
 
 bool mech_ecm_mode_toggle(Mech *mech, bool eccm) {
-  return mech_condition_mode_toggle(&mech->rd.status2,
-                                    eccm ? ECCM_ENABLED : ECM_ENABLED,
-                                    eccm ? ECM_ENABLED : ECCM_ENABLED);
+  return mech_condition_mode_toggle(&(MechConditionModeToggle){
+      .status = &mech->rd.status2,
+      .mode = eccm ? ECCM_ENABLED : ECM_ENABLED,
+      .opposite_mode = eccm ? ECM_ENABLED : ECCM_ENABLED});
 }
 
 bool mech_personal_ecm_mode_toggle(Mech *mech, bool eccm) {
-  return mech_condition_mode_toggle(&mech->rd.status2,
-                                    eccm ? PER_ECCM_ENABLED : PER_ECM_ENABLED,
-                                    eccm ? PER_ECM_ENABLED : PER_ECCM_ENABLED);
+  return mech_condition_mode_toggle(&(MechConditionModeToggle){
+      .status = &mech->rd.status2,
+      .mode = eccm ? PER_ECCM_ENABLED : PER_ECM_ENABLED,
+      .opposite_mode = eccm ? PER_ECM_ENABLED : PER_ECCM_ENABLED});
 }
 
 bool mech_angel_ecm_mode_toggle(Mech *mech, bool eccm) {
-  return mech_condition_mode_toggle(
-      &mech->rd.status2, eccm ? ANGEL_ECCM_ENABLED : ANGEL_ECM_ENABLED,
-      eccm ? ANGEL_ECM_ENABLED : ANGEL_ECCM_ENABLED);
+  return mech_condition_mode_toggle(&(MechConditionModeToggle){
+      .status = &mech->rd.status2,
+      .mode = eccm ? ANGEL_ECCM_ENABLED : ANGEL_ECM_ENABLED,
+      .opposite_mode = eccm ? ANGEL_ECM_ENABLED : ANGEL_ECCM_ENABLED});
 }
 
 void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist) {

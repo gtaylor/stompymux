@@ -18,7 +18,9 @@
 #include "mux/support/formatting.h"
 #include "special_object.h"
 
-void lower_xp(BtechContext *context, DbRef player, int promillage) {
+void character_experience_reduce(const CharacterExperienceReduction *change) {
+  BtechContext *context = change->context;
+  const DbRef player = change->character;
   PSTATS stats, *s = &stats;
   int i;
 
@@ -28,13 +30,19 @@ void lower_xp(BtechContext *context, DbRef player, int promillage) {
     if (!xp)
       continue;
     if (xp < 0) {
-      character_stats_xp_set(s, i, 0);
+      character_stats_xp_set(
+          &(CharacterStatsExperienceChange){.stats = s, .code = i});
       continue;
     }
-    character_stats_xp_set(s, i, (xp % XP_MAX) * promillage / 1000);
-    character_stats_xp_set(s, i,
-                           character_stats_xp_get(s, i) % XP_MAX +
-                               XP_MAX * figure_xp_bonus(context, player, s, i));
+    character_stats_xp_set(&(CharacterStatsExperienceChange){
+        .stats = s,
+        .code = i,
+        .value = (xp % XP_MAX) * change->per_mille / 1000});
+    character_stats_xp_set(&(CharacterStatsExperienceChange){
+        .stats = s,
+        .code = i,
+        .value = character_stats_xp_get(s, i) % XP_MAX +
+                 XP_MAX * figure_xp_bonus(context, player, s, i)});
   }
   character_stats_store(context, player, s, VALUES_ALL);
 }
@@ -46,7 +54,8 @@ void AccumulateTechXP(BtechContext *context, DbRef pilot, Mech *mech,
   static const char *techw = "technician-weapons";
 
   if (mech) {
-    if (!(skname = FindTechSkillName(mech)))
+    skname = FindTechSkillName(mech);
+    if (!skname)
       return;
   } else
     skname = techw;
@@ -97,7 +106,9 @@ void AccumulateCommXP(DbRef pilot, Mech *mech) {
                 "Comm-Conventional", mech_dbref(mech)));
 }
 
-void AccumulatePilXP(DbRef pilot, Mech *mech, int reason, int addanyway) {
+void piloting_experience_award(const PilotingExperienceAward *award) {
+  Mech *mech = award->mech;
+  const DbRef pilot = award->pilot;
   BtechContext *context = mech_context(mech);
   const char *skname;
   int xp;
@@ -108,14 +119,15 @@ void AccumulatePilXP(DbRef pilot, Mech *mech, int reason, int addanyway) {
   if (!mech_has_active_pilot(mech))
     return;
 
-  if (!(skname = FindPilotingSkillName(mech)))
+  skname = FindPilotingSkillName(mech);
+  if (!skname)
     return;
 
-  if (!addanyway) {
+  if (!award->unconditional) {
     if (!mech_piloting_position_mark_changed(mech))
       return;
   }
-  xp = MAX(1, reason);
+  xp = MAX(1, award->reason);
 
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels

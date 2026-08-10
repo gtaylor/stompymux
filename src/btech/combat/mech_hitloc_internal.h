@@ -13,6 +13,7 @@
 #include "mech_damage_api.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
+#include "mech_hitloc_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify_api.h"
 #include "mech_status_types.h"
@@ -25,23 +26,30 @@ int mech_punch_hit_location(Mech *target, int hitGroup);
 int mech_kick_hit_location(Mech *target, int hitGroup);
 int mech_battle_suit_hit_location(Mech *mech);
 int mech_hit_location_transfer(Mech *mech, int hitloc);
-int mech_section_is_crittable(Mech *mech, int loc, int tres);
+int mech_section_is_crittable(Mech *mech, int section,
+                              CriticalThreshold threshold);
 int mech_spheroid_rear_section(const Mech *mech, int section);
 void mech_motive_system_hit(Mech *mech, int wRollMod);
-int mech_fasa_hit_location(Mech *mech, int hitGroup, int *iscritical,
-                           int *isrear);
-int fasa_mech_hit_location(Mech *mech, int hitGroup, int *iscritical,
-                           int *isrear, int roll);
-int fasa_ground_hit_location(Mech *mech, int hitGroup, int *iscritical,
-                             int *isrear, int roll);
-int fasa_aerospace_hit_location(Mech *mech, int hitGroup, int *iscritical,
-                                int *isrear, int roll);
-int fasa_vtol_naval_hit_location(Mech *mech, int hitGroup, int *iscritical,
-                                 int *isrear, int roll);
-int mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
-                                       int *iscritical, int *isrear);
-int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical,
-                                int *isrear);
+static inline HitLocationResult hit_location_result_at(HitLocationResult result,
+                                                       int location) {
+  result.location = location;
+  return result;
+}
+
+HitLocationResult mech_fasa_hit_location(Mech *mech, int hit_group,
+                                         HitLocationResult result);
+HitLocationResult fasa_mech_hit_location(Mech *mech, int hit_group,
+                                         HitLocationResult result, int roll);
+HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
+                                           HitLocationResult result, int roll);
+HitLocationResult fasa_aerospace_hit_location(Mech *mech, int hit_group,
+                                              HitLocationResult result,
+                                              int roll);
+HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
+                                               HitLocationResult result,
+                                               int roll);
+HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hit_group,
+                                                     HitLocationResult result);
+int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical);
 int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear);
-int find_swarm_hit_location(BtechContext *context, int *iscritical,
-                            int *isrear);
+HitLocationResult find_swarm_hit_location(BtechContext *context);

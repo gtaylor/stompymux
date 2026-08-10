@@ -42,8 +42,11 @@ void bridge_set_elevation(Mech *mech) {
   mech_position_z_set(mech, upper_elevation);
 }
 
-int collision_check(Mech *mech, MovementCollisionMode mode, int last_elevation,
-                    int last_terrain) {
+int collision_check(const MovementCollisionCheck *check) {
+  Mech *mech = check->mech;
+  MovementCollisionMode mode = check->mode;
+  int last_elevation = check->previous_elevation;
+  int last_terrain = check->previous_terrain;
   BtechContext *context = mech_context(mech);
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(mech));
   bool over_water = mech_moves_over_water(mech);

@@ -26,8 +26,11 @@
  * * a place.
  */
 
-void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
-                  int key, char *direction) {
+void move_command(const MoveCommandRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef player = request->player;
+  int key = request->key;
+  char *direction = request->direction;
   DbRef exit, loc;
   int i, quiet;
   const ServerConfiguration *configuration = evaluation->world->configuration;
@@ -37,9 +40,8 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
                                                             * go home w/o stuff
                                                             */
 
-    if ((loc = game_object_location(evaluation->world->database, player)) !=
-            NOTHING &&
-        !is_dark(evaluation->world->database, player) &&
+    loc = game_object_location(evaluation->world->database, player);
+    if (loc != NOTHING && !is_dark(evaluation->world->database, player) &&
         !is_dark(evaluation->world->database, loc)) {
 
       /*
@@ -49,7 +51,12 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
       memset(buffer, 0, MBUF_SIZE);
       (void)snprintf(buffer, MBUF_SIZE - 1, "%s goes home.",
                      game_object_name(evaluation->world->database, player));
-      notify_except(evaluation, loc, player, player, buffer);
+      notify_excluding(&(ExcludingNotification){.evaluation = evaluation,
+                                                .location = loc,
+                                                .sender = player,
+                                                .exceptions = {player},
+                                                .exception_count = 1,
+                                                .message = buffer});
     }
     /*
      * give the player the messages
@@ -58,7 +65,10 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
     for (i = 0; i < 3; i++)
       notify_checked(evaluation, player, player,
                      "There's no place like home...", MSG_ME_ALL | MSG_F_DOWN);
-    move_via_generic(evaluation, player, HOME, NOTHING, 0);
+    move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                              .object = player,
+                                              .destination = HOME,
+                                              .cause = NOTHING});
     return;
   }
   /*
@@ -90,8 +100,10 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
 
 void do_move(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
-  move_command(evaluation, invocation->player, invocation->cause,
-               invocation->key, invocation->first);
+  move_command(&(MoveCommandRequest){.evaluation = evaluation,
+                                     .player = invocation->player,
+                                     .key = invocation->key,
+                                     .direction = invocation->first});
 }
 
 /*
@@ -115,10 +127,18 @@ void do_enter_internal(EvaluationContext *evaluation, DbRef player, DbRef thing,
              lock_test(evaluation, player, player, player, loc, LUA_LOCK_LEAVE,
                        LUA_LOCK_OPERATION_ENTER, quiet, &lock, &result)) {
     oattr = quiet ? HUSH_ENTER : 0;
-    move_via_generic(evaluation, player, thing, NOTHING, oattr);
+    move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                              .object = player,
+                                              .destination = thing,
+                                              .cause = NOTHING,
+                                              .hush = oattr});
   } else {
-    notify_lock_failure(evaluation, &lock, &result, "You can't enter that.",
-                        nullptr, LUA_EVENT_ENTER_FAIL);
+    notify_lock_failure(
+        &(LockFailureNotification){.evaluation = evaluation,
+                                   .invocation = &lock,
+                                   .result = &result,
+                                   .enactor_default = "You can't enter that.",
+                                   .event = LUA_EVENT_ENTER_FAIL});
   }
 }
 
@@ -134,7 +154,8 @@ void do_enter(CommandInvocation *invocation) {
   init_match(match, player, what, OBJECT_TYPE_THING);
   match_neighbor(match);
 
-  if ((thing = noisy_match_result(match)) == NOTHING)
+  thing = noisy_match_result(match);
+  if (thing == NOTHING)
     return;
 
   switch (typeof_obj(evaluation->world->database, thing)) {
@@ -182,11 +203,18 @@ void do_leave(CommandInvocation *invocation) {
                 game_object_location(evaluation->world->database, loc),
                 LUA_LOCK_ENTER, LUA_LOCK_OPERATION_LEAVE, quiet, &lock,
                 &result)) {
-    move_via_generic(evaluation, player,
-                     game_object_location(evaluation->world->database, loc),
-                     NOTHING, quiet);
+    move_via_generic(&(ObjectMovementRequest){
+        .evaluation = evaluation,
+        .object = player,
+        .destination = game_object_location(evaluation->world->database, loc),
+        .cause = NOTHING,
+        .hush = quiet});
   } else {
-    notify_lock_failure(evaluation, &lock, &result, "You can't leave.", nullptr,
-                        LUA_EVENT_LEAVE_FAIL);
+    notify_lock_failure(
+        &(LockFailureNotification){.evaluation = evaluation,
+                                   .invocation = &lock,
+                                   .result = &result,
+                                   .enactor_default = "You can't leave.",
+                                   .event = LUA_EVENT_LEAVE_FAIL});
   }
 }

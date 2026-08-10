@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "map_coordinates.h"
 #include "mux/server/platform.h"
 
 /* mech.move.c */
@@ -41,13 +42,25 @@ int mech_height_above_surface(Mech *mech);
 void mech_jump_land(Mech *mech);
 void mech_flood_section(Mech *mech, int section, int elevation);
 void mech_flood(Mech *mech);
-void mech_fall(Mech *mech, int levels, int seemsg);
+void mech_fall(Mech *mech, int levels, bool show_message);
 typedef enum MechDominoMode {
   MECH_DOMINO_GROUND,
   MECH_DOMINO_JUMP,
   MECH_DOMINO_FALL,
 } MechDominoMode;
 
-int battle_map_mech_count_in_hex(BattleMap *map, int x, int y, int friendly,
-                                 int team);
+typedef enum TeamRelationship {
+  TEAM_RELATIONSHIP_ANY,
+  TEAM_RELATIONSHIP_FRIENDLY,
+  TEAM_RELATIONSHIP_HOSTILE,
+} TeamRelationship;
+
+typedef struct BattleMapHexOccupancyRequest {
+  BattleMap *map;
+  MapHexPosition position;
+  TeamRelationship relationship;
+  int team;
+} BattleMapHexOccupancyRequest;
+
+int battle_map_mech_count_in_hex(const BattleMapHexOccupancyRequest *request);
 int mech_domino_resolve(Mech *mech, MechDominoMode mode);

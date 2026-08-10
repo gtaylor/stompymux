@@ -14,6 +14,7 @@
 #include "mux/commands/macro.h" // IWYU pragma: keep
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h" // IWYU pragma: keep
+#include "mux/server/configuration_interpreter.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
@@ -84,8 +85,9 @@ void command_list_switches(EvaluationContext *evaluation,
  * * cf_access: Change command or switch permissions.
  */
 
-int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-              ConfigurationContext *context) {
+int cf_access(const ConfigurationCall *call) {
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   CMDENT *cmdp;
   char *ap;
   const size_t length = strlen(str);
@@ -120,14 +122,19 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
 
   cmdp = (CMDENT *)hash_table_find(str, &context->command_registry->commands);
   if (cmdp != nullptr) {
-    if (set_switch)
-      return cf_ntab_access((int *)cmdp->switches, ap, extra, player, cmd,
-                            context);
-    else
-      return configuration_modify_bits(&(cmdp->perms), ap, extra, player, cmd,
-                                       context);
+    if (set_switch) {
+      ConfigurationCall access_call = *call;
+      access_call.value = cmdp->switches;
+      access_call.text = ap;
+      return cf_ntab_access(&access_call);
+    }
+    ConfigurationCall access_call = *call;
+    access_call.value = &cmdp->perms;
+    access_call.text = ap;
+    return configuration_modify_bits(&access_call);
   } else {
-    configuration_log_not_found(context, player, cmd, "Command", str);
+    configuration_log_not_found(context, call->player, call->command, "Command",
+                                str);
     return -1;
   }
 }
@@ -137,8 +144,10 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
  * * cf_cmd_alias: Add a command alias.
  */
 
-int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
-                 ConfigurationContext *context) {
+int cf_cmd_alias(const ConfigurationCall *call) {
+  void *vp = call->value;
+  char *str = call->text;
+  ConfigurationContext *context = call->context;
   char *alias, *orig, *ap;
   CMDENT *cmdp, *cmd2;
   NameTable *nt;
@@ -178,7 +187,8 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
 
     cmdp = (CMDENT *)hash_table_find(orig, (HashTable *)vp);
     if (cmdp == nullptr) {
-      configuration_log_not_found(context, player, cmd, "Command", orig);
+      configuration_log_not_found(context, call->player, call->command,
+                                  "Command", orig);
       return -1;
     }
     /*
@@ -186,9 +196,10 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
      */
 
     nt = name_table_find_entry(context->database, context->configuration,
-                               player, (NameTable *)cmdp->switches, ap);
+                               call->player, (NameTable *)cmdp->switches, ap);
     if (!nt) {
-      configuration_log_not_found(context, player, cmd, "Switch", ap);
+      configuration_log_not_found(context, call->player, call->command,
+                                  "Switch", ap);
       return -1;
     }
     /*
@@ -221,7 +232,8 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
 
     hp = hash_table_find(orig, (HashTable *)vp);
     if (hp == nullptr) {
-      configuration_log_not_found(context, player, cmd, "Entry", orig);
+      configuration_log_not_found(context, call->player, call->command, "Entry",
+                                  orig);
       return -1;
     }
     hash_table_add(alias, hp, (HashTable *)vp);

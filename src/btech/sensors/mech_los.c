@@ -81,8 +81,14 @@ float mech_los_actual_elevation(BattleMap *map, int x, int y, Mech *mech) {
 /* from/mech: mech _mech_ seeing _target_ on map _map_, _ff_
    is the previous flag (or seeing _x_,_y_ if _target_ is NULL),
    hexRange is range in hexes */
-int mech_los_calculate_flags(Mech *mech, Mech *target, BattleMap *map, int x,
-                             int y, int previous_flags, float hex_range) {
+int mech_los_calculate_flags(const MechLosCalculation *calculation) {
+  Mech *mech = calculation->observer;
+  Mech *target = calculation->target;
+  BattleMap *map = calculation->map;
+  const int x = calculation->target_hex.x;
+  const int y = calculation->target_hex.y;
+  const int previous_flags = calculation->previous_flags;
+  const float hex_range = calculation->hex_range;
   int new_flag = (previous_flags & (BATTLE_MAP_LOS_SEEN)) +
                  BATTLE_MAP_LOS_TERRAIN_CALCULATED;
   int woods_count = 0;
@@ -317,16 +323,25 @@ int mech_los_calculate_flags(Mech *mech, Mech *target, BattleMap *map, int x,
   return new_flag;
 }
 
-int mech_los_terrain_modifier(Mech *mech, Mech *target, BattleMap *map,
-                              float hex_range, int ammunition_mode) {
+int mech_los_terrain_modifier(const MechLosTerrainRequest *request) {
+  Mech *mech = request->observer;
+  Mech *target = request->target;
+  BattleMap *map = request->map;
+  const int ammunition_mode = request->ammunition_mode;
   /* Possibly do a quickie check only */
   if (mech && target) {
     const int flags =
         battle_map_los_flags(map, mech_map_slot(mech), mech_map_slot(target));
     mech_partial_cover_set(target, flags & BATTLE_MAP_LOS_PARTIAL_COVER);
 
-    return mech_sensor_to_hit_bonus(mech, target, flags, battle_map_light(map),
-                                    hex_range, ammunition_mode);
+    MechSensorToHitRequest sensor_request = {
+        .observer = mech,
+        .target = target,
+        .los_flags = flags,
+        .map_light = battle_map_light(map),
+        .ammunition_mode = ammunition_mode,
+    };
+    return mech_sensor_to_hit_bonus(&sensor_request);
   }
   return 0;
 }
@@ -381,9 +396,17 @@ int mech_los_check(Mech *mech, Mech *target, int x, int y, float hex_range) {
     const int observer_slot = mech_map_slot(mech);
     const int target_slot = mech_map_slot(target);
     losflag = battle_map_los_flags(map, observer_slot, target_slot);
-    if (mech_sensor_can_see(mech, target, &losflag, arc, hex_range,
-                            battle_map_visibility(map), battle_map_light(map),
-                            battle_map_cloud_base(map))) {
+    MechSensorObservationRequest request = {
+        .observer = mech,
+        .target = target,
+        .los_flags = &losflag,
+        .arc = arc,
+        .range = hex_range,
+        .map_visibility = battle_map_visibility(map),
+        .map_light = battle_map_light(map),
+        .cloud_base = battle_map_cloud_base(map),
+    };
+    if (mech_sensor_can_see(&request)) {
       battle_map_los_flags_set(
           map, observer_slot, target_slot,
           battle_map_los_flags(map, observer_slot, target_slot) |
@@ -408,10 +431,23 @@ int mech_los_check(Mech *mech, Mech *target, int x, int y, float hex_range) {
 #endif
     return 0;
   }
-  losflag = mech_los_calculate_flags(mech, nullptr, map, x, y, 0, hex_range);
-  return mech_sensor_can_see(mech, nullptr, &losflag, arc, hex_range,
-                             battle_map_visibility(map), battle_map_light(map),
-                             battle_map_cloud_base(map));
+  losflag = mech_los_calculate_flags(&(MechLosCalculation){
+      .observer = mech,
+      .target = nullptr,
+      .map = map,
+      .target_hex = {.x = x, .y = y},
+      .hex_range = hex_range,
+  });
+  MechSensorObservationRequest request = {
+      .observer = mech,
+      .los_flags = &losflag,
+      .arc = arc,
+      .range = hex_range,
+      .map_visibility = battle_map_visibility(map),
+      .map_light = battle_map_light(map),
+      .cloud_base = battle_map_cloud_base(map),
+  };
+  return mech_sensor_can_see(&request);
 }
 
 void mech_losemit(DbRef player, Mech *mech, char *buffer) {

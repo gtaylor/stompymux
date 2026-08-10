@@ -13,6 +13,7 @@
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_bth_api.h"
@@ -31,7 +32,6 @@
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
@@ -62,10 +62,12 @@ static bool mech_is_in_water(Mech *mech) {
 }
 
 bool mech_spot_has_artillery(Mech *mech) {
-  int weapnum, section, critical, weaptype = -2;
+  int weapnum, weaptype = -2;
 
   for (weapnum = 0; weaptype != -1; weapnum++) {
-    weaptype = FindWeaponNumberOnMech(mech, weapnum, &section, &critical);
+    WeaponNumberLookupResult lookup = weapon_number_find(
+        &(WeaponNumberLookupRequest){.mech = mech, .number = weapnum});
+    weaptype = lookup.value;
     if (weapon_catalogue_is_artillery(weaptype))
       return 1;
   }
@@ -133,8 +135,9 @@ void mech_spot_clear_fire_adjustments(BattleMap *map, DbRef mech) {
 
   for (i = 0; i < battle_map_unit_count(map); i++)
     if (battle_map_unit_dbref(map, i) >= 0) {
-      if (!(m = btech_context_get_mech(battle_map_context(map),
-                                       battle_map_unit_dbref(map, i))))
+      m = btech_context_get_mech(battle_map_context(map),
+                                 battle_map_unit_dbref(map, i));
+      if (!m)
         continue;
       if (mech_dbref(m) == mech)
         continue;
@@ -231,7 +234,7 @@ void mech_spot(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL, "That target is our of data link range!");
       return;
     }
-    Create(dat, SpotLinkEventData, 1);
+    dat = checked_storage_allocate(sizeof(*dat));
     dat->observer_y = mech_position_real_y(mech);
     dat->observer_x = mech_position_real_x(mech);
     dat->target_x = mech_position_real_x(target);
@@ -317,8 +320,11 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
         weapon_catalogue_is_artillery(weapontype)
             ? 2
             : (1 +
-               mech_los_terrain_modifier(spotter, target, mech_map, spot_range,
-                                         0) +
+               mech_los_terrain_modifier(&(MechLosTerrainRequest){
+                   .observer = spotter,
+                   .target = target,
+                   .map = mech_map,
+               }) +
                mech_attacker_movement_modifier(spotter) +
                ((mech_event_count(spotter, EVENT_LOCK) &&
                  mech_targeting_computer_type(spotter) != TARGCOMP_MULTI)
@@ -333,10 +339,18 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
       AccumulateSpotXP(mech_pilot_dbref(spotter), spotter, target);
       AccumulateArtyXP(mech_pilot_dbref(mech), mech, target);
     }
-    FireWeapon(mech, mech_map, target, 0, weapontype, weaponnum, section,
-               critical, mech_position_real_x(target),
-               mech_position_real_y(target), mapx, mapy, range, spotTerrain,
-               sight, 2);
+    mech_weapon_fire(&(WeaponFireRequest){
+        .mech = mech,
+        .map = mech_map,
+        .target = target,
+        .weapon_index = weapontype,
+        .weapon_number = weaponnum,
+        .weapon = {.section = section, .critical = critical},
+        .target_hex = {.x = mapx, .y = mapy},
+        .range = range,
+        .indirect_fire = spotTerrain,
+        .sight = sight != 0,
+        .target_kind = 2});
     return 1;
   }
   if (!(mech_target_hex_x(spotter) >= 0 && mech_target_hex_y(spotter) >= 0)) {
@@ -344,9 +358,10 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
                  "Your spotter has no target set!");
     return 1;
   }
-  if (!weapon_catalogue_is_artillery(weapontype))
-    if ((target = find_mech_in_hex(mech, mech_map, mech_target_hex_x(spotter),
-                                   mech_target_hex_y(spotter), 0))) {
+  if (!weapon_catalogue_is_artillery(weapontype)) {
+    target = find_mech_in_hex(mech, mech_map, mech_target_hex_x(spotter),
+                              mech_target_hex_y(spotter), 0);
+    if (target) {
       enemyX = mech_position_real_x(target);
       enemyY = mech_position_real_y(target);
       enemyZ = mech_position_real_z(target);
@@ -354,6 +369,7 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
       mapy = mech_position_y(target);
       found_target = true;
     }
+  }
   if (!found_target) {
     target = nullptr;
     mapx = mech_target_hex_x(spotter);
@@ -362,17 +378,24 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
     enemyZ = scaled_hex_elevation(target_hex_z);
     MapCoordToRealCoord(mapx, mapy, &enemyX, &enemyY);
   }
-  spot_range =
-      FindRange(mech_position_real_x(spotter), mech_position_real_y(spotter),
-                mech_position_real_z(spotter), enemyX, enemyY, enemyZ);
+  spot_range = map_spatial_range(&(MapSpatialSegment){
+      .start = {.x = mech_position_real_x(spotter),
+                .y = mech_position_real_y(spotter),
+                .z = mech_position_real_z(spotter)},
+      .end = {.x = enemyX, .y = enemyY, .z = enemyZ},
+  });
   LOS = mech_los_check(spotter, target, mapx, mapy, spot_range);
   if (!LOS) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That target is not in your spotters line of sight!");
     return 0;
   }
-  range = FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
-                    mech_position_real_z(mech), enemyX, enemyY, enemyZ);
+  range = map_spatial_range(&(MapSpatialSegment){
+      .start = {.x = mech_position_real_x(mech),
+                .y = mech_position_real_y(mech),
+                .z = mech_position_real_z(mech)},
+      .end = {.x = enemyX, .y = enemyY, .z = enemyZ},
+  });
   spotTerrain =
       weapon_catalogue_is_artillery(weapontype)
           ? 2
@@ -381,8 +404,17 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
                mech_targeting_computer_type(spotter) != TARGCOMP_MULTI)
                   ? 2
                   : 0));
-  FireWeapon(mech, mech_map, target, 0, weapontype, weaponnum, section,
-             critical, enemyX, enemyY, mapx, mapy, range, spotTerrain, sight,
-             2);
+  mech_weapon_fire(
+      &(WeaponFireRequest){.mech = mech,
+                           .map = mech_map,
+                           .target = target,
+                           .weapon_index = weapontype,
+                           .weapon_number = weaponnum,
+                           .weapon = {.section = section, .critical = critical},
+                           .target_hex = {.x = mapx, .y = mapy},
+                           .range = range,
+                           .indirect_fire = spotTerrain,
+                           .sight = sight != 0,
+                           .target_kind = 2});
   return 1;
 }

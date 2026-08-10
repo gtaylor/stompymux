@@ -29,12 +29,12 @@ void ai_init(Autopilot *a, Mech *m) {
 
 int artillery_round_flight_time(float fx, float fy, float tx, float ty);
 
-static int mech_snipe_func(Mech *mech, DbRef player, int index, int high,
-                           void *context) {
+static int mech_snipe_func(const MultiWeaponSelectionCall *call) {
+  Mech *mech = call->mech;
   /* Simulate mech movements until flight_time <= now */
   int now = 0, crashed = 0;
   LocationSimulation t;
-  Mech *target_mech = context;
+  Mech *target_mech = call->context;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
@@ -49,8 +49,8 @@ static int mech_snipe_func(Mech *mech, DbRef player, int index, int high,
   }
   /* Fire at t.x, t.y */
   if (mech_target_hex_x(mech) != t.x || mech_target_hex_y(mech) != t.y)
-    mech_set_target(player, mech, tprintf("%d %d", t.x, t.y));
-  mech_fireweapon(player, mech, tprintf("%d", index));
+    mech_set_target(call->actor, mech, tprintf("%d %d", t.x, t.y));
+  mech_fireweapon(call->actor, mech, tprintf("%d", call->first));
   return 0;
 }
 
@@ -69,11 +69,19 @@ void mech_snipe(DbRef player, Mech *mech, char *buffer) {
                  "Please supply target ID _and_ weapon(s) to use");
     return;
   }
-  if ((d = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0) {
+  d = FindTargetDBREFFromMapNumber(mech, args[0]);
+  if (d <= 0) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid target!");
     return;
   }
   target_mech = btech_context_get_mech(mech_context(mech), d);
-  multi_weap_sel(mech, player, args[1], 1, mech_snipe_func, target_mech);
+  multi_weapon_select(&(MultiWeaponSelectionRequest){
+      .mech = mech,
+      .actor = player,
+      .selection = args[1],
+      .mode = 1,
+      .callback = mech_snipe_func,
+      .context = target_mech,
+  });
 }

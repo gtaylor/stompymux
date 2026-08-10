@@ -16,11 +16,6 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 
-#ifdef __linux__
-char *___strtok;
-
-#endif
-
 /** Returns whether a parser stopped at only trailing whitespace. */
 static char checked_character_at(const char *text, size_t length,
                                  size_t index) {
@@ -178,8 +173,8 @@ char *upcasestr(char *s) {
   return s;
 }
 
-static char *normalize_spaces(const char *string, const char *allocation_name) {
-  char *buffer = alloc_lbuf(allocation_name);
+static char *normalize_spaces(const char *string) {
+  char *buffer = alloc_lbuf("normalize_spaces");
   if (buffer == nullptr)
     return nullptr;
 
@@ -212,17 +207,13 @@ static char *normalize_spaces(const char *string, const char *allocation_name) {
  * Allocates an lbuf with whitespace runs compressed to single spaces and
  * leading and trailing whitespace removed. The caller must free the lbuf.
  */
-char *munge_space(char *string) {
-  return normalize_spaces(string, "munge_space");
-}
+char *munge_space(const char *string) { return normalize_spaces(string); }
 
 /**
  * Allocates an lbuf with leading and trailing whitespace removed and internal
  * whitespace runs compressed. The caller must free the lbuf.
  */
-char *trim_spaces(char *string) {
-  return normalize_spaces(string, "trim_spaces");
-}
+char *trim_spaces(const char *string) { return normalize_spaces(string); }
 
 /**
  * Replaces the next targ in a mutable string with a terminator, returns the

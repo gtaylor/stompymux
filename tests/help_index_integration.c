@@ -14,12 +14,8 @@
 void notify_printf(EvaluationContext *evaluation, DbRef player,
                    const char *format, ...);
 
-void log_error(ServerLog *log, int key, const char *primary,
-               const char *secondary, const char *format, ...) {
-  (void)log;
-  (void)key;
-  (void)primary;
-  (void)secondary;
+void log_error(LogEntry entry, const char *format, ...) {
+  (void)entry;
   (void)format;
 }
 

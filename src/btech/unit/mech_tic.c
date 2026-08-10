@@ -1,5 +1,6 @@
 /* Implements BattleTech unit mechanics for unit tic. */
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -35,7 +36,8 @@ static const unsigned long *tic_word(const Mech *mech, int tic, int word) {
   if (tic < 0 || word < 0)
     abort();
   size_t index = (size_t)tic * TICLONGS + (size_t)word;
-  return checked_storage_at_const(mech->tic, NUM_TICS * TICLONGS,
+  return checked_storage_at_const(mech->tic,
+                                  (size_t)NUM_TICS * (size_t)TICLONGS,
                                   sizeof(unsigned long), index);
 }
 
@@ -43,26 +45,26 @@ static unsigned long *tic_word_mutable(Mech *mech, int tic, int word) {
   if (tic < 0 || word < 0)
     abort();
   size_t index = (size_t)tic * TICLONGS + (size_t)word;
-  return checked_storage_at(mech->tic, NUM_TICS * TICLONGS,
+  return checked_storage_at(mech->tic, (size_t)NUM_TICS * (size_t)TICLONGS,
                             sizeof(unsigned long), index);
 }
 
-static void tic_weapon_add(Mech *mech, int tic, int weapon_number) {
-  int word = weapon_number / SINGLE_TICLONG_SIZE;
-  unsigned int bit = (unsigned int)weapon_number % SINGLE_TICLONG_SIZE;
-  *tic_word_mutable(mech, tic, word) |= 1UL << bit;
+static void tic_weapon_add(Mech *mech, TicWeaponReference reference) {
+  int word = reference.weapon / SINGLE_TICLONG_SIZE;
+  unsigned int bit = (unsigned int)reference.weapon % SINGLE_TICLONG_SIZE;
+  *tic_word_mutable(mech, reference.tic, word) |= 1UL << bit;
 }
 
-static void tic_weapon_remove(Mech *mech, int tic, int weapon_number) {
-  int word = weapon_number / SINGLE_TICLONG_SIZE;
-  unsigned int bit = (unsigned int)weapon_number % SINGLE_TICLONG_SIZE;
-  *tic_word_mutable(mech, tic, word) &= ~(1UL << bit);
+static void tic_weapon_remove(Mech *mech, TicWeaponReference reference) {
+  int word = reference.weapon / SINGLE_TICLONG_SIZE;
+  unsigned int bit = (unsigned int)reference.weapon % SINGLE_TICLONG_SIZE;
+  *tic_word_mutable(mech, reference.tic, word) &= ~(1UL << bit);
 }
 
-bool mech_tic_contains_weapon(const Mech *mech, int tic, int weapon_number) {
-  const int word = weapon_number / SINGLE_TICLONG_SIZE;
-  const int bit = weapon_number % SINGLE_TICLONG_SIZE;
-  return *tic_word(mech, tic, word) & (1UL << (unsigned int)bit);
+bool mech_tic_contains_weapon(const Mech *mech, TicWeaponReference reference) {
+  const int word = reference.weapon / SINGLE_TICLONG_SIZE;
+  const int bit = reference.weapon % SINGLE_TICLONG_SIZE;
+  return *tic_word(mech, reference.tic, word) & (1UL << (unsigned int)bit);
 }
 #include "mux/support/formatting.h"
 #include "registry_api.h"
@@ -87,16 +89,14 @@ struct ListTicContext {
 
 /*****************************************************************************/
 
-int cleartic_sub_func(Mech *mech, DbRef player, int low, int high,
-                      void *context) {
+static int cleartic_sub_func(const MultiWeaponSelectionCall *call) {
   int i, j;
+  Mech *mech = call->mech;
 
-  (void)context;
-
-  for (i = low; i <= high; i++) {
+  for (i = call->first; i <= call->last; i++) {
     for (j = 0; j < TICLONGS; j++)
       *tic_word_mutable(mech, i, j) = 0;
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+    notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
                   "TIC #%d cleared!", i);
   }
   return 0;
@@ -110,24 +110,31 @@ void cleartic_sub(DbRef player, Mech *mech, char *buffer) {
                  "Invalid number of arguments to function");
     return;
   }
-  multi_weap_sel(mech, player, args[0], 2, cleartic_sub_func, nullptr);
+  multi_weapon_select(&(MultiWeaponSelectionRequest){
+      .mech = mech,
+      .actor = player,
+      .selection = args[0],
+      .mode = 2,
+      .callback = cleartic_sub_func,
+  });
 }
 
-int addtic_sub_func(Mech *mech, DbRef player, int low, int high,
-                    void *context) {
+static int addtic_sub_func(const MultiWeaponSelectionCall *call) {
   int i;
-  const TicSelectionContext *selection = context;
+  Mech *mech = call->mech;
+  const TicSelectionContext *selection = call->context;
 
-  for (i = low; i <= high; i++) {
-    tic_weapon_add(mech, selection->tic, i);
+  for (i = call->first; i <= call->last; i++) {
+    tic_weapon_add(mech,
+                   (TicWeaponReference){.tic = selection->tic, .weapon = i});
   }
-  if (low != high)
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                  "Weapons #%d - #%d added to TIC %d!", low, high,
+  if (call->first != call->last)
+    notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
+                  "Weapons #%d - #%d added to TIC %d!", call->first, call->last,
                   selection->tic);
   else
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                  "Weapon #%d added to TIC %d!", low, selection->tic);
+    notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
+                  "Weapon #%d added to TIC %d!", call->first, selection->tic);
   return 0;
 }
 
@@ -148,24 +155,33 @@ void addtic_sub(DbRef player, Mech *mech, char *buffer) {
     return;
   }
   selection = (TicSelectionContext){.tic = ticnum};
-  multi_weap_sel(mech, player, args[1], 0, addtic_sub_func, &selection);
+  multi_weapon_select(&(MultiWeaponSelectionRequest){
+      .mech = mech,
+      .actor = player,
+      .selection = args[1],
+      .mode = 0,
+      .callback = addtic_sub_func,
+      .context = &selection,
+  });
 }
 
-int deltic_sub_func(Mech *mech, DbRef player, int low, int high,
-                    void *context) {
+static int deltic_sub_func(const MultiWeaponSelectionCall *call) {
   int i;
-  const TicSelectionContext *selection = context;
+  Mech *mech = call->mech;
+  const TicSelectionContext *selection = call->context;
 
-  for (i = low; i <= high; i++) {
-    tic_weapon_remove(mech, selection->tic, i);
+  for (i = call->first; i <= call->last; i++) {
+    tic_weapon_remove(mech,
+                      (TicWeaponReference){.tic = selection->tic, .weapon = i});
   }
-  if (low != high)
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                  "Weapons #%d - #%d removed from TIC %d!", low, high,
-                  selection->tic);
+  if (call->first != call->last)
+    notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
+                  "Weapons #%d - #%d removed from TIC %d!", call->first,
+                  call->last, selection->tic);
   else
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                  "Weapon #%d removed from TIC %d!", low, selection->tic);
+    notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
+                  "Weapon #%d removed from TIC %d!", call->first,
+                  selection->tic);
   return 0;
 }
 
@@ -191,19 +207,26 @@ void deltic_sub(DbRef player, Mech *mech, char *buffer) {
     return;
   }
   selection = (TicSelectionContext){.tic = ticnum};
-  multi_weap_sel(mech, player, args[1], 0, deltic_sub_func, &selection);
+  multi_weapon_select(&(MultiWeaponSelectionRequest){
+      .mech = mech,
+      .actor = player,
+      .selection = args[1],
+      .mode = 0,
+      .callback = deltic_sub_func,
+      .context = &selection,
+  });
 }
 
-int firetic_sub_func(Mech *mech, DbRef player, int low, int high,
-                     void *context) {
+static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
   int i, j, k, count, weapnum;
-  const TicSelectionContext *selection = context;
+  Mech *mech = call->mech;
+  const TicSelectionContext *selection = call->context;
   BattleMap *mech_map =
       btech_context_get_map(mech->xcode.context, mech->mapindex);
   int f = mech_is_fallen(mech);
 
-  for (i = low; i <= high; i++) {
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  for (i = call->first; i <= call->last; i++) {
+    notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
                   "Firing weapons in tic #%d!", i);
     count = 0;
     for (k = 0; k < TICLONGS; k++)
@@ -211,9 +234,13 @@ int firetic_sub_func(Mech *mech, DbRef player, int low, int high,
         for (j = 0; j < SINGLE_TICLONG_SIZE; j++)
           if (*tic_word(mech, i, k) & (1UL << (unsigned int)j)) {
             weapnum = k * SINGLE_TICLONG_SIZE + j;
-            FireWeaponNumber(player, mech, mech_map, weapnum,
-                             selection->argument_count, selection->arguments,
-                             0);
+            mech_weapon_fire_command(&(WeaponFireCommandRequest){
+                .actor = call->actor,
+                .mech = mech,
+                .map = mech_map,
+                .weapon_number = weapnum,
+                .argument_count = selection->argument_count,
+                .arguments = selection->arguments});
             if (f != (mech_is_fallen(mech))) {
               if (mech_is_started(mech))
                 mech_notify(mech, MECHALL,
@@ -224,7 +251,7 @@ int firetic_sub_func(Mech *mech, DbRef player, int low, int high,
             count++;
           }
     if (!count)
-      notify_printf(btech_context_evaluation(mech->xcode.context), player,
+      notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
                     "*Click* (the tic contained no weapons)");
   }
   return 0;
@@ -235,7 +262,8 @@ void firetic_sub(DbRef player, Mech *mech, char *buffer) {
   char *args[5];
   TicSelectionContext selection;
 
-  if ((argc = mech_parseattributes(buffer, args, 5)) < 1) {
+  argc = mech_parseattributes(buffer, args, 5);
+  if (argc < 1) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Not enough arguments to function");
     return;
@@ -254,7 +282,14 @@ void firetic_sub(DbRef player, Mech *mech, char *buffer) {
       .argument_count = argc,
       .arguments = args,
   };
-  multi_weap_sel(mech, player, args[0], 2, firetic_sub_func, &selection);
+  multi_weapon_select(&(MultiWeaponSelectionRequest){
+      .mech = mech,
+      .actor = player,
+      .selection = args[0],
+      .mode = 2,
+      .callback = firetic_sub_func,
+      .context = &selection,
+  });
 }
 
 static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
@@ -270,17 +305,25 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
   }
   rtar = i / 2 + (i % 2 ? ((list->weapon_count + 1) / 2) : 0);
   for (j = 0; j < MAX_WEAPONS_PER_MECH; j++) {
-    if (mech_tic_contains_weapon(mech, list->tic, j)) {
+    if (mech_tic_contains_weapon(
+            mech, (TicWeaponReference){.tic = list->tic, .weapon = j})) {
       if (count == rtar) {
-        if ((FindWeaponNumberOnMech(mech, j, &section, &critical)) == -1) {
-          tic_weapon_remove(mech, list->tic, j);
+        WeaponNumberLookupResult lookup = weapon_number_find(
+            &(WeaponNumberLookupRequest){.mech = mech, .number = j});
+        section = lookup.slot.section;
+        critical = lookup.slot.critical;
+        if (!lookup.found) {
+          tic_weapon_remove(
+              mech, (TicWeaponReference){.tic = list->tic, .weapon = j});
           j = MAX_WEAPONS_PER_MECH;
           continue;
         }
         (void)snprintf(
             buffer, LBUF_SIZE, "#%2d %3s %-16s %s", j,
-            armor_section_abbreviation(((mech)->ud.type), ((mech)->ud.move),
-                                       section)
+            armor_section_abbreviation(
+                &(ArmorSectionReference){.unit_class = ((mech)->ud.type),
+                                         .movement_type = ((mech)->ud.move),
+                                         .location = section})
                 .text,
             checked_string_suffix(
                 weapon_catalogue_name(weapon_from_equipment_index(
@@ -316,7 +359,8 @@ void listtic_sub(DbRef player, Mech *mech, char *buffer) {
     return;
   }
   for (i = 0; i < MAX_WEAPONS_PER_MECH; i++) {
-    if (mech_tic_contains_weapon(mech, ticnum, i))
+    if (mech_tic_contains_weapon(
+            mech, (TicWeaponReference){.tic = ticnum, .weapon = i}))
       count++;
   }
   list = (ListTicContext){

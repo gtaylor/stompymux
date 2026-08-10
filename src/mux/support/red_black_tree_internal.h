@@ -22,8 +22,8 @@ struct RedBlackTreeNode {
 
 struct RedBlackTreeHead {
   RedBlackTreeNode *head;
-  int (*compare_function)(void *, void *, void *);
-  void *token;
+  RedBlackTreeCompare compare;
+  void *context;
   unsigned int size;
 };
 

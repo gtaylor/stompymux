@@ -10,6 +10,7 @@
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_conditions_api.h"
+#include "map_coordinates.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_classification_api.h"
@@ -95,8 +96,13 @@ int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
   float target_speed = location->ds;
   if (mech_class(mech) != CLASS_MW && mech_movement_type(mech) != MOVE_VTOL &&
       (mech_movement_type(mech) != MOVE_FLY || mech_is_landed(mech)))
-    target_speed = mech_terrain_speed(mech, target_speed, maximum_speed,
-                                      location->t, location->e);
+    target_speed = mech_terrain_speed(&(MechTerrainSpeedRequest){
+        .mech = mech,
+        .current_speed = target_speed,
+        .maximum_speed = maximum_speed,
+        .terrain = location->t,
+        .elevation = location->e,
+    });
   if (heading_changed) {
     const int slowdown =
         btech_context_movement_slowdown_mode(mech_context(mech));
@@ -135,12 +141,10 @@ int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
     }
   }
 
-  float x_delta = 0.0F;
-  float y_delta = 0.0F;
-  FindComponents(location->s * (float)MOVE_MOD, location->h, &x_delta,
-                 &y_delta);
-  location->fx += x_delta;
-  location->fy += y_delta;
+  MapRealPosition delta = map_vector_components(&(MapPolarVector){
+      .magnitude = location->s * (float)MOVE_MOD, .bearing = location->h});
+  location->fx += delta.x;
+  location->fy += delta.y;
   location->lx = location->x;
   location->ly = location->y;
   RealCoordToMapCoord(&location->x, &location->y, location->fx, location->fy);

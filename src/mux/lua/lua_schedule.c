@@ -21,25 +21,31 @@
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 
-static unsigned long lua_schedule_hash(const char *path, const char *name,
-                                       DbRef object, time_t minute) {
+typedef struct LuaScheduleIdentity {
+  const char *path;
+  const char *name;
+  DbRef object;
+  time_t minute;
+} LuaScheduleIdentity;
+
+static unsigned long lua_schedule_hash(const LuaScheduleIdentity *identity) {
   unsigned long hash = 2166136261U;
   size_t index;
 
-  for (index = 0; index < strlen(path); index++) {
-    const unsigned char *character =
-        checked_storage_at_const(path, strlen(path), sizeof(*character), index);
+  for (index = 0; index < strlen(identity->path); index++) {
+    const unsigned char *character = checked_storage_at_const(
+        identity->path, strlen(identity->path), sizeof(*character), index);
 
     hash = (hash ^ *character) * 16777619U;
   }
-  for (index = 0; index < strlen(name); index++) {
-    const unsigned char *character =
-        checked_storage_at_const(name, strlen(name), sizeof(*character), index);
+  for (index = 0; index < strlen(identity->name); index++) {
+    const unsigned char *character = checked_storage_at_const(
+        identity->name, strlen(identity->name), sizeof(*character), index);
 
     hash = (hash ^ *character) * 16777619U;
   }
-  hash ^= (unsigned long)object;
-  hash ^= (unsigned long)minute;
+  hash ^= (unsigned long)identity->object;
+  hash ^= (unsigned long)identity->minute;
   return hash;
 }
 
@@ -76,8 +82,13 @@ static int lua_schedule_add_job(LuaRuntime *runtime, LUA_MODULE_ROOT root,
   job->path = path_copy;
   job->name = name_copy;
   job->cron = cron_copy;
-  job->due = minute * 60 +
-             (time_t)(lua_schedule_hash(path, name, object, minute) % 55U);
+  job->due =
+      minute * 60 +
+      (time_t)(lua_schedule_hash(&(LuaScheduleIdentity){.path = path,
+                                                        .name = name,
+                                                        .object = object,
+                                                        .minute = minute}) %
+               55U);
   job->expires = minute * 60 + 60;
   return 1;
 }
@@ -177,11 +188,17 @@ static void lua_schedule_run_job(LuaRuntime *runtime, LUA_SCHEDULE_JOB *job) {
       runtime->current_root = previous_root;
       if (status) {
         if (job->root == LUA_ROOT_OBJECT_LOGIC)
-          log_error(runtime->services->log, LOG_PROBLEMS, "LUA", "SCHEDULE",
+          log_error((LogEntry){.log = runtime->services->log,
+                               .key = LOG_PROBLEMS,
+                               .primary = "LUA",
+                               .secondary = "SCHEDULE"},
                     "object #%ld module %s schedule %s: %s", job->object,
                     job->path, job->name, lua_tostring(state, -1));
         else
-          log_error(runtime->services->log, LOG_PROBLEMS, "LUA", "SCHEDULE",
+          log_error((LogEntry){.log = runtime->services->log,
+                               .key = LOG_PROBLEMS,
+                               .primary = "LUA",
+                               .secondary = "SCHEDULE"},
                     "global module %s schedule %s: %s", job->path, job->name,
                     lua_tostring(state, -1));
       }
@@ -396,8 +413,8 @@ void do_luaschedule(CommandInvocation *invocation) {
           !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
         continue;
       for (index = 0; index < path_count; index++) {
-        char **stored_path =
-            checked_storage_at(paths, path_count, sizeof(*paths), index);
+        char **stored_path = (char **)checked_storage_at(
+            (void *)paths, path_count, sizeof(*paths), index);
         size_t *stored_count =
             checked_storage_at(counts, path_count, sizeof(*counts), index);
 
@@ -407,7 +424,8 @@ void do_luaschedule(CommandInvocation *invocation) {
         }
       }
       if (index == path_count) {
-        char **new_paths = realloc(paths, (path_count + 1) * sizeof(*paths));
+        char **new_paths =
+            (char **)realloc((void *)paths, (path_count + 1) * sizeof(*paths));
         size_t *new_counts;
 
         if (!new_paths)
@@ -417,8 +435,8 @@ void do_luaschedule(CommandInvocation *invocation) {
         if (!new_counts)
           break;
         counts = new_counts;
-        *(char **)checked_storage_at(paths, path_count + 1, sizeof(*paths),
-                                     path_count) = strdup(path);
+        *(char **)checked_storage_at((void *)paths, path_count + 1,
+                                     sizeof(*paths), path_count) = strdup(path);
         *(size_t *)checked_storage_at(counts, path_count + 1, sizeof(*counts),
                                       path_count) = 1;
         path_count++;
@@ -427,8 +445,8 @@ void do_luaschedule(CommandInvocation *invocation) {
     for (index = 0; index < path_count; index++) {
       int count;
 
-      char **stored_path =
-          checked_storage_at(paths, path_count, sizeof(*paths), index);
+      char **stored_path = (char **)checked_storage_at(
+          (void *)paths, path_count, sizeof(*paths), index);
       size_t *stored_count =
           checked_storage_at(counts, path_count, sizeof(*counts), index);
 
@@ -440,7 +458,7 @@ void do_luaschedule(CommandInvocation *invocation) {
                       *stored_path, count, *stored_count);
       free(*stored_path);
     }
-    free(paths);
+    free((void *)paths);
     free(counts);
   }
 done:

@@ -109,8 +109,8 @@ const char *const LUA_MESSAGE_OPERATION_NAMES[LUA_MESSAGE_OPERATION_COUNT] = {
 
 static const char *lua_name_at(const char *const *names, size_t count,
                                size_t index) {
-  return *(const char *const *)checked_storage_at_const(names, count,
-                                                        sizeof(*names), index);
+  return *(const char *const *)checked_storage_at_const(
+      (const void *)names, count, sizeof(*names), index);
 }
 
 const char *lua_event_name(LuaEventType event) {
@@ -218,7 +218,7 @@ void lua_push_context(GameDatabase *database, Descriptor *descriptor,
   lua_newtable(state);
   for (index = 0; index < nargs; index++) {
     char *argument = *(char *const *)checked_storage_at_const(
-        args, (size_t)nargs, sizeof(*args), (size_t)index);
+        (const void *)args, (size_t)nargs, sizeof(*args), (size_t)index);
 
     if (argument) {
       lua_pushstring(state, argument);
@@ -449,9 +449,11 @@ bool lua_event_dispatch(LuaRuntime *runtime,
   int top;
   int status;
 
-  if (!runtime || !invocation || !(event = lua_event_name(invocation->type)) ||
-      !lua_attached_path(runtime, invocation->object, path, sizeof(path),
-                         nullptr))
+  if (!runtime || !invocation)
+    return false;
+  event = lua_event_name(invocation->type);
+  if (!event || !lua_attached_path(runtime, invocation->object, path,
+                                   sizeof(path), nullptr))
     return false;
   state = runtime->state;
   top = lua_gettop(state);
@@ -574,8 +576,13 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
 
   memset(result, 0, sizeof(*result));
   result->passes = false;
-  if (!runtime || !invocation || !(lock = lua_lock_name(invocation->type)) ||
-      !(operation = lua_lock_operation_name(invocation->operation)))
+  if (!runtime || !invocation)
+    return;
+  lock = lua_lock_name(invocation->type);
+  if (!lock)
+    return;
+  operation = lua_lock_operation_name(invocation->operation);
+  if (!operation)
     return;
   if (!lua_attached_path(runtime, invocation->object, path, sizeof(path),
                          nullptr)) {
@@ -679,11 +686,14 @@ void lua_message_evaluate(LuaRuntime *runtime,
   int status;
 
   memset(result, 0, sizeof(*result));
-  if (!runtime || !invocation ||
-      !(message = lua_message_name(invocation->type)) ||
-      !(operation = lua_message_operation_name(invocation->operation)) ||
-      !lua_attached_path(runtime, invocation->object, path, sizeof(path),
-                         nullptr))
+  if (!runtime || !invocation)
+    return;
+  message = lua_message_name(invocation->type);
+  if (!message)
+    return;
+  operation = lua_message_operation_name(invocation->operation);
+  if (!operation || !lua_attached_path(runtime, invocation->object, path,
+                                       sizeof(path), nullptr))
     return;
   state = runtime->state;
   top = lua_gettop(state);

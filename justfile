@@ -9,7 +9,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-mux-source-size fmt-check build test
+ci: check-mux-source-size fmt-check build test tidy-check
 
 agent-checks: ci
 
@@ -36,6 +36,9 @@ fmt-check: fmt-check-c fmt-check-lua
 
 tidy:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -fix -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
+
+tidy-check:
+    {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
 
 build:
     cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON

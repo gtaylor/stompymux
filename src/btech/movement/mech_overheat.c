@@ -5,6 +5,7 @@
 
 #include "btech/context.h"
 #include "btech_event.h"
+#include "btechstats.h"
 #include "btechstats_api.h"
 #include "equipment_types.h"
 #include "map_conditions_api.h"
@@ -35,7 +36,7 @@ static int mech_jump_speed_mp(const Mech *mech, const BattleMap *map) {
 void mech_overheat_handle(Mech *mech) {
   int avoided = 0, hasinferno = 0;
   BattleMap *mech_map;
-  int ammoloc, ammocritnum, damage = 0;
+  AmmunitionHazardResult ammunition = {0};
   BtechContext *context = mech_context(mech);
   float heat = mech_excess_heat(mech);
   int tick = btech_context_event_tick(context);
@@ -47,8 +48,10 @@ void mech_overheat_handle(Mech *mech) {
   mech_last_overheat_check_tick_set(mech, tick);
 
   if (heat >= 10.0F) {
-    if (btech_context_inferno_penalty_enabled(context))
-      hasinferno = FindInfernoAmmo(mech, &ammoloc, &ammocritnum);
+    if (btech_context_inferno_penalty_enabled(context)) {
+      ammunition = inferno_ammunition_find(mech);
+    }
+    hasinferno = ammunition.damage;
     if (heat >= 28.0F) {
       if (hasinferno) {
         if (btech_random_roll(context) >= 12)
@@ -78,11 +81,13 @@ void mech_overheat_handle(Mech *mech) {
 
     if (!avoided) {
       if (!hasinferno)
-        damage = FindDestructiveAmmo(mech, &ammoloc, &ammocritnum);
-      else
-        damage = hasinferno;
-      if (damage)
-        mech_ammunition_explode(mech, mech, ammoloc, ammocritnum, damage);
+        ammunition = destructive_ammunition_find(mech);
+      if (ammunition.damage)
+        mech_ammunition_explode(
+            &(AmmunitionExplosionRequest){.attacker = mech,
+                                          .target = mech,
+                                          .ammunition = ammunition.slot,
+                                          .damage = ammunition.damage});
       else
         mech_notify(mech, MECHALL, "You have no ammunition, lucky you!");
     }
@@ -112,14 +117,16 @@ void mech_overheat_handle(Mech *mech) {
     if (heat >= 14.0F) {
       mech_notify(mech, MECHALL,
                   "You frantically attempt to override the shutdown process!");
-      avoided =
-          char_getskillsuccess(context, mech_pilot_dbref(mech), "computer",
-                               (heat >= 30.0F   ? 8
-                                : heat >= 26.0F ? 6
-                                : heat >= 22.0F ? 4
-                                : heat >= 18.0F ? 2
-                                                : 0),
-                               1);
+      avoided = char_getskillsuccess(
+          &(CharacterSkillCheck){.context = context,
+                                 .player = mech_pilot_dbref(mech),
+                                 .name = "computer",
+                                 .modifier = (heat >= 30.0F   ? 8
+                                              : heat >= 26.0F ? 6
+                                              : heat >= 22.0F ? 4
+                                              : heat >= 18.0F ? 2
+                                                              : 0),
+                                 .loud = true});
       if (avoided)
         AccumulateComputerXP(mech_pilot_dbref(mech), mech, 1);
     }

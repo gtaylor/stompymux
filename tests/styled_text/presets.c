@@ -46,17 +46,28 @@ int styled_text_preset_tests(void) {
     return 1;
 
   if (!styled_text_palette_set_preset(
-          styled_text_test_palette, "danger",
-          "color=red bold hover.color=yellow tooltip=\"Dangerous action\"",
-          error, sizeof(error)) ||
+          styled_text_test_palette,
+          &(StyledPresetDefinition){.name = "danger",
+                                    .directives =
+                                        "color=red bold hover.color=yellow "
+                                        "tooltip=\"Dangerous action\"",
+                                    .error = error,
+                                    .error_size = sizeof(error)}) ||
       !styled_text_palette_set_preset(
-          styled_text_test_palette, "poll",
-          "selection.group=\"demo\" selection.exclusive", error,
-          sizeof(error)) ||
+          styled_text_test_palette,
+          &(StyledPresetDefinition){
+              .name = "poll",
+              .directives = "selection.group=\"demo\" selection.exclusive",
+              .error = error,
+              .error_size = sizeof(error)}) ||
       !styled_text_palette_set_preset(
-          styled_text_test_palette, "menu",
-          "menu.1.label=\"One\" menu.1.send=\"one\" title=\"Choices\"", error,
-          sizeof(error)) ||
+          styled_text_test_palette,
+          &(StyledPresetDefinition){
+              .name = "menu",
+              .directives = "menu.1.label=\"One\" menu.1.send=\"one\" "
+                            "title=\"Choices\"",
+              .error = error,
+              .error_size = sizeof(error)}) ||
       styled_text_palette_preset_count(styled_text_test_palette) != 3 ||
       !styled_text_palette_render_preset(styled_text_test_palette, 0,
                                          &tier_six_full, preset_definition,
@@ -132,10 +143,18 @@ int styled_text_preset_tests(void) {
   }
   if (!expect_invalid("[send=\"x\" preset=\"missing\"]x[/]") ||
       !expect_invalid("[send=\"x\" preset=danger]x[/]") ||
-      styled_text_palette_set_preset(styled_text_test_palette, "bad name",
-                                     "bold", error, sizeof(error)) ||
-      styled_text_palette_set_preset(styled_text_test_palette, "empty", "",
-                                     error, sizeof(error))) {
+      styled_text_palette_set_preset(
+          styled_text_test_palette,
+          &(StyledPresetDefinition){.name = "bad name",
+                                    .directives = "bold",
+                                    .error = error,
+                                    .error_size = sizeof(error)}) ||
+      styled_text_palette_set_preset(
+          styled_text_test_palette,
+          &(StyledPresetDefinition){.name = "empty",
+                                    .directives = "",
+                                    .error = error,
+                                    .error_size = sizeof(error)})) {
     fprintf(stderr, "OSC 8 invalid preset validation failed\n");
     styled_text_palette_destroy(styled_text_test_palette);
     return 1;

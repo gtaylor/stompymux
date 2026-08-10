@@ -85,10 +85,12 @@ static const char *section_recycle_status(Mech *mech, int section) {
   return "[fg=green]Ready[reset]";
 }
 
-static const char *physical_recycle_status(Mech *mech, int section,
-                                           int physical_type) {
+static const char *
+physical_recycle_status(Mech *mech, int section,
+                        MechPhysicalWeaponType physical_type) {
   int recycle = mech_section_recycle_ticks(mech, section);
-  if (!canUsePhysical(mech, section, physical_type))
+  if (!canUsePhysical(&(PhysicalWeaponRequest){
+          .mech = mech, .section = section, .type = physical_type}))
     return "[fg=red bold]XX[reset]";
   if (recycle > 0)
     return tprintf("%-3d", recycle / WEAPON_TICK + recycle % WEAPON_TICK);
@@ -358,43 +360,53 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                           is_quad ? "RRLEG" : "RLEG",
                           section_recycle_status(mech, RLEG));
 
-    if (hasPhysical(mech, LARM, PHY_AXE))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = LARM, .type = PHY_AXE}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Axe[LA]",
                             physical_recycle_status(mech, LARM, PHY_AXE));
 
-    if (hasPhysical(mech, RARM, PHY_AXE))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = RARM, .type = PHY_AXE}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Axe[RA]",
                             physical_recycle_status(mech, RARM, PHY_AXE));
 
-    if (hasPhysical(mech, LARM, PHY_SWORD))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = LARM, .type = PHY_SWORD}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Sword[LA]",
                             physical_recycle_status(mech, LARM, PHY_SWORD));
 
-    if (hasPhysical(mech, RARM, PHY_SWORD))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = RARM, .type = PHY_SWORD}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Sword[RA]",
                             physical_recycle_status(mech, RARM, PHY_SWORD));
 
-    if (hasPhysical(mech, LARM, PHY_CLAW))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = LARM, .type = PHY_CLAW}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Claw[LA]",
                             physical_recycle_status(mech, LARM, PHY_CLAW));
 
-    if (hasPhysical(mech, RARM, PHY_CLAW))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = RARM, .type = PHY_CLAW}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Claw[RA]",
                             physical_recycle_status(mech, RARM, PHY_CLAW));
 
-    if (hasPhysical(mech, LARM, PHY_MACE))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = LARM, .type = PHY_MACE}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Mace[LA]",
                             physical_recycle_status(mech, LARM, PHY_MACE));
 
-    if (hasPhysical(mech, RARM, PHY_MACE))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = RARM, .type = PHY_MACE}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Mace[RA]",
                             physical_recycle_status(mech, RARM, PHY_MACE));
 
-    if (hasPhysical(mech, LARM, PHY_SAW))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = LARM, .type = PHY_SAW}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Saw[LA]",
                             physical_recycle_status(mech, LARM, PHY_SAW));
 
-    if (hasPhysical(mech, RARM, PHY_SAW))
+    if (hasPhysical(&(PhysicalWeaponRequest){
+            .mech = mech, .section = RARM, .type = PHY_SAW}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Saw[RA]",
                             physical_recycle_status(mech, RARM, PHY_SAW));
 
@@ -452,7 +464,8 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     (void)snprintf(location, sizeof(location), "%-14.14s", tempbuff);
     if (compact) {
       strlcpy(location, tempbuff, sizeof(location));
-      if ((tmpc = strchr(location, ' ')))
+      tmpc = strchr(location, ' ');
+      if (tmpc)
         *tmpc = '_';
     }
     for (ii = 0; ii < count; ii++) {

@@ -57,22 +57,35 @@ static void tech_check_loc(MuxEvent *e, void *data) {
     context->matches++;
 }
 
-static int tech_event_part_count(Mech *mech, int location, int part,
-                                 int event_type) {
-  TechCheckContext check = {.location = location, .part = part};
-  mech_event_visit(mech, event_type, tech_check_locpart, &check);
+typedef struct TechEventPartQuery {
+  Mech *mech;
+  int location;
+  int part;
+  int event_type;
+} TechEventPartQuery;
+
+typedef struct TechEventLocationQuery {
+  Mech *mech;
+  int location;
+  int event_type;
+} TechEventLocationQuery;
+
+static int tech_event_part_count(const TechEventPartQuery *query) {
+  TechCheckContext check = {.location = query->location, .part = query->part};
+  mech_event_visit(query->mech, query->event_type, tech_check_locpart, &check);
   return check.matches;
 }
 
-static int tech_event_location_count(Mech *mech, int location, int event_type) {
-  TechCheckContext check = {.location = location};
-  mech_event_visit(mech, event_type, tech_check_loc, &check);
+static int tech_event_location_count(const TechEventLocationQuery *query) {
+  TechCheckContext check = {.location = query->location};
+  mech_event_visit(query->mech, query->event_type, tech_check_loc, &check);
   return check.matches;
 }
 
 /* Replace/reload */
 int SomeoneRepairing_s(Mech *mech, int loc, int part, int t) {
-  return tech_event_part_count(mech, loc, part, t);
+  return tech_event_part_count(&(TechEventPartQuery){
+      .mech = mech, .location = loc, .part = part, .event_type = t});
 }
 
 int SomeoneRepairing(Mech *mech, int loc, int part) {
@@ -92,11 +105,13 @@ int SomeoneRepairing(Mech *mech, int loc, int part) {
 
 /* Fixinternal/armor */
 int SomeoneFixingA(Mech *mech, int loc) {
-  return tech_event_location_count(mech, loc, EVENT_REPAIR_FIX);
+  return tech_event_location_count(&(TechEventLocationQuery){
+      .mech = mech, .location = loc, .event_type = EVENT_REPAIR_FIX});
 }
 
 int SomeoneFixingI(Mech *mech, int loc) {
-  return tech_event_location_count(mech, loc, EVENT_REPAIR_FIXI);
+  return tech_event_location_count(&(TechEventLocationQuery){
+      .mech = mech, .location = loc, .event_type = EVENT_REPAIR_FIXI});
 }
 
 int SomeoneFixing(Mech *mech, int loc) {
@@ -105,11 +120,13 @@ int SomeoneFixing(Mech *mech, int loc) {
 
 /* Reattach */
 int SomeoneAttaching(Mech *mech, int loc) {
-  return tech_event_location_count(mech, loc, EVENT_REPAIR_REAT);
+  return tech_event_location_count(&(TechEventLocationQuery){
+      .mech = mech, .location = loc, .event_type = EVENT_REPAIR_REAT});
 }
 
 int SomeoneReplacingSuit(Mech *mech, int loc) {
-  return tech_event_location_count(mech, loc, EVENT_REPAIR_REPSUIT);
+  return tech_event_location_count(&(TechEventLocationQuery){
+      .mech = mech, .location = loc, .event_type = EVENT_REPAIR_REPSUIT});
 }
 
 /* Reseal
@@ -119,11 +136,13 @@ int SomeoneReplacingSuit(Mech *mech, int loc) {
  */
 
 int SomeoneResealing(Mech *mech, int loc) {
-  return tech_event_location_count(mech, loc, EVENT_REPAIR_RESE);
+  return tech_event_location_count(&(TechEventLocationQuery){
+      .mech = mech, .location = loc, .event_type = EVENT_REPAIR_RESE});
 }
 
 int SomeoneScrappingLoc(Mech *mech, int loc) {
-  return tech_event_location_count(mech, loc, EVENT_REPAIR_SCRL);
+  return tech_event_location_count(&(TechEventLocationQuery){
+      .mech = mech, .location = loc, .event_type = EVENT_REPAIR_SCRL});
 }
 
 int SomeoneScrappingPart(Mech *mech, int loc, int part) {
@@ -151,19 +170,23 @@ int CanScrapPart(Mech *mech, int loc, int part) {
   return !(SomeoneRepairing(mech, loc, part));
 }
 
-int ValidGunPos(Mech *mech, int loc, int pos) {
+bool ValidGunPos(const RepairCriticalSelection *selection) {
+  Mech *mech = selection->mech;
+  const int loc = selection->location;
+  const int pos = selection->position;
   unsigned char weaparray_f[MAX_WEAPS_SECTION];
   unsigned char weapdata_f[MAX_WEAPS_SECTION];
   int critical_f[MAX_WEAPS_SECTION];
   int i, num_weaps_f;
 
-  if ((num_weaps_f = FindWeapons_Advanced(mech, loc, weaparray_f, weapdata_f,
-                                          critical_f, 1)) < 0)
-    return 0;
+  num_weaps_f =
+      FindWeapons_Advanced(mech, loc, weaparray_f, weapdata_f, critical_f, 1);
+  if (num_weaps_f < 0)
+    return false;
   for (i = 0; i < num_weaps_f; i++)
     if (tech_int_at(critical_f, MAX_WEAPS_SECTION, (size_t)i) == pos)
-      return 1;
-  return 0;
+      return true;
+  return false;
 }
 
 void tech_checkstatus(DbRef player, void *data, char *buffer) {

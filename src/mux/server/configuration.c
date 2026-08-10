@@ -15,6 +15,7 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/configuration_internal.h"
+#include "mux/server/configuration_interpreter.h"
 #include "mux/server/configuration_toml.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
@@ -274,8 +275,11 @@ void configuration_log_not_found(ConfigurationContext *context, DbRef player,
   char *buff;
 
   if (context->configuration->is_initializing) {
-    log_error(context->log, LOG_STARTUP, "CNF", "NFND", "%s: %s %s not found.",
-              cmd, thingname, thing);
+    log_error((LogEntry){.log = context->log,
+                         .key = LOG_STARTUP,
+                         .primary = "CNF",
+                         .secondary = "NFND"},
+              "%s: %s %s not found.", cmd, thingname, thing);
   } else {
     buff = alloc_lbuf("configuration_log_not_found");
     (void)snprintf(buff, LBUF_SIZE, "%s %s not found", thingname, thing);
@@ -294,8 +298,11 @@ void configuration_log_syntax(ConfigurationContext *context, DbRef player,
                               const char *cmd, const char *template,
                               const char *arg) {
   if (context->configuration->is_initializing) {
-    log_error(context->log, LOG_STARTUP, "CNF", "SYNTX", "%s: %s %s", cmd,
-              template, arg);
+    log_error((LogEntry){.log = context->log,
+                         .key = LOG_STARTUP,
+                         .primary = "CNF",
+                         .secondary = "SYNTX"},
+              "%s: %s %s", cmd, template, arg);
   } else {
     notify_printf(&context->command->evaluation, player, "%s%s", template, arg);
   }
@@ -306,17 +313,16 @@ void configuration_log_syntax(ConfigurationContext *context, DbRef player,
  * * cf_status_from_succfail: Return command status from succ and fail info
  */
 
-int configuration_status_from_succfail(DbRef player, char *cmd, int success,
-                                       int failure,
-                                       ConfigurationContext *context) {
+int configuration_status_from_counts(const ConfigurationCall *call,
+                                     ConfigurationParseCounts counts) {
 
   /*
    * If any successes, return SUCCESS(0) if no failures or * * * * *
    * PARTIAL_SUCCESS(1) if any failures.
    */
 
-  if (success > 0)
-    return ((failure == 0) ? 0 : 1);
+  if (counts.success > 0)
+    return ((counts.failure == 0) ? 0 : 1);
 
   /*
    * No successes.  If no failures indicate nothing done. Always return
@@ -324,13 +330,16 @@ int configuration_status_from_succfail(DbRef player, char *cmd, int success,
    * *  * *  * *  * *  * * FAILURE(-1)
    */
 
-  if (failure == 0) {
-    if (context->configuration->is_initializing) {
-      log_error(context->log, LOG_STARTUP, "CNF", "NDATA", "%s: Nothing to set",
-                cmd);
+  if (counts.failure == 0) {
+    if (call->context->configuration->is_initializing) {
+      log_error((LogEntry){.log = call->context->log,
+                           .key = LOG_STARTUP,
+                           .primary = "CNF",
+                           .secondary = "NDATA"},
+                "%s: Nothing to set", call->command);
     } else {
-      notify_checked(&context->command->evaluation, player, player,
-                     "Nothing to set", MSG_ME_ALL | MSG_F_DOWN);
+      notify_checked(&call->context->command->evaluation, call->player,
+                     call->player, "Nothing to set", MSG_ME_ALL | MSG_F_DOWN);
     }
   }
   return -1;
@@ -363,10 +372,20 @@ int configuration_set(ConfigurationContext *context, char *cp, char *ap,
       }
       buff = alloc_lbuf("configuration_set");
       StringCopy(buff, ap);
-      i = tp->interpreter(configuration_resolve_location(context, tp), ap,
-                          tp->extra, player, cp, context);
+      ConfigurationCall call = {
+          .value = configuration_resolve_location(context, tp),
+          .text = ap,
+          .extra = tp->extra,
+          .player = player,
+          .command = cp,
+          .context = context,
+      };
+      i = tp->interpreter(&call);
       if (!context->configuration->is_initializing) {
-        log_error(context->log, LOG_CONFIGMODS, "CFG", "UPDAT",
+        log_error((LogEntry){.log = context->log,
+                             .key = LOG_CONFIGMODS,
+                             .primary = "CFG",
+                             .secondary = "UPDAT"},
                   "%s entered config directive: %s with args '%s'. Status: %s",
                   game_object_name(context->database, player), cp, buff,
                   (i == 0 ? "Success"

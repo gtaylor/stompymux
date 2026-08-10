@@ -23,16 +23,38 @@ void mech_trip(DbRef player, void *data, char *buffer);
 void mech_kickortrip(DbRef player, void *data, char *buffer,
                      PhysicalAttackType attack_type);
 void mech_charge(DbRef player, void *data, char *buffer);
-const char *phys_form(PhysicalAttackType attack_type, int add_s);
+typedef struct PhysicalVerbRequest {
+  PhysicalAttackType attack_type;
+  bool third_person;
+} PhysicalVerbRequest;
+
+const char *physical_attack_verb(const PhysicalVerbRequest *request);
 void phys_succeed(Mech *mech, Mech *target, PhysicalAttackType attack_type);
 void phys_fail(Mech *mech, Mech *target, PhysicalAttackType attack_type);
-void PhysicalAttack(Mech *mech, int damageweight, int baseToHit,
-                    PhysicalAttackType attack_type, int argc, char **args,
-                    BattleMap *mech_map, int sect);
+typedef struct PhysicalAttackRequest {
+  Mech *mech;
+  int damage_weight;
+  int base_to_hit;
+  PhysicalAttackType attack_type;
+  int argument_count;
+  char **arguments;
+  BattleMap *map;
+  int section;
+} PhysicalAttackRequest;
+
+void physical_attack_resolve(const PhysicalAttackRequest *request);
 void PhysicalTrip(Mech *mech, Mech *target);
-void PhysicalDamage(Mech *mech, Mech *target, int weightdmg,
-                    PhysicalAttackType attack_type, int sect, int glance);
+typedef struct PhysicalDamageRequest {
+  Mech *attacker;
+  Mech *target;
+  int weight_divisor;
+  PhysicalAttackType attack_type;
+  int section;
+  int glancing_damage;
+} PhysicalDamageRequest;
+
+void physical_damage_resolve(const PhysicalDamageRequest *request);
 int DeathFromAbove(Mech *mech, Mech *target);
 void ChargeMech(Mech *mech, Mech *target);
-int checkGrabClubLocation(Mech *mech, int section, int emit);
+bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure);
 void mech_grabclub(DbRef player, void *data, char *buffer);

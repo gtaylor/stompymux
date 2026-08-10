@@ -34,14 +34,17 @@
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
-int battle_map_mech_count_in_hex(BattleMap *map, int x, int y, int friendly,
-                                 int team) {
+int battle_map_mech_count_in_hex(const BattleMapHexOccupancyRequest *request) {
+  BattleMap *map = request->map;
+  int x = request->position.x;
+  int y = request->position.y;
   Mech *mech;
   int i, cnt = 0;
 
-  for (i = 0; i < battle_map_unit_count(map); i++)
-    if ((mech = btech_context_get_mech(battle_map_context(map),
-                                       battle_map_unit_dbref(map, i)))) {
+  for (i = 0; i < battle_map_unit_count(map); i++) {
+    mech = btech_context_get_mech(battle_map_context(map),
+                                  battle_map_unit_dbref(map, i));
+    if (mech) {
       if (mech_position_x(mech) != x || mech_position_y(mech) != y)
         continue;
       if (mech_is_destroyed(mech))
@@ -56,9 +59,13 @@ int battle_map_mech_count_in_hex(BattleMap *map, int x, int y, int friendly,
         continue;
       if (mech_is_jumping(mech) || mech_is_out_of_control(mech))
         continue;
-      if (friendly < 0 || ((mech_team(mech) == team) == friendly))
+      bool same_team = mech_team(mech) == request->team;
+      if (request->relationship == TEAM_RELATIONSHIP_ANY ||
+          (request->relationship == TEAM_RELATIONSHIP_FRIENDLY && same_team) ||
+          (request->relationship == TEAM_RELATIONSHIP_HOSTILE && !same_team))
         cnt++;
     }
+  }
   return cnt;
 }
 
@@ -68,8 +75,18 @@ typedef enum CollisionDamageTable {
   COLLISION_DAMAGE_KICK,
 } CollisionDamageTable;
 
-static void collision_apply_damage(Mech *att, Mech *mech, int dam,
-                                   CollisionDamageTable table) {
+typedef struct CollisionDamageRequest {
+  Mech *attacker;
+  Mech *target;
+  int damage;
+  CollisionDamageTable table;
+} CollisionDamageRequest;
+
+static void collision_apply_damage(const CollisionDamageRequest *request) {
+  Mech *att = request->attacker;
+  Mech *mech = request->target;
+  int dam = request->damage;
+  CollisionDamageTable table = request->table;
   int hitGroup, isrear, iscrit = 0, hitloc = 0;
   int i, sp = (dam - 1) / 5;
 
@@ -104,9 +121,22 @@ static void collision_apply_damage(Mech *att, Mech *mech, int dam,
     }
     if (dam <= 0)
       return;
-    DamageMech(mech, att, (att == mech) ? 0 : 1,
-               (att == mech) ? -1 : mech_pilot_dbref(att), hitloc, isrear,
-               iscrit, dam > 5 ? 5 : dam, 0, -1, 0, -1, 0, 0);
+    mech_damage_apply(&(MechDamageRequest){
+        .target = mech,
+        .attacker = att,
+        .line_of_sight = (att == mech) ? 0 : 1,
+        .attack_pilot = (att == mech) ? -1 : mech_pilot_dbref(att),
+        .hit_location = hitloc,
+        .rear = isrear,
+        .critical = iscrit,
+        .armor_damage = dam > 5 ? 5 : dam,
+        .internal_damage = 0,
+        .transfer = MECH_DAMAGE_NORMAL,
+        .cause = -1,
+        .base_to_hit = 0,
+        .weapon_index = -1,
+        .ammunition_mode = 0,
+        .ignore_swarmers = 0});
     dam -= 5;
   }
 }
@@ -121,17 +151,31 @@ static int mech_adjusted_jump_speed_mp(const Mech *mech, const BattleMap *map) {
   return (int)(speed * MP_PER_KPH);
 }
 
-static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
-                                      int friendly, MechDominoMode mode,
-                                      int cnt) {
+typedef struct MechDominoRequest {
+  BattleMap *map;
+  Mech *moving_mech;
+  MapHexPosition position;
+  TeamRelationship relationship;
+  MechDominoMode mode;
+  int candidate_count;
+} MechDominoRequest;
+
+static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
+  BattleMap *map = request->map;
+  Mech *me = request->moving_mech;
+  int x = request->position.x;
+  int y = request->position.y;
+  int cnt = request->candidate_count;
+  MechDominoMode mode = request->mode;
   int tar = btech_random_range_int(mech_context(me), 0, cnt - 1);
   int i, head, td;
   Mech *mech = nullptr;
   int team = mech_team(me);
 
-  for (i = 0; i < battle_map_unit_count(map); i++)
-    if ((mech = btech_context_get_mech(battle_map_context(map),
-                                       battle_map_unit_dbref(map, i)))) {
+  for (i = 0; i < battle_map_unit_count(map); i++) {
+    mech = btech_context_get_mech(battle_map_context(map),
+                                  battle_map_unit_dbref(map, i));
+    if (mech) {
       if (mech_position_x(mech) != x || mech_position_y(mech) != y)
         continue;
       if (mech == me)
@@ -146,7 +190,11 @@ static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
           continue;
         if (mech_is_jumping(mech) || mech_is_out_of_control(mech))
           continue;
-        if (friendly < 0 || ((mech_team(mech) == team) == friendly))
+        bool same_team = mech_team(mech) == team;
+        if (request->relationship == TEAM_RELATIONSHIP_ANY ||
+            (request->relationship == TEAM_RELATIONSHIP_FRIENDLY &&
+             same_team) ||
+            (request->relationship == TEAM_RELATIONSHIP_HOSTILE && !same_team))
           tar--;
         else
           continue;
@@ -154,6 +202,7 @@ static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
       if (tar <= 0)
         break;
     }
+  }
   if (i == battle_map_unit_count(map))
     return 0;
   /* Now we got a mech we hit, accidentally or otherwise */
@@ -200,15 +249,27 @@ static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
                   mech_to_mech_display_id(mech, me).text);
       mech_los_broadcast_unit(me, mech, "lands on %s!");
       if (mech_is_dropship(mech)) {
-        collision_apply_damage(me, mech, MAX(1, td * factor / 500),
-                               COLLISION_DAMAGE_PUNCH);
-        collision_apply_damage(me, me, MAX(1, td * factor / 100),
-                               COLLISION_DAMAGE_KICK);
+        collision_apply_damage(
+            &(CollisionDamageRequest){.attacker = me,
+                                      .target = mech,
+                                      .damage = MAX(1, td * factor / 500),
+                                      .table = COLLISION_DAMAGE_PUNCH});
+        collision_apply_damage(
+            &(CollisionDamageRequest){.attacker = me,
+                                      .target = me,
+                                      .damage = MAX(1, td * factor / 100),
+                                      .table = COLLISION_DAMAGE_KICK});
       } else {
-        collision_apply_damage(me, mech, MAX(1, td * factor / 100),
-                               COLLISION_DAMAGE_PUNCH);
-        collision_apply_damage(me, me, MAX(1, td * factor / 500),
-                               COLLISION_DAMAGE_KICK);
+        collision_apply_damage(
+            &(CollisionDamageRequest){.attacker = me,
+                                      .target = mech,
+                                      .damage = MAX(1, td * factor / 100),
+                                      .table = COLLISION_DAMAGE_PUNCH});
+        collision_apply_damage(
+            &(CollisionDamageRequest){.attacker = me,
+                                      .target = me,
+                                      .damage = MAX(1, td * factor / 500),
+                                      .table = COLLISION_DAMAGE_KICK});
       }
     } else {
       mech_printf(me, MECHALL, "You nearly land on %s!",
@@ -233,15 +294,27 @@ static int mech_domino_resolve_in_hex(BattleMap *map, Mech *me, int x, int y,
                 mech_to_mech_display_id(mech, me).text);
     mech_los_broadcast_unit(me, mech, "bumps into %s!");
     if (mech_is_dropship(mech)) {
-      collision_apply_damage(me, mech, MAX(1, td * factor / 500),
-                             COLLISION_DAMAGE_NORMAL);
-      collision_apply_damage(me, me, MAX(1, td * factor / 100),
-                             COLLISION_DAMAGE_NORMAL);
+      collision_apply_damage(
+          &(CollisionDamageRequest){.attacker = me,
+                                    .target = mech,
+                                    .damage = MAX(1, td * factor / 500),
+                                    .table = COLLISION_DAMAGE_NORMAL});
+      collision_apply_damage(
+          &(CollisionDamageRequest){.attacker = me,
+                                    .target = me,
+                                    .damage = MAX(1, td * factor / 100),
+                                    .table = COLLISION_DAMAGE_NORMAL});
     } else {
-      collision_apply_damage(me, mech, MAX(1, td * factor / 100),
-                             COLLISION_DAMAGE_NORMAL);
-      collision_apply_damage(me, me, MAX(1, td * factor / 500),
-                             COLLISION_DAMAGE_NORMAL);
+      collision_apply_damage(
+          &(CollisionDamageRequest){.attacker = me,
+                                    .target = mech,
+                                    .damage = MAX(1, td * factor / 100),
+                                    .table = COLLISION_DAMAGE_NORMAL});
+      collision_apply_damage(
+          &(CollisionDamageRequest){.attacker = me,
+                                    .target = me,
+                                    .damage = MAX(1, td * factor / 500),
+                                    .table = COLLISION_DAMAGE_NORMAL});
     }
   } else {
     mech_printf(me, MECHALL, "You nearly bump into %s!",
@@ -268,19 +341,33 @@ int mech_domino_resolve(Mech *mech, MechDominoMode mode) {
     return 0;
   if (btech_context_stacking_mode(mech_context(mech)) == 0)
     return 0;
-  cnt = battle_map_mech_count_in_hex(map, mech_position_x(mech),
-                                     mech_position_y(mech), -1, 0);
+  MapHexPosition position = {.x = mech_position_x(mech),
+                             .y = mech_position_y(mech)};
+  cnt = battle_map_mech_count_in_hex(&(BattleMapHexOccupancyRequest){
+      .map = map, .position = position, .relationship = TEAM_RELATIONSHIP_ANY});
   if (cnt <= 2)
     return 0;
   /* Possible nastiness */
-  if ((fcnt = battle_map_mech_count_in_hex(map, mech_position_x(mech),
-                                           mech_position_y(mech), 1,
-                                           mech_team(mech))) > 2)
-    return mech_domino_resolve_in_hex(map, mech, mech_position_x(mech),
-                                      mech_position_y(mech), 1, mode, fcnt);
+  fcnt = battle_map_mech_count_in_hex(&(BattleMapHexOccupancyRequest){
+      .map = map,
+      .position = position,
+      .relationship = TEAM_RELATIONSHIP_FRIENDLY,
+      .team = mech_team(mech)});
+  if (fcnt > 2)
+    return mech_domino_resolve_in_hex(
+        &(MechDominoRequest){.map = map,
+                             .moving_mech = mech,
+                             .position = position,
+                             .relationship = TEAM_RELATIONSHIP_FRIENDLY,
+                             .mode = mode,
+                             .candidate_count = fcnt});
   else if (cnt > 6)
-    return mech_domino_resolve_in_hex(map, mech, mech_position_x(mech),
-                                      mech_position_y(mech), 0, mode,
-                                      cnt - fcnt);
+    return mech_domino_resolve_in_hex(
+        &(MechDominoRequest){.map = map,
+                             .moving_mech = mech,
+                             .position = position,
+                             .relationship = TEAM_RELATIONSHIP_HOSTILE,
+                             .mode = mode,
+                             .candidate_count = cnt - fcnt});
   return 0;
 }

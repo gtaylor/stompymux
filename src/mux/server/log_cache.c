@@ -2,6 +2,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +37,9 @@ struct LogCache {
   RedBlackTree files;
 };
 
-static int logcache_compare(void *vleft, void *vright, void *arg) {
+static int logcache_compare(const RedBlackTreeCompareCall *call) {
+  void *vleft = call->lhs;
+  void *vright = call->rhs;
   return strcmp((char *)vleft, (char *)vright);
 }
 
@@ -66,7 +70,9 @@ typedef struct LogCacheListContext {
   DbRef player;
 } LogCacheListContext;
 
-static int _logcache_list(void *key, void *data, int depth, void *arg) {
+static int logcache_list(const RedBlackTreeVisitCall *call) {
+  void *data = call->data;
+  void *arg = call->context;
   struct logfile_t *log = (struct logfile_t *)data;
   LogCacheListContext *context = arg;
   notify_printf(context->evaluation, context->player, "%-40s%llu",
@@ -90,7 +96,7 @@ void log_cache_list(EvaluationContext *evaluation, const LogCache *cache,
   notify_checked(evaluation, player, player,
                  "Filename                               Timeout",
                  MSG_ME_ALL | MSG_F_DOWN);
-  red_black_tree_walk(cache->files, WALK_INORDER, _logcache_list, &context);
+  red_black_tree_walk(cache->files, WALK_INORDER, logcache_list, &context);
 }
 
 static int log_cache_open(LogCache *cache, char *filename) {
@@ -113,8 +119,11 @@ static int log_cache_open(LogCache *cache, char *filename) {
     return 0;
   }
   if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
-    log_perror(cache->log, "LOGCACHE", "FAIL", nullptr,
-               "fcntl(fd, F_SETFD, FD_CLOEXEC)");
+    log_perror(
+        &(LogSystemError){.log = cache->log,
+                          .primary = "LOGCACHE",
+                          .secondary = "FAIL",
+                          .failing_object = "fcntl(fd, F_SETFD, FD_CLOEXEC)"});
   }
 
   newlog = malloc(sizeof(struct logfile_t));
@@ -128,7 +137,7 @@ static int log_cache_open(LogCache *cache, char *filename) {
     free(newlog);
     return 0;
   }
-  mux_timer_start(newlog->timer, LOGFILE_TIMEOUT * 1000, 0);
+  mux_timer_start(newlog->timer, (uint64_t)LOGFILE_TIMEOUT * 1000U, 0);
   red_black_tree_insert(cache->files, newlog->filename, newlog);
   dprintk("opened logfile '%s' fd = %d.", filename, fd);
   return 1;
@@ -149,7 +158,9 @@ LogCache *log_cache_create(uv_loop_t *loop, ServerLog *log) {
   return cache;
 }
 
-static void log_cache_release_file(void *key, void *data, void *arg) {
+static void log_cache_release_file(const RedBlackTreeReleaseCall *call) {
+  void *data = call->data;
+  void *arg = call->context;
   LogCache *cache = arg;
   struct logfile_t *log = (struct logfile_t *)data;
 
@@ -181,7 +192,7 @@ int log_cache_write(LogCache *cache, char *fname, const char *fdata) {
     }
   }
 
-  mux_timer_start(log->timer, LOGFILE_TIMEOUT * 1000, 0);
+  mux_timer_start(log->timer, (uint64_t)LOGFILE_TIMEOUT * 1000U, 0);
 
   if (write(log->fd, fdata, (size_t)len) < 0) {
     (void)fprintf(

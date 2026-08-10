@@ -114,13 +114,18 @@ struct ToggleModeContext {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
 #endif
-static int mech_toggle_mode_sub_func(Mech *mech, DbRef player, int index,
-                                     int high, void *context) {
+static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
+  Mech *mech = call->mech;
+  const DbRef player = call->actor;
+  const int index = call->first;
   int section, critical, weaptype;
-  const ToggleModeContext *toggle = context;
+  const ToggleModeContext *toggle = call->context;
 
-  weaptype =
-      FindWeaponNumberOnMech_Advanced(mech, index, &section, &critical, 0);
+  WeaponNumberLookupResult lookup = weapon_number_find(
+      &(WeaponNumberLookupRequest){.mech = mech, .number = index});
+  weaptype = lookup.value;
+  section = lookup.slot.section;
+  critical = lookup.slot.critical;
 
   if (weaptype == -1) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -288,7 +293,14 @@ static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
                  "Please specify a weapon number.");
     return;
   }
-  multi_weap_sel(mech, player, args[0], 1, mech_toggle_mode_sub_func, &toggle);
+  multi_weapon_select(&(MultiWeaponSelectionRequest){
+      .mech = mech,
+      .actor = player,
+      .selection = args[0],
+      .mode = 1,
+      .callback = mech_toggle_mode_sub_func,
+      .context = &toggle,
+  });
 }
 
 void mech_flamerheat(DbRef player, void *data, char *buffer) {
@@ -512,14 +524,19 @@ void mech_rac(DbRef player, void *data, char *buffer) {
   }
 }
 
-static int mech_unjamammo_func(Mech *mech, DbRef player, int index, int high,
-                               void *context) {
-  (void)context;
+static int mech_unjamammo_func(const MultiWeaponSelectionCall *call) {
+  Mech *mech = call->mech;
+  const DbRef player = call->actor;
+  const int index = call->first;
   int section, critical, weaptype;
   int i;
   char location[50];
 
-  weaptype = FindWeaponNumberOnMech(mech, index, &section, &critical);
+  WeaponNumberLookupResult lookup = weapon_number_find(
+      &(WeaponNumberLookupRequest){.mech = mech, .number = index});
+  weaptype = lookup.value;
+  section = lookup.slot.section;
+  critical = lookup.slot.critical;
   if (weaptype == -1) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "The weapons system chirps: 'Illegal Weapon Number!'");
@@ -582,7 +599,13 @@ void mech_unjamammo(DbRef player, void *data, char *buffer) {
                  "Please specify a weapon number.");
     return;
   }
-  multi_weap_sel(mech, player, args[0], 1, mech_unjamammo_func, nullptr);
+  multi_weapon_select(&(MultiWeaponSelectionRequest){
+      .mech = mech,
+      .actor = player,
+      .selection = args[0],
+      .mode = 1,
+      .callback = mech_unjamammo_func,
+  });
 }
 
 void mech_gattling(DbRef player, void *data, char *buffer) {

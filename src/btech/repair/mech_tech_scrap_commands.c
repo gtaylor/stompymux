@@ -70,7 +70,8 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
                  "That gun's gone already!");
     return;
   }
-  if (!ValidGunPos(mech, loc, part)) {
+  if (!ValidGunPos(&(RepairCriticalSelection){
+          .mech = mech, .location = loc, .position = part})) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You can't remove middle of a gun!");
     return;
@@ -113,12 +114,15 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
                         mech, weapon_from_equipment_index(
                                   mech_critical_part_type(mech, loc, part))));
       repair_event_schedule_with_techtime(
-          &repair_command, time, mod, EVENT_REPAIR_SCRG,
-          mech_event_failure_marker,
-          (RepairEventPayload){.location = loc,
-                               .position = part,
-                               .extra = mod,
-                               .player = player});
+          &(RepairWorkSchedule){.command = &repair_command,
+                                .work_time = time,
+                                .multiplier = mod,
+                                .event_type = EVENT_REPAIR_SCRG,
+                                .callback = mech_event_failure_marker,
+                                .payload = {.location = loc,
+                                            .position = part,
+                                            .extra = mod,
+                                            .player = player}});
       return;
     }
   }
@@ -129,11 +133,14 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
           mech,
           GetWeaponCrits(mech, weapon_from_equipment_index(
                                    mech_critical_part_type(mech, loc, part))));
-  repair_event_schedule_with_techtime(
-      &repair_command, time, mod, EVENT_REPAIR_SCRG,
-      mux_event_tickmech_removegun,
-      (RepairEventPayload){
-          .location = loc, .position = part, .extra = mod, .player = player});
+  repair_event_schedule_with_techtime(&(RepairWorkSchedule){
+      .command = &repair_command,
+      .work_time = time,
+      .multiplier = mod,
+      .event_type = EVENT_REPAIR_SCRG,
+      .callback = mux_event_tickmech_removegun,
+      .payload = {
+          .location = loc, .position = part, .extra = mod, .player = player}});
 }
 
 void tech_removepart(DbRef player, void *data, char *buffer) {
@@ -159,7 +166,8 @@ void tech_removepart(DbRef player, void *data, char *buffer) {
     return;
   loc = selection.location;
   part = selection.part;
-  if ((t = mech_critical_part_type(mech, loc, part)) == EMPTY) {
+  t = mech_critical_part_type(mech, loc, part);
+  if (t == EMPTY) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That location is empty!");
     return;
@@ -228,20 +236,26 @@ void tech_removepart(DbRef player, void *data, char *buffer) {
       mecha_notify(evaluation, player, "No good. Consider the part gone.");
       mod = 3;
       repair_event_schedule_with_techtime(
-          &repair_command, REMOVEP_TIME, mod, EVENT_REPAIR_SCRP,
-          mech_event_failure_marker,
-          (RepairEventPayload){.location = loc,
-                               .position = part,
-                               .extra = mod,
-                               .player = player});
+          &(RepairWorkSchedule){.command = &repair_command,
+                                .work_time = REMOVEP_TIME,
+                                .multiplier = mod,
+                                .event_type = EVENT_REPAIR_SCRP,
+                                .callback = mech_event_failure_marker,
+                                .payload = {.location = loc,
+                                            .position = part,
+                                            .extra = mod,
+                                            .player = player}});
       return;
     }
   }
-  repair_event_schedule_with_techtime(
-      &repair_command, REMOVEP_TIME, mod, EVENT_REPAIR_SCRP,
-      mux_event_tickmech_removepart,
-      (RepairEventPayload){
-          .location = loc, .position = part, .extra = mod, .player = player});
+  repair_event_schedule_with_techtime(&(RepairWorkSchedule){
+      .command = &repair_command,
+      .work_time = REMOVEP_TIME,
+      .multiplier = mod,
+      .event_type = EVENT_REPAIR_SCRP,
+      .callback = mux_event_tickmech_removepart,
+      .payload = {
+          .location = loc, .position = part, .extra = mod, .player = player}});
 }
 
 static bool invalid_scrap_dependency(Mech *mech, int location) {
@@ -320,9 +334,12 @@ void tech_removesection(DbRef player, void *data, char *buffer) {
   if (tech_roll(player, mech, REMOVES_DIFFICULTY) < 0)
     mod = 3;
   mecha_notify(evaluation, player, "You start removing the section..");
-  repair_event_schedule_with_techtime(
-      &repair_command, REMOVES_TIME, mod, EVENT_REPAIR_SCRL,
-      mux_event_tickmech_removesection,
-      (RepairEventPayload){
-          .location = loc, .position = 0, .extra = mod, .player = player});
+  repair_event_schedule_with_techtime(&(RepairWorkSchedule){
+      .command = &repair_command,
+      .work_time = REMOVES_TIME,
+      .multiplier = mod,
+      .event_type = EVENT_REPAIR_SCRL,
+      .callback = mux_event_tickmech_removesection,
+      .payload = {
+          .location = loc, .position = 0, .extra = mod, .player = player}});
 }

@@ -34,10 +34,11 @@ static int *template_integer_slot(int *values, size_t count, int index) {
   return checked_storage_at(values, count, sizeof(*values), (size_t)index);
 }
 
-void try_to_find_name(char *mechref, Mech *mech) {
+void try_to_find_name(const char *mechref, Mech *mech) {
   const char *c;
 
-  if ((c = find_mechname_by_mechref(mechref)))
+  c = find_mechname_by_mechref(mechref);
+  if (c)
     strlcpy(((mech)->ud.mech_name), c, sizeof(((mech)->ud.mech_name)));
 }
 
@@ -56,9 +57,22 @@ int DefaultFuelByType(Mech *mech) {
   return 0;
 }
 
-static void save_nondefault_range(FILE *fp, const Mech *mech, int current,
-                                  int computer_default, int legacy_default,
-                                  const char *name) {
+typedef struct NondefaultRangeSaveRequest {
+  FILE *file;
+  const Mech *mech;
+  int current;
+  int computer_default;
+  int legacy_default;
+  const char *name;
+} NondefaultRangeSaveRequest;
+
+static void save_nondefault_range(const NondefaultRangeSaveRequest *request) {
+  FILE *fp = request->file;
+  const Mech *mech = request->mech;
+  const int current = request->current;
+  const int computer_default = request->computer_default;
+  const int legacy_default = request->legacy_default;
+  const char *name = request->name;
   int expected =
       mech_computer_quality(mech) ? computer_default : legacy_default;
 
@@ -72,7 +86,11 @@ static void save_nondefault_integer(FILE *fp, int expected, int current,
     (void)fprintf(fp, "%-16s { %d }\n", name, current);
 }
 
-int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
+int template_save(const TemplateSaveRequest *request) {
+  const DbRef player = request->player;
+  Mech *mech = request->mech;
+  const char *reference = request->reference;
+  const char *filename = request->filename;
   FILE *fp;
   int x, x2, inf_x;
   const char *const *locs;
@@ -82,7 +100,8 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
     computer_conversion(mech);
   if (!((mech)->ud.mech_name)[0])
     try_to_find_name(reference, mech);
-  if (!(fp = fopen(filename, "w")))
+  fp = fopen(filename, "w");
+  if (!fp)
     return -1;
   if (((mech)->ud.mech_name)[0])
     (void)fprintf(fp, "Name             { %s }\n", ((mech)->ud.mech_name));
@@ -94,23 +113,44 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
       fprintf(fp, "Move_Type        { %s }\n",
               template_movement_type_name((size_t)mech->ud.move));
   (void)fprintf(fp, "Tons             { %d }\n", ((mech)->ud.tons));
-  if ((d = strrchr(c, '\n')))
+  d = strrchr(c, '\n');
+  if (d)
     *d = 0;
   (void)fprintf(fp, "Comment          { Saved by: %s(#%ld) at %s }\n",
                 game_object_name(mech->xcode.context->database, player), player,
                 c);
-  save_nondefault_range(fp, mech, mech_tactical_range(mech),
-                        mech_default_tactical_range(mech), DEFAULT_TACRANGE,
-                        "Tac_Range");
-  save_nondefault_range(fp, mech, mech_long_range_sensor_range(mech),
-                        mech_default_long_range_sensor_range(mech),
-                        DEFAULT_LRSRANGE, "LRS_Range");
-  save_nondefault_range(fp, mech, mech_scanner_range(mech),
-                        mech_default_scanner_range(mech), DEFAULT_SCANRANGE,
-                        "Scan_Range");
-  save_nondefault_range(fp, mech, mech_radio_range(mech),
-                        mech_default_radio_range(mech), DEFAULT_RADIORANGE,
-                        "Radio_Range");
+  save_nondefault_range(&(NondefaultRangeSaveRequest){
+      .file = fp,
+      .mech = mech,
+      .current = mech_tactical_range(mech),
+      .computer_default = mech_default_tactical_range(mech),
+      .legacy_default = DEFAULT_TACRANGE,
+      .name = "Tac_Range",
+  });
+  save_nondefault_range(&(NondefaultRangeSaveRequest){
+      .file = fp,
+      .mech = mech,
+      .current = mech_long_range_sensor_range(mech),
+      .computer_default = mech_default_long_range_sensor_range(mech),
+      .legacy_default = DEFAULT_LRSRANGE,
+      .name = "LRS_Range",
+  });
+  save_nondefault_range(&(NondefaultRangeSaveRequest){
+      .file = fp,
+      .mech = mech,
+      .current = mech_scanner_range(mech),
+      .computer_default = mech_default_scanner_range(mech),
+      .legacy_default = DEFAULT_SCANRANGE,
+      .name = "Scan_Range",
+  });
+  save_nondefault_range(&(NondefaultRangeSaveRequest){
+      .file = fp,
+      .mech = mech,
+      .current = mech_radio_range(mech),
+      .computer_default = mech_default_radio_range(mech),
+      .legacy_default = DEFAULT_RADIORANGE,
+      .name = "Radio_Range",
+  });
 
   save_nondefault_integer(fp, DEFAULT_COMPUTER, mech_computer_quality(mech),
                           "Computer");
@@ -154,25 +194,40 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
           BLOODHOUND_PROBE_TECH | TCOMP_TECH);
 
   if (x || x2)
-    (void)fprintf(fp, "Specials         { %s }\n",
-                  build_bit_string2(specials, primary_technology_name_count(),
-                                    specials2,
-                                    secondary_technology_name_count(), x, x2,
-                                    (char[BTECH_TEXT_CAPACITY]){0}));
+    (void)fprintf(
+        fp, "Specials         { %s }\n",
+        template_bit_string_build(&(TemplateBitStringRequest){
+            .sets =
+                (TemplateBitSet[]){{.descriptions = specials,
+                                    .count = primary_technology_name_count(),
+                                    .bits = x},
+                                   {.descriptions = specials2,
+                                    .count = secondary_technology_name_count(),
+                                    .bits = x2}},
+            .set_count = 2,
+            .delimiter = ' ',
+            .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
 
   inf_x = ((mech)->rd.infantry_specials);
 
   if (inf_x)
-    (void)fprintf(fp, "InfantrySpecials { %s }\n",
-                  build_bit_string(infantry_specials,
-                                   infantry_technology_name_count(), inf_x,
-                                   (char[BTECH_TEXT_CAPACITY]){0}));
+    (void)fprintf(
+        fp, "InfantrySpecials { %s }\n",
+        template_bit_string_build(&(TemplateBitStringRequest){
+            .sets = &(TemplateBitSet){.descriptions = infantry_specials,
+                                      .count = infantry_technology_name_count(),
+                                      .bits = inf_x},
+            .set_count = 1,
+            .delimiter = ' ',
+            .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
 
   int result = -1;
-  if ((locs =
-           ProperSectionStringFromType(((mech)->ud.type), ((mech)->ud.move)))) {
-    dump_locations(fp, mech, locs,
-                   mech_section_name_count(mech->ud.type, mech->ud.move));
+  locs = ProperSectionStringFromType(((mech)->ud.type), ((mech)->ud.move));
+  if (locs) {
+    dump_locations(
+        fp, mech, locs,
+        unit_section_name_count(&(UnitSectionCatalog){
+            .unit_type = mech->ud.type, .movement_type = mech->ud.move}));
     result = 0;
   }
   if (fclose(fp) != 0)
@@ -183,19 +238,26 @@ int save_template(DbRef player, Mech *mech, char *reference, char *filename) {
 static void skip_template_whitespace(FILE *fp) {
   int c;
 
-  while ((c = fgetc(fp)) != EOF && (c == ' ' || c == '\t' || c == '\n' ||
-                                    c == '\v' || c == '\f' || c == '\r'))
-    ;
+  for (;;) {
+    c = fgetc(fp);
+    if (c == EOF || (c != ' ' && c != '\t' && c != '\n' && c != '\v' &&
+                     c != '\f' && c != '\r'))
+      break;
+  }
   if (c != EOF)
     dassert(ungetc(c, fp) != EOF);
 }
 
-char *read_desc(FILE *fp, char *data, char *buffer) {
+char *template_description_read(const TemplateDescriptionRead *request) {
+  FILE *fp = request->file;
+  char *data = request->line;
+  char *buffer = request->buffer;
   BtechTextBuilder builder;
   btech_text_builder_initialize(&builder, buffer, BTECH_TEXT_CAPACITY);
   char *opening;
 
-  if (data && (opening = strchr(data, '{'))) {
+  opening = data ? strchr(data, '{') : nullptr;
+  if (opening) {
     skip_template_whitespace(fp);
     char *content = checked_mutable_string_suffix(opening, 1);
     content =
@@ -251,7 +313,9 @@ int find_section(char *cmd, int type, int mtype) {
       *character = ' ';
   }
   locs = ProperSectionStringFromType(type, mtype);
-  return compare_const_array(locs, mech_section_name_count(type, mtype),
+  return compare_const_array(locs,
+                             unit_section_name_count(&(UnitSectionCatalog){
+                                 .unit_type = type, .movement_type = mtype}),
                              section);
 }
 
@@ -264,8 +328,10 @@ long BuildBitVector(const char *const list[], size_t count, char *line) {
     return 0;
 
   while (*line) {
-    line = one_arg(line, buf, sizeof(buf));
-    if ((temp = compare_const_array(list, count, buf)) == -1)
+    line = template_token_parse(&(TemplateTokenRequest){
+        .input = line, .output = buf, .output_capacity = sizeof(buf)});
+    temp = compare_const_array(list, count, buf);
+    if (temp == -1)
       return -1;
     bv |= 1U << temp;
   }
@@ -282,9 +348,14 @@ long BuildBitVectorWithDelim(const char *const list[], size_t count,
     return 0;
 
   while (*line) {
-    line = one_arg_delim(line, buf, sizeof(buf));
+    line = template_token_parse(
+        &(TemplateTokenRequest){.input = line,
+                                .output = buf,
+                                .output_capacity = sizeof(buf),
+                                .pipe_delimited = true});
 
-    if ((temp = compare_const_array(list, count, buf)) == -1)
+    temp = compare_const_array(list, count, buf);
+    if (temp == -1)
       return -1;
 
     bv |= 1U << temp;
@@ -302,9 +373,11 @@ long BuildBitVectorNoErr(const char *const list[], size_t count, char *line) {
     return 0;
 
   while (*line) {
-    line = one_arg(line, buf, sizeof(buf));
+    line = template_token_parse(&(TemplateTokenRequest){
+        .input = line, .output = buf, .output_capacity = sizeof(buf)});
 
-    if ((temp = compare_const_array(list, count, buf)) != -1)
+    temp = compare_const_array(list, count, buf);
+    if (temp != -1)
       bv |= 1U << temp;
   }
 
@@ -321,7 +394,8 @@ int CheckSpecialsList(const char *const special_list[], size_t count,
     return 0;
 
   while (*line) {
-    line = one_arg(line, buf, sizeof(buf));
+    line = template_token_parse(&(TemplateTokenRequest){
+        .input = line, .output = buf, .output_capacity = sizeof(buf)});
 
     if (special_list)
       wSpecCheck = compare_const_array(special_list, count, buf);
@@ -405,8 +479,9 @@ void update_specials(Mech *mech) {
     *template_integer_slot(awcSthArmor, NUM_SECTIONS, x) = 0;
     *template_integer_slot(awcNSS, NUM_SECTIONS, x) = 0;
 
-    for (y = 0; y < CritsInLoc(mech, x); y++)
-      if ((t = mech_critical_part_type(mech, x, y))) {
+    for (y = 0; y < CritsInLoc(mech, x); y++) {
+      t = mech_critical_part_type(mech, x, y);
+      if (t) {
         switch (special_from_equipment_index(t)) {
         case ARTEMIS_IV:
           ((mech)->rd.specials) |= ARTEMIS_IV_TECH;
@@ -511,6 +586,7 @@ void update_specials(Mech *mech) {
             ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
         }
       }
+    }
     if (x != CTORSO && e_count) {
       if (e_count > 3)
         ((mech)->rd.specials) |= XXL_TECH;
@@ -538,10 +614,12 @@ void update_specials(Mech *mech) {
   if (tc_count) {
     ((mech)->rd.specials2) |= TCOMP_TECH;
     for (x = 0; x < NUM_SECTIONS; x++)
-      for (y = 0; y < CritsInLoc(mech, x); y++)
-        if (equipment_is_weapon((t = mech_critical_part_type(mech, x, y))))
+      for (y = 0; y < CritsInLoc(mech, x); y++) {
+        t = mech_critical_part_type(mech, x, y);
+        if (equipment_is_weapon(t))
           if (equipment_can_use_targeting_computer(t))
             mech_critical_fire_mode_add(mech, x, y, ON_TC);
+      }
   }
   if (masc_count >= MAX(1, (((mech)->ud.tons) / (cl ? 25 : 20))))
     ((mech)->rd.specials) |= MASC_TECH;

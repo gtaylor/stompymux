@@ -10,7 +10,7 @@ char *command_invocation_vector_at(const CommandInvocation *invocation,
   if (invocation->vector_count < 0)
     return nullptr;
   return *(char *const *)checked_storage_at_const(
-      invocation->vector, (size_t)invocation->vector_count,
+      (const void *)invocation->vector, (size_t)invocation->vector_count,
       sizeof(*invocation->vector), index);
 }
 

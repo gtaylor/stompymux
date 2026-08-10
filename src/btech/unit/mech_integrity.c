@@ -3,6 +3,7 @@
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_sensor_state_api.h"
@@ -227,7 +228,7 @@ int HeatFactor(Mech *mech) {
    remember that values 3 means the weapon IS NOT destroyed.  */
 int WeaponIsNonfunctional(Mech *mech, int section, int crit, int numcrits) {
   int disabled = 0, dested = 0;
-  int count = 0, nloc, ncrit, stype;
+  int count = 0, nloc, ncrit;
   int i;
 
   if (numcrits <= 0)
@@ -244,7 +245,11 @@ int WeaponIsNonfunctional(Mech *mech, int section, int crit, int numcrits) {
   }
 
   if (count < numcrits && ((mech)->ud.type) == CLASS_MECH) {
-    if (GetSplitData(mech, section, crit, &nloc, &ncrit, &stype)) {
+    SplitCriticalLookup split_lookup =
+        split_critical_find(mech, (CriticalSlotReference){section, crit});
+    if (split_lookup.found) {
+      nloc = split_lookup.slot.section;
+      ncrit = split_lookup.slot.critical;
       for (i = ncrit; i < (numcrits - count); i++) {
         if (mech_critical_is_destroyed(mech, nloc, i))
           dested++;

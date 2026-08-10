@@ -26,8 +26,14 @@ char GetWeaponFireModeLetter_Model_Mode(int model, int mode);
 char GetWeaponAmmoModeLetter(Mech *mech, int loop, int crit);
 char GetWeaponFireModeLetter(Mech *mech, int loop, int crit);
 const char *GetMoveTypeID(int movetype);
-void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                    int spaces, int level);
+typedef struct MechFlagDisplayRequest {
+  EvaluationContext *evaluation;
+  DbRef player;
+  Mech *mech;
+  int indentation;
+  int detail_level;
+} MechFlagDisplayRequest;
+void Mech_ShowFlags(const MechFlagDisplayRequest *request);
 const char *GetArcID(Mech *mech, int arc);
 MechDisplayId mech_to_mech_display_id_base(Mech *see, Mech *mech, int inlos);
 MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech);

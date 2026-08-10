@@ -157,18 +157,27 @@ void do_pemit(CommandInvocation *invocation) {
       }
       break;
     case PEMIT_OEMIT:
-      notify_except(evaluation,
-                    game_object_location(evaluation->world->database, target),
-                    player, target, message);
+      notify_excluding(&(ExcludingNotification){
+          .evaluation = evaluation,
+          .location = game_object_location(evaluation->world->database, target),
+          .sender = player,
+          .exceptions = {target},
+          .exception_count = 1,
+          .message = message});
       break;
     case PEMIT_FSAY:
       notify_printf(evaluation, target, "You say \"%s\"", message);
       if (loc != NOTHING) {
-        notify_except(
-            evaluation, loc, player, target,
-            tprintf("%s says \"%s\"",
-                    game_object_name(evaluation->world->database, target),
-                    message));
+        notify_excluding(&(ExcludingNotification){
+            .evaluation = evaluation,
+            .location = loc,
+            .sender = player,
+            .exceptions = {target},
+            .exception_count = 1,
+            .message =
+                tprintf("%s says \"%s\"",
+                        game_object_name(evaluation->world->database, target),
+                        message)});
       }
       break;
     case PEMIT_FPOSE:

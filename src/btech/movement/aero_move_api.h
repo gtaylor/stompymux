@@ -6,10 +6,16 @@
 
 /* aero.move.c */
 void aero_takeoff(DbRef player, void *data, const char *buffer);
-void DS_BlastNearbyMechsAndTrees(Mech *mech, const char *hitmsg,
-                                 const char *hitmsg1, const char *nearhitmsg,
-                                 const char *nearhitmsg1,
-                                 const char *treehitmsg, int damage);
+typedef struct DropshipExhaustBlastRequest {
+  Mech *dropship;
+  const char *direct_message;
+  const char *direct_observer_message;
+  const char *nearby_message;
+  const char *nearby_observer_message;
+  const char *tree_message;
+  int damage;
+} DropshipExhaustBlastRequest;
+void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request);
 void aero_land(DbRef player, void *data, const char *buffer);
 void aero_control_effect(Mech *mech);
 void dropship_bridge_hit(Mech *mech);

@@ -22,8 +22,20 @@
  * * give_thing, do_give: Give away things.
  */
 
-static void give_thing(EvaluationContext *evaluation, DbRef giver,
-                       DbRef recipient, int key, char *what) {
+typedef struct GiveThingRequest {
+  EvaluationContext *evaluation;
+  DbRef giver;
+  DbRef recipient;
+  int key;
+  char *description;
+} GiveThingRequest;
+
+static void give_thing(const GiveThingRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef giver = request->giver;
+  DbRef recipient = request->recipient;
+  int key = request->key;
+  char *what = request->description;
   MatchContext *match = &evaluation->command->match;
   DbRef thing;
   char *str, *sp;
@@ -67,8 +79,12 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
     safe_str(" away.", str, &sp);
     *sp = '\0';
 
-    notify_lock_failure(evaluation, &lock, &result, str, nullptr,
-                        LUA_EVENT_GIVE_FAIL);
+    notify_lock_failure(
+        &(LockFailureNotification){.evaluation = evaluation,
+                                   .invocation = &lock,
+                                   .result = &result,
+                                   .enactor_default = str,
+                                   .event = LUA_EVENT_GIVE_FAIL});
     free_lbuf(str);
     return;
   }
@@ -82,12 +98,19 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
     safe_chr('.', str, &sp);
     *sp = '\0';
 
-    notify_lock_failure(evaluation, &lock, &result, str, nullptr,
-                        LUA_EVENT_GIVE_RECEIVE_FAIL);
+    notify_lock_failure(
+        &(LockFailureNotification){.evaluation = evaluation,
+                                   .invocation = &lock,
+                                   .result = &result,
+                                   .enactor_default = str,
+                                   .event = LUA_EVENT_GIVE_RECEIVE_FAIL});
     free_lbuf(str);
     return;
   }
-  move_via_generic(evaluation, thing, recipient, giver, 0);
+  move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                            .object = thing,
+                                            .destination = recipient,
+                                            .cause = giver});
   if (!(key & GIVE_QUIET)) {
     str = alloc_lbuf("do_give.thing.ok");
     StringCopy(str, game_object_name(evaluation->world->database, giver));
@@ -157,5 +180,9 @@ void do_give(CommandInvocation *invocation) {
     break;
   }
 
-  give_thing(&invocation->context->evaluation, player, recipient, key, amnt);
+  give_thing(&(GiveThingRequest){.evaluation = &invocation->context->evaluation,
+                                 .giver = player,
+                                 .recipient = recipient,
+                                 .key = key,
+                                 .description = amnt});
 }

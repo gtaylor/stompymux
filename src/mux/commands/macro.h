@@ -52,7 +52,13 @@ char **macro_string_slot(MacroSet *set, size_t index);
 char *macro_alias_at(const MacroSet *set, size_t index);
 
 void init_mactab(CommandRegistry *commands);
-MacroSet *get_macro_set(MacroRegistry *registry, DbRef player, int which);
+typedef struct MacroSetRequest {
+  MacroRegistry *registry;
+  DbRef player;
+  int slot;
+} MacroSetRequest;
+
+MacroSet *get_macro_set(const MacroSetRequest *request);
 int can_write_macros(DbRef player, MacroSet *m);
 int can_read_macros(GameDatabase *database, DbRef player, MacroSet *m);
 
@@ -89,5 +95,11 @@ void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *cmd);
 void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s);
-char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
-                       char *s);
+typedef struct MacroExpansionRequest {
+  MacroRegistry *registry;
+  DbRef player;
+  char *input;
+  char *arguments;
+} MacroExpansionRequest;
+
+char *do_process_macro(const MacroExpansionRequest *request);

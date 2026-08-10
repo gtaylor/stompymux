@@ -60,7 +60,8 @@ static void command_queue_free_entries(BQUE *entry) {
   }
 }
 
-static void command_queue_free_object(void *key, void *data, void *arg) {
+static void command_queue_free_object(const RedBlackTreeReleaseCall *call) {
+  void *data = call->data;
   OBJQE *object_queue = data;
 
   command_queue_free_entries(object_queue->cque);
@@ -111,7 +112,9 @@ static void cque_free_entry(BQUE *entry) {
   free(entry);
 }
 
-static int objqe_compare(void *left_key, void *right_key, void *arg) {
+static int objqe_compare(const RedBlackTreeCompareCall *call) {
+  void *left_key = call->lhs;
+  void *right_key = call->rhs;
   const DbRef left = (DbRef)left_key;
   const DbRef right = (DbRef)right_key;
 
@@ -307,9 +310,11 @@ int halt_que(CommandQueue *queue, DbRef player, DbRef object) {
   if (player == NOTHING)
     player = object;
   if (object == NOTHING)
-    queue_set(queue->players, player, 0);
+    queue_set(
+        &(PlayerQueueAssignment){.cache = queue->players, .player = player});
   else
-    queue_adjust(queue->players, player, -numhalted);
+    queue_adjust(&(PlayerQueueAdjustment){
+        .cache = queue->players, .player = player, .delta = -numhalted});
   return numhalted;
 }
 
@@ -378,8 +383,11 @@ void do_halt(CommandInvocation *invocation) {
  * * setup_que: Set up a queue entry.
  */
 
-static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
-                       char *command) {
+static BQUE *setup_que(const QueuedCommandRequest *request) {
+  CommandQueue *queue = request->queue;
+  DbRef player = request->player;
+  DbRef cause = request->cause;
+  char *command = request->command;
   EvaluationContext *evaluation = &queue->background_command->evaluation;
   int maximum;
   BQUE *tmp;
@@ -392,7 +400,8 @@ static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
     return nullptr;
 
   maximum = queue_maximum(queue->players, player);
-  if (queue_adjust(queue->players, player, 1) > maximum) {
+  if (queue_adjust(&(PlayerQueueAdjustment){
+          .cache = queue->players, .player = player, .delta = 1}) > maximum) {
     notify_checked(evaluation, player, player,
                    "Run away objects: too many commands queued.  Halted.",
                    MSG_ME_ALL | MSG_F_DOWN);
@@ -445,11 +454,12 @@ static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
  * * wait_que: Add commands to the timed wait queue.
  */
 
-void wait_que(CommandQueue *queue, DbRef player, DbRef cause, int wait,
-              char *command) {
+void wait_que(const QueuedCommandRequest *request) {
+  CommandQueue *queue = request->queue;
+  DbRef player = request->player;
   BQUE *cmd;
   if (queue->world->configuration->is_command_queue_enabled)
-    cmd = setup_que(queue, player, cause, command);
+    cmd = setup_que(request);
   else
     cmd = nullptr;
 
@@ -457,8 +467,8 @@ void wait_que(CommandQueue *queue, DbRef player, DbRef cause, int wait,
     return;
   }
 
-  if (wait > 0) {
-    cmd->waittime = (int)(queue->clock->now + wait);
+  if (request->delay > 0) {
+    cmd->waittime = (int)(queue->clock->now + request->delay);
   } else {
     cmd->waittime = 0;
   }
@@ -486,7 +496,11 @@ void do_wait(CommandInvocation *invocation) {
     return;
   }
 
-  wait_que(queue, player, cause, delay, cmd);
+  wait_que(&(QueuedCommandRequest){.queue = queue,
+                                   .player = player,
+                                   .cause = cause,
+                                   .delay = delay,
+                                   .command = cmd});
 }
 
 /*
@@ -532,22 +546,30 @@ int do_top(CommandQueue *queue, int ncmds) {
       CommandContext context;
       BtechCommandScope btech_scope;
 
-      if (!command_context_initialize(&context, queue->command_runtime,
-                                      queue->btech, queue->log, object,
-                                      tmp->cause, nullptr, false)) {
+      if (!command_context_initialize(
+              &(CommandContextInitialization){.context = &context,
+                                              .runtime = queue->command_runtime,
+                                              .btech = queue->btech,
+                                              .log = queue->log,
+                                              .player = object,
+                                              .enactor = tmp->cause})) {
         free(tmp->text);
         cque_free_entry(tmp);
         continue;
       }
       context.debug_command = "< do_top >";
       btech_command_scope_enter(&btech_scope, context.btech, &context);
-      queue_adjust(queue->players, object, -1);
+      queue_adjust(&(PlayerQueueAdjustment){
+          .cache = queue->players, .player = object, .delta = -1});
       if (!is_halted(queue->world->database, object)) {
         command = tmp->comm;
 
         if (command) {
           while (command) {
-            cp = parse_to(queue->world->configuration, &command, ';', 0);
+            cp = parse_to(&(CommandParseRequest){
+                .configuration = queue->world->configuration,
+                .source = &command,
+                .delimiter = ';'});
             if (cp && *cp) {
               process_command(&context, cp, nullptr, 0);
             }

@@ -118,8 +118,11 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
   int err;
 
   /* Split <type>=<target>,<low>,<high>. */
-  searchtype = parse_to(context->world->configuration, &searchfor, '=',
-                        COMMAND_PARSE_STRIP_TRAILING);
+  searchtype = parse_to(
+      &(CommandParseRequest){.configuration = context->world->configuration,
+                             .source = &searchfor,
+                             .delimiter = '=',
+                             .options = COMMAND_PARSE_STRIP_TRAILING});
   if (!searchtype)
     searchtype = empty;
   if (!searchfor)
@@ -258,11 +261,11 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
   return 1;
 }
 
-void search_criteria_perform(EvaluationContext *context, DbRef player,
-                             DbRef cause, SearchCriteria *parm,
-                             ObjectList *results) {
+void search_criteria_perform(const SearchExecutionRequest *request) {
+  EvaluationContext *context = request->evaluation;
+  SearchCriteria *parm = request->criteria;
+  ObjectList *results = request->results;
   DbRef thing;
-  (void)cause;
 
   for (thing = parm->low_bound; thing <= parm->high_bound; thing++) {
     /*
@@ -287,7 +290,10 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
 
     for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
       if (object_flag_set_has(&parm->s_fset, flag) &&
-          !game_object_has_flag(context->world->database, thing, flag))
+          !game_object_has_flag(
+              &(ObjectFlagRequest){.database = context->world->database,
+                                   .object = thing,
+                                   .flag = flag}))
         goto next_object;
 
     /*
@@ -295,7 +301,10 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
      */
 
     if (parm->s_power != POWER_NONE &&
-        !game_object_has_power(context->world->database, thing, parm->s_power))
+        !game_object_has_power(
+            &(ObjectPowerRequest){.database = context->world->database,
+                                  .object = thing,
+                                  .power = parm->s_power}))
       continue;
 
     /*
@@ -320,7 +329,6 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
 void do_search(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
-  DbRef cause = invocation->cause;
   char *arg = invocation->first;
   int flag, destitute;
   int rcount, ecount, tcount, pcount, gcount;
@@ -332,7 +340,8 @@ void do_search(CommandInvocation *invocation) {
   if (!search_criteria_setup(evaluation, player, arg, &searchparm))
     return;
   object_list_initialize(&results);
-  search_criteria_perform(evaluation, player, cause, &searchparm, &results);
+  search_criteria_perform(&(SearchExecutionRequest){
+      .evaluation = evaluation, .criteria = &searchparm, .results = &results});
   destitute = 1;
 
   outbuf = alloc_lbuf("do_search.outbuf");

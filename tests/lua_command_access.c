@@ -82,13 +82,34 @@ int main(void) {
   }
   lua_pop(state, 1);
 
-  if (!lua_command_access_allows(&database, 3, LUA_COMMAND_ACCESS_PUBLIC) ||
-      lua_command_access_allows(&database, 3, LUA_COMMAND_ACCESS_WIZARD) ||
-      lua_command_access_allows(&database, 3, LUA_COMMAND_ACCESS_GOD) ||
-      !lua_command_access_allows(&database, 2, LUA_COMMAND_ACCESS_WIZARD) ||
-      lua_command_access_allows(&database, 2, LUA_COMMAND_ACCESS_GOD) ||
-      !lua_command_access_allows(&database, GOD, LUA_COMMAND_ACCESS_WIZARD) ||
-      !lua_command_access_allows(&database, GOD, LUA_COMMAND_ACCESS_GOD)) {
+  if (!lua_command_access_allows(
+          &(LuaCommandAccessRequest){.database = &database,
+                                     .player = 3,
+                                     .access = LUA_COMMAND_ACCESS_PUBLIC}) ||
+      lua_command_access_allows(
+          &(LuaCommandAccessRequest){.database = &database,
+                                     .player = 3,
+                                     .access = LUA_COMMAND_ACCESS_WIZARD}) ||
+      lua_command_access_allows(
+          &(LuaCommandAccessRequest){.database = &database,
+                                     .player = 3,
+                                     .access = LUA_COMMAND_ACCESS_GOD}) ||
+      !lua_command_access_allows(
+          &(LuaCommandAccessRequest){.database = &database,
+                                     .player = 2,
+                                     .access = LUA_COMMAND_ACCESS_WIZARD}) ||
+      lua_command_access_allows(
+          &(LuaCommandAccessRequest){.database = &database,
+                                     .player = 2,
+                                     .access = LUA_COMMAND_ACCESS_GOD}) ||
+      !lua_command_access_allows(
+          &(LuaCommandAccessRequest){.database = &database,
+                                     .player = GOD,
+                                     .access = LUA_COMMAND_ACCESS_WIZARD}) ||
+      !lua_command_access_allows(
+          &(LuaCommandAccessRequest){.database = &database,
+                                     .player = GOD,
+                                     .access = LUA_COMMAND_ACCESS_GOD})) {
     lua_close(state);
     return 1;
   }
