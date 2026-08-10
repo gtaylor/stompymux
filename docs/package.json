@@ -8,5 +8,8 @@
   "devDependencies": {
     "autoprefixer": "10.4.27",
     "postcss-cli": "11.0.1"
-  }
+  },
+  "workspaces": [
+    "packages/hugoautogen"
+  ]
 }
