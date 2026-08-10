@@ -5,12 +5,6 @@ description = 'Documentation for the StompyMUX game server.'
 defaultContentLanguage = 'en'
 defaultContentLanguageInSubdir = false
 
-[languages]
-  [languages.en]
-    contentDir = 'content/en'
-    label = 'English'
-    weight = 1
-
 [[menu.main]]
   name = 'Documentation'
   url = '/docs/'

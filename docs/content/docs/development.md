@@ -44,6 +44,6 @@ More information about Lua scripting may be found in the [Scripting](./scripting
 We use the [Hugo](https://gohugo.io/) static site generator for our documentation.
 See installation instructions [here](https://gohugo.io/installation/) if you'd like to be able to build docs locally, then:
 
-1. Make your docs changes under `docs/content/en`
+1. Make your docs changes under `docs/content`
 1. Run the local devserver with `just docsite-serve`
 1. Point your browser at [http://localhost:1313/](http://localhost:1313/) to see the  changes
