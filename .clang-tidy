@@ -11,7 +11,17 @@ Checks: >
   -cert-dcl37-c,
   bugprone-*,
   misc-include-cleaner,
-  readability-identifier-naming
+  readability-avoid-return-with-void-value,
+  readability-avoid-unconditional-preprocessor-if,
+  readability-duplicate-include,
+  readability-enum-initial-value,
+  readability-identifier-naming,
+  readability-misleading-indentation,
+  readability-misplaced-array-index,
+  readability-redundant-function-ptr-dereference,
+  readability-redundant-preprocessor,
+  readability-simplify-boolean-expr,
+  readability-use-concise-preprocessor-directives
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^.*/src/(mux|btech)/.*'
 CheckOptions:

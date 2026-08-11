@@ -39,27 +39,9 @@ static unsigned char battle_value_weapon_get(const unsigned char *values,
 }
 
 int FindAverageGunnery(Mech *mech) {
-#if 1
   /* NULLTODO : Get the multiple skills for gunnery and such ported or working
    * here so this is usefull again. */
   return FindPilotGunnery(mech, 0);
-#else
-  int runtot = 0;
-  int i;
-
-  if (!mech)
-    return 12;
-
-  for (i = 0; i < 5; i++) {
-    runtot += FindPilotGunnery(mech, (i == 0   ? 0
-                                      : i == 1 ? 4
-                                      : i == 2 ? 5
-                                      : i == 3 ? 6
-                                      : i == 4 ? 103
-                                               : 0));
-  }
-  return (runtot / 5);
-#endif
 }
 
 #undef DEBUG_BV

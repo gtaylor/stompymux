@@ -383,10 +383,7 @@ bool mech_weapon_critical_should_destroy(Mech *mech, int section, int critical,
   wCritsDamaged +=
       mech_weapon_damaged_slot_count(mech, section, wFirstCrit, wWeapSize);
 
-  if ((wCritsDamaged * 2) > wWeapSize)
-    return true;
-
-  return false;
+  return (wCritsDamaged * 2) > wWeapSize;
 }
 
 void mech_weapon_critical_apply(const WeaponCriticalApplication *application) {

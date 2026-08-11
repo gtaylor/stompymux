@@ -671,7 +671,6 @@ char *do_process_macro(const MacroExpansionRequest *request) {
         }
         if (!dir) {
           tar = macro_string_item(m, (size_t)current);
-#if 1 /* Original MUSE code */
           const size_t replacement_length = strlen(tar);
           size_t replacement_offset = 0;
           size_t output_offset = 0;
@@ -702,32 +701,6 @@ char *do_process_macro(const MacroExpansionRequest *request) {
           }
           *(char *)checked_storage_at(buff, LBUF_SIZE, sizeof(char),
                                       output_offset) = 0;
-#else
-          while (*tar) {
-            switch (*tar) {
-            case '*':
-              if (!buff)
-                StringCopy(buff, s);
-              else
-                strcat(buff, s);
-              break;
-            case '%':
-              if (!buff)
-                StringCopy(buff, tar + 1);
-              else
-                sprintf(buff, "%s%c", buff, tar + 1);
-              *tar++;
-              break;
-            default:
-              if (!buff)
-                StringCopy(buff, tar);
-              else
-                sprintf(buff, "%s%c", buff, *tar);
-              break;
-            }
-            *tar++;
-          }
-#endif
           return buff;
         }
       }

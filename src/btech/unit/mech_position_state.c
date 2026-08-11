@@ -6,7 +6,6 @@
 #include "checked_conversion.h"
 #include "floatsim.h"
 #include "map_coordinates.h"
-#include "map_terrain.h"
 #include "mech_internal.h"
 #include "mech_runtime_api.h"
 #include "mech_status_types.h"

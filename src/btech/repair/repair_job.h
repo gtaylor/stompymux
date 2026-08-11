@@ -196,13 +196,8 @@ int repair_part_type_difficulty(int part_type);
 int repair_weapon_type_difficulty(int part_type);
 
 /* In minutes */
-#if 1
 constexpr int TECH_TICK = 60;
 constexpr char TECH_UNIT[] = "minute";
-#else
-constexpr int TECH_TICK = 1;
-constexpr char TECH_UNIT[] = "second";
-#endif
 
 /* Tech skill modifiers ; + = bad, - = good */
 constexpr int REPAIR_DIFFICULTY = 0;

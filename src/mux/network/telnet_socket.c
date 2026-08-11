@@ -208,15 +208,17 @@ fail:
 }
 
 bool telnet_sockets_listen(TelnetSockets *sockets, int port) {
+#ifdef IPV6_SUPPORT
   if (!listener_start(&sockets->listener4, port, false))
     return false;
-#ifdef IPV6_SUPPORT
   if (!listener_start(&sockets->listener6, port, true)) {
     telnet_sockets_release(sockets);
     return false;
   }
-#endif
   return true;
+#else
+  return listener_start(&sockets->listener4, port, false);
+#endif
 }
 
 static void discarded_connection_closed(uv_handle_t *handle) {

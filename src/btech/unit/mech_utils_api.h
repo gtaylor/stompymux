@@ -8,7 +8,6 @@ typedef struct BtechContext BtechContext;
 
 #include "map_coordinates.h"
 #include "mech_api_types.h"
-#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "section_types.h"
 

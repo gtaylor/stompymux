@@ -251,10 +251,8 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
     } else
       return 0;
   }
-#if 1
   if (type > (int)BTECH_SPECIAL_OBJECT_COUNT)
     return 0;
-#endif
   typeOfObject = btech_special_object_definition(type);
   const size_t command_name_length = strcspn(command, " ");
   tmpc = strstr(command, " ");

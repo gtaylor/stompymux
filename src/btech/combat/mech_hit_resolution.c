@@ -393,11 +393,10 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
     return;
 
   if (weapon_catalogue_is_missile(weapindx)) {
-    if (player_roll < bth) {
+    if (player_roll < bth)
       return;
-    } else
 
-        if (tIsSwarm && hitMech) /* No swarms on hex hits */
+    if (tIsSwarm && hitMech) /* No swarms on hex hits */
       mech_swarm_missile_hit_target(&(MissileAttackRequest){
           .attacker = mech,
           .target = hitMech,
