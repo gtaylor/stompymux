@@ -70,10 +70,10 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
     return;
   }
 
-  const int profile_range = (int)range;
+  const int PROFILE_RANGE = (int)range;
   RedBlackTree weapon_profile =
       range >= 0.0F && range < (float)AUTO_GUN_MAX_RANGE
-          ? autopilot_weapon_profile_get(autopilot, profile_range)
+          ? autopilot_weapon_profile_get(autopilot, PROFILE_RANGE)
           : nullptr;
 
   /* Cycle through Guns while watching the heat */
@@ -101,38 +101,39 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
     while (weapon) {
 
-      const int weapon_heat = weapon_catalogue_heat(weapon->weapon_db_number);
-      const bool stinger_compatible =
+      const int WEAPON_HEAT = weapon_catalogue_heat(weapon->weapon_db_number);
+      const bool STINGER_COMPATIBLE =
           !(mech_critical_ammo_mode(mech, weapon->section, weapon->critical) &
             STINGER_MODE) ||
           target == nullptr || mech_is_jumping(target) ||
           mech_is_out_of_control(target) ||
           (mech_is_flying_type(target) && !mech_is_landed(target));
-      const bool ammunition_required =
+      const bool AMMUNITION_REQUIRED =
           weapon_catalogue_ammunition_per_ton(weapon->weapon_db_number) > 0;
-      const AutopilotWeaponDecision eligibility = autopilot_weapon_evaluate(&(
-          AutopilotWeaponSituation){
-          .functional = !mech_weapon_is_nonfunctional_at(
-              mech, weapon->section, weapon->critical,
-              weapon_from_equipment_index(weapon->weapon_db_number)),
-          .recycling = mech_weapon_is_recycling_at(mech, weapon->section,
-                                                   weapon->critical),
-          .defensive =
-              weapon_catalogue_is_anti_missile(weapon->weapon_db_number),
-          .ammunition_required = ammunition_required,
-          .ammunition = ammunition_required
-                            ? CountAmmoForWeapon(mech, weapon->weapon_db_number)
-                            : 0,
-          .ammunition_compatible = stinger_compatible,
-          .in_arc = true,
-          .heat_limited = mech_class(mech) == CLASS_MECH,
-          .projected_heat = accumulate_heat,
-          .heat_dissipation = mech_heat_dissipation(mech),
-          .weapon_heat = weapon_heat,
-          .maximum_heat = AUTO_GUN_MAX_HEAT});
-      if (!eligibility.fire) {
+      const AutopilotWeaponDecision ELIGIBILITY =
+          autopilot_weapon_evaluate(&(AutopilotWeaponSituation){
+              .functional = !mech_weapon_is_nonfunctional_at(
+                  mech, weapon->section, weapon->critical,
+                  weapon_from_equipment_index(weapon->weapon_db_number)),
+              .recycling = mech_weapon_is_recycling_at(mech, weapon->section,
+                                                       weapon->critical),
+              .defensive =
+                  weapon_catalogue_is_anti_missile(weapon->weapon_db_number),
+              .ammunition_required = AMMUNITION_REQUIRED,
+              .ammunition =
+                  AMMUNITION_REQUIRED
+                      ? count_ammo_for_weapon(mech, weapon->weapon_db_number)
+                      : 0,
+              .ammunition_compatible = STINGER_COMPATIBLE,
+              .in_arc = true,
+              .heat_limited = mech_class(mech) == CLASS_MECH,
+              .projected_heat = accumulate_heat,
+              .heat_dissipation = mech_heat_dissipation(mech),
+              .weapon_heat = WEAPON_HEAT,
+              .maximum_heat = AUTO_GUN_MAX_HEAT});
+      if (!ELIGIBILITY.fire) {
         weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                   profile_range);
+                                                   PROFILE_RANGE);
         continue;
       }
 
@@ -151,8 +152,8 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
         }
 
         /* Get Target Arc */
-        target_arc = InWeaponArc(mech, mech_position_real_x(target),
-                                 mech_position_real_y(target));
+        target_arc = in_weapon_arc(mech, mech_position_real_x(target),
+                                   mech_position_real_y(target));
 
         /* Now go through the various arcs and see if we
          * need to flip arm or rotorso or something */
@@ -196,7 +197,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
                 /* Can't do anything so go to next weapon */
                 weapon = autopilot_weapon_profile_previous(
-                    weapon_profile, weapon, profile_range);
+                    weapon_profile, weapon, PROFILE_RANGE);
 
                 continue;
               }
@@ -209,7 +210,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
             /* Weapon is forward torso or leg mounted weapon
              * so no way to shoot with */
             weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                       profile_range);
+                                                       PROFILE_RANGE);
 
             continue;
           }
@@ -224,7 +225,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
             /* No way can we hit him with leg mounted
              * weapons so lets go to next one */
             weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                       profile_range);
+                                                       PROFILE_RANGE);
 
             continue;
           }
@@ -239,7 +240,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
             /* No way can we hit him with leg mounted
              * weapons so lets go to next one */
             weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                       profile_range);
+                                                       PROFILE_RANGE);
 
             continue;
           }
@@ -255,7 +256,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
             /* No way can we hit the guy with a rear
              * gun so lets go to next one */
             weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                       profile_range);
+                                                       PROFILE_RANGE);
 
             continue;
           }
@@ -265,8 +266,8 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
                  (mech_movement_type(mech) == MOVE_QUAD)) {
 
         /* Get Target Arc */
-        target_arc = InWeaponArc(mech, mech_position_real_x(target),
-                                 mech_position_real_y(target));
+        target_arc = in_weapon_arc(mech, mech_position_real_x(target),
+                                   mech_position_real_y(target));
 
         if (target_arc & REARARC) {
 
@@ -277,7 +278,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
             /* Weapon is not rear mounted so skip it and
              * go to the next weapon */
             weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                       profile_range);
+                                                       PROFILE_RANGE);
 
             continue;
           }
@@ -290,7 +291,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
             /* Weapon is rear mounted so skip it and
              * go to the next weapon */
             weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                       profile_range);
+                                                       PROFILE_RANGE);
 
             continue;
           }
@@ -300,7 +301,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
           /* The attacker is in a zone we can't possibly
            * shoot into, so just go to next weapon */
           weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                     profile_range);
+                                                     PROFILE_RANGE);
 
           continue;
         }
@@ -314,8 +315,8 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
           /* Rotate Turret and nail the guy */
           MechConditionSummary condition = mech_condition_summary(mech);
           if (!condition.turret_jammed && !condition.turret_locked &&
-              (AcceptableDegree(mech_turret_heading_degrees(mech) +
-                                mech_heading_degrees(mech)) !=
+              (acceptable_degree(mech_turret_heading_degrees(mech) +
+                                 mech_heading_degrees(mech)) !=
                map_bearing(&(MapRealSegment){
                    .start = {.x = mech_position_real_x(mech),
                              .y = mech_position_real_y(mech)},
@@ -334,7 +335,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
         } else {
 
           /* Check if in arc of weapon */
-          if (!IsInWeaponArc(&(WeaponArcRequest){
+          if (!is_in_weapon_arc(&(WeaponArcRequest){
                   .mech = mech,
                   .target = {.x = mech_position_real_x(target),
                              .y = mech_position_real_y(target)},
@@ -343,7 +344,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
             /* Not in the arc so lets go to the next weapon */
             weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                       profile_range);
+                                                       PROFILE_RANGE);
 
             continue;
           }
@@ -370,12 +371,12 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
        * heat */
       if (mech_weapon_is_recycling_at(mech, weapon->section,
                                       weapon->critical)) {
-        accumulate_heat += (float)weapon_heat;
+        accumulate_heat += (float)WEAPON_HEAT;
       }
 
       /* Ok go to the next weapon */
       weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
-                                                 profile_range);
+                                                 PROFILE_RANGE);
 
     } /* End of cycling through weapons */
   }

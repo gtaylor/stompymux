@@ -10,15 +10,15 @@
 #include "mux/server/platform.h"
 #include "registry_api.h"
 
-int MapLimitedBroadcast2d(BattleMap *map, float x, float y, float range,
-                          const char *message) {
+int map_limited_broadcast2d(BattleMap *map, float x, float y, float range,
+                            const char *message) {
   int count = 0;
 
   for (int index = 0; index < battle_map_unit_count(map); index++) {
-    const DbRef candidate = battle_map_unit_dbref(map, index);
-    if (candidate < 0)
+    const DbRef CANDIDATE = battle_map_unit_dbref(map, index);
+    if (CANDIDATE < 0)
       continue;
-    Mech *mech = btech_context_get_mech(battle_map_context(map), candidate);
+    Mech *mech = btech_context_get_mech(battle_map_context(map), CANDIDATE);
     if (mech && map_real_range(&(MapRealSegment){
                     .start = {.x = x, .y = y},
                     .end = {.x = mech_position_real_x(mech),
@@ -31,15 +31,15 @@ int MapLimitedBroadcast2d(BattleMap *map, float x, float y, float range,
   return count;
 }
 
-int MapLimitedBroadcast3d(BattleMap *map, float x, float y, float z,
-                          float range, const char *message) {
+int map_limited_broadcast3d(BattleMap *map, float x, float y, float z,
+                            float range, const char *message) {
   int count = 0;
 
   for (int index = 0; index < battle_map_unit_count(map); index++) {
-    const DbRef candidate = battle_map_unit_dbref(map, index);
-    if (candidate == -1)
+    const DbRef CANDIDATE = battle_map_unit_dbref(map, index);
+    if (CANDIDATE == -1)
       continue;
-    Mech *mech = btech_context_get_mech(battle_map_context(map), candidate);
+    Mech *mech = btech_context_get_mech(battle_map_context(map), CANDIDATE);
     if (mech && map_spatial_range(&(MapSpatialSegment){
                     .start = {.x = x, .y = y, .z = z},
                     .end = {.x = mech_position_real_x(mech),
@@ -53,7 +53,7 @@ int MapLimitedBroadcast3d(BattleMap *map, float x, float y, float z,
   return count;
 }
 
-void MechBroadcast(Mech *mech, Mech *target, BattleMap *map, char *buffer) {
+void mech_broadcast(Mech *mech, Mech *target, BattleMap *map, char *buffer) {
   for (int index = 0; index < battle_map_unit_count(map); index++) {
     DbRef candidate = battle_map_unit_dbref(map, index);
     if (candidate == mech_dbref(mech) || candidate == -1 ||

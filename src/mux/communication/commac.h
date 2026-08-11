@@ -9,7 +9,7 @@
 typedef struct GameDatabase GameDatabase;
 typedef struct ChannelRegistry ChannelRegistry;
 
-struct commac {
+struct Commac {
   DbRef who;
 
   int numchannels;
@@ -20,19 +20,19 @@ struct commac {
   int curmac;
   int macros[5];
 
-  struct commac *next;
+  struct Commac *next;
 };
 
 void purge_commac(ChannelRegistry *registry, GameDatabase *database);
 
-void sort_com_aliases(struct commac *c);
-struct commac *get_commac(ChannelRegistry *registry, DbRef which);
-struct commac *create_new_commac(void);
-void destroy_commac(struct commac *c);
-void add_commac(ChannelRegistry *registry, struct commac *c);
+void sort_com_aliases(struct Commac *c);
+struct Commac *get_commac(ChannelRegistry *registry, DbRef which);
+struct Commac *create_new_commac(void);
+void destroy_commac(struct Commac *c);
+void add_commac(ChannelRegistry *registry, struct Commac *c);
 void del_commac(ChannelRegistry *registry, DbRef who);
-char *commac_alias_at(const struct commac *commac, size_t index);
-char *commac_channel_at(const struct commac *commac, size_t index);
-char **commac_channel_slot(struct commac *commac, size_t index);
-int commac_macro_at(const struct commac *commac, size_t index);
-void commac_macro_set(struct commac *commac, size_t index, int value);
+char *commac_alias_at(const struct Commac *commac, size_t index);
+char *commac_channel_at(const struct Commac *commac, size_t index);
+char **commac_channel_slot(struct Commac *commac, size_t index);
+int commac_macro_at(const struct Commac *commac, size_t index);
+void commac_macro_set(struct Commac *commac, size_t index, int value);

@@ -104,11 +104,11 @@ bool mech_has_working_ecm_suite(const Mech *mech) {
 }
 
 bool mech_supports_sensor_requirement(const SensorCapabilityRequest *request) {
-  const int capability = abs(request->signed_capability);
-  const bool equipped = request->capability_set == 1
-                            ? (request->mech->rd.specials & capability) != 0
-                            : (request->mech->rd.specials2 & capability) != 0;
-  return request->signed_capability > 0 ? equipped : !equipped;
+  const int CAPABILITY = abs(request->signed_capability);
+  const bool EQUIPPED = request->capability_set == 1
+                            ? (request->mech->rd.specials & CAPABILITY) != 0
+                            : (request->mech->rd.specials2 & CAPABILITY) != 0;
+  return request->signed_capability > 0 ? EQUIPPED : !EQUIPPED;
 }
 
 bool mech_searchlight_warning_enabled(const Mech *mech) {

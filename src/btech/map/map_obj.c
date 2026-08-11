@@ -25,7 +25,7 @@ static MapObject **map_object_slot(BattleMap *map, int type) {
   if (type < 0)
     abort();
   return (MapObject **)checked_storage_at(
-      (void *)map->MapObject, NUM_MAPOBJTYPES, sizeof(*map->MapObject),
+      (void *)map->map_object, NUM_MAPOBJTYPES, sizeof(*map->map_object),
       (size_t)type);
 }
 
@@ -536,8 +536,8 @@ static void fire_spreading_event(MuxEvent *e) {
   });
 
   for (int candidate = 0; candidate < 4; candidate++) {
-    const int threshold = candidate == 0 ? 9 : candidate == 3 ? 12 : 11;
-    if (btech_random_roll(map->xcode.context) >= threshold &&
+    const int THRESHOLD = candidate == 0 ? 9 : candidate == 3 ? 12 : 11;
+    if (btech_random_roll(map->xcode.context) >= THRESHOLD &&
         btech_random_range(map->xcode.context, 1, 60) <= map->windspeed) {
       *spread_hex(new_fire_hexes, candidate) =
           *spread_hex(new_smoke_hexes, candidate);
@@ -598,9 +598,9 @@ void add_decoration(const MapDecorationRequest *request) {
       map_event_schedule(map, EVENT_DECORATION, smoke_dissipation_event, flaggo,
                          (intptr_t)tmpo);
     if (type == TYPE_FIRE) {
-      const int fire_duration = foo.datas * map_fire_speed(map) * 4 / 3 / 60;
-      foo.datas = clamp_int_to_short(fire_duration);
-      foo.datas = clamp_int_to_short(MAX(foo.datas, map_fire_speed(map) * 2));
+      const int FIRE_DURATION = foo.datas * map_fire_speed(map) * 4 / 3 / 60;
+      foo.datas = clamp_int_to_short(FIRE_DURATION);
+      foo.datas = clamp_int_to_short(max(foo.datas, map_fire_speed(map) * 2));
       map_event_schedule(map, EVENT_DECORATION, fire_spreading_event,
                          map_fire_speed(map), (intptr_t)tmpo);
     }

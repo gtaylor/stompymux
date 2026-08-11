@@ -5,7 +5,7 @@
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 
-typedef struct lua_State lua_State;
+typedef struct lua_State LuaState;
 
 typedef enum LuaCommandAccess {
   LUA_COMMAND_ACCESS_PUBLIC,
@@ -14,7 +14,7 @@ typedef enum LuaCommandAccess {
   LUA_COMMAND_ACCESS_COUNT,
 } LuaCommandAccess;
 
-bool lua_command_access_read(lua_State *state, int entry,
+bool lua_command_access_read(LuaState *state, int entry,
                              LuaCommandAccess *access);
 typedef struct LuaCommandAccessRequest {
   GameDatabase *database;
@@ -23,5 +23,5 @@ typedef struct LuaCommandAccessRequest {
 } LuaCommandAccessRequest;
 
 bool lua_command_access_allows(const LuaCommandAccessRequest *request);
-bool lua_command_entry_read(lua_State *state, int entry, GameDatabase *database,
+bool lua_command_entry_read(LuaState *state, int entry, GameDatabase *database,
                             DbRef player, const char **pattern);

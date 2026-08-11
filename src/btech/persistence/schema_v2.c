@@ -17,7 +17,7 @@
 /* Explicit map and repair-event tables are the first BTech SQLite mirror. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
-const char btech_special_schema_sql[] =
+const char BTECH_SPECIAL_SCHEMA_SQL[] =
     "CREATE TABLE btech_persistence_metadata ("
     " id INTEGER PRIMARY KEY CHECK (id = 1),"
     " schema_name TEXT NOT NULL CHECK (schema_name = 'stompymux-btech'),"
@@ -330,7 +330,7 @@ int btech_special_prepare_v2(sqlite3 *sqlite, const char *sql, int byte_count,
   return sqlite3_prepare_v2(sqlite, sql, byte_count, statement, tail);
 }
 
-#define sqlite3_prepare_v2 btech_special_prepare_v2
+#define SQLITE3_PREPARE_V2 btech_special_prepare_v2
 
 int btech_special_exec(sqlite3 *sqlite, const char *sql) {
   char *error = NULL;
@@ -365,7 +365,7 @@ int btech_special_store_metadata(sqlite3 *sqlite) {
   int result;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(sqlite,
+  result = SQLITE3_PREPARE_V2(sqlite,
                               "INSERT INTO btech_persistence_metadata "
                               "(id, schema_name, schema_version) "
                               "VALUES (1, 'stompymux-btech', ?);",
@@ -545,7 +545,7 @@ int btech_special_validate_metadata(sqlite3 *sqlite) {
 
   statement = NULL;
   result =
-      sqlite3_prepare_v2(sqlite,
+      SQLITE3_PREPARE_V2(sqlite,
                          "SELECT count(*) FROM btech_persistence_metadata "
                          "WHERE id = 1 AND schema_name = 'stompymux-btech' "
                          "AND schema_version = 3;",

@@ -128,7 +128,7 @@ void mech_overheat_handle(Mech *mech) {
                                                               : 0),
                                  .loud = true});
       if (avoided)
-        AccumulateComputerXP(mech_pilot_dbref(mech), mech, 1);
+        accumulate_computer_xp(mech_pilot_dbref(mech), mech, 1);
     }
   }
 #endif
@@ -150,7 +150,7 @@ void mech_overheat_handle(Mech *mech) {
     } else {
       mech_los_broadcast(mech, "stops in mid-motion!");
       if ((fabsf(mech_current_speed(mech)) > MP1) && !mech_is_fallen(mech) &&
-          !MadePilotSkillRoll(mech, 3))
+          !made_pilot_skill_roll(mech, 3))
         mech_fall(mech, 0, 1);
     }
     mech_power_down(mech);

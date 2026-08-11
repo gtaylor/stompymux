@@ -43,7 +43,7 @@ void channel_registry_destroy(ChannelRegistry *registry) {
     channel_registry_bucket_set(registry, (size_t)bucket, nullptr);
   }
   if (registry->channels.tree != nullptr) {
-    struct channel *channel = hash_table_first_entry(&registry->channels);
+    struct Channel *channel = hash_table_first_entry(&registry->channels);
     while (channel != nullptr) {
       channel_destroy(channel);
       channel = hash_table_next_entry(&registry->channels);

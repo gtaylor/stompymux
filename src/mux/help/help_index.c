@@ -191,22 +191,22 @@ static bool help_locate_frontmatter(const char *content,
                                     const char **toml_start,
                                     size_t *toml_length,
                                     const char **body_start) {
-  const size_t content_length = strlen(content);
+  const size_t CONTENT_LENGTH = strlen(content);
   size_t line_end = 0;
   size_t toml_offset;
   size_t cursor;
 
-  if (content_length < 3 || strncmp(content, "+++", 3) != 0)
+  if (CONTENT_LENGTH < 3 || strncmp(content, "+++", 3) != 0)
     return false;
-  while (line_end < content_length &&
-         help_character_at(content, content_length, line_end) != '\n')
+  while (line_end < CONTENT_LENGTH &&
+         help_character_at(content, CONTENT_LENGTH, line_end) != '\n')
     line_end++;
-  if (line_end == content_length)
+  if (line_end == CONTENT_LENGTH)
     return false;
   for (size_t index = 3; index < line_end; index++) {
-    const char character = help_character_at(content, content_length, index);
+    const char CHARACTER = help_character_at(content, CONTENT_LENGTH, index);
 
-    if (character != '\r' && character != ' ' && character != '\t')
+    if (CHARACTER != '\r' && CHARACTER != ' ' && CHARACTER != '\t')
       return false;
   }
   toml_offset = line_end + 1;
@@ -218,23 +218,23 @@ static bool help_locate_frontmatter(const char *content,
     size_t trimmed_length;
 
     line_end = cursor;
-    while (line_end < content_length &&
-           help_character_at(content, content_length, line_end) != '\n')
+    while (line_end < CONTENT_LENGTH &&
+           help_character_at(content, CONTENT_LENGTH, line_end) != '\n')
       line_end++;
     line_length = line_end - cursor;
     trimmed_length = line_length;
     if (trimmed_length > 0 &&
-        help_character_at(content, content_length,
+        help_character_at(content, CONTENT_LENGTH,
                           cursor + trimmed_length - 1) == '\r')
       trimmed_length--;
     if (trimmed_length == 3 &&
         strncmp(checked_string_suffix(content, cursor), "+++", 3) == 0) {
       *toml_length = cursor - toml_offset;
       *body_start = checked_string_suffix(
-          content, line_end < content_length ? line_end + 1 : line_end);
+          content, line_end < CONTENT_LENGTH ? line_end + 1 : line_end);
       return true;
     }
-    if (line_end == content_length)
+    if (line_end == CONTENT_LENGTH)
       return false;
     cursor = line_end + 1;
   }

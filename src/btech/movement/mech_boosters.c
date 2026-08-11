@@ -151,7 +151,7 @@ static void mech_scharge_event(MuxEvent *e) {
   int roll = btech_random_roll(context);
   int j, count = 0;
   float maxspeed, newmaxspeed = 0.0F;
-  int critType;
+  int crit_type;
   char msgbuf[MBUF_SIZE] = {0};
 
   if (!mech_is_started(mech))
@@ -179,8 +179,8 @@ static void mech_scharge_event(MuxEvent *e) {
 
   if (mech_class(mech) == CLASS_MECH) {
     for (j = 0; j < mech_section_critical_count(mech, CTORSO); j++) {
-      critType = mech_critical_part_type(mech, CTORSO, j);
-      if (critType == special_equipment_index(SUPERCHARGER)) {
+      crit_type = mech_critical_part_type(mech, CTORSO, j);
+      if (crit_type == special_equipment_index(SUPERCHARGER)) {
         if (!mech_critical_is_destroyed(mech, CTORSO, j))
           mech_critical_destroy(mech, CTORSO, j);
       }
@@ -189,8 +189,8 @@ static void mech_scharge_event(MuxEvent *e) {
     count = btech_random_range_int(context, 1, 4);
 
     for (j = 0; count && j < mech_section_critical_count(mech, CTORSO); j++) {
-      critType = mech_critical_part_type(mech, CTORSO, j);
-      if (critType == special_equipment_index(ENGINE) &&
+      crit_type = mech_critical_part_type(mech, CTORSO, j);
+      if (crit_type == special_equipment_index(ENGINE) &&
           !mech_critical_is_destroyed(mech, CTORSO, j)) {
         mech_critical_destroy(mech, CTORSO, j);
         if (!mech_is_destroyed(mech) && mech_is_started(mech)) {

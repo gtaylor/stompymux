@@ -19,12 +19,12 @@ int mech_map_slot(const Mech *mech) { return mech->slot; }
 static void map_los_allocate(BattleMap *map, int size) {
   map->dynamic_size = size;
   map->first_free = size;
-  map->LOSinfo = calloc((size_t)size, sizeof(*map->LOSinfo));
-  if (!map->LOSinfo)
+  map->lo_sinfo = calloc((size_t)size, sizeof(*map->lo_sinfo));
+  if (!map->lo_sinfo)
     abort();
   for (int i = 0; i < size; ++i) {
-    unsigned short **row = checked_storage_at(map->LOSinfo, (size_t)size,
-                                              sizeof(*map->LOSinfo), (size_t)i);
+    unsigned short **row = checked_storage_at(map->lo_sinfo, (size_t)size,
+                                              sizeof(*map->lo_sinfo), (size_t)i);
     *row = calloc((size_t)size, sizeof(**row));
     if (!*row)
       abort();
@@ -34,12 +34,12 @@ static void map_los_allocate(BattleMap *map, int size) {
 static void map_los_destroy(BattleMap *map) {
   for (int i = 0; i < map->dynamic_size; ++i) {
     unsigned short **row =
-        checked_storage_at(map->LOSinfo, (size_t)map->dynamic_size,
-                           sizeof(*map->LOSinfo), (size_t)i);
+        checked_storage_at(map->lo_sinfo, (size_t)map->dynamic_size,
+                           sizeof(*map->lo_sinfo), (size_t)i);
     free(*row);
   }
-  free(map->LOSinfo);
-  map->LOSinfo = nullptr;
+  free(map->lo_sinfo);
+  map->lo_sinfo = nullptr;
 }
 
 int main(void) {

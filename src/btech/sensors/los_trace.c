@@ -175,11 +175,11 @@ static void los_trace_store(LosTrace *trace, int *count,
 }
 
 static int los_trace_elevation(BattleMap *map, int x, int y) {
-  const int elevation = (unsigned char)map_elevation_get(map, x, y);
-  const char terrain = map_real_terrain_get(map, x, y);
-  return terrain == BATTLE_TERRAIN_WATER || terrain == BATTLE_TERRAIN_ICE
-             ? -elevation
-             : elevation;
+  const int ELEVATION = (unsigned char)map_elevation_get(map, x, y);
+  const char TERRAIN = map_real_terrain_get(map, x, y);
+  return TERRAIN == BATTLE_TERRAIN_WATER || TERRAIN == BATTLE_TERRAIN_ICE
+             ? -ELEVATION
+             : ELEVATION;
 }
 
 static void los_trace_store_best(BattleMap *map, LosTrace *trace, int *count,
@@ -401,10 +401,10 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
 
     for (nexthex = HEX_NORTH; nexthex <= HEX_NORTHWEST; nexthex++) {
 
-      const MapHexPosition next =
+      const MapHexPosition NEXT =
           adjacent_hex((MapHexPosition){.x = currx, .y = curry}, nexthex);
-      nextx = next.x;
-      nexty = next.y;
+      nextx = NEXT.x;
+      nexty = NEXT.y;
       los_map_coord_to_real(nextx, nexty, &nextcx, &nextcy);
 
       /* Is it on the line? */

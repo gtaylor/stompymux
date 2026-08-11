@@ -151,7 +151,7 @@ void map_view(DbRef player, void *data, char *buffer) {
   int argc;
   int x, y;
   char *args[2];
-  int displayHeight = MAP_DISPLAY_HEIGHT, displayWidth = MAP_DISPLAY_WIDTH;
+  int display_height = MAP_DISPLAY_HEIGHT, display_width = MAP_DISPLAY_WIDTH;
   char *str;
   MapText *map_text;
   /* Check if its a valid map */
@@ -168,8 +168,8 @@ void map_view(DbRef player, void *data, char *buffer) {
       mecha_notify(evaluation, player, "Invalid map coordinates!");
       return;
     }
-    x = BOUNDED(0, x, mech_map->map_width - 1);
-    y = BOUNDED(0, y, mech_map->map_height - 1);
+    x = bounded(0, x, mech_map->map_width - 1);
+    y = bounded(0, y, mech_map->map_height - 1);
     break;
   default:
     mecha_notify(evaluation, player, "Invalid number of parameters!");
@@ -182,32 +182,32 @@ void map_view(DbRef player, void *data, char *buffer) {
   str = btech_attribute_read(mech_map->xcode.context->database, player,
                              A_TACSIZE, (char[LBUF_SIZE]){0});
   if (!*str) {
-    displayHeight = MAP_DISPLAY_HEIGHT;
-    displayWidth = MAP_DISPLAY_WIDTH;
-  } else if (!parse_int_checked(strtok(str, " \t"), &displayHeight) ||
-             !parse_int_checked(strtok(nullptr, " \t"), &displayWidth) ||
-             strtok(nullptr, " \t") != nullptr || displayHeight > 24 ||
-             displayHeight < 5 || displayWidth < 5 || displayWidth > 40) {
+    display_height = MAP_DISPLAY_HEIGHT;
+    display_width = MAP_DISPLAY_WIDTH;
+  } else if (!parse_int_checked(strtok(str, " \t"), &display_height) ||
+             !parse_int_checked(strtok(nullptr, " \t"), &display_width) ||
+             strtok(nullptr, " \t") != nullptr || display_height > 24 ||
+             display_height < 5 || display_width < 5 || display_width > 40) {
     mecha_notify(evaluation, player,
                  "Illegal Tacsize attribute. Must be in format "
                  "'Height Width' . Height : 5-24 Width : 5-40");
-    displayHeight = MAP_DISPLAY_HEIGHT;
-    displayWidth = MAP_DISPLAY_WIDTH;
+    display_height = MAP_DISPLAY_HEIGHT;
+    display_width = MAP_DISPLAY_WIDTH;
   }
   /* Everything worked but lets check the map size */
-  displayHeight = (displayHeight <= mech_map->map_height)
-                      ? displayHeight
-                      : mech_map->map_height;
-  displayWidth = (displayWidth <= mech_map->map_width) ? displayWidth
-                                                       : mech_map->map_width;
+  display_height = (display_height <= mech_map->map_height)
+                       ? display_height
+                       : mech_map->map_height;
+  display_width = (display_width <= mech_map->map_width) ? display_width
+                                                         : mech_map->map_width;
   /* Get the map data */
   MapTextRequest request = {
       .player = player,
       .map = mech_map,
       .center_x = x,
       .center_y = y,
-      .width = displayWidth,
-      .height = displayHeight,
+      .width = display_width,
+      .height = display_height,
       .labels = 3,
   };
   map_text = map_text_create(&request);
@@ -265,7 +265,7 @@ void map_mapemit(DbRef player, void *data, char *buffer) {
                  "What do you want to @mapemit?");
     return;
   }
-  MapBroadcast(map, buffer);
+  map_broadcast(map, buffer);
   mecha_notify(btech_context_evaluation(map->xcode.context), player,
                "Message sent!");
 }
@@ -277,13 +277,13 @@ int water_distance(const WaterDistanceRequest *request) {
   int i;
   int x2, y2;
   for (i = 1; i < request->limit; i++) {
-    const int direction_x = hex_direction_x(request->direction);
-    x = x + direction_x;
+    const int DIRECTION_X = hex_direction_x(request->direction);
+    x = x + DIRECTION_X;
     y = y + hex_direction_y(request->direction);
-    if (!x && direction_x)
+    if (!x && DIRECTION_X)
       y--;
-    x2 = BOUNDED(0, x, map->map_width - 1);
-    y2 = BOUNDED(0, y, map->map_height - 1);
+    x2 = bounded(0, x, map->map_width - 1);
+    y2 = bounded(0, y, map->map_height - 1);
     if (x != x2 || y != y2)
       return request->limit;
     if (map_terrain_get(map, x, y) == WATER ||
@@ -423,7 +423,7 @@ int map_load(BattleMap *map, char *mapname) {
         terr = LIGHT_FOREST;
         break;
       }
-      if (!strcmp(GetTerrainName_base(terr), "Unknown")) {
+      if (!strcmp(get_terrain_name_base(terr), "Unknown")) {
         btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
                            tprintf("Map #%ld: Invalid terrain at %d,%d: '%c'",
                                    map->mynum, j, i, terr));
@@ -688,16 +688,16 @@ void map_update(DbRef obj, void *data) {
     }
     map->winddir = clamp_int_to_short(wind);
     map->windspeed = clamp_int_to_short(wspeed);
-    map->mapvis = clamp_int_to_char(BOUNDED(0, ma, 60));
-    map->maxvis = clamp_int_to_short(BOUNDED(24, ma * 3, 60));
-    map->maplight = clamp_int_to_char(BOUNDED(0, ml, 2));
+    map->mapvis = clamp_int_to_char(bounded(0, ma, 60));
+    map->maxvis = clamp_int_to_short(bounded(24, ma * 3, 60));
+    map->maplight = clamp_int_to_char(bounded(0, ml, 2));
     map->cloudbase = clamp_int_to_short(cloudbase);
     if (ml != oldl || ma != oldv)
       for (i = 0; i < battle_map_unit_count(map); i++) {
-        const DbRef mech_dbref = battle_map_unit_dbref(map, i);
-        if (mech_dbref < 0)
+        const DbRef MECH_DBREF = battle_map_unit_dbref(map, i);
+        if (MECH_DBREF < 0)
           continue;
-        mech = btech_context_get_mech(map->xcode.context, mech_dbref);
+        mech = btech_context_get_mech(map->xcode.context, MECH_DBREF);
         if (!mech)
           continue;
         if (ml != oldl)
@@ -730,7 +730,7 @@ void newfreemap(DbRef key, void **data,
   case SPECIAL_ALLOC:
     initialize_map_empty(new, key);
     /* allocate default map space */
-    memset((void *)new->MapObject, 0, sizeof(new->MapObject));
+    memset((void *)new->map_object, 0, sizeof(new->map_object));
     (void)snprintf(new->mapname, MAP_NAME_SIZE, "%s", "Default Map");
     break;
   case SPECIAL_FREE:
@@ -757,30 +757,30 @@ int map_sizefun(void *data, int flag) {
 }
 void clear_hex(const TerrainHexEffectRequest *request) {
   Mech *mech = request->mech;
-  const int x = request->position.x;
-  const int y = request->position.y;
+  const int X = request->position.x;
+  const int Y = request->position.y;
   BattleMap *map;
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!map)
     return;
-  switch (map_terrain_get(map, x, y)) {
+  switch (map_terrain_get(map, X, Y)) {
   case HEAVY_FOREST:
-    map_terrain_set(map, x, y, LIGHT_FOREST);
+    map_terrain_set(map, X, Y, LIGHT_FOREST);
     break;
   case LIGHT_FOREST:
     if (btech_random_range(map->xcode.context, 1, 2) == 1)
-      map_terrain_set(map, x, y, ROUGH);
+      map_terrain_set(map, X, Y, ROUGH);
     else
-      map_terrain_set(map, x, y, GRASSLAND);
+      map_terrain_set(map, X, Y, GRASSLAND);
     break;
   default:
     return;
   }
   if (request->intentional) {
-    mech_los_broadcast(mech, tprintf("'s shot clears %d,%d!", x, y));
-    mech_printf(mech, MECHALL, "You clear %d,%d.", x, y);
+    mech_los_broadcast(mech, tprintf("'s shot clears %d,%d!", X, Y));
+    mech_printf(mech, MECHALL, "You clear %d,%d.", X, Y);
   } else {
-    mech_los_broadcast(mech, tprintf("'s stray shot clears %d,%d!", x, y));
-    mech_printf(mech, MECHALL, "You accidentally clear %d,%d!", x, y);
+    mech_los_broadcast(mech, tprintf("'s stray shot clears %d,%d!", X, Y));
+    mech_printf(mech, MECHALL, "You accidentally clear %d,%d!", X, Y);
   }
 }

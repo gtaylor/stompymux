@@ -53,10 +53,10 @@ constexpr int MAX_ARG = 100;          /* max # args from command processor */
 constexpr int HASH_FACTOR = 16; /* How much hashing you want. */
 
 constexpr int OUTPUT_BLOCK_SIZE = 16384;
-static inline char *StringCopy(char *dst, const char *src) {
+static inline char *string_copy(char *dst, const char *src) {
   return strcpy(dst, src); // NOLINT(clang-analyzer-security.insecureAPI.strcpy)
 }
-static inline char *StringCopyTrunc(char *dst, const char *src, size_t n) {
+static inline char *string_copy_trunc(char *dst, const char *src, size_t n) {
   return strncpy(dst, src, n);
 }
 

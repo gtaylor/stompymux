@@ -32,14 +32,14 @@
 #include <strings.h>
 
 /* INDENT OFF */
-const int scode_in_out[TYPE_LAST_TYPE] =
+const int SCODE_IN_OUT[TYPE_LAST_TYPE] =
     /* st ch sh in fl db sf sfb sfs bv sfbd cbv ro-ch ro-sh ro-in ro-fl ro-db*/
     {3, 3, 3, 3, 3, 3, 1, 1, 2, 3, 3, 3, 3, 1, 1, 1, 1, 1};
 /* INDENT ON */
 
 static int descriptor_permissions(int type) {
   return *(const int *)checked_storage_at_const(
-      scode_in_out, TYPE_LAST_TYPE, sizeof(*scode_in_out), (size_t)type);
+      SCODE_IN_OUT, TYPE_LAST_TYPE, sizeof(*SCODE_IN_OUT), (size_t)type);
 }
 
 static const GMV *find_descriptor(const char *name, int special_type,
@@ -146,11 +146,11 @@ static bool descriptor_write_text(void *data, const GMV *descriptor,
                                         .buffer = (char[LBUF_SIZE]){0}});
     return true;
   case TYPE_STRING: {
-    const size_t capacity = (size_t)descriptor->size;
-    if (capacity == 0)
+    const size_t CAPACITY = (size_t)descriptor->size;
+    if (CAPACITY == 0)
       return true;
-    char *field = descriptor_field(data, descriptor, capacity);
-    (void)snprintf(field, capacity, "%s", text);
+    char *field = descriptor_field(data, descriptor, CAPACITY);
+    (void)snprintf(field, CAPACITY, "%s", text);
     return true;
   }
   case TYPE_DBREF: {
@@ -199,7 +199,7 @@ static bool descriptor_write_text(void *data, const GMV *descriptor,
     return true;
   }
   case TYPE_CBV: {
-    byte value = clamp_int_to_unsigned_char(text2bv(text));
+    Byte value = clamp_int_to_unsigned_char(text2bv(text));
     memcpy(descriptor_field(data, descriptor, sizeof(value)), &value,
            sizeof(value));
     return true;
@@ -213,19 +213,19 @@ BtechScriptResult fun_zmechs(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
-  DbRef it = match_thing(&context->command->match, player,
-                         script_function_argument(fargs, nfargs, 0));
+  [[maybe_unused]] const DbRef PLAYER = call->player;
+  DbRef it = match_thing(&context->command->match, PLAYER,
+                         script_function_argument(fargs, NFARGS, 0));
   DbRef i;
   size_t len = 0;
   char reference[SBUF_SIZE];
 
-  if (!is_controls(context->world->database, player, it) &&
-      !is_wizard(context->btech->database, player)) {
+  if (!is_controls(context->world->database, PLAYER, it) &&
+      !is_wizard(context->btech->database, PLAYER)) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
@@ -257,11 +257,11 @@ BtechScriptResult fun_btsetxcodevalue(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   /* script_function_argument(fargs, nfargs, 0) = id of the mech
      script_function_argument(fargs, nfargs, 1) = name of the value
      script_function_argument(fargs, nfargs, 2) = what the value's to be set as
@@ -270,9 +270,9 @@ BtechScriptResult fun_btsetxcodevalue(BtechScriptCall *call) {
   int spec;
   void *foo;
 
-  it = match_thing(&context->command->match, player,
-                   script_function_argument(fargs, nfargs, 0));
-  if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
+  it = match_thing(&context->command->match, PLAYER,
+                   script_function_argument(fargs, NFARGS, 0));
+  if (it == NOTHING || !is_examinable(context->world->database, PLAYER, it)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
@@ -282,15 +282,15 @@ BtechScriptResult fun_btsetxcodevalue(BtechScriptCall *call) {
     safe_tprintf_str(buff, bufc, "#-1");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   const GMV *descriptor =
-      find_descriptor(script_function_argument(fargs, nfargs, 1), spec, 2);
+      find_descriptor(script_function_argument(fargs, NFARGS, 1), spec, 2);
   if (descriptor != nullptr &&
       descriptor_write_text(foo, descriptor,
-                            script_function_argument(fargs, nfargs, 2))) {
+                            script_function_argument(fargs, NFARGS, 2))) {
     safe_tprintf_str(buff, bufc, "1");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
@@ -373,7 +373,7 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
     break;
   }
   case TYPE_CBV: {
-    byte value;
+    Byte value;
     memcpy(&value, descriptor_field_const(data, descriptor, sizeof(value)),
            sizeof(value));
     (void)snprintf(buffer, LBUF_SIZE, "%s",
@@ -388,11 +388,11 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   /* script_function_argument(fargs, nfargs, 0) = id of the mech
      script_function_argument(fargs, nfargs, 1) = name of the value
    */
@@ -400,9 +400,9 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
   void *foo;
   int spec;
 
-  it = match_thing(&context->command->match, player,
-                   script_function_argument(fargs, nfargs, 0));
-  if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
+  it = match_thing(&context->command->match, PLAYER,
+                   script_function_argument(fargs, NFARGS, 0));
+  if (it == NOTHING || !is_examinable(context->world->database, PLAYER, it)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
@@ -412,12 +412,12 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
     safe_tprintf_str(buff, bufc, "#-1");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   const GMV *descriptor =
-      find_descriptor(script_function_argument(fargs, nfargs, 1), spec, 1);
+      find_descriptor(script_function_argument(fargs, NFARGS, 1), spec, 1);
   if (descriptor != nullptr) {
     safe_tprintf_str(buff, bufc, "%s",
                      retrieve_value(foo, descriptor, (char[LBUF_SIZE]){0}));
@@ -433,28 +433,28 @@ BtechScriptResult fun_btgetxcodevalue_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   /* script_function_argument(fargs, nfargs, 0) = mech ref
      script_function_argument(fargs, nfargs, 1) = name of the value
    */
   Mech *foo;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   foo =
-      load_refmech(context->btech, script_function_argument(fargs, nfargs, 0));
+      load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (!foo) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   const GMV *descriptor = find_descriptor(
-      script_function_argument(fargs, nfargs, 1), GTYPE_MECH, 1);
+      script_function_argument(fargs, NFARGS, 1), GTYPE_MECH, 1);
   if (descriptor != nullptr) {
     safe_tprintf_str(buff, bufc, "%s",
                      retrieve_value(foo, descriptor, (char[LBUF_SIZE]){0}));
@@ -485,7 +485,7 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
   if (find_descriptor(nullptr, t, 1) == nullptr) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Error: No xcode values for this type of object found.");
-    FreeTextItems(args, 2);
+    free_text_items(args, 2);
     return;
   }
   const GMV *descriptor = find_descriptor(name, t, 2);
@@ -493,7 +493,7 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
     mecha_notify(
         btech_context_evaluation(context), player,
         "Error: No matching xcode value for this type of object found.");
-    FreeTextItems(args, 2);
+    free_text_items(args, 2);
     return;
   }
   void *object = btech_context_find_object(
@@ -501,7 +501,7 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
   if (!descriptor_write_text(object, descriptor, value))
     mecha_notify(btech_context_evaluation(context), player,
                  "Error: Unable to set that xcode value.");
-  FreeTextItems(args, 2);
+  free_text_items(args, 2);
 }
 
 void list_xcodestuff(DbRef player, void *data, char *buffer) {
@@ -546,8 +546,8 @@ void list_xcodestuff(DbRef player, void *data, char *buffer) {
         if (strncasecmp(descriptor->name, filter, strlen(filter)))
           continue;
       (void)snprintf(lab, sizeof(lab), "%s", descriptor->name);
-      const size_t label_limit = (size_t)(se_len / 3);
-      *(char *)checked_storage_at(lab, sizeof(lab), sizeof(char), label_limit) =
+      const size_t LABEL_LIMIT = (size_t)(se_len / 3);
+      *(char *)checked_storage_at(lab, sizeof(lab), sizeof(char), LABEL_LIMIT) =
           '\0';
       cool_menu_add_with_flags(
           &c,
@@ -557,8 +557,8 @@ void list_xcodestuff(DbRef player, void *data, char *buffer) {
     }
   }
   cool_menu_add_line(&c);
-  ShowCoolMenu(btech_context_evaluation(context), player, c);
-  KillCoolMenu(c);
+  show_cool_menu(btech_context_evaluation(context), player, c);
+  kill_cool_menu(c);
 }
 
 // NOLINTEND(clang-analyzer-core.NonNullParamChecker,clang-analyzer-core.NullDereference)

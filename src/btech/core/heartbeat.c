@@ -19,7 +19,7 @@ static void heartbeat_run(MuxTimer *timer, void *arg);
 void btech_heartbeat_start(BtechContext *context) {
   if (context->heartbeat_running)
     return;
-  dprintk("hearbeat initialized, 1s timeout.");
+  DPRINTK("hearbeat initialized, 1s timeout.");
   context->heartbeat = mux_timer_create(
       server_lifecycle_loop(context->lifecycle), heartbeat_run, context);
   if (context->heartbeat == nullptr)
@@ -33,7 +33,7 @@ void btech_heartbeat_stop(BtechContext *context) {
     return;
   mux_timer_destroy(context->heartbeat);
   context->heartbeat = nullptr;
-  dprintk("heartbeat stopped.\n");
+  DPRINTK("heartbeat stopped.\n");
   context->heartbeat_running = false;
 }
 
@@ -41,15 +41,15 @@ void auto_heartbeat(Autopilot *);
 
 static int heartbeat_dispatch(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
-  BtechSpecialObject *const xcode_obj = data;
+  BtechSpecialObject *const XCODE_OBJ = data;
 
-  switch (xcode_obj->type) {
+  switch (XCODE_OBJ->type) {
   case GTYPE_MECH:
-    mech_update(mech_dbref((Mech *)xcode_obj), xcode_obj);
+    mech_update(mech_dbref((Mech *)XCODE_OBJ), XCODE_OBJ);
     break;
 
   case GTYPE_AUTO:
-    auto_heartbeat((Autopilot *)xcode_obj);
+    auto_heartbeat((Autopilot *)XCODE_OBJ);
     break;
 
   case GTYPE_DEBUG:

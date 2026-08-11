@@ -61,7 +61,7 @@ typedef struct BombShot {
   BattleMap *map;
 } BombShot;
 
-static const BombInfo bombs[] = {{"10_Inferno", 10, BOMB_KIND_INFERNO, 30},
+static const BombInfo BOMBS[] = {{"10_Inferno", 10, BOMB_KIND_INFERNO, 30},
                                  {"10_Cluster", 10, BOMB_KIND_CLUSTER, 30},
                                  {"10_Standard", 10, BOMB_KIND_STANDARD, 130},
                                  {"50_Inferno", 50, BOMB_KIND_INFERNO, 130},
@@ -75,7 +75,7 @@ static const BombInfo bombs[] = {{"10_Inferno", 10, BOMB_KIND_INFERNO, 30},
 static const BombInfo *bomb_info(int index) {
   if (index < 0)
     abort();
-  return checked_storage_at_const(bombs, 10, sizeof(*bombs), (size_t)index);
+  return checked_storage_at_const(BOMBS, 10, sizeof(*BOMBS), (size_t)index);
 }
 
 static const char *bomb_kind_name(BombKind kind) {
@@ -117,8 +117,8 @@ static void bomb_list(Mech *mech, DbRef player) {
       if (equipment_is_bomb(k)) {
         k = bomb_from_equipment_index(k);
         if (fb) {
-          ArmorStringFromIndex(i, location, mech_class(mech),
-                               mech_movement_type(mech));
+          armor_string_from_index(i, location, mech_class(mech),
+                                  mech_movement_type(mech));
           fb = 0;
         }
         if (!bc) {
@@ -136,8 +136,8 @@ static void bomb_list(Mech *mech, DbRef player) {
   if (!bc)
     cool_menu_add_centered(&c, "No bombs installed.");
   cool_menu_add_line(&c);
-  ShowCoolMenu(btech_context_evaluation(mech_context(mech)), player, c);
-  KillCoolMenu(c);
+  show_cool_menu(btech_context_evaluation(mech_context(mech)), player, c);
+  kill_cool_menu(c);
 }
 
 static float bomb_calculate_destination(Mech *mech, short *x, short *y) {
@@ -153,7 +153,7 @@ static float bomb_calculate_destination(Mech *mech, short *x, short *y) {
   t /= (float)MOVE_TICK;
   fx = fx + mech_motion_vector_x(mech) * t;
   fy = fy + mech_motion_vector_y(mech) * t;
-  RealCoordToMapCoord(x, y, fx, fy);
+  real_coord_to_map_coord(x, y, fx, fy);
   return ot;
 }
 
@@ -193,30 +193,30 @@ static void bomb_hit_hexes(BattleMap *map, int x, int y, int hitnb,
 
 static void bomb_hit(BombShot *s) {
   const BombInfo *bomb = bomb_info(s->type);
-  const int direct_damage =
+  const int DIRECT_DAMAGE =
       bomb->type == BOMB_KIND_INFERNO ? bomb->aff / 2 : bomb->aff;
-  const int heat_damage = bomb->type == BOMB_KIND_INFERNO ? bomb->aff : 0;
+  const int HEAT_DAMAGE = bomb->type == BOMB_KIND_INFERNO ? bomb->aff : 0;
   switch (bomb->type) {
   case BOMB_KIND_STANDARD:
-    HexLOSBroadcast(s->map, s->x, s->y, "A blast rocks the area around $H!");
-    bomb_hit_hexes(s->map, s->x, s->y, 1, 0, direct_damage, heat_damage,
+    hex_los_broadcast(s->map, s->x, s->y, "A blast rocks the area around $H!");
+    bomb_hit_hexes(s->map, s->x, s->y, 1, 0, DIRECT_DAMAGE, HEAT_DAMAGE,
                    "You receive a direct hit!", "receives a direct hit!",
                    "You are hit by shrapnel!", "is hit by shrapnel!");
     break;
   case BOMB_KIND_INFERNO:
-    HexLOSBroadcast(
+    hex_los_broadcast(
         s->map, s->x, s->y,
         "A fiery blast occurs in $H, spraying flaming gel everywhere!");
-    bomb_hit_hexes(s->map, s->x, s->y, 1, 0, direct_damage, heat_damage,
+    bomb_hit_hexes(s->map, s->x, s->y, 1, 0, DIRECT_DAMAGE, HEAT_DAMAGE,
                    "You receive a direct hit!", "receives a direct hit!",
                    "You are hit by the globs of flaming gel!",
                    "is hit by the globs!");
     break;
   case BOMB_KIND_CLUSTER:
-    HexLOSBroadcast(
+    hex_los_broadcast(
         s->map, s->x, s->y,
         "A bomb drops rain of small bomblets in $H's surroundings!");
-    bomb_hit_hexes(s->map, s->x, s->y, 1, 1, direct_damage, heat_damage,
+    bomb_hit_hexes(s->map, s->x, s->y, 1, 1, DIRECT_DAMAGE, HEAT_DAMAGE,
                    "You are hit by ton of small munitions!",
                    "is hit by many small munitions!",
                    "You are hit by some of the small munitions!",
@@ -245,20 +245,20 @@ static void bomb_simulate_flight(Mech *mech, BattleMap *map, short *x, short *y,
 
   if (t < 1.0F)
     return;
-  MapCoordToRealCoord(*x, *y, &dx, &dy);
+  map_coord_to_real_coord(*x, *y, &dx, &dy);
   delx = (dx - fx) / t;
   dely = (dy - fy) / t;
-  const float flight_ticks_float = ceilf(t);
-  const int flight_ticks = (int)flight_ticks_float;
-  for (i = 1; i < flight_ticks; i++) {
+  const float FLIGHT_TICKS_FLOAT = ceilf(t);
+  const int FLIGHT_TICKS = (int)FLIGHT_TICKS_FLOAT;
+  for (i = 1; i < FLIGHT_TICKS; i++) {
     fx = fx + delx;
     fy = fy + dely;
     fz -= BOMB_GRAVITY;
-    RealCoordToMapCoord(&tx, &ty, fx, fy);
+    real_coord_to_map_coord(&tx, &ty, fx, fy);
     if (!battle_map_coordinate_is_valid(map, tx, ty))
       continue;
-    const int elevation = battle_map_hex_elevation(map, tx, ty);
-    if ((float)elevation > (fz / (float)ZSCALE)) {
+    const int ELEVATION = battle_map_hex_elevation(map, tx, ty);
+    if ((float)ELEVATION > (fz / (float)ZSCALE)) {
       *x = tx;
       *y = ty;
     }
@@ -273,7 +273,7 @@ typedef struct BombDropRequest {
 
 static void bomb_drop(const BombDropRequest *request) {
   Mech *mech = request->mech;
-  const DbRef player = request->player;
+  const DbRef PLAYER = request->player;
   int bn = request->bomb_number;
   int bc = 0;
   int i, j, k;
@@ -287,7 +287,7 @@ static void bomb_drop(const BombDropRequest *request) {
   BattleMap *map;
 
   if (bn < 0) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+    mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "Negative bomb number? Gimme a break.");
     return;
   }
@@ -303,18 +303,18 @@ static void bomb_drop(const BombDropRequest *request) {
         bc++;
       }
   if (!bc) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+    mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "No bombs installed.");
     return;
   }
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!map) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+    mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "You're on invalid map!");
     return;
   }
   if (bn < 0 || bn >= bc) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+    mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "No bomb with such number installed! (See BOMB LIST)");
     return;
   }
@@ -323,9 +323,9 @@ static void bomb_drop(const BombDropRequest *request) {
   k = bomb_from_equipment_index(mech_critical_part_type(mech, lloc, lpos));
   mech_notify(mech, MECHALL, "The ship trembles as you detach a bomb..");
   t = bomb_calculate_destination(mech, &x, &y);
-  const float impact_time_truncated = truncf(t);
-  ob = (int)impact_time_truncated / 10;
-  if (MadePilotSkillRoll(mech, 4 + ob) || t < 2.0F)
+  const float IMPACT_TIME_TRUNCATED = truncf(t);
+  ob = (int)IMPACT_TIME_TRUNCATED / 10;
+  if (made_pilot_skill_roll(mech, 4 + ob) || t < 2.0F)
     mech_notify(mech, MECHALL,
                 "Despite the slight problems, you keep the craft stable enough "
                 "to drop the bomb right on target..");
@@ -333,17 +333,17 @@ static void bomb_drop(const BombDropRequest *request) {
     mech_notify(mech, MECHALL,
                 "The ship's lurches slightly, dropping the bomb off target!");
     ob = 6 * (1 + ob); /* Max distance missed  */
-    ob = MAX(1, btech_random_range_int(mech_context(mech), 1, ob) / 2);
+    ob = max(1, btech_random_range_int(mech_context(mech), 1, ob) / 2);
     di = btech_random_range_int(mech_context(mech), 0, 359);
     dir = (float)di * (float)M_PI / 180.0F;
-    const float scattered_x = (float)x + (float)ob * cosf(dir);
-    const float scattered_y = (float)y + (float)ob * sinf(dir);
-    const float truncated_x = truncf(scattered_x);
-    const float truncated_y = truncf(scattered_y);
-    const int target_x = (int)truncated_x;
-    const int target_y = (int)truncated_y;
-    x = clamp_int_to_short(target_x);
-    y = clamp_int_to_short(target_y);
+    const float SCATTERED_X = (float)x + (float)ob * cosf(dir);
+    const float SCATTERED_Y = (float)y + (float)ob * sinf(dir);
+    const float TRUNCATED_X = truncf(SCATTERED_X);
+    const float TRUNCATED_Y = truncf(SCATTERED_Y);
+    const int TARGET_X = (int)TRUNCATED_X;
+    const int TARGET_Y = (int)TRUNCATED_Y;
+    x = clamp_int_to_short(TARGET_X);
+    y = clamp_int_to_short(TARGET_Y);
   }
   bomb_simulate_flight(mech, map, &x, &y, t);
   if (!battle_map_coordinate_is_valid(map, x, y))
@@ -355,10 +355,10 @@ static void bomb_drop(const BombDropRequest *request) {
   s->type = k;
   s->map = map;
   mech_cargo_weight_recalculate(mech);
-  const float delay_truncated = truncf(t);
-  const int delay = MAX(1, (int)delay_truncated);
+  const float DELAY_TRUNCATED = truncf(t);
+  const int DELAY = max(1, (int)DELAY_TRUNCATED);
   btech_context_event_schedule(mech_context(mech), s, EVENT_DHIT,
-                               bomb_hit_event, delay, 0);
+                               bomb_hit_event, DELAY, 0);
 }
 
 void mech_bomb(DbRef player, void *data, char *buffer) {

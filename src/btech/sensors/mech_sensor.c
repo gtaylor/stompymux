@@ -43,7 +43,7 @@
 #include "mech_tag_api.h"
 #include "mech_utils_api.h"
 
-const SensorDefinition sensors[] = {
+const SensorDefinition SENSOR_DEFINITIONS[] = {
     {"Vislight", "V", 0, 60, 0, vislight_see, vislight_csee, vislight_tohit, -1,
      -1, 0, 1, SENSOR_ATTR_NONE, "Visual",
      "Fire/Smoke/Obstacles, 3 pt woods, 5 underwater hexes",
@@ -89,8 +89,8 @@ const SensorDefinition sensors[] = {
 const SensorDefinition *mech_sensor_definition(int sensor) {
   if (sensor < 0)
     abort();
-  return checked_storage_at_const(sensors, NUM_SENSORS, sizeof(*sensors),
-                                  (size_t)sensor);
+  return checked_storage_at_const(SENSOR_DEFINITIONS, NUM_SENSORS,
+                                  sizeof(*SENSOR_DEFINITIONS), (size_t)sensor);
 }
 
 static int mech_sensor_maximum_range(const Mech *mech, int sensor) {
@@ -118,7 +118,7 @@ int mech_sensor_to_hit_bonus(const MechSensorToHitRequest *request) {
   int flag = request->los_flags;
   int maplight = request->map_light;
   int bth1, bth2;
-  int wLightMod = (request->ammunition_mode & AC_INCENDIARY_MODE) ? 1 : 0;
+  int w_light_mod = (request->ammunition_mode & AC_INCENDIARY_MODE) ? 1 : 0;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   SensorToHitRequest sensor_request = {
@@ -128,7 +128,7 @@ int mech_sensor_to_hit_bonus(const MechSensorToHitRequest *request) {
       .flags = flag,
   };
 
-  maplight = maplight + wLightMod;
+  maplight = maplight + w_light_mod;
 
   if (maplight < 0)
     maplight = 0;
@@ -166,7 +166,7 @@ int mech_sensor_to_hit_bonus(const MechSensorToHitRequest *request) {
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
                      tprintf("%d: BTH +%d/+%d", mech_dbref(mech), bth1, bth2));
 #endif
-  return MIN(bth1, bth2);
+  return min(bth1, bth2);
 }
 
 int mech_sensor_can_see(const MechSensorObservationRequest *request) {
@@ -332,11 +332,11 @@ int mech_sensor_driver_base_chance(Mech *mech) {
   else if (perception >= 12)
     i = 1;
   else {
-    static const int modifiers[] = {3, 6, 10, 15, 21, 26, 30, 33, 35};
-    const int modifier = *(const int *)checked_storage_at_const(
-        modifiers, sizeof(modifiers) / sizeof(*modifiers), sizeof(*modifiers),
+    static const int MODIFIERS[] = {3, 6, 10, 15, 21, 26, 30, 33, 35};
+    const int MODIFIER = *(const int *)checked_storage_at_const(
+        MODIFIERS, sizeof(MODIFIERS) / sizeof(*MODIFIERS), sizeof(*MODIFIERS),
         (size_t)(perception - 3));
-    i = 36 - modifier;
+    i = 36 - MODIFIER;
   }
   return 64 + i; /* Padded a bit */
 }
@@ -397,7 +397,7 @@ int mech_sensor_detects(const MechSensorDetectionRequest *request) {
                         mech_dbref(target)) &&
         mech_team(mech) != mech_team(target))
       if (!btech_random_range(mech_context(mech), 0, 5))
-        MadePerceptionRoll(mech, -2);
+        made_perception_roll(mech, -2);
     return 1;
   }
   return 0;
@@ -454,10 +454,10 @@ SensorFlagText sensor_flag_text(int flags) {
       if (buffer[0] == '\0')
         (void)snprintf(buffer, sizeof(text.text), "%d", j);
       else {
-        const size_t used = strlen(buffer);
-        (void)snprintf(checked_storage_region(buffer, sizeof(text.text), used,
-                                              sizeof(text.text) - used),
-                       sizeof(text.text) - used, ",%d", j);
+        const size_t USED = strlen(buffer);
+        (void)snprintf(checked_storage_region(buffer, sizeof(text.text), USED,
+                                              sizeof(text.text) - USED),
+                       sizeof(text.text) - USED, ",%d", j);
       }
     }
   return text;
@@ -519,8 +519,8 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
     if (mech_position_z(mech) >= ATMO_Z && mech_position_z(target) >= ATMO_Z)
       range = range / 3;
   } else
-    MapCoordToRealCoord(request->x, request->y, &x1, &y1);
-  arc = InWeaponArc(mech, x1, y1);
+    map_coord_to_real_coord(request->x, request->y, &x1, &y1);
+  arc = in_weapon_arc(mech, x1, y1);
   if (f & BATTLE_MAP_LOS_SEEN) {
     MechSensorObservationRequest observation = {
         .observer = mech,
@@ -553,19 +553,19 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
           else
             buf[0] = 0;
           if (st & AUTOCON_SHORT) {
-            const size_t used = strlen(buf);
-            (void)snprintf(checked_storage_region(buf, sizeof(buf), used,
-                                                  sizeof(buf) - used),
-                           sizeof(buf) - used, "Lost: %s, %s arc.",
+            const size_t USED = strlen(buf);
+            (void)snprintf(checked_storage_region(buf, sizeof(buf), USED,
+                                                  sizeof(buf) - USED),
+                           sizeof(buf) - USED, "Lost: %s, %s arc.",
                            mech_to_mech_display_id_base(mech, target, wlf).text,
-                           GetArcID(mech, arc));
+                           get_arc_id(mech, arc));
           } else
             (void)snprintf(
                 buf, sizeof(buf),
                 "You have lost %s from your scanners. It was last in your "
                 "%s arc.",
                 mech_to_mech_display_id_base(mech, target, wlf).text,
-                GetArcID(mech, arc));
+                get_arc_id(mech, arc));
           if (st & AUTOCON_WARN)
             strlcat(buf, "[reset]", sizeof(buf));
           mech_notify(mech, MECHALL, buf);
@@ -636,19 +636,19 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
           else
             buf[0] = 0;
           if (st & AUTOCON_SHORT) {
-            const size_t used = strlen(buf);
-            (void)snprintf(checked_storage_region(buf, sizeof(buf), used,
-                                                  sizeof(buf) - used),
-                           sizeof(buf) - used, "Seen: %s, %s arc.",
+            const size_t USED = strlen(buf);
+            (void)snprintf(checked_storage_region(buf, sizeof(buf), USED,
+                                                  sizeof(buf) - USED),
+                           sizeof(buf) - USED, "Seen: %s, %s arc.",
                            mech_to_mech_display_id(mech, target).text,
-                           GetArcID(mech, arc));
+                           get_arc_id(mech, arc));
           } else {
-            const size_t used = strlen(buf);
-            (void)snprintf(checked_storage_region(buf, sizeof(buf), used,
-                                                  sizeof(buf) - used),
-                           sizeof(buf) - used, "You notice %s in your %s arc.",
+            const size_t USED = strlen(buf);
+            (void)snprintf(checked_storage_region(buf, sizeof(buf), USED,
+                                                  sizeof(buf) - USED),
+                           sizeof(buf) - USED, "You notice %s in your %s arc.",
                            mech_to_mech_display_id(mech, target).text,
-                           GetArcID(mech, arc));
+                           get_arc_id(mech, arc));
           }
           if (st & AUTOCON_WARN)
             strlcat(buf, "[reset]", sizeof(buf));
@@ -683,8 +683,8 @@ static void sensor_update_los_pair(BattleMap *map, int observer_index,
     mech_tag_check(observer);
   if (mech_searchlight_active(observer) && range < LITE_RANGE)
     cause_lite(observer, target);
-  const int maximum_visibility = battle_map_maximum_visibility(map);
-  if (range > mech_sensor_range_as_float(maximum_visibility) &&
+  const int MAXIMUM_VISIBILITY = battle_map_maximum_visibility(map);
+  if (range > mech_sensor_range_as_float(MAXIMUM_VISIBILITY) &&
       mech_position_z(target) < 11 && mech_position_z(observer) < 11) {
     battle_map_los_flags_set(map, observer_index, target_index,
                              BATTLE_MAP_LOS_BLOCKED);
@@ -769,25 +769,25 @@ void mech_sensor_description_append(
   if (request->capacity == 0)
     return;
   char *buf = request->buffer;
-  const size_t capacity = request->capacity;
+  const size_t CAPACITY = request->capacity;
   size_t used = strlen(buf);
-  if (used >= capacity)
+  if (used >= CAPACITY)
     return;
   if (!request->verbose)
-    (void)snprintf(checked_storage_region(buf, capacity, used, capacity - used),
-                   capacity - used, "(R:%s)",
+    (void)snprintf(checked_storage_region(buf, CAPACITY, used, CAPACITY - used),
+                   CAPACITY - used, "(R:%s)",
                    mech_sensor_definition(request->sensor)->range_description);
   else {
-    (void)snprintf(checked_storage_region(buf, capacity, used, capacity - used),
-                   capacity - used, "\n\tRange:      %s\n\tBlocked by: %s",
+    (void)snprintf(checked_storage_region(buf, CAPACITY, used, CAPACITY - used),
+                   CAPACITY - used, "\n\tRange:      %s\n\tBlocked by: %s",
                    mech_sensor_definition(request->sensor)->range_description,
                    mech_sensor_definition(request->sensor)->block_description);
     used = strlen(buf);
     if (mech_sensor_definition(request->sensor)->special_description &&
-        used < capacity)
+        used < CAPACITY)
       (void)snprintf(
-          checked_storage_region(buf, capacity, used, capacity - used),
-          capacity - used, "\n\tNotes:      %s",
+          checked_storage_region(buf, CAPACITY, used, CAPACITY - used),
+          CAPACITY - used, "\n\tNotes:      %s",
           mech_sensor_definition(request->sensor)->special_description);
   }
 }

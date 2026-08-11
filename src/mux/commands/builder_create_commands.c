@@ -40,7 +40,7 @@ char *builder_compile_object_name(EvaluationContext *evaluation, DbRef player,
 
   if (styled_text_compile(evaluation->world->styled_text_palette, name,
                           compiled, LBUF_SIZE, error, sizeof(error))) {
-    StringCopy(compiled, name);
+    string_copy(compiled, name);
     return compiled;
   }
   notify_printf(evaluation, player, "Invalid styled-text markup: %s.", error);

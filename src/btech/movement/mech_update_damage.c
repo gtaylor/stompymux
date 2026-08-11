@@ -27,7 +27,7 @@ void mech_damage_stagger_check(Mech *wounded) {
     if (!mech_is_jumping(wounded) && !mech_is_fallen(wounded) &&
         !mech_is_out_of_control(wounded)) {
       mech_notify(wounded, MECHALL, "You stagger from the damage!");
-      if (!MadePilotSkillRoll(wounded, 1)) {
+      if (!made_pilot_skill_roll(wounded, 1)) {
         mech_notify(wounded, MECHALL, "You fall over from all the damage!");
         mech_los_broadcast(wounded, "falls down, staggered by the damage!");
         mech_fall(wounded, 1, 0);

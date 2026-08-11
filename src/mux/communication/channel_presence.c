@@ -22,7 +22,7 @@
 
 void comsys_clear_player(EvaluationContext *evaluation, DbRef player) {
   int i;
-  struct commac *c;
+  struct Commac *c;
 
   c = get_commac(evaluation->runtime->channels, player);
 
@@ -45,7 +45,7 @@ void do_allcom(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *arg1 = invocation->first;
   int i;
-  struct commac *c;
+  struct Commac *c;
 
   c = get_commac(evaluation->runtime->channels, player);
 
@@ -67,22 +67,22 @@ void do_channelwho(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *arg1 = invocation->first;
-  struct channel *ch;
-  struct comuser *user;
+  struct Channel *ch;
+  struct Comuser *user;
   char channel[100];
   int flag = 0;
   char *cp;
   int i;
   char ansibuffer[LBUF_SIZE];
 
-  const size_t argument_length = strlen(arg1);
+  const size_t ARGUMENT_LENGTH = strlen(arg1);
   size_t slash_offset = 0;
 
-  while (slash_offset < argument_length &&
+  while (slash_offset < ARGUMENT_LENGTH &&
          *(const char *)checked_storage_at_const(
-             arg1, argument_length + 1, sizeof(char), slash_offset) != '/')
+             arg1, ARGUMENT_LENGTH + 1, sizeof(char), slash_offset) != '/')
     slash_offset++;
-  if (slash_offset == argument_length) {
+  if (slash_offset == ARGUMENT_LENGTH) {
     strncpy(channel, arg1, 100);
     *(char *)checked_storage_at(channel, sizeof(channel), sizeof(char), 99) =
         '\0';
@@ -95,7 +95,7 @@ void do_channelwho(CommandInvocation *invocation) {
     strncpy(channel, arg1, slash_offset);
     *(char *)checked_storage_at(channel, sizeof(channel), sizeof(char),
                                 slash_offset) = '\0';
-    cp = checked_storage_at(arg1, argument_length + 1, sizeof(char),
+    cp = checked_storage_at(arg1, ARGUMENT_LENGTH + 1, sizeof(char),
                             slash_offset + 1);
     if (*cp == 'a')
       flag = 1;
@@ -138,8 +138,8 @@ void do_channelwho(CommandInvocation *invocation) {
 
 static void do_comdisconnectraw_notify(EvaluationContext *evaluation,
                                        DbRef player, char *chan) {
-  struct channel *ch;
-  struct comuser *cu;
+  struct Channel *ch;
+  struct Comuser *cu;
 
   ch = select_channel(evaluation->runtime->channels, chan);
   if (!ch)
@@ -158,8 +158,8 @@ static void do_comdisconnectraw_notify(EvaluationContext *evaluation,
 
 static void do_comconnectraw_notify(EvaluationContext *evaluation, DbRef player,
                                     char *chan) {
-  struct channel *ch;
-  struct comuser *cu;
+  struct Channel *ch;
+  struct Comuser *cu;
 
   ch = select_channel(evaluation->runtime->channels, chan);
   if (!ch)
@@ -178,8 +178,8 @@ static void do_comconnectraw_notify(EvaluationContext *evaluation, DbRef player,
 
 static void do_comconnectchannel(EvaluationContext *evaluation, DbRef player,
                                  char *channel, const char *alias) {
-  struct channel *ch;
-  struct comuser *user;
+  struct Channel *ch;
+  struct Comuser *user;
 
   ch = select_channel(evaluation->runtime->channels, channel);
   if (ch) {
@@ -202,7 +202,7 @@ static void do_comconnectchannel(EvaluationContext *evaluation, DbRef player,
 
 void do_comdisconnect(EvaluationContext *evaluation, DbRef player) {
   int i;
-  struct commac *c;
+  struct Commac *c;
 
   c = get_commac(evaluation->runtime->channels, player);
 
@@ -217,7 +217,7 @@ void do_comdisconnect(EvaluationContext *evaluation, DbRef player) {
 }
 
 void do_comconnect(EvaluationContext *evaluation, DbRef player, Descriptor *d) {
-  struct commac *c;
+  struct Commac *c;
   int i;
   char *lsite;
 
@@ -242,8 +242,8 @@ void do_comconnect(EvaluationContext *evaluation, DbRef player, Descriptor *d) {
 
 void comsys_disconnect_channel(EvaluationContext *evaluation, DbRef player,
                                char *channel) {
-  struct comuser *user, *prevuser = nullptr;
-  struct channel *ch;
+  struct Comuser *user, *prevuser = nullptr;
+  struct Channel *ch;
 
   ch = select_channel(evaluation->runtime->channels, channel);
   if (!ch)

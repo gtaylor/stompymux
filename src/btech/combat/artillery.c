@@ -45,9 +45,9 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
-static void artillery_hit(artillery_shot *s);
+static void artillery_hit(ArtilleryShot *s);
 
-static const char *artillery_type(artillery_shot *s) {
+static const char *artillery_type(ArtilleryShot *s) {
   if (s->type == CL_ARROW || s->type == IS_ARROW)
     return "a missile";
   return "a round";
@@ -58,23 +58,23 @@ typedef struct ArtilleryDirection {
   const char *desc;
 } ArtilleryDirection;
 
-static const ArtilleryDirection arty_dirs[] = {
+static const ArtilleryDirection ARTY_DIRS[] = {
     {0, "north"},       {60, "northeast"},  {90, "east"},
     {120, "southeast"}, {180, "south"},     {240, "southwest"},
     {270, "west"},      {300, "northwest"}, {0, nullptr}};
 
 static const ArtilleryDirection *artillery_direction_at(size_t index) {
-  return checked_storage_at_const(arty_dirs,
-                                  sizeof(arty_dirs) / sizeof(*arty_dirs),
-                                  sizeof(*arty_dirs), index);
+  return checked_storage_at_const(ARTY_DIRS,
+                                  sizeof(ARTY_DIRS) / sizeof(*ARTY_DIRS),
+                                  sizeof(*ARTY_DIRS), index);
 }
 
-static const char *artillery_direction(artillery_shot *s) {
+static const char *artillery_direction(ArtilleryShot *s) {
   float fx, fy, tx, ty;
   int b, d, i, best = -1, bestd = 0;
 
-  MapCoordToRealCoord(s->from_x, s->from_y, &fx, &fy);
-  MapCoordToRealCoord(s->to_x, s->to_y, &tx, &ty);
+  map_coord_to_real_coord(s->from_x, s->from_y, &fx, &fy);
+  map_coord_to_real_coord(s->to_x, s->to_y, &tx, &ty);
   b = map_bearing(&(MapRealSegment){.start = {.x = fx, .y = fy},
                                     .end = {.x = tx, .y = ty}});
   for (i = 0; artillery_direction_at((size_t)i)->desc; i++) {
@@ -90,19 +90,19 @@ static const char *artillery_direction(artillery_shot *s) {
 }
 
 int artillery_round_flight_time(float fx, float fy, float tx, float ty) {
-  const float flight_time = map_real_range(&(MapRealSegment){
+  const float FLIGHT_TIME = map_real_range(&(MapRealSegment){
                                 .start = {.x = fx, .y = fy},
                                 .end = {.x = tx, .y = ty},
                             }) /
                             ARTY_SPEED;
-  const int delay = MAX(ARTILLERY_MINIMUM_FLIGHT, (int)flight_time);
+  const int DELAY = max(ARTILLERY_MINIMUM_FLIGHT, (int)FLIGHT_TIME);
 
   /* XXX Different weapons, diff. speed? */
-  return delay;
+  return DELAY;
 }
 
 static void artillery_hit_event(MuxEvent *e) {
-  artillery_shot *s = (artillery_shot *)e->data;
+  ArtilleryShot *s = (ArtilleryShot *)e->data;
 
   artillery_hit(s);
 }
@@ -125,8 +125,8 @@ void artillery_shoot(const ArtilleryShotRequest *request) {
   s->context = mech_context(mech);
   mech_los_broadcast(mech, tprintf("shoots %s towards the %s!",
                                    artillery_type(s), artillery_direction(s)));
-  MapCoordToRealCoord(s->from_x, s->from_y, &fx, &fy);
-  MapCoordToRealCoord(s->to_x, s->to_y, &tx, &ty);
+  map_coord_to_real_coord(s->from_x, s->from_y, &fx, &fy);
+  map_coord_to_real_coord(s->to_x, s->to_y, &tx, &ty);
   btech_context_owned_event_schedule(
       mech_context(mech), s, EVENT_DHIT, artillery_hit_event,
       artillery_round_flight_time(fx, fy, tx, ty), 0);
@@ -138,7 +138,7 @@ static int blast_arcf(float fx, float fy, Mech *mech) {
   b = map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                               .y = mech_position_real_y(mech)},
                                     .end = {.x = fx, .y = fy}});
-  dir = AcceptableDegree(b - mech_heading_degrees(mech));
+  dir = acceptable_degree(b - mech_heading_degrees(mech));
   if (dir > 120 && dir < 240)
     return BACK;
   if (dir > 300 || dir < 60)
@@ -154,7 +154,7 @@ static int blast_arcf(float fx, float fy, Mech *mech) {
 
 void blast_hit_real_hex(const BlastRealHexRequest *request) {
   BattleMap *map = request->map;
-  Mech *tempMech;
+  Mech *temp_mech;
   int loop;
   int isrear = 0, iscritical = 0, hitloc;
   int damleft, arc, ndam;
@@ -165,7 +165,7 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
   if (!map)
     return;
 
-  RealCoordToMapCoord(&tx, &ty, request->impact.x, request->impact.y);
+  real_coord_to_map_coord(&tx, &ty, request->impact.x, request->impact.y);
   if (tx < 0 || ty < 0 || tx >= map->map_width || ty >= map->map_height)
     return;
   if (!request->messages.target || !request->messages.observers)
@@ -173,26 +173,26 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
   if (request->safety.underwater)
     ground_zero = battle_map_hex_elevation(map, tx, ty);
   else
-    ground_zero = MAX(0, battle_map_hex_elevation(map, tx, ty));
+    ground_zero = max(0, battle_map_hex_elevation(map, tx, ty));
 
   for (loop = 0; loop < battle_map_unit_count(map); loop++) {
-    const DbRef unit = battle_map_unit_dbref(map, loop);
-    if (unit >= 0) {
-      tempMech = btech_context_get_mech(battle_map_context(map), unit);
-      if (!tempMech)
+    const DbRef UNIT = battle_map_unit_dbref(map, loop);
+    if (UNIT >= 0) {
+      temp_mech = btech_context_get_mech(battle_map_context(map), UNIT);
+      if (!temp_mech)
         continue;
-      if (mech_position_x(tempMech) != tx || mech_position_y(tempMech) != ty)
+      if (mech_position_x(temp_mech) != tx || mech_position_y(temp_mech) != ty)
         continue;
       /* Far too high.. */
-      if (mech_position_z(tempMech) >= (request->safety.above + ground_zero))
+      if (mech_position_z(temp_mech) >= (request->safety.above + ground_zero))
         continue;
       /* Far too below (underwater, mostly) */
       if (/* MechTerrain(tempMech) == WATER &&  */
-          mech_position_z(tempMech) <= (ground_zero - request->safety.below))
+          mech_position_z(temp_mech) <= (ground_zero - request->safety.below))
         continue;
-      mech_los_broadcast(tempMech, request->messages.observers);
-      mech_notify(tempMech, MECHALL, request->messages.target);
-      arc = blast_arcf(request->source.x, request->source.y, tempMech);
+      mech_los_broadcast(temp_mech, request->messages.observers);
+      mech_notify(temp_mech, MECHALL, request->messages.target);
+      arc = blast_arcf(request->source.x, request->source.y, temp_mech);
 
       if (arc == BACK)
         isrear = 1;
@@ -208,25 +208,25 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
 
         switch (request->hit_table) {
         case TABLE_PUNCH:
-          if (mech_class(tempMech) != CLASS_MECH) {
-            hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
+          if (mech_class(temp_mech) != CLASS_MECH) {
+            hitloc = mech_hit_location(temp_mech, arc, &iscritical, &isrear);
           } else {
-            hitloc = mech_punch_hit_location(tempMech, arc);
+            hitloc = mech_punch_hit_location(temp_mech, arc);
           }
           break;
         case TABLE_KICK:
-          if (mech_class(tempMech) != CLASS_MECH) {
-            hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
+          if (mech_class(temp_mech) != CLASS_MECH) {
+            hitloc = mech_hit_location(temp_mech, arc, &iscritical, &isrear);
           } else {
-            hitloc = mech_kick_hit_location(tempMech, arc);
+            hitloc = mech_kick_hit_location(temp_mech, arc);
           }
           break;
         default:
-          hitloc = mech_hit_location(tempMech, arc, &iscritical, &isrear);
+          hitloc = mech_hit_location(temp_mech, arc, &iscritical, &isrear);
         }
 
-        mech_damage_apply(&(MechDamageRequest){.target = tempMech,
-                                               .attacker = tempMech,
+        mech_damage_apply(&(MechDamageRequest){.target = temp_mech,
+                                               .attacker = temp_mech,
                                                .line_of_sight = 0,
                                                .attack_pilot = -1,
                                                .hit_location = hitloc,
@@ -241,7 +241,7 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
                                                .ammunition_mode = 0,
                                                .ignore_swarmers = 0});
       }
-      mech_heat_effect_apply(nullptr, tempMech, request->damage.heat, false);
+      mech_heat_effect_apply(nullptr, temp_mech, request->damage.heat, false);
     }
   }
 }
@@ -250,8 +250,8 @@ void blast_hit_hex(const BlastHexRequest *request) {
   float ftx, fty;
   float ffx, ffy;
 
-  MapCoordToRealCoord(request->impact.x, request->impact.y, &ftx, &fty);
-  MapCoordToRealCoord(request->source.x, request->source.y, &ffx, &ffy);
+  map_coord_to_real_coord(request->impact.x, request->impact.y, &ftx, &fty);
+  map_coord_to_real_coord(request->source.x, request->source.y, &ffx, &ffy);
   BlastRealHexRequest real_request = {
       .map = request->map,
       .damage = request->damage,
@@ -275,15 +275,15 @@ void blast_hit_real_area(const BlastRealAreaRequest *request) {
       .end = request->center.source,
   });
 
-  dm = MAX(1, (int)t + 1);
+  dm = max(1, (int)t + 1);
   BlastRealHexRequest hit = request->center;
   hit.damage.total /= dm;
   hit.damage.heat /= dm;
   blast_hit_real_hex(&hit);
   if (!request->neighbor_radius)
     return;
-  RealCoordToMapCoord(&tx, &ty, request->center.impact.x,
-                      request->center.impact.y);
+  real_coord_to_map_coord(&tx, &ty, request->center.impact.x,
+                          request->center.impact.y);
   for (x1 = (tx - request->neighbor_radius);
        x1 <= (tx + request->neighbor_radius); x1++)
     for (y1 = (ty - request->neighbor_radius);
@@ -299,12 +299,12 @@ void blast_hit_real_area(const BlastRealAreaRequest *request) {
         continue;
       if ((tx == x1) && (ty == y1))
         continue;
-      x2 = BOUNDED(0, x1, map->map_width - 1);
-      y2 = BOUNDED(0, y1, map->map_height - 1);
+      x2 = bounded(0, x1, map->map_width - 1);
+      y2 = bounded(0, y1, map->map_height - 1);
       if (x1 != x2 || y1 != y2)
         continue;
       spot = (x1 == tx && y1 == ty);
-      MapCoordToRealCoord(x1, y1, &hx, &hy);
+      map_coord_to_real_coord(x1, y1, &hx, &hy);
       dm++;
       if (!(request->center.damage.total / dm))
         continue;
@@ -345,8 +345,8 @@ void blast_hit_real_area(const BlastRealAreaRequest *request) {
 void blast_hit_area(const BlastAreaRequest *request) {
   float fx, fy;
 
-  MapCoordToRealCoord(request->center.impact.x, request->center.impact.y, &fx,
-                      &fy);
+  map_coord_to_real_coord(request->center.impact.x, request->center.impact.y,
+                          &fx, &fy);
   BlastRealAreaRequest real_request = {
       .center =
           {
@@ -366,7 +366,7 @@ void blast_hit_area(const BlastAreaRequest *request) {
 
 typedef struct ArtilleryImpact {
   BattleMap *map;
-  artillery_shot *shot;
+  ArtilleryShot *shot;
   int damage;
   MapHexPosition position;
   bool direct;
@@ -374,7 +374,7 @@ typedef struct ArtilleryImpact {
 
 static void artillery_hit_hex(const ArtilleryImpact *impact) {
   BattleMap *map = impact->map;
-  artillery_shot *s = impact->shot;
+  ArtilleryShot *s = impact->shot;
   int mode = s->mode;
   int dam = impact->damage;
   int tx = impact->position.x;
@@ -434,7 +434,7 @@ static void artillery_hit_hex(const ArtilleryImpact *impact) {
 typedef struct ArtilleryNeighborHit ArtilleryNeighborHit;
 struct ArtilleryNeighborHit {
   BattleMap *map;
-  artillery_shot *shot;
+  ArtilleryShot *shot;
   int damage;
 };
 
@@ -488,9 +488,9 @@ static void artillery_cluster_hit(const ArtilleryImpact *impact) {
       y = ty + yd;
     } while (x < 0 || x >= map->map_width || y < 0 || y >= map->map_height);
     /* Whee.. it's time to drop a bomb to the hex */
-    const int target_index = (xd + 2) * 5 + yd + 2;
+    const int TARGET_INDEX = (xd + 2) * 5 + yd + 2;
     int *target = checked_storage_at(targets.cells, 25, sizeof(*targets.cells),
-                                     (size_t)target_index);
+                                     (size_t)TARGET_INDEX);
     (*target)++;
   }
   for (xd = 0; xd < 5; xd++) {
@@ -514,7 +514,7 @@ void artillery_friendly_adjustment(DbRef mechnum, BattleMap *map, int x,
                                    int y) {
   Mech *mech;
   Mech *spotter;
-  Mech *tempMech = nullptr;
+  Mech *temp_mech = nullptr;
 
   mech = btech_context_get_mech(battle_map_context(map), mechnum);
   if (!mech)
@@ -529,26 +529,26 @@ void artillery_friendly_adjustment(DbRef mechnum, BattleMap *map, int x,
   /* Ok.. we've a valid target to adjust fire on */
   /* Now, see if we've any friendlies in LOS.. NOTE: FRIENDLIES ;-) */
   if (spotter) {
-    if (MechSeesHex(spotter, map, x, y))
-      tempMech = spotter;
+    if (mech_sees_hex(spotter, map, x, y))
+      temp_mech = spotter;
   } else
-    tempMech = find_mech_in_hex(mech, map, x, y, 2);
-  if (!tempMech)
+    temp_mech = find_mech_in_hex(mech, map, x, y, 2);
+  if (!temp_mech)
     return;
-  if (!mech_is_started(tempMech) || !mech_is_started(mech))
+  if (!mech_is_started(temp_mech) || !mech_is_started(mech))
     return;
   if (spotter) {
     mech_printf(mech, MECHSTARTED,
                 "%s sent you some trajectory-correction data.",
-                mech_to_mech_display_id(mech, tempMech).text);
-    mech_printf(tempMech, MECHSTARTED,
+                mech_to_mech_display_id(mech, temp_mech).text);
+    mech_printf(temp_mech, MECHSTARTED,
                 "You provide %s with information about the miss.",
-                mech_to_mech_display_id(tempMech, mech).text);
+                mech_to_mech_display_id(temp_mech, mech).text);
   }
   mech_fire_adjustment_increment(mech);
 }
 
-static void artillery_hit(artillery_shot *s) {
+static void artillery_hit(ArtilleryShot *s) {
   /* First, we figure where it exactly hits. Our first-hand information
      is only whether it hits or not, not _where_ it hits */
   float dir;
@@ -573,25 +573,26 @@ static void artillery_hit(artillery_shot *s) {
     original_y = s->to_y;
     s->to_x += (int)((float)dist * cosf(dir));
     s->to_y += (int)((float)dist * sinf(dir));
-    s->to_x = BOUNDED(0, s->to_x, map->map_width - 1);
-    s->to_y = BOUNDED(0, s->to_y, map->map_height - 1);
+    s->to_x = bounded(0, s->to_x, map->map_width - 1);
+    s->to_y = bounded(0, s->to_y, map->map_height - 1);
     /* Time to calculate if any friendlies have LOS to hex,
        and if so, adjust fire adjustment unless you lack information /
        have changed target */
   }
   /* It's time to run for your lives, lil' ones ;-) */
   if (!(s->mode & ARTILLERY_MODES))
-    HexLOSBroadcast(
+    hex_los_broadcast(
         map, s->to_x, s->to_y,
         tprintf("%s fire hits $H!",
                 checked_string_suffix(weapon_catalogue_name(s->type), 3)));
   else if (s->mode & CLUSTER_MODE)
-    HexLOSBroadcast(map, s->to_x, s->to_y,
-                    "A rain of small bomblets hits $H's surroundings!");
+    hex_los_broadcast(map, s->to_x, s->to_y,
+                      "A rain of small bomblets hits $H's surroundings!");
   else if (s->mode & MINE_MODE)
-    HexLOSBroadcast(map, s->to_x, s->to_y, "A rain of small bomblets hits $H!");
+    hex_los_broadcast(map, s->to_x, s->to_y,
+                      "A rain of small bomblets hits $H!");
   else if (s->mode & SMOKE_MODE)
-    HexLOSBroadcast(
+    hex_los_broadcast(
         map, s->to_x, s->to_y,
         tprintf("A %s %s hits $h, and smoke starts to billow!",
                 checked_string_suffix(weapon_catalogue_name(s->type), 3),

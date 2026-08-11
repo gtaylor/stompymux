@@ -47,8 +47,8 @@ constexpr int RECYCLE_ATTACKLEG = PHYSICAL_RECYCLE_TIME / 2;
 void bsuit_swarm(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   Mech *target;
-  int baseToHit = 4;
-  int tIsMount = 0;
+  int base_to_hit = 4;
+  int t_is_mount = 0;
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -83,7 +83,7 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    tIsMount = 1;
+    t_is_mount = 1;
   } else {
     if (bsuit_jettison_validate(mech))
       return;
@@ -111,36 +111,36 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
   case 1:
   case 2:
   case 3:
-    baseToHit = 5;
+    base_to_hit = 5;
     break;
 
   default:
-    baseToHit = 2;
+    base_to_hit = 2;
     break;
   }
 
-  if (tIsMount)
-    baseToHit -= 4;
+  if (t_is_mount)
+    base_to_hit -= 4;
 
   if (mech_condition_summary(mech).hidden) {
     if (mech_is_immobile(target))
-      baseToHit -= 4;
+      base_to_hit -= 4;
 
     if (mech_condition_summary(target).fallen)
-      baseToHit -= 4;
+      base_to_hit -= 4;
   } else {
-    baseToHit += mech_target_movement_modifier(mech, target, 0.0);
+    base_to_hit += mech_target_movement_modifier(mech, target, 0.0);
 
     if (mech_condition_summary(target).fallen)
-      baseToHit -= 2;
+      base_to_hit -= 2;
   }
 
   /* Well, we're here. Let's see if it works. */
-  if (MadePilotSkillRoll(mech, baseToHit)) {
+  if (made_pilot_skill_roll(mech, base_to_hit)) {
     mech_printf(target, MECHALL, "%s %s you!",
                 mech_to_mech_display_id(target, mech).text,
-                (tIsMount ? "mounts" : "swarms"));
-    mech_printf(mech, MECHALL, "You %s %s!", (tIsMount ? "mount" : "swarm"),
+                (t_is_mount ? "mounts" : "swarms"));
+    mech_printf(mech, MECHALL, "You %s %s!", (t_is_mount ? "mount" : "swarm"),
                 mech_to_mech_display_id(mech, target).text);
 
     mech_swarm_target_set(mech, mech_dbref(target));
@@ -148,7 +148,7 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
     mech_mounting_set(mech, true);
     mech_mounted_set(target, true);
 
-    if (tIsMount) {
+    if (t_is_mount) {
       mech_los_broadcast_unit(mech, target, "mounts %s!");
     } else {
       mech_los_broadcast_unit(mech, target, "swarms %s!");
@@ -159,16 +159,16 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
     mech_heading_set(mech, 270);
     mech_desired_heading_set(mech, 270);
     mech_position_mirror(mech, target, 1);
-    MarkForLOSUpdate(mech);
+    mark_for_los_update(mech);
     mech_flood(mech);
     mech_stop_lock(mech);
   } else {
     mech_printf(target, MECHALL, "%s attempts to %s you!",
                 mech_to_mech_display_id(target, mech).text,
-                (tIsMount ? "mount" : "swarm"));
+                (t_is_mount ? "mount" : "swarm"));
     mech_printf(mech, MECHALL,
                 "Nice try, but you don't succeed in your attempt at %s %s!",
-                (tIsMount ? "mounting" : "swarming"),
+                (t_is_mount ? "mounting" : "swarming"),
                 mech_to_mech_display_id(mech, target).text);
   }
 
@@ -185,11 +185,11 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
 void bsuit_attackleg(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   Mech *target;
-  int baseToHit = 0;
-  int wLegTemp = -1;
-  int wLegID = -1;
-  int wCritRoll = 0;
-  char strAttackLoc[50];
+  int base_to_hit = 0;
+  int w_leg_temp = -1;
+  int w_leg_id = -1;
+  int w_crit_roll = 0;
+  char str_attack_loc[50];
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -209,7 +209,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
   if (bsuit_target_find(player, mech, &target, buffer))
     return;
 
-  if (IsMechLegLess(mech)) {
+  if (is_mech_leg_less(mech)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That mech has no legs to grab!");
     return;
@@ -222,96 +222,96 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
 
   switch (bsuit_member_count(mech)) {
   case 1:
-    baseToHit = 7;
+    base_to_hit = 7;
     break;
 
   case 2:
-    baseToHit = 5;
+    base_to_hit = 5;
     break;
 
   case 3:
-    baseToHit = 2;
+    base_to_hit = 2;
     break;
 
   default:
-    baseToHit = -1;
+    base_to_hit = -1;
     break;
   }
 
   if (mech_condition_summary(mech).hidden) {
     if (mech_is_immobile(target))
-      baseToHit -= 4;
+      base_to_hit -= 4;
 
     if (mech_condition_summary(target).fallen)
-      baseToHit -= 2;
+      base_to_hit -= 2;
   } else {
-    baseToHit += mech_target_movement_modifier(mech, target, 0.0);
+    base_to_hit += mech_target_movement_modifier(mech, target, 0.0);
   }
 
   if (mech_is_quad(target)) {
     do {
       switch (btech_random_range(mech_context(mech), 0, 3)) {
       case 0:
-        wLegTemp = RLEG;
+        w_leg_temp = RLEG;
         break;
 
       case 1:
-        wLegTemp = LLEG;
+        w_leg_temp = LLEG;
         break;
 
       case 2:
-        wLegTemp = RARM;
+        w_leg_temp = RARM;
         break;
 
       case 3:
-        wLegTemp = LARM;
+        w_leg_temp = LARM;
         break;
       }
 
-      if (mech_section_internal(target, wLegTemp))
-        wLegID = wLegTemp;
+      if (mech_section_internal(target, w_leg_temp))
+        w_leg_id = w_leg_temp;
 
-    } while (wLegID == -1);
+    } while (w_leg_id == -1);
   } else {
-    wLegTemp = (btech_random_range(mech_context(mech), 0, 1)) ? RLEG : LLEG;
+    w_leg_temp = (btech_random_range(mech_context(mech), 0, 1)) ? RLEG : LLEG;
 
-    if (mech_section_internal(target, wLegTemp) == 0) {
-      wLegID = (wLegTemp == RLEG) ? LLEG : RLEG;
+    if (mech_section_internal(target, w_leg_temp) == 0) {
+      w_leg_id = (w_leg_temp == RLEG) ? LLEG : RLEG;
     } else {
-      wLegID = wLegTemp;
+      w_leg_id = w_leg_temp;
     }
   }
 
-  ArmorStringFromIndex(wLegID, strAttackLoc, mech_class(target),
-                       mech_movement_type(target));
+  armor_string_from_index(w_leg_id, str_attack_loc, mech_class(target),
+                          mech_movement_type(target));
 
   mech_printf(mech, MECHALL,
               "You go for %s's %s, placing explosives in the joints!",
-              mech_to_mech_display_id(mech, target).text, strAttackLoc);
+              mech_to_mech_display_id(mech, target).text, str_attack_loc);
 
-  if (MadePilotSkillRoll(mech, baseToHit)) {
+  if (made_pilot_skill_roll(mech, base_to_hit)) {
     mech_printf(
         target, MECHALL,
         "%s swarms your %s putting small packets of explosives all over it!",
-        mech_to_mech_display_id(target, mech).text, strAttackLoc);
+        mech_to_mech_display_id(target, mech).text, str_attack_loc);
 
     mech_los_broadcast_unit(mech, target, "attacks %s's legs!");
 
     /* find out if we do a crit or damage */
-    wCritRoll = btech_random_roll(mech_context(mech));
+    w_crit_roll = btech_random_roll(mech_context(mech));
 
-    if (wCritRoll >= 8) {
+    if (w_crit_roll >= 8) {
       mech_printf(target, MECHALL,
                   "The explosives manage to rip into the internals of your %s!",
-                  strAttackLoc);
+                  str_attack_loc);
 
-      switch (wCritRoll) {
+      switch (w_crit_roll) {
       case 8:
       case 9:
         mech_critical_handle(&(CriticalHitDispatch){.wounded = target,
                                                     .attacker = mech,
                                                     .line_of_sight = 1,
-                                                    .section = wLegID,
+                                                    .section = w_leg_id,
                                                     .count = 1});
         break;
       case 10:
@@ -319,11 +319,11 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
         mech_critical_handle(&(CriticalHitDispatch){.wounded = target,
                                                     .attacker = mech,
                                                     .line_of_sight = 1,
-                                                    .section = wLegID,
+                                                    .section = w_leg_id,
                                                     .count = 2});
         break;
       case 12:
-        switch (wLegID) {
+        switch (w_leg_id) {
         case RARM:
         case LARM:
         case RLEG:
@@ -334,17 +334,18 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
           mech_los_broadcast(
               target,
               tprintf("'s %s is blown off in a shower of sparks and smoke!",
-                      strAttackLoc));
-          mech_section_destroy(&(SectionDestructionRequest){.wounded = target,
-                                                            .attacker = mech,
-                                                            .line_of_sight = 1,
-                                                            .section = wLegID});
+                      str_attack_loc));
+          mech_section_destroy(
+              &(SectionDestructionRequest){.wounded = target,
+                                           .attacker = mech,
+                                           .line_of_sight = 1,
+                                           .section = w_leg_id});
           [[fallthrough]];
         default:
           mech_critical_handle(&(CriticalHitDispatch){.wounded = target,
                                                       .attacker = mech,
                                                       .line_of_sight = 1,
-                                                      .section = wLegID,
+                                                      .section = w_leg_id,
                                                       .count = 3});
         }
         break;
@@ -354,13 +355,13 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
     } else {
       mech_printf(target, MECHALL,
                   "The explosives explode on the surface of your %s!",
-                  strAttackLoc);
+                  str_attack_loc);
       mech_damage_apply(
           &(MechDamageRequest){.target = target,
                                .attacker = mech,
                                .line_of_sight = 1,
                                .attack_pilot = mech_pilot_dbref(mech),
-                               .hit_location = wLegID,
+                               .hit_location = w_leg_id,
                                .rear = 0,
                                .critical = 1,
                                .armor_damage = 4,
@@ -391,8 +392,8 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
 
 void bsuit_pack_jettison(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
-  int wcJettisoned = 0;
-  int wcSuits = 0;
+  int wc_jettisoned = 0;
+  int wc_suits = 0;
   int i, j;
 
   if (!common_checks(player, mech, MECH_USUALO))
@@ -409,15 +410,15 @@ void bsuit_pack_jettison(DbRef player, void *data, char *buffer) {
           (!(mech_critical_fire_mode(mech, i, j) & IS_JETTISONED_MODE))) {
         mech_critical_jettison(mech, i, j);
 
-        wcJettisoned++;
+        wc_jettisoned++;
       }
     }
   }
 
-  if (wcJettisoned > 0) {
-    wcSuits = bsuit_member_count(mech);
+  if (wc_jettisoned > 0) {
+    wc_suits = bsuit_member_count(mech);
 
-    if (wcSuits > 1) {
+    if (wc_suits > 1) {
       mech_notify(mech, MECHALL,
                   "The explosive bolts that hold the backpacks on blow, "
                   "allowing them to drop to the ground.");

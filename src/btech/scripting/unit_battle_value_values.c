@@ -18,18 +18,18 @@
 #include <stdlib.h>
 
 static Mech *matched_mech(BtechScriptCall *call, BtechScriptValueKind kind) {
-  const DbRef object =
+  const DbRef OBJECT =
       match_thing(&call->evaluation->command->match, call->player,
                   script_function_argument(call->arguments.values,
                                            (int)call->arguments.count, 0));
-  if (object == NOTHING ||
-      !is_examinable(call->evaluation->world->database, call->player, object) ||
-      !btech_context_is_mech(call->evaluation->btech, object)) {
+  if (OBJECT == NOTHING ||
+      !is_examinable(call->evaluation->world->database, call->player, OBJECT) ||
+      !btech_context_is_mech(call->evaluation->btech, OBJECT)) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 NOT A MECH");
     return nullptr;
   }
-  Mech *mech = btech_context_find_object(call->evaluation->btech, object);
+  Mech *mech = btech_context_find_object(call->evaluation->btech, OBJECT);
   if (!mech)
     safe_tprintf_str(call->output.buffer, &call->output.cursor, "#-1");
   (void)kind;
@@ -45,11 +45,11 @@ BtechScriptResult fun_btsetmaxspeed(BtechScriptCall *call) {
                      "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  const float maximum_speed =
+  const float MAXIMUM_SPEED =
       strtof(script_function_argument(call->arguments.values,
                                       (int)call->arguments.count, 1),
              nullptr);
-  mech_maximum_speed_set(mech, maximum_speed);
+  mech_maximum_speed_set(mech, MAXIMUM_SPEED);
   mech_speed_correct(mech);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "1");
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
@@ -64,9 +64,9 @@ BtechScriptResult fun_btgetrealmaxspeed(BtechScriptCall *call) {
                      "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
-  const float speed = mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
+  const float SPEED = mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%f",
-                   (double)speed);
+                   (double)SPEED);
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
@@ -93,10 +93,10 @@ BtechScriptResult fun_btgetbv(BtechScriptCall *call) {
                      "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
-  const int battle_value = CalculateBV(mech, 100, 100);
-  mech_battle_value_set(mech, battle_value);
+  const int BATTLE_VALUE = calculate_bv(mech, 100, 100);
+  mech_battle_value_set(mech, BATTLE_VALUE);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d",
-                   battle_value);
+                   BATTLE_VALUE);
 #else
   safe_tprintf_str(call->output.buffer, &call->output.cursor,
                    "#-1 BATTLE VALUE SUPPORT DISABLED");
@@ -125,7 +125,7 @@ BtechScriptResult fun_btgetbv_ref(BtechScriptCall *call) {
   Mech *mech = reference_mech(call);
   if (!mech)
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
-  mech_battle_value_set(mech, CalculateBV(mech, 4, 5));
+  mech_battle_value_set(mech, calculate_bv(mech, 4, 5));
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d",
                    mech_battle_value(mech));
 #else
@@ -141,7 +141,7 @@ BtechScriptResult fun_btgetdbv_ref(BtechScriptCall *call) {
   if (!mech)
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%.2f",
-                   (double)Calculate_Defensive_BV(mech));
+                   (double)calculate_defensive_bv(mech));
 #else
   safe_tprintf_str(call->output.buffer, &call->output.cursor,
                    "#-1 BATTLE VALUE SUPPORT DISABLED");
@@ -155,7 +155,7 @@ BtechScriptResult fun_btgetobv_ref(BtechScriptCall *call) {
   if (!mech)
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%.2f",
-                   (double)Calculate_Offensive_BV(mech));
+                   (double)calculate_offensive_bv(mech));
 #else
   safe_tprintf_str(call->output.buffer, &call->output.cursor,
                    "#-1 BATTLE VALUE SUPPORT DISABLED");
@@ -168,10 +168,10 @@ BtechScriptResult fun_btgetbv2_ref(BtechScriptCall *call) {
   Mech *mech = reference_mech(call);
   if (!mech)
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
-  const float defensive_value = Calculate_Defensive_BV(mech);
-  const float offensive_value = Calculate_Offensive_BV(mech);
+  const float DEFENSIVE_VALUE = calculate_defensive_bv(mech);
+  const float OFFENSIVE_VALUE = calculate_offensive_bv(mech);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%.2f",
-                   (double)(defensive_value + offensive_value));
+                   (double)(DEFENSIVE_VALUE + OFFENSIVE_VALUE));
 #else
   safe_tprintf_str(call->output.buffer, &call->output.cursor,
                    "#-1 BATTLE VALUE SUPPORT DISABLED");

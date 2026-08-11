@@ -21,7 +21,7 @@
 #include "weapon_settings.h"
 #include "weapons.h"
 
-const int num_def_weapons = NUM_DEF_WEAPONS;
+const int DEFAULT_WEAPON_COUNT = NUM_DEF_WEAPONS;
 
 static BtechWeaponRuntimeValues *
 weapon_runtime_values(BtechWeaponSettings *settings, size_t index) {
@@ -49,10 +49,10 @@ missile_hit_entry_const(const MissileHitRegistry *registry, size_t index) {
 
 bool btech_weapon_settings_initialize(BtechWeaponSettings *settings) {
   *settings = (BtechWeaponSettings){0};
-  settings->values = calloc(num_def_weapons, sizeof(*settings->values));
+  settings->values = calloc(DEFAULT_WEAPON_COUNT, sizeof(*settings->values));
   if (settings->values == nullptr)
     return false;
-  settings->count = num_def_weapons;
+  settings->count = DEFAULT_WEAPON_COUNT;
   for (size_t index = 0; index < settings->count; index++) {
     *weapon_runtime_values(settings, index) = (BtechWeaponRuntimeValues){
         .recycle_time = weapon_catalogue_recycle_time((int)index),
@@ -107,19 +107,19 @@ bool btech_weapon_settings_set_battle_value(BtechWeaponSettings *settings,
 
 bool missile_hit_registry_initialize(MissileHitRegistry *registry,
                                      BtechContext *context) {
-  const size_t definition_count =
+  const size_t DEFINITION_COUNT =
       sizeof(MISSILE_HIT_DEFINITIONS) / sizeof(*MISSILE_HIT_DEFINITIONS) - 1;
 
   *registry = (MissileHitRegistry){0};
-  registry->entries = calloc(definition_count, sizeof(*registry->entries));
+  registry->entries = calloc(DEFINITION_COUNT, sizeof(*registry->entries));
   if (registry->entries == nullptr)
     return false;
-  registry->count = definition_count;
+  registry->count = DEFINITION_COUNT;
 
-  for (size_t index = 0; index < definition_count; index++) {
+  for (size_t index = 0; index < DEFINITION_COUNT; index++) {
     MissileHitEntry *entry = missile_hit_entry(registry, index);
     *entry = *(const MissileHitEntry *)checked_storage_at_const(
-        MISSILE_HIT_DEFINITIONS, definition_count + 1,
+        MISSILE_HIT_DEFINITIONS, DEFINITION_COUNT + 1,
         sizeof(*MISSILE_HIT_DEFINITIONS), index);
     PartMatchResult match =
         part_match_next(&(PartMatchRequest){.context = context,
@@ -163,7 +163,7 @@ missile_hit_registry_find_name(const MissileHitRegistry *registry,
   return nullptr;
 }
 
-void FillDefaultCriticals(Mech *mech, int index) {
+void fill_default_criticals(Mech *mech, int index) {
   int loop;
 
   for (loop = 0; loop < NUM_CRITICALS; loop++) {
@@ -251,20 +251,20 @@ armor_section_abbreviation(const ArmorSectionReference *section) {
   int loc = section->location;
   if (loc < 0)
     return abbreviation;
-  const UnitSectionCatalog catalog = {.unit_type = type,
+  const UnitSectionCatalog CATALOG = {.unit_type = type,
                                       .movement_type = movement_type};
-  const char *name = unit_section_name(&catalog, (size_t)loc);
+  const char *name = unit_section_name(&CATALOG, (size_t)loc);
   if (name == nullptr)
     return abbreviation;
-  const size_t length = strlen(name);
+  const size_t LENGTH = strlen(name);
   size_t output = 0;
   for (size_t input = 0;
-       input < length && output + 1 < sizeof(abbreviation.text); input++) {
-    const char character = *checked_string_suffix(name, input);
-    if ((character >= 'A' && character <= 'Z') ||
-        (character >= '0' && character <= '9')) {
+       input < LENGTH && output + 1 < sizeof(abbreviation.text); input++) {
+    const char CHARACTER = *checked_string_suffix(name, input);
+    if ((CHARACTER >= 'A' && CHARACTER <= 'Z') ||
+        (CHARACTER >= '0' && CHARACTER <= '9')) {
       *(char *)checked_storage_at(abbreviation.text, sizeof(abbreviation.text),
-                                  sizeof(char), output++) = character;
+                                  sizeof(char), output++) = CHARACTER;
     }
   }
   *(char *)checked_storage_at(abbreviation.text, sizeof(abbreviation.text),
@@ -272,52 +272,52 @@ armor_section_abbreviation(const ArmorSectionReference *section) {
   return abbreviation;
 }
 
-int ArmorSectionFromString(UnitClass type, MechMovementType movement_type,
-                           const char *string) {
+int armor_section_from_string(UnitClass type, MechMovementType movement_type,
+                              const char *string) {
   int i, j;
   const char *c, *d;
 
   if (string == nullptr || !*string)
     return -1;
-  const UnitSectionCatalog catalog = {.unit_type = type,
+  const UnitSectionCatalog CATALOG = {.unit_type = type,
                                       .movement_type = movement_type};
-  const size_t location_count = unit_section_name_count(&catalog);
-  if (location_count == 0)
+  const size_t LOCATION_COUNT = unit_section_name_count(&CATALOG);
+  if (LOCATION_COUNT == 0)
     return -1;
   /* Then, methodically compare against each other until a suitable
      match is found */
-  for (i = 0; (size_t)i < location_count; i++)
-    if (!strcasecmp(string, unit_section_name(&catalog, (size_t)i)))
+  for (i = 0; (size_t)i < LOCATION_COUNT; i++)
+    if (!strcasecmp(string, unit_section_name(&CATALOG, (size_t)i)))
       return i;
-  for (i = 0; (size_t)i < location_count; i++) {
-    const char first = ascii_to_upper(*string);
-    const char *left = unit_section_name(&catalog, (size_t)i);
-    if (first != *left)
+  for (i = 0; (size_t)i < LOCATION_COUNT; i++) {
+    const char FIRST = ascii_to_upper(*string);
+    const char *left = unit_section_name(&CATALOG, (size_t)i);
+    if (FIRST != *left)
       continue;
-    for (j = i + 1; (size_t)j < location_count; j++)
-      if (first == *unit_section_name(&catalog, (size_t)j))
+    for (j = i + 1; (size_t)j < LOCATION_COUNT; j++)
+      if (FIRST == *unit_section_name(&CATALOG, (size_t)j))
         break;
-    if ((size_t)j == location_count)
+    if ((size_t)j == LOCATION_COUNT)
       return i;
     /* Ok, comparison between these two, then */
     c = strstr(left, " ");
-    d = strstr(unit_section_name(&catalog, (size_t)j), " ");
-    const char second = *checked_string_suffix(string, 1);
-    if (!c && !second && d)
+    d = strstr(unit_section_name(&CATALOG, (size_t)j), " ");
+    const char SECOND = *checked_string_suffix(string, 1);
+    if (!c && !SECOND && d)
       return i;
     if (!c && !d)
       return -1;
-    if (!second)
+    if (!SECOND)
       continue;
-    if (c && ascii_to_upper(second) == *checked_string_suffix(c, 1))
+    if (c && ascii_to_upper(SECOND) == *checked_string_suffix(c, 1))
       return i;
-    if (d && ascii_to_upper(second) == *checked_string_suffix(d, 1))
+    if (d && ascii_to_upper(SECOND) == *checked_string_suffix(d, 1))
       return j;
   }
   return -1;
 }
 
-int WeaponIndexFromString(BtechContext *context, char *string) {
+int weapon_index_from_string(BtechContext *context, char *string) {
   PartMatchResult match =
       part_match_next(&(PartMatchRequest){.context = context,
                                           .pattern = string,
@@ -328,7 +328,7 @@ int WeaponIndexFromString(BtechContext *context, char *string) {
   return -1;
 }
 
-int FindSpecialItemCodeFromString(BtechContext *context, char *buffer) {
+int find_special_item_code_from_string(BtechContext *context, char *buffer) {
   PartMatchResult match =
       part_match_next(&(PartMatchRequest){.context = context,
                                           .pattern = buffer,

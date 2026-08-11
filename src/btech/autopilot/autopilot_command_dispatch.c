@@ -100,7 +100,7 @@ void auto_com_event(MuxEvent *muxevent) {
       return;
     }
     if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-        CountDestroyedLegs(mech) <= 0) {
+        count_destroyed_legs(mech) <= 0) {
       if (!mech_event_count(mech, EVENT_STAND))
         mech_stand_empty(autopilot->mynum, mech);
       autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
@@ -170,9 +170,9 @@ void auto_com_event(MuxEvent *muxevent) {
 void autopilot_speed_up_for_target(const AutopilotApproachRequest *request) {
   Autopilot *a = request->autopilot;
   Mech *mech = request->mech;
-  const int tx = request->target.x;
-  const int ty = request->target.y;
-  const int bearing = request->bearing;
+  const int TX = request->target.x;
+  const int TY = request->target.y;
+  const int BEARING = request->bearing;
   BattleMap *map;
 
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -180,9 +180,9 @@ void autopilot_speed_up_for_target(const AutopilotApproachRequest *request) {
   if (!map)
     return;
 
-  if (bearing < 0 || fabsf(mech_desired_speed(mech)) < 2.0F)
-    if (bearing < 0 || abs(bearing - mech_heading_degrees(mech)) <= 30)
-      if (mech_position_x(mech) != tx || mech_position_y(mech) != ty) {
+  if (BEARING < 0 || fabsf(mech_desired_speed(mech)) < 2.0F)
+    if (BEARING < 0 || abs(BEARING - mech_heading_degrees(mech)) <= 30)
+      if (mech_position_x(mech) != TX || mech_position_y(mech) != TY) {
         if (map_real_terrain_get(map, mech_position_x(mech),
                                  mech_position_y(mech)) == BATTLE_TERRAIN_WATER)
           ai_set_speed(mech, a,
@@ -210,19 +210,19 @@ bool autopilot_slow_down_for_target(const AutopilotApproachRequest *request) {
   Autopilot *a = request->autopilot;
   Mech *mech = request->mech;
   float range = request->range;
-  const int bearing = request->bearing;
-  const int tx = request->target.x;
-  const int ty = request->target.y;
+  const int BEARING = request->bearing;
+  const int TX = request->target.x;
+  const int TY = request->target.y;
 
   if (range < 0)
     range = 0;
   if (range > 2.0F)
     return false;
-  if (abs(bearing - mech_heading_degrees(mech)) > 30) {
+  if (abs(BEARING - mech_heading_degrees(mech)) > 30) {
     /* Fix the bearing as well */
     ai_set_speed(mech, a, 0);
-    update_wanted_heading(a, mech, bearing);
-  } else if (tx == mech_position_x(mech) && ty == mech_position_y(mech)) {
+    update_wanted_heading(a, mech, BEARING);
+  } else if (TX == mech_position_x(mech) && TY == mech_position_y(mech)) {
     ai_set_speed(mech, a, 0);
   } else { /* slowdown */
     ai_set_speed(mech, a,
@@ -240,7 +240,7 @@ void figure_out_range_and_bearing(Mech *mech, int tx, int ty, float *range,
 
   float x, y;
 
-  MapCoordToRealCoord(tx, ty, &x, &y);
+  map_coord_to_real_coord(tx, ty, &x, &y);
   *bearing =
       map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                               .y = mech_position_real_y(mech)},

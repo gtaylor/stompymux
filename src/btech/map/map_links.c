@@ -62,10 +62,10 @@ static bool parse_coordinate_pair(char *text, int *x, int *y) {
   if (separator == nullptr)
     return false;
   *separator = '\0';
-  const bool parsed = parse_int_checked(text, x) &&
+  const bool PARSED = parse_int_checked(text, x) &&
                       parse_int_checked(checked_string_suffix(separator, 1), y);
   *separator = ',';
-  return parsed;
+  return PARSED;
 }
 
 int parse_coord(BattleMap *map, int dir, char *data, int *x, int *y) {
@@ -177,44 +177,44 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
 
 static void recursively_update_links(const MapLinkUpdateRequest *request) {
   BtechContext *context = request->context;
-  const DbRef from = request->source;
-  const DbRef loc = request->location;
+  const DbRef FROM = request->source;
+  const DbRef LOC = request->location;
   MapLinkUpdateStats *stats = request->stats;
   BattleMap *map;
   MapObject foo;
   char *tmps;
 
   memset(&foo, 0, sizeof(MapObject));
-  map = btech_context_get_map(context, loc);
+  map = btech_context_get_map(context, LOC);
   if (!map)
     return;
   clear_hex_bits(map, 2);
-  if (from >= 0) {
-    map->onmap = from;
+  if (FROM >= 0) {
+    map->onmap = FROM;
     /* Update leave exit */
     del_mapobjst(map, TYPE_LEAVE);
     if (stats != nullptr)
       stats->leaves++;
-    foo.obj = from;
+    foo.obj = FROM;
     add_mapobj_to_type(map, TYPE_LEAVE, &foo, 0);
     del_mapobjst(map, TYPE_ENTRANCE);
     /* Places you can enter this place from.. it's more or less
        directly taken from BUILDENTRANCE */
-    tmps = btech_attribute_read(context->database, loc, A_BUILDENTRANCE,
+    tmps = btech_attribute_read(context->database, LOC, A_BUILDENTRANCE,
                                 (char[LBUF_SIZE]){0});
     if (tmps) {
       /* number number number number
          or
          x,y x,y x,y x,y
        */
-      add_entrances(loc, map, tmps, stats);
+      add_entrances(LOC, map, tmps, stats);
     }
   }
   del_mapobjst(map, TYPE_BUILD);
-  tmps = btech_attribute_read(context->database, loc, A_BUILDLINKS,
+  tmps = btech_attribute_read(context->database, LOC, A_BUILDLINKS,
                               (char[LBUF_SIZE]){0});
   if (tmps)
-    add_links(loc, map, tmps, stats);
+    add_links(LOC, map, tmps, stats);
 }
 
 void recursively_updatelinks(BtechContext *context, DbRef from, DbRef loc) {

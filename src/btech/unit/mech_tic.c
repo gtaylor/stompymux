@@ -62,9 +62,9 @@ static void tic_weapon_remove(Mech *mech, TicWeaponReference reference) {
 }
 
 bool mech_tic_contains_weapon(const Mech *mech, TicWeaponReference reference) {
-  const int word = reference.weapon / SINGLE_TICLONG_SIZE;
-  const int bit = reference.weapon % SINGLE_TICLONG_SIZE;
-  return *tic_word(mech, reference.tic, word) & (1UL << (unsigned int)bit);
+  const int WORD = reference.weapon / SINGLE_TICLONG_SIZE;
+  const int BIT = reference.weapon % SINGLE_TICLONG_SIZE;
+  return *tic_word(mech, reference.tic, WORD) & (1UL << (unsigned int)BIT);
 }
 #include "mux/support/formatting.h"
 #include "registry_api.h"
@@ -368,11 +368,11 @@ void listtic_sub(DbRef player, Mech *mech, char *buffer) {
       .tic = ticnum,
       .weapon_count = count,
   };
-  c = SelCol_FunStringMenuContextK(
+  c = sel_col_fun_string_menu_context_k(
       2, tprintf("TIC #%d listing for %s", ticnum, mech_display_id(mech).text),
-      listtic_fun, &list, MAX(1, count));
-  ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
-  KillCoolMenu(c);
+      listtic_fun, &list, max(1, count));
+  show_cool_menu(btech_context_evaluation(mech->xcode.context), player, c);
+  kill_cool_menu(c);
 }
 
 void mech_cleartic(DbRef player, void *data, char *buffer) {

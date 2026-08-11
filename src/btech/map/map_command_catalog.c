@@ -3,7 +3,7 @@
 #include "command_registry.h"
 #include <stddef.h>
 
-const BtechCommandDefinition mapcommands[] = {
+const BtechCommandDefinition MAPCOMMANDS[] = {
     {0, "@VIEWXCODE", "@Views xcode values on object",
      btech_command_invoke_list_xcodestuff},
     {0, "@SETXCODE <NAME> <VALUE|DATA>", "@Sets xcode value on object",
@@ -63,16 +63,16 @@ const BtechCommandDefinition mapcommands[] = {
     {0, "STORES", "Lists stuff in the hangar.",
      btech_command_invoke_mech_manifest},
     {0, "ADDSTUFF <NAME> <COUNT>", "@Adds <COUNT> <NAME> to map",
-     btech_command_invoke_mech_Raddstuff},
+     btech_command_invoke_mech_raddstuff},
 
     {0, "FIXSTUFF", "@Fixes consistency errors in econ data",
-     btech_command_invoke_mech_Rfixstuff},
+     btech_command_invoke_mech_rfixstuff},
     {0, "REMOVESTUFF <NAME> <COUNT>", "@Removes <COUNT> <NAME> from map",
-     btech_command_invoke_mech_Rremovestuff},
+     btech_command_invoke_mech_rremovestuff},
     {0, "CLEARSTUFF", "@Removes all stuff from map",
-     btech_command_invoke_mech_Rresetstuff},
+     btech_command_invoke_mech_rresetstuff},
     {0, NULL, NULL, NULL}};
 
 size_t map_command_count(void) {
-  return sizeof(mapcommands) / sizeof(*mapcommands) - 1;
+  return sizeof(MAPCOMMANDS) / sizeof(*MAPCOMMANDS) - 1;
 }

@@ -10,7 +10,7 @@
 #endif
 
 // clang-format off: catalogue rows intentionally remain one logical row each.
-const struct WeaponDefinition MechWeapons[] = {
+const struct WeaponDefinition MECH_WEAPONS[] = {
 
     /* Clan Normal AC's. Couldn't find a reference for these anywhere. --
        02/13/07 Power_Shaper */
@@ -400,5 +400,6 @@ static const MissileHitEntry MISSILE_HIT_DEFINITIONS[] = {{"CL.LB10-XAC", 0, {3,
                                                           {"IS.InfantryLRM", 0, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
                                                           {"NoWeapon", -1, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}};
 
-#define NUM_DEF_WEAPONS (((sizeof(MechWeapons)) / (sizeof(struct WeaponDefinition))) - 1)
+#define NUM_DEF_WEAPONS \
+  (((sizeof(MECH_WEAPONS)) / (sizeof(struct WeaponDefinition))) - 1)
 // clang-format on

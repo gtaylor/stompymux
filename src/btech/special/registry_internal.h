@@ -54,7 +54,7 @@ typedef struct BtechSpecialObjectDefinition {
   long datasize;                          // Size of private buffer
   BtechSpecialStorageSize storage_size;
   BtechSpecialLifecycleHandler lifecycle;
-  int updateTime;                   // Amount of time between updates (secs)
+  int update_time;                  // Amount of time between updates (secs)
   BtechSpecialUpdateHandler update; // called for every object at every update
   PowerId power_needed; // What power is needed to restricted commands
 } BtechSpecialObjectDefinition;
@@ -68,7 +68,7 @@ btech_special_object_data_size(const BtechSpecialObjectDefinition *definition) {
 enum { BTECH_SPECIAL_OBJECT_COUNT = 6 };
 
 extern const BtechSpecialObjectDefinition
-    SpecialObjects[BTECH_SPECIAL_OBJECT_COUNT];
+    SPECIAL_OBJECTS[BTECH_SPECIAL_OBJECT_COUNT];
 const BtechSpecialObjectDefinition *btech_special_object_definition(int type);
 size_t btech_special_command_count(int type);
 const BtechCommandDefinition *btech_special_command_definition(int type,

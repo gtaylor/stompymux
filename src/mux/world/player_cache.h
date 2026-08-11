@@ -7,11 +7,11 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 
-typedef struct player_cache {
+typedef struct PcacheEntry {
   DbRef player;
   int queue;
   int cflags;
-  struct player_cache *next;
+  struct PcacheEntry *next;
 } PCACHE;
 
 typedef struct PlayerCache PlayerCache;

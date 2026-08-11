@@ -49,16 +49,16 @@ void debug_list(DbRef player, void *data, char *buffer) {
   if (argc == 0)
     return;
   char *first_argument = debug_argument(args, 3, 0);
-  const size_t argument_length = strlen(first_argument);
-  const char first_character =
-      argument_length > 0 ? *checked_string_suffix(first_argument, 0) : '\0';
-  const char second_character =
-      argument_length > 1 ? *checked_string_suffix(first_argument, 1) : '\0';
-  if (first_character == 'M' || first_character == 'm')
-    if (second_character == 'E' || second_character == 'e')
-      DumpMechs(debug->context, player);
-  if (second_character == 'A' || second_character == 'a')
-    DumpMaps(debug->context, player);
+  const size_t ARGUMENT_LENGTH = strlen(first_argument);
+  const char FIRST_CHARACTER =
+      ARGUMENT_LENGTH > 0 ? *checked_string_suffix(first_argument, 0) : '\0';
+  const char SECOND_CHARACTER =
+      ARGUMENT_LENGTH > 1 ? *checked_string_suffix(first_argument, 1) : '\0';
+  if (FIRST_CHARACTER == 'M' || FIRST_CHARACTER == 'm')
+    if (SECOND_CHARACTER == 'E' || SECOND_CHARACTER == 'e')
+      dump_mechs(debug->context, player);
+  if (SECOND_CHARACTER == 'A' || SECOND_CHARACTER == 'a')
+    dump_maps(debug->context, player);
 }
 
 void debug_savedb(DbRef player, void *data, char *buffer) {
@@ -98,20 +98,20 @@ static int debug_check_stuff(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   void *arg = call->context;
-  const DbRef key_val = (DbRef)key;
-  BtechSpecialObject *const xcode_obj = data;
+  const DbRef KEY_VAL = (DbRef)key;
+  BtechSpecialObject *const XCODE_OBJ = data;
   DebugMemoryContext *memory = arg;
 
-  const int type = (int)xcode_obj->type;
-  size_t size = btech_special_object_storage_size(type);
+  const int TYPE = (int)XCODE_OBJ->type;
+  size_t size = btech_special_object_storage_size(TYPE);
   BattleMap *map;
 
-  switch (xcode_obj->type) {
+  switch (XCODE_OBJ->type) {
   case GTYPE_MECH:
   case GTYPE_DEBUG:
   case GTYPE_MECHREP:
   case GTYPE_MAP:
-    map = (BattleMap *)xcode_obj;
+    map = (BattleMap *)XCODE_OBJ;
     if (map->map) {
       size += sizeof(unsigned char) * (size_t)map->map_width *
               (size_t)map->map_height;
@@ -127,7 +127,7 @@ static int debug_check_stuff(const RedBlackTreeVisitCall *call) {
     break;
   }
 
-  DebugMemoryStat *stat = debug_memory_stat(memory, type);
+  DebugMemoryStat *stat = debug_memory_stat(memory, TYPE);
   if (stat->number == 0 || size < stat->smallest)
     stat->smallest = size;
   if (stat->number == 0 || size > stat->largest)
@@ -137,9 +137,9 @@ static int debug_check_stuff(const RedBlackTreeVisitCall *call) {
 
   if (memory->detail_player > 0)
     notify_printf(
-        btech_context_evaluation(xcode_obj->context), memory->detail_player,
-        "#%5ld: %10s %5ld", key_val, btech_special_object_type_name(type),
-        xcode_obj->type == GTYPE_AUTO ? ((Autopilot *)xcode_obj)->mymechnum
+        btech_context_evaluation(XCODE_OBJ->context), memory->detail_player,
+        "#%5ld: %10s %5ld", KEY_VAL, btech_special_object_type_name(TYPE),
+        XCODE_OBJ->type == GTYPE_AUTO ? ((Autopilot *)XCODE_OBJ)->mymechnum
                                       : 0);
 
   return 1;
@@ -204,14 +204,14 @@ void map_shutdown_units(const MapShutdownRequest *request) {
   if (xcode_obj) {
     map = (BattleMap *)xcode_obj;
     for (j = 0; j < battle_map_unit_count(map); j++) {
-      const DbRef unit_dbref = battle_map_unit_dbref(map, j);
-      if (unit_dbref != -1) {
-        mech = btech_context_get_mech(context, unit_dbref);
+      const DbRef UNIT_DBREF = battle_map_unit_dbref(map, j);
+      if (UNIT_DBREF != -1) {
+        mech = btech_context_get_mech(context, UNIT_DBREF);
         if (mech) {
           notify_printf(
               btech_context_evaluation(context), request->actor,
               "Shutting down Mech #%ld and resetting map index to -1....",
-              unit_dbref);
+              UNIT_DBREF);
           mech_shutdown(GOD, (void *)mech, "");
           mech_position_reset_origin(mech);
           remove_mech_from_map(map, mech);
@@ -286,15 +286,15 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
   }
   btech_weapon_settings_set_recycle_time(&debug->context->weapon_settings,
                                          weapon_from_equipment_index(id), vrt);
-  const int weapon_index = weapon_from_equipment_index(id);
+  const int WEAPON_INDEX = weapon_from_equipment_index(id);
   notify_printf(btech_context_evaluation(debug->context), player,
-                "VRT for %s set to %d.", weapon_catalogue_name(weapon_index),
+                "VRT for %s set to %d.", weapon_catalogue_name(WEAPON_INDEX),
                 vrt);
   log_error((LogEntry){.log = debug->context->log,
                        .key = LOG_WIZARD,
                        .primary = "WIZ",
                        .secondary = "CHANGE"},
-            "VRT for %s set to %d by #%ld", weapon_catalogue_name(weapon_index),
+            "VRT for %s set to %d by #%ld", weapon_catalogue_name(WEAPON_INDEX),
             vrt, player);
 }
 

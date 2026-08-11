@@ -12,7 +12,7 @@
 #include "mux/support/styled_text/palette.h"
 #include "mux/support/utf8.h"
 
-const char *const styled_link_state_names[STYLED_LINK_STATE_COUNT] = {
+const char *const STYLED_LINK_STATE_NAMES[STYLED_LINK_STATE_COUNT] = {
     "active",   "hover",    "focus-visible", "focus",    "visited",
     "selected", "disabled", "link",          "any-link",
 };
@@ -38,8 +38,8 @@ static bool directive_is_space(char character) {
 
 static const char *styled_link_state_name(size_t index) {
   return *(const char *const *)checked_storage_at_const(
-      (const void *)styled_link_state_names, STYLED_LINK_STATE_COUNT,
-      sizeof(*styled_link_state_names), index);
+      (const void *)STYLED_LINK_STATE_NAMES, STYLED_LINK_STATE_COUNT,
+      sizeof(*STYLED_LINK_STATE_NAMES), index);
 }
 
 static bool parse_styled_boolean(const char *value, StyledBoolean *result) {
@@ -153,17 +153,17 @@ static bool apply_link_property(const StyledTextPalette *palette,
                                      .value = value,
                                      .error = error,
                                      .error_size = error_size});
-  const size_t property_length = strlen(property);
-  const size_t dot_offset = property_length - strlen(dot);
+  const size_t PROPERTY_LENGTH = strlen(property);
+  const size_t DOT_OFFSET = PROPERTY_LENGTH - strlen(dot);
   const char *field =
-      directive_suffix(property, property_length, dot_offset + 1);
-  if (dot_offset == 0 || *field == '\0' || strchr(field, '.') ||
-      dot_offset >= sizeof(state)) {
+      directive_suffix(property, PROPERTY_LENGTH, DOT_OFFSET + 1);
+  if (DOT_OFFSET == 0 || *field == '\0' || strchr(field, '.') ||
+      DOT_OFFSET >= sizeof(state)) {
     styled_set_error(error, error_size, "unknown OSC 8 style state");
     return false;
   }
-  memcpy(state, property, dot_offset);
-  *(char *)checked_storage_at(state, sizeof(state), sizeof(char), dot_offset) =
+  memcpy(state, property, DOT_OFFSET);
+  *(char *)checked_storage_at(state, sizeof(state), sizeof(char), DOT_OFFSET) =
       '\0';
   properties = nullptr;
   for (size_t index = 0; index < STYLED_LINK_STATE_COUNT; index++) {
@@ -299,27 +299,27 @@ static bool next_link_directive(StyledDirectiveCursor *cursor, char *name,
 
 static bool parse_menu_property(const char *property, size_t *index,
                                 const char **field) {
-  const size_t length = strlen(property);
+  const size_t LENGTH = strlen(property);
   size_t cursor = 5;
   size_t value = 0;
 
   if (strncasecmp(property, "menu.", 5) != 0)
     return false;
-  if (cursor >= length ||
-      !(isdigit)((unsigned char)directive_character(property, length, cursor)))
+  if (cursor >= LENGTH ||
+      !(isdigit)((unsigned char)directive_character(property, LENGTH, cursor)))
     return false;
-  while (cursor < length && (isdigit)((unsigned char)directive_character(
-                                property, length, cursor))) {
+  while (cursor < LENGTH && (isdigit)((unsigned char)directive_character(
+                                property, LENGTH, cursor))) {
     if (value > OSC8_URI_LIMIT)
       return false;
     value = value * 10 +
-            (size_t)(directive_character(property, length, cursor++) - '0');
+            (size_t)(directive_character(property, LENGTH, cursor++) - '0');
   }
-  if (value == 0 || value > OSC8_URI_LIMIT || cursor + 1 >= length ||
-      directive_character(property, length, cursor) != '.')
+  if (value == 0 || value > OSC8_URI_LIMIT || cursor + 1 >= LENGTH ||
+      directive_character(property, LENGTH, cursor) != '.')
     return false;
   *index = value - 1;
-  *field = directive_suffix(property, length, cursor + 1);
+  *field = directive_suffix(property, LENGTH, cursor + 1);
   return true;
 }
 
@@ -407,13 +407,13 @@ static bool parse_uint32_milliseconds(const char *value, bool quoted,
 
   if (quoted || !value || !*value)
     return false;
-  const size_t length = strlen(value);
-  for (size_t index = 0; index < length; index++) {
-    const unsigned char character =
-        (unsigned char)directive_character(value, length, index);
-    if (!(isdigit)(character))
+  const size_t LENGTH = strlen(value);
+  for (size_t index = 0; index < LENGTH; index++) {
+    const unsigned char CHARACTER =
+        (unsigned char)directive_character(value, LENGTH, index);
+    if (!(isdigit)(CHARACTER))
       return false;
-    uint64_t digit = (uint64_t)(character - '0');
+    uint64_t digit = (uint64_t)(CHARACTER - '0');
     if (parsed > (UINT32_MAX - digit) / 10)
       return false;
     parsed = parsed * 10 + digit;
@@ -678,10 +678,10 @@ bool styled_link_directives_parse(
     const StyledTextPalette *palette, const char *directives, const char *end,
     StyledLinkConfig *config, StyledState *fallback, bool allow_ansi_fallback,
     bool validate_complete, char *error, size_t error_size) {
-  const size_t directives_length = strlen(directives) - strlen(end);
+  const size_t DIRECTIVES_LENGTH = strlen(directives) - strlen(end);
   StyledDirectiveCursor cursor = {
       .text = directives,
-      .length = directives_length,
+      .length = DIRECTIVES_LENGTH,
   };
   while (cursor.offset < cursor.length) {
     char name[64];

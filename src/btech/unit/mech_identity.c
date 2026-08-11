@@ -45,13 +45,13 @@
 #include <string.h>
 #include <strings.h>
 
-static const char *const mechtypenames[CLASS_LAST + 1] = {
+static const char *const MECHTYPENAMES[CLASS_LAST + 1] = {
     "mech", "tank", "VTOL", "vessel", "aerofighter", "DropShip"};
 
 const char *mechtypename(Mech *foo) {
   UnitClass unit_class = mech_class(foo);
   const char *const *name = (const char *const *)checked_storage_at_const(
-      (const void *)mechtypenames, CLASS_LAST + 1, sizeof(*mechtypenames),
+      (const void *)MECHTYPENAMES, CLASS_LAST + 1, sizeof(*MECHTYPENAMES),
       (size_t)unit_class);
   return *name;
 }
@@ -98,7 +98,7 @@ int round_to_quarterton(int weight) {
   return weight + (256 - over);
 }
 
-int MNumber(Mech *mech, int low, int high) {
+int m_number(Mech *mech, int low, int high) {
   if ((mech->xcode.context->events->tick / RANDOM_TICK) !=
       ((mech)->rd.lastrndu)) {
     ((mech)->rd.rnd) = (int)btech_random_i31(&mech->xcode.context->random);
@@ -111,8 +111,8 @@ MechId mech_id(Mech *mech, bool lowercase) {
   MechId id;
 
   if (mech) {
-    id.text[0] = ((mech)->ID)[0];
-    id.text[1] = ((mech)->ID)[1];
+    id.text[0] = ((mech)->id)[0];
+    id.text[1] = ((mech)->id)[1];
   } else {
     id.text[0] = '*';
     id.text[1] = '*';
@@ -126,13 +126,13 @@ MechId mech_id(Mech *mech, bool lowercase) {
   return id;
 }
 
-char *MyToUpper(char *string) {
+char *my_to_upper(char *string) {
   if (*string)
     *string = ascii_to_upper(*string);
   return string;
 }
 
-int CritsInLoc(Mech *mech, int index) {
+int crits_in_loc(Mech *mech, int index) {
   if (((mech)->ud.type) == CLASS_MECH)
     switch (index) {
     case HEAD:
@@ -149,12 +149,12 @@ int CritsInLoc(Mech *mech, int index) {
   return NUM_CRITICALS;
 }
 
-int SectHasBusyWeap(Mech *mech, int sect) {
+int sect_has_busy_weap(Mech *mech, int sect) {
   int i = 0, count, critical[MAX_WEAPS_SECTION];
   unsigned char weaptype[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
 
-  count = FindWeapons_Advanced(mech, sect, weaptype, weapdata, critical, 1);
+  count = find_weapons_advanced(mech, sect, weaptype, weapdata, critical, 1);
   for (i = 0; i < count; i++) {
     const int *critical_index = checked_storage_at_const(
         critical, MAX_WEAPS_SECTION, sizeof(*critical), (size_t)i);
@@ -197,21 +197,21 @@ BattleMap *valid_map(const MapValidationRequest *request) {
   return maps;
 }
 
-DbRef FindMechOnMap(BattleMap *map, const char *mechid) {
-  Mech *tempMech;
+DbRef find_mech_on_map(BattleMap *map, const char *mechid) {
+  Mech *temp_mech;
 
   for (int loop = 0; loop < battle_map_unit_count(map); loop++) {
     DbRef candidate = battle_map_unit_dbref(map, loop);
     if (candidate != -1) {
-      tempMech = btech_context_get_mech(map->xcode.context, candidate);
-      if (tempMech && !strncasecmp(((tempMech)->ID), mechid, 2))
-        return tempMech->mynum;
+      temp_mech = btech_context_get_mech(map->xcode.context, candidate);
+      if (temp_mech && !strncasecmp(((temp_mech)->id), mechid, 2))
+        return temp_mech->mynum;
     }
   }
   return -1;
 }
 
-DbRef FindTargetDBREFFromMapNumber(Mech *mech, const char *mapnum) {
+DbRef find_target_dbref_from_map_number(Mech *mech, const char *mapnum) {
   BattleMap *map;
 
   if (mech->mapindex == -1)
@@ -224,7 +224,7 @@ DbRef FindTargetDBREFFromMapNumber(Mech *mech, const char *mapnum) {
     mech->mapindex = -1;
     return -1;
   }
-  return FindMechOnMap(map, mapnum);
+  return find_mech_on_map(map, mapnum);
 }
 
 MapRealPosition map_vector_components(const MapPolarVector *vector) {
@@ -238,7 +238,7 @@ MapRealPosition map_vector_components(const MapPolarVector *vector) {
   return result;
 }
 
-static int Leave_Hangar(BattleMap *map, Mech *mech) {
+static int leave_hangar(BattleMap *map, Mech *mech) {
   Mech *car = NULL;
   DbRef mapob;
   MapObject *mapo;
@@ -253,11 +253,11 @@ static int Leave_Hangar(BattleMap *map, Mech *mech) {
     return 0;
   }
   mech_los_broadcast(mech, "has left the hangar.");
-  mech_Rsetmapindex(GOD, (void *)mech,
-                    tprintf("%ld", map->MapObject[TYPE_LEAVE]->obj));
+  mech_rsetmapindex(GOD, (void *)mech,
+                    tprintf("%ld", map->map_object[TYPE_LEAVE]->obj));
   if (car)
-    mech_Rsetmapindex(GOD, (void *)car,
-                      tprintf("%ld", map->MapObject[TYPE_LEAVE]->obj));
+    mech_rsetmapindex(GOD, (void *)car,
+                      tprintf("%ld", map->map_object[TYPE_LEAVE]->obj));
   map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (mech->mapindex == mapob) {
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
@@ -283,7 +283,7 @@ static int Leave_Hangar(BattleMap *map, Mech *mech) {
       btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
   mech_printf(mech, MECHALL, "You have left %s.",
               structure_name(mech->xcode.context->database, mapo).text);
-  mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", mapo->x, mapo->y));
+  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", mapo->x, mapo->y));
   mech_continue_flying(mech);
   if (car)
     mech_position_mirror(car, mech, 0);
@@ -319,7 +319,7 @@ static int Leave_Hangar(BattleMap *map, Mech *mech) {
   return 1;
 }
 
-void CheckEdgeOfMap(Mech *mech) {
+void check_edge_of_map(Mech *mech) {
   int pinned = 0;
   int linked;
   BattleMap *map;
@@ -380,13 +380,13 @@ void CheckEdgeOfMap(Mech *mech) {
     if (map->onmap && btech_context_is_mech(map->xcode.context, map->onmap)) {
       if (dropship_leave(map, mech))
         return;
-    } else if (map->flags & MAPFLAG_MAPO && map->MapObject[TYPE_LEAVE])
-      if (Leave_Hangar(map, mech))
+    } else if (map->flags & MAPFLAG_MAPO && map->map_object[TYPE_LEAVE])
+      if (leave_hangar(map, mech))
         return;
   }
   if (pinned) {
-    MapCoordToRealCoord(((mech)->pd.x), ((mech)->pd.y), &((mech)->pd.fx),
-                        &((mech)->pd.fy));
+    map_coord_to_real_coord(((mech)->pd.x), ((mech)->pd.y), &((mech)->pd.fx),
+                            &((mech)->pd.fy));
     if (pinned > 0) {
       mech_notify(mech, MECHALL, "You cannot move off this map!");
       if (mech_is_jumping(mech) && !mech_is_aerospace_unit(mech))
@@ -421,8 +421,8 @@ int map_vertical_bearing(const MapSpatialSegment *segment) {
 }
 
 int map_bearing(const MapRealSegment *segment) {
-  const float dx = segment->end.x - segment->start.x;
-  const float dy = segment->end.y - segment->start.y;
+  const float DX = segment->end.x - segment->start.x;
+  const float DY = segment->end.y - segment->start.y;
 
   float rads;
   int degrees;
@@ -431,28 +431,28 @@ int map_bearing(const MapRealSegment *segment) {
    * atan2() doesn't need this check because we never actually divide by
    * dx, but we handle it specially for consistency with existing code.
    */
-  if (dx == 0.f) {
-    return (dy < 0.f) ? 0 : 180;
+  if (DX == 0.f) {
+    return (DY < 0.f) ? 0 : 180;
   }
 
-  rads = atan2f(-dx, dy);
+  rads = atan2f(-DX, DY);
 
   /* Round off degrees.  */
   float scaled_degrees = radians_to_degrees(10.0F * rads);
   degrees = (clamp_float_to_int(scaled_degrees) + 5) / 10;
 
-  return AcceptableDegree(degrees + 180);
+  return acceptable_degree(degrees + 180);
 }
 
-int InWeaponArc(Mech *mech, float x, float y) {
+int in_weapon_arc(Mech *mech, float x, float y) {
   int relat;
-  int bearingToTarget;
+  int bearing_to_target;
   int res = NOARC;
 
-  bearingToTarget = map_bearing(
+  bearing_to_target = map_bearing(
       &(MapRealSegment){.start = {.x = ((mech)->pd.fx), .y = ((mech)->pd.fy)},
                         .end = {.x = x, .y = y}});
-  relat = mech_heading_degrees(mech) - bearingToTarget;
+  relat = mech_heading_degrees(mech) - bearing_to_target;
   if (((mech)->ud.type) == CLASS_MECH || ((mech)->ud.type) == CLASS_MW ||
       ((mech)->ud.type) == CLASS_BSUIT) {
     if (((mech)->rd.status) & TORSO_RIGHT)
@@ -460,7 +460,7 @@ int InWeaponArc(Mech *mech, float x, float y) {
     else if (((mech)->rd.status) & TORSO_LEFT)
       relat -= 59;
   }
-  relat = AcceptableDegree(relat);
+  relat = acceptable_degree(relat);
   if (relat >= 300 || relat <= 60)
     res |= FORWARDARC;
   if (relat > 120 && relat < 240)
@@ -473,21 +473,21 @@ int InWeaponArc(Mech *mech, float x, float y) {
   if ((mech_class(mech) == CLASS_VEH_GROUND ||
        mech_class(mech) == CLASS_VEH_NAVAL || mech_class(mech) == CLASS_VTOL) &&
       mech_section_original_internal(mech, TURRET)) {
-    relat = AcceptableDegree(
+    relat = acceptable_degree(
         (mech_heading_degrees(mech) + ((mech)->rd.turretfacing)) -
-        bearingToTarget);
+        bearing_to_target);
     if (relat >= 330 || relat <= 30)
       res |= TURRETARC;
   }
   if (res == NOARC)
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                        tprintf("NoArc: #%ld: BearingToTarget:%d Facing:%d",
-                               mech->mynum, bearingToTarget,
+                               mech->mynum, bearing_to_target,
                                mech_heading_degrees(mech)));
   return res;
 }
 
-const char *FindGunnerySkillName(Mech *mech, int weapindx) {
+const char *find_gunnery_skill_name(Mech *mech, int weapindx) {
   if (!mech->xcode.context->configuration->btech_extended_gunnery) {
     switch (((mech)->ud.type)) {
     case CLASS_BSUIT:
@@ -542,7 +542,7 @@ const char *FindGunnerySkillName(Mech *mech, int weapindx) {
   return NULL;
 }
 
-const char *FindPilotingSkillName(Mech *mech) {
+const char *find_piloting_skill_name(Mech *mech) {
   if (!mech->xcode.context->configuration->btech_extended_piloting) {
     switch (((mech)->ud.type)) {
     case CLASS_MW:
@@ -595,11 +595,11 @@ const char *FindPilotingSkillName(Mech *mech) {
   return NULL;
 }
 
-int FindPilotPiloting(Mech *mech) {
+int find_pilot_piloting(Mech *mech) {
   const char *str;
 
   if (mech_has_active_pilot(mech)) {
-    str = FindPilotingSkillName(mech);
+    str = find_piloting_skill_name(mech);
     if (str)
       return char_getskilltarget(mech->xcode.context, mech_pilot_dbref(mech),
                                  str, 0);
@@ -607,29 +607,29 @@ int FindPilotPiloting(Mech *mech) {
   return DEFAULT_PILOTING;
 }
 
-int FindSPilotPiloting(Mech *mech) {
-  return FindPilotPiloting(mech) + (((mech)->ud.move) == MOVE_QUAD ? -2 : 0);
+int find_s_pilot_piloting(Mech *mech) {
+  return find_pilot_piloting(mech) + (((mech)->ud.move) == MOVE_QUAD ? -2 : 0);
 }
 
-int FindPilotSpotting(Mech *mech) {
+int find_pilot_spotting(Mech *mech) {
   if (mech_has_active_pilot(mech))
     return (char_getskilltarget(mech->xcode.context, mech_pilot_dbref(mech),
                                 "Gunnery-Spotting", 0));
   return DEFAULT_SPOTTING;
 }
 
-int FindPilotArtyGun(Mech *mech) {
+int find_pilot_arty_gun(Mech *mech) {
   if (mech_has_active_gunner(mech))
     return (char_getskilltarget(mech->xcode.context, mech_gunner_dbref(mech),
                                 "Gunnery-Artillery", 0));
   return DEFAULT_ARTILLERY;
 }
 
-int FindPilotGunnery(Mech *mech, int weapindx) {
+int find_pilot_gunnery(Mech *mech, int weapindx) {
   const char *str;
 
   if (mech_has_active_gunner(mech)) {
-    str = FindGunnerySkillName(mech, weapindx);
+    str = find_gunnery_skill_name(mech, weapindx);
     if (str)
       return char_getskilltarget(mech->xcode.context, mech_gunner_dbref(mech),
                                  str, 0);
@@ -637,7 +637,7 @@ int FindPilotGunnery(Mech *mech, int weapindx) {
   return DEFAULT_GUNNERY;
 }
 
-const char *FindTechSkillName(Mech *mech) {
+const char *find_tech_skill_name(Mech *mech) {
   switch (((mech)->ud.type)) {
   case CLASS_MECH:
   case CLASS_BSUIT:
@@ -654,22 +654,22 @@ const char *FindTechSkillName(Mech *mech) {
   return NULL;
 }
 
-int FindTechSkill(DbRef player, Mech *mech) {
+int find_tech_skill(DbRef player, Mech *mech) {
   const char *skname;
 
-  skname = FindTechSkillName(mech);
+  skname = find_tech_skill_name(mech);
   if (skname)
     return (char_getskilltarget(mech->xcode.context, player, skname, 0));
   return 18;
 }
 
-int MadePilotSkillRoll(Mech *mech, int mods) {
+int made_pilot_skill_roll(Mech *mech, int mods) {
   return mech_pilot_skill_roll(&(PilotSkillRollRequest){
       .mech = mech, .modifier = mods, .succeed_when_fallen = true});
 }
 
 int mech_pilot_skill_roll_target(Mech *mech, int mods) {
-  mods += FindSPilotPiloting(mech) + mech_pilot_skill_modifier(mech);
+  mods += find_s_pilot_piloting(mech) + mech_pilot_skill_modifier(mech);
   if (((mech)->rd.specials2) & SMALLCOCKPIT_TECH)
     mods++;
 
@@ -697,7 +697,7 @@ int mech_pilot_skill_roll_without_experience(
   btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                      tprintf("Attempting to make pilot skill roll. "
                              "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
-                             FindSPilotPiloting(mech), mods,
+                             find_s_pilot_piloting(mech), mods,
                              mech_pilot_skill_modifier(mech), roll_needed));
 
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");
@@ -725,7 +725,7 @@ int mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
   btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                      tprintf("Attempting to make pilot (noxp) skill roll. "
                              "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
-                             FindSPilotPiloting(mech), mods,
+                             find_s_pilot_piloting(mech), mods,
                              mech_pilot_skill_modifier(mech), roll_needed));
 
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");
@@ -736,7 +736,7 @@ int mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
       piloting_experience_award(&(PilotingExperienceAward){
           .pilot = mech_pilot_dbref(mech),
           .mech = mech,
-          .reason = BOUNDED(1, roll_needed - 7, MAX(2, 1 + mods)),
+          .reason = bounded(1, roll_needed - 7, max(2, 1 + mods)),
           .unconditional = true,
       });
     return 1;

@@ -113,7 +113,7 @@ static void give_thing(const GiveThingRequest *request) {
                                             .cause = giver});
   if (!(key & GIVE_QUIET)) {
     str = alloc_lbuf("do_give.thing.ok");
-    StringCopy(str, game_object_name(evaluation->world->database, giver));
+    string_copy(str, game_object_name(evaluation->world->database, giver));
     notify_checked(
         evaluation, recipient, giver,
         tprintf("%s gave you %s.", str,
@@ -151,8 +151,8 @@ static void give_thing(const GiveThingRequest *request) {
 
 void do_give(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
-  const DbRef player = invocation->player;
-  const int key = invocation->key;
+  const DbRef PLAYER = invocation->player;
+  const int KEY = invocation->key;
   char *who = invocation->first;
   char *amnt = invocation->second;
   DbRef recipient;
@@ -162,18 +162,18 @@ void do_give(CommandInvocation *invocation) {
    * check recipient
    */
 
-  init_match(match, player, who, OBJECT_TYPE_PLAYER);
+  init_match(match, PLAYER, who, OBJECT_TYPE_PLAYER);
   match_neighbor(match);
   match_possession(match);
   match_me(match);
   recipient = match_result(match);
   switch (recipient) {
   case NOTHING:
-    notify_checked(evaluation, player, player, "Give to whom?",
+    notify_checked(evaluation, PLAYER, PLAYER, "Give to whom?",
                    MSG_ME_ALL | MSG_F_DOWN);
     return;
   case AMBIGUOUS:
-    notify_checked(evaluation, player, player, "I don't know who you mean!",
+    notify_checked(evaluation, PLAYER, PLAYER, "I don't know who you mean!",
                    MSG_ME_ALL | MSG_F_DOWN);
     return;
   default:
@@ -181,8 +181,8 @@ void do_give(CommandInvocation *invocation) {
   }
 
   give_thing(&(GiveThingRequest){.evaluation = &invocation->context->evaluation,
-                                 .giver = player,
+                                 .giver = PLAYER,
                                  .recipient = recipient,
-                                 .key = key,
+                                 .key = KEY,
                                  .description = amnt});
 }

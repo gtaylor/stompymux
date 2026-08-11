@@ -46,20 +46,20 @@ void mech_status(DbRef player, void *data, const char *buffer) {
     doweap = doinfo = doarmor = doheat = 1;
   else {
     // Argument provided, only show certain parts.
-    const size_t option_length = strlen(buffer);
-    for (size_t position = 0; position < option_length; position++) {
+    const size_t OPTION_LENGTH = strlen(buffer);
+    for (size_t position = 0; position < OPTION_LENGTH; position++) {
       switch (ascii_to_upper(
-          status_option_character(buffer, option_length, position))) {
+          status_option_character(buffer, OPTION_LENGTH, position))) {
       case 'R':
         doweap = doinfo = doarmor = doheat = usex = 1;
         break;
       case 'A':
         // Armor status
-        if (ascii_to_upper(status_option_character(buffer, option_length,
+        if (ascii_to_upper(status_option_character(buffer, OPTION_LENGTH,
                                                    position + 1)) == 'R')
-          while (status_option_character(buffer, option_length, position + 1) !=
+          while (status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      '\0' &&
-                 status_option_character(buffer, option_length, position + 1) !=
+                 status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      ' ')
             position++;
         doarmor = 1;
@@ -67,22 +67,22 @@ void mech_status(DbRef player, void *data, const char *buffer) {
       case 'I':
         // Speed/Heading/Heat
         doinfo = 1;
-        if (ascii_to_upper(status_option_character(buffer, option_length,
+        if (ascii_to_upper(status_option_character(buffer, OPTION_LENGTH,
                                                    position + 1)) == 'N')
-          while (status_option_character(buffer, option_length, position + 1) !=
+          while (status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      '\0' &&
-                 status_option_character(buffer, option_length, position + 1) !=
+                 status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      ' ')
             position++;
         break;
       case 'W':
         // Weapons list.
         doweap = 1;
-        if (ascii_to_upper(status_option_character(buffer, option_length,
+        if (ascii_to_upper(status_option_character(buffer, OPTION_LENGTH,
                                                    position + 1)) == 'E')
-          while (status_option_character(buffer, option_length, position + 1) !=
+          while (status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      '\0' &&
-                 status_option_character(buffer, option_length, position + 1) !=
+                 status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      ' ')
             position++;
         break;
@@ -104,7 +104,7 @@ void mech_status(DbRef player, void *data, const char *buffer) {
 
   // Very short one-line status.
   if (doshort) {
-    PrintShortInfo(evaluation, player, mech);
+    print_short_info(evaluation, player, mech);
     return;
   }
 
@@ -120,12 +120,12 @@ void mech_status(DbRef player, void *data, const char *buffer) {
     memcpy(weird_buffer, buf, sizeof(weird_buffer));
 
   } else if (!doheat || (doarmor | doinfo | doweap))
-    PrintGenericStatus(evaluation, player, mech, usex != 0);
+    print_generic_status(evaluation, player, mech, usex != 0);
 
   // Show our armor diagram.
   if (doarmor) {
     if (!weird) {
-      PrintArmorStatus(evaluation, player, mech, 1);
+      print_armor_status(evaluation, player, mech, 1);
       mecha_notify(evaluation, player, " ");
     } else {
       for (i = 0; i < NUM_SECTIONS; i++)
@@ -145,13 +145,13 @@ void mech_status(DbRef player, void *data, const char *buffer) {
 
   // Standard heat/heading/dive/etc.
   if (doinfo && !weird) {
-    PrintInfoStatus(evaluation, player, mech, 1);
+    print_info_status(evaluation, player, mech, 1);
     // mecha_notify(evaluation, player, " ");
   }
 
   // Show our heat bar by itself.
   if (!doinfo && doheat && mech_uses_heat(mech)) {
-    PrintHeatBar(evaluation, player, mech);
+    print_heat_bar(evaluation, player, mech);
   }
 
   // Weapons readout.

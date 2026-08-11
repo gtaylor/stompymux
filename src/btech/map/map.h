@@ -163,7 +163,7 @@ typedef struct BattleMap {
   /* Now, da wicked stuff */
   int flags;
 
-  MapObject *MapObject[NUM_MAPOBJTYPES];
+  MapObject *map_object[NUM_MAPOBJTYPES];
   short cf, cfmax;
   DbRef onmap;
   char buildflag;
@@ -173,9 +173,9 @@ typedef struct BattleMap {
   /* Allocated occupancy/LOS matrix dimension. */
   int dynamic_size;
   /* Mechs on the map */
-  DbRef *mechsOnMap;
+  DbRef *mechs_on_map;
   /* Line of sight info */
-  unsigned short **LOSinfo;
+  unsigned short **lo_sinfo;
 
   /* 1 = mech has moved recently
      2 = mech has possible-LOS event ongoing */

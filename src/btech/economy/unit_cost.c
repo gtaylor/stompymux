@@ -29,10 +29,10 @@
 #include "section_types.h"
 
 #ifdef BT_PART_WEIGHTS
-extern const int internalsweight[];
-extern const int cargoweight[];
-extern const int template_internal_count;
-extern const int template_cargo_count;
+extern const int INTERNALSWEIGHT[];
+extern const int CARGOWEIGHT[];
+extern const int TEMPLATE_INTERNAL_COUNT;
+extern const int TEMPLATE_CARGO_COUNT;
 #endif
 
 static const int *int_at(const int *values, size_t count, size_t index) {
@@ -60,10 +60,10 @@ static const unsigned int *unsigned_int_at(const unsigned int *values,
 
 int btech_part_weight(int part) {
   if (equipment_is_weapon(part)) {
-    const int weapon_index = weapon_from_equipment_index(part);
-    const int catalogue_weight = weapon_catalogue_weight(weapon_index);
-    const float part_weight = 10.24F * (float)catalogue_weight;
-    return (int)part_weight;
+    const int WEAPON_INDEX = weapon_from_equipment_index(part);
+    const int CATALOGUE_WEIGHT = weapon_catalogue_weight(WEAPON_INDEX);
+    const float PART_WEIGHT = 10.24F * (float)CATALOGUE_WEIGHT;
+    return (int)PART_WEIGHT;
   } else if (equipment_is_ammunition(part))
     return 1024;
   else if (equipment_is_bomb(part))
@@ -74,10 +74,10 @@ int btech_part_weight(int part) {
 #else
   else if (equipment_is_special(
                part)) /* && i <= special_equipment_index(LAMEQUIP) */
-    return *int_at(internalsweight, (size_t)template_internal_count,
+    return *int_at(INTERNALSWEIGHT, (size_t)TEMPLATE_INTERNAL_COUNT,
                    (size_t)special_from_equipment_index(part));
   else if (equipment_is_cargo(part))
-    return *int_at(cargoweight, (size_t)template_cargo_count,
+    return *int_at(CARGOWEIGHT, (size_t)TEMPLATE_CARGO_COUNT,
                    (size_t)cargo_from_equipment_index(part));
 #endif /* BT_PART_WEIGHTS */
   else
@@ -198,7 +198,7 @@ int mech_engine_heat_sink_capacity(const Mech *mech) {
 
 static void mech_cost_add_arm_actuators(Mech *mech, int loc, double *total) {
   int i = 0;
-  int const tons = mech_tonnage(mech);
+  int const TONS = mech_tonnage(mech);
   for (i = 0; i < NUM_CRITICALS; i++) {
     int part = mech_critical_part_type(mech, loc, i);
     if (!equipment_is_actuator(part))
@@ -208,17 +208,17 @@ static void mech_cost_add_arm_actuators(Mech *mech, int loc, double *total) {
     // BMR Says don't count this.
     // mech_cost_add(mech, total, "Shoulder Actuator", 0);
     else if (special_from_equipment_index(part) == UPPER_ACTUATOR)
-      mech_cost_add(mech, total, "ARM Upper Actuator", (tons * 100));
+      mech_cost_add(mech, total, "ARM Upper Actuator", (TONS * 100));
     else if (special_from_equipment_index(part) == LOWER_ACTUATOR)
-      mech_cost_add(mech, total, "ARM Lower Actuator", (tons * 50));
+      mech_cost_add(mech, total, "ARM Lower Actuator", (TONS * 50));
     else if (special_from_equipment_index(part) == HAND_OR_FOOT_ACTUATOR)
-      mech_cost_add(mech, total, "ARM Hand Actuator", (tons * 80));
+      mech_cost_add(mech, total, "ARM Hand Actuator", (TONS * 80));
   }
 }
 
 static void mech_cost_add_leg_actuators(Mech *mech, int loc, double *total) {
   int i = 0;
-  int const tons = mech_tonnage(mech);
+  int const TONS = mech_tonnage(mech);
   for (i = 0; i < NUM_CRITICALS; i++) {
     int part = mech_critical_part_type(mech, loc, i);
     if (!equipment_is_actuator(part))
@@ -227,11 +227,11 @@ static void mech_cost_add_leg_actuators(Mech *mech, int loc, double *total) {
       continue;
     // BMR Says don't count the Hip
     else if (special_from_equipment_index(part) == UPPER_ACTUATOR)
-      mech_cost_add(mech, total, "LEG Upper Actuator", (tons * 150));
+      mech_cost_add(mech, total, "LEG Upper Actuator", (TONS * 150));
     else if (special_from_equipment_index(part) == LOWER_ACTUATOR)
-      mech_cost_add(mech, total, "LEG Lower Actuator", (tons * 80));
+      mech_cost_add(mech, total, "LEG Lower Actuator", (TONS * 80));
     else if (special_from_equipment_index(part) == HAND_OR_FOOT_ACTUATOR)
-      mech_cost_add(mech, total, "LEG Actuator", (tons * 120));
+      mech_cost_add(mech, total, "LEG Actuator", (TONS * 120));
   }
 }
 
@@ -258,31 +258,31 @@ unsigned long long mech_fasa_cost(Mech *mech) {
   if (!mech)
     return 0;
 
-  int const unit_class = mech_class(mech);
-  int const movement = mech_movement_type(mech);
-  int const tons = mech_tonnage(mech);
-  int const technology = mech_technology_flags(mech);
-  int const technology_secondary = mech_technology_flags_secondary(mech);
+  int const UNIT_CLASS = mech_class(mech);
+  int const MOVEMENT = mech_movement_type(mech);
+  int const TONS = mech_tonnage(mech);
+  int const TECHNOLOGY = mech_technology_flags(mech);
+  int const TECHNOLOGY_SECONDARY = mech_technology_flags_secondary(mech);
 
-  if (!(unit_class == CLASS_MECH || unit_class == CLASS_VEH_GROUND ||
-        unit_class == CLASS_VEH_NAVAL || unit_class == CLASS_VTOL ||
-        unit_class == CLASS_BSUIT))
+  if (!(UNIT_CLASS == CLASS_MECH || UNIT_CLASS == CLASS_VEH_GROUND ||
+        UNIT_CLASS == CLASS_VEH_NAVAL || UNIT_CLASS == CLASS_VTOL ||
+        UNIT_CLASS == CLASS_BSUIT))
     return 0;
 
-  if (unit_class == CLASS_MECH) {
+  if (UNIT_CLASS == CLASS_MECH) {
 
     /* Start MECH Internal Structure Skeleton ( Tech Manual (p278) MaxTech (p87)
      * ) */
-    if (technology & ES_TECH || technology & COMPI_TECH)
-      mech_cost_add(mech, &total, "ES/Co Internals", (tons * 1600));
-    else if (technology & REINFI_TECH)
-      mech_cost_add(mech, &total, "RE Internals", (tons * 6400));
+    if (TECHNOLOGY & ES_TECH || TECHNOLOGY & COMPI_TECH)
+      mech_cost_add(mech, &total, "ES/Co Internals", (TONS * 1600));
+    else if (TECHNOLOGY & REINFI_TECH)
+      mech_cost_add(mech, &total, "RE Internals", (TONS * 6400));
     else
-      mech_cost_add(mech, &total, "Std Internals", (tons * 400));
+      mech_cost_add(mech, &total, "Std Internals", (TONS * 400));
     /* End MECH Internal Structure Skeleton */
 
     /* Cockpit */
-    if (technology_secondary & SMALLCOCKPIT_TECH)
+    if (TECHNOLOGY_SECONDARY & SMALLCOCKPIT_TECH)
       mech_cost_add(mech, &total, "Small Cockpit", 175000);
     else
       mech_cost_add(mech, &total, "Cockpit", 200000);
@@ -293,13 +293,13 @@ unsigned long long mech_fasa_cost(Mech *mech) {
 
     /* Sensors */
     /* TODO: Add variable range and multi-trac II */
-    mech_cost_add(mech, &total, "Sensors", (tons * 2000));
+    mech_cost_add(mech, &total, "Sensors", (TONS * 2000));
 
     /* Start MECH Musculatre (Myomer) ( Tech Manual (p278) )*/
-    if (technology & TRIPLE_MYOMER_TECH)
-      mech_cost_add(mech, &total, "TS Myomer", (tons * 16000));
+    if (TECHNOLOGY & TRIPLE_MYOMER_TECH)
+      mech_cost_add(mech, &total, "TS Myomer", (TONS * 16000));
     else
-      mech_cost_add(mech, &total, "Myomer", (tons * 2000));
+      mech_cost_add(mech, &total, "Myomer", (TONS * 2000));
     /* End MECH Musculatre (Myomer) */
 
     /* Actuators */
@@ -315,20 +315,20 @@ unsigned long long mech_fasa_cost(Mech *mech) {
       i += (100 - (mech_engine_rating(mech) % 100));
     i /= 100;
 
-    if (technology_secondary & XLGYRO_TECH)
+    if (TECHNOLOGY_SECONDARY & XLGYRO_TECH)
       mech_cost_add(mech, &total, "XL Gyro", (i * 0.5 * 750000));
-    else if (technology_secondary & CGYRO_TECH)
+    else if (TECHNOLOGY_SECONDARY & CGYRO_TECH)
       mech_cost_add(mech, &total, "Compact Gyro", (i * 1.5 * 400000));
-    else if (technology_secondary & HDGYRO_TECH)
+    else if (TECHNOLOGY_SECONDARY & HDGYRO_TECH)
       mech_cost_add(mech, &total, "HD Gyro", (i * 2 * 500000));
     else
       mech_cost_add(mech, &total, "Gyro", (i * 300000));
 
-  } else if (unit_class == CLASS_BSUIT) {
+  } else if (UNIT_CLASS == CLASS_BSUIT) {
     /* ---------------------------------
      * BSuit Costs
      */
-    if (technology & CLAN_TECH) {
+    if (TECHNOLOGY & CLAN_TECH) {
       mech_cost_add(mech, &total, "Clan Point", 3500000);
     } else {
       mech_cost_add(mech, &total, "IS Squad", 2400000);
@@ -360,20 +360,20 @@ unsigned long long mech_fasa_cost(Mech *mech) {
      * Internals
      * 10,000 * Structure Tonnage
      */
-    const double internals = (double)tons * 1000.0;
-    mech_cost_add(mech, &total, "Internals", internals);
+    const double INTERNALS = (double)TONS * 1000.0;
+    mech_cost_add(mech, &total, "Internals", INTERNALS);
     /*
      * Control Components
      * 10,000 * Control Tonnage
      * Control Tonnage = .05 * Tons
      */
-    const double control_eq = 10000.0 * 0.05 * (double)tons;
-    mech_cost_add(mech, &total, "Cockpit & Controls", control_eq);
+    const double CONTROL_EQ = 10000.0 * 0.05 * (double)TONS;
+    mech_cost_add(mech, &total, "Cockpit & Controls", CONTROL_EQ);
     /*
      * Power Amp
      * 20,000 * Amplifier Tonnage
      */
-    if (technology & ICE_TECH) {
+    if (TECHNOLOGY & ICE_TECH) {
       int power_amp = 20000 * (pamp / 1024) / 10;
       mech_cost_add(mech, &total, "Power Amplifiers", power_amp);
     }
@@ -388,15 +388,15 @@ unsigned long long mech_fasa_cost(Mech *mech) {
      * Lift/Dive Equip (Hovercraft, Hydrofoils, Submarines)
      * 20,000 * Equipment Tonnage
      */
-    if (movement == MOVE_HOVER || movement == MOVE_FOIL ||
-        movement == MOVE_SUB) {
-      const double lift_dive = 20000.0 * (0.1 * (double)tons);
-      mech_cost_add(mech, &total, "Lift/Dive Equip", lift_dive);
+    if (MOVEMENT == MOVE_HOVER || MOVEMENT == MOVE_FOIL ||
+        MOVEMENT == MOVE_SUB) {
+      const double LIFT_DIVE = 20000.0 * (0.1 * (double)TONS);
+      mech_cost_add(mech, &total, "Lift/Dive Equip", LIFT_DIVE);
     }
 
-    if (movement == MOVE_VTOL) {
-      const double vtol_eq = 40000.0 * (0.1 * (double)tons);
-      mech_cost_add(mech, &total, "Rotor", vtol_eq);
+    if (MOVEMENT == MOVE_VTOL) {
+      const double VTOL_EQ = 40000.0 * (0.1 * (double)TONS);
+      mech_cost_add(mech, &total, "Rotor", VTOL_EQ);
     }
   } // end if (Vehicle Calcs)
 
@@ -404,43 +404,43 @@ unsigned long long mech_fasa_cost(Mech *mech) {
    * General Calculations
    */
 
-  if (unit_class != CLASS_BSUIT) {
+  if (UNIT_CLASS != CLASS_BSUIT) {
     /* Engine Math
      * (Engine Basecost * Engine Rating * Tonnage) / 75
      */
-    int engine_basecost = (technology & CE_TECH    ? 10000
-                           : technology & LE_TECH  ? 15000
-                           : technology & XL_TECH  ? 20000
-                           : technology & XXL_TECH ? 100000
-                           : technology & ICE_TECH ? 1250
+    int engine_basecost = (TECHNOLOGY & CE_TECH    ? 10000
+                           : TECHNOLOGY & LE_TECH  ? 15000
+                           : TECHNOLOGY & XL_TECH  ? 20000
+                           : TECHNOLOGY & XXL_TECH ? 100000
+                           : TECHNOLOGY & ICE_TECH ? 1250
                                                    : 5000);
 
     engine_size = mech_engine_rating(mech);
 
-    if (movement == MOVE_WHEEL || movement == MOVE_FOIL ||
-        movement == MOVE_HOVER || movement == MOVE_HULL ||
-        movement == MOVE_SUB || movement == MOVE_VTOL) {
+    if (MOVEMENT == MOVE_WHEEL || MOVEMENT == MOVE_FOIL ||
+        MOVEMENT == MOVE_HOVER || MOVEMENT == MOVE_HULL ||
+        MOVEMENT == MOVE_SUB || MOVEMENT == MOVE_VTOL) {
       engine_size = engine_size - susp_factor(mech);
     }
     /* Don't forget to Round up! */
-    const unsigned long long engine_numerator =
+    const unsigned long long ENGINE_NUMERATOR =
         (unsigned long long)engine_basecost * (unsigned long long)engine_size *
-        (unsigned long long)tons;
-    const unsigned long long engine_price = (engine_numerator + 74ULL) / 75ULL;
-    mech_cost_add(mech, &total, "Engine", (double)engine_price);
+        (unsigned long long)TONS;
+    const unsigned long long ENGINE_PRICE = (ENGINE_NUMERATOR + 74ULL) / 75ULL;
+    mech_cost_add(mech, &total, "Engine", (double)ENGINE_PRICE);
 
     /* Jump Jets
      * Standard: Tonnage * (number of JJs^2) * 200
      * Improved: Tonnage * (number of JJs^2) * 500
      * Mechanical: Tonnage * (Jumping MP) * 150
      */
-    const float num_jjs_float = mech_jump_speed(mech) * (float)MP_PER_KPH;
-    const int num_jjs = (int)num_jjs_float;
-    const double jj_price =
-        (double)tons * pow((double)num_jjs, 2.0) *
-        (technology_secondary & IMPROVED_JJ_TECH ? 500.0 : 200.0);
-    if (num_jjs > 0)
-      mech_cost_add(mech, &total, "Jumpjets", jj_price);
+    const float NUM_JJS_FLOAT = mech_jump_speed(mech) * (float)MP_PER_KPH;
+    const int NUM_JJS = (int)NUM_JJS_FLOAT;
+    const double JJ_PRICE =
+        (double)TONS * pow((double)NUM_JJS, 2.0) *
+        (TECHNOLOGY_SECONDARY & IMPROVED_JJ_TECH ? 500.0 : 200.0);
+    if (NUM_JJS > 0)
+      mech_cost_add(mech, &total, "Jumpjets", JJ_PRICE);
 
     /*
        Heat Sinks
@@ -448,25 +448,25 @@ unsigned long long mech_fasa_cost(Mech *mech) {
     int numsinks = mech_heat_sink_count(mech);
 
     int sinkcost;
-    if (technology & DOUBLE_HEAT_TECH || technology & CLAN_TECH)
+    if (TECHNOLOGY & DOUBLE_HEAT_TECH || TECHNOLOGY & CLAN_TECH)
       sinkcost = 6000;
-    else if (technology_secondary & COMPACT_HS_TECH)
+    else if (TECHNOLOGY_SECONDARY & COMPACT_HS_TECH)
       sinkcost = 3000;
     else
       sinkcost = 2000;
 
-    if ((technology & DOUBLE_HEAT_TECH || technology & CLAN_TECH)) {
+    if ((TECHNOLOGY & DOUBLE_HEAT_TECH || TECHNOLOGY & CLAN_TECH)) {
       /* We want to divide the heat dissipation by two if DHS */
-      numsinks = BOUNDED(0, numsinks / 2, 500);
+      numsinks = bounded(0, numsinks / 2, 500);
     }
 
     // For single heatsinks, we only charge for every heatsink over 10.
-    if (technology & DOUBLE_HEAT_TECH || technology & CLAN_TECH ||
-        technology_secondary & COMPACT_HS_TECH || technology & ICE_TECH)
+    if (TECHNOLOGY & DOUBLE_HEAT_TECH || TECHNOLOGY & CLAN_TECH ||
+        TECHNOLOGY_SECONDARY & COMPACT_HS_TECH || TECHNOLOGY & ICE_TECH)
       mech_cost_add(mech, &total, "Heat Sinks", (numsinks * sinkcost));
     else {
       mech_cost_add(mech, &total, "Heat Sinks",
-                    (BOUNDED(0, numsinks - 10, 500) * sinkcost));
+                    (bounded(0, numsinks - 10, 500) * sinkcost));
     }
 
 #if defined(COST_DEBUG) && COST_DEBUG
@@ -490,22 +490,22 @@ unsigned long long mech_fasa_cost(Mech *mech) {
     orig_armor = total_armor;
 #endif
 
-    if (technology & FF_TECH)
-      total_armor = total_armor * 50 / ((technology & CLAN_TECH) ? 60 : 56);
-    else if (technology_secondary & HVY_FF_ARMOR_TECH)
+    if (TECHNOLOGY & FF_TECH)
+      total_armor = total_armor * 50 / ((TECHNOLOGY & CLAN_TECH) ? 60 : 56);
+    else if (TECHNOLOGY_SECONDARY & HVY_FF_ARMOR_TECH)
       total_armor = total_armor * 50 / 62;
-    else if (technology_secondary & LT_FF_ARMOR_TECH)
+    else if (TECHNOLOGY_SECONDARY & LT_FF_ARMOR_TECH)
       total_armor = total_armor * 50 / 53;
 
     /* Come on. Really. We don't do .1 of armor. Round this !!! */
-    const int armor_weight = round_to_halfton(total_armor * 1024 / 16);
-    const double armor_tons = (double)armor_weight / 1024.0;
+    const int ARMOR_WEIGHT = round_to_halfton(total_armor * 1024 / 16);
+    const double ARMOR_TONS = (double)ARMOR_WEIGHT / 1024.0;
 
-    int armor_cost_point = (technology & FF_TECH                        ? 20000
-                            : technology_secondary & STEALTH_ARMOR_TECH ? 50000
-                            : technology & HARDA_TECH                   ? 15000
-                            : technology_secondary & LT_FF_ARMOR_TECH   ? 15000
-                            : technology_secondary & HVY_FF_ARMOR_TECH ? 25000
+    int armor_cost_point = (TECHNOLOGY & FF_TECH                        ? 20000
+                            : TECHNOLOGY_SECONDARY & STEALTH_ARMOR_TECH ? 50000
+                            : TECHNOLOGY & HARDA_TECH                   ? 15000
+                            : TECHNOLOGY_SECONDARY & LT_FF_ARMOR_TECH   ? 15000
+                            : TECHNOLOGY_SECONDARY & HVY_FF_ARMOR_TECH ? 25000
                                                                        : 10000);
 #if defined(COST_DEBUG) && COST_DEBUG
     btech_channel_send(
@@ -513,8 +513,8 @@ unsigned long long mech_fasa_cost(Mech *mech) {
         tprintf("Armor Tons %.1f(%d pts) * Armor Cost Per Point %d", armor_tons,
                 orig_armor, armor_cost_point));
 #endif
-    const double armor_price = armor_tons * (double)armor_cost_point;
-    mech_cost_add(mech, &total, "Armor", armor_price);
+    const double ARMOR_PRICE = ARMOR_TONS * (double)armor_cost_point;
+    mech_cost_add(mech, &total, "Armor", ARMOR_PRICE);
   } // End Non-BSuit General Calculations
 
   /* Weapons. */
@@ -523,54 +523,54 @@ unsigned long long mech_fasa_cost(Mech *mech) {
   /* and handle weapons first, than we'll handle parts */
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    count = FindWeapons_Advanced(mech, i, weaparray, weapdata, critical, 1);
+    count = find_weapons_advanced(mech, i, weaparray, weapdata, critical, 1);
     if (count <= 0)
       /* No weapons */
       continue;
 
     for (ii = 0; ii < count; ii++) {
-      const int weapon_index =
+      const int WEAPON_INDEX =
           *weapon_index_at(weaparray, MAX_WEAPS_SECTION, (size_t)ii);
-      mech_cost_add(mech, &total, weapon_catalogue_name(weapon_index),
-                    weapon_catalogue_cost(weapon_index));
+      mech_cost_add(mech, &total, weapon_catalogue_name(WEAPON_INDEX),
+                    weapon_catalogue_cost(WEAPON_INDEX));
     }
   }
 
   /* Ammo */
 
-  ammoweapcount = FindAmmunition(mech, ammoweap, ammo, ammomax, modearray, 0);
+  ammoweapcount = find_ammunition(mech, ammoweap, ammo, ammomax, modearray, 0);
 
   if (ammoweapcount > 0) {
     if (mech_context(mech)->configuration->btech_cost_debug)
       btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
                          "Ammo Costs");
     for (i = 0; i < ammoweapcount; i++) {
-      const int weapon_index =
+      const int WEAPON_INDEX =
           *weapon_index_at(ammoweap, 8U * (size_t)MAX_WEAPS_SECTION, (size_t)i);
-      const int maximum_ammunition = *unsigned_short_at(
+      const int MAXIMUM_AMMUNITION = *unsigned_short_at(
           ammomax, 8U * (size_t)MAX_WEAPS_SECTION, (size_t)i);
-      const int ammunition_per_ton =
-          weapon_catalogue_ammunition_per_ton(weapon_index);
-      const int ammunition_cost =
-          weapon_catalogue_ammunition_cost(weapon_index);
+      const int AMMUNITION_PER_TON =
+          weapon_catalogue_ammunition_per_ton(WEAPON_INDEX);
+      const int AMMUNITION_COST =
+          weapon_catalogue_ammunition_cost(WEAPON_INDEX);
       /* ArtemisIV ammo is X2 */
       /* Interesting way to handle half_tons */
-      if (maximum_ammunition < ammunition_per_ton) {
-        const int half_ton_divisor = ammunition_per_ton / maximum_ammunition;
-        const int adjusted_ammunition_cost = ammunition_cost / half_ton_divisor;
-        mech_cost_add(mech, &total, weapon_catalogue_name(weapon_index),
-                      (double)adjusted_ammunition_cost);
+      if (MAXIMUM_AMMUNITION < AMMUNITION_PER_TON) {
+        const int HALF_TON_DIVISOR = AMMUNITION_PER_TON / MAXIMUM_AMMUNITION;
+        const int ADJUSTED_AMMUNITION_COST = AMMUNITION_COST / HALF_TON_DIVISOR;
+        mech_cost_add(mech, &total, weapon_catalogue_name(WEAPON_INDEX),
+                      (double)ADJUSTED_AMMUNITION_COST);
       } else {
-        const int ammunition_tons = maximum_ammunition / ammunition_per_ton;
-        const int adjusted_ammunition_cost =
-            ammunition_cost * ammunition_tons *
+        const int AMMUNITION_TONS = MAXIMUM_AMMUNITION / AMMUNITION_PER_TON;
+        const int ADJUSTED_AMMUNITION_COST =
+            AMMUNITION_COST * AMMUNITION_TONS *
             ((*unsigned_int_at(modearray, 8U * (size_t)MAX_WEAPS_SECTION,
                                (size_t)i) &
               ARTEMIS_MODE)
                  ? 2
                  : 1);
-        mech_cost_add(mech, &total, weapon_catalogue_name(weapon_index),
-                      (double)adjusted_ammunition_cost);
+        mech_cost_add(mech, &total, weapon_catalogue_name(WEAPON_INDEX),
+                      (double)ADJUSTED_AMMUNITION_COST);
       }
     }
   }
@@ -665,7 +665,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
         }
       if (equipment_is_ammunition(part))
         /* Need Something in here to do CASE for CLAN mechs */
-        if ((technology & CLAN_TECH))
+        if ((TECHNOLOGY & CLAN_TECH))
           *mutable_int_at(clan_case_sections, NUM_SECTIONS, (size_t)i) = 1;
       continue;
       if (equipment_is_weapon(part))
@@ -673,11 +673,11 @@ unsigned long long mech_fasa_cost(Mech *mech) {
 
       unsigned long long indiv_part_cost =
           btech_part_cost_get(mech_context(mech), part);
-      if (unit_class != CLASS_MECH && equipment_is_weapon(part)) {
-        const unsigned long long critical_slots =
+      if (UNIT_CLASS != CLASS_MECH && equipment_is_weapon(part)) {
+        const unsigned long long CRITICAL_SLOTS =
             (unsigned long long)(unsigned char)weapon_catalogue_critical_slots(
                 part - 1);
-        indiv_part_cost *= critical_slots;
+        indiv_part_cost *= CRITICAL_SLOTS;
         // btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
         // tprintf("Part#: %s(%d) Crits: %d", MechWeapons[part-1].name, part-1,
         // MechWeapons[part-1].criticals));
@@ -686,60 +686,60 @@ unsigned long long mech_fasa_cost(Mech *mech) {
                     (double)indiv_part_cost);
     }
   /* We have to account for some other stuff that doesn't divide equally here */
-  const int bloodhound_packages = bloodhound_count / 3;
-  if (bloodhound_packages)
+  const int BLOODHOUND_PACKAGES = bloodhound_count / 3;
+  if (BLOODHOUND_PACKAGES)
     mech_cost_add(mech, &total, "Bloodhound",
-                  (double)(500000 * bloodhound_packages));
+                  (double)(500000 * BLOODHOUND_PACKAGES));
   if (masc_count)
     mech_cost_add(mech, &total, "MASC", masc_count * engine_size * 1000);
   if (has_sword) {
     /* Sword Cost is Tonnage of sword * 10000. Sword Tonnage is 1/20th of Mech
      * Tonnage, rounded up to nearest halfton */
-    const int sword_weight = round_to_halfton(tons * 1024 / 20);
-    const double sword_tons = (double)sword_weight / 1024.0;
-    mech_cost_add(mech, &total, "Sword", sword_tons * 10000.0);
+    const int SWORD_WEIGHT = round_to_halfton(TONS * 1024 / 20);
+    const double SWORD_TONS = (double)SWORD_WEIGHT / 1024.0;
+    mech_cost_add(mech, &total, "Sword", SWORD_TONS * 10000.0);
   }
 
   /* Clan Case */
-  if ((technology & CLAN_TECH)) {
+  if ((TECHNOLOGY & CLAN_TECH)) {
     for (i = 0; i < NUM_SECTIONS; i++) {
       if (*int_at(clan_case_sections, NUM_SECTIONS, (size_t)i) == 1)
         mech_cost_add(mech, &total, "Clan CASE Section", 50000);
     }
   }
 
-  if (unit_class != CLASS_MECH && unit_class != CLASS_BSUIT) {
-    switch (movement) {
+  if (UNIT_CLASS != CLASS_MECH && UNIT_CLASS != CLASS_BSUIT) {
+    switch (MOVEMENT) {
     case MOVE_TRACK:
-      mod = 1.0 + (double)tons / 100.0;
+      mod = 1.0 + (double)TONS / 100.0;
       break;
     case MOVE_WHEEL:
-      mod = 1.0 + (double)tons / 200.0;
+      mod = 1.0 + (double)TONS / 200.0;
       break;
     case MOVE_HOVER:
-      mod = 1.0 + (double)tons / 50.0;
+      mod = 1.0 + (double)TONS / 50.0;
       break;
     case MOVE_VTOL:
-      mod = 1.0 + (double)tons / 30.0;
+      mod = 1.0 + (double)TONS / 30.0;
       break;
     case MOVE_HULL:
-      mod = 1.0 + (double)tons / 200.0;
+      mod = 1.0 + (double)TONS / 200.0;
       break;
     case MOVE_FOIL:
-      mod = 1.0 + (double)tons / 75.0;
+      mod = 1.0 + (double)TONS / 75.0;
       break;
     case MOVE_SUB:
-      mod = 1.0 + (double)tons / 50.0;
+      mod = 1.0 + (double)TONS / 50.0;
       break;
     }
-  } else if (unit_class == CLASS_BSUIT) {
+  } else if (UNIT_CLASS == CLASS_BSUIT) {
     // There's nothing in Maxtech about this, but we're going to knock the
     // prices down to be competitive with other unit types.
     mod = 0.75;
   } else {
     // The standard mech size cost modifier. 20 ton mech, for example is Cost *
     // .20
-    mod = 1.0 + (double)tons / 100.0;
+    mod = 1.0 + (double)TONS / 100.0;
   }
 
   if (mech_is_omni(mech)) {

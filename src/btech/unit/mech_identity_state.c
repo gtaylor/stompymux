@@ -26,7 +26,7 @@ int mech_map_slot(const Mech *mech) { return mech->mapnumber; }
 int mech_brief_mode(const Mech *mech) { return mech->brief; }
 
 MechUnitId mech_unit_id(const Mech *mech) {
-  return (MechUnitId){.first = mech->ID[0], .second = mech->ID[1]};
+  return (MechUnitId){.first = mech->id[0], .second = mech->id[1]};
 }
 
 const char *mech_model_name(const Mech *mech) { return mech->ud.mech_name; }
@@ -49,8 +49,8 @@ void mech_map_slot_set(Mech *mech, int map_slot) { mech->mapnumber = map_slot; }
 void mech_brief_mode_set(Mech *mech, int mode) { mech->brief = (char)mode; }
 
 void mech_unit_id_set(Mech *mech, char first, char second) {
-  mech->ID[0] = first;
-  mech->ID[1] = second;
+  mech->id[0] = first;
+  mech->id[1] = second;
 }
 
 void mech_identity_initialize(Mech *mech, DbRef dbref) {

@@ -47,7 +47,7 @@ void mech_explode(DbRef player, void *data, char *buffer);
 void mech_dig(DbRef player, void *data, char *buffer);
 void mech_fixturret(DbRef player, void *data, char *buffer);
 void mech_disableweap(DbRef player, void *data, char *buffer);
-int FindMainWeapon(Mech *mech, int (*callback)(Mech *, int, int, int, int));
+int find_main_weapon(Mech *mech, int (*callback)(Mech *, int, int, int, int));
 void mech_stealtharmor(DbRef player, Mech *mech, char *buffer);
 void mech_nullsig(DbRef player, Mech *mech, char *buffer);
 void show_narc_pods(DbRef player, Mech *mech, char *buffer);

@@ -21,7 +21,7 @@ typedef enum PowerId {
  * POWERENT: Information about object powers.
  */
 
-typedef struct power_entry {
+typedef struct PowerEntry {
   const char *powername; /* Name of the flag */
   PowerId id;
   int listperm; /* Who sees this flag when set */

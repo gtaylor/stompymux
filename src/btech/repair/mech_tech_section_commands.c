@@ -38,7 +38,7 @@ typedef struct TechCheckContext {
   int part;
 } TechCheckContext;
 
-int Invalid_Repair_Path(Mech *mech, int loc) {
+int invalid_repair_path(Mech *mech, int loc) {
   if (mech_class(mech) != CLASS_MECH)
     return 0;
   switch (loc) {
@@ -91,7 +91,7 @@ static void schedule_section_repair(BtechContext *context, Mech *mech,
                                     MuxEventCallback callback) {
   btech_context_event_schedule(
       context, mech, event_type, callback,
-      MAX(1, player_techtime(context, player) * TECH_TICK),
+      max(1, player_techtime(context, player) * TECH_TICK),
       (intptr_t)(location + player * PLAYERPOS));
 }
 
@@ -151,12 +151,12 @@ void tech_reattach(DbRef player, void *data, char *buffer) {
                  "That section isn't destroyed!");
     return;
   }
-  if (Invalid_Repair_Path(mech, loc)) {
+  if (invalid_repair_path(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You need to reattach adjacent locations first!");
     return;
   }
-  if (SomeoneAttaching(mech, loc)) {
+  if (someone_attaching(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's attaching that section already!");
     return;
@@ -257,7 +257,7 @@ void tech_reattach(DbRef player, void *data, char *buffer) {
 }
 
 void tech_replacesuit(DbRef player, void *data, char *buffer) {
-  int wSuits = 0;
+  int w_suits = 0;
 
   RepairCommandContext repair_command;
   Mech *mech;
@@ -285,9 +285,9 @@ void tech_replacesuit(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  wSuits = bsuit_member_count(mech);
+  w_suits = bsuit_member_count(mech);
 
-  if (mech_maximum_battle_suits(mech) <= wSuits) {
+  if (mech_maximum_battle_suits(mech) <= w_suits) {
     mecha_notify(
         btech_context_evaluation(context), player,
         tprintf("This %s is already full! This %s only consists of %d suits!",
@@ -310,12 +310,12 @@ void tech_replacesuit(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (SomeoneReplacingSuit(mech, loc)) {
+  if (someone_replacing_suit(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's already rebuilding that suit!");
     return;
   }
-  if (wSuits <= 0) {
+  if (w_suits <= 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You are unable to replace the suits here! None of the "
                  "buggers are still alive!");
@@ -380,12 +380,12 @@ void tech_reseal(DbRef player, void *data, char *buffer) {
                  "That has not been flooded!");
     return;
   }
-  if (Invalid_Repair_Path(mech, loc)) {
+  if (invalid_repair_path(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You need to reattach adjacent locations first!");
     return;
   }
-  if (SomeoneResealing(mech, loc)) {
+  if (someone_resealing(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's sealing that section already!");
     return;

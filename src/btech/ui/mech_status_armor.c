@@ -24,8 +24,8 @@
 
 ArmorEvaluation armor_evaluate(const ArmorEvaluationRequest *request) {
   Mech *mech = request->mech;
-  const int loc = request->section;
-  const int flag = request->flags;
+  const int LOC = request->section;
+  const int FLAG = request->flags;
   int armor_value;
   int armor_percent, armor_denom;
   int repair_flag = 0;
@@ -34,38 +34,38 @@ ArmorEvaluation armor_evaluate(const ArmorEvaluationRequest *request) {
    * TODO: What happens when a custom template plugs in bogus values?
    * Make sure to check for aeros, too!
    */
-  switch (flag & ARMOR_TYPE_MASK) {
+  switch (FLAG & ARMOR_TYPE_MASK) {
   case ARMOR_FRONT:
     /* Front armor.  */
-    armor_value = mech_section_armor(mech, loc);
-    armor_denom = mech_section_original_armor(mech, loc);
+    armor_value = mech_section_armor(mech, LOC);
+    armor_denom = mech_section_original_armor(mech, LOC);
 
-    if (mech_section_armor_repairing(mech, loc))
+    if (mech_section_armor_repairing(mech, LOC))
       repair_flag = 1;
     break;
 
   case ARMOR_INTERNAL:
-    if (mech_class(mech) == CLASS_AERO && loc == 0) {
+    if (mech_class(mech) == CLASS_AERO && LOC == 0) {
       /* Aero SI.  loc doesn't actually matter, but we check
        * it in case we want to use other locs later. */
       armor_value = mech_structural_integrity(mech);
       armor_denom = mech_original_structural_integrity(mech);
     } else {
       /* Internal armor.  */
-      armor_value = mech_section_internal(mech, loc);
-      armor_denom = mech_section_original_internal(mech, loc);
+      armor_value = mech_section_internal(mech, LOC);
+      armor_denom = mech_section_original_internal(mech, LOC);
 
-      if (mech_section_internals_repairing(mech, loc))
+      if (mech_section_internals_repairing(mech, LOC))
         repair_flag = 1;
     }
     break;
 
   case ARMOR_REAR:
     /* Rear armor.  */
-    armor_value = mech_section_rear_armor(mech, loc);
-    armor_denom = mech_section_original_rear_armor(mech, loc);
+    armor_value = mech_section_rear_armor(mech, LOC);
+    armor_denom = mech_section_original_rear_armor(mech, LOC);
 
-    if (mech_section_rear_armor_repairing(mech, loc))
+    if (mech_section_rear_armor_repairing(mech, LOC))
       repair_flag = 1;
     break;
 
@@ -102,26 +102,26 @@ ArmorEvaluation armor_evaluate(const ArmorEvaluationRequest *request) {
 }
 
 /* bright green, dark green, bright yellow, dark red, black */
-static const char *const armordamcolorstr[] = {
+static const char *const ARMORDAMCOLORSTR[] = {
     "[fg=green bold]", "[fg=green]",      "[fg=yellow bold]",
     "[fg=red]",        "[fg=black bold]", "[fg=blue bold]"};
 
 /* Armor location character (enemy scan). Last one is for armor under repair. */
-static const char armordamltrstr[] = "OoxX*?";
+static const char ARMORDAMLTRSTR[] = "OoxX*?";
 
 static const char *armor_damage_color(int level) {
   if (level < 0)
     abort();
   return *(const char *const *)checked_storage_at_const(
-      (const void *)armordamcolorstr,
-      sizeof(armordamcolorstr) / sizeof(*armordamcolorstr),
-      sizeof(*armordamcolorstr), (size_t)level);
+      (const void *)ARMORDAMCOLORSTR,
+      sizeof(ARMORDAMCOLORSTR) / sizeof(*ARMORDAMCOLORSTR),
+      sizeof(*ARMORDAMCOLORSTR), (size_t)level);
 }
 
 static char armor_damage_letter(int level) {
   if (level < 0)
     abort();
-  return *checked_string_suffix(armordamltrstr, (size_t)level);
+  return *checked_string_suffix(ARMORDAMLTRSTR, (size_t)level);
 }
 
 /*
@@ -173,11 +173,11 @@ armor_damage_text(const ArmorDamageTextRequest *request) {
      * aren't going to use.  */
     if (armor_len < request->width) {
       /* Right justify.  */
-      const size_t padding = request->width - armor_len;
+      const size_t PADDING = request->width - armor_len;
       memset(
-          checked_storage_region(result.text, sizeof(result.text), 0, padding),
-          ' ', padding);
-      memcpy(checked_storage_region(result.text, sizeof(result.text), padding,
+          checked_storage_region(result.text, sizeof(result.text), 0, PADDING),
+          ' ', PADDING);
+      memcpy(checked_storage_region(result.text, sizeof(result.text), PADDING,
                                     armor_len),
              armor_buf, armor_len);
     } else {
@@ -218,10 +218,10 @@ static ArmorKeyText armor_key_text(int line_key, bool owner) {
   } else {
     /* Line 2-6 = armor level symbols.  */
     /* XXX: Probably safe from buffer overflows.  */
-    const int armor_level = 6 - line_key;
-    const char letter = armor_damage_letter(armor_level);
+    const int ARMOR_LEVEL = 6 - line_key;
+    const char LETTER = armor_damage_letter(ARMOR_LEVEL);
     (void)snprintf(result.text, sizeof(result.text), "%s%c%c [reset]",
-                   armor_damage_color(armor_level), letter, letter);
+                   armor_damage_color(ARMOR_LEVEL), LETTER, LETTER);
   }
 
   return result;
@@ -232,8 +232,8 @@ static ArmorKeyText armor_key_text(int line_key, bool owner) {
  * should autoconf-ize this with portability wrappers.  They're pretty common
  * these days, though.
  */
-static ArmorFieldText armor_field_text(Mech *mech, const int loc,
-                                       const int flag, int width) {
+static ArmorFieldText armor_field_text(Mech *mech, const int LOC,
+                                       const int FLAG, int width) {
   ArmorFieldText result = {0};
 
   int armor_level, armor_value;
@@ -245,16 +245,16 @@ static ArmorFieldText armor_field_text(Mech *mech, const int loc,
     width = 23;
 
   /* Get armor status.  */
-  const ArmorEvaluation evaluation = armor_evaluate(&(ArmorEvaluationRequest){
+  const ArmorEvaluation EVALUATION = armor_evaluate(&(ArmorEvaluationRequest){
       .mech = mech,
-      .section = loc,
-      .flags = flag,
+      .section = LOC,
+      .flags = FLAG,
   });
-  armor_level = evaluation.level;
-  armor_value = evaluation.value;
+  armor_level = EVALUATION.level;
+  armor_value = EVALUATION.value;
 
   /* Get strings.  */
-  if (!(flag & ARMOR_FLAG_SHOW_DEST) && !mech_section_internal(mech, loc)) {
+  if (!(FLAG & ARMOR_FLAG_SHOW_DEST) && !mech_section_internal(mech, LOC)) {
     /* Blank field. (Destroyed section.) */
     memset(result.text, ' ', (size_t)width);
     *(char *)checked_storage_at(result.text, sizeof(result.text), sizeof(char),
@@ -265,7 +265,7 @@ static ArmorFieldText armor_field_text(Mech *mech, const int loc,
   ArmorDamageText damage =
       armor_damage_text(&(ArmorDamageTextRequest){.level = armor_level,
                                                   .value = armor_value,
-                                                  .flags = flag,
+                                                  .flags = FLAG,
                                                   .width = (size_t)width});
   (void)snprintf(result.text, sizeof(result.text), "%s%s[reset]",
                  armor_damage_color(armor_level), damage.text);
@@ -288,7 +288,7 @@ static bool get_lua_status_template(EvaluationContext *evaluation, DbRef player,
       &status);
   if (!status.defined)
     return false;
-  StringCopy(result, status.rendered);
+  string_copy(result, status.rendered);
   return true;
 }
 
@@ -301,16 +301,16 @@ typedef enum {
   BTS_SUBSTITUTE_ARMOR, /* armor status substitution */
   BTS_CONDITIONAL_1,    /* unary conditional  */
   BTS_CONDITIONAL_2     /* binary conditional */
-} BTS_State;
+} BtsState;
 
 static void armor_template_commit(BtechTextBuilder *destination,
                                   const char *source, size_t *saved_position,
                                   size_t source_position) {
   if (source_position < *saved_position)
     abort();
-  const size_t length = source_position - *saved_position;
+  const size_t LENGTH = source_position - *saved_position;
   btech_text_builder_append_count(
-      destination, checked_string_suffix(source, *saved_position), length);
+      destination, checked_string_suffix(source, *saved_position), LENGTH);
   *saved_position = source_position;
 }
 
@@ -318,12 +318,12 @@ static bool ascii_is_digit(char value) { return value >= '0' && value <= '9'; }
 
 static int ascii_digit_value(int value) { return value - '0'; }
 
-void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                      int owner) {
+void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
+                        int owner) {
   const char *srcbuf;
   char destbuf[LBUF_SIZE];
 
-  BTS_State current_state = BTS_START_OF_LINE;
+  BtsState current_state = BTS_START_OF_LINE;
   int tmp_value1 = 0, tmp_value2 = 0;
   int flag;
 
@@ -363,22 +363,22 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     /* Use standard template.  */
     switch (mech_class(mech)) {
     case CLASS_MW:
-      srcbuf = mwdesc;
+      srcbuf = MWDESC;
       break;
 
     case CLASS_MECH:
       if (mech_movement_type(mech) == MOVE_QUAD) {
-        srcbuf = quaddesc;
+        srcbuf = QUADDESC;
       } else {
 #ifdef WEIGHTVARIABLE_STATUS
         if (mech_tonnage(mech) <= 35)
-          srcbuf = lightmechdesc;
+          srcbuf = LIGHTMECHDESC;
         else if (mech_tonnage(mech) <= 55)
-          srcbuf = mediummechdesc;
+          srcbuf = MEDIUMMECHDESC;
         else if (mech_tonnage(mech) <= 75)
-          srcbuf = heavymechdesc;
+          srcbuf = HEAVYMECHDESC;
         else
-          srcbuf = assaultmechdesc;
+          srcbuf = ASSAULTMECHDESC;
 #else  /* WEIGHTVARIABLE_STATUS */
         srcbuf = mechdesc;
 #endif /* WEIGHTVARIABLE_STATUS */
@@ -386,39 +386,39 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       break;
 
     case CLASS_BSUIT:
-      srcbuf = bsuitdesc;
+      srcbuf = BSUITDESC;
       break;
 
     case CLASS_VTOL:
-      srcbuf = vtoldesc;
+      srcbuf = VTOLDESC;
       break;
 
     case CLASS_AERO:
-      srcbuf = aerodesc;
+      srcbuf = AERODESC;
       break;
 
     case CLASS_DS:
-      srcbuf = aerod_ds_desc;
+      srcbuf = AEROD_DS_DESC;
       break;
 
     case CLASS_SPHEROID_DS:
-      srcbuf = spher_ds_desc;
+      srcbuf = SPHER_DS_DESC;
       break;
 
     case CLASS_VEH_GROUND:
       if (mech_section_original_internal(mech, TURRET))
-        srcbuf = vehdesc;
+        srcbuf = VEHDESC;
       else
-        srcbuf = veh_not_desc;
+        srcbuf = VEH_NOT_DESC;
       break;
 
     case CLASS_VEH_NAVAL:
       if (mech_movement_type(mech) == MOVE_FOIL)
-        srcbuf = foildesc;
+        srcbuf = FOILDESC;
       else if (mech_movement_type(mech) == MOVE_HULL)
-        srcbuf = shipdesc;
+        srcbuf = SHIPDESC;
       else
-        srcbuf = subdesc;
+        srcbuf = SUBDESC;
       break;
 
     default:
@@ -432,12 +432,12 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   BtechTextBuilder destination;
   btech_text_builder_initialize(&destination, destbuf, sizeof(destbuf));
   size_t saved_source_position = 0;
-  const size_t source_length = strlen(srcbuf);
-  for (size_t source_position = 0; source_position < source_length;
+  const size_t SOURCE_LENGTH = strlen(srcbuf);
+  for (size_t source_position = 0; source_position < SOURCE_LENGTH;
        source_position++) {
-    const char source_character =
+    const char SOURCE_CHARACTER =
         *checked_string_suffix(srcbuf, source_position);
-    BTS_State next_state = current_state;
+    BtsState next_state = current_state;
 
     /* Dispatch on current state.  */
     switch (current_state) {
@@ -446,13 +446,13 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
        * XXX: Portability note: Depends on a specific way of
        * encoding the digits from 0 to 7.
        */
-      if (source_character >= '1' && source_character <= '7') {
+      if (SOURCE_CHARACTER >= '1' && SOURCE_CHARACTER <= '7') {
         armor_template_commit(&destination, srcbuf, &saved_source_position,
                               source_position);
         saved_source_position = source_position + 1;
 
         ArmorKeyText key =
-            armor_key_text(ascii_digit_value(source_character), owner);
+            armor_key_text(ascii_digit_value(SOURCE_CHARACTER), owner);
         btech_text_builder_append(&destination, key.text);
       }
 
@@ -460,7 +460,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       break;
 
     case BTS_NORMAL: /* normal characters */
-      switch (source_character) {
+      switch (SOURCE_CHARACTER) {
       case '&':
         armor_template_commit(&destination, srcbuf, &saved_source_position,
                               source_position);
@@ -486,7 +486,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         int tmp_flag;
 
       case 1: /* optional width digit or type flag */
-        switch (source_character) {
+        switch (SOURCE_CHARACTER) {
         case '&':
           saved_source_position = source_position + 1;
           next_state = BTS_NORMAL;
@@ -497,12 +497,12 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         case '+':
         case ':':
         case '-':
-          tmp_value1 = (unsigned char)source_character;
+          tmp_value1 = (unsigned char)SOURCE_CHARACTER;
           break;
 
         default:
-          if (ascii_is_digit(source_character)) {
-            tmp_value1 = (unsigned char)source_character;
+          if (ascii_is_digit(SOURCE_CHARACTER)) {
+            tmp_value1 = (unsigned char)SOURCE_CHARACTER;
           } else {
             next_state = BTS_NORMAL;
           }
@@ -513,11 +513,11 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       case 2: /* location or type flag */
         if (ascii_is_digit((char)tmp_value1)) {
           /* Expect type code.  */
-          switch (source_character) {
+          switch (SOURCE_CHARACTER) {
           case '+':
           case '-':
           case ':':
-            tmp_value2 = (unsigned char)source_character;
+            tmp_value2 = (unsigned char)SOURCE_CHARACTER;
             break;
 
           default:
@@ -558,7 +558,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
         /* FIXME: Ponder semantics of gflag.  */
         ArmorFieldText field = armor_field_text(
-            mech, ascii_digit_value(source_character), tmp_flag, tmp_value1);
+            mech, ascii_digit_value(SOURCE_CHARACTER), tmp_flag, tmp_value1);
         btech_text_builder_append(&destination, field.text);
 
         saved_source_position = source_position + 1;
@@ -573,8 +573,8 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     case BTS_CONDITIONAL_1: /* '@' unary conditional */
       switch (source_position - saved_source_position) {
       case 1: /* get critical section */
-        if (ascii_is_digit(source_character)) {
-          tmp_value1 = ascii_digit_value(source_character);
+        if (ascii_is_digit(SOURCE_CHARACTER)) {
+          tmp_value1 = ascii_digit_value(SOURCE_CHARACTER);
         } else {
           next_state = BTS_NORMAL;
         }
@@ -585,7 +585,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
         next_state = BTS_NORMAL;
 
         if (mech_section_internal(mech, tmp_value1)) {
-          btech_text_builder_append_character(&destination, source_character);
+          btech_text_builder_append_character(&destination, SOURCE_CHARACTER);
         } else {
           btech_text_builder_append_character(&destination, ' ');
         }
@@ -599,16 +599,16 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     case BTS_CONDITIONAL_2: /* '!' binary conditional */
       switch (source_position - saved_source_position) {
       case 1: /* get first critical section */
-        if (ascii_is_digit(source_character)) {
-          tmp_value1 = ascii_digit_value(source_character);
+        if (ascii_is_digit(SOURCE_CHARACTER)) {
+          tmp_value1 = ascii_digit_value(SOURCE_CHARACTER);
         } else {
           next_state = BTS_NORMAL;
         }
         break;
 
       case 2: /* get second critical section */
-        if (ascii_is_digit(source_character)) {
-          tmp_value2 = ascii_digit_value(source_character);
+        if (ascii_is_digit(SOURCE_CHARACTER)) {
+          tmp_value2 = ascii_digit_value(SOURCE_CHARACTER);
         } else {
           next_state = BTS_NORMAL;
         }
@@ -620,7 +620,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
         if (mech_section_internal(mech, tmp_value1) ||
             mech_section_internal(mech, tmp_value2)) {
-          btech_text_builder_append_character(&destination, source_character);
+          btech_text_builder_append_character(&destination, SOURCE_CHARACTER);
         } else {
           btech_text_builder_append_character(&destination, ' ');
         }
@@ -636,7 +636,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     }
 
     /* Common logic.  */
-    if (source_character == '\n') {
+    if (SOURCE_CHARACTER == '\n') {
       current_state = BTS_START_OF_LINE;
 
       /*
@@ -660,7 +660,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
   /* Finish up.  */
   armor_template_commit(&destination, srcbuf, &saved_source_position,
-                        source_length);
+                        SOURCE_LENGTH);
 
   /* Send formatted status.  */
   mecha_notify(evaluation, player, destbuf);
@@ -669,103 +669,103 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
 /*
  * Figure out if we have a certain kind of physical weapon.
  */
-bool hasPhysical(const PhysicalWeaponRequest *request) {
-  Mech *objMech = request->mech;
-  const int wLoc = request->section;
-  const MechPhysicalWeaponType wPhysType = request->type;
-  int wType;
-  int wSize;
+bool has_physical(const PhysicalWeaponRequest *request) {
+  Mech *obj_mech = request->mech;
+  const int W_LOC = request->section;
+  const MechPhysicalWeaponType W_PHYS_TYPE = request->type;
+  int w_type;
+  int w_size;
 
-  switch (wPhysType) {
+  switch (W_PHYS_TYPE) {
   case PHY_AXE:
-    wType = AXE;
-    wSize = mech_tonnage(objMech) / 15;
+    w_type = AXE;
+    w_size = mech_tonnage(obj_mech) / 15;
     break;
 
   case PHY_CLAW:
-    wType = CLAW;
-    wSize = mech_tonnage(objMech) / 15;
+    w_type = CLAW;
+    w_size = mech_tonnage(obj_mech) / 15;
     break;
 
   case PHY_SWORD:
-    wType = SWORD;
-    wSize = mech_tonnage(objMech) / 15;
+    w_type = SWORD;
+    w_size = mech_tonnage(obj_mech) / 15;
     break;
 
   case PHY_MACE:
-    wType = MACE;
-    wSize = mech_tonnage(objMech) / 15;
+    w_type = MACE;
+    w_size = mech_tonnage(obj_mech) / 15;
     break;
 
   case PHY_SAW:
-    wType = DUAL_SAW;
-    wSize = 7;
+    w_type = DUAL_SAW;
+    w_size = 7;
     break;
 
   default:
     return false;
   } // end switch()
 
-  return FindObjWithDest(objMech, wLoc, special_equipment_index(wType)) >=
-         wSize;
+  return find_obj_with_dest(obj_mech, W_LOC, special_equipment_index(w_type)) >=
+         w_size;
 } // end hasPhysical()
 
-bool canUsePhysical(const PhysicalWeaponRequest *request) {
-  Mech *objMech = request->mech;
-  const int wLoc = request->section;
-  const MechPhysicalWeaponType wPhysType = request->type;
-  bool tRet = true;
+bool can_use_physical(const PhysicalWeaponRequest *request) {
+  Mech *obj_mech = request->mech;
+  const int W_LOC = request->section;
+  const MechPhysicalWeaponType W_PHYS_TYPE = request->type;
+  bool t_ret = true;
 
-  switch (wPhysType) {
+  switch (W_PHYS_TYPE) {
   case PHY_AXE:
   case PHY_SWORD:
-    if (mech_section_is_destroyed(objMech, wLoc))
-      tRet = false;
+    if (mech_section_is_destroyed(obj_mech, W_LOC))
+      t_ret = false;
     else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = objMech,
-                 .slot = {.section = wLoc, .critical = 0},
+                 .mech = obj_mech,
+                 .slot = {.section = W_LOC, .critical = 0},
                  .special = SHOULDER_OR_HIP}))
-      tRet = false;
+      t_ret = false;
     else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = objMech,
-                 .slot = {.section = wLoc, .critical = 3},
+                 .mech = obj_mech,
+                 .slot = {.section = W_LOC, .critical = 3},
                  .special = HAND_OR_FOOT_ACTUATOR}))
-      tRet = false;
+      t_ret = false;
     break;
 
   case PHY_CLAW:
-    if (mech_section_is_destroyed(objMech, wLoc))
-      tRet = false;
+    if (mech_section_is_destroyed(obj_mech, W_LOC))
+      t_ret = false;
     break;
 
   case PHY_MACE:
-    if (mech_section_is_destroyed(objMech, wLoc))
-      tRet = false;
+    if (mech_section_is_destroyed(obj_mech, W_LOC))
+      t_ret = false;
     else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = objMech,
-                 .slot = {.section = wLoc, .critical = 0},
+                 .mech = obj_mech,
+                 .slot = {.section = W_LOC, .critical = 0},
                  .special = SHOULDER_OR_HIP}))
-      tRet = false;
+      t_ret = false;
     else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = objMech,
-                 .slot = {.section = wLoc, .critical = 3},
+                 .mech = obj_mech,
+                 .slot = {.section = W_LOC, .critical = 3},
                  .special = HAND_OR_FOOT_ACTUATOR}))
-      tRet = false;
+      t_ret = false;
     break;
 
   case PHY_SAW:
-    if (mech_section_is_destroyed(objMech, wLoc))
-      tRet = false;
+    if (mech_section_is_destroyed(obj_mech, W_LOC))
+      t_ret = false;
     else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = objMech,
-                 .slot = {.section = wLoc, .critical = 0},
+                 .mech = obj_mech,
+                 .slot = {.section = W_LOC, .critical = 0},
                  .special = SHOULDER_OR_HIP}))
-      tRet = false;
+      t_ret = false;
     break;
 
   default:
-    tRet = false;
+    t_ret = false;
   } // end switch()
 
-  return tRet;
+  return t_ret;
 } // end canUsePhysical()

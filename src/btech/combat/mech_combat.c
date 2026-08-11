@@ -107,7 +107,7 @@ void mech_target(DbRef player, void *data, char *buffer) {
   }
   type = mech_class(target);
   movement_type = mech_movement_type(target);
-  index = ArmorSectionFromString(type, movement_type, args[0]);
+  index = armor_section_from_string(type, movement_type, args[0]);
   if (index < 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid location!");
@@ -116,7 +116,7 @@ void mech_target(DbRef player, void *data, char *buffer) {
   mech_targeting_aim_set(
       mech,
       (MechAimSelection){.section = index, .unit_class = (UnitClass)type});
-  ArmorStringFromIndex(index, section, type, movement_type);
+  armor_string_from_index(index, section, type, movement_type);
   notify_printf(btech_context_evaluation(context), player, "%s targetted.",
                 section);
 }
@@ -129,7 +129,7 @@ void mech_target(DbRef player, void *data, char *buffer) {
 /*Distance: <9, <20, rest */
 
 /* Idea: Tonseverity + 3 * distseverity */
-static const char *const ss_messages[] = {
+static const char *const SS_MESSAGES[] = {
     "You feel you'll have your hands full before too long..",
     "You have a bad feeling about this..",
     "You feel a homicidal maniac is about to pounce on you!",
@@ -152,15 +152,15 @@ static int sixth_sense_tonnage_severity(int difference) {
 
 static void mech_ss_event(MuxEvent *ev) {
   Mech *mech = (Mech *)ev->data;
-  const int i = (int)(intptr_t)ev->data2;
+  const int I = (int)(intptr_t)ev->data2;
 
   if (mech_pilot_is_unconscious(mech))
     return;
   if (!mech_has_active_pilot(mech))
     return;
   const char *const *message = (const char *const *)checked_storage_at_const(
-      (const void *)ss_messages, sizeof(ss_messages) / sizeof(*ss_messages),
-      sizeof(*ss_messages), (size_t)BOUNDED(0, i, 8));
+      (const void *)SS_MESSAGES, sizeof(SS_MESSAGES) / sizeof(*SS_MESSAGES),
+      sizeof(*SS_MESSAGES), (size_t)bounded(0, I, 8));
   mech_notify(mech, MECHPILOT, *message);
 }
 
@@ -187,9 +187,9 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
   BattleMap *mech_map;
   char *args[5];
-  char targetID[2];
+  char target_id[2];
   int argc;
-  int LOS = 1;
+  int los = 1;
   int newx, newy;
   DbRef targetref;
   int mode;
@@ -211,17 +211,17 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
         mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
       return;
     }
-    targetID[0] = *checked_string_suffix(*first_argument, 0);
-    targetID[1] = *checked_string_suffix(*first_argument, 1);
-    targetref = FindTargetDBREFFromMapNumber(mech, targetID);
+    target_id[0] = *checked_string_suffix(*first_argument, 0);
+    target_id[1] = *checked_string_suffix(*first_argument, 1);
+    targetref = find_target_dbref_from_map_number(mech, target_id);
     target = btech_context_get_mech(context, targetref);
     if (target)
-      LOS =
+      los =
           mech_los_check(mech, target, mech_position_x(target),
                          mech_position_y(target), mech_range_to(mech, target));
     else
       targetref = -1;
-    if (targetref == -1 || !LOS) {
+    if (targetref == -1 || !los) {
       mecha_notify(btech_context_evaluation(context), player,
                    "That is not a valid targetID. Try again.");
       return;

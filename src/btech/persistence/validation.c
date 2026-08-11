@@ -9,8 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct btech_special_object_counts BTECH_SPECIAL_OBJECT_COUNTS;
-struct btech_special_object_counts {
+typedef struct BtechSpecialObjectCounts BtechSpecialObjectCounts;
+struct BtechSpecialObjectCounts {
   int maps;
   int mechs;
   int mechreps;
@@ -25,7 +25,7 @@ static int btech_special_count_objects(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   int depth = call->depth;
   void *argument = call->context;
-  BTECH_SPECIAL_OBJECT_COUNTS *counts = argument;
+  BtechSpecialObjectCounts *counts = argument;
   BtechSpecialObject *xcode = data;
 
   (void)key;
@@ -65,7 +65,7 @@ static int btech_special_table_count(sqlite3 *sqlite, const char *table,
   statement = NULL;
   if (snprintf(sql, sizeof(sql), "SELECT count(*) FROM %s;", table) < 0)
     return -1;
-  result = sqlite3_prepare_v2(sqlite, sql, -1, &statement, NULL) == SQLITE_OK &&
+  result = SQLITE3_PREPARE_V2(sqlite, sql, -1, &statement, NULL) == SQLITE_OK &&
                    sqlite3_step(statement) == SQLITE_ROW &&
                    btech_special_column_int(statement, 0, count) == 0 &&
                    sqlite3_step(statement) == SQLITE_DONE
@@ -88,7 +88,7 @@ static int btech_special_require_rows(sqlite3 *sqlite, const char *table,
 /* Require one parent and every fixed child row for each preallocated object. */
 static int btech_special_validate_required_rows(sqlite3 *sqlite,
                                                 BtechContext *context) {
-  BTECH_SPECIAL_OBJECT_COUNTS counts = {0, 0, 0, 0, 0};
+  BtechSpecialObjectCounts counts = {0, 0, 0, 0, 0};
 
   red_black_tree_walk(context->special_objects, WALK_INORDER,
                       btech_special_count_objects, &counts);

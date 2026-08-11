@@ -21,15 +21,15 @@
 #include "mux/support/formatting.h"
 #include "section_types.h"
 
-int mech_head_hit_modify(int hitGroup, Mech *mech);
-int mech_punch_hit_location(Mech *target, int hitGroup);
-int mech_kick_hit_location(Mech *target, int hitGroup);
+int mech_head_hit_modify(int hit_group, Mech *mech);
+int mech_punch_hit_location(Mech *target, int hit_group);
+int mech_kick_hit_location(Mech *target, int hit_group);
 int mech_battle_suit_hit_location(Mech *mech);
 int mech_hit_location_transfer(Mech *mech, int hitloc);
 int mech_section_is_crittable(Mech *mech, int section,
                               CriticalThreshold threshold);
 int mech_spheroid_rear_section(const Mech *mech, int section);
-void mech_motive_system_hit(Mech *mech, int wRollMod);
+void mech_motive_system_hit(Mech *mech, int w_roll_mod);
 static inline HitLocationResult hit_location_result_at(HitLocationResult result,
                                                        int location) {
   result.location = location;
@@ -50,6 +50,6 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
                                                int roll);
 HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hit_group,
                                                      HitLocationResult result);
-int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical);
-int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear);
+int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical);
+int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear);
 HitLocationResult find_swarm_hit_location(BtechContext *context);

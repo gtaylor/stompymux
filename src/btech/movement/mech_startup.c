@@ -48,7 +48,7 @@
 
 enum { BOOT_MESSAGE_COUNT = 6 };
 
-static const char *const bsuit_bootmsgs[BOOT_MESSAGE_COUNT] = {
+static const char *const BSUIT_BOOTMSGS[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->         Initializing powerpack       <-[reset]",
     "[fg=green]->          Powerpack operational       <-[reset]",
     "[fg=green]->             Suit sealed              <-[reset]",
@@ -57,7 +57,7 @@ static const char *const bsuit_bootmsgs[BOOT_MESSAGE_COUNT] = {
     ("       [fg=green]- [fg=red]-=>[fg=white bold] All systems go![reset] "
      "[fg=red]<= [fg=green]-[reset]")};
 
-static const char *const aero_bootmsgs[BOOT_MESSAGE_COUNT] = {
+static const char *const AERO_BOOTMSGS[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->       Main reactor is now online    <-[reset]",
     "[fg=green]->            Thrusters online         <-[reset]",
     "[fg=green]->  Main computer system is now online <-[reset]",
@@ -66,7 +66,7 @@ static const char *const aero_bootmsgs[BOOT_MESSAGE_COUNT] = {
     ("       [fg=green]- [fg=red]-=>[fg=white bold] All systems go![reset] "
      "[fg=red]<= [fg=green]-[reset]")};
 
-static const char *const bootmsgs[BOOT_MESSAGE_COUNT] = {
+static const char *const BOOTMSGS[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->       Main reactor is now online    <-[reset]",
     "[fg=green]->         Gyros are now stable        <-[reset]",
     "[fg=green]->  Main computer system is now online <-[reset]",
@@ -75,7 +75,7 @@ static const char *const bootmsgs[BOOT_MESSAGE_COUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static const char *const hover_bootmsgs[BOOT_MESSAGE_COUNT] = {
+static const char *const HOVER_BOOTMSGS[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->  Powerplant initialized and online  <-[reset]",
     "[fg=green]->   Checking plenum chamber status    <-[reset]",
     "[fg=green]->         Verifying fan status        <-[reset]",
@@ -84,7 +84,7 @@ static const char *const hover_bootmsgs[BOOT_MESSAGE_COUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static const char *const track_bootmsgs[BOOT_MESSAGE_COUNT] = {
+static const char *const TRACK_BOOTMSGS[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->  Powerplant initialized and online  <-[reset]",
     "[fg=green]->      Auto-aligning drive wheels     <-[reset]",
     "[fg=green]->       Adjusting track tension       <-[reset]",
@@ -93,7 +93,7 @@ static const char *const track_bootmsgs[BOOT_MESSAGE_COUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static const char *const wheel_bootmsgs[BOOT_MESSAGE_COUNT] = {
+static const char *const WHEEL_BOOTMSGS[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->  Powerplant initialized and online  <-[reset]",
     "[fg=green]->  Performing steering system checks  <-[reset]",
     "[fg=green]->        Checking wheel status        <-[reset]",
@@ -102,7 +102,7 @@ static const char *const wheel_bootmsgs[BOOT_MESSAGE_COUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static const char *const vtol_bootmsgs[BOOT_MESSAGE_COUNT] = {
+static const char *const VTOL_BOOTMSGS[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->     Initializing main powerplant    <-[reset]",
     "[fg=green]-> Main turbine online and operational <-[reset]",
     "[fg=green]->      Rotor transmission engaged     <-[reset]",
@@ -111,7 +111,7 @@ static const char *const vtol_bootmsgs[BOOT_MESSAGE_COUNT] = {
     ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
      "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
-static const char *const naval_bootmsgs[BOOT_MESSAGE_COUNT] = {
+static const char *const NAVAL_BOOTMSGS[BOOT_MESSAGE_COUNT] = {
     "[fg=green]->       Main reactor is now online    <-[reset]",
     "[fg=green]->  Main computer system is now online <-[reset]",
     "[fg=green]->   Hull integrity monitoring online  <-[reset]",
@@ -125,9 +125,9 @@ startup_message(const char *const messages[static BOOT_MESSAGE_COUNT],
                 long timer) {
   if (timer < 0)
     abort();
-  const size_t index = (size_t)timer;
+  const size_t INDEX = (size_t)timer;
   const char *const *message = (const char *const *)checked_storage_at_const(
-      (const void *)messages, BOOT_MESSAGE_COUNT, sizeof(*messages), index);
+      (const void *)messages, BOOT_MESSAGE_COUNT, sizeof(*messages), INDEX);
   return *message;
 }
 
@@ -155,33 +155,33 @@ static void mech_startup_event(MuxEvent *e) {
 #pragma clang diagnostic ignored "-Wformat-security"
 #endif
   if (mech_is_aerospace_unit(mech)) {
-    mech_printf(mech, MECHALL, startup_message(aero_bootmsgs, timer));
+    mech_printf(mech, MECHALL, startup_message(AERO_BOOTMSGS, timer));
   } else if (unit_class == CLASS_BSUIT) {
-    mech_printf(mech, MECHALL, startup_message(bsuit_bootmsgs, timer));
+    mech_printf(mech, MECHALL, startup_message(BSUIT_BOOTMSGS, timer));
   } else
     switch (movement_type) {
     case MOVE_HOVER:
-      mech_printf(mech, MECHALL, startup_message(hover_bootmsgs, timer));
+      mech_printf(mech, MECHALL, startup_message(HOVER_BOOTMSGS, timer));
       break;
     case MOVE_TRACK:
-      mech_printf(mech, MECHALL, startup_message(track_bootmsgs, timer));
+      mech_printf(mech, MECHALL, startup_message(TRACK_BOOTMSGS, timer));
       break;
     case MOVE_WHEEL:
-      mech_printf(mech, MECHALL, startup_message(wheel_bootmsgs, timer));
+      mech_printf(mech, MECHALL, startup_message(WHEEL_BOOTMSGS, timer));
       break;
     case MOVE_VTOL:
-      mech_printf(mech, MECHALL, startup_message(vtol_bootmsgs, timer));
+      mech_printf(mech, MECHALL, startup_message(VTOL_BOOTMSGS, timer));
       break;
     case MOVE_BIPED:
-      mech_printf(mech, MECHALL, startup_message(bootmsgs, timer));
+      mech_printf(mech, MECHALL, startup_message(BOOTMSGS, timer));
       break;
     case MOVE_HULL:
     case MOVE_FOIL:
     case MOVE_SUB:
-      mech_printf(mech, MECHALL, startup_message(naval_bootmsgs, timer));
+      mech_printf(mech, MECHALL, startup_message(NAVAL_BOOTMSGS, timer));
       break;
     default:
-      mech_printf(mech, MECHALL, startup_message(bootmsgs, timer));
+      mech_printf(mech, MECHALL, startup_message(BOOTMSGS, timer));
       break;
     }
 #ifdef __clang__
@@ -224,7 +224,7 @@ static void mech_startup_event(MuxEvent *e) {
     battle_map_los_observer_clear(mech_map, mech_map_slot(mech));
   initialize_pc(mech_pilot_dbref(mech), mech);
   mech_power_up(mech);
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   mech_cargo_weight_recalculate(mech);
   mech_player_killer_set(mech, false);
   mech_los_broadcast(mech, "powers up!");

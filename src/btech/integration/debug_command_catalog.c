@@ -3,14 +3,14 @@
 #include "command_registry.h"
 #include <stddef.h>
 
-const BtechCommandDefinition debugcommands[] = {
+const BtechCommandDefinition DEBUGCOMMANDS[] = {
     {0, "EVENTSTATS", "@Shows event statistics",
-     btech_command_invoke_debug_EventTypes},
+     btech_command_invoke_debug_event_types},
     {0, "MEMSTATS [LONG]", "@Shows memory statistics (optionally in long form)",
      btech_command_invoke_debug_memory},
     {0, "SAVEDB", "@Writes a SQLite game checkpoint",
      btech_command_invoke_debug_savedb},
-    {0, "LISTFORMS", "@Shows forms", btech_command_invoke_ListForms},
+    {0, "LISTFORMS", "@Shows forms", btech_command_invoke_list_forms},
 
     {0, "SETVRT <WEAPON> <NUM>",
      "@Sets the VariableRecycleTime for weapon <WEAPON> to <NUM>",
@@ -29,5 +29,5 @@ const BtechCommandDefinition debugcommands[] = {
     {0, NULL, NULL, NULL}};
 
 size_t debug_command_count(void) {
-  return sizeof(debugcommands) / sizeof(*debugcommands) - 1;
+  return sizeof(DEBUGCOMMANDS) / sizeof(*DEBUGCOMMANDS) - 1;
 }

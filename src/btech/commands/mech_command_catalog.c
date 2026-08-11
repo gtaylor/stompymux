@@ -3,7 +3,7 @@
 #include "command_registry.h"
 #include <stddef.h>
 
-const BtechCommandDefinition mechcommands[] = {
+const BtechCommandDefinition MECHCOMMANDS[] = {
     /* Movement */
     {0, "Movement", "Movement", nullptr},
 
@@ -556,24 +556,24 @@ const BtechCommandDefinition mechcommands[] = {
      "@Lets you 'snipe' (=shoot artillery weapons with movement prediction)",
      btech_command_invoke_mech_snipe},
     {0, "ADDSTUFF <NAME> <COUNT>", "@Adds <COUNT> <NAME> to mech's inventory",
-     btech_command_invoke_mech_Raddstuff},
+     btech_command_invoke_mech_raddstuff},
 
     {0, "FIXSTUFF", "@Fixes consistency errors in econ data",
-     btech_command_invoke_mech_Rfixstuff},
+     btech_command_invoke_mech_rfixstuff},
     {0, "CLEARSTUFF", "@Removes all stuff from 'mech",
-     btech_command_invoke_mech_Rresetstuff},
+     btech_command_invoke_mech_rresetstuff},
 
     {0, "REMOVESTUFF <NAME> <COUNT>",
      "@Removes <COUNT> <NAME> from mech's inventory",
-     btech_command_invoke_mech_Rremovestuff},
+     btech_command_invoke_mech_rremovestuff},
     {0, "SETMAPINDX <NUM>", "@Sets the mech's map index to num.",
-     btech_command_invoke_mech_Rsetmapindex},
+     btech_command_invoke_mech_rsetmapindex},
     {0, "SETTEAM <NUM>", "@Sets the teams.",
-     btech_command_invoke_mech_Rsetteam},
+     btech_command_invoke_mech_rsetteam},
     {0, "SETXY <X> <Y>", "@Sets the x & y value of the mech.",
-     btech_command_invoke_mech_Rsetxy},
+     btech_command_invoke_mech_rsetxy},
     {0, NULL, NULL, NULL}};
 
 size_t mech_command_count(void) {
-  return sizeof(mechcommands) / sizeof(*mechcommands) - 1;
+  return sizeof(MECHCOMMANDS) / sizeof(*MECHCOMMANDS) - 1;
 }

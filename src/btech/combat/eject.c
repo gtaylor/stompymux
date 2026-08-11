@@ -225,10 +225,10 @@ static void char_eject(DbRef player, Mech *mech) {
   }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
   mech_team_set(m, mech_team(mech));
-  mech_Rsetmapindex(GOD, (void *)m, tprintf("%ld", mech_map_dbref(mech)));
-  mech_Rsetxy(GOD, (void *)m,
+  mech_rsetmapindex(GOD, (void *)m, tprintf("%ld", mech_map_dbref(mech)));
+  mech_rsetxy(GOD, (void *)m,
               tprintf("%d %d", mech_position_x(mech), mech_position_y(mech)));
-  mech_Rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
+  mech_rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
   move_via_teleport(
       &(ObjectMovementRequest){.evaluation = evaluation,
                                .object = suit,
@@ -386,11 +386,11 @@ static void char_disembark(DbRef player, Mech *mech) {
   }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
   mech_team_set(m, mech_team(mech));
-  mech_Rsetmapindex(GOD, (void *)m, tprintf("%ld", mech_map_dbref(mech)));
-  mech_Rsetxy(GOD, (void *)m,
+  mech_rsetmapindex(GOD, (void *)m, tprintf("%ld", mech_map_dbref(mech)));
+  mech_rsetxy(GOD, (void *)m,
               tprintf("%d %d", mech_position_x(mech), mech_position_y(mech)));
   mech_position_hex_z_set(m, mech_position_z(mech));
-  mech_Rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
+  mech_rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
   move_via_teleport(
       &(ObjectMovementRequest){.evaluation = evaluation,
                                .object = suit,
@@ -567,14 +567,14 @@ void mech_udisembark(DbRef player, void *data, const char *buffer) {
   }
 
   /* Carry out the disembarking. */
-  mech_Rsetmapindex(GOD, (void *)mech,
+  mech_rsetmapindex(GOD, (void *)mech,
                     tprintf("%d", (int)mech_map_dbref(target)));
-  mech_Rsetxy(
+  mech_rsetxy(
       GOD, (void *)mech,
       tprintf("%d %d", mech_position_x(target), mech_position_y(target)));
   mech_position_z_set(mech, mech_position_z(target));
-  const int elevation = mech_position_z(mech);
-  mech_position_real_z_set(mech, ZSCALE * (float)elevation);
+  const int ELEVATION = mech_position_z(mech);
+  mech_position_real_z_set(mech, ZSCALE * (float)ELEVATION);
   mymap = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!mymap) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -596,7 +596,7 @@ void mech_udisembark(DbRef player, void *data, const char *buffer) {
     mech_power_up(mech);
   }
 
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   mech_cargo_weight_recalculate(mech);
   mech_player_killer_set(mech, false);
   mech_los_broadcast(mech, "powers up!");
@@ -622,7 +622,7 @@ void mech_udisembark(DbRef player, void *data, const char *buffer) {
   mech_communication_last_tick_set(mech, 0);
   autopilot_resume_for_mech(mech);
   mech_cargo_space_add(target, mech_tonnage(mech) * 100);
-  MarkForLOSUpdate(target);
+  mark_for_los_update(target);
 
   /* A hidden carrier that is disembarked from loses its HIDDEN status */
   if (mech_condition_summary(target).hidden) {

@@ -15,7 +15,7 @@ const int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
  * Each file holds one complete game snapshot. Typed Lua object state is
  * normalized so a future incremental store can use the same representation.
  */
-const char schema_objects_sql[] =
+const char SCHEMA_OBJECTS_SQL[] =
     "CREATE TABLE snapshot ("
     " id INTEGER PRIMARY KEY CHECK (id = 1),"
     " schema_version INTEGER NOT NULL,"
@@ -81,7 +81,7 @@ const char schema_objects_sql[] =
     "1))"
     ");";
 
-const char schema_state_sql[] =
+const char SCHEMA_STATE_SQL[] =
     "CREATE TABLE player_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
     " password_hash TEXT, alias TEXT, last_login INTEGER, last_site TEXT,"
@@ -155,7 +155,7 @@ const char schema_state_sql[] =
     " PRIMARY KEY (object_dbref, namespace, key)"
     ") WITHOUT ROWID;";
 
-const NativeColumn native_columns[] = {
+const NativeColumn NATIVE_COLUMNS[] = {
     {A_DESC, "objects", "dbref", "description"},
     {A_IDESC, "objects", "dbref", "inside_description"},
     {A_DESTROYER, "objects", "dbref", "destroyer"},
@@ -181,7 +181,7 @@ const NativeColumn native_columns[] = {
      "personal_combat_equipment"},
 };
 
-const size_t native_column_count =
-    sizeof(native_columns) / sizeof(*native_columns);
+const size_t NATIVE_COLUMN_COUNT =
+    sizeof(NATIVE_COLUMNS) / sizeof(*NATIVE_COLUMNS);
 
 /* Log either the SQLite error or the current operating-system error. */

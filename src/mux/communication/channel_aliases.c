@@ -25,21 +25,21 @@
 #include "mux/support/utf8.h"
 #include "mux/world/player.h"
 
-struct comuser *channel_user_at(const struct channel *channel, size_t index) {
-  return *(struct comuser *const *)checked_storage_at_const(
+struct Comuser *channel_user_at(const struct Channel *channel, size_t index) {
+  return *(struct Comuser *const *)checked_storage_at_const(
       (const void *)channel->users, (size_t)channel->num_users,
       sizeof(*channel->users), index);
 }
 
-struct comuser **channel_user_slot(struct channel *channel, size_t index) {
-  return (struct comuser **)checked_storage_at((void *)channel->users,
+struct Comuser **channel_user_slot(struct Channel *channel, size_t index) {
+  return (struct Comuser **)checked_storage_at((void *)channel->users,
                                                (size_t)channel->max_users,
                                                sizeof(*channel->users), index);
 }
 
 void do_joinchannel(EvaluationContext *evaluation, DbRef player,
-                    struct channel *ch) {
-  struct comuser *user;
+                    struct Channel *ch) {
+  struct Comuser *user;
   int i;
 
   user = select_user(ch, player);
@@ -47,9 +47,9 @@ void do_joinchannel(EvaluationContext *evaluation, DbRef player,
   if (!user) {
     ch->num_users++;
     if (ch->num_users >= ch->max_users) {
-      const int capacity = ch->max_users + 10;
-      struct comuser **users = (struct comuser **)realloc(
-          (void *)ch->users, sizeof(*ch->users) * (size_t)capacity);
+      const int CAPACITY = ch->max_users + 10;
+      struct Comuser **users = (struct Comuser **)realloc(
+          (void *)ch->users, sizeof(*ch->users) * (size_t)CAPACITY);
 
       if (users == nullptr) {
         ch->num_users--;
@@ -57,14 +57,14 @@ void do_joinchannel(EvaluationContext *evaluation, DbRef player,
         return;
       }
       ch->users = users;
-      ch->max_users = capacity;
+      ch->max_users = CAPACITY;
       memset(checked_storage_at((void *)ch->users, (size_t)ch->max_users,
                                 sizeof(*ch->users), (size_t)ch->num_users - 1),
              0,
-             sizeof(struct comuser *) *
+             sizeof(struct Comuser *) *
                  (size_t)(ch->max_users - ch->num_users));
     }
-    user = (struct comuser *)malloc(sizeof(struct comuser));
+    user = (struct Comuser *)malloc(sizeof(struct Comuser));
 
     for (i = ch->num_users - 1;
          i > 0 && channel_user_at(ch, (size_t)i - 1)->who > player; i--)
@@ -95,8 +95,8 @@ void do_joinchannel(EvaluationContext *evaluation, DbRef player,
 }
 
 void comsys_leave_channel(EvaluationContext *evaluation, DbRef player,
-                          struct channel *ch) {
-  struct comuser *user;
+                          struct Channel *ch) {
+  struct Comuser *user;
   int i;
 
   user = select_user(ch, player);
@@ -106,7 +106,7 @@ void comsys_leave_channel(EvaluationContext *evaluation, DbRef player,
 
   /* Trigger ALEAVE of any channel objects on the channel */
   for (i = ch->num_users - 1; i > 0; i--) {
-    struct comuser *member = channel_user_at(ch, (size_t)i);
+    struct Comuser *member = channel_user_at(ch, (size_t)i);
 
     if (typeof_obj(evaluation->world->database, member->who) ==
         OBJECT_TYPE_THING)
@@ -128,8 +128,8 @@ void comsys_leave_channel(EvaluationContext *evaluation, DbRef player,
 }
 
 void comsys_show_channel_who(EvaluationContext *evaluation, DbRef player,
-                             struct channel *ch) {
-  struct comuser *user;
+                             struct Channel *ch) {
+  struct Comuser *user;
   char *buff;
 
   raw_notify(evaluation, player, "-- Players --");
@@ -177,11 +177,11 @@ void comsys_show_channel_who(EvaluationContext *evaluation, DbRef player,
   notify_printf(evaluation, player, "-- %s --", ch->name);
 }
 
-struct channel *select_channel(ChannelRegistry *channels, const char *channel) {
-  return (struct channel *)hash_table_find(channel, &channels->channels);
+struct Channel *select_channel(ChannelRegistry *channels, const char *channel) {
+  return (struct Channel *)hash_table_find(channel, &channels->channels);
 }
 
-struct comuser *select_user(struct channel *ch, DbRef player) {
+struct Comuser *select_user(struct Channel *ch, DbRef player) {
   int last, current;
   int dir = 1, first = 0;
 
@@ -193,7 +193,7 @@ struct comuser *select_user(struct channel *ch, DbRef player) {
 
   while (dir && (first <= last)) {
     current = (first + last) / 2;
-    struct comuser *candidate = channel_user_at(ch, (size_t)current);
+    struct Comuser *candidate = channel_user_at(ch, (size_t)current);
 
     if (candidate == nullptr) {
       last--;
@@ -219,9 +219,9 @@ struct comuser *select_user(struct channel *ch, DbRef player) {
 void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
                       char *arg2) {
   char channel[200];
-  struct channel *ch;
+  struct Channel *ch;
   int where;
-  struct commac *c;
+  struct Commac *c;
 
   if (!*arg1) {
     raw_notify(evaluation, player, "You need to specify an alias.");
@@ -281,8 +281,8 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
     return;
   }
   if (c->numchannels >= c->maxchannels) {
-    const int capacity = c->maxchannels + 10;
-    char *aliases = realloc(c->alias, sizeof(*c->alias) * 6 * (size_t)capacity);
+    const int CAPACITY = c->maxchannels + 10;
+    char *aliases = realloc(c->alias, sizeof(*c->alias) * 6 * (size_t)CAPACITY);
     char **channels = nullptr;
 
     if (aliases == nullptr) {
@@ -290,7 +290,7 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
       return;
     }
     channels = (char **)realloc((void *)c->channels,
-                                sizeof(*c->channels) * (size_t)capacity);
+                                sizeof(*c->channels) * (size_t)CAPACITY);
     if (channels == nullptr) {
       c->alias = aliases;
       raw_notify(evaluation, player, "Unable to add that channel alias.");
@@ -298,7 +298,7 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
     }
     c->alias = aliases;
     c->channels = channels;
-    c->maxchannels = capacity;
+    c->maxchannels = CAPACITY;
   }
   if (where < c->numchannels) {
     memmove(commac_alias_at(c, (size_t)where + 1),
@@ -333,7 +333,7 @@ void do_delcom(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *arg1 = invocation->first;
   int i;
-  struct commac *c;
+  struct Commac *c;
 
   if (!arg1) {
     raw_notify(evaluation, player, "Need an alias to delete.");
@@ -366,8 +366,8 @@ void do_delcom(CommandInvocation *invocation) {
 
 void comsys_delete_channel_alias(EvaluationContext *evaluation, DbRef player,
                                  char *channel) {
-  struct channel *ch;
-  struct comuser *user;
+  struct Channel *ch;
+  struct Comuser *user;
   int i;
 
   ch = select_channel(evaluation->runtime->channels, channel);
@@ -377,7 +377,7 @@ void comsys_delete_channel_alias(EvaluationContext *evaluation, DbRef player,
 
     /* Trigger ALEAVE of any channel objects on the channel */
     for (i = ch->num_users - 1; i > 0; i--) {
-      struct comuser *member = channel_user_at(ch, (size_t)i);
+      struct Comuser *member = channel_user_at(ch, (size_t)i);
 
       if (typeof_obj(evaluation->world->database, member->who) ==
           OBJECT_TYPE_THING)

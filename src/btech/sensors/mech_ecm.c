@@ -31,129 +31,130 @@ typedef enum MechEcmNotification {
  * Kipsta
  */
 
-static void mech_ecm_notification_send(Mech *objMech,
-                                       MechEcmNotification wMsgType) {
-  switch (wMsgType) {
+static void mech_ecm_notification_send(Mech *obj_mech,
+                                       MechEcmNotification w_msg_type) {
+  switch (w_msg_type) {
   case MECH_ECM_NOTIFY_DISTURBED:
 
-    mech_notify(objMech, MECHALL,
+    mech_notify(obj_mech, MECHALL,
                 "Half your screens are suddenly filled with static!");
     break;
   case MECH_ECM_NOTIFY_UNDISTURBED:
 
-    mech_notify(objMech, MECHALL, "All your systems are back to normal again!");
+    mech_notify(obj_mech, MECHALL,
+                "All your systems are back to normal again!");
     break;
   case MECH_ECM_NOTIFY_COUNTERED:
-    if (mech_has_working_ecm_suite(objMech))
+    if (mech_has_working_ecm_suite(obj_mech))
       mech_notify(
-          objMech, MECHALL,
+          obj_mech, MECHALL,
           "Your ECM suite's ready light turns red, countered by enemy ECCM!");
     break;
   case MECH_ECM_NOTIFY_UNCOUNTERED:
-    if (mech_has_working_ecm_suite(objMech))
-      mech_notify(objMech, MECHALL,
+    if (mech_has_working_ecm_suite(obj_mech))
+      mech_notify(obj_mech, MECHALL,
                   "Your ECM suite's ready light turns green, enemy ECCM is out "
                   "of range.");
     break;
   }
 }
-void mech_ecm_check(Mech *objMech) {
-  BattleMap *objMapmap;
-  Mech *objOtherMech;
+void mech_ecm_check(Mech *obj_mech) {
+  BattleMap *obj_mapmap;
+  Mech *obj_other_mech;
   float range = 0.0;
 
-  int wFriendlyECM = 0;
-  int wFriendlyECCM = 0;
-  int wUnFriendlyECM = 0;
-  int wUnFriendlyECCM = 0;
+  int w_friendly_ecm = 0;
+  int w_friendly_eccm = 0;
+  int w_un_friendly_ecm = 0;
+  int w_un_friendly_eccm = 0;
 
-  int wFriendlyAngelECM = 0;
-  int wFriendlyAngelECCM = 0;
-  int wUnFriendlyAngelECM = 0;
-  int wUnFriendlyAngelECCM = 0;
+  int w_friendly_angel_ecm = 0;
+  int w_friendly_angel_eccm = 0;
+  int w_un_friendly_angel_ecm = 0;
+  int w_un_friendly_angel_eccm = 0;
 
-  int wFriendlyECMDelta = 0;
-  int wFriendlyECCMDelta = 0;
+  int w_friendly_ecm_delta = 0;
+  int w_friendly_eccm_delta = 0;
 
-  int tCheckECM = 0;
-  int tCheckECCM = 0;
+  int t_check_ecm = 0;
+  int t_check_eccm = 0;
 
-  int wIter = 0;
-  int tMark = 0;
+  int w_iter = 0;
+  int t_mark = 0;
 
-  objMapmap =
-      btech_context_find_object(mech_context(objMech), mech_map_dbref(objMech));
-  if (!objMapmap) /* get our map */
+  obj_mapmap = btech_context_find_object(mech_context(obj_mech),
+                                         mech_map_dbref(obj_mech));
+  if (!obj_mapmap) /* get our map */
     return;
 
-  for (wIter = 0; wIter < battle_map_unit_count(objMapmap); wIter++) {
-    objOtherMech = btech_context_find_object(
-        mech_context(objMech), battle_map_unit_dbref(objMapmap, wIter));
-    if (!objOtherMech)
+  for (w_iter = 0; w_iter < battle_map_unit_count(obj_mapmap); w_iter++) {
+    obj_other_mech = btech_context_find_object(
+        mech_context(obj_mech), battle_map_unit_dbref(obj_mapmap, w_iter));
+    if (!obj_other_mech)
       continue;
 
-    range = mech_range_to(objOtherMech, objMech);
+    range = mech_range_to(obj_other_mech, obj_mech);
     if (range > ECM_RANGE)
       continue;
 
-    const MechConditionSummary other = mech_condition_summary(objOtherMech);
-    if (mech_team(objOtherMech) == mech_team(objMech)) {
-      if (other.ecm_enabled)
-        wFriendlyECM++;
+    const MechConditionSummary OTHER = mech_condition_summary(obj_other_mech);
+    if (mech_team(obj_other_mech) == mech_team(obj_mech)) {
+      if (OTHER.ecm_enabled)
+        w_friendly_ecm++;
 
-      if (other.eccm_enabled)
-        wFriendlyECCM++;
+      if (OTHER.eccm_enabled)
+        w_friendly_eccm++;
 
-      if (other.angel_ecm_enabled)
-        wFriendlyAngelECM++;
+      if (OTHER.angel_ecm_enabled)
+        w_friendly_angel_ecm++;
 
-      if (other.angel_eccm_enabled)
-        wFriendlyAngelECCM++;
+      if (OTHER.angel_eccm_enabled)
+        w_friendly_angel_eccm++;
 
       if (range <= 0.5F) {
-        if (other.personal_ecm_enabled)
-          wFriendlyECM++;
+        if (OTHER.personal_ecm_enabled)
+          w_friendly_ecm++;
 
-        if (other.personal_eccm_enabled)
-          wFriendlyECCM++;
+        if (OTHER.personal_eccm_enabled)
+          w_friendly_eccm++;
       }
     } else {
-      if (other.ecm_enabled)
-        wUnFriendlyECM++;
+      if (OTHER.ecm_enabled)
+        w_un_friendly_ecm++;
 
-      if (other.eccm_enabled)
-        wUnFriendlyECCM++;
+      if (OTHER.eccm_enabled)
+        w_un_friendly_eccm++;
 
-      if (other.angel_ecm_enabled)
-        wUnFriendlyAngelECM++;
+      if (OTHER.angel_ecm_enabled)
+        w_un_friendly_angel_ecm++;
 
-      if (other.angel_eccm_enabled)
-        wUnFriendlyAngelECCM++;
+      if (OTHER.angel_eccm_enabled)
+        w_un_friendly_angel_eccm++;
 
       if (range <= 0.5F) {
-        if (other.personal_ecm_enabled)
-          wUnFriendlyECM++;
+        if (OTHER.personal_ecm_enabled)
+          w_un_friendly_ecm++;
 
-        if (other.personal_eccm_enabled)
-          wUnFriendlyECCM++;
+        if (OTHER.personal_eccm_enabled)
+          w_un_friendly_eccm++;
       }
     }
   }
 
-  if (mech_condition_summary(objMech).stealth_armor_active ||
-      mech_has_attached_inarc_ecm(objMech))
-    wUnFriendlyECM += 1000;
+  if (mech_condition_summary(obj_mech).stealth_armor_active ||
+      mech_has_attached_inarc_ecm(obj_mech))
+    w_un_friendly_ecm += 1000;
 
   /* Generate our deltas */
-  wFriendlyECMDelta = wFriendlyECM + (2 * wFriendlyAngelECM) - wUnFriendlyECCM -
-                      (2 * wUnFriendlyAngelECCM);
-  wFriendlyECCMDelta = wFriendlyECCM + (2 * wFriendlyAngelECCM) -
-                       wUnFriendlyECM - (2 * wUnFriendlyAngelECM);
+  w_friendly_ecm_delta = w_friendly_ecm + (2 * w_friendly_angel_ecm) -
+                         w_un_friendly_eccm - (2 * w_un_friendly_angel_eccm);
+  w_friendly_eccm_delta = w_friendly_eccm + (2 * w_friendly_angel_eccm) -
+                          w_un_friendly_ecm - (2 * w_un_friendly_angel_ecm);
 
-  tCheckECM = ((wFriendlyECM != 0) || (wFriendlyAngelECM != 0) ||
-               (wUnFriendlyECCM != 0) || (wUnFriendlyAngelECCM != 0));
-  tCheckECCM = ((wFriendlyECCM != 0) || (wFriendlyAngelECCM != 0) ||
-                (wUnFriendlyECM != 0) || (wUnFriendlyAngelECM != 0));
+  t_check_ecm = ((w_friendly_ecm != 0) || (w_friendly_angel_ecm != 0) ||
+                 (w_un_friendly_eccm != 0) || (w_un_friendly_angel_eccm != 0));
+  t_check_eccm = ((w_friendly_eccm != 0) || (w_friendly_angel_eccm != 0) ||
+                  (w_un_friendly_ecm != 0) || (w_un_friendly_angel_ecm != 0));
 
   /* btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
    * tprintf("Checking unit %d. ECMDelta: %d. ECCMDelta: %d. CheckECM: %d.
@@ -164,91 +165,91 @@ void mech_ecm_check(Mech *objMech) {
   /* Now we do our checks... */
   /* Let's first see if we should just reset our flags... 'cause there's no ECM
    * or ECCM around */
-  if (!tCheckECM) {
-    if (mech_condition_summary(objMech).ecm_countered) {
-      mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_UNCOUNTERED);
-      mech_ecm_countered_set(objMech, false);
-      tMark = 1;
+  if (!t_check_ecm) {
+    if (mech_condition_summary(obj_mech).ecm_countered) {
+      mech_ecm_notification_send(obj_mech, MECH_ECM_NOTIFY_UNCOUNTERED);
+      mech_ecm_countered_set(obj_mech, false);
+      t_mark = 1;
     }
 
-    if (mech_condition_summary(objMech).ecm_protected ||
-        mech_condition_summary(objMech).angel_ecm_protected) {
-      mech_ecm_protected_set(objMech, false);
-      mech_angel_ecm_protected_set(objMech, false);
-      tMark = 1;
+    if (mech_condition_summary(obj_mech).ecm_protected ||
+        mech_condition_summary(obj_mech).angel_ecm_protected) {
+      mech_ecm_protected_set(obj_mech, false);
+      mech_angel_ecm_protected_set(obj_mech, false);
+      t_mark = 1;
     }
   }
 
-  if (!tCheckECCM) {
-    if (mech_is_any_ecm_disturbed(objMech)) {
-      mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_UNDISTURBED);
-      mech_ecm_disturbed_set(objMech, false);
-      mech_angel_ecm_disturbed_set(objMech, false);
-      tMark = 1;
+  if (!t_check_eccm) {
+    if (mech_is_any_ecm_disturbed(obj_mech)) {
+      mech_ecm_notification_send(obj_mech, MECH_ECM_NOTIFY_UNDISTURBED);
+      mech_ecm_disturbed_set(obj_mech, false);
+      mech_angel_ecm_disturbed_set(obj_mech, false);
+      t_mark = 1;
     }
   }
 
   /* Sanity check so we don't bother to do all the other checks */
-  if (!tCheckECM && !tCheckECCM) {
-    if (tMark)
-      MarkForLOSUpdate(objMech);
+  if (!t_check_ecm && !t_check_eccm) {
+    if (t_mark)
+      mark_for_los_update(obj_mech);
 
     return;
   }
 
   /* Now we see if our ECM has been countered */
-  if (tCheckECM) {
-    if (wFriendlyECMDelta <=
+  if (t_check_ecm) {
+    if (w_friendly_ecm_delta <=
         0) { /* They have the same or more ECCM than we have ECM */
-      if (!mech_condition_summary(objMech).ecm_countered) {
-        mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_COUNTERED);
-        mech_ecm_countered_set(objMech, true);
-        mech_ecm_protected_set(objMech, false);
-        mech_angel_ecm_protected_set(objMech, false);
+      if (!mech_condition_summary(obj_mech).ecm_countered) {
+        mech_ecm_notification_send(obj_mech, MECH_ECM_NOTIFY_COUNTERED);
+        mech_ecm_countered_set(obj_mech, true);
+        mech_ecm_protected_set(obj_mech, false);
+        mech_angel_ecm_protected_set(obj_mech, false);
       }
     } else {
-      if (mech_condition_summary(objMech).ecm_countered) {
-        mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_UNCOUNTERED);
-        mech_ecm_countered_set(objMech, false);
+      if (mech_condition_summary(obj_mech).ecm_countered) {
+        mech_ecm_notification_send(obj_mech, MECH_ECM_NOTIFY_UNCOUNTERED);
+        mech_ecm_countered_set(obj_mech, false);
       }
 
-      if (wFriendlyECM > 0)
-        mech_ecm_protected_set(objMech, true);
+      if (w_friendly_ecm > 0)
+        mech_ecm_protected_set(obj_mech, true);
       else
-        mech_ecm_protected_set(objMech, false);
+        mech_ecm_protected_set(obj_mech, false);
 
-      if (wFriendlyAngelECM > 0)
-        mech_angel_ecm_protected_set(objMech, true);
+      if (w_friendly_angel_ecm > 0)
+        mech_angel_ecm_protected_set(obj_mech, true);
       else
-        mech_angel_ecm_protected_set(objMech, false);
+        mech_angel_ecm_protected_set(obj_mech, false);
     }
   }
 
   /* Now we see if we're under an enemy ECM umbrella */
-  if (tCheckECCM) {
-    if (wFriendlyECCMDelta < 0) { /* They have more ECM than we have ECCM */
-      if (!mech_is_any_ecm_disturbed(objMech)) {
-        mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_DISTURBED);
+  if (t_check_eccm) {
+    if (w_friendly_eccm_delta < 0) { /* They have more ECM than we have ECCM */
+      if (!mech_is_any_ecm_disturbed(obj_mech)) {
+        mech_ecm_notification_send(obj_mech, MECH_ECM_NOTIFY_DISTURBED);
 
-        if (wUnFriendlyECM > 0)
-          mech_ecm_disturbed_set(objMech, true);
+        if (w_un_friendly_ecm > 0)
+          mech_ecm_disturbed_set(obj_mech, true);
         else
-          mech_ecm_disturbed_set(objMech, false);
+          mech_ecm_disturbed_set(obj_mech, false);
 
-        if (wUnFriendlyAngelECM > 0)
-          mech_angel_ecm_disturbed_set(objMech, true);
+        if (w_un_friendly_angel_ecm > 0)
+          mech_angel_ecm_disturbed_set(obj_mech, true);
         else
-          mech_angel_ecm_disturbed_set(objMech, false);
+          mech_angel_ecm_disturbed_set(obj_mech, false);
 
-        MarkForLOSUpdate(objMech);
+        mark_for_los_update(obj_mech);
       }
     } else {
-      if (mech_is_any_ecm_disturbed(objMech)) {
-        mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_UNDISTURBED);
+      if (mech_is_any_ecm_disturbed(obj_mech)) {
+        mech_ecm_notification_send(obj_mech, MECH_ECM_NOTIFY_UNDISTURBED);
 
-        mech_ecm_disturbed_set(objMech, false);
-        mech_angel_ecm_disturbed_set(objMech, false);
-        MarkForLOSUpdate(objMech);
+        mech_ecm_disturbed_set(obj_mech, false);
+        mech_angel_ecm_disturbed_set(obj_mech, false);
+        mark_for_los_update(obj_mech);
       }
     }
   }

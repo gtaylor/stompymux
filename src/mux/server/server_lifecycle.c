@@ -99,7 +99,7 @@ static void server_lifecycle_run_queues(MuxTimer *timer, void *arg) {
                     lifecycle->current_time);
   child = waitpid(-1, &status, WNOHANG);
   if (child > 0) {
-    dprintk("unexpected child %d exited with exit status %d.", child,
+    DPRINTK("unexpected child %d exited with exit status %d.", child,
             WEXITSTATUS(status));
   }
   if (lifecycle->maintenance->configuration->command_queue_idle_chunk)

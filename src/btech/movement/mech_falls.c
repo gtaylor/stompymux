@@ -49,7 +49,7 @@ static int mech_fall_movement_mode_delay(const Mech *mech) {
 #endif
 
 void mech_fall(Mech *mech, int levels, bool show_message) {
-  int roll, spread, i, hitloc, hitGroup = 0;
+  int roll, spread, i, hitloc, hit_group = 0;
   int isrear = 0, damage, iscritical = 0;
   int heading_offset = 0;
   BattleMap *map;
@@ -79,7 +79,7 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
                   "You try to avoid taking personal damage in the fall.");
     else
       mech_notify(mech, MECHPILOT, "You try to avoid taking personal damage.");
-    if (!MadePilotSkillRoll(mech, levels)) {
+    if (!made_pilot_skill_roll(mech, levels)) {
       if (mech_class(mech) == CLASS_MECH || mech_class(mech) == CLASS_MW ||
           show_message)
         mech_notify(mech, MECHPILOT, "You take personal injury from the fall!");
@@ -133,30 +133,30 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
   roll = btech_random_range_int(context, 1, 6);
   switch (roll) {
   case 1:
-    hitGroup = FRONT;
+    hit_group = FRONT;
     break;
   case 2:
     heading_offset = 60;
-    hitGroup = RIGHTSIDE;
+    hit_group = RIGHTSIDE;
     break;
   case 3:
     heading_offset = 120;
-    hitGroup = RIGHTSIDE;
+    hit_group = RIGHTSIDE;
     break;
   case 4:
     heading_offset = 180;
-    hitGroup = BACK;
+    hit_group = BACK;
     break;
   case 5:
     heading_offset = 240;
-    hitGroup = LEFTSIDE;
+    hit_group = LEFTSIDE;
     break;
   case 6:
     heading_offset = 300;
-    hitGroup = LEFTSIDE;
+    hit_group = LEFTSIDE;
     break;
   }
-  if (hitGroup == BACK)
+  if (hit_group == BACK)
     isrear = 1;
   mech_fall_heading_apply(mech, heading_offset);
   if (!mech_fall_is_in_water(mech) &&
@@ -187,7 +187,7 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
 
   if (!mech_condition_summary(mech).combat_safe) {
     for (i = 0; i < spread; i++) {
-      hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
+      hitloc = mech_hit_location(mech, hit_group, &iscritical, &isrear);
       mech_damage_apply(
           &(MechDamageRequest){.target = mech,
                                .attacker = mech,
@@ -208,7 +208,7 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
       mech_inferno_extinguish_in_water(mech);
     }
     if (damage % 5) {
-      hitloc = mech_hit_location(mech, hitGroup, &iscritical, &isrear);
+      hitloc = mech_hit_location(mech, hit_group, &iscritical, &isrear);
       mech_damage_apply(
           &(MechDamageRequest){.target = mech,
                                .attacker = mech,
@@ -230,5 +230,5 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
     }
   }
   mine_field_trigger(mech, MINE_FALL);
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }

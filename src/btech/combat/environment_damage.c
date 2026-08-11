@@ -64,7 +64,7 @@ void mech_reactor_explode(Mech *wounded, Mech *attacker) {
   mech_section_destroy(&(SectionDestructionRequest){
       .wounded = wounded, .attacker = attacker, .section = HEAD});
   mech_position_z_set(wounded, z + 6);
-  dam = MAX(mech_tonnage(wounded) / 5, mech_engine_rating(wounded) / 10);
+  dam = max(mech_tonnage(wounded) / 5, mech_engine_rating(wounded) / 10);
 
   mech_sensors_scramble_infrared_and_liteamp(&(SensorScrambleRequest){
       .source = wounded,
@@ -79,7 +79,7 @@ void mech_reactor_explode(Mech *wounded, Mech *attacker) {
               .map = map,
               .damage = {.total = dam,
                          .hit_size = 3,
-                         .heat = MAX(mech_tonnage(wounded) / 10,
+                         .heat = max(mech_tonnage(wounded) / 10,
                                      mech_engine_rating(wounded) / 25)},
               .impact = {.x = mech_position_real_x(wounded),
                          .y = mech_position_real_y(wounded)},
@@ -107,11 +107,12 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
                         bool disable) {
   float oldjs;
   int i;
-  int critType;
+  int crit_type;
   int nhs = 0;
-  int tDoAutoFall = 0;
-  int tIsLeg = ((hitloc == RLEG || hitloc == LLEG) ||
-                ((hitloc == RARM || hitloc == LARM) && mech_is_quad(wounded)));
+  int t_do_auto_fall = 0;
+  int t_is_leg =
+      ((hitloc == RLEG || hitloc == LLEG) ||
+       ((hitloc == RARM || hitloc == LARM) && mech_is_quad(wounded)));
 
   if (!(mech_class(wounded) == CLASS_MECH || mech_class(wounded) == CLASS_MW ||
         mech_class(wounded) == CLASS_BSUIT)) {
@@ -136,18 +137,18 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
       } else
         mech_critical_destroy(wounded, hitloc, i);
 
-      critType = mech_critical_part_type(wounded, hitloc, i);
-      if (equipment_is_ammunition(critType)) {
+      crit_type = mech_critical_part_type(wounded, hitloc, i);
+      if (equipment_is_ammunition(crit_type)) {
         mech_critical_data_set(wounded, hitloc, i, 0);
       }
-      if ((equipment_is_special(critType))) {
-        switch (special_from_equipment_index(critType)) {
+      if ((equipment_is_special(crit_type))) {
+        switch (special_from_equipment_index(crit_type)) {
         case UPPER_ACTUATOR:
         case LOWER_ACTUATOR:
         case HAND_OR_FOOT_ACTUATOR:
           break;
         case SHOULDER_OR_HIP:
-          if (tIsLeg) {
+          if (t_is_leg) {
             MechConditionSummary condition = mech_condition_summary(wounded);
             if (!condition.hip_damaged) {
               mech_hip_damage_set(wounded, true, false);
@@ -195,7 +196,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
                 (mech_is_started(wounded) ||
                  mech_event_count(wounded, EVENT_STARTUP))) {
 
-              HexLOSBroadcast(
+              hex_los_broadcast(
                   btech_context_get_map(context, mech_map_dbref(wounded)),
                   mech_position_x(wounded), mech_position_y(wounded),
                   "[fg=red bold]The hit destroys the last safety systems, "
@@ -255,19 +256,19 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
       if (hitloc == LARM || hitloc == RARM)
         return;
     if (hitloc == RLEG || hitloc == LLEG || hitloc == LARM || hitloc == RARM) {
-      tDoAutoFall = 1;
+      t_do_auto_fall = 1;
       mech_event_cancel(wounded, EVENT_STAND);
     }
     mech_actuator_criticals_normalize(wounded);
-    if (tIsLeg && !mech_is_fallen(wounded) && !mech_is_jumping(wounded) &&
+    if (t_is_leg && !mech_is_fallen(wounded) && !mech_is_jumping(wounded) &&
         !mech_is_out_of_control(wounded) && attacker) {
-      if (tDoAutoFall) {
+      if (t_do_auto_fall) {
         mech_notify(wounded, MECHALL,
                     "You realize remaining standing is no longer an option and "
                     "crash to the ground!");
         mech_los_broadcast(wounded, "crashes to the ground!");
         mech_fall(wounded, 1, 0);
-      } else if (!MadePilotSkillRoll(wounded, 0)) {
+      } else if (!made_pilot_skill_roll(wounded, 0)) {
         mech_notify(wounded, MECHALL, "You lose your balance and fall down!");
         mech_los_broadcast(wounded, "loses balance and falls down!");
         mech_fall(wounded, 1, 0);
@@ -286,7 +287,8 @@ int mech_location_breach(Mech *attacker, Mech *mech, int hitloc) {
   if (mech_section_is_destroyed(mech, hitloc) ||
       mech_section_is_breached(mech, hitloc))
     return 0;
-  ArmorStringFromIndex(hitloc, buf, mech_class(mech), mech_movement_type(mech));
+  armor_string_from_index(hitloc, buf, mech_class(mech),
+                          mech_movement_type(mech));
   mech_notify(mech, MECHALL, tprintf("Your %s has been breached!", buf));
   mech_section_breached_set(mech, hitloc, true);
   mech_parts_destroy(attacker, mech, hitloc, true, true);

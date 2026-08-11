@@ -55,7 +55,7 @@ void mech_findcenter(DbRef player, void *data, char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   x = mech_position_x(mech);
   y = mech_position_y(mech);
-  MapCoordToRealCoord(x, y, &fx, &fy);
+  map_coord_to_real_coord(x, y, &fx, &fy);
   notify_printf(
       evaluation, player,
       "Current hex: (%d,%d,%d)\tRange to center: %.2f\t"
@@ -79,33 +79,33 @@ static char *tactical_argument(char *const *args, size_t argument_capacity,
 
 TacticalArgumentParseResult
 tactical_arguments_parse(const TacticalArgumentParseRequest *request) {
-  const DbRef player = request->player;
+  const DbRef PLAYER = request->player;
   Mech *mech = request->mech;
   char *const *args = request->arguments;
-  const size_t argument_capacity = request->argument_capacity;
-  const size_t first_argument = request->first_argument;
-  const int argc = request->argument_count;
-  const int maxrange = request->maximum_range;
+  const size_t ARGUMENT_CAPACITY = request->argument_capacity;
+  const size_t FIRST_ARGUMENT = request->first_argument;
+  const int ARGC = request->argument_count;
+  const int MAXRANGE = request->maximum_range;
   TacticalArgumentParseResult result = {0};
   int bearing;
   float range, fx, fy;
-  Mech *tempMech;
+  Mech *temp_mech;
   BattleMap *map;
 
-  switch (argc) {
+  switch (ARGC) {
   case 2:
     if (!parse_int_checked(
-            tactical_argument(args, argument_capacity, first_argument),
+            tactical_argument(args, ARGUMENT_CAPACITY, FIRST_ARGUMENT),
             &bearing) ||
         !parse_float_checked(
-            tactical_argument(args, argument_capacity, first_argument + 1),
+            tactical_argument(args, ARGUMENT_CAPACITY, FIRST_ARGUMENT + 1),
             &range)) {
-      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+      mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                    "Invalid bearing or range.");
       return result;
     }
-    if (!mech_is_observer(mech) && abs((int)range) > maxrange) {
-      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+    if (!mech_is_observer(mech) && abs((int)range) > MAXRANGE) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                    "Those coordinates are out of sensor range!");
       return result;
     }
@@ -118,36 +118,36 @@ tactical_arguments_parse(const TacticalArgumentParseRequest *request) {
     fy = projected.y;
     short x;
     short y;
-    RealCoordToMapCoord(&x, &y, fx, fy);
+    real_coord_to_map_coord(&x, &y, fx, fy);
     result.valid = true;
     result.position = (MapHexPosition){.x = x, .y = y};
     return result;
   case 1:
     map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-    tempMech = btech_context_get_mech(
+    temp_mech = btech_context_get_mech(
         mech_context(mech),
-        FindMechOnMap(
-            map, tactical_argument(args, argument_capacity, first_argument)));
-    if (!tempMech) {
-      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+        find_mech_on_map(
+            map, tactical_argument(args, ARGUMENT_CAPACITY, FIRST_ARGUMENT)));
+    if (!temp_mech) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                    "No such target.");
       return result;
     }
-    range = mech_range_to(mech, tempMech);
-    if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                        mech_position_y(tempMech), range)) {
-      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+    range = mech_range_to(mech, temp_mech);
+    if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                        mech_position_y(temp_mech), range)) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                    "No such target.");
       return result;
     }
-    if (abs((int)range) > maxrange) {
-      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+    if (abs((int)range) > MAXRANGE) {
+      mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                    "Target is out of scanner range.");
       return result;
     }
     result.valid = true;
-    result.position = (MapHexPosition){.x = mech_position_x(tempMech),
-                                       .y = mech_position_y(tempMech)};
+    result.position = (MapHexPosition){.x = mech_position_x(temp_mech),
+                                       .y = mech_position_y(temp_mech)};
     return result;
   case 0:
     result.valid = true;
@@ -155,13 +155,13 @@ tactical_arguments_parse(const TacticalArgumentParseRequest *request) {
                                        .y = mech_position_y(mech)};
     return result;
   default:
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+    mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "Invalid number of parameters!");
     return result;
   }
 }
 
-const char *GetTerrainName_base(int t) {
+const char *get_terrain_name_base(int t) {
   switch (t) {
   case GRASSLAND:
     return "Grassland";
@@ -196,8 +196,8 @@ const char *GetTerrainName_base(int t) {
   return "Unknown";
 }
 
-const char *GetTerrainName(BattleMap *map, int x, int y) {
-  return GetTerrainName_base(map_terrain_get(map, x, y));
+const char *get_terrain_name(BattleMap *map, int x, int y) {
+  return get_terrain_name_base(map_terrain_get(map, x, y));
 }
 
 /* Player-customizable colors */
@@ -233,7 +233,7 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   }
 
   argc = mech_parseattributes(buffer, args, 3);
-  const TacticalArgumentParseResult parsed =
+  const TacticalArgumentParseResult PARSED =
       tactical_arguments_parse(&(TacticalArgumentParseRequest){
           .player = player,
           .mech = mech,
@@ -243,10 +243,10 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
           .argument_count = argc,
           .maximum_range = mech_tactical_range(mech),
       });
-  if (!parsed.valid)
+  if (!PARSED.valid)
     return;
-  x = parsed.position.x;
-  y = parsed.position.y;
+  x = PARSED.position.x;
+  y = PARSED.position.y;
 
   MapTextRequest request = {
       .player = player,
@@ -280,7 +280,7 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   (void)snprintf(
       navigate_line(mybuff, 3), MBUF_SIZE,
       "  300  /             \\  60     Terrain: %14s   %.150s",
-      GetTerrainName(mech_map, mech_position_x(mech), mech_position_y(mech)),
+      get_terrain_name(mech_map, mech_position_x(mech), mech_position_y(mech)),
       map_text_line(map_text, 3));
   (void)snprintf(
       navigate_line(mybuff, 4), MBUF_SIZE,

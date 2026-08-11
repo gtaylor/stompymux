@@ -11,13 +11,13 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-static const char mech_location_table[][2] = {
+static const char MECH_LOCATION_TABLE[][2] = {
     {CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2}, {LARM, 3},
     {RARM, 3},   {LLEG, 4},   {RLEG, 4},   {-1, 0}};
-static const char quad_location_table[][2] = {
+static const char QUAD_LOCATION_TABLE[][2] = {
     {CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2}, {LARM, 4},
     {RARM, 4},   {LLEG, 4},   {RLEG, 4},   {-1, 0}};
-static const char internal_structure[][5] = {
+static const char INTERNAL_STRUCTURE[][5] = {
     {10, 4, 3, 1, 2},      {15, 5, 4, 2, 3},     {20, 6, 5, 3, 4},
     {25, 8, 6, 4, 6},      {30, 10, 7, 5, 7},    {35, 11, 8, 6, 8},
     {40, 12, 10, 6, 10},   {45, 14, 11, 7, 11},  {50, 16, 12, 8, 12},
@@ -38,13 +38,13 @@ static int internal_location_table(const Mech *mech, int row, int column) {
   if (row < 0 || column < 0)
     abort();
   const void *table =
-      mech_is_quad(mech) ? quad_location_table : mech_location_table;
+      mech_is_quad(mech) ? QUAD_LOCATION_TABLE : MECH_LOCATION_TABLE;
   return table_value(table, 8, 2, (size_t)row, (size_t)column);
 }
 
 static char internal_structure_value(size_t row, size_t column) {
-  return table_value(internal_structure,
-                     sizeof(internal_structure) / sizeof(*internal_structure),
+  return table_value(INTERNAL_STRUCTURE,
+                     sizeof(INTERNAL_STRUCTURE) / sizeof(*INTERNAL_STRUCTURE),
                      5, row, column);
 }
 
@@ -71,21 +71,21 @@ expected_internal_structure(const InternalStructureRequest *request) {
 }
 
 void vehicle_int_check(Mech *mech, int noisy) {
-  const int rounded_tonnage = mech->ud.tons + 5;
-  const int expected = (rounded_tonnage > 10 ? rounded_tonnage : 10) / 10;
+  const int ROUNDED_TONNAGE = mech->ud.tons + 5;
+  const int EXPECTED = (ROUNDED_TONNAGE > 10 ? ROUNDED_TONNAGE : 10) / 10;
   for (int location = 0; location < NUM_SECTIONS; location++) {
     if (!mech_section_original_internal(mech, location) ||
-        mech_section_original_internal(mech, location) == expected)
+        mech_section_original_internal(mech, location) == EXPECTED)
       continue;
     if (noisy)
       btech_channel_send(
           mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
                   "(should be %d, are %d)",
-                  mech->ud.mech_type, mech->mynum, location, expected,
+                  mech->ud.mech_type, mech->mynum, location, EXPECTED,
                   mech_section_original_internal(mech, location)));
-    mech_section_original_internal_set(mech, location, expected);
-    mech_section_internal_set(mech, location, expected);
+    mech_section_original_internal_set(mech, location, EXPECTED);
+    mech_section_internal_set(mech, location, EXPECTED);
   }
 }
 
@@ -110,19 +110,19 @@ void mech_int_check(Mech *mech, int noisy) {
   }
 
   for (int location = 0; location < NUM_SECTIONS; location++) {
-    const int expected = expected_internal_structure(&(
+    const int EXPECTED = expected_internal_structure(&(
         InternalStructureRequest){
         .mech = mech, .location = location, .tonnage_index = tonnage_index});
-    if (mech_section_original_internal(mech, location) == expected)
+    if (mech_section_original_internal(mech, location) == EXPECTED)
       continue;
     if (noisy)
       btech_channel_send(
           mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
                   "(should be %d, are %d)",
-                  mech->ud.mech_type, mech->mynum, location, expected,
+                  mech->ud.mech_type, mech->mynum, location, EXPECTED,
                   mech_section_original_internal(mech, location)));
-    mech_section_original_internal_set(mech, location, expected);
-    mech_section_internal_set(mech, location, expected);
+    mech_section_original_internal_set(mech, location, EXPECTED);
+    mech_section_internal_set(mech, location, EXPECTED);
   }
 }

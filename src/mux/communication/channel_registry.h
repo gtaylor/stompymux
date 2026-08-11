@@ -7,7 +7,7 @@
 struct ChannelRegistry; // IWYU pragma: keep
 
 typedef struct ChannelRegistry ChannelRegistry;
-typedef struct commac Commac;
+typedef struct Commac Commac;
 constexpr int COMMAC_BUCKET_COUNT = 500;
 
 struct ChannelRegistry {

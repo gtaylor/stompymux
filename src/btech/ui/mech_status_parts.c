@@ -53,8 +53,8 @@ void mech_critstatus(DbRef player, void *data, char *buffer) {
                  "You must specify a section to list the criticals for!");
     return;
   }
-  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                 args[0]);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    args[0]);
   if (index == -1) {
     mecha_notify(btech_context_evaluation(context), player, "Invalid section!");
     return;
@@ -63,7 +63,7 @@ void mech_critstatus(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(context), player, "Invalid section!");
     return;
   }
-  CriticalStatus(evaluation, player, mech, index);
+  critical_status(evaluation, player, mech, index);
 }
 
 typedef struct WeaponSpecsMenuContext WeaponSpecsMenuContext;
@@ -182,7 +182,7 @@ PartDisplayName pos_part_name(Mech *mech, int index, int loop) {
 
   if (t == special_equipment_index(SPLIT_CRIT_RIGHT) ||
       t == special_equipment_index(SPLIT_CRIT_LEFT)) {
-    newindex = ReverseSplitCritLoc(mech, index, loop);
+    newindex = reverse_split_crit_loc(mech, index, loop);
     newloop = mech_critical_data(mech, index, loop);
     if (newindex >= 0) {
       t = mech_critical_part_type(mech, newindex, newloop);
@@ -232,12 +232,12 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
   else {
     i--;
     j = weapon_menu_get(menu, i);
-    const WeaponRangeProfile ranges = weapon_catalogue_ranges(j);
+    const WeaponRangeProfile RANGES = weapon_catalogue_ranges(j);
     if (menu->configuration->btech_erange)
       (void)snprintf(
           buffer, LBUF_SIZE, WSDUMP_MASK_ER, weapon_catalogue_name(j),
-          weapon_catalogue_heat(j), weapon_catalogue_damage(j), ranges.minimum,
-          ranges.short_range, ranges.medium_range,
+          weapon_catalogue_heat(j), weapon_catalogue_damage(j), RANGES.minimum,
+          RANGES.short_range, RANGES.medium_range,
           weapon_catalogue_effective_range(j, false),
           weapon_catalogue_effective_range(j,
                                            menu->configuration->btech_erange),
@@ -245,8 +245,8 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
     else
       (void)snprintf(
           buffer, LBUF_SIZE, WSDUMP_MASK_NOER, weapon_catalogue_name(j),
-          weapon_catalogue_heat(j), weapon_catalogue_damage(j), ranges.minimum,
-          ranges.short_range, ranges.medium_range,
+          weapon_catalogue_heat(j), weapon_catalogue_damage(j), RANGES.minimum,
+          RANGES.short_range, RANGES.medium_range,
           weapon_catalogue_effective_range(j, false),
           btech_weapon_settings_recycle_time(menu->weapon_settings, j));
   }
@@ -274,16 +274,16 @@ void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
 
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     num_weaps =
-        FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 0);
+        find_weapons_advanced(mech, loop, weaparray, weapdata, critical, 0);
     for (index = 0; index < num_weaps; index++) {
       duplicate = 0;
-      const int weapon = weapon_array_get(weaparray, index);
+      const int WEAPON = weapon_array_get(weaparray, index);
       for (ii = 0; ii < menu.weapon_count; ii++)
-        if (weapon == weapon_menu_get(&menu, ii))
+        if (WEAPON == weapon_menu_get(&menu, ii))
           duplicate = 1;
       if (!duplicate && menu.weapon_count < MAX_WEAPONS_PER_MECH)
         weapon_menu_set(&(WeaponMenuAssignment){
-            .menu = &menu, .index = menu.weapon_count++, .weapon = weapon});
+            .menu = &menu, .index = menu.weapon_count++, .weapon = WEAPON});
     }
   }
   if (!menu.weapon_count) {
@@ -292,17 +292,17 @@ void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
     return;
   }
   if (strcmp(mech_model_name(mech), mech_model_reference(mech)))
-    c = SelCol_FunStringMenuContextK(1,
-                                     tprintf("Weapons statistics for %s: %s",
-                                             mech_model_name(mech),
-                                             mech_model_reference(mech)),
-                                     wspec_fun, &menu, menu.weapon_count + 1);
+    c = sel_col_fun_string_menu_context_k(
+        1,
+        tprintf("Weapons statistics for %s: %s", mech_model_name(mech),
+                mech_model_reference(mech)),
+        wspec_fun, &menu, menu.weapon_count + 1);
   else
-    c = SelCol_FunStringMenuContextK(
+    c = sel_col_fun_string_menu_context_k(
         1, tprintf("Weapons statistics for %s", mech_model_reference(mech)),
         wspec_fun, &menu, menu.weapon_count + 1);
-  ShowCoolMenu(evaluation, player, c);
-  KillCoolMenu(c);
+  show_cool_menu(evaluation, player, c);
+  kill_cool_menu(c);
 }
 
 static char *status_text(char buffer[static MBUF_SIZE], const char *text) {
@@ -324,8 +324,8 @@ char *sectstatus_func(const MechStatusTextRequest *request) {
   if (!arg || !*arg)
     return status_text(buffer, "#-1 INVALID SECTION");
 
-  index =
-      ArmorSectionFromString(mech_class(mech), mech_movement_type(mech), arg);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    arg);
   if (index == -1)
     return status_text(buffer, "#-1 INVALID SECTION");
 
@@ -348,20 +348,20 @@ char *critstatus_func(const MechStatusTextRequest *request) {
   if (!arg || !*arg)
     return status_text(buffer, "#-1 INVALID SECTION");
 
-  index =
-      ArmorSectionFromString(mech_class(mech), mech_movement_type(mech), arg);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    arg);
   if (index == -1 || !mech_section_original_internal(mech, index))
     return status_text(buffer, "#-1 INVALID SECTION");
 
   buffer[0] = '\0';
-  max_crits = CritsInLoc(mech, index);
+  max_crits = crits_in_loc(mech, index);
   for (i = 0; i < max_crits; i++) {
     if (buffer[0])
       append_status(buffer, MBUF_SIZE, ",");
     append_status(buffer, MBUF_SIZE, "%d|", i + 1);
     type = mech_critical_part_type(mech, index, i);
     if (equipment_is_ammunition(type))
-      type = FindAmmoType(mech, index, i);
+      type = find_ammo_type(mech, index, i);
     tmp = get_parts_long_name(mech_context(mech), type,
                               mech_critical_brand(mech, index, i));
     append_status(buffer, MBUF_SIZE, "|%s", tmp ? tmp : "Empty");
@@ -396,8 +396,8 @@ char *armorstatus_func(const MechStatusTextRequest *request) {
     return status_text(buffer, "#-1 INVALID SECTION");
 
   if (strcmp(arg, "all") == 0) {
-    locs =
-        ProperSectionStringFromType(mech_class(mech), mech_movement_type(mech));
+    locs = proper_section_string_from_type(mech_class(mech),
+                                           mech_movement_type(mech));
     curarm = totarm = curint = totint = 0;
     for (iter = 0; iter < NUM_SECTIONS; iter++) {
       const char *location = *(const char *const *)checked_storage_at_const(
@@ -417,8 +417,8 @@ char *armorstatus_func(const MechStatusTextRequest *request) {
     return buffer;
   }
 
-  index =
-      ArmorSectionFromString(mech_class(mech), mech_movement_type(mech), arg);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    arg);
   if (index == -1 || !mech_section_original_internal(mech, index))
     return status_text(buffer, "#-1 INVALID SECTION");
 
@@ -468,8 +468,8 @@ char *weaponstatus_func(const MechStatusTextRequest *request) {
   else if (!*arg)
     return status_text(buffer, "#-1 INVALID SECTION");
   else {
-    sect =
-        ArmorSectionFromString(mech_class(mech), mech_movement_type(mech), arg);
+    sect = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                     arg);
     if (sect == -1 || !mech_section_original_internal(mech, sect))
       return status_text(buffer, "#-1 INVALID SECTION");
   }
@@ -478,25 +478,25 @@ char *weaponstatus_func(const MechStatusTextRequest *request) {
   for ((sect == -1) ? (loopsect = 0) : (loopsect = sect);
        (sect == -1) ? (loopsect < NUM_SECTIONS) : (loopsect < sect + 1);
        loopsect++) {
-    count =
-        FindWeapons_Advanced(mech, loopsect, weaparray, weapdata, criticals, 0);
+    count = find_weapons_advanced(mech, loopsect, weaparray, weapdata,
+                                  criticals, 0);
     for (i = 0; i < count; i++, totalcount++) {
-      const int critical = critical_array_get(criticals, i);
+      const int CRITICAL = critical_array_get(criticals, i);
       if (buffer[0])
         append_status(buffer, MBUF_SIZE, ",");
       type = weapon_from_equipment_index(
-          mech_critical_part_type(mech, loopsect, critical));
+          mech_critical_part_type(mech, loopsect, CRITICAL));
       append_status(
           buffer, MBUF_SIZE, "%d|%s|%d|%d|%d|%d|%d|%d", totalcount,
           get_parts_long_name(mech_context(mech), weapon_equipment_index(type),
-                              mech_critical_brand(mech, loopsect, critical)),
-          GetWeaponCrits(mech, type),
-          mech_critical_brand(mech, loopsect, critical),
+                              mech_critical_brand(mech, loopsect, CRITICAL)),
+          get_weapon_crits(mech, type),
+          mech_critical_brand(mech, loopsect, CRITICAL),
           btech_weapon_settings_recycle_time(
               &mech_context(mech)->weapon_settings, type),
           weapon_array_get(weapdata, i), weapon_catalogue_type(type),
-          mech_critical_is_nonfunctional(mech, loopsect, critical)    ? 2
-          : mech_critical_temporary_failure(mech, loopsect, critical) ? 1
+          mech_critical_is_nonfunctional(mech, loopsect, CRITICAL)    ? 2
+          : mech_critical_temporary_failure(mech, loopsect, CRITICAL) ? 1
                                                                       : 0);
     }
   }
@@ -511,14 +511,14 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
   char *buffer = request->buffer;
   int index, crit, flag, type;
 
-  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                 buf_section);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    buf_section);
   if (index == -1)
     return status_text(buffer, "#-1 INVALID SECTION");
   if (!mech_section_original_internal(mech, index))
     return status_text(buffer, "#-1 INVALID SECTION");
   if (!parse_int_checked(buf_critnum, &crit) || crit < 1 ||
-      crit > CritsInLoc(mech, index))
+      crit > crits_in_loc(mech, index))
     return status_text(buffer, "#-1 INVALID CRITICAL");
   crit--;
   if (!buf_flag)
@@ -555,25 +555,25 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
   } else if (flag == 3) {
     if (!equipment_is_ammunition(type))
       return status_text(buffer, "#-1 NOT AMMO");
-    (void)snprintf(buffer, MBUF_SIZE, "%d", FullAmmo(mech, index, crit));
+    (void)snprintf(buffer, MBUF_SIZE, "%d", full_ammo(mech, index, crit));
     return buffer;
   } else if (flag == 4) {
     if (!equipment_is_ammunition(type))
       return status_text(buffer, "#-1 NOT AMMO");
-    type = FindAmmoType(mech, index, crit);
+    type = find_ammo_type(mech, index, crit);
   } else if (flag == 5) {
     int weapindex;
     if (!equipment_is_weapon(type))
       return status_text(buffer, "#-1 NOT AMMO OR WEAPON");
     else {
-      const int ammo_mode = mech_critical_ammo_mode(mech, index, crit);
+      const int AMMO_MODE = mech_critical_ammo_mode(mech, index, crit);
       weapindex = weapon_from_equipment_index(type);
       (void)snprintf(buffer, MBUF_SIZE, "%c%c",
-                     GetWeaponFireModeLetter_Model_Mode(
+                     get_weapon_fire_mode_letter_model_mode(
                          weapindex, mech_critical_fire_mode(mech, index, crit)),
-                     ammo_mode < 0 ? ' '
-                                   : GetWeaponAmmoModeLetter_Model_Mode(
-                                         weapindex, (unsigned int)ammo_mode));
+                     AMMO_MODE < 0 ? ' '
+                                   : get_weapon_ammo_mode_letter_model_mode(
+                                         weapindex, (unsigned int)AMMO_MODE));
       return buffer;
     }
   } else if (flag == 6) {
@@ -597,12 +597,12 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
   return buffer;
 }
 
-void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                    int index) {
+void critical_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
+                     int index) {
   int loop, i;
   char buffer[LBUF_SIZE] = {0};
-  int type, data, wFireMode;
-  int max_crits = CritsInLoc(mech, index);
+  int type, data, w_fire_mode;
+  int max_crits = crits_in_loc(mech, index);
   char **foo;
   int count = 0;
   CoolMenu *cm;
@@ -616,33 +616,33 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     btech_text_builder_append_format(&line, "%2d ", loop + 1);
     type = mech_critical_part_type(mech, index, loop);
     data = mech_critical_data(mech, index, loop);
-    wFireMode = mech_critical_fire_mode(mech, index, loop);
+    w_fire_mode = mech_critical_fire_mode(mech, index, loop);
     if (equipment_is_ammunition(type)) {
-      const int weapon = ammunition_to_weapon_index(type);
+      const int WEAPON = ammunition_to_weapon_index(type);
       btech_text_builder_append(
-          &line, checked_string_suffix(weapon_catalogue_name(weapon), 3));
+          &line, checked_string_suffix(weapon_catalogue_name(WEAPON), 3));
       btech_text_builder_append(
-          &line, GetAmmoDesc_Model_Mode(
-                     weapon, mech_critical_ammo_mode(mech, index, loop)));
+          &line, get_ammo_desc_model_mode(
+                     WEAPON, mech_critical_ammo_mode(mech, index, loop)));
       btech_text_builder_append(&line, " Ammo");
       if (!mech_critical_is_nonfunctional(mech, index, loop)) {
         btech_text_builder_append_format(&line, " [%3.3d/%3.3d]", data,
-                                         FullAmmo(mech, index, loop));
+                                         full_ammo(mech, index, loop));
       }
 
     } else {
-      if (equipment_is_weapon(type) && (wFireMode & OS_MODE))
+      if (equipment_is_weapon(type) && (w_fire_mode & OS_MODE))
         btech_text_builder_append(&line, "OS ");
       PartDisplayName name = pos_part_name(mech, index, loop);
       btech_text_builder_append(&line, name.text);
       if (equipment_is_weapon(type) &&
-          (((wFireMode & OS_MODE) && (wFireMode & OS_USED)) ||
-           (wFireMode & ROCKET_FIRED)))
+          (((w_fire_mode & OS_MODE) && (w_fire_mode & OS_USED)) ||
+           (w_fire_mode & ROCKET_FIRED)))
         btech_text_builder_append(&line, " (Empty)");
-      if (wFireMode & WILL_JETTISON_MODE)
+      if (w_fire_mode & WILL_JETTISON_MODE)
         btech_text_builder_append(&line, " (backpack)");
 
-      if (equipment_is_weapon(type) && (wFireMode & REAR_MOUNT))
+      if (equipment_is_weapon(type) && (w_fire_mode & REAR_MOUNT))
         btech_text_builder_append(&line, " (R)");
       if (!mech_critical_is_nonfunctional(mech, index, loop)) {
         if (special_from_equipment_index(type) == ARTEMIS_IV) {
@@ -670,8 +670,8 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
     *entry = strdup(buffer);
   }
 
-  ArmorStringFromIndex(index, buffer, mech_class(mech),
-                       mech_movement_type(mech));
+  armor_string_from_index(index, buffer, mech_class(mech),
+                          mech_movement_type(mech));
   BtechTextBuilder title;
   title.text = buffer;
   title.capacity = sizeof(buffer);
@@ -683,9 +683,9 @@ void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                                   .heading = buffer,
                                   .strings = (const char *const *)foo,
                                   .string_count = (size_t)count});
-  ShowCoolMenu(evaluation, player, cm);
-  KillCoolMenu(cm);
-  KillText(foo, (size_t)count);
+  show_cool_menu(evaluation, player, cm);
+  kill_cool_menu(cm);
+  kill_text(foo, (size_t)count);
 }
 
 const char *evaluate_ammo_amount(int now, int max) {

@@ -54,8 +54,8 @@ static bool mech_is_water_beast(const Mech *mech) {
 }
 
 static float mech_los_position_z(const Mech *mech) {
-  const int elevation = mech_position_z(mech);
-  return (float)elevation;
+  const int ELEVATION = mech_position_z(mech);
+  return (float)ELEVATION;
 }
 
 float mech_los_actual_elevation(BattleMap *map, int x, int y, Mech *mech) {
@@ -63,8 +63,8 @@ float mech_los_actual_elevation(BattleMap *map, int x, int y, Mech *mech) {
   if (!map)
     return 0.0;
   if (!mech) {
-    const int elevation = battle_map_hex_elevation(map, x, y);
-    return (float)elevation + 0.1F;
+    const int ELEVATION = battle_map_hex_elevation(map, x, y);
+    return (float)ELEVATION + 0.1F;
   }
   if (mech_class(mech) == CLASS_MECH && !mech_is_fallen(mech))
     return mech_los_position_z(mech) + 1.5F;
@@ -85,11 +85,11 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
   Mech *mech = calculation->observer;
   Mech *target = calculation->target;
   BattleMap *map = calculation->map;
-  const int x = calculation->target_hex.x;
-  const int y = calculation->target_hex.y;
-  const int previous_flags = calculation->previous_flags;
-  const float hex_range = calculation->hex_range;
-  int new_flag = (previous_flags & (BATTLE_MAP_LOS_SEEN)) +
+  const int X = calculation->target_hex.x;
+  const int Y = calculation->target_hex.y;
+  const int PREVIOUS_FLAGS = calculation->previous_flags;
+  const float HEX_RANGE = calculation->hex_range;
+  int new_flag = (PREVIOUS_FLAGS & (BATTLE_MAP_LOS_SEEN)) +
                  BATTLE_MAP_LOS_TERRAIN_CALCULATED;
   int woods_count = 0;
   int water_count = 0;
@@ -107,23 +107,23 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
 #endif
 
   /* A Hex target off the map? Don't bother */
-  if (!target && !battle_map_coordinate_is_valid(map, x, y))
+  if (!target && !battle_map_coordinate_is_valid(map, X, Y))
     return new_flag + BATTLE_MAP_LOS_BLOCKED;
 
   /* Outside max sensor range in the worst case? Don't bother. */
-  const int maximum_visibility =
+  const int MAXIMUM_VISIBILITY =
       ((mech_technology_flags(mech) & AA_TECH) ||
        (target && (mech_technology_flags(target) & AA_TECH)))
           ? 180
           : battle_map_maximum_visibility(map);
-  if (hex_range > (float)maximum_visibility)
+  if (HEX_RANGE > (float)MAXIMUM_VISIBILITY)
     return new_flag + BATTLE_MAP_LOS_BLOCKED;
 
   /* We start at the observer hex and wind up at (x,y). */
   pos_x = mech_position_x(mech);
   pos_y = mech_position_y(mech);
   pos_z = mech_los_actual_elevation(map, pos_x, pos_y, mech);
-  end_z = mech_los_actual_elevation(map, x, y, target);
+  end_z = mech_los_actual_elevation(map, X, Y, target);
 
   /* Definition of 'both worlds': According to FASA, if a mech is half
      submerged, or a sub is surfaced, or any naval or hover is on top
@@ -144,7 +144,7 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
 
   /* Ice hex targeting special case */
   if (!target && !underwater &&
-      map_real_terrain_get(map, x, y) == BATTLE_TERRAIN_ICE)
+      map_real_terrain_get(map, X, Y) == BATTLE_TERRAIN_ICE)
     end_z = 0.0;
 
   if (target) {
@@ -159,7 +159,7 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
 
     t_underwater = mech_is_in_water(target) && (end_z < 0.0F);
   } else {
-    if (map_real_terrain_get(map, x, y) == BATTLE_TERRAIN_ICE)
+    if (map_real_terrain_get(map, X, Y) == BATTLE_TERRAIN_ICE)
       t_bothworlds = 1;
     else
       t_bothworlds = 0;
@@ -176,11 +176,11 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
     dopartials = (mech_class(target) == CLASS_MECH) && !mech_is_fallen(target);
 
   /*Same hex is always LoS */
-  if ((x == pos_x) && (y == pos_y))
+  if ((X == pos_x) && (Y == pos_y))
     return new_flag;
 
   /* Special cases are out of the way, looks like we have to do actual work. */
-  coordcount = trace_los(map, pos_x, pos_y, x, y, &trace);
+  coordcount = trace_los(map, pos_x, pos_y, X, Y, &trace);
   if (coordcount > 0) {
     z_inc = (end_z - pos_z) / (float)coordcount;
   } else {
@@ -206,7 +206,7 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
       terrain = (unsigned char)map_real_terrain_get(map, point->x, point->y);
       /* get the current height */
       height = battle_map_hex_elevation(map, point->x, point->y);
-      const float height_as_float = (float)height;
+      const float HEIGHT_AS_FLOAT = (float)height;
 
       /* If you, persoanlly, are underwater, the only way you can see someone
          if if they are underwater or in both worlds AND your LoS passes thru
@@ -215,7 +215,7 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
 
         /* LoS hits sea floor */
         if (!(terrain_is_water(terrain)) ||
-            (terrain != BATTLE_TERRAIN_BRIDGE && height_as_float >= pos_z)) {
+            (terrain != BATTLE_TERRAIN_BRIDGE && HEIGHT_AS_FLOAT >= pos_z)) {
           new_flag |= BATTLE_MAP_LOS_BLOCKED;
           return new_flag;
         }
@@ -233,7 +233,7 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
         water_count++;
       } else { /* Viewer is not underwater */
         /* keep track of how many wooded hexes we cross */
-        if (pos_z < height_as_float + 2.0F) {
+        if (pos_z < HEIGHT_AS_FLOAT + 2.0F) {
           switch (map_terrain_get(map, point->x, point->y)) {
           case BATTLE_TERRAIN_SMOKE:
             if (i < coordcount - 1)
@@ -281,7 +281,7 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
           }
         }
         /* make this the new 'current hex' */
-        if (height_as_float >= pos_z && terrain != BATTLE_TERRAIN_BRIDGE) {
+        if (HEIGHT_AS_FLOAT >= pos_z && terrain != BATTLE_TERRAIN_BRIDGE) {
           new_flag |= BATTLE_MAP_LOS_BLOCKED;
           return new_flag;
         }
@@ -310,8 +310,8 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
 
 #endif
 
-  water_count = BOUNDED(0, water_count, BATTLE_MAP_LOS_MAX_WATER - 1);
-  woods_count = BOUNDED(0, woods_count, BATTLE_MAP_LOS_MAX_WOOD - 1);
+  water_count = bounded(0, water_count, BATTLE_MAP_LOS_MAX_WATER - 1);
+  woods_count = bounded(0, woods_count, BATTLE_MAP_LOS_MAX_WOOD - 1);
   new_flag += BATTLE_MAP_LOS_WOOD * woods_count;
   new_flag += BATTLE_MAP_LOS_WATER * water_count;
 
@@ -327,19 +327,19 @@ int mech_los_terrain_modifier(const MechLosTerrainRequest *request) {
   Mech *mech = request->observer;
   Mech *target = request->target;
   BattleMap *map = request->map;
-  const int ammunition_mode = request->ammunition_mode;
+  const int AMMUNITION_MODE = request->ammunition_mode;
   /* Possibly do a quickie check only */
   if (mech && target) {
-    const int flags =
+    const int FLAGS =
         battle_map_los_flags(map, mech_map_slot(mech), mech_map_slot(target));
-    mech_partial_cover_set(target, flags & BATTLE_MAP_LOS_PARTIAL_COVER);
+    mech_partial_cover_set(target, FLAGS & BATTLE_MAP_LOS_PARTIAL_COVER);
 
     MechSensorToHitRequest sensor_request = {
         .observer = mech,
         .target = target,
-        .los_flags = flags,
+        .los_flags = FLAGS,
         .map_light = battle_map_light(map),
-        .ammunition_mode = ammunition_mode,
+        .ammunition_mode = AMMUNITION_MODE,
     };
     return mech_sensor_to_hit_bonus(&sensor_request);
   }
@@ -388,8 +388,8 @@ int mech_los_check(Mech *mech, Mech *target, int x, int y, float hex_range) {
     x1 = mech_position_real_x(target);
     y1 = mech_position_real_y(target);
   } else
-    MapCoordToRealCoord(x, y, &x1, &y1);
-  arc = InWeaponArc(mech, x1, y1);
+    map_coord_to_real_coord(x, y, &x1, &y1);
+  arc = in_weapon_arc(mech, x1, y1);
 
   if (mech && target) {
 #ifndef ADVANCED_LOS

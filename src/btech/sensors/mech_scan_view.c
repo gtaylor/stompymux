@@ -39,7 +39,7 @@ static int scan_weapon_integer(const int *values, int index) {
                                                 sizeof(*values), (size_t)index);
 }
 
-void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
+void print_enemy_weapon_status(Mech *mech, DbRef player) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
@@ -64,17 +64,17 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     if (mech_section_is_destroyed(mech, loop))
       continue;
-    count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
+    count = find_weapons_advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
-      ArmorStringFromIndex(loop, tempbuff, mech_class(mech),
-                           mech_movement_type(mech));
+      armor_string_from_index(loop, tempbuff, mech_class(mech),
+                              mech_movement_type(mech));
       (void)snprintf(location, sizeof(location), "%-14.14s", tempbuff);
 
       for (ii = 0; ii < count; ii++) {
-        const int weapon_index = scan_weapon_byte(weaparray, ii);
+        const int WEAPON_INDEX = scan_weapon_byte(weaparray, ii);
         (void)snprintf(
             weapbuff, sizeof(weapbuff), " %-18.18s [%2d]  ",
-            checked_string_suffix(weapon_catalogue_name(weapon_index), 3),
+            checked_string_suffix(weapon_catalogue_name(WEAPON_INDEX), 3),
             running_sum + ii);
         strlcat(weapbuff, location, sizeof(weapbuff));
 
@@ -130,7 +130,7 @@ void mech_view(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *target;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   DbRef targetnum;
-  char targetID[5];
+  char target_id[5];
   char *args[5];
   int argc;
   char *target_desc;
@@ -166,9 +166,9 @@ void mech_view(DbRef player, void *data, char *buffer) {
     else
       mecha_notify(evaluation, player, "That target has no markings.");
   } else if (argc == 1) { /* ID number */
-    targetID[0] = args[0][0];
-    targetID[1] = *checked_string_suffix(*args, 1);
-    targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
+    target_id[0] = args[0][0];
+    target_id[1] = *checked_string_suffix(*args, 1);
+    targetnum = find_target_dbref_from_map_number(mech, target_id);
     if (targetnum == -1) {
       mech_notify(mech, MECHPILOT, "Target is not in line of sight!");
       return;

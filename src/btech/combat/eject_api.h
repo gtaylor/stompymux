@@ -22,4 +22,4 @@ void mech_eject(DbRef player, void *data, char *buffer);
 void mech_disembark(DbRef player, void *data, char *buffer);
 void mech_udisembark(DbRef player, void *data, const char *buffer);
 void mech_embark(DbRef player, void *data, char *buffer);
-void autoeject(DbRef player, Mech *mech, int tIsBSuit);
+void autoeject(DbRef player, Mech *mech, int t_is_b_suit);

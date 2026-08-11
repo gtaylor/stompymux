@@ -54,32 +54,32 @@ void mech_main_weapon_destroy(Mech *mech) {
   int maxloc = 0;
   int critfound = 0;
   unsigned char maxtype = 0;
-  int firstCrit = 0;
+  int first_crit = 0;
   BtechContext *context = mech_context(mech);
 
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     if (mech_section_is_destroyed(mech, loop))
       continue;
-    count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
+    count = find_weapons_advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
       for (ii = 0; ii < count; ii++) {
-        const int current_critical = critical_at(critical, (size_t)ii);
-        const unsigned char current_weapon = weapon_at(weaparray, (size_t)ii);
-        if (!mech_critical_is_broken(mech, loop, current_critical)) {
+        const int CURRENT_CRITICAL = critical_at(critical, (size_t)ii);
+        const unsigned char CURRENT_WEAPON = weapon_at(weaparray, (size_t)ii);
+        if (!mech_critical_is_broken(mech, loop, CURRENT_CRITICAL)) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
           tempcrit = (int)btech_context_random_i31(context);
           if (tempcrit > maxcrit) {
             critfound = 1;
             maxcrit = tempcrit;
             maxloc = loop;
-            maxtype = current_weapon;
+            maxtype = CURRENT_WEAPON;
           }
         }
       }
     }
   }
   if (critfound) {
-    firstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+    first_crit = mech_weapon_first_critical(&(WeaponCriticalSearch){
         .mech = mech,
         .weapon = {.section = maxloc, .critical = -1},
         .start_critical = 0,
@@ -90,8 +90,8 @@ void mech_main_weapon_destroy(Mech *mech) {
         .mech = mech,
         .first = {.section = maxloc, .critical = 1},
         .part_type = weapon_equipment_index(maxtype),
-        .criticals_to_destroy = firstCrit,
-        .total_criticals = GetWeaponCrits(mech, maxtype)});
+        .criticals_to_destroy = first_crit,
+        .total_criticals = get_weapon_crits(mech, maxtype)});
     mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
                 checked_string_suffix(weapon_catalogue_name(maxtype), 3));
   }
@@ -158,13 +158,13 @@ void mech_fasa_vehicle_critical_handle(const VehicleCriticalRequest *request) {
 void mech_vehicle_critical_handle(const VehicleCriticalRequest *request) {
   Mech *wounded = request->wounded;
   Mech *attacker = request->attacker;
-  const int hitloc = request->section;
+  const int HITLOC = request->section;
   BtechContext *context = mech_context(wounded);
   MechConditionSummary condition = mech_condition_summary(wounded);
 
   if (mech_movement_type(wounded) == MOVE_NONE)
     return;
-  if (hitloc == TURRET) {
+  if (HITLOC == TURRET) {
     if (btech_random_range(context, 1, 3) == 2) {
       if (!condition.turret_locked) {
         mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");

@@ -48,8 +48,8 @@ static int *persistence_int(int *values, size_t count, int index) {
 
 void mech_persistence_snapshot_export(const Mech *mech,
                                       MechPersistenceSnapshot *snapshot) {
-  snapshot->id[0] = mech->ID[0];
-  snapshot->id[1] = mech->ID[1];
+  snapshot->id[0] = mech->id[0];
+  snapshot->id[1] = mech->id[1];
   snapshot->brief = mech->brief;
   snapshot->map_number = mech->mapnumber;
   snapshot->map_dbref = mech->mapindex;
@@ -67,8 +67,8 @@ void mech_persistence_snapshot_export(const Mech *mech,
 
 void mech_persistence_identity_restore(
     Mech *mech, const MechPersistenceSnapshot *snapshot) {
-  mech->ID[0] = snapshot->id[0];
-  mech->ID[1] = snapshot->id[1];
+  mech->id[0] = snapshot->id[0];
+  mech->id[1] = snapshot->id[1];
   mech->brief = snapshot->brief;
   mech->mapnumber = snapshot->map_number;
   mech->mapindex = snapshot->map_dbref;
@@ -112,10 +112,10 @@ void mech_persistence_network_restore(Mech *mech,
 void mech_persistence_network_node_restore(
     const MechNetworkNodeRestore *request) {
   if (request->network_type == 0)
-    *persistence_dbref(request->mech->sd.C3iNetwork, C3I_NETWORK_SIZE,
+    *persistence_dbref(request->mech->sd.c3i_network, C3I_NETWORK_SIZE,
                        request->node_index) = request->node_dbref;
   else
-    *persistence_dbref(request->mech->sd.C3Network, C3_NETWORK_SIZE,
+    *persistence_dbref(request->mech->sd.c3_network, C3_NETWORK_SIZE,
                        request->node_index) = request->node_dbref;
 }
 
@@ -145,8 +145,8 @@ void mech_persistence_frequency_restore(const MechFrequencyRestore *request) {
 
 void mech_persistence_runtime_restore(Mech *mech,
                                       const MechPersistenceSnapshot *snapshot) {
-  MechDamageRecord *damage_history = mech->rd.staggerDamageList;
+  MechDamageRecord *damage_history = mech->rd.stagger_damage_list;
 
   mech->rd = snapshot->runtime;
-  mech->rd.staggerDamageList = damage_history;
+  mech->rd.stagger_damage_list = damage_history;
 }

@@ -33,33 +33,33 @@ static int maximum_int(int left, int right) {
 }
 
 static int map_base_elevation(BattleMap *map, int x, int y) {
-  const int elevation = (unsigned char)map_elevation_get(map, x, y);
-  const char terrain = map_real_terrain_get(map, x, y);
-  return terrain == WATER || terrain == ICE ? -elevation : elevation;
+  const int ELEVATION = (unsigned char)map_elevation_get(map, x, y);
+  const char TERRAIN = map_real_terrain_get(map, x, y);
+  return TERRAIN == WATER || TERRAIN == ICE ? -ELEVATION : ELEVATION;
 }
 
 void tactical_sketch_landing_zones(const TacticalSketch *sketch) {
-  const int origin_offset =
+  const int ORIGIN_OFFSET =
       sketch->top_offset * sketch->display_columns + sketch->left_offset;
-  const int first_column_is_odd = tactical_column_is_odd(sketch->start_x);
-  const int width =
+  const int FIRST_COLUMN_IS_ODD = tactical_column_is_odd(sketch->start_x);
+  const int WIDTH =
       minimum_int(sketch->width, sketch->map->map_width - sketch->start_x);
-  const int height =
+  const int HEIGHT =
       minimum_int(sketch->height, sketch->map->map_height - sketch->start_y);
 
-  for (int y = maximum_int(0, -sketch->start_y); y < height; ++y) {
-    const int map_y = sketch->start_y + y;
-    for (int x = maximum_int(0, -sketch->start_x); x < width; ++x) {
-      const int map_x = sketch->start_x + x;
-      const int base_offset =
-          origin_offset + tactical_hex_offset(&(TacticalHexOffsetRequest){
+  for (int y = maximum_int(0, -sketch->start_y); y < HEIGHT; ++y) {
+    const int MAP_Y = sketch->start_y + y;
+    for (int x = maximum_int(0, -sketch->start_x); x < WIDTH; ++x) {
+      const int MAP_X = sketch->start_x + x;
+      const int BASE_OFFSET =
+          ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                               .position = {.x = x, .y = y},
                               .display_columns = sketch->display_columns,
-                              .first_column_is_odd = first_column_is_odd,
+                              .first_column_is_odd = FIRST_COLUMN_IS_ODD,
                           });
       *tactical_canvas_at(sketch->canvas,
-                          base_offset + sketch->display_columns) =
-          aero_landing_zone_check(sketch->mech, map_x, map_y)
+                          BASE_OFFSET + sketch->display_columns) =
+          aero_landing_zone_check(sketch->mech, MAP_X, MAP_Y)
               ? (sketch->color ? '\241' : 'X')
               : (sketch->color ? '\240' : 'O');
     }
@@ -67,63 +67,63 @@ void tactical_sketch_landing_zones(const TacticalSketch *sketch) {
 }
 
 void tactical_sketch_mines(const TacticalSketch *sketch) {
-  const int origin_offset =
+  const int ORIGIN_OFFSET =
       sketch->top_offset * sketch->display_columns + sketch->left_offset;
-  const int first_column_is_odd = tactical_column_is_odd(sketch->start_x);
-  const int width =
+  const int FIRST_COLUMN_IS_ODD = tactical_column_is_odd(sketch->start_x);
+  const int WIDTH =
       minimum_int(sketch->width, sketch->map->map_width - sketch->start_x);
-  const int height =
+  const int HEIGHT =
       minimum_int(sketch->height, sketch->map->map_height - sketch->start_y);
 
-  for (int y = maximum_int(0, -sketch->start_y); y < height; ++y) {
-    const int map_y = sketch->start_y + y;
-    for (int x = maximum_int(0, -sketch->start_x); x < width; ++x) {
-      const int map_x = sketch->start_x + x;
-      const int base_offset =
-          origin_offset + tactical_hex_offset(&(TacticalHexOffsetRequest){
+  for (int y = maximum_int(0, -sketch->start_y); y < HEIGHT; ++y) {
+    const int MAP_Y = sketch->start_y + y;
+    for (int x = maximum_int(0, -sketch->start_x); x < WIDTH; ++x) {
+      const int MAP_X = sketch->start_x + x;
+      const int BASE_OFFSET =
+          ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                               .position = {.x = x, .y = y},
                               .display_columns = sketch->display_columns,
-                              .first_column_is_odd = first_column_is_odd,
+                              .first_column_is_odd = FIRST_COLUMN_IS_ODD,
                           });
-      const char elevation = *tactical_canvas_at(
-          sketch->canvas, base_offset + sketch->display_columns + 1);
-      if (*tactical_canvas_at(sketch->canvas, base_offset) == '*') {
-        *tactical_canvas_at(sketch->canvas, base_offset + 1) = '*';
-      } else if (ascii_is_digit(elevation)) {
-        *tactical_canvas_at(sketch->canvas, base_offset + 1) = elevation;
+      const char ELEVATION = *tactical_canvas_at(
+          sketch->canvas, BASE_OFFSET + sketch->display_columns + 1);
+      if (*tactical_canvas_at(sketch->canvas, BASE_OFFSET) == '*') {
+        *tactical_canvas_at(sketch->canvas, BASE_OFFSET + 1) = '*';
+      } else if (ascii_is_digit(ELEVATION)) {
+        *tactical_canvas_at(sketch->canvas, BASE_OFFSET + 1) = ELEVATION;
       }
 
       MapObject *mine =
           battle_map_object_first(sketch->map, BATTLE_MAP_OBJECT_MINE);
-      while (mine != nullptr && (battle_map_object_x(mine) != map_x ||
-                                 battle_map_object_y(mine) != map_y))
+      while (mine != nullptr && (battle_map_object_x(mine) != MAP_X ||
+                                 battle_map_object_y(mine) != MAP_Y))
         mine = battle_map_object_next(mine);
 
       *tactical_canvas_at(sketch->canvas,
-                          base_offset + sketch->display_columns) = ' ';
+                          BASE_OFFSET + sketch->display_columns) = ' ';
       *tactical_canvas_at(sketch->canvas,
-                          base_offset + sketch->display_columns + 1) = ' ';
+                          BASE_OFFSET + sketch->display_columns + 1) = ' ';
       if (mine == nullptr)
         continue;
 
       float real_x;
       float real_y;
-      MapCoordToRealCoord(map_x, map_y, &real_x, &real_y);
-      const int elevation_value = map_base_elevation(sketch->map, map_x, map_y);
-      const float real_z = ZSCALE * (float)elevation_value;
-      const float range = map_spatial_range(&(MapSpatialSegment){
+      map_coord_to_real_coord(MAP_X, MAP_Y, &real_x, &real_y);
+      const int ELEVATION_VALUE = map_base_elevation(sketch->map, MAP_X, MAP_Y);
+      const float REAL_Z = ZSCALE * (float)ELEVATION_VALUE;
+      const float RANGE = map_spatial_range(&(MapSpatialSegment){
           .start = {.x = mech_position_real_x(sketch->mech),
                     .y = mech_position_real_y(sketch->mech),
                     .z = mech_position_real_z(sketch->mech)},
-          .end = {.x = real_x, .y = real_y, .z = real_z},
+          .end = {.x = real_x, .y = real_y, .z = REAL_Z},
       });
       if (mine->datac != MINE_TRIGGER &&
-          mech_los_check_unblocked(sketch->mech, nullptr, map_x, map_y,
-                                   range)) {
+          mech_los_check_unblocked(sketch->mech, nullptr, MAP_X, MAP_Y,
+                                   RANGE)) {
         *tactical_canvas_at(sketch->canvas,
-                            base_offset + sketch->display_columns) = '<';
+                            BASE_OFFSET + sketch->display_columns) = '<';
         *tactical_canvas_at(sketch->canvas,
-                            base_offset + sketch->display_columns + 1) = '>';
+                            BASE_OFFSET + sketch->display_columns + 1) = '>';
       }
     }
   }

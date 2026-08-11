@@ -58,10 +58,10 @@ static int mech_movement_mode_delay(const Mech *mech) {
 #endif
 
 static int mech_hull_down_change_delay(const Mech *mech) {
-  const float speed_factor = mech_maximum_speed(mech) / MP2;
-  const float bounded_factor = fminf(fmaxf(1.0F, speed_factor), 30.0F);
-  const float delay = 30.0F / bounded_factor;
-  return (int)delay;
+  const float SPEED_FACTOR = mech_maximum_speed(mech) / MP2;
+  const float BOUNDED_FACTOR = fminf(fmaxf(1.0F, SPEED_FACTOR), 30.0F);
+  const float DELAY = 30.0F / BOUNDED_FACTOR;
+  return (int)DELAY;
 }
 static void mech_hulldown_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
@@ -382,7 +382,7 @@ void mech_dodge(DbRef player, void *data, char *buffer) {
                  "You cannot perform multiple movement modes!");
     return;
   }
-  if (!HasBoolAdvantage(context, player, "dodge_maneuver") ||
+  if (!has_bool_advantage(context, player, "dodge_maneuver") ||
       player != mech_pilot_dbref(mech)) {
     mecha_notify(
         btech_context_evaluation(context), player,

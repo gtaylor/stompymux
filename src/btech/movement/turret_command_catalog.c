@@ -3,7 +3,7 @@
 #include "command_registry.h"
 #include <stddef.h>
 
-const BtechCommandDefinition turretcommands[] = {
+const BtechCommandDefinition TURRETCOMMANDS[] = {
     {0, "@SETTURRET <NAME> <VALUE|DATA>", "@Sets xcode value on object",
      btech_command_invoke_set_xcodestuff},
     {0, "@SETXCODE <NAME> <VALUE|DATA>", "@Sets xcode value on object",
@@ -74,5 +74,5 @@ const BtechCommandDefinition turretcommands[] = {
     {0, NULL, NULL, NULL}};
 
 size_t turret_command_count(void) {
-  return sizeof(turretcommands) / sizeof(*turretcommands) - 1;
+  return sizeof(TURRETCOMMANDS) / sizeof(*TURRETCOMMANDS) - 1;
 }

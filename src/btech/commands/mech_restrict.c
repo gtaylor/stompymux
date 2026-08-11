@@ -47,16 +47,16 @@
 #include "special_object.h"
 
 static char random_mech_id_character(BtechContext *context) {
-  const int offset = btech_random_range_int(context, 0, 25);
-  return (char)('A' + offset);
+  const int OFFSET = btech_random_range_int(context, 0, 25);
+  return (char)('A' + OFFSET);
 }
 
 static char normalized_mech_id_character(char value) {
-  const int uppercase = (unsigned char)ascii_to_upper(value);
-  return (char)BOUNDED('A', uppercase, 'Z');
+  const int UPPERCASE = (unsigned char)ascii_to_upper(value);
+  return (char)bounded('A', UPPERCASE, 'Z');
 }
 
-void clear_mech_from_LOS(Mech *mech) {
+void clear_mech_from_los(Mech *mech) {
   BattleMap *map;
   int i;
   Mech *mek;
@@ -75,9 +75,9 @@ void clear_mech_from_LOS(Mech *mech) {
     battle_map_los_flags_set(map, mech_map_slot(mech), i, 0);
     battle_map_los_flags_set(map, i, mech_map_slot(mech), 0);
 
-    const DbRef unit = battle_map_unit_dbref(map, i);
-    if (unit >= 0 && i != mech_map_slot(mech)) {
-      mek = btech_context_get_mech(mech_context(mech), unit);
+    const DbRef UNIT = battle_map_unit_dbref(map, i);
+    if (UNIT >= 0 && i != mech_map_slot(mech)) {
+      mek = btech_context_get_mech(mech_context(mech), UNIT);
       if (!mek)
         continue;
       if (mech_targeting_has_lock_on(mek, mech_dbref(mech))) {
@@ -97,7 +97,7 @@ void clear_mech_from_LOS(Mech *mech) {
   }
 }
 
-void mech_Rsetxy(DbRef player, void *data, char *buffer) {
+void mech_rsetxy(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -125,9 +125,9 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
     return;
   }
   mech_position_xy_set(mech, x, y);
-  MapCoordToRealCoord(x, y, &fx, &fy);
+  map_coord_to_real_coord(x, y, &fx, &fy);
   mech_position_real_xy_set(mech, (MapRealPosition){.x = fx, .y = fy});
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   if (argc == 2) {
     elevation = (unsigned char)map_elevation_get(mech_map, x, y);
     mech_position_z_set(mech, elevation - 1);
@@ -142,20 +142,20 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
     }
     mech_position_z_set(mech, z);
   }
-  clear_mech_from_LOS(mech);
+  clear_mech_from_los(mech);
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Pos changed to %d,%d,%d", x, y, z);
 }
 
 /* Team/Map commands */
-void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
+void mech_rsetmapindex(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   char *args[2], *tempstr;
   int newindex, nargs, notdone = 0;
   int loop;
   BattleMap *newmap = NULL;
   BattleMap *oldmap;
-  Mech *tempMech;
+  Mech *temp_mech;
   char targ[2];
 
   nargs = mech_parseattributes(buffer, args, 2);
@@ -218,11 +218,11 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   targ[0] = normalized_mech_id_character(targ[0]);
   targ[1] = normalized_mech_id_character(targ[1]);
   for (loop = 0; (loop < battle_map_unit_count(newmap) && !notdone); loop++) {
-    const DbRef unit = battle_map_unit_dbref(newmap, loop);
-    tempMech = (Mech *)btech_context_find_object(mech_context(mech), unit);
-    if (tempMech) {
-      MechUnitId const id = mech_unit_id(tempMech);
-      if (id.first == targ[0] && id.second == targ[1])
+    const DbRef UNIT = battle_map_unit_dbref(newmap, loop);
+    temp_mech = (Mech *)btech_context_find_object(mech_context(mech), UNIT);
+    if (temp_mech) {
+      MechUnitId const ID = mech_unit_id(temp_mech);
+      if (ID.first == targ[0] && ID.second == targ[1])
         notdone = 1;
     }
   }
@@ -231,11 +231,11 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     targ[1] = random_mech_id_character(mech_context(mech));
     notdone = 0;
     for (loop = 0; (loop < battle_map_unit_count(newmap) && !notdone); loop++) {
-      const DbRef unit = battle_map_unit_dbref(newmap, loop);
-      tempMech = (Mech *)btech_context_find_object(mech_context(mech), unit);
-      if (tempMech) {
-        MechUnitId const id = mech_unit_id(tempMech);
-        if (id.first == targ[0] && id.second == targ[1])
+      const DbRef UNIT = battle_map_unit_dbref(newmap, loop);
+      temp_mech = (Mech *)btech_context_find_object(mech_context(mech), UNIT);
+      if (temp_mech) {
+        MechUnitId const ID = mech_unit_id(temp_mech);
+        if (ID.first == targ[0] && ID.second == targ[1])
           notdone = 1;
       }
     }
@@ -251,7 +251,7 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
       mech_position_y(mech) > (newmap->map_height - 1)) {
     float fx, fy;
     mech_position_reset_origin(mech);
-    MapCoordToRealCoord(0, 0, &fx, &fy);
+    map_coord_to_real_coord(0, 0, &fx, &fy);
     mech_position_real_xy_set(mech, (MapRealPosition){.x = fx, .y = fy});
     mecha_notify(
         btech_context_evaluation(mech_context(mech)), player,
@@ -265,7 +265,7 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   autopilot_resume_for_mech(mech);
 }
 
-void mech_Rsetteam(DbRef player, void *data, char *buffer) {
+void mech_rsetteam(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   char *args[1];
   int team;
@@ -315,7 +315,7 @@ void newfreemech(DbRef key, void **data,
     mech_identity_initialize(new, key);
     mech_template_clear(new, 1);
     for (i = 0; i < NUM_SECTIONS; i++)
-      FillDefaultCriticals(new, i);
+      fill_default_criticals(new, i);
     break;
   case SPECIAL_FREE:
     mech_stagger_damage_clear(new);

@@ -19,12 +19,12 @@ BtechScriptResult fun_btthreshold(BtechScriptCall *call) {
                      "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
-  const int threshold =
+  const int THRESHOLD =
       btthreshold_func(call->evaluation->btech,
                        script_function_argument(call->arguments.values,
                                                 (int)call->arguments.count, 0));
   safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                   threshold < 0 ? "#%d ERROR" : "%d", threshold);
+                   THRESHOLD < 0 ? "#%d ERROR" : "%d", THRESHOLD);
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
@@ -34,18 +34,18 @@ static Mech *damage_target(BtechScriptCall *call, BtechScriptValueKind kind) {
                      "#-1 PERMISSION DENIED");
     return nullptr;
   }
-  const DbRef object =
+  const DbRef OBJECT =
       match_thing(&call->evaluation->command->match, call->player,
                   script_function_argument(call->arguments.values,
                                            (int)call->arguments.count, 0));
-  if (object == NOTHING ||
-      !is_examinable(call->evaluation->world->database, call->player, object) ||
-      !btech_context_is_mech(call->evaluation->btech, object)) {
+  if (OBJECT == NOTHING ||
+      !is_examinable(call->evaluation->world->database, call->player, OBJECT) ||
+      !btech_context_is_mech(call->evaluation->btech, OBJECT)) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 NOT A MECH");
     return nullptr;
   }
-  Mech *mech = btech_context_find_object(call->evaluation->btech, object);
+  Mech *mech = btech_context_find_object(call->evaluation->btech, OBJECT);
   if (!mech)
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 UNABLE TO GET MECHDATA");
@@ -95,7 +95,7 @@ BtechScriptResult fun_btdamagemech(BtechScriptCall *call) {
                      "#-1 INVALID 5TH ARG");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  const int result = mech_damage_apply_clusters(&(DamageClusterRequest){
+  const int RESULT = mech_damage_apply_clusters(&(DamageClusterRequest){
       .mech = mech,
       .total_damage = total_damage,
       .cluster_size = cluster_size,
@@ -106,7 +106,7 @@ BtechScriptResult fun_btdamagemech(BtechScriptCall *call) {
       .broadcast_message = script_function_argument(
           call->arguments.values, (int)call->arguments.count, 6),
   });
-  safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d", result);
+  safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d", RESULT);
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 

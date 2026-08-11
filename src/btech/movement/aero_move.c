@@ -303,17 +303,17 @@ void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
   const char *nearhitmsg = request->nearby_message;
   const char *nearhitmsg1 = request->nearby_observer_message;
   const char *treehitmsg = request->tree_message;
-  const int damage = request->damage;
+  const int DAMAGE = request->damage;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int x = mech_position_x(mech), y = mech_position_y(mech),
       z = mech_position_z(mech);
   int x1, y1, x2, y2, d;
-  int rng = (damage > 100 ? 5 : 3);
+  int rng = (DAMAGE > 100 ? 5 : 3);
   for (x1 = x - rng; x1 <= (x + rng); x1++)
     for (y1 = y - rng; y1 <= (y + rng); y1++) {
-      x2 = BOUNDED(0, x1, battle_map_width(map) - 1);
-      y2 = BOUNDED(0, y1, battle_map_height(map) - 1);
+      x2 = bounded(0, x1, battle_map_width(map) - 1);
+      y2 = bounded(0, y1, battle_map_height(map) - 1);
       if (x1 != x2 || y1 != y2)
         continue;
       d = map_hex_distance(&(HexDistanceRequest){
@@ -323,15 +323,15 @@ void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
       });
       if (d > rng)
         continue;
-      d = MAX(1, d);
+      d = max(1, d);
       switch (map_real_terrain_get(map, x1, y1)) {
       case BATTLE_TERRAIN_LIGHT_FOREST:
       case BATTLE_TERRAIN_HEAVY_FOREST:
         if (!find_decorations(map, x1, y1)) {
-          HexLOSBroadcast(
+          hex_los_broadcast(
               map, x1, y1,
               tprintf("[fg=red bold]The trees in $h %s[reset]", treehitmsg));
-          if ((damage / d) > 100) {
+          if ((DAMAGE / d) > 100) {
             map_terrain_set(map, x1, y1, BATTLE_TERRAIN_ROUGH);
           } else {
             add_decoration(&(MapDecorationRequest){
@@ -352,7 +352,7 @@ void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
       .center =
           {
               .map = map,
-              .damage = {.total = damage, .hit_size = 5, .heat = damage / 2},
+              .damage = {.total = DAMAGE, .hit_size = 5, .heat = DAMAGE / 2},
               .impact = {.x = mech_position_real_x(mech),
                          .y = mech_position_real_y(mech)},
               .source = {.x = mech_position_real_x(mech),
@@ -367,14 +367,14 @@ void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
   mech_position_hex_z_set(mech, z);
 }
 enum { NO_ERROR, INVALID_TERRAIN, UNEVEN_TERRAIN, BLOCKED_LZ };
-static const char *const reasons[] = {"Improper terrain", "Uneven ground",
+static const char *const REASONS[] = {"Improper terrain", "Uneven ground",
                                       "Blocked landing zone"};
 const char *aero_landing_reason(int index) {
   if (index < 0)
     abort();
   const char *const *reason = (const char *const *)checked_storage_at_const(
-      (const void *)reasons, sizeof(reasons) / sizeof(*reasons),
-      sizeof(*reasons), (size_t)index);
+      (const void *)REASONS, sizeof(REASONS) / sizeof(*REASONS),
+      sizeof(*REASONS), (size_t)index);
   return *reason;
 }
 typedef struct LandingZoneCheck LandingZoneCheck;
@@ -482,15 +482,15 @@ void aero_land(DbRef player, void *data, const char *buffer) {
                  "You're moving too slowly to land.");
     return;
   }
-  const float vertical_speed = mech_vertical_speed(mech);
-  const float current_speed = mech_current_speed(mech);
-  if ((double)vertical_speed > land_data_entry(i)->maxvertup ||
-      (double)vertical_speed < land_data_entry(i)->maxvertdown) {
+  const float VERTICAL_SPEED = mech_vertical_speed(mech);
+  const float CURRENT_SPEED = mech_current_speed(mech);
+  if ((double)VERTICAL_SPEED > land_data_entry(i)->maxvertup ||
+      (double)VERTICAL_SPEED < land_data_entry(i)->maxvertdown) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You are moving too fast to land. ");
     return;
   }
-  if ((double)current_speed < land_data_entry(i)->minhoriz) {
+  if ((double)CURRENT_SPEED < land_data_entry(i)->minhoriz) {
     if (mech_motion_vector_z(mech) <= 0)
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
@@ -575,29 +575,29 @@ void aero_speed_update(Mech *mech) {
   float ab = 0.7F;
   float m = 1.0F;
   if (mech_condition_summary(mech).spinning) {
-    const int speed_adjustment =
+    const int SPEED_ADJUSTMENT =
         btech_random_range_int(mech_context(mech), 1, 10);
-    const float randomized_speed =
-        mech_desired_speed(mech) + (float)speed_adjustment;
-    const float bounded_speed = fminf(fmaxf(0.0F, randomized_speed),
+    const float RANDOMIZED_SPEED =
+        mech_desired_speed(mech) + (float)SPEED_ADJUSTMENT;
+    const float BOUNDED_SPEED = fminf(fmaxf(0.0F, RANDOMIZED_SPEED),
                                       mech_effective_maximum_speed(mech));
-    mech_desired_speed_set(mech, bounded_speed);
+    mech_desired_speed_set(mech, BOUNDED_SPEED);
     mech_desired_angle_set(
-        mech, MAX(-90, mech_desired_angle(mech) -
+        mech, max(-90, mech_desired_angle(mech) -
                            btech_random_range_int(mech_context(mech), 1, 15)));
     mech_desired_heading_set(
         mech,
-        AcceptableDegree(mech_desired_heading_degrees(mech) +
-                         btech_random_range_int(mech_context(mech), -3, 3)));
+        acceptable_degree(mech_desired_heading_degrees(mech) +
+                          btech_random_range_int(mech_context(mech), -3, 3)));
   }
-  const int desired_angle = mech_desired_angle(mech);
-  wz = mech_desired_speed(mech) * degrees_sine((float)desired_angle);
+  const int DESIRED_ANGLE = mech_desired_angle(mech);
+  wz = mech_desired_speed(mech) * degrees_sine((float)DESIRED_ANGLE);
   if (mech_class(mech) == CLASS_AERO)
     ab = 2.5F;
   if (mech_position_z(mech) < ATMO_Z)
     ab /= 2.0F;
   /* First, we calculate the vector we want to be going */
-  xypart = mech_desired_speed(mech) * degrees_cosine((float)desired_angle);
+  xypart = mech_desired_speed(mech) * degrees_cosine((float)DESIRED_ANGLE);
   if (mech_fuel(mech) < 0) {
     wz /= 5.0F;
     xypart /= 5.0F;
@@ -637,7 +637,7 @@ void aero_speed_update(Mech *mech) {
   /* Then, we need to calculate present heading / speed / verticalspeed */
   nh = atan2f(ny, nx) * 180.0F / (float)M_PI;
   if (!(mech_class(mech) == CLASS_SPHEROID_DS))
-    mech_heading_set(mech, AcceptableDegree((int)nh + 90));
+    mech_heading_set(mech, acceptable_degree((int)nh + 90));
   xypart = length_hypotenuse_float(nx, ny);
   mech_current_speed_set(mech, xypart);
   mech_vertical_speed_set(mech, nz);
@@ -655,9 +655,9 @@ int aero_fuel_check(Mech *mech) {
     return 0;
   if (fabsf(mech_current_speed(mech)) > mech_effective_maximum_speed(mech)) {
     if (mech_position_z(mech) < ATMO_Z) {
-      const float fuel_ratio =
+      const float FUEL_RATIO =
           fabsf(mech_current_speed(mech) / mech_effective_maximum_speed(mech));
-      fuelcost = (int)fuel_ratio;
+      fuelcost = (int)FUEL_RATIO;
     }
   } else if (fabsf(mech_current_speed(mech)) < MP1 &&
              fabsf(mech_vertical_speed(mech)) < MP2)
@@ -721,17 +721,17 @@ void aero_update(Mech *mech) {
       return;
     if (mech_is_landed(mech))
       return;
-    time_t const spin_duration =
+    time_t const SPIN_DURATION =
         mech_spin_start_tick(mech) - btech_context_now(mech_context(mech));
-    int const spin_modifier = clamp_intptr_to_int((intptr_t)spin_duration);
-    if (MadePilotSkillRoll(mech, spin_modifier / 15 + 8)) {
+    int const SPIN_MODIFIER = clamp_intptr_to_int((intptr_t)SPIN_DURATION);
+    if (made_pilot_skill_roll(mech, SPIN_MODIFIER / 15 + 8)) {
       mech_notify(mech, MECHALL, "You recover control of your craft.");
       mech_spinning_set(mech, false);
     }
   }
   if (mech_is_started(mech))
     mech_sensor_visibility_modifier_set(
-        mech, BOUNDED(0,
+        mech, bounded(0,
                       mech_sensor_visibility_modifier(mech) +
                           btech_random_range_int(mech_context(mech), -40, 40),
                       100));

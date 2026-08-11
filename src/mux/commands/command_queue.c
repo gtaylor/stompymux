@@ -115,10 +115,10 @@ static void cque_free_entry(BQUE *entry) {
 static int objqe_compare(const RedBlackTreeCompareCall *call) {
   void *left_key = call->lhs;
   void *right_key = call->rhs;
-  const DbRef left = (DbRef)left_key;
-  const DbRef right = (DbRef)right_key;
+  const DbRef LEFT = (DbRef)left_key;
+  const DbRef RIGHT = (DbRef)right_key;
 
-  return (right > left) - (right < left);
+  return (RIGHT > LEFT) - (RIGHT < LEFT);
 }
 
 int cque_init(CommandQueue *queue) {
@@ -158,7 +158,7 @@ static BQUE *cque_deque(CommandQueue *queue, DbRef player) {
   if (!tmp)
     return nullptr;
 
-  dassert(tmp);
+  DASSERT(tmp);
 
   if (!tmp->cque)
     return nullptr;
@@ -182,7 +182,7 @@ static void cque_enqueue(CommandQueue *queue, DbRef player, BQUE *cmd) {
     cmd->waittime = 0;
     tmp = cque_find(queue, player);
 
-    dassert(tmp);
+    DASSERT(tmp);
 
     if (!tmp->ctail) {
       tmp->cque = tmp->ctail = cmd;
@@ -540,7 +540,7 @@ int do_top(CommandQueue *queue, int ncmds) {
     if (!tmp)
       continue;
 
-    dassert(tmp);
+    DASSERT(tmp);
     count++;
     if ((object >= 0) && !is_going(queue->world->database, object)) {
       CommandContext context;

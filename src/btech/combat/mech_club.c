@@ -21,16 +21,16 @@
 #include "section_types.h"
 #include <stdio.h>
 bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure) {
-  int tCanGrab = 1;
+  int t_can_grab = 1;
   char buf[100] = {0};
   char location[20] = {0};
 
-  ArmorStringFromIndex(section, location, mech_class(mech),
-                       mech_movement_type(mech));
+  armor_string_from_index(section, location, mech_class(mech),
+                          mech_movement_type(mech));
 
   if (mech_section_is_destroyed(mech, section)) {
     (void)snprintf(buf, sizeof(buf), "Your %s is destroyed.", location);
-    tCanGrab = 0;
+    t_can_grab = 0;
   } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
                  .mech = mech,
                  .slot = {.section = section, .critical = 3},
@@ -38,7 +38,7 @@ bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure) {
     (void)snprintf(buf, sizeof(buf),
                    "Your %s's hand actuator is destroyed or missing.",
                    location);
-    tCanGrab = 0;
+    t_can_grab = 0;
   } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
                  .mech = mech,
                  .slot = {.section = section, .critical = 0},
@@ -46,18 +46,18 @@ bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure) {
     (void)snprintf(buf, sizeof(buf),
                    "Your %s's shoulder actuator is destroyed or missing.",
                    location);
-    tCanGrab = 0;
+    t_can_grab = 0;
   } else if (mech_section_has_recycling_weapon(mech, section)) {
     (void)snprintf(buf, sizeof(buf),
                    "Your %s is still recovering from it's last attack.",
                    location);
-    tCanGrab = 0;
+    t_can_grab = 0;
   }
 
-  if (!tCanGrab && emit_failure)
+  if (!t_can_grab && emit_failure)
     mech_notify(mech, MECHALL, buf);
 
-  return tCanGrab;
+  return t_can_grab;
 }
 
 /*
@@ -65,7 +65,7 @@ bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure) {
  */
 void mech_grabclub(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  int wcArgs = 0;
+  int wc_args = 0;
   int location = 0;
   char *args[1];
   char locname[20];
@@ -73,10 +73,10 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
 
-  wcArgs = mech_parseattributes(buffer, args, 1);
+  wc_args = mech_parseattributes(buffer, args, 1);
 
   // If we grabclub -, we're attempting to drop it.
-  if (wcArgs >= 1 &&
+  if (wc_args >= 1 &&
       ascii_to_upper(*checked_string_suffix(args[0], 0)) == '-') {
     if (mech_section_carries_club(mech, LARM) ||
         mech_section_carries_club(mech, RARM)) {
@@ -127,7 +127,7 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (wcArgs == 0) {
+  if (wc_args == 0) {
     if (mech_club_location_is_usable(mech, LARM, false))
       location = LARM;
     else if (mech_club_location_is_usable(mech, RARM, false))
@@ -169,8 +169,8 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  ArmorStringFromIndex(location, locname, mech_class(mech),
-                       mech_movement_type(mech));
+  armor_string_from_index(location, locname, mech_class(mech),
+                          mech_movement_type(mech));
 
   mech_los_broadcast(mech, "reaches down and yanks a tree out of the ground!");
   mech_printf(mech, MECHALL,

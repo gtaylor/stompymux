@@ -62,17 +62,17 @@ static int template_load_modern(DbRef player, Mech *mech, const char *id) {
   return load_template(player, mech, filename) >= 0 ? 1 : 0;
 }
 
-extern const int num_def_weapons;
+extern const int DEFAULT_WEAPON_COUNT;
 
 static int template_part_type_is_invalid(int i) {
   if (!i)
     return 0;
   if (equipment_is_weapon(i)) {
-    if (i > (num_def_weapons))
+    if (i > (DEFAULT_WEAPON_COUNT))
       return 1;
   }
   if (equipment_is_ammunition(i)) {
-    if ((ammunition_to_weapon_index(i) + 1) > (num_def_weapons))
+    if ((ammunition_to_weapon_index(i) + 1) > (DEFAULT_WEAPON_COUNT))
       return 1;
   }
   if (equipment_is_special(i))

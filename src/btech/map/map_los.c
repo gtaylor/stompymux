@@ -38,7 +38,7 @@ static unsigned short *battle_map_los_cell(BattleMap *map, int observer,
   if (observer < 0 || target < 0)
     abort();
   unsigned short **row_slot = (unsigned short **)checked_storage_at(
-      (void *)map->LOSinfo, (size_t)map->dynamic_size, sizeof(*map->LOSinfo),
+      (void *)map->lo_sinfo, (size_t)map->dynamic_size, sizeof(*map->lo_sinfo),
       (size_t)observer);
   return checked_storage_at(*row_slot, (size_t)map->dynamic_size,
                             sizeof(**row_slot), (size_t)target);
@@ -50,8 +50,8 @@ battle_map_los_cell_const(const BattleMap *map, int observer, int target) {
     abort();
   unsigned short *const *row_slot =
       (unsigned short *const *)checked_storage_at_const(
-          (const void *)map->LOSinfo, (size_t)map->dynamic_size,
-          sizeof(*map->LOSinfo), (size_t)observer);
+          (const void *)map->lo_sinfo, (size_t)map->dynamic_size,
+          sizeof(*map->lo_sinfo), (size_t)observer);
   return checked_storage_at_const(*row_slot, (size_t)map->dynamic_size,
                                   sizeof(**row_slot), (size_t)target);
 }
@@ -104,16 +104,16 @@ bool battle_map_unit_los_is_blocked(const BattleMap *map, const Mech *observer,
 
 int battle_map_unit_los_wood_count(const BattleMap *map, const Mech *observer,
                                    const Mech *target) {
-  const int flags = *battle_map_los_cell_const(map, mech_map_slot(observer),
+  const int FLAGS = *battle_map_los_cell_const(map, mech_map_slot(observer),
                                                mech_map_slot(target));
-  return battle_map_los_wood_count(flags);
+  return battle_map_los_wood_count(FLAGS);
 }
 
 int battle_map_unit_los_water_count(const BattleMap *map, const Mech *observer,
                                     const Mech *target) {
-  const int flags = *battle_map_los_cell_const(map, mech_map_slot(observer),
+  const int FLAGS = *battle_map_los_cell_const(map, mech_map_slot(observer),
                                                mech_map_slot(target));
-  return battle_map_los_water_count(flags);
+  return battle_map_los_water_count(FLAGS);
 }
 
 unsigned short battle_map_los_flags(const BattleMap *map, int observer_index,
@@ -264,7 +264,7 @@ static int mech_los_sees_range(const SensorRangeRequest *request) {
   const SensorDefinition *sensor_definition = mech_sensor_definition(sn);
   float maxvis = (float)sensor_definition->maximum_visibility;
 
-  MapCoordToRealCoord(request->position.x, request->position.y, &fx, &fy);
+  map_coord_to_real_coord(request->position.x, request->position.y, &fx, &fy);
   range = map_spatial_range(&(MapSpatialSegment){
       .start = {.x = mech_position_real_x(mech),
                 .y = mech_position_real_y(mech),
@@ -282,7 +282,7 @@ static int mech_los_sees_range(const SensorRangeRequest *request) {
     maxvis *= 2;
 
   if (!sensor_definition->full_vision) {
-    int arc = InWeaponArc(mech, fx, fy);
+    int arc = in_weapon_arc(mech, fx, fy);
 
     if (!(arc & (FORWARDARC | TURRETARC))) {
       if (mech_sensor_index(mech, 0) == mech_sensor_index(mech, 1))
@@ -309,10 +309,10 @@ static int mech_searchlight_reaches(const SearchlightReachRequest *request) {
   Mech *mech = request->mech;
   float fx, fy, range;
   int arc;
-  const float maxvis = 60.0F;
+  const float MAXVIS = 60.0F;
 
-  MapCoordToRealCoord(request->position.x, request->position.y, &fx, &fy);
-  arc = InWeaponArc(mech, fx, fy);
+  map_coord_to_real_coord(request->position.x, request->position.y, &fx, &fy);
+  arc = in_weapon_arc(mech, fx, fy);
   if (!(arc & (FORWARDARC | TURRETARC))) {
     return 0;
   }
@@ -323,7 +323,7 @@ static int mech_searchlight_reaches(const SearchlightReachRequest *request) {
                 .z = mech_position_real_z(mech)},
       .end = {.x = fx, .y = fy, .z = ZSCALE * (float)request->elevation},
   });
-  return range < maxvis;
+  return range < MAXVIS;
 }
 
 static int mech_sensor_sees_terrain(Mech *mech, int sn) {
@@ -399,7 +399,7 @@ static void trace_slitelos(const SliteTraceRequest *request) {
     trace_x = point->x;
     trace_y = point->y;
 
-    trace_height = MAX(0, map_elevation_get(map, trace_x, trace_y));
+    trace_height = max(0, map_elevation_get(map, trace_x, trace_y));
 
     if (!mech_searchlight_reaches(
             &(SearchlightReachRequest){.mech = mech,
@@ -441,10 +441,10 @@ static void litemark_map(HexLosMap *los_map, BattleMap *map, LosTrace *trace) {
   }
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
-    const DbRef unit_dbref = battle_map_unit_dbref(map, i);
-    if (unit_dbref < 0)
+    const DbRef UNIT_DBREF = battle_map_unit_dbref(map, i);
+    if (UNIT_DBREF < 0)
       continue;
-    mech = btech_context_get_mech(map->xcode.context, unit_dbref);
+    mech = btech_context_get_mech(map->xcode.context, UNIT_DBREF);
     if (!mech)
       continue;
 
@@ -459,13 +459,13 @@ static void litemark_map(HexLosMap *los_map, BattleMap *map, LosTrace *trace) {
       continue;
 
     for (index = 0; index < los_map->xsize * los_map->ysize; index++) {
-      const int mech_z = mech_position_z(mech);
-      const float light_height = (float)mech_z + mech_los_height(mech);
+      const int MECH_Z = mech_position_z(mech);
+      const float LIGHT_HEIGHT = (float)MECH_Z + mech_los_height(mech);
       trace_slitelos(&(SliteTraceRequest){.los_map = los_map,
                                           .map = map,
                                           .mech = mech,
                                           .index = index,
-                                          .start_height = light_height,
+                                          .start_height = LIGHT_HEIGHT,
                                           .trace = trace});
     }
   }
@@ -693,8 +693,8 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
   } else
     bothworlds = 0;
 
-  const int mech_z = mech_position_z(mech);
-  start_height = (float)mech_z + mech_los_height(mech);
+  const int MECH_Z = mech_position_z(mech);
+  start_height = (float)MECH_Z + mech_los_height(mech);
 
   if (mech_is_clairvoyant(mech)) {
     set_hexlosall(los_map, MAPLOSHEX_SEE);

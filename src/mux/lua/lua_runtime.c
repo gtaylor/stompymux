@@ -16,7 +16,6 @@
 #include <sys/stat.h>
 
 #include "mux/lua/btech_package.h"
-#include "mux/lua/command_access.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/lua/mux_package.h"
@@ -41,18 +40,17 @@ char *lua_global_module_slot(LuaRuntime *runtime, size_t index) {
                                       sizeof(*runtime->global_modules), index);
 }
 
-const char *lua_runtime_root_at(const LuaRuntime *runtime,
-                                LUA_MODULE_ROOT root) {
+const char *lua_runtime_root_at(const LuaRuntime *runtime, LuaModuleRoot root) {
   return checked_storage_at_const(runtime->roots, LUA_ROOT_COUNT,
                                   sizeof(*runtime->roots), (size_t)root);
 }
 
-char *lua_runtime_root_slot(LuaRuntime *runtime, LUA_MODULE_ROOT root) {
+char *lua_runtime_root_slot(LuaRuntime *runtime, LuaModuleRoot root) {
   return checked_storage_at(runtime->roots, LUA_ROOT_COUNT,
                             sizeof(*runtime->roots), (size_t)root);
 }
 
-LUA_SCHEDULE_JOB *lua_schedule_job_at(LuaRuntime *runtime, size_t index) {
+LuaScheduleJob *lua_schedule_job_at(LuaRuntime *runtime, size_t index) {
   return checked_storage_at(runtime->schedule_jobs, runtime->schedule_job_count,
                             sizeof(*runtime->schedule_jobs), index);
 }
@@ -161,7 +159,7 @@ int lua_valid_relative_path(const char *path) {
   return 1;
 }
 
-const char *lua_root_name(LUA_MODULE_ROOT root) {
+const char *lua_root_name(LuaModuleRoot root) {
   switch (root) {
   case LUA_ROOT_OBJECT_LOGIC:
     return "object_logic";
@@ -191,9 +189,9 @@ int lua_join_path(char *destination, size_t destination_size, const char *first,
   return 1;
 }
 
-int lua_resolve_path(LuaRuntime *runtime, LUA_MODULE_ROOT root,
-                     const char *path, char *resolved, size_t resolved_size,
-                     char *error, size_t error_size) {
+int lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
+                     char *resolved, size_t resolved_size, char *error,
+                     size_t error_size) {
   char candidate[PATH_MAX];
   size_t root_length;
 
@@ -236,15 +234,15 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
                                   "loadstring", "load",      "collectgarbage",
                                   "module",     "require",   "getfenv",
                                   "setfenv",    nullptr};
-  const size_t blocked_count = sizeof(blocked) / sizeof(*blocked) - 1;
+  const size_t BLOCKED_COUNT = sizeof(blocked) / sizeof(*blocked) - 1;
   size_t index;
 
   luaL_openlibs(runtime->state);
   if (!luaJIT_setmode(runtime->state, 0, LUAJIT_MODE_ENGINE | LUAJIT_MODE_ON))
     return false;
-  for (index = 0; index < blocked_count; index++) {
+  for (index = 0; index < BLOCKED_COUNT; index++) {
     const char *name = *(const char *const *)checked_storage_at_const(
-        (const void *)blocked, blocked_count, sizeof(*blocked), index);
+        (const void *)blocked, BLOCKED_COUNT, sizeof(*blocked), index);
 
     lua_pushnil(runtime->state);
     lua_setglobal(runtime->state, name);
@@ -268,12 +266,12 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
   return true;
 }
 
-int lua_load_module(LuaRuntime *runtime, LUA_MODULE_ROOT root, const char *path,
+int lua_load_module(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
                     char *error, size_t error_size) {
   lua_State *state = runtime->state;
   char resolved[PATH_MAX];
   char key[PATH_MAX];
-  LUA_MODULE_ROOT previous_root;
+  LuaModuleRoot previous_root;
   int status;
 
   if (!lua_resolve_path(runtime, root, path, resolved, sizeof(resolved), error,
@@ -322,12 +320,12 @@ int lua_load_module(LuaRuntime *runtime, LUA_MODULE_ROOT root, const char *path,
   return 1;
 }
 
-LUA_MODULE_ROOT lua_require_root(lua_State *state, LuaRuntime *runtime) {
+LuaModuleRoot lua_require_root(lua_State *state, LuaRuntime *runtime) {
   lua_Debug debug;
   int root = (int)runtime->current_root;
 
   if (!lua_getstack(state, 1, &debug) || !lua_getinfo(state, "f", &debug))
-    return (LUA_MODULE_ROOT)root;
+    return (LuaModuleRoot)root;
   lua_getfenv(state, -1);
   lua_getfield(state, -1, "__mux_module_root");
   if (lua_isnumber(state, -1))
@@ -335,13 +333,13 @@ LUA_MODULE_ROOT lua_require_root(lua_State *state, LuaRuntime *runtime) {
   lua_pop(state, 2);
   if (root < LUA_ROOT_OBJECT_LOGIC || root >= LUA_ROOT_COUNT)
     return runtime->current_root;
-  return (LUA_MODULE_ROOT)root;
+  return (LuaModuleRoot)root;
 }
 
 static int lua_require_module(lua_State *state) {
   LuaRuntime *runtime = lua_touserdata(state, lua_upvalueindex(1));
   const char *name = luaL_checkstring(state, 1);
-  LUA_MODULE_ROOT root = lua_require_root(state, runtime);
+  LuaModuleRoot root = lua_require_root(state, runtime);
   char path[PATH_MAX];
   char resolved[PATH_MAX];
   size_t index;
@@ -395,7 +393,7 @@ static int lua_require_module(lua_State *state) {
 LuaRuntime *lua_runtime_create(LuaOwner *owner, const LuaServices *services,
                                char *error, size_t error_size) {
   LuaRuntime *runtime;
-  LUA_MODULE_ROOT root;
+  LuaModuleRoot root;
   const ServerConfiguration *configuration = services->configuration;
 
   if (configuration->lua.memory_limit <= 0) {
@@ -474,7 +472,7 @@ void lua_runtime_destroy(LuaRuntime *runtime) {
     free((void *)runtime->global_modules);
   }
   for (index = 0; index < runtime->schedule_job_count; index++) {
-    LUA_SCHEDULE_JOB *job = lua_schedule_job_at(runtime, index);
+    LuaScheduleJob *job = lua_schedule_job_at(runtime, index);
 
     free(job->path);
     free(job->name);

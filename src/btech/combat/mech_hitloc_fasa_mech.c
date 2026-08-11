@@ -12,7 +12,7 @@
 #include "mux/support/formatting.h"
 #include "section_types.h"
 
-HitLocationResult fasa_mech_hit_location(Mech *mech, int hitGroup,
+HitLocationResult fasa_mech_hit_location(Mech *mech, int hit_group,
                                          HitLocationResult result, int roll) {
   int hitloc = 0;
   BtechContext *context = mech_context(mech);
@@ -26,7 +26,7 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hitGroup,
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
@@ -56,7 +56,7 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hitGroup,
       case 12:
         if (btech_context_uses_exile_stun_code(context))
           return hit_location_result_at(result,
-                                        mech_head_hit_modify(hitGroup, mech));
+                                        mech_head_hit_modify(hit_group, mech));
         return hit_location_result_at(result, HEAD);
       }
       break;
@@ -89,7 +89,7 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hitGroup,
       case 12:
         if (btech_context_uses_exile_stun_code(context))
           return hit_location_result_at(result,
-                                        mech_head_hit_modify(hitGroup, mech));
+                                        mech_head_hit_modify(hit_group, mech));
         return hit_location_result_at(result, HEAD);
       }
       break;
@@ -122,7 +122,7 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hitGroup,
       case 12:
         if (btech_context_uses_exile_stun_code(context))
           return hit_location_result_at(result,
-                                        mech_head_hit_modify(hitGroup, mech));
+                                        mech_head_hit_modify(hit_group, mech));
         return hit_location_result_at(result, HEAD);
       }
     }

@@ -89,7 +89,7 @@ static const char *
 physical_recycle_status(Mech *mech, int section,
                         MechPhysicalWeaponType physical_type) {
   int recycle = mech_section_recycle_ticks(mech, section);
-  if (!canUsePhysical(&(PhysicalWeaponRequest){
+  if (!can_use_physical(&(PhysicalWeaponRequest){
           .mech = mech, .section = section, .type = physical_type}))
     return "[fg=red bold]XX[reset]";
   if (recycle > 0)
@@ -116,7 +116,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
   char weapbuff[LBUF_SIZE] = {0};
   char tempbuff[LBUF_SIZE] = {0};
   char location[80] = {0};
-  char astrAmmoSpacer[MBUF_SIZE] = {0}; /* mem is cheap. over allocate */
+  char astr_ammo_spacer[MBUF_SIZE] = {0}; /* mem is cheap. over allocate */
   int running_sum = 0;
   char ammo_mode;
   int technology = mech_technology_flags(mech);
@@ -360,52 +360,52 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                           is_quad ? "RRLEG" : "RLEG",
                           section_recycle_status(mech, RLEG));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_AXE}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Axe[LA]",
                             physical_recycle_status(mech, LARM, PHY_AXE));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_AXE}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Axe[RA]",
                             physical_recycle_status(mech, RARM, PHY_AXE));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_SWORD}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Sword[LA]",
                             physical_recycle_status(mech, LARM, PHY_SWORD));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_SWORD}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Sword[RA]",
                             physical_recycle_status(mech, RARM, PHY_SWORD));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_CLAW}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Claw[LA]",
                             physical_recycle_status(mech, LARM, PHY_CLAW));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_CLAW}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Claw[RA]",
                             physical_recycle_status(mech, RARM, PHY_CLAW));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_MACE}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Mace[LA]",
                             physical_recycle_status(mech, LARM, PHY_MACE));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_MACE}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Mace[RA]",
                             physical_recycle_status(mech, RARM, PHY_MACE));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_SAW}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Saw[LA]",
                             physical_recycle_status(mech, LARM, PHY_SAW));
 
-    if (hasPhysical(&(PhysicalWeaponRequest){
+    if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_SAW}))
       recycle_status_append(tempbuff, sizeof(tempbuff), "Saw[RA]",
                             physical_recycle_status(mech, RARM, PHY_SAW));
@@ -441,7 +441,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       mecha_notify(evaluation, player, tempbuff);
   }
 
-  ammoweapcount = FindAmmunition(mech, ammoweap, ammo, ammomax, modearray, 0);
+  ammoweapcount = find_ammunition(mech, ammoweap, ammo, ammomax, modearray, 0);
   if (!compact) {
     mecha_notify(evaluation, player,
                  "==================WEAPON "
@@ -456,11 +456,11 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                    "Ammo Type ---- Rounds");
   }
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 0);
+    count = find_weapons_advanced(mech, loop, weaparray, weapdata, critical, 0);
     if (count <= 0)
       continue;
-    ArmorStringFromIndex(loop, tempbuff, mech_class(mech),
-                         mech_movement_type(mech));
+    armor_string_from_index(loop, tempbuff, mech_class(mech),
+                            mech_movement_type(mech));
     (void)snprintf(location, sizeof(location), "%-14.14s", tempbuff);
     if (compact) {
       strlcpy(location, tempbuff, sizeof(location));
@@ -471,13 +471,13 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     for (ii = 0; ii < count; ii++) {
       BtechTextBuilder weapon_text;
       btech_text_builder_initialize(&weapon_text, weapbuff, sizeof(weapbuff));
-      const int critical_index = weapon_status_critical(critical, ii);
-      const int weapon_index =
+      const int CRITICAL_INDEX = weapon_status_critical(critical, ii);
+      const int WEAPON_INDEX =
           weapon_status_byte(weaparray, MAX_WEAPS_SECTION, ii);
       const char *weapon_name =
-          checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
-      int fire_mode = mech_critical_fire_mode(mech, loop, critical_index);
-      if (weapon_catalogue_has_special(weapon_index, AMS))
+          checked_string_suffix(weapon_catalogue_name(WEAPON_INDEX), 3);
+      int fire_mode = mech_critical_fire_mode(mech, loop, CRITICAL_INDEX);
+      if (weapon_catalogue_has_special(WEAPON_INDEX, AMS))
         btech_text_builder_append_format(
             &weapon_text, " %-16.16s %c%c%c%c%c [%2d] ", weapon_name, ' ',
             conditions.ams_enabled ? ' ' : 'O',
@@ -492,8 +492,8 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
             (((fire_mode & OS_USED) || (fire_mode & ROCKET_FIRED)) ? '-'
              : (fire_mode & OS_MODE)                               ? 'O'
                                                                    : ' '),
-            GetWeaponAmmoModeLetter(mech, loop, critical_index),
-            GetWeaponFireModeLetter(mech, loop, critical_index),
+            get_weapon_ammo_mode_letter(mech, loop, CRITICAL_INDEX),
+            get_weapon_fire_mode_letter(mech, loop, CRITICAL_INDEX),
             ((fire_mode & ON_TC) && !conditions.targeting_computer_destroyed)
                 ? 'T'
             : (fire_mode & IS_JETTISONED_MODE) ? 'J'
@@ -507,12 +507,12 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       btech_text_builder_append(&weapon_text, location);
 
       int temporary_failure =
-          mech_critical_temporary_failure(mech, loop, critical_index);
-      if (mech_critical_is_broken(mech, loop, critical_index) ||
+          mech_critical_temporary_failure(mech, loop, CRITICAL_INDEX);
+      if (mech_critical_is_broken(mech, loop, CRITICAL_INDEX) ||
           temporary_failure == FAIL_DESTROYED)
         btech_text_builder_append(&weapon_text,
                                   "[fg=black bold]*****[reset]  || ");
-      else if (mech_critical_is_disabled(mech, loop, critical_index))
+      else if (mech_critical_is_disabled(mech, loop, CRITICAL_INDEX))
         btech_text_builder_append(&weapon_text, "[fg=red]DISABLE[reset]|| ");
       else if (temporary_failure) {
         switch (temporary_failure) {
@@ -536,37 +536,37 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
         btech_text_builder_append(&weapon_text,
                                   "[fg=black bold]Empty[reset]  || ");
       else if (weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii)) {
-        const int recycle = weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii);
+        const int RECYCLE = weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii);
         btech_text_builder_append_format(&weapon_text, " %2d    || ",
-                                         recycle / WEAPON_TICK +
-                                             (recycle % WEAPON_TICK ? 1 : 0));
-      } else if (mech_weapon_damaged_slot_count_at(mech, loop, critical_index))
+                                         RECYCLE / WEAPON_TICK +
+                                             (RECYCLE % WEAPON_TICK ? 1 : 0));
+      } else if (mech_weapon_damaged_slot_count_at(mech, loop, CRITICAL_INDEX))
         btech_text_builder_append(&weapon_text, "[fg=red]DAMAGED[reset]|| ");
       else
         btech_text_builder_append(&weapon_text, "[fg=green]Ready[reset]  || ");
 
       if ((ii + running_sum) < ammoweapcount) {
-        const int ammunition_index = ii + running_sum;
-        const int ammunition_weapon = weapon_status_byte(
-            ammoweap, AMMO_STATUS_CAPACITY, ammunition_index);
-        const int ammunition = weapon_status_short(ammo, ammunition_index);
-        const int maximum_ammunition =
-            weapon_status_short(ammomax, ammunition_index);
+        const int AMMUNITION_INDEX = ii + running_sum;
+        const int AMMUNITION_WEAPON = weapon_status_byte(
+            ammoweap, AMMO_STATUS_CAPACITY, AMMUNITION_INDEX);
+        const int AMMUNITION = weapon_status_short(ammo, AMMUNITION_INDEX);
+        const int MAXIMUM_AMMUNITION =
+            weapon_status_short(ammomax, AMMUNITION_INDEX);
         const char *ammunition_name =
-            checked_string_suffix(weapon_catalogue_name(ammunition_weapon), 3);
-        ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(
-            ammunition_weapon, weapon_status_mode(modearray, ammunition_index));
+            checked_string_suffix(weapon_catalogue_name(AMMUNITION_WEAPON), 3);
+        ammo_mode = get_weapon_ammo_mode_letter_model_mode(
+            AMMUNITION_WEAPON, weapon_status_mode(modearray, AMMUNITION_INDEX));
         (void)snprintf(weapname, sizeof(weapname), "%-16.16s %c  %s%3d%s",
                        ammunition_name, ammo_mode,
-                       evaluate_ammo_amount(ammunition, maximum_ammunition),
-                       ammunition, "[reset]");
+                       evaluate_ammo_amount(AMMUNITION, MAXIMUM_AMMUNITION),
+                       AMMUNITION, "[reset]");
         if (compact) {
           if (ammo_mode && ammo_mode != ' ')
             append_status(compact_buffer, compact_buffer_size, "|%s|%d|%c ",
-                          ammunition_name, ammunition, ammo_mode);
+                          ammunition_name, AMMUNITION, ammo_mode);
           else
             append_status(compact_buffer, compact_buffer_size, "|%s|%d ",
-                          ammunition_name, ammunition);
+                          ammunition_name, AMMUNITION);
         }
       } else {
         if (compact)
@@ -582,21 +582,21 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
 
   if (running_sum < ammoweapcount) {
     while (running_sum < ammoweapcount) {
-      const int ammunition_weapon =
+      const int AMMUNITION_WEAPON =
           weapon_status_byte(ammoweap, AMMO_STATUS_CAPACITY, running_sum);
-      const int ammunition = weapon_status_short(ammo, running_sum);
-      const int maximum_ammunition = weapon_status_short(ammomax, running_sum);
-      ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(
-          ammunition_weapon, weapon_status_mode(modearray, running_sum));
+      const int AMMUNITION = weapon_status_short(ammo, running_sum);
+      const int MAXIMUM_AMMUNITION = weapon_status_short(ammomax, running_sum);
+      ammo_mode = get_weapon_ammo_mode_letter_model_mode(
+          AMMUNITION_WEAPON, weapon_status_mode(modearray, running_sum));
       (void)snprintf(
-          astrAmmoSpacer, sizeof(astrAmmoSpacer),
+          astr_ammo_spacer, sizeof(astr_ammo_spacer),
           "                                                  || "
           "%-16.16s %c  %s%3d%s",
-          checked_string_suffix(weapon_catalogue_name(ammunition_weapon), 3),
-          ammo_mode, evaluate_ammo_amount(ammunition, maximum_ammunition),
-          ammunition, "[reset]");
+          checked_string_suffix(weapon_catalogue_name(AMMUNITION_WEAPON), 3),
+          ammo_mode, evaluate_ammo_amount(AMMUNITION, MAXIMUM_AMMUNITION),
+          AMMUNITION, "[reset]");
 
-      mecha_notify(evaluation, player, astrAmmoSpacer);
+      mecha_notify(evaluation, player, astr_ammo_spacer);
 
       running_sum++;
     }

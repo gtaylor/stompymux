@@ -6,103 +6,103 @@
 
 void mech_ammunition_decrement(const AmmunitionDecrementRequest *request) {
   Mech *mech = request->mech;
-  const int weapon_index = request->weapon_index;
-  const int section = request->weapon.section;
-  const int critical = request->weapon.critical;
+  const int WEAPON_INDEX = request->weapon_index;
+  const int SECTION = request->weapon.section;
+  const int CRITICAL = request->weapon.critical;
 
-  if (weapon_catalogue_is_energy(weapon_index) ||
-      weapon_catalogue_is_hand_to_hand(weapon_index))
+  if (weapon_catalogue_is_energy(WEAPON_INDEX) ||
+      weapon_catalogue_is_hand_to_hand(WEAPON_INDEX))
     return;
 
-  if (weapon_catalogue_is_only_rocket(weapon_index)) {
-    const int weapon_size = GetWeaponCrits(mech, weapon_index);
-    const int first_critical =
+  if (weapon_catalogue_is_only_rocket(WEAPON_INDEX)) {
+    const int WEAPON_SIZE = get_weapon_crits(mech, WEAPON_INDEX);
+    const int FIRST_CRITICAL =
         mech_weapon_first_critical(&(WeaponCriticalSearch){
             .mech = mech,
-            .weapon = {.section = section, .critical = critical},
+            .weapon = {.section = SECTION, .critical = CRITICAL},
             .start_critical = 0,
-            .part_type = mech_critical_part_type(mech, section, critical),
-            .maximum_criticals = weapon_size,
+            .part_type = mech_critical_part_type(mech, SECTION, CRITICAL),
+            .maximum_criticals = WEAPON_SIZE,
         });
 
-    for (int index = first_critical; index < first_critical + weapon_size;
+    for (int index = FIRST_CRITICAL; index < FIRST_CRITICAL + WEAPON_SIZE;
          ++index)
-      mech_critical_fire_mode_add(mech, section, index, ROCKET_FIRED);
+      mech_critical_fire_mode_add(mech, SECTION, index, ROCKET_FIRED);
     return;
   }
 
-  if (mech_critical_fire_mode(mech, section, critical) & OS_MODE) {
-    mech_critical_fire_mode_add(mech, section, critical, OS_USED);
+  if (mech_critical_fire_mode(mech, SECTION, CRITICAL) & OS_MODE) {
+    mech_critical_fire_mode_add(mech, SECTION, CRITICAL, OS_USED);
     return;
   }
 
-  const bool rotary = weapon_catalogue_is_rotary_autocannon(weapon_index);
-  const bool gatling =
-      (mech_critical_fire_mode(mech, section, critical) & GATTLING_MODE) != 0;
-  if (!rotary && !gatling && !request->primary_ammunition.found)
+  const bool ROTARY = weapon_catalogue_is_rotary_autocannon(WEAPON_INDEX);
+  const bool GATLING =
+      (mech_critical_fire_mode(mech, SECTION, CRITICAL) & GATTLING_MODE) != 0;
+  if (!ROTARY && !GATLING && !request->primary_ammunition.found)
     return;
 
-  const bool double_rate = (mech_critical_fire_mode(mech, section, critical) &
+  const bool DOUBLE_RATE = (mech_critical_fire_mode(mech, SECTION, CRITICAL) &
                             (ULTRA_MODE | RFAC_MODE)) != 0;
-  const int warning_rounds = request->gatling_shots > (int)double_rate
+  const int WARNING_ROUNDS = request->gatling_shots > (int)DOUBLE_RATE
                                  ? request->gatling_shots
-                                 : (int)double_rate;
+                                 : (int)DOUBLE_RATE;
   mech_ammunition_expenditure_check(&(AmmunitionExpenditureCheck){
       .mech = mech,
-      .weapon_index = weapon_index,
-      .rounds_remaining = warning_rounds,
+      .weapon_index = WEAPON_INDEX,
+      .rounds_remaining = WARNING_ROUNDS,
   });
 
-  if (rotary || gatling) {
-    int shots_left = gatling ? request->gatling_shots * 3 : 1;
-    const int fire_mode = mech_critical_fire_mode(mech, section, critical);
-    if (rotary && (fire_mode & RAC_TWOSHOT_MODE))
+  if (ROTARY || GATLING) {
+    int shots_left = GATLING ? request->gatling_shots * 3 : 1;
+    const int FIRE_MODE = mech_critical_fire_mode(mech, SECTION, CRITICAL);
+    if (ROTARY && (FIRE_MODE & RAC_TWOSHOT_MODE))
       shots_left = 2;
-    else if (rotary && (fire_mode & RAC_FOURSHOT_MODE))
+    else if (ROTARY && (FIRE_MODE & RAC_FOURSHOT_MODE))
       shots_left = 4;
-    else if (rotary && (fire_mode & RAC_SIXSHOT_MODE))
+    else if (ROTARY && (FIRE_MODE & RAC_SIXSHOT_MODE))
       shots_left = 6;
 
     while (shots_left > 0) {
-      const CriticalSlotLookupResult ammunition =
+      const CriticalSlotLookupResult AMMUNITION =
           ammunition_find(&(AmmunitionLookupRequest){
               .mech = mech,
-              .weapon = {.section = section, .critical = critical},
+              .weapon = {.section = SECTION, .critical = CRITICAL},
               .use_weapon_preference = true,
-              .weapon_index = weapon_index,
-              .start_section = section,
+              .weapon_index = WEAPON_INDEX,
+              .start_section = SECTION,
               .forbidden_modes = AMMO_MODES,
           });
-      if (!ammunition.found)
+      if (!AMMUNITION.found)
         break;
 
-      const int rounds = mech_critical_data(mech, ammunition.slot.section,
-                                            ammunition.slot.critical);
-      const int spent = rounds < shots_left ? rounds : shots_left;
-      mech_critical_data_set(mech, ammunition.slot.section,
-                             ammunition.slot.critical, rounds - spent);
-      shots_left -= spent;
+      const int ROUNDS = mech_critical_data(mech, AMMUNITION.slot.section,
+                                            AMMUNITION.slot.critical);
+      const int SPENT = ROUNDS < shots_left ? ROUNDS : shots_left;
+      mech_critical_data_set(mech, AMMUNITION.slot.section,
+                             AMMUNITION.slot.critical, ROUNDS - SPENT);
+      shots_left -= SPENT;
 
-      if (CountAmmoForWeapon(mech, weapon_index) <= 0)
+      if (count_ammo_for_weapon(mech, WEAPON_INDEX) <= 0)
         break;
     }
     return;
   }
 
-  const CriticalSlotReference primary = request->primary_ammunition.slot;
-  const int primary_rounds =
-      mech_critical_data(mech, primary.section, primary.critical);
-  if (primary_rounds > 0)
-    mech_critical_data_set(mech, primary.section, primary.critical,
-                           primary_rounds - 1);
+  const CriticalSlotReference PRIMARY = request->primary_ammunition.slot;
+  const int PRIMARY_ROUNDS =
+      mech_critical_data(mech, PRIMARY.section, PRIMARY.critical);
+  if (PRIMARY_ROUNDS > 0)
+    mech_critical_data_set(mech, PRIMARY.section, PRIMARY.critical,
+                           PRIMARY_ROUNDS - 1);
 
-  if (!double_rate || !request->secondary_ammunition.found)
+  if (!DOUBLE_RATE || !request->secondary_ammunition.found)
     return;
 
-  const CriticalSlotReference secondary = request->secondary_ammunition.slot;
-  const int secondary_rounds =
-      mech_critical_data(mech, secondary.section, secondary.critical);
-  if (secondary_rounds > 0)
-    mech_critical_data_set(mech, secondary.section, secondary.critical,
-                           secondary_rounds - 1);
+  const CriticalSlotReference SECONDARY = request->secondary_ammunition.slot;
+  const int SECONDARY_ROUNDS =
+      mech_critical_data(mech, SECONDARY.section, SECONDARY.critical);
+  if (SECONDARY_ROUNDS > 0)
+    mech_critical_data_set(mech, SECONDARY.section, SECONDARY.critical,
+                           SECONDARY_ROUNDS - 1);
 }

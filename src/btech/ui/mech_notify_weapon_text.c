@@ -33,7 +33,7 @@ static void mech_show_flag(EvaluationContext *evaluation, DbRef player,
   notify_printf(evaluation, player, "%*s%s", spaces, "", text);
 }
 
-const char *GetAmmoDesc_Model_Mode(int model, int mode) {
+const char *get_ammo_desc_model_mode(int model, int mode) {
   if (mode & LBX_MODE)
     return " Shotgun";
   if (mode & ARTEMIS_MODE)
@@ -83,7 +83,7 @@ const char *GetAmmoDesc_Model_Mode(int model, int mode) {
   return "";
 }
 
-char GetWeaponAmmoModeLetter_Model_Mode(int model, unsigned int mode) {
+char get_weapon_ammo_mode_letter_model_mode(int model, unsigned int mode) {
   if (!(mode & AMMO_MODES))
     return ' ';
   if (mode & CLUSTER_MODE)
@@ -135,7 +135,7 @@ char GetWeaponAmmoModeLetter_Model_Mode(int model, unsigned int mode) {
   return ' ';
 }
 
-char GetWeaponFireModeLetter_Model_Mode(int model, int mode) {
+char get_weapon_fire_mode_letter_model_mode(int model, int mode) {
   if (!(mode & FIRE_MODES))
     return ' ';
   if (mode & HOTLOAD_MODE)
@@ -157,23 +157,23 @@ char GetWeaponFireModeLetter_Model_Mode(int model, int mode) {
   return ' ';
 }
 
-char GetWeaponAmmoModeLetter(Mech *mech, int loop, int crit) {
-  const int mode = mech_critical_ammo_mode(mech, loop, crit);
+char get_weapon_ammo_mode_letter(Mech *mech, int loop, int crit) {
+  const int MODE = mech_critical_ammo_mode(mech, loop, crit);
 
-  if (mode < 0)
+  if (MODE < 0)
     return ' ';
-  return GetWeaponAmmoModeLetter_Model_Mode(
+  return get_weapon_ammo_mode_letter_model_mode(
       weapon_from_equipment_index(mech_critical_part_type(mech, loop, crit)),
-      (unsigned int)mode);
+      (unsigned int)MODE);
 }
 
-char GetWeaponFireModeLetter(Mech *mech, int loop, int crit) {
-  return GetWeaponFireModeLetter_Model_Mode(
+char get_weapon_fire_mode_letter(Mech *mech, int loop, int crit) {
+  return get_weapon_fire_mode_letter_model_mode(
       weapon_from_equipment_index(mech_critical_part_type(mech, loop, crit)),
       mech_critical_fire_mode(mech, loop, crit));
 }
 
-const char *GetMoveTypeID(int movetype) {
+const char *get_move_type_id(int movetype) {
   switch (movetype) {
   case MOVE_QUAD:
     return "QUAD";
@@ -200,24 +200,24 @@ const char *GetMoveTypeID(int movetype) {
   }
 }
 
-void Mech_ShowFlags(const MechFlagDisplayRequest *request) {
+void mech_show_flags(const MechFlagDisplayRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
-  const DbRef player = request->player;
+  const DbRef PLAYER = request->player;
   Mech *mech = request->mech;
-  const int spaces = request->indentation;
-  const int level = request->detail_level;
+  const int SPACES = request->indentation;
+  const int LEVEL = request->detail_level;
   MechConditionSummary conditions = mech_condition_summary(mech);
 
   if (conditions.combat_safe) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=blue bold]COMBAT SAFE[reset]");
   }
   if (conditions.fortified) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=green bold]FORTIFIED[reset]");
   }
   if (conditions.weapons_hold) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=red bold]WEAPONS HOLD[reset]");
   }
   if (mech_is_fallen(mech)) {
@@ -252,52 +252,52 @@ void Mech_ShowFlags(const MechFlagDisplayRequest *request) {
     case MOVE_NONE:
       break;
     }
-    mech_show_flag(evaluation, player, spaces, fallen_text);
+    mech_show_flag(evaluation, PLAYER, SPACES, fallen_text);
   }
   if (conditions.hull_down) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=green bold]HULLDOWN[reset]");
   }
   if (conditions.dug_in) {
-    mech_show_flag(evaluation, player, spaces, "[fg=green bold]DUG IN[reset]");
+    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=green bold]DUG IN[reset]");
   }
   if (conditions.digging) {
-    mech_show_flag(evaluation, player, spaces, "[fg=green]DIGGING IN[reset]");
+    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=green]DIGGING IN[reset]");
   }
   if (conditions.staggering) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=red bold]STAGGERING[reset]");
   }
   if (conditions.searchlight_destroyed) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=red bold]SEARCHLIGHT DESTROYED[reset]");
   }
   if (mech_searchlight_active(mech)) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=green bold]SEARCHLIGHT ON[reset]");
   } else if (conditions.illuminated) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=green bold]ILLUMINATED[reset]");
   }
   if (mech_event_count(mech, EVENT_VEHICLEBURN) || mech_is_jellied(mech)) {
-    mech_show_flag(evaluation, player, spaces, "[fg=red bold]ON FIRE[reset]");
+    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=red bold]ON FIRE[reset]");
   }
   if (conditions.hidden) {
-    mech_show_flag(evaluation, player, spaces, "[fg=green bold]HIDDEN[reset]");
+    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=green bold]HIDDEN[reset]");
   }
   if (bsuit_has_enemy_swarmers(mech)) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=red bold]SWARMED BY ENEMY SUITS[reset]");
   }
   if (bsuit_has_friendly_riders(mech)) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=red bold]MOUNTED BY FRIENDLY SUITS[reset]");
   }
   if (conditions.swarm_target > 0) {
     Mech *swarm_target =
         btech_context_get_mech(mech_context(mech), conditions.swarm_target);
     if (swarm_target) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      mech_team(swarm_target) == mech_team(mech)
                          ? "[fg=green bold]MOUNTED ON FRIENDLY UNIT[reset]"
                          : "[fg=green bold]SWARMING ENEMY UNIT[reset]");
@@ -305,103 +305,103 @@ void Mech_ShowFlags(const MechFlagDisplayRequest *request) {
   }
 #ifdef BT_MOVEMENT_MODES
   if (conditions.dodging) {
-    mech_show_flag(evaluation, player, spaces, "[fg=red bold]DODGING[reset]");
+    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=red bold]DODGING[reset]");
   }
   if (conditions.evading) {
-    mech_show_flag(evaluation, player, spaces, "[fg=red bold]EVADING[reset]");
+    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=red bold]EVADING[reset]");
   }
   if (conditions.sprinting) {
-    mech_show_flag(evaluation, player, spaces, "[fg=red bold]SPRINTING[reset]");
+    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=red bold]SPRINTING[reset]");
   }
   if (mech_event_count(mech, EVENT_MOVEMODE)) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=yellow bold]CHANGING MOVEMENT MODE[reset]");
   }
   if (mech_event_count(mech, EVENT_SIDESLIP)) {
-    mech_show_flag(evaluation, player, spaces,
+    mech_show_flag(evaluation, PLAYER, SPACES,
                    "[fg=yellow bold]SIDESLIPPING[reset]");
   }
   if (conditions.stunned) {
-    mech_show_flag(evaluation, player, spaces, "[fg=red bold]STUNNED[reset]");
+    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=red bold]STUNNED[reset]");
   }
 #endif
-  if (level == 0) { /* our own 'status' */
+  if (LEVEL == 0) { /* our own 'status' */
     if (conditions.ecm_protected) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=green bold]PROTECTED BY ECM[reset]");
     }
     if (conditions.angel_ecm_protected) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=green bold]PROTECTED BY ANGEL ECM[reset]");
     }
     if (mech_is_ecm_disturbed(mech)) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=yellow bold]AFFECTED BY ECM[reset]");
     }
     if (conditions.angel_ecm_disturbed) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=yellow bold]AFFECTED BY ANGEL ECM[reset]");
     }
     if (conditions.ecm_countered) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=yellow bold]COUNTERED BY ECCM[reset]");
     }
     if (conditions.stealth_armor_active) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=green bold]STEALTH ARMOR ACTIVE[reset]");
     }
     if (conditions.null_signature_active) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=green bold]NULL SIGNATURE SYSTEM ACTIVE[reset]");
     }
-    if (checkAllSections(mech, NARC_ATTACHED)) {
-      mech_show_flag(evaluation, player, spaces,
+    if (check_all_sections(mech, NARC_ATTACHED)) {
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=yellow bold]NARC POD ATTACHED[reset]");
     }
-    if (checkAllSections(mech, INARC_HOMING_ATTACHED)) {
-      mech_show_flag(evaluation, player, spaces,
+    if (check_all_sections(mech, INARC_HOMING_ATTACHED)) {
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=yellow bold]INARC HOMING POD ATTACHED[reset]");
     }
-    if (checkAllSections(mech, INARC_HAYWIRE_ATTACHED)) {
-      mech_show_flag(evaluation, player, spaces,
+    if (check_all_sections(mech, INARC_HAYWIRE_ATTACHED)) {
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=yellow bold]INARC HAYWIRE POD ATTACHED[reset]");
     }
-    if (checkAllSections(mech, INARC_ECM_ATTACHED)) {
-      mech_show_flag(evaluation, player, spaces,
+    if (check_all_sections(mech, INARC_ECM_ATTACHED)) {
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=yellow bold]INARC ECM POD ATTACHED[reset]");
     }
     if (mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH)) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=yellow bold]EXTINGUISHING FIRE[reset]");
     }
     if (conditions.turret_auto_turn) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=green bold]TURRET AUTO-TURN ENGAGED[reset]");
     }
     if (mech_section_carries_club(mech, RARM)) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=green bold]CARRYING CLUB - RIGHT ARM[reset]");
     }
     if (mech_section_carries_club(mech, LARM)) {
-      mech_show_flag(evaluation, player, spaces,
+      mech_show_flag(evaluation, PLAYER, SPACES,
                      "[fg=green bold]CARRYING CLUB - LEFT ARM[reset]");
     }
   }
-  if (level <= 1 && mech_is_destroyed(mech)) {
-    mech_show_flag(evaluation, player, spaces, "DESTROYED");
+  if (LEVEL <= 1 && mech_is_destroyed(mech)) {
+    mech_show_flag(evaluation, PLAYER, SPACES, "DESTROYED");
   }
-  if (level <= 1 && !mech_is_started(mech)) {
-    mech_show_flag(evaluation, player, spaces, "SHUTDOWN");
+  if (LEVEL <= 1 && !mech_is_started(mech)) {
+    mech_show_flag(evaluation, PLAYER, SPACES, "SHUTDOWN");
   }
-  if (level == 0 && conditions.torso_right) {
-    mech_show_flag(evaluation, player, spaces, "Torso is 60 degrees right");
+  if (LEVEL == 0 && conditions.torso_right) {
+    mech_show_flag(evaluation, PLAYER, SPACES, "Torso is 60 degrees right");
   }
-  if (level == 0 && conditions.torso_left) {
-    mech_show_flag(evaluation, player, spaces, "Torso is 60 degrees left");
+  if (LEVEL == 0 && conditions.torso_left) {
+    mech_show_flag(evaluation, PLAYER, SPACES, "Torso is 60 degrees left");
   }
 }
 
-const char *GetArcID(Mech *mech, int arc) {
+const char *get_arc_id(Mech *mech, int arc) {
   int unit_class = mech_class(mech);
   bool mechlike = unit_class == CLASS_MECH || unit_class == CLASS_MW ||
                   unit_class == CLASS_BSUIT;
@@ -444,11 +444,11 @@ MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech) {
   MechDisplayId id = {0};
 
   if (!mech) {
-    dprintk("bad mech");
+    DPRINTK("bad mech");
     return id;
   }
   if (!see) {
-    dprintk("bad see");
+    DPRINTK("bad see");
     return id;
   }
   BtechContext *context = mech_context(mech);

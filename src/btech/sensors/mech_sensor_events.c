@@ -92,8 +92,8 @@ static void mech_unblind_event(MuxEvent *event) {
 void mech_sensors_scramble_infrared_and_liteamp(
     const SensorScrambleRequest *request) {
   Mech *mech = request->source;
-  const int time = request->duration;
-  const int chance = request->chance;
+  const int TIME = request->duration;
+  const int CHANCE = request->chance;
   const char *inframsg = request->infrared_message;
   const char *liteampmsg = request->light_amplification_message;
   BattleMap *map =
@@ -117,12 +117,12 @@ void mech_sensors_scramble_infrared_and_liteamp(
     const char *match_letter = mech_sensor_definition(sensor)->match_letter;
     if (*match_letter == 'I' ||
         *checked_string_suffix(match_letter, 1) == 'I') {
-      if (chance && btech_random_range(mech_context(mech), 1, 100) > chance)
+      if (CHANCE && btech_random_range(mech_context(mech), 1, 100) > CHANCE)
         continue;
       mech_notify(observer, MECHALL, inframsg);
     } else if (*match_letter == 'L' ||
                *checked_string_suffix(match_letter, 1) == 'L') {
-      if (chance && btech_random_range(mech_context(mech), 1, 100) > chance)
+      if (CHANCE && btech_random_range(mech_context(mech), 1, 100) > CHANCE)
         continue;
       mech_notify(observer, MECHALL, liteampmsg);
     } else {
@@ -130,6 +130,6 @@ void mech_sensors_scramble_infrared_and_liteamp(
     }
 
     mech_blinded_set(observer, true);
-    mech_event_schedule(observer, EVENT_BLINDREC, mech_unblind_event, time, 0);
+    mech_event_schedule(observer, EVENT_BLINDREC, mech_unblind_event, TIME, 0);
   }
 }

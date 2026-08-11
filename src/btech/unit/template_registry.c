@@ -204,7 +204,7 @@ static void template_registry_reset(MechTemplateRegistry *registry) {
   *registry = (MechTemplateRegistry){0};
 }
 
-static const char *const subdirs[] = {
+static const char *const SUBDIRS[] = {
     "3025",   "3050",    "3055",     "3058",         "3060",     "2750",
     "Aero",   "MISC",    "Clan",     "ClanVehicles", "Clan2nd",  "ClanAero",
     "Custom", "Solaris", "Vehicles", "MFNA",         "Infantry", nullptr};
@@ -276,11 +276,11 @@ oldstyle:
   snprintf(registry->resolved_path, sizeof(registry->resolved_path), "%s/%s",
            mech_path, id);
   fp = fopen(registry->resolved_path, "r");
-  const size_t subdir_count = sizeof(subdirs) / sizeof(*subdirs) - 1;
-  for (size_t subdir_index = 0; !fp && subdir_index < subdir_count;
+  const size_t SUBDIR_COUNT = sizeof(SUBDIRS) / sizeof(*SUBDIRS) - 1;
+  for (size_t subdir_index = 0; !fp && subdir_index < SUBDIR_COUNT;
        subdir_index++) {
     const char *const *subdir = (const char *const *)checked_storage_at_const(
-        (const void *)subdirs, subdir_count, sizeof(*subdirs), subdir_index);
+        (const void *)SUBDIRS, SUBDIR_COUNT, sizeof(*SUBDIRS), subdir_index);
     (void)snprintf(registry->resolved_path, sizeof(registry->resolved_path),
                    "%s/%s/%s", mech_path, *subdir, id);
     fp = fopen(registry->resolved_path, "r");

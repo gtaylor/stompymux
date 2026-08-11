@@ -13,7 +13,7 @@
 
 /* Use this when the unit is CRITPROOF because the other
  * hitlocation functions are screwy */
-int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
+int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
   int roll, hitloc = 0;
   int side;
   BtechContext *context = mech_context(mech);
@@ -40,7 +40,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
@@ -64,7 +64,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
         return RLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return mech_head_hit_modify(hitGroup, mech);
+          return mech_head_hit_modify(hit_group, mech);
         return HEAD;
       }
       break;
@@ -91,7 +91,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
         return LLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return mech_head_hit_modify(hitGroup, mech);
+          return mech_head_hit_modify(hit_group, mech);
         return HEAD;
       }
       break;
@@ -118,13 +118,13 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
         return LARM;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return mech_head_hit_modify(hitGroup, mech);
+          return mech_head_hit_modify(hit_group, mech);
         return HEAD;
       }
     }
     break;
   case CLASS_VEH_GROUND:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
@@ -173,7 +173,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
 
     case FRONT:
     case BACK:
-      side = (hitGroup == FRONT ? FSIDE : BSIDE);
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
       switch (roll) {
       case 2:
       case 12:
@@ -197,7 +197,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
     }
     break;
   case CLASS_AERO:
-    switch (hitGroup) {
+    switch (hit_group) {
     case FRONT:
       switch (roll) {
       case 2:
@@ -219,7 +219,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
-      side = ((hitGroup == LEFTSIDE) ? AERO_LWING : AERO_RWING);
+      side = ((hit_group == LEFTSIDE) ? AERO_LWING : AERO_RWING);
       switch (roll) {
       case 2:
       case 12:
@@ -262,7 +262,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
     break;
   case CLASS_DS:
   case CLASS_SPHEROID_DS:
-    switch (hitGroup) {
+    switch (hit_group) {
     case FRONT:
       switch (roll) {
       case 2:
@@ -286,7 +286,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
-      side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
+      side = (hit_group == LEFTSIDE) ? DS_LWING : DS_RWING;
       if (btech_random_range(context, 1, 2) == 2)
         side = mech_spheroid_rear_section(mech, side);
       switch (roll) {
@@ -335,7 +335,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
     }
     break;
   case CLASS_VTOL:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
@@ -390,7 +390,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
 
     case FRONT:
     case BACK:
-      side = (hitGroup == FRONT ? FSIDE : BSIDE);
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
       switch (roll) {
       case 2:
         hitloc = ROTOR;
@@ -418,7 +418,7 @@ int mech_critproof_hit_location(Mech *mech, int hitGroup, int *iscritical) {
     }
     break;
   case CLASS_VEH_NAVAL:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:

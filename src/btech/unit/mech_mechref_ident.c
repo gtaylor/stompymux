@@ -12,7 +12,7 @@ typedef struct MechrefName {
   const char *name;
 } MechrefName;
 
-static const MechrefName my_mechref_pile[] = {
+static const MechrefName MY_MECHREF_PILE[] = {
     {"ALB-", "Albatross"},
     {"ALM-", "Fireball"},
     {"ANH-", "Annihilator"},
@@ -249,11 +249,11 @@ static const MechrefName my_mechref_pile[] = {
     {nullptr, nullptr}};
 
 const char *find_mechname_by_mechref(const char *ref) {
-  const size_t entry_count =
-      sizeof(my_mechref_pile) / sizeof(*my_mechref_pile) - 1;
-  for (size_t i = 0; i < entry_count; i++) {
+  const size_t ENTRY_COUNT =
+      sizeof(MY_MECHREF_PILE) / sizeof(*MY_MECHREF_PILE) - 1;
+  for (size_t i = 0; i < ENTRY_COUNT; i++) {
     const MechrefName *entry = checked_storage_at_const(
-        my_mechref_pile, entry_count, sizeof(*my_mechref_pile), i);
+        MY_MECHREF_PILE, ENTRY_COUNT, sizeof(*MY_MECHREF_PILE), i);
     if (entry->name &&
         !strncmp(entry->mechref_start, ref, strlen(entry->mechref_start)))
       return entry->name;

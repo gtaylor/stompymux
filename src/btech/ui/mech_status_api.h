@@ -67,14 +67,14 @@ typedef struct PhysicalWeaponRequest {
 static_assert(ARMOR_LEVEL_GREAT == 0 && ARMOR_LEVEL_REPAIRING == 5);
 
 /* mech.status.c */
-void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech);
+void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech);
 void show_miscbrands(Mech *mech, DbRef player);
-void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                        bool use_model_reference);
-void PrintHeatBar(EvaluationContext *evaluation, DbRef player, Mech *mech);
-void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                     int own);
-void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech);
+void print_generic_status(EvaluationContext *evaluation, DbRef player,
+                          Mech *mech, bool use_model_reference);
+void print_heat_bar(EvaluationContext *evaluation, DbRef player, Mech *mech);
+void print_info_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
+                       int own);
+void print_short_info(EvaluationContext *evaluation, DbRef player, Mech *mech);
 void mech_status(DbRef player, void *data, const char *buffer);
 void mech_critstatus(DbRef player, void *data, char *buffer);
 PartDisplayName part_name(BtechContext *context, int type, int brand);
@@ -100,12 +100,13 @@ char *sectstatus_func(const MechStatusTextRequest *request);
 char *armorstatus_func(const MechStatusTextRequest *request);
 char *weaponstatus_func(const MechStatusTextRequest *request);
 char *critslot_func(const CriticalSlotTextRequest *request);
-void CriticalStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                    int index);
+void critical_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
+                     int index);
 const char *evaluate_ammo_amount(int now, int max);
-void PrintWeaponStatus(EvaluationContext *evaluation, Mech *mech, DbRef player);
+void print_weapon_status_summary(EvaluationContext *evaluation, Mech *mech,
+                                 DbRef player);
 ArmorEvaluation armor_evaluate(const ArmorEvaluationRequest *request);
-void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                      int owner);
-bool hasPhysical(const PhysicalWeaponRequest *request);
-bool canUsePhysical(const PhysicalWeaponRequest *request);
+void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
+                        int owner);
+bool has_physical(const PhysicalWeaponRequest *request);
+bool can_use_physical(const PhysicalWeaponRequest *request);

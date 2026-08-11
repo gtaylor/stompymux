@@ -6,7 +6,7 @@
 #include "mech_utils_api.h"
 #include "registry_api.h"
 
-void UpdateMechsTerrain(const MapTerrainChange *change) {
+void update_mechs_terrain(const MapTerrainChange *change) {
   BattleMap *map = change->map;
   (void)change->terrain;
   for (int index = 0; index < battle_map_unit_count(map); index++) {
@@ -15,6 +15,6 @@ void UpdateMechsTerrain(const MapTerrainChange *change) {
     if (mech == nullptr || mech_position_x(mech) != change->position.x ||
         mech_position_y(mech) != change->position.y)
       continue;
-    MarkForLOSUpdate(mech);
+    mark_for_los_update(mech);
   }
 }

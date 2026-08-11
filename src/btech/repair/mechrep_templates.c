@@ -44,7 +44,7 @@ extern char *strtok(char *s, const char *ct);
 
 /* Alloc/free routine */
 
-void mechrep_Rloadnew(DbRef player, void *data, char *buffer) {
+void mechrep_rloadnew(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   RepairFacilityCommandContext repair_command;
@@ -62,7 +62,7 @@ void mechrep_Rloadnew(DbRef player, void *data, char *buffer) {
   if (mech_parseattributes(buffer, args, 1) == 1)
     if (mech_template_load(player, mech, args[0]) == 1) {
       mech_events_cancel_all(mech);
-      clear_mech_from_LOS(mech);
+      clear_mech_from_los(mech);
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "Template loaded.");
       return;
@@ -71,7 +71,7 @@ void mechrep_Rloadnew(DbRef player, void *data, char *buffer) {
                "Unable to read that template.");
 }
 
-void mechrep_Rrestore(DbRef player, void *data, char *buffer) {
+void mechrep_rrestore(DbRef player, void *data, char *buffer) {
   char *c;
 
   RepairFacilityCommandContext repair_command;
@@ -102,7 +102,7 @@ void mechrep_Rrestore(DbRef player, void *data, char *buffer) {
                "Unable to restore this mech!.");
 }
 
-void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
+void mechrep_rsavetemp(DbRef player, void *data, char *buffer) {
   char *args[1];
   FILE *fp;
   char openfile[512] = {0};
@@ -144,12 +144,12 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
                  "Unable to open/create mech file! Sorry.");
     return;
   }
-  float const maximum_speed = mech_maximum_speed(mech);
-  float const jump_speed = mech_jump_speed(mech);
+  float const MAXIMUM_SPEED = mech_maximum_speed(mech);
+  float const JUMP_SPEED = mech_jump_speed(mech);
   (void)fprintf(fp, "%d %d %d %d %d %.2f %.2f %d\n", mech_tonnage(mech),
                 mech_tactical_range(mech), mech_long_range_sensor_range(mech),
                 mech_scanner_range(mech), mech_heat_sink_count(mech),
-                (double)maximum_speed, (double)jump_speed,
+                (double)MAXIMUM_SPEED, (double)JUMP_SPEED,
                 mech_technology_flags(mech));
   for (i = 0; i < NUM_SECTIONS; i++) {
     (void)fprintf(fp, "%d %d %d %d\n", mech_section_armor(mech, i),
@@ -176,7 +176,7 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
 /*
  * Template saving routines and logic.
  */
-void mechrep_Rsavetemp2(DbRef player, void *data, char *buffer) {
+void mechrep_rsavetemp2(DbRef player, void *data, char *buffer) {
   char *args[1];
   char openfile[512] = {0};
 

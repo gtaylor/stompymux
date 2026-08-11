@@ -277,17 +277,17 @@ static void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
     if (max_range < 1) {
       range = 1.0F;
     } else {
-      const long random_range =
+      const long RANDOM_RANGE =
           btech_random_range(mech_context(mech), 1, max_range);
-      range = (float)random_range;
+      range = (float)RANDOM_RANGE;
     }
 
     /* Generate random bearing */
-    const long random_bearing = btech_random_range(mech_context(mech), 0, 359);
-    bearing = (int)random_bearing;
+    const long RANDOM_BEARING = btech_random_range(mech_context(mech), 0, 359);
+    bearing = (int)RANDOM_BEARING;
 
     /* Map coord to Real */
-    MapCoordToRealCoord(start_hex_x, start_hex_y, &x1, &y1);
+    map_coord_to_real_coord(start_hex_x, start_hex_y, &x1, &y1);
 
     /* Calc new hex */
     MapRealPosition projected = map_project_position(&(MapProjection){
@@ -296,7 +296,7 @@ static void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
     y2 = projected.y;
 
     /* Real coord to Map */
-    RealCoordToMapCoord(&target_hex_x, &target_hex_y, x2, y2);
+    real_coord_to_map_coord(&target_hex_x, &target_hex_y, x2, y2);
 
     /* Make sure the hex is sane */
     if (target_hex_x < 0 || target_hex_y < 0 ||
@@ -403,7 +403,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
 
   /* Ok not standing so lets do that first */
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-      !(CountDestroyedLegs(mech) > 0)) {
+      !(count_destroyed_legs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
       mech_stand_empty(autopilot->mynum, mech);

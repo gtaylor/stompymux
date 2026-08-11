@@ -47,22 +47,22 @@ static int mech_adjusted_jump_speed_mp(const Mech *mech, const BattleMap *map) {
   float speed = mech_jump_speed(mech);
 
   if (mech_is_under_gravity(mech) && map != nullptr) {
-    const int gravity = MAX(50, battle_map_gravity(map));
-    speed = speed * 100.0F / (float)gravity;
+    const int GRAVITY = max(50, battle_map_gravity(map));
+    speed = speed * 100.0F / (float)GRAVITY;
   }
   return (int)(speed * MP_PER_KPH);
 }
 
 void mech_jump(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  Mech *tempMech = nullptr;
+  Mech *temp_mech = nullptr;
   BattleMap *mech_map;
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition;
   char *args[3];
   int argc;
   DbRef target;
-  char targetID[2];
+  char target_id[2];
   short mapx, mapy;
   int bearing;
   float range = 0.0;
@@ -175,7 +175,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   if (condition.staggering) {
     mech_notify(mech, MECHALL, "The damage inhibits your coordination...");
 
-    if (!MadePilotSkillRoll(mech, mech_stagger_modifier(mech))) {
+    if (!made_pilot_skill_roll(mech, mech_stagger_modifier(mech))) {
       mech_notify(mech, MECHALL, "... something you apparently can't handle!");
       mech_los_broadcast(
           mech,
@@ -210,26 +210,26 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     }
 
     target = mech_target_dbref(mech);
-    tempMech = btech_context_get_mech(context, target);
-    if (!tempMech) {
+    temp_mech = btech_context_get_mech(context, target);
+    if (!temp_mech) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Invalid Target!");
       return;
     }
-    range = mech_range_to(mech, tempMech);
-    if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                        mech_position_y(tempMech), range)) {
+    range = mech_range_to(mech, temp_mech);
+    if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                        mech_position_y(temp_mech), range)) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Target is not in line of sight!");
       return;
     }
-    if (mech_class(tempMech) == CLASS_MW) {
+    if (mech_class(temp_mech) == CLASS_MW) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Even you can't aim your jump well enough to squish that!");
       return;
     }
-    mapx = clamp_int_to_short(mech_position_x(tempMech));
-    mapy = clamp_int_to_short(mech_position_y(tempMech));
+    mapx = clamp_int_to_short(mech_position_x(temp_mech));
+    mapy = clamp_int_to_short(mech_position_y(temp_mech));
     mech_dfa_target_dbref_set(mech, mech_target_dbref(mech));
     break;
   case 1:
@@ -242,30 +242,30 @@ void mech_jump(DbRef player, void *data, char *buffer) {
 
     char **target_argument_slot =
         (char **)checked_storage_at((void *)args, 3, sizeof(*args), 0);
-    targetID[0] = *checked_string_suffix(*target_argument_slot, 0);
-    targetID[1] = *checked_string_suffix(*target_argument_slot, 1);
-    target = FindTargetDBREFFromMapNumber(mech, targetID);
-    tempMech = btech_context_get_mech(context, target);
-    if (!tempMech) {
+    target_id[0] = *checked_string_suffix(*target_argument_slot, 0);
+    target_id[1] = *checked_string_suffix(*target_argument_slot, 1);
+    target = find_target_dbref_from_map_number(mech, target_id);
+    temp_mech = btech_context_get_mech(context, target);
+    if (!temp_mech) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Target is not in line of sight!");
       return;
     }
-    range = mech_range_to(mech, tempMech);
-    if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                        mech_position_y(tempMech), range)) {
+    range = mech_range_to(mech, temp_mech);
+    if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                        mech_position_y(temp_mech), range)) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Target is not in line of sight!");
       return;
     }
-    if (mech_class(tempMech) == CLASS_MW) {
+    if (mech_class(temp_mech) == CLASS_MW) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Even you can't aim your jump well enough to squish that!");
       return;
     }
-    mapx = clamp_int_to_short(mech_position_x(tempMech));
-    mapy = clamp_int_to_short(mech_position_y(tempMech));
-    mech_dfa_target_dbref_set(mech, mech_dbref(tempMech));
+    mapx = clamp_int_to_short(mech_position_x(temp_mech));
+    mapy = clamp_int_to_short(mech_position_y(temp_mech));
+    mech_dfa_target_dbref_set(mech, mech_dbref(temp_mech));
     break;
   case 2:
     if (!parse_int_checked(args[0], &bearing) ||
@@ -284,7 +284,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
 
     /* This is so we are jumping to the center of a hex */
     /* and the bearing jives with the target hex */
-    RealCoordToMapCoord(&mapx, &mapy, realx, realy);
+    real_coord_to_map_coord(&mapx, &mapy, realx, realy);
     break;
   }
   if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
@@ -308,7 +308,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                  "That target is out of range!");
     return;
   }
-  dfa_attack = mech_class(mech) != CLASS_BSUIT && tempMech;
+  dfa_attack = mech_class(mech) != CLASS_BSUIT && temp_mech;
   if (dfa_attack)
     mech_dfa_attacking_set(mech, true);
   /* New idea: JumpTop = (JP + 1 - range / 3) - in another words,
@@ -319,10 +319,10 @@ void mech_jump(DbRef player, void *data, char *buffer) {
      Come to think of it, the last SDR figure was ridiculous. New
      value: 2 * 1 + 2 = 4
    */
-  const float apex_candidate =
+  const float APEX_CANDIDATE =
       fminf((float)jps + 1.0F - range / 3.0F, 2.0F * range + 2.0F);
-  const int apex_elevation = (int)apex_candidate;
-  mech_jump_apex_elevation_set(mech, apex_elevation);
+  const int APEX_ELEVATION = (int)APEX_CANDIDATE;
+  mech_jump_apex_elevation_set(mech, APEX_ELEVATION);
   if ((tz - sz) > jps) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That target's high for you to reach with a single jump!");
@@ -337,14 +337,14 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(context), player, "Glub glub glub.");
     return;
   }
-  MapCoordToRealCoord(mapx, mapy, &realx, &realy);
+  map_coord_to_real_coord(mapx, mapy, &realx, &realy);
   bearing =
       map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                               .y = mech_position_real_y(mech)},
                                     .end = {.x = realx, .y = realy}});
 
   /* TAKE OFF! */
-  const double jump_distance =
+  const double JUMP_DISTANCE =
       length_hypotenuse((double)(realx - mech_position_real_x(mech)),
                         (double)(realy - mech_position_real_y(mech)));
   MechJumpLaunch launch = {
@@ -352,8 +352,8 @@ void mech_jump(DbRef player, void *data, char *buffer) {
       .destination_x = mapx,
       .destination_y = mapy,
       .destination_elevation = tz,
-      .apex_elevation = apex_elevation,
-      .distance = (float)jump_distance,
+      .apex_elevation = APEX_ELEVATION,
+      .distance = (float)JUMP_DISTANCE,
   };
   mech_jump_launch(mech, &launch);
   if (dfa_attack)

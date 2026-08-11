@@ -68,7 +68,7 @@ static void building_regen_event(MuxEvent *e) {
 
   if (!get_building_cf(map, &cf, &max))
     return;
-  cf = MIN(cf + map->regen_factor, max);
+  cf = min(cf + map->regen_factor, max);
   set_building_cf(map, cf, max);
   if (cf != max)
     btech_event_schedule(e->scheduler, map, EVENT_BREGEN, building_regen_event,
@@ -117,14 +117,14 @@ static void damage_cf(const BuildingDamageRequest *request) {
   Mech *mech = request->mech;
   MapObject *o = request->object;
   int from = request->current_integrity;
-  const int to = request->maximum_integrity;
+  const int TO = request->maximum_integrity;
   int damage = request->damage;
   int destroy = 0;
   int start_regen = 0;
 
-  if (from == to)
+  if (from == TO)
     start_regen = 1;
-  damage = MIN(from, damage);
+  damage = min(from, damage);
   if (from == damage)
     destroy = 1;
   from -= damage;
@@ -132,7 +132,7 @@ static void damage_cf(const BuildingDamageRequest *request) {
 
   if (building == nullptr)
     return;
-  set_building_cf(building, from, to);
+  set_building_cf(building, from, TO);
   if (destroy) {
     mech_printf(mech, MECHALL,
                 "You hit %s for %d points of damage, destroying it!",
@@ -144,7 +144,7 @@ static void damage_cf(const BuildingDamageRequest *request) {
         .exception = o->obj,
         .message = tprintf(
             "%s is hit for %d more points of damage, destroying it!",
-            MyToUpper(structure_name(mech_context(mech)->database, o).text),
+            my_to_upper(structure_name(mech_context(mech)->database, o).text),
             damage)});
     mech_los_broadcast(
         mech, tprintf("hits %s, destroying it!",
@@ -160,7 +160,7 @@ static void damage_cf(const BuildingDamageRequest *request) {
         .exception = o->obj,
         .message = tprintf(
             "%s is hit for %d points of damage.",
-            MyToUpper(structure_name(mech_context(mech)->database, o).text),
+            my_to_upper(structure_name(mech_context(mech)->database, o).text),
             damage)});
   }
   if (start_regen)
@@ -169,9 +169,9 @@ static void damage_cf(const BuildingDamageRequest *request) {
 
 void hit_building(const BuildingHitRequest *request) {
   Mech *mech = request->mech;
-  const int x = request->position.x;
-  const int y = request->position.y;
-  const int weapindx = request->weapon_index;
+  const int X = request->position.x;
+  const int Y = request->position.y;
+  const int WEAPINDX = request->weapon_index;
   int damage = request->damage;
   MapObject *o;
   BattleMap *map;
@@ -182,35 +182,35 @@ void hit_building(const BuildingHitRequest *request) {
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!map)
     return;
-  o = find_entrance_by_xy(map, x, y);
+  o = find_entrance_by_xy(map, X, Y);
   if (!o)
     return;
   nmap = btech_context_get_map(mech_context(mech), o->obj);
   if (!nmap)
     return;
   if (!damage) {
-    if (!weapon_catalogue_is_missile(weapindx))
-      damage = weapon_catalogue_damage(weapindx);
+    if (!weapon_catalogue_is_missile(WEAPINDX))
+      damage = weapon_catalogue_damage(WEAPINDX);
     else {
       /* Missile weapon.  Multiple Hit locations... */
-      if (!btech_context_has_missile_hit_table(mech_context(mech), weapindx))
+      if (!btech_context_has_missile_hit_table(mech_context(mech), WEAPINDX))
         return;
-      if ((weapon_catalogue_type(weapindx) == STREAK) &&
+      if ((weapon_catalogue_type(WEAPINDX) == STREAK) &&
           !mech_condition_summary(mech).angel_ecm_disturbed)
         num_missiles_hit = btech_context_missile_hit_count(&(MissileHitLookup){
             .context = mech_context(mech),
-            .weapon = weapindx,
+            .weapon = WEAPINDX,
             .roll = 10,
         });
       else {
         hit_roll = btech_random_roll(map->xcode.context) - 2;
         num_missiles_hit = btech_context_missile_hit_count(&(MissileHitLookup){
             .context = mech_context(mech),
-            .weapon = weapindx,
+            .weapon = WEAPINDX,
             .roll = hit_roll,
         });
       }
-      damage = num_missiles_hit * weapon_catalogue_damage(weapindx);
+      damage = num_missiles_hit * weapon_catalogue_damage(WEAPINDX);
     }
   }
   if (!damage)
@@ -231,14 +231,14 @@ void hit_building(const BuildingHitRequest *request) {
 
 void fire_hex(const TerrainHexEffectRequest *request) {
   Mech *mech = request->mech;
-  const int x = request->position.x;
-  const int y = request->position.y;
+  const int X = request->position.x;
+  const int Y = request->position.y;
   BattleMap *map;
 
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!map)
     return;
-  switch (map_terrain_get(map, x, y)) {
+  switch (map_terrain_get(map, X, Y)) {
   case HEAVY_FOREST:
     break;
   case LIGHT_FOREST:
@@ -247,15 +247,15 @@ void fire_hex(const TerrainHexEffectRequest *request) {
     return;
   }
   if (request->intentional) {
-    mech_los_broadcast(mech, tprintf("'s shot ignites %d,%d!", x, y));
-    mech_printf(mech, MECHALL, "You ignite %d,%d.", x, y);
+    mech_los_broadcast(mech, tprintf("'s shot ignites %d,%d!", X, Y));
+    mech_printf(mech, MECHALL, "You ignite %d,%d.", X, Y);
   } else {
-    mech_los_broadcast(mech, tprintf("'s stray shot ignites %d,%d!", x, y));
-    mech_printf(mech, MECHALL, "You accidentally ignite %d,%d!", x, y);
+    mech_los_broadcast(mech, tprintf("'s stray shot ignites %d,%d!", X, Y));
+    mech_printf(mech, MECHALL, "You accidentally ignite %d,%d!", X, Y);
   }
   add_decoration(&(MapDecorationRequest){
       .map = map,
-      .position = {.x = x, .y = y},
+      .position = {.x = X, .y = Y},
       .type = TYPE_FIRE,
       .terrain_marker = FIRE,
       .duration = btech_random_range_int(map->xcode.context, 60, 180),
@@ -282,10 +282,10 @@ void steppable_base_check(Mech *mech, int x, int y) {
     return;
   if (battle_map_build_is_dropship_structure(nmap))
     return;
-  if (battle_map_build_is_hidden(nmap) && !MadePerceptionRoll(mech, 0))
+  if (battle_map_build_is_hidden(nmap) && !made_perception_roll(mech, 0))
     return;
   mech_printf(mech, MECHALL, "%s has CF of %d.",
-              MyToUpper(structure_name(mech_context(mech)->database, o).text),
+              my_to_upper(structure_name(mech_context(mech)->database, o).text),
               nmap->cf);
 }
 
@@ -309,23 +309,23 @@ void show_building_in_hex(Mech *mech, int x, int y) {
     mech_notify(mech, MECHALL, "The sensors detect no building in the hex!");
     return;
   }
-  const int mech_x = mech_position_x(mech);
-  const int mech_y = mech_position_y(mech);
-  const int mech_z = mech_position_z(mech);
-  const float building_range = map_spatial_range(&(MapSpatialSegment){
-      .start = {.x = (float)mech_x, .y = (float)mech_y, .z = (float)mech_z},
+  const int MECH_X = mech_position_x(mech);
+  const int MECH_Y = mech_position_y(mech);
+  const int MECH_Z = mech_position_z(mech);
+  const float BUILDING_RANGE = map_spatial_range(&(MapSpatialSegment){
+      .start = {.x = (float)MECH_X, .y = (float)MECH_Y, .z = (float)MECH_Z},
       .end = {.x = (float)x, .y = (float)y, .z = 0.0F},
   });
-  const float rounded_range = floorf(building_range + 0.95F);
-  const int perception_difficulty = (int)rounded_range;
+  const float ROUNDED_RANGE = floorf(BUILDING_RANGE + 0.95F);
+  const int PERCEPTION_DIFFICULTY = (int)ROUNDED_RANGE;
   if (battle_map_build_is_invisible(nmap) ||
       (battle_map_build_is_hidden(nmap) &&
-       !MadePerceptionRoll(mech, perception_difficulty))) {
+       !made_perception_roll(mech, PERCEPTION_DIFFICULTY))) {
     mech_notify(mech, MECHALL, "The sensors detect no building in the hex!");
     return;
   }
   mech_printf(mech, MECHALL, "%s's CF is %d.",
-              MyToUpper(structure_name(mech_context(mech)->database, o).text),
+              my_to_upper(structure_name(mech_context(mech)->database, o).text),
               nmap->cf);
 }
 

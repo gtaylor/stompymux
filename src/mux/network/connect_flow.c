@@ -419,19 +419,19 @@ static FlowOutcome connect_flow_step_username(const FlowStepCall *call) {
     outcome.prompt = "Who are you? ";
     return outcome;
   }
-  StringCopyTrunc(data->name, input, sizeof(data->name) - 1);
+  string_copy_trunc(data->name, input, sizeof(data->name) - 1);
   outcome.action = FLOW_ACTION_GOTO;
   if (lookup_player(descriptor_runtime(d)->world, NOTHING, data->name, 0) !=
       NOTHING) {
-    StringCopyTrunc(outcome.next_step, "password", FLOW_STEP_NAME_SIZE - 1);
+    string_copy_trunc(outcome.next_step, "password", FLOW_STEP_NAME_SIZE - 1);
   } else if (!ok_new_player_name(descriptor_runtime(d)->world->configuration,
                                  data->name)) {
     outcome.action = FLOW_ACTION_WAIT;
     outcome.prompt = "New usernames must start with a letter and be at least "
                      "two characters long.\r\nWho are you? ";
   } else {
-    StringCopyTrunc(outcome.next_step, "confirm_create",
-                    FLOW_STEP_NAME_SIZE - 1);
+    string_copy_trunc(outcome.next_step, "confirm_create",
+                      FLOW_STEP_NAME_SIZE - 1);
   }
   return outcome;
 }
@@ -450,7 +450,7 @@ static FlowOutcome connect_flow_step_password(const FlowStepCall *call) {
   }
   descriptor_telnet_set_echo(d, 1);
   connect_flow_hide_input_length(d, input);
-  StringCopyTrunc(data->password, input, sizeof(data->password) - 1);
+  string_copy_trunc(data->password, input, sizeof(data->password) - 1);
 
   switch (connect_flow_attempt_login(d, data->name, data->password)) {
   case CONNECT_RESULT_CONNECTED:
@@ -462,7 +462,7 @@ static FlowOutcome connect_flow_step_password(const FlowStepCall *call) {
   case CONNECT_RESULT_RETRY:
   default:
     outcome.action = FLOW_ACTION_GOTO;
-    StringCopyTrunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
+    string_copy_trunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
     return outcome;
   }
 }
@@ -483,13 +483,13 @@ static FlowOutcome connect_flow_step_confirm_create(const FlowStepCall *call) {
   }
   if (connect_flow_blank(input) || flow_parse_yesno(input) == FLOW_YESNO_YES) {
     outcome.action = FLOW_ACTION_GOTO;
-    StringCopyTrunc(outcome.next_step, "create_password",
-                    FLOW_STEP_NAME_SIZE - 1);
+    string_copy_trunc(outcome.next_step, "create_password",
+                      FLOW_STEP_NAME_SIZE - 1);
     return outcome;
   }
   if (flow_parse_yesno(input) == FLOW_YESNO_NO) {
     outcome.action = FLOW_ACTION_GOTO;
-    StringCopyTrunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
+    string_copy_trunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
     return outcome;
   }
   outcome.action = FLOW_ACTION_WAIT;
@@ -515,10 +515,10 @@ static FlowOutcome connect_flow_step_create_password(const FlowStepCall *call) {
     return outcome;
   }
   connect_flow_hide_input_length(d, input);
-  StringCopyTrunc(data->password, input, sizeof(data->password) - 1);
+  string_copy_trunc(data->password, input, sizeof(data->password) - 1);
   outcome.action = FLOW_ACTION_GOTO;
-  StringCopyTrunc(outcome.next_step, "create_confirm_password",
-                  FLOW_STEP_NAME_SIZE - 1);
+  string_copy_trunc(outcome.next_step, "create_confirm_password",
+                    FLOW_STEP_NAME_SIZE - 1);
   return outcome;
 }
 
@@ -541,8 +541,8 @@ connect_flow_step_create_confirm_password(const FlowStepCall *call) {
      * suppressed rather than restoring and immediately re-suppressing it. */
     outcome.action = FLOW_ACTION_GOTO;
     outcome.prompt = "Passwords did not match.\r\n";
-    StringCopyTrunc(outcome.next_step, "create_password",
-                    FLOW_STEP_NAME_SIZE - 1);
+    string_copy_trunc(outcome.next_step, "create_password",
+                      FLOW_STEP_NAME_SIZE - 1);
     return outcome;
   }
 
@@ -560,7 +560,7 @@ connect_flow_step_create_confirm_password(const FlowStepCall *call) {
   default:
     outcome.action = FLOW_ACTION_GOTO;
     outcome.prompt = create_fail;
-    StringCopyTrunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
+    string_copy_trunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
     return outcome;
   }
 }

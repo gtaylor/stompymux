@@ -29,14 +29,14 @@ DbRef mech_parts_store_dbref(const Mech *mech) {
 
 int mech_parts_alias(const MechPartLocation *location) {
   Mech *mech = location->mech;
-  const int part = location->part;
+  const int PART = location->part;
 #ifdef BT_COMPLEXREPAIRS
   return alias_part(mech, part, location->section);
 #else
-  if (equipment_is_actuator(part)) {
+  if (equipment_is_actuator(PART)) {
     return cargo_equipment_index(S_ACTUATOR);
   }
-  if (part == special_equipment_index(ENGINE)) {
+  if (PART == special_equipment_index(ENGINE)) {
     if (((mech)->rd.specials) & XL_TECH) {
       return cargo_equipment_index(XL_ENGINE);
     }
@@ -53,11 +53,11 @@ int mech_parts_alias(const MechPartLocation *location) {
       return cargo_equipment_index(LIGHT_ENGINE);
     }
   }
-  if (part == special_equipment_index(HEAT_SINK) &&
+  if (PART == special_equipment_index(HEAT_SINK) &&
       mech_has_double_heat_sinks(mech)) {
     return cargo_equipment_index(DOUBLE_HEAT_SINK);
   }
-  return part;
+  return PART;
 #endif
 }
 
@@ -115,13 +115,13 @@ bool mech_parts_consume(Mech *mech, DbRef player,
 }
 
 bool mech_section_armor_repairing(Mech *mech, int section) {
-  return SomeoneFixingA(mech, section);
+  return someone_fixing_a(mech, section);
 }
 
 bool mech_section_rear_armor_repairing(Mech *mech, int section) {
-  return SomeoneFixingA(mech, section + 8);
+  return someone_fixing_a(mech, section + 8);
 }
 
 bool mech_section_internals_repairing(Mech *mech, int section) {
-  return SomeoneFixingI(mech, section);
+  return someone_fixing_i(mech, section);
 }

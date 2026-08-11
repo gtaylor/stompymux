@@ -252,7 +252,7 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
 
   if (!*wild_cursor_suffix(&pattern, 1)) {
     char *capture = wild_argument_at(context, arg);
-    StringCopyTrunc(capture, wild_cursor_suffix(&data, 0), LBUF_SIZE - 1);
+    string_copy_trunc(capture, wild_cursor_suffix(&data, 0), LBUF_SIZE - 1);
     *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char),
                                 LBUF_SIZE - 1) = '\0';
     return 1;
@@ -378,9 +378,9 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
       size_t capture_length =
           data.offset - data_capture_offset - (size_t)numextra;
       char *capture = wild_argument_at(context, argpos);
-      StringCopyTrunc(capture,
-                      checked_string_suffix(data.text, data_capture_offset),
-                      capture_length);
+      string_copy_trunc(capture,
+                        checked_string_suffix(data.text, data_capture_offset),
+                        capture_length);
       *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char),
                                   capture_length) = '\0';
       data_capture_offset = data.offset - (size_t)numextra;

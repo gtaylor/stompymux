@@ -23,8 +23,8 @@ void aero_checklz(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUAL))
     return;
 
-  const int argument_count = mech_parseattributes(buffer, arguments, 3);
-  if (argument_count == 2) {
+  const int ARGUMENT_COUNT = mech_parseattributes(buffer, arguments, 3);
+  if (ARGUMENT_COUNT == 2) {
     if (!parse_int_checked(arguments[0], &x) ||
         !parse_int_checked(arguments[1], &y)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -34,19 +34,19 @@ void aero_checklz(DbRef player, Mech *mech, char *buffer) {
     if (!mech_is_observer(mech)) {
       float real_x;
       float real_y;
-      const int tactical_range = mech_tactical_range(mech);
-      MapCoordToRealCoord(x, y, &real_x, &real_y);
+      const int TACTICAL_RANGE = mech_tactical_range(mech);
+      map_coord_to_real_coord(x, y, &real_x, &real_y);
       if (map_real_range(&(MapRealSegment){
               .start = {.x = mech_position_real_x(mech),
                         .y = mech_position_real_y(mech)},
               .end = {.x = real_x, .y = real_y},
-          }) > (float)tactical_range) {
+          }) > (float)TACTICAL_RANGE) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Out of range!");
         return;
       }
     }
-  } else if (argument_count == 0) {
+  } else if (ARGUMENT_COUNT == 0) {
     x = mech_position_x(mech);
     y = mech_position_y(mech);
   } else {

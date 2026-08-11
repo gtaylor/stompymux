@@ -36,9 +36,9 @@ static bool character_is_alphanumeric(char character) {
 }
 
 static bool parse_finished(const char *end) {
-  const size_t length = strlen(end);
-  for (size_t index = 0; index < length; index++) {
-    if (!character_is_space(checked_character_at(end, length + 1, index)))
+  const size_t LENGTH = strlen(end);
+  for (size_t index = 0; index < LENGTH; index++) {
+    if (!character_is_space(checked_character_at(end, LENGTH + 1, index)))
       return false;
   }
   return true;
@@ -107,11 +107,11 @@ bool parse_time_checked(const char *text, time_t *value) {
   if (value == nullptr || !parse_long_checked(text, &parsed))
     return false;
 
-  const time_t converted = (time_t)parsed;
-  if ((long)converted != parsed)
+  const time_t CONVERTED = (time_t)parsed;
+  if ((long)CONVERTED != parsed)
     return false;
 
-  *value = converted;
+  *value = CONVERTED;
   return true;
 }
 
@@ -165,9 +165,9 @@ int clamped_atoi(const char *str) {
 char *upcasestr(char *s) {
   if (s == nullptr)
     return nullptr;
-  const size_t length = strlen(s);
-  for (size_t index = 0; index < length; index++) {
-    char *slot = checked_character_slot(s, length + 1, index);
+  const size_t LENGTH = strlen(s);
+  for (size_t index = 0; index < LENGTH; index++) {
+    char *slot = checked_character_slot(s, LENGTH + 1, index);
     *slot = ascii_to_upper(*slot);
   }
   return s;
@@ -181,11 +181,11 @@ static char *normalize_spaces(const char *string) {
   size_t output_index = 0;
   bool pending_space = false;
   if (string != nullptr) {
-    const size_t length = strlen(string);
-    for (size_t input_index = 0; input_index < length; input_index++) {
-      const char character =
-          checked_character_at(string, length + 1, input_index);
-      if (character_is_space(character)) {
+    const size_t LENGTH = strlen(string);
+    for (size_t input_index = 0; input_index < LENGTH; input_index++) {
+      const char CHARACTER =
+          checked_character_at(string, LENGTH + 1, input_index);
+      if (character_is_space(CHARACTER)) {
         pending_space = output_index > 0;
       } else {
         if (pending_space && output_index < (size_t)LBUF_SIZE - 1) {
@@ -194,7 +194,7 @@ static char *normalize_spaces(const char *string) {
         pending_space = false;
         if (output_index < (size_t)LBUF_SIZE - 1) {
           *checked_character_slot(buffer, LBUF_SIZE, output_index++) =
-              character;
+              CHARACTER;
         }
       }
     }
@@ -224,14 +224,14 @@ char *grabto(char **str, char targ) {
     return nullptr;
 
   char *field = *str;
-  const size_t length = strlen(field);
+  const size_t LENGTH = strlen(field);
   size_t index = 0;
-  while (index < length &&
-         checked_character_at(field, length + 1, index) != targ) {
+  while (index < LENGTH &&
+         checked_character_at(field, LENGTH + 1, index) != targ) {
     index++;
   }
-  if (index < length) {
-    *checked_character_slot(field, length + 1, index) = '\0';
+  if (index < LENGTH) {
+    *checked_character_slot(field, LENGTH + 1, index) = '\0';
     index++;
   }
   *str = checked_mutable_string_suffix(field, index);
@@ -244,57 +244,57 @@ char *grabto(char **str, char targ) {
  */
 int string_compare(const ServerConfiguration *configuration, const char *s1,
                    const char *s2) {
-  const size_t length1 = strlen(s1);
-  const size_t length2 = strlen(s2);
+  const size_t LENGTH1 = strlen(s1);
+  const size_t LENGTH2 = strlen(s2);
   size_t index1 = 0;
   size_t index2 = 0;
 
   if (!configuration->space_compress) {
-    while (index1 < length1 && index2 < length2 &&
-           ascii_to_lower(checked_character_at(s1, length1 + 1, index1)) ==
-               ascii_to_lower(checked_character_at(s2, length2 + 1, index2))) {
+    while (index1 < LENGTH1 && index2 < LENGTH2 &&
+           ascii_to_lower(checked_character_at(s1, LENGTH1 + 1, index1)) ==
+               ascii_to_lower(checked_character_at(s2, LENGTH2 + 1, index2))) {
       index1++;
       index2++;
     }
-    return ascii_to_lower(checked_character_at(s1, length1 + 1, index1)) -
-           ascii_to_lower(checked_character_at(s2, length2 + 1, index2));
+    return ascii_to_lower(checked_character_at(s1, LENGTH1 + 1, index1)) -
+           ascii_to_lower(checked_character_at(s2, LENGTH2 + 1, index2));
   } else {
-    while (index1 < length1 &&
-           character_is_space(checked_character_at(s1, length1 + 1, index1)))
+    while (index1 < LENGTH1 &&
+           character_is_space(checked_character_at(s1, LENGTH1 + 1, index1)))
       index1++;
-    while (index2 < length2 &&
-           character_is_space(checked_character_at(s2, length2 + 1, index2)))
+    while (index2 < LENGTH2 &&
+           character_is_space(checked_character_at(s2, LENGTH2 + 1, index2)))
       index2++;
-    while (index1 < length1 && index2 < length2) {
-      const char character1 = checked_character_at(s1, length1 + 1, index1);
-      const char character2 = checked_character_at(s2, length2 + 1, index2);
-      if (character_is_space(character1) && character_is_space(character2)) {
-        while (index1 < length1 && character_is_space(checked_character_at(
-                                       s1, length1 + 1, index1)))
+    while (index1 < LENGTH1 && index2 < LENGTH2) {
+      const char CHARACTER1 = checked_character_at(s1, LENGTH1 + 1, index1);
+      const char CHARACTER2 = checked_character_at(s2, LENGTH2 + 1, index2);
+      if (character_is_space(CHARACTER1) && character_is_space(CHARACTER2)) {
+        while (index1 < LENGTH1 && character_is_space(checked_character_at(
+                                       s1, LENGTH1 + 1, index1)))
           index1++;
-        while (index2 < length2 && character_is_space(checked_character_at(
-                                       s2, length2 + 1, index2)))
+        while (index2 < LENGTH2 && character_is_space(checked_character_at(
+                                       s2, LENGTH2 + 1, index2)))
           index2++;
-      } else if (ascii_to_lower(character1) == ascii_to_lower(character2)) {
+      } else if (ascii_to_lower(CHARACTER1) == ascii_to_lower(CHARACTER2)) {
         index1++;
         index2++;
       } else {
         break;
       }
     }
-    if (index1 < length1 && index2 < length2)
+    if (index1 < LENGTH1 && index2 < LENGTH2)
       return (1);
-    while (index1 < length1 &&
-           character_is_space(checked_character_at(s1, length1 + 1, index1)))
+    while (index1 < LENGTH1 &&
+           character_is_space(checked_character_at(s1, LENGTH1 + 1, index1)))
       index1++;
-    if (index1 < length1) {
-      return checked_character_at(s1, length1 + 1, index1);
+    if (index1 < LENGTH1) {
+      return checked_character_at(s1, LENGTH1 + 1, index1);
     }
-    while (index2 < length2 &&
-           character_is_space(checked_character_at(s2, length2 + 1, index2)))
+    while (index2 < LENGTH2 &&
+           character_is_space(checked_character_at(s2, LENGTH2 + 1, index2)))
       index2++;
-    if (index2 < length2) {
-      return checked_character_at(s2, length2 + 1, index2);
+    if (index2 < LENGTH2) {
+      return checked_character_at(s2, LENGTH2 + 1, index2);
     }
     return (0);
   }
@@ -305,18 +305,18 @@ int string_compare(const ServerConfiguration *configuration, const char *s1,
  * matched characters, or zero if the complete nonempty prefix does not match.
  */
 int string_prefix(const char *string, const char *prefix) {
-  const size_t string_length = strlen(string);
-  const size_t prefix_length = strlen(prefix);
+  const size_t STRING_LENGTH = strlen(string);
+  const size_t PREFIX_LENGTH = strlen(prefix);
   size_t count = 0;
 
   while (
-      count < string_length && count < prefix_length &&
-      ascii_to_lower(checked_character_at(string, string_length + 1, count)) ==
+      count < STRING_LENGTH && count < PREFIX_LENGTH &&
+      ascii_to_lower(checked_character_at(string, STRING_LENGTH + 1, count)) ==
           ascii_to_lower(
-              checked_character_at(prefix, prefix_length + 1, count))) {
+              checked_character_at(prefix, PREFIX_LENGTH + 1, count))) {
     count++;
   }
-  if (count != prefix_length)
+  if (count != PREFIX_LENGTH)
     return 0;
   return count > (size_t)INT_MAX ? INT_MAX : (int)count;
 }
@@ -329,17 +329,17 @@ const char *string_match(const char *src, const char *sub) {
   if (src == nullptr || sub == nullptr || *sub == '\0')
     return nullptr;
 
-  const size_t length = strlen(src);
+  const size_t LENGTH = strlen(src);
   size_t index = 0;
-  while (index < length) {
+  while (index < LENGTH) {
     const char *word = checked_string_suffix(src, index);
     if (string_prefix(word, sub))
       return word;
-    while (index < length && character_is_alphanumeric(
-                                 checked_character_at(src, length + 1, index)))
+    while (index < LENGTH && character_is_alphanumeric(
+                                 checked_character_at(src, LENGTH + 1, index)))
       index++;
-    while (index < length && !character_is_alphanumeric(
-                                 checked_character_at(src, length + 1, index)))
+    while (index < LENGTH && !character_is_alphanumeric(
+                                 checked_character_at(src, LENGTH + 1, index)))
       index++;
   }
   return nullptr;
@@ -353,23 +353,23 @@ char *replace_string(const char *old, const char *new, const char *string) {
   if (old == nullptr || new == nullptr || string == nullptr)
     return nullptr;
 
-  const size_t old_length = strlen(old);
-  const size_t string_length = strlen(string);
+  const size_t OLD_LENGTH = strlen(old);
+  const size_t STRING_LENGTH = strlen(string);
   char *result = alloc_lbuf("replace_string");
   if (result == nullptr)
     return nullptr;
   char *output = result;
 
   size_t index = 0;
-  while (index < string_length) {
-    const bool matches =
-        old_length > 0 && old_length <= string_length - index &&
-        memcmp(old, checked_string_suffix(string, index), old_length) == 0;
-    if (matches) {
+  while (index < STRING_LENGTH) {
+    const bool MATCHES =
+        OLD_LENGTH > 0 && OLD_LENGTH <= STRING_LENGTH - index &&
+        memcmp(old, checked_string_suffix(string, index), OLD_LENGTH) == 0;
+    if (MATCHES) {
       safe_str(new, result, &output);
-      index += old_length;
+      index += OLD_LENGTH;
     } else {
-      safe_chr(checked_character_at(string, string_length + 1, index), result,
+      safe_chr(checked_character_at(string, STRING_LENGTH + 1, index), result,
                &output);
       index++;
     }
@@ -383,19 +383,19 @@ char *replace_string(const char *old, const char *new, const char *string) {
  * at least min characters, unless str exactly consumes target.
  */
 int minmatch(const char *str, const char *target, int min) {
-  const size_t str_length = strlen(str);
-  const size_t target_length = strlen(target);
+  const size_t STR_LENGTH = strlen(str);
+  const size_t TARGET_LENGTH = strlen(target);
   size_t index = 0;
-  while (index < str_length && index < target_length &&
-         ascii_to_lower(checked_character_at(str, str_length + 1, index)) ==
+  while (index < STR_LENGTH && index < TARGET_LENGTH &&
+         ascii_to_lower(checked_character_at(str, STR_LENGTH + 1, index)) ==
              ascii_to_lower(
-                 checked_character_at(target, target_length + 1, index))) {
+                 checked_character_at(target, TARGET_LENGTH + 1, index))) {
     index++;
     min--;
   }
-  if (index < str_length)
+  if (index < STR_LENGTH)
     return 0;
-  if (index == target_length)
+  if (index == TARGET_LENGTH)
     return 1;
   return ((min <= 0) ? 1 : 0);
 }
@@ -404,10 +404,10 @@ int minmatch(const char *str, const char *target, int min) {
 char *strsave(const char *s) {
   if (s == nullptr)
     return nullptr;
-  const size_t size = strlen(s) + 1;
-  char *copy = malloc(size);
+  const size_t SIZE = strlen(s) + 1;
+  char *copy = malloc(SIZE);
   if (copy != nullptr)
-    memcpy(copy, s, size);
+    memcpy(copy, s, SIZE);
   return copy;
 }
 
@@ -418,25 +418,25 @@ char *strsave(const char *s) {
 int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
   if (src == nullptr || buff == nullptr || bufp == nullptr || *bufp == nullptr)
     return 0;
-  const uintptr_t base_address = (uintptr_t)buff;
-  const uintptr_t cursor_address = (uintptr_t)*bufp;
-  if (max < 0 || cursor_address < base_address ||
-      cursor_address - base_address > (uintptr_t)max) {
+  const uintptr_t BASE_ADDRESS = (uintptr_t)buff;
+  const uintptr_t CURSOR_ADDRESS = (uintptr_t)*bufp;
+  if (max < 0 || CURSOR_ADDRESS < BASE_ADDRESS ||
+      CURSOR_ADDRESS - BASE_ADDRESS > (uintptr_t)max) {
     return strlen(src) > (size_t)INT_MAX ? INT_MAX : (int)strlen(src);
   }
 
-  const size_t source_length = strlen(src);
+  const size_t SOURCE_LENGTH = strlen(src);
   size_t source_index = 0;
-  size_t output_index = (size_t)(cursor_address - base_address);
-  while (source_index < source_length && output_index < (size_t)max) {
+  size_t output_index = (size_t)(CURSOR_ADDRESS - BASE_ADDRESS);
+  while (source_index < SOURCE_LENGTH && output_index < (size_t)max) {
     *checked_character_slot(buff, (size_t)max + 1, output_index) =
-        checked_character_at(src, source_length + 1, source_index);
+        checked_character_at(src, SOURCE_LENGTH + 1, source_index);
     source_index++;
     output_index++;
   }
   *bufp = checked_character_slot(buff, (size_t)max + 1, output_index);
-  const size_t remaining = source_length - source_index;
-  return remaining > (size_t)INT_MAX ? INT_MAX : (int)remaining;
+  const size_t REMAINING = SOURCE_LENGTH - source_index;
+  return REMAINING > (size_t)INT_MAX ? INT_MAX : (int)REMAINING;
 }
 
 /**
@@ -446,17 +446,17 @@ int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
 int safe_copy_chr(char src, char *buff, char **bufp, int max) {
   if (buff == nullptr || bufp == nullptr || *bufp == nullptr || max < 0)
     return 1;
-  const uintptr_t base_address = (uintptr_t)buff;
-  const uintptr_t cursor_address = (uintptr_t)*bufp;
-  if (cursor_address < base_address ||
-      cursor_address - base_address > (uintptr_t)max) {
+  const uintptr_t BASE_ADDRESS = (uintptr_t)buff;
+  const uintptr_t CURSOR_ADDRESS = (uintptr_t)*bufp;
+  if (CURSOR_ADDRESS < BASE_ADDRESS ||
+      CURSOR_ADDRESS - BASE_ADDRESS > (uintptr_t)max) {
     return 1;
   }
 
-  const size_t output_index = (size_t)(cursor_address - base_address);
-  if (output_index >= (size_t)max)
+  const size_t OUTPUT_INDEX = (size_t)(CURSOR_ADDRESS - BASE_ADDRESS);
+  if (OUTPUT_INDEX >= (size_t)max)
     return 1;
-  *checked_character_slot(buff, (size_t)max + 1, output_index) = src;
-  *bufp = checked_character_slot(buff, (size_t)max + 1, output_index + 1);
+  *checked_character_slot(buff, (size_t)max + 1, OUTPUT_INDEX) = src;
+  *bufp = checked_character_slot(buff, (size_t)max + 1, OUTPUT_INDEX + 1);
   return 0;
 }

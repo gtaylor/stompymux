@@ -206,7 +206,7 @@ void mech_set_recycle_limb(Mech *mech, int section, int value) {
 void mech_make_fall(Mech *mech) {
   ((mech)->rd.status) |= FALLEN;
   ((mech)->rd.status) &= ~(TORSO_RIGHT | TORSO_LEFT | FLIPPED_ARMS);
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   mech_flood(mech);
   mech_event_cancel(mech, EVENT_STAND);
   mech_event_cancel(mech, EVENT_CHANGING_HULLDOWN);
@@ -218,7 +218,7 @@ void mech_make_fall(Mech *mech) {
 
 void mech_make_stand(Mech *mech) {
   ((mech)->rd.status) &= ~FALLEN;
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 void mech_start_seeing(Mech *mech) {

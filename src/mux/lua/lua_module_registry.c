@@ -34,23 +34,23 @@ static char *lua_module_item(char *const *modules, size_t count, size_t index) {
 }
 
 static const char *lua_runtime_root(const LuaRuntime *runtime,
-                                    LUA_MODULE_ROOT root) {
+                                    LuaModuleRoot root) {
   return checked_storage_at_const(runtime->roots, LUA_ROOT_COUNT,
                                   sizeof(*runtime->roots), (size_t)root);
 }
 
 static char *lua_split_at(char *text, char delimiter) {
-  const size_t length = strlen(text);
+  const size_t LENGTH = strlen(text);
   size_t offset = 0;
 
-  while (offset < length &&
-         *(const char *)checked_storage_at_const(text, length + 1, sizeof(char),
+  while (offset < LENGTH &&
+         *(const char *)checked_storage_at_const(text, LENGTH + 1, sizeof(char),
                                                  offset) != delimiter)
     offset++;
-  if (offset == length)
+  if (offset == LENGTH)
     return nullptr;
-  *(char *)checked_storage_at(text, length + 1, sizeof(char), offset) = '\0';
-  return checked_storage_at(text, length + 1, sizeof(char), offset + 1);
+  *(char *)checked_storage_at(text, LENGTH + 1, sizeof(char), offset) = '\0';
+  return checked_storage_at(text, LENGTH + 1, sizeof(char), offset + 1);
 }
 
 static char **lua_string_slot(char **items, size_t count, size_t index) {
@@ -116,7 +116,7 @@ static int lua_add_module(char ***modules, size_t *module_count,
   return 1;
 }
 
-int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+int lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
                         const char *relative, char ***modules,
                         size_t *module_count, char *error, size_t error_size) {
   char directory[PATH_MAX];
@@ -198,13 +198,13 @@ static int lua_collect_global_modules(LuaRuntime *runtime, const char *relative,
 
 static int lua_cron_parse_number(const char *text, long *value) {
   char *end;
-  const size_t length = strlen(text);
+  const size_t LENGTH = strlen(text);
 
   if (!*text)
     return 0;
-  for (size_t index = 0; index < length; index++) {
+  for (size_t index = 0; index < LENGTH; index++) {
     if (!(isdigit)((unsigned char)*(const char *)checked_storage_at_const(
-            text, length + 1, sizeof(char), index)))
+            text, LENGTH + 1, sizeof(char), index)))
       return 0;
   }
   errno = 0;
@@ -464,7 +464,7 @@ static int lua_verify_commands(lua_State *state, int commands, const char *path,
   return 1;
 }
 
-static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+static int lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
                              const char *path, char *error, size_t error_size) {
   int top = lua_gettop(runtime->state);
   int has_commands = 0;
@@ -714,7 +714,7 @@ int lua_reload(LuaOwner *owner, char *error, size_t error_size) {
   return 1;
 }
 
-int lua_check_one_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+int lua_check_one_module(LuaRuntime *runtime, LuaModuleRoot root,
                          const char *path, char *error, size_t error_size) {
   char detail[LBUF_SIZE];
 
@@ -725,8 +725,8 @@ int lua_check_one_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
   return 0;
 }
 
-typedef struct lua_parent_check_t LUA_PARENT_CHECK;
-struct lua_parent_check_t {
+typedef struct LuaParentCheckT LuaParentCheck;
+struct LuaParentCheckT {
   char *path;
   char *error;
   size_t object_count;

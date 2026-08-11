@@ -40,27 +40,27 @@ constexpr int CEMIT_NOHEADER = 1; /* Channel emit without header. */
 constexpr int CLIST_FULL = 1;     /* Full listing of channels. */
 constexpr int CSTATUS_FULL = 1;   /* Full listing of channel status. */
 
-typedef struct chanentry CHANENT;
-struct chanentry {
+typedef struct Chanentry CHANENT;
+struct Chanentry {
   char *channame;
-  struct channel *chan;
+  struct Channel *chan;
 };
 
 constexpr int CHAN_NAME_LEN = 50;
-struct comuser {
+struct Comuser {
   DbRef who;
   int on;
-  struct comuser *on_next;
+  struct Comuser *on_next;
 };
 
-struct channel {
+struct Channel {
   char name[CHAN_NAME_LEN];
   int type;
   int num_users;
   int max_users;
   int chan_obj;
-  struct comuser **users;
-  struct comuser *on_users; /* Linked list of who is on */
+  struct Comuser **users;
+  struct Comuser *on_users; /* Linked list of who is on */
   Fifo *last_messages;
   int num_messages;
 };
@@ -68,10 +68,10 @@ struct channel {
 typedef struct {
   time_t time;
   char *msg;
-} chmsg;
+} Chmsg;
 
 void init_chantab(ChannelRegistry *channels);
-void channel_destroy(struct channel *channel);
+void channel_destroy(struct Channel *channel);
 void send_channel(EvaluationContext *evaluation, const char *chan,
                   const char *format, ...)
     __attribute__((format(printf, 3, 4)));
@@ -82,10 +82,10 @@ typedef struct ChannelMessageTarget {
 
 void send_channel_v(const ChannelMessageTarget *target, const char *format,
                     va_list arguments) __attribute__((format(printf, 2, 0)));
-struct channel *select_channel(ChannelRegistry *channels, const char *channel);
-struct comuser *select_user(struct channel *ch, DbRef player);
-struct comuser *channel_user_at(const struct channel *channel, size_t index);
-struct comuser **channel_user_slot(struct channel *channel, size_t index);
+struct Channel *select_channel(ChannelRegistry *channels, const char *channel);
+struct Comuser *select_user(struct Channel *ch, DbRef player);
+struct Comuser *channel_user_at(const struct Channel *channel, size_t index);
+struct Comuser **channel_user_slot(struct Channel *channel, size_t index);
 void do_addcom(CommandInvocation *invocation);
 void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *alias,
                       char *channel);
@@ -109,7 +109,7 @@ void do_chboot(CommandInvocation *invocation);
 void do_chanstatus(CommandInvocation *invocation);
 void do_chanlist(CommandInvocation *invocation);
 void do_joinchannel(EvaluationContext *evaluation, DbRef player,
-                    struct channel *ch);
+                    struct Channel *ch);
 void fun_cemit(char *buff, char **bufc, DbRef player, DbRef cause,
                char *fargs[], int nfargs, char *cargs[], int ncargs,
                EvaluationContext *context);

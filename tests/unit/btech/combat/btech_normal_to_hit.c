@@ -90,7 +90,7 @@ int mech_position_z(const Mech *mech) {
   (void)mech;
   return attacker_z;
 }
-int FindPilotGunnery(Mech *mech, int weapon_index) {
+int find_pilot_gunnery(Mech *mech, int weapon_index) {
   (void)mech;
   (void)weapon_index;
   return gunnery;
@@ -108,7 +108,7 @@ void mech_notify(Mech *mech, MechNotifyAudience audience, const char *message) {
   (void)audience;
   (void)message;
 }
-int FindPilotSpotting(Mech *mech) {
+int find_pilot_spotting(Mech *mech) {
   (void)mech;
   return spotting;
 }
@@ -278,7 +278,7 @@ MechTargetPositionResult mech_target_position(const Mech *mech) {
   (void)mech;
   return (MechTargetPositionResult){0};
 }
-int InWeaponArc(Mech *mech, float x, float y) {
+int in_weapon_arc(Mech *mech, float x, float y) {
   (void)mech;
   (void)x;
   (void)y;

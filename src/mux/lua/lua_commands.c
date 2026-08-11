@@ -27,7 +27,7 @@
 #include "mux/world/match.h"
 
 static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
-                                    LUA_MODULE_ROOT root, const char *path,
+                                    LuaModuleRoot root, const char *path,
                                     DbRef thing, DbRef player, DbRef cause,
                                     const char *command, int stop_on_handled) {
   lua_State *state;
@@ -36,7 +36,7 @@ static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
   int commands;
   int index;
   int handled = 0;
-  LUA_MODULE_ROOT previous_root;
+  LuaModuleRoot previous_root;
 
   state = runtime->state;
   top = lua_gettop(state);
@@ -109,7 +109,7 @@ static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
 
 typedef struct LuaModuleCommandVisitRequest {
   LuaRuntime *runtime;
-  LUA_MODULE_ROOT root;
+  LuaModuleRoot root;
   const char *path;
   DbRef object;
   DbRef player;
@@ -120,7 +120,7 @@ typedef struct LuaModuleCommandVisitRequest {
 static size_t
 lua_visit_module_commands(const LuaModuleCommandVisitRequest *request) {
   LuaRuntime *runtime = request->runtime;
-  LUA_MODULE_ROOT root = request->root;
+  LuaModuleRoot root = request->root;
   const char *path = request->path;
   DbRef object = request->object;
   DbRef player = request->player;
@@ -298,10 +298,10 @@ static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
                   source);
   while ((length = getline(&line, &capacity, stream)) >= 0) {
     while (length > 0) {
-      const char character = *(const char *)checked_storage_at_const(
+      const char CHARACTER = *(const char *)checked_storage_at_const(
           line, capacity, sizeof(char), (size_t)length - 1);
 
-      if (character != '\n' && character != '\r')
+      if (CHARACTER != '\n' && CHARACTER != '\r')
         break;
       length--;
       *(char *)checked_storage_at(line, capacity, sizeof(char),

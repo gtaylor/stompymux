@@ -91,7 +91,7 @@ void mech_critical_data_set(Mech *value, int section, int critical, int data) {
     secondary_rounds = data;
 }
 
-int CountAmmoForWeapon(Mech *value, int weapon_index) {
+int count_ammo_for_weapon(Mech *value, int weapon_index) {
   (void)value;
   (void)weapon_index;
   return ammunition_count;

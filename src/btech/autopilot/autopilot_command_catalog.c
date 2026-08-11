@@ -3,7 +3,7 @@
 #include "command_registry.h"
 #include <stddef.h>
 
-const BtechCommandDefinition autopilotcommands[] = {
+const BtechCommandDefinition AUTOPILOTCOMMANDS[] = {
     {0, "ENGAGE", "Engages the autopilot", btech_command_invoke_auto_engage},
     {0, "DISENGAGE", "Disengages the autopilot",
      btech_command_invoke_auto_disengage},
@@ -21,5 +21,5 @@ const BtechCommandDefinition autopilotcommands[] = {
     {0, NULL, NULL, NULL}};
 
 size_t autopilot_command_count(void) {
-  return sizeof(autopilotcommands) / sizeof(*autopilotcommands) - 1;
+  return sizeof(AUTOPILOTCOMMANDS) / sizeof(*AUTOPILOTCOMMANDS) - 1;
 }

@@ -38,17 +38,17 @@ int btech_random_roll(BtechContext *context) {
 }
 
 int map_hex_distance(const HexDistanceRequest *request) {
-  const int x1 = request->start.x;
-  const int y1 = request->start.y;
-  const int x2 = request->end.x;
-  const int y2 = request->end.y;
-  const int tc = request->correction;
-  int xd = abs(x2 - x1);
-  int yd = abs(y2 - y1);
+  const int X1 = request->start.x;
+  const int Y1 = request->start.y;
+  const int X2 = request->end.x;
+  const int Y2 = request->end.y;
+  const int TC = request->correction;
+  int xd = abs(X2 - X1);
+  int yd = abs(Y2 - Y1);
   int hm;
 
   /* _the_ base case */
-  if (x1 == x2)
+  if (X1 == X2)
     return yd;
   /*
      +
@@ -58,7 +58,7 @@ int map_hex_distance(const HexDistanceRequest *request) {
    */
   hm = xd / 2;
   if (hm <= yd)
-    return (yd - hm) + tc + xd;
+    return (yd - hm) + TC + xd;
 
   /*
      +     +
@@ -67,7 +67,7 @@ int map_hex_distance(const HexDistanceRequest *request) {
      +
    */
   if (!yd)
-    return (xd + tc);
+    return (xd + TC);
   /*
      +
      +
@@ -76,166 +76,166 @@ int map_hex_distance(const HexDistanceRequest *request) {
      +
    */
   /* For now, same as above */
-  return (xd + tc);
+  return (xd + TC);
 }
 
-int CountDestroyedLegs(Mech *objMech) {
-  int wcDeadLegs = 0;
+int count_destroyed_legs(Mech *obj_mech) {
+  int wc_dead_legs = 0;
 
-  if (((objMech)->ud.type) != CLASS_MECH)
+  if (((obj_mech)->ud.type) != CLASS_MECH)
     return 0;
 
-  if (mech_is_quad(objMech)) {
-    if (IsLegDestroyed(objMech, LARM))
-      wcDeadLegs++;
+  if (mech_is_quad(obj_mech)) {
+    if (is_leg_destroyed(obj_mech, LARM))
+      wc_dead_legs++;
 
-    if (IsLegDestroyed(objMech, RARM))
-      wcDeadLegs++;
+    if (is_leg_destroyed(obj_mech, RARM))
+      wc_dead_legs++;
   }
 
-  if (IsLegDestroyed(objMech, LLEG))
-    wcDeadLegs++;
+  if (is_leg_destroyed(obj_mech, LLEG))
+    wc_dead_legs++;
 
-  if (IsLegDestroyed(objMech, RLEG))
-    wcDeadLegs++;
+  if (is_leg_destroyed(obj_mech, RLEG))
+    wc_dead_legs++;
 
-  return wcDeadLegs;
+  return wc_dead_legs;
 }
 
-int IsLegDestroyed(Mech *objMech, int wLoc) {
-  return (mech_section_is_destroyed(objMech, wLoc) ||
-          mech_section_is_breached(objMech, wLoc) ||
-          mech_section_is_flooded(objMech, wLoc));
+int is_leg_destroyed(Mech *obj_mech, int w_loc) {
+  return (mech_section_is_destroyed(obj_mech, w_loc) ||
+          mech_section_is_breached(obj_mech, w_loc) ||
+          mech_section_is_flooded(obj_mech, w_loc));
 }
 
-int IsMechLegLess(Mech *objMech) {
-  int wcMaxLegs = 0;
+int is_mech_leg_less(Mech *obj_mech) {
+  int wc_max_legs = 0;
 
-  if (((objMech)->ud.type) != CLASS_MECH)
+  if (((obj_mech)->ud.type) != CLASS_MECH)
     return 0;
 
-  if (mech_is_quad(objMech))
-    wcMaxLegs = 4;
+  if (mech_is_quad(obj_mech))
+    wc_max_legs = 4;
   else
-    wcMaxLegs = 2;
+    wc_max_legs = 2;
 
-  if (CountDestroyedLegs(objMech) >= wcMaxLegs)
+  if (count_destroyed_legs(obj_mech) >= wc_max_legs)
     return 1;
 
   return 0;
 }
 
 int mech_weapon_first_critical(const WeaponCriticalSearch *search) {
-  Mech *objMech = search->mech;
-  const int wLoc = search->weapon.section;
-  const int wSlot = search->weapon.critical;
-  const int wStartSlot = search->start_critical;
-  const int wCritType = search->part_type;
-  const int wMaxCrits = search->maximum_criticals;
-  int wCritsInLoc = 0;
-  int wCritIter, wFirstCrit;
+  Mech *obj_mech = search->mech;
+  const int W_LOC = search->weapon.section;
+  const int W_SLOT = search->weapon.critical;
+  const int W_START_SLOT = search->start_critical;
+  const int W_CRIT_TYPE = search->part_type;
+  const int W_MAX_CRITS = search->maximum_criticals;
+  int w_crits_in_loc = 0;
+  int w_crit_iter, w_first_crit;
 
   /*
    * First let's count the number of crits in this loc, incase
    * we have two of the same weapon
    */
 
-  wFirstCrit = -1;
+  w_first_crit = -1;
 
-  for (wCritIter = wStartSlot; wCritIter < NUM_CRITICALS; wCritIter++) {
-    if (mech_critical_part_type(objMech, wLoc, wCritIter) == wCritType) {
-      wCritsInLoc++;
+  for (w_crit_iter = W_START_SLOT; w_crit_iter < NUM_CRITICALS; w_crit_iter++) {
+    if (mech_critical_part_type(obj_mech, W_LOC, w_crit_iter) == W_CRIT_TYPE) {
+      w_crits_in_loc++;
 
-      if (wFirstCrit == -1)
-        wFirstCrit = wCritIter;
+      if (w_first_crit == -1)
+        w_first_crit = w_crit_iter;
     }
   }
 
-  if ((wFirstCrit > -1) && (wSlot == -1))
-    return wFirstCrit;
+  if ((w_first_crit > -1) && (W_SLOT == -1))
+    return w_first_crit;
 
   /*
    * Now, if there are more crits than our max crit, then we have
    * two of the same weapon in this location. We need to figure
    * out which weapon this crit actually belongs to.
    */
-  if (wCritsInLoc > wMaxCrits) {
+  if (w_crits_in_loc > W_MAX_CRITS) {
     /*
      * Well, we have thje first crit of the first instance, so
      * let's see if our crit falls out of that range.. if so, then
      * we need to figure out what range it actually falls into.
      */
-    if ((wFirstCrit + wMaxCrits) <= wSlot)
-      wFirstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
-          .mech = objMech,
-          .weapon = {.section = wLoc, .critical = wSlot},
-          .start_critical = wFirstCrit + wMaxCrits,
-          .part_type = wCritType,
-          .maximum_criticals = wMaxCrits,
+    if ((w_first_crit + W_MAX_CRITS) <= W_SLOT)
+      w_first_crit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+          .mech = obj_mech,
+          .weapon = {.section = W_LOC, .critical = W_SLOT},
+          .start_critical = w_first_crit + W_MAX_CRITS,
+          .part_type = W_CRIT_TYPE,
+          .maximum_criticals = W_MAX_CRITS,
       });
   }
 
-  return wFirstCrit;
+  return w_first_crit;
 }
 
-int checkAllSections(Mech *mech, int specialToFind) {
+int check_all_sections(Mech *mech, int special_to_find) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    if (checkSectionForSpecial(mech, specialToFind, i))
+    if (check_section_for_special(mech, special_to_find, i))
       return 1;
   }
 
   return 0;
 }
 
-int checkSectionForSpecial(Mech *mech, int specialToFind, int wSec) {
-  if (mech_section_is_destroyed(mech, wSec))
+int check_section_for_special(Mech *mech, int special_to_find, int w_sec) {
+  if (mech_section_is_destroyed(mech, w_sec))
     return 0;
 
-  if (mech_section_has_special(mech, wSec, specialToFind))
+  if (mech_section_has_special(mech, w_sec, special_to_find))
     return 1;
 
   return 0;
 }
 
-int getRemainingInternalPercent(Mech *mech) {
+int get_remaining_internal_percent(Mech *mech) {
   int i;
-  float wMax = 0.0F;
-  float wRemaining = 0.0F;
+  float w_max = 0.0F;
+  float w_remaining = 0.0F;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    wMax += integer_as_float(mech_section_original_internal(mech, i));
+    w_max += integer_as_float(mech_section_original_internal(mech, i));
 
-    wRemaining += integer_as_float(mech_section_internal(mech, i));
+    w_remaining += integer_as_float(mech_section_internal(mech, i));
   }
 
-  if (wMax <= 0.0F)
+  if (w_max <= 0.0F)
     return 0;
 
-  return clamp_float_to_int((wRemaining / wMax) * 100.0F);
+  return clamp_float_to_int((w_remaining / w_max) * 100.0F);
 }
 
-int getRemainingArmorPercent(Mech *mech) {
+int get_remaining_armor_percent(Mech *mech) {
   int i;
-  float wMax = 0.0F;
-  float wRemaining = 0.0F;
+  float w_max = 0.0F;
+  float w_remaining = 0.0F;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    wMax += integer_as_float(mech_section_original_armor(mech, i));
-    wMax += integer_as_float(mech_section_original_rear_armor(mech, i));
+    w_max += integer_as_float(mech_section_original_armor(mech, i));
+    w_max += integer_as_float(mech_section_original_rear_armor(mech, i));
 
-    wRemaining += integer_as_float(mech_section_armor(mech, i));
-    wRemaining += integer_as_float(mech_section_rear_armor(mech, i));
+    w_remaining += integer_as_float(mech_section_armor(mech, i));
+    w_remaining += integer_as_float(mech_section_rear_armor(mech, i));
   }
 
-  if (wMax <= 0.0F)
+  if (w_max <= 0.0F)
     return 0;
 
-  return clamp_float_to_int((wRemaining / wMax) * 100.0F);
+  return clamp_float_to_int((w_remaining / w_max) * 100.0F);
 }
 
-int FindObj(Mech *mech, int loc, int type) {
+int find_obj(Mech *mech, int loc, int type) {
   int count = 0, i;
 
   for (i = 0; i < NUM_CRITICALS; i++)
@@ -245,7 +245,7 @@ int FindObj(Mech *mech, int loc, int type) {
   return count;
 }
 
-int FindObjWithDest(Mech *mech, int loc, int type) {
+int find_obj_with_dest(Mech *mech, int loc, int type) {
   int count = 0, i;
 
   for (i = 0; i < NUM_CRITICALS; i++)
@@ -282,7 +282,7 @@ Mech *find_mech_in_hex(Mech *mech, BattleMap *mech_map, int x, int y,
         if (needlos & 2) {
           if (((mech)->pd.team) != ((target)->pd.team))
             continue;
-          if (!(MechSeesHex(target, mech_map, x, y)))
+          if (!(mech_sees_hex(target, mech_map, x, y)))
             continue;
           if (mech == target)
             continue;
@@ -301,10 +301,10 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
   int critical = request->weapon.critical;
   AmmunitionCheckResult result = {.gatling_shots = request->gatling_shots};
   int mod, nmod = 0;
-  int wMaxShots = 0;
-  int wRoundsToCheck = 1;
-  int wWeapMode = mech_critical_fire_mode(mech, section, critical);
-  int tResetMode = 0;
+  int w_max_shots = 0;
+  int w_rounds_to_check = 1;
+  int w_weap_mode = mech_critical_fire_mode(mech, section, critical);
+  int t_reset_mode = 0;
   DbRef player = mech_gunner_dbref(mech);
 
   /* Return if it's an energy or PC weapon */
@@ -315,7 +315,7 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
 
   /* Check for rocket launchers */
   if (weapon_catalogue_specials(weapindx) == ROCKET) {
-    if (wWeapMode & ROCKET_FIRED) {
+    if (w_weap_mode & ROCKET_FIRED) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    "That weapon has already been used!");
       return result;
@@ -325,7 +325,7 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
   }
 
   /* Check for One-Shots */
-  if (wWeapMode & OS_MODE) {
+  if (w_weap_mode & OS_MODE) {
     if (mech_critical_fire_mode(mech, section, critical) & OS_USED) {
       mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                    "That weapon has already been used!");
@@ -336,23 +336,23 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
   }
   /* Check RACs - No special ammo type possible */
   if (weapon_catalogue_has_special(weapindx, RAC)) {
-    wMaxShots = CountAmmoForWeapon(mech, weapindx);
+    w_max_shots = count_ammo_for_weapon(mech, weapindx);
 
-    if ((wWeapMode & RAC_TWOSHOT_MODE) && (wMaxShots < 2)) {
+    if ((w_weap_mode & RAC_TWOSHOT_MODE) && (w_max_shots < 2)) {
       mech_critical_fire_mode_clear(mech, section, critical, RAC_TWOSHOT_MODE);
 
       result.available = true;
       return result;
     }
 
-    if ((wWeapMode & RAC_FOURSHOT_MODE) && (wMaxShots < 4)) {
+    if ((w_weap_mode & RAC_FOURSHOT_MODE) && (w_max_shots < 4)) {
       mech_critical_fire_mode_clear(mech, section, critical, RAC_FOURSHOT_MODE);
 
       result.available = true;
       return result;
     }
 
-    if ((wWeapMode & RAC_SIXSHOT_MODE) && (wMaxShots < 6)) {
+    if ((w_weap_mode & RAC_SIXSHOT_MODE) && (w_max_shots < 6)) {
       mech_critical_fire_mode_clear(mech, section, critical, RAC_SIXSHOT_MODE);
 
       result.available = true;
@@ -360,21 +360,21 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
     }
   }
   /* Check GMGs */
-  if (wWeapMode & GATTLING_MODE) {
-    wMaxShots = CountAmmoForWeapon(mech, weapindx);
+  if (w_weap_mode & GATTLING_MODE) {
+    w_max_shots = count_ammo_for_weapon(mech, weapindx);
 
     /*
      * Gattling MGs suck up damage * 3 in ammo
      */
 
-    if ((wMaxShots / 3) < result.gatling_shots) {
-      const int available_shots = wMaxShots / 3;
-      result.gatling_shots = available_shots > 1 ? available_shots : 1;
+    if ((w_max_shots / 3) < result.gatling_shots) {
+      const int AVAILABLE_SHOTS = w_max_shots / 3;
+      result.gatling_shots = AVAILABLE_SHOTS > 1 ? AVAILABLE_SHOTS : 1;
     }
   }
   /* If we're an ULTRA or RFAC, we need to check for multiple rounds */
-  if ((wWeapMode & ULTRA_MODE) || (wWeapMode & RFAC_MODE))
-    wRoundsToCheck = 2;
+  if ((w_weap_mode & ULTRA_MODE) || (w_weap_mode & RFAC_MODE))
+    w_rounds_to_check = 2;
 
   mod = mech_critical_ammo_mode(mech, section, critical) & AMMO_MODES;
   AmmunitionLookupRequest lookup_request = {
@@ -403,7 +403,7 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
       return result;
     }
 
-    if (wRoundsToCheck > 1) {
+    if (w_rounds_to_check > 1) {
       mech_critical_data_set(
           mech, result.primary.slot.section, result.primary.slot.critical,
           mech_critical_data(mech, result.primary.slot.section,
@@ -415,12 +415,12 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
         result.secondary = secondary;
         if (!mech_critical_data(mech, result.secondary.slot.section,
                                 result.secondary.slot.critical))
-          tResetMode = 1;
+          t_reset_mode = 1;
       } else
-        tResetMode = 1;
+        t_reset_mode = 1;
 
-      if (tResetMode)
-        mech_critical_fire_mode_clear(mech, section, critical, wWeapMode);
+      if (t_reset_mode)
+        mech_critical_fire_mode_clear(mech, section, critical, w_weap_mode);
 
       mech_critical_data_set(
           mech, result.primary.slot.section, result.primary.slot.critical,
@@ -453,7 +453,7 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
       return result;
     }
 
-    if (wRoundsToCheck > 1) {
+    if (w_rounds_to_check > 1) {
       mech_critical_data_set(
           mech, result.primary.slot.section, result.primary.slot.critical,
           mech_critical_data(mech, result.primary.slot.section,
@@ -465,12 +465,12 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
         result.secondary = secondary;
         if (!mech_critical_data(mech, result.secondary.slot.section,
                                 result.secondary.slot.critical))
-          tResetMode = 1;
+          t_reset_mode = 1;
       } else
-        tResetMode = 1;
+        t_reset_mode = 1;
 
-      if (tResetMode)
-        mech_critical_fire_mode_clear(mech, section, critical, wWeapMode);
+      if (t_reset_mode)
+        mech_critical_fire_mode_clear(mech, section, critical, w_weap_mode);
 
       mech_critical_data_set(
           mech, result.primary.slot.section, result.primary.slot.critical,
@@ -484,7 +484,7 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
   return result;
 }
 
-void ChannelEmitKill(Mech *mech, Mech *attacker, const char *reason) {
+void channel_emit_kill(Mech *mech, Mech *attacker, const char *reason) {
   if (!attacker)
     attacker = mech;
 

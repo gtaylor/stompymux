@@ -280,8 +280,8 @@ void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech,
     (void)snprintf(mesg, LBUF_SIZE, "!Invalide second int");
     return;
   }
-  x = MAX(1, x);
-  y = MAX(1, y);
+  x = max(1, x);
+  y = max(1, y);
   autopilot->auto_goweight = x;
   autopilot->auto_fweight = y;
   (void)snprintf(mesg, LBUF_SIZE, "sweight'ed to %d:%d. (go:fight)", x, y);
@@ -318,7 +318,7 @@ void auto_radio_command_target(Autopilot *autopilot, Mech *mech,
 
   } else {
 
-    targetref = FindTargetDBREFFromMapNumber(
+    targetref = find_target_dbref_from_map_number(
         mech, autopilot_argument_list_get(args, 1));
     if (targetref <= 0) {
       (void)snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");

@@ -63,8 +63,8 @@ int mech_weapon_recycle_update(Mech *mech) {
 
   btech_context_combat_arcs_override_set(context, 1);
   for (int section = 0; section < NUM_SECTIONS; section++) {
-    int count = FindWeapons_Advanced(mech, section, weapon_types, weapon_data,
-                                     criticals, 1);
+    int count = find_weapons_advanced(mech, section, weapon_types, weapon_data,
+                                      criticals, 1);
     for (int weapon = 0; weapon < count; weapon++) {
       int critical = recycle_int_at(criticals, weapon);
       if (!mech_weapon_is_recycling_at(mech, section, critical))
@@ -115,8 +115,8 @@ int mech_weapon_recycle_update(Mech *mech) {
 
     if (diff >= section_recycle && !mech_section_is_destroyed(mech, section)) {
       mech_section_recycle_ticks_set(mech, section, 0);
-      ArmorStringFromIndex(section, location, mech_class(mech),
-                           mech_movement_type(mech));
+      armor_string_from_index(section, location, mech_class(mech),
+                              mech_movement_type(mech));
       mech_printf(mech, MECHSTARTED,
                   "[fg=green]%s%s has finished its previous action.[reset]",
                   mech_class(mech) == CLASS_BSUIT ? "" : "Your ", location);

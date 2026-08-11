@@ -13,19 +13,19 @@
 #include <math.h>
 
 float map_spatial_range(const MapSpatialSegment *segment) {
-  const float dx = segment->start.x - segment->end.x;
-  const float dy = segment->start.y - segment->end.y;
-  const float dz = segment->start.z - segment->end.z;
+  const float DX = segment->start.x - segment->end.x;
+  const float DY = segment->start.y - segment->end.y;
+  const float DZ = segment->start.z - segment->end.z;
 
-  return sqrtf(dx * dx + dy * dy + dz * dz) / (float)SCALEMAP;
+  return sqrtf(DX * DX + DY * DY + DZ * DZ) / (float)SCALEMAP;
 }
 
 /* Computes hex range between Cartesian (x0, y0) and (x1, y1).  */
 float map_real_range(const MapRealSegment *segment) {
-  const float dx = segment->start.x - segment->end.x;
-  const float dy = segment->start.y - segment->end.y;
+  const float DX = segment->start.x - segment->end.x;
+  const float DY = segment->start.y - segment->end.y;
 
-  return sqrtf(dx * dx + dy * dy) / (float)SCALEMAP;
+  return sqrtf(DX * DX + DY * DY) / (float)SCALEMAP;
 }
 
 /* CONVERSION ROUTINES courtesy Mike :) (Whoever that may be -focus) */
@@ -76,8 +76,8 @@ float map_real_range(const MapRealSegment *segment) {
 #define FULL_Y ((float)SCALEMAP)
 #define HALF_Y (0.5F * FULL_Y)
 
-void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
-                         float cart_y) {
+void real_coord_to_map_coord(short *hex_x, short *hex_y, float cart_x,
+                             float cart_y) {
   float x, y;
   int x_count, y_count;
 
@@ -160,7 +160,8 @@ void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
  * 3a) Even column centers (counting from 0) are vertically offset HALF_Y.
  * 3b) Odd column centers (counting from 0) are not vertically offset.
  */
-void MapCoordToRealCoord(int hex_x, int hex_y, float *cart_x, float *cart_y) {
+void map_coord_to_real_coord(int hex_x, int hex_y, float *cart_x,
+                             float *cart_y) {
   /* TODO: Can use some integer math if we're careful about overflow.  */
   /* Use % 2 for theoretical portability to non-2's-complement archs.  */
   *cart_x = (2.0F + 3.0F * (float)hex_x) * ALPHA;
@@ -193,13 +194,13 @@ void MapCoordToRealCoord(int hex_x, int hex_y, float *cart_x, float *cart_y) {
 void navigate_sketch_mechs(const NavigateSketchRequest *request) {
   Mech *mech = request->mech;
   BattleMap *map = request->map;
-  const int x = request->center.x;
-  const int y = request->center.y;
+  const int X = request->center.x;
+  const int Y = request->center.y;
   float corner_fx, corner_fy, fx, fy;
   int row, column;
   Mech *other;
 
-  MapCoordToRealCoord(x, y, &corner_fx, &corner_fy);
+  map_coord_to_real_coord(X, Y, &corner_fx, &corner_fy);
   corner_fx -= 2.0F * ALPHA;
   corner_fy -= HALF_Y;
 
@@ -212,9 +213,9 @@ void navigate_sketch_mechs(const NavigateSketchRequest *request) {
       continue;
     if (other == mech)
       continue;
-    if (((other)->pd.x) != x || ((other)->pd.y) != y)
+    if (((other)->pd.x) != X || ((other)->pd.y) != Y)
       continue;
-    if (!mech_los_check(mech, other, x, y, 0.5))
+    if (!mech_los_check(mech, other, X, Y, 0.5))
       continue;
 
     fx = ((other)->pd.fx) - corner_fx;
@@ -258,23 +259,23 @@ void navigate_sketch_mechs(const NavigateSketchRequest *request) {
 
 MechTargetPositionResult mech_target_position(const Mech *mech) {
   MechTargetPositionResult result = {0};
-  Mech *tempMech;
+  Mech *temp_mech;
 
   if (mech_target_dbref(mech) != -1) {
-    tempMech =
+    temp_mech =
         btech_context_get_mech(mech->xcode.context, mech_target_dbref(mech));
-    if (tempMech) {
+    if (temp_mech) {
       result.found = true;
       result.position = (MapSpatialPosition){
-          .x = tempMech->pd.fx,
-          .y = tempMech->pd.fy,
-          .z = tempMech->pd.fz,
+          .x = temp_mech->pd.fx,
+          .y = temp_mech->pd.fy,
+          .z = temp_mech->pd.fz,
       };
       return result;
     }
   } else if (mech_target_hex_x(mech) != -1 && mech_target_hex_y(mech) != -1) {
-    MapCoordToRealCoord(mech_target_hex_x(mech), mech_target_hex_y(mech),
-                        &result.position.x, &result.position.y);
+    map_coord_to_real_coord(mech_target_hex_x(mech), mech_target_hex_y(mech),
+                            &result.position.x, &result.position.y);
     int target_hex_z = mech_target_hex_z(mech);
     result.position.z = (float)ZSCALE * (float)target_hex_z;
 

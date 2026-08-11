@@ -44,8 +44,8 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
   Mech *mech = request->mech;
   BattleMap *mech_map = request->map;
   float deltax = request->delta.x;
-  const float deltay = request->delta.y;
-  const int last_z = request->previous_z;
+  const float DELTAY = request->delta.y;
+  const int LAST_Z = request->previous_z;
   int elevation, lastelevation;
   int oldterrain;
   int ot, le, done = 0, tt, avoidbth;
@@ -63,7 +63,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       mech_map, mech_position_previous_x(mech), mech_position_previous_y(mech));
   if ((mech_movement_type(mech) == MOVE_HOVER) &&
       (oldterrain == BATTLE_TERRAIN_WATER || oldterrain == BATTLE_TERRAIN_ICE ||
-       ((oldterrain == BATTLE_TERRAIN_BRIDGE) && (last_z == 0)))) {
+       ((oldterrain == BATTLE_TERRAIN_BRIDGE) && (LAST_Z == 0)))) {
     lastelevation = elevation = 0;
   } else {
     lastelevation =
@@ -86,7 +86,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         &(HexMechTransitionInput){.mech = mech,
                                   .map = mech_map,
                                   .delta_x = deltax,
-                                  .delta_y = deltay,
+                                  .delta_y = DELTAY,
                                   .elevation = elevation,
                                   .last_elevation = lastelevation,
                                   .old_terrain = oldterrain});
@@ -120,7 +120,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_movement_stop(mech);
       return;
@@ -162,7 +162,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_movement_stop(mech);
       return;
@@ -175,12 +175,13 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
                   (elevation > lastelevation ? "small incline" : "small drop"));
       if (mech_pilot_dbref(mech) == -1 ||
-          (MadePilotSkillRoll(mech, collision_check(&(MovementCollisionCheck){
-                                        .mech = mech,
-                                        .mode = WALK_BACK,
-                                        .previous_elevation = lastelevation,
-                                        .previous_terrain = oldterrain}) -
-                                        1))) {
+          (made_pilot_skill_roll(mech,
+                                 collision_check(&(MovementCollisionCheck){
+                                     .mech = mech,
+                                     .mode = WALK_BACK,
+                                     .previous_elevation = lastelevation,
+                                     .previous_terrain = oldterrain}) -
+                                     1))) {
         mech_notify(mech, MECHALL, "You manage to overcome the obstacle.");
       } else {
         mech_printf(mech, MECHALL, "%s",
@@ -197,7 +198,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         if (elevation > lastelevation) {
           mech_position_rollback(
               &(MechPositionRollback){.mech = mech,
-                                      .delta = {.x = deltax, .y = deltay},
+                                      .delta = {.x = deltax, .y = DELTAY},
                                       .previous_z = lastelevation});
         }
       }
@@ -210,7 +211,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         elevation < 0) {
       mech_notify(mech, MECHALL, "You notice a body of water in front of you");
       if (mech_pilot_dbref(mech) == -1 ||
-          MadePilotSkillRoll(
+          made_pilot_skill_roll(
               mech,
               clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
                   3)) {
@@ -226,7 +227,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_movement_stop(mech);
       return;
@@ -238,7 +239,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
           fabsf(mech_current_speed(mech)) > MP1) {
         mech_notify(mech, MECHALL, "You try to dodge the larger trees..");
         if (mech_pilot_dbref(mech) == -1 ||
-            MadePilotSkillRoll(
+            made_pilot_skill_roll(
                 mech, clamp_float_to_int(fabsf(mech_current_speed(mech)) / MP1 /
                                          6.0F))) {
           mech_notify(mech, MECHALL, "You manage to dodge 'em!");
@@ -289,7 +290,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_movement_stop(mech);
       return;
@@ -331,7 +332,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_movement_stop(mech);
       return;
@@ -344,12 +345,13 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
                   (elevation > lastelevation ? "small incline" : "small drop"));
       if (mech_pilot_dbref(mech) == -1 ||
-          (MadePilotSkillRoll(mech, collision_check(&(MovementCollisionCheck){
-                                        .mech = mech,
-                                        .mode = WALK_BACK,
-                                        .previous_elevation = lastelevation,
-                                        .previous_terrain = oldterrain}) -
-                                        1))) {
+          (made_pilot_skill_roll(mech,
+                                 collision_check(&(MovementCollisionCheck){
+                                     .mech = mech,
+                                     .mode = WALK_BACK,
+                                     .previous_elevation = lastelevation,
+                                     .previous_terrain = oldterrain}) -
+                                     1))) {
         mech_notify(mech, MECHALL, "You manage to overcome the obstacle.");
       } else {
         mech_printf(mech, MECHALL, "%s",
@@ -366,7 +368,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         if (elevation > lastelevation) {
           mech_position_rollback(
               &(MechPositionRollback){.mech = mech,
-                                      .delta = {.x = deltax, .y = deltay},
+                                      .delta = {.x = deltax, .y = DELTAY},
                                       .previous_z = lastelevation});
         }
       }
@@ -379,7 +381,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         elevation < 0) {
       mech_notify(mech, MECHALL, "You notice a body of water in front of you");
       if (mech_pilot_dbref(mech) == -1 ||
-          MadePilotSkillRoll(
+          made_pilot_skill_roll(
               mech,
               clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
                   3)) {
@@ -394,7 +396,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_movement_stop(mech);
       return;
@@ -407,7 +409,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
           fabsf(mech_current_speed(mech)) > MP1) {
         mech_notify(mech, MECHALL, "You try to dodge the larger trees..");
         if (mech_pilot_dbref(mech) == -1 ||
-            MadePilotSkillRoll(
+            made_pilot_skill_roll(
                 mech, (tt == BATTLE_TERRAIN_HEAVY_FOREST ? 3 : 0) +
                           clamp_float_to_int(fabsf(mech_current_speed(mech)) /
                                              MP1 / 6.0F))) {
@@ -427,7 +429,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                  fabsf(mech_current_speed(mech)) > MP1) {
         mech_notify(mech, MECHALL, "You try to avoid the rocks..");
         if (mech_pilot_dbref(mech) == -1 ||
-            MadePilotSkillRoll(
+            made_pilot_skill_roll(
                 mech, clamp_float_to_int(fabsf(mech_current_speed(mech)) / MP1 /
                                          6.0F))) {
           mech_notify(mech, MECHALL, "You manage to dodge 'em!");
@@ -463,7 +465,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       /* Run aground */
       mech_notify(mech, MECHALL, "You attempt to get too close with ground!");
       if (mech_pilot_dbref(mech) == -1 ||
-          MadePilotSkillRoll(
+          made_pilot_skill_roll(
               mech,
               clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
                   3)) {
@@ -471,7 +473,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         mech_los_broadcast(mech, "stops suddenly to avoid running aground!");
         mech_position_rollback(
             &(MechPositionRollback){.mech = mech,
-                                    .delta = {.x = deltax, .y = deltay},
+                                    .delta = {.x = deltax, .y = DELTAY},
                                     .previous_z = lastelevation});
       } else {
         mech_notify(mech, MECHALL, "You smash into the ground!");
@@ -508,7 +510,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_movement_stop(mech);
       return;
@@ -542,7 +544,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_movement_stop(mech);
       return;
@@ -555,12 +557,12 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                   "You notice the underside of the bridge in front of you!");
       if (mech_pilot_dbref(mech) == -1 ||
           (!skid_cliff &&
-           MadePilotSkillRoll(
+           made_pilot_skill_roll(
                mech,
                clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) / MP1) /
                    3)) ||
           (skid_cliff &&
-           MadePilotSkillRoll(
+           made_pilot_skill_roll(
                mech,
                mech_skid_modifier(fabsf(mech_current_speed(mech)) / MP1)))) {
         mech_notify(mech, MECHALL,
@@ -576,7 +578,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_movement_stop(mech);
       return;
@@ -590,12 +592,13 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
                   (elevation > lastelevation ? "small incline" : "small drop"));
       if (mech_pilot_dbref(mech) == -1 ||
-          (MadePilotSkillRoll(mech, collision_check(&(MovementCollisionCheck){
-                                        .mech = mech,
-                                        .mode = WALK_BACK,
-                                        .previous_elevation = lastelevation,
-                                        .previous_terrain = oldterrain}) -
-                                        1))) {
+          (made_pilot_skill_roll(mech,
+                                 collision_check(&(MovementCollisionCheck){
+                                     .mech = mech,
+                                     .mode = WALK_BACK,
+                                     .previous_elevation = lastelevation,
+                                     .previous_terrain = oldterrain}) -
+                                     1))) {
         mech_notify(mech, MECHALL, "You manage to overcome the obstacle.");
       } else {
         mech_printf(mech, MECHALL, "%s",
@@ -612,7 +615,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         if (elevation > lastelevation) {
           mech_position_rollback(
               &(MechPositionRollback){.mech = mech,
-                                      .delta = {.x = deltax, .y = deltay},
+                                      .delta = {.x = deltax, .y = DELTAY},
                                       .previous_z = lastelevation});
         }
       }
@@ -624,7 +627,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         fabsf(mech_current_speed(mech)) > MP1) {
       mech_notify(mech, MECHALL, "You try to dodge the larger trees..");
       if (mech_pilot_dbref(mech) == -1 ||
-          MadePilotSkillRoll(
+          made_pilot_skill_roll(
               mech, (tt == BATTLE_TERRAIN_HEAVY_FOREST ? 3 : 0) +
                         clamp_float_to_int(fabsf(mech_current_speed(mech)) /
                                            MP1 / 6.0F))) {
@@ -659,11 +662,11 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
          mech_position_z(mech) < (mech_position_surface_elevation(mech) + 2))) {
       mech_notify(mech, MECHALL,
                   "You go where no flying thing has ever gone before..");
-      if (mech_has_active_pilot(mech) && MadePilotSkillRoll(mech, 5)) {
+      if (mech_has_active_pilot(mech) && made_pilot_skill_roll(mech, 5)) {
         mech_notify(mech, MECHALL, "You stop in time!");
         mech_position_rollback(
             &(MechPositionRollback){.mech = mech,
-                                    .delta = {.x = deltax, .y = deltay},
+                                    .delta = {.x = deltax, .y = DELTAY},
                                     .previous_z = lastelevation});
       } else {
         mech_notify(mech, MECHALL, "Eww.. You've a bad feeling about this.");
@@ -682,12 +685,13 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
                   (elevation > lastelevation ? "small incline" : "small drop"));
       if (mech_pilot_dbref(mech) == -1 ||
-          (MadePilotSkillRoll(mech, collision_check(&(MovementCollisionCheck){
-                                        .mech = mech,
-                                        .mode = WALK_BACK,
-                                        .previous_elevation = lastelevation,
-                                        .previous_terrain = oldterrain}) -
-                                        1))) {
+          (made_pilot_skill_roll(mech,
+                                 collision_check(&(MovementCollisionCheck){
+                                     .mech = mech,
+                                     .mode = WALK_BACK,
+                                     .previous_elevation = lastelevation,
+                                     .previous_terrain = oldterrain}) -
+                                     1))) {
         mech_notify(mech, MECHALL, "You manage to overcome the obstacle.");
       } else {
         mech_printf(mech, MECHALL, "%s",
@@ -704,7 +708,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         if (elevation > lastelevation) {
           mech_position_rollback(
               &(MechPositionRollback){.mech = mech,
-                                      .delta = {.x = deltax, .y = deltay},
+                                      .delta = {.x = deltax, .y = DELTAY},
                                       .previous_z = lastelevation});
         }
       }
@@ -718,13 +722,13 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                                                   .previous_terrain = 0})) {
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
-                                  .delta = {.x = deltax, .y = deltay},
+                                  .delta = {.x = deltax, .y = DELTAY},
                                   .previous_z = lastelevation});
       mech_notify(mech, MECHALL,
                   "You attempt to fly over elevation that is too high!");
       if (mech_pilot_dbref(mech) == -1 ||
-          (MadePilotSkillRoll(mech,
-                              (int)(mech_position_real_z(mech) / ZSCALE / 3)) &&
+          (made_pilot_skill_roll(
+               mech, (int)(mech_position_real_z(mech) / ZSCALE / 3)) &&
            (ot == BATTLE_TERRAIN_GRASSLAND || ot == BATTLE_TERRAIN_ROAD ||
             ot == BATTLE_TERRAIN_BUILDING))) {
         mech_notify(mech, MECHALL, "You land safely.");
@@ -750,5 +754,5 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         (mech_position_terrain(mech) == BATTLE_TERRAIN_FIRE))
       vehicle_fire_check(mech, 1);
   }
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }

@@ -7,7 +7,6 @@
 #include <string.h>
 #include <time.h>
 
-#include "mux/lua/command_access.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
@@ -49,11 +48,11 @@ static unsigned long lua_schedule_hash(const LuaScheduleIdentity *identity) {
   return hash;
 }
 
-static int lua_schedule_add_job(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+static int lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
                                 const char *path, const char *name,
                                 const char *cron, DbRef object, time_t minute) {
-  LUA_SCHEDULE_JOB *jobs;
-  LUA_SCHEDULE_JOB *job;
+  LuaScheduleJob *jobs;
+  LuaScheduleJob *job;
   char *path_copy = strdup(path);
   char *name_copy = strdup(name);
   char *cron_copy = strdup(cron);
@@ -93,9 +92,9 @@ static int lua_schedule_add_job(LuaRuntime *runtime, LUA_MODULE_ROOT root,
   return 1;
 }
 
-static void lua_schedule_collect_module(LuaRuntime *runtime,
-                                        LUA_MODULE_ROOT root, const char *path,
-                                        DbRef object, time_t minute) {
+static void lua_schedule_collect_module(LuaRuntime *runtime, LuaModuleRoot root,
+                                        const char *path, DbRef object,
+                                        time_t minute) {
   lua_State *state = runtime->state;
   int top = lua_gettop(state);
   int schedules;
@@ -132,7 +131,7 @@ static void lua_schedule_collect_module(LuaRuntime *runtime,
   lua_settop(state, top);
 }
 
-static void lua_schedule_run_job(LuaRuntime *runtime, LUA_SCHEDULE_JOB *job) {
+static void lua_schedule_run_job(LuaRuntime *runtime, LuaScheduleJob *job) {
   lua_State *state = runtime->state;
   int top = lua_gettop(state);
   int schedules;
@@ -165,7 +164,7 @@ static void lua_schedule_run_job(LuaRuntime *runtime, LUA_SCHEDULE_JOB *job) {
     }
     lua_getfield(state, -1, "handler");
     if (lua_isfunction(state, -1)) {
-      LUA_MODULE_ROOT previous_root;
+      LuaModuleRoot previous_root;
       int status;
 
       lua_push_context(runtime->services->database, nullptr, state, job->object,
@@ -239,7 +238,7 @@ void lua_schedule_tick(LuaRuntime *runtime, time_t now) {
     }
   }
   for (index = 0; index < runtime->schedule_job_count;) {
-    LUA_SCHEDULE_JOB *job = lua_schedule_job_at(runtime, index);
+    LuaScheduleJob *job = lua_schedule_job_at(runtime, index);
 
     if (now >= job->expires) {
       free(job->path);
@@ -264,7 +263,7 @@ void lua_schedule_tick(LuaRuntime *runtime, time_t now) {
   }
 }
 
-static int lua_schedule_count(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+static int lua_schedule_count(LuaRuntime *runtime, LuaModuleRoot root,
                               const char *path, int *count, char *error,
                               size_t error_size) {
   lua_State *state = runtime->state;
@@ -282,7 +281,7 @@ static int lua_schedule_count(LuaRuntime *runtime, LUA_MODULE_ROOT root,
 
 static void lua_schedule_show_module(EvaluationContext *evaluation,
                                      DbRef player, LuaRuntime *runtime,
-                                     LUA_MODULE_ROOT root, const char *path,
+                                     LuaModuleRoot root, const char *path,
                                      int show_objects) {
   lua_State *state;
   int top;

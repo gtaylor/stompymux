@@ -90,19 +90,19 @@ int cf_access(const ConfigurationCall *call) {
   ConfigurationContext *context = call->context;
   CMDENT *cmdp;
   char *ap;
-  const size_t length = strlen(str);
+  const size_t LENGTH = strlen(str);
   size_t offset = 0;
   bool set_switch;
 
-  while (offset < length) {
-    const char character = *(const char *)checked_storage_at_const(
-        str, length + 1, sizeof(char), offset);
+  while (offset < LENGTH) {
+    const char CHARACTER = *(const char *)checked_storage_at_const(
+        str, LENGTH + 1, sizeof(char), offset);
 
-    if ((isspace)((unsigned char)character) || character == '/')
+    if ((isspace)((unsigned char)CHARACTER) || CHARACTER == '/')
       break;
     offset++;
   }
-  ap = checked_storage_at(str, length + 1, sizeof(char), offset);
+  ap = checked_storage_at(str, LENGTH + 1, sizeof(char), offset);
   if (*ap == '/') {
     set_switch = true;
     *ap = '\0';
@@ -113,12 +113,12 @@ int cf_access(const ConfigurationCall *call) {
       *ap = '\0';
       offset++;
     }
-    while (offset < length &&
+    while (offset < LENGTH &&
            (isspace)((unsigned char)*(const char *)checked_storage_at_const(
-               str, length + 1, sizeof(char), offset)))
+               str, LENGTH + 1, sizeof(char), offset)))
       offset++;
   }
-  ap = checked_storage_at(str, length + 1, sizeof(char), offset);
+  ap = checked_storage_at(str, LENGTH + 1, sizeof(char), offset);
 
   cmdp = (CMDENT *)hash_table_find(str, &context->command_registry->commands);
   if (cmdp != nullptr) {
@@ -162,14 +162,14 @@ int cf_cmd_alias(const ConfigurationCall *call) {
               */
     return -1;
 
-  const size_t orig_length = strlen(orig);
+  const size_t ORIG_LENGTH = strlen(orig);
   size_t switch_offset = 0;
 
-  while (switch_offset < orig_length &&
+  while (switch_offset < ORIG_LENGTH &&
          *(const char *)checked_storage_at_const(
-             orig, orig_length + 1, sizeof(char), switch_offset) != '/')
+             orig, ORIG_LENGTH + 1, sizeof(char), switch_offset) != '/')
     switch_offset++;
-  ap = checked_storage_at(orig, orig_length + 1, sizeof(char), switch_offset);
+  ap = checked_storage_at(orig, ORIG_LENGTH + 1, sizeof(char), switch_offset);
   if (*ap == '/') {
 
     /*
@@ -178,7 +178,7 @@ int cf_cmd_alias(const ConfigurationCall *call) {
      */
 
     *ap = '\0';
-    ap = checked_storage_at(orig, orig_length + 1, sizeof(char),
+    ap = checked_storage_at(orig, ORIG_LENGTH + 1, sizeof(char),
                             switch_offset + 1);
 
     /*

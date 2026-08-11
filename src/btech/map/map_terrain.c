@@ -68,16 +68,16 @@ bool mech_hex_get(const Mech *mech, MechHex *hex) {
 
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  const int x = mech_position_x(mech);
-  const int y = mech_position_y(mech);
-  if (map == nullptr || !battle_map_coordinate_is_valid(map, x, y))
+  const int X = mech_position_x(mech);
+  const int Y = mech_position_y(mech);
+  if (map == nullptr || !battle_map_coordinate_is_valid(map, X, Y))
     return false;
 
   *hex = (MechHex){
       .map = map,
-      .terrain = map_terrain_get(map, x, y),
-      .real_terrain = map_real_terrain_get(map, x, y),
-      .elevation = map_elevation_get(map, x, y),
+      .terrain = map_terrain_get(map, X, Y),
+      .real_terrain = map_real_terrain_get(map, X, Y),
+      .elevation = map_elevation_get(map, X, Y),
   };
   return true;
 }
@@ -110,11 +110,11 @@ int mech_hex_surface_elevation_get(const Mech *mech) {
   if (!mech_hex_get(mech, &hex))
     return 0;
 
-  const int elevation = abs(hex.elevation);
+  const int ELEVATION = abs(hex.elevation);
   return hex.real_terrain == BATTLE_TERRAIN_WATER ||
                  hex.real_terrain == BATTLE_TERRAIN_ICE
-             ? -elevation
-             : elevation;
+             ? -ELEVATION
+             : ELEVATION;
 }
 
 char map_elevation_get(const BattleMap *map, int x, int y) {
@@ -183,10 +183,10 @@ void battle_map_grid_destroy(unsigned char **grid, int height) {
   free((void *)grid);
 }
 
-void map_hex_buffer_set(MapCodingRegistry *registry, unsigned char **BattleMap,
+void map_hex_buffer_set(MapCodingRegistry *registry, unsigned char **battle_map,
                         int width, int height, int x, int y, char terrain,
                         char elevation) {
-  *map_grid_cell(&(MapGridCellRequest){.grid = BattleMap,
+  *map_grid_cell(&(MapGridCellRequest){.grid = battle_map,
                                        .width = width,
                                        .height = height,
                                        .position = {.x = x, .y = y}}) =
@@ -195,7 +195,7 @@ void map_hex_buffer_set(MapCodingRegistry *registry, unsigned char **BattleMap,
 
 void map_terrain_set(BattleMap *map, int x, int y, char terrain) {
   map_hex_set(map, x, y, terrain, map_elevation_get(map, x, y));
-  UpdateMechsTerrain(&(MapTerrainChange){
+  update_mechs_terrain(&(MapTerrainChange){
       .map = map, .position = {.x = x, .y = y}, .terrain = terrain});
 }
 
@@ -205,7 +205,7 @@ void map_terrain_set_base(BattleMap *map, int x, int y, char terrain) {
 
 void map_elevation_set(BattleMap *map, int x, int y, char elevation) {
   map_hex_set(map, x, y, map_terrain_get(map, x, y), elevation);
-  UpdateMechsTerrain(
+  update_mechs_terrain(
       &(MapTerrainChange){.map = map,
                           .position = {.x = x, .y = y},
                           .terrain = map_terrain_get(map, x, y)});

@@ -79,8 +79,8 @@ static int *branded_part_pile_slot(const BrandedPartPileSlot *slot) {
 #ifdef BT_PART_WEIGHTS
 /* From template.c */
 
-extern const int internalsweight[];
-extern const int cargoweight[];
+extern const int INTERNALSWEIGHT[];
+extern const int CARGOWEIGHT[];
 #endif /* BT_PART_WEIGHTS */
 
 /* Also sets the fuel we have ; but I digress */
@@ -193,16 +193,16 @@ void economy_manifest_repair(const EconomyRepairRequest *request) {
       if (*branded_part_pile_slot(&(BrandedPartPileSlot){
               .pile = &pile, .part = {.id = id, .brand = brand}}) > 0 &&
           get_parts_long_name(context, id, brand)) {
-        const int quantity = *branded_part_pile_slot(&(BrandedPartPileSlot){
+        const int QUANTITY = *branded_part_pile_slot(&(BrandedPartPileSlot){
             .pile = &pile, .part = {.id = id, .brand = brand}});
         economy_inventory_change(&(EconomyInventoryChange){
             .context = context,
             .store = request->location,
             .part = {.id = id, .brand = brand},
-            .quantity_delta = quantity,
+            .quantity_delta = QUANTITY,
         });
         kinds++;
-        items += quantity;
+        items += QUANTITY;
       }
   new_entries = economy_parts_entry_count(context->database, request->location);
   notify_printf(btech_context_evaluation(context), request->actor,
@@ -212,7 +212,7 @@ void economy_manifest_repair(const EconomyRepairRequest *request) {
                 "Items in new: %d. Unique items in new: %d.", items, kinds);
 }
 
-void mech_Rfixstuff(DbRef player, void *data, char *buffer) {
+void mech_rfixstuff(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *object = data;
   BtechContext *context = object->context;
 
@@ -268,15 +268,15 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
         .cursor = 0,
     };
     for (;;) {
-      const PartMatchResult match = part_match_next(&request);
+      const PartMatchResult MATCH = part_match_next(&request);
 
-      if (!match.found)
+      if (!MATCH.found)
         break;
-      request.cursor = match.cursor;
+      request.cursor = MATCH.cursor;
       *branded_part_pile_slot(
-          &(BrandedPartPileSlot){.pile = &matching_pile, .part = match.part}) =
+          &(BrandedPartPileSlot){.pile = &matching_pile, .part = MATCH.part}) =
           *branded_part_pile_slot(
-              &(BrandedPartPileSlot){.pile = &pile, .part = match.part});
+              &(BrandedPartPileSlot){.pile = &pile, .part = MATCH.part});
     }
   }
   for (i = 0; i < (int)part_name_count(context); i++) {
@@ -316,8 +316,8 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   if (!found)
     cool_menu_entry_simple(&c, "None", CM_ONE);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
-  ShowCoolMenu(btech_context_evaluation(context), player, c);
-  KillCoolMenu(c);
+  show_cool_menu(btech_context_evaluation(context), player, c);
+  kill_cool_menu(c);
 }
 
 static void list_manifest(BtechContext *context, DbRef player, DbRef location,
@@ -390,11 +390,11 @@ static bool try_part_search(BtechContext *context, const char *pattern,
   if (*count)
     return true;
   for (;;) {
-    const PartMatchResult match = part_match_next(&request);
+    const PartMatchResult MATCH = part_match_next(&request);
 
-    if (!match.found)
+    if (!MATCH.found)
       break;
-    request.cursor = match.cursor;
+    request.cursor = MATCH.cursor;
     (*count)++;
   }
 #ifndef ECON_ALLOW_MULTIPLE_LOAD_UNLOAD
@@ -446,12 +446,12 @@ typedef struct ManifestChangeRequest {
 
 static void manifest_change(const ManifestChangeRequest *change) {
   BtechContext *context = change->context;
-  const DbRef player = change->actor;
+  const DbRef PLAYER = change->actor;
   char *buffer = change->arguments;
-  const DbRef loc1 = change->source;
-  const DbRef loc2 = change->destination;
-  const int mod = change->direction;
-  const bool mort = change->transfer;
+  const DbRef LOC1 = change->source;
+  const DbRef LOC2 = change->destination;
+  const int MOD = change->direction;
+  const bool MORT = change->transfer;
   int count = 0;
   int argc;
   char *args[2];
@@ -462,7 +462,7 @@ static void manifest_change(const ManifestChangeRequest *change) {
 
   argc = mech_parseattributes(buffer, args, 2);
   if (argc < 2) {
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Invalid number of arguments!");
     return;
   }
@@ -472,7 +472,7 @@ static void manifest_change(const ManifestChangeRequest *change) {
    * to add to max.
    */
   if (!parse_int_checked(args[1], &num)) {
-    mecha_notify(btech_context_evaluation(context), player, "Invalid amount!");
+    mecha_notify(btech_context_evaluation(context), PLAYER, "Invalid amount!");
     return;
   }
   if (num > ADDSTORES_MAX) {
@@ -480,47 +480,47 @@ static void manifest_change(const ManifestChangeRequest *change) {
   }
 
   if (num <= 0) {
-    mecha_notify(btech_context_evaluation(context), player, "Invalid amount!");
+    mecha_notify(btech_context_evaluation(context), PLAYER, "Invalid amount!");
     return;
   }
   if (!try_part_search(context, args[0], PART_MATCH_SHORT, &count,
                        &selection)) {
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Too many matches!");
     return;
   }
   if (!try_part_search(context, args[0], PART_MATCH_VERY_LONG, &count,
                        &selection)) {
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Too many matches!");
     return;
   }
   if (!try_part_search(context, args[0], PART_MATCH_LONG, &count, &selection)) {
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Too many matches!");
     return;
   }
   if (!selection.selected) {
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  tprintf("Nothing matches '%s'!", args[0]));
     return;
   }
-  if (!mort && count > 20 && player != GOD) {
+  if (!MORT && count > 20 && PLAYER != GOD) {
     mecha_notify(
-        btech_context_evaluation(context), player,
+        btech_context_evaluation(context), PLAYER,
         tprintf("Wizards can't add more than 20 different objtypes at a "
                 "time. ('%s' matches: %d)",
                 args[0], count));
     return;
   }
-  if (mort) {
-    if (game_object_location(context->database, player) != loc1) {
-      mecha_notify(btech_context_evaluation(context), player,
+  if (MORT) {
+    if (game_object_location(context->database, PLAYER) != LOC1) {
+      mecha_notify(btech_context_evaluation(context), PLAYER,
                    "You ain't in your 'mech!");
       return;
     }
-    if (game_object_location(context->database, loc1) != loc2) {
-      mecha_notify(btech_context_evaluation(context), player,
+    if (game_object_location(context->database, LOC1) != LOC2) {
+      mecha_notify(btech_context_evaluation(context), PLAYER,
                    "You ain't in hangar!");
       return;
     }
@@ -532,45 +532,45 @@ static void manifest_change(const ManifestChangeRequest *change) {
       .cursor = -1,
   };
   for (;;) {
-    const PartMatchResult match = part_match_next(&request);
+    const PartMatchResult MATCH = part_match_next(&request);
 
-    if (!match.found)
+    if (!MATCH.found)
       break;
-    request.cursor = match.cursor;
-    if (mort) {
-      if (mod < 0)
-        count = MIN(num, econ_find_items(context, loc1, match.part.id,
-                                         match.part.brand));
+    request.cursor = MATCH.cursor;
+    if (MORT) {
+      if (MOD < 0)
+        count = min(num, econ_find_items(context, LOC1, MATCH.part.id,
+                                         MATCH.part.brand));
       else
-        count = MIN(num, econ_find_items(context, loc2, match.part.id,
-                                         match.part.brand));
+        count = min(num, econ_find_items(context, LOC2, MATCH.part.id,
+                                         MATCH.part.brand));
     } else
       count = num;
     foo += count;
     if (!count)
       continue;
-    c = modify_manifest(context, player, loc1, match.part.id, match.part.brand,
-                        mod * count);
-    if (!mort) {
-      notify_printf(btech_context_evaluation(context), player,
-                    "You %s %d %s%s.", mod > 0 ? "add" : "remove", count, c,
+    c = modify_manifest(context, PLAYER, LOC1, MATCH.part.id, MATCH.part.brand,
+                        MOD * count);
+    if (!MORT) {
+      notify_printf(btech_context_evaluation(context), PLAYER,
+                    "You %s %d %s%s.", MOD > 0 ? "add" : "remove", count, c,
                     count > 1 ? "s" : "");
     } else {
-      c = modify_manifest(context, player, loc2, match.part.id,
-                          match.part.brand, (0 - mod) * count);
-      notify_printf(btech_context_evaluation(context), player,
-                    "You %s %d %s%s.", mod > 0 ? "load" : "unload", count, c,
+      c = modify_manifest(context, PLAYER, LOC2, MATCH.part.id,
+                          MATCH.part.brand, (0 - MOD) * count);
+      notify_printf(btech_context_evaluation(context), PLAYER,
+                    "You %s %d %s%s.", MOD > 0 ? "load" : "unload", count, c,
                     count > 1 ? "s" : "");
     }
   }
   if (!foo) {
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Nothing matching that criteria was found!");
     return;
   }
 }
 
-void mech_Raddstuff(DbRef player, void *data, char *buffer) {
+void mech_raddstuff(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *object = data;
   BtechContext *context = object->context;
 
@@ -585,7 +585,7 @@ void mech_Raddstuff(DbRef player, void *data, char *buffer) {
   });
 }
 
-void mech_Rremovestuff(DbRef player, void *data, char *buffer) {
+void mech_rremovestuff(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *object = data;
   BtechContext *context = object->context;
 
@@ -667,7 +667,7 @@ void mech_unloadcargo(DbRef player, void *data, char *buffer) {
   mech_speed_correct(mech);
 }
 
-void mech_Rresetstuff(DbRef player, void *data, char *buffer) {
+void mech_rresetstuff(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *object = data;
   BtechContext *context = object->context;
 

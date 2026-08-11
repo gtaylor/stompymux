@@ -43,7 +43,7 @@ typedef struct PhysicalAttackRequest {
 } PhysicalAttackRequest;
 
 void physical_attack_resolve(const PhysicalAttackRequest *request);
-void PhysicalTrip(Mech *mech, Mech *target);
+void physical_trip(Mech *mech, Mech *target);
 typedef struct PhysicalDamageRequest {
   Mech *attacker;
   Mech *target;
@@ -54,7 +54,7 @@ typedef struct PhysicalDamageRequest {
 } PhysicalDamageRequest;
 
 void physical_damage_resolve(const PhysicalDamageRequest *request);
-int DeathFromAbove(Mech *mech, Mech *target);
-void ChargeMech(Mech *mech, Mech *target);
+int death_from_above(Mech *mech, Mech *target);
+void charge_mech(Mech *mech, Mech *target);
 bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure);
 void mech_grabclub(DbRef player, void *data, char *buffer);

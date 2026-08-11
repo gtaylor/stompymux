@@ -66,11 +66,11 @@ typedef struct CharacterExperienceReduction {
   int per_mille;
 } CharacterExperienceReduction;
 void character_experience_reduce(const CharacterExperienceReduction *change);
-void AccumulateTechXP(BtechContext *context, DbRef pilot, Mech *mech,
-                      int reason);
-void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, Mech *mech,
-                             int reason);
-void AccumulateCommXP(DbRef pilot, Mech *mech);
+void accumulate_tech_xp(BtechContext *context, DbRef pilot, Mech *mech,
+                        int reason);
+void accumulate_tech_weapons_xp(BtechContext *context, DbRef pilot, Mech *mech,
+                                int reason);
+void accumulate_comm_xp(DbRef pilot, Mech *mech);
 typedef struct PilotingExperienceAward {
   DbRef pilot;
   Mech *mech;
@@ -78,11 +78,11 @@ typedef struct PilotingExperienceAward {
   bool unconditional;
 } PilotingExperienceAward;
 void piloting_experience_award(const PilotingExperienceAward *award);
-void AccumulateSpotXP(DbRef pilot, Mech *attacker, Mech *wounded);
-int MadePerceptionRoll(Mech *mech, int modifier);
-void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded);
-void AccumulateComputerXP(DbRef pilot, Mech *mech, int reason);
-int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name);
+void accumulate_spot_xp(DbRef pilot, Mech *attacker, Mech *wounded);
+int made_perception_roll(Mech *mech, int modifier);
+void accumulate_arty_xp(DbRef pilot, Mech *attacker, Mech *wounded);
+void accumulate_computer_xp(DbRef pilot, Mech *mech, int reason);
+int has_bool_advantage(BtechContext *context, DbRef player, const char *name);
 typedef struct GunneryExperienceAward {
   DbRef pilot;
   Mech *attacker;

@@ -25,10 +25,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *mechIDfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
-  const MechUnitId id = mech_unit_id(mech);
-  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 0) = id.first;
-  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 1) = id.second;
+char *mech_i_dfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
+  const MechUnitId ID = mech_unit_id(mech);
+  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 0) = ID.first;
+  *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 1) = ID.second;
   *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 2) = '\0';
   return buffer;
 }
@@ -36,36 +36,36 @@ char *mechIDfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
 static bool parse_damage_numbers(const char *token, const char *prefix,
                                  bool has_third, int *first, int *second,
                                  int *third) {
-  const size_t token_length = strcspn(token, " ,");
-  const size_t prefix_length = strlen(prefix);
-  if (token_length >= 64 || token_length <= prefix_length ||
-      strncmp(token, prefix, prefix_length) != 0) {
+  const size_t TOKEN_LENGTH = strcspn(token, " ,");
+  const size_t PREFIX_LENGTH = strlen(prefix);
+  if (TOKEN_LENGTH >= 64 || TOKEN_LENGTH <= PREFIX_LENGTH ||
+      strncmp(token, prefix, PREFIX_LENGTH) != 0) {
     return false;
   }
 
   char text[64];
-  memcpy(text, token, token_length);
-  *(char *)checked_storage_at(text, sizeof(text), sizeof(*text), token_length) =
+  memcpy(text, token, TOKEN_LENGTH);
+  *(char *)checked_storage_at(text, sizeof(text), sizeof(*text), TOKEN_LENGTH) =
       '\0';
   char *second_text =
-      strchr(checked_mutable_string_suffix(text, prefix_length), '/');
+      strchr(checked_mutable_string_suffix(text, PREFIX_LENGTH), '/');
   if (second_text == nullptr)
     return false;
   *second_text = '\0';
   second_text = checked_mutable_string_suffix(second_text, 1);
   if (!has_third)
-    return parse_int_checked(checked_string_suffix(text, prefix_length),
+    return parse_int_checked(checked_string_suffix(text, PREFIX_LENGTH),
                              first) &&
            parse_int_checked(second_text, second);
 
   char *third_text = strchr(second_text, '(');
   char *last = (char *)checked_storage_at(text, sizeof(text), sizeof(*text),
-                                          token_length - 1);
+                                          TOKEN_LENGTH - 1);
   if (third_text == nullptr || *last != ')')
     return false;
   *third_text = '\0';
   *last = '\0';
-  return parse_int_checked(checked_string_suffix(text, prefix_length), first) &&
+  return parse_int_checked(checked_string_suffix(text, PREFIX_LENGTH), first) &&
          parse_int_checked(second_text, second) &&
          parse_int_checked(checked_string_suffix(third_text, 1), third);
 }
@@ -85,12 +85,12 @@ char *mech_getset_ref(int mode, Mech *mech, char *data) {
 extern char *mech_types[];
 extern char *move_types[];
 
-char *mechTypefunc(int mode, Mech *mech, char *arg) {
+char *mech_typefunc(int mode, Mech *mech, char *arg) {
   int i;
 
   if (!mode) {
-    const UnitClass unit_class = mech_class(mech);
-    return template_unit_class_name((size_t)unit_class);
+    const UnitClass UNIT_CLASS = mech_class(mech);
+    return template_unit_class_name((size_t)UNIT_CLASS);
   }
   /* Should _alter_ mechtype.. weeeel. */
   i = compare_array(mech_types, template_unit_class_count(), arg);
@@ -99,12 +99,12 @@ char *mechTypefunc(int mode, Mech *mech, char *arg) {
   return nullptr;
 }
 
-char *mechMovefunc(int mode, Mech *mech, char *arg) {
+char *mech_movefunc(int mode, Mech *mech, char *arg) {
   int i;
 
   if (!mode) {
-    const MechMovementType movement_type = mech_movement_type(mech);
-    return template_movement_type_name((size_t)movement_type);
+    const MechMovementType MOVEMENT_TYPE = mech_movement_type(mech);
+    return template_movement_type_name((size_t)MOVEMENT_TYPE);
   }
   i = compare_array(move_types, template_movement_type_count(), arg);
   if (i >= 0)
@@ -112,14 +112,14 @@ char *mechMovefunc(int mode, Mech *mech, char *arg) {
   return NULL;
 }
 
-char *mechTechTimefunc(Mech *mech, char buffer[static LBUF_SIZE]) {
+char *mech_tech_timefunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   int n = figure_latest_tech_event(mech);
 
   (void)snprintf(buffer, LBUF_SIZE, "%d", n);
   return buffer;
 }
 
-void apply_mechDamage(Mech *omech, char *buf) {
+void apply_mech_damage(Mech *omech, char *buf) {
   Mech *mech = mech_temporary_clone(omech);
   int i, j, i1, i2, i3;
   int do_mag = 0;
@@ -148,10 +148,10 @@ void apply_mechDamage(Mech *omech, char *buf) {
       }
   }
   size_t offset = 0;
-  const size_t input_length = strlen(buf);
-  while (offset < input_length) {
+  const size_t INPUT_LENGTH = strlen(buf);
+  while (offset < INPUT_LENGTH) {
     offset += strspn(checked_string_suffix(buf, offset), " ,");
-    if (offset >= input_length)
+    if (offset >= INPUT_LENGTH)
       break;
     const char *token = checked_string_suffix(buf, offset);
     /* Parse the keyword ; it's one of the many known types */
@@ -209,7 +209,7 @@ void apply_mechDamage(Mech *omech, char *buf) {
           do_mag = 1;
         } else if (!mech_critical_is_destroyed(mech, i, j) &&
                    mech_critical_is_destroyed(omech, i, j)) {
-          mech_RepairPart(omech, i, j);
+          mech_repair_part(omech, i, j);
           mech_critical_temporary_failure_set(
               &(CriticalSlotFailureSet){.mech = omech,
                                         .slot = {.section = i, .critical = j},
@@ -259,8 +259,8 @@ static void damage_list_append(char buffer[static LBUF_SIZE], int *count,
   va_end(arguments);
 }
 
-char *mechDamagefunc(const GmvBufferedBidirectionalCall *call) {
-  const int mode = call->mode;
+char *mech_damagefunc(const GmvBufferedBidirectionalCall *call) {
+  const int MODE = call->mode;
   Mech *mech = call->mech;
   char *arg = call->value;
   char *buffer = call->buffer;
@@ -270,8 +270,8 @@ char *mechDamagefunc(const GmvBufferedBidirectionalCall *call) {
   int i, j;
   int count = 0;
 
-  if (mode) {
-    apply_mechDamage(mech, arg);
+  if (MODE) {
+    apply_mech_damage(mech, arg);
     (void)snprintf(buffer, LBUF_SIZE, "?");
     return buffer;
   };
@@ -296,7 +296,7 @@ char *mechDamagefunc(const GmvBufferedBidirectionalCall *call) {
                            mech_section_original_internal(mech, i) -
                                mech_section_internal(mech, i));
   for (i = 0; i < NUM_SECTIONS; i++)
-    for (j = 0; j < CritsInLoc(mech, i); j++) {
+    for (j = 0; j < crits_in_loc(mech, i); j++) {
       if (mech_critical_part_type(mech, i, j) &&
           !mech_part_is_structural_placeholder(
               mech_critical_part_type(mech, i, j))) {
@@ -318,12 +318,12 @@ char *mechDamagefunc(const GmvBufferedBidirectionalCall *call) {
   return buffer;
 }
 
-char *mechCentBearingfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
+char *mech_cent_bearingfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   int x = mech_position_x(mech);
   int y = mech_position_y(mech);
   float fx, fy;
 
-  MapCoordToRealCoord(x, y, &fx, &fy);
+  map_coord_to_real_coord(x, y, &fx, &fy);
   (void)snprintf(
       buffer, LBUF_SIZE, "%d",
       map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
@@ -332,12 +332,12 @@ char *mechCentBearingfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   return buffer;
 }
 
-char *mechCentDistfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
+char *mech_cent_distfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   int x = mech_position_x(mech);
   int y = mech_position_y(mech);
   float fx, fy;
 
-  MapCoordToRealCoord(x, y, &fx, &fy);
+  map_coord_to_real_coord(x, y, &fx, &fy);
   (void)snprintf(buffer, LBUF_SIZE, "%.2f",
                  (double)map_real_range(&(MapRealSegment){
                      .start = {.x = fx, .y = fy},
@@ -380,13 +380,13 @@ int text2bv(const char *text) {
     return j; /* Allow 'old style' as well */
 
   /* Valid bitvector letters are: a-z (=27), A-Z (=27 more) */
-  const size_t text_length = strlen(text);
-  for (size_t index = 0; index < text_length; ++index) {
+  const size_t TEXT_LENGTH = strlen(text);
+  for (size_t index = 0; index < TEXT_LENGTH; ++index) {
     char current = *checked_string_suffix(text, index);
     if (current == '!') {
       mode_not = 1;
       ++index;
-      if (index >= text_length)
+      if (index >= TEXT_LENGTH)
         break;
       current = *checked_string_suffix(text, index);
     };

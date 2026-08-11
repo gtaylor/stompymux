@@ -42,7 +42,7 @@ typedef struct WeaponFireCommandRequest {
 
 int mech_weapon_fire_command(const WeaponFireCommandRequest *request);
 const char *mech_hex_target_description(const Mech *mech);
-int canClearOrIgnite(int weapindx);
+int can_clear_or_ignite(int weapindx);
 void mech_terrain_hex_hit(const TerrainWeaponHitRequest *request);
 void mech_terrain_possibly_ignite_or_clear(
     const TerrainWeaponEffectRequest *request);

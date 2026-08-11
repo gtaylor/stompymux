@@ -214,7 +214,7 @@ constexpr int ECM_RANGE = 6;
 
 constexpr int LITE_RANGE = 30;
 
-typedef unsigned char byte;
+typedef unsigned char Byte;
 
 /* Exile Stun Code Timer */
 constexpr int MECHSTUN_TICK = 10;

@@ -28,8 +28,8 @@ static float mech_motion_jump_speed(const Mech *mech, const BattleMap *map) {
   if (!mech_is_under_gravity(mech) || !map)
     return speed;
   int gravity = battle_map_gravity(map);
-  int const effective_gravity = gravity > 50 ? gravity : 50;
-  return speed * 100.0F / (float)effective_gravity;
+  int const EFFECTIVE_GRAVITY = gravity > 50 ? gravity : 50;
+  return speed * 100.0F / (float)EFFECTIVE_GRAVITY;
 }
 static float motion_hypotenuse(float x, float y) {
   return sqrtf(x * x + y * y);
@@ -55,7 +55,7 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
   case MOVE_BIPED:
   case MOVE_QUAD:
     if (mech_is_jumping(mech)) {
-      MarkForLOSUpdate(mech);
+      mark_for_los_update(mech);
       motion_step_delta_set(
           step, (MapPolarVector){.magnitude = jump_speed * (float)MOVE_MOD *
                                               movement_modifier,
@@ -82,16 +82,16 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
         remaining_jump = 0.0F;
       midpoint_modifier = jump_position / mech_jump_length(mech);
       midpoint_modifier = (midpoint_modifier - 0.5F) * 2.0F;
-      int const jump_apex_elevation = mech_jump_apex_elevation(mech);
-      float const jump_apex_elevation_float = (float)jump_apex_elevation;
+      int const JUMP_APEX_ELEVATION = mech_jump_apex_elevation(mech);
+      float const JUMP_APEX_ELEVATION_FLOAT = (float)JUMP_APEX_ELEVATION;
       if (mech_jump_apex_elevation(mech) >=
           (1 + clamp_float_to_int(jump_speed * MP_PER_KPH))) {
         midpoint_modifier = (1.0F - (midpoint_modifier * midpoint_modifier)) *
-                            jump_apex_elevation_float;
+                            JUMP_APEX_ELEVATION_FLOAT;
       } else {
         midpoint_modifier = (1.0F - (midpoint_modifier * midpoint_modifier *
                                      midpoint_modifier * midpoint_modifier)) *
-                            jump_apex_elevation_float;
+                            JUMP_APEX_ELEVATION_FLOAT;
       }
       mech_position_real_z_set(mech,
                                (remaining_jump * mech_motion_vector_z(mech) +
@@ -124,8 +124,8 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
       }
       if (mech_position_x(mech) == mech_jump_destination_x(mech) &&
           mech_position_y(mech) == mech_jump_destination_y(mech)) {
-        MapCoordToRealCoord(mech_position_x(mech), mech_position_y(mech),
-                            &target_x, &target_y);
+        map_coord_to_real_coord(mech_position_x(mech), mech_position_y(mech),
+                                &target_x, &target_y);
 #ifdef ODDJUMP
         if (motion_hypotenuse(target_x - mech_motion_vector_x(mech),
                               target_y - mech_motion_vector_y(mech)) <=
@@ -206,7 +206,7 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
       return false;
     [[fallthrough]];
   case MOVE_SUB:
-    MarkForLOSUpdate(mech);
+    mark_for_los_update(mech);
     motion_step_delta_set(
         step, (MapPolarVector){.magnitude = mech_current_speed(mech) *
                                             (float)MOVE_MOD * movement_modifier,
@@ -219,7 +219,7 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
     break;
   case MOVE_FLY:
     if (!mech_is_landed(mech)) {
-      MarkForLOSUpdate(mech);
+      mark_for_los_update(mech);
       mech_position_real_z_translate(mech, mech_motion_vector_z(mech) *
                                                (float)MOVE_MOD);
       mech_position_hex_z_set(

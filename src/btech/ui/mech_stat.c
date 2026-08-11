@@ -26,10 +26,10 @@ void init_stat(BtechContext *context) {
   }
 }
 
-static const int chances[11] = {1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1};
+static const int CHANCES[11] = {1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1};
 
 static int roll_chance(int index) {
-  return *(const int *)checked_storage_at_const(chances, 11, sizeof(*chances),
+  return *(const int *)checked_storage_at_const(CHANCES, 11, sizeof(*CHANCES),
                                                 (size_t)index);
 }
 
@@ -56,10 +56,10 @@ void do_show_stat(CommandInvocation *invocation) {
                    "#    Rolls %Current  Optimal Rolls %Optimal  %Hit Chance "
                    " %Miss Chance");
     }
-    const int chance = roll_chance(i);
-    const int count = roll_count(statistics, i);
-    f1 = (float)chance * 100.0F / 36.0F;
-    f2 = (float)count * 100.0F / (float)statistics->total_rolls;
+    const int CHANCE = roll_chance(i);
+    const int COUNT = roll_count(statistics, i);
+    f1 = (float)CHANCE * 100.0F / 36.0F;
+    f2 = (float)COUNT * 100.0F / (float)statistics->total_rolls;
     chancetotal = 0;
     for (j = i; j < 11; j++) {
       chancetotal = chancetotal + roll_chance(j);
@@ -67,7 +67,7 @@ void do_show_stat(CommandInvocation *invocation) {
     chanceperc = (float)chancetotal / 36.0F * 100.0F;
     optimalrolls = f1 / 100.0F * (float)statistics->total_rolls;
     notify_printf(evaluation, player, "%-3d %6d %8.3f %14d %8.3f %12.3f %13.3f",
-                  i + 2, count, (double)f2, (int)optimalrolls, (double)f1,
+                  i + 2, COUNT, (double)f2, (int)optimalrolls, (double)f1,
                   (double)chanceperc, (double)(100.0F - chanceperc));
   }
   notify_printf(evaluation, player, "Total rolls: %d", statistics->total_rolls);

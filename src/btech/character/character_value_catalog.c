@@ -6,7 +6,7 @@
 #include "btechstats_internal.h"
 #include "mux/support/checked_storage.h"
 
-static const char *const btech_charvaluetype_names[] = {
+static const char *const BTECH_CHARVALUETYPE_NAMES[] = {
     "Char_value", "Char_skill", "Char_advantage", "Char_attribute"};
 
 const char *btech_charskillflag_names[] = {"Athletic", "Mental", "Physical",
@@ -189,9 +189,9 @@ const char *character_value_type_name(int type) {
   if (type < CHAR_VALUE || type > CHAR_ATTRIBUTE)
     return "Unknown";
   const char *const *name = (const char *const *)checked_storage_at_const(
-      (const void *)btech_charvaluetype_names,
-      sizeof(btech_charvaluetype_names) / sizeof(*btech_charvaluetype_names),
-      sizeof(*btech_charvaluetype_names), (size_t)type);
+      (const void *)BTECH_CHARVALUETYPE_NAMES,
+      sizeof(BTECH_CHARVALUETYPE_NAMES) / sizeof(*BTECH_CHARVALUETYPE_NAMES),
+      sizeof(*BTECH_CHARVALUETYPE_NAMES), (size_t)type);
   return *name;
 }
 

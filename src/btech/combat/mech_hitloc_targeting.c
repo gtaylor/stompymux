@@ -139,12 +139,12 @@ int mech_hit_group(Mech *mech, Mech *target) {
   }
 
   /* Compute attack direction.  */
-  ad = AcceptableDegree(map_bearing(&(MapRealSegment){
-                            .start = {.x = mech_position_real_x(target),
-                                      .y = mech_position_real_y(target)},
-                            .end = {.x = mech_position_real_x(mech),
-                                    .y = mech_position_real_y(mech)}}) -
-                        mech_heading_degrees(target));
+  ad = acceptable_degree(map_bearing(&(MapRealSegment){
+                             .start = {.x = mech_position_real_x(target),
+                                       .y = mech_position_real_y(target)},
+                             .end = {.x = mech_position_real_x(mech),
+                                     .y = mech_position_real_y(mech)}}) -
+                         mech_heading_degrees(target));
 
   /* Determine hit group.  */
   switch (mech_class(target)) {
@@ -194,22 +194,22 @@ int mech_hit_group(Mech *mech, Mech *target) {
 int mech_target_hit_location(Mech *mech, Mech *target, int *isrear,
                              int *iscritical) {
 
-  int hitGroup;
+  int hit_group;
 
   *iscritical = 0;
-  hitGroup = mech_hit_group(mech, target);
+  hit_group = mech_hit_group(mech, target);
 
-  if (hitGroup == BACK) {
+  if (hit_group == BACK) {
     *isrear = 1;
   }
 
   if (mech_class(target) == CLASS_MECH && mech_has_partial_cover(target)) {
-    return mech_punch_hit_location(target, hitGroup);
+    return mech_punch_hit_location(target, hit_group);
   }
 
   if (mech_class(mech) == CLASS_MW && mech_class(target) == CLASS_MECH &&
       mech_position_z(mech) <= mech_position_z(target)) {
-    return mech_kick_hit_location(target, hitGroup);
+    return mech_kick_hit_location(target, hit_group);
   }
 
   if (mech_class(target) == CLASS_MECH &&
@@ -221,39 +221,40 @@ int mech_target_hit_location(Mech *mech, Mech *target, int *isrear,
     return swarm.location;
   }
 
-  return mech_hit_location(target, hitGroup, iscritical, isrear);
+  return mech_hit_location(target, hit_group, iscritical, isrear);
 }
 
-int mech_narc_hit_location(Mech *mech, Mech *hitMech, int *tIsRearHit) {
-  int tIsRear = 0;
-  int tIsCritical = 0;
-  int wHitLoc = mech_target_hit_location(mech, hitMech, &tIsRear, &tIsCritical);
+int mech_narc_hit_location(Mech *mech, Mech *hit_mech, int *t_is_rear_hit) {
+  int t_is_rear = 0;
+  int t_is_critical = 0;
+  int w_hit_loc =
+      mech_target_hit_location(mech, hit_mech, &t_is_rear, &t_is_critical);
 
-  while (mech_section_internal(hitMech, wHitLoc) <= 0) {
-    wHitLoc = mech_hit_location_transfer(hitMech, wHitLoc);
-    if (wHitLoc < 0)
+  while (mech_section_internal(hit_mech, w_hit_loc) <= 0) {
+    w_hit_loc = mech_hit_location_transfer(hit_mech, w_hit_loc);
+    if (w_hit_loc < 0)
       return -1;
   }
 
-  *tIsRearHit = 0;
-  if (tIsRear) {
-    if (mech_class(hitMech) == CLASS_MECH)
-      *tIsRearHit = 1;
-    else if (wHitLoc == FSIDE)
-      wHitLoc = BSIDE;
+  *t_is_rear_hit = 0;
+  if (t_is_rear) {
+    if (mech_class(hit_mech) == CLASS_MECH)
+      *t_is_rear_hit = 1;
+    else if (w_hit_loc == FSIDE)
+      w_hit_loc = BSIDE;
   }
 
-  return wHitLoc;
+  return w_hit_loc;
 }
 
 int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
                                          int *iscritical) {
-  int hitGroup;
+  int hit_group;
 
   *isrear = 0;
   *iscritical = 0;
-  hitGroup = mech_hit_group(mech, target);
-  if (hitGroup == BACK)
+  hit_group = mech_hit_group(mech, target);
+  if (hit_group == BACK)
     *isrear = 1;
   if (mech_aim_unit_class(mech) == mech_class(target) &&
       btech_random_range(mech_context(mech), 1, 6) >= 3)
@@ -263,27 +264,27 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
     case CLASS_BSUIT:
       switch (mech_aim_section(mech)) {
       case RARM:
-        if (hitGroup != LEFTSIDE)
+        if (hit_group != LEFTSIDE)
           return RARM;
         break;
       case LARM:
-        if (hitGroup != RIGHTSIDE)
+        if (hit_group != RIGHTSIDE)
           return LARM;
         break;
       case RLEG:
-        if (hitGroup != LEFTSIDE && !mech_has_partial_cover(target))
+        if (hit_group != LEFTSIDE && !mech_has_partial_cover(target))
           return RLEG;
         break;
       case LLEG:
-        if (hitGroup != RIGHTSIDE && !mech_has_partial_cover(target))
+        if (hit_group != RIGHTSIDE && !mech_has_partial_cover(target))
           return LLEG;
         break;
       case RTORSO:
-        if (hitGroup != LEFTSIDE)
+        if (hit_group != LEFTSIDE)
           return RTORSO;
         break;
       case LTORSO:
-        if (hitGroup != RIGHTSIDE)
+        if (hit_group != RIGHTSIDE)
           return LTORSO;
         break;
       case CTORSO:
@@ -300,19 +301,19 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
     case CLASS_SPHEROID_DS:
       switch (mech_aim_section(mech)) {
       case AERO_NOSE:
-        if (hitGroup != BACK)
+        if (hit_group != BACK)
           return AERO_NOSE;
         break;
       case AERO_LWING:
-        if (hitGroup != RIGHTSIDE)
+        if (hit_group != RIGHTSIDE)
           return AERO_LWING;
         break;
       case AERO_RWING:
-        if (hitGroup != LEFTSIDE)
+        if (hit_group != LEFTSIDE)
           return AERO_RWING;
         break;
       case AERO_AFT:
-        if (hitGroup != FRONT)
+        if (hit_group != FRONT)
           return AERO_AFT;
         break;
       }
@@ -322,19 +323,19 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
     case CLASS_VTOL:
       switch (mech_aim_section(mech)) {
       case RSIDE:
-        if (hitGroup != LEFTSIDE)
+        if (hit_group != LEFTSIDE)
           return (RSIDE);
         break;
       case LSIDE:
-        if (hitGroup != RIGHTSIDE)
+        if (hit_group != RIGHTSIDE)
           return (LSIDE);
         break;
       case FSIDE:
-        if (hitGroup != BACK)
+        if (hit_group != BACK)
           return (FSIDE);
         break;
       case BSIDE:
-        if (hitGroup != FRONT)
+        if (hit_group != FRONT)
           return (BSIDE);
         break;
       case TURRET:
@@ -344,43 +345,43 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
       break;
     }
   if (mech_class(target) == CLASS_MECH && mech_has_partial_cover(target))
-    return mech_punch_hit_location(target, hitGroup);
-  return mech_hit_location(target, hitGroup, iscritical, isrear);
+    return mech_punch_hit_location(target, hit_group);
+  return mech_hit_location(target, hit_group, iscritical, isrear);
 }
 
 int mech_aimed_hit_location(Mech *mech, Mech *target, int *isrear,
                             int *iscritical) {
-  int hitGroup;
+  int hit_group;
 
   *isrear = 0;
   *iscritical = 0;
-  hitGroup = mech_hit_group(mech, target);
-  if (hitGroup == BACK)
+  hit_group = mech_hit_group(mech, target);
+  if (hit_group == BACK)
     *isrear = 1;
   if (mech_class(target) == CLASS_MECH || mech_class(target) == CLASS_MW)
     switch (mech_aim_section(mech)) {
     case RARM:
-      if (hitGroup != LEFTSIDE)
+      if (hit_group != LEFTSIDE)
         return (RARM);
       break;
     case LARM:
-      if (hitGroup != RIGHTSIDE)
+      if (hit_group != RIGHTSIDE)
         return (LARM);
       break;
     case RLEG:
-      if (hitGroup != LEFTSIDE && !mech_has_partial_cover(target))
+      if (hit_group != LEFTSIDE && !mech_has_partial_cover(target))
         return (RLEG);
       break;
     case LLEG:
-      if (hitGroup != RIGHTSIDE && !mech_has_partial_cover(target))
+      if (hit_group != RIGHTSIDE && !mech_has_partial_cover(target))
         return (LLEG);
       break;
     case RTORSO:
-      if (hitGroup != LEFTSIDE)
+      if (hit_group != LEFTSIDE)
         return (RTORSO);
       break;
     case LTORSO:
-      if (hitGroup != RIGHTSIDE)
+      if (hit_group != RIGHTSIDE)
         return (LTORSO);
       break;
     case CTORSO:
@@ -393,19 +394,19 @@ int mech_aimed_hit_location(Mech *mech, Mech *target, int *isrear,
   else
     switch (mech_aim_section(mech)) {
     case RSIDE:
-      if (hitGroup != LEFTSIDE)
+      if (hit_group != LEFTSIDE)
         return (RSIDE);
       break;
     case LSIDE:
-      if (hitGroup != RIGHTSIDE)
+      if (hit_group != RIGHTSIDE)
         return (LSIDE);
       break;
     case FSIDE:
-      if (hitGroup != BACK)
+      if (hit_group != BACK)
         return (FSIDE);
       break;
     case BSIDE:
-      if (hitGroup != FRONT)
+      if (hit_group != FRONT)
         return (BSIDE);
       break;
     case TURRET:
@@ -414,6 +415,6 @@ int mech_aimed_hit_location(Mech *mech, Mech *target, int *isrear,
     }
 
   if (mech_class(target) == CLASS_MECH && mech_has_partial_cover(target))
-    return mech_punch_hit_location(target, hitGroup);
-  return mech_hit_location(target, hitGroup, iscritical, isrear);
+    return mech_punch_hit_location(target, hit_group);
+  return mech_hit_location(target, hit_group, iscritical, isrear);
 }

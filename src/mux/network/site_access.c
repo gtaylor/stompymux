@@ -99,7 +99,7 @@ static void list_sites(EvaluationContext *evaluation, DbRef player,
   for (this = site_list; this; this = this->next) {
     str = stat_string(
         &(SiteStatusRequest){.type = stat_type, .flag = this->flag});
-    StringCopy(buff1, inet_ntoa(this->mask));
+    string_copy(buff1, inet_ntoa(this->mask));
     (void)snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", inet_ntoa(this->address),
                    buff1, str);
     notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
@@ -173,7 +173,7 @@ void descriptor_run_command(Descriptor *d, char *command) {
   if (!is_wizard(descriptor_runtime(d)->world->database, d->player)) {
     if (d->quota <= 0) {
       descriptor_queue_string(d, "quota exceed, dropping command.\n");
-      dprintk("aborting execution of %s for #%ld.", command, d->player);
+      DPRINTK("aborting execution of %s for #%ld.", command, d->player);
       return;
     }
     d->quota--;

@@ -71,9 +71,9 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   int terrain;
   int limbs = 4;
   int i;
-  int tempLoc;
-  char locName[50];
-  int damage, tempDamage;
+  int temp_loc;
+  char loc_name[50];
+  int damage, temp_damage;
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -100,25 +100,25 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
 
   /* Check locations */
   for (i = 0; i < 4; i++) {
-    tempLoc = thrashing_limb(i);
+    temp_loc = thrashing_limb(i);
 
-    if (mech_section_is_destroyed(mech, tempLoc)) {
+    if (mech_section_is_destroyed(mech, temp_loc)) {
       limbs--;
       continue;
     }
 
-    ArmorStringFromIndex(tempLoc, locName, mech_class(mech),
-                         mech_movement_type(mech));
+    armor_string_from_index(temp_loc, loc_name, mech_class(mech),
+                            mech_movement_type(mech));
 
-    if (mech_section_has_recycling_weapon(mech, tempLoc)) {
+    if (mech_section_has_recycling_weapon(mech, temp_loc)) {
       mecha_notify(btech_context_evaluation(context), player,
-                   tprintf("You have weapons recycling on your %s.", locName));
+                   tprintf("You have weapons recycling on your %s.", loc_name));
       return;
     }
-    if (mech_section_recycle_ticks(mech, tempLoc)) {
+    if (mech_section_recycle_ticks(mech, temp_loc)) {
       mecha_notify(btech_context_evaluation(context), player,
                    tprintf("Your %s is still recovering from your last attack.",
-                           locName));
+                           loc_name));
       return;
     }
   }
@@ -143,9 +143,9 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
 
   /* Let's see who we can smack around */
   for (i = 0; i < battle_map_unit_count(map); i++) {
-    const DbRef unit = battle_map_unit_dbref(map, i);
-    if (unit >= 0) {
-      target = (Mech *)btech_context_find_object(context, unit);
+    const DbRef UNIT = battle_map_unit_dbref(map, i);
+    if (UNIT >= 0) {
+      target = (Mech *)btech_context_find_object(context, UNIT);
 
       if (!target)
         continue;
@@ -167,10 +167,10 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
       mech_printf(target, MECHALL, "You get hit by %s's thrashing limbs!",
                   mech_to_mech_display_id(target, mech).text);
 
-      tempDamage = damage;
+      temp_damage = damage;
 
-      while (tempDamage > 0) {
-        if (tempDamage > 5) {
+      while (temp_damage > 0) {
+        if (temp_damage > 5) {
           mech_damage_apply(&(MechDamageRequest){
               .target = target,
               .attacker = mech,
@@ -188,7 +188,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
               .weapon_index = -1,
               .ammunition_mode = 0,
               .ignore_swarmers = 1});
-          tempDamage -= 5;
+          temp_damage -= 5;
         } else {
           mech_damage_apply(&(MechDamageRequest){
               .target = target,
@@ -199,7 +199,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
                   btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1),
               .rear = 0,
               .critical = 0,
-              .armor_damage = tempDamage,
+              .armor_damage = temp_damage,
               .internal_damage = 0,
               .transfer = MECH_DAMAGE_NORMAL,
               .cause = -1,
@@ -207,7 +207,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
               .weapon_index = -1,
               .ammunition_mode = 0,
               .ignore_swarmers = 1});
-          tempDamage = 0;
+          temp_damage = 0;
         }
       }
     }
@@ -224,11 +224,11 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   }
 
   for (i = 0; i < 4; i++) {
-    tempLoc = thrashing_limb(i);
+    temp_loc = thrashing_limb(i);
 
-    if (mech_section_is_destroyed(mech, tempLoc))
+    if (mech_section_is_destroyed(mech, temp_loc))
       continue;
 
-    mech_set_recycle_limb(mech, tempLoc, PHYSICAL_RECYCLE_TIME);
+    mech_set_recycle_limb(mech, temp_loc, PHYSICAL_RECYCLE_TIME);
   }
 }

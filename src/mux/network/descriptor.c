@@ -67,21 +67,21 @@ static Descriptor **descriptor_registry_slot(DescriptorRegistry *registry,
 
 static const char *
 descriptor_shutdown_reason_at(DescriptorShutdownReason reason) {
-  const size_t count = sizeof(descriptor_disconnect_reasons) /
+  const size_t COUNT = sizeof(descriptor_disconnect_reasons) /
                        sizeof(*descriptor_disconnect_reasons);
 
   return *(const char *const *)checked_storage_at_const(
-      (const void *)descriptor_disconnect_reasons, count,
+      (const void *)descriptor_disconnect_reasons, COUNT,
       sizeof(*descriptor_disconnect_reasons), (size_t)reason);
 }
 
 static const char *
 descriptor_shutdown_message_at(DescriptorShutdownReason reason) {
-  const size_t count = sizeof(descriptor_disconnect_messages) /
+  const size_t COUNT = sizeof(descriptor_disconnect_messages) /
                        sizeof(*descriptor_disconnect_messages);
 
   return *(const char *const *)checked_storage_at_const(
-      (const void *)descriptor_disconnect_messages, count,
+      (const void *)descriptor_disconnect_messages, COUNT,
       sizeof(*descriptor_disconnect_messages), (size_t)reason);
 }
 
@@ -141,7 +141,7 @@ ServerLog *descriptor_log(Descriptor *descriptor) {
 void descriptor_registry_destroy(DescriptorRegistry *registry) {
   if (registry == nullptr)
     return;
-  dassert(registry->count == 0);
+  DASSERT(registry->count == 0);
   free((void *)registry->slots);
   free(registry);
 }
@@ -178,7 +178,7 @@ static void descriptor_unregister(Descriptor *descriptor) {
     descriptor->registry = nullptr;
     return;
   }
-  dassert(false);
+  DASSERT(false);
 }
 
 /* Return the number of descriptors in the flat registry. */
@@ -243,7 +243,7 @@ void descriptor_retain(Descriptor *descriptor) { descriptor->refcount++; }
 
 /* Destroy descriptor after all references and socket ownership have ended. */
 static void descriptor_free(Descriptor *descriptor) {
-  dprintk("%p destructing", descriptor);
+  DPRINTK("%p destructing", descriptor);
   descriptor_clear_input(descriptor);
   descriptor_flow_destroy(descriptor);
   descriptor_telnet_destroy(descriptor);
@@ -274,7 +274,7 @@ void descriptor_force_close(Descriptor *descriptor) {
 
 /* Release a retained descriptor and destroy it when no references remain. */
 void descriptor_release(Descriptor *descriptor) {
-  dassert(descriptor->refcount > 0);
+  DASSERT(descriptor->refcount > 0);
   descriptor->refcount--;
   if (descriptor->refcount != 0)
     return;

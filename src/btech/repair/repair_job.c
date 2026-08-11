@@ -103,18 +103,18 @@ RepairParseStatus repair_selection_parse_part(Mech *mech, char *buffer,
                                               bool parse_brand,
                                               RepairSelection *selection) {
   *selection = (RepairSelection){0};
-  const TechPartParseResult result =
+  const TechPartParseResult RESULT =
       tech_part_parse(&(TechPartParseRequest){.mech = mech,
                                               .text = buffer,
                                               .parse_position = parse_position,
                                               .parse_extra = parse_brand});
-  if (result.status == TECH_PART_PARSE_INVALID)
+  if (RESULT.status == TECH_PART_PARSE_INVALID)
     return REPAIR_PARSE_INVALID_SECTION;
-  if (result.status == TECH_PART_PARSE_INVALID_POSITION)
+  if (RESULT.status == TECH_PART_PARSE_INVALID_POSITION)
     return REPAIR_PARSE_INVALID_PART;
-  selection->location = result.location;
-  selection->part = result.position;
-  selection->brand = result.extra;
+  selection->location = RESULT.location;
+  selection->part = RESULT.position;
+  selection->brand = RESULT.extra;
   return REPAIR_PARSE_OK;
 }
 
@@ -239,12 +239,12 @@ static RepairJobResult repair_job_schedule(RepairCommandContext *command,
 RepairJobResult repair_part_job_execute(RepairCommandContext *command,
                                         int location, int part,
                                         const RepairPartJob *job) {
-  const RepairOperationCall call = {
+  const RepairOperationCall CALL = {
       .player = command->player,
       .mech = command->mech,
       .selection = {.location = location, .part = part},
   };
-  if (job->resource(&call) < 0)
+  if (job->resource(&CALL) < 0)
     return REPAIR_JOB_REJECTED;
   mecha_notify(command->evaluation, command->player, job->message);
   bool failed =
@@ -253,10 +253,10 @@ RepairJobResult repair_part_job_execute(RepairCommandContext *command,
                 0
           : tech_roll(command->player, command->mech, job->difficulty) < 0;
   if (failed) {
-    if (job->failure(&call) < 0)
+    if (job->failure(&CALL) < 0)
       return repair_job_schedule(command, job->time, 3, job->event_type,
                                  job->event_callback, job->event_data, true);
-  } else if (job->success(&call) < 0) {
+  } else if (job->success(&CALL) < 0) {
     return REPAIR_JOB_CALLBACK_ABORTED;
   }
   return repair_job_schedule(command, job->time, failed ? 3 : 2,
@@ -268,18 +268,18 @@ RepairJobResult repair_part_amount_job_execute(RepairCommandContext *command,
                                                int location, int part,
                                                int *amount,
                                                const RepairPartAmountJob *job) {
-  const RepairOperationCall call = {
+  const RepairOperationCall CALL = {
       .player = command->player,
       .mech = command->mech,
       .selection = {.location = location, .part = part},
       .amount = amount,
   };
-  if (job->resource(&call) < 0)
+  if (job->resource(&CALL) < 0)
     return REPAIR_JOB_REJECTED;
   mecha_notify(command->evaluation, command->player, job->message);
   bool failed = tech_roll(command->player, command->mech, job->difficulty) < 0;
   if (failed) {
-    if (job->failure(&call) < 0) {
+    if (job->failure(&CALL) < 0) {
       repair_event_schedule_with_techtime(
           &(RepairWorkSchedule){.command = command,
                                 .work_time = job->time,
@@ -292,7 +292,7 @@ RepairJobResult repair_part_amount_job_execute(RepairCommandContext *command,
                                             .player = command->player}});
       return REPAIR_JOB_SCHEDULED_FAILURE;
     }
-  } else if (job->success(&call) < 0) {
+  } else if (job->success(&CALL) < 0) {
     return REPAIR_JOB_CALLBACK_ABORTED;
   }
   repair_event_schedule_with_techtime(
@@ -311,20 +311,20 @@ RepairJobResult repair_part_amount_job_execute(RepairCommandContext *command,
 RepairJobResult repair_section_job_execute(RepairCommandContext *command,
                                            int location,
                                            const RepairSectionJob *job) {
-  const RepairOperationCall call = {
+  const RepairOperationCall CALL = {
       .player = command->player,
       .mech = command->mech,
       .selection = {.location = location},
   };
-  if (job->resource(&call) < 0)
+  if (job->resource(&CALL) < 0)
     return REPAIR_JOB_REJECTED;
   mecha_notify(command->evaluation, command->player, job->message);
   bool failed = tech_roll(command->player, command->mech, job->difficulty) < 0;
   if (failed) {
-    if (job->failure(&call) < 0)
+    if (job->failure(&CALL) < 0)
       return repair_job_schedule(command, job->time, 3, job->event_type,
                                  job->event_callback, job->event_data, true);
-  } else if (job->success(&call) < 0) {
+  } else if (job->success(&CALL) < 0) {
     return REPAIR_JOB_CALLBACK_ABORTED;
   }
   return repair_job_schedule(command, job->time, failed ? 3 : 2,
@@ -336,18 +336,18 @@ RepairJobResult
 repair_section_amount_job_execute(RepairCommandContext *command, int location,
                                   int *amount,
                                   const RepairSectionAmountJob *job) {
-  const RepairOperationCall call = {
+  const RepairOperationCall CALL = {
       .player = command->player,
       .mech = command->mech,
       .selection = {.location = location},
       .amount = amount,
   };
-  if (job->resource(&call) < 0)
+  if (job->resource(&CALL) < 0)
     return REPAIR_JOB_REJECTED;
   mecha_notify(command->evaluation, command->player, job->message);
   bool failed = tech_roll(command->player, command->mech, job->difficulty) < 0;
   if (failed) {
-    if (job->failure(&call) < 0) {
+    if (job->failure(&CALL) < 0) {
       RepairEventPayload payload = {.location = location,
                                     .player = command->player};
       repair_event_schedule_with_techtime(
@@ -359,7 +359,7 @@ repair_section_amount_job_execute(RepairCommandContext *command, int location,
                                 .payload = payload});
       return REPAIR_JOB_SCHEDULED_FAILURE;
     }
-  } else if (job->success(&call) < 0) {
+  } else if (job->success(&CALL) < 0) {
     return REPAIR_JOB_CALLBACK_ABORTED;
   }
   RepairEventPayload payload = {
@@ -383,6 +383,6 @@ int repair_part_type_difficulty(int part_type) {
 int repair_weapon_type_difficulty(int part_type) {
   int weapon = weapon_from_equipment_index(part_type);
   int critical_slots = weapon_catalogue_critical_slots(weapon);
-  float const difficulty = sqrtf((float)critical_slots * 1.5F - 1.1F);
-  return clamp_float_to_int(difficulty);
+  float const DIFFICULTY = sqrtf((float)critical_slots * 1.5F - 1.1F);
+  return clamp_float_to_int(DIFFICULTY);
 }

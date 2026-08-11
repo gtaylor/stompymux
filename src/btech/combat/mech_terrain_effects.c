@@ -73,72 +73,72 @@ static void
 mech_terrain_possibly_ignite(const TerrainWeaponEffectRequest *request) {
   Mech *mech = request->mech;
   BattleMap *map = request->map;
-  const int weapindx = request->weapon_index;
-  const int ammoMode = request->ammunition_mode;
-  const int x = request->position.x;
-  const int y = request->position.y;
-  char terrain = map_terrain_get(map, x, y);
+  const int WEAPINDX = request->weapon_index;
+  const int AMMO_MODE = request->ammunition_mode;
+  const int X = request->position.x;
+  const int Y = request->position.y;
+  char terrain = map_terrain_get(map, X, Y);
   int roll = btech_random_roll(mech_context(mech));
   int bth = 13;
 
-  if (weapon_catalogue_is_personal_combat(weapindx))
+  if (weapon_catalogue_is_personal_combat(WEAPINDX))
     return;
 
   if ((terrain != LIGHT_FOREST) && (terrain != HEAVY_FOREST))
     return;
 
-  if (weapon_catalogue_is_terrain_flamer(weapindx))
+  if (weapon_catalogue_is_terrain_flamer(WEAPINDX))
     bth = 4;
-  else if (weapon_catalogue_is_missile(weapindx) && (ammoMode & INFERNO_MODE))
+  else if (weapon_catalogue_is_missile(WEAPINDX) && (AMMO_MODE & INFERNO_MODE))
     bth = 5;
-  else if (weapon_catalogue_is_ballistic(weapindx) &&
-           (ammoMode & AC_FLECHETTE_MODE))
+  else if (weapon_catalogue_is_ballistic(WEAPINDX) &&
+           (AMMO_MODE & AC_FLECHETTE_MODE))
     bth = 5;
-  else if (weapon_catalogue_is_energy(weapindx) && weapon_can_ignite(weapindx))
+  else if (weapon_catalogue_is_energy(WEAPINDX) && weapon_can_ignite(WEAPINDX))
     bth = 5;
-  else if ((weapon_catalogue_is_missile(weapindx) ||
-            weapon_catalogue_is_ballistic(weapindx)) &&
-           weapon_can_ignite(weapindx))
+  else if ((weapon_catalogue_is_missile(WEAPINDX) ||
+            weapon_catalogue_is_ballistic(WEAPINDX)) &&
+           weapon_can_ignite(WEAPINDX))
     bth = 9;
 
   if (roll >= bth)
     fire_hex(&(TerrainHexEffectRequest){.mech = mech,
-                                        .position = {.x = x, .y = y},
+                                        .position = {.x = X, .y = Y},
                                         .intentional = request->intentional});
 }
 
 static void
 mech_terrain_possibly_clear(const TerrainWeaponEffectRequest *request) {
   Mech *mech = request->mech;
-  const int weapindx = request->weapon_index;
-  const int damage = request->damage;
-  const int x = request->position.x;
-  const int y = request->position.y;
-  int igniteBTH = 5; /* This is for intentional clearing */
-  int igniteRoll = btech_random_roll(mech_context(mech));
-  int clearRoll = btech_random_roll(mech_context(mech));
+  const int WEAPINDX = request->weapon_index;
+  const int DAMAGE = request->damage;
+  const int X = request->position.x;
+  const int Y = request->position.y;
+  int ignite_bth = 5; /* This is for intentional clearing */
+  int ignite_roll = btech_random_roll(mech_context(mech));
+  int clear_roll = btech_random_roll(mech_context(mech));
 
-  if (weapon_catalogue_is_personal_combat(weapindx))
+  if (weapon_catalogue_is_personal_combat(WEAPINDX))
     return;
 
   if (!request->intentional)
-    igniteBTH = 3;
+    ignite_bth = 3;
 
-  if (igniteRoll <= igniteBTH) {
+  if (ignite_roll <= ignite_bth) {
     mech_terrain_possibly_ignite(request);
     return;
   }
 
-  if (!weapon_can_clear(weapindx))
+  if (!weapon_can_clear(WEAPINDX))
     return;
 
-  if (clearRoll > damage)
+  if (clear_roll > DAMAGE)
     return;
 
   clear_hex(&(TerrainHexEffectRequest){.mech = mech,
-                                       .position = {.x = x, .y = y},
+                                       .position = {.x = X, .y = Y},
                                        .intentional = request->intentional});
-  mine_field_possibly_remove(mech, x, y);
+  mine_field_possibly_remove(mech, X, Y);
 }
 
 void mech_terrain_possibly_ignite_or_clear(
@@ -174,9 +174,9 @@ void mech_terrain_possibly_ignite_or_clear(
 
 void mech_terrain_hex_hit(const TerrainWeaponHitRequest *request) {
   Mech *mech = request->attacker;
-  const int weapindx = request->weapon_index;
-  const int x = request->position.x;
-  const int y = request->position.y;
+  const int WEAPINDX = request->weapon_index;
+  const int X = request->position.x;
+  const int Y = request->position.y;
   if (!mech_targets_hex_or_building(mech))
     return;
 
@@ -185,26 +185,26 @@ void mech_terrain_hex_hit(const TerrainWeaponHitRequest *request) {
   if (mech_targets_building(mech)) {
     if (request->hit)
       hit_building(&(BuildingHitRequest){.mech = mech,
-                                         .position = {.x = x, .y = y},
-                                         .weapon_index = weapindx,
+                                         .position = {.x = X, .y = Y},
+                                         .weapon_index = WEAPINDX,
                                          .damage = request->damage});
   } else {
     mech_terrain_possibly_ignite_or_clear(&(TerrainWeaponEffectRequest){
         .mech = mech,
         .position = request->position,
-        .weapon_index = weapindx,
+        .weapon_index = WEAPINDX,
         .ammunition_mode = request->ammunition_mode,
         .damage = request->damage,
         .intentional = true});
 
     if (mech_targets_hex(mech)) {
-      const TerrainStructureWeaponImpact impact = {
+      const TerrainStructureWeaponImpact IMPACT = {
           .attacker = mech,
-          .weapon_index = weapindx,
-          .position = {.x = x, .y = y},
+          .weapon_index = WEAPINDX,
+          .position = {.x = X, .y = Y},
       };
-      ice_weapon_impact_resolve(&impact);
-      bridge_weapon_impact_resolve(&impact);
+      ice_weapon_impact_resolve(&IMPACT);
+      bridge_weapon_impact_resolve(&IMPACT);
     }
   }
 }

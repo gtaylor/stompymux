@@ -12,7 +12,7 @@
 #include "mech_utils_api.h"
 #include "section_types.h"
 
-HitLocationResult mech_fasa_hit_location(Mech *mech, int hitGroup,
+HitLocationResult mech_fasa_hit_location(Mech *mech, int hit_group,
                                          HitLocationResult result) {
   int roll;
 
@@ -34,16 +34,16 @@ HitLocationResult mech_fasa_hit_location(Mech *mech, int hitGroup,
   case CLASS_BSUIT:
   case CLASS_MW:
   case CLASS_MECH:
-    return fasa_mech_hit_location(mech, hitGroup, result, roll);
+    return fasa_mech_hit_location(mech, hit_group, result, roll);
   case CLASS_VEH_GROUND:
-    return fasa_ground_hit_location(mech, hitGroup, result, roll);
+    return fasa_ground_hit_location(mech, hit_group, result, roll);
   case CLASS_AERO:
   case CLASS_DS:
   case CLASS_SPHEROID_DS:
-    return fasa_aerospace_hit_location(mech, hitGroup, result, roll);
+    return fasa_aerospace_hit_location(mech, hit_group, result, roll);
   case CLASS_VTOL:
   case CLASS_VEH_NAVAL:
-    return fasa_vtol_naval_hit_location(mech, hitGroup, result, roll);
+    return fasa_vtol_naval_hit_location(mech, hit_group, result, roll);
   }
   return hit_location_result_at(result, 0);
 }

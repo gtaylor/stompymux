@@ -25,11 +25,11 @@
 #include <string.h>
 
 static int map_signed_elevation(BattleMap *map, int x, int y) {
-  const char terrain = map_real_terrain_get(map, x, y);
-  const int elevation = (unsigned char)map_elevation_get(map, x, y);
-  return terrain == BATTLE_TERRAIN_WATER || terrain == BATTLE_TERRAIN_ICE
-             ? -elevation
-             : elevation;
+  const char TERRAIN = map_real_terrain_get(map, x, y);
+  const int ELEVATION = (unsigned char)map_elevation_get(map, x, y);
+  return TERRAIN == BATTLE_TERRAIN_WATER || TERRAIN == BATTLE_TERRAIN_ICE
+             ? -ELEVATION
+             : ELEVATION;
 }
 
 static float scaled_hex_elevation(int elevation) {
@@ -54,7 +54,7 @@ static bool parse_navigation_arguments(char *arguments[], size_t count,
 }
 
 void mech_bearing(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *tempMech = nullptr;
+  Mech *mech = (Mech *)data, *temp_mech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
@@ -79,24 +79,24 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
     if (argc == 0) {
       /* Bearing to current target */
       if (mech_target_dbref(mech) != -1) {
-        tempMech =
+        temp_mech =
             btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
-        if (tempMech) {
-          if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                              mech_position_y(tempMech),
-                              mech_range_to(mech, tempMech))) {
+        if (temp_mech) {
+          if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                              mech_position_y(temp_mech),
+                              mech_range_to(mech, temp_mech))) {
             mecha_notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
         }
       }
-      const MechTargetPositionResult target_position =
+      const MechTargetPositionResult TARGET_POSITION =
           mech_target_position(mech);
-      if (!target_position.found) {
+      if (!TARGET_POSITION.found) {
         mecha_notify(evaluation, player, "There is no default target!");
       } else {
-        x1 = target_position.position.x;
-        y1 = target_position.position.y;
+        x1 = TARGET_POSITION.position.x;
+        y1 = TARGET_POSITION.position.y;
         strcpy(buff, "Bearing to default target is: ");
       }
     } else if (argc == 2) {
@@ -113,7 +113,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
         x1 = y1 = -1.;
       } else {
         (void)snprintf(buff, sizeof(buff), "Bearing to  %d,%d is: ", ix1, iy1);
-        MapCoordToRealCoord(ix1, iy1, &x1, &y1);
+        map_coord_to_real_coord(ix1, iy1, &x1, &y1);
       }
     } else if (argc == 4) {
       if (!parse_navigation_arguments(args, 4, values)) {
@@ -134,17 +134,17 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
       } else {
         (void)snprintf(buff, sizeof(buff),
                        "Bearing to %d,%d from %d,%d is: ", ix1, iy1, ix0, iy0);
-        MapCoordToRealCoord(ix0, iy0, &x0, &y0);
-        MapCoordToRealCoord(ix1, iy1, &x1, &y1);
+        map_coord_to_real_coord(ix0, iy0, &x0, &y0);
+        map_coord_to_real_coord(ix1, iy1, &x1, &y1);
       }
     } else {
       mecha_notify(evaluation, player,
                    "Invalid number of attributes to Bearing function!");
     }
     if (x1 >= 0.0F) {
-      const int bearing = map_bearing(&(MapRealSegment){
+      const int BEARING = map_bearing(&(MapRealSegment){
           .start = {.x = x0, .y = y0}, .end = {.x = x1, .y = y1}});
-      (void)snprintf(trash, sizeof(trash), "%d degrees.", bearing);
+      (void)snprintf(trash, sizeof(trash), "%d degrees.", BEARING);
       strlcat(buff, trash, sizeof(buff));
       mecha_notify(evaluation, player, buff);
     }
@@ -154,7 +154,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
 }
 
 void mech_range(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *tempMech = nullptr;
+  Mech *mech = (Mech *)data, *temp_mech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
@@ -183,28 +183,28 @@ void mech_range(DbRef player, void *data, char *buffer) {
     if (argc == 0) {
       /* Range to current target */
       if (mech_target_dbref(mech) != -1) {
-        tempMech =
+        temp_mech =
             btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
-        if (tempMech) {
-          if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                              mech_position_y(tempMech),
-                              mech_range_to(mech, tempMech))) {
+        if (temp_mech) {
+          if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                              mech_position_y(temp_mech),
+                              mech_range_to(mech, temp_mech))) {
             mecha_notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
         }
       }
-      const MechTargetPositionResult target_position =
+      const MechTargetPositionResult TARGET_POSITION =
           mech_target_position(mech);
-      if (!target_position.found) {
+      if (!TARGET_POSITION.found) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "There is no default target!");
         return;
       }
-      x1 = target_position.position.x;
-      y1 = target_position.position.y;
-      z1 = target_position.position.z;
-      if (battle_map_is_dark(mech_map) && !tempMech)
+      x1 = TARGET_POSITION.position.x;
+      y1 = TARGET_POSITION.position.y;
+      z1 = TARGET_POSITION.position.z;
+      if (battle_map_is_dark(mech_map) && !temp_mech)
         z1 = scaled_hex_elevation(mech_position_z(mech));
       strcpy(buff, "Range to default target is: ");
     } else if (argc == 2) {
@@ -221,7 +221,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
         x1 = y1 = -1.;
       } else {
         (void)snprintf(buff, sizeof(buff), "Range to  %d,%d is: ", ix1, iy1);
-        MapCoordToRealCoord(ix1, iy1, &x1, &y1);
+        map_coord_to_real_coord(ix1, iy1, &x1, &y1);
         if (battle_map_is_dark(mech_map))
           z1 = scaled_hex_elevation(mech_position_z(mech));
         else
@@ -247,8 +247,8 @@ void mech_range(DbRef player, void *data, char *buffer) {
       } else {
         (void)snprintf(buff, sizeof(buff),
                        "Range to %d,%d from %d,%d is: ", ix1, iy1, ix0, iy0);
-        MapCoordToRealCoord(ix1, iy1, &x1, &y1);
-        MapCoordToRealCoord(ix0, iy0, &x0, &y0);
+        map_coord_to_real_coord(ix1, iy1, &x1, &y1);
+        map_coord_to_real_coord(ix0, iy0, &x0, &y0);
         if (battle_map_is_dark(mech_map))
           z1 = z0 = 0;
         else {
@@ -286,7 +286,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
 }
 
 void mech_vector(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *tempMech = nullptr;
+  Mech *mech = (Mech *)data, *temp_mech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[6];
@@ -315,27 +315,27 @@ void mech_vector(DbRef player, void *data, char *buffer) {
     if (argc == 0) {
       /* Range to current target */
       if (mech_target_dbref(mech) != -1) {
-        tempMech =
+        temp_mech =
             btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
-        if (tempMech) {
-          if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                              mech_position_y(tempMech),
-                              mech_range_to(mech, tempMech))) {
+        if (temp_mech) {
+          if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                              mech_position_y(temp_mech),
+                              mech_range_to(mech, temp_mech))) {
             mecha_notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
         }
       }
-      const MechTargetPositionResult target_position =
+      const MechTargetPositionResult TARGET_POSITION =
           mech_target_position(mech);
-      if (!target_position.found) {
+      if (!TARGET_POSITION.found) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "There is no default target!");
         return;
       }
-      x1 = target_position.position.x;
-      y1 = target_position.position.y;
-      z1 = target_position.position.z;
+      x1 = TARGET_POSITION.position.x;
+      y1 = TARGET_POSITION.position.y;
+      z1 = TARGET_POSITION.position.z;
       strcpy(buff, "Vector to default target is: ");
     } else if (argc == 2) {
       /* Range to X, Y */
@@ -351,7 +351,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         x1 = y1 = -1.;
       } else {
         (void)snprintf(buff, sizeof(buff), "Vector to  %d,%d is: ", ix1, iy1);
-        MapCoordToRealCoord(ix1, iy1, &x1, &y1);
+        map_coord_to_real_coord(ix1, iy1, &x1, &y1);
         z1 = map_scaled_elevation(mech_map, ix1, iy1);
       }
     } else if (argc == 3) {
@@ -369,7 +369,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       } else {
         (void)snprintf(buff, sizeof(buff), "Vector to  %d,%d,%d is: ", ix1, iy1,
                        iz1);
-        MapCoordToRealCoord(ix1, iy1, &x1, &y1);
+        map_coord_to_real_coord(ix1, iy1, &x1, &y1);
         z1 = scaled_hex_elevation(iz1);
       }
     } else if (argc == 4) {
@@ -392,8 +392,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       } else {
         (void)snprintf(buff, sizeof(buff),
                        "Vector to %d,%d from %d,%d is: ", ix1, iy1, ix0, iy0);
-        MapCoordToRealCoord(ix1, iy1, &x1, &y1);
-        MapCoordToRealCoord(ix0, iy0, &x0, &y0);
+        map_coord_to_real_coord(ix1, iy1, &x1, &y1);
+        map_coord_to_real_coord(ix0, iy0, &x0, &y0);
         z1 = map_scaled_elevation(mech_map, ix1, iy1);
         z0 = map_scaled_elevation(mech_map, ix0, iy0);
       }
@@ -419,8 +419,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         (void)snprintf(buff, sizeof(buff),
                        "Vector to %d,%d,%d from %d,%d,%d is: ", ix1, iy1, iz1,
                        ix0, iy0, iz0);
-        MapCoordToRealCoord(ix1, iy1, &x1, &y1);
-        MapCoordToRealCoord(ix0, iy0, &x0, &y0);
+        map_coord_to_real_coord(ix1, iy1, &x1, &y1);
+        map_coord_to_real_coord(ix0, iy0, &x0, &y0);
         z1 = scaled_hex_elevation(iz1);
         z0 = scaled_hex_elevation(iz0);
       }
@@ -450,12 +450,12 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       strlcat(buff, trash, sizeof(buff));
 
       /* bearing */
-      const int bearing = map_bearing(&(MapRealSegment){
+      const int BEARING = map_bearing(&(MapRealSegment){
           .start = {.x = x0, .y = y0}, .end = {.x = x1, .y = y1}});
       if (argc != 0 && argc != 3 && argc != 6)
-        (void)snprintf(trash, sizeof(trash), "%d degrees.", bearing);
+        (void)snprintf(trash, sizeof(trash), "%d degrees.", BEARING);
       else
-        (void)snprintf(trash, sizeof(trash), "%d degrees mark %c%d.", bearing,
+        (void)snprintf(trash, sizeof(trash), "%d degrees mark %c%d.", BEARING,
                        (z1 > z0   ? '+'
                         : z1 < z0 ? '-'
                                   : ' '),

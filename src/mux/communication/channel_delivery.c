@@ -45,7 +45,7 @@ void send_channel_v(const ChannelMessageTarget *target, const char *format,
                     va_list arguments) {
   EvaluationContext *evaluation = target->evaluation;
   const char *chan = target->channel;
-  struct channel *ch;
+  struct Channel *ch;
   char buf[LBUF_SIZE];
   char data[LBUF_SIZE];
   char *bp = buf;
@@ -69,7 +69,7 @@ void send_channel_v(const ChannelMessageTarget *target, const char *format,
 
 char *comsys_channel_from_alias(EvaluationContext *evaluation, DbRef player,
                                 char *alias) {
-  struct commac *c;
+  struct Commac *c;
   int first, last, current = 0;
   int dir;
 
@@ -107,7 +107,7 @@ struct ComHistoryView {
 };
 
 static void do_show_com(const FifoVisit *visit) {
-  chmsg *d = visit->item;
+  Chmsg *d = visit->item;
   ComHistoryView *view = visit->context;
   DbRef player = view->player;
   struct tm *t;
@@ -128,7 +128,7 @@ static void do_show_com(const FifoVisit *visit) {
 }
 
 static void do_comlast(EvaluationContext *evaluation, DbRef player,
-                       struct channel *ch) {
+                       struct Channel *ch) {
   if (!fifo_length(&ch->last_messages)) {
     notify_printf(evaluation, player, "There haven't been any messages on %s.",
                   ch->name);
@@ -140,15 +140,15 @@ static void do_comlast(EvaluationContext *evaluation, DbRef player,
 
 void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
                                   char *arg1, char *arg2) {
-  struct channel *ch;
-  struct comuser *user;
+  struct Channel *ch;
+  struct Comuser *user;
 
   if ((strlen(arg1) + strlen(arg2)) > LBUF_SIZE / 2) {
-    const size_t name_length = strlen(arg1);
-    const size_t limit =
-        name_length < LBUF_SIZE / 2 ? LBUF_SIZE / 2 - name_length : 0;
+    const size_t NAME_LENGTH = strlen(arg1);
+    const size_t LIMIT =
+        NAME_LENGTH < LBUF_SIZE / 2 ? LBUF_SIZE / 2 - NAME_LENGTH : 0;
 
-    *(char *)checked_storage_at(arg2, LBUF_SIZE, sizeof(char), limit) = '\0';
+    *(char *)checked_storage_at(arg2, LBUF_SIZE, sizeof(char), LIMIT) = '\0';
   }
   if (!*arg2) {
     raw_notify(evaluation, player, "No message.");
@@ -225,9 +225,9 @@ void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
 }
 
 void comsys_send_channel_message(EvaluationContext *evaluation,
-                                 struct channel *ch, char *mess) {
-  struct comuser *user;
-  chmsg *c;
+                                 struct Channel *ch, char *mess) {
+  struct Comuser *user;
+  Chmsg *c;
 
   ch->num_messages++;
   for (user = ch->on_users; user; user = user->on_next) {
@@ -260,10 +260,10 @@ void comsys_send_channel_message(EvaluationContext *evaluation,
   fifo_push(&ch->last_messages, c);
 }
 
-void comsys_channel_printf(EvaluationContext *evaluation, struct channel *ch,
+void comsys_channel_printf(EvaluationContext *evaluation, struct Channel *ch,
                            const char *messfmt, ...) {
-  struct comuser *user;
-  chmsg *c;
+  struct Comuser *user;
+  Chmsg *c;
   va_list ap;
   char buffer[LBUF_SIZE];
   memset(buffer, 0, LBUF_SIZE);

@@ -33,9 +33,9 @@
 #include "registry_api.h"
 
 static inline int map_fire_speed(const BattleMap *map) {
-  return MAX(20, 60 - map->windspeed);
+  return max(20, 60 - map->windspeed);
 }
 
-static const char *const map_types[] = {"FIRE",     "SMOKE", "DECO",  "MINE",
+static const char *const MAP_TYPES[] = {"FIRE",     "SMOKE", "DECO",  "MINE",
                                         "BUILDING", "LEAVE", "ENTRA", "LINKED",
                                         "TBITS",    "BLZ",   nullptr};

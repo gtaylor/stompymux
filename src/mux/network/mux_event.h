@@ -51,19 +51,18 @@ struct MuxEvent {
   MuxEventScheduler *scheduler;
 };
 
-typedef struct uv_loop_s uv_loop_t;
+typedef struct uv_loop_s UvLoopT;
 struct MuxEventScheduler {
   MuxEvent **first_by_type;
   MuxEvent *events;
   MuxEvent *free_events;
   int last_type;
   int tick;
-  uv_loop_t *loop;
+  UvLoopT *loop;
 };
 
 void mux_event_scheduler_initialize(MuxEventScheduler *scheduler);
-void mux_event_scheduler_set_loop(MuxEventScheduler *scheduler,
-                                  uv_loop_t *loop);
+void mux_event_scheduler_set_loop(MuxEventScheduler *scheduler, UvLoopT *loop);
 void mux_event_scheduler_destroy(MuxEventScheduler *scheduler);
 /* Macro for handling simple lists.
    Where it applies: a = main list, b = thing to be added, c = next

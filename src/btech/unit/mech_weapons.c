@@ -15,12 +15,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern const int num_def_weapons;
+extern const int DEFAULT_WEAPON_COUNT;
 
 static const struct WeaponDefinition *weapon_catalogue_entry(int weapon_index) {
   if (weapon_index < 0)
     abort();
-  return checked_storage_at_const(MechWeapons, (size_t)num_def_weapons,
+  return checked_storage_at_const(MECH_WEAPONS, (size_t)DEFAULT_WEAPON_COUNT,
                                   sizeof(struct WeaponDefinition),
                                   (size_t)weapon_index);
 }
@@ -57,14 +57,14 @@ static bool weapon_critical_count_is_valid(Mech *mech, int weapon_index,
                                            int *critical_count, bool report) {
   if (*critical_count == 0)
     return true;
-  const int expected = GetWeaponCrits(mech, weapon_index);
-  if (*critical_count != expected && expected < 9) {
+  const int EXPECTED = get_weapon_crits(mech, weapon_index);
+  if (*critical_count != EXPECTED && EXPECTED < 9) {
     if (report)
       btech_channel_send(
           mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf("Error in the numcriticals for weapon on #%ld! "
                   "(Should be: %d, is: %d)",
-                  mech->mynum, expected, *critical_count));
+                  mech->mynum, EXPECTED, *critical_count));
     return false;
   }
   *critical_count = 0;
@@ -342,9 +342,9 @@ int weapon_catalogue_effective_water_range(int weapon_index, bool extended) {
 }
 
 /* ASSERTION: Weapons must be located next to each other in criticals. */
-int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
-                         unsigned char *weapdataarray, int *critical,
-                         int whine) {
+int find_weapons_advanced(Mech *mech, int index, unsigned char *weaparray,
+                          unsigned char *weapdataarray, int *critical,
+                          int whine) {
   int loop;
   int weapcount = 0;
   int temp, data, lastweap = -1;
@@ -367,7 +367,7 @@ int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
         continue;
       }
       if (!num_crits || temp != lastweap ||
-          (num_crits == GetWeaponCrits(mech, temp))) {
+          (num_crits == get_weapon_crits(mech, temp))) {
         if (!weapon_critical_count_is_valid(mech, lastweap, &num_crits, whine))
           return -1;
         *weapon_byte_slot(weaparray, weapcount) =
@@ -390,9 +390,9 @@ int FindWeapons_Advanced(Mech *mech, int index, unsigned char *weaparray,
   return (weapcount);
 }
 
-int FindAmmunition(Mech *mech, unsigned char *weaparray,
-                   unsigned short *ammoarray, unsigned short *ammomaxarray,
-                   unsigned int *modearray, int returnall) {
+int find_ammunition(Mech *mech, unsigned char *weaparray,
+                    unsigned short *ammoarray, unsigned short *ammomaxarray,
+                    unsigned int *modearray, int returnall) {
   int loop;
   int weapcount = 0;
   int temp, data;
@@ -416,7 +416,7 @@ int FindAmmunition(Mech *mech, unsigned char *weaparray,
                   *weapon_short_slot(ammoarray, i) + data);
             *weapon_short_slot(ammomaxarray, i) = clamp_int_to_unsigned_short(
                 *weapon_short_slot(ammomaxarray, i) +
-                FullAmmo(mech, index, loop));
+                full_ammo(mech, index, loop));
             duplicate = 1;
           }
         }
@@ -432,7 +432,7 @@ int FindAmmunition(Mech *mech, unsigned char *weaparray,
             *weapon_short_slot(ammoarray, weapcount) = 0;
 
           *weapon_short_slot(ammomaxarray, weapcount) =
-              clamp_int_to_unsigned_short(FullAmmo(mech, index, loop));
+              clamp_int_to_unsigned_short(full_ammo(mech, index, loop));
           *weapon_mode_slot(modearray, weapcount) = mode;
 
           weapcount++;
@@ -458,7 +458,7 @@ int FindAmmunition(Mech *mech, unsigned char *weaparray,
   return (weapcount);
 }
 
-int FindLegHeatSinks(Mech *mech) {
+int find_leg_heat_sinks(Mech *mech) {
   int loop;
   int heatsinks = 0;
 
@@ -510,7 +510,7 @@ weapon_number_find(const WeaponNumberLookupRequest *request) {
 
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     num_weaps =
-        FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
+        find_weapons_advanced(mech, loop, weaparray, weapdata, critical, 1);
 
     if (num_weaps <= 0)
       continue;
@@ -559,7 +559,7 @@ weapon_number_find(const WeaponNumberLookupRequest *request) {
   return (WeaponNumberLookupResult){.value = -1};
 }
 
-int FindWeaponIndex(Mech *mech, int number) {
+int find_weapon_index(Mech *mech, int number) {
   int loop;
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
@@ -572,7 +572,7 @@ int FindWeaponIndex(Mech *mech, int number) {
     return -1; /* Anti-crash */
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     num_weaps =
-        FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
+        find_weapons_advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (num_weaps <= 0)
       continue;
     if (number < running_sum + num_weaps) {
@@ -585,7 +585,7 @@ int FindWeaponIndex(Mech *mech, int number) {
   return -1;
 }
 
-int FullAmmo(const Mech *mech, int loc, int pos) {
+int full_ammo(const Mech *mech, int loc, int pos) {
   int baseammo;
   int overage;
 
@@ -614,19 +614,20 @@ int FullAmmo(const Mech *mech, int loc, int pos) {
   return baseammo;
 }
 
-int findAmmoInSection(Mech *mech, int section, int type, int nogof, int gof) {
-  int wIter;
+int find_ammo_in_section(Mech *mech, int section, int type, int nogof,
+                         int gof) {
+  int w_iter;
 
   /* Can't use LBX ammo as normal, but can use Narc and Artemis as normal */
-  for (wIter = 0; wIter < NUM_CRITICALS; wIter++) {
-    if (mech_critical_part_type(mech, section, wIter) == type &&
-        !mech_critical_is_nonfunctional(mech, section, wIter) &&
-        (!nogof || !(mech_critical_ammo_mode(mech, section, wIter) & nogof)) &&
-        (!gof || (mech_critical_ammo_mode(mech, section, wIter) & gof))) {
+  for (w_iter = 0; w_iter < NUM_CRITICALS; w_iter++) {
+    if (mech_critical_part_type(mech, section, w_iter) == type &&
+        !mech_critical_is_nonfunctional(mech, section, w_iter) &&
+        (!nogof || !(mech_critical_ammo_mode(mech, section, w_iter) & nogof)) &&
+        (!gof || (mech_critical_ammo_mode(mech, section, w_iter) & gof))) {
 
-      if (!mech_critical_is_nonfunctional(mech, section, wIter) &&
-          mech_critical_data(mech, section, wIter) > 0)
-        return wIter;
+      if (!mech_critical_is_nonfunctional(mech, section, w_iter) &&
+          mech_critical_data(mech, section, w_iter) > 0)
+        return w_iter;
     }
   }
 
@@ -636,66 +637,68 @@ int findAmmoInSection(Mech *mech, int section, int type, int nogof, int gof) {
 CriticalSlotLookupResult
 ammunition_find(const AmmunitionLookupRequest *request) {
   Mech *mech = request->mech;
-  int weapSection = request->weapon.section;
-  int weapCritical = request->weapon.critical;
+  int weap_section = request->weapon.section;
+  int weap_critical = request->weapon.critical;
   int weapindx = request->weapon_index;
   int start = request->start_section;
   int nogof = request->forbidden_modes;
   int gof = request->required_modes;
   int loop;
-  int foundSlot;
+  int found_slot;
   int desired;
-  int wCritType = 0;
-  int wWeapSize = 0;
-  int wFirstCrit = 0;
-  int wDesiredLoc = -1;
+  int w_crit_type = 0;
+  int w_weap_size = 0;
+  int w_first_crit = 0;
+  int w_desired_loc = -1;
 
   desired = ammunition_equipment_index(weapindx);
 
   /* The data on the desired location */
   if (request->use_weapon_preference) {
-    wCritType = mech_critical_part_type(mech, weapSection, weapCritical);
-    wWeapSize = GetWeaponCrits(mech, weapon_from_equipment_index(wCritType));
-    wFirstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+    w_crit_type = mech_critical_part_type(mech, weap_section, weap_critical);
+    w_weap_size =
+        get_weapon_crits(mech, weapon_from_equipment_index(w_crit_type));
+    w_first_crit = mech_weapon_first_critical(&(WeaponCriticalSearch){
         .mech = mech,
-        .weapon = {.section = weapSection, .critical = weapCritical},
+        .weapon = {.section = weap_section, .critical = weap_critical},
         .start_critical = 0,
-        .part_type = wCritType,
-        .maximum_criticals = wWeapSize,
+        .part_type = w_crit_type,
+        .maximum_criticals = w_weap_size,
     });
 
-    wDesiredLoc =
-        mech_critical_desired_ammo_section(mech, weapSection, wFirstCrit);
+    w_desired_loc =
+        mech_critical_desired_ammo_section(mech, weap_section, w_first_crit);
 
-    if (wDesiredLoc >= 0) {
-      foundSlot = findAmmoInSection(mech, wDesiredLoc, desired, nogof, gof);
+    if (w_desired_loc >= 0) {
+      found_slot =
+          find_ammo_in_section(mech, w_desired_loc, desired, nogof, gof);
 
-      if (foundSlot >= 0) {
+      if (found_slot >= 0) {
         return (CriticalSlotLookupResult){
             .found = true,
-            .slot = {.section = wDesiredLoc, .critical = foundSlot}};
+            .slot = {.section = w_desired_loc, .critical = found_slot}};
       }
     }
   }
 
   /* Now lets search the current section */
-  foundSlot = findAmmoInSection(mech, start, desired, nogof, gof);
+  found_slot = find_ammo_in_section(mech, start, desired, nogof, gof);
 
-  if (foundSlot >= 0) {
+  if (found_slot >= 0) {
     return (CriticalSlotLookupResult){
-        .found = true, .slot = {.section = start, .critical = foundSlot}};
+        .found = true, .slot = {.section = start, .critical = found_slot}};
   }
 
   /* If all else fails, start hunting for ammo */
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    if ((loop == start) || (loop == wDesiredLoc))
+    if ((loop == start) || (loop == w_desired_loc))
       continue;
 
-    foundSlot = findAmmoInSection(mech, loop, desired, nogof, gof);
+    found_slot = find_ammo_in_section(mech, loop, desired, nogof, gof);
 
-    if (foundSlot >= 0) {
+    if (found_slot >= 0) {
       return (CriticalSlotLookupResult){
-          .found = true, .slot = {.section = loop, .critical = foundSlot}};
+          .found = true, .slot = {.section = loop, .critical = found_slot}};
     }
   }
 

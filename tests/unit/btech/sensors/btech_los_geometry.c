@@ -34,7 +34,7 @@ static char terrain[TEST_HEIGHT][TEST_WIDTH];
 static char real_terrain[TEST_HEIGHT][TEST_WIDTH];
 static char elevation[TEST_HEIGHT][TEST_WIDTH];
 
-int BOUNDED(int lower, int value, int upper);
+int bounded(int lower, int value, int upper);
 
 static char *cell(char values[TEST_HEIGHT][TEST_WIDTH], int x, int y) {
   char (*row)[TEST_WIDTH] =
@@ -85,7 +85,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
   return mech->condition;
 }
 
-int BOUNDED(int lower, int value, int upper) {
+int bounded(int lower, int value, int upper) {
   return value < lower ? lower : value > upper ? upper : value;
 }
 

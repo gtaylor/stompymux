@@ -51,13 +51,13 @@ static const PersonalArmorDefinition *personal_armor_at(size_t index) {
 int personal_combat_damage_to_unit(
     const PersonalCombatDamageConversion *conversion) {
   Mech *target = conversion->target;
-  const int weapindx = conversion->weapon_index;
+  const int WEAPINDX = conversion->weapon_index;
   int dam = conversion->damage;
   int i = 0;
 
   if (mech_class(target) == CLASS_MW)
     return dam;
-  if (weapindx < 0 || !weapon_catalogue_is_personal_combat(weapindx))
+  if (WEAPINDX < 0 || !weapon_catalogue_is_personal_combat(WEAPINDX))
     return dam;
   i = dam / 100;
   dam = dam % 100;
@@ -69,16 +69,16 @@ int personal_combat_damage_to_unit(
 int unit_damage_to_personal_combat(
     const PersonalCombatDamageConversion *conversion) {
   Mech *target = conversion->target;
-  const int weapindx = conversion->weapon_index;
-  const int dam = conversion->damage;
+  const int WEAPINDX = conversion->weapon_index;
+  const int DAM = conversion->damage;
   int i = 0, j;
 
-  if (weapindx >= 0 && weapon_catalogue_is_personal_combat(weapindx))
-    return dam;
+  if (WEAPINDX >= 0 && weapon_catalogue_is_personal_combat(WEAPINDX))
+    return DAM;
   if (mech_class(target) != CLASS_MW)
-    return dam;
+    return DAM;
   /* Target is MW _and_ we have yet to convert damage */
-  for (j = 0; j < dam; j++)
+  for (j = 0; j < DAM; j++)
     i += btech_random_range_int(mech_context(target), 80, 130);
   return i;
 }
@@ -98,25 +98,25 @@ static int pcombat_hitloc(int loc) {
 
 int personal_armor_reduce_damage(const PersonalArmorDamageRequest *request) {
   Mech *wounded = request->wounded;
-  const int cause = request->cause;
+  const int CAUSE = request->cause;
   int hitloc = request->hit_location;
-  int intDamage = request->damage;
-  const int id = request->damage_identifier;
+  int int_damage = request->damage;
+  const int ID = request->damage_identifier;
   size_t armor_index;
   int block;
   int noblock = 0;
 
-  if (id != -2)
-    intDamage =
-        (intDamage * btech_random_range_int(mech_context(wounded), 75, 125)) /
+  if (ID != -2)
+    int_damage =
+        (int_damage * btech_random_range_int(mech_context(wounded), 75, 125)) /
         100;
   if (mech_class(wounded) != CLASS_MW)
-    return intDamage;
+    return int_damage;
   hitloc = pcombat_hitloc(hitloc);
   if (!mech_section_armor(wounded, hitloc))
-    return intDamage;
-  const size_t armor_count = sizeof(PERSONAL_ARMOR) / sizeof(*PERSONAL_ARMOR);
-  for (armor_index = 0; armor_index < armor_count; armor_index++) {
+    return int_damage;
+  const size_t ARMOR_COUNT = sizeof(PERSONAL_ARMOR) / sizeof(*PERSONAL_ARMOR);
+  for (armor_index = 0; armor_index < ARMOR_COUNT; armor_index++) {
     const PersonalArmorDefinition *candidate = personal_armor_at(armor_index);
     if (candidate->name == nullptr ||
         (candidate->loc == hitloc &&
@@ -125,25 +125,25 @@ int personal_armor_reduce_damage(const PersonalArmorDamageRequest *request) {
   }
   if (btech_random_range_int(mech_context(wounded), 1, 5) == 1) {
     if (btech_random_range_int(mech_context(wounded), 1, 2) == 1)
-      intDamage = intDamage * 2;
+      int_damage = int_damage * 2;
     else
       noblock = 1;
   } else if (btech_random_range_int(mech_context(wounded), 1, 10) == 2)
-    intDamage = intDamage / 2;
+    int_damage = int_damage / 2;
   const PersonalArmorDefinition *armor = personal_armor_at(armor_index);
   if (!armor->name)
-    return intDamage;
-  const int personal_combat_flags =
-      cause >= 0 ? weapon_catalogue_personal_combat_flags(cause) : 0;
-  if (cause >= 0 && !(armor->deft & personal_combat_flags) &&
-      personal_combat_flags)
-    return intDamage;
-  block = BOUNDED(
+    return int_damage;
+  const int PERSONAL_COMBAT_FLAGS =
+      CAUSE >= 0 ? weapon_catalogue_personal_combat_flags(CAUSE) : 0;
+  if (CAUSE >= 0 && !(armor->deft & PERSONAL_COMBAT_FLAGS) &&
+      PERSONAL_COMBAT_FLAGS)
+    return int_damage;
+  block = bounded(
       btech_random_range_int(mech_context(wounded), 1, (armor->defmin / 2)),
-      abs(intDamage * armor->defpros / 100), armor->defmax / 2);
+      abs(int_damage * armor->defpros / 100), armor->defmax / 2);
   if (noblock)
     block = 0;
-  if (abs(intDamage) < block) {
+  if (abs(int_damage) < block) {
     mech_printf(wounded, MECHALL, "Your armor blocks all of the damage!");
     return 0;
   }
@@ -151,5 +151,5 @@ int personal_armor_reduce_damage(const PersonalArmorDamageRequest *request) {
     mech_printf(wounded, MECHALL, "Armor blocks %d points of the damage!",
                 block);
   }
-  return (abs(intDamage) - block) * intDamage / abs(intDamage);
+  return (abs(int_damage) - block) * int_damage / abs(int_damage);
 }

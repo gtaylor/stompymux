@@ -26,7 +26,7 @@ bool styled_append_string(char *output, size_t output_size, size_t *used,
 bool styled_append_utf8_codepoint(char *output, size_t output_size,
                                   size_t *used, const char *value,
                                   size_t *consumed) {
-  static const char replacement[] = "\xef\xbf\xbd";
+  static const char REPLACEMENT[] = "\xef\xbf\xbd";
   Utf8DecodeResult decoded;
   size_t available = strnlen(value, 4);
 
@@ -36,8 +36,8 @@ bool styled_append_utf8_codepoint(char *output, size_t output_size,
                                decoded.length);
   }
   *consumed = 1;
-  return styled_append_bytes(output, output_size, used, replacement,
-                             sizeof(replacement) - 1);
+  return styled_append_bytes(output, output_size, used, REPLACEMENT,
+                             sizeof(REPLACEMENT) - 1);
 }
 
 void styled_set_error(char *error, size_t error_size, const char *message) {

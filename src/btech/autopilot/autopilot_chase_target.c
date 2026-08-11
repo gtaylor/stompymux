@@ -133,7 +133,7 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
           fx = projected.x;
           fy = projected.y;
 
-          RealCoordToMapCoord(&generated_x, &generated_y, fx, fy);
+          real_coord_to_map_coord(&generated_x, &generated_y, fx, fy);
           x = generated_x;
           y = generated_y;
 
@@ -153,7 +153,7 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
               (mech_current_speed(target) < 0.5F)) {
 
             /* Get his bearing and face him */
-            MapCoordToRealCoord(x, y, &fx, &fy);
+            map_coord_to_real_coord(x, y, &fx, &fy);
 
             /* If we're not facing him, turn towards him */
             if (mech_desired_heading_degrees(mech) !=

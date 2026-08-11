@@ -71,8 +71,8 @@ int tech_proper_internal_part(const Mech *mech) {
 int game_lag(BtechContext *context) {
   if (!context->events->tick)
     return 0;
-  time_t const elapsed = context->clock->now - context->process_start_time;
-  return clamp_intptr_to_int(100 * (intptr_t)elapsed / context->events->tick -
+  time_t const ELAPSED = context->clock->now - context->process_start_time;
+  return clamp_intptr_to_int(100 * (intptr_t)ELAPSED / context->events->tick -
                              100);
 }
 
@@ -109,11 +109,11 @@ int tech_roll(DbRef player, Mech *mech, int diff) {
   BtechContext *context = mech_context(mech);
   int s;
   int succ;
-  int r = (HasBoolAdvantage(context, player, "tech_aptitude")
+  int r = (has_bool_advantage(context, player, "tech_aptitude")
                ? char_rollsaving(context)
                : btech_random_roll(context));
 
-  s = FindTechSkill(player, mech);
+  s = find_tech_skill(player, mech);
   s += diff;
   succ = r >= s;
   if (is_wizard(btech_context_database(context), player)) {
@@ -126,8 +126,8 @@ int tech_roll(DbRef player, Mech *mech, int diff) {
   }
   if (succ &&
       is_in_character(btech_context_database(context), mech_dbref(mech)))
-    AccumulateTechXP(context, player, mech,
-                     BOUNDED(1, s - 7, MAX(2, 1 + diff)));
+    accumulate_tech_xp(context, player, mech,
+                       bounded(1, s - 7, max(2, 1 + diff)));
   return (r - s);
 }
 
@@ -135,7 +135,7 @@ int tech_weapon_roll(DbRef player, Mech *mech, int diff) {
   BtechContext *context = mech_context(mech);
   int s;
   int succ;
-  int r = (HasBoolAdvantage(context, player, "tech_aptitude")
+  int r = (has_bool_advantage(context, player, "tech_aptitude")
                ? char_rollsaving(context)
                : btech_random_roll(context));
 
@@ -152,8 +152,8 @@ int tech_weapon_roll(DbRef player, Mech *mech, int diff) {
   }
   if (succ &&
       is_in_character(btech_context_database(context), mech_dbref(mech)))
-    AccumulateTechWeaponsXP(context, player, mech,
-                            BOUNDED(1, s - 7, MAX(2, 1 + diff)));
+    accumulate_tech_weapons_xp(context, player, mech,
+                               bounded(1, s - 7, max(2, 1 + diff)));
   return (r - s);
 }
 
@@ -168,14 +168,14 @@ typedef struct TechStatusRequest {
 
 static void tech_status(const TechStatusRequest *request) {
   BtechContext *context = request->context;
-  const DbRef player = request->player;
+  const DbRef PLAYER = request->player;
   time_t dat = request->completion;
   char buf[MBUF_SIZE] = {0};
   char *olds;
   int un;
 
   if (dat <= 0) {
-    olds = btech_attribute_read(context->database, player, A_TECHTIME,
+    olds = btech_attribute_read(context->database, PLAYER, A_TECHTIME,
                                 (char[LBUF_SIZE]){0});
     if (olds) {
       if (!parse_time_checked(olds, &dat))
@@ -186,7 +186,7 @@ static void tech_status(const TechStatusRequest *request) {
       dat = context->clock->now;
   }
   if (dat <= context->clock->now)
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "You have no jobs pending!");
   else {
     un = clamp_intptr_to_int(
@@ -204,15 +204,15 @@ static void tech_status(const TechStatusRequest *request) {
                      " and you're ready to do at least %d more %s%s of work.",
                      un, TECH_UNIT, un == 1 ? "" : "s");
     }
-    mecha_notify(btech_context_evaluation(context), player, buf);
+    mecha_notify(btech_context_evaluation(context), PLAYER, buf);
   }
 }
 
 int tech_addtechtime(const TechTimeAddition *addition) {
   BtechContext *context = addition->context;
-  const DbRef player = addition->player;
+  const DbRef PLAYER = addition->player;
   time_t old;
-  char *olds = btech_attribute_read(context->database, player, A_TECHTIME,
+  char *olds = btech_attribute_read(context->database, PLAYER, A_TECHTIME,
                                     (char[LBUF_SIZE]){0});
 
   if (olds) {
@@ -223,9 +223,9 @@ int tech_addtechtime(const TechTimeAddition *addition) {
   } else
     old = context->clock->now;
   old += (time_t)(addition->units * TECH_TICK);
-  silly_atr_set_in(context->database, player, A_TECHTIME, tprintf("%ld", old));
+  silly_atr_set_in(context->database, PLAYER, A_TECHTIME, tprintf("%ld", old));
   tech_status(&(TechStatusRequest){
-      .context = context, .player = player, .completion = old});
+      .context = context, .player = PLAYER, .completion = old});
   return clamp_intptr_to_int((intptr_t)(old - context->clock->now));
 }
 
@@ -252,8 +252,8 @@ TechPartParseResult tech_part_parse(const TechPartParseRequest *request) {
       isrear = 8;
     }
   }
-  result.location = ArmorSectionFromString(mech_class(mech),
-                                           mech_movement_type(mech), args[0]);
+  result.location = armor_section_from_string(
+      mech_class(mech), mech_movement_type(mech), args[0]);
   if (result.location < 0)
     return (TechPartParseResult){.status = TECH_PART_PARSE_INVALID};
   if (request->allow_rear)
@@ -284,8 +284,8 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
   if (argc == (2 + (brand != NULL)) ||
       (brand && argc == 2 && parse_int_checked(args[1], &position) &&
        position != 0)) {
-    *loc = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                  args[0]);
+    *loc = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                     args[0]);
     if (*loc < 0)
       return -1;
     if (!parse_int_checked(args[1], &l))

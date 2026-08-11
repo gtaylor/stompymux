@@ -109,23 +109,23 @@ typedef struct CharacterVariableRetrieval {
 static void
 retrieve_variable_values(const CharacterVariableRetrieval *request) {
   BtechContext *context = request->context;
-  const DbRef player = request->player;
-  const int modes = request->modes;
+  const DbRef PLAYER = request->player;
+  const int MODES = request->modes;
   PSTATS *stats = request->stats;
-  if (modes & VALUES_ADVS)
+  if (MODES & VALUES_ADVS)
     character_stats_value_set(&(CharacterStatsValueChange){
         .stats = stats, .code = LIVES_NUMBER, .value = 1});
   for (size_t index = 0;
-       index < character_state_value_count(context->database, player);
+       index < character_state_value_count(context->database, PLAYER);
        index++) {
     CharacterStateEntryResult result =
         character_state_value_entry(&(CharacterStateEntryRequest){
-            .database = context->database, .player = player, .index = index});
+            .database = context->database, .player = PLAYER, .index = index});
     if (!result.found)
       continue;
     CharacterValueStateView entry = result.entry;
     int code = char_getvaluecode(context, entry.name);
-    if (code < 0 || !selected_variable_value(code, modes))
+    if (code < 0 || !selected_variable_value(code, MODES))
       continue;
     character_stats_value_set(&(CharacterStatsValueChange){
         .stats = stats, .code = code, .value = entry.value});

@@ -30,14 +30,14 @@ BtechScriptResult fun_btgetpartcost(BtechScriptCall *call) {
                      "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
-  const PartMatchResult match = cost_part_match(call);
-  if (!match.found) {
+  const PartMatchResult MATCH = cost_part_match(call);
+  if (!MATCH.found) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 INVALID PART NAME");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%llu",
-                   btech_part_cost_get(call->evaluation->btech, match.part.id));
+                   btech_part_cost_get(call->evaluation->btech, MATCH.part.id));
 #else
   safe_tprintf_str(call->output.buffer, &call->output.cursor,
                    "#-1 NO ECONDB SUPPORT");
@@ -52,8 +52,8 @@ BtechScriptResult fun_btsetpartcost(BtechScriptCall *call) {
                      "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  const PartMatchResult match = cost_part_match(call);
-  if (!match.found) {
+  const PartMatchResult MATCH = cost_part_match(call);
+  if (!MATCH.found) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 INVALID PART NAME");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
@@ -62,14 +62,14 @@ BtechScriptResult fun_btsetpartcost(BtechScriptCall *call) {
       call->arguments.values, (int)call->arguments.count, 1);
   char *cost_end = nullptr;
   errno = 0;
-  const unsigned long long cost = strtoull(cost_text, &cost_end, 10);
+  const unsigned long long COST = strtoull(cost_text, &cost_end, 10);
   if (errno == ERANGE || cost_end == cost_text || *cost_end != '\0') {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 COST ERROR");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  btech_part_cost_set(call->evaluation->btech, match.part.id, cost);
-  safe_tprintf_str(call->output.buffer, &call->output.cursor, "%llu", cost);
+  btech_part_cost_set(call->evaluation->btech, MATCH.part.id, COST);
+  safe_tprintf_str(call->output.buffer, &call->output.cursor, "%llu", COST);
 #else
   safe_tprintf_str(call->output.buffer, &call->output.cursor,
                    "#-1 NO ECONDB SUPPORT");

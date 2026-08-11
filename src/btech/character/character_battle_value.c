@@ -92,7 +92,7 @@ static int bth_modifier_value(int bth) {
   }
 }
 
-int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
+int has_bool_advantage(BtechContext *context, DbRef player, const char *name) {
   PSTATS stats, *s = &stats;
   char buf[SBUF_SIZE];
 
@@ -106,7 +106,7 @@ int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
 }
 
 static int ton_value(const Mech *mech) {
-  return MAX(1, mech_tonnage(mech) /
+  return max(1, mech_tonnage(mech) /
                     ((mech_class(mech) != CLASS_MECH) ? 2 : 1) /
                     ((mech_movement_type(mech) == MOVE_NONE) ? 2 : 1));
 }
@@ -131,7 +131,7 @@ static int new_move_value(const Mech *mech) {
   return (int)(mech_maximum_speed(mech) / MP1);
 }
 
-static double getPilotBVMod(Mech *mech, int weapindx) {
+static double get_pilot_bv_mod(Mech *mech, int weapindx) {
   /*
    * What we do is we get the mod as if we had a 0+ piloting (baseline)
    * for the gun skill we want. Each '+' above zero subtracts .05 from
@@ -142,23 +142,23 @@ static double getPilotBVMod(Mech *mech, int weapindx) {
    * (that's <gun skill>+ <pilot skill>+)
    */
 
-  int myGSkill = FindPilotGunnery(mech, weapindx);
-  int myPSkill = FindPilotPiloting(mech);
-  double baseMod = 0.0;
+  int my_g_skill = find_pilot_gunnery(mech, weapindx);
+  int my_p_skill = find_pilot_piloting(mech);
+  double base_mod = 0.0;
 
   /* First we check if we have a totally off the wall GSkill, i.e., below
    * 0 or above 7.
    */
-  if (myGSkill < 0) {
-    const int gunnery_penalty = abs(myGSkill);
-    baseMod = zero_pilot_base_skill(0) + gunnery_penalty * 0.20;
-  } else if (myGSkill > 7) {
-    baseMod = zero_pilot_base_skill(7) - myGSkill * 0.10;
+  if (my_g_skill < 0) {
+    const int GUNNERY_PENALTY = abs(my_g_skill);
+    base_mod = zero_pilot_base_skill(0) + GUNNERY_PENALTY * 0.20;
+  } else if (my_g_skill > 7) {
+    base_mod = zero_pilot_base_skill(7) - my_g_skill * 0.10;
   } else {
-    baseMod = zero_pilot_base_skill(myGSkill);
+    base_mod = zero_pilot_base_skill(my_g_skill);
   }
 
-  return baseMod - myPSkill * 0.05;
+  return base_mod - my_p_skill * 0.05;
 }
 
 /*
@@ -168,19 +168,19 @@ static void
 legacy_gunnery_experience_award(const GunneryExperienceAward *award);
 
 void gunnery_experience_award(const GunneryExperienceAward *award) {
-  const DbRef pilot = award->pilot;
+  const DbRef PILOT = award->pilot;
   Mech *attacker = award->attacker;
   Mech *wounded = award->target;
-  const int damage = award->damage;
+  const int DAMAGE = award->damage;
   double multiplier = award->multiplier;
-  const int weapindx = award->weapon_index;
-  const int bth = award->base_to_hit;
+  const int WEAPINDX = award->weapon_index;
+  const int BTH = award->base_to_hit;
   BtechContext *context = mech_context(attacker);
   int xp, my_speed, th_speed;
   double my_battle_value;
   double their_battle_value;
-  double myPilotBVMod = 1.0, theirPilotBVMod = 1.0;
-  double weapTypeMod;
+  double my_pilot_bv_mod = 1.0, their_pilot_bv_mod = 1.0;
+  double weap_type_mod;
   const char *skname;
   char buf[MBUF_SIZE];
   int damagemod;
@@ -190,7 +190,7 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
   int i;
   int j = NUM_SECTIONS;
 
-  weapTypeMod = 1.0;
+  weap_type_mod = 1.0;
 
   if (mech_context(attacker)->configuration->btech_oldxpsystem) {
     legacy_gunnery_experience_award(award);
@@ -215,7 +215,7 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
   if (!mech_has_active_gunner(attacker))
     return;
 
-  if (mech_gunner_dbref(attacker) != pilot)
+  if (mech_gunner_dbref(attacker) != PILOT)
     return;
 
   /* No xp for shooting yourself */
@@ -235,7 +235,7 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
     return;
 
   /* No skill to match the weapon we're shooting with? */
-  skname = FindGunnerySkillName(attacker, weapindx);
+  skname = find_gunnery_skill_name(attacker, WEAPINDX);
   if (!skname)
     return;
 
@@ -244,69 +244,69 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
     return;
 
   /* bth to high so no way to hit */
-  if (!(bth <= 12))
+  if (!(BTH <= 12))
     return;
 
   multiplier *= mech_context(attacker)->configuration->btech_xp_modifier;
 
   if (mech_context(attacker)->configuration->btech_xp_bthmod) {
-    if (!(bth >= 3 && bth <= 12)) {
+    if (!(BTH >= 3 && BTH <= 12)) {
       if (mech_context(attacker)->configuration->btech_noisy_xpgain)
         btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
-                           tprintf("#%ld in #%ld 1 noxp #%ld", pilot,
+                           tprintf("#%ld in #%ld 1 noxp #%ld", PILOT,
                                    mech_dbref(attacker), mech_dbref(wounded)));
       return; /* sure hits aren't interesting */
     }
-    multiplier = 2.0 * multiplier * bth_modifier_value(bth) / 36.0;
+    multiplier = 2.0 * multiplier * bth_modifier_value(BTH) / 36.0;
   }
 
   /* Need to do a BV mod between the mechs */
-  const int attacker_battle_value = mech_battle_value(attacker);
-  const int wounded_battle_value = mech_battle_value(wounded);
-  my_battle_value = attacker_battle_value;
-  their_battle_value = wounded_battle_value;
+  const int ATTACKER_BATTLE_VALUE = mech_battle_value(attacker);
+  const int WOUNDED_BATTLE_VALUE = mech_battle_value(wounded);
+  my_battle_value = ATTACKER_BATTLE_VALUE;
+  their_battle_value = WOUNDED_BATTLE_VALUE;
 
-  if (mech_context(attacker)->configuration->btech_xp_usePilotBVMod) {
-    myPilotBVMod = getPilotBVMod(attacker, weapindx);
-    theirPilotBVMod = getPilotBVMod(wounded, weapindx);
+  if (mech_context(attacker)->configuration->btech_xp_use_pilot_bv_mod) {
+    my_pilot_bv_mod = get_pilot_bv_mod(attacker, WEAPINDX);
+    their_pilot_bv_mod = get_pilot_bv_mod(wounded, WEAPINDX);
 
-    my_battle_value *= myPilotBVMod;
-    their_battle_value *= theirPilotBVMod;
+    my_battle_value *= my_pilot_bv_mod;
+    their_battle_value *= their_pilot_bv_mod;
 
 #ifdef XP_DEBUG
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_DEBUG, "%s",
         tprintf("Using skill modified battle value for mechs %ld and %ld "
                 "with skill mods of %2.2f and %2.2f",
-                mech_dbref(attacker), mech_dbref(wounded), myPilotBVMod,
-                theirPilotBVMod));
+                mech_dbref(attacker), mech_dbref(wounded), my_pilot_bv_mod,
+                their_pilot_bv_mod));
 #endif
   }
 
   my_speed = new_move_value(attacker) + 1;
   th_speed = new_move_value(wounded) + 1;
 
-  if (weapon_catalogue_is_missile(weapindx))
-    weapTypeMod = mech_context(attacker)->configuration->btech_xp_missilemod;
-  else if (weapon_catalogue_is_ballistic(weapindx))
-    weapTypeMod = mech_context(attacker)->configuration->btech_xp_ammomod;
+  if (weapon_catalogue_is_missile(WEAPINDX))
+    weap_type_mod = mech_context(attacker)->configuration->btech_xp_missilemod;
+  else if (weapon_catalogue_is_ballistic(WEAPINDX))
+    weap_type_mod = mech_context(attacker)->configuration->btech_xp_ammomod;
 
   if (mech_context(attacker)->configuration->btech_defaultweapdam > 1)
-    damagemod = damage;
+    damagemod = DAMAGE;
   else
     damagemod = 1;
 
   recycle_time =
-      btech_weapon_settings_recycle_time(&context->weapon_settings, weapindx);
+      btech_weapon_settings_recycle_time(&context->weapon_settings, WEAPINDX);
   weapon_battle_value =
-      btech_weapon_settings_battle_value(&context->weapon_settings, weapindx);
+      btech_weapon_settings_battle_value(&context->weapon_settings, WEAPINDX);
   if (mech_context(attacker)->configuration->btech_xp_vrtmod)
     vrtmod = (recycle_time < 30 ? sqrt((double)recycle_time / 30.0) : 1.0);
   else
     vrtmod = 1.0;
 
   multiplier =
-      (vrtmod * weapTypeMod * multiplier *
+      (vrtmod * weap_type_mod * multiplier *
        sqrt((their_battle_value + 1.0) * th_speed *
             mech_context(attacker)->configuration->btech_defaultweapbv /
             mech_context(attacker)->configuration->btech_defaultweapdam)) /
@@ -314,13 +314,13 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
             damagemod));
 
   if (mech_context(attacker)->configuration->btech_perunit_xpmod) {
-    const double experience_modifier = mech_experience_modifier(attacker);
-    multiplier *= experience_modifier;
+    const double EXPERIENCE_MODIFIER = mech_experience_modifier(attacker);
+    multiplier *= EXPERIENCE_MODIFIER;
   }
 
   /* Change the Cap to be variable depending on what a mux wants */
 
-  xp = BOUNDED(1, (int)(multiplier * (double)damage / 100.0),
+  xp = bounded(1, (int)(multiplier * (double)DAMAGE / 100.0),
                mech_context(attacker)->configuration->btech_xpgain_cap);
 
   strlcpy(
@@ -329,17 +329,17 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
       sizeof(buf));
 
   // Emit XP gain over MechAttackXP
-  if (char_gainxp(context, pilot, skname, (int)xp)) {
+  if (char_gainxp(context, PILOT, skname, (int)xp)) {
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
         tprintf("%s gained %d gun XP from feat of %f/100 difficulty "
                 "(%d damage) against %s",
-                game_object_name(mech_context(attacker)->database, pilot),
-                (int)xp, multiplier, damage, buf));
+                game_object_name(mech_context(attacker)->database, PILOT),
+                (int)xp, multiplier, DAMAGE, buf));
     if (mech_context(attacker)->configuration->btech_noisy_xpgain)
       btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
-                         tprintf("#%ld in #%ld %d damage #%ld", pilot,
-                                 mech_dbref(attacker), damage,
+                         tprintf("#%ld in #%ld %d damage #%ld", PILOT,
+                                 mech_dbref(attacker), DAMAGE,
                                  mech_dbref(wounded)));
   }
 
@@ -347,13 +347,13 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
 
 static void
 legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
-  const DbRef pilot = award->pilot;
+  const DbRef PILOT = award->pilot;
   Mech *attacker = award->attacker;
   Mech *wounded = award->target;
-  const int numOccurences = award->damage;
+  const int NUM_OCCURENCES = award->damage;
   double multiplier = award->multiplier;
-  const int weapindx = award->weapon_index;
-  const int bth = award->base_to_hit;
+  const int WEAPINDX = award->weapon_index;
+  const int BTH = award->base_to_hit;
   BtechContext *context = mech_context(attacker);
   int xp;
   const char *skname;
@@ -366,7 +366,7 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
   if (!mech_has_active_gunner(attacker))
     return;
 
-  if (mech_gunner_dbref(attacker) != pilot)
+  if (mech_gunner_dbref(attacker) != PILOT)
     return;
 
   /* No xp for shooting yourself */
@@ -385,7 +385,7 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
   if (!is_in_character(mech_context(attacker)->database, mech_dbref(wounded)))
     return;
 
-  skname = FindGunnerySkillName(attacker, weapindx);
+  skname = find_gunnery_skill_name(attacker, WEAPINDX);
   if (!skname)
     return;
 
@@ -393,13 +393,13 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
   if (mech_class(wounded) == CLASS_MW && mech_class(attacker) != CLASS_MW)
     return;
 
-  if (!(bth >= 3 && bth <= 12))
+  if (!(BTH >= 3 && BTH <= 12))
     return; /* sure hits aren't interesting */
 
   if (mech_tonnage(attacker) > 0)
     multiplier =
         multiplier *
-        BOUNDED(50, 100 * ton_value(wounded) / ton_value(attacker), 150);
+        bounded(50, 100 * ton_value(wounded) / ton_value(attacker), 150);
   else {
     /* Bring this to the attention of the admins */
     btech_channel_send(
@@ -420,18 +420,18 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
     multiplier = multiplier * th_speed * th_speed / my_speed / my_speed;
   }
 
-  multiplier = multiplier * bth_modifier_value(bth) / 36;
+  multiplier = multiplier * bth_modifier_value(BTH) / 36;
   multiplier = multiplier * 2; /* For average shot */
   if (mech_context(attacker)->configuration->btech_perunit_xpmod) {
-    const double experience_modifier = mech_experience_modifier(attacker);
-    multiplier *= experience_modifier;
+    const double EXPERIENCE_MODIFIER = mech_experience_modifier(attacker);
+    multiplier *= EXPERIENCE_MODIFIER;
   }
 
   if (btech_random_range_int(mech_context(attacker), 1, 50) >
-      (multiplier * numOccurences))
+      (multiplier * NUM_OCCURENCES))
     return; /* Nothing for truly twinky stuff, occasionally */
 
-  xp = BOUNDED(1, (int)(multiplier * numOccurences) / 100,
+  xp = bounded(1, (int)(multiplier * NUM_OCCURENCES) / 100,
                50); /*Hardcoded limit */
   strlcpy(
       buf,
@@ -440,24 +440,24 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */
-  if (char_gainxp(context, pilot, skname, (int)xp))
+  if (char_gainxp(context, PILOT, skname, (int)xp))
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
         tprintf("%s gained %d gun XP from feat of %f %% "
                 "difficulty (%d occurences) against %s",
-                game_object_name(mech_context(attacker)->database, pilot),
-                (int)xp, multiplier, numOccurences, buf));
+                game_object_name(mech_context(attacker)->database, PILOT),
+                (int)xp, multiplier, NUM_OCCURENCES, buf));
 }
 
 BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *evaluation = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   BtechContext *context = evaluation->btech;
   PSTATS stats;
   /* fargs[0] = char id (#222)
@@ -468,25 +468,25 @@ BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
 
   target = character_lookup(&(CharacterLookupRequest){
       .context = context,
-      .viewer = player,
-      .name = function_argument(fargs, nfargs, 0),
+      .viewer = PLAYER,
+      .name = function_argument(fargs, NFARGS, 0),
   });
   if (target == NOTHING) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
-  if (!is_wizard(context->database, player)) {
+  if (!is_wizard(context->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED!");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
-  const char *value_name = function_argument(fargs, nfargs, 1);
+  const char *value_name = function_argument(fargs, NFARGS, 1);
   if (!parse_int_checked(value_name, &targetcode))
     targetcode = char_getvaluecode(context, value_name);
   if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
-  if (!parse_int_checked(function_argument(fargs, nfargs, 2), &flaggo)) {
+  if (!parse_int_checked(function_argument(fargs, NFARGS, 2), &flaggo)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID FLAG");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
@@ -528,11 +528,11 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *evaluation = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   BtechContext *context = evaluation->btech;
   /* fargs[0] = char id (#222)
      fargs[1] = value name / value loc #
@@ -544,26 +544,26 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
 
   target = character_lookup(&(CharacterLookupRequest){
       .context = context,
-      .viewer = player,
-      .name = function_argument(fargs, nfargs, 0),
+      .viewer = PLAYER,
+      .name = function_argument(fargs, NFARGS, 0),
   });
   if (target == NOTHING) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  if (!is_wizard(context->database, player)) {
+  if (!is_wizard(context->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED!");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  const char *value_name = function_argument(fargs, nfargs, 1);
+  const char *value_name = function_argument(fargs, NFARGS, 1);
   if (!parse_int_checked(value_name, &targetcode))
     targetcode = char_getvaluecode(context, value_name);
   if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  if (!parse_int_checked(function_argument(fargs, nfargs, 2), &targetvalue) ||
-      !parse_int_checked(function_argument(fargs, nfargs, 3), &flaggo)) {
+  if (!parse_int_checked(function_argument(fargs, NFARGS, 2), &targetvalue) ||
+      !parse_int_checked(function_argument(fargs, NFARGS, 3), &flaggo)) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
@@ -637,7 +637,7 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
         .override_interval = true});
 
     btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
-                       tprintf("%ld set %ld's %s XP to %d", player, target,
+                       tprintf("%ld set %ld's %s XP to %d", PLAYER, target,
                                character_value_definition(targetcode)->name,
                                targetvalue));
     safe_tprintf_str(buff, bufc, "%s's %s XP set to %d.",
@@ -654,7 +654,7 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
         .override_interval = true});
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_XP, "%s",
-        tprintf("#%ld added %d more %s XP to #%ld", player, targetvalue,
+        tprintf("#%ld added %d more %s XP to #%ld", PLAYER, targetvalue,
                 character_value_definition(targetcode)->name, target));
     safe_tprintf_str(buff, bufc, "%s gained %d more %s XP.",
                      game_object_name(context->database, target), targetvalue,
@@ -680,11 +680,11 @@ BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *evaluation = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   BtechContext *context = evaluation->btech;
   int i;
   int type = 0;
@@ -695,17 +695,17 @@ BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
     CHADV,
     CHATT,
   };
-  static const char *const cmds[] = {"skills", "advantages", "attributes",
+  static const char *const CMDS[] = {"skills", "advantages", "attributes",
                                      nullptr};
 
-  if (!argument_count_in_range("BTCHARLIST", nfargs, 1, 2, buff, bufc))
+  if (!argument_count_in_range("BTCHARLIST", NFARGS, 1, 2, buff, bufc))
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 
-  if (nfargs == 2) {
+  if (NFARGS == 2) {
     target = character_lookup(&(CharacterLookupRequest){
         .context = context,
-        .viewer = player,
-        .name = function_argument(fargs, nfargs, 1),
+        .viewer = PLAYER,
+        .name = function_argument(fargs, NFARGS, 1),
     });
     if (target == NOTHING) {
       safe_str("#-1 FUNCTION (BTCHARLIST) INVALID TARGET", buff, bufc);
@@ -713,7 +713,7 @@ BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
     }
   }
 
-  switch (listmatch(cmds, 3, fargs[0])) {
+  switch (listmatch(CMDS, 3, fargs[0])) {
   case CHSKI:
     type = CHAR_SKILL;
     break;
@@ -731,7 +731,7 @@ BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
   for (i = 0; i < (int)(NUM_CHARVALUES); ++i) {
     const CharacterValue *definition = character_value_definition(i);
     if (type == definition->type) {
-      if (nfargs == 2 && type != CHAR_ATTRIBUTE) {
+      if (NFARGS == 2 && type != CHAR_ATTRIBUTE) {
         int targetcode = char_getvaluecode(context, definition->name);
         if (character_value_by_code(&(CharacterValueRequest){
                 .context = context, .player = target, .code = targetcode}) ==

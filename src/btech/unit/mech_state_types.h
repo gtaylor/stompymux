@@ -51,9 +51,9 @@ typedef struct {
 
 typedef struct MechDamageRecord {
   int amount;
-  time_t occuredAt;
+  time_t occured_at;
   struct MechDamageRecord *next;
-  DbRef attackerNum;
+  DbRef attacker_num;
   int counted;
 } MechDamageRecord;
 
@@ -67,7 +67,7 @@ typedef struct {
   char aim_type;       /* Type we aim at */
 
   char sensor[2];       /* Primary mode, secondary mode */
-  byte fire_adjustment; /* For artillery mostly */
+  Byte fire_adjustment; /* For artillery mostly */
   char vis_mod;         /* Should be in range of 0 to 100 ; basically, this
                            is used as _base_ of random element in each sensor type,
                            altered         once every heat update (and when mech's
@@ -149,14 +149,15 @@ typedef struct {
   int erat;
   int per;
   int wxf;
-  int last_startup;      /* timestamp of last 'startup' */
-  int maxsuits;          /* Maximum number of bsuits in this unit */
-  int infantry_specials; /* Infantry related specials */
-  char scharge_value;    /* Supercharger roll .. updated up/down as needed */
-  int staggerDamage;     /* Damage for Stagger MkII */
-  int lastStaggerNotify; /* The level that we were last notified of a stagger */
-  int critstatus2;       /* Starting to fill up. More CritStatus */
-  int unused[5];         /* Space for future expansion */
+  int last_startup;        /* timestamp of last 'startup' */
+  int maxsuits;            /* Maximum number of bsuits in this unit */
+  int infantry_specials;   /* Infantry related specials */
+  char scharge_value;      /* Supercharger roll .. updated up/down as needed */
+  int stagger_damage;      /* Damage for Stagger MkII */
+  int last_stagger_notify; /* The level that we were last notified of a stagger
+                            */
+  int critstatus2;         /* Starting to fill up. More CritStatus */
+  int unused[5];           /* Space for future expansion */
   float
       xpmod; /* Used to modify XP values per unit. Will default loading to 1 */
   int shots_fired;      /* Record how many shots we fired */
@@ -166,9 +167,9 @@ typedef struct {
   int damage_inflicted; /* Record how much damage we inflicted */
   int units_killed;     /* Record how many units we killed */
   struct MechDamageRecord
-      *staggerDamageList; /* The damage we've taken, in linked list form, so we
-                             can calc damages - JF */
-  time_t lastStaggerCheck;
+      *stagger_damage_list; /* The damage we've taken, in linked list form, so
+                             we can calc damages - JF */
+  time_t last_stagger_check;
 
 } MechRuntimeState;
 
@@ -188,15 +189,15 @@ typedef struct {
 } MechPositionState;
 
 typedef struct {
-  char C3ChanTitle[CHTITLELEN + 1];   /* applies to C3 and C3i */
-  DbRef C3iNetwork[C3I_NETWORK_SIZE]; /* other mechs in the C3i network */
-  int wC3iNetworkSize;                /* Current size of our network */
-  DbRef C3Network[C3_NETWORK_SIZE];   /* The whole network. We're sacrificing
+  char c3_chan_title[CHTITLELEN + 1];  /* applies to C3 and C3i */
+  DbRef c3i_network[C3I_NETWORK_SIZE]; /* other mechs in the C3i network */
+  int w_c3i_network_size;              /* Current size of our network */
+  DbRef c3_network[C3_NETWORK_SIZE];   /* The whole network. We're sacrificing
                                          memory for speed. */
-  int wC3NetworkSize;                 /* Current size of the C3Network */
-  int wTotalC3Masters;                /* How many masters are on this mech? */
-  int wWorkingC3Masters; /* How many working masters are on this mech? */
-  int C3FreqMode;        /* applies to C3 and C3i */
-  DbRef tagTarget;       /* dbref of the target we're tagging */
-  DbRef taggedBy;        /* dbref of the person tagging us */
+  int w_c3_network_size;               /* Current size of the C3Network */
+  int w_total_c3_masters;              /* How many masters are on this mech? */
+  int w_working_c3_masters; /* How many working masters are on this mech? */
+  int c3_freq_mode;         /* applies to C3 and C3i */
+  DbRef tag_target;         /* dbref of the target we're tagging */
+  DbRef tagged_by;          /* dbref of the person tagging us */
 } MechNetworkState;

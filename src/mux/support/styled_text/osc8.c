@@ -38,24 +38,24 @@ bool styled_link_target_unquote(const char *start, const char *end,
                                 const char **remainder, char *error,
                                 size_t error_size) {
   size_t used = 0;
-  const size_t length = strlen(start) - strlen(end);
+  const size_t LENGTH = strlen(start) - strlen(end);
   size_t offset = 0;
 
-  if (length == 0 || osc8_byte(start, length, 0) != '"') {
+  if (LENGTH == 0 || osc8_byte(start, LENGTH, 0) != '"') {
     styled_set_error(error, error_size, "link target must be double quoted");
     return false;
   }
   offset++;
-  while (offset < length && osc8_byte(start, length, offset) != '"') {
-    unsigned char byte = osc8_byte(start, length, offset++);
+  while (offset < LENGTH && osc8_byte(start, LENGTH, offset) != '"') {
+    unsigned char byte = osc8_byte(start, LENGTH, offset++);
 
     if (byte == '\\') {
-      if (offset == length || (osc8_byte(start, length, offset) != '\\' &&
-                               osc8_byte(start, length, offset) != '"')) {
+      if (offset == LENGTH || (osc8_byte(start, LENGTH, offset) != '\\' &&
+                               osc8_byte(start, LENGTH, offset) != '"')) {
         styled_set_error(error, error_size, "invalid escape in link target");
         return false;
       }
-      byte = osc8_byte(start, length, offset++);
+      byte = osc8_byte(start, LENGTH, offset++);
     }
     if (byte < 0x20 || byte == 0x7f) {
       styled_set_error(error, error_size,
@@ -68,14 +68,14 @@ bool styled_link_target_unquote(const char *start, const char *end,
     }
     osc8_write(target, target_size, used++, (char)byte);
   }
-  if (offset == length || osc8_byte(start, length, offset) != '"') {
+  if (offset == LENGTH || osc8_byte(start, LENGTH, offset) != '"') {
     styled_set_error(error, error_size, "unterminated quoted link target");
     return false;
   }
   offset++;
-  while (offset < length && (isspace)(osc8_byte(start, length, offset)))
+  while (offset < LENGTH && (isspace)(osc8_byte(start, LENGTH, offset)))
     offset++;
-  *remainder = osc8_suffix(start, length, offset);
+  *remainder = osc8_suffix(start, LENGTH, offset);
   osc8_write(target, target_size, used, '\0');
   if (used == 0) {
     styled_set_error(error, error_size, "link target must not be empty");
@@ -140,18 +140,18 @@ bool styled_command_uri_encode(StyledLinkKind kind, const char *command,
   if (used + 1 > uri_size)
     goto too_long;
   memcpy(uri, scheme, used + 1);
-  const size_t command_length = strlen(command);
-  for (size_t index = 0; index < command_length; index++) {
-    const unsigned char byte = osc8_byte(command, command_length, index);
-    if (uri_unreserved(byte)) {
+  const size_t COMMAND_LENGTH = strlen(command);
+  for (size_t index = 0; index < COMMAND_LENGTH; index++) {
+    const unsigned char BYTE = osc8_byte(command, COMMAND_LENGTH, index);
+    if (uri_unreserved(BYTE)) {
       if (used + 1 >= uri_size)
         goto too_long;
-      osc8_write(uri, uri_size, used++, (char)byte);
+      osc8_write(uri, uri_size, used++, (char)BYTE);
     } else {
       if (used + 3 >= uri_size)
         goto too_long;
       (void)snprintf(checked_storage_at(uri, uri_size, sizeof(char), used),
-                     uri_size - used, "%%%02X", byte);
+                     uri_size - used, "%%%02X", BYTE);
       used += 3;
     }
   }
@@ -191,15 +191,15 @@ bool styled_config_capability_advertised(
 
 bool styled_emit_link_open(const char *uri, char *output, size_t output_size,
                            size_t *used) {
-  constexpr char prefix[] = "\033]8;;";
-  constexpr char suffix[] = "\033\\";
-  size_t length = sizeof(prefix) - 1 + strlen(uri) + sizeof(suffix) - 1;
+  constexpr char PREFIX[] = "\033]8;;";
+  constexpr char SUFFIX[] = "\033\\";
+  size_t length = sizeof(PREFIX) - 1 + strlen(uri) + sizeof(SUFFIX) - 1;
 
   if (*used + length + OSC8_CLOSE_SIZE >= output_size)
     return false;
-  return styled_append_string(output, output_size, used, prefix) &&
+  return styled_append_string(output, output_size, used, PREFIX) &&
          styled_append_string(output, output_size, used, uri) &&
-         styled_append_string(output, output_size, used, suffix);
+         styled_append_string(output, output_size, used, SUFFIX);
 }
 
 bool styled_emit_link_close(char *output, size_t output_size, size_t *used) {
@@ -316,22 +316,22 @@ static bool append_json_string(char *json, size_t json_size, size_t *used,
                                const char *value) {
   if (!styled_append_string(json, json_size, used, "\""))
     return false;
-  const size_t length = strlen(value);
-  for (size_t index = 0; index < length; index++) {
-    const unsigned char byte = osc8_byte(value, length, index);
-    if (byte == '"' || byte == '\\') {
-      char escaped[2] = {'\\', (char)byte};
+  const size_t LENGTH = strlen(value);
+  for (size_t index = 0; index < LENGTH; index++) {
+    const unsigned char BYTE = osc8_byte(value, LENGTH, index);
+    if (BYTE == '"' || BYTE == '\\') {
+      char escaped[2] = {'\\', (char)BYTE};
       if (!styled_append_bytes(json, json_size, used, escaped, sizeof(escaped)))
         return false;
-    } else if (byte < 0x20) {
+    } else if (BYTE < 0x20) {
       char escaped[7];
-      int escaped_length = snprintf(escaped, sizeof(escaped), "\\u%04x", byte);
+      int escaped_length = snprintf(escaped, sizeof(escaped), "\\u%04x", BYTE);
       if (escaped_length <= 0 ||
           !styled_append_bytes(json, json_size, used, escaped,
                                (size_t)escaped_length))
         return false;
     } else if (!styled_append_bytes(json, json_size, used,
-                                    osc8_suffix(value, length, index), 1)) {
+                                    osc8_suffix(value, LENGTH, index), 1)) {
       return false;
     }
   }
@@ -342,7 +342,7 @@ static bool append_json_style(char *json, size_t json_size, size_t *used,
                               bool *root_first, const StyledLinkStyle *style,
                               bool include_base, bool include_states,
                               bool compact) {
-  static const char *const compact_states[STYLED_LINK_STATE_COUNT] = {
+  static const char *const COMPACT_STATES[STYLED_LINK_STATE_COUNT] = {
       "a", "h", "fv", "f", "vi", "sl", "d", "l", "al",
   };
   bool first = true;
@@ -374,11 +374,11 @@ static bool append_json_style(char *json, size_t json_size, size_t *used,
         return false;
       char name[48];
       const char *compact_name = *(const char *const *)checked_storage_at_const(
-          (const void *)compact_states, STYLED_LINK_STATE_COUNT,
-          sizeof(*compact_states), index);
+          (const void *)COMPACT_STATES, STYLED_LINK_STATE_COUNT,
+          sizeof(*COMPACT_STATES), index);
       const char *state_name = *(const char *const *)checked_storage_at_const(
-          (const void *)styled_link_state_names, STYLED_LINK_STATE_COUNT,
-          sizeof(*styled_link_state_names), index);
+          (const void *)STYLED_LINK_STATE_NAMES, STYLED_LINK_STATE_COUNT,
+          sizeof(*STYLED_LINK_STATE_NAMES), index);
       int length = snprintf(name, sizeof(name),
                             "\"%s\":", compact ? compact_name : state_name);
       if (length <= 0 ||
@@ -646,16 +646,16 @@ static bool build_config_json(const StyledLinkConfig *config, bool include_base,
 
 static bool append_percent_encoded(const char *value, char *output,
                                    size_t output_size, size_t *used) {
-  const size_t length = strlen(value);
-  for (size_t index = 0; index < length; index++) {
-    const unsigned char byte = osc8_byte(value, length, index);
-    if (uri_unreserved(byte)) {
+  const size_t LENGTH = strlen(value);
+  for (size_t index = 0; index < LENGTH; index++) {
+    const unsigned char BYTE = osc8_byte(value, LENGTH, index);
+    if (uri_unreserved(BYTE)) {
       if (!styled_append_bytes(output, output_size, used,
-                               osc8_suffix(value, length, index), 1))
+                               osc8_suffix(value, LENGTH, index), 1))
         return false;
     } else {
       char encoded[4];
-      (void)snprintf(encoded, sizeof(encoded), "%%%02X", byte);
+      (void)snprintf(encoded, sizeof(encoded), "%%%02X", BYTE);
       if (!styled_append_bytes(output, output_size, used, encoded, 3))
         return false;
     }
@@ -671,13 +671,13 @@ bool styled_build_configured_uri(
     const char *preset_name, bool append_config, bool reserve_config,
     bool reserve_preset, const StyledTextRenderOptions *options, char *output,
     size_t output_size) {
-  constexpr char encoded_config[] = "%63%6F%6E%66%69%67";
-  constexpr char encoded_preset[] = "%70%72%65%73%65%74";
+  constexpr char ENCODED_CONFIG[] = "%63%6F%6E%66%69%67";
+  constexpr char ENCODED_PRESET[] = "%70%72%65%73%65%74";
   char json[4096];
-  const size_t uri_length = strlen(uri);
+  const size_t URI_LENGTH = strlen(uri);
   const char *fragment = strchr(uri, '#');
-  const size_t main_length =
-      fragment ? uri_length - strlen(fragment) : uri_length;
+  const size_t MAIN_LENGTH =
+      fragment ? URI_LENGTH - strlen(fragment) : URI_LENGTH;
   bool in_query = false;
   bool at_parameter_name = false;
   size_t used = 0;
@@ -689,31 +689,31 @@ bool styled_build_configured_uri(
                          include_visibility, include_selection, include_spoiler,
                          include_disabled, options, json, sizeof(json)))
     return false;
-  for (size_t offset = 0; offset < main_length;) {
-    const char *cursor = osc8_suffix(uri, uri_length, offset);
-    if (reserve_config && at_parameter_name && main_length - offset >= 6 &&
+  for (size_t offset = 0; offset < MAIN_LENGTH;) {
+    const char *cursor = osc8_suffix(uri, URI_LENGTH, offset);
+    if (reserve_config && at_parameter_name && MAIN_LENGTH - offset >= 6 &&
         !memcmp(cursor, "config", 6) &&
-        (offset + 6 == main_length ||
-         osc8_byte(uri, uri_length, offset + 6) == '=' ||
-         osc8_byte(uri, uri_length, offset + 6) == '&')) {
-      if (!styled_append_string(output, output_size, &used, encoded_config))
+        (offset + 6 == MAIN_LENGTH ||
+         osc8_byte(uri, URI_LENGTH, offset + 6) == '=' ||
+         osc8_byte(uri, URI_LENGTH, offset + 6) == '&')) {
+      if (!styled_append_string(output, output_size, &used, ENCODED_CONFIG))
         return false;
       offset += 6;
       at_parameter_name = false;
       continue;
     }
-    if (reserve_preset && at_parameter_name && main_length - offset >= 6 &&
+    if (reserve_preset && at_parameter_name && MAIN_LENGTH - offset >= 6 &&
         !memcmp(cursor, "preset", 6) &&
-        (offset + 6 == main_length ||
-         osc8_byte(uri, uri_length, offset + 6) == '=' ||
-         osc8_byte(uri, uri_length, offset + 6) == '&')) {
-      if (!styled_append_string(output, output_size, &used, encoded_preset))
+        (offset + 6 == MAIN_LENGTH ||
+         osc8_byte(uri, URI_LENGTH, offset + 6) == '=' ||
+         osc8_byte(uri, URI_LENGTH, offset + 6) == '&')) {
+      if (!styled_append_string(output, output_size, &used, ENCODED_PRESET))
         return false;
       offset += 6;
       at_parameter_name = false;
       continue;
     }
-    char byte = (char)osc8_byte(uri, uri_length, offset++);
+    char byte = (char)osc8_byte(uri, URI_LENGTH, offset++);
     if (!styled_append_bytes(output, output_size, &used, &byte, 1))
       return false;
     if (byte == '?') {

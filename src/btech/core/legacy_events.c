@@ -10,7 +10,7 @@
 #include "registry_api.h"
 #include "special_object.h"
 
-void debug_EventTypes(DbRef player, void *data, char *buffer) {
+void debug_event_types(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
   int i, j, k, tot = 0;
 

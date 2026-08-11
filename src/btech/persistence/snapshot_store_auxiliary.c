@@ -31,7 +31,7 @@ static int bind_unsigned_long(sqlite3_stmt *statement, int index,
   return btech_special_bind_int(statement, index, (sqlite3_int64)value);
 }
 
-static void store_repair_facility(BTECH_OBJECT_STORE_CONTEXT *context,
+static void store_repair_facility(BtechObjectStoreContext *context,
                                   DbRef object_id,
                                   const RepairFacility *facility) {
   if (btech_special_bind_int(context->mechrep, 1, object_id) < 0 ||
@@ -41,7 +41,7 @@ static void store_repair_facility(BTECH_OBJECT_STORE_CONTEXT *context,
     context->result = -1;
 }
 
-static void store_turret(BTECH_OBJECT_STORE_CONTEXT *context, DbRef object_id,
+static void store_turret(BtechObjectStoreContext *context, DbRef object_id,
                          const Turret *turret) {
   if (btech_special_bind_int(context->turret, 1, object_id) < 0 ||
       btech_special_bind_int(context->turret, 2, turret->arcs) < 0 ||
@@ -66,7 +66,7 @@ static void store_turret(BTECH_OBJECT_STORE_CONTEXT *context, DbRef object_id,
   }
 }
 
-static void store_autopilot_commands(BTECH_OBJECT_STORE_CONTEXT *context,
+static void store_autopilot_commands(BtechObjectStoreContext *context,
                                      DbRef object_id, Autopilot *autopilot) {
   for (int index = 1; context->result == 0 && autopilot->commands != nullptr &&
                       index <= doubly_linked_list_size(autopilot->commands);
@@ -104,7 +104,7 @@ static void store_autopilot_commands(BTECH_OBJECT_STORE_CONTEXT *context,
   }
 }
 
-static void store_autopilot_path(BTECH_OBJECT_STORE_CONTEXT *context,
+static void store_autopilot_path(BtechObjectStoreContext *context,
                                  DbRef object_id, Autopilot *autopilot) {
   for (int index = 1;
        context->result == 0 && autopilot->astar_path != nullptr &&
@@ -133,8 +133,8 @@ static void store_autopilot_path(BTECH_OBJECT_STORE_CONTEXT *context,
   }
 }
 
-static void store_autopilot(BTECH_OBJECT_STORE_CONTEXT *context,
-                            DbRef object_id, Autopilot *autopilot) {
+static void store_autopilot(BtechObjectStoreContext *context, DbRef object_id,
+                            Autopilot *autopilot) {
   sqlite3_int64 values[] = {
       autopilot->mymechnum,
       autopilot->mapindex,
@@ -188,7 +188,7 @@ static void store_autopilot(BTECH_OBJECT_STORE_CONTEXT *context,
   store_autopilot_path(context, object_id, autopilot);
 }
 
-void btech_store_auxiliary_object(BTECH_OBJECT_STORE_CONTEXT *context,
+void btech_store_auxiliary_object(BtechObjectStoreContext *context,
                                   DbRef object_id, BtechSpecialObject *object) {
   if (object->type == GTYPE_MECHREP)
     store_repair_facility(context, object_id, (RepairFacility *)object);

@@ -51,7 +51,7 @@ PartMatchResult part_match_next(const PartMatchRequest *request);
 PartMatchResult part_name_lookup(const PartNameLookupRequest *request);
 size_t part_name_count(const BtechContext *context);
 const PartNameEntry *part_name_at(const BtechContext *context, size_t index);
-void ListForms(DbRef player, void *data, char *buffer);
+void list_forms(DbRef player, void *data, char *buffer);
 typedef enum PartNameDescriptionFormat {
   PART_NAME_DESCRIPTION_SHORT,
   PART_NAME_DESCRIPTION_LONG,

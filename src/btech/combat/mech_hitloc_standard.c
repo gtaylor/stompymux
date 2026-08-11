@@ -31,7 +31,7 @@ static int hit_location_export(HitLocationResult result,
   return result.location;
 }
 
-int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
+int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
   int roll, hitloc = 0;
   int side;
   BtechContext *context = mech_context(mech);
@@ -48,15 +48,15 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     if (btech_context_uses_advanced_vtol_criticals(context))
       return hit_location_export(
           mech_advanced_vehicle_hit_location(
-              mech, hitGroup,
+              mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
     else if (mech_technology_flags(mech) & CRITPROOF_TECH)
-      return mech_critproof_hit_location(mech, hitGroup, iscritical);
+      return mech_critproof_hit_location(mech, hit_group, iscritical);
     else if (btech_context_uses_fasa_criticals(context))
       return hit_location_export(
           mech_fasa_hit_location(
-              mech, hitGroup,
+              mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
     break;
@@ -64,15 +64,15 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     if (btech_context_uses_advanced_vehicle_criticals(context))
       return hit_location_export(
           mech_advanced_vehicle_hit_location(
-              mech, hitGroup,
+              mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
     else if (mech_technology_flags(mech) & CRITPROOF_TECH)
-      return mech_critproof_hit_location(mech, hitGroup, iscritical);
+      return mech_critproof_hit_location(mech, hit_group, iscritical);
     else if (btech_context_uses_fasa_criticals(context))
       return hit_location_export(
           mech_fasa_hit_location(
-              mech, hitGroup,
+              mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
     break;
@@ -85,11 +85,11 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
   case CLASS_BSUIT:
   default:
     if (mech_technology_flags(mech) & CRITPROOF_TECH)
-      return mech_critproof_hit_location(mech, hitGroup, iscritical);
+      return mech_critproof_hit_location(mech, hit_group, iscritical);
     else if (btech_context_uses_fasa_criticals(context))
       return hit_location_export(
           mech_fasa_hit_location(
-              mech, hitGroup,
+              mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
     break;
@@ -109,7 +109,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
@@ -141,7 +141,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return RLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return mech_head_hit_modify(hitGroup, mech);
+          return mech_head_hit_modify(hit_group, mech);
         return HEAD;
       }
       break;
@@ -176,7 +176,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return LLEG;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return mech_head_hit_modify(hitGroup, mech);
+          return mech_head_hit_modify(hit_group, mech);
         return HEAD;
       }
       break;
@@ -211,13 +211,13 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
         return LARM;
       case 12:
         if (btech_context_uses_exile_stun_code(context))
-          return mech_head_hit_modify(hitGroup, mech);
+          return mech_head_hit_modify(hit_group, mech);
         return HEAD;
       }
     }
     break;
   case CLASS_VEH_GROUND:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
@@ -274,7 +274,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
 
     case FRONT:
     case BACK:
-      side = (hitGroup == FRONT ? FSIDE : BSIDE);
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
       switch (roll) {
       case 2:
       case 12:
@@ -302,7 +302,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     }
     break;
   case CLASS_AERO:
-    switch (hitGroup) {
+    switch (hit_group) {
     case FRONT:
       switch (roll) {
       case 2:
@@ -326,7 +326,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
-      side = ((hitGroup == LEFTSIDE) ? AERO_LWING : AERO_RWING);
+      side = ((hit_group == LEFTSIDE) ? AERO_LWING : AERO_RWING);
       switch (roll) {
       case 2:
       case 12:
@@ -377,7 +377,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     break;
   case CLASS_DS:
   case CLASS_SPHEROID_DS:
-    switch (hitGroup) {
+    switch (hit_group) {
     case FRONT:
       switch (roll) {
       case 2:
@@ -405,7 +405,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
-      side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
+      side = (hit_group == LEFTSIDE) ? DS_LWING : DS_RWING;
       if (btech_random_range(context, 1, 2) == 2)
         side = mech_spheroid_rear_section(mech, side);
       switch (roll) {
@@ -464,7 +464,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     }
     break;
   case CLASS_VTOL:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
@@ -531,7 +531,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
 
     case FRONT:
     case BACK:
-      side = (hitGroup == FRONT ? FSIDE : BSIDE);
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
       switch (roll) {
       case 2:
         hitloc = ROTOR;
@@ -565,7 +565,7 @@ int mech_hit_location(Mech *mech, int hitGroup, int *iscritical, int *isrear) {
     }
     break;
   case CLASS_VEH_NAVAL:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:

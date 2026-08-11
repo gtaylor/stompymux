@@ -52,18 +52,18 @@ static int remove_from_all_maps_func(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   void *arg = call->context;
-  BtechSpecialObject *const xcode_obj = data;
-  Mech *const mech = arg;
+  BtechSpecialObject *const XCODE_OBJ = data;
+  Mech *const MECH = arg;
 
-  if (xcode_obj->type == GTYPE_MAP) {
+  if (XCODE_OBJ->type == GTYPE_MAP) {
     BattleMap *map;
     int i;
 
-    map = btech_context_get_map(mech_context(mech), (DbRef)key);
+    map = btech_context_get_map(mech_context(MECH), (DbRef)key);
     if (!map)
       return 1;
     for (i = 0; i < battle_map_unit_count(map); i++)
-      if (battle_map_unit_dbref(map, i) == mech_dbref(mech))
+      if (battle_map_unit_dbref(map, i) == mech_dbref(MECH))
         battle_map_unit_slot_clear(map, i);
   }
   return 1;
@@ -84,21 +84,21 @@ static int remove_from_all_maps_except_func(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   void *arg = call->context;
   DbRef key_val = (DbRef)key;
-  BtechSpecialObject *const xcode_obj = data;
+  BtechSpecialObject *const XCODE_OBJ = data;
   RemoveFromAllMapsContext *context = arg;
-  Mech *const mech = context->mech;
+  Mech *const MECH = context->mech;
 
-  if (xcode_obj->type == GTYPE_MAP) {
+  if (XCODE_OBJ->type == GTYPE_MAP) {
     int i;
     BattleMap *map;
 
     if (key_val == context->except_map)
       return 1;
-    map = btech_context_get_map(mech_context(mech), key_val);
+    map = btech_context_get_map(mech_context(MECH), key_val);
     if (!map)
       return 1;
     for (i = 0; i < battle_map_unit_count(map); i++)
-      if (battle_map_unit_dbref(map, i) == mech_dbref(mech))
+      if (battle_map_unit_dbref(map, i) == mech_dbref(MECH))
         battle_map_unit_slot_clear(map, i);
   }
   return 1;
@@ -116,54 +116,54 @@ void mech_remove_from_all_maps_except(Mech *mech, DbRef num) {
 
 static int load_update2(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
-  BtechSpecialObject *const xcode_obj = data;
+  BtechSpecialObject *const XCODE_OBJ = data;
 
-  if (xcode_obj->type == GTYPE_MECH)
-    mech_map_consistency_check((void *)xcode_obj);
+  if (XCODE_OBJ->type == GTYPE_MECH)
+    mech_map_consistency_check((void *)XCODE_OBJ);
   return 1;
 }
 
 static int load_update4(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   void *arg = call->context;
-  BtechSpecialObject *const xcode_obj = data;
-  BtechContext *const context = arg;
+  BtechSpecialObject *const XCODE_OBJ = data;
+  BtechContext *const CONTEXT = arg;
 
-  if (xcode_obj->type == GTYPE_MECH) {
-    Mech *const mech = (Mech *)xcode_obj;
+  if (XCODE_OBJ->type == GTYPE_MECH) {
+    Mech *const MECH = (Mech *)XCODE_OBJ;
     BattleMap *map;
 
-    map = btech_context_get_map(context, mech_map_dbref(mech));
+    map = btech_context_get_map(CONTEXT, mech_map_dbref(MECH));
     if (!map) {
       /* Ugly kludge */
       map = btech_context_get_map(
-          context, game_object_location(context->database, mech_dbref(mech)));
+          CONTEXT, game_object_location(CONTEXT->database, mech_dbref(MECH)));
       if (map)
-        mech_Rsetmapindex(
-            GOD, mech,
+        mech_rsetmapindex(
+            GOD, MECH,
             tprintf("%ld",
-                    game_object_location(context->database, mech_dbref(mech))));
-      map = btech_context_get_map(context, mech_map_dbref(mech));
+                    game_object_location(CONTEXT->database, mech_dbref(MECH))));
+      map = btech_context_get_map(CONTEXT, mech_map_dbref(MECH));
       if (!map)
         return 1;
     }
 
-    if (!mech_is_started(mech))
+    if (!mech_is_started(MECH))
       return 1;
-    mech_start_seeing(mech);
-    mech_update_recycling(mech);
-    mech_maybe_move(mech);
+    mech_start_seeing(MECH);
+    mech_update_recycling(MECH);
+    mech_maybe_move(MECH);
   }
   return 1;
 }
 
 static int load_update3(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
-  BtechSpecialObject *const xcode_obj = data;
+  BtechSpecialObject *const XCODE_OBJ = data;
 
-  if (xcode_obj->type == GTYPE_MAP) {
-    eliminate_empties((BattleMap *)xcode_obj);
-    mine_fields_recalculate((BattleMap *)xcode_obj);
+  if (XCODE_OBJ->type == GTYPE_MAP) {
+    eliminate_empties((BattleMap *)XCODE_OBJ);
+    mine_fields_recalculate((BattleMap *)XCODE_OBJ);
   }
   return 1;
 }
@@ -174,26 +174,26 @@ static int load_update3(const RedBlackTreeVisitCall *call) {
 static int load_autopilot_data(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   void *arg = call->context;
-  BtechSpecialObject *const xcode_obj = data;
-  BtechContext *const context = arg;
+  BtechSpecialObject *const XCODE_OBJ = data;
+  BtechContext *const CONTEXT = arg;
 
-  if (xcode_obj->type == GTYPE_AUTO) {
-    Autopilot *const autopilot = (Autopilot *)xcode_obj;
+  if (XCODE_OBJ->type == GTYPE_AUTO) {
+    Autopilot *const AUTOPILOT = (Autopilot *)XCODE_OBJ;
 
     /* Commands and A* paths are restored before these derived caches. */
-    autopilot->weaplist = NULL;
-    autopilot_weapon_profiles_initialize(autopilot);
+    AUTOPILOT->weaplist = NULL;
+    autopilot_weapon_profiles_initialize(AUTOPILOT);
 
-    if (autopilot->mymechnum)
-      autopilot->mymech = btech_context_get_mech(context, autopilot->mymechnum);
-    if (!autopilot->mymechnum || !autopilot->mymech) {
-      autopilot_gunning_stop(autopilot);
+    if (AUTOPILOT->mymechnum)
+      AUTOPILOT->mymech = btech_context_get_mech(CONTEXT, AUTOPILOT->mymechnum);
+    if (!AUTOPILOT->mymechnum || !AUTOPILOT->mymech) {
+      autopilot_gunning_stop(AUTOPILOT);
     } else {
       /*
        * Weapon lists and range profiles are caches derived from the restored
        * MECH definition. Rebuild them instead of persisting cache trees.
        */
-      auto_update_profile_event(autopilot);
+      auto_update_profile_event(AUTOPILOT);
 
       /*
        * MUX event nodes are runtime-only. An autopilot that was engaged at
@@ -201,16 +201,16 @@ static int load_autopilot_data(const RedBlackTreeVisitCall *call) {
        * the AUTO object being inside that MECH. Requeue its dispatcher from
        * the durable command list; it recreates goal-specific events itself.
        */
-      if (mech_autopilot_dbref(autopilot->mymech) == autopilot->mynum &&
-          game_object_location(context->database, autopilot->mynum) ==
-              autopilot->mymechnum &&
-          autopilot->commands &&
-          doubly_linked_list_size(autopilot->commands) > 0 &&
-          !mux_event_count_type_data(context->events, EVENT_AUTOCOM, autopilot))
-        autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
+      if (mech_autopilot_dbref(AUTOPILOT->mymech) == AUTOPILOT->mynum &&
+          game_object_location(CONTEXT->database, AUTOPILOT->mynum) ==
+              AUTOPILOT->mymechnum &&
+          AUTOPILOT->commands &&
+          doubly_linked_list_size(AUTOPILOT->commands) > 0 &&
+          !mux_event_count_type_data(CONTEXT->events, EVENT_AUTOCOM, AUTOPILOT))
+        autopilot_event_schedule(AUTOPILOT, EVENT_AUTOCOM, auto_com_event,
                                  AUTOPILOT_NC_DELAY, 0);
-      if (autopilot_is_gunning(autopilot))
-        autopilot_gunning_start(autopilot);
+      if (autopilot_is_gunning(AUTOPILOT))
+        autopilot_gunning_start(AUTOPILOT);
     }
   }
 
@@ -245,13 +245,13 @@ void btech_special_objects_load(BtechContext *context) {
     if (type >= 0) {
       if (btech_special_object_data_size(
               btech_special_object_definition(type)) > 0)
-        NewSpecialObject(context, i, type);
+        new_special_object(context, i, type);
     } else
       c_xcode(context->database, i); /* Reset the flag */
   }
   for (special_type = 0; special_type < BTECH_SPECIAL_OBJECT_COUNT;
        special_type++) {
-    InitSpecialHash(context, special_type);
+    init_special_hash(context, special_type);
   }
   init_btechstats(context);
   if (!character_state_validate_all(context)) {
@@ -284,20 +284,20 @@ void btech_special_objects_load(BtechContext *context) {
   btech_heartbeat_start(context);
 }
 
-static int UpdateSpecialObject_func(const RedBlackTreeVisitCall *call) {
+static int update_special_object_func(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   void *arg = call->context;
-  BtechSpecialObject *const xcode_obj = data;
-  BtechContext *const context = arg;
+  BtechSpecialObject *const XCODE_OBJ = data;
+  BtechContext *const CONTEXT = arg;
 
   const BtechSpecialObjectDefinition *definition =
-      btech_special_object_definition((int)xcode_obj->type);
-  if (!definition->updateTime)
+      btech_special_object_definition((int)XCODE_OBJ->type);
+  if (!definition->update_time)
     return 1;
-  if ((context->clock->now % definition->updateTime))
+  if ((CONTEXT->clock->now % definition->update_time))
     return 1;
-  definition->update((DbRef)key, xcode_obj);
+  definition->update((DbRef)key, XCODE_OBJ);
   return 1;
 }
 
@@ -329,7 +329,7 @@ void btech_special_objects_update(BtechContext *context) {
     btech_context_command(context)->debug_command =
         "< Generic hcode update handler>";
     red_black_tree_walk(context->special_objects, WALK_INORDER,
-                        UpdateSpecialObject_func, context);
+                        update_special_object_func, context);
   }
   context->last_special_update = context->clock->now;
   btech_context_command(context)->debug_command = cmdsave;

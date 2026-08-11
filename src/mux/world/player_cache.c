@@ -21,10 +21,10 @@ struct PlayerCache {
 static int compare_pcache(const RedBlackTreeCompareCall *call) {
   void *left_key = call->lhs;
   void *right_key = call->rhs;
-  const DbRef left = (DbRef)left_key;
-  const DbRef right = (DbRef)right_key;
+  const DbRef LEFT = (DbRef)left_key;
+  const DbRef RIGHT = (DbRef)right_key;
 
-  return (left > right) - (left < right);
+  return (LEFT > RIGHT) - (LEFT < RIGHT);
 }
 
 PlayerCache *player_cache_create(const ServerConfiguration *configuration,

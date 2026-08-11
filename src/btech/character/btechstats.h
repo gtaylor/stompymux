@@ -57,7 +57,7 @@ extern const char *char_packages[NUM_CHARPACKAGES];
  */
 
 typedef struct {
-  DbRef DbRef;
+  DbRef db_ref;
   unsigned char value_storage[NUM_CHARVALUES];
   time_t last_use_storage[NUM_CHARVALUES];
   int xp_storage[NUM_CHARVALUES];

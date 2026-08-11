@@ -50,7 +50,7 @@ static int btech_economy_table_exists(sqlite3 *sqlite, int *exists) {
 
   statement = NULL;
   result = -1;
-  if (sqlite3_prepare_v2(sqlite,
+  if (SQLITE3_PREPARE_V2(sqlite,
                          "SELECT 1 FROM sqlite_master WHERE type = 'table' "
                          "AND name = 'btech_economy_costs';",
                          -1, &statement, NULL) == SQLITE_OK) {
@@ -74,7 +74,7 @@ static int btech_economy_table_has_item_name(sqlite3 *sqlite, int *has_name) {
   statement = NULL;
   *has_name = 0;
   result = -1;
-  if (sqlite3_prepare_v2(sqlite, "PRAGMA table_info(btech_economy_costs);", -1,
+  if (SQLITE3_PREPARE_V2(sqlite, "PRAGMA table_info(btech_economy_costs);", -1,
                          &statement, NULL) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -158,7 +158,7 @@ static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
   statement = NULL;
   result = -1;
   skipped = 0;
-  if (sqlite3_prepare_v2(sqlite,
+  if (SQLITE3_PREPARE_V2(sqlite,
                          "SELECT item_name, cost FROM btech_economy_costs;", -1,
                          &statement, NULL) == SQLITE_OK) {
     result = 0;
@@ -253,7 +253,7 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
                                 " item_name TEXT PRIMARY KEY,"
                                 " cost TEXT NOT NULL"
                                 ") WITHOUT ROWID;") < 0 ||
-      sqlite3_prepare_v2(sqlite,
+      SQLITE3_PREPARE_V2(sqlite,
                          "INSERT INTO btech_economy_costs (item_name, cost) "
                          "VALUES (?, ?);",
                          -1, &statement, NULL) != SQLITE_OK)
@@ -264,8 +264,8 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
   for (index = 0; result == 0 && index < BTECH_PART_COST_SET_COUNT; index++) {
     cost_set = cost_set_at(cost_sets, index);
     for (item_index = 0; item_index < cost_set->count; item_index++) {
-      const unsigned long long item_cost = cost_at(cost_set, item_index);
-      if (!item_cost)
+      const unsigned long long ITEM_COST = cost_at(cost_set, item_index);
+      if (!ITEM_COST)
         continue;
       if (cost_set->first_part > INT_MAX ||
           item_index > (size_t)(INT_MAX - cost_set->first_part)) {
@@ -274,7 +274,7 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
       }
       part = cost_set->first_part + (int)item_index;
       part_name = btech_part_name(btech->configuration, part, generated_name);
-      length = snprintf(cost, sizeof(cost), "%llu", item_cost);
+      length = snprintf(cost, sizeof(cost), "%llu", ITEM_COST);
       if (!part_name || length < 0 || (size_t)length >= sizeof(cost) ||
           sqlite3_bind_text(statement, 1, part_name, -1, SQLITE_TRANSIENT) !=
               SQLITE_OK ||

@@ -2,7 +2,7 @@
 #include "template_internal.h"
 
 #ifdef BT_PART_WEIGHTS
-const int cargoweight[] = {
+const int CARGOWEIGHT[] = {
     1024, /* Ammo_LBX2 */
     1024, /* Ammo_LBX5_LBX */
     1024, /* Ammo_LBX10_LBX */

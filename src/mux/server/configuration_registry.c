@@ -3,15 +3,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "mux/commands/command.h"
-#include "mux/objects/flags.h" // IWYU pragma: keep
-#include "mux/server/configuration.h"
+#include "mux/commands/command.h"             // IWYU pragma: keep
+#include "mux/objects/flags.h"                // IWYU pragma: keep
+#include "mux/server/configuration.h"         // IWYU pragma: keep
 #include "mux/server/configuration_context.h" // IWYU pragma: keep
 #include "mux/server/configuration_internal.h"
-#include "mux/server/server_config.h"
-#include "mux/server/server_registries.h"
+#include "mux/server/server_config.h"     // IWYU pragma: keep
+#include "mux/server/server_registries.h" // IWYU pragma: keep
 #include "mux/support/checked_storage.h"
-#include "mux/support/hash_table.h"
+#include "mux/support/hash_table.h" // IWYU pragma: keep
 
 #define CONFIG_LOC(member) (offsetof(ServerConfiguration, member) + 1)
 #define COMMAND_LOC(member)                                                    \
@@ -80,7 +80,7 @@ CONF conftable[] = {
     {"btech_xp_modifier", cf_int, CA_GOD, CONFIG_LOC(btech_xp_modifier), 0},
     {"btech_defaultweapbv", cf_int, CA_GOD, CONFIG_LOC(btech_defaultweapbv), 0},
     {"btech_xp_usePilotBVMod", cf_int, CA_GOD,
-     CONFIG_LOC(btech_xp_usePilotBVMod), 0},
+     CONFIG_LOC(btech_xp_use_pilot_bv_mod), 0},
     {"btech_oldxpsystem", cf_int, CA_GOD, CONFIG_LOC(btech_oldxpsystem), 0},
     {"btech_xp_vrtmod", cf_int, CA_GOD, CONFIG_LOC(btech_xp_vrtmod), 0},
     {"btech_extendedmovemod", cf_int, CA_GOD, CONFIG_LOC(btech_extendedmovemod),

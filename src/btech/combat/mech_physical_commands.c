@@ -74,7 +74,7 @@ void mech_sword(DbRef player, void *data, char *buffer) {
 
   argument_count = mech_parseattributes(buffer, arguments, 5);
   if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
-    left_to_hit = right_to_hit = FindPilotPiloting(mech) - 2;
+    left_to_hit = right_to_hit = find_pilot_piloting(mech) - 2;
   ArmSelectionResult selection = physical_arm_select(&(ArmSelectionRequest){
       .using = using,
       .argument_count = argument_count,
@@ -128,7 +128,7 @@ void mech_kick(DbRef player, void *data, char *buffer) {
  * Mech kick/trip routines.
  */
 void mech_kickortrip(DbRef player, void *data, char *buffer,
-                     PhysicalAttackType AttackType) {
+                     PhysicalAttackType attack_type) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -148,7 +148,7 @@ void mech_kickortrip(DbRef player, void *data, char *buffer,
     ll = LARM;
   }
   // See if we have enough usable legs to kick/trip with.
-  int destroyed_legs = CountDestroyedLegs(mech);
+  int destroyed_legs = count_destroyed_legs(mech);
   if (mech_class(mech) == CLASS_MW || mech_class(mech) == CLASS_BSUIT) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You cannot kick without a 'mech!");
@@ -216,7 +216,7 @@ void mech_kickortrip(DbRef player, void *data, char *buffer,
   if (mech_condition_summary(mech).hip_damaged) {
     mech_printf(mech, MECHALL, "You can't %s with a destroyed hip.",
                 physical_attack_verb(
-                    &(PhysicalVerbRequest){.attack_type = AttackType}));
+                    &(PhysicalVerbRequest){.attack_type = attack_type}));
     return;
   }
 
@@ -225,9 +225,9 @@ void mech_kickortrip(DbRef player, void *data, char *buffer,
       .damage_weight = 5,
       .base_to_hit =
           btech_context_physical_attacks_use_pilot_skill(mech_context(mech))
-              ? FindPilotPiloting(mech) - 2
+              ? find_pilot_piloting(mech) - 2
               : 3,
-      .attack_type = AttackType,
+      .attack_type = attack_type,
       .argument_count = argc,
       .arguments = args,
       .map = mech_map,
@@ -242,10 +242,10 @@ void mech_charge(DbRef player, void *data, char *buffer) {
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   DbRef targetnum;
-  char targetID[5];
+  char target_id[5];
   char *args[5];
   int argc;
-  int wcDeadLegs = 0;
+  int wc_dead_legs = 0;
 
   // Make sure we're started, on a map, etc.
   if (!common_checks(player, mech, MECH_USUALO))
@@ -270,24 +270,24 @@ void mech_charge(DbRef player, void *data, char *buffer) {
   // Figure out if we have enough legs to kick with.
   if (mech_class(mech) == CLASS_MECH) {
     /* set the number of dead legs we have */
-    wcDeadLegs = CountDestroyedLegs(mech);
+    wc_dead_legs = count_destroyed_legs(mech);
 
-    if (!mech_is_quad(mech) && (wcDeadLegs > 0)) {
+    if (!mech_is_quad(mech) && (wc_dead_legs > 0)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "With one leg? Are you kidding?");
       return;
     }
-    if (!mech_is_quad(mech) && (wcDeadLegs > 1)) {
+    if (!mech_is_quad(mech) && (wc_dead_legs > 1)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Without legs? Are you kidding?");
       return;
     }
-    if (wcDeadLegs > 1) {
+    if (wc_dead_legs > 1) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "It'd unbalance you too much in your condition..");
       return;
     }
-    if (wcDeadLegs > 2) {
+    if (wc_dead_legs > 2) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Exactly _what_ are you going to kick with?");
       return;
@@ -359,9 +359,9 @@ void mech_charge(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    targetID[0] = *checked_string_suffix(first, 0);
-    targetID[1] = *checked_string_suffix(first, 1);
-    targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
+    target_id[0] = *checked_string_suffix(first, 0);
+    target_id[1] = *checked_string_suffix(first, 1);
+    targetnum = find_target_dbref_from_map_number(mech, target_id);
 
     if (targetnum == -1) {
       mech_notify(mech, MECHALL, "Target is not in line of sight!");

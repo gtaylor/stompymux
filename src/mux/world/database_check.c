@@ -735,14 +735,14 @@ static void check_floating(EvaluationContext *evaluation) {
 void database_check(const DatabaseCheckRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef player = request->player;
-  const bool full_check = (request->options & DBCK_FULL) != 0;
+  const bool FULL_CHECK = (request->options & DBCK_FULL) != 0;
 
   object_make_freelist(evaluation->world->database);
-  check_dead_refs(evaluation, full_check);
-  check_exit_chains(evaluation, full_check);
-  check_contents_chains(evaluation, full_check);
+  check_dead_refs(evaluation, FULL_CHECK);
+  check_exit_chains(evaluation, FULL_CHECK);
+  check_contents_chains(evaluation, FULL_CHECK);
   check_floating(evaluation);
-  object_purge_going(evaluation, full_check);
+  object_purge_going(evaluation, FULL_CHECK);
 
   if (player != NOTHING)
     notify_checked(evaluation, player, player, "Done.",

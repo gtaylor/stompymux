@@ -134,16 +134,16 @@ struct ServerConfiguration {
   int btech_skidcliff; /* skidroll to check for cliffs and falldamage for mechs
                         */
   int btech_xp_bthmod; /* Use bth modifier in new xp code */
-  int btech_xp_missilemod;    /* Modifier for missile weapons */
-  int btech_xp_ammomod;       /* modifier for ammo weapons (not missiles ) */
-  int btech_defaultweapdam;   /* modifier to default weapon BV */
-  int btech_xp_usePilotBVMod; /* use the pilot's skills to modify the BV of the
-                                 unit */
-  int btech_xp_modifier;      /* modifier to increase or decrease xp-gain */
-  int btech_defaultweapbv;    /* Weapons with BVs higher than this give less xp,
-                                 lower give more */
-  int btech_oldxpsystem;      /* Uses old xp system if 1 */
-  int btech_xp_vrtmod;        /* Modifier for VRT weapons used if !0 */
+  int btech_xp_missilemod;       /* Modifier for missile weapons */
+  int btech_xp_ammomod;          /* modifier for ammo weapons (not missiles ) */
+  int btech_defaultweapdam;      /* modifier to default weapon BV */
+  int btech_xp_use_pilot_bv_mod; /* use the pilot's skills to modify the BV of
+                                 the unit */
+  int btech_xp_modifier;         /* modifier to increase or decrease xp-gain */
+  int btech_defaultweapbv;  /* Weapons with BVs higher than this give less xp,
+                               lower give more */
+  int btech_oldxpsystem;    /* Uses old xp system if 1 */
+  int btech_xp_vrtmod;      /* Modifier for VRT weapons used if !0 */
   int btech_limitedrepairs; /* If on then armor fixes and reloads in stalls only
                              */
   int btech_digbonus; /* If shot would land on the FS hitgroup of a tank at >=
@@ -279,10 +279,10 @@ struct SiteData {
   int flag;               /* Value to return on match */
 };
 
-typedef struct badname_struc BADNAME;
-struct badname_struc {
+typedef struct BadnameStruc BADNAME;
+struct BadnameStruc {
   char *name;
-  struct badname_struc *next;
+  struct BadnameStruc *next;
 };
 
 /* Global flags */

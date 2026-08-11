@@ -56,35 +56,35 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
   Mech *wounded = request->wounded;
   Mech *attacker = request->attacker;
   const int LOS = request->line_of_sight;
-  const int hitloc = request->slot.section;
-  int critHit = request->slot.critical;
-  const int critType = request->part_type;
-  const int critData = request->part_data;
+  const int HITLOC = request->slot.section;
+  int crit_hit = request->slot.critical;
+  const int CRIT_TYPE = request->part_type;
+  const int CRIT_DATA = request->part_data;
   Mech *mech = wounded;
-  int weapindx, damage, destroycrit, weapon_slot, wFirstCrit;
+  int weapindx, damage, destroycrit, weapon_slot, w_first_crit;
   int temp;
   char locname[30];
   char msgbuf[MBUF_SIZE];
-  int tLocIsArm =
-      ((hitloc == LARM || hitloc == RARM) && !mech_is_quad(wounded));
-  int tLocIsLeg =
-      ((hitloc == LLEG || hitloc == RLEG) ||
-       ((hitloc == LARM || hitloc == RARM) && mech_is_quad(wounded)));
-  char partBuf[100];
+  int t_loc_is_arm =
+      ((HITLOC == LARM || HITLOC == RARM) && !mech_is_quad(wounded));
+  int t_loc_is_leg =
+      ((HITLOC == LLEG || HITLOC == RLEG) ||
+       ((HITLOC == LARM || HITLOC == RARM) && mech_is_quad(wounded)));
+  char part_buf[100];
 
-  int fCrit;
+  int f_crit;
   BtechContext *context = mech_context(wounded);
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(wounded));
 
-  ArmorStringFromIndex(hitloc, locname, mech_class(wounded),
-                       mech_movement_type(wounded));
+  armor_string_from_index(HITLOC, locname, mech_class(wounded),
+                          mech_movement_type(wounded));
   mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT!![reset]");
 
-  if (equipment_is_ammunition(critType)) {
+  if (equipment_is_ammunition(CRIT_TYPE)) {
     /* BOOM! */
     /* That's going to hurt... */
-    weapindx = ammunition_to_weapon_index(critType);
-    damage = critData * weapon_catalogue_damage(weapindx);
+    weapindx = ammunition_to_weapon_index(CRIT_TYPE);
+    damage = CRIT_DATA * weapon_catalogue_damage(weapindx);
     if (weapon_catalogue_is_missile(weapindx) ||
         weapon_catalogue_is_artillery(weapindx)) {
       int missile_count = btech_context_missile_hit_count(&(MissileHitLookup){
@@ -97,173 +97,174 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
       if (weapon_catalogue_is_gauss(weapindx))
         mech_notify(wounded, MECHALL,
                     "One of your Gauss Rifle ammo feeds is destroyed");
-      mech_critical_destroy(wounded, hitloc, critHit);
+      mech_critical_destroy(wounded, HITLOC, crit_hit);
     } else if (damage) {
       mech_ammunition_explode(&(AmmunitionExplosionRequest){
           .attacker = attacker,
           .target = wounded,
-          .ammunition = {.section = hitloc, .critical = critHit},
+          .ammunition = {.section = HITLOC, .critical = crit_hit},
           .damage = damage});
     } else {
       mech_notify(wounded, MECHALL,
                   "You have no ammunition left in that location, lucky you!");
-      mech_critical_destroy(wounded, hitloc, critHit);
+      mech_critical_destroy(wounded, HITLOC, crit_hit);
     }
     return 1;
   }
 
-  if (mech_critical_is_broken(wounded, hitloc, critHit) &&
-      equipment_is_weapon(critType) &&
-      !mech_critical_is_disabled(wounded, hitloc, critHit)) {
+  if (mech_critical_is_broken(wounded, HITLOC, crit_hit) &&
+      equipment_is_weapon(CRIT_TYPE) &&
+      !mech_critical_is_disabled(wounded, HITLOC, crit_hit)) {
     for (;;) {
-      --critHit;
-      if (!critHit ||
-          mech_critical_part_type(wounded, hitloc, critHit) != critType)
+      --crit_hit;
+      if (!crit_hit ||
+          mech_critical_part_type(wounded, HITLOC, crit_hit) != CRIT_TYPE)
         break;
-      if (mech_critical_is_destroyed(wounded, hitloc, critHit))
+      if (mech_critical_is_destroyed(wounded, HITLOC, crit_hit))
         break;
     }
     mech_printf(
         wounded, MECHALL, "Your destroyed %s is damaged some more!",
         checked_string_suffix(
-            weapon_catalogue_name(weapon_from_equipment_index(critType)), 3));
-    mech_critical_destroy(wounded, hitloc, critHit + 1);
+            weapon_catalogue_name(weapon_from_equipment_index(CRIT_TYPE)), 3));
+    mech_critical_destroy(wounded, HITLOC, crit_hit + 1);
     return 1;
   }
 
-  if (mech_critical_is_nonfunctional(wounded, hitloc, critHit)) {
-    if (equipment_is_special(critType)) {
-      switch (special_from_equipment_index(critType)) {
+  if (mech_critical_is_nonfunctional(wounded, HITLOC, crit_hit)) {
+    if (equipment_is_special(CRIT_TYPE)) {
+      switch (special_from_equipment_index(CRIT_TYPE)) {
       case LIFE_SUPPORT:
-        strcpy(partBuf, "life support");
+        strcpy(part_buf, "life support");
         break;
       case COCKPIT:
-        strcpy(partBuf, "cockpit");
+        strcpy(part_buf, "cockpit");
         break;
       case SENSORS:
-        strcpy(partBuf, "sensors");
+        strcpy(part_buf, "sensors");
         break;
       case HEAT_SINK:
-        strcpy(partBuf, "heatsink");
+        strcpy(part_buf, "heatsink");
         break;
       case JUMP_JET:
-        strcpy(partBuf, "jump jet");
+        strcpy(part_buf, "jump jet");
         break;
       case ENGINE:
-        strcpy(partBuf, "engine");
+        strcpy(part_buf, "engine");
         break;
       case TARGETING_COMPUTER:
-        strcpy(partBuf, "targeting computer");
+        strcpy(part_buf, "targeting computer");
         break;
       case GYRO:
-        strcpy(partBuf, "gyro");
+        strcpy(part_buf, "gyro");
         break;
       case SHOULDER_OR_HIP:
-        if (tLocIsArm)
-          strcpy(partBuf, "shoulder");
+        if (t_loc_is_arm)
+          strcpy(part_buf, "shoulder");
         else
-          strcpy(partBuf, "hip");
+          strcpy(part_buf, "hip");
         break;
       case LOWER_ACTUATOR:
       case UPPER_ACTUATOR:
       case HAND_OR_FOOT_ACTUATOR:
-        if (tLocIsArm) {
-          if (special_from_equipment_index(critType) == HAND_OR_FOOT_ACTUATOR)
-            strcpy(partBuf, "hand actuator");
+        if (t_loc_is_arm) {
+          if (special_from_equipment_index(CRIT_TYPE) == HAND_OR_FOOT_ACTUATOR)
+            strcpy(part_buf, "hand actuator");
           else
-            strcpy(partBuf, "arm actuator");
+            strcpy(part_buf, "arm actuator");
         } else {
-          if (special_from_equipment_index(critType) == HAND_OR_FOOT_ACTUATOR)
-            strcpy(partBuf, "foot actuator");
+          if (special_from_equipment_index(CRIT_TYPE) == HAND_OR_FOOT_ACTUATOR)
+            strcpy(part_buf, "foot actuator");
           else
-            strcpy(partBuf, "arm actuator");
+            strcpy(part_buf, "arm actuator");
         }
         break;
       case C3_MASTER:
-        strcpy(partBuf, "C3 system");
+        strcpy(part_buf, "C3 system");
         break;
       case C3_SLAVE:
-        strcpy(partBuf, "C3 system");
+        strcpy(part_buf, "C3 system");
         break;
       case C3I:
-        strcpy(partBuf, "C3i system");
+        strcpy(part_buf, "C3i system");
         break;
       case TAG:
-        strcpy(partBuf, "TAG system");
+        strcpy(part_buf, "TAG system");
         break;
       case ECM:
-        strcpy(partBuf, "ECM system");
+        strcpy(part_buf, "ECM system");
         break;
       case ANGELECM:
-        strcpy(partBuf, "Angel ECM system");
+        strcpy(part_buf, "Angel ECM system");
         break;
       case BEAGLE_PROBE:
-        strcpy(partBuf, "Beagle Active Probe");
+        strcpy(part_buf, "Beagle Active Probe");
         break;
       case BLOODHOUND_PROBE:
-        strcpy(partBuf, "Bloodhound Active Probe");
+        strcpy(part_buf, "Bloodhound Active Probe");
         break;
       case LIGHT_BAP:
-        strcpy(partBuf, "Light Beagle Active Probe");
+        strcpy(part_buf, "Light Beagle Active Probe");
         break;
       case ARTEMIS_IV:
-        strcpy(partBuf, "ArtemisIV system");
+        strcpy(part_buf, "ArtemisIV system");
         break;
       case AXE:
-        strcpy(partBuf, "axe");
+        strcpy(part_buf, "axe");
         break;
       case SWORD:
-        strcpy(partBuf, "sword");
+        strcpy(part_buf, "sword");
         break;
       case MACE:
-        strcpy(partBuf, "mace");
+        strcpy(part_buf, "mace");
         break;
       case DUAL_SAW:
-        strcpy(partBuf, "dual saw");
+        strcpy(part_buf, "dual saw");
         break;
       case DS_AERODOOR:
-        strcpy(partBuf, "aero doors");
+        strcpy(part_buf, "aero doors");
         break;
       case DS_MECHDOOR:
-        strcpy(partBuf, "mech doors");
+        strcpy(part_buf, "mech doors");
         break;
       case NULL_SIGNATURE_SYSTEM:
-        strcpy(partBuf, "Null Signature System");
+        strcpy(part_buf, "Null Signature System");
         break;
       } // end switch() - Part Names
     } // end if()
 
-    if (equipment_is_weapon(critType)) {
+    if (equipment_is_weapon(CRIT_TYPE)) {
       mech_printf(
           wounded, MECHALL, "Part of your non-working %s has been hit!",
           checked_string_suffix(
-              weapon_catalogue_name(weapon_from_equipment_index(critType)), 3));
+              weapon_catalogue_name(weapon_from_equipment_index(CRIT_TYPE)),
+              3));
     } else {
       mech_printf(wounded, MECHALL, "Part of your non-working %s has been hit!",
-                  partBuf);
+                  part_buf);
     }
-    mech_critical_destroy(wounded, hitloc, critHit);
+    mech_critical_destroy(wounded, HITLOC, crit_hit);
     return 1;
   }
 
-  if (equipment_is_weapon(critType)) {
+  if (equipment_is_weapon(CRIT_TYPE)) {
     if (mech_weapon_critical_handle(&(WeaponCriticalRequest){
             .attacker = attacker,
             .wounded = wounded,
-            .slot = {.section = hitloc, .critical = critHit},
-            .part_type = critType})) {
+            .slot = {.section = HITLOC, .critical = crit_hit},
+            .part_type = CRIT_TYPE})) {
       return 1;
     }
 
     mech_weapon_critical_apply(&(WeaponCriticalApplication){
-        .mech = mech, .slot = {.section = hitloc, .critical = critHit}});
+        .mech = mech, .slot = {.section = HITLOC, .critical = crit_hit}});
 
     return 1;
   }
 
-  if (equipment_is_special(critType)) {
+  if (equipment_is_special(CRIT_TYPE)) {
     destroycrit = 1;
-    switch (special_from_equipment_index(critType)) {
+    switch (special_from_equipment_index(CRIT_TYPE)) {
     case LIFE_SUPPORT:
       mech_life_support_destroyed_set(wounded, true);
       mech_notify(wounded, MECHALL, "Your life support has been destroyed!");
@@ -300,40 +301,40 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
       break;
     case SPLIT_CRIT_LEFT:
     case SPLIT_CRIT_RIGHT:
-      fCrit = mech_critical_data(wounded, hitloc, critHit);
-      temp = ReverseSplitCritLoc(wounded, hitloc, critHit);
+      f_crit = mech_critical_data(wounded, HITLOC, crit_hit);
+      temp = reverse_split_crit_loc(wounded, HITLOC, crit_hit);
       if (temp < 0) {
         mech_printf(wounded, MECHALL,
                     "ERROR: Could not find split weapon parent location. "
                     "Loc:%d Crit:%d temp:%d fCrit:%d",
-                    hitloc, critHit, temp, fCrit);
+                    HITLOC, crit_hit, temp, f_crit);
         break; // sanity check
       }
       destroycrit = 0;
       if (mech_weapon_critical_handle(&(WeaponCriticalRequest){
               .attacker = attacker,
               .wounded = wounded,
-              .slot = {.section = temp, .critical = fCrit},
-              .part_type = mech_critical_part_type(wounded, temp, fCrit)}))
+              .slot = {.section = temp, .critical = f_crit},
+              .part_type = mech_critical_part_type(wounded, temp, f_crit)}))
         break;
       mech_weapon_critical_apply(&(WeaponCriticalApplication){
-          .mech = wounded, .slot = {.section = temp, .critical = fCrit}});
+          .mech = wounded, .slot = {.section = temp, .critical = f_crit}});
       break;
     case HEAT_SINK:
       if (mech_has_double_heat_sinks(mech)) {
         int heat_sink_critical_size = mech_heat_sink_critical_size(mech);
-        wFirstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+        w_first_crit = mech_weapon_first_critical(&(WeaponCriticalSearch){
             .mech = wounded,
-            .weapon = {.section = hitloc, .critical = critHit},
+            .weapon = {.section = HITLOC, .critical = crit_hit},
             .start_critical = 0,
-            .part_type = critType,
+            .part_type = CRIT_TYPE,
             .maximum_criticals = heat_sink_critical_size,
         });
         mech_heat_sink_count_remove(wounded, 2);
         mech_weapon_destroy(&(WeaponDestructionRequest){
             .mech = wounded,
-            .first = {.section = hitloc, .critical = wFirstCrit},
-            .part_type = critType,
+            .first = {.section = HITLOC, .critical = w_first_crit},
+            .part_type = CRIT_TYPE,
             .criticals_to_destroy = 1,
             .total_criticals = heat_sink_critical_size});
         destroycrit = 0;
@@ -355,17 +356,17 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
       }
       /* IMPROVED JJ CHECK HERE. SIMILIAR TO DHS */
       if (mech_technology_flags_secondary(mech) & IMPROVED_JJ_TECH) {
-        wFirstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+        w_first_crit = mech_weapon_first_critical(&(WeaponCriticalSearch){
             .mech = wounded,
-            .weapon = {.section = hitloc, .critical = critHit},
+            .weapon = {.section = HITLOC, .critical = crit_hit},
             .start_critical = 0,
-            .part_type = critType,
+            .part_type = CRIT_TYPE,
             .maximum_criticals = 2,
         });
         mech_weapon_destroy(&(WeaponDestructionRequest){
             .mech = wounded,
-            .first = {.section = hitloc, .critical = wFirstCrit},
-            .part_type = critType,
+            .first = {.section = HITLOC, .critical = w_first_crit},
+            .part_type = CRIT_TYPE,
             .criticals_to_destroy = 1,
             .total_criticals = 2});
         destroycrit = 0;
@@ -433,7 +434,7 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
         mech_pilot_skill_modifier_add(wounded, 3);
         mech_notify(wounded, MECHALL, "Your Gyro has been damaged!");
         if (attacker)
-          if (!MadePilotSkillRoll(wounded, 0) &&
+          if (!made_pilot_skill_roll(wounded, 0) &&
               !mech_condition_summary(wounded).fallen) {
             if (!mech_is_jumping(wounded) && !mech_is_out_of_control(wounded)) {
               mech_notify(wounded, MECHALL,
@@ -471,14 +472,14 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
       }
       break;
     case SHOULDER_OR_HIP:
-      mech_critical_destroy(wounded, hitloc, critHit);
+      mech_critical_destroy(wounded, HITLOC, crit_hit);
       destroycrit = 0;
 
-      if (tLocIsArm) {
+      if (t_loc_is_arm) {
         mech_notify(wounded, MECHALL,
                     "Your shoulder joint takes a hit and is frozen!");
-        mech_section_actuator_criticals_normalize(wounded, hitloc);
-      } else if (tLocIsLeg) {
+        mech_section_actuator_criticals_normalize(wounded, HITLOC);
+      } else if (t_loc_is_leg) {
         if (!mech_is_destroyed(wounded) && mech_is_started(wounded)) {
           (void)snprintf(msgbuf, MBUF_SIZE, "'s hip locks into place!");
           mech_los_broadcast(wounded, msgbuf);
@@ -498,7 +499,7 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
 
         if (attacker && !mech_is_jumping(wounded) &&
             !mech_is_out_of_control(wounded) &&
-            !MadePilotSkillRoll(wounded, 0)) {
+            !made_pilot_skill_roll(wounded, 0)) {
           mech_notify(wounded, MECHALL, "You lose your balance and fall down!");
           mech_los_broadcast(wounded, "stumbles and falls down!");
           mech_fall(wounded, 1, 0);
@@ -508,22 +509,23 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
     case LOWER_ACTUATOR:
     case UPPER_ACTUATOR:
     case HAND_OR_FOOT_ACTUATOR:
-      mech_critical_destroy(wounded, hitloc, critHit);
+      mech_critical_destroy(wounded, HITLOC, crit_hit);
       destroycrit = 0;
 
-      if (tLocIsArm) {
-        if (special_from_equipment_index(critType) == HAND_OR_FOOT_ACTUATOR)
+      if (t_loc_is_arm) {
+        if (special_from_equipment_index(CRIT_TYPE) == HAND_OR_FOOT_ACTUATOR)
           mech_printf(wounded, MECHALL, "Your %s hand actuator is destroyed!",
-                      hitloc == LARM ? "left" : "right");
+                      HITLOC == LARM ? "left" : "right");
         else
           mech_printf(wounded, MECHALL, "Your %s %s arm actuator is destroyed!",
-                      hitloc == LARM ? "left" : "right",
-                      special_from_equipment_index(critType) == LOWER_ACTUATOR
+                      HITLOC == LARM ? "left" : "right",
+                      special_from_equipment_index(CRIT_TYPE) == LOWER_ACTUATOR
                           ? "lower"
                           : "upper");
 
-        if ((special_from_equipment_index(critType) == HAND_OR_FOOT_ACTUATOR) &&
-            mech_section_carries_club(mech, hitloc))
+        if ((special_from_equipment_index(CRIT_TYPE) ==
+             HAND_OR_FOOT_ACTUATOR) &&
+            mech_section_carries_club(mech, HITLOC))
           mech_drop_club(mech);
         if (mech_carried_dbref(mech) > 0) {
           mech_notify(mech, MECHALL, "The hit causes your tow line to let go!");
@@ -531,14 +533,14 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
                              "'s tow lines release and flap freely behind it!");
           mech_dropoff(GOD, mech, "");
         }
-        mech_section_actuator_criticals_normalize(wounded, hitloc);
-      } else if (tLocIsLeg) {
+        mech_section_actuator_criticals_normalize(wounded, HITLOC);
+      } else if (t_loc_is_leg) {
         mech_notify(wounded, MECHALL,
                     "One of your leg actuators is destroyed!");
 
         if (mech_critical_is_operational_special(&(CriticalSpecialCheck){
                 .mech = wounded,
-                .slot = {.section = hitloc, .critical = 0},
+                .slot = {.section = HITLOC, .critical = 0},
                 .special = SHOULDER_OR_HIP})) { /* don't
 need to bother with crits if we already have a hip crit here */
           if (!mech_is_destroyed(wounded) && mech_is_started(wounded)) {
@@ -551,7 +553,7 @@ need to bother with crits if we already have a hip crit here */
 
           if (attacker && !mech_is_jumping(wounded) &&
               !mech_is_out_of_control(wounded) &&
-              !MadePilotSkillRoll(wounded, 0)) {
+              !made_pilot_skill_roll(wounded, 0)) {
             mech_notify(wounded, MECHALL,
                         "You lose your balance and fall down!");
             mech_los_broadcast(wounded, "stumbles and falls down!");
@@ -638,14 +640,14 @@ need to bother with crits if we already have a hip crit here */
       mech_sensors_disable_requiring(wounded, LIGHT_BAP_TECH);
       break;
     case ARTEMIS_IV:
-      weapon_slot = mech_critical_data(wounded, hitloc, critHit);
+      weapon_slot = mech_critical_data(wounded, HITLOC, crit_hit);
       if (weapon_slot > NUM_CRITICALS) {
         btech_channel_send(
             context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Artemis IV error on mech %ld", mech_dbref(wounded)));
         break;
       }
-      mech_critical_ammo_mode_clear(wounded, hitloc, weapon_slot, ARTEMIS_MODE);
+      mech_critical_ammo_mode_clear(wounded, HITLOC, weapon_slot, ARTEMIS_MODE);
       mech_notify(wounded, MECHALL,
                   "Your Artemis IV system has been destroyed!");
       break;
@@ -684,7 +686,7 @@ need to bother with crits if we already have a hip crit here */
     }
 
     if (destroycrit)
-      mech_critical_destroy(wounded, hitloc, critHit);
+      mech_critical_destroy(wounded, HITLOC, crit_hit);
   }
 
   return 1;

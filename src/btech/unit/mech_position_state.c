@@ -26,7 +26,7 @@ void mech_position_previous_capture(Mech *mech) {
 }
 
 void mech_position_hex_sync_from_real(Mech *mech) {
-  RealCoordToMapCoord(&mech->pd.x, &mech->pd.y, mech->pd.fx, mech->pd.fy);
+  real_coord_to_map_coord(&mech->pd.x, &mech->pd.y, mech->pd.fx, mech->pd.fy);
 }
 
 int mech_position_x(const Mech *mech) { return mech->pd.x; }
@@ -171,12 +171,12 @@ void mech_desired_speed_set(Mech *mech, float speed) {
 }
 
 void mech_desired_heading_set(Mech *mech, int heading) {
-  mech->rd.desiredfacing = clamp_int_to_short(AcceptableDegree(heading));
+  mech->rd.desiredfacing = clamp_int_to_short(acceptable_degree(heading));
 }
 
 void mech_heading_set(Mech *mech, int heading) {
   mech->pd.facing =
-      clamp_int_to_short(short_to_float_simulation(AcceptableDegree(heading)));
+      clamp_int_to_short(short_to_float_simulation(acceptable_degree(heading)));
 }
 
 void mech_heading_fixed_set(Mech *mech, int heading) {
@@ -207,22 +207,22 @@ void mech_heading_rotate_toward_desired(Mech *mech, int fixed_offset) {
   }
 
   mech->rd.critstatus |= CHEAD;
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 void mech_heading_change_clear(Mech *mech) { mech->rd.critstatus &= ~CHEAD; }
 
 void mech_turret_heading_absolute_set(Mech *mech, int heading) {
   mech->rd.turretfacing = clamp_int_to_short(
-      AcceptableDegree(heading - mech_heading_degrees(mech)));
+      acceptable_degree(heading - mech_heading_degrees(mech)));
 }
 
 void mech_turret_heading_relative_set(Mech *mech, int heading) {
-  mech->rd.turretfacing = clamp_int_to_short(AcceptableDegree(heading));
+  mech->rd.turretfacing = clamp_int_to_short(acceptable_degree(heading));
 }
 
 int mech_turret_heading_absolute(const Mech *mech) {
-  return AcceptableDegree(mech->rd.turretfacing + mech_heading_degrees(mech));
+  return acceptable_degree(mech->rd.turretfacing + mech_heading_degrees(mech));
 }
 
 void mech_desired_angle_set(Mech *mech, int angle) {
@@ -257,7 +257,7 @@ void mech_jump_destination_y_set(Mech *mech, int destination_y) {
 void mech_fall_heading_apply(Mech *mech, int offset) {
   mech->pd.facing += short_to_float_simulation(offset);
   mech->pd.facing = clamp_int_to_short(short_to_float_simulation(
-      AcceptableDegree(float_simulation_to_short(mech->pd.facing))));
+      acceptable_degree(float_simulation_to_short(mech->pd.facing))));
   mech->rd.desiredfacing =
       clamp_int_to_short(float_simulation_to_short(mech->pd.facing));
 }
@@ -294,7 +294,7 @@ void mech_jump_overshoot_restore(Mech *mech, float delta_x, float delta_y) {
   mech->pd.fz = mech->rd.endfz;
   mech->pd.x = mech->rd.goingx;
   mech->pd.y = mech->rd.goingy;
-  MapCoordToRealCoord(mech->pd.x, mech->pd.y, &mech->pd.fx, &mech->pd.fy);
+  map_coord_to_real_coord(mech->pd.x, mech->pd.y, &mech->pd.fx, &mech->pd.fy);
   mech->pd.z = clamp_float_to_short(mech->pd.fz / (float)ZSCALE);
 }
 
@@ -310,11 +310,11 @@ void mech_position_mirror(Mech *target, const Mech *source, int height_offset) {
 }
 
 void mech_position_land_if_flying(Mech *mech) {
-  bool const is_dropship =
+  bool const IS_DROPSHIP =
       mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS;
-  bool const is_flying =
-      mech->ud.type == CLASS_AERO || is_dropship || mech->ud.move == MOVE_VTOL;
-  if (!(mech->rd.status & LANDED) && is_flying)
+  bool const IS_FLYING =
+      mech->ud.type == CLASS_AERO || IS_DROPSHIP || mech->ud.move == MOVE_VTOL;
+  if (!(mech->rd.status & LANDED) && IS_FLYING)
     mech->rd.status |= LANDED;
 }
 

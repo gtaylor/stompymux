@@ -159,7 +159,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   }
   if (key & MSG_ME) {
     msg_copy = alloc_lbuf("notify_checked");
-    StringCopy(msg_copy, msg);
+    string_copy(msg_copy, msg);
   } else {
     msg_copy = nullptr;
   }
@@ -495,10 +495,10 @@ void fork_and_dump(ServerControl *control, int key) {
         return;
 
       case 0: /* child */
-        dprintk("child database write process starting.");
+        DPRINTK("child database write process starting.");
         server_lifecycle_unbind_signals(control->lifecycle);
         dump_database_internal(control, DUMP_NORMAL);
-        dprintk("child database write process finished.");
+        DPRINTK("child database write process finished.");
         /* You generally don't want to run atexit()
          * handlers and that sort of thing.  */
         _exit(0);

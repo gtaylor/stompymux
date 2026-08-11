@@ -22,14 +22,14 @@ typedef struct MapTextRequest {
 
 /* mech.maps.c */
 void mech_findcenter(DbRef player, void *data, char *buffer);
-const char *GetTerrainName_base(int t);
-const char *GetTerrainName(BattleMap *map, int x, int y);
+const char *get_terrain_name_base(int t);
+const char *get_terrain_name(BattleMap *map, int x, int y);
 void mech_navigate(DbRef player, void *data, char *buffer);
-char GetLRSMechChar(Mech *mech, Mech *tempMech);
+char get_lrs_mech_char(Mech *mech, Mech *temp_mech);
 void mech_lrsmap(DbRef player, void *data, char *buffer);
-char *TerrainColor(char terrain, int elev);
-void TacMapTerr(BattleMap *mech_map, int x, int y, char *terr, char *elev,
-                int isdown);
+char *terrain_color(char terrain, int elev);
+void tac_map_terr(BattleMap *mech_map, int x, int y, char *terr, char *elev,
+                  int isdown);
 MapText *map_text_create(const MapTextRequest *request);
 char *const *map_text_lines(const MapText *text);
 size_t map_text_line_count(const MapText *text);

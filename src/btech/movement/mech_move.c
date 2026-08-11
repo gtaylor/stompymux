@@ -55,10 +55,10 @@ static int mech_movement_maximum_int(int first, int second) {
 }
 
 static int mech_stand_time(const Mech *mech) {
-  const float speed_factor = mech_maximum_speed(mech) / MP2;
-  const float bounded_factor = fminf(fmaxf(1.0F, speed_factor), 30.0F);
-  const float delay = 30.0F / bounded_factor;
-  return (int)delay;
+  const float SPEED_FACTOR = mech_maximum_speed(mech) / MP2;
+  const float BOUNDED_FACTOR = fminf(fmaxf(1.0F, SPEED_FACTOR), 30.0F);
+  const float DELAY = 30.0F / BOUNDED_FACTOR;
+  return (int)DELAY;
 }
 
 typedef struct LateralMode {
@@ -67,7 +67,7 @@ typedef struct LateralMode {
   int ofs;
 } LateralMode;
 
-static const LateralMode lateral_modes[] = {
+static const LateralMode LATERAL_MODES[] = {
     {"nw", "Front/Left", 300}, {"fl", "Front/Left", 300},
     {"ne", "Front/Right", 60}, {"fr", "Front/Right", 60},
     {"sw", "Rear/Left", 240},  {"rl", "Rear/Left", 240},
@@ -77,7 +77,7 @@ static const LateralMode lateral_modes[] = {
 static const LateralMode *lateral_mode(int index) {
   if (index < 0)
     abort();
-  return checked_storage_at_const(lateral_modes, 10, sizeof(*lateral_modes),
+  return checked_storage_at_const(LATERAL_MODES, 10, sizeof(*LATERAL_MODES),
                                   (size_t)index);
 }
 
@@ -131,10 +131,10 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
     return;
 
   if (!(((mech_movement_type(mech) == MOVE_QUAD) &&
-         (CountDestroyedLegs(mech) == 0)) ||
+         (count_destroyed_legs(mech) == 0)) ||
         ((mech_class(mech) == CLASS_VTOL) ||
          (mech_movement_type(mech) == MOVE_HOVER)) ||
-        ((HasBoolAdvantage(mech_context(mech), player, "maneuvering_ace") &&
+        ((has_bool_advantage(mech_context(mech), player, "maneuvering_ace") &&
           (mech_pilot_dbref(mech) == player))))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You cannot alter your lateral movement!");
@@ -181,7 +181,7 @@ void mech_turnmode(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (!HasBoolAdvantage(mech_context(mech), player, "maneuvering_ace")) {
+  if (!has_bool_advantage(mech_context(mech), player, "maneuvering_ace")) {
     mech_notify(mech, MECHPILOT, "You're not skilled enough to do that.");
     return;
   }
@@ -204,15 +204,15 @@ void mech_turnmode(DbRef player, void *data, char *buffer) {
 
 void mech_bootlegger(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  float fMinSpeed = (4 * MP1);
-  int wBTHMod = 0;
-  int wFallLevels = 0;
+  float f_min_speed = (4 * MP1);
+  int w_bth_mod = 0;
+  int w_fall_levels = 0;
   int i;
-  int wHeadingChange = 0;
-  int wNewHeading;
-  float fMechSpeed = mech_current_speed(mech);
-  int wMechTons = mech_tonnage(mech);
-  char strLocation[50];
+  int w_heading_change = 0;
+  int w_new_heading;
+  float f_mech_speed = mech_current_speed(mech);
+  int w_mech_tons = mech_tonnage(mech);
+  char str_location[50];
   char *args[1];
 
   if (!common_checks(player, mech, MECH_USUALO))
@@ -223,16 +223,16 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  if (CountDestroyedLegs(mech) > 0) {
+  if (count_destroyed_legs(mech) > 0) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You can't perform a bootlegger with destroyed legs!");
     return;
   }
-  if (fMechSpeed < fMinSpeed) {
+  if (f_mech_speed < f_min_speed) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  tprintf("You are going too slow to perform a bootlegger! The "
                          "required minimum speed is %4.1f KPH.",
-                         (double)fMinSpeed));
+                         (double)f_min_speed));
     return;
   }
 
@@ -241,14 +241,14 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
       turn_argument, strlen(turn_argument) + 1, sizeof(*turn_argument), 0);
   switch (ascii_to_upper(*turn_character)) {
   case 'R':
-    wHeadingChange = 90;
+    w_heading_change = 90;
     break;
   case 'L':
-    wHeadingChange = -90;
+    w_heading_change = -90;
     break;
   }
 
-  if (wHeadingChange == 0) {
+  if (w_heading_change == 0) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid turn direction!");
     return;
@@ -258,69 +258,70 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     if ((i == LLEG) || (i == RLEG) ||
         ((mech_movement_type(mech) == MOVE_QUAD) &&
          ((i == LARM) || (i == RARM)))) {
-      ArmorStringFromIndex(i, strLocation, mech_class(mech),
-                           mech_movement_type(mech));
+      armor_string_from_index(i, str_location, mech_class(mech),
+                              mech_movement_type(mech));
 
-      if (SectHasBusyWeap(mech, i)) {
+      if (sect_has_busy_weap(mech, i)) {
         mech_printf(mech, MECHALL, "You have weapons recycling in your %s.",
-                    strLocation);
+                    str_location);
         return;
       }
 
       if (mech_section_recycle_ticks(mech, i)) {
         mech_printf(mech, MECHALL,
                     "Your %s is still recovering from its last action.",
-                    strLocation);
+                    str_location);
         return;
       }
 
-      wBTHMod += mech_section_base_to_hit(mech, i);
+      w_bth_mod += mech_section_base_to_hit(mech, i);
     }
   }
 
-  if (fMechSpeed <= (4 * MP1)) {
-    wBTHMod += 0;
-  } else if (fMechSpeed <= (8 * MP1)) {
-    wBTHMod += 1;
-  } else if (fMechSpeed <= (12 * MP1)) {
-    wBTHMod += 2;
+  if (f_mech_speed <= (4 * MP1)) {
+    w_bth_mod += 0;
+  } else if (f_mech_speed <= (8 * MP1)) {
+    w_bth_mod += 1;
+  } else if (f_mech_speed <= (12 * MP1)) {
+    w_bth_mod += 2;
   } else {
-    wBTHMod += 3;
+    w_bth_mod += 3;
   }
 
-  if (wMechTons <= 35) {
-    wBTHMod += 0;
-  } else if (wMechTons <= 55) {
-    wBTHMod += 1;
-  } else if (wMechTons <= 75) {
-    wBTHMod += 2;
+  if (w_mech_tons <= 35) {
+    w_bth_mod += 0;
+  } else if (w_mech_tons <= 55) {
+    w_bth_mod += 1;
+  } else if (w_mech_tons <= 75) {
+    w_bth_mod += 2;
   } else {
-    wBTHMod += 3;
+    w_bth_mod += 3;
   }
 
-  wBTHMod += (battle_terrain_is_water(mech_real_terrain_get(mech)) &&
-                      mech_position_z(mech) < 0
-                  ? 2
-                  : 0);
+  w_bth_mod += (battle_terrain_is_water(mech_real_terrain_get(mech)) &&
+                        mech_position_z(mech) < 0
+                    ? 2
+                    : 0);
 
-  wBTHMod = mech_movement_maximum_int(wBTHMod, 1);
+  w_bth_mod = mech_movement_maximum_int(w_bth_mod, 1);
 
   btech_channel_send(
       mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
       tprintf("#%ld attempts to do a bootlegger (mech). Tonnage: %d, "
               "Speed: %4.1f, BTHMod: %d",
-              mech_dbref(mech), wMechTons, (double)fMechSpeed, wBTHMod));
+              mech_dbref(mech), w_mech_tons, (double)f_mech_speed, w_bth_mod));
 
-  if (MadePilotSkillRoll(mech, wBTHMod)) {
-    wNewHeading = AcceptableDegree(mech_heading_degrees(mech) + wHeadingChange);
+  if (made_pilot_skill_roll(mech, w_bth_mod)) {
+    w_new_heading =
+        acceptable_degree(mech_heading_degrees(mech) + w_heading_change);
 
-    mech_heading_set(mech, wNewHeading);
-    mech_desired_heading_set(mech, wNewHeading);
+    mech_heading_set(mech, w_new_heading);
+    mech_desired_heading_set(mech, w_new_heading);
     mech_current_speed_scale(mech, 0.5F);
 
     mech_printf(mech, MECHALL,
                 "You plant a foot and swivel, changing your heading to %d.",
-                wNewHeading);
+                w_new_heading);
 
     for (i = 0; i < NUM_SECTIONS; i++) {
       if ((i == LLEG) || (i == RLEG) ||
@@ -330,7 +331,7 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     }
 
   } else {
-    wFallLevels = mech_movement_maximum_int(wBTHMod, 1);
+    w_fall_levels = mech_movement_maximum_int(w_bth_mod, 1);
 
     mech_notify(mech, MECHALL, "You plant a foot and try to swivel...");
     mech_notify(
@@ -340,10 +341,10 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
                        "attempts to fight the forces of inertia but looses "
                        "the battle miserably!");
 
-    if (wFallLevels > 2)
+    if (w_fall_levels > 2)
       mech_los_broadcast(mech, "tumbles over and over and over!");
 
-    mech_fall(mech, wFallLevels, 1);
+    mech_fall(mech, w_fall_levels, 1);
   }
 }
 
@@ -385,22 +386,22 @@ void mech_eta(DbRef player, void *data, char *buffer) {
                  "Invalid arguments!");
     return;
   }
-  MapCoordToRealCoord(eta_x, eta_y, &fx, &fy);
+  map_coord_to_real_coord(eta_x, eta_y, &fx, &fy);
   range = map_spatial_range(&(MapSpatialSegment){
       .start = {.x = mech_position_real_x(mech),
                 .y = mech_position_real_y(mech),
                 .z = 0.0F},
       .end = {.x = fx, .y = fy, .z = 0.0F},
   });
-  float const current_speed = mech_current_speed(mech);
-  if (fabsf(current_speed) < 0.1F)
+  float const CURRENT_SPEED = mech_current_speed(mech);
+  if (fabsf(CURRENT_SPEED) < 0.1F)
     mech_printf(mech, MECHALL,
                 "Range to hex (%d,%d) is %.1f.  ETA: Never, mech not moving.",
                 eta_x, eta_y, (double)range);
   else {
-    float const eta_minutes =
-        fabsf(range / (current_speed / (float)KPH_PER_MP));
-    etamin = clamp_float_to_int(eta_minutes);
+    float const ETA_MINUTES =
+        fabsf(range / (CURRENT_SPEED / (float)KPH_PER_MP));
+    etamin = clamp_float_to_int(ETA_MINUTES);
     etahr = etamin / 60;
     etamin = etamin % 60;
     mech_printf(mech, MECHALL, "Range to hex (%d,%d) is %.1f.  ETA: %.2d:%.2d.",
@@ -450,8 +451,8 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
 
     /* if the player has speed demon give him his boost in speed */
     if (!mech_event_count(mech, EVENT_MOVEMODE) && conditions.sprinting &&
-        HasBoolAdvantage(mech_context(mech), mech_pilot_dbref(mech),
-                         "speed_demon"))
+        has_bool_advantage(mech_context(mech), mech_pilot_dbref(mech),
+                           "speed_demon"))
       mspeed += MP1;
 
     if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech)) {
@@ -510,21 +511,21 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
     if (3 * sv < (mech_cached_lugged_weight(mech) + mv))
       mspeed = 0.0F;
     else {
-      int const tonnage = mech_tonnage(mech);
-      int const denominator = mech_movement_maximum_int(
-          1024 * tonnage + mech_cached_lugged_weight(mech) / 3,
+      int const TONNAGE = mech_tonnage(mech);
+      int const DENOMINATOR = mech_movement_maximum_int(
+          1024 * TONNAGE + mech_cached_lugged_weight(mech) / 3,
           mech_movement_maximum_int(1024,
                                     mv + mech_cached_lugged_weight(mech)));
-      mspeed = mech_maximum_speed(mech) * (float)tonnage * 1024.0F /
-               (float)denominator;
+      mspeed = mech_maximum_speed(mech) * (float)TONNAGE * 1024.0F /
+               (float)DENOMINATOR;
     }
   }
-  int const speed_in_movement_points = clamp_float_to_int(mspeed / MP1);
+  int const SPEED_IN_MOVEMENT_POINTS = clamp_float_to_int(mspeed / MP1);
   mech_speed_cache_record(&(MechSpeedCacheRecord){
       .mech = mech,
       .maximum_speed = mspeed,
       .walking_xp_factor =
-          mech_movement_maximum_int(1, speed_in_movement_points) * 2});
+          mech_movement_maximum_int(1, SPEED_IN_MOVEMENT_POINTS) * 2});
   return mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 }
 
@@ -535,9 +536,9 @@ float mech_effective_maximum_speed(Mech *mech) {
 void mech_drop(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   float s1;
-  int wDropLevels = 0;
-  int wDropBTH = 0;
-  int tHasSwarmers = 0;
+  int w_drop_levels = 0;
+  int w_drop_bth = 0;
+  int t_has_swarmers = 0;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;
@@ -570,36 +571,36 @@ void mech_drop(DbRef player, void *data, const char *buffer) {
   s1 = mech_effective_maximum_speed(mech) / 3.0F;
 
   if ((mech_class(mech) == CLASS_MECH) && bsuit_swarmer_count(mech))
-    tHasSwarmers = 1;
+    t_has_swarmers = 1;
 
-  float const current_speed = mech_current_speed(mech);
-  if (mech_class(mech) != CLASS_MW && fabsf(current_speed) > s1 * 2.0F) {
+  float const CURRENT_SPEED = mech_current_speed(mech);
+  if (mech_class(mech) != CLASS_MW && fabsf(CURRENT_SPEED) > s1 * 2.0F) {
     mech_notify(mech, MECHALL, "You attempt a controlled drop while running.");
-    wDropLevels = 2;
-    wDropBTH = 2;
-  } else if (fabsf(current_speed) > s1) {
+    w_drop_levels = 2;
+    w_drop_bth = 2;
+  } else if (fabsf(CURRENT_SPEED) > s1) {
     mech_notify(mech, MECHALL,
                 "You attempt a controlled drop from your fast walk.");
-    wDropLevels = 1;
+    w_drop_levels = 1;
   }
 
   if (mech_stagger_level(mech) > 0) {
     mech_notify(mech, MECHALL,
                 "Still staggering, you try not to fall on your face.");
-    wDropLevels = (wDropLevels == 0 ? 1 : wDropLevels);
-    wDropBTH = wDropBTH + mech_stagger_level(mech);
+    w_drop_levels = (w_drop_levels == 0 ? 1 : w_drop_levels);
+    w_drop_bth = w_drop_bth + mech_stagger_level(mech);
   }
 
-  if (tHasSwarmers)
+  if (t_has_swarmers)
     mech_notify(mech, MECHALL,
                 "The suits hanging off you make a controlled drop harder!");
 
-  if ((wDropLevels > 0) || tHasSwarmers) {
-    if (MadePilotSkillRoll(mech, wDropBTH)) {
+  if ((w_drop_levels > 0) || t_has_swarmers) {
+    if (made_pilot_skill_roll(mech, w_drop_bth)) {
       mech_notify(mech, MECHALL, "You hit the ground with minimal damage");
       mech_los_broadcast(mech, "drops to the ground!");
 
-      if (tHasSwarmers)
+      if (t_has_swarmers)
         bsuit_swarmers_stop(
             btech_context_find_object(mech_context(mech), mech_map_dbref(mech)),
             mech, 0);
@@ -608,15 +609,15 @@ void mech_drop(DbRef player, void *data, const char *buffer) {
       mech_notify(mech, MECHALL, "You fall to the ground hard");
       mech_los_broadcast(mech, "falls hard to the ground!");
 
-      if (wDropLevels <= 0)
-        wDropLevels = 1;
+      if (w_drop_levels <= 0)
+        w_drop_levels = 1;
 
-      if (tHasSwarmers)
+      if (t_has_swarmers)
         bsuit_swarmers_stop(
             btech_context_find_object(mech_context(mech), mech_map_dbref(mech)),
             mech, 0);
 
-      mech_fall(mech, wDropLevels, 1);
+      mech_fall(mech, w_drop_levels, 1);
     }
   } else {
     mech_notify(mech, MECHALL, "You drop to the ground prone!");
@@ -638,9 +639,9 @@ void mech_drop(DbRef player, void *data, const char *buffer) {
 void mech_stand(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   char *args[2] = {0};
-  int wcDeadLegs = 0;
-  int tNeedsPSkill = 1;
-  int tDoStand = 1;
+  int wc_dead_legs = 0;
+  int t_needs_p_skill = 1;
+  int t_do_stand = 1;
   int bth, mechstandtime, standanyway = 0, standcarefulmod = 0;
 
   if (!common_checks(player, mech, MECH_USUAL))
@@ -667,15 +668,15 @@ void mech_stand(DbRef player, void *data, char *buffer) {
   }
 
   /* set the number of dead legs we have */
-  wcDeadLegs = CountDestroyedLegs(mech);
+  wc_dead_legs = count_destroyed_legs(mech);
 
-  if ((((mech_movement_type(mech) == MOVE_QUAD) && (wcDeadLegs > 3)) ||
-       (!(mech_movement_type(mech) == MOVE_QUAD) && (wcDeadLegs > 1)))) {
+  if ((((mech_movement_type(mech) == MOVE_QUAD) && (wc_dead_legs > 3)) ||
+       (!(mech_movement_type(mech) == MOVE_QUAD) && (wc_dead_legs > 1)))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You have no legs to stand on!");
     return;
   }
-  if (wcDeadLegs > 2) {
+  if (wc_dead_legs > 2) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You'd be far too unstable!");
     return;
@@ -742,9 +743,9 @@ void mech_stand(DbRef player, void *data, char *buffer) {
   mech_make_stand(mech);
 
   /*  quads with all 4 legs don't have to roll to stand */
-  if (((wcDeadLegs == 0) && (mech_movement_type(mech) == MOVE_QUAD)) ||
+  if (((wc_dead_legs == 0) && (mech_movement_type(mech) == MOVE_QUAD)) ||
       (mech_class(mech) == CLASS_MW)) {
-    tNeedsPSkill = 0;
+    t_needs_p_skill = 0;
   }
 
   mech_los_broadcast(mech, "attempts to stand up.");
@@ -753,7 +754,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
       mech_position_z(mech) == -1)
     break_thru_ice(mech);
 
-  if (tNeedsPSkill) {
+  if (t_needs_p_skill) {
     /* Changed to NoXP. Keeps people from doing pushups to gain Pilot XP */
     if (!mech_pilot_skill_roll_without_experience(&(PilotSkillRollRequest){
             .mech = mech, .modifier = standcarefulmod})) {
@@ -769,11 +770,11 @@ void mech_stand(DbRef player, void *data, char *buffer) {
       }
       mech_event_schedule(mech, EVENT_STANDFAIL, mech_standfail_event,
                           mechstandtime, 0);
-      tDoStand = 0;
+      t_do_stand = 0;
     }
   }
 
-  if (tDoStand) {
+  if (t_do_stand) {
     /* Now we set a counter in goingy to keep him from moving or jumping until
      * he is finished standing */
     mech_notify(mech, MECHALL, "You begin to stand up.");

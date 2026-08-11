@@ -34,8 +34,8 @@ void gamedb_log_failure(ServerLog *log, const char *stage, const char *path,
 }
 
 const NativeColumn *gamedb_native_column_at(size_t index) {
-  return checked_storage_at_const(native_columns, native_column_count,
-                                  sizeof(*native_columns), index);
+  return checked_storage_at_const(NATIVE_COLUMNS, NATIVE_COLUMN_COUNT,
+                                  sizeof(*NATIVE_COLUMNS), index);
 }
 
 /* Report a subsystem persistence failure with its registered extension name. */
@@ -164,10 +164,10 @@ int gamedb_fsync_directory(const char *path) {
 
   if (strlen(path) >= sizeof(directory))
     return -1;
-  StringCopy(directory, path);
+  string_copy(directory, path);
   slash = strrchr(directory, '/');
   if (!slash)
-    StringCopy(directory, ".");
+    string_copy(directory, ".");
   else if (slash == directory)
     *(char *)checked_storage_at(directory, sizeof(directory), sizeof(char), 1) =
         '\0';

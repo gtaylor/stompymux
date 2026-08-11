@@ -21,14 +21,14 @@ static unsigned short **restore_los_row(BattleMap *map, size_t count,
   if (index < 0)
     abort();
   return (unsigned short **)checked_storage_at(
-      (void *)map->LOSinfo, count, sizeof(*map->LOSinfo), (size_t)index);
+      (void *)map->lo_sinfo, count, sizeof(*map->lo_sinfo), (size_t)index);
 }
 
 static DbRef *restore_unit_slot(BattleMap *map, int index) {
   if (index < 0)
     abort();
-  return checked_storage_at(map->mechsOnMap, (size_t)map->first_free,
-                            sizeof(*map->mechsOnMap), (size_t)index);
+  return checked_storage_at(map->mechs_on_map, (size_t)map->first_free,
+                            sizeof(*map->mechs_on_map), (size_t)index);
 }
 
 static char *restore_unit_flag(BattleMap *map, int index) {
@@ -51,7 +51,7 @@ static MapObject **restore_object_slot(BattleMap *map, int type) {
   if (type < 0)
     abort();
   return (MapObject **)checked_storage_at(
-      (void *)map->MapObject, NUM_MAPOBJTYPES, sizeof(*map->MapObject),
+      (void *)map->map_object, NUM_MAPOBJTYPES, sizeof(*map->map_object),
       (size_t)type);
 }
 
@@ -86,30 +86,30 @@ static int btech_special_allocate_map_dynamic(BattleMap *map) {
     return 0;
   }
   allocation_count = (size_t)map->first_free;
-  map->mechsOnMap = calloc(allocation_count, sizeof(*map->mechsOnMap));
+  map->mechs_on_map = calloc(allocation_count, sizeof(*map->mechs_on_map));
   map->mechflags = calloc(allocation_count, sizeof(*map->mechflags));
-  map->LOSinfo =
-      (unsigned short **)calloc(allocation_count, sizeof(*map->LOSinfo));
-  for (index = 0; map->mechsOnMap && map->mechflags && map->LOSinfo &&
+  map->lo_sinfo =
+      (unsigned short **)calloc(allocation_count, sizeof(*map->lo_sinfo));
+  for (index = 0; map->mechs_on_map && map->mechflags && map->lo_sinfo &&
                   index < map->first_free;
        index++) {
     unsigned short **row = restore_los_row(map, allocation_count, index);
     *row = calloc(allocation_count, sizeof(**row));
   }
-  if (map->mechsOnMap && map->mechflags && map->LOSinfo &&
+  if (map->mechs_on_map && map->mechflags && map->lo_sinfo &&
       index == map->first_free) {
     map->dynamic_size = map->first_free;
     return 0;
   }
-  if (map->LOSinfo)
+  if (map->lo_sinfo)
     for (index = 0; index < map->first_free; index++)
       free(*restore_los_row(map, allocation_count, index));
-  free((void *)map->LOSinfo);
+  free((void *)map->lo_sinfo);
   free(map->mechflags);
-  free(map->mechsOnMap);
-  map->LOSinfo = NULL;
+  free(map->mechs_on_map);
+  map->lo_sinfo = NULL;
   map->mechflags = NULL;
-  map->mechsOnMap = NULL;
+  map->mechs_on_map = NULL;
   map->dynamic_size = 0;
   return -1;
 }
@@ -145,7 +145,7 @@ int btech_special_load_map_parents(sqlite3 *sqlite, BtechContext *context) {
   int wind_speed;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
+  result = SQLITE3_PREPARE_V2(
                sqlite,
                "SELECT dbref, map_name, width, height, temperature, gravity, "
                "cloudbase, visibility, max_visibility, light, wind_direction, "
@@ -252,7 +252,7 @@ int btech_special_load_map_hexes(sqlite3 *sqlite, BtechContext *context) {
   expected_y = 0;
   map = NULL;
   result =
-      sqlite3_prepare_v2(sqlite,
+      SQLITE3_PREPARE_V2(sqlite,
                          "SELECT map_dbref, x, y, value FROM btech_map_hexes "
                          "ORDER BY map_dbref, y, x;",
                          -1, &statement, NULL) == SQLITE_OK
@@ -317,7 +317,7 @@ int btech_special_load_map_slots(sqlite3 *sqlite, BtechContext *context) {
   current_map = NOTHING;
   expected_slot = 0;
   map = NULL;
-  result = sqlite3_prepare_v2(sqlite,
+  result = SQLITE3_PREPARE_V2(sqlite,
                               "SELECT map_dbref, slot, mech_dbref, mech_flags "
                               "FROM btech_map_slots ORDER BY map_dbref, slot;",
                               -1, &statement, NULL) == SQLITE_OK
@@ -384,7 +384,7 @@ int btech_special_load_map_los(sqlite3 *sqlite, BtechContext *context) {
   expected_target = 0;
   map = NULL;
   result =
-      sqlite3_prepare_v2(
+      SQLITE3_PREPARE_V2(
           sqlite,
           "SELECT map_dbref, source_slot, target_slot, flags "
           "FROM btech_map_los ORDER BY map_dbref, source_slot, target_slot;",
@@ -443,7 +443,7 @@ int btech_special_validate_map_child_counts(sqlite3 *sqlite) {
 
   statement = NULL;
   result =
-      sqlite3_prepare_v2(
+      SQLITE3_PREPARE_V2(
           sqlite,
           "SELECT count(*) FROM btech_maps AS maps WHERE "
           "(SELECT count(*) FROM btech_map_hexes AS hexes "
@@ -492,7 +492,7 @@ int btech_special_load_map_objects(sqlite3 *sqlite, BtechContext *context) {
   expected_ordinal = 0;
   map = NULL;
   tail = NULL;
-  result = sqlite3_prepare_v2(
+  result = SQLITE3_PREPARE_V2(
                sqlite,
                "SELECT map_dbref, object_type, ordinal, x, y, object_dbref, "
                "data_char, data_short, data_int FROM btech_map_objects "
@@ -584,7 +584,7 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
   expected_byte = 0;
   map = NULL;
   bits = NULL;
-  result = sqlite3_prepare_v2(
+  result = SQLITE3_PREPARE_V2(
                sqlite,
                "SELECT map_dbref, y, byte_index, value FROM btech_map_bits "
                "ORDER BY map_dbref, y, byte_index;",

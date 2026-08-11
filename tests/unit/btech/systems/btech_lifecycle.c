@@ -15,7 +15,7 @@ void mech_speed_correct(Mech *mech) {
   speed_corrections++;
 }
 
-void MarkForLOSUpdate(Mech *mech) {
+void mark_for_los_update(Mech *mech) {
   (void)mech;
   los_updates++;
 }

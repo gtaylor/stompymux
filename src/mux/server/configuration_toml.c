@@ -47,7 +47,7 @@ typedef struct {
  * or [access] need no row: the walker recurses into any unmapped table.
  */
 
-static const ConfigTomlMapping config_toml_map[] = {
+static const ConfigTomlMapping CONFIG_TOML_MAP[] = {
     /* database */
     {"database.game_database", "game_database", CFG_KIND_SCALAR},
     {"database.mech_database", "mech_database", CFG_KIND_SCALAR},
@@ -312,14 +312,14 @@ static toml_datum_t configuration_toml_table_value(toml_datum_t table,
 
 static const ConfigTomlMapping *configuration_toml_mapping_at(size_t index) {
   return checked_storage_at_const(
-      config_toml_map, sizeof(config_toml_map) / sizeof(config_toml_map[0]) - 1,
-      sizeof(*config_toml_map), index);
+      CONFIG_TOML_MAP, sizeof(CONFIG_TOML_MAP) / sizeof(CONFIG_TOML_MAP[0]) - 1,
+      sizeof(*CONFIG_TOML_MAP), index);
 }
 
 static const ConfigTomlMapping *configuration_toml_map_find(const char *path) {
-  const size_t count = sizeof(config_toml_map) / sizeof(config_toml_map[0]) - 1;
+  const size_t COUNT = sizeof(CONFIG_TOML_MAP) / sizeof(CONFIG_TOML_MAP[0]) - 1;
 
-  for (size_t index = 0; index < count; index++) {
+  for (size_t index = 0; index < COUNT; index++) {
     const ConfigTomlMapping *m = configuration_toml_mapping_at(index);
 
     if (!strcmp(m->toml_path, path))

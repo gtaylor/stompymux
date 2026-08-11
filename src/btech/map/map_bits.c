@@ -15,8 +15,8 @@ constexpr unsigned char BIT_HANGAR = 2;
 static size_t map_bits_byte_count(int hex_count) {
   if (hex_count < 0)
     abort();
-  const size_t count = (size_t)hex_count;
-  return count / 4U + (count % 4U ? 1U : 0U);
+  const size_t COUNT = (size_t)hex_count;
+  return COUNT / 4U + (COUNT % 4U ? 1U : 0U);
 }
 
 static size_t map_bits_byte_index(int x) { return (size_t)x / 4; }
@@ -53,7 +53,7 @@ static MapObject **map_object_slot(BattleMap *map, int type) {
   if (type < 0)
     abort();
   return (MapObject **)checked_storage_at(
-      (void *)map->MapObject, NUM_MAPOBJTYPES, sizeof(*map->MapObject),
+      (void *)map->map_object, NUM_MAPOBJTYPES, sizeof(*map->map_object),
       (size_t)type);
 }
 
@@ -103,12 +103,12 @@ static bool map_bits_is_set(unsigned char **bits, BattleMap *map, int x, int y,
 static unsigned char **grab_us_an_array(BattleMap *map) {
   unsigned char **foo;
   MapObject foob;
-  const size_t ys = (size_t)map->map_height;
+  const size_t YS = (size_t)map->map_height;
 
   MapObject **bits_object = map_object_slot(map, TYPE_BITS);
   if (!*bits_object) {
-    foo = (unsigned char **)calloc(ys, sizeof(*foo));
-    if (foo == nullptr && ys > 0)
+    foo = (unsigned char **)calloc(YS, sizeof(*foo));
+    if (foo == nullptr && YS > 0)
       abort();
 
     foob.payload.bits = foo;

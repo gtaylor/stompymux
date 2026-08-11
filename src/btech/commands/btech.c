@@ -30,10 +30,10 @@ void do_show(CommandInvocation *invocation) {
   char *arg1 = invocation->first;
   int i;
   enum { CHAVA, CHVAL, CHSKI, CHADV, CHATT, MECHVALUES };
-  const char *const cmds[] = {"allvalues",  "values",     "skills",
+  const char *const CMDS[] = {"allvalues",  "values",     "skills",
                               "advantages", "attributes", "xcodevalues",
                               nullptr};
-  const char *const cmds_help[] = {"[char_]allvalues",
+  const char *const CMDS_HELP[] = {"[char_]allvalues",
                                    "[char_]values",
                                    "[char_]skills",
                                    "[char_]advantages",
@@ -50,10 +50,10 @@ void do_show(CommandInvocation *invocation) {
 
   if (!arg1 || !*arg1) {
     strcpy(buf, "Valid arguments:");
-    const size_t help_count = sizeof(cmds_help) / sizeof(*cmds_help) - 1;
-    for (size_t index = 0; index < help_count; index++) {
+    const size_t HELP_COUNT = sizeof(CMDS_HELP) / sizeof(*CMDS_HELP) - 1;
+    for (size_t index = 0; index < HELP_COUNT; index++) {
       const char *const *help = (const char *const *)checked_storage_at_const(
-          (const void *)cmds_help, help_count, sizeof(*cmds_help), index);
+          (const void *)CMDS_HELP, HELP_COUNT, sizeof(*CMDS_HELP), index);
       char entry[80];
       (void)snprintf(entry, sizeof(entry), "%c %s", index > 0 ? ',' : ' ',
                      *help);
@@ -62,7 +62,7 @@ void do_show(CommandInvocation *invocation) {
     mecha_notify(&command->evaluation, player, buf);
     return;
   }
-  i = listmatch(cmds, 6, arg1);
+  i = listmatch(CMDS, 6, arg1);
   /* Do da cmd */
   switch (i) {
   case MECHVALUES:

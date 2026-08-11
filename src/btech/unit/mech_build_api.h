@@ -18,10 +18,10 @@ typedef struct ArmorSectionReference {
 } ArmorSectionReference;
 
 /* mech.build.c */
-void FillDefaultCriticals(Mech *mech, int index);
+void fill_default_criticals(Mech *mech, int index);
 ArmorSectionAbbreviation
 armor_section_abbreviation(const ArmorSectionReference *section);
-int ArmorSectionFromString(UnitClass type, MechMovementType movement_type,
-                           const char *string);
-int WeaponIndexFromString(BtechContext *context, char *string);
-int FindSpecialItemCodeFromString(BtechContext *context, char *buffer);
+int armor_section_from_string(UnitClass type, MechMovementType movement_type,
+                              const char *string);
+int weapon_index_from_string(BtechContext *context, char *string);
+int find_special_item_code_from_string(BtechContext *context, char *buffer);

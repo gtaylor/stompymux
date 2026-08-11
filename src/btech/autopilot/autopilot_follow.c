@@ -108,7 +108,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
 
   /* Ok not standing so lets do that first */
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-      !(CountDestroyedLegs(mech) > 0)) {
+      !(count_destroyed_legs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
       mech_stand_empty(autopilot->mynum, mech);
@@ -199,7 +199,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   fx = projected.x;
   fy = projected.y;
 
-  RealCoordToMapCoord(&generated_x, &generated_y, fx, fy);
+  real_coord_to_map_coord(&generated_x, &generated_y, fx, fy);
   x = generated_x;
   y = generated_y;
 
@@ -485,7 +485,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
 
   /* Make sure the mech is standing before going on */
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-      !(CountDestroyedLegs(mech) > 0)) {
+      !(count_destroyed_legs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
       mech_stand_empty(autopilot->mynum, mech);

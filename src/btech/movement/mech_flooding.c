@@ -62,8 +62,8 @@ void mech_flood_section(Mech *mech, int loc, int lev) {
     return;
 
   /* Woo, valid target. */
-  ArmorStringFromIndex(loc, locbuff, mech_class(mech),
-                       mech_movement_type(mech));
+  armor_string_from_index(loc, locbuff, mech_class(mech),
+                          mech_movement_type(mech));
   mech_printf(
       mech, MECHALL,
       "[fg=red bold]Water floods into your %s disabling everything that was "

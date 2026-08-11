@@ -21,9 +21,9 @@ typedef struct AmmunitionExpenditureCheck {
   int rounds_remaining;
 } AmmunitionExpenditureCheck;
 void mech_ammunition_expenditure_check(const AmmunitionExpenditureCheck *check);
-void mech_heat_effect_apply(Mech *mech, Mech *tempMech, int heatdam,
-                            bool fromInferno);
-void mech_inferno_hit(Mech *mech, Mech *hitMech, int missiles, bool LOS);
+void mech_heat_effect_apply(Mech *mech, Mech *temp_mech, int heatdam,
+                            bool from_inferno);
+void mech_inferno_hit(Mech *mech, Mech *hit_mech, int missiles, bool los);
 void mech_plasma_hit(Mech *target);
 void mech_contents_kill_if_in_character(Mech *mech);
 void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason);

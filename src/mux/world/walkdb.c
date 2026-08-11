@@ -529,7 +529,7 @@ void object_list_destroy(ObjectList *list) {
 }
 
 void object_list_add(ObjectList *list, DbRef item) {
-  constexpr int block_capacity =
+  constexpr int BLOCK_CAPACITY =
       (LBUF_SIZE - sizeof(ObjectListBlock *)) / sizeof(DbRef);
   ObjectListBlock *block;
 
@@ -538,7 +538,7 @@ void object_list_add(ObjectList *list, DbRef item) {
     list->head = list->tail = block;
     list->count = 0;
     block->next = nullptr;
-  } else if (list->count >= block_capacity) {
+  } else if (list->count >= BLOCK_CAPACITY) {
     block = (ObjectListBlock *)alloc_lbuf("object_list_add.next");
     list->tail->next = block;
     list->tail = block;
@@ -547,7 +547,7 @@ void object_list_add(ObjectList *list, DbRef item) {
   } else {
     block = list->tail;
   }
-  *(DbRef *)checked_storage_at(block->data, (size_t)block_capacity,
+  *(DbRef *)checked_storage_at(block->data, (size_t)BLOCK_CAPACITY,
                                sizeof(*block->data), (size_t)list->count++) =
       item;
 }
@@ -559,15 +559,15 @@ DbRef object_list_first(ObjectList *list) {
     return NOTHING;
   list->cursor_block = list->head;
   list->cursor_index = 0;
-  constexpr size_t block_capacity =
+  constexpr size_t BLOCK_CAPACITY =
       (LBUF_SIZE - sizeof(ObjectListBlock *)) / sizeof(DbRef);
   return *(const DbRef *)checked_storage_at_const(
-      list->cursor_block->data, block_capacity,
+      list->cursor_block->data, BLOCK_CAPACITY,
       sizeof(*list->cursor_block->data), (size_t)list->cursor_index++);
 }
 
 DbRef object_list_next(ObjectList *list) {
-  constexpr int block_capacity =
+  constexpr int BLOCK_CAPACITY =
       (LBUF_SIZE - sizeof(ObjectListBlock *)) / sizeof(DbRef);
   DbRef thing;
 
@@ -576,9 +576,9 @@ DbRef object_list_next(ObjectList *list) {
   if (list->cursor_block == list->tail && list->cursor_index >= list->count)
     return NOTHING;
   thing = *(const DbRef *)checked_storage_at_const(
-      list->cursor_block->data, (size_t)block_capacity,
+      list->cursor_block->data, (size_t)BLOCK_CAPACITY,
       sizeof(*list->cursor_block->data), (size_t)list->cursor_index++);
-  if (list->cursor_index >= block_capacity) {
+  if (list->cursor_index >= BLOCK_CAPACITY) {
     list->cursor_block = list->cursor_block->next;
     list->cursor_index = 0;
   }

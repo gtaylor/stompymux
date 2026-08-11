@@ -61,7 +61,7 @@ void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
 
 void do_pemit(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
-  const DbRef player = invocation->player;
+  const DbRef PLAYER = invocation->player;
   int key = invocation->key;
   char *recipient = invocation->first;
   char *message = invocation->second;
@@ -69,7 +69,7 @@ void do_pemit(CommandInvocation *invocation) {
   int do_contents, ok_to_do, depth, pemit_flags;
 
   if (key & PEMIT_LIST) {
-    do_pemit_list(evaluation, player, recipient, message);
+    do_pemit_list(evaluation, PLAYER, recipient, message);
     return;
   }
   if (key & PEMIT_CONTENTS) {
@@ -87,13 +87,13 @@ void do_pemit(CommandInvocation *invocation) {
   case PEMIT_FPOSE:
   case PEMIT_FPOSE_NS:
   case PEMIT_FEMIT:
-    target = match_controlled(&evaluation->command->match, player, recipient);
+    target = match_controlled(&evaluation->command->match, PLAYER, recipient);
     if (target == NOTHING)
       return;
     ok_to_do = 1;
     break;
   default:
-    init_match(&evaluation->command->match, player, recipient,
+    init_match(&evaluation->command->match, PLAYER, recipient,
                OBJECT_TYPE_PLAYER);
     match_everything(&evaluation->command->match, 0);
     target = match_result(&evaluation->command->match);
@@ -103,20 +103,20 @@ void do_pemit(CommandInvocation *invocation) {
   case NOTHING:
     switch (key) {
     case PEMIT_PEMIT:
-      notify_checked(evaluation, player, player, "Emit to whom?",
+      notify_checked(evaluation, PLAYER, PLAYER, "Emit to whom?",
                      MSG_ME_ALL | MSG_F_DOWN);
       break;
     case PEMIT_OEMIT:
-      notify_checked(evaluation, player, player, "Emit except to whom?",
+      notify_checked(evaluation, PLAYER, PLAYER, "Emit except to whom?",
                      MSG_ME_ALL | MSG_F_DOWN);
       break;
     default:
-      notify_checked(evaluation, player, player, "Sorry.",
+      notify_checked(evaluation, PLAYER, PLAYER, "Sorry.",
                      MSG_ME_ALL | MSG_F_DOWN);
     }
     break;
   case AMBIGUOUS:
-    notify_checked(evaluation, player, player, "I don't know who you mean!",
+    notify_checked(evaluation, PLAYER, PLAYER, "I don't know who you mean!",
                    MSG_ME_ALL | MSG_F_DOWN);
     break;
   default:
@@ -125,19 +125,19 @@ void do_pemit(CommandInvocation *invocation) {
      */
 
     if (!ok_to_do &&
-        (nearby(evaluation->world->database, player, target) ||
-         is_controls(evaluation->world->database, player, target))) {
+        (nearby(evaluation->world->database, PLAYER, target) ||
+         is_controls(evaluation->world->database, PLAYER, target))) {
       ok_to_do = 1;
     }
     if (!ok_to_do) {
-      notify_checked(evaluation, player, player,
+      notify_checked(evaluation, PLAYER, PLAYER,
                      "You are too far away to do that.",
                      MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
     if (do_contents &&
-        !is_controls(evaluation->world->database, player, target)) {
-      notify_checked(evaluation, player, player, "Permission denied.",
+        !is_controls(evaluation->world->database, PLAYER, target)) {
+      notify_checked(evaluation, PLAYER, PLAYER, "Permission denied.",
                      MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
@@ -147,12 +147,12 @@ void do_pemit(CommandInvocation *invocation) {
     case PEMIT_PEMIT:
       if (do_contents) {
         if (has_contents(evaluation->world->database, target)) {
-          notify_checked(evaluation, target, player, message,
+          notify_checked(evaluation, target, PLAYER, message,
                          MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP |
                              MSG_F_CONTENTS | MSG_S_INSIDE);
         }
       } else {
-        notify_checked(evaluation, target, player, message,
+        notify_checked(evaluation, target, PLAYER, message,
                        MSG_ME_ALL | MSG_F_DOWN);
       }
       break;
@@ -160,7 +160,7 @@ void do_pemit(CommandInvocation *invocation) {
       notify_excluding(&(ExcludingNotification){
           .evaluation = evaluation,
           .location = game_object_location(evaluation->world->database, target),
-          .sender = player,
+          .sender = PLAYER,
           .exceptions = {target},
           .exception_count = 1,
           .message = message});
@@ -171,7 +171,7 @@ void do_pemit(CommandInvocation *invocation) {
         notify_excluding(&(ExcludingNotification){
             .evaluation = evaluation,
             .location = loc,
-            .sender = player,
+            .sender = PLAYER,
             .exceptions = {target},
             .exception_count = 1,
             .message =
@@ -182,7 +182,7 @@ void do_pemit(CommandInvocation *invocation) {
       break;
     case PEMIT_FPOSE:
       notify_checked(
-          evaluation, loc, player,
+          evaluation, loc, PLAYER,
           tprintf("%s %s",
                   game_object_name(evaluation->world->database, target),
                   message),
@@ -191,7 +191,7 @@ void do_pemit(CommandInvocation *invocation) {
       break;
     case PEMIT_FPOSE_NS:
       notify_checked(
-          evaluation, loc, player,
+          evaluation, loc, PLAYER,
           tprintf("%s%s", game_object_name(evaluation->world->database, target),
                   message),
           MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
@@ -199,7 +199,7 @@ void do_pemit(CommandInvocation *invocation) {
       break;
     case PEMIT_FEMIT:
       if ((pemit_flags & PEMIT_HERE) || !pemit_flags)
-        notify_checked(evaluation, loc, player, message,
+        notify_checked(evaluation, loc, PLAYER, message,
                        MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP |
                            MSG_F_CONTENTS | MSG_S_INSIDE);
       if (pemit_flags & PEMIT_ROOM) {
@@ -218,7 +218,7 @@ void do_pemit(CommandInvocation *invocation) {
             return;
         }
         if (typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) {
-          notify_checked(evaluation, loc, player, message,
+          notify_checked(evaluation, loc, PLAYER, message,
                          MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP |
                              MSG_F_CONTENTS | MSG_S_INSIDE);
         }

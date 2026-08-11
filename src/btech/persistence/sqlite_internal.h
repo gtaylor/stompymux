@@ -43,8 +43,8 @@
 #include "template_api.h"
 #include "turret.h"
 
-typedef struct btech_map_store_context BTECH_MAP_STORE_CONTEXT;
-struct btech_map_store_context {
+typedef struct BtechMapStoreContext BtechMapStoreContext;
+struct BtechMapStoreContext {
   sqlite3_stmt *map;
   sqlite3_stmt *hex;
   sqlite3_stmt *slot;
@@ -54,8 +54,8 @@ struct btech_map_store_context {
   int result;
 };
 
-typedef struct btech_object_store_context BTECH_OBJECT_STORE_CONTEXT;
-struct btech_object_store_context {
+typedef struct BtechObjectStoreContext BtechObjectStoreContext;
+struct BtechObjectStoreContext {
   sqlite3_stmt *mechrep;
   sqlite3_stmt *turret;
   sqlite3_stmt *turret_tic;
@@ -80,7 +80,7 @@ struct btech_object_store_context {
   int result;
 };
 
-extern const char btech_special_schema_sql[];
+extern const char BTECH_SPECIAL_SCHEMA_SQL[];
 
 void btech_special_test_reset_fault(void);
 int btech_special_prepare_v2(sqlite3 *sqlite, const char *sql, int byte_count,
@@ -148,7 +148,7 @@ int btech_special_load_autopilot_path(sqlite3 *sqlite, BtechContext *context);
 
 int btech_store_simple_object(const RedBlackTreeVisitCall *call);
 int btech_store_map(const RedBlackTreeVisitCall *call);
-void btech_finalize_object_statements(BTECH_OBJECT_STORE_CONTEXT *context);
+void btech_finalize_object_statements(BtechObjectStoreContext *context);
 int btech_persistence_store_special_state(sqlite3 *sqlite,
                                           PersistenceContext *persistence,
                                           void *extension_context);
@@ -160,5 +160,5 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
                                     void *extension_context);
 
 #ifndef BTECH_PERSISTENCE_PREPARE_IMPLEMENTATION
-#define sqlite3_prepare_v2 btech_special_prepare_v2
+#define SQLITE3_PREPARE_V2 btech_special_prepare_v2
 #endif

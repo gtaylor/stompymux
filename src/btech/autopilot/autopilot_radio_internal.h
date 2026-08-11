@@ -14,7 +14,7 @@ typedef struct AutopilotRadioCommand {
   AutopilotRadioHandler handler;
 } AutopilotRadioCommand;
 
-extern AutopilotRadioCommand const autopilot_radio_commands[];
+extern AutopilotRadioCommand const AUTOPILOT_RADIO_COMMANDS[];
 const AutopilotRadioCommand *autopilot_radio_command_at(int index);
 
 void autopilot_radio_clear_commands(Autopilot *autopilot, char *buffer);

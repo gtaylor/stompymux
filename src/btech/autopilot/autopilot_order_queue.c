@@ -37,8 +37,8 @@ bool autopilot_order_is_supported(int command_enum) {
 size_t autopilot_order_count(const Autopilot *autopilot) {
   if (autopilot == nullptr || autopilot->commands == nullptr)
     return 0;
-  const int count = doubly_linked_list_size(autopilot->commands);
-  return count > 0 ? (size_t)count : 0;
+  const int COUNT = doubly_linked_list_size(autopilot->commands);
+  return COUNT > 0 ? (size_t)COUNT : 0;
 }
 
 const AutopilotCommand *autopilot_order_at(const Autopilot *autopilot,
@@ -71,8 +71,8 @@ autopilot_order_enqueue(Autopilot *autopilot,
       arguments->capacity != AUTOPILOT_MAX_ARGS)
     return AUTOPILOT_ORDER_INVALID;
   for (size_t index = 0; index < AUTOPILOT_MAX_ARGS; index++) {
-    const bool expected = index <= (size_t)definition->argcount;
-    if ((autopilot_argument_list_get(arguments, index) != nullptr) != expected)
+    const bool EXPECTED = index <= (size_t)definition->argcount;
+    if ((autopilot_argument_list_get(arguments, index) != nullptr) != EXPECTED)
       return AUTOPILOT_ORDER_INVALID;
   }
 

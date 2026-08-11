@@ -56,7 +56,7 @@ void mech_land(DbRef player, void *data, char *buffer) {
   if (mech_is_jumping(mech)) {
     mech_notify(mech, MECHALL,
                 "You abort your full jump and attempt to land early");
-    if (MadePilotSkillRoll(mech, 0)) {
+    if (made_pilot_skill_roll(mech, 0)) {
       mech_notify(mech, MECHALL, "You are able to abort the jump.");
 
       /*        mech_los_broadcast (mech, "lands abruptly!"); */
@@ -99,7 +99,7 @@ int mech_drop_surface_elevation(Mech *mech) {
   if (mech_is_over_water(mech) ||
       (mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE &&
        mech_position_z(mech) >= 0))
-    return MAX(0, mech_position_surface_elevation(mech));
+    return max(0, mech_position_surface_elevation(mech));
   else
     return mech_position_surface_elevation(mech);
 }
@@ -167,7 +167,7 @@ void mech_jump_land(Mech *mech) {
       if (target) {
         if (mech_position_x(target) == mech_position_x(mech) &&
             mech_position_y(target) == mech_position_y(mech))
-          dfa = DeathFromAbove(mech, target);
+          dfa = death_from_above(mech, target);
         else
           mech_notify(mech, MECHPILOT, "Your DFA target has moved!");
       } else
@@ -185,7 +185,7 @@ void mech_jump_land(Mech *mech) {
       mech_notify(mech, MECHALL,
                   "The damage you've taken makes the landing a bit harder...");
 
-      if (!MadePilotSkillRoll(mech, mech_stagger_modifier(mech))) {
+      if (!made_pilot_skill_roll(mech, mech_stagger_modifier(mech))) {
         mech_notify(mech, MECHALL,
                     "... something you apparently can't handle!");
         mech_los_broadcast(mech, "lands, staggers, and falls down!");
@@ -196,10 +196,10 @@ void mech_jump_land(Mech *mech) {
 
     /* Check piloting rolls, etc. */
     if (mech_class(mech) == CLASS_MECH) {
-      if (CountDestroyedLegs(mech) > 0) {
+      if (count_destroyed_legs(mech) > 0) {
         mech_notify(mech, MECHPILOT,
                     "Your missing leg makes it harder to land");
-        if (!MadePilotSkillRoll(mech, 0)) {
+        if (!made_pilot_skill_roll(mech, 0)) {
           mech_notify(mech, MECHALL,
                       "Your missing leg has caused you to fall upon landing!");
           mech_los_broadcast(mech, "lands, unbalanced, and falls down!");
@@ -211,7 +211,7 @@ void mech_jump_land(Mech *mech) {
                  mech_section_base_to_hit(mech, LLEG)) {
         mech_notify(mech, MECHPILOT,
                     "Your damaged leg actuators make it harder to land");
-        if (!MadePilotSkillRoll(mech, 0)) {
+        if (!made_pilot_skill_roll(mech, 0)) {
           mech_notify(mech, MECHALL,
                       "Your damaged leg actuators have caused you to fall upon "
                       "landing!");
@@ -223,7 +223,7 @@ void mech_jump_land(Mech *mech) {
       } else if (mech_has_damaged_gyro(mech)) {
         mech_notify(mech, MECHPILOT,
                     "Your damaged gyro makes it harder to land");
-        if (!MadePilotSkillRoll(mech, 0)) {
+        if (!made_pilot_skill_roll(mech, 0)) {
           mech_notify(mech, MECHALL,
                       "Your damaged gyro has caused you to fall upon landing!");
           mech_los_broadcast(mech, "lands, twists awkwardly, and falls down!");
@@ -239,7 +239,7 @@ void mech_jump_land(Mech *mech) {
     mech_notify(mech, MECHALL,
                 "The suits hanging off you make landing harder!");
 
-    if (MadePilotSkillRoll(mech, 4)) {
+    if (made_pilot_skill_roll(mech, 4)) {
       bsuit_swarmers_stop(
           btech_context_find_object(context, mech_map_dbref(mech)), mech, 0);
     } else {

@@ -106,19 +106,19 @@ static void sketch_tac_ownmech(const TacticalSketch *sketch) {
   int left_offset = sketch->left_offset;
 
   int oddcol1 = tactical_column_is_odd(sx);
-  const int origin_offset = top_offset * dispcols + left_offset;
+  const int ORIGIN_OFFSET = top_offset * dispcols + left_offset;
   int x = mech_position_x(mech) - sx;
   int y = mech_position_y(mech) - sy;
 
   if (x < 0 || x >= wx || y < 0 || y >= wy) {
     return;
   }
-  const int base_offset =
-      origin_offset + tactical_hex_offset(&(TacticalHexOffsetRequest){
+  const int BASE_OFFSET =
+      ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                           .position = {.x = x, .y = y},
                           .display_columns = dispcols,
                           .first_column_is_odd = oddcol1});
-  *tactical_canvas_at(buf, base_offset) = '*';
+  *tactical_canvas_at(buf, BASE_OFFSET) = '*';
 }
 
 static void sketch_tac_mechs(const TacticalSketch *sketch) {
@@ -134,7 +134,7 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
   int left_offset = sketch->left_offset;
   bool docolour = sketch->color;
   int i;
-  const int origin_offset = top_offset * dispcols + left_offset;
+  const int ORIGIN_OFFSET = top_offset * dispcols + left_offset;
   int oddcol1 = tactical_column_is_odd(sx);
 
   /*
@@ -144,12 +144,12 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
     int x, y;
     Mech *mech;
 
-    const DbRef unit_dbref = battle_map_unit_dbref(map, i);
-    if (unit_dbref == -1) {
+    const DbRef UNIT_DBREF = battle_map_unit_dbref(map, i);
+    if (UNIT_DBREF == -1) {
       continue;
     }
 
-    mech = btech_context_get_mech(map->xcode.context, unit_dbref);
+    mech = btech_context_get_mech(map->xcode.context, UNIT_DBREF);
     if (mech == nullptr) {
       continue;
     }
@@ -176,7 +176,7 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
     }
 
     int base_offset =
-        origin_offset + tactical_hex_offset(&(TacticalHexOffsetRequest){
+        ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                             .position = {.x = x, .y = y},
                             .display_columns = dispcols,
                             .first_column_is_odd = oddcol1});
@@ -195,18 +195,18 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
 
       for (dir = 0; dir < 6; dir++) {
         const TacticalDirection *direction = tactical_direction(dir);
-        const int direction_x = direction->x;
-        int tx = x + direction_x;
+        const int DIRECTION_X = direction->x;
+        int tx = x + DIRECTION_X;
         int ty = y + direction->y;
 
-        if ((tx + oddcol1) % 2 == 0 && direction_x != 0) {
+        if ((tx + oddcol1) % 2 == 0 && DIRECTION_X != 0) {
           ty--;
         }
         if (tx < 0 || tx >= wx || ty < 0 || ty >= wy) {
           continue;
         }
         base_offset =
-            origin_offset + tactical_hex_offset(&(TacticalHexOffsetRequest){
+            ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                                 .position = {.x = tx, .y = ty},
                                 .display_columns = dispcols,
                                 .first_column_is_odd = oddcol1});
@@ -220,7 +220,7 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
         continue;
 
       base_offset =
-          origin_offset + tactical_hex_offset(&(TacticalHexOffsetRequest){
+          ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                               .position = {.x = x, .y = y},
                               .display_columns = dispcols,
                               .first_column_is_odd = oddcol1});
@@ -272,7 +272,7 @@ static void sketch_tac_cliffs(const TacticalSketch *sketch) {
   int top_offset = sketch->top_offset;
   int left_offset = sketch->left_offset;
   int cliff_size = sketch->cliff_size;
-  const int origin_offset = top_offset * dispcols + left_offset;
+  const int ORIGIN_OFFSET = top_offset * dispcols + left_offset;
   int y, x;
   int oddcol1 = tactical_column_is_odd(sx);
 
@@ -285,8 +285,8 @@ static void sketch_tac_cliffs(const TacticalSketch *sketch) {
       int tx = sx + x;
       int oddcolx = tactical_column_is_odd(tx);
       int elev = map_base_elevation(map, tx, ty);
-      const int base_offset =
-          origin_offset + tactical_hex_offset(&(TacticalHexOffsetRequest){
+      const int BASE_OFFSET =
+          ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                               .position = {.x = x, .y = y},
                               .display_columns = dispcols,
                               .first_column_is_odd = oddcol1});
@@ -296,12 +296,12 @@ static void sketch_tac_cliffs(const TacticalSketch *sketch) {
        * Copy the elevation up to the top of the hex
        * so we can draw a bottom hex edge on every hex.
        */
-      c = *tactical_canvas_at(buf, base_offset + dispcols + 1);
-      if (*tactical_canvas_at(buf, base_offset) == '*') {
-        *tactical_canvas_at(buf, base_offset) = '*';
-        *tactical_canvas_at(buf, base_offset + 1) = '*';
+      c = *tactical_canvas_at(buf, BASE_OFFSET + dispcols + 1);
+      if (*tactical_canvas_at(buf, BASE_OFFSET) == '*') {
+        *tactical_canvas_at(buf, BASE_OFFSET) = '*';
+        *tactical_canvas_at(buf, BASE_OFFSET + 1) = '*';
       } else if (ascii_is_digit(c)) {
-        *tactical_canvas_at(buf, base_offset + 1) = c;
+        *tactical_canvas_at(buf, BASE_OFFSET + 1) = c;
       }
 
       /*
@@ -315,20 +315,20 @@ static void sketch_tac_cliffs(const TacticalSketch *sketch) {
           abs(map_base_elevation(map, tx - 1, ty + 1 - oddcolx) - elev) >=
               cliff_size) {
 
-        *tactical_canvas_at(buf, base_offset + dispcols - 1) = '|';
+        *tactical_canvas_at(buf, BASE_OFFSET + dispcols - 1) = '|';
       }
       if (y < wy - 1 &&
           abs(map_base_elevation(map, tx, ty + 1) - elev) >= cliff_size) {
-        *tactical_canvas_at(buf, base_offset + dispcols) = ',';
-        *tactical_canvas_at(buf, base_offset + dispcols + 1) = ',';
+        *tactical_canvas_at(buf, BASE_OFFSET + dispcols) = ',';
+        *tactical_canvas_at(buf, BASE_OFFSET + dispcols + 1) = ',';
       } else {
-        *tactical_canvas_at(buf, base_offset + dispcols) = '_';
-        *tactical_canvas_at(buf, base_offset + dispcols + 1) = '_';
+        *tactical_canvas_at(buf, BASE_OFFSET + dispcols) = '_';
+        *tactical_canvas_at(buf, BASE_OFFSET + dispcols + 1) = '_';
       }
       if (x < wx - 1 && (y < wy - 1 || oddcolx) &&
           abs(map_base_elevation(map, tx + 1, ty + 1 - oddcolx) - elev) >=
               cliff_size) {
-        *tactical_canvas_at(buf, base_offset + dispcols + 2) = '!';
+        *tactical_canvas_at(buf, BASE_OFFSET + dispcols + 2) = '!';
       }
     }
   }
@@ -492,11 +492,11 @@ MapText *map_text_create(const MapTextRequest *request) {
         continue;
       }
       (void)snprintf(scratch, sizeof(scratch), "%3d", label);
-      const int label_offset = left_offset + 1 + x * 3;
-      *tactical_canvas_at(sketch_buf, label_offset) = scratch[0];
-      *tactical_canvas_at(sketch_buf, label_offset + dispcols) =
+      const int LABEL_OFFSET = left_offset + 1 + x * 3;
+      *tactical_canvas_at(sketch_buf, LABEL_OFFSET) = scratch[0];
+      *tactical_canvas_at(sketch_buf, LABEL_OFFSET + dispcols) =
           *checked_string_suffix(scratch, 1);
-      *tactical_canvas_at(sketch_buf, label_offset + 2 * dispcols) =
+      *tactical_canvas_at(sketch_buf, LABEL_OFFSET + 2 * dispcols) =
           *checked_string_suffix(scratch, 2);
     }
   }
@@ -593,10 +593,10 @@ MapText *map_text_create(const MapTextRequest *request) {
       *tactical_canvas_at(sketch_buf, base_offset + mapcols - len) = '\0';
     }
 
-    const size_t top_blank_size = (size_t)n * 3U + 1U;
+    const size_t TOP_BLANK_SIZE = (size_t)n * 3U + 1U;
     memset(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
-                                  (size_t)left_offset, top_blank_size),
-           ' ', top_blank_size);
+                                  (size_t)left_offset, TOP_BLANK_SIZE),
+           ' ', TOP_BLANK_SIZE);
     *tactical_canvas_at(sketch_buf, left_offset + n * 3 + 1) = '_';
     *tactical_canvas_at(sketch_buf, left_offset + n * 3 + 2) = '_';
     *tactical_canvas_at(sketch_buf, left_offset + n * 3 + 3) = '\0';

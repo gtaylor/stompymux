@@ -38,10 +38,10 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
   char query[256];
 
   const char *tables[] = {"btech_object_state"};
-  const size_t table_count = sizeof(tables) / sizeof(*tables);
-  for (size_t index = 0; index < table_count; index++) {
+  const size_t TABLE_COUNT = sizeof(tables) / sizeof(*tables);
+  for (size_t index = 0; index < TABLE_COUNT; index++) {
     const char *table = *(const char *const *)checked_storage_at_const(
-        (const void *)tables, table_count, sizeof(*tables), index);
+        (const void *)tables, TABLE_COUNT, sizeof(*tables), index);
     (void)snprintf(query, sizeof(query),
                    "INSERT INTO %s (object_dbref) VALUES (?);", table);
     if (gamedb_prepare(sqlite, &statement, query) < 0 ||
@@ -53,7 +53,7 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
     sqlite3_finalize(statement);
     statement = nullptr;
   }
-  for (size_t index = 0; index < native_column_count; index++) {
+  for (size_t index = 0; index < NATIVE_COLUMN_COUNT; index++) {
     const NativeColumn *column = gamedb_native_column_at(index);
     const char *value = attribute_get_raw(database, object, column->field);
 
@@ -270,8 +270,8 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
                   "PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL; "
                   "PRAGMA foreign_keys = ON;") < 0 ||
       gamedb_exec(sqlite, "BEGIN IMMEDIATE;") < 0 ||
-      gamedb_exec(sqlite, schema_objects_sql) < 0 ||
-      gamedb_exec(sqlite, schema_state_sql) < 0 ||
+      gamedb_exec(sqlite, SCHEMA_OBJECTS_SQL) < 0 ||
+      gamedb_exec(sqlite, SCHEMA_STATE_SQL) < 0 ||
       gamedb_exec(sqlite, "PRAGMA application_id = "
                           "1112821080; PRAGMA user_version = 1;") < 0)
     return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);

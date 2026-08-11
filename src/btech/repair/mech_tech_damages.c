@@ -64,7 +64,7 @@ static void append_damage(char *buffer, size_t size, const char *fmt, ...) {
   (void)vsnprintf(destination, size - len, fmt, ap);
   va_end(ap);
 }
-static const char *const repair_need_msgs[] = {
+static const char *const REPAIR_NEED_MSGS[] = {
     "Reattachment",
     "Repairs on %s",
     "Repairs on %s",
@@ -91,9 +91,9 @@ static const char *repair_need_message(int type) {
   if (type < 0)
     abort();
   const char *const *message = (const char *const *)checked_storage_at_const(
-      (const void *)repair_need_msgs,
-      sizeof(repair_need_msgs) / sizeof(*repair_need_msgs),
-      sizeof(*repair_need_msgs), (size_t)type);
+      (const void *)REPAIR_NEED_MSGS,
+      sizeof(REPAIR_NEED_MSGS) / sizeof(*REPAIR_NEED_MSGS),
+      sizeof(*REPAIR_NEED_MSGS), (size_t)type);
   return *message;
 }
 static void repair_damage_add(RepairDamageTable *damages, int type,
@@ -107,7 +107,7 @@ static void repair_damage_add_detail(RepairDamageTable *damages, int type,
       (RepairDamage){.type = type, .location = location, .detail = detail};
 }
 static int clan_modified_time(const Mech *mech, int time) {
-  return MAX(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
+  return max(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
 }
 static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
   int a, b;
@@ -178,7 +178,7 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
       repair_damage_add_detail(
           damages, equipment_is_weapon(b) ? REPAIRG : REPAIRP, loc, a);
     if (equipment_is_weapon(b))
-      a += GetWeaponCrits(mech, weapon_from_equipment_index(b)) - 1;
+      a += get_weapon_crits(mech, weapon_from_equipment_index(b)) - 1;
   }
   return 1;
 }
@@ -188,7 +188,7 @@ static int check_for_scrappage(RepairDamageTable *damages, Mech *mech,
   int ret = 1;
   if (mech_section_is_destroyed(mech, loc))
     return 1;
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     repair_damage_add(damages, DETACH, loc);
     return 1;
   }
@@ -202,18 +202,18 @@ static int check_for_scrappage(RepairDamageTable *damages, Mech *mech,
       continue;
     if (equipment_is_ammunition(b) && mech_critical_data(mech, loc, a)) {
       repair_damage_add_detail(damages, UNLOAD, loc, a);
-      if (ret && !SomeoneRepairing(mech, loc, a))
+      if (ret && !someone_repairing(mech, loc, a))
         ret = 0;
       continue;
     }
     repair_damage_add_detail(damages, equipment_is_weapon(b) ? SCRAPG : SCRAPP,
                              loc, a);
-    if (ret && !SomeoneScrappingPart(mech, loc, a))
+    if (ret && !someone_scrapping_part(mech, loc, a))
       ret = 0;
     if (equipment_is_weapon(b))
-      a += GetWeaponCrits(mech, weapon_from_equipment_index(b)) - 1;
+      a += get_weapon_crits(mech, weapon_from_equipment_index(b)) - 1;
   }
-  if (ret && !Invalid_Scrap_Path(mech, loc))
+  if (ret && !invalid_scrap_path(mech, loc))
     repair_damage_add(damages, DETACH, loc);
   return 0;
 }
@@ -273,23 +273,23 @@ static int is_under_repair(const RepairDamageTable *damages, Mech *mech,
   case ENHCRIT_AMMOB:
   case ENHCRIT_RANGING:
   case ENHCRIT_AMMOM:
-    return SomeoneRepairing(mech, v1, v2);
+    return someone_repairing(mech, v1, v2);
   case REATTACH:
-    return SomeoneAttaching(mech, v1);
+    return someone_attaching(mech, v1);
   case RESEAL:
-    return SomeoneResealing(mech, v1);
+    return someone_resealing(mech, v1);
   case FIXARMOR_R:
-    return SomeoneFixing(mech, v1 + 8);
+    return someone_fixing(mech, v1 + 8);
   case FIXARMOR:
   case FIXINTERNAL:
-    return SomeoneFixing(mech, v1);
+    return someone_fixing(mech, v1);
   case DETACH:
-    return SomeoneScrappingLoc(mech, v1);
+    return someone_scrapping_loc(mech, v1);
   case SCRAPP:
   case SCRAPG:
-    return SomeoneScrappingPart(mech, v1, v2);
+    return someone_scrapping_part(mech, v1, v2);
   case REPLACESUIT:
-    return SomeoneReplacingSuit(mech, v1);
+    return someone_replacing_suit(mech, v1);
   }
   return 0;
 }
@@ -340,7 +340,7 @@ void mech_repair_jobs_format(Mech *mech, char *buffer, size_t buffer_size) {
       append_damage(
           buffer, buffer_size, "%s:%d",
           pos_part_name(mech, damage->location, damage->detail).text,
-          FullAmmo(mech, damage->location, damage->detail) -
+          full_ammo(mech, damage->location, damage->detail) -
               mech_critical_data(mech, damage->location, damage->detail));
       break;
     case UNLOAD:
@@ -415,36 +415,37 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     v2 = damage->detail;
     switch (damage->type) {
     case REATTACH:
-      fix_bth = FindTechSkill(player, mech) + REATTACH_DIFFICULTY;
+      fix_bth = find_tech_skill(player, mech) + REATTACH_DIFFICULTY;
       fix_time = REATTACH_TIME;
       strlcpy(buf, repair_need_message(damage->type), sizeof(buf));
       break;
     case DETACH:
-      fix_bth = FindTechSkill(player, mech) + REMOVES_DIFFICULTY;
+      fix_bth = find_tech_skill(player, mech) + REMOVES_DIFFICULTY;
       fix_time = REMOVES_TIME;
       strlcpy(buf, repair_need_message(damage->type), sizeof(buf));
       break;
     case RESEAL:
-      fix_bth = FindTechSkill(player, mech) + RESEAL_DIFFICULTY;
+      fix_bth = find_tech_skill(player, mech) + RESEAL_DIFFICULTY;
       fix_time = RESEAL_TIME;
       strlcpy(buf, repair_need_message(damage->type), sizeof(buf));
       break;
     case REPLACESUIT:
       strlcpy(buf, repair_need_message(damage->type), sizeof(buf));
       fix_time = REPLACESUIT_TIME;
-      fix_bth = FindTechSkill(player, mech) + REPLACESUIT_DIFFICULTY;
+      fix_bth = find_tech_skill(player, mech) + REPLACESUIT_DIFFICULTY;
       break;
     case REPAIRP:
       fix_bth =
-          FindTechSkill(player, mech) + REPLACE_DIFFICULTY +
+          find_tech_skill(player, mech) + REPLACE_DIFFICULTY +
           repair_part_type_difficulty(mech_critical_part_type(mech, v1, v2));
       fix_time = REPLACEPART_TIME;
       (void)snprintf(buf, sizeof(buf), "Repairs on %s",
                      pos_part_name(mech, v1, v2).text);
       break;
     case REPAIRP_T:
-      if (GetWeaponCrits(mech, weapon_from_equipment_index(
-                                   mech_critical_part_type(mech, v1, v2))) < 5)
+      if (get_weapon_crits(mech, weapon_from_equipment_index(
+                                     mech_critical_part_type(mech, v1, v2))) <
+          5)
         extra_hard = 0;
       fix_bth =
           char_getskilltarget(mech_context(mech), player, "technician-weapons",
@@ -465,9 +466,9 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
       fix_time =
           REPLACEGUN_TIME *
           clan_modified_time(
-              mech,
-              GetWeaponCrits(mech, weapon_from_equipment_index(
-                                       mech_critical_part_type(mech, v1, v2))));
+              mech, get_weapon_crits(
+                        mech, weapon_from_equipment_index(
+                                  mech_critical_part_type(mech, v1, v2))));
       (void)snprintf(buf, sizeof(buf), "Repairs on %s",
                      pos_part_name(mech, v1, v2).text);
       break;
@@ -513,7 +514,7 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
       }
       break;
     case SCRAPP:
-      fix_bth = FindTechSkill(player, mech) + REMOVEP_DIFFICULTY;
+      fix_bth = find_tech_skill(player, mech) + REMOVEP_DIFFICULTY;
       fix_time = REMOVEP_TIME;
       (void)snprintf(buf, sizeof(buf), "Removal of %s",
                      pos_part_name(mech, v1, v2).text);
@@ -525,9 +526,9 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
       fix_time =
           REMOVEG_TIME *
           clan_modified_time(
-              mech,
-              GetWeaponCrits(mech, weapon_from_equipment_index(
-                                       mech_critical_part_type(mech, v1, v2))));
+              mech, get_weapon_crits(
+                        mech, weapon_from_equipment_index(
+                                  mech_critical_part_type(mech, v1, v2))));
       (void)snprintf(buf, sizeof(buf), "Removal of %s",
                      pos_part_name(mech, v1, v2).text);
       break;
@@ -535,7 +536,7 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
       (void)snprintf(buf, sizeof(buf), "Reload of %s%s (%d rounds)",
                      pos_part_name(mech, v1, v2).text,
                      mech_critical_ammo_mode(mech, v1, v2)
-                         ? GetAmmoDesc_Model_Mode(
+                         ? get_ammo_desc_model_mode(
                                ammunition_to_weapon_index(
                                    mech_critical_part_type(mech, v1, v2)),
                                mech_critical_ammo_mode(mech, v1, v2))
@@ -543,20 +544,20 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
                      mech_critical_full_ammunition(mech, v1, v2) -
                          mech_critical_data(mech, v1, v2));
       fix_time = RELOAD_TIME;
-      fix_bth = FindTechSkill(player, mech) + RELOAD_DIFFICULTY;
+      fix_bth = find_tech_skill(player, mech) + RELOAD_DIFFICULTY;
       break;
     case UNLOAD:
       (void)snprintf(buf, sizeof(buf), "Unload of %s%s(%d rounds)",
                      pos_part_name(mech, v1, v2).text,
                      mech_critical_ammo_mode(mech, v1, v2)
-                         ? GetAmmoDesc_Model_Mode(
+                         ? get_ammo_desc_model_mode(
                                ammunition_to_weapon_index(
                                    mech_critical_part_type(mech, v1, v2)),
                                mech_critical_ammo_mode(mech, v1, v2))
                          : "",
                      mech_critical_data(mech, v1, v2));
       fix_time = RELOAD_TIME;
-      fix_bth = FindTechSkill(player, mech) + REMOVES_DIFFICULTY;
+      fix_bth = find_tech_skill(player, mech) + REMOVES_DIFFICULTY;
       break;
     case FIXARMOR:
     case FIXARMOR_R:
@@ -589,9 +590,9 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
         (void)snprintf(buf, sizeof(buf), "Repairs on%s armor (%d points)",
                        armor_material, damage->detail);
       }
-      fix_bth = FindTechSkill(player, mech) + (damage->type == FIXINTERNAL
-                                                   ? FIXINTERNAL_DIFFICULTY
-                                                   : FIXARMOR_DIFFICULTY);
+      fix_bth = find_tech_skill(player, mech) + (damage->type == FIXINTERNAL
+                                                     ? FIXINTERNAL_DIFFICULTY
+                                                     : FIXARMOR_DIFFICULTY);
       fix_time = damage->type == FIXINTERNAL ? FIXINTERNAL_TIME * damage->detail
                                              : FIXARMOR_TIME * damage->detail;
       break;
@@ -621,8 +622,8 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
       &c, "Time = Normal Time (in minutes) to complete fix. BTH = Your BTH to "
           "fix.");
   cool_menu_add_line(&c);
-  ShowCoolMenu(btech_context_evaluation(mech_context(mech)), player, c);
-  KillCoolMenu(c);
+  show_cool_menu(btech_context_evaluation(mech_context(mech)), player, c);
+  kill_cool_menu(c);
 }
 static void fix_entry(const RepairDamageTable *damages, DbRef player,
                       Mech *mech, int n) {

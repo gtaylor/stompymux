@@ -9,8 +9,8 @@ struct CriticalSlot {
   unsigned short type;   /* Type of item that this is a critical for */
   unsigned int firemode; /* Holds info like rear mount, ultra mode... */
   unsigned int ammomode; /* Holds info for the special ammo type in use */
-  unsigned int weapDamageFlags; /* Holds the enhanced critical damage flags */
-  short desiredAmmoLoc;         /* Location of the desired ammo bin */
+  unsigned int weap_damage_flags; /* Holds the enhanced critical damage flags */
+  short desired_ammo_loc;         /* Location of the desired ammo bin */
   //    unsigned int recycle;   /* time when it will finish recycling */
 };
 

@@ -441,13 +441,13 @@ const char *cargo[] = {"Ammo_LBX2",
 #endif
                        NULL};
 
-const int template_cargo_count = sizeof(cargo) / sizeof(*cargo) - 1;
+const int TEMPLATE_CARGO_COUNT = sizeof(cargo) / sizeof(*cargo) - 1;
 
 const char *template_cargo_name(int index) {
   if (index < 0)
     return nullptr;
   const char *const *name = (const char *const *)checked_storage_at_const(
-      (const void *)cargo, (size_t)template_cargo_count, sizeof(*cargo),
+      (const void *)cargo, (size_t)TEMPLATE_CARGO_COUNT, sizeof(*cargo),
       (size_t)index);
   return *name;
 }

@@ -38,4 +38,4 @@ typedef struct MapTerrainChange {
   MapHexPosition position;
   int terrain;
 } MapTerrainChange;
-void UpdateMechsTerrain(const MapTerrainChange *change);
+void update_mechs_terrain(const MapTerrainChange *change);

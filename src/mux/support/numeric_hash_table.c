@@ -9,10 +9,10 @@
 static int nhrbtab_compare(const RedBlackTreeCompareCall *call) {
   void *left_key = call->lhs;
   void *right_key = call->rhs;
-  const DbRef left = (DbRef)left_key;
-  const DbRef right = (DbRef)right_key;
+  const DbRef LEFT = (DbRef)left_key;
+  const DbRef RIGHT = (DbRef)right_key;
 
-  return (right > left) - (right < left);
+  return (RIGHT > LEFT) - (RIGHT < LEFT);
 }
 
 void numeric_hash_table_initialize(HashTable *htab, int size) {

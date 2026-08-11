@@ -55,35 +55,35 @@
 
 void mech_staggercheck_heartbeat(Mech *mech) {
   time_t now = mech->xcode.context->clock->now;
-  int curStaggerDamage = 0;
-  int prevStaggerDamage = 0;
-  int staggerLevel = 0;
+  int cur_stagger_damage = 0;
+  int prev_stagger_damage = 0;
+  int stagger_level = 0;
 
   // if we've not checked stagger since last time... ruhroh!
-  if (now - (mech)->rd.lastStaggerCheck >=
+  if (now - (mech)->rd.last_stagger_check >=
       btech_context_stagger_interval(mech_context(mech))) {
-    (mech)->rd.lastStaggerCheck = now;
+    (mech)->rd.last_stagger_check = now;
 
     // curStagger is stuff we haven't rolled against
     // prevStagger is stuf we have
     // stuff we have adds to the difficulty, but doesn't get rolled against
-    curStaggerDamage = mech_stagger_damage_current(mech, now);
-    prevStaggerDamage = mech_stagger_damage_current_counted(mech, now);
-    if (curStaggerDamage < 20)
+    cur_stagger_damage = mech_stagger_damage_current(mech, now);
+    prev_stagger_damage = mech_stagger_damage_current_counted(mech, now);
+    if (cur_stagger_damage < 20)
       return;
     else {
-      staggerLevel = curStaggerDamage / 20;
+      stagger_level = cur_stagger_damage / 20;
 
       // Dont need to remove stagger anymore, it clears on fall,
       // unless we're using
       // Stagger mode 2 removes damage after it is checked.
       if (btech_context_stagger_mode(mech_context(mech)) == 2)
-        mech_stagger_damage_remove(mech, staggerLevel);
+        mech_stagger_damage_remove(mech, stagger_level);
       else {
-        mech_stagger_damage_mark(mech, staggerLevel);
-        staggerLevel = (curStaggerDamage + prevStaggerDamage) / 20;
+        mech_stagger_damage_mark(mech, stagger_level);
+        stagger_level = (cur_stagger_damage + prev_stagger_damage) / 20;
       }
-      switch (staggerLevel) {
+      switch (stagger_level) {
       case 1:
         mech_notify(mech, MECHALL,
                     "[fg=yellow bold]The damage causes you to stagger a "
@@ -111,8 +111,8 @@ void mech_staggercheck_heartbeat(Mech *mech) {
       // do the actual staggering here
       mech_notify(mech, MECHALL, "You stagger from the damage!");
 
-      if (!MadePilotSkillRoll(
-              mech, mech_stagger_modifier_at_level(mech, staggerLevel))) {
+      if (!made_pilot_skill_roll(
+              mech, mech_stagger_modifier_at_level(mech, stagger_level))) {
         mech_notify(mech, MECHALL,
                     "You loose the battle with gravity and tumble over!!");
         mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
@@ -122,30 +122,30 @@ void mech_staggercheck_heartbeat(Mech *mech) {
   }
 }
 
-int mech_stagger_modifier_at_level(Mech *mech, int staggerLevel) {
-  int bthMod = 0;
-  int tonnageMod = 0;
+int mech_stagger_modifier_at_level(Mech *mech, int stagger_level) {
+  int bth_mod = 0;
+  int tonnage_mod = 0;
 
   if (!mech_is_started(mech)) {
-    bthMod = 999;
+    bth_mod = 999;
   } else {
-    bthMod = staggerLevel - 1;
+    bth_mod = stagger_level - 1;
 
     if (((mech)->ud.tons) <= 35)
-      tonnageMod = 1;
+      tonnage_mod = 1;
     else if (((mech)->ud.tons) <= 55)
-      tonnageMod = 0;
+      tonnage_mod = 0;
     else if (((mech)->ud.tons) <= 75)
-      tonnageMod = -1;
+      tonnage_mod = -1;
     else
-      tonnageMod = -2;
+      tonnage_mod = -2;
 
     // disable tonnage mods if so configured
     if (btech_context_stagger_uses_tonnage(mech_context(mech)))
-      bthMod += tonnageMod;
+      bth_mod += tonnage_mod;
   }
 
-  return bthMod;
+  return bth_mod;
 }
 
 static int factoral(int n) {
@@ -179,7 +179,7 @@ void mech_fall_event(MuxEvent *e) {
     fallspeed -= FALL_ACCEL;
   else
     fallspeed += FALL_ACCEL;
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   if (mech_height_above_surface(mech) > labs(fallspeed)) {
     ((mech)->pd.z) -= labs(fallspeed);
     ((mech)->pd.fz) = ((mech)->pd.z) * ZSCALE;
@@ -273,11 +273,11 @@ static void mech_sideslip_event(MuxEvent *e) {
   if (!mech || !mech_is_started(mech))
     return;
   mech_notify(mech, MECHALL, "You make a skill roll while sideslipping!");
-  if (!MadePilotSkillRoll(mech, HasBoolAdvantage(mech->xcode.context,
-                                                 mech_pilot_dbref(mech),
-                                                 "maneuvering_ace")
-                                    ? -1
-                                    : 0)) {
+  if (!made_pilot_skill_roll(mech, has_bool_advantage(mech->xcode.context,
+                                                      mech_pilot_dbref(mech),
+                                                      "maneuvering_ace")
+                                       ? -1
+                                       : 0)) {
     mech_notify(mech, MECHALL, "You fail and spin out!");
     mech_los_broadcast(mech, "spins out while sideslipping!");
     ((mech)->rd.speed) = 0.0;
@@ -323,7 +323,7 @@ void mech_move_event(MuxEvent *e) {
     if (mech_is_landed(mech) || aero_fuel_check(mech))
       return;
   mech_heading_update(mech);
-  if ((IsMechLegLess(mech)) || mech_is_jumping(mech) ||
+  if ((is_mech_leg_less(mech)) || mech_is_jumping(mech) ||
       mech_cocoon_integrity(mech)) {
     if (((mech)->rd.desiredfacing) != mech_heading_degrees(mech))
       mech_event_schedule(mech, EVENT_MOVE, mech_move_event, MOVE_TICK, 0);
@@ -488,64 +488,64 @@ void unstun_crew_event(MuxEvent *e) {
   ((mech)->rd.tankcritstatus) &= ~CREW_STUNNED;
 }
 
-void mech_unjam_ammo_event(MuxEvent *objEvent) {
-  Mech *objMech = (Mech *)objEvent->data; /* get the mech */
-  int wWeapNum =
-      clamp_intptr_to_int((intptr_t)objEvent->data2); /* weapon number */
-  int wSect, wSlot, wWeapStatus, wWeapIdx;
-  int wRoll = 0;
-  int wRollNeeded = 0;
+void mech_unjam_ammo_event(MuxEvent *obj_event) {
+  Mech *obj_mech = (Mech *)obj_event->data; /* get the mech */
+  int w_weap_num =
+      clamp_intptr_to_int((intptr_t)obj_event->data2); /* weapon number */
+  int w_sect, w_slot, w_weap_status, w_weap_idx;
+  int w_roll = 0;
+  int w_roll_needed = 0;
 
-  if (mech_pilot_is_unconscious(objMech) || !mech_is_started(objMech))
+  if (mech_pilot_is_unconscious(obj_mech) || !mech_is_started(obj_mech))
     return;
 
   WeaponNumberLookupResult lookup = weapon_number_find(
-      &(WeaponNumberLookupRequest){.mech = objMech, .number = wWeapNum});
-  wWeapStatus = lookup.value;
-  wSect = lookup.slot.section;
-  wSlot = lookup.slot.critical;
+      &(WeaponNumberLookupRequest){.mech = obj_mech, .number = w_weap_num});
+  w_weap_status = lookup.value;
+  w_sect = lookup.slot.section;
+  w_slot = lookup.slot.critical;
 
-  if (wWeapStatus ==
+  if (w_weap_status ==
       TIC_NUM_DESTROYED) /* return if the weapon has been destroyed */
     return;
 
-  wWeapIdx = FindWeaponIndex(objMech, wWeapNum);
+  w_weap_idx = find_weapon_index(obj_mech, w_weap_num);
 
   AmmunitionCheckResult ammunition = ammunition_check(&(AmmunitionCheckRequest){
-      .mech = objMech,
-      .weapon_index = wWeapIdx,
-      .weapon = {.section = wSect, .critical = wSlot}});
+      .mech = obj_mech,
+      .weapon_index = w_weap_idx,
+      .weapon = {.section = w_sect, .critical = w_slot}});
   if (!ammunition.available) {
-    mech_critical_temporary_failure_set(
-        &(CriticalSlotFailureSet){.mech = objMech,
-                                  .slot = {.section = wSect, .critical = wSlot},
-                                  .failure = 0});
+    mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+        .mech = obj_mech,
+        .slot = {.section = w_sect, .critical = w_slot},
+        .failure = 0});
 
-    mech_printf(objMech, MECHALL,
+    mech_printf(obj_mech, MECHALL,
                 "You finish bouncing around and realize you no longer have "
                 "ammo for your %s!",
-                get_parts_long_name(objMech->xcode.context,
-                                    weapon_equipment_index(wWeapIdx), 0));
+                get_parts_long_name(obj_mech->xcode.context,
+                                    weapon_equipment_index(w_weap_idx), 0));
     return;
   }
 
-  if (weapon_catalogue_has_special(wWeapStatus, RAC)) {
-    wRoll = btech_random_roll(objMech->xcode.context);
-    wRollNeeded = FindPilotGunnery(objMech, wWeapStatus) + 3;
+  if (weapon_catalogue_has_special(w_weap_status, RAC)) {
+    w_roll = btech_random_roll(obj_mech->xcode.context);
+    w_roll_needed = find_pilot_gunnery(obj_mech, w_weap_status) + 3;
 
-    mech_notify(objMech, MECHPILOT, "You make a roll to unjam the weapon!");
-    mech_printf(objMech, MECHPILOT, "Modified Gunnery Skill: BTH %d\tRoll: %d",
-                wRollNeeded, wRoll);
+    mech_notify(obj_mech, MECHPILOT, "You make a roll to unjam the weapon!");
+    mech_printf(obj_mech, MECHPILOT, "Modified Gunnery Skill: BTH %d\tRoll: %d",
+                w_roll_needed, w_roll);
 
-    if (wRoll < wRollNeeded) {
-      mech_notify(objMech, MECHALL,
+    if (w_roll < w_roll_needed) {
+      mech_notify(obj_mech, MECHALL,
                   "Your attempt to remove the jammed slug fails. You'll need "
                   "to try again to clear it.");
       return;
     }
   } else {
-    if (!MadePilotSkillRoll(objMech, 0)) {
-      mech_notify(objMech, MECHALL,
+    if (!made_pilot_skill_roll(obj_mech, 0)) {
+      mech_notify(obj_mech, MECHALL,
                   "Your attempt to remove the jammed slug fails. You'll need "
                   "to try again to clear it.");
       return;
@@ -553,18 +553,18 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
   }
 
   mech_critical_temporary_failure_set(
-      &(CriticalSlotFailureSet){.mech = objMech,
-                                .slot = {.section = wSect, .critical = wSlot},
+      &(CriticalSlotFailureSet){.mech = obj_mech,
+                                .slot = {.section = w_sect, .critical = w_slot},
                                 .failure = 0});
-  mech_printf(objMech, MECHALL, "You manage to clear the jam on your %s!",
-              get_parts_long_name(objMech->xcode.context,
-                                  weapon_equipment_index(wWeapIdx), 0));
-  mech_los_broadcast(objMech, "ejects a mangled shell!");
+  mech_printf(obj_mech, MECHALL, "You manage to clear the jam on your %s!",
+              get_parts_long_name(obj_mech->xcode.context,
+                                  weapon_equipment_index(w_weap_idx), 0));
+  mech_los_broadcast(obj_mech, "ejects a mangled shell!");
 
   mech_ammunition_decrement(&(AmmunitionDecrementRequest){
-      .mech = objMech,
-      .weapon_index = wWeapNum,
-      .weapon = {.section = wSect, .critical = wSlot},
+      .mech = obj_mech,
+      .weapon_index = w_weap_num,
+      .weapon = {.section = w_sect, .critical = w_slot},
       .primary_ammunition = ammunition.primary,
       .secondary_ammunition = ammunition.secondary,
       .gatling_shots = 0,
@@ -588,7 +588,7 @@ void check_stagger_event(MuxEvent *event) {
   }
 
   mech_notify(mech, MECHALL, "You stagger from the damage!");
-  if (!MadePilotSkillRoll(mech, mech_stagger_modifier(mech))) {
+  if (!made_pilot_skill_roll(mech, mech_stagger_modifier(mech))) {
     mech_notify(mech, MECHALL,
                 "You loose the battle with gravity and tumble over!!");
     mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
@@ -601,7 +601,7 @@ void check_stagger_event(MuxEvent *event) {
    * Mechs whose damage accumulation times out without making a roll (<20
    * damage) don't get this help. This 10 points of damage assistance slowly
    * times out in mech_damage_stagger_check, or can be erased by weapons fire */
-  mech->rd.staggerDamage = -10;
+  mech->rd.stagger_damage = -10;
 }
 
 #ifdef BT_MOVEMENT_MODES
@@ -687,25 +687,25 @@ void mech_movemode_event(MuxEvent *e) {
 #endif
 
 int mech_stagger_modifier(Mech *mech) {
-  int bthMod = 0;
-  int tonnageMod = 0;
+  int bth_mod = 0;
+  int tonnage_mod = 0;
 
   if (!mech_is_started(mech)) {
-    bthMod = 999;
+    bth_mod = 999;
   } else {
-    bthMod = mech_stagger_level(mech);
+    bth_mod = mech_stagger_level(mech);
 
     if (((mech)->ud.tons) <= 35)
-      tonnageMod = 1;
+      tonnage_mod = 1;
     else if (((mech)->ud.tons) <= 55)
-      tonnageMod = 0;
+      tonnage_mod = 0;
     else if (((mech)->ud.tons) <= 75)
-      tonnageMod = -1;
+      tonnage_mod = -1;
     else
-      tonnageMod = -2;
+      tonnage_mod = -2;
 
-    bthMod += tonnageMod;
+    bth_mod += tonnage_mod;
   }
 
-  return bthMod;
+  return bth_mod;
 }

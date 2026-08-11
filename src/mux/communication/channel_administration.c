@@ -30,7 +30,7 @@ void do_channel_membership_flags(CommandInvocation *invocation) {
   char *arg1 = invocation->first;
   char *arg2 = invocation->second;
   char *s;
-  struct channel *ch;
+  struct Channel *ch;
   int add_remove = 1;
 
   ch = select_channel(evaluation->runtime->channels, arg1);
@@ -121,7 +121,7 @@ void do_channel_membership_flags(CommandInvocation *invocation) {
 int comsys_test_access(const ChannelAccessRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef player = request->player;
-  struct channel *chan = request->channel;
+  struct Channel *chan = request->channel;
   long flag_value = request->access;
   LuaLockInvocation lock;
   LuaLockResult result;
@@ -179,22 +179,22 @@ int do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {
   char *alias;
 
   alias = alloc_lbuf("do_comsystem");
-  const size_t length = strlen(cmd);
+  const size_t LENGTH = strlen(cmd);
   size_t offset = 0;
 
-  while (offset < length) {
-    const char character = *(const char *)checked_storage_at_const(
-        cmd, length + 1, sizeof(char), offset);
+  while (offset < LENGTH) {
+    const char CHARACTER = *(const char *)checked_storage_at_const(
+        cmd, LENGTH + 1, sizeof(char), offset);
 
-    if (character == ' ')
+    if (CHARACTER == ' ')
       break;
     *(char *)checked_storage_at(alias, LBUF_SIZE, sizeof(char), offset) =
-        character;
+        CHARACTER;
     offset++;
   }
   *(char *)checked_storage_at(alias, LBUF_SIZE, sizeof(char), offset) = '\0';
-  t = checked_storage_at(cmd, length + 1, sizeof(char),
-                         offset < length ? offset + 1 : offset);
+  t = checked_storage_at(cmd, LENGTH + 1, sizeof(char),
+                         offset < LENGTH ? offset + 1 : offset);
 
   ch = comsys_channel_from_alias(evaluation, who, alias);
   if (ch && *ch) {
@@ -212,7 +212,7 @@ void do_cemit(CommandInvocation *invocation) {
   int key = invocation->key;
   char *chan = invocation->first;
   char *text = invocation->second;
-  struct channel *ch;
+  struct Channel *ch;
 
   ch = select_channel(evaluation->runtime->channels, chan);
   if (!ch) {
@@ -234,7 +234,7 @@ void do_channel_flags(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *channel = invocation->first;
   char *flag = invocation->second;
-  struct channel *ch;
+  struct Channel *ch;
   int flag_value;
   bool enable = true;
 
@@ -276,7 +276,7 @@ void do_chboot(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *channel = invocation->first;
   char *victim = invocation->second;
-  struct channel *ch;
+  struct Channel *ch;
   DbRef thing;
 
   /*
@@ -322,7 +322,7 @@ void do_channel_object(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *channel = invocation->first;
   char *object = invocation->second;
-  struct channel *ch;
+  struct Channel *ch;
   DbRef thing;
   char *buff;
 
@@ -356,7 +356,7 @@ void do_chanlist(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   int key = invocation->key;
-  struct channel *ch;
+  struct Channel *ch;
   long flags;
   char temp[MBUF_SIZE];
   char buf[MBUF_SIZE];
@@ -370,9 +370,9 @@ void do_chanlist(CommandInvocation *invocation) {
   }
   raw_notify(evaluation, player, "** Channel       Description");
 
-  for (ch = (struct channel *)hash_table_first_entry(
+  for (ch = (struct Channel *)hash_table_first_entry(
            &evaluation->runtime->channels->channels);
-       ch; ch = (struct channel *)hash_table_next_entry(
+       ch; ch = (struct Channel *)hash_table_next_entry(
                &evaluation->runtime->channels->channels)) {
     if (is_wizard(evaluation->world->database, player) ||
         (ch->type & CHANNEL_PUBLIC) ||
@@ -404,12 +404,12 @@ void do_chanstatus(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   int key = invocation->key;
   char *chan = invocation->first;
-  struct channel *ch;
+  struct Channel *ch;
   long flags;
   char *atrstr;
 
   if (key & CSTATUS_FULL) {
-    struct channel *selected_channel;
+    struct Channel *selected_channel;
     raw_notify(evaluation, player,
                "** Channel             --Flags--  Obj  Users   Messages");
 

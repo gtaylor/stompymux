@@ -16,7 +16,7 @@ typedef struct NamedColor {
   int blue;
 } NamedColor;
 
-static const NamedColor built_in_colors[] = {
+static const NamedColor BUILT_IN_COLORS[] = {
     {"aliceblue", 240, 248, 255},
     {"antiquewhite", 250, 235, 215},
     {"aqua", 0, 255, 255},
@@ -170,8 +170,8 @@ static const NamedColor built_in_colors[] = {
 
 static const NamedColor *built_in_color(size_t index) {
   return checked_storage_at_const(
-      built_in_colors, sizeof(built_in_colors) / sizeof(built_in_colors[0]),
-      sizeof(*built_in_colors), index);
+      BUILT_IN_COLORS, sizeof(BUILT_IN_COLORS) / sizeof(BUILT_IN_COLORS[0]),
+      sizeof(*BUILT_IN_COLORS), index);
 }
 
 static char palette_character(const char *text, size_t length, size_t index) {
@@ -215,8 +215,8 @@ static bool styled_text_color_name_valid(const char *name) {
 }
 
 static const NamedColor *styled_text_builtin_color(const char *name) {
-  const size_t count = sizeof(built_in_colors) / sizeof(built_in_colors[0]);
-  for (size_t index = 0; index + 1 < count; index++) {
+  const size_t COUNT = sizeof(BUILT_IN_COLORS) / sizeof(BUILT_IN_COLORS[0]);
+  for (size_t index = 0; index + 1 < COUNT; index++) {
     const NamedColor *color = built_in_color(index);
     if (!strcasecmp(name, color->name))
       return color;
@@ -286,13 +286,13 @@ bool styled_text_palette_set_rgb(StyledTextPalette *palette, const char *name,
 }
 
 static bool parse_hex_byte(const char *value, int *result) {
-  const unsigned char first = (unsigned char)palette_character(value, 2, 0);
-  const unsigned char second = (unsigned char)palette_character(value, 2, 1);
+  const unsigned char FIRST = (unsigned char)palette_character(value, 2, 0);
+  const unsigned char SECOND = (unsigned char)palette_character(value, 2, 1);
 
-  if (!(isxdigit)(first) || !(isxdigit)(second))
+  if (!(isxdigit)(FIRST) || !(isxdigit)(SECOND))
     return false;
-  int high = (isdigit)(first) ? first - '0' : (tolower)(first) - 'a' + 10;
-  int low = (isdigit)(second) ? second - '0' : (tolower)(second) - 'a' + 10;
+  int high = (isdigit)(FIRST) ? FIRST - '0' : (tolower)(FIRST) - 'a' + 10;
+  int low = (isdigit)(SECOND) ? SECOND - '0' : (tolower)(SECOND) - 'a' + 10;
   *result = high * 16 + low;
   return true;
 }
@@ -319,15 +319,15 @@ static bool parse_rgb_channel(const char *text, size_t length, size_t *offset,
 }
 
 static bool parse_rgb_function(const char *value, StyledColor *color) {
-  const size_t length = strlen(value);
+  const size_t LENGTH = strlen(value);
   size_t offset = 4;
 
   if (strncasecmp(value, "rgb(", 4) != 0)
     return false;
-  if (!parse_rgb_channel(value, length, &offset, &color->red, ',') ||
-      !parse_rgb_channel(value, length, &offset, &color->green, ',') ||
-      !parse_rgb_channel(value, length, &offset, &color->blue, ')') ||
-      offset != length)
+  if (!parse_rgb_channel(value, LENGTH, &offset, &color->red, ',') ||
+      !parse_rgb_channel(value, LENGTH, &offset, &color->green, ',') ||
+      !parse_rgb_channel(value, LENGTH, &offset, &color->blue, ')') ||
+      offset != LENGTH)
     return false;
   color->kind = STYLED_COLOR_RGB;
   return true;
@@ -335,8 +335,8 @@ static bool parse_rgb_function(const char *value, StyledColor *color) {
 
 bool styled_color_parse(const StyledTextPalette *palette, const char *value,
                         StyledColor *color) {
-  const size_t length = strlen(value);
-  if (length == 7 && palette_character(value, length, 0) == '#') {
+  const size_t LENGTH = strlen(value);
+  if (LENGTH == 7 && palette_character(value, LENGTH, 0) == '#') {
     if (!parse_hex_byte(checked_string_suffix(value, 1), &color->red) ||
         !parse_hex_byte(checked_string_suffix(value, 3), &color->green) ||
         !parse_hex_byte(checked_string_suffix(value, 5), &color->blue))

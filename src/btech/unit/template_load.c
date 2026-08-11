@@ -39,8 +39,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   char *tmpc;
   int lpos, hpos;
   int ok_count = 0;
-  int isClan = 0;
-  int wFireModes, wAmmoModes;
+  int is_clan = 0;
+  int w_fire_modes, w_ammo_modes;
   if (!fp)
     return -1;
   ptr = strrchr(filename, '/');
@@ -132,7 +132,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         return -1;
       }
       ((mech)->ud.type) = clamp_int_to_char(type);
-      ((mech)->ud.fuel) = ((mech)->ud.fuel_orig) = DefaultFuelByType(mech);
+      ((mech)->ud.fuel) = ((mech)->ud.fuel_orig) = default_fuel_by_type(mech);
       break;
     case 2: /* Movement Type */
       tmpc = template_description_read(&(TemplateDescriptionRead){
@@ -227,12 +227,12 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     case 10: /* Specials */
       tmpc = template_description_read(&(TemplateDescriptionRead){
           .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
-      if (CheckSpecialsList(specials, primary_technology_name_count(),
-                            specials2, secondary_technology_name_count(),
-                            tmpc)) {
-        ((mech)->rd.specials) |= BuildBitVectorNoErr(
+      if (check_specials_list(specials, primary_technology_name_count(),
+                              specials2, secondary_technology_name_count(),
+                              tmpc)) {
+        ((mech)->rd.specials) |= build_bit_vector_no_err(
             specials, primary_technology_name_count(), tmpc);
-        ((mech)->rd.specials2) |= BuildBitVectorNoErr(
+        ((mech)->rd.specials2) |= build_bit_vector_no_err(
             specials2, secondary_technology_name_count(), tmpc);
       } else if (template_load_error(
                      fp, mech, player, ((mech)->rd.specials) == -1, true,
@@ -285,8 +285,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       mech_section_configuration_set(
           mech, section,
           clamp_long_to_int(
-              BuildBitVector(section_configs,
-                             template_section_configuration_count(), tmpc) &
+              build_bit_vector(section_configs,
+                               template_section_configuration_count(), tmpc) &
               ~(CASE_TECH | SECTION_DESTROYED)));
       if (template_load_error(
               fp, mech, player, mech_section_configuration(mech, section) == -1,
@@ -310,7 +310,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       line2 = template_token_parse(&(TemplateTokenRequest){
           .input = line2, .output = buf, .output_capacity = sizeof(buf)});
       if (!strncasecmp(buf, "CL.", 3))
-        isClan = 1;
+        is_clan = 1;
       PartMatchResult match =
           part_match_next(&(PartMatchRequest){.context = mech->xcode.context,
                                               .pattern = buf,
@@ -346,22 +346,22 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         line2 = template_token_parse(&(TemplateTokenRequest){
             .input = line2, .output = buf, .output_capacity = sizeof(buf)});
         /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
-        wFireModes = clamp_long_to_int(BuildBitVectorWithDelim(
+        w_fire_modes = clamp_long_to_int(build_bit_vector_with_delim(
             crit_fire_modes, template_critical_fire_mode_count(), buf));
-        wAmmoModes = clamp_long_to_int(BuildBitVectorWithDelim(
+        w_ammo_modes = clamp_long_to_int(build_bit_vector_with_delim(
             crit_ammo_modes, template_critical_ammo_mode_count(), buf));
         if (template_load_error(
-                fp, mech, player, wFireModes < 0 && wAmmoModes < 0, true,
+                fp, mech, player, w_fire_modes < 0 && w_ammo_modes < 0, true,
                 "Error while loading: Invalid crit modes for weapon: %s.",
                 buf)) {
           return -1;
         }
-        if (wFireModes < 0)
-          wFireModes = 0;
-        if (wAmmoModes < 0)
-          wAmmoModes = 0;
-        mech_critical_fire_mode_set(mech, section, critical, wFireModes);
-        mech_critical_ammo_mode_set(mech, section, critical, wAmmoModes);
+        if (w_fire_modes < 0)
+          w_fire_modes = 0;
+        if (w_ammo_modes < 0)
+          w_ammo_modes = 0;
+        mech_critical_fire_mode_set(mech, section, critical, w_fire_modes);
+        mech_critical_ammo_mode_set(mech, section, critical, w_ammo_modes);
         template_token_parse(&(TemplateTokenRequest){
             .input = line2, .output = buf, .output_capacity = sizeof(buf)});
         if (mech->xcode.context->configuration->btech_parts &&
@@ -382,31 +382,31 @@ int load_template(DbRef player, Mech *mech, char *filename) {
             .input = line2, .output = buf, .output_capacity = sizeof(buf)});
         /*              wFireModes = BuildBitVector(crit_fire_modes, buf); */
         /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
-        wFireModes = clamp_long_to_int(BuildBitVectorWithDelim(
+        w_fire_modes = clamp_long_to_int(build_bit_vector_with_delim(
             crit_fire_modes, template_critical_fire_mode_count(), buf));
-        wAmmoModes = clamp_long_to_int(BuildBitVectorWithDelim(
+        w_ammo_modes = clamp_long_to_int(build_bit_vector_with_delim(
             crit_ammo_modes, template_critical_ammo_mode_count(), buf));
         if (template_load_error(
-                fp, mech, player, wFireModes < 0 && wAmmoModes < 0, true,
+                fp, mech, player, w_fire_modes < 0 && w_ammo_modes < 0, true,
                 "Error while loading: Invalid crit modes for ammo: %s.", buf)) {
           return -1;
         }
-        if (wFireModes < 0)
-          wFireModes = 0;
-        if (wAmmoModes < 0)
-          wAmmoModes = 0;
-        mech_critical_fire_mode_set(mech, section, critical, wFireModes);
-        mech_critical_ammo_mode_set(mech, section, critical, wAmmoModes);
+        if (w_fire_modes < 0)
+          w_fire_modes = 0;
+        if (w_ammo_modes < 0)
+          w_ammo_modes = 0;
+        mech_critical_fire_mode_set(mech, section, critical, w_fire_modes);
+        mech_critical_ammo_mode_set(mech, section, critical, w_ammo_modes);
         if (mech_critical_data(mech, section, critical) <
-            FullAmmo(mech, section, critical)) {
+            full_ammo(mech, section, critical)) {
           mech_critical_fire_mode_add(mech, section, critical, HALFTON_MODE);
           if (mech_critical_data(mech, section, critical) >
-              FullAmmo(mech, section, critical))
+              full_ammo(mech, section, critical))
             mech_critical_fire_mode_clear(mech, section, critical,
                                           HALFTON_MODE);
         }
         if (mech_critical_data(mech, section, critical) !=
-                FullAmmo(mech, section, critical) &&
+                full_ammo(mech, section, critical) &&
             ((mech)->ud.type) != CLASS_MW && ((mech)->ud.type) != CLASS_BSUIT) {
           btech_channel_send(
               mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
@@ -414,9 +414,9 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                       weapon_catalogue_name(ammunition_to_weapon_index(type)),
                       mech->mynum, filename,
                       mech_critical_data(mech, section, critical),
-                      FullAmmo(mech, section, critical)));
+                      full_ammo(mech, section, critical)));
           mech_critical_data_set(mech, section, critical,
-                                 FullAmmo(mech, section, critical));
+                                 full_ammo(mech, section, critical));
         }
       } else {
         if (template_token_parse(
@@ -574,9 +574,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     case 26: /* Specials */
       tmpc = template_description_read(&(TemplateDescriptionRead){
           .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
-      if (CheckSpecialsList(infantry_specials, infantry_technology_name_count(),
-                            nullptr, 0, tmpc))
-        ((mech)->rd.infantry_specials) |= BuildBitVectorNoErr(
+      if (check_specials_list(infantry_specials,
+                              infantry_technology_name_count(), nullptr, 0,
+                              tmpc))
+        ((mech)->rd.infantry_specials) |= build_bit_vector_no_err(
             infantry_specials, infantry_technology_name_count(), tmpc);
       break;
     case 27: /* Carmaxton */
@@ -621,6 +622,6 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   }
   if (fclose(fp) != 0)
     return -1;
-  template_load_finalize(mech, isClan != 0);
+  template_load_finalize(mech, is_clan != 0);
   return 0;
 }

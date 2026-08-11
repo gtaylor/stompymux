@@ -22,14 +22,14 @@ bool styled_text_preset_name_valid(const char *name) {
         (first >= '0' && first <= '9')))
     return false;
   for (size_t index = 0; index < length; index++) {
-    const unsigned char character =
+    const unsigned char CHARACTER =
         (unsigned char)*(const char *)checked_storage_at_const(
             name, length + 1, sizeof(char), index);
-    bool alphanumeric = (character >= 'A' && character <= 'Z') ||
-                        (character >= 'a' && character <= 'z') ||
-                        (character >= '0' && character <= '9');
-    if (!alphanumeric && character != '.' && character != '_' &&
-        character != '~' && character != '-')
+    bool alphanumeric = (CHARACTER >= 'A' && CHARACTER <= 'Z') ||
+                        (CHARACTER >= 'a' && CHARACTER <= 'z') ||
+                        (CHARACTER >= '0' && CHARACTER <= '9');
+    if (!alphanumeric && CHARACTER != '.' && CHARACTER != '_' &&
+        CHARACTER != '~' && CHARACTER != '-')
       return false;
   }
   return true;
@@ -91,7 +91,7 @@ bool styled_text_palette_set_preset(StyledTextPalette *palette,
   const char *directives = definition->directives;
   char *error = definition->error;
   size_t error_size = definition->error_size;
-  static const StyledTextRenderOptions all_options = {
+  static const StyledTextRenderOptions ALL_OPTIONS = {
       .osc_hyperlinks = true,
       .osc_hyperlinks_send = true,
       .osc_hyperlinks_prompt = true,
@@ -137,7 +137,7 @@ bool styled_text_palette_set_preset(StyledTextPalette *palette,
   }
   (void)snprintf(candidate_name, sizeof(candidate_name), "%s", name);
   StyledTextPreset candidate = {.name = candidate_name, .config = config};
-  if (!styled_text_preset_uri(&candidate, &all_options, uri, sizeof(uri))) {
+  if (!styled_text_preset_uri(&candidate, &ALL_OPTIONS, uri, sizeof(uri))) {
     styled_set_error(error, error_size, "OSC 8 preset URI is too long");
     goto fail;
   }

@@ -42,10 +42,10 @@ int tactical_column_is_odd(int column) { return (unsigned)column & 1; }
 int tactical_display_columns(int hex_columns) { return hex_columns * 3 + 1; }
 
 int tactical_hex_offset(const TacticalHexOffsetRequest *request) {
-  const int x = request->position.x;
-  const int y = request->position.y;
-  int column_is_odd = tactical_column_is_odd(x + request->first_column_is_odd);
-  return (y * 2 + 1 - column_is_odd) * request->display_columns + x * 3 + 1;
+  const int X = request->position.x;
+  const int Y = request->position.y;
+  int column_is_odd = tactical_column_is_odd(X + request->first_column_is_odd);
+  return (Y * 2 + 1 - column_is_odd) * request->display_columns + X * 3 + 1;
 }
 
 static void tactical_row_sketch(TacticalCanvas *canvas, int row_offset,
@@ -65,7 +65,7 @@ void tactical_map_sketch(char *buffer, size_t buffer_capacity, BattleMap *map,
                          int height, int display_columns, int top_offset,
                          int left_offset, bool use_color, bool use_hex_los,
                          bool show_underlying_terrain) {
-  static const char hex_rows[2][311] = {
+  static const char HEX_ROWS[2][311] = {
       "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
       "][\\][/]["
       "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
@@ -95,16 +95,16 @@ void tactical_map_sketch(char *buffer, size_t buffer_capacity, BattleMap *map,
   };
 
   for (int y = 0; y < top_offset; y++) {
-    const int row_offset = y * display_columns;
-    memset(tactical_canvas_region(&canvas, row_offset, display_columns - 1),
+    const int ROW_OFFSET = y * display_columns;
+    memset(tactical_canvas_region(&canvas, ROW_OFFSET, display_columns - 1),
            ' ', (size_t)(display_columns - 1));
-    *tactical_canvas_at(&canvas, row_offset + display_columns - 1) = '\0';
+    *tactical_canvas_at(&canvas, ROW_OFFSET + display_columns - 1) = '\0';
   }
   for (int y = 0; y < height; y++) {
     const char (*first_row)[311] = checked_storage_at_const(
-        hex_rows, 2, sizeof(*hex_rows), (size_t)first_column_is_odd);
+        HEX_ROWS, 2, sizeof(*HEX_ROWS), (size_t)first_column_is_odd);
     const char (*second_row)[311] = checked_storage_at_const(
-        hex_rows, 2, sizeof(*hex_rows), (size_t)!first_column_is_odd);
+        HEX_ROWS, 2, sizeof(*HEX_ROWS), (size_t)!first_column_is_odd);
     int row_offset = (top_offset + y * 2) * display_columns;
     tactical_row_sketch(&canvas, row_offset, left_offset, *first_row,
                         map_columns);
@@ -113,11 +113,11 @@ void tactical_map_sketch(char *buffer, size_t buffer_capacity, BattleMap *map,
                         map_columns);
   }
   const char (*last_row)[311] = checked_storage_at_const(
-      hex_rows, 2, sizeof(*hex_rows), (size_t)first_column_is_odd);
+      HEX_ROWS, 2, sizeof(*HEX_ROWS), (size_t)first_column_is_odd);
   tactical_row_sketch(&canvas, (top_offset + height * 2) * display_columns,
                       left_offset, *last_row, map_columns);
 
-  const int map_origin_offset = top_offset * display_columns + left_offset;
+  const int MAP_ORIGIN_OFFSET = top_offset * display_columns + left_offset;
   width = minimum_int(width, map->map_width - start_x);
   height = minimum_int(height, map->map_height - start_y);
   if (use_hex_los &&
@@ -180,18 +180,18 @@ void tactical_map_sketch(char *buffer, size_t buffer_capacity, BattleMap *map,
         break;
       }
 
-      const int base_offset =
-          map_origin_offset + tactical_hex_offset(&(TacticalHexOffsetRequest){
+      const int BASE_OFFSET =
+          MAP_ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                                   .position = {.x = x, .y = y},
                                   .display_columns = display_columns,
                                   .first_column_is_odd = first_column_is_odd});
-      *tactical_canvas_at(&canvas, base_offset) = top_character;
-      *tactical_canvas_at(&canvas, base_offset + 1) = top_character;
-      *tactical_canvas_at(&canvas, base_offset + display_columns) =
+      *tactical_canvas_at(&canvas, BASE_OFFSET) = top_character;
+      *tactical_canvas_at(&canvas, BASE_OFFSET + 1) = top_character;
+      *tactical_canvas_at(&canvas, BASE_OFFSET + display_columns) =
           bottom_character;
       if (elevation > 0)
         bottom_character = (char)('0' + elevation);
-      *tactical_canvas_at(&canvas, base_offset + display_columns + 1) =
+      *tactical_canvas_at(&canvas, BASE_OFFSET + display_columns + 1) =
           bottom_character;
     }
   }

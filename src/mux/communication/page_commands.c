@@ -76,7 +76,7 @@ static char *dbrefs_to_names(const PageNameListRequest *request) {
   char *bp, *p;
   char oldlist[LBUF_SIZE];
 
-  StringCopy(oldlist, list);
+  string_copy(oldlist, list);
   bp = namelist;
   for (p = (char *)strtok(oldlist, " "); p != nullptr;
        p = (char *)strtok(nullptr, " ")) {
@@ -95,11 +95,11 @@ static char *dbrefs_to_names(const PageNameListRequest *request) {
     }
   }
   if (bp != namelist) {
-    const size_t length = strlen(namelist);
+    const size_t LENGTH = strlen(namelist);
 
-    if (length >= 2)
+    if (LENGTH >= 2)
       *(char *)checked_storage_at(namelist, LBUF_SIZE, sizeof(char),
-                                  length - 2) = '\0';
+                                  LENGTH - 2) = '\0';
   }
   return bp;
 }
@@ -108,7 +108,7 @@ void do_page(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const ServerConfiguration *configuration =
       invocation->context->world->configuration;
-  const DbRef player = invocation->player;
+  const DbRef PLAYER = invocation->player;
   char *tname = invocation->first;
   char *message = invocation->second;
   char plain_message[LBUF_SIZE];
@@ -136,12 +136,12 @@ void do_page(CommandInvocation *invocation) {
   if (!*message) {
     char *target_cursor = targetname;
     for (size_t index = 0; index < player_account_last_page_count(
-                                       evaluation->world->database, player);
+                                       evaluation->world->database, PLAYER);
          index++) {
       PlayerPageRecipientResult recipient =
           player_account_last_page_recipient(&(PlayerPageRecipientRequest){
               .account = {.database = evaluation->world->database,
-                          .player = player},
+                          .player = PLAYER},
               .position = index});
       if (!recipient.found)
         continue;
@@ -152,14 +152,14 @@ void do_page(CommandInvocation *invocation) {
     *target_cursor = '\0';
     if (!*tname) {
       if (!*targetname)
-        notify_checked(evaluation, player, player, "You have not paged anyone.",
+        notify_checked(evaluation, PLAYER, PLAYER, "You have not paged anyone.",
                        MSG_ME_ALL | MSG_F_DOWN);
       else
         for (p = (char *)strtok(targetname, " "); p != nullptr;
              p = (char *)strtok(nullptr, " ")) {
           if (parse_long_checked(p, &target))
             notify_printf(
-                evaluation, player, "You last paged %s.",
+                evaluation, PLAYER, "You last paged %s.",
                 game_object_name(evaluation->world->database, target));
         }
 
@@ -167,8 +167,8 @@ void do_page(CommandInvocation *invocation) {
       free_lbuf(buf2);
       return;
     }
-    StringCopy(message, tname);
-    StringCopy(tname, targetname);
+    string_copy(message, tname);
+    string_copy(tname, targetname);
     ismessage = 1;
   }
 
@@ -177,7 +177,7 @@ void do_page(CommandInvocation *invocation) {
   message = plain_message;
   mp = message;
 
-  attribute_get_string(evaluation->world->database, alias, player, A_ALIAS,
+  attribute_get_string(evaluation->world->database, alias, PLAYER, A_ALIAS,
                        &aflags);
   if (*alias) {
     char *ap = aladd;
@@ -195,10 +195,10 @@ void do_page(CommandInvocation *invocation) {
   for (n = 0, str = tname; str; str = (char *)next_token(str, ' '), n++)
     ;
 
-  target = lookup_player(evaluation->world, player, tname, 1);
+  target = lookup_player(evaluation->world, PLAYER, tname, 1);
   if (target == NOTHING && n > 1) {
     bp = dbrefs_to_names(&(PageNameListRequest){.world = evaluation->world,
-                                                .player = player,
+                                                .player = PLAYER,
                                                 .list = tname,
                                                 .names = buf1,
                                                 .dbrefs = ismessage});
@@ -213,30 +213,30 @@ void do_page(CommandInvocation *invocation) {
         if (!parse_long_checked(p, &target))
           continue;
       } else
-        target = lookup_player(evaluation->world, player, p, 1);
+        target = lookup_player(evaluation->world, PLAYER, p, 1);
 
       message = mp;
 
       if (target == NOTHING) {
-        notify_printf(evaluation, player, "I don't recognize \"%s\".", p);
-      } else if (!page_check(evaluation, configuration, player, target)) {
+        notify_printf(evaluation, PLAYER, "I don't recognize \"%s\".", p);
+      } else if (!page_check(evaluation, configuration, PLAYER, target)) {
         ;
       } else {
         switch (*message) {
         case ':':
           notify_checked(
-              evaluation, target, player,
+              evaluation, target, PLAYER,
               tprintf("From afar, to (%s):%s %s %s", buf1, aladd,
-                      game_object_name(evaluation->world->database, player),
+                      game_object_name(evaluation->world->database, PLAYER),
                       checked_string_suffix(message, 1)),
               MSG_ME_ALL | MSG_F_DOWN);
           break;
         case ';':
           message = checked_mutable_string_suffix(message, 1);
           notify_checked(
-              evaluation, target, player,
+              evaluation, target, PLAYER,
               tprintf("From afar, to (%s):%s %s%s", buf1, aladd,
-                      game_object_name(evaluation->world->database, player),
+                      game_object_name(evaluation->world->database, PLAYER),
                       message),
               MSG_ME_ALL | MSG_F_DOWN);
           break;
@@ -245,9 +245,9 @@ void do_page(CommandInvocation *invocation) {
           [[fallthrough]];
         default:
           notify_checked(
-              evaluation, target, player,
+              evaluation, target, PLAYER,
               tprintf("To (%s), %s%s pages you: %s", buf1,
-                      game_object_name(evaluation->world->database, player),
+                      game_object_name(evaluation->world->database, PLAYER),
                       aladd, message),
               MSG_ME_ALL | MSG_F_DOWN);
         }
@@ -259,26 +259,26 @@ void do_page(CommandInvocation *invocation) {
     if (ismessage && !parse_long_checked(tname, &target))
       target = NOTHING;
     if (target == NOTHING) {
-      notify_printf(evaluation, player, "I don't recognize \"%s\".", tname);
-    } else if (!page_check(evaluation, configuration, player, target)) {
+      notify_printf(evaluation, PLAYER, "I don't recognize \"%s\".", tname);
+    } else if (!page_check(evaluation, configuration, PLAYER, target)) {
       ;
     } else {
 
       switch (*message) {
       case ':':
         notify_checked(
-            evaluation, target, player,
+            evaluation, target, PLAYER,
             tprintf("From afar,%s %s %s", aladd,
-                    game_object_name(evaluation->world->database, player),
+                    game_object_name(evaluation->world->database, PLAYER),
                     checked_string_suffix(message, 1)),
             MSG_ME_ALL | MSG_F_DOWN);
         break;
       case ';':
         message = checked_mutable_string_suffix(message, 1);
         notify_checked(
-            evaluation, target, player,
+            evaluation, target, PLAYER,
             tprintf("From afar,%s %s%s", aladd,
-                    game_object_name(evaluation->world->database, player),
+                    game_object_name(evaluation->world->database, PLAYER),
                     message),
             MSG_ME_ALL | MSG_F_DOWN);
         break;
@@ -287,9 +287,9 @@ void do_page(CommandInvocation *invocation) {
         [[fallthrough]];
       default:
         notify_checked(
-            evaluation, target, player,
+            evaluation, target, PLAYER,
             tprintf("%s%s pages: %s",
-                    game_object_name(evaluation->world->database, player),
+                    game_object_name(evaluation->world->database, PLAYER),
                     aladd, message),
             MSG_ME_ALL | MSG_F_DOWN);
       }
@@ -301,11 +301,11 @@ void do_page(CommandInvocation *invocation) {
       /* this is terminating the string above when there is no more to add to
        * the list removing the ", "
        */
-      const size_t name_list_length = strlen(buf1);
+      const size_t NAME_LIST_LENGTH = strlen(buf1);
 
-      if (name_list_length >= 2)
+      if (NAME_LIST_LENGTH >= 2)
         *(char *)checked_storage_at(buf1, LBUF_SIZE, sizeof(char),
-                                    name_list_length - 2) = '\0';
+                                    NAME_LIST_LENGTH - 2) = '\0';
       count++;
     }
   }
@@ -315,11 +315,11 @@ void do_page(CommandInvocation *invocation) {
     free_lbuf(buf2);
     return;
   }
-  const size_t reference_list_length = strlen(buf2);
+  const size_t REFERENCE_LIST_LENGTH = strlen(buf2);
 
-  if (reference_list_length > 0)
+  if (REFERENCE_LIST_LENGTH > 0)
     *(char *)checked_storage_at(buf2, LBUF_SIZE, sizeof(char),
-                                reference_list_length - 1) = '\0';
+                                REFERENCE_LIST_LENGTH - 1) = '\0';
   DbRef *recipients = malloc((size_t)count * sizeof(*recipients));
   if (recipients) {
     size_t recipient_count = 0;
@@ -328,7 +328,7 @@ void do_page(CommandInvocation *invocation) {
       *(DbRef *)checked_storage_at(recipients, (size_t)count,
                                    sizeof(*recipients), recipient_count++) =
           parse_dbref(token);
-    player_account_last_page_set(evaluation->world->database, player,
+    player_account_last_page_set(evaluation->world->database, PLAYER,
                                  recipients, recipient_count);
     free(recipients);
   }
@@ -336,39 +336,39 @@ void do_page(CommandInvocation *invocation) {
   if (count == 1) {
     if (*buf1) {
       if (ispose != 1) {
-        notify_printf(evaluation, player, "You paged %s with '%s'.", buf1, mp);
+        notify_printf(evaluation, PLAYER, "You paged %s with '%s'.", buf1, mp);
       } else {
         if (*mp == ':')
-          notify_printf(evaluation, player, "Long distance to %s: %s %s", buf1,
-                        game_object_name(evaluation->world->database, player),
+          notify_printf(evaluation, PLAYER, "Long distance to %s: %s %s", buf1,
+                        game_object_name(evaluation->world->database, PLAYER),
                         checked_string_suffix(mp, 1));
         else
-          notify_printf(evaluation, player, "Long distance to %s: %s%s", buf1,
-                        game_object_name(evaluation->world->database, player),
+          notify_printf(evaluation, PLAYER, "Long distance to %s: %s%s", buf1,
+                        game_object_name(evaluation->world->database, PLAYER),
                         checked_string_suffix(mp, 1));
       }
     }
   } else {
-    const size_t name_list_length = strlen(buf1);
+    const size_t NAME_LIST_LENGTH = strlen(buf1);
 
-    if (name_list_length >= 2) {
+    if (NAME_LIST_LENGTH >= 2) {
       *(char *)checked_storage_at(buf1, LBUF_SIZE, sizeof(char),
-                                  name_list_length - 2) = ')';
+                                  NAME_LIST_LENGTH - 2) = ')';
       *(char *)checked_storage_at(buf1, LBUF_SIZE, sizeof(char),
-                                  name_list_length - 1) = '\0';
+                                  NAME_LIST_LENGTH - 1) = '\0';
     }
 
     if (*buf1) {
       if (ispose != 1) {
-        notify_printf(evaluation, player, "You paged (%s with '%s'.", buf1, mp);
+        notify_printf(evaluation, PLAYER, "You paged (%s with '%s'.", buf1, mp);
       } else {
         if (*mp == ':')
-          notify_printf(evaluation, player, "Long distance to (%s: %s %s", buf1,
-                        game_object_name(evaluation->world->database, player),
+          notify_printf(evaluation, PLAYER, "Long distance to (%s: %s %s", buf1,
+                        game_object_name(evaluation->world->database, PLAYER),
                         checked_string_suffix(mp, 1));
         else
-          notify_printf(evaluation, player, "Long distance to (%s: %s%s", buf1,
-                        game_object_name(evaluation->world->database, player),
+          notify_printf(evaluation, PLAYER, "Long distance to (%s: %s%s", buf1,
+                        game_object_name(evaluation->world->database, PLAYER),
                         checked_string_suffix(mp, 1));
       }
     }

@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mux/lua/command_access.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
@@ -25,10 +24,10 @@ struct LuaParentCheck {
   size_t object_count;
 };
 
-typedef LuaParentCheck LUA_PARENT_CHECK;
+typedef LuaParentCheck LuaParentCheck;
 
-static LUA_PARENT_CHECK *lua_parent_check_at(LUA_PARENT_CHECK *checks,
-                                             size_t check_count, size_t index) {
+static LuaParentCheck *lua_parent_check_at(LuaParentCheck *checks,
+                                           size_t check_count, size_t index) {
   return checked_storage_at(checks, check_count, sizeof(*checks), index);
 }
 
@@ -44,12 +43,11 @@ static const char *lua_name_at(const char *const *names, size_t count,
       (const void *)names, count, sizeof(*names), index);
 }
 
-static void lua_free_parent_checks(LUA_PARENT_CHECK *checks,
-                                   size_t check_count) {
+static void lua_free_parent_checks(LuaParentCheck *checks, size_t check_count) {
   size_t index;
 
   for (index = 0; index < check_count; index++) {
-    LUA_PARENT_CHECK *check = lua_parent_check_at(checks, check_count, index);
+    LuaParentCheck *check = lua_parent_check_at(checks, check_count, index);
 
     free(check->path);
     free(check->error);
@@ -57,10 +55,10 @@ static void lua_free_parent_checks(LUA_PARENT_CHECK *checks,
   free(checks);
 }
 
-static int lua_add_parent_check(LUA_PARENT_CHECK **checks, size_t *check_count,
+static int lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
                                 const char *path, const char *detail,
                                 char *error, size_t error_size) {
-  LUA_PARENT_CHECK *replacement;
+  LuaParentCheck *replacement;
   char *path_copy;
   char *detail_copy;
 
@@ -81,7 +79,7 @@ static int lua_add_parent_check(LUA_PARENT_CHECK **checks, size_t *check_count,
   }
   *checks = replacement;
   (*check_count)++;
-  LUA_PARENT_CHECK *check =
+  LuaParentCheck *check =
       lua_parent_check_at(*checks, *check_count, *check_count - 1);
   check->path = path_copy;
   check->error = detail_copy;
@@ -93,7 +91,7 @@ static int lua_check_luaparents(EvaluationContext *evaluation,
                                 LuaRuntime *runtime, DbRef player,
                                 int *has_errors, char *error,
                                 size_t error_size) {
-  LUA_PARENT_CHECK *checks = nullptr;
+  LuaParentCheck *checks = nullptr;
   size_t check_count = 0;
   DbRef object;
   size_t index;
@@ -109,7 +107,7 @@ static int lua_check_luaparents(EvaluationContext *evaluation,
     if (!*path)
       continue;
     for (index = 0; index < check_count; index++) {
-      LUA_PARENT_CHECK *check = lua_parent_check_at(checks, check_count, index);
+      LuaParentCheck *check = lua_parent_check_at(checks, check_count, index);
 
       if (!strcmp(check->path, path)) {
         check->object_count++;
@@ -126,7 +124,7 @@ static int lua_check_luaparents(EvaluationContext *evaluation,
     }
   }
   for (index = 0; index < check_count; index++) {
-    LUA_PARENT_CHECK *check = lua_parent_check_at(checks, check_count, index);
+    LuaParentCheck *check = lua_parent_check_at(checks, check_count, index);
 
     notify_printf(evaluation, player, "%zu %s are unable to read %s: %s",
                   check->object_count,
@@ -141,7 +139,7 @@ static int lua_check_luaparents(EvaluationContext *evaluation,
 int lua_check(EvaluationContext *evaluation, LuaRuntime *source, DbRef player,
               char *error, size_t error_size) {
   LuaRuntime *runtime;
-  LUA_MODULE_ROOT root;
+  LuaModuleRoot root;
   int has_luaparent_errors;
   int result = 1;
 
@@ -344,10 +342,10 @@ void lua_examine_object(const LuaExamineObjectRequest *request) {
     bool found = false;
     static const char *names[] = {"internal_appearance", "external_appearance",
                                   "mech_status"};
-    const size_t name_count = sizeof(names) / sizeof(*names);
+    const size_t NAME_COUNT = sizeof(names) / sizeof(*names);
 
-    for (size_t index = 0; index < name_count; index++) {
-      const char *name = lua_name_at(names, name_count, index);
+    for (size_t index = 0; index < NAME_COUNT; index++) {
+      const char *name = lua_name_at(names, NAME_COUNT, index);
 
       lua_getfield(state, module, name);
       if (lua_isfunction(state, -1)) {

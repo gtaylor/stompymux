@@ -23,7 +23,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg);
 /*
  * Master list of AI - radio commands
  */
-AutopilotRadioCommand const autopilot_radio_commands[] = {
+AutopilotRadioCommand const AUTOPILOT_RADIO_COMMANDS[] = {
     {"auto", "autogun", 1, 0, auto_radio_command_autogun},
     {"auto", "autogun", 2, 0, auto_radio_command_autogun},
     {"chase", "chasetarg", 1, 0, auto_radio_command_chasetarg},
@@ -62,8 +62,8 @@ AutopilotRadioCommand const autopilot_radio_commands[] = {
 const AutopilotRadioCommand *autopilot_radio_command_at(int index) {
   if (index < 0)
     abort();
-  return checked_storage_at_const(autopilot_radio_commands,
-                                  sizeof(autopilot_radio_commands) /
+  return checked_storage_at_const(AUTOPILOT_RADIO_COMMANDS,
+                                  sizeof(AUTOPILOT_RADIO_COMMANDS) /
                                       sizeof(AutopilotRadioCommand),
                                   sizeof(AutopilotRadioCommand), (size_t)index);
 }

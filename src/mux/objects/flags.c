@@ -207,18 +207,18 @@ bool is_linkable(GameDatabase *database, DbRef player, DbRef target) {
 }
 
 void mark(GameDatabase *database, DbRef x) {
-  const unsigned char mask = (unsigned char)(1U << (x & 7));
+  const unsigned char MASK = (unsigned char)(1U << (x & 7));
   char *byte = checked_storage_at(database->markbits->chunk,
                                   sizeof(database->markbits->chunk),
                                   sizeof(char), (size_t)(x >> 3));
-  *byte = (char)((unsigned char)*byte | mask);
+  *byte = (char)((unsigned char)*byte | MASK);
 }
 void unmark(GameDatabase *database, DbRef x) {
-  const unsigned char mask = (unsigned char)(1U << (x & 7));
+  const unsigned char MASK = (unsigned char)(1U << (x & 7));
   char *byte = checked_storage_at(database->markbits->chunk,
                                   sizeof(database->markbits->chunk),
                                   sizeof(char), (size_t)(x >> 3));
-  *byte = (char)((unsigned char)*byte & (unsigned char)~mask);
+  *byte = (char)((unsigned char)*byte & (unsigned char)~MASK);
 }
 bool is_marked(GameDatabase *database, DbRef x) {
   const char *byte = checked_storage_at_const(database->markbits->chunk,
@@ -319,7 +319,7 @@ static FlagEntry *flag_entry_at(size_t index) {
                             index);
 }
 
-static const ObjectEntry object_types[8] = {
+static const ObjectEntry OBJECT_TYPES[8] = {
     {"ROOM", 'R', CA_PUBLIC, OF_CONTENTS | OF_EXITS | OF_DROPTO | OF_HOME},
     {"THING", ' ', CA_PUBLIC,
      OF_CONTENTS | OF_LOCATION | OF_EXITS | OF_HOME | OF_SIBLINGS},
@@ -335,23 +335,23 @@ static const ObjectEntry object_types[8] = {
 const ObjectEntry *object_type_entry(int type) {
   switch (type) {
   case OBJECT_TYPE_ROOM:
-    return &object_types[0];
+    return &OBJECT_TYPES[0];
   case OBJECT_TYPE_THING:
-    return &object_types[1];
+    return &OBJECT_TYPES[1];
   case OBJECT_TYPE_EXIT:
-    return &object_types[2];
+    return &OBJECT_TYPES[2];
   case OBJECT_TYPE_PLAYER:
-    return &object_types[3];
+    return &OBJECT_TYPES[3];
   case OBJECT_TYPE_INVALID:
-    return &object_types[4];
+    return &OBJECT_TYPES[4];
   case OBJECT_TYPE_GARBAGE:
-    return &object_types[5];
+    return &OBJECT_TYPES[5];
   case 6:
-    return &object_types[6];
+    return &OBJECT_TYPES[6];
   case OBJECT_TYPE_NOTYPE:
-    return &object_types[7];
+    return &OBJECT_TYPES[7];
   default:
-    return &object_types[4];
+    return &OBJECT_TYPES[4];
   }
 }
 
@@ -451,7 +451,7 @@ char *decode_flags(const DecodeFlagsRequest *request) {
   char *out = buffer;
   *out = '\0';
   if (!is_good_obj(request->database, request->player)) {
-    StringCopy(buffer, "#-2 ERROR");
+    string_copy(buffer, "#-2 ERROR");
     return buffer;
   }
   const ObjectEntry *object_type = object_type_entry(request->object_type);
@@ -505,9 +505,9 @@ char *flags_description(GameDatabase *database, DbRef target) {
 char *unparse_object_numonly(GameDatabase *database, DbRef target) {
   char *buffer = alloc_lbuf("unparse_object_numonly");
   if (target == NOTHING)
-    StringCopy(buffer, "*NOTHING*");
+    string_copy(buffer, "*NOTHING*");
   else if (target == HOME)
-    StringCopy(buffer, "*HOME*");
+    string_copy(buffer, "*HOME*");
   else if (!is_good_obj(database, target))
     (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   else
@@ -520,9 +520,9 @@ char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
   (void)evaluation;
   char *buffer = alloc_lbuf("unparse_object");
   if (target == NOTHING)
-    StringCopy(buffer, "*NOTHING*");
+    string_copy(buffer, "*NOTHING*");
   else if (target == HOME)
-    StringCopy(buffer, "*HOME*");
+    string_copy(buffer, "*HOME*");
   else if (!is_good_obj(database, target))
     (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   else if (is_examinable(database, player, target)) {
@@ -532,7 +532,7 @@ char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
                    *flags ? ":" : "", flags);
     free_sbuf(flags);
   } else
-    StringCopy(buffer, game_object_name(database, target));
+    string_copy(buffer, game_object_name(database, target));
   return buffer;
 }
 bool convert_flags(EvaluationContext *evaluation, DbRef player, char *list,

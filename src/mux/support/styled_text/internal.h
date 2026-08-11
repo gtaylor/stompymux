@@ -204,7 +204,7 @@ enum {
   OSC8_CLOSE_SIZE = 7,
 };
 
-extern const char *const styled_link_state_names[STYLED_LINK_STATE_COUNT];
+extern const char *const STYLED_LINK_STATE_NAMES[STYLED_LINK_STATE_COUNT];
 
 bool styled_append_bytes(char *output, size_t output_size, size_t *used,
                          const char *value, size_t length);

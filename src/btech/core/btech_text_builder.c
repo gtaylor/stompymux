@@ -38,23 +38,23 @@ bool btech_text_builder_append_count(BtechTextBuilder *builder,
     builder->truncated = true;
     return false;
   }
-  const size_t available = builder->capacity - builder->length;
-  const size_t copied = length < available ? length : available - 1;
+  const size_t AVAILABLE = builder->capacity - builder->length;
+  const size_t COPIED = length < AVAILABLE ? length : AVAILABLE - 1;
   memcpy(checked_storage_region(builder->text, builder->capacity,
-                                builder->length, copied),
-         text, copied);
-  builder->length += copied;
+                                builder->length, COPIED),
+         text, COPIED);
+  builder->length += COPIED;
   *(char *)checked_storage_at(builder->text, builder->capacity, sizeof(char),
                               builder->length) = '\0';
-  if (copied != length)
+  if (COPIED != length)
     builder->truncated = true;
   return !builder->truncated;
 }
 
 bool btech_text_builder_append_character(BtechTextBuilder *builder,
                                          char character) {
-  const char text[] = {character, '\0'};
-  return btech_text_builder_append(builder, text);
+  const char TEXT[] = {character, '\0'};
+  return btech_text_builder_append(builder, TEXT);
 }
 
 bool btech_text_builder_append_format(BtechTextBuilder *builder,
@@ -69,20 +69,20 @@ bool btech_text_builder_append_format(BtechTextBuilder *builder,
     builder->truncated = true;
     return false;
   }
-  const size_t available = builder->capacity - builder->length;
+  const size_t AVAILABLE = builder->capacity - builder->length;
   va_list arguments;
   va_start(arguments, format);
-  const int count = vsnprintf( // NOLINT(clang-analyzer-security.VAList)
+  const int COUNT = vsnprintf( // NOLINT(clang-analyzer-security.VAList)
       checked_storage_region(builder->text, builder->capacity, builder->length,
-                             available),
-      available, format, arguments);
+                             AVAILABLE),
+      AVAILABLE, format, arguments);
   va_end(arguments);
 
-  if (count < 0 || (size_t)count >= available) {
+  if (COUNT < 0 || (size_t)COUNT >= AVAILABLE) {
     builder->length = builder->capacity - 1;
     builder->truncated = true;
     return false;
   }
-  builder->length += (size_t)count;
+  builder->length += (size_t)COUNT;
   return true;
 }

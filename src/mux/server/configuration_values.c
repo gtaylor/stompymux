@@ -191,7 +191,7 @@ int cf_string(const ConfigurationCall *call) {
     }
     retval = 1;
   }
-  StringCopy(destination, str);
+  string_copy(destination, str);
   return retval;
 }
 

@@ -46,18 +46,18 @@ static unsigned char *autopilot_hex_bit_byte(AutopilotHexBitSet *bits,
 }
 
 static bool autopilot_hex_bit_is_set(AutopilotHexBitSet *bits, int offset) {
-  const unsigned char byte = *autopilot_hex_bit_byte(bits, offset);
-  return (byte & (1U << (offset & 7))) != 0;
+  const unsigned char BYTE = *autopilot_hex_bit_byte(bits, offset);
+  return (BYTE & (1U << (offset & 7))) != 0;
 }
 
 static void autopilot_hex_bit_set(AutopilotHexBitSet *bits, int offset,
                                   bool enabled) {
   unsigned char *byte = autopilot_hex_bit_byte(bits, offset);
-  const unsigned char mask = (unsigned char)(1U << (offset & 7));
+  const unsigned char MASK = (unsigned char)(1U << (offset & 7));
   if (enabled)
-    *byte |= mask;
+    *byte |= MASK;
   else
-    *byte &= (unsigned char)~mask;
+    *byte &= (unsigned char)~MASK;
 }
 
 /* Experimental (highly) path finding system based on the A* 'a-star'
@@ -110,10 +110,10 @@ auto_create_astar_node(const AutopilotPathNodeRequest *request) {
 static int astar_compare(const RedBlackTreeCompareCall *call) {
   void *left_key = call->lhs;
   void *right_key = call->rhs;
-  const intptr_t left = (intptr_t)left_key;
-  const intptr_t right = (intptr_t)right_key;
+  const intptr_t LEFT = (intptr_t)left_key;
+  const intptr_t RIGHT = (intptr_t)right_key;
 
-  return (left > right) - (left < right);
+  return (LEFT > RIGHT) - (LEFT < RIGHT);
 }
 static void astar_release(const RedBlackTreeReleaseCall *call) {
   [[maybe_unused]] void *key = call->key;
@@ -298,7 +298,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
     for (i = 0; i < 360; i += 60) {
 
       /* Map coord to Real */
-      MapCoordToRealCoord(map_x1, map_y1, &x1, &y1);
+      map_coord_to_real_coord(map_x1, map_y1, &x1, &y1);
 
       /* Calc new hex */
       MapRealPosition projected = map_project_position(&(MapProjection){
@@ -307,7 +307,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       y2 = projected.y;
 
       /* Real coord to Map */
-      RealCoordToMapCoord(&map_x2, &map_y2, x2, y2);
+      real_coord_to_map_coord(&map_x2, &map_y2, x2, y2);
 
       /* Make sure the hex is sane */
       if (map_x2 < 0 || map_y2 < 0 || map_x2 >= battle_map_width(map) ||
@@ -322,13 +322,13 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       if (autopilot_hex_bit_is_set(&closed_list_bitfield, hexoffset))
         continue;
 
-      const int friendly_units =
+      const int FRIENDLY_UNITS =
           battle_map_mech_count_in_hex(&(BattleMapHexOccupancyRequest){
               .map = map,
               .position = {.x = map_x2, .y = map_y2},
               .relationship = TEAM_RELATIONSHIP_FRIENDLY,
               .team = mech_team(mech)});
-      const AutopilotPathStepResult step =
+      const AutopilotPathStepResult STEP =
           autopilot_path_step_evaluate(&(AutopilotPathStepRequest){
               .mobility = autopilot_path_mobility(mech),
               .waterproof = (mech_technology_flags_secondary(mech) &
@@ -337,10 +337,10 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                        .elevation = map_elevation_get(map, map_x1, map_y1)},
               .to = {.terrain = map_terrain_get(map, map_x2, map_y2),
                      .elevation = map_elevation_get(map, map_x2, map_y2),
-                     .friendly_units = friendly_units}});
-      if (!step.traversable)
+                     .friendly_units = FRIENDLY_UNITS}});
+      if (!STEP.traversable)
         continue;
-      child_g_score = step.cost;
+      child_g_score = STEP.cost;
 
       /* Now add the g score from the parent */
       child_g_score += parent_astar_node->g_score;
@@ -355,15 +355,15 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
       /* Get the end hex in real coords, using the old variables
        * to store the values */
-      MapCoordToRealCoord(end_x, end_y, &x1, &y1);
+      map_coord_to_real_coord(end_x, end_y, &x1, &y1);
 
       /* Re-using the x2 and y2 values we calc'd for the child hex
        * to find the range between the child hex and end hex */
-      const float estimated_cost = 100.0F * map_real_range(&(MapRealSegment){
+      const float ESTIMATED_COST = 100.0F * map_real_range(&(MapRealSegment){
                                                 .start = {.x = x2, .y = y2},
                                                 .end = {.x = x1, .y = y1},
                                             });
-      child_h_score = (int)estimated_cost;
+      child_h_score = (int)ESTIMATED_COST;
 
       /* Is it already on the openlist */
       if (autopilot_hex_bit_is_set(&open_list_bitfield, hexoffset)) {

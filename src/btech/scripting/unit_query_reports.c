@@ -22,22 +22,22 @@ BtechScriptResult fun_bttechlist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef it;
   Mech *mech;
   char *infostr;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
-  it = match_thing(&context->command->match, player,
-                   script_function_argument(fargs, nfargs, 0));
-  if (it == NOTHING || !is_examinable(context->world->database, player, it)) {
+  it = match_thing(&context->command->match, PLAYER,
+                   script_function_argument(fargs, NFARGS, 0));
+  if (it == NOTHING || !is_examinable(context->world->database, PLAYER, it)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
@@ -60,20 +60,20 @@ BtechScriptResult fun_bttechlist_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   Mech *mech;
   char *infostr;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
   mech =
-      load_refmech(context->btech, script_function_argument(fargs, nfargs, 0));
+      load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
@@ -93,20 +93,20 @@ BtechScriptResult fun_btpayload_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   Mech *mech;
   char *infostr;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   mech =
-      load_refmech(context->btech, script_function_argument(fargs, nfargs, 0));
+      load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
@@ -122,28 +122,28 @@ BtechScriptResult fun_btshowstatus_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef outplayer;
   Mech *mech;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   mech =
-      load_refmech(context->btech, script_function_argument(fargs, nfargs, 0));
+      load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
-  outplayer = match_thing(&context->command->match, player,
-                          script_function_argument(fargs, nfargs, 1));
+  outplayer = match_thing(&context->command->match, PLAYER,
+                          script_function_argument(fargs, NFARGS, 1));
   if (outplayer == NOTHING ||
-      !is_examinable(context->world->database, player, outplayer) ||
+      !is_examinable(context->world->database, PLAYER, outplayer) ||
       !is_player(context->btech->database, outplayer)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
@@ -159,28 +159,28 @@ BtechScriptResult fun_btshowwspecs_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef outplayer;
   Mech *mech;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   mech =
-      load_refmech(context->btech, script_function_argument(fargs, nfargs, 0));
+      load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
-  outplayer = match_thing(&context->command->match, player,
-                          script_function_argument(fargs, nfargs, 1));
+  outplayer = match_thing(&context->command->match, PLAYER,
+                          script_function_argument(fargs, NFARGS, 1));
   if (outplayer == NOTHING ||
-      !is_examinable(context->world->database, player, outplayer) ||
+      !is_examinable(context->world->database, PLAYER, outplayer) ||
       !is_player(context->btech->database, outplayer)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
@@ -196,35 +196,35 @@ BtechScriptResult fun_btshowcritstatus_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef outplayer;
   Mech *mech;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   mech =
-      load_refmech(context->btech, script_function_argument(fargs, nfargs, 0));
+      load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
     safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
-  outplayer = match_thing(&context->command->match, player,
-                          script_function_argument(fargs, nfargs, 1));
+  outplayer = match_thing(&context->command->match, PLAYER,
+                          script_function_argument(fargs, NFARGS, 1));
   if (outplayer == NOTHING ||
-      !is_examinable(context->world->database, player, outplayer) ||
+      !is_examinable(context->world->database, PLAYER, outplayer) ||
       !is_player(context->btech->database, outplayer)) {
     safe_tprintf_str(buff, bufc, "#-1");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
 
   mech_critstatus(outplayer, (void *)mech,
-                  script_function_argument(fargs, nfargs, 2));
+                  script_function_argument(fargs, NFARGS, 2));
   safe_tprintf_str(buff, bufc, "1");
 
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
@@ -234,22 +234,22 @@ BtechScriptResult fun_btengrate(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef mechdb;
   Mech *mech;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
-  mechdb = match_thing(&context->command->match, player,
-                       script_function_argument(fargs, nfargs, 0));
+  mechdb = match_thing(&context->command->match, PLAYER,
+                       script_function_argument(fargs, NFARGS, 0));
   if (mechdb == NOTHING ||
-      !is_examinable(context->world->database, player, mechdb)) {
+      !is_examinable(context->world->database, PLAYER, mechdb)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
@@ -273,19 +273,19 @@ BtechScriptResult fun_btengrate_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   Mech *mech;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
   mech =
-      load_refmech(context->btech, script_function_argument(fargs, nfargs, 0));
+      load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (!mech) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID REF");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
@@ -301,20 +301,20 @@ BtechScriptResult fun_btfasabasecost_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
 #ifdef BT_ADVANCED_ECON
   Mech *mech;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
   mech =
-      load_refmech(context->btech, script_function_argument(fargs, nfargs, 0));
+      load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (!mech) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID REF");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
@@ -332,20 +332,20 @@ BtechScriptResult fun_btunitpartslist_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   Mech *mech;
   char parts[LBUF_SIZE];
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
   mech =
-      load_refmech(context->btech, script_function_argument(fargs, nfargs, 0));
+      load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (!mech) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID REF");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
@@ -361,24 +361,24 @@ BtechScriptResult fun_btunitpartslist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
 
   DbRef mechdb;
   Mech *mech;
   char parts[LBUF_SIZE];
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
-  mechdb = match_thing(&context->command->match, player,
-                       script_function_argument(fargs, nfargs, 0));
+  mechdb = match_thing(&context->command->match, PLAYER,
+                       script_function_argument(fargs, NFARGS, 0));
   if (mechdb == NOTHING ||
-      !is_examinable(context->world->database, player, mechdb)) {
+      !is_examinable(context->world->database, PLAYER, mechdb)) {
     safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }

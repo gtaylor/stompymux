@@ -87,10 +87,10 @@ static inline void cool_menu_entry_very_simple(CoolMenu **menu,
   cool_menu_entry_normal(menu, text, CM_ONE, 0, 999);
 }
 
-void KillCoolMenu(CoolMenu *c);
-void ShowCoolMenu(EvaluationContext *evaluation, DbRef player, CoolMenu *c);
-char **MakeCoolMenuText(CoolMenu *c, size_t *line_count);
-int CoolMenu_FPWBit(int number, int maxlen);
+void kill_cool_menu(CoolMenu *c);
+void show_cool_menu(EvaluationContext *evaluation, DbRef player, CoolMenu *c);
+char **make_cool_menu_text(CoolMenu *c, size_t *line_count);
+int cool_menu_fpw_bit(int number, int maxlen);
 
 typedef struct CoolMenuSelectionRequest {
   int columns;
@@ -105,11 +105,13 @@ typedef struct CoolMenuSelectionRequest {
 CoolMenu *cool_menu_selection_create(const CoolMenuSelectionRequest *request);
 
 /* last = how many entries we have */
-CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
-                                int last);
-CoolMenu *SelCol_FunStringMenuContextK(int columns, const char *heading,
-                                       char *(*fun)(void *, int, char *buffer),
-                                       void *context, int last);
+CoolMenu *sel_col_fun_string_menu_k(int columns, char *heading,
+                                    char *(*fun)(int), int last);
+CoolMenu *sel_col_fun_string_menu_context_k(int columns, const char *heading,
+                                            char *(*fun)(void *, int,
+                                                         char *buffer),
+                                            void *context, int last);
 
 /* Same, except we dunno how many entries we got */
-CoolMenu *SelCol_FunStringMenu(int columns, char *heading, char *(*fun)(int));
+CoolMenu *sel_col_fun_string_menu(int columns, char *heading,
+                                  char *(*fun)(int));

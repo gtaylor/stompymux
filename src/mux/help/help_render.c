@@ -108,12 +108,12 @@ static void help_text_buffer_append_str(HelpTextBuffer *buffer,
 
 static void help_text_buffer_append_code(HelpTextBuffer *buffer,
                                          const char *text) {
-  const size_t length = strlen(text);
+  const size_t LENGTH = strlen(text);
 
-  for (size_t index = 0; index < length; index++) {
-    if (help_text_character(text, length, index) == '[')
+  for (size_t index = 0; index < LENGTH; index++) {
+    if (help_text_character(text, LENGTH, index) == '[')
       help_text_buffer_append_str(buffer, "[");
-    help_text_buffer_append(buffer, help_text_suffix(text, length, index), 1);
+    help_text_buffer_append(buffer, help_text_suffix(text, LENGTH, index), 1);
   }
 }
 
@@ -156,14 +156,14 @@ static bool help_url_is_external(const char *url) {
 
 static void help_text_buffer_append_quoted(HelpTextBuffer *buffer,
                                            const char *text) {
-  const size_t length = strlen(text);
+  const size_t LENGTH = strlen(text);
 
-  for (size_t index = 0; index < length; index++) {
-    const char character = help_text_character(text, length, index);
+  for (size_t index = 0; index < LENGTH; index++) {
+    const char CHARACTER = help_text_character(text, LENGTH, index);
 
-    if (character == '\\' || character == '"')
+    if (CHARACTER == '\\' || CHARACTER == '"')
       help_text_buffer_append_str(buffer, "\\");
-    help_text_buffer_append(buffer, help_text_suffix(text, length, index), 1);
+    help_text_buffer_append(buffer, help_text_suffix(text, LENGTH, index), 1);
   }
 }
 

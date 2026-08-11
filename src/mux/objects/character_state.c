@@ -31,7 +31,7 @@ static CharacterValueState *character_value(CharacterValueState *values,
   return checked_storage_at(values, count, sizeof(*values), index);
 }
 
-static const CharacterFixedState default_fixed_state = {
+static const CharacterFixedState DEFAULT_FIXED_STATE = {
     .build = 1,
     .reflexes = 1,
     .intuition = 1,
@@ -55,7 +55,7 @@ static CharacterState *state_create(GameDatabase *database, DbRef player) {
   state = calloc(1, sizeof(*state));
   if (!state)
     return nullptr;
-  state->fixed = default_fixed_state;
+  state->fixed = DEFAULT_FIXED_STATE;
   game_database_object(database, player)->character = state;
   return state;
 }
@@ -87,7 +87,7 @@ bool character_state_fixed_get(GameDatabase *database, DbRef player,
   if (!valid_player(database, player) || !state)
     return false;
   stored = game_database_object(database, player)->character;
-  *state = stored ? stored->fixed : default_fixed_state;
+  *state = stored ? stored->fixed : DEFAULT_FIXED_STATE;
   return true;
 }
 

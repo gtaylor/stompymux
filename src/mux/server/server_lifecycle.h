@@ -9,7 +9,7 @@
 // IWYU pragma: no_include "mux/world/world_context.h"
 // IWYU pragma: no_include "uv.h"
 
-typedef struct uv_loop_s uv_loop_t;
+typedef struct uv_loop_s UvLoopT;
 typedef struct DescriptorRegistry DescriptorRegistry;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLifecycle ServerLifecycle;
@@ -18,7 +18,7 @@ typedef struct MaintenanceContext MaintenanceContext;
 
 ServerLifecycle *server_lifecycle_create(MaintenanceContext *maintenance);
 void server_lifecycle_destroy(ServerLifecycle *lifecycle);
-uv_loop_t *server_lifecycle_loop(ServerLifecycle *lifecycle);
+UvLoopT *server_lifecycle_loop(ServerLifecycle *lifecycle);
 void server_lifecycle_prepare(ServerLifecycle *lifecycle);
 void server_lifecycle_unbind_signals(ServerLifecycle *lifecycle);
 int server_lifecycle_boot(ServerLifecycle *lifecycle);

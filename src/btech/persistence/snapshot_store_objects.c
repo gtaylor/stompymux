@@ -110,7 +110,7 @@ static int bind_runtime_real(sqlite3_stmt *statement, int *index, float value) {
   return btech_special_bind_real(statement, (*index)++, (double)value);
 }
 
-void btech_finalize_object_statements(BTECH_OBJECT_STORE_CONTEXT *context) {
+void btech_finalize_object_statements(BtechObjectStoreContext *context) {
   sqlite3_finalize(context->mechrep);
   sqlite3_finalize(context->turret);
   sqlite3_finalize(context->turret_tic);
@@ -141,7 +141,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   int depth = call->depth;
   void *argument = call->context;
-  BTECH_OBJECT_STORE_CONTEXT *context = argument;
+  BtechObjectStoreContext *context = argument;
   BtechSpecialObject *xcode = data;
   Mech *mech;
   MechPersistenceSnapshot snapshot;
@@ -252,9 +252,9 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
             btech_special_bind_int(context->critical, 8, critical->ammomode) <
                 0 ||
             btech_special_bind_int(context->critical, 9,
-                                   critical->weapDamageFlags) < 0 ||
+                                   critical->weap_damage_flags) < 0 ||
             btech_special_bind_int(context->critical, 10,
-                                   critical->desiredAmmoLoc) < 0 ||
+                                   critical->desired_ammo_loc) < 0 ||
             btech_special_step(context->critical) < 0)
           context->result = -1;
       }
@@ -310,21 +310,21 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
     }
     if (context->result == 0 &&
         (btech_special_bind_int(context->c3, 1, (DbRef)key) < 0 ||
-         sqlite3_bind_text(context->c3, 2, snapshot.network.C3ChanTitle, -1,
+         sqlite3_bind_text(context->c3, 2, snapshot.network.c3_chan_title, -1,
                            SQLITE_TRANSIENT) != SQLITE_OK ||
          btech_special_bind_int(context->c3, 3,
-                                snapshot.network.wC3iNetworkSize) < 0 ||
+                                snapshot.network.w_c3i_network_size) < 0 ||
          btech_special_bind_int(context->c3, 4,
-                                snapshot.network.wC3NetworkSize) < 0 ||
+                                snapshot.network.w_c3_network_size) < 0 ||
          btech_special_bind_int(context->c3, 5,
-                                snapshot.network.wTotalC3Masters) < 0 ||
+                                snapshot.network.w_total_c3_masters) < 0 ||
          btech_special_bind_int(context->c3, 6,
-                                snapshot.network.wWorkingC3Masters) < 0 ||
-         btech_special_bind_int(context->c3, 7, snapshot.network.C3FreqMode) <
+                                snapshot.network.w_working_c3_masters) < 0 ||
+         btech_special_bind_int(context->c3, 7, snapshot.network.c3_freq_mode) <
              0 ||
-         btech_special_bind_int(context->c3, 8, snapshot.network.tagTarget) <
+         btech_special_bind_int(context->c3, 8, snapshot.network.tag_target) <
              0 ||
-         btech_special_bind_int(context->c3, 9, snapshot.network.taggedBy) <
+         btech_special_bind_int(context->c3, 9, snapshot.network.tagged_by) <
              0 ||
          btech_special_step(context->c3) < 0))
       context->result = -1;
@@ -333,9 +333,9 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
          index++) {
       DbRef node =
           index < C3I_NETWORK_SIZE
-              ? stored_dbref(snapshot.network.C3iNetwork, C3I_NETWORK_SIZE,
+              ? stored_dbref(snapshot.network.c3i_network, C3I_NETWORK_SIZE,
                              index)
-              : stored_dbref(snapshot.network.C3Network, C3_NETWORK_SIZE,
+              : stored_dbref(snapshot.network.c3_network, C3_NETWORK_SIZE,
                              index - C3I_NETWORK_SIZE);
       int network = index < C3I_NETWORK_SIZE ? 0 : 1;
       int node_index =
@@ -543,9 +543,9 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.scharge_value) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.staggerDamage) < 0 ||
+                           snapshot.runtime.stagger_damage) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.lastStaggerNotify) < 0 ||
+                           snapshot.runtime.last_stagger_notify) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.critstatus2) < 0 ||
           bind_runtime_real(context->runtime, &runtime_index,
@@ -563,7 +563,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.units_killed) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.lastStaggerCheck) < 0 ||
+                           snapshot.runtime.last_stagger_check) < 0 ||
           btech_special_step(context->runtime) < 0)
         context->result = -1;
     }

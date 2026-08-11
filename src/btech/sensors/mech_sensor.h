@@ -124,4 +124,4 @@ typedef enum SensorAttribute {
 } SensorAttribute;
 
 const SensorDefinition *mech_sensor_definition(int sensor);
-extern const SensorDefinition sensors[];
+extern const SensorDefinition SENSOR_DEFINITIONS[];

@@ -87,35 +87,35 @@ static void collision_apply_damage(const CollisionDamageRequest *request) {
   Mech *mech = request->target;
   int dam = request->damage;
   CollisionDamageTable table = request->table;
-  int hitGroup, isrear, iscrit = 0, hitloc = 0;
+  int hit_group, isrear, iscrit = 0, hitloc = 0;
   int i, sp = (dam - 1) / 5;
 
   if (!dam)
     return;
   if (att == mech)
-    hitGroup = FRONT;
+    hit_group = FRONT;
   else
-    hitGroup = mech_hit_group(att, mech);
-  isrear = (hitGroup == BACK);
+    hit_group = mech_hit_group(att, mech);
+  isrear = (hit_group == BACK);
   if (mech_is_fallen(mech))
     table = COLLISION_DAMAGE_NORMAL;
   for (i = 0; i <= sp; i++) {
     switch (table) {
     case COLLISION_DAMAGE_NORMAL:
-      hitloc = mech_hit_location(mech, hitGroup, &iscrit, &isrear);
+      hitloc = mech_hit_location(mech, hit_group, &iscrit, &isrear);
       break;
     case COLLISION_DAMAGE_PUNCH:
       if (mech_class(mech) != CLASS_MECH) {
-        hitloc = mech_hit_location(mech, hitGroup, &iscrit, &isrear);
+        hitloc = mech_hit_location(mech, hit_group, &iscrit, &isrear);
       } else {
-        hitloc = mech_punch_hit_location(mech, hitGroup);
+        hitloc = mech_punch_hit_location(mech, hit_group);
       }
       break;
     case COLLISION_DAMAGE_KICK:
       if (mech_class(mech) != CLASS_MECH) {
-        hitloc = mech_hit_location(mech, hitGroup, &iscrit, &isrear);
+        hitloc = mech_hit_location(mech, hit_group, &iscrit, &isrear);
       } else {
-        hitloc = mech_kick_hit_location(mech, hitGroup);
+        hitloc = mech_kick_hit_location(mech, hit_group);
       }
       break;
     }
@@ -145,8 +145,8 @@ static int mech_adjusted_jump_speed_mp(const Mech *mech, const BattleMap *map) {
   float speed = mech_jump_speed(mech);
 
   if (mech_is_under_gravity(mech) && map != nullptr) {
-    const int gravity = MAX(50, battle_map_gravity(map));
-    speed = speed * 100.0F / (float)gravity;
+    const int GRAVITY = max(50, battle_map_gravity(map));
+    speed = speed * 100.0F / (float)GRAVITY;
   }
   return (int)(speed * MP_PER_KPH);
 }
@@ -222,16 +222,16 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
   case MECH_DOMINO_GROUND:
   default:
     head = mech_heading_degrees(me) + mech_lateral_movement(me);
-    const int heading_delta =
+    const int HEADING_DELTA =
         head - (mech_heading_degrees(mech) + mech_lateral_movement(mech));
-    const float relative_speed =
+    const float RELATIVE_SPEED =
         mech_current_speed(me) -
         mech_current_speed(mech) *
-            cosf((float)heading_delta * (float)M_PI / 180.0F);
-    const int mech_weight = mech_calculated_weight(me);
-    const float damage = fabsf(relative_speed * MP_PER_KPH) *
-                         ((float)mech_weight / 1024.0F + 5.0F) / 15.0F;
-    td = (int)damage;
+            cosf((float)HEADING_DELTA * (float)M_PI / 180.0F);
+    const int MECH_WEIGHT = mech_calculated_weight(me);
+    const float DAMAGE = fabsf(RELATIVE_SPEED * MP_PER_KPH) *
+                         ((float)MECH_WEIGHT / 1024.0F + 5.0F) / 15.0F;
+    td = (int)DAMAGE;
     break;
   }
   if (td > 10)
@@ -252,23 +252,23 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
         collision_apply_damage(
             &(CollisionDamageRequest){.attacker = me,
                                       .target = mech,
-                                      .damage = MAX(1, td * factor / 500),
+                                      .damage = max(1, td * factor / 500),
                                       .table = COLLISION_DAMAGE_PUNCH});
         collision_apply_damage(
             &(CollisionDamageRequest){.attacker = me,
                                       .target = me,
-                                      .damage = MAX(1, td * factor / 100),
+                                      .damage = max(1, td * factor / 100),
                                       .table = COLLISION_DAMAGE_KICK});
       } else {
         collision_apply_damage(
             &(CollisionDamageRequest){.attacker = me,
                                       .target = mech,
-                                      .damage = MAX(1, td * factor / 100),
+                                      .damage = max(1, td * factor / 100),
                                       .table = COLLISION_DAMAGE_PUNCH});
         collision_apply_damage(
             &(CollisionDamageRequest){.attacker = me,
                                       .target = me,
-                                      .damage = MAX(1, td * factor / 500),
+                                      .damage = max(1, td * factor / 500),
                                       .table = COLLISION_DAMAGE_KICK});
       }
     } else {
@@ -277,8 +277,8 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
       mech_printf(mech, MECHALL, "%s nearly lands on you!",
                   mech_to_mech_display_id(mech, me).text);
       mech_los_broadcast_unit(me, mech, "nearly lands on %s!");
-      if (!MadePilotSkillRoll(me,
-                              cnt + mech_adjusted_jump_speed_mp(me, map) / 2))
+      if (!made_pilot_skill_roll(
+              me, cnt + mech_adjusted_jump_speed_mp(me, map) / 2))
         mech_fall(me, 1, mech_adjusted_jump_speed_mp(me, map) / 2);
     }
     return 1;
@@ -297,23 +297,23 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
       collision_apply_damage(
           &(CollisionDamageRequest){.attacker = me,
                                     .target = mech,
-                                    .damage = MAX(1, td * factor / 500),
+                                    .damage = max(1, td * factor / 500),
                                     .table = COLLISION_DAMAGE_NORMAL});
       collision_apply_damage(
           &(CollisionDamageRequest){.attacker = me,
                                     .target = me,
-                                    .damage = MAX(1, td * factor / 100),
+                                    .damage = max(1, td * factor / 100),
                                     .table = COLLISION_DAMAGE_NORMAL});
     } else {
       collision_apply_damage(
           &(CollisionDamageRequest){.attacker = me,
                                     .target = mech,
-                                    .damage = MAX(1, td * factor / 100),
+                                    .damage = max(1, td * factor / 100),
                                     .table = COLLISION_DAMAGE_NORMAL});
       collision_apply_damage(
           &(CollisionDamageRequest){.attacker = me,
                                     .target = me,
-                                    .damage = MAX(1, td * factor / 500),
+                                    .damage = max(1, td * factor / 500),
                                     .table = COLLISION_DAMAGE_NORMAL});
     }
   } else {
@@ -322,7 +322,7 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
     mech_printf(mech, MECHALL, "%s nearly bumps into you!",
                 mech_to_mech_display_id(mech, me).text);
     mech_los_broadcast_unit(me, mech, "nearly bumps into %s!");
-    if (!MadePilotSkillRoll(me, cnt))
+    if (!made_pilot_skill_roll(me, cnt))
       mech_fall(me, 1, 0);
     mech_movement_stop(me);
   }

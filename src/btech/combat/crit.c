@@ -95,29 +95,29 @@ typedef struct ActuatorCritical {
 
 static void
 mech_arm_actuator_criticals_normalize(const ActuatorCritical *critical) {
-  Mech *objMech = critical->mech;
-  const int wLoc = critical->section;
-  const int wCritType = critical->equipment_type;
-  switch (special_from_equipment_index(wCritType)) {
+  Mech *obj_mech = critical->mech;
+  const int W_LOC = critical->section;
+  const int W_CRIT_TYPE = critical->equipment_type;
+  switch (special_from_equipment_index(W_CRIT_TYPE)) {
   case SHOULDER_OR_HIP:
     /* +4 to BTH with weapons in arm */
-    mech_section_base_to_hit_set(objMech, wLoc, 4);
+    mech_section_base_to_hit_set(obj_mech, W_LOC, 4);
     break;
 
   case UPPER_ACTUATOR:
   case LOWER_ACTUATOR:
     /* +1 BTH */
-    mech_section_base_to_hit_add(objMech, wLoc, 1);
+    mech_section_base_to_hit_add(obj_mech, W_LOC, 1);
     break;
   }
 }
 
 static void
 mech_leg_actuator_criticals_normalize(const ActuatorCritical *critical) {
-  Mech *objMech = critical->mech;
-  const int wLoc = critical->section;
-  const int wCritType = critical->equipment_type;
-  switch (special_from_equipment_index(wCritType)) {
+  Mech *obj_mech = critical->mech;
+  const int W_LOC = critical->section;
+  const int W_CRIT_TYPE = critical->equipment_type;
+  switch (special_from_equipment_index(W_CRIT_TYPE)) {
   case SHOULDER_OR_HIP:
     /*
        speed cut in half
@@ -125,8 +125,8 @@ mech_leg_actuator_criticals_normalize(const ActuatorCritical *critical) {
        2nd crit == zero speed on bipeds, but not on quads. Cut current speed in
        half again
      */
-    mech_max_speed_divide(objMech, 2);
-    mech_pilot_skill_modifier_add(objMech, 2);
+    mech_max_speed_divide(obj_mech, 2);
+    mech_pilot_skill_modifier_add(obj_mech, 2);
     break;
 
   case UPPER_ACTUATOR:
@@ -137,47 +137,47 @@ mech_leg_actuator_criticals_normalize(const ActuatorCritical *critical) {
        +1 to pskill rolls
        +1 to BTHs with this leg
      */
-    mech_max_speed_lower(objMech, MP1);
-    mech_section_base_to_hit_add(objMech, wLoc, 1);
-    mech_pilot_skill_modifier_add(objMech, 1);
+    mech_max_speed_lower(obj_mech, MP1);
+    mech_section_base_to_hit_add(obj_mech, W_LOC, 1);
+    mech_pilot_skill_modifier_add(obj_mech, 1);
     break;
   }
 }
 
-void mech_section_actuator_criticals_normalize(Mech *objMech, int wLoc) {
-  int wCritType;
-  int tIsArm = 0;
-  int tHasShoulderOrHipCrit = 0;
+void mech_section_actuator_criticals_normalize(Mech *obj_mech, int w_loc) {
+  int w_crit_type;
+  int t_is_arm = 0;
+  int t_has_shoulder_or_hip_crit = 0;
   int i;
 
-  if (!mech_is_quad(objMech) && ((wLoc == LARM) || (wLoc == RARM)))
-    tIsArm = 1;
+  if (!mech_is_quad(obj_mech) && ((w_loc == LARM) || (w_loc == RARM)))
+    t_is_arm = 1;
 
   /* reset the BTHs for this section */
-  mech_section_base_to_hit_set(objMech, wLoc, 0);
+  mech_section_base_to_hit_set(obj_mech, w_loc, 0);
 
   /* Let's first check to see if we have a shoulder or hip crit. If we do, then
    * we ignore all the other mods */
   for (i = 0; i < NUM_CRITICALS; i++) {
-    wCritType = mech_critical_part_type(objMech, wLoc, i);
+    w_crit_type = mech_critical_part_type(obj_mech, w_loc, i);
 
-    if (mech_critical_is_destroyed(objMech, wLoc, i)) {
-      if (equipment_is_special(wCritType)) {
-        switch (special_from_equipment_index(wCritType)) {
+    if (mech_critical_is_destroyed(obj_mech, w_loc, i)) {
+      if (equipment_is_special(w_crit_type)) {
+        switch (special_from_equipment_index(w_crit_type)) {
         case SHOULDER_OR_HIP:
-          tHasShoulderOrHipCrit = 1;
+          t_has_shoulder_or_hip_crit = 1;
 
-          if (tIsArm)
+          if (t_is_arm)
             mech_arm_actuator_criticals_normalize(&(ActuatorCritical){
-                .mech = objMech,
-                .section = wLoc,
-                .equipment_type = wCritType,
+                .mech = obj_mech,
+                .section = w_loc,
+                .equipment_type = w_crit_type,
             });
           else
             mech_leg_actuator_criticals_normalize(&(ActuatorCritical){
-                .mech = objMech,
-                .section = wLoc,
-                .equipment_type = wCritType,
+                .mech = obj_mech,
+                .section = w_loc,
+                .equipment_type = w_crit_type,
             });
 
           break;
@@ -185,35 +185,35 @@ void mech_section_actuator_criticals_normalize(Mech *objMech, int wLoc) {
       }
     }
 
-    if (tHasShoulderOrHipCrit)
+    if (t_has_shoulder_or_hip_crit)
       break;
   }
 
   /* Now, we only check the rest of the crits if we don't have a shoulder/hip */
-  if (!tHasShoulderOrHipCrit) {
+  if (!t_has_shoulder_or_hip_crit) {
 
     for (i = 0; i < NUM_CRITICALS; i++) {
-      wCritType = mech_critical_part_type(objMech, wLoc, i);
+      w_crit_type = mech_critical_part_type(obj_mech, w_loc, i);
 
-      if (mech_critical_is_destroyed(objMech, wLoc, i)) {
+      if (mech_critical_is_destroyed(obj_mech, w_loc, i)) {
 
-        if (equipment_is_special(wCritType)) {
+        if (equipment_is_special(w_crit_type)) {
 
-          switch (special_from_equipment_index(wCritType)) {
+          switch (special_from_equipment_index(w_crit_type)) {
           case UPPER_ACTUATOR:
           case LOWER_ACTUATOR:
           case HAND_OR_FOOT_ACTUATOR:
-            if (tIsArm)
+            if (t_is_arm)
               mech_arm_actuator_criticals_normalize(&(ActuatorCritical){
-                  .mech = objMech,
-                  .section = wLoc,
-                  .equipment_type = wCritType,
+                  .mech = obj_mech,
+                  .section = w_loc,
+                  .equipment_type = w_crit_type,
               });
             else
               mech_leg_actuator_criticals_normalize(&(ActuatorCritical){
-                  .mech = objMech,
-                  .section = wLoc,
-                  .equipment_type = wCritType,
+                  .mech = obj_mech,
+                  .section = w_loc,
+                  .equipment_type = w_crit_type,
               });
 
             break;
@@ -223,7 +223,7 @@ void mech_section_actuator_criticals_normalize(Mech *objMech, int wLoc) {
     }
   }
 
-  mech_speed_correct(objMech);
+  mech_speed_correct(obj_mech);
 }
 
 /*
@@ -232,14 +232,14 @@ void mech_section_actuator_criticals_normalize(Mech *objMech, int wLoc) {
         is anything but correct.
 */
 
-void mech_actuator_criticals_normalize(Mech *objMech) {
-  int wLegsDestroyed = CountDestroyedLegs(objMech);
-  MechConditionSummary condition = mech_condition_summary(objMech);
+void mech_actuator_criticals_normalize(Mech *obj_mech) {
+  int w_legs_destroyed = count_destroyed_legs(obj_mech);
+  MechConditionSummary condition = mech_condition_summary(obj_mech);
 
   /* reset us back to zero */
-  mech_pilot_skill_modifier_set(objMech, 0);
+  mech_pilot_skill_modifier_set(obj_mech, 0);
 
-  mech_max_speed_set(objMech, mech_template_maximum_speed(objMech));
+  mech_max_speed_set(obj_mech, mech_template_maximum_speed(obj_mech));
 
   /*
      The problem here is all the calcs are based on running speed... ie, max
@@ -250,51 +250,51 @@ void mech_actuator_criticals_normalize(Mech *objMech) {
 
   /* If we have a gyro crit, add 3 to our skill */
   /* Hardened gyro is a +2 on first hit */
-  if (mech_technology_flags_secondary(objMech) & HDGYRO_TECH) {
+  if (mech_technology_flags_secondary(obj_mech) & HDGYRO_TECH) {
     if (condition.hardened_gyro_damaged) {
       if (condition.gyro_damaged) {
-        mech_pilot_skill_modifier_add(objMech, 3);
+        mech_pilot_skill_modifier_add(obj_mech, 3);
       } else {
-        mech_pilot_skill_modifier_add(objMech, 2);
+        mech_pilot_skill_modifier_add(obj_mech, 2);
       }
     }
 
   } else if (condition.gyro_damaged)
-    mech_pilot_skill_modifier_add(objMech, 3);
+    mech_pilot_skill_modifier_add(obj_mech, 3);
 
   /*
      Let's add in the appropriate modifiers for a dead leg.
      ie. add 5 to the pskill BTH for each dead leg
    */
-  if (wLegsDestroyed > 0) {
-    if (mech_is_quad(objMech)) {
-      mech_pilot_skill_modifier_add(objMech, 2); /* loose quad bonus */
+  if (w_legs_destroyed > 0) {
+    if (mech_is_quad(obj_mech)) {
+      mech_pilot_skill_modifier_add(obj_mech, 2); /* loose quad bonus */
 
-      switch (wLegsDestroyed) {
+      switch (w_legs_destroyed) {
       case 1:
-        mech_max_speed_lower(objMech, MP1);
+        mech_max_speed_lower(obj_mech, MP1);
         break;
 
       case 2:
-        mech_max_speed_set(objMech, MP1);
-        mech_pilot_skill_modifier_add(objMech, 5);
+        mech_max_speed_set(obj_mech, MP1);
+        mech_pilot_skill_modifier_add(obj_mech, 5);
         break;
 
       case 3:
       case 4:
-        mech_max_speed_set(objMech, 0.0);
-        mech_make_fall(objMech);
+        mech_max_speed_set(obj_mech, 0.0);
+        mech_make_fall(obj_mech);
         ;
         break;
       }
     } else {
-      if (wLegsDestroyed == 1) {
-        mech_max_speed_set(objMech, MP1);
-        mech_pilot_skill_modifier_add(objMech, 5);
+      if (w_legs_destroyed == 1) {
+        mech_max_speed_set(obj_mech, MP1);
+        mech_pilot_skill_modifier_add(obj_mech, 5);
       } else {
-        mech_max_speed_set(objMech, 0.0);
-        mech_pilot_skill_modifier_add(objMech, 10);
-        mech_make_fall(objMech);
+        mech_max_speed_set(obj_mech, 0.0);
+        mech_pilot_skill_modifier_add(obj_mech, 10);
+        mech_make_fall(obj_mech);
       }
     }
   }
@@ -335,17 +335,17 @@ void mech_actuator_criticals_normalize(Mech *objMech) {
   */
 
   /* Now, normalize our legs and arms */
-  if (!IsLegDestroyed(objMech, LARM))
-    mech_section_actuator_criticals_normalize(objMech, LARM);
+  if (!is_leg_destroyed(obj_mech, LARM))
+    mech_section_actuator_criticals_normalize(obj_mech, LARM);
 
-  if (!IsLegDestroyed(objMech, RARM))
-    mech_section_actuator_criticals_normalize(objMech, RARM);
+  if (!is_leg_destroyed(obj_mech, RARM))
+    mech_section_actuator_criticals_normalize(obj_mech, RARM);
 
-  if (!IsLegDestroyed(objMech, LLEG))
-    mech_section_actuator_criticals_normalize(objMech, LLEG);
+  if (!is_leg_destroyed(obj_mech, LLEG))
+    mech_section_actuator_criticals_normalize(obj_mech, LLEG);
 
-  if (!IsLegDestroyed(objMech, RLEG))
-    mech_section_actuator_criticals_normalize(objMech, RLEG);
+  if (!is_leg_destroyed(obj_mech, RLEG))
+    mech_section_actuator_criticals_normalize(obj_mech, RLEG);
 
   /*
      Once were done, we just gotta fix one thing.
@@ -353,9 +353,9 @@ void mech_actuator_criticals_normalize(Mech *objMech) {
      speed to zero.
    */
   if (condition.hip_destroyed) {
-    mech_max_speed_set(objMech, 0.0);
-    mech_make_fall(objMech);
+    mech_max_speed_set(obj_mech, 0.0);
+    mech_make_fall(obj_mech);
   }
 
-  mech_speed_correct(objMech);
+  mech_speed_correct(obj_mech);
 }

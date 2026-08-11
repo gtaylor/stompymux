@@ -21,13 +21,13 @@ typedef struct EconomyRepairRequest {
   DbRef location;
 } EconomyRepairRequest;
 void economy_manifest_repair(const EconomyRepairRequest *request);
-void mech_Rfixstuff(DbRef player, void *data, char *buffer);
+void mech_rfixstuff(DbRef player, void *data, char *buffer);
 void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
                    char *buf);
 void mech_manifest(DbRef player, void *data, char *buffer);
 void mech_stores(DbRef player, void *data, char *buffer);
-void mech_Raddstuff(DbRef player, void *data, char *buffer);
-void mech_Rremovestuff(DbRef player, void *data, char *buffer);
+void mech_raddstuff(DbRef player, void *data, char *buffer);
+void mech_rremovestuff(DbRef player, void *data, char *buffer);
 void mech_loadcargo(DbRef player, void *data, char *buffer);
 void mech_unloadcargo(DbRef player, void *data, char *buffer);
-void mech_Rresetstuff(DbRef player, void *data, char *buffer);
+void mech_rresetstuff(DbRef player, void *data, char *buffer);

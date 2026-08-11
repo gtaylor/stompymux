@@ -76,12 +76,12 @@ static char *radio_cursor_remaining(const RadioCommandCursor *cursor) {
 }
 
 static bool radio_frequency_is_valid(const char *text) {
-  const size_t length = strlen(text);
-  if (length == 0)
+  const size_t LENGTH = strlen(text);
+  if (LENGTH == 0)
     return false;
-  for (size_t index = 0; index < length; index++) {
-    const char value = *checked_string_suffix(text, index);
-    if (value < '0' || value > '9')
+  for (size_t index = 0; index < LENGTH; index++) {
+    const char VALUE = *checked_string_suffix(text, index);
+    if (VALUE < '0' || VALUE > '9')
       return false;
   }
   return true;
@@ -172,8 +172,8 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
    */
   if (freq > 0 && map) {
     for (i = 0; i < battle_map_unit_count(map); i++) {
-      const DbRef candidate = battle_map_unit_dbref(map, i);
-      t = btech_context_find_object(mech_context(mech), candidate);
+      const DbRef CANDIDATE = battle_map_unit_dbref(map, i);
+      t = btech_context_find_object(mech_context(mech), CANDIDATE);
       if (!t)
         continue;
       if (t == mech)
@@ -238,7 +238,7 @@ void mech_set_channeltitle(DbRef player, void *data, char *buffer) {
 }
 
 /*                    1234567890123456 */
-const char radio_colorstr[] = "xrgybmcwXRGYBMCW";
+const char RADIO_COLORSTR[] = "xrgybmcwXRGYBMCW";
 
 static const struct {
   int team;
@@ -251,7 +251,7 @@ static const struct {
     {13, "[fg=yellow bold]"}, {14, "[fg=green bold]"},   {15, "[fg=red bold]"},
     {0, "[fg=white bold]"}};
 
-static const char *const radio_color_styles[] = {
+static const char *const RADIO_COLOR_STYLES[] = {
     "[fg=black]",      "[fg=red]",          "[fg=green]",
     "[fg=yellow]",     "[fg=blue]",         "[fg=magenta]",
     "[fg=cyan]",       "[fg=white]",        "[fg=black bold]",
@@ -264,9 +264,9 @@ static const char *radio_color_style(int index) {
   if (index < 0)
     abort();
   return *(const char *const *)checked_storage_at_const(
-      (const void *)radio_color_styles,
-      sizeof(radio_color_styles) / sizeof(*radio_color_styles),
-      sizeof(*radio_color_styles), (size_t)index);
+      (const void *)RADIO_COLOR_STYLES,
+      sizeof(RADIO_COLOR_STYLES) / sizeof(*RADIO_COLOR_STYLES),
+      sizeof(*RADIO_COLOR_STYLES), (size_t)index);
 }
 
 static const typeof(*OBSERVER_TEAM_COLORS) *observer_team_color(int index) {
@@ -281,7 +281,7 @@ static const typeof(*OBSERVER_TEAM_COLORS) *observer_team_color(int index) {
 static char radio_color_character(int index) {
   if (index < 0)
     abort();
-  return *checked_string_suffix(radio_colorstr, (size_t)index);
+  return *checked_string_suffix(RADIO_COLORSTR, (size_t)index);
 }
 
 void radio_color_code(const RadioColorRequest *request) {
@@ -346,8 +346,8 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
     return;
   }
   while (radio_cursor_current(&input) != '\0') {
-    const char mode_character = radio_cursor_current(&input);
-    switch (mode_character) {
+    const char MODE_CHARACTER = radio_cursor_current(&input);
+    switch (MODE_CHARACTER) {
     case 'D':
     case 'd':
       if (mech_radio_capabilities(mech) & RADIO_NODIGITAL) {
@@ -390,7 +390,7 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
       break;
     default:
       for (i = 0; radio_color_character(i); i++)
-        if (mode_character == radio_color_character(i)) {
+        if (MODE_CHARACTER == radio_color_character(i)) {
           nm = nm % FREQ_REST + FREQ_REST * (i + 1);
           break;
         }
@@ -480,18 +480,18 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   char *message = radio_command_argument(&arguments, 2);
   if (!fail && strlen(channel_text) > 1)
     fail = 1;
-  const char channel_character = !fail ? *channel_text : '\0';
-  if (!fail && channel_character >= 'a' && channel_character <= 'z')
-    chn = channel_character - 'a';
-  if (!fail && channel_character >= 'A' && channel_character <= 'Z')
-    chn = channel_character - 'Z';
+  const char CHANNEL_CHARACTER = !fail ? *channel_text : '\0';
+  if (!fail && CHANNEL_CHARACTER >= 'a' && CHANNEL_CHARACTER <= 'z')
+    chn = CHANNEL_CHARACTER - 'a';
+  if (!fail && CHANNEL_CHARACTER >= 'A' && CHANNEL_CHARACTER <= 'Z')
+    chn = CHANNEL_CHARACTER - 'Z';
   if (!fail && (chn >= mech_radio_channel_count(mech) || chn < 0))
     fail = 1;
   if (!fail) {
-    const size_t message_length = strlen(message);
-    for (size_t index = 0; index < message_length; index++) {
-      const char character = *checked_string_suffix(message, index);
-      if ((BOUNDED(32, character, 255)) != character) {
+    const size_t MESSAGE_LENGTH = strlen(message);
+    for (size_t index = 0; index < MESSAGE_LENGTH; index++) {
+      const char CHARACTER = *checked_string_suffix(message, index);
+      if ((bounded(32, CHARACTER, 255)) != CHARACTER) {
         mecha_notify(
             evaluation, player,
             "Invalid: No control characters in radio messages, please.");

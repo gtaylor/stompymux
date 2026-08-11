@@ -41,12 +41,12 @@ void set_prefix_cmds(CommandRegistry *registry);
 /*
  * Commands are dispatched through the uniform typed invocation boundary.
  */
-typedef union cmdentry_handler {
+typedef union CmdentryHandler {
   CommandInvocationHandler invoke;
 } CmdHandler;
 
-typedef struct cmdentry CMDENT;
-struct cmdentry {
+typedef struct Cmdentry CMDENT;
+struct Cmdentry {
   const char *cmdname;
   NameTable *switches;
   int perms;

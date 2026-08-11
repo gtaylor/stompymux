@@ -49,16 +49,16 @@ static void mech_enter_event(MuxEvent *e) {
   BattleMap *map =
                 btech_context_get_map(mech_context(mech), mech_map_dbref(mech)),
             *newmap;
-  const intptr_t target_value = (intptr_t)e->data2;
+  const intptr_t TARGET_VALUE = (intptr_t)e->data2;
   char target;
   int x, y;
   int obj_x, obj_y;
   LuaLockInvocation lock;
   LuaLockResult lock_result;
 
-  if (target_value < CHAR_MIN || target_value > CHAR_MAX)
+  if (TARGET_VALUE < CHAR_MIN || TARGET_VALUE > CHAR_MAX)
     return;
-  target = (char)target_value;
+  target = (char)TARGET_VALUE;
   mapo = find_entrance_by_xy(map, mech_position_x(mech), mech_position_y(mech));
   if (!mapo)
     return;
@@ -103,7 +103,7 @@ static void mech_enter_event(MuxEvent *e) {
       mech, tprintf("has entered %s at %d,%d.",
                     structure_name(mech_context(mech)->database, mapo).text,
                     mech_position_x(mech), mech_position_y(mech)));
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   if (mech_class(mech) == CLASS_MW &&
       !is_in_character(mech_context(mech)->database, mapo->obj)) {
     enter_mw_bay(mech, mapo->obj);
@@ -113,8 +113,8 @@ static void mech_enter_event(MuxEvent *e) {
     tmpm = btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
   obj_x = mech_position_x(mech);
   obj_y = mech_position_y(mech);
-  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", mapo->obj));
-  mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
+  mech_rsetmapindex(GOD, (void *)mech, tprintf("%ld", mapo->obj));
+  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
   mech_los_broadcast(
       mech, tprintf("has entered %s at %d,%d.",
                     structure_name(mech_context(mech)->database, mapo).text,
@@ -130,8 +130,8 @@ static void mech_enter_event(MuxEvent *e) {
       .destination = mapo->obj,
       .cause = 1});
   if (tmpm) {
-    mech_Rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", mapo->obj));
-    mech_Rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
+    mech_rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", mapo->obj));
+    mech_rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
     move_via_teleport(&(ObjectMovementRequest){
         .evaluation = btech_context_evaluation(mech_context(mech)),
         .object = mech_dbref(tmpm),
@@ -258,8 +258,8 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
     return;
   }
   /* XXX Check for other mechs in the hex possibly doing this as well (ick) */
-  HexLOSBroadcast(map, mech_position_x(mech), mech_position_y(mech),
-                  "The doors at $h start to open..");
+  hex_los_broadcast(map, mech_position_x(mech), mech_position_y(mech),
+                    "The doors at $h start to open..");
   mech_event_schedule(mech, EVENT_ENTER_HANGAR, mech_enter_event, 18,
                       (long)target);
 }

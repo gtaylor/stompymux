@@ -82,9 +82,9 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                     "[bold]You attempt to jump over elevation that is too "
                     "high![reset]");
         if (mech_has_active_pilot(mech) &&
-            MadePilotSkillRoll(mech,
-                               clamp_float_to_int(mech_position_real_z(mech) /
-                                                  (float)ZSCALE / 3.0F))) {
+            made_pilot_skill_roll(
+                mech, clamp_float_to_int(mech_position_real_z(mech) /
+                                         (float)ZSCALE / 3.0F))) {
 
           mech_notify(mech, MECHALL, "[bold]You land safely.[reset]");
           mech_jump_land(mech);
@@ -191,12 +191,13 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                   (elevation > lastelevation ? "small incline" : "small drop"));
 
       if (mech_pilot_dbref(mech) == -1 ||
-          (MadePilotSkillRoll(mech, collision_check(&(MovementCollisionCheck){
-                                        .mech = mech,
-                                        .mode = WALK_BACK,
-                                        .previous_elevation = lastelevation,
-                                        .previous_terrain = oldterrain}) -
-                                        1))) {
+          (made_pilot_skill_roll(mech,
+                                 collision_check(&(MovementCollisionCheck){
+                                     .mech = mech,
+                                     .mode = WALK_BACK,
+                                     .previous_elevation = lastelevation,
+                                     .previous_terrain = oldterrain}) -
+                                     1))) {
 
         mech_notify(mech, MECHALL, "You manage to overcome the obstacle.");
 
@@ -255,7 +256,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                     "You notice a body of water in front of you");
 
         if (mech_pilot_dbref(mech) == -1 ||
-            MadePilotSkillRoll(
+            made_pilot_skill_roll(
                 mech, clamp_float_to_int(fabsf(mech_current_speed(mech) + MP1) /
                                          MP1) /
                           3)) {

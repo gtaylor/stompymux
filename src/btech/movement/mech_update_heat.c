@@ -130,8 +130,8 @@ void mech_heat_update(Mech *mech) {
                                        : 3.0F);
 
   if (mech_is_started(mech)) {
-    int const engine_heat = mech_engine_heat(mech);
-    mech_heat_production_add(mech, (float)engine_heat);
+    int const ENGINE_HEAT = mech_engine_heat(mech);
+    mech_heat_production_add(mech, (float)ENGINE_HEAT);
   }
 
   if (condition.stealth_armor_active)
@@ -147,7 +147,7 @@ void mech_heat_update(Mech *mech) {
   /* ADD Water effects here */
   if (battle_terrain_is_water(mech_real_terrain_get(mech)) &&
       mech_position_z(mech) <= -1) {
-    legsinks = FindLegHeatSinks(mech);
+    legsinks = find_leg_heat_sinks(mech);
     legsinks = (legsinks > 4) ? 4 : legsinks;
     float active_sinks = mech_active_heat_sinks(mech);
     if (mech_position_z(mech) == -1 && !mech_is_fallen(mech)) {

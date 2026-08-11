@@ -142,7 +142,7 @@ static int btech_lua_invoke(lua_State *state) {
         (void *)arguments, MAX_ARG, sizeof(*arguments), (size_t)index);
 
     *slot = alloc_lbuf("btech_lua_argument");
-    StringCopy(*slot, value);
+    string_copy(*slot, value);
   }
   BtechScriptCall call = {
       .evaluation = &package->services->background_command->evaluation,
@@ -186,12 +186,12 @@ static int btech_lua_invoke(lua_State *state) {
 
 void lua_btech_package_install(lua_State *state, LuaBtechPackage *package) {
   lua_newtable(state);
-  constexpr size_t entry_count =
+  constexpr size_t ENTRY_COUNT =
       sizeof(btech_lua_entries) / sizeof(btech_lua_entries[0]) - 1;
 
-  for (size_t index = 0; index < entry_count; index++) {
+  for (size_t index = 0; index < ENTRY_COUNT; index++) {
     BtechLuaEntry *entry = checked_storage_at(
-        btech_lua_entries, entry_count, sizeof(*btech_lua_entries), index);
+        btech_lua_entries, ENTRY_COUNT, sizeof(*btech_lua_entries), index);
 
     lua_pushlightuserdata(state, package);
     lua_pushlightuserdata(state, entry);

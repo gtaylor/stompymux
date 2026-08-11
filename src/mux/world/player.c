@@ -424,7 +424,7 @@ void badname_add(WorldContext *world, char *bad_name) {
   bp->name = malloc(strlen(bad_name) + 1);
   bp->next = world->access_control->bad_names;
   world->access_control->bad_names = bp;
-  StringCopy(bp->name, bad_name);
+  string_copy(bp->name, bad_name);
 }
 
 void badname_remove(WorldContext *world, char *bad_name) {

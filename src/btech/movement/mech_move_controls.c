@@ -141,7 +141,7 @@ void mech_heading(DbRef player, void *data, char *buffer) {
                    "Invalid heading!");
       return;
     }
-    newheading = AcceptableDegree(newheading);
+    newheading = acceptable_degree(newheading);
     mech_desired_heading_set(mech, newheading);
     mech_printf(mech, MECHALL, "Heading changed to %d.", newheading);
     mech_maybe_move(mech);
@@ -183,7 +183,7 @@ void mech_turret(DbRef player, void *data, char *buffer) {
                    "Invalid turret heading!");
       return;
     }
-    newheading = AcceptableDegree(newheading);
+    newheading = acceptable_degree(newheading);
     mech_turret_heading_absolute_set(mech, newheading);
     mech_printf(mech, MECHALL, "Turret facing changed to %d.",
                 mech_turret_heading_absolute(mech));
@@ -193,7 +193,7 @@ void mech_turret(DbRef player, void *data, char *buffer) {
                   mech_turret_heading_absolute(mech));
   }
 
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 void mech_rotatetorso(DbRef player, void *data, char *buffer) {
@@ -265,19 +265,19 @@ void mech_rotatetorso(DbRef player, void *data, char *buffer) {
   } else
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid number of arguments!");
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 static const struct MechSpeedName {
   const char *name;
   int flag;
-} speed_tables[] = {{"walk", 1},   {"run", 2},   {"stop", 0}, {"back", -1},
+} SPEED_TABLES[] = {{"walk", 1},   {"run", 2},   {"stop", 0}, {"back", -1},
                     {"cruise", 1}, {"flank", 2}, {nullptr, 0}};
 
 static const struct MechSpeedName *speed_table_entry(int index) {
   if (index < 0)
     abort();
-  return checked_storage_at_const(speed_tables, 7, sizeof(*speed_tables),
+  return checked_storage_at_const(SPEED_TABLES, 7, sizeof(*SPEED_TABLES),
                                   (size_t)index);
 }
 

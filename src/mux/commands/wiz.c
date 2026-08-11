@@ -226,12 +226,12 @@ void do_force_prefixed(CommandInvocation *invocation) {
       .delimiter = ' '});
   if (!command)
     return;
-  const size_t command_length = strlen(command);
+  const size_t COMMAND_LENGTH = strlen(command);
   size_t offset = 0;
 
-  while (offset < command_length &&
+  while (offset < COMMAND_LENGTH &&
          (isspace)((unsigned char)*(const char *)checked_storage_at_const(
-             command, command_length + 1, sizeof(char), offset)))
+             command, COMMAND_LENGTH + 1, sizeof(char), offset)))
     offset++;
   command = checked_mutable_string_suffix(command, offset);
   if (*command) {
@@ -411,7 +411,7 @@ typedef enum GlobalControl {
   GLOBAL_CONTROL_LOGINS,
 } GlobalControl;
 
-static const NameTable enable_names[] = {
+static const NameTable ENABLE_NAMES[] = {
     {"checkpointing", 2, CA_PUBLIC, GLOBAL_CONTROL_CHECKPOINTING},
     {"cleaning", 2, CA_PUBLIC, GLOBAL_CONTROL_CLEANING},
     {"idlechecking", 2, CA_PUBLIC, GLOBAL_CONTROL_IDLE_CHECKING},
@@ -441,19 +441,19 @@ void list_global_controls(EvaluationContext *evaluation,
                           ServerConfiguration *configuration, DbRef player) {
   char *buf = alloc_lbuf("list_global_controls");
   char *bp = buf;
-  constexpr size_t control_count =
-      sizeof(enable_names) / sizeof(enable_names[0]) - 1;
+  constexpr size_t CONTROL_COUNT =
+      sizeof(ENABLE_NAMES) / sizeof(ENABLE_NAMES[0]) - 1;
 
   safe_str("Global parameters:", buf, &bp);
-  for (size_t index = 0; index < control_count; index++) {
+  for (size_t index = 0; index < CONTROL_COUNT; index++) {
     const NameTable *control = checked_storage_at_const(
-        enable_names, control_count, sizeof(*enable_names), index);
+        ENABLE_NAMES, CONTROL_COUNT, sizeof(*ENABLE_NAMES), index);
     const bool *is_enabled = global_control_value(configuration, control->flag);
 
     safe_chr(' ', buf, &bp);
     safe_str(control->name, buf, &bp);
     safe_str(*is_enabled ? "...enabled" : "...disabled", buf, &bp);
-    if (index + 1 < control_count)
+    if (index + 1 < CONTROL_COUNT)
       safe_chr(';', buf, &bp);
   }
   *bp = '\0';
@@ -475,7 +475,7 @@ void do_global(CommandInvocation *invocation) {
 
   control = name_table_search(invocation->context->world->database,
                               invocation->context->world->configuration, player,
-                              enable_names, flag);
+                              ENABLE_NAMES, flag);
   if (control < 0) {
     notify_checked(evaluation, player, player, "I don't know about that flag.",
                    MSG_ME);

@@ -18,26 +18,26 @@
 #include "weapon_catalogue_api.h"
 
 static void swap_ints(int *left, int *right) {
-  const int temporary = *left;
+  const int TEMPORARY = *left;
   *left = *right;
-  *right = temporary;
+  *right = TEMPORARY;
 }
 
 WeaponFirePreparation weapon_fire_prepare(const WeaponFireRequest *request,
                                           float range) {
   WeaponFirePreparation result = {.target = request->target};
-  const int fire_mode = mech_critical_fire_mode(
+  const int FIRE_MODE = mech_critical_fire_mode(
       request->mech, request->weapon.section, request->weapon.critical);
-  const int ammunition_mode = mech_critical_ammo_mode(
+  const int AMMUNITION_MODE = mech_critical_ammo_mode(
       request->mech, request->weapon.section, request->weapon.critical);
-  const WeaponRangeProfile ranges =
+  const WeaponRangeProfile RANGES =
       weapon_catalogue_ranges(request->weapon_index);
 
-  if ((ammunition_mode & STINGER_MODE) && request->target_kind) {
+  if ((AMMUNITION_MODE & STINGER_MODE) && request->target_kind) {
     mech_notify(request->mech, MECHALL, "Stinger missiles cannot shoot hexes!");
     return result;
   }
-  if ((ammunition_mode & STINGER_MODE) && result.target != nullptr &&
+  if ((AMMUNITION_MODE & STINGER_MODE) && result.target != nullptr &&
       !(mech_is_jumping(result.target) ||
         mech_cocoon_integrity(result.target) ||
         (mech_is_flying_type(result.target) &&
@@ -47,10 +47,10 @@ WeaponFirePreparation weapon_fire_prepare(const WeaponFireRequest *request,
     return result;
   }
   if (weapon_catalogue_is_coolant(request->weapon_index) &&
-      (fire_mode & HEAT_MODE))
+      (FIRE_MODE & HEAT_MODE))
     result.target = request->mech;
   if (mech_section_is_underwater(request->mech, request->weapon.section) &&
-      ranges.water_short_range <= 0) {
+      RANGES.water_short_range <= 0) {
     mech_notify(request->mech, MECHALL,
                 "This weapon may not be fired underwater.");
     return result;
@@ -75,18 +75,18 @@ WeaponFirePreparation weapon_fire_prepare(const WeaponFireRequest *request,
     return result;
   }
 
-  const DbRef swarm_target = mech_swarm_target(request->mech);
-  if (swarm_target > 0 &&
-      (result.target == nullptr || swarm_target != mech_dbref(result.target))) {
+  const DbRef SWARM_TARGET = mech_swarm_target(request->mech);
+  if (SWARM_TARGET > 0 &&
+      (result.target == nullptr || SWARM_TARGET != mech_dbref(result.target))) {
     mech_notify(request->mech, MECHALL,
                 "You're too busy holding on for dear life!");
     return result;
   }
-  result.swarm_attack = swarm_target > 0 && result.target != nullptr &&
-                        swarm_target == mech_dbref(result.target);
+  result.swarm_attack = SWARM_TARGET > 0 && result.target != nullptr &&
+                        SWARM_TARGET == mech_dbref(result.target);
 
   int gatling_shots = 0;
-  if (fire_mode & GATTLING_MODE)
+  if (FIRE_MODE & GATTLING_MODE)
     gatling_shots = btech_random_range_int(mech_context(request->mech), 1, 6);
   result.ammunition.gatling_shots = gatling_shots;
   if (!request->sight) {
@@ -102,7 +102,7 @@ WeaponFirePreparation weapon_fire_prepare(const WeaponFireRequest *request,
   }
 
   if (!weapon_catalogue_is_artillery(request->weapon_index)) {
-    const MechNormalToHitResult to_hit = mech_normal_to_hit_calculate(
+    const MechNormalToHitResult TO_HIT = mech_normal_to_hit_calculate(
         &(MechNormalToHitRequest){.attacker = request->mech,
                                   .map = request->map,
                                   .section = request->weapon.section,
@@ -111,8 +111,8 @@ WeaponFirePreparation weapon_fire_prepare(const WeaponFireRequest *request,
                                   .range = range,
                                   .target = result.target,
                                   .indirect_fire = request->indirect_fire});
-    result.base_to_hit = to_hit.value;
-    result.c3_reference = to_hit.c3_reference;
+    result.base_to_hit = TO_HIT.value;
+    result.c3_reference = TO_HIT.c3_reference;
     if (result.c3_reference) {
       result.c3_mech = btech_context_get_mech(mech_context(request->mech),
                                               result.c3_reference);

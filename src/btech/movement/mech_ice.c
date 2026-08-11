@@ -105,7 +105,7 @@ void break_thru_ice(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   mech_notify(mech, MECHALL, "You break through the ice!");
   mech_los_broadcast(mech, "breaks through the ice!");
   break_sub(map, mech, mech_position_x(mech), mech_position_y(mech),
@@ -247,39 +247,39 @@ void map_delice(DbRef player, BattleMap *map, char *buffer) {
 
 void ice_weapon_impact_resolve(const TerrainStructureWeaponImpact *impact) {
   Mech *mech = impact->attacker;
-  const int weapindx = impact->weapon_index;
-  const int x = impact->position.x;
-  const int y = impact->position.y;
+  const int WEAPINDX = impact->weapon_index;
+  const int X = impact->position.x;
+  const int Y = impact->position.y;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
-  if (map_real_terrain_get(map, x, y) != BATTLE_TERRAIN_ICE)
+  if (map_real_terrain_get(map, X, Y) != BATTLE_TERRAIN_ICE)
     return;
   if (btech_random_range(mech_context(mech), 1, 15) >
-      weapon_catalogue_damage(weapindx))
+      weapon_catalogue_damage(WEAPINDX))
     return;
-  HexLOSBroadcast(map, x, y, "The ice breaks from the blast!");
-  break_sub(map, nullptr, x, y, "goes swimming as ice breaks!");
+  hex_los_broadcast(map, X, Y, "The ice breaks from the blast!");
+  break_sub(map, nullptr, X, Y, "goes swimming as ice breaks!");
 }
 
 void bridge_weapon_impact_resolve(const TerrainStructureWeaponImpact *impact) {
   Mech *mech = impact->attacker;
-  const int weapindx = impact->weapon_index;
-  const int x = impact->position.x;
-  const int y = impact->position.y;
+  const int WEAPINDX = impact->weapon_index;
+  const int X = impact->position.x;
+  const int Y = impact->position.y;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
-  if (map_real_terrain_get(map, x, y) != BATTLE_TERRAIN_BRIDGE)
+  if (map_real_terrain_get(map, X, Y) != BATTLE_TERRAIN_BRIDGE)
     return;
   if (battle_map_bridges_have_capacity(map))
     return;
   if (btech_random_range(mech_context(mech), 1,
-                         (long)(10 * (1 + map_elevation_get(map, x, y)))) >
-      weapon_catalogue_damage(weapindx)) {
-    HexLOSBroadcast(map, x, y, "The bridge at $H shudders from direct hit!");
+                         (long)(10 * (1 + map_elevation_get(map, X, Y)))) >
+      weapon_catalogue_damage(WEAPINDX)) {
+    hex_los_broadcast(map, X, Y, "The bridge at $H shudders from direct hit!");
     return;
   }
-  HexLOSBroadcast(map, x, y, "The bridge at $H is blown apart!");
-  break_sub(map, nullptr, x, y, "goes swimming as the bridge is blown apart!");
+  hex_los_broadcast(map, X, Y, "The bridge at $H is blown apart!");
+  break_sub(map, nullptr, X, Y, "goes swimming as the bridge is blown apart!");
 }

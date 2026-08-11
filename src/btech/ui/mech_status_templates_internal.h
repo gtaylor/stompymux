@@ -1,19 +1,19 @@
 #pragma once
 
-extern const char *const lightmechdesc;
-extern const char *const heavymechdesc;
-extern const char *const mediummechdesc;
-extern const char *const assaultmechdesc;
-extern const char *const mechdesc;
-extern const char *const quaddesc;
-extern const char *const mwdesc;
-extern const char *const shipdesc;
-extern const char *const foildesc;
-extern const char *const subdesc;
-extern const char *const aerodesc;
-extern const char *const spher_ds_desc;
-extern const char *const aerod_ds_desc;
-extern const char *const vehdesc;
-extern const char *const veh_not_desc;
-extern const char *const vtoldesc;
-extern const char *const bsuitdesc;
+extern const char *const LIGHTMECHDESC;
+extern const char *const HEAVYMECHDESC;
+extern const char *const MEDIUMMECHDESC;
+extern const char *const ASSAULTMECHDESC;
+extern const char *const MECHDESC;
+extern const char *const QUADDESC;
+extern const char *const MWDESC;
+extern const char *const SHIPDESC;
+extern const char *const FOILDESC;
+extern const char *const SUBDESC;
+extern const char *const AERODESC;
+extern const char *const SPHER_DS_DESC;
+extern const char *const AEROD_DS_DESC;
+extern const char *const VEHDESC;
+extern const char *const VEH_NOT_DESC;
+extern const char *const VTOLDESC;
+extern const char *const BSUITDESC;

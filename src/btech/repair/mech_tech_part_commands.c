@@ -28,7 +28,7 @@
 #include "repair_job.h"
 
 static int clan_modified_time(const Mech *mech, int time) {
-  return MAX(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
+  return max(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
 }
 
 typedef struct TechCheckContext {
@@ -73,7 +73,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (SomeoneRepairing(mech, loc, part)) {
+  if (someone_repairing(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's repairing that part already!");
     return;
@@ -82,7 +82,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(context), player, "That's no gun!");
     return;
   }
-  if (!ValidGunPos(&(RepairCriticalSelection){
+  if (!valid_gun_pos(&(RepairCriticalSelection){
           .mech = mech, .location = loc, .position = part})) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You can't replace middle of a gun!");
@@ -93,7 +93,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
                  "That gun isn't hurtin'!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping that section - no repairs are possible!");
     return;
@@ -139,9 +139,9 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
   base_fixtime =
       REPLACEGUN_TIME *
       clan_modified_time(
-          mech,
-          GetWeaponCrits(mech, weapon_from_equipment_index(
-                                   mech_critical_part_type(mech, loc, part))));
+          mech, get_weapon_crits(
+                    mech, weapon_from_equipment_index(
+                              mech_critical_part_type(mech, loc, part))));
   fail_fixtime = (base_fixtime * 3) / 2;
 
   if (roll < 0) {
@@ -170,7 +170,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
           .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
           context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker,
-          MAX(1, player_techtime(context, player) * TECH_TICK),
+          max(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack((RepairEventPayload){
               .location = loc, .position = part, .extra = brand}) +
               player * PLAYERPOS);
@@ -201,7 +201,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
           .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
           context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker,
-          MAX(1, player_techtime(context, player) * TECH_TICK),
+          max(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack((RepairEventPayload){
               .location = loc, .position = part, .extra = brand}) +
               player * PLAYERPOS);
@@ -239,7 +239,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
         .context = context, .player = player, .units = fixtime});
     btech_context_event_schedule(
         context, mech, EVENT_REPAIR_REPLG, mux_event_tickmech_replacegun,
-        MAX(1, player_techtime(context, player) * TECH_TICK),
+        max(1, player_techtime(context, player) * TECH_TICK),
         repair_event_payload_pack((RepairEventPayload){
             .location = loc, .position = part, .extra = brand}) +
             player * PLAYERPOS);
@@ -285,7 +285,7 @@ void tech_repairgun(DbRef player, void *data, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (SomeoneRepairing(mech, loc, part)) {
+  if (someone_repairing(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's repairing that part already!");
     return;
@@ -294,18 +294,18 @@ void tech_repairgun(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(context), player, "That's no gun!");
     return;
   }
-  if (!ValidGunPos(&(RepairCriticalSelection){
+  if (!valid_gun_pos(&(RepairCriticalSelection){
           .mech = mech, .location = loc, .position = part})) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You can't repair middle of a gun!");
     return;
   }
-  if (SomeoneScrappingPart(mech, loc, part)) {
+  if (someone_scrapping_part(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping it already!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping that section - no repairs are possible!");
     return;
@@ -317,8 +317,8 @@ void tech_repairgun(DbRef player, void *data, char *buffer) {
   }
 
   if (mech_critical_is_destroyed(mech, loc, part)) {
-    if (GetWeaponCrits(mech, weapon_from_equipment_index(
-                                 mech_critical_part_type(mech, loc, part))) <
+    if (get_weapon_crits(mech, weapon_from_equipment_index(
+                                   mech_critical_part_type(mech, loc, part))) <
             5 ||
         mech_critical_is_destroyed(mech, loc, part + 1)) {
       mecha_notify(evaluation, player, "That gun is gone for good!");
@@ -389,7 +389,7 @@ void tech_fixenhcrit(DbRef player, void *data, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (SomeoneRepairing(mech, loc, part)) {
+  if (someone_repairing(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's repairing that part already!");
     return;
@@ -398,12 +398,12 @@ void tech_fixenhcrit(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(context), player, "That's no gun!");
     return;
   }
-  if (SomeoneScrappingPart(mech, loc, part)) {
+  if (someone_scrapping_part(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping it already!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping that section - no repairs are possible!");
     return;
@@ -501,12 +501,12 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (SomeoneRepairing(mech, loc, part)) {
+  if (someone_repairing(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's repairing that part already!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping that section - no repairs are possible!");
     return;
@@ -589,7 +589,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
           .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
           context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker,
-          MAX(1, player_techtime(context, player) * TECH_TICK),
+          max(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack(
               (RepairEventPayload){.location = loc, .position = part}) +
               player * PLAYERPOS);
@@ -620,7 +620,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
           .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
           context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker,
-          MAX(1, player_techtime(context, player) * TECH_TICK),
+          max(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack(
               (RepairEventPayload){.location = loc, .position = part}) +
               player * PLAYERPOS);
@@ -657,7 +657,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
         .context = context, .player = player, .units = fixtime});
     btech_context_event_schedule(
         context, mech, EVENT_REPAIR_REPL, mux_event_tickmech_repairpart,
-        MAX(1, player_techtime(context, player) * TECH_TICK),
+        max(1, player_techtime(context, player) * TECH_TICK),
         repair_event_payload_pack(
             (RepairEventPayload){.location = loc, .position = part}) +
             player * PLAYERPOS);
@@ -728,12 +728,12 @@ void tech_repairpart(DbRef player, void *data, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (SomeoneRepairing(mech, loc, part)) {
+  if (someone_repairing(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's repairing that part already!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping that section - no repairs are possible!");
     return;

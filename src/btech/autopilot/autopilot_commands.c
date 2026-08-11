@@ -39,7 +39,7 @@ static bool auto_command_prepare_unit(Autopilot *autopilot, Mech *mech) {
     return false;
   }
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-      CountDestroyedLegs(mech) <= 0) {
+      count_destroyed_legs(mech) <= 0) {
     if (!mech_event_count(mech, EVENT_STAND))
       mech_stand_empty(autopilot->mynum, mech);
     autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
@@ -62,7 +62,7 @@ static bool auto_command_prepare_unit(Autopilot *autopilot, Mech *mech) {
  * that can be given to the AI.  These use a
  * large enum that is located in autopilot.h
  */
-const AutopilotCommandDefinition acom[AUTO_NUM_COMMANDS + 1] = {
+const AutopilotCommandDefinition ACOM[AUTO_NUM_COMMANDS + 1] = {
     {"chasetarget", 1, GOAL_CHASETARGET,
      nullptr}, /* Extension of follow, for chasetarget */
     {"dumbfollow", 1, GOAL_DUMBFOLLOW, nullptr},
@@ -105,7 +105,7 @@ const AutopilotCommandDefinition acom[AUTO_NUM_COMMANDS + 1] = {
 const AutopilotCommandDefinition *autopilot_command_definition_at(int index) {
   if (index < 0)
     abort();
-  return checked_storage_at_const(acom, AUTO_NUM_COMMANDS + 1,
+  return checked_storage_at_const(ACOM, AUTO_NUM_COMMANDS + 1,
                                   sizeof(AutopilotCommandDefinition),
                                   (size_t)index);
 }

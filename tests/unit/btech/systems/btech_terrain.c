@@ -40,7 +40,7 @@ char map_coding_get_terrain(const MapCodingRegistry *registry, int index) {
   return *encoded_value(encoded_terrain, index);
 }
 
-void UpdateMechsTerrain(const MapTerrainChange *change) {
+void update_mechs_terrain(const MapTerrainChange *change) {
   BattleMap *map = change->map;
   const int x = change->position.x;
   const int y = change->position.y;

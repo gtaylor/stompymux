@@ -45,7 +45,7 @@ void mech_sensors_disable_requiring(Mech *mech, int technology) {
     return;
   mech_sensors_set(mech, primary_requires ? 0 : primary,
                    secondary_requires ? 0 : secondary);
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 typedef struct SensorModeTextRequest {
@@ -57,23 +57,23 @@ typedef struct SensorModeTextRequest {
 
 static SensorModeText sensor_mode_text(const SensorModeTextRequest *request) {
   Mech *mech = request->mech;
-  const int sn = request->sensor;
+  const int SN = request->sensor;
   SensorModeText mode = {0};
   char *buf = mode.text;
 
-  if (sn < 0 || (size_t)sn >= NUM_SENSORS) {
+  if (SN < 0 || (size_t)SN >= NUM_SENSORS) {
     (void)snprintf(buf, sizeof(mode.text), "None");
     return mode;
   }
 
-  if (mech_sensor_definition(sn)->full_vision) {
+  if (mech_sensor_definition(SN)->full_vision) {
     (void)snprintf(buf, sizeof(mode.text), "%s ",
-                   mech_sensor_definition(sn)->sensor_name);
+                   mech_sensor_definition(SN)->sensor_name);
     MechSensorDescriptionRequest description = {
         .buffer = buf,
         .capacity = sizeof(mode.text),
         .mech = mech,
-        .sensor = sn,
+        .sensor = SN,
         .verbose = request->verbose,
     };
     mech_sensor_description_append(&description);
@@ -81,16 +81,16 @@ static SensorModeText sensor_mode_text(const SensorModeTextRequest *request) {
     if (request->full_arc || mech_movement_type(mech) == MOVE_NONE ||
         mech_class(mech) == CLASS_BSUIT)
       (void)snprintf(buf, sizeof(mode.text), "%s in 360 degree scanning mode ",
-                     mech_sensor_definition(sn)->sensor_name);
+                     mech_sensor_definition(SN)->sensor_name);
     else
       (void)snprintf(buf, sizeof(mode.text),
                      "%s in 120 degree scanning mode (Forward arc) ",
-                     mech_sensor_definition(sn)->sensor_name);
+                     mech_sensor_definition(SN)->sensor_name);
     MechSensorDescriptionRequest description = {
         .buffer = buf,
         .capacity = sizeof(mode.text),
         .mech = mech,
-        .sensor = sn,
+        .sensor = SN,
         .verbose = request->verbose,
     };
     mech_sensor_description_append(&description);
@@ -102,11 +102,11 @@ static void sensor_mode(Mech *mech, const char *msg, DbRef player, int p, int s,
   char buf[MBUF_SIZE];
 
   if (p != s) {
-    const size_t message_length = strlen(msg);
-    const size_t line_length =
-        message_length < sizeof(buf) - 1 ? message_length : sizeof(buf) - 1;
-    memset(buf, '-', line_length);
-    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char), line_length) =
+    const size_t MESSAGE_LENGTH = strlen(msg);
+    const size_t LINE_LENGTH =
+        MESSAGE_LENGTH < sizeof(buf) - 1 ? MESSAGE_LENGTH : sizeof(buf) - 1;
+    memset(buf, '-', LINE_LENGTH);
+    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char), LINE_LENGTH) =
         '\0';
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, msg);
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, buf);
@@ -139,36 +139,36 @@ struct SensorSelection {
 
 static void sensor_selection_read(MuxEvent *event, void *data) {
   SensorSelection *selection = data;
-  const long encoded = (long)event->data2;
-  const long primary = encoded / NUM_SENSORS;
-  const long secondary = encoded % NUM_SENSORS;
+  const long ENCODED = (long)event->data2;
+  const long PRIMARY = ENCODED / NUM_SENSORS;
+  const long SECONDARY = ENCODED % NUM_SENSORS;
 
-  if (primary < 0 || primary >= NUM_SENSORS || secondary < 0 ||
-      secondary >= NUM_SENSORS)
+  if (PRIMARY < 0 || PRIMARY >= NUM_SENSORS || SECONDARY < 0 ||
+      SECONDARY >= NUM_SENSORS)
     return;
-  selection->primary = (int)primary;
-  selection->secondary = (int)secondary;
+  selection->primary = (int)PRIMARY;
+  selection->secondary = (int)SECONDARY;
   selection->found = true;
 }
 
-static const char SensorInf[] = "vliesrbVLIESRB";
+static const char SENSOR_INF[] = "vliesrbVLIESRB";
 
 char *mech_sensor_info(Mech *mech, char buffer[static LBUF_SIZE]) {
   SensorSelection selection = {0};
 
   *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 0) =
-      *checked_string_suffix(SensorInf, (size_t)mech_sensor_index(mech, 0));
+      *checked_string_suffix(SENSOR_INF, (size_t)mech_sensor_index(mech, 0));
   *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 1) =
-      *checked_string_suffix(SensorInf, (size_t)mech_sensor_index(mech, 1));
+      *checked_string_suffix(SENSOR_INF, (size_t)mech_sensor_index(mech, 1));
   if (mech_event_count(mech, EVENT_SCHANGE)) {
     mech_event_visit(mech, EVENT_SCHANGE, sensor_selection_read, &selection);
     if (selection.found) {
       *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 2) =
-          *checked_string_suffix(SensorInf, (size_t)selection.primary +
-                                                (size_t)NUM_SENSORS);
+          *checked_string_suffix(SENSOR_INF, (size_t)selection.primary +
+                                                 (size_t)NUM_SENSORS);
       *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 3) =
-          *checked_string_suffix(SensorInf, (size_t)selection.secondary +
-                                                (size_t)NUM_SENSORS);
+          *checked_string_suffix(SENSOR_INF, (size_t)selection.secondary +
+                                                 (size_t)NUM_SENSORS);
       *(char *)checked_storage_at(buffer, LBUF_SIZE, sizeof(char), 4) = '\0';
       return buffer;
     }
@@ -191,23 +191,23 @@ static void show_sensor(DbRef player, Mech *mech, int verbose) {
 }
 
 static void mech_sensorchange_event(MuxEvent *e) {
-  const long d = (long)e->data2;
+  const long D = (long)e->data2;
   Mech *mech = (Mech *)e->data;
-  const long primary = d / NUM_SENSORS;
-  const long secondary = d % NUM_SENSORS;
+  const long PRIMARY = D / NUM_SENSORS;
+  const long SECONDARY = D % NUM_SENSORS;
 
-  if (primary < 0 || primary >= NUM_SENSORS || secondary < 0 ||
-      secondary >= NUM_SENSORS)
+  if (PRIMARY < 0 || PRIMARY >= NUM_SENSORS || SECONDARY < 0 ||
+      SECONDARY >= NUM_SENSORS)
     return;
-  const int prim = (int)primary;
-  const int sec = (int)secondary;
+  const int PRIM = (int)PRIMARY;
+  const int SEC = (int)SECONDARY;
 
   if (!mech_is_started(mech))
     return;
-  mech_sensors_set(mech, prim, sec);
+  mech_sensors_set(mech, PRIM, SEC);
   mech_notify(mech, MECHALL, "As your sensors change, your lock clears.");
   mech_targeting_target_clear(mech);
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 int mech_sensor_can_change_to(Mech *mech, int s) {
@@ -333,9 +333,9 @@ void mech_sensor(DbRef player, void *data, char *buffer) {
     show_sensor(player, mech, 1);
     break;
   case 2:
-    const char primary = ascii_to_upper(*checked_string_suffix(args[0], 0));
-    const char secondary = ascii_to_upper(*checked_string_suffix(args[1], 0));
-    if (set_sensor(mech, primary, secondary) < 0) {
+    const char PRIMARY = ascii_to_upper(*checked_string_suffix(args[0], 0));
+    const char SECONDARY = ascii_to_upper(*checked_string_suffix(args[1], 0));
+    if (set_sensor(mech, PRIMARY, SECONDARY) < 0) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Invalid arguments!");
       return;

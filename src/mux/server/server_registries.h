@@ -9,7 +9,7 @@ struct AccessControlStore; // IWYU pragma: keep
 struct CommandRegistry;    // IWYU pragma: keep
 
 typedef struct SiteData SiteData;
-typedef struct badname_struc BADNAME;
+typedef struct BadnameStruc BADNAME;
 
 typedef struct CommandRegistry CommandRegistry;
 struct CommandRegistry {

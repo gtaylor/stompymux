@@ -11,7 +11,7 @@
 #include "mech_utils_api.h"
 #include "section_types.h"
 
-HitLocationResult fasa_aerospace_hit_location(Mech *mech, int hitGroup,
+HitLocationResult fasa_aerospace_hit_location(Mech *mech, int hit_group,
                                               HitLocationResult result,
                                               int roll) {
   int hitloc = 0;
@@ -20,7 +20,7 @@ HitLocationResult fasa_aerospace_hit_location(Mech *mech, int hitGroup,
 
   switch (mech_class(mech)) {
   case CLASS_AERO:
-    switch (hitGroup) {
+    switch (hit_group) {
     case FRONT:
       switch (roll) {
       case 2:
@@ -174,7 +174,7 @@ HitLocationResult fasa_aerospace_hit_location(Mech *mech, int hitGroup,
     break;
   case CLASS_DS:
   case CLASS_SPHEROID_DS:
-    switch (hitGroup) {
+    switch (hit_group) {
     case FRONT:
       switch (roll) {
       case 2:
@@ -204,7 +204,7 @@ HitLocationResult fasa_aerospace_hit_location(Mech *mech, int hitGroup,
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
-      side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
+      side = (hit_group == LEFTSIDE) ? DS_LWING : DS_RWING;
       if (btech_random_range(context, 1, 2) == 2)
         side = mech_spheroid_rear_section(mech, side);
       switch (roll) {

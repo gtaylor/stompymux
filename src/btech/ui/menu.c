@@ -15,9 +15,9 @@
 
 typedef struct EvaluationContext EvaluationContext;
 
-void KillText(char **lines, size_t count);
-void ShowText(EvaluationContext *evaluation, char **lines, size_t count,
-              DbRef player);
+void kill_text(char **lines, size_t count);
+void show_text(EvaluationContext *evaluation, char **lines, size_t count,
+               DbRef player);
 
 /*
    Simple menu system for cool menus ;-)
@@ -32,7 +32,7 @@ static int maximum_int(int first, int second) {
   return first > second ? first : second;
 }
 
-int BOUNDED(int, int, int);
+int bounded(int, int, int);
 
 static int number_of_entries(CoolMenu *c) {
   if (c->flags & CM_ONE)
@@ -110,7 +110,7 @@ static void display_toggle_end(BtechTextBuilder *output, CoolMenu *m) {
 /* Turn value into equivalent with kilo, mega, giga, tera, peta, exa, zetta
    or yotta postfix. */
 static StringifiedValue stringified_value(int v) {
-  const char suffixes[] = "KMGTPEZY";
+  const char SUFFIXES[] = "KMGTPEZY";
   int i = -1;
   StringifiedValue result = {0};
 
@@ -118,14 +118,14 @@ static StringifiedValue stringified_value(int v) {
     do {
       i++;
       v /= 1000;
-    } while (v > 999 && *checked_string_suffix(suffixes, (size_t)i));
+    } while (v > 999 && *checked_string_suffix(SUFFIXES, (size_t)i));
 
-    if (!*checked_string_suffix(suffixes, (size_t)i))
+    if (!*checked_string_suffix(SUFFIXES, (size_t)i))
       i--;
-    (void)snprintf(result.text, sizeof(result.text), "%d%c", BOUNDED(0, v, 999),
-                   *checked_string_suffix(suffixes, (size_t)i));
+    (void)snprintf(result.text, sizeof(result.text), "%d%c", bounded(0, v, 999),
+                   *checked_string_suffix(SUFFIXES, (size_t)i));
   } else
-    (void)snprintf(result.text, sizeof(result.text), "%d", BOUNDED(0, v, 999));
+    (void)snprintf(result.text, sizeof(result.text), "%d", bounded(0, v, 999));
   return result;
 }
 
@@ -197,7 +197,7 @@ static void display_entries(CoolMenu *c, int wnum, int num, char *text) {
   }
 }
 
-char **MakeCoolMenuText(CoolMenu *c, size_t *line_count) {
+char **make_cool_menu_text(CoolMenu *c, size_t *line_count) {
   char **m;
   int pos = 0;
   int n, rn;
@@ -235,7 +235,7 @@ char **MakeCoolMenuText(CoolMenu *c, size_t *line_count) {
 void cool_menu_entry_add(const CoolMenuEntryRequest *request) {
   CoolMenu **c = request->menu;
   const char *text = request->text;
-  const int flag = request->flags;
+  const int FLAG = request->flags;
   CoolMenu *d, *e;
   char first = 'a';
 
@@ -250,8 +250,8 @@ void cool_menu_entry_add(const CoolMenuEntryRequest *request) {
   }
   if (text)
     d->text = strdup(text);
-  d->flags = flag;
-  if ((flag & LETTERFIRST) && !(flag & CM_NOTOG)) {
+  d->flags = FLAG;
+  if ((FLAG & LETTERFIRST) && !(FLAG & CM_NOTOG)) {
     /* gasp, s'pose we need a letter for this thingy */
     for (e = *c; e; e = e->next)
       if (e->letter)
@@ -264,7 +264,7 @@ void cool_menu_entry_add(const CoolMenuEntryRequest *request) {
   d->maxvalue = request->maximum_value;
 }
 
-void KillCoolMenu(CoolMenu *c) {
+void kill_cool_menu(CoolMenu *c) {
   CoolMenu *d;
 
   for (; c; c = d) {
@@ -275,14 +275,14 @@ void KillCoolMenu(CoolMenu *c) {
   }
 }
 
-void ShowCoolMenu(EvaluationContext *evaluation, DbRef player, CoolMenu *c) {
+void show_cool_menu(EvaluationContext *evaluation, DbRef player, CoolMenu *c) {
   size_t line_count = 0;
-  char **ch = MakeCoolMenuText(c, &line_count);
-  ShowText(evaluation, ch, line_count, player);
-  KillText(ch, line_count);
+  char **ch = make_cool_menu_text(c, &line_count);
+  show_text(evaluation, ch, line_count, player);
+  kill_text(ch, line_count);
 }
 
-int CoolMenu_FPWBit(int number, int maxlen) {
+int cool_menu_fpw_bit(int number, int maxlen) {
   if (number <= maxlen)
     return CM_ONE;
   if (number <= (maxlen * 2))
@@ -305,7 +305,7 @@ CoolMenu *cool_menu_selection_create(const CoolMenuSelectionRequest *request) {
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   count = (int)request->string_count;
   if (columns < 0)
-    columns = CoolMenu_FPWBit(count, 18);
+    columns = cool_menu_fpw_bit(count, 18);
   for (int index = 0; index < count; index++) {
     const char *entry = *(const char *const *)checked_storage_at_const(
         (const void *)request->strings, request->string_count,
@@ -317,8 +317,8 @@ CoolMenu *cool_menu_selection_create(const CoolMenuSelectionRequest *request) {
   return c;
 }
 
-CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
-                                int last) {
+CoolMenu *sel_col_fun_string_menu_k(int columns, char *heading,
+                                    char *(*fun)(int), int last) {
   CoolMenu *c = NULL;
   int i;
   char buf[LBUF_SIZE];
@@ -334,16 +334,17 @@ CoolMenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
   }
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   if (columns < 0)
-    columns = CoolMenu_FPWBit(last, 18);
+    columns = cool_menu_fpw_bit(last, 18);
   for (i = sick; i < last; i++)
     cool_menu_entry_normal(&c, fun(i), columns, i + 1 - sick, 0);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   return c;
 }
 
-CoolMenu *SelCol_FunStringMenuContextK(int columns, const char *heading,
-                                       char *(*fun)(void *, int, char *buffer),
-                                       void *context, int last) {
+CoolMenu *sel_col_fun_string_menu_context_k(int columns, const char *heading,
+                                            char *(*fun)(void *, int,
+                                                         char *buffer),
+                                            void *context, int last) {
   CoolMenu *c = nullptr;
   int i;
   char buf[LBUF_SIZE];
@@ -361,7 +362,7 @@ CoolMenu *SelCol_FunStringMenuContextK(int columns, const char *heading,
   }
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   if (columns < 0)
-    columns = CoolMenu_FPWBit(last, 18);
+    columns = cool_menu_fpw_bit(last, 18);
   for (i = sick; i < last; i++) {
     fun(context, i, entry);
     cool_menu_entry_normal(&c, entry, columns, i + 1 - sick, 0);
@@ -370,10 +371,11 @@ CoolMenu *SelCol_FunStringMenuContextK(int columns, const char *heading,
   return c;
 }
 
-CoolMenu *SelCol_FunStringMenu(int columns, char *heading, char *(*fun)(int)) {
+CoolMenu *sel_col_fun_string_menu(int columns, char *heading,
+                                  char *(*fun)(int)) {
   int co;
 
   for (co = 0; fun(co); co++)
     ;
-  return SelCol_FunStringMenuK(columns, heading, fun, co);
+  return sel_col_fun_string_menu_k(columns, heading, fun, co);
 }

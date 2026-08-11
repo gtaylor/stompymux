@@ -20,7 +20,7 @@ int mech_recycling_state(Mech *mech, int num) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    if (num & CHECK_WEAPS && SectHasBusyWeap(mech, i))
+    if (num & CHECK_WEAPS && sect_has_busy_weap(mech, i))
       return 1;
     if (num & CHECK_PHYS && mech_section_recycle_ticks(mech, i) > 0)
       return 2;
@@ -197,7 +197,7 @@ int ProperMyomer(Mech *mech) {
 
 /* Function to return a value of how much heat a unit is putting out*/
 /* TODO: Double check how Stealth Armor and Null Sig are coded */
-int HeatFactor(Mech *mech) {
+int heat_factor(Mech *mech) {
 
   int factor = 0;
   char buf[LBUF_SIZE];
@@ -226,17 +226,17 @@ int HeatFactor(Mech *mech) {
    Returns 2 if fully damaged.
    Returns -(# of crits) if partially damaged.
    remember that values 3 means the weapon IS NOT destroyed.  */
-int WeaponIsNonfunctional(Mech *mech, int section, int crit, int numcrits) {
+int weapon_is_nonfunctional(Mech *mech, int section, int crit, int numcrits) {
   int disabled = 0, dested = 0;
   int count = 0, nloc, ncrit;
   int i;
 
   if (numcrits <= 0)
-    numcrits =
-        GetWeaponCrits(mech, weapon_from_equipment_index(
-                                 mech_critical_part_type(mech, section, crit)));
+    numcrits = get_weapon_crits(
+        mech, weapon_from_equipment_index(
+                  mech_critical_part_type(mech, section, crit)));
 
-  for (i = crit; i < MIN(NUM_CRITICALS, crit + numcrits); i++) {
+  for (i = crit; i < min(NUM_CRITICALS, crit + numcrits); i++) {
     if (mech_critical_is_destroyed(mech, section, i))
       dested++;
     else if (mech_critical_is_disabled(mech, section, i))

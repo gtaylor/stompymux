@@ -43,9 +43,9 @@ int autopilot_weapon_score(const AutopilotWeaponScoreSituation *situation) {
     range_score = 390;
   float minimum_range_score = 0.0F;
   if (situation->range < situation->minimum_range) {
-    const int delta = situation->minimum_range - situation->range;
+    const int DELTA = situation->minimum_range - situation->range;
     minimum_range_score =
-        -12.5F * (float)(delta * delta) - 25.0F * (float)delta;
+        -12.5F * (float)(DELTA * DELTA) - 25.0F * (float)DELTA;
   }
   return range_score + 50 * situation->damage - 25 * situation->heat + 250 +
          (int)minimum_range_score;

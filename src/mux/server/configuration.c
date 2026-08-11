@@ -97,9 +97,9 @@ extern CONF conftable[];
  */
 
 void configuration_initialize(ConfigurationContext *context) {
-  StringCopy(context->configuration->database.gamedb, "");
-  StringCopy(context->configuration->database.mech_db, "mechs");
-  StringCopy(context->configuration->database.map_db, "maps");
+  string_copy(context->configuration->database.gamedb, "");
+  string_copy(context->configuration->database.mech_db, "mechs");
+  string_copy(context->configuration->database.map_db, "maps");
   context->configuration->database.bootstrap_objects[0] =
       (BootstrapObjectConfiguration){
           .dbref = 0, .type = BOOTSTRAP_OBJECT_ROOM, .name = "Limbo"};
@@ -157,7 +157,7 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->btech_defaultweapdam = 5;
   context->configuration->btech_xp_modifier = 100;
   context->configuration->btech_defaultweapbv = 120;
-  context->configuration->btech_xp_usePilotBVMod = 1;
+  context->configuration->btech_xp_use_pilot_bv_mod = 1;
   context->configuration->btech_oldxpsystem = 1;
   context->configuration->btech_xp_vrtmod = 0;
   context->configuration->btech_limitedrepairs = 0;
@@ -211,18 +211,18 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->afterlife_dbref = 5;
   context->configuration->port = 6250;
   context->configuration->init_size = 1000;
-  StringCopy(context->configuration->conn_file, "text/connect.txt");
-  StringCopy(context->configuration->conn_dir, "");
-  StringCopy(context->configuration->quit_file, "text/quit.txt");
-  StringCopy(context->configuration->down_file, "text/down.txt");
-  StringCopy(context->configuration->full_file, "text/full.txt");
-  StringCopy(context->configuration->site_file, "text/badsite.txt");
-  StringCopy(context->configuration->help_dir, "help");
-  StringCopy(context->configuration->down_msg, "");
-  StringCopy(context->configuration->full_msg, "");
-  StringCopy(context->configuration->database.dump_msg, "");
-  StringCopy(context->configuration->database.postdump_msg, "");
-  StringCopy(context->configuration->public_channel, "Public");
+  string_copy(context->configuration->conn_file, "text/connect.txt");
+  string_copy(context->configuration->conn_dir, "");
+  string_copy(context->configuration->quit_file, "text/quit.txt");
+  string_copy(context->configuration->down_file, "text/down.txt");
+  string_copy(context->configuration->full_file, "text/full.txt");
+  string_copy(context->configuration->site_file, "text/badsite.txt");
+  string_copy(context->configuration->help_dir, "help");
+  string_copy(context->configuration->down_msg, "");
+  string_copy(context->configuration->full_msg, "");
+  string_copy(context->configuration->database.dump_msg, "");
+  string_copy(context->configuration->database.postdump_msg, "");
+  string_copy(context->configuration->public_channel, "Public");
   context->configuration->name_spaces = 1;
   context->configuration->database.fork_dump = 1;
   context->configuration->max_players = -1;
@@ -251,14 +251,14 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->start_room = 4;
   context->configuration->start_home = 4;
   context->configuration->default_home = 0;
-  StringCopy(context->configuration->default_thing_lua_parent,
-             "default_thing.lua");
-  StringCopy(context->configuration->default_room_lua_parent,
-             "default_room.lua");
-  StringCopy(context->configuration->default_exit_lua_parent,
-             "default_exit.lua");
-  StringCopy(context->configuration->default_player_lua_parent,
-             "default_player.lua");
+  string_copy(context->configuration->default_thing_lua_parent,
+              "default_thing.lua");
+  string_copy(context->configuration->default_room_lua_parent,
+              "default_room.lua");
+  string_copy(context->configuration->default_exit_lua_parent,
+              "default_exit.lua");
+  string_copy(context->configuration->default_player_lua_parent,
+              "default_player.lua");
   context->configuration->default_player_flags =
       (ObjectFlagSet){.values = {
                           [OBJECT_FLAG_ANSI] = true,
@@ -273,7 +273,7 @@ void configuration_initialize(ConfigurationContext *context) {
                           [OBJECT_FLAG_NO_COMMAND] = true,
                       }};
   context->configuration->default_thing_flags = (ObjectFlagSet){0};
-  StringCopy(context->configuration->mud_name, "StompyMUX");
+  string_copy(context->configuration->mud_name, "StompyMUX");
   context->configuration->command_quota_interval = 100;
   context->configuration->command_quota_max = 100;
   context->configuration->command_quota_increment = 5;
@@ -293,7 +293,7 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->cache_depth = CACHE_DEPTH;
   context->configuration->cache_width = CACHE_WIDTH;
   context->configuration->cache_names = 1;
-  StringCopy(context->configuration->lua.directory, "lua");
+  string_copy(context->configuration->lua.directory, "lua");
   context->configuration->lua.memory_limit = 64 * 1024 * 1024;
   context->configuration->lua.state_value_limit = 64 * 1024;
   context->configuration->lua.state_entry_limit = 1024;
@@ -408,7 +408,7 @@ int configuration_set(ConfigurationContext *context, char *cp, char *ap,
         return (-1);
       }
       buff = alloc_lbuf("configuration_set");
-      StringCopy(buff, ap);
+      string_copy(buff, ap);
       ConfigurationCall call = {
           .value = configuration_resolve_location(context, tp),
           .text = ap,
@@ -481,7 +481,7 @@ int configuration_read(ConfigurationContext *context, char *fn) {
   char errbuf[256];
   bool ok;
 
-  StringCopy(context->configuration->config_file, fn);
+  string_copy(context->configuration->config_file, fn);
   context->fatal_error = false;
   context->configuration->is_initializing = true;
   ok = configuration_toml_load(fn, configuration_toml_dispatch_to_set, context,

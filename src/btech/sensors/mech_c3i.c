@@ -48,15 +48,15 @@ static bool mech_has_c3i(const Mech *mech) {
 int mech_c3i_free_network_position(const MechNetworkLink *link) {
   Mech *mech = link->owner;
   int i;
-  DbRef otherRef;
+  DbRef other_ref;
 
   mech_c3i_network_validate(mech);
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
-    otherRef = mech_c3i_network_node(mech, i);
+    other_ref = mech_c3i_network_node(mech, i);
 
-    if (otherRef > 0) {
-      if (otherRef == mech_dbref(link->member))
+    if (other_ref > 0) {
+      if (other_ref == mech_dbref(link->member))
         return C3_POS_IN_NETWORK;
     } else
       return i;
@@ -65,128 +65,129 @@ int mech_c3i_free_network_position(const MechNetworkLink *link) {
   return C3_POS_NO_ROOM;
 }
 
-void mech_c3i_network_replicate(Mech *mechSrc, Mech *mechDest) {
+void mech_c3i_network_replicate(Mech *mech_src, Mech *mech_dest) {
   int i;
-  DbRef otherRef;
+  DbRef other_ref;
 
-  mech_network_debug(mech_context(mechSrc),
+  mech_network_debug(mech_context(mech_src),
                      tprintf("REPLICATE: %ld's C3i network to %ld",
-                             mech_dbref(mechSrc), mech_dbref(mechDest)));
+                             mech_dbref(mech_src), mech_dbref(mech_dest)));
 
-  mech_c3i_network_clear(mechDest, 0);
+  mech_c3i_network_clear(mech_dest, 0);
 
-  mech_c3i_network_node_set(mechDest, 0, mech_dbref(mechSrc));
-  mech_c3i_network_size_set(mechDest, 1);
+  mech_c3i_network_node_set(mech_dest, 0, mech_dbref(mech_src));
+  mech_c3i_network_size_set(mech_dest, 1);
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
-    otherRef = mech_c3i_network_node(mechSrc, i);
+    other_ref = mech_c3i_network_node(mech_src, i);
 
-    if (otherRef != mech_dbref(mechDest)) {
-      const int destination_size = mech_c3i_network_size(mechDest);
-      mech_c3i_network_node_set(mechDest, destination_size, otherRef);
-      mech_c3i_network_size_set(mechDest, destination_size + 1);
+    if (other_ref != mech_dbref(mech_dest)) {
+      const int DESTINATION_SIZE = mech_c3i_network_size(mech_dest);
+      mech_c3i_network_node_set(mech_dest, DESTINATION_SIZE, other_ref);
+      mech_c3i_network_size_set(mech_dest, DESTINATION_SIZE + 1);
     }
   }
 
-  mech_c3i_network_validate(mechDest);
+  mech_c3i_network_validate(mech_dest);
 }
 
-void mech_c3i_network_add(Mech *mech, Mech *mechToAdd) {
-  Mech *otherMech;
-  Mech *otherNotifyMech;
-  DbRef otherRef;
+void mech_c3i_network_add(Mech *mech, Mech *mech_to_add) {
+  Mech *other_mech;
+  Mech *other_notify_mech;
+  DbRef other_ref;
   int i;
-  int wPos = -1;
+  int w_pos = -1;
 
   mech_network_debug(mech_context(mech),
                      tprintf("ADD: %ld to the C3i network of %ld",
-                             mech_dbref(mechToAdd), mech_dbref(mech)));
+                             mech_dbref(mech_to_add), mech_dbref(mech)));
 
   /* Find a position to add the new mech into my network */
-  wPos = mech_c3i_free_network_position(
-      &(MechNetworkLink){.owner = mech, .member = mechToAdd});
+  w_pos = mech_c3i_free_network_position(
+      &(MechNetworkLink){.owner = mech, .member = mech_to_add});
 
   /* If we have a number that's less than 0, then we have an invalid position.
    * Either we're already in the network or there's not enough room */
-  if (wPos < 0)
+  if (w_pos < 0)
     return;
 
   /* Well, we have a valid position, so let's put this mech in the network */
-  mech_c3i_network_node_set(mech, wPos, mech_dbref(mechToAdd));
+  mech_c3i_network_node_set(mech, w_pos, mech_dbref(mech_to_add));
   mech_c3i_network_size_set(mech, mech_c3i_network_size(mech) + 1);
 
   mech_notify(mech, MECHALL,
               tprintf("%s connects to your C3i network.",
-                      mech_to_mech_display_id(mech, mechToAdd).text));
+                      mech_to_mech_display_id(mech, mech_to_add).text));
 
   /* Now let's replicate the new network across the system so that everyone has
    * the same network settings */
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
-    otherRef = mech_c3i_network_node(mech, i);
+    other_ref = mech_c3i_network_node(mech, i);
 
-    otherMech = mech_network_unit(mech, i, 0, 0, 0, 0);
+    other_mech = mech_network_unit(mech, i, 0, 0, 0, 0);
 
-    if (!otherMech)
+    if (!other_mech)
       continue;
 
-    if (!is_good_obj(mech_context(mech)->database, mech_dbref(otherMech)))
+    if (!is_good_obj(mech_context(mech)->database, mech_dbref(other_mech)))
       continue;
 
-    if (otherRef != mech_dbref(mechToAdd)) {
-      otherNotifyMech = mech_network_unit(mech, i, 1, 1, 1, 0);
+    if (other_ref != mech_dbref(mech_to_add)) {
+      other_notify_mech = mech_network_unit(mech, i, 1, 1, 1, 0);
 
-      if (otherNotifyMech)
+      if (other_notify_mech)
         mech_notify(
-            otherNotifyMech, MECHALL,
-            tprintf("%s connects to your C3i network.",
-                    mech_to_mech_display_id(otherNotifyMech, mechToAdd).text));
+            other_notify_mech, MECHALL,
+            tprintf(
+                "%s connects to your C3i network.",
+                mech_to_mech_display_id(other_notify_mech, mech_to_add).text));
     }
 
-    mech_c3i_network_replicate(mech, otherMech);
+    mech_c3i_network_replicate(mech, other_mech);
   }
 
   /* Last, but not least, one final validation of the network */
   mech_c3i_network_validate(mech);
 }
 
-void mech_c3i_network_remove_reference(DbRef refToClear, Mech *mech) {
+void mech_c3i_network_remove_reference(DbRef ref_to_clear, Mech *mech) {
   int i;
 
   mech_network_debug(mech_context(mech),
                      tprintf("CLEAR: %ld from the C3i network of %ld",
-                             refToClear, mech_dbref(mech)));
+                             ref_to_clear, mech_dbref(mech)));
 
   if (!mech_c3i_network_size(mech))
     return;
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
-    if (mech_c3i_network_node(mech, i) == refToClear)
+    if (mech_c3i_network_node(mech, i) == ref_to_clear)
       mech_c3i_network_node_set(mech, i, -1);
   }
 
   mech_c3i_network_validate(mech);
 }
 
-void mech_c3i_network_clear(Mech *mech, int tClearFromOthers) {
-  Mech *otherMech;
+void mech_c3i_network_clear(Mech *mech, int t_clear_from_others) {
+  Mech *other_mech;
   int i;
 
   mech_network_debug(mech_context(mech),
                      tprintf("CLEAR: %ld's C3i network", mech_dbref(mech)));
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
-    otherMech = mech_network_unit(mech, i, 0, 0, 0, 0);
+    other_mech = mech_network_unit(mech, i, 0, 0, 0, 0);
 
     mech_c3i_network_node_set(mech, i, -1);
 
-    if (tClearFromOthers) {
-      if (!otherMech)
+    if (t_clear_from_others) {
+      if (!other_mech)
         continue;
 
-      if (!is_good_obj(mech_context(mech)->database, mech_dbref(otherMech)))
+      if (!is_good_obj(mech_context(mech)->database, mech_dbref(other_mech)))
         continue;
 
-      mech_c3i_network_remove_reference(mech_dbref(mech), otherMech);
+      mech_c3i_network_remove_reference(mech_dbref(mech), other_mech);
     }
   }
 
@@ -194,10 +195,10 @@ void mech_c3i_network_clear(Mech *mech, int tClearFromOthers) {
 }
 
 void mech_c3i_network_validate(Mech *mech) {
-  Mech *otherMech;
-  DbRef myTempNetwork[C3I_NETWORK_SIZE];
+  Mech *other_mech;
+  DbRef my_temp_network[C3I_NETWORK_SIZE];
   int i;
-  int networkSize = 0;
+  int network_size = 0;
 
   mech_network_debug(mech_context(mech),
                      tprintf("VALIDATE: %ld's C3i network", mech_dbref(mech)));
@@ -216,27 +217,27 @@ void mech_c3i_network_validate(Mech *mech) {
   }
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
-    otherMech = mech_network_unit(mech, i, 0, 0, 0, 0);
+    other_mech = mech_network_unit(mech, i, 0, 0, 0, 0);
 
-    if (!otherMech)
+    if (!other_mech)
       continue;
 
-    if (!is_good_obj(mech_context(mech)->database, mech_dbref(otherMech)))
+    if (!is_good_obj(mech_context(mech)->database, mech_dbref(other_mech)))
       continue;
 
     mech_network_debug(mech_context(mech),
                        tprintf("VALIDATE INFO: %ld is now in %ld's C3i network",
-                               mech_dbref(otherMech), mech_dbref(mech)));
+                               mech_dbref(other_mech), mech_dbref(mech)));
 
-    *c3i_network_slot(myTempNetwork, networkSize++) = mech_dbref(otherMech);
+    *c3i_network_slot(my_temp_network, network_size++) = mech_dbref(other_mech);
   }
 
   mech_c3i_network_clear(mech, 0);
 
-  for (i = 0; i < networkSize; i++)
-    mech_c3i_network_node_set(mech, i, c3i_network_value(myTempNetwork, i));
+  for (i = 0; i < network_size; i++)
+    mech_c3i_network_node_set(mech, i, c3i_network_value(my_temp_network, i));
 
-  mech_c3i_network_size_set(mech, networkSize);
+  mech_c3i_network_size_set(mech, network_size);
 
   mech_network_debug(mech_context(mech),
                      tprintf("VALIDATE INFO: %ld's C3i network is %d elements",
@@ -246,8 +247,8 @@ void mech_c3i_network_validate(Mech *mech) {
 void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *target;
   char *args[2];
-  DbRef refTarget;
-  int LOS = 1;
+  DbRef ref_target;
+  int los = 1;
   float range = 0.0;
 
   if (!common_checks(player, mech, MECH_USUALO))
@@ -302,16 +303,16 @@ void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
   }
 
   /* Find who we're trying to connect to */
-  refTarget = FindTargetDBREFFromMapNumber(mech, args[0]);
-  target = btech_context_get_mech(mech_context(mech), refTarget);
+  ref_target = find_target_dbref_from_map_number(mech, args[0]);
+  target = btech_context_get_mech(mech_context(mech), ref_target);
 
   if (target) {
-    LOS = mech_los_check(mech, target, mech_position_x(target),
+    los = mech_los_check(mech, target, mech_position_x(target),
                          mech_position_y(target), range);
   } else
-    refTarget = 0;
+    ref_target = 0;
 
-  if ((refTarget < 1) || !LOS) {
+  if ((ref_target < 1) || !los) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That is not a valid targetID. Try again.");
     return;

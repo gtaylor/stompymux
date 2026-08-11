@@ -32,15 +32,15 @@ void state_examine_namespaces(const ObjectStateExamineRequest *request) {
   DbRef player = request->viewer;
   DbRef thing = request->object;
   GameDatabase *database = evaluation->world->database;
-  const size_t entry_count = object_state_count(database, thing);
+  const size_t ENTRY_COUNT = object_state_count(database, thing);
   const char *name_space = nullptr;
   size_t namespace_count = 0;
 
-  if (!entry_count)
+  if (!ENTRY_COUNT)
     return;
 
   notify_checked(evaluation, player, player, "State namespaces:", MSG_ME);
-  for (size_t index = 0; index < entry_count; index++) {
+  for (size_t index = 0; index < ENTRY_COUNT; index++) {
     ObjectStateEntryResult result =
         object_state_entry(&(ObjectStateEntryRequest){
             .database = database, .object = thing, .index = index});
@@ -66,11 +66,11 @@ static char *examine_state_string(const ObjectStateString *string) {
 
   safe_chr('"', rendered, &cursor);
   for (size_t index = 0; index < string->length; index++) {
-    const unsigned char byte = *(const unsigned char *)checked_storage_at_const(
+    const unsigned char BYTE = *(const unsigned char *)checked_storage_at_const(
         string->data, string->length, sizeof(unsigned char), index);
     char escaped[5];
 
-    switch (byte) {
+    switch (BYTE) {
     case '"':
       safe_str("\\\"", rendered, &cursor);
       break;
@@ -87,10 +87,10 @@ static char *examine_state_string(const ObjectStateString *string) {
       safe_str("\\t", rendered, &cursor);
       break;
     default:
-      if (byte >= 0x20 && byte <= 0x7e) {
-        safe_chr((char)byte, rendered, &cursor);
+      if (BYTE >= 0x20 && BYTE <= 0x7e) {
+        safe_chr((char)BYTE, rendered, &cursor);
       } else {
-        (void)snprintf(escaped, sizeof(escaped), "\\x%02X", byte);
+        (void)snprintf(escaped, sizeof(escaped), "\\x%02X", BYTE);
         safe_str(escaped, rendered, &cursor);
       }
       break;
@@ -139,10 +139,10 @@ examine_state_namespace(const StateNamespaceExamineRequest *request) {
   DbRef thing = request->object.object;
   const char *name_space = request->name_space;
   GameDatabase *database = evaluation->world->database;
-  const size_t entry_count = object_state_count(database, thing);
+  const size_t ENTRY_COUNT = object_state_count(database, thing);
   bool found = false;
 
-  for (size_t index = 0; index < entry_count; index++) {
+  for (size_t index = 0; index < ENTRY_COUNT; index++) {
     ObjectStateEntryResult result =
         object_state_entry(&(ObjectStateEntryRequest){
             .database = database, .object = thing, .index = index});
@@ -171,49 +171,49 @@ static void examine_state_summary(EvaluationContext *evaluation, DbRef player,
 
 static void do_state_examine(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
-  const DbRef player = invocation->player;
+  const DbRef PLAYER = invocation->player;
   char *name = invocation->first;
   char *name_space = nullptr;
   DbRef thing;
 
-  if (!is_hearer(evaluation, player))
+  if (!is_hearer(evaluation, PLAYER))
     return;
 
   if (!name || !*name) {
-    thing = game_object_location(evaluation->world->database, player);
+    thing = game_object_location(evaluation->world->database, PLAYER);
   } else {
-    const size_t name_length = strlen(name);
+    const size_t NAME_LENGTH = strlen(name);
     size_t slash_offset = 0;
 
-    while (slash_offset < name_length &&
+    while (slash_offset < NAME_LENGTH &&
            *(const char *)checked_storage_at_const(
-               name, name_length + 1, sizeof(char), slash_offset) != '/')
+               name, NAME_LENGTH + 1, sizeof(char), slash_offset) != '/')
       slash_offset++;
-    if (slash_offset < name_length) {
-      *(char *)checked_storage_at(name, name_length + 1, sizeof(char),
+    if (slash_offset < NAME_LENGTH) {
+      *(char *)checked_storage_at(name, NAME_LENGTH + 1, sizeof(char),
                                   slash_offset) = '\0';
-      name_space = checked_storage_at(name, name_length + 1, sizeof(char),
+      name_space = checked_storage_at(name, NAME_LENGTH + 1, sizeof(char),
                                       slash_offset + 1);
     }
     if (!*name) {
-      notify_checked(evaluation, player, player, "You must specify an object.",
+      notify_checked(evaluation, PLAYER, PLAYER, "You must specify an object.",
                      MSG_ME);
       return;
     }
-    init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
+    init_match(&invocation->context->match, PLAYER, name, OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, 0);
     thing = noisy_match_result(&invocation->context->match);
   }
   if (!is_good_obj(evaluation->world->database, thing))
     return;
   if (!name_space) {
-    examine_state_summary(evaluation, player, thing);
+    examine_state_summary(evaluation, PLAYER, thing);
   } else if (!object_state_name_is_valid(name_space)) {
-    notify_checked(evaluation, player, player, "Invalid state namespace.",
+    notify_checked(evaluation, PLAYER, PLAYER, "Invalid state namespace.",
                    MSG_ME);
   } else {
     examine_state_namespace(&(StateNamespaceExamineRequest){
-        .object = {.evaluation = evaluation, .viewer = player, .object = thing},
+        .object = {.evaluation = evaluation, .viewer = PLAYER, .object = thing},
         .name_space = name_space});
   }
 }
@@ -234,30 +234,30 @@ typedef struct StateWordSplitResult {
 static StateWordSplitResult state_split_last_word(char *text) {
   if (!text || !*text)
     return (StateWordSplitResult){0};
-  const size_t length = strlen(text);
-  size_t end = length;
+  const size_t LENGTH = strlen(text);
+  size_t end = LENGTH;
   size_t start;
   size_t separator;
 
   while (end > 0 &&
          (isspace)((unsigned char)*(const char *)checked_storage_at_const(
-             text, length + 1, sizeof(char), end - 1)))
+             text, LENGTH + 1, sizeof(char), end - 1)))
     end--;
-  *(char *)checked_storage_at(text, length + 1, sizeof(char), end) = '\0';
+  *(char *)checked_storage_at(text, LENGTH + 1, sizeof(char), end) = '\0';
   start = end;
   while (start > 0 &&
          !(isspace)((unsigned char)*(const char *)checked_storage_at_const(
-             text, length + 1, sizeof(char), start - 1)))
+             text, LENGTH + 1, sizeof(char), start - 1)))
     start--;
   if (start == 0)
     return (StateWordSplitResult){0};
   separator = start;
   while (separator > 0 &&
          (isspace)((unsigned char)*(const char *)checked_storage_at_const(
-             text, length + 1, sizeof(char), separator - 1)))
+             text, LENGTH + 1, sizeof(char), separator - 1)))
     separator--;
-  *(char *)checked_storage_at(text, length + 1, sizeof(char), separator) = '\0';
-  char *word_start = checked_storage_at(text, length + 1, sizeof(char), start);
+  *(char *)checked_storage_at(text, LENGTH + 1, sizeof(char), separator) = '\0';
+  char *word_start = checked_storage_at(text, LENGTH + 1, sizeof(char), start);
 
   if (!*text || !*word_start)
     return (StateWordSplitResult){0};
@@ -295,22 +295,22 @@ static bool state_parse_address(CommandInvocation *invocation, char *text,
   }
   target = split.prefix;
   address->key = split.word;
-  const size_t target_length = strlen(target);
+  const size_t TARGET_LENGTH = strlen(target);
   size_t slash_offset = 0;
 
-  while (slash_offset < target_length &&
+  while (slash_offset < TARGET_LENGTH &&
          *(const char *)checked_storage_at_const(
-             target, target_length + 1, sizeof(char), slash_offset) != '/')
+             target, TARGET_LENGTH + 1, sizeof(char), slash_offset) != '/')
     slash_offset++;
-  if (slash_offset == 0 || slash_offset + 1 >= target_length) {
+  if (slash_offset == 0 || slash_offset + 1 >= TARGET_LENGTH) {
     notify_checked(evaluation, invocation->player, invocation->player,
                    "Expected <object>/<namespace> <attribute_name>.", MSG_ME);
     return false;
   }
   slash =
-      checked_storage_at(target, target_length + 1, sizeof(char), slash_offset);
+      checked_storage_at(target, TARGET_LENGTH + 1, sizeof(char), slash_offset);
   *slash = '\0';
-  slash = checked_storage_at(target, target_length + 1, sizeof(char),
+  slash = checked_storage_at(target, TARGET_LENGTH + 1, sizeof(char),
                              slash_offset + 1);
   address->name_space = slash;
   if (!object_state_name_is_valid(address->name_space) ||
@@ -356,69 +356,69 @@ static int state_hex_digit(unsigned char byte) {
 static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
                                       char **owned, char *error,
                                       size_t error_size) {
-  const size_t length = strlen(text);
+  const size_t LENGTH = strlen(text);
   char *decoded;
   size_t output = 0;
 
-  if (length < 2 || *(const char *)checked_storage_at_const(
-                        text, length + 1, sizeof(char), length - 1) != '"') {
+  if (LENGTH < 2 || *(const char *)checked_storage_at_const(
+                        text, LENGTH + 1, sizeof(char), LENGTH - 1) != '"') {
     (void)snprintf(error, error_size, "unterminated quoted string");
     return false;
   }
-  decoded = malloc(length);
+  decoded = malloc(LENGTH);
   if (!decoded) {
     (void)snprintf(error, error_size, "out of memory");
     return false;
   }
-  for (size_t index = 1; index < length - 1; index++) {
+  for (size_t index = 1; index < LENGTH - 1; index++) {
     unsigned char byte = (unsigned char)*(const char *)checked_storage_at_const(
-        text, length + 1, sizeof(char), index);
+        text, LENGTH + 1, sizeof(char), index);
 
     if (byte != '\\') {
-      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+      *(char *)checked_storage_at(decoded, LENGTH, sizeof(char), output++) =
           (char)byte;
       continue;
     }
-    if (++index >= length - 1) {
+    if (++index >= LENGTH - 1) {
       free(decoded);
       (void)snprintf(error, error_size, "incomplete string escape");
       return false;
     }
     byte = (unsigned char)*(const char *)checked_storage_at_const(
-        text, length + 1, sizeof(char), index);
+        text, LENGTH + 1, sizeof(char), index);
     switch (byte) {
     case '"':
     case '\\':
-      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+      *(char *)checked_storage_at(decoded, LENGTH, sizeof(char), output++) =
           (char)byte;
       break;
     case 'n':
-      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+      *(char *)checked_storage_at(decoded, LENGTH, sizeof(char), output++) =
           '\n';
       break;
     case 'r':
-      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+      *(char *)checked_storage_at(decoded, LENGTH, sizeof(char), output++) =
           '\r';
       break;
     case 't':
-      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+      *(char *)checked_storage_at(decoded, LENGTH, sizeof(char), output++) =
           '\t';
       break;
     case 'x': {
       int high;
       int low;
 
-      bool invalid_escape = index + 2 >= length - 1;
+      bool invalid_escape = index + 2 >= LENGTH - 1;
       if (!invalid_escape) {
         high = state_hex_digit(
             (unsigned char)*(const char *)checked_storage_at_const(
-                text, length + 1, sizeof(char), index + 1));
+                text, LENGTH + 1, sizeof(char), index + 1));
         invalid_escape = high < 0;
       }
       if (!invalid_escape) {
         low = state_hex_digit(
             (unsigned char)*(const char *)checked_storage_at_const(
-                text, length + 1, sizeof(char), index + 2));
+                text, LENGTH + 1, sizeof(char), index + 2));
         invalid_escape = low < 0;
       }
       if (invalid_escape) {
@@ -426,7 +426,7 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
         (void)snprintf(error, error_size, "invalid hexadecimal string escape");
         return false;
       }
-      *(char *)checked_storage_at(decoded, length, sizeof(char), output++) =
+      *(char *)checked_storage_at(decoded, LENGTH, sizeof(char), output++) =
           (char)((high << 4) | low);
       index += 2;
       break;
@@ -437,7 +437,7 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
       return false;
     }
   }
-  *(char *)checked_storage_at(decoded, length, sizeof(char), output) = '\0';
+  *(char *)checked_storage_at(decoded, LENGTH, sizeof(char), output) = '\0';
   *owned = decoded;
   *value = (ObjectStateValue){
       .type = OBJECT_STATE_STRING,
@@ -538,18 +538,18 @@ static void do_state_wipe(CommandInvocation *invocation) {
                    "Expected <object> or <object>/<namespace>.", MSG_ME);
     return;
   }
-  const size_t target_length = strlen(target);
+  const size_t TARGET_LENGTH = strlen(target);
   size_t slash_offset = 0;
 
-  while (slash_offset < target_length &&
+  while (slash_offset < TARGET_LENGTH &&
          *(const char *)checked_storage_at_const(
-             target, target_length + 1, sizeof(char), slash_offset) != '/')
+             target, TARGET_LENGTH + 1, sizeof(char), slash_offset) != '/')
     slash_offset++;
   name_space = nullptr;
-  if (slash_offset < target_length) {
-    *(char *)checked_storage_at(target, target_length + 1, sizeof(char),
+  if (slash_offset < TARGET_LENGTH) {
+    *(char *)checked_storage_at(target, TARGET_LENGTH + 1, sizeof(char),
                                 slash_offset) = '\0';
-    name_space = checked_storage_at(target, target_length + 1, sizeof(char),
+    name_space = checked_storage_at(target, TARGET_LENGTH + 1, sizeof(char),
                                     slash_offset + 1);
   }
   if (!state_match_object(invocation, target, &object))

@@ -7,7 +7,7 @@
 
 /* mech.tech.do.c */
 int valid_ammo_mode(Mech *mech, int loc, int part, int let);
-int FindAmmoType(Mech *mech, int loc, int part);
+int find_ammo_type(Mech *mech, int loc, int part);
 int replace_econ(const RepairOperationCall *call);
 int reload_econ(const RepairOperationCall *call);
 int fixarmor_econ(const RepairOperationCall *call);

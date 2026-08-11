@@ -9,7 +9,7 @@
 #include "mech_hitloc_internal.h"
 #include "section_types.h"
 
-HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hitGroup,
+HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
                                                HitLocationResult result,
                                                int roll) {
   int hitloc = 0;
@@ -17,7 +17,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hitGroup,
 
   switch (mech_class(mech)) {
   case CLASS_VTOL:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
@@ -95,7 +95,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hitGroup,
 
     case FRONT:
     case BACK:
-      side = (hitGroup == FRONT ? FSIDE : BSIDE);
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
 
       switch (roll) {
       case 2:
@@ -134,7 +134,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hitGroup,
 
     break;
   case CLASS_VEH_NAVAL:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 2:
@@ -206,7 +206,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hitGroup,
 
     case FRONT:
     case BACK:
-      side = (hitGroup == FRONT ? FSIDE : BSIDE);
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
       switch (roll) {
       case 2:
       case 12:

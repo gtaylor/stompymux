@@ -57,46 +57,47 @@ static const char *weapon_display_name(int weapon_index) {
 int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
   Mech *attacker = request->attacker;
   Mech *wounded = request->wounded;
-  const int hitloc = request->slot.section;
-  const int critHit = request->slot.critical;
-  const int critType = request->part_type;
-  int wMaxCrits, wFirstCrit, wWeapDestroyed = 0;
+  const int HITLOC = request->slot.section;
+  const int CRIT_HIT = request->slot.critical;
+  const int CRIT_TYPE = request->part_type;
+  int w_max_crits, w_first_crit, w_weap_destroyed = 0;
   int damage;
   char locname[30];
   char msgbuf[MBUF_SIZE] = {0};
   BtechContext *context = mech_context(wounded);
 
-  ArmorStringFromIndex(hitloc, locname, mech_class(wounded),
-                       mech_movement_type(wounded));
+  armor_string_from_index(HITLOC, locname, mech_class(wounded),
+                          mech_movement_type(wounded));
 
   /* Get the max number of crits for this weapon */
-  wMaxCrits = GetWeaponCrits(wounded, weapon_from_equipment_index(critType));
+  w_max_crits =
+      get_weapon_crits(wounded, weapon_from_equipment_index(CRIT_TYPE));
 
   /* Find the first crit */
-  wFirstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+  w_first_crit = mech_weapon_first_critical(&(WeaponCriticalSearch){
       .mech = wounded,
-      .weapon = {.section = hitloc, .critical = critHit},
+      .weapon = {.section = HITLOC, .critical = CRIT_HIT},
       .start_critical = 0,
-      .part_type = critType,
-      .maximum_criticals = wMaxCrits,
+      .part_type = CRIT_TYPE,
+      .maximum_criticals = w_max_crits,
   });
 
   /* See if the weapon is already destroyed */
-  if (wFirstCrit != -1) {
-    wWeapDestroyed =
-        (mech_critical_is_nonfunctional(wounded, hitloc, wFirstCrit) ||
-         (mech_critical_temporary_failure(wounded, hitloc, wFirstCrit) ==
+  if (w_first_crit != -1) {
+    w_weap_destroyed =
+        (mech_critical_is_nonfunctional(wounded, HITLOC, w_first_crit) ||
+         (mech_critical_temporary_failure(wounded, HITLOC, w_first_crit) ==
           FAIL_DESTROYED));
   }
 
   /* Gauss rifle-ish weapons explode when critted */
-  const int weapon_index = weapon_from_equipment_index(critType);
-  if (weapon_catalogue_is_gauss(weapon_index) && !wWeapDestroyed) {
+  const int WEAPON_INDEX = weapon_from_equipment_index(CRIT_TYPE);
+  if (weapon_catalogue_is_gauss(WEAPON_INDEX) && !w_weap_destroyed) {
     mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
-                weapon_display_name(weapon_index));
+                weapon_display_name(WEAPON_INDEX));
 
     mech_printf(wounded, MECHALL, "It explodes for %d points damage.",
-                weapon_catalogue_explosion_damage(weapon_index));
+                weapon_catalogue_explosion_damage(WEAPON_INDEX));
 
     if (!mech_is_destroyed(wounded)) {
       (void)snprintf(msgbuf, MBUF_SIZE,
@@ -107,10 +108,10 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
 
     mech_weapon_destroy(&(WeaponDestructionRequest){
         .mech = wounded,
-        .first = {.section = hitloc, .critical = wFirstCrit},
-        .part_type = critType,
-        .criticals_to_destroy = wMaxCrits,
-        .total_criticals = wMaxCrits});
+        .first = {.section = HITLOC, .critical = w_first_crit},
+        .part_type = CRIT_TYPE,
+        .criticals_to_destroy = w_max_crits,
+        .total_criticals = w_max_crits});
 
     if (attacker) {
       mech_damage_apply(&(MechDamageRequest){
@@ -118,11 +119,11 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
           .attacker = attacker,
           .line_of_sight = 0,
           .attack_pilot = -1,
-          .hit_location = hitloc,
+          .hit_location = HITLOC,
           .rear = 0,
           .critical = 0,
           .armor_damage = 0,
-          .internal_damage = weapon_catalogue_explosion_damage(weapon_index),
+          .internal_damage = weapon_catalogue_explosion_damage(WEAPON_INDEX),
           .transfer = MECH_DAMAGE_NORMAL,
           .cause = -1,
           .base_to_hit = 7,
@@ -140,40 +141,40 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
       /* Rule Reference: MaxTech Revised, Page 46 (Reduce by 1 because of pain
        * resistance) */
 
-      if (HasBoolAdvantage(context, mech_pilot_dbref(wounded),
-                           "pain_resistance"))
+      if (has_bool_advantage(context, mech_pilot_dbref(wounded),
+                             "pain_resistance"))
         headhitmwdamage(wounded, wounded, 1);
       else
         headhitmwdamage(wounded, wounded, 2);
     }
     return 1;
   } else if (weapon_catalogue_is_anti_missile(
-                 weapon_from_equipment_index(critType))) { /* Have to shut down
+                 weapon_from_equipment_index(CRIT_TYPE))) { /* Have to shut down
                                            AMS when its critted */
     mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
-                weapon_display_name(weapon_index));
+                weapon_display_name(WEAPON_INDEX));
 
     mech_ams_enabled_set(wounded, false);
     mech_technology_flags_remove(wounded,
                                  IS_ANTI_MISSILE_TECH | CL_ANTI_MISSILE_TECH);
   } else if (weapon_catalogue_is_hot_loaded(
-                 weapon_from_equipment_index(critType),
-                 mech_critical_fire_mode(wounded, hitloc, wFirstCrit)) &&
-             !wWeapDestroyed) { /* And crit hotloaded LRMs */
+                 weapon_from_equipment_index(CRIT_TYPE),
+                 mech_critical_fire_mode(wounded, HITLOC, w_first_crit)) &&
+             !w_weap_destroyed) { /* And crit hotloaded LRMs */
     CriticalSlotLookupResult ammunition =
         ammunition_find(&(AmmunitionLookupRequest){
             .mech = wounded,
-            .weapon_index = weapon_from_equipment_index(critType),
+            .weapon_index = weapon_from_equipment_index(CRIT_TYPE),
             .forbidden_modes = AMMO_MODES});
     if (ammunition.found) {
-      damage = weapon_catalogue_damage(weapon_index);
+      damage = weapon_catalogue_damage(WEAPON_INDEX);
 
-      if (weapon_catalogue_is_missile(weapon_from_equipment_index(critType)) ||
+      if (weapon_catalogue_is_missile(weapon_from_equipment_index(CRIT_TYPE)) ||
           weapon_catalogue_is_artillery(
-              weapon_from_equipment_index(critType))) {
+              weapon_from_equipment_index(CRIT_TYPE))) {
         int missile_count = btech_context_missile_hit_count(&(MissileHitLookup){
             .context = context,
-            .weapon = weapon_from_equipment_index(critType),
+            .weapon = weapon_from_equipment_index(CRIT_TYPE),
             .roll = 10,
         });
         if (missile_count > 0) {
@@ -182,7 +183,7 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
       }
 
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
-                  weapon_display_name(weapon_index));
+                  weapon_display_name(WEAPON_INDEX));
 
       mech_printf(
           wounded, MECHALL,
@@ -198,17 +199,17 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
 
       mech_weapon_destroy(&(WeaponDestructionRequest){
           .mech = wounded,
-          .first = {.section = hitloc, .critical = wFirstCrit},
-          .part_type = critType,
-          .criticals_to_destroy = wMaxCrits,
-          .total_criticals = wMaxCrits});
+          .first = {.section = HITLOC, .critical = w_first_crit},
+          .part_type = CRIT_TYPE,
+          .criticals_to_destroy = w_max_crits,
+          .total_criticals = w_max_crits});
 
       if (attacker) {
         mech_damage_apply(&(MechDamageRequest){.target = wounded,
                                                .attacker = attacker,
                                                .line_of_sight = 0,
                                                .attack_pilot = -1,
-                                               .hit_location = hitloc,
+                                               .hit_location = HITLOC,
                                                .rear = 0,
                                                .critical = 0,
                                                .armor_damage = 0,
@@ -223,28 +224,28 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
 
       return 1;
     }
-  } else if ((mech_critical_ammo_mode(wounded, hitloc, wFirstCrit) &
+  } else if ((mech_critical_ammo_mode(wounded, HITLOC, w_first_crit) &
               AC_INCENDIARY_MODE) &&
-             !wWeapDestroyed &&
+             !w_weap_destroyed &&
              mech_weapon_is_recycling_at(
-                 wounded, hitloc,
-                 wFirstCrit)) { /* Incendiary ACs blow up too */
+                 wounded, HITLOC,
+                 w_first_crit)) { /* Incendiary ACs blow up too */
 
     CriticalSlotLookupResult ammunition =
         ammunition_find(&(AmmunitionLookupRequest){
             .mech = wounded,
-            .weapon_index = weapon_from_equipment_index(critType),
+            .weapon_index = weapon_from_equipment_index(CRIT_TYPE),
             .required_modes = AC_INCENDIARY_MODE});
     if (ammunition.found) {
 
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
-                  weapon_display_name(weapon_index));
+                  weapon_display_name(WEAPON_INDEX));
 
       mech_printf(
           wounded, MECHALL,
           "[fg=red bold]The incendiary ammunition in your launcher ignites "
           "for %d points of damage![reset]",
-          weapon_catalogue_damage(weapon_index));
+          weapon_catalogue_damage(WEAPON_INDEX));
 
       if (!mech_is_destroyed(wounded)) {
         (void)snprintf(msgbuf, MBUF_SIZE,
@@ -254,10 +255,10 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
 
       mech_weapon_destroy(&(WeaponDestructionRequest){
           .mech = wounded,
-          .first = {.section = hitloc, .critical = wFirstCrit},
-          .part_type = critType,
-          .criticals_to_destroy = wMaxCrits,
-          .total_criticals = wMaxCrits});
+          .first = {.section = HITLOC, .critical = w_first_crit},
+          .part_type = CRIT_TYPE,
+          .criticals_to_destroy = w_max_crits,
+          .total_criticals = w_max_crits});
 
       if (attacker) {
         mech_damage_apply(&(MechDamageRequest){
@@ -265,11 +266,11 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
             .attacker = attacker,
             .line_of_sight = 0,
             .attack_pilot = -1,
-            .hit_location = hitloc,
+            .hit_location = HITLOC,
             .rear = 0,
             .critical = 0,
             .armor_damage = 0,
-            .internal_damage = weapon_catalogue_damage(weapon_index),
+            .internal_damage = weapon_catalogue_damage(WEAPON_INDEX),
             .transfer = MECH_DAMAGE_NORMAL,
             .cause = -1,
             .base_to_hit = 7,
@@ -303,22 +304,22 @@ void mech_main_weapon_jam(Mech *mech) {
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     if (mech_section_is_destroyed(mech, loop))
       continue;
-    count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
+    count = find_weapons_advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
       for (ii = 0; ii < count; ii++) {
-        const int current_critical =
+        const int CURRENT_CRITICAL =
             *critical_slot(critical, MAX_WEAPS_SECTION, (size_t)ii);
-        const unsigned char current_weapon =
+        const unsigned char CURRENT_WEAPON =
             *weapon_slot(weaparray, MAX_WEAPS_SECTION, (size_t)ii);
-        if (!mech_critical_is_broken(mech, loop, current_critical)) {
+        if (!mech_critical_is_broken(mech, loop, CURRENT_CRITICAL)) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
           tempcrit = (int)btech_context_random_i31(context);
           if (tempcrit > maxcrit) {
             critfound = 1;
             maxcrit = tempcrit;
             maxloc = loop;
-            maxtype = current_weapon;
-            critnum = current_critical;
+            maxtype = CURRENT_WEAPON;
+            critnum = CURRENT_CRITICAL;
           }
         }
       }
@@ -335,31 +336,33 @@ void mech_main_weapon_jam(Mech *mech) {
   }
 }
 
-void mech_random_weapon_select(Mech *objMech, int wLoc, int *critNum,
-                               int wIgnoreJams) {
-  int awCrits[MAX_WEAPS_SECTION];
-  int wcWeaps = 0;
-  int wIter;
+void mech_random_weapon_select(Mech *obj_mech, int w_loc, int *crit_num,
+                               int w_ignore_jams) {
+  int aw_crits[MAX_WEAPS_SECTION];
+  int wc_weaps = 0;
+  int w_iter;
 
   /*
    * Find our weapons
    */
 
-  for (wIter = 0; wIter < MAX_WEAPS_SECTION; wIter++) {
-    if (equipment_is_weapon(mech_critical_part_type(objMech, wLoc, wIter))) {
-      if (!mech_critical_is_broken(objMech, wLoc, wIter)) {
-        if (!wIgnoreJams || (wIgnoreJams && !mech_critical_temporary_failure(
-                                                objMech, wLoc, wIter))) {
-          *critical_slot(awCrits, MAX_WEAPS_SECTION, (size_t)wcWeaps) = wIter;
+  for (w_iter = 0; w_iter < MAX_WEAPS_SECTION; w_iter++) {
+    if (equipment_is_weapon(mech_critical_part_type(obj_mech, w_loc, w_iter))) {
+      if (!mech_critical_is_broken(obj_mech, w_loc, w_iter)) {
+        if (!w_ignore_jams ||
+            (w_ignore_jams &&
+             !mech_critical_temporary_failure(obj_mech, w_loc, w_iter))) {
+          *critical_slot(aw_crits, MAX_WEAPS_SECTION, (size_t)wc_weaps) =
+              w_iter;
 
-          wcWeaps++;
+          wc_weaps++;
         }
       }
     }
   }
 
-  if (wcWeaps <= 0) {
-    *critNum = -1;
+  if (wc_weaps <= 0) {
+    *crit_num = -1;
     return;
   }
 
@@ -367,31 +370,31 @@ void mech_random_weapon_select(Mech *objMech, int wLoc, int *critNum,
    * Now randomly pick one
    */
 
-  *critNum = *critical_slot(
-      awCrits, MAX_WEAPS_SECTION,
-      (size_t)btech_random_range_int(mech_context(objMech), 0, wcWeaps - 1));
+  *crit_num = *critical_slot(
+      aw_crits, MAX_WEAPS_SECTION,
+      (size_t)btech_random_range_int(mech_context(obj_mech), 0, wc_weaps - 1));
 }
 
 /*
  * Make sure we're not set to go over our walking/cruise speed
  */
-void mech_speed_limit_to_cruise(Mech *objMech) {
+void mech_speed_limit_to_cruise(Mech *obj_mech) {
   float maximum_speed;
 
   maximum_speed =
-      mech_cargo_maximum_speed(objMech, mech_maximum_speed(objMech));
+      mech_cargo_maximum_speed(obj_mech, mech_maximum_speed(obj_mech));
 
-  if (mech_movement_type(objMech) == MOVE_VTOL)
+  if (mech_movement_type(obj_mech) == MOVE_VTOL)
     maximum_speed =
         sqrtf(maximum_speed * maximum_speed -
-              mech_vertical_speed(objMech) * mech_vertical_speed(objMech));
+              mech_vertical_speed(obj_mech) * mech_vertical_speed(obj_mech));
 
-  const float walking_speed = 2.0F * maximum_speed / 3.0F;
-  if (walking_speed < mech_desired_speed(objMech))
-    mech_desired_speed_set(objMech, walking_speed - 0.1F);
+  const float WALKING_SPEED = 2.0F * maximum_speed / 3.0F;
+  if (WALKING_SPEED < mech_desired_speed(obj_mech))
+    mech_desired_speed_set(obj_mech, WALKING_SPEED - 0.1F);
 }
 
-void mech_vehicle_stabilizer_critical_apply(Mech *objMech, int wLoc) {
+void mech_vehicle_stabilizer_critical_apply(Mech *obj_mech, int w_loc) {
   /*
    * Double attacker movement for all weapons fired from
    * this location. If no weapons in this location, crit has no
@@ -399,72 +402,72 @@ void mech_vehicle_stabilizer_critical_apply(Mech *objMech, int wLoc) {
    * should be ignored.
    */
 
-  char strLocName[30];
+  char str_loc_name[30];
 
-  ArmorStringFromIndex(wLoc, strLocName, mech_class(objMech),
-                       mech_movement_type(objMech));
+  armor_string_from_index(w_loc, str_loc_name, mech_class(obj_mech),
+                          mech_movement_type(obj_mech));
 
-  if (mech_section_configuration_has(objMech, wLoc, STABILIZERS_DESTROYED))
-    mech_printf(objMech, MECHALL,
+  if (mech_section_configuration_has(obj_mech, w_loc, STABILIZERS_DESTROYED))
+    mech_printf(obj_mech, MECHALL,
                 "The destroyed weapon stabilizers in your %s take another hit!",
-                strLocName);
+                str_loc_name);
   else {
-    mech_printf(objMech, MECHALL,
+    mech_printf(obj_mech, MECHALL,
                 "The weapon stabilizers in your %s have been destroyed!",
-                strLocName);
-    mech_section_configuration_add(objMech, wLoc, STABILIZERS_DESTROYED);
+                str_loc_name);
+    mech_section_configuration_add(obj_mech, w_loc, STABILIZERS_DESTROYED);
   }
 }
 
-void mech_turret_lock_critical_apply(Mech *objMech) {
+void mech_turret_lock_critical_apply(Mech *obj_mech) {
   /*
    * Turret locks in the current direction.
    */
 
-  MechConditionSummary condition = mech_condition_summary(objMech);
+  MechConditionSummary condition = mech_condition_summary(obj_mech);
   if (condition.turret_locked) {
     mech_notify(
-        objMech, MECHALL,
+        obj_mech, MECHALL,
         "The shot pierces your armor yet fails to hit a critical system!");
     return;
   }
 
   if (condition.turret_jammed)
-    mech_turret_jammed_set(objMech, false);
+    mech_turret_jammed_set(obj_mech, false);
 
-  mech_turret_locked_set(objMech, true);
+  mech_turret_locked_set(obj_mech, true);
   mech_notify(
-      objMech, MECHALL,
+      obj_mech, MECHALL,
       "[fg=red bold]The shot destroys your turret rotation mechanism![reset]");
 }
 
-void mech_turret_jam_critical_apply(Mech *objMech) {
+void mech_turret_jam_critical_apply(Mech *obj_mech) {
   /*
    * Turret rotation temporarily jams. Vehicle crew must spend
    * attack phase unjamming (read for mux: no weapons fire/ramming/etc...
    * while unjamming turret. Second jam crit == turret locked.
    */
 
-  MechConditionSummary condition = mech_condition_summary(objMech);
+  MechConditionSummary condition = mech_condition_summary(obj_mech);
   if (condition.turret_locked) {
     mech_notify(
-        objMech, MECHALL,
+        obj_mech, MECHALL,
         "The shot pierces your armor yet fails to hit a critical system!");
     return;
   }
 
   if (condition.turret_jammed) {
-    mech_turret_lock_critical_apply(objMech);
+    mech_turret_lock_critical_apply(obj_mech);
     return;
   }
 
-  mech_turret_jammed_set(objMech, true);
+  mech_turret_jammed_set(obj_mech, true);
   mech_notify(
-      objMech, MECHALL,
+      obj_mech, MECHALL,
       "[fg=red bold]Your turret gets jammed on its current facing![reset]");
 }
 
-void mech_weapon_jam_critical_apply(Mech *objMech, int wLoc) {
+void mech_weapon_jam_critical_apply(Mech *obj_mech, int w_loc) {
   /*
    * A weapon in this location is stuck. The vehicle crew must spend
    * the attack phase unjamming this weapon.
@@ -475,140 +478,140 @@ void mech_weapon_jam_critical_apply(Mech *objMech, int wLoc) {
    * ALTERATION: Currently it's coded to 'auto-unjam' after 60 to 120 seconds.
    */
 
-  int wWeapIdx = 0;
-  int wCritType = 0;
-  int wCritNum = 0;
+  int w_weap_idx = 0;
+  int w_crit_type = 0;
+  int w_crit_num = 0;
 
-  if (mech_section_is_destroyed(objMech, wLoc))
+  if (mech_section_is_destroyed(obj_mech, w_loc))
     return;
 
-  mech_random_weapon_select(objMech, wLoc, &wCritNum, 1);
+  mech_random_weapon_select(obj_mech, w_loc, &w_crit_num, 1);
 
-  if (wCritNum < 0) {
+  if (w_crit_num < 0) {
     mech_notify(
-        objMech, MECHALL,
+        obj_mech, MECHALL,
         "The shot pierces your armor yet fails to hit a critical system!");
     return;
   }
 
-  wCritType = mech_critical_part_type(objMech, wLoc, wCritNum);
-  wWeapIdx = weapon_from_equipment_index(wCritType);
+  w_crit_type = mech_critical_part_type(obj_mech, w_loc, w_crit_num);
+  w_weap_idx = weapon_from_equipment_index(w_crit_type);
 
-  if (wWeapIdx >= 0) {
-    switch (weapon_catalogue_type(wWeapIdx)) {
+  if (w_weap_idx >= 0) {
+    switch (weapon_catalogue_type(w_weap_idx)) {
     case TBEAM:
     case TMISSILE:
     case TARTILLERY:
-      wCritType = FAIL_SHORTED;
-      mech_printf(objMech, MECHALL,
+      w_crit_type = FAIL_SHORTED;
+      mech_printf(obj_mech, MECHALL,
                   "[fg=red bold]The shot causes your %s to temporarily short "
                   "out![reset]",
-                  weapon_display_name(wWeapIdx));
+                  weapon_display_name(w_weap_idx));
       break;
     case TAMMO:
-      wCritType = FAIL_JAMMED;
-      mech_printf(objMech, MECHALL,
+      w_crit_type = FAIL_JAMMED;
+      mech_printf(obj_mech, MECHALL,
                   "[fg=red bold]The shot temporarily jams your %s![reset]",
-                  weapon_display_name(wWeapIdx));
+                  weapon_display_name(w_weap_idx));
       break;
     default:
-      wCritType = FAIL_SHORTED;
-      mech_printf(objMech, MECHALL,
+      w_crit_type = FAIL_SHORTED;
+      mech_printf(obj_mech, MECHALL,
                   "[fg=red bold]The shot causes your %s to temporarily short "
                   "out![reset]",
-                  weapon_display_name(wWeapIdx));
+                  weapon_display_name(w_weap_idx));
       break;
     }
 
     mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
-        .mech = objMech,
-        .slot = {.section = wLoc, .critical = wCritNum},
-        .failure = wCritType});
+        .mech = obj_mech,
+        .slot = {.section = w_loc, .critical = w_crit_num},
+        .failure = w_crit_type});
     mech_set_recycle_part(
-        objMech, wLoc, wCritNum,
-        btech_random_range_int(mech_context(objMech), 60, 120));
+        obj_mech, w_loc, w_crit_num,
+        btech_random_range_int(mech_context(obj_mech), 60, 120));
   }
 }
 
 void mech_weapon_destroyed_critical_apply(
     const RandomWeaponDestructionRequest *request) {
-  Mech *objAttacker = request->attacker;
-  Mech *objMech = request->mech;
-  const int wLoc = request->section;
+  Mech *obj_attacker = request->attacker;
+  Mech *obj_mech = request->mech;
+  const int W_LOC = request->section;
   /*
    * A weapon in this location is destroyed.
    */
-  int wWeapIdx = 0;
-  int wCritNum = 0;
-  int wCritType = 0;
-  int firstCrit = 0;
+  int w_weap_idx = 0;
+  int w_crit_num = 0;
+  int w_crit_type = 0;
+  int first_crit = 0;
 
-  if (mech_section_is_destroyed(objMech, wLoc))
+  if (mech_section_is_destroyed(obj_mech, W_LOC))
     return;
 
-  mech_random_weapon_select(objMech, wLoc, &wCritNum, 0);
+  mech_random_weapon_select(obj_mech, W_LOC, &w_crit_num, 0);
 
-  if (wCritNum < 0) {
+  if (w_crit_num < 0) {
     mech_notify(
-        objMech, MECHALL,
+        obj_mech, MECHALL,
         "The shot pierces your armor yet fails to hit a critical system!");
     return;
   }
 
-  wCritType = mech_critical_part_type(objMech, wLoc, wCritNum);
-  wWeapIdx = weapon_from_equipment_index(wCritType);
+  w_crit_type = mech_critical_part_type(obj_mech, W_LOC, w_crit_num);
+  w_weap_idx = weapon_from_equipment_index(w_crit_type);
 
   if (mech_weapon_critical_handle(&(WeaponCriticalRequest){
-          .attacker = objAttacker,
-          .wounded = objMech,
-          .slot = {.section = wLoc, .critical = wCritNum},
-          .part_type = wCritType})) {
+          .attacker = obj_attacker,
+          .wounded = obj_mech,
+          .slot = {.section = W_LOC, .critical = w_crit_num},
+          .part_type = w_crit_type})) {
     return;
   }
 
-  if (wWeapIdx >= 0) {
-    firstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
-        .mech = objMech,
-        .weapon = {.section = wLoc, .critical = -1},
+  if (w_weap_idx >= 0) {
+    first_crit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+        .mech = obj_mech,
+        .weapon = {.section = W_LOC, .critical = -1},
         .start_critical = 0,
-        .part_type = wCritType,
+        .part_type = w_crit_type,
         .maximum_criticals = 1,
     });
 
     mech_weapon_destroy(&(WeaponDestructionRequest){
-        .mech = objMech,
-        .first = {.section = wLoc, .critical = firstCrit},
-        .part_type = wCritType,
+        .mech = obj_mech,
+        .first = {.section = W_LOC, .critical = first_crit},
+        .part_type = w_crit_type,
         .criticals_to_destroy = 1,
         .total_criticals = 1});
-    mech_printf(objMech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
-                weapon_display_name(wWeapIdx));
+    mech_printf(obj_mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
+                weapon_display_name(w_weap_idx));
   }
 }
 
-void mech_turret_blown_off_critical_apply(Mech *objMech, Mech *objAttacker,
-                                          int LOS) {
+void mech_turret_blown_off_critical_apply(Mech *obj_mech, Mech *obj_attacker,
+                                          int los) {
   /*
    * The turret is blown off, destroying everything in there
    */
 
-  if (mech_section_is_destroyed(objMech, TURRET))
+  if (mech_section_is_destroyed(obj_mech, TURRET))
     return;
 
   mech_notify(
-      objMech, MECHALL,
+      obj_mech, MECHALL,
       "[fg=red bold]The shot pops your turret clear off its housing![reset]");
-  mech_los_broadcast(objMech, "'s turret flies off!");
-  mech_section_destroy(&(SectionDestructionRequest){.wounded = objMech,
-                                                    .attacker = objAttacker,
-                                                    .line_of_sight = LOS,
+  mech_los_broadcast(obj_mech, "'s turret flies off!");
+  mech_section_destroy(&(SectionDestructionRequest){.wounded = obj_mech,
+                                                    .attacker = obj_attacker,
+                                                    .line_of_sight = los,
                                                     .section = TURRET});
 }
 
 void mech_ammunition_critical_apply(const AmmunitionCriticalRequest *request) {
-  Mech *objMech = request->mech;
-  Mech *objAttacker = request->attacker;
-  const int wLoc = request->section;
+  Mech *obj_mech = request->mech;
+  Mech *obj_attacker = request->attacker;
+  const int W_LOC = request->section;
   /*
    * Count total ammo carried on the tank. Apply damage directly to
    * the internal structure of the vehicle.
@@ -619,56 +622,56 @@ void mech_ammunition_critical_apply(const AmmunitionCriticalRequest *request) {
    * if the vehicle has no ammunition, treat this as a weapon destroyed crit.
    */
 
-  int wTotalAmmoDamage = 0;
-  int wTempDamage = 0;
-  int wSecIter, wSlotIter;
-  int wPartType = 0;
-  int wWeapIdx;
-  BtechContext *context = mech_context(objMech);
+  int w_total_ammo_damage = 0;
+  int w_temp_damage = 0;
+  int w_sec_iter, w_slot_iter;
+  int w_part_type = 0;
+  int w_weap_idx;
+  BtechContext *context = mech_context(obj_mech);
 
-  for (wSecIter = 0; wSecIter <= 7; wSecIter++) {
-    if (mech_section_is_destroyed(objMech, wSecIter))
+  for (w_sec_iter = 0; w_sec_iter <= 7; w_sec_iter++) {
+    if (mech_section_is_destroyed(obj_mech, w_sec_iter))
       continue;
 
-    for (wSlotIter = mech_section_critical_count(objMech, wSecIter) - 1;
-         wSlotIter >= 0; wSlotIter--) {
-      wPartType = mech_critical_part_type(objMech, wSecIter, wSlotIter);
-      wWeapIdx = ammunition_to_weapon_index(wPartType);
+    for (w_slot_iter = mech_section_critical_count(obj_mech, w_sec_iter) - 1;
+         w_slot_iter >= 0; w_slot_iter--) {
+      w_part_type = mech_critical_part_type(obj_mech, w_sec_iter, w_slot_iter);
+      w_weap_idx = ammunition_to_weapon_index(w_part_type);
 
-      if (equipment_is_ammunition(wPartType) &&
-          mech_critical_data(objMech, wSecIter, wSlotIter) &&
-          !weapon_catalogue_is_gauss(wWeapIdx)) {
-        wTempDamage = weapon_maximum_ammunition_damage(
-                          context, ammunition_to_weapon_index(wPartType)) *
-                      mech_critical_data(objMech, wSecIter, wSlotIter);
-        wTotalAmmoDamage += wTempDamage;
+      if (equipment_is_ammunition(w_part_type) &&
+          mech_critical_data(obj_mech, w_sec_iter, w_slot_iter) &&
+          !weapon_catalogue_is_gauss(w_weap_idx)) {
+        w_temp_damage = weapon_maximum_ammunition_damage(
+                            context, ammunition_to_weapon_index(w_part_type)) *
+                        mech_critical_data(obj_mech, w_sec_iter, w_slot_iter);
+        w_total_ammo_damage += w_temp_damage;
 
-        mech_critical_data_set(objMech, wSecIter, wSlotIter, 0);
+        mech_critical_data_set(obj_mech, w_sec_iter, w_slot_iter, 0);
       }
     }
   }
 
-  if (wTotalAmmoDamage == 0) {
+  if (w_total_ammo_damage == 0) {
     mech_weapon_destroyed_critical_apply(&(RandomWeaponDestructionRequest){
-        .attacker = objAttacker, .mech = objMech, .section = wLoc});
+        .attacker = obj_attacker, .mech = obj_mech, .section = W_LOC});
     return;
   }
 
   mech_notify(
-      objMech, MECHALL,
+      obj_mech, MECHALL,
       "[fg=red bold]One of your ammo bins is struck causing a cascading "
       "explosion![reset]");
-  mech_los_broadcast(objMech, "has an internal ammo explosion!");
+  mech_los_broadcast(obj_mech, "has an internal ammo explosion!");
 
-  mech_damage_apply(&(MechDamageRequest){.target = objMech,
-                                         .attacker = objAttacker,
+  mech_damage_apply(&(MechDamageRequest){.target = obj_mech,
+                                         .attacker = obj_attacker,
                                          .line_of_sight = 0,
                                          .attack_pilot = -1,
-                                         .hit_location = wLoc,
+                                         .hit_location = W_LOC,
                                          .rear = 0,
                                          .critical = 0,
                                          .armor_damage = 0,
-                                         .internal_damage = wTotalAmmoDamage,
+                                         .internal_damage = w_total_ammo_damage,
                                          .transfer = MECH_DAMAGE_NORMAL,
                                          .cause = 0,
                                          .base_to_hit = 0,

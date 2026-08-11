@@ -91,7 +91,7 @@ void invalid_section(DbRef player, Mech *mech) {
 /*
  * Logic for the 'setarmor' mechrep command.
  */
-void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
+void mechrep_rsetarmor(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
   int index;
@@ -114,8 +114,8 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                 args[0]);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    args[0]);
   if (index == -1) {
     // Invalid section, emit error and valid choices for unit type.
     invalid_section(player, mech);
@@ -175,7 +175,7 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
  * addweap <weap> <loc> <crits> [<flags>]
  * Current Flags: O = OS, T = TC, R = Rear
  */
-void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
+void mechrep_raddweap(DbRef player, void *data, char *buffer) {
   char *args[20];    /* The argument array */
   int argc;          /* Count of arguments */
   int index;         /* Used to determine section validity */
@@ -205,18 +205,18 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                 args[1]);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    args[1]);
   if (index == -1) {
     // Invalid section entered. Emit error and valid sections.
     invalid_section(player, mech);
     return;
   }
-  weapindex = WeaponIndexFromString(rep->xcode.context, args[0]);
+  weapindex = weapon_index_from_string(rep->xcode.context, args[0]);
   if (weapindex == -1) {
     notify_printf(btech_context_evaluation(rep->xcode.context), player,
                   "That is not a valid weapon!");
-    DumpWeapons(mech_context(mech), player);
+    dump_weapons(mech_context(mech), player);
     return;
   }
   /*
@@ -255,7 +255,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   } /* end for */
   /* Chop off the first the first two redundant args. */
   argc -= 2;
-  weapnumcrits = GetWeaponCrits(mech, weapindex);
+  weapnumcrits = get_weapon_crits(mech, weapindex);
   // Add < 9 for split weap help
   /* Check to see if player gives enough crits and start adding if so. */
   if (argc < weapnumcrits && weapnumcrits < 9) {
@@ -312,7 +312,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
                   "Weapon added.");
   }
 } /* end mechrep_Raddweap() */
-void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
+void mechrep_rfiremode(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
   int section, critical, weaptype, weapon_number;
@@ -443,7 +443,7 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
 /*
  * Logic for the 'reload' mechrep command.
  */
-void mechrep_Rreload(DbRef player, void *data, char *buffer) {
+void mechrep_rreload(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
   int index;
@@ -467,15 +467,15 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  weapindex = WeaponIndexFromString(rep->xcode.context, args[0]);
+  weapindex = weapon_index_from_string(rep->xcode.context, args[0]);
   if (weapindex == -1) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "That is not a valid weapon!");
-    DumpWeapons(mech_context(mech), player);
+    dump_weapons(mech_context(mech), player);
     return;
   }
-  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                 args[1]);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    args[1]);
   if (index == -1) {
     // Invalid section entered. Emit error and valid sections.
     invalid_section(player, mech);
@@ -487,7 +487,7 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
     return;
   }
   subsect--; /* from 1 based to 0 based */
-  if (subsect < 0 || subsect >= CritsInLoc(mech, index)) {
+  if (subsect < 0 || subsect >= crits_in_loc(mech, index)) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Critslot out of range!");
     return;
@@ -581,7 +581,7 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
         mech_critical_fire_mode_set(mech, index, subsect, 0);
       }
     mech_critical_data_set(mech, index, subsect,
-                           FullAmmo(mech, index, subsect));
+                           full_ammo(mech, index, subsect));
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Weapon loaded!");
   }
@@ -589,7 +589,7 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
 /*
  * Logic for the 'restock' mechrep command.
  */
-void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
+void mechrep_rrestock(DbRef player, void *data, char *buffer) {
   char *args[2];
   int argc;
   int index;
@@ -612,8 +612,8 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                 args[0]);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    args[0]);
   if (index == -1) {
     // Invalid section entered. Emit error and valid sections.
     invalid_section(player, mech);
@@ -625,7 +625,7 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
     return;
   }
   subsect--; /* from 1 based to 0 based */
-  if (subsect < 0 || subsect >= CritsInLoc(mech, index)) {
+  if (subsect < 0 || subsect >= crits_in_loc(mech, index)) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Critslot out of range!");
     return;
@@ -636,7 +636,7 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
                  "That weapon doesn't require ammo!");
   else {
     mech_critical_data_set(mech, index, subsect,
-                           FullAmmo(mech, index, subsect));
+                           full_ammo(mech, index, subsect));
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Weapon restocked!");
   }
@@ -644,7 +644,7 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
 /*
  * Logic for the 'repair' mechrep command.
  */
-void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
+void mechrep_rrepair(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
   int index;
@@ -667,8 +667,8 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments!");
     return;
   }
-  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                 args[0]);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    args[0]);
   if (index == -1) {
     // Invalid section entered. Emit error and valid sections.
     invalid_section(player, mech);
@@ -701,7 +701,7 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
     /* criticals */
     temp--;
     if (temp >= 0 && temp < NUM_CRITICALS) {
-      mech_RepairPart(mech, index, temp);
+      mech_repair_part(mech, index, temp);
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "Critical location repaired!");
     } else {
@@ -724,7 +724,7 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   case 'S':
   case 's':
     /* reattach */
-    mech_ReAttach(mech, index);
+    mech_re_attach(mech, index);
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Section reattached.");
     break;

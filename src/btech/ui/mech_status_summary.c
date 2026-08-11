@@ -48,9 +48,9 @@
 static int effective_jump_speed_mp(Mech *mech, const BattleMap *map) {
   float speed = mech_jump_speed(mech);
   if (mech_is_under_gravity(mech) && map) {
-    const int gravity = MAX(50, battle_map_gravity(map));
+    const int GRAVITY = max(50, battle_map_gravity(map));
 
-    speed = speed * 100.0F / (float)gravity;
+    speed = speed * 100.0F / (float)GRAVITY;
   }
   return clamp_float_to_int(speed * MP_PER_KPH);
 }
@@ -81,43 +81,43 @@ void append_status(char *buffer, size_t size, const char *fmt, ...) {
   va_end(ap);
 }
 
-void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech) {
+void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech) {
   int arc;
-  Mech *tempMech = nullptr;
+  Mech *temp_mech = nullptr;
   char location[50] = {0};
   char buff[MBUF_SIZE] = {0};
   char buff1[100] = {0};
 
   DbRef target_dbref = mech_target_dbref(mech);
   if (target_dbref != -1) {
-    tempMech = btech_context_get_mech(mech_context(mech), target_dbref);
-    if (tempMech) {
-      float range = mech_range_to(mech, tempMech);
-      if (mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                         mech_position_y(tempMech), range)) {
+    temp_mech = btech_context_get_mech(mech_context(mech), target_dbref);
+    if (temp_mech) {
+      float range = mech_range_to(mech, temp_mech);
+      if (mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                         mech_position_y(temp_mech), range)) {
         (void)snprintf(buff, sizeof(buff),
                        "Target: %s\t   Range: %.1f hexes   Bearing: %d deg\n",
-                       mech_to_mech_display_id(mech, tempMech).text,
+                       mech_to_mech_display_id(mech, temp_mech).text,
                        (double)range,
                        map_bearing(&(MapRealSegment){
                            .start = {.x = mech_position_real_x(mech),
                                      .y = mech_position_real_y(mech)},
-                           .end = {.x = mech_position_real_x(tempMech),
-                                   .y = mech_position_real_y(tempMech)}}));
+                           .end = {.x = mech_position_real_x(temp_mech),
+                                   .y = mech_position_real_y(temp_mech)}}));
         mecha_notify(evaluation, player, buff);
-        arc = InWeaponArc(mech, mech_position_real_x(tempMech),
-                          mech_position_real_y(tempMech));
+        arc = in_weapon_arc(mech, mech_position_real_x(temp_mech),
+                            mech_position_real_y(temp_mech));
         strlcpy(buff,
                 tprintf("Target in %s Weapons Arc",
-                        (arc & TURRETARC) ? "Turret" : GetArcID(mech, arc)),
+                        (arc & TURRETARC) ? "Turret" : get_arc_id(mech, arc)),
                 sizeof(buff));
         if (mech_aim_section(mech) == NUM_SECTIONS ||
-            mech_aim_unit_class(mech) != mech_class(tempMech))
+            mech_aim_unit_class(mech) != mech_class(temp_mech))
           strcpy(location, "None");
         else
-          ArmorStringFromIndex(mech_aim_section(mech), location,
-                               mech_class(tempMech),
-                               mech_movement_type(tempMech));
+          armor_string_from_index(mech_aim_section(mech), location,
+                                  mech_class(temp_mech),
+                                  mech_movement_type(temp_mech));
         (void)snprintf(buff1, sizeof(buff1), "\t   Aimed Shot Location: %s",
                        location);
         strlcat(buff, buff1, sizeof(buff));
@@ -141,21 +141,21 @@ void DisplayTarget(EvaluationContext *evaluation, DbRef player, Mech *mech) {
     mecha_notify(evaluation, player,
                  "Weapon Safeties are [fg=red bold]OFF[reset].\n");
   if (mech_has_pilot(mech) &&
-      HasBoolAdvantage(mech_context(mech), mech_pilot_dbref(mech),
-                       "maneuvering_ace"))
+      has_bool_advantage(mech_context(mech), mech_pilot_dbref(mech),
+                         "maneuvering_ace"))
     notify_printf(evaluation, player, "Turn Mode: %s",
                   conditions.tight_turn_mode ? "TIGHT" : "NORMAL");
   if (mech_charge_target_dbref(mech) > 0 &&
       mech_context(mech)->configuration->btech_newcharge) {
-    tempMech = btech_context_get_mech(mech_context(mech),
-                                      mech_charge_target_dbref(mech));
-    if (!tempMech)
+    temp_mech = btech_context_get_mech(mech_context(mech),
+                                       mech_charge_target_dbref(mech));
+    if (!temp_mech)
       return;
-    if (mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                       mech_position_y(tempMech),
-                       mech_range_to(mech, tempMech))) {
+    if (mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                       mech_position_y(temp_mech),
+                       mech_range_to(mech, temp_mech))) {
       notify_printf(evaluation, player, "ChargeTarget: %s\t  ChargeTimer: %d\n",
-                    mech_to_mech_display_id(mech, tempMech).text,
+                    mech_to_mech_display_id(mech, temp_mech).text,
                     mech_charge_timer(mech) / 2);
     } else {
       notify_printf(evaluation, player,
@@ -170,9 +170,9 @@ void show_miscbrands(Mech *mech, DbRef player) {
   (void)player;
 }
 
-void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                        bool use_model_reference) {
-  Mech *tempMech = nullptr;
+void print_generic_status(EvaluationContext *evaluation, DbRef player,
+                          Mech *mech, bool use_model_reference) {
+  Mech *temp_mech = nullptr;
   BtechContext *context = mech_context(mech);
   BattleMap *map = btech_context_find_object(context, mech_map_dbref(mech));
   char buff[SBUF_SIZE];
@@ -227,7 +227,7 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                    mech_maximum_battle_suits(mech));
     mecha_notify(evaluation, player, buff);
 
-    Mech_ShowFlags(&(MechFlagDisplayRequest){
+    mech_show_flags(&(MechFlagDisplayRequest){
         .evaluation = evaluation, .player = player, .mech = mech});
 
     if (mech_is_jumping(mech)) {
@@ -236,9 +236,10 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                      mech_jump_destination_y(mech));
       if (mech_condition_summary(mech).dfa_attacking &&
           mech_dfa_target_dbref(mech) != -1) {
-        tempMech = btech_context_get_mech(context, mech_dfa_target_dbref(mech));
+        temp_mech =
+            btech_context_get_mech(context, mech_dfa_target_dbref(mech));
         append_status(buff, sizeof(buff), "  Death From Above Target: %s",
-                      mech_to_mech_display_id(mech, tempMech).text);
+                      mech_to_mech_display_id(mech, temp_mech).text);
       }
       mecha_notify(evaluation, player, buff);
     }
@@ -263,15 +264,15 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
           mech_pilot_status(mech));
       mecha_notify(evaluation, player, buff);
     }
-    Mech_ShowFlags(&(MechFlagDisplayRequest){
+    mech_show_flags(&(MechFlagDisplayRequest){
         .evaluation = evaluation, .player = player, .mech = mech});
     if (!mech_is_jumping(mech) && !mech_is_fallen(mech) &&
         mech_is_started(mech) && mech_charge_target_dbref(mech) != -1) {
-      tempMech =
+      temp_mech =
           btech_context_get_mech(context, mech_charge_target_dbref(mech));
-      if (tempMech) {
+      if (temp_mech) {
         (void)snprintf(buff, sizeof(buff), "CHARGING --> %s",
-                       mech_to_mech_display_id(mech, tempMech).text);
+                       mech_to_mech_display_id(mech, temp_mech).text);
         mecha_notify(evaluation, player, buff);
       }
     }
@@ -281,9 +282,10 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
                      mech_jump_destination_y(mech));
       if (mech_condition_summary(mech).dfa_attacking &&
           mech_dfa_target_dbref(mech) != -1) {
-        tempMech = btech_context_get_mech(context, mech_dfa_target_dbref(mech));
+        temp_mech =
+            btech_context_get_mech(context, mech_dfa_target_dbref(mech));
         append_status(buff, sizeof(buff), "  Death From Above Target: %s",
-                      mech_to_mech_display_id(mech, tempMech).text);
+                      mech_to_mech_display_id(mech, temp_mech).text);
       }
       mecha_notify(evaluation, player, buff);
     }
@@ -366,12 +368,12 @@ void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
       }
     if (mech_is_flying_type(mech) && mech_is_landed(mech))
       mecha_notify(evaluation, player, "LANDED");
-    Mech_ShowFlags(&(MechFlagDisplayRequest){
+    mech_show_flags(&(MechFlagDisplayRequest){
         .evaluation = evaluation, .player = player, .mech = mech});
   }
 }
 
-void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
+void print_short_info(EvaluationContext *evaluation, DbRef player, Mech *mech) {
   char buff[MBUF_SIZE] = {0};
   char typespecific[50] = {0};
 
@@ -404,8 +406,8 @@ void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
     /* XXX This won't work for subs with turrets.. are they possible ? */
     if (mech_section_original_internal(mech, TURRET)) {
       (void)snprintf(typespecific, sizeof(typespecific), " TUR: %3d ",
-                     AcceptableDegree(mech_turret_heading_degrees(mech) +
-                                      mech_heading_degrees(mech)));
+                     acceptable_degree(mech_turret_heading_degrees(mech) +
+                                       mech_heading_degrees(mech)));
       break;
     }
     [[fallthrough]];
@@ -424,7 +426,7 @@ void PrintShortInfo(EvaluationContext *evaluation, DbRef player, Mech *mech) {
       (double)mech_current_speed(mech), (double)mech_desired_speed(mech),
       typespecific, mech_status_string(mech, 2).text);
   mecha_notify(evaluation, player, buff);
-  DisplayTarget(evaluation, player, mech);
+  display_target(evaluation, player, mech);
 }
 
 #define HEAT_LEVEL_BGREEN 7
@@ -442,8 +444,8 @@ static char heat_fill_character(const char *fill, char state) {
   return *checked_string_suffix(fill, (size_t)state);
 }
 
-static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
-                               int length) {
+static char *make_heat_scale_info(Mech *mech, const char *fillchar,
+                                  char *heatstr, int length) {
   int counter = 0, heat = displayed_speed(mech_heat_production(mech)),
       minheat = displayed_speed(mech_heat_dissipation(mech)), start = 0;
   char state = 1;
@@ -558,20 +560,20 @@ static char *MakeHeatScaleInfo(Mech *mech, const char *fillchar, char *heatstr,
   return heatstr;
 }
 
-void PrintHeatBar(EvaluationContext *evaluation, DbRef player, Mech *mech) {
+void print_heat_bar(EvaluationContext *evaluation, DbRef player, Mech *mech) {
   char subbuff[256];
   char buff[sizeof(subbuff) + sizeof("Temp:")];
   char heatstr[9] = ".:::::::";
 
-  MakeHeatScaleInfo(mech, heatstr, subbuff, 256);
+  make_heat_scale_info(mech, heatstr, subbuff, 256);
   (void)snprintf(buff, sizeof(buff), "Temp:%s", subbuff);
   mecha_notify(evaluation, player, buff);
 }
 
-void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                     int own) {
+void print_info_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
+                       int own) {
   char buff[256];
-  Mech *tempMech;
+  Mech *temp_mech;
   int f;
 
   switch (mech_class(mech)) {
@@ -630,7 +632,7 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
           displayed_speed(mech_vertical_speed(mech)),
           displayed_speed(mech_desired_speed(mech)));
       mecha_notify(evaluation, player, buff);
-      f = MAX(0, mech_fuel(mech));
+      f = max(0, mech_fuel(mech));
       if (mech_movement_type(mech) == MOVE_SUB) {
         (void)snprintf(
             buff, sizeof(buff), "Heading: %3d KPH  Des. Heading: %3d deg",
@@ -643,7 +645,7 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
             "deg   Fuel: Unlimited",
             mech_heading_degrees(mech), mech_desired_heading_degrees(mech));
       } else {
-        const int original_fuel = mech_original_fuel(mech);
+        const int ORIGINAL_FUEL = mech_original_fuel(mech);
 
         (void)snprintf(
             buff, sizeof(buff),
@@ -651,7 +653,7 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
             "    %3d "
             "deg   Fuel: %d (%.2f %%)",
             mech_heading_degrees(mech), mech_desired_heading_degrees(mech), f,
-            (double)(100.0F * (float)f / (float)original_fuel));
+            (double)(100.0F * (float)f / (float)ORIGINAL_FUEL));
       }
 
       mecha_notify(evaluation, player, buff);
@@ -698,17 +700,17 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, Mech *mech,
   }
 
   if (mech_uses_heat(mech)) {
-    PrintHeatBar(evaluation, player, mech);
+    print_heat_bar(evaluation, player, mech);
   }
   mecha_notify(evaluation, player, "  ");
   // Show our locked target info (hex or unit).
-  DisplayTarget(evaluation, player, mech);
+  display_target(evaluation, player, mech);
 
   if (mech_carried_dbref(mech) > 0) {
-    tempMech =
+    temp_mech =
         btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
-    if (tempMech)
+    if (temp_mech)
       notify_printf(evaluation, player, "Towing %s.",
-                    mech_to_mech_display_id(mech, tempMech).text);
+                    mech_to_mech_display_id(mech, temp_mech).text);
   }
 }

@@ -37,23 +37,23 @@ static bool ascii_is_alnum(unsigned char byte) {
 int is_integer(char *str) {
   if (str == nullptr)
     return 0;
-  const size_t length = strlen(str);
+  const size_t LENGTH = strlen(str);
   size_t index = 0;
-  while (index < length &&
-         validation_is_space(validation_character(str, length, index)))
+  while (index < LENGTH &&
+         validation_is_space(validation_character(str, LENGTH, index)))
     index++;
-  if (index < length && validation_character(str, length, index) == '-')
+  if (index < LENGTH && validation_character(str, LENGTH, index) == '-')
     index++;
-  if (index >= length ||
-      !validation_is_digit(validation_character(str, length, index)))
+  if (index >= LENGTH ||
+      !validation_is_digit(validation_character(str, LENGTH, index)))
     return 0;
-  while (index < length &&
-         validation_is_digit(validation_character(str, length, index)))
+  while (index < LENGTH &&
+         validation_is_digit(validation_character(str, LENGTH, index)))
     index++;
-  while (index < length &&
-         validation_is_space(validation_character(str, length, index)))
+  while (index < LENGTH &&
+         validation_is_space(validation_character(str, LENGTH, index)))
     index++;
-  return index == length;
+  return index == LENGTH;
 }
 
 /**
@@ -62,37 +62,37 @@ int is_integer(char *str) {
 int is_number(const char *str) {
   if (str == nullptr)
     return 0;
-  const size_t length = strlen(str);
+  const size_t LENGTH = strlen(str);
   size_t index = 0;
   bool got_digit = false;
-  while (index < length &&
-         validation_is_space(validation_character(str, length, index)))
+  while (index < LENGTH &&
+         validation_is_space(validation_character(str, LENGTH, index)))
     index++;
-  if (index < length && validation_character(str, length, index) == '-')
+  if (index < LENGTH && validation_character(str, LENGTH, index) == '-')
     index++;
-  while (index < length &&
-         validation_is_digit(validation_character(str, length, index))) {
+  while (index < LENGTH &&
+         validation_is_digit(validation_character(str, LENGTH, index))) {
     got_digit = true;
     index++;
   }
-  if (index < length && validation_character(str, length, index) == '.')
+  if (index < LENGTH && validation_character(str, LENGTH, index) == '.')
     index++;
-  while (index < length &&
-         validation_is_digit(validation_character(str, length, index))) {
+  while (index < LENGTH &&
+         validation_is_digit(validation_character(str, LENGTH, index))) {
     got_digit = true;
     index++;
   }
-  while (index < length &&
-         validation_is_space(validation_character(str, length, index)))
+  while (index < LENGTH &&
+         validation_is_space(validation_character(str, LENGTH, index)))
     index++;
-  return got_digit && index == length;
+  return got_digit && index == LENGTH;
 }
 
 int ok_name(const ServerConfiguration *configuration, const char *name) {
   if (name == nullptr || *name == '\0')
     return 0;
 
-  const size_t length = strlen(name);
+  const size_t LENGTH = strlen(name);
 
   /* Disallow leading spaces */
 
@@ -109,7 +109,7 @@ int ok_name(const ServerConfiguration *configuration, const char *name) {
   /*
    * Disallow trailing spaces
    */
-  if (validation_character(name, length, length - 1) == ' ')
+  if (validation_character(name, LENGTH, LENGTH - 1) == ' ')
     return 0;
 
   /*
@@ -151,12 +151,12 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
    * Make sure name only contains legal characters
    */
 
-  const size_t length = strlen(name);
-  for (size_t index = 0; index < length; index++) {
-    const char character = validation_character(name, length, index);
-    if (ascii_is_alnum((unsigned char)character))
+  const size_t LENGTH = strlen(name);
+  for (size_t index = 0; index < LENGTH; index++) {
+    const char CHARACTER = validation_character(name, LENGTH, index);
+    if (ascii_is_alnum((unsigned char)CHARACTER))
       continue;
-    if (!strchr(good_chars, character))
+    if (!strchr(good_chars, CHARACTER))
       return 0;
   }
   return 1;

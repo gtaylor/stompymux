@@ -58,7 +58,7 @@
        / /  \ \               /  \                / /  \ \
       (99|  |99)             /    \              (99|  |99)
 */
-const char *const lightmechdesc =
+const char *const LIGHTMECHDESC =
     "7         FRONT                REAR                INTERNAL\n"
     "1          @7_@7_                   @7_@7_                    @7_@7_\n"
     "2       @2_@2_@7(&+7@7)@3_@3_             @2_@2_@7(@7*@7*@7)@3_@3_        "
@@ -83,7 +83,7 @@ const char *const lightmechdesc =
 
 */
 
-const char *const heavymechdesc =
+const char *const HEAVYMECHDESC =
     "7         FRONT                REAR                INTERNAL\n"
     "1          @7_@7_                   @7_@7_                    @7_@7_\n"
     "2       @2_@2_@7(&+7@7)@3_@3_             @2_@2_@7(@7*@7*@7)@3_@3_        "
@@ -107,7 +107,7 @@ const char *const heavymechdesc =
       (99|  |99)             /    \              (99|  |99)
 
 */
-const char *const mediummechdesc =
+const char *const MEDIUMMECHDESC =
 
     "7         FRONT                REAR                INTERNAL\n"
     "1          @7_@7_                   @7_@7_                    @7_@7_\n"
@@ -133,7 +133,7 @@ const char *const mediummechdesc =
 
 */
 
-const char *const assaultmechdesc =
+const char *const ASSAULTMECHDESC =
     "7         FRONT                REAR                INTERNAL\n"
     "1          @7_@7_                   @7_@7_                    @7_@7_\n"
     "2       @2_@2_@7[&+7@7]@3_@3_             @2_@2_@7[@7*@7*@7]@3_@3_        "
@@ -184,7 +184,7 @@ const char *const mechdesc =
     /_/__\    /__\_\                         /_/__\    /__\_\
 */
 
-const char *const quaddesc =
+const char *const QUADDESC =
     "7         FRONT                REAR                INTERNAL\n"
     "1           @7_@7_@7_                                      @7_@7_@7_\n"
     "2   @5_@5_@5_  @2_@2_@7/&+7 @7\\@3_  @6_@6_@6_                       "
@@ -207,7 +207,7 @@ const char *const quaddesc =
                      (9/ \9)
 */
 
-const char *const mwdesc = "1                       @7(&1:7@7)\n"
+const char *const MWDESC = "1                       @7(&1:7@7)\n"
                            "2                     @2/&1:2@4|&1:4@4|&1:3@3\\\n"
                            "6                    @0(&1:0@0/ @4_ @1\\&1:1@1)\n"
                            "7                     @5(&1:5@5/ @6\\&1:6@6)";
@@ -226,7 +226,7 @@ const char *const mwdesc = "1                       @7(&1:7@7)\n"
          `~~~~'                    `~~~~'
 */
 
-const char *const shipdesc =
+const char *const SHIPDESC =
     "7         FRONT                    INTERNAL\n"
     "1         @2.@2/&+2@2\\@2.                    @2.@2/&:2@2\\@2. \n"
     "2        @2|@2'@4.@4-@4-@4.@2`@2|                  "
@@ -252,7 +252,7 @@ const char *const shipdesc =
         `~~~~'                     `~~~~'
 */
 
-const char *const foildesc =
+const char *const FOILDESC =
     "7         FRONT                    INTERNAL\n"
     "7         @2.@2/@2\\@2.                       @2.@2/@2\\@2.\n"
     "1      @2_@2_@2_@2|&+2@2|@2_@2_@2_                 "
@@ -279,7 +279,7 @@ const char *const foildesc =
        =|99|=                     =|99|=
 */
 
-const char *const subdesc =
+const char *const SUBDESC =
     "7        FRONT                     INTERNAL\n"
     "1         @2-@2-                         @2-@2-      \n"
     "1       @2=@2|&+2@2|@2=                     @2=@2|&:2@2|@2=    \n"
@@ -303,7 +303,7 @@ const char *const subdesc =
              '===='
  */
 
-const char *const aerodesc =
+const char *const AERODESC =
     "7              @0/@0^@0^@0\\\n"
     "1            @1/@1|@0`&+0@0'@2|@2\\\n"
     "2     @1|     @1|@1_@1|.--.@2|@2_@2|     @2|\n"
@@ -325,7 +325,7 @@ const char *const aerodesc =
           ~~~~~~~
 */
 
-const char *const spher_ds_desc = "7          FRONT\n"
+const char *const SPHER_DS_DESC = "7          FRONT\n"
                                   "1          @1_@1_@1_@1_@1_@1_@1_\n"
                                   "2         @1/!15`!15.&3+5!05,!05'@0\\\n"
                                   "3        @1|&3+1@1|@1~@0|&3+0@0|\n"
@@ -346,7 +346,7 @@ const char *const spher_ds_desc = "7          FRONT\n"
    `|`_\~~/_`|'
 */
 
-const char *const aerod_ds_desc = "7           .--.\n"
+const char *const AEROD_DS_DESC = "7           .--.\n"
                                   "1         ,`.&+5.'.\n"
                                   "2         |.|__|.|\n"
                                   "3        | | ?? | |\n"
@@ -366,7 +366,7 @@ const char *const aerod_ds_desc = "7           .--.\n"
           ~~~~~~                                ~~~~~~
 */
 
-const char *const vehdesc =
+const char *const VEHDESC =
     "1          FRONT                                INTERNAL\n"
     "2         @0,@0`!02.&+2!12,@1'@1.                              "
     "@0,@0`!02.&:2!12,@1'@1.\n"
@@ -392,7 +392,7 @@ const char *const vehdesc =
           ~~~~~~                                ~~~~~~
 */
 
-const char *const veh_not_desc =
+const char *const VEH_NOT_DESC =
     "1          FRONT                                INTERNAL\n"
     "2         @0,@0`!02.&+2!12,@1'@1.                              "
     "@0,@0`!02.&:2!12,@1'@1.\n"
@@ -421,7 +421,7 @@ const char *const veh_not_desc =
       ~       ~                             ~       ~
 */
 
-const char *const vtoldesc =
+const char *const VTOLDESC =
     "7        FRONT                               INTERNAL\n"
     "7     @5.   @2.@2.   @5.                            @5.   @2.@2.   @5.   "
     "\n"
@@ -451,7 +451,7 @@ const char *const vtoldesc =
 
 */
 
-const char *const bsuitdesc =
+const char *const BSUITDESC =
     "7 SQUAD STATUS\n"
     "7   Member#      @01  @12  @23  @34  @45  @56  @67  @78\n"
     "7   Health      &:0 &:1 &:2 &:3 &:4 &:5 &:6 &:7\n"

@@ -20,11 +20,11 @@
 
 void character_experience_reduce(const CharacterExperienceReduction *change) {
   BtechContext *context = change->context;
-  const DbRef player = change->character;
+  const DbRef PLAYER = change->character;
   PSTATS stats, *s = &stats;
   int i;
 
-  character_stats_retrieve(context, player, VALUES_ALL, s);
+  character_stats_retrieve(context, PLAYER, VALUES_ALL, s);
   for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     int xp = character_stats_xp_get(s, i);
     if (!xp)
@@ -42,25 +42,25 @@ void character_experience_reduce(const CharacterExperienceReduction *change) {
         .stats = s,
         .code = i,
         .value = character_stats_xp_get(s, i) % XP_MAX +
-                 XP_MAX * figure_xp_bonus(context, player, s, i)});
+                 XP_MAX * figure_xp_bonus(context, PLAYER, s, i)});
   }
-  character_stats_store(context, player, s, VALUES_ALL);
+  character_stats_store(context, PLAYER, s, VALUES_ALL);
 }
 
-void AccumulateTechXP(BtechContext *context, DbRef pilot, Mech *mech,
-                      int reason) {
+void accumulate_tech_xp(BtechContext *context, DbRef pilot, Mech *mech,
+                        int reason) {
   int xp;
   const char *skname;
   static const char *techw = "technician-weapons";
 
   if (mech) {
-    skname = FindTechSkillName(mech);
+    skname = find_tech_skill_name(mech);
     if (!skname)
       return;
   } else
     skname = techw;
 
-  xp = MAX(1, reason);
+  xp = max(1, reason);
 
   // We emit all tech XP gains to the MechTechXP channel.
   if (char_gainxp(context, pilot, skname, xp))
@@ -70,14 +70,14 @@ void AccumulateTechXP(BtechContext *context, DbRef pilot, Mech *mech,
                                skname, mech ? mech_dbref(mech) : -1));
 }
 
-void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, Mech *mech,
-                             int reason) {
+void accumulate_tech_weapons_xp(BtechContext *context, DbRef pilot, Mech *mech,
+                                int reason) {
   const char *skname;
   int xp;
   static const char *techw = "technician-weapons";
 
   skname = techw;
-  xp = MAX(1, reason);
+  xp = max(1, reason);
 
   // We emit all tech xp gains to MechTechXP channel.
   if (char_gainxp(context, pilot, skname, xp))
@@ -87,7 +87,7 @@ void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, Mech *mech,
                                skname, mech ? mech_dbref(mech) : -1));
 }
 
-void AccumulateCommXP(DbRef pilot, Mech *mech) {
+void accumulate_comm_xp(DbRef pilot, Mech *mech) {
   BtechContext *context = mech_context(mech);
   int xp;
 
@@ -108,7 +108,7 @@ void AccumulateCommXP(DbRef pilot, Mech *mech) {
 
 void piloting_experience_award(const PilotingExperienceAward *award) {
   Mech *mech = award->mech;
-  const DbRef pilot = award->pilot;
+  const DbRef PILOT = award->pilot;
   BtechContext *context = mech_context(mech);
   const char *skname;
   int xp;
@@ -119,7 +119,7 @@ void piloting_experience_award(const PilotingExperienceAward *award) {
   if (!mech_has_active_pilot(mech))
     return;
 
-  skname = FindPilotingSkillName(mech);
+  skname = find_piloting_skill_name(mech);
   if (!skname)
     return;
 
@@ -127,16 +127,16 @@ void piloting_experience_award(const PilotingExperienceAward *award) {
     if (!mech_piloting_position_mark_changed(mech))
       return;
   }
-  xp = MAX(1, award->reason);
+  xp = max(1, award->reason);
 
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */
-  if (char_gainxp(context, pilot, skname, xp))
+  if (char_gainxp(context, PILOT, skname, xp))
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_PILOT_XP, "%s",
         tprintf("%s gained %d %s XP",
-                game_object_name(mech_context(mech)->database, pilot), xp,
+                game_object_name(mech_context(mech)->database, PILOT), xp,
                 skname));
   /*
       if (char_gainxp(context, pilot, skname, xp))
@@ -146,7 +146,7 @@ void piloting_experience_award(const PilotingExperienceAward *award) {
   */
 }
 
-void AccumulateSpotXP(DbRef pilot, Mech *attacker, Mech *wounded) {
+void accumulate_spot_xp(DbRef pilot, Mech *attacker, Mech *wounded) {
   BtechContext *context = mech_context(attacker);
   int xp = 1;
 
@@ -171,7 +171,7 @@ void AccumulateSpotXP(DbRef pilot, Mech *attacker, Mech *wounded) {
                 game_object_name(mech_context(attacker)->database, pilot)));
 }
 
-int MadePerceptionRoll(Mech *mech, int modifier) {
+int made_perception_roll(Mech *mech, int modifier) {
   BtechContext *context = mech_context(mech);
   DbRef pilot;
 
@@ -196,7 +196,7 @@ int MadePerceptionRoll(Mech *mech, int modifier) {
   return 1;
 }
 
-void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded) {
+void accumulate_arty_xp(DbRef pilot, Mech *attacker, Mech *wounded) {
   BtechContext *context = mech_context(attacker);
   int xp = 1;
 
@@ -236,14 +236,14 @@ void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded) {
                 game_object_name(mech_context(attacker)->database, pilot), xp));
 }
 
-void AccumulateComputerXP(DbRef pilot, Mech *mech, int reason) {
+void accumulate_computer_xp(DbRef pilot, Mech *mech, int reason) {
   if (!mech)
     return;
   BtechContext *context = mech_context(mech);
 
   if (mech && is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
       is_player(mech_context(mech)->database, pilot))
-    if (char_gainxp(context, pilot, "computer", MAX(1, reason)))
+    if (char_gainxp(context, pilot, "computer", max(1, reason)))
       btech_channel_send(
           context, BTECH_CHANNEL_MECH_XP, "%s",
           tprintf("%s gained %d computer XP (mech #%ld)",

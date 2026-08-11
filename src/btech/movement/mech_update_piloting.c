@@ -78,7 +78,7 @@ void mech_piloting_update(Mech *mech) {
         (condition.gyro_damaged || condition.hip_damaged))
       makeroll = 1;
 
-    if (makeroll && !MadePilotSkillRoll(mech, makeroll - 1)) {
+    if (makeroll && !made_pilot_skill_roll(mech, makeroll - 1)) {
       if (grav) {
         int dam =
             clamp_float_to_int(
@@ -196,17 +196,17 @@ void mech_turret_autoturn_update(Mech *mech) {
     fx = mech_position_real_x(target);
     fy = mech_position_real_y(target);
   } else {
-    MapCoordToRealCoord(mech_target_hex_x(mech), mech_target_hex_y(mech), &fx,
-                        &fy);
+    map_coord_to_real_coord(mech_target_hex_x(mech), mech_target_hex_y(mech),
+                            &fx, &fy);
   }
 
-  bearing = AcceptableDegree(
+  bearing = acceptable_degree(
       map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                               .y = mech_position_real_y(mech)},
                                     .end = {.x = fx, .y = fy}}) -
       mech_heading_degrees(mech));
   mech_turret_heading_relative_set(mech, bearing);
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 /* This function is called once every second for every mech in the game */

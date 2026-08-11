@@ -18,8 +18,8 @@
 #include "mux/server/signals.h"
 
 static void signal_shutdown(uv_signal_t *handle, int signo);
-static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext);
-static void signal_BUS(int signo, siginfo_t *siginfo, void *ucontext);
+static void signal_segv(int signo, siginfo_t *siginfo, void *ucontext);
+static void signal_bus(int signo, siginfo_t *siginfo, void *ucontext);
 
 /* POSIX sigaction has no user-data parameter, so crash handlers bridge to the
  * single process-owned signal service through this module-scoped selector. */
@@ -59,31 +59,31 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
   handlers->command = control->command;
   active_signal_handlers = handlers;
   handlers->segv_action = (struct sigaction){
-      .sa_sigaction = signal_SEGV,
+      .sa_sigaction = signal_segv,
       .sa_flags = (int)(SA_SIGINFO | SA_RESETHAND | SA_RESTART)};
   handlers->bus_action = (struct sigaction){
-      .sa_sigaction = signal_BUS,
+      .sa_sigaction = signal_bus,
       .sa_flags = (int)(SA_SIGINFO | SA_RESETHAND | SA_RESTART)};
-  dprintk("creating alternate signal stack.");
+  DPRINTK("creating alternate signal stack.");
   error_code = posix_memalign(&handlers->alternate_stack.ss_sp, ALT_STACK_ALIGN,
                               ALT_STACK_SIZE);
   if (error_code == 0) {
     handlers->alternate_stack.ss_size = ALT_STACK_SIZE;
     handlers->alternate_stack.ss_flags = 0;
     memset(handlers->alternate_stack.ss_sp, 0, ALT_STACK_SIZE);
-    dperror(sigaltstack(&handlers->alternate_stack, &handlers->regular_stack) <
+    DPERROR(sigaltstack(&handlers->alternate_stack, &handlers->regular_stack) <
             0);
-    dprintk("Current stack at 0x%lx with length 0x%lx and flags 0x%x",
+    DPRINTK("Current stack at 0x%lx with length 0x%lx and flags 0x%x",
             (unsigned long)handlers->regular_stack.ss_sp,
             handlers->regular_stack.ss_size, handlers->regular_stack.ss_flags);
-    dprintk("Signal stack at 0x%lx with length 0x%lx and flags 0x%x",
+    DPRINTK("Signal stack at 0x%lx with length 0x%lx and flags 0x%x",
             (unsigned long)handlers->alternate_stack.ss_sp,
             handlers->alternate_stack.ss_size,
             handlers->alternate_stack.ss_flags);
     handlers->segv_action.sa_flags |= SA_ONSTACK;
     handlers->bus_action.sa_flags |= SA_ONSTACK;
   } else {
-    dprintk("posix_memalign failed with %s", strerror(error_code));
+    DPRINTK("posix_memalign failed with %s", strerror(error_code));
     log_error(
         (LogEntry){.log = handlers->log,
                    .key = LOG_PROBLEMS,
@@ -99,7 +99,7 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
               "coredumps!");
     handlers->alternate_stack.ss_sp = nullptr;
   }
-  dprintk("binding signals.");
+  DPRINTK("binding signals.");
   uv_signal_init(loop, &handlers->signal_int);
   uv_signal_init(loop, &handlers->signal_term);
   uv_signal_init(loop, &handlers->signal_usr2);
@@ -112,22 +112,22 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
   handlers->initialized = true;
   sigaction(SIGSEGV, &handlers->segv_action, nullptr);
   sigaction(SIGBUS, &handlers->bus_action, nullptr);
-  dperror(signal(SIGCHLD, SIG_IGN) == SIG_ERR);
-  dperror(signal(SIGPIPE, SIG_IGN) == SIG_ERR);
-  dprintk("done.");
+  DPERROR(signal(SIGCHLD, SIG_IGN) == SIG_ERR);
+  DPERROR(signal(SIGPIPE, SIG_IGN) == SIG_ERR);
+  DPRINTK("done.");
   return handlers;
 }
 
 void signal_handlers_unbind(SignalHandlers *handlers) {
   if (handlers == nullptr)
     return;
-  dperror(signal(SIGINT, SIG_DFL) == SIG_ERR);
-  dperror(signal(SIGTERM, SIG_DFL) == SIG_ERR);
-  dperror(signal(SIGPIPE, SIG_DFL) == SIG_ERR);
-  dperror(signal(SIGUSR2, SIG_DFL) == SIG_ERR);
-  dperror(signal(SIGSEGV, SIG_DFL) == SIG_ERR);
-  dperror(signal(SIGBUS, SIG_DFL) == SIG_ERR);
-  dperror(signal(SIGCHLD, SIG_DFL) == SIG_ERR);
+  DPERROR(signal(SIGINT, SIG_DFL) == SIG_ERR);
+  DPERROR(signal(SIGTERM, SIG_DFL) == SIG_ERR);
+  DPERROR(signal(SIGPIPE, SIG_DFL) == SIG_ERR);
+  DPERROR(signal(SIGUSR2, SIG_DFL) == SIG_ERR);
+  DPERROR(signal(SIGSEGV, SIG_DFL) == SIG_ERR);
+  DPERROR(signal(SIGBUS, SIG_DFL) == SIG_ERR);
+  DPERROR(signal(SIGCHLD, SIG_DFL) == SIG_ERR);
   if (active_signal_handlers == handlers)
     active_signal_handlers = nullptr;
   if (handlers->alternate_stack.ss_sp != nullptr) {
@@ -169,14 +169,14 @@ void signal_handlers_destroy(SignalHandlers *handlers) {
 static void signal_shutdown(uv_signal_t *handle, int signo) {
   SignalHandlers *handlers = uv_handle_get_data((uv_handle_t *)handle);
   if (signo == SIGINT) {
-    dprintk("caught SIGINT");
+    DPRINTK("caught SIGINT");
     server_shutdown(
         &(ServerShutdownRequest){.control = handlers->control,
                                  .player = NOTHING,
                                  .options = SHUTDN_EXIT,
                                  .message = "received SIGINT from kernel."});
   } else if (signo == SIGTERM) {
-    dprintk("caught SIGTERM");
+    DPRINTK("caught SIGTERM");
     server_shutdown(
         &(ServerShutdownRequest){.control = handlers->control,
                                  .player = NOTHING,
@@ -190,10 +190,10 @@ static void signal_shutdown(uv_signal_t *handle, int signo) {
                                  .message = "received SIGUSR2 from kernel."});
 }
 
-static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext) {
+static void signal_segv(int signo, siginfo_t *siginfo, void *ucontext) {
   SignalHandlers *handlers = active_signal_handlers;
 
-  dprintk("caught SIGSEGV");
+  DPRINTK("caught SIGSEGV");
   if (handlers == nullptr)
     return;
   server_lifecycle_release_sockets(handlers->lifecycle);
@@ -220,10 +220,10 @@ static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext) {
   report(handlers->command);
 }
 
-static void signal_BUS(int signo, siginfo_t *siginfo, void *ucontext) {
+static void signal_bus(int signo, siginfo_t *siginfo, void *ucontext) {
   SignalHandlers *handlers = active_signal_handlers;
 
-  dprintk("caught SIGBUS");
+  DPRINTK("caught SIGBUS");
   if (handlers == nullptr)
     return;
   server_lifecycle_release_sockets(handlers->lifecycle);

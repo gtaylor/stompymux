@@ -89,7 +89,7 @@ int mech_real_tonnage(const Mech *mech) { return mech->tonnage; }
 bool mech_is_flying_type(const Mech *mech) {
   return mech->movement == MOVE_FLY || mech->movement == MOVE_VTOL;
 }
-int MNumber(Mech *mech, int low, int high) {
+int m_number(Mech *mech, int low, int high) {
   (void)mech;
   (void)high;
   return low;

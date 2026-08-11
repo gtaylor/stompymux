@@ -51,7 +51,7 @@ void mech_ood_damage(Mech *wounded, Mech *attacker, int damage) {
               "[fg=yellow bold]Your cocoon has been hit for %d points of "
               "damage![reset]",
               damage);
-  cocoon_integrity = MAX(0, mech_cocoon_integrity(wounded) - damage);
+  cocoon_integrity = max(0, mech_cocoon_integrity(wounded) - damage);
   mech_cocoon_integrity_set(wounded, cocoon_integrity);
   if (cocoon_integrity)
     return;
@@ -91,7 +91,7 @@ void mech_ood_event(MuxEvent *e) {
     return;
   context = mech_context(mech);
   unit_class = mech_class(mech);
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   if (mech_drop_height_above_surface(mech) > OOD_SPEED) {
     mech_position_z_set(mech, mech_position_z(mech) - OOD_SPEED);
     mech_event_schedule(mech, EVENT_OOD, mech_ood_event, OOD_TICK, 0);
@@ -122,8 +122,8 @@ void mech_ood_event(MuxEvent *e) {
   roll = btech_random_roll(context);
   roll_needed =
       unit_class == CLASS_BSUIT || unit_class == CLASS_MW
-          ? FindPilotPiloting(mech) - 1
-          : FindSPilotPiloting(mech) + mech_pilot_skill_modifier(mech);
+          ? find_pilot_piloting(mech) - 1
+          : find_s_pilot_piloting(mech) + mech_pilot_skill_modifier(mech);
 
   if (!mech_is_started(mech))
     roll_needed += 10;
@@ -167,7 +167,7 @@ void mech_ood_event(MuxEvent *e) {
       piloting_experience_award(&(PilotingExperienceAward){
           .pilot = mech_pilot_dbref(mech),
           .mech = mech,
-          .reason = BOUNDED(1, (abs(mof) + 1) * 2, 20),
+          .reason = bounded(1, (abs(mof) + 1) * 2, 20),
           .unconditional = true,
       });
   }
@@ -322,7 +322,7 @@ void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
                  "OOD already in progress!");
     return;
   }
-  mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
+  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
   if (mech_position_x(mech) != x || mech_position_y(mech) != y) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid co-ordinates!");
@@ -339,7 +339,7 @@ void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
     return;
   }
   mech_position_z_set(mech, z);
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   mecha_notify(btech_context_evaluation(context), player, "OOD initiated.");
   if (mech_condition_summary(mech).evading)
     mech_evading_set(mech, false);

@@ -88,7 +88,7 @@ void auto_leave_event(MuxEvent *muxevent) {
 
   /* Ok not standing so lets do that first */
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-      !(CountDestroyedLegs(mech) > 0)) {
+      !(count_destroyed_legs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
       mech_stand_empty(autopilot->mynum, mech);
@@ -251,7 +251,7 @@ void auto_enter_event(MuxEvent *muxevent) {
 
   /* Ok not standing so lets do that first */
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-      !(CountDestroyedLegs(mech) > 0)) {
+      !(count_destroyed_legs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
       mech_stand_empty(autopilot->mynum, mech);

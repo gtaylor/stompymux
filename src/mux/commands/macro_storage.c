@@ -77,7 +77,7 @@ MacroSet *get_macro_set(const MacroSetRequest *request) {
   MacroRegistry *registry = request->registry;
   DbRef player = request->player;
   int which = request->slot;
-  struct commac *commac = get_commac(registry->channels, player);
+  struct Commac *commac = get_commac(registry->channels, player);
   if (commac == nullptr)
     return nullptr;
 
@@ -92,7 +92,7 @@ MacroSet *get_macro_set(const MacroSetRequest *request) {
 
 void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                      char *description) {
-  struct commac *commac = get_commac(registry->channels, player);
+  struct Commac *commac = get_commac(registry->channels, player);
   int first = -1;
   for (int index = 0; index < MAX_SLOTS && first < 0; index++) {
     if (commac_macro_at(commac, (size_t)index) == -1)
@@ -117,9 +117,9 @@ void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     registry->sets = sets;
   }
 
-  const int set = registry->count++;
+  const int SET = registry->count++;
   MacroSet *created = malloc(sizeof(*created));
-  *macro_registry_slot(registry, (size_t)set) = created;
+  *macro_registry_slot(registry, (size_t)SET) = created;
   created->player = macro_player_storage_value(player);
   created->status = 0;
   created->macro_count = 0;
@@ -127,12 +127,12 @@ void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   created->alias = nullptr;
   created->string = nullptr;
   created->desc = malloc(strlen(description) + 1);
-  StringCopy(created->desc, description);
+  string_copy(created->desc, description);
   commac->curmac = first;
-  commac_macro_set(commac, (size_t)first, set);
+  commac_macro_set(commac, (size_t)first, SET);
 
   notify_printf(match->evaluation, player,
-                "MACRO: Macro set %d created with description %s.", set,
+                "MACRO: Macro set %d created with description %s.", SET,
                 description);
 }
 

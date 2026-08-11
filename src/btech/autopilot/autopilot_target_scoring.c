@@ -167,10 +167,10 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
     status_score += 2000.0F;
 
   /* Add the individual scores and return the value */
-  const float combined_score =
+  const float COMBINED_SCORE =
       range_score + speed_score + bv_score + damage_score + status_score;
-  const float rounded_score = floorf(combined_score);
-  target_score = (int)rounded_score;
+  const float ROUNDED_SCORE = floorf(COMBINED_SCORE);
+  target_score = (int)ROUNDED_SCORE;
 
   return target_score;
 }

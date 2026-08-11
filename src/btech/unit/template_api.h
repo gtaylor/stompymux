@@ -69,11 +69,11 @@ char *part_name_format(const PartNameRequest *request);
 void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
                     size_t location_count);
 float generic_computer_multiplier(Mech *mech);
-int generic_radio_type(int i, int isClan);
+int generic_radio_type(int i, int is_clan);
 float generic_radio_multiplier(Mech *mech);
 void computer_conversion(Mech *mech);
 void try_to_find_name(const char *mechref, Mech *mech);
-int DefaultFuelByType(Mech *mech);
+int default_fuel_by_type(Mech *mech);
 typedef struct TemplateSaveRequest {
   DbRef player;
   Mech *mech;
@@ -89,20 +89,22 @@ typedef struct TemplateDescriptionRead {
 
 char *template_description_read(const TemplateDescriptionRead *request);
 int find_section(char *cmd, int type, int mtype);
-long BuildBitVector(const char *const list[], size_t count, char *line);
-long BuildBitVectorWithDelim(const char *const list[], size_t count,
+long build_bit_vector(const char *const list[], size_t count, char *line);
+long build_bit_vector_with_delim(const char *const list[], size_t count,
+                                 char *line);
+long build_bit_vector_no_err(const char *const list[], size_t count,
                              char *line);
-long BuildBitVectorNoErr(const char *const list[], size_t count, char *line);
-int CheckSpecialsList(const char *const specials[], size_t count,
-                      const char *const specials2[], size_t count2, char *line);
-int WeaponIFromString(char *data);
-int AmmoIFromString(char *data);
+int check_specials_list(const char *const specials[], size_t count,
+                        const char *const specials2[], size_t count2,
+                        char *line);
+int weapon_i_from_string(char *data);
+int ammo_i_from_string(char *data);
 void update_specials(Mech *mech);
 int update_oweight(Mech *mech, int value);
 int mech_calculated_weight(Mech *mech);
 int load_template(DbRef player, Mech *mech, char *filename);
-void DumpMechSpecialObjects(BtechContext *context, DbRef player);
-void DumpWeapons(BtechContext *context, DbRef player);
+void dump_mech_special_objects(BtechContext *context, DbRef player);
+void dump_weapons(BtechContext *context, DbRef player);
 char *techlist_func(Mech *mech, char *buffer);
 char *payloadlist_func(Mech *mech, char *buffer);
 char *partlist_func(Mech *mech, char *buffer);

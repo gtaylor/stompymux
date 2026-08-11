@@ -6,11 +6,11 @@
 
 // IWYU pragma: no_include "uv.h"
 
-typedef struct uv_loop_s uv_loop_t;
+typedef struct uv_loop_s UvLoopT;
 typedef struct MuxTimer MuxTimer;
 typedef void (*MuxTimerCallback)(MuxTimer *timer, void *data);
 
-MuxTimer *mux_timer_create(uv_loop_t *loop, MuxTimerCallback callback,
+MuxTimer *mux_timer_create(UvLoopT *loop, MuxTimerCallback callback,
                            void *data);
 bool mux_timer_start(MuxTimer *timer, uint64_t timeout_ms, uint64_t repeat_ms);
 void mux_timer_stop(MuxTimer *timer);

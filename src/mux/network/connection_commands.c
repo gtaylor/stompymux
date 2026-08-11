@@ -137,7 +137,7 @@ static char *trimmed_name(GameDatabase *database, DbRef player) {
 
   if (strlen(name) <= 16)
     return name;
-  StringCopyTrunc(cbuff, name, 16);
+  string_copy_trunc(cbuff, name, 16);
   cbuff[16] = '\0';
   return cbuff;
 }

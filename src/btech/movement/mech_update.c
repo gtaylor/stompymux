@@ -61,7 +61,7 @@ void mech_movement_update(Mech *mech) {
 #endif
 
   DbRef previous_map = mech_map_dbref(mech);
-  CheckEdgeOfMap(mech);
+  check_edge_of_map(mech);
   if (mech_map_dbref(mech) != previous_map)
     mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
@@ -105,8 +105,8 @@ void mech_movement_update(Mech *mech) {
     }
     mech_event_cancel(mech, EVENT_HIDE);
 
-    const int x = mech_position_x(mech);
-    const int y = mech_position_y(mech);
+    const int X = mech_position_x(mech);
+    const int Y = mech_position_y(mech);
     int iced = 0;
     if (step.update_surface) {
       if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE) {
@@ -132,10 +132,10 @@ void mech_movement_update(Mech *mech) {
           .previous_z = last_z,
       });
 
-    if (mech_position_x(mech) == x && mech_position_y(mech) == y) {
+    if (mech_position_x(mech) == X && mech_position_y(mech) == Y) {
       mech_flood(mech);
       mech_inferno_extinguish_in_water(mech);
-      steppable_base_check(mech, x, y);
+      steppable_base_check(mech, X, Y);
 
       if (is_in_character(btech_context_database(mech_context(mech)),
                           mech_dbref(mech))) {

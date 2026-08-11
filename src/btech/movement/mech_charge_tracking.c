@@ -49,6 +49,6 @@ void mech_charge_impact_resolve(Mech *mech) {
   if (mech_range_to(mech, target) >= (float)CHARGE_DIST_TRIGGER)
     return;
 
-  ChargeMech(mech, target);
+  charge_mech(mech, target);
   mech_charge_reset(mech);
 }

@@ -42,16 +42,16 @@ static int *section_critical_slot(int *criticals, int index) {
                             (size_t)index);
 }
 
-void DumpMechSpecialObjects(BtechContext *context, DbRef player) {
+void dump_mech_special_objects(BtechContext *context, DbRef player) {
   CoolMenu *c;
 
   c = cool_menu_selection_create(&(CoolMenuSelectionRequest){
       .columns = -1,
       .heading = "MechSpecials available",
       .strings = internals,
-      .string_count = (size_t)template_internal_count});
-  ShowCoolMenu(btech_context_evaluation(context), player, c);
-  KillCoolMenu(c);
+      .string_count = (size_t)TEMPLATE_INTERNAL_COUNT});
+  show_cool_menu(btech_context_evaluation(context), player, c);
+  kill_cool_menu(c);
 }
 
 static char *dumpweapon_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
@@ -74,14 +74,14 @@ static char *dumpweapon_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
   return buffer;
 }
 
-void DumpWeapons(BtechContext *context, DbRef player) {
+void dump_weapons(BtechContext *context, DbRef player) {
   CoolMenu *c;
 
-  c = SelCol_FunStringMenuContextK(1, "MechWeapons available", dumpweapon_fun,
-                                   &context->weapon_settings,
-                                   num_def_weapons + 1);
-  ShowCoolMenu(btech_context_evaluation(context), player, c);
-  KillCoolMenu(c);
+  c = sel_col_fun_string_menu_context_k(
+      1, "MechWeapons available", dumpweapon_fun, &context->weapon_settings,
+      DEFAULT_WEAPON_COUNT + 1);
+  show_cool_menu(btech_context_evaluation(context), player, c);
+  kill_cool_menu(c);
 }
 
 char *techlist_func(Mech *mech, char *buffer) {
@@ -224,8 +224,8 @@ char *payloadlist_func(Mech *mech, char *buffer) {
   for (section_loop = 0; section_loop < NUM_SECTIONS; section_loop++) {
 
     /* Get all the weapons for that section */
-    count = FindWeapons_Advanced(mech, section_loop, weaparray, weapdata,
-                                 critical, 1);
+    count = find_weapons_advanced(mech, section_loop, weaparray, weapdata,
+                                  critical, 1);
     /* Check if any weapons in that section */
     if (count <= 0)
       continue;

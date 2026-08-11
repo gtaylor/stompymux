@@ -34,7 +34,7 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
   int step;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
+  result = SQLITE3_PREPARE_V2(
                sqlite, "SELECT * FROM btech_mech_runtime ORDER BY mech_dbref;",
                -1, &statement, NULL) == SQLITE_OK
                ? 0
@@ -201,9 +201,9 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
         btech_special_column_char(statement, 83,
                                   &snapshot.runtime.scharge_value) < 0 ||
         btech_special_column_int(statement, 84,
-                                 &snapshot.runtime.staggerDamage) < 0 ||
+                                 &snapshot.runtime.stagger_damage) < 0 ||
         btech_special_column_int(statement, 85,
-                                 &snapshot.runtime.lastStaggerNotify) < 0 ||
+                                 &snapshot.runtime.last_stagger_notify) < 0 ||
         btech_special_column_int(statement, 86, &snapshot.runtime.critstatus2) <
             0 ||
         btech_special_column_real(statement, 87, &snapshot.runtime.xpmod) < 0 ||
@@ -220,7 +220,7 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
         btech_special_column_int(statement, 93,
                                  &snapshot.runtime.units_killed) < 0 ||
         btech_special_column_time(statement, 94,
-                                  &snapshot.runtime.lastStaggerCheck) < 0)
+                                  &snapshot.runtime.last_stagger_check) < 0)
       result = -1;
     else
       mech_persistence_runtime_restore(mech, &snapshot);
@@ -251,7 +251,7 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
   current_mech = NOTHING;
   mech = NULL;
   memset(seen, 0, sizeof(seen));
-  result = sqlite3_prepare_v2(
+  result = SQLITE3_PREPARE_V2(
                sqlite,
                "SELECT mech_dbref, slot, value FROM btech_mech_unit_aux "
                "ORDER BY mech_dbref, slot;",
@@ -358,7 +358,7 @@ int btech_special_load_mech_runtime_unused(sqlite3 *sqlite,
   current_mech = NOTHING;
   expected_slot = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(
+  result = SQLITE3_PREPARE_V2(
                sqlite,
                "SELECT mech_dbref, slot, value FROM btech_mech_runtime_unused "
                "ORDER BY mech_dbref, slot;",
@@ -423,7 +423,7 @@ int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
   current_mech = NOTHING;
   expected_position = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(
+  result = SQLITE3_PREPARE_V2(
                sqlite,
                "SELECT mech_dbref, position, amount, occurred_at, "
                "attacker_dbref, counted "

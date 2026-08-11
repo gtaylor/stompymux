@@ -128,7 +128,7 @@ enum {
   TYPE_DBREF_RO,
   TYPE_LAST_TYPE
 };
-extern const int scode_in_out[TYPE_LAST_TYPE];
+extern const int SCODE_IN_OUT[TYPE_LAST_TYPE];
 extern GMV xcode_data[];
 size_t xcode_descriptor_count(void);
 const GMV *xcode_descriptor_at(size_t index);

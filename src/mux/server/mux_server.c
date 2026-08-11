@@ -68,7 +68,7 @@ bool mux_server_create(MuxServer *server) {
   world_indexes_initialize(&server->world_indexes);
   access_control_store_initialize(&server->access_control);
   server_log_initialize(&server->log, &server->database, server->configuration);
-  const BtechDependencies btech_dependencies = {
+  const BtechDependencies BTECH_DEPENDENCIES = {
       .configuration = server->configuration,
       .clock = &server->clock,
       .background_command = &server->background_command,
@@ -80,7 +80,7 @@ bool mux_server_create(MuxServer *server) {
       .access_control = &server->access_control,
       .process_start_time = server->process_start_time,
   };
-  server->btech = btech_context_create(&btech_dependencies);
+  server->btech = btech_context_create(&BTECH_DEPENDENCIES);
   if (server->btech == nullptr)
     goto fail;
 
@@ -95,7 +95,7 @@ bool mux_server_create(MuxServer *server) {
   server->login_throttle = login_throttle_create();
   server->players =
       player_cache_create(server->configuration, &server->database);
-  const CommandQueueDependencies queue_dependencies = {
+  const CommandQueueDependencies QUEUE_DEPENDENCIES = {
       .command_runtime = &server->command_runtime,
       .btech = server->btech,
       .log = &server->log,
@@ -104,7 +104,7 @@ bool mux_server_create(MuxServer *server) {
       .players = server->players,
       .background_command = &server->background_command,
   };
-  server->commands = command_queue_create(&queue_dependencies);
+  server->commands = command_queue_create(&QUEUE_DEPENDENCIES);
   if (server->descriptors == nullptr || server->commands == nullptr ||
       server->login_throttle == nullptr || server->players == nullptr)
     goto fail;

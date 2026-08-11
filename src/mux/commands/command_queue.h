@@ -16,7 +16,7 @@
 
 /* BQUE - Command queue */
 
-typedef struct bque BQUE;
+typedef struct Bque BQUE;
 typedef struct BtechContext BtechContext;
 typedef struct CommandQueue CommandQueue;
 typedef struct CommandRuntime CommandRuntime;
@@ -39,7 +39,7 @@ struct CommandQueueDependencies {
   PlayerCache *players;
   CommandContext *background_command;
 };
-struct bque {
+struct Bque {
   BQUE *next;
 
   DbRef player; /* player who will do command */
@@ -53,15 +53,15 @@ struct bque {
 };
 
 /* Per object run queues */
-typedef struct objqe OBJQE;
+typedef struct Objqe OBJQE;
 
-struct objqe {
+struct Objqe {
   DbRef obj;
   BQUE *cque;
   BQUE *ctail;
   BQUE *wait_que;    // commands waiting on this object
   BQUE *pending_que; // obj's commands that are waiting
-  struct objqe *next;
+  struct Objqe *next;
   int queued;
 };
 

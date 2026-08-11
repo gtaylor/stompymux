@@ -24,7 +24,7 @@
  * timer is reset on each write. */
 constexpr int LOGFILE_TIMEOUT = 300; // Five Minutes
 
-struct logfile_t {
+struct LogfileT {
   LogCache *cache;
   char *filename;
   int fd;
@@ -32,7 +32,7 @@ struct logfile_t {
 };
 
 struct LogCache {
-  uv_loop_t *loop;
+  UvLoopT *loop;
   ServerLog *log;
   RedBlackTree files;
 };
@@ -43,9 +43,9 @@ static int logcache_compare(const RedBlackTreeCompareCall *call) {
   return strcmp((char *)vleft, (char *)vright);
 }
 
-static int log_cache_close(LogCache *cache, struct logfile_t *log,
+static int log_cache_close(LogCache *cache, struct LogfileT *log,
                            bool remove_from_cache) {
-  dprintk("closing logfile '%s'.", log->filename);
+  DPRINTK("closing logfile '%s'.", log->filename);
   mux_timer_destroy(log->timer);
   close(log->fd);
   if (remove_from_cache)
@@ -59,9 +59,9 @@ static int log_cache_close(LogCache *cache, struct logfile_t *log,
 }
 
 static void logcache_expire(MuxTimer *timer, void *arg) {
-  struct logfile_t *log = arg;
+  struct LogfileT *log = arg;
 
-  dprintk("Expiring '%s'.", log->filename);
+  DPRINTK("Expiring '%s'.", log->filename);
   log_cache_close(log->cache, log, true);
 }
 
@@ -73,7 +73,7 @@ typedef struct LogCacheListContext {
 static int logcache_list(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   void *arg = call->context;
-  struct logfile_t *log = (struct logfile_t *)data;
+  struct LogfileT *log = (struct LogfileT *)data;
   LogCacheListContext *context = arg;
   notify_printf(context->evaluation, context->player, "%-40s%llu",
                 log->filename,
@@ -101,7 +101,7 @@ void log_cache_list(EvaluationContext *evaluation, const LogCache *cache,
 
 static int log_cache_open(LogCache *cache, char *filename) {
   int fd;
-  struct logfile_t *newlog;
+  struct LogfileT *newlog;
 
   if (red_black_tree_exists(cache->files, filename)) {
     (void)fprintf(stderr,
@@ -126,7 +126,7 @@ static int log_cache_open(LogCache *cache, char *filename) {
                           .failing_object = "fcntl(fd, F_SETFD, FD_CLOEXEC)"});
   }
 
-  newlog = malloc(sizeof(struct logfile_t));
+  newlog = malloc(sizeof(struct LogfileT));
   newlog->cache = cache;
   newlog->fd = fd;
   newlog->filename = strdup(filename);
@@ -139,11 +139,11 @@ static int log_cache_open(LogCache *cache, char *filename) {
   }
   mux_timer_start(newlog->timer, (uint64_t)LOGFILE_TIMEOUT * 1000U, 0);
   red_black_tree_insert(cache->files, newlog->filename, newlog);
-  dprintk("opened logfile '%s' fd = %d.", filename, fd);
+  DPRINTK("opened logfile '%s' fd = %d.", filename, fd);
   return 1;
 }
 
-LogCache *log_cache_create(uv_loop_t *loop, ServerLog *log) {
+LogCache *log_cache_create(UvLoopT *loop, ServerLog *log) {
   LogCache *cache = calloc(1, sizeof(*cache));
 
   if (cache == nullptr)
@@ -162,7 +162,7 @@ static void log_cache_release_file(const RedBlackTreeReleaseCall *call) {
   void *data = call->data;
   void *arg = call->context;
   LogCache *cache = arg;
-  struct logfile_t *log = (struct logfile_t *)data;
+  struct LogfileT *log = (struct LogfileT *)data;
 
   log_cache_close(cache, log, false);
 }
@@ -175,7 +175,7 @@ void log_cache_destroy(LogCache *cache) {
 }
 
 int log_cache_write(LogCache *cache, char *fname, const char *fdata) {
-  struct logfile_t *log;
+  struct LogfileT *log;
   int len;
 
   len = (int)strlen(fdata);

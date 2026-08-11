@@ -46,7 +46,7 @@ int mech_attacker_movement_modifier(Mech *mech) {
 
   /* quads don't suffer the +2 BTH firing while prone if they have all 4 legs */
   if ((!mech_is_quad(mech) ||
-       (mech_is_quad(mech) && CountDestroyedLegs(mech) > 0)) &&
+       (mech_is_quad(mech) && count_destroyed_legs(mech) > 0)) &&
       mech_condition_summary(mech).fallen && !mech_is_dropship(mech))
     return 2;
 
@@ -69,11 +69,11 @@ int mech_attacker_movement_modifier(Mech *mech) {
 
 int mech_target_movement_modifier(Mech *mech, Mech *target, float range) {
   float target_speed = 0.0;
-  int returnValue = 0;
+  int return_value = 0;
   float m = 1.0;
   BtechContext *context = mech_context(mech);
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(target));
-  Mech *swarmTarget;
+  Mech *swarm_target;
 
   if (mech_is_aerospace_unit(target)) {
     if (mech_is_aerospace_unit(mech))
@@ -84,13 +84,13 @@ int mech_target_movement_modifier(Mech *mech, Mech *target, float range) {
     if (mech_is_jumping(target)) {
       target_speed = mech_jump_speed_for_map(target, map);
     } else if (mech_condition_summary(target).swarm_target > 0) {
-      swarmTarget = btech_context_get_mech(
+      swarm_target = btech_context_get_mech(
           context, mech_condition_summary(target).swarm_target);
-      if (swarmTarget) {
-        if (mech_is_jumping(swarmTarget))
-          target_speed = mech_jump_speed_for_map(swarmTarget, map);
+      if (swarm_target) {
+        if (mech_is_jumping(swarm_target))
+          target_speed = mech_jump_speed_for_map(swarm_target, map);
         else
-          target_speed = fabsf(mech_current_speed(swarmTarget));
+          target_speed = fabsf(mech_current_speed(swarm_target));
       }
     } else {
       target_speed = fabsf(mech_current_speed(target));
@@ -100,47 +100,47 @@ int mech_target_movement_modifier(Mech *mech, Mech *target, float range) {
   if (mech_infantry_technology_flags(target) & CS_PURIFIER_STEALTH_TECH) {
     if (target_speed <= 0.0F) {
       /* Mech moved 0-2 hexes */
-      returnValue = 3;
+      return_value = 3;
     } else if (target_speed <= MP1) {
       /* Mech moved 3-4 hexes */
-      returnValue = 2;
+      return_value = 2;
     } else if (target_speed <= MP2) {
       /* Mech moved 5-6 hexes */
-      returnValue = 1;
+      return_value = 1;
     } else {
-      returnValue = 0;
+      return_value = 0;
     }
   } else {
     if (target_speed <= MP2) {
       /* Mech moved 0-2 hexes */
-      returnValue = 0;
+      return_value = 0;
     } else if (target_speed <= MP4) {
       /* Mech moved 3-4 hexes */
-      returnValue = 1;
+      return_value = 1;
     } else if (target_speed <= MP6) {
       /* Mech moved 5-6 hexes */
-      returnValue = 2;
+      return_value = 2;
     } else if (target_speed <= MP9) {
       /* Mech moved 7-9 hexes */
-      returnValue = 3;
+      return_value = 3;
     } else {
       /* Moving more than 9 hexes */
       if (btech_context_uses_extended_movement_modifiers(context))
-        returnValue = 4 + (int)((target_speed - 10.0F * MP1) / MP4);
+        return_value = 4 + (int)((target_speed - 10.0F * MP1) / MP4);
       else
-        returnValue = 4;
+        return_value = 4;
     }
   }
 
   if (mech_is_immobile(target))
-    returnValue += -4;
+    return_value += -4;
 
   if (mech_condition_summary(target).fallen &&
       ((mech_class(target) == CLASS_MECH) || (mech_class(target) == CLASS_MW)))
-    returnValue += (range <= 1.0F) ? -2 : 1;
+    return_value += (range <= 1.0F) ? -2 : 1;
 
   if (mech_is_jumping(target))
-    returnValue++;
+    return_value++;
 
-  return (returnValue);
+  return (return_value);
 }

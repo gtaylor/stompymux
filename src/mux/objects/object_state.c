@@ -80,21 +80,21 @@ static void object_state_error(char *error, size_t error_size,
 bool object_state_name_is_valid(const char *name) {
   if (name == nullptr)
     return false;
-  const size_t length = strlen(name);
-  if (length == 0)
+  const size_t LENGTH = strlen(name);
+  if (LENGTH == 0)
     return false;
-  for (size_t index = 0; index < length; index++) {
-    const unsigned char character =
-        *(const unsigned char *)checked_storage_at_const(name, length + 1,
+  for (size_t index = 0; index < LENGTH; index++) {
+    const unsigned char CHARACTER =
+        *(const unsigned char *)checked_storage_at_const(name, LENGTH + 1,
                                                          sizeof(char), index);
-    if (index == 0 && !((character >= 'A' && character <= 'Z') ||
-                        (character >= 'a' && character <= 'z')))
+    if (index == 0 && !((CHARACTER >= 'A' && CHARACTER <= 'Z') ||
+                        (CHARACTER >= 'a' && CHARACTER <= 'z')))
       return false;
-    if (!((character >= 'A' && character <= 'Z') ||
-          (character >= 'a' && character <= 'z') ||
-          (character >= '0' && character <= '9')) &&
-        character != '_' && character != '-' && character != '.' &&
-        character != '/')
+    if (!((CHARACTER >= 'A' && CHARACTER <= 'Z') ||
+          (CHARACTER >= 'a' && CHARACTER <= 'z') ||
+          (CHARACTER >= '0' && CHARACTER <= '9')) &&
+        CHARACTER != '_' && CHARACTER != '-' && CHARACTER != '.' &&
+        CHARACTER != '/')
       return false;
   }
   return true;

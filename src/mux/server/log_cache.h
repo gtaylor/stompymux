@@ -8,12 +8,12 @@
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
 
-typedef struct uv_loop_s uv_loop_t;
+typedef struct uv_loop_s UvLoopT;
 typedef struct LogCache LogCache;
 typedef struct EvaluationContext EvaluationContext;
 typedef struct ServerLog ServerLog;
 
-LogCache *log_cache_create(uv_loop_t *loop, ServerLog *log);
+LogCache *log_cache_create(UvLoopT *loop, ServerLog *log);
 void log_cache_destroy(LogCache *cache);
 void log_cache_list(EvaluationContext *evaluation, const LogCache *cache,
                     DbRef player);

@@ -87,7 +87,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguments.");
     return;
   }
-  target_num = FindTargetDBREFFromMapNumber(mech, args[0]);
+  target_num = find_target_dbref_from_map_number(mech, args[0]);
   if (target_num == -1) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That target is not in your line of sight.");
@@ -294,7 +294,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   through_ice = mech_real_terrain_get(target) == BATTLE_TERRAIN_ICE &&
                 mech_position_z(mech) >= 0 && mech_position_z(target) < 0;
   mech_position_mirror(target, mech, 0);
-  MarkForLOSUpdate(target);
+  mark_for_los_update(target);
   mech_flood(target);
   if (through_ice) {
     if (mech_position_z(mech) == 0 && mech_movement_type(mech) != MOVE_HOVER)
@@ -316,15 +316,15 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
 
 void mech_attachcables(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  Mech *towMech;
+  Mech *tow_mech;
   Mech *target;
-  DbRef towMech_num;
+  DbRef tow_mech_num;
   DbRef target_num;
   int argc;
   char *args[3];
-  char mechName[SBUF_SIZE];
-  char towMechName[SBUF_SIZE];
-  char targetName[SBUF_SIZE];
+  char mech_name[SBUF_SIZE];
+  char tow_mech_name[SBUF_SIZE];
+  char target_name[SBUF_SIZE];
   BtechContext *context = mech_context(mech);
 
   if (player != GOD)
@@ -345,104 +345,104 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   }
 
   /* Check the towing unit. */
-  towMech_num = FindTargetDBREFFromMapNumber(mech, args[0]);
-  if (towMech_num == -1) {
+  tow_mech_num = find_target_dbref_from_map_number(mech, args[0]);
+  if (tow_mech_num == -1) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That towing unit is not in your line of sight.");
     return;
   }
-  towMech = btech_context_get_mech(context, towMech_num);
-  if (!towMech ||
-      !mech_los_check(mech, towMech, mech_position_x(towMech),
-                      mech_position_y(towMech), mech_range_to(mech, towMech))) {
+  tow_mech = btech_context_get_mech(context, tow_mech_num);
+  if (!tow_mech || !mech_los_check(mech, tow_mech, mech_position_x(tow_mech),
+                                   mech_position_y(tow_mech),
+                                   mech_range_to(mech, tow_mech))) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That towing unit is not in your line of sight.");
     return;
   }
-  if (mech_position_x(mech) != mech_position_x(towMech) ||
-      mech_position_y(mech) != mech_position_y(towMech)) {
+  if (mech_position_x(mech) != mech_position_x(tow_mech) ||
+      mech_position_y(mech) != mech_position_y(tow_mech)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You need to be in the same hex as the towing unit!");
     return;
   }
-  if (mech_is_jumping(towMech)) {
+  if (mech_is_jumping(tow_mech)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That towing unit is currently flying through the air!");
     return;
   }
-  if (mech_position_z(mech) != mech_position_z(towMech)) {
+  if (mech_position_z(mech) != mech_position_z(tow_mech)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You must be on the same elevation as the towing unit!");
     return;
   }
-  if (mech_carried_dbref(towMech) > 0) {
+  if (mech_carried_dbref(tow_mech) > 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That towing unit is towing someone else!");
     return;
   }
-  if (mech_is_towed(towMech)) {
+  if (mech_is_towed(tow_mech)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That towing unit is already being towed by someone!");
     return;
   }
-  if (mech_class(towMech) == CLASS_MW) {
+  if (mech_class(tow_mech) == CLASS_MW) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That unit can not tow!");
     return;
   }
-  if (mech_movement_type(towMech) == MOVE_NONE) {
+  if (mech_movement_type(tow_mech) == MOVE_NONE) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That unit can not tow!");
     return;
   }
-  if (mech_tonnage(towMech) < 5) {
+  if (mech_tonnage(tow_mech) < 5) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That unit can not tow!");
     return;
   }
-  if (mech_is_destroyed(towMech)) {
+  if (mech_is_destroyed(tow_mech)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Destroyed units can not tow!");
     return;
   }
-  if (mech_tonnage(towMech) < 5 ||
-      !is_in_character(btech_context_database(context), mech_dbref(towMech))) {
+  if (mech_tonnage(tow_mech) < 5 ||
+      !is_in_character(btech_context_database(context), mech_dbref(tow_mech))) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That unit can not tow!");
     return;
   }
-  if (mech_event_count(towMech, EVENT_VEHICLEBURN)) {
+  if (mech_event_count(tow_mech, EVENT_VEHICLEBURN)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You can not attach tow cables to a burning unit!");
     return;
   }
-  if (mech_technology_flags(towMech) & SALVAGE_TECH) {
+  if (mech_technology_flags(tow_mech) & SALVAGE_TECH) {
     mecha_notify(
         btech_context_evaluation(context), player,
         "That is a dedicated towing unit and can pick up the target itself!");
     return;
   }
-  if (fabsf(mech_current_speed(towMech)) > 0.0F ||
-      fabsf(mech_vertical_speed(towMech)) > 0.0F) {
+  if (fabsf(mech_current_speed(tow_mech)) > 0.0F ||
+      fabsf(mech_vertical_speed(tow_mech)) > 0.0F) {
     mecha_notify(
         btech_context_evaluation(context), player,
         "The towing unit is moving to fast for you to grab the tow cables!");
     return;
   }
-  if (mech_team(towMech) != mech_team(mech)) {
+  if (mech_team(tow_mech) != mech_team(mech)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You can not grab the tow cables from that unit!");
     return;
   }
-  if (mech_class(towMech) != CLASS_MECH &&
-      mech_class(towMech) != CLASS_VEH_GROUND) {
+  if (mech_class(tow_mech) != CLASS_MECH &&
+      mech_class(tow_mech) != CLASS_VEH_GROUND) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That unit can not tow!");
     return;
   }
 
   /* Check the target */
-  target_num = FindTargetDBREFFromMapNumber(mech, args[1]);
+  target_num = find_target_dbref_from_map_number(mech, args[1]);
   if (target_num == -1) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That target is not in your line of sight.");
@@ -532,42 +532,42 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  strlcpy(mechName, mech_display_id(mech).text, sizeof(mechName));
-  strlcpy(towMechName, mech_display_id(towMech).text, sizeof(towMechName));
-  strlcpy(targetName, mech_display_id(target).text, sizeof(targetName));
+  strlcpy(mech_name, mech_display_id(mech).text, sizeof(mech_name));
+  strlcpy(tow_mech_name, mech_display_id(tow_mech).text, sizeof(tow_mech_name));
+  strlcpy(target_name, mech_display_id(target).text, sizeof(target_name));
 
   mech_printf(target, MECHALL, "%s attaches tow lines from %s to you.",
-              mechName, towMechName);
-  mech_printf(towMech, MECHALL, "%s attaches your tow lines to %s.", mechName,
-              targetName);
-  mech_printf(mech, MECHALL, "You attach %s's tow lines to %s.", towMechName,
-              targetName);
+              mech_name, tow_mech_name);
+  mech_printf(tow_mech, MECHALL, "%s attaches your tow lines to %s.", mech_name,
+              target_name);
+  mech_printf(mech, MECHALL, "You attach %s's tow lines to %s.", tow_mech_name,
+              target_name);
 
   mech_los_broadcast(mech, tprintf("attaches tow cables from %s to %s!",
-                                   towMechName, targetName));
+                                   tow_mech_name, target_name));
 
-  mech_carried_dbref_set(towMech, mech_dbref(target));
+  mech_carried_dbref_set(tow_mech, mech_dbref(target));
   mech_towing_target_prepare(target);
 
   if (!mech_is_destroyed(target))
     mech_power_down(target);
 
   /* Adjust the speed involved */
-  mech_speed_correct(towMech);
+  mech_speed_correct(tow_mech);
 }
 
 void mech_detachcables(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  Mech *towMech;
+  Mech *tow_mech;
   Mech *target;
-  DbRef towMech_num;
+  DbRef tow_mech_num;
   BattleMap *newmap;
-  DbRef aRef;
+  DbRef a_ref;
   int argc;
   char *args[2];
-  char mechName[SBUF_SIZE];
-  char towMechName[SBUF_SIZE];
-  char targetName[SBUF_SIZE];
+  char mech_name[SBUF_SIZE];
+  char tow_mech_name[SBUF_SIZE];
+  char target_name[SBUF_SIZE];
   BtechContext *context = mech_context(mech);
 
   if (!common_checks(player, mech, MECH_USUAL))
@@ -580,40 +580,40 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  towMech_num = FindTargetDBREFFromMapNumber(mech, args[0]);
-  if (towMech_num == -1) {
+  tow_mech_num = find_target_dbref_from_map_number(mech, args[0]);
+  if (tow_mech_num == -1) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That towing unit is not in your line of sight.");
     return;
   }
-  towMech = btech_context_get_mech(context, towMech_num);
-  if (!towMech ||
-      !mech_los_check(mech, towMech, mech_position_x(towMech),
-                      mech_position_y(towMech), mech_range_to(mech, towMech))) {
+  tow_mech = btech_context_get_mech(context, tow_mech_num);
+  if (!tow_mech || !mech_los_check(mech, tow_mech, mech_position_x(tow_mech),
+                                   mech_position_y(tow_mech),
+                                   mech_range_to(mech, tow_mech))) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That towing unit is not in your line of sight.");
     return;
   }
-  if (mech_position_x(mech) != mech_position_x(towMech) ||
-      mech_position_y(mech) != mech_position_y(towMech)) {
+  if (mech_position_x(mech) != mech_position_x(tow_mech) ||
+      mech_position_y(mech) != mech_position_y(tow_mech)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You need to be in the same hex as the towing unit!");
     return;
   }
-  if (mech_position_z(mech) != mech_position_z(towMech)) {
+  if (mech_position_z(mech) != mech_position_z(tow_mech)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You must be on the same elevation as the towing unit!");
     return;
   }
-  if (mech_carried_dbref(towMech) <= 0) {
+  if (mech_carried_dbref(tow_mech) <= 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That unit is not towing anyone!");
     return;
   }
 
-  aRef = mech_carried_dbref(towMech);
-  mech_carried_dbref_set(towMech, -1);
-  target = btech_context_get_mech(context, aRef);
+  a_ref = mech_carried_dbref(tow_mech);
+  mech_carried_dbref_set(tow_mech, -1);
+  target = btech_context_get_mech(context, a_ref);
   if (!target) {
     mecha_notify(btech_context_evaluation(context), player,
                  "The towed unit was invalid!");
@@ -621,37 +621,37 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
   }
   mech_towed_set(target, false);
 
-  strlcpy(mechName, mech_display_id(mech).text, sizeof(mechName));
-  strlcpy(towMechName, mech_display_id(towMech).text, sizeof(towMechName));
-  strlcpy(targetName, mech_display_id(target).text, sizeof(targetName));
+  strlcpy(mech_name, mech_display_id(mech).text, sizeof(mech_name));
+  strlcpy(tow_mech_name, mech_display_id(tow_mech).text, sizeof(tow_mech_name));
+  strlcpy(target_name, mech_display_id(target).text, sizeof(target_name));
 
-  mech_printf(mech, MECHALL, "You detach %s's tow lines from %s.", towMechName,
-              targetName);
-  mech_printf(towMech, MECHALL, "%s detaches your tow lines from %s.", mechName,
-              targetName);
+  mech_printf(mech, MECHALL, "You detach %s's tow lines from %s.",
+              tow_mech_name, target_name);
+  mech_printf(tow_mech, MECHALL, "%s detaches your tow lines from %s.",
+              mech_name, target_name);
   mech_notify(target, MECHALL, "You have been released from towing.");
 
   mech_event_cancel(target, EVENT_MOVE);
   mech_movement_stop(target);
 
   mech_los_broadcast(mech, tprintf("detaches %s's tow cables from %s!",
-                                   towMechName, targetName));
+                                   tow_mech_name, target_name));
 
   newmap = btech_context_get_map(context, mech_map_dbref(target));
   if (newmap) {
     mech_position_hex_z_set(
-        target, battle_map_hex_elevation(newmap, mech_position_x(towMech),
-                                         mech_position_y(towMech)));
+        target, battle_map_hex_elevation(newmap, mech_position_x(tow_mech),
+                                         mech_position_y(tow_mech)));
   }
 
-  mech_speed_correct(towMech);
+  mech_speed_correct(tow_mech);
 }
 
 void mech_dropoff(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   Mech *target;
   BattleMap *newmap;
-  DbRef aRef;
+  DbRef a_ref;
   BtechContext *context = mech_context(mech);
 
   if (player != GOD)
@@ -663,9 +663,9 @@ void mech_dropoff(DbRef player, void *data, const char *buffer) {
                  "You aren't carrying a mech!");
     return;
   }
-  aRef = mech_carried_dbref(mech);
+  a_ref = mech_carried_dbref(mech);
   mech_carried_dbref_set(mech, -1);
-  target = btech_context_get_mech(context, aRef);
+  target = btech_context_get_mech(context, a_ref);
   if (!target) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You were towing invalid target!");

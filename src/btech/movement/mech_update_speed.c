@@ -49,7 +49,7 @@ static float speed_new_decrease(float speed, float penalty) {
 float mech_terrain_speed(const MechTerrainSpeedRequest *request) {
   Mech *mech = request->mech;
   float tempspeed = request->current_speed;
-  const float maxspeed = request->maximum_speed;
+  const float MAXSPEED = request->maximum_speed;
   switch (request->terrain) {
   case BATTLE_TERRAIN_SNOW:
   case BATTLE_TERRAIN_ROUGH:
@@ -77,7 +77,7 @@ float mech_terrain_speed(const MechTerrainSpeedRequest *request) {
         (mech_movement_type(mech) == MOVE_TRACK ||
          mech_movement_type(mech) == MOVE_WHEEL))
 #endif
-      tempspeed = speed_old_increase(tempspeed, maxspeed, MP1);
+      tempspeed = speed_old_increase(tempspeed, MAXSPEED, MP1);
     [[fallthrough]];
   case BATTLE_TERRAIN_ICE:
     if (mech_position_z(mech) >= 0)
@@ -176,8 +176,9 @@ void mech_speed_update(Mech *mech) {
     }
 #ifdef BT_MOVEMENT_MODES
     if ((conditions.sprinting || conditions.evading) &&
-        !(HasBoolAdvantage(context, mech_pilot_dbref(mech), "speed_demon") ||
-          HasBoolAdvantage(context, mech_pilot_dbref(mech), "maneuvering_ace")))
+        !(has_bool_advantage(context, mech_pilot_dbref(mech), "speed_demon") ||
+          has_bool_advantage(context, mech_pilot_dbref(mech),
+                             "maneuvering_ace")))
       tempspeed = (tempspeed * 2.0F) / 3.0F;
 #endif
     mech_heading_change_clear(mech);
@@ -186,7 +187,7 @@ void mech_speed_update(Mech *mech) {
     tempspeed = speed_old_decrease(tempspeed, maxspeed, MP1);
 #ifdef BT_MOVEMENT_MODES
   else if (mech_lateral_movement(mech)) {
-    if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "maneuvering_ace"))
+    if (has_bool_advantage(context, mech_pilot_dbref(mech), "maneuvering_ace"))
       tempspeed = speed_old_decrease(tempspeed, maxspeed, MP2);
     else
       tempspeed = speed_old_decrease(tempspeed, maxspeed, MP3);
@@ -203,7 +204,7 @@ void mech_speed_update(Mech *mech) {
       acc = maxspeed / 10.0F;
     else
       acc = maxspeed / 20.0F;
-    if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "speed_demon"))
+    if (has_bool_advantage(context, mech_pilot_dbref(mech), "speed_demon"))
       acc *= 1.25F;
 
     if (tempspeed < current_speed) {

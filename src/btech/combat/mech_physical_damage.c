@@ -80,9 +80,9 @@ void physical_damage_apply_without_experience(Mech *target, Mech *attacker,
   btech_context_damage_experience_mode_set(context, BTECH_DAMAGE_XP_GUNNERY);
 }
 
-void PhysicalTrip(Mech *mech, Mech *target) {
+void physical_trip(Mech *mech, Mech *target) {
   // If we trip our target (who is a mech), make a roll to see if he falls.
-  if (!MadePilotSkillRoll(target, 0) &&
+  if (!made_pilot_skill_roll(target, 0) &&
       !mech_condition_summary(target).fallen) {
 
     // Emit to Attacker
@@ -105,10 +105,10 @@ void PhysicalTrip(Mech *mech, Mech *target) {
 void physical_damage_resolve(const PhysicalDamageRequest *request) {
   Mech *mech = request->attacker;
   Mech *target = request->target;
-  const int weightdmg = request->weight_divisor;
-  const PhysicalAttackType AttackType = request->attack_type;
-  const int sect = request->section;
-  const int glance = request->glancing_damage;
+  const int WEIGHTDMG = request->weight_divisor;
+  const PhysicalAttackType ATTACK_TYPE = request->attack_type;
+  const int SECT = request->section;
+  const int GLANCE = request->glancing_damage;
 
   int hitloc = 0, damage, hitgroup = 0, isrear, iscritical;
 
@@ -118,7 +118,7 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
   /* Two types of physical attack weapons - Those affected by TSM
    * and those not - Right now just saw but can add more to the list via
    * || (AttackType == PA_BLAH) */
-  if (AttackType == PA_SAW) {
+  if (ATTACK_TYPE == PA_SAW) {
 
     /* Saws do a constant 7 damage due to their mechanical nature. */
     damage = 7;
@@ -126,11 +126,11 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
   } else {
 
     /* Sword attack uses an odd weapon damage amount */
-    if (AttackType == PA_SWORD) {
-      damage = (mech_tonnage(mech) + 5) / weightdmg + 1;
+    if (ATTACK_TYPE == PA_SWORD) {
+      damage = (mech_tonnage(mech) + 5) / WEIGHTDMG + 1;
     } else {
       /* Round Down to nearest ton -- TW Page 145 */
-      damage = mech_tonnage(mech) / weightdmg;
+      damage = mech_tonnage(mech) / WEIGHTDMG;
     }
 
     /* Calc in affect by TSM */
@@ -141,24 +141,24 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
   }
 
   /* If we have melee_specialist, add a point of damage. */
-  if (HasBoolAdvantage(mech_context(mech), mech_pilot_dbref(mech),
-                       "melee_specialist")) {
+  if (has_bool_advantage(mech_context(mech), mech_pilot_dbref(mech),
+                         "melee_specialist")) {
     damage++;
   }
 
-  switch (AttackType) {
+  switch (ATTACK_TYPE) {
   case PA_PUNCH:
 
     if (!mech_critical_is_operational_special(
             &(CriticalSpecialCheck){.mech = mech,
-                                    .slot = {.section = sect, .critical = 2},
+                                    .slot = {.section = SECT, .critical = 2},
                                     .special = LOWER_ACTUATOR})) {
       damage = damage / 2;
     }
 
     if (!mech_critical_is_operational_special(
             &(CriticalSpecialCheck){.mech = mech,
-                                    .slot = {.section = sect, .critical = 1},
+                                    .slot = {.section = SECT, .critical = 1},
                                     .special = UPPER_ACTUATOR})) {
       damage = damage / 2;
     }
@@ -247,13 +247,13 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
 
     if (!mech_critical_is_operational_special(
             &(CriticalSpecialCheck){.mech = mech,
-                                    .slot = {.section = sect, .critical = 2},
+                                    .slot = {.section = SECT, .critical = 2},
                                     .special = LOWER_ACTUATOR}))
       damage = damage / 2;
 
     if (!mech_critical_is_operational_special(
             &(CriticalSpecialCheck){.mech = mech,
-                                    .slot = {.section = sect, .critical = 1},
+                                    .slot = {.section = SECT, .critical = 1},
                                     .special = UPPER_ACTUATOR}))
       damage = damage / 2;
 
@@ -281,7 +281,7 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
     break;
   }
 
-  if (glance) {
+  if (GLANCE) {
     damage = (damage + 1) / 2;
   }
 
@@ -291,13 +291,13 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
 
   // If we've successfully hit a suit, knock him off.
   if (mech_class(target) == CLASS_BSUIT && mech_swarm_target(target) > 0 &&
-      AttackType != PA_KICK) {
+      ATTACK_TYPE != PA_KICK) {
     bsuit_swarm_stop(target, 0);
   }
 
   // If we kick our target (who is a mech), make a roll to see if he falls.
-  if (mech_class(target) == CLASS_MECH && AttackType == PA_KICK) {
-    if (!MadePilotSkillRoll(target, 0) &&
+  if (mech_class(target) == CLASS_MECH && ATTACK_TYPE == PA_KICK) {
+    if (!made_pilot_skill_roll(target, 0) &&
         !mech_condition_summary(target).fallen) {
       mech_notify(target, MECHSTARTED, "The kick knocks you to the ground!");
       mech_los_broadcast(target, "stumbles and falls down!");
@@ -333,10 +333,10 @@ int physical_charge_section(int index) {
 /*
  * Executed at the end of a DFA
  */
-int DeathFromAbove(Mech *mech, Mech *target) {
-  int baseToHit = 5;
+int death_from_above(Mech *mech, Mech *target) {
+  int base_to_hit = 5;
   int roll;
-  int hitGroup;
+  int hit_group;
   int hitloc;
   int isrear = 0;
   int iscritical = 0;
@@ -350,10 +350,10 @@ int DeathFromAbove(Mech *mech, Mech *target) {
 
   /* Weapons recycling check on each major section */
   for (i = 0; i < DFA_SECTIONS; i++) {
-    const int section = physical_charge_section(i);
-    if (mech_section_has_recycling_weapon(mech, section)) {
-      ArmorStringFromIndex(section, location, mech_class(mech),
-                           mech_movement_type(mech));
+    const int SECTION = physical_charge_section(i);
+    if (mech_section_has_recycling_weapon(mech, SECTION)) {
+      armor_string_from_index(SECTION, location, mech_class(mech),
+                              mech_movement_type(mech));
       mech_printf(mech, MECHALL, "You have weapons recycling on your %s.",
                   location);
       return 0;
@@ -407,35 +407,35 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     return 0;
   }
   if (btech_context_physical_attacks_use_pilot_skill(context))
-    baseToHit = FindPilotPiloting(mech);
+    base_to_hit = find_pilot_piloting(mech);
 
-  baseToHit +=
-      (HasBoolAdvantage(context, mech_pilot_dbref(mech), "melee_specialist")
-           ? MIN(0, mech_attacker_movement_modifier(mech)) - 1
+  base_to_hit +=
+      (has_bool_advantage(context, mech_pilot_dbref(mech), "melee_specialist")
+           ? min(0, mech_attacker_movement_modifier(mech)) - 1
            : mech_attacker_movement_modifier(mech));
-  baseToHit += mech_target_movement_modifier(mech, target, 0.0);
-  baseToHit += mech_class(target) == CLASS_BSUIT ? 1 : 0;
+  base_to_hit += mech_target_movement_modifier(mech, target, 0.0);
+  base_to_hit += mech_class(target) == CLASS_BSUIT ? 1 : 0;
 
 #ifdef BT_MOVEMENT_MODES
   if (mech_condition_summary(target).dodging)
-    baseToHit += 2;
+    base_to_hit += 2;
 #endif
 
-  if (baseToHit > 12) {
+  if (base_to_hit > 12) {
     mech_notify(
         mech, MECHALL,
         tprintf(
             "DFA: BTH %d\tYou choose not to attack and land from your jump.",
-            baseToHit));
+            base_to_hit));
     return 0;
   }
 
   roll = btech_random_roll(context);
-  mech_printf(mech, MECHALL, "DFA: BTH %d\tRoll: %d", baseToHit, roll);
+  mech_printf(mech, MECHALL, "DFA: BTH %d\tRoll: %d", base_to_hit, roll);
 
   mech_jump_abort(mech);
 
-  if (roll >= baseToHit) {
+  if (roll >= base_to_hit) {
     /* OUCH */
     mech_printf(target, MECHSTARTED,
                 "DEATH FROM ABOVE!!!\n%s lands on you from above!",
@@ -443,8 +443,8 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     mech_notify(mech, MECHALL, "You land on your target legs first!");
     mech_los_broadcast_unit(mech, target, "lands on %s!");
 
-    hitGroup = mech_hit_group(mech, target);
-    if (hitGroup == BACK)
+    hit_group = mech_hit_group(mech, target);
+    if (hit_group == BACK)
       isrear = 1;
 
     target_damage = (3 * mech_real_tonnage(mech)) / 10;
@@ -452,7 +452,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     if (mech_tonnage(mech) % 10)
       target_damage++;
 
-    if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "melee_specialist"))
+    if (has_bool_advantage(context, mech_pilot_dbref(mech), "melee_specialist"))
       target_damage++;
 
     spread = target_damage / 5;
@@ -460,9 +460,9 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     for (i = 0; i < spread; i++) {
       if (mech_condition_summary(target).fallen ||
           mech_class(target) != CLASS_MECH)
-        hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(target, hit_group, &iscritical, &isrear);
       else
-        hitloc = mech_punch_hit_location(target, hitGroup);
+        hitloc = mech_punch_hit_location(target, hit_group);
 
       physical_damage_apply(target, mech, 1, mech_pilot_dbref(mech), hitloc,
                             isrear, iscritical, 5, 0);
@@ -471,9 +471,9 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     if (target_damage % 5) {
       if (mech_condition_summary(target).fallen ||
           (mech_class(target) != CLASS_MECH))
-        hitloc = mech_hit_location(target, hitGroup, &iscritical, &isrear);
+        hitloc = mech_hit_location(target, hit_group, &iscritical, &isrear);
       else
-        hitloc = mech_punch_hit_location(target, hitGroup);
+        hitloc = mech_punch_hit_location(target, hit_group);
 
       physical_damage_apply(target, mech, 1, mech_pilot_dbref(mech), hitloc,
                             isrear, iscritical, (target_damage % 5), 0);
@@ -496,13 +496,14 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     }
 
     if (!mech_condition_summary(mech).fallen) {
-      if (!MadePilotSkillRoll(mech, 4)) {
+      if (!made_pilot_skill_roll(mech, 4)) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
         mech_los_broadcast(mech, "stumbles and falls down!");
         mech_fall(mech, 1, 0);
       }
-      if (mech_class(target) == CLASS_MECH && !MadePilotSkillRoll(target, 2)) {
+      if (mech_class(target) == CLASS_MECH &&
+          !made_pilot_skill_roll(target, 2)) {
         mech_notify(target, MECHSTARTED,
                     "Your piloting skill fails and you fall over!!");
         mech_los_broadcast(target, "stumbles and falls down!");
@@ -534,7 +535,7 @@ int DeathFromAbove(Mech *mech, Mech *target) {
     }
 
     /* now damage pilot */
-    if (!MadePilotSkillRoll(mech, 2)) {
+    if (!made_pilot_skill_roll(mech, 2)) {
       mech_notify(mech, MECHALL, "You take personal injury from the fall!");
       headhitmwdamage(mech, mech, 1);
     }

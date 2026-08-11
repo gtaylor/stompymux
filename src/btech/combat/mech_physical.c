@@ -62,10 +62,10 @@ static int all_limbs_recycled(Mech *mech) {
   return 1;
 } // end all_limbs_recycled()
 const char *physical_attack_verb(const PhysicalVerbRequest *request) {
-  const PhysicalAttackType AttackType = request->attack_type;
+  const PhysicalAttackType ATTACK_TYPE = request->attack_type;
   const char *verb;
   if (request->third_person) {
-    switch (AttackType) {
+    switch (ATTACK_TYPE) {
     case PA_PUNCH:
       verb = "punchs";
       break;
@@ -97,7 +97,7 @@ const char *physical_attack_verb(const PhysicalVerbRequest *request) {
       verb = "??bugs??";
     } // end switch()
   } else {
-    switch (AttackType) {
+    switch (ATTACK_TYPE) {
     case PA_PUNCH:
       verb = "punch";
       break;
@@ -145,22 +145,22 @@ void phys_fail(Mech *mech, Mech *target, PhysicalAttackType at) {
 }
 int have_punch(Mech *mech, int loc) { return 1; }
 int have_axe(Mech *mech, int loc) {
-  return FindObj(mech, loc, special_equipment_index(AXE)) >=
+  return find_obj(mech, loc, special_equipment_index(AXE)) >=
          (mech_tonnage(mech) / 15);
 }
 int have_claw(Mech *mech, int loc) {
-  return FindObj(mech, loc, special_equipment_index(CLAW)) >=
+  return find_obj(mech, loc, special_equipment_index(CLAW)) >=
          (mech_tonnage(mech) / 15);
 }
 int have_saw(Mech *mech, int loc) {
-  return FindObj(mech, loc, special_equipment_index(DUAL_SAW)) >= 7;
+  return find_obj(mech, loc, special_equipment_index(DUAL_SAW)) >= 7;
 }
 int have_sword(Mech *mech, int loc) {
-  return FindObj(mech, loc, special_equipment_index(SWORD)) >=
+  return find_obj(mech, loc, special_equipment_index(SWORD)) >=
          ((mech_tonnage(mech) + 15) / 20);
 }
 int have_mace(Mech *mech, int loc) {
-  return FindObj(mech, loc, special_equipment_index(MACE)) >=
+  return find_obj(mech, loc, special_equipment_index(MACE)) >=
          (mech_tonnage(mech) / 10);
 }
 int phys_common_checks(Mech *mech) {
@@ -199,9 +199,9 @@ ArmSelectionResult physical_arm_select(const ArmSelectionRequest *request) {
     const char *first = *first_slot;
     if (strlen(first) != 1)
       goto arm_selection_complete;
-    const int arm =
+    const int ARM =
         *first >= 'a' && *first <= 'z' ? *first - 'a' + 'A' : *first;
-    switch (arm) {
+    switch (ARM) {
     case 'B':
       using = P_LEFT | P_RIGHT;
       --argc;
@@ -249,7 +249,7 @@ arm_selection_complete:
   return (ArmSelectionResult){
       .using = using, .argument_count = argc, .arguments = args};
 } // end get_arm_args()
-static int punch_checkArm(Mech *mech, int arm) {
+static int punch_check_arm(Mech *mech, int arm) {
   const char *arm_used = (arm == LARM ? "left" : "right");
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -288,7 +288,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
     return;
   argc = mech_parseattributes(buffer, args, 5);
   if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
-    rtohit = ltohit = FindPilotPiloting(mech);
+    rtohit = ltohit = find_pilot_piloting(mech);
   ArmSelectionResult selection = physical_arm_select(&(ArmSelectionRequest){
       .using = punching,
       .argument_count = argc,
@@ -306,7 +306,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
   if (!phys_common_checks(mech))
     return;
   if (punching & P_LEFT) {
-    if (punch_checkArm(mech, LARM))
+    if (punch_check_arm(mech, LARM))
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 10,
                                                        .base_to_hit = ltohit,
@@ -317,7 +317,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
                                                        .section = LARM});
   }
   if (punching & P_RIGHT) {
-    if (punch_checkArm(mech, RARM))
+    if (punch_check_arm(mech, RARM))
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 10,
                                                        .base_to_hit = rtohit,
@@ -334,7 +334,7 @@ void mech_club(DbRef player, void *data, char *buffer) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *args[5];
   int argc;
-  int clubLoc = -1;
+  int club_loc = -1;
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   if (!physical_arm_check(player, mech, "club"))
@@ -342,10 +342,10 @@ void mech_club(DbRef player, void *data, char *buffer) {
   if (!physical_quad_check(player, mech, "club"))
     return;
   if (mech_section_carries_club(mech, RARM))
-    clubLoc = RARM;
+    club_loc = RARM;
   else if (mech_section_carries_club(mech, LARM))
-    clubLoc = LARM;
-  if (clubLoc == -1) {
+    club_loc = LARM;
+  if (club_loc == -1) {
     if (mech_real_terrain_get(mech) != HEAVY_FOREST &&
         mech_real_terrain_get(mech) != LIGHT_FOREST) {
       mech_notify(mech, MECHALL,
@@ -407,7 +407,7 @@ void mech_club(DbRef player, void *data, char *buffer) {
       .damage_weight = 5,
       .base_to_hit =
           btech_context_physical_attacks_use_pilot_skill(mech_context(mech))
-              ? FindPilotPiloting(mech) - 1
+              ? find_pilot_piloting(mech) - 1
               : 4,
       .attack_type = PA_CLUB,
       .argument_count = argc,
@@ -415,7 +415,7 @@ void mech_club(DbRef player, void *data, char *buffer) {
       .map = mech_map,
       .section = RARM});
 } // end mech_club()
-static int axe_checkArm(Mech *mech, int arm) {
+static int axe_check_arm(Mech *mech, int arm) {
   const char *arm_used = (arm == RARM ? "right" : "left");
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -456,7 +456,7 @@ void mech_axe(DbRef player, void *data, char *buffer) {
     return;
   argc = mech_parseattributes(buffer, args, 5);
   if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
-    ltohit = rtohit = FindPilotPiloting(mech) - 1;
+    ltohit = rtohit = find_pilot_piloting(mech) - 1;
   ArmSelectionResult selection = physical_arm_select(&(ArmSelectionRequest){
       .using = using,
       .argument_count = argc,
@@ -472,7 +472,7 @@ void mech_axe(DbRef player, void *data, char *buffer) {
   argc = selection.argument_count;
   args = selection.arguments;
   if (using & P_LEFT) {
-    if (axe_checkArm(mech, LARM))
+    if (axe_check_arm(mech, LARM))
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 5,
                                                        .base_to_hit = ltohit,
@@ -483,7 +483,7 @@ void mech_axe(DbRef player, void *data, char *buffer) {
                                                        .section = LARM});
   }
   if (using & P_RIGHT) {
-    if (axe_checkArm(mech, RARM))
+    if (axe_check_arm(mech, RARM))
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 5,
                                                        .base_to_hit = rtohit,
@@ -500,7 +500,7 @@ void mech_axe(DbRef player, void *data, char *buffer) {
     return;
   }
 } // end mech_axe()
-static int saw_checkArm(Mech *mech, int arm) {
+static int saw_check_arm(Mech *mech, int arm) {
   const char *arm_used = (arm == RARM ? "right" : "left");
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -533,7 +533,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
     return;
   argc = mech_parseattributes(buffer, args, 5);
   if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
-    ltohit = rtohit = FindPilotPiloting(mech) - 1;
+    ltohit = rtohit = find_pilot_piloting(mech) - 1;
   ArmSelectionResult selection = physical_arm_select(&(ArmSelectionRequest){
       .using = using,
       .argument_count = argc,
@@ -549,7 +549,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
   argc = selection.argument_count;
   args = selection.arguments;
   if (using & P_LEFT) {
-    if (saw_checkArm(mech, LARM))
+    if (saw_check_arm(mech, LARM))
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 7,
                                                        .base_to_hit = ltohit,
@@ -560,7 +560,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
                                                        .section = LARM});
   }
   if (using & P_RIGHT) {
-    if (saw_checkArm(mech, RARM))
+    if (saw_check_arm(mech, RARM))
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 7,
                                                        .base_to_hit = rtohit,
@@ -591,7 +591,7 @@ void mech_claw(DbRef player, void *data, char *buffer) {
     return;
   argc = mech_parseattributes(buffer, args, 5);
   if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
-    rtohit = ltohit = FindPilotPiloting(mech);
+    rtohit = ltohit = find_pilot_piloting(mech);
   ArmSelectionResult selection = physical_arm_select(&(ArmSelectionRequest){
       .using = using,
       .argument_count = argc,
@@ -634,7 +634,7 @@ void mech_claw(DbRef player, void *data, char *buffer) {
     return;
   }
 } // end mech_claw()
-static int mace_checkArm(Mech *mech, int arm) {
+static int mace_check_arm(Mech *mech, int arm) {
   const char *arm_used = (arm == RARM ? "right" : "left");
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -678,7 +678,7 @@ void mech_mace(DbRef player, void *data, char *buffer) {
     return;
   argc = mech_parseattributes(buffer, args, 5);
   if (btech_context_physical_attacks_use_pilot_skill(mech_context(mech)))
-    ltohit = rtohit = FindPilotPiloting(mech) - 1;
+    ltohit = rtohit = find_pilot_piloting(mech) - 1;
   ArmSelectionResult selection = physical_arm_select(&(ArmSelectionRequest){
       .using = using,
       .argument_count = argc,
@@ -694,7 +694,7 @@ void mech_mace(DbRef player, void *data, char *buffer) {
   argc = selection.argument_count;
   args = selection.arguments;
   if (using & P_LEFT) {
-    if (mace_checkArm(mech, LARM))
+    if (mace_check_arm(mech, LARM))
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 4,
                                                        .base_to_hit = ltohit,
@@ -705,7 +705,7 @@ void mech_mace(DbRef player, void *data, char *buffer) {
                                                        .section = LARM});
   }
   if (using & P_RIGHT) {
-    if (mace_checkArm(mech, RARM))
+    if (mace_check_arm(mech, RARM))
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 4,
                                                        .base_to_hit = rtohit,

@@ -55,9 +55,9 @@ static float scaled_hex_elevation(int elevation) {
 }
 
 static bool mech_is_in_water(Mech *mech) {
-  const char terrain = mech_real_terrain_get(mech);
-  return (terrain == BATTLE_TERRAIN_ICE || terrain == BATTLE_TERRAIN_WATER ||
-          terrain == BATTLE_TERRAIN_BRIDGE) &&
+  const char TERRAIN = mech_real_terrain_get(mech);
+  return (TERRAIN == BATTLE_TERRAIN_ICE || TERRAIN == BATTLE_TERRAIN_WATER ||
+          TERRAIN == BATTLE_TERRAIN_BRIDGE) &&
          mech_position_z(mech) < 0;
 }
 
@@ -90,8 +90,8 @@ static void mech_check_range(MuxEvent *e) {
     return;
   }
   range = mech_range_to(mech, spotter);
-  const int maximum_range = 2 * mech_radio_range(spotter);
-  if (range > (float)maximum_range || mech_spotter_dbref(spotter) == -1 ||
+  const int MAXIMUM_RANGE = 2 * mech_radio_range(spotter);
+  if (range > (float)MAXIMUM_RANGE || mech_spotter_dbref(spotter) == -1 ||
       mech_map_dbref(spotter) != mech_map_dbref(mech)) {
     mech_notify(mech, MECHALL, "You have lost link with your spotter!");
     mech_spotter_dbref_set(mech, -1);
@@ -149,9 +149,9 @@ void mech_spot_clear_fire_adjustments(BattleMap *map, DbRef mech) {
 void mech_spot(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *target;
   char *args[5];
-  char targetID[3];
+  char target_id[3];
   int argc;
-  int LOS = 1;
+  int los = 1;
   DbRef targetref;
   float range;
   SpotLinkEventData *dat;
@@ -178,10 +178,10 @@ void mech_spot(DbRef player, void *data, char *buffer) {
                  "Spot ? You ? What with, your pretty blue eyes ? Hah!");
     return;
   }
-  targetID[0] = args[0][0];
-  targetID[1] = *checked_string_suffix(*args, 1);
-  targetID[2] = 0;
-  targetref = FindTargetDBREFFromMapNumber(mech, targetID);
+  target_id[0] = args[0][0];
+  target_id[1] = *checked_string_suffix(*args, 1);
+  target_id[2] = 0;
+  targetref = find_target_dbref_from_map_number(mech, target_id);
   if (!strcmp(args[0], "-")) {
     if (mech_spotter_dbref(mech) == mech_dbref(mech)) {
       mech_notify(mech, MECHALL, "You spot no longer.");
@@ -191,7 +191,7 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     mech_spotter_dbref_set(mech, -1);
     return;
   }
-  if (!strcasecmp(targetID, mech_id(mech, false).text)) {
+  if (!strcasecmp(target_id, mech_id(mech, false).text)) {
     if (mech_recycling_state(mech, CHECK_BOTH)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "You have weapons recycling!");
@@ -203,7 +203,7 @@ void mech_spot(DbRef player, void *data, char *buffer) {
   }
   target = btech_context_get_mech(mech_context(mech), targetref);
   if (target)
-    LOS = mech_los_check(mech, target, mech_position_x(target),
+    los = mech_los_check(mech, target, mech_position_x(target),
                          mech_position_y(target), mech_range_to(mech, target));
   if (!target || (targetref == -1) || mech_team(target) != mech_team(mech)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -223,14 +223,14 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (mech_spot_has_artillery(mech) && !LOS) {
+  if (mech_spot_has_artillery(mech) && !los) {
     mech_notify(target, MECHALL,
                 "Someone is trying to establish a data link with you!");
     mech_notify(mech, MECHALL,
                 "You attempt to establish a data link..... please stand by.");
     range = mech_range_to(mech, target);
-    const int maximum_range = 2 * mech_radio_range(target);
-    if (range > (float)maximum_range) {
+    const int MAXIMUM_RANGE = 2 * mech_radio_range(target);
+    if (range > (float)MAXIMUM_RANGE) {
       mech_notify(mech, MECHALL, "That target is our of data link range!");
       return;
     }
@@ -244,7 +244,7 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     mech_event_schedule(mech, EVENT_SPOT_LOCK, mech_spot_event,
                         WEAPON_TICK * ((int)range / 10 + 5), (intptr_t)dat);
     return;
-  } else if (!LOS) {
+  } else if (!los) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You do not have LOS to that target!");
     return;
@@ -260,10 +260,10 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
   /* Nim 9/11/96 */
 
   float spot_range, range;
-  float enemyX, enemyY, enemyZ = 0;
-  int LOS, mapx = 0, mapy = 0;
+  float enemy_x, enemy_y, enemy_z = 0;
+  int los, mapx = 0, mapy = 0;
   Mech *target = nullptr, *spotter;
-  int spotTerrain;
+  int spot_terrain;
   bool found_target = false;
 
   /* No spotter or not IDF weapon lets get outta here */
@@ -303,8 +303,8 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
     mapx = mech_position_x(target);
     mapy = mech_position_y(target);
     spot_range = mech_range_to(spotter, target);
-    LOS = mech_los_check(spotter, target, mapx, mapy, spot_range);
-    if (!LOS) {
+    los = mech_los_check(spotter, target, mapx, mapy, spot_range);
+    if (!los) {
       mech_notify(mech, MECHPILOT,
                   "You spotter does not have a target in LOS!");
       return 1;
@@ -316,7 +316,7 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
       return 0;
     }
 
-    spotTerrain =
+    spot_terrain =
         weapon_catalogue_is_artillery(weapontype)
             ? 2
             : (1 +
@@ -336,8 +336,8 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
       return -1;
     }
     if (!sight) {
-      AccumulateSpotXP(mech_pilot_dbref(spotter), spotter, target);
-      AccumulateArtyXP(mech_pilot_dbref(mech), mech, target);
+      accumulate_spot_xp(mech_pilot_dbref(spotter), spotter, target);
+      accumulate_arty_xp(mech_pilot_dbref(mech), mech, target);
     }
     mech_weapon_fire(&(WeaponFireRequest){
         .mech = mech,
@@ -348,7 +348,7 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
         .weapon = {.section = section, .critical = critical},
         .target_hex = {.x = mapx, .y = mapy},
         .range = range,
-        .indirect_fire = spotTerrain,
+        .indirect_fire = spot_terrain,
         .sight = sight != 0,
         .target_kind = 2});
     return 1;
@@ -362,9 +362,9 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
     target = find_mech_in_hex(mech, mech_map, mech_target_hex_x(spotter),
                               mech_target_hex_y(spotter), 0);
     if (target) {
-      enemyX = mech_position_real_x(target);
-      enemyY = mech_position_real_y(target);
-      enemyZ = mech_position_real_z(target);
+      enemy_x = mech_position_real_x(target);
+      enemy_y = mech_position_real_y(target);
+      enemy_z = mech_position_real_z(target);
       mapx = mech_position_x(target);
       mapy = mech_position_y(target);
       found_target = true;
@@ -374,18 +374,18 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
     target = nullptr;
     mapx = mech_target_hex_x(spotter);
     mapy = mech_target_hex_y(spotter);
-    const int target_hex_z = mech_target_hex_z(spotter);
-    enemyZ = scaled_hex_elevation(target_hex_z);
-    MapCoordToRealCoord(mapx, mapy, &enemyX, &enemyY);
+    const int TARGET_HEX_Z = mech_target_hex_z(spotter);
+    enemy_z = scaled_hex_elevation(TARGET_HEX_Z);
+    map_coord_to_real_coord(mapx, mapy, &enemy_x, &enemy_y);
   }
   spot_range = map_spatial_range(&(MapSpatialSegment){
       .start = {.x = mech_position_real_x(spotter),
                 .y = mech_position_real_y(spotter),
                 .z = mech_position_real_z(spotter)},
-      .end = {.x = enemyX, .y = enemyY, .z = enemyZ},
+      .end = {.x = enemy_x, .y = enemy_y, .z = enemy_z},
   });
-  LOS = mech_los_check(spotter, target, mapx, mapy, spot_range);
-  if (!LOS) {
+  los = mech_los_check(spotter, target, mapx, mapy, spot_range);
+  if (!los) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That target is not in your spotters line of sight!");
     return 0;
@@ -394,9 +394,9 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
       .start = {.x = mech_position_real_x(mech),
                 .y = mech_position_real_y(mech),
                 .z = mech_position_real_z(mech)},
-      .end = {.x = enemyX, .y = enemyY, .z = enemyZ},
+      .end = {.x = enemy_x, .y = enemy_y, .z = enemy_z},
   });
-  spotTerrain =
+  spot_terrain =
       weapon_catalogue_is_artillery(weapontype)
           ? 2
           : (1 + mech_attacker_movement_modifier(spotter) +
@@ -413,7 +413,7 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
                            .weapon = {.section = section, .critical = critical},
                            .target_hex = {.x = mapx, .y = mapy},
                            .range = range,
-                           .indirect_fire = spotTerrain,
+                           .indirect_fire = spot_terrain,
                            .sight = sight != 0,
                            .target_kind = 2});
   return 1;

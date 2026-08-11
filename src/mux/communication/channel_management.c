@@ -24,7 +24,7 @@
 #include "mux/support/utf8.h"
 #include "mux/world/player.h"
 
-static void comlist_description(GameDatabase *database, struct channel *channel,
+static void comlist_description(GameDatabase *database, struct Channel *channel,
                                 char *buffer, size_t buffer_size);
 
 static void chan_show_switches(EvaluationContext *evaluation, DbRef player) {
@@ -136,7 +136,7 @@ void do_createchannel(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *channel = invocation->first;
-  struct channel *newchannel;
+  struct Channel *newchannel;
 
   if (select_channel(evaluation->runtime->channels, channel)) {
     notify_printf(evaluation, player, "Channel %s already exists.", channel);
@@ -157,7 +157,7 @@ void do_createchannel(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "You do not have permission to do that.");
     return;
   }
-  newchannel = (struct channel *)malloc(sizeof(struct channel));
+  newchannel = (struct Channel *)malloc(sizeof(struct Channel));
 
   strncpy(newchannel->name, channel, CHAN_NAME_LEN - 1);
   newchannel->name[CHAN_NAME_LEN - 1] = '\0';
@@ -178,7 +178,7 @@ void do_createchannel(CommandInvocation *invocation) {
   notify_printf(evaluation, player, "Channel %s created.", channel);
 }
 
-void channel_destroy(struct channel *channel) {
+void channel_destroy(struct Channel *channel) {
   if (channel == nullptr)
     return;
   for (int index = 0; index < channel->num_users; index++)
@@ -186,7 +186,7 @@ void channel_destroy(struct channel *channel) {
   free((void *)channel->users);
   while (channel->last_messages != nullptr &&
          fifo_length(&channel->last_messages) > 0) {
-    chmsg *message = fifo_pop(&channel->last_messages);
+    Chmsg *message = fifo_pop(&channel->last_messages);
     free(message->msg);
     free(message);
   }
@@ -198,9 +198,9 @@ void do_destroychannel(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *channel = invocation->first;
-  struct channel *ch;
+  struct Channel *ch;
 
-  ch = (struct channel *)hash_table_find(
+  ch = (struct Channel *)hash_table_find(
       channel, &evaluation->runtime->channels->channels);
 
   if (!ch) {
@@ -218,14 +218,14 @@ void do_destroychannel(CommandInvocation *invocation) {
 }
 
 void comsys_list_channels(EvaluationContext *evaluation, DbRef player) {
-  struct channel *ch;
+  struct Channel *ch;
 
   raw_notify(evaluation, player,
              "** Channel             --Flags--  Obj  Users   Messages");
 
-  for (ch = (struct channel *)hash_table_first_entry(
+  for (ch = (struct Channel *)hash_table_first_entry(
            &evaluation->runtime->channels->channels);
-       ch; ch = (struct channel *)hash_table_next_entry(
+       ch; ch = (struct Channel *)hash_table_next_entry(
                &evaluation->runtime->channels->channels)) {
     notify_printf(
         evaluation, player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %6d %10d",
@@ -246,9 +246,9 @@ void comsys_list_channels(EvaluationContext *evaluation, DbRef player) {
 void do_comlist(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
-  struct channel *ch;
-  struct comuser *user;
-  struct commac *c;
+  struct Channel *ch;
+  struct Comuser *user;
+  struct Commac *c;
   Descriptor *descriptor;
   char description[LBUF_SIZE];
   int description_width;
@@ -286,7 +286,7 @@ void do_comlist(CommandInvocation *invocation) {
   raw_notify(evaluation, player, "-- End of comlist --");
 }
 
-static void comlist_description(GameDatabase *database, struct channel *ch,
+static void comlist_description(GameDatabase *database, struct Channel *ch,
                                 char *buffer, size_t buffer_size) {
   long flags;
   char *description;
@@ -302,15 +302,15 @@ static void comlist_description(GameDatabase *database, struct channel *ch,
   if (!*description) {
     strlcpy(buffer, "No description.", buffer_size);
   } else {
-    const size_t description_length = strlen(description);
+    const size_t DESCRIPTION_LENGTH = strlen(description);
     size_t output = 0;
 
-    while (output < description_length && output < buffer_size - 1) {
-      const char character = *(const char *)checked_storage_at_const(
-          description, description_length + 1, sizeof(char), output);
+    while (output < DESCRIPTION_LENGTH && output < buffer_size - 1) {
+      const char CHARACTER = *(const char *)checked_storage_at_const(
+          description, DESCRIPTION_LENGTH + 1, sizeof(char), output);
 
       *(char *)checked_storage_at(buffer, buffer_size, sizeof(char), output) =
-          character == '\r' || character == '\n' ? ' ' : character;
+          CHARACTER == '\r' || CHARACTER == '\n' ? ' ' : CHARACTER;
       output++;
     }
     *(char *)checked_storage_at(buffer, buffer_size, sizeof(char), output) =

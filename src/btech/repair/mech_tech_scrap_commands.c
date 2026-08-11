@@ -26,7 +26,7 @@
 #include "section_types.h"
 
 static int clan_modified_time(const Mech *mech, int time) {
-  return MAX(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
+  return max(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
 }
 
 typedef struct TechCheckContext {
@@ -70,23 +70,23 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
                  "That gun's gone already!");
     return;
   }
-  if (!ValidGunPos(&(RepairCriticalSelection){
+  if (!valid_gun_pos(&(RepairCriticalSelection){
           .mech = mech, .location = loc, .position = part})) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You can't remove middle of a gun!");
     return;
   }
-  if (SomeoneScrappingPart(mech, loc, part)) {
+  if (someone_scrapping_part(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping it already!");
     return;
   }
-  if (!CanScrapPart(mech, loc, part)) {
+  if (!can_scrap_part(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's tinkering with it already!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(
         btech_context_evaluation(context), player,
         "Someone's scrapping that section - no additional removals are "
@@ -110,7 +110,7 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
       int time =
           REMOVEG_TIME *
           clan_modified_time(
-              mech, GetWeaponCrits(
+              mech, get_weapon_crits(
                         mech, weapon_from_equipment_index(
                                   mech_critical_part_type(mech, loc, part))));
       repair_event_schedule_with_techtime(
@@ -130,9 +130,9 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
   int time =
       REMOVEG_TIME *
       clan_modified_time(
-          mech,
-          GetWeaponCrits(mech, weapon_from_equipment_index(
-                                   mech_critical_part_type(mech, loc, part))));
+          mech, get_weapon_crits(
+                    mech, weapon_from_equipment_index(
+                              mech_critical_part_type(mech, loc, part))));
   repair_event_schedule_with_techtime(&(RepairWorkSchedule){
       .command = &repair_command,
       .work_time = time,
@@ -202,19 +202,19 @@ void tech_removepart(DbRef player, void *data, char *buffer) {
                  "That type of item can't be removed!");
     return;
   }
-  if (SomeoneScrappingPart(mech, loc, part)) {
+  if (someone_scrapping_part(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping it already!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(
         btech_context_evaluation(context), player,
         "Someone's scrapping that section - no additional removals are "
         "possible!");
     return;
   }
-  if (!CanScrapPart(mech, loc, part)) {
+  if (!can_scrap_part(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's tinkering with it already!");
     return;
@@ -260,10 +260,10 @@ void tech_removepart(DbRef player, void *data, char *buffer) {
 
 static bool invalid_scrap_dependency(Mech *mech, int location) {
   return !mech_section_is_destroyed(mech, location) ||
-         Invalid_Scrap_Path(mech, location);
+         invalid_scrap_path(mech, location);
 }
 
-int Invalid_Scrap_Path(Mech *mech, int loc) {
+int invalid_scrap_path(Mech *mech, int loc) {
   if (loc < 0)
     return 0;
   if (mech_class(mech) != CLASS_MECH)
@@ -308,17 +308,17 @@ void tech_removesection(DbRef player, void *data, char *buffer) {
                  "That section's gone already!");
     return;
   }
-  if (Invalid_Scrap_Path(mech, loc)) {
+  if (invalid_scrap_path(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You need to remove the outer sections first!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping it already!");
     return;
   }
-  if (!CanScrapLoc(mech, loc)) {
+  if (!can_scrap_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's tinkering with it already!");
     return;

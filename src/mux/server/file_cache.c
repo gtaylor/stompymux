@@ -21,19 +21,19 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/utf8.h"
 
-typedef struct filecache_hdr FCACHE;
-typedef struct filecache_block_hdr FBLKHDR;
-typedef struct filecache_block FBLOCK;
+typedef struct FilecacheHdr FCACHE;
+typedef struct FilecacheBlockHdr FBLKHDR;
+typedef struct FilecacheBlock FBLOCK;
 
-struct filecache_hdr {
+struct FilecacheHdr {
   const char *filename;
   FBLOCK *fileblock;
   const char *desc;
 };
 
-struct filecache_block {
-  struct filecache_block_hdr {
-    struct filecache_block *nxt;
+struct FilecacheBlock {
+  struct FilecacheBlockHdr {
+    struct FilecacheBlock *nxt;
     int nchars;
   } hdr;
   char data[MBUF_SIZE - sizeof(FBLKHDR)];

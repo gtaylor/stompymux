@@ -218,12 +218,12 @@ typedef struct AutopilotWeaponScoreRequest {
 
 static int auto_calc_weapon_score(const AutopilotWeaponScoreRequest *request) {
   BtechContext *context = request->context;
-  const int weapon_db_number = request->weapon_index;
-  const int range = request->range;
+  const int WEAPON_DB_NUMBER = request->weapon_index;
+  const int RANGE = request->range;
 
   int weapon_damage;
-  const WeaponRangeProfile weapon_ranges =
-      weapon_catalogue_ranges(weapon_db_number);
+  const WeaponRangeProfile WEAPON_RANGES =
+      weapon_catalogue_ranges(WEAPON_DB_NUMBER);
 
   /* Simple Calc */
 
@@ -236,9 +236,9 @@ static int auto_calc_weapon_score(const AutopilotWeaponScoreRequest *request) {
   weapon_damage = 0;
 
   /* Get the damage for the weapon */
-  if (weapon_catalogue_is_missile(weapon_db_number)) {
+  if (weapon_catalogue_is_missile(WEAPON_DB_NUMBER)) {
     const MissileHitEntry *entry = missile_hit_registry_find_weapon(
-        &context->missile_hits, weapon_db_number);
+        &context->missile_hits, WEAPON_DB_NUMBER);
 
     /* Its a missile weapon so lookup in the Missile table get the max
      * number of missiles it can hit with, and multiply by the damage
@@ -248,20 +248,20 @@ static int auto_calc_weapon_score(const AutopilotWeaponScoreRequest *request) {
      * 5 */
     if (entry != nullptr)
       weapon_damage =
-          entry->num_missiles[5] * weapon_catalogue_damage(weapon_db_number);
+          entry->num_missiles[5] * weapon_catalogue_damage(WEAPON_DB_NUMBER);
 
   } else {
-    weapon_damage = weapon_catalogue_damage(weapon_db_number);
+    weapon_damage = weapon_catalogue_damage(WEAPON_DB_NUMBER);
   }
 
   return autopilot_weapon_score(&(AutopilotWeaponScoreSituation){
-      .range = range,
-      .minimum_range = weapon_ranges.minimum,
-      .short_range = weapon_ranges.short_range,
-      .medium_range = weapon_ranges.medium_range,
-      .long_range = weapon_ranges.long_range,
+      .range = RANGE,
+      .minimum_range = WEAPON_RANGES.minimum,
+      .short_range = WEAPON_RANGES.short_range,
+      .medium_range = WEAPON_RANGES.medium_range,
+      .long_range = WEAPON_RANGES.long_range,
       .damage = weapon_damage,
-      .heat = weapon_catalogue_heat(weapon_db_number)});
+      .heat = weapon_catalogue_heat(WEAPON_DB_NUMBER)});
 }
 
 /*
@@ -293,17 +293,17 @@ void auto_update_profile_event(Autopilot *autopilot) {
     /* most commonly, the mech is a bad memory space.
      * lets not try to access it
      */
-    dprintk("ap mymechnum is bad");
+    DPRINTK("ap mymechnum is bad");
     autopilot_gunning_stop(autopilot);
     return;
   }
 
   if (!mech) {
-    dprintk("mech is bad!");
+    DPRINTK("mech is bad!");
     return;
   }
   if (!autopilot) {
-    dprintk("ai is bad!");
+    DPRINTK("ai is bad!");
     return;
   }
   if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
@@ -346,7 +346,7 @@ void auto_update_profile_event(Autopilot *autopilot) {
 
     /* Find all the weapons for a given section */
     weapon_count_section =
-        FindWeapons_Advanced(mech, section, weaparray, weapdata, critical, 1);
+        find_weapons_advanced(mech, section, weaparray, weapdata, critical, 1);
 
     /* No weapons here */
     if (weapon_count_section <= 0)
@@ -355,9 +355,9 @@ void auto_update_profile_event(Autopilot *autopilot) {
     /* loop through the possible weapons */
     for (weapon_number = 0; weapon_number < weapon_count_section;
          weapon_number++) {
-      const int weapon_index =
+      const int WEAPON_INDEX =
           (int)autopilot_weapon_number_at(weaparray, weapon_number);
-      const int critical_index =
+      const int CRITICAL_INDEX =
           autopilot_weapon_critical_at(critical, weapon_number);
 
       /* Count it even if its not a valid weapon like AMS */
@@ -365,29 +365,29 @@ void auto_update_profile_event(Autopilot *autopilot) {
        * which one to send in the command */
       weapon_count++;
 
-      if (weapon_catalogue_is_anti_missile(weapon_index))
+      if (weapon_catalogue_is_anti_missile(WEAPON_INDEX))
         continue;
 
       /* Does it work? */
-      if (WeaponIsNonfunctional(
-              mech, section, critical_index,
-              GetWeaponCrits(mech, weapon_from_equipment_index(weapon_index))) >
-          0)
+      if (weapon_is_nonfunctional(
+              mech, section, CRITICAL_INDEX,
+              get_weapon_crits(mech,
+                               weapon_from_equipment_index(WEAPON_INDEX))) > 0)
         continue;
 
       /* Ok made it this far, lets add it to our list */
       temp_weapon_node = auto_create_weapon_node(&(AutopilotWeaponRequest){
           .weapon_number = weapon_count,
-          .catalogue_index = weapon_index,
-          .slot = {.section = section, .critical = critical_index}});
+          .catalogue_index = WEAPON_INDEX,
+          .slot = {.section = section, .critical = CRITICAL_INDEX}});
 
       temp_dllist_node = doubly_linked_list_create_node(temp_weapon_node);
       doubly_linked_list_insert_end(autopilot->weaplist, temp_dllist_node);
 
       /* Check the max range */
-      const int long_range = weapon_catalogue_ranges(weapon_index).long_range;
-      if (autopilot->mech_max_range < long_range) {
-        autopilot->mech_max_range = long_range;
+      const int LONG_RANGE = weapon_catalogue_ranges(WEAPON_INDEX).long_range;
+      if (autopilot->mech_max_range < LONG_RANGE) {
+        autopilot->mech_max_range = LONG_RANGE;
       }
     }
   }
@@ -406,9 +406,9 @@ void auto_update_profile_event(Autopilot *autopilot) {
     temp_weapon_node = (AutopilotWeapon *)doubly_linked_list_get_node(
         autopilot->weaplist, weapon_number);
 
-    const int long_range =
+    const int LONG_RANGE =
         weapon_catalogue_ranges(temp_weapon_node->weapon_db_number).long_range;
-    for (range = 0; range < long_range; range++) {
+    for (range = 0; range < LONG_RANGE; range++) {
 
       /* Out side the the range of AI's profile system */
       if (range >= AUTO_PROFILE_MAX_SIZE) {

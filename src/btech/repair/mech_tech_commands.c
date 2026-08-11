@@ -83,48 +83,48 @@ static int tech_event_location_count(const TechEventLocationQuery *query) {
 }
 
 /* Replace/reload */
-int SomeoneRepairing_s(Mech *mech, int loc, int part, int t) {
+int someone_repairing_s(Mech *mech, int loc, int part, int t) {
   return tech_event_part_count(&(TechEventPartQuery){
       .mech = mech, .location = loc, .part = part, .event_type = t});
 }
 
-int SomeoneRepairing(Mech *mech, int loc, int part) {
-  const int event_types[] = {EVENT_REPAIR_RELO,      EVENT_REPAIR_REPL,
+int someone_repairing(Mech *mech, int loc, int part) {
+  const int EVENT_TYPES[] = {EVENT_REPAIR_RELO,      EVENT_REPAIR_REPL,
                              EVENT_REPAIR_REPLG,     EVENT_REPAIR_REPAP,
                              EVENT_REPAIR_REPAG,     EVENT_REPAIR_MOB,
                              EVENT_REPAIR_REPENHCRIT};
-  for (size_t index = 0; index < (sizeof(event_types) / sizeof(event_types[0]));
+  for (size_t index = 0; index < (sizeof(EVENT_TYPES) / sizeof(EVENT_TYPES[0]));
        index++)
-    if (SomeoneRepairing_s(
+    if (someone_repairing_s(
             mech, loc, part,
-            tech_int_at(event_types, sizeof(event_types) / sizeof(*event_types),
+            tech_int_at(EVENT_TYPES, sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
                         index)))
       return 1;
   return 0;
 }
 
 /* Fixinternal/armor */
-int SomeoneFixingA(Mech *mech, int loc) {
+int someone_fixing_a(Mech *mech, int loc) {
   return tech_event_location_count(&(TechEventLocationQuery){
       .mech = mech, .location = loc, .event_type = EVENT_REPAIR_FIX});
 }
 
-int SomeoneFixingI(Mech *mech, int loc) {
+int someone_fixing_i(Mech *mech, int loc) {
   return tech_event_location_count(&(TechEventLocationQuery){
       .mech = mech, .location = loc, .event_type = EVENT_REPAIR_FIXI});
 }
 
-int SomeoneFixing(Mech *mech, int loc) {
-  return SomeoneFixingA(mech, loc) || SomeoneFixingI(mech, loc);
+int someone_fixing(Mech *mech, int loc) {
+  return someone_fixing_a(mech, loc) || someone_fixing_i(mech, loc);
 }
 
 /* Reattach */
-int SomeoneAttaching(Mech *mech, int loc) {
+int someone_attaching(Mech *mech, int loc) {
   return tech_event_location_count(&(TechEventLocationQuery){
       .mech = mech, .location = loc, .event_type = EVENT_REPAIR_REAT});
 }
 
-int SomeoneReplacingSuit(Mech *mech, int loc) {
+int someone_replacing_suit(Mech *mech, int loc) {
   return tech_event_location_count(&(TechEventLocationQuery){
       .mech = mech, .location = loc, .event_type = EVENT_REPAIR_REPSUIT});
 }
@@ -135,56 +135,56 @@ int SomeoneReplacingSuit(Mech *mech, int loc) {
  * 8/4/99
  */
 
-int SomeoneResealing(Mech *mech, int loc) {
+int someone_resealing(Mech *mech, int loc) {
   return tech_event_location_count(&(TechEventLocationQuery){
       .mech = mech, .location = loc, .event_type = EVENT_REPAIR_RESE});
 }
 
-int SomeoneScrappingLoc(Mech *mech, int loc) {
+int someone_scrapping_loc(Mech *mech, int loc) {
   return tech_event_location_count(&(TechEventLocationQuery){
       .mech = mech, .location = loc, .event_type = EVENT_REPAIR_SCRL});
 }
 
-int SomeoneScrappingPart(Mech *mech, int loc, int part) {
-  const int event_types[] = {EVENT_REPAIR_SCRP, EVENT_REPAIR_SCRG,
+int someone_scrapping_part(Mech *mech, int loc, int part) {
+  const int EVENT_TYPES[] = {EVENT_REPAIR_SCRP, EVENT_REPAIR_SCRG,
                              EVENT_REPAIR_UMOB};
-  for (size_t index = 0; index < (sizeof(event_types) / sizeof(event_types[0]));
+  for (size_t index = 0; index < (sizeof(EVENT_TYPES) / sizeof(EVENT_TYPES[0]));
        index++)
-    if (SomeoneRepairing_s(
+    if (someone_repairing_s(
             mech, loc, part,
-            tech_int_at(event_types, sizeof(event_types) / sizeof(*event_types),
+            tech_int_at(EVENT_TYPES, sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
                         index)))
       return 1;
   return 0;
 }
 
-int CanScrapLoc(Mech *mech, int loc) {
+int can_scrap_loc(Mech *mech, int loc) {
   TechCheckContext check = {.location = loc % 8};
 
   mech_event_visit(mech, EVENT_REPAIR_REPL, tech_check_loc, &check);
   mech_event_visit(mech, EVENT_REPAIR_RELO, tech_check_loc, &check);
-  return !check.matches && !SomeoneFixing(mech, loc);
+  return !check.matches && !someone_fixing(mech, loc);
 }
 
-int CanScrapPart(Mech *mech, int loc, int part) {
-  return !(SomeoneRepairing(mech, loc, part));
+int can_scrap_part(Mech *mech, int loc, int part) {
+  return !(someone_repairing(mech, loc, part));
 }
 
-bool ValidGunPos(const RepairCriticalSelection *selection) {
+bool valid_gun_pos(const RepairCriticalSelection *selection) {
   Mech *mech = selection->mech;
-  const int loc = selection->location;
-  const int pos = selection->position;
+  const int LOC = selection->location;
+  const int POS = selection->position;
   unsigned char weaparray_f[MAX_WEAPS_SECTION];
   unsigned char weapdata_f[MAX_WEAPS_SECTION];
   int critical_f[MAX_WEAPS_SECTION];
   int i, num_weaps_f;
 
   num_weaps_f =
-      FindWeapons_Advanced(mech, loc, weaparray_f, weapdata_f, critical_f, 1);
+      find_weapons_advanced(mech, LOC, weaparray_f, weapdata_f, critical_f, 1);
   if (num_weaps_f < 0)
     return false;
   for (i = 0; i < num_weaps_f; i++)
-    if (tech_int_at(critical_f, MAX_WEAPS_SECTION, (size_t)i) == pos)
+    if (tech_int_at(critical_f, MAX_WEAPS_SECTION, (size_t)i) == POS)
       return true;
   return false;
 }

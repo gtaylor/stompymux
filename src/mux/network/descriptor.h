@@ -26,12 +26,13 @@ typedef enum DescriptorShutdownReason {
 } DescriptorShutdownReason;
 
 /* Opaque libtelnet protocol state owned by a descriptor. */
-typedef struct telnet_t telnet_t;
+typedef struct telnet_t TelnetT;
 typedef struct TelnetEnvironment TelnetEnvironment;
 /* Opaque interactive input-flow state owned by a descriptor. */
 typedef struct InputFlow InputFlow;
 /* Opaque libuv TCP handle owned by a descriptor. */
-typedef struct uv_tcp_s uv_tcp_t;
+// NOLINTNEXTLINE(readability-identifier-naming) — external libuv tag.
+typedef struct uv_tcp_s UvTcpT;
 typedef struct DescriptorRegistry DescriptorRegistry;
 typedef struct BtechContext BtechContext;
 typedef struct CommandRuntime CommandRuntime;
@@ -82,7 +83,7 @@ typedef struct Descriptor {
   /* Write position within the input buffer. */
   int input_tail;
   /* libtelnet state for protocol negotiation. */
-  telnet_t *telnet;
+  TelnetT *telnet;
   /* Environment variables reported through RFC 1572 NEW-ENVIRON. */
   TelnetEnvironment *telnet_environment;
   /* Terminal type reported by the client. */
@@ -138,7 +139,7 @@ typedef struct Descriptor {
   /* Number of asynchronous writes still owned by libuv. */
   size_t pending_writes;
   /* libuv TCP stream for this client. */
-  uv_tcp_t *socket;
+  UvTcpT *socket;
   /* Registry that owns this descriptor's active reference. */
   DescriptorRegistry *registry;
 } Descriptor;

@@ -154,8 +154,8 @@ void auto_radio_command_dfollow(Autopilot *autopilot, Mech *mech,
   DbRef targetref;
   char buffer[SBUF_SIZE];
 
-  targetref =
-      FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
+  targetref = find_target_dbref_from_map_number(
+      mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
     (void)snprintf(mesg, LBUF_SIZE, "!Invalid target to follow");
     return;
@@ -225,8 +225,8 @@ void auto_radio_command_embark(Autopilot *autopilot, Mech *mech,
   DbRef targetref;
   char buffer[SBUF_SIZE];
 
-  targetref =
-      FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
+  targetref = find_target_dbref_from_map_number(
+      mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
     (void)snprintf(mesg, LBUF_SIZE, "!Invalid target to embark");
     return;
@@ -275,8 +275,8 @@ void auto_radio_command_follow(Autopilot *autopilot, Mech *mech,
   char buffer[SBUF_SIZE];
   DbRef targetref;
 
-  targetref =
-      FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
+  targetref = find_target_dbref_from_map_number(
+      mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
     (void)snprintf(mesg, LBUF_SIZE, "!Invalid target to follow");
     return;
@@ -432,7 +432,7 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
   }
 
   if ((argc - 1) == 1) {
-    if (FindTargetDBREFFromMapNumber(
+    if (find_target_dbref_from_map_number(
             mech, autopilot_argument_list_get(args, 1)) <= 0) {
       (void)snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");
       return;
@@ -527,8 +527,8 @@ void auto_radio_command_pickup(Autopilot *autopilot, Mech *mech,
   DbRef targetref;
   char buffer[SBUF_SIZE];
 
-  targetref =
-      FindTargetDBREFFromMapNumber(mech, autopilot_argument_list_get(args, 1));
+  targetref = find_target_dbref_from_map_number(
+      mech, autopilot_argument_list_get(args, 1));
   if (targetref <= 0) {
     (void)snprintf(mesg, LBUF_SIZE, "!Invalid target to pickup");
     return;

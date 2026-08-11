@@ -52,8 +52,8 @@
 
 #ifdef BT_PART_WEIGHTS
 /* From template.c */
-extern const int internalsweight[];
-extern const int cargoweight[];
+extern const int INTERNALSWEIGHT[];
+extern const int CARGOWEIGHT[];
 #endif
 
 #ifdef BT_MOVEMENT_MODES

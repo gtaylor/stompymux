@@ -69,7 +69,7 @@ void mech_snipe(DbRef player, Mech *mech, char *buffer) {
                  "Please supply target ID _and_ weapon(s) to use");
     return;
   }
-  d = FindTargetDBREFFromMapNumber(mech, args[0]);
+  d = find_target_dbref_from_map_number(mech, args[0]);
   if (d <= 0) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid target!");

@@ -61,10 +61,10 @@ static void append_lbuf(char *buffer, size_t size, const char *fmt, ...) {
 }
 
 static void do_scramble(BtechContext *context, char *buffo, int ch, int bth) {
-  const size_t length = strlen(buffo);
+  const size_t LENGTH = strlen(buffo);
 
-  for (size_t i = 0; i < length; i++) {
-    char *character = checked_storage_at(buffo, length + 1, sizeof(char), i);
+  for (size_t i = 0; i < LENGTH; i++) {
+    char *character = checked_storage_at(buffo, LENGTH + 1, sizeof(char), i);
     if (btech_random_range(context, 1, 100) > ch &&
         btech_random_roll(context) < (bth + 5)) {
       if (btech_random_range(context, 1, 2) == 1)
@@ -72,7 +72,7 @@ static void do_scramble(BtechContext *context, char *buffo, int ch, int bth) {
       else
         *character += btech_random_range(context, 1, 10);
     }
-    *character = (char)(unsigned char)BOUNDED(33, *character, 255);
+    *character = (char)(unsigned char)bounded(33, *character, 255);
   }
 }
 
@@ -192,15 +192,15 @@ static void scramble_message(const RadioScrambleRequest *request) {
   const CommRelayContext *relay = request->relay;
   BtechContext *context = request->context;
   char *buffo = request->output;
-  const float range = request->range;
-  const int sendrange = request->send_range;
-  const int recvrrange = request->receive_range;
+  const float RANGE = request->range;
+  const int SENDRANGE = request->send_range;
+  const int RECVRRANGE = request->receive_range;
   const char *handle = request->handle;
   const char *msg = request->message;
-  const int bth = request->base_to_hit;
+  const int BTH = request->base_to_hit;
   int *isxp = request->awarded_experience;
-  const bool under_ecm = request->under_ecm;
-  const int digmode = request->digital_mode;
+  const bool UNDER_ECM = request->under_ecm;
+  const int DIGMODE = request->digital_mode;
 
   int mr, i;
   char *header = nullptr;
@@ -208,7 +208,7 @@ static void scramble_message(const RadioScrambleRequest *request) {
 
   *isxp = 0;
 
-  if (digmode > 1 && relay != nullptr && relay->best_depth > 1) {
+  if (DIGMODE > 1 && relay != nullptr && relay->best_depth > 1) {
     int bearing;
     BtechTextBuilder path;
 
@@ -240,35 +240,35 @@ static void scramble_message(const RadioScrambleRequest *request) {
     append_lbuf(buffo, LBUF_SIZE, "<%s> ", handle);
   append_lbuf(buffo, LBUF_SIZE, "%s", msg);
 
-  const float send_range = (float)sendrange;
-  const float receive_range = (float)recvrrange;
+  const float SEND_RANGE = (float)SENDRANGE;
+  const float RECEIVE_RANGE = (float)RECVRRANGE;
 
-  if ((!digmode && (range >= send_range || range >= receive_range)) ||
-      under_ecm) {
-    if (!digmode) {
+  if ((!DIGMODE && (RANGE >= SEND_RANGE || RANGE >= RECEIVE_RANGE)) ||
+      UNDER_ECM) {
+    if (!DIGMODE) {
 
-      mr = MAX(recvrrange, (sendrange + recvrrange) / 2);
-      if (send_range < range) {
-        const float signal = 100.0F * send_range / fmaxf(1.0F, range);
+      mr = max(RECVRRANGE, (SENDRANGE + RECVRRANGE) / 2);
+      if (SEND_RANGE < RANGE) {
+        const float SIGNAL = 100.0F * SEND_RANGE / fmaxf(1.0F, RANGE);
 
-        do_scramble(context, buffo, clamp_float_to_int(signal), bth);
+        do_scramble(context, buffo, clamp_float_to_int(SIGNAL), BTH);
         *isxp = 1;
       }
 
-      if ((float)mr < range) {
-        const float signal = 100.0F * (float)mr / fmaxf(1.0F, range);
+      if ((float)mr < RANGE) {
+        const float SIGNAL = 100.0F * (float)mr / fmaxf(1.0F, RANGE);
 
         do_scramble(context, buffo,
-                    relay_signal_improve(clamp_float_to_int(signal), 2), bth);
+                    relay_signal_improve(clamp_float_to_int(SIGNAL), 2), BTH);
         *isxp = 1;
       }
     }
 
-    if (under_ecm && range >= 1.0F) {
-      const long random_chance = btech_random_range(context, 30, 50);
+    if (UNDER_ECM && RANGE >= 1.0F) {
+      const long RANDOM_CHANCE = btech_random_range(context, 30, 50);
 
-      do_scramble(context, buffo, clamp_intptr_to_int((intptr_t)random_chance),
-                  bth);
+      do_scramble(context, buffo, clamp_intptr_to_int((intptr_t)RANDOM_CHANCE),
+                  BTH);
       *isxp = 1;
     }
   }
@@ -367,8 +367,8 @@ static bool find_comm_link(CommRelayContext *relay, BattleMap *map, Mech *from,
   relay->node_count = 0;
   relay_mech_set(relay, relay->node_count++, from);
   for (i = 0; i < battle_map_unit_count(map); i++) {
-    const DbRef candidate = battle_map_unit_dbref(map, i);
-    t = btech_context_find_object(mech_context(from), candidate);
+    const DbRef CANDIDATE = battle_map_unit_dbref(map, i);
+    t = btech_context_find_object(mech_context(from), CANDIDATE);
     if (!t)
       continue;
     if (t == from || t == to)
@@ -399,11 +399,11 @@ static bool find_comm_link(CommRelayContext *relay, BattleMap *map, Mech *from,
       Mech *target = relay_mech_get(relay, j);
       float range = mech_range_to(source, target);
 
-      const int source_range = mech_radio_range(source);
-      const int target_range = mech_radio_range(target);
+      const int SOURCE_RANGE = mech_radio_range(source);
+      const int TARGET_RANGE = mech_radio_range(target);
 
-      relay_connected_set(relay, i, j, range <= (float)source_range);
-      relay_connected_set(relay, j, i, range <= (float)target_range);
+      relay_connected_set(relay, i, j, range <= (float)SOURCE_RANGE);
+      relay_connected_set(relay, j, i, range <= (float)TARGET_RANGE);
     }
   }
   relay->best_depth = 9999;
@@ -441,7 +441,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   /* The _smart_ code :-) */
   int loop, bearing, i, isxp;
   float range;
-  Mech *tempMech;
+  Mech *temp_mech;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char buf[LBUF_SIZE];
@@ -460,44 +460,44 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
   /* Loop through all the units on the map */
   for (loop = 0; loop < battle_map_unit_count(mech_map); loop++) {
-    const DbRef candidate = battle_map_unit_dbref(mech_map, loop);
-    if (candidate != 2) {
+    const DbRef CANDIDATE = battle_map_unit_dbref(mech_map, loop);
+    if (CANDIDATE != 2) {
       // XXX: The test below is indicative of very bad bookkeeping. Suggesting
       // that a dbref may be indicated as "on the map" without being on the
       // map. I believe this to be a serious problem.
-      tempMech =
-          (Mech *)btech_context_find_object(mech_context(mech), candidate);
-      if (!tempMech)
+      temp_mech =
+          (Mech *)btech_context_find_object(mech_context(mech), CANDIDATE);
+      if (!temp_mech)
         continue;
-      if (mech_is_destroyed(tempMech))
+      if (mech_is_destroyed(temp_mech))
         continue;
-      obs = mech_is_observer(tempMech);
-      range = mech_range_to(mech, tempMech);
+      obs = mech_is_observer(temp_mech);
+      range = mech_range_to(mech, temp_mech);
       bearing = map_bearing(
-          &(MapRealSegment){.start = {.x = mech_position_real_x(tempMech),
-                                      .y = mech_position_real_y(tempMech)},
+          &(MapRealSegment){.start = {.x = mech_position_real_x(temp_mech),
+                                      .y = mech_position_real_y(temp_mech)},
                             .end = {.x = mech_position_real_x(mech),
                                     .y = mech_position_real_y(mech)}});
-      for (i = 0; i < mech_radio_channel_count(tempMech); i++) {
-        if (mech_radio_frequency(tempMech, i) ==
+      for (i = 0; i < mech_radio_channel_count(temp_mech); i++) {
+        if (mech_radio_frequency(temp_mech, i) ==
                 mech_radio_frequency(mech, freq) ||
             obs) {
-          if ((mech_radio_mode(tempMech, i) & FREQ_MUTE) ||
+          if ((mech_radio_mode(temp_mech, i) & FREQ_MUTE) ||
               ((mech_radio_mode(mech, freq) & FREQ_DIGITAL) &&
-               (mech_radio_capabilities(tempMech) & RADIO_NODIGITAL)))
+               (mech_radio_capabilities(temp_mech) & RADIO_NODIGITAL)))
             continue;
           break;
         }
       }
-      if (i >= mech_radio_channel_count(tempMech)) {
+      if (i >= mech_radio_channel_count(temp_mech)) {
         /* Possible scanner check */
         if (!(mech_radio_mode(mech, freq) & FREQ_DIGITAL))
-          if ((mech_radio_capabilities(tempMech) & RADIO_SCAN) &&
+          if ((mech_radio_capabilities(temp_mech) & RADIO_SCAN) &&
               mech_radio_frequency(mech, freq)) {
             int tnc = 0;
 
-            for (i = 0; i < mech_radio_channel_count(tempMech); i++)
-              if (mech_radio_mode(tempMech, i) & FREQ_SCAN) {
+            for (i = 0; i < mech_radio_channel_count(temp_mech); i++)
+              if (mech_radio_mode(temp_mech, i) & FREQ_SCAN) {
                 int l = clamp_size_to_int(strlen(msg)), t;
                 int mod, diff;
                 int pr;
@@ -505,32 +505,32 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
                 /* Possible skill check here? Nah. */
 
                 /* Chance of detection: 1 in MIN(80,l) out of 100 */
-                if (btech_random_range(mech_context(mech), 1, 100) > MIN(80, l))
+                if (btech_random_range(mech_context(mech), 1, 100) > min(80, l))
                   continue;
 
                 if (!tnc++)
-                  mech_notify(tempMech, MECHALL,
+                  mech_notify(temp_mech, MECHALL,
                               "You notice a "
                               "unknown transmission your scanner.. ");
-                if (mech_radio_frequency(tempMech, i) <
+                if (mech_radio_frequency(temp_mech, i) <
                     mech_radio_frequency(mech, freq)) {
                   diff = mech_radio_frequency(mech, freq) -
-                         mech_radio_frequency(tempMech, i);
+                         mech_radio_frequency(temp_mech, i);
                   mod = 1;
                 } else {
-                  diff = mech_radio_frequency(tempMech, i) -
+                  diff = mech_radio_frequency(temp_mech, i) -
                          mech_radio_frequency(mech, freq);
                   mod = -1;
                 }
 
-                const long random_fraction =
-                    btech_random_range(mech_context(mech), 1, MIN(99, l));
-                const int64_t scaled_fraction =
-                    (int64_t)random_fraction * (int64_t)diff / 100;
+                const long RANDOM_FRACTION =
+                    btech_random_range(mech_context(mech), 1, min(99, l));
+                const int64_t SCALED_FRACTION =
+                    (int64_t)RANDOM_FRACTION * (int64_t)diff / 100;
 
-                t = MAX(1, clamp_intptr_to_int((intptr_t)scaled_fraction));
+                t = max(1, clamp_intptr_to_int((intptr_t)SCALED_FRACTION));
                 pr = t * 100 / diff;
-                mech_printf(tempMech, MECHALL,
+                mech_printf(temp_mech, MECHALL,
                             "Your systems "
                             "manage to zero on it %s on channel %c.",
                             pr < 30   ? "somewhat"
@@ -538,7 +538,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
                             : pr < 95 ? "precisely"
                                       : "exactly",
                             i + 'A');
-                mech_radio_frequency_add(tempMech, i, mod * t);
+                mech_radio_frequency_add(temp_mech, i, mod * t);
               }
           }
 
@@ -547,7 +547,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
       (void)snprintf(buf2, LBUF_SIZE, "%s", msg);
       radio_color_code(&(RadioColorRequest){.buffer = color_code,
-                                            .mech = tempMech,
+                                            .mech = temp_mech,
                                             .channel = i,
                                             .observer = obs != 0,
                                             .team = mech_team(mech)});
@@ -574,23 +574,23 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
               mech_id(mech, false).text, mech_radio_frequency(mech, freq),
               mech_radio_title(mech, freq), buf2);
         }
-        mech_notify(tempMech, MECHALL, buf);
+        mech_notify(temp_mech, MECHALL, buf);
       }
 
       /* This is where we check to see if the mech has an AI and
        * then we give the radio commands to the AI */
-      if (mech_autopilot_dbref(tempMech) > 0 &&
-          mech_radio_frequency(tempMech, i)) {
+      if (mech_autopilot_dbref(temp_mech) > 0 &&
+          mech_radio_frequency(temp_mech, i)) {
         Autopilot *a = (Autopilot *)btech_context_find_object(
-            mech_context(mech), mech_autopilot_dbref(tempMech));
+            mech_context(mech), mech_autopilot_dbref(temp_mech));
 
         /* First check to make sure the AI is still there */
         if (!a) {
           /* No AI there so reset the AI value on the mech */
-          mech_autopilot_dbref_set(tempMech, -1);
+          mech_autopilot_dbref_set(temp_mech, -1);
         } else if (a && game_object_location(
                             btech_context_database(mech_context(mech)),
-                            a->mynum) != mech_dbref(tempMech)) {
+                            a->mynum) != mech_dbref(temp_mech)) {
           /* Check to see if the AI is still in the same mech */
           (void)snprintf(
               ai_buf, LBUF_SIZE,
@@ -599,33 +599,33 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
               a->mynum,
               game_object_location(btech_context_database(mech_context(mech)),
                                    a->mynum),
-              mech_dbref(tempMech));
+              mech_dbref(temp_mech));
           btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_AI, "%s",
                              ai_buf);
-        } else if (a && !mech_is_ecm_disturbed(tempMech)) {
+        } else if (a && !mech_is_ecm_disturbed(temp_mech)) {
           /* Ok send the command to the AI provided its not ECM'd */
           (void)snprintf(buf3, LBUF_SIZE, "%s", msg);
-          auto_parse_command(a, tempMech, i, buf3);
+          auto_parse_command(a, temp_mech, i, buf3);
         }
       }
       /* Radio failure checks were intentionally removed from delivery. */
-      if (!mech_radio_range(tempMech))
+      if (!mech_radio_range(temp_mech))
         continue;
       if (mech_radio_mode(mech, freq) & FREQ_DIGITAL) {
         if (relay != nullptr)
           relay->best_depth = 1;
-        const int source_range = mech_radio_range(mech);
-        if (range > (float)source_range) {
+        const int SOURCE_RANGE = mech_radio_range(mech);
+        if (range > (float)SOURCE_RANGE) {
           if (relay == nullptr ||
-              !find_comm_link(relay, mech_map, mech, tempMech,
+              !find_comm_link(relay, mech_map, mech, temp_mech,
                               mech_radio_frequency(mech, freq)))
             continue;
         }
 
-        if (tempMech != mech) {
+        if (temp_mech != mech) {
           if (mech_is_any_ecm_disturbed(mech))
             continue;
-          else if (mech_is_any_ecm_disturbed(tempMech))
+          else if (mech_is_any_ecm_disturbed(temp_mech))
             continue;
         }
 
@@ -638,18 +638,18 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
             .receive_range = mech_radio_range(mech),
             .handle = mech_radio_title(mech, freq),
             .message = buf2,
-            .base_to_hit = mech_communication_skill(tempMech),
+            .base_to_hit = mech_communication_skill(temp_mech),
             .awarded_experience = &isxp,
             .digital_mode =
-                (mech_radio_mode(tempMech, i) & FREQ_INFO) ? 2 : 1});
+                (mech_radio_mode(temp_mech, i) & FREQ_INFO) ? 2 : 1});
 
         if (relay != nullptr && relay->best_depth >= 2) {
-          const int relay_index =
+          const int RELAY_INDEX =
               relay_index_get(relay->best_path, relay->best_depth - 1);
-          Mech *last_relay = relay_mech_get(relay, relay_index);
+          Mech *last_relay = relay_mech_get(relay, RELAY_INDEX);
           bearing = map_bearing(&(MapRealSegment){
-              .start = {.x = mech_position_real_x(tempMech),
-                        .y = mech_position_real_y(tempMech)},
+              .start = {.x = mech_position_real_x(temp_mech),
+                        .y = mech_position_real_y(temp_mech)},
               .end = {.x = mech_position_real_x(last_relay),
                       .y = mech_position_real_y(last_relay)}});
         }
@@ -665,33 +665,33 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
             .output = buf3,
             .range = range,
             .send_range = mech_radio_range(mech),
-            .receive_range = mech_radio_range(tempMech),
+            .receive_range = mech_radio_range(temp_mech),
             .handle = mech_radio_title(mech, freq),
             .message = buf2,
-            .base_to_hit = mech_communication_skill(tempMech),
+            .base_to_hit = mech_communication_skill(temp_mech),
             .awarded_experience = &isxp,
             .under_ecm = (mech_is_any_ecm_disturbed(mech) ||
-                          mech_is_any_ecm_disturbed(tempMech)
+                          mech_is_any_ecm_disturbed(temp_mech)
                           /*
                              || sfail_type == FAIL_STATIC ||
                              rfail_type == FAIL_STATIC
                            */
                           ) &&
-                         mech != tempMech});
+                         mech != temp_mech});
         if (!obs)
           build_channel_message(buf, color_code, '(', ')', (char)('A' + i),
                                 bearing, buf3);
       }
 
       if (!obs)
-        mech_notify(tempMech, MECHALL, buf);
+        mech_notify(temp_mech, MECHALL, buf);
       if (isxp && is_in_character(btech_context_database(mech_context(mech)),
-                                  mech_dbref(tempMech)))
-        if ((mech_communication_last_tick(tempMech) + 60) <
+                                  mech_dbref(temp_mech)))
+        if ((mech_communication_last_tick(temp_mech) + 60) <
             btech_context_event_tick(mech_context(mech))) {
-          AccumulateCommXP(mech_pilot_dbref(tempMech), tempMech);
+          accumulate_comm_xp(mech_pilot_dbref(temp_mech), temp_mech);
           mech_communication_last_tick_set(
-              tempMech, btech_context_event_tick(mech_context(mech)));
+              temp_mech, btech_context_event_tick(mech_context(mech)));
         }
     }
   } /* End of looping through all the units on the map */
@@ -704,7 +704,7 @@ void mech_radio(DbRef player, void *data, char *buffer) {
   int i;
   Mech *mech = (Mech *)data;
   DbRef target;
-  Mech *tempMech;
+  Mech *temp_mech;
 
   /* radio <id>=message */
   /* Quick clone :-) */
@@ -727,22 +727,23 @@ void mech_radio(DbRef player, void *data, char *buffer) {
   if (!fail && (target_id == nullptr || strlen(target_id) != 2))
     fail = 1;
   if (!fail) {
-    target = FindTargetDBREFFromMapNumber(mech, target_id);
-    tempMech = btech_context_get_mech(mech_context(mech), target);
-    if (!tempMech || !mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                                     mech_position_y(tempMech),
-                                     mech_range_to(mech, tempMech))) {
+    target = find_target_dbref_from_map_number(mech, target_id);
+    temp_mech = btech_context_get_mech(mech_context(mech), target);
+    if (!temp_mech ||
+        !mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                        mech_position_y(temp_mech),
+                        mech_range_to(mech, temp_mech))) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Target is not in line of sight!");
       return;
     }
     mech_printf(mech, MECHSTARTED, "You radio %s with, '%s'",
-                mech_to_mech_display_id(mech, tempMech).text, message);
-    mech_printf(tempMech, MECHSTARTED, "%s radios you with, '%s'",
-                mech_to_mech_display_id(tempMech, mech).text, message);
-    auto_reply(tempMech,
+                mech_to_mech_display_id(mech, temp_mech).text, message);
+    mech_printf(temp_mech, MECHSTARTED, "%s radios you with, '%s'",
+                mech_to_mech_display_id(temp_mech, mech).text, message);
+    auto_reply(temp_mech,
                tprintf("%s radio'ed me '%s'",
-                       mech_to_mech_display_id(tempMech, mech).text, message));
+                       mech_to_mech_display_id(temp_mech, mech).text, message));
   }
   if (fail) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

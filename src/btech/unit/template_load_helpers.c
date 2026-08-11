@@ -106,13 +106,14 @@ void template_load_finalize(Mech *mech, bool clan_equipment) {
   if (mech->ud.type == CLASS_MW)
     mech_power_up(mech);
 
-  const int section_count = mech->ud.type == CLASS_MECH ? 8 : 6;
+  const int SECTION_COUNT = mech->ud.type == CLASS_MECH ? 8 : 6;
   if (mech->xcode.context->configuration->btech_parts) {
-    for (int section = 0; section < section_count; ++section) {
-      for (int critical = 0; critical < CritsInLoc(mech, section); ++critical) {
-        const int part = mech_critical_part_type(mech, section, critical);
-        if (part == 0 || mech_critical_brand(mech, section, critical) ||
-            equipment_is_ammunition(part) || equipment_is_bomb(part))
+    for (int section = 0; section < SECTION_COUNT; ++section) {
+      for (int critical = 0; critical < crits_in_loc(mech, section);
+           ++critical) {
+        const int PART = mech_critical_part_type(mech, section, critical);
+        if (PART == 0 || mech_critical_brand(mech, section, critical) ||
+            equipment_is_ammunition(PART) || equipment_is_bomb(PART))
           continue;
         mech_critical_brand_set(&(CriticalSlotBrandSet){
             .mech = mech,
@@ -170,15 +171,15 @@ void template_load_finalize(Mech *mech, bool clan_equipment) {
   mech->rd.xpmod = 1.0;
   mech->rd.units_killed = 0;
   mech_int_check(mech, 1);
-  const int weight = mech_weight_sub(GOD, mech, 0);
-  const int frame_weight = mech->ud.tons * 1024;
-  if (weight - frame_weight > 40 && mech->ud.type != CLASS_BSUIT &&
+  const int WEIGHT = mech_weight_sub(GOD, mech, 0);
+  const int FRAME_WEIGHT = mech->ud.tons * 1024;
+  if (WEIGHT - FRAME_WEIGHT > 40 && mech->ud.type != CLASS_BSUIT &&
       mech->ud.move != MOVE_NONE)
     btech_channel_send(
         mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Error in %s template: %.1f tons of 'stuff', yet %d ton frame.",
-                mech->ud.mech_type, weight / 1024.0, frame_weight / 1024));
-  update_oweight(mech, weight);
+                mech->ud.mech_type, WEIGHT / 1024.0, FRAME_WEIGHT / 1024));
+  update_oweight(mech, WEIGHT);
 
   BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (map != nullptr)

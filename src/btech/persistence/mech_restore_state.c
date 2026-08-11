@@ -35,7 +35,7 @@ int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
 
   statement = NULL;
   result =
-      sqlite3_prepare_v2(
+      SQLITE3_PREPARE_V2(
           sqlite,
           "SELECT mech_dbref, pilot_status, hexes_walked, facing, x, y, z, "
           "last_x, last_y, fx, fy, fz, team, unusable_arcs, stall, pilot "
@@ -113,7 +113,7 @@ int btech_special_load_mech_bays(sqlite3 *sqlite, BtechContext *context) {
   current_mech = NOTHING;
   expected_bay = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(
+  result = SQLITE3_PREPARE_V2(
                sqlite,
                "SELECT mech_dbref, bay_index, bay_dbref FROM btech_mech_bays "
                "ORDER BY mech_dbref, bay_index;",
@@ -174,7 +174,7 @@ int btech_special_load_mech_turrets(sqlite3 *sqlite, BtechContext *context) {
   current_mech = NOTHING;
   expected_turret = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(sqlite,
+  result = SQLITE3_PREPARE_V2(sqlite,
                               "SELECT mech_dbref, turret_index, turret_dbref "
                               "FROM btech_mech_turrets "
                               "ORDER BY mech_dbref, turret_index;",
@@ -238,7 +238,7 @@ int btech_special_load_mech_c3(sqlite3 *sqlite, BtechContext *context) {
 
   statement = NULL;
   result =
-      sqlite3_prepare_v2(
+      SQLITE3_PREPARE_V2(
           sqlite,
           "SELECT mech_dbref, channel_title, c3i_size, c3_size, total_masters, "
           "working_masters, frequency_mode, tag_target, tagged_by "
@@ -273,14 +273,15 @@ int btech_special_load_mech_c3(sqlite3 *sqlite, BtechContext *context) {
       break;
     }
     mech_persistence_snapshot_export(mech, &snapshot);
-    memcpy(snapshot.network.C3ChanTitle, channel_title, sizeof(channel_title));
-    snapshot.network.wC3iNetworkSize = c3i_size;
-    snapshot.network.wC3NetworkSize = c3_size;
-    snapshot.network.wTotalC3Masters = total_masters;
-    snapshot.network.wWorkingC3Masters = working_masters;
-    snapshot.network.C3FreqMode = frequency_mode;
-    snapshot.network.tagTarget = tag_target;
-    snapshot.network.taggedBy = tagged_by;
+    memcpy(snapshot.network.c3_chan_title, channel_title,
+           sizeof(channel_title));
+    snapshot.network.w_c3i_network_size = c3i_size;
+    snapshot.network.w_c3_network_size = c3_size;
+    snapshot.network.w_total_c3_masters = total_masters;
+    snapshot.network.w_working_c3_masters = working_masters;
+    snapshot.network.c3_freq_mode = frequency_mode;
+    snapshot.network.tag_target = tag_target;
+    snapshot.network.tagged_by = tagged_by;
     mech_persistence_network_restore(mech, &snapshot);
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -308,7 +309,7 @@ int btech_special_load_mech_c3_nodes(sqlite3 *sqlite, BtechContext *context) {
   expected_network = 0;
   expected_node = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(
+  result = SQLITE3_PREPARE_V2(
                sqlite,
                "SELECT mech_dbref, network_type, node_index, node_dbref "
                "FROM btech_mech_c3_nodes ORDER BY mech_dbref, network_type, "
@@ -386,7 +387,7 @@ int btech_special_load_mech_tics(sqlite3 *sqlite, BtechContext *context) {
   expected_tic = 0;
   expected_word = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(sqlite,
+  result = SQLITE3_PREPARE_V2(sqlite,
                               "SELECT mech_dbref, tic_index, word_index, value "
                               "FROM btech_mech_tics "
                               "ORDER BY mech_dbref, tic_index, word_index;",
@@ -458,7 +459,7 @@ int btech_special_load_mech_frequencies(sqlite3 *sqlite,
   expected_frequency = 0;
   mech = NULL;
   result =
-      sqlite3_prepare_v2(
+      SQLITE3_PREPARE_V2(
           sqlite,
           "SELECT mech_dbref, frequency_index, frequency, mode, title "
           "FROM btech_mech_frequencies ORDER BY mech_dbref, frequency_index;",

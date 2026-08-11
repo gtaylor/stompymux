@@ -74,130 +74,133 @@ static bool mech_has_c3i(const Mech *mech) {
   return mech_technology_flags_secondary(mech) & C3I_TECH;
 }
 
-Mech *mech_network_temporary_unit(BtechContext *context, int wIdx,
-                                  const DbRef *myNetwork, int networkSize) {
-  Mech *tempMech;
-  DbRef refOtherMech;
+Mech *mech_network_temporary_unit(BtechContext *context, int w_idx,
+                                  const DbRef *my_network, int network_size) {
+  Mech *temp_mech;
+  DbRef ref_other_mech;
 
-  if ((wIdx > networkSize) || (wIdx < 0))
+  if ((w_idx > network_size) || (w_idx < 0))
     return NULL;
 
-  refOtherMech = c3_network_value(myNetwork, wIdx);
+  ref_other_mech = c3_network_value(my_network, w_idx);
 
-  if (refOtherMech > 0) {
-    tempMech = btech_context_get_mech(context, refOtherMech);
+  if (ref_other_mech > 0) {
+    temp_mech = btech_context_get_mech(context, ref_other_mech);
 
-    if (!tempMech)
+    if (!temp_mech)
       return NULL;
 
-    if (mech_is_destroyed(tempMech))
+    if (mech_is_destroyed(temp_mech))
       return NULL;
 
-    return tempMech;
+    return temp_mech;
   }
 
   return NULL;
 }
 
-Mech *mech_network_unit(Mech *mech, int wIdx, bool tCheckECM,
-                        bool tCheckStarted, bool tCheckUncon, bool tIsC3) {
-  Mech *tempMech;
-  DbRef refOtherMech;
-  int networkSize;
+Mech *mech_network_unit(Mech *mech, int w_idx, bool t_check_ecm,
+                        bool t_check_started, bool t_check_uncon,
+                        bool t_is_c3) {
+  Mech *temp_mech;
+  DbRef ref_other_mech;
+  int network_size;
 
-  networkSize =
-      tIsC3 ? mech_c3_network_size(mech) : mech_c3i_network_size(mech);
+  network_size =
+      t_is_c3 ? mech_c3_network_size(mech) : mech_c3i_network_size(mech);
 
-  if ((wIdx >= networkSize) || (wIdx < 0))
+  if ((w_idx >= network_size) || (w_idx < 0))
     return NULL;
 
-  refOtherMech = tIsC3 ? mech_c3_network_node(mech, wIdx)
-                       : mech_c3i_network_node(mech, wIdx);
+  ref_other_mech = t_is_c3 ? mech_c3_network_node(mech, w_idx)
+                           : mech_c3i_network_node(mech, w_idx);
 
-  if (refOtherMech > 0) {
-    tempMech = btech_context_get_mech(mech_context(mech), refOtherMech);
+  if (ref_other_mech > 0) {
+    temp_mech = btech_context_get_mech(mech_context(mech), ref_other_mech);
 
-    if (!tempMech)
+    if (!temp_mech)
       return NULL;
 
-    if (mech_team(tempMech) != mech_team(mech))
+    if (mech_team(temp_mech) != mech_team(mech))
       return NULL;
 
-    if (mech_map_dbref(tempMech) != mech_map_dbref(mech))
+    if (mech_map_dbref(temp_mech) != mech_map_dbref(mech))
       return NULL;
 
-    if (mech_is_destroyed(tempMech))
+    if (mech_is_destroyed(temp_mech))
       return NULL;
 
-    if (tIsC3) {
-      if (!mech_has_c3(tempMech)) /* Sanity check */
+    if (t_is_c3) {
+      if (!mech_has_c3(temp_mech)) /* Sanity check */
         return NULL;
 
-      if (mech_condition_summary(tempMech).c3_destroyed)
+      if (mech_condition_summary(temp_mech).c3_destroyed)
         return NULL;
     } else {
-      if (!mech_has_c3i(tempMech)) /* Sanity check */
+      if (!mech_has_c3i(temp_mech)) /* Sanity check */
         return NULL;
 
-      if (mech_condition_summary(tempMech).c3i_destroyed)
+      if (mech_condition_summary(temp_mech).c3i_destroyed)
         return NULL;
     }
 
-    if (tCheckECM)
-      if (mech_is_any_ecm_disturbed(tempMech))
+    if (t_check_ecm)
+      if (mech_is_any_ecm_disturbed(temp_mech))
         return NULL;
 
-    if (tCheckStarted)
-      if (!mech_is_started(tempMech))
+    if (t_check_started)
+      if (!mech_is_started(temp_mech))
         return NULL;
 
-    if (tCheckUncon)
-      if (mech_pilot_is_unconscious(tempMech))
+    if (t_check_uncon)
+      if (mech_pilot_is_unconscious(temp_mech))
         return NULL;
 
-    return tempMech;
+    return temp_mech;
   }
 
   return NULL;
 }
 
-void mech_network_build_temporary(Mech *mech, DbRef *myNetwork,
-                                  int *networkSize, bool tCheckECM,
-                                  bool tCheckStarted, bool tCheckUncon,
-                                  bool tIsC3) {
-  int tempNetworkSize = 0;
-  int baseNetworkSize;
-  Mech *otherMech;
-  DbRef myTempNetwork[C3_NETWORK_SIZE];
+void mech_network_build_temporary(Mech *mech, DbRef *my_network,
+                                  int *network_size, bool t_check_ecm,
+                                  bool t_check_started, bool t_check_uncon,
+                                  bool t_is_c3) {
+  int temp_network_size = 0;
+  int base_network_size;
+  Mech *other_mech;
+  DbRef my_temp_network[C3_NETWORK_SIZE];
   int i;
 
   /* Re-init the network */
   for (i = 0; i < C3_NETWORK_SIZE; i++)
-    *c3_network_slot(myNetwork, i) = -1;
+    *c3_network_slot(my_network, i) = -1;
 
-  *networkSize = 0;
+  *network_size = 0;
 
-  baseNetworkSize =
-      tIsC3 ? mech_c3_network_size(mech) : mech_c3i_network_size(mech);
+  base_network_size =
+      t_is_c3 ? mech_c3_network_size(mech) : mech_c3i_network_size(mech);
 
-  if (baseNetworkSize == 0)
+  if (base_network_size == 0)
     return;
 
   /*
    * Build the base netork of all the mechs that fit the criteria we passed in
    */
-  for (i = 0; i < baseNetworkSize; i++) {
-    otherMech = mech_network_unit(mech, i, tCheckECM, tCheckStarted,
-                                  tCheckUncon, tIsC3);
+  for (i = 0; i < base_network_size; i++) {
+    other_mech = mech_network_unit(mech, i, t_check_ecm, t_check_started,
+                                   t_check_uncon, t_is_c3);
 
-    if (!otherMech)
+    if (!other_mech)
       continue;
 
-    if (!is_good_obj(mech_context(otherMech)->database, mech_dbref(otherMech)))
+    if (!is_good_obj(mech_context(other_mech)->database,
+                     mech_dbref(other_mech)))
       continue;
 
-    *c3_network_slot(myTempNetwork, tempNetworkSize) = mech_dbref(otherMech);
-    tempNetworkSize++;
+    *c3_network_slot(my_temp_network, temp_network_size) =
+        mech_dbref(other_mech);
+    temp_network_size++;
   }
 
   /*
@@ -209,162 +212,168 @@ void mech_network_build_temporary(Mech *mech, DbRef *myNetwork,
    * A valid network is one where there are MIN((((NUM_MASTERS * 4) -
    * NUM_MASTERS) + ((MY_MASTERS * 4) - MY_MASTERS), 11) units in the network
    */
-  if (tIsC3) {
-    if (tempNetworkSize > 0)
-      tempNetworkSize =
-          mech_c3_network_trim(mech, myTempNetwork, tempNetworkSize);
+  if (t_is_c3) {
+    if (temp_network_size > 0)
+      temp_network_size =
+          mech_c3_network_trim(mech, my_temp_network, temp_network_size);
   }
 
-  for (i = 0; i < tempNetworkSize; i++)
-    *c3_network_slot(myNetwork, i) = c3_network_value(myTempNetwork, i);
+  for (i = 0; i < temp_network_size; i++)
+    *c3_network_slot(my_network, i) = c3_network_value(my_temp_network, i);
 
-  *networkSize = tempNetworkSize;
+  *network_size = temp_network_size;
 }
 
 void mech_network_send_message(DbRef player, Mech *mech, const char *msg,
-                               bool tIsC3) {
+                               bool t_is_c3) {
   int i;
-  Mech *otherMech;
+  Mech *other_mech;
   MechDisplayId display_id = mech_display_id(mech);
   const char *c = display_id.text;
   char buf[LBUF_SIZE] = {0};
-  int networkSize;
-  DbRef myNetwork[C3_NETWORK_SIZE];
+  int network_size;
+  DbRef my_network[C3_NETWORK_SIZE];
 
-  mech_network_build_temporary(mech, myNetwork, &networkSize, 1, 1, 1, tIsC3);
+  mech_network_build_temporary(mech, my_network, &network_size, 1, 1, 1,
+                               t_is_c3);
 
-  for (i = 0; i < networkSize; i++) {
-    otherMech = mech_network_temporary_unit(mech_context(mech), i, myNetwork,
-                                            networkSize);
+  for (i = 0; i < network_size; i++) {
+    other_mech = mech_network_temporary_unit(mech_context(mech), i, my_network,
+                                             network_size);
 
-    if (!otherMech)
+    if (!other_mech)
       continue;
 
-    if (!is_good_obj(mech_context(otherMech)->database, mech_dbref(otherMech)))
+    if (!is_good_obj(mech_context(other_mech)->database,
+                     mech_dbref(other_mech)))
       continue;
 
     (void)snprintf(buf, LBUF_SIZE, "[bold]%s/%s: %s[reset]",
-                   (tIsC3 ? "C3" : "C3i"), c, msg);
-    mech_notify(otherMech, MECHALL, buf);
+                   (t_is_c3 ? "C3" : "C3i"), c, msg);
+    mech_notify(other_mech, MECHALL, buf);
   }
 
   (void)snprintf(buf, LBUF_SIZE, "[bold]%s/You: %s[reset]",
-                 (tIsC3 ? "C3" : "C3i"), msg);
+                 (t_is_c3 ? "C3" : "C3i"), msg);
   mech_notify(mech, MECHALL, buf);
 }
 
-void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
-  BattleMap *objMap =
+void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
+  BattleMap *obj_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i, j, bearing;
-  Mech *otherMech;
-  float realRange, c3Range;
+  Mech *other_mech;
+  float real_range, c3_range;
   char buff[LBUF_SIZE];
   const char *mech_name;
   char move_type[30];
-  char cStatus1, cStatus2, cStatus3, cStatus4, cStatus5;
+  char c_status1, c_status2, c_status3, c_status4, c_status5;
   char weaponarc;
-  int losFlag;
+  int los_flag;
   int arc;
-  int wSeeTarget = TARG_LOS_NONE;
-  int wC3SeeTarget = TARG_LOS_NONE;
-  int tShowStatusInfo = 0;
+  int w_see_target = TARG_LOS_NONE;
+  int w_c3_see_target = TARG_LOS_NONE;
+  int t_show_status_info = 0;
   C3ContactLine contacts[BATTLE_MAP_UNIT_CAPACITY];
   int buffindex = 0;
-  int networkSize;
-  DbRef myNetwork[C3_NETWORK_SIZE];
-  DbRef c3Ref;
+  int network_size;
+  DbRef my_network[C3_NETWORK_SIZE];
+  DbRef c3_ref;
 
-  mech_network_build_temporary(mech, myNetwork, &networkSize, 1, 1, 0, tIsC3);
+  mech_network_build_temporary(mech, my_network, &network_size, 1, 1, 0,
+                               t_is_c3);
 
   /*
    * Send then a 'contacts' style report. This is different from the
    * normal contacts since it has a 'physical' range in it too.
    */
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                "%s Contacts:", tIsC3 ? "C3" : "C3i");
+                "%s Contacts:", t_is_c3 ? "C3" : "C3i");
 
-  for (i = 0; i < battle_map_unit_count(objMap); i++) {
-    const DbRef other_dbref = battle_map_unit_dbref(objMap, i);
-    if (!(other_dbref != mech_dbref(mech) && other_dbref != -1))
+  for (i = 0; i < battle_map_unit_count(obj_map); i++) {
+    const DbRef OTHER_DBREF = battle_map_unit_dbref(obj_map, i);
+    if (!(OTHER_DBREF != mech_dbref(mech) && OTHER_DBREF != -1))
       continue;
 
-    otherMech = btech_context_get_mech(mech_context(mech), other_dbref);
+    other_mech = btech_context_get_mech(mech_context(mech), OTHER_DBREF);
 
-    if (!otherMech)
+    if (!other_mech)
       continue;
 
-    if (!is_good_obj(mech_context(otherMech)->database, mech_dbref(otherMech)))
+    if (!is_good_obj(mech_context(other_mech)->database,
+                     mech_dbref(other_mech)))
       continue;
 
-    realRange = mech_range_to(mech, otherMech);
-    losFlag = mech_los_check(mech, otherMech, mech_position_x(otherMech),
-                             mech_position_y(otherMech), realRange);
+    real_range = mech_range_to(mech, other_mech);
+    los_flag = mech_los_check(mech, other_mech, mech_position_x(other_mech),
+                              mech_position_y(other_mech), real_range);
 
     /*
      * If we do see them, let's make sure it's not just a 'something'
      */
-    if (losFlag) {
-      if (mech_los_check_unblocked(mech, otherMech, mech_position_x(otherMech),
-                                   mech_position_y(otherMech), 0.0))
-        wSeeTarget = TARG_LOS_CLEAR;
+    if (los_flag) {
+      if (mech_los_check_unblocked(mech, other_mech,
+                                   mech_position_x(other_mech),
+                                   mech_position_y(other_mech), 0.0))
+        w_see_target = TARG_LOS_CLEAR;
       else
-        wSeeTarget = TARG_LOS_SOMETHING;
+        w_see_target = TARG_LOS_SOMETHING;
     } else
-      wSeeTarget = TARG_LOS_NONE;
+      w_see_target = TARG_LOS_NONE;
 
     /*
      * If I don't see it, let's see if someone else in the network does
      */
-    if (wSeeTarget != TARG_LOS_CLEAR)
-      wC3SeeTarget = mech_network_visibility(&(MechNetworkVisibilityRequest){
-          .observer = mech, .target = otherMech, .is_c3 = tIsC3});
+    if (w_see_target != TARG_LOS_CLEAR)
+      w_c3_see_target = mech_network_visibility(&(MechNetworkVisibilityRequest){
+          .observer = mech, .target = other_mech, .is_c3 = t_is_c3});
 
     /* If noone sees it, we continue */
-    if (!wSeeTarget && !wC3SeeTarget)
+    if (!w_see_target && !w_c3_see_target)
       continue;
 
     /* Get our network range */
-    c3Range = mech_network_range_with_members(mech, otherMech, realRange,
-                                              myNetwork, networkSize, &c3Ref);
+    c3_range = mech_network_range_with_members(
+        mech, other_mech, real_range, my_network, network_size, &c3_ref);
 
     /* Figure out if we show the info or not... ie, do we actually 'see' it */
-    if ((wSeeTarget != TARG_LOS_CLEAR) && (wC3SeeTarget != TARG_LOS_CLEAR)) {
-      tShowStatusInfo = 0;
+    if ((w_see_target != TARG_LOS_CLEAR) &&
+        (w_c3_see_target != TARG_LOS_CLEAR)) {
+      t_show_status_info = 0;
       mech_name = "something";
     } else {
-      tShowStatusInfo = 1;
-      mech_name = btech_attribute_read(mech_context(otherMech)->database,
-                                       mech_dbref(otherMech), A_MECHNAME,
+      t_show_status_info = 1;
+      mech_name = btech_attribute_read(mech_context(other_mech)->database,
+                                       mech_dbref(other_mech), A_MECHNAME,
                                        (char[LBUF_SIZE]){0});
     }
 
     bearing = map_bearing(
         &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                     .y = mech_position_real_y(mech)},
-                          .end = {.x = mech_position_real_x(otherMech),
-                                  .y = mech_position_real_y(otherMech)}});
-    strlcpy(move_type, GetMoveTypeID(mech_movement_type(otherMech)),
+                          .end = {.x = mech_position_real_x(other_mech),
+                                  .y = mech_position_real_y(other_mech)}});
+    strlcpy(move_type, get_move_type_id(mech_movement_type(other_mech)),
             sizeof(move_type));
 
     /* Get our weapon arc */
-    arc = InWeaponArc(mech, mech_position_real_x(otherMech),
-                      mech_position_real_y(otherMech));
+    arc = in_weapon_arc(mech, mech_position_real_x(other_mech),
+                        mech_position_real_y(other_mech));
     weaponarc = mech_contact_weapon_arc(arc);
 
     /* Now get our status chars */
-    if (!tShowStatusInfo) {
-      cStatus1 = ' ';
-      cStatus2 = ' ';
-      cStatus3 = ' ';
-      cStatus4 = ' ';
-      cStatus5 = ' ';
+    if (!t_show_status_info) {
+      c_status1 = ' ';
+      c_status2 = ' ';
+      c_status3 = ' ';
+      c_status4 = ' ';
+      c_status5 = ' ';
     } else {
-      cStatus1 = mech_contact_status_character(mech, otherMech, 1);
-      cStatus2 = mech_contact_status_character(mech, otherMech, 2);
-      cStatus3 = mech_contact_status_character(mech, otherMech, 3);
-      cStatus4 = mech_contact_status_character(mech, otherMech, 4);
-      cStatus5 = mech_contact_status_character(mech, otherMech, 5);
+      c_status1 = mech_contact_status_character(mech, other_mech, 1);
+      c_status2 = mech_contact_status_character(mech, other_mech, 2);
+      c_status3 = mech_contact_status_character(mech, other_mech, 3);
+      c_status4 = mech_contact_status_character(mech, other_mech, 4);
+      c_status5 = mech_contact_status_character(mech, other_mech, 5);
     }
 
     /* Now, build the string */
@@ -372,28 +381,29 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
         buff, sizeof(buff),
         "%s%c%c%c[%s]%c %-11.11s x:%3d y:%3d z:%3d r:%4.1f c:%4.1f b:%3d "
         "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-        mech_dbref(otherMech) == mech_target_dbref(mech) ? "[fg=red bold]"
-        : (tShowStatusInfo && mech_team(mech) != mech_team(otherMech))
+        mech_dbref(other_mech) == mech_target_dbref(mech) ? "[fg=red bold]"
+        : (t_show_status_info && mech_team(mech) != mech_team(other_mech))
             ? "[fg=yellow bold]"
             : "",
-        (losFlag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
-        (losFlag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
-        mech_id(otherMech,
-                mech_team(mech) == mech_team(otherMech) || !tShowStatusInfo)
+        (los_flag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
+        (los_flag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
+        mech_id(other_mech,
+                mech_team(mech) == mech_team(other_mech) || !t_show_status_info)
             .text,
-        move_type[0], mech_name, mech_position_x(otherMech),
-        mech_position_y(otherMech), mech_position_z(otherMech),
-        (double)realRange, (double)c3Range, bearing,
-        (double)mech_current_speed(otherMech), mech_heading_degrees(otherMech),
-        cStatus1, cStatus2, cStatus3, cStatus4, cStatus5,
-        (mech_dbref(otherMech) == mech_target_dbref(mech) ||
-         mech_team(mech) != mech_team(otherMech))
+        move_type[0], mech_name, mech_position_x(other_mech),
+        mech_position_y(other_mech), mech_position_z(other_mech),
+        (double)real_range, (double)c3_range, bearing,
+        (double)mech_current_speed(other_mech),
+        mech_heading_degrees(other_mech), c_status1, c_status2, c_status3,
+        c_status4, c_status5,
+        (mech_dbref(other_mech) == mech_target_dbref(mech) ||
+         mech_team(mech) != mech_team(other_mech))
             ? "[reset]"
             : "");
 
     C3ContactLine *contact = c3_contact_line(contacts, buffindex++);
     contact->sort_range =
-        realRange + (mech_is_destroyed(otherMech) ? 10000.0F : 0.0F);
+        real_range + (mech_is_destroyed(other_mech) ? 10000.0F : 0.0F);
     (void)snprintf(contact->text, sizeof(contact->text), "%s", buff);
   }
 
@@ -413,46 +423,48 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool tIsC3) {
                  c3_contact_line(contacts, i)->text);
 
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                "End %s Contact List", tIsC3 ? "C3" : "C3i");
+                "End %s Contact List", t_is_c3 ? "C3" : "C3i");
 }
 
-void mech_network_show_status(DbRef player, Mech *mech, bool tIsC3) {
+void mech_network_show_status(DbRef player, Mech *mech, bool t_is_c3) {
   int i, bearing;
-  Mech *otherMech;
+  Mech *other_mech;
   float range;
   char buff[LBUF_SIZE];
   const char *mech_name;
   char move_type[30];
-  int networkSize;
-  DbRef myNetwork[C3_NETWORK_SIZE];
+  int network_size;
+  DbRef my_network[C3_NETWORK_SIZE];
 
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                "%s Network Status:", tIsC3 ? "C3" : "C3i");
+                "%s Network Status:", t_is_c3 ? "C3" : "C3i");
 
-  mech_network_build_temporary(mech, myNetwork, &networkSize, 1, 1, 0, tIsC3);
+  mech_network_build_temporary(mech, my_network, &network_size, 1, 1, 0,
+                               t_is_c3);
 
-  for (i = 0; i < networkSize; i++) {
-    otherMech = mech_network_temporary_unit(mech_context(mech), i, myNetwork,
-                                            networkSize);
+  for (i = 0; i < network_size; i++) {
+    other_mech = mech_network_temporary_unit(mech_context(mech), i, my_network,
+                                             network_size);
 
-    if (!otherMech)
+    if (!other_mech)
       continue;
 
-    if (!is_good_obj(mech_context(otherMech)->database, mech_dbref(otherMech)))
+    if (!is_good_obj(mech_context(other_mech)->database,
+                     mech_dbref(other_mech)))
       continue;
 
-    range = mech_range_to(mech, otherMech);
+    range = mech_range_to(mech, other_mech);
     bearing = map_bearing(
         &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                     .y = mech_position_real_y(mech)},
-                          .end = {.x = mech_position_real_x(otherMech),
-                                  .y = mech_position_real_y(otherMech)}});
+                          .end = {.x = mech_position_real_x(other_mech),
+                                  .y = mech_position_real_y(other_mech)}});
 
-    strlcpy(move_type, GetMoveTypeID(mech_movement_type(otherMech)),
+    strlcpy(move_type, get_move_type_id(mech_movement_type(other_mech)),
             sizeof(move_type));
 
-    mech_name = btech_attribute_read(mech_context(otherMech)->database,
-                                     mech_dbref(otherMech), A_MECHNAME,
+    mech_name = btech_attribute_read(mech_context(other_mech)->database,
+                                     mech_dbref(other_mech), A_MECHNAME,
                                      (char[LBUF_SIZE]){0});
 
     (void)snprintf(buff, sizeof(buff),
@@ -460,58 +472,60 @@ void mech_network_show_status(DbRef player, Mech *mech, bool tIsC3) {
                    "r:%4.1f "
                    "b:%3d s:%5.1f "
                    "h:%3d a: %3d i: %3d[reset]",
-                   mech_id(otherMech, true).text, move_type[0], mech_name,
-                   mech_position_x(otherMech), mech_position_y(otherMech),
-                   mech_position_z(otherMech), (double)range, bearing,
-                   (double)mech_current_speed(otherMech),
-                   mech_heading_degrees(otherMech),
-                   getRemainingArmorPercent(otherMech),
-                   getRemainingInternalPercent(otherMech));
+                   mech_id(other_mech, true).text, move_type[0], mech_name,
+                   mech_position_x(other_mech), mech_position_y(other_mech),
+                   mech_position_z(other_mech), (double)range, bearing,
+                   (double)mech_current_speed(other_mech),
+                   mech_heading_degrees(other_mech),
+                   get_remaining_armor_percent(other_mech),
+                   get_remaining_internal_percent(other_mech));
 
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
   }
 
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                "End %s Network Status", tIsC3 ? "C3" : "C3i");
+                "End %s Network Status", t_is_c3 ? "C3" : "C3i");
 }
 
 int mech_network_visibility(const MechNetworkVisibilityRequest *request) {
   Mech *mech = request->observer;
-  Mech *mechTarget = request->target;
-  const bool tIsC3 = request->is_c3;
+  Mech *mech_target = request->target;
+  const bool T_IS_C3 = request->is_c3;
   int los = TARG_LOS_NONE;
   float range = 0.0;
   int i;
-  int networkSize;
-  DbRef myNetwork[C3_NETWORK_SIZE];
-  Mech *otherMech;
+  int network_size;
+  DbRef my_network[C3_NETWORK_SIZE];
+  Mech *other_mech;
 
-  mech_network_build_temporary(mech, myNetwork, &networkSize, 1, 1, 0, tIsC3);
+  mech_network_build_temporary(mech, my_network, &network_size, 1, 1, 0,
+                               T_IS_C3);
 
-  if (networkSize == 0)
+  if (network_size == 0)
     return TARG_LOS_NONE;
 
-  for (i = 0; i < networkSize; i++) {
-    otherMech = mech_network_temporary_unit(mech_context(mech), i, myNetwork,
-                                            networkSize);
+  for (i = 0; i < network_size; i++) {
+    other_mech = mech_network_temporary_unit(mech_context(mech), i, my_network,
+                                             network_size);
 
-    if (!otherMech)
+    if (!other_mech)
       continue;
 
-    if (!is_good_obj(mech_context(otherMech)->database, mech_dbref(otherMech)))
+    if (!is_good_obj(mech_context(other_mech)->database,
+                     mech_dbref(other_mech)))
       continue;
 
-    if (otherMech == mechTarget)
+    if (other_mech == mech_target)
       continue;
 
-    range = mech_range_to(otherMech, mechTarget);
-    los = mech_los_check(otherMech, mechTarget, mech_position_x(mechTarget),
-                         mech_position_y(mechTarget), range);
+    range = mech_range_to(other_mech, mech_target);
+    los = mech_los_check(other_mech, mech_target, mech_position_x(mech_target),
+                         mech_position_y(mech_target), range);
 
     if (los) {
-      if (!mech_los_check_unblocked(otherMech, mechTarget,
-                                    mech_position_x(mechTarget),
-                                    mech_position_y(mechTarget), range))
+      if (!mech_los_check_unblocked(other_mech, mech_target,
+                                    mech_position_x(mech_target),
+                                    mech_position_y(mech_target), range))
         los = TARG_LOS_SOMETHING;
       else {
         los = TARG_LOS_CLEAR;
@@ -523,105 +537,109 @@ int mech_network_visibility(const MechNetworkVisibilityRequest *request) {
   return los;
 }
 
-float mech_network_range(Mech *mech, Mech *mechTarget, float realRange,
-                         DbRef *c3Ref, bool tIsC3) {
-  int networkSize;
-  DbRef myNetwork[C3_NETWORK_SIZE];
+float mech_network_range(Mech *mech, Mech *mech_target, float real_range,
+                         DbRef *c3_ref, bool t_is_c3) {
+  int network_size;
+  DbRef my_network[C3_NETWORK_SIZE];
 
-  if (tIsC3) {
+  if (t_is_c3) {
     if (mech_condition_summary(mech).c3_destroyed) {
-      return realRange;
+      return real_range;
     }
   } else {
     if (mech_condition_summary(mech).c3i_destroyed) {
       mech_c3i_network_validate(mech);
 
-      return realRange;
+      return real_range;
     }
   }
 
   if (mech_is_any_ecm_disturbed(mech))
-    return realRange;
+    return real_range;
 
-  mech_network_build_temporary(mech, myNetwork, &networkSize, 1, 1, 0, tIsC3);
+  mech_network_build_temporary(mech, my_network, &network_size, 1, 1, 0,
+                               t_is_c3);
 
-  return mech_network_range_with_members(mech, mechTarget, realRange, myNetwork,
-                                         networkSize, c3Ref);
+  return mech_network_range_with_members(mech, mech_target, real_range,
+                                         my_network, network_size, c3_ref);
 }
 
-float mech_network_range_with_members(Mech *mech, Mech *mechTarget,
-                                      float realRange, const DbRef *myNetwork,
-                                      int networkSize, DbRef *c3Ref) {
-  float c3Range = 0.0;
-  float bestRange = 0.0;
+float mech_network_range_with_members(Mech *mech, Mech *mech_target,
+                                      float real_range, const DbRef *my_network,
+                                      int network_size, DbRef *c3_ref) {
+  float c3_range = 0.0;
+  float best_range = 0.0;
   int i;
-  int inLOS = 0;
-  int mapX, mapY;
-  float hexX, hexY, hexZ;
-  Mech *otherMech;
+  int in_los = 0;
+  int map_x, map_y;
+  float hex_x, hex_y, hex_z;
+  Mech *other_mech;
   BattleMap *map;
 
-  bestRange = realRange;
-  *c3Ref = 0;
+  best_range = real_range;
+  *c3_ref = 0;
 
-  if (networkSize == 0)
-    return realRange;
+  if (network_size == 0)
+    return real_range;
 
-  for (i = 0; i < networkSize; i++) {
-    otherMech = mech_network_temporary_unit(mech_context(mech), i, myNetwork,
-                                            networkSize);
+  for (i = 0; i < network_size; i++) {
+    other_mech = mech_network_temporary_unit(mech_context(mech), i, my_network,
+                                             network_size);
 
-    if (!otherMech)
+    if (!other_mech)
       continue;
 
-    if (!is_good_obj(mech_context(otherMech)->database, mech_dbref(otherMech)))
+    if (!is_good_obj(mech_context(other_mech)->database,
+                     mech_dbref(other_mech)))
       continue;
 
-    if (mechTarget) {
-      if (otherMech == mechTarget)
+    if (mech_target) {
+      if (other_mech == mech_target)
         continue;
 
       mech_network_debug(
           mech_context(mech),
           tprintf("C3RANGE-NETWORK (mech): Finding range from %ld to %ld.",
-                  mech_dbref(mech), mech_dbref(mechTarget)));
+                  mech_dbref(mech), mech_dbref(mech_target)));
 
-      c3Range = mech_range_to(otherMech, mechTarget);
-      inLOS = mech_los_check(otherMech, mechTarget, mech_position_x(mechTarget),
-                             mech_position_y(mechTarget), c3Range);
+      c3_range = mech_range_to(other_mech, mech_target);
+      in_los =
+          mech_los_check(other_mech, mech_target, mech_position_x(mech_target),
+                         mech_position_y(mech_target), c3_range);
     } else if ((mech_target_hex_x(mech) > 0) && (mech_target_hex_y(mech) > 0)) {
-      mapX = mech_target_hex_x(mech);
-      mapY = mech_target_hex_y(mech);
+      map_x = mech_target_hex_x(mech);
+      map_y = mech_target_hex_y(mech);
       map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
       mech_network_debug(
           mech_context(mech),
           tprintf("C3RANGE-NETWORK (hex): Finding range from %ld to %d %d.",
-                  mech_dbref(mech), mapX, mapY));
+                  mech_dbref(mech), map_x, map_y));
 
-      mech_target_hex_z_set(mech, battle_map_hex_elevation(map, mapX, mapY));
-      const int target_hex_z = mech_target_hex_z(mech);
-      hexZ = ZSCALE * (float)target_hex_z;
-      MapCoordToRealCoord(mapX, mapY, &hexX, &hexY);
+      mech_target_hex_z_set(mech, battle_map_hex_elevation(map, map_x, map_y));
+      const int TARGET_HEX_Z = mech_target_hex_z(mech);
+      hex_z = ZSCALE * (float)TARGET_HEX_Z;
+      map_coord_to_real_coord(map_x, map_y, &hex_x, &hex_y);
 
-      c3Range = map_spatial_range(&(MapSpatialSegment){
-          .start = {.x = mech_position_real_x(otherMech),
-                    .y = mech_position_real_y(otherMech),
-                    .z = mech_position_real_z(otherMech)},
-          .end = {.x = hexX, .y = hexY, .z = hexZ},
+      c3_range = map_spatial_range(&(MapSpatialSegment){
+          .start = {.x = mech_position_real_x(other_mech),
+                    .y = mech_position_real_y(other_mech),
+                    .z = mech_position_real_z(other_mech)},
+          .end = {.x = hex_x, .y = hex_y, .z = hex_z},
       });
-      inLOS = mech_los_check_unblocked(otherMech, nullptr, mapX, mapY, c3Range);
+      in_los =
+          mech_los_check_unblocked(other_mech, nullptr, map_x, map_y, c3_range);
     } else {
       continue;
     }
 
-    if (inLOS && (c3Range < bestRange)) {
-      bestRange = c3Range;
-      *c3Ref = mech_dbref(otherMech);
+    if (in_los && (c3_range < best_range)) {
+      best_range = c3_range;
+      *c3_ref = mech_dbref(other_mech);
     }
   }
 
-  return bestRange;
+  return best_range;
 }
 
 void mech_network_debug(BtechContext *context, const char *msg) {

@@ -66,16 +66,16 @@ static void help_color_initialize(const char *from, char *to) {
   char buf[LBUF_SIZE];
   char *tp = to;
 
-  const size_t first_word_length = strcspn(from, " ");
-  if (*checked_string_suffix(from, first_word_length) != '\0') {
+  const size_t FIRST_WORD_LENGTH = strcspn(from, " ");
+  if (*checked_string_suffix(from, FIRST_WORD_LENGTH) != '\0') {
 
-    strncpy(buf, from, first_word_length);
+    strncpy(buf, from, FIRST_WORD_LENGTH);
     *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
-                                first_word_length) = '\0';
+                                FIRST_WORD_LENGTH) = '\0';
     safe_str("[fg=blue bold]", to, &tp);
     safe_str(buf, to, &tp);
     safe_str("[reset] ", to, &tp);
-    safe_str(checked_string_suffix(from, first_word_length + 1), to, &tp);
+    safe_str(checked_string_suffix(from, FIRST_WORD_LENGTH + 1), to, &tp);
 
     /*      from[i]=' '; */
   } else {
@@ -89,7 +89,7 @@ static void help_color_initialize(const char *from, char *to) {
 #define ONE_LINE_TEXTS
 
 #ifdef ONE_LINE_TEXTS
-#define MLen CM_ONE
+#define M_LEN CM_ONE
 #else
 #define MLen CM_TWO
 #endif
@@ -104,8 +104,8 @@ typedef struct HelpLineRequest {
 static const char *help_line_add(const HelpLineRequest *request) {
   CoolMenu **d = request->menu;
   const char *msg = request->message;
-  const int len = request->width;
-  const int initial = request->indentation;
+  const int LEN = request->width;
+  const int INITIAL = request->indentation;
   CoolMenu *c = *d;
   size_t msg_len;
   char buf[LBUF_SIZE];
@@ -133,26 +133,26 @@ static const char *help_line_add(const HelpLineRequest *request) {
   msg_len = strlen(msg);
 
   size_t break_offset = msg_len;
-  if (msg_len > (size_t)len) {
-    break_offset = (size_t)len - 1;
+  if (msg_len > (size_t)LEN) {
+    break_offset = (size_t)LEN - 1;
     while (break_offset > 0 && *checked_string_suffix(msg, break_offset) != ' ')
       --break_offset;
     if (break_offset == 0)
-      break_offset = (size_t)len;
+      break_offset = (size_t)LEN;
   }
 
-  if (initial > 0) {
+  if (INITIAL > 0) {
     /* Colorize header line.  */
     help_color_initialize(msg, buf);
-  } else if (initial < 0) {
+  } else if (INITIAL < 0) {
     /* Write indented line.  */
-    const size_t indentation = (size_t)(-initial);
+    const size_t INDENTATION = (size_t)(-INITIAL);
     text_length = break_offset;
-    memset(buf, ' ', indentation);
-    memcpy(checked_storage_region(buf, sizeof(buf), indentation, text_length),
+    memset(buf, ' ', INDENTATION);
+    memcpy(checked_storage_region(buf, sizeof(buf), INDENTATION, text_length),
            msg, text_length);
     *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
-                                text_length + indentation) = '\0';
+                                text_length + INDENTATION) = '\0';
   } else {
     /* Write unindented line.  */
     text_length = break_offset;
@@ -161,7 +161,7 @@ static const char *help_line_add(const HelpLineRequest *request) {
         '\0';
   }
 
-  cool_menu_add_with_flags(&c, buf, MLen);
+  cool_menu_add_with_flags(&c, buf, M_LEN);
 
   /* Move pointer to start of next line.  */
   if (*checked_string_suffix(msg, break_offset) == ' ')
@@ -190,8 +190,8 @@ static void help_text_add(const HelpTextRequest *request) {
   CoolMenu **d = request->menu;
   const char *msg1 = request->command;
   const char *msg2 = request->description;
-  const int len = request->width;
-  [[maybe_unused]] const int initial = request->initial_indentation;
+  const int LEN = request->width;
+  [[maybe_unused]] const int INITIAL = request->initial_indentation;
   int l1 = help_text_length(msg1);
   int l2 = help_text_length(msg2);
   int nl1, nl2;
@@ -221,7 +221,7 @@ static void help_text_add(const HelpTextRequest *request) {
   while (msg1 && *msg1) {
     msg1 = help_line_add(&(HelpLineRequest){.menu = d,
                                             .message = msg1,
-                                            .width = len * 2 - 1,
+                                            .width = LEN * 2 - 1,
                                             .indentation = first});
     nl1 = help_text_length(msg1);
     if (nl1 == l1)
@@ -232,7 +232,7 @@ static void help_text_add(const HelpTextRequest *request) {
   while (msg2 && *msg2) {
     msg2 = help_line_add(&(HelpLineRequest){.menu = d,
                                             .message = msg2,
-                                            .width = len * 2 - TAB,
+                                            .width = LEN * 2 - TAB,
                                             .indentation = 0 - TAB});
     nl2 = help_text_length(msg2);
     if (nl2 == l2)
@@ -254,11 +254,11 @@ static HelpSection *help_section(HelpSection *sections, int index) {
 
 void btech_special_object_help(const SpecialObjectHelpRequest *request) {
   BtechContext *context = request->context;
-  const DbRef player = request->player;
+  const DbRef PLAYER = request->player;
   const char *type = request->type;
-  const int id = request->special_type;
-  const DbRef loc = request->location;
-  const PowerId powerneeded = request->power_needed;
+  const int ID = request->special_type;
+  const DbRef LOC = request->location;
+  const PowerId POWERNEEDED = request->power_needed;
   char *arg = request->argument;
   int i, j;
   Mech *mech = NULL;
@@ -268,17 +268,17 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
   char buf[LBUF_SIZE];
   int dc;
 
-  if (id == GTYPE_MECH)
-    mech = btech_context_get_mech(context, loc);
+  if (ID == GTYPE_MECH)
+    mech = btech_context_get_mech(context, LOC);
   memset(sections, 0, sizeof(sections));
-  const int command_count = (int)btech_special_command_count(id);
-  for (i = 0; i < command_count; i++) {
+  const int COMMAND_COUNT = (int)btech_special_command_count(ID);
+  for (i = 0; i < COMMAND_COUNT; i++) {
     const BtechCommandDefinition *command =
-        btech_special_command_definition(id, (size_t)i);
+        btech_special_command_definition(ID, (size_t)i);
     if (!btech_command_definition_has_handler(command) &&
         (*command->helpmsg != '@' ||
-         btech_special_command_access(context, player, powerneeded)))
-      if (id != GTYPE_MECH ||
+         btech_special_command_access(context, PLAYER, POWERNEEDED)))
+      if (ID != GTYPE_MECH ||
           btech_command_allowed_for_mech(mech, command->flag)) {
         if (count)
           help_section(sections, count - 1)->length =
@@ -301,7 +301,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
       if (count > 1) {
         center_string(
             buf, sizeof(buf),
-            command_help_message(id, help_section(sections, i)->start), 70);
+            command_help_message(ID, help_section(sections, i)->start), 70);
         cool_menu_add_with_flags(
             &c, tprintf("%s%s%s", "[fg=green]", buf, "[reset]"), CM_ONE);
       } else
@@ -311,15 +311,15 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
       for (j = section->start + (count == 1 ? 0 : 1);
            j < section->start + section->length; j++) {
         const BtechCommandDefinition *command =
-            btech_special_command_definition(id, (size_t)j);
+            btech_special_command_definition(ID, (size_t)j);
         if (*command->helpmsg != '@' ||
-            btech_special_command_access(context, player, powerneeded))
-          if (id != GTYPE_MECH ||
+            btech_special_command_access(context, PLAYER, POWERNEEDED))
+          if (ID != GTYPE_MECH ||
               btech_command_allowed_for_mech(mech, command->flag)) {
             strlcpy(buf, command->name, sizeof(buf));
-            const size_t name_length = strcspn(buf, " ");
+            const size_t NAME_LENGTH = strcspn(buf, " ");
             *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
-                                        name_length) = '\0';
+                                        NAME_LENGTH) = '\0';
             cool_menu_add_with_flags(&c, buf, CM_FOUR);
             csho++;
           }
@@ -354,7 +354,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
       } else {
         for (i = 0; i < count; i++)
           if (!strcasecmp(arg, command_help_message(
-                                   id, help_section(sections, i)->start)))
+                                   ID, help_section(sections, i)->start)))
             break;
         if (i == count) {
           cool_menu_add_text(&c, "Subcategory not found.");
@@ -369,7 +369,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
           if (count > 1) {
             center_string(
                 buf, sizeof(buf),
-                command_help_message(id, help_section(sections, i)->start), 70);
+                command_help_message(ID, help_section(sections, i)->start), 70);
             cool_menu_add_text(&c,
                                tprintf("%s%s%s", "[fg=green]", buf, "[reset]"));
           }
@@ -377,15 +377,15 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
           for (j = section->start + (count == 1 ? 0 : 1);
                j < section->start + section->length; j++) {
             const BtechCommandDefinition *command =
-                btech_special_command_definition(id, (size_t)j);
+                btech_special_command_definition(ID, (size_t)j);
             if (*command->helpmsg != '@' ||
-                btech_special_command_access(context, player, powerneeded))
-              if (id != GTYPE_MECH ||
+                btech_special_command_access(context, PLAYER, POWERNEEDED))
+              if (ID != GTYPE_MECH ||
                   btech_command_allowed_for_mech(mech, command->flag))
                 help_text_add(&(HelpTextRequest){
                     .menu = &c,
                     .command = command->name,
-                    .description = command_help_message(id, j),
+                    .description = command_help_message(ID, j),
                     .width = 37,
                     .initial_indentation = 1});
           }
@@ -393,6 +393,6 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
     }
   }
   cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
-  ShowCoolMenu(btech_context_evaluation(context), player, c);
-  KillCoolMenu(c);
+  show_cool_menu(btech_context_evaluation(context), PLAYER, c);
+  kill_cool_menu(c);
 }

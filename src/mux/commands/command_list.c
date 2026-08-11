@@ -164,24 +164,24 @@ static void list_cmdtable(EvaluationContext *evaluation,
   size_t count;
 
   buf = alloc_lbuf("list_cmdtable");
-  const char prefix[] = "Built-in commands:";
+  const char PREFIX[] = "Built-in commands:";
 
-  memcpy(buf, prefix, sizeof(prefix) - 1);
-  used = sizeof(prefix) - 1;
+  memcpy(buf, PREFIX, sizeof(PREFIX) - 1);
+  used = sizeof(PREFIX) - 1;
   for (size_t index = 0; index < command_table_entry_count(); index++) {
     CMDENT *cmdp = command_table_entry_at(index);
 
     if (check_access(evaluation->world->database, configuration, player,
                      cmdp->perms)) {
       if (!(cmdp->perms & CF_DARK)) {
-        const size_t name_length = strlen(cmdp->cmdname);
+        const size_t NAME_LENGTH = strlen(cmdp->cmdname);
 
-        if (name_length > LBUF_SIZE - used - 2)
+        if (NAME_LENGTH > LBUF_SIZE - used - 2)
           abort();
         *(char *)checked_storage_at(buf, LBUF_SIZE, sizeof(char), used++) = ' ';
-        memcpy(checked_storage_region(buf, LBUF_SIZE, used, name_length),
-               cmdp->cmdname, name_length);
-        used += name_length;
+        memcpy(checked_storage_region(buf, LBUF_SIZE, used, NAME_LENGTH),
+               cmdp->cmdname, NAME_LENGTH);
+        used += NAME_LENGTH;
       }
     }
   }
@@ -464,52 +464,52 @@ extern NameTable logdata_nametab[];
 void do_list(CommandInvocation *invocation) {
   CommandRuntime *runtime = invocation->context->runtime;
   ServerConfiguration *configuration = runtime->world->configuration;
-  const DbRef player = invocation->player;
+  const DbRef PLAYER = invocation->player;
   char *arg = invocation->first;
   int flagvalue;
 
-  flagvalue = name_table_search(runtime->world->database, configuration, player,
+  flagvalue = name_table_search(runtime->world->database, configuration, PLAYER,
                                 list_names, arg);
   switch (flagvalue) {
   case LIST_COMMANDS:
-    list_cmdtable(&invocation->context->evaluation, runtime, player);
+    list_cmdtable(&invocation->context->evaluation, runtime, PLAYER);
     break;
   case LIST_SWITCHES:
     command_list_switches(&invocation->context->evaluation, configuration,
-                          player);
+                          PLAYER);
     break;
   case LIST_OPTIONS:
-    list_options(&invocation->context->evaluation, runtime, player);
+    list_options(&invocation->context->evaluation, runtime, PLAYER);
     break;
   case LIST_SITEINFO:
     list_siteinfo(&invocation->context->evaluation,
-                  invocation->context->world->access_control, player);
+                  invocation->context->world->access_control, PLAYER);
     break;
   case LIST_FLAGS:
-    display_flagtab(&invocation->context->evaluation, player);
+    display_flagtab(&invocation->context->evaluation, PLAYER);
     break;
   case LIST_GLOBALS:
     list_global_controls(&invocation->context->evaluation, configuration,
-                         player);
+                         PLAYER);
     break;
   case LIST_DF_FLAGS:
-    list_df_flags(&invocation->context->evaluation, configuration, player);
+    list_df_flags(&invocation->context->evaluation, configuration, PLAYER);
     break;
   case LIST_PERMS:
     command_list_access(&invocation->context->evaluation, configuration,
-                        runtime->command_registry, player);
+                        runtime->command_registry, PLAYER);
     break;
   case LIST_CONF_PERMS:
-    configuration_list_access(&invocation->context->evaluation, player);
+    configuration_list_access(&invocation->context->evaluation, PLAYER);
     break;
   case LIST_POWERS:
-    display_powertab(&invocation->context->evaluation, player);
+    display_powertab(&invocation->context->evaluation, PLAYER);
     break;
   case LIST_LOGGING:
     name_table_interpret(&(NameTableInterpretRequest){
         .evaluation = &invocation->context->evaluation,
         .configuration = configuration,
-        .player = player,
+        .player = PLAYER,
         .table = logoptions_nametab,
         .flags = configuration->log_options,
         .prefix = "Events Logged:",
@@ -519,7 +519,7 @@ void do_list(CommandInvocation *invocation) {
     name_table_interpret(&(NameTableInterpretRequest){
         .evaluation = &invocation->context->evaluation,
         .configuration = configuration,
-        .player = player,
+        .player = PLAYER,
         .table = logdata_nametab,
         .flags = configuration->log_info,
         .prefix = "Information Logged:",
@@ -528,20 +528,20 @@ void do_list(CommandInvocation *invocation) {
     });
     break;
   case LIST_PROCESS:
-    list_process(&invocation->context->evaluation, runtime->clock, player);
+    list_process(&invocation->context->evaluation, runtime->clock, PLAYER);
     break;
   case LIST_BADNAMES:
     badname_list(&invocation->context->evaluation, invocation->context->world,
-                 player, "Disallowed names:");
+                 PLAYER, "Disallowed names:");
     break;
 #ifdef ARBITRARY_LOGFILES
   case LIST_LOGFILES:
     log_cache_list(&invocation->context->evaluation,
-                   invocation->context->log->cache, player);
+                   invocation->context->log->cache, PLAYER);
     break;
 #endif
   default:
-    name_table_display(&invocation->context->evaluation, configuration, player,
+    name_table_display(&invocation->context->evaluation, configuration, PLAYER,
                        list_names, "Unknown option.  Use one of:", 1);
   }
 }

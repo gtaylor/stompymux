@@ -48,7 +48,7 @@
 void mech_weapon_destroy(const WeaponDestructionRequest *request) {
   Mech *wounded = request->mech;
   int hitloc = request->first.section;
-  int startCrit = request->first.critical;
+  int start_crit = request->first.critical;
   int type = request->part_type;
   int numcrits = request->criticals_to_destroy;
   int totalcrits = request->total_criticals;
@@ -57,7 +57,7 @@ void mech_weapon_destroy(const WeaponDestructionRequest *request) {
   int destroyed = numcrits;
   int disable = 0; // Hax for later destroying all crits or disabling
 
-  for (i = startCrit; i < NUM_CRITICALS; i++) {
+  for (i = start_crit; i < NUM_CRITICALS; i++) {
     if (mech_critical_part_type(wounded, hitloc, i) == type) {
       if (mech_critical_is_damaged(wounded, hitloc, i)) {
         if (disable)
@@ -84,7 +84,7 @@ void mech_weapon_destroy(const WeaponDestructionRequest *request) {
   if (mech_class(wounded) != CLASS_MECH)
     return; // sanity check
   SplitCriticalLookup split =
-      split_critical_find(wounded, (CriticalSlotReference){hitloc, startCrit});
+      split_critical_find(wounded, (CriticalSlotReference){hitloc, start_crit});
   if (split.found)
     mech_weapon_destroy(
         &(WeaponDestructionRequest){.mech = wounded,
@@ -116,8 +116,8 @@ int mech_weapon_count_in_section(Mech *mech, int loc) {
 
 int mech_weapon_index_in_section(const WeaponSectionLookup *section_lookup) {
   Mech *mech = section_lookup->mech;
-  const int loc = section_lookup->section;
-  const int num = section_lookup->ordinal;
+  const int LOC = section_lookup->section;
+  const int NUM = section_lookup->ordinal;
   int i;
   int j, sec;
   int count = 0;
@@ -127,9 +127,9 @@ int mech_weapon_index_in_section(const WeaponSectionLookup *section_lookup) {
   j = lookup.value;
   sec = lookup.slot.section;
   for (i = 2; j != -1; i++) {
-    if (sec == loc) {
+    if (sec == LOC) {
       count++;
-      if (count == num)
+      if (count == NUM)
         return j;
     }
     lookup = weapon_number_find(
@@ -144,7 +144,7 @@ void mech_weapon_destroy_random(Mech *mech, int hitloc) {
   /* Look for hit locations.. */
   int i = mech_weapon_count_in_section(mech, hitloc);
   int a, b;
-  int firstCrit;
+  int first_crit;
 
   if (!i)
     return;
@@ -154,20 +154,20 @@ void mech_weapon_destroy_random(Mech *mech, int hitloc) {
   if (b < 0)
     return;
 
-  firstCrit = mech_weapon_first_critical(&(WeaponCriticalSearch){
+  first_crit = mech_weapon_first_critical(&(WeaponCriticalSearch){
       .mech = mech,
       .weapon = {.section = hitloc, .critical = -1},
       .start_critical = 0,
       .part_type = weapon_equipment_index(b),
-      .maximum_criticals = GetWeaponCrits(mech, b),
+      .maximum_criticals = get_weapon_crits(mech, b),
   });
 
   mech_weapon_destroy(&(WeaponDestructionRequest){
       .mech = mech,
-      .first = {.section = hitloc, .critical = firstCrit},
+      .first = {.section = hitloc, .critical = first_crit},
       .part_type = weapon_equipment_index(b),
       .criticals_to_destroy = 1,
-      .total_criticals = GetWeaponCrits(mech, b)});
+      .total_criticals = get_weapon_crits(mech, b)});
   mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
               checked_string_suffix(weapon_catalogue_name(b), 3));
 }
@@ -178,7 +178,7 @@ void mech_heat_sink_destroy(Mech *mech, int hitloc) {
   int num;
   int i = special_equipment_index(HEAT_SINK);
 
-  if (FindObj(mech, hitloc, i)) {
+  if (find_obj(mech, hitloc, i)) {
     num = mech_heat_sink_critical_size(mech);
     mech_weapon_destroy(
         &(WeaponDestructionRequest){.mech = mech,
@@ -186,7 +186,7 @@ void mech_heat_sink_destroy(Mech *mech, int hitloc) {
                                     .part_type = i,
                                     .criticals_to_destroy = 1,
                                     .total_criticals = num});
-    mech_heat_sink_count_remove(mech, MAX(num, 2));
+    mech_heat_sink_count_remove(mech, max(num, 2));
     mech_notify(mech, MECHALL,
                 "The computer shows a heatsink died due to the impact.");
   }
@@ -196,19 +196,20 @@ void mech_section_destroy(const SectionDestructionRequest *request) {
   Mech *wounded = request->wounded;
   Mech *attacker = request->attacker;
   const int LOS = request->line_of_sight;
-  const int hitloc = request->section;
+  const int HITLOC = request->section;
   char locname[30] = {0};
   char msgbuf[MBUF_SIZE] = {0};
   int i;
-  int tKillMech;
-  int tIsLeg = ((hitloc == RLEG || hitloc == LLEG) ||
-                ((hitloc == RARM || hitloc == LARM) && mech_is_quad(wounded)));
+  int t_kill_mech;
+  int t_is_leg =
+      ((HITLOC == RLEG || HITLOC == LLEG) ||
+       ((HITLOC == RARM || HITLOC == LARM) && mech_is_quad(wounded)));
   DbRef wounded_pilot = mech_pilot_dbref(wounded);
   Mech *ttarget;
 
   /* Prevent the rare occurance of a section getting destroyed twice */
-  if (mech_section_is_destroyed(wounded, hitloc)) {
-    (void)fprintf(stderr, "Double-desting section %d on mech #%ld\n", hitloc,
+  if (mech_section_is_destroyed(wounded, HITLOC)) {
+    (void)fprintf(stderr, "Double-desting section %d on mech #%ld\n", HITLOC,
                   mech_dbref(wounded));
     if (mech_is_dropship(wounded))
       return;
@@ -225,18 +226,18 @@ void mech_section_destroy(const SectionDestructionRequest *request) {
     return;
   }
   /* Ouch. They got toasted */
-  mech_section_armor_set(wounded, hitloc, 0);
-  mech_section_internal_set(wounded, hitloc, 0);
-  mech_section_rear_armor_set(wounded, hitloc, 0);
-  mech_section_specials_clear(wounded, hitloc);
+  mech_section_armor_set(wounded, HITLOC, 0);
+  mech_section_internal_set(wounded, HITLOC, 0);
+  mech_section_rear_armor_set(wounded, HITLOC, 0);
+  mech_section_specials_clear(wounded, HITLOC);
 
   /* uncycle the section <in the case of an arm/leg that was kicking getting
    * blown */
-  mech_set_recycle_limb(wounded, hitloc, 0);
+  mech_set_recycle_limb(wounded, HITLOC, 0);
 
   /* drop off what we were carrying, since we really can't pick it up with one
    * arm */
-  if ((hitloc == RARM || hitloc == LARM)) {
+  if ((HITLOC == RARM || HITLOC == LARM)) {
     if (mech_carried_dbref(wounded) > 0) {
       ttarget = btech_context_get_mech(mech_context(wounded),
                                        mech_carried_dbref(wounded));
@@ -249,8 +250,8 @@ void mech_section_destroy(const SectionDestructionRequest *request) {
 
   /* Tell the attacker about it... */
   if (attacker) {
-    ArmorStringFromIndex(hitloc, locname, mech_class(wounded),
-                         mech_movement_type(wounded));
+    armor_string_from_index(HITLOC, locname, mech_class(wounded),
+                            mech_movement_type(wounded));
     if (LOS >= 0)
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!", locname);
     (void)snprintf(msgbuf, sizeof(msgbuf), "'s %s has been destroyed!",
@@ -259,11 +260,11 @@ void mech_section_destroy(const SectionDestructionRequest *request) {
   }
 
   /* Destroy everything in the loc */
-  mech_parts_destroy(attacker, wounded, hitloc, false, false);
+  mech_parts_destroy(attacker, wounded, HITLOC, false, false);
   mech_ecm_check(wounded);
   /* Stop lateral if we're a quad */
   if (mech_class(wounded) == CLASS_MECH && mech_is_quad(wounded))
-    if (mech_lateral_movement(wounded) && tIsLeg)
+    if (mech_lateral_movement(wounded) && t_is_leg)
       mech_lateral_movement_set(wounded, 0);
   /* Check to see if we should destroy the unit */
   if (mech_class(wounded) == CLASS_BSUIT) {
@@ -307,23 +308,23 @@ skip_nuke:
   /* If it's a MW or a mech, let's see if there's additional stuff we need to do
    */
   if (mech_class(wounded) == CLASS_MW || mech_class(wounded) == CLASS_MECH) {
-    if (hitloc == LTORSO)
+    if (HITLOC == LTORSO)
       mech_section_destroy(&(SectionDestructionRequest){
           .wounded = wounded,
           .attacker = attacker,
           .line_of_sight = LOS,
           .section = LARM,
       });
-    else if (hitloc == RTORSO)
+    else if (HITLOC == RTORSO)
       mech_section_destroy(&(SectionDestructionRequest){
           .wounded = wounded,
           .attacker = attacker,
           .line_of_sight = LOS,
           .section = RARM,
       });
-    else if (hitloc == CTORSO || hitloc == HEAD) {
+    else if (HITLOC == CTORSO || HITLOC == HEAD) {
       if (!mech_is_destroyed(wounded)) {
-        if (hitloc == HEAD) {
+        if (HITLOC == HEAD) {
           if (attacker && mech_aim_section(attacker) == HEAD) {
             mech_destroy(wounded, attacker, 1, KILL_TYPE_HEAD_TARGET);
           } else {
@@ -334,8 +335,8 @@ skip_nuke:
         }
       }
       /* If it's the head or a MW's CT, kill the contents if IC */
-      if (hitloc == HEAD ||
-          ((mech_class(wounded) == CLASS_MW) && (hitloc == CTORSO))) {
+      if (HITLOC == HEAD ||
+          ((mech_class(wounded) == CLASS_MW) && (HITLOC == CTORSO))) {
         if (is_in_character(btech_context_database(mech_context(wounded)),
                             mech_dbref(wounded))) {
           mech_communications_clear(wounded);
@@ -355,7 +356,7 @@ skip_nuke:
     /* FIXME: Could this be the invincible aero bug? */
     /* Aero handling is trivial ; No destruction whatsoever, for now. */
     /* With one exception.. */
-    if (hitloc == COCKPIT && mech_class(wounded) == CLASS_AERO) {
+    if (HITLOC == COCKPIT && mech_class(wounded) == CLASS_AERO) {
       if (!mech_is_destroyed(wounded))
         mech_destroy(wounded, attacker, 0, KILL_TYPE_COCKPIT);
       mech_communications_clear(wounded);
@@ -366,26 +367,26 @@ skip_nuke:
 
   /* Last check to see if we destroy the unit... vehicle stuff */
   if (mech_hit_location_transfer(wounded, 0) < 0)
-    tKillMech = 1;
+    t_kill_mech = 1;
   else
-    tKillMech = 0;
+    t_kill_mech = 0;
   switch (mech_class(wounded)) {
   case CLASS_BSUIT:
-    tKillMech = 0;
+    t_kill_mech = 0;
     break;
   case CLASS_VEH_GROUND:
-    if (hitloc == TURRET) {
-      tKillMech = 0;
+    if (HITLOC == TURRET) {
+      t_kill_mech = 0;
       mech_turret_auto_turn_set(wounded, false);
     } else
-      tKillMech = 1;
+      t_kill_mech = 1;
     break;
   case CLASS_VTOL:
-    if (hitloc == ROTOR) {
-      tKillMech = 0;
+    if (HITLOC == ROTOR) {
+      t_kill_mech = 0;
       mech_vtol_crash_start(wounded);
     } else
-      tKillMech = 1;
+      t_kill_mech = 1;
     break;
   case CLASS_MECH:
   case CLASS_VEH_NAVAL:
@@ -398,7 +399,7 @@ skip_nuke:
     break;
   }
 
-  if (tKillMech) {
+  if (t_kill_mech) {
     if (!mech_is_destroyed(wounded))
       mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
   }
@@ -413,8 +414,8 @@ const char *mech_armor_status_set_value(const ArmorStatusSetRequest *request) {
 
   if (!sectstr || !*sectstr)
     return "#-1 INVALID SECTION";
-  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                 sectstr);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    sectstr);
   if (index == -1 || !mech_section_original_internal(mech, index))
     return "#-1 INVALID SECTION";
   if (!parse_int_checked(valuestr, &value) || value < 0 || value > 255)
@@ -440,21 +441,21 @@ const char *mech_armor_status_set_value(const ArmorStatusSetRequest *request) {
 bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
   Mech *mech = request->mech;
   int totaldam = request->total_damage;
-  const int clustersize = request->cluster_size;
-  const int direction = request->direction;
-  const bool iscritical = request->critical;
+  const int CLUSTERSIZE = request->cluster_size;
+  const int DIRECTION = request->direction;
+  const bool ISCRITICAL = request->critical;
   const char *mechmsg = request->mech_message;
   const char *mechbroadcast = request->broadcast_message;
 
   int hitloc = 1, this_time, isrear = 0, dummy = 0;
   int *dummy1 = &dummy, *dummy2 = &dummy;
 
-  if (direction < 8) {
-    hitloc = direction;
-  } else if (direction < 16) {
-    hitloc = direction - 8;
+  if (DIRECTION < 8) {
+    hitloc = DIRECTION;
+  } else if (DIRECTION < 16) {
+    hitloc = DIRECTION - 8;
     isrear = 1;
-  } else if (direction > 21) {
+  } else if (DIRECTION > 21) {
     return false;
   }
 
@@ -463,19 +464,19 @@ bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
   if (mechbroadcast && *mechbroadcast)
     mech_los_broadcast(mech, mechbroadcast);
   while (totaldam) {
-    if (direction > 18)
+    if (DIRECTION > 18)
       isrear = 1;
-    if (direction > 15)
+    if (DIRECTION > 15)
       hitloc =
-          mech_hit_location(mech, ((direction - 1) & 3) + 1, dummy1, dummy2);
-    this_time = MIN(clustersize, totaldam);
+          mech_hit_location(mech, ((DIRECTION - 1) & 3) + 1, dummy1, dummy2);
+    this_time = min(CLUSTERSIZE, totaldam);
     mech_damage_apply(&(MechDamageRequest){.target = mech,
                                            .attacker = mech,
                                            .line_of_sight = 0,
                                            .attack_pilot = -1,
                                            .hit_location = hitloc,
                                            .rear = isrear,
-                                           .critical = iscritical,
+                                           .critical = ISCRITICAL,
                                            .armor_damage = this_time,
                                            .internal_damage = 0,
                                            .transfer = MECH_DAMAGE_NORMAL,
@@ -568,8 +569,8 @@ void mech_damage_section(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  section = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                   args[0]);
+  section = armor_section_from_string(mech_class(mech),
+                                      mech_movement_type(mech), args[0]);
 
   if (section == -1) {
     invalid_section(player, mech);

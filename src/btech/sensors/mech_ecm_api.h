@@ -6,4 +6,4 @@
 #include "mux/server/platform.h"
 
 /* mech.ecm.c */
-void mech_ecm_check(Mech *objMech);
+void mech_ecm_check(Mech *obj_mech);

@@ -87,18 +87,18 @@ static char **character_short_name_slot(BtechContext *context, int code) {
 
 static void lowercase_copy(char *destination, size_t capacity,
                            const char *source) {
-  const size_t source_length = strlen(source);
-  const size_t copy_length =
-      source_length < capacity - 1 ? source_length : capacity - 1;
-  for (size_t index = 0; index < copy_length; index++) {
+  const size_t SOURCE_LENGTH = strlen(source);
+  const size_t COPY_LENGTH =
+      SOURCE_LENGTH < capacity - 1 ? SOURCE_LENGTH : capacity - 1;
+  for (size_t index = 0; index < COPY_LENGTH; index++) {
     char *output =
         checked_storage_at(destination, capacity, sizeof(char), index);
-    const char *input = checked_storage_at_const(source, source_length + 1,
+    const char *input = checked_storage_at_const(source, SOURCE_LENGTH + 1,
                                                  sizeof(char), index);
     *output = ascii_to_lower(*input);
   }
   char *terminator =
-      checked_storage_at(destination, capacity, sizeof(char), copy_length);
+      checked_storage_at(destination, capacity, sizeof(char), COPY_LENGTH);
   *terminator = '\0';
 }
 
@@ -644,10 +644,10 @@ void init_btechstats(BtechContext *context) {
     hash_table_add(tmpbuf, (int *)(intptr_t)(i + 1),
                    character_value_hash(context, 0));
     *(char *)checked_storage_at(tmpbuf, SBUF_SIZE, sizeof(char), 0) = '\0';
-    const size_t name_length = strlen(name);
-    for (size_t j = 0; j < name_length; j++) {
+    const size_t NAME_LENGTH = strlen(name);
+    for (size_t j = 0; j < NAME_LENGTH; j++) {
       const char *character =
-          checked_storage_at_const(name, name_length + 1, sizeof(char), j);
+          checked_storage_at_const(name, NAME_LENGTH + 1, sizeof(char), j);
       if (*character < 'A' || *character > 'Z')
         continue;
       char fragment[4];
@@ -687,7 +687,7 @@ PSTATS *character_stats_create(void) {
   PSTATS *s;
 
   s = checked_storage_allocate(sizeof(*s));
-  s->DbRef = -1;
+  s->db_ref = -1;
   character_stats_clear(s);
   return s;
 }

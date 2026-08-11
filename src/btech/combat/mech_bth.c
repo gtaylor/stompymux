@@ -98,32 +98,32 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
   int weapindx = request->weapon_index;
   float range = request->range;
   Mech *target = request->target;
-  int indirectFire = request->indirect_fire;
-  DbRef c3Ref = NOTHING;
+  int indirect_fire = request->indirect_fire;
+  DbRef c3_ref = NOTHING;
   Mech *spotter = nullptr;
   BthTrace trace;
-  int wFireMode = mech_critical_fire_mode(mech, section, critical);
-  int wAmmoMode = mech_critical_ammo_mode(mech, section, critical);
-  int tInWater = 0;
-  int wTargMoveMod = 0;
+  int w_fire_mode = mech_critical_fire_mode(mech, section, critical);
+  int w_ammo_mode = mech_critical_ammo_mode(mech, section, critical);
+  int t_in_water = 0;
+  int w_targ_move_mod = 0;
   int rangecheck = 0;
   int j, rbth = 0;
-  float enemyX, enemyY;
-  WeaponRangeBracket wRangeBracket = RANGE_TOFAR;
+  float enemy_x, enemy_y;
+  WeaponRangeBracket w_range_bracket = RANGE_TOFAR;
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);
   if (target) {
-    tInWater =
+    t_in_water =
         ((mech_real_terrain_get(mech) == WATER) && (mech_position_z(mech) < 0));
   }
-  bth_trace_begin(&trace, mech, target, FindPilotGunnery(mech, weapindx));
-  if (indirectFire < 1000) {
+  bth_trace_begin(&trace, mech, target, find_pilot_gunnery(mech, weapindx));
+  if (indirect_fire < 1000) {
     spotter = btech_context_get_mech(context, mech_spotter_dbref(mech));
     if (!spotter) {
       mech_notify(mech, MECHALL, "Error finding your spotter! (notify a wiz)");
-      return (MechNormalToHitResult){.value = 0, .c3_reference = c3Ref};
+      return (MechNormalToHitResult){.value = 0, .c3_reference = c3_ref};
     }
-    bth_trace_add(&trace, "Spotting", FindPilotSpotting(spotter) - 4);
+    bth_trace_add(&trace, "Spotting", find_pilot_spotting(spotter) - 4);
   }
   /* Our special bother for aeros */
   if (mech_is_aerospace_unit(mech) && target &&
@@ -139,26 +139,26 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
   bth_trace_add(&trace, "MechLocBTHMod",
                 mech_section_base_to_hit(mech, section));
   /* Add +1 if we're firing from water */
-  if (tInWater)
+  if (t_in_water)
     bth_trace_add(&trace, "InWater", 1);
   /* Add in the rangebase.. */
-  const WeaponRangeProfile weapon_ranges = weapon_catalogue_ranges(weapindx);
+  const WeaponRangeProfile WEAPON_RANGES = weapon_catalogue_ranges(weapindx);
   rangecheck = weapon_catalogue_effective_range(
       weapindx, btech_context_uses_extended_weapon_ranges(context));
-  if (wAmmoMode & STINGER_MODE)
+  if (w_ammo_mode & STINGER_MODE)
     rangecheck += 7;
   if ((float)rangecheck < range) {
     bth_trace_add(&trace, "OutOfRange", 1000);
   } else {
-    if (((float)weapon_ranges.minimum >= range) &&
-        (weapon_ranges.minimum > 0)) {
-      if (!weapon_catalogue_is_hot_loaded(weapindx, wFireMode)) {
+    if (((float)WEAPON_RANGES.minimum >= range) &&
+        (WEAPON_RANGES.minimum > 0)) {
+      if (!weapon_catalogue_is_hot_loaded(weapindx, w_fire_mode)) {
         /* if the target is in minimum range then the BTH is as good as it will
          * get */
-        rbth = (int)((float)weapon_ranges.minimum - range + 1.0F);
+        rbth = (int)((float)WEAPON_RANGES.minimum - range + 1.0F);
       } else {
         if (btech_context_hotload_uses_half_modifier(context)) {
-          rbth = (int)(((float)weapon_ranges.minimum - range + 2.0F) / 2.0F);
+          rbth = (int)(((float)WEAPON_RANGES.minimum - range + 2.0F) / 2.0F);
         }
       }
       bth_trace_add(&trace, "MinRange", rbth);
@@ -173,9 +173,9 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
                                  .weapon_index = weapindx,
                                  .physical_range = range,
                                  .network_range = mech_network_range(
-                                     mech, target, range, &c3Ref, 1),
-                                 .fire_mode = wAmmoMode});
-      wRangeBracket = range_result.bracket;
+                                     mech, target, range, &c3_ref, 1),
+                                 .fire_mode = w_ammo_mode});
+      w_range_bracket = range_result.bracket;
       rbth = range_result.modifier;
       bth_trace_add(&trace, "C3Range", rbth);
     } else if ((mech_technology_flags_secondary(mech) & C3I_TECH) &&
@@ -188,9 +188,9 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
                                  .weapon_index = weapindx,
                                  .physical_range = range,
                                  .network_range = mech_network_range(
-                                     mech, target, range, &c3Ref, 0),
-                                 .fire_mode = wAmmoMode});
-      wRangeBracket = range_result.bracket;
+                                     mech, target, range, &c3_ref, 0),
+                                 .fire_mode = w_ammo_mode});
+      w_range_bracket = range_result.bracket;
       rbth = range_result.modifier;
       bth_trace_add(&trace, "C3iRange", rbth);
     } else {
@@ -200,9 +200,9 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
                                      .section = section,
                                      .weapon_index = weapindx,
                                      .range = range,
-                                     .fire_mode = wFireMode,
-                                     .ammunition_mode = wAmmoMode});
-      wRangeBracket = range_result.bracket;
+                                     .fire_mode = w_fire_mode,
+                                     .ammunition_mode = w_ammo_mode});
+      w_range_bracket = range_result.bracket;
       rbth = range_result.modifier;
       bth_trace_add(&trace, "Range", rbth);
     }
@@ -225,14 +225,14 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
     else
       tmp_range = (int)(range + 0.95F);
     if (tmp_range > (mech_section_is_underwater(mech, section)
-                         ? weapon_ranges.water_medium_range
-                         : weapon_ranges.medium_range))
+                         ? WEAPON_RANGES.water_medium_range
+                         : WEAPON_RANGES.medium_range))
       bth_trace_add(&trace, "TargComp/Long",
                     mech_targeting_computer_type(mech) == TARGCOMP_LONG ? -1
                                                                         : 1);
     else if (tmp_range <= (mech_section_is_underwater(mech, section)
-                               ? weapon_ranges.water_medium_range
-                               : weapon_ranges.medium_range))
+                               ? WEAPON_RANGES.water_medium_range
+                               : WEAPON_RANGES.medium_range))
       bth_trace_add(&trace, "TargComp/Short",
                     mech_targeting_computer_type(mech) == TARGCOMP_SHORT ? -1
                                                                          : 1);
@@ -240,28 +240,28 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
   if (target && mech_infantry_technology_flags(target) & STEALTH_TECH) {
     int infantry_technology = mech_infantry_technology_flags(target);
     if (infantry_technology & FWL_ACHILEUS_STEALTH_TECH) {
-      if (wRangeBracket == RANGE_SHORT)
+      if (w_range_bracket == RANGE_SHORT)
         bth_trace_add(&trace, "FWLStealthBonus", 1);
-      else if (wRangeBracket == RANGE_MED)
+      else if (w_range_bracket == RANGE_MED)
         bth_trace_add(&trace, "FWLStealthBonus", 2);
-      else if (wRangeBracket == RANGE_LONG)
+      else if (w_range_bracket == RANGE_LONG)
         bth_trace_add(&trace, "FWLStealthBonus", 3);
     } else if (infantry_technology & DC_KAGE_STEALTH_TECH) {
-      if (wRangeBracket == RANGE_MED)
+      if (w_range_bracket == RANGE_MED)
         bth_trace_add(&trace, "DCStealthBonus", 1);
-      else if (wRangeBracket == RANGE_LONG)
+      else if (w_range_bracket == RANGE_LONG)
         bth_trace_add(&trace, "DCStealthBonus", 2);
     } else if (infantry_technology & FC_INFILTRATOR_STEALTH_TECH) {
-      if (wRangeBracket == RANGE_MED)
+      if (w_range_bracket == RANGE_MED)
         bth_trace_add(&trace, "FCStealthBonus", 1);
-      else if (wRangeBracket == RANGE_LONG)
+      else if (w_range_bracket == RANGE_LONG)
         bth_trace_add(&trace, "FCStealthBonus", 2);
     } else if (infantry_technology & FC_INFILTRATORII_STEALTH_TECH) {
-      if (wRangeBracket == RANGE_SHORT)
+      if (w_range_bracket == RANGE_SHORT)
         bth_trace_add(&trace, "FCStealthIIBonus", 1);
-      if (wRangeBracket == RANGE_MED)
+      if (w_range_bracket == RANGE_MED)
         bth_trace_add(&trace, "FCStealthIIBonus", 1);
-      else if (wRangeBracket == RANGE_LONG)
+      else if (w_range_bracket == RANGE_LONG)
         bth_trace_add(&trace, "FCStealthIIBonus", 2);
     }
   }
@@ -274,11 +274,11 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
   /* Add mods for overheating */
   bth_trace_add(&trace, "Overheat", mech_overheat_to_hit_modifier(mech));
   /* Add special weapon mods */
-  if (wAmmoMode & AC_AP_MODE)
+  if (w_ammo_mode & AC_AP_MODE)
     bth_trace_add(&trace, "ArmorPiercing", 1);
   if (mech_has_section_special(mech, INARC_HAYWIRE_ATTACHED))
     bth_trace_add(&trace, "HaywirePod", 1);
-  if (target && (wAmmoMode & NARC_MODE) &&
+  if (target && (w_ammo_mode & NARC_MODE) &&
       !weapon_catalogue_is_narc(weapindx) &&
       mech_has_section_special(target, INARC_HOMING_ATTACHED))
     bth_trace_add(&trace, "iNARC", -1);
@@ -288,7 +288,7 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
     bth_trace_add(&trace, "MRM", 1);
   if (weapon_catalogue_is_heavy(weapindx))
     bth_trace_add(&trace, "HeavyWeapon", 1);
-  if (target && (wAmmoMode & STINGER_MODE)) {
+  if (target && (w_ammo_mode & STINGER_MODE)) {
     if (mech_is_flying_type(target) && !mech_is_landed(target))
       bth_trace_add(&trace, "Stinger (Flying)", -3);
     else if (mech_is_out_of_control(target))
@@ -312,7 +312,7 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
       bth_trace_add(&trace, "TargComp/AA-Ground", 1);
   }
   /* -1 for LBX, unless it's a VTOL... then -3 */
-  if (wAmmoMode & LBX_MODE)
+  if (w_ammo_mode & LBX_MODE)
     bth_trace_add(&trace, "LBX",
                   (target && (mech_class(target) == CLASS_VTOL) ? -3 : -1));
   /* Unstable lock */
@@ -321,11 +321,11 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
        ((mech_target_dbref(mech) != mech_dbref(target)) ||
         (mech_event_count(mech, EVENT_LOCK) &&
          mech_targeting_computer_type(mech) != TARGCOMP_MULTI)))) {
-    const MechTargetPositionResult unstable_target = mech_target_position(mech);
-    if (unstable_target.found) {
-      enemyX = unstable_target.position.x;
-      enemyY = unstable_target.position.y;
-      if (InWeaponArc(mech, enemyX, enemyY) & (FORWARDARC | TURRETARC))
+    const MechTargetPositionResult UNSTABLE_TARGET = mech_target_position(mech);
+    if (UNSTABLE_TARGET.found) {
+      enemy_x = UNSTABLE_TARGET.position.x;
+      enemy_y = UNSTABLE_TARGET.position.y;
+      if (in_weapon_arc(mech, enemy_x, enemy_y) & (FORWARDARC | TURRETARC))
         bth_trace_add(&trace, "UnstableLock/Fwarc", 1);
       else
         bth_trace_add(&trace, "UnstableLock", 2);
@@ -334,11 +334,11 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
     }
   }
   if (mech_targeting_computer_type(mech) == TARGCOMP_MULTI) {
-    const MechTargetPositionResult multi_target = mech_target_position(mech);
-    if (multi_target.found) {
-      enemyX = multi_target.position.x;
-      enemyY = multi_target.position.y;
-      if (!(InWeaponArc(mech, enemyX, enemyY) & FORWARDARC))
+    const MechTargetPositionResult MULTI_TARGET = mech_target_position(mech);
+    if (MULTI_TARGET.found) {
+      enemy_x = MULTI_TARGET.position.x;
+      enemy_y = MULTI_TARGET.position.y;
+      if (!(in_weapon_arc(mech, enemy_x, enemy_y) & FORWARDARC))
         bth_trace_add(&trace, "TargComp/MultiSideArc", 1);
     }
   }
@@ -349,8 +349,8 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
   if (target && mech_cocoon_integrity(target) > 0)
     bth_trace_add(&trace, "OODbonus", -2);
   /* Indirect fire terrain modifiers */
-  if (indirectFire < 1000)
-    bth_trace_add(&trace, "IDFTerrain", indirectFire);
+  if (indirect_fire < 1000)
+    bth_trace_add(&trace, "IDFTerrain", indirect_fire);
   /* +1 if spotting */
   if (mech_spotter_dbref(mech) == mech_dbref(mech))
     bth_trace_add(&trace, "Spotting", 1);
@@ -377,8 +377,8 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
       else
         bth_trace_add(&trace, "HeadTarget-Fake", 25);
     } else {
-      if ((wFireMode & ON_TC) && !condition.targeting_computer_destroyed &&
-          !(wAmmoMode & LBX_MODE)) {
+      if ((w_fire_mode & ON_TC) && !condition.targeting_computer_destroyed &&
+          !(w_ammo_mode & LBX_MODE)) {
         if (mech_aim_section(mech) != NUM_SECTIONS && !mech_is_immobile(target))
           bth_trace_add(&trace, "TC-Target-NotImmobile", 3);
         else
@@ -387,40 +387,42 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
     }
     /* Add aero targetting mods. TODO: Rewrite aero code :) */
     if (mech_class(mech) == CLASS_AERO) {
-      wTargMoveMod = mech_target_movement_modifier(mech, target, range) * 3 / 4;
+      w_targ_move_mod =
+          mech_target_movement_modifier(mech, target, range) * 3 / 4;
     } else {
-      wTargMoveMod = mech_target_movement_modifier(mech, target, range);
+      w_targ_move_mod = mech_target_movement_modifier(mech, target, range);
     }
-    if (wAmmoMode & AC_PRECISION_MODE) {
-      wTargMoveMod -= 2;
-      if (wTargMoveMod < 0)
-        wTargMoveMod = 0;
+    if (w_ammo_mode & AC_PRECISION_MODE) {
+      w_targ_move_mod -= 2;
+      if (w_targ_move_mod < 0)
+        w_targ_move_mod = 0;
     }
     /* We ignore Movemod if the weapon is in sguided AND its tagged by a
      * friendly TAG AND movemod > 0 */
-    if ((wAmmoMode & SGUIDED_MODE) && (mech_tagged_by_dbref(target) > 0)) {
+    if ((w_ammo_mode & SGUIDED_MODE) && (mech_tagged_by_dbref(target) > 0)) {
       Mech *tagger =
           btech_context_get_mech(context, mech_tagged_by_dbref(target));
       if (tagger != nullptr) {
         if ((mech_team(tagger) == mech_team(mech)) &&
             (mech_tagged_by_dbref(target) != mech_dbref(mech))) {
-          if (wTargMoveMod < 0) {
-            bth_trace_add(&trace, "TargetMove (SG Tag -MoveMod)", wTargMoveMod);
+          if (w_targ_move_mod < 0) {
+            bth_trace_add(&trace, "TargetMove (SG Tag -MoveMod)",
+                          w_targ_move_mod);
           }
         } else {
-          bth_trace_add(&trace, "TargetMove (SG No Tag)", wTargMoveMod);
+          bth_trace_add(&trace, "TargetMove (SG No Tag)", w_targ_move_mod);
         }
       }
     } else {
-      bth_trace_add(&trace, "TargetMove", wTargMoveMod);
+      bth_trace_add(&trace, "TargetMove", w_targ_move_mod);
     }
     /* Add in the terrain modifier */
-    if (indirectFire >= 1000) {
+    if (indirect_fire >= 1000) {
       j = mech_los_terrain_modifier(&(MechLosTerrainRequest){
           .observer = mech,
           .target = target,
           .map = mech_map,
-          .ammunition_mode = wAmmoMode,
+          .ammunition_mode = w_ammo_mode,
       });
       if (j < 1000)
         bth_trace_add(&trace, "Terrain/is_light(Sensor)", j);
@@ -457,14 +459,14 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
       mech_weapon_critical_to_hit_modifier(&(WeaponCriticalToHitRequest){
           .mech = mech,
           .slot = {.section = section, .critical = critical},
-          .range_bracket = wRangeBracket}));
+          .range_bracket = w_range_bracket}));
 #ifdef BTH_DEBUG
   if (condition.to_hit_debug)
     notify_printf(btech_context_evaluation(context), mech_pilot_dbref(mech),
                   "BTHDebug: %s", trace.summary);
 #endif
   bth_trace_finish(mech, &trace);
-  return (MechNormalToHitResult){.value = trace.total, .c3_reference = c3Ref};
+  return (MechNormalToHitResult){.value = trace.total, .c3_reference = c3_ref};
 }
 int mech_artillery_to_hit_calculate(const MechArtilleryToHitRequest *request) {
   Mech *mech = request->attacker;
@@ -472,27 +474,27 @@ int mech_artillery_to_hit_calculate(const MechArtilleryToHitRequest *request) {
   int weapindx = request->weapon_index;
   bool indirect = request->indirect;
   float range = request->range;
-  int baseToHit = 11;
+  int base_to_hit = 11;
   Mech *spotter;
   BtechContext *context = mech_context(mech);
   if (mech_section_is_underwater(mech, section))
     return 5000;
-  const int effective_range = weapon_catalogue_effective_range(
+  const int EFFECTIVE_RANGE = weapon_catalogue_effective_range(
       weapindx, btech_context_uses_extended_weapon_ranges(context));
-  if ((float)effective_range < range)
+  if ((float)EFFECTIVE_RANGE < range)
     return 1000;
-  baseToHit += (FindPilotArtyGun(mech) - 4);
+  base_to_hit += (find_pilot_arty_gun(mech) - 4);
   if (indirect) {
     spotter = btech_context_get_mech(context, mech_spotter_dbref(mech));
     if (spotter && spotter != mech)
-      baseToHit += (FindPilotSpotting(spotter) - 4) / 2;
+      base_to_hit += (find_pilot_spotting(spotter) - 4) / 2;
     /* the usual +2, added by +1 make +3 */
     if ((mech_spotter_dbref(mech) == NOTHING ||
          mech_spotter_dbref(mech) == mech_dbref(mech)))
-      baseToHit += 1;
+      base_to_hit += 1;
   } else
-    baseToHit -= 2;
-  return baseToHit - mech_fire_adjustment(mech);
+    base_to_hit -= 2;
+  return base_to_hit - mech_fire_adjustment(mech);
 }
 WeaponRangeToHitResult
 mech_range_to_hit_calculate(const WeaponRangeToHitRequest *request) {
@@ -504,21 +506,21 @@ mech_range_to_hit_calculate(const WeaponRangeToHitRequest *request) {
   int firemode = request->fire_mode;
   int ammomode = request->ammunition_mode;
   int modifier;
-  int *wBTH = &modifier;
+  int *w_bth = &modifier;
   int range;
-  int wTargetStealth = 0;
+  int w_target_stealth = 0;
   BtechContext *context = mech_context(mech);
-  const WeaponRangeProfile ranges = weapon_catalogue_ranges(weapindx);
+  const WeaponRangeProfile RANGES = weapon_catalogue_ranges(weapindx);
   if (target)
-    wTargetStealth = mech_condition_summary(target).stealth_armor_active ||
-                     mech_condition_summary(target).null_signature_active;
+    w_target_stealth = mech_condition_summary(target).stealth_armor_active ||
+                       mech_condition_summary(target).null_signature_active;
   if (weapon_catalogue_is_personal_combat(weapindx))
     range = (int)(frange * 10.0F + 0.95F);
   else
     range = (int)(frange + 0.95F);
   if (mech_section_is_underwater(mech, section)) {
-    if (ranges.water_short_range <= 0) {
-      *wBTH = 5000;
+    if (RANGES.water_short_range <= 0) {
+      *w_bth = 5000;
       return (WeaponRangeToHitResult){.bracket = RANGE_NOWATER,
                                       .modifier = modifier};
     }
@@ -526,47 +528,47 @@ mech_range_to_hit_calculate(const WeaponRangeToHitRequest *request) {
     if (range >
         weapon_catalogue_effective_water_range(
             weapindx, btech_context_uses_extended_weapon_ranges(context))) {
-      *wBTH = 1000;
+      *w_bth = 1000;
       return (WeaponRangeToHitResult){.bracket = RANGE_TOFAR,
                                       .modifier = modifier};
     }
     /* Very long range */
     if (range > weapon_catalogue_effective_water_range(weapindx, false)) {
-      *wBTH = wTargetStealth ? 12 : 8;
+      *w_bth = w_target_stealth ? 12 : 8;
       return (WeaponRangeToHitResult){.bracket = RANGE_EXTREME,
                                       .modifier = modifier};
     }
     /* Long range... */
-    if (range > ranges.water_medium_range) {
-      *wBTH = wTargetStealth ? 6 : 4;
+    if (range > RANGES.water_medium_range) {
+      *w_bth = w_target_stealth ? 6 : 4;
       return (WeaponRangeToHitResult){.bracket = RANGE_LONG,
                                       .modifier = modifier};
     }
     /* Medium range */
-    if (range > ranges.water_short_range) {
-      *wBTH = wTargetStealth ? 3 : 2;
+    if (range > RANGES.water_short_range) {
+      *w_bth = w_target_stealth ? 3 : 2;
       return (WeaponRangeToHitResult){.bracket = RANGE_MED,
                                       .modifier = modifier};
     }
     /* Short range */
-    if (range > ranges.water_minimum) {
-      *wBTH = 0;
+    if (range > RANGES.water_minimum) {
+      *w_bth = 0;
       return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                       .modifier = modifier};
     }
     if (range == 0) {
-      if (ranges.water_minimum == 0) {
-        *wBTH = 0;
+      if (RANGES.water_minimum == 0) {
+        *w_bth = 0;
         return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                         .modifier = modifier};
       } else {
-        *wBTH = ranges.water_minimum - range;
+        *w_bth = RANGES.water_minimum - range;
         return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                         .modifier = modifier};
       }
     }
     /* Less than or equal to minimum range */
-    *wBTH = ranges.water_minimum - range + 1;
+    *w_bth = RANGES.water_minimum - range + 1;
   }
   /* Beyond range */
   if (range > ((ammomode & STINGER_MODE)
@@ -577,30 +579,30 @@ mech_range_to_hit_calculate(const WeaponRangeToHitRequest *request) {
                    : weapon_catalogue_effective_range(
                          weapindx,
                          btech_context_uses_extended_weapon_ranges(context)))) {
-    *wBTH = 1000;
+    *w_bth = 1000;
     return (WeaponRangeToHitResult){.bracket = RANGE_TOFAR,
                                     .modifier = modifier};
   }
   /* V. Long range */
   if (range > weapon_catalogue_effective_range(weapindx, false)) {
-    *wBTH = wTargetStealth ? 12 : 8;
+    *w_bth = w_target_stealth ? 12 : 8;
     return (WeaponRangeToHitResult){.bracket = RANGE_EXTREME,
                                     .modifier = modifier};
   }
   /* Long range... */
-  if (range > ranges.medium_range) {
-    *wBTH = wTargetStealth ? 6 : 4;
+  if (range > RANGES.medium_range) {
+    *w_bth = w_target_stealth ? 6 : 4;
     return (WeaponRangeToHitResult){.bracket = RANGE_LONG,
                                     .modifier = modifier};
   }
   /* Medium range */
-  if (range > ranges.short_range) {
-    *wBTH = wTargetStealth ? 3 : 2;
+  if (range > RANGES.short_range) {
+    *w_bth = w_target_stealth ? 3 : 2;
     return (WeaponRangeToHitResult){.bracket = RANGE_MED, .modifier = modifier};
   }
   /* Short range */
-  if (range > ranges.minimum) {
-    *wBTH = 0;
+  if (range > RANGES.minimum) {
+    *w_bth = 0;
     return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                     .modifier = modifier};
   }
@@ -608,18 +610,18 @@ mech_range_to_hit_calculate(const WeaponRangeToHitRequest *request) {
    * Added 8/3/99 by Kipsta (to fix a 0.0 bug)
    */
   if (range == 0) {
-    if (ranges.minimum == 0) {
-      *wBTH = 0;
+    if (RANGES.minimum == 0) {
+      *w_bth = 0;
       return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                       .modifier = modifier};
     } else {
       if (!weapon_catalogue_is_hot_loaded(weapindx, firemode)) {
-        *wBTH = ranges.minimum - range;
+        *w_bth = RANGES.minimum - range;
       } else {
         if (btech_context_hotload_uses_half_modifier(context))
-          *wBTH = ((ranges.minimum - range + 1) / 2);
+          *w_bth = ((RANGES.minimum - range + 1) / 2);
         else
-          *wBTH = 0;
+          *w_bth = 0;
       }
       return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                       .modifier = modifier};
@@ -627,14 +629,14 @@ mech_range_to_hit_calculate(const WeaponRangeToHitRequest *request) {
   }
   if (weapon_catalogue_is_hot_loaded(weapindx, firemode)) {
     if (btech_context_hotload_uses_half_modifier(context))
-      *wBTH = ((ranges.minimum - range + 1) / 2);
+      *w_bth = ((RANGES.minimum - range + 1) / 2);
     else
-      *wBTH = 0;
+      *w_bth = 0;
     return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                     .modifier = modifier};
   }
   /* Less than or equal to minimum range */
-  *wBTH = ranges.minimum - range + 1;
+  *w_bth = RANGES.minimum - range + 1;
   return (WeaponRangeToHitResult){.bracket = RANGE_SHORT, .modifier = modifier};
 }
 WeaponRangeToHitResult
@@ -643,84 +645,84 @@ mech_c3_range_to_hit_calculate(const C3RangeToHitRequest *request) {
   Mech *target = request->target;
   int section = request->section;
   int weapindx = request->weapon_index;
-  float realRange = request->physical_range;
-  float c3Range = request->network_range;
+  float real_range = request->physical_range;
+  float c3_range = request->network_range;
   int mode = request->fire_mode;
   int modifier;
-  int *wBTH = &modifier;
-  int realRangeAdj = 0;
-  int c3RangeAdj = 0;
-  int wTargetStealth = 0;
+  int *w_bth = &modifier;
+  int real_range_adj = 0;
+  int c3_range_adj = 0;
+  int w_target_stealth = 0;
   BtechContext *context = mech_context(mech);
-  const WeaponRangeProfile ranges = weapon_catalogue_ranges(weapindx);
+  const WeaponRangeProfile RANGES = weapon_catalogue_ranges(weapindx);
   if (target)
-    wTargetStealth = mech_condition_summary(target).stealth_armor_active ||
-                     mech_condition_summary(target).null_signature_active;
+    w_target_stealth = mech_condition_summary(target).stealth_armor_active ||
+                       mech_condition_summary(target).null_signature_active;
   if (weapon_catalogue_is_personal_combat(weapindx)) {
-    realRangeAdj = (int)(realRange * 10.0F + 0.95F);
-    c3RangeAdj = (int)(c3Range * 10.0F + 0.95F);
+    real_range_adj = (int)(real_range * 10.0F + 0.95F);
+    c3_range_adj = (int)(c3_range * 10.0F + 0.95F);
   } else {
-    realRangeAdj = (int)(realRange + 0.95F);
-    c3RangeAdj = (int)(c3Range + 0.95F);
+    real_range_adj = (int)(real_range + 0.95F);
+    c3_range_adj = (int)(c3_range + 0.95F);
   }
   if (mech_section_is_underwater(mech, section)) {
-    if (ranges.water_short_range <= 0) {
-      *wBTH = 5000;
+    if (RANGES.water_short_range <= 0) {
+      *w_bth = 5000;
       return (WeaponRangeToHitResult){.bracket = RANGE_NOWATER,
                                       .modifier = modifier};
     }
     /* Out of range. No ERange in C3 */
-    if (realRangeAdj >
+    if (real_range_adj >
         weapon_catalogue_effective_water_range(weapindx, false)) {
-      *wBTH = 1000;
+      *w_bth = 1000;
       return (WeaponRangeToHitResult){.bracket = RANGE_TOFAR,
                                       .modifier = modifier};
     }
     /* Long range... */
-    if (c3RangeAdj > ranges.water_medium_range) {
-      *wBTH = wTargetStealth ? 6 : 4;
+    if (c3_range_adj > RANGES.water_medium_range) {
+      *w_bth = w_target_stealth ? 6 : 4;
       return (WeaponRangeToHitResult){.bracket = RANGE_LONG,
                                       .modifier = modifier};
     }
     /* Medium range */
-    if (c3RangeAdj > ranges.water_short_range) {
-      *wBTH = wTargetStealth ? 3 : 2;
+    if (c3_range_adj > RANGES.water_short_range) {
+      *w_bth = w_target_stealth ? 3 : 2;
       return (WeaponRangeToHitResult){.bracket = RANGE_MED,
                                       .modifier = modifier};
     }
     /* Short range */
-    *wBTH = 0;
+    *w_bth = 0;
     return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                     .modifier = modifier};
   }
   /* Beyond range */
-  if (realRangeAdj > weapon_catalogue_effective_range(weapindx, false)) {
-    *wBTH = 1000;
+  if (real_range_adj > weapon_catalogue_effective_range(weapindx, false)) {
+    *w_bth = 1000;
     return (WeaponRangeToHitResult){.bracket = RANGE_TOFAR,
                                     .modifier = modifier};
   }
   /* No V. Long range in a C3 network */
   /* Long range... */
-  if (c3RangeAdj > ranges.medium_range) {
-    *wBTH = wTargetStealth ? 6 : 4;
+  if (c3_range_adj > RANGES.medium_range) {
+    *w_bth = w_target_stealth ? 6 : 4;
     return (WeaponRangeToHitResult){.bracket = RANGE_LONG,
                                     .modifier = modifier};
   }
   /* Medium range */
-  if (c3RangeAdj > ranges.short_range) {
-    *wBTH = wTargetStealth ? 3 : 2;
+  if (c3_range_adj > RANGES.short_range) {
+    *w_bth = w_target_stealth ? 3 : 2;
     return (WeaponRangeToHitResult){.bracket = RANGE_MED, .modifier = modifier};
   }
   /* Short range */
-  if (realRange > (float)ranges.minimum) {
-    *wBTH = 0;
+  if (real_range > (float)RANGES.minimum) {
+    *w_bth = 0;
     return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                     .modifier = modifier};
   }
   /* Check for range 0.0 */
-  if (c3RangeAdj == 0) {
-    if (ranges.minimum == 0) {
-      *wBTH = 0;
+  if (c3_range_adj == 0) {
+    if (RANGES.minimum == 0) {
+      *w_bth = 0;
       return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                       .modifier = modifier};
     }
@@ -728,13 +730,13 @@ mech_c3_range_to_hit_calculate(const C3RangeToHitRequest *request) {
   /* We don't care about min range if we're Hotloading */
   if (!weapon_catalogue_is_hot_loaded(weapindx, mode)) {
     if (btech_context_hotload_uses_half_modifier(context))
-      *wBTH = (int)(((float)ranges.minimum - realRange + 1.0F) / 2.0F);
+      *w_bth = (int)(((float)RANGES.minimum - real_range + 1.0F) / 2.0F);
     else
-      *wBTH = 0;
+      *w_bth = 0;
     return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                     .modifier = modifier};
   }
   /* Less than or equal to minimum PHYSICAL range */
-  *wBTH = (int)((float)ranges.minimum - realRange + 1.0F);
+  *w_bth = (int)((float)RANGES.minimum - real_range + 1.0F);
   return (WeaponRangeToHitResult){.bracket = RANGE_SHORT, .modifier = modifier};
 }

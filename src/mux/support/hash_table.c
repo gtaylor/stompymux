@@ -11,7 +11,7 @@
 #include "mux/support/hash_table.h"
 #include "mux/support/red_black_tree.h"
 
-struct string_dict_entry {
+struct StringDictEntry {
   char *key;
   union {
     void *mutable_data;
@@ -62,7 +62,7 @@ void hash_table_reset(HashTable *htab) {
  */
 
 void *hash_table_find(const char *str, HashTable *htab) {
-  struct string_dict_entry *ent;
+  struct StringDictEntry *ent;
 
   htab->checks++;
   /* red_black_tree's key parameter isn't const-correct; str is only used
@@ -78,7 +78,7 @@ void *hash_table_find(const char *str, HashTable *htab) {
 }
 
 const void *hash_table_find_const(const char *str, HashTable *htab) {
-  struct string_dict_entry *ent;
+  struct StringDictEntry *ent;
 
   htab->checks++;
   /* red_black_tree's key parameter isn't const-correct; str is only used
@@ -96,7 +96,7 @@ const void *hash_table_find_const(const char *str, HashTable *htab) {
  */
 
 int hash_table_add(const char *str, void *hashdata, HashTable *htab) {
-  struct string_dict_entry *ent;
+  struct StringDictEntry *ent;
 
   /* red_black_tree's key parameter isn't const-correct; str is only used
      as a lookup key here, never mutated. */
@@ -106,7 +106,7 @@ int hash_table_add(const char *str, void *hashdata, HashTable *htab) {
     return (-1);
 #pragma clang diagnostic pop
 
-  ent = malloc(sizeof(struct string_dict_entry));
+  ent = malloc(sizeof(struct StringDictEntry));
   ent->key = strdup(str);
   ent->data.mutable_data = hashdata;
   ent->is_const = false;
@@ -117,7 +117,7 @@ int hash_table_add(const char *str, void *hashdata, HashTable *htab) {
 
 int hash_table_add_const(const char *str, const void *hashdata,
                          HashTable *htab) {
-  struct string_dict_entry *ent;
+  struct StringDictEntry *ent;
 
   /* red_black_tree's key parameter isn't const-correct; str is only used
      as a lookup key here, never mutated. */
@@ -127,7 +127,7 @@ int hash_table_add_const(const char *str, const void *hashdata,
     return -1;
 #pragma clang diagnostic pop
 
-  ent = malloc(sizeof(struct string_dict_entry));
+  ent = malloc(sizeof(struct StringDictEntry));
   ent->key = strdup(str);
   ent->data.const_data = hashdata;
   ent->is_const = true;
@@ -141,7 +141,7 @@ int hash_table_add_const(const char *str, const void *hashdata,
  */
 
 void hash_table_delete(const char *str, HashTable *htab) {
-  struct string_dict_entry *ent = nullptr;
+  struct StringDictEntry *ent = nullptr;
 
   /* red_black_tree's key parameter isn't const-correct; str is only used
      as a lookup key here, never mutated. */
@@ -169,7 +169,7 @@ void hash_table_delete(const char *str, HashTable *htab) {
 
 static int nuke_hash_ent(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
-  struct string_dict_entry *ent = (struct string_dict_entry *)data;
+  struct StringDictEntry *ent = (struct StringDictEntry *)data;
   free(ent->key);
   free(ent);
   return 1;
@@ -190,7 +190,7 @@ void hash_table_flush(HashTable *htab, int size) {
  */
 
 int hash_table_replace(char *str, void *hashdata, HashTable *htab) {
-  struct string_dict_entry *ent;
+  struct StringDictEntry *ent;
 
   ent = red_black_tree_find(htab->tree, str);
   if (!ent)
@@ -201,7 +201,7 @@ int hash_table_replace(char *str, void *hashdata, HashTable *htab) {
   return 1;
 }
 
-struct hashreplstat {
+struct Hashreplstat {
   void *old;
   void *new;
 };
@@ -209,8 +209,8 @@ struct hashreplstat {
 static int hashreplall_cb(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   void *arg = call->context;
-  struct string_dict_entry *ent = (struct string_dict_entry *)data;
-  struct hashreplstat *repl = (struct hashreplstat *)arg;
+  struct StringDictEntry *ent = (struct StringDictEntry *)data;
+  struct Hashreplstat *repl = (struct Hashreplstat *)arg;
 
   if (ent->data.mutable_data == repl->old) {
     ent->data.mutable_data = repl->new;
@@ -220,7 +220,7 @@ static int hashreplall_cb(const RedBlackTreeVisitCall *call) {
 }
 
 void hash_table_replace_all(void *old, void *new, HashTable *htab) {
-  struct hashreplstat repl = {old, new};
+  struct Hashreplstat repl = {old, new};
 
   red_black_tree_walk(htab->tree, WALK_INORDER, hashreplall_cb, &repl);
 }
@@ -244,7 +244,7 @@ char *hash_table_info(const char *tab_name, HashTable *htab) {
  */
 
 void *hash_table_first_entry(HashTable *htab) {
-  struct string_dict_entry *ent;
+  struct StringDictEntry *ent;
 
   if (htab->last)
     free(htab->last);
@@ -260,7 +260,7 @@ void *hash_table_first_entry(HashTable *htab) {
 }
 
 void *hash_table_next_entry(HashTable *htab) {
-  struct string_dict_entry *ent;
+  struct StringDictEntry *ent;
 
   if (!htab->last) {
     return hash_table_first_entry(htab);
@@ -279,7 +279,7 @@ void *hash_table_next_entry(HashTable *htab) {
 }
 
 char *hash_table_first_key(HashTable *htab) {
-  struct string_dict_entry *ent;
+  struct StringDictEntry *ent;
   if (htab->last)
     free(htab->last);
 
@@ -294,7 +294,7 @@ char *hash_table_first_key(HashTable *htab) {
 }
 
 char *hash_table_next_key(HashTable *htab) {
-  struct string_dict_entry *ent;
+  struct StringDictEntry *ent;
 
   if (!htab->last) {
     return hash_table_first_key(htab);

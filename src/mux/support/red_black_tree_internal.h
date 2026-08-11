@@ -27,6 +27,6 @@ struct RedBlackTreeHead {
   unsigned int size;
 };
 
-typedef RedBlackTreeNode rbtree_node;
+typedef RedBlackTreeNode RbtreeNode;
 
 RedBlackTreeNode *red_black_tree_find_successor_node(RedBlackTreeNode *node);

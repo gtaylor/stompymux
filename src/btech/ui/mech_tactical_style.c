@@ -61,7 +61,7 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
                    const char *sketch, int dispcols, int disprows) {
   if (dispcols <= 0 || disprows < 0)
     return false;
-  const size_t sketch_capacity = (size_t)dispcols * (size_t)disprows;
+  const size_t SKETCH_CAPACITY = (size_t)dispcols * (size_t)disprows;
   MapTextBuilder builder = {.text = text};
   int line = 0;
   int column = 0;
@@ -71,15 +71,15 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
     return false;
   while (line < disprows) {
     char new_colour;
-    const size_t source_offset =
+    const size_t SOURCE_OFFSET =
         (size_t)line * (size_t)dispcols + (size_t)column;
-    const unsigned char input =
+    const unsigned char INPUT =
         (unsigned char)*(const char *)checked_storage_at_const(
-            sketch, sketch_capacity, sizeof(char), source_offset);
+            sketch, SKETCH_CAPACITY, sizeof(char), SOURCE_OFFSET);
     column++;
-    char c = (char)input;
+    char c = (char)INPUT;
 
-    if (input == '\0') {
+    if (INPUT == '\0') {
       /*
        * End of line.
        */
@@ -99,7 +99,7 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
       continue;
     }
 
-    switch (input) {
+    switch (INPUT) {
     case (unsigned char)'\242': /* Colour Hack: Deep Water */
       c = '~';
       new_colour = colors->values[DWATER_IDX];
@@ -142,11 +142,11 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
       break;
 
     default:
-      if (ascii_is_lower(input)) { /* Friendly con */
+      if (ascii_is_lower(INPUT)) { /* Friendly con */
         new_colour = colors->values[FRIEND_IDX];
-      } else if (ascii_is_upper(input)) { /* Enemy con */
+      } else if (ascii_is_upper(INPUT)) { /* Enemy con */
         new_colour = colors->values[ENEMY_IDX];
-      } else if (ascii_is_digit(input)) { /* Elevation */
+      } else if (ascii_is_digit(INPUT)) { /* Elevation */
         new_colour = cur_colour;
       } else {
         new_colour = map_terrain_color_char(&(TerrainColorRequest){

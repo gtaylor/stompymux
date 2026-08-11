@@ -22,7 +22,7 @@ static const char *map_type_name(int type) {
   if (type < 0)
     abort();
   const char *const *name = (const char *const *)checked_storage_at_const(
-      (const void *)map_types, NUM_MAPOBJTYPES + 1, sizeof(*map_types),
+      (const void *)MAP_TYPES, NUM_MAPOBJTYPES + 1, sizeof(*MAP_TYPES),
       (size_t)type);
   return *name;
 }
@@ -166,7 +166,7 @@ int is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
   float fx, fy;
   float tx, ty;
 
-  MapCoordToRealCoord(x, y, &fx, &fy);
+  map_coord_to_real_coord(x, y, &fx, &fy);
   for (o = first_mapobj(map, TYPE_B_LZ); o; o = next_mapobj(o)) {
     // comment this out...That makes it a square BLZ, not round
     //		if(abs(x - o->x) > o->payload.scalar ||
@@ -174,7 +174,7 @@ int is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
     //			continue;
     if (o->datac && o->datac == mech_team(mech))
       continue;
-    MapCoordToRealCoord(o->x, o->y, &tx, &ty);
+    map_coord_to_real_coord(o->x, o->y, &tx, &ty);
     if (map_real_range(&(MapRealSegment){
             .start = {.x = fx, .y = fy},
             .end = {.x = tx, .y = ty},
@@ -228,7 +228,7 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                  "Error: Invalid number of attributes to delobj command.");
     return;
   case 1:
-    tt = listmatch(map_types, NUM_MAPOBJTYPES, args[0]);
+    tt = listmatch(MAP_TYPES, NUM_MAPOBJTYPES, args[0]);
     if (tt < 0) {
       mecha_notify(btech_context_evaluation(map->xcode.context), player,
                    "Invalid type!");
@@ -274,7 +274,7 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                   "%d objects at (%d,%d) deleted.", count, x, y);
     break;
   case 3:
-    tt = listmatch(map_types, NUM_MAPOBJTYPES, args[0]);
+    tt = listmatch(MAP_TYPES, NUM_MAPOBJTYPES, args[0]);
     if (tt < 0) {
       mecha_notify(btech_context_evaluation(map->xcode.context), player,
                    "Invalid type!");

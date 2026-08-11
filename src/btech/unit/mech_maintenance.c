@@ -37,52 +37,52 @@
 #include <string.h>
 #include <strings.h>
 
-void ArmorStringFromIndex(int index, char *buffer, UnitClass type,
-                          MechMovementType movement_type) {
-  const UnitSectionCatalog catalog = {.unit_type = type,
+void armor_string_from_index(int index, char *buffer, UnitClass type,
+                             MechMovementType movement_type) {
+  const UnitSectionCatalog CATALOG = {.unit_type = type,
                                       .movement_type = movement_type};
-  size_t location_count = unit_section_name_count(&catalog);
+  size_t location_count = unit_section_name_count(&CATALOG);
   if (index >= 0 && (size_t)index < location_count) {
     // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
-    strcpy(buffer, unit_section_name(&catalog, (size_t)index));
+    strcpy(buffer, unit_section_name(&CATALOG, (size_t)index));
     return;
   }
   // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
   strcpy(buffer, "Invalid!!");
 }
 
-bool IsInWeaponArc(const WeaponArcRequest *request) {
+bool is_in_weapon_arc(const WeaponArcRequest *request) {
   Mech *mech = request->mech;
-  const float x = request->target.x;
-  const float y = request->target.y;
-  const int section = request->section;
-  const int critical = request->critical;
+  const float X = request->target.x;
+  const float Y = request->target.y;
+  const int SECTION = request->section;
+  const int CRITICAL = request->critical;
   int weaponarc, isrear;
   int wantarc = NOARC;
 
   if (((mech)->ud.type) == CLASS_MECH &&
-      (section == LLEG || section == RLEG ||
-       (mech_is_quad(mech) && (section == LARM || section == RARM)))) {
+      (SECTION == LLEG || SECTION == RLEG ||
+       (mech_is_quad(mech) && (SECTION == LARM || SECTION == RARM)))) {
     int ts = ((mech)->rd.status) & (TORSO_LEFT | TORSO_RIGHT);
     ((mech)->rd.status) &= ~(ts);
-    weaponarc = InWeaponArc(mech, x, y);
+    weaponarc = in_weapon_arc(mech, X, Y);
     ((mech)->rd.status) |= ts;
   } else
-    weaponarc = InWeaponArc(mech, x, y);
+    weaponarc = in_weapon_arc(mech, X, Y);
 
   switch (((mech)->ud.type)) {
   case CLASS_MECH:
   case CLASS_BSUIT:
   case CLASS_MW:
-    if (mech_critical_fire_mode(mech, section, critical) & REAR_MOUNT)
+    if (mech_critical_fire_mode(mech, SECTION, CRITICAL) & REAR_MOUNT)
       wantarc = REARARC;
-    else if (section == LARM && (((mech)->rd.status) & FLIPPED_ARMS))
+    else if (SECTION == LARM && (((mech)->rd.status) & FLIPPED_ARMS))
       wantarc = REARARC | LSIDEARC;
-    else if (section == LARM)
+    else if (SECTION == LARM)
       wantarc = FORWARDARC | LSIDEARC;
-    else if (section == RARM && (((mech)->rd.status) & FLIPPED_ARMS))
+    else if (SECTION == RARM && (((mech)->rd.status) & FLIPPED_ARMS))
       wantarc = REARARC | RSIDEARC;
-    else if (section == RARM)
+    else if (SECTION == RARM)
       wantarc = FORWARDARC | RSIDEARC;
     else
       wantarc = FORWARDARC;
@@ -90,7 +90,7 @@ bool IsInWeaponArc(const WeaponArcRequest *request) {
   case CLASS_VEH_GROUND:
   case CLASS_VEH_NAVAL:
   case CLASS_VTOL:
-    switch (section) {
+    switch (SECTION) {
     case TURRET:
       wantarc = TURRETARC;
       break;
@@ -109,7 +109,7 @@ bool IsInWeaponArc(const WeaponArcRequest *request) {
     }
     break;
   case CLASS_DS:
-    switch (section) {
+    switch (SECTION) {
     case DS_NOSE:
       wantarc = FORWARDARC;
       break;
@@ -127,7 +127,7 @@ bool IsInWeaponArc(const WeaponArcRequest *request) {
     }
     break;
   case CLASS_SPHEROID_DS:
-    switch (section) {
+    switch (SECTION) {
     case DS_NOSE:
       wantarc = FORWARDARC;
       break;
@@ -150,8 +150,8 @@ bool IsInWeaponArc(const WeaponArcRequest *request) {
     break;
 
   case CLASS_AERO:
-    isrear = (mech_critical_fire_mode(mech, section, critical) & REAR_MOUNT);
-    switch (section) {
+    isrear = (mech_critical_fire_mode(mech, SECTION, CRITICAL) & REAR_MOUNT);
+    switch (SECTION) {
     case AERO_NOSE:
       wantarc = FORWARDARC | LSIDEARC | RSIDEARC;
       break;
@@ -170,7 +170,7 @@ bool IsInWeaponArc(const WeaponArcRequest *request) {
   return wantarc && (wantarc & weaponarc);
 }
 
-int GetWeaponCrits(Mech *mech, int weapindx) {
+int get_weapon_crits(Mech *mech, int weapindx) {
   return (((mech)->ud.type) == CLASS_MECH)
              ? weapon_catalogue_critical_slots(weapindx)
              : 1;
@@ -210,7 +210,7 @@ void do_sub_magic(Mech *mech, int loud) {
   if (((mech)->rd.specials) & ICE_TECH)
     inthses = 0;
   for (i = 0; i < NUM_SECTIONS; i++)
-    for (j = 0; j < CritsInLoc(mech, i); j++)
+    for (j = 0; j < crits_in_loc(mech, i); j++)
       switch (
           special_from_equipment_index(mech_critical_part_type(mech, i, j))) {
       case HEAT_SINK:
@@ -224,7 +224,7 @@ void do_sub_magic(Mech *mech, int loud) {
       }
   if (((mech)->ud.hsengoverride))
     inthses = ((mech)->ud.hsengoverride);
-  hses += MIN(((mech)->ud.numsinks) * shs_size / hs_eff, inthses * shs_size);
+  hses += min(((mech)->ud.numsinks) * shs_size / hs_eff, inthses * shs_size);
 
   /* Improved are 2 crits per Jump MP */
   if ((((mech)->rd.specials2) & IMPROVED_JJ_TECH))
@@ -245,7 +245,7 @@ void do_sub_magic(Mech *mech, int loud) {
   wanths = wanths_f - (dest_hses * hs_eff / shs_size);
   if (loud)
     ((mech)->rd.onumsinks) =
-        wanths - MIN(((mech)->ud.numsinks), inthses * hs_eff);
+        wanths - min(((mech)->ud.numsinks), inthses * hs_eff);
   if (wanths != ((mech)->ud.numsinks) && loud) {
     btech_channel_send(
         mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
@@ -292,18 +292,18 @@ void do_fixextra(Mech *mech) {
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (mech_section_is_flooded(mech, i))
       mech_section_flooded_set(mech, i, false);
-    for (j = 0; j < CritsInLoc(mech, i); j++) {
+    for (j = 0; j < crits_in_loc(mech, i); j++) {
       if (!equipment_is_ammunition(mech_critical_part_type(mech, i, j))) {
         if (!mech_critical_is_broken(mech, i, j) &&
             !mech_critical_is_destroyed(mech, i, j))
-          mech_RepairPart(mech, i, j);
+          mech_repair_part(mech, i, j);
         else {
           mech_critical_fire_mode_clear(mech, i, j, DISABLED_MODE);
-          mech_RepairPart(mech, i, j);
+          mech_repair_part(mech, i, j);
         }
       } else {
         mech_critical_fire_mode_clear(mech, i, j, DISABLED_MODE);
-        mech_FillPartAmmo(mech, i, j);
+        mech_fill_part_ammo(mech, i, j);
       }
     }
   }
@@ -313,10 +313,10 @@ void do_magic(Mech *mech) {
   Mech opp;
   int i, j, t;
   int mask = 0;
-  int tankCritMask = 0;
+  int tank_crit_mask = 0;
 
   if (((mech)->ud.type) != CLASS_MECH)
-    tankCritMask =
+    tank_crit_mask =
         (TURRET_LOCKED | TURRET_JAMMED | TAIL_ROTOR_DESTROYED | CREW_STUNNED);
 
   /* stop the burning */
@@ -330,7 +330,7 @@ void do_magic(Mech *mech) {
   opp.mynum = -1;
   /* Ok.. It's at perfect condition. Start inflicting some serious crits.. */
   for (i = 0; i < NUM_SECTIONS; i++)
-    for (j = 0; j < CritsInLoc(mech, i); j++) {
+    for (j = 0; j < crits_in_loc(mech, i); j++) {
       mech_critical_part_type_set(&opp, i, j,
                                   mech_critical_part_type(mech, i, j));
       mech_critical_brand_set(
@@ -346,7 +346,7 @@ void do_magic(Mech *mech) {
   ((mech)->rd.onumsinks) = ((&opp)->rd.onumsinks);
   for (i = 0; i < NUM_SECTIONS; i++) {
 
-    for (j = 0; j < CritsInLoc(mech, i); j++) {
+    for (j = 0; j < crits_in_loc(mech, i); j++) {
       if (mech_critical_is_destroyed(mech, i, j)) {
         if (!mech_critical_is_destroyed(&opp, i, j)) {
           t = mech_critical_part_type(mech, i, j);
@@ -397,8 +397,9 @@ void do_magic(Mech *mech) {
   ((mech)->rd.critstatus) &= mask;
   ((mech)->rd.critstatus) |= ((&opp)->rd.critstatus) & (~mask);
 
-  ((mech)->rd.tankcritstatus) &= tankCritMask;
-  ((mech)->rd.tankcritstatus) |= ((&opp)->rd.tankcritstatus) & (~tankCritMask);
+  ((mech)->rd.tankcritstatus) &= tank_crit_mask;
+  ((mech)->rd.tankcritstatus) |=
+      ((&opp)->rd.tankcritstatus) & (~tank_crit_mask);
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     mech_section_base_to_hit_set(mech, i, mech_section_base_to_hit(&opp, i));
@@ -419,7 +420,7 @@ void do_magic(Mech *mech) {
   update_specials(mech);
 }
 
-void mech_RepairPart(Mech *mech, int loc, int pos) {
+void mech_repair_part(Mech *mech, int loc, int pos) {
   int t = mech_critical_part_type(mech, loc, pos);
 
   mech_critical_restore(mech, loc, pos);
@@ -470,7 +471,7 @@ int no_locations_destroyed(Mech *mech) {
   return 1;
 }
 
-void mech_ReAttach(Mech *mech, int loc) {
+void mech_re_attach(Mech *mech, int loc) {
   if (!mech_section_is_destroyed(mech, loc))
     return;
   mech_section_flooded_set(mech, loc, false);
@@ -485,7 +486,7 @@ void mech_ReAttach(Mech *mech, int loc) {
   }
 }
 
-void mech_ReplaceSuit(Mech *mech, int loc) {
+void mech_replace_suit(Mech *mech, int loc) {
   if (!mech_section_is_destroyed(mech, loc))
     return;
 
@@ -498,7 +499,7 @@ void mech_ReplaceSuit(Mech *mech, int loc) {
  * 8/4/99
  */
 
-void mech_ReSeal(Mech *mech, int loc) {
+void mech_re_seal(Mech *mech, int loc) {
   int i;
 
   if (mech_section_is_destroyed(mech, loc))
@@ -508,18 +509,18 @@ void mech_ReSeal(Mech *mech, int loc) {
 
   mech_section_flooded_set(mech, loc, false);
 
-  for (i = 0; i < CritsInLoc(mech, loc); i++) {
+  for (i = 0; i < crits_in_loc(mech, loc); i++) {
     if (mech_critical_is_disabled(mech, loc, i)) {
       if (!mech_critical_is_broken(mech, loc, i) &&
           !mech_critical_is_damaged(mech, loc, i))
-        mech_RepairPart(mech, loc, i);
+        mech_repair_part(mech, loc, i);
       else
         mech_critical_fire_mode_clear(mech, loc, i, DISABLED_MODE);
     }
   }
 }
 
-void mech_Detach(Mech *mech, int loc) {
+void mech_detach(Mech *mech, int loc) {
   if (mech_section_is_destroyed(mech, loc))
     return;
   mech_section_destroy(&(SectionDestructionRequest){
@@ -528,7 +529,7 @@ void mech_Detach(Mech *mech, int loc) {
 
 /* Figures out how much ammo there is when we're 'fully loaded', and
    fills it */
-void mech_FillPartAmmo(Mech *mech, int loc, int pos) {
+void mech_fill_part_ammo(Mech *mech, int loc, int pos) {
   int t;
 
   t = mech_critical_part_type(mech, loc, pos);
@@ -537,10 +538,10 @@ void mech_FillPartAmmo(Mech *mech, int loc, int pos) {
     return;
   if (!weapon_catalogue_ammunition_per_ton(ammunition_to_weapon_index(t)))
     return;
-  mech_critical_data_set(mech, loc, pos, FullAmmo(mech, loc, pos));
+  mech_critical_data_set(mech, loc, pos, full_ammo(mech, loc, pos));
 }
 
-int AcceptableDegree(int d) {
+int acceptable_degree(int d) {
   /*
    * Silly billies, integer modulo (division) is still faster than loops.
    * And probably slightly faster than branches, too, but let's not worry
@@ -555,7 +556,7 @@ int AcceptableDegree(int d) {
   }
 }
 
-void MarkForLOSUpdate(Mech *mech) {
+void mark_for_los_update(Mech *mech) {
   BattleMap *mech_map;
 
   mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
@@ -567,7 +568,7 @@ void MarkForLOSUpdate(Mech *mech) {
 
 void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
   Mech *mech = request->mech;
-  const DbRef player = request->actor;
+  const DbRef PLAYER = request->actor;
   char *buffer = request->selection;
   /* Insight: buffer contains stuff in form:
      <num>
@@ -595,17 +596,17 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
     *range_separator = '\0';
     if (!parse_int_checked(buffer, &i1) ||
         !parse_int_checked(checked_string_suffix(range_separator, 1), &i2)) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
                    tprintf("Invalid value: %s", buffer));
       return;
     }
     if (i1 < 0 || i1 >= MAX_WEAPONS_PER_MECH) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
                    tprintf("Invalid first number in range (%d)", i1));
       return;
     }
     if (i2 < 0 || i2 >= MAX_WEAPONS_PER_MECH) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
                    tprintf("Invalid second number in range (%d)", i2));
       return;
     }
@@ -616,12 +617,12 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
     }
   } else {
     if (!parse_int_checked(buffer, &i1)) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
                    tprintf("Invalid value: %s", buffer));
       return;
     }
     if (i1 < 0 || i1 >= MAX_WEAPONS_PER_MECH) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
                    tprintf("Invalid weapon number: %d", i1));
       return;
     }
@@ -629,7 +630,7 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
   }
   if (request->mode / 2) {
     if (i2 >= NUM_TICS) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
                    tprintf("There are only %d tics!", i2));
       return;
     }
@@ -637,7 +638,7 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
     WeaponNumberLookupResult lookup = weapon_number_find(
         &(WeaponNumberLookupRequest){.mech = mech, .number = i2});
     if (!lookup.found) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), player,
+      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
                    tprintf("Error: the mech doesn't HAVE %d weapons!", i2 + 1));
       return;
     }
@@ -646,7 +647,7 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
     for (i3 = i1; i3 <= i2; i3++)
       if (request->callback(&(MultiWeaponSelectionCall){
               .mech = mech,
-              .actor = player,
+              .actor = PLAYER,
               .first = i3,
               .last = i3,
               .context = request->context,
@@ -654,7 +655,7 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
         return;
   } else if (request->callback(&(MultiWeaponSelectionCall){
                  .mech = mech,
-                 .actor = player,
+                 .actor = PLAYER,
                  .first = i1,
                  .last = i2,
                  .context = request->context,
@@ -663,7 +664,7 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
   if (c)
     multi_weapon_select(&(MultiWeaponSelectionRequest){
         .mech = mech,
-        .actor = player,
+        .actor = PLAYER,
         .selection = c,
         .mode = request->mode,
         .callback = request->callback,

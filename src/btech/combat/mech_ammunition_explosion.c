@@ -16,12 +16,12 @@
 void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
   Mech *attacker = request->attacker;
   Mech *mech = request->target;
-  const int ammunition_section = request->ammunition.section;
-  const int ammunition_critical = request->ammunition.critical;
+  const int AMMUNITION_SECTION = request->ammunition.section;
+  const int AMMUNITION_CRITICAL = request->ammunition.critical;
   int damage = request->damage;
   BtechContext *context = mech_context(mech);
   int ammunition_mode =
-      mech_critical_ammo_mode(mech, ammunition_section, ammunition_critical);
+      mech_critical_ammo_mode(mech, AMMUNITION_SECTION, AMMUNITION_CRITICAL);
 
   if (mech_class(mech) == CLASS_MW) {
     mech_notify(mech, MECHALL, "Your weapon's ammo explodes!");
@@ -34,7 +34,7 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
     else
       mech_los_broadcast(mech, "has an internal ammo explosion!");
   }
-  mech_critical_destroy(mech, ammunition_section, ammunition_critical);
+  mech_critical_destroy(mech, AMMUNITION_SECTION, AMMUNITION_CRITICAL);
   if (!attacker)
     return;
   if (ammunition_mode & INFERNO_MODE) {
@@ -48,7 +48,7 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
                                            .attacker = attacker,
                                            .line_of_sight = 0,
                                            .attack_pilot = -1,
-                                           .hit_location = ammunition_section,
+                                           .hit_location = AMMUNITION_SECTION,
                                            .rear = 0,
                                            .critical = 0,
                                            .armor_damage = damage,
@@ -65,7 +65,7 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
                              .attacker = attacker,
                              .line_of_sight = 0,
                              .attack_pilot = -1,
-                             .hit_location = ammunition_section,
+                             .hit_location = AMMUNITION_SECTION,
                              .rear = 0,
                              .critical = 0,
                              .armor_damage = 0,
@@ -80,7 +80,7 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
   if (mech_class(mech) != CLASS_BSUIT) {
     mech_notify(mech, MECHPILOT,
                 "You take personal injury from the ammunition explosion!");
-    if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "pain_resistance"))
+    if (has_bool_advantage(context, mech_pilot_dbref(mech), "pain_resistance"))
       headhitmwdamage(mech, mech, 1);
     else
       headhitmwdamage(mech, mech, 2);

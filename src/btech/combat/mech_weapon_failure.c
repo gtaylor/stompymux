@@ -43,13 +43,13 @@ weapon_failure_resolve(const WeaponFailureResolutionRequest *request) {
   }
   if (result.type == RANGE) {
     const BtechContext *context = mech_context(request->mech);
-    const bool extended = btech_context_uses_extended_weapon_ranges(context);
-    const int effective_range =
+    const bool EXTENDED = btech_context_uses_extended_weapon_ranges(context);
+    const int EFFECTIVE_RANGE =
         mech_section_is_underwater(request->mech, request->weapon.section)
             ? weapon_catalogue_effective_water_range(request->weapon_index,
-                                                     extended)
-            : weapon_catalogue_effective_range(request->weapon_index, extended);
-    if ((float)(effective_range - result.modifier) < request->range) {
+                                                     EXTENDED)
+            : weapon_catalogue_effective_range(request->weapon_index, EXTENDED);
+    if ((float)(EFFECTIVE_RANGE - result.modifier) < request->range) {
       mech_notify(
           request->mech, MECHALL,
           "Due to weapons failure your shot falls short of its target!");

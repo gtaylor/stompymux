@@ -84,7 +84,7 @@ void map_delobj(DbRef player, void *data, char *buffer);
 int parse_coord(BattleMap *map, int dir, char *data, int *x, int *y);
 void recursively_updatelinks(BtechContext *context, DbRef from, DbRef loc);
 void map_updatelinks(DbRef player, void *data, char *buffer);
-int map_linked(BtechContext *context, DbRef MapObject);
+int map_linked(BtechContext *context, DbRef map_object);
 void possibly_start_building_regen(BtechContext *context, DbRef obj);
 void hit_building(const BuildingHitRequest *request);
 void fire_hex(const TerrainHexEffectRequest *request);

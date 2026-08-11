@@ -84,7 +84,7 @@ void mine_field_add(BattleMap *map, int x, int y, int damage) {
   MapObject *o, foo;
 
   if (is_mine_hex(map, x, y)) {
-    for (o = map->MapObject[TYPE_MINE]; o; o = o->next)
+    for (o = map->map_object[TYPE_MINE]; o; o = o->next)
       if (o->x == x && o->y == y)
         break;
     if (o)
@@ -95,7 +95,7 @@ void mine_field_add(BattleMap *map, int x, int y, int damage) {
   foo.y = clamp_int_to_short(y);
   foo.datas = clamp_int_to_short(damage);
   foo.datac = MINE_STANDARD;
-  add_mapobj(map, &map->MapObject[TYPE_MINE], &foo, 1);
+  add_mapobj(map, &map->map_object[TYPE_MINE], &foo, 1);
 }
 
 typedef struct MineDamageRequest {
@@ -177,7 +177,7 @@ static void mine_explode(const MineExplosion *explosion) {
         break;
       }
     } else
-      HexLOSBroadcast(map, o->x, o->y, "A mine explodes in $H!");
+      hex_los_broadcast(map, o->x, o->y, "A mine explodes in $H!");
   }
 
   switch (o->datac) {
@@ -245,7 +245,7 @@ static void mine_explode(const MineExplosion *explosion) {
   case MINE_VIBRA:
     unset_hex_mine(map, o->x, o->y);
     if (o->x != x || o->y != y)
-      HexLOSBroadcast(map, o->x, o->y, "A mine explodes in $H!");
+      hex_los_broadcast(map, o->x, o->y, "A mine explodes in $H!");
     mine_damage_mechs(&(MineDamageRequest){
         .map = map,
         .position = {.x = o->x, .y = o->y},
@@ -274,8 +274,8 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
   int mdis = (mech_real_tonnage(mech) - 20) / 10;
   float x1, y1, x2, y2;
 
-  MapCoordToRealCoord(x, y, &x1, &y1);
-  for (o = map->MapObject[TYPE_MINE]; o; o = o2) {
+  map_coord_to_real_coord(x, y, &x1, &y1);
+  for (o = map->map_object[TYPE_MINE]; o; o = o2) {
 
     int real = 1;
 
@@ -315,7 +315,7 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
         if (o->datas > mech_real_tonnage(mech))
           continue;
 
-        MapCoordToRealCoord(o->x, o->y, &x2, &y2);
+        map_coord_to_real_coord(o->x, o->y, &x2, &y2);
 
         /* Out side of range */
         /* Using round here because we get some funky ranges like
@@ -337,13 +337,13 @@ static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
         if (abs(o->x - x) <= mdis && abs(o->y - y) <= mdis) {
 
           /* Possible remote explosion */
-          MapCoordToRealCoord(o->x, o->y, &x2, &y2);
-          const long range_limit =
+          map_coord_to_real_coord(o->x, o->y, &x2, &y2);
+          const long RANGE_LIMIT =
               (mech_real_tonnage(mech) - o->payload.scalar) / 10;
           if (map_real_range(&(MapRealSegment){
                   .start = {.x = x1, .y = y1},
                   .end = {.x = x2, .y = y2},
-              }) > (float)range_limit)
+              }) > (float)RANGE_LIMIT)
             continue;
 
           mine_explode(&(MineExplosion){.mech = mech,
@@ -412,7 +412,7 @@ static void add_mine_on_map(const MineFieldDefinition *definition) {
     float fx, fy, fx1, fy1;
 
     /* Get the main hex's location in floating values */
-    MapCoordToRealCoord(x, y, &fx, &fy);
+    map_coord_to_real_coord(x, y, &fx, &fy);
 
     /* Loop through all the possible hexes within range
      * and add mines to those hexes if they are within
@@ -423,7 +423,7 @@ static void add_mine_on_map(const MineFieldDefinition *definition) {
         /* Check the range, if in range add a mine */
         /* We round because of weirdness with FindHexRange returning
          * values like 1.00215 */
-        MapCoordToRealCoord(x1, y1, &fx1, &fy1);
+        map_coord_to_real_coord(x1, y1, &fx1, &fy1);
         if (nearbyintf(map_real_range(&(MapRealSegment){
                 .start = {.x = fx, .y = fy},
                 .end = {.x = fx1, .y = fy1},
@@ -451,7 +451,7 @@ void mine_fields_recalculate(BattleMap *map) {
   MapObject *o;
 
   clear_hex_bits(map, 1);
-  for (o = map->MapObject[TYPE_MINE]; o; o = o->next)
+  for (o = map->map_object[TYPE_MINE]; o; o = o->next)
     add_mine_on_map(
         &(MineFieldDefinition){.map = map,
                                .position = {.x = o->x, .y = o->y},
@@ -519,7 +519,7 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
   foo.datas = clamp_int_to_short(str);
   foo.datac = type + 1;
   foo.obj = player;
-  add_mapobj(map, &map->MapObject[TYPE_MINE], &foo, 1);
+  add_mapobj(map, &map->map_object[TYPE_MINE], &foo, 1);
 
   notify_printf(btech_context_evaluation(battle_map_context(map)), player,
                 "%s mine added to (%d,%d) (strength: %d / extra: %d)",
@@ -535,7 +535,7 @@ void mine_command_detonate(Mech *mech, int channel) {
 
   if (!map)
     return;
-  for (o = map->MapObject[TYPE_MINE]; o; o = o2) {
+  for (o = map->map_object[TYPE_MINE]; o; o = o2) {
     o2 = o->next;
     if (o->datac == MINE_COMMAND)
       if (o->payload.scalar == channel) {
@@ -566,7 +566,7 @@ void mine_field_scan(const MineFieldScanRequest *request) {
     return;
   }
 
-  for (o = map->MapObject[TYPE_MINE]; o; o = o->next)
+  for (o = map->map_object[TYPE_MINE]; o; o = o->next)
     if (o->x == x && o->y == y)
       break;
 
@@ -580,7 +580,7 @@ void mine_field_scan(const MineFieldScanRequest *request) {
                  "You see nothing else of interest in the hex, either.");
     return;
   }
-  if (!MadePerceptionRoll(mech, 0)) {
+  if (!made_perception_roll(mech, 0)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You see nothing else of interest in the hex, either.");
     return;

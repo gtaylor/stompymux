@@ -92,17 +92,17 @@ int vislight_see(const SensorVisibilityRequest *request) {
       !request->light && request->target && mech_sensor_is_lit(request->target)
           ? 3
           : 1;
-  const int maximum_range = request->condition_range * illuminated_multiplier;
-  if (request->range > sensor_range_limit(maximum_range))
+  const int MAXIMUM_RANGE = request->condition_range * illuminated_multiplier;
+  if (request->range > sensor_range_limit(MAXIMUM_RANGE))
     return 0;
   return (int)((100 - (request->range / 3)) /
                (mech_sensor_target_is_small(request->target) ? 3 : 1));
 }
 
 int liteamp_see(const SensorVisibilityRequest *request) {
-  const int maximum_range =
+  const int MAXIMUM_RANGE =
       request->light ? request->condition_range : 2 * request->condition_range;
-  if (request->range > sensor_range_limit(maximum_range))
+  if (request->range > sensor_range_limit(MAXIMUM_RANGE))
     return 0;
   return (int)((70 - request->range) /
                (mech_sensor_target_is_small(request->target) ? 3 : 1));
@@ -203,9 +203,9 @@ int radar_csee(const SensorContactRequest *request) {
       (request->flags & BATTLE_MAP_LOS_BLOCKED) ||
       mech_sensor_elevation_above_surface(request->target) <= 1)
     return 0;
-  const int target_z = mech_position_z(request->target);
-  const float target_z_squared = (float)target_z * (float)target_z;
-  return target_z >= 10 || request->range < target_z_squared;
+  const int TARGET_Z = mech_position_z(request->target);
+  const float TARGET_Z_SQUARED = (float)TARGET_Z * (float)TARGET_Z;
+  return TARGET_Z >= 10 || request->range < TARGET_Z_SQUARED;
 }
 
 int bap_csee(const SensorContactRequest *request) {
@@ -258,18 +258,18 @@ int electrom_tohit(const SensorToHitRequest *request) {
          sensor_weight_modifier(mech_tonnage(request->target)) +
          sensor_movement_modifier(mech_current_speed(request->target)) +
          (mech_has_fired_recently(request->target) ? -1 : 0) +
-         MNumber(request->observer, 0, 1);
+         m_number(request->observer, 0, 1);
 }
 
 int seismic_tohit(const SensorToHitRequest *request) {
   return 2 + sensor_partial_cover_modifier(request->target, request->flags, 3) +
          sensor_weight_modifier(mech_real_tonnage(request->target)) -
          sensor_movement_modifier(mech_current_speed(request->target)) +
-         MNumber(request->observer, 0, 1);
+         m_number(request->observer, 0, 1);
 }
 
 int bap_tohit(const SensorToHitRequest *request) {
-  return MNumber(request->observer, 0, 2);
+  return m_number(request->observer, 0, 2);
 }
 
 int blood_tohit(const SensorToHitRequest *request) {

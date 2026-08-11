@@ -407,10 +407,10 @@ void auto_stop_pilot(Autopilot *autopilot);
 void auto_heartbeat(Autopilot *autopilot);
 
 /* From autopilot_autogun.c */
-int SearchLightInRange(Mech *mech, BattleMap *map);
-int PrefVisSens(Mech *mech, BattleMap *map, int slite, Mech *target);
+int search_light_in_range(Mech *mech, BattleMap *map);
+int pref_vis_sens(Mech *mech, BattleMap *map, int slite, Mech *target);
 void auto_sensor_event(Autopilot *muxevent);
-void auto_gun_event(Autopilot *AUTOPILOT);
+void auto_gun_event(Autopilot *autopilot);
 void auto_destroy_weaplist(Autopilot *autopilot);
 void auto_update_profile_event(Autopilot *autopilot);
 

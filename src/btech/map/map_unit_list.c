@@ -15,13 +15,13 @@
 
 void map_listmechs(DbRef player, void *data, char *buffer) {
   BattleMap *map;
-  Mech *tempMech;
+  Mech *temp_mech;
   int i;
   int count = 0;
   char valid[50];
   MechId id;
   char *args[2];
-  const char *const cmds[] = {"MECHS", "OBJS", nullptr};
+  const char *const CMDS[] = {"MECHS", "OBJS", nullptr};
   enum { MECHS, OBJS };
 
   map = (BattleMap *)data;
@@ -33,23 +33,23 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
   }
   char **argument_slot =
       (char **)checked_storage_at((void *)args, 2, sizeof(*args), 0);
-  switch (listmatch(cmds, 2, *argument_slot)) {
+  switch (listmatch(CMDS, 2, *argument_slot)) {
   case MECHS:
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
                  "--- Mechs on Map ---");
     for (i = 0; i < battle_map_unit_count(map); i++) {
-      const DbRef unit_dbref = battle_map_unit_dbref(map, i);
-      if (unit_dbref != -1) {
-        tempMech = btech_context_get_mech(map->xcode.context, unit_dbref);
-        if (tempMech) {
-          id = mech_id(tempMech, false);
+      const DbRef UNIT_DBREF = battle_map_unit_dbref(map, i);
+      if (UNIT_DBREF != -1) {
+        temp_mech = btech_context_get_mech(map->xcode.context, UNIT_DBREF);
+        if (temp_mech) {
+          id = mech_id(temp_mech, false);
           strcpy(valid, "Valid Data");
         } else {
           id = (MechId){0};
           strcpy(valid, "Invalid Object Data!  Remove this Mech!");
         }
         notify_printf(btech_context_evaluation(map->xcode.context), player,
-                      "Mech DB Number: %ld : [%s]\t%s", unit_dbref, id.text,
+                      "Mech DB Number: %ld : [%s]\t%s", UNIT_DBREF, id.text,
                       valid);
         count++;
       }

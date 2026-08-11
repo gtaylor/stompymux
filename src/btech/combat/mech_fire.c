@@ -52,33 +52,33 @@ void mech_inferno_burn(Mech *mech, int time) {
   mech_event_schedule(mech, EVENT_BURN, inferno_end_event, l, 0);
 }
 
-static void vehicle_burn_event(MuxEvent *objEvent) {
-  Mech *objMech = (Mech *)objEvent->data; /* get the mech */
-  const int wLoc = (int)(intptr_t)objEvent->data2;
-  int wDamRoll;
-  char strLocName[30];
+static void vehicle_burn_event(MuxEvent *obj_event) {
+  Mech *obj_mech = (Mech *)obj_event->data; /* get the mech */
+  const int W_LOC = (int)(intptr_t)obj_event->data2;
+  int w_dam_roll;
+  char str_loc_name[30];
 
-  if (!objMech)
+  if (!obj_mech)
     return;
-  wDamRoll = btech_random_range_int(mech_context(objMech), 1, 6);
+  w_dam_roll = btech_random_range_int(mech_context(obj_mech), 1, 6);
 
-  ArmorStringFromIndex(wLoc, strLocName, mech_class(objMech),
-                       mech_movement_type(objMech));
+  armor_string_from_index(W_LOC, str_loc_name, mech_class(obj_mech),
+                          mech_movement_type(obj_mech));
 
-  if (!mech_section_internal(objMech, wLoc))
+  if (!mech_section_internal(obj_mech, W_LOC))
     return;
 
-  mech_printf(objMech, MECHALL,
+  mech_printf(obj_mech, MECHALL,
               "[fg=red bold]Your %s takes damage from the fire![reset]",
-              strLocName);
-  mech_damage_apply(&(MechDamageRequest){.target = objMech,
-                                         .attacker = objMech,
+              str_loc_name);
+  mech_damage_apply(&(MechDamageRequest){.target = obj_mech,
+                                         .attacker = obj_mech,
                                          .line_of_sight = 0,
                                          .attack_pilot = -1,
-                                         .hit_location = wLoc,
+                                         .hit_location = W_LOC,
                                          .rear = 0,
                                          .critical = 0,
-                                         .armor_damage = wDamRoll,
+                                         .armor_damage = w_dam_roll,
                                          .internal_damage = 0,
                                          .transfer = MECH_DAMAGE_NORMAL,
                                          .cause = 0,
@@ -90,44 +90,45 @@ static void vehicle_burn_event(MuxEvent *objEvent) {
   /*
    * Only continue the event if the damage was greater than one
    */
-  if ((wDamRoll > 1) && mech_section_internal(objMech, wLoc))
-    mech_event_schedule(objMech, EVENT_VEHICLEBURN, vehicle_burn_event,
-                        VEHICLEBURN_TICK, wLoc);
+  if ((w_dam_roll > 1) && mech_section_internal(obj_mech, W_LOC))
+    mech_event_schedule(obj_mech, EVENT_VEHICLEBURN, vehicle_burn_event,
+                        VEHICLEBURN_TICK, W_LOC);
   else {
-    if (mech_section_internal(objMech, wLoc))
-      mech_printf(objMech, MECHALL,
-                  "The fire burning on your %s finally goes out.", strLocName);
-    if (!mech_event_count(objMech, EVENT_VEHICLEBURN))
-      mech_los_broadcast(objMech, "is no longer engulfed in flames.");
+    if (mech_section_internal(obj_mech, W_LOC))
+      mech_printf(obj_mech, MECHALL,
+                  "The fire burning on your %s finally goes out.",
+                  str_loc_name);
+    if (!mech_event_count(obj_mech, EVENT_VEHICLEBURN))
+      mech_los_broadcast(obj_mech, "is no longer engulfed in flames.");
   }
 }
 
-void vehicle_fire_start(Mech *objMech, Mech *objAttacker) {
-  int wDamage = 0;
-  char strLocName[30];
+void vehicle_fire_start(Mech *obj_mech, Mech *obj_attacker) {
+  int w_damage = 0;
+  char str_loc_name[30];
 
-  if (!objAttacker)
-    objAttacker = objMech;
+  if (!obj_attacker)
+    obj_attacker = obj_mech;
 
-  mech_notify(objMech, MECHALL, "You catch on fire!");
-  mech_los_broadcast(objMech, "catches on fire!");
+  mech_notify(obj_mech, MECHALL, "You catch on fire!");
+  mech_los_broadcast(obj_mech, "catches on fire!");
 
-  for (int wIter = 0; wIter < NUM_SECTIONS; wIter++) {
-    if (mech_section_internal(objMech, wIter) &&
-        !mech_event_count_data(objMech, EVENT_VEHICLEBURN, wIter)) {
-      wDamage = btech_random_range_int(mech_context(objMech), 1, 6);
-      ArmorStringFromIndex(wIter, strLocName, mech_class(objMech),
-                           mech_movement_type(objMech));
-      mech_printf(objMech, MECHALL, "Your %s catches on fire!", strLocName);
+  for (int w_iter = 0; w_iter < NUM_SECTIONS; w_iter++) {
+    if (mech_section_internal(obj_mech, w_iter) &&
+        !mech_event_count_data(obj_mech, EVENT_VEHICLEBURN, w_iter)) {
+      w_damage = btech_random_range_int(mech_context(obj_mech), 1, 6);
+      armor_string_from_index(w_iter, str_loc_name, mech_class(obj_mech),
+                              mech_movement_type(obj_mech));
+      mech_printf(obj_mech, MECHALL, "Your %s catches on fire!", str_loc_name);
 
-      mech_damage_apply(&(MechDamageRequest){.target = objMech,
-                                             .attacker = objAttacker,
+      mech_damage_apply(&(MechDamageRequest){.target = obj_mech,
+                                             .attacker = obj_attacker,
                                              .line_of_sight = 0,
                                              .attack_pilot = -1,
-                                             .hit_location = wIter,
+                                             .hit_location = w_iter,
                                              .rear = 0,
                                              .critical = 0,
-                                             .armor_damage = wDamage,
+                                             .armor_damage = w_damage,
                                              .internal_damage = 0,
                                              .transfer = MECH_DAMAGE_NORMAL,
                                              .cause = 0,
@@ -135,25 +136,25 @@ void vehicle_fire_start(Mech *objMech, Mech *objAttacker) {
                                              .weapon_index = -1,
                                              .ammunition_mode = 0,
                                              .ignore_swarmers = 1});
-      mech_event_schedule(objMech, EVENT_VEHICLEBURN, vehicle_burn_event,
-                          VEHICLEBURN_TICK, wIter);
+      mech_event_schedule(obj_mech, EVENT_VEHICLEBURN, vehicle_burn_event,
+                          VEHICLEBURN_TICK, w_iter);
     }
   }
 }
 
 void vehicle_fire_extinguish_event(MuxEvent *e) {
-  Mech *objMech = (Mech *)e->data;
+  Mech *obj_mech = (Mech *)e->data;
 
-  if (!objMech)
+  if (!obj_mech)
     return;
 
-  if (!mech_event_count(objMech, EVENT_VEHICLEBURN))
+  if (!mech_event_count(obj_mech, EVENT_VEHICLEBURN))
     return;
 
-  mech_event_cancel(objMech, EVENT_VEHICLEBURN);
+  mech_event_cancel(obj_mech, EVENT_VEHICLEBURN);
 
-  mech_notify(objMech, MECHALL, "You manage to dowse the fire.");
-  mech_los_broadcast(objMech, "is no longer engulfed in flames.");
+  mech_notify(obj_mech, MECHALL, "You manage to dowse the fire.");
+  mech_los_broadcast(obj_mech, "is no longer engulfed in flames.");
 }
 
 void vehicle_fire_extinguish(DbRef player, Mech *mech, char *buffer) {
@@ -215,18 +216,18 @@ void mech_inferno_extinguish_in_water(Mech *mech) {
   });
 }
 
-void vehicle_fire_check(Mech *objMech, int fromHexFire) {
-  int wRoll = btech_random_roll(mech_context(objMech));
-  int wIter;
-  int wDamage = 0;
+void vehicle_fire_check(Mech *obj_mech, int from_hex_fire) {
+  int w_roll = btech_random_roll(mech_context(obj_mech));
+  int w_iter;
+  int w_damage = 0;
 
-  switch (mech_movement_type(objMech)) {
+  switch (mech_movement_type(obj_mech)) {
   case MOVE_WHEEL:
   case MOVE_VTOL:
-    wRoll += 2;
+    w_roll += 2;
     break;
   case MOVE_HOVER:
-    wRoll += 4;
+    w_roll += 4;
     break;
   case MOVE_BIPED:
   case MOVE_TRACK:
@@ -240,28 +241,28 @@ void vehicle_fire_check(Mech *objMech, int fromHexFire) {
     break;
   }
 
-  if (wRoll < 8) /* don't do jack if it's < 8 */
+  if (w_roll < 8) /* don't do jack if it's < 8 */
     return;
 
-  if (fromHexFire)
+  if (from_hex_fire)
     mech_notify(
-        objMech, MECHALL,
+        obj_mech, MECHALL,
         "[fg=red bold]You drive through a wall of searing flames![reset]");
   else
-    mech_notify(objMech, MECHALL,
+    mech_notify(obj_mech, MECHALL,
                 "[fg=red bold]The fires surround your vehicle![reset]");
 
-  switch (wRoll) {
+  switch (w_roll) {
   case 8: /* roll once on the motive system chart */
   case 9:
-    if (mech_class(objMech) == CLASS_VTOL) {
+    if (mech_class(obj_mech) == CLASS_VTOL) {
       /*
        * VTOLs _should_ make a pskill or go up one level... not right now tho
        */
     } else {
-      mech_notify(objMech, MECHALL,
+      mech_notify(obj_mech, MECHALL,
                   "[fg=red bold]The fire damages your motive system![reset]");
-      mech_motive_system_hit(objMech, 0);
+      mech_motive_system_hit(obj_mech, 0);
     }
     break;
 
@@ -271,21 +272,21 @@ void vehicle_fire_check(Mech *objMech, int fromHexFire) {
      * Do 1d6 damage to each loc
      */
     mech_notify(
-        objMech, MECHALL,
+        obj_mech, MECHALL,
         "[fg=red bold]The fire sweeps across your unit damaging it![reset]");
 
-    for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
-      wDamage = btech_random_range_int(mech_context(objMech), 1, 6);
+    for (w_iter = 0; w_iter < NUM_SECTIONS; w_iter++) {
+      w_damage = btech_random_range_int(mech_context(obj_mech), 1, 6);
 
-      if (mech_section_internal(objMech, wIter))
-        mech_damage_apply(&(MechDamageRequest){.target = objMech,
-                                               .attacker = objMech,
+      if (mech_section_internal(obj_mech, w_iter))
+        mech_damage_apply(&(MechDamageRequest){.target = obj_mech,
+                                               .attacker = obj_mech,
                                                .line_of_sight = 0,
                                                .attack_pilot = -1,
-                                               .hit_location = wIter,
+                                               .hit_location = w_iter,
                                                .rear = 0,
                                                .critical = 0,
-                                               .armor_damage = wDamage,
+                                               .armor_damage = w_damage,
                                                .internal_damage = 0,
                                                .transfer = MECH_DAMAGE_NORMAL,
                                                .cause = 0,
@@ -297,7 +298,7 @@ void vehicle_fire_check(Mech *objMech, int fromHexFire) {
     break;
 
   default:
-    vehicle_fire_start(objMech, objMech);
+    vehicle_fire_start(obj_mech, obj_mech);
     break;
   }
 }

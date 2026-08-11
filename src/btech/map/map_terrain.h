@@ -56,7 +56,7 @@ bool battle_terrain_is_forest(char terrain);
 void map_hex_set(BattleMap *map, int x, int y, char terrain, char elevation);
 unsigned char **battle_map_grid_create(int width, int height);
 void battle_map_grid_destroy(unsigned char **grid, int height);
-void map_hex_buffer_set(MapCodingRegistry *registry, unsigned char **BattleMap,
+void map_hex_buffer_set(MapCodingRegistry *registry, unsigned char **battle_map,
                         int width, int height, int x, int y, char terrain,
                         char elevation);
 void map_terrain_set(BattleMap *map, int x, int y, char terrain);

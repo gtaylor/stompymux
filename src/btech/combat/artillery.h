@@ -18,7 +18,7 @@ typedef struct ArtilleryShot {
   DbRef shooter;      /* nice to know type of information */
   DbRef map;          /* map we're on */
   BtechContext *context;
-} artillery_shot;
+} ArtilleryShot;
 
 /* Weapon values for artillery guns */
 constexpr int IS_LTOM = 30;

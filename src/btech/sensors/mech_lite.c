@@ -29,8 +29,8 @@ static int mech_lites_target(Mech *mech, Mech *target) {
     return 0;
   if (mech_range_to(mech, target) > LITE_RANGE)
     return 0;
-  if (!(InWeaponArc(mech, mech_position_real_x(target),
-                    mech_position_real_y(target)) &
+  if (!(in_weapon_arc(mech, mech_position_real_x(target),
+                      mech_position_real_y(target)) &
         FORWARDARC))
     return 0;
   if (battle_map_unit_los_is_blocked(map, mech, target) ||
@@ -40,13 +40,13 @@ static int mech_lites_target(Mech *mech, Mech *target) {
   return 1;
 }
 
-void cause_lite(Mech *mech, Mech *tempMech) {
-  if (mech_condition_summary(tempMech).illuminated)
+void cause_lite(Mech *mech, Mech *temp_mech) {
+  if (mech_condition_summary(temp_mech).illuminated)
     return;
-  if (mech_lites_target(mech, tempMech)) {
-    mech_illumination_set(tempMech, true);
-    if (mech_searchlight_warning_enabled(tempMech))
-      mech_notify(tempMech, MECHALL, "You are being illuminated!");
+  if (mech_lites_target(mech, temp_mech)) {
+    mech_illumination_set(temp_mech, true);
+    if (mech_searchlight_warning_enabled(temp_mech))
+      mech_notify(temp_mech, MECHALL, "You are being illuminated!");
   }
 }
 

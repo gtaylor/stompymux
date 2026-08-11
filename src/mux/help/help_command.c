@@ -85,11 +85,11 @@ void do_help(CommandInvocation *invocation) {
     return;
   }
 
-  const size_t length = strlen(message);
+  const size_t LENGTH = strlen(message);
 
-  for (size_t index = 0; index < length; index++) {
+  for (size_t index = 0; index < LENGTH; index++) {
     char *character =
-        checked_storage_at(message, length + 1, sizeof(char), index);
+        checked_storage_at(message, LENGTH + 1, sizeof(char), index);
 
     *character = ascii_to_lower(*character);
   }

@@ -36,15 +36,15 @@ static void repair_append(char *buffer, size_t capacity, const char *format,
 
 static void repair_append(char *buffer, size_t capacity, const char *format,
                           ...) {
-  const size_t used = strlen(buffer);
-  if (used >= capacity)
+  const size_t USED = strlen(buffer);
+  if (USED >= capacity)
     return;
   char *destination =
-      checked_storage_at(buffer, capacity, sizeof(*buffer), used);
+      checked_storage_at(buffer, capacity, sizeof(*buffer), USED);
   va_list arguments;
   va_start(arguments, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  (void)vsnprintf(destination, capacity - used, format, arguments);
+  (void)vsnprintf(destination, capacity - USED, format, arguments);
   va_end(arguments);
 }
 
@@ -213,6 +213,6 @@ void tech_repairs(DbRef player, Mech *mech, char *buffer) {
   cool_menu_add_text(
       &c, "Note: Time = Time remaining in minutes. Plr = Tech's dbref");
   cool_menu_add_line(&c);
-  ShowCoolMenu(btech_context_evaluation(context), player, c);
-  KillCoolMenu(c);
+  show_cool_menu(btech_context_evaluation(context), player, c);
+  kill_cool_menu(c);
 }

@@ -124,7 +124,7 @@ int mech_cocoon_integrity(const Mech *mech) {
   return 0;
 }
 
-void ArmorStringFromIndex(int index, char *buffer, UnitClass unit_class,
+void armor_string_from_index(int index, char *buffer, UnitClass unit_class,
                           MechMovementType movement_type) {
   (void)index;
   (void)unit_class;

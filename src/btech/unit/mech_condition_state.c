@@ -7,91 +7,92 @@
 #include "section_types.h"
 
 MechConditionSummary mech_condition_summary(const Mech *mech) {
-  const int status = mech->rd.status;
-  const int status2 = mech->rd.status2;
-  const int critical_status = mech->rd.critstatus;
-  const int tank_critical_status = mech->rd.tankcritstatus;
-  const bool ecm_countered = status2 & ECM_COUNTERED;
-  const bool ecm_active = (status2 & ECM_ENABLED) && !ecm_countered;
-  const bool personal_ecm_active =
-      (status2 & PER_ECM_ENABLED) && !ecm_countered;
-  const bool angel_ecm_active = (status2 & ANGEL_ECM_ENABLED) && !ecm_countered;
+  const int STATUS = mech->rd.status;
+  const int STATUS2 = mech->rd.status2;
+  const int CRITICAL_STATUS = mech->rd.critstatus;
+  const int TANK_CRITICAL_STATUS = mech->rd.tankcritstatus;
+  const bool ECM_IS_COUNTERED = STATUS2 & ECM_COUNTERED;
+  const bool ECM_ACTIVE = (STATUS2 & ECM_ENABLED) && !ECM_IS_COUNTERED;
+  const bool PERSONAL_ECM_ACTIVE =
+      (STATUS2 & PER_ECM_ENABLED) && !ECM_IS_COUNTERED;
+  const bool ANGEL_ECM_ACTIVE =
+      (STATUS2 & ANGEL_ECM_ENABLED) && !ECM_IS_COUNTERED;
 
   return (MechConditionSummary){
-      .combat_safe = status & COMBAT_SAFE,
-      .partial_cover = status & PARTIAL_COVER,
-      .fallen = status & FALLEN,
-      .fortified = status2 & FORTIFIED,
-      .weapons_hold = status2 & WEAPONS_HOLD,
-      .hull_down = status & HULLDOWN,
-      .dug_in = tank_critical_status & DUG_IN,
-      .digging = tank_critical_status & DIGGING_IN,
-      .staggering = mech->rd.staggerDamage / 20 > 0,
-      .searchlight_destroyed = critical_status & SLITE_DEST,
-      .searchlight_on = status2 & SLITE_ON,
-      .illuminated = critical_status & SLITE_LIT,
-      .hidden = critical_status & HIDDEN,
-      .dodging = status2 & DODGING,
-      .evading = status2 & EVADING,
-      .sprinting = status2 & SPRINTING,
-      .stunned = (tank_critical_status & CREW_STUNNED) ||
-                 (critical_status & MECH_STUNNED),
-      .performing_action = status & PERFORMING_ACTION,
+      .combat_safe = STATUS & COMBAT_SAFE,
+      .partial_cover = STATUS & PARTIAL_COVER,
+      .fallen = STATUS & FALLEN,
+      .fortified = STATUS2 & FORTIFIED,
+      .weapons_hold = STATUS2 & WEAPONS_HOLD,
+      .hull_down = STATUS & HULLDOWN,
+      .dug_in = TANK_CRITICAL_STATUS & DUG_IN,
+      .digging = TANK_CRITICAL_STATUS & DIGGING_IN,
+      .staggering = mech->rd.stagger_damage / 20 > 0,
+      .searchlight_destroyed = CRITICAL_STATUS & SLITE_DEST,
+      .searchlight_on = STATUS2 & SLITE_ON,
+      .illuminated = CRITICAL_STATUS & SLITE_LIT,
+      .hidden = CRITICAL_STATUS & HIDDEN,
+      .dodging = STATUS2 & DODGING,
+      .evading = STATUS2 & EVADING,
+      .sprinting = STATUS2 & SPRINTING,
+      .stunned = (TANK_CRITICAL_STATUS & CREW_STUNNED) ||
+                 (CRITICAL_STATUS & MECH_STUNNED),
+      .performing_action = STATUS & PERFORMING_ACTION,
       .auto_fall = mech->rd.mech_prefs & MECHPREF_AUTOFALL,
       .to_hit_debug = mech->rd.mech_prefs & MECHPREF_BTHDEBUG,
-      .ecm_disturbed = status2 & ECM_DISTURBANCE,
+      .ecm_disturbed = STATUS2 & ECM_DISTURBANCE,
       .ecm_protected =
-          (status2 & ECM_PROTECTED) || ecm_active || personal_ecm_active,
+          (STATUS2 & ECM_PROTECTED) || ECM_ACTIVE || PERSONAL_ECM_ACTIVE,
       .angel_ecm_protected =
-          (status2 & ANGEL_ECM_PROTECTED) || angel_ecm_active,
-      .angel_ecm_disturbed = status2 & ANGEL_ECM_DISTURBED,
-      .ecm_countered = ecm_countered,
-      .ecm_destroyed = critical_status & ECM_DESTROYED,
-      .ecm_enabled = status2 & ECM_ENABLED,
-      .ecm_active = ecm_active,
-      .eccm_enabled = status2 & ECCM_ENABLED,
-      .angel_ecm_destroyed = critical_status & ANGEL_ECM_DESTROYED,
-      .angel_ecm_enabled = status2 & ANGEL_ECM_ENABLED,
-      .angel_ecm_active = angel_ecm_active,
-      .angel_eccm_enabled = status2 & ANGEL_ECCM_ENABLED,
-      .personal_ecm_enabled = status2 & PER_ECM_ENABLED,
-      .personal_ecm_active = personal_ecm_active,
-      .personal_eccm_enabled = status2 & PER_ECCM_ENABLED,
-      .stealth_armor_active = status2 & STH_ARMOR_ON,
-      .null_signature_active = status2 & NULLSIGSYS_ON,
-      .null_signature_destroyed = critical_status & NSS_DESTROYED,
-      .c3_destroyed = critical_status & C3_DESTROYED,
-      .c3i_destroyed = critical_status & C3I_DESTROYED,
-      .sensors_damaged = critical_status & SENSORS_DAMAGED,
-      .beagle_probe_destroyed = critical_status & BEAGLE_DESTROYED,
-      .bloodhound_probe_destroyed = critical_status & BLOODHOUND_DESTROYED,
+          (STATUS2 & ANGEL_ECM_PROTECTED) || ANGEL_ECM_ACTIVE,
+      .angel_ecm_disturbed = STATUS2 & ANGEL_ECM_DISTURBED,
+      .ecm_countered = ECM_IS_COUNTERED,
+      .ecm_destroyed = CRITICAL_STATUS & ECM_DESTROYED,
+      .ecm_enabled = STATUS2 & ECM_ENABLED,
+      .ecm_active = ECM_ACTIVE,
+      .eccm_enabled = STATUS2 & ECCM_ENABLED,
+      .angel_ecm_destroyed = CRITICAL_STATUS & ANGEL_ECM_DESTROYED,
+      .angel_ecm_enabled = STATUS2 & ANGEL_ECM_ENABLED,
+      .angel_ecm_active = ANGEL_ECM_ACTIVE,
+      .angel_eccm_enabled = STATUS2 & ANGEL_ECCM_ENABLED,
+      .personal_ecm_enabled = STATUS2 & PER_ECM_ENABLED,
+      .personal_ecm_active = PERSONAL_ECM_ACTIVE,
+      .personal_eccm_enabled = STATUS2 & PER_ECCM_ENABLED,
+      .stealth_armor_active = STATUS2 & STH_ARMOR_ON,
+      .null_signature_active = STATUS2 & NULLSIGSYS_ON,
+      .null_signature_destroyed = CRITICAL_STATUS & NSS_DESTROYED,
+      .c3_destroyed = CRITICAL_STATUS & C3_DESTROYED,
+      .c3i_destroyed = CRITICAL_STATUS & C3I_DESTROYED,
+      .sensors_damaged = CRITICAL_STATUS & SENSORS_DAMAGED,
+      .beagle_probe_destroyed = CRITICAL_STATUS & BEAGLE_DESTROYED,
+      .bloodhound_probe_destroyed = CRITICAL_STATUS & BLOODHOUND_DESTROYED,
       .light_beagle_probe_destroyed =
           mech->rd.critstatus2 & LIGHT_BAP_DESTROYED,
-      .turret_auto_turn = status2 & AUTOTURN_TURRET,
-      .arms_flipped = status & FLIPPED_ARMS,
-      .targeting_computer_destroyed = critical_status & TC_DESTROYED,
-      .ams_enabled = status & AMS_ENABLED,
-      .supercharger_enabled = status & SCHARGE_ENABLED,
-      .masc_enabled = status & MASC_ENABLED,
+      .turret_auto_turn = STATUS2 & AUTOTURN_TURRET,
+      .arms_flipped = STATUS & FLIPPED_ARMS,
+      .targeting_computer_destroyed = CRITICAL_STATUS & TC_DESTROYED,
+      .ams_enabled = STATUS & AMS_ENABLED,
+      .supercharger_enabled = STATUS & SCHARGE_ENABLED,
+      .masc_enabled = STATUS & MASC_ENABLED,
       .player_killer = mech->rd.mech_prefs & MECHPREF_PKILL,
       .friendly_fire_safety = mech->rd.mech_prefs & MECHPREF_NOFRIENDLYFIRE,
-      .attack_emissions = status2 & ATTACKEMIT_MECH,
+      .attack_emissions = STATUS2 & ATTACKEMIT_MECH,
       .unit_target_lock = (mech->rd.status & LOCK_TARGET) &&
                           !(mech->rd.status & (LOCK_BUILDING | LOCK_HEX |
                                                LOCK_HEX_IGN | LOCK_HEX_CLR)),
       .tight_turn_mode = mech->rd.mech_prefs & MECHPREF_TURNMODE,
-      .dfa_attacking = status & DFA_ATTACK,
-      .turret_jammed = tank_critical_status & TURRET_JAMMED,
-      .turret_locked = tank_critical_status & TURRET_LOCKED,
-      .tail_rotor_destroyed = tank_critical_status & TAIL_ROTOR_DESTROYED,
-      .hip_damaged = critical_status & HIP_DAMAGED,
-      .hip_destroyed = critical_status & HIP_DESTROYED,
-      .gyro_damaged = critical_status & GYRO_DAMAGED,
+      .dfa_attacking = STATUS & DFA_ATTACK,
+      .turret_jammed = TANK_CRITICAL_STATUS & TURRET_JAMMED,
+      .turret_locked = TANK_CRITICAL_STATUS & TURRET_LOCKED,
+      .tail_rotor_destroyed = TANK_CRITICAL_STATUS & TAIL_ROTOR_DESTROYED,
+      .hip_damaged = CRITICAL_STATUS & HIP_DAMAGED,
+      .hip_destroyed = CRITICAL_STATUS & HIP_DESTROYED,
+      .gyro_damaged = CRITICAL_STATUS & GYRO_DAMAGED,
       .hardened_gyro_damaged = mech->rd.critstatus2 & HDGYRO_DAMAGED,
-      .torso_right = status & TORSO_RIGHT,
-      .torso_left = status & TORSO_LEFT,
-      .spinning = critical_status & SPINNING,
-      .self_destruct_safe = status & EXPLODE_SAFE,
+      .torso_right = STATUS & TORSO_RIGHT,
+      .torso_left = STATUS & TORSO_LEFT,
+      .spinning = CRITICAL_STATUS & SPINNING,
+      .self_destruct_safe = STATUS & EXPLODE_SAFE,
       .swarm_target = mech->rd.swarming,
       .supercharger_counter = mech->rd.scharge_value,
       .masc_counter = mech->rd.masc_value,

@@ -35,22 +35,22 @@
 #include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 
-extern const int num_def_weapons;
+extern const int DEFAULT_WEAPON_COUNT;
 
-static PartFailureResult FailureRadioStatic(const PartFailureCall *call);
-static PartFailureResult FailureRadioShort(const PartFailureCall *call);
-static PartFailureResult FailureRadioRange(const PartFailureCall *call);
-static PartFailureResult FailureComputerShutdown(const PartFailureCall *call);
-static PartFailureResult FailureComputerScanner(const PartFailureCall *call);
-static PartFailureResult FailureComputerTarget(const PartFailureCall *call);
-static PartFailureResult FailureWeaponMissiles(const PartFailureCall *call);
-static PartFailureResult FailureWeaponDud(const PartFailureCall *call);
-static PartFailureResult FailureWeaponJammed(const PartFailureCall *call);
-static PartFailureResult FailureWeaponDamage(const PartFailureCall *call);
-static PartFailureResult FailureWeaponHeat(const PartFailureCall *call);
-static PartFailureResult FailureWeaponSpike(const PartFailureCall *call);
+static PartFailureResult failure_radio_static(const PartFailureCall *call);
+static PartFailureResult failure_radio_short(const PartFailureCall *call);
+static PartFailureResult failure_radio_range(const PartFailureCall *call);
+static PartFailureResult failure_computer_shutdown(const PartFailureCall *call);
+static PartFailureResult failure_computer_scanner(const PartFailureCall *call);
+static PartFailureResult failure_computer_target(const PartFailureCall *call);
+static PartFailureResult failure_weapon_missiles(const PartFailureCall *call);
+static PartFailureResult failure_weapon_dud(const PartFailureCall *call);
+static PartFailureResult failure_weapon_jammed(const PartFailureCall *call);
+static PartFailureResult failure_weapon_damage(const PartFailureCall *call);
+static PartFailureResult failure_weapon_heat(const PartFailureCall *call);
+static PartFailureResult failure_weapon_spike(const PartFailureCall *call);
 
-static const PartBrand brands[] = {
+static const PartBrand BRANDS[] = {
     {"Lords", 1, 80, -40}, /* Energy weapons */
     {"Hesperus", 2, 90, -20},
     {"Martell", 3, 95, 0},
@@ -96,127 +96,127 @@ static const PartBrand brands[] = {
 #define REQ_COMPUTER 6
 #define REQ_RADIO 7
 
-static const PartFailure failures[] = {
+static const PartFailure FAILURES[] = {
 #define ENERGY_INDEX 0
     /* Energy Weapons - 0 */
 
     {"[fg=red bold]Your weapon fails to charge properly![reset]", 15,
-     FailureWeaponDamage, FAIL_NONE, 0},
+     failure_weapon_damage, FAIL_NONE, 0},
     {"[fg=red bold]Your weapon fails to charge properly![reset]", 30,
-     FailureWeaponDamage, FAIL_NONE, 0},
+     failure_weapon_damage, FAIL_NONE, 0},
     {"[fg=red bold]Your weapon fails to charge properly![reset]", 45,
-     FailureWeaponDamage, FAIL_NONE, 0},
+     failure_weapon_damage, FAIL_NONE, 0},
     {"[fg=red bold]Failure in the weapon's cooling system ; too much heat "
      "produced![reset]",
-     30, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
+     30, failure_weapon_heat, FAIL_NONE, REQ_HEAT},
     {"[fg=red bold]Odd energy reading from the weapon ; It seems to have gone "
      "offline![reset]",
-     0, FailureWeaponSpike, FAIL_SHORTED, 0},
-    {"[fg=red bold]Weapon melts down![reset]", 0, FailureWeaponSpike,
+     0, failure_weapon_spike, FAIL_SHORTED, 0},
+    {"[fg=red bold]Weapon melts down![reset]", 0, failure_weapon_spike,
      FAIL_SHORTED, 0},
 
 /* Autocannons - 6 */
 #define AC_INDEX 6
 
     {"[fg=red bold]Round misfires! .. and spirals off![reset]", 0,
-     FailureWeaponDud, FAIL_NONE, 0},
-    {"[fg=red bold]Round not fired!  Dud![reset]", 0, FailureWeaponDud,
+     failure_weapon_dud, FAIL_NONE, 0},
+    {"[fg=red bold]Round not fired!  Dud![reset]", 0, failure_weapon_dud,
      FAIL_DUD, 0},
-    {"[fg=red bold]Weapon JAMS... clearing![reset]", 0, FailureWeaponJammed,
+    {"[fg=red bold]Weapon JAMS... clearing![reset]", 0, failure_weapon_jammed,
      FAIL_JAMMED, 0},
     {"[fg=red bold]Failure in the weapon's cooling system, too much heat "
      "produced![reset]",
-     20, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
+     20, failure_weapon_heat, FAIL_NONE, REQ_HEAT},
     {"[fg=red bold]Failure in the weapon's cooling system, too much heat "
      "produced![reset]",
-     40, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
+     40, failure_weapon_heat, FAIL_NONE, REQ_HEAT},
     {"[fg=red bold]Round not fired!  STUCK in chamber![reset]", 0,
-     FailureWeaponDud, FAIL_DUD, 0},
+     failure_weapon_dud, FAIL_DUD, 0},
 
 /* Missiles - 12 */
 #define MISSILE_INDEX 12
 
     {"[fg=red bold]Rack jams, attemping to clear![reset]", 0,
-     FailureWeaponJammed, FAIL_JAMMED, 0},
+     failure_weapon_jammed, FAIL_JAMMED, 0},
     {"[fg=red bold]Some of your missiles veer off course![reset]", 20,
-     FailureWeaponMissiles, FAIL_NONE, 0},
+     failure_weapon_missiles, FAIL_NONE, 0},
     {"[fg=red bold]Some of your missiles veer off course![reset]", 40,
-     FailureWeaponMissiles, FAIL_NONE, 0},
+     failure_weapon_missiles, FAIL_NONE, 0},
     {"[fg=red bold]Guidance Failure!  All missile veer off course![reset]", 100,
-     FailureWeaponMissiles, FAIL_NONE, 0},
+     failure_weapon_missiles, FAIL_NONE, 0},
     {"[fg=red bold]Weapon power spikes.. attempting to restart![reset]", 0,
-     FailureWeaponSpike, FAIL_SHORTED, 0},
+     failure_weapon_spike, FAIL_SHORTED, 0},
     {"[fg=red bold]Weapon power spikes.. Electronics fused!![reset]", 0,
-     FailureWeaponSpike, FAIL_SHORTED, 0},
+     failure_weapon_spike, FAIL_SHORTED, 0},
 
 /* Flamer - 18 */
 #define FLAMMER_INDEX 18
 
     {"[fg=red bold]Gel line clogs, sending pressure through it now![reset]", 0,
-     FailureWeaponJammed, FAIL_JAMMED, 0},
+     failure_weapon_jammed, FAIL_JAMMED, 0},
     {"[fg=red bold]Electric ignition shorts out! Restarting![reset]", 0,
-     FailureWeaponSpike, FAIL_SHORTED, 0},
+     failure_weapon_spike, FAIL_SHORTED, 0},
     {"[fg=red bold]Fuel leaks on the chassis and ignites![reset]", 100,
-     FailureWeaponHeat, FAIL_NONE, 0},
+     failure_weapon_heat, FAIL_NONE, 0},
 
     {"[fg=red bold]Fuel at critical point!! Shutting down weapon to vent "
      "heat![reset]",
-     0, FailureWeaponSpike, FAIL_SHORTED, 0},
+     0, failure_weapon_spike, FAIL_SHORTED, 0},
     {"[fg=red bold]Ejection nozzle gums up!  Please wait while pressure is "
      "applied![reset]",
-     0, FailureWeaponJammed, FAIL_JAMMED, 0},
+     0, failure_weapon_jammed, FAIL_JAMMED, 0},
     {"[fg=red bold]Fuel canisters explode!  No fuel left to burn![reset]", 0,
-     FailureWeaponSpike, FAIL_EMPTY, 0},
+     failure_weapon_spike, FAIL_EMPTY, 0},
 
 /* Computer - 24 */
 #define COMPUTER_INDEX 24
 
     {"[fg=red bold]Computer Glitch!  Target lost, please reacquire![reset]", 0,
-     FailureComputerTarget, FAIL_NONE, REQ_TARGET},
+     failure_computer_target, FAIL_NONE, REQ_TARGET},
     {"[fg=red bold]Tactical shorts out! Fixing .. Please stand by.[reset]", 1,
-     FailureComputerScanner, FAIL_NONE, REQ_TAC},
+     failure_computer_scanner, FAIL_NONE, REQ_TAC},
     {"[fg=red bold]Long Range Sensors short out! .. Fixing .. Please stand "
      "by.[reset]",
-     2, FailureComputerScanner, FAIL_NONE, REQ_LRS},
+     2, failure_computer_scanner, FAIL_NONE, REQ_LRS},
     {"[fg=red bold]Scanners short out! Fixing .. Please stand by.[reset]", 4,
-     FailureComputerScanner, FAIL_NONE, REQ_SCANNERS},
+     failure_computer_scanner, FAIL_NONE, REQ_SCANNERS},
     {"[fg=red bold]A sudden *SNAP* echos in your cockpit then all your "
      "displays "
      "die![reset]",
-     7, FailureComputerScanner, FAIL_NONE, REQ_SCANNERS},
+     7, failure_computer_scanner, FAIL_NONE, REQ_SCANNERS},
     {"[fg=red bold]You hear a loud *SNAP* *CRACKLE* and then everything "
      "powers "
      "down![reset]",
-     0, FailureComputerShutdown, FAIL_NONE, REQ_COMPUTER},
+     0, failure_computer_shutdown, FAIL_NONE, REQ_COMPUTER},
 
 /* Radio - 30 */
 #define RADIO_INDEX 30
-    {"none", 50, FailureRadioStatic, FAIL_NONE, 0},
-    {"none", 70, FailureRadioStatic, FAIL_NONE, 0},
+    {"none", 50, failure_radio_static, FAIL_NONE, 0},
+    {"none", 70, failure_radio_static, FAIL_NONE, 0},
     {"[fg=red bold]Your readouts register a power loss in your radio![reset]",
-     15, FailureRadioRange, FAIL_NONE, REQ_RADIO},
+     15, failure_radio_range, FAIL_NONE, REQ_RADIO},
     {"[fg=red bold]Your readouts register a power loss in your radio![reset]",
-     30, FailureRadioRange, FAIL_NONE, REQ_RADIO},
+     30, failure_radio_range, FAIL_NONE, REQ_RADIO},
     {"[fg=red bold]Your radio suddenly shorts out! Please wait for backup to "
      "come "
      "online![reset]",
-     0, FailureRadioShort, FAIL_NONE, REQ_RADIO},
+     0, failure_radio_short, FAIL_NONE, REQ_RADIO},
     {"[fg=red bold]Your entire radio system suddenly shorts out![reset]", 0,
-     FailureRadioShort, FAIL_NONE, REQ_RADIO}};
+     failure_radio_short, FAIL_NONE, REQ_RADIO}};
 
 static const PartBrand *part_brand_at(int index) {
   if (index < 0)
     abort();
-  return checked_storage_at_const(brands, sizeof(brands) / sizeof(*brands),
-                                  sizeof(*brands), (size_t)index);
+  return checked_storage_at_const(BRANDS, sizeof(BRANDS) / sizeof(*BRANDS),
+                                  sizeof(*BRANDS), (size_t)index);
 }
 
 static const PartFailure *part_failure_at(int index) {
   if (index < 0)
     abort();
-  return checked_storage_at_const(failures,
-                                  sizeof(failures) / sizeof(*failures),
-                                  sizeof(*failures), (size_t)index);
+  return checked_storage_at_const(FAILURES,
+                                  sizeof(FAILURES) / sizeof(*FAILURES),
+                                  sizeof(*FAILURES), (size_t)index);
 }
 
 static int part_brand_failure_index(int type) {
@@ -225,7 +225,7 @@ static int part_brand_failure_index(int type) {
   if (type == -2)
     return RADIO_INDEX;
   if (equipment_is_weapon(type))
-    if (type < weapon_equipment_index(num_def_weapons)) {
+    if (type < weapon_equipment_index(DEFAULT_WEAPON_COUNT)) {
       type = weapon_from_equipment_index(type);
       if (weapon_catalogue_is_personal_combat(type))
         return -1;
@@ -260,7 +260,7 @@ static int failure_index_for_critical(const Mech *mech, int section,
          1;
 }
 
-static PartFailureResult FailureRadioStatic(const PartFailureCall *call) {
+static PartFailureResult failure_radio_static(const PartFailureCall *call) {
   int modifier =
       part_failure_at(part_brand_failure_index(-2) + call->roll - 1)->data;
   return (PartFailureResult){.type = FAIL_STATIC, .modifier = modifier};
@@ -268,44 +268,44 @@ static PartFailureResult FailureRadioStatic(const PartFailureCall *call) {
 
 static void mech_rrec_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  const intptr_t event_value = (intptr_t)e->data2;
+  const intptr_t EVENT_VALUE = (intptr_t)e->data2;
   assert(event_value >= INT_MIN && event_value <= INT_MAX);
-  const int val = (int)event_value;
+  const int VAL = (int)EVENT_VALUE;
 
-  mech_radio_range_add(mech, val);
-  if (!mech_is_destroyed(mech) && val == mech_radio_range(mech))
+  mech_radio_range_add(mech, VAL);
+  if (!mech_is_destroyed(mech) && VAL == mech_radio_range(mech))
     mech_notify(mech, MECHALL, "Your radio is now operational again.");
 }
 
 static void mech_srec_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  const intptr_t event_value = (intptr_t)e->data2;
+  const intptr_t EVENT_VALUE = (intptr_t)e->data2;
   assert(event_value >= INT_MIN && event_value <= INT_MAX);
-  const int val = (int)event_value;
-  const int vt = val / 256;
+  const int VAL = (int)EVENT_VALUE;
+  const int VT = VAL / 256;
 
-  switch (vt) {
+  switch (VT) {
   case 0:
-    mech_tactical_range_set(mech, val);
+    mech_tactical_range_set(mech, VAL);
     if (!mech_is_destroyed(mech))
       mech_notify(mech, MECHALL,
                   "Your tactical scanners are operational again.");
     break;
   case 1:
-    mech_long_range_sensor_range_set(mech, val);
+    mech_long_range_sensor_range_set(mech, VAL);
     if (!mech_is_destroyed(mech))
       mech_notify(mech, MECHALL,
                   "Your long-range scanners are operational again.");
     break;
   case 2:
-    mech_scanner_range_set(mech, val);
+    mech_scanner_range_set(mech, VAL);
     if (!mech_is_destroyed(mech))
       mech_notify(mech, MECHALL, "Your scanners are operational again.");
     break;
   }
 }
 
-static PartFailureResult FailureRadioShort(const PartFailureCall *call) {
+static PartFailureResult failure_radio_short(const PartFailureCall *call) {
   Mech *mech = call->mech;
   mech_event_schedule(mech, EVENT_MRECOVERY, mech_rrec_event,
                       btech_random_range_int(
@@ -316,12 +316,12 @@ static PartFailureResult FailureRadioShort(const PartFailureCall *call) {
   return (PartFailureResult){0};
 }
 
-static PartFailureResult FailureRadioRange(const PartFailureCall *call) {
+static PartFailureResult failure_radio_range(const PartFailureCall *call) {
   Mech *mech = call->mech;
   int mod =
       part_failure_at(part_brand_failure_index(-2) + call->roll - 1)->data;
 
-  mod = MIN(mech_radio_range(mech) - 1, mod);
+  mod = min(mech_radio_range(mech) - 1, mod);
   mech_event_schedule(mech, EVENT_MRECOVERY, mech_rrec_event,
                       btech_random_range_int(
                           mech_context(mech), 30,
@@ -331,13 +331,14 @@ static PartFailureResult FailureRadioRange(const PartFailureCall *call) {
   return (PartFailureResult){0};
 }
 
-static PartFailureResult FailureComputerShutdown(const PartFailureCall *call) {
+static PartFailureResult
+failure_computer_shutdown(const PartFailureCall *call) {
   if (mech_is_started(call->mech))
     mech_shutdown(mech_dbref(call->mech), call->mech, "");
   return (PartFailureResult){0};
 }
 
-static PartFailureResult FailureComputerScanner(const PartFailureCall *call) {
+static PartFailureResult failure_computer_scanner(const PartFailureCall *call) {
   Mech *mech = call->mech;
   int tmp =
       part_failure_at(part_brand_failure_index(-1) + call->roll - 1)->data;
@@ -397,12 +398,12 @@ static PartFailureResult FailureComputerScanner(const PartFailureCall *call) {
   return (PartFailureResult){0};
 }
 
-static PartFailureResult FailureComputerTarget(const PartFailureCall *call) {
+static PartFailureResult failure_computer_target(const PartFailureCall *call) {
   mech_targeting_target_clear(call->mech);
   return (PartFailureResult){0};
 }
 
-static PartFailureResult FailureWeaponMissiles(const PartFailureCall *call) {
+static PartFailureResult failure_weapon_missiles(const PartFailureCall *call) {
   const PartFailure *failure = part_failure_at(
       failure_index_for_critical(call->mech, call->section, call->critical) +
       call->roll);
@@ -416,7 +417,7 @@ static PartFailureResult FailureWeaponMissiles(const PartFailureCall *call) {
   };
 }
 
-static PartFailureResult FailureWeaponDud(const PartFailureCall *call) {
+static PartFailureResult failure_weapon_dud(const PartFailureCall *call) {
   Mech *mech = call->mech;
   const PartFailure *failure = part_failure_at(
       failure_index_for_critical(mech, call->section, call->critical) +
@@ -443,7 +444,7 @@ static PartFailureResult FailureWeaponDud(const PartFailureCall *call) {
   return (PartFailureResult){.type = WEAPON_DUD};
 }
 
-static PartFailureResult FailureWeaponJammed(const PartFailureCall *call) {
+static PartFailureResult failure_weapon_jammed(const PartFailureCall *call) {
   Mech *mech = call->mech;
   const PartFailure *failure = part_failure_at(
       failure_index_for_critical(mech, call->section, call->critical) +
@@ -457,8 +458,8 @@ static PartFailureResult FailureWeaponJammed(const PartFailureCall *call) {
   return (PartFailureResult){.type = WEAPON_JAMMED};
 }
 
-static PartFailureResult FailureWeaponDamage(const PartFailureCall *call) {
-  const int percentage =
+static PartFailureResult failure_weapon_damage(const PartFailureCall *call) {
+  const int PERCENTAGE =
       part_failure_at(failure_index_for_critical(call->mech, call->section,
                                                  call->critical) +
                       call->roll)
@@ -466,23 +467,23 @@ static PartFailureResult FailureWeaponDamage(const PartFailureCall *call) {
   return (PartFailureResult){
       .type = DAMAGE,
       .modifier =
-          (weapon_catalogue_damage(call->weapon_type) * percentage) / 100,
+          (weapon_catalogue_damage(call->weapon_type) * PERCENTAGE) / 100,
   };
 }
 
-static PartFailureResult FailureWeaponHeat(const PartFailureCall *call) {
-  const int percentage =
+static PartFailureResult failure_weapon_heat(const PartFailureCall *call) {
+  const int PERCENTAGE =
       part_failure_at(failure_index_for_critical(call->mech, call->section,
                                                  call->critical) +
                       call->roll)
           ->data;
   return (PartFailureResult){
       .type = HEAT,
-      .modifier = (weapon_catalogue_heat(call->weapon_type) * percentage) / 100,
+      .modifier = (weapon_catalogue_heat(call->weapon_type) * PERCENTAGE) / 100,
   };
 }
 
-static PartFailureResult FailureWeaponSpike(const PartFailureCall *call) {
+static PartFailureResult failure_weapon_spike(const PartFailureCall *call) {
   Mech *mech = call->mech;
   const PartFailure *failure = part_failure_at(
       failure_index_for_critical(mech, call->section, call->critical) +
@@ -504,24 +505,24 @@ static PartFailureResult FailureWeaponSpike(const PartFailureCall *call) {
 }
 
 PartFailureResult mech_generic_failure_check(Mech *mech, FailureSystem system) {
-  const PartFailureResult no_failure = {0};
+  const PartFailureResult NO_FAILURE = {0};
   int type = system == FAILURE_SYSTEM_COMPUTER ? -1 : -2;
   int i = part_brand_failure_index(type);
   int l = type == -1 ? mech_computer_quality(mech) : mech_radio_quality(mech);
   int roll, in;
 
   if (i < 0)
-    return no_failure;
+    return NO_FAILURE;
   if (mech_context(mech)->configuration->btech_parts) {
     if (!l)
       l = 5;
   } else
-    return no_failure;
+    return NO_FAILURE;
   if (btech_random_range_int(mech_context(mech), 1, 5000) != 42)
-    return no_failure; /* ~1/5000 chance */
+    return NO_FAILURE; /* ~1/5000 chance */
   if (btech_random_range_int(mech_context(mech), 1, 100) <=
       part_brand_at((i + l - 1) * 5 / 6)->success)
-    return no_failure;
+    return NO_FAILURE;
   roll = btech_random_range_int(mech_context(mech), 1, 6);
   if (roll == 6)
     roll = btech_random_range_int(mech_context(mech), 1, 6);
@@ -530,28 +531,28 @@ PartFailureResult mech_generic_failure_check(Mech *mech, FailureSystem system) {
   switch (failure->flag) {
   case REQ_TARGET:
     if (mech_target_dbref(mech) <= 0)
-      return no_failure;
+      return NO_FAILURE;
     break;
   case REQ_TAC:
     if (mech_tactical_range(mech) == 0)
-      return no_failure;
+      return NO_FAILURE;
     break;
   case REQ_LRS:
     if (mech_long_range_sensor_range(mech) == 0)
-      return no_failure;
+      return NO_FAILURE;
     break;
   case REQ_SCANNERS:
     if (mech_tactical_range(mech) == 0 ||
         mech_long_range_sensor_range(mech) == 0 ||
         mech_scanner_range(mech) == 0)
-      return no_failure;
+      return NO_FAILURE;
     break;
   case REQ_COMPUTER:
     /* */
     break;
   case REQ_RADIO:
     if (mech_radio_range(mech) == 0)
-      return no_failure;
+      return NO_FAILURE;
     break;
   }
   if (failure->message && strcmp(failure->message, "none"))
@@ -569,7 +570,7 @@ PartFailureResult mech_generic_failure_check(Mech *mech, FailureSystem system) {
 
 PartFailureResult
 mech_weapon_failure_check(const MechWeaponFailureRequest *request) {
-  const PartFailureResult no_failure = {0};
+  const PartFailureResult NO_FAILURE = {0};
   Mech *mech = request->mech;
   int roll;
   int l = mech_critical_brand(mech, request->section, request->critical);
@@ -577,21 +578,21 @@ mech_weapon_failure_check(const MechWeaponFailureRequest *request) {
   int i = part_brand_failure_index(t), in;
 
   if (i < 0)
-    return no_failure;
+    return NO_FAILURE;
   if (mech_context(mech)->configuration->btech_parts) {
     if (!l)
       l = 5;
     if (!equipment_is_weapon(t))
-      return no_failure;
+      return NO_FAILURE;
     if (weapon_catalogue_is_personal_combat(weapon_from_equipment_index(t)))
-      return no_failure;
+      return NO_FAILURE;
   } else
-    return no_failure;
+    return NO_FAILURE;
   if (btech_random_range_int(mech_context(mech), 1, 10) < 9)
-    return no_failure;
+    return NO_FAILURE;
   if (btech_random_range_int(mech_context(mech), 1, 100) <=
       part_brand_at((i + l - 1) * 5 / 6)->success)
-    return no_failure;
+    return NO_FAILURE;
   roll = btech_random_range_int(mech_context(mech), 1, 6);
   if (roll == 6)
     roll = btech_random_range_int(mech_context(mech), 1, 6);
@@ -599,7 +600,7 @@ mech_weapon_failure_check(const MechWeaponFailureRequest *request) {
   const PartFailure *failure = part_failure_at(in);
   if (failure->flag & REQ_HEAT)
     if (!weapon_catalogue_heat(request->weapon_type))
-      return no_failure;
+      return NO_FAILURE;
   if (failure->message && strcmp(failure->message, "none"))
     mech_notify(mech, MECHALL, failure->message);
   PartFailureCall call = {

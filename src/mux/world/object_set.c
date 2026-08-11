@@ -375,7 +375,7 @@ void do_setattr(CommandInvocation *invocation) {
 
 void do_use(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
-  const DbRef player = invocation->player;
+  const DbRef PLAYER = invocation->player;
   char *object = invocation->first;
   char *df_use, *df_ouse;
   DbRef thing;
@@ -383,10 +383,10 @@ void do_use(CommandInvocation *invocation) {
   LuaLockInvocation lock;
   LuaLockResult result;
 
-  init_match(&invocation->context->match, player, object, OBJECT_TYPE_NOTYPE);
+  init_match(&invocation->context->match, PLAYER, object, OBJECT_TYPE_NOTYPE);
   match_neighbor(&invocation->context->match);
   match_possession(&invocation->context->match);
-  if (is_wizard(evaluation->world->database, player)) {
+  if (is_wizard(evaluation->world->database, PLAYER)) {
     match_absolute(&invocation->context->match);
     match_player(&invocation->context->match);
   }
@@ -400,7 +400,7 @@ void do_use(CommandInvocation *invocation) {
    * Make sure player can use it
    */
 
-  if (!lock_test(evaluation, player, invocation->cause, player, thing,
+  if (!lock_test(evaluation, PLAYER, invocation->cause, PLAYER, thing,
                  LUA_LOCK_USE, LUA_LOCK_OPERATION_USE, false, &lock, &result)) {
     notify_lock_failure(&(LockFailureNotification){
         .evaluation = evaluation,
@@ -429,7 +429,7 @@ void do_use(CommandInvocation *invocation) {
                                   .operation = LUA_MESSAGE_OPERATION_USE,
                                   .descriptor = invocation->context->descriptor,
                                   .object = thing,
-                                  .enactor = player,
+                                  .enactor = PLAYER,
                                   .cause = invocation->cause,
                                   .source = NOTHING,
                                   .destination = NOTHING},
@@ -439,7 +439,7 @@ void do_use(CommandInvocation *invocation) {
     free_lbuf(df_use);
     free_lbuf(df_ouse);
   } else {
-    notify_checked(evaluation, player, player,
+    notify_checked(evaluation, PLAYER, PLAYER,
                    "You can't figure out how to use that.", MSG_ME);
   }
 }

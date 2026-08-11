@@ -57,7 +57,7 @@ void auto_goto_event(MuxEvent *e) {
     return;
   }
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-      CountDestroyedLegs(mech) <= 0) {
+      count_destroyed_legs(mech) <= 0) {
     if (!mech_event_count(mech, EVENT_STAND))
       mech_stand_empty(autopilot->mynum, mech);
     autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
@@ -101,7 +101,7 @@ void auto_goto_event(MuxEvent *e) {
     return;
   }
 
-  MapCoordToRealCoord(tx, ty, &dx, &dy);
+  map_coord_to_real_coord(tx, ty, &dx, &dy);
   figure_out_range_and_bearing(mech, tx, ty, &range, &bearing);
   if (!autopilot_slow_down_for_target(
           &(AutopilotApproachRequest){.autopilot = autopilot,
@@ -185,7 +185,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
 
   /* Ok not standing so lets do that first */
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-      !(CountDestroyedLegs(mech) > 0)) {
+      !(count_destroyed_legs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
       mech_stand_empty(autopilot->mynum, mech);
@@ -361,7 +361,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
 
   /* Ok not standing so lets do that first */
   if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
-      !(CountDestroyedLegs(mech) > 0)) {
+      !(count_destroyed_legs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
       mech_stand_empty(autopilot->mynum, mech);

@@ -38,8 +38,8 @@
 #include <stdio.h>
 
 static float mech_scan_hex_real_z(BattleMap *map, int x, int y) {
-  const int elevation = battle_map_hex_elevation(map, x, y);
-  return ZSCALE * (float)elevation;
+  const int ELEVATION = battle_map_hex_elevation(map, x, y);
+  return ZSCALE * (float)ELEVATION;
 }
 
 enum {
@@ -54,10 +54,10 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   BattleMap *mech_map;
   char *args[4];
   int mapx = 0, mapy = 0;
-  char targetID[2];
+  char target_id[2];
   DbRef target;
   int numargs;
-  Mech *tempMech = NULL;
+  Mech *temp_mech = NULL;
   float fx, fy, fz = 0.0;
   float range = 0.0;
   int dob = 0, doh = 0;
@@ -80,25 +80,25 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   switch (numargs) {
   case 1:
     /* Scan Target */
-    targetID[0] = args[0][0];
+    target_id[0] = args[0][0];
     if ((*checked_string_suffix(*args, 1))) {
-      targetID[1] = (*checked_string_suffix(*args, 1));
-      target = FindTargetDBREFFromMapNumber(mech, targetID);
-      tempMech = btech_context_get_mech(mech_context(mech), target);
-      if (!tempMech) {
+      target_id[1] = (*checked_string_suffix(*args, 1));
+      target = find_target_dbref_from_map_number(mech, target_id);
+      temp_mech = btech_context_get_mech(mech_context(mech), target);
+      if (!temp_mech) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Target is not in line of sight!");
         return;
       }
-      range = mech_range_to(mech, tempMech);
-      if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                          mech_position_y(tempMech), range)) {
+      range = mech_range_to(mech, temp_mech);
+      if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                          mech_position_y(temp_mech), range)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Target is not in line of sight!");
         return;
       }
-      if (!mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
-                                    mech_position_y(tempMech), range)) {
+      if (!mech_los_check_unblocked(mech, temp_mech, mech_position_x(temp_mech),
+                                    mech_position_y(temp_mech), range)) {
         mecha_notify(
             btech_context_evaluation(mech_context(mech)), player,
             "That target isn't seen well enough by the scanners for scanning!");
@@ -130,22 +130,22 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   case 0:
     /* scan current target... */
     target = mech_target_dbref(mech);
-    tempMech = btech_context_get_mech(mech_context(mech), target);
-    if (tempMech) {
-      range = mech_range_to(mech, tempMech);
+    temp_mech = btech_context_get_mech(mech_context(mech), target);
+    if (temp_mech) {
+      range = mech_range_to(mech, temp_mech);
       if (!mech_is_observer(mech) && (int)range > mech_scanner_range(mech)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Target is out of scanner range.");
         return;
       }
-      if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                          mech_position_y(tempMech), range)) {
+      if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                          mech_position_y(temp_mech), range)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Target is not in line of sight!");
         return;
       }
-      if (!mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
-                                    mech_position_y(tempMech), range)) {
+      if (!mech_los_check_unblocked(mech, temp_mech, mech_position_x(temp_mech),
+                                    mech_position_y(temp_mech), range)) {
         mecha_notify(
             btech_context_evaluation(mech_context(mech)), player,
             "That target isn't seen well enough by the scanners for scanning!");
@@ -153,9 +153,9 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       }
     } else {
       if (!mech_targets_building(mech)) {
-        const MechTargetPositionResult target_position =
+        const MechTargetPositionResult TARGET_POSITION =
             mech_target_position(mech);
-        if (!target_position.found) {
+        if (!TARGET_POSITION.found) {
           mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                        "No default target set!");
           return;
@@ -163,7 +163,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       }
       mapx = mech_target_hex_x(mech);
       mapy = mech_target_hex_y(mech);
-      MapCoordToRealCoord(mapx, mapy, &fx, &fy);
+      map_coord_to_real_coord(mapx, mapy, &fx, &fy);
       fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
       range = map_spatial_range(&(MapSpatialSegment){
           .start = {.x = mech_position_real_x(mech),
@@ -181,7 +181,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                      "Those coordinates are out of scanner range.");
         return;
       }
-      if (!mech_los_check_unblocked(mech, tempMech, mapx, mapy, range)) {
+      if (!mech_los_check_unblocked(mech, temp_mech, mapx, mapy, range)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Target hex is not in line of sight!");
         return;
@@ -193,7 +193,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
         dob = 1;
         doh = 1;
       } else {
-        tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
+        temp_mech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
       }
     }
     break;
@@ -221,7 +221,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       mecha_notify(evaluation, player, "Invalid 3rd argument!");
       return;
     }
-    MapCoordToRealCoord(mapx, mapy, &fx, &fy);
+    map_coord_to_real_coord(mapx, mapy, &fx, &fy);
     fz = mech_scan_hex_real_z(mech_map, mapx, mapy);
     range = map_spatial_range(&(MapSpatialSegment){
         .start = {.x = mech_position_real_x(mech),
@@ -234,7 +234,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                    "Those coordinates are out of scanner range.");
       return;
     }
-    if (!mech_los_check(mech, tempMech, mapx, mapy, range)) {
+    if (!mech_los_check(mech, temp_mech, mapx, mapy, range)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Coordinates are not in line of sight!");
       return;
@@ -243,18 +243,18 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   case 2:
     /* scan x, y */
     if (!parse_int_checked(args[0], &mapx)) {
-      targetID[0] = args[0][0];
-      targetID[1] = (*checked_string_suffix(*args, 1));
-      target = FindTargetDBREFFromMapNumber(mech, targetID);
-      tempMech = btech_context_get_mech(mech_context(mech), target);
-      if (!tempMech) {
+      target_id[0] = args[0][0];
+      target_id[1] = (*checked_string_suffix(*args, 1));
+      target = find_target_dbref_from_map_number(mech, target_id);
+      temp_mech = btech_context_get_mech(mech_context(mech), target);
+      if (!temp_mech) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Target is not in line of sight!");
         return;
       }
-      range = mech_range_to(mech, tempMech);
-      if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                          mech_position_y(tempMech), range)) {
+      range = mech_range_to(mech, temp_mech);
+      if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                          mech_position_y(temp_mech), range)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Target is not in line of sight!");
         return;
@@ -285,7 +285,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                    "Those coordinates are out of scanner range.");
       return;
     }
-    MapCoordToRealCoord(mapx, mapy, &fx, &fy);
+    map_coord_to_real_coord(mapx, mapy, &fx, &fy);
     range = map_spatial_range(&(MapSpatialSegment){
         .start = {.x = mech_position_real_x(mech),
                   .y = mech_position_real_y(mech),
@@ -297,24 +297,24 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                    "Those coordinates are out of scanner range.");
       return;
     }
-    if (!mech_los_check(mech, tempMech, mapx, mapy, range)) {
+    if (!mech_los_check(mech, temp_mech, mapx, mapy, range)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Coordinates are not in line of sight!");
       return;
     }
     /* look for enemies in that hex... */
-    tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
+    temp_mech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
     break;
   }
-  if (tempMech) {
-    if (!mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
-                                  mech_position_y(tempMech), range)) {
+  if (temp_mech) {
+    if (!mech_los_check_unblocked(mech, temp_mech, mech_position_x(temp_mech),
+                                  mech_position_y(temp_mech), range)) {
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
           "That target isn't seen well enough by the scanners for report!");
       return;
     }
-    if (mech_class(tempMech) == CLASS_MW) {
+    if (mech_class(temp_mech) == CLASS_MW) {
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
           "Your scanners cannot give you precise information on targets that "
@@ -325,16 +325,16 @@ void mech_scan(DbRef player, void *data, char *buffer) {
         .evaluation = evaluation,
         .player = player,
         .observer = mech,
-        .target = tempMech,
+        .target = temp_mech,
         .range = range,
         .options = options,
     });
     if (!mech_is_observer(mech)) {
-      mech_printf(tempMech, MECHSTARTED, "You are being scanned by %s",
-                  mech_to_mech_display_id(tempMech, mech).text);
-      auto_reply(tempMech,
+      mech_printf(temp_mech, MECHSTARTED, "You are being scanned by %s",
+                  mech_to_mech_display_id(temp_mech, mech).text);
+      auto_reply(temp_mech,
                  tprintf("%s just scanned me.",
-                         mech_to_mech_display_id(tempMech, mech).text));
+                         mech_to_mech_display_id(temp_mech, mech).text));
     }
     return;
   }
@@ -358,10 +358,10 @@ void mech_report(DbRef player, void *data, char *buffer) {
   BattleMap *mech_map;
   char *args[3];
   int mapx = 0, mapy = 0;
-  char targetID[2];
+  char target_id[2];
   DbRef target;
   int numargs;
-  Mech *tempMech = NULL;
+  Mech *temp_mech = NULL;
   float fx, fy, fz = 0.0;
   float range = 0.0;
 
@@ -382,24 +382,24 @@ void mech_report(DbRef player, void *data, char *buffer) {
   switch (numargs) {
   case 1:
     /* Scan Target */
-    targetID[0] = args[0][0];
-    targetID[1] = (*checked_string_suffix(*args, 1));
-    target = FindTargetDBREFFromMapNumber(mech, targetID);
-    tempMech = btech_context_get_mech(mech_context(mech), target);
-    if (!tempMech) {
+    target_id[0] = args[0][0];
+    target_id[1] = (*checked_string_suffix(*args, 1));
+    target = find_target_dbref_from_map_number(mech, target_id);
+    temp_mech = btech_context_get_mech(mech_context(mech), target);
+    if (!temp_mech) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Target is not in line of sight!");
       return;
     }
-    range = mech_range_to(mech, tempMech);
-    if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                        mech_position_y(tempMech), range)) {
+    range = mech_range_to(mech, temp_mech);
+    if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                        mech_position_y(temp_mech), range)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Target is not in line of sight!");
       return;
     }
-    if (!mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
-                                  mech_position_y(tempMech), range)) {
+    if (!mech_los_check_unblocked(mech, temp_mech, mech_position_x(temp_mech),
+                                  mech_position_y(temp_mech), range)) {
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
           "That target isn't seen well enough by the scanners for a report!");
@@ -414,7 +414,7 @@ void mech_report(DbRef player, void *data, char *buffer) {
                    "Invalid coordinates!");
       return;
     }
-    MapCoordToRealCoord(mapx, mapy, &fx, &fy);
+    map_coord_to_real_coord(mapx, mapy, &fx, &fy);
     range = map_spatial_range(&(MapSpatialSegment){
         .start = {.x = mech_position_real_x(mech),
                   .y = mech_position_real_y(mech),
@@ -431,20 +431,20 @@ void mech_report(DbRef player, void *data, char *buffer) {
                    "Those coordinates are out of scanner range.");
       return;
     }
-    if (!mech_los_check(mech, tempMech, mapx, mapy, range)) {
+    if (!mech_los_check(mech, temp_mech, mapx, mapy, range)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Coordinates are not in line of sight!");
       return;
     }
-    if (!mech_los_check_unblocked(mech, tempMech, mapx, mapy, range)) {
+    if (!mech_los_check_unblocked(mech, temp_mech, mapx, mapy, range)) {
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
           "That target isn't seen well enough by the scanners for a report!");
       return;
     }
     /* look for enemies in that hex... */
-    tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
-    if (!tempMech) {
+    temp_mech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
+    if (!temp_mech) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "No target found.");
       return;
@@ -453,47 +453,47 @@ void mech_report(DbRef player, void *data, char *buffer) {
   case 0:
     /* report current target... */
     target = mech_target_dbref(mech);
-    tempMech = btech_context_get_mech(mech_context(mech), target);
-    if (tempMech) {
-      range = mech_range_to(mech, tempMech);
-      if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                          mech_position_y(tempMech), range)) {
+    temp_mech = btech_context_get_mech(mech_context(mech), target);
+    if (temp_mech) {
+      range = mech_range_to(mech, temp_mech);
+      if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                          mech_position_y(temp_mech), range)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Target is not in line of sight!");
         return;
       }
-      if (!mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
-                                    mech_position_y(tempMech), range)) {
+      if (!mech_los_check_unblocked(mech, temp_mech, mech_position_x(temp_mech),
+                                    mech_position_y(temp_mech), range)) {
         mecha_notify(
             btech_context_evaluation(mech_context(mech)), player,
             "That target isn't seen well enough by the scanners for a report!");
         return;
       }
     } else {
-      const MechTargetPositionResult target_position =
+      const MechTargetPositionResult TARGET_POSITION =
           mech_target_position(mech);
-      if (!target_position.found) {
+      if (!TARGET_POSITION.found) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "No default target set!");
         return;
       }
       /* look for enemies in that hex... */
-      tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
-      if (!tempMech) {
+      temp_mech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
+      if (!temp_mech) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "You don't see a thing.");
         return;
       }
-      if (!mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                          mech_position_y(tempMech), range)) {
+      if (!mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                          mech_position_y(temp_mech), range)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "You don't see a thing.");
         return;
       }
     }
   }
-  if (tempMech)
-    mech_scan_print_report(evaluation, player, mech, tempMech, range);
+  if (temp_mech)
+    mech_scan_print_report(evaluation, player, mech, temp_mech, range);
 }
 
 void mech_scan_show_turret_facing(EvaluationContext *evaluation, DbRef player,
@@ -506,11 +506,11 @@ void mech_scan_show_turret_facing(EvaluationContext *evaluation, DbRef player,
       !(mech_class(mech) == CLASS_MECH || mech_class(mech) == CLASS_BSUIT ||
         mech_class(mech) == CLASS_MW) &&
       !mech_is_aerospace_unit(mech)) {
-    i = AcceptableDegree(mech_turret_heading_degrees(mech));
+    i = acceptable_degree(mech_turret_heading_degrees(mech));
     if (i > 180)
       i -= 360;
-    j = AcceptableDegree(mech_turret_heading_degrees(mech) +
-                         mech_heading_degrees(mech));
+    j = acceptable_degree(mech_turret_heading_degrees(mech) +
+                          mech_heading_degrees(mech));
     if (mech_movement_type(mech) != MOVE_NONE)
       (void)snprintf(buff, sizeof(buff), "      Turret Facing: %d degrees%s", j,
                      i ? tprintf(" (%d offset from heading)", i) : "");
@@ -521,56 +521,57 @@ void mech_scan_show_turret_facing(EvaluationContext *evaluation, DbRef player,
 }
 
 void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
-                            Mech *mech, Mech *tempMech, float range) {
+                            Mech *mech, Mech *temp_mech, float range) {
   int bearing;
   char buff[100] = {0};
   int weaponarc;
   char *mech_name;
 
   mech_name = btech_attribute_read(
-      btech_context_database(mech_context(tempMech)), mech_dbref(tempMech),
+      btech_context_database(mech_context(temp_mech)), mech_dbref(temp_mech),
       A_MECHNAME, (char[LBUF_SIZE]){0});
   (void)snprintf(
       buff, sizeof(buff), "[%s]  %-25.25s Tonnage: %d",
-      mech_id(tempMech, mech_team(mech) == mech_team(tempMech) &&
-                            mech_los_check_unblocked(mech, tempMech, 0, 0, 0))
+      mech_id(temp_mech, mech_team(mech) == mech_team(temp_mech) &&
+                             mech_los_check_unblocked(mech, temp_mech, 0, 0, 0))
           .text,
-      mech_name, mech_tonnage(tempMech));
+      mech_name, mech_tonnage(temp_mech));
   mecha_notify(evaluation, player, buff);
   bearing = map_bearing(
       &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                   .y = mech_position_real_y(mech)},
-                        .end = {.x = mech_position_real_x(tempMech),
-                                .y = mech_position_real_y(tempMech)}});
+                        .end = {.x = mech_position_real_x(temp_mech),
+                                .y = mech_position_real_y(temp_mech)}});
   (void)snprintf(buff, sizeof(buff),
                  "      Range: %.1f hex\t\tBearing: %d degrees", (double)range,
                  bearing);
   mecha_notify(evaluation, player, buff);
   (void)snprintf(buff, sizeof(buff),
                  "      Speed: %.1f KPH\t\tHeading: %d degrees",
-                 (double)mech_current_speed(tempMech),
-                 AcceptableDegree(mech_heading_degrees(tempMech) +
-                                  mech_lateral_movement(tempMech)));
+                 (double)mech_current_speed(temp_mech),
+                 acceptable_degree(mech_heading_degrees(temp_mech) +
+                                   mech_lateral_movement(temp_mech)));
   mecha_notify(evaluation, player, buff);
-  if (mech_is_flying_type(tempMech))
+  if (mech_is_flying_type(temp_mech))
     notify_printf(evaluation, player, "      Vertical speed: %.1f KPH",
-                  (double)mech_vertical_speed(tempMech));
-  (void)snprintf(
-      buff, sizeof(buff), "      X, Y, Z: %3d, %3d, %3d\tHeat: %.0f deg C.",
-      mech_position_x(tempMech), mech_position_y(tempMech),
-      mech_position_z(tempMech), (double)(10.0F * mech_excess_heat(tempMech)));
+                  (double)mech_vertical_speed(temp_mech));
+  (void)snprintf(buff, sizeof(buff),
+                 "      X, Y, Z: %3d, %3d, %3d\tHeat: %.0f deg C.",
+                 mech_position_x(temp_mech), mech_position_y(temp_mech),
+                 mech_position_z(temp_mech),
+                 (double)(10.0F * mech_excess_heat(temp_mech)));
   mecha_notify(evaluation, player, buff);
-  if (mech_lateral_movement(tempMech))
+  if (mech_lateral_movement(temp_mech))
     notify_printf(evaluation, player, "      Mech is moving laterally %s",
-                  mech_lateral_description(tempMech));
-  mech_scan_show_turret_facing(evaluation, player, tempMech);
+                  mech_lateral_description(temp_mech));
+  mech_scan_show_turret_facing(evaluation, player, temp_mech);
 
-  switch (mech_movement_type(tempMech)) {
+  switch (mech_movement_type(temp_mech)) {
   case MOVE_NONE:
     mecha_notify(evaluation, player, "      Type: INSTALLATION");
     break;
   case MOVE_BIPED:
-    switch (mech_class(tempMech)) {
+    switch (mech_class(temp_mech)) {
     case CLASS_MW:
       mecha_notify(evaluation, player,
                    "      Type: MECHWARRIOR         Movement: BIPED");
@@ -617,7 +618,7 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   case MOVE_FLY:
     notify_printf(
         evaluation, player, "      Type: %-9s             Movement: FLIGHT",
-        mech_class(tempMech) == CLASS_AERO ? "AEROSPACE" : "DROPSHIP");
+        mech_class(temp_mech) == CLASS_AERO ? "AEROSPACE" : "DROPSHIP");
     break;
   case MOVE_HULL:
     mecha_notify(evaluation, player,
@@ -633,59 +634,59 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
     break;
   }
 
-  weaponarc = InWeaponArc(mech, mech_position_real_x(tempMech),
-                          mech_position_real_y(tempMech));
+  weaponarc = in_weapon_arc(mech, mech_position_real_x(temp_mech),
+                            mech_position_real_y(temp_mech));
   if (weaponarc & TURRETARC) {
     mecha_notify(evaluation, player, "      In Turret Arc");
     weaponarc &= ~TURRETARC;
   }
   notify_printf(evaluation, player, "      In %s Weapons Arc",
-                GetArcID(mech, weaponarc));
-  Mech_ShowFlags(&(MechFlagDisplayRequest){.evaluation = evaluation,
-                                           .player = player,
-                                           .mech = tempMech,
-                                           .indentation = 6,
-                                           .detail_level = 1});
-  if (mech_is_jumping(tempMech))
+                get_arc_id(mech, weaponarc));
+  mech_show_flags(&(MechFlagDisplayRequest){.evaluation = evaluation,
+                                            .player = player,
+                                            .mech = temp_mech,
+                                            .indentation = 6,
+                                            .detail_level = 1});
+  if (mech_is_jumping(temp_mech))
     notify_printf(evaluation, player,
                   "      Mech is Jumping!\tJump Heading: %d",
-                  mech_jump_heading_degrees(tempMech));
+                  mech_jump_heading_degrees(temp_mech));
   mecha_notify(evaluation, player, " ");
 }
 
 void mech_scan_print_enemy_status(const ScanEnemyStatusRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
-  const DbRef player = request->player;
+  const DbRef PLAYER = request->player;
   Mech *mymech = request->observer;
   Mech *mech = request->target;
-  const float range = request->range;
-  const int opt = request->options;
-  Mech *tempMech;
+  const float RANGE = request->range;
+  const int OPT = request->options;
+  Mech *temp_mech;
   int owner = 0;
 
   if (mech_is_observer(mymech))
     owner = 1;
-  mech_scan_print_report(evaluation, player, mymech, mech, range);
-  if (opt & SHOW_ARMOR)
-    PrintArmorStatus(evaluation, player, mech, owner);
-  if (opt & SHOW_INFO) {
+  mech_scan_print_report(evaluation, PLAYER, mymech, mech, RANGE);
+  if (OPT & SHOW_ARMOR)
+    print_armor_status(evaluation, PLAYER, mech, owner);
+  if (OPT & SHOW_INFO) {
     if (mech_condition_summary(mech).torso_right)
-      mecha_notify(evaluation, player, "Torso is 60 degrees right");
+      mecha_notify(evaluation, PLAYER, "Torso is 60 degrees right");
     if (mech_condition_summary(mech).torso_left)
-      mecha_notify(evaluation, player, "Torso is 60 degrees left");
+      mecha_notify(evaluation, PLAYER, "Torso is 60 degrees left");
     if (mech_carried_dbref(mech) > 0) {
-      tempMech =
+      temp_mech =
           btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
-      if (tempMech)
-        notify_printf(evaluation, player, "Towing %s.",
-                      mech_to_mech_display_id(mech, tempMech).text);
+      if (temp_mech)
+        notify_printf(evaluation, PLAYER, "Towing %s.",
+                      mech_to_mech_display_id(mech, temp_mech).text);
     }
-    mecha_notify(evaluation, player, " ");
+    mecha_notify(evaluation, PLAYER, " ");
   }
-  if (opt & SHOW_WEAPONS) {
+  if (OPT & SHOW_WEAPONS) {
     if (owner)
-      PrintWeaponStatus(evaluation, mech, player);
+      print_weapon_status_summary(evaluation, mech, PLAYER);
     else
-      PrintEnemyWeaponStatus(mech, player);
+      print_enemy_weapon_status(mech, PLAYER);
   }
 }

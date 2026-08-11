@@ -37,18 +37,18 @@ bool utf8_decode(const char *text, size_t length, Utf8DecodeResult *result) {
 
   if (text == nullptr || result == nullptr || length == 0)
     return false;
-  const unsigned char first = utf8_byte_at(text, length, 0);
-  if (first <= 0x7f) {
-    codepoint = first;
+  const unsigned char FIRST = utf8_byte_at(text, length, 0);
+  if (FIRST <= 0x7f) {
+    codepoint = FIRST;
     needed = 1;
-  } else if (first >= 0xc2 && first <= 0xdf) {
-    codepoint = first & 0x1f;
+  } else if (FIRST >= 0xc2 && FIRST <= 0xdf) {
+    codepoint = FIRST & 0x1f;
     needed = 2;
-  } else if (first >= 0xe0 && first <= 0xef) {
-    codepoint = first & 0x0f;
+  } else if (FIRST >= 0xe0 && FIRST <= 0xef) {
+    codepoint = FIRST & 0x0f;
     needed = 3;
-  } else if (first >= 0xf0 && first <= 0xf4) {
-    codepoint = first & 0x07;
+  } else if (FIRST >= 0xf0 && FIRST <= 0xf4) {
+    codepoint = FIRST & 0x07;
     needed = 4;
   } else {
     return false;
@@ -56,10 +56,10 @@ bool utf8_decode(const char *text, size_t length, Utf8DecodeResult *result) {
   if (length < needed)
     return false;
   for (size_t index = 1; index < needed; index++) {
-    const unsigned char byte = utf8_byte_at(text, length, index);
-    if (!utf8_is_continuation(byte))
+    const unsigned char BYTE = utf8_byte_at(text, length, index);
+    if (!utf8_is_continuation(BYTE))
       return false;
-    codepoint = (codepoint << 6) | (byte & 0x3f);
+    codepoint = (codepoint << 6) | (BYTE & 0x3f);
   }
   if ((needed == 3 && codepoint < 0x800) ||
       (needed == 4 && codepoint < 0x10000) ||
@@ -101,8 +101,8 @@ bool utf8_validate_printable(const char *text, size_t length) {
 
 bool utf8_is_printable_ascii(const char *text, size_t length) {
   for (size_t index = 0; index < length; index++) {
-    const unsigned char byte = utf8_byte_at(text, length, index);
-    if (byte < 0x20 || byte > 0x7e)
+    const unsigned char BYTE = utf8_byte_at(text, length, index);
+    if (BYTE < 0x20 || BYTE > 0x7e)
       return false;
   }
   return true;
@@ -208,7 +208,7 @@ bool utf8_validator_is_complete(const Utf8ValidatorState *state) {
 
 size_t utf8_sanitize(char *destination, size_t destination_size,
                      const char *source, size_t source_length) {
-  static const char replacement[] = "\xef\xbf\xbd";
+  static const char REPLACEMENT[] = "\xef\xbf\xbd";
   Utf8DecodeResult decoded;
   size_t source_offset = 0;
   size_t destination_offset = 0;
@@ -225,8 +225,8 @@ size_t utf8_sanitize(char *destination, size_t destination_size,
       value_length = decoded.length;
       source_offset += decoded.length;
     } else {
-      value = replacement;
-      value_length = sizeof(replacement) - 1;
+      value = REPLACEMENT;
+      value_length = sizeof(REPLACEMENT) - 1;
       source_offset++;
     }
     if (value_length >= destination_size - destination_offset)

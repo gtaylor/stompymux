@@ -32,13 +32,13 @@ void tech_fixarmor(DbRef player, void *data, char *buffer) {
   }
   mech = repair_command.mech;
   context = repair_command.context;
-  const TechPartParseResult parsed = tech_part_parse(&(TechPartParseRequest){
+  const TechPartParseResult PARSED = tech_part_parse(&(TechPartParseRequest){
       .mech = mech, .text = buffer, .allow_rear = true});
-  if (parsed.status != TECH_PART_PARSE_OK) {
+  if (PARSED.status != TECH_PART_PARSE_OK) {
     mecha_notify(btech_context_evaluation(context), player, "Invalid section!");
     return;
   }
-  loc = parsed.location;
+  loc = PARSED.location;
   if (loc >= 8) {
     from = mech_section_rear_armor(mech, loc % 8);
     to = mech_section_original_rear_armor(mech, loc % 8);
@@ -56,7 +56,7 @@ void tech_fixarmor(DbRef player, void *data, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (SomeoneFixingA(mech, loc) || SomeoneFixingI(mech, loc % 8)) {
+  if (someone_fixing_a(mech, loc) || someone_fixing_i(mech, loc % 8)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's repairing that section already!");
     return;
@@ -67,7 +67,7 @@ void tech_fixarmor(DbRef player, void *data, char *buffer) {
                  "The internals need to be fixed first!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping that section - no repairs are possible!");
     return;
@@ -141,12 +141,12 @@ void tech_fixinternal(DbRef player, void *data, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (SomeoneFixing(mech, loc)) {
+  if (someone_fixing(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's repairing that section already!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping that section - no repairs are possible!");
     return;

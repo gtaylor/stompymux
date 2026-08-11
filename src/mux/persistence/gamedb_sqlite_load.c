@@ -175,7 +175,7 @@ static int gamedb_load_native_state(PersistenceContext *context,
                                     sqlite3 *sqlite) {
   char query[256];
 
-  for (size_t index = 0; index < native_column_count; index++) {
+  for (size_t index = 0; index < NATIVE_COLUMN_COUNT; index++) {
     const NativeColumn *column = gamedb_native_column_at(index);
     sqlite3_stmt *statement = nullptr;
     int step;

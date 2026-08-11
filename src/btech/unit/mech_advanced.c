@@ -34,11 +34,11 @@
 
 static int mech_disableweap_func(const MultiWeaponSelectionCall *call) {
   Mech *mech = call->mech;
-  const int index = call->first;
+  const int INDEX = call->first;
   int section, critical, weaptype;
 
   WeaponNumberLookupResult lookup = weapon_number_find(&(
-      WeaponNumberLookupRequest){.mech = mech, .number = index, .sight = true});
+      WeaponNumberLookupRequest){.mech = mech, .number = INDEX, .sight = true});
   weaptype = lookup.value;
   section = lookup.slot.section;
   critical = lookup.slot.critical;
@@ -71,7 +71,7 @@ static int mech_disableweap_func(const MultiWeaponSelectionCall *call) {
       .mech = mech,
       .slot = {.section = section, .critical = critical},
       .failure = FAIL_DESTROYED});
-  mech_printf(mech, MECHALL, "You power down weapon %d.", index);
+  mech_printf(mech, MECHALL, "You power down weapon %d.", INDEX);
   return 0;
 }
 
@@ -96,7 +96,7 @@ void mech_disableweap(DbRef player, void *data, char *buffer) {
   });
 }
 
-int FindMainWeapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
+int find_main_weapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
   int critical[MAX_WEAPS_SECTION];
@@ -112,12 +112,12 @@ int FindMainWeapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     if (mech_section_is_destroyed(mech, loop))
       continue;
-    count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
+    count = find_weapons_advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
       for (ii = 0; ii < count; ii++) {
-        const int critical_index = *(const int *)checked_storage_at_const(
+        const int CRITICAL_INDEX = *(const int *)checked_storage_at_const(
             critical, MAX_WEAPS_SECTION, sizeof(*critical), (size_t)ii);
-        if (!mech_critical_is_broken(mech, loop, critical_index)) {
+        if (!mech_critical_is_broken(mech, loop, CRITICAL_INDEX)) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
           tempcrit = (int)btech_random_i31(&mech->xcode.context->random);
           if (tempcrit > maxcrit) {
@@ -131,10 +131,10 @@ int FindMainWeapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
     }
   }
   if (critfound) {
-    const unsigned char weapon =
+    const unsigned char WEAPON =
         *(const unsigned char *)checked_storage_at_const(
             weaparray, MAX_WEAPS_SECTION, sizeof(*weaparray), (size_t)maxcount);
-    return callback(mech, maxloc, weapon, maxcount, maxcrit);
+    return callback(mech, maxloc, WEAPON, maxcount, maxcrit);
   } else
     return 0;
 }
@@ -159,9 +159,9 @@ void mech_auto_turret(DbRef player, Mech *mech, char *buffer) {
 }
 
 void mech_usebin(DbRef player, Mech *mech, char *buffer) {
-  char strLocation[80];
-  int wLoc, wCurLoc;
-  int wSection, wCritSlot, wWeapNum, wWeapType;
+  char str_location[80];
+  int w_loc, w_cur_loc;
+  int w_section, w_crit_slot, w_weap_num, w_weap_type;
   char *args[2];
 
   if (!common_checks(player, mech, MECH_USUALSO))
@@ -173,40 +173,40 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  if (!parse_int_checked(args[0], &wWeapNum)) {
+  if (!parse_int_checked(args[0], &w_weap_num)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  tprintf("Invalid value: %s", args[0]));
     return;
   }
   WeaponNumberLookupResult lookup = weapon_number_find(
-      &(WeaponNumberLookupRequest){.mech = mech, .number = wWeapNum});
-  wWeapType = lookup.value;
-  wSection = lookup.slot.section;
-  wCritSlot = lookup.slot.critical;
+      &(WeaponNumberLookupRequest){.mech = mech, .number = w_weap_num});
+  w_weap_type = lookup.value;
+  w_section = lookup.slot.section;
+  w_crit_slot = lookup.slot.critical;
 
-  if (wWeapType == -1) {
+  if (w_weap_type == -1) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "The weapons system chirps: 'Illegal Weapon Number!'");
     return;
   }
-  if (wWeapType == -2) {
+  if (w_weap_type == -2) {
     mecha_notify(
         btech_context_evaluation(mech->xcode.context), player,
         "The weapons system chirps: 'That Weapon has been destroyed!'");
     return;
   }
-  if (wWeapType == -3) {
+  if (w_weap_type == -3) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "The weapon system chirps: 'That weapon is still reloading!'");
     return;
   }
-  if (wWeapType == -4) {
+  if (w_weap_type == -4) {
     mecha_notify(
         btech_context_evaluation(mech->xcode.context), player,
         "The weapon system chirps: 'That weapon is still recharging!'");
     return;
   }
-  if (weapon_catalogue_is_energy(wWeapType)) {
+  if (weapon_catalogue_is_energy(w_weap_type)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Energy weapons do not use ammo!");
     return;
@@ -214,43 +214,45 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
 
   if (args[1][0] == '-') {
     mech_printf(mech, MECHALL, "Prefered ammo source reset for weapon #%d",
-                wWeapNum);
-    mech_critical_desired_ammo_section_set(mech, wSection, wCritSlot, -1);
+                w_weap_num);
+    mech_critical_desired_ammo_section_set(mech, w_section, w_crit_slot, -1);
     return;
   }
 
-  wLoc = ArmorSectionFromString(((mech)->ud.type), ((mech)->ud.move), args[1]);
+  w_loc =
+      armor_section_from_string(((mech)->ud.type), ((mech)->ud.move), args[1]);
 
-  if (wLoc == -1) {
+  if (w_loc == -1) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Invalid section!");
     return;
   }
-  if (!mech_section_original_internal(mech, wLoc)) {
+  if (!mech_section_original_internal(mech, w_loc)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Invalid section!");
     return;
   }
-  if (!mech_section_internal(mech, wLoc)) {
+  if (!mech_section_internal(mech, w_loc)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "That section is destroyed!");
     return;
   }
 
-  ArmorStringFromIndex(wLoc, strLocation, ((mech)->ud.type), ((mech)->ud.move));
-  wCurLoc = mech_critical_desired_ammo_section(mech, wSection, wCritSlot);
+  armor_string_from_index(w_loc, str_location, ((mech)->ud.type),
+                          ((mech)->ud.move));
+  w_cur_loc = mech_critical_desired_ammo_section(mech, w_section, w_crit_slot);
 
-  if (wCurLoc == wLoc) {
+  if (w_cur_loc == w_loc) {
     mecha_notify(
         btech_context_evaluation(mech->xcode.context), player,
         tprintf("Prefered ammo source already set to %s for weapon #%d",
-                strLocation, wWeapNum));
+                str_location, w_weap_num));
     return;
   }
 
   mech_printf(mech, MECHALL, "Prefered ammo source set to %s for weapon #%d",
-              strLocation, wWeapNum);
-  mech_critical_desired_ammo_section_set(mech, wSection, wCritSlot, wLoc);
+              str_location, w_weap_num);
+  mech_critical_desired_ammo_section_set(mech, w_section, w_crit_slot, w_loc);
 }
 
 void mech_safety(DbRef player, void *data, char *buffer) {
@@ -352,10 +354,10 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
   if (!nargs) {
 
     /* Show mechprefs */
-    c = SelCol_FunStringMenuContextK(1, "Mech Preferences", display_mechpref,
-                                     mech, NUM_MECHPREFERENCES);
-    ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
-    KillCoolMenu(c);
+    c = sel_col_fun_string_menu_context_k(
+        1, "Mech Preferences", display_mechpref, mech, NUM_MECHPREFERENCES);
+    show_cool_menu(btech_context_evaluation(mech->xcode.context), player, c);
+    kill_cool_menu(c);
 
   } else {
 

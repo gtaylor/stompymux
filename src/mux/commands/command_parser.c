@@ -61,15 +61,15 @@ char *parse_to(const CommandParseRequest *request) {
   }
 
   char *text = *source;
-  const size_t length = strlen(text);
-  const size_t capacity = length + 1;
+  const size_t LENGTH = strlen(text);
+  const size_t CAPACITY = LENGTH + 1;
   size_t result_offset = 0;
   if ((configuration->space_compress ||
        (flags & COMMAND_PARSE_STRIP_LEADING)) &&
       !(flags & COMMAND_PARSE_NO_COMPRESS)) {
-    while (result_offset < length &&
+    while (result_offset < LENGTH &&
            (isspace)((unsigned char)*(const char *)checked_storage_at_const(
-               text, capacity, sizeof(char), result_offset)))
+               text, CAPACITY, sizeof(char), result_offset)))
       result_offset++;
   }
 
@@ -79,17 +79,17 @@ char *parse_to(const CommandParseRequest *request) {
   bool first = true;
   size_t read_offset = result_offset;
   size_t write_offset = result_offset;
-  while (read_offset < length) {
+  while (read_offset < LENGTH) {
     char character = *(const char *)checked_storage_at_const(
-        text, capacity, sizeof(char), read_offset);
+        text, CAPACITY, sizeof(char), read_offset);
 
-    if (character == '\\' && read_offset + 1 < length) {
-      *(char *)checked_storage_at(text, capacity, sizeof(char),
+    if (character == '\\' && read_offset + 1 < LENGTH) {
+      *(char *)checked_storage_at(text, CAPACITY, sizeof(char),
                                   write_offset++) = character;
       read_offset++;
-      *(char *)checked_storage_at(text, capacity, sizeof(char),
+      *(char *)checked_storage_at(text, CAPACITY, sizeof(char),
                                   write_offset++) =
-          *(const char *)checked_storage_at_const(text, capacity, sizeof(char),
+          *(const char *)checked_storage_at_const(text, CAPACITY, sizeof(char),
                                                   read_offset++);
       first = false;
       continue;
@@ -98,7 +98,7 @@ char *parse_to(const CommandParseRequest *request) {
     if (character == '{') {
       brace_depth++;
       if (!(flags & COMMAND_PARSE_STRIP) || brace_depth > 1)
-        *(char *)checked_storage_at(text, capacity, sizeof(char),
+        *(char *)checked_storage_at(text, CAPACITY, sizeof(char),
                                     write_offset++) = character;
       read_offset++;
       first = false;
@@ -107,7 +107,7 @@ char *parse_to(const CommandParseRequest *request) {
     if (character == '}' && brace_depth > 0) {
       brace_depth--;
       if (!(flags & COMMAND_PARSE_STRIP) || brace_depth > 0)
-        *(char *)checked_storage_at(text, capacity, sizeof(char),
+        *(char *)checked_storage_at(text, CAPACITY, sizeof(char),
                                     write_offset++) = character;
       read_offset++;
       first = false;
@@ -124,11 +124,11 @@ char *parse_to(const CommandParseRequest *request) {
                        stack, sizeof(stack), sizeof(char), depth - 1)) {
       depth--;
     } else if (brace_depth == 0 && depth == 0 && character == delimiter) {
-      char *result = parse_cleanup(configuration, flags, first, text, capacity,
+      char *result = parse_cleanup(configuration, flags, first, text, CAPACITY,
                                    result_offset, write_offset);
 
       *source =
-          checked_storage_at(text, capacity, sizeof(char), read_offset + 1);
+          checked_storage_at(text, CAPACITY, sizeof(char), read_offset + 1);
       return result;
     }
 
@@ -140,19 +140,19 @@ char *parse_to(const CommandParseRequest *request) {
         continue;
       }
       if (write_offset > result_offset &&
-          *(const char *)checked_storage_at_const(text, capacity, sizeof(char),
+          *(const char *)checked_storage_at_const(text, CAPACITY, sizeof(char),
                                                   write_offset - 1) == ' ') {
         read_offset++;
         continue;
       }
     }
     first = false;
-    *(char *)checked_storage_at(text, capacity, sizeof(char), write_offset++) =
+    *(char *)checked_storage_at(text, CAPACITY, sizeof(char), write_offset++) =
         character;
     read_offset++;
   }
 
-  char *result = parse_cleanup(configuration, flags, first, text, capacity,
+  char *result = parse_cleanup(configuration, flags, first, text, CAPACITY,
                                result_offset, write_offset);
   *source = nullptr;
   return result;
@@ -183,7 +183,7 @@ char *parse_arglist(const CommandArgumentListRequest *request) {
                                               sizeof(*arguments), i);
 
     *slot = alloc_lbuf("parse_arglist");
-    StringCopy(*slot, argument);
+    string_copy(*slot, argument);
   }
   return remainder;
 }

@@ -20,7 +20,7 @@
 #include "mux/support/utf8.h"
 
 /* SQLite schema for commac, comsys, and macro state. */
-static const char commac_schema_sql[] =
+static const char COMMAC_SCHEMA_SQL[] =
     "CREATE TABLE commac_entries ("
     " who INTEGER PRIMARY KEY, curmac INTEGER NOT NULL,"
     " macro_slot_0 INTEGER NOT NULL, macro_slot_1 INTEGER NOT NULL,"
@@ -93,7 +93,7 @@ static int commac_store_entries(ChannelRegistry *registry,
                                 GameDatabase *database, sqlite3 *sqlite) {
   sqlite3_stmt *entry = nullptr;
   sqlite3_stmt *alias = nullptr;
-  struct commac *commac;
+  struct Commac *commac;
   int bucket;
   int index;
   int result = -1;
@@ -152,7 +152,7 @@ struct CommacMessageStoreContext {
 };
 
 static void commac_store_message(const FifoVisit *visit) {
-  chmsg *message = visit->item;
+  Chmsg *message = visit->item;
   CommacMessageStoreContext *context = visit->context;
 
   if (context->result < 0 ||
@@ -170,8 +170,8 @@ static int commac_store_comsys(sqlite3 *sqlite,
   sqlite3_stmt *channel = nullptr;
   sqlite3_stmt *user_statement = nullptr;
   sqlite3_stmt *message = nullptr;
-  struct channel *current;
-  struct comuser *user;
+  struct Channel *current;
+  struct Comuser *user;
   int index;
   int position;
   int result = -1;
@@ -192,10 +192,10 @@ static int commac_store_comsys(sqlite3 *sqlite,
           "(channel_name, position, sent_at, message) VALUES (?, ?, ?, ?);",
           -1, &message, nullptr) == SQLITE_OK) {
     result = 0;
-    for (current = (struct channel *)hash_table_first_entry(
+    for (current = (struct Channel *)hash_table_first_entry(
              &context->channels->channels);
          result == 0 && current;
-         current = (struct channel *)hash_table_next_entry(
+         current = (struct Channel *)hash_table_next_entry(
              &context->channels->channels)) {
       if (commac_sqlite_bind_text(channel, 1, current->name) < 0 ||
           commac_sqlite_bind_int(channel, 2, current->type) < 0 ||
@@ -288,7 +288,7 @@ static int commac_persistence_store(sqlite3 *sqlite,
                                     PersistenceContext *context,
                                     void *extension_context) {
   (void)extension_context;
-  return commac_sqlite_exec(sqlite, commac_schema_sql) < 0 ||
+  return commac_sqlite_exec(sqlite, COMMAC_SCHEMA_SQL) < 0 ||
                  commac_store_entries(context->channels, context->database,
                                       sqlite) < 0 ||
                  commac_store_comsys(sqlite, context) < 0 ||
@@ -323,13 +323,13 @@ static int commac_column_text(sqlite3_stmt *statement, int column,
 
 /* Add one persisted alias while retaining commac's sorted runtime layout. */
 typedef struct CommacAliasLoadRequest {
-  struct commac *commac;
+  struct Commac *commac;
   const char *alias;
   const char *channel;
 } CommacAliasLoadRequest;
 
 static int commac_load_alias(const CommacAliasLoadRequest *request) {
-  struct commac *commac = request->commac;
+  struct Commac *commac = request->commac;
   const char *alias = request->alias;
   const char *channel = request->channel;
   int capacity;
@@ -354,15 +354,15 @@ static int commac_load_alias(const CommacAliasLoadRequest *request) {
     commac->channels = channels;
     commac->maxchannels = capacity;
   }
-  StringCopy(commac_alias_at(commac, (size_t)commac->numchannels), alias);
+  string_copy(commac_alias_at(commac, (size_t)commac->numchannels), alias);
   *commac_channel_slot(commac, (size_t)commac->numchannels) = strdup(channel);
   commac->numchannels++;
   return 0;
 }
 
 /* Find an existing entry without creating one for a malformed alias row. */
-static struct commac *commac_find_loaded(ChannelRegistry *registry, DbRef who) {
-  struct commac *commac;
+static struct Commac *commac_find_loaded(ChannelRegistry *registry, DbRef who) {
+  struct Commac *commac;
 
   if (who < 0)
     return nullptr;
@@ -380,7 +380,7 @@ static int commac_load_entries(sqlite3 *sqlite,
                                const PersistenceContext *context) {
   sqlite3_stmt *entries = nullptr;
   sqlite3_stmt *aliases = nullptr;
-  struct commac *commac;
+  struct Commac *commac;
   const char *alias;
   const char *channel;
   long value;
@@ -458,7 +458,7 @@ static int commac_load_entries(sqlite3 *sqlite,
 /* Restore channels first so memberships and history can reference them. */
 static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
   sqlite3_stmt *statement = nullptr;
-  struct channel *channel;
+  struct Channel *channel;
   const char *name;
   long value;
   int result = -1;
@@ -480,7 +480,7 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      StringCopy(channel->name, name);
+      string_copy(channel->name, name);
       channel->type = (int)value;
       if (commac_column_int(statement, 2, &value) < 0)
         result = -1;
@@ -509,8 +509,8 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
 static int commac_load_users(sqlite3 *sqlite,
                              const PersistenceContext *context) {
   sqlite3_stmt *statement = nullptr;
-  struct channel *channel;
-  struct comuser *user;
+  struct Channel *channel;
+  struct Comuser *user;
   const char *name;
   long who;
   long is_on;
@@ -541,9 +541,9 @@ static int commac_load_users(sqlite3 *sqlite,
         break;
       }
       if (channel->num_users == channel->max_users) {
-        const int capacity = channel->max_users + 10;
-        struct comuser **users = (struct comuser **)realloc(
-            (void *)channel->users, sizeof(*channel->users) * (size_t)capacity);
+        const int CAPACITY = channel->max_users + 10;
+        struct Comuser **users = (struct Comuser **)realloc(
+            (void *)channel->users, sizeof(*channel->users) * (size_t)CAPACITY);
 
         if (users == nullptr) {
           free(user);
@@ -551,7 +551,7 @@ static int commac_load_users(sqlite3 *sqlite,
           break;
         }
         channel->users = users;
-        channel->max_users = capacity;
+        channel->max_users = CAPACITY;
       }
       user->who = who;
       user->on = (int)is_on;
@@ -573,8 +573,8 @@ static int commac_load_users(sqlite3 *sqlite,
 static int commac_load_messages(sqlite3 *sqlite,
                                 const PersistenceContext *context) {
   sqlite3_stmt *statement = nullptr;
-  struct channel *channel;
-  chmsg *message;
+  struct Channel *channel;
+  Chmsg *message;
   const char *name;
   const char *text;
   long sent_at;
@@ -722,7 +722,7 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
       macro->alias = aliases;
       macro->string = strings;
       macro->macro_capacity = macro->macro_count + 1;
-      StringCopy(macro_alias_at(macro, (size_t)macro->macro_count), alias);
+      string_copy(macro_alias_at(macro, (size_t)macro->macro_count), alias);
       *macro_string_slot(macro, (size_t)macro->macro_count) = strdup(expansion);
       macro->macro_count++;
     }

@@ -71,7 +71,7 @@ void bsuit_swarm_stop(Mech *mech, int intentional) {
 
     bsuit_recycle_start(mech, RECYCLE_INT_STOPSWARM);
   } else {
-    if (MadePilotSkillRoll(mech, 4)) {
+    if (made_pilot_skill_roll(mech, 4)) {
       mech_notify(mech, MECHALL,
                   "The hold loosens and you drop from the 'mech!");
       mech_los_broadcast_unit(mech, target, "jumps off of %s!");
@@ -125,10 +125,10 @@ int bsuit_has_enemy_swarmers(Mech *mech) {
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i != mech_map_slot(mech)) {
-      const DbRef unit = battle_map_unit_dbref(map, i);
-      if (unit <= 0)
+      const DbRef UNIT = battle_map_unit_dbref(map, i);
+      if (UNIT <= 0)
         continue;
-      Mech *t = btech_context_get_mech(mech_context(mech), unit);
+      Mech *t = btech_context_get_mech(mech_context(mech), UNIT);
       if (!t)
         continue;
 
@@ -155,10 +155,10 @@ int bsuit_has_friendly_riders(Mech *mech) {
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i != mech_map_slot(mech)) {
-      const DbRef unit = battle_map_unit_dbref(map, i);
-      if (unit <= 0)
+      const DbRef UNIT = battle_map_unit_dbref(map, i);
+      if (UNIT <= 0)
         continue;
-      Mech *t = btech_context_get_mech(mech_context(mech), unit);
+      Mech *t = btech_context_get_mech(mech_context(mech), UNIT);
       if (!t)
         continue;
 
@@ -184,10 +184,10 @@ int bsuit_swarmer_count(Mech *mech) {
     return 0;
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i != mech_map_slot(mech)) {
-      const DbRef unit = battle_map_unit_dbref(map, i);
-      if (unit <= 0)
+      const DbRef UNIT = battle_map_unit_dbref(map, i);
+      if (UNIT <= 0)
         continue;
-      Mech *t = btech_context_get_mech(mech_context(mech), unit);
+      Mech *t = btech_context_get_mech(mech_context(mech), UNIT);
       if (!t)
         continue;
       if (mech_swarm_target(t) != mech_dbref(mech))
@@ -208,10 +208,10 @@ Mech *bsuit_swarmer_find(Mech *mech) {
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i != mech_map_slot(mech)) {
-      const DbRef unit = battle_map_unit_dbref(map, i);
-      if (unit <= 0)
+      const DbRef UNIT = battle_map_unit_dbref(map, i);
+      if (UNIT <= 0)
         continue;
-      Mech *t = btech_context_get_mech(mech_context(mech), unit);
+      Mech *t = btech_context_get_mech(mech_context(mech), UNIT);
       if (!t)
         continue;
 
@@ -231,10 +231,10 @@ void bsuit_swarmers_stop(BattleMap *map, Mech *mech, int intentional) {
     return;
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i != mech_map_slot(mech)) {
-      const DbRef unit = battle_map_unit_dbref(map, i);
-      if (unit <= 0)
+      const DbRef UNIT = battle_map_unit_dbref(map, i);
+      if (UNIT <= 0)
         continue;
-      Mech *t = btech_context_get_mech(mech_context(mech), unit);
+      Mech *t = btech_context_get_mech(mech_context(mech), UNIT);
       if (!t)
         continue;
       if (mech_swarm_target(t) != mech_dbref(mech))
@@ -249,16 +249,16 @@ void bsuit_swarmers_position_update(BattleMap *map, Mech *mech) {
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i != mech_map_slot(mech)) {
-      const DbRef unit = battle_map_unit_dbref(map, i);
-      if (unit <= 0)
+      const DbRef UNIT = battle_map_unit_dbref(map, i);
+      if (UNIT <= 0)
         continue;
-      Mech *t = btech_context_get_mech(mech_context(mech), unit);
+      Mech *t = btech_context_get_mech(mech_context(mech), UNIT);
       if (!t)
         continue;
       if (mech_swarm_target(t) != mech_dbref(mech))
         continue;
       mech_position_mirror(t, mech, 1);
-      MarkForLOSUpdate(t);
+      mark_for_los_update(t);
       mech_flood(t);
     }
   }
@@ -314,7 +314,7 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
   int argc;
   char *args[3];
   float range;
-  char targetID[2];
+  char target_id[2];
   DbRef targetnum;
   Mech *t = NULL;
 
@@ -341,9 +341,9 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
   case 1:
     char *const *argument = (char *const *)checked_storage_at_const(
         (const void *)args, sizeof(args) / sizeof(*args), sizeof(*args), 0);
-    targetID[0] = *checked_string_suffix(*argument, 0);
-    targetID[1] = *checked_string_suffix(*argument, 1);
-    targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
+    target_id[0] = *checked_string_suffix(*argument, 0);
+    target_id[1] = *checked_string_suffix(*argument, 1);
+    targetnum = find_target_dbref_from_map_number(mech, target_id);
     if (targetnum <= 0) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Target is not in line of sight!");

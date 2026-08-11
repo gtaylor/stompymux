@@ -17,7 +17,7 @@ static int hit_location_or_fallback(const Mech *mech, int preferred,
   return mech_section_internal(mech, preferred) > 0 ? preferred : fallback;
 }
 
-HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
+HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hit_group,
                                                      HitLocationResult result) {
   int roll, hitloc = 0;
   int side;
@@ -38,10 +38,10 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
 
   switch (mech_class(mech)) {
   case CLASS_VEH_GROUND:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
     case RIGHTSIDE:
-      side = (hitGroup == LEFTSIDE ? LSIDE : RSIDE);
+      side = (hit_group == LEFTSIDE ? LSIDE : RSIDE);
 
       switch (roll) {
       case 2:
@@ -82,7 +82,7 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
 
     case FRONT:
     case BACK:
-      side = (hitGroup == FRONT ? FSIDE : BSIDE);
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
 
       switch (roll) {
       case 2:
@@ -101,7 +101,7 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
         hitloc = side;
         break;
       case 5:
-        hitloc = (hitGroup == FRONT ? RSIDE : LSIDE);
+        hitloc = (hit_group == FRONT ? RSIDE : LSIDE);
         break;
       case 6:
       case 7:
@@ -109,16 +109,16 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
         hitloc = side;
         break;
       case 9:
-        hitloc = (hitGroup == FRONT ? LSIDE : RSIDE);
+        hitloc = (hit_group == FRONT ? LSIDE : RSIDE);
         break;
       case 10:
       case 11:
         hitloc = hit_location_or_fallback(mech, TURRET,
-                                          (hitGroup == FRONT ? LSIDE : RSIDE));
+                                          (hit_group == FRONT ? LSIDE : RSIDE));
         break;
       case 12:
         hitloc = hit_location_or_fallback(mech, TURRET,
-                                          (hitGroup == FRONT ? LSIDE : RSIDE));
+                                          (hit_group == FRONT ? LSIDE : RSIDE));
         result.critical = true;
         break;
       }
@@ -127,10 +127,10 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
     break;
 
   case CLASS_VTOL:
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
     case RIGHTSIDE:
-      side = (hitGroup == LEFTSIDE ? LSIDE : RSIDE);
+      side = (hit_group == LEFTSIDE ? LSIDE : RSIDE);
 
       switch (roll) {
       case 2:
@@ -165,7 +165,7 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
 
     case FRONT:
     case BACK:
-      side = (hitGroup == FRONT ? FSIDE : BSIDE);
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
 
       switch (roll) {
       case 2:
@@ -179,7 +179,7 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
         hitloc = side;
         break;
       case 5:
-        hitloc = (hitGroup == FRONT ? RSIDE : LSIDE);
+        hitloc = (hit_group == FRONT ? RSIDE : LSIDE);
         break;
       case 6:
       case 7:
@@ -187,7 +187,7 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hitGroup,
         hitloc = side;
         break;
       case 9:
-        hitloc = (hitGroup == FRONT ? LSIDE : RSIDE);
+        hitloc = (hit_group == FRONT ? LSIDE : RSIDE);
         break;
       case 10:
       case 11:

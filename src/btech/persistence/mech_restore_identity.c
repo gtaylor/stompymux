@@ -77,7 +77,7 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
 
   statement = NULL;
   result =
-      sqlite3_prepare_v2(
+      SQLITE3_PREPARE_V2(
           sqlite,
           "SELECT dbref, id_0, id_1, brief, map_number, map_dbref, "
           "mech_name, mech_type, unit_era, unit_tro, unit_class, "
@@ -224,7 +224,7 @@ int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
   expected_section = 0;
   mech = NULL;
   result =
-      sqlite3_prepare_v2(
+      SQLITE3_PREPARE_V2(
           sqlite,
           "SELECT mech_dbref, section, armor, internal, rear, armor_original, "
           "internal_original, rear_original, base_to_hit, config, recycle, "
@@ -324,7 +324,7 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
   current_section = -1;
   expected_slot = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(sqlite,
+  result = SQLITE3_PREPARE_V2(sqlite,
                               "SELECT mech_dbref, section, slot, brand, data, "
                               "item_type, fire_mode, "
                               "ammo_mode, damage_flags, desired_ammo_location "
@@ -389,8 +389,8 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
     critical->type = (unsigned short)item_type;
     critical->firemode = fire_mode;
     critical->ammomode = ammo_mode;
-    critical->weapDamageFlags = damage_flags;
-    critical->desiredAmmoLoc = (short)desired_ammo_location;
+    critical->weap_damage_flags = damage_flags;
+    critical->desired_ammo_loc = (short)desired_ammo_location;
     mech_persistence_critical_restore(mech, section_index, slot, critical);
     expected_slot++;
   }

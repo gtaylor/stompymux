@@ -227,12 +227,12 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
     autopilot_argument_list_set(&args, 0, strdup(definition->name));
   }
 
-  const AutopilotOrderResult result =
+  const AutopilotOrderResult RESULT =
       autopilot_order_enqueue(autopilot, definition, &args);
   autopilot_argument_list_destroy(&args);
-  if (result != AUTOPILOT_ORDER_OK) {
+  if (RESULT != AUTOPILOT_ORDER_OK) {
     mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
-                 result == AUTOPILOT_ORDER_FULL
+                 RESULT == AUTOPILOT_ORDER_FULL
                      ? "The autopilot command queue is full."
                      : "Unable to add the autopilot command.");
     return;
@@ -296,8 +296,8 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
   }
 
   cool_menu_add_line(&c);
-  ShowCoolMenu(btech_context_evaluation(autopilot->xcode.context), player, c);
-  KillCoolMenu(c);
+  show_cool_menu(btech_context_evaluation(autopilot->xcode.context), player, c);
+  kill_cool_menu(c);
 }
 
 void auto_eventstats(DbRef player, void *data, char *buffer) {

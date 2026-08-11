@@ -61,25 +61,25 @@
 #include "turret.h"
 
 /* Special object parameters.  */
-const BtechSpecialObjectDefinition SpecialObjects[BTECH_SPECIAL_OBJECT_COUNT] =
-    {{"MECH", mechcommands, 0, mech_storage_size, newfreemech, HEAT_TICK,
+const BtechSpecialObjectDefinition SPECIAL_OBJECTS[BTECH_SPECIAL_OBJECT_COUNT] =
+    {{"MECH", MECHCOMMANDS, 0, mech_storage_size, newfreemech, HEAT_TICK,
       mech_update, POWER_NONE},
-     {"DEBUG", debugcommands, sizeof(BtechSpecialObject), nullptr, nullptr, 0,
+     {"DEBUG", DEBUGCOMMANDS, sizeof(BtechSpecialObject), nullptr, nullptr, 0,
       nullptr, POWER_NONE},
-     {"MECHREP", mechrepcommands, sizeof(RepairFacility), nullptr,
+     {"MECHREP", MECHREPCOMMANDS, sizeof(RepairFacility), nullptr,
       newfreemechrep, 0, nullptr, POWER_NONE},
-     {"MAP", mapcommands, sizeof(BattleMap), nullptr, newfreemap, LOS_TICK,
+     {"MAP", MAPCOMMANDS, sizeof(BattleMap), nullptr, newfreemap, LOS_TICK,
       map_update, POWER_NONE},
-     {"AUTOPILOT", autopilotcommands, sizeof(Autopilot), nullptr,
+     {"AUTOPILOT", AUTOPILOTCOMMANDS, sizeof(Autopilot), nullptr,
       auto_newautopilot, 0, nullptr, POWER_NONE},
-     {"TURRET", turretcommands, sizeof(Turret), nullptr,
+     {"TURRET", TURRETCOMMANDS, sizeof(Turret), nullptr,
       turret_lifecycle_update, 0, nullptr, POWER_NONE}};
 
 const BtechSpecialObjectDefinition *btech_special_object_definition(int type) {
   if (type < 0)
     abort();
-  return checked_storage_at_const(SpecialObjects, BTECH_SPECIAL_OBJECT_COUNT,
-                                  sizeof(*SpecialObjects), (size_t)type);
+  return checked_storage_at_const(SPECIAL_OBJECTS, BTECH_SPECIAL_OBJECT_COUNT,
+                                  sizeof(*SPECIAL_OBJECTS), (size_t)type);
 }
 
 static HashTable *special_command_table(BtechContext *context, size_t type) {
@@ -142,7 +142,7 @@ void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
 void raw_notify(EvaluationContext *evaluation, DbRef player, const char *msg);
 
 /*************PERSONAL PROTOS*****************/
-void *NewSpecialObject(BtechContext *context, long id, int type);
+void *new_special_object(BtechContext *context, long id, int type);
 void *btech_context_find_object(BtechContext *context, DbRef key);
 int btech_context_which_special(BtechContext *context, DbRef key);
 int btech_context_which_special_attribute(BtechContext *context, DbRef key);
@@ -150,12 +150,12 @@ int btech_context_which_special_attribute(BtechContext *context, DbRef key);
 static int compare_dbrefs(const RedBlackTreeCompareCall *call) {
   void *key1 = call->lhs;
   void *key2 = call->rhs;
-  const DbRef key1_val = (DbRef)key1;
-  const DbRef key2_val = (DbRef)key2;
+  const DbRef KEY1_VAL = (DbRef)key1;
+  const DbRef KEY2_VAL = (DbRef)key2;
 
-  if (key1_val < key2_val)
+  if (KEY1_VAL < KEY2_VAL)
     return -1;
-  if (key1_val > key2_val)
+  if (KEY1_VAL > KEY2_VAL)
     return 1;
   return 0;
 }
@@ -222,11 +222,11 @@ bool btech_special_command_access(BtechContext *context, DbRef object,
                                      .power = power}));
 }
 
-int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
-                       char *command) {
+int handled_command_sub(BtechContext *context, DbRef player, DbRef location,
+                        char *command) {
   BtechSpecialObject *xcode_obj = NULL;
 
-  const BtechSpecialObjectDefinition *typeOfObject;
+  const BtechSpecialObjectDefinition *type_of_object;
   int type;
   const BtechCommandDefinition *cmd;
   char *tmpc;
@@ -253,13 +253,13 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   }
   if (type > (int)BTECH_SPECIAL_OBJECT_COUNT)
     return 0;
-  typeOfObject = btech_special_object_definition(type);
-  const size_t command_name_length = strcspn(command, " ");
+  type_of_object = btech_special_object_definition(type);
+  const size_t COMMAND_NAME_LENGTH = strcspn(command, " ");
   tmpc = strstr(command, " ");
   if (tmpc)
     *tmpc = 0;
   ishelp = !strcmp(command, "HELP");
-  for (size_t index = 0; index < command_name_length; ++index) {
+  for (size_t index = 0; index < COMMAND_NAME_LENGTH; ++index) {
     char *character =
         checked_storage_at(command, strlen(command) + 1, sizeof(char), index);
     *character = ascii_to_lower(*character);
@@ -269,18 +269,18 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   if (tmpc)
     *tmpc = ' ';
   const char *argument_start =
-      checked_string_suffix(command, command_name_length);
-  const size_t argument_offset =
-      command_name_length + strspn(argument_start, " ");
+      checked_string_suffix(command, COMMAND_NAME_LENGTH);
+  const size_t ARGUMENT_OFFSET =
+      COMMAND_NAME_LENGTH + strspn(argument_start, " ");
   char *arguments = checked_storage_at(command, strlen(command) + 1,
-                                       sizeof(char), argument_offset);
+                                       sizeof(char), ARGUMENT_OFFSET);
   if (cmd && (type != GTYPE_MECH ||
               (type == GTYPE_MECH && btech_command_allowed_for_mech(
                                          ((Mech *)xcode_obj), cmd->flag)))) {
     if (*cmd->helpmsg != '@' ||
         btech_special_command_access(context, player,
-                                     typeOfObject->power_needed)) {
-      const BtechCommandInvocation invocation = {
+                                     type_of_object->power_needed)) {
+      const BtechCommandInvocation INVOCATION = {
           .context = context,
           .evaluation = btech_context_evaluation(context),
           .actor = player,
@@ -288,20 +288,20 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
           .object = xcode_obj,
           .arguments = arguments,
       };
-      cmd->handler(&invocation);
+      cmd->handler(&INVOCATION);
     } else
       mecha_notify(btech_context_evaluation(context), player,
                    "Sorry, that command is restricted!");
     return 1;
   } else if (ishelp) {
-    btech_special_object_help(
-        &(SpecialObjectHelpRequest){.context = context,
-                                    .player = player,
-                                    .type = typeOfObject->type,
-                                    .special_type = type,
-                                    .location = location,
-                                    .power_needed = typeOfObject->power_needed,
-                                    .argument = arguments});
+    btech_special_object_help(&(SpecialObjectHelpRequest){
+        .context = context,
+        .player = player,
+        .type = type_of_object->type,
+        .special_type = type,
+        .location = location,
+        .power_needed = type_of_object->power_needed,
+        .argument = arguments});
     return 1;
   }
   return 0;
@@ -320,24 +320,24 @@ bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
   if (strlen(command) > (LBUF_SIZE - MBUF_SIZE))
     return 0;
   if (okay_hcode(context, player) &&
-      HandledCommand_sub(context, player, player, command))
+      handled_command_sub(context, player, player, command))
     return 1;
   if (okay_hcode(context, loc) &&
-      HandledCommand_sub(context, player, loc, command))
+      handled_command_sub(context, player, loc, command))
     return 1;
   SAFE_DOLIST(context->database, curr, temp,
               game_object_contents(context->database, player)) {
     if (okay_hcode(context, curr))
-      if (HandledCommand_sub(context, player, curr, command))
+      if (handled_command_sub(context, player, curr, command))
         return 1;
   }
   return 0;
 }
 
-void InitSpecialHash(BtechContext *context, int which);
-const int global_specials = BTECH_SPECIAL_OBJECT_COUNT;
+void init_special_hash(BtechContext *context, int which);
+const int GLOBAL_SPECIALS = BTECH_SPECIAL_OBJECT_COUNT;
 
-void *NewSpecialObject(BtechContext *context, DbRef id, int type) {
+void *new_special_object(BtechContext *context, DbRef id, int type) {
   BtechSpecialObject *xcode_obj = NULL;
   if (type < 0 || type >= BTECH_SPECIAL_OBJECT_COUNT)
     return nullptr;
@@ -366,90 +366,90 @@ void *NewSpecialObject(BtechContext *context, DbRef id, int type) {
 
 static void create_special_object(const BtechSpecialObjectAction *action) {
   BtechContext *context = action->context;
-  const DbRef player = action->actor;
-  const DbRef key = action->object;
+  const DbRef PLAYER = action->actor;
+  const DbRef KEY = action->object;
   void *new;
-  const BtechSpecialObjectDefinition *typeOfObject;
+  const BtechSpecialObjectDefinition *type_of_object;
   int type;
   char *str;
 
-  str = btech_attribute_read(context->database, key, A_XTYPE,
+  str = btech_attribute_read(context->database, KEY, A_XTYPE,
                              (char[LBUF_SIZE]){0});
   if (!(str && *str)) {
     mecha_notify(
-        btech_context_evaluation(context), player,
+        btech_context_evaluation(context), PLAYER,
         "You must first set Xtype using @attribute/set <object>/Xtype=<type>");
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
                  "AUTOPILOT, TURRET.");
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Resetting XCODE flag.");
-    c_xcode(context->database, key); /* Reset the flag */
+    c_xcode(context->database, KEY); /* Reset the flag */
     return;
   }
 
   /* Find the special objects */
-  type = btech_context_which_special_attribute(context, key);
+  type = btech_context_which_special_attribute(context, KEY);
   if (type > -1) {
     /* We found the proper special object */
-    typeOfObject = btech_special_object_definition(type);
-    if (btech_special_object_data_size(typeOfObject)) {
-      new = NewSpecialObject(context, key, type);
+    type_of_object = btech_special_object_definition(type);
+    if (btech_special_object_data_size(type_of_object)) {
+      new = new_special_object(context, KEY, type);
       if (!new)
-        mecha_notify(btech_context_evaluation(context), player,
+        mecha_notify(btech_context_evaluation(context), PLAYER,
                      "Memory allocation failure!");
     }
   } else {
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "That is not a valid XTYPE!");
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
                  "AUTOPILOT, TURRET.");
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Resetting XCODE flag.");
-    c_xcode(context->database, key);
+    c_xcode(context->database, KEY);
   }
 }
 
 void btech_special_object_dispose(const BtechSpecialObjectAction *action) {
   BtechContext *context = action->context;
-  const DbRef player = action->actor;
-  const DbRef key = action->object;
+  const DbRef PLAYER = action->actor;
+  const DbRef KEY = action->object;
   BtechSpecialObject *xcode_obj;
 
   int i;
-  const BtechSpecialObjectDefinition *typeOfObject;
+  const BtechSpecialObjectDefinition *type_of_object;
 
-  xcode_obj = red_black_tree_find(context->special_objects, (void *)key);
+  xcode_obj = red_black_tree_find(context->special_objects, (void *)KEY);
 
-  i = btech_context_which_special_attribute(context, key);
+  i = btech_context_which_special_attribute(context, KEY);
   if (i < 0) {
     mecha_notify(
-        btech_context_evaluation(context), player,
+        btech_context_evaluation(context), PLAYER,
         "CRITICAL: Unable to free data, inconsistency somewhere. Please");
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "contact a wizard about this _NOW_!");
     return;
   }
-  typeOfObject = btech_special_object_definition(i);
+  type_of_object = btech_special_object_definition(i);
 
-  if (btech_special_object_data_size(typeOfObject) > 0 &&
-      btech_context_which_special(context, key) != i) {
-    mecha_notify(btech_context_evaluation(context), player,
+  if (btech_special_object_data_size(type_of_object) > 0 &&
+      btech_context_which_special(context, KEY) != i) {
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Semi-critical error has occured. For some reason the "
                  "object's data differs\nfrom the data on the object. Please "
                  "contact a wizard about this.");
   }
   if (xcode_obj) {
-    if (typeOfObject->lifecycle)
-      typeOfObject->lifecycle(key, (void **)&xcode_obj, SPECIAL_FREE);
-    red_black_tree_delete(context->special_objects, (void *)key);
+    if (type_of_object->lifecycle)
+      type_of_object->lifecycle(KEY, (void **)&xcode_obj, SPECIAL_FREE);
+    red_black_tree_delete(context->special_objects, (void *)KEY);
     mux_event_remove_data(context->events, xcode_obj);
     free(xcode_obj);
-  } else if (btech_special_object_data_size(typeOfObject) > 0) {
-    mecha_notify(btech_context_evaluation(context), player,
+  } else if (btech_special_object_data_size(type_of_object) > 0) {
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "This object is not in the special object DBASE.");
-    mecha_notify(btech_context_evaluation(context), player,
+    mecha_notify(btech_context_evaluation(context), PLAYER,
                  "Please contact a wizard about this bug. ");
   }
 }
@@ -495,12 +495,12 @@ void btech_context_release_owned_state(BtechContext *context) {
   *context = (BtechContext){0};
 }
 
-void DumpMechs(BtechContext *context, DbRef player) {
+void dump_mechs(BtechContext *context, DbRef player) {
   mecha_notify(btech_context_evaluation(context), player,
                "Support discontinued. Bother a wiz if this bothers you.");
 }
 
-void DumpMaps(BtechContext *context, DbRef player) {
+void dump_maps(BtechContext *context, DbRef player) {
   mecha_notify(btech_context_evaluation(context), player,
                "Support discontinued. Bother a wiz if this bothers you.");
 }
@@ -526,7 +526,7 @@ int btech_context_which_special(BtechContext *context, DbRef key) {
 
 int btech_context_which_special_attribute(BtechContext *context, DbRef key) {
   int i;
-  int returnValue = -1;
+  int return_value = -1;
   char *str;
 
   if (!is_xcode(context->database, key))
@@ -536,12 +536,12 @@ int btech_context_which_special_attribute(BtechContext *context, DbRef key) {
   if (str && *str) {
     for (i = 0; i < (int)BTECH_SPECIAL_OBJECT_COUNT; i++) {
       if (!strcmp(btech_special_object_definition(i)->type, str)) {
-        returnValue = i;
+        return_value = i;
         break;
       }
     }
   }
-  return (returnValue);
+  return (return_value);
 }
 
 bool btech_context_is_mech(BtechContext *context, DbRef key) {
@@ -560,7 +560,7 @@ void *btech_context_find_object(BtechContext *context, DbRef key) {
   return red_black_tree_find(context->special_objects, (void *)key);
 }
 
-void InitSpecialHash(BtechContext *context, int which) {
+void init_special_hash(BtechContext *context, int which) {
   char buf[MBUF_SIZE];
 
   hash_table_initialize(special_command_table(context, (size_t)which),
@@ -570,14 +570,14 @@ void InitSpecialHash(BtechContext *context, int which) {
         btech_special_command_definition(which, index);
     if (!btech_command_definition_has_handler(command))
       continue;
-    const size_t name_length = strcspn(command->name, " ");
-    if (name_length >= sizeof(buf))
+    const size_t NAME_LENGTH = strcspn(command->name, " ");
+    if (NAME_LENGTH >= sizeof(buf))
       continue;
-    for (size_t name_index = 0; name_index < name_length; ++name_index) {
+    for (size_t name_index = 0; name_index < NAME_LENGTH; ++name_index) {
       *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char), name_index) =
           ascii_to_lower(*checked_string_suffix(command->name, name_index));
     }
-    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char), name_length) =
+    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char), NAME_LENGTH) =
         '\0';
     hash_table_add_const(buf, command,
                          special_command_table(context, (size_t)which));
@@ -637,18 +637,18 @@ bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
 void btech_special_object_type_register(
     const BtechSpecialObjectAction *action) {
   BtechContext *context = action->context;
-  const DbRef player = action->actor;
-  const DbRef object = action->object;
+  const DbRef PLAYER = action->actor;
+  const DbRef OBJECT = action->object;
   int type;
 
-  if (!is_xcode(context->database, object) ||
-      btech_context_find_object(context, object))
+  if (!is_xcode(context->database, OBJECT) ||
+      btech_context_find_object(context, OBJECT))
     return;
-  type = btech_context_which_special_attribute(context, object);
+  type = btech_context_which_special_attribute(context, OBJECT);
   if (type >= 0 &&
       btech_special_object_data_size(btech_special_object_definition(type)) > 0)
-    NewSpecialObject(context, object, type);
-  (void)player;
+    new_special_object(context, OBJECT, type);
+  (void)PLAYER;
 }
 
 #undef notify
@@ -659,19 +659,19 @@ void mecha_notify(EvaluationContext *evaluation, DbRef player,
 
 void mecha_notify_except(const MechaNotificationExclusion *notification) {
   EvaluationContext *evaluation = notification->evaluation;
-  const DbRef loc = notification->location;
-  const DbRef player = notification->actor;
-  const DbRef exception = notification->exception;
+  const DbRef LOC = notification->location;
+  const DbRef PLAYER = notification->actor;
+  const DbRef EXCEPTION = notification->exception;
   const char *msg = notification->message;
   DbRef first;
 
-  if (loc != exception)
-    notify_checked(evaluation, loc, player, msg,
+  if (LOC != EXCEPTION)
+    notify_checked(evaluation, LOC, PLAYER, msg,
                    MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A);
   DOLIST(evaluation->world->database, first,
-         game_object_contents(evaluation->world->database, loc)) {
-    if (first != exception) {
-      notify_checked(evaluation, first, player, msg,
+         game_object_contents(evaluation->world->database, LOC)) {
+    if (first != EXCEPTION) {
+      notify_checked(evaluation, first, PLAYER, msg,
                      (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
     }
   }

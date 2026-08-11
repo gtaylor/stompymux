@@ -31,12 +31,12 @@ static char *macro_string_storage_item(const MacroSet *set, size_t index) {
                                                   (size_t)set->macro_capacity,
                                                   sizeof(*set->string), index);
 }
-static int *commac_macro_slot(struct commac *commac, size_t index) {
+static int *commac_macro_slot(struct Commac *commac, size_t index) {
   return checked_storage_at(commac->macros,
                             sizeof(commac->macros) / sizeof(commac->macros[0]),
                             sizeof(*commac->macros), index);
 }
-static int commac_macro_item(const struct commac *commac, size_t index) {
+static int commac_macro_item(const struct Commac *commac, size_t index) {
   return *(const int *)checked_storage_at_const(
       commac->macros, sizeof(commac->macros) / sizeof(commac->macros[0]),
       sizeof(*commac->macros), index);
@@ -81,17 +81,17 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
     return 0;
   }
   old = alloc_lbuf("do_macro");
-  StringCopy(old, in);
-  const size_t command_length = strlen(cmd);
+  string_copy(old, in);
+  const size_t COMMAND_LENGTH = strlen(cmd);
   size_t command_end = 0;
-  while (command_end < command_length &&
+  while (command_end < COMMAND_LENGTH &&
          *(const char *)checked_storage_at_const(
-             cmd, command_length + 1, sizeof(char), command_end) != ' ')
+             cmd, COMMAND_LENGTH + 1, sizeof(char), command_end) != ' ')
     command_end++;
-  s = checked_storage_at(cmd, command_length + 1, sizeof(char), command_end);
+  s = checked_storage_at(cmd, COMMAND_LENGTH + 1, sizeof(char), command_end);
   if (*s == ' ') {
     *s = 0;
-    s = checked_storage_at(cmd, command_length + 1, sizeof(char),
+    s = checked_storage_at(cmd, COMMAND_LENGTH + 1, sizeof(char),
                            command_end + 1);
   }
   mp = (MACENT *)hash_table_find(cmd, &commands->macros);
@@ -106,7 +106,7 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
     free_lbuf(old);
     return 1;
   } else {
-    StringCopy(in, old);
+    string_copy(in, old);
     free_lbuf(old);
     return 2; /*
                * return any value > 1, and command * * *
@@ -148,7 +148,7 @@ void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   int first;
   int set;
   MacroSet *m;
-  struct commac *c;
+  struct Commac *c;
   int i;
   c = get_commac(registry->channels, player);
   first = -1;
@@ -181,7 +181,7 @@ void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 void do_del_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s) {
   (void)registry;
-  struct commac *c;
+  struct Commac *c;
   int set;
   c = get_commac(registry->channels, player);
   if (is_number(s)) {
@@ -211,7 +211,7 @@ void do_desc_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   if (m) {
     free(m->desc);
     m->desc = malloc(strlen(s) + 1);
-    StringCopy(m->desc, s);
+    string_copy(m->desc, s);
     notify_printf(match->evaluation, player,
                   "MACRO: Current slot description to %s.", s);
   } else
@@ -321,7 +321,7 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 }
 void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s) {
-  struct commac *c;
+  struct Commac *c;
   int set;
   c = get_commac(registry->channels, player);
   if (is_number(s)) {
@@ -340,7 +340,7 @@ void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                      char *s) {
   int i;
-  struct commac *c;
+  struct Commac *c;
   MacroSet *m;
   char *unparse;
   c = get_commac(registry->channels, player);
@@ -348,17 +348,17 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                "#: Num  Description                         Owner            "
                "         LRW");
   for (i = 0; i < 5; i++) {
-    const int macro_index = commac_macro_item(c, (size_t)i);
-    if (macro_index >= 0)
-      if (!(is_valid_macro_index(registry, macro_index)))
+    const int MACRO_INDEX = commac_macro_item(c, (size_t)i);
+    if (MACRO_INDEX >= 0)
+      if (!(is_valid_macro_index(registry, MACRO_INDEX)))
         notify_printf(match->evaluation, player, "%d: INVALID MACRO SET!", i);
       else {
-        m = macro_registry_item(registry, (size_t)macro_index);
+        m = macro_registry_item(registry, (size_t)MACRO_INDEX);
         unparse = unparse_object(match->evaluation->world->database,
                                  match->evaluation, player, m->player);
         notify_printf(
             match->evaluation, player, "%d: %-4d %-35.35s %-24.24s  %c%c%c", i,
-            macro_index, m->desc, unparse, m->status & MACRO_L ? 'L' : '-',
+            MACRO_INDEX, m->desc, unparse, m->status & MACRO_L ? 'L' : '-',
             m->status & MACRO_R ? 'R' : '-', m->status & MACRO_W ? 'W' : '-');
         free_lbuf(unparse);
       }
@@ -421,7 +421,7 @@ void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 }
 void clear_macro_set(MacroRegistry *registry, int set) {
   MacroSet *m;
-  struct commac *c;
+  struct Commac *c;
   int i, j;
   if (is_valid_macro_index(registry, set)) {
     m = macro_registry_item(registry, (size_t)set);
@@ -458,7 +458,7 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *s) {
   int set;
   MacroSet *m;
-  struct commac *c;
+  struct Commac *c;
   c = get_commac(registry->channels, player);
   if (c->curmac == -1) {
     macro_notify(match, player,
@@ -508,47 +508,47 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     return;
   }
   char *input = cmd;
-  const size_t input_length = strlen(input);
+  const size_t INPUT_LENGTH = strlen(input);
   size_t offset = 0;
-  while (offset < input_length &&
-         *(const char *)checked_storage_at_const(input, input_length + 1,
+  while (offset < INPUT_LENGTH &&
+         *(const char *)checked_storage_at_const(input, INPUT_LENGTH + 1,
                                                  sizeof(char), offset) == ' ') {
-    *(char *)checked_storage_at(input, input_length + 1, sizeof(char), offset) =
+    *(char *)checked_storage_at(input, INPUT_LENGTH + 1, sizeof(char), offset) =
         '\0';
     offset++;
   }
-  alias = checked_storage_at(input, input_length + 1, sizeof(char), offset);
-  while (offset < input_length) {
-    const char character = *(const char *)checked_storage_at_const(
-        input, input_length + 1, sizeof(char), offset);
-    if (character == ' ' || character == '=')
+  alias = checked_storage_at(input, INPUT_LENGTH + 1, sizeof(char), offset);
+  while (offset < INPUT_LENGTH) {
+    const char CHARACTER = *(const char *)checked_storage_at_const(
+        input, INPUT_LENGTH + 1, sizeof(char), offset);
+    if (CHARACTER == ' ' || CHARACTER == '=')
       break;
     offset++;
   }
-  while (offset < input_length &&
-         *(const char *)checked_storage_at_const(input, input_length + 1,
+  while (offset < INPUT_LENGTH &&
+         *(const char *)checked_storage_at_const(input, INPUT_LENGTH + 1,
                                                  sizeof(char), offset) == ' ') {
-    *(char *)checked_storage_at(input, input_length + 1, sizeof(char), offset) =
+    *(char *)checked_storage_at(input, INPUT_LENGTH + 1, sizeof(char), offset) =
         '\0';
     offset++;
   }
-  if (*(const char *)checked_storage_at_const(input, input_length + 1,
+  if (*(const char *)checked_storage_at_const(input, INPUT_LENGTH + 1,
                                               sizeof(char), offset) != '=') {
     macro_notify(match, player,
                  "MACRO: You must specify an = in your macro definition");
     return;
   }
-  *(char *)checked_storage_at(input, input_length + 1, sizeof(char), offset) =
+  *(char *)checked_storage_at(input, INPUT_LENGTH + 1, sizeof(char), offset) =
       0;
   offset++;
-  while (offset < input_length &&
-         *(const char *)checked_storage_at_const(input, input_length + 1,
+  while (offset < INPUT_LENGTH &&
+         *(const char *)checked_storage_at_const(input, INPUT_LENGTH + 1,
                                                  sizeof(char), offset) == ' ') {
-    *(char *)checked_storage_at(input, input_length + 1, sizeof(char), offset) =
+    *(char *)checked_storage_at(input, INPUT_LENGTH + 1, sizeof(char), offset) =
         0;
     offset++;
   }
-  cmd = checked_storage_at(input, input_length + 1, sizeof(char), offset);
+  cmd = checked_storage_at(input, INPUT_LENGTH + 1, sizeof(char), offset);
   s = cmd;
   if (!*s) {
     macro_notify(match, player,
@@ -583,9 +583,9 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     na = malloc(5 * (size_t)m->macro_capacity);
     ns = (char **)malloc(sizeof(char *) * (size_t)m->macro_capacity);
     for (i = 0; i < m->macro_count; i++) {
-      StringCopy(checked_storage_at(na, (size_t)m->macro_capacity * 5,
-                                    sizeof(char), (size_t)i * 5),
-                 macro_alias_at(m, (size_t)i));
+      string_copy(checked_storage_at(na, (size_t)m->macro_capacity * 5,
+                                     sizeof(char), (size_t)i * 5),
+                  macro_alias_at(m, (size_t)i));
       *(char **)checked_storage_at((void *)ns, (size_t)m->macro_capacity,
                                    sizeof(*ns), (size_t)i) =
           macro_string_item(m, (size_t)i);
@@ -597,13 +597,13 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
   where = m->macro_count++;
   for (i = where; i > j; i--) {
-    StringCopy(macro_alias_at(m, (size_t)i), macro_alias_at(m, (size_t)i - 1));
+    string_copy(macro_alias_at(m, (size_t)i), macro_alias_at(m, (size_t)i - 1));
     *macro_string_slot(m, (size_t)i) = macro_string_item(m, (size_t)i - 1);
   }
   where = j;
-  StringCopy(macro_alias_at(m, (size_t)where), alias);
+  string_copy(macro_alias_at(m, (size_t)where), alias);
   *macro_string_slot(m, (size_t)where) = malloc(strlen(s) + 1);
-  StringCopy(macro_string_item(m, (size_t)where), s);
+  string_copy(macro_string_item(m, (size_t)where), s);
   (void)snprintf(buffer, sizeof(buffer), "MACRO: Macro %s:%s defined.", alias,
                  s);
   macro_notify(match, player, buffer);
@@ -623,8 +623,8 @@ void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       free(macro_string_item(m, (size_t)i));
       m->macro_count--;
       for (; i < m->macro_count; i++) {
-        StringCopy(macro_alias_at(m, (size_t)i),
-                   macro_alias_at(m, (size_t)i + 1));
+        string_copy(macro_alias_at(m, (size_t)i),
+                    macro_alias_at(m, (size_t)i + 1));
         *macro_string_slot(m, (size_t)i) =
             macro_string_storage_item(m, (size_t)i + 1);
       }
@@ -645,7 +645,7 @@ char *do_process_macro(const MacroExpansionRequest *request) {
   int first, last, current = 0;
   int dir;
   int i;
-  struct commac *c;
+  struct Commac *c;
   char *buff;
   c = get_commac(registry->channels, player);
   buff = alloc_lbuf("do_process_macro");
@@ -653,9 +653,9 @@ char *do_process_macro(const MacroExpansionRequest *request) {
                    * End the string
                    */
   for (i = 0; i < 5; i++) {
-    const int macro_index = commac_macro_item(c, (size_t)i);
-    if (is_valid_macro_index(registry, macro_index)) {
-      m = macro_registry_item(registry, (size_t)macro_index);
+    const int MACRO_INDEX = commac_macro_item(c, (size_t)i);
+    if (is_valid_macro_index(registry, MACRO_INDEX)) {
+      m = macro_registry_item(registry, (size_t)MACRO_INDEX);
       if (m->macro_count > 0) {
         first = 0;
         last = m->macro_count - 1;
@@ -671,31 +671,31 @@ char *do_process_macro(const MacroExpansionRequest *request) {
         }
         if (!dir) {
           tar = macro_string_item(m, (size_t)current);
-          const size_t replacement_length = strlen(tar);
+          const size_t REPLACEMENT_LENGTH = strlen(tar);
           size_t replacement_offset = 0;
           size_t output_offset = 0;
-          while (replacement_offset < replacement_length &&
+          while (replacement_offset < REPLACEMENT_LENGTH &&
                  output_offset < LBUF_SIZE - 1) {
-            const char character = *(const char *)checked_storage_at_const(
-                tar, replacement_length + 1, sizeof(char), replacement_offset);
-            if (character == '%' &&
-                replacement_offset + 1 < replacement_length &&
+            const char CHARACTER = *(const char *)checked_storage_at_const(
+                tar, REPLACEMENT_LENGTH + 1, sizeof(char), replacement_offset);
+            if (CHARACTER == '%' &&
+                replacement_offset + 1 < REPLACEMENT_LENGTH &&
                 *(const char *)checked_storage_at_const(
-                    tar, replacement_length + 1, sizeof(char),
+                    tar, REPLACEMENT_LENGTH + 1, sizeof(char),
                     replacement_offset + 1) == '*') {
               *(char *)checked_storage_at(buff, LBUF_SIZE, sizeof(char),
                                           output_offset++) = '*';
               replacement_offset += 2;
-            } else if (character == '*') {
+            } else if (CHARACTER == '*') {
               char *destination = checked_storage_at(
                   buff, LBUF_SIZE, sizeof(char), output_offset);
-              const size_t remaining = LBUF_SIZE - output_offset;
-              strlcpy(destination, s, remaining);
+              const size_t REMAINING = LBUF_SIZE - output_offset;
+              strlcpy(destination, s, REMAINING);
               output_offset += strlen(destination);
               replacement_offset++;
             } else {
               *(char *)checked_storage_at(buff, LBUF_SIZE, sizeof(char),
-                                          output_offset++) = character;
+                                          output_offset++) = CHARACTER;
               replacement_offset++;
             }
           }

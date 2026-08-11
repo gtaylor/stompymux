@@ -49,23 +49,23 @@ static size_t checked_storage_offset(const void *storage, size_t count,
 
 void *checked_storage_at(void *storage, size_t count, size_t element_size,
                          size_t index) {
-  const size_t offset =
+  const size_t OFFSET =
       checked_storage_offset(storage, count, element_size, index);
 
   /* Clang's C warning does not recognize the checks above. Keep the one
    * unavoidable address calculation inside this audited storage boundary. */
 #pragma clang unsafe_buffer_usage begin
-  return (unsigned char *)storage + offset;
+  return (unsigned char *)storage + OFFSET;
 #pragma clang unsafe_buffer_usage end
 }
 
 const void *checked_storage_at_const(const void *storage, size_t count,
                                      size_t element_size, size_t index) {
-  const size_t offset =
+  const size_t OFFSET =
       checked_storage_offset(storage, count, element_size, index);
 
 #pragma clang unsafe_buffer_usage begin
-  return (const unsigned char *)storage + offset;
+  return (const unsigned char *)storage + OFFSET;
 #pragma clang unsafe_buffer_usage end
 }
 

@@ -40,31 +40,31 @@
 
 int mech_hit_damage_determine(const HitDamageRequest *request) {
   Mech *mech = request->attacker;
-  const int wSection = request->weapon.section;
-  const int wCritSlot = request->weapon.critical;
-  Mech *hitMech = request->target;
-  const int hitX = request->target_hex.x;
-  const int hitY = request->target_hex.y;
-  const int weapindx = request->weapon_index;
-  const int wGattlingShots = request->gatling_shots;
-  const int wBaseWeapDamage = request->base_damage;
-  const int wAmmoMode = request->ammunition_mode;
-  const int type = request->failure_type;
-  const int modifier = request->failure_modifier;
-  const bool isTempCalc = request->temporary_calculation;
+  const int W_SECTION = request->weapon.section;
+  const int W_CRIT_SLOT = request->weapon.critical;
+  Mech *hit_mech = request->target;
+  const int HIT_X = request->target_hex.x;
+  const int HIT_Y = request->target_hex.y;
+  const int WEAPINDX = request->weapon_index;
+  const int W_GATTLING_SHOTS = request->gatling_shots;
+  const int W_BASE_WEAP_DAMAGE = request->base_damage;
+  const int W_AMMO_MODE = request->ammunition_mode;
+  const int TYPE = request->failure_type;
+  const int MODIFIER = request->failure_modifier;
+  const bool IS_TEMP_CALC = request->temporary_calculation;
   BattleMap *mech_map;
-  float fRange = 0.0;
-  int wWeapDamage = wBaseWeapDamage;
-  int wClearDamage = 0;
-  const WeaponRangeProfile ranges = weapon_catalogue_ranges(weapindx);
+  float f_range = 0.0;
+  int w_weap_damage = W_BASE_WEAP_DAMAGE;
+  int w_clear_damage = 0;
+  const WeaponRangeProfile RANGES = weapon_catalogue_ranges(WEAPINDX);
 
   /* Find the range to our target */
-  if (hitMech)
-    fRange = mech_range_to(mech, hitMech);
+  if (hit_mech)
+    f_range = mech_range_to(mech, hit_mech);
   else {
     float fx, fy;
-    MapCoordToRealCoord(hitX, hitY, &fx, &fy);
-    fRange = map_real_range(&(MapRealSegment){
+    map_coord_to_real_coord(HIT_X, HIT_Y, &fx, &fy);
+    f_range = map_real_range(&(MapRealSegment){
         .start = {.x = mech_position_real_x(mech),
                   .y = mech_position_real_y(mech)},
         .end = {.x = fx, .y = fy},
@@ -72,62 +72,63 @@ int mech_hit_damage_determine(const HitDamageRequest *request) {
   }
 
   /* If our Gattling shots are greater then 0, use that as the damage. */
-  if (wGattlingShots > 0)
-    wWeapDamage = wGattlingShots;
+  if (W_GATTLING_SHOTS > 0)
+    w_weap_damage = W_GATTLING_SHOTS;
 
   /* If we're a heavy gauss rifle, damage gets altered by range. */
-  if (weapon_catalogue_is_heavy_gauss(weapindx)) {
-    if (fRange > (float)ranges.medium_range)
-      wWeapDamage = 10;
-    else if (fRange > (float)ranges.short_range)
-      wWeapDamage = 20;
+  if (weapon_catalogue_is_heavy_gauss(WEAPINDX)) {
+    if (f_range > (float)RANGES.medium_range)
+      w_weap_damage = 10;
+    else if (f_range > (float)RANGES.short_range)
+      w_weap_damage = 20;
   }
 
   /* If we're a snub ppc, damage gets altered by range. */
-  if (weapon_catalogue_is_snub_ppc(weapindx)) {
-    if (fRange > (float)ranges.medium_range)
-      wWeapDamage = 5;
-    else if (fRange > (float)ranges.short_range)
-      wWeapDamage = 8;
+  if (weapon_catalogue_is_snub_ppc(WEAPINDX)) {
+    if (f_range > (float)RANGES.medium_range)
+      w_weap_damage = 5;
+    else if (f_range > (float)RANGES.short_range)
+      w_weap_damage = 8;
   }
 
-  wWeapDamage -= mech_weapon_critical_damage_penalty(mech, wSection, wCritSlot);
+  w_weap_damage -=
+      mech_weapon_critical_damage_penalty(mech, W_SECTION, W_CRIT_SLOT);
 
   /* See if we're using flechette ammo */
-  if (hitMech) {
-    if (wAmmoMode & AC_FLECHETTE_MODE) {
-      if (mech_class(hitMech) == CLASS_MW) {
-        if (mech_real_terrain_get(hitMech) == GRASSLAND)
-          wWeapDamage *= 4;
+  if (hit_mech) {
+    if (W_AMMO_MODE & AC_FLECHETTE_MODE) {
+      if (mech_class(hit_mech) == CLASS_MW) {
+        if (mech_real_terrain_get(hit_mech) == GRASSLAND)
+          w_weap_damage *= 4;
         else
-          wWeapDamage *= 2;
-      } else if (mech_class(hitMech) != CLASS_BSUIT)
-        wWeapDamage /= 2;
+          w_weap_damage *= 2;
+      } else if (mech_class(hit_mech) != CLASS_BSUIT)
+        w_weap_damage /= 2;
     }
 
-    if (wAmmoMode & AC_INCENDIARY_MODE) {
-      if (mech_class(hitMech) == CLASS_MW)
-        wWeapDamage += 2;
+    if (W_AMMO_MODE & AC_INCENDIARY_MODE) {
+      if (mech_class(hit_mech) == CLASS_MW)
+        w_weap_damage += 2;
     }
   }
 
   /* Check to see if we have an energy weapon and we're modding the damage based
    * on range */
   if (btech_context_range_modifies_damage(mech_context(mech)) &&
-      weapon_catalogue_is_energy(weapindx)) {
-    if (fRange <= 1.0F)
-      wWeapDamage++;
+      weapon_catalogue_is_energy(WEAPINDX)) {
+    if (f_range <= 1.0F)
+      w_weap_damage++;
     else {
-      if (mech_section_is_underwater(mech, wSection)) {
-        if (fRange > (float)ranges.water_long_range)
-          wWeapDamage = (wWeapDamage / 2);
-        else if (fRange > (float)ranges.water_medium_range)
-          wWeapDamage--;
+      if (mech_section_is_underwater(mech, W_SECTION)) {
+        if (f_range > (float)RANGES.water_long_range)
+          w_weap_damage = (w_weap_damage / 2);
+        else if (f_range > (float)RANGES.water_medium_range)
+          w_weap_damage--;
       } else {
-        if (fRange > (float)ranges.long_range)
-          wWeapDamage = (wWeapDamage / 2);
-        else if (fRange > (float)ranges.medium_range)
-          wWeapDamage--;
+        if (f_range > (float)RANGES.long_range)
+          w_weap_damage = (w_weap_damage / 2);
+        else if (f_range > (float)RANGES.medium_range)
+          w_weap_damage--;
       }
     }
   }
@@ -136,43 +137,43 @@ int mech_hit_damage_determine(const HitDamageRequest *request) {
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   /* If there was a damage type failure, mod the damage */
-  if (type == DAMAGE)
-    wWeapDamage -= modifier;
+  if (TYPE == DAMAGE)
+    w_weap_damage -= MODIFIER;
 
-  if (hitMech && !isTempCalc) {
+  if (hit_mech && !IS_TEMP_CALC) {
     if (btech_context_woods_modify_damage(mech_context(mech)) &&
         battle_terrain_is_forest(map_real_terrain_get(
-            mech_map, mech_position_x(hitMech), mech_position_y(hitMech))) &&
-        ((mech_position_z(hitMech) - 2) <=
-         battle_map_hex_elevation(mech_map, mech_position_x(hitMech),
-                                  mech_position_y(hitMech)))) {
-      wClearDamage = wWeapDamage;
+            mech_map, mech_position_x(hit_mech), mech_position_y(hit_mech))) &&
+        ((mech_position_z(hit_mech) - 2) <=
+         battle_map_hex_elevation(mech_map, mech_position_x(hit_mech),
+                                  mech_position_y(hit_mech)))) {
+      w_clear_damage = w_weap_damage;
 
-      if (map_real_terrain_get(mech_map, mech_position_x(hitMech),
-                               mech_position_y(hitMech)) == LIGHT_FOREST)
-        wWeapDamage -= 2;
-      else if (map_real_terrain_get(mech_map, mech_position_x(hitMech),
-                                    mech_position_y(hitMech)) == HEAVY_FOREST)
-        wWeapDamage -= 4;
+      if (map_real_terrain_get(mech_map, mech_position_x(hit_mech),
+                               mech_position_y(hit_mech)) == LIGHT_FOREST)
+        w_weap_damage -= 2;
+      else if (map_real_terrain_get(mech_map, mech_position_x(hit_mech),
+                                    mech_position_y(hit_mech)) == HEAVY_FOREST)
+        w_weap_damage -= 4;
 
       mech_notify(mech, MECHALL, "The woods absorb some of your shot!");
-      mech_notify(hitMech, MECHALL, "The woods absorb some of the damage!");
+      mech_notify(hit_mech, MECHALL, "The woods absorb some of the damage!");
 
       mech_terrain_possibly_ignite_or_clear(&(TerrainWeaponEffectRequest){
           .mech = mech,
-          .position = {.x = mech_position_x(hitMech),
-                       .y = mech_position_y(hitMech)},
-          .weapon_index = weapindx,
-          .ammunition_mode = wAmmoMode,
-          .damage = wClearDamage,
+          .position = {.x = mech_position_x(hit_mech),
+                       .y = mech_position_y(hit_mech)},
+          .weapon_index = WEAPINDX,
+          .ammunition_mode = W_AMMO_MODE,
+          .damage = w_clear_damage,
           .intentional = true});
     }
   }
 
-  if (wWeapDamage <= 0)
-    wWeapDamage = 1;
+  if (w_weap_damage <= 0)
+    w_weap_damage = 1;
 
-  return wWeapDamage;
+  return w_weap_damage;
 }
 
 static int missile_hit_count(const Mech *mech, int weapon_index,
@@ -190,49 +191,49 @@ static int missile_hit_count(const Mech *mech, int weapon_index,
 
 void mech_hit_resolve(const HitResolutionRequest *request) {
   Mech *mech = request->attacker;
-  const int weapindx = request->weapon_index;
-  const int wSection = request->weapon.section;
-  const int wCritSlot = request->weapon.critical;
-  Mech *hitMech = request->target;
-  const int hitX = request->target_hex.x;
-  const int hitY = request->target_hex.y;
+  const int WEAPINDX = request->weapon_index;
+  const int W_SECTION = request->weapon.section;
+  const int W_CRIT_SLOT = request->weapon.critical;
+  Mech *hit_mech = request->target;
+  const int HIT_X = request->target_hex.x;
+  const int HIT_Y = request->target_hex.y;
   const int LOS = request->line_of_sight;
-  const int type = request->failure_type;
-  const int modifier = request->failure_modifier;
-  const bool reallyhit = request->hit;
-  const int bth = request->base_to_hit;
-  const int wGattlingShots = request->gatling_shots;
-  const bool tIsSwarmAttack = request->swarm_attack;
-  const int player_roll = request->player_roll;
+  const int TYPE = request->failure_type;
+  const int MODIFIER = request->failure_modifier;
+  const bool REALLYHIT = request->hit;
+  const int BTH = request->base_to_hit;
+  const int W_GATTLING_SHOTS = request->gatling_shots;
+  const bool T_IS_SWARM_ATTACK = request->swarm_attack;
+  const int PLAYER_ROLL = request->player_roll;
   int isrear = 0, iscritical = 0;
   int hitloc = 0;
   int roll;
   int aim_hit = 0;
-  int wBaseWeapDamage = weapon_catalogue_damage(weapindx);
-  int wWeapDamage = 0;
+  int w_base_weap_damage = weapon_catalogue_damage(WEAPINDX);
+  int w_weap_damage = 0;
   int num_missiles_hit;
-  int wFireMode = mech_critical_fire_mode(mech, wSection, wCritSlot);
-  int wAmmoMode = mech_critical_ammo_mode(mech, wSection, wCritSlot);
-  int tIsUltra = ((wFireMode & ULTRA_MODE) || (wFireMode & RFAC_MODE));
-  int tIsRAC = (wFireMode & RAC_MODES);
-  int tIsLBX = (wAmmoMode & LBX_MODE);
-  int tIsSwarm = ((wAmmoMode & SWARM_MODE) || (wAmmoMode & SWARM1_MODE));
+  int w_fire_mode = mech_critical_fire_mode(mech, W_SECTION, W_CRIT_SLOT);
+  int w_ammo_mode = mech_critical_ammo_mode(mech, W_SECTION, W_CRIT_SLOT);
+  int t_is_ultra = ((w_fire_mode & ULTRA_MODE) || (w_fire_mode & RFAC_MODE));
+  int t_is_rac = (w_fire_mode & RAC_MODES);
+  int t_is_lbx = (w_ammo_mode & LBX_MODE);
+  int t_is_swarm = ((w_ammo_mode & SWARM_MODE) || (w_ammo_mode & SWARM1_MODE));
   const char *missile_fake_name = nullptr;
   int maximum_missile_hits;
-  int tUsingTC =
-      ((wFireMode & ON_TC) && !weapon_catalogue_is_artillery(weapindx) &&
-       !weapon_catalogue_is_missile(weapindx) &&
+  int t_using_tc =
+      ((w_fire_mode & ON_TC) && !weapon_catalogue_is_artillery(WEAPINDX) &&
+       !weapon_catalogue_is_missile(WEAPINDX) &&
        !mech_condition_summary(mech).targeting_computer_destroyed &&
-       ((mech_aim_section(mech) != NUM_SECTIONS) && hitMech &&
-        (mech_aim_unit_class(mech) == mech_class(hitMech))));
+       ((mech_aim_section(mech) != NUM_SECTIONS) && hit_mech &&
+        (mech_aim_unit_class(mech) == mech_class(hit_mech))));
   int missileindex = 0;
 
-  if (hitMech) {
+  if (hit_mech) {
 
     /* Check to see if we're aiming at a particular location. Swarm attacks
      * can't aim. */
-    if ((mech_aim_section(mech) != NUM_SECTIONS) && hitMech &&
-        mech_is_immobile(hitMech) && !tIsSwarmAttack) {
+    if ((mech_aim_section(mech) != NUM_SECTIONS) && hit_mech &&
+        mech_is_immobile(hit_mech) && !T_IS_SWARM_ATTACK) {
 
       roll = btech_random_roll(mech_context(mech));
 
@@ -241,31 +242,31 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
     }
   }
 
-  if (!weapon_catalogue_is_missile(weapindx)) {
-    wWeapDamage = mech_hit_damage_determine(&(HitDamageRequest){
+  if (!weapon_catalogue_is_missile(WEAPINDX)) {
+    w_weap_damage = mech_hit_damage_determine(&(HitDamageRequest){
         .attacker = mech,
-        .weapon = {.section = wSection, .critical = wCritSlot},
-        .target = hitMech,
-        .target_hex = {.x = hitX, .y = hitY},
-        .weapon_index = weapindx,
-        .gatling_shots = wGattlingShots,
-        .base_damage = wBaseWeapDamage,
-        .ammunition_mode = wAmmoMode,
-        .failure_type = type,
-        .failure_modifier = modifier});
+        .weapon = {.section = W_SECTION, .critical = W_CRIT_SLOT},
+        .target = hit_mech,
+        .target_hex = {.x = HIT_X, .y = HIT_Y},
+        .weapon_index = WEAPINDX,
+        .gatling_shots = W_GATTLING_SHOTS,
+        .base_damage = w_base_weap_damage,
+        .ammunition_mode = w_ammo_mode,
+        .failure_type = TYPE,
+        .failure_modifier = MODIFIER});
 
     /* Check if it is a glancing blow, if so, make an emit */
     if (btech_context_glancing_blows_enabled(mech_context(mech)) &&
-        (player_roll == bth) && hitMech) {
+        (PLAYER_ROLL == BTH) && hit_mech) {
       /* Yes, even though we have two different glance modes, the above is
        * correct because we modified the bth in FireWeapon. Nothing to see here.
        * move along
        */
-      mech_los_broadcast(hitMech, "is nicked by a glancing blow!");
-      mech_notify(hitMech, MECHALL, "You are nicked by a glancing blow!");
-      wWeapDamage = (int)(wWeapDamage + 1) / 2;
-      if (wWeapDamage < 1)
-        wWeapDamage = 1; /* very rare case */
+      mech_los_broadcast(hit_mech, "is nicked by a glancing blow!");
+      mech_notify(hit_mech, MECHALL, "You are nicked by a glancing blow!");
+      w_weap_damage = (int)(w_weap_damage + 1) / 2;
+      if (w_weap_damage < 1)
+        w_weap_damage = 1; /* very rare case */
     }
   }
 
@@ -273,46 +274,46 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
    * Ok, if we're not an artillery weapon or missile and we're not in
    * LBX, RAC, Ultra or RFAC mode...
    */
-  if (!weapon_catalogue_is_artillery(weapindx) &&
-      !weapon_catalogue_is_missile(weapindx) && !tIsUltra && !tIsLBX &&
-      !tIsRAC) {
+  if (!weapon_catalogue_is_artillery(WEAPINDX) &&
+      !weapon_catalogue_is_missile(WEAPINDX) && !t_is_ultra && !t_is_lbx &&
+      !t_is_rac) {
 
-    if (hitMech) {
+    if (hit_mech) {
 
       /* Flamers - if in heat mode don't do damage */
-      if ((weapon_catalogue_is_flamer(weapindx)) && (wFireMode & HEAT_MODE)) {
+      if ((weapon_catalogue_is_flamer(WEAPINDX)) && (w_fire_mode & HEAT_MODE)) {
 
         mech_notify(
-            hitMech, MECHALL,
+            hit_mech, MECHALL,
             "[fg=yellow bold]The flaming plasma sprays all over you![reset]");
         mech_notify(
             mech, MECHALL,
             "[fg=green]You cover your target in flaming plasma![reset]");
-        mech_weapon_heat_add(hitMech, (float)wBaseWeapDamage);
+        mech_weapon_heat_add(hit_mech, (float)w_base_weap_damage);
         return;
 
-      } else if ((weapon_catalogue_is_coolant(weapindx)) &&
-                 (mech_class(hitMech) != CLASS_MW)) {
+      } else if ((weapon_catalogue_is_coolant(WEAPINDX)) &&
+                 (mech_class(hit_mech) != CLASS_MW)) {
 
         /* Its a Coolant Gun */
         /* So now we figure out if we want to hit our unit with it
          * or a target */
 
-        if (wFireMode & HEAT_MODE) {
+        if (w_fire_mode & HEAT_MODE) {
 
           /* Hit our own unit with the coolant gun */
           mech_notify(mech, MECHALL,
                       "[fg=cyan]Coolant washes over your systems!![reset]");
-          mech_weapon_heat_add(mech, -(float)wBaseWeapDamage);
+          mech_weapon_heat_add(mech, -(float)w_base_weap_damage);
 
         } else {
 
           /* Hit the target with the coolant gun */
           mech_notify(mech, MECHALL,
                       "[fg=cyan]You hit with the stream of coolant!![reset]");
-          mech_notify(hitMech, MECHALL,
+          mech_notify(hit_mech, MECHALL,
                       "[fg=cyan]Coolant washes over your systems!![reset]");
-          mech_weapon_heat_add(hitMech, -(float)wBaseWeapDamage);
+          mech_weapon_heat_add(hit_mech, -(float)w_base_weap_damage);
         }
 
         /* Never does damage so return */
@@ -320,15 +321,15 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
       }
 
       if (aim_hit)
-        hitloc = mech_aimed_hit_location(mech, hitMech, &isrear, &iscritical);
-      else if (tUsingTC)
-        hitloc = mech_targeting_computer_hit_location(mech, hitMech, &isrear,
+        hitloc = mech_aimed_hit_location(mech, hit_mech, &isrear, &iscritical);
+      else if (t_using_tc)
+        hitloc = mech_targeting_computer_hit_location(mech, hit_mech, &isrear,
                                                       &iscritical);
       else
-        hitloc = mech_target_hit_location(mech, hitMech, &isrear, &iscritical);
+        hitloc = mech_target_hit_location(mech, hit_mech, &isrear, &iscritical);
 
       mech_damage_apply(&(MechDamageRequest){
-          .target = hitMech,
+          .target = hit_mech,
           .attacker = mech,
           .line_of_sight = LOS,
           .attack_pilot = mech_gunner_dbref(mech),
@@ -337,25 +338,25 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
           .critical = iscritical,
           .armor_damage =
               personal_combat_damage_to_unit(&(PersonalCombatDamageConversion){
-                  .target = hitMech,
-                  .weapon_index = weapindx,
-                  .damage = wWeapDamage,
+                  .target = hit_mech,
+                  .weapon_index = WEAPINDX,
+                  .damage = w_weap_damage,
               }),
           .internal_damage = 0,
           .transfer = MECH_DAMAGE_NORMAL,
-          .cause = weapindx,
-          .base_to_hit = bth,
-          .weapon_index = weapindx,
-          .ammunition_mode = wAmmoMode,
-          .ignore_swarmers = tIsSwarmAttack});
+          .cause = WEAPINDX,
+          .base_to_hit = BTH,
+          .weapon_index = WEAPINDX,
+          .ammunition_mode = w_ammo_mode,
+          .ignore_swarmers = T_IS_SWARM_ATTACK});
 
     } else {
       mech_terrain_hex_hit(
           &(TerrainWeaponHitRequest){.attacker = mech,
-                                     .position = {.x = hitX, .y = hitY},
-                                     .weapon_index = weapindx,
-                                     .ammunition_mode = wAmmoMode,
-                                     .damage = wWeapDamage,
+                                     .position = {.x = HIT_X, .y = HIT_Y},
+                                     .weapon_index = WEAPINDX,
+                                     .ammunition_mode = w_ammo_mode,
+                                     .damage = w_weap_damage,
                                      .hit = true});
     }
 
@@ -377,59 +378,61 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
    * We're gonna fake it by pretending we're either an SRM-2, SRM-4 or SRM-6,
    * depending upon the mode
    */
-  if (tIsRAC) {
-    if (mech_critical_fire_mode(mech, wSection, wCritSlot) & RAC_TWOSHOT_MODE)
+  if (t_is_rac) {
+    if (mech_critical_fire_mode(mech, W_SECTION, W_CRIT_SLOT) &
+        RAC_TWOSHOT_MODE)
       missile_fake_name = "IS.SRM-2";
-    else if (mech_critical_fire_mode(mech, wSection, wCritSlot) &
+    else if (mech_critical_fire_mode(mech, W_SECTION, W_CRIT_SLOT) &
              RAC_FOURSHOT_MODE)
       missile_fake_name = "IS.SRM-4";
-    else if (mech_critical_fire_mode(mech, wSection, wCritSlot) &
+    else if (mech_critical_fire_mode(mech, W_SECTION, W_CRIT_SLOT) &
              RAC_SIXSHOT_MODE)
       missile_fake_name = "IS.SRM-6";
   }
   maximum_missile_hits =
-      missile_hit_count(mech, weapindx, missile_fake_name, tIsRAC, 10);
+      missile_hit_count(mech, WEAPINDX, missile_fake_name, t_is_rac, 10);
   if (maximum_missile_hits == 0)
     return;
 
-  if (weapon_catalogue_is_missile(weapindx)) {
-    if (player_roll < bth)
+  if (weapon_catalogue_is_missile(WEAPINDX)) {
+    if (PLAYER_ROLL < BTH)
       return;
 
-    if (tIsSwarm && hitMech) /* No swarms on hex hits */
+    if (t_is_swarm && hit_mech) /* No swarms on hex hits */
       mech_swarm_missile_hit_target(&(MissileAttackRequest){
           .attacker = mech,
-          .target = hitMech,
-          .weapon = {.weapon_index = weapindx,
-                     .section = wSection,
-                     .critical = wCritSlot},
+          .target = hit_mech,
+          .weapon = {.weapon_index = WEAPINDX,
+                     .section = W_SECTION,
+                     .critical = W_CRIT_SLOT},
           .los = LOS,
-          .base_to_hit = bth,
-          .roll = reallyhit ? bth + 1 : bth - 1,
-          .incoming = (type == CRAZY_MISSILES)
-                          ? maximum_missile_hits * modifier / 100
+          .base_to_hit = BTH,
+          .roll = REALLYHIT ? BTH + 1 : BTH - 1,
+          .incoming = (TYPE == CRAZY_MISSILES)
+                          ? maximum_missile_hits * MODIFIER / 100
                           : maximum_missile_hits,
           .friend_or_foe =
-              mech_critical_ammo_mode(mech, wSection, wCritSlot) & SWARM1_MODE,
-          .swarm_attack = tIsSwarmAttack,
-          .player_roll = player_roll,
+              mech_critical_ammo_mode(mech, W_SECTION, W_CRIT_SLOT) &
+              SWARM1_MODE,
+          .swarm_attack = T_IS_SWARM_ATTACK,
+          .player_roll = PLAYER_ROLL,
       });
     else
       (void)mech_missile_hit_target(&(MissileAttackRequest){
           .attacker = mech,
-          .target = hitMech,
-          .weapon = {.weapon_index = weapindx,
-                     .section = wSection,
-                     .critical = wCritSlot},
-          .target_hex = {.x = hitX, .y = hitY},
+          .target = hit_mech,
+          .weapon = {.weapon_index = WEAPINDX,
+                     .section = W_SECTION,
+                     .critical = W_CRIT_SLOT},
+          .target_hex = {.x = HIT_X, .y = HIT_Y},
           .los = LOS ? 1 : 0,
-          .base_to_hit = bth,
-          .roll = reallyhit ? bth + 1 : bth - 1,
-          .incoming = (type == CRAZY_MISSILES)
-                          ? maximum_missile_hits * modifier / 100
+          .base_to_hit = BTH,
+          .roll = REALLYHIT ? BTH + 1 : BTH - 1,
+          .incoming = (TYPE == CRAZY_MISSILES)
+                          ? maximum_missile_hits * MODIFIER / 100
                           : maximum_missile_hits,
-          .swarm_attack = tIsSwarmAttack,
-          .player_roll = player_roll,
+          .swarm_attack = T_IS_SWARM_ATTACK,
+          .player_roll = PLAYER_ROLL,
       });
 
     return;
@@ -437,20 +440,20 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
 
   missileindex = mech_missile_hit_index(&(MissileHitIndexRequest){
       .attacker = mech,
-      .target = hitMech,
-      .weapon = {.weapon_index = weapindx,
-                 .section = wSection,
-                 .critical = wCritSlot},
+      .target = hit_mech,
+      .weapon = {.weapon_index = WEAPINDX,
+                 .section = W_SECTION,
+                 .critical = W_CRIT_SLOT},
       .glancing = btech_context_glancing_blows_enabled(mech_context(mech)) &&
-                  player_roll == bth,
+                  PLAYER_ROLL == BTH,
   });
   /* This is how we'll handle glancing. Any roll < 2 is considering just one
    * missile hit, full damage */
   if (missileindex == -1)
     num_missiles_hit = 1;
   else
-    num_missiles_hit = missile_hit_count(mech, weapindx, missile_fake_name,
-                                         tIsRAC, missileindex);
+    num_missiles_hit = missile_hit_count(mech, WEAPINDX, missile_fake_name,
+                                         t_is_rac, missileindex);
 
   /*
    * Check for non-missile, multiple hit weapons, like LBXs, RACs, RFACs and
@@ -459,41 +462,41 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
   if (LOS)
     mech_printf(mech, MECHALL, "[fg=green]You hit with %d %s%s![reset]",
                 num_missiles_hit,
-                (tIsUltra || tIsRAC ? "slug"
-                 : tIsLBX           ? "pellet"
-                                    : "missile"),
+                (t_is_ultra || t_is_rac ? "slug"
+                 : t_is_lbx             ? "pellet"
+                                        : "missile"),
                 (num_missiles_hit > 1 ? "s" : ""));
 
-  if (tIsLBX)
+  if (t_is_lbx)
     mech_missile_apply_hits(&(MissileHitsRequest){
         .attacker = mech,
-        .target = hitMech,
-        .target_hex = {.x = hitX, .y = hitY},
+        .target = hit_mech,
+        .target_hex = {.x = HIT_X, .y = HIT_Y},
         .rear = isrear,
         .critical = iscritical,
-        .weapon = {.weapon_index = weapindx,
-                   .section = wSection,
-                   .critical = wCritSlot},
-        .fire_mode = wFireMode,
-        .ammunition_mode = wAmmoMode,
+        .weapon = {.weapon_index = WEAPINDX,
+                   .section = W_SECTION,
+                   .critical = W_CRIT_SLOT},
+        .fire_mode = w_fire_mode,
+        .ammunition_mode = w_ammo_mode,
         .missile_count = num_missiles_hit,
-        .damage_per_missile = tIsLBX ? 1 : wWeapDamage,
-        .salvo_size = weapon_catalogue_cluster_size(weapindx),
+        .damage_per_missile = t_is_lbx ? 1 : w_weap_damage,
+        .salvo_size = weapon_catalogue_cluster_size(WEAPINDX),
         .los = LOS,
-        .base_to_hit = bth,
-        .swarm_attack = tIsSwarmAttack,
+        .base_to_hit = BTH,
+        .swarm_attack = T_IS_SWARM_ATTACK,
     });
   else {
     while (num_missiles_hit) {
-      if (hitMech) {
-        if (tUsingTC)
-          hitloc = mech_targeting_computer_hit_location(mech, hitMech, &isrear,
+      if (hit_mech) {
+        if (t_using_tc)
+          hitloc = mech_targeting_computer_hit_location(mech, hit_mech, &isrear,
                                                         &iscritical);
         else
           hitloc =
-              mech_target_hit_location(mech, hitMech, &isrear, &iscritical);
+              mech_target_hit_location(mech, hit_mech, &isrear, &iscritical);
         mech_damage_apply(
-            &(MechDamageRequest){.target = hitMech,
+            &(MechDamageRequest){.target = hit_mech,
                                  .attacker = mech,
                                  .line_of_sight = LOS,
                                  .attack_pilot = mech_gunner_dbref(mech),
@@ -502,24 +505,24 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
                                  .critical = iscritical,
                                  .armor_damage = personal_combat_damage_to_unit(
                                      &(PersonalCombatDamageConversion){
-                                         .target = hitMech,
-                                         .weapon_index = weapindx,
-                                         .damage = wWeapDamage,
+                                         .target = hit_mech,
+                                         .weapon_index = WEAPINDX,
+                                         .damage = w_weap_damage,
                                      }),
                                  .internal_damage = 0,
                                  .transfer = MECH_DAMAGE_NORMAL,
-                                 .cause = weapindx,
-                                 .base_to_hit = bth,
-                                 .weapon_index = weapindx,
-                                 .ammunition_mode = wAmmoMode,
-                                 .ignore_swarmers = tIsSwarmAttack});
+                                 .cause = WEAPINDX,
+                                 .base_to_hit = BTH,
+                                 .weapon_index = WEAPINDX,
+                                 .ammunition_mode = w_ammo_mode,
+                                 .ignore_swarmers = T_IS_SWARM_ATTACK});
       } else
         mech_terrain_hex_hit(
             &(TerrainWeaponHitRequest){.attacker = mech,
-                                       .position = {.x = hitX, .y = hitY},
-                                       .weapon_index = weapindx,
-                                       .ammunition_mode = wAmmoMode,
-                                       .damage = wWeapDamage,
+                                       .position = {.x = HIT_X, .y = HIT_Y},
+                                       .weapon_index = WEAPINDX,
+                                       .ammunition_mode = w_ammo_mode,
+                                       .damage = w_weap_damage,
                                        .hit = true});
 
       num_missiles_hit--;

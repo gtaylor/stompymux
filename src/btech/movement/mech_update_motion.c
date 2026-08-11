@@ -29,8 +29,8 @@ void mech_heading_update(Mech *mech) {
   int offset;
   int normangle;
   int mw_mod = 1;
-  int const turn_unit = short_to_float_simulation(1);
-  float const turn_unit_float = (float)turn_unit;
+  int const TURN_UNIT = short_to_float_simulation(1);
+  float const TURN_UNIT_FLOAT = (float)TURN_UNIT;
   float maxspeed, omaxspeed;
   BattleMap *mech_map;
   BtechContext *context = mech_context(mech);
@@ -52,7 +52,7 @@ void mech_heading_update(Mech *mech) {
   if (btech_context_uses_fasa_turning(context)) {
     constexpr float FASA_TURN_MOD = 1.5F;
     if (mech_is_jumping(mech))
-      offset = clamp_float_to_int(2.0F * turn_unit_float * 2.0F * 360.0F *
+      offset = clamp_float_to_int(2.0F * TURN_UNIT_FLOAT * 2.0F * 360.0F *
                                   FASA_TURN_MOD / 60.0F);
     else {
       float ts = mech_current_speed(mech);
@@ -64,11 +64,11 @@ void mech_heading_update(Mech *mech) {
       if (ts > maxspeed || maxspeed < 0.1F) /* kludge */
         offset = 0;
       else {
-        float const offset_float = turn_unit_float * 2.0F * 360.0F *
+        float const OFFSET_FLOAT = TURN_UNIT_FLOAT * 2.0F * 360.0F *
                                    FASA_TURN_MOD / 60.0F * (maxspeed - ts) *
                                    (omaxspeed / maxspeed) * (float)mw_mod *
                                    MP_PER_KPH / 6.0F;
-        offset = clamp_float_to_int(offset_float); /* hmm. */
+        offset = clamp_float_to_int(OFFSET_FLOAT); /* hmm. */
       }
     }
   } else {
@@ -77,30 +77,30 @@ void mech_heading_update(Mech *mech) {
       float jump_speed = mech_jump_speed(mech);
       if (mech_is_under_gravity(mech) && mech_map) {
         int gravity = battle_map_gravity(mech_map);
-        int const effective_gravity = gravity > 50 ? gravity : 50;
-        jump_speed = jump_speed * 100.0F / (float)effective_gravity;
+        int const EFFECTIVE_GRAVITY = gravity > 50 ? gravity : 50;
+        jump_speed = jump_speed * 100.0F / (float)EFFECTIVE_GRAVITY;
       }
       offset = short_to_float_simulation(1) * 6 *
                clamp_float_to_int(jump_speed * MP_PER_KPH) * mw_mod;
     } else if (fabsf(mech_current_speed(mech)) < 1.0F) {
-      float const offset_float =
-          turn_unit_float * 3.0F * maxspeed * MP_PER_KPH * (float)mw_mod;
-      offset = clamp_float_to_int(offset_float);
+      float const OFFSET_FLOAT =
+          TURN_UNIT_FLOAT * 3.0F * maxspeed * MP_PER_KPH * (float)mw_mod;
+      offset = clamp_float_to_int(OFFSET_FLOAT);
     } else {
-      float const offset_float =
-          turn_unit_float * 2.0F * maxspeed * MP_PER_KPH * (float)mw_mod;
-      offset = clamp_float_to_int(offset_float);
+      float const OFFSET_FLOAT =
+          TURN_UNIT_FLOAT * 2.0F * maxspeed * MP_PER_KPH * (float)mw_mod;
+      offset = clamp_float_to_int(OFFSET_FLOAT);
       if ((short_to_float_simulation(abs(normangle)) > offset) &&
           mech_current_speed(mech) > 2.0F * maxspeed / 3.0F + 0.1F) {
-        const int half_offset = offset / 2;
+        const int HALF_OFFSET = offset / 2;
         if (mech_current_speed(mech) > maxspeed)
           offset =
-              clamp_float_to_int((float)offset - (float)half_offset * maxspeed /
+              clamp_float_to_int((float)offset - (float)HALF_OFFSET * maxspeed /
                                                      mech_current_speed(mech));
         else
           offset = clamp_float_to_int(
               (float)offset -
-              (float)half_offset *
+              (float)HALF_OFFSET *
                   (3.0F * mech_current_speed(mech) / maxspeed - 2.0F));
       }
     }
@@ -110,11 +110,11 @@ void mech_heading_update(Mech *mech) {
 #ifdef BT_MOVEMENT_MODES
   MechConditionSummary conditions = mech_condition_summary(mech);
   if (conditions.tight_turn_mode &&
-      HasBoolAdvantage(context, mech_pilot_dbref(mech), "maneuvering_ace"))
+      has_bool_advantage(context, mech_pilot_dbref(mech), "maneuvering_ace"))
     offset = (offset * 3) / 2;
   if ((conditions.sprinting || conditions.evading) &&
-      !HasBoolAdvantage(context, mech_pilot_dbref(mech), "maneuvering_ace")) {
-    if (HasBoolAdvantage(context, mech_pilot_dbref(mech), "speed_demon"))
+      !has_bool_advantage(context, mech_pilot_dbref(mech), "maneuvering_ace")) {
+    if (has_bool_advantage(context, mech_pilot_dbref(mech), "speed_demon"))
       offset = (offset * 2) / 3;
     else
       offset = (offset / 2);

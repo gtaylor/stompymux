@@ -57,8 +57,8 @@ static void tag_recycle_event(MuxEvent *e) {
 void mech_tag(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *target;
   char *args[2];
-  DbRef refTarget;
-  int LOS = 1;
+  DbRef ref_target;
+  int los = 1;
   float range = 0.0;
 
   if (!common_checks(player, mech, MECH_USUALO))
@@ -87,9 +87,9 @@ void mech_tag(DbRef player, void *data, char *buffer) {
 
   /* Clear our TAG */
   if (!strcmp(args[0], "-")) {
-    refTarget = mech_tag_target_dbref(mech);
+    ref_target = mech_tag_target_dbref(mech);
 
-    if (refTarget <= 0) {
+    if (ref_target <= 0) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "You are not currently tagging anything!");
       return;
@@ -101,18 +101,18 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   }
 
   /* TAG something... anything :) */
-  refTarget = FindTargetDBREFFromMapNumber(mech, args[0]);
-  target = btech_context_get_mech(mech_context(mech), refTarget);
+  ref_target = find_target_dbref_from_map_number(mech, args[0]);
+  target = btech_context_get_mech(mech_context(mech), ref_target);
 
   if (target) {
     range = mech_range_to(mech, target);
 
-    LOS = mech_los_check_unblocked(mech, target, mech_position_x(target),
+    los = mech_los_check_unblocked(mech, target, mech_position_x(target),
                                    mech_position_y(target), range);
   } else
-    refTarget = 0;
+    ref_target = 0;
 
-  if (refTarget < 1 || !LOS) {
+  if (ref_target < 1 || !los) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That is not a valid TAG targetID. Try again.");
     return;
@@ -179,16 +179,16 @@ void mech_tag_stop(Mech *mech) {
 
 void mech_tag_check(Mech *mech) {
   Mech *target;
-  DbRef refTarget;
+  DbRef ref_target;
   float range;
-  int LOS = 1;
+  int los = 1;
 
-  refTarget = mech_tag_target_dbref(mech);
+  ref_target = mech_tag_target_dbref(mech);
 
-  if (refTarget <= 0)
+  if (ref_target <= 0)
     return;
 
-  target = btech_context_get_mech(mech_context(mech), refTarget);
+  target = btech_context_get_mech(mech_context(mech), ref_target);
 
   if (!target) {
     mech_tag_stop(mech);
@@ -201,10 +201,10 @@ void mech_tag_check(Mech *mech) {
   }
 
   range = mech_range_to(mech, target);
-  LOS = mech_los_check_unblocked(mech, target, mech_position_x(target),
+  los = mech_los_check_unblocked(mech, target, mech_position_x(target),
                                  mech_position_y(target), range);
 
-  if (!LOS || (range > TAG_LONG)) {
+  if (!los || (range > TAG_LONG)) {
     mech_tag_stop(mech);
     return;
   }

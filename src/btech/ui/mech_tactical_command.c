@@ -36,7 +36,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   int x, y;
   char *args_vec[4];
   BattleMap *mech_map;
-  int displayHeight = MAP_DISPLAY_HEIGHT, displayWidth = MAP_DISPLAY_WIDTH;
+  int display_height = MAP_DISPLAY_HEIGHT, display_width = MAP_DISPLAY_WIDTH;
   char *str;
   MapText *map_text;
   int flags = 3, dohexlos = 0;
@@ -109,7 +109,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  const TacticalArgumentParseResult parsed =
+  const TacticalArgumentParseResult PARSED =
       tactical_arguments_parse(&(TacticalArgumentParseRequest){
           .player = player,
           .mech = mech,
@@ -119,10 +119,10 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
           .argument_count = argc,
           .maximum_range = mech_tactical_range(mech),
       });
-  if (!parsed.valid)
+  if (!PARSED.valid)
     return;
-  x = parsed.position.x;
-  y = parsed.position.y;
+  x = PARSED.position.x;
+  y = PARSED.position.y;
 
   /* Get the Tacsize attribute from
    * the player, if doesn't exist set the height and width to
@@ -131,34 +131,34 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   str = btech_attribute_read(mech_context(mech)->database, player, A_TACSIZE,
                              (char[LBUF_SIZE]){0});
   if (!*str) {
-    displayHeight = MAP_DISPLAY_HEIGHT;
-    displayWidth = MAP_DISPLAY_WIDTH;
-  } else if (!parse_int_checked(strtok(str, " \t"), &displayHeight) ||
-             !parse_int_checked(strtok(nullptr, " \t"), &displayWidth) ||
-             strtok(nullptr, " \t") != nullptr || displayHeight > 24 ||
-             displayHeight < 5 || displayWidth > 40 || displayWidth < 5) {
+    display_height = MAP_DISPLAY_HEIGHT;
+    display_width = MAP_DISPLAY_WIDTH;
+  } else if (!parse_int_checked(strtok(str, " \t"), &display_height) ||
+             !parse_int_checked(strtok(nullptr, " \t"), &display_width) ||
+             strtok(nullptr, " \t") != nullptr || display_height > 24 ||
+             display_height < 5 || display_width > 40 || display_width < 5) {
 
     mecha_notify(evaluation, player,
                  "Illegal Tacsize attribute. Must be in format "
                  "'Height Width' . Height : 5-24 Width : 5-40");
-    displayHeight = MAP_DISPLAY_HEIGHT;
-    displayWidth = MAP_DISPLAY_WIDTH;
+    display_height = MAP_DISPLAY_HEIGHT;
+    display_width = MAP_DISPLAY_WIDTH;
   }
 
   /* Everything worked but lets check the mech's tac range
    * and the map size */
-  displayHeight = (displayHeight <= 2 * mech_tactical_range(mech)
-                       ? displayHeight
+  display_height = (display_height <= 2 * mech_tactical_range(mech)
+                        ? display_height
+                        : 2 * mech_tactical_range(mech));
+  display_width = (display_width <= 2 * mech_tactical_range(mech)
+                       ? display_width
                        : 2 * mech_tactical_range(mech));
-  displayWidth = (displayWidth <= 2 * mech_tactical_range(mech)
-                      ? displayWidth
-                      : 2 * mech_tactical_range(mech));
 
-  displayHeight = (displayHeight <= mech_map->map_height)
-                      ? displayHeight
-                      : mech_map->map_height;
-  displayWidth = (displayWidth <= mech_map->map_width) ? displayWidth
-                                                       : mech_map->map_width;
+  display_height = (display_height <= mech_map->map_height)
+                       ? display_height
+                       : mech_map->map_height;
+  display_width = (display_width <= mech_map->map_width) ? display_width
+                                                         : mech_map->map_width;
 
   /* Get the data to draw the map */
   MapTextRequest request = {
@@ -167,8 +167,8 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
       .map = mech_map,
       .center_x = x,
       .center_y = y,
-      .width = displayWidth,
-      .height = displayHeight,
+      .width = display_width,
+      .height = display_height,
       .labels = flags,
       .calculate_los = dohexlos,
   };

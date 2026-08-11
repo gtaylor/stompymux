@@ -55,15 +55,15 @@ static void lrs_text_append(char *buffer, size_t capacity, const char *format,
 
 static void lrs_text_append(char *buffer, size_t capacity, const char *format,
                             ...) {
-  const size_t used = strlen(buffer);
-  if (used >= capacity)
+  const size_t USED = strlen(buffer);
+  if (USED >= capacity)
     return;
   va_list arguments;
   va_start(arguments, format);
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   (void)vsnprintf(
-      checked_storage_region(buffer, capacity, used, capacity - used),
-      capacity - used, format, arguments);
+      checked_storage_region(buffer, capacity, USED, capacity - USED),
+      capacity - USED, format, arguments);
   va_end(arguments);
 }
 
@@ -72,7 +72,7 @@ static bool mech_seems_friendly(Mech *mech, Mech *other) {
          mech_los_check_unblocked(mech, other, 0, 0, 0);
 }
 
-char GetLRSMechChar(Mech *mech, Mech *other) {
+char get_lrs_mech_char(Mech *mech, Mech *other) {
   char c = 'u';
 
   if (mech == other)
@@ -160,9 +160,9 @@ char map_terrain_color_char(const TerrainColorRequest *request) {
 
 const char *map_color_markup(char color) {
   bool bold = color >= 'A' && color <= 'Z';
-  const char normalized = bold ? (char)(color + ('a' - 'A')) : color;
+  const char NORMALIZED = bold ? (char)(color + ('a' - 'A')) : color;
 
-  switch (normalized) {
+  switch (NORMALIZED) {
   case 'x':
     return bold ? "[fg=black bold]" : "[fg=black]";
   case 'r':
@@ -206,7 +206,7 @@ static MapCellText map_cell_text(char newc, char *prevc, char c) {
 
 static MapCellText lrs_mech_text(const MapColorScheme *colors, Mech *mech,
                                  Mech *other, int docolor, char *prevc) {
-  char c = GetLRSMechChar(mech, other);
+  char c = get_lrs_mech_char(mech, other);
   char newc;
 
   if (!docolor) {
@@ -356,15 +356,15 @@ typedef struct LrsMapRequest {
 
 static void show_lrs_map(const LrsMapRequest *request) {
   const MapColorScheme *colors = request->colors;
-  const DbRef player = request->player;
+  const DbRef PLAYER = request->player;
   Mech *mech = request->mech;
   BattleMap *map = request->map;
-  const int x = request->center.x;
-  const int y = request->center.y;
-  const int displayHeight = request->display_height;
-  const int mode = request->mode;
+  const int X = request->center.x;
+  const int Y = request->center.y;
+  const int DISPLAY_HEIGHT = request->display_height;
+  const int MODE = request->mode;
   int loop, b_width, e_width, b_height, e_height, i;
-  Mech *oMech;
+  Mech *o_mech;
 
   /* These buffers hold styled map cells and their coordinate labels. */
   char topbuff[LBUF_SIZE] = "    ";
@@ -379,25 +379,25 @@ static void show_lrs_map(const LrsMapRequest *request) {
   HexLosMap *losmap = nullptr;
 
   /* x and y hold the viewing center of the map */
-  b_width = x - LRS_DISPLAY_WIDTH / 2;
-  b_width = MAX(b_width, 0);
+  b_width = X - LRS_DISPLAY_WIDTH / 2;
+  b_width = max(b_width, 0);
   e_width = b_width + LRS_DISPLAY_WIDTH;
   if (e_width >= map->map_width) {
     e_width = map->map_width - 1;
     b_width = e_width - LRS_DISPLAY_WIDTH;
-    b_width = MAX(b_width, 0);
+    b_width = max(b_width, 0);
   }
 
   if (b_width % 2)
     oddcol = 1;
 
-  b_height = y - displayHeight / 2;
-  b_height = MAX(b_height, 0);
-  e_height = b_height + displayHeight;
+  b_height = Y - DISPLAY_HEIGHT / 2;
+  b_height = max(b_height, 0);
+  e_height = b_height + DISPLAY_HEIGHT;
   if (e_height > map->map_height) {
     e_height = map->map_height;
-    b_height = e_height - displayHeight;
-    b_height = MAX(b_height, 0);
+    b_height = e_height - DISPLAY_HEIGHT;
+    b_height = max(b_height, 0);
   }
 
   /* Display the top labels */
@@ -409,24 +409,24 @@ static void show_lrs_map(const LrsMapRequest *request) {
     lrs_text_append(botbuff, sizeof(botbuff), "%c",
                     *checked_string_suffix(trash1, 2));
   }
-  mecha_notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
-  mecha_notify(btech_context_evaluation(mech_context(mech)), player, midbuff);
-  mecha_notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
+  mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER, topbuff);
+  mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER, midbuff);
+  mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER, botbuff);
 
-  if (mode & LRS_MECHMODE) {
+  if (MODE & LRS_MECHMODE) {
     for (i = 0; i < battle_map_unit_count(map); i++) {
-      oMech = btech_context_get_mech(mech_context(mech),
-                                     battle_map_unit_dbref(map, i));
-      if (oMech) {
-        if ((mech == oMech) ||
-            (mech_position_y(oMech) >= b_height &&
-             mech_position_y(oMech) <= e_height &&
-             mech_position_x(oMech) >= b_width &&
-             mech_position_x(oMech) <= e_width &&
-             mech_los_check(mech, oMech, mech_position_x(oMech),
-                            mech_position_y(oMech),
-                            mech_range_to(mech, oMech))))
-          *lrs_mech_slot(&mechs, last_mech++) = oMech;
+      o_mech = btech_context_get_mech(mech_context(mech),
+                                      battle_map_unit_dbref(map, i));
+      if (o_mech) {
+        if ((mech == o_mech) ||
+            (mech_position_y(o_mech) >= b_height &&
+             mech_position_y(o_mech) <= e_height &&
+             mech_position_x(o_mech) >= b_width &&
+             mech_position_x(o_mech) <= e_width &&
+             mech_los_check(mech, o_mech, mech_position_x(o_mech),
+                            mech_position_y(o_mech),
+                            mech_range_to(mech, o_mech))))
+          *lrs_mech_slot(&mechs, last_mech++) = o_mech;
       }
     }
     for (i = 0; i < (last_mech - 1); i++) /* Bubble-sort the list
@@ -434,23 +434,23 @@ static void show_lrs_map(const LrsMapRequest *request) {
       for (loop = (i + 1); loop < last_mech; loop++) {
         if (mech_position_y(lrs_mech_at(&mechs, i)) >
             mech_position_y(lrs_mech_at(&mechs, loop))) {
-          oMech = lrs_mech_at(&mechs, i);
+          o_mech = lrs_mech_at(&mechs, i);
           *lrs_mech_slot(&mechs, i) = lrs_mech_at(&mechs, loop);
-          *lrs_mech_slot(&mechs, loop) = oMech;
+          *lrs_mech_slot(&mechs, loop) = o_mech;
         } else if (mech_position_y(lrs_mech_at(&mechs, i)) ==
                        mech_position_y(lrs_mech_at(&mechs, loop)) &&
                    mech_position_x(lrs_mech_at(&mechs, i)) >
                        mech_position_x(lrs_mech_at(&mechs, loop))) {
-          oMech = lrs_mech_at(&mechs, i);
+          o_mech = lrs_mech_at(&mechs, i);
           *lrs_mech_slot(&mechs, i) = lrs_mech_at(&mechs, loop);
-          *lrs_mech_slot(&mechs, loop) = oMech;
+          *lrs_mech_slot(&mechs, loop) = o_mech;
         }
       }
     *lrs_mech_slot(&mechs, last_mech) = nullptr;
     last_mech = 0;
   }
 
-  if ((mode & LRS_LOSMODE) &&
+  if ((MODE & LRS_LOSMODE) &&
       los_map_calculate(&los_map_storage, map, mech, b_width, b_height,
                         e_width - b_width, e_height - b_height))
     losmap = &los_map_storage;
@@ -458,7 +458,7 @@ static void show_lrs_map(const LrsMapRequest *request) {
   for (loop = b_height; loop < e_height; loop++) {
     (void)snprintf(topbuff, sizeof(topbuff), "%3d ", loop);
     strcpy(botbuff, "    ");
-    if (mode & LRS_MECHMODE)
+    if (MODE & LRS_MECHMODE)
       while (lrs_mech_at(&mechs, last_mech) &&
              mech_position_y(lrs_mech_at(&mechs, last_mech)) < loop)
         last_mech++;
@@ -466,28 +466,28 @@ static void show_lrs_map(const LrsMapRequest *request) {
     for (i = b_width; i < e_width; i += 2) {
       lrs_text_append(topbuff, sizeof(topbuff), oddcol ? "%s " : " %s",
                       lrs_hex_text(colors, mech, map, i + !oddcol, loop,
-                                   &prevct, mode, &mechs, last_mech, losmap)
+                                   &prevct, MODE, &mechs, last_mech, losmap)
                           .text);
 
       lrs_text_append(botbuff, sizeof(botbuff), oddcol ? " %s" : "%s ",
                       lrs_hex_text(colors, mech, map, i + oddcol, loop, &prevcb,
-                                   mode, &mechs, last_mech, losmap)
+                                   MODE, &mechs, last_mech, losmap)
                           .text);
     }
     if (i == e_width && !oddcol) {
       lrs_text_append(botbuff, sizeof(botbuff), "%s",
-                      lrs_hex_text(colors, mech, map, i, loop, &prevcb, mode,
+                      lrs_hex_text(colors, mech, map, i, loop, &prevcb, MODE,
                                    &mechs, last_mech, losmap)
                           .text);
     } else if (i == e_width) {
       lrs_text_append(topbuff, sizeof(topbuff), "%s",
-                      lrs_hex_text(colors, mech, map, i, loop, &prevct, mode,
+                      lrs_hex_text(colors, mech, map, i, loop, &prevct, MODE,
                                    &mechs, last_mech, losmap)
                           .text);
       strlcat(botbuff, " ", sizeof(botbuff));
     }
 
-    if (mode & (LRS_COLORMODE | LRS_ELEVCOLORMODE)) {
+    if (MODE & (LRS_COLORMODE | LRS_ELEVCOLORMODE)) {
       if (prevct) {
         strlcat(topbuff, "[reset]", sizeof(topbuff));
         prevct = 0;
@@ -498,8 +498,8 @@ static void show_lrs_map(const LrsMapRequest *request) {
       }
     }
     lrs_text_append(botbuff, sizeof(botbuff), " %-3d", loop);
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER, topbuff);
+    mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER, botbuff);
   }
 }
 
@@ -510,7 +510,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   int argc, mode = 0;
   int x, y;
   char *args[5], *str;
-  int displayHeight = LRS_DISPLAY_HEIGHT;
+  int display_height = LRS_DISPLAY_HEIGHT;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;
@@ -526,7 +526,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
                  "Your system seems to be inoperational.");
     return;
   }
-  const TacticalArgumentParseResult parsed =
+  const TacticalArgumentParseResult PARSED =
       tactical_arguments_parse(&(TacticalArgumentParseRequest){
           .player = player,
           .mech = mech,
@@ -536,10 +536,10 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
           .argument_count = argc - 1,
           .maximum_range = mech_long_range_sensor_range(mech),
       });
-  if (!parsed.valid)
+  if (!PARSED.valid)
     return;
-  x = parsed.position.x;
-  y = parsed.position.y;
+  x = PARSED.position.x;
+  y = PARSED.position.y;
   switch (args[0][0]) {
   case 'M':
   case 'm':
@@ -583,19 +583,19 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   str = btech_attribute_read(mech_context(mech)->database, player, A_LRSHEIGHT,
                              (char[LBUF_SIZE]){0});
   if (*str) {
-    if (!parse_int_checked(str, &displayHeight) || displayHeight < 10 ||
-        displayHeight > 40) {
+    if (!parse_int_checked(str, &display_height) || display_height < 10 ||
+        display_height > 40) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Illegal LRSHeight attribute.  Must be between 10 and 40");
-      displayHeight = LRS_DISPLAY_HEIGHT;
+      display_height = LRS_DISPLAY_HEIGHT;
     }
   }
 
-  displayHeight = MIN(displayHeight, 2 * mech_long_range_sensor_range(mech));
-  displayHeight = MIN(displayHeight, map->map_height);
+  display_height = min(display_height, 2 * mech_long_range_sensor_range(mech));
+  display_height = min(display_height, map->map_height);
 
-  if (!(displayHeight % 2))
-    displayHeight++;
+  if (!(display_height % 2))
+    display_height++;
 
   map_color_scheme_load(&colors);
 
@@ -604,6 +604,6 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
                                 .mech = mech,
                                 .map = map,
                                 .center = {.x = x, .y = y},
-                                .display_height = displayHeight,
+                                .display_height = display_height,
                                 .mode = mode});
 }

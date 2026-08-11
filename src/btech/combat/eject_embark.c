@@ -74,7 +74,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
                    "Invalid number of arguements.");
       return;
     }
-    target_num = FindTargetDBREFFromMapNumber(mech, args[0]);
+    target_num = find_target_dbref_from_map_number(mech, args[0]);
     if (target_num == -1) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "That target is not in your line of sight.");
@@ -202,7 +202,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
                  "Invalid number of arguements.");
     return;
   }
-  target_num = FindTargetDBREFFromMapNumber(mech, args[0]);
+  target_num = find_target_dbref_from_map_number(mech, args[0]);
   if (target_num == -1) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That target is not in your line of sight.");
@@ -387,8 +387,8 @@ void mech_embark(DbRef player, void *data, char *buffer) {
                                         mech_display_id(target).text));
     }
   }
-  MarkForLOSUpdate(mech);
-  MarkForLOSUpdate(target);
+  mark_for_los_update(mech);
+  mark_for_los_update(target);
 
   if (mech_condition_summary(target).hidden) {
     mech_hidden_set(target, false);
@@ -399,9 +399,9 @@ void mech_embark(DbRef player, void *data, char *buffer) {
    * is handled first because mech_power_down() will cause it to drop
    * whatever its towing */
   if (towee && mech_carried_dbref(mech) > 0) {
-    MarkForLOSUpdate(towee);
-    mech_Rsetmapindex(GOD, (void *)towee, tprintf("%d", (int)-1));
-    mech_Rsetxy(GOD, (void *)towee, tprintf("%d %d", 0, 0));
+    mark_for_los_update(towee);
+    mech_rsetmapindex(GOD, (void *)towee, tprintf("%d", (int)-1));
+    mech_rsetxy(GOD, (void *)towee, tprintf("%d %d", 0, 0));
     move_via_teleport(
         &(ObjectMovementRequest){.evaluation = evaluation,
                                  .object = mech_dbref(towee),
@@ -414,8 +414,8 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   }
 
   /* Now handle the unit itself */
-  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%d", (int)-1));
-  mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", 0, 0));
+  mech_rsetmapindex(GOD, (void *)mech, tprintf("%d", (int)-1));
+  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", 0, 0));
   move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
                                              .object = mech_dbref(mech),
                                              .destination = mech_dbref(target),
@@ -426,7 +426,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   mech_speed_correct(target);
 }
 
-void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
+void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   Mech *m;
   DbRef suit;
   char *d;
@@ -474,10 +474,10 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
   }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
   mech_team_set(m, mech_team(mech));
-  mech_Rsetmapindex(GOD, (void *)m, tprintf("%ld", mech_map_dbref(mech)));
-  mech_Rsetxy(GOD, (void *)m,
+  mech_rsetmapindex(GOD, (void *)m, tprintf("%ld", mech_map_dbref(mech)));
+  mech_rsetxy(GOD, (void *)m,
               tprintf("%d %d", mech_position_x(mech), mech_position_y(mech)));
-  mech_Rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
+  mech_rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
 
   /* Tele the MW to the map and player to the MW */
   move_via_teleport(
@@ -511,7 +511,7 @@ void autoeject(DbRef player, Mech *mech, int tIsBSuit) {
   #endif
   */
 
-  if (tIsBSuit) {
+  if (t_is_b_suit) {
     mech_los_broadcast(m, "climbs out of one of the destroyed suits!");
     mecha_notify(evaluation, player, "You climb out of the unit!");
   } else {

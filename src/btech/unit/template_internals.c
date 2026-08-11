@@ -72,7 +72,7 @@ const char *template_internal_name(int index) {
 }
 
 #ifdef BT_PART_WEIGHTS
-const int internalsweight[] = {
+const int INTERNALSWEIGHT[] = {
     102,  /* ShoulderOrHip */
     102,  /* UpperActuator */
     102,  /* LowerActuator */
@@ -124,4 +124,4 @@ const int internalsweight[] = {
 };
 #endif /* BT_PART_WEIGHTS */
 
-const int template_internal_count = sizeof(internals) / sizeof(*internals) - 1;
+const int TEMPLATE_INTERNAL_COUNT = sizeof(internals) / sizeof(*internals) - 1;

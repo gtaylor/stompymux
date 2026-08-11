@@ -23,7 +23,7 @@
 #include "section_types.h"
 #include <stddef.h>
 
-int mech_punch_hit_location(Mech *target, int hitGroup) {
+int mech_punch_hit_location(Mech *target, int hit_group) {
   BtechContext *context = mech_context(target);
 
   int roll = btech_random_range_int(context, 1, 6);
@@ -32,7 +32,7 @@ int mech_punch_hit_location(Mech *target, int hitGroup) {
    * - Dany 01/2007 */
   if (mech_is_quad(target)) {
 
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 1:
@@ -73,7 +73,7 @@ int mech_punch_hit_location(Mech *target, int hitGroup) {
     case FRONT:
       switch (roll) {
       case 1:
-        if (hitGroup == BACK) {
+        if (hit_group == BACK) {
           /* Rear Left Leg */
           return LLEG;
         } else {
@@ -87,7 +87,7 @@ int mech_punch_hit_location(Mech *target, int hitGroup) {
       case 4:
         return RTORSO;
       case 5:
-        if (hitGroup == BACK) {
+        if (hit_group == BACK) {
           /* Rear Right Leg */
           return RLEG;
         } else {
@@ -103,7 +103,7 @@ int mech_punch_hit_location(Mech *target, int hitGroup) {
   } else {
 
     /* Biped Mech */
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 1:
@@ -159,7 +159,7 @@ int mech_punch_hit_location(Mech *target, int hitGroup) {
   return -1;
 }
 
-int mech_kick_hit_location(Mech *target, int hitGroup) {
+int mech_kick_hit_location(Mech *target, int hit_group) {
   BtechContext *context = mech_context(target);
 
   int roll = btech_random_range_int(context, 1, 6);
@@ -167,7 +167,7 @@ int mech_kick_hit_location(Mech *target, int hitGroup) {
   /* New tables from Total Warfare for quads */
   if (mech_is_quad(target)) {
 
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       switch (roll) {
       case 1:
@@ -204,7 +204,7 @@ int mech_kick_hit_location(Mech *target, int hitGroup) {
       case 1:
       case 2:
       case 3:
-        if (hitGroup == BACK) {
+        if (hit_group == BACK) {
           /* Right Rear Leg */
           return RLEG;
         } else {
@@ -214,7 +214,7 @@ int mech_kick_hit_location(Mech *target, int hitGroup) {
       case 4:
       case 5:
       case 6:
-        if (hitGroup == BACK) {
+        if (hit_group == BACK) {
           /* Left Rear Leg */
           return LLEG;
         } else {
@@ -226,7 +226,7 @@ int mech_kick_hit_location(Mech *target, int hitGroup) {
 
   } else {
 
-    switch (hitGroup) {
+    switch (hit_group) {
     case LEFTSIDE:
       return LLEG;
     case BACK:
@@ -258,10 +258,10 @@ int mech_kick_hit_location(Mech *target, int hitGroup) {
  * instead of doing damage to the head it stuns the pilot
  * and re-rolls the location
  */
-int mech_head_hit_modify(int hitGroup, Mech *mech) {
+int mech_head_hit_modify(int hit_group, Mech *mech) {
   BtechContext *context = mech_context(mech);
 
-  int newloc = mech_punch_hit_location(mech, hitGroup);
+  int newloc = mech_punch_hit_location(mech, hit_group);
 
   if (mech_class(mech) != CLASS_MECH) {
     return newloc;

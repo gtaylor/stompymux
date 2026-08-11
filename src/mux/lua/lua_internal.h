@@ -21,11 +21,11 @@ typedef enum LuaModuleRoot {
   LUA_ROOT_GLOBAL_LOGIC,
   LUA_ROOT_PACKAGES,
   LUA_ROOT_COUNT,
-} LUA_MODULE_ROOT;
+} LuaModuleRoot;
 
-typedef struct LuaScheduleJob LUA_SCHEDULE_JOB;
+typedef struct LuaScheduleJob LuaScheduleJob;
 struct LuaScheduleJob {
-  LUA_MODULE_ROOT root;
+  LuaModuleRoot root;
   DbRef object;
   time_t due;
   time_t expires;
@@ -41,11 +41,11 @@ struct LuaRuntime {
   char root[PATH_MAX];
   char roots[LUA_ROOT_COUNT][PATH_MAX];
   char module[PATH_MAX];
-  LUA_MODULE_ROOT current_root;
+  LuaModuleRoot current_root;
   int checking;
   char **global_modules;
   size_t global_module_count;
-  LUA_SCHEDULE_JOB *schedule_jobs;
+  LuaScheduleJob *schedule_jobs;
   size_t schedule_job_count;
   time_t schedule_high_water;
   LuaMuxPackage mux_package;
@@ -54,10 +54,9 @@ struct LuaRuntime {
 
 const char *lua_global_module_at(const LuaRuntime *runtime, size_t index);
 char *lua_global_module_slot(LuaRuntime *runtime, size_t index);
-const char *lua_runtime_root_at(const LuaRuntime *runtime,
-                                LUA_MODULE_ROOT root);
-char *lua_runtime_root_slot(LuaRuntime *runtime, LUA_MODULE_ROOT root);
-LUA_SCHEDULE_JOB *lua_schedule_job_at(LuaRuntime *runtime, size_t index);
+const char *lua_runtime_root_at(const LuaRuntime *runtime, LuaModuleRoot root);
+char *lua_runtime_root_slot(LuaRuntime *runtime, LuaModuleRoot root);
+LuaScheduleJob *lua_schedule_job_at(LuaRuntime *runtime, size_t index);
 
 extern const char LUA_MODULES_KEY[];
 extern const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT];
@@ -76,27 +75,27 @@ void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
 void lua_log_load_error(LuaRuntime *runtime, DbRef object, const char *path,
                         const char *error);
 int lua_valid_relative_path(const char *path);
-const char *lua_root_name(LUA_MODULE_ROOT root);
+const char *lua_root_name(LuaModuleRoot root);
 int lua_join_path(char *destination, size_t destination_size, const char *first,
                   const char *second);
-int lua_resolve_path(LuaRuntime *runtime, LUA_MODULE_ROOT root,
-                     const char *path, char *resolved, size_t resolved_size,
-                     char *error, size_t error_size);
-int lua_load_module(LuaRuntime *runtime, LUA_MODULE_ROOT root, const char *path,
+int lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
+                     char *resolved, size_t resolved_size, char *error,
+                     size_t error_size);
+int lua_load_module(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
                     char *error, size_t error_size);
-LUA_MODULE_ROOT lua_require_root(lua_State *state, LuaRuntime *runtime);
+LuaModuleRoot lua_require_root(lua_State *state, LuaRuntime *runtime);
 LuaRuntime *lua_runtime_create(LuaOwner *owner, const LuaServices *services,
                                char *error, size_t error_size);
 void lua_runtime_destroy(LuaRuntime *runtime);
 
 void lua_free_modules(char **modules, size_t module_count);
 int lua_compare_module_paths(const ArraySortComparison *comparison);
-int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+int lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
                         const char *relative, char ***modules,
                         size_t *module_count, char *error, size_t error_size);
 int lua_cron_matches(const char *cron, time_t when, char *error,
                      size_t error_size);
-int lua_check_one_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+int lua_check_one_module(LuaRuntime *runtime, LuaModuleRoot root,
                          const char *path, char *error, size_t error_size);
 
 bool lua_event_name_is_known(const char *name);

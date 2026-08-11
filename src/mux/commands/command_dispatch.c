@@ -85,16 +85,16 @@ static char **command_argument_slot(char **arguments, size_t capacity,
 }
 
 static char *command_split_slash(char *text) {
-  const size_t length = strlen(text);
+  const size_t LENGTH = strlen(text);
   size_t offset = 0;
 
-  while (offset < length && *(const char *)checked_storage_at_const(
-                                text, length + 1, sizeof(char), offset) != '/')
+  while (offset < LENGTH && *(const char *)checked_storage_at_const(
+                                text, LENGTH + 1, sizeof(char), offset) != '/')
     offset++;
-  if (offset == length)
+  if (offset == LENGTH)
     return nullptr;
-  *(char *)checked_storage_at(text, length + 1, sizeof(char), offset) = '\0';
-  return checked_storage_at(text, length + 1, sizeof(char), offset + 1);
+  *(char *)checked_storage_at(text, LENGTH + 1, sizeof(char), offset) = '\0';
+  return checked_storage_at(text, LENGTH + 1, sizeof(char), offset + 1);
 }
 
 static void command_invoke(CMDENT *command, CommandContext *context,
@@ -377,9 +377,9 @@ void process_command(CommandContext *context, char *command, char *args[],
   CommandRuntime *runtime = context->runtime;
   ServerConfiguration *configuration = runtime->world->configuration;
   CommandRegistry *registry = runtime->command_registry;
-  const DbRef player = context->player;
-  const DbRef cause = context->enactor;
-  const bool interactive = context->interactive;
+  const DbRef PLAYER = context->player;
+  const DbRef CAUSE = context->enactor;
+  const bool INTERACTIVE = context->interactive;
   char *arg = nullptr, *lcbuf = nullptr, *slashp = nullptr;
   const char *cmdsave = nullptr;
   int succ = 0, lua_succ = 0, i = 0;
@@ -399,12 +399,12 @@ void process_command(CommandContext *context, char *command, char *args[],
     abort();
   }
 
-  if (!is_good_obj(context->world->database, player)) {
+  if (!is_good_obj(context->world->database, PLAYER)) {
     log_error((LogEntry){.log = context->log,
                          .key = LOG_BUGS,
                          .primary = "CMD",
                          .secondary = "PLYR"},
-              "Bad player in process_command: %ld", player);
+              "Bad player in process_command: %ld", PLAYER);
     context->debug_command = cmdsave;
     goto exit;
   }
@@ -413,19 +413,19 @@ void process_command(CommandContext *context, char *command, char *args[],
    * Make sure player isn't going or halted
    */
 
-  if (is_going(context->world->database, player) ||
-      (is_halted(context->world->database, player) &&
-       !((typeof_obj(context->world->database, player) == OBJECT_TYPE_PLAYER) &&
-         interactive))) {
-    notify_printf(&context->evaluation, player,
-                  "Attempt to execute command by halted object #%ld", player);
+  if (is_going(context->world->database, PLAYER) ||
+      (is_halted(context->world->database, PLAYER) &&
+       !((typeof_obj(context->world->database, PLAYER) == OBJECT_TYPE_PLAYER) &&
+         INTERACTIVE))) {
+    notify_printf(&context->evaluation, PLAYER,
+                  "Attempt to execute command by halted object #%ld", PLAYER);
     context->debug_command = cmdsave;
     goto exit;
   }
 
-  if (is_suspect(context->world->database, player)) {
+  if (is_suspect(context->world->database, PLAYER)) {
     STARTLOG(context->log, LOG_SUSPECTCMDS | LOG_ALLCOMMANDS, "CMD", "SUS") {
-      log_name_and_loc(context->log, player);
+      log_name_and_loc(context->log, PLAYER);
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
       (void)snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
@@ -434,11 +434,11 @@ void process_command(CommandContext *context, char *command, char *args[],
     }
     send_channel(
         &context->evaluation, "SuspectsLog", "%s (#%ld) (in #%ld) entered: %s",
-        game_object_name(context->world->database, player), player,
-        game_object_location(context->world->database, player), command);
+        game_object_name(context->world->database, PLAYER), PLAYER,
+        game_object_location(context->world->database, PLAYER), command);
   } else {
     STARTLOG(context->log, LOG_ALLCOMMANDS, "CMD", "ALL") {
-      log_name_and_loc(context->log, player);
+      log_name_and_loc(context->log, PLAYER);
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
       (void)snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
@@ -476,13 +476,13 @@ void process_command(CommandContext *context, char *command, char *args[],
 
     while (read_offset < command_length) {
       while (read_offset < command_length) {
-        const char character = *(const char *)checked_storage_at_const(
+        const char CHARACTER = *(const char *)checked_storage_at_const(
             command, command_length + 1, sizeof(char), read_offset);
 
-        if ((isspace)((unsigned char)character))
+        if ((isspace)((unsigned char)CHARACTER))
           break;
         *(char *)checked_storage_at(command, command_length + 1, sizeof(char),
-                                    write_offset++) = character;
+                                    write_offset++) = CHARACTER;
         read_offset++;
       }
       while (read_offset < command_length &&
@@ -510,31 +510,31 @@ void process_command(CommandContext *context, char *command, char *args[],
   if (prefix_command != nullptr && *command) {
     process_cmdent(&(CommandEntryDispatch){.context = context,
                                            .command = prefix_command,
-                                           .player = player,
-                                           .cause = cause,
+                                           .player = PLAYER,
+                                           .cause = CAUSE,
                                            .arguments = command,
                                            .unparsed_command = command});
     context->debug_command = cmdsave;
     goto exit;
   }
-  if ((*command == '.') && interactive) {
+  if ((*command == '.') && INTERACTIVE) {
     macerr = do_macro(&context->match, context->runtime->command_registry,
-                      context->runtime->macros, player, command, &macroout);
+                      context->runtime->macros, PLAYER, command, &macroout);
     if (!macerr)
       goto exit;
     if (macerr == 1) {
-      StringCopy(command, macroout);
+      string_copy(command, macroout);
       free_lbuf(macroout);
     }
   } else
     macerr = 0;
-  if (!do_comsystem(&context->evaluation, player, command))
+  if (!do_comsystem(&context->evaluation, PLAYER, command))
     goto exit;
 
   /* Handle mecha stuff.. */
   if (btech_command_try_execute(
-          context->btech, player,
-          game_object_location(context->world->database, player), command))
+          context->btech, PLAYER,
+          game_object_location(context->world->database, PLAYER), command))
     goto exit;
   /*
    * Check for the HOME command
@@ -545,7 +545,7 @@ void process_command(CommandContext *context, char *command, char *args[],
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
     move_command(&(MoveCommandRequest){.evaluation = &context->evaluation,
-                                       .player = player,
+                                       .player = PLAYER,
                                        .direction = (char *)"home"});
 #pragma clang diagnostic pop
     context->debug_command = cmdsave;
@@ -555,16 +555,16 @@ void process_command(CommandContext *context, char *command, char *args[],
   /*
    * Only check for exits if we may use the goto command
    */
-  if (check_access(context->world->database, configuration, player,
+  if (check_access(context->world->database, configuration, PLAYER,
                    ((CMDENT *)registry->goto_command)->perms)) {
     /*
      * Check for an exit name
      */
-    init_match_check_keys(&context->match, player, command, OBJECT_TYPE_EXIT);
+    init_match_check_keys(&context->match, PLAYER, command, OBJECT_TYPE_EXIT);
     match_exit(&context->match);
     exit = last_match_result(&context->match);
     if (exit != NOTHING) {
-      move_exit(&context->evaluation, player, exit, "You can't go that way.",
+      move_exit(&context->evaluation, PLAYER, exit, "You can't go that way.",
                 0);
       context->debug_command = cmdsave;
       goto exit;
@@ -586,13 +586,13 @@ void process_command(CommandContext *context, char *command, char *args[],
   size_t name_length = 0;
 
   while (name_length < command_length) {
-    const char character = *(const char *)checked_storage_at_const(
+    const char CHARACTER = *(const char *)checked_storage_at_const(
         command, command_length + 1, sizeof(char), name_length);
 
-    if ((isspace)((unsigned char)character))
+    if ((isspace)((unsigned char)CHARACTER))
       break;
     *(char *)checked_storage_at(lcbuf, LBUF_SIZE, sizeof(char), name_length) =
-        ascii_to_lower(character);
+        ascii_to_lower(CHARACTER);
     name_length++;
   }
   *(char *)checked_storage_at(lcbuf, LBUF_SIZE, sizeof(char), name_length) =
@@ -618,7 +618,7 @@ void process_command(CommandContext *context, char *command, char *args[],
   cmdp = (CMDENT *)hash_table_find(lcbuf, &registry->commands);
   if (cmdp != nullptr) {
     if ((cmdp->callseq & CS_NO_MACRO) && macerr == 1)
-      notify_checked(&context->evaluation, player, player,
+      notify_checked(&context->evaluation, PLAYER, PLAYER,
                      "This command is unavailable as macro. Please use an "
                      "attribute instead.",
                      MSG_ME_ALL | MSG_F_DOWN);
@@ -626,8 +626,8 @@ void process_command(CommandContext *context, char *command, char *args[],
       process_cmdent(&(CommandEntryDispatch){.context = context,
                                              .command = cmdp,
                                              .switches = slashp,
-                                             .player = player,
-                                             .cause = cause,
+                                             .player = PLAYER,
+                                             .cause = CAUSE,
                                              .arguments = arg,
                                              .unparsed_command = command});
     free_lbuf(lcbuf);
@@ -635,90 +635,90 @@ void process_command(CommandContext *context, char *command, char *args[],
     goto exit;
   }
   /* Lua handlers observe the original unmatched command. */
-  if (!is_no_command(context->world->database, player))
+  if (!is_no_command(context->world->database, PLAYER))
     lua_succ +=
         lua_command_match(runtime->lua_owner->runtime, context->descriptor,
-                          player, player, cause, command);
-  if (has_location(context->world->database, player)) {
+                          PLAYER, PLAYER, CAUSE, command);
+  if (has_location(context->world->database, PLAYER)) {
     lua_succ += lua_list_command_match(
         runtime->lua_owner->runtime, context->descriptor,
         game_object_contents(
             context->world->database,
-            game_object_location(context->world->database, player)),
-        player, cause, command);
+            game_object_location(context->world->database, PLAYER)),
+        PLAYER, CAUSE, command);
     if (!is_no_command(context->world->database,
-                       game_object_location(context->world->database, player)))
+                       game_object_location(context->world->database, PLAYER)))
       lua_succ += lua_command_match(
           runtime->lua_owner->runtime, context->descriptor,
-          game_object_location(context->world->database, player), player, cause,
+          game_object_location(context->world->database, PLAYER), PLAYER, CAUSE,
           command);
   }
-  if (has_contents(context->world->database, player))
+  if (has_contents(context->world->database, PLAYER))
     lua_succ += lua_list_command_match(
         runtime->lua_owner->runtime, context->descriptor,
-        game_object_contents(context->world->database, player), player, cause,
+        game_object_contents(context->world->database, PLAYER), PLAYER, CAUSE,
         command);
   if (!lua_succ &&
       (game_object_zone(context->world->database,
                         game_object_location(context->world->database,
-                                             player)) != NOTHING)) {
+                                             PLAYER)) != NOTHING)) {
     if (typeof_obj(context->world->database,
                    game_object_zone(context->world->database,
                                     game_object_location(
-                                        context->world->database, player))) ==
+                                        context->world->database, PLAYER))) ==
         OBJECT_TYPE_ROOM) {
-      if (game_object_location(context->world->database, player) !=
-          game_object_zone(context->world->database, player))
+      if (game_object_location(context->world->database, PLAYER) !=
+          game_object_zone(context->world->database, PLAYER))
         lua_succ += lua_list_command_match(
             runtime->lua_owner->runtime, context->descriptor,
             game_object_contents(
                 context->world->database,
                 game_object_zone(
                     context->world->database,
-                    game_object_location(context->world->database, player))),
-            player, cause, command);
+                    game_object_location(context->world->database, PLAYER))),
+            PLAYER, CAUSE, command);
     } else if (!is_no_command(
                    context->world->database,
                    game_object_zone(context->world->database,
                                     game_object_location(
-                                        context->world->database, player)))) {
+                                        context->world->database, PLAYER)))) {
       lua_succ += lua_command_match(
           runtime->lua_owner->runtime, context->descriptor,
           game_object_zone(
               context->world->database,
-              game_object_location(context->world->database, player)),
-          player, cause, command);
+              game_object_location(context->world->database, PLAYER)),
+          PLAYER, CAUSE, command);
     }
   }
   if (!lua_succ &&
-      (game_object_zone(context->world->database, player) != NOTHING) &&
+      (game_object_zone(context->world->database, PLAYER) != NOTHING) &&
       !is_no_command(context->world->database,
-                     game_object_zone(context->world->database, player)) &&
+                     game_object_zone(context->world->database, PLAYER)) &&
       (game_object_zone(
            context->world->database,
-           game_object_location(context->world->database, player)) !=
-       game_object_zone(context->world->database, player)))
+           game_object_location(context->world->database, PLAYER)) !=
+       game_object_zone(context->world->database, PLAYER)))
     lua_succ +=
         lua_command_match(runtime->lua_owner->runtime, context->descriptor,
-                          game_object_zone(context->world->database, player),
-                          player, cause, command);
+                          game_object_zone(context->world->database, PLAYER),
+                          PLAYER, CAUSE, command);
   if (!lua_succ &&
       (game_object_zone(context->world->database,
                         game_object_location(context->world->database,
-                                             player)) != NOTHING) &&
+                                             PLAYER)) != NOTHING) &&
       (typeof_obj(context->world->database,
                   game_object_zone(context->world->database,
                                    game_object_location(
-                                       context->world->database, player))) ==
+                                       context->world->database, PLAYER))) ==
        OBJECT_TYPE_ROOM) &&
-      (game_object_location(context->world->database, player) !=
-       game_object_zone(context->world->database, player))) {
-    init_match_check_keys(&context->match, player, command, OBJECT_TYPE_EXIT);
+      (game_object_location(context->world->database, PLAYER) !=
+       game_object_zone(context->world->database, PLAYER))) {
+    init_match_check_keys(&context->match, PLAYER, command, OBJECT_TYPE_EXIT);
     match_zone_exit(&context->match);
     exit = last_match_result(&context->match);
     if (exit != NOTHING) {
       free_lbuf(lcbuf);
-      move_exit(&context->evaluation, player, exit, nullptr, 0);
+      move_exit(&context->evaluation, PLAYER, exit, nullptr, 0);
       context->debug_command = cmdsave;
       goto exit;
     }
@@ -726,7 +726,7 @@ void process_command(CommandContext *context, char *command, char *args[],
   if (!lua_succ)
     lua_succ +=
         lua_global_command_match(runtime->lua_owner->runtime,
-                                 context->descriptor, player, cause, command);
+                                 context->descriptor, PLAYER, CAUSE, command);
   succ = lua_succ;
   free_lbuf(lcbuf);
 
@@ -735,10 +735,10 @@ void process_command(CommandContext *context, char *command, char *args[],
    */
 
   if (!succ) {
-    notify_checked(&context->evaluation, player, player,
+    notify_checked(&context->evaluation, PLAYER, PLAYER,
                    "Huh?  (Type \"help\" for help.)", MSG_ME_ALL | MSG_F_DOWN);
     STARTLOG(context->log, LOG_BADCOMMANDS, "CMD", "BAD") {
-      log_name_and_loc(context->log, player);
+      log_name_and_loc(context->log, PLAYER);
       lcbuf = alloc_lbuf("process_commands.LOG.badcmd");
       (void)snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);

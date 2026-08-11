@@ -19,7 +19,7 @@ void diagnostics_perror(DiagnosticLocation location, const char *expression,
 
 /* dassert: abort with a timestamped message if `x` is false. Always active,
  * regardless of the DEBUG build option. */
-#define dassert(x)                                                             \
+#define DASSERT(x)                                                             \
   do {                                                                         \
     if (!(x))                                                                  \
       diagnostics_assert_failed(                                               \
@@ -28,7 +28,7 @@ void diagnostics_perror(DiagnosticLocation location, const char *expression,
 
 /* dperror: log a timestamped message if `x` is true, using errno to describe
  * the failure. */
-#define dperror(x)                                                             \
+#define DPERROR(x)                                                             \
   do {                                                                         \
     if (x)                                                                     \
       diagnostics_perror(                                                      \
@@ -36,7 +36,7 @@ void diagnostics_perror(DiagnosticLocation location, const char *expression,
   } while (0)
 
 /* printk: always-on timestamped trace message. */
-#define printk(...)                                                            \
+#define PRINTK(...)                                                            \
   diagnostics_log((DiagnosticLocation){__FILE__, __LINE__, __FUNCTION__},      \
                   __VA_ARGS__)
 
@@ -46,5 +46,5 @@ void diagnostics_perror(DiagnosticLocation location, const char *expression,
   diagnostics_log((DiagnosticLocation){__FILE__, __LINE__, __FUNCTION__},      \
                   __VA_ARGS__)
 #else
-#define dprintk(...) ((void)0)
+#define DPRINTK(...) ((void)0)
 #endif

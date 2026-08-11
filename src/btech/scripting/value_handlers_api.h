@@ -15,14 +15,14 @@ typedef struct GmvBufferedBidirectionalCall {
   char *buffer;
 } GmvBufferedBidirectionalCall;
 
-char *mechIDfunc(Mech *mech, char buffer[static LBUF_SIZE]);
-char *mechTypefunc(int mode, Mech *mech, char *arg);
-char *mechMovefunc(int mode, Mech *mech, char *arg);
-char *mechTechTimefunc(Mech *mech, char buffer[static LBUF_SIZE]);
-void apply_mechDamage(Mech *omech, char *buf);
-char *mechDamagefunc(const GmvBufferedBidirectionalCall *call);
-char *mechCentBearingfunc(Mech *mech, char buffer[static LBUF_SIZE]);
-char *mechCentDistfunc(Mech *mech, char buffer[static LBUF_SIZE]);
+char *mech_i_dfunc(Mech *mech, char buffer[static LBUF_SIZE]);
+char *mech_typefunc(int mode, Mech *mech, char *arg);
+char *mech_movefunc(int mode, Mech *mech, char *arg);
+char *mech_tech_timefunc(Mech *mech, char buffer[static LBUF_SIZE]);
+void apply_mech_damage(Mech *omech, char *buf);
+char *mech_damagefunc(const GmvBufferedBidirectionalCall *call);
+char *mech_cent_bearingfunc(Mech *mech, char buffer[static LBUF_SIZE]);
+char *mech_cent_distfunc(Mech *mech, char buffer[static LBUF_SIZE]);
 void set_xcodestuff(DbRef player, void *data, char *buffer);
 void list_xcodestuff(DbRef player, void *data, char *buffer);
 void list_xcodevalues(EvaluationContext *context, DbRef player);

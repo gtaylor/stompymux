@@ -7,7 +7,7 @@
 typedef struct Mech {
   BtechSpecialObject xcode; /* XCODE base class field */
 
-  char ID[2];                            /* Only for internal use */
+  char id[2];                            /* Only for internal use */
   char brief;                            /* toggle brievity */
   char chantitle[FREQS][CHTITLELEN + 1]; /* Channel titles */
   DbRef mynum;                           /* My dbref */
@@ -24,10 +24,10 @@ typedef struct Mech {
 } Mech;
 
 struct MechSpotData {
-  float tarFX;
-  float tarFY;
-  float mechFX;
-  float mechFY;
+  float tar_fx;
+  float tar_fy;
+  float mech_fx;
+  float mech_fy;
   Mech *target;
 };
 

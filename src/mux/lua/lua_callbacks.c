@@ -5,7 +5,6 @@
 #include <lua.h>
 #include <string.h>
 
-#include "mux/lua/command_access.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
@@ -268,7 +267,7 @@ void lua_appearance_evaluate(LuaRuntime *runtime,
   lua_pushstring(state, function);
   lua_setfield(state, -2, "appearance");
   {
-    LUA_MODULE_ROOT previous_root = runtime->current_root;
+    LuaModuleRoot previous_root = runtime->current_root;
 
     runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
     status = lua_callback_pcall_checked(runtime, 1, 1);
@@ -330,7 +329,7 @@ void lua_mech_status_evaluate(LuaRuntime *runtime,
   lua_push_context(runtime->services->database, invocation->descriptor, state,
                    invocation->object, invocation->enactor, invocation->cause,
                    nullptr, nullptr, nullptr, nullptr, 0);
-  LUA_MODULE_ROOT previous_root = runtime->current_root;
+  LuaModuleRoot previous_root = runtime->current_root;
   runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
   int status = lua_callback_pcall_checked(runtime, 1, 1);
   runtime->current_root = previous_root;
@@ -485,7 +484,7 @@ bool lua_event_dispatch(LuaRuntime *runtime,
     lua_setfield(state, -2, "reason");
   }
   {
-    LUA_MODULE_ROOT previous_root = runtime->current_root;
+    LuaModuleRoot previous_root = runtime->current_root;
 
     runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
     status = lua_callback_pcall_checked(runtime, 1, 0);
@@ -623,7 +622,7 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
   lua_pushboolean(state, invocation->silent);
   lua_setfield(state, -2, "silent");
   {
-    LUA_MODULE_ROOT previous_root = runtime->current_root;
+    LuaModuleRoot previous_root = runtime->current_root;
 
     runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
     status = lua_callback_pcall_checked(runtime, 1, 1);
@@ -643,7 +642,7 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
 
 static bool lua_message_parse_result(lua_State *state, LuaMessageType type,
                                      LuaMessageResult *result) {
-  const bool allow_enactor = type != LUA_MESSAGE_DESCRIBE &&
+  const bool ALLOW_ENACTOR = type != LUA_MESSAGE_DESCRIBE &&
                              type != LUA_MESSAGE_ENTER_SOURCE &&
                              type != LUA_MESSAGE_LEAVE_DESTINATION &&
                              type != LUA_MESSAGE_TELEPORT_SOURCE;
@@ -655,17 +654,17 @@ static bool lua_message_parse_result(lua_State *state, LuaMessageType type,
   lua_pushnil(state);
   while (lua_next(state, table) != 0) {
     const char *key = lua_tostring(state, -2);
-    const bool valid = lua_type(state, -2) == LUA_TSTRING && key &&
-                       ((!strcmp(key, "enactor_message") && allow_enactor) ||
+    const bool VALID = lua_type(state, -2) == LUA_TSTRING && key &&
+                       ((!strcmp(key, "enactor_message") && ALLOW_ENACTOR) ||
                         !strcmp(key, "other_message"));
 
     lua_pop(state, 1);
-    if (!valid) {
+    if (!VALID) {
       lua_pop(state, 1);
       return false;
     }
   }
-  return (!allow_enactor ||
+  return (!ALLOW_ENACTOR ||
           lua_result_copy_message(state, table, "enactor_message",
                                   &result->has_enactor_message,
                                   result->enactor_message)) &&
@@ -734,7 +733,7 @@ void lua_message_evaluate(LuaRuntime *runtime,
     lua_pushinteger(state, invocation->destination);
   lua_setfield(state, -2, "destination");
   {
-    LUA_MODULE_ROOT previous_root = runtime->current_root;
+    LuaModuleRoot previous_root = runtime->current_root;
 
     runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
     status = lua_callback_pcall_checked(runtime, 1, 1);

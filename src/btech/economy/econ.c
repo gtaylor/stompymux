@@ -12,31 +12,31 @@
 
 void economy_inventory_change(const EconomyInventoryChange *change) {
   BtechContext *context = change->context;
-  const DbRef d = change->store;
-  const int id = change->part.id;
+  const DbRef D = change->store;
+  const int ID = change->part.id;
   int brand = change->part.brand;
-  const int num = change->quantity_delta;
+  const int NUM = change->quantity_delta;
   GameDatabase *database = context->database;
   int base;
 
-  if (!is_good_obj(database, d))
+  if (!is_good_obj(database, D))
     return;
   if (brand)
-    if (get_parts_short_name(context, id, brand) ==
-        get_parts_short_name(context, id, 0))
+    if (get_parts_short_name(context, ID, brand) ==
+        get_parts_short_name(context, ID, 0))
       brand = 0;
-  base = economy_parts_quantity(database, d, id, brand);
-  base += num;
+  base = economy_parts_quantity(database, D, ID, brand);
+  base += NUM;
   if (base <= 0) {
-    economy_parts_set_quantity(database, d, id, brand, 0);
+    economy_parts_set_quantity(database, D, ID, brand, 0);
     return;
   }
-  if (!(equipment_is_actuator(id)))
-    economy_parts_set_quantity(database, d, id, brand, base);
-  if (equipment_is_actuator(id))
+  if (!(equipment_is_actuator(ID)))
+    economy_parts_set_quantity(database, D, ID, brand, base);
+  if (equipment_is_actuator(ID))
     economy_inventory_change(&(EconomyInventoryChange){
         .context = context,
-        .store = d,
+        .store = D,
         .part = {.id = cargo_equipment_index(S_ACTUATOR), .brand = brand},
         .quantity_delta = base,
     });

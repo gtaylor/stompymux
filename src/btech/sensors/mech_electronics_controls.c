@@ -75,7 +75,7 @@ void mech_ecm(DbRef player, Mech *mech, char *buffer) {
       .online_message = "You turn your ECM suite online (ECM mode).",
       .offline_message = "You turn your ECM suite offline.",
       .missing_message = "This unit isn't equipped with an ECM suite!"});
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 void mech_eccm(DbRef player, Mech *mech, char *buffer) {
@@ -95,7 +95,7 @@ void mech_eccm(DbRef player, Mech *mech, char *buffer) {
       .online_message = "You turn your ECM suite online (ECCM mode).",
       .offline_message = "You turn your ECM suite offline.",
       .missing_message = "This unit isn't equipped with an ECM suite!"});
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 void mech_perecm(DbRef player, Mech *mech, char *buffer) {
@@ -111,7 +111,7 @@ void mech_perecm(DbRef player, Mech *mech, char *buffer) {
       .offline_message = "You turn your Personal ECM suite offline.",
       .missing_message =
           "This unit isn't equipped with a Personal ECM suite!"});
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 void mech_pereccm(DbRef player, Mech *mech, char *buffer) {
@@ -128,7 +128,7 @@ void mech_pereccm(DbRef player, Mech *mech, char *buffer) {
       .offline_message = "You turn your Personal ECM suite offline.",
       .missing_message =
           "This unit isn't equipped with a Personal ECM suite!"});
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 void mech_angelecm(DbRef player, Mech *mech, char *buffer) {
@@ -148,7 +148,7 @@ void mech_angelecm(DbRef player, Mech *mech, char *buffer) {
       .online_message = "You turn your Angel ECM suite online (ECM mode).",
       .offline_message = "You turn your Angel ECM suite offline.",
       .missing_message = "This unit isn't equipped with an Angel ECM suite!"});
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 void mech_angeleccm(DbRef player, Mech *mech, char *buffer) {
@@ -169,12 +169,12 @@ void mech_angeleccm(DbRef player, Mech *mech, char *buffer) {
       .online_message = "You turn your Angel ECM suite online (ECCM mode).",
       .offline_message = "You turn your Angel ECM suite offline.",
       .missing_message = "This unit isn't equipped with an Angel ECM suite!"});
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 static void mech_searchlight_change_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long wType = (long)e->data2;
+  long w_type = (long)e->data2;
 
   if (mech_condition_summary(mech).searchlight_destroyed)
     return;
@@ -187,7 +187,7 @@ static void mech_searchlight_change_event(MuxEvent *e) {
     return;
   }
 
-  if (wType == 1) {
+  if (w_type == 1) {
     mech_searchlight_set(mech, true);
 
     mech_notify(mech, MECHALL, "Your searchlight comes on to full power.");
@@ -199,7 +199,7 @@ static void mech_searchlight_change_event(MuxEvent *e) {
     mech_los_broadcast(mech, "turns off a searchlight!");
   }
 
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
 }
 
 void mech_slite(DbRef player, Mech *mech, char *buffer) {
@@ -241,7 +241,7 @@ void mech_slite(DbRef player, Mech *mech, char *buffer) {
 
 static void mech_stealth_armor_change_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long wType = (long)e->data2;
+  long w_type = (long)e->data2;
 
   if (!mech_is_started(mech))
     return;
@@ -249,18 +249,18 @@ static void mech_stealth_armor_change_event(MuxEvent *e) {
   if (!mech_has_working_ecm_suite(mech))
     return;
 
-  if (wType) {
+  if (w_type) {
     mech_notify(mech, MECHALL, "Stealth Armor system engaged!");
 
     mech_stealth_armor_active_set(mech, true);
     mech_ecm_check(mech);
-    MarkForLOSUpdate(mech);
+    mark_for_los_update(mech);
   } else {
     mech_notify(mech, MECHALL, "Stealth Armor system disengaged!");
 
     mech_stealth_armor_active_set(mech, false);
     mech_ecm_check(mech);
-    MarkForLOSUpdate(mech);
+    mark_for_los_update(mech);
   }
 }
 
@@ -306,7 +306,7 @@ void mech_stealtharmor(DbRef player, Mech *mech, char *buffer) {
 
 static void mech_null_signature_change_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long wType = (long)e->data2;
+  long w_type = (long)e->data2;
 
   if (!mech_is_started(mech))
     return;
@@ -314,16 +314,16 @@ static void mech_null_signature_change_event(MuxEvent *e) {
   if (mech_condition_summary(mech).null_signature_destroyed)
     return;
 
-  if (wType) {
+  if (w_type) {
     mech_notify(mech, MECHALL, "Null Signature System engaged!");
 
     mech_null_signature_active_set(mech, true);
-    MarkForLOSUpdate(mech);
+    mark_for_los_update(mech);
   } else {
     mech_notify(mech, MECHALL, "Null Signature System disengaged!");
 
     mech_null_signature_active_set(mech, false);
-    MarkForLOSUpdate(mech);
+    mark_for_los_update(mech);
   }
 }
 
@@ -395,8 +395,8 @@ void show_narc_pods(DbRef player, Mech *mech, char *buffer) {
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (mech_section_original_internal(mech, i) > 0) {
-      ArmorStringFromIndex(i, location, mech_class(mech),
-                           mech_movement_type(mech));
+      armor_string_from_index(i, location, mech_class(mech),
+                              mech_movement_type(mech));
 
       if (mech_section_is_destroyed(mech, i)) {
         notify_printf(btech_context_evaluation(mech_context(mech)), player,
@@ -422,39 +422,39 @@ void show_narc_pods(DbRef player, Mech *mech, char *buffer) {
   }
 }
 
-static int mech_arm_base_to_hit_modifier(Mech *mech, int wSec) {
-  int wRet = 0;
+static int mech_arm_base_to_hit_modifier(Mech *mech, int w_sec) {
+  int w_ret = 0;
 
-  if (mech_critical_is_nonfunctional(mech, wSec, 1) ||
-      mech_critical_part_type(mech, wSec, 1) !=
+  if (mech_critical_is_nonfunctional(mech, w_sec, 1) ||
+      mech_critical_part_type(mech, w_sec, 1) !=
           special_equipment_index(UPPER_ACTUATOR))
-    wRet += 2;
-  if (mech_critical_is_nonfunctional(mech, wSec, 2) ||
-      mech_critical_part_type(mech, wSec, 2) !=
+    w_ret += 2;
+  if (mech_critical_is_nonfunctional(mech, w_sec, 2) ||
+      mech_critical_part_type(mech, w_sec, 2) !=
           special_equipment_index(LOWER_ACTUATOR))
-    wRet += 2;
-  if (mech_critical_is_nonfunctional(mech, wSec, 3) ||
-      mech_critical_part_type(mech, wSec, 3) !=
+    w_ret += 2;
+  if (mech_critical_is_nonfunctional(mech, w_sec, 3) ||
+      mech_critical_part_type(mech, w_sec, 3) !=
           special_equipment_index(HAND_OR_FOOT_ACTUATOR))
-    wRet += 1;
+    w_ret += 1;
 
-  return wRet;
+  return w_ret;
 }
 
 void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
-  int wLoc;
-  int wArmToUse = -1;
+  int w_loc;
+  int w_arm_to_use = -1;
   char *args[2];
-  char strLocation[50], strPunchWith[50];
-  int wBTH = 0;
-  int wBTHModLARM = 0;
-  int wBTHModRARM = 0;
-  int wRAAvail = 1;
-  int wLAAvail = 1;
-  int wRoll;
-  int wSelfDamage;
-  int wPodType = INARC_HOMING_ATTACHED;
-  char strPodType[30];
+  char str_location[50], str_punch_with[50];
+  int w_bth = 0;
+  int w_bth_mod_larm = 0;
+  int w_bth_mod_rarm = 0;
+  int w_ra_avail = 1;
+  int w_la_avail = 1;
+  int w_roll;
+  int w_self_damage;
+  int w_pod_type = INARC_HOMING_ATTACHED;
+  char str_pod_type[30];
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -470,50 +470,50 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  wLoc = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                args[0]);
+  w_loc = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    args[0]);
 
-  if (wLoc == -1) {
+  if (w_loc == -1) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid section!");
     return;
   }
-  if (!mech_section_original_internal(mech, wLoc)) {
+  if (!mech_section_original_internal(mech, w_loc)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Invalid section!");
     return;
   }
-  if (!mech_section_internal(mech, wLoc)) {
+  if (!mech_section_internal(mech, w_loc)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That section is destroyed!");
     return;
   }
 
-  ArmorStringFromIndex(wLoc, strLocation, mech_class(mech),
-                       mech_movement_type(mech));
+  armor_string_from_index(w_loc, str_location, mech_class(mech),
+                          mech_movement_type(mech));
 
   /* Figure out wot type of pods we want to remove */
   switch (ascii_to_upper(*checked_string_suffix(args[1], 0))) {
   case 'Y':
-    strcpy(strPodType, "Haywire");
-    wPodType = INARC_HAYWIRE_ATTACHED;
+    strcpy(str_pod_type, "Haywire");
+    w_pod_type = INARC_HAYWIRE_ATTACHED;
     break;
 
   case 'E':
-    strcpy(strPodType, "ECM");
-    wPodType = INARC_ECM_ATTACHED;
+    strcpy(str_pod_type, "ECM");
+    w_pod_type = INARC_ECM_ATTACHED;
     break;
 
   default:
-    strcpy(strPodType, "Homing");
-    wPodType = INARC_HOMING_ATTACHED;
+    strcpy(str_pod_type, "Homing");
+    w_pod_type = INARC_HOMING_ATTACHED;
     break;
   }
 
-  if (!mech_section_has_special(mech, wLoc, wPodType)) {
+  if (!mech_section_has_special(mech, w_loc, w_pod_type)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  tprintf("There are no iNarc %s pods attached to your %s!",
-                         strPodType, strLocation));
+                         str_pod_type, str_location));
     return;
   }
 
@@ -524,7 +524,7 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  if (wLoc == RARM) {
+  if (w_loc == RARM) {
     if (!mech_section_internal(mech, LARM)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Your Left Arm needs to be intact to take "
@@ -542,10 +542,10 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
       return;
     }
 
-    wArmToUse = LARM;
+    w_arm_to_use = LARM;
   }
 
-  if (wLoc == LARM) {
+  if (w_loc == LARM) {
     if (!mech_section_internal(mech, RARM)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Your Right Arm needs to be intact to "
@@ -563,21 +563,21 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
       return;
     }
 
-    wArmToUse = RARM;
+    w_arm_to_use = RARM;
   }
 
-  if (wArmToUse == -1) {
+  if (w_arm_to_use == -1) {
     if (mech_section_has_recycling_weapon(mech, RARM) ||
         mech_section_recycle_ticks(mech, RARM) ||
         (!mech_section_internal(mech, RARM)))
-      wRAAvail = 0;
+      w_ra_avail = 0;
 
     if (mech_section_has_recycling_weapon(mech, LARM) ||
         mech_section_recycle_ticks(mech, LARM) ||
         (!mech_section_internal(mech, LARM)))
-      wLAAvail = 0;
+      w_la_avail = 0;
 
-    if (!(wLAAvail || wRAAvail)) {
+    if (!(w_la_avail || w_ra_avail)) {
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
           "You need at least one arm that is not recycling and does not have "
@@ -585,65 +585,65 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
       return;
     }
 
-    if (!wLAAvail)
-      wBTHModLARM = 1000;
+    if (!w_la_avail)
+      w_bth_mod_larm = 1000;
     else
-      wBTHModLARM = mech_arm_base_to_hit_modifier(mech, LARM);
+      w_bth_mod_larm = mech_arm_base_to_hit_modifier(mech, LARM);
 
-    if (!wRAAvail)
-      wBTHModRARM = 1000;
+    if (!w_ra_avail)
+      w_bth_mod_rarm = 1000;
     else
-      wBTHModRARM = mech_arm_base_to_hit_modifier(mech, RARM);
+      w_bth_mod_rarm = mech_arm_base_to_hit_modifier(mech, RARM);
 
-    if (wBTHModRARM < wBTHModLARM) {
-      wBTH = wBTHModRARM;
-      wArmToUse = RARM;
+    if (w_bth_mod_rarm < w_bth_mod_larm) {
+      w_bth = w_bth_mod_rarm;
+      w_arm_to_use = RARM;
     } else {
-      wBTH = wBTHModLARM;
-      wArmToUse = LARM;
+      w_bth = w_bth_mod_larm;
+      w_arm_to_use = LARM;
     }
   } else {
-    wBTH = mech_arm_base_to_hit_modifier(mech, wArmToUse);
+    w_bth = mech_arm_base_to_hit_modifier(mech, w_arm_to_use);
   }
 
-  wBTH += FindPilotPiloting(mech) + 4;
-  wRoll = btech_random_roll(mech_context(mech));
+  w_bth += find_pilot_piloting(mech) + 4;
+  w_roll = btech_random_roll(mech_context(mech));
 
-  ArmorStringFromIndex(wArmToUse, strPunchWith, mech_class(mech),
-                       mech_movement_type(mech));
+  armor_string_from_index(w_arm_to_use, str_punch_with, mech_class(mech),
+                          mech_movement_type(mech));
 
   mech_printf(mech, MECHALL,
               "You try to swat at the iNarc pods attached to your %s with your "
               "%s.  BTH:  %d,\tRoll:  %d",
-              strLocation, strPunchWith, wBTH, wRoll);
+              str_location, str_punch_with, w_bth, w_roll);
 
   /* Oops, we failed! */
-  if (wRoll < wBTH) {
+  if (w_roll < w_bth) {
     mech_notify(mech, MECHALL, "Uh oh. You miss the pod and hit yourself!");
     mech_los_broadcast(
         mech, "tries to swat off an iNarc pod, but misses and hits itself!");
 
-    wSelfDamage = (mech_tonnage(mech) + 10 / 2) / 10;
+    w_self_damage = (mech_tonnage(mech) + 10 / 2) / 10;
 
-    if (mech_critical_part_type(mech, wArmToUse, 2) !=
+    if (mech_critical_part_type(mech, w_arm_to_use, 2) !=
             special_equipment_index(LOWER_ACTUATOR) ||
-        mech_critical_is_nonfunctional(mech, wArmToUse, 2))
-      wSelfDamage = wSelfDamage / 2;
+        mech_critical_is_nonfunctional(mech, w_arm_to_use, 2))
+      w_self_damage = w_self_damage / 2;
 
-    if (mech_critical_part_type(mech, wArmToUse, 1) !=
+    if (mech_critical_part_type(mech, w_arm_to_use, 1) !=
             special_equipment_index(UPPER_ACTUATOR) ||
-        mech_critical_is_nonfunctional(mech, wArmToUse, 1))
-      wSelfDamage = wSelfDamage / 2;
+        mech_critical_is_nonfunctional(mech, w_arm_to_use, 1))
+      w_self_damage = w_self_damage / 2;
 
     mech_damage_apply(
         &(MechDamageRequest){.target = mech,
                              .attacker = mech,
                              .line_of_sight = 1,
                              .attack_pilot = mech_pilot_dbref(mech),
-                             .hit_location = wLoc,
+                             .hit_location = w_loc,
                              .rear = 0,
                              .critical = 0,
-                             .armor_damage = wSelfDamage,
+                             .armor_damage = w_self_damage,
                              .internal_damage = 0,
                              .transfer = MECH_DAMAGE_NORMAL,
                              .cause = -1,
@@ -652,14 +652,14 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
                              .ammunition_mode = 0,
                              .ignore_swarmers = 0});
   } else {
-    mech_section_special_remove(mech, wLoc, wPodType);
+    mech_section_special_remove(mech, w_loc, w_pod_type);
 
-    mech_printf(mech, MECHALL, "You knock a %s pod off your %s!", strPodType,
-                strLocation);
+    mech_printf(mech, MECHALL, "You knock a %s pod off your %s!", str_pod_type,
+                str_location);
     mech_los_broadcast(mech, "knocks an iNarc pod off itself.");
   }
 
-  mech_set_recycle_limb(mech, wArmToUse, PHYSICAL_RECYCLE_TIME);
+  mech_set_recycle_limb(mech, w_arm_to_use, PHYSICAL_RECYCLE_TIME);
 }
 
 static void mech_inarc_pods_tank_remove_event(MuxEvent *e) {

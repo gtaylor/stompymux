@@ -69,7 +69,7 @@ void tech_toggletype(DbRef player, void *data, char *buffer) {
   mech_critical_ammo_mode_set(
       mech, loc, part,
       (mech_critical_ammo_mode(mech, loc, part) & ~AMMO_MODES) | t);
-  mech_critical_data_set(mech, loc, part, FullAmmo(mech, loc, part));
+  mech_critical_data_set(mech, loc, part, full_ammo(mech, loc, part));
   mech_notify(mech, MECHALL, "Ammo toggled.");
 }
 
@@ -113,12 +113,12 @@ void tech_reload(DbRef player, void *data, char *buffer) {
         "The ammo compartment is disabled ; repair/replacepart it first.");
     return;
   }
-  if (mech_critical_data(mech, loc, part) == FullAmmo(mech, loc, part)) {
+  if (mech_critical_data(mech, loc, part) == full_ammo(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That particular ammo compartment doesn't need reloading.");
     return;
   }
-  if (SomeoneRepairing(mech, loc, part)) {
+  if (someone_repairing(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's playing with that part already!");
     return;
@@ -133,7 +133,7 @@ void tech_reload(DbRef player, void *data, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping that section - no repairs are possible!");
     return;
@@ -218,7 +218,7 @@ void tech_unload(DbRef player, void *data, char *buffer) {
                  "That particular ammo compartment is empty already.");
     return;
   }
-  if (SomeoneRepairing(mech, loc, part)) {
+  if (someone_repairing(mech, loc, part)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's playing with that part already!");
     return;
@@ -233,13 +233,13 @@ void tech_unload(DbRef player, void *data, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (SomeoneScrappingLoc(mech, loc)) {
+  if (someone_scrapping_loc(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping that section - no repairs are possible!");
     return;
   }
   now = mech_critical_data(mech, loc, part);
-  if (FullAmmo(mech, loc, part) == now)
+  if (full_ammo(mech, loc, part) == now)
     change = 2;
   else
     change = 1;

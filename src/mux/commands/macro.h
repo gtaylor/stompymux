@@ -17,8 +17,8 @@ constexpr int MAX_SLOTS = 5; /* Number of macro slots a person can have. */
 
 typedef struct MacroRegistry MacroRegistry;
 typedef struct ChannelRegistry ChannelRegistry;
-typedef struct macroentry MACENT;
-struct macroentry {
+typedef struct Macroentry MACENT;
+struct Macroentry {
   const char *cmdname;
   void (*handler)(MatchContext *, MacroRegistry *, DbRef, char *);
 };

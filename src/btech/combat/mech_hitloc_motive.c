@@ -17,34 +17,34 @@
 #include "section_types.h"
 
 /* Do L3 FASA motive system crits */
-void mech_motive_system_hit(Mech *mech, int wRollMod) {
-  int wRoll;
+void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
+  int w_roll;
   const char MAX_LEN = 64;
-  char strVhlTypeName[64];
+  char str_vhl_type_name[64];
 
-  wRoll = btech_random_roll(mech_context(mech)) + wRollMod;
+  w_roll = btech_random_roll(mech_context(mech)) + w_roll_mod;
 
   switch (mech_movement_type(mech)) {
   case MOVE_TRACK:
-    strcpy(strVhlTypeName, "tank");
+    strcpy(str_vhl_type_name, "tank");
     break;
   case MOVE_WHEEL:
-    strcpy(strVhlTypeName, "vehicle");
-    wRoll += 2;
+    strcpy(str_vhl_type_name, "vehicle");
+    w_roll += 2;
     break;
   case MOVE_HOVER:
-    strcpy(strVhlTypeName, "hovercraft");
-    wRoll += 4;
+    strcpy(str_vhl_type_name, "hovercraft");
+    w_roll += 4;
     break;
   case MOVE_HULL:
-    strcpy(strVhlTypeName, "ship");
+    strcpy(str_vhl_type_name, "ship");
     break;
   case MOVE_FOIL:
-    strcpy(strVhlTypeName, "hydrofoil");
-    wRoll += 4;
+    strcpy(str_vhl_type_name, "hydrofoil");
+    w_roll += 4;
     break;
   case MOVE_SUB:
-    strncpy(strVhlTypeName, "submarine", MAX_LEN);
+    strncpy(str_vhl_type_name, "submarine", MAX_LEN);
     break;
   case MOVE_BIPED:
   case MOVE_VTOL:
@@ -52,17 +52,17 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
   case MOVE_QUAD:
   case MOVE_NONE:
   default:
-    strncpy(strVhlTypeName, "weird unidentifiable toy (warn a wizard!)",
+    strncpy(str_vhl_type_name, "weird unidentifiable toy (warn a wizard!)",
             MAX_LEN);
     break;
   }
 
-  if (wRoll < 8) /* no effect */
+  if (w_roll < 8) /* no effect */
     return;
 
   mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
 
-  if (wRoll < 10) { /* minor effect */
+  if (w_roll < 10) { /* minor effect */
     mech_pilot_skill_modifier_add(mech, 1);
 
     if (mech_condition_summary(mech).fallen)
@@ -74,11 +74,11 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
           mech, MECHALL,
           "[fg=red bold]Your motive system takes a minor hit, making it "
           "harder to control your %s![reset]",
-          strVhlTypeName);
+          str_vhl_type_name);
 
     if (fabsf(mech_current_speed(mech)) > 0.0F)
       mech_los_broadcast(mech, "wobbles slightly.");
-  } else if (wRoll < 12) { /* moderate effect */
+  } else if (w_roll < 12) { /* moderate effect */
     mech_pilot_skill_modifier_add(mech, 2);
 
     if (mech_condition_summary(mech).fallen)
@@ -90,7 +90,7 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
           mech, MECHALL,
           "[fg=red bold]Your motive system takes a moderate hit, slowing "
           "you down and making it harder to control your %s![reset]",
-          strVhlTypeName);
+          str_vhl_type_name);
 
     if (fabsf(mech_current_speed(mech)) > 0.0F)
       mech_los_broadcast(mech, "wobbles violently.");
@@ -107,7 +107,7 @@ void mech_motive_system_hit(Mech *mech, int wRollMod) {
           mech, MECHALL,
           "[fg=red bold]Your motive system is destroyed! Your %s can no "
           "longer move![reset]",
-          strVhlTypeName);
+          str_vhl_type_name);
 
     if (mech_current_speed(mech) > 0)
       mech_los_broadcast(mech, "shakes violently then begins to slow down.");

@@ -6,6 +6,7 @@
 #include <bits/types/struct_rusage.h>
 #include <errno.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <sys/resource.h>
 #include <time.h>
@@ -56,7 +57,7 @@ static void signal_test_tick(void) {
 }
 #endif
 
-ServerTimer *server_timer_create(uv_loop_t *loop,
+ServerTimer *server_timer_create(UvLoopT *loop,
                                  MaintenanceContext *maintenance) {
   ServerTimer *timer = calloc(1, sizeof(*timer));
   uint64_t initial_timeout = 100;

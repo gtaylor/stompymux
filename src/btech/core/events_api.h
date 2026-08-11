@@ -3,4 +3,4 @@
 #include "mux/server/platform.h"
 
 /* Administrative command that reports currently scheduled BTech events. */
-void debug_EventTypes(DbRef player, void *data, char *buffer);
+void debug_event_types(DbRef player, void *data, char *buffer);

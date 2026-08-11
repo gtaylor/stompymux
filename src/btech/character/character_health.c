@@ -130,7 +130,7 @@ static int loc_mod(int loc) {
 void initialize_pc(DbRef player, Mech *mech) {
   BtechContext *context = mech_context(mech);
   PSTATS stats, *s = &stats;
-  int bruise, lethal, playerBLD;
+  int bruise, lethal, player_bld;
   int dam, tot;
   char *c;
   int cnt;
@@ -147,14 +147,14 @@ void initialize_pc(DbRef player, Mech *mech) {
   buf4[1] = 0;
   character_stats_retrieve(context, player,
                            VALUES_HEALTH | VALUES_ATTRS | VALUES_SKILLS, s);
-  playerBLD = char_getstatvalue(s, "build");
+  player_bld = char_getstatvalue(s, "build");
   bruise = char_getstatvalue(s, "bruise");
   lethal = char_getstatvalue(s, "lethal");
-  tot = playerBLD * 20;
+  tot = player_bld * 20;
   dam = bruise + lethal;
-  const int movement_score = playerBLD + char_getstatvalue(s, "reflexes") +
+  const int MOVEMENT_SCORE = player_bld + char_getstatvalue(s, "reflexes") +
                              char_getstatvalue(s, "running");
-  mech_maximum_speed_set(mech, (float)movement_score * MP1 / 9.0F);
+  mech_maximum_speed_set(mech, (float)MOVEMENT_SCORE * MP1 / 9.0F);
 #define PC_LOCS 4
   for (i = 0; i < NUM_SECTIONS; i++) {
     mech_section_armor_set(mech, i, 0);
@@ -306,16 +306,16 @@ void initialize_pc(DbRef player, Mech *mech) {
 void fix_pilotdamage(Mech *mech, DbRef player) {
   BtechContext *context = mech_context(mech);
   PSTATS stats, *s = &stats;
-  int bruise, lethal, playerBLD;
+  int bruise, lethal, player_bld;
 
   character_stats_retrieve(context, player, VALUES_HEALTH | VALUES_ATTRS, s);
   bruise = char_getstatvalue(s, "bruise");
   lethal = char_getstatvalue(s, "lethal");
-  playerBLD = char_getstatvalue(s, "build") * 2;
-  if (playerBLD < 1 || playerBLD > 100)
-    playerBLD = 10;
+  player_bld = char_getstatvalue(s, "build") * 2;
+  if (player_bld < 1 || player_bld > 100)
+    player_bld = 10;
 
-  mech_pilot_status_set(mech, (bruise + lethal) / playerBLD);
+  mech_pilot_status_set(mech, (bruise + lethal) / player_bld);
 }
 
 static int pilot_status_roll_needed(int status) {
@@ -343,25 +343,25 @@ int mw_ic_bth(Mech *mech) {
   /* Rule Reference: Total Warfare, Page 41-42 ( Consciousness Table ) */
   /* Rule Reference: MaxTech Revised, Page 46 ( Pain Resistance = -1 ) */
 
-  int playerBLD;
+  int player_bld;
   int bruise, playerhits;
   PSTATS stats, *s = &stats;
   int mod = 0;
 
   character_stats_retrieve(context, mech_pilot_dbref(mech),
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
-  playerBLD = char_getstatvalue(s, "build");
+  player_bld = char_getstatvalue(s, "build");
   bruise = char_getstatvalue(s, "bruise");
-  playerhits = 10 * playerBLD - bruise;
+  playerhits = 10 * player_bld - bruise;
   if (char_getstatvalue(s, "pain_resistance") == 1)
     mod = -1;
-  if (playerhits >= (8 * playerBLD))
+  if (playerhits >= (8 * player_bld))
     return 3 + mod;
-  else if (playerhits >= (6 * playerBLD))
+  else if (playerhits >= (6 * player_bld))
     return 5 + mod;
-  else if (playerhits >= (4 * playerBLD))
+  else if (playerhits >= (4 * player_bld))
     return 7 + mod;
-  else if (playerhits >= (2 * playerBLD))
+  else if (playerhits >= (2 * player_bld))
     return 10 + mod;
   else if (playerhits >= -1)
     return 11 + mod;
@@ -393,11 +393,12 @@ int handlemwconc(Mech *mech, int initial) {
         mech_movement_stop(mech);
         return 0;
       }
-    m = pilot_status_roll_needed(BOUNDED(0, mech_pilot_status(mech), 4));
+    m = pilot_status_roll_needed(bounded(0, mech_pilot_status(mech), 4));
   }
   if (initial && mech_pilot_is_unconscious(mech))
     return 0;
-  if (HasBoolAdvantage(mech_context(mech), mech_pilot_dbref(mech), "toughness"))
+  if (has_bool_advantage(mech_context(mech), mech_pilot_dbref(mech),
+                         "toughness"))
     /*  Gets the saving roll for someone with toughness  */
     roll = char_rollsaving(mech_context(mech));
   else
@@ -428,7 +429,7 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
   BtechContext *context = mech_context(mech);
   PSTATS stats, *s = &stats;
   DbRef player;
-  int damage, bruise, lethaldam, playerBLD;
+  int damage, bruise, lethaldam, player_bld;
 
   if (mech_dbref(mech) < 0)
     return;
@@ -448,23 +449,23 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
   bruise = char_getstatvalue(s, "bruise");
   /* gets the players bruise damage */
 
-  playerBLD = char_getstatvalue(s, "build");
+  player_bld = char_getstatvalue(s, "build");
   /* get the player's BLD value */
 
-  damage = 2 * playerBLD * dam;
+  damage = 2 * player_bld * dam;
   /* the damage we are due */
 
   bruise += damage;
   /* this part subtracts 10 from players lethal damage */
 
-  if (bruise > playerBLD * 10) {
+  if (bruise > player_bld * 10) {
     lethaldam = char_getstatvalue(s, "lethal");
-    lethaldam += (bruise - playerBLD * 10);
-    bruise = playerBLD * 10;
+    lethaldam += (bruise - player_bld * 10);
+    bruise = player_bld * 10;
 
-    if (lethaldam >= playerBLD * 10) {
-      char_setstatvalue(s, "lethal", playerBLD * 10 - 1);
-      char_setstatvalue(s, "bruise", playerBLD * 10);
+    if (lethaldam >= player_bld * 10) {
+      char_setstatvalue(s, "lethal", player_bld * 10 - 1);
+      char_setstatvalue(s, "bruise", player_bld * 10);
       character_stats_store(context, player, s, VALUES_HEALTH);
       if (!mech_is_destroyed(mech)) {
         mech_destroy(mech, attacker, 0, KILL_TYPE_MWDAMAGE);
@@ -484,7 +485,7 @@ void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
   BtechContext *context = mech_context(mech);
   PSTATS stats, *s = &stats;
   DbRef player;
-  int lethaldam, playerBLD;
+  int lethaldam, player_bld;
 
   if (mech_dbref(mech) < 0)
     return;
@@ -500,13 +501,13 @@ void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
   character_stats_retrieve(context, player,
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
   /* get the player_stats structure */
-  playerBLD = char_getstatvalue(s, "build");
-  if (!playerBLD)
-    playerBLD++;
+  player_bld = char_getstatvalue(s, "build");
+  if (!player_bld)
+    player_bld++;
   lethaldam = char_getstatvalue(s, "lethal");
-  lethaldam += BOUNDED(10, dam * playerBLD, 40);
-  if (lethaldam >= playerBLD * 10) {
-    lethaldam = playerBLD * 10;
+  lethaldam += bounded(10, dam * player_bld, 40);
+  if (lethaldam >= player_bld * 10) {
+    lethaldam = player_bld * 10;
     char_setstatvalue(s, "lethal", lethaldam - 1);
     char_setstatvalue(s, "bruise", lethaldam);
     character_stats_store(context, player, s, VALUES_HEALTH);
@@ -516,7 +517,7 @@ void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
     mech_contents_kill_if_in_character(mech);
     return;
   }
-  char_setstatvalue(s, "bruise", playerBLD * 10 - 5);
+  char_setstatvalue(s, "bruise", player_bld * 10 - 5);
   char_setstatvalue(s, "lethal", lethaldam);
   character_stats_store(context, player, s, VALUES_HEALTH);
   handlemwconc(mech, 1);

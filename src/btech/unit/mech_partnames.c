@@ -257,14 +257,14 @@ typedef struct PartNameLookup {
 
 static const char *get_part_name(const PartNameLookup *lookup) {
   PartNameRegistry *registry = lookup->context->part_names;
-  const int id = lookup->part.id;
-  const int brand = lookup->part.brand;
+  const int ID = lookup->part.id;
+  const int BRAND = lookup->part.brand;
 
-  if (id < 0 || id >= NUM_ITEMS || brand < 0 || brand > BRANDCOUNT)
+  if (ID < 0 || ID >= NUM_ITEMS || BRAND < 0 || BRAND > BRANDCOUNT)
     return nullptr;
-  PartNameEntry *entry = part_index_entry(registry, brand, id);
-  if (!entry && brand)
-    entry = part_index_entry(registry, 0, id);
+  PartNameEntry *entry = part_index_entry(registry, BRAND, ID);
+  if (!entry && BRAND)
+    entry = part_index_entry(registry, 0, ID);
   return entry ? part_name_field(entry, lookup->field) : nullptr;
 }
 
@@ -361,7 +361,7 @@ PartMatchResult part_name_lookup(const PartNameLookupRequest *request) {
   });
 }
 
-void ListForms(DbRef player, void *data, char *buffer) {
+void list_forms(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
   PartNameRegistry *registry = debug->context->part_names;
   int i;
@@ -381,11 +381,11 @@ BtechScriptResult fun_btpartmatch(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   /* fargs[0] = name to match on
    */
 
@@ -396,7 +396,7 @@ BtechScriptResult fun_btpartmatch(BtechScriptCall *call) {
 
   int part_count = 0;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
@@ -456,17 +456,17 @@ BtechScriptResult fun_btpartmatch(BtechScriptCall *call) {
 }
 
 /* Categories accepted by btpartslist(), based on the canonical part ID. */
-typedef enum bt_part_category {
+typedef enum BtPartCategory {
   BT_PART_CATEGORY_AMMO,
   BT_PART_CATEGORY_WEAPON,
   BT_PART_CATEGORY_BOMB,
   BT_PART_CATEGORY_SPECIAL,
   BT_PART_CATEGORY_CARGO,
   BT_PART_CATEGORY_INVALID
-} BT_PART_CATEGORY;
+} BtPartCategory;
 
 /* Convert a user-facing category name into the corresponding part category. */
-static BT_PART_CATEGORY btpartslist_category(const char *category) {
+static BtPartCategory btpartslist_category(const char *category) {
   if (!strcasecmp(category, "ammo"))
     return BT_PART_CATEGORY_AMMO;
   if (!strcasecmp(category, "weapon") || !strcasecmp(category, "weapons") ||
@@ -484,7 +484,7 @@ static BT_PART_CATEGORY btpartslist_category(const char *category) {
 
 /* Return whether a canonical part ID belongs in the requested category. */
 typedef struct PartCategoryRequest {
-  BT_PART_CATEGORY category;
+  BtPartCategory category;
   int part;
 } PartCategoryRequest;
 
@@ -512,12 +512,12 @@ BtechScriptResult fun_btpartscategorylist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
-  if (!is_wizard(context->world->database, player)) {
+  [[maybe_unused]] const DbRef PLAYER = call->player;
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
@@ -534,12 +534,12 @@ BtechScriptResult fun_btpartslist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
-  BT_PART_CATEGORY category;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
+  BtPartCategory category;
   PartNameEntry *part_name;
   size_t used;
   size_t needed;
@@ -548,11 +548,11 @@ BtechScriptResult fun_btpartslist(BtechScriptCall *call) {
   int listed;
   PartNameRegistry *registry = context->btech->part_names;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
-  if (nfargs != 1) {
+  if (NFARGS != 1) {
     safe_tprintf_str(buff, bufc, "#-1 EXPECTS ONE CATEGORY ARGUMENT");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
@@ -597,11 +597,11 @@ BtechScriptResult fun_btpartname(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int nfargs = (int)call->arguments.count;
+  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
   [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int ncargs = (int)call->command_arguments.count;
+  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef player = call->player;
+  [[maybe_unused]] const DbRef PLAYER = call->player;
   /* fargs[0] = partnumer to find name for
    * fargs[1] = 'short', 'long' or 'vlong'
    */
@@ -610,7 +610,7 @@ BtechScriptResult fun_btpartname(BtechScriptCall *call) {
   char *cptr;
   const char *infostr;
 
-  if (!is_wizard(context->world->database, player)) {
+  if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
@@ -626,10 +626,10 @@ BtechScriptResult fun_btpartname(BtechScriptCall *call) {
   }
 
   char *const *name_type_slot = (char *const *)checked_storage_at_const(
-      (const void *)fargs, (size_t)nfargs, sizeof(*fargs), 1);
-  const char name_type = **name_type_slot;
+      (const void *)fargs, (size_t)NFARGS, sizeof(*fargs), 1);
+  const char NAME_TYPE = **name_type_slot;
   PartNameDescriptionFormat format;
-  switch (name_type) {
+  switch (NAME_TYPE) {
   case 's':
   case 'S':
     format = PART_NAME_DESCRIPTION_SHORT;
@@ -655,13 +655,13 @@ BtechScriptResult fun_btpartname(BtechScriptCall *call) {
 
 const char *partname_func(const PartNameDescriptionRequest *request) {
   BtechContext *context = request->context;
-  const int index = request->packed_part;
+  const int INDEX = request->packed_part;
   PartNameRegistry *registry = context->part_names;
   int id, brand;
   PartNameEntry *p;
 
-  id = packed_part_id(index);
-  brand = packed_part_brand(index);
+  id = packed_part_id(INDEX);
+  brand = packed_part_brand(INDEX);
   if (brand < 0 || brand > BRANDCOUNT || id < 0 || id >= NUM_ITEMS)
     return "#-1 INVALID PART NUMBER";
 

@@ -147,8 +147,8 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
       }
 
       /* Find direction of bad guy */
-      what_arc = InWeaponArc(mech, mech_position_real_x(physical_target),
-                             mech_position_real_y(physical_target));
+      what_arc = in_weapon_arc(mech, mech_position_real_x(physical_target),
+                               mech_position_real_y(physical_target));
 
       /* Rotate if we need to */
       if (what_arc & LSIDEARC) {
@@ -188,8 +188,8 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
       }
 
       /* Calculate the new arc */
-      new_arc = InWeaponArc(mech, mech_position_real_x(physical_target),
-                            mech_position_real_y(physical_target));
+      new_arc = in_weapon_arc(mech, mech_position_real_x(physical_target),
+                              mech_position_real_y(physical_target));
 
       /* Check to see what sections are destroyed */
       memset(is_section_destroyed, 0, sizeof(is_section_destroyed));
@@ -200,10 +200,10 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
       /* Check to see if the sections have a busy weapon */
       memset(section_hasbusyweap, 0, sizeof(section_hasbusyweap));
-      section_hasbusyweap[0] = SectHasBusyWeap(mech, RARM);
-      section_hasbusyweap[1] = SectHasBusyWeap(mech, LARM);
-      section_hasbusyweap[2] = SectHasBusyWeap(mech, RLEG);
-      section_hasbusyweap[3] = SectHasBusyWeap(mech, LLEG);
+      section_hasbusyweap[0] = sect_has_busy_weap(mech, RARM);
+      section_hasbusyweap[1] = sect_has_busy_weap(mech, LARM);
+      section_hasbusyweap[2] = sect_has_busy_weap(mech, RLEG);
+      section_hasbusyweap[3] = sect_has_busy_weap(mech, LLEG);
 
       /* Try weapon physical attacks */
 
@@ -357,8 +357,8 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
        * Front LLEG */
 
       /* Find direction of bad guy */
-      what_arc = InWeaponArc(mech, mech_position_real_x(physical_target),
-                             mech_position_real_y(physical_target));
+      what_arc = in_weapon_arc(mech, mech_position_real_x(physical_target),
+                               mech_position_real_y(physical_target));
 
       /* Check to see what sections are destroyed */
       memset(is_section_destroyed, 0, sizeof(is_section_destroyed));
@@ -369,8 +369,8 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
       /* Check to see if the sections have a busy weapon */
       memset(section_hasbusyweap, 0, sizeof(section_hasbusyweap));
-      section_hasbusyweap[0] = SectHasBusyWeap(mech, RARM);
-      section_hasbusyweap[1] = SectHasBusyWeap(mech, LARM);
+      section_hasbusyweap[0] = sect_has_busy_weap(mech, RARM);
+      section_hasbusyweap[1] = sect_has_busy_weap(mech, LARM);
       // section_hasbusyweap[2] = SectHasBusyWeap(mech, RLEG);
       // section_hasbusyweap[3] = SectHasBusyWeap(mech, LLEG);
 

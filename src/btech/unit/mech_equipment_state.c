@@ -84,25 +84,25 @@ void mech_critical_ammo_mode_set(Mech *mech, int section, int critical,
 int mech_critical_damage_flags(const Mech *mech, int section, int critical) {
   return clamp_unsigned_int_to_int(
       critical_at(mech, (CriticalSlotReference){section, critical})
-          ->weapDamageFlags);
+          ->weap_damage_flags);
 }
 
 void mech_critical_damage_flags_set(Mech *mech, int section, int critical,
                                     int flags) {
   critical_at_mutable(mech, (CriticalSlotReference){section, critical})
-      ->weapDamageFlags = clamp_int_to_unsigned_int(flags);
+      ->weap_damage_flags = clamp_int_to_unsigned_int(flags);
 }
 
 int mech_critical_desired_ammo_section(const Mech *mech, int section,
                                        int critical) {
   return critical_at(mech, (CriticalSlotReference){section, critical})
-      ->desiredAmmoLoc;
+      ->desired_ammo_loc;
 }
 
 void mech_critical_desired_ammo_section_set(Mech *mech, int section,
                                             int critical, int ammo_section) {
   critical_at_mutable(mech, (CriticalSlotReference){section, critical})
-      ->desiredAmmoLoc = clamp_int_to_short(ammo_section);
+      ->desired_ammo_loc = clamp_int_to_short(ammo_section);
 }
 
 int mech_critical_temporary_failure(const Mech *mech, int section,
@@ -112,7 +112,7 @@ int mech_critical_temporary_failure(const Mech *mech, int section,
 }
 
 int mech_critical_full_ammunition(const Mech *mech, int section, int critical) {
-  return FullAmmo(mech, section, critical);
+  return full_ammo(mech, section, critical);
 }
 
 float mech_ammunition_slot_multiplier(const Mech *mech, int section,
@@ -190,14 +190,14 @@ void mech_critical_ammo_mode_add(Mech *mech, int section, int critical,
 void mech_critical_damage_flags_add(Mech *mech, int section, int critical,
                                     int flags) {
   critical_at_mutable(mech, (CriticalSlotReference){section, critical})
-      ->weapDamageFlags |= clamp_int_to_unsigned_int(flags);
+      ->weap_damage_flags |= clamp_int_to_unsigned_int(flags);
 }
 
 void mech_critical_damage_repair(Mech *mech, int section, int critical) {
   struct CriticalSlot *slot =
       critical_at_mutable(mech, (CriticalSlotReference){section, critical});
   slot->firemode &= ~clamp_int_to_unsigned_int(DAMAGED_MODE);
-  slot->weapDamageFlags = 0;
+  slot->weap_damage_flags = 0;
   slot->brand %= 16;
 }
 
@@ -223,7 +223,7 @@ void mech_critical_destroy(Mech *mech, int section, int critical) {
   slot->firemode |= clamp_int_to_unsigned_int(DESTROYED_MODE);
   slot->firemode &=
       ~clamp_int_to_unsigned_int(BROKEN_MODE | DISABLED_MODE | DAMAGED_MODE);
-  slot->weapDamageFlags = 0;
+  slot->weap_damage_flags = 0;
   slot->brand %= 16;
 }
 
@@ -233,7 +233,7 @@ void mech_critical_restore(Mech *mech, int section, int critical) {
   slot->firemode &=
       ~clamp_int_to_unsigned_int(DESTROYED_MODE | HOTLOAD_MODE | DISABLED_MODE |
                                  BROKEN_MODE | DAMAGED_MODE);
-  slot->weapDamageFlags = 0;
+  slot->weap_damage_flags = 0;
   slot->brand %= 16;
 }
 
@@ -396,13 +396,13 @@ bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical) {
 }
 
 bool mech_section_has_recycling_weapon(Mech *mech, int section) {
-  return SectHasBusyWeap(mech, section);
+  return sect_has_busy_weap(mech, section);
 }
 
 bool mech_weapon_is_nonfunctional_at(Mech *mech, int section, int critical,
                                      int weapon_index) {
-  return WeaponIsNonfunctional(mech, section, critical,
-                               GetWeaponCrits(mech, weapon_index)) > 0;
+  return weapon_is_nonfunctional(mech, section, critical,
+                                 get_weapon_crits(mech, weapon_index)) > 0;
 }
 
 int mech_section_recycle_ticks(const Mech *mech, int section) {
@@ -434,7 +434,7 @@ void mech_section_base_to_hit_add(Mech *mech, int section, int modifier) {
 }
 
 int mech_section_critical_count(Mech *mech, int section) {
-  return CritsInLoc(mech, section);
+  return crits_in_loc(mech, section);
 }
 
 bool mech_part_is_structural_placeholder(int part_type) {

@@ -8,9 +8,9 @@
 float mech_jump_speed_for_map(const Mech *mech, const BattleMap *map) {
   float speed = mech_jump_speed(mech);
   if (mech_is_under_gravity(mech) && map != nullptr) {
-    const int map_gravity = battle_map_gravity(map);
-    const int gravity = map_gravity > 50 ? map_gravity : 50;
-    speed = speed * 100.0F / (float)gravity;
+    const int MAP_GRAVITY = battle_map_gravity(map);
+    const int GRAVITY = MAP_GRAVITY > 50 ? MAP_GRAVITY : 50;
+    speed = speed * 100.0F / (float)GRAVITY;
   }
   return speed;
 }

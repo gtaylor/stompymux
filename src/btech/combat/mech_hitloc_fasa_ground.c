@@ -14,7 +14,7 @@
 #include "mech_specification_api.h"
 #include "section_types.h"
 
-HitLocationResult fasa_ground_hit_location(Mech *mech, int hitGroup,
+HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
                                            HitLocationResult result, int roll) {
   int hitloc = 0;
   int side;
@@ -23,7 +23,7 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hitGroup,
 
   switch (mech_class(mech)) {
   case CLASS_VEH_GROUND:
-    switch (hitGroup) {
+    switch (hit_group) {
 
     case LEFTSIDE:
       switch (roll) {
@@ -304,7 +304,7 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hitGroup,
 
     case FRONT:
     case BACK:
-      side = (hitGroup == FRONT ? FSIDE : BSIDE);
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
       switch (roll) {
       case 2:
         /* A Roll on Determining Critical Hits Table */

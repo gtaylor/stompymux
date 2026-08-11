@@ -63,7 +63,7 @@ void newfreemechrep(DbRef key, void **data,
 
 /* With cap R means restricted command */
 
-void mechrep_Rresetcrits(DbRef player, void *data, char *buffer) {
+void mechrep_rresetcrits(DbRef player, void *data, char *buffer) {
   int i;
 
   RepairFacilityCommandContext repair_command;
@@ -81,10 +81,10 @@ void mechrep_Rresetcrits(DbRef player, void *data, char *buffer) {
   mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                "Default criticals set!");
   for (i = 0; i < NUM_SECTIONS; i++)
-    FillDefaultCriticals(mech, i);
+    fill_default_criticals(mech, i);
 }
 
-void mechrep_Rdisplaysection(DbRef player, void *data, char *buffer) {
+void mechrep_rdisplaysection(DbRef player, void *data, char *buffer) {
   char *args[1];
   int index;
 
@@ -105,18 +105,18 @@ void mechrep_Rdisplaysection(DbRef player, void *data, char *buffer) {
                  "You must specify a section to list the criticals for!");
     return;
   }
-  index = ArmorSectionFromString(mech_class(mech), mech_movement_type(mech),
-                                 args[0]);
+  index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
+                                    args[0]);
   if (index == -1) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Invalid section!");
     return;
   }
-  CriticalStatus(btech_context_evaluation(rep->xcode.context), player, mech,
-                 index);
+  critical_status(btech_context_evaluation(rep->xcode.context), player, mech,
+                  index);
 }
 
-void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
+void mechrep_rsetradio(DbRef player, void *data, char *buffer) {
   char *args[2];
   int i;
 
@@ -147,7 +147,7 @@ void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
                  "Invalid radio level!");
     return;
   }
-  i = BOUNDED(1, i, 5);
+  i = bounded(1, i, 5);
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "Radio level set to %d.", i);
   mech_radio_quality_set(mech, i);
@@ -163,7 +163,7 @@ void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
                 "Radio range set to %d.", mech_radio_range(mech));
 }
 
-void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
+void mechrep_rsettarget(DbRef player, void *data, char *buffer) {
   char *args[2];
   DbRef newmech;
 
@@ -198,7 +198,7 @@ void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
+void mechrep_rsettype(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   RepairFacilityCommandContext repair_command;
@@ -316,7 +316,7 @@ static void notify_repair_int(RepairFacility *rep, DbRef player,
                 "%s changed to %d.", name, value);
 }
 
-void mechrep_Rsetspeed(DbRef player, void *data, char *buffer) {
+void mechrep_rsetspeed(DbRef player, void *data, char *buffer) {
   float value;
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -337,7 +337,7 @@ void mechrep_Rsetspeed(DbRef player, void *data, char *buffer) {
   notify_repair_float(rep, player, "Maxspeed", mech_maximum_speed(mech));
 }
 
-void mechrep_Rsetjumpspeed(DbRef player, void *data, char *buffer) {
+void mechrep_rsetjumpspeed(DbRef player, void *data, char *buffer) {
   float value;
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -358,7 +358,7 @@ void mechrep_Rsetjumpspeed(DbRef player, void *data, char *buffer) {
   notify_repair_float(rep, player, "Jumpspeed", mech_jump_speed(mech));
 }
 
-void mechrep_Rsetheatsinks(DbRef player, void *data, char *buffer) {
+void mechrep_rsetheatsinks(DbRef player, void *data, char *buffer) {
   int value;
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -378,7 +378,7 @@ void mechrep_Rsetheatsinks(DbRef player, void *data, char *buffer) {
   notify_repair_int(rep, player, "Heatsinks", mech_heat_sink_count(mech));
 }
 
-void mechrep_Rsetlrsrange(DbRef player, void *data, char *buffer) {
+void mechrep_rsetlrsrange(DbRef player, void *data, char *buffer) {
   int value;
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -399,7 +399,7 @@ void mechrep_Rsetlrsrange(DbRef player, void *data, char *buffer) {
                     mech_long_range_sensor_range(mech));
 }
 
-void mechrep_Rsettacrange(DbRef player, void *data, char *buffer) {
+void mechrep_rsettacrange(DbRef player, void *data, char *buffer) {
   int value;
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -419,7 +419,7 @@ void mechrep_Rsettacrange(DbRef player, void *data, char *buffer) {
   notify_repair_int(rep, player, "TACrange", mech_tactical_range(mech));
 }
 
-void mechrep_Rsetscanrange(DbRef player, void *data, char *buffer) {
+void mechrep_rsetscanrange(DbRef player, void *data, char *buffer) {
   int value;
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -439,7 +439,7 @@ void mechrep_Rsetscanrange(DbRef player, void *data, char *buffer) {
   notify_repair_int(rep, player, "SCANrange", mech_scanner_range(mech));
 }
 
-void mechrep_Rsetradiorange(DbRef player, void *data, char *buffer) {
+void mechrep_rsetradiorange(DbRef player, void *data, char *buffer) {
   int value;
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -459,7 +459,7 @@ void mechrep_Rsetradiorange(DbRef player, void *data, char *buffer) {
   notify_repair_int(rep, player, "RADIOrange", mech_radio_range(mech));
 }
 
-void mechrep_Rsettons(DbRef player, void *data, char *buffer) {
+void mechrep_rsettons(DbRef player, void *data, char *buffer) {
   int value;
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -479,7 +479,7 @@ void mechrep_Rsettons(DbRef player, void *data, char *buffer) {
   notify_repair_int(rep, player, "Tons", mech_tonnage(mech));
 }
 
-void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
+void mechrep_rsetmove(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   RepairFacilityCommandContext repair_command;

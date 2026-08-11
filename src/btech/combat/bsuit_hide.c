@@ -59,10 +59,10 @@ static void mech_hide_event(MuxEvent *e) {
     return;
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
-    const DbRef unit = battle_map_unit_dbref(map, i);
-    if (unit <= 0)
+    const DbRef UNIT = battle_map_unit_dbref(map, i);
+    if (UNIT <= 0)
       continue;
-    t = btech_context_get_mech(context, unit);
+    t = btech_context_get_mech(context, UNIT);
     if (!t)
       continue;
     if (mech_is_clairvoyant(t) || mech_is_observer(t) || mech_is_invisible(t))

@@ -116,17 +116,17 @@ static int lua_mux_style(lua_State *state) {
   markup = alloc_lbuf("lua_mux_style.markup");
   cursor = markup;
   *cursor = '\0';
-  static const LuaStyleProperty properties[] = {
+  static const LuaStyleProperty PROPERTIES[] = {
       {"foreground", "fg=", LUA_STYLE_PROPERTY_STRING},
       {"background", "bg=", LUA_STYLE_PROPERTY_STRING},
       {"bold", "bold", LUA_STYLE_PROPERTY_BOOLEAN},
       {"underline", "underline", LUA_STYLE_PROPERTY_BOOLEAN},
       {"inverse", "inverse", LUA_STYLE_PROPERTY_BOOLEAN}};
-  for (size_t index = 0; index < sizeof(properties) / sizeof(properties[0]);
+  for (size_t index = 0; index < sizeof(PROPERTIES) / sizeof(PROPERTIES[0]);
        index++) {
     const LuaStyleProperty *property = checked_storage_at_const(
-        properties, sizeof(properties) / sizeof(properties[0]),
-        sizeof(*properties), index);
+        PROPERTIES, sizeof(PROPERTIES) / sizeof(PROPERTIES[0]),
+        sizeof(*PROPERTIES), index);
     if (!lua_mux_style_open(
             &(LuaStylePropertyRequest){.state = state,
                                        .table = 2,

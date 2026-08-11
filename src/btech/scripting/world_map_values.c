@@ -27,12 +27,12 @@ BtechScriptResult fun_btunitfixable(BtechScriptCall *call) {
                      "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
-  const DbRef mech_id =
+  const DbRef MECH_ID =
       match_thing(&call->evaluation->command->match, call->player,
                   script_function_argument(call->arguments.values,
                                            (int)call->arguments.count, 0));
-  Mech *mech = btech_context_get_mech(call->evaluation->btech, mech_id);
-  if (!is_good_obj(call->evaluation->btech->database, mech_id) || !mech) {
+  Mech *mech = btech_context_get_mech(call->evaluation->btech, MECH_ID);
+  if (!is_good_obj(call->evaluation->btech->database, MECH_ID) || !mech) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 INVALID TARGET");
     return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
@@ -49,12 +49,12 @@ BtechScriptResult fun_btlistblz(BtechScriptCall *call) {
                      "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
-  const DbRef map_id =
+  const DbRef MAP_ID =
       match_thing(&call->evaluation->command->match, call->player,
                   script_function_argument(call->arguments.values,
                                            (int)call->arguments.count, 0));
-  BattleMap *map = btech_context_get_map(call->evaluation->btech, map_id);
-  if (!is_good_obj(call->evaluation->btech->database, map_id) || !map) {
+  BattleMap *map = btech_context_get_map(call->evaluation->btech, MAP_ID);
+  if (!is_good_obj(call->evaluation->btech->database, MAP_ID) || !map) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 INVALID MAP");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
@@ -65,12 +65,12 @@ BtechScriptResult fun_btlistblz(BtechScriptCall *call) {
        object = next_mapobj(object)) {
     char *destination = checked_storage_region(buffer, sizeof(buffer), used,
                                                sizeof(buffer) - used);
-    const int written = snprintf(destination, sizeof(buffer) - used,
+    const int WRITTEN = snprintf(destination, sizeof(buffer) - used,
                                  count++ == 0 ? "%d %d %ld" : "|%d %d %ld",
                                  object->x, object->y, object->payload.scalar);
-    if (written < 0 || (size_t)written >= sizeof(buffer) - used)
+    if (WRITTEN < 0 || (size_t)WRITTEN >= sizeof(buffer) - used)
       break;
-    used += (size_t)written;
+    used += (size_t)WRITTEN;
   }
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%s", buffer);
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
@@ -82,12 +82,12 @@ BtechScriptResult fun_bthexinblz(BtechScriptCall *call) {
                      "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
   }
-  const DbRef map_id =
+  const DbRef MAP_ID =
       match_thing(&call->evaluation->command->match, call->player,
                   script_function_argument(call->arguments.values,
                                            (int)call->arguments.count, 0));
-  BattleMap *map = btech_context_get_map(call->evaluation->btech, map_id);
-  if (!is_good_obj(call->evaluation->btech->database, map_id) || !map) {
+  BattleMap *map = btech_context_get_map(call->evaluation->btech, MAP_ID);
+  if (!is_good_obj(call->evaluation->btech->database, MAP_ID) || !map) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 INVALID MAP");
     return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
@@ -109,18 +109,18 @@ BtechScriptResult fun_bthexinblz(BtechScriptCall *call) {
   }
   float source_x;
   float source_y;
-  MapCoordToRealCoord(x, y, &source_x, &source_y);
+  map_coord_to_real_coord(x, y, &source_x, &source_y);
   bool contained = false;
   for (MapObject *object = first_mapobj(map, TYPE_B_LZ); object;
        object = next_mapobj(object)) {
     float target_x;
     float target_y;
-    MapCoordToRealCoord(object->x, object->y, &target_x, &target_y);
-    const long radius = object->payload.scalar;
-    if (radius >= 0 && (double)map_real_range(&(MapRealSegment){
+    map_coord_to_real_coord(object->x, object->y, &target_x, &target_y);
+    const long RADIUS = object->payload.scalar;
+    if (RADIUS >= 0 && (double)map_real_range(&(MapRealSegment){
                            .start = {.x = source_x, .y = source_y},
                            .end = {.x = target_x, .y = target_y},
-                       }) <= (double)radius) {
+                       }) <= (double)RADIUS) {
       contained = true;
       break;
     }

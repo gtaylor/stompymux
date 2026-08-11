@@ -117,7 +117,7 @@ static char *set_string(char **ptr, char *new) {
                               * Check with GAC about this
                               */
   *ptr = (char *)malloc(strlen(new) + 1);
-  StringCopy(*ptr, new);
+  string_copy(*ptr, new);
   return (*ptr);
 }
 
@@ -338,7 +338,7 @@ char *attribute_get_string(GameDatabase *database, char *s, DbRef thing,
   if (!buff) {
     *s = '\0';
   } else {
-    StringCopy(s, buff);
+    string_copy(s, buff);
   }
   return s;
 }
@@ -578,19 +578,19 @@ void db_grow(GameDatabase *database, DbRef newtop) {
 
     database->object_storage = newdb;
     for (i = 0; i < SIZE_HACK; i++) {
-      const DbRef reserved = i - SIZE_HACK;
-      game_object_set_type(database, reserved, OBJECT_TYPE_GARBAGE);
-      game_object_clear_flags(database, reserved);
-      s_going(database, reserved);
-      game_object_clear_powers(database, reserved);
-      game_object_set_location(database, reserved, NOTHING);
-      game_object_set_contents(database, reserved, NOTHING);
-      game_object_set_exits(database, reserved, NOTHING);
-      game_object_set_link(database, reserved, NOTHING);
-      game_object_set_next(database, reserved, NOTHING);
-      game_object_set_zone(database, reserved, NOTHING);
-      game_object_set_stack(database, reserved, nullptr);
-      game_database_object(database, reserved)->state = nullptr;
+      const DbRef RESERVED = i - SIZE_HACK;
+      game_object_set_type(database, RESERVED, OBJECT_TYPE_GARBAGE);
+      game_object_clear_flags(database, RESERVED);
+      s_going(database, RESERVED);
+      game_object_clear_powers(database, RESERVED);
+      game_object_set_location(database, RESERVED, NOTHING);
+      game_object_set_contents(database, RESERVED, NOTHING);
+      game_object_set_exits(database, RESERVED, NOTHING);
+      game_object_set_link(database, RESERVED, NOTHING);
+      game_object_set_next(database, RESERVED, NOTHING);
+      game_object_set_zone(database, RESERVED, NOTHING);
+      game_object_set_stack(database, RESERVED, nullptr);
+      game_database_object(database, RESERVED)->state = nullptr;
     }
   }
   database->object_storage = newdb;

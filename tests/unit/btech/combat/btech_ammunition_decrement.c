@@ -50,7 +50,7 @@ bool weapon_catalogue_is_rotary_autocannon(int weapon_index) {
   return rotary;
 }
 
-int GetWeaponCrits(Mech *value, int weapon_index) {
+int get_weapon_crits(Mech *value, int weapon_index) {
   (void)value;
   (void)weapon_index;
   return 3;
@@ -126,7 +126,7 @@ ammunition_find(const AmmunitionLookupRequest *request) {
   return lookup_index == 1 ? first_lookup : second_lookup;
 }
 
-int CountAmmoForWeapon(Mech *value, int weapon_index) {
+int count_ammo_for_weapon(Mech *value, int weapon_index) {
   (void)value;
   (void)weapon_index;
   return ammunition_count;

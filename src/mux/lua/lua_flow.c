@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mux/lua/command_access.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/descriptor.h"
@@ -31,7 +30,7 @@ typedef struct LuaFlowField {
 
 typedef struct LuaFlowData {
   LuaOwner *runtime_owner;
-  LUA_MODULE_ROOT root;
+  LuaModuleRoot root;
   char path[PATH_MAX];
   LuaFlowField fields[LUA_FLOW_MAX_FIELDS];
   int field_count;
@@ -90,10 +89,10 @@ static void lua_flow_encode(LuaRuntime *runtime, lua_State *state,
         data->field_count < LUA_FLOW_MAX_FIELDS) {
       LuaFlowField *field = lua_flow_field_at(data, (size_t)data->field_count);
 
-      StringCopyTrunc(field->key, lua_tostring(state, -2),
-                      LUA_FLOW_KEY_SIZE - 1);
+      string_copy_trunc(field->key, lua_tostring(state, -2),
+                        LUA_FLOW_KEY_SIZE - 1);
       field->value = alloc_lbuf("lua_flow_field");
-      StringCopyTrunc(field->value, lua_tostring(state, -1), LBUF_SIZE - 1);
+      string_copy_trunc(field->value, lua_tostring(state, -1), LBUF_SIZE - 1);
       data->field_count++;
     } else if (lua_type(state, -2) == LUA_TSTRING) {
       log_error((LogEntry){.log = runtime->services->log,
@@ -118,7 +117,7 @@ static FlowOutcome lua_flow_step(const FlowStepCall *call) {
       data->runtime_owner != nullptr ? data->runtime_owner->runtime : nullptr;
   lua_State *state;
   FlowOutcome outcome = {.action = FLOW_ACTION_CANCEL};
-  LUA_MODULE_ROOT previous_root;
+  LuaModuleRoot previous_root;
   char error[LBUF_SIZE];
   const char *field;
   int top;
@@ -206,8 +205,8 @@ static FlowOutcome lua_flow_step(const FlowStepCall *call) {
 
   lua_getfield(state, result_index, "step");
   if (lua_isstring(state, -1))
-    StringCopyTrunc(outcome.next_step, lua_tostring(state, -1),
-                    FLOW_STEP_NAME_SIZE - 1);
+    string_copy_trunc(outcome.next_step, lua_tostring(state, -1),
+                      FLOW_STEP_NAME_SIZE - 1);
   lua_pop(state, 1);
 
   lua_getfield(state, result_index, "prompt");
@@ -226,7 +225,7 @@ static FlowOutcome lua_flow_step(const FlowStepCall *call) {
   return outcome;
 }
 
-static int lua_verify_module_has_flow(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+static int lua_verify_module_has_flow(LuaRuntime *runtime, LuaModuleRoot root,
                                       const char *path, const char *first_step,
                                       char *error, size_t error_size) {
   int top = lua_gettop(runtime->state);
@@ -258,7 +257,7 @@ int lua_runtime_flow_start(void *context, lua_State *state, int descriptor_id,
                            const char *module, const char *first_step) {
   LuaRuntime *runtime = context;
   Descriptor *d;
-  LUA_MODULE_ROOT root;
+  LuaModuleRoot root;
   char error[LBUF_SIZE];
   LuaFlowData *data;
 

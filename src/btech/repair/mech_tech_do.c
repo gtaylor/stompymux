@@ -26,24 +26,24 @@
 
 static bool parts_consume_one(DbRef player, Mech *mech, int location, int part,
                               int brand, int count) {
-  const MechPartRequirement requirement = {
+  const MechPartRequirement REQUIREMENT = {
       .part = mech_parts_alias(
           &(MechPartLocation){.mech = mech, .section = location, .part = part}),
       .brand = brand,
       .count = count,
   };
-  return mech_parts_consume(mech, player, &requirement, 1);
+  return mech_parts_consume(mech, player, &REQUIREMENT, 1);
 }
 
 static bool parts_consume_two(DbRef player, Mech *mech, int first_part,
                               int first_brand, int first_count, int second_part,
                               int second_brand, int second_count) {
-  const MechPartRequirement requirements[] = {
+  const MechPartRequirement REQUIREMENTS[] = {
       {.part = first_part, .brand = first_brand, .count = first_count},
       {.part = second_part, .brand = second_brand, .count = second_count},
   };
-  return mech_parts_consume(mech, player, requirements,
-                            sizeof(requirements) / sizeof(requirements[0]));
+  return mech_parts_consume(mech, player, REQUIREMENTS,
+                            sizeof(REQUIREMENTS) / sizeof(REQUIREMENTS[0]));
 }
 
 static bool parts_consume_four(DbRef player, Mech *mech, int first_part,
@@ -53,14 +53,14 @@ static bool parts_consume_four(DbRef player, Mech *mech, int first_part,
                                int third_brand, int third_count,
                                int fourth_part, int fourth_brand,
                                int fourth_count) {
-  const MechPartRequirement requirements[] = {
+  const MechPartRequirement REQUIREMENTS[] = {
       {.part = first_part, .brand = first_brand, .count = first_count},
       {.part = second_part, .brand = second_brand, .count = second_count},
       {.part = third_part, .brand = third_brand, .count = third_count},
       {.part = fourth_part, .brand = fourth_brand, .count = fourth_count},
   };
-  return mech_parts_consume(mech, player, requirements,
-                            sizeof(requirements) / sizeof(requirements[0]));
+  return mech_parts_consume(mech, player, REQUIREMENTS,
+                            sizeof(REQUIREMENTS) / sizeof(REQUIREMENTS[0]));
 }
 
 typedef struct AmmoType {
@@ -80,7 +80,7 @@ typedef struct AmmoType {
                                 in the special flag, to allow this ammo */
 } AmmoType;
 
-static const AmmoType ammo_types[] = {
+static const AmmoType AMMO_TYPES[] = {
     {'-', "normal", 0, -1, -1, 0, 0},
     {'L', "cluster", LBX_MODE, -1, -1, LBX, 0},
     {'A', "artemis", ARTEMIS_MODE, TMISSILE, -1, 0, DAR | NARC | INARC},
@@ -107,7 +107,7 @@ static const AmmoType ammo_types[] = {
 static const AmmoType *ammo_type(int index) {
   if (index < 0)
     abort();
-  return checked_storage_at_const(ammo_types, 22, sizeof(*ammo_types),
+  return checked_storage_at_const(AMMO_TYPES, 22, sizeof(*AMMO_TYPES),
                                   (size_t)index);
 }
 
@@ -140,7 +140,7 @@ int valid_ammo_mode(Mech *mech, int loc, int part, int let) {
   return -1;
 }
 
-int FindAmmoType(Mech *mech, int loc, int part) {
+int find_ammo_type(Mech *mech, int loc, int part) {
   int t = mech_critical_part_type(mech, loc, part);
   int m = mech_critical_ammo_mode(mech, loc, part);
   int base = -1;
@@ -314,7 +314,7 @@ int reload_econ(const RepairOperationCall *call) {
   Mech *mech = call->mech;
   int loc = call->selection.location;
   int part = call->selection.part;
-  int ammotype = FindAmmoType(mech, loc, part);
+  int ammotype = find_ammo_type(mech, loc, part);
 
   if (!parts_consume_one(player, mech, loc, ammotype,
                          mech_critical_brand(mech, loc, part), 1))
@@ -510,7 +510,8 @@ int replaceg_fail(const RepairOperationCall *call) {
                 "Despite messing the repair, you manage not to waste the %s.",
                 w ? "weapon" : "part");
 #ifndef BT_COMPLEXREPAIRS
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, FindAmmoType(mech, loc, part),
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
+                 find_ammo_type(mech, loc, part),
                  mech_critical_brand(mech, loc, part), 1);
 #else
   mech_parts_add(mech, loc, FindAmmoType(mech, loc, part),
@@ -527,8 +528,8 @@ int repairg_fail(const RepairOperationCall *call) {
   if (mech_critical_is_destroyed(mech, loc, part))
     /* If we are calling repairgun on a thing that is actually destroyed
      * the following check *should not* be necessary. Nevertheless... */
-    if (GetWeaponCrits(mech, weapon_from_equipment_index(
-                                 mech_critical_part_type(mech, loc, part))) >
+    if (get_weapon_crits(mech, weapon_from_equipment_index(
+                                   mech_critical_part_type(mech, loc, part))) >
         4) {
       mech_critical_destroy(mech, loc, part + 1);
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -657,29 +658,29 @@ int reattach_fail(const RepairOperationCall *call) {
 int replacesuit_fail(const RepairOperationCall *call) {
   DbRef player = call->player;
   Mech *mech = call->mech;
-  int wRand = 0;
+  int w_rand = 0;
 
   if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
     return 0;
 
-  wRand = btech_random_range_int(mech_context(mech), 5, 94);
+  w_rand = btech_random_range_int(mech_context(mech), 5, 94);
   notify_printf(
       btech_context_evaluation(mech_context(mech)), player,
       "Despite your disastrous failure, you recover %d%% of the materials.",
-      wRand);
+      w_rand);
 #ifndef BT_COMPLEXREPAIRS
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
                  cargo_equipment_index(BSUIT_SENSOR), 0,
-                 MAX(((BSUIT_REPAIR_SENSORS_NEEDED * wRand) / 100), 1));
+                 max(((BSUIT_REPAIR_SENSORS_NEEDED * w_rand) / 100), 1));
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
                  cargo_equipment_index(BSUIT_LIFESUPPORT), 0,
-                 ((BSUIT_REPAIR_LIFESUPPORT_NEEDED * wRand) / 100));
+                 ((BSUIT_REPAIR_LIFESUPPORT_NEEDED * w_rand) / 100));
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
                  cargo_equipment_index(BSUIT_ELECTRONIC), 0,
-                 ((BSUIT_REPAIR_ELECTRONICS_NEEDED * wRand) / 100));
+                 ((BSUIT_REPAIR_ELECTRONICS_NEEDED * w_rand) / 100));
   mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
                  tech_proper_internal_part(mech), 0,
-                 MAX(((BSUIT_REPAIR_INTERNAL_NEEDED * wRand) / 100), 1));
+                 max(((BSUIT_REPAIR_INTERNAL_NEEDED * w_rand) / 100), 1));
 #else
   int loc = call->selection.location;
   mech_parts_add(mech, loc, cargo_equipment_index(BSUIT_SENSOR), 0,

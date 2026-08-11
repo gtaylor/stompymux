@@ -27,15 +27,15 @@ extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
 
 static void look_append_quoted_target(const char *target, char *buffer,
                                       char **cursor) {
-  const size_t length = strlen(target);
+  const size_t LENGTH = strlen(target);
 
-  for (size_t index = 0; index < length; index++) {
-    const char character = *(const char *)checked_storage_at_const(
-        target, length + 1, sizeof(char), index);
+  for (size_t index = 0; index < LENGTH; index++) {
+    const char CHARACTER = *(const char *)checked_storage_at_const(
+        target, LENGTH + 1, sizeof(char), index);
 
-    if (character == '\\' || character == '"')
+    if (CHARACTER == '\\' || CHARACTER == '"')
       safe_chr('\\', buffer, cursor);
-    safe_chr(character, buffer, cursor);
+    safe_chr(CHARACTER, buffer, cursor);
   }
 }
 
@@ -51,15 +51,15 @@ static void look_exit_parts(const LookExitPartsRequest *request) {
   const char *stored_name = request->stored_name;
   char *display = request->display;
   char *command = request->command;
-  const size_t stored_length = strlen(stored_name);
+  const size_t STORED_LENGTH = strlen(stored_name);
   size_t primary_end = 0;
   size_t command_start = 0;
   size_t command_end;
   char raw_command[LBUF_SIZE];
 
-  while (primary_end < stored_length &&
+  while (primary_end < STORED_LENGTH &&
          *(const char *)checked_storage_at_const(
-             stored_name, stored_length + 1, sizeof(char), primary_end) != ';')
+             stored_name, STORED_LENGTH + 1, sizeof(char), primary_end) != ';')
     primary_end++;
   command_end = primary_end;
   size_t display_size = command_end;
@@ -70,15 +70,15 @@ static void look_exit_parts(const LookExitPartsRequest *request) {
   *(char *)checked_storage_at(display, LBUF_SIZE, sizeof(char), display_size) =
       '\0';
 
-  if (primary_end < stored_length && primary_end + 1 < stored_length &&
-      *(const char *)checked_storage_at_const(stored_name, stored_length + 1,
+  if (primary_end < STORED_LENGTH && primary_end + 1 < STORED_LENGTH &&
+      *(const char *)checked_storage_at_const(stored_name, STORED_LENGTH + 1,
                                               sizeof(char),
                                               primary_end + 1) != ';') {
     command_start = primary_end + 1;
     command_end = command_start;
-    while (command_end < stored_length &&
+    while (command_end < STORED_LENGTH &&
            *(const char *)checked_storage_at_const(
-               stored_name, stored_length + 1, sizeof(char), command_end) !=
+               stored_name, STORED_LENGTH + 1, sizeof(char), command_end) !=
                ';')
       command_end++;
   }
@@ -276,7 +276,7 @@ static void look_contents(const LookContext *look, const char *contents_name,
 static bool look_custom_appearance(EvaluationContext *evaluation, DbRef player,
                                    DbRef thing) {
   LuaAppearanceResult result;
-  const LuaAppearanceType type =
+  const LuaAppearanceType TYPE =
       is_room(evaluation->world->database, thing) ||
               game_object_location(evaluation->world->database, player) == thing
           ? LUA_APPEARANCE_INTERNAL
@@ -285,7 +285,7 @@ static bool look_custom_appearance(EvaluationContext *evaluation, DbRef player,
   lua_appearance_evaluate(
       evaluation->runtime->lua_owner->runtime,
       &(LuaAppearanceInvocation){
-          .type = type,
+          .type = TYPE,
           .descriptor =
               evaluation->command ? evaluation->command->descriptor : nullptr,
           .object = thing,
@@ -457,29 +457,29 @@ void look_in(const LookRequest *request) {
 
 void do_look(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
-  const DbRef player = invocation->player;
-  const int key = invocation->key;
+  const DbRef PLAYER = invocation->player;
+  const int KEY = invocation->key;
   char *name = invocation->first;
   DbRef thing, loc;
   int look_key;
 
   look_key = LK_SHOWATTR | LK_SHOWEXIT;
 
-  loc = game_object_location(evaluation->world->database, player);
+  loc = game_object_location(evaluation->world->database, PLAYER);
   if (!name || !*name) {
     thing = loc;
     if (is_good_obj(evaluation->world->database, thing)) {
-      if (key & LOOK_OUTSIDE) {
+      if (KEY & LOOK_OUTSIDE) {
         if (typeof_obj(evaluation->world->database, thing) ==
             OBJECT_TYPE_ROOM) {
-          notify_checked(evaluation, player, player, "You can't look outside.",
+          notify_checked(evaluation, PLAYER, PLAYER, "You can't look outside.",
                          MSG_ME);
           return;
         }
         thing = game_object_location(evaluation->world->database, thing);
       }
       look_in(&(LookRequest){.evaluation = evaluation,
-                             .viewer = player,
+                             .viewer = PLAYER,
                              .location = thing,
                              .key = look_key});
     }
@@ -489,7 +489,7 @@ void do_look(CommandInvocation *invocation) {
    * Look for the target locally
    */
 
-  thing = (key & LOOK_OUTSIDE) ? loc : player;
+  thing = (KEY & LOOK_OUTSIDE) ? loc : PLAYER;
   init_match(&invocation->context->match, thing, name, OBJECT_TYPE_NOTYPE);
   match_exit(&invocation->context->match);
   match_neighbor(&invocation->context->match);
@@ -503,9 +503,9 @@ void do_look(CommandInvocation *invocation) {
    */
 
   if (!is_good_obj(evaluation->world->database, thing)) {
-    thing = match_status(evaluation, player,
-                         match_possessed(&invocation->context->match, player,
-                                         ((key & LOOK_OUTSIDE) ? loc : player),
+    thing = match_status(evaluation, PLAYER,
+                         match_possessed(&invocation->context->match, PLAYER,
+                                         ((KEY & LOOK_OUTSIDE) ? loc : PLAYER),
                                          (char *)name, thing));
   }
   /*
@@ -516,33 +516,33 @@ void do_look(CommandInvocation *invocation) {
     switch (typeof_obj(evaluation->world->database, thing)) {
     case OBJECT_TYPE_ROOM:
       look_in(&(LookRequest){.evaluation = evaluation,
-                             .viewer = player,
+                             .viewer = PLAYER,
                              .location = thing,
                              .key = look_key});
       break;
     case OBJECT_TYPE_THING:
     case OBJECT_TYPE_PLAYER:
-      if (!look_simple(evaluation, player, thing)) {
+      if (!look_simple(evaluation, PLAYER, thing)) {
         LookContext look = {
-            .evaluation = evaluation, .viewer = player, .location = thing};
+            .evaluation = evaluation, .viewer = PLAYER, .location = thing};
         look_contents(&look, "Carrying:", CONTENTS_NESTED);
       }
       break;
     case OBJECT_TYPE_EXIT:
-      if (!look_simple(evaluation, player, thing) &&
+      if (!look_simple(evaluation, PLAYER, thing) &&
           is_transparent(evaluation->world->database, thing) &&
           (game_object_location(evaluation->world->database, thing) !=
            NOTHING)) {
         look_key &= ~LK_SHOWATTR;
         look_in(&(LookRequest){.evaluation = evaluation,
-                               .viewer = player,
+                               .viewer = PLAYER,
                                .location = game_object_location(
                                    evaluation->world->database, thing),
                                .key = look_key});
       }
       break;
     default:
-      (void)look_simple(evaluation, player, thing);
+      (void)look_simple(evaluation, PLAYER, thing);
     }
   }
 }

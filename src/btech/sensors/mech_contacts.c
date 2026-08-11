@@ -46,7 +46,7 @@
 #include "mux/world/access.h"
 #include "registry_api.h"
 
-static const char default_contactoptions[] = "!db";
+static const char DEFAULT_CONTACTOPTIONS[] = "!db";
 
 static bool mech_contact_is_friend(Mech *observer, Mech *target) {
   return mech_team(observer) == mech_team(target) &&
@@ -54,8 +54,8 @@ static bool mech_contact_is_friend(Mech *observer, Mech *target) {
 }
 
 static int mech_contact_heading(const Mech *mech) {
-  return AcceptableDegree(mech_heading_degrees(mech) +
-                          mech_lateral_movement(mech));
+  return acceptable_degree(mech_heading_degrees(mech) +
+                           mech_lateral_movement(mech));
 }
 
 static bool mech_contact_carries_club(const Mech *mech) {
@@ -63,7 +63,7 @@ static bool mech_contact_carries_club(const Mech *mech) {
          mech_section_carries_club(mech, LARM);
 }
 
-static const char *const ac_desc[] = {
+static const char *const AC_DESC[] = {
     "0 - See enemies and friends, long text, color",
     "1 - See enemies and friends, short text, color",
     "2 - See enemies only, long text, color",
@@ -73,7 +73,7 @@ static const char *const ac_desc[] = {
 
     "6 - Disabled"};
 
-static const char *const c_desc[] = {
+static const char *const C_DESC[] = {
     "0 - Very verbose", "1 - Short form, the usual one",
     "2 - Short form, the usual one, but do not see buildings",
     "3 - Shorter form"};
@@ -108,12 +108,12 @@ void show_brief_flags(DbRef player, Mech *mech) {
 #ifdef ADVANCED_LOS
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "    (A)utocontacts: %s",
-                contact_description(ac_desc, sizeof(ac_desc) / sizeof(*ac_desc),
+                contact_description(AC_DESC, sizeof(AC_DESC) / sizeof(*AC_DESC),
                                     mech_brief_mode(mech) / 4));
 #endif
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "    (C)ontacts:     %s",
-                contact_description(c_desc, sizeof(c_desc) / sizeof(*c_desc),
+                contact_description(C_DESC, sizeof(C_DESC) / sizeof(*C_DESC),
                                     mech_brief_mode(mech) % 4));
 }
 
@@ -153,11 +153,11 @@ void mech_brief(DbRef player, void *data, char *buffer) {
                    "Number out of range!");
       return;
     }
-    v = BOUNDED(0, v, 6);
+    v = bounded(0, v, 6);
     mech_brief_mode_set(mech, mech_brief_mode(mech) % 4 + v * 4);
     mech_printf(
         mech, MECHALL, "Autocontact brevity set to %s.",
-        contact_description(ac_desc, sizeof(ac_desc) / sizeof(*ac_desc), v));
+        contact_description(AC_DESC, sizeof(AC_DESC) / sizeof(*AC_DESC), v));
     return;
 #endif
   case 'C':
@@ -166,11 +166,11 @@ void mech_brief(DbRef player, void *data, char *buffer) {
                    "Number out of range!");
       return;
     }
-    v = BOUNDED(0, v, 3);
+    v = bounded(0, v, 3);
     mech_brief_mode_set(mech, ((mech_brief_mode(mech) / 4) * 4) + v);
     mech_printf(
         mech, MECHALL, "Contact brevity set to %s.",
-        contact_description(c_desc, sizeof(c_desc) / sizeof(*c_desc), v));
+        contact_description(C_DESC, sizeof(C_DESC) / sizeof(*C_DESC), v));
     return;
   }
 }
@@ -203,7 +203,7 @@ MechStatusString mech_status_string(Mech *target, int who) {
   MechStatusString status = {0};
   size_t sptr = 0;
 
-  const MechConditionSummary condition = mech_condition_summary(target);
+  const MechConditionSummary CONDITION = mech_condition_summary(target);
 
   if (mech_is_destroyed(target))
     status_string_append(&status, &sptr, 'D');
@@ -220,7 +220,7 @@ MechStatusString mech_status_string(Mech *target, int who) {
 
   if (mech_event_count(target, EVENT_CHANGING_HULLDOWN))
     status_string_append(&status, &sptr, 'h');
-  else if (condition.hull_down)
+  else if (CONDITION.hull_down)
     status_string_append(&status, &sptr, 'H');
 
   if (mech_is_towed(target))
@@ -246,10 +246,10 @@ MechStatusString mech_status_string(Mech *target, int who) {
   if (mech_searchlight_active(target))
     status_string_append(&status, &sptr, 'L');
 
-  if (condition.illuminated)
+  if (CONDITION.illuminated)
     status_string_append(&status, &sptr, 'l');
 
-  if (condition.swarm_target > 0)
+  if (CONDITION.swarm_target > 0)
     status_string_append(&status, &sptr, 'W');
 
   if (mech_contact_carries_club(target))
@@ -264,13 +264,13 @@ MechStatusString mech_status_string(Mech *target, int who) {
 #ifndef ECM_ON_CONTACTS
   if (who > 1) {
 #endif
-    if (condition.eccm_enabled || condition.angel_eccm_enabled)
+    if (CONDITION.eccm_enabled || CONDITION.angel_eccm_enabled)
       status_string_append(&status, &sptr, 'P');
 
-    if (condition.ecm_active || condition.angel_ecm_active)
+    if (CONDITION.ecm_active || CONDITION.angel_ecm_active)
       status_string_append(&status, &sptr, 'E');
 
-    if (condition.ecm_protected || condition.angel_ecm_protected)
+    if (CONDITION.ecm_protected || CONDITION.angel_ecm_protected)
       status_string_append(&status, &sptr, 'p');
 
     if (mech_is_any_ecm_disturbed(target))
@@ -279,13 +279,13 @@ MechStatusString mech_status_string(Mech *target, int who) {
   }
 #endif
 
-  if (condition.spinning)
+  if (CONDITION.spinning)
     status_string_append(&status, &sptr, 'X');
 
 #ifdef BT_MOVEMENT_MODES
-  if (condition.sprinting)
+  if (CONDITION.sprinting)
     status_string_append(&status, &sptr, 'M');
-  if (condition.evading)
+  if (CONDITION.evading)
     status_string_append(&status, &sptr, 'm');
 #endif
 
@@ -293,70 +293,71 @@ MechStatusString mech_status_string(Mech *target, int who) {
   return status;
 }
 
-char mech_contact_status_character(Mech *mech, Mech *mechTarget, int wCharNum) {
-  char cRet = ' ';
-  const MechConditionSummary condition = mech_condition_summary(mechTarget);
+char mech_contact_status_character(Mech *mech, Mech *mech_target,
+                                   int w_char_num) {
+  char c_ret = ' ';
+  const MechConditionSummary CONDITION = mech_condition_summary(mech_target);
 
-  switch (wCharNum) {
+  switch (w_char_num) {
   case 1:
-    cRet = condition.swarm_target > 0              ? 'W'
-           : mech_is_towed(mechTarget)             ? 'T'
-           : mech_carried_dbref(mechTarget) > 0    ? 't'
-           : mech_contact_carries_club(mechTarget) ? 'C'
-           :
+    c_ret = CONDITION.swarm_target > 0               ? 'W'
+            : mech_is_towed(mech_target)             ? 'T'
+            : mech_carried_dbref(mech_target) > 0    ? 't'
+            : mech_contact_carries_club(mech_target) ? 'C'
+            :
 #ifdef BT_MOVEMENT_MODES
-           condition.sprinting ? 'M'
-           : condition.evading ? 'm'
-                               :
+            CONDITION.sprinting ? 'M'
+            : CONDITION.evading ? 'm'
+                                :
 #endif
-                               ' ';
+                                ' ';
     break;
   case 2:
-    cRet = mech_is_destroyed(mechTarget)         ? 'D'
-           : mech_searchlight_active(mechTarget) ? 'L'
-           : condition.illuminated               ? 'l'
-                                                 : ' ';
+    c_ret = mech_is_destroyed(mech_target)         ? 'D'
+            : mech_searchlight_active(mech_target) ? 'L'
+            : CONDITION.illuminated                ? 'l'
+                                                   : ' ';
     break;
   case 3:
-    cRet = mech_is_jumping(mechTarget)                             ? 'J'
-           : mech_is_out_of_control(mechTarget)                    ? 'O'
-           : mech_is_fallen(mechTarget)                            ? 'F'
-           : mech_event_count(mechTarget, EVENT_STAND)             ? 'f'
-           : mech_event_count(mechTarget, EVENT_CHANGING_HULLDOWN) ? 'h'
-           : condition.hull_down                                   ? 'H'
-           : mech_condition_summary(mech).spinning                 ? 'X'
-                                                                   : ' ';
+    c_ret = mech_is_jumping(mech_target)                             ? 'J'
+            : mech_is_out_of_control(mech_target)                    ? 'O'
+            : mech_is_fallen(mech_target)                            ? 'F'
+            : mech_event_count(mech_target, EVENT_STAND)             ? 'f'
+            : mech_event_count(mech_target, EVENT_CHANGING_HULLDOWN) ? 'h'
+            : CONDITION.hull_down                                    ? 'H'
+            : mech_condition_summary(mech).spinning                  ? 'X'
+                                                                     : ' ';
     break;
   case 4:
-    cRet = mech_is_started(mechTarget)
-               ? (mech_excess_heat(mechTarget) != 0.0F              ? '+'
-                  : mech_is_jellied(mechTarget)                     ? 'I'
-                  : mech_event_count(mechTarget, EVENT_VEHICLEBURN) ? 'B'
-                                                                    : ' ')
-           : condition.staggering                        ? 'G'
-           : mech_event_count(mechTarget, EVENT_STARTUP) ? 's'
-                                                         : 'S';
+    c_ret = mech_is_started(mech_target)
+                ? (mech_excess_heat(mech_target) != 0.0F              ? '+'
+                   : mech_is_jellied(mech_target)                     ? 'I'
+                   : mech_event_count(mech_target, EVENT_VEHICLEBURN) ? 'B'
+                                                                      : ' ')
+            : CONDITION.staggering                         ? 'G'
+            : mech_event_count(mech_target, EVENT_STARTUP) ? 's'
+                                                           : 'S';
     break;
   case 5:
-    cRet = mech_has_attached_homing_beacon(mechTarget)
-               ? (mech_team(mechTarget) == mech_team(mech) ? 'n' : 'N')
-           :
+    c_ret = mech_has_attached_homing_beacon(mech_target)
+                ? (mech_team(mech_target) == mech_team(mech) ? 'n' : 'N')
+            :
 #ifdef ECM_ON_CONTACTS
-           (condition.eccm_enabled || condition.angel_eccm_enabled)     ? 'P'
-           : (condition.ecm_active || condition.angel_ecm_active)       ? 'E'
-           : (condition.ecm_protected || condition.angel_ecm_protected) ? 'p'
-           : mech_is_any_ecm_disturbed(mechTarget)                      ? 'e'
-                                                                        :
+            (CONDITION.eccm_enabled || CONDITION.angel_eccm_enabled)     ? 'P'
+            : (CONDITION.ecm_active || CONDITION.angel_ecm_active)       ? 'E'
+            : (CONDITION.ecm_protected || CONDITION.angel_ecm_protected) ? 'p'
+            : mech_is_any_ecm_disturbed(mech_target)                     ? 'e'
+                                                                         :
 #endif
-                                                   ' ';
+                                                     ' ';
     break;
   }
 
-  return cRet;
+  return c_ret;
 }
 
 void mech_contacts(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *tempMech;
+  Mech *mech = (Mech *)data, *temp_mech;
   BattleMap *mech_map =
                 btech_context_get_map(mech_context(mech), mech_map_dbref(mech)),
             *tmp_map;
@@ -370,7 +371,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   unsigned char see_what;
   char *str;
   char move_type[30];
-  char cStatus1, cStatus2, cStatus3, cStatus4, cStatus5;
+  char c_status1, c_status2, c_status3, c_status4, c_status5;
   int losflag;
   int isvb;
   int inlos;
@@ -390,13 +391,13 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       str = btech_attribute_read(mech_context(mech)->database, player,
                                  A_CONTACTOPT, (char[LBUF_SIZE]){0});
       if (!*str)
-        strlcpy(buff, default_contactoptions, sizeof(buff));
+        strlcpy(buff, DEFAULT_CONTACTOPTIONS, sizeof(buff));
       else {
         strncpy(buff, str, 50);
         buff[49] = 0;
 
         if (strlen(buff) == 0)
-          strlcpy(buff, default_contactoptions, sizeof(buff));
+          strlcpy(buff, DEFAULT_CONTACTOPTIONS, sizeof(buff));
       }
     } else {
       strncpy(buff, argument, 50);
@@ -409,35 +410,35 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       see_what = 0x0;
 
     for (loop = 0; loop < 50; loop++) {
-      const char c = *checked_string_suffix(buff, (size_t)loop);
-      if (c == '\0')
+      const char C = *checked_string_suffix(buff, (size_t)loop);
+      if (C == '\0')
         break;
 
-      if (c == 'd')
+      if (C == 'd')
 
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_DEAD)
                                  : (see_what |= SEE_DEAD);
-      else if (c == 's')
+      else if (C == 's')
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_SHUTDOWN)
                                  : (see_what |= SEE_SHUTDOWN);
-      else if (c == 'b')
+      else if (C == 'b')
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_BUILDINGS)
                                  : (see_what |= SEE_BUILDINGS);
-      else if (c == 'e')
+      else if (C == 'e')
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_ENEMA)
                                  : (see_what |= SEE_ENEMA);
-      else if (c == 'a')
+      else if (C == 'a')
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_ALLY)
                                  : (see_what |= SEE_ALLY);
-      else if (c == 't')
+      else if (C == 't')
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_TARGET)
                                  : (see_what |= SEE_TARGET);
-      else if (c == '!') {
+      else if (C == '!') {
         see_what = (SEE_NEGNEXT | SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA |
                     SEE_ALLY | SEE_TARGET);
       } else
         notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                      "Ignoring %c as contact option.", c);
+                      "Ignoring %c as contact option.", C);
     }
   } else {
     see_what = (SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA | SEE_ALLY | SEE_TARGET);
@@ -450,43 +451,44 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                  "Line of Sight Contacts:");
 
   for (loop = 0; loop < battle_map_unit_count(mech_map); loop++) {
-    const DbRef contact_dbref = battle_map_unit_dbref(mech_map, loop);
-    if (!(contact_dbref != mech_dbref(mech) && contact_dbref != -1))
+    const DbRef CONTACT_DBREF = battle_map_unit_dbref(mech_map, loop);
+    if (!(CONTACT_DBREF != mech_dbref(mech) && CONTACT_DBREF != -1))
       continue;
 
-    tempMech = btech_context_get_mech(mech_context(mech), contact_dbref);
+    temp_mech = btech_context_get_mech(mech_context(mech), CONTACT_DBREF);
 
-    if (!tempMech)
+    if (!temp_mech)
       continue;
     if (argc) {
-      if (!((mech_contact_is_friend(mech, tempMech) ? (see_what & SEE_ALLY)
-                                                    : (see_what & SEE_ENEMA)) ||
+      if (!((mech_contact_is_friend(mech, temp_mech)
+                 ? (see_what & SEE_ALLY)
+                 : (see_what & SEE_ENEMA)) ||
             ((see_what & SEE_TARGET) &&
-             (mech_dbref(tempMech) == mech_target_dbref(mech)))))
+             (mech_dbref(temp_mech) == mech_target_dbref(mech)))))
         continue;
-      if (!(((see_what & SEE_SHUTDOWN) || mech_is_started(tempMech)) ||
-            mech_is_destroyed(tempMech) ||
+      if (!(((see_what & SEE_SHUTDOWN) || mech_is_started(temp_mech)) ||
+            mech_is_destroyed(temp_mech) ||
             ((see_what & SEE_TARGET) &&
-             (mech_dbref(tempMech) == mech_target_dbref(mech)))))
+             (mech_dbref(temp_mech) == mech_target_dbref(mech)))))
         continue;
-      if (!(((see_what & SEE_DEAD) || !mech_is_destroyed(tempMech)) ||
+      if (!(((see_what & SEE_DEAD) || !mech_is_destroyed(temp_mech)) ||
             ((see_what & SEE_TARGET) &&
-             (mech_dbref(tempMech) == mech_target_dbref(mech)))))
+             (mech_dbref(temp_mech) == mech_target_dbref(mech)))))
         continue;
     }
-    range = mech_range_to(mech, tempMech);
-    losflag = mech_los_check(mech, tempMech, mech_position_x(tempMech),
-                             mech_position_y(tempMech), range);
+    range = mech_range_to(mech, temp_mech);
+    losflag = mech_los_check(mech, temp_mech, mech_position_x(temp_mech),
+                             mech_position_y(temp_mech), range);
     if (!losflag)
       continue;
-    if (is_good_obj(mech_context(mech)->database, mech_dbref(tempMech))) {
-      if (!mech_los_check_unblocked(mech, tempMech, mech_position_x(tempMech),
-                                    mech_position_y(tempMech), 0.0)) {
+    if (is_good_obj(mech_context(mech)->database, mech_dbref(temp_mech))) {
+      if (!mech_los_check_unblocked(mech, temp_mech, mech_position_x(temp_mech),
+                                    mech_position_y(temp_mech), 0.0)) {
         mech_name = "something";
         inlos = 0;
       } else {
-        mech_name = btech_attribute_read(mech_context(tempMech)->database,
-                                         mech_dbref(tempMech), A_MECHNAME,
+        mech_name = btech_attribute_read(mech_context(temp_mech)->database,
+                                         mech_dbref(temp_mech), A_MECHNAME,
                                          (char[LBUF_SIZE]){0});
         inlos = 1;
       }
@@ -495,94 +497,96 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
     bearing = map_bearing(
         &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                     .y = mech_position_real_y(mech)},
-                          .end = {.x = mech_position_real_x(tempMech),
-                                  .y = mech_position_real_y(tempMech)}});
-    weaponarc = mech_contact_weapon_arc(InWeaponArc(
-        mech, mech_position_real_x(tempMech), mech_position_real_y(tempMech)));
+                          .end = {.x = mech_position_real_x(temp_mech),
+                                  .y = mech_position_real_y(temp_mech)}});
+    weaponarc = mech_contact_weapon_arc(
+        in_weapon_arc(mech, mech_position_real_x(temp_mech),
+                      mech_position_real_y(temp_mech)));
 
-    strlcpy(move_type, GetMoveTypeID(mech_movement_type(tempMech)),
+    strlcpy(move_type, get_move_type_id(mech_movement_type(temp_mech)),
             sizeof(move_type));
 
     if (isvb) {
       if (!inlos) {
-        cStatus1 = ' ';
-        cStatus2 = ' ';
-        cStatus3 = ' ';
-        cStatus4 = ' ';
-        cStatus5 = ' ';
+        c_status1 = ' ';
+        c_status2 = ' ';
+        c_status3 = ' ';
+        c_status4 = ' ';
+        c_status5 = ' ';
       } else {
-        cStatus1 = mech_contact_status_character(mech, tempMech, 1);
-        cStatus2 = mech_contact_status_character(mech, tempMech, 2);
-        cStatus3 = mech_contact_status_character(mech, tempMech, 3);
-        cStatus4 = mech_contact_status_character(mech, tempMech, 4);
-        cStatus5 = mech_contact_status_character(mech, tempMech, 5);
+        c_status1 = mech_contact_status_character(mech, temp_mech, 1);
+        c_status2 = mech_contact_status_character(mech, temp_mech, 2);
+        c_status3 = mech_contact_status_character(mech, temp_mech, 3);
+        c_status4 = mech_contact_status_character(mech, temp_mech, 4);
+        c_status5 = mech_contact_status_character(mech, temp_mech, 5);
       }
 
       (void)snprintf(
           buff, sizeof(buff),
           "%s%c%c%c[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d "
           "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-          mech_dbref(tempMech) == mech_target_dbref(mech) ? "[fg=red bold]"
-          : !mech_contact_is_friend(mech, tempMech)       ? "[fg=yellow bold]"
-                                                          : "",
+          mech_dbref(temp_mech) == mech_target_dbref(mech) ? "[fg=red bold]"
+          : !mech_contact_is_friend(mech, temp_mech)       ? "[fg=yellow bold]"
+                                                           : "",
           (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
           (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
-          mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
-          *move_type, mech_name, mech_position_x(tempMech),
-          mech_position_y(tempMech), mech_position_z(tempMech), (double)range,
-          bearing, (double)mech_current_speed(tempMech),
-          mech_contact_heading(tempMech), cStatus1, cStatus2, cStatus3,
-          cStatus4, cStatus5,
-          (mech_dbref(tempMech) == mech_target_dbref(mech) ||
-           !mech_contact_is_friend(mech, tempMech))
+          mech_id(temp_mech, mech_contact_is_friend(mech, temp_mech)).text,
+          *move_type, mech_name, mech_position_x(temp_mech),
+          mech_position_y(temp_mech), mech_position_z(temp_mech), (double)range,
+          bearing, (double)mech_current_speed(temp_mech),
+          mech_contact_heading(temp_mech), c_status1, c_status2, c_status3,
+          c_status4, c_status5,
+          (mech_dbref(temp_mech) == mech_target_dbref(mech) ||
+           !mech_contact_is_friend(mech, temp_mech))
               ? "[reset]"
               : "");
 
       if (buffindex < BATTLE_MAP_UNIT_CAPACITY) {
         ContactLine *contact = contact_line(contacts, buffindex++);
         contact->sort_range =
-            range + (mech_is_destroyed(tempMech) ? 10000.0F : 0.0F);
+            range + (mech_is_destroyed(temp_mech) ? 10000.0F : 0.0F);
         (void)snprintf(contact->text, sizeof(contact->text), "%s", buff);
       }
     } else {
       (void)snprintf(
           buff, sizeof(buff), "[%s] %-17s  Tonnage: %d",
-          mech_id(tempMech, mech_contact_is_friend(mech, tempMech)).text,
-          mech_name, mech_tonnage(tempMech));
+          mech_id(temp_mech, mech_contact_is_friend(mech, temp_mech)).text,
+          mech_name, mech_tonnage(temp_mech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       (void)snprintf(buff, sizeof(buff),
                      "      Range: %.1f hex\tBearing: %d degrees",
                      (double)range, bearing);
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
-      (void)snprintf(
-          buff, sizeof(buff), "      Speed: %.1f KPH\tHeading: %d degrees",
-          (double)mech_current_speed(tempMech), mech_contact_heading(tempMech));
+      (void)snprintf(buff, sizeof(buff),
+                     "      Speed: %.1f KPH\tHeading: %d degrees",
+                     (double)mech_current_speed(temp_mech),
+                     mech_contact_heading(temp_mech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       (void)snprintf(buff, sizeof(buff),
                      "      X, Y: %3d, %3d \tHeat: %.0f deg C.",
-                     mech_position_x(tempMech), mech_position_y(tempMech),
-                     (double)mech_excess_heat(tempMech));
+                     mech_position_x(temp_mech), mech_position_y(temp_mech),
+                     (double)mech_excess_heat(temp_mech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       (void)snprintf(buff, sizeof(buff), "      Movement Type: %s", move_type);
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, buff);
       notify_printf(
           btech_context_evaluation(mech_context(mech)), player,
           "      Mech is in %s Arc",
-          GetArcID(mech, InWeaponArc(mech, mech_position_real_x(tempMech),
-                                     mech_position_real_y(tempMech))));
-      if (mech_is_destroyed(tempMech))
+          get_arc_id(mech, in_weapon_arc(mech, mech_position_real_x(temp_mech),
+                                         mech_position_real_y(temp_mech))));
+      if (mech_is_destroyed(temp_mech))
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "      Mech Destroyed");
-      if (!mech_is_started(tempMech))
+      if (!mech_is_started(temp_mech))
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "      Mech Shutdown");
-      if (mech_is_fallen(tempMech))
+      if (mech_is_fallen(temp_mech))
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "      Mech has Fallen!");
-      if (mech_is_jumping(tempMech))
+      if (mech_is_jumping(temp_mech))
         notify_printf(btech_context_evaluation(mech_context(mech)), player,
                       "      Mech is Jumping!\tJump Heading: %d",
-                      mech_jump_heading_degrees(tempMech));
+                      mech_jump_heading_degrees(temp_mech));
       mecha_notify(btech_context_evaluation(mech_context(mech)), player, " ");
     }
   }
@@ -591,29 +595,29 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
     for (building =
              battle_map_object_first(mech_map, BATTLE_MAP_OBJECT_BUILDING);
          building; building = battle_map_object_next(building)) {
-      const int building_x = battle_map_object_x(building);
-      const int building_y = battle_map_object_y(building);
-      const DbRef building_dbref = battle_map_object_dbref(building);
+      const int BUILDING_X = battle_map_object_x(building);
+      const int BUILDING_Y = battle_map_object_y(building);
+      const DbRef BUILDING_DBREF = battle_map_object_dbref(building);
 
-      MapCoordToRealCoord(building_x, building_y, &fx, &fy);
-      const int building_elevation =
-          battle_map_hex_elevation(mech_map, building_x, building_y);
-      i = building_elevation + 1;
-      const float building_real_z = ZSCALE * (float)i;
+      map_coord_to_real_coord(BUILDING_X, BUILDING_Y, &fx, &fy);
+      const int BUILDING_ELEVATION =
+          battle_map_hex_elevation(mech_map, BUILDING_X, BUILDING_Y);
+      i = BUILDING_ELEVATION + 1;
+      const float BUILDING_REAL_Z = ZSCALE * (float)i;
       range = map_spatial_range(&(MapSpatialSegment){
           .start = {.x = mech_position_real_x(mech),
                     .y = mech_position_real_y(mech),
                     .z = mech_position_real_z(mech)},
-          .end = {.x = fx, .y = fy, .z = building_real_z},
+          .end = {.x = fx, .y = fy, .z = BUILDING_REAL_Z},
       });
 
-      losflag = mech_los_check(mech, nullptr, building_x, building_y, range);
+      losflag = mech_los_check(mech, nullptr, BUILDING_X, BUILDING_Y, range);
       if (!losflag || (losflag & BATTLE_MAP_LOS_BLOCKED))
         continue;
 
-      if (!building_dbref)
+      if (!BUILDING_DBREF)
         continue;
-      tmp_map = btech_context_get_map(mech_context(mech), building_dbref);
+      tmp_map = btech_context_get_map(mech_context(mech), BUILDING_DBREF);
       if (!tmp_map)
         continue;
       if (battle_map_building_is_invisible(tmp_map))
@@ -628,18 +632,18 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                       .y = mech_position_real_y(mech)},
                             .end = {.x = fx, .y = fy}});
-      weaponarc = mech_contact_weapon_arc(InWeaponArc(mech, fx, fy));
+      weaponarc = mech_contact_weapon_arc(in_weapon_arc(mech, fx, fy));
 
       mech_name =
-          btech_attribute_read(mech_context(mech)->database, building_dbref,
+          btech_attribute_read(mech_context(mech)->database, BUILDING_DBREF,
                                A_MECHNAME, (char[LBUF_SIZE]){0});
       if (!mech_name || !*mech_name) {
         strncpy(new,
-                game_object_name(mech_context(mech)->database, building_dbref),
+                game_object_name(mech_context(mech)->database, BUILDING_DBREF),
                 LBUF_SIZE - 1);
         styled_text_strip(
             mech_context(mech)->database->styled_text_palette,
-            game_object_name(mech_context(mech)->database, building_dbref), new,
+            game_object_name(mech_context(mech)->database, BUILDING_DBREF), new,
             sizeof(new));
         mech_name = new;
       }
@@ -651,7 +655,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           j ? "[fg=yellow bold]" : "",
           (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
           (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
-          mech_name, building_x, building_y, i, (double)range, bearing,
+          mech_name, BUILDING_X, BUILDING_Y, i, (double)range, bearing,
           battle_map_building_integrity(tmp_map),
           battle_map_building_maximum_integrity(tmp_map),
           (battle_map_building_is_safe(tmp_map) ||

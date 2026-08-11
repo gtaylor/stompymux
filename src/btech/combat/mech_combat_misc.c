@@ -41,9 +41,9 @@
 void mech_ammunition_expenditure_check(
     const AmmunitionExpenditureCheck *check) {
   Mech *mech = check->mech;
-  const int weapindx = check->weapon_index;
-  const int ns = check->rounds_remaining;
-  int targ = ammunition_equipment_index(weapindx);
+  const int WEAPINDX = check->weapon_index;
+  const int NS = check->rounds_remaining;
+  int targ = ammunition_equipment_index(WEAPINDX);
   int cnt = 0;
   float slots = 0.0F;
   int t, t2;
@@ -63,77 +63,78 @@ void mech_ammunition_expenditure_check(
         slots += mech_ammunition_slot_multiplier(mech, i, j);
       }
   }
-  const int ammunition_per_ton = weapon_catalogue_ammunition_per_ton(weapindx);
-  t = BOUNDED(3, (int)(slots * (float)ammunition_per_ton / 8.0F), 30);
+  const int AMMUNITION_PER_TON = weapon_catalogue_ammunition_per_ton(WEAPINDX);
+  t = bounded(3, (int)(slots * (float)AMMUNITION_PER_TON / 8.0F), 30);
   t2 = 2 * t;
-  if ((cnt == (t + ns)) || (ns && cnt >= t && cnt < (t + ns)))
+  if ((cnt == (t + NS)) || (NS && cnt >= t && cnt < (t + NS)))
     sev = 1;
-  else if ((cnt == (t2 + ns)) || (ns && cnt >= t2 && cnt < (t2 + ns)))
+  else if ((cnt == (t2 + NS)) || (NS && cnt >= t2 && cnt < (t2 + NS)))
     sev = 0;
   else
     return;
   /* Okay, we have case of warning here */
   if (mech_is_started(mech))
-    if ((sev * 65536 + weapindx) % 65536)
+    if ((sev * 65536 + WEAPINDX) % 65536)
       mech_printf(mech, MECHALL,
                   "%sWARNING: Ammo for %s is running low.[reset]",
                   sev ? "[fg=red bold]" : "[fg=yellow bold]",
                   get_parts_long_name(mech_context(mech),
-                                      weapon_equipment_index(weapindx), 0));
+                                      weapon_equipment_index(WEAPINDX), 0));
 }
 
-void mech_heat_effect_apply(Mech *mech, Mech *tempMech, int heatdam,
-                            bool fromInferno) {
-  if (mech_class(tempMech) != CLASS_MECH && mech_class(tempMech) != CLASS_MW &&
-      mech_class(tempMech) != CLASS_BSUIT && !mech_is_dropship(tempMech) &&
-      mech_movement_type(tempMech) != MOVE_NONE) {
+void mech_heat_effect_apply(Mech *mech, Mech *temp_mech, int heatdam,
+                            bool from_inferno) {
+  if (mech_class(temp_mech) != CLASS_MECH &&
+      mech_class(temp_mech) != CLASS_MW &&
+      mech_class(temp_mech) != CLASS_BSUIT && !mech_is_dropship(temp_mech) &&
+      mech_movement_type(temp_mech) != MOVE_NONE) {
 
-    if ((mech_class(tempMech) == CLASS_VEH_GROUND ||
-         mech_class(tempMech) == CLASS_VTOL) &&
-        btech_context_uses_advanced_vehicle_fire(mech_context(tempMech))) {
-      if (fromInferno)
-        vehicle_fire_start(tempMech, mech);
+    if ((mech_class(temp_mech) == CLASS_VEH_GROUND ||
+         mech_class(temp_mech) == CLASS_VTOL) &&
+        btech_context_uses_advanced_vehicle_fire(mech_context(temp_mech))) {
+      if (from_inferno)
+        vehicle_fire_start(temp_mech, mech);
       else
-        vehicle_fire_check(tempMech, 0);
+        vehicle_fire_check(temp_mech, 0);
     } else {
-      if (btech_random_roll(mech_context(tempMech)) > 8) {
-        mech_los_broadcast(tempMech, "explodes!");
-        mech_notify(tempMech, MECHALL,
+      if (btech_random_roll(mech_context(temp_mech)) > 8) {
+        mech_los_broadcast(temp_mech, "explodes!");
+        mech_notify(temp_mech, MECHALL,
                     "The heat's too much for your vehicle! It blows up!");
-        mech_mark_destroyed(tempMech);
-        ChannelEmitKill(tempMech, mech, KILL_TYPE_HEAT);
-        mech_explosion_apply(tempMech, mech ? mech : tempMech);
+        mech_mark_destroyed(temp_mech);
+        channel_emit_kill(temp_mech, mech, KILL_TYPE_HEAT);
+        mech_explosion_apply(temp_mech, mech ? mech : temp_mech);
       }
     }
   } else {
 
     if (heatdam)
-      mech_inferno_burn(tempMech, heatdam * 6);
+      mech_inferno_burn(temp_mech, heatdam * 6);
   }
 }
 
 /* Burn.. burn in hell! ;> */
-void mech_inferno_hit(Mech *mech, Mech *hitMech, int missiles, bool LOS) {
+void mech_inferno_hit(Mech *mech, Mech *hit_mech, int missiles, bool los) {
   int hmod = (missiles + 1) / 2;
 
-  if (mech_is_jellied(hitMech) ||
-      mech_event_count(hitMech, EVENT_VEHICLEBURN)) {
-    mech_los_broadcast(hitMech, "burns a bit more brightly.");
-    mech_notify(hitMech, MECHALL,
+  if (mech_is_jellied(hit_mech) ||
+      mech_event_count(hit_mech, EVENT_VEHICLEBURN)) {
+    mech_los_broadcast(hit_mech, "burns a bit more brightly.");
+    mech_notify(hit_mech, MECHALL,
                 "[fg=red bold]More burning jelly joins the flames![reset]");
   } else {
-    mech_los_broadcast(hitMech, "suddenly bursts into flames!");
-    mech_notify(hitMech, MECHALL,
+    mech_los_broadcast(hit_mech, "suddenly bursts into flames!");
+    mech_notify(hit_mech, MECHALL,
                 "[fg=red bold]You are sprayed with burning jelly![reset]");
   }
-  mech_heat_effect_apply(mech, hitMech, hmod * 30,
+  mech_heat_effect_apply(mech, hit_mech, hmod * 30,
                          1); /* 3min for _each_ missile */
   mech_inferno_extinguish_in_water(
-      hitMech); /* They could be in -2 standing or -1 prone.. Shooter just
+      hit_mech); /* They could be in -2 standing or -1 prone.. Shooter just
                    wastes his missiles! */
 }
 
-void mech_plasma_hit(Mech *hitMech) {
+void mech_plasma_hit(Mech *hit_mech) {
   /* For now, lets just worry about IS.PlasmaRifles
    * They are 1D6 Heat to mechs and 2D6 damage to anything else (clustered into
    * 5) We'll handle the cluster damage in HitMech
@@ -141,10 +142,10 @@ void mech_plasma_hit(Mech *hitMech) {
 
   float heatadd = 0;
 
-  if (mech_class(hitMech) == CLASS_MECH) {
-    const int heat_roll = btech_random_range_int(mech_context(hitMech), 1, 6);
-    heatadd = (float)heat_roll;
-    mech_weapon_heat_add(hitMech, heatadd);
+  if (mech_class(hit_mech) == CLASS_MECH) {
+    const int HEAT_ROLL = btech_random_range_int(mech_context(hit_mech), 1, 6);
+    heatadd = (float)HEAT_ROLL;
+    mech_weapon_heat_add(hit_mech, heatadd);
   }
 }
 
@@ -239,9 +240,9 @@ void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason) {
   }
 
   if (mech && target)
-    ChannelEmitKill(target, mech, reason);
+    channel_emit_kill(target, mech, reason);
   else
-    ChannelEmitKill(target, target, reason);
+    channel_emit_kill(target, target, reason);
   if (mech) {
 
     if (mech != target) {

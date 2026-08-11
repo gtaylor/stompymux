@@ -202,7 +202,7 @@ static int dropship_find_single_adjacent_bay(Mech *mech, DbRef *ref,
   BattleMap *map =
       btech_context_find_object(mech_context(mech), mech_map_dbref(mech));
   int loop;
-  Mech *tempMech;
+  Mech *temp_mech;
   int count = 0;
 
   *ref = 0;
@@ -210,20 +210,20 @@ static int dropship_find_single_adjacent_bay(Mech *mech, DbRef *ref,
     return 0;
   for (loop = 0; loop < battle_map_unit_count(map); loop++)
     if (battle_map_unit_dbref(map, loop) >= 0) {
-      tempMech = btech_context_get_mech(mech_context(mech),
-                                        battle_map_unit_dbref(map, loop));
-      if (!tempMech)
+      temp_mech = btech_context_get_mech(mech_context(mech),
+                                         battle_map_unit_dbref(map, loop));
+      if (!temp_mech)
         continue;
-      if (!mech_is_dropship(tempMech))
+      if (!mech_is_dropship(temp_mech))
         continue;
-      if (!mech_is_landed(tempMech))
+      if (!mech_is_landed(temp_mech))
         continue; /* This might break midflight-aero-DS-docking. But aeros are
                      broken anyway. */
-      if (dropship_bay_in_adjacent_hex(mech, tempMech, bayn)) {
+      if (dropship_bay_in_adjacent_hex(mech, temp_mech, bayn)) {
         if (count++)
           *ref = -1;
         else
-          *ref = mech_dbref(tempMech);
+          *ref = mech_dbref(temp_mech);
       }
     }
   return count;
@@ -261,7 +261,7 @@ static void mech_enterbay_event(MuxEvent *e) {
   mech_los_broadcast(
       mech, tprintf("has entered %s at %d,%d.", mech_display_id(ds).text,
                     mech_position_x(mech), mech_position_y(mech)));
-  MarkForLOSUpdate(mech);
+  mark_for_los_update(mech);
   if (mech_class(mech) == CLASS_MW &&
       !is_in_character(btech_context_database(context), ref)) {
     enter_mw_bay(mech, ref);
@@ -269,8 +269,8 @@ static void mech_enterbay_event(MuxEvent *e) {
   }
   if (mech_carried_dbref(mech) > 0)
     tmpm = btech_context_get_mech(context, mech_carried_dbref(mech));
-  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", ref));
-  mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
+  mech_rsetmapindex(GOD, (void *)mech, tprintf("%ld", ref));
+  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
   mech_los_broadcast(mech, "has entered the bay.");
   move_via_teleport(
       &(ObjectMovementRequest){.evaluation = btech_context_evaluation(context),
@@ -278,8 +278,8 @@ static void mech_enterbay_event(MuxEvent *e) {
                                .destination = ref,
                                .cause = 1});
   if (tmpm) {
-    mech_Rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", ref));
-    mech_Rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
+    mech_rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", ref));
+    mech_rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
     move_via_teleport(&(ObjectMovementRequest){
         .evaluation = btech_context_evaluation(context),
         .object = mech_dbref(tmpm),
@@ -317,14 +317,14 @@ typedef struct DropshipBayEntryRequest {
 
 static bool dropship_bay_is_enterable(const DropshipBayEntryRequest *request) {
   Mech *ds = request->dropship;
-  const DbRef bayref = request->bay;
+  const DbRef BAYREF = request->bay;
   int i;
 
   for (i = 0; i < NUM_BAYS; i++)
     if (mech_bay_dbref(ds, i) > 0)
-      if (mech_bay_dbref(ds, i) == bayref)
+      if (mech_bay_dbref(ds, i) == BAYREF)
         return btech_context_event_data_count(mech_context(ds),
-                                              EVENT_ENTER_HANGAR, bayref) > 0
+                                              EVENT_ENTER_HANGAR, BAYREF) > 0
                    ? 0
                    : 1;
   return 0;
@@ -373,7 +373,7 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
     return;
   }
   if (argc > 0) {
-    ref = FindTargetDBREFFromMapNumber(mech, args[0]);
+    ref = find_target_dbref_from_map_number(mech, args[0]);
     if (ref <= 0) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Invalid target!");
@@ -443,7 +443,7 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
     return;
   }
   if (mech_class(mech) == CLASS_MECH && mech_movement_type(mech) != MOVE_QUAD &&
-      (IsMechLegLess(mech))) {
+      (is_mech_leg_less(mech))) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Without legs? Are you kidding?");
     return;
@@ -485,8 +485,8 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
                  "You sense a wrongness in fabric of space.");
     return;
   }
-  HexLOSBroadcast(map, mech_position_x(mech), mech_position_y(mech),
-                  "The bay doors at $h start to open..");
+  hex_los_broadcast(map, mech_position_x(mech), mech_position_y(mech),
+                    "The bay doors at $h start to open..");
   mech_event_schedule(mech, EVENT_ENTER_HANGAR, mech_enterbay_event, 12, ref);
 }
 
@@ -506,18 +506,18 @@ static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
     return;
   }
   i = dropship_bay_direction(ds, i);
-  const int direction = (mech_dropship_bearing_sector(ds) + i) % 6;
-  nx = dropship_direction_x(direction) + mech_position_x(ds);
-  ny = dropship_direction_y(direction) + mech_position_y(ds) +
+  const int DIRECTION = (mech_dropship_bearing_sector(ds) + i) % 6;
+  nx = dropship_direction_x(DIRECTION) + mech_position_x(ds);
+  ny = dropship_direction_y(DIRECTION) + mech_position_y(ds) +
        dropship_hex_row_adjustment(mech_position_x(ds), nx);
-  nx = BOUNDED(0, nx, battle_map_width(mech_map) - 1);
-  ny = BOUNDED(0, ny, battle_map_height(mech_map) - 1);
+  nx = bounded(0, nx, battle_map_width(mech_map) - 1);
+  ny = bounded(0, ny, battle_map_height(mech_map) - 1);
 
   /* snippage from mech_Rsetxy */
   mech_position_xy_set(mech, nx, ny);
   mech_position_hex_z_set(mech, mech_position_z(ds));
   float real_x, real_y;
-  MapCoordToRealCoord(nx, ny, &real_x, &real_y);
+  map_coord_to_real_coord(nx, ny, &real_x, &real_y);
   mech_position_real_xy_set(mech, (MapRealPosition){.x = real_x, .y = real_y});
 }
 
@@ -530,11 +530,11 @@ static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
                       mech, 1);
   mech_los_broadcast(mech, "has left the bay.");
   /* We escape confines of the bay to open air/land! */
-  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", mech_map_dbref(ds)));
+  mech_rsetmapindex(GOD, (void *)mech, tprintf("%ld", mech_map_dbref(ds)));
   if (mech_carried_dbref(mech) > 0)
     car = btech_context_get_mech(context, mech_carried_dbref(mech));
   if (car)
-    mech_Rsetmapindex(GOD, (void *)car, tprintf("%ld", mech_map_dbref(ds)));
+    mech_rsetmapindex(GOD, (void *)car, tprintf("%ld", mech_map_dbref(ds)));
   if (mech_map_dbref(mech) == battle_map_dbref(map)) {
     mech_notify(mech, MECHALL,
                 "Fatal error: Unable to find the map 'ship is on.");
@@ -555,7 +555,7 @@ static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
   dropship_place_departing_unit(ds, mech, frombay);
   if (car) {
     mech_position_mirror(car, mech, 0);
-    MarkForLOSUpdate(car);
+    mark_for_los_update(car);
     mech_flood(car);
   }
   mech_los_broadcast_unit(mech, ds, "has left %s's bay.");

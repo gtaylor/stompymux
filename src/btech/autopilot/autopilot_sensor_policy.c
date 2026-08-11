@@ -80,7 +80,7 @@ autopilot_sensor_select(const AutopilotSensorSituation *situation) {
 }
 
 /* Function to determine if there are any slites affecting the AI */
-int SearchLightInRange(Mech *mech, BattleMap *map) {
+int search_light_in_range(Mech *mech, BattleMap *map) {
 
   Mech *target;
   int i;
@@ -107,19 +107,19 @@ int SearchLightInRange(Mech *mech, BattleMap *map) {
     if (mech_range_to(target, mech) < LITE_RANGE) {
 
       /* Returning true, but let's differentiate also between being in-arc. */
-      const bool in_arc = (InWeaponArc(target, mech_position_real_x(mech),
-                                       mech_position_real_y(mech)) &
+      const bool IN_ARC = (in_weapon_arc(target, mech_position_real_x(mech),
+                                         mech_position_real_y(mech)) &
                            FORWARDARC) != 0;
       return autopilot_searchlight_classify(
-          mech_searchlight_active(target), in_arc,
-          in_arc && battle_map_unit_los_is_blocked(map, target, mech));
+          mech_searchlight_active(target), IN_ARC,
+          IN_ARC && battle_map_unit_los_is_blocked(map, target, mech));
     }
   }
   return 0;
 }
 
 /* Function to determine if the AI should use V or L sensor */
-int PrefVisSens(Mech *mech, BattleMap *map, int slite, Mech *target) {
+int pref_vis_sens(Mech *mech, BattleMap *map, int slite, Mech *target) {
 
   /* No map or mech so use default till we get put somewhere */
   if (!mech || !map)
@@ -145,11 +145,11 @@ void auto_sensor_event(Autopilot *autopilot) {
   float trng;
 
   if (!is_good_obj(autopilot->xcode.context->database, autopilot->mymechnum)) {
-    dprintk("mymechnum is bad!");
+    DPRINTK("mymechnum is bad!");
     return;
   }
   if (!is_good_obj(autopilot->xcode.context->database, autopilot->mynum)) {
-    dprintk("mynum is bad!");
+    DPRINTK("mynum is bad!");
     return;
   }
 
@@ -159,11 +159,11 @@ void auto_sensor_event(Autopilot *autopilot) {
    * an AUTOPILOT Xcode Object */
   /* Basic checks */
   if (!mech) {
-    dprintk("mech is bad!");
+    DPRINTK("mech is bad!");
     return;
   }
   if (!autopilot) {
-    dprintk("ai is bad!");
+    DPRINTK("ai is bad!");
     return;
   }
 
@@ -205,12 +205,12 @@ void auto_sensor_event(Autopilot *autopilot) {
   /* Checks to see if there is slite, and what types of vis
    * and which visual sensor (V or L) to use */
   int visibility = battle_map_visibility(map);
-  slite = (visibility != 2 ? SearchLightInRange(mech, map) : 0);
+  slite = (visibility != 2 ? search_light_in_range(mech, map) : 0);
   rvis = (battle_map_light(map) ? visibility : (visibility * (slite ? 1 : 3)));
-  prefvis = PrefVisSens(mech, map, slite, target);
+  prefvis = pref_vis_sens(mech, map, slite, target);
 
   trng = target != nullptr ? mech_range_to(mech, target) : 0.0F;
-  const AutopilotSensorSelection selection =
+  const AutopilotSensorSelection SELECTION =
       autopilot_sensor_select(&(AutopilotSensorSituation){
           .has_target = target != nullptr,
           .target_range = (int)trng,
@@ -221,8 +221,8 @@ void auto_sensor_event(Autopilot *autopilot) {
           .has_bloodhound_probe = mech_has_operational_bloodhound_probe(mech),
           .preferred_visual_sensor = prefvis,
           .effective_visibility = rvis});
-  wanted_s[0] = selection.primary;
-  wanted_s[1] = selection.secondary;
+  wanted_s[0] = SELECTION.primary;
+  wanted_s[1] = SELECTION.secondary;
 
   /* Check to make sure valid sensors are selected and then set them */
   if (wanted_s[0] >= SENSOR_VIS && wanted_s[0] <= SENSOR_BHAP &&
@@ -236,7 +236,7 @@ void auto_sensor_event(Autopilot *autopilot) {
     mech_sensors_set(mech, wanted_s[0], wanted_s[1]);
     mech_notify(mech, MECHALL, "As your sensors change, your lock clears.");
     mech_targeting_target_clear(mech);
-    MarkForLOSUpdate(mech);
+    mark_for_los_update(mech);
   }
 }
 

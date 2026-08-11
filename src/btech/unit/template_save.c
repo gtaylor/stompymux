@@ -42,7 +42,7 @@ void try_to_find_name(const char *mechref, Mech *mech) {
     strlcpy(((mech)->ud.mech_name), c, sizeof(((mech)->ud.mech_name)));
 }
 
-int DefaultFuelByType(Mech *mech) {
+int default_fuel_by_type(Mech *mech) {
   int mod = 2;
 
   switch (((mech)->ud.type)) {
@@ -69,15 +69,15 @@ typedef struct NondefaultRangeSaveRequest {
 static void save_nondefault_range(const NondefaultRangeSaveRequest *request) {
   FILE *fp = request->file;
   const Mech *mech = request->mech;
-  const int current = request->current;
-  const int computer_default = request->computer_default;
-  const int legacy_default = request->legacy_default;
+  const int CURRENT = request->current;
+  const int COMPUTER_DEFAULT = request->computer_default;
+  const int LEGACY_DEFAULT = request->legacy_default;
   const char *name = request->name;
   int expected =
-      mech_computer_quality(mech) ? computer_default : legacy_default;
+      mech_computer_quality(mech) ? COMPUTER_DEFAULT : LEGACY_DEFAULT;
 
-  if (current != expected)
-    (void)fprintf(fp, "%-16s { %d }\n", name, current);
+  if (CURRENT != expected)
+    (void)fprintf(fp, "%-16s { %d }\n", name, CURRENT);
 }
 
 static void save_nondefault_integer(FILE *fp, int expected, int current,
@@ -87,7 +87,7 @@ static void save_nondefault_integer(FILE *fp, int expected, int current,
 }
 
 int template_save(const TemplateSaveRequest *request) {
-  const DbRef player = request->player;
+  const DbRef PLAYER = request->player;
   Mech *mech = request->mech;
   const char *reference = request->reference;
   const char *filename = request->filename;
@@ -117,7 +117,7 @@ int template_save(const TemplateSaveRequest *request) {
   if (d)
     *d = 0;
   (void)fprintf(fp, "Comment          { Saved by: %s(#%ld) at %s }\n",
-                game_object_name(mech->xcode.context->database, player), player,
+                game_object_name(mech->xcode.context->database, PLAYER), PLAYER,
                 c);
   save_nondefault_range(&(NondefaultRangeSaveRequest){
       .file = fp,
@@ -168,8 +168,8 @@ int template_save(const TemplateSaveRequest *request) {
   save_nondefault_integer(fp, 0, ((mech)->ud.carmaxton), "Max_Ton");
   save_nondefault_integer(fp, 2000, ((mech)->rd.maxsuits), "Max_Suits");
   save_nondefault_integer(fp, 0, ((mech)->ud.si_orig), "SI");
-  save_nondefault_integer(fp, DefaultFuelByType(mech), ((mech)->ud.fuel_orig),
-                          "Fuel");
+  save_nondefault_integer(fp, default_fuel_by_type(mech),
+                          ((mech)->ud.fuel_orig), "Fuel");
 
   (void)fprintf(fp, "Max_Speed        { %.2f }\n",
                 (double)((mech)->ud.maxspeed));
@@ -222,7 +222,7 @@ int template_save(const TemplateSaveRequest *request) {
             .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
 
   int result = -1;
-  locs = ProperSectionStringFromType(((mech)->ud.type), ((mech)->ud.move));
+  locs = proper_section_string_from_type(((mech)->ud.type), ((mech)->ud.move));
   if (locs) {
     dump_locations(
         fp, mech, locs,
@@ -245,7 +245,7 @@ static void skip_template_whitespace(FILE *fp) {
       break;
   }
   if (c != EOF)
-    dassert(ungetc(c, fp) != EOF);
+    DASSERT(ungetc(c, fp) != EOF);
 }
 
 char *template_description_read(const TemplateDescriptionRead *request) {
@@ -312,14 +312,14 @@ int find_section(char *cmd, int type, int mtype) {
     if (*character == '_')
       *character = ' ';
   }
-  locs = ProperSectionStringFromType(type, mtype);
+  locs = proper_section_string_from_type(type, mtype);
   return compare_const_array(locs,
                              unit_section_name_count(&(UnitSectionCatalog){
                                  .unit_type = type, .movement_type = mtype}),
                              section);
 }
 
-long BuildBitVector(const char *const list[], size_t count, char *line) {
+long build_bit_vector(const char *const list[], size_t count, char *line) {
   long bv = 0;
   int temp;
   char buf[30];
@@ -338,8 +338,8 @@ long BuildBitVector(const char *const list[], size_t count, char *line) {
   return bv;
 }
 
-long BuildBitVectorWithDelim(const char *const list[], size_t count,
-                             char *line) {
+long build_bit_vector_with_delim(const char *const list[], size_t count,
+                                 char *line) {
   long bv = 0;
   int temp;
   char buf[30];
@@ -364,7 +364,8 @@ long BuildBitVectorWithDelim(const char *const list[], size_t count,
   return bv;
 }
 
-long BuildBitVectorNoErr(const char *const list[], size_t count, char *line) {
+long build_bit_vector_no_err(const char *const list[], size_t count,
+                             char *line) {
   long bv = 0;
   int temp;
   char buf[30];
@@ -384,10 +385,10 @@ long BuildBitVectorNoErr(const char *const list[], size_t count, char *line) {
   return bv;
 }
 
-int CheckSpecialsList(const char *const special_list[], size_t count,
-                      const char *const special_list2[], size_t count2,
-                      char *line) {
-  int wSpecCheck = -1, wSpec2Check = -1;
+int check_specials_list(const char *const special_list[], size_t count,
+                        const char *const special_list2[], size_t count2,
+                        char *line) {
+  int w_spec_check = -1, w_spec2_check = -1;
   char buf[30];
 
   if (!strcasecmp(line, "-"))
@@ -398,32 +399,32 @@ int CheckSpecialsList(const char *const special_list[], size_t count,
         .input = line, .output = buf, .output_capacity = sizeof(buf)});
 
     if (special_list)
-      wSpecCheck = compare_const_array(special_list, count, buf);
+      w_spec_check = compare_const_array(special_list, count, buf);
 
     if (special_list2)
-      wSpec2Check = compare_const_array(special_list2, count2, buf);
+      w_spec2_check = compare_const_array(special_list2, count2, buf);
 
-    if ((wSpecCheck == -1) && (wSpec2Check == -1))
+    if ((w_spec_check == -1) && (w_spec2_check == -1))
       return 0;
   }
 
   return 1;
 }
 
-int WeaponIFromString(char *data) {
-  for (int x = 0; x < num_def_weapons; x++) {
+int weapon_i_from_string(char *data) {
+  for (int x = 0; x < DEFAULT_WEAPON_COUNT; x++) {
     if (!strcasecmp(weapon_catalogue_name(x), data))
       return x + 1; /* weapons start at 1 not 0 */
   }
   return -1;
 }
 
-int AmmoIFromString(char *data) {
+int ammo_i_from_string(char *data) {
   char *separator = strchr(data, '_');
   if (!separator)
     return -1;
   char *name = checked_mutable_string_suffix(separator, 1);
-  for (int x = 0; x < num_def_weapons; x++) {
+  for (int x = 0; x < DEFAULT_WEAPON_COUNT; x++) {
     if (!strcasecmp(weapon_catalogue_name(x), name))
       return x + 101;
   }
@@ -438,20 +439,20 @@ void update_specials(Mech *mech) {
   int ff_count = 0;
   int es_count = 0;
   int tc_count = 0;
-  int awcSthArmor[NUM_SECTIONS];
-  int awcNSS[NUM_SECTIONS];
-  int wcSthArmor = 0;
-  int wcNSS = 0;
-  int wcAngel = 0;
+  int awc_sth_armor[NUM_SECTIONS];
+  int awc_nss[NUM_SECTIONS];
+  int wc_sth_armor = 0;
+  int wc_nss = 0;
+  int wc_angel = 0;
   int cl = ((mech)->rd.specials) & CLAN_TECH;
   int e_count = 0;
-  int tTechOK = 1;
-  int wcHvyFF = 0;
-  int wcLtFF = 0;
-  int wcC3i = 0;
-  int wcBloodhound = 0;
-  int awInfSpec[5];
-  int wcSuits = 0;
+  int t_tech_ok = 1;
+  int wc_hvy_ff = 0;
+  int wc_lt_ff = 0;
+  int wc_c3i = 0;
+  int wc_bloodhound = 0;
+  int aw_inf_spec[5];
+  int wc_suits = 0;
 
   ((mech)->rd.specials) &=
       ~(BEAGLE_PROBE_TECH | TRIPLE_MYOMER_TECH | MASC_TECH | ECM_TECH |
@@ -471,15 +472,15 @@ void update_specials(Mech *mech) {
         FC_INFILTRATORII_STEALTH_TECH);
 
   for (x = 0; x < 5; x++)
-    *template_integer_slot(awInfSpec, 5, x) = 0;
+    *template_integer_slot(aw_inf_spec, 5, x) = 0;
 
   for (x = 0; x < NUM_SECTIONS; x++) {
     e_count = 0;
     mech_section_configuration_remove(mech, x, CASE_TECH);
-    *template_integer_slot(awcSthArmor, NUM_SECTIONS, x) = 0;
-    *template_integer_slot(awcNSS, NUM_SECTIONS, x) = 0;
+    *template_integer_slot(awc_sth_armor, NUM_SECTIONS, x) = 0;
+    *template_integer_slot(awc_nss, NUM_SECTIONS, x) = 0;
 
-    for (y = 0; y < CritsInLoc(mech, x); y++) {
+    for (y = 0; y < crits_in_loc(mech, x); y++) {
       t = mech_critical_part_type(mech, x, y);
       if (t) {
         switch (special_from_equipment_index(t)) {
@@ -513,11 +514,11 @@ void update_specials(Mech *mech) {
           break;
         case C3I:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            wcC3i++;
+            wc_c3i++;
           break;
         case ANGELECM:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            wcAngel++;
+            wc_angel++;
           break;
         case TRIPLE_STRENGTH_MYOMER:
           tsm_count++;
@@ -526,13 +527,13 @@ void update_specials(Mech *mech) {
           ff_count++;
           break;
         case HVY_FERRO_FIBROUS:
-          wcHvyFF++;
+          wc_hvy_ff++;
           break;
         case LT_FERRO_FIBROUS:
-          wcLtFF++;
+          wc_lt_ff++;
           break;
         case BLOODHOUND_PROBE:
-          wcBloodhound++;
+          wc_bloodhound++;
           break;
         case TARGETING_COMPUTER:
           if (!mech_critical_is_nonfunctional(mech, x, y))
@@ -542,23 +543,23 @@ void update_specials(Mech *mech) {
           es_count++;
           break;
         case PURIFIER_ARMOR:
-          (*template_integer_slot(awInfSpec, 5, 0))++;
+          (*template_integer_slot(aw_inf_spec, 5, 0))++;
           break;
         case KAGE_STEALTH_UNIT:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            (*template_integer_slot(awInfSpec, 5, 1))++;
+            (*template_integer_slot(aw_inf_spec, 5, 1))++;
           break;
         case ACHILEUS_STEALTH_UNIT:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            (*template_integer_slot(awInfSpec, 5, 2))++;
+            (*template_integer_slot(aw_inf_spec, 5, 2))++;
           break;
         case INFILTRATOR_STEALTH_UNIT:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            (*template_integer_slot(awInfSpec, 5, 3))++;
+            (*template_integer_slot(aw_inf_spec, 5, 3))++;
           break;
         case INFILTRATORII_STEALTH_UNIT:
           if (!mech_critical_is_nonfunctional(mech, x, y))
-            (*template_integer_slot(awInfSpec, 5, 4))++;
+            (*template_integer_slot(aw_inf_spec, 5, 4))++;
           break;
         case ENGINE:
           e_count++;
@@ -569,12 +570,12 @@ void update_specials(Mech *mech) {
               CASE_TECH);
           break;
         case STEALTH_ARMOR:
-          (*template_integer_slot(awcSthArmor, NUM_SECTIONS, x))++;
-          wcSthArmor++;
+          (*template_integer_slot(awc_sth_armor, NUM_SECTIONS, x))++;
+          wc_sth_armor++;
           break;
         case NULL_SIGNATURE_SYSTEM:
-          (*template_integer_slot(awcNSS, NUM_SECTIONS, x))++;
-          wcNSS++;
+          (*template_integer_slot(awc_nss, NUM_SECTIONS, x))++;
+          wc_nss++;
           break;
         }
         if (equipment_is_weapon(t) &&
@@ -614,14 +615,14 @@ void update_specials(Mech *mech) {
   if (tc_count) {
     ((mech)->rd.specials2) |= TCOMP_TECH;
     for (x = 0; x < NUM_SECTIONS; x++)
-      for (y = 0; y < CritsInLoc(mech, x); y++) {
+      for (y = 0; y < crits_in_loc(mech, x); y++) {
         t = mech_critical_part_type(mech, x, y);
         if (equipment_is_weapon(t))
           if (equipment_can_use_targeting_computer(t))
             mech_critical_fire_mode_add(mech, x, y, ON_TC);
       }
   }
-  if (masc_count >= MAX(1, (((mech)->ud.tons) / (cl ? 25 : 20))))
+  if (masc_count >= max(1, (((mech)->ud.tons) / (cl ? 25 : 20))))
     ((mech)->rd.specials) |= MASC_TECH;
   if (ff_count >= (cl ? 7 : 14) ||
       (((mech)->ud.type) != CLASS_MECH && ff_count > 0))
@@ -631,16 +632,16 @@ void update_specials(Mech *mech) {
     ((mech)->rd.specials) |= ES_TECH;
   if (tsm_count >= 6 || (((mech)->ud.type) != CLASS_MECH && tsm_count > 0))
     ((mech)->rd.specials) |= TRIPLE_MYOMER_TECH;
-  if (wcAngel >= 2 || (((mech)->ud.type) != CLASS_MECH && wcAngel > 0))
+  if (wc_angel >= 2 || (((mech)->ud.type) != CLASS_MECH && wc_angel > 0))
     ((mech)->rd.specials2) |= ANGEL_ECM_TECH;
-  if (wcHvyFF >= 21 || (((mech)->ud.type) != CLASS_MECH && wcHvyFF > 0))
+  if (wc_hvy_ff >= 21 || (((mech)->ud.type) != CLASS_MECH && wc_hvy_ff > 0))
     ((mech)->rd.specials2) |= HVY_FF_ARMOR_TECH;
-  if (wcLtFF >= 7 || (((mech)->ud.type) != CLASS_MECH && wcLtFF > 0))
+  if (wc_lt_ff >= 7 || (((mech)->ud.type) != CLASS_MECH && wc_lt_ff > 0))
     ((mech)->rd.specials2) |= LT_FF_ARMOR_TECH;
-  if (wcC3i >= 2 || (((mech)->ud.type) != CLASS_MECH && wcC3i > 0))
+  if (wc_c3i >= 2 || (((mech)->ud.type) != CLASS_MECH && wc_c3i > 0))
     ((mech)->rd.specials2) |= C3I_TECH;
-  if (wcBloodhound >= 3 ||
-      (((mech)->ud.type) != CLASS_MECH && wcBloodhound > 0))
+  if (wc_bloodhound >= 3 ||
+      (((mech)->ud.type) != CLASS_MECH && wc_bloodhound > 0))
     ((mech)->rd.specials2) |= BLOODHOUND_PROBE_TECH;
 
   if (((mech)->ud.type) == CLASS_MECH) {
@@ -663,58 +664,60 @@ void update_specials(Mech *mech) {
                                  ((mech)->ud.mech_type), mech->mynum,
                                  tsm_count));
 
-    if ((wcHvyFF > 0) && (wcHvyFF < 21))
+    if ((wc_hvy_ff > 0) && (wc_hvy_ff < 21))
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                          tprintf("%s (#%ld) is missing HvyFF Crits %d/21!",
-                                 ((mech)->ud.mech_type), mech->mynum, wcHvyFF));
+                                 ((mech)->ud.mech_type), mech->mynum,
+                                 wc_hvy_ff));
 
-    if ((wcLtFF > 0) && (wcLtFF < 7))
+    if ((wc_lt_ff > 0) && (wc_lt_ff < 7))
       btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
                          tprintf("%s (#%ld) is missing LtFF Crits %d/7!",
-                                 ((mech)->ud.mech_type), mech->mynum, wcLtFF));
+                                 ((mech)->ud.mech_type), mech->mynum,
+                                 wc_lt_ff));
   }
 
   /*
    * Check our NSS. Need 1 crit in each loc except H
    */
-  if (wcNSS > 0) {
-    tTechOK = 1;
+  if (wc_nss > 0) {
+    t_tech_ok = 1;
 
     if (((mech)->ud.type) != CLASS_MECH) {
-      if (wcNSS < 1)
-        tTechOK = 0;
+      if (wc_nss < 1)
+        t_tech_ok = 0;
     } else {
       for (x = 0; x < NUM_SECTIONS; x++) {
         if (x != HEAD) {
-          if (*template_integer_slot(awcNSS, NUM_SECTIONS, x) < 1) {
-            tTechOK = 0;
+          if (*template_integer_slot(awc_nss, NUM_SECTIONS, x) < 1) {
+            t_tech_ok = 0;
             break;
           }
         }
       }
     }
 
-    if (tTechOK)
+    if (t_tech_ok)
       ((mech)->rd.specials2) |= NULLSIGSYS_TECH;
   }
 
   /*
    * Check our Stealth armor. Need 2 crits in each loc except H and CT
    */
-  if (wcSthArmor > 0) {
-    tTechOK = 1;
+  if (wc_sth_armor > 0) {
+    t_tech_ok = 1;
 
     if (!(((mech)->rd.specials) & ECM_TECH)) {
-      tTechOK = 0;
+      t_tech_ok = 0;
     } else {
       if (((mech)->ud.type) != CLASS_MECH) {
-        if (wcSthArmor < 1)
-          tTechOK = 0;
+        if (wc_sth_armor < 1)
+          t_tech_ok = 0;
       } else {
         for (x = 0; x < NUM_SECTIONS; x++) {
           if ((x != HEAD) && (x != CTORSO)) {
-            if (*template_integer_slot(awcSthArmor, NUM_SECTIONS, x) < 2) {
-              tTechOK = 0;
+            if (*template_integer_slot(awc_sth_armor, NUM_SECTIONS, x) < 2) {
+              t_tech_ok = 0;
               break;
             }
           }
@@ -722,27 +725,27 @@ void update_specials(Mech *mech) {
       }
     }
 
-    if (tTechOK)
+    if (t_tech_ok)
       ((mech)->rd.specials2) |= STEALTH_ARMOR_TECH;
   }
 
   /* Let's do our suit checks */
   if (((mech)->ud.type) == CLASS_BSUIT) {
-    wcSuits = bsuit_member_count(mech);
+    wc_suits = bsuit_member_count(mech);
 
-    if (*template_integer_slot(awInfSpec, 5, 0) >= wcSuits)
+    if (*template_integer_slot(aw_inf_spec, 5, 0) >= wc_suits)
       ((mech)->rd.infantry_specials) |= CS_PURIFIER_STEALTH_TECH;
 
-    if (*template_integer_slot(awInfSpec, 5, 1) >= wcSuits)
+    if (*template_integer_slot(aw_inf_spec, 5, 1) >= wc_suits)
       ((mech)->rd.infantry_specials) |= DC_KAGE_STEALTH_TECH;
 
-    if (*template_integer_slot(awInfSpec, 5, 2) >= wcSuits)
+    if (*template_integer_slot(aw_inf_spec, 5, 2) >= wc_suits)
       ((mech)->rd.infantry_specials) |= FWL_ACHILEUS_STEALTH_TECH;
 
-    if (*template_integer_slot(awInfSpec, 5, 3) >= wcSuits)
+    if (*template_integer_slot(aw_inf_spec, 5, 3) >= wc_suits)
       ((mech)->rd.infantry_specials) |= FC_INFILTRATOR_STEALTH_TECH;
 
-    if (*template_integer_slot(awInfSpec, 5, 4) >= wcSuits)
+    if (*template_integer_slot(aw_inf_spec, 5, 4) >= wc_suits)
       ((mech)->rd.infantry_specials) |= FC_INFILTRATORII_STEALTH_TECH;
   }
 
