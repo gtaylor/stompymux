@@ -26,6 +26,21 @@ typedef struct PersistenceContext PersistenceContext;
 typedef unsigned char Uchar;
 
 typedef struct DatabaseConfiguration DatabaseConfiguration;
+typedef enum BootstrapObjectType {
+  BOOTSTRAP_OBJECT_ROOM,
+  BOOTSTRAP_OBJECT_PLAYER,
+} BootstrapObjectType;
+
+typedef struct BootstrapObjectConfiguration BootstrapObjectConfiguration;
+struct BootstrapObjectConfiguration {
+  DbRef dbref;
+  BootstrapObjectType type;
+  bool wizard;
+  char name[128];
+};
+
+constexpr size_t MAX_BOOTSTRAP_OBJECTS = 32;
+
 struct DatabaseConfiguration {
   char gamedb[128];       /* SQLite game database */
   char mech_db[128];      /* Mecha templates */
@@ -34,6 +49,8 @@ struct DatabaseConfiguration {
   int fork_dump;          /* Perform dumps in a forked process */
   char dump_msg[128];     /* Message displayed while dumping */
   char postdump_msg[128]; /* Message displayed after dumping */
+  BootstrapObjectConfiguration bootstrap_objects[MAX_BOOTSTRAP_OBJECTS];
+  size_t bootstrap_object_count;
 };
 
 typedef struct LuaConfiguration LuaConfiguration;

@@ -1,11 +1,15 @@
 /* game.c - Core game notifications, database dumps, and shutdown operations. */
 
+#include <asm-generic/errno-base.h>
+#include <errno.h>
+#include <sodium/utils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "btech/context.h"
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -23,6 +27,7 @@
 #include "mux/persistence/gamedb.h"
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h"
+#include "mux/server/database_bootstrap.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/game.h"
@@ -554,21 +559,23 @@ void do_readcache(CommandInvocation *invocation) {
 int main(int argc, char *argv[]) {
   MuxServer server;
   char *config_file;
-  int mindb;
+  struct stat database_status;
+  bool create_database;
+  char god_password[BOOTSTRAP_PASSWORD_SIZE];
+  char wizard_password[BOOTSTRAP_PASSWORD_SIZE];
   char *argument_one =
       argc > 1 ? *(char **)checked_storage_at((void *)argv, (size_t)argc,
                                               sizeof(*argv), 1)
                : nullptr;
 
-  if (argc > 3 || (argc > 2 && strcmp(argument_one, "-s") != 0) ||
+  if (argc > 2 || (argc > 1 && !strcmp(argument_one, "-s")) ||
       (argc > 1 && strcmp(argument_one, "--restart") == 0)) {
-    (void)fprintf(stderr, "Usage: %s [-s] [config-file]\n",
+    (void)fprintf(stderr, "Usage: %s [config-file]\n",
                   *(char **)checked_storage_at((void *)argv, (size_t)argc,
                                                sizeof(*argv), 0));
     exit(1);
   }
 
-  mindb = 0; /* Are we creating a new db? */
   /* config_file also gets assigned a genuinely mutable argv[] entry below,
      so it can't be const; CONF_FILE is only read as the default here. */
 #pragma clang diagnostic push
@@ -576,14 +583,7 @@ int main(int argc, char *argv[]) {
   config_file = (char *)CONF_FILE;
 #pragma clang diagnostic pop
   if (argc > 1) {
-    if (!strcmp(argument_one, "-s")) {
-      mindb = 1;
-      if (argc == 3)
-        config_file = *(char **)checked_storage_at((void *)argv, (size_t)argc,
-                                                   sizeof(*argv), 2);
-    } else {
-      config_file = argument_one;
-    }
+    config_file = argument_one;
   }
   if (!mux_server_create(&server)) {
     (void)fprintf(stderr, "Unable to create MUX server resources.\n");
@@ -636,10 +636,28 @@ int main(int argc, char *argv[]) {
   db_free(&server.database);
 
   server.record_players = 0;
-
-  if (mindb)
-    db_make_minimal(&server.background_command.evaluation);
-  else if (load_game(&server) < 0) {
+  if (!database_bootstrap_god_is_wizard_player(server.configuration)) {
+    (void)fprintf(stderr,
+                  "Invalid database bootstrap configuration: #1 must be a "
+                  "player with wizard = true.\n");
+    goto fail;
+  }
+  create_database =
+      stat(server.configuration->database.gamedb, &database_status) < 0 &&
+      errno == ENOENT;
+  if (create_database) {
+    if (database_bootstrap(&server.background_command.evaluation, god_password,
+                           wizard_password) < 0 ||
+        gamedb_create(&server.persistence) < 0)
+      goto fail;
+    (void)fprintf(stderr,
+                  "Created %s. Initial credentials (shown once):\n"
+                  "  GOD (#1): %s\n  Wizard (#2): %s\n",
+                  server.configuration->database.gamedb, god_password,
+                  wizard_password);
+    sodium_memzero(god_password, sizeof(god_password));
+    sodium_memzero(wizard_password, sizeof(wizard_password));
+  } else if (load_game(&server) < 0) {
     STARTLOG(&server.log, LOG_ALWAYS, "INI", "LOAD") {
       log_text("Couldn't load: ");
       log_text(server.configuration->database.gamedb);
@@ -666,7 +684,7 @@ int main(int argc, char *argv[]) {
   hash_table_reset(&server.world_indexes.flags);
   hash_table_reset(&server.world_indexes.players);
 
-  if (!server_lifecycle_boot(server.lifecycle, mindb)) {
+  if (!server_lifecycle_boot(server.lifecycle)) {
     goto fail;
   }
 

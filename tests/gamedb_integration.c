@@ -30,10 +30,8 @@ static int run_server(const char *binary_path, const char *config,
   if (child < 0)
     return -1;
   if (child == 0) {
-    if (make_minimal)
-      execl(binary_path, binary_path, "-s", config, NULL);
-    else
-      execl(binary_path, binary_path, config, NULL);
+    (void)make_minimal;
+    execl(binary_path, binary_path, config, NULL);
     _exit(127);
   }
 
@@ -59,10 +57,8 @@ static int run_server_in_directory_for(const char *binary_path,
   if (child == 0) {
     if (chdir(directory) < 0)
       _exit(127);
-    if (make_minimal)
-      execl(binary_path, binary_path, "-s", config, NULL);
-    else
-      execl(binary_path, binary_path, config, NULL);
+    (void)make_minimal;
+    execl(binary_path, binary_path, config, NULL);
     _exit(127);
   }
   delay.tv_sec = seconds;
@@ -97,10 +93,8 @@ static pid_t start_server_in_directory_after(const char *binary_path,
     snprintf(ready_fd, sizeof(ready_fd), "%d", ready_pipe[1]);
     if (chdir(directory) < 0 || setenv("BTMUX_TEST_READY_FD", ready_fd, 1) < 0)
       _exit(127);
-    if (make_minimal)
-      execl(binary_path, binary_path, "-s", config, NULL);
-    else
-      execl(binary_path, binary_path, config, NULL);
+    (void)make_minimal;
+    execl(binary_path, binary_path, config, NULL);
     _exit(127);
   }
   close(ready_pipe[1]);
@@ -235,13 +229,48 @@ static int check_minimal_lua_parents(const char *path) {
   sqlite = NULL;
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
     return -1;
-  result = query_text(sqlite, "SELECT lua_parent FROM objects WHERE dbref = 0;",
-                      "room.lua") == 0 &&
-                   query_text(sqlite,
-                              "SELECT lua_parent FROM objects WHERE dbref = 1;",
-                              "player.lua") == 0
-               ? 0
-               : -1;
+  result =
+      query_text(sqlite, "SELECT lua_parent FROM objects WHERE dbref = 0;",
+                 "room.lua") == 0 &&
+              query_text(sqlite,
+                         "SELECT lua_parent FROM objects WHERE dbref = 1;",
+                         "player.lua") == 0 &&
+              query_text(sqlite,
+                         "SELECT lua_parent FROM objects WHERE dbref = 2;",
+                         "player.lua") == 0 &&
+              query_text(sqlite, "SELECT name FROM objects WHERE dbref = 1;",
+                         "GOD") == 0 &&
+              query_text(sqlite, "SELECT name FROM objects WHERE dbref = 2;",
+                         "Wizard") == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM objects WHERE dbref IN "
+                        "(0,3,4,5) AND type = 0;",
+                        4) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM objects WHERE dbref IN "
+                        "(1,2) AND type = 3 AND location = 4 AND link = 4 "
+                        "AND has_wizard_flag = 1;",
+                        2) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM objects WHERE "
+                        "has_no_command_flag = 1 AND dbref IN (0,3,4,5);",
+                        4) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM objects WHERE dbref IN "
+                        "(1,2) AND has_ansi_flag = 1 AND "
+                        "has_in_character_flag = 1;",
+                        2) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM player_state WHERE "
+                        "object_dbref IN (1,2) AND password_hash IS NOT "
+                        "NULL AND password_hash != '';",
+                        2) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(DISTINCT password_hash) FROM "
+                        "player_state WHERE object_dbref IN (1,2);",
+                        2) == 0
+          ? 0
+          : -1;
   sqlite3_close(sqlite);
   return result;
 }
@@ -375,7 +404,7 @@ static int check_snapshot(const char *path) {
                  1) == 0 &&
        query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
            0 &&
-       (query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 ||
+       (query_int(sqlite, "SELECT count(*) FROM objects;", 6) == 0 ||
         query_int(sqlite, "SELECT count(*) FROM objects;", 7) == 0) &&
        (query_int(sqlite, "SELECT count(*) FROM object_state;", 0) == 0 ||
         query_int(sqlite, "SELECT count(*) FROM object_state;", 6) == 0) &&
@@ -645,7 +674,8 @@ static int seed_btech_special_objects(const char *path) {
               sqlite3_exec(
                   sqlite,
                   "UPDATE snapshot SET db_top = 7 WHERE id = 1;"
-                  "INSERT INTO objects "
+                  "DELETE FROM player_state WHERE object_dbref = 2;"
+                  "INSERT OR REPLACE INTO objects "
                   "(dbref, name, location, contents, exits, next, link, zone, "
                   "type, has_xcode_flag) VALUES "
                   "(2, 'Test map', -1, -1, -1, -1, -1, -1, 1, 1),"
@@ -653,7 +683,8 @@ static int seed_btech_special_objects(const char *path) {
                   "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, 1),"
                   "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, 1),"
                   "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, 1);"
-                  "INSERT INTO btech_object_state (object_dbref, object_type) "
+                  "INSERT OR REPLACE INTO btech_object_state "
+                  "(object_dbref, object_type) "
                   "VALUES "
                   "(2, 'MAP'), (3, 'MECH'), (4, 'MECHREP'),"
                   "(5, 'AUTOPILOT'), (6, 'TURRET');"
@@ -1354,6 +1385,7 @@ int main(int argc, char *argv[]) {
   char directory[] = "/tmp/btmux-gamedb-test.XXXXXX";
   char config[PATH_MAX];
   char bootstrap_config[PATH_MAX];
+  char invalid_god_config[PATH_MAX];
   char sqlite_read_config[PATH_MAX];
   char missing_config[PATH_MAX];
   char sqlite_directory[PATH_MAX];
@@ -1378,6 +1410,8 @@ int main(int argc, char *argv[]) {
                directory) < 0 ||
       snprintf(bootstrap_config, sizeof(bootstrap_config), "%s/bootstrap.conf",
                directory) < 0 ||
+      snprintf(invalid_god_config, sizeof(invalid_god_config),
+               "%s/invalid-god.conf", directory) < 0 ||
       snprintf(sqlite_read_config, sizeof(sqlite_read_config),
                "%s/sqlite-read.conf", directory) < 0 ||
       snprintf(sqlite_directory, sizeof(sqlite_directory), "%s/sqlite",
@@ -1395,9 +1429,21 @@ int main(int argc, char *argv[]) {
   if (!file)
     return 2;
   fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
+  fprintf(file, "[database.bootstrap.objects]\n");
+  fprintf(file, "0 = { type = \"room\", name = \"Limbo\" }\n");
+  fprintf(file, "1 = { type = \"player\", name = \"GOD\", wizard = true }\n");
+  fprintf(file,
+          "2 = { type = \"player\", name = \"Wizard\", wizard = true }\n");
+  fprintf(file, "3 = { type = \"room\", name = \"Store\" }\n");
+  fprintf(file, "4 = { type = \"room\", name = \"Start\" }\n");
+  fprintf(file, "5 = { type = \"room\", name = \"Afterlife\" }\n");
   fprintf(file, "[mux]\n");
   fprintf(file, "default_room_lua_parent = \"room.lua\"\n");
   fprintf(file, "default_player_lua_parent = \"player.lua\"\n");
+  fprintf(file, "default_room_flags = [\"no_command\"]\n");
+  fprintf(file, "default_player_flags = [\"ansi\", \"in_character\"]\n");
+  fprintf(file, "player_starting_room = 4\nplayer_starting_home = 4\n");
+  fprintf(file, "[battletech]\nusedmechstore = 3\nafterlife_dbref = 5\n");
   fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
     return 2;
@@ -1411,6 +1457,19 @@ int main(int argc, char *argv[]) {
                ? 0
                : 1;
 
+  file = fopen(invalid_god_config, "w");
+  if (!file)
+    return 2;
+  fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
+  fprintf(file, "[database.bootstrap.objects]\n");
+  fprintf(file, "1 = { type = \"player\", name = \"GOD\" }\n");
+  fprintf(file, "[server]\nport = 0\n");
+  if (fclose(file) != 0)
+    return 2;
+  if (result == 0 && (run_server(server, invalid_god_config, 0, &status) < 0 ||
+                      !WIFEXITED(status) || WEXITSTATUS(status) == 0))
+    result = 1;
+
   if (result == 0 && seed_commac_snapshot(database) < 0)
     result = 1;
   if (result == 0 && seed_btech_special_objects(database) < 0)
@@ -1420,6 +1479,8 @@ int main(int argc, char *argv[]) {
   if (!file)
     return 2;
   fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
+  fprintf(file, "[database.bootstrap.objects]\n");
+  fprintf(file, "1 = { type = \"player\", name = \"GOD\", wizard = true }\n");
   fprintf(file, "[mux]\n");
   fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
@@ -1456,6 +1517,8 @@ int main(int argc, char *argv[]) {
   if (!file)
     return 2;
   fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
+  fprintf(file, "[database.bootstrap.objects]\n");
+  fprintf(file, "1 = { type = \"player\", name = \"GOD\", wizard = true }\n");
   fprintf(file, "[mux]\n");
   fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
@@ -1659,6 +1722,7 @@ int main(int argc, char *argv[]) {
 
   unlink(config);
   unlink(bootstrap_config);
+  unlink(invalid_god_config);
   unlink(sqlite_read_config);
   unlink(missing_config);
   unlink(database);

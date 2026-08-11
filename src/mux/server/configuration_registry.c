@@ -25,6 +25,8 @@ CONF conftable[] = {
     {"alias", cf_cmd_alias, CA_GOD, COMMAND_LOC(commands), 0},
     {"bad_name", cf_badname, CA_GOD, 0, 0},
     {"badsite_file", cf_string, CA_DISABLED, CONFIG_LOC(site_file), 32},
+    {"bootstrap_objects_clear", cf_bootstrap_objects_clear, CA_DISABLED, 0, 0},
+    {"bootstrap_object", cf_bootstrap_object, CA_DISABLED, 0, 0},
     {"named_color", cf_named_color, CA_DISABLED, 0, 0},
     {"osc8_preset", cf_osc8_preset, CA_DISABLED, 0, 0},
     {"btech_explode_reactor", cf_int, CA_GOD, CONFIG_LOC(btech_explode_reactor),

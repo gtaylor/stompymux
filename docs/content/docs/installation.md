@@ -40,14 +40,17 @@ Use the included `just` task runner:
 just build-and-run
 ```
 
-If all goes well, you'll see a StompyMUX log stream.
+If `game/data/stompymux.db` does not exist, the first run creates it before
+opening the game port. The console prints one-time generated passwords for the
+two administrator characters. Save them immediately; only password hashes are
+stored in the database.
 
 ## Connecting
 
 Use your preferred MUD client (or `telnet`) to connec to `localhost` port `5555`.
-There are two Wizard (admin) characters, `#1` (God) and `#2` (Wizard). They both
-have the same default password of `btmuxr0x`. Change these as soon as possible
-with the `@newpassword` command.
+There are two administrator characters, `#1` (`GOD`) and `#2` (`Wizard`). Use
+the distinct passwords printed during first startup and change them with the
+`@newpassword` command.
 
 ## Next steps
 

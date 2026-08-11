@@ -31,6 +31,15 @@ fork_dump = true
 # Message displayed to players after a database dump finishes.
 # postdump_message = "BattletechMUX : Database Saved."
 
+# Objects created when game_database does not exist. Numeric keys are dbrefs.
+[database.bootstrap.objects]
+0 = { type = "room", name = "Limbo" }
+1 = { type = "player", name = "GOD", wizard = true }
+2 = { type = "player", name = "Wizard", wizard = true }
+3 = { type = "room", name = "Used Mech Store" }
+4 = { type = "room", name = "Starter Room" }
+5 = { type = "room", name = "Afterlife" }
+
 # -----------------------------------------------
 #  Lua runtime
 # -----------------------------------------------
@@ -135,7 +144,7 @@ usedmechstore = 3
 # Enable catastrophic explosions after a third engine critical hit.
 stackpole = 1
 # Database object to which players are moved after death.
-afterlife_dbref = 167
+afterlife_dbref = 5
 
 # -----------------------------------------------
 #  XP System
@@ -183,9 +192,9 @@ default_room_flags = ["no_command"]
 # Flags that are set on things after creation.
 default_thing_flags = []
 # Room where players start after creation.
-player_starting_room = 95
+player_starting_room = 4
 # Default home for new players.
-player_starting_home = 95
+player_starting_home = 4
 # Interval for checking idle players.
 command_queue_active_chunk = 100
 # Number of commands to be run from queue when there is no net traffic.
