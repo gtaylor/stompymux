@@ -250,7 +250,7 @@ static int write_lua_fixture(const char *directory) {
       "        state:set_many({ balance = balance, enabled = true,\n"
       "          memo = \"\", rate = 1.25 })\n"
       "        object:state(\"audit\"):set(\"last_balance\", balance)\n"
-      "        local examined = mux.object(0)\n"
+      "        local examined = mux.object(4)\n"
       "        examined:state(\"integration\"):set_many({\n"
       "          balance = balance, enabled = true, memo = \"\", rate = 1.25\n"
       "        })\n"
@@ -1002,9 +1002,9 @@ static int create_styled_object(int socket_fd) {
       send_command(socket_fd, "color\r\n") < 0 ||
       expect_text(socket_fd, "Color mode: truecolor (override).") < 0 ||
       send_command(socket_fd, "@flag me=monitor\r\n") < 0 ||
-      expect_text(socket_fd, "GeeOhDee - MONITOR set.") < 0 ||
+      expect_text(socket_fd, "GOD - MONITOR set.") < 0 ||
       send_command(socket_fd, "@flag me=!monitor\r\n") < 0 ||
-      expect_text(socket_fd, "GeeOhDee - MONITOR cleared.") < 0 ||
+      expect_text(socket_fd, "GOD - MONITOR cleared.") < 0 ||
       send_command(socket_fd, "@flag/quiet me=monitor\r\n") < 0 ||
       expect_text(socket_fd, "Command @flag does not take switches.") < 0 ||
       send_command(socket_fd, "@set me=monitor\r\n") < 0 ||
@@ -1135,8 +1135,7 @@ static int create_styled_object(int socket_fd) {
       send_command(socket_fd, "@state/wipe here\r\n") < 0 ||
       expect_text(socket_fd, "7 state values wiped.") < 0 ||
       send_command(socket_fd, "look\r\n") < 0 ||
-      expect_three_texts(socket_fd, "Staff Nexus", "\033]8;;send:wh\033\\",
-                         "Wiz Hangars") < 0) {
+      expect_text(socket_fd, "Starter Room") < 0) {
     fprintf(stderr, "styled-object login failed\n");
     return -1;
   }
@@ -1328,6 +1327,8 @@ int main(int argc, char **argv) {
   if (child == 0) {
     if (chdir(directory) < 0)
       _exit(127);
+    if (setenv("BTMUX_TEST_GOD_PASSWORD", "btmuxr0x", 1) < 0)
+      _exit(127);
     char *server = process_argument(argv, argc, 1);
     execl(server, server, "stompymux.toml", nullptr);
     _exit(127);
@@ -1346,6 +1347,8 @@ int main(int argc, char **argv) {
     goto done;
   if (child == 0) {
     if (chdir(directory) < 0)
+      _exit(127);
+    if (setenv("BTMUX_TEST_GOD_PASSWORD", "btmuxr0x", 1) < 0)
       _exit(127);
     char *server = process_argument(argv, argc, 1);
     execl(server, server, "stompymux.toml", nullptr);

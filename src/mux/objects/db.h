@@ -264,7 +264,6 @@ extern void al_destroy(DbRef);
 extern void al_store(void);
 extern void db_grow(GameDatabase *database, DbRef newtop);
 extern void db_free(GameDatabase *database);
-extern void db_make_minimal(EvaluationContext *evaluation);
 void object_password_set(GameDatabase *database, DbRef thing,
                          const char *password);
 void object_name_set(GameDatabase *database, DbRef thing, char *name);

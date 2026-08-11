@@ -176,6 +176,27 @@ static int test_alias_map_dispatch(void) {
   return ok;
 }
 
+static int test_bootstrap_object_map_dispatch(void) {
+  static const char toml[] =
+      "[database.bootstrap.objects]\n"
+      "0 = { type = \"room\", name = \"Limbo\" }\n"
+      "1 = { type = \"player\", name = \"GOD\", wizard = true }\n"
+      "4 = { type = \"room\", name = \"Starter Room\" }\n";
+  toml_result_t result = toml_parse(toml, sizeof(toml) - 1);
+  CallLog log = {0};
+
+  if (!result.ok)
+    return 0;
+  configuration_toml_walk(result.toptab, recording_set_fn, &log);
+  int ok = log.count == 4 &&
+           call_log_find(&log, "bootstrap_objects_clear", "") &&
+           call_log_find(&log, "bootstrap_object", "0 room false Limbo") &&
+           call_log_find(&log, "bootstrap_object", "1 player true GOD") &&
+           call_log_find(&log, "bootstrap_object", "4 room false Starter Room");
+  toml_free(result);
+  return ok;
+}
+
 static int test_rgb_map_dispatch(void) {
   static const char toml[] = "[colors]\n"
                              "brand_red = [205, 0, 0]\n"
@@ -389,6 +410,8 @@ int main(int argc, char *argv[]) {
     return 3;
   if (!test_alias_map_dispatch())
     return 4;
+  if (!test_bootstrap_object_map_dispatch())
+    return 16;
   if (!test_rgb_map_dispatch())
     return 5;
   if (!test_osc8_preset_map_dispatch())

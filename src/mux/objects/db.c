@@ -643,47 +643,6 @@ void db_free(GameDatabase *database) {
   database->freelist = NOTHING;
 }
 
-void db_make_minimal(EvaluationContext *evaluation) {
-  GameDatabase *database = evaluation->world->database;
-  DbRef obj;
-
-  db_free(database);
-  db_grow(database, 1);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  object_name_set(database, 0, (char *)"Limbo");
-#pragma clang diagnostic pop
-  game_object_set_type(database, 0, OBJECT_TYPE_ROOM);
-  game_object_clear_flags(database, 0);
-  game_object_clear_powers(database, 0);
-  game_object_set_location(database, 0, NOTHING);
-  game_object_set_exits(database, 0, NOTHING);
-  game_object_set_link(database, 0, NOTHING);
-  game_object_set_zone(database, 0, NOTHING);
-  game_database_object(database, 0)->state = nullptr;
-  object_apply_default_lua_parent(&(ObjectCreationIdentity){
-      .evaluation = evaluation, .object = 0, .type = OBJECT_TYPE_ROOM});
-  /*
-   * should be #1
-   */
-  load_player_names(evaluation->world);
-  obj = create_player(&(PlayerCreationRequest){
-      .evaluation = evaluation, .name = "Wizard", .password = "potrzebie"});
-  game_object_set_flag(&(ObjectFlagChangeRequest){.database = database,
-                                                  .object = obj,
-                                                  .flag = OBJECT_FLAG_WIZARD,
-                                                  .value = true});
-  game_object_clear_powers(database, obj);
-
-  /*
-   * Manually link to Limbo, just in case
-   */
-  game_object_set_location(database, obj, 0);
-  game_object_set_next(database, obj, NOTHING);
-  game_object_set_contents(database, 0, obj);
-  game_object_set_link(database, obj, 0);
-}
-
 DbRef parse_dbref(const char *s) {
   size_t index;
   size_t length = strlen(s);

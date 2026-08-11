@@ -44,4 +44,6 @@ int cf_badname(const ConfigurationCall *call);
 int cf_site(const ConfigurationCall *call);
 int cf_named_color(const ConfigurationCall *call);
 int cf_osc8_preset(const ConfigurationCall *call);
+int cf_bootstrap_objects_clear(const ConfigurationCall *call);
+int cf_bootstrap_object(const ConfigurationCall *call);
 int cf_cf_access(const ConfigurationCall *call);

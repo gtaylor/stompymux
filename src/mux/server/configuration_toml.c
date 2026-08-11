@@ -30,6 +30,7 @@ typedef enum {
   CFG_KIND_SITE_LIST,   /* array of {address=,mask=} tables -> one dispatch
                             per element, in order, "address mask" */
   CFG_KIND_STRING_LIST, /* array of strings -> one dispatch per element */
+  CFG_KIND_BOOTSTRAP_MAP,
 } ConfigTomlKind;
 
 typedef struct {
@@ -55,6 +56,7 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"database.fork_dump", "fork_dump", CFG_KIND_SCALAR},
     {"database.dump_message", "dump_message", CFG_KIND_SCALAR},
     {"database.postdump_message", "postdump_message", CFG_KIND_SCALAR},
+    {"database.bootstrap.objects", "bootstrap_object", CFG_KIND_BOOTSTRAP_MAP},
 
     /* lua */
     {"lua.directory", "lua_directory", CFG_KIND_SCALAR},
@@ -585,6 +587,40 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       len = strlen(address.u.s) + 1 + strlen(mask.u.s) + 1;
       args = malloc(len);
       (void)snprintf(args, len, "%s %s", address.u.s, mask.u.s);
+      set_fn(m->pname, args, ctx);
+      free(args);
+    }
+    return;
+
+  case CFG_KIND_BOOTSTRAP_MAP:
+    if (value.type != TOML_TABLE) {
+      set_fn(m->pname, "", ctx);
+      return;
+    }
+    set_fn("bootstrap_objects_clear", "", ctx);
+    for (size_t i = 0; i < configuration_toml_table_count(value); i++) {
+      toml_datum_t entry = configuration_toml_table_value(value, i);
+      const char *key = configuration_toml_table_key(value, i);
+
+      if (entry.type != TOML_TABLE) {
+        set_fn(m->pname, "", ctx);
+        continue;
+      }
+      toml_datum_t type = toml_get(entry, "type");
+      toml_datum_t name = toml_get(entry, "name");
+      toml_datum_t wizard = toml_get(entry, "wizard");
+      if (type.type != TOML_STRING || name.type != TOML_STRING ||
+          (wizard.type != TOML_UNKNOWN && wizard.type != TOML_BOOLEAN)) {
+        set_fn(m->pname, "", ctx);
+        continue;
+      }
+      const char *wizard_text =
+          wizard.type == TOML_BOOLEAN && wizard.u.boolean ? "true" : "false";
+      size_t len = strlen(key) + strlen(type.u.s) + strlen(wizard_text) +
+                   strlen(name.u.s) + 4;
+      args = malloc(len);
+      (void)snprintf(args, len, "%s %s %s %s", key, type.u.s, wizard_text,
+                     name.u.s);
       set_fn(m->pname, args, ctx);
       free(args);
     }

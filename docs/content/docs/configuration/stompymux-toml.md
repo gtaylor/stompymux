@@ -19,7 +19,7 @@ anything pulled in through `include`.
 
 | Section | Contents |
 | --- | --- |
-| `[database]` | SQLite game database path, checkpoint dump timing, messages, and fork behavior, and mech/map database paths. |
+| `[database]` | SQLite game database path, first-run bootstrap objects, checkpoint behavior, and mech/map database paths. |
 | `[lua]` | Lua module directory, VM memory limit, and persistent object-state limits. LuaJIT compilation is enabled. |
 | `[server]` | Port and MUD name. |
 | `[colors]` | Case-insensitive named RGB colors used by styled-text markup. |
@@ -62,9 +62,47 @@ directives take other shapes:
   RGB channels. Each channel must be from `0` through `255`.
 - **OSC 8 presets** (`[osc8.presets]`) map a preset name to a string of the
   flattened directives accepted on a styled link.
+- **Bootstrap objects** (`[database.bootstrap.objects]`) map numeric dbrefs to
+  inline tables containing a `type` (`room` or `player`) and `name`.
 
 An unrecognized key is logged to stderr and skipped rather than aborting the
 whole file; a syntax error in the TOML itself aborts loading.
+
+## New database bootstrap
+
+When `database.game_database` does not exist, startup creates the configured
+bootstrap objects, writes a complete SQLite snapshot atomically, and then
+opens the listener. Existing files are always loaded and are never replaced by
+bootstrap, including empty or corrupt files.
+
+```toml
+[database.bootstrap.objects]
+0 = { type = "room", name = "Limbo" }
+1 = { type = "player", name = "GOD", wizard = true }
+2 = { type = "player", name = "Wizard", wizard = true }
+3 = { type = "room", name = "Used Mech Store" }
+4 = { type = "room", name = "Starter Room" }
+5 = { type = "room", name = "Afterlife" }
+```
+
+The stock configuration uses `#3` for `usedmechstore`, `#4` for both player
+starting directives, and `#5` for `afterlife_dbref`. Bootstrap fails before
+writing if the required dbrefs are missing or have incompatible types. Seeded
+objects receive the configured default flags and Lua parents for their types.
+Player entries accept an optional `wizard` Boolean that defaults to `false` and
+cannot be enabled for rooms. The stock `#1` and `#2` entries enable it and
+receive distinct generated passwords, printed to stderr once after the database
+is safely published. When this table is present, it replaces the compiled
+bootstrap object defaults rather than extending them. Startup fails if `#1` is
+not a player with `wizard = true`, even when the database already exists. The
+startup log records when bootstrap begins and lists each created object's name,
+dbref, and type, regardless of the `logging.topics.startup` setting.
+
+The compiled fallbacks use bootstrap-safe room references: `#0` for the player
+starting room and default home, `#3` for the used mech store, and `#5` for the
+afterlife. The stock TOML intentionally overrides the player starting room to
+`#4` Starter Room. It does not set `default_home`, so that value retains the
+compiled `#0` fallback.
 
 ## Named colors
 

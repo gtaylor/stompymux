@@ -82,6 +82,9 @@ int persistence_register_sqlite_extension(PersistenceContext *context,
  */
 int gamedb_dump(PersistenceContext *context, int dump_type);
 
+/* Persist a new normal snapshot without replacing an existing path. */
+int gamedb_create(PersistenceContext *context);
+
 /*
  * Rebuild the in-memory game database from a SQLite file. The caller must
  * initialize the attribute and hash-table subsystems first. Returns 0 on

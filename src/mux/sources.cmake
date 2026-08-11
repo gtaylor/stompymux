@@ -90,6 +90,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/server/diagnostics.c
   ${MUX_MODULE_DIR}/server/file_cache.c
   ${MUX_MODULE_DIR}/server/game.c
+  ${MUX_MODULE_DIR}/server/database_bootstrap.c
   ${MUX_MODULE_DIR}/server/log.c
   ${MUX_MODULE_DIR}/server/maintenance.c
   ${MUX_MODULE_DIR}/server/mux_server.c

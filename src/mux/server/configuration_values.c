@@ -22,6 +22,89 @@
 #include "mux/support/styled_text/palette.h"
 #include "mux/world/player.h"
 
+int cf_bootstrap_objects_clear(const ConfigurationCall *call) {
+  call->context->configuration->database.bootstrap_object_count = 0;
+  return 0;
+}
+
+int cf_bootstrap_object(const ConfigurationCall *call) {
+  DatabaseConfiguration *database = &call->context->configuration->database;
+  BootstrapObjectConfiguration object;
+  size_t text_length = strlen(call->text);
+  char *type_separator = strchr(call->text, ' ');
+  char *type;
+  char *wizard_separator;
+  char *name_separator;
+  char *wizard;
+  const char *name;
+
+  if (!type_separator) {
+    call->context->fatal_error = true;
+    return -1;
+  }
+  *type_separator = '\0';
+  type = checked_storage_at(call->text, text_length + 1, sizeof(char),
+                            strlen(call->text) + 1);
+  wizard_separator = strchr(type, ' ');
+  if (!wizard_separator) {
+    call->context->fatal_error = true;
+    return -1;
+  }
+  *wizard_separator = '\0';
+  wizard =
+      checked_storage_at(type, text_length + 1 - (size_t)(type - call->text),
+                         sizeof(char), strlen(type) + 1);
+  name_separator = strchr(wizard, ' ');
+  if (!name_separator) {
+    call->context->fatal_error = true;
+    return -1;
+  }
+  *name_separator = '\0';
+  name = checked_storage_at_const(call->text, text_length + 1, sizeof(char),
+                                  (size_t)(name_separator - call->text) + 1);
+  if (!parse_long_checked(call->text, &object.dbref) || object.dbref < 0 ||
+      !*name || database->bootstrap_object_count >= MAX_BOOTSTRAP_OBJECTS) {
+    call->context->fatal_error = true;
+    return -1;
+  }
+  if (!strcmp(type, "room"))
+    object.type = BOOTSTRAP_OBJECT_ROOM;
+  else if (!strcmp(type, "player"))
+    object.type = BOOTSTRAP_OBJECT_PLAYER;
+  else {
+    call->context->fatal_error = true;
+    return -1;
+  }
+  if (!strcmp(wizard, "true"))
+    object.wizard = true;
+  else if (!strcmp(wizard, "false"))
+    object.wizard = false;
+  else {
+    call->context->fatal_error = true;
+    return -1;
+  }
+  if (object.wizard && object.type != BOOTSTRAP_OBJECT_PLAYER) {
+    call->context->fatal_error = true;
+    return -1;
+  }
+  for (size_t index = 0; index < database->bootstrap_object_count; index++) {
+    BootstrapObjectConfiguration *existing =
+        checked_storage_at(database->bootstrap_objects, MAX_BOOTSTRAP_OBJECTS,
+                           sizeof(*database->bootstrap_objects), index);
+    if (existing->dbref == object.dbref) {
+      call->context->fatal_error = true;
+      return -1;
+    }
+  }
+  (void)snprintf(object.name, sizeof(object.name), "%s", name);
+  BootstrapObjectConfiguration *slot = checked_storage_at(
+      database->bootstrap_objects, MAX_BOOTSTRAP_OBJECTS,
+      sizeof(*database->bootstrap_objects), database->bootstrap_object_count);
+  *slot = object;
+  database->bootstrap_object_count++;
+  return 0;
+}
+
 int cf_int(const ConfigurationCall *call) {
   int *vp = call->value;
   /*
