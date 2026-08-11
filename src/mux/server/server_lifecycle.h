@@ -21,7 +21,7 @@ void server_lifecycle_destroy(ServerLifecycle *lifecycle);
 uv_loop_t *server_lifecycle_loop(ServerLifecycle *lifecycle);
 void server_lifecycle_prepare(ServerLifecycle *lifecycle);
 void server_lifecycle_unbind_signals(ServerLifecycle *lifecycle);
-int server_lifecycle_boot(ServerLifecycle *lifecycle, int mindb);
+int server_lifecycle_boot(ServerLifecycle *lifecycle);
 void server_lifecycle_run(ServerLifecycle *lifecycle, int port);
 void server_lifecycle_stop(ServerLifecycle *lifecycle);
 void server_lifecycle_release_sockets(ServerLifecycle *lifecycle);

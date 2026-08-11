@@ -135,7 +135,7 @@ usedmechstore = 3
 # Enable catastrophic explosions after a third engine critical hit.
 stackpole = 1
 # Database object to which players are moved after death.
-afterlife_dbref = 167
+afterlife_dbref = 5
 
 # -----------------------------------------------
 #  XP System
@@ -183,9 +183,9 @@ default_room_flags = ["no_command"]
 # Flags that are set on things after creation.
 default_thing_flags = []
 # Room where players start after creation.
-player_starting_room = 95
+player_starting_room = 4
 # Default home for new players.
-player_starting_home = 95
+player_starting_home = 4
 # Interval for checking idle players.
 command_queue_active_chunk = 100
 # Number of commands to be run from queue when there is no net traffic.
@@ -261,13 +261,13 @@ bugs = true
 # Write normal database checkpoint activity.
 checkpoints = false
 # Write runtime changes to configuration directives.
-config_changes = false
+config_changes = true
 # Write player-character creation events.
-create = false
+create = true
 # Write successful logins and logouts.
-logins = false
+logins = true
 # Write network connections and disconnections.
-network = false
+network = true
 # Write detected runtime inconsistencies and other operational problems.
 problems = true
 # Write security-related events, including failed authentication attempts.
@@ -275,6 +275,6 @@ security = true
 # Write shouts, broadcasts, and other global speech.
 shouts = false
 # Write nonfatal errors and progress during server startup.
-startup = false
+startup = true
 # Write sensitive or dangerous wizard actions.
 wizard = false

@@ -100,6 +100,29 @@ void configuration_initialize(ConfigurationContext *context) {
   StringCopy(context->configuration->database.gamedb, "");
   StringCopy(context->configuration->database.mech_db, "mechs");
   StringCopy(context->configuration->database.map_db, "maps");
+  context->configuration->database.bootstrap_objects[0] =
+      (BootstrapObjectConfiguration){
+          .dbref = 0, .type = BOOTSTRAP_OBJECT_ROOM, .name = "Limbo"};
+  context->configuration->database.bootstrap_objects[1] =
+      (BootstrapObjectConfiguration){.dbref = 1,
+                                     .type = BOOTSTRAP_OBJECT_PLAYER,
+                                     .wizard = true,
+                                     .name = "GOD"};
+  context->configuration->database.bootstrap_objects[2] =
+      (BootstrapObjectConfiguration){.dbref = 2,
+                                     .type = BOOTSTRAP_OBJECT_PLAYER,
+                                     .wizard = true,
+                                     .name = "Wizard"};
+  context->configuration->database.bootstrap_objects[3] =
+      (BootstrapObjectConfiguration){
+          .dbref = 3, .type = BOOTSTRAP_OBJECT_ROOM, .name = "Used Mech Store"};
+  context->configuration->database.bootstrap_objects[4] =
+      (BootstrapObjectConfiguration){
+          .dbref = 4, .type = BOOTSTRAP_OBJECT_ROOM, .name = "Starter Room"};
+  context->configuration->database.bootstrap_objects[5] =
+      (BootstrapObjectConfiguration){
+          .dbref = 5, .type = BOOTSTRAP_OBJECT_ROOM, .name = "Afterlife"};
+  context->configuration->database.bootstrap_object_count = 6;
   context->configuration->btech_explode_reactor = 1;
   context->configuration->btech_explode_time = 120;
   context->configuration->btech_explode_ammo = 1;
@@ -153,7 +176,7 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->btech_seismic_see_stopped = 0;
   context->configuration->btech_exile_stun_code = 0;
   context->configuration->btech_roll_on_backwalk = 1;
-  context->configuration->btech_usedmechstore = 0;
+  context->configuration->btech_usedmechstore = 3;
   context->configuration->btech_ooc_comsys = 0;
   context->configuration->btech_idf_requires_spotter = 1;
   context->configuration->btech_vtol_ice_causes_fire = 1;
@@ -185,7 +208,7 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->btech_complexrepair = 1;
 #endif
   context->configuration->allow_chanlurking = 0;
-  context->configuration->afterlife_dbref = 220;
+  context->configuration->afterlife_dbref = 5;
   context->configuration->port = 6250;
   context->configuration->init_size = 1000;
   StringCopy(context->configuration->conn_file, "text/connect.txt");
@@ -225,18 +248,32 @@ void configuration_initialize(ConfigurationContext *context) {
    * -- ??? Running SC on a non-SC DB may cause problems
    */
   context->configuration->space_compress = 1;
-  context->configuration->start_room = 0;
-  context->configuration->start_home = -1;
-  context->configuration->default_home = -1;
-  StringCopy(context->configuration->default_thing_lua_parent, "");
-  StringCopy(context->configuration->default_room_lua_parent, "");
-  StringCopy(context->configuration->default_exit_lua_parent, "");
-  StringCopy(context->configuration->default_player_lua_parent, "");
-  context->configuration->default_player_flags = (ObjectFlagSet){0};
-  context->configuration->default_room_flags = (ObjectFlagSet){0};
-  context->configuration->default_exit_flags = (ObjectFlagSet){0};
+  context->configuration->start_room = 4;
+  context->configuration->start_home = 4;
+  context->configuration->default_home = 0;
+  StringCopy(context->configuration->default_thing_lua_parent,
+             "default_thing.lua");
+  StringCopy(context->configuration->default_room_lua_parent,
+             "default_room.lua");
+  StringCopy(context->configuration->default_exit_lua_parent,
+             "default_exit.lua");
+  StringCopy(context->configuration->default_player_lua_parent,
+             "default_player.lua");
+  context->configuration->default_player_flags =
+      (ObjectFlagSet){.values = {
+                          [OBJECT_FLAG_ANSI] = true,
+                          [OBJECT_FLAG_IN_CHARACTER] = true,
+                      }};
+  context->configuration->default_room_flags =
+      (ObjectFlagSet){.values = {
+                          [OBJECT_FLAG_NO_COMMAND] = true,
+                      }};
+  context->configuration->default_exit_flags =
+      (ObjectFlagSet){.values = {
+                          [OBJECT_FLAG_NO_COMMAND] = true,
+                      }};
   context->configuration->default_thing_flags = (ObjectFlagSet){0};
-  StringCopy(context->configuration->mud_name, "TinyMUX");
+  StringCopy(context->configuration->mud_name, "StompyMUX");
   context->configuration->command_quota_interval = 100;
   context->configuration->command_quota_max = 100;
   context->configuration->command_quota_increment = 5;
@@ -451,7 +488,7 @@ int configuration_read(ConfigurationContext *context, char *fn) {
                                errbuf, sizeof(errbuf));
   context->configuration->is_initializing = false;
   if (context->fatal_error && errbuf[0] == '\0')
-    (void)snprintf(errbuf, sizeof(errbuf), "invalid styled-text configuration");
+    (void)snprintf(errbuf, sizeof(errbuf), "invalid configuration");
   if (!ok || context->fatal_error) {
     (void)fprintf(stderr, "Error reading config file '%s': %s\n", fn, errbuf);
     return -1;

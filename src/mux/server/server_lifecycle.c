@@ -181,7 +181,7 @@ void server_lifecycle_unbind_signals(ServerLifecycle *lifecycle) {
 }
 
 /* Start services required after the database and descriptor state are ready. */
-int server_lifecycle_boot(ServerLifecycle *lifecycle, int mindb) {
+int server_lifecycle_boot(ServerLifecycle *lifecycle) {
   char lua_error[LBUF_SIZE];
 
   lifecycle->maintenance->clock->now = time(nullptr);

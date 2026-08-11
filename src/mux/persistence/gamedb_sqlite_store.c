@@ -423,7 +423,8 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
  * target file. The previous file remains untouched until the replacement is
  * fully written, closed, and synced.
  */
-int gamedb_dump(PersistenceContext *context, int dump_type) {
+static int gamedb_write(PersistenceContext *context, int dump_type,
+                        bool replace) {
   char target[PATH_MAX];
   char temporary[PATH_MAX];
   sqlite3 *sqlite;
@@ -487,15 +488,28 @@ int gamedb_dump(PersistenceContext *context, int dump_type) {
     unlink(temporary);
     return -1;
   }
-  if (rename(temporary, target) < 0) {
-    gamedb_log_failure(context->log, "replacing snapshot", target, nullptr);
+  if ((replace && rename(temporary, target) < 0) ||
+      (!replace && link(temporary, target) < 0)) {
+    gamedb_log_failure(context->log,
+                       replace ? "replacing snapshot" : "creating snapshot",
+                       target, nullptr);
     unlink(temporary);
     return -1;
   }
+  if (!replace)
+    unlink(temporary);
   if (gamedb_fsync_directory(target) < 0) {
     gamedb_log_failure(context->log, "syncing snapshot directory", target,
                        nullptr);
     return -1;
   }
   return 0;
+}
+
+int gamedb_dump(PersistenceContext *context, int dump_type) {
+  return gamedb_write(context, dump_type, true);
+}
+
+int gamedb_create(PersistenceContext *context) {
+  return gamedb_write(context, DUMP_NORMAL, false);
 }
