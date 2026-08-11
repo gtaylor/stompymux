@@ -261,13 +261,13 @@ bugs = true
 # Write normal database checkpoint activity.
 checkpoints = false
 # Write runtime changes to configuration directives.
-config_changes = false
+config_changes = true
 # Write player-character creation events.
-create = false
+create = true
 # Write successful logins and logouts.
-logins = false
+logins = true
 # Write network connections and disconnections.
-network = false
+network = true
 # Write detected runtime inconsistencies and other operational problems.
 problems = true
 # Write security-related events, including failed authentication attempts.
