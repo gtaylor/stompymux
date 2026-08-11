@@ -897,6 +897,69 @@ static int expect_three_texts(int socket_fd, const char *first,
   return -1;
 }
 
+static int expect_texts(int socket_fd, const char *const *expected,
+                        size_t expected_count) {
+  char *received = nullptr;
+  size_t received_size = 0;
+  size_t received_capacity = 0;
+  struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
+  int idle_attempts = 0;
+
+  while (idle_attempts < 20) {
+    if (poll(&readable, 1, 500) != 1) {
+      idle_attempts++;
+      continue;
+    }
+    if (received_capacity - received_size < 4096) {
+      size_t new_capacity = received_capacity ? received_capacity * 2 : 16384;
+      char *expanded = realloc(received, new_capacity);
+
+      if (!expanded) {
+        free(received);
+        return -1;
+      }
+      received = expanded;
+      received_capacity = new_capacity;
+    }
+    ssize_t size = read(
+        socket_fd, buffer_suffix(received, received_capacity, received_size),
+        received_capacity - received_size - 1);
+
+    if (size <= 0) {
+      free(received);
+      return -1;
+    }
+    received_size += (size_t)size;
+    *(char *)checked_storage_at(received, received_capacity, sizeof(char),
+                                received_size) = '\0';
+
+    bool found_all = true;
+    for (size_t index = 0; index < expected_count; index++) {
+      const char *item = *(const char *const *)checked_storage_at_const(
+          expected, expected_count, sizeof(*expected), index);
+
+      if (!strstr(received, item)) {
+        found_all = false;
+        break;
+      }
+    }
+    if (found_all) {
+      free(received);
+      return 0;
+    }
+  }
+  for (size_t index = 0; index < expected_count; index++) {
+    const char *item = *(const char *const *)checked_storage_at_const(
+        expected, expected_count, sizeof(*expected), index);
+
+    if (!strstr(received, item))
+      fprintf(stderr, "expected '%s'\n", item);
+  }
+  fprintf(stderr, "received '%s'\n", received ? received : "");
+  free(received);
+  return -1;
+}
+
 static int exercise_utf8(int socket_fd) {
   return send_command(socket_fd, "say UTF caf\xc3\xa9 \xf0\x9f\x98\x80\r\n") <
                      0 ||
@@ -1029,27 +1092,29 @@ static int create_styled_object(int socket_fd) {
                          "\033]8;;send:cast%20fireball\033\\Cast\033]8;;\033\\ "
                          "\033]8;;prompt:look\033\\Edit\033]8;;\033\\") < 0 ||
       send_command(socket_fd, "osc8demo\r\n") < 0 ||
-      expect_three_texts(
-          socket_fd, "OSC 8 demonstration (Tier 1-6)",
-          "\033]8;;prompt:say%20OSC%208%20works%21\033\\fill input",
-          "%22t%22%3A%22Left-click%20to%20look%3B%20right-click%20for%20"
-          "more%20actions%22") < 0 ||
-      expect_three_texts(
+      expect_texts(
           socket_fd,
-          "%22v%22%3A%7B%22action%22%3A%22conceal%22%2C%22delay%22"
-          "%3A500%7D",
-          "%22sp%22%3Atrue%2C%22d%22%3Atrue", "%22d%22%3Atrue%7D") < 0 ||
-      expect_three_texts(
-          socket_fd,
-          "%22sel%22%3A%7B%22group%22%3A%22difficulty%22%2C%22value"
-          "%22%3A%22easy%22",
-          "%22sel%22%3A%7B%22group%22%3A%22buffs%22%2C%22value%22%3A"
-          "%22strength%22%2C%22exclusive%22%3Afalse",
-          "%22sel%22%3A%7B%22group%22%3A%22following%22%2C%22value%22"
-          "%3A%22news%22%2C%22toggle%22%3Afalse%2C%22selected%22%3Atrue") < 0 ||
-      expect_three_texts(
-          socket_fd, "preset=osc8-demo-button",
-          "preset=osc8-demo-button&config=", "preset=osc8-demo-danger") < 0 ||
+          (const char *const[]){
+              "OSC 8 demonstration (Tier 1-6)",
+              "\033]8;;prompt:say%20OSC%208%20works%21\033\\fill input",
+              "%22t%22%3A%22Left-click%20to%20look%3B%20right-click%20for%20"
+              "more%20actions%22",
+              "%22v%22%3A%7B%22action%22%3A%22conceal%22%2C%22delay%22"
+              "%3A500%7D",
+              "%22sp%22%3Atrue%2C%22d%22%3Atrue",
+              "%22d%22%3Atrue%7D",
+              "%22sel%22%3A%7B%22group%22%3A%22difficulty%22%2C%22value"
+              "%22%3A%22easy%22",
+              "%22sel%22%3A%7B%22group%22%3A%22buffs%22%2C%22value%22%3A"
+              "%22strength%22%2C%22exclusive%22%3Afalse",
+              "%22sel%22%3A%7B%22group%22%3A%22following%22%2C%22value%22"
+              "%3A%22news%22%2C%22toggle%22%3Afalse%2C%22selected%22%3Atrue",
+              "preset=osc8-demo-button",
+              "preset=osc8-demo-button&config=",
+              "preset=osc8-demo-danger",
+              "Hover and focus the styled links",
+          },
+          13) < 0 ||
       send_command(socket_fd, "@telnet GOD\r\n") < 0 ||
       expect_three_texts(socket_fd, "  NEW-ENVIRON:",
                          "      VAR \"USER\" = "
