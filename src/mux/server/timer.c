@@ -4,9 +4,12 @@
  */
 
 #include <bits/types/struct_rusage.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <sys/resource.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "btech/special_objects.h"
 #include "mux/lua/lua_runtime.h"
@@ -29,16 +32,42 @@ static void timer_callback(MuxTimer *timer, void *arg);
 struct ServerTimer {
   MuxTimer *event;
   MaintenanceContext *maintenance;
+#ifdef BTMUX_PERSISTENCE_TESTING
+  unsigned test_ticks;
+#endif
 };
+
+#ifdef BTMUX_PERSISTENCE_TESTING
+static void signal_test_tick(void) {
+  const char *value = getenv("BTMUX_TEST_TICK_FD");
+  char *end;
+  long descriptor;
+
+  if (value == nullptr)
+    return;
+  errno = 0;
+  descriptor = strtol(value, &end, 10);
+  if (errno != 0 || end == value || *end != '\0' || descriptor < 0 ||
+      descriptor > INT_MAX)
+    return;
+  (void)write((int)descriptor, "1", 1);
+  close((int)descriptor);
+  unsetenv("BTMUX_TEST_TICK_FD");
+}
+#endif
 
 ServerTimer *server_timer_create(uv_loop_t *loop,
                                  MaintenanceContext *maintenance) {
   ServerTimer *timer = calloc(1, sizeof(*timer));
+  uint64_t initial_timeout = 100;
 
   if (timer == nullptr)
     return nullptr;
   timer->maintenance = maintenance;
   maintenance->clock->now = time(nullptr);
+#ifdef BTMUX_PERSISTENCE_TESTING
+  timer->test_ticks = 0;
+#endif
   maintenance->clock->dump_deadline =
       ((maintenance->configuration->dump_offset == 0)
            ? maintenance->configuration->database.dump_interval
@@ -53,7 +82,12 @@ ServerTimer *server_timer_create(uv_loop_t *loop,
       maintenance->configuration->idle_interval + maintenance->clock->now;
   maintenance->clock->metrics_deadline = 15 + maintenance->clock->now;
   timer->event = mux_timer_create(loop, timer_callback, timer);
-  if (timer->event == nullptr || !mux_timer_start(timer->event, 100, 100)) {
+#ifdef BTMUX_PERSISTENCE_TESTING
+  if (getenv("BTMUX_TEST_TICK_FD") == nullptr)
+    initial_timeout = 5000;
+#endif
+  if (timer->event == nullptr ||
+      !mux_timer_start(timer->event, initial_timeout, 100)) {
     server_timer_destroy(timer);
     return nullptr;
   }
@@ -189,6 +223,11 @@ static void timer_callback(MuxTimer *timer, void *arg) {
 
   maintenance->clock->tick_pending = true;
   dispatch(maintenance);
+#ifdef BTMUX_PERSISTENCE_TESTING
+  server_timer->test_ticks++;
+  if (server_timer->test_ticks >= 11)
+    signal_test_tick();
+#endif
 }
 
 void server_timer_destroy(ServerTimer *timer) {

@@ -45,7 +45,16 @@ build:
     cmake --build {{build_dir}} -j "$(nproc)"
 
 test:
-    ctest --test-dir {{build_dir}} --output-on-failure
+    ctest --test-dir {{build_dir}} --output-on-failure -j "$(nproc)"
+
+test-unit:
+    ctest --test-dir {{build_dir}} --output-on-failure --no-tests=error -j "$(nproc)" -L '^unit$'
+
+test-unit-topic topic:
+    ctest --test-dir {{build_dir}} --output-on-failure --no-tests=error -j "$(nproc)" -L '^unit$' -L '^{{topic}}$'
+
+test-integration:
+    ctest --test-dir {{build_dir}} --output-on-failure --no-tests=error -j "$(nproc)" -L '^integration$'
 
 install:
     cmake --install {{build_dir}} --prefix "$PWD/game"

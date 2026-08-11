@@ -1,0 +1,5 @@
+[database]
+game_database = "data/stompymux.db"
+
+[server]
+port = 0
