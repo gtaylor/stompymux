@@ -116,11 +116,13 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
     else
       (void)snprintf(buf, SBUF_SIZE, "%s", "damage");
 
+    const char *missile_quantity = "Some of the";
+    if (orig_num_missiles == 1)
+      missile_quantity = "The";
+    else if (num_missiles_hit == 0)
+      missile_quantity = "All of the";
     mech_printf(mech, MECHALL, "%s %s %s absorbed by the trees!",
-                (orig_num_missiles == 1  ? "The"
-                 : num_missiles_hit == 0 ? "All of the"
-                                         : "Some of the"),
-                buf, (orig_num_missiles == 1 ? "is" : "are"));
+                missile_quantity, buf, (orig_num_missiles == 1 ? "is" : "are"));
     mech_printf(target, MECHALL, "The trees absorb %s %s",
                 ((orig_num_missiles == 1) || (num_missiles_hit == 0)
                      ? "the"
@@ -505,10 +507,10 @@ void mech_swarm_missile_hit_target(const MissileAttackRequest *request) {
     MissileAttackRequest attack = *request;
     attack.target = hit_mech;
     attack.target_hex = (MapHexPosition){.x = -1, .y = -1};
-    attack.los = mech_los_check_unblocked(mech, hit_mech, mech_position_x(mech),
-                                          mech_position_y(mech), ran)
-                     ? present_target == 0 ? 1 : 2
-                     : 0;
+    attack.los = 0;
+    if (mech_los_check_unblocked(mech, hit_mech, mech_position_x(mech),
+                                 mech_position_y(mech), ran))
+      attack.los = present_target == 0 ? 1 : 2;
     attack.roll =
         present_target == 0 ? roll : btech_random_roll(mech_context(mech));
     attack.incoming = missiles;

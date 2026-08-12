@@ -543,24 +543,23 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
   /* little cheating here to get the proper part, since we aren't doing complex
    * repairs */
   oparttype = mech_critical_part_type(mech, loc, part);
-  parttype = (equipment_is_actuator(oparttype)
-                  ? cargo_equipment_index(S_ACTUATOR)
-                  : (oparttype == special_equipment_index(ENGINE)
-                         ? ((mech_technology_flags(mech) & XL_TECH)
-                                ? cargo_equipment_index(XL_ENGINE)
-                            : (mech_technology_flags(mech) & ICE_TECH)
-                                ? cargo_equipment_index(IC_ENGINE)
-                            : (mech_technology_flags(mech) & XXL_TECH)
-                                ? cargo_equipment_index(XXL_ENGINE)
-                            : (mech_technology_flags(mech) & CE_TECH)
-                                ? cargo_equipment_index(COMP_ENGINE)
-                            : (mech_technology_flags(mech) & LE_TECH)
-                                ? cargo_equipment_index(LIGHT_ENGINE)
-                                : oparttype)
-                         : (oparttype == special_equipment_index(HEAT_SINK) &&
-                                    mech_has_double_heat_sinks(mech)
-                                ? cargo_equipment_index(DOUBLE_HEAT_SINK)
-                                : oparttype)));
+  parttype = oparttype;
+  if (equipment_is_actuator(oparttype))
+    parttype = cargo_equipment_index(S_ACTUATOR);
+  else if (oparttype == special_equipment_index(ENGINE)) {
+    if (mech_technology_flags(mech) & XL_TECH)
+      parttype = cargo_equipment_index(XL_ENGINE);
+    else if (mech_technology_flags(mech) & ICE_TECH)
+      parttype = cargo_equipment_index(IC_ENGINE);
+    else if (mech_technology_flags(mech) & XXL_TECH)
+      parttype = cargo_equipment_index(XXL_ENGINE);
+    else if (mech_technology_flags(mech) & CE_TECH)
+      parttype = cargo_equipment_index(COMP_ENGINE);
+    else if (mech_technology_flags(mech) & LE_TECH)
+      parttype = cargo_equipment_index(LIGHT_ENGINE);
+  } else if (oparttype == special_equipment_index(HEAT_SINK) &&
+             mech_has_double_heat_sinks(mech))
+    parttype = cargo_equipment_index(DOUBLE_HEAT_SINK);
 
   if (equipment_is_ammunition(mech_critical_part_type(mech, loc, part))
           ? 0

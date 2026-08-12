@@ -85,6 +85,32 @@ static const char *section_recycle_status(Mech *mech, int section) {
   return "[fg=green]Ready[reset]";
 }
 
+static const char *ecm_status(bool destroyed, bool enabled, bool active,
+                              bool eccm_enabled, bool countered) {
+  if (destroyed)
+    return "[fg=red bold]XX[reset]";
+  if (enabled)
+    return active ? "[fg=green bold]ECM[reset]" : "[fg=red bold]ECM[reset]";
+  if (eccm_enabled)
+    return "[fg=green bold]ECCM[reset]";
+  return countered ? "[fg=red]Off[reset]" : "[fg=green]Off[reset]";
+}
+
+static const char *network_status_color(bool destroyed, bool disturbed,
+                                        bool connected) {
+  if (destroyed)
+    return "[fg=red]";
+  if (disturbed)
+    return "[fg=yellow]";
+  return connected ? "[fg=green bold]" : "[fg=green]";
+}
+
+static const char *counter_status_color(int counter) {
+  if (counter > 3)
+    return "[fg=red bold]";
+  return counter > 0 ? "[fg=yellow bold]" : "[fg=green]";
+}
+
 static const char *
 physical_recycle_status(Mech *mech, int section,
                         MechPhysicalWeaponType physical_type) {
@@ -141,83 +167,73 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
 
     if (technology & ECM_TECH) {
       append_status(tempbuff, sizeof(tempbuff), "ECM(%s)  ",
-                    conditions.ecm_destroyed ? "[fg=red bold]XX[reset]"
-                    : conditions.ecm_enabled
-                        ? (conditions.ecm_active ? "[fg=green bold]ECM[reset]"
-                                                 : "[fg=red bold]ECM[reset]")
-                    : conditions.eccm_enabled  ? "[fg=green bold]ECCM[reset]"
-                    : conditions.ecm_countered ? "[fg=red]Off[reset]"
-                                               : "[fg=green]Off[reset]");
+                    ecm_status(conditions.ecm_destroyed, conditions.ecm_enabled,
+                               conditions.ecm_active, conditions.eccm_enabled,
+                               conditions.ecm_countered));
     }
 
     if (technology_secondary & ANGEL_ECM_TECH) {
       append_status(
           tempbuff, sizeof(tempbuff), "AngelECM(%s)  ",
-          conditions.angel_ecm_destroyed ? "[fg=red bold]XX[reset]"
-          : conditions.angel_ecm_enabled
-              ? (conditions.angel_ecm_active ? "[fg=green bold]ECM[reset]"
-                                             : "[fg=red bold]ECM[reset]")
-          : conditions.angel_eccm_enabled ? "[fg=green bold]ECCM[reset]"
-          : conditions.ecm_countered      ? "[fg=red]Off[reset]"
-                                          : "[fg=green]Off[reset]");
+          ecm_status(conditions.angel_ecm_destroyed,
+                     conditions.angel_ecm_enabled, conditions.angel_ecm_active,
+                     conditions.angel_eccm_enabled, conditions.ecm_countered));
     }
 
     if (infantry_technology & FC_INFILTRATORII_STEALTH_TECH) {
-      append_status(
-          tempbuff, sizeof(tempbuff), "PersonalECM(%s)  ",
-          conditions.personal_ecm_enabled
-              ? (conditions.personal_ecm_active ? "[fg=green bold]ECM[reset]"
-                                                : "[fg=red bold]ECM[reset]")
-          : conditions.personal_eccm_enabled ? "[fg=green bold]ECCM[reset]"
-          : conditions.ecm_countered         ? "[fg=red]Off[reset]"
-                                             : "[fg=green]Off[reset]");
+      append_status(tempbuff, sizeof(tempbuff), "PersonalECM(%s)  ",
+                    ecm_status(false, conditions.personal_ecm_enabled,
+                               conditions.personal_ecm_active,
+                               conditions.personal_eccm_enabled,
+                               conditions.ecm_countered));
     }
 
     if (technology_secondary & STEALTH_ARMOR_TECH) {
-      append_status(tempbuff, sizeof(tempbuff), "SthArmor(%s)  ",
-                    conditions.ecm_destroyed ? "[fg=red bold]XX[reset]"
-                    : conditions.stealth_armor_active
-                        ? "[fg=green bold]On[reset]"
-                        : "[fg=green]Rdy[reset]");
+      const char *status = conditions.stealth_armor_active
+                               ? "[fg=green bold]On[reset]"
+                               : "[fg=green]Rdy[reset]";
+      if (conditions.ecm_destroyed)
+        status = "[fg=red bold]XX[reset]";
+      append_status(tempbuff, sizeof(tempbuff), "SthArmor(%s)  ", status);
     }
 
     if (technology_secondary & NULLSIGSYS_TECH) {
-      append_status(
-          tempbuff, sizeof(tempbuff), "NullSigSys(%s)  ",
-          conditions.null_signature_destroyed ? "[fg=red bold]XX[reset]"
-          : conditions.null_signature_active  ? "[fg=green bold]On[reset]"
-                                              : "[fg=green]Rdy[reset]");
+      const char *status = conditions.null_signature_active
+                               ? "[fg=green bold]On[reset]"
+                               : "[fg=green]Rdy[reset]";
+      if (conditions.null_signature_destroyed)
+        status = "[fg=red bold]XX[reset]";
+      append_status(tempbuff, sizeof(tempbuff), "NullSigSys(%s)  ", status);
     }
 
     if (technology & SLITE_TECH) {
-      append_status(tempbuff, sizeof(tempbuff), "SLITE(%s)  ",
-                    conditions.searchlight_destroyed ? "[fg=red bold]XX[reset]"
-                    : mech_searchlight_active(mech) ? "[fg=green bold]On[reset]"
-                                                    : "[fg=green]Off[reset]");
+      const char *status = mech_searchlight_active(mech)
+                               ? "[fg=green bold]On[reset]"
+                               : "[fg=green]Off[reset]";
+      if (conditions.searchlight_destroyed)
+        status = "[fg=red bold]XX[reset]";
+      append_status(tempbuff, sizeof(tempbuff), "SLITE(%s)  ", status);
     }
 
     if (has_c3_master) {
       append_status(tempbuff, sizeof(tempbuff), "%sC3M[reset]  ",
-                    conditions.c3_destroyed           ? "[fg=red]"
-                    : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
-                    : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
-                                                      : "[fg=green]");
+                    network_status_color(conditions.c3_destroyed,
+                                         mech_is_any_ecm_disturbed(mech),
+                                         mech_c3_network_size(mech) > 0));
     }
 
     if (has_c3_slave) {
       append_status(tempbuff, sizeof(tempbuff), "%sC3S[reset]  ",
-                    conditions.c3_destroyed           ? "[fg=red]"
-                    : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
-                    : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
-                                                      : "[fg=green]");
+                    network_status_color(conditions.c3_destroyed,
+                                         mech_is_any_ecm_disturbed(mech),
+                                         mech_c3_network_size(mech) > 0));
     }
 
     if (has_c3i) {
       append_status(tempbuff, sizeof(tempbuff), "%sC3i[reset]  ",
-                    conditions.c3i_destroyed          ? "[fg=red]"
-                    : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
-                    : mech_c3i_network_size(mech) > 0 ? "[fg=green bold]"
-                                                      : "[fg=green]");
+                    network_status_color(conditions.c3i_destroyed,
+                                         mech_is_any_ecm_disturbed(mech),
+                                         mech_c3i_network_size(mech) > 0));
     }
 
     if (technology & TRIPLE_MYOMER_TECH)
@@ -229,35 +245,31 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       DbRef tag_target_dbref = mech_tag_target_dbref(mech);
       Mech *tag_target =
           btech_context_get_mech(mech_context(mech), tag_target_dbref);
-      append_status(
-          tempbuff, sizeof(tempbuff), "TAG(%s)  ",
-          mech_tag_is_destroyed(mech) ? "[fg=red bold]XX[reset]"
-          : (!tag_target ||
-             mech_tagged_by_dbref(tag_target) != mech_dbref(mech))
-              ? (mech_event_count(mech, EVENT_TAG_RECYCLE)
-                     ? "[fg=yellow bold]Not Rdy[reset]"
-                     : "[fg=green]Rdy[reset]")
-              : tprintf("%s%s[reset]",
-                        (mech_event_count(mech, EVENT_TAG_RECYCLE)
-                             ? "[fg=yellow bold]"
-                             : "[bold]"),
-                        mech_to_mech_display_id(mech, tag_target).text));
+      const bool RECYCLING = mech_event_count(mech, EVENT_TAG_RECYCLE) != 0;
+      const char *status;
+      if (mech_tag_is_destroyed(mech))
+        status = "[fg=red bold]XX[reset]";
+      else if (!tag_target ||
+               mech_tagged_by_dbref(tag_target) != mech_dbref(mech))
+        status = RECYCLING ? "[fg=yellow bold]Not Rdy[reset]"
+                           : "[fg=green]Rdy[reset]";
+      else
+        status =
+            tprintf("%s%s[reset]", RECYCLING ? "[fg=yellow bold]" : "[bold]",
+                    mech_to_mech_display_id(mech, tag_target).text);
+      append_status(tempbuff, sizeof(tempbuff), "TAG(%s)  ", status);
     }
 
     if (technology_secondary & SUPERCHARGER_TECH) {
       append_status(tempbuff, sizeof(tempbuff), "SCHARGE: %s%d[reset] (%s)",
-                    conditions.supercharger_counter > 3   ? "[fg=red bold]"
-                    : conditions.supercharger_counter > 0 ? "[fg=yellow bold]"
-                                                          : "[fg=green]",
+                    counter_status_color(conditions.supercharger_counter),
                     conditions.supercharger_counter,
                     conditions.supercharger_enabled ? "On" : "Off");
     }
 
     if (technology & MASC_TECH) {
       append_status(tempbuff, sizeof(tempbuff), "MASC: %s%d[reset] (%s)",
-                    conditions.masc_counter > 3   ? "[fg=red bold]"
-                    : conditions.masc_counter > 0 ? "[fg=yellow bold]"
-                                                  : "[fg=green]",
+                    counter_status_color(conditions.masc_counter),
                     conditions.masc_counter,
                     conditions.masc_enabled ? "On" : "Off");
     }
@@ -493,20 +505,24 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       } else {
         (void)snprintf(tmpbuf, sizeof(tmpbuf), "%s%s",
                        fire_mode & OS_MODE ? "OS " : "", weapon_name);
+        char one_shot_status = ' ';
+        if ((fire_mode & OS_USED) || (fire_mode & ROCKET_FIRED))
+          one_shot_status = '-';
+        else if (fire_mode & OS_MODE)
+          one_shot_status = 'O';
+        char targeting_status = ' ';
+        if ((fire_mode & ON_TC) && !conditions.targeting_computer_destroyed)
+          targeting_status = 'T';
+        else if (fire_mode & IS_JETTISONED_MODE)
+          targeting_status = 'J';
+        else if (fire_mode & WILL_JETTISON_MODE)
+          targeting_status = 'P';
         btech_text_builder_append_format(
             &weapon_text, " %-16.16s %c%c%c%c%c [%2d] ", tmpbuf,
-            (fire_mode & REAR_MOUNT) ? 'R' : ' ',
-            (((fire_mode & OS_USED) || (fire_mode & ROCKET_FIRED)) ? '-'
-             : (fire_mode & OS_MODE)                               ? 'O'
-                                                                   : ' '),
+            (fire_mode & REAR_MOUNT) ? 'R' : ' ', one_shot_status,
             get_weapon_ammo_mode_letter(mech, loop, CRITICAL_INDEX),
             get_weapon_fire_mode_letter(mech, loop, CRITICAL_INDEX),
-            ((fire_mode & ON_TC) && !conditions.targeting_computer_destroyed)
-                ? 'T'
-            : (fire_mode & IS_JETTISONED_MODE) ? 'J'
-            : (fire_mode & WILL_JETTISON_MODE) ? 'P'
-                                               : ' ',
-            running_sum + ii);
+            targeting_status, running_sum + ii);
       }
       if (compact)
         append_status(compact_buffer, compact_buffer_size, "%s|%s", weapon_name,

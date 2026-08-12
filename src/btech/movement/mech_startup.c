@@ -407,15 +407,19 @@ void mech_shutdown(DbRef player, void *data, const char *buffer) {
     mech_pilot_dbref_set(mech, -1);
     return;
   }
-  mech_printf(mech, MECHALL, "%s has been shutdown!",
-              mech_is_dropship(mech)         ? "Dropship"
-              : mech_is_aerospace_unit(mech) ? "Fighter"
-              : unit_class == CLASS_BSUIT    ? "Suit"
-              : ((movement_type == MOVE_HOVER) ||
-                 (movement_type == MOVE_TRACK) || (movement_type == MOVE_WHEEL))
-                  ? "Vehicle"
-              : movement_type == MOVE_VTOL ? "VTOL"
-                                           : "Mech");
+  const char *unit_name = "Mech";
+  if (mech_is_dropship(mech))
+    unit_name = "Dropship";
+  else if (mech_is_aerospace_unit(mech))
+    unit_name = "Fighter";
+  else if (unit_class == CLASS_BSUIT)
+    unit_name = "Suit";
+  else if (movement_type == MOVE_HOVER || movement_type == MOVE_TRACK ||
+           movement_type == MOVE_WHEEL)
+    unit_name = "Vehicle";
+  else if (movement_type == MOVE_VTOL)
+    unit_name = "VTOL";
+  mech_printf(mech, MECHALL, "%s has been shutdown!", unit_name);
 
   /*
    * Fixed by Kipsta so searchlights shutoff when the mech shuts down

@@ -464,11 +464,13 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
    * Ultras
    */
   if (LOS) {
+    const char *projectile = "missile";
+    if (t_is_ultra || t_is_rac)
+      projectile = "slug";
+    else if (t_is_lbx)
+      projectile = "pellet";
     mech_printf(mech, MECHALL, "[fg=green]You hit with %d %s%s![reset]",
-                num_missiles_hit,
-                (t_is_ultra || t_is_rac ? "slug"
-                 : t_is_lbx             ? "pellet"
-                                        : "missile"),
+                num_missiles_hit, projectile,
                 (num_missiles_hit > 1 ? "s" : ""));
   }
 

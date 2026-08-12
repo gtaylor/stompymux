@@ -12,6 +12,7 @@ Checks: >
   bugprone-*,
   misc-include-cleaner,
   readability-avoid-const-params-in-decls,
+  readability-avoid-nested-conditional-operator,
   readability-avoid-return-with-void-value,
   readability-avoid-unconditional-preprocessor-if,
   readability-braces-around-statements,

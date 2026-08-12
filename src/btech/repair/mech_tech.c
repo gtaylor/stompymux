@@ -44,13 +44,19 @@ int tech_proper_armor_part(const Mech *mech) {
   int technology = mech_technology_flags(mech);
   int secondary = mech_technology_flags_secondary(mech);
   int infantry = mech_infantry_technology_flags(mech);
-  int armor = technology & FF_TECH                  ? FF_ARMOR
-              : technology & HARDA_TECH             ? HD_ARMOR
-              : secondary & STEALTH_ARMOR_TECH      ? STH_ARMOR
-              : secondary & HVY_FF_ARMOR_TECH       ? HVY_FF_ARMOR
-              : secondary & LT_FF_ARMOR_TECH        ? LT_FF_ARMOR
-              : infantry & CS_PURIFIER_STEALTH_TECH ? PURIFIER_ARMOR
-                                                    : S_ARMOR;
+  int armor = S_ARMOR;
+  if (technology & FF_TECH)
+    armor = FF_ARMOR;
+  else if (technology & HARDA_TECH)
+    armor = HD_ARMOR;
+  else if (secondary & STEALTH_ARMOR_TECH)
+    armor = STH_ARMOR;
+  else if (secondary & HVY_FF_ARMOR_TECH)
+    armor = HVY_FF_ARMOR;
+  else if (secondary & LT_FF_ARMOR_TECH)
+    armor = LT_FF_ARMOR;
+  else if (infantry & CS_PURIFIER_STEALTH_TECH)
+    armor = PURIFIER_ARMOR;
   return cargo_equipment_index(armor);
 #endif
 }
@@ -60,10 +66,13 @@ int tech_proper_internal_part(const Mech *mech) {
   return ProperInternal(mech);
 #else
   int technology = mech_technology_flags(mech);
-  int internal = technology & ES_TECH       ? ES_INTERNAL
-                 : technology & REINFI_TECH ? RE_INTERNAL
-                 : technology & COMPI_TECH  ? CO_INTERNAL
-                                            : S_INTERNAL;
+  int internal = S_INTERNAL;
+  if (technology & ES_TECH)
+    internal = ES_INTERNAL;
+  else if (technology & REINFI_TECH)
+    internal = RE_INTERNAL;
+  else if (technology & COMPI_TECH)
+    internal = CO_INTERNAL;
   return cargo_equipment_index(internal);
 #endif
 }

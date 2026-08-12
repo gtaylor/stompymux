@@ -772,9 +772,11 @@ void dropship_land_warning(Mech *mech, int serious) {
   if (!ilz)
     return;
   ilz--;
+  const char *warning = "Please do not even consider landing here.";
+  if (serious == 1)
+    warning = "CLIMB UP NOW!!!";
+  else if (serious == 0)
+    warning = "No further descent is advisable.";
   mech_printf(mech, MECHALL, "%sWARNING: %s - %s[reset]", colorstr(serious),
-              aero_landing_reason(ilz),
-              serious == 1   ? "CLIMB UP NOW!!!"
-              : serious == 0 ? "No further descent is advisable."
-                             : "Please do not even consider landing here.");
+              aero_landing_reason(ilz), warning);
 }

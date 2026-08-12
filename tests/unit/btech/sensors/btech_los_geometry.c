@@ -86,7 +86,9 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
 }
 
 int bounded(int lower, int value, int upper) {
-  return value < lower ? lower : value > upper ? upper : value;
+  if (value < lower)
+    return lower;
+  return value > upper ? upper : value;
 }
 
 static void reset_map(BattleMap *map) {

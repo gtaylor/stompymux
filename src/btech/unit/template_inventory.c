@@ -436,13 +436,18 @@ char *partlist_func(Mech *mech, char *buffer) {
       act_count = act_count + count_for_part;
       break;
     case ENGINE:
-      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-                     ((mech)->rd.specials) & LE_TECH    ? "Light_Engine"
-                     : ((mech)->rd.specials) & CE_TECH  ? "Compact_Engine"
-                     : ((mech)->rd.specials) & XXL_TECH ? "XXL_Engine"
-                     : ((mech)->rd.specials) & XL_TECH  ? "XL_Engine"
-                     : ((mech)->rd.specials) & ICE_TECH ? "ICE_Engine"
-                                                        : "Engine",
+      const char *engine_name = "Engine";
+      if (((mech)->rd.specials) & LE_TECH)
+        engine_name = "Light_Engine";
+      else if (((mech)->rd.specials) & CE_TECH)
+        engine_name = "Compact_Engine";
+      else if (((mech)->rd.specials) & XXL_TECH)
+        engine_name = "XXL_Engine";
+      else if (((mech)->rd.specials) & XL_TECH)
+        engine_name = "XL_Engine";
+      else if (((mech)->rd.specials) & ICE_TECH)
+        engine_name = "ICE_Engine";
+      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d", engine_name,
                      count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
@@ -454,10 +459,12 @@ char *partlist_func(Mech *mech, char *buffer) {
       strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
       break;
     case GYRO:
-      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-                     ((mech)->rd.specials2) & XLGYRO_TECH   ? "XL_Gyro"
-                     : ((mech)->rd.specials2) & HDGYRO_TECH ? "HeavyDuty_Gyro"
-                                                            : "Gyro",
+      const char *gyro_name = "Gyro";
+      if (((mech)->rd.specials2) & XLGYRO_TECH)
+        gyro_name = "XL_Gyro";
+      else if (((mech)->rd.specials2) & HDGYRO_TECH)
+        gyro_name = "HeavyDuty_Gyro";
+      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d", gyro_name,
                      count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
@@ -469,13 +476,13 @@ char *partlist_func(Mech *mech, char *buffer) {
       strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
       break;
     case HEAT_SINK:
+      const char *heat_sink_name = "HeatSink";
+      if (((mech)->rd.specials2) & COMPACT_HS_TECH)
+        heat_sink_name = "Compact_HeatSink";
+      else if (((mech)->rd.specials) & (DOUBLE_HEAT_TECH | CLAN_TECH))
+        heat_sink_name = "Double_HeatSink";
       (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-                     ((mech)->rd.specials2) & COMPACT_HS_TECH
-                         ? "Compact_HeatSink"
-                     : ((mech)->rd.specials) & (DOUBLE_HEAT_TECH | CLAN_TECH)
-                         ? "Double_HeatSink"
-                         : "HeatSink",
-                     count_for_part);
+                     heat_sink_name, count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {

@@ -74,9 +74,11 @@ enum { BTECH_BV_SKILL_LIMIT = 8 };
 extern float skillmul[BTECH_BV_SKILL_LIMIT][BTECH_BV_SKILL_LIMIT];
 
 static inline int battle_value_skill_index(int skill) {
-  return skill < 0                           ? 0
-         : skill >= BTECH_BV_SKILL_LIMIT - 1 ? BTECH_BV_SKILL_LIMIT - 1
-                                             : skill;
+  if (skill < 0)
+    return 0;
+  if (skill >= BTECH_BV_SKILL_LIMIT - 1)
+    return BTECH_BV_SKILL_LIMIT - 1;
+  return skill;
 }
 
 static inline float degrees_to_radians(float degrees) {

@@ -318,12 +318,14 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         skillmod = 0;
         dammod = 0;
       }
-      skillmod += (mech_real_terrain_get(mech) == BATTLE_TERRAIN_HIGH_WATER ? -2
-                   : mech_real_terrain_get(mech) == BATTLE_TERRAIN_BRIDGE
-                       ? bridge_w_elevation(mech)
-                   : mech_position_elevation(mech) > 3
-                       ? 1
-                       : (mech_position_elevation(mech) - 2));
+      int terrain_modifier = mech_position_elevation(mech) - 2;
+      if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_HIGH_WATER)
+        terrain_modifier = -2;
+      else if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_BRIDGE)
+        terrain_modifier = bridge_w_elevation(mech);
+      else if (mech_position_elevation(mech) > 3)
+        terrain_modifier = 1;
+      skillmod += terrain_modifier;
       //
       // Stupid Frontiers cheaters. No XP gains here.
       if (!mech_pilot_skill_roll_without_experience(

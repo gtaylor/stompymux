@@ -287,26 +287,32 @@ int weapon_is_nonfunctional(Mech *mech, int section, int crit, int numcrits) {
 
 void unit_parts_list(Mech *mech, char buffer[static LBUF_SIZE]) {
   char *bp = buffer;
+  const char *armor_name = "ARMOR";
+  const char *internal_name = "INTERNAL";
+
+  if (((mech)->rd.specials2) & STEALTH_ARMOR_TECH)
+    armor_name = "ST_ARMOR";
+  else if (((mech)->rd.specials2) & HVY_FF_ARMOR_TECH)
+    armor_name = "HVY_FF_ARMOR";
+  else if (((mech)->rd.specials2) & LT_FF_ARMOR_TECH)
+    armor_name = "LT_FF_ARMOR";
+  else if (((mech)->rd.specials2) & HARDA_TECH)
+    armor_name = "HD_ARMOR";
+  else if (((mech)->rd.specials) & FF_TECH)
+    armor_name = "FF_ARMOR";
+
+  if (((mech)->rd.specials) & REINFI_TECH)
+    internal_name = "RE_INTERNALS";
+  else if (((mech)->rd.specials) & COMPI_TECH)
+    internal_name = "CO_INTERNALS";
+  else if (((mech)->rd.specials) & ES_TECH)
+    internal_name = "ES_INTERNAL";
 
   buffer[0] = '\0';
 
-  safe_str(tprintf("%s:%d|",
-                   ((mech)->rd.specials2) & STEALTH_ARMOR_TECH  ? "ST_ARMOR"
-                   : ((mech)->rd.specials2) & HVY_FF_ARMOR_TECH ? "HVY_FF_ARMOR"
-                   : ((mech)->rd.specials2) & LT_FF_ARMOR_TECH  ? "LT_FF_ARMOR"
-                   : ((mech)->rd.specials2) & HARDA_TECH        ? "HD_ARMOR"
-                   : ((mech)->rd.specials) & FF_TECH            ? "FF_ARMOR"
-                                                                : "ARMOR",
-                   mech_armorpoints(mech)),
-           buffer, &bp);
+  safe_str(tprintf("%s:%d|", armor_name, mech_armorpoints(mech)), buffer, &bp);
 
-  safe_str(tprintf("%s:%d|",
-                   ((mech)->rd.specials) & REINFI_TECH  ? "RE_INTERNALS"
-                   : ((mech)->rd.specials) & COMPI_TECH ? "CO_INTERNALS"
-                   : ((mech)->rd.specials) & ES_TECH    ? "ES_INTERNAL"
-                                                        : "INTERNAL",
-                   mech_intpoints(mech)),
-           buffer, &bp);
+  safe_str(tprintf("%s:%d|", internal_name, mech_intpoints(mech)), buffer, &bp);
 
   safe_str(tprintf("%s|", payloadlist_func(mech, (char[MBUF_SIZE]){0})), buffer,
            &bp);

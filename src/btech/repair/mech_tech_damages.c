@@ -570,24 +570,26 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     case FIXARMOR:
     case FIXARMOR_R:
     case FIXINTERNAL:
-      const char *armor_material =
-          damage->type == FIXINTERNAL
-              ? ((mech_technology_flags(mech) & ES_TECH)       ? " Endosteel"
-                 : (mech_technology_flags(mech) & REINFI_TECH) ? " Reinforced"
-                 : (mech_technology_flags(mech) & COMPI_TECH)  ? " Composite"
-                                                               : "")
-              : ((mech_technology_flags(mech) & FF_TECH)      ? " Ferrofibrous"
-                 : (mech_technology_flags(mech) & HARDA_TECH) ? " Hardened"
-                 : (mech_technology_flags_secondary(mech) & STEALTH_ARMOR_TECH)
-                     ? " Stealth"
-                 : (mech_technology_flags_secondary(mech) & HVY_FF_ARMOR_TECH)
-                     ? " Heavy Ferrofibrous"
-                 : (mech_technology_flags_secondary(mech) & LT_FF_ARMOR_TECH)
-                     ? " Light Ferrofibrous"
-                 : (mech_infantry_technology_flags(mech) &
-                    CS_PURIFIER_STEALTH_TECH)
-                     ? " Purifier Stealth"
-                     : "");
+      const char *armor_material = "";
+      if (damage->type == FIXINTERNAL) {
+        if (mech_technology_flags(mech) & ES_TECH)
+          armor_material = " Endosteel";
+        else if (mech_technology_flags(mech) & REINFI_TECH)
+          armor_material = " Reinforced";
+        else if (mech_technology_flags(mech) & COMPI_TECH)
+          armor_material = " Composite";
+      } else if (mech_technology_flags(mech) & FF_TECH)
+        armor_material = " Ferrofibrous";
+      else if (mech_technology_flags(mech) & HARDA_TECH)
+        armor_material = " Hardened";
+      else if (mech_technology_flags_secondary(mech) & STEALTH_ARMOR_TECH)
+        armor_material = " Stealth";
+      else if (mech_technology_flags_secondary(mech) & HVY_FF_ARMOR_TECH)
+        armor_material = " Heavy Ferrofibrous";
+      else if (mech_technology_flags_secondary(mech) & LT_FF_ARMOR_TECH)
+        armor_material = " Light Ferrofibrous";
+      else if (mech_infantry_technology_flags(mech) & CS_PURIFIER_STEALTH_TECH)
+        armor_material = " Purifier Stealth";
       if (damage->type == FIXINTERNAL) {
         (void)snprintf(buf, sizeof(buf), "Repairs on%s internals (%d points)",
                        armor_material, damage->detail);

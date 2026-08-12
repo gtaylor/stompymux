@@ -478,10 +478,13 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       if (argc != 0 && argc != 3 && argc != 6)
         (void)snprintf(trash, sizeof(trash), "%d degrees.", BEARING);
       else {
+        char elevation_direction = ' ';
+        if (z1 > z0)
+          elevation_direction = '+';
+        else if (z1 < z0)
+          elevation_direction = '-';
         (void)snprintf(trash, sizeof(trash), "%d degrees mark %c%d.", BEARING,
-                       (z1 > z0   ? '+'
-                        : z1 < z0 ? '-'
-                                  : ' '),
+                       elevation_direction,
                        map_vertical_bearing(&(MapSpatialSegment){
                            .start = {.x = x0, .y = y0, .z = z0},
                            .end = {.x = x1, .y = y1, .z = z1}}));

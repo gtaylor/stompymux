@@ -51,7 +51,11 @@ void mech_critical_brand_set(const CriticalSlotBrandSet *request) {
   struct CriticalSlot *slot = critical_at_mutable(request->mech, request->slot);
   int failure_bits = slot->brand & 0xF0;
   int brand = request->brand;
-  int clamped_brand = brand < 0 ? 0 : brand > 15 ? 15 : brand;
+  int clamped_brand = brand;
+  if (brand < 0)
+    clamped_brand = 0;
+  else if (brand > 15)
+    clamped_brand = 15;
   slot->brand = clamp_int_to_unsigned_char(failure_bits | clamped_brand);
 }
 
@@ -153,7 +157,11 @@ void mech_critical_temporary_failure_set(
     const CriticalSlotFailureSet *request) {
   struct CriticalSlot *slot = critical_at_mutable(request->mech, request->slot);
   int failure = request->failure;
-  int clamped_failure = failure < 0 ? 0 : failure > 15 ? 15 : failure;
+  int clamped_failure = failure;
+  if (failure < 0)
+    clamped_failure = 0;
+  else if (failure > 15)
+    clamped_failure = 15;
   slot->brand =
       clamp_int_to_unsigned_char((slot->brand & 0x0F) | (clamped_failure << 4));
 }

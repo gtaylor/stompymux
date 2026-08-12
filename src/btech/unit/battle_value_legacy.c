@@ -84,10 +84,12 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
                          (mechspec & HARDA_TECH ? 200 : 100));
     }
     if (!mech_is_aerospace_unit(mech)) {
-      intern += (debug3 = mech_section_internal(mech, i) *
-                          (mechspec & COMPI_TECH    ? 50
-                           : mechspec & REINFI_TECH ? 200
-                                                    : 100));
+      int internal_multiplier = 100;
+      if (mechspec & COMPI_TECH)
+        internal_multiplier = 50;
+      else if (mechspec & REINFI_TECH)
+        internal_multiplier = 200;
+      intern += (debug3 = mech_section_internal(mech, i) * internal_multiplier);
     } else {
       intern = (debug3 = (unsigned char)((mech)->ud.si));
     }
@@ -180,10 +182,13 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
             !mech_critical_data(mech, i, ii))
           continue;
         temp2 = mech_critical_ammo_mode(mech, i, ii);
-        mul = temp2 & AC_AP_MODE                                  ? 4.0F
-              : temp2 & AC_PRECISION_MODE                         ? 6.0F
-              : temp2 & (SWARM_MODE | SWARM1_MODE | STINGER_MODE) ? 1.5F
-                                                                  : 1.0F;
+        mul = 1.0F;
+        if (temp2 & AC_AP_MODE)
+          mul = 4.0F;
+        else if (temp2 & AC_PRECISION_MODE)
+          mul = 6.0F;
+        else if (temp2 & (SWARM_MODE | SWARM1_MODE | STINGER_MODE))
+          mul = 1.5F;
         const int AMMUNITION = mech_critical_data(mech, i, ii);
         weapindx = ammunition_to_weapon_index(temp);
         const int AMMUNITION_PER_TON =
@@ -416,15 +421,19 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
   else
     defbv -= deduct;
   if (type != CLASS_MECH) {
-    const float MOVEMENT_MODIFIER =
-        move == MOVE_TRACK                                           ? 0.8F
-        : move == MOVE_WHEEL                                         ? 0.7F
-        : move == MOVE_HOVER                                         ? 0.6F
-        : move == MOVE_VTOL                                          ? 0.4F
-        : move == MOVE_FOIL || move == MOVE_SUB || move == MOVE_HULL ? 0.5F
-                                                                     : 1.0F;
+    float movement_modifier = 1.0F;
+    if (move == MOVE_TRACK)
+      movement_modifier = 0.8F;
+    else if (move == MOVE_WHEEL)
+      movement_modifier = 0.7F;
+    else if (move == MOVE_HOVER)
+      movement_modifier = 0.6F;
+    else if (move == MOVE_VTOL)
+      movement_modifier = 0.4F;
+    else if (move == MOVE_FOIL || move == MOVE_SUB || move == MOVE_HULL)
+      movement_modifier = 0.5F;
     defbv =
-        clamp_float_to_int((float)defbv * MOVEMENT_MODIFIER - (float)deduct);
+        clamp_float_to_int((float)defbv * movement_modifier - (float)deduct);
   }
   defbv = clamp_float_to_int((float)defbv * mul);
 

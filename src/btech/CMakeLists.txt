@@ -274,6 +274,7 @@ set(BTECH_SOURCES
   unit/mech_damage_history.c
   unit/mech_electronics_state.c
   unit/mech_consistency.c
+  unit/mech_weight_descriptions.c
   unit/mech_internal_consistency.c
   unit/mech_events.c
   unit/mech_equipment_state.c

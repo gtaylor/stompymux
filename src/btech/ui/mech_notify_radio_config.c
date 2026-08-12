@@ -446,15 +446,18 @@ void mech_list_freqs(DbRef player, void *data, char *buffer) {
   mecha_notify(evaluation, player, "# -- Mode -- Frequency -- Comtitle");
   for (i = 0; i < mech_radio_channel_count(mech); i++) {
     int mode = mech_radio_mode(mech, i);
+    char scan_mode = '-';
+    if (mode & FREQ_SCAN)
+      scan_mode = 'S';
+    else if (mode >= FREQ_REST)
+      scan_mode = radio_color_character(mode / FREQ_REST - 1);
+    else if (mode & FREQ_INFO)
+      scan_mode = 'I';
     notify_printf(evaluation, player, "%c    %c%c%c%c    %-9d    %s", 'A' + i,
                   mode & FREQ_DIGITAL ? 'D' : 'A',
                   mode & FREQ_RELAY ? 'R' : '-', mode & FREQ_MUTE ? 'M' : '-',
-                  mode & FREQ_SCAN ? 'S'
-                  : mode >= FREQ_REST
-                      ? radio_color_character(mode / FREQ_REST - 1)
-                  : mode & FREQ_INFO ? 'I'
-                                     : '-',
-                  mech_radio_frequency(mech, i), mech_radio_title(mech, i));
+                  scan_mode, mech_radio_frequency(mech, i),
+                  mech_radio_title(mech, i));
   }
 }
 

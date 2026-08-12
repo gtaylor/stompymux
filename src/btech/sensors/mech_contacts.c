@@ -294,65 +294,72 @@ MechStatusString mech_status_string(Mech *target, int who) {
 
 char mech_contact_status_character(Mech *mech, Mech *mech_target,
                                    int w_char_num) {
-  char c_ret = ' ';
   const MechConditionSummary CONDITION = mech_condition_summary(mech_target);
 
   switch (w_char_num) {
   case 1:
-    c_ret = CONDITION.swarm_target > 0               ? 'W'
-            : mech_is_towed(mech_target)             ? 'T'
-            : mech_carried_dbref(mech_target) > 0    ? 't'
-            : mech_contact_carries_club(mech_target) ? 'C'
-            :
+    if (CONDITION.swarm_target > 0)
+      return 'W';
+    if (mech_is_towed(mech_target))
+      return 'T';
+    if (mech_carried_dbref(mech_target) > 0)
+      return 't';
+    if (mech_contact_carries_club(mech_target))
+      return 'C';
 #ifdef BT_MOVEMENT_MODES
-            CONDITION.sprinting ? 'M'
-            : CONDITION.evading ? 'm'
-                                :
+    if (CONDITION.sprinting)
+      return 'M';
+    if (CONDITION.evading)
+      return 'm';
 #endif
-                                ' ';
-    break;
+    return ' ';
   case 2:
-    c_ret = mech_is_destroyed(mech_target)         ? 'D'
-            : mech_searchlight_active(mech_target) ? 'L'
-            : CONDITION.illuminated                ? 'l'
-                                                   : ' ';
-    break;
+    if (mech_is_destroyed(mech_target))
+      return 'D';
+    if (mech_searchlight_active(mech_target))
+      return 'L';
+    return CONDITION.illuminated ? 'l' : ' ';
   case 3:
-    c_ret = mech_is_jumping(mech_target)                             ? 'J'
-            : mech_is_out_of_control(mech_target)                    ? 'O'
-            : mech_is_fallen(mech_target)                            ? 'F'
-            : mech_event_count(mech_target, EVENT_STAND)             ? 'f'
-            : mech_event_count(mech_target, EVENT_CHANGING_HULLDOWN) ? 'h'
-            : CONDITION.hull_down                                    ? 'H'
-            : mech_condition_summary(mech).spinning                  ? 'X'
-                                                                     : ' ';
-    break;
+    if (mech_is_jumping(mech_target))
+      return 'J';
+    if (mech_is_out_of_control(mech_target))
+      return 'O';
+    if (mech_is_fallen(mech_target))
+      return 'F';
+    if (mech_event_count(mech_target, EVENT_STAND))
+      return 'f';
+    if (mech_event_count(mech_target, EVENT_CHANGING_HULLDOWN))
+      return 'h';
+    if (CONDITION.hull_down)
+      return 'H';
+    return mech_condition_summary(mech).spinning ? 'X' : ' ';
   case 4:
-    c_ret = mech_is_started(mech_target)
-                ? (mech_excess_heat(mech_target) != 0.0F              ? '+'
-                   : mech_is_jellied(mech_target)                     ? 'I'
-                   : mech_event_count(mech_target, EVENT_VEHICLEBURN) ? 'B'
-                                                                      : ' ')
-            : CONDITION.staggering                         ? 'G'
-            : mech_event_count(mech_target, EVENT_STARTUP) ? 's'
-                                                           : 'S';
-    break;
+    if (mech_is_started(mech_target)) {
+      if (mech_excess_heat(mech_target) != 0.0F)
+        return '+';
+      if (mech_is_jellied(mech_target))
+        return 'I';
+      return mech_event_count(mech_target, EVENT_VEHICLEBURN) ? 'B' : ' ';
+    }
+    if (CONDITION.staggering)
+      return 'G';
+    return mech_event_count(mech_target, EVENT_STARTUP) ? 's' : 'S';
   case 5:
-    c_ret = mech_has_attached_homing_beacon(mech_target)
-                ? (mech_team(mech_target) == mech_team(mech) ? 'n' : 'N')
-            :
+    if (mech_has_attached_homing_beacon(mech_target))
+      return mech_team(mech_target) == mech_team(mech) ? 'n' : 'N';
 #ifdef ECM_ON_CONTACTS
-            (CONDITION.eccm_enabled || CONDITION.angel_eccm_enabled)     ? 'P'
-            : (CONDITION.ecm_active || CONDITION.angel_ecm_active)       ? 'E'
-            : (CONDITION.ecm_protected || CONDITION.angel_ecm_protected) ? 'p'
-            : mech_is_any_ecm_disturbed(mech_target)                     ? 'e'
-                                                                         :
+    if (CONDITION.eccm_enabled || CONDITION.angel_eccm_enabled)
+      return 'P';
+    if (CONDITION.ecm_active || CONDITION.angel_ecm_active)
+      return 'E';
+    if (CONDITION.ecm_protected || CONDITION.angel_ecm_protected)
+      return 'p';
+    if (mech_is_any_ecm_disturbed(mech_target))
+      return 'e';
 #endif
-                                                     ' ';
-    break;
+    return ' ';
   }
-
-  return c_ret;
+  return ' ';
 }
 
 void mech_contacts(DbRef player, void *data, char *buffer) {
@@ -535,14 +542,16 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         c_status5 = mech_contact_status_character(mech, temp_mech, 5);
       }
 
+      const char *contact_color = "";
+      if (mech_dbref(temp_mech) == mech_target_dbref(mech))
+        contact_color = "[fg=red bold]";
+      else if (!mech_contact_is_friend(mech, temp_mech))
+        contact_color = "[fg=yellow bold]";
       (void)snprintf(
           buff, sizeof(buff),
           "%s%c%c%c[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d "
           "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-          mech_dbref(temp_mech) == mech_target_dbref(mech) ? "[fg=red bold]"
-          : !mech_contact_is_friend(mech, temp_mech)       ? "[fg=yellow bold]"
-                                                           : "",
-          (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
+          contact_color, (losflag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
           (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
           mech_id(temp_mech, mech_contact_is_friend(mech, temp_mech)).text,
           *move_type, mech_name, mech_position_x(temp_mech),
@@ -662,6 +671,14 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         mech_name = new;
       }
 
+      char building_status = ' ';
+      if (battle_map_building_is_safe(tmp_map) ||
+          (j && battle_map_building_is_command_center(tmp_map)))
+        building_status = 'X';
+      else if (j)
+        building_status = 'x';
+      else if (battle_map_building_is_command_center(tmp_map))
+        building_status = 'C';
       (void)snprintf(
           buff, sizeof(buff),
           "%s%c%c%c %-23.23s x:%3d y:%3d z:%2d r:%4.1f b:%3d CF:%4d /%4d "
@@ -671,13 +688,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           (losflag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
           mech_name, BUILDING_X, BUILDING_Y, i, (double)range, bearing,
           battle_map_building_integrity(tmp_map),
-          battle_map_building_maximum_integrity(tmp_map),
-          (battle_map_building_is_safe(tmp_map) ||
-           (j && battle_map_building_is_command_center(tmp_map)))
-              ? 'X'
-          : j                                              ? 'x'
-          : battle_map_building_is_command_center(tmp_map) ? 'C'
-                                                           : ' ',
+          battle_map_building_maximum_integrity(tmp_map), building_status,
           battle_map_building_is_hidden(tmp_map) ? 'H' : ' ',
           j ? "[reset]" : "");
       if (buffindex < BATTLE_MAP_UNIT_CAPACITY) {

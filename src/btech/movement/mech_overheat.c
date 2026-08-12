@@ -123,15 +123,20 @@ void mech_overheat_handle(Mech *mech) {
     if (heat >= 14.0F) {
       mech_notify(mech, MECHALL,
                   "You frantically attempt to override the shutdown process!");
+      int modifier = 0;
+      if (heat >= 30.0F)
+        modifier = 8;
+      else if (heat >= 26.0F)
+        modifier = 6;
+      else if (heat >= 22.0F)
+        modifier = 4;
+      else if (heat >= 18.0F)
+        modifier = 2;
       avoided = char_getskillsuccess(
           &(CharacterSkillCheck){.context = context,
                                  .player = mech_pilot_dbref(mech),
                                  .name = "computer",
-                                 .modifier = (heat >= 30.0F   ? 8
-                                              : heat >= 26.0F ? 6
-                                              : heat >= 22.0F ? 4
-                                              : heat >= 18.0F ? 2
-                                                              : 0),
+                                 .modifier = modifier,
                                  .loud = true});
       if (avoided)
         accumulate_computer_xp(mech_pilot_dbref(mech), mech, 1);

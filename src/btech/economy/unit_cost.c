@@ -413,12 +413,17 @@ unsigned long long mech_fasa_cost(Mech *mech) {
     /* Engine Math
      * (Engine Basecost * Engine Rating * Tonnage) / 75
      */
-    int engine_basecost = (TECHNOLOGY & CE_TECH    ? 10000
-                           : TECHNOLOGY & LE_TECH  ? 15000
-                           : TECHNOLOGY & XL_TECH  ? 20000
-                           : TECHNOLOGY & XXL_TECH ? 100000
-                           : TECHNOLOGY & ICE_TECH ? 1250
-                                                   : 5000);
+    int engine_basecost = 5000;
+    if (TECHNOLOGY & CE_TECH)
+      engine_basecost = 10000;
+    else if (TECHNOLOGY & LE_TECH)
+      engine_basecost = 15000;
+    else if (TECHNOLOGY & XL_TECH)
+      engine_basecost = 20000;
+    else if (TECHNOLOGY & XXL_TECH)
+      engine_basecost = 100000;
+    else if (TECHNOLOGY & ICE_TECH)
+      engine_basecost = 1250;
 
     engine_size = mech_engine_rating(mech);
 
@@ -506,12 +511,17 @@ unsigned long long mech_fasa_cost(Mech *mech) {
     const int ARMOR_WEIGHT = round_to_halfton(total_armor * 1024 / 16);
     const double ARMOR_TONS = (double)ARMOR_WEIGHT / 1024.0;
 
-    int armor_cost_point = (TECHNOLOGY & FF_TECH                        ? 20000
-                            : TECHNOLOGY_SECONDARY & STEALTH_ARMOR_TECH ? 50000
-                            : TECHNOLOGY & HARDA_TECH                   ? 15000
-                            : TECHNOLOGY_SECONDARY & LT_FF_ARMOR_TECH   ? 15000
-                            : TECHNOLOGY_SECONDARY & HVY_FF_ARMOR_TECH ? 25000
-                                                                       : 10000);
+    int armor_cost_point = 10000;
+    if (TECHNOLOGY & FF_TECH)
+      armor_cost_point = 20000;
+    else if (TECHNOLOGY_SECONDARY & STEALTH_ARMOR_TECH)
+      armor_cost_point = 50000;
+    else if (TECHNOLOGY & HARDA_TECH)
+      armor_cost_point = 15000;
+    else if (TECHNOLOGY_SECONDARY & LT_FF_ARMOR_TECH)
+      armor_cost_point = 15000;
+    else if (TECHNOLOGY_SECONDARY & HVY_FF_ARMOR_TECH)
+      armor_cost_point = 25000;
 #if defined(COST_DEBUG) && COST_DEBUG
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",

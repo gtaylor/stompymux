@@ -194,11 +194,16 @@ PartDisplayName pos_part_name(Mech *mech, int index, int loop) {
 
   if (t == special_equipment_index(ENGINE)) {
     int technology = mech_technology_flags(mech);
-    return part_display_name(technology & LE_TECH    ? "Engine (Light)"
-                             : technology & CE_TECH  ? "Engine (Compact)"
-                             : technology & XXL_TECH ? "Engine (XXL)"
-                             : technology & XL_TECH  ? "Engine (XL)"
-                                                     : "Engine");
+    const char *engine_name = "Engine";
+    if (technology & LE_TECH)
+      engine_name = "Engine (Light)";
+    else if (technology & CE_TECH)
+      engine_name = "Engine (Compact)";
+    else if (technology & XXL_TECH)
+      engine_name = "Engine (XXL)";
+    else if (technology & XL_TECH)
+      engine_name = "Engine (XL)";
+    return part_display_name(engine_name);
   }
 
   if (t == special_equipment_index(JUMP_JET)) {
@@ -379,14 +384,18 @@ char *critstatus_func(const MechStatusTextRequest *request) {
                     mech_section_is_destroyed(mech, index)))
                       ? -1
                       : mech_critical_temporary_failure(mech, index, i));
-    append_status(buffer, MBUF_SIZE, "|%d",
-                  equipment_is_weapon(type)       ? 1
-                  : equipment_is_ammunition(type) ? 2
-                  : equipment_is_actuator(type)   ? 3
-                  : equipment_is_cargo(type)      ? 4
-                  : (mech_part_is_structural_placeholder(type) || type == EMPTY)
-                      ? 5
-                      : 0);
+    int category = 0;
+    if (equipment_is_weapon(type))
+      category = 1;
+    else if (equipment_is_ammunition(type))
+      category = 2;
+    else if (equipment_is_actuator(type))
+      category = 3;
+    else if (equipment_is_cargo(type))
+      category = 4;
+    else if (mech_part_is_structural_placeholder(type) || type == EMPTY)
+      category = 5;
+    append_status(buffer, MBUF_SIZE, "|%d", category);
   }
   return buffer;
 }
@@ -511,9 +520,10 @@ char *weaponstatus_func(const MechStatusTextRequest *request) {
           btech_weapon_settings_recycle_time(
               &mech_context(mech)->weapon_settings, type),
           weapon_array_get(weapdata, i), weapon_catalogue_type(type),
-          mech_critical_is_nonfunctional(mech, loopsect, CRITICAL)    ? 2
-          : mech_critical_temporary_failure(mech, loopsect, CRITICAL) ? 1
-                                                                      : 0);
+          mech_critical_is_nonfunctional(mech, loopsect, CRITICAL)
+              ? 2
+              : (mech_critical_temporary_failure(mech, loopsect, CRITICAL) !=
+                 0));
     }
   }
   return buffer;

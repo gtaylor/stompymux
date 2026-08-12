@@ -189,10 +189,10 @@ void mech_sprint(DbRef player, void *data, char *buffer) {
   if (d & MODE_ON) {
     i = mech_recycling_state(mech, CHECK_BOTH);
     if (i > 0) {
-      mech_printf(mech, MECHALL, "You have %s recycling!",
-                  (i == 1   ? "weapons"
-                   : i == 2 ? "limbs"
-                            : "error"));
+      const char *recycling = i == 1 ? "weapons" : "error";
+      if (i == 2)
+        recycling = "limbs";
+      mech_printf(mech, MECHALL, "You have %s recycling!", recycling);
       return;
     }
     mech_notify(mech, MECHALL, "You begin the process of sprinting...");
@@ -308,10 +308,10 @@ void mech_evade(DbRef player, void *data, char *buffer) {
   if (d & MODE_ON) {
     i = mech_recycling_state(mech, CHECK_BOTH);
     if (i > 0) {
-      mech_printf(mech, MECHALL, "You have %s recycling!",
-                  (i == 1   ? "weapons"
-                   : i == 2 ? "limbs"
-                            : "error"));
+      const char *recycling = i == 1 ? "weapons" : "error";
+      if (i == 2)
+        recycling = "limbs";
+      mech_printf(mech, MECHALL, "You have %s recycling!", recycling);
       return;
     }
     mech_notify(mech, MECHALL, "You begin the process of evading...");
@@ -400,10 +400,10 @@ void mech_dodge(DbRef player, void *data, char *buffer) {
   if (d & MODE_ON) {
     i = mech_recycling_state(mech, CHECK_PHYS);
     if (i > 0) {
-      mech_printf(mech, MECHALL, "You have %s recycling!",
-                  (i == 1   ? "weapons"
-                   : i == 2 ? "limbs"
-                            : "error"));
+      const char *recycling = i == 1 ? "weapons" : "error";
+      if (i == 2)
+        recycling = "limbs";
+      mech_printf(mech, MECHALL, "You have %s recycling!", recycling);
       return;
     }
     mech_notify(mech, MECHALL, "You begin the process of dodging...");

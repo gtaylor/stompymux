@@ -142,11 +142,15 @@ static const char *const SS_MESSAGES[] = {
     "Something makes you feel out of your element.."};
 
 static int sixth_sense_distance_severity(float range) {
-  return range < 9 ? 0 : range < 20 ? 1 : 2;
+  if (range < 9)
+    return 0;
+  return range < 20 ? 1 : 2;
 }
 
 static int sixth_sense_tonnage_severity(int difference) {
-  return difference <= -20 ? 0 : difference >= 20 ? 2 : 1;
+  if (difference <= -20)
+    return 0;
+  return difference >= 20 ? 2 : 1;
 }
 
 static void mech_ss_event(MuxEvent *ev) {

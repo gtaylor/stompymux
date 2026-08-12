@@ -542,14 +542,17 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
                 t = max(1, clamp_intptr_to_int((intptr_t)SCALED_FRACTION));
                 pr = t * 100 / diff;
+                const char *precision = "exactly";
+                if (pr < 30)
+                  precision = "somewhat";
+                else if (pr < 60)
+                  precision = "fairly well";
+                else if (pr < 95)
+                  precision = "precisely";
                 mech_printf(temp_mech, MECHALL,
                             "Your systems "
                             "manage to zero on it %s on channel %c.",
-                            pr < 30   ? "somewhat"
-                            : pr < 60 ? "fairly well"
-                            : pr < 95 ? "precisely"
-                                      : "exactly",
-                            i + 'A');
+                            precision, i + 'A');
                 mech_radio_frequency_add(temp_mech, i, mod * t);
               }
             }

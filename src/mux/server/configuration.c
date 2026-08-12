@@ -414,15 +414,20 @@ int configuration_set(ConfigurationContext *context, char *cp, char *ap,
       };
       i = tp->interpreter(&call);
       if (!context->configuration->is_initializing) {
+        const char *status = "Strange";
+        if (i == 0)
+          status = "Success";
+        else if (i == 1)
+          status = "Partial success";
+        else if (i == -1)
+          status = "Failure";
         log_error((LogEntry){.log = context->log,
                              .key = LOG_CONFIGMODS,
                              .primary = "CFG",
                              .secondary = "UPDAT"},
                   "%s entered config directive: %s with args '%s'. Status: %s",
                   game_object_name(context->database, player), cp, buff,
-                  (i == 0 ? "Success"
-                          : (i == 1 ? "Partial success"
-                                    : (i == -1 ? "Failure" : "Strange"))));
+                  status);
       }
       free_lbuf(buff);
       return i;

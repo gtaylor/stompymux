@@ -81,18 +81,21 @@ int mech_weapon_recycle_update(Mech *mech) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-zero-length"
 #endif
-        mech_printf(
-            mech, MECHSTARTED,
-            mech_class(mech) == CLASS_MW
-                ? "[fg=green]You are ready to attack again with %s.[reset]"
-            : mech_critical_temporary_failure(mech, section, critical) != 0
-                ? "[fg=green]%s is operational again.[reset]"
-            : (mech_critical_fire_mode(mech, section, critical) & ROCKET_FIRED)
-                ? ""
-                : "[fg=green]%s finished recycling.[reset]",
-            checked_string_suffix(
-                weapon_catalogue_name(recycle_weapon_at(weapon_types, weapon)),
-                3));
+        const char *weapon_name = checked_string_suffix(
+            weapon_catalogue_name(recycle_weapon_at(weapon_types, weapon)), 3);
+        if (mech_class(mech) == CLASS_MW)
+          mech_printf(mech, MECHSTARTED,
+                      "[fg=green]You are ready to attack again with %s.[reset]",
+                      weapon_name);
+        else if (mech_critical_temporary_failure(mech, section, critical) != 0)
+          mech_printf(mech, MECHSTARTED,
+                      "[fg=green]%s is operational again.[reset]", weapon_name);
+        else if (mech_critical_fire_mode(mech, section, critical) &
+                 ROCKET_FIRED)
+          mech_printf(mech, MECHSTARTED, "");
+        else
+          mech_printf(mech, MECHSTARTED,
+                      "[fg=green]%s finished recycling.[reset]", weapon_name);
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif

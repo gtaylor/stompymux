@@ -613,7 +613,7 @@ void check_stagger_event(MuxEvent *event) {
 void mech_movemode_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long i = (long)e->data2;
-  int dir = (i & MODE_ON ? 1 : i & MODE_OFF ? 0 : 0);
+  int dir = (i & MODE_ON) != 0;
 
   if (!mech)
     return;

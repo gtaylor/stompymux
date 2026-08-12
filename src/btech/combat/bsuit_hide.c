@@ -38,10 +38,13 @@
  */
 
 static int mech_hidden_turns(const Mech *mech) {
-  int turns = mech_class(mech) == CLASS_MW      ? 1
-              : mech_class(mech) == CLASS_BSUIT ? 3
-              : mech_class(mech) == CLASS_VTOL  ? 4
-                                                : 5;
+  int turns = 5;
+  if (mech_class(mech) == CLASS_MW)
+    turns = 1;
+  else if (mech_class(mech) == CLASS_BSUIT)
+    turns = 3;
+  else if (mech_class(mech) == CLASS_VTOL)
+    turns = 4;
   return turns * ((mech_technology_flags_secondary(mech) & CAMO_TECH) ? 1 : 2);
 }
 

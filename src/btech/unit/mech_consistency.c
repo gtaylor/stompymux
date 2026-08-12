@@ -14,6 +14,7 @@
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
+#include "mech_weight_descriptions.h"
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
@@ -260,7 +261,9 @@ int crit_weight(Mech *mech, int t) {
     return 1024 * 3 / (((mech)->ud.type) == CLASS_MECH ? 4 : 2);
   case ECM:
     /* IS ECM is 1.5 tons for 2 crits, Clan ECM 1 ton for 1 crit. */
-    return 1024 * (cl ? 4 : ((mech)->ud.type) == CLASS_MECH ? 3 : 6) / 4;
+    if (cl)
+      return 1024;
+    return 1024 * (((mech)->ud.type) == CLASS_MECH ? 3 : 6) / 4;
   case CASE:
     return 512;
   case LIGHT_BAP:
@@ -376,6 +379,18 @@ static float engine_rating_in_tons(int rating) {
   return (float)rating / 100.0F;
 }
 
+static int internal_structure_divisor(const Mech *mech) {
+  if (((mech)->rd.specials) & REINFI_TECH)
+    return 1;
+  return ((mech)->rd.specials) & (ES_TECH | COMPI_TECH) ? 4 : 2;
+}
+
+static float cargo_space_divisor(const Mech *mech) {
+  if (((mech)->rd.specials2) & CARRIER_TECH)
+    return 1000.0F;
+  return ((mech)->rd.specials) & CARGO_TECH ? 100.0F : 500.0F;
+}
+
 static void weight_entry_add(CoolMenu **menu, int interactive, int *total,
                              const char *text, int weight) {
   if (!weight)
@@ -463,12 +478,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   hs_eff = mech_has_double_heat_sinks(mech) ? 2 : 1;
   cl = ((mech)->rd.specials) & CLAN_TECH;
   (void)snprintf(buf, sizeof(buf), "%-12s(%d rating)",
-                 ((mech)->rd.specials) & XL_TECH    ? "Engine (XL)"
-                 : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
-                 : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
-                 : ((mech)->rd.specials) & LE_TECH  ? "Engine (Light)"
-                                                    : "Engine",
-                 mech_engine_rating(mech));
+                 mech_weight_mech_engine_name(mech), mech_engine_rating(mech));
   if (interactive >= 0 || !mech_section_is_destroyed(mech, CTORSO))
     weight_entry_add(&c, interactive, &total, buf, engine_weight(mech));
   if (interactive >= 0 || !mech_section_is_destroyed(mech, HEAD)) {
@@ -502,17 +512,10 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   }
 
   weight_entry_add(
-      &c, interactive, &total,
-      ((mech)->rd.specials) & REINFI_TECH  ? "Internals (Reinforced)"
-      : ((mech)->rd.specials) & COMPI_TECH ? "Internals (Composite)"
-      : ((mech)->rd.specials) & ES_TECH    ? "Internals (ES)"
-                                           : "Internals",
+      &c, interactive, &total, mech_weight_internal_structure_name(mech),
       round_to_halfton(((mech)->ud.tons) * 1024 *
                        (interactive >= 0 ? ints_tot : ints_c) / 5 / ints_tot /
-                       (((mech)->rd.specials) & REINFI_TECH ? 1
-                        : (((mech)->rd.specials) & (ES_TECH | COMPI_TECH))
-                            ? 4
-                            : 2)));
+                       internal_structure_divisor(mech)));
   armor_o = armor;
   if (((mech)->rd.specials) & FF_TECH)
     armor = armor * 50 / (cl ? 60 : 56);
@@ -522,14 +525,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
     armor = armor * 50 / 53;
 
   weight_counted_entry_add(
-      &c, interactive, &total,
-      ((mech)->rd.specials2) & STEALTH_ARMOR_TECH  ? "Armor (Stealth)"
-      : ((mech)->rd.specials2) & HVY_FF_ARMOR_TECH ? "Armor (Hvy FF)"
-      : ((mech)->rd.specials2) & LT_FF_ARMOR_TECH  ? "Armor (Lt FF)"
-      : ((mech)->rd.specials) & HARDA_TECH         ? "Armor (Hardened)"
-      : ((mech)->rd.specials) & FF_TECH            ? "Armor (FF)"
-                                                   : "Armor",
-      armor_o,
+      &c, interactive, &total, mech_weight_armor_name(mech), armor_o,
       round_to_halfton(armor * 1024 /
                        (((mech)->rd.specials) & HARDA_TECH ? 8 : 16)));
 
@@ -569,15 +565,12 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
     }
   }
   if (((mech)->ud.cargospace)) {
-    weight_entry_add(
-        &c, interactive, &total,
-        tprintf("CargoSpace (%.2ft)",
-                (double)((float)mech->ud.cargospace / 100.0F)),
-        clamp_float_to_int(((float)mech->ud.cargospace /
-                            (((mech)->rd.specials2) & CARRIER_TECH ? 1000.0F
-                             : ((mech)->rd.specials) & CARGO_TECH  ? 100.0F
-                                                                   : 500.0F)) *
-                           1024.0F));
+    weight_entry_add(&c, interactive, &total,
+                     tprintf("CargoSpace (%.2ft)",
+                             (double)((float)mech->ud.cargospace / 100.0F)),
+                     clamp_float_to_int(((float)mech->ud.cargospace /
+                                         cargo_space_divisor(mech)) *
+                                        1024.0F));
   }
   if (interactive > 0) {
     cool_menu_add_line(&c);
@@ -661,22 +654,12 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   es = susp_factor(mech);
   if (es) {
     (void)snprintf(buf, sizeof(buf), "%-12s(%d->%d eff/wt rat)",
-                   ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
-                   : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
-                   : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
-                   : ((mech)->rd.specials) & XL_TECH  ? "Engine (XL)"
-                   : ((mech)->rd.specials) & ICE_TECH ? "Engine (ICE)"
-                                                      : "Engine",
+                   mech_weight_vehicle_engine_name(mech),
                    mech_engine_rating(mech),
                    mech_engine_rating(mech) - susp_factor(mech));
   } else {
     (void)snprintf(buf, sizeof(buf), "%-12s(%d rating)",
-                   ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
-                   : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
-                   : ((mech)->rd.specials) & XXL_TECH ? "Engine (XXL)"
-                   : ((mech)->rd.specials) & XL_TECH  ? "Engine (XL)"
-                   : ((mech)->rd.specials) & ICE_TECH ? "Engine (ICE)"
-                                                      : "Engine",
+                   mech_weight_vehicle_engine_name(mech),
                    mech_engine_rating(mech));
   }
   if (!tank_in_pieces(mech)) {
@@ -697,17 +680,10 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
       weight_entry_add(&c, interactive, &total, "Turret",
                        round_to_quarterton((turr_stuff / 10)));
   weight_entry_add(
-      &c, interactive, &total,
-      ((mech)->rd.specials) & REINFI_TECH  ? "Internals (Reinforced)"
-      : ((mech)->rd.specials) & COMPI_TECH ? "Internals (Composite)"
-      : ((mech)->rd.specials) & ES_TECH    ? "Internals (ES)"
-                                           : "Internals",
+      &c, interactive, &total, mech_weight_internal_structure_name(mech),
       round_to_halfton(((mech)->ud.tons) * 1024 *
                        (interactive >= 0 ? ints_tot : ints_c) / 5 / ints_tot /
-                       (((mech)->rd.specials) & REINFI_TECH ? 1
-                        : (((mech)->rd.specials) & (ES_TECH | COMPI_TECH))
-                            ? 4
-                            : 2)));
+                       internal_structure_divisor(mech)));
   armor_o = armor;
 
   if (((mech)->rd.specials) & FF_TECH)
@@ -719,15 +695,9 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   else if (((mech)->rd.specials) & HARDA_TECH)
     armor *= 2;
 
-  weight_counted_entry_add(
-      &c, interactive, &total,
-      ((mech)->rd.specials2) & STEALTH_ARMOR_TECH  ? "Armor (Stealth)"
-      : ((mech)->rd.specials2) & HVY_FF_ARMOR_TECH ? "Armor (Hvy FF)"
-      : ((mech)->rd.specials2) & LT_FF_ARMOR_TECH  ? "Armor (Lt FF)"
-      : ((mech)->rd.specials) & HARDA_TECH         ? "Armor (Hardened)"
-      : ((mech)->rd.specials) & FF_TECH            ? "Armor (FF)"
-                                                   : "Armor",
-      armor_o, round_to_halfton(armor * 1024 / 16));
+  weight_counted_entry_add(&c, interactive, &total,
+                           mech_weight_armor_name(mech), armor_o,
+                           round_to_halfton(armor * 1024 / 16));
 
   part_pile_set(
       &pile, special_equipment_index(HEAT_SINK),
@@ -753,15 +723,12 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
     }
   }
   if (((mech)->ud.cargospace)) {
-    weight_entry_add(
-        &c, interactive, &total,
-        tprintf("CargoSpace (%.2ft)",
-                (double)((float)mech->ud.cargospace / 100.0F)),
-        clamp_float_to_int(((float)mech->ud.cargospace /
-                            (((mech)->rd.specials2) & CARRIER_TECH ? 1000.0F
-                             : ((mech)->rd.specials) & CARGO_TECH  ? 100.0F
-                                                                   : 500.0F)) *
-                           1024.0F));
+    weight_entry_add(&c, interactive, &total,
+                     tprintf("CargoSpace (%.2ft)",
+                             (double)((float)mech->ud.cargospace / 100.0F)),
+                     clamp_float_to_int(((float)mech->ud.cargospace /
+                                         cargo_space_divisor(mech)) *
+                                        1024.0F));
   }
 
   if (interactive > 0) {

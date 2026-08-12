@@ -70,11 +70,13 @@ void mech_movement_update(Mech *mech) {
       mech_position_previous_y(mech) != mech_position_y(mech)) {
     if (!mech || !mech_map) {
       char message_buffer[MBUF_SIZE];
+      const char *invalid_pointer = "weird....";
+      if (!mech)
+        invalid_pointer = "mech";
+      else if (!mech_map)
+        invalid_pointer = "mech_map";
       (void)snprintf(message_buffer, MBUF_SIZE,
-                     "Invalide pointer (%s) in move_mech()",
-                     (!mech       ? "mech"
-                      : !mech_map ? "mech_map"
-                                  : "weird...."));
+                     "Invalide pointer (%s) in move_mech()", invalid_pointer);
       btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
                          message_buffer);
 

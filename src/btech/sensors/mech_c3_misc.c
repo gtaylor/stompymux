@@ -385,15 +385,16 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
     }
 
     /* Now, build the string */
+    const char *target_color = "";
+    if (mech_dbref(other_mech) == mech_target_dbref(mech))
+      target_color = "[fg=red bold]";
+    else if (t_show_status_info && mech_team(mech) != mech_team(other_mech))
+      target_color = "[fg=yellow bold]";
     (void)snprintf(
         buff, sizeof(buff),
         "%s%c%c%c[%s]%c %-11.11s x:%3d y:%3d z:%3d r:%4.1f c:%4.1f b:%3d "
         "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-        mech_dbref(other_mech) == mech_target_dbref(mech) ? "[fg=red bold]"
-        : (t_show_status_info && mech_team(mech) != mech_team(other_mech))
-            ? "[fg=yellow bold]"
-            : "",
-        (los_flag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
+        target_color, (los_flag & BATTLE_MAP_LOS_SEEN_PRIMARY) ? 'P' : ' ',
         (los_flag & BATTLE_MAP_LOS_SEEN_SECONDARY) ? 'S' : ' ', weaponarc,
         mech_id(other_mech,
                 mech_team(mech) == mech_team(other_mech) || !t_show_status_info)

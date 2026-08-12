@@ -57,11 +57,12 @@ void tactical_sketch_landing_zones(const TacticalSketch *sketch) {
                               .display_columns = sketch->display_columns,
                               .first_column_is_odd = FIRST_COLUMN_IS_ODD,
                           });
+      char safe_marker = sketch->color ? '\241' : 'X';
+      char unsafe_marker = sketch->color ? '\240' : 'O';
       *tactical_canvas_at(sketch->canvas,
                           BASE_OFFSET + sketch->display_columns) =
-          aero_landing_zone_check(sketch->mech, MAP_X, MAP_Y)
-              ? (sketch->color ? '\241' : 'X')
-              : (sketch->color ? '\240' : 'O');
+          aero_landing_zone_check(sketch->mech, MAP_X, MAP_Y) ? safe_marker
+                                                              : unsafe_marker;
     }
   }
 }

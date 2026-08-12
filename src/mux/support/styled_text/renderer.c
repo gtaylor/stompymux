@@ -35,6 +35,12 @@ static int renderer_parameter_value(const int *parameters,
                                                 sizeof(*parameters), index);
 }
 
+static int renderer_clamp_color(int color) {
+  if (color < 0)
+    return 0;
+  return color > 255 ? 255 : color;
+}
+
 bool styled_sgr_parse(const char *cursor, const char **end, int *parameters,
                       size_t *parameter_count) {
   const size_t LENGTH = strlen(cursor);
@@ -300,9 +306,9 @@ static void render_sgr(const SgrRenderRequest *request) {
       } else {
         continue;
       }
-      red = red < 0 ? 0 : red > 255 ? 255 : red;
-      green = green < 0 ? 0 : green > 255 ? 255 : green;
-      blue = blue < 0 ? 0 : blue > 255 ? 255 : blue;
+      red = renderer_clamp_color(red);
+      green = renderer_clamp_color(green);
+      blue = renderer_clamp_color(blue);
       if (depth == TERMINAL_COLOR_TRUECOLOR) {
         char sequence[48];
         int length = snprintf(sequence, sizeof(sequence), "\033[%d;2;%d;%d;%dm",
@@ -320,8 +326,11 @@ static void render_sgr(const SgrRenderRequest *request) {
                               (size_t)length);
       } else if (depth == TERMINAL_COLOR_ANSI_16) {
         int color = nearest_ansi(red, green, blue);
-        int code = foreground ? (color < 8 ? 30 + color : 90 + color - 8)
-                              : (color < 8 ? 40 + color : 100 + color - 8);
+        int code;
+        if (foreground)
+          code = color < 8 ? 30 + color : 90 + color - 8;
+        else
+          code = color < 8 ? 40 + color : 100 + color - 8;
         append_sgr(output, output_size, used, code);
       }
       continue;
@@ -391,10 +400,9 @@ static void styled_text_render_ansi(const char *styled,
 
       if (parse_osc8(cursor, &end, &is_close)) {
         size_t length = strlen(cursor) - strlen(end);
-        size_t available = is_close ? output_size
-                           : output_size > OSC8_CLOSE_SIZE
-                               ? output_size - OSC8_CLOSE_SIZE
-                               : output_size;
+        size_t available = output_size;
+        if (!is_close && output_size > OSC8_CLOSE_SIZE)
+          available = output_size - OSC8_CLOSE_SIZE;
 
         if (styled_append_bytes(output, available, &used, cursor, length)) {
           link_open = !is_close;

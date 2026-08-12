@@ -544,8 +544,12 @@ static void fire_spreading_event(MuxEvent *e) {
   });
 
   for (int candidate = 0; candidate < 4; candidate++) {
-    const int THRESHOLD = candidate == 0 ? 9 : candidate == 3 ? 12 : 11;
-    if (btech_random_roll(map->xcode.context) >= THRESHOLD &&
+    int threshold = 11;
+    if (candidate == 0)
+      threshold = 9;
+    else if (candidate == 3)
+      threshold = 12;
+    if (btech_random_roll(map->xcode.context) >= threshold &&
         btech_random_range(map->xcode.context, 1, 60) <= map->windspeed) {
       *spread_hex(new_fire_hexes, candidate) =
           *spread_hex(new_smoke_hexes, candidate);

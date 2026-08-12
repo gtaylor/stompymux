@@ -332,10 +332,13 @@ int weapon_catalogue_effective_range(int weapon_index, bool extended) {
 
 int weapon_catalogue_effective_water_range(int weapon_index, bool extended) {
   const struct WeaponDefinition *weapon = weapon_catalogue_entry(weapon_index);
-  int normal = weapon->longrange_water > 0    ? weapon->longrange_water
-               : weapon->medrange_water > 0   ? weapon->medrange_water
-               : weapon->shortrange_water > 0 ? weapon->shortrange_water
-                                              : 0;
+  int normal = 0;
+  if (weapon->longrange_water > 0)
+    normal = weapon->longrange_water;
+  else if (weapon->medrange_water > 0)
+    normal = weapon->medrange_water;
+  else if (weapon->shortrange_water > 0)
+    normal = weapon->shortrange_water;
   int extended_range = weapon->medrange_water * 2;
   return extended && extended_range > normal && weapon->longrange_water > 0
              ? extended_range

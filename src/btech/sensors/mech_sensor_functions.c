@@ -66,21 +66,35 @@ static int sensor_woods_count(Mech *target, int flags) {
 
 static int sensor_partial_cover_modifier(const Mech *target, int flags,
                                          int base) {
-  return flags & BATTLE_MAP_LOS_PARTIAL_COVER
-             ? base + (mech_condition_summary(target).hull_down ? 2 : 0)
-             : 0;
+  if (!(flags & BATTLE_MAP_LOS_PARTIAL_COVER))
+    return 0;
+  return base + (mech_condition_summary(target).hull_down ? 2 : 0);
 }
 
 static int sensor_heat_modifier(float heat) {
 #ifdef BT_SCALED_INFRARED
-  return heat <= 0 ? 2 : heat > 50 ? -2 : heat > 35 ? -1 : heat > 20 ? 0 : 1;
+  if (heat <= 0)
+    return 2;
+  if (heat > 50)
+    return -2;
+  if (heat > 35)
+    return -1;
+  return heat > 20 ? 0 : 1;
 #else
-  return heat <= 7 ? 2 : heat <= 10 ? 1 : heat <= 15 ? 0 : heat <= 22 ? -1 : -2;
+  if (heat <= 7)
+    return 2;
+  if (heat <= 10)
+    return 1;
+  if (heat <= 15)
+    return 0;
+  return heat <= 22 ? -1 : -2;
 #endif
 }
 
 static int sensor_weight_modifier(int tonnage) {
-  return tonnage > 65 ? -1 : tonnage > 35 ? 0 : 1;
+  if (tonnage > 65)
+    return -1;
+  return tonnage > 35 ? 0 : 1;
 }
 
 static int sensor_movement_modifier(float speed) {
@@ -124,7 +138,9 @@ int seismic_see(const SensorVisibilityRequest *request) {
 
 int radar_see(const SensorVisibilityRequest *request) {
   float chance = 180 - request->range;
-  return (int)(chance < 10 ? 10 : chance > 90 ? 90 : chance);
+  if (chance < 10)
+    return 10;
+  return (int)(chance > 90 ? 90 : chance);
 }
 
 int bap_see(const SensorVisibilityRequest *request) {
